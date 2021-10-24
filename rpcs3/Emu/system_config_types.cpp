@@ -334,6 +334,7 @@ void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
 		{
 		case camera_handler::null: return "Null";
 		case camera_handler::fake: return "Fake";
+		case camera_handler::qt: return "Qt";
 		}
 
 		return unknown;
@@ -351,6 +352,23 @@ void fmt_class_string<fake_camera_type>::format(std::string& out, u64 arg)
 		case fake_camera_type::eyetoy: return "EyeToy";
 		case fake_camera_type::eyetoy2: return "PS Eye";
 		case fake_camera_type::uvc1_1: return "UVC 1.1";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<camera_flip>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case camera_flip::none: return "None";
+		case camera_flip::horizontal: return "Horizontal";
+		case camera_flip::vertical: return "Vertical";
+		case camera_flip::both: return "Both";
 		}
 
 		return unknown;

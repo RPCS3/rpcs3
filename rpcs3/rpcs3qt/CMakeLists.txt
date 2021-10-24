@@ -7,6 +7,7 @@ set(SRC_FILES
     breakpoint_handler.cpp
     breakpoint_list.cpp
     call_stack_list.cpp
+    camera_settings_dialog.cpp
     cg_disasm_window.cpp
     cheat_manager.cpp
     config_adapter.cpp
@@ -49,6 +50,9 @@ set(SRC_FILES
     persistent_settings.cpp
     pkg_install_dialog.cpp
     progress_dialog.cpp
+    qt_camera_error_handler.cpp
+    qt_camera_handler.cpp
+    qt_camera_video_surface.cpp
     qt_utils.cpp
     register_editor_dialog.cpp
     recvmessage_dialog_frame.cpp
@@ -80,6 +84,7 @@ set(SRC_FILES
 
 set(UI_FILES
     about_dialog.ui
+    camera_settings_dialog.ui
     main_window.ui
     pad_led_settings_dialog.ui
     pad_settings_dialog.ui

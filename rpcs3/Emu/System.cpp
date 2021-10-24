@@ -635,7 +635,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if (!add_only)
 		{
-			if (m_config_mode == cfg_mode::custom_selection || m_config_mode == cfg_mode::continuous)
+			if (m_config_mode == cfg_mode::custom_selection || (m_config_mode == cfg_mode::continuous && !m_config_path.empty()))
 			{
 				if (fs::file cfg_file{ m_config_path })
 				{
@@ -896,7 +896,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 
 		// Detect boot location
-		constexpr usz game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 		const bool from_hdd0_game   = IsPathInsideDir(m_path, hdd0_game);
@@ -916,17 +915,38 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Mount /dev_bdvd/ if necessary
 		if (bdvd_dir.empty() && disc.empty())
 		{
-			// Find /USRDIR position
-#ifdef _WIN32
-			if (const usz usrdir_pos = std::max<usz>(elf_dir.rfind("/USRDIR"sv) + 1, elf_dir.rfind("\\USRDIR"sv) + 1) - 1; usrdir_pos != umax)
-#else
-			if (const usz usrdir_pos = elf_dir.rfind("/USRDIR"); usrdir_pos != umax)
-#endif
-			{
-				const std::string main_dir = elf_dir.substr(0, usrdir_pos);
+			// Find disc directory by searching a valid PS3_DISC.SFB closest to root directory
+			std::string sfb_dir, main_dir;
+			std::string_view main_dir_name;
 
-				if (const std::string sfb_dir = fs::get_parent_dir(main_dir);
-					!sfb_dir.empty() && fs::is_file(sfb_dir + "/PS3_DISC.SFB"))
+			for (std::string search_dir = elf_dir;;)
+			{
+				std::string parent_dir = fs::get_parent_dir(search_dir);
+
+				if (parent_dir.size() == search_dir.size())
+				{
+					// Keep looking until root directory is reached
+					break;
+				}
+
+				if (fs::file sfb_file{parent_dir + "/PS3_DISC.SFB"}; sfb_file && sfb_file.size() >= 4 && sfb_file.read<u32>() == ".SFB"_u32)
+				{
+					main_dir_name = std::string_view{search_dir}.substr(search_dir.find_last_of(fs::delim) + 1);
+
+					if (main_dir_name == "PS3_GAME" || std::regex_match(main_dir_name.begin(), main_dir_name.end(), std::regex("^PS3_GM[[:digit:]]{2}$")))
+					{
+						// Remember valid disc directory
+						main_dir = search_dir;
+						sfb_dir = parent_dir;
+						main_dir_name = std::string_view{main_dir}.substr(main_dir.find_last_of(fs::delim) + 1);
+					}
+				}
+
+				search_dir = std::move(parent_dir);
+			}
+
+			if (!sfb_dir.empty())
+			{
 				{
 					if (from_hdd0_game)
 					{
@@ -948,19 +968,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 					bdvd_dir = sfb_dir + "/";
 
-					// Find game dir
-					if (const std::string main_dir_name = main_dir.substr(main_dir.find_last_of(fs::delim) + 1);
-						main_dir_name.size() == game_dir_size)
-					{
-						m_game_dir = main_dir_name;
-					}
-					else
-					{
-						// Show an error and reset game dir for now
-						m_game_dir = "PS3_GAME";
-						sys_log.error("Could not find proper game dir path for %s", elf_dir);
-						return game_boot_result::unsupported_disc_type;
-					}
+					// Set game dir
+					m_game_dir = std::string{main_dir_name};
 				}
 			}
 		}
@@ -1008,20 +1017,32 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			const auto game_psf = psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")});
 			const auto bdvd_title_id = psf::get_string(game_psf, "TITLE_ID");
 
-			if (bdvd_title_id != m_title_id)
+			if (m_title_id.empty())
 			{
-				sys_log.error("Unexpected disc directory for the disc game %s (found %s)", m_title_id, bdvd_title_id);
-				return game_boot_result::invalid_file_or_folder;
+				// We are most likely booting a binary inside a disc directory
+				sys_log.error("Booting binary without TITLE_ID inside disc dir of '%s'", bdvd_title_id);
 			}
+			else
+			{
+				if (bdvd_title_id != m_title_id)
+				{
+					// Not really an error just an odd situation
+					sys_log.error("Unexpected PARAM.SFO found in disc directory '%s' (found '%s')", m_title_id, bdvd_title_id);
+				}
 
-			// Store /dev_bdvd/ location
-			games[m_title_id] = bdvd_dir;
-			YAML::Emitter out;
-			out << games;
+				// Store /dev_bdvd/ location
+				games[m_title_id] = bdvd_dir;
+				YAML::Emitter out;
+				out << games;
 
-			fs::pending_file temp(fs::get_config_dir() + "/games.yml");
-			temp.file.write(out.c_str(), out.size());
-			temp.commit();
+				fs::pending_file temp(fs::get_config_dir() + "/games.yml");
+
+				// Do not update games.yml when TITLE_ID is empty
+				if (!temp.file || temp.file.write(out.c_str(), out.size()), !temp.commit())
+				{
+					sys_log.error("Failed to save BDVD location of title '%s' (%s)", m_title_id, fs::g_tls_error);
+				}
+			}
 		}
 		else if (m_cat == "1P" && from_hdd0_game)
 		{
@@ -1328,7 +1349,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				{
 					// Disc games are on /dev_bdvd/
 					const usz pos = resolved_path.rfind(m_game_dir);
-					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(resolved_path.substr(pos + game_dir_size + 1));
+					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(resolved_path.substr(pos + m_game_dir.size() + 1));
 					m_dir = "/dev_bdvd/PS3_GAME/";
 				}
 				else if (from_dev_flash)

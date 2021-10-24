@@ -135,7 +135,7 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	}
 	else
 	{
-		m_tty_input->setPlaceholderText(tr("All User Channels"));
+		m_tty_input->setPlaceholderText(tr("All user channels"));
 	}
 
 	QVBoxLayout* tty_layout = new QVBoxLayout();

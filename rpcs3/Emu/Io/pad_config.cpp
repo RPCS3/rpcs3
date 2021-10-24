@@ -96,11 +96,9 @@ void cfg_profile::save() const
 {
 	input_log.notice("Saving pad profile config to '%s'", path);
 
-	if (auto cfg_file = fs::file(path, fs::rewrite))
-	{
-		cfg_file.write(to_string());
-	}
-	else
+	fs::pending_file cfg_file(path);
+
+	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
 		input_log.error("Failed to save pad profile config to '%s'", path);
 	}

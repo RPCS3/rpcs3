@@ -220,6 +220,7 @@
     <addaction name="confGPUAct"/>
     <addaction name="separator"/>
     <addaction name="confPadsAct"/>
+    <addaction name="confCamerasAct"/>
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
@@ -1173,6 +1174,11 @@
   <action name="patchCreatorAct">
    <property name="text">
     <string>Patch Creator</string>
+   </property>
+  </action>
+  <action name="confCamerasAct">
+   <property name="text">
+    <string>Cameras</string>
    </property>
   </action>
  </widget>
