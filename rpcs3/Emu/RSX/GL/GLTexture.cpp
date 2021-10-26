@@ -631,32 +631,31 @@ namespace gl
 			for (const rsx::subresource_layout& layout : input_layouts)
 			{
 				upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
-				const sizei image_size{utils::align(layout.width_in_texel, 4), utils::align(layout.height_in_texel, 4)};
 
 				switch (dst->get_target())
 				{
 				case texture::target::texture1D:
 				{
 					const GLsizei size = layout.width_in_block * format_block_size;
-					glCompressedTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, image_size.width, gl_format, size, staging_buffer.data());
+					glCompressedTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, layout.width_in_texel, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case texture::target::texture2D:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
-					glCompressedTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
+					glCompressedTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case texture::target::textureCUBE:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
-					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
+					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case texture::target::texture3D:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * layout.depth * format_block_size;
-					glCompressedTexSubImage3D(GL_TEXTURE_3D, layout.level, 0, 0, 0, image_size.width, image_size.height, layout.depth, gl_format, size, staging_buffer.data());
+					glCompressedTexSubImage3D(GL_TEXTURE_3D, layout.level, 0, 0, 0, layout.width_in_texel, layout.height_in_texel, layout.depth, gl_format, size, staging_buffer.data());
 					break;
 				}
 				default:
