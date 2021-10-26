@@ -129,7 +129,21 @@ void GLGSRender::on_init_thread()
 		rsx_log.warning("Texture barriers are not supported by your GPU. Feedback loops will have undefined results.");
 	}
 
-	//Use industry standard resource alignment values as defaults
+	if (!gl_caps.ARB_bindless_texture_supported)
+	{
+		switch (shadermode)
+		{
+		case shader_mode::async_with_interpreter:
+		case shader_mode::interpreter_only:
+			rsx_log.error("Bindless texture extension required for shader interpreter is not supported on your GPU. Will use async recompiler as a fallback.");
+			g_cfg.video.shadermode.set(shader_mode::async_recompiler);
+			break;
+		default:
+			break;
+		}
+	}
+
+	// Use industry standard resource alignment values as defaults
 	m_uniform_buffer_offset_align = 256;
 	m_min_texbuffer_alignment = 256;
 	m_max_texbuffer_size = 0;
@@ -140,7 +154,7 @@ void GLGSRender::on_init_thread()
 	glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &m_max_texbuffer_size);
 	m_vao.create();
 
-	//Set min alignment to 16-bytes for SSE optimizations with aligned addresses to work
+	// Set min alignment to 16-bytes for SSE optimizations with aligned addresses to work
 	m_min_texbuffer_alignment = std::max(m_min_texbuffer_alignment, 16);
 	m_uniform_buffer_offset_align = std::max(m_uniform_buffer_offset_align, 16);
 
@@ -151,37 +165,37 @@ void GLGSRender::on_init_thread()
 		m_max_texbuffer_size = (16 * 0x100000);
 	}
 
-	//Array stream buffer
+	// Array stream buffer
 	{
 		m_gl_persistent_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
 		_SelectTexture(GL_STREAM_BUFFER_START + 0);
 		glBindTexture(GL_TEXTURE_BUFFER, m_gl_persistent_stream_buffer->id());
 	}
 
-	//Register stream buffer
+	// Register stream buffer
 	{
 		m_gl_volatile_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
 		_SelectTexture(GL_STREAM_BUFFER_START + 1);
 		glBindTexture(GL_TEXTURE_BUFFER, m_gl_volatile_stream_buffer->id());
 	}
 
-	//Fallback null texture instead of relying on texture0
+	// Fallback null texture instead of relying on texture0
 	{
 		std::vector<u32> pixeldata = { 0, 0, 0, 0 };
 
-		//1D
+		// 1D
 		auto tex1D = std::make_unique<gl::texture>(GL_TEXTURE_1D, 1, 1, 1, 1, GL_RGBA8);
 		tex1D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
-		//2D
+		// 2D
 		auto tex2D = std::make_unique<gl::texture>(GL_TEXTURE_2D, 1, 1, 1, 1, GL_RGBA8);
 		tex2D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
-		//3D
+		// 3D
 		auto tex3D = std::make_unique<gl::texture>(GL_TEXTURE_3D, 1, 1, 1, 1, GL_RGBA8);
 		tex3D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
-		//CUBE
+		// CUBE
 		auto texCUBE = std::make_unique<gl::texture>(GL_TEXTURE_CUBE_MAP, 1, 1, 1, 1, GL_RGBA8);
 		texCUBE->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
