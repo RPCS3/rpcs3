@@ -51,7 +51,7 @@ error_code cellAtracCreateDecoder(vm::ptr<CellAtracHandle> pHandle, vm::ptr<u8> 
 {
 	cellAtrac.warning("cellAtracCreateDecoder(pHandle=*0x%x, pucWorkMem=*0x%x, uiPpuThreadPriority=%d, uiSpuThreadPriority=%d)", pHandle, pucWorkMem, uiPpuThreadPriority, uiSpuThreadPriority);
 
-	pHandle->pucWorkMem = pucWorkMem;
+	std::memcpy(pHandle->ucWorkMem, pucWorkMem.get_ptr(), CELL_ATRAC_HANDLE_SIZE);
 	return CELL_OK;
 }
 
@@ -59,7 +59,7 @@ error_code cellAtracCreateDecoderExt(vm::ptr<CellAtracHandle> pHandle, vm::ptr<u
 {
 	cellAtrac.warning("cellAtracCreateDecoderExt(pHandle=*0x%x, pucWorkMem=*0x%x, uiPpuThreadPriority=%d, pExtRes=*0x%x)", pHandle, pucWorkMem, uiPpuThreadPriority, pExtRes);
 
-	pHandle->pucWorkMem = pucWorkMem;
+	std::memcpy(pHandle->ucWorkMem, pucWorkMem.get_ptr(), CELL_ATRAC_HANDLE_SIZE);
 	return CELL_OK;
 }
 
@@ -84,7 +84,7 @@ error_code cellAtracGetStreamDataInfo(vm::ptr<CellAtracHandle> pHandle, vm::pptr
 {
 	cellAtrac.warning("cellAtracGetStreamDataInfo(pHandle=*0x%x, ppucWritePointer=**0x%x, puiWritableByte=*0x%x, puiReadPosition=*0x%x)", pHandle, ppucWritePointer, puiWritableByte, puiReadPosition);
 
-	*ppucWritePointer = pHandle->pucWorkMem;
+	ppucWritePointer->set(pHandle.addr());
 	*puiWritableByte = 0x1000;
 	*puiReadPosition = 0;
 	return CELL_OK;
@@ -206,7 +206,7 @@ error_code cellAtracGetBufferInfoForResetting(vm::ptr<CellAtracHandle> pHandle, 
 {
 	cellAtrac.warning("cellAtracGetBufferInfoForResetting(pHandle=*0x%x, uiSample=0x%x, pBufferInfo=*0x%x)", pHandle, uiSample, pBufferInfo);
 
-	pBufferInfo->pucWriteAddr = pHandle->pucWorkMem;
+	pBufferInfo->pucWriteAddr.set(pHandle.addr());
 	pBufferInfo->uiWritableByte = 0x1000;
 	pBufferInfo->uiMinWriteByte = 0;
 	pBufferInfo->uiReadPosition = 0;

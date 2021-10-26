@@ -59,7 +59,7 @@ struct alignas(8) CellFiberPpuAttribute
 {
 	u8 privateHeader[16];
 	char name[32];
-	vm::ptr<CellFiberPpuOnExitCallback> onExitCallback;
+	vm::bptr<CellFiberPpuOnExitCallback> onExitCallback;
 	be_t<u32> __reserved0__;
 	be_t<u64> onExitCallbackArg;
 	be_t<u64> __reserved1__;
