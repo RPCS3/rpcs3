@@ -68,46 +68,46 @@ struct SceNpTusDataStatus
 
 struct SceNpTusAddAndGetVariableOptParam
 {
-	u64 size; // TODO: correct type?
-	vm::ptr<CellRtcTick> isLastChangedDate;
-	vm::ptr<SceNpId> isLastChangedAuthorId;
+	be_t<u32> size;
+	vm::bptr<CellRtcTick> isLastChangedDate;
+	vm::bptr<SceNpId> isLastChangedAuthorId;
 };
 
 struct SceNpTusTryAndSetVariableOptParam
 {
-	u64 size; // TODO: correct type?
-	vm::ptr<CellRtcTick> isLastChangedDate;
-	vm::ptr<SceNpId> isLastChangedAuthorId;
-	vm::ptr<s64> compareValue;
+	be_t<u32> size;
+	vm::bptr<CellRtcTick> isLastChangedDate;
+	vm::bptr<SceNpId> isLastChangedAuthorId;
+	vm::bptr<s64> compareValue;
 };
 
 struct SceNpTusSetDataOptParam
 {
-	u64 size; // TODO: correct type?
-	vm::ptr<CellRtcTick> isLastChangedDate;
-	vm::ptr<SceNpId> isLastChangedAuthorId;
+	be_t<u32> size;
+	vm::bptr<CellRtcTick> isLastChangedDate;
+	vm::bptr<SceNpId> isLastChangedAuthorId;
 };
 
 struct SceNpTssDataStatus
 {
 	CellRtcTick lastModified;
-	s32 statusCodeType;
-	u64 contentLength;
+	be_t<s32> statusCodeType;
+	be_t<u32> contentLength;
 };
 
 struct SceNpTssIfModifiedSinceParam
 {
-	s32 ifType;
+	be_t<s32> ifType;
 	u8 padding[4];
 	CellRtcTick lastModified;
 };
 
 struct SceNpTssGetDataOptParam
 {
-	u64 size; // TODO: correct type?
-	vm::ptr<u64> offset;
-	vm::ptr<u64> lastByte;
-	vm::ptr<SceNpTssIfModifiedSinceParam> ifParam;
+	be_t<u32> size;
+	vm::bptr<u64> offset;
+	vm::bptr<u64> lastByte;
+	vm::bptr<SceNpTssIfModifiedSinceParam> ifParam;
 };
 
 // fxm objects
