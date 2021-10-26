@@ -730,7 +730,7 @@ error_code cellGemClearStatusFlags(u32 gem_num, u64 mask)
 
 error_code cellGemConvertVideoFinish()
 {
-	cellGem.todo("cellGemConvertVideoFinish()");
+	cellGem.warning("cellGemConvertVideoFinish()");
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -754,7 +754,7 @@ error_code cellGemConvertVideoFinish()
 
 error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
 {
-	cellGem.todo("cellGemConvertVideoStart(video_frame=*0x%x)", video_frame);
+	cellGem.warning("cellGemConvertVideoStart(video_frame=*0x%x)", video_frame);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -768,7 +768,6 @@ error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	// TODO: The alignment checks seem to break Time Crisis Razing Storm [BLUS30528]
 	if (!video_frame.aligned(128))
 	{
 		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
@@ -1038,7 +1037,7 @@ error_code cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8>
 
 error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_image_state)
 {
-	cellGem.todo("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, gem_image_state);
+	cellGem.warning("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, gem_image_state);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -1554,7 +1553,7 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 
 error_code cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribute)
 {
-	cellGem.todo("cellGemPrepareVideoConvert(vc_attribute=*0x%x)", vc_attribute);
+	cellGem.warning("cellGemPrepareVideoConvert(vc_attribute=*0x%x)", vc_attribute);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -1658,7 +1657,7 @@ error_code cellGemReset(u32 gem_num)
 
 error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 {
-	cellGem.todo("cellGemSetRumble(gem_num=%d, rumble=0x%x)", gem_num, rumble);
+	cellGem.warning("cellGemSetRumble(gem_num=%d, rumble=0x%x)", gem_num, rumble);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -1827,7 +1826,6 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 		return CELL_GEM_ERROR_UPDATE_NOT_FINISHED;
 	}
 
-	// TODO: The alignment checks seem to break Time Crisis Razing Storm [BLUS30528]
 	if (!camera_frame.aligned(128))
 	{
 		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
