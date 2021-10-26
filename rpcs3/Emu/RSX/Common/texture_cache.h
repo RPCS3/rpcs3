@@ -1106,7 +1106,7 @@ namespace rsx
 					}
 					else if (best_fit == nullptr && tex.can_be_reused())
 					{
-						//By grabbing a ref to a matching entry, duplicates are avoided
+						// By grabbing a ref to a matching entry, duplicates are avoided
 						best_fit = &tex;
 					}
 				}
@@ -2502,6 +2502,7 @@ namespace rsx
 			}
 
 			section_storage_type* cached_dest = nullptr;
+			section_storage_type* cached_src = nullptr;
 			bool dst_is_depth_surface = false;
 			u16 max_dst_width = dst.width;
 			u16 max_dst_height = dst.height;
@@ -2688,9 +2689,7 @@ namespace rsx
 				// NOTE: Src address already takes into account the flipped nature of the overlap!
 				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::shader_read;
 				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src_payload_length), src.pitch, lookup_mask);
-
 				auto old_src_area = src_area;
-				section_storage_type *cached_src = nullptr;
 
 				for (const auto &surface : overlapping_surfaces)
 				{
@@ -2816,6 +2815,7 @@ namespace rsx
 					typeless_info.src_gcm_format = cached_src->get_gcm_format();
 				}
 
+				cached_src->add_ref();
 				vram_texture = cached_src->get_raw_texture();
 				typeless_info.src_context = cached_src->get_context();
 			}
@@ -2879,6 +2879,7 @@ namespace rsx
 				lock.upgrade();
 
 				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
+				// NOTE: This step can potentially invalidate the newly created src image as well.
 				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
 
 				if (use_null_region) [[likely]]
@@ -3057,6 +3058,11 @@ namespace rsx
 			else
 			{
 				cached_dest->dma_transfer(cmd, vram_texture, src_area, dst_range, dst.pitch);
+			}
+
+			if (cached_src)
+			{
+				cached_src->release();
 			}
 
 			blit_op_result result = true;
