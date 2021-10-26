@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "qt_camera_handler.h"
 #include "Emu/system_config.h"
+#include "Emu/System.h"
 #include "Emu/Io/camera_config.h"
+#include "Emu/Cell/lv2/sys_event.h"
 
 #include <QMediaService>
 #include <QCameraInfo>
@@ -21,7 +23,23 @@ qt_camera_handler::qt_camera_handler() : camera_handler_base()
 
 qt_camera_handler::~qt_camera_handler()
 {
-	close_camera();
+	atomic_t<bool> wake_up = false;
+
+	Emu.CallAfter([&]()
+	{
+		close_camera();
+		m_surface.reset();
+		m_camera.reset();
+		m_error_handler.reset();
+
+		wake_up = true;
+		wake_up.notify_one();
+	});
+
+	while (!wake_up)
+	{
+		thread_ctrl::wait_on(wake_up, false);
+	}
 }
 
 void qt_camera_handler::set_camera(const QCameraInfo& camera_info)
