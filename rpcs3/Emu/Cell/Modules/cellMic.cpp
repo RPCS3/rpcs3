@@ -949,7 +949,7 @@ error_code cellMicReadRaw(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
 
 error_code cellMicRead(s32 dev_num, vm::ptr<void> data, u32 max_bytes)
 {
-	cellMic.todo("cellMicRead(dev_num=%d, data=0x%x, maxBytes=0x%x)", dev_num, data, max_bytes);
+	cellMic.warning("cellMicRead(dev_num=%d, data=0x%x, maxBytes=0x%x)", dev_num, data, max_bytes);
 
 	auto& mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr.mutex);
