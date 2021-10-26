@@ -190,6 +190,7 @@ namespace rpcn
 		CreationBannedEmailProvider, // Specific to Account Creation: the email provider is banned
 		CreationExistingEmail,       // Specific to Account Creation: that email is already registered to an account
 		AlreadyJoined,               // User tried to join a room he's already part of
+		Unauthorized,                // User attempted an unauthorized operation
 		DbFail,                      // Generic failure on db side
 		EmailFail,                   // Generic failure related to email
 		NotFound,                    // Object of the query was not found(room, user, etc)

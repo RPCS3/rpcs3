@@ -1490,7 +1490,7 @@ namespace rpcn
 			final_binattrinternal_vec = builder.CreateVector(davec);
 		}
 
-		auto req_finished = CreateSetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, req->teamId, req->flagFilter, req->flagAttr, final_binattrinternal_vec);
+		auto req_finished = CreateSetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, req->teamId, final_binattrinternal_vec);
 
 		builder.Finish(req_finished);
 		u8* buf     = builder.GetBufferPointer();
@@ -1667,6 +1667,7 @@ namespace rpcn
 		case CreationBannedEmailProvider: rpcn_log.error("Error creating an account: banned email provider!"); break;
 		case CreationExistingEmail: rpcn_log.error("Error creating an account: an account with that email already exist!"); break;
 		case AlreadyJoined: rpcn_log.error("User has already joined!"); break;
+		case Unauthorized: rpcn_log.error("User attempted an unauthorized operation!");
 		case DbFail: rpcn_log.error("A db query failed on the server!"); break;
 		case EmailFail: rpcn_log.error("An email action failed on the server!"); break;
 		case NotFound: rpcn_log.error("A request replied not found!"); break;
