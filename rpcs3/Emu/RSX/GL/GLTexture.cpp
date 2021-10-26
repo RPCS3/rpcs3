@@ -548,7 +548,15 @@ namespace gl
 		{
 			mem_info->memory_required = (mem_info->image_size_in_texels * 4);
 			initialize_scratch_mem();
-			get_compute_task<cs_fconvert_task<f16, f32, true, false>>()->run(transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
+
+			if (unpack_info.swap_bytes)
+			{
+				get_compute_task<cs_fconvert_task<f16, f32, true, false>>()->run(transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
+			}
+			else
+			{
+				get_compute_task<cs_fconvert_task<f16, f32, false, false>>()->run(transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
+			}
 		}
 		else if (unpack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
 		{
@@ -597,7 +605,14 @@ namespace gl
 			const std::vector<rsx::subresource_layout> &input_layouts,
 			bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
 	{
-		rsx::texture_uploader_capabilities caps{ true, false, false, false, 4 };
+		rsx::texture_uploader_capabilities caps
+		{
+			.supports_byteswap = true,
+			.supports_vtc_decoding = false,
+			.supports_hw_deswizzle = false,
+			.supports_zero_copy = false,
+			.alignment = 4
+		};
 
 		pixel_unpack_settings unpack_settings;
 		unpack_settings.row_length(0).alignment(4);
@@ -720,10 +735,13 @@ namespace gl
 					// 2. Upload memory to GPU
 					upload_scratch_mem.copy_to(&compute_scratch_mem, 0, 0, image_linear_size);
 
-					// 3. Dispatch compute routines
+					// 3. Update configuration
+					mem_layout.swap_bytes = op.require_swap;
 					mem_info.image_size_in_texels = image_linear_size / block_size_in_bytes;
 					mem_info.image_size_in_bytes = image_linear_size;
 					mem_info.memory_required = 0;
+
+					// 4. Dispatch compute routines
 					copy_buffer_to_image(mem_layout, &compute_scratch_mem, dst, nullptr, layout.level, region, & mem_info);
 				}
 				else
