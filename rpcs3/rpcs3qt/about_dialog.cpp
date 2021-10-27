@@ -5,16 +5,15 @@
 
 #include <QDesktopServices>
 #include <QUrl>
-
-constexpr auto qstr = QString::fromStdString;
+#include <QSvgWidget>
 
 about_dialog::about_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::about_dialog)
 {
 	ui->setupUi(this);
 
 	ui->close->setDefault(true);
-
-	ui->version->setText(tr("RPCS3 Version: %1").arg(qstr(rpcs3::get_version().to_string())));
+	ui->icon->load(QStringLiteral(":/rpcs3.svg"));
+	ui->version->setText(tr("RPCS3 Version: %1").arg(QString::fromStdString(rpcs3::get_version().to_string())));
 
 	// Events
 	connect(ui->gitHub, &QPushButton::clicked, [] { QDesktopServices::openUrl(QUrl("https://www.github.com/RPCS3")); });

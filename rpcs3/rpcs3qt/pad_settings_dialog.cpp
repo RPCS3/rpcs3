@@ -4,6 +4,7 @@
 #include <QPainterPath>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QSvgRenderer>
 
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
@@ -20,16 +21,6 @@
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
 #include "Input/keyboard_pad_handler.h"
-#include "Input/ds3_pad_handler.h"
-#include "Input/ds4_pad_handler.h"
-#include "Input/dualsense_pad_handler.h"
-#ifdef _WIN32
-#include "Input/xinput_pad_handler.h"
-#include "Input/mm_joystick_handler.h"
-#endif
-#ifdef HAVE_LIBEVDEV
-#include "Input/evdev_joystick_handler.h"
-#endif
 
 LOG_CHANNEL(cfg_log, "CFG");
 
@@ -193,7 +184,13 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	SubscribeTooltips();
 
 	// Repaint controller image
-	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(ui->l_controller->pixmap(Qt::ReturnByValue), QColor(), gui::utils::get_label_color("l_controller"), false, true));
+	QSvgRenderer renderer(QStringLiteral(":/Icons/DualShock_3.svg"));
+	QPixmap controller_pixmap(renderer.defaultSize() * 10);
+	controller_pixmap.fill(Qt::transparent);
+	QPainter painter(&controller_pixmap);
+	painter.setRenderHints(QPainter::TextAntialiasing | QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
+	renderer.render(&painter, controller_pixmap.rect());
+	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(controller_pixmap, QColor(), gui::utils::get_label_color("l_controller"), false, true));
 
 	// Show default widgets first in order to calculate the required size for the scroll area (see pad_settings_dialog::ResizeDialog)
 	ui->left_stack->setCurrentIndex(0);
