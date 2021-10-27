@@ -972,10 +972,10 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					const float center     = buf[in + 2] * m;
 					[[maybe_unused]]
 					const float low_freq   = buf[in + 3] * m;
-					const float rear_left  = buf[in + 4] * m;
-					const float rear_right = buf[in + 5] * m;
-					const float side_left  = buf[in + 6] * m;
-					const float side_right = buf[in + 7] * m;
+					const float side_left  = buf[in + 4] * m;
+					const float side_right = buf[in + 5] * m;
+					const float rear_left  = buf[in + 6] * m;
+					const float rear_right = buf[in + 7] * m;
 
 					if constexpr (downmix == audio_downmix::downmix_to_stereo)
 					{
@@ -1017,10 +1017,10 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					const float right      = buf[in + 1] * m;
 					const float center     = buf[in + 2] * m;
 					const float low_freq   = buf[in + 3] * m;
-					const float rear_left  = buf[in + 4] * m;
-					const float rear_right = buf[in + 5] * m;
-					const float side_left  = buf[in + 6] * m;
-					const float side_right = buf[in + 7] * m;
+					const float side_left  = buf[in + 4] * m;
+					const float side_right = buf[in + 5] * m;
+					const float rear_left  = buf[in + 6] * m;
+					const float rear_right = buf[in + 7] * m;
 
 					if constexpr (downmix == audio_downmix::downmix_to_stereo)
 					{
