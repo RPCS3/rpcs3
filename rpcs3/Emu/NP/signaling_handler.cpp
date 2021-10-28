@@ -648,7 +648,7 @@ u32 signaling_handler::init_sig_infos(const SceNpId* npid)
 
 		// Request peer infos from RPCN
 		std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
-		auto& nph = g_fxo->get<named_thread<np_handler>>();
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		nph.req_sign_infos(npid_str, conn_id);
 	}
 	else

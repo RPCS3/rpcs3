@@ -93,6 +93,9 @@
     <ClCompile Include="Emu\NP\fb_helpers.cpp" />
     <ClCompile Include="Emu\NP\np_contexts.cpp" />
     <ClCompile Include="Emu\NP\np_handler.cpp" />
+    <ClCompile Include="Emu\NP\np_helpers.cpp" />
+    <ClCompile Include="Emu\NP\np_notifications.cpp" />
+    <ClCompile Include="Emu\NP\np_requests.cpp" />
     <ClCompile Include="Emu\NP\signaling_handler.cpp" />
     <ClCompile Include="Emu\NP\np_structs_extra.cpp" />
     <ClCompile Include="Emu\NP\rpcn_client.cpp" />
@@ -462,6 +465,8 @@
     <ClInclude Include="Emu\NP\generated\np2_structs_generated.h" />
     <ClInclude Include="Emu\NP\np_handler.h" />
     <ClInclude Include="Emu\NP\signaling_handler.h" />
+    <ClInclude Include="Emu\NP\np_allocator.h" />
+    <ClInclude Include="Emu\NP\np_event_data.h" />
     <ClInclude Include="Emu\NP\np_structs_extra.h" />
     <ClInclude Include="Emu\NP\rpcn_client.h" />
     <ClInclude Include="Emu\NP\rpcn_config.h" />

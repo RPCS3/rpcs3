@@ -1413,7 +1413,7 @@ struct SceNpMatching2RoomMessageInfo
 	u8 padding[2];
 	vm::bptr<SceNpMatching2RoomMessageDestination> dst;
 	vm::bptr<SceNpUserInfo2> srcMember;
-	vm::bcptr<void> msg;
+	vm::bptr<void> msg;
 	be_t<u32> msgLen;
 };
 

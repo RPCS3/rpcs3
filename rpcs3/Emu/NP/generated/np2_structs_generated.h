@@ -590,8 +590,8 @@ struct RoomMemberDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
   uint8_t teamId() const {
     return GetField<uint8_t>(VT_TEAMID, 0);
   }
-  uint8_t roomGroup() const {
-    return GetField<uint8_t>(VT_ROOMGROUP, 0);
+  const RoomGroup *roomGroup() const {
+    return GetPointer<const RoomGroup *>(VT_ROOMGROUP);
   }
   uint8_t natType() const {
     return GetField<uint8_t>(VT_NATTYPE, 0);
@@ -609,7 +609,8 @@ struct RoomMemberDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
            VerifyField<uint64_t>(verifier, VT_JOINDATE) &&
            VerifyField<uint16_t>(verifier, VT_MEMBERID) &&
            VerifyField<uint8_t>(verifier, VT_TEAMID) &&
-           VerifyField<uint8_t>(verifier, VT_ROOMGROUP) &&
+           VerifyOffset(verifier, VT_ROOMGROUP) &&
+           verifier.VerifyTable(roomGroup()) &&
            VerifyField<uint8_t>(verifier, VT_NATTYPE) &&
            VerifyField<uint32_t>(verifier, VT_FLAGATTR) &&
            VerifyOffset(verifier, VT_ROOMMEMBERBINATTRINTERNAL) &&
@@ -635,8 +636,8 @@ struct RoomMemberDataInternalBuilder {
   void add_teamId(uint8_t teamId) {
     fbb_.AddElement<uint8_t>(RoomMemberDataInternal::VT_TEAMID, teamId, 0);
   }
-  void add_roomGroup(uint8_t roomGroup) {
-    fbb_.AddElement<uint8_t>(RoomMemberDataInternal::VT_ROOMGROUP, roomGroup, 0);
+  void add_roomGroup(flatbuffers::Offset<RoomGroup> roomGroup) {
+    fbb_.AddOffset(RoomMemberDataInternal::VT_ROOMGROUP, roomGroup);
   }
   void add_natType(uint8_t natType) {
     fbb_.AddElement<uint8_t>(RoomMemberDataInternal::VT_NATTYPE, natType, 0);
@@ -664,7 +665,7 @@ inline flatbuffers::Offset<RoomMemberDataInternal> CreateRoomMemberDataInternal(
     uint64_t joinDate = 0,
     uint16_t memberId = 0,
     uint8_t teamId = 0,
-    uint8_t roomGroup = 0,
+    flatbuffers::Offset<RoomGroup> roomGroup = 0,
     uint8_t natType = 0,
     uint32_t flagAttr = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RoomMemberBinAttrInternal>>> roomMemberBinAttrInternal = 0) {
@@ -672,10 +673,10 @@ inline flatbuffers::Offset<RoomMemberDataInternal> CreateRoomMemberDataInternal(
   builder_.add_joinDate(joinDate);
   builder_.add_roomMemberBinAttrInternal(roomMemberBinAttrInternal);
   builder_.add_flagAttr(flagAttr);
+  builder_.add_roomGroup(roomGroup);
   builder_.add_userInfo(userInfo);
   builder_.add_memberId(memberId);
   builder_.add_natType(natType);
-  builder_.add_roomGroup(roomGroup);
   builder_.add_teamId(teamId);
   return builder_.Finish();
 }
@@ -686,7 +687,7 @@ inline flatbuffers::Offset<RoomMemberDataInternal> CreateRoomMemberDataInternalD
     uint64_t joinDate = 0,
     uint16_t memberId = 0,
     uint8_t teamId = 0,
-    uint8_t roomGroup = 0,
+    flatbuffers::Offset<RoomGroup> roomGroup = 0,
     uint8_t natType = 0,
     uint32_t flagAttr = 0,
     const std::vector<flatbuffers::Offset<RoomMemberBinAttrInternal>> *roomMemberBinAttrInternal = nullptr) {

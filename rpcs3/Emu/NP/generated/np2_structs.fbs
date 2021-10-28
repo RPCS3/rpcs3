@@ -43,7 +43,7 @@ table RoomMemberDataInternal {
     joinDate:uint64;
     memberId:uint16;
     teamId:uint8;
-    roomGroup:uint8;
+    roomGroup:RoomGroup;
     natType:uint8;
     flagAttr:uint32;
     roomMemberBinAttrInternal:[RoomMemberBinAttrInternal];
