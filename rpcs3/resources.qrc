@@ -5,6 +5,8 @@
         <file>Icons/restart.png</file>
         <file>Icons/stop.png</file>
         <file>rpcs3.ico</file>
+        <file>Icons/controller.png</file>
+        <file>Icons/insignia.png</file>
         <file>Icons/configure.png</file>
         <file>Icons/controllers.png</file>
         <file>Icons/fullscreen.png</file>
@@ -15,7 +17,5 @@
         <file>Icons/open.png</file>
         <file>Icons/custom_config.png</file>
         <file>Icons/combo_config_bordered.png</file>
-        <file>rpcs3.svg</file>
-        <file>Icons/DualShock_3.svg</file>
     </qresource>
 </RCC>
