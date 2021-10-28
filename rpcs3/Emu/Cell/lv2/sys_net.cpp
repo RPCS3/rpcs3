@@ -1695,7 +1695,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 		if (psa_in->sin_port == 53)
 		{
-			auto& nph = g_fxo->get<named_thread<np_handler>>();
+			auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 			// Hack for DNS
 			name.sin_port        = std::bit_cast<u16, be_t<u16>>(53);
@@ -2286,7 +2286,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 		//if (!(sock.events & lv2_socket::poll::read))
 		{
-			auto& nph = g_fxo->get<named_thread<np_handler>>();
+			auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 			if (nph.is_dns(s) && nph.is_dns_queue(s))
 			{
 				const auto packet = nph.get_dns_packet(s);
@@ -2708,7 +2708,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 		//if (!(sock.events & lv2_socket::poll::write))
 		{
-			auto& nph = g_fxo->get<named_thread<np_handler>>();
+			auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 			if (addr && type == SYS_NET_SOCK_DGRAM && psa_in->sin_port == 53)
 			{
 				nph.add_dns_spy(s);
@@ -3217,7 +3217,7 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 		}
 	}
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	nph.remove_dns_spy(s);
 
 	return CELL_OK;
@@ -3309,7 +3309,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 				else
 				{
 					// Check for fake packet for dns interceptions
-					auto& nph = g_fxo->get<named_thread<np_handler>>();
+					auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 					if (fds_buf[i].events & SYS_NET_POLLIN && nph.is_dns(fds_buf[i].fd) && nph.is_dns_queue(fds_buf[i].fd))
 						fds_buf[i].revents |= SYS_NET_POLLIN;
 
@@ -3754,8 +3754,8 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 		char buffer[nameserver.size() + 80]{};
 		std::memcpy(buffer, nameserver.data(), nameserver.size());
 
-		auto& nph = g_fxo->get<named_thread<np_handler>>();
-		const auto dns_str = np_handler::ip_to_string(nph.get_dns_ip());
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		const auto dns_str = np::ip_to_string(nph.get_dns_ip());
 		std::memcpy(buffer + nameserver.size() - 1, dns_str.data(), dns_str.size());
 
 		std::string_view name{buffer};

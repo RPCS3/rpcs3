@@ -178,7 +178,7 @@ error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatchin
 error_code sceNpMatching2Term(ppu_thread& ppu);
 error_code sceNpMatching2Term2();
 
-error_code generic_match2_error_check(const named_thread<np_handler>& nph, SceNpMatching2ContextId ctxId, vm::cptr<void> reqParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
+error_code generic_match2_error_check(const named_thread<np::np_handler>& nph, SceNpMatching2ContextId ctxId, vm::cptr<void> reqParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -207,7 +207,7 @@ error_code sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 {
 	sceNp2.warning("sceNp2Init(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	{
 		std::lock_guard lock(nph.mutex_status);
@@ -239,7 +239,7 @@ error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatchin
 {
 	sceNp2.todo("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_init)
 	{
@@ -265,7 +265,7 @@ error_code sceNp2Term(ppu_thread& ppu)
 {
 	sceNp2.warning("sceNp2Term()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	{
 		std::lock_guard lock(nph.mutex_status);
@@ -295,7 +295,7 @@ error_code sceNpMatching2Term2()
 {
 	sceNp2.warning("sceNpMatching2Term2()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	{
 		std::lock_guard lock(nph.mutex_status);
@@ -321,7 +321,7 @@ error_code sceNpMatching2DestroyContext(SceNpMatching2ContextId ctxId)
 {
 	sceNp2.todo("sceNpMatching2DestroyContext(ctxId=%d)", ctxId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -339,7 +339,7 @@ error_code sceNpMatching2LeaveLobby(
 {
 	sceNp2.todo("sceNpMatching2LeaveLobby(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -352,7 +352,7 @@ error_code sceNpMatching2RegisterLobbyMessageCallback(SceNpMatching2ContextId ct
 {
 	sceNp2.todo("sceNpMatching2RegisterLobbyMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -367,7 +367,7 @@ error_code sceNpMatching2GetWorldInfoList(
 {
 	sceNp2.warning("sceNpMatching2GetWorldInfoList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -387,7 +387,7 @@ error_code sceNpMatching2RegisterLobbyEventCallback(SceNpMatching2ContextId ctxI
 {
 	sceNp2.todo("sceNpMatching2RegisterLobbyEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -402,7 +402,7 @@ error_code sceNpMatching2GetLobbyMemberDataInternalList(SceNpMatching2ContextId 
 {
 	sceNp2.todo("sceNpMatching2GetLobbyMemberDataInternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -416,7 +416,7 @@ error_code sceNpMatching2SearchRoom(
 {
 	sceNp2.warning("sceNpMatching2SearchRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -432,7 +432,7 @@ error_code sceNpMatching2SignalingGetConnectionStatus(
 {
 	sceNp2.warning("sceNpMatching2SignalingGetConnectionStatus(ctxId=%d, roomId=%d, memberId=%d, connStatus=*0x%x, peerAddr=*0x%x, peerPort=*0x%x)", ctxId, roomId, memberId, connStatus, peerAddr, peerPort);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -468,7 +468,7 @@ error_code sceNpMatching2SetUserInfo(
 {
 	sceNp2.todo("sceNpMatching2SetUserInfo(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -481,7 +481,7 @@ error_code sceNpMatching2GetClanLobbyId(SceNpMatching2ContextId ctxId, SceNpClan
 {
 	sceNp2.todo("sceNpMatching2GetClanLobbyId(ctxId=%d, clanId=%d, lobbyId=*0x%x)", ctxId, clanId, lobbyId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -496,7 +496,7 @@ error_code sceNpMatching2GetLobbyMemberDataInternal(
 {
 	sceNp2.todo("sceNpMatching2GetLobbyMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -509,7 +509,7 @@ error_code sceNpMatching2ContextStart(SceNpMatching2ContextId ctxId)
 {
 	sceNp2.warning("sceNpMatching2ContextStart(ctxId=%d)", ctxId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -537,7 +537,7 @@ error_code sceNpMatching2CreateServerContext(
 {
 	sceNp2.warning("sceNpMatching2CreateServerContext(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -557,7 +557,7 @@ error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo
 {
 	sceNp2.todo("sceNpMatching2GetMemoryInfo(memInfo=*0x%x)", memInfo);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -572,7 +572,7 @@ error_code sceNpMatching2LeaveRoom(
 {
 	sceNp2.warning("sceNpMatching2LeaveRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -588,7 +588,7 @@ error_code sceNpMatching2SetRoomDataExternal(
 {
 	sceNp2.warning("sceNpMatching2SetRoomDataExternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -604,7 +604,7 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 {
 	sceNp2.todo("sceNpMatching2SignalingGetConnectionInfo(ctxId=%d, roomId=%d, memberId=%d, code=%d, connInfo=*0x%x)", ctxId, roomId, memberId, code, connInfo);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -665,7 +665,7 @@ error_code sceNpMatching2SendRoomMessage(
 {
 	sceNp2.warning("sceNpMatching2SendRoomMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -681,7 +681,7 @@ error_code sceNpMatching2JoinLobby(
 {
 	sceNp2.todo("sceNpMatching2JoinLobby(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -695,7 +695,7 @@ error_code sceNpMatching2GetRoomMemberDataExternalList(SceNpMatching2ContextId c
 {
 	sceNp2.todo("sceNpMatching2GetRoomMemberDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -708,7 +708,7 @@ error_code sceNpMatching2AbortRequest(SceNpMatching2ContextId ctxId, SceNpMatchi
 {
 	sceNp2.todo("sceNpMatching2AbortRequest(ctxId=%d, reqId=%d)", ctxId, reqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -723,7 +723,7 @@ error_code sceNpMatching2GetServerInfo(
 {
 	sceNp2.warning("sceNpMatching2GetServerInfo(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -738,7 +738,7 @@ error_code sceNpMatching2GetEventData(SceNpMatching2ContextId ctxId, SceNpMatchi
 {
 	sceNp2.notice("sceNpMatching2GetEventData(ctxId=%d, eventKey=%d, buf=*0x%x, bufLen=%d)", ctxId, eventKey, buf, bufLen);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -750,14 +750,14 @@ error_code sceNpMatching2GetEventData(SceNpMatching2ContextId ctxId, SceNpMatchi
 		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
 	}
 
-	return not_an_error(nph.get_match2_event(eventKey, static_cast<u8 *>(buf.get_ptr()), bufLen));
+	return not_an_error(nph.get_match2_event(eventKey, buf.addr(), bufLen));
 }
 
 error_code sceNpMatching2GetRoomSlotInfoLocal(SceNpMatching2ContextId ctxId, const SceNpMatching2RoomId roomId, vm::ptr<SceNpMatching2RoomSlotInfo> roomSlotInfo)
 {
 	sceNp2.todo("sceNpMatching2GetRoomSlotInfoLocal(ctxId=%d, roomId=%d, roomSlotInfo=*0x%x)", ctxId, roomId, roomSlotInfo);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -772,7 +772,7 @@ error_code sceNpMatching2SendLobbyChatMessage(
 {
 	sceNp2.todo("sceNpMatching2SendLobbyChatMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -785,7 +785,7 @@ error_code sceNpMatching2AbortContextStart(SceNpMatching2ContextId ctxId)
 {
 	sceNp2.todo("sceNpMatching2AbortContextStart(ctxId=%d)", ctxId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -799,7 +799,7 @@ error_code sceNpMatching2GetRoomMemberIdListLocal(SceNpMatching2ContextId ctxId,
 {
 	sceNp2.todo("sceNpMatching2GetRoomMemberIdListLocal(ctxId=%d, roomId=%d, sortMethod=%d, memberId=*0x%x, memberIdNum=%d)", ctxId, roomId, sortMethod, memberId, memberIdNum);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -814,7 +814,7 @@ error_code sceNpMatching2JoinRoom(
 {
 	sceNp2.warning("sceNpMatching2JoinRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -831,7 +831,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 	sceNp2.todo("sceNpMatching2GetRoomMemberDataInternalLocal(ctxId=%d, roomId=%d, memberId=%d, attrId=*0x%x, attrIdNum=%d, member=*0x%x, buf=*0x%x, bufLen=%d)", ctxId, roomId, memberId, attrId,
 	    attrIdNum, member, buf, bufLen);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -845,7 +845,7 @@ error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<S
 {
 	sceNp2.todo("sceNpMatching2GetCbQueueInfo(ctxId=%d, queueInfo=*0x%x)", ctxId, queueInfo);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -860,7 +860,7 @@ error_code sceNpMatching2KickoutRoomMember(
 {
 	sceNp2.todo("sceNpMatching2KickoutRoomMember(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -873,7 +873,7 @@ error_code sceNpMatching2ContextStartAsync(SceNpMatching2ContextId ctxId, u32 ti
 {
 	sceNp2.warning("sceNpMatching2ContextStartAsync(ctxId=%d, timeout=%d)", ctxId, timeout);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -906,7 +906,7 @@ error_code sceNpMatching2SetSignalingOptParam(
 {
 	sceNp2.todo("sceNpMatching2SetSignalingOptParam(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -919,7 +919,7 @@ error_code sceNpMatching2RegisterContextCallback(SceNpMatching2ContextId ctxId, 
 {
 	sceNp2.warning("sceNpMatching2RegisterContextCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -946,7 +946,7 @@ error_code sceNpMatching2SendRoomChatMessage(
 {
 	sceNp2.todo("sceNpMatching2SendRoomChatMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -960,7 +960,7 @@ error_code sceNpMatching2SetRoomDataInternal(
 {
 	sceNp2.warning("sceNpMatching2SetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -976,7 +976,7 @@ error_code sceNpMatching2GetRoomDataInternal(
 {
 	sceNp2.warning("sceNpMatching2GetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -992,7 +992,7 @@ error_code sceNpMatching2SignalingGetPingInfo(
 {
 	sceNp2.warning("sceNpMatching2SignalingGetPingInfo(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1007,7 +1007,7 @@ error_code sceNpMatching2GetServerIdListLocal(SceNpMatching2ContextId ctxId, vm:
 {
 	sceNp2.todo("sceNpMatching2GetServerIdListLocal(ctxId=%d, serverId=*0x%x, serverIdNum=%d)", ctxId, serverId, serverIdNum);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1057,7 +1057,7 @@ error_code sceNpMatching2GrantRoomOwner(
 {
 	sceNp2.todo("sceNpMatching2GrantRoomOwner(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1071,7 +1071,7 @@ error_code sceNpMatching2CreateContext(
 {
 	sceNp2.warning("sceNpMatching2CreateContext(npId=*0x%x, commId=*0x%x(%s), passPhrase=*0x%x, ctxId=*0x%x, option=%d)", npId, commId, commId ? commId->data : "", ctxId, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1092,7 +1092,7 @@ error_code sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId
 {
 	sceNp2.todo("sceNpMatching2GetSignalingOptParamLocal(ctxId=%d, roomId=%d, signalingOptParam=*0x%x)", ctxId, roomId, signalingOptParam);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1106,7 +1106,7 @@ error_code sceNpMatching2RegisterSignalingCallback(SceNpMatching2ContextId ctxId
 {
 	sceNp2.notice("sceNpMatching2RegisterSignalingCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1123,7 +1123,7 @@ error_code sceNpMatching2ClearEventData(SceNpMatching2ContextId ctxId, SceNpMatc
 {
 	sceNp2.todo("sceNpMatching2ClearEventData(ctxId=%d, eventKey=%d)", ctxId, eventKey);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1138,7 +1138,7 @@ error_code sceNpMatching2GetUserInfoList(
 {
 	sceNp2.todo("sceNpMatching2GetUserInfoList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1152,7 +1152,7 @@ error_code sceNpMatching2GetRoomMemberDataInternal(
 {
 	sceNp2.todo("sceNpMatching2GetRoomMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1166,7 +1166,7 @@ error_code sceNpMatching2SetRoomMemberDataInternal(
 {
 	sceNp2.warning("sceNpMatching2SetRoomMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1182,7 +1182,7 @@ error_code sceNpMatching2JoinProhibitiveRoom(
 {
 	sceNp2.warning("sceNpMatching2JoinProhibitiveRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1198,7 +1198,7 @@ error_code sceNpMatching2SignalingSetCtxOpt(SceNpMatching2ContextId ctxId, s32 o
 {
 	sceNp2.todo("sceNpMatching2SignalingSetCtxOpt(ctxId=%d, optname=%d, optval=%d)", ctxId, optname, optval);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1213,7 +1213,7 @@ error_code sceNpMatching2DeleteServerContext(
 {
 	sceNp2.todo("sceNpMatching2DeleteServerContext(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1226,7 +1226,7 @@ error_code sceNpMatching2SetDefaultRequestOptParam(SceNpMatching2ContextId ctxId
 {
 	sceNp2.warning("sceNpMatching2SetDefaultRequestOptParam(ctxId=%d, optParam=*0x%x)", ctxId, optParam);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1251,7 +1251,7 @@ error_code sceNpMatching2RegisterRoomEventCallback(SceNpMatching2ContextId ctxId
 {
 	sceNp2.todo("sceNpMatching2RegisterRoomEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1269,7 +1269,7 @@ error_code sceNpMatching2GetRoomPasswordLocal(SceNpMatching2ContextId ctxId, Sce
 {
 	sceNp2.todo("sceNpMatching2GetRoomPasswordLocal(ctxId=%d, roomId=%d, withPassword=*0x%x, roomPassword=*0x%x)", ctxId, roomId, withPassword, roomPassword);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1284,7 +1284,7 @@ error_code sceNpMatching2GetRoomDataExternalList(
 {
 	sceNp2.warning("sceNpMatching2GetRoomDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1300,7 +1300,7 @@ error_code sceNpMatching2CreateJoinRoom(
 {
 	sceNp2.warning("sceNpMatching2CreateJoinRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1315,7 +1315,7 @@ error_code sceNpMatching2SignalingGetCtxOpt(SceNpMatching2ContextId ctxId, s32 o
 {
 	sceNp2.todo("sceNpMatching2SignalingGetCtxOpt(ctxId=%d, optname=%d, optval=*0x%x)", ctxId, optname, optval);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1330,7 +1330,7 @@ error_code sceNpMatching2GetLobbyInfoList(
 {
 	sceNp2.todo("sceNpMatching2GetLobbyInfoList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1344,7 +1344,7 @@ error_code sceNpMatching2GetLobbyMemberIdListLocal(
 {
 	sceNp2.todo("sceNpMatching2GetLobbyMemberIdListLocal(ctxId=%d, lobbyId=%d, memberId=*0x%x, memberIdNum=%d, me=*0x%x)", ctxId, lobbyId, memberId, memberIdNum, me);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1359,7 +1359,7 @@ error_code sceNpMatching2SendLobbyInvitation(
 {
 	sceNp2.todo("sceNpMatching2SendLobbyInvitation(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1372,7 +1372,7 @@ error_code sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 {
 	sceNp2.todo("sceNpMatching2ContextStop(ctxId=%d)", ctxId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1403,7 +1403,7 @@ error_code sceNpMatching2SetLobbyMemberDataInternal(
 {
 	sceNp2.todo("sceNpMatching2SetLobbyMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
@@ -1416,7 +1416,7 @@ error_code sceNpMatching2RegisterRoomMessageCallback(SceNpMatching2ContextId ctx
 {
 	sceNp2.todo("sceNpMatching2RegisterRoomMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1434,7 +1434,7 @@ error_code sceNpMatching2SignalingCancelPeerNetInfo(SceNpMatching2ContextId ctxI
 {
 	sceNp2.todo("sceNpMatching2SignalingCancelPeerNetInfo(ctxId=%d, reqId=%d)", ctxId, reqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1448,7 +1448,7 @@ error_code sceNpMatching2SignalingGetLocalNetInfo(vm::ptr<SceNpMatching2Signalin
 {
 	sceNp2.todo("sceNpMatching2SignalingGetLocalNetInfo(netinfo=*0x%x)", netinfo);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1468,7 +1468,7 @@ error_code sceNpMatching2SignalingGetPeerNetInfo(SceNpMatching2ContextId ctxId, 
 {
 	sceNp2.todo("sceNpMatching2SignalingGetPeerNetInfo(ctxId=%d, roomId=%d, roomMemberId=%d, reqId=*0x%x)", ctxId, roomId, roomMemberId, reqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1487,7 +1487,7 @@ error_code sceNpMatching2SignalingGetPeerNetInfoResult(SceNpMatching2ContextId c
 {
 	sceNp2.todo("sceNpMatching2SignalingGetPeerNetInfoResult(ctxId=%d, reqId=%d, netinfo=*0x%x)", ctxId, reqId, netinfo);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
@@ -1507,7 +1507,7 @@ error_code sceNpAuthOAuthInit()
 {
 	sceNp2.todo("sceNpAuthOAuthInit()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (nph.is_NP_Auth_init)
 	{
@@ -1523,7 +1523,7 @@ error_code sceNpAuthOAuthTerm()
 {
 	sceNp2.todo("sceNpAuthOAuthTerm()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	// TODO: check if this might throw SCE_NP_OAUTH_ERROR_NOT_INITIALIZED
 	nph.is_NP_Auth_init = false;
@@ -1535,7 +1535,7 @@ error_code sceNpAuthCreateOAuthRequest()
 {
 	sceNp2.todo("sceNpAuthCreateOAuthRequest()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Auth_init)
 	{
@@ -1549,7 +1549,7 @@ error_code sceNpAuthDeleteOAuthRequest(SceNpAuthOAuthRequestId reqId)
 {
 	sceNp2.todo("sceNpAuthDeleteOAuthRequest(reqId=%d)", reqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Auth_init)
 	{
@@ -1563,7 +1563,7 @@ error_code sceNpAuthAbortOAuthRequest(SceNpAuthOAuthRequestId reqId)
 {
 	sceNp2.todo("sceNpAuthAbortOAuthRequest(reqId=%d)", reqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Auth_init)
 	{
@@ -1577,7 +1577,7 @@ error_code sceNpAuthGetAuthorizationCode(SceNpAuthOAuthRequestId reqId, vm::cptr
 {
 	sceNp2.todo("sceNpAuthGetAuthorizationCode(reqId=%d, param=*0x%x, authCode=*0x%x, issuerId=%d)", reqId, param, authCode, issuerId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Auth_init)
 	{
