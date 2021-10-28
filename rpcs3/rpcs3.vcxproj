@@ -112,7 +112,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "$(TargetDir)qt\plugins" --release "$(TargetPath)"
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-translations --no-quick --plugindir "$(TargetDir)qt\plugins" --release "$(TargetPath)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -164,7 +164,7 @@
     </ResourceCompile>
     <PostBuildEvent>
       <Command>
-        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-svg --no-translations --no-quick --plugindir "$(TargetDir)qt\plugins" --debug "$(TargetPath)"
+        $(QTDIR)\bin\windeployqt --no-angle --no-opengl-sw --no-translations --no-quick --plugindir "$(TargetDir)qt\plugins" --debug "$(TargetPath)"
       </Command>
     </PostBuildEvent>
     <PostBuildEvent>
