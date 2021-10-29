@@ -6,6 +6,8 @@
 
 #include "util/asm.hpp"
 
+#include <cmath>
+
 const ppu_decoder<PPUDisAsm> s_ppu_disasm;
 const ppu_decoder<ppu_itype> s_ppu_itype;
 
@@ -324,7 +326,7 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 enum CellError : u32;
 
-void comment_constant(std::string& last_opcode, u64 value)
+void comment_constant(std::string& last_opcode, u64 value, bool print_float = false)
 {
 	// Test if potentially a CELL error
 	if ((value >> 28) == 0xf'ffff'fff8u || (value >> 28) == 0x8u)
@@ -332,7 +334,7 @@ void comment_constant(std::string& last_opcode, u64 value)
 		const usz old_size = last_opcode.size();
 
 		// Comment as CELL error
-		fmt::append(last_opcode, " #%s (0x%x)", CellError{static_cast<u32>(value)}, value);
+		fmt::append(last_opcode, " #%s (0x%xh)", CellError{static_cast<u32>(value)}, value);
 
 		// Test if failed to format (appended " #0x8".. in such case)
 		if (last_opcode[old_size + 2] != '0')
@@ -346,7 +348,21 @@ void comment_constant(std::string& last_opcode, u64 value)
 	}
 
 	// Comment constant formation
-	fmt::append(last_opcode, " #0x%x", value);
+	fmt::append(last_opcode, " #0x%xh", value);
+
+	if (print_float && ((value >> 31) <= 1u || (value >> 31) == 0x1'ffff'ffffu))
+	{
+		const f32 float_val = std::bit_cast<f32>(static_cast<u32>(value));
+
+		if (std::isfinite(float_val))
+		{
+			fmt::append(last_opcode, " (%.6gf)", float_val);
+		}
+		else
+		{
+			fmt::append(last_opcode, " (%g)", float_val);
+		}
+	}
 }
 
 constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
