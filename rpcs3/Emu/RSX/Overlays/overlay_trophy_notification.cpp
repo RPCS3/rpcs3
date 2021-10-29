@@ -40,7 +40,6 @@ namespace rsx
 			frame.back_color.g = 0.250980f;
 			frame.back_color.b = 0.247059f;
 			frame.back_color.a = 0.88f;
-			
 
 			image.set_pos(78, 64);
 			image.set_size(53, 53);
@@ -54,9 +53,6 @@ namespace rsx
 
 			sliding_animation.duration = 1.5f;
 			sliding_animation.type = animation_type::ease_in_out_cubic;
-			sliding_animation.current = { -f32(frame.w), 0, 0 };
-			sliding_animation.end = { 0, 0, 0};
-			sliding_animation.active = true;
 		}
 
 		void trophy_notification::update()
@@ -79,7 +75,7 @@ namespace rsx
 			{
 				if (!sliding_animation.active)
 				{
-					sliding_animation.end = { -f32(frame.w), 0, 0 };
+					sliding_animation.end = { -f32(frame.x + frame.w), 0, 0 };
 					sliding_animation.on_finish = [this]
 					{
 						s_trophy_semaphore.release();
@@ -139,6 +135,10 @@ namespace rsx
 			// Resize background to cover the text
 			u16 margin_sz = 9;
 			frame.w       = margin_sz * 3 + image.w + text_view.w;
+
+			sliding_animation.current = { -f32(frame.x + frame.w), 0, 0 };
+			sliding_animation.end = { 0, 0, 0 };
+			sliding_animation.active = true;
 
 			visible = true;
 			return CELL_OK;
