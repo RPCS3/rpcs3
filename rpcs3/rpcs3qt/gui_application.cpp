@@ -39,6 +39,7 @@
 #include <QLibraryInfo>
 #include <QDirIterator>
 #include <QFileInfo>
+#include <QSound>
 
 #include <clocale>
 
@@ -410,6 +411,17 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
 	{
 		return localized_emu::get_u32string(id, args);
+	};
+
+	callbacks.play_sound = [](const std::string& path)
+	{
+		Emu.CallAfter([path]()
+		{
+			if (fs::is_file(path))
+			{
+				QSound::play(qstr(path));
+			}
+		});
 	};
 
 	callbacks.resolve_path = [](std::string_view sv)

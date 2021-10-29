@@ -175,6 +175,9 @@ namespace rsx
 			fade_animation.active = true;
 
 			visible = true;
+
+			Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/trophy.wav");
+
 			return CELL_OK;
 		}
 	} // namespace overlays
