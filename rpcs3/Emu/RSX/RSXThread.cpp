@@ -696,7 +696,7 @@ namespace rsx
 						}
 						else
 						{
-							sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
+							sys_rsx_context_attribute(0x55555555, 0xFED, 1, post_event_time, 0, 0);
 						}
 					}
 				}
