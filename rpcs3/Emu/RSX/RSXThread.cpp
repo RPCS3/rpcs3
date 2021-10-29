@@ -716,7 +716,7 @@ namespace rsx
 
 					while (Emu.IsPaused() && !is_stopped())
 					{
-						thread_ctrl::wait_for(wait_sleep);
+						thread_ctrl::wait_for(5'000);
 					}
 
 					// Restore difference
