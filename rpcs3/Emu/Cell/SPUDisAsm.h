@@ -74,7 +74,7 @@ namespace utils
 	class shm;
 }
 
-void comment_constant(std::string& last_opocde, u64 value);
+void comment_constant(std::string& last_opocde, u64 value, bool print_float = true);
 
 class SPUDisAsm final : public PPCDisAsm
 {
@@ -872,10 +872,12 @@ public:
 	void ILHU(spu_opcode_t op)
 	{
 		DisAsm("ilhu", spu_reg_name[op.rt], op.i16);
+		comment_constant(last_opcode, op.i16 << 16);
 	}
 	void ILH(spu_opcode_t op)
 	{
 		DisAsm("ilh", spu_reg_name[op.rt], op.i16);
+		comment_constant(last_opcode, (op.i16 << 16) | op.i16);
 	}
 
 	void IOHL(spu_opcode_t op);
