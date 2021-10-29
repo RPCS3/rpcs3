@@ -121,6 +121,10 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 			{
 				return { true, v128::from32p(op0.i16 << 16) };
 			}
+			case spu_itype::ILH:
+			{
+				return { true, v128::from16p(op0.i16) };
+			}
 			case spu_itype::CBD:
 			case spu_itype::CHD:
 			case spu_itype::CWD:
