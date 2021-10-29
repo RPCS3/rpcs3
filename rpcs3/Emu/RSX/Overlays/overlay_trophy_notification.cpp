@@ -53,6 +53,9 @@ namespace rsx
 
 			sliding_animation.duration = 1.5f;
 			sliding_animation.type = animation_type::ease_in_out_cubic;
+
+			// Make the fade animation a bit shorter to see the trophy better.
+			fade_animation.duration = 1.0f;
 		}
 
 		void trophy_notification::update()
@@ -71,7 +74,10 @@ namespace rsx
 				return;
 			}
 
-			if (((t - creation_time) / 1000) > 5000)
+			const u64 time_since_creation = ((t - creation_time) / 1000);
+			u64 end_animation_begin = 5000;
+
+			if (time_since_creation > end_animation_begin)
 			{
 				if (!sliding_animation.active)
 				{
@@ -86,9 +92,31 @@ namespace rsx
 				}
 			}
 
+			// Match both animation ends based on their durations
+			if (sliding_animation.duration > fade_animation.duration)
+			{
+				end_animation_begin += static_cast<u64>((sliding_animation.duration - fade_animation.duration) * 1000);
+			}
+
+			if (time_since_creation > end_animation_begin)
+			{
+				if (!fade_animation.active)
+				{
+					fade_animation.current = color4f(1.f);
+					fade_animation.end = color4f(0.f);
+
+					fade_animation.active = true;
+				}
+			}
+
 			if (sliding_animation.active)
 			{
 				sliding_animation.update(rsx::get_current_renderer()->vblank_count);
+			}
+
+			if (fade_animation.active)
+			{
+				fade_animation.update(rsx::get_current_renderer()->vblank_count);
 			}
 		}
 
@@ -104,6 +132,8 @@ namespace rsx
 			result.add(text_view.get_compiled());
 
 			sliding_animation.apply(result);
+			fade_animation.apply(result);
+
 			return result;
 		}
 
@@ -139,6 +169,10 @@ namespace rsx
 			sliding_animation.current = { -f32(frame.x + frame.w), 0, 0 };
 			sliding_animation.end = { 0, 0, 0 };
 			sliding_animation.active = true;
+
+			fade_animation.current = color4f(0.f);
+			fade_animation.end = color4f(1.f);
+			fade_animation.active = true;
 
 			visible = true;
 			return CELL_OK;
