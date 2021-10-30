@@ -4,6 +4,7 @@
 
 #include <QWidget>
 #include <QComboBox>
+#include <QFutureWatcher>
 #include <QLabel>
 #include <QPixmap>
 #include <QTableWidget>
@@ -48,6 +49,13 @@ enum GameColumns
 	GameProgress = 2,
 
 	GameColumnsCount
+};
+
+enum GameUserRole
+{
+	GameIndex = Qt::UserRole,
+	GamePixmapLoaded,
+	GamePixmap
 };
 
 class trophy_manager_dialog : public QWidget
@@ -103,6 +111,8 @@ private:
 	QSplitter* m_splitter; //! Contains the game and trophy tables
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	QTableWidget* m_game_table; //! UI element to display games.
+	QFutureWatcher<QPixmap> m_game_repaint_watcher;
+	QFutureWatcher<QPixmap> m_trophy_repaint_watcher;
 
 	bool m_show_hidden_trophies = false;
 	bool m_show_unlocked_trophies = true;
