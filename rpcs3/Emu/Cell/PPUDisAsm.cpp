@@ -356,7 +356,15 @@ void comment_constant(std::string& last_opcode, u64 value, bool print_float = fa
 
 		if (std::isfinite(float_val))
 		{
+			const usz old_size = last_opcode.size();
+
 			fmt::append(last_opcode, " (%.6gf)", float_val);
+
+			if (usz pos = last_opcode.find_first_of('.', old_size); pos == umax)
+			{
+				// No decimal point has been inserted, force insertion
+				last_opcode.insert(last_opcode.size() - 2, ".0"sv);
+			}
 		}
 		else
 		{
