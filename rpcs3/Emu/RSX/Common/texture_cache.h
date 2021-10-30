@@ -2031,7 +2031,7 @@ namespace rsx
 				if (attributes.pitch = tex.pitch(); !attributes.pitch)
 				{
 					attributes.pitch = packed_pitch;
-					scale = { 0.f, 0.f, 0.f };
+					scale = { 1.f, 0.f, 0.f };
 				}
 				else if (packed_pitch > attributes.pitch && !options.is_compressed_format)
 				{
