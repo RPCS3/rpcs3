@@ -39,6 +39,10 @@ namespace utils
 
 	bool has_fma4();
 
+	bool has_erms();
+
+	bool has_fsrm();
+
 	std::string get_cpu_brand();
 
 	std::string get_system_info();
@@ -56,6 +60,9 @@ namespace utils
 	u32 get_cpu_family();
 
 	u32 get_cpu_model();
+
+	// A threshold of 0xFFFFFFFF means that the rep movsb is expected to be slow on this platform
+	u32 get_rep_movsb_threshold();
 
 	extern const u64 main_tid;
 }
