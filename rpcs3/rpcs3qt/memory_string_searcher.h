@@ -7,8 +7,11 @@
 class QLineEdit;
 class QCheckBox;
 class QComboBox;
+class QLabel;
 
 class CPUDisAsm;
+
+enum search_mode : int;
 
 class memory_string_searcher : public QDialog
 {
@@ -17,17 +20,20 @@ class memory_string_searcher : public QDialog
 	QLineEdit* m_addr_line = nullptr;
 	QCheckBox* m_chkbox_case_insensitive = nullptr;
 	QComboBox* m_cbox_input_mode = nullptr;
+	QLabel* m_modes_label = nullptr;
 
 	std::shared_ptr<CPUDisAsm> m_disasm;
 
 	const void* m_ptr;
 	usz m_size;
 
+	search_mode m_modes{};
+
 public:
 	explicit memory_string_searcher(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, std::string_view title = {});
 
-private Q_SLOTS:
-	void OnSearch();
+private:
+	u64 OnSearch(std::string wstr, int mode);
 };
 
 // Lifetime management with IDM
