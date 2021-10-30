@@ -719,7 +719,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			// Play a sound
 			Emu.CallAfter([]()
 			{
-				if (const std::string sound_path = fs::get_config_dir() + "sounds/screenshot.wav"; fs::is_file(sound_path))
+				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
 				{
 					QSound::play(qstr(sound_path));
 				}

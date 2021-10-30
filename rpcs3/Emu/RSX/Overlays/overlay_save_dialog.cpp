@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_save_dialog.h"
 #include "Utilities/date_time.h"
+#include "Emu/System.h"
 
 namespace rsx
 {
@@ -120,10 +121,13 @@ namespace rsx
 				if (m_no_saves)
 					break;
 				return_code = m_list->get_selected_index();
-				[[fallthrough]];
-			case pad_button::circle:
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
 				close(true, true);
-				break;
+				return;
+			case pad_button::circle:
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				close(true, true);
+				return;
 			case pad_button::dpad_up:
 				m_list->select_previous();
 				break;
@@ -140,6 +144,8 @@ namespace rsx
 				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
 				break;
 			}
+
+			Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
 		}
 
 		compiled_resource save_dialog::get_compiled()
