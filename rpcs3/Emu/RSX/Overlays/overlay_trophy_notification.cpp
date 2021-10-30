@@ -71,7 +71,7 @@ namespace rsx
 			{
 				// First tick
 				creation_time = t;
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/trophy.wav");
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_trophy.wav");
 				return;
 			}
 

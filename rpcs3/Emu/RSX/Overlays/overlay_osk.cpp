@@ -420,6 +420,8 @@ namespace rsx
 				}
 			};
 
+			bool play_cursor_sound = true;
+
 			switch (button_press)
 			{
 			case pad_button::L1:
@@ -522,7 +524,9 @@ namespace rsx
 			}
 			case pad_button::start:
 			{
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
 				Close(CELL_OSKDIALOG_CLOSE_CONFIRM);
+				play_cursor_sound = false;
 				break;
 			}
 			case pad_button::triangle:
@@ -537,13 +541,17 @@ namespace rsx
 			}
 			case pad_button::cross:
 			{
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
 				on_accept();
 				m_reset_pulse = true;
+				play_cursor_sound = false;
 				break;
 			}
 			case pad_button::circle:
 			{
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
 				Close(CELL_OSKDIALOG_CLOSE_CANCEL);
+				play_cursor_sound = false;
 				break;
 			}
 			case pad_button::L2:
@@ -558,6 +566,11 @@ namespace rsx
 			}
 			default:
 				break;
+			}
+
+			if (play_cursor_sound)
+			{
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
 			}
 
 			if (m_reset_pulse)

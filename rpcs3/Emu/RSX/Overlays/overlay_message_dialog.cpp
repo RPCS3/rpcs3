@@ -124,6 +124,7 @@ namespace rsx
 					return_code = CELL_MSGDIALOG_BUTTON_YES;
 				}
 
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
 				break;
 			}
 			case pad_button::circle:
@@ -143,6 +144,7 @@ namespace rsx
 					return_code = CELL_MSGDIALOG_BUTTON_NO;
 				}
 
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
 				break;
 			}
 			default: return;
