@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "screenshot_manager_dialog.h"
 #include "screenshot_preview.h"
 #include "qt_utils.h"
@@ -14,6 +15,8 @@
 #include <QVBoxLayout>
 #include <QtConcurrent>
 
+LOG_CHANNEL(gui_log, "GUI");
+
 screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(parent)
 {
 	setWindowTitle(tr("Screenshots"));
@@ -28,6 +31,9 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 	m_grid->setIconSize(m_icon_size);
 	m_grid->setGridSize(m_icon_size + QSize(10, 10));
 
+	// Make sure the directory is mounted
+	vfs::mount("/dev_hdd0", rpcs3::utils::get_hdd0_dir());
+
 	const std::string screenshot_path_qt   = fs::get_config_dir() + "screenshots/";
 	const std::string screenshot_path_cell = vfs::get("/dev_hdd0/photo/");
 	const QStringList filter{ QStringLiteral("*.png") };
@@ -38,6 +44,12 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 
 	for (const std::string& path : { screenshot_path_qt, screenshot_path_cell })
 	{
+		if (path.empty())
+		{
+			gui_log.error("Screenshot manager: Trying to load screenshots from empty path!");
+			continue;
+		}
+
 		QDirIterator dir_iter(QString::fromStdString(path), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 		while (dir_iter.hasNext())

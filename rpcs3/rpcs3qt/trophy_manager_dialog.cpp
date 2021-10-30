@@ -60,6 +60,9 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_show_gold_trophies     = m_gui_settings->GetValue(gui::tr_show_gold).toBool();
 	m_show_platinum_trophies = m_gui_settings->GetValue(gui::tr_show_platinum).toBool();
 
+	// Make sure the directory is mounted
+	vfs::mount("/dev_hdd0", rpcs3::utils::get_hdd0_dir());
+
 	// Get the currently selected user's trophy path.
 	m_trophy_dir = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/";
 
@@ -346,15 +349,22 @@ trophy_manager_dialog::~trophy_manager_dialog()
 
 bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 {
-	const std::string trophyPath = m_trophy_dir + trop_name;
+	const std::string trophy_path = m_trophy_dir + trop_name;
+	const std::string vfs_path = vfs::get(trophy_path + "/");
+
+	if (vfs_path.empty())
+	{
+		gui_log.error("Failed to load trophy database for %s. Path empty!", trop_name);
+		return false;
+	}
 
 	// Populate GameTrophiesData
 	std::unique_ptr<GameTrophiesData> game_trophy_data = std::make_unique<GameTrophiesData>();
 
-	game_trophy_data->path = vfs::get(trophyPath + "/");
+	game_trophy_data->path = vfs_path;
 	game_trophy_data->trop_usr.reset(new TROPUSRLoader());
-	const std::string tropusr_path = trophyPath + "/TROPUSR.DAT";
-	const std::string tropconf_path = trophyPath + "/TROPCONF.SFM";
+	const std::string tropusr_path = trophy_path + "/TROPUSR.DAT";
+	const std::string tropconf_path = trophy_path + "/TROPCONF.SFM";
 	const bool success = game_trophy_data->trop_usr->Load(tropusr_path, tropconf_path).success;
 
 	fs::file config(vfs::get(tropconf_path));
@@ -671,7 +681,16 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 {
 	m_trophies_db.clear();
 
-	const QDir trophy_dir(qstr(vfs::get(m_trophy_dir)));
+	const QString trophy_path = qstr(vfs::get(m_trophy_dir));
+
+	if (trophy_path.isEmpty())
+	{
+		gui_log.error("Cannot load trophy dir. Path empty!");
+		RepaintUI(true);
+		return;
+	}
+
+	const QDir trophy_dir(trophy_path);
 	const auto folder_list = trophy_dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 	const int count = folder_list.count();
 
