@@ -253,18 +253,15 @@ namespace rsx
 			reset_transforms();
 			force_next_update();
 
-			if (m_is_initialised)
+			if (!m_is_initialised)
 			{
-				update();
-				return;
+				m_update_timer.Start();
+				m_frametime_timer.Start();
 			}
-
-			m_update_timer.Start();
-			m_frametime_timer.Start();
 
 			update();
 
-			// The text might have changed during the initial update. Recalculate positions.
+			// The text might have changed during the update. Recalculate positions.
 			reset_transforms();
 
 			m_is_initialised = true;
