@@ -180,6 +180,8 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 		{
 			return false;
 		}
+
+		cfg_log.notice("User accepted to stop the current emulation.");
 	}
 
 	return true;

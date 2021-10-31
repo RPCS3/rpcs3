@@ -715,6 +715,7 @@ bool gdb_thread::cmd_attached_to_what(gdb_cmd&)
 
 bool gdb_thread::cmd_kill(gdb_cmd&)
 {
+	GDB.notice("Kill command issued");
 	Emu.Stop();
 	return true;
 }
