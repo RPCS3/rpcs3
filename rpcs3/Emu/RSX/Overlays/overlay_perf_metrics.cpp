@@ -96,9 +96,6 @@ namespace rsx
 			const positionu margin { m_margin_x, m_margin_y };
 			positionu pos;
 
-			const auto overlay_width = m_body.w + margin.x;
-			const auto overlay_height = m_body.h + margin.y;
-
 			u16 graph_width = 0;
 			u16 graph_height = 0;
 
@@ -126,16 +123,16 @@ namespace rsx
 				pos.y = margin.y;
 				break;
 			case screen_quadrant::top_right:
-				pos.x = virtual_width - overlay_width;
+				pos.x = virtual_width - std::max(m_body.w, graph_width) - margin.x;
 				pos.y = margin.y;
 				break;
 			case screen_quadrant::bottom_left:
 				pos.x = margin.x;
-				pos.y = virtual_height - overlay_height - graph_height;
+				pos.y = virtual_height - m_body.h - graph_height - margin.y;
 				break;
 			case screen_quadrant::bottom_right:
-				pos.x = virtual_width - overlay_width;
-				pos.y = virtual_height - overlay_height - graph_height;
+				pos.x = virtual_width - std::max(m_body.w, graph_width) - margin.x;
+				pos.y = virtual_height - m_body.h - graph_height - margin.y;
 				break;
 			}
 
