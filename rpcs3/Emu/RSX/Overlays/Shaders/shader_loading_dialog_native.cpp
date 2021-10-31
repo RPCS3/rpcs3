@@ -22,7 +22,10 @@ namespace rsx
 		dlg->show(false, msg, type, [](s32 status)
 		{
 			if (status != CELL_OK)
+			{
+				rsx_log.notice("Aborted shader loading dialog");
 				Emu.Stop();
+			}
 		});
 	}
 

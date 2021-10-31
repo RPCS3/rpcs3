@@ -18,7 +18,7 @@ class CPUDisAsm
 {
 protected:
 	cpu_disasm_mode m_mode{};
-	const std::add_pointer_t<const u8> m_offset{};
+	const u8* m_offset{};
 	const u32 m_start_pc;
 	const std::add_pointer_t<const cpu_thread> m_cpu{};
 	u32 m_op = 0;
@@ -64,10 +64,14 @@ public:
 	std::string last_opcode{};
 	u32 dump_pc{};
 
-	CPUDisAsm& change_mode(cpu_disasm_mode mode)
+	cpu_disasm_mode change_mode(cpu_disasm_mode mode)
 	{
-		m_mode = mode;
-		return *this;
+		return std::exchange(m_mode, mode);
+	}
+
+	const u8* change_ptr(const u8* ptr)
+	{
+		return std::exchange(m_offset, ptr);
 	}
 
 protected:
