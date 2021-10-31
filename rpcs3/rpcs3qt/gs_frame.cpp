@@ -48,6 +48,7 @@
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 LOG_CHANNEL(mark_log, "MARK");
+LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 
@@ -348,6 +349,8 @@ bool gs_frame::get_mouse_lock_state()
 
 void gs_frame::close()
 {
+	gui_log.notice("Closing game window");
+
 	Emu.CallAfter([this]()
 	{
 		if (!(+g_progr))
@@ -808,6 +811,8 @@ bool gs_frame::event(QEvent* ev)
 				return true;
 			}
 		}
+
+		gui_log.notice("Game window close event issued");
 		close();
 	}
 	else if (ev->type() == QEvent::MouseMove && (!m_show_mouse || m_mousehide_timer.isActive()))
