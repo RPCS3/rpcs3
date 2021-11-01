@@ -5,6 +5,8 @@
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
 #include "Emu/System.h"
 
+LOG_CHANNEL(sys_log, "SYS");
+
 // Progress display server synchronization variables
 atomic_t<const char*> g_progr{nullptr};
 atomic_t<u32> g_progr_ftotal{0};
@@ -90,6 +92,7 @@ void progress_dialog_server::operator()()
 				Emu.CallAfter([]()
 				{
 					// Abort everything
+					sys_log.notice("Aborted progress dialog");
 					Emu.Stop();
 				});
 

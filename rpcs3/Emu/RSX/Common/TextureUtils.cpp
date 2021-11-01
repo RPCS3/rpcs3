@@ -580,7 +580,7 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 		}
 		else
 		{
-			w = h = depth = 1;
+			h = depth = 1;
 		}
 	}
 
@@ -1161,7 +1161,7 @@ namespace rsx
 			if (width > 1 || height > 1)
 			{
 				// If width == 1, the scanning just returns texel 0, so it is a valid setup
-				rsx_log.error("Invalid texture pitch setup, width=%d, height=%d, format=0x%x(0x%x)",
+				rsx_log.warning("Invalid texture pitch setup, width=%d, height=%d, format=0x%x(0x%x)",
 					width, height, format, gcm_format);
 			}
 
