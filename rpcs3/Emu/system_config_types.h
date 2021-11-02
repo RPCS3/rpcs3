@@ -54,16 +54,17 @@ enum class audio_renderer
 #ifdef _WIN32
 	xaudio,
 #endif
-#ifdef HAVE_ALSA
-	alsa,
-#endif
-	openal,
-#ifdef HAVE_PULSE
-	pulse,
-#endif
+	cubeb,
 #ifdef HAVE_FAUDIO
 	faudio,
 #endif
+};
+
+enum class audio_provider
+{
+	none,
+	cell_audio,
+	rsxaudio
 };
 
 enum class audio_downmix

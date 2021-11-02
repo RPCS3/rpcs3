@@ -1,4 +1,4 @@
-﻿add_library(rpcs3_emu
+add_library(rpcs3_emu
     cache_utils.cpp
     IdManager.cpp
     localized_string.cpp
@@ -54,6 +54,7 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/mutex.cpp
     ../../Utilities/rXml.cpp
     ../../Utilities/sema.cpp
+    ../../Utilities/simple_ringbuf.cpp
     ../../Utilities/StrFmt.cpp
     ../../Utilities/Thread.cpp
     ../../Utilities/version.cpp
@@ -110,21 +111,8 @@ target_sources(rpcs3_emu PRIVATE
     Audio/audio_device_listener.cpp
     Audio/AudioDumper.cpp
     Audio/AudioBackend.cpp
-    Audio/AL/OpenALBackend.cpp
+    Audio/Cubeb/CubebBackend.cpp
 )
-
-if(USE_ALSA)
-    find_package(ALSA)
-    if(ALSA_FOUND)
-        target_sources(rpcs3_emu PRIVATE Audio/ALSA/ALSABackend.cpp)
-        target_link_libraries(rpcs3_emu PUBLIC 3rdparty::alsa)
-    endif()
-endif()
-
-if(USE_PULSE AND PULSE_FOUND)
-    target_sources(rpcs3_emu PRIVATE Audio/Pulse/PulseBackend.cpp)
-    target_link_libraries(rpcs3_emu PUBLIC 3rdparty::pulse)
-endif()
 
 if(USE_FAUDIO)
     find_package(SDL2)
@@ -147,6 +135,9 @@ target_link_libraries(rpcs3_emu
     PUBLIC
         3rdparty::openal)
 
+target_link_libraries(rpcs3_emu
+    PUBLIC
+        3rdparty::cubeb)
 
 # Cell
 target_sources(rpcs3_emu PRIVATE

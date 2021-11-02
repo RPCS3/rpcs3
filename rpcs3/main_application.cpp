@@ -18,15 +18,9 @@
 
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/Null/NullAudioBackend.h"
-#include "Emu/Audio/AL/OpenALBackend.h"
+#include "Emu/Audio/Cubeb/CubebBackend.h"
 #ifdef _WIN32
 #include "Emu/Audio/XAudio2/XAudio2Backend.h"
-#endif
-#ifdef HAVE_ALSA
-#include "Emu/Audio/ALSA/ALSABackend.h"
-#endif
-#ifdef HAVE_PULSE
-#include "Emu/Audio/Pulse/PulseBackend.h"
 #endif
 #ifdef HAVE_FAUDIO
 #include "Emu/Audio/FAudio/FAudioBackend.h"
@@ -112,14 +106,7 @@ EmuCallbacks main_application::CreateCallbacks()
 #ifdef _WIN32
 		case audio_renderer::xaudio: result = std::make_shared<XAudio2Backend>(); break;
 #endif
-#ifdef HAVE_ALSA
-		case audio_renderer::alsa: result = std::make_shared<ALSABackend>(); break;
-#endif
-#ifdef HAVE_PULSE
-		case audio_renderer::pulse: result = std::make_shared<PulseBackend>(); break;
-#endif
-
-		case audio_renderer::openal: result = std::make_shared<OpenALBackend>(); break;
+		case audio_renderer::cubeb: result = std::make_shared<CubebBackend>(); break;
 #ifdef HAVE_FAUDIO
 		case audio_renderer::faudio: result = std::make_shared<FAudioBackend>(); break;
 #endif

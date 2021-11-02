@@ -109,13 +109,7 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 #ifdef _WIN32
 		case audio_renderer::xaudio: return "XAudio2";
 #endif
-#ifdef HAVE_ALSA
-		case audio_renderer::alsa: return "ALSA";
-#endif
-#ifdef HAVE_PULSE
-		case audio_renderer::pulse: return "PulseAudio";
-#endif
-		case audio_renderer::openal: return "OpenAL";
+		case audio_renderer::cubeb: return "Cubeb";
 #ifdef HAVE_FAUDIO
 		case audio_renderer::faudio: return "FAudio";
 #endif
@@ -466,6 +460,22 @@ void fmt_class_string<shader_mode>::format(std::string& out, u64 arg)
 		case shader_mode::async_recompiler: return "Async Shader Recompiler";
 		case shader_mode::async_with_interpreter: return "Async with Shader Interpreter";
 		case shader_mode::interpreter_only: return "Shader Interpreter only";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<audio_provider>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_provider value)
+	{
+		switch (value)
+		{
+		case audio_provider::none: return "None";
+		case audio_provider::cell_audio: return "CellAudio";
+		case audio_provider::rsxaudio: return "RSXAudio";
 		}
 
 		return unknown;

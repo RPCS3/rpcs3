@@ -30,19 +30,19 @@ struct WAVHeader
 		u32 SampleRate; // 48000
 		u32 ByteRate; // SampleRate * NumChannels * BitsPerSample/8
 		u16 BlockAlign; // NumChannels * BitsPerSample/8
-		u16 BitsPerSample; // sizeof(float) * 8
+		u16 BitsPerSample; // SampleSize * 8
 
 		FMTHeader() = default;
 
-		FMTHeader(u16 ch)
+		FMTHeader(u16 ch, u32 sample_rate, u32 sample_size)
 			: ID("fmt "_u32)
 			, Size(16)
-			, AudioFormat(3)
+			, AudioFormat(sample_size == sizeof(float) ? 3 : 1)
 			, NumChannels(ch)
-			, SampleRate(48000)
-			, ByteRate(SampleRate * ch * sizeof(float))
-			, BlockAlign(ch * sizeof(float))
-			, BitsPerSample(sizeof(float) * 8)
+			, SampleRate(sample_rate)
+			, ByteRate(SampleRate * ch * sample_size)
+			, BlockAlign(ch * sample_size)
+			, BitsPerSample(sample_size * 8)
 		{
 		}
 	} FMT;
@@ -52,9 +52,9 @@ struct WAVHeader
 
 	WAVHeader() = default;
 
-	WAVHeader(u16 ch)
+	WAVHeader(u16 ch, u32 sample_rate, u32 sample_size)
 		: RIFF(sizeof(RIFFHeader) + sizeof(FMTHeader))
-		, FMT(ch)
+		, FMT(ch, sample_rate, sample_size)
 		, ID("data"_u32)
 		, Size(0)
 	{
@@ -67,7 +67,7 @@ class AudioDumper
 	fs::file m_output{};
 
 public:
-	AudioDumper(u16 ch);
+	AudioDumper(u16 ch, u32 sample_rate, u32 sample_size);
 	~AudioDumper();
 
 	void WriteData(const void* buffer, u32 size);

@@ -15,8 +15,6 @@ endif()
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
 option(WITH_LLVM "Enable usage of LLVM library" ON)
 option(BUILD_LLVM_SUBMODULE "Build LLVM from git submodule" ON)
-option(USE_ALSA "ALSA audio backend" ON)
-option(USE_PULSE "PulseAudio audio backend" ON)
 option(USE_FAUDIO "FAudio audio backend" ON)
 option(USE_LIBEVDEV "libevdev-based joystick support" ON)
 option(USE_DISCORD_RPC "Discord rich presence integration" ON)
@@ -56,12 +54,12 @@ if(MSVC)
     if(NOT(CMAKE_BUILD_TYPE MATCHES "Release" AND USE_MSVC_STATIC_CRT))
         set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only available in Release and static CRT build." FORCE)
     endif()
-    
+
     if(USE_MSVC_STATIC_CRT)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     else()
         # though doc ( https://cmake.org/cmake/help/latest/variable/CMAKE_MSVC_RUNTIME_LIBRARY.html )
-        # says if that property is not set then CMake uses the default value MultiThreaded$<$<CONFIG:Debug>:Debug>DLL 
+        # says if that property is not set then CMake uses the default value MultiThreaded$<$<CONFIG:Debug>:Debug>DLL
         # to select a MSVC runtime library.
         # But yaml-cpp set /MT(d) if CMAKE_MSVC_RUNTIME_LIBRARY is undefined
         # So we have to define it explicitly
@@ -71,10 +69,10 @@ if(MSVC)
     # TODO(cjj19970505@live.cn)
     # offical QT uses dynamic CRT.
     # When building our lib with static CRT and debug build type
-    # and linking with Qt with dynmaic CRT and debug build, 
-    # error is encountered in runtime (which is expected). 
-    # But building our lib with static CRT and release build type, 
-    # and linking with Qt with dynamic CRT and release build seems to be working, 
+    # and linking with Qt with dynmaic CRT and debug build,
+    # error is encountered in runtime (which is expected).
+    # But building our lib with static CRT and release build type,
+    # and linking with Qt with dynamic CRT and release build seems to be working,
     # which is the same config with VS solution.
     # (though technically it might still have some hidden errors).
     # So we allow static CRT in both relase and debug build, but prompt warning in debug build.
