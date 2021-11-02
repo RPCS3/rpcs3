@@ -680,7 +680,7 @@ error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm:
 
 error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
+	sceNp.notice("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

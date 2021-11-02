@@ -75,28 +75,6 @@ namespace np
 			{
 				dns_ip = conv.s_addr;
 			}
-
-			// Init switch map for dns
-			auto swaps = fmt::split(g_cfg.net.swap_list.to_string(), {"&&"});
-			for (usz i = 0; i < swaps.size(); i++)
-			{
-				auto host_and_ip = fmt::split(swaps[i], {"="});
-				if (host_and_ip.size() != 2)
-				{
-					nph_log.error("Pattern <%s> contains more than one '='", swaps[i]);
-					continue;
-				}
-
-				in_addr conv;
-				if (!inet_pton(AF_INET, host_and_ip[1].c_str(), &conv))
-				{
-					nph_log.error("IP(%s) provided for %s in the switch list is invalid!", host_and_ip[1], host_and_ip[0]);
-				}
-				else
-				{
-					switch_map[host_and_ip[0]] = conv.s_addr;
-				}
-			}
 		}
 	}
 
@@ -551,132 +529,6 @@ namespace np
 		}
 	}
 
-	void np_handler::add_dns_spy(u32 sock)
-	{
-		dns_spylist.emplace(std::make_pair(sock, std::queue<std::vector<u8>>()));
-	}
-
-	void np_handler::remove_dns_spy(u32 sock)
-	{
-		dns_spylist.erase(sock);
-	}
-
-	bool np_handler::is_dns(u32 sock) const
-	{
-		return dns_spylist.contains(sock);
-	}
-
-	bool np_handler::is_dns_queue(u32 sock) const
-	{
-		return !dns_spylist.at(sock).empty();
-	}
-
-	std::vector<u8> np_handler::get_dns_packet(u32 sock)
-	{
-		auto ret_vec = std::move(dns_spylist.at(sock).front());
-		dns_spylist.at(sock).pop();
-
-		return ret_vec;
-	}
-
-	s32 np_handler::analyze_dns_packet(s32 s, const u8* buf, u32 len)
-	{
-		if (sys_net.enabled == logs::level::trace)
-		{
-			std::string datrace;
-			const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-			for (u32 index = 0; index < len; index++)
-			{
-				if ((index % 16) == 0)
-					datrace += '\n';
-
-				datrace += hex[(buf[index] >> 4) & 15];
-				datrace += hex[(buf[index]) & 15];
-				datrace += ' ';
-			}
-			sys_net.trace("DNS REQUEST: %s", datrace);
-		}
-
-		struct dns_header
-		{
-			u16 id; // identification number
-
-			u8 rd : 1;     // recursion desired
-			u8 tc : 1;     // truncated message
-			u8 aa : 1;     // authoritive answer
-			u8 opcode : 4; // purpose of message
-			u8 qr : 1;     // query/response flag
-
-			u8 rcode : 4; // response code
-			u8 cd : 1;    // checking disabled
-			u8 ad : 1;    // authenticated data
-			u8 z : 1;     // its z! reserved
-			u8 ra : 1;    // recursion available
-
-			be_t<u16> q_count;    // number of question entries
-			be_t<u16> ans_count;  // number of answer entries
-			be_t<u16> auth_count; // number of authority entries
-			be_t<u16> add_count;  // number of resource entries
-		};
-
-		if (len < sizeof(dns_header))
-			return -1;
-
-		const dns_header* dhead = reinterpret_cast<const dns_header*>(buf);
-		// We are only looking for queries not truncated(todo?), only handle one dns query at a time(todo?)
-		if (dhead->qr != 0 || dhead->tc != 0 || dhead->q_count != 1 || dhead->ans_count != 0 || dhead->auth_count != 0 || dhead->add_count != 0)
-			return -1;
-
-		// Get the actual address
-		u8 count = 0;
-		std::string host{};
-		for (u32 i = sizeof(dns_header); (i < len) && buf[i] != 0; i++)
-		{
-			if (count == 0)
-			{
-				count = buf[i];
-				if (i != sizeof(dns_header))
-				{
-					host += '.';
-				}
-			}
-			else
-			{
-				host += static_cast<char>(buf[i]);
-				count--;
-			}
-		}
-
-		sys_net.warning("DNS query for %s", host);
-
-		if (switch_map.contains(host))
-		{
-			// design fake packet
-			std::vector<u8> fake(len);
-			memcpy(fake.data(), buf, len);
-			dns_header* fake_header = reinterpret_cast<dns_header*>(fake.data());
-			fake_header->qr         = 1;
-			fake_header->ra         = 1;
-			fake_header->ans_count  = 1;
-			fake.insert(fake.end(), {0xC0, 0x0C});             // Ref to name in header
-			fake.insert(fake.end(), {0x00, 0x01});             // IPv4
-			fake.insert(fake.end(), {0x00, 0x01});             // Class?
-			fake.insert(fake.end(), {0x00, 0x00, 0x00, 0x3B}); // TTL
-			fake.insert(fake.end(), {0x00, 0x04});             // Size of data
-			u32 ip     = switch_map[host];
-			u8* ptr_ip = reinterpret_cast<u8*>(&ip);
-			fake.insert(fake.end(), ptr_ip, ptr_ip + 4); // IP
-
-			sys_net.warning("Solving %s to %d.%d.%d.%d", host, ptr_ip[0], ptr_ip[1], ptr_ip[2], ptr_ip[3]);
-
-			dns_spylist[s].push(std::move(fake));
-			return len;
-		}
-
-		return -1;
-	}
-
 	bool np_handler::error_and_disconnect(const std::string& error_msg)
 	{
 		rpcn_log.error("%s", error_msg);
@@ -751,4 +603,23 @@ namespace np
 		return rpcn->get_num_blocks();
 	}
 
+	std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> np_handler::local_get_room_password(SceNpMatching2RoomId room_id)
+	{
+		return np_cache.get_password(room_id);
+	}
+
+	std::pair<error_code, std::optional<SceNpMatching2RoomSlotInfo>> np_handler::local_get_room_slots(SceNpMatching2RoomId room_id)
+	{
+		return np_cache.get_slots(room_id);
+	}
+
+	std::pair<error_code, std::vector<SceNpMatching2RoomMemberId>> np_handler::local_get_room_memberids(SceNpMatching2RoomId room_id, s32 sort_method)
+	{
+		return np_cache.get_memberids(room_id, sort_method);
+	}
+
+	error_code np_handler::local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data)
+	{
+		return np_cache.get_member_and_attrs(room_id, member_id, binattrs_list, ptr_member, addr_data, size_data);
+	}
 } // namespace np

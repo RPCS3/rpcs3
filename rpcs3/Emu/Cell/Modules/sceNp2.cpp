@@ -755,7 +755,7 @@ error_code sceNpMatching2GetEventData(SceNpMatching2ContextId ctxId, SceNpMatchi
 
 error_code sceNpMatching2GetRoomSlotInfoLocal(SceNpMatching2ContextId ctxId, const SceNpMatching2RoomId roomId, vm::ptr<SceNpMatching2RoomSlotInfo> roomSlotInfo)
 {
-	sceNp2.todo("sceNpMatching2GetRoomSlotInfoLocal(ctxId=%d, roomId=%d, roomSlotInfo=*0x%x)", ctxId, roomId, roomSlotInfo);
+	sceNp2.notice("sceNpMatching2GetRoomSlotInfoLocal(ctxId=%d, roomId=%d, roomSlotInfo=*0x%x)", ctxId, roomId, roomSlotInfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -763,6 +763,30 @@ error_code sceNpMatching2GetRoomSlotInfoLocal(SceNpMatching2ContextId ctxId, con
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!roomId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ROOM_ID;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	const auto [error, slots] = nph.local_get_room_slots(roomId);
+
+	if (error)
+	{
+		return error;
+	}
+
+	memcpy(roomSlotInfo.get_ptr(), &slots.value(), sizeof(SceNpMatching2RoomSlotInfo));
 
 	return CELL_OK;
 }
@@ -797,7 +821,7 @@ error_code sceNpMatching2AbortContextStart(SceNpMatching2ContextId ctxId)
 
 error_code sceNpMatching2GetRoomMemberIdListLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, s32 sortMethod, vm::ptr<SceNpMatching2RoomMemberId> memberId, u32 memberIdNum)
 {
-	sceNp2.todo("sceNpMatching2GetRoomMemberIdListLocal(ctxId=%d, roomId=%d, sortMethod=%d, memberId=*0x%x, memberIdNum=%d)", ctxId, roomId, sortMethod, memberId, memberIdNum);
+	sceNp2.notice("sceNpMatching2GetRoomMemberIdListLocal(ctxId=%d, roomId=%d, sortMethod=%d, memberId=*0x%x, memberIdNum=%d)", ctxId, roomId, sortMethod, memberId, memberIdNum);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -806,7 +830,41 @@ error_code sceNpMatching2GetRoomMemberIdListLocal(SceNpMatching2ContextId ctxId,
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
-	return CELL_OK;
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!roomId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ROOM_ID;
+	}
+
+	if (sortMethod != SCE_NP_MATCHING2_SORT_METHOD_JOIN_DATE && sortMethod != SCE_NP_MATCHING2_SORT_METHOD_SLOT_NUMBER)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_SORT_METHOD;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	const auto [error, vec_memberids] = nph.local_get_room_memberids(roomId, sortMethod);
+
+	if (error)
+	{
+		return error;
+	}
+
+	u32 num_members = std::min(memberIdNum, static_cast<u32>(vec_memberids.size()));
+
+	for (u32 i = 0; i < num_members; i++)
+	{
+		memberId[i] = vec_memberids[i];
+	}
+
+	return not_an_error(num_members);
 }
 
 error_code sceNpMatching2JoinRoom(
@@ -826,10 +884,10 @@ error_code sceNpMatching2JoinRoom(
 }
 
 error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, SceNpMatching2RoomMemberId memberId, vm::cptr<SceNpMatching2AttributeId> attrId,
-    u32 attrIdNum, vm::ptr<SceNpMatching2RoomMemberDataInternal> member, vm::ptr<char> buf, u64 bufLen)
+	u32 attrIdNum, vm::ptr<SceNpMatching2RoomMemberDataInternal> member, vm::ptr<char> buf, u64 bufLen)
 {
-	sceNp2.todo("sceNpMatching2GetRoomMemberDataInternalLocal(ctxId=%d, roomId=%d, memberId=%d, attrId=*0x%x, attrIdNum=%d, member=*0x%x, buf=*0x%x, bufLen=%d)", ctxId, roomId, memberId, attrId,
-	    attrIdNum, member, buf, bufLen);
+	sceNp2.warning("sceNpMatching2GetRoomMemberDataInternalLocal(ctxId=%d, roomId=%d, memberId=%d, attrId=*0x%x, attrIdNum=%d, member=*0x%x, buf=*0x%x, bufLen=%d)", ctxId, roomId, memberId, attrId,
+		attrIdNum, member, buf, bufLen);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -838,7 +896,37 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
-	return CELL_OK;
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!roomId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ROOM_ID;
+	}
+
+	if (!memberId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_MEMBER_ID;
+	}
+
+	std::vector<SceNpMatching2AttributeId> binattrs_list;
+	for (u32 i = 0; i < attrIdNum; i++)
+	{
+		if (attrId[i] < SCE_NP_MATCHING2_ROOMMEMBER_BIN_ATTR_INTERNAL_1_ID || attrId[i] >= SCE_NP_MATCHING2_USER_BIN_ATTR_1_ID)
+		{
+			return SCE_NP_MATCHING2_ERROR_INVALID_ATTRIBUTE_ID;
+		}
+		binattrs_list.push_back(attrId[i]);
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	return nph.local_get_room_member_data(roomId, memberId, binattrs_list, member ? member.get_ptr() : nullptr, buf.addr(), bufLen);
 }
 
 error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2CbQueueInfo> queueInfo)
@@ -1005,7 +1093,7 @@ error_code sceNpMatching2SignalingGetPingInfo(
 
 error_code sceNpMatching2GetServerIdListLocal(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2ServerId> serverId, u32 serverIdNum)
 {
-	sceNp2.todo("sceNpMatching2GetServerIdListLocal(ctxId=%d, serverId=*0x%x, serverIdNum=%d)", ctxId, serverId, serverIdNum);
+	sceNp2.notice("sceNpMatching2GetServerIdListLocal(ctxId=%d, serverId=*0x%x, serverIdNum=%d)", ctxId, serverId, serverIdNum);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1267,13 +1355,45 @@ error_code sceNpMatching2RegisterRoomEventCallback(SceNpMatching2ContextId ctxId
 
 error_code sceNpMatching2GetRoomPasswordLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, vm::ptr<b8> withPassword, vm::ptr<SceNpMatching2SessionPassword> roomPassword)
 {
-	sceNp2.todo("sceNpMatching2GetRoomPasswordLocal(ctxId=%d, roomId=%d, withPassword=*0x%x, roomPassword=*0x%x)", ctxId, roomId, withPassword, roomPassword);
+	sceNp2.notice("sceNpMatching2GetRoomPasswordLocal(ctxId=%d, roomId=%d, withPassword=*0x%x, roomPassword=*0x%x)", ctxId, roomId, withPassword, roomPassword);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP2_Match2_init)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!roomId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ROOM_ID;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	const auto [error, password] = nph.local_get_room_password(roomId);
+
+	if (error)
+	{
+		return error;
+	}
+
+	if (password)
+	{
+		*withPassword = true;
+		memcpy(roomPassword.get_ptr(), &*password, sizeof(SceNpMatching2SessionPassword));
+	}
+	else
+	{
+		*withPassword = false;
 	}
 
 	return CELL_OK;

@@ -88,11 +88,14 @@ namespace np
 
 		void free(u32 addr)
 		{
+			std::lock_guard lock(m_mutex);
+
 			ensure(addr >= m_pool.addr() && addr < (m_pool.addr() + m_size), "memory_allocator::free: addr is out of bounds!");
 
 			const u32 offset = addr - m_pool.addr();
 			ensure(m_allocs.contains(offset), "memory_allocator::free: m_allocs doesn't contain the allocation!");
 
+			m_avail += m_allocs.at(offset);
 			m_allocs.erase(offset);
 		}
 
@@ -106,6 +109,7 @@ namespace np
 			ensure(m_allocs.contains(offset), "memory_allocator::reduce_allocation: m_allocs doesn't contain the allocation!");
 			ensure(m_allocs[offset] >= new_size, "memory_allocator::reduce_allocation: New size is bigger than current allocation!");
 
+			m_avail += (m_allocs.at(offset) - new_size);
 			m_allocs[offset] = new_size;
 		}
 

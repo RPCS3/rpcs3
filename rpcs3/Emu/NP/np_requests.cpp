@@ -97,7 +97,6 @@ namespace np
 
 		if (reply.is_error())
 		{
-			world_list.clear();
 			return error_and_disconnect("Malformed reply to GetWorldList command");
 		}
 
@@ -142,6 +141,9 @@ namespace np
 			is_psn_active = false;
 		}
 
+		// More elegant solution would be to send back password with creation reply
+		cached_cj_password = req->roomPassword ? std::optional<SceNpMatching2SessionPassword>{*req->roomPassword} : std::nullopt;
+
 		return req_id;
 	}
 
@@ -163,6 +165,9 @@ namespace np
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
 		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		np_cache.insert_room(room_info);
+		np_cache.update_password(room_resp->roomDataInternal->roomId, cached_cj_password);
 
 		// Establish Matching2 self signaling info
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
@@ -214,7 +219,9 @@ namespace np
 		u16 member_id   = RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		extra_nps::print_room_data_internal(room_resp->roomDataInternal.get_ptr());
+		np_cache.insert_room(room_info);
+
+		extra_nps::print_room_data_internal(room_info);
 
 		// Establish Matching2 self signaling info
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
@@ -409,7 +416,9 @@ namespace np
 		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		extra_nps::print_room_data_internal(room_resp->roomDataInternal.get_ptr());
+		np_cache.insert_room(room_info);
+
+		extra_nps::print_room_data_internal(room_info);
 
 		sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
 			{
