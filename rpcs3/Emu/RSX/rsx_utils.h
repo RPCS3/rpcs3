@@ -161,35 +161,12 @@ namespace rsx
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
-		u32 get_compatible_gcm_format() const
-		{
-			switch (format)
-			{
-			default:
-				rsx_log.error("Invalid AV format 0x%x", format);
-				[[fallthrough]];
-			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
-			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
-				return CELL_GCM_TEXTURE_A8R8G8B8;
-			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
-				return CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
-			}
-		}
+		u32 get_compatible_gcm_format() const;
+		u8 get_bpp() const;
+		double get_aspect_ratio() const;
 
-		u8 get_bpp() const
-		{
-			switch (format)
-			{
-			default:
-				rsx_log.error("Invalid AV format 0x%x", format);
-				[[fallthrough]];
-			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
-			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
-				return 4;
-			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
-				return 8;
-			}
-		}
+		void upscale_to_aspect_ratio(int& width, int& height) const;
+		void downscale_to_aspect_ratio(int& x, int& y, int& width, int& height) const;
 	};
 
 	struct blit_src_info

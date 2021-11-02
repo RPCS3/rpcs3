@@ -203,7 +203,7 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		conf.aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 	}
 
-	cellSysutil.notice("Selected video resolution 0x%x", config->resolutionId);
+	cellSysutil.notice("Selected video configuration: resolutionId=0x%x, aspect=0x%x, format=0x%x", config->resolutionId, config->aspect, config->format);
 
 	return CELL_OK;
 }
