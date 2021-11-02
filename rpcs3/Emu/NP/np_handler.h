@@ -11,8 +11,9 @@
 #include "Emu/NP/rpcn_client.h"
 #include "generated/np2_structs_generated.h"
 #include "signaling_handler.h"
-#include "np_event_data.h"
 #include "np_allocator.h"
+#include "np_cache.h"
+#include "np_event_data.h"
 
 namespace np
 {
@@ -51,14 +52,6 @@ namespace np
 		const SceNpOnlineName& get_online_name() const;
 		const SceNpAvatarUrl& get_avatar_url() const;
 
-		// DNS hooking functions
-		void add_dns_spy(u32 sock);
-		void remove_dns_spy(u32 sock);
-		bool is_dns(u32 sock) const;
-		bool is_dns_queue(u32 sock) const;
-		std::vector<u8> get_dns_packet(u32 sock);
-		s32 analyze_dns_packet(s32 s, const u8* buf, u32 len);
-
 		// handles async messages from server(only needed for RPCN)
 		void operator()();
 
@@ -91,6 +84,8 @@ namespace np
 		void queue_basic_event(basic_event to_queue);
 		bool send_basic_event(s32 event, s32 retCode, u32 reqId);
 		error_code get_basic_event(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size);
+
+		// Messages-related functions
 		std::optional<std::shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
 
 		// Those should probably be under match2 ctx
@@ -120,6 +115,12 @@ namespace np
 		u32 send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req);
 
 		u32 get_match2_event(SceNpMatching2EventKey event_key, u32 dest_addr, u32 size);
+
+		// Local functions
+		std::pair<error_code, std::optional<SceNpMatching2RoomSlotInfo>> local_get_room_slots(SceNpMatching2RoomId room_id);
+		std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> local_get_room_password(SceNpMatching2RoomId room_id);
+		std::pair<error_code, std::vector<SceNpMatching2RoomMemberId>> local_get_room_memberids(SceNpMatching2RoomId room_id, s32 sort_method);
+		error_code local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data);
 
 		// Friend stuff
 		u32 get_num_friends();
@@ -227,12 +228,12 @@ namespace np
 		SceNpOnlineName online_name{};
 		SceNpAvatarUrl avatar_url{};
 
-		// DNS related
-		std::map<s32, std::queue<std::vector<u8>>> dns_spylist{};
-		std::map<std::string, u32> switch_map{};
-
 		// Memory pool for sceNp/sceNp2
 		memory_allocator np_memory;
+
+		// Cache related
+		std::optional<SceNpMatching2SessionPassword> cached_cj_password;
+		cache_manager np_cache;
 
 		// Requests(reqEventKey : data)
 		shared_mutex mutex_match2_req_results;

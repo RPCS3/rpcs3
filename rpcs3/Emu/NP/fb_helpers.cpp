@@ -182,14 +182,13 @@ namespace np
 
 	u16 np_handler::RoomDataInternal_to_SceNpMatching2RoomDataInternal(event_data& edata, const RoomDataInternal* resp, SceNpMatching2RoomDataInternal* room_info, const SceNpId& npid)
 	{
-		u16 member_id                    = 0;
-		room_info->serverId              = resp->serverId();
-		room_info->worldId               = resp->worldId();
-		room_info->lobbyId               = resp->lobbyId();
-		room_info->roomId                = resp->roomId();
-		room_info->passwordSlotMask      = resp->passwordSlotMask();
-		room_info->maxSlot               = resp->maxSlot();
-		room_info->memberList.membersNum = resp->memberList()->size();
+		u16 member_id               = 0;
+		room_info->serverId         = resp->serverId();
+		room_info->worldId          = resp->worldId();
+		room_info->lobbyId          = resp->lobbyId();
+		room_info->roomId           = resp->roomId();
+		room_info->passwordSlotMask = resp->passwordSlotMask();
+		room_info->maxSlot          = resp->maxSlot();
 
 		if (resp->roomGroup() && resp->roomGroup()->size() != 0)
 		{
@@ -199,32 +198,43 @@ namespace np
 		}
 
 		room_info->memberList.membersNum = static_cast<u32>(resp->memberList()->size());
+		edata.allocate<SceNpMatching2RoomMemberDataInternal>(sizeof(SceNpMatching2RoomMemberDataInternal) * room_info->memberList.membersNum, room_info->memberList.members);
 
-		SceNpMatching2RoomMemberDataInternal* prev_member = nullptr;
 		for (flatbuffers::uoffset_t i = 0; i < resp->memberList()->size(); i++)
 		{
-			auto fb_member = resp->memberList()->Get(i);
-			SceNpMatching2RoomMemberDataInternal* member_info;
+			auto fb_member                                   = resp->memberList()->Get(i);
+			SceNpMatching2RoomMemberDataInternal* sce_member = &room_info->memberList.members[i];
 
-			member_info = (i > 0) ? edata.allocate<SceNpMatching2RoomMemberDataInternal>(sizeof(SceNpMatching2RoomMemberDataInternal), prev_member->next) :
-                                    edata.allocate<SceNpMatching2RoomMemberDataInternal>(sizeof(SceNpMatching2RoomMemberDataInternal), room_info->memberList.members);
-
-			RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(edata, fb_member, room_info, member_info);
-
-			if (strcmp(member_info->userInfo.npId.handle.data, npid.handle.data) == 0)
+			if (i < (resp->memberList()->size() - 1))
 			{
-				room_info->memberList.me = (i > 0) ? prev_member->next : room_info->memberList.members;
+				sce_member->next = room_info->memberList.members + i + 1;
+				edata.add_relocation<SceNpMatching2RoomMemberDataInternal>(sce_member->next);
+			}
+
+			RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(edata, fb_member, room_info, sce_member);
+		}
+
+		for (u32 i = 0; i < room_info->memberList.membersNum; i++)
+		{
+			SceNpMatching2RoomMemberDataInternal* sce_member = &room_info->memberList.members[i];
+			if (strcmp(sce_member->userInfo.npId.handle.data, npid.handle.data) == 0)
+			{
+				room_info->memberList.me = room_info->memberList.members + i;
 				edata.add_relocation<SceNpMatching2RoomMemberDataInternal>(room_info->memberList.me);
-				member_id = member_info->memberId;
+				member_id = sce_member->memberId;
+				break;
 			}
+		}
 
-			if (member_info->memberId == resp->ownerId())
+		for (u32 i = 0; i < room_info->memberList.membersNum; i++)
+		{
+			SceNpMatching2RoomMemberDataInternal* sce_member = &room_info->memberList.members[i];
+			if (sce_member->memberId == resp->ownerId())
 			{
-				room_info->memberList.owner = (i > 0) ? prev_member->next : room_info->memberList.members;
+				room_info->memberList.owner = room_info->memberList.members + i;
 				edata.add_relocation<SceNpMatching2RoomMemberDataInternal>(room_info->memberList.owner);
+				break;
 			}
-
-			prev_member = member_info;
 		}
 
 		room_info->flagAttr = resp->flagAttr();
@@ -375,7 +385,7 @@ namespace np
 				{
 					if (ret_ptr->data.id == binattr_id)
 						return ret_ptr;
-					
+
 					ret_ptr++;
 				}
 				rpcn_log.fatal("RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo: Couldn't find matching roomBinAttrInternal!");
@@ -391,7 +401,7 @@ namespace np
 		}
 	}
 
-	void np_handler::RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(event_data &edata, const RoomMemberDataInternalUpdateInfo* update_info, SceNpMatching2RoomMemberDataInternalUpdateInfo* sce_update_info)
+	void np_handler::RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(event_data& edata, const RoomMemberDataInternalUpdateInfo* update_info, SceNpMatching2RoomMemberDataInternalUpdateInfo* sce_update_info)
 	{
 		auto* sce_room_member_data = edata.allocate<SceNpMatching2RoomMemberDataInternal>(sizeof(SceNpMatching2RoomMemberDataInternal), sce_update_info->newRoomMemberDataInternal);
 		RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(edata, update_info->newRoomMemberDataInternal(), nullptr, sce_room_member_data);
@@ -419,7 +429,7 @@ namespace np
 				{
 					if (ret_ptr->data.id == binattr_id)
 						return ret_ptr;
-					
+
 					ret_ptr++;
 				}
 				rpcn_log.fatal("RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo: Couldn't find matching roomMemberBinAttrInternal!");
@@ -479,8 +489,8 @@ namespace np
 
 		if (auto msg = mi->msg())
 		{
-			sce_mi->msgLen = msg->size();
-			auto* ptr_msg_data = static_cast<u8 *>(edata.allocate<void>(msg->size(), sce_mi->msg));
+			sce_mi->msgLen     = msg->size();
+			auto* ptr_msg_data = static_cast<u8*>(edata.allocate<void>(msg->size(), sce_mi->msg));
 			for (u32 i = 0; i < msg->size(); i++)
 			{
 				ptr_msg_data[i] = msg->Get(i);
