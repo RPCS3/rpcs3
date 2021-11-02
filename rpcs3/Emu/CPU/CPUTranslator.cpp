@@ -139,9 +139,9 @@ llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
 	uint s2 = val->getType()->getScalarSizeInBits();
 
 	if (type->isVectorTy())
-		s1 *= llvm::cast<llvm::VectorType>(type)->getNumElements();
+		s1 *= llvm::cast<llvm::FixedVectorType>(type)->getNumElements();
 	if (val->getType()->isVectorTy())
-		s2 *= llvm::cast<llvm::VectorType>(val->getType())->getNumElements();
+		s2 *= llvm::cast<llvm::FixedVectorType>(val->getType())->getNumElements();
 
 	if (s1 != s2)
 	{
@@ -183,7 +183,7 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 		fmt::throw_exception("[0x%x, %u] Not a vector", _pos, _line);
 	}
 
-	if (auto v = llvm::cast<llvm::VectorType>(t); v->getScalarSizeInBits() * v->getNumElements() != 128)
+	if (auto v = llvm::cast<llvm::FixedVectorType>(t); v->getScalarSizeInBits() * v->getNumElements() != 128)
 	{
 		fmt::throw_exception("[0x%x, %u] Bad vector size: i%ux%u", _pos, _line, v->getScalarSizeInBits(), v->getNumElements());
 	}
@@ -267,7 +267,7 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u
 	}
 
 	ensure(t->isVectorTy());
-	ensure(128 == t->getScalarSizeInBits() * llvm::cast<llvm::VectorType>(t)->getNumElements());
+	ensure(128 == t->getScalarSizeInBits() * llvm::cast<llvm::FixedVectorType>(t)->getNumElements());
 
 	const auto sct = t->getScalarType();
 
