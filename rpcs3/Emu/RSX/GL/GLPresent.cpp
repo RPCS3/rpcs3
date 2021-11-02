@@ -137,7 +137,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		const u32 video_frame_height = (!avconfig._3d? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
+		const u32 video_frame_height = (!avconfig._3d ? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
 		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
 	}
@@ -200,25 +200,12 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	// Calculate blit coordinates
 	coordi aspect_ratio;
-	sizei csize(width, height);
+	const sizei csize(width, height);
 	sizei new_size = csize;
 
 	if (!g_cfg.video.stretch_to_display_area)
 	{
-		const double aq = 1. * buffer_width / buffer_height;
-		const double rq = 1. * new_size.width / new_size.height;
-		const double q = aq / rq;
-
-		if (q > 1.0)
-		{
-			new_size.height = static_cast<int>(new_size.height / q);
-			aspect_ratio.y = (csize.height - new_size.height) / 2;
-		}
-		else if (q < 1.0)
-		{
-			new_size.width = static_cast<int>(new_size.width * q);
-			aspect_ratio.x = (csize.width - new_size.width) / 2;
-		}
+		avconfig.downscale_to_aspect_ratio(aspect_ratio.x, aspect_ratio.y, new_size.width, new_size.height);
 	}
 
 	aspect_ratio.size = new_size;

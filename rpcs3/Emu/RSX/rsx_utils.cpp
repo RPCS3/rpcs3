@@ -2,6 +2,7 @@
 #include "rsx_utils.h"
 #include "rsx_methods.h"
 #include "Emu/RSX/GCM.h"
+#include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Overlays/overlays.h"
 
 #ifdef _MSC_VER
@@ -99,6 +100,94 @@ namespace rsx
 			u8 blend_color_a = rsx::method_registers.blend_color_8b_a();
 
 			return { blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f };
+		}
+	}
+
+	u32 avconf::get_compatible_gcm_format() const
+	{
+		switch (format)
+		{
+		default:
+			rsx_log.error("Invalid AV format 0x%x", format);
+			[[fallthrough]];
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+			return CELL_GCM_TEXTURE_A8R8G8B8;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+			return CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
+		}
+	}
+
+	u8 avconf::get_bpp() const
+	{
+		switch (format)
+		{
+		default:
+			rsx_log.error("Invalid AV format 0x%x", format);
+			[[fallthrough]];
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+			return 4;
+		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+			return 8;
+		}
+	}
+
+	double avconf::get_aspect_ratio() const
+	{
+		video_aspect v_aspect;
+		switch (aspect)
+		{
+		case CELL_VIDEO_OUT_ASPECT_16_9: v_aspect = video_aspect::_16_9; break;
+		case CELL_VIDEO_OUT_ASPECT_4_3: v_aspect = video_aspect::_4_3; break;
+		case CELL_VIDEO_OUT_ASPECT_AUTO:
+		default: v_aspect = g_cfg.video.aspect_ratio; break;
+		}
+
+		double aspect_ratio;
+		switch (v_aspect)
+		{
+		case video_aspect::_4_3: aspect_ratio = 4.0 / 3.0; break;
+		case video_aspect::_16_9: aspect_ratio = 16.0 / 9.0; break;
+		}
+		return aspect_ratio;
+	}
+
+	void avconf::upscale_to_aspect_ratio(int& width, int& height) const
+	{
+		if (width == 0 || height == 0) return;
+
+		const double old_aspect = 1. * width / height;
+		const double scaling_factor = get_aspect_ratio() / old_aspect;
+
+		if (scaling_factor > 1.0)
+		{
+			width = static_cast<int>(width * scaling_factor);
+		}
+		else if (scaling_factor < 1.0)
+		{
+			height = static_cast<int>(height / scaling_factor);
+		}
+	}
+
+	void avconf::downscale_to_aspect_ratio(int& x, int& y, int& width, int& height) const
+	{
+		if (width == 0 || height == 0) return;
+
+		const double old_aspect = 1. * width / height;
+		const double scaling_factor = get_aspect_ratio() / old_aspect;
+
+		if (scaling_factor > 1.0)
+		{
+			const int new_height = static_cast<int>(height / scaling_factor);
+			y = (height - new_height) / 2;
+			height = new_height;
+		}
+		else if (scaling_factor < 1.0)
+		{
+			const int new_width = static_cast<int>(width * scaling_factor);
+			x = (width - new_width) / 2;
+			width = new_width;
 		}
 	}
 
