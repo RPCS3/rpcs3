@@ -5600,7 +5600,7 @@ public:
 
 		if (atomic)
 		{
-			const auto val = m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, ptr, m_ir->getInt64(0), llvm::AtomicOrdering::Acquire);
+			const auto val = m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Xchg, ptr, m_ir->getInt64(0), llvm::MaybeAlign{8}, llvm::AtomicOrdering::Acquire);
 			val0 = val;
 		}
 		else
