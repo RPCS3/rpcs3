@@ -560,7 +560,7 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	std::tie(h, depth, layer) = get_height_depth_layer(texture);
 
 	const auto format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	const auto pitch = texture.pitch();
+	auto pitch = texture.pitch();
 
 	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
 	auto pixels = vm::_ptr<const std::byte>(texaddr);
@@ -570,17 +570,18 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 
 	if (!is_swizzled)
 	{
-		if (pitch) [[likely]]
+		if (const auto packed_pitch = rsx::get_format_packed_pitch(format, w, has_border, false); pitch < packed_pitch) [[unlikely]]
 		{
-			if (pitch < rsx::get_format_packed_pitch(format, w, has_border, false))
+			if (pitch)
 			{
 				const u32 real_width_in_block = pitch / rsx::get_format_block_size_in_bytes(format);
 				w = std::max<u16>(real_width_in_block * rsx::get_format_block_size_in_texel(format), 1);
 			}
-		}
-		else
-		{
-			h = depth = 1;
+			else
+			{
+				h = depth = 1;
+				pitch = packed_pitch;
+			}
 		}
 	}
 

@@ -21,7 +21,7 @@ const ppu_decoder<ppu_iname> s_ppu_iname;
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module& info, ExecutionEngine& engine)
 	: cpu_translator(_module, false)
 	, m_info(info)
-	, m_pure_attr(AttributeList::get(m_context, AttributeList::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
+	, m_pure_attr()
 {
 	// Bind context
 	cpu_translator::initialize(context, engine);
@@ -189,7 +189,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	if (need_check)
 	{
 		// Check status register in the entry block
-		const auto vstate = m_ir->CreateLoad(m_ir->CreateStructGEP(nullptr, m_thread, 1), true);
+		const auto vstate = m_ir->CreateLoad(m_ir->CreateStructGEP(m_thread, 1), true);
 		const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
 		m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), body, vcheck, m_md_likely);
 
@@ -236,7 +236,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 			if (ppu_get_far_jump(m_addr + base))
 			{
-				// Branch into an HLEd instruction using the jump table 
+				// Branch into an HLEd instruction using the jump table
 				FlushRegisters();
 				CallFunction(0, m_reloc ? m_ir->CreateAdd(m_ir->getInt64(m_addr), m_seg0) : m_ir->getInt64(m_addr));
 				continue;
@@ -324,7 +324,7 @@ Type* PPUTranslator::ScaleType(Type* type, s32 pow2)
 
 	ensure(scaled);
 	const auto new_type = m_ir->getIntNTy(scaled);
-	const auto vec_type = dyn_cast<VectorType>(type);
+	const auto vec_type = dyn_cast<FixedVectorType>(type);
 	return vec_type ? VectorType::get(new_type, vec_type->getNumElements(), false) : cast<Type>(new_type);
 }
 
@@ -375,7 +375,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 	if (indirect)
 	{
-		m_ir->CreateStore(Trunc(indirect, GetType<u32>()), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_cia - m_locals)), true);
+		m_ir->CreateStore(Trunc(indirect, GetType<u32>()), m_ir->CreateStructGEP(m_thread, static_cast<uint>(&m_cia - m_locals)), true);
 
 		// Try to optimize
 		if (auto inst = dyn_cast_or_null<Instruction>(indirect))
@@ -412,7 +412,7 @@ Value* PPUTranslator::RegInit(Value*& local)
 	}
 
 	// (Re)Initialize global, will be written in FlushRegisters
-	m_globals[index] = m_ir->CreateStructGEP(nullptr, m_thread, index);
+	m_globals[index] = m_ir->CreateStructGEP(m_thread, index);
 
 	return m_globals[index];
 }
@@ -428,7 +428,7 @@ Value* PPUTranslator::RegLoad(Value*& local)
 	}
 
 	// Load from the global value
-	local = m_ir->CreateLoad(m_ir->CreateStructGEP(nullptr, m_thread, index));
+	local = m_ir->CreateLoad(m_ir->CreateStructGEP(m_thread, index));
 	return local;
 }
 
@@ -525,9 +525,9 @@ Value* PPUTranslator::Broadcast(Value* value, u32 count)
 std::pair<Value*, Value*> PPUTranslator::Saturate(Value* value, CmpInst::Predicate inst, Value* extreme)
 {
 	// Modify args
-	if (auto v = dyn_cast<VectorType>(value->getType()); v && !extreme->getType()->isVectorTy())
+	if (auto v = dyn_cast<FixedVectorType>(value->getType()); v && !extreme->getType()->isVectorTy())
 		extreme = Broadcast(extreme, v->getNumElements());
-	if (auto e = dyn_cast<VectorType>(extreme->getType()); e && !value->getType()->isVectorTy())
+	if (auto e = dyn_cast<FixedVectorType>(extreme->getType()); e && !value->getType()->isVectorTy())
 		value = Broadcast(value, e->getNumElements());
 
 	// Compare args
@@ -554,7 +554,7 @@ Value* PPUTranslator::Scale(Value* value, s32 scale)
 		const auto type = value->getType();
 		const auto power = std::pow(2, scale);
 
-		if (auto v = dyn_cast<VectorType>(type))
+		if (auto v = dyn_cast<FixedVectorType>(type))
 		{
 			return m_ir->CreateFMul(value, ConstantVector::getSplat({v->getNumElements(), false}, ConstantFP::get(v->getElementType(), power)));
 		}
@@ -580,7 +580,7 @@ Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u
 	{
 		std::vector<u32> data; data.reserve(indices.size());
 
-		const u32 mask = cast<VectorType>(type)->getNumElements() - 1;
+		const u32 mask = cast<FixedVectorType>(type)->getNumElements() - 1;
 
 		// Transform indices (works for vectors with size 2^N)
 		for (usz i = 0; i < indices.size(); i++)
@@ -2003,7 +2003,7 @@ void PPUTranslator::BC(ppu_opcode_t op)
 
 	if (op.lk)
 	{
-		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_lr - m_locals)));
+		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(m_thread, static_cast<uint>(&m_lr - m_locals)));
 	}
 
 	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
@@ -2073,7 +2073,7 @@ void PPUTranslator::BCLR(ppu_opcode_t op)
 
 	if (op.lk)
 	{
-		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_lr - m_locals)));
+		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(m_thread, static_cast<uint>(&m_lr - m_locals)));
 	}
 
 	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
@@ -2136,7 +2136,7 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 
 	if (op.lk)
 	{
-		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_lr - m_locals)));
+		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(m_thread, static_cast<uint>(&m_lr - m_locals)));
 	}
 
 	UseCondition(CheckBranchProbability(op.bo | 0x4), CheckBranchCondition(op.bo | 0x4, op.bi));
@@ -2551,8 +2551,8 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 	else if (std::none_of(m_cr + 0, m_cr + 32, [](auto* p) { return p; }))
 	{
 		// MFCR (optimized)
-		Value* ln0 = m_ir->CreateIntToPtr(m_ir->CreatePtrToInt(m_ir->CreateStructGEP(nullptr, m_thread, 99), GetType<uptr>()), GetType<u8[16]>()->getPointerTo());
-		Value* ln1 = m_ir->CreateIntToPtr(m_ir->CreatePtrToInt(m_ir->CreateStructGEP(nullptr, m_thread, 115), GetType<uptr>()), GetType<u8[16]>()->getPointerTo());
+		Value* ln0 = m_ir->CreateIntToPtr(m_ir->CreatePtrToInt(m_ir->CreateStructGEP(m_thread, 99), GetType<uptr>()), GetType<u8[16]>()->getPointerTo());
+		Value* ln1 = m_ir->CreateIntToPtr(m_ir->CreatePtrToInt(m_ir->CreateStructGEP(m_thread, 115), GetType<uptr>()), GetType<u8[16]>()->getPointerTo());
 
 		ln0 = m_ir->CreateLoad(ln0);
 		ln1 = m_ir->CreateLoad(ln1);
@@ -2868,7 +2868,7 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 
 			const auto index = m_ir->CreateAnd(m_ir->CreateLShr(value, 28 - i * 4), 15);
 			const auto src = m_ir->CreateGEP(m_mtocr_table, {m_ir->getInt32(0), m_ir->CreateShl(index, 2)});
-			const auto dst = bitcast(m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(m_cr - m_locals) + i * 4), GetType<u8*>());
+			const auto dst = bitcast(m_ir->CreateStructGEP(m_thread, static_cast<uint>(m_cr - m_locals) + i * 4), GetType<u8*>());
 			Call(GetType<void>(), "llvm.memcpy.p0i8.p0i8.i32", dst, src, m_ir->getInt32(4), m_ir->getFalse());
 		}
 	}
