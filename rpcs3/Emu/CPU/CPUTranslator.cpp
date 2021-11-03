@@ -89,6 +89,7 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 	if (cpu == "haswell" ||
 		cpu == "broadwell" ||
 		cpu == "skylake" ||
+		cpu == "alderlake" ||
 		cpu == "bdver2" ||
 		cpu == "bdver3" ||
 		cpu == "bdver4" ||
