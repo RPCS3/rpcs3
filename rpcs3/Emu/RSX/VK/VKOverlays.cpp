@@ -328,7 +328,7 @@ namespace vk
 		load_program(cmd, render_pass, src);
 		set_up_viewport(cmd, viewport.x1, viewport.y1, viewport.width(), viewport.height());
 
-		vk::begin_renderpass(cmd, render_pass, fbo->value, viewport);
+		vk::begin_renderpass(cmd, render_pass, fbo->value, { positionu{0u, 0u}, sizeu{fbo->width(), fbo->height()} });
 		emit_geometry(cmd);
 	}
 
