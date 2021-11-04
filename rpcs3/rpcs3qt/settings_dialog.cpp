@@ -244,26 +244,57 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		m_emu_settings->EnhanceComboBox(ui->enableTSX, emu_settings_type::EnableTSX);
 		SubscribeTooltip(ui->gb_tsx, tooltips.settings.enable_tsx);
 
+		static const QString tsx_enabled = qstr(fmt::format("%s", tsx_usage::enabled));
 		static const QString tsx_forced = qstr(fmt::format("%s", tsx_usage::forced));
 		static const QString tsx_default = qstr(m_emu_settings->GetSettingDefault(emu_settings_type::EnableTSX));
 
-		// connect the toogled signal so that the stateChanged signal in EnhanceCheckBox can be prevented
-		connect(ui->enableTSX, &QComboBox::currentTextChanged, [this](const QString& text)
+		if (!utils::has_mpx() || utils::has_tsx_force_abort())
 		{
-			if (text == tsx_forced && !utils::has_mpx() && QMessageBox::No == QMessageBox::critical(this, tr("Haswell/Broadwell TSX Warning"), tr(
-				R"(
-					<p style="white-space: nowrap;">
-						RPCS3 has detected you are using TSX functions on a Haswell or Broadwell CPU.<br>
-						Intel has deactivated these functions in newer Microcode revisions, since they can lead to unpredicted behaviour.<br>
-						That means using TSX may break games or even <font color="red"><b>damage</b></font> your data.<br>
-						We recommend to disable this feature and update your computer BIOS.<br><br>
-						Do you wish to use TSX anyway?
-					</p>
-				)"
-			), QMessageBox::Yes, QMessageBox::No))
+			ui->enableTSX->removeItem(ui->enableTSX->findText(m_emu_settings->GetLocalizedSetting(tsx_enabled, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::enabled))));
+			ui->enableTSX->setCurrentIndex(ui->enableTSX->findText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def))));
+		}
+
+		// connect the toogled signal so that the stateChanged signal in EnhanceCheckBox can be prevented
+		connect(ui->enableTSX, &QComboBox::currentTextChanged, this, [this](const QString& text)
+		{
+			if (text == m_emu_settings->GetLocalizedSetting(tsx_forced, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::forced)) &&
+				(!utils::has_mpx() || utils::has_tsx_force_abort()))
 			{
-				// Reset if the messagebox was answered with no. This prevents the currentIndexChanged signal in EnhanceComboBox
-				ui->enableTSX->setCurrentText(tsx_default);
+				QString title;
+				QString message;
+				if (!utils::has_mpx())
+				{
+					title = tr("Haswell/Broadwell TSX Warning");
+					message = tr(
+						R"(
+							<p style="white-space: nowrap;">
+								RPCS3 has detected that you are using TSX functions on a Haswell or Broadwell CPU.<br>
+								Intel has deactivated these functions in newer Microcode revisions, since they can lead to unpredicted behaviour.<br>
+								That means using TSX may break games or even <font color="red"><b>damage</b></font> your data.<br>
+								We recommend to disable this feature and update your computer BIOS.<br><br>
+								Do you wish to use TSX anyway?
+							</p>
+						)");
+				}
+				else
+				{
+					title = tr("TSX-FA Warning");
+					message = tr(
+						R"(
+							<p style="white-space: nowrap;">
+								RPCS3 has detected your CPU only supports TSX-FA.<br>
+								That means using TSX may break games or even <font color="red"><b>damage</b></font> your data.<br>
+								We recommend to disable this feature.<br><br>
+								Do you wish to use TSX anyway?
+							</p>
+						)");
+				}
+
+				if (QMessageBox::No == QMessageBox::critical(this, title, message, QMessageBox::Yes, QMessageBox::No))
+				{
+					// Reset if the messagebox was answered with no. This prevents the currentIndexChanged signal in EnhanceComboBox
+					ui->enableTSX->setCurrentText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def)));
+				}
 			}
 		});
 	}
@@ -467,6 +498,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(ui->zcullPrecisionMode, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
 	{
+		if (index < 0) return;
+
 		bool relaxed = false, precise = false;
 
 		switch (static_cast<zcull_precision_level>(ui->zcullPrecisionMode->itemData(index).toInt()))
@@ -780,6 +813,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto enable_buffering = [this, enable_buffering_options](int index)
 	{
+		if (index < 0) return;
 		const QVariantList var_list = ui->audioOutBox->itemData(index).toList();
 		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
 		const QString text = var_list[0].toString();
@@ -1727,7 +1761,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->combo_updates->setCurrentIndex(ui->combo_updates->findData(m_gui_settings->GetValue(gui::m_check_upd_start).toString()));
 		connect(ui->combo_updates, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
 		{
-			m_gui_settings->SetValue(gui::m_check_upd_start, ui->combo_updates->itemData(index));
+			if (index >= 0) m_gui_settings->SetValue(gui::m_check_upd_start, ui->combo_updates->itemData(index));
 		});
 
 		const bool enable_ui_colors = m_gui_settings->GetValue(gui::m_enableUIColors).toBool();
