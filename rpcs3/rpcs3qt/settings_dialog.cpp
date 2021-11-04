@@ -639,9 +639,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		return tr("%1%").arg(value);
 	};
 	m_emu_settings->EnhanceSlider(ui->fsrSharpeningStrength, emu_settings_type::FsrSharpeningStrength);
-	SubscribeTooltip(ui->fsrSharpeningStrength, tooltips.settings.fsr_rcas_strength);
-	SubscribeTooltip(ui->fsrSharpeningStrengthVal, tooltips.settings.fsr_rcas_strength);
-	SubscribeTooltip(ui->fsrSharpeningStrengthReset, tooltips.settings.fsr_rcas_strength);
+	SubscribeTooltip(ui->fsrSharpeningStrengthWidget, tooltips.settings.fsr_rcas_strength);
 	ui->fsrSharpeningStrengthVal->setText(fmt_fsr_sharpening_strength(ui->fsrSharpeningStrength->value()));
 	connect(ui->fsrSharpeningStrength, &QSlider::valueChanged, [fmt_fsr_sharpening_strength, this](int value)
 	{
