@@ -481,7 +481,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 	const auto [fs_error, ppath, real_path, enc_file, type] = lv2_file::open(enc_drm_path, 0, 0);
 
-	if (!fs_error)
+	if (fs_error)
 	{
 		return {fs_error, enc_drm_path};
 	}
