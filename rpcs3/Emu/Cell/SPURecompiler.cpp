@@ -4485,13 +4485,13 @@ public:
 				elements = 16;
 				dwords = 8;
 			}
-			else if (true)
+			else if (m_use_avx)
 			{
 				stride = 32;
 				elements = 8;
 				dwords = 4;
 			}
-			else // TODO: Use this path when the cpu doesn't support AVX
+			else
 			{
 				stride = 16;
 				elements = 4;
@@ -4539,7 +4539,7 @@ public:
 				{
 					vls = m_ir->CreateAlignedLoad(_ptr<u32[16]>(data_addr, j - starta), llvm::MaybeAlign{4});
 				}
-				else if (true)
+				else if (m_use_avx)
 				{
 					vls = m_ir->CreateAlignedLoad(_ptr<u32[8]>(data_addr, j - starta), llvm::MaybeAlign{4});
 				}
@@ -4573,7 +4573,7 @@ public:
 			{
 				acc = m_ir->CreateBitCast(acc, get_type<u64[8]>());
 			}
-			else if (true)
+			else if (m_use_avx)
 			{
 				acc = m_ir->CreateBitCast(acc, get_type<u64[4]>());
 			}
