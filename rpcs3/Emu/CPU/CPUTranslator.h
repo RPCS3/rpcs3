@@ -2886,6 +2886,9 @@ protected:
 	// Allow FMA
 	bool m_use_fma = false;
 
+	// Allow AVX
+	bool m_use_avx = false;
+
 	// Allow skylake-x tier AVX-512
 	bool m_use_avx512 = false;
 
