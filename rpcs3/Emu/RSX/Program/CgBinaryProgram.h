@@ -3,15 +3,21 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"
 #include "Emu/RSX/GL/GLFragmentProgram.h"
+#include "Emu/RSX/Program/ProgramStateCache.h"
 #include "Utilities/File.h"
 
-using CGprofile = be_t<u32>;
-using CGbool = be_t<s32>;
-using CGresource = be_t<u32>;
-using CGenum = be_t<u32>;
-using CGtype = be_t<u32>;
+using CGprofile = u32;
+using CGbool = s32;
+using CGresource = u32;
+using CGenum = u32;
+using CGtype = u32;
+using CGbitfield = u32;
+using CGbitfield16 = u16;
+using CGint = s32;
+using CGuint = u32;
 
-using CgBinaryOffset = be_t<u32>;
+using CgBinaryOffset = CGuint;
+using CgBinarySize = CgBinaryOffset;
 using CgBinaryEmbeddedConstantOffset = CgBinaryOffset;
 using CgBinaryFloatOffset = CgBinaryOffset;
 using CgBinaryStringOffset = CgBinaryOffset;
@@ -36,13 +42,13 @@ struct CgBinaryParameter
 	CGtype                          type;          // cgGetParameterType()
 	CGresource                      res;           // cgGetParameterResource()
 	CGenum                          var;           // cgGetParameterVariability()
-	be_t<s32>                       resIndex;      // cgGetParameterResourceIndex()
+	CGint                           resIndex;      // cgGetParameterResourceIndex()
 	CgBinaryStringOffset            name;          // cgGetParameterName()
 	CgBinaryFloatOffset             defaultValue;  // default constant value
 	CgBinaryEmbeddedConstantOffset  embeddedConst; // embedded constant information
 	CgBinaryStringOffset            semantic;      // cgGetParameterSemantic()
 	CGenum                          direction;     // cgGetParameterDirection()
-	be_t<s32>                       paramno;       // 0..n: cgGetParameterIndex() -1: globals
+	CGint                           paramno;       // 0..n: cgGetParameterIndex() -1: globals
 	CGbool                          isReferenced;  // cgIsParameterReferenced()
 	CGbool                          isShared;	   // cgIsParameterShared()
 };
@@ -50,12 +56,12 @@ struct CgBinaryParameter
 // attributes needed for vshaders
 struct CgBinaryVertexProgram
 {
-	be_t<u32>  instructionCount;         // #instructions
-	be_t<u32>  instructionSlot;          // load address (indexed reads!)
-	be_t<u32>  registerCount;            // R registers count
-	be_t<u32>  attributeInputMask;       // attributes vs reads from
-	be_t<u32>  attributeOutputMask;      // attributes vs writes (uses SET_VERTEX_ATTRIB_OUTPUT_MASK bits)
-	be_t<u32>  userClipMask;             // user clip plane enables (for SET_USER_CLIP_PLANE_CONTROL)
+	CgBinarySize  instructionCount;       // #instructions
+	CgBinarySize  instructionSlot;        // load address (indexed reads!)
+	CgBinarySize  registerCount;          // R registers count
+	CGbitfield  attributeInputMask;       // attributes vs reads from
+	CGbitfield  attributeOutputMask;      // attributes vs writes (uses SET_VERTEX_ATTRIB_OUTPUT_MASK bits)
+	CGbitfield  userClipMask;             // user clip plane enables (for SET_USER_CLIP_PLANE_CONTROL)
 };
 
 typedef enum
@@ -68,16 +74,16 @@ typedef enum
 // attributes needed for pshaders
 struct CgBinaryFragmentProgram
 {
-	be_t<u32> instructionCount;        // #instructions
-	be_t<u32> attributeInputMask;      // attributes fp reads (uses SET_VERTEX_ATTRIB_OUTPUT_MASK bits)
-	be_t<u32> partialTexType;          // texid 0..15 use two bits each marking whether the texture format requires partial load: see CgBinaryPartialTexType
-	be_t<u16> texCoordsInputMask;      // tex coords used by frag prog. (tex<n> is bit n)
-	be_t<u16> texCoords2D;             // tex coords that are 2d        (tex<n> is bit n)
-	be_t<u16> texCoordsCentroid;       // tex coords that are centroid  (tex<n> is bit n)
-	u8        registerCount;           // R registers count
-	u8        outputFromH0;            // final color from R0 or H0
-	u8        depthReplace;            // fp generated z depth value
-	u8        pixelKill;               // fp uses kill operations
+	CgBinarySize instructionCount;        // #instructions
+	CGbitfield   attributeInputMask;      // attributes fp reads (uses SET_VERTEX_ATTRIB_OUTPUT_MASK bits)
+	CGbitfield   partialTexType;          // texid 0..15 use two bits each marking whether the texture format requires partial load: see CgBinaryPartialTexType
+	CGbitfield16 texCoordsInputMask;      // tex coords used by frag prog. (tex<n> is bit n)
+	CGbitfield16 texCoords2D;             // tex coords that are 2d        (tex<n> is bit n)
+	CGbitfield16 texCoordsCentroid;       // tex coords that are centroid  (tex<n> is bit n)
+	u8           registerCount;           // R registers count
+	u8           outputFromH0;            // final color from R0 or H0
+	u8           depthReplace;            // fp generated z depth value
+	u8           pixelKill;               // fp uses kill operations
 };
 
 struct CgBinaryProgram
@@ -86,20 +92,20 @@ struct CgBinaryProgram
 	CGprofile profile;
 
 	// binary revision (used to verify binary and driver structs match)
-	be_t<u32> binaryFormatRevision;
+	CgBinarySize binaryFormatRevision;
 
 	// total size of this struct including profile and totalSize field
-	be_t<u32> totalSize;
+	CgBinarySize totalSize;
 
 	// parameter usually queried using cgGet[First/Next]LeafParameter
-	be_t<u32> parameterCount;
+	CgBinarySize parameterCount;
 	CgBinaryParameterOffset parameterArray;
 
 	// depending on profile points to a CgBinaryVertexProgram or CgBinaryFragmentProgram struct
 	CgBinaryOffset program;
 
 	// raw ucode data
-	be_t<u32>    ucodeSize;
+	CgBinarySize    ucodeSize;
 	CgBinaryOffset  ucode;
 
 	// variable length data follows
@@ -255,11 +261,62 @@ public:
 		return reinterpret_cast<T&>(m_buffer[offset]);
 	}
 
+	void ConvertToLE(CgBinaryProgram& prog)
+	{
+		// BE payload, requires that data be swapped
+		const auto be_profile = prog.profile;
+
+		auto swap_be32 = [&](u32 start_offset, size_t size_bytes)
+		{
+			auto start = reinterpret_cast<u32*>(m_buffer + start_offset);
+			auto end = reinterpret_cast<u32*>(m_buffer + start_offset + size_bytes);
+
+			for (auto data = start; data < end; ++data)
+			{
+				*data = std::bit_cast<be_t<u32>>(*data);
+			}
+		};
+
+		// 1. Swap the header
+		swap_be32(0, sizeof(CgBinaryProgram));
+
+		// 2. Swap parameters
+		swap_be32(prog.parameterArray, sizeof(CgBinaryParameter) * prog.parameterCount);
+
+		// 3. Swap the ucode
+		swap_be32(prog.ucode, m_buffer_size - prog.ucode);
+
+		// 4. Swap the domain header
+		if (be_profile == 7004u)
+		{
+			// Need to swap each field individually
+			auto& fprog = GetCgRef<CgBinaryFragmentProgram>(prog.program);
+			fprog.instructionCount = std::bit_cast<be_t<u32>>(fprog.instructionCount);
+			fprog.attributeInputMask = std::bit_cast<be_t<u32>>(fprog.attributeInputMask);
+			fprog.partialTexType = std::bit_cast<be_t<u32>>(fprog.partialTexType);
+			fprog.texCoordsInputMask = std::bit_cast<be_t<u16>>(fprog.texCoordsInputMask);
+			fprog.texCoords2D = std::bit_cast<be_t<u16>>(fprog.texCoords2D);
+			fprog.texCoordsCentroid = std::bit_cast<be_t<u16>>(fprog.texCoordsCentroid);
+		}
+		else
+		{
+			// Swap entire header block as all fields are u32
+			swap_be32(prog.program, sizeof(CgBinaryVertexProgram));
+		}
+	}
+
 	void BuildShaderBody()
 	{
 		ParamArray param_array;
 
 		auto& prog = GetCgRef<CgBinaryProgram>(0);
+
+		if (const u32 be_profile = std::bit_cast<be_t<u32>>(prog.profile);
+			be_profile == 7003u || be_profile == 7004u)
+		{
+			ConvertToLE(prog);
+			ensure(be_profile == prog.profile);
+		}
 
 		if (prog.profile == 7004u)
 		{
@@ -292,34 +349,31 @@ public:
 			m_offset = prog.ucode;
 			TaskFP();
 
-			// reload binary data in the virtual memory, temporary solution
+			u32 unused;
+			std::vector<u32> be_data;
+
+			// Swap bytes. FP decompiler expects input in BE
+			for (u32* ptr = reinterpret_cast<u32*>(m_buffer + m_offset),
+				*end = reinterpret_cast<u32*>(m_buffer + m_buffer_size);
+				ptr < end; ++ptr)
 			{
-				u32 ptr;
-				{
-					fs::file f(m_path);
-					if (!f) return;
-
-					usz size = f.size();
-					vm::init();
-					ptr = vm::alloc(static_cast<u32>(size), vm::main);
-					f.read(vm::base(ptr), size);
-				}
-
-				auto& vmprog = vm::_ref<CgBinaryProgram>(ptr);
-				auto& vmfprog = vm::_ref<CgBinaryFragmentProgram>(ptr + vmprog.program);
-				u32 size;
-				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
-				std::vector<rsx::texture_dimension_extended> td;
-				RSXFragmentProgram prog;
-				prog.ucode_length = 0, prog.data = vm::base(ptr + vmprog.ucode), prog.offset = 0, prog.ctrl = ctrl;
-				GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, size).Task();
-				vm::close();
+				be_data.push_back(std::bit_cast<be_t<u32>>(*ptr));
 			}
+
+			RSXFragmentProgram prog;
+			auto metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(be_data.data());
+			prog.ctrl = (fprog.outputFromH0 ? 0 : 0x40) | (fprog.depthReplace ? 0xe : 0);
+			prog.offset = metadata.program_start_offset;
+			prog.ucode_length = metadata.program_ucode_length;
+			prog.total_length = metadata.program_ucode_length + metadata.program_start_offset;
+			prog.data = reinterpret_cast<u8*>(be_data.data()) + metadata.program_start_offset;
+			for (u32 i = 0; i < 16; ++i) prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
+			GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, unused).Task();
 		}
 
 		else
 		{
-			auto& vprog = GetCgRef<CgBinaryVertexProgram>(prog.program);
+			const auto& vprog = GetCgRef<CgBinaryVertexProgram>(prog.program);
 			m_arb_shader += "\n";
 			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
 			m_arb_shader += fmt::format("# profile sce_vp_rsx\n");
@@ -347,22 +401,16 @@ public:
 
 			m_arb_shader += "\n";
 			m_offset = prog.ucode;
+			ensure((m_buffer_size - m_offset) % sizeof(u32) == 0);
 
 			u32* vdata = reinterpret_cast<u32*>(&m_buffer[m_offset]);
-			ensure((m_buffer_size - m_offset) % sizeof(u32) == 0);
-			for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
-			{
-				vdata[i] = std::bit_cast<u32, be_t<u32>>(vdata[i]);
-			}
-
-			for (u32 i = 0; i < prog.ucodeSize / sizeof(u32); i++)
-			{
-				m_data.push_back(vdata[i]);
-			}
-
+			m_data.resize(prog.ucodeSize / sizeof(u32));
+			std::memcpy(m_data.data(), vdata, prog.ucodeSize);
 			TaskVP();
+
 			RSXVertexProgram prog;
-			prog.data = m_data;
+			program_hash_util::vertex_program_utils::analyse_vertex_program(vdata, 0, prog);
+			for (u32 i = 0; i < 4; ++i) prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
 			GLVertexDecompilerThread(prog, m_glsl_shader, param_array).Task();
 		}
 	}

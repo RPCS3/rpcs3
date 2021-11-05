@@ -48,6 +48,13 @@ namespace gl
 			int find_count = 14;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
+
+			if (!ext_count)
+			{
+				rsx_log.error("Coult not initialize GL driver capabilities. Is OpenGL initialized?");
+				return;
+			}
+
 			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 			std::string version_string = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 			std::string renderer_string = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
