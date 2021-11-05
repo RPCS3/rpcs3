@@ -27,18 +27,7 @@ else()
 
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 
-	# TODO(cjj19970505@live.cn)
-	# This only works in single-config generator
-	# For a multi-config generator, we need to provide different wolfssl binaries for different config
-	if (GENERATOR_IS_MULTI_CONFIG)
-		message( FATAL_ERROR "RPCS3 can only be configured using single-config generator." )
-	endif()
-
-	if(MSVC)
-		set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/${CMAKE_BUILD_TYPE}/wolfssl.lib" CACHE INTERNAL "")
-	else()
-		set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a" CACHE INTERNAL "")
-	endif()
+	set(WolfSSL_LIBRARY "$<TARGET_FILE:wolfssl>" CACHE INTERNAL "")
 
 	# "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/" provides openssl headers
 	# So that curl can be built on an environment where openssl headers are not provided

@@ -41,7 +41,7 @@
 
 #include "display_sleep_control.h"
 
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
@@ -718,7 +718,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		if (!add_only)
 		{
 			// Log some extra info in case of boot
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 			if (g_cfg.video.renderer == video_renderer::vulkan)
 			{
 				sys_log.notice("Vulkan SDK Revision: %d", VK_HEADER_VERSION);

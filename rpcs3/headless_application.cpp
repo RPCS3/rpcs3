@@ -73,7 +73,7 @@ void headless_application::InitializeCallbacks()
 			break;
 		}
 		case video_renderer::opengl:
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
 #endif
 		{
