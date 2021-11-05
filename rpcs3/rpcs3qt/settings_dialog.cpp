@@ -250,8 +250,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		if (!utils::has_mpx() || utils::has_tsx_force_abort())
 		{
-			ui->enableTSX->removeItem(ui->enableTSX->findText(m_emu_settings->GetLocalizedSetting(tsx_enabled, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::enabled))));
-			ui->enableTSX->setCurrentIndex(ui->enableTSX->findText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def))));
+			const QString current_text = ui->enableTSX->currentText();
+			const QString localized_tsx_enabled = m_emu_settings->GetLocalizedSetting(tsx_enabled, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::enabled));
+
+			ui->enableTSX->removeItem(ui->enableTSX->findText(localized_tsx_enabled));
+
+			if (current_text == localized_tsx_enabled)
+			{
+				ui->enableTSX->setCurrentText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def)));
+			}
 		}
 
 		// connect the toogled signal so that the stateChanged signal in EnhanceCheckBox can be prevented
