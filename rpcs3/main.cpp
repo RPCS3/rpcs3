@@ -26,6 +26,15 @@
 #ifdef _WIN32
 #include <windows.h>
 #include "util/dyn_lib.hpp"
+
+// TODO(cjj19970505@live.cn)
+// When compiling with WIN32_LEAN_AND_MEAN definition
+// NTSTATUS is defined in CMake build but not in VS build
+// May be caused by some different header pre-inclusion between CMake and VS configurations.
+#if !defined(NTSTATUS)
+// Copied from ntdef.h
+typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
+#endif
 DYNAMIC_IMPORT("ntdll.dll", NtQueryTimerResolution, NTSTATUS(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution));
 DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
 #else
