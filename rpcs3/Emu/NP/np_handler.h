@@ -9,11 +9,11 @@
 #include "Emu/Cell/Modules/sceNp2.h"
 
 #include "Emu/NP/rpcn_client.h"
-#include "generated/np2_structs_generated.h"
-#include "signaling_handler.h"
-#include "np_allocator.h"
-#include "np_cache.h"
-#include "np_event_data.h"
+#include "Emu/NP/generated/np2_structs_generated.h"
+#include "Emu/NP/signaling_handler.h"
+#include "Emu/NP/np_allocator.h"
+#include "Emu/NP/np_cache.h"
+#include "Emu/NP/np_event_data.h"
 
 namespace np
 {
@@ -23,15 +23,6 @@ namespace np
 		SceNpUserInfo from{};
 		std::vector<u8> data;
 	};
-
-	// Helper functions
-	std::string ip_to_string(u32 addr);
-	std::string ether_to_string(std::array<u8, 6>& ether);
-
-	void string_to_npid(const std::string& str, SceNpId* npid);
-	void string_to_online_name(const std::string& str, SceNpOnlineName* online_name);
-	void string_to_avatar_url(const std::string& str, SceNpAvatarUrl* avatar_url);
-	void string_to_communication_id(const std::string& str, SceNpCommunicationId* comm_id);
 
 	class np_handler
 	{
@@ -125,6 +116,7 @@ namespace np
 		// Friend stuff
 		u32 get_num_friends();
 		u32 get_num_blocks();
+		std::pair<error_code, std::optional<SceNpId>> get_friend_by_index(u32 index);
 
 		// Misc stuff
 		void req_ticket(u32 version, const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, const char* entitlement_id, u32 consumed_count);

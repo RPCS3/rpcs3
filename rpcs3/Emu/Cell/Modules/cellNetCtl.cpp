@@ -11,6 +11,7 @@
 #include "Utilities/StrUtil.h"
 
 #include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_helpers.h"
 
 LOG_CHANNEL(cellNetCtl);
 

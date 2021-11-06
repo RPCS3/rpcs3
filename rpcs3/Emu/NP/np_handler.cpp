@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Emu/system_config.h"
-#include "np_handler.h"
+#include "Emu/NP/np_handler.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
@@ -8,10 +8,11 @@
 #include "Utilities/StrUtil.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/IdManager.h"
-#include "np_structs_extra.h"
+#include "Emu/NP/np_structs_extra.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/NP/np_contexts.h"
+#include "Emu/NP/np_helpers.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -601,6 +602,21 @@ namespace np
 	u32 np_handler::get_num_blocks()
 	{
 		return rpcn->get_num_blocks();
+	}
+
+	std::pair<error_code, std::optional<SceNpId>> np_handler::get_friend_by_index(u32 index)
+	{
+		auto str_friend = rpcn->get_friend_by_index(index);
+
+		if (!str_friend)
+		{
+			return {SCE_NP_ERROR_ID_NOT_FOUND, {}};
+		}
+
+		SceNpId npid_friend;
+		string_to_npid(str_friend.value(), &npid_friend);
+
+		return {CELL_OK, npid_friend};
 	}
 
 	std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> np_handler::local_get_room_password(SceNpMatching2RoomId room_id)
