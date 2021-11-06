@@ -24,6 +24,7 @@
 #endif
 
 #include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_helpers.h"
 #include "Emu/NP/np_dnshook.h"
 
 #include <chrono>

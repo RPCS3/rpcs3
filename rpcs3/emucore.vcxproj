@@ -471,6 +471,7 @@
     <ClInclude Include="Emu\NP\np_cache.h" />
     <ClInclude Include="Emu\NP\np_dnshook.h" />
     <ClInclude Include="Emu\NP\np_event_data.h" />
+    <ClInclude Include="Emu\NP\np_helpers.h" />
     <ClInclude Include="Emu\NP\np_structs_extra.h" />
     <ClInclude Include="Emu\NP\rpcn_client.h" />
     <ClInclude Include="Emu\NP\rpcn_config.h" />

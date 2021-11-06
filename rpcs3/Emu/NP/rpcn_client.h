@@ -293,8 +293,9 @@ namespace rpcn
 		bool add_friend(const std::string& friend_username);
 		bool remove_friend(const std::string& friend_username);
 
-		u32 get_num_friends() const;
-		u32 get_num_blocks() const;
+		u32 get_num_friends();
+		u32 get_num_blocks();
+		std::optional<std::string> get_friend_by_index(u32 index);
 
 		std::vector<std::pair<u16, std::vector<u8>>> get_notifications();
 		std::unordered_map<u32, std::pair<u16, std::vector<u8>>> get_replies();

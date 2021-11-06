@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include <bit>
 
-#include "np_allocator.h"
-#include "np_cache.h"
+#include "Emu/NP/np_allocator.h"
+#include "Emu/NP/np_cache.h"
 
 namespace np
 {

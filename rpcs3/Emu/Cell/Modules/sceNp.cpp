@@ -1267,11 +1267,19 @@ error_code sceNpBasicGetFriendListEntry(u32 index, vm::ptr<SceNpId> npid)
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_ERROR_ID_NOT_FOUND;
+		return SCE_NP_BASIC_ERROR_BUSY;
 	}
+
+	const auto [error, res_npid] = nph.get_friend_by_index(index);
+
+	if (error)
+	{
+		return error;
+	}
+
+	memcpy(npid.get_ptr(), &res_npid.value(), sizeof(SceNpId));
 
 	return CELL_OK;
 }
@@ -4250,7 +4258,7 @@ error_code sceNpScoreCensorCommentAsync(s32 transId, vm::cptr<char> comment, s32
 
 error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
 {
-	sceNp.todo("sceNpScoreSanitizeComment(transId=%d, comment=%s, sanitizedComment=*0x%x, option=*0x%x)", transId, comment, sanitizedComment, option);
+	sceNp.warning("sceNpScoreSanitizeComment(transId=%d, comment=%s, sanitizedComment=*0x%x, option=*0x%x)", transId, comment, sanitizedComment, option);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4264,9 +4272,10 @@ error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::pt
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (strlen(comment.get_ptr()) > SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN || option) // option check at least until fw 4.71
+	const auto comment_len = strlen(comment.get_ptr());
+
+	if (comment_len > SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN || option) // option check at least until fw 4.71
 	{
-		// TODO: is SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN + 1 allowed ?
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
@@ -4274,6 +4283,9 @@ error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::pt
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
+
+	// TODO: send to server and get sanitized version back
+	memcpy(sanitizedComment.get_ptr(), comment.get_ptr(), comment_len + 1);
 
 	return CELL_OK;
 }

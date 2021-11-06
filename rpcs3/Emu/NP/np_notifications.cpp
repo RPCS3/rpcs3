@@ -2,8 +2,9 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/IdManager.h"
-#include "np_handler.h"
-#include "np_structs_extra.h"
+#include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_helpers.h"
+#include "Emu/NP/np_structs_extra.h"
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 

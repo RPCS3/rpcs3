@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "np_dnshook.h"
+#include "Emu/NP/np_dnshook.h"
 
 #include "Emu/system_config.h"
 #include "Utilities/StrUtil.h"
