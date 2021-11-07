@@ -1299,13 +1299,20 @@ error_code sceNpMatching2SignalingSetCtxOpt(SceNpMatching2ContextId ctxId, s32 o
 error_code sceNpMatching2DeleteServerContext(
     SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2DeleteServerContextRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	sceNp2.todo("sceNpMatching2DeleteServerContext(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+	sceNp2.warning("sceNpMatching2DeleteServerContext(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
 	}
+
+	if (reqParam->serverId == 0)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_SERVER_ID;
+	}
+
+	*assignedReqId = nph.delete_server_context(ctxId, optParam, reqParam->serverId);
 
 	return CELL_OK;
 }
