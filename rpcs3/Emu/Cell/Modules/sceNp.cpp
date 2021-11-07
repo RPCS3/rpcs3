@@ -710,7 +710,7 @@ error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunication
 
 error_code sceNpBasicUnregisterHandler()
 {
-	sceNp.todo("sceNpBasicUnregisterHandler()");
+	sceNp.notice("sceNpBasicUnregisterHandler()");
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

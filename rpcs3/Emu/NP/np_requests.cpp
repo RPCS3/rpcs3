@@ -69,6 +69,22 @@ namespace np
 		return req_id;
 	}
 
+	u32 np_handler::delete_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 /*server_id*/)
+	{
+		u32 req_id    = generate_callback_info(ctx_id, optParam);
+		u32 event_key = get_event_key();
+
+		const auto cb_info = take_pending_request(req_id);
+
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+			{
+				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_DeleteServerContext, event_key, 0, 0, cb_info.cb_arg);
+				return 0;
+			});
+
+		return req_id;
+	}
+
 	u32 np_handler::get_world_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 server_id)
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam);
