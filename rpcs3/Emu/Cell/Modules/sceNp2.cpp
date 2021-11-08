@@ -602,7 +602,7 @@ error_code sceNpMatching2SetRoomDataExternal(
 error_code sceNpMatching2SignalingGetConnectionInfo(
     SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, SceNpMatching2RoomMemberId memberId, s32 code, vm::ptr<SceNpSignalingConnectionInfo> connInfo)
 {
-	sceNp2.todo("sceNpMatching2SignalingGetConnectionInfo(ctxId=%d, roomId=%d, memberId=%d, code=%d, connInfo=*0x%x)", ctxId, roomId, memberId, code, connInfo);
+	sceNp2.warning("sceNpMatching2SignalingGetConnectionInfo(ctxId=%d, roomId=%d, memberId=%d, code=%d, connInfo=*0x%x)", ctxId, roomId, memberId, code, connInfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
