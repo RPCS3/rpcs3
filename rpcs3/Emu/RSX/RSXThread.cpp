@@ -1625,6 +1625,8 @@ namespace rsx
 		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
 
 		const auto [program_offset, program_location] = method_registers.shader_program_address();
+		const auto prev_textures_reference_mask = current_fp_metadata.referenced_textures_mask;
+
 		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
 		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
@@ -1648,6 +1650,14 @@ namespace rsx
 					break;
 				}
 			}
+		}
+
+		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_state_dirty) &&
+			(prev_textures_reference_mask != current_fp_metadata.referenced_textures_mask))
+		{
+			// If different textures are used, upload their coefficients.
+			// The texture parameters transfer routine is optimized and only writes data for textures consumed by the ucode.
+			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 		}
 	}
 
