@@ -199,18 +199,19 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	const int height = m_frame->client_height();
 
 	// Calculate blit coordinates
-	coordi aspect_ratio;
-	const sizei csize(width, height);
-	sizei new_size = csize;
-
+	areai aspect_ratio;
 	if (!g_cfg.video.stretch_to_display_area)
 	{
-		avconfig.downscale_to_aspect_ratio(aspect_ratio.x, aspect_ratio.y, new_size.width, new_size.height);
+		const sizeu csize(width, height);
+		const auto converted = avconfig.aspect_convert_region(size2u{ buffer_width, buffer_height }, csize);
+		aspect_ratio = static_cast<areai>(converted);
+	}
+	else
+	{
+		aspect_ratio = { 0, 0, width, height };
 	}
 
-	aspect_ratio.size = new_size;
-
-	if (!image_to_flip || aspect_ratio.width < csize.width || aspect_ratio.height < csize.height)
+	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
 		// Clear the window background to black
 		gl_state.clear_color(0, 0, 0, 0);
@@ -251,7 +252,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			m_flip_fbo.color = image_to_flip;
 			m_flip_fbo.read_buffer(m_flip_fbo.color);
 			m_flip_fbo.draw_buffer(m_flip_fbo.color);
-			m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
+			m_flip_fbo.blit(gl::screen, screen_area, aspect_ratio.flipped_vertical(), gl::buffers::color, gl::filter::linear);
 		}
 		else
 		{

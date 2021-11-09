@@ -165,8 +165,8 @@ namespace rsx
 		u8 get_bpp() const;
 		double get_aspect_ratio() const;
 
-		void upscale_to_aspect_ratio(int& width, int& height) const;
-		void downscale_to_aspect_ratio(int& x, int& y, int& width, int& height) const;
+		areau aspect_convert_region(const size2u& image_dimensions, const size2u& output_dimensions) const;
+		size2u aspect_convert_dimensions(const size2u& image_dimensions) const;
 	};
 
 	struct blit_src_info
