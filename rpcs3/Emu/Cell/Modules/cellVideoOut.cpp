@@ -119,7 +119,7 @@ error_code cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideo
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
 	{
-		auto& conf = g_fxo->get<rsx::avconf>();
+		const auto& conf = g_fxo->get<rsx::avconf>();
 		state->state = CELL_VIDEO_OUT_OUTPUT_STATE_ENABLED;
 		state->colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
 		state->displayMode.resolutionId = conf.state ? conf.resolution_id : g_video_out_resolution_id.at(g_cfg.video.resolution);
@@ -224,7 +224,7 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
 	{
-		if (auto& conf = g_fxo->get<rsx::avconf>(); conf.state)
+		if (const auto& conf = g_fxo->get<rsx::avconf>(); conf.state)
 		{
 			config->resolutionId = conf.resolution_id;
 			config->format = conf.format;
