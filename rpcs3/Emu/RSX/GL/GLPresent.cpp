@@ -129,7 +129,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	u32 buffer_pitch = display_buffers[info.buffer].pitch;
 
 	u32 av_format;
-	auto& avconfig = g_fxo->get<rsx::avconf>();
+	const auto& avconfig = g_fxo->get<rsx::avconf>();
 
 	if (avconfig.state)
 	{
