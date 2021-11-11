@@ -626,7 +626,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			const auto& avconf = g_fxo->get<rsx::avconf>();
 			auto new_size = avconf.aspect_convert_dimensions(size2u{ u32(img.width()), u32(img.height()) });
 
-			if (new_size.width != img.width() || new_size.height != img.height())
+			if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
 			{
 				img = img.scaled(QSize(new_size.width, new_size.height), Qt::AspectRatioMode::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
 				img.convertTo(QImage::Format_RGBA8888); // The current Qt version changes the image format during smooth scaling, so we have to change it back.
@@ -679,7 +679,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 					// Scale the resolution first (as seen before with the image)
 					new_size = avconf.aspect_convert_dimensions(size2u{ avconf.resolution_x, avconf.resolution_y });
 
-					if (new_size.width != img.width() || new_size.height != img.height())
+					if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
 					{
 						const int scale = rsx::get_resolution_scale_percent();
 						const int x = (scale * manager.overlay_offset_x) / 100;
