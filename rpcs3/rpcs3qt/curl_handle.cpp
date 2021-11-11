@@ -22,8 +22,8 @@ curl_handle::curl_handle(QObject* parent) : QObject(parent)
 
 	m_uses_error_buffer = err == CURLE_OK;
 
-	err = curl_easy_setopt(m_curl, CURLOPT_VERBOSE, s_curl_verbose);
-	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_VERBOSE, %d): %s", s_curl_verbose, curl_easy_strerror(err));
+	err = curl_easy_setopt(m_curl, CURLOPT_VERBOSE, g_curl_verbose);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_VERBOSE, %d): %s", g_curl_verbose, curl_easy_strerror(err));
 
 #ifdef _WIN32
 	// This shouldn't be needed on linux

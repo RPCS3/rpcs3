@@ -545,7 +545,20 @@ int main(int argc, char** argv)
 		return 0;
 
 	// Set curl to verbose if needed
-	rpcs3::curl::s_curl_verbose = parser.isSet(arg_verbose_curl);
+	rpcs3::curl::g_curl_verbose = parser.isSet(arg_verbose_curl);
+
+	if (rpcs3::curl::g_curl_verbose)
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
+			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
+		}
+#endif
+		fprintf(stdout, "Enabled Curl verbose logging.\n");
+		sys_log.always()("Enabled Curl verbose logging. Please look at your console output.");
+	}
 
 	// Handle update of commit database
 	if (parser.isSet(arg_commit_db))
