@@ -402,7 +402,9 @@ namespace rpcn
 
 			bool operator<(const message_cb_t& other) const
 			{
-				return (cb_func < other.cb_func) || ((!(other.cb_func < cb_func)) && (cb_param < other.cb_param));
+				const void* void_cb_func       = reinterpret_cast<const void*>(cb_func);
+				const void* void_other_cb_func = reinterpret_cast<const void*>(other.cb_func);
+				return (void_cb_func < void_other_cb_func) || ((!(void_other_cb_func < void_cb_func)) && (cb_param < other.cb_param));
 			}
 		};
 		shared_mutex mutex_messages;

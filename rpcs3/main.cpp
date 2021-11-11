@@ -226,22 +226,23 @@ struct fatal_error_listener final : logs::listener
 	}
 };
 
-constexpr auto arg_headless   = "headless";
-constexpr auto arg_no_gui     = "no-gui";
-constexpr auto arg_high_dpi   = "hidpi";
-constexpr auto arg_rounding   = "dpi-rounding";
-constexpr auto arg_styles     = "styles";
-constexpr auto arg_style      = "style";
-constexpr auto arg_stylesheet = "stylesheet";
-constexpr auto arg_config     = "config";
-constexpr auto arg_q_debug    = "qDebug";
-constexpr auto arg_error      = "error";
-constexpr auto arg_updating   = "updating";
-constexpr auto arg_user_id    = "user-id";
-constexpr auto arg_installfw  = "installfw";
-constexpr auto arg_installpkg = "installpkg";
-constexpr auto arg_commit_db  = "get-commit-db";
-constexpr auto arg_timer      = "high-res-timer";
+constexpr auto arg_headless     = "headless";
+constexpr auto arg_no_gui       = "no-gui";
+constexpr auto arg_high_dpi     = "hidpi";
+constexpr auto arg_rounding     = "dpi-rounding";
+constexpr auto arg_styles       = "styles";
+constexpr auto arg_style        = "style";
+constexpr auto arg_stylesheet   = "stylesheet";
+constexpr auto arg_config       = "config";
+constexpr auto arg_q_debug      = "qDebug";
+constexpr auto arg_error        = "error";
+constexpr auto arg_updating     = "updating";
+constexpr auto arg_user_id      = "user-id";
+constexpr auto arg_installfw    = "installfw";
+constexpr auto arg_installpkg   = "installpkg";
+constexpr auto arg_commit_db    = "get-commit-db";
+constexpr auto arg_timer        = "high-res-timer";
+constexpr auto arg_verbose_curl = "verbose-curl";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -536,12 +537,30 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_commit_db, "Update commits.lst cache. Optional arguments: <path> <sha>"));
 	parser.addOption(QCommandLineOption(arg_timer, "Enable high resolution timer for better performance (windows)", "enabled", "1"));
+	parser.addOption(QCommandLineOption(arg_verbose_curl, "Enable verbose curl logging."));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(version_option) || parser.isSet(help_option))
 		return 0;
 
+	// Set curl to verbose if needed
+	rpcs3::curl::g_curl_verbose = parser.isSet(arg_verbose_curl);
+
+	if (rpcs3::curl::g_curl_verbose)
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
+			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
+		}
+#endif
+		fprintf(stdout, "Enabled Curl verbose logging.\n");
+		sys_log.always()("Enabled Curl verbose logging. Please look at your console output.");
+	}
+
+	// Handle update of commit database
 	if (parser.isSet(arg_commit_db))
 	{
 #ifdef _WIN32
@@ -619,7 +638,7 @@ int main(int argc, char** argv)
 		QByteArray buf;
 
 		// CURL handle to work with GitHub API
-		curl_handle curl;
+		rpcs3::curl::curl_handle curl;
 
 		struct curl_slist* hhdr{};
 		hhdr = curl_slist_append(hhdr, "Accept: application/vnd.github.v3+json");
@@ -657,10 +676,14 @@ int main(int argc, char** argv)
 				break;
 			}
 
+			// Reset error buffer before we call curl_easy_perform
+			curl.reset_error_buffer();
+
 			err = curl_easy_perform(curl);
 			if (err != CURLE_OK)
 			{
-				fprintf(stderr, "Curl error:\n%s", curl_easy_strerror(err));
+				const std::string error_string = curl.get_verbose_error(err);
+				fprintf(stderr, "curl_easy_perform(): %s", error_string.c_str());
 				break;
 			}
 

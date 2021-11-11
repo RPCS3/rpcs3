@@ -548,8 +548,16 @@ namespace np
 		const u32 req_id = get_req_id(optParam ? optParam->appReqId : ctx->default_match2_optparam.appReqId);
 
 		ret.ctx_id = ctx_id;
-		ret.cb     = optParam ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc;
 		ret.cb_arg = optParam ? optParam->cbFuncArg : ctx->default_match2_optparam.cbFuncArg;
+
+		if (optParam && optParam->cbFunc)
+		{
+			ret.cb = optParam->cbFunc;
+		}
+		else
+		{
+			ret.cb = ctx->default_match2_optparam.cbFunc;
+		}
 
 		nph_log.warning("Callback used is 0x%x", ret.cb);
 
