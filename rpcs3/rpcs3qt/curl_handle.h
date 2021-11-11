@@ -10,7 +10,7 @@
 
 namespace rpcs3::curl
 {
-static bool s_curl_verbose = false;
+inline bool g_curl_verbose = false;
 
 class curl_handle : public QObject
 {
