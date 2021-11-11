@@ -204,6 +204,8 @@ private:
 	void SubscribeTooltips();
 
 protected:
+	void showEvent(QShowEvent* event) override;
+
 	/** Handle keyboard handler input */
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void mouseReleaseEvent(QMouseEvent *event) override;
