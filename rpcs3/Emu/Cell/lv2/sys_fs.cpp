@@ -311,6 +311,43 @@ fs::file lv2_file::make_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
 	return result;
 }
 
+std::pair<CellError, std::string_view> translate_to_sv(vm::cptr<char> ptr)
+{
+	const u32 addr = ptr.addr();
+
+	if (!vm::check_addr(addr, vm::page_readable))
+	{
+		return {CELL_EFAULT, {}};
+	}
+
+	const usz remained_page_memory = (~addr % 4096) + 1;
+
+	constexpr usz max_length = CELL_FS_MAX_FS_PATH_LENGTH + 1;
+
+	const usz target_memory_span_size = std::min<usz>(max_length, vm::check_addr(addr + 4096, vm::page_readable) ? max_length : remained_page_memory);
+
+	std::string_view path{ptr.get_ptr(), target_memory_span_size};
+	path = path.substr(0, path.find_first_of('\0'));
+
+	if (path.size() == max_length)
+	{
+		return {CELL_ENAMETOOLONG, {}};
+	}
+
+	if (path.size() == target_memory_span_size)
+	{
+		// Null character lookup has ended whilst pointing at invalid memory
+		return {CELL_EFAULT, path};
+	}
+
+	if (!path.starts_with("/"sv))
+	{
+		return {CELL_ENOENT, path};
+	}
+
+	return {{}, path};
+}
+
 error_code sys_fs_test(ppu_thread&, u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 arg4, vm::ptr<char> buf, u32 buf_size)
 {
 	sys_fs.trace("sys_fs_test(arg1=0x%x, arg2=0x%x, arg3=*0x%x, arg4=0x%x, buf=*0x%x, buf_size=0x%x)", arg1, arg2, arg3, arg4, buf, buf_size);
@@ -600,10 +637,14 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 	sys_fs.warning("sys_fs_open(path=%s, flags=%#o, fd=*0x%x, mode=%#o, arg=*0x%x, size=0x%llx)", path, flags, fd, mode, arg, size);
 
-	if (!path)
-		return CELL_EFAULT;
+	const auto [path_error, vpath] = translate_to_sv(path);
 
-	auto [error, ppath, real, file, type] = lv2_file::open(path.get_ptr(), flags, mode, arg.get_ptr(), size);
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
+
+	auto [error, ppath, real, file, type] = lv2_file::open(vpath, flags, mode, arg.get_ptr(), size);
 
 	if (error)
 	{
@@ -849,15 +890,15 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 
 	sys_fs.warning("sys_fs_opendir(path=%s, fd=*0x%x)", path, fd);
 
-	if (!path)
-		return CELL_EFAULT;
+	const auto [path_error, vpath] = translate_to_sv(path);
 
-	if (!path[0])
-		return CELL_ENOENT;
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
 
 	std::string processed_path;
 	std::vector<std::string> ext;
-	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath, &ext, &processed_path);
 
 	processed_path += "/";
@@ -1018,13 +1059,13 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	sys_fs.warning("sys_fs_stat(path=%s, sb=*0x%x)", path, sb);
 
-	if (!path)
-		return CELL_EFAULT;
+	const auto [path_error, vpath] = translate_to_sv(path);
 
-	if (!path[0])
-		return CELL_ENOENT;
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
 
-	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
@@ -1168,13 +1209,13 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 
 	sys_fs.warning("sys_fs_mkdir(path=%s, mode=%#o)", path, mode);
 
-	if (!path)
-		return CELL_EFAULT;
+	const auto [path_error, vpath] = translate_to_sv(path);
 
-	if (!path[0])
-		return CELL_ENOENT;
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
 
-	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
@@ -1219,10 +1260,21 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 
 	sys_fs.warning("sys_fs_rename(from=%s, to=%s)", from, to);
 
-	const std::string_view vfrom = from.get_ptr();
-	const std::string local_from = vfs::get(vfrom);
+	const auto [from_error, vfrom] = translate_to_sv(from);
 
-	const std::string_view vto = to.get_ptr();
+	if (from_error)
+	{
+		return {from_error, vfrom};
+	}
+
+	const auto [to_error, vto] = translate_to_sv(to);
+
+	if (to_error)
+	{
+		return {to_error, vto};
+	}
+
+	const std::string local_from = vfs::get(vfrom);
 	const std::string local_to = vfs::get(vto);
 
 	const auto mp = lv2_fs_object::get_mp(vfrom);
@@ -1274,13 +1326,13 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 
 	sys_fs.warning("sys_fs_rmdir(path=%s)", path);
 
-	if (!path)
-		return CELL_EFAULT;
+	const auto [path_error, vpath] = translate_to_sv(path);
 
-	if (!path[0])
-		return CELL_ENOENT;
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
 
-	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
@@ -1325,13 +1377,13 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 
 	sys_fs.warning("sys_fs_unlink(path=%s)", path);
 
-	if (!path)
-		return CELL_EFAULT;
+	const auto [path_error, vpath] = translate_to_sv(path);
 
-	if (!path[0])
-		return CELL_ENOENT;
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
 
-	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
@@ -2002,13 +2054,13 @@ error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u
 
 	sys_fs.warning("sys_fs_get_block_size(path=%s, sector_size=*0x%x, block_size=*0x%x, arg4=*0x%x)", path, sector_size, block_size, arg4);
 
-	if (!path)
-		return CELL_EFAULT;
+	const auto [path_error, vpath] = translate_to_sv(path);
 
-	if (!path[0])
-		return CELL_ENOENT;
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
 
-	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
 	if (vpath.find_first_not_of('/') == umax)
@@ -2056,13 +2108,13 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 
 	sys_fs.warning("sys_fs_truncate(path=%s, size=0x%llx)", path, size);
 
-	if (!path)
-		return CELL_EFAULT;
+	const auto [path_error, vpath] = translate_to_sv(path);
 
-	if (!path[0])
-		return CELL_ENOENT;
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
 
-	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
@@ -2249,13 +2301,13 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 	sys_fs.warning("sys_fs_utime(path=%s, timep=*0x%x)", path, timep);
 	sys_fs.warning("** actime=%u, modtime=%u", timep->actime, timep->modtime);
 
-	if (!path)
-		return CELL_EFAULT;
+	const auto [path_error, vpath] = translate_to_sv(path);
 
-	if (!path[0])
-		return CELL_ENOENT;
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
 
-	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
