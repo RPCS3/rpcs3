@@ -133,6 +133,8 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		return CELL_EINVAL;
 	}
 
+	std::vector<lv2_event> events;
+
 	const auto queue = idm::withdraw<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
 	{
 		std::lock_guard lock(queue.mutex);
@@ -140,6 +142,18 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		if (!mode && !queue.sq.empty())
 		{
 			return CELL_EBUSY;
+		}
+
+		if (queue.sq.empty())
+		{
+			// Optimization
+			mode = 0;
+		}
+
+		if (!events.empty())
+		{
+			// Copy events for logging, does not empty
+			events.insert(events.begin(), queue.events.begin(), queue.events.end());
 		}
 
 		lv2_obj::on_id_destroy(queue, queue.key);
@@ -156,6 +170,8 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		return queue.ret;
 	}
 
+	std::string lost_data;
+
 	if (mode == SYS_EVENT_QUEUE_DESTROY_FORCE)
 	{
 		std::deque<cpu_thread*> sq;
@@ -163,7 +179,18 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		std::lock_guard lock(queue->mutex);
 
 		sq = std::move(queue->sq);
-	
+
+		if (sys_event.warning)
+		{
+			fmt::append(lost_data, "Forcefully awaken waiters (%u):\n", sq.size());
+
+			for (auto cpu : sq)
+			{
+				lost_data += cpu->get_name();
+				lost_data += '\n';
+			}
+		}
+
 		if (queue->type == SYS_PPU_QUEUE)
 		{
 			for (auto cpu : sq)
@@ -172,10 +199,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 				queue->append(cpu);
 			}
 
-			if (!queue->sq.empty())
-			{
-				lv2_obj::awake_all();
-			}
+			lv2_obj::awake_all();
 		}
 		else
 		{
@@ -184,6 +208,25 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 				static_cast<spu_thread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
 				resume_spu_thread_group_from_waiting(static_cast<spu_thread&>(*cpu));
 			}
+		}
+	}
+
+	if (sys_event.warning)
+	{
+		if (!events.empty())
+		{
+			fmt::append(lost_data, "Unread queue events (%u):\n", events.size());
+		}
+
+		for (const lv2_event& evt : events)
+		{
+			fmt::append(lost_data, "data0=0x%x, data1=0x%x, data2=0x%x, data3=0x%x\n"
+				, std::get<0>(evt), std::get<1>(evt), std::get<2>(evt), std::get<3>(evt));
+		}
+
+		if (!lost_data.empty())
+		{
+			sys_event.warning("sys_event_queue_destroy(): %s", lost_data);
 		}
 	}
 
@@ -209,6 +252,11 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 	}
 
 	std::lock_guard lock(queue->mutex);
+
+	if (!queue->exists)
+	{
+		return CELL_ESRCH;
+	}
 
 	s32 count = 0;
 
