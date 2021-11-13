@@ -936,7 +936,7 @@ bool EDATADecrypter::ReadHeader()
 	// Try decrypting the first block instead
 	u8 data_sample[1];
 
-	if (!ReadData(0, data_sample, 1))
+	if (file_size && !ReadData(0, data_sample, 1))
 	{
 		return false;
 	}
