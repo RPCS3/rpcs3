@@ -401,6 +401,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GSRender.cpp
     RSX/RSXFIFO.cpp
     RSX/rsx_methods.cpp
+    RSX/rsx_vertex_data.cpp
     RSX/RSXOffload.cpp
     RSX/RSXTexture.cpp
     RSX/RSXThread.cpp
