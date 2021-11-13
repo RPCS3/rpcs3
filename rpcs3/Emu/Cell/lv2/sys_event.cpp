@@ -150,7 +150,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			mode = 0;
 		}
 
-		if (!events.empty())
+		if (!queue.events.empty())
 		{
 			// Copy events for logging, does not empty
 			events.insert(events.begin(), queue.events.begin(), queue.events.end());
