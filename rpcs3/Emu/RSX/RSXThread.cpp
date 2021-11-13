@@ -473,26 +473,28 @@ namespace rsx
 
 	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
 	{
-		vertex_push_buffers[attribute].size = size;
-		vertex_push_buffers[attribute].append_vertex_data(subreg_index, type, value);
+		if (!(rsx::method_registers.vertex_attrib_input_mask() & (1 << attribute)))
+		{
+			return;
+		}
+
+		// Enforce ATTR0 as vertex attribute for push buffers.
+		// This whole thing becomes a mess if we don't have a provoking attribute.
+		const auto vertex_id = vertex_push_buffers[0].get_vertex_id();
+		vertex_push_buffers[attribute].set_vertex_data(attribute, vertex_id, subreg_index, type, size, value);
 	}
 
 	u32 thread::get_push_buffer_vertex_count() const
 	{
-		//There's no restriction on which attrib shall hold vertex data, so we check them all
-		u32 max_vertex_count = 0;
-		for (auto &buf: vertex_push_buffers)
-		{
-			max_vertex_count = std::max(max_vertex_count, buf.vertex_count);
-		}
-
-		return max_vertex_count;
+		// Enforce ATTR0 as vertex attribute for push buffers.
+		// This whole thing becomes a mess if we don't have a provoking attribute.
+		return vertex_push_buffers[0].vertex_count;
 	}
 
 	void thread::append_array_element(u32 index)
 	{
-		//Endianness is swapped because common upload code expects input in BE
-		//TODO: Implement fast upload path for LE inputs and do away with this
+		// Endianness is swapped because common upload code expects input in BE
+		// TODO: Implement fast upload path for LE inputs and do away with this
 		element_push_buffer.push_back(std::bit_cast<u32, be_t<u32>>(index));
 	}
 
@@ -1732,7 +1734,7 @@ namespace rsx
 		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
 	}
 
-	void thread::analyse_inputs_interleaved(vertex_input_layout& result) const
+	void thread::analyse_inputs_interleaved(vertex_input_layout& result)
 	{
 		const rsx_state& state = rsx::method_registers;
 		const u32 input_mask = state.vertex_attrib_input_mask() & current_vp_metadata.referenced_inputs_mask;
@@ -1800,6 +1802,9 @@ namespace rsx
 				// Observed with GT5, immediate render bypasses array pointers completely, even falling back to fixed-function register defaults
 				if (vertex_push_buffers[index].vertex_count > 1)
 				{
+					// Ensure consistent number of vertices per attribute.
+					vertex_push_buffers[index].pad_to(vertex_push_buffers[0].vertex_count, false);
+
 					// Read temp buffer (register array)
 					std::pair<u8, u32> volatile_range_info = std::make_pair(index, static_cast<u32>(vertex_push_buffers[index].data.size() * sizeof(u32)));
 					result.volatile_blocks.push_back(volatile_range_info);

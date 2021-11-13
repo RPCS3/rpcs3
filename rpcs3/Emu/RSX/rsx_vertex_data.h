@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gcm_enums.h"
-
+#include "rsx_decode.h"
 #include "Common/simple_array.hpp"
 #include "util/types.hpp"
 
@@ -56,64 +56,23 @@ public:
 
 struct push_buffer_vertex_info
 {
-	u8 size = 0;
+	u32 attr = 0;
+	u32 size = 0;
 	vertex_base_type type = vertex_base_type::f;
 
 	u32 vertex_count = 0;
-	u32 attribute_mask = ~0;
+	u32 dword_count = 0;
 	rsx::simple_array<u32> data;
 
-	void clear()
-	{
-		if (size)
-		{
-			data.clear();
-			attribute_mask = ~0;
-			vertex_count = 0;
-			size = 0;
-		}
-	}
+	push_buffer_vertex_info() = default;
+	~push_buffer_vertex_info() = default;
 
-	u8 get_vertex_size_in_dwords(vertex_base_type type) const
-	{
-		//NOTE: Types are always provided to fit into 32-bits
-		//i.e no less than 4 8-bit values and no less than 2 16-bit values
+	u8 get_vertex_size_in_dwords() const;
+	u32 get_vertex_id() const;
 
-		switch (type)
-		{
-		case vertex_base_type::f:
-			return size;
-		case vertex_base_type::ub:
-		case vertex_base_type::ub256:
-			return 1;
-		case vertex_base_type::s1:
-		case vertex_base_type::s32k:
-			return size / 2;
-		default:
-			fmt::throw_exception("Unsupported vertex base type %d", static_cast<u8>(type));
-		}
-	}
-
-	void append_vertex_data(u32 sub_index, vertex_base_type type, u32 arg)
-	{
-		const u32 element_mask = (1 << sub_index);
-		const u8  vertex_size = get_vertex_size_in_dwords(type);
-
-		this->type = type;
-
-		if (attribute_mask & element_mask)
-		{
-			attribute_mask = 0;
-
-			vertex_count++;
-			data.resize(vertex_count * vertex_size);
-		}
-
-		attribute_mask |= element_mask;
-
-		u32* dst = data.data() + ((vertex_count - 1) * vertex_size) + sub_index;
-		*dst = arg;
-	}
+	void clear();
+	void set_vertex_data(u32 attribute_id, u32 vertex_id, u32 sub_index, vertex_base_type type, u32 size, u32 arg);
+	void pad_to(u32 required_vertex_count, bool skip_last);
 };
 
 struct register_vertex_data_info

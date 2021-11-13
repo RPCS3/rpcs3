@@ -745,7 +745,7 @@ namespace rsx
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks
 		 */
-		void analyse_inputs_interleaved(vertex_input_layout&) const;
+		void analyse_inputs_interleaved(vertex_input_layout&);
 
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};

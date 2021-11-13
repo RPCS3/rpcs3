@@ -281,10 +281,10 @@ namespace rsx
 			if (rsx->in_begin_end)
 			{
 				// Update to immediate mode register/array
+				// NOTE: Push buffers still behave like register writes.
+				// You do not need to specify each attribute for each vertex, the register is referenced instead.
+				// This is classic OpenGL 1.x behavior as I remember.
 				rsx->append_to_push_buffer(attribute_index, count, vertex_subreg, vtype, arg);
-
-				// NOTE: one can update the register to update constant across primitive. Needs verification.
-				// Fall through
 			}
 
 			auto& info = rsx::method_registers.register_vertex_info[attribute_index];
