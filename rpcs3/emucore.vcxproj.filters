@@ -891,10 +891,25 @@
     <ClCompile Include="Emu\NP\fb_helpers.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\np_cache.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\NP\np_contexts.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\np_dnshook.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\NP\np_handler.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\np_helpers.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\np_notifications.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\np_requests.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\signaling_handler.cpp">

@@ -1287,7 +1287,7 @@ void main_window::DecryptSPRXLibraries()
 	if (const auto keys = g_fxo->try_get<loaded_npdrm_keys>())
 	{
 		// Second klic: get it from a running game
-		if (const u128 klic = keys->devKlic)
+		if (const u128 klic = keys->last_key())
 		{
 			klics.emplace_back(klic);
 		}

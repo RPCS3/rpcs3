@@ -124,6 +124,7 @@ namespace rpcn
 		SetRoomDataExternal,
 		GetRoomDataInternal,
 		SetRoomDataInternal,
+		SetRoomMemberDataInternal,
 		PingRoomOwner,
 		SendRoomMessage,
 		RequestSignalingInfos,
@@ -136,6 +137,8 @@ namespace rpcn
 		UserJoinedRoom,
 		UserLeftRoom,
 		RoomDestroyed,
+		UpdatedRoomDataInternal,
+		UpdatedRoomMemberDataInternal,
 		SignalP2PConnect,
 		_SignalP2PDisconnect,
 		FriendQuery,  // Other user sent a friend request
@@ -187,6 +190,7 @@ namespace rpcn
 		CreationBannedEmailProvider, // Specific to Account Creation: the email provider is banned
 		CreationExistingEmail,       // Specific to Account Creation: that email is already registered to an account
 		AlreadyJoined,               // User tried to join a room he's already part of
+		Unauthorized,                // User attempted an unauthorized operation
 		DbFail,                      // Generic failure on db side
 		EmailFail,                   // Generic failure related to email
 		NotFound,                    // Object of the query was not found(room, user, etc)
@@ -289,8 +293,9 @@ namespace rpcn
 		bool add_friend(const std::string& friend_username);
 		bool remove_friend(const std::string& friend_username);
 
-		u32 get_num_friends() const;
-		u32 get_num_blocks() const;
+		u32 get_num_friends();
+		u32 get_num_blocks();
+		std::optional<std::string> get_friend_by_index(u32 index);
 
 		std::vector<std::pair<u16, std::vector<u8>>> get_notifications();
 		std::unordered_map<u32, std::pair<u16, std::vector<u8>>> get_replies();
@@ -328,6 +333,7 @@ namespace rpcn
 		bool set_roomdata_external(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataExternalRequest* req);
 		bool get_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataInternalRequest* req);
 		bool set_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataInternalRequest* req);
+		bool set_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomMemberDataInternalRequest* req);
 		bool ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id);
 		bool send_room_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomMessageRequest* req);
 		bool req_sign_infos(u32 req_id, const std::string& npid);
@@ -396,7 +402,9 @@ namespace rpcn
 
 			bool operator<(const message_cb_t& other) const
 			{
-				return (cb_func < other.cb_func) || ((!(other.cb_func < cb_func)) && (cb_param < other.cb_param));
+				const void* void_cb_func       = reinterpret_cast<const void*>(cb_func);
+				const void* void_other_cb_func = reinterpret_cast<const void*>(other.cb_func);
+				return (void_cb_func < void_other_cb_func) || ((!(void_other_cb_func < void_cb_func)) && (cb_param < other.cb_param));
 			}
 		};
 		shared_mutex mutex_messages;

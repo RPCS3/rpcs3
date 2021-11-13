@@ -575,6 +575,7 @@ void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
 	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
+	wake_up();
 }
 
 void signaling_handler::start_sig2(u64 room_id, u16 member_id)
@@ -592,6 +593,7 @@ void signaling_handler::start_sig2(u64 room_id, u16 member_id)
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
 	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
+	wake_up();
 }
 
 void signaling_handler::disconnect_sig2_users(u64 room_id)
@@ -648,7 +650,7 @@ u32 signaling_handler::init_sig_infos(const SceNpId* npid)
 
 		// Request peer infos from RPCN
 		std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
-		auto& nph = g_fxo->get<named_thread<np_handler>>();
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		nph.req_sign_infos(npid_str, conn_id);
 	}
 	else
