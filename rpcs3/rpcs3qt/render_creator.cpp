@@ -4,7 +4,7 @@
 
 #include "Utilities/Thread.h"
 
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/vkutils/instance.hpp"
 #endif
 
@@ -20,7 +20,7 @@ constexpr auto qstr = QString::fromStdString;
 
 render_creator::render_creator(QObject *parent) : QObject(parent)
 {
-#if defined(WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 	// Some drivers can get stuck when checking for vulkan-compatible gpus, f.ex. if they're waiting for one to get
 	// plugged in. This whole contraption is for showing an error message in case that happens, so that user has
 	// some idea about why the emulator window isn't showing up.
