@@ -105,7 +105,7 @@ public:
 
 	MsgDialogType type{};
 
-	std::function<void(s32 status)> on_close;
+	std::function<void(s32 status)> on_close = nullptr;
 
 	virtual ~MsgDialogBase();
 	virtual void Create(const std::string& msg, const std::string& title = "") = 0;
