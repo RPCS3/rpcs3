@@ -81,9 +81,8 @@ void progress_dialog_server::operator()()
 			}
 		}
 
-		if (!skip_this_one && !native_dlg)
+		if (!skip_this_one && !native_dlg && (dlg = Emu.GetCallbacks().get_msg_dialog()))
 		{
-			dlg                          = Emu.GetCallbacks().get_msg_dialog();
 			dlg->type.se_normal          = true;
 			dlg->type.bg_invisible       = true;
 			dlg->type.progress_bar_count = 1;
