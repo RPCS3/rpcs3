@@ -2886,6 +2886,9 @@ protected:
 	// Allow FMA
 	bool m_use_fma = false;
 
+	// Allow AVX
+	bool m_use_avx = false;
+
 	// Allow skylake-x tier AVX-512
 	bool m_use_avx512 = false;
 
@@ -3493,10 +3496,10 @@ public:
 		shuffle.value = m_ir->CreateZExt(shuffle.value, get_type<u32[32]>());
 		intermediate.value = m_ir->CreateShuffleVector(data0, data1, shuffle.value);
 
-		// expand the shuffle index to 256 bits with zeroes 
+		// expand the shuffle index to 256 bits with zeroes
 		shuffleindex.value = m_ir->CreateShuffleVector(index, zeroes, shuffle.value);
 
-		// permute 
+		// permute
 		intermediate.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_permvar_qi_256), {intermediate.value, shuffleindex.value});
 
 		// convert the 256 bit vector back to 128 bits

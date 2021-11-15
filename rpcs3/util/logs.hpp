@@ -49,6 +49,8 @@ namespace logs
 			return reinterpret_cast<const channel*>(reinterpret_cast<uptr>(this) & -16);
 		}
 
+		inline explicit operator bool() const;
+
 	private:
 		// Send log message to global logger instance
 		void broadcast(const char*, const fmt_type_info*, ...) const;
@@ -122,10 +124,16 @@ namespace logs
 #undef GEN_LOG_METHOD
 	};
 
+	inline logs::message::operator bool() const
+	{
+		// Test if enabled
+		return *this <= (*this)->enabled.observe();
+	}
+
 	template <typename... Args>
 	FORCE_INLINE SAFE_BUFFERS(void) message::operator()(const const_str& fmt, const Args&... args) const
 	{
-		if (*this <= (*this)->enabled.observe()) [[unlikely]]
+		if (operator bool()) [[unlikely]]
 		{
 			if constexpr (sizeof...(Args) > 0)
 			{

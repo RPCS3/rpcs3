@@ -51,16 +51,15 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 			return "N/A";
 		}
 
-		std::string size_str = fmt::format("0x%05x ", size);
+		std::string size_str;
 		switch (std::bit_width(size) / 10 * 10)
 		{
-		case 64: size_str = "0"s; break;
-		case 0: fmt::append(size_str, "(%u)", size); break;
-		case 10: fmt::append(size_str, "(%gKB)", size / 1024.); break;
-		case 20: fmt::append(size_str, "(%gMB)", size / (1024. * 1024)); break;
+		case 0: fmt::append(size_str, "%u", size); break;
+		case 10: fmt::append(size_str, "%gKB", size / 1024.); break;
+		case 20: fmt::append(size_str, "%gMB", size / (1024. * 1024)); break;
 
 		default:
-		case 30: fmt::append(size_str, "(%gGB)", size / (1024. * 1024 * 1024)); break;
+		case 30: fmt::append(size_str, "%gGB", size / (1024. * 1024 * 1024)); break;
 		}
 	
 		return size_str;
@@ -69,7 +68,7 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 	const usz pos = file.file ? file.file.pos() : umax;
 	const usz size = file.file ? file.file.size() : umax;
 
-	fmt::append(out, u8"%s, “%s”, Mode: 0x%x, Flags: 0x%x, Pos: %s, Size: %s", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size));
+	fmt::append(out, u8"%s, “%s”, Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size);
 }
 
 template<>
@@ -516,13 +515,32 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 			if (magic == "NPD\0"_u32)
 			{
 				auto& edatkeys = g_fxo->get<loaded_npdrm_keys>();
-				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys.devKlic.load(), edatkeys.rifKey.load());
-				if (!sdata_file->ReadHeader())
-				{
-					return {CELL_EFSSPECIFIC};
-				}
 
-				file.reset(std::move(sdata_file));
+				const u64 init_pos = edatkeys.dec_keys_pos;
+				const auto& dec_keys = edatkeys.dec_keys;
+				const u64 max_i = std::min<u64>(std::size(dec_keys), init_pos);
+
+				for (u64 i = 0;; i++)
+				{
+					if (i == max_i)
+					{
+						// Run out of keys to try
+						return {CELL_EFSSPECIFIC};
+					}
+
+					// Try all registered keys
+					auto edata_file = std::make_unique<EDATADecrypter>(std::move(file), dec_keys[(init_pos - i - 1) % std::size(dec_keys)].load());
+					if (!edata_file->ReadHeader())
+					{
+						// Prepare file for the next iteration
+						file = std::move(edata_file->edata_file);
+						continue;
+					}
+
+					file.reset(std::move(edata_file));
+					break;
+
+				}
 			}
 
 			break;
@@ -597,25 +615,19 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 		return {error, path};
 	}
 
-	if (type >= lv2_file_type::sdata)
+	if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&ppath = ppath, &file = file, mode, flags, &real = real, &type = type]() -> std::shared_ptr<lv2_file>
 	{
-		sys_fs.warning("sys_fs_open(): NPDRM detected");
+		std::shared_ptr<lv2_file> result;
 
-		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&ppath = ppath, &file = file, mode, flags, &real = real, &type = type]() -> std::shared_ptr<lv2_file>
+		if (type >= lv2_file_type::sdata && !g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
 		{
-			if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
-			{
-				return nullptr;
-			}
-
-			return std::make_shared<lv2_file>(ppath, std::move(file), mode, flags, real, type);
-		}))
-		{
-			*fd = id;
-			return CELL_OK;
+			return result;
 		}
-	}
-	else if (const u32 id = idm::make<lv2_fs_object, lv2_file>(ppath, std::move(file), mode, flags, real))
+
+		result = std::make_shared<lv2_file>(ppath, std::move(file), mode, flags, real, type);
+		sys_fs.warning("sys_fs_open(): fd=%u, %s", idm::last_id(), *result);
+		return result;
+	}))
 	{
 		*fd = id;
 		return CELL_OK;
@@ -677,7 +689,15 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 		return CELL_EIO;
 	}
 
-	*nread = file->op_read(buf, nbytes);
+	const u64 read_bytes = file->op_read(buf, nbytes);
+
+	*nread = read_bytes;
+
+	if (!read_bytes && file->file.pos() < file->file.size())
+	{
+		// EDATA corruption perhaps
+		return CELL_EFSSPECIFIC;
+	}
 
 	return CELL_OK;
 }
@@ -812,7 +832,7 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 		return {CELL_EBADF, fd};
 	}
 
-	sys_fs.warning("sys_fs_close(fd=%u): path='%s'", fd, file->name.data());
+	sys_fs.warning("sys_fs_close(fd=%u): %s", fd, *file);
 
 	if (file->lock == 1)
 	{
@@ -1465,6 +1485,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			: file->op_write(arg->buf, arg->size);
 
 		ensure(old_pos == file->file.seek(old_pos));
+
+		// TODO: EDATA corruption detection
 
 		arg->out_code = CELL_OK;
 		return CELL_OK;

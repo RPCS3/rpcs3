@@ -1,8 +1,3 @@
-#ifdef _WIN32
-// This is to avoid inclusion of winsock.h from windows.h header which creates conflicts with inclusion of winsock2.h later
-#define _WINSOCKAPI_
-#endif
-
 #include "gui_application.h"
 
 #include "qt_utils.h"
@@ -46,7 +41,7 @@
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
 
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 
@@ -342,7 +337,7 @@ void gui_application::InitializeCallbacks()
 			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
 			break;
 		}
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
 		{
 			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();

@@ -41,7 +41,7 @@
 
 #include "display_sleep_control.h"
 
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
@@ -714,12 +714,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		initalize_timebased_time();
 
 		// Set RTM usage
-		g_use_rtm = utils::has_rtm() && ((utils::has_mpx() && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
+		g_use_rtm = utils::has_rtm() && (((utils::has_mpx() && !utils::has_tsx_force_abort()) && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
 
 		if (!add_only)
 		{
 			// Log some extra info in case of boot
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 			if (g_cfg.video.renderer == video_renderer::vulkan)
 			{
 				sys_log.notice("Vulkan SDK Revision: %d", VK_HEADER_VERSION);
@@ -727,7 +727,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 #endif
 			sys_log.notice("Used configuration:\n%s\n", g_cfg.to_string());
 
-			if (g_use_rtm && !utils::has_mpx())
+			if (g_use_rtm && (!utils::has_mpx() || utils::has_tsx_force_abort()))
 			{
 				sys_log.warning("TSX forced by User");
 			}

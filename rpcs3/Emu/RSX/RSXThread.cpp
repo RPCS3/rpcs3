@@ -473,26 +473,28 @@ namespace rsx
 
 	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
 	{
-		vertex_push_buffers[attribute].size = size;
-		vertex_push_buffers[attribute].append_vertex_data(subreg_index, type, value);
+		if (!(rsx::method_registers.vertex_attrib_input_mask() & (1 << attribute)))
+		{
+			return;
+		}
+
+		// Enforce ATTR0 as vertex attribute for push buffers.
+		// This whole thing becomes a mess if we don't have a provoking attribute.
+		const auto vertex_id = vertex_push_buffers[0].get_vertex_id();
+		vertex_push_buffers[attribute].set_vertex_data(attribute, vertex_id, subreg_index, type, size, value);
 	}
 
 	u32 thread::get_push_buffer_vertex_count() const
 	{
-		//There's no restriction on which attrib shall hold vertex data, so we check them all
-		u32 max_vertex_count = 0;
-		for (auto &buf: vertex_push_buffers)
-		{
-			max_vertex_count = std::max(max_vertex_count, buf.vertex_count);
-		}
-
-		return max_vertex_count;
+		// Enforce ATTR0 as vertex attribute for push buffers.
+		// This whole thing becomes a mess if we don't have a provoking attribute.
+		return vertex_push_buffers[0].vertex_count;
 	}
 
 	void thread::append_array_element(u32 index)
 	{
-		//Endianness is swapped because common upload code expects input in BE
-		//TODO: Implement fast upload path for LE inputs and do away with this
+		// Endianness is swapped because common upload code expects input in BE
+		// TODO: Implement fast upload path for LE inputs and do away with this
 		element_push_buffer.push_back(std::bit_cast<u32, be_t<u32>>(index));
 	}
 
@@ -641,20 +643,45 @@ namespace rsx
 #endif
 			u64 start_time = get_system_time();
 
+			u64 vblank_rate = g_cfg.video.vblank_rate;
+			u64 vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
+
+			u64 local_vblank_count = 0;
+
 			// TODO: exit condition
 			while (!is_stopped())
 			{
+				// Get current time
 				const u64 current = get_system_time();
-				const u64 period_time = 1000000 / g_cfg.video.vblank_rate;
-				const u64 wait_for = period_time - std::min<u64>(current - start_time, period_time);
+
+				// Calculate the time at which we need to send a new VBLANK signal
+				const u64 post_event_time = start_time + (local_vblank_count + 1) * vblank_period / vblank_rate;
+
+				// Calculate time remaining to that time (0 if we passed it)
+				const u64 wait_for = current >= post_event_time ? 0 : post_event_time - current;
+
+				// Substract host operating system min sleep quantom to get sleep time
 				const u64 wait_sleep = wait_for - u64{wait_for >= host_min_quantum} * host_min_quantum;
 
 				if (!wait_for)
 				{
 					{
-						start_time += period_time;
+						local_vblank_count++;
 						vblank_count++;
 
+						if (local_vblank_count == vblank_rate)
+						{
+							// Advance start_time to the moment of the current VBLANK
+							// Which is the last VBLANK event in this period
+							// This is in order for multiplication by ratio above to use only small numbers
+							start_time += vblank_period;
+							local_vblank_count = 0;
+
+							// We have a rare chance to update settings without losing precision whenever local_vblank_count is 0
+							vblank_rate = g_cfg.video.vblank_rate;
+							vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
+						}
+	
 						if (isHLE)
 						{
 							if (vblank_handler)
@@ -671,7 +698,7 @@ namespace rsx
 						}
 						else
 						{
-							sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
+							sys_rsx_context_attribute(0x55555555, 0xFED, 1, post_event_time, 0, 0);
 						}
 					}
 				}
@@ -691,7 +718,7 @@ namespace rsx
 
 					while (Emu.IsPaused() && !is_stopped())
 					{
-						thread_ctrl::wait_for(wait_sleep);
+						thread_ctrl::wait_for(5'000);
 					}
 
 					// Restore difference
@@ -1600,6 +1627,8 @@ namespace rsx
 		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
 
 		const auto [program_offset, program_location] = method_registers.shader_program_address();
+		const auto prev_textures_reference_mask = current_fp_metadata.referenced_textures_mask;
+
 		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
 		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
@@ -1623,6 +1652,14 @@ namespace rsx
 					break;
 				}
 			}
+		}
+
+		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_state_dirty) &&
+			(prev_textures_reference_mask != current_fp_metadata.referenced_textures_mask))
+		{
+			// If different textures are used, upload their coefficients.
+			// The texture parameters transfer routine is optimized and only writes data for textures consumed by the ucode.
+			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 		}
 	}
 
@@ -1697,7 +1734,7 @@ namespace rsx
 		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
 	}
 
-	void thread::analyse_inputs_interleaved(vertex_input_layout& result) const
+	void thread::analyse_inputs_interleaved(vertex_input_layout& result)
 	{
 		const rsx_state& state = rsx::method_registers;
 		const u32 input_mask = state.vertex_attrib_input_mask() & current_vp_metadata.referenced_inputs_mask;
@@ -1765,6 +1802,9 @@ namespace rsx
 				// Observed with GT5, immediate render bypasses array pointers completely, even falling back to fixed-function register defaults
 				if (vertex_push_buffers[index].vertex_count > 1)
 				{
+					// Ensure consistent number of vertices per attribute.
+					vertex_push_buffers[index].pad_to(vertex_push_buffers[0].vertex_count, false);
+
 					// Read temp buffer (register array)
 					std::pair<u8, u32> volatile_range_info = std::make_pair(index, static_cast<u32>(vertex_push_buffers[index].data.size() * sizeof(u32)));
 					result.volatile_blocks.push_back(volatile_range_info);

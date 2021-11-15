@@ -196,17 +196,9 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	ui->left_stack->setCurrentIndex(0);
 	ui->right_stack->setCurrentIndex(0);
 
-	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0, 0);
-	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0, 0);
-
-	show();
-
 	// Set up first tab
 	OnTabChanged(0);
 	ChangeProfile(ui->chooseProfile->currentText());
-
-	// Resize in order to fit into our scroll area
-	ResizeDialog();
 }
 
 pad_settings_dialog::~pad_settings_dialog()
@@ -219,6 +211,20 @@ pad_settings_dialog::~pad_settings_dialog()
 	}
 
 	pad::set_enabled(true);
+}
+
+void pad_settings_dialog::showEvent(QShowEvent* event)
+{
+	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0, 0);
+	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0, 0);
+
+	// Resize in order to fit into our scroll area
+	ResizeDialog();
+
+	// Restrict our inner layout size. This is necessary because redrawing things will slow down the dialog otherwise.
+	ui->mainLayout->setSizeConstraint(QLayout::SizeConstraint::SetFixedSize);
+
+	QDialog::showEvent(event);
 }
 
 void pad_settings_dialog::InitButtons()

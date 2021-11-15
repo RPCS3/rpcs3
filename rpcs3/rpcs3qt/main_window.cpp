@@ -186,8 +186,16 @@ bool main_window::Init(bool with_cli_boot)
 
 	RepaintThumbnailIcons();
 
-	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, this, []() { Emu.Stop(); });
-	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, this, []() { Emu.Restart(); });
+	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, this, []()
+	{
+		gui_log.notice("User clicked stop button on thumbnail toolbar");
+		Emu.Stop();
+	});
+	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, this, []()
+	{
+		gui_log.notice("User clicked restart button on thumbnail toolbar");
+		Emu.Restart();
+	});
 	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, &main_window::OnPlayOrPause);
 #endif
 
@@ -307,6 +315,8 @@ void main_window::ResizeIcons(int index)
 
 void main_window::OnPlayOrPause()
 {
+	gui_log.notice("User triggered OnPlayOrPause");
+
 	switch (Emu.GetStatus())
 	{
 	case system_state::ready: Emu.Run(true); return;
@@ -316,6 +326,7 @@ void main_window::OnPlayOrPause()
 	{
 		if (m_selected_game)
 		{
+			gui_log.notice("Booting from OnPlayOrPause...");
 			Boot(m_selected_game->info.path, m_selected_game->info.serial);
 		}
 		else if (const auto path = Emu.GetBoot(); !path.empty())
@@ -1276,7 +1287,7 @@ void main_window::DecryptSPRXLibraries()
 	if (const auto keys = g_fxo->try_get<loaded_npdrm_keys>())
 	{
 		// Second klic: get it from a running game
-		if (const u128 klic = keys->devKlic)
+		if (const u128 klic = keys->last_key())
 		{
 			klics.emplace_back(klic);
 		}
@@ -2073,13 +2084,22 @@ void main_window::CreateConnects()
 	connect(ui->createFirmwareCacheAct, &QAction::triggered, this, &main_window::CreateFirmwareCache);
 
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
-	connect(ui->sysStopAct, &QAction::triggered, this, []() { Emu.Stop(); });
-	connect(ui->sysRebootAct, &QAction::triggered, this, []() { Emu.Restart(); });
+	connect(ui->sysStopAct, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered stop action in menu bar");
+		Emu.Stop();
+	});
+	connect(ui->sysRebootAct, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered restart action in menu bar");
+		Emu.Restart();
+	});
 
 	connect(ui->sysSendOpenMenuAct, &QAction::triggered, this, [this]()
 	{
 		if (Emu.IsStopped()) return;
 
+		gui_log.notice("User triggered \"Send %s system menu command\" action in menu bar", m_sys_menu_opened ? "close" : "open");
 		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
 		m_sys_menu_opened ^= true;
 		ui->sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
@@ -2089,6 +2109,7 @@ void main_window::CreateConnects()
 	{
 		if (Emu.IsStopped()) return;
 
+		gui_log.notice("User triggered \"Send exit command\" action in menu bar");
 		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 	});
 
@@ -2391,7 +2412,11 @@ void main_window::CreateConnects()
 
 	connect(ui->toolbar_open, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->toolbar_refresh, &QAction::triggered, this, [this]() { m_game_list_frame->Refresh(true); });
-	connect(ui->toolbar_stop, &QAction::triggered, this, []() { Emu.Stop(); });
+	connect(ui->toolbar_stop, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered stop action in toolbar");
+		Emu.Stop();
+	});
 	connect(ui->toolbar_start, &QAction::triggered, this, &main_window::OnPlayOrPause);
 
 	connect(ui->toolbar_fullscreen, &QAction::triggered, this, [this]

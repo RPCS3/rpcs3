@@ -232,13 +232,13 @@ bool debugger_frame::eventFilter(QObject* object, QEvent* event)
 	return false;
 }
 
-void debugger_frame::closeEvent(QCloseEvent *event)
+void debugger_frame::closeEvent(QCloseEvent* event)
 {
 	QDockWidget::closeEvent(event);
 	Q_EMIT DebugFrameClosed();
 }
 
-void debugger_frame::showEvent(QShowEvent * event)
+void debugger_frame::showEvent(QShowEvent* event)
 {
 	// resize splitter widgets
 	if (!m_splitter->restoreState(m_gui_settings->GetValue(gui::d_splitterState).toByteArray()))
@@ -251,7 +251,7 @@ void debugger_frame::showEvent(QShowEvent * event)
 	QDockWidget::showEvent(event);
 }
 
-void debugger_frame::hideEvent(QHideEvent * event)
+void debugger_frame::hideEvent(QHideEvent* event)
 {
 	// save splitter state or it will resume its initial state on next show
 	m_gui_settings->SetValue(gui::d_splitterState, m_splitter->saveState());

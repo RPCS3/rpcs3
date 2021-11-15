@@ -11,6 +11,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
+#include "Emu/NP/np_helpers.h"
 
 #include "util/asm.hpp"
 
@@ -41,8 +42,7 @@ std::vector<std::vector<u8>> get_rpcn_msgs();
 
 namespace rpcn
 {
-
-	constexpr u32 RPCN_PROTOCOL_VERSION = 13;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 14;
 	constexpr usz RPCN_HEADER_SIZE      = 13;
 	constexpr usz COMMUNICATION_ID_SIZE = 9;
 
@@ -775,10 +775,14 @@ namespace rpcn
 			}
 		};
 
-		get_usernames_and_status(reply, friend_infos.friends);
-		get_usernames(reply, friend_infos.requests_sent);
-		get_usernames(reply, friend_infos.requests_received);
-		get_usernames(reply, friend_infos.blocked);
+		{
+			std::lock_guard lock(mutex_friends);
+
+			get_usernames_and_status(reply, friend_infos.friends);
+			get_usernames(reply, friend_infos.requests_sent);
+			get_usernames(reply, friend_infos.requests_received);
+			get_usernames(reply, friend_infos.blocked);
+		}
 
 		if (is_error(error))
 		{
@@ -1472,6 +1476,42 @@ namespace rpcn
 		return true;
 	}
 
+	bool rpcn_client::set_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
+	{
+		std::vector<u8> data{};
+
+		extra_nps::print_set_roommemberdata_int_req(req);
+
+		flatbuffers::FlatBufferBuilder builder(1024);
+		flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrinternal_vec;
+		if (req->roomMemberBinAttrInternalNum)
+		{
+			std::vector<flatbuffers::Offset<BinAttr>> davec;
+			for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
+			{
+				auto bin = CreateBinAttr(builder, req->roomMemberBinAttrInternal[i].id, builder.CreateVector(req->roomMemberBinAttrInternal[i].ptr.get_ptr(), req->roomMemberBinAttrInternal[i].size));
+				davec.push_back(bin);
+			}
+			final_binattrinternal_vec = builder.CreateVector(davec);
+		}
+
+		auto req_finished = CreateSetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, req->teamId, final_binattrinternal_vec);
+
+		builder.Finish(req_finished);
+		u8* buf     = builder.GetBufferPointer();
+		usz bufsize = builder.GetSize();
+		data.resize(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		if (!forge_send(CommandType::SetRoomMemberDataInternal, req_id, data))
+			return false;
+
+		return true;
+	}
+
 	bool rpcn_client::ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id)
 	{
 		std::vector<u8> data;
@@ -1632,6 +1672,7 @@ namespace rpcn
 		case CreationBannedEmailProvider: rpcn_log.error("Error creating an account: banned email provider!"); break;
 		case CreationExistingEmail: rpcn_log.error("Error creating an account: an account with that email already exist!"); break;
 		case AlreadyJoined: rpcn_log.error("User has already joined!"); break;
+		case Unauthorized: rpcn_log.error("User attempted an unauthorized operation!"); break;
 		case DbFail: rpcn_log.error("A db query failed on the server!"); break;
 		case EmailFail: rpcn_log.error("An email action failed on the server!"); break;
 		case NotFound: rpcn_log.error("A request replied not found!"); break;
@@ -1700,6 +1741,7 @@ namespace rpcn
 	void rpcn_client::get_friends_and_register_cb(friend_data& friend_infos, friend_cb_func cb_func, void* cb_param)
 	{
 		std::lock_guard lock(mutex_friends);
+
 		friend_infos = this->friend_infos;
 		friend_cbs.insert(std::make_pair(cb_func, cb_param));
 	}
@@ -1707,6 +1749,7 @@ namespace rpcn
 	void rpcn_client::remove_friend_cb(friend_cb_func cb_func, void* cb_param)
 	{
 		std::lock_guard lock(mutex_friends);
+
 		for (const auto& friend_cb : friend_cbs)
 		{
 			if (friend_cb.first == cb_func && friend_cb.second == cb_param)
@@ -1897,6 +1940,7 @@ namespace rpcn
 	void rpcn_client::remove_message_cb(message_cb_func cb_func, void* cb_param)
 	{
 		std::lock_guard lock(mutex_messages);
+
 		for (const auto& message_cb : message_cbs)
 		{
 			if (message_cb.cb_func == cb_func && message_cb.cb_param == cb_param)
@@ -1910,17 +1954,40 @@ namespace rpcn
 	void rpcn_client::discard_active_message(u64 id)
 	{
 		std::lock_guard lock(mutex_messages);
+
 		active_messages.erase(id);
 	}
 
-	u32 rpcn_client::get_num_friends() const
+	u32 rpcn_client::get_num_friends()
 	{
+		std::lock_guard lock(mutex_friends);
+
 		return friend_infos.friends.size();
 	}
 
-	u32 rpcn_client::get_num_blocks() const
+	u32 rpcn_client::get_num_blocks()
 	{
+		std::lock_guard lock(mutex_friends);
+
 		return friend_infos.blocked.size();
+	}
+
+	std::optional<std::string> rpcn_client::get_friend_by_index(u32 index)
+	{
+		std::lock_guard lock(mutex_friends);
+
+		if (index >= friend_infos.friends.size())
+		{
+			return {};
+		}
+
+		auto it = friend_infos.friends.begin();
+		for (usz i = 0; i < index; i++)
+		{
+			it++;
+		}
+
+		return it->first;
 	}
 
 } // namespace rpcn

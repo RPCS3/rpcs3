@@ -20,6 +20,8 @@ namespace utils
 	bool has_rtm();
 
 	bool has_tsx_force_abort();
+	
+	bool has_rtm_always_abort();
 
 	bool has_mpx();
 

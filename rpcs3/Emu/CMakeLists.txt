@@ -375,8 +375,13 @@ target_sources(rpcs3_emu PRIVATE
 # Np
 target_sources(rpcs3_emu PRIVATE
     NP/fb_helpers.cpp
+    NP/np_cache.cpp
     NP/np_contexts.cpp
+    NP/np_dnshook.cpp
     NP/np_handler.cpp
+    NP/np_helpers.cpp
+    NP/np_notifications.cpp
+    NP/np_requests.cpp
     NP/signaling_handler.cpp
     NP/np_structs_extra.cpp
     NP/rpcn_client.cpp
@@ -396,6 +401,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GSRender.cpp
     RSX/RSXFIFO.cpp
     RSX/rsx_methods.cpp
+    RSX/rsx_vertex_data.cpp
     RSX/RSXOffload.cpp
     RSX/RSXTexture.cpp
     RSX/RSXThread.cpp

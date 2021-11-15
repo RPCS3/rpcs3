@@ -24,6 +24,8 @@
 #endif
 
 #include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_helpers.h"
+#include "Emu/NP/np_dnshook.h"
 
 #include <chrono>
 #include <shared_mutex>
@@ -1695,7 +1697,8 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 		if (psa_in->sin_port == 53)
 		{
-			auto& nph = g_fxo->get<named_thread<np_handler>>();
+			auto& dnshook = g_fxo->get<np::dnshook>();
+			auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 			// Hack for DNS
 			name.sin_port        = std::bit_cast<u16, be_t<u16>>(53);
@@ -1703,7 +1706,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 			sys_net.notice("sys_net_bnet_connect: using DNS...");
 
-			nph.add_dns_spy(s);
+			dnshook.add_dns_spy(s);
 		}
 		else if (_addr->sa_family != SYS_NET_AF_INET)
 		{
@@ -2255,7 +2258,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		return -SYS_NET_EINVAL;
 	}
 
-	if (flags & ~(SYS_NET_MSG_PEEK | SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL))
+	if (flags & ~(SYS_NET_MSG_PEEK | SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
 		fmt::throw_exception("sys_net_bnet_recvfrom(s=%d): unknown flags (0x%x)", flags);
 	}
@@ -2286,10 +2289,12 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 		//if (!(sock.events & lv2_socket::poll::read))
 		{
-			auto& nph = g_fxo->get<named_thread<np_handler>>();
-			if (nph.is_dns(s) && nph.is_dns_queue(s))
+			auto& dnshook = g_fxo->get<np::dnshook>();
+			if (dnshook.is_dns(s) && dnshook.is_dns_queue(s))
 			{
-				const auto packet = nph.get_dns_packet(s);
+				auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+				const auto packet = dnshook.get_dns_packet(s);
 				ensure(packet.size() < len);
 
 				memcpy(buf.get_ptr(), packet.data(), packet.size());
@@ -2580,7 +2585,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 	sys_net.warning("sys_net_bnet_sendto(s=%d, buf=*0x%x, len=%u, flags=0x%x, addr=*0x%x, addrlen=%u)", s, buf, len, flags, addr, addrlen);
 
-	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL))
+	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
 		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", flags);
 	}
@@ -2708,17 +2713,18 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 		//if (!(sock.events & lv2_socket::poll::write))
 		{
-			auto& nph = g_fxo->get<named_thread<np_handler>>();
+			auto& dnshook = g_fxo->get<np::dnshook>();
 			if (addr && type == SYS_NET_SOCK_DGRAM && psa_in->sin_port == 53)
 			{
-				nph.add_dns_spy(s);
+				dnshook.add_dns_spy(s);
 			}
 
-			if (nph.is_dns(s))
+			if (dnshook.is_dns(s))
 			{
-				const s32 ret_analyzer = nph.analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.data()), len);
+				const s32 ret_analyzer = dnshook.analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.data()), len);
 
 				// If we're not connected just never send the packet and pretend we did
+				auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 				if (!nph.get_net_status())
 				{
 					native_result = data_len;
@@ -3217,8 +3223,8 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 		}
 	}
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
-	nph.remove_dns_spy(s);
+	auto& dnshook = g_fxo->get<np::dnshook>();
+	dnshook.remove_dns_spy(s);
 
 	return CELL_OK;
 }
@@ -3309,8 +3315,8 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 				else
 				{
 					// Check for fake packet for dns interceptions
-					auto& nph = g_fxo->get<named_thread<np_handler>>();
-					if (fds_buf[i].events & SYS_NET_POLLIN && nph.is_dns(fds_buf[i].fd) && nph.is_dns_queue(fds_buf[i].fd))
+					auto& dnshook = g_fxo->get<np::dnshook>();
+					if (fds_buf[i].events & SYS_NET_POLLIN && dnshook.is_dns(fds_buf[i].fd) && dnshook.is_dns_queue(fds_buf[i].fd))
 						fds_buf[i].revents |= SYS_NET_POLLIN;
 
 					if (fds_buf[i].events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT | SYS_NET_POLLERR))
@@ -3754,8 +3760,8 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 		char buffer[nameserver.size() + 80]{};
 		std::memcpy(buffer, nameserver.data(), nameserver.size());
 
-		auto& nph = g_fxo->get<named_thread<np_handler>>();
-		const auto dns_str = np_handler::ip_to_string(nph.get_dns_ip());
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		const auto dns_str = np::ip_to_string(nph.get_dns_ip());
 		std::memcpy(buffer + nameserver.size() - 1, dns_str.data(), dns_str.size());
 
 		std::string_view name{buffer};
