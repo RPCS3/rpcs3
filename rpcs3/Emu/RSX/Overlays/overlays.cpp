@@ -67,6 +67,51 @@ namespace rsx
 
 			input::SetIntercepted(true);
 
+			const auto handle_button_press = [&](u8 button_id, bool pressed, int pad_index)
+			{
+				if (button_id >= pad_button::pad_button_max_enum)
+				{
+					return;
+				}
+
+				if (pressed)
+				{
+					const bool is_auto_repeat_button = auto_repeat_buttons.contains(button_id);
+
+					if (!last_button_state[pad_index][button_id])
+					{
+						// The button was not pressed before, so this is a new button press. Reset auto-repeat.
+						timestamp[pad_index] = steady_clock::now();
+						initial_timestamp[pad_index] = timestamp[pad_index];
+						last_auto_repeat_button[pad_index] = is_auto_repeat_button ? button_id : pad_button::pad_button_max_enum;
+						on_button_pressed(static_cast<pad_button>(button_id));
+					}
+					else if (is_auto_repeat_button)
+					{
+						if (last_auto_repeat_button[pad_index] == button_id
+						    && input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold
+						    && input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
+						{
+							// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
+							timestamp[pad_index] = steady_clock::now();
+							on_button_pressed(static_cast<pad_button>(button_id));
+						}
+						else if (last_auto_repeat_button[pad_index] == pad_button::pad_button_max_enum)
+						{
+							// An auto-repeat button was already pressed before and will now start triggering again after the next threshold.
+							last_auto_repeat_button[pad_index] = button_id;
+						}
+					}
+				}
+				else if (last_button_state[pad_index][button_id] && last_auto_repeat_button[pad_index] == button_id)
+				{
+					// We stopped pressing an auto-repeat button, so re-enable auto-repeat for other buttons.
+					last_auto_repeat_button[pad_index] = pad_button::pad_button_max_enum;
+				}
+
+				last_button_state[pad_index][button_id] = pressed;
+			};
+
 			while (!exit)
 			{
 				if (Emu.IsStopped())
@@ -179,45 +224,47 @@ namespace rsx
 							}
 						}
 
-						if (button_id < pad_button::pad_button_max_enum)
+						handle_button_press(button_id, button.m_pressed, pad_index);
+
+						if (exit)
+							break;
+					}
+
+					for (const AnalogStick& stick : pad->m_sticks)
+					{
+						u8 button_id = pad_button::pad_button_max_enum;
+						u8 release_id = pad_button::pad_button_max_enum;
+
+						// Let's say sticks are only pressed if they are almost completely tilted. Otherwise navigation feels really wacky.
+						const bool pressed = stick.m_value < 30 || stick.m_value > 225;
+
+						switch (stick.m_offset)
 						{
-							if (button.m_pressed)
-							{
-								const bool is_auto_repeat_button = auto_repeat_buttons.contains(button_id);
-
-								if (!last_button_state[pad_index][button_id])
-								{
-									// The button was not pressed before, so this is a new button press. Reset auto-repeat.
-									timestamp[pad_index] = steady_clock::now();
-									initial_timestamp[pad_index] = timestamp[pad_index];
-									last_auto_repeat_button[pad_index] = is_auto_repeat_button ? button_id : pad_button::pad_button_max_enum;
-									on_button_pressed(static_cast<pad_button>(button_id));
-								}
-								else if (is_auto_repeat_button)
-								{
-									if (last_auto_repeat_button[pad_index] == button_id
-									    && input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold
-									    && input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
-									{
-										// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
-										timestamp[pad_index] = steady_clock::now();
-										on_button_pressed(static_cast<pad_button>(button_id));
-									}
-									else if (last_auto_repeat_button[pad_index] == pad_button::pad_button_max_enum)
-									{
-										// An auto-repeat button was already pressed before and will now start triggering again after the next threshold.
-										last_auto_repeat_button[pad_index] = button_id;
-									}
-								}
-							}
-							else if (last_button_state[pad_index][button_id] && last_auto_repeat_button[pad_index] == button_id)
-							{
-								// We stopped pressing an auto-repeat button, so re-enable auto-repeat for other buttons.
-								last_auto_repeat_button[pad_index] = pad_button::pad_button_max_enum;
-							}
-
-							last_button_state[pad_index][button_id] = button.m_pressed;
+						case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
+							button_id = (stick.m_value <= 128) ? pad_button::ls_left : pad_button::ls_right;
+							release_id = (stick.m_value > 128) ? pad_button::ls_left : pad_button::ls_right;
+							break;
+						case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
+							button_id = (stick.m_value <= 128) ? pad_button::ls_up : pad_button::ls_down;
+							release_id = (stick.m_value > 128) ? pad_button::ls_up : pad_button::ls_down;
+							break;
+						case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
+							button_id = (stick.m_value <= 128) ? pad_button::rs_left : pad_button::rs_right;
+							release_id = (stick.m_value > 128) ? pad_button::rs_left : pad_button::rs_right;
+							break;
+						case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
+							button_id = (stick.m_value <= 128) ? pad_button::rs_up : pad_button::rs_down;
+							release_id = (stick.m_value > 128) ? pad_button::rs_up : pad_button::rs_down;
+							break;
+						default:
+							break;
 						}
+
+						// Release other direction on the same axis first
+						handle_button_press(release_id, false, pad_index);
+
+						// Handle currently pressed stick direction
+						handle_button_press(button_id, pressed, pad_index);
 
 						if (exit)
 							break;

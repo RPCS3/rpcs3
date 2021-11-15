@@ -435,6 +435,7 @@ namespace rsx
 				break;
 			}
 			case pad_button::dpad_right:
+			case pad_button::ls_right:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
 				while (true)
@@ -457,6 +458,7 @@ namespace rsx
 				break;
 			}
 			case pad_button::dpad_left:
+			case pad_button::ls_left:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
 				while (current_index > 0)
@@ -481,6 +483,7 @@ namespace rsx
 				break;
 			}
 			case pad_button::dpad_down:
+			case pad_button::ls_down:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
 				while (true)
@@ -501,6 +504,7 @@ namespace rsx
 				break;
 			}
 			case pad_button::dpad_up:
+			case pad_button::ls_up:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
 				while (current_index >= num_columns)
