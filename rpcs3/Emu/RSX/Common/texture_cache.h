@@ -3055,7 +3055,7 @@ namespace rsx
 
 				blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, typeless_info);
 			}
-			else
+			else if (cached_dest)
 			{
 				cached_dest->dma_transfer(cmd, vram_texture, src_area, dst_range, dst.pitch);
 			}
