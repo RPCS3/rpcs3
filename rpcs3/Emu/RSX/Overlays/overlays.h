@@ -68,12 +68,30 @@ namespace rsx
 				L3,
 				R3,
 
+				ls_up,
+				ls_down,
+				ls_left,
+				ls_right,
+				rs_up,
+				rs_down,
+				rs_left,
+				rs_right,
+
 				pad_button_max_enum
 			};
 
 		protected:
 			Timer input_timer;
-			std::set<u8> auto_repeat_buttons = { pad_button::dpad_up, pad_button::dpad_down, pad_button::dpad_left, pad_button::dpad_right };
+			std::set<u8> auto_repeat_buttons = {
+				pad_button::dpad_up,
+				pad_button::dpad_down,
+				pad_button::dpad_left,
+				pad_button::dpad_right,
+				pad_button::ls_up,
+				pad_button::ls_down,
+				pad_button::ls_left,
+				pad_button::ls_right
+			};
 			atomic_t<bool> exit = false;
 			atomic_t<bool> m_interactive = false;
 			atomic_t<bool> m_stop_pad_interception = false;

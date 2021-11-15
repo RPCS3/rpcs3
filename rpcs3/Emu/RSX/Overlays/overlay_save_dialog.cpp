@@ -129,9 +129,11 @@ namespace rsx
 				close(true, true);
 				return;
 			case pad_button::dpad_up:
+			case pad_button::ls_up:
 				m_list->select_previous();
 				break;
 			case pad_button::dpad_down:
+			case pad_button::ls_down:
 				m_list->select_next();
 				break;
 			case pad_button::L1:
