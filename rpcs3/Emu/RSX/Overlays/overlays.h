@@ -56,6 +56,7 @@ namespace rsx
 				dpad_right,
 				select,
 				start,
+				ps,
 				triangle,
 				circle,
 				square,
@@ -64,6 +65,8 @@ namespace rsx
 				R1,
 				L2,
 				R2,
+				L3,
+				R3,
 
 				pad_button_max_enum
 			};

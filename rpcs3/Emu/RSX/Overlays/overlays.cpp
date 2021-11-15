@@ -86,7 +86,7 @@ namespace rsx
 				}
 
 				int pad_index = -1;
-				for (const auto &pad : handler->GetPads())
+				for (const auto& pad : handler->GetPads())
 				{
 					if (exit)
 						break;
@@ -97,7 +97,18 @@ namespace rsx
 						continue;
 					}
 
-					for (auto &button : pad->m_buttons)
+					if (!pad)
+					{
+						rsx_log.fatal("Pad %d is nullptr", pad_index);
+						continue;
+					}
+
+					if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+					{
+						continue;
+					}
+
+					for (const Button& button : pad->m_buttons)
 					{
 						u8 button_id = pad_button::pad_button_max_enum;
 						if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
@@ -116,13 +127,20 @@ namespace rsx
 							case CELL_PAD_CTRL_UP:
 								button_id = pad_button::dpad_up;
 								break;
+							case CELL_PAD_CTRL_L3:
+								button_id = pad_button::L3;
+								break;
+							case CELL_PAD_CTRL_R3:
+								button_id = pad_button::R3;
+								break;
 							case CELL_PAD_CTRL_SELECT:
 								button_id = pad_button::select;
 								break;
 							case CELL_PAD_CTRL_START:
 								button_id = pad_button::start;
 								break;
-							default: break;
+							default:
+								break;
 							}
 						}
 						else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
@@ -153,7 +171,11 @@ namespace rsx
 							case CELL_PAD_CTRL_R2:
 								button_id = pad_button::R2;
 								break;
-							default: break;
+							case CELL_PAD_CTRL_PS:
+								button_id = pad_button::ps;
+								break;
+							default:
+								break;
 							}
 						}
 
