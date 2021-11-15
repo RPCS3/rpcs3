@@ -49,7 +49,7 @@ struct av_get_monitor_info_cmd : public ps3av_cmd
 		evnt->color.red_x = 0xFFFF;
 		evnt->color.red_y = 0xFFFF;
 		evnt->color.white_x = 0xFFFF;
-		evnt->color.white_x = 0xFFFF;
+		evnt->color.white_y = 0xFFFF;
 		evnt->color.gamma = 100;
 
 		evnt->supported_ai = 0;
