@@ -350,7 +350,10 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		for (int i = 0; i < combobox->count(); i++)
 		{
 			const QVariantList var_list = combobox->itemData(i).toList();
-			ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
+			if (var_list.size() != 2 || !var_list[0].canConvert<QString>())
+			{
+				fmt::throw_exception("Invalid data found in combobox entry %d (text='%s', listsize=%d, itemcount=%d)", i, sstr(combobox->itemText(i)), var_list.size(), combobox->count());
+			}
 
 			if (value == var_list[0].toString())
 			{
@@ -394,6 +397,8 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 	connect(combobox, QOverload<int>::of(&QComboBox::currentIndexChanged), combobox, [this, is_ranged, combobox, type](int index)
 	{
+		if (index < 0) return;
+
 		if (is_ranged)
 		{
 			SetSetting(type, sstr(combobox->itemData(index)));
@@ -401,7 +406,10 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		else
 		{
 			const QVariantList var_list = combobox->itemData(index).toList();
-			ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
+			if (var_list.size() != 2 || !var_list[0].canConvert<QString>())
+			{
+				fmt::throw_exception("Invalid data found in combobox entry %d (text='%s', listsize=%d, itemcount=%d)", index, sstr(combobox->itemText(index)), var_list.size(), combobox->count());
+			}
 			SetSetting(type, sstr(var_list[0]));
 		}
 	});

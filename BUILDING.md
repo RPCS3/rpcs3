@@ -86,7 +86,7 @@ sudo apt-get install cmake
 
 #### OpenSUSE
 
-    sudo zypper install git cmake libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt5-qtbase-devel libqt5gui-private-headers-devel libevdev-devel libsndio7_1 libjack-devel
+    sudo zypper install git cmake libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt5-qtbase-devel libqt5-qtmultimedia-devel libqt5-qtsvg-devel libQt5Gui-private-headers-devel libevdev-devel libsndio7_1 libjack-devel
 
 ## Setup the project
 

@@ -14,7 +14,7 @@ struct cfg_root : cfg::node
 	{
 	private:
 		/** We don't wanna include the sysinfo header here */
-		static bool has_rtm();
+		static bool enable_tsx_by_default();
 
 	public:
 		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
@@ -49,7 +49,7 @@ struct cfg_root : cfg::node
 		cfg::uint<0, 16> mfc_transfers_shuffling{ this, "MFC Commands Shuffling Limit", 0 };
 		cfg::uint<0, 10000> mfc_transfers_timeout{ this, "MFC Commands Timeout", 0, true };
 		cfg::_bool mfc_shuffling_in_steps{ this, "MFC Commands Shuffling In Steps", false, true };
-		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", has_rtm() ? tsx_usage::enabled : tsx_usage::disabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
+		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", enable_tsx_by_default() ? tsx_usage::enabled : tsx_usage::disabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
 		cfg::_bool llvm_accurate_dfma{ this, "LLVM Accurate DFMA", true }; // Enable accurate double-precision FMA for CPUs which do not support it natively

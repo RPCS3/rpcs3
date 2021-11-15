@@ -130,6 +130,8 @@ memory_string_searcher::memory_string_searcher(QWidget* parent, std::shared_ptr<
 
 	connect(m_cbox_input_mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
+		if (index < 0) return;
+
 		if ((1 << index) == no_mode)
 		{
 			m_modes = {};

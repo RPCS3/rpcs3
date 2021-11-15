@@ -332,7 +332,7 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 		return {fs_error, path};
 	}
 
-	u128 klic = g_fxo->get<loaded_npdrm_keys>().devKlic.load();
+	u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
 	const fs::file elf_file = decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic));
 

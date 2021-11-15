@@ -5,6 +5,7 @@
 #include "Emu/Cell/Modules/cellOskDialog.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Emu/Io/Null/null_camera_handler.h"
 
 #include <clocale>
 
@@ -73,7 +74,7 @@ void headless_application::InitializeCallbacks()
 			break;
 		}
 		case video_renderer::opengl:
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
 #endif
 		{
@@ -85,6 +86,23 @@ void headless_application::InitializeCallbacks()
 			fmt::throw_exception("Invalid video renderer: %s", type);
 		}
 		}
+	};
+
+	callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
+	{
+		switch (g_cfg.io.camera.get())
+		{
+		case camera_handler::null:
+		case camera_handler::fake:
+		{
+			return std::make_shared<null_camera_handler>();
+		}
+		case camera_handler::qt:
+		{
+			fmt::throw_exception("Headless mode can not be used with this camera handler. Current handler: %s", g_cfg.io.camera.get());
+		}
+		}
+		return nullptr;
 	};
 
 	callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
@@ -106,6 +124,10 @@ void headless_application::InitializeCallbacks()
 	callbacks.on_resume = []() {};
 	callbacks.on_stop   = []() {};
 	callbacks.on_ready  = []() {};
+
+	callbacks.on_missing_fw = []() { return false; };
+
+	callbacks.handle_taskbar_progress = [](s32, s32) {};
 
 	callbacks.get_localized_string    = [](localized_string_id, const char*) -> std::string { return {}; };
 	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };

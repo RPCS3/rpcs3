@@ -108,6 +108,12 @@ set_target_properties(rpcs3_ui
         AUTOUIC ON
         AUTORCC ON)
 
+# AUTOMOC brings Windows.h to the sources, which have some definitions conflicting with winsock2.h
+# define WIN32_LEAN_AND_MEAN resolve the problem
+# https://docs.microsoft.com/en-us/windows/win32/winsock/creating-a-basic-winsock-application
+# https://docs.microsoft.com/en-us/windows/win32/winprog/using-the-windows-headers#faster-builds-with-smaller-header-files
+target_compile_definitions(rpcs3_ui PRIVATE WIN32_LEAN_AND_MEAN)
+
 target_link_libraries(rpcs3_ui
     PUBLIC
         3rdparty::qt5 3rdparty::yaml-cpp

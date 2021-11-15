@@ -82,6 +82,12 @@ bool utils::has_tsx_force_abort()
 	return g_value;
 }
 
+bool utils::has_rtm_always_abort()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[3] & 0x800) == 0x800;
+	return g_value;
+}
+
 bool utils::has_mpx()
 {
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x4000) == 0x4000;
@@ -230,10 +236,14 @@ std::string utils::get_system_info()
 			result += "-FA";
 		}
 
-		if (!has_mpx())
+		if (!has_mpx() || has_tsx_force_abort())
 		{
 			result += " disabled by default";
 		}
+	}
+	else if (has_rtm_always_abort())
+	{
+		result += " | TSX disabled via microcode";
 	}
 
 	return result;

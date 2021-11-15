@@ -85,29 +85,35 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		m_use_ssse3 = false;
 	}
 
+	// Test AVX feature (TODO)
+	if (cpu == "sandybridge" ||
+		cpu == "ivybridge" ||
+		cpu == "bdver1")
+	{
+		m_use_avx = true;
+	}
+
 	// Test FMA feature (TODO)
 	if (cpu == "haswell" ||
 		cpu == "broadwell" ||
 		cpu == "skylake" ||
+		cpu == "alderlake" ||
 		cpu == "bdver2" ||
 		cpu == "bdver3" ||
 		cpu == "bdver4" ||
 		cpu.startswith("znver"))
 	{
 		m_use_fma = true;
+		m_use_avx = true;
 	}
 
 	// Test AVX-512 feature (TODO)
 	if (cpu == "skylake-avx512" ||
 		cpu == "cascadelake" ||
 		cpu == "cannonlake" ||
-		cpu == "cooperlake" ||
-		cpu == "icelake" ||
-		cpu == "icelake-client" ||
-		cpu == "icelake-server" ||
-		cpu == "tigerlake" ||
-		cpu == "rocketlake")
+		cpu == "cooperlake")
 	{
+		m_use_avx = true;
 		m_use_fma = true;
 		m_use_avx512 = true;
 	}
@@ -128,6 +134,9 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "rocketlake" ||
 		cpu == "sapphirerapids")
 	{
+		m_use_avx = true;
+		m_use_fma = true;
+		m_use_avx512 = true;
 		m_use_avx512_icl = true;
 		m_use_vnni = true;
 	}
