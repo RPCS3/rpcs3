@@ -157,10 +157,10 @@ namespace vk
 		{
 #ifdef _WIN32
 			// SPIRV bugs were fixed in 452.28 for windows
-			const u32 threshold_version = (452u >> 22) | (28 >> 14);
+			const u32 threshold_version = (452u << 22) | (28 << 14);
 #else
 			// SPIRV bugs were fixed in 450.56 for linux/BSD
-			const u32 threshold_version = (450u >> 22) | (56 >> 14);
+			const u32 threshold_version = (450u << 22) | (56 << 14);
 #endif
 			const auto current_version = props.driverVersion & ~0x3fffu; // Clear patch and revision fields
 			if (current_version < threshold_version)
