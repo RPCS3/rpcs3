@@ -497,7 +497,7 @@ static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller
 		return false;
 
 	ext.status = 0; // CELL_GEM_EXT_CONNECTED | CELL_GEM_EXT_EXT0 | CELL_GEM_EXT_EXT1
-	ext.analog_left_x = pad->m_analog_left_x;
+	ext.analog_left_x = pad->m_analog_left_x; // HACK: these pad members are actually only set in cellPad
 	ext.analog_left_y = pad->m_analog_left_y;
 	ext.analog_right_x = pad->m_analog_right_x;
 	ext.analog_right_y = pad->m_analog_right_y;
