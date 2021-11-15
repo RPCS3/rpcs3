@@ -2173,6 +2173,7 @@ namespace rsx
 					// NOTE: Do not disable 'cyclic ref' since the texture_barrier may have already been issued!
 					result.image_handle = 0;
 					result.external_subresource_desc = { 0, deferred_request_command::mipmap_gather, attributes, {}, tex.decoded_remap() };
+					result.format_class = rsx::classify_format(attributes.gcm_format);
 
 					if (use_upscaling)
 					{
