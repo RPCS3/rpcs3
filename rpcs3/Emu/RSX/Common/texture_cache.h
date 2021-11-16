@@ -2240,6 +2240,7 @@ namespace rsx
 
 			const bool is_copy_op = (fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f));
 			const bool is_format_convert = (dst_is_argb8 != src_is_argb8);
+			const bool is_interpolating_op = (!is_copy_op && interpolate);
 			bool skip_if_collision_exists = false;
 
 			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
@@ -2416,14 +2417,14 @@ namespace rsx
 				if (!typeless) [[likely]]
 				{
 					// Use format as-is
-					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, src_subres.is_depth, false);
+					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, src_subres.is_depth, false, is_interpolating_op);
 				}
 				else
 				{
 					// Enable type scaling in src
 					typeless_info.src_is_typeless = true;
 					typeless_info.src_scaling_hint = static_cast<f32>(bpp) / src_bpp;
-					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, is_format_convert);
+					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, is_format_convert, is_interpolating_op);
 				}
 
 				if (surf->get_surface_width(rsx::surface_metrics::pixels) != surf->width() ||
@@ -2491,14 +2492,14 @@ namespace rsx
 
 				if (!typeless) [[likely]]
 				{
-					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, dst_subres.is_depth, false);
+					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, dst_subres.is_depth, false, is_interpolating_op);
 				}
 				else
 				{
 					// Enable type scaling in dst
 					typeless_info.dst_is_typeless = true;
 					typeless_info.dst_scaling_hint = static_cast<f32>(bpp) / dst_bpp;
-					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert);
+					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert, is_interpolating_op);
 				}
 			}
 
@@ -2799,7 +2800,7 @@ namespace rsx
 					subres.data = { vm::_ptr<const std::byte>(image_base), static_cast<std::span<const std::byte>::size_type>(src.pitch * image_height) };
 					subresource_layout.push_back(subres);
 
-					const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface, is_format_convert);
+					const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface, is_format_convert, is_interpolating_op);
 					const auto rsx_range = address_range::start_length(image_base, src.pitch * image_height);
 
 					lock.upgrade();
@@ -2828,7 +2829,7 @@ namespace rsx
 			}
 
 			//const auto src_is_depth_format = helpers::is_gcm_depth_format(typeless_info.src_gcm_format);
-			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert);
+			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert, is_interpolating_op);
 
 			if (cached_dest && !use_null_region)
 			{
@@ -3035,7 +3036,7 @@ namespace rsx
 					if (!typeless_info.src_is_typeless)
 					{
 						typeless_info.src_is_typeless = true;
-						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false);
+						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false, is_interpolating_op);
 					}
 				}
 				else
@@ -3044,7 +3045,7 @@ namespace rsx
 					if (!typeless_info.dst_is_typeless)
 					{
 						typeless_info.dst_is_typeless = true;
-						typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false);
+						typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false, is_interpolating_op);
 					}
 				}
 			}
