@@ -277,6 +277,7 @@ void Emulator::Init(bool add_only)
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
+	make_path_verbose(fs::get_config_dir() + "sounds/");
 	make_path_verbose(patch_engine::get_patches_path());
 
 	if (add_only)
