@@ -3244,10 +3244,11 @@ error_code sceNpManagerGetCachedInfo(CellSysutilUserId userId, vm::ptr<SceNpMana
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetPsHandle()
+error_code sceNpManagerGetPsHandle(vm::ptr<SceNpOnlineId> onlineId)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
+	sceNp.warning("sceNpManagerGetPsHandle(onlineId=*0x%x)", onlineId);
+
+	return sceNpManagerGetOnlineId(onlineId);
 }
 
 error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serviceId, vm::cptr<void> cookie, u32 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
