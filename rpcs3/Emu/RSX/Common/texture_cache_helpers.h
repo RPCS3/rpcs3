@@ -133,9 +133,9 @@ namespace rsx
 			return gcm_format;
 		}
 
-		static inline u32 get_sized_blit_format(bool is_32_bit, bool depth_format, bool format_conversion)
+		static inline u32 get_sized_blit_format(bool is_32_bit, bool depth_format, bool is_format_convert, bool is_interpolating_op)
 		{
-			if (format_conversion)
+			if (is_format_convert || is_interpolating_op)
 			{
 				return (is_32_bit) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 			}
