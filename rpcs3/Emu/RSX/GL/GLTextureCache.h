@@ -727,11 +727,6 @@ namespace gl
 					cached.set_format(gl::texture::format::depth, gl::texture::type::ushort, true);
 					break;
 				}
-				case CELL_GCM_TEXTURE_X16:
-				{
-					cached.set_format(gl::texture::format::r, gl::texture::type::ushort, true);
-					break;
-				}
 				default:
 					fmt::throw_exception("Unexpected gcm format 0x%X", gcm_format);
 				}
