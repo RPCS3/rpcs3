@@ -6,6 +6,7 @@
 #include <variant>
 #include <stack>
 #include <unordered_map>
+#include <source_location>
 
 #include "GCM.h"
 #include "rsx_cache.h"
@@ -174,11 +175,7 @@ namespace rsx
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	u32 get_address(u32 offset, u32 location, u32 size_to_check = 0,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* func = __builtin_FUNCTION());
+	u32 get_address(u32 offset, u32 location, u32 size_to_check = 0, const std::source_location src_loc = std::source_location::current());
 
 	struct tiled_region
 	{
@@ -659,10 +656,7 @@ namespace rsx
 		bool is_fifo_idle() const;
 		void flush_fifo();
 
-		void recover_fifo(u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN(),
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION());
+		void recover_fifo(const std::source_location src_loc = std::source_location::current());
 
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;

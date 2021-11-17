@@ -7,11 +7,7 @@
 
 namespace vk
 {
-	void die_with_error(VkResult error_code, std::string message,
-		const char* file,
-		const char* func,
-		u32 line,
-		u32 col)
+	void die_with_error(VkResult error_code, std::string message, const std::source_location src_loc)
 	{
 		std::string error_message;
 		int severity = 0; // 0 - die, 1 - warn, 2 - nothing
@@ -95,7 +91,7 @@ namespace vk
 			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)";
 			break;
 		default:
-			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), src_loc{line, col, file, func});
+			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), src_loc);
 			break;
 		}
 
@@ -104,9 +100,9 @@ namespace vk
 		default:
 		case 0:
 			if (!message.empty()) message += "\n\n";
-			fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc{line, col, file, func});
+			fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc);
 		case 1:
-			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc{line, col, file, func});
+			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc);
 			break;
 		case 2:
 			break;

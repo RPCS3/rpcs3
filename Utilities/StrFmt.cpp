@@ -306,22 +306,22 @@ void fmt_class_string<s128>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
+void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 {
-	const src_loc& loc = get_object(arg);
+	const std::source_location& src_loc = get_object(arg);
 
-	if (loc.col != umax)
+	if (src_loc.column() != umax)
 	{
-		fmt::append(out, "\n(in file %s:%u[:%u]", loc.file, loc.line, loc.col);
+		fmt::append(out, "\n(in file %s:%u[:%u]", src_loc.file_name(), src_loc.line(), src_loc.column());
 	}
 	else
 	{
-		fmt::append(out, "\n(in file %s:%u", loc.file, loc.line);
+		fmt::append(out, "\n(in file %s:%u", src_loc.file_name(), src_loc.line());
 	}
 
-	if (loc.func && *loc.func)
+	if (src_loc.function_name() && *src_loc.function_name())
 	{
-		fmt::append(out, ", in function %s)", loc.func);
+		fmt::append(out, ", in function %s)", src_loc.function_name());
 	}
 	else
 	{
@@ -344,18 +344,18 @@ void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(const src_loc& loc, const char8_t* msg)
+	[[noreturn]] void raw_verify_error(const std::source_location& src_loc, const char8_t* msg)
 	{
 		std::string out;
-		fmt::append(out, "%s%s", msg ? msg : u8"Verification failed", loc);
+		fmt::append(out, "%s%s", msg ? msg : u8"Verification failed", src_loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
-	[[noreturn]] void raw_throw_exception(const src_loc& loc, const char* fmt, const fmt_type_info* sup, const u64* args)
+	[[noreturn]] void raw_throw_exception(const std::source_location& src_loc, const char* fmt, const fmt_type_info* sup, const u64* args)
 	{
 		std::string out;
 		raw_append(out, fmt, sup, args);
-		fmt::append(out, "%s", loc);
+		fmt::append(out, "%s", src_loc);
 		thread_ctrl::emergency_exit(out);
 	}
 

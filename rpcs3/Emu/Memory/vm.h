@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <source_location>
+
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/auto_typemap.hpp"
@@ -215,11 +217,7 @@ namespace vm
 	template<>
 	struct cast_impl<u32>
 	{
-		static vm::addr_t cast(u32 addr,
-			u32,
-			u32,
-			const char*,
-			const char*)
+		static vm::addr_t cast(u32 addr, const std::source_location& /*src_loc*/)
 		{
 			return static_cast<vm::addr_t>(addr);
 		}
@@ -228,37 +226,25 @@ namespace vm
 	template<>
 	struct cast_impl<u64>
 	{
-		static vm::addr_t cast(u64 addr,
-			u32 line,
-			u32 col,
-			const char* file,
-			const char* func)
+		static vm::addr_t cast(u64 addr, const std::source_location& src_loc)
 		{
-			return static_cast<vm::addr_t>(::narrow<u32>(addr, line, col, file, func));
+			return static_cast<vm::addr_t>(::narrow<u32>(addr, src_loc));
 		}
 	};
 
 	template<typename T, bool Se>
 	struct cast_impl<se_t<T, Se>>
 	{
-		static vm::addr_t cast(const se_t<T, Se>& addr,
-			u32 line,
-			u32 col,
-			const char* file,
-			const char* func)
+		static vm::addr_t cast(const se_t<T, Se>& addr, const std::source_location& src_loc)
 		{
-			return cast_impl<T>::cast(addr, line, col, file, func);
+			return cast_impl<T>::cast(addr, src_loc);
 		}
 	};
 
 	template<typename T>
-	vm::addr_t cast(const T& addr,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* func = __builtin_FUNCTION())
+	vm::addr_t cast(const T& addr, const std::source_location src_loc = std::source_location::current())
 	{
-		return cast_impl<T>::cast(addr, line, col, file, func);
+		return cast_impl<T>::cast(addr, src_loc);
 	}
 
 	// Convert specified PS3/PSV virtual memory address to a pointer for common access

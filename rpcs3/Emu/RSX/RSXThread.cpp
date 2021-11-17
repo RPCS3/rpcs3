@@ -75,7 +75,7 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	u32 get_address(u32 offset, u32 location, u32 size_to_check, u32 line, u32 col, const char* file, const char* func)
+	u32 get_address(u32 offset, u32 location, u32 size_to_check, const std::source_location src_loc)
 	{
 		const auto render = get_current_renderer();
 		std::string_view msg;
@@ -192,11 +192,11 @@ namespace rsx
 		{
 			// Allow failure if specified size
 			// This is to allow accurate recovery for failures
-			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc{line, col, file, func});
+			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc);
 			return 0;
 		}
 
-		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc{line, col, file, func});
+		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc);
 	}
 
 	std::pair<u32, u32> interleaved_range_info::calculate_required_range(u32 first, u32 count) const
@@ -2609,7 +2609,7 @@ namespace rsx
 		fifo_ctrl->sync_get();
 	}
 
-	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
+	void thread::recover_fifo(const std::source_location src_loc)
 	{
 		const u64 current_time = rsx::uclock();
 
@@ -2622,7 +2622,7 @@ namespace rsx
 			if (current_time - cmd_info.timestamp < 2'000'000u - std::min<u32>(g_cfg.video.driver_wakeup_delay * 700, 1'400'000))
 			{
 				// Probably hopeless
-				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings. Called from %s", src_loc{line, col, file, func});
+				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings. Called from %s", src_loc);
 			}
 
 			// Erase the last command from history, keep the size of the queue the same

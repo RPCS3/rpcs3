@@ -11,6 +11,7 @@
 #include <compare>
 #include <memory>
 #include <bit>
+#include <source_location>
 
 #if defined(__SSE2__) || defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__)
 #define ARCH_X64 1
@@ -769,13 +770,6 @@ constexpr u64 operator""_u64(const char* s, usz len)
 	return std::bit_cast<u64>(buf);
 }
 
-#if !defined(__INTELLISENSE__) && !__has_builtin(__builtin_COLUMN) && !defined(_MSC_VER)
-constexpr unsigned __builtin_COLUMN()
-{
-	return -1;
-}
-#endif
-
 template <usz Size = umax>
 struct const_str_t
 {
@@ -856,32 +850,20 @@ const_str_t(const char8_t(&a)[Size]) -> const_str_t<Size - 1>;
 
 using const_str = const_str_t<>;
 
-struct src_loc
-{
-	u32 line;
-	u32 col;
-	const char* file;
-	const char* func;
-};
-
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(const src_loc& loc, const char8_t* msg);
+	[[noreturn]] void raw_verify_error(const std::source_location& src_loc, const char8_t* msg);
 }
 
 template <typename T>
-constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(),
-	u32 line = __builtin_LINE(),
-	u32 col = __builtin_COLUMN(),
-	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION()) noexcept
+constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(), const std::source_location src_loc = std::source_location::current()) noexcept
 {
 	if (std::forward<T>(arg)) [[likely]]
 	{
 		return std::forward<T>(arg);
 	}
 
-	fmt::raw_verify_error({line, col, file, func}, msg);
+	fmt::raw_verify_error(src_loc, msg);
 }
 
 // narrow() function details
@@ -957,16 +939,12 @@ struct narrow_impl<From, To, std::enable_if_t<!std::is_same_v<std::common_type_t
 };
 
 template <typename To = void, typename From, typename = decltype(static_cast<To>(std::declval<From>()))>
-[[nodiscard]] constexpr To narrow(const From& value,
-	u32 line = __builtin_LINE(),
-	u32 col = __builtin_COLUMN(),
-	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION())
+[[nodiscard]] constexpr To narrow(const From& value, const std::source_location src_loc = std::source_location::current())
 {
 	// Narrow check
 	if (narrow_impl<From, To>::test(value)) [[unlikely]]
 	{
-		fmt::raw_verify_error({line, col, file, func}, u8"Narrowing error");
+		fmt::raw_verify_error(src_loc, u8"Narrowing error");
 	}
 
 	return static_cast<To>(value);
@@ -974,13 +952,9 @@ template <typename To = void, typename From, typename = decltype(static_cast<To>
 
 // Returns u32 size() for container
 template <typename CT, typename = decltype(static_cast<u32>(std::declval<CT>().size()))>
-[[nodiscard]] constexpr u32 size32(const CT& container,
-	u32 line = __builtin_LINE(),
-	u32 col = __builtin_COLUMN(),
-	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION())
+[[nodiscard]] constexpr u32 size32(const CT& container, const std::source_location src_loc = std::source_location::current())
 {
-	return narrow<u32>(container.size(), line, col, file, func);
+	return narrow<u32>(container.size(), src_loc);
 }
 
 // Returns u32 size for an array

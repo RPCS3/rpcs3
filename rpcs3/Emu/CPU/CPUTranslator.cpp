@@ -166,7 +166,7 @@ llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
 }
 
 template <>
-std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32 _pos, u32 _line)
+std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32 _pos, const std::source_location src_loc)
 {
 	v128 result{};
 
@@ -189,12 +189,12 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 			return {true, result};
 		}
 
-		fmt::throw_exception("[0x%x, %u] Not a vector", _pos, _line);
+		fmt::throw_exception("[0x%x, %u] Not a vector", _pos, src_loc.line());
 	}
 
 	if (auto v = llvm::cast<llvm::FixedVectorType>(t); v->getScalarSizeInBits() * v->getNumElements() != 128)
 	{
-		fmt::throw_exception("[0x%x, %u] Bad vector size: i%ux%u", _pos, _line, v->getScalarSizeInBits(), v->getNumElements());
+		fmt::throw_exception("[0x%x, %u] Bad vector size: i%ux%u", _pos, src_loc.line(), v->getScalarSizeInBits(), v->getNumElements());
 	}
 
 	const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
@@ -214,10 +214,10 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 		if (llvm::isa<llvm::ConstantExpr>(c))
 		{
 			// Sorry, if we cannot evaluate it we cannot use it
-			fmt::throw_exception("[0x%x, %u] Constant Expression!\n%s", _pos, _line, result);
+			fmt::throw_exception("[0x%x, %u] Constant Expression!\n%s", _pos, src_loc.line(), result);
 		}
 
-		fmt::throw_exception("[0x%x, %u] Unexpected constant type!\n%s", _pos, _line, result);
+		fmt::throw_exception("[0x%x, %u] Unexpected constant type!\n%s", _pos, src_loc.line(), result);
 	}
 
 	const auto sct = t->getScalarType();
@@ -266,14 +266,14 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 	}
 	else
 	{
-		fmt::throw_exception("[0x%x, %u] Unexpected vector element type", _pos, _line);
+		fmt::throw_exception("[0x%x, %u] Unexpected vector element type", _pos, src_loc.line());
 	}
 
 	return {true, result};
 }
 
 template <>
-llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u32 _line)
+llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, const std::source_location src_loc)
 {
 	if (const auto ct = llvm::dyn_cast<llvm::IntegerType>(t); ct && ct->getBitWidth() == 128)
 	{
@@ -310,7 +310,7 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
 	}
 
-	fmt::throw_exception("[line %u] No supported constant type", _line);
+	fmt::throw_exception("[line %u] No supported constant type", src_loc.line());
 }
 
 void cpu_translator::replace_intrinsics(llvm::Function& f)

@@ -3552,10 +3552,10 @@ public:
 	}
 
 	template <typename R = v128>
-	std::pair<bool, R> get_const_vector(llvm::Value*, u32 pos, u32 = __builtin_LINE());
+	std::pair<bool, R> get_const_vector(llvm::Value* c, u32 pos, const std::source_location src_loc = std::source_location::current());
 
 	template <typename T = v128>
-	llvm::Constant* make_const_vector(T, llvm::Type*, u32 = __builtin_LINE());
+	llvm::Constant* make_const_vector(T v, llvm::Type* t, const std::source_location src_loc = std::source_location::current());
 
 private:
 	// Custom intrinsic table
