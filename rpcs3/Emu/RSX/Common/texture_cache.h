@@ -2240,7 +2240,6 @@ namespace rsx
 
 			const bool is_copy_op = (fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f));
 			const bool is_format_convert = (dst_is_argb8 != src_is_argb8);
-			const bool is_interpolating_op = (!is_copy_op && interpolate);
 			bool skip_if_collision_exists = false;
 
 			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
@@ -2417,14 +2416,14 @@ namespace rsx
 				if (!typeless) [[likely]]
 				{
 					// Use format as-is
-					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, src_subres.is_depth, false, is_interpolating_op);
+					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, src_subres.is_depth, false);
 				}
 				else
 				{
 					// Enable type scaling in src
 					typeless_info.src_is_typeless = true;
 					typeless_info.src_scaling_hint = static_cast<f32>(bpp) / src_bpp;
-					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, is_format_convert, is_interpolating_op);
+					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, is_format_convert);
 				}
 
 				if (surf->get_surface_width(rsx::surface_metrics::pixels) != surf->width() ||
@@ -2492,14 +2491,14 @@ namespace rsx
 
 				if (!typeless) [[likely]]
 				{
-					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, dst_subres.is_depth, false, is_interpolating_op);
+					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, dst_subres.is_depth, false);
 				}
 				else
 				{
 					// Enable type scaling in dst
 					typeless_info.dst_is_typeless = true;
 					typeless_info.dst_scaling_hint = static_cast<f32>(bpp) / dst_bpp;
-					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert, is_interpolating_op);
+					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert);
 				}
 			}
 
@@ -2624,7 +2623,6 @@ namespace rsx
 					case CELL_GCM_TEXTURE_A8R8G8B8:
 						if (!dst_is_argb8) continue;
 						break;
-					case CELL_GCM_TEXTURE_X16:
 					case CELL_GCM_TEXTURE_R5G6B5:
 						if (dst_is_argb8) continue;
 						break;
@@ -2705,20 +2703,28 @@ namespace rsx
 					// Force format matching; only accept 16-bit data for 16-bit transfers, 32-bit for 32-bit transfers
 					switch (surface->get_gcm_format())
 					{
-					case CELL_GCM_TEXTURE_A8R8G8B8:
-					case CELL_GCM_TEXTURE_D8R8G8B8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 					case CELL_GCM_TEXTURE_X32_FLOAT:
 					case CELL_GCM_TEXTURE_Y16_X16:
 					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 					{
-						if (!src_is_argb8) continue;
-						break;
+						// Should be copy compatible but not scaling compatible
+						if (src_is_argb8 && (is_copy_op || dst_is_render_target)) break;
+						continue;
 					}
-					case CELL_GCM_TEXTURE_R5G6B5:
-					case CELL_GCM_TEXTURE_DEPTH16:
-					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+					{
+						// Should be copy compatible but not scaling compatible
+						if (src_is_argb8 && (is_copy_op || !dst_is_render_target)) break;
+						continue;
+					}
+					case CELL_GCM_TEXTURE_A8R8G8B8:
+					case CELL_GCM_TEXTURE_D8R8G8B8:
+					{
+						// Perfect match
+						if (src_is_argb8) break;
+						continue;
+					}
 					case CELL_GCM_TEXTURE_X16:
 					case CELL_GCM_TEXTURE_G8B8:
 					case CELL_GCM_TEXTURE_A1R5G5B5:
@@ -2726,8 +2732,22 @@ namespace rsx
 					case CELL_GCM_TEXTURE_D1R5G5B5:
 					case CELL_GCM_TEXTURE_R5G5B5A1:
 					{
-						if (src_is_argb8) continue;
-						break;
+						// Copy compatible
+						if (!src_is_argb8 && (is_copy_op || dst_is_render_target)) break;
+						continue;
+					}
+					case CELL_GCM_TEXTURE_DEPTH16:
+					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					{
+						// Copy compatible
+						if (!src_is_argb8 && (is_copy_op || !dst_is_render_target)) break;
+						continue;
+					}
+					case CELL_GCM_TEXTURE_R5G6B5:
+					{
+						// Perfect match
+						if (!src_is_argb8) break;
+						continue;
 					}
 					default:
 					{
@@ -2800,7 +2820,7 @@ namespace rsx
 					subres.data = { vm::_ptr<const std::byte>(image_base), static_cast<std::span<const std::byte>::size_type>(src.pitch * image_height) };
 					subresource_layout.push_back(subres);
 
-					const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface, is_format_convert, is_interpolating_op);
+					const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface, is_format_convert);
 					const auto rsx_range = address_range::start_length(image_base, src.pitch * image_height);
 
 					lock.upgrade();
@@ -2829,7 +2849,7 @@ namespace rsx
 			}
 
 			//const auto src_is_depth_format = helpers::is_gcm_depth_format(typeless_info.src_gcm_format);
-			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert, is_interpolating_op);
+			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert);
 
 			if (cached_dest && !use_null_region)
 			{
@@ -3036,7 +3056,7 @@ namespace rsx
 					if (!typeless_info.src_is_typeless)
 					{
 						typeless_info.src_is_typeless = true;
-						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false, is_interpolating_op);
+						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false);
 					}
 				}
 				else
@@ -3045,7 +3065,7 @@ namespace rsx
 					if (!typeless_info.dst_is_typeless)
 					{
 						typeless_info.dst_is_typeless = true;
-						typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false, is_interpolating_op);
+						typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false);
 					}
 				}
 			}
