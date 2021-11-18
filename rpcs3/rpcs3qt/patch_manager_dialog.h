@@ -56,7 +56,7 @@ private:
 	void save_config() const;
 	void update_patch_info(const gui_patch_info& info) const;
 	static bool is_valid_file(const QMimeData& md, QStringList* drop_paths = nullptr);
-	void download_update() const;
+	void download_update(bool automatic, bool auto_accept);
 	bool handle_json(const QByteArray& data);
 
 	std::shared_ptr<gui_settings> m_gui_settings;
@@ -70,6 +70,8 @@ private:
 	patch_engine::patch_map m_map;
 
 	downloader* m_downloader = nullptr;
+	bool m_download_automatic = false;
+	bool m_download_auto_accept = false;
 
 	Ui::patch_manager_dialog *ui;
 
