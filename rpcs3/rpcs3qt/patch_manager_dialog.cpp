@@ -97,12 +97,13 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 		}
 		else if (button == ui->buttonBox->button(QDialogButtonBox::RestoreDefaults))
 		{
-			download_update();
+			download_update(false, true);
 		}
 	});
 	connect(m_downloader, &downloader::signal_download_error, this, [this](const QString& /*error*/)
 	{
 		QMessageBox::warning(this, tr("Patch downloader"), tr("An error occurred during the download process.\nCheck the log for more information."));
+		ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(true);
 	});
 	connect(m_downloader, &downloader::signal_download_finished, this, [this](const QByteArray& data)
 	{
@@ -110,9 +111,15 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 
 		if (!result_json)
 		{
-			QMessageBox::warning(this, tr("Patch downloader"), tr("An error occurred during the download process.\nCheck the log for more information."));
+			if (!m_download_automatic)
+			{
+				QMessageBox::warning(this, tr("Patch downloader"), tr("An error occurred during the download process.\nCheck the log for more information."));
+			}
 		}
+		ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(true);
 	});
+
+	download_update(true, false);
 }
 
 patch_manager_dialog::~patch_manager_dialog()
@@ -861,9 +868,14 @@ void patch_manager_dialog::dragLeaveEvent(QDragLeaveEvent* event)
 	event->accept();
 }
 
-void patch_manager_dialog::download_update() const
+void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 {
-	patch_log.notice("Patch download triggered");
+	patch_log.notice("Patch download triggered (automatic=%d, auto_accept=%d)", automatic, auto_accept);
+
+	ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(false);
+
+	m_download_automatic = automatic;
+	m_download_auto_accept = auto_accept;
 
 	const std::string path = patch_engine::get_patches_path() + "patch.yml";
 	std::string url        = "https://rpcs3.net/compatibility?patch&api=v1&v=" + patch_engine_version;
@@ -882,7 +894,7 @@ void patch_manager_dialog::download_update() const
 		}
 	}
 
-	m_downloader->start(url, true, true, tr("Downloading latest patches"));
+	m_downloader->start(url, true, !m_download_automatic, tr("Downloading latest patches"));
 }
 
 bool patch_manager_dialog::handle_json(const QByteArray& data)
@@ -913,7 +925,12 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 	if (return_code == 1)
 	{
 		patch_log.notice("Patch download: No newer patches found");
-		QMessageBox::information(this, tr("Download successful"), tr("Your patch file is already up to date."));
+
+		if (!m_download_automatic)
+		{
+			QMessageBox::information(this, tr("Download successful"), tr("Your patch file is already up to date."));
+		}
+
 		return true;
 	}
 
@@ -921,6 +938,16 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 	{
 		patch_log.error("Patch download error: unknown return code: %d", return_code);
 		return false;
+	}
+
+	// TODO: check for updates first instead of loading the whole file immediately
+	if (!m_download_auto_accept)
+	{
+		const QMessageBox::StandardButton answer = QMessageBox::question(this, tr("Update patches?"), tr("New patches are available.\n\nDo you want to update?"));
+		if (answer != QMessageBox::StandardButton::Yes)
+		{
+			return true;
+		}
 	}
 
 	const QJsonValue& version_obj = json_data["version"];
