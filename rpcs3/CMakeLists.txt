@@ -3,6 +3,9 @@ if(USE_PRECOMPILED_HEADERS AND NOT COMMAND target_precompile_headers)
     include(cotire)
 endif()
 
+# Define GNU standard installation directories
+include(GNUInstallDirs)
+
 # Generate git-version.h at build time.
 include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
@@ -23,6 +26,7 @@ elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 endif()
 
 if(UNIX AND NOT APPLE)
+    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
     # Optionally enable X11 for window management
     find_package(X11)
     if(X11_FOUND)
@@ -198,21 +202,21 @@ endif()
 # Unix installation
 if(UNIX AND NOT APPLE)
     # Install the binary
-    install(TARGETS rpcs3 RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+    install(TARGETS rpcs3 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     # Install the application icon and menu item
     install(FILES rpcs3.svg
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/scalable/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps)
     install(FILES rpcs3.png
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/48x48/apps)
     install(FILES rpcs3.desktop
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
     install(FILES rpcs3.metainfo.xml
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/share/metainfo)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/metainfo)
     # Install other files
     install(DIRECTORY ../bin/Icons
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
     install(DIRECTORY ../bin/GuiConfigs
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
     install(DIRECTORY ../bin/git
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
 endif()
