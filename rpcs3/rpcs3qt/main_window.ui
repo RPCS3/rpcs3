@@ -628,7 +628,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>String Search</string>
+    <string>Memory Searcher</string>
    </property>
   </action>
   <action name="toolsDecryptSprxLibsAct">

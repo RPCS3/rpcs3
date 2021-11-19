@@ -83,11 +83,11 @@ memory_string_searcher::memory_string_searcher(QWidget* parent, std::shared_ptr<
 {
 	if (title.empty())
 	{
-		setWindowTitle(tr("String Searcher"));
+		setWindowTitle(tr("Memory Searcher"));
 	}
 	else
 	{
-		setWindowTitle(tr("String Searcher Of %1").arg(title.data()));
+		setWindowTitle(tr("Memory Searcher Of %1").arg(title.data()));
 	}
 
 	setObjectName("memory_string_searcher");
@@ -316,7 +316,7 @@ u64 memory_string_searcher::OnSearch(std::string wstr, int mode)
 
 	vm::reader_lock rlock;
 
-	const named_thread_group workers("String Searcher "sv, max_threads, [&]()
+	const named_thread_group workers("Memory Searcher "sv, max_threads, [&]()
 	{
 		if (mode == as_inst || mode == as_fake_spu_inst)
 		{
