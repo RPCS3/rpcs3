@@ -494,6 +494,31 @@ u64 memory_string_searcher::OnSearch(std::string wstr, int mode)
 
 			usz first_char = 0;
 
+			auto log_occurance = [&](std::string_view& test_sv, bool always_log_str)
+			{
+				// Cut out a view which may or may not be suffixed by a single null character
+				// This view is a peek at the full string which resides in PS3 memory 
+				test_sv = test_sv.substr(0, std::max<usz>(wstr.size(), 100));
+				const usz null_pos = test_sv.find_first_of("\n\0"sv, wstr.size());
+				test_sv = test_sv.substr(0, null_pos);
+
+				const usz start = test_sv.data() - get_ptr(0);
+
+				if (!always_log_str && test_sv.size() == wstr.size())
+				{
+					// Shorthand logging for identical strings
+					gui_log.success("Found at 0x%08x", start);
+				}
+				else if (null_pos != umax)
+				{
+					gui_log.success("Found at 0x%08x: '%s'", start, test_sv);
+				}
+				else
+				{
+					gui_log.success("Found at 0x%08x: '%s'..", start, test_sv);
+				}
+			};
+
 			if (case_insensitive)
 			{
 				while (first_char = section.find_first_of(insensitive_search, first_char), first_char != umax)
@@ -505,7 +530,8 @@ u64 memory_string_searcher::OnSearch(std::string wstr, int mode)
 					// Do not use allocating functions such as fmt::to_lower
 					if (test_sv.size() >= wstr.size() && std::all_of(wstr.begin(), wstr.end(), [&](const char& c) { return c == ::tolower(test_sv[&c - wstr.data()]); }))
 					{
-						gui_log.success("Found at 0x%08x: '%s'", start, test_sv);
+						// Force full logging if any character differs in case
+						log_occurance(test_sv, !test_sv.starts_with(wstr));
 						local_found++;
 					}
 
@@ -519,9 +545,19 @@ u64 memory_string_searcher::OnSearch(std::string wstr, int mode)
 				{
 					const u32 start = addr + first_char;
 
-					if (std::string_view{get_ptr(start), addr_max - start}.starts_with(wstr))
+					std::string_view test_sv{get_ptr(start), addr_max - start};
+
+					if (test_sv.starts_with(wstr))
 					{
-						gui_log.success("Found at 0x%08x", start);
+						if (mode == as_string)
+						{
+							log_occurance(test_sv, false);
+						}
+						else
+						{
+							gui_log.success("Found at 0x%08x", start);
+						}
+
 						local_found++;
 					}
 
