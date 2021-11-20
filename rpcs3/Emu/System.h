@@ -81,7 +81,6 @@ struct EmuCallbacks
 	std::function<std::string(localized_string_id, const char*)> get_localized_string;
 	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
 	std::function<void(const std::string&)> play_sound;
-	std::string(*resolve_path)(std::string_view) = nullptr; // Resolve path using Qt
 };
 
 class Emulator final

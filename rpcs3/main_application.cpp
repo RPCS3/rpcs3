@@ -26,8 +26,6 @@
 #include "Emu/Audio/FAudio/FAudioBackend.h"
 #endif
 
-#include <QFileInfo> // This shouldn't be outside rpcs3qt...
-
 LOG_CHANNEL(sys_log, "SYS");
 
 /** Emu.Init() wrapper for user management */
@@ -121,11 +119,6 @@ EmuCallbacks main_application::CreateCallbacks()
 			result = std::make_shared<NullAudioBackend>();
 		}
 		return result;
-	};
-
-	callbacks.resolve_path = [](std::string_view sv)
-	{
-		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
 	};
 
 	return callbacks;
