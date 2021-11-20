@@ -1122,21 +1122,6 @@ namespace atomic_wait
 	}
 }
 
-namespace std
-{
-	template <typename T>
-	void swap(stx::single_ptr<T>& lhs, stx::single_ptr<T>& rhs) noexcept
-	{
-		lhs.swap(rhs);
-	}
-
-	template <typename T>
-	void swap(stx::shared_ptr<T>& lhs, stx::shared_ptr<T>& rhs) noexcept
-	{
-		lhs.swap(rhs);
-	}
-}
-
 using stx::null_ptr;
 using stx::single_ptr;
 using stx::shared_ptr;
