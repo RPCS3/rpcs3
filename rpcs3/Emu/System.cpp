@@ -554,7 +554,7 @@ void Emulator::SetForceBoot(bool force_boot)
 
 game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool is_disc_patch)
 {
-	const std::string resolved_path = GetCallbacks().resolve_path(m_path);
+	const std::string resolved_path = fs::resolve_path(m_path);
 
 	if (!IsStopped())
 	{
@@ -1213,7 +1213,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Check game updates
 		const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN";
 
-		if (disc.empty() && !bdvd_dir.empty() && GetCallbacks().resolve_path(m_path) != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot))
+		if (disc.empty() && !bdvd_dir.empty() && fs::resolve_path(m_path) != fs::resolve_path(hdd0_boot) && fs::is_file(hdd0_boot))
 		{
 			// Booting game update
 			sys_log.success("Updates found at /dev_hdd0/game/%s/", m_title_id);
@@ -1333,7 +1333,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					return fmt::merge(result, "/");
 				};
 
-				const std::string resolved_hdd0 = GetCallbacks().resolve_path(hdd0_game) + '/';
+				const std::string resolved_hdd0 = fs::resolve_path(hdd0_game) + '/';
 
 				if (from_hdd0_game && m_cat == "DG")
 				{
@@ -1357,7 +1357,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				else if (from_dev_flash)
 				{
 					// Firmware executables
-					argv[0] = "/dev_flash" + resolved_path.substr(GetCallbacks().resolve_path(g_cfg_vfs.get_dev_flash()).size());
+					argv[0] = "/dev_flash" + resolved_path.substr(fs::resolve_path(g_cfg_vfs.get_dev_flash()).size());
 					m_dir = fs::get_parent_dir(argv[0]) + '/';
 				}
 				else if (g_cfg.vfs.host_root)
@@ -1975,9 +1975,9 @@ std::set<std::string> Emulator::GetGameDirs() const
 
 bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
 {
-	const std::string dir_path = GetCallbacks().resolve_path(dir);
+	const std::string dir_path = fs::resolve_path(dir);
 
-	return !dir_path.empty() && (GetCallbacks().resolve_path(path) + '/').starts_with(dir_path + '/');
+	return !dir_path.empty() && (fs::resolve_path(path) + '/').starts_with(dir_path + '/');
 };
 
 const std::string& Emulator::GetFakeCat() const
