@@ -1210,6 +1210,12 @@ bool lv2_obj::awake(cpu_thread* const thread, s32 prio)
 bool lv2_obj::yield(cpu_thread& thread)
 {
 	vm::temporary_unlock(thread);
+
+	if (auto ppu = thread.try_get<ppu_thread>())
+	{
+		ppu->raddr = 0; // Clear reservation
+	}
+
 	return awake(&thread, yield_cmd);
 }
 
