@@ -436,19 +436,6 @@ namespace vk
 		enabled_features.textureCompressionBC = VK_TRUE;
 		enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
-		// If we're on lavapipe / llvmpipe, disable unimplemented features:
-		// - shaderStorageBufferArrayDynamicIndexing
-		// as of mesa 21.1.0-dev (aea36ee05e9, 2020-02-10)
-		// Several games work even if we disable these, testing purpose only
-		if (pgpu->get_name().find("llvmpipe") != umax)
-		{
-			if (!pgpu->features.shaderStorageBufferArrayDynamicIndexing)
-			{
-				rsx_log.error("Running lavapipe without support for shaderStorageBufferArrayDynamicIndexing");
-				enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
-			}
-		}
-
 		// Optionally disable unsupported stuff
 		if (!pgpu->features.shaderStorageImageMultisample || !pgpu->features.shaderStorageImageWriteWithoutFormat)
 		{
