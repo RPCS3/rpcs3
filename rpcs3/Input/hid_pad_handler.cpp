@@ -153,7 +153,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 		}
 		else
 		{
-			hid_log.error("%s hid_open_path failed! Reason: %s", m_type, hid_error(dev));
+			hid_log.error("%s hid_open_path failed! error='%s', path='%s'", m_type, hid_error(dev), path);
 			warn_about_drivers = true;
 		}
 	}
