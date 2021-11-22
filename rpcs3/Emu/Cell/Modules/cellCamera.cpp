@@ -433,6 +433,15 @@ error_code cellCameraInit()
 		g_camera.attr[CELL_CAMERA_AGCHIGH] = { 64 };
 		break;
 	}
+
+	case fake_camera_type::uvc1_1:
+	{
+		g_camera.attr[CELL_CAMERA_DEVICEID] = { 0x5ca, 0x18d0 }; // KBCR-S01MU
+		g_camera.attr[CELL_CAMERA_FORMATCAP] = { CELL_CAMERA_JPG | CELL_CAMERA_YUV422 };
+		g_camera.attr[CELL_CAMERA_NUMFRAME] = { 1 }; // Amount of supported resolutions
+		break;
+	}
+
 	default:
 		cellCamera.todo("Trying to init cellCamera with un-researched camera type.");
 	}
