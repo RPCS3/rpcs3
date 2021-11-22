@@ -133,7 +133,7 @@ namespace rsx
 			return gcm_format;
 		}
 
-		static inline u32 get_sized_blit_format(bool is_32_bit, bool depth_format, bool is_format_convert)
+		static inline u32 get_sized_blit_format(bool is_32_bit, bool depth_format, bool /*is_format_convert*/)
 		{
 			if (is_32_bit)
 			{
