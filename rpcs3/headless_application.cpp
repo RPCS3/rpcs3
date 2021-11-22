@@ -9,8 +9,6 @@
 
 #include <clocale>
 
-#include <QFileInfo>
-
 // For now, a trivial constructor/destructor. May add command line usage later.
 headless_application::headless_application(int& argc, char** argv) : QCoreApplication(argc, argv)
 {
@@ -133,11 +131,6 @@ void headless_application::InitializeCallbacks()
 	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };
 
 	callbacks.play_sound = [](const std::string&){};
-
-	callbacks.resolve_path = [](std::string_view sv)
-	{
-		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
-	};
 
 	Emu.SetCallbacks(std::move(callbacks));
 }
