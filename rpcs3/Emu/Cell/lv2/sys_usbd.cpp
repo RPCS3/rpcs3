@@ -16,6 +16,7 @@
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/Buzz.h"
 #include "Emu/Io/Turntable.h"
+#include "Emu/Io/usio.h"
 
 #include <libusb.h>
 
@@ -146,6 +147,7 @@ usb_handler_thread::usb_handler_thread()
 	bool found_skylander = false;
 	bool found_ghltar    = false;
 	bool found_turntable = false;
+	bool found_usio = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -226,6 +228,13 @@ usb_handler_thread::usb_handler_thread()
 
 		// DVB-T
 		check_device(0x1415, 0x0003, 0x0003, " PlayTV SCEH-0036");
+
+		// V406 USIO
+		if (check_device(0x0B9A, 0x0910, 0x0910, "USIO PCB rev00"))
+		{
+			found_usio = true;
+		}
+
 	}
 
 	libusb_free_device_list(list, 1);
@@ -234,6 +243,12 @@ usb_handler_thread::usb_handler_thread()
 	{
 		sys_usbd.notice("Adding emulated skylander");
 		usb_devices.push_back(std::make_shared<usb_device_skylander>());
+	}
+
+	if (!found_usio)
+	{
+		sys_usbd.notice("Adding emulated v406 usio");
+		usb_devices.push_back(std::make_shared<usb_device_usio>());
 	}
 
 	if (g_cfg.io.ghltar == ghltar_handler::one_controller || g_cfg.io.ghltar == ghltar_handler::two_controllers)
@@ -648,6 +663,12 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_pr
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
 		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0800, 0x0800);
 	}
+	if (strcmp(s_product.get_ptr(), "PS3A-USJ") == 0)
+	{
+		// Arcade v406 USIO board
+		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
+		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0910, 0x0910);// usio
+	}
 	else
 	{
 		sys_usbd.todo("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x)", handle, s_product, slen_product);
@@ -852,6 +873,21 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 	}
 	else
 	{
+		// If output endpoint
+		if (!(pipe.endpoint & 0x80))
+		{
+			std::string datrace;
+			const char hex[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+
+			for (u32 index = 0; index < buf_size; index++)
+			{
+				datrace += hex[buf[index] >> 4];
+				datrace += hex[buf[index] & 15];
+				datrace += ' ';
+			}
+
+			sys_usbd.trace("Write Int(s: %d) :%s", buf_size, datrace);
+		}
 		pipe.device->interrupt_transfer(buf_size, buf.get_ptr(), pipe.endpoint, &transfer);
 		transfer.busy = true;
 	}

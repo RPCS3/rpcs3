@@ -370,6 +370,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/GHLtar.cpp
     Io/Buzz.cpp
     Io/Turntable.cpp
+    Io/usio.cpp
 )
 
 # Np
