@@ -50,9 +50,9 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
-	// Interrupt transfers are slow
 	// Turntable runs at 100hz --> 10ms
-	transfer->expected_time = get_timestamp() + 10000;
+	// But make the emulated table go as fast as possible for better input behavior
+	transfer->expected_time = get_timestamp();
 
 	memset(buf, 0, buf_size);
 
@@ -116,6 +116,7 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 
 	// All other bufs are always 0x00
 
+	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 	const auto& pad    = handler->GetPads()[m_controller_index];
 

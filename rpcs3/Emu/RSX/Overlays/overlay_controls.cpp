@@ -116,7 +116,10 @@ namespace rsx
 						if (success)
 						{
 							std::string executablePath = dirname(result);
-#ifdef __APPLE__
+#if defined(DATADIR)
+							const std::string dataPath (DATADIR);
+							src = dataPath + "/Icons/ui/" + res;
+#elif defined(__APPLE__)
 							src = executablePath + "/../Resources/Icons/ui/" + res;
 #else
 							src = executablePath + "/../share/rpcs3/Icons/ui/" + res;
