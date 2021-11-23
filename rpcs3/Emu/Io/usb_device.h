@@ -167,8 +167,11 @@ struct UsbDescriptorNode
 class usb_device
 {
 public:
+	usb_device(const std::array<u8, 7>& location);
+
 	virtual bool open_device() = 0;
 
+	void get_location(u8* location) const;
 	virtual void read_descriptors();
 
 	virtual bool set_configuration(u8 cfg_num);
@@ -187,6 +190,7 @@ public:
 protected:
 	u8 current_config    = 1;
 	u8 current_interface = 0;
+	std::array<u8, 7> location{};
 
 protected:
 	static u64 get_timestamp();
@@ -195,7 +199,7 @@ protected:
 class usb_device_passthrough : public usb_device
 {
 public:
-	usb_device_passthrough(libusb_device* _device, libusb_device_descriptor& desc);
+	usb_device_passthrough(libusb_device* _device, libusb_device_descriptor& desc, const std::array<u8, 7>& location);
 	~usb_device_passthrough();
 
 	bool open_device() override;
@@ -214,8 +218,8 @@ protected:
 class usb_device_emulated : public usb_device
 {
 public:
-	usb_device_emulated();
-	usb_device_emulated(const UsbDeviceDescriptor& _device);
+	usb_device_emulated(const std::array<u8, 7>& location);
+	usb_device_emulated(const UsbDeviceDescriptor& _device, const std::array<u8, 7>& location);
 
 	bool open_device() override;
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;

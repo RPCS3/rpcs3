@@ -7,7 +7,8 @@
 
 LOG_CHANNEL(ghltar_log);
 
-usb_device_ghltar::usb_device_ghltar(int controller_index) : m_controller_index(controller_index)
+usb_device_ghltar::usb_device_ghltar(int controller_index, const std::array<u8, 7>& location)
+	: usb_device_emulated(location), m_controller_index(controller_index)
 {
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x20, 0x12BA, 0x074B, 0x0100, 0x01, 0x02, 0x00, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0029, 0x01, 0x01, 0x00, 0x80, 0x96}));

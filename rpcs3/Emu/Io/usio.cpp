@@ -9,7 +9,8 @@
 
 LOG_CHANNEL(usio_log);
 
-usb_device_usio::usb_device_usio()
+usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
+	: usb_device_emulated(location)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
 		UsbDeviceDescriptor{
