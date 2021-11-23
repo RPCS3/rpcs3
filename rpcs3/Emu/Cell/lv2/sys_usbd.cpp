@@ -128,7 +128,6 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 {
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
-	std::lock_guard lock(usbh.mutex);
 	if (!usbh.is_init)
 		return;
 
@@ -142,11 +141,17 @@ usb_handler_thread::usb_handler_thread()
 
 	// look if any device which we could be interested in is actually connected
 	libusb_device** list = nullptr;
-	ssize_t ndev = libusb_get_device_list(ctx, &list);
+	ssize_t ndev         = libusb_get_device_list(ctx, &list);
+
+	std::array<u8, 7> location{};
+
+	auto get_new_location = [&]() -> const std::array<u8, 7>&
+	{
+		location[0]++;
+		return location;
+	};
 
 	bool found_skylander = false;
-	bool found_ghltar    = false;
-	bool found_turntable = false;
 	bool found_usio = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
@@ -154,20 +159,18 @@ usb_handler_thread::usb_handler_thread()
 		libusb_device_descriptor desc;
 		libusb_get_device_descriptor(list[index], &desc);
 
-		// clang-format off
 		auto check_device = [&](const u16 id_vendor, const u16 id_product_min, const u16 id_product_max, const char* s_name) -> bool
 		{
 			if (desc.idVendor == id_vendor && desc.idProduct >= id_product_min && desc.idProduct <= id_product_max)
 			{
 				sys_usbd.success("Found device: %s", s_name);
 				libusb_ref_device(list[index]);
-				std::shared_ptr<usb_device_passthrough> usb_dev = std::make_shared<usb_device_passthrough>(list[index], desc);
+				std::shared_ptr<usb_device_passthrough> usb_dev = std::make_shared<usb_device_passthrough>(list[index], desc, get_new_location());
 				usb_devices.push_back(usb_dev);
 				return true;
 			}
 			return false;
 		};
-		// clang-format on
 
 		// Portals
 		if (check_device(0x1430, 0x0150, 0x0150, "Skylanders Portal"))
@@ -187,15 +190,9 @@ usb_handler_thread::usb_handler_thread()
 		//check_device(0x1415, 0x0020, 0x0020, "SingStar Microphone Wireless"); // TODO: verifiy
 		check_device(0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar");
 		check_device(0x12BA, 0x0120, 0x0120, "Guitar Hero Drums");
-		if (check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar"))
-		{
-			found_ghltar = true;
-		}
+		check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar");
 
-		if (check_device(0x12BA, 0x0140, 0x0140, "DJ Hero Turntable"))
-		{
-			found_turntable = true;
-		}
+		check_device(0x12BA, 0x0140, 0x0140, "DJ Hero Turntable");
 		check_device(0x12BA, 0x0200, 0x020F, "Harmonix Guitar");
 		check_device(0x12BA, 0x0210, 0x021F, "Harmonix Drums");
 		check_device(0x12BA, 0x2330, 0x233F, "Harmonix Keyboard");
@@ -242,48 +239,48 @@ usb_handler_thread::usb_handler_thread()
 	if (!found_skylander)
 	{
 		sys_usbd.notice("Adding emulated skylander");
-		usb_devices.push_back(std::make_shared<usb_device_skylander>());
+		usb_devices.push_back(std::make_shared<usb_device_skylander>(get_new_location()));
 	}
 
 	if (!found_usio)
 	{
 		sys_usbd.notice("Adding emulated v406 usio");
-		usb_devices.push_back(std::make_shared<usb_device_usio>());
+		usb_devices.push_back(std::make_shared<usb_device_usio>(get_new_location()));
 	}
 
 	if (g_cfg.io.ghltar == ghltar_handler::one_controller || g_cfg.io.ghltar == ghltar_handler::two_controllers)
 	{
 		sys_usbd.notice("Adding emulated GHLtar (1 player)");
-		usb_devices.push_back(std::make_shared<usb_device_ghltar>(0));
+		usb_devices.push_back(std::make_shared<usb_device_ghltar>(0, get_new_location()));
 	}
 	if (g_cfg.io.ghltar == ghltar_handler::two_controllers)
 	{
 		sys_usbd.notice("Adding emulated GHLtar (2 players)");
-		usb_devices.push_back(std::make_shared<usb_device_ghltar>(1));
+		usb_devices.push_back(std::make_shared<usb_device_ghltar>(1, get_new_location()));
 	}
 
 	if (g_cfg.io.turntable == turntable_handler::one_controller || g_cfg.io.turntable == turntable_handler::two_controllers)
 	{
 		sys_usbd.notice("Adding emulated turntable (1 player)");
-		usb_devices.push_back(std::make_shared<usb_device_turntable>(0));
+		usb_devices.push_back(std::make_shared<usb_device_turntable>(0, get_new_location()));
 	}
 	if (g_cfg.io.turntable == turntable_handler::two_controllers)
 	{
 		sys_usbd.notice("Adding emulated turntable (2 players)");
-		usb_devices.push_back(std::make_shared<usb_device_turntable>(1));
+		usb_devices.push_back(std::make_shared<usb_device_turntable>(1, get_new_location()));
 	}
 
 	if (g_cfg.io.buzz == buzz_handler::one_controller || g_cfg.io.buzz == buzz_handler::two_controllers)
 	{
 		sys_usbd.notice("Adding emulated Buzz! buzzer (1-4 players)");
-		usb_devices.push_back(std::make_shared<usb_device_buzz>(0, 3));
+		usb_devices.push_back(std::make_shared<usb_device_buzz>(0, 3, get_new_location()));
 	}
 	if (g_cfg.io.buzz == buzz_handler::two_controllers)
 	{
 		// The current buzz emulation piggybacks on the pad input.
 		// Since there can only be 7 pads connected on a PS3 the 8th player is currently not supported
 		sys_usbd.notice("Adding emulated Buzz! buzzer (5-7 players)");
-		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6));
+		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6, get_new_location()));
 	}
 
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
@@ -317,6 +314,7 @@ void usb_handler_thread::operator()()
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		// Todo: Hotplug here?
+		std::lock_guard lock(this->mutex);
 
 		// Process asynchronous requests that are pending
 		libusb_handle_events_timeout_completed(ctx, &lusb_tv, nullptr);
@@ -324,8 +322,6 @@ void usb_handler_thread::operator()()
 		// Process fake transfers
 		if (!fake_transfers.empty())
 		{
-			std::lock_guard lock(this->mutex);
-
 			u64 timestamp = get_system_time() - Emu.GetPauseTime();
 
 			for (auto it = fake_transfers.begin(); it != fake_transfers.end();)
@@ -339,7 +335,6 @@ void usb_handler_thread::operator()()
 					++it;
 					continue;
 				}
-
 
 				transfer->result = transfer->expected_result;
 				transfer->count  = transfer->expected_count;
@@ -596,7 +591,7 @@ error_code sys_usbd_register_extra_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char
 	ppu.state += cpu_flag::wait;
 
 	sys_usbd.warning("sys_usbd_register_extra_ldd(handle=0x%x, s_product=%s, slen_product=0x%x, id_vendor=0x%x, id_product_min=0x%x, id_product_max=0x%x)", handle, s_product, slen_product, id_vendor,
-	    id_product_min, id_product_max);
+		id_product_min, id_product_max);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -749,7 +744,7 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.trace("sys_usbd_receive_event(handle=%u, arg1=*0x%x, arg2=*0x%x, arg3=*0x%x)", handle, arg1, arg2, arg3);
+	sys_usbd.trace("sys_usbd_receive_event(handle=0x%x, arg1=*0x%x, arg2=*0x%x, arg3=*0x%x)", handle, arg1, arg2, arg3);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -851,6 +846,7 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 	u32 id_transfer  = usbh.get_free_transfer_id();
 	const auto& pipe = usbh.get_pipe(id_pipe);
 	auto& transfer   = usbh.get_transfer(id_transfer);
+	transfer.busy = true;
 
 	// Default endpoint is control endpoint
 	if (pipe.endpoint == 0)
@@ -869,7 +865,6 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 		}
 
 		pipe.device->control_transfer(request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength, buf_size, buf.get_ptr(), &transfer);
-		transfer.busy = true;
 	}
 	else
 	{
@@ -889,7 +884,6 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 			sys_usbd.trace("Write Int(s: %d) :%s", buf_size, datrace);
 		}
 		pipe.device->interrupt_transfer(buf_size, buf.get_ptr(), pipe.endpoint, &transfer);
-		transfer.busy = true;
 	}
 
 	if (transfer.fake)
@@ -967,11 +961,21 @@ error_code sys_usbd_get_isochronous_transfer_status(ppu_thread& ppu, u32 handle,
 	return CELL_OK;
 }
 
-error_code sys_usbd_get_device_location(ppu_thread& ppu)
+error_code sys_usbd_get_device_location(ppu_thread& ppu, u32 handle, u32 device_handle, vm::ptr<u8> location)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.todo("sys_usbd_get_device_location()");
+	sys_usbd.notice("sys_usbd_get_device_location(handle=0x%x, device_handle=0x%x, location=*0x%x)", handle, device_handle, location);
+
+	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+
+	std::lock_guard lock(usbh.mutex);
+
+	if (!usbh.is_init || !usbh.handled_devices.count(device_handle))
+		return CELL_EINVAL;
+
+	usbh.handled_devices[device_handle].second->get_location(location.get_ptr());
+
 	return CELL_OK;
 }
 

@@ -13,6 +13,16 @@ extern void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer);
 // ALL DEVICES ///////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
 
+usb_device::usb_device(const std::array<u8, 7>& location)
+{
+	this->location = location;
+}
+
+void usb_device::get_location(u8* location) const
+{
+	memcpy(location, this->location.data(), 7);
+}
+
 void usb_device::read_descriptors()
 {
 }
@@ -37,11 +47,11 @@ u64 usb_device::get_timestamp()
 //////////////////////////////////////////////////////////////////
 // PASSTHROUGH DEVICE ////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
-usb_device_passthrough::usb_device_passthrough(libusb_device* _device, libusb_device_descriptor& desc)
-    : lusb_device(_device)
+usb_device_passthrough::usb_device_passthrough(libusb_device* _device, libusb_device_descriptor& desc, const std::array<u8, 7>& location)
+	: usb_device(location), lusb_device(_device)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{desc.bcdUSB, desc.bDeviceClass, desc.bDeviceSubClass, desc.bDeviceProtocol, desc.bMaxPacketSize0, desc.idVendor, desc.idProduct,
-	                                                      desc.bcdDevice, desc.iManufacturer, desc.iProduct, desc.iSerialNumber, desc.bNumConfigurations});
+														  desc.bcdDevice, desc.iManufacturer, desc.iProduct, desc.iSerialNumber, desc.bNumConfigurations});
 }
 
 usb_device_passthrough::~usb_device_passthrough()
@@ -136,11 +146,13 @@ void usb_device_passthrough::isochronous_transfer(UsbTransfer* transfer)
 //////////////////////////////////////////////////////////////////
 // EMULATED DEVICE ///////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////
-usb_device_emulated::usb_device_emulated()
+usb_device_emulated::usb_device_emulated(const std::array<u8, 7>& location)
+	: usb_device(location)
 {
 }
 
-usb_device_emulated::usb_device_emulated(const UsbDeviceDescriptor& _device)
+usb_device_emulated::usb_device_emulated(const UsbDeviceDescriptor& _device, const std::array<u8, 7>& location)
+	: usb_device(location)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, _device);
 }
