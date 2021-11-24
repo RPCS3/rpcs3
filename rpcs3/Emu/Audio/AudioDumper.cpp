@@ -4,8 +4,8 @@
 #include "Utilities/date_time.h"
 #include "Emu/System.h"
 
-AudioDumper::AudioDumper(u16 ch)
-	: m_header(ch)
+AudioDumper::AudioDumper(u16 ch, u32 sample_rate, u32 sample_size)
+	: m_header(ch, sample_rate, sample_size)
 {
 	if (GetCh())
 	{

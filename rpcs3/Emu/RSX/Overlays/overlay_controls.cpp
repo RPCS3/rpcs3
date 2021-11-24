@@ -77,9 +77,19 @@ namespace rsx
 				const std::string image_path = fs::get_config_dir() + "Icons/ui/" + res;
 				auto info = std::make_unique<image_info>(image_path.c_str());
 
+#if !defined(_WIN32) && !defined(__APPLE__) && defined(DATADIR)
+				// Check the DATADIR if defined
 				if (info->data == nullptr)
 				{
-					// Resource was not found in config dir, try and grab from relative path (linux)
+					const std::string data_dir (DATADIR);
+					const std::string image_data = data_dir + "/Icons/ui/" + res;
+					info = std::make_unique<image_info>(image_data.c_str());
+				}
+#endif
+
+				if (info->data == nullptr)
+				{
+					// Resource was not found in the DATADIR or config dir, try and grab from relative path (linux)
 					std::string src = "Icons/ui/" + res;
 					info = std::make_unique<image_info>(src.c_str());
 #ifndef _WIN32

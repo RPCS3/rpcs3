@@ -70,12 +70,6 @@
     <Filter Include="Emu\Audio\FAudio">
       <UniqueIdentifier>{7555ff6f-67a9-4d02-b744-0bf896751edb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\Audio\ALSA">
-      <UniqueIdentifier>{c76057f1-bb19-4981-8ab0-5ba20ac27552}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Emu\Audio\Pulse">
-      <UniqueIdentifier>{84c0e40e-efb6-4cfd-b2f5-13c720b09105}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\GPU\RSX\Program">
       <UniqueIdentifier>{d055ca32-157a-4d8c-895e-29509858fcb0}</UniqueIdentifier>
     </Filter>
@@ -140,6 +134,9 @@
     </ClCompile>
     <ClCompile Include="Loader\TRP.cpp">
       <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\simple_ringbuf.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
@@ -926,12 +923,6 @@
     </ClCompile>
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
       <Filter>Emu\Audio\FAudio</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Audio\ALSA\ALSABackend.cpp">
-      <Filter>Emu\Audio\ALSA</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Audio\Pulse\PulseBackend.cpp">
-      <Filter>Emu\Audio\Pulse</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\cheat_info.cpp">
       <Filter>Utilities</Filter>
@@ -1889,12 +1880,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
       <Filter>Emu\Audio\FAudio</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Audio\ALSA\ALSABackend.h">
-      <Filter>Emu\Audio\ALSA</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Audio\Pulse\PulseBackend.h">
-      <Filter>Emu\Audio\Pulse</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\cheat_info.h">
       <Filter>Utilities</Filter>

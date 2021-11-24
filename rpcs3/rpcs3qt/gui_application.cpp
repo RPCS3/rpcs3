@@ -521,6 +521,10 @@ void gui_application::OnChangeStyleSheetRequest()
 #ifdef __APPLE__
 		locs << QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
 #else
+#ifdef DATADIR
+		const QString data_dir = (DATADIR);
+		locs << data_dir + "/GuiConfigs/";
+#endif
 		locs << QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
 #endif
 		locs << QCoreApplication::applicationDirPath() + "/GuiConfigs/";

@@ -128,38 +128,8 @@ target_include_directories(3rdparty_stblib INTERFACE stblib/include)
 # DiscordRPC
 add_subdirectory(discord-rpc)
 
-
-# ALSA
-set(ALSA_TARGET 3rdparty_dummy_lib)
-
-if(USE_ALSA)
-	find_package(ALSA)
-	if(ALSA_FOUND)
-		add_library(3rdparty_alsa INTERFACE)
-		target_compile_definitions(3rdparty_alsa INTERFACE -DHAVE_ALSA)
-		target_include_directories(3rdparty_alsa SYSTEM INTERFACE ${ALSA_INCLUDE_DIRS})
-		target_link_libraries(3rdparty_alsa INTERFACE ${ALSA_LIBRARIES})
-
-		set(ALSA_TARGET 3rdparty_alsa)
-	endif()
-endif()
-
-
-# Pulse
-set(PULSE_TARGET 3rdparty_dummy_lib)
-if(USE_PULSE)
-	pkg_check_modules(PULSE libpulse-simple)
-
-	if(PULSE_FOUND)
-		add_library(3rdparty_pulse INTERFACE)
-		target_compile_definitions(3rdparty_pulse INTERFACE -DHAVE_PULSE)
-		target_include_directories(3rdparty_pulse SYSTEM
-			INTERFACE ${PULSE_INCLUDE_DIRS})
-		target_link_libraries(3rdparty_pulse INTERFACE ${PULSE_LDFLAGS})
-
-		set(PULSE_TARGET 3rdparty_pulse)
-	endif()
-endif()
+# Cubeb
+add_subdirectory(cubeb EXCLUDE_FROM_ALL)
 
 # libevdev
 set(LIBEVDEV_TARGET 3rdparty_dummy_lib)
@@ -334,8 +304,6 @@ add_library(3rdparty::libpng ALIAS ${LIBPNG_TARGET})
 add_library(3rdparty::opengl ALIAS 3rdparty_opengl)
 add_library(3rdparty::stblib ALIAS 3rdparty_stblib)
 add_library(3rdparty::discordRPC ALIAS 3rdparty_discordRPC)
-add_library(3rdparty::alsa ALIAS ${ALSA_TARGET})
-add_library(3rdparty::pulse ALIAS ${PULSE_TARGET})
 add_library(3rdparty::faudio ALIAS ${FAUDIO_TARGET})
 add_library(3rdparty::libevdev ALIAS ${LIBEVDEV_TARGET})
 add_library(3rdparty::vulkan ALIAS ${VULKAN_TARGET})

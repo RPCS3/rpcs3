@@ -973,10 +973,42 @@ std::string ppu_thread::dump_regs() const
 	fmt::append(ret, "XER: [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
 	fmt::append(ret, "VSCR: [SAT=%u | NJ=%u]\n", sat, nj);
 	fmt::append(ret, "FPSCR: [FL=%u | FG=%u | FE=%u | FU=%u]\n", fpscr.fl, fpscr.fg, fpscr.fe, fpscr.fu);
-	if (const u32 addr = raddr)
+
+	const u32 addr = raddr;
+
+	if (addr)
 		fmt::append(ret, "Reservation Addr: 0x%x", addr);
 	else
 		fmt::append(ret, "Reservation Addr: none");
+
+	fmt::append(ret, "Reservation Data (entire cache line):\n");
+
+	be_t<u32> data[32]{};
+	std::memcpy(data, rdata, sizeof(rdata)); // Show the data even if the reservation was lost inside the atomic loop
+
+	if (addr && !use_full_rdata)
+	{
+		const u32 offset = addr & 0x78;
+
+		fmt::append(ret, "[0x%02x] %08x %08x\n", offset, data[offset / sizeof(u32)], data[offset / sizeof(u32) + 1]);
+
+		// Asterisk marks the offset of data that had been given to the guest PPU code
+		*(&ret.back() - (addr & 4 ? 9 : 18)) = '*';
+	}
+	else
+	{
+		for (usz i = 0; i < std::size(data); i += 4)
+		{
+			fmt::append(ret, "[0x%02x] %08x %08x %08x %08x\n", i * sizeof(data[0])
+				, data[i + 0], data[i + 1], data[i + 2], data[i + 3]);
+		}
+
+		if (addr)
+		{
+			// See the note above
+			*(&ret.back() - (4 - (addr % 16 / 4)) * 9 - (8 - (addr % 128 / 16)) * std::size("[0x00]"sv)) = '*';
+		}
+	}
 
 	return ret;
 }

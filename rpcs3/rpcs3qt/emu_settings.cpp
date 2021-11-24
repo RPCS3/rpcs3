@@ -965,13 +965,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 #ifdef _WIN32
 		case audio_renderer::xaudio: return tr("XAudio2", "Audio renderer");
 #endif
-#ifdef HAVE_ALSA
-		case audio_renderer::alsa: return tr("ALSA", "Audio renderer");
-#endif
-#ifdef HAVE_PULSE
-		case audio_renderer::pulse: return tr("PulseAudio", "Audio renderer");
-#endif
-		case audio_renderer::openal: return tr("OpenAL", "Audio renderer");
+		case audio_renderer::cubeb: return tr("Cubeb", "Audio renderer");
 #ifdef HAVE_FAUDIO
 		case audio_renderer::faudio: return tr("FAudio", "Audio renderer");
 #endif
