@@ -308,7 +308,7 @@ error_code cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 
 	if (g_cfg.video.enable_3d)
 	{
-		// Return Playstation 3D display value
+		// Return PlayStation 3D display value
 		// Some games call this function when 3D is enabled
 		*screenSize = 24.f;
 		return CELL_OK;
