@@ -218,13 +218,14 @@ QStringList gui_settings::GetStylesheetEntries() const
 	QStringList res = gui::utils::get_dir_entries(m_settings_dir, name_filter);
 #if !defined(_WIN32)
 	// Makes stylesheets load if using AppImage (App Bundle) or installed to /usr/bin
-#if defined(DATADIR)
-	const QString dataPath = (DATADIR);
-	QDir platformStylesheetDir = dataPath + "/GuiConfigs/";
-#elif defined(__APPLE__)
+#ifdef __APPLE__
 	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
 #else
 	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+#ifdef DATADIR
+	const QString data_dir = (DATADIR);
+	res.append(gui::utils::get_dir_entries(data_dir + "/GuiConfigs/", name_filter));
+#endif
 #endif
 	res.append(gui::utils::get_dir_entries(QCoreApplication::applicationDirPath() + "/GuiConfigs/", name_filter));
 	res.append(gui::utils::get_dir_entries(platformStylesheetDir, name_filter));

@@ -518,12 +518,13 @@ void gui_application::OnChangeStyleSheetRequest()
 		locs << m_gui_settings->GetSettingsDir();
 
 #if !defined(_WIN32)
-#if defined(DATADIR)
-		const QString dataPath = (DATADIR);
-		locs << dataPath + "/GuiConfigs/";
-#elif defined(__APPLE__)
+#ifdef __APPLE__
 		locs << QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
 #else
+#ifdef DATADIR
+		const QString data_dir = (DATADIR);
+		locs << data_dir + "/GuiConfigs/";
+#endif
 		locs << QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
 #endif
 		locs << QCoreApplication::applicationDirPath() + "/GuiConfigs/";
