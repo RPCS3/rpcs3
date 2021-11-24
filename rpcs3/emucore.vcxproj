@@ -52,14 +52,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\cheat_info.cpp" />
-    <ClCompile Include="Emu\Audio\ALSA\ALSABackend.cpp">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="Emu\Audio\audio_device_listener.cpp" />
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="Emu\Audio\Pulse\PulseBackend.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Emu\cache_utils.cpp" />
@@ -140,6 +134,9 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\rXml.cpp" />
     <ClCompile Include="..\Utilities\sema.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\simple_ringbuf.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\StrFmt.cpp">
@@ -436,14 +433,8 @@
     <ClInclude Include="..\3rdparty\stblib\include\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
     <ClInclude Include="..\Utilities\cheat_info.h" />
-    <ClInclude Include="Emu\Audio\ALSA\ALSABackend.h">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClInclude>
     <ClInclude Include="Emu\Audio\audio_device_listener.h" />
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
-      <ExcludedFromBuild>true</ExcludedFromBuild>
-    </ClInclude>
-    <ClInclude Include="Emu\Audio\Pulse\PulseBackend.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Emu\cache_utils.hpp" />

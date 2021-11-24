@@ -479,7 +479,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->shaderCompilerThreads, emu_settings_type::ShaderCompilerNumThreads, true);
 	SubscribeTooltip(ui->gb_shader_compiler_threads, tooltips.settings.shader_compiler_threads);
 	ui->shaderCompilerThreads->setItemText(ui->shaderCompilerThreads->findData(0), tr("Auto", "Number of Shader Compiler Threads"));
-	
+
 	// Custom control that simplifies operation of two independent variables. Can probably be done better but this works.
 	ui->zcullPrecisionMode->addItem(tr("Precise (Default)"), static_cast<int>(zcull_precision_level::precise));
 	ui->zcullPrecisionMode->addItem(tr("Approximate (Fast)"), static_cast<int>(zcull_precision_level::approximate));
@@ -822,7 +822,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const QVariantList var_list = ui->audioOutBox->itemData(index).toList();
 		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
 		const QString text = var_list[0].toString();
-		const bool enabled = text == "XAudio2" || text == "OpenAL" || text == "FAudio";
+		const bool enabled = text == "Cubeb" || text == "XAudio2" || text == "FAudio";
 		ui->enableBuffering->setEnabled(enabled);
 		enable_buffering_options(enabled && ui->enableBuffering->isChecked());
 	};

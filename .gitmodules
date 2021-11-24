@@ -68,3 +68,7 @@
 	path = 3rdparty/flatbuffers
 	url = ../../google/flatbuffers.git
 	ignore = dirty
+[submodule "3rdparty/cubeb/cubeb"]
+	path = 3rdparty/cubeb/cubeb
+	url = ../../mozilla/cubeb.git
+	ignore = dirty
