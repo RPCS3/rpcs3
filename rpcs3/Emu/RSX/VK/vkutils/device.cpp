@@ -157,10 +157,10 @@ namespace vk
 		{
 #ifdef _WIN32
 			// SPIRV bugs were fixed in 452.28 for windows
-			const u32 threshold_version = (452u >> 22) | (28 >> 14);
+			const u32 threshold_version = (452u << 22) | (28 << 14);
 #else
 			// SPIRV bugs were fixed in 450.56 for linux/BSD
-			const u32 threshold_version = (450u >> 22) | (56 >> 14);
+			const u32 threshold_version = (450u << 22) | (56 << 14);
 #endif
 			const auto current_version = props.driverVersion & ~0x3fffu; // Clear patch and revision fields
 			if (current_version < threshold_version)
@@ -435,19 +435,6 @@ namespace vk
 		enabled_features.samplerAnisotropy = VK_TRUE;
 		enabled_features.textureCompressionBC = VK_TRUE;
 		enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
-
-		// If we're on lavapipe / llvmpipe, disable unimplemented features:
-		// - shaderStorageBufferArrayDynamicIndexing
-		// as of mesa 21.1.0-dev (aea36ee05e9, 2020-02-10)
-		// Several games work even if we disable these, testing purpose only
-		if (pgpu->get_name().find("llvmpipe") != umax)
-		{
-			if (!pgpu->features.shaderStorageBufferArrayDynamicIndexing)
-			{
-				rsx_log.error("Running lavapipe without support for shaderStorageBufferArrayDynamicIndexing");
-				enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
-			}
-		}
 
 		// Optionally disable unsupported stuff
 		if (!pgpu->features.shaderStorageImageMultisample || !pgpu->features.shaderStorageImageWriteWithoutFormat)

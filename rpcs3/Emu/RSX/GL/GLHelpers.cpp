@@ -554,63 +554,73 @@ namespace gl
 
 		ensure(real_src->aspect() == real_dst->aspect());
 
-		const bool is_depth_copy = (real_src->aspect() != image_aspect::color);
-		const filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
-		GLenum attachment;
-		gl::buffers target;
-
-		if (is_depth_copy)
+		if (src_rect.width() == dst_rect.width() && src_rect.height() == dst_rect.height() &&
+			!src_rect.is_flipped() && !dst_rect.is_flipped())
 		{
-			if (real_dst->aspect() & gl::image_aspect::stencil)
-			{
-				attachment = GL_DEPTH_STENCIL_ATTACHMENT;
-				target = gl::buffers::depth_stencil;
-			}
-			else
-			{
-				attachment = GL_DEPTH_ATTACHMENT;
-				target = gl::buffers::depth;
-			}
+			glCopyImageSubData(real_src->id(), static_cast<GLenum>(real_src->get_target()), 0, src_rect.x1, src_rect.y1, 0,
+				real_dst->id(), static_cast<GLenum>(real_dst->get_target()), 0, dst_rect.x1, dst_rect.y1, 0,
+				src_rect.width(), src_rect.height(), 1);
 		}
 		else
 		{
-			attachment = GL_COLOR_ATTACHMENT0;
-			target = gl::buffers::color;
+			const bool is_depth_copy = (real_src->aspect() != image_aspect::color);
+			const filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
+			GLenum attachment;
+			gl::buffers target;
+
+			if (is_depth_copy)
+			{
+				if (real_dst->aspect() & gl::image_aspect::stencil)
+				{
+					attachment = GL_DEPTH_STENCIL_ATTACHMENT;
+					target = gl::buffers::depth_stencil;
+				}
+				else
+				{
+					attachment = GL_DEPTH_ATTACHMENT;
+					target = gl::buffers::depth;
+				}
+			}
+			else
+			{
+				attachment = GL_COLOR_ATTACHMENT0;
+				target = gl::buffers::color;
+			}
+
+			cmd.drv->enable(GL_FALSE, GL_SCISSOR_TEST);
+
+			save_binding_state saved;
+
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, blit_src.id());
+			glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_src->id(), 0);
+
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, blit_dst.id());
+			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_dst->id(), 0);
+
+			if (xfer_info.flip_horizontal)
+			{
+				src_rect.flip_horizontal();
+			}
+
+			if (xfer_info.flip_vertical)
+			{
+				src_rect.flip_vertical();
+			}
+
+			glBlitFramebuffer(src_rect.x1, src_rect.y1, src_rect.x2, src_rect.y2,
+				dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2,
+				static_cast<GLbitfield>(target), static_cast<GLenum>(interp));
+
+			// Release the attachments explicitly (not doing so causes glitches, e.g Journey Menu)
+			glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
 		}
-
-		cmd.drv->enable(GL_FALSE, GL_SCISSOR_TEST);
-
-		save_binding_state saved;
-
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, blit_src.id());
-		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_src->id(), 0);
-
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, blit_dst.id());
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_dst->id(), 0);
-
-		if (xfer_info.flip_horizontal)
-		{
-			src_rect.flip_horizontal();
-		}
-
-		if (xfer_info.flip_vertical)
-		{
-			src_rect.flip_vertical();
-		}
-
-		glBlitFramebuffer(src_rect.x1, src_rect.y1, src_rect.x2, src_rect.y2,
-			dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2,
-			static_cast<GLbitfield>(target), static_cast<GLenum>(interp));
 
 		if (xfer_info.dst_is_typeless)
 		{
 			// Transfer contents from typeless dst back to original dst
 			copy_typeless(dst, typeless_dst.get());
 		}
-
-		// Release the attachments explicitly (not doing so causes glitches, e.g Journey Menu)
-		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
 	}
 
 	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, const color4f& color)

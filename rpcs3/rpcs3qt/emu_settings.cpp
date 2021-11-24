@@ -72,11 +72,6 @@ bool emu_settings::Init()
 {
 	m_render_creator = new render_creator(this);
 
-	if (!m_render_creator)
-	{
-		fmt::throw_exception("emu_settings::emu_settings() render_creator is null");
-	}
-
 	if (m_render_creator->abort_requested)
 	{
 		return false;

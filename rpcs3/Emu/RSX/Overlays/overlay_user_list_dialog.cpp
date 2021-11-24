@@ -2,6 +2,7 @@
 #include "overlay_user_list_dialog.h"
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/System.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
 
@@ -98,14 +99,19 @@ namespace rsx
 				{
 					return_code = selection_code::error;
 				}
-				[[fallthrough]];
-			case pad_button::circle:
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
 				close(true, true);
-				break;
+				return;
+			case pad_button::circle:
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				close(true, true);
+				return;
 			case pad_button::dpad_up:
+			case pad_button::ls_up:
 				m_list->select_previous();
 				break;
 			case pad_button::dpad_down:
+			case pad_button::ls_down:
 				m_list->select_next();
 				break;
 			case pad_button::L1:
@@ -118,6 +124,8 @@ namespace rsx
 				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
 				break;
 			}
+
+			Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
 		}
 
 		compiled_resource user_list_dialog::get_compiled()

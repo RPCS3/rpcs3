@@ -419,11 +419,6 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.resolve_path = [](std::string_view sv)
-	{
-		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
-	};
-
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
@@ -526,6 +521,10 @@ void gui_application::OnChangeStyleSheetRequest()
 #ifdef __APPLE__
 		locs << QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
 #else
+#ifdef DATADIR
+		const QString data_dir = (DATADIR);
+		locs << data_dir + "/GuiConfigs/";
+#endif
 		locs << QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
 #endif
 		locs << QCoreApplication::applicationDirPath() + "/GuiConfigs/";

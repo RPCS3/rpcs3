@@ -117,6 +117,7 @@ struct savedata_manager
 {
 	semaphore<> mutex;
 	atomic_t<bool> enable_overlay{false};
+	atomic_t<s32> last_cbresult_error_dialog{0}; // CBRESULT errors are negative
 };
 
 static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
@@ -312,9 +313,12 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 		return {CELL_SAVEDATA_ERROR_PARAM, "22"};
 	}
 
-	// TODO: errDialog == CELL_SAVEDATA_ERRDIALOG_NOREPEAT
-	if (errDialog != CELL_SAVEDATA_ERRDIALOG_ALWAYS)
+	if (errDialog == CELL_SAVEDATA_ERRDIALOG_NONE ||
+		(errDialog == CELL_SAVEDATA_ERRDIALOG_NOREPEAT && result.result == g_fxo->get<savedata_manager>().last_cbresult_error_dialog.exchange(result.result)))
+	{
+		// TODO: Find out if the "last error" is always tracked or only when NOREPEAT is set
 		return CELL_SAVEDATA_ERROR_CBRESULT;
+	}
 
 	// Yield before a blocking dialog is being spawned
 	lv2_obj::sleep(ppu);
@@ -571,6 +575,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
+	if (const auto [ok, list] = setList.try_read(); ok)
+		cellSaveData.notice("savedata_op(): setList = { .sortType=%d, .sortOrder=%d, .dirNamePrefix='%s' }", list.sortType, list.sortOrder, list.dirNamePrefix);
+
+	if (const auto [ok, buf] = setBuf.try_read(); ok)
+		cellSaveData.notice("savedata_op(): setBuf  = { .dirListMax=%d, .fileListMax=%d, .bufSize=%d }", buf.dirListMax, buf.fileListMax, buf.bufSize);
+
 	if (const auto ecode = savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
 		funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{

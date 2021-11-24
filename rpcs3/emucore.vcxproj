@@ -80,6 +80,7 @@
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Program\program_util.cpp" />
     <ClCompile Include="Emu\RSX\RSXDisAsm.cpp" />
+    <ClCompile Include="Emu\RSX\rsx_vertex_data.cpp" />
     <ClCompile Include="Emu\system_config_types.cpp" />
     <ClCompile Include="Emu\perf_meter.cpp" />
     <ClCompile Include="Emu\system_progress.cpp" />

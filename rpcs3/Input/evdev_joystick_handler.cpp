@@ -997,12 +997,11 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->select).code,   CELL_PAD_CTRL_SELECT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->l3).code,       CELL_PAD_CTRL_L3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->r3).code,       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->ps).code,       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->ps).code,       CELL_PAD_CTRL_PS);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->up).code,       CELL_PAD_CTRL_UP);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->down).code,     CELL_PAD_CTRL_DOWN);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->left).code,     CELL_PAD_CTRL_LEFT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->right).code,    CELL_PAD_CTRL_RIGHT);
-	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0,                                     0x0); // Reserved (and currently not in use by rpcs3 at all)
 
 	m_dev->axis_left[0]  = evdevbutton(cfg->ls_right);
 	m_dev->axis_left[1]  = evdevbutton(cfg->ls_left);
@@ -1047,22 +1046,22 @@ bool evdev_joystick_handler::check_buttons(const std::vector<EvdevButton>& b, co
 
 bool evdev_joystick_handler::get_is_left_trigger(u64 keyCode)
 {
-	return keyCode == check_button(m_dev->trigger_left, static_cast<u32>(keyCode));
+	return check_button(m_dev->trigger_left, static_cast<u32>(keyCode));
 }
 
 bool evdev_joystick_handler::get_is_right_trigger(u64 keyCode)
 {
-	return keyCode == check_button(m_dev->trigger_right, static_cast<u32>(keyCode));
+	return check_button(m_dev->trigger_right, static_cast<u32>(keyCode));
 }
 
 bool evdev_joystick_handler::get_is_left_stick(u64 keyCode)
 {
-	return keyCode == check_buttons(m_dev->axis_left, static_cast<u32>(keyCode));
+	return check_buttons(m_dev->axis_left, static_cast<u32>(keyCode));
 }
 
 bool evdev_joystick_handler::get_is_right_stick(u64 keyCode)
 {
-	return keyCode == check_buttons(m_dev->axis_right, static_cast<u32>(keyCode));
+	return check_buttons(m_dev->axis_right, static_cast<u32>(keyCode));
 }
 
 #endif

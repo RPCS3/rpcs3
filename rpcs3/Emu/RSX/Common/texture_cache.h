@@ -2173,6 +2173,7 @@ namespace rsx
 					// NOTE: Do not disable 'cyclic ref' since the texture_barrier may have already been issued!
 					result.image_handle = 0;
 					result.external_subresource_desc = { 0, deferred_request_command::mipmap_gather, attributes, {}, tex.decoded_remap() };
+					result.format_class = rsx::classify_format(attributes.gcm_format);
 
 					if (use_upscaling)
 					{
@@ -2622,7 +2623,6 @@ namespace rsx
 					case CELL_GCM_TEXTURE_A8R8G8B8:
 						if (!dst_is_argb8) continue;
 						break;
-					case CELL_GCM_TEXTURE_X16:
 					case CELL_GCM_TEXTURE_R5G6B5:
 						if (dst_is_argb8) continue;
 						break;
@@ -2703,20 +2703,28 @@ namespace rsx
 					// Force format matching; only accept 16-bit data for 16-bit transfers, 32-bit for 32-bit transfers
 					switch (surface->get_gcm_format())
 					{
-					case CELL_GCM_TEXTURE_A8R8G8B8:
-					case CELL_GCM_TEXTURE_D8R8G8B8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 					case CELL_GCM_TEXTURE_X32_FLOAT:
 					case CELL_GCM_TEXTURE_Y16_X16:
 					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 					{
-						if (!src_is_argb8) continue;
-						break;
+						// Should be copy compatible but not scaling compatible
+						if (src_is_argb8 && (is_copy_op || dst_is_render_target)) break;
+						continue;
 					}
-					case CELL_GCM_TEXTURE_R5G6B5:
-					case CELL_GCM_TEXTURE_DEPTH16:
-					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+					{
+						// Should be copy compatible but not scaling compatible
+						if (src_is_argb8 && (is_copy_op || !dst_is_render_target)) break;
+						continue;
+					}
+					case CELL_GCM_TEXTURE_A8R8G8B8:
+					case CELL_GCM_TEXTURE_D8R8G8B8:
+					{
+						// Perfect match
+						if (src_is_argb8) break;
+						continue;
+					}
 					case CELL_GCM_TEXTURE_X16:
 					case CELL_GCM_TEXTURE_G8B8:
 					case CELL_GCM_TEXTURE_A1R5G5B5:
@@ -2724,8 +2732,22 @@ namespace rsx
 					case CELL_GCM_TEXTURE_D1R5G5B5:
 					case CELL_GCM_TEXTURE_R5G5B5A1:
 					{
-						if (src_is_argb8) continue;
-						break;
+						// Copy compatible
+						if (!src_is_argb8 && (is_copy_op || dst_is_render_target)) break;
+						continue;
+					}
+					case CELL_GCM_TEXTURE_DEPTH16:
+					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					{
+						// Copy compatible
+						if (!src_is_argb8 && (is_copy_op || !dst_is_render_target)) break;
+						continue;
+					}
+					case CELL_GCM_TEXTURE_R5G6B5:
+					{
+						// Perfect match
+						if (!src_is_argb8) break;
+						continue;
 					}
 					default:
 					{
@@ -3055,7 +3077,7 @@ namespace rsx
 
 				blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, typeless_info);
 			}
-			else
+			else if (cached_dest)
 			{
 				cached_dest->dma_transfer(cmd, vram_texture, src_area, dst_range, dst.pitch);
 			}

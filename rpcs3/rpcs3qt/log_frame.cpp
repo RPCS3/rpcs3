@@ -60,7 +60,7 @@ struct gui_listener : logs::listener
 			packet_t p,* _new = &p;
 			_new->sev = msg;
 
-			if ((msg >= logs::level::fatal || show_prefix) && !prefix.empty())
+			if ((msg == logs::level::fatal || show_prefix) && !prefix.empty())
 			{
 				_new->msg += "{";
 				_new->msg += prefix;

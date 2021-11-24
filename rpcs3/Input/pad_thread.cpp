@@ -185,7 +185,7 @@ void pad_thread::Init()
 
 void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
 {
-	if (pad > m_pads.size())
+	if (pad >= m_pads.size())
 		return;
 
 	if (m_pads[pad]->m_vibrateMotors.size() >= 2)
