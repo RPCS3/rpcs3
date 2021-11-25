@@ -922,18 +922,34 @@ void PPUTranslator::VCTUXS(ppu_opcode_t op)
 	SetSat(IsNotZero(eval(sat_l | sat_h).value));
 }
 
-extern __m128 sse_exp2_ps(__m128);
-
 void PPUTranslator::VEXPTEFP(ppu_opcode_t op)
 {
-	set_vr(op.vd, call("__vexptefp", &sse_exp2_ps, get_vr<f32[4]>(op.vb)));
+	const auto b = get_vr<f32[4]>(op.vb);
+	const auto x0 = eval(fmax(fmin(b, fsplat<f32[4]>(127.4999961f)), fsplat<f32[4]>(-127.4999961f)));
+	const auto x1 = eval(x0 + fsplat<f32[4]>(0.5f));
+	const auto x2 = eval(llvm_calli<s32[4], decltype(x1)>{"llvm.x86.sse2.cvtps2dq", {x1}} - noncast<s32[4]>(zext<u32[4]>(fcmp_ord(x1 <= fsplat<f32[4]>(0)))));
+	const auto x3 = eval(x0 - fpcast<f32[4]>(x2));
+	const auto x4 = eval(x3 * x3);
+	const auto x5 = eval(x3 * fmuladd(fmuladd(x4, fsplat<f32[4]>(0.023093347705f), fsplat<f32[4]>(20.20206567f)), x4, fsplat<f32[4]>(1513.906801f)));
+	const auto x6 = eval(x5 * fre(fmuladd(x4, fsplat<f32[4]>(233.1842117f), fsplat<f32[4]>(4368.211667f)) - x5));
+	set_vr(op.vd, (x6 + x6 + fsplat<f32[4]>(1.0f)) * bitcast<f32[4]>((x2 + 127) << 23));
 }
-
-extern __m128 sse_log2_ps(__m128);
 
 void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 {
-	set_vr(op.vd, call("__vlogefp", &sse_log2_ps, get_vr<f32[4]>(op.vb)));
+	const auto b = get_vr<f32[4]>(op.vb);
+	const auto _1 = fsplat<f32[4]>(1.0f);
+	const auto _c = fsplat<f32[4]>(1.442695040f);
+	const auto x0 = eval(fmax(b, bitcast<f32[4]>(splat<s32[4]>(0x00800000))));
+	const auto x1 = eval(bitcast<f32[4]>((bitcast<u32[4]>(x0) & 0x807fffff) | bitcast<u32[4]>(_1)));
+	const auto x2 = eval(fre(x1 + _1));
+	const auto x3 = eval((x1 - _1) * x2);
+	const auto x4 = eval(x3 + x3);
+	const auto x5 = eval(x4 * x4);
+	const auto x6 = eval(fmuladd(fmuladd(x5, fsplat<f32[4]>(-0.7895802789f), fsplat<f32[4]>(16.38666457f)), x5, fsplat<f32[4]>(-64.1409953f)));
+	const auto x7 = eval(fre(fmuladd(fmuladd(x5, fsplat<f32[4]>(-35.67227983f), fsplat<f32[4]>(312.0937664f)), x5, fsplat<f32[4]>(-769.6919436f))));
+	const auto x8 = eval(fpcast<f32[4]>(bitcast<s32[4]>((bitcast<u32[4]>(x0) >> 23) - 127)));
+	set_vr(op.vd, fmuladd(x5 * x6 * x7 * x4, _c, fmuladd(x4, _c, x8)));
 }
 
 void PPUTranslator::VMADDFP(ppu_opcode_t op)
@@ -2406,11 +2422,8 @@ void PPUTranslator::TW(ppu_opcode_t op)
 
 void PPUTranslator::LVSL(ppu_opcode_t op)
 {
-	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
-	//const auto _add = m_ir->CreateInsertElement(ConstantVector::getSplat(16, m_ir->getInt8(0)), Trunc(m_ir->CreateAnd(addr, 0xf), GetType<u8>()), m_ir->getInt32(0));
-	//const auto base = ConstantDataVector::get(m_context, std::vector<u8>{15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-	//SetVr(op.vd, m_ir->CreateAdd(base, Shuffle(_add, nullptr, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})));
-	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__lvsl", addr));
+	const auto addr = value<u64>(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
+	set_vr(op.vd, build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0) + vsplat<u8[16]>(trunc<u8>(addr & 0xf)));
 }
 
 void PPUTranslator::LVEBX(ppu_opcode_t op)
@@ -2570,11 +2583,8 @@ void PPUTranslator::CMPL(ppu_opcode_t op)
 
 void PPUTranslator::LVSR(ppu_opcode_t op)
 {
-	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
-	//const auto _add = m_ir->CreateInsertElement(ConstantVector::getSplat(16, m_ir->getInt8(0)), Trunc(m_ir->CreateAnd(addr, 0xf), GetType<u8>()), m_ir->getInt32(0));
-	//const auto base = ConstantDataVector::get(m_context, std::vector<u8>{31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16});
-	//SetVr(op.vd, m_ir->CreateSub(base, Shuffle(_add, nullptr, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})));
-	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__lvsr", addr));
+	const auto addr = value<u64>(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
+	set_vr(op.vd, build<u8[16]>(31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16) - vsplat<u8[16]>(trunc<u8>(addr & 0xf)));
 }
 
 void PPUTranslator::LVEHX(ppu_opcode_t op)
@@ -3191,7 +3201,8 @@ void PPUTranslator::DIVW(ppu_opcode_t op)
 void PPUTranslator::LVLX(ppu_opcode_t op)
 {
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
-	SetVr(op.vd, Call(GetType<u8[16]>(), "__lvlx", addr));
+	const auto data = ReadMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8[16]>(), m_is_be, 16);
+	set_vr(op.vd, pshufb(value<u8[16]>(data), build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf))));
 }
 
 void PPUTranslator::LDBRX(ppu_opcode_t op)
@@ -3235,7 +3246,8 @@ void PPUTranslator::SRD(ppu_opcode_t op)
 void PPUTranslator::LVRX(ppu_opcode_t op)
 {
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
-	SetVr(op.vd, Call(GetType<u8[16]>(), "__lvrx", addr));
+	const auto data = ReadMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8[16]>(), m_is_be, 16);
+	set_vr(op.vd, pshufb(value<u8[16]>(data), build<u8[16]>(255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf))));
 }
 
 void PPUTranslator::LSWI(ppu_opcode_t op)
@@ -3308,7 +3320,11 @@ void PPUTranslator::LFDUX(ppu_opcode_t op)
 
 void PPUTranslator::STVLX(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__stvlx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetVr(op.vs, VrType::vi8));
+	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
+	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
+	const auto mask = sext<s8[16]>(bitcast<bool[16]>(splat<u16>(0xffff) << trunc<u16>(value<u64>(addr) & 0xf)));
+	const auto ptr = value<u8*>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8>()));
+	eval(llvm_calli<void, decltype(data), decltype(mask), decltype(ptr)>{"llvm.x86.sse2.maskmov.dqu", {data, mask, ptr}});
 }
 
 void PPUTranslator::STDBRX(ppu_opcode_t op)
@@ -3333,7 +3349,11 @@ void PPUTranslator::STFSX(ppu_opcode_t op)
 
 void PPUTranslator::STVRX(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__stvrx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetVr(op.vs, VrType::vi8));
+	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
+	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
+	const auto mask = sext<s8[16]>(bitcast<bool[16]>(trunc<u16>(splat<u64>(0xffff) << (value<u64>(addr) & 0xf) >> 16)));
+	const auto ptr = value<u8*>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8>()));
+	eval(llvm_calli<void, decltype(data), decltype(mask), decltype(ptr)>{"llvm.x86.sse2.maskmov.dqu", {data, mask, ptr}});
 }
 
 void PPUTranslator::STFSUX(ppu_opcode_t op)
