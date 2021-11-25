@@ -201,6 +201,12 @@ bool emu_settings::ValidateSettings(bool cleanup)
 
 			if (cfg_node)
 			{
+				// Ignore every node in Log subsection
+				if (level == 0 && cfg_node->get_name() == "Log")
+				{
+					continue;
+				}
+
 				YAML::Node next_node = yml_node[key];
 				search_level(next_level, next_node, keys, cfg_node);
 			}
