@@ -82,23 +82,28 @@ public:
 	void add_event(u64 arg1, u64 arg2, u64 arg3);
 
 	// Transfers related functions
-	u32 get_free_transfer_id();
-	UsbTransfer& get_transfer(u32 transfer_id);
+	std::pair<u32, UsbTransfer&> get_free_transfer();
+	std::pair<u32, u32> get_transfer_status(u32 transfer_id);
+	std::pair<u32, UsbDeviceIsoRequest> get_isochronous_transfer_status(u32 transfer_id);
+	void push_fake_transfer(UsbTransfer* transfer);
 
 	// Map of devices actively handled by the ps3(device_id, device)
 	std::map<u32, std::pair<UsbInternalDevice, std::shared_ptr<usb_device>>> handled_devices;
-	// Fake transfers
-	std::vector<UsbTransfer*> fake_transfers;
 
 	shared_mutex mutex;
 	atomic_t<bool> is_init = false;
 
 	// sys_usbd_receive_event PPU Threads
+	shared_mutex mutex_sq;
 	std::deque<ppu_thread*> sq;
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
 private:
+	// Lock free functions for internal use(ie make sure to lock before using those)
+	UsbTransfer& get_transfer(u32 transfer_id);
+	u32 get_free_transfer_id();
+
 	void send_message(u32 message, u32 tr_id);
 
 private:
@@ -113,7 +118,9 @@ private:
 	// List of pipes
 	std::map<u32, UsbPipe> open_pipes;
 	// Transfers infos
+	shared_mutex mutex_transfers;
 	std::array<UsbTransfer, 0x44> transfers;
+	std::vector<UsbTransfer*> fake_transfers;
 
 	// Queue of pending usbd events
 	std::queue<std::tuple<u64, u64, u64>> usbd_events;
@@ -152,7 +159,7 @@ usb_handler_thread::usb_handler_thread()
 	};
 
 	bool found_skylander = false;
-	bool found_usio = false;
+	bool found_usio      = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -231,7 +238,6 @@ usb_handler_thread::usb_handler_thread()
 		{
 			found_usio = true;
 		}
-
 	}
 
 	libusb_free_device_list(list, 1);
@@ -314,7 +320,6 @@ void usb_handler_thread::operator()()
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		// Todo: Hotplug here?
-		std::lock_guard lock(this->mutex);
 
 		// Process asynchronous requests that are pending
 		libusb_handle_events_timeout_completed(ctx, &lusb_tv, nullptr);
@@ -322,6 +327,7 @@ void usb_handler_thread::operator()()
 		// Process fake transfers
 		if (!fake_transfers.empty())
 		{
+			std::lock_guard lock_tf(mutex_transfers);
 			u64 timestamp = get_system_time() - Emu.GetPauseTime();
 
 			for (auto it = fake_transfers.begin(); it != fake_transfers.end();)
@@ -353,13 +359,13 @@ void usb_handler_thread::operator()()
 
 void usb_handler_thread::send_message(u32 message, u32 tr_id)
 {
-	sys_usbd.trace("Sending event: arg1=0x%x arg2=0x%x arg3=0x00", message, tr_id);
-
 	add_event(message, tr_id, 0x00);
 }
 
 void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 {
+	std::lock_guard lock_tf(mutex_transfers);
+
 	UsbTransfer* usbd_transfer = static_cast<UsbTransfer*>(transfer->user_data);
 
 	if (transfer->status != 0)
@@ -488,8 +494,11 @@ bool usb_handler_thread::get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::p
 void usb_handler_thread::add_event(u64 arg1, u64 arg2, u64 arg3)
 {
 	// sys_usbd events use an internal event queue with SYS_SYNC_PRIORITY protocol
+	std::lock_guard lock_sq(mutex_sq);
+
 	if (const auto cpu = lv2_obj::schedule<ppu_thread>(sq, SYS_SYNC_PRIORITY))
 	{
+		sys_usbd.trace("Sending event(queue): arg1=0x%x arg2=0x%x arg3=0x%x", arg1, arg2, arg3);
 		cpu->gpr[4] = arg1;
 		cpu->gpr[5] = arg2;
 		cpu->gpr[6] = arg3;
@@ -497,18 +506,28 @@ void usb_handler_thread::add_event(u64 arg1, u64 arg2, u64 arg3)
 	}
 	else
 	{
+		sys_usbd.trace("Sending event: arg1=0x%x arg2=0x%x arg3=0x%x", arg1, arg2, arg3);
 		usbd_events.emplace(arg1, arg2, arg3);
 	}
 }
 
 u32 usb_handler_thread::get_free_transfer_id()
 {
+	u32 num_loops = 0;
 	do
 	{
+		num_loops++;
 		transfer_counter++;
 
 		if (transfer_counter >= MAX_SYS_USBD_TRANSFERS)
+		{
 			transfer_counter = 0;
+		}
+
+		if (num_loops > MAX_SYS_USBD_TRANSFERS)
+		{
+			sys_usbd.fatal("Usb transfers are saturated!");
+		}
 	} while (transfers[transfer_counter].busy);
 
 	return transfer_counter;
@@ -517,6 +536,41 @@ u32 usb_handler_thread::get_free_transfer_id()
 UsbTransfer& usb_handler_thread::get_transfer(u32 transfer_id)
 {
 	return transfers[transfer_id];
+}
+
+std::pair<u32, UsbTransfer&> usb_handler_thread::get_free_transfer()
+{
+	std::lock_guard lock_tf(mutex_transfers);
+
+	u32 transfer_id = get_free_transfer_id();
+	auto& transfer  = get_transfer(transfer_id);
+	transfer.busy   = true;
+
+	return {transfer_id, transfer};
+}
+
+std::pair<u32, u32> usb_handler_thread::get_transfer_status(u32 transfer_id)
+{
+	std::lock_guard lock_tf(mutex_transfers);
+
+	const auto& transfer = get_transfer(transfer_id);
+
+	return {transfer.result, transfer.count};
+}
+
+std::pair<u32, UsbDeviceIsoRequest> usb_handler_thread::get_isochronous_transfer_status(u32 transfer_id)
+{
+	std::lock_guard lock_tf(mutex_transfers);
+
+	const auto& transfer = get_transfer(transfer_id);
+
+	return {transfer.result, transfer.iso_request};
+}
+
+void usb_handler_thread::push_fake_transfer(UsbTransfer* transfer)
+{
+	std::lock_guard lock_tf(mutex_transfers);
+	fake_transfers.push_back(transfer);
 }
 
 error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
@@ -662,7 +716,7 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_pr
 	{
 		// Arcade v406 USIO board
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
-		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0910, 0x0910);// usio
+		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0910, 0x0910); // usio
 	}
 	else
 	{
@@ -749,7 +803,7 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	{
-		std::lock_guard lock(usbh.mutex);
+		std::lock_guard lock_sq(usbh.mutex_sq);
 
 		if (!usbh.is_init)
 			return CELL_EINVAL;
@@ -772,11 +826,13 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 	{
 		if (is_stopped(state))
 		{
+			sys_usbd.trace("sys_usbd_receive_event: aborting");
 			return {};
 		}
 
 		if (state & cpu_flag::signal)
 		{
+			sys_usbd.trace("Received event(queued): arg1=0x%x arg2=0x%x arg3=0x%x", ppu.gpr[4], ppu.gpr[5], ppu.gpr[6]);
 			break;
 		}
 
@@ -843,10 +899,8 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 		return CELL_EINVAL;
 	}
 
-	u32 id_transfer  = usbh.get_free_transfer_id();
-	const auto& pipe = usbh.get_pipe(id_pipe);
-	auto& transfer   = usbh.get_transfer(id_transfer);
-	transfer.busy = true;
+	const auto& pipe               = usbh.get_pipe(id_pipe);
+	auto&& [transfer_id, transfer] = usbh.get_free_transfer();
 
 	// Default endpoint is control endpoint
 	if (pipe.endpoint == 0)
@@ -872,7 +926,7 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 		if (!(pipe.endpoint & 0x80))
 		{
 			std::string datrace;
-			const char hex[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+			const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
 			for (u32 index = 0; index < buf_size; index++)
 			{
@@ -887,10 +941,12 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 	}
 
 	if (transfer.fake)
-		usbh.fake_transfers.push_back(&transfer);
+	{
+		usbh.push_fake_transfer(&transfer);
+	}
 
 	// returns an identifier specific to the transfer
-	return not_an_error(id_transfer);
+	return not_an_error(transfer_id);
 }
 
 error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::ptr<UsbDeviceIsoRequest> iso_request)
@@ -908,15 +964,13 @@ error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 i
 		return CELL_EINVAL;
 	}
 
-	u32 id_transfer  = usbh.get_free_transfer_id();
-	const auto& pipe = usbh.get_pipe(id_pipe);
-	auto& transfer   = usbh.get_transfer(id_transfer);
+	const auto& pipe               = usbh.get_pipe(id_pipe);
+	auto&& [transfer_id, transfer] = usbh.get_free_transfer();
 
-	memcpy(&transfer.iso_request, iso_request.get_ptr(), sizeof(UsbDeviceIsoRequest));
 	pipe.device->isochronous_transfer(&transfer);
 
 	// returns an identifier specific to the transfer
-	return not_an_error(id_transfer);
+	return not_an_error(transfer_id);
 }
 
 error_code sys_usbd_get_transfer_status(ppu_thread& ppu, u32 handle, u32 id_transfer, u32 unk1, vm::ptr<u32> result, vm::ptr<u32> count)
@@ -932,10 +986,9 @@ error_code sys_usbd_get_transfer_status(ppu_thread& ppu, u32 handle, u32 id_tran
 	if (!usbh.is_init)
 		return CELL_EINVAL;
 
-	auto& transfer = usbh.get_transfer(id_transfer);
-
-	*result = transfer.result;
-	*count  = transfer.count;
+	const auto status = usbh.get_transfer_status(id_transfer);
+	*result           = status.first;
+	*count            = status.second;
 
 	return CELL_OK;
 }
@@ -953,10 +1006,10 @@ error_code sys_usbd_get_isochronous_transfer_status(ppu_thread& ppu, u32 handle,
 	if (!usbh.is_init)
 		return CELL_EINVAL;
 
-	auto& transfer = usbh.get_transfer(id_transfer);
+	const auto status = usbh.get_isochronous_transfer_status(id_transfer);
 
-	*result = transfer.result;
-	memcpy(request.get_ptr(), &transfer.iso_request, sizeof(UsbDeviceIsoRequest));
+	*result  = status.first;
+	*request = status.second;
 
 	return CELL_OK;
 }

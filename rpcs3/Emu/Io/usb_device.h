@@ -111,7 +111,8 @@ struct UsbDescriptorNode
 	u8 bLength;
 	u8 bDescriptorType;
 
-	union {
+	union
+	{
 		UsbDeviceDescriptor _device;
 		UsbDeviceConfiguration _configuration;
 		UsbDeviceInterface _interface;
@@ -122,17 +123,15 @@ struct UsbDescriptorNode
 
 	std::vector<UsbDescriptorNode> subnodes;
 
-	UsbDescriptorNode(){}
+	UsbDescriptorNode() {}
 	template <typename T>
 	UsbDescriptorNode(u8 _bDescriptorType, const T& _data)
-	    : bLength(sizeof(T) + 2)
-	    , bDescriptorType(_bDescriptorType)
+		: bLength(sizeof(T) + 2), bDescriptorType(_bDescriptorType)
 	{
 		memcpy(data, &_data, sizeof(T));
 	}
 	UsbDescriptorNode(u8 _bLength, u8 _bDescriptorType, u8* _data)
-	    : bLength(_bLength)
-	    , bDescriptorType(_bDescriptorType)
+		: bLength(_bLength), bDescriptorType(_bDescriptorType)
 	{
 		memcpy(data, _data, _bLength - 2);
 	}
@@ -209,6 +208,9 @@ public:
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 	void isochronous_transfer(UsbTransfer* transfer) override;
+
+protected:
+	void send_libusb_transfer(libusb_transfer* transfer);
 
 protected:
 	libusb_device* lusb_device        = nullptr;
