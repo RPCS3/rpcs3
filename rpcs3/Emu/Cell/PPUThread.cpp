@@ -65,8 +65,6 @@
 #include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
 
-const bool s_use_ssse3 = utils::has_ssse3();
-
 extern atomic_t<u64> g_watchdog_hold_ctr;
 
 // Should be of the same type

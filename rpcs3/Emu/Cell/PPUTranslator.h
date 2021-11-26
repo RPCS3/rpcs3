@@ -79,8 +79,8 @@ class PPUTranslator final : public cpu_translator
 	DEF_VALUE(m_ov, m_g_ov, 168) // XER.OV bit, overflow flag
 	DEF_VALUE(m_ca, m_g_ca, 169) // XER.CA bit, carry flag
 	DEF_VALUE(m_cnt, m_g_cnt, 170) // XER.CNT
-	DEF_VALUE(m_sat, m_g_sat, 171) // VSCR.SAT bit, sticky saturation flag
-	DEF_VALUE(m_nj, m_g_nj, 172) // VSCR.NJ bit, non-Java mode
+	DEF_VALUE(m_nj, m_g_nj, 171) // VSCR.NJ bit, non-Java mode
+	DEF_VALUE(m_sat, m_g_sat, 173) // VSCR.SAT bit, sticky saturation flag
 	DEF_VALUE(m_jm_mask, m_g_jm_mask, 174) // Java-Mode helper mask
 
 #undef DEF_VALUE
@@ -116,6 +116,17 @@ public:
 		value_t<typename T::type> result;
 		result.value = VecHandleResult(expr.eval(m_ir));
 		return result;
+	}
+
+	// Update sticky VSCR.SAT bit (|=)
+	template <typename T>
+	void set_sat(T&& expr)
+	{
+		if (m_attr & ppu_attr::has_mfvscr)
+		{
+			const auto val = expr.eval(m_ir);
+			RegStore(m_ir->CreateOr(m_ir->CreateBitCast(RegLoad(m_sat), val->getType()), val), m_sat);
+		}
 	}
 
 	// Get current instruction address
@@ -264,9 +275,6 @@ public:
 
 	// Set XER.OV bit, and update XER.SO bit (|=)
 	void SetOverflow(llvm::Value*);
-
-	// Update sticky VSCR.SAT bit (|=)
-	void SetSat(llvm::Value*);
 
 	// Check condition for trap instructions
 	llvm::Value* CheckTrapCondition(u32 to, llvm::Value* left, llvm::Value* right);
