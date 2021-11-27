@@ -1767,7 +1767,7 @@ namespace rsx
 			if (!valid_range())
 				return false;
 
-			if ((gcm_format & format) != format)
+			if (format && gcm_format != format)
 				return false;
 
 			if (!width && !height && !depth && !mipmaps)
