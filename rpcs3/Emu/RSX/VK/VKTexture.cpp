@@ -971,6 +971,12 @@ namespace vk
 				offset_in_upload_buffer = dma_mapping.first;
 				copy_info.bufferOffset = offset_in_upload_buffer;
 			}
+			else if (!layout.layer && !layout.level)
+			{
+				// Do not allow mixed transfer modes.
+				// This can happen in special cases, e.g mipN having different processing than mip0 as is the case with the last VTC mip
+				caps.supports_zero_copy = false;
+			}
 
 			if (opt.require_swap || opt.require_deswizzle || requires_depth_processing)
 			{
