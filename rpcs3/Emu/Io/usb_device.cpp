@@ -57,10 +57,33 @@ usb_device_passthrough::usb_device_passthrough(libusb_device* _device, libusb_de
 usb_device_passthrough::~usb_device_passthrough()
 {
 	if (lusb_handle)
+	{
+		libusb_release_interface(lusb_handle, 0);
 		libusb_close(lusb_handle);
+	}
 
 	if (lusb_device)
+	{
 		libusb_unref_device(lusb_device);
+	}
+}
+
+void usb_device_passthrough::send_libusb_transfer(libusb_transfer* transfer)
+{
+	while (true)
+	{
+		auto res = libusb_submit_transfer(transfer);
+		switch (res)
+		{
+		case LIBUSB_SUCCESS: return;
+		case LIBUSB_ERROR_BUSY: continue;
+		default:
+		{
+			sys_usbd.error("Unexpected error from libusb_submit_transfer: %d", res);
+			return;
+		}
+		}
+	}
 }
 
 bool usb_device_passthrough::open_device()
@@ -120,13 +143,13 @@ void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16
 	libusb_fill_control_setup(transfer->setup_buf.data(), bmRequestType, bRequest, wValue, wIndex, buf_size);
 	memcpy(transfer->setup_buf.data() + 8, buf, buf_size);
 	libusb_fill_control_transfer(transfer->transfer, lusb_handle, transfer->setup_buf.data(), callback_transfer, transfer, 0);
-	libusb_submit_transfer(transfer->transfer);
+	send_libusb_transfer(transfer->transfer);
 }
 
 void usb_device_passthrough::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
 	libusb_fill_interrupt_transfer(transfer->transfer, lusb_handle, endpoint, buf, buf_size, callback_transfer, transfer, 0);
-	libusb_submit_transfer(transfer->transfer);
+	send_libusb_transfer(transfer->transfer);
 }
 
 void usb_device_passthrough::isochronous_transfer(UsbTransfer* transfer)
@@ -140,7 +163,7 @@ void usb_device_passthrough::isochronous_transfer(UsbTransfer* transfer)
 		transfer->transfer->iso_packet_desc[index].length = transfer->iso_request.packets[index];
 	}
 
-	libusb_submit_transfer(transfer->transfer);
+	send_libusb_transfer(transfer->transfer);
 }
 
 //////////////////////////////////////////////////////////////////
