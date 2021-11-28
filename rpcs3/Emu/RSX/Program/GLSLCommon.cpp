@@ -122,7 +122,7 @@ namespace program_common
 		"	return result;\n"
 		"}\n\n";
 
-		std::pair<std::string, std::string> replacements[] =
+		std::pair<std::string_view, std::string> replacements[] =
 			{std::make_pair("$T", wide_vector_type),
 			 std::make_pair("$I", input_coord)};
 

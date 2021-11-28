@@ -21,6 +21,7 @@ namespace vk
 		virtual ~cs_resolve_base()
 		{}
 
+		// FIXME: move body to cpp
 		void build(const std::string& kernel, const std::string& format_prefix, int direction)
 		{
 			create();
@@ -39,7 +40,7 @@ namespace vk
 				break;
 			}
 
-			const std::pair<std::string, std::string> syntax_replace[] =
+			const std::pair<std::string_view, std::string> syntax_replace[] =
 			{
 				{ "%wx", std::to_string(cs_wave_x) },
 				{ "%wy", std::to_string(cs_wave_y) },

@@ -21,7 +21,7 @@ namespace cfg
 	std::vector<std::string> make_uint_range(u64 min, u64 max);
 
 	// Internal hack
-	bool try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, const std::string&);
+	bool try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, std::string_view);
 
 	// Internal hack
 	std::vector<std::string> try_to_enum_list(decltype(&fmt_class_string<int>::format) func);
@@ -53,7 +53,7 @@ namespace cfg
 		_base(type _type);
 
 		// Owned entry constructor
-		_base(type _type, class node* owner, const std::string& name, bool dynamic);
+		_base(type _type, class node* owner, std::string name, bool dynamic);
 
 	public:
 		_base(const _base&) = delete;
@@ -80,7 +80,7 @@ namespace cfg
 		}
 
 		// Try to convert from string (optional)
-		virtual bool from_string(const std::string&, bool /*dynamic*/ = false);
+		virtual bool from_string(std::string_view, bool /*dynamic*/ = false);
 
 		// Get string list (optional)
 		virtual std::vector<std::string> to_list() const
@@ -107,8 +107,8 @@ namespace cfg
 		}
 
 		// Registered node constructor
-		node(node* owner, const std::string& name, bool dynamic = true)
-			: _base(type::node, owner, name, dynamic)
+		node(node* owner, std::string name, bool dynamic = true)
+			: _base(type::node, owner, std::move(name), dynamic)
 		{
 		}
 
@@ -122,7 +122,7 @@ namespace cfg
 		std::string to_string() const override;
 
 		// Deserialize node
-		bool from_string(const std::string& value, bool dynamic = false) override;
+		bool from_string(std::string_view value, bool dynamic = false) override;
 
 		// Set default values
 		void from_default() override;
@@ -135,8 +135,8 @@ namespace cfg
 	public:
 		bool def;
 
-		_bool(node* owner, const std::string& name, bool def = false, bool dynamic = false)
-			: _base(type::_bool, owner, name, dynamic)
+		_bool(node* owner, std::string name, bool def = false, bool dynamic = false)
+			: _base(type::_bool, owner, std::move(name), dynamic)
 			, m_value(def)
 			, def(def)
 		{
@@ -159,7 +159,7 @@ namespace cfg
 			return m_value ? "true" : "false";
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			if (value == "false")
 				m_value = false;
@@ -220,7 +220,7 @@ namespace cfg
 			return result; // TODO: ???
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			u64 result;
 
@@ -285,7 +285,7 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			s64 result;
 			if (try_to_int64(&result, value, Min, Max))
@@ -359,7 +359,7 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			u64 result;
 			if (try_to_uint64(&result, value, Min, Max))
@@ -430,9 +430,9 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
-			m_value = value;
+			m_value = std::string(value);
 			return true;
 		}
 	};
@@ -474,9 +474,12 @@ namespace cfg
 		}
 	};
 
+	template<typename T>
+	using map_of_type = std::map<std::string, T, std::less<>>;
+
 	class map_entry final : public _base
 	{
-		std::map<std::string, std::string> m_map{};
+		map_of_type<std::string> m_map{};
 
 	public:
 		map_entry(node* owner, const std::string& name)
@@ -484,24 +487,24 @@ namespace cfg
 		{
 		}
 
-		const std::map<std::string, std::string>& get_map() const
+		const map_of_type<std::string>& get_map() const
 		{
 			return m_map;
 		}
 
-		std::string get_value(const std::string& key);
+		std::string get_value(std::string_view key);
 
-		void set_value(const std::string& key, const std::string& value);
-		void set_map(std::map<std::string, std::string>&& map);
+		void set_value(std::string key, std::string value);
+		void set_map(map_of_type<std::string>&& map);
 
-		void erase(const std::string& key);
+		void erase(std::string_view key);
 
 		void from_default() override;
 	};
 
 	class log_entry final : public _base
 	{
-		std::map<std::string, logs::level> m_map{};
+		map_of_type<logs::level> m_map{};
 
 	public:
 		log_entry(node* owner, const std::string& name)
@@ -509,12 +512,12 @@ namespace cfg
 		{
 		}
 
-		const std::map<std::string, logs::level>& get_map() const
+		const map_of_type<logs::level>& get_map() const
 		{
 			return m_map;
 		}
 
-		void set_map(std::map<std::string, logs::level>&& map);
+		void set_map(map_of_type<logs::level>&& map);
 
 		void from_default() override;
 	};
