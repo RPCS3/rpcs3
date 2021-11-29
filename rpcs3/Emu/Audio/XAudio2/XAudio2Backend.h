@@ -21,7 +21,7 @@ public:
 	XAudio2Backend(const XAudio2Backend&) = delete;
 	XAudio2Backend& operator=(const XAudio2Backend&) = delete;
 
-	const char* GetName() const override { return "XAudio2"; }
+	std::string_view GetName() const override { return "XAudio2"sv; }
 
 	static const u32 capabilities = SET_FREQUENCY_RATIO;
 	u32 GetCapabilities() const override { return capabilities;	}

@@ -8,7 +8,7 @@ public:
 	NullAudioBackend() {}
 	~NullAudioBackend() {}
 
-	const char* GetName() const override { return "Null"; }
+	std::string_view GetName() const override { return "Null"sv; }
 
 	static const u32 capabilities = 0;
 	u32 GetCapabilities() const override { return capabilities; }

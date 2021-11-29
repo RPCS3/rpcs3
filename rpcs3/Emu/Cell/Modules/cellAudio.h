@@ -360,7 +360,7 @@ public:
 		return backend->Operational();
 	}
 
-	const char* get_backend_name() const
+	std::string_view get_backend_name() const
 	{
 		return backend->GetName();
 	}
@@ -415,11 +415,9 @@ public:
 	f32 m_average_playtime = 0.0f;
 	bool m_backend_failed = false;
 
-	void operator()();
+	cell_audio_thread();
 
-	cell_audio_thread()
-	{
-	}
+	void operator()();
 
 	audio_port* open_port()
 	{
