@@ -51,7 +51,7 @@ public:
 	/*
 	 * Pure virtual methods
 	 */
-	virtual const char* GetName() const = 0;
+	virtual std::string_view GetName() const = 0;
 	virtual u32 GetCapabilities() const = 0;
 
 	virtual void Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) = 0;

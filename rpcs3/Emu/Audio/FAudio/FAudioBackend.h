@@ -19,7 +19,7 @@ public:
 	FAudioBackend(const FAudioBackend&) = delete;
 	FAudioBackend& operator=(const FAudioBackend&) = delete;
 
-	const char* GetName() const override { return "FAudio"; }
+	std::string_view GetName() const override { return "FAudio"sv; }
 
 	static const u32 capabilities = SET_FREQUENCY_RATIO;
 	u32 GetCapabilities() const override { return capabilities; }
