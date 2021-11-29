@@ -374,20 +374,9 @@ namespace fs
 			return *this;
 		}
 
-		// Read std::basic_string, size must be set by resize() method
-		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		bool read(std::basic_string<T>& str,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
-		{
-			return read(str.data(), str.size() * sizeof(T), line, col, file, func) == str.size() * sizeof(T);
-		}
-
 		// Read std::basic_string
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		bool read(std::basic_string<T>& str, usz _size,
+		bool read(std::basic_string<T>& str, usz _size = umax,
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION(),
 			u32 line = __builtin_LINE(),
@@ -395,14 +384,18 @@ namespace fs
 		{
 			if (!m_file) xnull({line, col, file, func});
 
-			// If _size arg is too high std::bad_alloc may happen during resize and then we cannot error check
-			if (_size >= 0x10'0000 / sizeof(T) && !strict_read_check(_size, sizeof(T)))
+			if (_size != umax)
 			{
-				return false;
+				// If _size arg is too high std::bad_alloc may happen during resize and then we cannot error check
+				if (_size >= 0x10'0000 / sizeof(T) && !strict_read_check(_size, sizeof(T)))
+				{
+					return false;
+				}
+
+				str.resize(_size);
 			}
 
-			str.resize(_size);
-			return read(str.data(), sizeof(T) * _size, line, col, file, func) == sizeof(T) * _size;
+			return read(str.data(), sizeof(T) * str.size(), line, col, file, func) == sizeof(T) * str.size();
 		}
 
 		// Read POD, sizeof(T) is used
@@ -417,20 +410,9 @@ namespace fs
 			return read(std::addressof(data), sizeof(T), line, col, file, func) == sizeof(T);
 		}
 
-		// Read POD std::vector, size must be set by resize() method
-		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		bool read(std::vector<T>& vec,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
-		{
-			return read(vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
-		}
-
 		// Read POD std::vector
 		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
-		bool read(std::vector<T>& vec, usz _size,
+		bool read(std::vector<T>& vec, usz _size = umax,
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION(),
 			u32 line = __builtin_LINE(),
@@ -438,13 +420,18 @@ namespace fs
 		{
 			if (!m_file) xnull({line, col, file, func});
 
-			if (_size >= 0x10'0000 / sizeof(T) && !strict_read_check(_size, sizeof(T)))
+			if (_size != umax)
 			{
-				return false;
+				// If _size arg is too high std::bad_alloc may happen during resize and then we cannot error check
+				if (_size >= 0x10'0000 / sizeof(T) && !strict_read_check(_size, sizeof(T)))
+				{
+					return false;
+				}
+
+				vec.resize(_size);
 			}
 
-			vec.resize(_size);
-			return read(vec.data(), sizeof(T) * _size, line, col, file, func) == sizeof(T) * _size;
+			return read(vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
 		}
 
 		// Read POD (experimental)
