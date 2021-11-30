@@ -387,7 +387,7 @@ namespace fs
 			if (_size != umax)
 			{
 				// If _size arg is too high std::bad_alloc may happen during resize and then we cannot error check
-				if (_size >= 0x10'0000 / sizeof(T) && !strict_read_check(_size, sizeof(T)))
+				if ((_size >= 0x10'0000 / sizeof(T)) && !strict_read_check(_size, sizeof(T)))
 				{
 					return false;
 				}
@@ -423,7 +423,7 @@ namespace fs
 			if (_size != umax)
 			{
 				// If _size arg is too high std::bad_alloc may happen during resize and then we cannot error check
-				if (_size >= 0x10'0000 / sizeof(T) && !strict_read_check(_size, sizeof(T)))
+				if ((_size >= 0x10'0000 / sizeof(T)) && !strict_read_check(_size, sizeof(T)))
 				{
 					return false;
 				}
