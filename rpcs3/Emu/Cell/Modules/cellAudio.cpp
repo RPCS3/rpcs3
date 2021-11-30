@@ -92,7 +92,7 @@ void cell_audio_config::reset(bool backend_changed)
 	audio_buffer_size = audio_buffer_length * audio_sample_size;
 
 	desired_buffer_duration = raw.desired_buffer_duration * 1000llu;
-	buffering_enabled = raw.buffering_enabled;
+	buffering_enabled = raw.buffering_enabled && raw.renderer != audio_renderer::null;
 
 	minimum_block_period = audio_block_period / 2;
 	maximum_block_period = (6 * audio_block_period) / 5;
@@ -598,14 +598,12 @@ void cell_audio_thread::reset_counters()
 	m_backend_failed = false;
 }
 
-void cell_audio_thread::operator()()
+cell_audio_thread::cell_audio_thread()
 {
 	if (cfg.raw.provider != audio_provider::cell_audio)
 	{
 		return;
 	}
-
-	thread_ctrl::scoped_priority high_prio(+1);
 
 	// Init audio config
 	cfg.reset();
@@ -615,6 +613,16 @@ void cell_audio_thread::operator()()
 
 	// Initialize loop variables
 	reset_counters();
+}
+
+void cell_audio_thread::operator()()
+{
+	if (cfg.raw.provider != audio_provider::cell_audio)
+	{
+		return;
+	}
+
+	thread_ctrl::scoped_priority high_prio(+1);
 
 	u32 untouched_expected = 0;
 

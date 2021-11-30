@@ -16,7 +16,7 @@ public:
 	CubebBackend(const CubebBackend&) = delete;
 	CubebBackend& operator=(const CubebBackend&) = delete;
 
-	const char* GetName() const override { return "Cubeb"; }
+	std::string_view GetName() const override { return "Cubeb"sv; }
 
 	static const u32 capabilities = 0;
 	u32 GetCapabilities() const override { return capabilities; }
