@@ -251,7 +251,7 @@ static sys_net_error get_last_error(bool is_blocking, int native_error = 0)
 		ERROR_CASE(EHOSTDOWN);
 		ERROR_CASE(EHOSTUNREACH);
 	default:
-		fmt::throw_exception("sys_net get_last_error(is_blocking=%d, native_error=%d): Unknown/illegal socket error", is_blocking, native_error);
+		sys_net.warning("sys_net get_last_error(is_blocking=%d, native_error=%d): Unknown/illegal socket error", is_blocking, native_error);
 	}
 
 	if (name && result != SYS_NET_EWOULDBLOCK && result != SYS_NET_EINPROGRESS)
@@ -3113,12 +3113,6 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protoc
 	if (family != SYS_NET_AF_INET && family != SYS_NET_AF_UNSPEC)
 	{
 		sys_net.error("sys_net_bnet_socket(): unknown family (%d)", family);
-	}
-
-	if (type != SYS_NET_SOCK_STREAM && type != SYS_NET_SOCK_DGRAM && type != SYS_NET_SOCK_DGRAM_P2P && type != SYS_NET_SOCK_STREAM_P2P)
-	{
-		sys_net.error("sys_net_bnet_socket(): unsupported type (%d)", type);
-		return -SYS_NET_EPROTONOSUPPORT;
 	}
 
 	lv2_socket::socket_type native_socket = 0;
