@@ -183,20 +183,8 @@ namespace rsx
 			return {};
 		}
 
-		const double old_aspect = 1. * image_dimensions.width / image_dimensions.height;
-		const double scaling_factor = get_aspect_ratio() / old_aspect;
-		size2u result{ image_dimensions.width, image_dimensions.height };
-
-		if (scaling_factor > 1.0)
-		{
-			result.width = static_cast<int>(image_dimensions.width * scaling_factor);
-		}
-		else if (scaling_factor < 1.0)
-		{
-			result.height = static_cast<int>(image_dimensions.height / scaling_factor);
-		}
-
-		return result;
+		// Unconstrained aspect ratio conversion
+		return size2u{ static_cast<u32>(image_dimensions.height * get_aspect_ratio()), image_dimensions.height };
 	}
 
 	areau avconf::aspect_convert_region(const size2u& image_dimensions, const size2u& output_dimensions) const
