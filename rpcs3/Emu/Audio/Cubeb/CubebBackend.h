@@ -35,8 +35,8 @@ public:
 	bool IsPlaying() override;
 
 private:
-	cubeb *m_ctx = nullptr;
-	cubeb_stream *m_stream = nullptr;
+	cubeb* m_ctx = nullptr;
+	cubeb_stream* m_stream = nullptr;
 #ifdef _WIN32
 	bool m_com_init_success = false;
 #endif

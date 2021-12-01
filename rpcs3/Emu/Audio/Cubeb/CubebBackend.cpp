@@ -97,6 +97,12 @@ void CubebBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChanne
 	{
 		m_stream = nullptr;
 		Cubeb.error("cubeb_stream_init() failed: 0x%08x", err);
+	}
+
+	if (m_stream == nullptr)
+	{
+		Cubeb.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
+		CloseUnlocked();
 		return;
 	}
 
@@ -130,8 +136,6 @@ void CubebBackend::Close()
 
 void CubebBackend::Play()
 {
-	ensure(m_stream != nullptr);
-
 	if (m_playing) return;
 
 	if (int err = cubeb_stream_start(m_stream))
@@ -145,8 +149,6 @@ void CubebBackend::Play()
 
 void CubebBackend::Pause()
 {
-	ensure(m_stream != nullptr);
-
 	if (int err = cubeb_stream_stop(m_stream))
 	{
 		Cubeb.error("cubeb_stream_stop() failed: 0x%08x", err);
@@ -158,8 +160,6 @@ void CubebBackend::Pause()
 
 bool CubebBackend::IsPlaying()
 {
-	ensure(m_stream != nullptr);
-
 	return m_playing;
 }
 
@@ -171,8 +171,6 @@ void CubebBackend::SetWriteCallback(std::function<u32(u32, void *)> cb)
 
 f64 CubebBackend::GetCallbackFrameLen()
 {
-	ensure(m_stream != nullptr);
-
 	cubeb_stream_params stream_param{};
 	stream_param.format = get_convert_to_s16() ? CUBEB_SAMPLE_S16NE : CUBEB_SAMPLE_FLOAT32NE;
 	stream_param.rate = get_sampling_rate();
