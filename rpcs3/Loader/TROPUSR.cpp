@@ -80,7 +80,7 @@ bool TROPUSRLoader::LoadTableHeaders()
 	m_file.seek(0x30);
 	m_tableHeaders.clear();
 
-	if (!m_file.read<true>(m_tableHeaders, m_header.tables_count))
+	if (!m_file.read(m_tableHeaders, m_header.tables_count))
 	{
 		return false;
 	}
@@ -103,7 +103,7 @@ bool TROPUSRLoader::LoadTables()
 		{
 			m_table4.clear();
 
-			if (!m_file.read<true>(m_table4, tableHeader.entries_count))
+			if (!m_file.read(m_table4, tableHeader.entries_count))
 				return false;
 		}
 
@@ -111,7 +111,7 @@ bool TROPUSRLoader::LoadTables()
 		{
 			m_table6.clear();
 
-			if (!m_file.read<true>(m_table6, tableHeader.entries_count))
+			if (!m_file.read(m_table6, tableHeader.entries_count))
 				return false;
 		}
 
