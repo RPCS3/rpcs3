@@ -120,6 +120,16 @@ void FAudioBackend::Close()
 	CloseUnlocked();
 }
 
+bool FAudioBackend::Initialized()
+{
+	return m_instance != nullptr;
+}
+
+bool FAudioBackend::Operational()
+{
+	return m_instance != nullptr && m_source_voice != nullptr && !m_reset_req.observe();
+}
+
 void FAudioBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
 {
 	if (m_instance == nullptr) return;

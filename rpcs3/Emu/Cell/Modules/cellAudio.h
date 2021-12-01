@@ -419,18 +419,7 @@ public:
 
 	void operator()();
 
-	audio_port* open_port()
-	{
-		for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
-		{
-			if (ports[i].state.compare_and_swap_test(audio_port_state::closed, audio_port_state::opened))
-			{
-				return &ports[i];
-			}
-		}
-
-		return nullptr;
-	}
+	audio_port* open_port();
 
 	bool has_capability(u32 cap) const
 	{

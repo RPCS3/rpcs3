@@ -74,9 +74,17 @@ XAudio2Backend::~XAudio2Backend()
 	}
 }
 
+bool XAudio2Backend::Initialized()
+{
+	return m_xaudio2_instance != nullptr;
+}
+
 bool XAudio2Backend::Operational()
 {
-	if (m_dev_listener.output_device_changed()) m_reset_req = true;
+	if (m_dev_listener.output_device_changed())
+	{
+		m_reset_req = true;
+	}
 
 	return m_xaudio2_instance != nullptr && m_source_voice != nullptr && !m_reset_req.observe();
 }

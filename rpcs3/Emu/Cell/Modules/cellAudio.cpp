@@ -648,7 +648,8 @@ void cell_audio_thread::operator()()
 			m_backend_failed = true;
 			continue;
 		}
-		else if (m_backend_failed)
+
+		if (m_backend_failed)
 		{
 			cellAudio.warning("Backend recovered");
 			m_backend_failed = false;
@@ -902,6 +903,19 @@ void cell_audio_thread::operator()()
 
 	// Destroy ringbuffer
 	ringbuffer.reset();
+}
+
+audio_port* cell_audio_thread::open_port()
+{
+	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
+	{
+		if (ports[i].state.compare_and_swap_test(audio_port_state::closed, audio_port_state::opened))
+		{
+			return &ports[i];
+		}
+	}
+
+	return nullptr;
 }
 
 template <audio_downmix downmix>
