@@ -49,6 +49,16 @@ CubebBackend::~CubebBackend()
 #endif
 }
 
+bool CubebBackend::Initialized()
+{
+	return m_ctx != nullptr;
+}
+
+bool CubebBackend::Operational()
+{
+	return m_ctx != nullptr && m_stream != nullptr && !m_reset_req.observe();
+}
+
 void CubebBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
 {
 	if (m_ctx == nullptr) return;
