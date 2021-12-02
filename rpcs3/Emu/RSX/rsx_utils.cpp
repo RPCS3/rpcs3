@@ -135,6 +135,20 @@ namespace rsx
 		return result;
 	}
 
+	avconf::avconf() noexcept
+	{
+		switch (g_cfg.video.aspect_ratio)
+		{
+		default:
+		case video_aspect::_16_9:
+			aspect = CELL_VIDEO_OUT_ASPECT_16_9;
+			break;
+		case video_aspect::_4_3:
+			aspect = CELL_VIDEO_OUT_ASPECT_4_3;
+			break;
+		}
+	}
+
 	u32 avconf::get_compatible_gcm_format() const
 	{
 		switch (format)
