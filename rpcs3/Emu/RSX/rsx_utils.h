@@ -161,7 +161,7 @@ namespace rsx
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
-		avconf();
+		avconf() noexcept;
 		~avconf() = default;
 
 		u32 get_compatible_gcm_format() const;
