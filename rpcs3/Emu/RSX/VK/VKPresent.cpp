@@ -448,6 +448,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	u32 av_format;
 	const auto& avconfig = g_fxo->get<rsx::avconf>();
 
+	if (!buffer_width)
+	{
+		buffer_width = avconfig.resolution_x;
+		buffer_height = avconfig.resolution_y;
+	}
+
 	if (avconfig.state)
 	{
 		av_format = avconfig.get_compatible_gcm_format();
@@ -457,11 +463,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		const u32 video_frame_height = (!avconfig._3d? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
 		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
-	}
-	else if (!buffer_width)
-	{
-		buffer_width = avconfig.resolution_x;
-		buffer_height = avconfig.resolution_y;
 	}
 	else
 	{
