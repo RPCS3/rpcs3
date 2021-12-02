@@ -2,6 +2,8 @@
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <iostream>
+#include <chrono>
+#include <sstream>
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -362,6 +364,14 @@ void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QStrin
 	}
 }
 
+template <>
+void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::duration>>::format(std::string& out, u64 arg)
+{
+	std::ostringstream ss;
+	ss << get_object(arg);
+	out += ss.str();
+}
+
 
 
 int main(int argc, char** argv)
@@ -474,7 +484,10 @@ int main(int argc, char** argv)
 		logs::stored_message qt{(strcmp(QT_VERSION_STR, qVersion()) != 0) ? sys_log.error : sys_log.notice};
 		qt.text  = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
 
-		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt)});
+		logs::stored_message time{sys_log.always()};
+		time.text  = fmt::format("Current Time: %s", std::chrono::system_clock::now());
+
+		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt), std::move(time)});
 	}
 
 #ifdef _WIN32
