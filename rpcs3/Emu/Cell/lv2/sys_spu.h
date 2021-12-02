@@ -117,7 +117,6 @@ struct sys_spu_segment
 	be_t<s32> type; // copy, fill, info
 	be_t<u32> ls; // local storage address
 	be_t<u32> size;
-	char _pad[4];
 
 	union
 	{
