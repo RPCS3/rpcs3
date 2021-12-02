@@ -497,7 +497,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 			return CELL_EINVAL;
 		}
 
-		for (auto it = &seg; it != spu_segs.data(); it--)
+		for (auto it = spu_segs.data(); it != &seg; it++)
 		{
 			if (it->type != SYS_SPU_SEGMENT_TYPE_INFO)
 			{
