@@ -135,7 +135,7 @@ namespace rsx
 		return result;
 	}
 
-	avconf::avconf()
+	avconf::avconf() noexcept
 	{
 		switch (g_cfg.video.aspect_ratio)
 		{
