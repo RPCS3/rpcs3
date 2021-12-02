@@ -197,13 +197,19 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 	conf.resolution_y = res.height;
 	conf.state = 1;
 
-	if (conf.aspect == CELL_VIDEO_OUT_ASPECT_AUTO)
+	// TODO: What happens if the aspect is unknown? Let's treat it as auto for now.
+	if (conf.aspect != CELL_VIDEO_OUT_ASPECT_4_3 && conf.aspect != CELL_VIDEO_OUT_ASPECT_16_9)
 	{
-		// Resolve 'auto' option to actual aspect ratio
+		if (conf.aspect != CELL_VIDEO_OUT_ASPECT_AUTO)
+		{
+			cellSysutil.error("Selected unknown aspect 0x%x. Falling back to aspect %s.", conf.aspect, g_cfg.video.aspect_ratio.get());
+		}
+
+		// Resolve 'auto' or unknown options to actual aspect ratio
 		conf.aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 	}
 
-	cellSysutil.notice("Selected video configuration: resolutionId=0x%x, aspect=0x%x, format=0x%x", config->resolutionId, config->aspect, config->format);
+	cellSysutil.notice("Selected video configuration: resolutionId=0x%x, aspect=0x%x=>0x%x, format=0x%x", config->resolutionId, config->aspect, conf.aspect, config->format);
 
 	return CELL_OK;
 }
