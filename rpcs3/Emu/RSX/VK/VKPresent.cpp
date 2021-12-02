@@ -458,6 +458,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
 	}
+	else if (!buffer_width)
+	{
+		buffer_width = avconfig.resolution_x;
+		buffer_height = avconfig.resolution_y;
+	}
 	else
 	{
 		av_format = CELL_GCM_TEXTURE_A8R8G8B8;
