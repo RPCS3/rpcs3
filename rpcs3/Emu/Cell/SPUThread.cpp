@@ -3942,40 +3942,46 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		spu_function_logger logger(*this, "MFC Events read");
 
-		if (mask1 & SPU_EVENT_LR && raddr)
+		state += cpu_flag::wait;
+
+		using resrv_ptr = std::add_pointer_t<decltype(rdata)>;
+	
+		resrv_ptr resrv_mem{};
+		std::shared_ptr<utils::shm> rdata_shm;
+
+		if (raddr && mask1 & SPU_EVENT_LR)
 		{
-			if (mask1 != SPU_EVENT_LR && mask1 != SPU_EVENT_LR + SPU_EVENT_TM)
+			auto area = vm::get(vm::any, raddr);
+
+			if (area && (area->flags & vm::preallocated) && vm::check_addr(raddr))
 			{
-				// Combining LR with other flags needs another solution
-				fmt::throw_exception("Not supported: event mask 0x%x", mask1);
+				// Obtain pointer to pre-allocated storage
+				resrv_mem = vm::get_super_ptr<decltype(rdata)>(raddr);
+			}
+			else if (area)
+			{
+				// Ensure possesion over reservation memory so it won't be deallocated
+				auto [base_addr, shm_] = area->peek(raddr);
+
+				if (shm_)
+				{
+					const u32 data_offs = raddr - base_addr;
+					rdata_shm = std::move(shm_);
+					vm::writer_lock{}, resrv_mem = reinterpret_cast<resrv_ptr>(rdata_shm->map_self() + data_offs);
+				}
 			}
 
-			for (; !events.count; events = get_events(mask1, false, true))
+			if (!resrv_mem)
 			{
-				const auto old = state.add_fetch(cpu_flag::wait);
-
-				if (is_stopped(old))
-				{
-					return -1;
-				}
-
-				if (is_paused(old))
-				{
-					// Ensure reservation data won't change while paused for debugging purposes
-					check_state();
-					continue;
-				}
-
-				vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{100'000});
+				spu_log.error("A dangling reservation address has been found while reading SPU_RdEventStat channel. (addr=0x%x, events_mask=0x%x)", raddr, mask1);
+				raddr = 0;
+				set_events(SPU_EVENT_LR);
 			}
-
-			check_state();
-			return events.events & mask1;
 		}
 
-		for (; !events.count; events = get_events(mask1, true, true))
+		for (; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true))
 		{
-			const auto old = state.add_fetch(cpu_flag::wait);
+			const auto old = +state;
 
 			if (is_stopped(old))
 			{
@@ -3984,7 +3990,28 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			if (is_paused(old))
 			{
+				// Ensure spu_thread::rdata's stagnancy while the thread is paused for debugging purposes
 				check_state();
+				state += cpu_flag::wait;
+				continue;
+			}
+
+			// Optimized check
+			if (raddr && (!vm::check_addr(raddr) || rtime != vm::reservation_acquire(raddr) || !cmp_rdata(rdata, *resrv_mem)))
+			{
+				raddr = 0;
+				set_events(SPU_EVENT_LR);
+				continue;
+			}
+
+			if (raddr)
+			{
+				thread_ctrl::wait_on_custom<2>([&](atomic_wait::list<4>& list)
+				{
+					list.set<0>(state, old);
+					list.set<1>(vm::reservation_notifier(raddr), rtime, -128);
+				}, 100);
+
 				continue;
 			}
 
