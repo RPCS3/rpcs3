@@ -7,8 +7,6 @@
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/RSX/Common/BufferUtils.h"
 
-#include <thread>
-
 namespace rsx
 {
 	rsx_state method_registers;
@@ -438,11 +436,11 @@ namespace rsx
 				if (rsx->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
 				{
 					// Minor optimization: don't compare values if we already know we need invalidation
-					stream_data_to_memory_swapped_u32<true>(values, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
+					copy_data_swap_u32(values, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount);
 				}
 				else
 				{
-					if (stream_data_to_memory_swapped_and_compare_u32<true>(values, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount * 4))
+					if (copy_data_swap_u32_cmp(values, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount))
 					{
 						// Transform constants invalidation is expensive (~8k bytes per update)
 						rsx->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
@@ -473,8 +471,7 @@ namespace rsx
 					rcount -= max - (max_vertex_program_instructions * 4);
 				}
 
-				stream_data_to_memory_swapped_u32<true>(&rsx::method_registers.transform_program[load_pos * 4 + index % 4]
-					, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
+				copy_data_swap_u32(&rsx::method_registers.transform_program[load_pos * 4 + index % 4], vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount);
 
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
 				rsx::method_registers.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));

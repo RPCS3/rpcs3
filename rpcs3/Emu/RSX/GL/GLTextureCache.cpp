@@ -38,7 +38,7 @@ namespace gl
 				ensure(real_pitch == (width * 4));
 				if (rsx_pitch == real_pitch) [[likely]]
 				{
-					stream_data_to_memory_swapped_u32<true>(dst, dst, valid_length / 4, 4);
+					copy_data_swap_u32(dst, dst, valid_length / 4);
 				}
 				else
 				{
@@ -46,7 +46,7 @@ namespace gl
 					u8* data = static_cast<u8*>(dst);
 					for (u32 row = 0; row < num_rows; ++row)
 					{
-						stream_data_to_memory_swapped_u32<true>(data, data, width, 4);
+						copy_data_swap_u32(data, data, width);
 						data += rsx_pitch;
 					}
 				}
