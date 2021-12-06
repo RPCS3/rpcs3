@@ -180,7 +180,7 @@ std::string CgBinaryDisasm::GetTexDisasm()
 
 std::string CgBinaryDisasm::FormatDisasm(const std::string& code)
 {
-	const std::pair<std::string, std::function<std::string()>> repl_list[] =
+	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
 	{
 		{ "$$",  []() -> std::string { return "$"; } },
 		{ "$0",  [this]{ return GetSRCDisasm(0); } },

@@ -565,7 +565,7 @@ namespace vk
 				}
 			}
 
-			const std::pair<std::string, std::string> syntax_replace[] =
+			const std::pair<std::string_view, std::string> syntax_replace[] =
 			{
 				{ "%ws", std::to_string(optimal_group_size) },
 				{ "%_wordcount", std::to_string(sizeof(_BlockType) / 4) },

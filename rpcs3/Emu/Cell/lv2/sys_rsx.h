@@ -115,10 +115,10 @@ struct RsxReports
 
 struct RsxDisplayInfo
 {
-	be_t<u32> offset;
-	be_t<u32> pitch;
-	be_t<u32> width;
-	be_t<u32> height;
+	be_t<u32> offset{0};
+	be_t<u32> pitch{0};
+	be_t<u32> width{0};
+	be_t<u32> height{0};
 
 	bool valid() const
 	{

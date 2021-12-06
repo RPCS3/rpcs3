@@ -65,8 +65,6 @@
 #include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
 
-const bool s_use_ssse3 = utils::has_ssse3();
-
 extern atomic_t<u64> g_watchdog_hold_ctr;
 
 // Should be of the same type
@@ -551,7 +549,7 @@ struct ppu_far_jumps_t
 				auto& opd = vm::_ref<ppu_func_opd_t>(target);
 				target = opd.addr;
 
-				// We modify LR to custom values here 
+				// We modify LR to custom values here
 				link = false;
 
 				if (ppu)
@@ -566,7 +564,7 @@ struct ppu_far_jumps_t
 					saved_info.saved_lr = std::exchange(ppu->lr, FIND_FUNC(ppu_return_from_far_jump));
 					saved_info.saved_r2 = std::exchange(ppu->gpr[2], opd.rtoc);
 				}
-				
+
 			}
 
 			if (link && ppu)
@@ -1640,21 +1638,6 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 }
 
 extern ppu_function_t ppu_get_syscall(u64 code);
-
-extern __m128 sse_exp2_ps(__m128 A);
-extern __m128 sse_log2_ps(__m128 A);
-extern __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C);
-extern __m128i sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C);
-extern __m128i sse_altivec_lvsl(u64 addr);
-extern __m128i sse_altivec_lvsr(u64 addr);
-extern __m128i sse_cellbe_lvlx(u64 addr);
-extern __m128i sse_cellbe_lvrx(u64 addr);
-extern void sse_cellbe_stvlx(u64 addr, __m128i a);
-extern void sse_cellbe_stvrx(u64 addr, __m128i a);
-extern __m128i sse_cellbe_lvlx_v0(u64 addr);
-extern __m128i sse_cellbe_lvrx_v0(u64 addr);
-extern void sse_cellbe_stvlx_v0(u64 addr, __m128i a);
-extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a);
 
 void ppu_trap(ppu_thread& ppu, u64 addr)
 {
@@ -2999,14 +2982,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			{ "__ldarx", reinterpret_cast<u64>(ppu_ldarx) },
 			{ "__stwcx", reinterpret_cast<u64>(ppu_stwcx) },
 			{ "__stdcx", reinterpret_cast<u64>(ppu_stdcx) },
-			{ "__vexptefp", reinterpret_cast<u64>(sse_exp2_ps) },
-			{ "__vlogefp", reinterpret_cast<u64>(sse_log2_ps) },
-			{ "__lvsl", reinterpret_cast<u64>(sse_altivec_lvsl) },
-			{ "__lvsr", reinterpret_cast<u64>(sse_altivec_lvsr) },
-			{ "__lvlx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_lvlx) : reinterpret_cast<u64>(sse_cellbe_lvlx_v0) },
-			{ "__lvrx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_lvrx) : reinterpret_cast<u64>(sse_cellbe_lvrx_v0) },
-			{ "__stvlx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_stvlx) : reinterpret_cast<u64>(sse_cellbe_stvlx_v0) },
-			{ "__stvrx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_stvrx) : reinterpret_cast<u64>(sse_cellbe_stvrx_v0) },
 			{ "__dcbz", reinterpret_cast<u64>(+[](u32 addr){ alignas(64) static constexpr u8 z[128]{}; do_cell_atomic_128_store(addr, z); }) },
 			{ "__resupdate", reinterpret_cast<u64>(vm::reservation_update) },
 			{ "__resinterp", reinterpret_cast<u64>(ppu_reservation_fallback) },
@@ -3099,6 +3074,44 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	bool compiled_new = false;
 
+	bool has_mfvscr = false;
+
+	for (auto& func : info.funcs)
+	{
+		if (func.size == 0)
+		{
+			continue;
+		}
+
+		for (const auto& [addr, size] : func.blocks)
+		{
+			if (size == 0)
+			{
+				continue;
+			}
+
+			for (u32 i = addr; i < addr + size; i += 4)
+			{
+				if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::MFVSCR)
+				{
+					ppu_log.warning("MFVSCR found");
+					has_mfvscr = true;
+					break;
+				}
+			}
+
+			if (has_mfvscr)
+			{
+				break;
+			}
+		}
+
+		if (has_mfvscr)
+		{
+			break;
+		}
+	}
+
 	while (!jit_mod.init && fpos < info.funcs.size())
 	{
 		// Initialize compiler instance
@@ -3139,6 +3152,12 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			// Fixup some information
 			entry.name = fmt::format("__0x%x", entry.addr - reloc);
+
+			if (has_mfvscr)
+			{
+				// TODO
+				entry.attr += ppu_attr::has_mfvscr;
+			}
 
 			if (entry.blocks.empty())
 			{
@@ -3257,6 +3276,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				accurate_cache_line_stores,
 				reservations_128_byte,
 				greedy_mode,
+				has_mfvscr,
 
 				__bitset_enum_max
 			};
@@ -3278,9 +3298,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				settings += ppu_settings::reservations_128_byte;
 			if (g_cfg.core.ppu_llvm_greedy_mode)
 				settings += ppu_settings::greedy_mode;
+			if (has_mfvscr)
+				settings += ppu_settings::has_mfvscr;
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v4-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v5-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (Emu.IsStopped())

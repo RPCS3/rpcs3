@@ -226,7 +226,7 @@ namespace rpcs3::utils
 
 		// Read null-terminated string
 		dec_file.seek(0x10);
-		dec_file.read<true>(edat_content_id, 0x30);
+		dec_file.read(edat_content_id, 0x30);
 		edat_content_id.resize(std::min<usz>(0x30, edat_content_id.find_first_of('\0')));
 		if (edat_content_id != content_id)
 		{

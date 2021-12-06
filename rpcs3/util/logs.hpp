@@ -164,7 +164,7 @@ namespace logs
 	level get_level(const std::string&);
 
 	// Log level control: set specific channels to level::fatal
-	void set_channel_levels(const std::map<std::string, logs::level>& map);
+	void set_channel_levels(const std::map<std::string, logs::level, std::less<>>& map);
 
 	// Get all registered log channels
 	std::vector<std::string> get_channels();

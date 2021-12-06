@@ -447,6 +447,75 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	default: return CELL_EINVAL;
 	}
 
+	std::vector<sys_spu_segment> spu_segs(image.segs.get_ptr(), image.segs.get_ptr() + image.nsegs);
+
+	bool found_info_segment = false;
+	bool found_copy_segment = false;
+
+	for (const auto& seg : spu_segs)
+	{
+		if (image.type == SYS_SPU_IMAGE_TYPE_KERNEL)
+		{
+			// Assume valid, values are coming from LV2
+			found_copy_segment = true;
+			break;
+		}
+
+		switch (seg.type)
+		{
+		case SYS_SPU_SEGMENT_TYPE_COPY:
+		{
+			if (seg.addr % 4)
+			{
+				// 4-bytes unaligned address is not valid
+				return CELL_EINVAL;
+			}
+
+			found_copy_segment = true;
+			break;
+		}
+		case SYS_SPU_SEGMENT_TYPE_FILL:
+		{
+			break;
+		}
+		case SYS_SPU_SEGMENT_TYPE_INFO:
+		{
+			// There can only be one INFO segment at max
+			if (seg.size > 256u || found_info_segment)
+			{
+				return CELL_EINVAL;
+			}
+
+			found_info_segment = true;
+			continue;
+		}
+		default: return CELL_EINVAL;
+		}
+
+		if (!seg.size || (seg.ls | seg.size) % 0x10 || seg.ls >= SPU_LS_SIZE || seg.size > SPU_LS_SIZE)
+		{
+			return CELL_EINVAL;
+		}
+
+		for (auto it = spu_segs.data(); it != &seg; it++)
+		{
+			if (it->type != SYS_SPU_SEGMENT_TYPE_INFO)
+			{
+				if (seg.ls + seg.size > it->ls && it->ls + it->size > seg.ls)
+				{
+					// Overlapping segments are not allowed
+					return CELL_EINVAL;
+				}
+			}
+		}
+	}
+
+	// There must be at least one COPY segment
+	if (!found_copy_segment)
+	{
+		return CELL_EINVAL;
+	}
+
 	// Read thread name
 	const std::string thread_name(attr->name.get_ptr(), std::max<u32>(attr->name_len, 1) - 1);
 
@@ -500,7 +569,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	group->args[inited] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
 	group->imgs[inited].first = image.entry_point;
-	group->imgs[inited].second.assign(image.segs.get_ptr(), image.segs.get_ptr() + image.nsegs);
+	group->imgs[inited].second = std::move(spu_segs);
 
 	if (++group->init == group->max_num)
 	{

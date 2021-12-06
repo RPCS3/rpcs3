@@ -139,7 +139,7 @@ std::string CgBinaryDisasm::GetCondDisAsm() const
 
 std::string CgBinaryDisasm::FormatDisAsm(const std::string& code)
 {
-	const std::pair<std::string, std::function<std::string()>> repl_list[] =
+	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
 	{
 		{ "$$",    []() -> std::string { return "$"; } },
 		{ "$0",    [this]{ return GetSrcDisAsm<SRC0>(src0); } },

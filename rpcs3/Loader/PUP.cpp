@@ -46,7 +46,7 @@ pup_object::pup_object(fs::file&& file) : m_file(std::move(file))
 		return;
 	}
 
-	if (!m_file.read<true>(m_file_tbl, m_header.file_count) || !m_file.read<true>(m_hash_tbl, m_header.file_count))
+	if (!m_file.read(m_file_tbl, m_header.file_count) || !m_file.read(m_hash_tbl, m_header.file_count))
 	{
 		m_error = pup_error::header_file_count;
 		return;

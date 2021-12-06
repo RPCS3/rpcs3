@@ -189,12 +189,12 @@ namespace psf
 
 		// Get indices
 		std::vector<def_table_t> indices;
-		PSF_CHECK(stream.read<true>(indices, header.entries_num), corrupt);
+		PSF_CHECK(stream.read(indices, header.entries_num), corrupt);
 
 		// Get keys
 		std::string keys;
 		PSF_CHECK(stream.seek(header.off_key_table) == header.off_key_table, corrupt);
-		PSF_CHECK(stream.read<true>(keys, header.off_data_table - header.off_key_table), corrupt);
+		PSF_CHECK(stream.read(keys, header.off_data_table - header.off_key_table), corrupt);
 
 		// Load entries
 		for (u32 i = 0; i < header.entries_num; ++i)
@@ -227,7 +227,7 @@ namespace psf
 			{
 				// String/array data
 				std::string value;
-				PSF_CHECK(stream.read<true>(value, indices[i].param_len), corrupt);
+				PSF_CHECK(stream.read(value, indices[i].param_len), corrupt);
 
 				if (indices[i].param_fmt == format::string)
 				{

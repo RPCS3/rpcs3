@@ -10,6 +10,7 @@
 #include "Emu/system_progress.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
+#include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/RSX/rsx_utils.h"
 
 #include <QApplication>
@@ -618,16 +619,30 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			text[num_text].key         = const_cast<char*>("Comment");
 			text[num_text].text        = const_cast<char*>(game_comment.c_str());
 
-			std::vector<u8*> rows(sshot_height);
-			for (usz y = 0; y < sshot_height; y++)
-				rows[y] = sshot_data_alpha.data() + y * sshot_width * 4;
+			// Create image from data
+			QImage img(sshot_data_alpha.data(), sshot_width, sshot_height, sshot_width * 4, QImage::Format_RGBA8888);
+
+			// Scale image if necessary
+			const auto& avconf = g_fxo->get<rsx::avconf>();
+			auto new_size = avconf.aspect_convert_dimensions(size2u{ u32(img.width()), u32(img.height()) });
+
+			if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
+			{
+				img = img.scaled(QSize(new_size.width, new_size.height), Qt::AspectRatioMode::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
+				img.convertTo(QImage::Format_RGBA8888); // The current Qt version changes the image format during smooth scaling, so we have to change it back.
+			}
+
+			// Create row pointers for libpng
+			std::vector<u8*> rows(img.height());
+			for (int y = 0; y < img.height(); y++)
+				rows[y] = img.scanLine(y);
 
 			std::vector<u8> encoded_png;
 
 			const auto write_png = [&]()
 			{
 				const scoped_png_ptrs ptrs;
-				png_set_IHDR(ptrs.write_ptr, ptrs.info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+				png_set_IHDR(ptrs.write_ptr, ptrs.info_ptr, img.width(), img.height(), 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 				png_set_text(ptrs.write_ptr, ptrs.info_ptr, text, 6);
 				png_set_rows(ptrs.write_ptr, ptrs.info_ptr, &rows[0]);
 				png_set_write_fn(ptrs.write_ptr, &encoded_png, [](png_structp png_ptr, png_bytep data, png_size_t length)
@@ -660,10 +675,11 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 
 					// Games choose the overlay file and the offset based on the current video resolution.
 					// We need to scale the overlay if our resolution scaling causes the image to have a different size.
-					auto& avconf = g_fxo->get<rsx::avconf>();
 
-					// TODO: handle wacky PS3 resolutions (without resolution scaling)
-					if (avconf.resolution_x != sshot_width || avconf.resolution_y != sshot_height)
+					// Scale the resolution first (as seen before with the image)
+					new_size = avconf.aspect_convert_dimensions(size2u{ avconf.resolution_x, avconf.resolution_y });
+
+					if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
 					{
 						const int scale = rsx::get_resolution_scale_percent();
 						const int x = (scale * manager.overlay_offset_x) / 100;
@@ -679,16 +695,16 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 						overlay_img = overlay_img.scaled(QSize(width, height), Qt::AspectRatioMode::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
 					}
 
-					if (manager.overlay_offset_x < static_cast<s64>(sshot_width) &&
-					    manager.overlay_offset_y < static_cast<s64>(sshot_height) &&
+					if (manager.overlay_offset_x < static_cast<s64>(img.width()) &&
+					    manager.overlay_offset_y < static_cast<s64>(img.height()) &&
 					    manager.overlay_offset_x + overlay_img.width() > 0 &&
 					    manager.overlay_offset_y + overlay_img.height() > 0)
 					{
-						QImage screenshot_img(rows[0], sshot_width, sshot_height, QImage::Format_RGBA8888);
+						QImage screenshot_img(rows[0], img.width(), img.height(), QImage::Format_RGBA8888);
 						QPainter painter(&screenshot_img);
 						painter.drawImage(manager.overlay_offset_x, manager.overlay_offset_y, overlay_img);
 
-						std::memcpy(rows[0], screenshot_img.constBits(), static_cast<usz>(sshot_height) * screenshot_img.bytesPerLine());
+						std::memcpy(rows[0], screenshot_img.constBits(), screenshot_img.sizeInBytes());
 
 						screenshot_log.success("Applied screenshot overlay '%s'", cell_sshot_overlay_path);
 					}

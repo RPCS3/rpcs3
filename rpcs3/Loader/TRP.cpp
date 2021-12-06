@@ -40,7 +40,7 @@ bool TRPLoader::Install(const std::string& dest, bool /*show*/)
 	{
 		trp_f.seek(entry.offset);
 
-		if (!trp_f.read<true>(buffer, entry.size))
+		if (!trp_f.read(buffer, entry.size))
 		{
 			trp_log.error("Failed to read TRPEntry at: offset=0x%x, size=0x%x", entry.offset, entry.size);
 			continue; // ???
@@ -106,7 +106,7 @@ bool TRPLoader::LoadHeader(bool show)
 		std::vector<u8> file_contents;
 
 		trp_f.seek(0);
-		if (!trp_f.read<true>(file_contents, m_header.trp_file_size))
+		if (!trp_f.read(file_contents, m_header.trp_file_size))
 		{
 			trp_log.notice("Failed verifying checksum");
 		}
@@ -127,7 +127,7 @@ bool TRPLoader::LoadHeader(bool show)
 
 	m_entries.clear();
 
-	if (!trp_f.read<true>(m_entries, m_header.trp_files_count))
+	if (!trp_f.read(m_entries, m_header.trp_files_count))
 	{
 		return false;
 	}

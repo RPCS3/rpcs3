@@ -201,12 +201,17 @@ error_code cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 {
 	cellAvconfExt.warning("cellVideoOutGetGamma(videoOut=%d, gamma=*0x%x)", videoOut, gamma);
 
+	if (!gamma)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
-	auto& conf = g_fxo->get<rsx::avconf>();
+	const auto& conf = g_fxo->get<rsx::avconf>();
 
 	*gamma = conf.gamma;
 
@@ -300,6 +305,11 @@ error_code cellAudioInUnregisterDevice(u32 deviceNumber)
 error_code cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 {
 	cellAvconfExt.warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize=*0x%x)", videoOut, screenSize);
+
+	if (!screenSize)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{

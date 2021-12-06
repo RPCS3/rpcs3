@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <type_traits>
 
 template<typename T>
 struct size2_base
@@ -670,17 +671,22 @@ struct area_base
 	{
 		return{ x1 / size.width, y1 / size.height, x2 / size.width, y2 / size.height };
 	}
-	constexpr area_base operator / (const T& value) const
+
+	template <typename U> requires (std::is_arithmetic_v<U>)
+	constexpr area_base operator / (const U& value) const
 	{
-		return{ x1 / value, y1 / value, x2 / value, y2 / value };
+		return area_base{static_cast<T>(x1 / value), static_cast<T>(y1 / value), static_cast<T>(x2 / value), static_cast<T>(y2 / value)};
 	}
+
 	constexpr area_base operator * (const size2_base<T>& size) const
 	{
 		return{ x1 * size.width, y1 * size.height, x2 * size.width, y2 * size.height };
 	}
-	constexpr area_base operator * (const f32& value) const
+
+	template <typename U> requires (std::is_arithmetic_v<U>)
+	constexpr area_base operator * (const U& value) const
 	{
-		return{ static_cast<T>(x1 * value), static_cast<T>(y1 * value), static_cast<T>(x2 * value), static_cast<T>(y2 * value) };
+		return area_base{static_cast<T>(x1 * value), static_cast<T>(y1 * value), static_cast<T>(x2 * value), static_cast<T>(y2 * value)};
 	}
 
 	template<typename NT>

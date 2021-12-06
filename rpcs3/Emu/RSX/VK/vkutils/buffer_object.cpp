@@ -42,11 +42,11 @@ namespace vk
 	buffer::buffer(const vk::render_device& dev, u64 size, const memory_type_info& memory_type, u32 access_flags, VkBufferUsageFlags usage, VkBufferCreateFlags flags, vmm_allocation_pool allocation_pool)
 		: m_device(dev)
 	{
-		info.size = size;
 		info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		info.flags = flags;
+		info.size = size;
 		info.usage = usage;
+		info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		CHECK_RESULT(vkCreateBuffer(m_device, &info, nullptr, &value));
 
@@ -67,11 +67,11 @@ namespace vk
 	buffer::buffer(const vk::render_device& dev, VkBufferUsageFlags usage, void* host_pointer, u64 size)
 		: m_device(dev)
 	{
-		info.size = size;
 		info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		info.flags = 0;
+		info.size = size;
 		info.usage = usage;
+		info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		VkExternalMemoryBufferCreateInfoKHR ex_info;
 		ex_info.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_BUFFER_CREATE_INFO_KHR;

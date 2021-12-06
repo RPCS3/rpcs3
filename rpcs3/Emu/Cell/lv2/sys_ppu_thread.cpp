@@ -253,7 +253,7 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 
 		// Remove ID on EAGAIN
 		return result != CELL_EAGAIN;
-	}).ptr;
+	});
 
 	if (result)
 	{
