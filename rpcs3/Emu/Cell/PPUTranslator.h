@@ -90,7 +90,7 @@ public:
 	value_t<T> get_vr(u32 vr)
 	{
 		value_t<T> result;
-		result.value = m_ir->CreateBitCast(GetVr(vr, VrType::vi32), value_t<T>::get_type(m_context));
+		result.value = bitcast(GetVr(vr, VrType::vi32), value_t<T>::get_type(m_context));
 		return result;
 	}
 
@@ -125,7 +125,7 @@ public:
 		if (m_attr & ppu_attr::has_mfvscr)
 		{
 			const auto val = expr.eval(m_ir);
-			RegStore(m_ir->CreateOr(m_ir->CreateBitCast(RegLoad(m_sat), val->getType()), val), m_sat);
+			RegStore(m_ir->CreateOr(bitcast(RegLoad(m_sat), val->getType()), val), m_sat);
 		}
 	}
 
