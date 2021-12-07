@@ -206,13 +206,18 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 			return {};
 		}
 
+		std::string result;
+		llvm::raw_string_ostream out(result);
+		c->print(out, true);
+		out.flush();
+
 		if (llvm::isa<llvm::ConstantExpr>(c))
 		{
 			// Sorry, if we cannot evaluate it we cannot use it
-			fmt::throw_exception("[0x%x, %u] Constant Expression!", _pos, _line);
+			fmt::throw_exception("[0x%x, %u] Constant Expression!\n%s", _pos, _line, result);
 		}
 
-		fmt::throw_exception("[0x%x, %u] Unexpected constant type", _pos, _line);
+		fmt::throw_exception("[0x%x, %u] Unexpected constant type!\n%s", _pos, _line, result);
 	}
 
 	const auto sct = t->getScalarType();
