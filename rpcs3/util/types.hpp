@@ -131,6 +131,12 @@ namespace stx
 {
 	template <typename T, bool Se, usz Align>
 	class se_t;
+
+	template <typename T>
+	struct lazy;
+
+	template <typename T>
+	struct generator;
 }
 
 using stx::se_t;
