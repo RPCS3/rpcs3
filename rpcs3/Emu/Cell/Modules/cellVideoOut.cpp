@@ -119,7 +119,7 @@ error_code cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideo
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
 	{
-		auto& conf = g_fxo->get<rsx::avconf>();
+		const auto& conf = g_fxo->get<rsx::avconf>();
 		state->state = CELL_VIDEO_OUT_OUTPUT_STATE_ENABLED;
 		state->colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
 		state->displayMode.resolutionId = conf.state ? conf.resolution_id : g_video_out_resolution_id.at(g_cfg.video.resolution);
@@ -197,13 +197,19 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 	conf.resolution_y = res.height;
 	conf.state = 1;
 
-	if (conf.aspect == CELL_VIDEO_OUT_ASPECT_AUTO)
+	// TODO: What happens if the aspect is unknown? Let's treat it as auto for now.
+	if (conf.aspect != CELL_VIDEO_OUT_ASPECT_4_3 && conf.aspect != CELL_VIDEO_OUT_ASPECT_16_9)
 	{
-		// Resolve 'auto' option to actual aspect ratio
+		if (conf.aspect != CELL_VIDEO_OUT_ASPECT_AUTO)
+		{
+			cellSysutil.error("Selected unknown aspect 0x%x. Falling back to aspect %s.", conf.aspect, g_cfg.video.aspect_ratio.get());
+		}
+
+		// Resolve 'auto' or unknown options to actual aspect ratio
 		conf.aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 	}
 
-	cellSysutil.notice("Selected video resolution 0x%x", config->resolutionId);
+	cellSysutil.notice("Selected video configuration: resolutionId=0x%x, aspect=0x%x=>0x%x, format=0x%x", config->resolutionId, config->aspect, conf.aspect, config->format);
 
 	return CELL_OK;
 }
@@ -224,7 +230,7 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
 	{
-		if (auto& conf = g_fxo->get<rsx::avconf>(); conf.state)
+		if (const auto& conf = g_fxo->get<rsx::avconf>(); conf.state)
 		{
 			config->resolutionId = conf.resolution_id;
 			config->format = conf.format;

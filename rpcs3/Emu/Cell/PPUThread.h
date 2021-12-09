@@ -223,27 +223,6 @@ public:
 	xer;
 
 	/*
-		Saturation. A sticky status bit indicating that some field in a saturating instruction saturated since the last
-		time SAT was cleared. In other words when SAT = '1' it remains set to '1' until it is cleared to '0' by an
-		mtvscr instruction.
-		1	The vector saturate instruction implicitly sets when saturation has occurred on the results one of
-			the vector instructions having saturate in its name:
-			Move To VSCR (mtvscr)
-			Vector Add Integer with Saturation (vaddubs, vadduhs, vadduws, vaddsbs, vaddshs,
-			vaddsws)
-			Vector Subtract Integer with Saturation (vsububs, vsubuhs, vsubuws, vsubsbs, vsubshs,
-			vsubsws)
-			Vector Multiply-Add Integer with Saturation (vmhaddshs, vmhraddshs)
-			Vector Multiply-Sum with Saturation (vmsumuhs, vmsumshs, vsumsws)
-			Vector Sum-Across with Saturation (vsumsws, vsum2sws, vsum4sbs, vsum4shs,
-			vsum4ubs)
-			Vector Pack with Saturation (vpkuhus, vpkuwus, vpkshus, vpkswus, vpkshss, vpkswss)
-			Vector Convert to Fixed-Point with Saturation (vctuxs, vctsxs)
-		0	Indicates no saturation occurred; mtvscr can explicitly clear this bit.
-	*/
-	bool sat{};
-
-	/*
 		Non-Java. A mode control bit that determines whether vector floating-point operations will be performed
 		in a Java-IEEE-C9X-compliant mode or a possibly faster non-Java/non-IEEE mode.
 		0	The Java-IEEE-C9X-compliant mode is selected. Denormalized values are handled as specified
@@ -254,6 +233,9 @@ public:
 			has the same sign as the denormalized or underflowing value.
 	*/
 	bool nj = true;
+
+	// Sticky saturation bit
+	v128 sat{};
 
 	// Optimization: precomputed java-mode mask for handling denormals
 	u32 jm_mask = 0x7f80'0000;

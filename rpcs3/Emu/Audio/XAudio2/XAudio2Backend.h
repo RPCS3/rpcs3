@@ -26,7 +26,7 @@ public:
 	static const u32 capabilities = SET_FREQUENCY_RATIO;
 	u32 GetCapabilities() const override { return capabilities;	}
 
-	bool Initialized() override { return m_xaudio2_instance != nullptr; }
+	bool Initialized() override;
 	bool Operational() override;
 
 	void Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;

@@ -131,6 +131,12 @@ namespace stx
 {
 	template <typename T, bool Se, usz Align>
 	class se_t;
+
+	template <typename T>
+	struct lazy;
+
+	template <typename T>
+	struct generator;
 }
 
 using stx::se_t;
@@ -799,13 +805,13 @@ struct const_str_t<umax>
 {
 	const usz size;
 
-	const union
+	union
 	{
 		const char8_t* chars;
 		const char* chars2;
 	};
 
-	const_str_t()
+	constexpr const_str_t()
 		: size(0)
 		, chars(nullptr)
 	{
@@ -825,7 +831,7 @@ struct const_str_t<umax>
 	{
 	}
 
-	operator const char*() const
+	constexpr operator const char*() const
 	{
 		return std::launder(chars2);
 	}

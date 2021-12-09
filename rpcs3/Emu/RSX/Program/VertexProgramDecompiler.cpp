@@ -222,7 +222,7 @@ std::string VertexProgramDecompiler::GetTex()
 
 std::string VertexProgramDecompiler::Format(const std::string& code)
 {
-	const std::pair<std::string, std::function<std::string()>> repl_list[] =
+	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
 	{
 		{ "$$", []() -> std::string { return "$"; } },
 		{ "$0", std::bind(std::mem_fn(&VertexProgramDecompiler::GetSRC), this, 0) },

@@ -64,19 +64,17 @@ void cell_audio_config::reset(bool backend_changed)
 	}
 
 	const AudioFreq freq = AudioFreq::FREQ_48K;
-	const AudioSampleSize sample_size = g_cfg.audio.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
+	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
 	const AudioChannelCnt ch_cnt = [&]()
 	{
-		const audio_downmix downmix = g_cfg.audio.audio_channel_downmix.get();
-
-		switch (downmix)
+		switch (raw.downmix)
 		{
 		case audio_downmix::no_downmix:               return AudioChannelCnt::SURROUND_7_1;
 		case audio_downmix::downmix_to_5_1:           return AudioChannelCnt::SURROUND_5_1;
 		case audio_downmix::downmix_to_stereo:        return AudioChannelCnt::STEREO;
 		case audio_downmix::use_application_settings: return AudioChannelCnt::STEREO; // TODO
 		default:
-			fmt::throw_exception("Unknown audio channel mode %s (%d)", downmix, static_cast<int>(downmix));
+			fmt::throw_exception("Unknown audio channel mode %s (%d)", raw.downmix, static_cast<int>(raw.downmix));
 		}
 	}();
 
@@ -650,7 +648,8 @@ void cell_audio_thread::operator()()
 			m_backend_failed = true;
 			continue;
 		}
-		else if (m_backend_failed)
+
+		if (m_backend_failed)
 		{
 			cellAudio.warning("Backend recovered");
 			m_backend_failed = false;
@@ -904,6 +903,19 @@ void cell_audio_thread::operator()()
 
 	// Destroy ringbuffer
 	ringbuffer.reset();
+}
+
+audio_port* cell_audio_thread::open_port()
+{
+	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
+	{
+		if (ports[i].state.compare_and_swap_test(audio_port_state::closed, audio_port_state::opened))
+		{
+			return &ports[i];
+		}
+	}
+
+	return nullptr;
 }
 
 template <audio_downmix downmix>

@@ -19,8 +19,8 @@ namespace cfg
 		}
 	}
 
-	_base::_base(type _type, node* owner, const std::string& name, bool dynamic)
-		: m_type(_type), m_dynamic(dynamic), m_name(name)
+	_base::_base(type _type, node* owner, std::string name, bool dynamic)
+		: m_type(_type), m_dynamic(dynamic), m_name(std::move(name))
 	{
 		for (const auto& node : owner->m_nodes)
 		{
@@ -33,7 +33,7 @@ namespace cfg
 		owner->m_nodes.emplace_back(this);
 	}
 
-	bool _base::from_string(const std::string&, bool)
+	bool _base::from_string(std::string_view, bool)
 	{
 		cfg_log.fatal("cfg::_base::from_string() purecall");
 		return false;
@@ -58,7 +58,7 @@ std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
 	return {std::to_string(min), std::to_string(max)};
 }
 
-bool try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
+bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 {
 	s64 result;
 	const char* start = &value.front();
@@ -104,7 +104,7 @@ std::vector<std::string> cfg::make_uint_range(u64 min, u64 max)
 	return {std::to_string(min), std::to_string(max)};
 }
 
-bool try_to_uint64(u64* out, const std::string& value, u64 min, u64 max)
+bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 {
 	u64 result;
 	const char* start = &value.front();
@@ -136,7 +136,7 @@ bool try_to_uint64(u64* out, const std::string& value, u64 min, u64 max)
 	return true;
 }
 
-bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, const std::string& value)
+bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, std::string_view value)
 {
 	u64 max = umax;
 
@@ -320,7 +320,7 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 			return;
 		}
 
-		std::map<std::string, std::string> values;
+		map_of_type<std::string> values;
 
 		for (const auto& pair : data)
 		{
@@ -339,7 +339,7 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 			return; // ???
 		}
 
-		std::map<std::string, logs::level> values;
+		map_of_type<logs::level> values;
 
 		for (const auto& pair : data)
 		{
@@ -377,9 +377,9 @@ std::string cfg::node::to_string() const
 	return {out.c_str(), out.size()};
 }
 
-bool cfg::node::from_string(const std::string& value, bool dynamic)
+bool cfg::node::from_string(std::string_view value, bool dynamic)
 {
-	auto [result, error] = yaml_load(value);
+	auto [result, error] = yaml_load(std::string(value));
 
 	if (error.empty())
 	{
@@ -414,26 +414,31 @@ void cfg::set_entry::from_default()
 	m_set = {};
 }
 
-std::string cfg::map_entry::get_value(const std::string& key)
+std::string cfg::map_entry::get_value(std::string_view key)
 {
-	return m_map.contains(key) ? m_map.at(key) : "";
+	if (auto it = m_map.find(key); it != m_map.end())
+	{
+		return it->second;
+	}
+
+	return {};
 }
 
-void cfg::map_entry::set_value(const std::string& key, const std::string& value)
+void cfg::map_entry::set_value(std::string key, std::string value)
 {
-	m_map[key] = value;
+	m_map[std::move(key)] = std::move(value);
 }
 
-void cfg::map_entry::set_map(std::map<std::string, std::string>&& map)
+void cfg::map_entry::set_map(map_of_type<std::string>&& map)
 {
 	m_map = std::move(map);
 }
 
-void cfg::map_entry::erase(const std::string& key)
+void cfg::map_entry::erase(std::string_view key)
 {
-	if (m_map.contains(key))
+	if (auto it = m_map.find(key); it != m_map.end())
 	{
-		m_map.erase(key);
+		m_map.erase(it);
 	}
 }
 
@@ -442,7 +447,7 @@ void cfg::map_entry::from_default()
 	set_map({});
 }
 
-void cfg::log_entry::set_map(std::map<std::string, logs::level>&& map)
+void cfg::log_entry::set_map(map_of_type<logs::level>&& map)
 {
 	m_map = std::move(map);
 }
