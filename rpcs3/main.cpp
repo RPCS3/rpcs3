@@ -132,8 +132,8 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 
 #if defined(__APPLE__) && defined(BLOCKS)
 	// Cocoa access is not allowed outside of the main thread
-    // Prevents crash dialogs from freezing the program
-    // BLOCKS is required for dispatch_sync, but GCC-11 does not support it
+	// Prevents crash dialogs from freezing the program
+	// BLOCKS is required for dispatch_sync, but GCC-11 does not support it
 	if (!pthread_main_np())
 	{
 		dispatch_sync(dispatch_get_main_queue(), ^ { show_report(text); });
