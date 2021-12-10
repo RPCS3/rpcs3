@@ -49,12 +49,9 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <sys/resource.h>
 #endif
 
-// Prevent the crash dialog from freezing the software on macOS.
-// Cocoa access is not allowed outside of the main thread.
-// TODO: find out why this doesn't compile
-// #ifdef __APPLE__
-// #include <dispatch/dispatch.h>
-// #endif
+#if defined(__APPLE__) && defined(BLOCKS)
+#include <dispatch/dispatch.h>
+#endif
 
 #include "Utilities/Config.h"
 #include "Utilities/Thread.h"
@@ -133,17 +130,16 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		dlg.exec();
 	};
 
-// Prevent the crash dialog from freezing the software on macOS.
-// Cocoa access is not allowed outside of the main thread.
-// TODO: find out why this doesn't compile
-// #ifdef __APPLE__
-// 	// Cocoa access is not allowed outside of the main thread
-// 	if (!pthread_main_np())
-// 	{
-// 		dispatch_sync(dispatch_get_main_queue(), ^ { show_report(text); });
-// 	}
-// 	else
-// #endif
+#if defined(__APPLE__) && defined(BLOCKS)
+	// Cocoa access is not allowed outside of the main thread
+    // Prevents crash dialogs from freezing the program
+	if (!pthread_main_np())
+	{
+		dispatch_sync(dispatch_get_main_queue(), ^ { show_report(text); });
+	}
+ 	else
+ #endif
+
 	{
 		// If Qt is already initialized, spawn a new RPCS3 process with an --error argument
 		if (local)
