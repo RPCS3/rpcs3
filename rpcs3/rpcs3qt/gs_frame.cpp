@@ -523,7 +523,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 				screen_path += id + "/";
 			};
 
-			if (!fs::create_dir(screen_path) && fs::g_tls_error != fs::error::exist)
+			if (!fs::create_path(screen_path) && fs::g_tls_error != fs::error::exist)
 			{
 				screenshot_log.error("Failed to create screenshot path \"%s\" : %s", screen_path, fs::g_tls_error);
 				return;
