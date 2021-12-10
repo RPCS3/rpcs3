@@ -29,7 +29,9 @@ namespace vk
 		case rsx::primitive_type::quad_strip:
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		case rsx::primitive_type::triangle_fan:
+#ifndef __APPLE__
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+#endif
 		case rsx::primitive_type::quads:
 		case rsx::primitive_type::polygon:
 			requires_modification = true;
