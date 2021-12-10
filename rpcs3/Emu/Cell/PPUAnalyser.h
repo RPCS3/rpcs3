@@ -16,6 +16,7 @@ enum class ppu_attr : u32
 	known_size,
 	no_return,
 	no_size,
+	has_mfvscr,
 
 	__bitset_enum_max
 };

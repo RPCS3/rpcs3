@@ -43,6 +43,18 @@ enum class i4 : char
 {
 };
 
+template <typename T>
+concept LLVMType = (std::is_pointer_v<T>) && (std::is_base_of_v<llvm::Type, std::remove_pointer_t<T>>);
+
+template <typename T>
+concept LLVMValue = (std::is_pointer_v<T>) && (std::is_base_of_v<llvm::Value, std::remove_pointer_t<T>>);
+
+template <typename T>
+concept DSLValue = requires (T& v)
+{
+	{ v.eval(std::declval<llvm::IRBuilder<>*>()) } -> LLVMValue;
+};
+
 template <typename T = void>
 struct llvm_value_t
 {
@@ -2948,7 +2960,7 @@ public:
 	}
 
 	// Call external function: provide name and function pointer
-	template <typename RT, typename... FArgs, typename... Args>
+	template <typename RT, typename... FArgs, LLVMValue... Args>
 	llvm::CallInst* call(std::string_view lame, RT(*_func)(FArgs...), Args... args)
 	{
 		static_assert(sizeof...(FArgs) == sizeof...(Args), "spu_llvm_recompiler::call(): unexpected arg number");
@@ -2964,6 +2976,22 @@ public:
 		inst->setCallingConv(llvm::CallingConv::Win64);
 #endif
 		return inst;
+	}
+
+	template <typename RT, typename... FArgs, DSLValue... Args> requires (sizeof...(Args) != 0)
+	auto call(std::string_view name, RT(*_func)(FArgs...), Args&&... args)
+	{
+		llvm_value_t<RT> r;
+		r.value = call(name, _func, std::forward<Args>(args).eval(m_ir)...);
+		return r;
+	}
+
+	template <typename RT, DSLValue... Args>
+	auto call(llvm::Function* func, Args&&... args)
+	{
+		llvm_value_t<RT> r;
+		r.value = m_ir->CreateCall(func, {std::forward<Args>(args).eval(m_ir)...});
+		return r;
 	}
 
 	// Bitcast with immediate constant folding
@@ -3657,10 +3685,22 @@ struct fmt_unveil<llvm::TypeSize, void>
 #endif
 
 template <>
-inline llvm::Type* cpu_translator::get_type<__m128i>()
+struct llvm_value_t<__m128> : llvm_value_t<f32[4]>
 {
-	return llvm::VectorType::get(llvm::Type::getInt8Ty(m_context), 16, false);
-}
+
+};
+
+template <>
+struct llvm_value_t<__m128d> : llvm_value_t<f64[2]>
+{
+
+};
+
+template <>
+struct llvm_value_t<__m128i> : llvm_value_t<u8[16]>
+{
+
+};
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop

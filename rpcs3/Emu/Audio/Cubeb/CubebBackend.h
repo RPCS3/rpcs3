@@ -21,8 +21,8 @@ public:
 	static const u32 capabilities = 0;
 	u32 GetCapabilities() const override { return capabilities; }
 
-	bool Initialized() override { return m_ctx != nullptr; }
-	bool Operational() override { return m_ctx != nullptr && m_stream != nullptr && !m_reset_req.observe(); }
+	bool Initialized() override;
+	bool Operational() override;
 
 	void Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
 	void Close() override;
@@ -35,8 +35,8 @@ public:
 	bool IsPlaying() override;
 
 private:
-	cubeb *m_ctx = nullptr;
-	cubeb_stream *m_stream = nullptr;
+	cubeb* m_ctx = nullptr;
+	cubeb_stream* m_stream = nullptr;
 #ifdef _WIN32
 	bool m_com_init_success = false;
 #endif

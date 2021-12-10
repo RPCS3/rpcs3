@@ -251,7 +251,7 @@ namespace vk
 			"\n";
 
 		const auto parameters_size = utils::align(push_constants_size, 16) / 16;
-		const std::pair<std::string, std::string> syntax_replace[] =
+		const std::pair<std::string_view, std::string> syntax_replace[] =
 		{
 			{ "%ws", std::to_string(optimal_group_size) },
 			{ "%ks", std::to_string(kernel_size) },
@@ -396,7 +396,7 @@ namespace vk
 			"	}\n"
 			"}\n";
 
-		const std::pair<std::string, std::string> syntax_replace[] =
+		const std::pair<std::string_view, std::string> syntax_replace[] =
 		{
 			{ "%ws", std::to_string(optimal_group_size) },
 		};

@@ -330,7 +330,7 @@ bool FragmentProgramDecompiler::DstExpectsSca() const
 
 std::string FragmentProgramDecompiler::Format(const std::string& code, bool ignore_redirects)
 {
-	const std::pair<std::string, std::function<std::string()>> repl_list[] =
+	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
 	{
 		{ "$$", []() -> std::string { return "$"; } },
 		{ "$0", [this]() -> std::string {return GetSRC<SRC0>(src0);} },
@@ -369,7 +369,7 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 		{
 			//Redirect parameter 0 to the x2d temp register for TEXBEM
 			//TODO: Organize this a little better
-			std::pair<std::string, std::string> repl[] = { { "$0", "x2d" } };
+			std::pair<std::string_view, std::string> repl[] = { { "$0", "x2d" } };
 			std::string result = fmt::replace_all(code, repl);
 
 			return fmt::replace_all(result, repl_list);

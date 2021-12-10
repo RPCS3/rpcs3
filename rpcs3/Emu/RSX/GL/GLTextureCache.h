@@ -413,15 +413,7 @@ namespace gl
 
 		bool is_depth_texture() const
 		{
-			switch (vram_texture->get_internal_format())
-			{
-			case gl::texture::internal_format::depth16:
-			case gl::texture::internal_format::depth24_stencil8:
-			case gl::texture::internal_format::depth32f_stencil8:
-				return true;
-			default:
-				return false;
-			}
+			return !!(vram_texture->aspect() & gl::image_aspect::depth);
 		}
 
 		bool has_compatible_format(gl::texture* tex) const

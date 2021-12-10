@@ -15,17 +15,17 @@ namespace vk
 {
 	struct gpu_formats_support
 	{
-		bool d24_unorm_s8;
-		bool d32_sfloat_s8;
-		bool bgra8_linear;
-		bool argb8_linear;
+		bool d24_unorm_s8 : 1;
+		bool d32_sfloat_s8 : 1;
+		bool bgra8_linear : 1;
+		bool argb8_linear : 1;
 	};
 
 	struct gpu_shader_types_support
 	{
-		bool allow_float64;
-		bool allow_float16;
-		bool allow_int8;
+		bool allow_float64 : 1;
+		bool allow_float16 : 1;
+		bool allow_int8 : 1;
 	};
 
 	struct memory_type_mapping
@@ -54,17 +54,17 @@ namespace vk
 		gpu_shader_types_support shader_types_support{};
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
 
-		bool stencil_export_support = false;
-		bool conditional_render_support = false;
-		bool external_memory_host_support = false;
-		bool unrestricted_depth_range_support = false;
-		bool surface_capabilities_2_support = false;
-		bool debug_utils_support = false;
-		bool sampler_mirror_clamped_support = false;
-		bool descriptor_indexing_support = false;
+		bool stencil_export_support : 1 = false;
+		bool conditional_render_support : 1 = false;
+		bool external_memory_host_support : 1 = false;
+		bool unrestricted_depth_range_support : 1 = false;
+		bool surface_capabilities_2_support : 1 = false;
+		bool debug_utils_support : 1 = false;
+		bool sampler_mirror_clamped_support : 1 = false;
+		bool descriptor_indexing_support : 1 = false;
 
-		u64 descriptor_update_after_bind_mask = 0;
 		u32 descriptor_max_draw_calls = DESCRIPTOR_MAX_DRAW_CALLS;
+		u64 descriptor_update_after_bind_mask = 0;
 
 		friend class render_device;
 	private:

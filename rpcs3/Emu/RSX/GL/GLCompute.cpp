@@ -135,7 +135,7 @@ namespace gl
 			"	%vars"
 			"\n";
 
-		const std::pair<std::string, std::string> syntax_replace[] =
+		const std::pair<std::string_view, std::string> syntax_replace[] =
 		{
 			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 			{ "%ws", std::to_string(optimal_group_size) },

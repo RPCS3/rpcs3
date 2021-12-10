@@ -78,6 +78,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 			const auto instruction = v128::loadu(&data[current_instruction * 4]);
 			d1.HEX = instruction._u32[1];
+			d2.HEX = instruction._u32[2];
 			d3.HEX = instruction._u32[3];
 
 			// Touch current instruction
@@ -86,20 +87,52 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			instruction_range.second = std::max(current_instruction, instruction_range.second);
 
 			// Whether to check if the current instruction references an input stream
-			bool test_input_read = false;
+			auto input_attribute_ref = [&]()
+			{
+				if (!d1.input_src)
+				{
+					// It is possible to reference ATTR0, but this is mandatory anyway. No need to explicitly test for it
+					return;
+				}
+
+				const auto ref_mask = (1u << d1.input_src);
+				if ((result.referenced_inputs_mask & ref_mask) == 0)
+				{
+					// Type is encoded in the first 2 bits of each block
+					const auto src0 = d2.src0l & 0x3;
+					const auto src1 = d2.src1  & 0x3;
+					const auto src2 = d3.src2l & 0x3;
+
+					if ((src0 == RSX_VP_REGISTER_TYPE_INPUT) ||
+						(src1 == RSX_VP_REGISTER_TYPE_INPUT) ||
+						(src2 == RSX_VP_REGISTER_TYPE_INPUT))
+					{
+						result.referenced_inputs_mask |= ref_mask;
+					}
+				}
+			};
+
+			auto branch_to = [&](const u32 target)
+			{
+				input_attribute_ref();
+				current_instruction = target;
+			};
 
 			// Basic vec op analysis, must be done before flow analysis
 			switch (d1.vec_opcode)
 			{
+			case RSX_VEC_OPCODE_NOP:
+			{
+				break;
+			}
 			case RSX_VEC_OPCODE_TXL:
 			{
-				d2.HEX = instruction._u32[2];
 				result.referenced_textures_mask |= (1 << d2.tex_num);
 				break;
 			}
 			default:
 			{
-				test_input_read = !!d1.input_src;
+				input_attribute_ref();
 				break;
 			}
 			}
@@ -109,6 +142,10 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 			switch (d1.sca_opcode)
 			{
+			case RSX_SCA_OPCODE_NOP:
+			{
+				break;
+			}
 			case RSX_SCA_OPCODE_BRI:
 			{
 				d0.HEX = instruction._u32[0];
@@ -129,19 +166,18 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				has_branch_instruction = true;
 
 				d0.HEX = instruction._u32[0];
-				d2.HEX = instruction._u32[2];
 				const u32 jump_address = (d0.iaddrh2 << 9) | (d2.iaddrh << 3) | d3.iaddrl;
 
 				if (function_call)
 				{
 					call_stack.push(current_instruction + 1);
-					current_instruction = jump_address;
+					branch_to(jump_address);
 					continue;
 				}
 				else if (static_jump)
 				{
 					// NOTE: This will skip potential jump target blocks between current->target
-					current_instruction = jump_address;
+					branch_to(jump_address);
 					continue;
 				}
 				else
@@ -161,7 +197,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				}
 				else
 				{
-					current_instruction = call_stack.top();
+					branch_to(call_stack.top());
 					call_stack.pop();
 					continue;
 				}
@@ -170,24 +206,9 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			}
 			default:
 			{
-				test_input_read = !!d1.input_src;
+				input_attribute_ref();
 				break;
 			}
-			}
-
-			if (test_input_read)
-			{
-				// Type is encoded in the first 2 bits of each block
-				d2.HEX = instruction._u32[2];
-
-				const auto src0 = d2.src0l;
-				const auto src1 = d2.src1;
-				const auto src2 = d3.src2l;
-
-				if ((src0 | src1 | src2) & RSX_VP_REGISTER_TYPE_INPUT)
-				{
-					result.referenced_inputs_mask |= (1 << d1.input_src);
-				}
 			}
 
 			if ((d3.end && (fast_exit || current_instruction >= instruction_range.second)) ||

@@ -62,7 +62,11 @@ FAudioBackend::~FAudioBackend()
 
 void FAudioBackend::Play()
 {
-	ensure(m_source_voice != nullptr);
+	if (m_source_voice == nullptr)
+	{
+		FAudio_.error("Play() called uninitialized");
+		return;
+	}
 
 	if (m_playing) return;
 
@@ -78,18 +82,22 @@ void FAudioBackend::Play()
 
 void FAudioBackend::Pause()
 {
-	ensure(m_source_voice != nullptr);
-
-	u32 res = FAudioSourceVoice_Stop(m_source_voice, 0, FAUDIO_COMMIT_NOW);
-	if (res)
+	if (m_source_voice)
 	{
-		FAudio_.error("FAudioSourceVoice_Stop() failed(0x%08x)", res);
+		u32 res = FAudioSourceVoice_Stop(m_source_voice, 0, FAUDIO_COMMIT_NOW);
+		if (res)
+		{
+			FAudio_.error("FAudioSourceVoice_Stop() failed(0x%08x)", res);
+		}
+
+		if (res = FAudioSourceVoice_FlushSourceBuffers(m_source_voice))
+		{
+			FAudio_.error("FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
+		}
 	}
-
-	res = FAudioSourceVoice_FlushSourceBuffers(m_source_voice);
-	if (res)
+	else
 	{
-		FAudio_.error("FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
+		FAudio_.error("Pause() called uninitialized");
 	}
 
 	std::lock_guard lock(m_cb_mutex);
@@ -118,6 +126,16 @@ void FAudioBackend::Close()
 {
 	std::lock_guard lock(m_cb_mutex);
 	CloseUnlocked();
+}
+
+bool FAudioBackend::Initialized()
+{
+	return m_instance != nullptr;
+}
+
+bool FAudioBackend::Operational()
+{
+	return m_instance != nullptr && m_source_voice != nullptr && !m_reset_req.observe();
 }
 
 void FAudioBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
@@ -154,7 +172,12 @@ void FAudioBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChann
 		FAudio_.error("FAudio_CreateSourceVoice() failed(0x%08x)", res);
 	}
 
-	ensure(m_source_voice != nullptr);
+	if (m_source_voice == nullptr)
+	{
+		FAudio_.fatal("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
+		return;
+	}
+
 	FAudioVoice_SetVolume(m_source_voice, 1.0f, FAUDIO_COMMIT_NOW);
 
 	m_data_buf_len = get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS * static_cast<u32>(FAUDIO_DEFAULT_FREQ_RATIO) / 1000;
@@ -163,16 +186,18 @@ void FAudioBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChann
 
 bool FAudioBackend::IsPlaying()
 {
-	ensure(m_source_voice != nullptr);
-
 	return m_playing;
 }
 
 f32 FAudioBackend::SetFrequencyRatio(f32 new_ratio)
 {
-	ensure(m_source_voice != nullptr);
-
 	new_ratio = std::clamp(new_ratio, FAUDIO_MIN_FREQ_RATIO, FAUDIO_DEFAULT_FREQ_RATIO);
+
+	if (m_source_voice == nullptr)
+	{
+		FAudio_.error("SetFrequencyRatio() called uninitialized");
+		return 1.0f;
+	}
 
 	const u32 res = FAudioSourceVoice_SetFrequencyRatio(m_source_voice, new_ratio, FAUDIO_COMMIT_NOW);
 	if (res)
@@ -192,10 +217,15 @@ void FAudioBackend::SetWriteCallback(std::function<u32(u32, void *)> cb)
 
 f64 FAudioBackend::GetCallbackFrameLen()
 {
-	ensure(m_source_voice != nullptr);
+	constexpr f64 _10ms = 0.01;
+
+	if (m_instance == nullptr)
+	{
+		FAudio_.error("GetCallbackFrameLen() called uninitialized");
+		return _10ms;
+	}
 
 	f64 min_latency{};
-	const f64 _10ms = 0.01;
 
 	u32 samples_per_q = 0, freq = 0;
 	FAudio_GetProcessingQuantum(m_instance, &samples_per_q, &freq);

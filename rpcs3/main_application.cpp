@@ -117,7 +117,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		if (!result->Initialized())
 		{
 			// Fall back to a null backend if something went wrong
-			sys_log.error("Audio renderer %s could not be initialized, using a Null renderer instead", result->GetName());
+			sys_log.error("Audio renderer %s could not be initialized, using a Null renderer instead. Make sure that no other application is running that might block audio access (e.g. Netflix).", result->GetName());
 			result = std::make_shared<NullAudioBackend>();
 		}
 		return result;
