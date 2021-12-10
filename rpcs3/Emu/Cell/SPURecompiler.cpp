@@ -7652,7 +7652,7 @@ public:
 			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
 				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-				if (m_use_avx512_icl && (op.ra != op.rb))
+				if (false)
 				{
 					if (perm_only)
 					{
@@ -7714,7 +7714,7 @@ public:
 			}
 		}
 
-		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
+		if (false)
 		{
 			if (perm_only)
 			{
