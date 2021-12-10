@@ -137,9 +137,8 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	{
 		dispatch_sync(dispatch_get_main_queue(), ^ { show_report(text); });
 	}
- 	else
- #endif
-
+	else
+#endif
 	{
 		// If Qt is already initialized, spawn a new RPCS3 process with an --error argument
 		if (local)
