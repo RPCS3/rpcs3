@@ -1826,6 +1826,14 @@ const bool s_exception_handler_set = []() -> bool
 		std::abort();
 	}
 
+#ifdef __APPLE__
+	if (::sigaction(SIGBUS, &sa, NULL) == -1)
+	{
+		std::fprintf(stderr, "sigaction(SIGBUS) failed (%d).\n", errno);
+		std::abort();
+	}
+#endif
+
 	sa.sa_handler = sigpipe_signaling_handler;
 	if (::sigaction(SIGPIPE, &sa, NULL) == -1)
 	{

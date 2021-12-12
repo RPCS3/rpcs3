@@ -681,8 +681,8 @@ namespace glsl
 			"{\n"
 			"	vec4 low = cl * 12.92;\n"
 			"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
-			"	bvec4 select = lessThan(cl, vec4(0.0031308));\n"
-			"	return clamp(mix(high, low, select), 0., 1.);\n"
+			"	bvec4 selection = lessThan(cl, vec4(0.0031308));\n"
+			"	return clamp(mix(high, low, selection), 0., 1.);\n"
 			"}\n\n";
 		}
 

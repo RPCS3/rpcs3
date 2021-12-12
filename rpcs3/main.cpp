@@ -49,7 +49,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <sys/resource.h>
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(BLOCKS) // BLOCKS is required for dispatch_sync, but GCC-11 does not support it
 #include <dispatch/dispatch.h>
 #endif
 
@@ -130,8 +130,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		dlg.exec();
 	};
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(BLOCKS) // BLOCKS is required for dispatch_sync, but GCC-11 does not support it
 	// Cocoa access is not allowed outside of the main thread
+	// Prevents crash dialogs from freezing the program
 	if (!pthread_main_np())
 	{
 		dispatch_sync(dispatch_get_main_queue(), ^ { show_report(text); });
