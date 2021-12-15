@@ -831,7 +831,7 @@ namespace
 				const __m128i value = _mm_shuffle_epi8(raw, s_bswap_u16_mask);
 				max = _mm_max_epu16(max, value);
 				min = _mm_min_epu16(min, value);
-				_mm_storeu_si128(dst_stream++, value);
+				_mm_store_si128(dst_stream++, value);
 			}
 
 			const u16 min_index = sse41_hmin_epu16(min);
@@ -857,7 +857,7 @@ namespace
 				const __m128i value = _mm_shuffle_epi8(raw, s_bswap_u32_mask);
 				max = _mm_max_epu32(max, value);
 				min = _mm_min_epu32(min, value);
-				_mm_storeu_si128(dst_stream++, value);
+				_mm_store_si128(dst_stream++, value);
 			}
 
 			__m128i tmp = _mm_srli_si128(min, 8);
@@ -944,7 +944,7 @@ namespace
 				const __m256i value_with_max_restart = _mm256_or_si256(mask, value);
 				max = _mm256_max_epu16(max, value_with_min_restart);
 				min = _mm256_min_epu16(min, value_with_max_restart);
-				_mm256_storeu_si256(dst_stream++, value_with_max_restart);
+				_mm256_store_si256(dst_stream++, value_with_max_restart);
 			}
 
 			__m128i tmp = _mm256_extracti128_si256(min, 1);
@@ -981,7 +981,7 @@ namespace
 				const __m128i value_with_max_restart = _mm_or_si128(mask, value);
 				max = _mm_max_epu16(max, value_with_min_restart);
 				min = _mm_min_epu16(min, value_with_max_restart);
-				_mm_storeu_si128(dst_stream++, value_with_max_restart);
+				_mm_store_si128(dst_stream++, value_with_max_restart);
 			}
 
 			const u16 min_index = sse41_hmin_epu16(min);
@@ -1010,7 +1010,7 @@ namespace
 				const __m128i value_with_max_restart = _mm_or_si128(mask, value);
 				max = _mm_max_epu32(max, value_with_min_restart);
 				min = _mm_min_epu32(min, value_with_max_restart);
-				_mm_storeu_si128(dst_stream++, value_with_max_restart);
+				_mm_store_si128(dst_stream++, value_with_max_restart);
 			}
 
 			__m128i tmp = _mm_srli_si128(min, 8);
