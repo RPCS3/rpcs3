@@ -446,6 +446,9 @@ int main(int argc, char** argv)
 	{
 		report_fatal_error("Not enough memory for RPCS3 process.");
 	}
+
+	WSADATA wsa_data;
+	WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
 
 	ensure(thread_ctrl::is_main(), "Not main thread");
