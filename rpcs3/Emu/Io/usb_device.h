@@ -167,6 +167,7 @@ class usb_device
 {
 public:
 	usb_device(const std::array<u8, 7>& location);
+	virtual ~usb_device() = default;
 
 	virtual bool open_device() = 0;
 

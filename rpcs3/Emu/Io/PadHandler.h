@@ -15,6 +15,7 @@
 class PadDevice
 {
 public:
+	virtual ~PadDevice() = default;
 	cfg_pad* config{ nullptr };
 	u8 player_id{0};
 };
