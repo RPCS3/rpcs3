@@ -105,6 +105,12 @@ long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::stri
 	return -1;
 }
 
+// Get new multiplied value based on the multiplier
+s32 PadHandlerBase::MultipliedInput(s32 raw_value, s32 multiplier)
+{
+	return (multiplier * raw_value) / 100;
+}
+
 // Get new scaled value between 0 and 255 based on its minimum and maximum
 float PadHandlerBase::ScaledInput(s32 raw_value, int minimum, int maximum)
 {
@@ -163,7 +169,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 
 u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold) const
 {
-	const s32 scaled_value = (multiplier * raw_value) / 100;
+	const s32 scaled_value = MultipliedInput(raw_value, multiplier);
 
 	if (ignore_threshold)
 	{
