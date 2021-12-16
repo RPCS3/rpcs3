@@ -150,13 +150,13 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 				value = MultipliedInput(value, is_left_stick ? m_l_stick_multiplier : m_r_stick_multiplier);
 			}
 
-			const u16 normalized_value = std::max<u16>(1, static_cast<u16>(std::floor(value / 2.0)));
+			const u16 normalized_value = std::ceil(value / 2.0);
 
 			if (is_max)
-				m_stick_max[i] = pressed ? 128 + normalized_value : 128;
+				m_stick_max[i] = pressed ? std::min<int>(128 + normalized_value, 255) : 128;
 
 			if (is_min)
-				m_stick_min[i] = pressed ? normalized_value : 0;
+				m_stick_min[i] = pressed ? std::min<u8>(normalized_value, 128) : 0;
 
 			m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
 
