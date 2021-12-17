@@ -2,6 +2,7 @@
 #include "VKQueryPool.h"
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
+#include "util/asm.hpp"
 
 namespace vk
 {
@@ -157,9 +158,16 @@ namespace vk
 	{
 		// Check for cached result
 		auto& query_info = query_slot_status[index];
-		while (!query_info.ready)
+
+		if (!query_info.ready)
 		{
 			poke_query(query_info, index, result_flags);
+
+			while (!query_info.ready)
+			{
+				utils::pause();
+				poke_query(query_info, index, result_flags);
+			}
 		}
 
 		return query_info.data;
