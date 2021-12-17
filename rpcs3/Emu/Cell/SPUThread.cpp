@@ -1705,7 +1705,7 @@ void spu_thread::cpu_work()
 		gen_interrupt = check_mfc_interrupts(pc);
 		work_left |= interrupts_enabled;
 	}
-	
+
 	in_cpu_work = false;
 
 	if (!work_left)
@@ -4575,7 +4575,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		spu_function_logger logger(*this, "sys_spu_thread_receive_event");
 
 		std::shared_ptr<lv2_event_queue> queue;
-	
+
 		while (true)
 		{
 			// Check group status, wait if necessary

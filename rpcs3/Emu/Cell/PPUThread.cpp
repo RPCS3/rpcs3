@@ -2339,7 +2339,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		// Aligned 8-byte reservations will be used here
 		addr &= -8;
 
-		const u64 lock_bits = g_cfg.core.spu_accurate_dma ? vm::rsrv_unique_lock : 1;
+		const u64 lock_bits = vm::rsrv_unique_lock;
 
 		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
 		{
@@ -2348,7 +2348,6 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				return false;
 			}
 
-			// Despite using shared lock, doesn't allow other shared locks (TODO)
 			r += lock_bits;
 			return true;
 		});
