@@ -2555,12 +2555,12 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		// TODO: Limit scope!!
 		rsx::reservation_lock rsx_lock(addr, 128);
 
-		if (!g_use_rtm && rtime != res)
+		if (rtime != res)
 		{
 			return false;
 		}
 
-		if (!g_use_rtm && cmp_rdata(to_write, rdata))
+		if (cmp_rdata(to_write, rdata))
 		{
 			// Writeback of unchanged data. Only check memory change
 			return cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);
