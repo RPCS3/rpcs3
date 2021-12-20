@@ -125,6 +125,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
 	properties2.emulate_zclip_transform = true;
+	properties2.quantize_depth_values = dev_caps.vendor_AMD;
 	properties2.emulate_depth_clip_only = dev_caps.NV_depth_buffer_float_supported;
 
 	insert_glsl_legacy_function(OS, properties2);

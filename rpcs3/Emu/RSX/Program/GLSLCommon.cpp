@@ -603,6 +603,17 @@ namespace glsl
 		{
 			if (props.emulate_depth_clip_only)
 			{
+				// Optionally quantize Z values. This doesn't work fully since fragment interpolation will add back intermediate values...
+				// But it helps make the values closer to the correct integral counterparts
+				if (!props.quantize_depth_values) [[likely]]
+				{
+					OS << "#define _quantize_z(value) (value)\n\n";
+				}
+				else
+				{
+					OS << "#define _quantize_z(value) (double(uint(value * 0xFFFFFFu)) / 16777215.0)\n\n";
+				}
+
 				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
 				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
 				OS <<
@@ -615,7 +626,7 @@ namespace glsl
 				"		const double depth_range = double(real_f - real_n);\n"
 				"		const double inv_range = (depth_range > 0.0) ? (1.0 / (depth_range * pos.w)) : 0.0;\n"
 				"		const double d = (double(pos.z) - real_n) * inv_range;\n"
-				"		return vec4(pos.xy, float(d * pos.w), pos.w);\n"
+				"		return vec4(pos.xy, float(_quantize_z(d) * pos.w), pos.w);\n"
 				"	}\n"
 				"	else\n"
 				"	{\n"
