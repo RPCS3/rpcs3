@@ -15,6 +15,7 @@
 class PadDevice
 {
 public:
+	virtual ~PadDevice() = default;
 	cfg_pad* config{ nullptr };
 	u8 player_id{0};
 };
@@ -99,6 +100,9 @@ protected:
 
 	// Search an unordered map for a string value and return found keycode
 	static long FindKeyCodeByString(const std::unordered_map<u64, std::string>& map, const std::string& name, bool fallback = true);
+
+	// Get new multiplied value based on the multiplier
+	static s32 MultipliedInput(s32 raw_value, s32 multiplier);
 
 	// Get new scaled value between 0 and 255 based on its minimum and maximum
 	static float ScaledInput(s32 raw_value, int minimum, int maximum);

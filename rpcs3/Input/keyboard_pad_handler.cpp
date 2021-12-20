@@ -138,25 +138,34 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			const bool is_max = pad.m_sticks[i].m_keyCodeMax == code;
 			const bool is_min = pad.m_sticks[i].m_keyCodeMin == code;
 
-			const u16 normalized_value = std::max<u16>(1, static_cast<u16>(std::floor(value / 2.0)));
+			if (!is_max && !is_min)
+			{
+				continue;
+			}
+
+			const bool is_left_stick = i < 2;
+
+			if (pressed)
+			{
+				value = MultipliedInput(value, is_left_stick ? m_l_stick_multiplier : m_r_stick_multiplier);
+			}
+
+			const u16 normalized_value = std::ceil(value / 2.0);
 
 			if (is_max)
-				m_stick_max[i] = pressed ? 128 + normalized_value : 128;
+				m_stick_max[i] = pressed ? std::min<int>(128 + normalized_value, 255) : 128;
 
 			if (is_min)
-				m_stick_min[i] = pressed ? normalized_value : 0;
+				m_stick_min[i] = pressed ? std::min<u8>(normalized_value, 128) : 0;
 
-			if (is_max || is_min)
+			m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
+
+			const f32 stick_lerp_factor = is_left_stick ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
+
+			// to get the fastest response time possible we don't wanna use any lerp with factor 1
+			if (stick_lerp_factor >= 1.0f)
 			{
-				m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
-
-				const f32 stick_lerp_factor = (i < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
-
-				// to get the fastest response time possible we don't wanna use any lerp with factor 1
-				if (stick_lerp_factor >= 1.0f)
-				{
-					pad.m_sticks[i].m_value = m_stick_val[i];
-				}
+				pad.m_sticks[i].m_value = m_stick_val[i];
 			}
 		}
 	}
@@ -735,6 +744,8 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	m_r_stick_lerp_factor = cfg->r_stick_lerp_factor / 100.0f;
 	m_analog_lerp_factor  = cfg->analog_lerp_factor / 100.0f;
 	m_trigger_lerp_factor = cfg->trigger_lerp_factor / 100.0f;
+	m_l_stick_multiplier = cfg->lstickmultiplier;
+	m_r_stick_multiplier = cfg->rstickmultiplier;
 
 	const auto find_key = [this](const cfg::string& name)
 	{
