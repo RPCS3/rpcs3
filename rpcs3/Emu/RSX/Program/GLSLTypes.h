@@ -34,6 +34,7 @@ namespace glsl
 		bool emulate_shadow_compare : 1;
 		bool emulate_zclip_transform : 1;
 		bool emulate_depth_clip_only : 1;
+		bool quantize_depth_values : 1;
 		bool low_precision_tests : 1;
 		bool disable_early_discard : 1;
 		bool supports_native_fp16 : 1;
