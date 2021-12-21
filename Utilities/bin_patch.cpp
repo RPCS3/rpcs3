@@ -576,7 +576,7 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value) + alloc_at % 4096, 4096);
 
 			// Allocate map if needed, if allocated flags will indicate that bit 62 is set (unique identifier)
-			auto alloc_map = vm::reserve_map(vm::any, alloc_at & -0x10000, utils::align(alloc_size, 0x10000), vm::page_size_64k | vm::preallocated | (1ull << 62));
+			auto alloc_map = vm::reserve_map(vm::any, alloc_at & -0x10000, utils::align(alloc_size, 0x10000), vm::page_size_64k | (1ull << 62));
 
 			u64 flags = vm::alloc_unwritable;
 
