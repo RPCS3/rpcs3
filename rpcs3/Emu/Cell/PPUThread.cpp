@@ -147,7 +147,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op);
 
 extern void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
-const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>([](asmjit::X86Assembler& c, auto& args)
+const auto ppu_gateway = built_function<void(*)(ppu_thread*)>([](asmjit::X86Assembler& c, auto& args)
 {
 	// Gateway for PPU, converts from native to GHC calling convention, also saves RSP value for escape
 	using namespace asmjit;
@@ -1816,7 +1816,7 @@ extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
-const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>([](asmjit::X86Assembler& c, auto& args)
+const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 

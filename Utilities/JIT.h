@@ -63,6 +63,30 @@ namespace asmjit
 	// Should only be used to build global functions
 	asmjit::Runtime& get_global_runtime();
 
+	// Don't use directly
+	class inline_runtime : public HostRuntime
+	{
+		uchar* m_data;
+		usz m_size;
+
+	public:
+		inline_runtime(const inline_runtime&) = delete;
+
+		inline_runtime& operator=(const inline_runtime&) = delete;
+
+		inline_runtime(uchar* data, usz size)
+			: m_data(data)
+			, m_size(size)
+		{
+		}
+
+		asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override;
+
+		asmjit::Error _release(void*) noexcept override;
+
+		~inline_runtime();
+	};
+
 	// Emit xbegin and adjacent loop, return label at xbegin (don't use xabort please)
 	template <typename F>
 	[[nodiscard]] inline asmjit::Label build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback, F func)
@@ -167,6 +191,63 @@ inline FT build_function_asm(F&& builder)
 
 	return result;
 }
+
+template <typename FT, usz Size = 4096>
+class built_function
+{
+	alignas(4096) uchar m_data[Size];
+
+public:
+	built_function(const built_function&) = delete;
+
+	built_function& operator=(const built_function&) = delete;
+
+	template <typename F>
+	built_function(F&& builder)
+	{
+		using namespace asmjit;
+
+		inline_runtime rt(m_data, Size);
+
+		CodeHolder code;
+		code.init(rt.getCodeInfo());
+		code._globalHints = asmjit::CodeEmitter::kHintOptimizedAlign;
+
+		std::array<X86Gp, 4> args;
+	#ifdef _WIN32
+		args[0] = x86::rcx;
+		args[1] = x86::rdx;
+		args[2] = x86::r8;
+		args[3] = x86::r9;
+	#else
+		args[0] = x86::rdi;
+		args[1] = x86::rsi;
+		args[2] = x86::rdx;
+		args[3] = x86::rcx;
+	#endif
+
+		X86Assembler compiler(&code);
+		builder(std::ref(compiler), args);
+
+		FT result;
+
+		if (compiler.getLastError() || rt.add(&result, &code))
+		{
+			ensure(false);
+		}
+	}
+
+	operator FT() const noexcept
+	{
+		return FT(+m_data);
+	}
+
+	template <typename... Args>
+	auto operator()(Args&&... args) const noexcept
+	{
+		return FT(+m_data)(std::forward<Args>(args)...);
+	}
+};
 
 #ifdef LLVM_AVAILABLE
 

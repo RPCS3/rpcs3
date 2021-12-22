@@ -405,7 +405,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	return res;
 }
 
-const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putllc_tx = built_function<u64(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -667,7 +667,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 	c.ret();
 });
 
-const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rdata, u64* _stx, u64* _ftx)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putlluc_tx = built_function<u64(*)(u32 raddr, const void* rdata, u64* _stx, u64* _ftx)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -801,7 +801,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	c.ret();
 });
 
-const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_getllar_tx = built_function<u64(*)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 

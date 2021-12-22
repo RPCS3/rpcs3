@@ -268,6 +268,44 @@ asmjit::Runtime& asmjit::get_global_runtime()
 	return g_rt;
 }
 
+asmjit::Error asmjit::inline_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
+{
+	usz codeSize = code->getCodeSize();
+	if (!codeSize) [[unlikely]]
+	{
+		*dst = nullptr;
+		return asmjit::kErrorNoCodeGenerated;
+	}
+
+	if (utils::align(codeSize, 4096) > m_size) [[unlikely]]
+	{
+		*dst = nullptr;
+		return asmjit::kErrorNoVirtualMemory;
+	}
+
+	usz relocSize = code->relocate(m_data);
+	if (!relocSize) [[unlikely]]
+	{
+		*dst = nullptr;
+		return asmjit::kErrorInvalidState;
+	}
+
+	flush(m_data, relocSize);
+	*dst = m_data;
+
+	return asmjit::kErrorOk;
+}
+
+asmjit::Error asmjit::inline_runtime::_release(void*) noexcept
+{
+	return asmjit::kErrorOk;
+}
+
+asmjit::inline_runtime::~inline_runtime()
+{
+	utils::memory_protect(m_data, m_size, utils::protection::rx);
+}
+
 #ifdef LLVM_AVAILABLE
 
 #include <unordered_map>
