@@ -756,7 +756,7 @@ namespace glsl
 			OS <<
 
 #ifdef __APPLE__
-			"vec4 remap_vector(const in vec4 rgba, const in uint remap_bits)\n"
+			"vec4 remap_vector_m(const in vec4 rgba, const in uint remap_bits)\n"
 			"{\n"
 			"	uvec4 selector = (uvec4(remap_bits) >> uvec4(3, 6, 9, 0)) & 0x7;\n"
 			"	bvec4 choice = greaterThan(selector, uvec4(1));\n"
@@ -773,7 +773,7 @@ namespace glsl
 			"{\n"
 #ifdef __APPLE__
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
-			"	if (remap_bits != 0x8D5) rgba = remap_vector(rgba, remap_bits);\n\n"
+			"	if (remap_bits != 0x8D5) rgba = remap_vector_m(rgba, remap_bits);\n\n"
 #endif
 			"	if (control_bits == 0)\n"
 			"	{\n"

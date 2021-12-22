@@ -133,7 +133,7 @@ public:
 	static std::array<atomic_t<spu_function_t>, (1 << 20)>* const g_dispatcher;
 
 	// Recompiler entry point
-	static const spu_function_t g_gateway;
+	static const built_function<spu_function_t> g_gateway;
 
 	// Longjmp to the end of the gateway function (native CC)
 	static void(*const g_escape)(spu_thread*);

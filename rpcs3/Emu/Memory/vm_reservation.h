@@ -32,7 +32,7 @@ namespace vm
 	{
 		rsrv_lock_mask = 127,
 		rsrv_unique_lock = 64,
-		rsrv_shared_mask = 63,
+		rsrv_putunc_flag = 32,
 	};
 
 	// Get reservation status for further atomic update: last update timestamp

@@ -25,6 +25,9 @@
 #define SSSE3_FUNC __attribute__((__target__("ssse3")))
 #define SSE4_1_FUNC __attribute__((__target__("sse4.1")))
 #define AVX2_FUNC __attribute__((__target__("avx2")))
+#ifndef __AVX2__
+using __m256i = long long __attribute__((vector_size(32)));
+#endif
 #endif // _MSC_VER
 
 SSSE3_FUNC static inline __m128i ssse3_shuffle_epi8(__m128i x, __m128i y)
@@ -42,9 +45,35 @@ SSE4_1_FUNC static inline u16 sse41_hmax_epu16(__m128i x)
 	return ~_mm_cvtsi128_si32(_mm_minpos_epu16(_mm_xor_si128(x, _mm_set1_epi32(-1))));
 }
 
+#if defined(__AVX2__)
+constexpr bool s_use_ssse3 = true;
+constexpr bool s_use_sse4_1 = true;
+constexpr bool s_use_avx2 = true;
+#elif defined(__SSE41__)
+constexpr bool s_use_ssse3 = true;
+constexpr bool s_use_sse4_1 = true;
+constexpr bool s_use_avx2 = false;
+#elif defined(__SSSE3__)
+constexpr bool s_use_ssse3 = true;
+constexpr bool s_use_sse4_1 = false;
+constexpr bool s_use_avx2 = false;
+#else
 const bool s_use_ssse3 = utils::has_ssse3();
 const bool s_use_sse4_1 = utils::has_sse41();
 const bool s_use_avx2 = utils::has_avx2();
+#endif
+
+const __m128i s_bswap_u32_mask = _mm_set_epi8(
+	0xC, 0xD, 0xE, 0xF,
+	0x8, 0x9, 0xA, 0xB,
+	0x4, 0x5, 0x6, 0x7,
+	0x0, 0x1, 0x2, 0x3);
+
+const __m128i s_bswap_u16_mask = _mm_set_epi8(
+	0xE, 0xF, 0xC, 0xD,
+	0xA, 0xB, 0x8, 0x9,
+	0x6, 0x7, 0x4, 0x5,
+	0x2, 0x3, 0x0, 0x1);
 
 namespace utils
 {
@@ -75,15 +104,229 @@ namespace
 	}
 }
 
-	template <bool unaligned>
-	void stream_data_to_memory_swapped_u32(void *dst, const void *src, u32 vertex_count, u8 stride)
-	{
-		const __m128i mask = _mm_set_epi8(
-			0xC, 0xD, 0xE, 0xF,
-			0x8, 0x9, 0xA, 0xB,
-			0x4, 0x5, 0x6, 0x7,
-			0x0, 0x1, 0x2, 0x3);
+template <bool Compare>
+AVX2_FUNC inline bool copy_data_swap_u32_avx2(void*& dst, const void*& src, u32 count)
+{
+	const __m256i bswap_u32_mask = _mm256_set_m128i(s_bswap_u32_mask, s_bswap_u32_mask);
 
+	__m128i diff0 = _mm_setzero_si128();
+	__m256i diff = _mm256_setzero_si256();
+
+	if (uptr(dst) & 16 && count >= 4)
+	{
+		const auto dst0 = static_cast<__m128i*>(dst);
+		const auto src0 = static_cast<const __m128i*>(src);
+		const auto data = _mm_shuffle_epi8(_mm_loadu_si128(src0), s_bswap_u32_mask);
+
+		if (Compare)
+		{
+			diff0 = _mm_xor_si128(data, _mm_load_si128(dst0));
+		}
+
+		_mm_store_si128(dst0, data);
+		dst = dst0 + 1;
+		src = src0 + 1;
+		count -= 4;
+	}
+
+	const u32 lane_count = count / 8;
+
+	auto dst_ptr = static_cast<__m256i*>(dst);
+	auto src_ptr = static_cast<const __m256i*>(src);
+
+#ifdef __clang__
+#pragma clang loop unroll(disable)
+#endif
+	for (u32 i = 0; i < lane_count; ++i)
+	{
+		const __m256i vec0 = _mm256_loadu_si256(src_ptr + i);
+		const __m256i vec1 = _mm256_shuffle_epi8(vec0, bswap_u32_mask);
+
+		if constexpr (Compare)
+		{
+			diff = _mm256_or_si256(diff, _mm256_xor_si256(vec1, _mm256_load_si256(dst_ptr + i)));
+		}
+
+		_mm256_store_si256(dst_ptr + i, vec1);
+	}
+
+	dst = dst_ptr + lane_count;
+	src = src_ptr + lane_count;
+
+	if (count & 4)
+	{
+		const auto dst0 = static_cast<__m128i*>(dst);
+		const auto src0 = static_cast<const __m128i*>(src);
+		const auto data = _mm_shuffle_epi8(_mm_loadu_si128(src0), s_bswap_u32_mask);
+
+		if (Compare)
+		{
+			diff0 = _mm_or_si128(diff0, _mm_xor_si128(data, _mm_load_si128(dst0)));
+		}
+
+		_mm_store_si128(dst0, data);
+		dst = dst0 + 1;
+		src = src0 + 1;
+	}
+
+	if constexpr (Compare)
+	{
+		diff = _mm256_or_si256(diff, _mm256_set_m128i(_mm_setzero_si128(), diff0));
+		return !_mm256_testz_si256(diff, diff);
+	}
+	else
+	{
+		return false;
+	}
+}
+
+template <bool Compare>
+static auto copy_data_swap_u32(void* dst, const void* src, u32 count)
+{
+	bool result = false;
+
+	if (uptr(dst) & 4)
+	{
+		const auto dst0 = static_cast<u32*>(dst);
+		const auto src0 = static_cast<const u32*>(src);
+		const u32 data = stx::se_storage<u32>::swap(*src0);
+
+		if (Compare && *dst0 != data)
+		{
+			result = true;
+		}
+
+		*dst0 = data;
+		dst = dst0 + 1;
+		src = src0 + 1;
+		count--;
+	}
+
+	if (uptr(dst) & 8 && count >= 2)
+	{
+		const auto dst0 = static_cast<u64*>(dst);
+		const auto src0 = static_cast<const u64*>(src);
+		const u64 data = utils::rol64(stx::se_storage<u64>::swap(*src0), 32);
+
+		if (Compare && *dst0 != data)
+		{
+			result = true;
+		}
+
+		*dst0 = data;
+		dst = dst0 + 1;
+		src = src0 + 1;
+		count -= 2;
+	}
+
+	const u32 lane_count = count / 4;
+
+	if (s_use_avx2) [[likely]]
+	{
+		result |= copy_data_swap_u32_avx2<Compare>(dst, src, count);
+	}
+	else if (s_use_ssse3)
+	{
+		__m128i diff = _mm_setzero_si128();
+
+		auto dst_ptr = static_cast<__m128i*>(dst);
+		auto src_ptr = static_cast<const __m128i*>(src);
+
+		for (u32 i = 0; i < lane_count; ++i)
+		{
+			const __m128i vec0 = _mm_loadu_si128(src_ptr + i);
+			const __m128i vec1 = ssse3_shuffle_epi8(vec0, s_bswap_u32_mask);
+
+			if constexpr (Compare)
+			{
+				diff = _mm_or_si128(diff, _mm_xor_si128(vec1, _mm_load_si128(dst_ptr + i)));
+			}
+
+			_mm_store_si128(dst_ptr + i, vec1);
+		}
+
+		result |= _mm_cvtsi128_si64(_mm_packs_epi32(diff, diff)) != 0;
+
+		dst = dst_ptr + lane_count;
+		src = src_ptr + lane_count;
+	}
+	else
+	{
+		__m128i diff = _mm_setzero_si128();
+
+		auto dst_ptr = static_cast<__m128i*>(dst);
+		auto src_ptr = static_cast<const __m128i*>(src);
+
+		for (u32 i = 0; i < lane_count; ++i)
+		{
+			const __m128i vec0 = _mm_loadu_si128(src_ptr + i);
+			const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
+			const __m128i vec2 = _mm_or_si128(_mm_slli_epi32(vec1, 16), _mm_srli_epi32(vec1, 16));
+
+			if constexpr (Compare)
+			{
+				diff = _mm_or_si128(diff, _mm_xor_si128(vec2, _mm_load_si128(dst_ptr + i)));
+			}
+
+			_mm_store_si128(dst_ptr + i, vec2);
+		}
+
+		result |= _mm_cvtsi128_si64(_mm_packs_epi32(diff, diff)) != 0;
+
+		dst = dst_ptr + lane_count;
+		src = src_ptr + lane_count;
+	}
+
+	if (count & 2)
+	{
+		const auto dst0 = static_cast<u64*>(dst);
+		const auto src0 = static_cast<const u64*>(src);
+		const u64 data = utils::rol64(stx::se_storage<u64>::swap(*src0), 32);
+
+		if (Compare && *dst0 != data)
+		{
+			result = true;
+		}
+
+		*dst0 = data;
+		dst = dst0 + 1;
+		src = src0 + 1;
+	}
+
+	if (count & 1)
+	{
+		const auto dst0 = static_cast<u32*>(dst);
+		const auto src0 = static_cast<const u32*>(src);
+		const u32 data = stx::se_storage<u32>::swap(*src0);
+
+		if (Compare && *dst0 != data)
+		{
+			result = true;
+		}
+
+		*dst0 = data;
+	}
+
+	if constexpr (Compare)
+	{
+		return result;
+	}
+}
+
+bool copy_data_swap_u32_cmp(void* dst, const void* src, u32 count)
+{
+	return copy_data_swap_u32<true>(dst, src, count);
+}
+
+void copy_data_swap_u32(void* dst, const void* src, u32 count)
+{
+	copy_data_swap_u32<false>(dst, src, count);
+}
+
+namespace
+{
+	inline void stream_data_to_memory_swapped_u32(void *dst, const void *src, u32 vertex_count, u8 stride)
+	{
 		auto dst_ptr = static_cast<__m128i*>(dst);
 		auto src_ptr = static_cast<const __m128i*>(src);
 
@@ -96,16 +339,8 @@ namespace
 			for (u32 i = 0; i < iterations; ++i)
 			{
 				const __m128i vector = _mm_loadu_si128(src_ptr);
-				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
-
-				if constexpr (!unaligned)
-				{
-					_mm_stream_si128(dst_ptr, shuffled_vector);
-				}
-				else
-				{
-					_mm_storeu_si128(dst_ptr, shuffled_vector);
-				}
+				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, s_bswap_u32_mask);
+				_mm_stream_si128(dst_ptr, shuffled_vector);
 
 				src_ptr++;
 				dst_ptr++;
@@ -118,15 +353,7 @@ namespace
 				const __m128i vec0 = _mm_loadu_si128(src_ptr);
 				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
 				const __m128i vec2 = _mm_or_si128(_mm_slli_epi32(vec1, 16), _mm_srli_epi32(vec1, 16));
-
-				if constexpr (!unaligned)
-				{
-					_mm_stream_si128(dst_ptr, vec2);
-				}
-				else
-				{
-					_mm_storeu_si128(dst_ptr, vec2);
-				}
+				_mm_stream_si128(dst_ptr, vec2);
 
 				src_ptr++;
 				dst_ptr++;
@@ -143,107 +370,8 @@ namespace
 		}
 	}
 
-	template void stream_data_to_memory_swapped_u32<false>(void *, const void *, u32, u8);
-	template void stream_data_to_memory_swapped_u32<true>(void*, const void*, u32, u8);
-
-	template <bool unaligned>
-	bool stream_data_to_memory_swapped_and_compare_u32(void *dst, const void *src, u32 size)
-	{
-		const __m128i mask = _mm_set_epi8(
-			0xC, 0xD, 0xE, 0xF,
-			0x8, 0x9, 0xA, 0xB,
-			0x4, 0x5, 0x6, 0x7,
-			0x0, 0x1, 0x2, 0x3);
-
-		auto dst_ptr = static_cast<__m128i*>(dst);
-		auto src_ptr = static_cast<const __m128i*>(src);
-
-		const u32 dword_count = size >> 2;
-		const u32 iterations = dword_count >> 2;
-
-		__m128i bits_diff = _mm_setzero_si128();
-
-		if (s_use_ssse3) [[likely]]
-		{
-			for (u32 i = 0; i < iterations; ++i)
-			{
-				const __m128i vector = _mm_loadu_si128(src_ptr);
-				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
-
-				if constexpr (!unaligned)
-				{
-					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector));
-					_mm_stream_si128(dst_ptr, shuffled_vector);
-				}
-				else
-				{
-					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector));
-					_mm_storeu_si128(dst_ptr, shuffled_vector);
-				}
-
-				src_ptr++;
-				dst_ptr++;
-			}
-		}
-		else
-		{
-			for (u32 i = 0; i < iterations; ++i)
-			{
-				const __m128i vec0 = _mm_loadu_si128(src_ptr);
-				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
-				const __m128i vec2 = _mm_or_si128(_mm_slli_epi32(vec1, 16), _mm_srli_epi32(vec1, 16));
-
-				if constexpr (!unaligned)
-				{
-					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_load_si128(dst_ptr), vec2));
-					_mm_stream_si128(dst_ptr, vec2);
-				}
-				else
-				{
-					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2));
-					_mm_storeu_si128(dst_ptr, vec2);
-				}
-
-				src_ptr++;
-				dst_ptr++;
-			}
-		}
-
-		const u32 remaining = dword_count % 4;
-
-		if (remaining)
-		{
-			const auto src_ptr2 = utils::bless<const se_t<u32, true, 1>>(src_ptr);
-			const auto dst_ptr2 = utils::bless<nse_t<u32, 1>>(dst_ptr);
-
-			for (u32 i = 0; i < remaining; ++i)
-			{
-				const u32 data = src_ptr2[i];
-
-				if (dst_ptr2[i] != data)
-				{
-					dst_ptr2[i] = data;
-					bits_diff = _mm_set1_epi64x(-1);
-				}
-			}
-		}
-
-		return _mm_cvtsi128_si64(_mm_packs_epi32(bits_diff, bits_diff)) != 0;
-	}
-
-	template bool stream_data_to_memory_swapped_and_compare_u32<false>(void *dst, const void *src, u32 size);
-	template bool stream_data_to_memory_swapped_and_compare_u32<true>(void *dst, const void *src, u32 size);
-
-namespace
-{
 	inline void stream_data_to_memory_swapped_u16(void *dst, const void *src, u32 vertex_count, u8 stride)
 	{
-		const __m128i mask = _mm_set_epi8(
-			0xE, 0xF, 0xC, 0xD,
-			0xA, 0xB, 0x8, 0x9,
-			0x6, 0x7, 0x4, 0x5,
-			0x2, 0x3, 0x0, 0x1);
-
 		auto dst_ptr = static_cast<__m128i*>(dst);
 		auto src_ptr = static_cast<const __m128i*>(src);
 
@@ -256,7 +384,7 @@ namespace
 			for (u32 i = 0; i < iterations; ++i)
 			{
 				const __m128i vector = _mm_loadu_si128(src_ptr);
-				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
+				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, s_bswap_u16_mask);
 				_mm_stream_si128(dst_ptr, shuffled_vector);
 
 				src_ptr++;
@@ -288,12 +416,6 @@ namespace
 
 	inline void stream_data_to_memory_swapped_u32_non_continuous(void *dst, const void *src, u32 vertex_count, u8 dst_stride, u8 src_stride)
 	{
-		const __m128i mask = _mm_set_epi8(
-			0xC, 0xD, 0xE, 0xF,
-			0x8, 0x9, 0xA, 0xB,
-			0x4, 0x5, 0x6, 0x7,
-			0x0, 0x1, 0x2, 0x3);
-
 		auto src_ptr = static_cast<const char*>(src);
 		auto dst_ptr = static_cast<char*>(dst);
 
@@ -316,7 +438,7 @@ namespace
 			for (u32 i = 0; i < iterations; ++i)
 			{
 				const __m128i vector = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
-				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
+				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, s_bswap_u32_mask);
 				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), shuffled_vector);
 
 				src_ptr += src_stride;
@@ -356,12 +478,6 @@ namespace
 
 	inline void stream_data_to_memory_swapped_u16_non_continuous(void *dst, const void *src, u32 vertex_count, u8 dst_stride, u8 src_stride)
 	{
-		const __m128i mask = _mm_set_epi8(
-			0xE, 0xF, 0xC, 0xD,
-			0xA, 0xB, 0x8, 0x9,
-			0x6, 0x7, 0x4, 0x5,
-			0x2, 0x3, 0x0, 0x1);
-
 		auto src_ptr = static_cast<const char*>(src);
 		auto dst_ptr = static_cast<char*>(dst);
 
@@ -383,7 +499,7 @@ namespace
 			for (u32 i = 0; i < iterations; ++i)
 			{
 				const __m128i vector = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
-				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
+				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, s_bswap_u16_mask);
 				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), shuffled_vector);
 
 				src_ptr += src_stride;
@@ -702,12 +818,6 @@ namespace
 		static
 		std::tuple<u16, u16, u32> upload_u16_swapped_sse4_1(const void *src, void *dst, u32 count)
 		{
-			const __m128i mask = _mm_set_epi8(
-				0xE, 0xF, 0xC, 0xD,
-				0xA, 0xB, 0x8, 0x9,
-				0x6, 0x7, 0x4, 0x5,
-				0x2, 0x3, 0x0, 0x1);
-
 			auto src_stream = static_cast<const __m128i*>(src);
 			auto dst_stream = static_cast<__m128i*>(dst);
 
@@ -718,10 +828,10 @@ namespace
 			for (unsigned n = 0; n < iterations; ++n)
 			{
 				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = _mm_shuffle_epi8(raw, mask);
+				const __m128i value = _mm_shuffle_epi8(raw, s_bswap_u16_mask);
 				max = _mm_max_epu16(max, value);
 				min = _mm_min_epu16(min, value);
-				_mm_storeu_si128(dst_stream++, value);
+				_mm_store_si128(dst_stream++, value);
 			}
 
 			const u16 min_index = sse41_hmin_epu16(min);
@@ -734,12 +844,6 @@ namespace
 		static
 		std::tuple<u32, u32, u32> upload_u32_swapped_sse4_1(const void *src, void *dst, u32 count)
 		{
-			const __m128i mask = _mm_set_epi8(
-				0xC, 0xD, 0xE, 0xF,
-				0x8, 0x9, 0xA, 0xB,
-				0x4, 0x5, 0x6, 0x7,
-				0x0, 0x1, 0x2, 0x3);
-
 			auto src_stream = static_cast<const __m128i*>(src);
 			auto dst_stream = static_cast<__m128i*>(dst);
 
@@ -750,10 +854,10 @@ namespace
 			for (unsigned n = 0; n < iterations; ++n)
 			{
 				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = _mm_shuffle_epi8(raw, mask);
+				const __m128i value = _mm_shuffle_epi8(raw, s_bswap_u32_mask);
 				max = _mm_max_epu32(max, value);
 				min = _mm_min_epu32(min, value);
-				_mm_storeu_si128(dst_stream++, value);
+				_mm_store_si128(dst_stream++, value);
 			}
 
 			__m128i tmp = _mm_srli_si128(min, 8);
@@ -822,15 +926,7 @@ namespace
 		static
 		std::tuple<u16, u16> upload_u16_swapped_avx2(const void *src, void *dst, u32 iterations, u16 restart_index)
 		{
-			const __m256i shuffle_mask = _mm256_set_epi8(
-				0xE, 0xF, 0xC, 0xD,
-				0xA, 0xB, 0x8, 0x9,
-				0x6, 0x7, 0x4, 0x5,
-				0x2, 0x3, 0x0, 0x1,
-				0xE, 0xF, 0xC, 0xD,
-				0xA, 0xB, 0x8, 0x9,
-				0x6, 0x7, 0x4, 0x5,
-				0x2, 0x3, 0x0, 0x1);
+			const __m256i shuffle_mask = _mm256_set_m128i(s_bswap_u16_mask, s_bswap_u16_mask);
 
 			auto src_stream = static_cast<const __m256i*>(src);
 			auto dst_stream = static_cast<__m256i*>(dst);
@@ -848,7 +944,7 @@ namespace
 				const __m256i value_with_max_restart = _mm256_or_si256(mask, value);
 				max = _mm256_max_epu16(max, value_with_min_restart);
 				min = _mm256_min_epu16(min, value_with_max_restart);
-				_mm256_storeu_si256(dst_stream++, value_with_max_restart);
+				_mm256_store_si256(dst_stream++, value_with_max_restart);
 			}
 
 			__m128i tmp = _mm256_extracti128_si256(min, 1);
@@ -869,12 +965,6 @@ namespace
 		static
 		std::tuple<u16, u16> upload_u16_swapped_sse4_1(const void *src, void *dst, u32 iterations, u16 restart_index)
 		{
-			const __m128i shuffle_mask = _mm_set_epi8(
-				0xE, 0xF, 0xC, 0xD,
-				0xA, 0xB, 0x8, 0x9,
-				0x6, 0x7, 0x4, 0x5,
-				0x2, 0x3, 0x0, 0x1);
-
 			auto src_stream = static_cast<const __m128i*>(src);
 			auto dst_stream = static_cast<__m128i*>(dst);
 
@@ -885,13 +975,13 @@ namespace
 			for (unsigned n = 0; n < iterations; ++n)
 			{
 				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = _mm_shuffle_epi8(raw, shuffle_mask);
+				const __m128i value = _mm_shuffle_epi8(raw, s_bswap_u16_mask);
 				const __m128i mask = _mm_cmpeq_epi16(restart, value);
 				const __m128i value_with_min_restart = _mm_andnot_si128(mask, value);
 				const __m128i value_with_max_restart = _mm_or_si128(mask, value);
 				max = _mm_max_epu16(max, value_with_min_restart);
 				min = _mm_min_epu16(min, value_with_max_restart);
-				_mm_storeu_si128(dst_stream++, value_with_max_restart);
+				_mm_store_si128(dst_stream++, value_with_max_restart);
 			}
 
 			const u16 min_index = sse41_hmin_epu16(min);
@@ -904,12 +994,6 @@ namespace
 		static
 		std::tuple<u32, u32> upload_u32_swapped_sse4_1(const void *src, void *dst, u32 iterations, u32 restart_index)
 		{
-			const __m128i shuffle_mask = _mm_set_epi8(
-				0xC, 0xD, 0xE, 0xF,
-				0x8, 0x9, 0xA, 0xB,
-				0x4, 0x5, 0x6, 0x7,
-				0x0, 0x1, 0x2, 0x3);
-
 			auto src_stream = static_cast<const __m128i*>(src);
 			auto dst_stream = static_cast<__m128i*>(dst);
 
@@ -920,13 +1004,13 @@ namespace
 			for (unsigned n = 0; n < iterations; ++n)
 			{
 				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = _mm_shuffle_epi8(raw, shuffle_mask);
+				const __m128i value = _mm_shuffle_epi8(raw, s_bswap_u32_mask);
 				const __m128i mask = _mm_cmpeq_epi32(restart, value);
 				const __m128i value_with_min_restart = _mm_andnot_si128(mask, value);
 				const __m128i value_with_max_restart = _mm_or_si128(mask, value);
 				max = _mm_max_epu32(max, value_with_min_restart);
 				min = _mm_min_epu32(min, value_with_max_restart);
-				_mm_storeu_si128(dst_stream++, value_with_max_restart);
+				_mm_store_si128(dst_stream++, value_with_max_restart);
 			}
 
 			__m128i tmp = _mm_srli_si128(min, 8);

@@ -49,7 +49,7 @@ namespace stx
 
 	// Control block with data and reference counter
 	template <typename T>
-	class alignas(T) shared_data final : align_filler<sizeof(shared_counter), alignof(T)>
+	class shared_data final : align_filler<sizeof(shared_counter), alignof(T)>
 	{
 	public:
 		shared_counter m_ctr{};
@@ -64,7 +64,7 @@ namespace stx
 	};
 
 	template <typename T>
-	class alignas(T) shared_data<T[]> final : align_filler<sizeof(shared_counter) + sizeof(usz), alignof(T)>
+	class shared_data<T[]> final : align_filler<sizeof(shared_counter) + sizeof(usz), alignof(T)>
 	{
 	public:
 		usz m_count{};
@@ -98,8 +98,6 @@ namespace stx
 		friend class atomic_ptr;
 
 	public:
-		using pointer = T*;
-
 		using element_type = std::remove_extent_t<T>;
 
 		constexpr single_ptr() noexcept = default;
@@ -109,7 +107,7 @@ namespace stx
 		// Default constructor or null_ptr should be used instead
 		[[deprecated("Use null_ptr")]] single_ptr(std::nullptr_t) = delete;
 
-		explicit single_ptr(shared_data<T>&, pointer ptr) noexcept
+		explicit single_ptr(shared_data<T>&, element_type* ptr) noexcept
 			: m_ptr(ptr)
 		{
 		}
@@ -258,7 +256,7 @@ namespace stx
 		return single_ptr<T>(*ptr, &ptr->m_data);
 	}
 
-	template <typename T, bool Init = true>
+	template <typename T, bool Init = true, usz Align = alignof(std::remove_extent_t<T>)>
 	static std::enable_if_t<std::is_unbounded_array_v<T>, single_ptr<T>> make_single(usz count) noexcept
 	{
 		static_assert(sizeof(shared_data<T>) - offsetof(shared_data<T>, m_ctr) == sizeof(shared_counter));
@@ -269,9 +267,9 @@ namespace stx
 
 		std::byte* bytes = nullptr;
 
-		if constexpr (alignof(etype) > (__STDCPP_DEFAULT_NEW_ALIGNMENT__))
+		if constexpr (Align > (__STDCPP_DEFAULT_NEW_ALIGNMENT__))
 		{
-			bytes = static_cast<std::byte*>(::operator new(size, std::align_val_t{alignof(etype)}));
+			bytes = static_cast<std::byte*>(::operator new(size, std::align_val_t{Align}));
 		}
 		else
 		{
@@ -305,9 +303,9 @@ namespace stx
 
 			ptr->~shared_data<T>();
 
-			if constexpr (alignof(etype) > (__STDCPP_DEFAULT_NEW_ALIGNMENT__))
+			if constexpr (Align > (__STDCPP_DEFAULT_NEW_ALIGNMENT__))
 			{
-				::operator delete[](bytes, std::align_val_t{alignof(etype)});
+				::operator delete[](bytes, std::align_val_t{Align});
 			}
 			else
 			{
@@ -347,8 +345,6 @@ namespace stx
 		friend class atomic_ptr;
 
 	public:
-		using pointer = T*;
-
 		using element_type = std::remove_extent_t<T>;
 
 		constexpr shared_ptr() noexcept = default;
@@ -594,8 +590,6 @@ namespace stx
 		friend class atomic_ptr;
 
 	public:
-		using pointer = T*;
-
 		using element_type = std::remove_extent_t<T>;
 
 		using shared_type = shared_ptr<T>;
