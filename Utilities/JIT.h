@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/types.hpp"
+
 // Include asmjit with warnings ignored
 #define ASMJIT_EMBED
 #define ASMJIT_DEBUG
@@ -27,6 +29,10 @@
 
 #include <array>
 #include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <unordered_map>
 
 enum class jit_class
 {
@@ -251,43 +257,18 @@ public:
 
 #ifdef LLVM_AVAILABLE
 
-#include <memory>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-
-#include "util/types.hpp"
-
-#ifdef _MSC_VER
-#pragma warning(push, 0)
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wextra"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Weffc++"
-#pragma GCC diagnostic ignored "-Wmissing-noreturn"
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Winconsistent-missing-override"
-#endif
-#endif
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#ifdef _MSC_VER
-#pragma warning(pop)
-#else
-#pragma GCC diagnostic pop
-#endif
+namespace llvm
+{
+	class LLVMContext;
+	class ExecutionEngine;
+	class Module;
+}
 
 // Temporary compiler interface
 class jit_compiler final
 {
 	// Local LLVM context
-	llvm::LLVMContext m_context{};
+	std::unique_ptr<llvm::LLVMContext> m_context{};
 
 	// Execution instance
 	std::unique_ptr<llvm::ExecutionEngine> m_engine{};
@@ -302,7 +283,7 @@ public:
 	// Get LLVM context
 	auto& get_context()
 	{
-		return m_context;
+		return *m_context;
 	}
 
 	auto& get_engine() const

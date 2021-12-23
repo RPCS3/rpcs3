@@ -18,13 +18,22 @@
 #endif
 
 #if defined(_MSC_VER)
+#define PLAIN_FUNC
 #define SSSE3_FUNC
 #define SSE4_1_FUNC
 #define AVX2_FUNC
+#define AVX3_FUNC
 #else
+#ifndef __clang__
+#define PLAIN_FUNC __attribute__((optimize("no-tree-vectorize")))
+#define SSSE3_FUNC __attribute__((__target__("ssse3"))) __attribute__((optimize("tree-vectorize")))
+#else
+#define PLAIN_FUNC
 #define SSSE3_FUNC __attribute__((__target__("ssse3")))
+#endif
 #define SSE4_1_FUNC __attribute__((__target__("sse4.1")))
 #define AVX2_FUNC __attribute__((__target__("avx2")))
+#define AVX3_FUNC __attribute__((__target__("avx512f,avx512bw,avx512dq,avx512cd,avx512vl")))
 #ifndef __AVX2__
 using __m256i = long long __attribute__((vector_size(32)));
 #endif
@@ -45,22 +54,31 @@ SSE4_1_FUNC static inline u16 sse41_hmax_epu16(__m128i x)
 	return ~_mm_cvtsi128_si32(_mm_minpos_epu16(_mm_xor_si128(x, _mm_set1_epi32(-1))));
 }
 
-#if defined(__AVX2__)
+#if defined(__AVX512F__) && defined(__AVX512VL__) && defined(__AVX512DQ__) && defined(__AVX512CD__) && defined(__AVX512BW__)
 constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = true;
 constexpr bool s_use_avx2 = true;
+constexpr bool s_use_avx3 = true;
+#elif defined(__AVX2__)
+constexpr bool s_use_ssse3 = true;
+constexpr bool s_use_sse4_1 = true;
+constexpr bool s_use_avx2 = true;
+constexpr bool s_use_avx3 = false;
 #elif defined(__SSE41__)
 constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = true;
 constexpr bool s_use_avx2 = false;
+constexpr bool s_use_avx3 = false;
 #elif defined(__SSSE3__)
 constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = false;
 constexpr bool s_use_avx2 = false;
+constexpr bool s_use_avx3 = false;
 #else
 const bool s_use_ssse3 = utils::has_ssse3();
 const bool s_use_sse4_1 = utils::has_sse41();
 const bool s_use_avx2 = utils::has_avx2();
+const bool s_use_avx3 = utils::has_avx512();
 #endif
 
 const __m128i s_bswap_u32_mask = _mm_set_epi8(
@@ -102,226 +120,69 @@ namespace
 		X = X << 5;
 		return{ X, Y, Z, 1 };
 	}
-}
 
-template <bool Compare>
-AVX2_FUNC inline bool copy_data_swap_u32_avx2(void*& dst, const void*& src, u32 count)
-{
-	const __m256i bswap_u32_mask = _mm256_set_m128i(s_bswap_u32_mask, s_bswap_u32_mask);
-
-	__m128i diff0 = _mm_setzero_si128();
-	__m256i diff = _mm256_setzero_si256();
-
-	if (uptr(dst) & 16 && count >= 4)
+	template <bool Compare>
+	PLAIN_FUNC bool copy_data_swap_u32_naive(u32* dst, const u32* src, u32 count)
 	{
-		const auto dst0 = static_cast<__m128i*>(dst);
-		const auto src0 = static_cast<const __m128i*>(src);
-		const auto data = _mm_shuffle_epi8(_mm_loadu_si128(src0), s_bswap_u32_mask);
-
-		if (Compare)
-		{
-			diff0 = _mm_xor_si128(data, _mm_load_si128(dst0));
-		}
-
-		_mm_store_si128(dst0, data);
-		dst = dst0 + 1;
-		src = src0 + 1;
-		count -= 4;
-	}
-
-	const u32 lane_count = count / 8;
-
-	auto dst_ptr = static_cast<__m256i*>(dst);
-	auto src_ptr = static_cast<const __m256i*>(src);
+		u32 result = 0;
 
 #ifdef __clang__
-#pragma clang loop unroll(disable)
+		#pragma clang loop vectorize(disable) interleave(disable) unroll(disable)
 #endif
-	for (u32 i = 0; i < lane_count; ++i)
-	{
-		const __m256i vec0 = _mm256_loadu_si256(src_ptr + i);
-		const __m256i vec1 = _mm256_shuffle_epi8(vec0, bswap_u32_mask);
-
-		if constexpr (Compare)
+		for (u32 i = 0; i < count; i++)
 		{
-			diff = _mm256_or_si256(diff, _mm256_xor_si256(vec1, _mm256_load_si256(dst_ptr + i)));
-		}
-
-		_mm256_store_si256(dst_ptr + i, vec1);
-	}
-
-	dst = dst_ptr + lane_count;
-	src = src_ptr + lane_count;
-
-	if (count & 4)
-	{
-		const auto dst0 = static_cast<__m128i*>(dst);
-		const auto src0 = static_cast<const __m128i*>(src);
-		const auto data = _mm_shuffle_epi8(_mm_loadu_si128(src0), s_bswap_u32_mask);
-
-		if (Compare)
-		{
-			diff0 = _mm_or_si128(diff0, _mm_xor_si128(data, _mm_load_si128(dst0)));
-		}
-
-		_mm_store_si128(dst0, data);
-		dst = dst0 + 1;
-		src = src0 + 1;
-	}
-
-	if constexpr (Compare)
-	{
-		diff = _mm256_or_si256(diff, _mm256_set_m128i(_mm_setzero_si128(), diff0));
-		return !_mm256_testz_si256(diff, diff);
-	}
-	else
-	{
-		return false;
-	}
-}
-
-template <bool Compare>
-static auto copy_data_swap_u32(void* dst, const void* src, u32 count)
-{
-	bool result = false;
-
-	if (uptr(dst) & 4)
-	{
-		const auto dst0 = static_cast<u32*>(dst);
-		const auto src0 = static_cast<const u32*>(src);
-		const u32 data = stx::se_storage<u32>::swap(*src0);
-
-		if (Compare && *dst0 != data)
-		{
-			result = true;
-		}
-
-		*dst0 = data;
-		dst = dst0 + 1;
-		src = src0 + 1;
-		count--;
-	}
-
-	if (uptr(dst) & 8 && count >= 2)
-	{
-		const auto dst0 = static_cast<u64*>(dst);
-		const auto src0 = static_cast<const u64*>(src);
-		const u64 data = utils::rol64(stx::se_storage<u64>::swap(*src0), 32);
-
-		if (Compare && *dst0 != data)
-		{
-			result = true;
-		}
-
-		*dst0 = data;
-		dst = dst0 + 1;
-		src = src0 + 1;
-		count -= 2;
-	}
-
-	const u32 lane_count = count / 4;
-
-	if (s_use_avx2) [[likely]]
-	{
-		result |= copy_data_swap_u32_avx2<Compare>(dst, src, count);
-	}
-	else if (s_use_ssse3)
-	{
-		__m128i diff = _mm_setzero_si128();
-
-		auto dst_ptr = static_cast<__m128i*>(dst);
-		auto src_ptr = static_cast<const __m128i*>(src);
-
-		for (u32 i = 0; i < lane_count; ++i)
-		{
-			const __m128i vec0 = _mm_loadu_si128(src_ptr + i);
-			const __m128i vec1 = ssse3_shuffle_epi8(vec0, s_bswap_u32_mask);
+			const u32 data = stx::se_storage<u32>::swap(src[i]);
 
 			if constexpr (Compare)
 			{
-				diff = _mm_or_si128(diff, _mm_xor_si128(vec1, _mm_load_si128(dst_ptr + i)));
+				result |= data ^ dst[i];
 			}
 
-			_mm_store_si128(dst_ptr + i, vec1);
+			dst[i] = data;
 		}
 
-		result |= _mm_cvtsi128_si64(_mm_packs_epi32(diff, diff)) != 0;
-
-		dst = dst_ptr + lane_count;
-		src = src_ptr + lane_count;
+		return static_cast<bool>(result);
 	}
-	else
+
+	template <bool Compare>
+	SSSE3_FUNC bool copy_data_swap_u32_ssse3(u32* dst, const u32* src, u32 count)
 	{
-		__m128i diff = _mm_setzero_si128();
+		u32 result = 0;
 
-		auto dst_ptr = static_cast<__m128i*>(dst);
-		auto src_ptr = static_cast<const __m128i*>(src);
-
-		for (u32 i = 0; i < lane_count; ++i)
+#ifdef __clang__
+		#pragma clang loop vectorize(enable) interleave(disable) unroll(disable)
+#endif
+		for (u32 i = 0; i < count; i++)
 		{
-			const __m128i vec0 = _mm_loadu_si128(src_ptr + i);
-			const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
-			const __m128i vec2 = _mm_or_si128(_mm_slli_epi32(vec1, 16), _mm_srli_epi32(vec1, 16));
+			const u32 data = stx::se_storage<u32>::swap(src[i]);
 
 			if constexpr (Compare)
 			{
-				diff = _mm_or_si128(diff, _mm_xor_si128(vec2, _mm_load_si128(dst_ptr + i)));
+				result |= data ^ dst[i];
 			}
 
-			_mm_store_si128(dst_ptr + i, vec2);
+			dst[i] = data;
 		}
 
-		result |= _mm_cvtsi128_si64(_mm_packs_epi32(diff, diff)) != 0;
-
-		dst = dst_ptr + lane_count;
-		src = src_ptr + lane_count;
+		return static_cast<bool>(result);
 	}
 
-	if (count & 2)
+	template <bool Compare>
+	void build_copy_data_swap_u32(asmjit::X86Assembler& c, std::array<asmjit::X86Gp, 4>& args)
 	{
-		const auto dst0 = static_cast<u64*>(dst);
-		const auto src0 = static_cast<const u64*>(src);
-		const u64 data = utils::rol64(stx::se_storage<u64>::swap(*src0), 32);
-
-		if (Compare && *dst0 != data)
+		if (utils::has_ssse3())
 		{
-			result = true;
+			c.jmp(asmjit::imm_ptr(&copy_data_swap_u32_ssse3<Compare>));
+			return;
 		}
 
-		*dst0 = data;
-		dst = dst0 + 1;
-		src = src0 + 1;
-	}
-
-	if (count & 1)
-	{
-		const auto dst0 = static_cast<u32*>(dst);
-		const auto src0 = static_cast<const u32*>(src);
-		const u32 data = stx::se_storage<u32>::swap(*src0);
-
-		if (Compare && *dst0 != data)
-		{
-			result = true;
-		}
-
-		*dst0 = data;
-	}
-
-	if constexpr (Compare)
-	{
-		return result;
+		c.jmp(asmjit::imm_ptr(&copy_data_swap_u32_naive<Compare>));
 	}
 }
 
-bool copy_data_swap_u32_cmp(void* dst, const void* src, u32 count)
-{
-	return copy_data_swap_u32<true>(dst, src, count);
-}
+built_function<void(*)(void*, const void*, u32)> copy_data_swap_u32(&build_copy_data_swap_u32<false>);
 
-void copy_data_swap_u32(void* dst, const void* src, u32 count)
-{
-	copy_data_swap_u32<false>(dst, src, count);
-}
+built_function<bool(*)(void*, const void*, u32)> copy_data_swap_u32_cmp(&build_copy_data_swap_u32<true>);
 
 namespace
 {

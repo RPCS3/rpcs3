@@ -763,11 +763,12 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 }
 
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
-	: m_cpu(cpu(_cpu))
+	: m_context(new llvm::LLVMContext)
+	, m_cpu(cpu(_cpu))
 {
 	std::string result;
 
-	auto null_mod = std::make_unique<llvm::Module> ("null_", m_context);
+	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
 
 	if (_link.empty())
 	{
