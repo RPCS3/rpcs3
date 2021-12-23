@@ -18,6 +18,11 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     # Embed newer libstdc++ for distros that don't come with it (ubuntu 16.04)
     mkdir -p appdir/usr/optional/ ; mkdir -p appdir/usr/optional/libstdc++/
     cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./appdir/usr/optional/libstdc++/
+    
+    # Remove libwayland-client because it has platform-dependent exports and breaks other OSes
+    rm -f ./appdir/usr/lib/libwayland-client.so*
+    
+    # Install latest appimage runner
     rm ./appdir/AppRun
     curl -sL https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous2/AppRun-patched-x86_64 -o ./appdir/AppRun
     chmod a+x ./appdir/AppRun
