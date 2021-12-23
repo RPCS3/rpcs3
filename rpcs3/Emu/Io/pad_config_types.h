@@ -10,6 +10,7 @@ enum class pad_handler
 	ds4,
 	dualsense,
 #ifdef _WIN32
+	direct_input,
 	xinput,
 	mm,
 #endif

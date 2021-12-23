@@ -326,7 +326,7 @@ xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_scp(co
 	return values;
 }
 
-pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
+pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data, const pad_buttons& /*buttons*/)
 {
 	return {
 		::at32(data, LT),

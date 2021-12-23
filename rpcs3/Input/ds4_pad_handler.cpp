@@ -358,7 +358,7 @@ std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::share
 	return keyBuffer;
 }
 
-pad_preview_values ds4_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
+pad_preview_values ds4_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data, const pad_buttons& /*buttons*/)
 {
 	return {
 		::at32(data, L2),

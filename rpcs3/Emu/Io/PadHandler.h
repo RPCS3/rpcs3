@@ -48,6 +48,7 @@ struct pad_list_entry
 using pad_preview_values = std::array<int, 6>;
 using pad_callback = std::function<void(u16 /*button_value*/, std::string /*button_name*/, std::string /*pad_name*/, u32 /*battery_level*/, pad_preview_values /*preview_values*/)>;
 using pad_fail_callback = std::function<void(std::string /*pad_name*/)>;
+using pad_buttons = std::array<std::string, 10>;
 
 using motion_preview_values = std::array<u16, 4>;
 using motion_callback = std::function<void(std::string /*pad_name*/, motion_preview_values /*preview_values*/)>;
@@ -204,7 +205,7 @@ public:
 	// Binds a Pad to a device
 	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id);
 	virtual void init_config(cfg_pad* cfg) = 0;
-	virtual void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
+	virtual void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const pad_buttons& buttons = {});
 	virtual void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors);
 	virtual std::unordered_map<u32, std::string> get_motion_axis_list() const { return {}; }
 
@@ -218,7 +219,11 @@ private:
 	virtual void get_extended_info(const pad_ensemble& /*binding*/) {}
 	virtual void apply_pad_data(const pad_ensemble& /*binding*/) {}
 	virtual std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/) { return {}; }
-	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/) { return {}; }
+	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/, const pad_buttons& /*buttons*/) { return {}; }
+
+	// These two functions are only supposed to be used in get_next_button_press in the pad settings dialog.
+	virtual bool get_is_trigger(const std::shared_ptr<PadDevice>& device, u64 keycode) { return get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode); }
+	virtual bool get_is_stick(const std::shared_ptr<PadDevice>& device, u64 keycode) { return get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode); }
 
 protected:
 	virtual std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg);

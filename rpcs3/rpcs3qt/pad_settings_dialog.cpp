@@ -522,7 +522,7 @@ void pad_settings_dialog::InitButtons()
 
 			std::lock_guard lock(m_handler_mutex);
 
-			const std::vector<std::string> buttons =
+			const pad_buttons buttons =
 			{
 				m_cfg_entries[button_ids::id_pad_l2].key, m_cfg_entries[button_ids::id_pad_r2].key, m_cfg_entries[button_ids::id_pad_lstick_left].key,
 				m_cfg_entries[button_ids::id_pad_lstick_right].key, m_cfg_entries[button_ids::id_pad_lstick_down].key, m_cfg_entries[button_ids::id_pad_lstick_up].key,
@@ -1336,6 +1336,8 @@ void pad_settings_dialog::ChangeHandler()
 	case pad_handler::keyboard:
 		m_description = tooltips.gamepad_settings.keyboard; break;
 #ifdef _WIN32
+	case pad_handler::direct_input:
+		m_description = tooltips.gamepad_settings.direct_input; break;
 	case pad_handler::xinput:
 		m_description = tooltips.gamepad_settings.xinput; break;
 	case pad_handler::mm:
@@ -1841,6 +1843,7 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 		case pad_handler::ds4: return tr("DualShock 4");
 		case pad_handler::dualsense: return tr("DualSense");
 #ifdef _WIN32
+		case pad_handler::direct_input: return tr("DirectInput");
 		case pad_handler::xinput: return tr("XInput");
 		case pad_handler::mm: return tr("MMJoystick");
 #endif

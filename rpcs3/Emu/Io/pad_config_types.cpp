@@ -14,6 +14,7 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 		case pad_handler::ds4: return "DualShock 4";
 		case pad_handler::dualsense: return "DualSense";
 #ifdef _WIN32
+		case pad_handler::direct_input: return "DirectInput";
 		case pad_handler::xinput: return "XInput";
 		case pad_handler::mm: return "MMJoystick";
 #endif

@@ -176,7 +176,7 @@ std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_m
 	return mapping;
 }
 
-void mm_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+void mm_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const pad_buttons& buttons)
 {
 	if (get_blacklist)
 		m_blacklist.clear();
@@ -311,22 +311,19 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 		}
 
 		pad_preview_values preview_values{};
-		if (buttons.size() == 10)
-		{
-			preview_values[0] = data[find_key(buttons[0])];
-			preview_values[1] = data[find_key(buttons[1])];
-			preview_values[2] = data[find_key(buttons[3])] - data[find_key(buttons[2])];
-			preview_values[3] = data[find_key(buttons[5])] - data[find_key(buttons[4])];
-			preview_values[4] = data[find_key(buttons[7])] - data[find_key(buttons[6])];
-			preview_values[5] = data[find_key(buttons[9])] - data[find_key(buttons[8])];
-		}
+		preview_values[0] = data[find_key(buttons[0])];
+		preview_values[1] = data[find_key(buttons[1])];
+		preview_values[2] = data[find_key(buttons[3])] - data[find_key(buttons[2])];
+		preview_values[3] = data[find_key(buttons[5])] - data[find_key(buttons[4])];
+		preview_values[4] = data[find_key(buttons[7])] - data[find_key(buttons[6])];
+		preview_values[5] = data[find_key(buttons[9])] - data[find_key(buttons[8])];
 
 		if (callback)
 		{
 			if (pressed_button.value > 0)
 				return callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
-			else
-				return callback(0, "", padId, 0, preview_values);
+
+			return callback(0, "", padId, 0, preview_values);
 		}
 
 		break;

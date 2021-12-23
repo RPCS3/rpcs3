@@ -142,6 +142,9 @@
     <Filter Include="Gui\ipc">
       <UniqueIdentifier>{91389c5b-9ebd-43fe-a288-1bbad775e528}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\DirectInput">
+      <UniqueIdentifier>{b481a930-5dbd-422c-8ae0-93d30174fb9b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -873,6 +876,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_pad_motion_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="Input\direct_input_pad_handler.cpp">
+      <Filter>Io\DirectInput</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1030,6 +1036,12 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\pad_device_info.h">
       <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\direct_input_pad_handler.h">
+      <Filter>Io\DirectInput</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\direct_input_constants.h">
+      <Filter>Io\DirectInput</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

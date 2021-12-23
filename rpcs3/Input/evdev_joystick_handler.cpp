@@ -294,7 +294,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::get
 	return evdev_device;
 }
 
-void evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+void evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const pad_buttons& buttons)
 {
 	if (get_blacklist)
 		m_blacklist.clear();
@@ -343,16 +343,12 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	};
 
 	pad_preview_values preview_values{};
-
-	if (buttons.size() == 10)
-	{
-		preview_values[0] = find_value(buttons[0]);                          // Left Trigger
-		preview_values[1] = find_value(buttons[1]);                          // Right Trigger
-		preview_values[2] = find_value(buttons[3]) - find_value(buttons[2]); // Left Stick X
-		preview_values[3] = find_value(buttons[5]) - find_value(buttons[4]); // Left Stick Y
-		preview_values[4] = find_value(buttons[7]) - find_value(buttons[6]); // Right Stick X
-		preview_values[5] = find_value(buttons[9]) - find_value(buttons[8]); // Right Stick Y
-	}
+	preview_values[0] = find_value(buttons[0]);                          // Left Trigger
+	preview_values[1] = find_value(buttons[1]);                          // Right Trigger
+	preview_values[2] = find_value(buttons[3]) - find_value(buttons[2]); // Left Stick X
+	preview_values[3] = find_value(buttons[5]) - find_value(buttons[4]); // Left Stick Y
+	preview_values[4] = find_value(buttons[7]) - find_value(buttons[6]); // Right Stick X
+	preview_values[5] = find_value(buttons[9]) - find_value(buttons[8]); // Right Stick Y
 
 	// return if nothing new has happened. ignore this to get the current state for blacklist
 	if (!get_blacklist && !has_new_event)
@@ -457,8 +453,8 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	{
 		if (pressed_button.value > 0)
 			return callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
-		else
-			return callback(0, "", padId, 0, preview_values);
+
+		return callback(0, "", padId, 0, preview_values);
 	}
 }
 

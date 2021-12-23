@@ -318,7 +318,7 @@ void PadHandlerBase::init_configs()
 	}
 }
 
-void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
+void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const pad_buttons& buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -357,8 +357,8 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
 			continue;
 
-		const bool is_trigger = get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode);
-		const bool is_stick   = !is_trigger && (get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode));
+		const bool is_trigger = get_is_trigger(device, keycode);
+		const bool is_stick   = !is_trigger && get_is_stick(device, keycode);
 		const bool is_button = !is_trigger && !is_stick;
 
 		if ((is_trigger && (value > m_trigger_threshold)) || (is_stick && (value > m_thumb_threshold)) || (is_button && (value > 0)))
@@ -382,15 +382,15 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 		return;
 	}
 
-	const pad_preview_values preview_values = get_preview_values(data);
+	const pad_preview_values preview_values = get_preview_values(data, buttons);
 	const u32 battery_level = get_battery_level(pad_id);
 
 	if (callback)
 	{
 		if (pressed_button.value > 0)
 			return callback(pressed_button.value, pressed_button.name, pad_id, battery_level, preview_values);
-		else
-			return callback(0, "", pad_id, battery_level, preview_values);
+
+		return callback(0, "", pad_id, battery_level, preview_values);
 	}
 }
 
