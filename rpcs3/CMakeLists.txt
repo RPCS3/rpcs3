@@ -62,6 +62,7 @@ set(RPCS3_SRC
 
     Input/basic_keyboard_handler.cpp
     Input/basic_mouse_handler.cpp
+    Input/direct_input_pad_handler.cpp
     Input/ds3_pad_handler.cpp
     Input/ds4_pad_handler.cpp
     Input/dualsense_pad_handler.cpp

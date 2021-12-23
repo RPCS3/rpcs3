@@ -10,6 +10,7 @@ enum class pad_handler
 	ds4,
 	dualsense,
 #ifdef _WIN32
+	direct_input,
 	xinput,
 	mm,
 #endif
@@ -20,7 +21,7 @@ enum class pad_handler
 
 struct PadInfo
 {
-	u32 now_connect;
-	u32 system_info;
-	bool ignore_input;
+	u32 now_connect{};
+	u32 system_info{};
+	bool ignore_input{};
 };

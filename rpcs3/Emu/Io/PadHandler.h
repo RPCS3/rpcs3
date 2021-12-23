@@ -18,6 +18,10 @@ public:
 	virtual ~PadDevice() = default;
 	cfg_pad* config{ nullptr };
 	u8 player_id{0};
+	u64 trigger_left = 0;
+	u64 trigger_right = 0;
+	std::vector<u64> axis_left  = {0, 0, 0, 0};
+	std::vector<u64> axis_right = {0, 0, 0, 0};
 };
 
 using pad_preview_values = std::array<int, 6>;
@@ -177,15 +181,15 @@ public:
 
 private:
 	virtual std::shared_ptr<PadDevice> get_device(const std::string& /*device*/) { return nullptr; }
-	virtual bool get_is_left_trigger(u64 /*keyCode*/) { return false; }
-	virtual bool get_is_right_trigger(u64 /*keyCode*/) { return false; }
-	virtual bool get_is_left_stick(u64 /*keyCode*/) { return false; }
-	virtual bool get_is_right_stick(u64 /*keyCode*/) { return false; }
+	virtual bool get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
 	virtual PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& /*device*/) { return connection::disconnected; }
 	virtual void get_extended_info(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {}
 	virtual void apply_pad_data(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {}
 	virtual std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/) { return {}; }
-	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/) { return {}; }
+	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/, const std::vector<std::string>& /*buttons*/) { return {}; }
 
 protected:
 	virtual std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg);

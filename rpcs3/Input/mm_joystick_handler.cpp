@@ -480,24 +480,24 @@ std::shared_ptr<PadDevice> mm_joystick_handler::get_device(const std::string& de
 	return joy_device;
 }
 
-bool mm_joystick_handler::get_is_left_trigger(u64 keyCode)
+bool mm_joystick_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode)
 {
-	return m_dev && m_dev->trigger_left == keyCode;
+	return device && device->trigger_left == keyCode;
 }
 
-bool mm_joystick_handler::get_is_right_trigger(u64 keyCode)
+bool mm_joystick_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode)
 {
-	return m_dev && m_dev->trigger_right == keyCode;
+	return device && device->trigger_right == keyCode;
 }
 
-bool mm_joystick_handler::get_is_left_stick(u64 keyCode)
+bool mm_joystick_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode)
 {
-	return m_dev && std::find(m_dev->axis_left.begin(), m_dev->axis_left.end(), keyCode) != m_dev->axis_left.end();
+	return device && std::find(device->axis_left.begin(), device->axis_left.end(), keyCode) != device->axis_left.end();
 }
 
-bool mm_joystick_handler::get_is_right_stick(u64 keyCode)
+bool mm_joystick_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode)
 {
-	return m_dev && std::find(m_dev->axis_right.begin(), m_dev->axis_right.end(), keyCode) != m_dev->axis_right.end();
+	return device && std::find(device->axis_right.begin(), device->axis_right.end(), keyCode) != device->axis_right.end();
 }
 
 PadHandlerBase::connection mm_joystick_handler::update_connection(const std::shared_ptr<PadDevice>& device)

@@ -1179,6 +1179,8 @@ void pad_settings_dialog::ChangeHandler()
 	case pad_handler::keyboard:
 		m_description = tooltips.gamepad_settings.keyboard; break;
 #ifdef _WIN32
+	case pad_handler::direct_input:
+		m_description = tooltips.gamepad_settings.direct_input; break;
 	case pad_handler::xinput:
 		m_description = tooltips.gamepad_settings.xinput; break;
 	case pad_handler::mm:
@@ -1672,6 +1674,7 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 		case pad_handler::ds4: return tr("DualShock 4");
 		case pad_handler::dualsense: return tr("DualSense");
 #ifdef _WIN32
+		case pad_handler::direct_input: return tr("DirectInput");
 		case pad_handler::xinput: return tr("XInput");
 		case pad_handler::mm: return tr("MMJoystick");
 #endif

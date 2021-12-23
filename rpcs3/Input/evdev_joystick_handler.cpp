@@ -1044,22 +1044,22 @@ bool evdev_joystick_handler::check_buttons(const std::vector<EvdevButton>& b, co
 	return std::any_of(b.begin(), b.end(), [this, code](const EvdevButton& b) { return check_button(b, code); });
 };
 
-bool evdev_joystick_handler::get_is_left_trigger(u64 keyCode)
+bool evdev_joystick_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return check_button(m_dev->trigger_left, static_cast<u32>(keyCode));
 }
 
-bool evdev_joystick_handler::get_is_right_trigger(u64 keyCode)
+bool evdev_joystick_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return check_button(m_dev->trigger_right, static_cast<u32>(keyCode));
 }
 
-bool evdev_joystick_handler::get_is_left_stick(u64 keyCode)
+bool evdev_joystick_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return check_buttons(m_dev->axis_left, static_cast<u32>(keyCode));
 }
 
-bool evdev_joystick_handler::get_is_right_stick(u64 keyCode)
+bool evdev_joystick_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return check_buttons(m_dev->axis_right, static_cast<u32>(keyCode));
 }

@@ -136,6 +136,9 @@
     <Filter Include="Io\camera">
       <UniqueIdentifier>{f1996891-48b7-441a-b3fe-52794cbebe80}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\DirectInput">
+      <UniqueIdentifier>{b481a930-5dbd-422c-8ae0-93d30174fb9b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -804,6 +807,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_camera_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="Input\direct_input_pad_handler.cpp">
+      <Filter>Io\DirectInput</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -946,6 +952,12 @@
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\direct_input_pad_handler.h">
+      <Filter>Io\DirectInput</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\direct_input_constants.h">
+      <Filter>Io\DirectInput</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

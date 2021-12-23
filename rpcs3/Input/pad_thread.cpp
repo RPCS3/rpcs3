@@ -5,6 +5,7 @@
 #include "ds4_pad_handler.h"
 #include "dualsense_pad_handler.h"
 #ifdef _WIN32
+#include "direct_input_pad_handler.h"
 #include "xinput_pad_handler.h"
 #include "mm_joystick_handler.h"
 #elif HAVE_LIBEVDEV
@@ -147,6 +148,9 @@ void pad_thread::Init()
 				cur_pad_handler = std::make_shared<dualsense_pad_handler>();
 				break;
 #ifdef _WIN32
+			case pad_handler::direct_input:
+				cur_pad_handler = std::make_shared<direct_input_pad_handler>();
+				break;
 			case pad_handler::xinput:
 				cur_pad_handler = std::make_shared<xinput_pad_handler>();
 				break;
@@ -341,6 +345,8 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 	case pad_handler::dualsense:
 		return std::make_unique<dualsense_pad_handler>();
 #ifdef _WIN32
+	case pad_handler::direct_input:
+		return std::make_unique<direct_input_pad_handler>();
 	case pad_handler::xinput:
 		return std::make_unique<xinput_pad_handler>();
 	case pad_handler::mm:
@@ -380,6 +386,9 @@ void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<P
 		static_cast<dualsense_pad_handler*>(handler.get())->init_config(&cfg);
 		break;
 #ifdef _WIN32
+	case pad_handler::direct_input:
+		static_cast<direct_input_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
 	case pad_handler::xinput:
 		static_cast<xinput_pad_handler*>(handler.get())->init_config(&cfg);
 		break;

@@ -326,7 +326,7 @@ xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_scp(co
 	return values;
 }
 
-pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
+pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data, const std::vector<std::string>& /*buttons*/)
 {
 	return {
 		data.at(LT),
@@ -422,17 +422,17 @@ std::shared_ptr<PadDevice> xinput_pad_handler::get_device(const std::string& dev
 	return x_device;
 }
 
-bool xinput_pad_handler::get_is_left_trigger(u64 keyCode)
+bool xinput_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return keyCode == XInputKeyCodes::LT;
 }
 
-bool xinput_pad_handler::get_is_right_trigger(u64 keyCode)
+bool xinput_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return keyCode == XInputKeyCodes::RT;
 }
 
-bool xinput_pad_handler::get_is_left_stick(u64 keyCode)
+bool xinput_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	switch (keyCode)
 	{
@@ -446,7 +446,7 @@ bool xinput_pad_handler::get_is_left_stick(u64 keyCode)
 	}
 }
 
-bool xinput_pad_handler::get_is_right_stick(u64 keyCode)
+bool xinput_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	switch (keyCode)
 	{
