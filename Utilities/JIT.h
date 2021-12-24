@@ -34,6 +34,13 @@
 #include <string_view>
 #include <unordered_map>
 
+void jit_announce(uptr func, usz size, std::string_view name);
+
+void jit_announce(auto* func, usz size, std::string_view name)
+{
+	jit_announce(uptr(func), size, name);
+}
+
 enum class jit_class
 {
 	ppu_code,
@@ -161,7 +168,7 @@ namespace asmjit
 
 // Build runtime function with asmjit::X86Assembler
 template <typename FT, typename F>
-inline FT build_function_asm(F&& builder)
+inline FT build_function_asm(std::string_view name, F&& builder)
 {
 	using namespace asmjit;
 
@@ -195,6 +202,7 @@ inline FT build_function_asm(F&& builder)
 		return nullptr;
 	}
 
+	jit_announce(result, code.getCodeSize(), name);
 	return result;
 }
 
@@ -210,8 +218,8 @@ public:
 	built_function& operator=(const built_function&) = delete;
 
 	template <typename F>
-	built_function(F&& builder)
-		: m_func(ensure(build_function_asm<FT>(std::forward<F>(builder))))
+	built_function(std::string_view name, F&& builder)
+		: m_func(ensure(build_function_asm<FT>(name, std::forward<F>(builder))))
 	{
 	}
 
@@ -238,7 +246,7 @@ public:
 	built_function& operator=(const built_function&) = delete;
 
 	template <typename F>
-	built_function(F&& builder)
+	built_function(std::string_view name, F&& builder)
 	{
 		using namespace asmjit;
 
@@ -269,6 +277,10 @@ public:
 		if (compiler.getLastError() || rt.add(&result, &code))
 		{
 			ensure(false);
+		}
+		else
+		{
+			jit_announce(result, code.getCodeSize(), name);
 		}
 	}
 

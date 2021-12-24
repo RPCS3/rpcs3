@@ -256,9 +256,9 @@ namespace
 	}
 }
 
-built_function<void(*)(void*, const void*, u32)> copy_data_swap_u32(&build_copy_data_swap_u32<false>);
+built_function<void(*)(void*, const void*, u32)> copy_data_swap_u32("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
 
-built_function<bool(*)(void*, const void*, u32)> copy_data_swap_u32_cmp(&build_copy_data_swap_u32<true>);
+built_function<bool(*)(void*, const void*, u32)> copy_data_swap_u32_cmp("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
 
 namespace
 {

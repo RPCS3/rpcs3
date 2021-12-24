@@ -904,6 +904,10 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 
 		spu_log.fatal("Failed to build a function");
 	}
+	else
+	{
+		jit_announce(fn, code.getCodeSize(), fmt::format("spu-b-%s", fmt::base57(be_t<u64>(m_hash_start))));
+	}
 
 	// Install compiled function pointer
 	const bool added = !add_loc->compiled && add_loc->compiled.compare_and_swap_test(nullptr, fn);

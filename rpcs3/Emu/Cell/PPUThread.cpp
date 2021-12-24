@@ -147,7 +147,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op);
 
 extern void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
-const auto ppu_gateway = built_function<void(*)(ppu_thread*)>([](asmjit::X86Assembler& c, auto& args)
+const auto ppu_gateway = built_function<void(*)(ppu_thread*)>("ppu_gateway", [](asmjit::X86Assembler& c, auto& args)
 {
 	// Gateway for PPU, converts from native to GHC calling convention, also saves RSP value for escape
 	using namespace asmjit;
@@ -248,7 +248,7 @@ const auto ppu_gateway = built_function<void(*)(ppu_thread*)>([](asmjit::X86Asse
 	c.ret();
 });
 
-const extern auto ppu_escape = build_function_asm<void(*)(ppu_thread*)>([](asmjit::X86Assembler& c, auto& args)
+const extern auto ppu_escape = build_function_asm<void(*)(ppu_thread*)>("ppu_escape", [](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -256,12 +256,13 @@ const extern auto ppu_escape = build_function_asm<void(*)(ppu_thread*)>([](asmji
 	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&ppu_thread::saved_native_sp)));
 
 	// Return to the return location
-	c.jmp(x86::qword_ptr(x86::rsp, -8));
+	c.sub(x86::rsp, 8);
+	c.ret();
 });
 
 void ppu_recompiler_fallback(ppu_thread& ppu);
 
-const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& ppu)>([](asmjit::X86Assembler& c, auto& args)
+const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& ppu)>("ppu_trampolineb", [](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -1816,7 +1817,7 @@ extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
-const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>([](asmjit::X86Assembler& c, auto& args)
+const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>("ppu_stcx_accurate_tx", [](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -1832,11 +1833,7 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
 	c.push(x86::rbp);
-	c.push(x86::r13);
-	c.push(x86::r12);
-	c.push(x86::rbx);
 	c.push(x86::r14);
-	c.push(x86::r15);
 	c.sub(x86::rsp, 40);
 #ifdef _WIN32
 	if (!s_tsx_avx)
@@ -1847,7 +1844,7 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 #endif
 
 	// Prepare registers
-	build_swap_rdx_with(c, args, x86::r12);
+	build_swap_rdx_with(c, args, x86::r10);
 	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.and_(x86::rbp, -128);
@@ -1855,11 +1852,9 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 	c.movzx(args[0].r32(), args[0].r16());
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
-	c.and_(x86::rbx, -128 / 2);
-	c.prefetchw(x86::byte_ptr(x86::rbx));
+	c.lea(x86::r11, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
+	c.and_(x86::r11, -128 / 2);
 	c.and_(args[0].r32(), 63);
-	c.mov(x86::r13, args[1]);
 
 	// Prepare data
 	if (s_tsx_avx)
@@ -1894,8 +1889,6 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
 		c.jae(fall);
 	});
-	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
-	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
 
 	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&ppu_thread::state) - ::offset32(&ppu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
@@ -1939,7 +1932,7 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 	c.mov(x86::qword_ptr(x86::rbp, args[0], 1, 0), args[3]);
 
 	c.xend();
-	c.lock().add(x86::qword_ptr(x86::rbx), 64);
+	c.lock().add(x86::qword_ptr(x86::r11), 64);
 	build_get_tsc(c);
 	c.sub(x86::rax, stamp0);
 	c.jmp(_ret);
@@ -1975,7 +1968,7 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 	c.jmp(_ret);
 
 	c.bind(fail2);
-	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
+	c.lock().sub(x86::qword_ptr(x86::r11), 64);
 	c.bind(load);
 
 	// Store previous data back to rdata
@@ -2019,12 +2012,17 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 	}
 
 	c.add(x86::rsp, 40);
-	c.pop(x86::r15);
 	c.pop(x86::r14);
-	c.pop(x86::rbx);
-	c.pop(x86::r12);
-	c.pop(x86::r13);
 	c.pop(x86::rbp);
+
+#ifdef __linux__
+	// Hack for perf profiling (TODO)
+	Label ret2 = c.newLabel();
+	c.lea(x86::rdx, x86::qword_ptr(ret2));
+	c.push(x86::rdx);
+	c.push(x86::rdx);
+	c.bind(ret2);
+#endif
 	c.ret();
 });
 
