@@ -43,7 +43,7 @@ u32 convert_rgb565_to_bgra8(const u16 bits)
 	const u8 r8 = ((r5 * 527) + 23) >> 6;
 	const u8 a8 = 255;
 
-	return b8 | g8 << 8 | r8 << (8*2) | a8 << (8*3);
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
 }
 
 u32 convert_argb4_to_bgra8(const u16 bits)
@@ -53,7 +53,7 @@ u32 convert_argb4_to_bgra8(const u16 bits)
 	const u8 r8 = ((bits >> 8) & 0xF0);
 	const u8 a8 = ((bits << 4) & 0xF0);
 
-	return b8 | g8 << 8 | r8 << (8*2) | a8 << (8*3);
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
 }
 
 u32 convert_a1rgb5_to_bgra8(const u16 bits)
@@ -68,7 +68,7 @@ u32 convert_a1rgb5_to_bgra8(const u16 bits)
 	const u8 r8 = ((r5 * 527) + 23) >> 6;
 	const u8 a8 = a1;
 
-	return b8 | g8 << 8 | r8 << (8*2) | a8 << (8*3);
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
 }
 
 u32 convert_rgb5a1_to_bgra8(const u16 bits)
@@ -83,7 +83,7 @@ u32 convert_rgb5a1_to_bgra8(const u16 bits)
 	const u8 r8 = ((r5 * 527) + 23) >> 6;
 	const u8 a8 = a1;
 
-	return b8 | g8 << 8 | r8 << (8*2) | a8 << (8*3);
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
 }
 
 u32 convert_rgb655_to_bgra8(const u16 bits)
@@ -97,7 +97,7 @@ u32 convert_rgb655_to_bgra8(const u16 bits)
 	const u8 r8 = ((r6 * 259) + 33) >> 6;
 	const u8 a8 = 1;
 
-	return b8 | g8 << 8 | r8 << (8*2) | a8 << (8*3);
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
 }
 
 u32 convert_d1rgb5_to_bgra8(const u16 bits)
@@ -111,7 +111,7 @@ u32 convert_d1rgb5_to_bgra8(const u16 bits)
 	const u8 r8 = ((r5 * 527) + 23) >> 6;
 	const u8 a8 = 1;
 
-	return b8 | g8 << 8 | r8 << (8*2) | a8 << (8*3);
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
 }
 
 struct convert_16_block_32
