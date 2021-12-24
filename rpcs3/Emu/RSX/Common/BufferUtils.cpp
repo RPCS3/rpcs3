@@ -143,9 +143,109 @@ namespace
 		return static_cast<bool>(result);
 	}
 
+	template <bool Compare, int Size, typename RT>
+	void build_copy_data_swap_u32_avx3(asmjit::X86Assembler& c, std::array<asmjit::X86Gp, 4>& args, const RT& rmask, const RT& rload, const RT& rtest)
+	{
+		using namespace asmjit;
+
+		Label loop = c.newLabel();
+		Label tail = c.newLabel();
+
+		// Get start alignment offset
+		c.mov(args[3].r32(), args[0].r32());
+		c.and_(args[3].r32(), Size * 4 - 1);
+
+		// Load and duplicate shuffle mask
+		c.vbroadcasti32x4(rmask, x86::oword_ptr(uptr(&s_bswap_u32_mask)));
+		if (Compare)
+			c.vpxor(x86::xmm2, x86::xmm2, x86::xmm2);
+
+		c.or_(x86::eax, -1);
+		// Small data: skip to tail (ignore alignment)
+		c.cmp(args[2].r32(), Size);
+		c.jbe(tail);
+
+		// Generate mask for first iteration, adjust args using alignment offset
+		c.sub(args[1], args[3]);
+		c.shr(args[3].r32(), 2);
+		c.shlx(x86::eax, x86::eax, args[3].r32());
+		c.kmovw(x86::k1, x86::eax);
+		c.and_(args[0], -Size * 4);
+		c.add(args[2].r32(), args[3].r32());
+
+		c.k(x86::k1).z().vmovdqu32(rload, X86Mem(args[1], 0, Size * 4u));
+		c.vpshufb(rload, rload, rmask);
+		if (Compare)
+			c.k(x86::k1).z().vpxord(rtest, rload, X86Mem(args[0], 0, Size * 4u));
+		c.k(x86::k1).vmovdqa32(X86Mem(args[0], 0, Size * 4u), rload);
+		c.lea(args[0], x86::qword_ptr(args[0], Size * 4));
+		c.lea(args[1], x86::qword_ptr(args[1], Size * 4));
+		c.sub(args[2].r32(), Size);
+
+		c.or_(x86::eax, -1);
+		c.align(kAlignCode, 16);
+
+		c.bind(loop);
+		c.cmp(args[2].r32(), Size);
+		c.jbe(tail);
+		c.vmovdqu32(rload, X86Mem(args[1], 0, Size * 4u));
+		c.vpshufb(rload, rload, rmask);
+		if (Compare)
+			c.vpternlogd(rtest, rload, X86Mem(args[0], 0, Size * 4u), 0xf6); // orAxorBC
+		c.vmovdqa32(X86Mem(args[0], 0, Size * 4u), rload);
+		c.lea(args[0], x86::qword_ptr(args[0], Size * 4));
+		c.lea(args[1], x86::qword_ptr(args[1], Size * 4));
+		c.sub(args[2].r32(), Size);
+		c.jmp(loop);
+
+		c.bind(tail);
+		c.shlx(x86::eax, x86::eax, args[2].r32());
+		c.not_(x86::eax);
+		c.kmovw(x86::k1, x86::eax);
+		c.k(x86::k1).z().vmovdqu32(rload, X86Mem(args[1], 0, Size * 4u));
+		c.vpshufb(rload, rload, rmask);
+		if (Compare)
+			c.k(x86::k1).vpternlogd(rtest, rload, X86Mem(args[0], 0, Size * 4u), 0xf6);
+		c.k(x86::k1).vmovdqu32(X86Mem(args[0], 0, Size * 4u), rload);
+
+		if (Compare)
+		{
+			if constexpr (Size != 16)
+			{
+				c.vptest(rtest, rtest);
+			}
+			else
+			{
+				c.vptestmd(x86::k1, rtest, rtest);
+				c.ktestw(x86::k1, x86::k1);
+			}
+
+			c.setnz(x86::al);
+		}
+
+#ifndef __AVX__
+		c.vzeroupper();
+#endif
+		c.ret();
+	}
+
 	template <bool Compare>
 	void build_copy_data_swap_u32(asmjit::X86Assembler& c, std::array<asmjit::X86Gp, 4>& args)
 	{
+		using namespace asmjit;
+
+		if (utils::has_avx512())
+		{
+			if (utils::has_avx512_icl())
+			{
+				build_copy_data_swap_u32_avx3<Compare, 16>(c, args, x86::zmm0, x86::zmm1, x86::zmm2);
+				return;
+			}
+
+			build_copy_data_swap_u32_avx3<Compare, 8>(c, args, x86::ymm0, x86::ymm1, x86::ymm2);
+			return;
+		}
+
 		if (utils::has_ssse3())
 		{
 			c.jmp(asmjit::imm_ptr(&copy_data_swap_u32_ssse3<Compare>));
