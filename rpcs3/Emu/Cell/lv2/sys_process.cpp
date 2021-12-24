@@ -231,7 +231,7 @@ CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 		return CELL_EPERM;
 	default:
 	{
-		if (auto vm0 = idm::get<sys_vm_t>(sys_vm_t::find_id(addr & -0x1000'0000)))
+		if (auto vm0 = idm::get<sys_vm_t>(sys_vm_t::find_id(addr)))
 		{
 			// sys_vm area was not covering the address specified but made a reservation on the entire 256mb region
 			if (vm0->addr + vm0->size - 1 < addr)
