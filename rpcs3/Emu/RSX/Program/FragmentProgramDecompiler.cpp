@@ -1099,13 +1099,6 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			}
 		}
 
-		// Sanity checks
-		if (func_id != base_func && base_func != FUNCTION::TEXTURE_SAMPLE_BASE)
-		{
-			// A lot of redundant special-access modes would be needed to cater for all the variations, ignore special modifiers for now, but log an error
-			rsx_log.error("[Unimplemented warning] Conflicting texture decode options in the shaders detected. Base option=%d, selected=%d", static_cast<int>(base_func), static_cast<int>(func_id));
-		}
-
 		ensure(func_id <= FUNCTION::TEXTURE_SAMPLE_MAX_BASE_ENUM && func_id >= FUNCTION::TEXTURE_SAMPLE_BASE);
 
 		// Clamp type to 3 types (1d, 2d, cube+3d) and offset into sampling redirection table
