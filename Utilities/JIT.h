@@ -198,6 +198,35 @@ inline FT build_function_asm(F&& builder)
 	return result;
 }
 
+#ifdef __APPLE__
+template <typename FT, usz = 4096>
+class built_function
+{
+	FT m_func;
+
+public:
+	built_function(const built_function&) = delete;
+
+	built_function& operator=(const built_function&) = delete;
+
+	template <typename F>
+	built_function(F&& builder)
+		: m_func(ensure(build_function_asm<FT>(std::forward<F>(builder))))
+	{
+	}
+
+	operator FT() const noexcept
+	{
+		return m_func;
+	}
+
+	template <typename... Args>
+	auto operator()(Args&&... args) const noexcept
+	{
+		return m_func(std::forward<Args>(args)...);
+	}
+};
+#else
 template <typename FT, usz Size = 4096>
 class built_function
 {
@@ -254,6 +283,7 @@ public:
 		return FT(+m_data)(std::forward<Args>(args)...);
 	}
 };
+#endif
 
 #ifdef LLVM_AVAILABLE
 
