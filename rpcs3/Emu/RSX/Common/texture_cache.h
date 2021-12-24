@@ -505,8 +505,10 @@ namespace rsx
 					AUDIT(other != surface);
 					if (!other->is_flushable())
 					{
-						if (other->overlaps(*surface, section_bounds::full_range))
+						if (other->overlaps(*surface, section_bounds::confirmed_range))
 						{
+							// This should never happen. It will raise exceptions later due to a dirty region being locked
+							rsx_log.error("Excluded region overlaps with flushed surface!");
 							other->set_dirty(true);
 						}
 					}
