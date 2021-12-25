@@ -895,12 +895,12 @@ namespace rsx
 
 	namespace nv308a
 	{
-		template<u32 index>
 		struct color
 		{
-			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
+			static void impl(thread* rsx, u32 reg, u32)
 			{
 				const u32 out_x_max = method_registers.nv308a_size_out_x();
+				const u32 index = reg - NV308A_COLOR;
 
 				if (index >= out_x_max)
 				{
@@ -3338,13 +3338,7 @@ namespace rsx
 		bind_array<NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>>();
 
 		//NV308A (0xa400..0xbffc!)
-		bind_range<NV308A_COLOR + (256 * 0), 1, 256, nv308a::color, 256 * 0>();
-		bind_range<NV308A_COLOR + (256 * 1), 1, 256, nv308a::color, 256 * 1>();
-		bind_range<NV308A_COLOR + (256 * 2), 1, 256, nv308a::color, 256 * 2>();
-		bind_range<NV308A_COLOR + (256 * 3), 1, 256, nv308a::color, 256 * 3>();
-		bind_range<NV308A_COLOR + (256 * 4), 1, 256, nv308a::color, 256 * 4>();
-		bind_range<NV308A_COLOR + (256 * 5), 1, 256, nv308a::color, 256 * 5>();
-		bind_range<NV308A_COLOR + (256 * 6), 1, 256, nv308a::color, 256 * 6>();
+		bind_array<NV308A_COLOR, 1, 256 * 7, nv308a::color::impl>();
 
 		//NV3089
 		bind<NV3089_IMAGE_IN, nv3089::image_in>();
