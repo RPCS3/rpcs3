@@ -424,6 +424,14 @@ struct JITAnnouncer : llvm::JITEventListener
 		using namespace llvm;
 
 		object::OwningBinary<object::ObjectFile> debug_obj_ = info.getObjectForDebug(obj);
+		if (!debug_obj_.getBinary())
+		{
+#ifdef __linux__
+			jit_log.error("LLVM: Failed to announce JIT events (no debug object)");
+#endif
+			return;
+		}
+
 		const object::ObjectFile& debug_obj = *debug_obj_.getBinary();
 
 		for (const auto& [sym, size] : computeSymbolSizes(debug_obj))
