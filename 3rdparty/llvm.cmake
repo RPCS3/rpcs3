@@ -61,7 +61,11 @@ if(WITH_LLVM)
 		endif()
 	endif()
 
-	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen LLVMX86AsmParser LLVMIntelJITEvents)
+	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen LLVMX86AsmParser)
+
+	if(WIN32 OR CMAKE_SYSTEM MATCHES "Linux")
+		set(LLVM_LIBS ${LLVM_LIBS} LLVMIntelJITEvents)
+	endif()
 
 	if(CMAKE_SYSTEM MATCHES "Linux")
 		set(LLVM_LIBS ${LLVM_LIBS} LLVMPerfJITEvents)
