@@ -6,7 +6,9 @@
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/RSXThread.h"
+#include "util/asm.hpp"
 #include "sys_event.h"
+#include "sys_vm.h"
 
 LOG_CHANNEL(sys_rsx);
 
@@ -322,6 +324,12 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 	{
 		if (!vm::check_addr(addr, vm::page_readable | (addr < 0x20000000 ? 0 : vm::page_1m_size)))
 		{
+			return CELL_EINVAL;
+		}
+
+		if ((addr == ea || !(addr % 0x1000'0000)) && idm::check<sys_vm_t>(sys_vm_t::find_id(addr)))
+		{
+			// Virtual memory is disallowed
 			return CELL_EINVAL;
 		}
 	}

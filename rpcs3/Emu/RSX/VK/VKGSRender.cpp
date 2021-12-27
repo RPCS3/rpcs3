@@ -32,9 +32,26 @@ namespace vk
 
 		switch (color_format)
 		{
+#ifndef __APPLE__
 		case rsx::surface_color_format::r5g6b5:
 			return std::make_pair(VK_FORMAT_R5G6B5_UNORM_PACK16, vk::default_component_map);
 
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, o_rgb);
+
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, z_rgb);
+#else
+		// assign B8G8R8A8_UNORM to formats that are not supported by Metal
+		case rsx::surface_color_format::r5g6b5:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map);
+
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, o_rgb);
+
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, z_rgb);
+#endif
 		case rsx::surface_color_format::a8r8g8b8:
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map);
 
@@ -58,12 +75,6 @@ namespace vk
 
 		case rsx::surface_color_format::w32z32y32x32:
 			return std::make_pair(VK_FORMAT_R32G32B32A32_SFLOAT, vk::default_component_map);
-
-		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, o_rgb);
-
-		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, z_rgb);
 
 		case rsx::surface_color_format::b8:
 		{

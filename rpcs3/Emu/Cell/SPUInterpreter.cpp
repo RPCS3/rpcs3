@@ -1733,7 +1733,7 @@ bool spu_interpreter::SHUFB(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>([](asmjit::X86Assembler& c, auto& /*args*/)
+const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>("spu_shufb", [](asmjit::X86Assembler& c, auto& /*args*/)
 {
 	using namespace asmjit;
 

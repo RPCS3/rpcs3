@@ -13,6 +13,15 @@ if(WITH_LLVM)
 		option(LLVM_INCLUDE_UTILS OFF)
 		option(LLVM_CCACHE_BUILD ON)
 
+		if(WIN32)
+			set(LLVM_USE_INTEL_JITEVENTS ON)
+		endif()
+
+		if(CMAKE_SYSTEM MATCHES "Linux")
+			set(LLVM_USE_INTEL_JITEVENTS ON)
+			set(LLVM_USE_PERF ON)
+		endif()
+
 		set(CXX_FLAGS_OLD ${CMAKE_CXX_FLAGS})
 
 		if (MSVC)
@@ -53,6 +62,14 @@ if(WITH_LLVM)
 	endif()
 
 	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen LLVMX86AsmParser)
+
+	if(WIN32 OR CMAKE_SYSTEM MATCHES "Linux")
+		set(LLVM_LIBS ${LLVM_LIBS} LLVMIntelJITEvents)
+	endif()
+
+	if(CMAKE_SYSTEM MATCHES "Linux")
+		set(LLVM_LIBS ${LLVM_LIBS} LLVMPerfJITEvents)
+	endif()
 
 	add_library(3rdparty_llvm INTERFACE)
 	target_link_libraries(3rdparty_llvm INTERFACE ${LLVM_LIBS})

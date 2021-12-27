@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/types.hpp"
+
 // Include asmjit with warnings ignored
 #define ASMJIT_EMBED
 #define ASMJIT_DEBUG
@@ -27,6 +29,17 @@
 
 #include <array>
 #include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+
+void jit_announce(uptr func, usz size, std::string_view name);
+
+void jit_announce(auto* func, usz size, std::string_view name)
+{
+	jit_announce(uptr(func), size, name);
+}
 
 enum class jit_class
 {
@@ -62,6 +75,30 @@ namespace asmjit
 {
 	// Should only be used to build global functions
 	asmjit::Runtime& get_global_runtime();
+
+	// Don't use directly
+	class inline_runtime : public HostRuntime
+	{
+		uchar* m_data;
+		usz m_size;
+
+	public:
+		inline_runtime(const inline_runtime&) = delete;
+
+		inline_runtime& operator=(const inline_runtime&) = delete;
+
+		inline_runtime(uchar* data, usz size)
+			: m_data(data)
+			, m_size(size)
+		{
+		}
+
+		asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override;
+
+		asmjit::Error _release(void*) noexcept override;
+
+		~inline_runtime();
+	};
 
 	// Emit xbegin and adjacent loop, return label at xbegin (don't use xabort please)
 	template <typename F>
@@ -131,7 +168,7 @@ namespace asmjit
 
 // Build runtime function with asmjit::X86Assembler
 template <typename FT, typename F>
-inline FT build_function_asm(F&& builder)
+inline FT build_function_asm(std::string_view name, F&& builder)
 {
 	using namespace asmjit;
 
@@ -165,48 +202,115 @@ inline FT build_function_asm(F&& builder)
 		return nullptr;
 	}
 
+	jit_announce(result, code.getCodeSize(), name);
 	return result;
 }
 
+#ifdef __APPLE__
+template <typename FT, usz = 4096>
+class built_function
+{
+	FT m_func;
+
+public:
+	built_function(const built_function&) = delete;
+
+	built_function& operator=(const built_function&) = delete;
+
+	template <typename F>
+	built_function(std::string_view name, F&& builder)
+		: m_func(ensure(build_function_asm<FT>(name, std::forward<F>(builder))))
+	{
+	}
+
+	operator FT() const noexcept
+	{
+		return m_func;
+	}
+
+	template <typename... Args>
+	auto operator()(Args&&... args) const noexcept
+	{
+		return m_func(std::forward<Args>(args)...);
+	}
+};
+#else
+template <typename FT, usz Size = 4096>
+class built_function
+{
+	alignas(4096) uchar m_data[Size];
+
+public:
+	built_function(const built_function&) = delete;
+
+	built_function& operator=(const built_function&) = delete;
+
+	template <typename F>
+	built_function(std::string_view name, F&& builder)
+	{
+		using namespace asmjit;
+
+		inline_runtime rt(m_data, Size);
+
+		CodeHolder code;
+		code.init(rt.getCodeInfo());
+		code._globalHints = asmjit::CodeEmitter::kHintOptimizedAlign;
+
+		std::array<X86Gp, 4> args;
+	#ifdef _WIN32
+		args[0] = x86::rcx;
+		args[1] = x86::rdx;
+		args[2] = x86::r8;
+		args[3] = x86::r9;
+	#else
+		args[0] = x86::rdi;
+		args[1] = x86::rsi;
+		args[2] = x86::rdx;
+		args[3] = x86::rcx;
+	#endif
+
+		X86Assembler compiler(&code);
+		builder(std::ref(compiler), args);
+
+		FT result;
+
+		if (compiler.getLastError() || rt.add(&result, &code))
+		{
+			ensure(false);
+		}
+		else
+		{
+			jit_announce(result, code.getCodeSize(), name);
+		}
+	}
+
+	operator FT() const noexcept
+	{
+		return FT(+m_data);
+	}
+
+	template <typename... Args>
+	auto operator()(Args&&... args) const noexcept
+	{
+		return FT(+m_data)(std::forward<Args>(args)...);
+	}
+};
+#endif
+
 #ifdef LLVM_AVAILABLE
 
-#include <memory>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-
-#include "util/types.hpp"
-
-#ifdef _MSC_VER
-#pragma warning(push, 0)
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wextra"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Weffc++"
-#pragma GCC diagnostic ignored "-Wmissing-noreturn"
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Winconsistent-missing-override"
-#endif
-#endif
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#ifdef _MSC_VER
-#pragma warning(pop)
-#else
-#pragma GCC diagnostic pop
-#endif
+namespace llvm
+{
+	class LLVMContext;
+	class ExecutionEngine;
+	class Module;
+}
 
 // Temporary compiler interface
 class jit_compiler final
 {
 	// Local LLVM context
-	llvm::LLVMContext m_context{};
+	std::unique_ptr<llvm::LLVMContext> m_context{};
 
 	// Execution instance
 	std::unique_ptr<llvm::ExecutionEngine> m_engine{};
@@ -221,7 +325,7 @@ public:
 	// Get LLVM context
 	auto& get_context()
 	{
-		return m_context;
+		return *m_context;
 	}
 
 	auto& get_engine() const

@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -115,6 +116,98 @@ void fmt_class_string<lv2_socket_family>::format(std::string& out, u64 arg)
 		case SYS_NET_AF_LOCAL: return "LOCAL";
 		case SYS_NET_AF_INET: return "INET";
 		case SYS_NET_AF_INET6: return "INET6";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<lv2_ip_protocol>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_NET_IPPROTO_IP: return "IPPROTO_IP";
+		case SYS_NET_IPPROTO_ICMP: return "IPPROTO_ICMP";
+		case SYS_NET_IPPROTO_IGMP: return "IPPROTO_IGMP";
+		case SYS_NET_IPPROTO_TCP: return "IPPROTO_TCP";
+		case SYS_NET_IPPROTO_UDP: return "IPPROTO_UDP";
+		case SYS_NET_IPPROTO_ICMPV6: return "IPPROTO_ICMPV6";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<lv2_tcp_option>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_NET_TCP_NODELAY: return "TCP_NODELAY";
+		case SYS_NET_TCP_MAXSEG: return "TCP_MAXSEG";
+		case SYS_NET_TCP_MSS_TO_ADVERTISE: return "TCP_MSS_TO_ADVERTISE";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<lv2_socket_option>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_NET_SO_SNDBUF: return "SO_SNDBUF";
+		case SYS_NET_SO_RCVBUF: return "SO_RCVBUF";
+		case SYS_NET_SO_SNDLOWAT: return "SO_SNDLOWAT";
+		case SYS_NET_SO_RCVLOWAT: return "SO_RCVLOWAT";
+		case SYS_NET_SO_SNDTIMEO: return "SO_SNDTIMEO";
+		case SYS_NET_SO_RCVTIMEO: return "SO_RCVTIMEO";
+		case SYS_NET_SO_ERROR: return "SO_ERROR";
+		case SYS_NET_SO_TYPE: return "SO_TYPE";
+		case SYS_NET_SO_NBIO: return "SO_NBIO";
+		case SYS_NET_SO_TPPOLICY: return "SO_TPPOLICY";
+		case SYS_NET_SO_REUSEADDR: return "SO_REUSEADDR";
+		case SYS_NET_SO_KEEPALIVE: return "SO_KEEPALIVE";
+		case SYS_NET_SO_BROADCAST: return "SO_BROADCAST";
+		case SYS_NET_SO_LINGER: return "SO_LINGER";
+		case SYS_NET_SO_OOBINLINE: return "SO_OOBINLINE";
+		case SYS_NET_SO_REUSEPORT: return "SO_REUSEPORT";
+		case SYS_NET_SO_ONESBCAST: return "SO_ONESBCAST";
+		case SYS_NET_SO_USECRYPTO: return "SO_USECRYPTO";
+		case SYS_NET_SO_USESIGNATURE: return "SO_USESIGNATURE";
+		case SYS_NET_SOL_SOCKET: return "SOL_SOCKET";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<lv2_ip_option>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_NET_IP_HDRINCL: return "IP_HDRINCL";
+		case SYS_NET_IP_TOS: return "IP_TOS";
+		case SYS_NET_IP_TTL: return "IP_TTL";
+		case SYS_NET_IP_MULTICAST_IF: return "IP_MULTICAST_IF";
+		case SYS_NET_IP_MULTICAST_TTL: return "IP_MULTICAST_TTL";
+		case SYS_NET_IP_MULTICAST_LOOP: return "IP_MULTICAST_LOOP";
+		case SYS_NET_IP_ADD_MEMBERSHIP: return "IP_ADD_MEMBERSHIP";
+		case SYS_NET_IP_DROP_MEMBERSHIP: return "IP_DROP_MEMBERSHIP";
+		case SYS_NET_IP_TTLCHK: return "IP_TTLCHK";
+		case SYS_NET_IP_MAXTTL: return "IP_MAXTTL";
+		case SYS_NET_IP_DONTFRAG: return "IP_DONTFRAG";
 		}
 
 		return unknown;
@@ -1980,7 +2073,21 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_net.warning("sys_net_bnet_getsockopt(s=%d, level=0x%x, optname=0x%x, optval=*0x%x, optlen=*0x%x)", s, level, optname, optval, optlen);
+	switch (level)
+	{
+	case SYS_NET_SOL_SOCKET:
+		sys_net.warning("sys_net_bnet_getsockopt(s=%d, level=SYS_NET_SOL_SOCKET, optname=%s, optval=*0x%x, optlen=%u)", s, static_cast<lv2_socket_option>(optname), optval, optlen);
+		break;
+	case SYS_NET_IPPROTO_TCP:
+		sys_net.warning("sys_net_bnet_getsockopt(s=%d, level=SYS_NET_IPPROTO_TCP, optname=%s, optval=*0x%x, optlen=%u)", s, static_cast<lv2_tcp_option>(optname), optval, optlen);
+		break;
+	case SYS_NET_IPPROTO_IP:
+		sys_net.warning("sys_net_bnet_getsockopt(s=%d, level=SYS_NET_IPPROTO_IP, optname=%s, optval=*0x%x, optlen=%u)", s, static_cast<lv2_ip_option>(optname), optval, optlen);
+		break;
+	default:
+		sys_net.warning("sys_net_bnet_getsockopt(s=%d, level=0x%x, optname=0x%x, optval=*0x%x, optlen=%u)", s, level, optname, optval, optlen);
+		break;
+	}
 
 	if (!optval || !optlen)
 	{
@@ -2144,6 +2251,77 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			default:
 			{
 				sys_net.error("sys_net_bnet_getsockopt(s=%d, IPPROTO_TCP): unknown option (0x%x)", s, optname);
+				return SYS_NET_EINVAL;
+			}
+			}
+		}
+		else if (level == SYS_NET_IPPROTO_IP)
+		{
+			native_level = IPPROTO_IP;
+			switch (optname)
+			{
+			case SYS_NET_IP_HDRINCL:
+			{
+				native_opt = IP_HDRINCL;
+				break;
+			}
+			case SYS_NET_IP_TOS:
+			{
+				native_opt = IP_TOS;
+				break;
+			}
+			case SYS_NET_IP_TTL:
+			{
+				native_opt = IP_TTL;
+				break;
+			}
+			case SYS_NET_IP_MULTICAST_IF:
+			{
+				native_opt = IP_MULTICAST_IF;
+				break;
+			}
+			case SYS_NET_IP_MULTICAST_TTL:
+			{
+				native_opt = IP_MULTICAST_TTL;
+				break;
+			}
+			case SYS_NET_IP_MULTICAST_LOOP:
+			{
+				native_opt = IP_MULTICAST_LOOP;
+				break;
+			}
+			case SYS_NET_IP_ADD_MEMBERSHIP:
+			{
+				native_opt = IP_ADD_MEMBERSHIP;
+				break;
+			}
+			case SYS_NET_IP_DROP_MEMBERSHIP:
+			{
+				native_opt = IP_DROP_MEMBERSHIP;
+				break;
+			}
+			case SYS_NET_IP_TTLCHK:
+			{
+				sys_net.error("sys_net_bnet_getsockopt(s=%d, IPPROTO_IP): Stubbed option (0x%x) (SYS_NET_IP_TTLCHK)", s, optname);
+				return {};
+			}
+			case SYS_NET_IP_MAXTTL:
+			{
+				sys_net.error("sys_net_bnet_getsockopt(s=%d, IPPROTO_IP): Stubbed option (0x%x) (SYS_NET_IP_MAXTTL)", s, optname);
+				return {};
+			}
+			case SYS_NET_IP_DONTFRAG:
+			{
+				#ifdef _WIN32
+				native_opt = IP_DONTFRAGMENT;
+				#else
+				native_opt = IP_DF;
+				#endif
+				break;
+			}
+			default:
+			{
+				sys_net.error("sys_net_bnet_getsockopt(s=%d, IPPROTO_IP): unknown option (0x%x)", s, optname);
 				return SYS_NET_EINVAL;
 			}
 			}
@@ -2827,7 +3005,22 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_net.warning("sys_net_bnet_setsockopt(s=%d, level=0x%x, optname=0x%x, optval=*0x%x, optlen=%u)", s, level, optname, optval, optlen);
+	switch (level)
+	{
+	case SYS_NET_SOL_SOCKET:
+		sys_net.warning("sys_net_bnet_setsockopt(s=%d, level=SYS_NET_SOL_SOCKET, optname=%s, optval=*0x%x, optlen=%u)", s, static_cast<lv2_socket_option>(optname), optval, optlen);
+		break;
+	case SYS_NET_IPPROTO_TCP:
+		sys_net.warning("sys_net_bnet_setsockopt(s=%d, level=SYS_NET_IPPROTO_TCP, optname=%s, optval=*0x%x, optlen=%u)", s, static_cast<lv2_tcp_option>(optname), optval, optlen);
+		break;
+	case SYS_NET_IPPROTO_IP:
+		sys_net.warning("sys_net_bnet_setsockopt(s=%d, level=SYS_NET_IPPROTO_IP, optname=%s, optval=*0x%x, optlen=%u)", s, static_cast<lv2_ip_option>(optname), optval, optlen);
+		break;
+	default:
+		sys_net.warning("sys_net_bnet_setsockopt(s=%d, level=0x%x, optname=0x%x, optval=*0x%x, optlen=%u)", s, level, optname, optval, optlen);
+		break;
+	}
+
 	switch(optlen)
 	{
 		case 1:
@@ -3025,6 +3218,77 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			}
 			}
 		}
+		else if (level == SYS_NET_IPPROTO_IP)
+		{
+			native_level = IPPROTO_IP;
+			switch (optname)
+			{
+			case SYS_NET_IP_HDRINCL:
+			{
+				native_opt = IP_HDRINCL;
+				break;
+			}
+			case SYS_NET_IP_TOS:
+			{
+				native_opt = IP_TOS;
+				break;
+			}
+			case SYS_NET_IP_TTL:
+			{
+				native_opt = IP_TTL;
+				break;
+			}
+			case SYS_NET_IP_MULTICAST_IF:
+			{
+				native_opt = IP_MULTICAST_IF;
+				break;
+			}
+			case SYS_NET_IP_MULTICAST_TTL:
+			{
+				native_opt = IP_MULTICAST_TTL;
+				break;
+			}
+			case SYS_NET_IP_MULTICAST_LOOP:
+			{
+				native_opt = IP_MULTICAST_LOOP;
+				break;
+			}
+			case SYS_NET_IP_ADD_MEMBERSHIP:
+			{
+				native_opt = IP_ADD_MEMBERSHIP;
+				break;
+			}
+			case SYS_NET_IP_DROP_MEMBERSHIP:
+			{
+				native_opt = IP_DROP_MEMBERSHIP;
+				break;
+			}
+			case SYS_NET_IP_TTLCHK:
+			{
+				sys_net.error("sys_net_bnet_setsockopt(s=%d, IPPROTO_IP): Stubbed option (0x%x) (SYS_NET_IP_TTLCHK)", s, optname);
+				break;
+			}
+			case SYS_NET_IP_MAXTTL:
+			{
+				sys_net.error("sys_net_bnet_setsockopt(s=%d, IPPROTO_IP): Stubbed option (0x%x) (SYS_NET_IP_MAXTTL)", s, optname);
+				break;
+			}
+			case SYS_NET_IP_DONTFRAG:
+			{
+				#ifdef _WIN32
+				native_opt = IP_DONTFRAGMENT;
+				#else
+				native_opt = IP_DF;
+				#endif
+				break;
+			}
+			default:
+			{
+				sys_net.error("sys_net_bnet_setsockopt(s=%d, IPPROTO_IP): unknown option (0x%x)", s, optname);
+				return SYS_NET_EINVAL;
+			}
+			}
+		}
 		else
 		{
 			sys_net.error("sys_net_bnet_setsockopt(s=%d): unknown level (0x%x)", s, level);
@@ -3104,11 +3368,11 @@ error_code sys_net_bnet_shutdown(ppu_thread& ppu, s32 s, s32 how)
 	return CELL_OK;
 }
 
-error_code sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protocol)
+error_code sys_net_bnet_socket(ppu_thread& ppu, lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_net.warning("sys_net_bnet_socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
+	sys_net.warning("sys_net_bnet_socket(family=%s, type=%s, protocol=%s)", family, type, protocol);
 
 	if (family != SYS_NET_AF_INET && family != SYS_NET_AF_UNSPEC)
 	{

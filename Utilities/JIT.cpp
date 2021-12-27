@@ -16,6 +16,15 @@
 
 LOG_CHANNEL(jit_log, "JIT");
 
+void jit_announce(uptr func, usz size, std::string_view name)
+{
+#ifdef __linux__
+	static const fs::file s_map(fmt::format("/tmp/perf-%d.map", getpid()), fs::rewrite + fs::append);
+
+	s_map.write(fmt::format("%x %x %s\n", func, size, name));
+#endif
+}
+
 static u8* get_jit_memory()
 {
 	// Reserve 2G memory (magic static)
@@ -230,7 +239,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 				return asmjit::kErrorNoCodeGenerated;
 			}
 
-			void* p = m_pos.fetch_add(utils::align(codeSize, 4096));
+			void* p = m_pos.fetch_add(utils::align(codeSize, 64));
 			if (!p || m_pos > m_max) [[unlikely]]
 			{
 				*dst = nullptr;
@@ -245,7 +254,6 @@ asmjit::Runtime& asmjit::get_global_runtime()
 				return asmjit::kErrorInvalidState;
 			}
 
-			utils::memory_protect(p, utils::align(codeSize, 4096), utils::protection::rx);
 			flush(p, relocSize);
 			*dst = p;
 
@@ -266,6 +274,44 @@ asmjit::Runtime& asmjit::get_global_runtime()
 	// Magic static
 	static custom_runtime g_rt;
 	return g_rt;
+}
+
+asmjit::Error asmjit::inline_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
+{
+	usz codeSize = code->getCodeSize();
+	if (!codeSize) [[unlikely]]
+	{
+		*dst = nullptr;
+		return asmjit::kErrorNoCodeGenerated;
+	}
+
+	if (utils::align(codeSize, 4096) > m_size) [[unlikely]]
+	{
+		*dst = nullptr;
+		return asmjit::kErrorNoVirtualMemory;
+	}
+
+	usz relocSize = code->relocate(m_data);
+	if (!relocSize) [[unlikely]]
+	{
+		*dst = nullptr;
+		return asmjit::kErrorInvalidState;
+	}
+
+	flush(m_data, relocSize);
+	*dst = m_data;
+
+	return asmjit::kErrorOk;
+}
+
+asmjit::Error asmjit::inline_runtime::_release(void*) noexcept
+{
+	return asmjit::kErrorOk;
+}
+
+asmjit::inline_runtime::~inline_runtime()
+{
+	utils::memory_protect(m_data, m_size, utils::protection::rx);
 }
 
 #ifdef LLVM_AVAILABLE
@@ -293,6 +339,9 @@ asmjit::Runtime& asmjit::get_global_runtime()
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/SymbolSize.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -348,7 +397,7 @@ static u64 make_null_function(const std::string& name)
 		using namespace asmjit;
 
 		// Build a "null" function that contains its name
-		const auto func = build_function_asm<void (*)()>([&](X86Assembler& c, auto& args)
+		const auto func = build_function_asm<void (*)()>("NULL", [&](X86Assembler& c, auto& args)
 		{
 			Label data = c.newLabel();
 			c.lea(args[0], x86::qword_ptr(data, 0));
@@ -367,6 +416,42 @@ static u64 make_null_function(const std::string& name)
 		return func_ptr;
 	}
 }
+
+struct JITAnnouncer : llvm::JITEventListener
+{
+	void notifyObjectLoaded(u64, const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& info) override
+	{
+		using namespace llvm;
+
+		object::OwningBinary<object::ObjectFile> debug_obj_ = info.getObjectForDebug(obj);
+		if (!debug_obj_.getBinary())
+		{
+#ifdef __linux__
+			jit_log.error("LLVM: Failed to announce JIT events (no debug object)");
+#endif
+			return;
+		}
+
+		const object::ObjectFile& debug_obj = *debug_obj_.getBinary();
+
+		for (const auto& [sym, size] : computeSymbolSizes(debug_obj))
+		{
+			Expected<object::SymbolRef::Type> type_ = sym.getType();
+			if (!type_ || *type_ != object::SymbolRef::ST_Function)
+				continue;
+
+			Expected<StringRef> name = sym.getName();
+			if (!name)
+				continue;
+
+			Expected<u64> addr = sym.getAddress();
+			if (!addr)
+				continue;
+
+			jit_announce(*addr, size, {name->data(), name->size()});
+		}
+	}
+};
 
 // Simple memory manager
 struct MemoryManager1 : llvm::RTDyldMemoryManager
@@ -391,7 +476,8 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 	~MemoryManager1() override
 	{
-		utils::memory_release(ptr, c_max_size * 2);
+		// Hack: don't release to prevent reuse of address space, see jit_announce
+		utils::memory_decommit(ptr, c_max_size * 2);
 	}
 
 	llvm::JITSymbol findSymbol(const std::string& name) override
@@ -725,11 +811,12 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 }
 
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
-	: m_cpu(cpu(_cpu))
+	: m_context(new llvm::LLVMContext)
+	, m_cpu(cpu(_cpu))
 {
 	std::string result;
 
-	auto null_mod = std::make_unique<llvm::Module> ("null_", m_context);
+	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
 
 	if (_link.empty())
 	{
@@ -771,6 +858,12 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		{
 			m_engine->updateGlobalMapping(name, addr);
 		}
+	}
+
+	if (!_link.empty() || !(flags & 0x1))
+	{
+		m_engine->RegisterJITEventListener(llvm::JITEventListener::createIntelJITEventListener());
+		m_engine->RegisterJITEventListener(new JITAnnouncer);
 	}
 
 	if (!m_engine)

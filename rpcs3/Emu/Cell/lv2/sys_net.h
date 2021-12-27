@@ -70,7 +70,7 @@ enum lv2_socket_type : s32
 };
 
 // Socket options (prefixed with SYS_NET_)
-enum
+enum lv2_socket_option : s32
 {
 	SYS_NET_SO_SNDBUF       = 0x1001,
 	SYS_NET_SO_RCVBUF       = 0x1002,
@@ -94,6 +94,22 @@ enum
 	SYS_NET_SO_USESIGNATURE = 0x2000,
 
 	SYS_NET_SOL_SOCKET      = 0xffff,
+};
+
+// IP options (prefixed with SYS_NET_)
+enum lv2_ip_option : s32
+{
+	SYS_NET_IP_HDRINCL         = 2,
+	SYS_NET_IP_TOS             = 3,
+	SYS_NET_IP_TTL             = 4,
+	SYS_NET_IP_MULTICAST_IF    = 9,
+	SYS_NET_IP_MULTICAST_TTL   = 10,
+	SYS_NET_IP_MULTICAST_LOOP  = 11,
+	SYS_NET_IP_ADD_MEMBERSHIP  = 12,
+	SYS_NET_IP_DROP_MEMBERSHIP = 13,
+	SYS_NET_IP_TTLCHK          = 23,
+	SYS_NET_IP_MAXTTL          = 24,
+	SYS_NET_IP_DONTFRAG        = 26
 };
 
 // Family (prefixed with SYS_NET_)
@@ -132,7 +148,7 @@ enum
 };
 
 // TCP options (prefixed with SYS_NET_)
-enum
+enum lv2_tcp_option : s32
 {
 	SYS_NET_TCP_NODELAY          = 1,
 	SYS_NET_TCP_MAXSEG           = 2,
@@ -140,7 +156,7 @@ enum
 };
 
 // IP protocols (prefixed with SYS_NET_)
-enum
+enum lv2_ip_protocol : s32
 {
 	SYS_NET_IPPROTO_IP     = 0,
 	SYS_NET_IPPROTO_ICMP   = 1,
@@ -447,7 +463,7 @@ error_code sys_net_bnet_sendmsg(ppu_thread&, s32 s, vm::cptr<sys_net_msghdr> msg
 error_code sys_net_bnet_sendto(ppu_thread&, s32 s, vm::cptr<void> buf, u32 len, s32 flags, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
 error_code sys_net_bnet_setsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::cptr<void> optval, u32 optlen);
 error_code sys_net_bnet_shutdown(ppu_thread&, s32 s, s32 how);
-error_code sys_net_bnet_socket(ppu_thread&, s32 family, s32 type, s32 protocol);
+error_code sys_net_bnet_socket(ppu_thread&, lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 error_code sys_net_bnet_close(ppu_thread&, s32 s);
 error_code sys_net_bnet_poll(ppu_thread&, vm::ptr<sys_net_pollfd> fds, s32 nfds, s32 ms);
 error_code sys_net_bnet_select(ppu_thread&, s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> timeout);

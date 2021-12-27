@@ -144,15 +144,15 @@ namespace
 
 			if (emulate_restart) upload_size *= 2;
 
-			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<4>(upload_size);
+			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<64>(upload_size);
 			void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
 			std::span<std::byte> dst;
-			std::vector<std::byte> tmp;
+			stx::single_ptr<std::byte[]> tmp;
 			if (emulate_restart)
 			{
-				tmp.resize(upload_size);
-				dst = tmp;
+				tmp = stx::make_single<std::byte[], false, 64>(upload_size);
+				dst = std::span<std::byte>(tmp.get(), upload_size);
 			}
 			else
 			{
@@ -182,11 +182,11 @@ namespace
 			{
 				if (index_type == rsx::index_array_type::u16)
 				{
-					index_count = rsx::remove_restart_index(static_cast<u16*>(buf), reinterpret_cast<u16*>(tmp.data()), index_count, u16{umax});
+					index_count = rsx::remove_restart_index(static_cast<u16*>(buf), reinterpret_cast<u16*>(tmp.get()), index_count, u16{umax});
 				}
 				else
 				{
-					index_count = rsx::remove_restart_index(static_cast<u32*>(buf), reinterpret_cast<u32*>(tmp.data()), index_count, u32{umax});
+					index_count = rsx::remove_restart_index(static_cast<u32*>(buf), reinterpret_cast<u32*>(tmp.get()), index_count, u32{umax});
 				}
 			}
 

@@ -603,27 +603,19 @@ namespace glsl
 		{
 			if (props.emulate_depth_clip_only)
 			{
-				// Declare rcp_precise. Requires f64 support in the drivers.
-				// This is required to handle precision drift during division for extended depth range.
-				OS <<
-				"double rcp_precise(double x)\n"
-				"{\n"
-				"	double scaled = x * 0.0009765625;\n"
-				"	double inv = 1.0 / scaled;\n"
-				"	return inv * 0.0009765625;\n"
-				"}\n"
-				"\n"
 				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
 				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
+				OS <<
 				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
 				"{\n"
-				"	if (far_plane != 0.0 && pos.w != 0.0)\n"
+				"	if (pos.w != 0.0)\n"
 				"	{\n"
-				"		double z_range = (far_plane > near_plane)? (far_plane - near_plane) : far_plane;\n"
-				"		double inv_range = rcp_precise(z_range);\n"
-				"		float d = float(pos.z * rcp_precise(pos.w));\n"
-				"		float new_d = (d - near_plane) * float(inv_range);\n"
-				"		return vec4(pos.x, pos.y, (new_d * pos.w), pos.w);\n"
+				"		const float real_n = min(far_plane, near_plane);\n"
+				"		const float real_f = max(far_plane, near_plane);\n"
+				"		const double depth_range = double(real_f - real_n);\n"
+				"		const double inv_range = (depth_range > 0.000001) ? (1.0 / (depth_range * pos.w)) : 0.0;\n"
+				"		const double d = (double(pos.z) - double(real_n * pos.w)) * inv_range;\n"
+				"		return vec4(pos.xy, float(d * pos.w), pos.w);\n"
 				"	}\n"
 				"	else\n"
 				"	{\n"
@@ -764,7 +756,7 @@ namespace glsl
 			OS <<
 
 #ifdef __APPLE__
-			"vec4 remap_vector(const in vec4 rgba, const in uint remap_bits)\n"
+			"vec4 remap_vector_m(const in vec4 rgba, const in uint remap_bits)\n"
 			"{\n"
 			"	uvec4 selector = (uvec4(remap_bits) >> uvec4(3, 6, 9, 0)) & 0x7;\n"
 			"	bvec4 choice = greaterThan(selector, uvec4(1));\n"
@@ -781,7 +773,7 @@ namespace glsl
 			"{\n"
 #ifdef __APPLE__
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
-			"	if (remap_bits != 0x8D5) rgba = remap_vector(rgba, remap_bits);\n\n"
+			"	if (remap_bits != 0x8D5) rgba = remap_vector_m(rgba, remap_bits);\n\n"
 #endif
 			"	if (control_bits == 0)\n"
 			"	{\n"
