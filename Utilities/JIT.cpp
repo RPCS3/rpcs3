@@ -113,8 +113,32 @@ static u8* add_jit_memory(usz size, uint align)
 	return pointer + pos;
 }
 
+const asmjit::Environment& jit_runtime_base::environment() const noexcept
+{
+	static const asmjit::Environment g_env = asmjit::Environment::host();
+
+	return g_env;
+}
+
+void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
+{
+	ensure(!code->flatten());
+	ensure(!code->resolveUnresolvedLinks());
+	usz codeSize = ensure(code->codeSize());
+	auto p = ensure(this->_alloc(codeSize, 64));
+	ensure(!code->relocateToBase(uptr(p)));
+
+	asmjit::VirtMem::ProtectJitReadWriteScope rwScope(p, codeSize);
+
+	for (asmjit::Section* section : code->_sections)
+	{
+		std::memcpy(p + section->offset(), section->data(), section->bufferSize());
+	}
+
+	return p;
+}
+
 jit_runtime::jit_runtime()
-	: HostRuntime()
 {
 }
 
@@ -122,38 +146,9 @@ jit_runtime::~jit_runtime()
 {
 }
 
-asmjit::Error jit_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
+uchar* jit_runtime::_alloc(usz size, usz align) noexcept
 {
-	usz codeSize = code->getCodeSize();
-	if (!codeSize) [[unlikely]]
-	{
-		*dst = nullptr;
-		return asmjit::kErrorNoCodeGenerated;
-	}
-
-	void* p = jit_runtime::alloc(codeSize, 16);
-	if (!p) [[unlikely]]
-	{
-		*dst = nullptr;
-		return asmjit::kErrorNoVirtualMemory;
-	}
-
-	usz relocSize = code->relocate(p);
-	if (!relocSize) [[unlikely]]
-	{
-		*dst = nullptr;
-		return asmjit::kErrorInvalidState;
-	}
-
-	flush(p, relocSize);
-	*dst = p;
-
-	return asmjit::kErrorOk;
-}
-
-asmjit::Error jit_runtime::_release(void*) noexcept
-{
-	return asmjit::kErrorOk;
+	return jit_runtime::alloc(size, align, true);
 }
 
 u8* jit_runtime::alloc(usz size, uint align, bool exec) noexcept
@@ -200,12 +195,12 @@ void jit_runtime::finalize() noexcept
 	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
 }
 
-asmjit::Runtime& asmjit::get_global_runtime()
+jit_runtime_base& asmjit::get_global_runtime()
 {
 	// 16 MiB for internal needs
 	static constexpr u64 size = 1024 * 1024 * 16;
 
-	struct custom_runtime final : asmjit::HostRuntime
+	struct custom_runtime final : jit_runtime_base
 	{
 		custom_runtime() noexcept
 		{
@@ -214,7 +209,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 			{
 				if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))
 				{
-					m_pos.raw() = static_cast<std::byte*>(ptr);
+					m_pos.raw() = static_cast<uchar*>(ptr);
 					break;
 				}
 			}
@@ -226,49 +221,26 @@ asmjit::Runtime& asmjit::get_global_runtime()
 			utils::memory_commit(m_pos, size, utils::protection::wx);
 		}
 
-		custom_runtime(const custom_runtime&) = delete;
-
-		custom_runtime& operator=(const custom_runtime&) = delete;
-
-		asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override
+		uchar* _alloc(usz size, usz align) noexcept override
 		{
-			usz codeSize = code->getCodeSize();
-			if (!codeSize) [[unlikely]]
+			return m_pos.atomic_op([&](uchar*& pos) -> uchar*
 			{
-				*dst = nullptr;
-				return asmjit::kErrorNoCodeGenerated;
-			}
+				const auto r = reinterpret_cast<uchar*>(utils::align(uptr(pos), align));
 
-			void* p = m_pos.fetch_add(utils::align(codeSize, 64));
-			if (!p || m_pos > m_max) [[unlikely]]
-			{
-				*dst = nullptr;
-				jit_log.fatal("Out of memory (static asmjit)");
-				return asmjit::kErrorNoVirtualMemory;
-			}
+				if (r >= pos && r + size > pos && r + size <= m_max)
+				{
+					pos = r + size;
+					return r;
+				}
 
-			usz relocSize = code->relocate(p);
-			if (!relocSize) [[unlikely]]
-			{
-				*dst = nullptr;
-				return asmjit::kErrorInvalidState;
-			}
-
-			flush(p, relocSize);
-			*dst = p;
-
-			return asmjit::kErrorOk;
-		}
-
-		asmjit::Error _release(void*) noexcept override
-		{
-			return asmjit::kErrorOk;
+				return nullptr;
+			});
 		}
 
 	private:
-		atomic_t<std::byte*> m_pos{};
+		atomic_t<uchar*> m_pos{};
 
-		std::byte* m_max{};
+		uchar* m_max{};
 	};
 
 	// Magic static
@@ -276,37 +248,17 @@ asmjit::Runtime& asmjit::get_global_runtime()
 	return g_rt;
 }
 
-asmjit::Error asmjit::inline_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
+asmjit::inline_runtime::inline_runtime(uchar* data, usz size)
+	: m_data(data)
+	, m_size(size)
 {
-	usz codeSize = code->getCodeSize();
-	if (!codeSize) [[unlikely]]
-	{
-		*dst = nullptr;
-		return asmjit::kErrorNoCodeGenerated;
-	}
-
-	if (utils::align(codeSize, 4096) > m_size) [[unlikely]]
-	{
-		*dst = nullptr;
-		return asmjit::kErrorNoVirtualMemory;
-	}
-
-	usz relocSize = code->relocate(m_data);
-	if (!relocSize) [[unlikely]]
-	{
-		*dst = nullptr;
-		return asmjit::kErrorInvalidState;
-	}
-
-	flush(m_data, relocSize);
-	*dst = m_data;
-
-	return asmjit::kErrorOk;
 }
 
-asmjit::Error asmjit::inline_runtime::_release(void*) noexcept
+uchar* asmjit::inline_runtime::_alloc(usz size, usz align) noexcept
 {
-	return asmjit::kErrorOk;
+	ensure(align <= 4096);
+
+	return size <= m_size ? m_data : nullptr;
 }
 
 asmjit::inline_runtime::~inline_runtime()
@@ -397,19 +349,19 @@ static u64 make_null_function(const std::string& name)
 		using namespace asmjit;
 
 		// Build a "null" function that contains its name
-		const auto func = build_function_asm<void (*)()>("NULL", [&](X86Assembler& c, auto& args)
+		const auto func = build_function_asm<void (*)()>("NULL", [&](x86::Assembler& c, auto& args)
 		{
 			Label data = c.newLabel();
 			c.lea(args[0], x86::qword_ptr(data, 0));
-			c.jmp(imm_ptr(&null));
-			c.align(kAlignCode, 16);
+			c.jmp(Imm(&null));
+			c.align(AlignMode::kCode, 16);
 			c.bind(data);
 
 			// Copy function name bytes
 			for (char ch : name)
 				c.db(ch);
 			c.db(0);
-			c.align(kAlignData, 16);
+			c.align(AlignMode::kData, 16);
 		});
 
 		func_ptr = reinterpret_cast<u64>(func);

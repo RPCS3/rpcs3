@@ -147,7 +147,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op);
 
 extern void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
-const auto ppu_gateway = built_function<void(*)(ppu_thread*)>("ppu_gateway", [](asmjit::X86Assembler& c, auto& args)
+const auto ppu_gateway = built_function<void(*)(ppu_thread*)>("ppu_gateway", [](asmjit::x86::Assembler& c, auto& args)
 {
 	// Gateway for PPU, converts from native to GHC calling convention, also saves RSP value for escape
 	using namespace asmjit;
@@ -248,7 +248,7 @@ const auto ppu_gateway = built_function<void(*)(ppu_thread*)>("ppu_gateway", [](
 	c.ret();
 });
 
-const extern auto ppu_escape = build_function_asm<void(*)(ppu_thread*)>("ppu_escape", [](asmjit::X86Assembler& c, auto& args)
+const extern auto ppu_escape = build_function_asm<void(*)(ppu_thread*)>("ppu_escape", [](asmjit::x86::Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -262,7 +262,7 @@ const extern auto ppu_escape = build_function_asm<void(*)(ppu_thread*)>("ppu_esc
 
 void ppu_recompiler_fallback(ppu_thread& ppu);
 
-const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& ppu)>("ppu_trampolineb", [](asmjit::X86Assembler& c, auto& args)
+const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& ppu)>("ppu_trampolineb", [](asmjit::x86::Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -1817,7 +1817,7 @@ extern u64 ppu_ldarx(ppu_thread& ppu, u32 addr)
 	return ppu_load_acquire_reservation<u64>(ppu, addr);
 }
 
-const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>("ppu_stcx_accurate_tx", [](asmjit::X86Assembler& c, auto& args)
+const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, const void* _old, u64 _new)>("ppu_stcx_accurate_tx", [](asmjit::x86::Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -1859,10 +1859,10 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 	// Prepare data
 	if (s_tsx_avx)
 	{
-		c.vmovups(x86::ymm0, x86::yword_ptr(args[2], 0));
-		c.vmovups(x86::ymm1, x86::yword_ptr(args[2], 32));
-		c.vmovups(x86::ymm2, x86::yword_ptr(args[2], 64));
-		c.vmovups(x86::ymm3, x86::yword_ptr(args[2], 96));
+		c.vmovups(x86::ymm0, x86::ymmword_ptr(args[2], 0));
+		c.vmovups(x86::ymm1, x86::ymmword_ptr(args[2], 32));
+		c.vmovups(x86::ymm2, x86::ymmword_ptr(args[2], 64));
+		c.vmovups(x86::ymm3, x86::ymmword_ptr(args[2], 96));
 	}
 	else
 	{
@@ -1897,10 +1897,10 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 
 	if (s_tsx_avx)
 	{
-		c.vxorps(x86::ymm0, x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vxorps(x86::ymm1, x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vxorps(x86::ymm2, x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vxorps(x86::ymm3, x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+		c.vxorps(x86::ymm0, x86::ymm0, x86::ymmword_ptr(x86::rbp, 0));
+		c.vxorps(x86::ymm1, x86::ymm1, x86::ymmword_ptr(x86::rbp, 32));
+		c.vxorps(x86::ymm2, x86::ymm2, x86::ymmword_ptr(x86::rbp, 64));
+		c.vxorps(x86::ymm3, x86::ymm3, x86::ymmword_ptr(x86::rbp, 96));
 		c.vorps(x86::ymm0, x86::ymm0, x86::ymm1);
 		c.vorps(x86::ymm1, x86::ymm2, x86::ymm3);
 		c.vorps(x86::ymm0, x86::ymm1, x86::ymm0);
@@ -1943,10 +1943,10 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 	// Load old data to store back in rdata
 	if (s_tsx_avx)
 	{
-		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+		c.vmovaps(x86::ymm0, x86::ymmword_ptr(x86::rbp, 0));
+		c.vmovaps(x86::ymm1, x86::ymmword_ptr(x86::rbp, 32));
+		c.vmovaps(x86::ymm2, x86::ymmword_ptr(x86::rbp, 64));
+		c.vmovaps(x86::ymm3, x86::ymmword_ptr(x86::rbp, 96));
 	}
 	else
 	{
@@ -1974,10 +1974,10 @@ const auto ppu_stcx_accurate_tx = built_function<u64(*)(u32 raddr, u64 rtime, co
 	// Store previous data back to rdata
 	if (s_tsx_avx)
 	{
-		c.vmovaps(x86::yword_ptr(args[2], 0), x86::ymm0);
-		c.vmovaps(x86::yword_ptr(args[2], 32), x86::ymm1);
-		c.vmovaps(x86::yword_ptr(args[2], 64), x86::ymm2);
-		c.vmovaps(x86::yword_ptr(args[2], 96), x86::ymm3);
+		c.vmovaps(x86::ymmword_ptr(args[2], 0), x86::ymm0);
+		c.vmovaps(x86::ymmword_ptr(args[2], 32), x86::ymm1);
+		c.vmovaps(x86::ymmword_ptr(args[2], 64), x86::ymm2);
+		c.vmovaps(x86::ymmword_ptr(args[2], 96), x86::ymm3);
 	}
 	else
 	{

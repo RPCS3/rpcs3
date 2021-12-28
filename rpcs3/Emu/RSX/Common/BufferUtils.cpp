@@ -144,7 +144,7 @@ namespace
 	}
 
 	template <bool Compare, int Size, typename RT>
-	void build_copy_data_swap_u32_avx3(asmjit::X86Assembler& c, std::array<asmjit::X86Gp, 4>& args, const RT& rmask, const RT& rload, const RT& rtest)
+	void build_copy_data_swap_u32_avx3(asmjit::x86::Assembler& c, std::array<asmjit::x86::Gp, 4>& args, const RT& rmask, const RT& rload, const RT& rtest)
 	{
 		using namespace asmjit;
 
@@ -173,26 +173,26 @@ namespace
 		c.and_(args[0], -Size * 4);
 		c.add(args[2].r32(), args[3].r32());
 
-		c.k(x86::k1).z().vmovdqu32(rload, X86Mem(args[1], 0, Size * 4u));
+		c.k(x86::k1).z().vmovdqu32(rload, x86::Mem(args[1], 0, Size * 4u));
 		c.vpshufb(rload, rload, rmask);
 		if (Compare)
-			c.k(x86::k1).z().vpxord(rtest, rload, X86Mem(args[0], 0, Size * 4u));
-		c.k(x86::k1).vmovdqa32(X86Mem(args[0], 0, Size * 4u), rload);
+			c.k(x86::k1).z().vpxord(rtest, rload, x86::Mem(args[0], 0, Size * 4u));
+		c.k(x86::k1).vmovdqa32(x86::Mem(args[0], 0, Size * 4u), rload);
 		c.lea(args[0], x86::qword_ptr(args[0], Size * 4));
 		c.lea(args[1], x86::qword_ptr(args[1], Size * 4));
 		c.sub(args[2].r32(), Size);
 
 		c.or_(x86::eax, -1);
-		c.align(kAlignCode, 16);
+		c.align(AlignMode::kCode, 16);
 
 		c.bind(loop);
 		c.cmp(args[2].r32(), Size);
 		c.jbe(tail);
-		c.vmovdqu32(rload, X86Mem(args[1], 0, Size * 4u));
+		c.vmovdqu32(rload, x86::Mem(args[1], 0, Size * 4u));
 		c.vpshufb(rload, rload, rmask);
 		if (Compare)
-			c.vpternlogd(rtest, rload, X86Mem(args[0], 0, Size * 4u), 0xf6); // orAxorBC
-		c.vmovdqa32(X86Mem(args[0], 0, Size * 4u), rload);
+			c.vpternlogd(rtest, rload, x86::Mem(args[0], 0, Size * 4u), 0xf6); // orAxorBC
+		c.vmovdqa32(x86::Mem(args[0], 0, Size * 4u), rload);
 		c.lea(args[0], x86::qword_ptr(args[0], Size * 4));
 		c.lea(args[1], x86::qword_ptr(args[1], Size * 4));
 		c.sub(args[2].r32(), Size);
@@ -202,11 +202,11 @@ namespace
 		c.shlx(x86::eax, x86::eax, args[2].r32());
 		c.not_(x86::eax);
 		c.kmovw(x86::k1, x86::eax);
-		c.k(x86::k1).z().vmovdqu32(rload, X86Mem(args[1], 0, Size * 4u));
+		c.k(x86::k1).z().vmovdqu32(rload, x86::Mem(args[1], 0, Size * 4u));
 		c.vpshufb(rload, rload, rmask);
 		if (Compare)
-			c.k(x86::k1).vpternlogd(rtest, rload, X86Mem(args[0], 0, Size * 4u), 0xf6);
-		c.k(x86::k1).vmovdqu32(X86Mem(args[0], 0, Size * 4u), rload);
+			c.k(x86::k1).vpternlogd(rtest, rload, x86::Mem(args[0], 0, Size * 4u), 0xf6);
+		c.k(x86::k1).vmovdqu32(x86::Mem(args[0], 0, Size * 4u), rload);
 
 		if (Compare)
 		{
@@ -230,7 +230,7 @@ namespace
 	}
 
 	template <bool Compare>
-	void build_copy_data_swap_u32(asmjit::X86Assembler& c, std::array<asmjit::X86Gp, 4>& args)
+	void build_copy_data_swap_u32(asmjit::x86::Assembler& c, std::array<asmjit::x86::Gp, 4>& args)
 	{
 		using namespace asmjit;
 

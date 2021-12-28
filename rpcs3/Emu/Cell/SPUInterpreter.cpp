@@ -43,7 +43,7 @@ namespace asmjit
 	static constexpr spu_opcode_t s_op{};
 
 	template <uint I, uint N>
-	static void build_spu_gpr_load(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>&, bool store = false)
+	static void build_spu_gpr_load(x86::Assembler& c, x86::Xmm x, const bf_t<u32, I, N>&, bool store = false)
 	{
 		static_assert(N == 7, "Invalid bitfield");
 
@@ -87,7 +87,7 @@ namespace asmjit
 	}
 
 	template <uint I, uint N>
-	static void build_spu_gpr_store(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>&, bool store = true)
+	static void build_spu_gpr_store(x86::Assembler& c, x86::Xmm x, const bf_t<u32, I, N>&, bool store = true)
 	{
 		build_spu_gpr_load(c, x, bf_t<u32, I, N>{}, store);
 	}
@@ -1733,7 +1733,7 @@ bool spu_interpreter::SHUFB(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>("spu_shufb", [](asmjit::X86Assembler& c, auto& /*args*/)
+const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>("spu_shufb", [](asmjit::x86::Assembler& c, auto& /*args*/)
 {
 	using namespace asmjit;
 
@@ -1793,7 +1793,7 @@ const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>("s
 	c.mov(x86::eax, 1);
 	c.ret();
 
-	c.align(kAlignData, 16);
+	c.align(AlignMode::kData, 16);
 	c.bind(xc0);
 	c.dq(0xc0c0c0c0c0c0c0c0);
 	c.dq(0xc0c0c0c0c0c0c0c0);

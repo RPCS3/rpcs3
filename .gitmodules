@@ -5,7 +5,7 @@
 [submodule "asmjit"]
 	path = 3rdparty/asmjit/asmjit
 	url = ../../asmjit/asmjit.git
-	branch = oldstable
+	branch = aarch64
 	ignore = dirty
 [submodule "llvm"]
 	path = llvm

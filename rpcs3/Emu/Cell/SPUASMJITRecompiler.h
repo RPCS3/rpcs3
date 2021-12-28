@@ -24,23 +24,23 @@ private:
 	u32 m_base;
 
 	// emitter:
-	asmjit::X86Assembler* c;
+	asmjit::x86::Assembler* c;
 
 	// arguments:
-	const asmjit::X86Gp* cpu;
-	const asmjit::X86Gp* ls;
-	const asmjit::X86Gp* rip;
-	const asmjit::X86Gp* pc0;
+	const asmjit::x86::Gp* cpu;
+	const asmjit::x86::Gp* ls;
+	const asmjit::x86::Gp* rip;
+	const asmjit::x86::Gp* pc0;
 
 	// Native args or temp variables:
-	const asmjit::X86Gp* arg0;
-	const asmjit::X86Gp* arg1;
-	const asmjit::X86Gp* qw0;
-	const asmjit::X86Gp* qw1;
+	const asmjit::x86::Gp* arg0;
+	const asmjit::x86::Gp* arg1;
+	const asmjit::x86::Gp* qw0;
+	const asmjit::x86::Gp* qw1;
 
 	// temporary:
-	const asmjit::X86Gp* addr;
-	std::array<const asmjit::X86Xmm*, 16> vec;
+	const asmjit::x86::Gp* addr;
+	std::array<const asmjit::x86::Xmm*, 16> vec;
 
 	// workload for the end of function:
 	std::vector<std::function<void()>> after;
@@ -60,10 +60,10 @@ private:
 
 	class XmmLink
 	{
-		const asmjit::X86Xmm* m_var;
+		const asmjit::x86::Xmm* m_var;
 
 	public:
-		XmmLink(const asmjit::X86Xmm*& xmm_var)
+		XmmLink(const asmjit::x86::Xmm*& xmm_var)
 			: m_var(xmm_var)
 		{
 			xmm_var = nullptr;
@@ -71,7 +71,7 @@ private:
 
 		XmmLink(XmmLink&&) = default; // MoveConstructible + delete copy constructor and copy/move operators
 
-		operator const asmjit::X86Xmm&() const
+		operator const asmjit::x86::Xmm&() const
 		{
 			return *m_var;
 		}
@@ -87,11 +87,11 @@ private:
 	XmmLink XmmAlloc();
 	XmmLink XmmGet(s8 reg, XmmType type);
 
-	asmjit::X86Mem XmmConst(const v128& data);
-	asmjit::X86Mem XmmConst(const __m128& data);
-	asmjit::X86Mem XmmConst(const __m128i& data);
+	asmjit::x86::Mem XmmConst(const v128& data);
+	asmjit::x86::Mem XmmConst(const __m128& data);
+	asmjit::x86::Mem XmmConst(const __m128i& data);
 
-	asmjit::X86Mem get_pc(u32 addr);
+	asmjit::x86::Mem get_pc(u32 addr);
 	void branch_fixed(u32 target, bool absolute = false);
 	void branch_indirect(spu_opcode_t op, bool jt = false, bool ret = true);
 	void branch_set_link(u32 target);
