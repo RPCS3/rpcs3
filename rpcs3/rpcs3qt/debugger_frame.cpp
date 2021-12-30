@@ -45,8 +45,8 @@ extern bool is_using_interpreter(u32 id_type)
 	switch (id_type)
 	{
 	case 1: return g_cfg.core.ppu_decoder != ppu_decoder_type::llvm;
-	case 2: return g_cfg.core.spu_decoder == spu_decoder_type::fast || g_cfg.core.spu_decoder == spu_decoder_type::precise;
-	default: return true; 
+	case 2: return g_cfg.core.spu_decoder != spu_decoder_type::asmjit && g_cfg.core.spu_decoder != spu_decoder_type::llvm;
+	default: return true;
 	}
 }
 
@@ -528,7 +528,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					dis_asm.disasm(*it);
 					fmt::append(ret, "\n(%u) 0x%08x: %s", i, *it, dis_asm.last_opcode);
 				}
-	
+
 				if (ret.empty())
 				{
 					ret = "No PPU calls have been logged";
@@ -1134,7 +1134,7 @@ void debugger_frame::EnableButtons(bool enable)
 	if (!cpu) enable = false;
 
 	const bool step = enable && is_using_interpreter(cpu->id_type());
- 
+
 	m_go_to_addr->setEnabled(enable);
 	m_go_to_pc->setEnabled(enable);
 	m_btn_step->setEnabled(step);

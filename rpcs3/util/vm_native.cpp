@@ -27,7 +27,7 @@
 #ifdef __NR_memfd_create
 #elif __x86_64__
 #define __NR_memfd_create 319
-#elif __aarch64__
+#elif ARCH_ARM64
 #define __NR_memfd_create 279
 #endif
 

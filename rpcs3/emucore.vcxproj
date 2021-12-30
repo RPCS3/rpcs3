@@ -509,7 +509,7 @@
     <ClInclude Include="util\media_utils.h" />
     <ClInclude Include="util\serialization.hpp" />
     <ClInclude Include="util\v128.hpp" />
-    <ClInclude Include="util\v128sse.hpp" />
+    <ClInclude Include="util\simd.hpp" />
     <ClInclude Include="util\to_endian.hpp" />
     <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />

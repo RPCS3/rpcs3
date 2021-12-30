@@ -1889,47 +1889,56 @@ extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid)
 	return fmt::format("0x%08X", vnid);
 }
 
-std::vector<ppu_function_t>& ppu_function_manager::access(bool ghc)
+std::vector<ppu_intrp_func_t>& ppu_function_manager::access(bool ghc)
 {
-	static std::vector<ppu_function_t> list
+	static std::vector<ppu_intrp_func_t> list
 	{
-		[](ppu_thread& ppu) -> bool
+		[](ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func*)
 		{
+			ppu.cia = vm::get_addr(this_op);
 			ppu_log.error("Unregistered function called (LR=0x%x)", ppu.lr);
 			ppu.gpr[3] = 0;
 			ppu.cia = static_cast<u32>(ppu.lr) & ~3;
-			return false;
 		},
-		[](ppu_thread& ppu) -> bool
+		[](ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func*)
 		{
 			ppu.state += cpu_flag::ret;
-			ppu.cia += 4;
-			return false;
+			ppu.cia = vm::get_addr(this_op) + 4;
 		},
 	};
 
-	static std::vector<ppu_function_t> list_ghc
+#if defined(ARCH_X64)
+	static std::vector<ppu_intrp_func_t> list_ghc
 	{
-		build_function_asm<ppu_function_t>("ppu_unregistered", [](asmjit::x86::Assembler& c, auto& args)
+		build_function_asm<ppu_intrp_func_t>("ppu_unregistered", [](native_asm& c, auto& args)
 		{
 			using namespace asmjit;
 
+			// Take second ghc arg
 			c.mov(args[0], x86::rbp);
+			c.mov(args[2].r32(), x86::dword_ptr(args[0], ::offset32(&ppu_thread::cia)));
+			c.add(args[2], x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
 			c.jmp(imm_ptr(list[0]));
 		}),
-		build_function_asm<ppu_function_t>("ppu_return", [](asmjit::x86::Assembler& c, auto& args)
+		build_function_asm<ppu_intrp_func_t>("ppu_return", [](native_asm& c, auto& args)
 		{
 			using namespace asmjit;
 
+			// Take second ghc arg
 			c.mov(args[0], x86::rbp);
+			c.mov(args[2].r32(), x86::dword_ptr(args[0], ::offset32(&ppu_thread::cia)));
+			c.add(args[2], x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
 			c.jmp(imm_ptr(list[1]));
 		}),
 	};
+#elif defined(ARCH_ARM64)
+	static std::vector<ppu_intrp_func_t> list_ghc(list);
+#endif
 
 	return ghc ? list_ghc : list;
 }
 
-u32 ppu_function_manager::add_function(ppu_function_t function)
+u32 ppu_function_manager::add_function(ppu_intrp_func_t function)
 {
 	auto& list = access();
 	auto& list2 = access(true);
@@ -1937,13 +1946,22 @@ u32 ppu_function_manager::add_function(ppu_function_t function)
 	list.push_back(function);
 
 	// Generate trampoline
-	list2.push_back(build_function_asm<ppu_function_t>("ppu_trampolinea", [&](asmjit::x86::Assembler& c, auto& args)
+#if defined(ARCH_X64)
+	list2.push_back(build_function_asm<ppu_intrp_func_t>("ppu_trampolinea", [&](native_asm& c, auto& args)
 	{
 		using namespace asmjit;
 
+		// Take second ghc arg
 		c.mov(args[0], x86::rbp);
+		c.mov(args[2].r32(), x86::dword_ptr(args[0], ::offset32(&ppu_thread::cia)));
+		c.add(args[2], x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
 		c.jmp(imm_ptr(function));
 	}));
+#elif defined(ARCH_ARM64)
+	list2.push_back(function);
+#else
+#error "Not implemented"
+#endif
 
 	return ::size32(list) - 1;
 }

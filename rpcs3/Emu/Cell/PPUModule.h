@@ -123,7 +123,7 @@ public:
 	static void initialize_modules();
 
 	template <auto* Func>
-	static auto& register_static_function(const char* _module, const char* name, ppu_function_t func, u32 fnid)
+	static auto& register_static_function(const char* _module, const char* name, ppu_intrp_func_t func, u32 fnid)
 	{
 		auto& info = access_static_function(_module, fnid);
 

@@ -42,6 +42,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <spawn.h>
 #include <sys/wait.h>
 #include <stdlib.h>
+#include <signal.h>
 #endif
 
 #ifdef __linux__
@@ -49,7 +50,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <sys/resource.h>
 #endif
 
-#if defined(__APPLE__) && defined(BLOCKS) // BLOCKS is required for dispatch_sync, but GCC-11 does not support it
+#if defined(__APPLE__)
 #include <dispatch/dispatch.h>
 #endif
 
@@ -96,7 +97,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		fmt::append(buf, "\nThread id = %s.", std::this_thread::get_id());
 	}
 
-	const std::string_view text = buf.empty() ? _text : buf;
+	std::string_view text = buf.empty() ? _text : buf;
 
 	if (s_headless)
 	{
@@ -124,18 +125,16 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		std::cerr << fmt::format("RPCS3: %s\n", text);
 	}
 
-	auto show_report = [](std::string_view text)
+	static auto show_report = [](std::string_view text)
 	{
 		fatal_error_dialog dlg(text);
 		dlg.exec();
 	};
 
-#if defined(__APPLE__) && defined(BLOCKS) // BLOCKS is required for dispatch_sync, but GCC-11 does not support it
-	// Cocoa access is not allowed outside of the main thread
-	// Prevents crash dialogs from freezing the program
+#if defined(__APPLE__)
 	if (!pthread_main_np())
 	{
-		dispatch_sync(dispatch_get_main_queue(), ^ { show_report(text); });
+		dispatch_sync_f(dispatch_get_main_queue(), &text, [](void* text){ show_report(*static_cast<std::string_view*>(text)); });
 	}
 	else
 #endif
@@ -143,9 +142,12 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		// If Qt is already initialized, spawn a new RPCS3 process with an --error argument
 		if (local)
 		{
-			// Since we only show an error, we can hope for a graceful exit
 			show_report(text);
-			std::exit(0);
+#ifdef _WIN32
+			ExitProcess(0);
+#else
+			kill(getpid(), SIGKILL);
+#endif
 		}
 
 #ifdef _WIN32

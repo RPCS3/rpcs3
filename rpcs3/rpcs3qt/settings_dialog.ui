@@ -57,16 +57,16 @@
              </property>
              <layout class="QVBoxLayout" name="ppu_layout">
               <item>
-               <widget class="QRadioButton" name="ppu_precise">
+               <widget class="QRadioButton" name="ppu__static">
                 <property name="text">
-                 <string notr="true">Interpreter (precise)</string>
+                 <string notr="true">Interpreter (static)</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QRadioButton" name="ppu_fast">
+               <widget class="QRadioButton" name="ppu_dynamic">
                 <property name="text">
-                 <string notr="true">Interpreter (fast)</string>
+                 <string notr="true">Interpreter (dynamic)</string>
                 </property>
                </widget>
               </item>
@@ -87,16 +87,16 @@
              </property>
              <layout class="QVBoxLayout" name="spu_layout">
               <item>
-               <widget class="QRadioButton" name="spu_precise">
+               <widget class="QRadioButton" name="spu__static">
                 <property name="text">
-                 <string notr="true">Interpreter (precise)</string>
+                 <string notr="true">Interpreter (static)</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QRadioButton" name="spu_fast">
+               <widget class="QRadioButton" name="spu_dynamic">
                 <property name="text">
-                 <string notr="true">Interpreter (fast)</string>
+                 <string notr="true">Interpreter (dynamic)</string>
                 </property>
                </widget>
               </item>
@@ -2050,9 +2050,9 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="accurateLLVMdfma">
+               <widget class="QCheckBox" name="accurateDFMA">
                 <property name="text">
-                 <string>Accurate LLVM DFMA</string>
+                 <string>Accurate DFMA</string>
                 </property>
                </widget>
               </item>
@@ -2064,16 +2064,37 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="AccurateVectorNaN">
+               <widget class="QCheckBox" name="accuratePPUSAT">
                 <property name="text">
-                 <string>PPU LLVM Accurate Vector NaNs</string>
+                 <string>Accurate PPU Saturation Bit</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="ppuLlvmJavaModeHandling">
+               <widget class="QCheckBox" name="accuratePPUNJ">
                 <property name="text">
-                 <string>PPU LLVM Java Mode Handling</string>
+                 <string>Accurate PPU Non-Java Mode</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="fixupPPUVNAN">
+                <property name="text">
+                 <string>PPU Vector NaN Fixup</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="accuratePPUVNAN">
+                <property name="text">
+                 <string>Accurate PPU Vector NaN Handling</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="accuratePPUFPCC">
+                <property name="text">
+                 <string>Accurate PPU Float Condition Control</string>
                 </property>
                </widget>
               </item>

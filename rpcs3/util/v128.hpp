@@ -2,6 +2,9 @@
 
 #include "util/types.hpp"
 
+template <typename T>
+concept Vector128 = (sizeof(T) == 16) && (std::is_trivial_v<T>);
+
 // 128-bit vector type
 union alignas(16) v128
 {
@@ -58,39 +61,23 @@ union alignas(16) v128
 	u128 _u;
 	s128 _s;
 
-#ifdef _MSC_VER
-	template <typename T>
-	struct opaque_wrapper
+	v128() = default;
+
+	constexpr v128(const v128&) noexcept = default;
+
+	template <Vector128 T>
+	constexpr v128(const T& rhs) noexcept
+		: v128(std::bit_cast<v128>(rhs))
 	{
-		u128 m_data;
+	}
 
-		opaque_wrapper() = default;
+	constexpr v128& operator=(const v128&) noexcept = default;
 
-		opaque_wrapper(const T& value)
-			: m_data(std::bit_cast<u128>(value))
-		{
-		}
-
-		opaque_wrapper& operator=(const T& value)
-		{
-			m_data = std::bit_cast<u128>(value);
-			return *this;
-		}
-
-		operator T() const
-		{
-			return std::bit_cast<T>(m_data);
-		}
-	};
-
-	opaque_wrapper<__m128> vf;
-	opaque_wrapper<__m128i> vi;
-	opaque_wrapper<__m128d> vd;
-#else
-	__m128 vf;
-	__m128i vi;
-	__m128d vd;
-#endif
+	template <Vector128 T>
+	constexpr operator T() const noexcept
+	{
+		return std::bit_cast<T>(*this);
+	}
 
 	using enable_bitcopy = std::true_type;
 
@@ -105,6 +92,14 @@ union alignas(16) v128
 	static v128 from64r(u64 _1, u64 _0 = 0)
 	{
 		return from64(_0, _1);
+	}
+
+	static v128 from64p(u64 value)
+	{
+		v128 ret;
+		ret._u64[0] = value;
+		ret._u64[1] = value;
+		return ret;
 	}
 
 	static v128 from32(u32 _0, u32 _1 = 0, u32 _2 = 0, u32 _3 = 0)
@@ -132,6 +127,16 @@ union alignas(16) v128
 		return ret;
 	}
 
+	static v128 fromf32p(f32 value)
+	{
+		v128 ret;
+		ret._f[0] = value;
+		ret._f[1] = value;
+		ret._f[2] = value;
+		ret._f[3] = value;
+		return ret;
+	}
+
 	static v128 from16p(u16 value)
 	{
 		v128 ret;
@@ -153,11 +158,18 @@ union alignas(16) v128
 		return ret;
 	}
 
-	static inline v128 fromV(const __m128i& value);
-
-	static inline v128 fromF(const __m128& value);
-
-	static inline v128 fromD(const __m128d& value);
+	static v128 undef()
+	{
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
+		v128 ret;
+		return ret;
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+	}
 
 	// Unaligned load with optional index offset
 	static v128 loadu(const void* ptr, usz index = 0)
@@ -173,44 +185,12 @@ union alignas(16) v128
 		std::memcpy(static_cast<u8*>(ptr) + index * sizeof(v128), &value, sizeof(v128));
 	}
 
-	static inline v128 add8(const v128& left, const v128& right);
-
-	static inline v128 add16(const v128& left, const v128& right);
-
-	static inline v128 add32(const v128& left, const v128& right);
-
-	static inline v128 addfs(const v128& left, const v128& right);
-
-	static inline v128 addfd(const v128& left, const v128& right);
-
-	static inline v128 sub8(const v128& left, const v128& right);
-
-	static inline v128 sub16(const v128& left, const v128& right);
-
-	static inline v128 sub32(const v128& left, const v128& right);
-
-	static inline v128 subfs(const v128& left, const v128& right);
-
-	static inline v128 subfd(const v128& left, const v128& right);
-
-	static inline v128 maxu8(const v128& left, const v128& right);
-
-	static inline v128 minu8(const v128& left, const v128& right);
-
-	static inline v128 eq8(const v128& left, const v128& right);
-
-	static inline v128 eq16(const v128& left, const v128& right);
-
-	static inline v128 eq32(const v128& left, const v128& right);
-
-	static inline v128 eq32f(const v128& left, const v128& right);
-
-	static inline v128 fma32f(v128 a, const v128& b, const v128& c);
+	v128 operator|(const v128&) const;
+	v128 operator&(const v128&) const;
+	v128 operator^(const v128&) const;
+	v128 operator~() const;
 
 	bool operator==(const v128& right) const;
-
-	// result = (~left) & (right)
-	static inline v128 andnot(const v128& left, const v128& right);
 
 	void clear()
 	{
@@ -225,5 +205,14 @@ struct offset32_array<v128::masked_array_t<T, N, M>>
 	static inline u32 index32(const Arg& arg)
 	{
 		return u32{sizeof(T)} * (static_cast<u32>(arg) ^ static_cast<u32>(M));
+	}
+};
+
+template <>
+struct std::hash<v128>
+{
+	usz operator()(const v128& key) const
+	{
+		return key._u64[0] + key._u64[1];
 	}
 };

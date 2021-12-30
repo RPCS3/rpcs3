@@ -21,6 +21,10 @@
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #else
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -32,6 +36,9 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <netdb.h>
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 LOG_CHANNEL(rpcn_log, "rpcn");

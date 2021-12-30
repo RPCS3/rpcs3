@@ -4,11 +4,12 @@
 #include "SPUThread.h"
 
 const spu_decoder<SPUDisAsm> s_spu_disasm;
-const spu_decoder<spu_itype> s_spu_itype;
-const spu_decoder<spu_iflag> s_spu_iflag;
+const extern spu_decoder<spu_itype> g_spu_itype;
+const extern spu_decoder<spu_iname> g_spu_iname;
+const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 #include "util/v128.hpp"
-#include "util/v128sse.hpp"
+#include "util/simd.hpp"
 
 u32 SPUDisAsm::disasm(u32 pc)
 {
@@ -49,7 +50,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 
 	if (pc == umax)
 	{
-		// Default arg: choose pc of previous instruction 
+		// Default arg: choose pc of previous instruction
 
 		if (dump_pc == 0)
 		{
@@ -68,7 +69,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
 		const spu_opcode_t op0{ opcode };
 
-		const auto type = s_spu_itype.decode(opcode);
+		const auto type = g_spu_itype.decode(opcode);
 
 		if (type & spu_itype::branch || type == spu_itype::UNK || !opcode)
 		{
@@ -101,7 +102,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 			var = value;\
 		} void() /*<- Require a semicolon*/
 
-		//const auto flag = s_spu_iflag.decode(opcode);
+		//const auto flag = g_spu_iflag.decode(opcode);
 
 		// TODO: It detects spurious register modifications
 		if (u32 dst = type & spu_itype::_quadrop ? +op0.rt4 : +op0.rt; dst == reg)
@@ -203,14 +204,14 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) c
 				v128 reg_val{};
 				GET_CONST_REG(reg_val, op0.ra);
 
-				return { true, reg_val };	
+				return { true, reg_val };
 			}
 			case spu_itype::ORI:
 			{
 				v128 reg_val{};
 				GET_CONST_REG(reg_val, op0.ra);
 
-				return { true, reg_val | v128::from32p(op0.si10) };	
+				return { true, reg_val | v128::from32p(op0.si10) };
 			}
 			default: return {};
 			}

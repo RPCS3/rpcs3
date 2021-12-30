@@ -88,8 +88,6 @@ private:
 	XmmLink XmmGet(s8 reg, XmmType type);
 
 	asmjit::x86::Mem XmmConst(const v128& data);
-	asmjit::x86::Mem XmmConst(const __m128& data);
-	asmjit::x86::Mem XmmConst(const __m128i& data);
 
 	asmjit::x86::Mem get_pc(u32 addr);
 	void branch_fixed(u32 target, bool absolute = false);

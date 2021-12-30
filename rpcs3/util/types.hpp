@@ -12,6 +12,12 @@
 #include <memory>
 #include <bit>
 
+#if defined(__SSE2__) || defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__)
+#define ARCH_X64 1
+#elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+#define ARCH_ARM64 1
+#endif
+
 using std::chrono::steady_clock;
 
 using namespace std::literals;
@@ -180,15 +186,15 @@ public:
 	}
 };
 
-#ifndef _MSC_VER
-
-using u128 = __uint128_t;
-using s128 = __int128_t;
-
+#if defined(ARCH_X64) && !defined(_MSC_VER)
 using __m128i = long long __attribute__((vector_size(16)));
 using __m128d = double __attribute__((vector_size(16)));
 using __m128 = float __attribute__((vector_size(16)));
+#endif
 
+#ifndef _MSC_VER
+using u128 = __uint128_t;
+using s128 = __int128_t;
 #else
 
 extern "C"

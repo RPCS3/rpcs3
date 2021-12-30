@@ -7,15 +7,25 @@
 #include "util/sysinfo.hpp"
 #include "util/asm.hpp"
 
+#if defined(ARCH_X64)
 #include "emmintrin.h"
 #include "immintrin.h"
+#endif
 
-#if !defined(_MSC_VER) && defined(__clang__)
+#if !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 
-#if defined(_MSC_VER)
+#ifdef ARCH_ARM64
+#if !defined(_MSC_VER)
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+#undef FORCE_INLINE
+#include "Emu/CPU/sse2neon.h"
+#endif
+
+#if defined(_MSC_VER) || !defined(__SSE2__)
 #define PLAIN_FUNC
 #define SSSE3_FUNC
 #define SSE4_1_FUNC
@@ -57,7 +67,7 @@ constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = true;
 constexpr bool s_use_avx2 = true;
 constexpr bool s_use_avx3 = false;
-#elif defined(__SSE41__)
+#elif defined(__SSE4_1__)
 constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = true;
 constexpr bool s_use_avx2 = false;
@@ -67,11 +77,16 @@ constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = false;
 constexpr bool s_use_avx2 = false;
 constexpr bool s_use_avx3 = false;
-#else
+#elif defined(ARCH_X64)
 const bool s_use_ssse3 = utils::has_ssse3();
 const bool s_use_sse4_1 = utils::has_sse41();
 const bool s_use_avx2 = utils::has_avx2();
 const bool s_use_avx3 = utils::has_avx512();
+#else
+constexpr bool s_use_ssse3 = true; // Non x86
+constexpr bool s_use_sse4_1 = true; // Non x86
+constexpr bool s_use_avx2 = false;
+constexpr bool s_use_avx3 = false;
 #endif
 
 const __m128i s_bswap_u32_mask = _mm_set_epi8(
@@ -98,7 +113,7 @@ namespace utils
 namespace
 {
 	template <bool Compare>
-	PLAIN_FUNC bool copy_data_swap_u32_naive(u32* dst, const u32* src, u32 count)
+	PLAIN_FUNC auto copy_data_swap_u32_naive(u32* dst, const u32* src, u32 count)
 	{
 		u32 result = 0;
 
@@ -117,11 +132,14 @@ namespace
 			dst[i] = data;
 		}
 
-		return static_cast<bool>(result);
+		if constexpr (Compare)
+		{
+			return static_cast<bool>(result);
+		}
 	}
 
 	template <bool Compare>
-	SSSE3_FUNC bool copy_data_swap_u32_ssse3(u32* dst, const u32* src, u32 count)
+	SSSE3_FUNC auto copy_data_swap_u32_ssse3(u32* dst, const u32* src, u32 count)
 	{
 		u32 result = 0;
 
@@ -140,9 +158,13 @@ namespace
 			dst[i] = data;
 		}
 
-		return static_cast<bool>(result);
+		if constexpr (Compare)
+		{
+			return static_cast<bool>(result);
+		}
 	}
 
+#if defined(ARCH_X64)
 	template <bool Compare, int Size, typename RT>
 	void build_copy_data_swap_u32_avx3(asmjit::x86::Assembler& c, std::array<asmjit::x86::Gp, 4>& args, const RT& rmask, const RT& rload, const RT& rtest)
 	{
@@ -199,8 +221,7 @@ namespace
 		c.jmp(loop);
 
 		c.bind(tail);
-		c.shlx(x86::eax, x86::eax, args[2].r32());
-		c.not_(x86::eax);
+		c.bzhi(x86::eax, x86::eax, args[2].r32());
 		c.kmovw(x86::k1, x86::eax);
 		c.k(x86::k1).z().vmovdqu32(rload, x86::Mem(args[1], 0, Size * 4u));
 		c.vpshufb(rload, rload, rmask);
@@ -230,7 +251,7 @@ namespace
 	}
 
 	template <bool Compare>
-	void build_copy_data_swap_u32(asmjit::x86::Assembler& c, std::array<asmjit::x86::Gp, 4>& args)
+	void build_copy_data_swap_u32(native_asm& c, native_args& args)
 	{
 		using namespace asmjit;
 
@@ -254,11 +275,18 @@ namespace
 
 		c.jmp(asmjit::imm_ptr(&copy_data_swap_u32_naive<Compare>));
 	}
+#else
+	template <bool Compare>
+	constexpr auto build_copy_data_swap_u32()
+	{
+		return &copy_data_swap_u32_naive<Compare>;
+	}
+#endif
 }
 
-built_function<void(*)(void*, const void*, u32)> copy_data_swap_u32("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
+built_function<void(*)(u32*, const u32*, u32)> copy_data_swap_u32("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
 
-built_function<bool(*)(void*, const void*, u32)> copy_data_swap_u32_cmp("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
+built_function<bool(*)(u32*, const u32*, u32)> copy_data_swap_u32_cmp("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
 
 namespace
 {
@@ -390,6 +418,7 @@ namespace
 
 	struct primitive_restart_impl
 	{
+#if defined(ARCH_X64)
 		AVX2_FUNC
 		static
 		std::tuple<u16, u16> upload_u16_swapped_avx2(const void *src, void *dst, u32 iterations, u16 restart_index)
@@ -428,6 +457,7 @@ namespace
 
 			return std::make_tuple(min_index, max_index);
 		}
+#endif
 
 		SSE4_1_FUNC
 		static
@@ -512,9 +542,11 @@ namespace
 				{
 					if (s_use_avx2)
 					{
+#if defined(ARCH_X64)
 						u32 iterations = length >> 4;
 						written = length & ~0xF;
 						std::tie(min_index, max_index) = upload_u16_swapped_avx2(src.data(), dst.data(), iterations, restart_index);
+#endif
 					}
 					else if (s_use_sse4_1)
 					{

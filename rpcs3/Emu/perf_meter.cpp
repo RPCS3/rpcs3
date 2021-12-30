@@ -2,6 +2,8 @@
 #include "perf_meter.hpp"
 
 #include "util/sysinfo.hpp"
+#include "util/fence.hpp"
+#include "util/tsc.hpp"
 #include "Utilities/Thread.h"
 
 #include <map>
@@ -68,18 +70,10 @@ void perf_stat_base::print(const char* name) const noexcept
 	}
 }
 
-#ifdef _MSC_VER
-extern "C" void _mm_lfence();
-#endif
-
 SAFE_BUFFERS(void) perf_stat_base::push(u64 data[66], u64 start_time, const char* name) noexcept
 {
 	// Event end
-#ifdef _MSC_VER
-	const u64 end_time = (_mm_lfence(), get_tsc());
-#else
-	const u64 end_time = (__builtin_ia32_lfence(), get_tsc());
-#endif
+	const u64 end_time = (utils::lfence(), utils::get_tsc());
 
 	// Compute difference in seconds
 	const f64 diff = (end_time - start_time) * 1. / utils::get_tsc_freq();

@@ -12,10 +12,6 @@
 
 namespace vk
 {
-#ifdef _MSC_VER
-	extern "C" void _mm_pause();
-#endif
-
 	fence::fence(VkDevice dev)
 	{
 		owner                  = dev;
@@ -48,11 +44,7 @@ namespace vk
 	{
 		while (!flushed)
 		{
-#ifdef _MSC_VER
-			_mm_pause();
-#else
-			__builtin_ia32_pause();
-#endif
+			utils::pause();
 		}
 	}
 
@@ -218,11 +210,7 @@ namespace vk
 				}
 			}
 
-#ifdef _MSC_VER
-			_mm_pause();
-#else
-			__builtin_ia32_pause();
-#endif
+			utils::pause();
 		}
 	}
 }

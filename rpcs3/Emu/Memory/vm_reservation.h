@@ -3,6 +3,7 @@
 #include "vm.h"
 #include "vm_locking.h"
 #include "util/atomic.hpp"
+#include "util/tsc.hpp"
 #include <functional>
 
 extern bool g_use_rtm;
@@ -11,7 +12,6 @@ extern u64 g_rtm_tx_limit2;
 #ifdef _MSC_VER
 extern "C"
 {
-	u64 __rdtsc();
 	u32 _xbegin();
 	void _xend();
 }
@@ -19,15 +19,6 @@ extern "C"
 
 namespace vm
 {
-	inline u64 get_tsc()
-	{
-#ifdef _MSC_VER
-		return __rdtsc();
-#else
-		return __builtin_ia32_rdtsc();
-#endif
-	}
-
 	enum : u64
 	{
 		rsrv_lock_mask = 127,
@@ -108,13 +99,14 @@ namespace vm
 		auto& res = vm::reservation_acquire(addr);
 		//_m_prefetchw(&res);
 
+#if defined(ARCH_X64)
 		if (g_use_rtm)
 		{
 			// Stage 1: single optimistic transaction attempt
 			unsigned status = -1;
 			u64 _old = 0;
 
-			auto stamp0 = get_tsc(), stamp1 = stamp0, stamp2 = stamp0;
+			auto stamp0 = utils::get_tsc(), stamp1 = stamp0, stamp2 = stamp0;
 
 #ifndef _MSC_VER
 			__asm__ goto ("xbegin %l[stage2];" ::: "memory" : stage2);
@@ -176,16 +168,16 @@ namespace vm
 #ifndef _MSC_VER
 			__asm__ volatile ("mov %%eax, %0;" : "=r" (status) :: "memory");
 #endif
-			stamp1 = get_tsc();
+			stamp1 = utils::get_tsc();
 
 			// Stage 2: try to lock reservation first
 			_old = res.fetch_add(1);
 
 			// Compute stamps excluding memory touch
-			stamp2 = get_tsc() - (stamp1 - stamp0);
+			stamp2 = utils::get_tsc() - (stamp1 - stamp0);
 
 			// Start lightened transaction
-			for (; !(_old & vm::rsrv_unique_lock) && stamp2 - stamp0 <= g_rtm_tx_limit2; stamp2 = get_tsc())
+			for (; !(_old & vm::rsrv_unique_lock) && stamp2 - stamp0 <= g_rtm_tx_limit2; stamp2 = utils::get_tsc())
 			{
 				if (cpu.has_pause_flag())
 				{
@@ -285,6 +277,9 @@ namespace vm
 				return result;
 			}
 		}
+#else
+		static_cast<void>(cpu);
+#endif /* ARCH_X64 */
 
 		// Lock reservation and perform heavyweight lock
 		reservation_shared_lock_internal(res);

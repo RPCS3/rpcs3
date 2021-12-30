@@ -276,6 +276,7 @@ public:
 	u32 last_faddr = 0;
 	u64 last_fail = 0;
 	u64 last_succ = 0;
+	u64 exec_bytes = 0; // Amount of "bytes" executed (4 for each instruction)
 
 	u32 dbg_step_pc = 0;
 

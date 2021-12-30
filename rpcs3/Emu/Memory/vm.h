@@ -200,16 +200,10 @@ namespace vm
 		return {};
 	}
 
+	// Unsafe convert host ptr to PS3 VM address (clamp with 4GiB alignment assumption)
 	inline vm::addr_t get_addr(const void* ptr)
 	{
-		const auto [addr, ok] = try_get_addr(ptr);
-
-		if (!ok)
-		{
-			fmt::throw_exception("Not a virtual memory pointer (%p)", ptr);
-		}
-
-		return addr;
+		return vm::addr_t{static_cast<u32>(uptr(ptr))};
 	}
 
 	template<typename T>

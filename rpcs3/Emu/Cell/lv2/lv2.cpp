@@ -75,30 +75,28 @@ void fmt_class_string<lv2_protocol>::format(std::string& out, u64 arg)
 	});
 }
 
-static bool null_func_(ppu_thread& ppu)
+static void null_func_(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func*)
 {
 	ppu_log.todo("Unimplemented syscall %s -> CELL_OK (r3=0x%llx, r4=0x%llx, r5=0x%llx, r6=0x%llx, r7=0x%llx, r8=0x%llx, r9=0x%llx, r10=0x%llx)", ppu_syscall_code(ppu.gpr[11]),
 		ppu.gpr[3], ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7], ppu.gpr[8], ppu.gpr[9], ppu.gpr[10]);
 
 	ppu.gpr[3] = 0;
-	ppu.cia += 4;
-	return false;
+	ppu.cia = vm::get_addr(this_op) + 4;
 }
 
-static bool uns_func_(ppu_thread& ppu)
+static void uns_func_(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func*)
 {
 	ppu_log.trace("Unused syscall %d -> ENOSYS", ppu.gpr[11]);
 	ppu.gpr[3] = CELL_ENOSYS;
-	ppu.cia += 4;
-	return false;
+	ppu.cia = vm::get_addr(this_op) + 4;
 }
 
 // Bind Syscall
 #define BIND_SYSC(func) {BIND_FUNC(func), #func}
 #define NULL_FUNC(name) {null_func_, #name}
 
-constexpr std::pair<ppu_function_t, std::string_view> null_func{null_func_, ""};
-constexpr std::pair<ppu_function_t, std::string_view> uns_func{uns_func_, ""};
+constexpr std::pair<ppu_intrp_func_t, std::string_view> null_func{null_func_, ""};
+constexpr std::pair<ppu_intrp_func_t, std::string_view> uns_func{uns_func_, ""};
 
 // UNS = Unused
 // ROOT = Root
@@ -106,7 +104,7 @@ constexpr std::pair<ppu_function_t, std::string_view> uns_func{uns_func_, ""};
 // DEX..DECR = Unavailable on retail consoles
 // PM = Product Mode
 // AuthID = Authentication ID
-const std::array<std::pair<ppu_function_t, std::string_view>, 1024> g_ppu_syscall_table
+const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_syscall_table
 {
 	null_func,
 	BIND_SYSC(sys_process_getpid),                          //1   (0x001)
@@ -1151,7 +1149,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 
 		if (const auto func = g_ppu_syscall_table[code].first)
 		{
-			func(ppu);
+			func(ppu, {}, vm::_ptr<u32>(ppu.cia), nullptr);
 			ppu_log.trace("Syscall '%s' (%llu) finished, r3=0x%llx", ppu_syscall_code(code), code, ppu.gpr[3]);
 			return;
 		}
@@ -1160,7 +1158,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 	fmt::throw_exception("Invalid syscall number (%llu)", code);
 }
 
-extern ppu_function_t ppu_get_syscall(u64 code)
+extern ppu_intrp_func_t ppu_get_syscall(u64 code)
 {
 	if (code < g_ppu_syscall_table.size())
 	{

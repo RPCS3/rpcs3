@@ -30,7 +30,7 @@
 #include "util/vm.hpp"
 #include "util/asm.hpp"
 #include "util/v128.hpp"
-#include "util/v128sse.hpp"
+#include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
 using spu_rdata_t = decltype(spu_thread::rdata);
@@ -87,14 +87,13 @@ void fmt_class_string<spu_type>::format(std::string& out, u64 arg)
 // Verify AVX availability for TSX transactions
 static const bool s_tsx_avx = utils::has_avx();
 
-// For special case
-static const bool s_tsx_haswell = utils::has_rtm() && !utils::has_mpx();
-
 // Threshold for when rep mosvb is expected to outperform simd copies
 // The threshold will be 0xFFFFFFFF when the performance of rep movsb is expected to be bad
 static const u32 s_rep_movsb_threshold = utils::get_rep_movsb_threshold();
 
-#ifndef _MSC_VER
+#if defined(_M_X64)
+extern "C" void __movsb(uchar*, const uchar*, size_t);
+#elif defined(ARCH_X64)
 static FORCE_INLINE void __movsb(unsigned char * Dst, const unsigned char * Src, size_t Size)
 {
 	__asm__ __volatile__
@@ -104,8 +103,12 @@ static FORCE_INLINE void __movsb(unsigned char * Dst, const unsigned char * Src,
 		"[Dst]" (Dst), "[Src]" (Src), "[Size]" (Size)
 	);
 }
+#else
+#define s_rep_movsb_threshold umax
+#define __movsb std::memcpy
 #endif
 
+#if defined(ARCH_X64)
 static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 {
 #if defined(_MSC_VER) || defined(__AVX__)
@@ -145,18 +148,21 @@ static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 	return result;
 #endif
 }
+#endif
 
 #ifdef _MSC_VER
 __forceinline
 #endif
 extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs)
 {
+#if defined(ARCH_X64)
 #ifndef __AVX__
 	if (s_tsx_avx) [[likely]]
 #endif
 	{
 		return cmp_rdata_avx(reinterpret_cast<const __m256i*>(_lhs), reinterpret_cast<const __m256i*>(_rhs));
 	}
+#endif
 
 	const auto lhs = reinterpret_cast<const v128*>(_lhs);
 	const auto rhs = reinterpret_cast<const v128*>(_rhs);
@@ -165,9 +171,10 @@ extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs)
 	const v128 c = (lhs[4] ^ rhs[4]) | (lhs[5] ^ rhs[5]);
 	const v128 d = (lhs[6] ^ rhs[6]) | (lhs[7] ^ rhs[7]);
 	const v128 r = (a | b) | (c | d);
-	return r == v128{};
+	return gv_testz(r);
 }
 
+#if defined(ARCH_X64)
 static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 {
 #ifdef _MSC_VER
@@ -199,12 +206,14 @@ static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 	);
 #endif
 }
+#endif
 
 #ifdef _MSC_VER
 __forceinline
 #endif
 extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src)
 {
+#if defined(ARCH_X64)
 #ifndef __AVX__
 	if (s_tsx_avx) [[likely]]
 #endif
@@ -232,8 +241,12 @@ extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src)
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(_dst + 80), v1);
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(_dst + 96), v2);
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(_dst + 112), v3);
+#else
+	std::memcpy(_dst, _src, 128);
+#endif
 }
 
+#if defined(ARCH_X64)
 static FORCE_INLINE void mov_rdata_nt_avx(__m256i* dst, const __m256i* src)
 {
 #ifdef _MSC_VER
@@ -265,9 +278,11 @@ static FORCE_INLINE void mov_rdata_nt_avx(__m256i* dst, const __m256i* src)
 	);
 #endif
 }
+#endif
 
 extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src)
 {
+#if defined(ARCH_X64)
 #ifndef __AVX__
 	if (s_tsx_avx) [[likely]]
 #endif
@@ -295,6 +310,9 @@ extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src)
 	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 80), v1);
 	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 96), v2);
 	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 112), v3);
+#else
+	std::memcpy(_dst, _src, 128);
+#endif
 }
 
 void do_cell_atomic_128_store(u32 addr, const void* to_write);
@@ -421,10 +439,11 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	return res;
 }
 
-const auto spu_putllc_tx = built_function<u64(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>("spu_putllc_tx", [](asmjit::x86::Assembler& c, auto& args)
+const auto spu_putllc_tx = built_function<u64(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>("spu_putllc_tx", [](native_asm& c, auto& args)
 {
 	using namespace asmjit;
 
+#if defined(ARCH_X64)
 	Label fall = c.newLabel();
 	Label fail = c.newLabel();
 	Label _ret = c.newLabel();
@@ -677,12 +696,16 @@ const auto spu_putllc_tx = built_function<u64(*)(u32 raddr, u64 rtime, void* _ol
 	c.bind(ret2);
 #endif
 	c.ret();
+#else
+	c.ret(a64::x30);
+#endif
 });
 
-const auto spu_putlluc_tx = built_function<u64(*)(u32 raddr, const void* rdata, u64* _stx, u64* _ftx)>("spu_putlluc_tx", [](asmjit::x86::Assembler& c, auto& args)
+const auto spu_putlluc_tx = built_function<u64(*)(u32 raddr, const void* rdata, u64* _stx, u64* _ftx)>("spu_putlluc_tx", [](native_asm& c, auto& args)
 {
 	using namespace asmjit;
 
+#if defined(ARCH_X64)
 	Label fall = c.newLabel();
 	Label _ret = c.newLabel();
 
@@ -803,12 +826,16 @@ const auto spu_putlluc_tx = built_function<u64(*)(u32 raddr, const void* rdata, 
 	c.bind(ret2);
 #endif
 	c.ret();
+#else
+	c.ret(a64::x30);
+#endif
 });
 
-const auto spu_getllar_tx = built_function<u64(*)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime)>("spu_getllar_tx", [](asmjit::x86::Assembler& c, auto& args)
+const auto spu_getllar_tx = built_function<u64(*)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime)>("spu_getllar_tx", [](native_asm& c, auto& args)
 {
 	using namespace asmjit;
 
+#if defined(ARCH_X64)
 	Label fall = c.newLabel();
 	Label _ret = c.newLabel();
 
@@ -938,6 +965,9 @@ const auto spu_getllar_tx = built_function<u64(*)(u32 raddr, void* rdata, cpu_th
 	c.bind(ret2);
 #endif
 	c.ret();
+#else
+	c.ret(a64::x30);
+#endif
 });
 
 void spu_int_ctrl_t::set(u64 ints)
@@ -967,7 +997,7 @@ spu_imm_table_t::scale_table_t::scale_table_t()
 {
 	for (s32 i = -155; i < 174; i++)
 	{
-		m_data[i + 155].vf = _mm_set1_ps(static_cast<float>(std::exp2(i)));
+		m_data[i + 155] = v128::fromf32p(static_cast<float>(std::exp2(i)));
 	}
 }
 
@@ -1385,6 +1415,8 @@ void spu_thread::cpu_task()
 
 	std::fesetround(FE_TOWARDZERO);
 
+	gv_set_zeroing_denormals();
+
 	g_tls_log_prefix = []
 	{
 		const auto cpu = static_cast<spu_thread*>(get_current_cpu_thread());
@@ -1622,7 +1654,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 		jit = spu_recompiler_base::make_fast_llvm_recompiler();
 	}
 
-	if (g_cfg.core.spu_decoder != spu_decoder_type::fast && g_cfg.core.spu_decoder != spu_decoder_type::precise)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
 		{
@@ -2640,7 +2672,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					return false;
 				});
 
-				const u64 count2 = __rdtsc() - perf2.get();
+				const u64 count2 = utils::get_tsc() - perf2.get();
 
 				if (count2 > 20000 && g_cfg.core.perf_report) [[unlikely]]
 				{
@@ -2672,7 +2704,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 				utils::prefetch_read(rdata + 64);
 				last_faddr = addr;
 				last_ftime = res.load() & -128;
-				last_ftsc = __rdtsc();
+				last_ftsc = utils::get_tsc();
 				return false;
 			}
 			default:
@@ -2854,7 +2886,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			});
 
 			vm::reservation_acquire(addr) += 32;
-			result = __rdtsc() - perf0.get();
+			result = utils::get_tsc() - perf0.get();
 		}
 
 		if (result > 20000 && g_cfg.core.perf_report) [[unlikely]]
@@ -3007,7 +3039,7 @@ bool spu_thread::do_mfc(bool can_escape, bool must_finish)
 	{
 		// Get commands' execution mask
 		// Mask bits are always set when mfc_transfers_shuffling is 0
-		return static_cast<u16>((0 - (1u << std::min<u32>(g_cfg.core.mfc_transfers_shuffling, size))) | __rdtsc());
+		return static_cast<u16>((0 - (1u << std::min<u32>(g_cfg.core.mfc_transfers_shuffling, size))) | utils::get_tsc());
 	};
 
 	// Process enqueued commands
@@ -3684,9 +3716,9 @@ void spu_thread::set_interrupt_status(bool enable)
 		// Detect enabling interrupts with events masked
 		if (auto mask = ch_events.load().mask; mask & SPU_EVENT_INTR_BUSY_CHECK)
 		{
-			if (g_cfg.core.spu_decoder != spu_decoder_type::precise && g_cfg.core.spu_decoder != spu_decoder_type::fast)
+			if (g_cfg.core.spu_decoder != spu_decoder_type::_static)
 			{
-				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use interpreterts", mask);
+				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use static interpreter", mask);
 			}
 
 			spu_log.trace("SPU Interrupts (mask=0x%x) are using CPU busy checking mode", mask);

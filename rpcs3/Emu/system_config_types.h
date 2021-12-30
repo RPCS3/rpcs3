@@ -2,15 +2,15 @@
 
 enum class ppu_decoder_type : unsigned
 {
-	precise = 0, // Don't change (0)
-	fast, // Don't change (1)
+	_static,
+	dynamic,
 	llvm,
 };
 
 enum class spu_decoder_type : unsigned
 {
-	precise = 0, // Don't change (0)
-	fast, // Don't change (1)
+	_static,
+	dynamic,
 	asmjit,
 	llvm,
 };

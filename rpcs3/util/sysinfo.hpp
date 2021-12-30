@@ -5,10 +5,6 @@
 
 namespace utils
 {
-	std::array<u32, 4> get_cpuid(u32 func, u32 subfunc);
-
-	u64 get_xgetbv(u32 xcr);
-
 	bool has_ssse3();
 
 	bool has_sse41();
@@ -20,7 +16,7 @@ namespace utils
 	bool has_rtm();
 
 	bool has_tsx_force_abort();
-	
+
 	bool has_rtm_always_abort();
 
 	bool has_mpx();
@@ -28,6 +24,8 @@ namespace utils
 	bool has_avx512();
 
 	bool has_avx512_icl();
+
+	bool has_avx512_vnni();
 
 	bool has_xop();
 

@@ -478,7 +478,19 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 		return thread::finalize(thread_state::finished);
 	}
 
+#if defined(ARCH_X64)
 	static inline thread::native_entry trampoline = thread::make_trampoline(entry_point);
+#else
+	static void* trampoline(void* arg)
+	{
+		if (const auto next = thread_base::finalize(entry_point(static_cast<thread_base*>(arg))))
+		{
+			return next(thread_ctrl::get_current());
+		}
+
+		return nullptr;
+	}
+#endif
 
 	friend class thread_ctrl;
 

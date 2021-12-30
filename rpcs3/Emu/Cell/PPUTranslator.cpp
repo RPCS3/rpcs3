@@ -3,20 +3,19 @@
 #include "Emu/system_config.h"
 #include "PPUTranslator.h"
 #include "PPUThread.h"
-#include "PPUInterpreter.h"
 
 #include "util/types.hpp"
 #include "util/endian.hpp"
 #include "util/logs.hpp"
 #include "util/v128.hpp"
-#include "util/v128sse.hpp"
+#include "util/simd.hpp"
 #include <algorithm>
 
 using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
-const ppu_decoder<ppu_itype> s_ppu_itype;
-const ppu_decoder<ppu_iname> s_ppu_iname;
+extern const ppu_decoder<ppu_itype> g_ppu_itype;
+extern const ppu_decoder<ppu_iname> g_ppu_iname;
 
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module& info, ExecutionEngine& engine)
 	: cpu_translator(_module, false)
@@ -151,7 +150,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	{
 		const u32 op = vm::read32(vm::cast(addr + base));
 
-		switch (s_ppu_itype.decode(op))
+		switch (g_ppu_itype.decode(op))
 		{
 		case ppu_itype::UNK:
 		case ppu_itype::ECIWX:
@@ -251,7 +250,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			if (m_rel)
 			{
 				// This is very bad. m_rel is normally set to nullptr after a relocation is handled (so it wasn't)
-				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s' (opcode=0x%x '%s'). Please report.", rel_found->first, m_rel->type, m_info.name, op, s_ppu_iname.decode(op));
+				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s' (opcode=0x%x '%s'). Please report.", rel_found->first, m_rel->type, m_info.name, op, g_ppu_iname.decode(op));
 				return nullptr;
 			}
 		}
@@ -291,8 +290,8 @@ Value* PPUTranslator::VecHandleDenormal(Value* val)
 
 Value* PPUTranslator::VecHandleResult(Value* val)
 {
-	val = g_cfg.core.llvm_ppu_accurate_vector_nan ? VecHandleNan(val) : val;
-	val = g_cfg.core.llvm_ppu_jm_handling ? VecHandleDenormal(val) : val;
+	val = g_cfg.core.ppu_fix_vnan ? VecHandleNan(val) : val;
+	val = g_cfg.core.ppu_use_nj_bit ? VecHandleDenormal(val) : val;
 	return val;
 }
 
@@ -391,10 +390,10 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 		const auto pos = m_ir->CreateShl(indirect, 1);
 		const auto ptr = m_ir->CreateGEP(m_exec, pos);
 		const auto val = m_ir->CreateLoad(m_ir->CreateBitCast(ptr, get_type<u64*>()));
-		callee = FunctionCallee(type, m_ir->CreateIntToPtr(m_ir->CreateAnd(val, 0x7fff'ffff'ffff), type->getPointerTo()));
+		callee = FunctionCallee(type, m_ir->CreateIntToPtr(m_ir->CreateAnd(val, 0xffff'ffff'ffff), type->getPointerTo()));
 
 		// Load new segment address
-		seg0 = m_ir->CreateShl(m_ir->CreateLShr(val, 47), 12);
+		seg0 = m_ir->CreateShl(m_ir->CreateLShr(val, 48), 13);
 	}
 
 	m_ir->SetInsertPoint(block);
@@ -640,7 +639,8 @@ void PPUTranslator::CompilationError(const std::string& error)
 
 void PPUTranslator::MFVSCR(ppu_opcode_t op)
 {
-	const auto vscr = m_ir->CreateOr(ZExt(IsNotZero(RegLoad(m_sat)), GetType<u32>()), m_ir->CreateShl(ZExt(RegLoad(m_nj), GetType<u32>()), 16));
+	const auto vsat = g_cfg.core.ppu_set_sat_bit ? ZExt(IsNotZero(RegLoad(m_sat)), GetType<u32>()) : m_ir->getInt32(0);
+	const auto vscr = m_ir->CreateOr(vsat, m_ir->CreateShl(ZExt(RegLoad(m_nj), GetType<u32>()), 16));
 	SetVr(op.vd, m_ir->CreateInsertElement(ConstantAggregateZero::get(GetType<u32[4]>()), vscr, m_ir->getInt32(m_is_be ? 3 : 0)));
 }
 
@@ -649,8 +649,10 @@ void PPUTranslator::MTVSCR(ppu_opcode_t op)
 	const auto vscr = m_ir->CreateExtractElement(GetVr(op.vb, VrType::vi32), m_ir->getInt32(m_is_be ? 3 : 0));
 	const auto nj = Trunc(m_ir->CreateLShr(vscr, 16), GetType<bool>());
 	RegStore(nj, m_nj);
-	if (g_cfg.core.llvm_ppu_jm_handling) RegStore(m_ir->CreateSelect(nj, m_ir->getInt32(0x7f80'0000), m_ir->getInt32(0x7fff'ffff)), m_jm_mask);
-	RegStore(m_ir->CreateInsertElement(ConstantAggregateZero::get(GetType<u32[4]>()), m_ir->CreateAnd(vscr, 1), m_ir->getInt32(0)), m_sat);
+	if (g_cfg.core.ppu_use_nj_bit)
+		RegStore(m_ir->CreateSelect(nj, m_ir->getInt32(0x7f80'0000), m_ir->getInt32(0x7fff'ffff)), m_jm_mask);
+	if (g_cfg.core.ppu_set_sat_bit)
+		RegStore(m_ir->CreateInsertElement(ConstantAggregateZero::get(GetType<u32[4]>()), m_ir->CreateAnd(vscr, 1), m_ir->getInt32(0)), m_sat);
 }
 
 void PPUTranslator::VADDCUW(ppu_opcode_t op)
@@ -902,10 +904,12 @@ void PPUTranslator::VCTSXS(ppu_opcode_t op)
 	const auto b = get_vr<f32[4]>(op.vb);
 	const auto scaled = b * fsplat<f32[4]>(std::pow(2, 0 + op.vuimm));
 	const auto const1 = fsplat<f32[4]>(-std::pow(2, 31));
-	//const auto is_nan = fcmp_uno(b == b); // NaN -> 0.0
-	const auto sat_l = fcmp_ord(scaled < const1); // TODO ???
+	const auto is_nan = fcmp_uno(b != b);
+	const auto sat_l = fcmp_ord(scaled < const1);
 	const auto sat_h = fcmp_ord(scaled >= fsplat<f32[4]>(std::pow(2, 31)));
-	const auto converted = fpcast<s32[4]>(select(sat_l, const1, scaled));
+	value_t<s32[4]> converted = eval(fpcast<s32[4]>(select(sat_l, const1, scaled)));
+	if (g_cfg.core.ppu_fix_vnan)
+		converted = eval(select(is_nan, splat<s32[4]>(0), converted));  // NaN -> 0
 	set_vr(op.vd, select(sat_h, splat<s32[4]>(0x7fff'ffff), converted));
 	set_sat(sext<s32[4]>(sat_l) | sext<s32[4]>(sat_h));
 }
@@ -915,10 +919,12 @@ void PPUTranslator::VCTUXS(ppu_opcode_t op)
 	const auto b = get_vr<f32[4]>(op.vb);
 	const auto scaled = b * fsplat<f32[4]>(std::pow(2, 0 + op.vuimm));
 	const auto const0 = fsplat<f32[4]>(0.);
-	//const auto is_nan = fcmp_uno(b == b); // NaN -> 0.0
+	const auto is_nan = fcmp_uno(b != b);
 	const auto sat_l = fcmp_ord(scaled < const0);
-	const auto sat_h = fcmp_ord(scaled >= fsplat<f32[4]>(std::pow(2, 32))); // TODO ???
-	const auto converted = fpcast<u32[4]>(select(sat_l, const0, scaled));
+	const auto sat_h = fcmp_ord(scaled >= fsplat<f32[4]>(std::pow(2, 32)));
+	value_t<u32[4]> converted = eval(fpcast<u32[4]>(select(sat_l, const0, scaled)));
+	if (g_cfg.core.ppu_fix_vnan)
+		converted = eval(select(is_nan, splat<u32[4]>(0), converted)); // NaN -> 0
 	set_vr(op.vd, select(sat_h, splat<u32[4]>(0xffff'ffff), converted));
 	set_sat(sext<s32[4]>(sat_l) | sext<s32[4]>(sat_h));
 }
@@ -1334,7 +1340,7 @@ void PPUTranslator::VPKSHSS(ppu_opcode_t op)
 	const auto ab = shuffle2(b, a, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 	const auto r = trunc<u8[16]>(min(max(ab, splat<s16[16]>(-0x80)), splat<s16[16]>(0x7f)));
 	set_vr(op.vd, r);
-	set_sat(((a + 0x80) | (b + 0x80)) >> 8);
+	set_sat(bitcast<u16[8]>((a + 0x80) | (b + 0x80)) >> 8);
 }
 
 void PPUTranslator::VPKSHUS(ppu_opcode_t op)
@@ -1344,7 +1350,7 @@ void PPUTranslator::VPKSHUS(ppu_opcode_t op)
 	const auto ab = shuffle2(b, a, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 	const auto r = trunc<u8[16]>(min(max(ab, splat<s16[16]>(0)), splat<s16[16]>(0xff)));
 	set_vr(op.vd, r);
-	set_sat((a | b) >> 8);
+	set_sat(bitcast<u16[8]>(a | b) >> 8);
 }
 
 void PPUTranslator::VPKSWSS(ppu_opcode_t op)
@@ -1354,7 +1360,7 @@ void PPUTranslator::VPKSWSS(ppu_opcode_t op)
 	const auto ab = shuffle2(b, a, 0, 1, 2, 3, 4, 5, 6, 7);
 	const auto r = trunc<u16[8]>(min(max(ab, splat<s32[8]>(-0x8000)), splat<s32[8]>(0x7fff)));
 	set_vr(op.vd, r);
-	set_sat(((a + 0x8000) | (b + 0x8000)) >> 16);
+	set_sat(bitcast<u32[4]>((a + 0x8000) | (b + 0x8000)) >> 16);
 }
 
 void PPUTranslator::VPKSWUS(ppu_opcode_t op)
@@ -1364,7 +1370,7 @@ void PPUTranslator::VPKSWUS(ppu_opcode_t op)
 	const auto ab = shuffle2(b, a, 0, 1, 2, 3, 4, 5, 6, 7);
 	const auto r = trunc<u16[8]>(min(max(ab, splat<s32[8]>(0)), splat<s32[8]>(0xffff)));
 	set_vr(op.vd, r);
-	set_sat((a | b) >> 16);
+	set_sat(bitcast<u32[4]>(a | b) >> 16);
 }
 
 void PPUTranslator::VPKUHUM(ppu_opcode_t op)
@@ -1741,7 +1747,7 @@ void PPUTranslator::VSUMSWS(ppu_opcode_t op)
 	const auto s = eval(x + y + z);
 	const auto r = min(max(zshuffle(s, 0, 2) + zshuffle(s, 1, 2), splat<s64[2]>(-0x8000'0000ll)), splat<s64[2]>(0x7fff'ffff));
 	set_vr(op.vd, zshuffle(bitcast<u32[4]>(r), 0, 4, 4, 4));
-	set_sat((r + 0x8000'0000) >> 32);
+	set_sat(bitcast<u64[2]>(r + 0x8000'0000) >> 32);
 }
 
 void PPUTranslator::VSUM2SWS(ppu_opcode_t op)
@@ -1752,18 +1758,15 @@ void PPUTranslator::VSUM2SWS(ppu_opcode_t op)
 	const auto z = b >> 32;
 	const auto r = min(max(x + y + z, splat<s64[2]>(-0x8000'0000ll)), splat<s64[2]>(0x7fff'ffff));
 	set_vr(op.vd, zshuffle(bitcast<u32[4]>(r), 0, 4, 2, 4));
-	set_sat((r + 0x8000'0000) >> 32);
+	set_sat(bitcast<u64[2]>(r + 0x8000'0000) >> 32);
 }
 
 void PPUTranslator::VSUM4SBS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s32[4]>(op.va);
+	const auto a = get_vr<s16[8]>(op.va);
 	const auto b = get_vr<s32[4]>(op.vb);
-	const auto x = a << 24 >> 24;
-	const auto y = a << 16 >> 24;
-	const auto z = a << 8 >> 24;
-	const auto w = a >> 24;
-	const auto s = eval(x + y + z + w); // Can't overflow
+	const auto x = eval(bitcast<s32[4]>((a << 8 >> 8) + (a >> 8)));
+	const auto s = eval((x << 16 >> 16) + (x >> 16));
 	const auto r = add_sat(s, b);
 	set_vr(op.vd, r);
 	set_sat(r ^ (s + b));
@@ -1773,9 +1776,7 @@ void PPUTranslator::VSUM4SHS(ppu_opcode_t op)
 {
 	const auto a = get_vr<s32[4]>(op.va);
 	const auto b = get_vr<s32[4]>(op.vb);
-	const auto x = a << 16 >> 16;
-	const auto y = a >> 16;
-	const auto s = eval(x + y); // Can't overflow
+	const auto s = eval((a << 16 >> 16) + (a >> 16));
 	const auto r = add_sat(s, b);
 	set_vr(op.vd, r);
 	set_sat(r ^ (s + b));
@@ -1783,13 +1784,10 @@ void PPUTranslator::VSUM4SHS(ppu_opcode_t op)
 
 void PPUTranslator::VSUM4UBS(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
+	const auto a = get_vr<u16[8]>(op.va);
 	const auto b = get_vr<u32[4]>(op.vb);
-	const auto x = a & 0xff;
-	const auto y = a << 16 >> 24;
-	const auto z = a << 8 >> 24;
-	const auto w = a >> 24;
-	const auto s = eval(x + y + z + w); // Can't overflow
+	const auto x = eval(bitcast<u32[4]>((a & 0xff) + (a >> 8)));
+	const auto s = eval((x & 0xffff) + (x >> 16));
 	const auto r = add_sat(s, b);
 	set_vr(op.vd, r);
 	set_sat(r ^ (s + b));
@@ -4047,7 +4045,7 @@ void PPUTranslator::FMADDS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.llvm_accurate_dfma)
+	if (g_cfg.core.use_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
 	}
@@ -4075,7 +4073,7 @@ void PPUTranslator::FMSUBS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.llvm_accurate_dfma)
+	if (g_cfg.core.use_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
 	}
@@ -4103,7 +4101,7 @@ void PPUTranslator::FNMSUBS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.llvm_accurate_dfma)
+	if (g_cfg.core.use_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
 	}
@@ -4131,7 +4129,7 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.llvm_accurate_dfma)
+	if (g_cfg.core.use_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
 	}
@@ -4384,7 +4382,7 @@ void PPUTranslator::FMSUB(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.llvm_accurate_dfma)
+	if (g_cfg.core.use_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
 	}
@@ -4412,7 +4410,7 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.llvm_accurate_dfma)
+	if (g_cfg.core.use_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, b });
 	}
@@ -4440,7 +4438,7 @@ void PPUTranslator::FNMSUB(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.llvm_accurate_dfma)
+	if (g_cfg.core.use_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
 	}
@@ -4468,7 +4466,7 @@ void PPUTranslator::FNMADD(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if (g_cfg.core.llvm_accurate_dfma)
+	if (g_cfg.core.use_accurate_dfma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
 	}

@@ -239,7 +239,7 @@ struct fmt_class_string<T, void>
 	static void format(std::string& out, u64 arg)
 	{
 		const auto& obj = get_object(arg);
-	
+
 		void format_byte_array(std::string&, const uchar*, usz);
 		format_byte_array(out, reinterpret_cast<const uchar*>(std::data(obj)), std::size(obj));
 	}

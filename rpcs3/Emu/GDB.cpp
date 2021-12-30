@@ -15,6 +15,10 @@
 #include <WS2tcpip.h>
 #include <afunix.h> // sockaddr_un
 #else
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -25,6 +29,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/un.h> // sockaddr_un
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 #include <charconv>

@@ -3,7 +3,7 @@
 #include "CPUTranslator.h"
 
 #include "util/v128.hpp"
-#include "util/v128sse.hpp"
+#include "util/simd.hpp"
 
 llvm::LLVMContext g_llvm_ctx;
 

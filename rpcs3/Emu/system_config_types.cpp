@@ -256,8 +256,8 @@ void fmt_class_string<spu_decoder_type>::format(std::string& out, u64 arg)
 	{
 		switch (type)
 		{
-		case spu_decoder_type::precise: return "Interpreter (precise)";
-		case spu_decoder_type::fast: return "Interpreter (fast)";
+		case spu_decoder_type::_static: return "Interpreter (static)";
+		case spu_decoder_type::dynamic: return "Interpreter (dynamic)";
 		case spu_decoder_type::asmjit: return "Recompiler (ASMJIT)";
 		case spu_decoder_type::llvm: return "Recompiler (LLVM)";
 		}
@@ -440,8 +440,8 @@ void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 	{
 		switch (type)
 		{
-		case ppu_decoder_type::precise: return "Interpreter (precise)";
-		case ppu_decoder_type::fast: return "Interpreter (fast)";
+		case ppu_decoder_type::_static: return "Interpreter (static)";
+		case ppu_decoder_type::dynamic: return "Interpreter (dynamic)";
 		case ppu_decoder_type::llvm: return "Recompiler (LLVM)";
 		}
 

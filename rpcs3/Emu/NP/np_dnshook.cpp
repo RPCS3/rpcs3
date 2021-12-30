@@ -8,8 +8,15 @@
 #ifdef _WIN32
 #include <WS2tcpip.h>
 #else
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 LOG_CHANNEL(dnshook_log, "DnsHook");

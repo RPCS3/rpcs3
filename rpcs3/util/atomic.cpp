@@ -35,6 +35,7 @@ namespace utils
 
 #include "asm.hpp"
 #include "endian.hpp"
+#include "tsc.hpp"
 
 // Total number of entries.
 static constexpr usz s_hashtable_size = 1u << 17;
@@ -804,17 +805,9 @@ namespace
 	};
 }
 
-#ifdef _MSC_VER
-extern "C" u64 __rdtsc();
-#endif
-
 u64 utils::get_unique_tsc()
 {
-#ifdef _MSC_VER
-	const u64 stamp0 = __rdtsc();
-#else
-    const u64 stamp0 = __builtin_ia32_rdtsc();
-#endif
+	const u64 stamp0 = utils::get_tsc();
 
 	return s_min_tsc.atomic_op([&](u64& tsc)
 	{

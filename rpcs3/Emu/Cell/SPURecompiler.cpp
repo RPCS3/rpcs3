@@ -24,15 +24,12 @@
 #include <unordered_set>
 
 #include "util/v128.hpp"
-#include "util/v128sse.hpp"
+#include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
-const spu_decoder<spu_itype> s_spu_itype;
-const spu_decoder<spu_iname> s_spu_iname;
-const spu_decoder<spu_iflag> s_spu_iflag;
-
-extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise{};
-extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
+const extern spu_decoder<spu_itype> g_spu_itype;
+const extern spu_decoder<spu_iname> g_spu_iname;
+const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 // Move 4 args for calling native function from a GHC calling convention function
 static u8* move_args_ghc_to_native(u8* raw)
@@ -160,11 +157,12 @@ DECLARE(spu_runtime::tr_all) = []
 	return reinterpret_cast<spu_function_t>(trptr);
 }();
 
-DECLARE(spu_runtime::g_gateway) = built_function<spu_function_t>("spu_gateway", [](asmjit::x86::Assembler& c, auto& args)
+DECLARE(spu_runtime::g_gateway) = built_function<spu_function_t>("spu_gateway", [](native_asm& c, auto& args)
 {
 	// Gateway for SPU dispatcher, converts from native to GHC calling convention, also saves RSP value for spu_escape
 	using namespace asmjit;
 
+#if defined(ARCH_X64)
 #ifdef _WIN32
 	c.push(x86::r15);
 	c.push(x86::r14);
@@ -247,24 +245,30 @@ DECLARE(spu_runtime::g_gateway) = built_function<spu_function_t>("spu_gateway", 
 #endif
 
 	c.ret();
+#else
+	c.ret(a64::x30);
+#endif
 });
 
-DECLARE(spu_runtime::g_escape) = build_function_asm<void(*)(spu_thread*)>("spu_escape", [](asmjit::x86::Assembler& c, auto& args)
+DECLARE(spu_runtime::g_escape) = build_function_asm<void(*)(spu_thread*)>("spu_escape", [](native_asm& c, auto& args)
 {
 	using namespace asmjit;
 
+#if defined(ARCH_X64)
 	// Restore native stack pointer (longjmp emulation)
 	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
 
 	// Return to the return location
 	c.sub(x86::rsp, 8);
 	c.ret();
+#endif
 });
 
-DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, spu_function_t, u8*)>("spu_tail_escape", [](asmjit::x86::Assembler& c, auto& args)
+DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, spu_function_t, u8*)>("spu_tail_escape", [](native_asm& c, auto& args)
 {
 	using namespace asmjit;
 
+#if defined(ARCH_X64)
 	// Restore native stack pointer (longjmp emulation)
 	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
 
@@ -278,6 +282,7 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, sp
 	c.xor_(x86::ebx, x86::ebx);
 	c.mov(x86::qword_ptr(x86::rsp), args[1]);
 	c.ret();
+#endif
 });
 
 DECLARE(spu_runtime::g_interpreter_table) = {};
@@ -364,7 +369,7 @@ void spu_cache::initialize()
 {
 	spu_runtime::g_interpreter = spu_runtime::g_gateway;
 
-	if (g_cfg.core.spu_decoder == spu_decoder_type::precise || g_cfg.core.spu_decoder == spu_decoder_type::fast)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::_static || g_cfg.core.spu_decoder == spu_decoder_type::dynamic)
 	{
 		for (auto& x : *spu_runtime::g_dispatcher)
 		{
@@ -395,7 +400,7 @@ void spu_cache::initialize()
 	atomic_t<usz> fnext{};
 	atomic_t<u8> fail_flag{0};
 
-	if (g_cfg.core.spu_decoder == spu_decoder_type::fast || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::dynamic || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		if (auto compiler = spu_recompiler_base::make_llvm_recompiler(11))
 		{
@@ -634,7 +639,7 @@ void spu_cache::initialize()
 
 				for (u32 i = 0; i < f->data.size(); i++)
 				{
-					fmt::append(dump, "%-10s", s_spu_iname.decode(std::bit_cast<be_t<u32>>(f->data[i])));
+					fmt::append(dump, "%-10s", g_spu_iname.decode(std::bit_cast<be_t<u32>>(f->data[i])));
 				}
 
 				n_max = std::max(n_max, ::size32(depth_n));
@@ -1289,15 +1294,13 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 
 void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* /*rip*/)
 {
-	if (g_cfg.core.spu_decoder > spu_decoder_type::fast)
+	if (g_cfg.core.spu_decoder != spu_decoder_type::_static)
 	{
 		fmt::throw_exception("Invalid SPU decoder");
 	}
 
 	// Select opcode table
-	const auto& table = *(g_cfg.core.spu_decoder == spu_decoder_type::precise
-		? &g_spu_interpreter_precise.get_table()
-		: &g_spu_interpreter_fast.get_table());
+	const auto& table = g_fxo->get<spu_interpreter_rt>();
 
 	// LS pointer
 	const auto base = static_cast<const u8*>(ls);
@@ -1311,7 +1314,7 @@ void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* /*rip*/
 		}
 
 		const u32 op = *reinterpret_cast<const be_t<u32>*>(base + spu.pc);
-		if (table[spu_decode(op)](spu, {op}))
+		if (table.decode(op)(spu, {op}))
 			spu.pc += 4;
 	}
 }
@@ -1430,7 +1433,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		m_targets.erase(pos);
 
 		// Fill register access info
-		if (auto iflags = s_spu_iflag.decode(data))
+		if (auto iflags = g_spu_iflag.decode(data))
 		{
 			if (+iflags & +spu_iflag::use_ra)
 				m_use_ra[pos / 4] = op.ra;
@@ -1441,7 +1444,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		}
 
 		// Analyse instruction
-		switch (const auto type = s_spu_itype.decode(data))
+		switch (const auto type = g_spu_itype.decode(data))
 		{
 		case spu_itype::UNK:
 		case spu_itype::DFCEQ:
@@ -2297,7 +2300,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			// Decode instruction
 			const spu_opcode_t op{std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 4])};
 
-			const auto type = s_spu_itype.decode(op.opcode);
+			const auto type = g_spu_itype.decode(op.opcode);
 
 			u8 reg_save = 255;
 
@@ -2790,7 +2793,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		{
 			// Decode instruction again
 			op.opcode = std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 41]);
-			last_inst = s_spu_itype.decode(op.opcode);
+			last_inst = g_spu_itype.decode(op.opcode);
 
 			// Propagate some constants
 			switch (last_inst)
@@ -5035,7 +5038,7 @@ public:
 
 			// Execute interpreter instruction
 			const u32 op = *reinterpret_cast<const be_t<u32>*>(_spu->_ptr<u8>(0) + _spu->pc);
-			if (!g_spu_interpreter_fast.decode(op)(*_spu, {op}))
+			if (!g_fxo->get<spu_interpreter_rt>().decode(op)(*_spu, {op}))
 				spu_log.fatal("Bad instruction");
 
 			// Swap state
@@ -5151,10 +5154,10 @@ public:
 			const u32 op = i << (32u - m_interp_magn);
 
 			// Instruction type
-			const auto itype = s_spu_itype.decode(op);
+			const auto itype = g_spu_itype.decode(op);
 
 			// Function name
-			std::string fname = fmt::format("spu_%s", s_spu_iname.decode(op));
+			std::string fname = fmt::format("spu_%s", g_spu_iname.decode(op));
 
 			if (last_itype != itype)
 			{
@@ -5460,7 +5463,7 @@ public:
 		return _spu->check_state();
 	}
 
-	template <spu_inter_func_t F>
+	template <spu_intrp_func_t F>
 	static void exec_fall(spu_thread* _spu, spu_opcode_t op)
 	{
 		if (F(*_spu, op))
@@ -5469,10 +5472,10 @@ public:
 		}
 	}
 
-	template <spu_inter_func_t F>
+	template <spu_intrp_func_t F>
 	void fall(spu_opcode_t op)
 	{
-		std::string name = fmt::format("spu_%s", s_spu_iname.decode(op.opcode));
+		std::string name = fmt::format("spu_%s", g_spu_iname.decode(op.opcode));
 
 		if (m_interp_magn)
 		{
@@ -6808,11 +6811,21 @@ public:
 		set_vr(op.rt, fshl(a, zshuffle(a, 4, 0, 1, 2), b));
 	}
 
+#if defined(ARCH_X64)
 	static __m128i exec_rotqby(__m128i a, u8 b)
 	{
 		alignas(32) const __m128i buf[2]{a, a};
 		return _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (16 - (b & 0xf))));
 	}
+#else
+	static v128 exec_rotqby(v128 a, u8 b)
+	{
+		alignas(32) const v128 buf[2]{a, a};
+		alignas(16) v128 res;
+		std::memcpy(&res, reinterpret_cast<const u8*>(buf) + (16 - (b & 0xf)), 16);
+		return res;
+	}
+#endif
 
 	void ROTQBY(spu_opcode_t op)
 	{
@@ -6822,7 +6835,7 @@ public:
 		if (!m_use_ssse3)
 		{
 			value_t<u8[16]> r;
-			r.value = call("spu_rotqby", &exec_rotqby, a.value, eval(extract(b, 12)).value);
+			r.value = call<u8[16]>("spu_rotqby", &exec_rotqby, a.value, eval(extract(b, 12)).value);
 			set_vr(op.rt, r);
 			return;
 		}
@@ -7805,7 +7818,7 @@ public:
 	{
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
-		if (g_cfg.core.llvm_accurate_dfma)
+		if (g_cfg.core.use_accurate_dfma)
 			set_vr(op.rt, fmuladd(a, b, c, true));
 		else
 			set_vr(op.rt, a * b + c);
@@ -7815,7 +7828,7 @@ public:
 	{
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
-		if (g_cfg.core.llvm_accurate_dfma)
+		if (g_cfg.core.use_accurate_dfma)
 			set_vr(op.rt, fmuladd(a, b, -c, true));
 		else
 			set_vr(op.rt, a * b - c);
@@ -7825,7 +7838,7 @@ public:
 	{
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
-		if (g_cfg.core.llvm_accurate_dfma)
+		if (g_cfg.core.use_accurate_dfma)
 			set_vr(op.rt, fmuladd(-a, b, c, true));
 		else
 			set_vr(op.rt, c - (a * b));
@@ -7835,7 +7848,7 @@ public:
 	{
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
-		if (g_cfg.core.llvm_accurate_dfma)
+		if (g_cfg.core.use_accurate_dfma)
 			set_vr(op.rt, -fmuladd(a, b, c, true));
 		else
 			set_vr(op.rt, -(a * b + c));
@@ -9894,11 +9907,11 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u
 	return std::make_unique<spu_llvm_recompiler>(magn);
 }
 
-const spu_decoder<spu_llvm_recompiler> g_spu_llvm_decoder;
+const spu_decoder<spu_llvm_recompiler> s_spu_llvm_decoder;
 
 decltype(&spu_llvm_recompiler::UNK) spu_llvm_recompiler::decode(u32 op)
 {
-	return g_spu_llvm_decoder.decode(op);
+	return s_spu_llvm_decoder.decode(op);
 }
 
 #else
@@ -10025,6 +10038,11 @@ struct spu_llvm
 
 	void operator()()
 	{
+		if (g_cfg.core.spu_decoder != spu_decoder_type::llvm)
+		{
+			return;
+		}
+
 		// To compile (hash -> item)
 		std::unordered_multimap<u64, spu_item*, value_hash<u64>> enqueued;
 
@@ -10345,7 +10363,7 @@ struct spu_fast : public spu_recompiler_base
 			// Fix endianness
 			const spu_opcode_t op{std::bit_cast<be_t<u32>>(func.data[i])};
 
-			switch (auto type = s_spu_itype.decode(op.opcode))
+			switch (auto type = g_spu_itype.decode(op.opcode))
 			{
 			case spu_itype::BRZ:
 			case spu_itype::BRHZ:

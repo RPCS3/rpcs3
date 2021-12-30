@@ -20,11 +20,20 @@ else()
 	# Some distros have the compilers set to use PIE by default, but RPCS3 doesn't work with PIE, so we need to disable it.
 	CHECK_CXX_COMPILER_FLAG("-no-pie" HAS_NO_PIE)
 	CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+	CHECK_CXX_COMPILER_FLAG("-msse -msse2 -mcx16" COMPILER_X86)
+	CHECK_CXX_COMPILER_FLAG("-march=armv8.1-a" COMPILER_ARM)
 
 	add_compile_options(-Wall)
 	add_compile_options(-fno-exceptions)
 	add_compile_options(-fstack-protector)
-	add_compile_options(-msse -msse2 -mcx16)
+
+	if (COMPILER_X86)
+		add_compile_options(-msse -msse2 -mcx16)
+	endif()
+
+	if (COMPILER_ARM)
+		add_compile_options(-march=armv8.1-a)
+	endif()
 
 	add_compile_options(-Werror=old-style-cast)
 	add_compile_options(-Werror=sign-compare)

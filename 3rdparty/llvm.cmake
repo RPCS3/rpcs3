@@ -1,8 +1,10 @@
 if(WITH_LLVM)
+	CHECK_CXX_COMPILER_FLAG("-msse -msse2 -mcx16" COMPILER_X86)
+	CHECK_CXX_COMPILER_FLAG("-march=armv8-a+lse" COMPILER_ARM)
+
 	if(BUILD_LLVM_SUBMODULE)
 		message(STATUS "LLVM will be built from the submodule.")
 
-		set(LLVM_TARGETS_TO_BUILD "X86" CACHE INTERNAL "")
 		option(LLVM_BUILD_RUNTIME OFF)
 		option(LLVM_BUILD_TOOLS OFF)
 		option(LLVM_INCLUDE_BENCHMARKS OFF)
@@ -61,7 +63,15 @@ if(WITH_LLVM)
 		endif()
 	endif()
 
-	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen LLVMX86AsmParser)
+	set(LLVM_LIBS LLVMMCJIT)
+
+	if(COMPILER_X86)
+		set(LLVM_LIBS ${LLVM_LIBS} LLVMX86CodeGen LLVMX86AsmParser)
+	endif()
+
+	if(COMPILER_ARM)
+		set(LLVM_LIBS ${LLVM_LIBS} LLVMX86CodeGen LLVMX86AsmParser LLVMARMCodeGen LLVMARMAsmParser)
+	endif()
 
 	if(WIN32 OR CMAKE_SYSTEM MATCHES "Linux")
 		set(LLVM_LIBS ${LLVM_LIBS} LLVMIntelJITEvents)

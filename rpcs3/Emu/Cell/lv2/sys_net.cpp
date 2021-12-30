@@ -11,6 +11,10 @@
 #include <winsock2.h>
 #include <WS2tcpip.h>
 #else
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -22,6 +26,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 #include "Emu/NP/np_handler.h"

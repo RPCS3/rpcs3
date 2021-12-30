@@ -684,7 +684,7 @@ namespace vm
 				// 1. To simplify range_lock logic
 				// 2. To make sure it never overlaps with 32-bit addresses
 				// Also check that it's aligned (lowest 16 bits)
-				ensure((shm_self & 0xffff'8000'0000'ffff) == range_locked);
+				ensure((shm_self & 0xffff'0000'0000'ffff) == range_locked);
 
 				// Find another mirror and map it as shareable too
 				for (auto& ploc : g_locations)
@@ -714,7 +714,7 @@ namespace vm
 			u64 shm_self = reinterpret_cast<u64>(shm->get()) ^ range_locked;
 
 			// Check (see above)
-			ensure((shm_self & 0xffff'8000'0000'ffff) == range_locked);
+			ensure((shm_self & 0xffff'0000'0000'ffff) == range_locked);
 
 			// Map range as shareable
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
@@ -1129,13 +1129,16 @@ namespace vm
 		{
 			auto fill64 = [](u8* ptr, u64 data, usz count)
 			{
-#ifdef _MSC_VER
+#ifdef _M_X64
 				__stosq(reinterpret_cast<u64*>(ptr), data, count);
-#else
+#elif defined(ARCH_X64)
 				__asm__ ("mov %0, %%rdi; mov %1, %%rax; mov %2, %%rcx; rep stosq;"
 					:
 					: "r" (ptr), "r" (data), "r" (count)
 					: "rdi", "rax", "rcx", "memory");
+#else
+				for (usz i = 0; i < count; i++)
+					reinterpret_cast<u64*>(ptr)[i] = data;
 #endif
 			};
 

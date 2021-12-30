@@ -1104,16 +1104,16 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::PPUDecoder:
 		switch (static_cast<ppu_decoder_type>(index))
 		{
-		case ppu_decoder_type::precise: return tr("Interpreter (precise)", "PPU decoder");
-		case ppu_decoder_type::fast: return tr("Interpreter (fast)", "PPU decoder");
+		case ppu_decoder_type::_static: return tr("Interpreter (static)", "PPU decoder");
+		case ppu_decoder_type::dynamic: return tr("Interpreter (dynamic)", "PPU decoder");
 		case ppu_decoder_type::llvm: return tr("Recompiler (LLVM)", "PPU decoder");
 		}
 		break;
 	case emu_settings_type::SPUDecoder:
 		switch (static_cast<spu_decoder_type>(index))
 		{
-		case spu_decoder_type::precise: return tr("Interpreter (precise)", "SPU decoder");
-		case spu_decoder_type::fast: return tr("Interpreter (fast)", "SPU decoder");
+		case spu_decoder_type::_static: return tr("Interpreter (static)", "SPU decoder");
+		case spu_decoder_type::dynamic: return tr("Interpreter (dynamic)", "SPU decoder");
 		case spu_decoder_type::asmjit: return tr("Recompiler (ASMJIT)", "SPU decoder");
 		case spu_decoder_type::llvm: return tr("Recompiler (LLVM)", "SPU decoder");
 		}

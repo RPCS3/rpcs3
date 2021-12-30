@@ -42,8 +42,10 @@ namespace rsx
 		{
 			rsx->sync();
 
-			// Write ref+get atomically (get will be written again with the same value at command end)
-			vm::_ref<atomic_be_t<u64>>(rsx->dma_address + ::offset32(&RsxDmaControl::get)).store(u64{rsx->fifo_ctrl->get_pos()} << 32 | arg);
+			// Write ref+get (get will be written again with the same value at command end)
+			auto& dma = vm::_ref<RsxDmaControl>(rsx->dma_address);
+			dma.get.release(rsx->fifo_ctrl->get_pos());
+			dma.ref.store(arg);
 		}
 
 		void semaphore_acquire(thread* rsx, u32 /*reg*/, u32 arg)
@@ -436,11 +438,11 @@ namespace rsx
 				if (rsx->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
 				{
 					// Minor optimization: don't compare values if we already know we need invalidation
-					copy_data_swap_u32(values, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount);
+					copy_data_swap_u32(values, static_cast<u32*>(vm::base(rsx->fifo_ctrl->get_current_arg_ptr())), rcount);
 				}
 				else
 				{
-					if (copy_data_swap_u32_cmp(values, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount))
+					if (copy_data_swap_u32_cmp(values, static_cast<u32*>(vm::base(rsx->fifo_ctrl->get_current_arg_ptr())), rcount))
 					{
 						// Transform constants invalidation is expensive (~8k bytes per update)
 						rsx->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
@@ -472,7 +474,7 @@ namespace rsx
 					rcount -= max - (max_vertex_program_instructions * 4);
 				}
 
-				copy_data_swap_u32(&rsx::method_registers.transform_program[load_pos * 4 + index % 4], vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount);
+				copy_data_swap_u32(&rsx::method_registers.transform_program[load_pos * 4 + index % 4], static_cast<u32*>(vm::base(rsx->fifo_ctrl->get_current_arg_ptr())), rcount);
 
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
 				rsx::method_registers.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));

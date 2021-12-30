@@ -11,9 +11,16 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #else
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 #include "Emu/Cell/Modules/sceNp.h"

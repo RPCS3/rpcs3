@@ -452,6 +452,18 @@ namespace vk
 			enabled_features.shaderStorageImageWriteWithoutFormat = VK_FALSE;
 		}
 
+		if (!pgpu->features.shaderClipDistance)
+		{
+			rsx_log.error("Your GPU does not support shader clip distance. Graphics will not render correctly.");
+			enabled_features.shaderClipDistance = VK_FALSE;
+		}
+
+		if (!pgpu->features.shaderStorageBufferArrayDynamicIndexing)
+		{
+			rsx_log.error("Your GPU does not support shader storage buffer array dynamic indexing. Graphics will not render correctly.");
+			enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
+		}
+
 		if (!pgpu->features.samplerAnisotropy)
 		{
 			rsx_log.error("Your GPU does not support anisotropic filtering. Graphics may not render correctly.");

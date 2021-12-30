@@ -18,6 +18,12 @@ LOG_CHANNEL(jit_log, "JIT");
 
 void jit_announce(uptr func, usz size, std::string_view name)
 {
+	if (!size)
+	{
+		jit_log.error("Empty function announced: %s (%p)", name, func);
+		return;
+	}
+
 #ifdef __linux__
 	static const fs::file s_map(fmt::format("/tmp/perf-%d.map", getpid()), fs::rewrite + fs::append);
 
@@ -124,15 +130,31 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
 {
 	ensure(!code->flatten());
 	ensure(!code->resolveUnresolvedLinks());
-	usz codeSize = ensure(code->codeSize());
+	usz codeSize = code->codeSize();
+	if (!codeSize)
+		return nullptr;
+
 	auto p = ensure(this->_alloc(codeSize, 64));
 	ensure(!code->relocateToBase(uptr(p)));
 
-	asmjit::VirtMem::ProtectJitReadWriteScope rwScope(p, codeSize);
-
-	for (asmjit::Section* section : code->_sections)
 	{
-		std::memcpy(p + section->offset(), section->data(), section->bufferSize());
+		asmjit::VirtMem::ProtectJitReadWriteScope rwScope(p, codeSize);
+
+		for (asmjit::Section* section : code->_sections)
+		{
+			std::memcpy(p + section->offset(), section->data(), section->bufferSize());
+		}
+	}
+
+	if (!dump_name.empty())
+	{
+		// If directory ASMJIT doesn't exist, nothing will be written
+		fs::file dump(fmt::format("%s/ASMJIT/%s", fs::get_cache_dir(), dump_name), fs::rewrite);
+
+		if (dump)
+		{
+			dump.write(p, codeSize);
+		}
 	}
 
 	return p;
@@ -349,8 +371,9 @@ static u64 make_null_function(const std::string& name)
 		using namespace asmjit;
 
 		// Build a "null" function that contains its name
-		const auto func = build_function_asm<void (*)()>("NULL", [&](x86::Assembler& c, auto& args)
+		const auto func = build_function_asm<void (*)()>("NULL", [&](native_asm& c, auto& args)
 		{
+#if defined(ARCH_X64)
 			Label data = c.newLabel();
 			c.lea(args[0], x86::qword_ptr(data, 0));
 			c.jmp(Imm(&null));
@@ -362,6 +385,7 @@ static u64 make_null_function(const std::string& name)
 				c.db(ch);
 			c.db(0);
 			c.align(AlignMode::kData, 16);
+#endif
 		});
 
 		func_ptr = reinterpret_cast<u64>(func);

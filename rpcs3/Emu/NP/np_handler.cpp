@@ -19,12 +19,19 @@
 #include <WS2tcpip.h>
 #include <iphlpapi.h>
 #else
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <net/if.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
 #endif
 
 #if defined(__FreeBSD__) || defined(__APPLE__)

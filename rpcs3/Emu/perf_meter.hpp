@@ -2,25 +2,12 @@
 
 #include "util/types.hpp"
 #include "util/logs.hpp"
+#include "util/tsc.hpp"
 #include "system_config.h"
 #include <array>
 #include <cmath>
 
 LOG_CHANNEL(perf_log, "PERF");
-
-#ifdef _MSC_VER
-extern "C" u64 __rdtsc();
-
-inline u64 get_tsc()
-{
-	return __rdtsc();
-}
-#else
-inline u64 get_tsc()
-{
-	return __builtin_ia32_rdtsc();
-}
-#endif
 
 // TODO: constexpr with the help of bitcast
 template <auto Name>
@@ -145,7 +132,7 @@ public:
 		if constexpr (std::array<bool, sizeof...(SubEvents)>{(SubEvents == Event)...}[Index])
 		{
 			// Push actual timestamp into an array
-			m_timestamps[Index + 1] = get_tsc();
+			m_timestamps[Index + 1] = utils::get_tsc();
 		}
 		else if constexpr (Index < sizeof...(SubEvents))
 		{
@@ -169,7 +156,7 @@ public:
 	// Re-initialize first timestamp
 	FORCE_INLINE SAFE_BUFFERS(void) restart() noexcept
 	{
-		m_timestamps[0] = get_tsc();
+		m_timestamps[0] = utils::get_tsc();
 		std::memset(m_timestamps + 1, 0, sizeof(m_timestamps) - sizeof(u64));
 	}
 

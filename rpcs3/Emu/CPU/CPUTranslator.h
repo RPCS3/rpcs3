@@ -2961,11 +2961,11 @@ public:
 	}
 
 	// Call external function: provide name and function pointer
-	template <typename RT, typename... FArgs, LLVMValue... Args>
+	template <typename RetT = void, typename RT, typename... FArgs, LLVMValue... Args>
 	llvm::CallInst* call(std::string_view lame, RT(*_func)(FArgs...), Args... args)
 	{
 		static_assert(sizeof...(FArgs) == sizeof...(Args), "spu_llvm_recompiler::call(): unexpected arg number");
-		const auto type = llvm::FunctionType::get(get_type<RT>(), {args->getType()...}, false);
+		const auto type = llvm::FunctionType::get(get_type<std::conditional_t<std::is_void_v<RetT>, RT, RetT>>(), {args->getType()...}, false);
 		const auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({lame.data(), lame.size()}, type).getCallee());
 #ifdef _WIN32
 		func->setCallingConv(llvm::CallingConv::Win64);
@@ -3679,32 +3679,5 @@ struct fmt_unveil<llvm::TypeSize, void>
 		return arg;
 	}
 };
-
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wignored-attributes"
-#endif
-
-template <>
-struct llvm_value_t<__m128> : llvm_value_t<f32[4]>
-{
-
-};
-
-template <>
-struct llvm_value_t<__m128d> : llvm_value_t<f64[2]>
-{
-
-};
-
-template <>
-struct llvm_value_t<__m128i> : llvm_value_t<u8[16]>
-{
-
-};
-
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
 
 #endif

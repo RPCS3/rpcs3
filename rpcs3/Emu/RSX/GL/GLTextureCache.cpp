@@ -38,16 +38,16 @@ namespace gl
 				ensure(real_pitch == (width * 4));
 				if (rsx_pitch == real_pitch) [[likely]]
 				{
-					copy_data_swap_u32(dst, dst, valid_length / 4);
+					copy_data_swap_u32(static_cast<u32*>(dst), static_cast<u32*>(dst), valid_length / 4);
 				}
 				else
 				{
 					const u32 num_rows = utils::align(valid_length, rsx_pitch) / rsx_pitch;
-					u8* data = static_cast<u8*>(dst);
+					u32* data = static_cast<u32*>(dst);
 					for (u32 row = 0; row < num_rows; ++row)
 					{
 						copy_data_swap_u32(data, data, width);
-						data += rsx_pitch;
+						data += rsx_pitch / 4;
 					}
 				}
 				break;

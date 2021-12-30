@@ -1,3 +1,5 @@
+#if defined(__SSE2__) || defined(_M_X64)
+
 /*
  *  AES-NI support functions
  *
@@ -680,3 +682,5 @@ int aesni_setkey_enc( unsigned char *rk,
 
     return( 0 );
 }
+
+#endif

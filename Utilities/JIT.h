@@ -22,10 +22,17 @@
 #pragma GCC diagnostic ignored "-Wredundant-decls"
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #pragma GCC diagnostic ignored "-Weffc++"
-#ifndef __clang__
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#else
 #pragma GCC diagnostic ignored "-Wduplicated-branches"
+#pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
 #endif
 #include <asmjit/asmjit.h>
+#if defined(ARCH_ARM64)
+#include <asmjit/a64.h>
+#endif
 #pragma GCC diagnostic pop
 #endif
 
@@ -35,6 +42,14 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+
+#if defined(ARCH_X64)
+using native_asm = asmjit::x86::Assembler;
+using native_args = std::array<asmjit::x86::Gp, 4>;
+#elif defined(ARCH_ARM64)
+using native_asm = asmjit::a64::Assembler;
+using native_args = std::array<asmjit::a64::Gp, 4>;
+#endif
 
 void jit_announce(uptr func, usz size, std::string_view name);
 
@@ -62,6 +77,8 @@ struct jit_runtime_base
 	const asmjit::Environment& environment() const noexcept;
 	void* _add(asmjit::CodeHolder* code) noexcept;
 	virtual uchar* _alloc(usz size, usz align) noexcept = 0;
+
+	std::string_view dump_name;
 };
 
 // ASMJIT runtime for emitting code in a single 2G region
@@ -167,11 +184,39 @@ namespace asmjit
 		}
 	}
 
+	inline void build_init_args_from_ghc(native_asm& c, native_args& args)
+	{
+#if defined(ARCH_X64)
+		// TODO: handle case when args don't overlap with r13/rbp/r12/rbx
+		c.mov(args[0], x86::r13);
+		c.mov(args[1], x86::rbp);
+		c.mov(args[2], x86::r12);
+		c.mov(args[3], x86::rbx);
+#else
+		static_cast<void>(c);
+		static_cast<void>(args);
+#endif
+	}
+
+	inline void build_init_ghc_args(native_asm& c, native_args& args)
+	{
+#if defined(ARCH_X64)
+		// TODO: handle case when args don't overlap with r13/rbp/r12/rbx
+		c.mov(x86::r13, args[0]);
+		c.mov(x86::rbp, args[1]);
+		c.mov(x86::r12, args[2]);
+		c.mov(x86::rbx, args[3]);
+#else
+		static_cast<void>(c);
+		static_cast<void>(args);
+#endif
+	}
+
 	using imm_ptr = Imm;
 }
 
 // Build runtime function with asmjit::X86Assembler
-template <typename FT, typename F>
+template <typename FT, typename Asm = native_asm, typename F>
 inline FT build_function_asm(std::string_view name, F&& builder)
 {
 	using namespace asmjit;
@@ -181,7 +226,8 @@ inline FT build_function_asm(std::string_view name, F&& builder)
 	CodeHolder code;
 	code.init(rt.environment());
 
-	std::array<x86::Gp, 4> args;
+#if defined(ARCH_X64)
+	native_args args;
 #ifdef _WIN32
 	args[0] = x86::rcx;
 	args[1] = x86::rdx;
@@ -193,16 +239,27 @@ inline FT build_function_asm(std::string_view name, F&& builder)
 	args[2] = x86::rdx;
 	args[3] = x86::rcx;
 #endif
+#elif defined(ARCH_ARM64)
+	native_args args;
+	args[0] = a64::x0;
+	args[1] = a64::x1;
+	args[2] = a64::x2;
+	args[3] = a64::x3;
+#endif
 
-	x86::Assembler compiler(&code);
+	Asm compiler(&code);
 	compiler.addEncodingOptions(EncodingOptions::kOptimizedAlign);
-	builder(std::ref(compiler), args);
+	if constexpr (std::is_invocable_v<F, Asm&, native_args&>)
+		builder(compiler, args);
+	else
+		builder(compiler);
+	rt.dump_name = name;
 	const auto result = rt._add(&code);
 	jit_announce(result, code.codeSize(), name);
 	return reinterpret_cast<FT>(uptr(result));
 }
 
-#ifdef __APPLE__
+#if !defined(ARCH_X64) || defined(__APPLE__)
 template <typename FT, usz = 4096>
 class built_function
 {
@@ -213,9 +270,23 @@ public:
 
 	built_function& operator=(const built_function&) = delete;
 
-	template <typename F>
-	built_function(std::string_view name, F&& builder)
-		: m_func(ensure(build_function_asm<FT>(name, std::forward<F>(builder))))
+	template <typename F> requires (std::is_invocable_v<F, native_asm&, native_args&>)
+	built_function(std::string_view name, F&& builder,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION())
+		: m_func(ensure(build_function_asm<FT>(name, std::forward<F>(builder)), const_str(), line, col, file, func))
+	{
+	}
+
+	template <typename F> requires (std::is_invocable_v<F>)
+	built_function(std::string_view, F&& getter,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION())
+		: m_func(ensure(getter(), const_str(), line, col, file, func))
 	{
 	}
 
@@ -251,7 +322,8 @@ public:
 		CodeHolder code;
 		code.init(rt.environment());
 
-		std::array<x86::Gp, 4> args;
+#if defined(ARCH_X64)
+		native_args args;
 	#ifdef _WIN32
 		args[0] = x86::rcx;
 		args[1] = x86::rdx;
@@ -263,10 +335,18 @@ public:
 		args[2] = x86::rdx;
 		args[3] = x86::rcx;
 	#endif
+#elif defined(ARCH_ARM64)
+		native_args args;
+		args[0] = a64::x0;
+		args[1] = a64::x1;
+		args[2] = a64::x2;
+		args[3] = a64::x3;
+#endif
 
-		x86::Assembler compiler(&code);
+		native_asm compiler(&code);
 		compiler.addEncodingOptions(EncodingOptions::kOptimizedAlign);
-		builder(std::ref(compiler), args);
+		builder(compiler, args);
+		rt.dump_name = name;
 		jit_announce(rt._add(&code), code.codeSize(), name);
 	}
 

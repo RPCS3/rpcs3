@@ -1122,7 +1122,7 @@
     <ClInclude Include="util\v128.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="util\v128sse.hpp">
+    <ClInclude Include="util\simd.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\to_endian.hpp">

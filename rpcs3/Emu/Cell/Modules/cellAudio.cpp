@@ -6,8 +6,11 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "cellAudio.h"
 
-#include "emmintrin.h"
 #include <cmath>
+
+#if defined(ARCH_X64)
+#include "emmintrin.h"
+#endif
 
 LOG_CHANNEL(cellAudio);
 
@@ -1118,6 +1121,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 		// 2x CVTPS2DQ (converts float to s32)
 		// PACKSSDW (converts s32 to s16 with signed saturation)
 
+#if defined(ARCH_X64)
 		for (usz i = 0; i < out_buffer_sz; i += 8)
 		{
 			const auto scale = _mm_set1_ps(0x8000);
@@ -1125,6 +1129,9 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 				_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer + i), scale)),
 				_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer + i + 4), scale)))));
 		}
+#else
+		fmt::throw_exception("Not supported");
+#endif
 	}
 }
 
