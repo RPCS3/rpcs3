@@ -729,7 +729,7 @@ error_code sceNpBasicUnregisterHandler()
 	return CELL_OK;
 }
 
-error_code sceNpBasicSetPresence(vm::cptr<u8> data, u64 size)
+error_code sceNpBasicSetPresence(vm::cptr<u8> data, u32 size)
 {
 	sceNp.todo("sceNpBasicSetPresence(data=*0x%x, size=%d)", data, size);
 
@@ -817,7 +817,7 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 	return CELL_OK;
 }
 
-error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u64 size)
+error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 size)
 {
 	sceNp.todo("sceNpBasicSendMessage(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
 
@@ -970,7 +970,7 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 	return CELL_OK;
 }
 
-error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> subject, vm::cptr<char> body, vm::cptr<char> data, u64 size, sys_memory_container_t containerId)
+error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> subject, vm::cptr<char> body, vm::cptr<char> data, u32 size, sys_memory_container_t containerId)
 {
 	sceNp.todo("sceNpBasicSendMessageAttachment(to=*0x%x, subject=%s, body=%s, data=%s, size=%d, containerId=%d)", to, subject, body, data, size, containerId);
 

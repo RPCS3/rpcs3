@@ -90,6 +90,22 @@ static const bool s_tsx_avx = utils::has_avx();
 // For special case
 static const bool s_tsx_haswell = utils::has_rtm() && !utils::has_mpx();
 
+// Threshold for when rep mosvb is expected to outperform simd copies
+// The threshold will be 0xFFFFFFFF when the performance of rep movsb is expected to be bad
+static const u32 s_rep_movsb_threshold = utils::get_rep_movsb_threshold();
+
+#ifndef _MSC_VER
+static FORCE_INLINE void __movsb(unsigned char * Dst, const unsigned char * Src, size_t Size)
+{
+	__asm__ __volatile__
+	(
+		"rep; movsb" :
+		[Dst] "=D" (Dst), [Src] "=S" (Src), [Size] "=c" (Size) :
+		"[Dst]" (Dst), "[Src]" (Src), "[Size]" (Size)
+	);
+}
+#endif
+
 static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 {
 #if defined(_MSC_VER) || defined(__AVX__)
@@ -2234,32 +2250,41 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				// Split locking + transfer in two parts (before 64K border, and after it)
 				vm::range_lock(range_lock, range_addr, size0);
 
-				// Avoid unaligned stores in mov_rdata_avx
-				if (reinterpret_cast<u64>(dst) & 0x10)
+				if (size > s_rep_movsb_threshold)
 				{
-					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
-
-					dst += 16;
-					src += 16;
-					size0 -= 16;
+					__movsb(dst, src, size0);
+					dst += size0;
+					src += size0;
 				}
-
-				while (size0 >= 128)
+				else
 				{
-					mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+					// Avoid unaligned stores in mov_rdata_avx
+					if (reinterpret_cast<u64>(dst) & 0x10)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
 
-					dst += 128;
-					src += 128;
-					size0 -= 128;
-				}
+						dst += 16;
+						src += 16;
+						size0 -= 16;
+					}
 
-				while (size0)
-				{
-					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+					while (size0 >= 128)
+					{
+						mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
 
-					dst += 16;
-					src += 16;
-					size0 -= 16;
+						dst += 128;
+						src += 128;
+						size0 -= 128;
+					}
+
+					while (size0)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+						dst += 16;
+						src += 16;
+						size0 -= 16;
+					}
 				}
 
 				range_lock->release(0);
@@ -2268,32 +2293,39 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 			vm::range_lock(range_lock, range_addr, range_end - range_addr);
 
-			// Avoid unaligned stores in mov_rdata_avx
-			if (reinterpret_cast<u64>(dst) & 0x10)
+			if (size > s_rep_movsb_threshold)
 			{
-				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
-
-				dst += 16;
-				src += 16;
-				size -= 16;
+				__movsb(dst, src, size);
 			}
-
-			while (size >= 128)
+			else
 			{
-				mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+				// Avoid unaligned stores in mov_rdata_avx
+				if (reinterpret_cast<u64>(dst) & 0x10)
+				{
+					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
 
-				dst += 128;
-				src += 128;
-				size -= 128;
-			}
+					dst += 16;
+					src += 16;
+					size -= 16;
+				}
 
-			while (size)
-			{
-				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+				while (size >= 128)
+				{
+					mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
 
-				dst += 16;
-				src += 16;
-				size -= 16;
+					dst += 128;
+					src += 128;
+					size -= 128;
+				}
+
+				while (size)
+				{
+					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+					dst += 16;
+					src += 16;
+					size -= 16;
+				}
 			}
 
 			range_lock->release(0);
@@ -2338,32 +2370,39 @@ plain_access:
 	}
 	default:
 	{
-		// Avoid unaligned stores in mov_rdata_avx
-		if (reinterpret_cast<u64>(dst) & 0x10)
+		if (size > s_rep_movsb_threshold)
 		{
-			*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
-
-			dst += 16;
-			src += 16;
-			size -= 16;
+			__movsb(dst, src, size);
 		}
-
-		while (size >= 128)
+		else
 		{
-			mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+			// Avoid unaligned stores in mov_rdata_avx
+			if (reinterpret_cast<u64>(dst) & 0x10)
+			{
+				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
 
-			dst += 128;
-			src += 128;
-			size -= 128;
-		}
+				dst += 16;
+				src += 16;
+				size -= 16;
+			}
 
-		while (size)
-		{
-			*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+			while (size >= 128)
+			{
+				mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
 
-			dst += 16;
-			src += 16;
-			size -= 16;
+				dst += 128;
+				src += 128;
+				size -= 128;
+			}
+
+			while (size)
+			{
+				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+				dst += 16;
+				src += 16;
+				size -= 16;
+			}
 		}
 
 		break;

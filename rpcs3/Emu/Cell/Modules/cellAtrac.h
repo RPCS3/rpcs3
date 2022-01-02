@@ -43,15 +43,12 @@ enum
 
 struct alignas(8) CellAtracHandle
 {
-	vm::ptr<u8> pucWorkMem;
-	// ...
+	u8 ucWorkMem[CELL_ATRAC_HANDLE_SIZE];
 };
-
-CHECK_MAX_SIZE(CellAtracHandle, 512);
 
 struct CellAtracBufferInfo
 {
-	vm::ptr<u8> pucWriteAddr;
+	vm::bptr<u8> pucWriteAddr;
 	be_t<u32> uiWritableByte;
 	be_t<u32> uiMinWriteByte;
 	be_t<u32> uiReadPosition;
@@ -59,6 +56,6 @@ struct CellAtracBufferInfo
 
 struct CellAtracExtRes
 {
-	vm::ptr<struct CellSpurs> pSpurs;
+	vm::bptr<struct CellSpurs> pSpurs;
 	u8 priority[8];
 };
