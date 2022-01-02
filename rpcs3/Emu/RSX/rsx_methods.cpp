@@ -2286,7 +2286,7 @@ namespace rsx
 			registers[NV308A_SIZE_OUT] = 0x0;
 			registers[NV308A_SIZE_IN] = 0x0;
 			registers[NV406E_SET_REFERENCE] = umax;
-			if (rsx) rsx->ctrl->ref = umax;
+			if (rsx && rsx->ctrl) rsx->ctrl->ref = u32{umax};
 		}
 	}
 
