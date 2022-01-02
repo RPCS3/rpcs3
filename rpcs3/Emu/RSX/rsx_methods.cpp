@@ -407,9 +407,9 @@ namespace rsx
 
 		struct set_transform_constant
 		{
-			static void impl(thread* rsx, u32 reg, u32 /*arg*/)
+			static void impl(thread* rsx, u32 _reg, u32 /*arg*/)
 			{
-				const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
+				const u32 index = _reg - NV4097_SET_TRANSFORM_CONSTANT;
 				const u32 reg = index / 4;
 				const u8 subreg = index % 4;
 
@@ -2845,7 +2845,7 @@ namespace rsx
 		auto bind = [](u32 id, rsx_method_t func)
 		{
 			methods.at(id) = func;
-		}
+		};
 
 		auto bind_array = [](u32 id, u32 step, u32 count, rsx_method_t func)
 		{
