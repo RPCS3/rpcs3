@@ -10,7 +10,7 @@ add_library(3rdparty_hidapi INTERFACE)
 add_subdirectory(hidapi EXCLUDE_FROM_ALL)
 
 if(APPLE)
-	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-mac "-framework CoreFoundation" "-framework IOKit")
+	target_link_libraries(3rdparty_hidapi INTERFACE hidapi_darwin "-framework CoreFoundation" "-framework IOKit")
 elseif(CMAKE_SYSTEM MATCHES "Linux")
 	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-hidraw udev)
 elseif(WIN32)
