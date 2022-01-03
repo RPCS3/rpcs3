@@ -130,6 +130,4 @@ macos_task:
     CI_HAS_ARTIFACTS: true
   artifacts:
     name: Artifact
-    path: "artifacts/*.7z"
-    name: Artifact-DMG
-    path: "artifacts/*.dmg"
+    path: "artifacts/rpcs3-*_macos.*"
