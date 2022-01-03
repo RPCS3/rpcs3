@@ -23,8 +23,8 @@ enum class video_renderer;
 
 enum class system_state : u32
 {
-	running,
 	stopped,
+	running,
 	paused,
 	frozen, // paused but cannot resume
 	ready,
