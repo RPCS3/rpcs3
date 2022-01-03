@@ -136,7 +136,7 @@ struct CellGifDecOutParam
 struct CellGifDecExtension
 {
 	u8 label;
-	vm::ptr<u8> data;
+	vm::bptr<u8> data;
 };
 
 struct CellGifDecDataOutInfo

@@ -156,10 +156,6 @@ elseif(UNIX)
             ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git)
 elseif(WIN32)
     # TODO(cjj19970505@live.cn)
-    # this is a single-config generator workaround
-    # multi-config generator will fail.
-
-    # TODO(cjj19970505@live.cn)
     # offical Qt binaries are built with -MD(d) only as stated in offical wiki
     # https://wiki.qt.io/Technical_FAQ#Why_does_a_statically_built_Qt_use_the_dynamic_Visual_Studio_runtime_libraries_.3F_Do_I_need_to_deploy_those_with_my_application_.3F
     # If we build our libs with /MT(d), we might encounter some issues.
@@ -179,19 +175,10 @@ elseif(WIN32)
     list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../bin/")
 
     # If Qt5 is installed from vcpkg
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5/debug/bin/")
-    else()
-        list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5/bin/")
-    endif()
-    
-    find_program(_WINDEPLOYQT 
-        NAMES windeployqt
-        PATHS ${_QT5_TOOLS_PATHS}
-        REQUIRED)
-    message("Use windeployqt in ${_WINDEPLOYQT}")
+    list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5$<$<CONFIG:Debug>:/debug>/bin/")
     
     add_custom_command(TARGET rpcs3 POST_BUILD
+        COMMAND set PATH=${_QT5_TOOLS_PATHS}$<SEMICOLON>%PATH%
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
         # If Qt5 is installed from vcpkg, add binary path to PATH
         # otherwise windeployqt tool won't be able to locate necessary dlls
