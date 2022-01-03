@@ -1,27 +1,68 @@
 #!/bin/sh -ex
 
-export CCACHE_SLOPPINESS=pch_defines,time_macros
-export CMAKE_PREFIX_PATH=/usr/local/opt/qt5/
-export PATH="/usr/local/opt/ccache/libexec:$PATH"
+brew update
+brew install llvm@13 molten-vk vulkan-headers sdl2 nasm qt@5 ninja cmake glew git p7zip create-dmg ccache
 
-# Setup vulkan and gfx-rs/portability
-curl -sLO https://github.com/gfx-rs/portability/releases/download/latest/gfx-portability-macos-latest.zip
-unzip -: gfx-portability-macos-latest.zip
-curl -sLO https://github.com/KhronosGroup/Vulkan-Headers/archive/sdk-1.1.106.0.zip
-unzip -: sdk-*.zip
-mkdir vulkan-sdk
-ln -s "${PWD}"/Vulkan-Headers*/include vulkan-sdk/include
-mkdir vulkan-sdk/lib
-cp target/release/libportability.dylib vulkan-sdk/lib/libVulkan.dylib
-# Let macdeployqt locate and install Vulkan library
-install_name_tool -id "${PWD}"/vulkan-sdk/lib/libVulkan.dylib vulkan-sdk/lib/libVulkan.dylib
-export VULKAN_SDK="${PWD}/vulkan-sdk"
+export CXX=clang++
+export CC=clang
+export Qt5_DIR="/usr/local/Cellar/qt@5/5.15.2_1/lib/cmake/Qt5"
+export PATH="/usr/local/opt/llvm/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
+export LDFLAGS="-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib"
+export CPPFLAGS="-I/usr/local/opt/llvm/include -msse -msse2 -mcx16 -no-pie"
+export CXXFLAGS="-I/usr/local/opt/llvm/include -msse -msse2 -mcx16 -no-pie"
+export VULKAN_SDK="/usr/local/Cellar/molten-vk/1.1.6"
+export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 
-# Pull all the submodules except llvm
-# Note: Tried to use git submodule status, but it takes over 20 seconds
-# shellcheck disable=SC2046
-git submodule -q update --init $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
+git submodule init
+git submodule update
 
+# 3rdparty fixes
+sed -i '' "s/if(APPLE)/if(CMAKE_C_COMPILER_ID MATCHES \"AppleClang\")/g" 3rdparty/wolfssl/wolfssl/CMakeLists.txt
+#cd 3rdparty/ffmpeg
+#git pull origin master
+#cd ../hidapi/hidapi/mac
+cd 3rdparty/hidapi/hidapi/mac
+sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" hid.c
+cd ../../../..
+#cd llvm
+#git pull origin master
+#cd ..
+ln -s "$VULKAN_SDK/lib/libMoltenVK.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
+
+cd ..
 mkdir build && cd build || exit 1
-cmake .. -DWITH_LLVM=OFF -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja
+cmake -DUSE_DISCORD_RPC=OFF -DUSE_VULKAN=ON -DUSE_ALSA=OFF -DUSE_PULSE=OFF -DUSE_AUDIOUNIT=ON \
+-G Ninja -DLLVM_CCACHE_BUILD=OFF -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF \
+-DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF \
+-DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_PERF=OFF -DLLVM_ENABLE_Z3_SOLVER=OFF \
+-DCMAKE_CXX_STANDARD=20 -DUSE_NATIVE_INSTRUCTIONS=OFF \
+../cirrus-ci-build/
 ninja
+
+cd ../cirrus-ci-build/
+COMM_TAG="$(grep 'version{.*}' rpcs3/rpcs3_version.cpp | awk -F[\{,] '{printf "%d.%d.%d", $2, $3, $4}')"
+COMM_COUNT="$(git rev-list --count HEAD)"
+COMM_HASH="$(git rev-parse --short=8 HEAD)"
+cd ../build/bin
+
+mkdir "rpcs3.app/Contents/lib/"
+cp "/usr/local/Cellar/llvm/13.0.0_2/lib/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
+"rpcs3.app/Contents/Frameworks/QtQml.framework" \
+"rpcs3.app/Contents/Frameworks/QtQmlModels.framework" \
+"rpcs3.app/Contents/Frameworks/QtQuick.framework" \
+"rpcs3.app/Contents/Frameworks/QtVirtualKeyboard.framework" \
+"rpcs3.app/Contents/Plugins/platforminputcontexts" \
+"rpcs3.app/Contents/Plugins/virtualkeyboard"
+
+create-dmg --volname RPCS3 \
+--window-size 800 400 \
+--icon-size 100 \
+--icon rpcs3.app 200 190 \
+--hide-extension rpcs3.app \
+--app-drop-link 600 185 \
+"$ARTDIR/rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_macos.dmg" \
+rpcs3.app
+
+7z a -mx9 rpcs3-v"${COMM_TAG}"-"${COMM_COUNT}"-"${COMM_HASH}"_macos.7z rpcs3.app
+mv rpcs3-v"${COMM_TAG}"-"${COMM_COUNT}"-"${COMM_HASH}"_macos.7z "$ARTDIR"
