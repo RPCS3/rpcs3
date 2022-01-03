@@ -1753,7 +1753,7 @@ namespace rsx
 		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_R;
 		registers[NV4097_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
 
-		if (auto rsx = get_current_renderer(); true)
+		if (auto rsx = Emu.IsStopped() ? nullptr : get_current_renderer(); true)
 		{
 			// Commands injected by cellGcmInit
 			registers[NV406E_SEMAPHORE_OFFSET] = 0x30;
