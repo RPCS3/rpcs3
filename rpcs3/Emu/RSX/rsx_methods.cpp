@@ -1753,7 +1753,6 @@ namespace rsx
 		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_R;
 		registers[NV4097_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
 
-		if (auto rsx = Emu.IsStopped() ? nullptr : get_current_renderer(); true)
 		{
 			// Commands injected by cellGcmInit
 			registers[NV406E_SEMAPHORE_OFFSET] = 0x30;
@@ -2286,7 +2285,7 @@ namespace rsx
 			registers[NV308A_SIZE_OUT] = 0x0;
 			registers[NV308A_SIZE_IN] = 0x0;
 			registers[NV406E_SET_REFERENCE] = umax;
-			if (rsx && rsx->ctrl) rsx->ctrl->ref = u32{umax};
+			if (auto rsx = Emu.IsStopped() ? nullptr : get_current_renderer(); rsx && rsx->ctrl) rsx->ctrl->ref = u32{umax};
 		}
 	}
 
