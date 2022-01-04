@@ -463,7 +463,7 @@ struct av_video_ytrapcontrol_cmd : public ps3av_cmd
 			return;
 		}
 
-		if (pkt->unk1 && pkt->unk1 != 5)
+		if (pkt->unk1 && pkt->unk1 != 5U)
 		{
 			vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_SUCCESS);
 			return;
@@ -487,16 +487,16 @@ struct av_audio_mute_cmd : public ps3av_cmd
 		const auto pkt = static_cast<const ps3av_pkt_av_audio_mute *>(pkt_buf);
 
 		if (pkt->avport == static_cast<u16>(UartAudioAvport::AVMULTI_1))
-        {
-            vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_INVALID_PORT);
-            return;
-        }
-
-		if (pkt->avport > static_cast<u16>(UartAudioAvport::HDMI_1) && pkt->avport != static_cast<u16>(UartAudioAvport::AVMULTI_0) ||
-			pkt->avport == static_cast<u16>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode)
 		{
-            vuart.write_resp<true>(pkt->hdr.cid, PS3AV_STATUS_SYSCON_COMMUNICATE_FAIL);
-            return;
+			vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_INVALID_PORT);
+			return;
+		}
+
+		if ((pkt->avport > static_cast<u16>(UartAudioAvport::HDMI_1) && pkt->avport != static_cast<u16>(UartAudioAvport::AVMULTI_0)) ||
+			(pkt->avport == static_cast<u16>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode))
+		{
+			vuart.write_resp<true>(pkt->hdr.cid, PS3AV_STATUS_SYSCON_COMMUNICATE_FAIL);
+			return;
 		}
 
 		// TBA
@@ -517,7 +517,7 @@ struct av_acp_ctrl_cmd : public ps3av_cmd
 		const auto pkt = static_cast<const ps3av_pkt_acp_ctrl *>(pkt_buf);
 
 		if (pkt->avport > static_cast<u8>(UartAudioAvport::HDMI_1) ||
-			pkt->avport == static_cast<u8>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode)
+			(pkt->avport == static_cast<u8>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode))
 		{
 			vuart.write_resp<true>(pkt->hdr.cid, PS3AV_STATUS_INVALID_PORT);
 			return;
@@ -541,8 +541,8 @@ struct av_set_acp_packet_cmd : public ps3av_cmd
 		const auto pkt = static_cast<const ps3av_pkt_set_acp_packet *>(pkt_buf);
 
 		if (pkt->avport > static_cast<u8>(UartAudioAvport::HDMI_1) ||
-			pkt->avport == static_cast<u8>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode ||
-			pkt->pkt_type > 0x0A && pkt->pkt_type < 0x81 ||
+			(pkt->avport == static_cast<u8>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode) ||
+			(pkt->pkt_type > 0x0A && pkt->pkt_type < 0x81) ||
 			pkt->pkt_type > 0x85)
 		{
 			vuart.write_resp<true>(pkt->hdr.cid, PS3AV_STATUS_INVALID_PORT);
@@ -567,20 +567,20 @@ struct av_add_signal_ctl_cmd : public ps3av_cmd
 		const auto pkt = static_cast<const ps3av_pkt_add_signal_ctl *>(pkt_buf);
 
 		if (vuart.get_reply_buf_free_size() < sizeof(ps3av_pkt_reply_hdr))
-    	{
+		{
 			vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_BUFFER_OVERFLOW);
 			return;
-    	}
+		}
 
-    	if (pkt->avport != static_cast<u16>(UartAudioAvport::AVMULTI_0))
-    	{
-    	    vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_INVALID_PORT);
-    	    return;
-    	}
+		if (pkt->avport != static_cast<u16>(UartAudioAvport::AVMULTI_0))
+		{
+			vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_INVALID_PORT);
+			return;
+		}
 
 		sys_uart.notice("[av_add_signal_ctl_cmd] signal_ctl=0x%04x", pkt->signal_ctl);
 
-   		vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_SUCCESS);
+		vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_SUCCESS);
 	}
 };
 
@@ -602,11 +602,11 @@ struct av_set_cgms_wss_cmd : public ps3av_cmd
 			return;
 		}
 
-    	if (pkt->avport != static_cast<u16>(UartAudioAvport::AVMULTI_0))
-    	{
-    	    vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_INVALID_PORT);
-    	    return;
-    	}
+		if (pkt->avport != static_cast<u16>(UartAudioAvport::AVMULTI_0))
+		{
+			vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_INVALID_PORT);
+			return;
+		}
 
 		sys_uart.notice("[av_set_cgms_wss_cmd] cgms_wss=0x%08x", pkt->cgms_wss);
 
@@ -735,10 +735,10 @@ struct video_set_format_cmd : public ps3av_cmd
 		}
 
 		if (pkt->video_head > PS3AV_HEAD_B_ANALOG || pkt->video_order > 1 || pkt->video_format > 16)
-    	{
-    	    vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_INVALID_VIDEO_PARAM);
+		{
+			vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_INVALID_VIDEO_PARAM);
 			return;
-    	}
+		}
 
 		vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_SUCCESS);
 	}
@@ -782,10 +782,10 @@ struct video_set_pitch_cmd : public ps3av_cmd
 			return;
 		}
 
-		if (pkt->video_head > PS3AV_HEAD_B_ANALOG || (pkt->pitch & 7) != 0 || pkt->pitch > UINT16_MAX)
+		if (pkt->video_head > PS3AV_HEAD_B_ANALOG || (pkt->pitch & 7) != 0U || pkt->pitch > UINT16_MAX)
 		{
 			vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_INVALID_VIDEO_PARAM);
-		    return;
+			return;
 		}
 
 		vuart.write_resp(pkt->hdr.cid, PS3AV_STATUS_SUCCESS);
@@ -964,7 +964,7 @@ private:
 
 		const auto bit_cnt = [&]()
 		{
-			if (rsxaudio_port != SYS_RSXAUDIO_PORT_SERIAL && pkt.audio_format != UartAudioFormat::PCM ||
+			if ((rsxaudio_port != SYS_RSXAUDIO_PORT_SERIAL && pkt.audio_format != UartAudioFormat::PCM) ||
 				pkt.audio_word_bits == UartAudioSampleSize::_16BIT)
 			{
 				return UartAudioSampleSize::_16BIT;
@@ -1069,11 +1069,11 @@ struct audio_set_active_cmd : public ps3av_cmd
 
 		const bool requested_avports[SYS_RSXAUDIO_AVPORT_CNT] =
 		{
-			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_AVMULTI) != 0,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_0) != 0,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_1) != 0
+			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0U,
+			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0U,
+			(pkt->audio_port & PS3AV_AUDIO_PORT_AVMULTI) != 0U,
+			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_0) != 0U,
+			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_1) != 0U
 		};
 
 		// TBA
@@ -1124,11 +1124,11 @@ struct audio_spdif_bit_cmd : public ps3av_cmd
 
 		const bool requested_avports[SYS_RSXAUDIO_AVPORT_CNT] =
 		{
-			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_AVMULTI) != 0,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_0) != 0,
-			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_1) != 0
+			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0U,
+			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0U,
+			(pkt->audio_port & PS3AV_AUDIO_PORT_AVMULTI) != 0U,
+			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_0) != 0U,
+			(pkt->audio_port & PS3AV_AUDIO_PORT_SPDIF_1) != 0U
 		};
 
 		// TBA
@@ -1237,7 +1237,7 @@ struct inc_avset_cmd : public ps3av_cmd
 			pkt_data_addr += video_pkt->hdr.length + 4ULL;
 		}
 
-		if (pkt->num_of_av_video_pkt == 0 && pkt->num_of_av_audio_pkt == 0)
+		if (pkt->num_of_av_video_pkt == 0U && pkt->num_of_av_audio_pkt == 0U)
 		{
 			vuart.write_resp(pkt->hdr.cid, video_cmd_status);
 			return;
@@ -1295,7 +1295,7 @@ struct inc_avset_cmd : public ps3av_cmd
 			{
 				valid_av_audio_pkt = true;
 
-				if (!syscon_check_passed || av_audio_pkt->avport == static_cast<u16>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode)
+				if (!syscon_check_passed || (av_audio_pkt->avport == static_cast<u16>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode))
 				{
 					syscon_check_passed = false;
 					break;
@@ -1329,9 +1329,9 @@ private:
 
 	struct video_sce_param
 	{
-	    u32 width_div;
-	    u32 width;
-	    u32 height;
+		u32 width_div;
+		u32 width;
+		u32 height;
 	};
 
 	struct av_video_resp
@@ -1342,115 +1342,115 @@ private:
 
 	u32 video_pkt_parse(const ps3av_pkt_video_mode &video_head_cfg)
 	{
-	    constexpr video_sce_param sce_param_arr[28] =
-	    {
-	        { 0, 0,    0    },
-	        { 4, 2880, 480  },
-	        { 4, 2880, 480  },
-	        { 4, 2880, 576  },
-	        { 4, 2880, 576  },
-	        { 2, 1440, 480  },
-	        { 2, 1440, 576  },
-	        { 1, 1920, 1080 },
-	        { 1, 1920, 1080 },
-	        { 1, 1920, 1080 },
-	        { 1, 1280, 720  },
-	        { 1, 1280, 720  },
-	        { 1, 1920, 1080 },
-	        { 1, 1920, 1080 },
-	        { 1, 1920, 1080 },
-	        { 1, 1920, 1080 },
-	        { 1, 1280, 768  },
-	        { 1, 1280, 1024 },
-	        { 1, 1920, 1200 },
-	        { 1, 1360, 768  },
-	        { 1, 1280, 1470 },
-	        { 1, 1280, 1470 },
-	        { 1, 1920, 1080 },
-	        { 1, 1920, 2205 },
-	        { 1, 1920, 2205 },
-	        { 1, 1280, 721  },
-	        { 1, 720,  481  },
-	        { 1, 720,  577  }
-	    };
+		constexpr video_sce_param sce_param_arr[28] =
+		{
+			{ 0, 0,    0    },
+			{ 4, 2880, 480  },
+			{ 4, 2880, 480  },
+			{ 4, 2880, 576  },
+			{ 4, 2880, 576  },
+			{ 2, 1440, 480  },
+			{ 2, 1440, 576  },
+			{ 1, 1920, 1080 },
+			{ 1, 1920, 1080 },
+			{ 1, 1920, 1080 },
+			{ 1, 1280, 720  },
+			{ 1, 1280, 720  },
+			{ 1, 1920, 1080 },
+			{ 1, 1920, 1080 },
+			{ 1, 1920, 1080 },
+			{ 1, 1920, 1080 },
+			{ 1, 1280, 768  },
+			{ 1, 1280, 1024 },
+			{ 1, 1920, 1200 },
+			{ 1, 1360, 768  },
+			{ 1, 1280, 1470 },
+			{ 1, 1280, 1470 },
+			{ 1, 1920, 1080 },
+			{ 1, 1920, 2205 },
+			{ 1, 1920, 2205 },
+			{ 1, 1280, 721  },
+			{ 1, 720,  481  },
+			{ 1, 720,  577  }
+		};
 
-	    const auto sce_idx = [&]() -> u8
-	    {
-	        switch (video_head_cfg.video_vid)
-	        {
-	        case 16: return 1;
-	        case 1:  return 2;
-	        case 3:  return 4;
-	        case 17: return 4;
-	        case 5:  return 5;
-	        case 6:  return 6;
-	        case 18: return 7;
-	        case 7:  return 8;
-	        case 33: return 8;
-	        case 8:  return 9;
-	        case 34: return 9;
-	        case 9:  return 10;
-	        case 31: return 10;
-	        case 10: return 11;
-	        case 32: return 11;
-	        case 11: return 12;
-	        case 35: return 12;
-	        case 37: return 12;
-	        case 12: return 13;
-	        case 36: return 13;
-	        case 38: return 13;
-	        case 19: return 14;
-	        case 20: return 15;
-	        case 13: return 16;
-	        case 14: return 17;
-	        case 15: return 18;
-	        case 21: return 19;
-	        case 22: return 20;
-	        case 27: return 20;
-	        case 23: return 21;
-	        case 28: return 21;
-	        case 24: return 22;
-	        case 25: return 23;
-	        case 29: return 23;
-	        case 26: return 24;
-	        case 30: return 24;
-	        case 39: return 25;
-	        case 40: return 26;
-	        case 41: return 27;
-	        default: return umax;
-	        }
-	    }();
+		const auto sce_idx = [&]() -> u8
+		{
+			switch (video_head_cfg.video_vid)
+			{
+			case 16: return 1;
+			case 1:  return 2;
+			case 3:  return 4;
+			case 17: return 4;
+			case 5:  return 5;
+			case 6:  return 6;
+			case 18: return 7;
+			case 7:  return 8;
+			case 33: return 8;
+			case 8:  return 9;
+			case 34: return 9;
+			case 9:  return 10;
+			case 31: return 10;
+			case 10: return 11;
+			case 32: return 11;
+			case 11: return 12;
+			case 35: return 12;
+			case 37: return 12;
+			case 12: return 13;
+			case 36: return 13;
+			case 38: return 13;
+			case 19: return 14;
+			case 20: return 15;
+			case 13: return 16;
+			case 14: return 17;
+			case 15: return 18;
+			case 21: return 19;
+			case 22: return 20;
+			case 27: return 20;
+			case 23: return 21;
+			case 28: return 21;
+			case 24: return 22;
+			case 25: return 23;
+			case 29: return 23;
+			case 26: return 24;
+			case 30: return 24;
+			case 39: return 25;
+			case 40: return 26;
+			case 41: return 27;
+			default: return umax;
+			}
+		}();
 
-	    const video_sce_param &sce_param = sce_param_arr[sce_idx];
-	    if (sce_idx == umax ||
-	        video_head_cfg.video_head > PS3AV_HEAD_B_ANALOG ||
-	        video_head_cfg.video_order > 1 ||
-	        video_head_cfg.video_format > 16 ||
-	        video_head_cfg.video_out_format > 16 ||
-	        ((1ULL << video_head_cfg.video_out_format) & 0x1CE07) == 0 ||
-	        video_head_cfg.unk2 > 3 ||
-	        video_head_cfg.pitch & 7 ||
-	        video_head_cfg.pitch >> 16 ||
-	        video_head_cfg.width != 1280 && ((video_head_cfg.width & 7) != 0 || video_head_cfg.width > UINT16_MAX) ||
-	        sce_param.width != 720 && video_head_cfg.width > sce_param.width / sce_param.width_div ||
-	        !(video_head_cfg.height == 1470 && (sce_param.height == 721 || sce_param.height == 481 || sce_param.height == 577) || video_head_cfg.height <= sce_param.height && video_head_cfg.height <= UINT16_MAX))
-	    {
-	        return PS3AV_STATUS_INVALID_VIDEO_PARAM;
-	    }
+		const video_sce_param &sce_param = sce_param_arr[sce_idx];
+		if (sce_idx == umax ||
+			video_head_cfg.video_head > PS3AV_HEAD_B_ANALOG ||
+			video_head_cfg.video_order > 1 ||
+			video_head_cfg.video_format > 16 ||
+			video_head_cfg.video_out_format > 16 ||
+			((1ULL << video_head_cfg.video_out_format) & 0x1CE07) == 0U ||
+			video_head_cfg.unk2 > 3 ||
+			video_head_cfg.pitch & 7 ||
+			video_head_cfg.pitch >> 16 ||
+			(video_head_cfg.width != 1280U && ((video_head_cfg.width & 7) != 0U || video_head_cfg.width > UINT16_MAX)) ||
+			(sce_param.width != 720 && video_head_cfg.width > sce_param.width / sce_param.width_div) ||
+			!((video_head_cfg.height == 1470U && (sce_param.height == 721 || sce_param.height == 481 || sce_param.height == 577)) || (video_head_cfg.height <= sce_param.height && video_head_cfg.height <= UINT16_MAX)))
+		{
+			return PS3AV_STATUS_INVALID_VIDEO_PARAM;
+		}
 
 		sys_uart.notice("[inc_avset_cmd] new resolution on HEAD_%c width=%u height=%u", video_head_cfg.video_head == PS3AV_HEAD_A_HDMI ? 'A' : 'B', video_head_cfg.width, video_head_cfg.height);
 
-	    return PS3AV_STATUS_SUCCESS;
+		return PS3AV_STATUS_SUCCESS;
 	}
 
 	av_video_resp av_video_pkt_parse(const ps3av_pkt_av_video_cs &pkt, bool &syscon_pkt_valid)
 	{
-	    if (pkt.avport <= static_cast<u16>(UartAudioAvport::HDMI_1))
-	    {
-	        if (pkt.av_vid > 23)
-	        {
-	            return {PS3AV_STATUS_INVALID_AV_PARAM};
-	        }
+		if (pkt.avport <= static_cast<u16>(UartAudioAvport::HDMI_1))
+		{
+			if (pkt.av_vid > 23)
+			{
+				return {PS3AV_STATUS_INVALID_AV_PARAM};
+			}
 
 			if (pkt.avport == static_cast<u16>(UartAudioAvport::HDMI_1) && !g_cfg.core.debug_console_mode)
 			{
@@ -1464,15 +1464,15 @@ private:
 				resp.hdcp_done_event[pkt.avport] = true;
 				return resp;
 			}
-	    }
+		}
 		else
 		{
-			if (pkt.avport != static_cast<u16>(UartAudioAvport::AVMULTI_0) && pkt.avport != static_cast<u16>(UartAudioAvport::AVMULTI_1) ||
+			if ((pkt.avport != static_cast<u16>(UartAudioAvport::AVMULTI_0) && pkt.avport != static_cast<u16>(UartAudioAvport::AVMULTI_1)) ||
 				pkt.av_vid > 23 ||
-				pkt.av_vid > 12 && pkt.av_vid != 18)
-	    	{
-	    	    return {PS3AV_STATUS_INVALID_AV_PARAM};
-	    	}
+				(pkt.av_vid > 12 && pkt.av_vid != 18U))
+			{
+				return {PS3AV_STATUS_INVALID_AV_PARAM};
+			}
 
 			if (pkt.avport == static_cast<u16>(UartAudioAvport::AVMULTI_1))
 			{
@@ -1484,7 +1484,7 @@ private:
 			}
 		}
 
-	    return {};
+		return {};
 	}
 };
 
