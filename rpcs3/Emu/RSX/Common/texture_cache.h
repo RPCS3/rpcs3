@@ -1879,16 +1879,16 @@ namespace rsx
 							switch (result.external_subresource_desc.op)
 							{
 							case deferred_request_command::atlas_gather:
-								max_safe_sections = 8 + attr.mipmaps; break;
+								max_safe_sections = 32 + attr.mipmaps; break;
 							case deferred_request_command::cubemap_gather:
-								max_safe_sections = 8 * attr.mipmaps; break;
+								max_safe_sections = 16 * attr.mipmaps; break;
 							case deferred_request_command::_3d_gather:
-								max_safe_sections = (attr.depth * attr.mipmaps * 110) / 100; break; // 10% factor of safety
+								max_safe_sections = (attr.depth * attr.mipmaps * 6); break;
 							default:
 								break;
 							}
 
-							if (overlapping_fbos.size() > max_safe_sections)
+							if (overlapping_fbos.size() > std::max<usz>(max_safe_sections, 32u))
 							{
 								rsx_log.error("[Performance warning] Texture gather routine encountered too many objects!");
 								m_rtts.check_for_duplicates(overlapping_fbos, memory_range);
