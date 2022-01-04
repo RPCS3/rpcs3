@@ -122,7 +122,7 @@ namespace program_common
 		"	return result;\n"
 		"}\n\n";
 
-		std::pair<std::string, std::string> replacements[] =
+		std::pair<std::string_view, std::string> replacements[] =
 			{std::make_pair("$T", wide_vector_type),
 			 std::make_pair("$I", input_coord)};
 
@@ -172,17 +172,17 @@ namespace glsl
 		{
 			switch (f)
 			{
-			case COMPARE::FUNCTION_SEQ:
+			case COMPARE::SEQ:
 				return Op0 + " == " + Op1;
-			case COMPARE::FUNCTION_SGE:
+			case COMPARE::SGE:
 				return Op0 + " >= " + Op1;
-			case COMPARE::FUNCTION_SGT:
+			case COMPARE::SGT:
 				return Op0 + " > " + Op1;
-			case COMPARE::FUNCTION_SLE:
+			case COMPARE::SLE:
 				return Op0 + " <= " + Op1;
-			case COMPARE::FUNCTION_SLT:
+			case COMPARE::SLT:
 				return Op0 + " < " + Op1;
-			case COMPARE::FUNCTION_SNE:
+			case COMPARE::SNE:
 				return Op0 + " != " + Op1;
 			}
 		}
@@ -190,17 +190,17 @@ namespace glsl
 		{
 			switch (f)
 			{
-			case COMPARE::FUNCTION_SEQ:
+			case COMPARE::SEQ:
 				return "equal(" + Op0 + ", " + Op1 + ")";
-			case COMPARE::FUNCTION_SGE:
+			case COMPARE::SGE:
 				return "greaterThanEqual(" + Op0 + ", " + Op1 + ")";
-			case COMPARE::FUNCTION_SGT:
+			case COMPARE::SGT:
 				return "greaterThan(" + Op0 + ", " + Op1 + ")";
-			case COMPARE::FUNCTION_SLE:
+			case COMPARE::SLE:
 				return "lessThanEqual(" + Op0 + ", " + Op1 + ")";
-			case COMPARE::FUNCTION_SLT:
+			case COMPARE::SLT:
 				return "lessThan(" + Op0 + ", " + Op1 + ")";
-			case COMPARE::FUNCTION_SNE:
+			case COMPARE::SNE:
 				return "notEqual(" + Op0 + ", " + Op1 + ")";
 			}
 		}
@@ -603,27 +603,19 @@ namespace glsl
 		{
 			if (props.emulate_depth_clip_only)
 			{
-				// Declare rcp_precise. Requires f64 support in the drivers.
-				// This is required to handle precision drift during division for extended depth range.
-				OS <<
-				"double rcp_precise(double x)\n"
-				"{\n"
-				"	double scaled = x * 0.0009765625;\n"
-				"	double inv = 1.0 / scaled;\n"
-				"	return inv * 0.0009765625;\n"
-				"}\n"
-				"\n"
 				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
 				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
+				OS <<
 				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
 				"{\n"
-				"	if (far_plane != 0.0 && pos.w != 0.0)\n"
+				"	if (pos.w != 0.0)\n"
 				"	{\n"
-				"		double z_range = (far_plane > near_plane)? (far_plane - near_plane) : far_plane;\n"
-				"		double inv_range = rcp_precise(z_range);\n"
-				"		float d = float(pos.z * rcp_precise(pos.w));\n"
-				"		float new_d = (d - near_plane) * float(inv_range);\n"
-				"		return vec4(pos.x, pos.y, (new_d * pos.w), pos.w);\n"
+				"		const float real_n = min(far_plane, near_plane);\n"
+				"		const float real_f = max(far_plane, near_plane);\n"
+				"		const double depth_range = double(real_f - real_n);\n"
+				"		const double inv_range = (depth_range > 0.000001) ? (1.0 / (depth_range * pos.w)) : 0.0;\n"
+				"		const double d = (double(pos.z) - double(real_n * pos.w)) * inv_range;\n"
+				"		return vec4(pos.xy, float(d * pos.w), pos.w);\n"
 				"	}\n"
 				"	else\n"
 				"	{\n"
@@ -681,8 +673,8 @@ namespace glsl
 			"{\n"
 			"	vec4 low = cl * 12.92;\n"
 			"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
-			"	bvec4 select = lessThan(cl, vec4(0.0031308));\n"
-			"	return clamp(mix(high, low, select), 0., 1.);\n"
+			"	bvec4 selection = lessThan(cl, vec4(0.0031308));\n"
+			"	return clamp(mix(high, low, selection), 0., 1.);\n"
 			"}\n\n";
 		}
 
@@ -747,10 +739,10 @@ namespace glsl
 			"	return _select(result, vec4(remap_select), choice);\n"
 			"}\n\n"
 
-			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, const in vec2 coord, const in uint remap, const in uint flags)\n"
+			"vec4 convert_z24x8_to_rgba8(const in vec2 depth_stencil, const in uint remap, const in uint flags)\n"
 			"{\n"
-			"	vec4 result = decode_depth24(texture(tex, coord.xy).r, _test_bit(flags, DEPTH_FLOAT));\n"
-			"	result.z = float(texture(stencil_tex, coord.xy).x) / 255.f;\n\n"
+			"	vec4 result = decode_depth24(depth_stencil.x, _test_bit(flags, DEPTH_FLOAT));\n"
+			"	result.z = depth_stencil.y / 255.;\n\n"
 
 			"	if (remap == 0xAAE4)\n"
 			" 		return result;\n\n"
@@ -764,7 +756,7 @@ namespace glsl
 			OS <<
 
 #ifdef __APPLE__
-			"vec4 remap_vector(const in vec4 rgba, const in uint remap_bits)\n"
+			"vec4 remap_vector_m(const in vec4 rgba, const in uint remap_bits)\n"
 			"{\n"
 			"	uvec4 selector = (uvec4(remap_bits) >> uvec4(3, 6, 9, 0)) & 0x7;\n"
 			"	bvec4 choice = greaterThan(selector, uvec4(1));\n"
@@ -781,7 +773,7 @@ namespace glsl
 			"{\n"
 #ifdef __APPLE__
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
-			"	if (remap_bits != 0x8D5) rgba = remap_vector(rgba, remap_bits);\n\n"
+			"	if (remap_bits != 0x8D5) rgba = remap_vector_m(rgba, remap_bits);\n\n"
 #endif
 			"	if (control_bits == 0)\n"
 			"	{\n"
@@ -855,15 +847,13 @@ namespace glsl
 			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), COORD_SCALE1(index, coord1), bias), TEX_FLAGS(index))\n"
 			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), COORD_SCALE1(index, coord1), lod), TEX_FLAGS(index))\n"
 			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), COORD_SCALE1(index, coord1), dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), vec2(COORD_SCALE1(index, coord2.x), coord2.y)), TEX_FLAGS(index))\n"
+			"#define TEX1D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), vec2(COORD_SCALE1(index, coord4.x), coord4.w)), TEX_FLAGS(index))\n"
 
 			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), COORD_SCALE2(index, coord2)), TEX_FLAGS(index))\n"
 			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), COORD_SCALE2(index, coord2), bias), TEX_FLAGS(index))\n"
 			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), COORD_SCALE2(index, coord2), lod), TEX_FLAGS(index))\n"
 			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), COORD_SCALE2(index, coord2), dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), vec4(COORD_SCALE2(index, coord4.xy), coord4.z, coord4.w)), TEX_FLAGS(index))\n"
-
-			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), COORD_SCALE2(index, coord2), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n";
+			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), vec4(COORD_SCALE2(index, coord4.xy), coord4.z, coord4.w)), TEX_FLAGS(index))\n\n";
 
 			if (props.emulate_shadow_compare)
 			{
@@ -873,14 +863,14 @@ namespace glsl
 				"#define SHADOW_COORD_PROJ(index, coord4) vec4(COORD_SCALE2(index, coord4.xy), _test_bit(TEX_FLAGS(index), DEPTH_FLOAT)? coord4.z : min(coord4.z, coord4.w), coord4.w)\n\n"
 
 				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), SHADOW_COORD(index, coord3))\n"
-				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), SHADOW_COORD4(index, coord4))\n"
+				"#define TEX3D_SHADOW(index, coord4) texture(TEX_NAME(index), SHADOW_COORD4(index, coord4))\n"
 				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), SHADOW_COORD_PROJ(index, coord4))\n";
 			}
 			else
 			{
 				OS <<
 				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), vec3(COORD_SCALE2(index, coord3.xy), coord3.z))\n"
-				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w))\n"
+				"#define TEX3D_SHADOW(index, coord4) texture(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w))\n"
 				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), vec4(COORD_SCALE2(index, coord4.xy), coord4.zw))\n";
 			}
 
@@ -889,7 +879,16 @@ namespace glsl
 			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord3), bias), TEX_FLAGS(index))\n"
 			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), COORD_SCALE3(index, coord3), lod), TEX_FLAGS(index))\n"
 			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), COORD_SCALE3(index, coord3), dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w)), TEX_FLAGS(index))\n\n";
+			"#define TEX3D_PROJ(index, coord4) process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord4.xyz) / coord4.w), TEX_FLAGS(index))\n\n";
+
+			if (props.require_depth_conversion)
+			{
+				OS <<
+				"#define ZS_READ(index, coord) vec2(texture(TEX_NAME(index), coord).r, float(texture(TEX_NAME_STENCIL(index), coord).x))\n"
+				"#define TEX1D_Z24X8_RGBA8(index, coord1) process_texel(convert_z24x8_to_rgba8(ZS_READ(index, COORD_SCALE1(index, coord1)), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n"
+				"#define TEX2D_Z24X8_RGBA8(index, coord2) process_texel(convert_z24x8_to_rgba8(ZS_READ(index, COORD_SCALE2(index, coord2)), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n"
+				"#define TEX3D_Z24X8_RGBA8(index, coord3) process_texel(convert_z24x8_to_rgba8(ZS_READ(index, COORD_SCALE3(index, coord3)), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n\n";
+			}
 		}
 
 		if (props.require_wpos)
@@ -914,86 +913,94 @@ namespace glsl
 		{
 		default:
 			abort();
-		case FUNCTION::FUNCTION_DP2:
+		case FUNCTION::DP2:
 			return "$Ty(dot($0.xy, $1.xy))";
-		case FUNCTION::FUNCTION_DP2A:
+		case FUNCTION::DP2A:
 			return "$Ty(dot($0.xy, $1.xy) + $2.x)";
-		case FUNCTION::FUNCTION_DP3:
+		case FUNCTION::DP3:
 			return "$Ty(dot($0.xyz, $1.xyz))";
-		case FUNCTION::FUNCTION_DP4:
+		case FUNCTION::DP4:
 			return "$Ty(dot($0, $1))";
-		case FUNCTION::FUNCTION_DPH:
+		case FUNCTION::DPH:
 			return "$Ty(dot(vec4($0.xyz, 1.0), $1))";
-		case FUNCTION::FUNCTION_SFL:
+		case FUNCTION::SFL:
 			return "$Ty(0.)";
-		case FUNCTION::FUNCTION_STR:
+		case FUNCTION::STR:
 			return "$Ty(1.)";
-		case FUNCTION::FUNCTION_FRACT:
+		case FUNCTION::FRACT:
 			return "fract($0)";
-		case FUNCTION::FUNCTION_REFL:
+		case FUNCTION::REFL:
 			return "reflect($0, $1)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
+		case FUNCTION::TEXTURE_SAMPLE1D:
 			return "TEX1D($_i, $0.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS:
+		case FUNCTION::TEXTURE_SAMPLE1D_BIAS:
 			return "TEX1D_BIAS($_i, $0.x, $1.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ:
-			return "TEX1D_PROJ($_i, $0.xy)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD:
+		case FUNCTION::TEXTURE_SAMPLE1D_PROJ:
+			return "TEX1D_PROJ($_i, $0)";
+		case FUNCTION::TEXTURE_SAMPLE1D_LOD:
 			return "TEX1D_LOD($_i, $0.x, $1.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD:
+		case FUNCTION::TEXTURE_SAMPLE1D_GRAD:
 			return "TEX1D_GRAD($_i, $0.x, $1.x, $2.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D:
+		case FUNCTION::TEXTURE_SAMPLE1D_SHADOW:
+		case FUNCTION::TEXTURE_SAMPLE1D_SHADOW_PROJ:
+			// Unimplemented
+			break;
+		case FUNCTION::TEXTURE_SAMPLE1D_DEPTH_RGBA:
+			return "TEX1D_Z24X8_RGBA8($_i, $0.x)";
+		case FUNCTION::TEXTURE_SAMPLE1D_DEPTH_RGBA_PROJ:
+			return "TEX1D_Z24X8_RGBA8($_i, ($0.x / $0.w))";
+		case FUNCTION::TEXTURE_SAMPLE2D:
 			return "TEX2D($_i, $0.xy)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_BIAS:
+		case FUNCTION::TEXTURE_SAMPLE2D_BIAS:
 			return "TEX2D_BIAS($_i, $0.xy, $1.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ:
+		case FUNCTION::TEXTURE_SAMPLE2D_PROJ:
 			return "TEX2D_PROJ($_i, $0)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD:
+		case FUNCTION::TEXTURE_SAMPLE2D_LOD:
 			return "TEX2D_LOD($_i, $0.xy, $1.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD:
+		case FUNCTION::TEXTURE_SAMPLE2D_GRAD:
 			return "TEX2D_GRAD($_i, $0.xy, $1.xy, $2.xy)";
-		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D:
+		case FUNCTION::TEXTURE_SAMPLE2D_SHADOW:
 			return "TEX2D_SHADOW($_i, $0.xyz)";
-		case FUNCTION::FUNCTION_TEXTURE_SHADOWCUBE:
-			return "TEX2D_SHADOWCUBE($_i, $0)";
-		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ:
+		case FUNCTION::TEXTURE_SAMPLE2D_SHADOW_PROJ:
 			return "TEX2D_SHADOWPROJ($_i, $0)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:
+		case FUNCTION::TEXTURE_SAMPLE2D_DEPTH_RGBA:
+			return "TEX2D_Z24X8_RGBA8($_i, $0.xy)";
+		case FUNCTION::TEXTURE_SAMPLE2D_DEPTH_RGBA_PROJ:
+			return "TEX2D_Z24X8_RGBA8($_i, ($0.xy / $0.w))";
+		case FUNCTION::TEXTURE_SAMPLE3D:
 			return "TEX3D($_i, $0.xyz)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_BIAS:
+		case FUNCTION::TEXTURE_SAMPLE3D_BIAS:
 			return "TEX3D_BIAS($_i, $0.xyz, $1.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
-			return "TEX3D($_i, ($0.xyz / $0.w))";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD:
-			return "TEX3D_LOD($_i, $0.xyz, $1.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD:
-			return "TEX3D_GRAD($_i, $0.xyz, $1.xyz, $2.xyz)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D:
-			return "TEX3D($_i, $0.xyz)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_BIAS:
-			return "TEX3D_BIAS($_i, $0.xyz, $1.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ:
+		case FUNCTION::TEXTURE_SAMPLE3D_PROJ:
 			return "TEX3D_PROJ($_i, $0)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD:
+		case FUNCTION::TEXTURE_SAMPLE3D_LOD:
 			return "TEX3D_LOD($_i, $0.xyz, $1.x)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD:
+		case FUNCTION::TEXTURE_SAMPLE3D_GRAD:
 			return "TEX3D_GRAD($_i, $0.xyz, $1.xyz, $2.xyz)";
-		case FUNCTION::FUNCTION_DFDX:
+		case FUNCTION::TEXTURE_SAMPLE3D_SHADOW:
+			return "TEX3D_SHADOW($_i, $0)";
+		case FUNCTION::TEXTURE_SAMPLE3D_SHADOW_PROJ:
+			// Impossible
+			break;
+		case FUNCTION::TEXTURE_SAMPLE3D_DEPTH_RGBA:
+			return "TEX3D_Z24X8_RGBA8($_i, $0.xyz)";
+		case FUNCTION::TEXTURE_SAMPLE3D_DEPTH_RGBA_PROJ:
+			return "TEX3D_Z24X8_RGBA8($_i, ($0.xyz / $0.w))";
+		case FUNCTION::DFDX:
 			return "dFdx($0)";
-		case FUNCTION::FUNCTION_DFDY:
+		case FUNCTION::DFDY:
 			return "dFdy($0)";
-		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH1D:
+		case FUNCTION::VERTEX_TEXTURE_FETCH1D:
 			return "textureLod($t, $0.x, 0)";
-		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D:
+		case FUNCTION::VERTEX_TEXTURE_FETCH2D:
 			return "textureLod($t, $0.xy, 0)";
-		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH3D:
-		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCHCUBE:
+		case FUNCTION::VERTEX_TEXTURE_FETCH3D:
+		case FUNCTION::VERTEX_TEXTURE_FETCHCUBE:
 			return "textureLod($t, $0.xyz, 0)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
-			return "TEX2D_DEPTH_RGBA8($_i, $0.xy)";
-		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA_PROJ:
-			return "TEX2D_DEPTH_RGBA8($_i, ($0.xy / $0.w))";
 		}
+
+		rsx_log.error("Unexpected function request: %d", static_cast<int>(f));
+		return "$Ty(0.)";
 	}
 
 	void insert_subheader_block(std::ostream& OS)

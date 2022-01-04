@@ -8,10 +8,18 @@ LOG_CHANNEL(rpcn_log, "rpcn");
 
 void cfg_rpcn::load()
 {
-	fs::file cfg_file(cfg_rpcn::get_path(), fs::read);
+	const std::string path = cfg_rpcn::get_path();
+
+	fs::file cfg_file(path, fs::read);
 	if (cfg_file)
 	{
+		rpcn_log.notice("Loading RPCN config. Path: %s", path);
 		from_string(cfg_file.to_string());
+	}
+	else
+	{
+		rpcn_log.notice("RPCN config missing. Using default settings. Path: %s", path);
+		from_default();
 	}
 }
 
@@ -25,12 +33,9 @@ void cfg_rpcn::save() const
 	}
 #endif
 
-	fs::file cfg_file(cfg_rpcn::get_path(), fs::rewrite);
-	if (cfg_file)
-	{
-		cfg_file.write(to_string());	
-	}
-	else
+	fs::pending_file cfg_file(cfg_rpcn::get_path());
+
+	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
 		rpcn_log.error("Could not save config: %s", cfg_rpcn::get_path());
 	}

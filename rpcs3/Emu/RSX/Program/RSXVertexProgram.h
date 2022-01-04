@@ -219,31 +219,11 @@ static const std::string rsx_vp_vec_op_names[] =
 	"SEQ", "SFL", "SGT", "SLE", "SNE", "STR", "SSG", "NULL", "NULL", "TXL"
 };
 
-struct rsx_vertex_input
-{
-	u8 location; // between 0 and 15
-	u8 size; // between 1 and 4
-	u16 frequency;
-	bool is_modulo; // either modulo frequency or divide frequency
-	bool is_array; // false if "reg value"
-	bool int_type;
-	u32 flags;		//Initially zero, to be optionally filled by the backend
-
-	bool operator==(const rsx_vertex_input& other) const
-	{
-		return location == other.location && size == other.size && frequency == other.frequency && is_modulo == other.is_modulo &&
-			is_array == other.is_array && int_type == other.int_type && flags == other.flags;
-	}
-};
-
 struct RSXVertexProgram
 {
 	std::vector<u32> data;
-	std::vector<rsx_vertex_input> rsx_vertex_inputs;
-	u32 output_mask;
-	bool skip_vertex_input_check;
 	rsx::vertex_program_texture_state texture_state;
-
+	u32 output_mask;
 	u32 base_address;
 	u32 entry;
 	std::bitset<rsx::max_vertex_program_instructions> instruction_mask;

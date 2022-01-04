@@ -1457,7 +1457,7 @@ error_code cellRtcGetDaysInMonth(s32 year, s32 month)
 {
 	cellRtc.todo("cellRtcGetDaysInMonth(year=%d, month=%d)", year, month);
 
-	if ((year < 0) || (month < 0) || (month > 12))
+	if ((year < 0) || (month <= 0) || (month > 12))
 	{
 		return CELL_RTC_ERROR_INVALID_ARG;
 	}
@@ -1467,7 +1467,7 @@ error_code cellRtcGetDaysInMonth(s32 year, s32 month)
 		return not_an_error(DAYS_IN_MONTH[month + 11]);
 	}
 
-	return not_an_error(DAYS_IN_MONTH[month + -1]);
+	return not_an_error(DAYS_IN_MONTH[month - 1]);
 }
 
 error_code cellRtcGetDayOfWeek(s32 year, s32 month, s32 day)

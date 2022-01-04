@@ -15,6 +15,7 @@
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
@@ -32,6 +33,8 @@
 #include "Utilities/JIT.h"
 
 #include "util/v128.hpp"
+#include <functional>
+#include <unordered_map>
 
 enum class i2 : char
 {
@@ -39,6 +42,18 @@ enum class i2 : char
 
 enum class i4 : char
 {
+};
+
+template <typename T>
+concept LLVMType = (std::is_pointer_v<T>) && (std::is_base_of_v<llvm::Type, std::remove_pointer_t<T>>);
+
+template <typename T>
+concept LLVMValue = (std::is_pointer_v<T>) && (std::is_base_of_v<llvm::Value, std::remove_pointer_t<T>>);
+
+template <typename T>
+concept DSLValue = requires (T& v)
+{
+	{ v.eval(std::declval<llvm::IRBuilder<>*>()) } -> LLVMValue;
 };
 
 template <typename T = void>
@@ -67,7 +82,7 @@ struct llvm_value_t
 		return value;
 	}
 
-	std::tuple<> match(llvm::Value*& value) const
+	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
 	{
 		if (value != this->value)
 		{
@@ -423,7 +438,10 @@ template <typename T, typename... Types>
 using llvm_common_t = std::enable_if_t<(is_llvm_expr_of<T, Types>::ok && ...), typename is_llvm_expr<T>::type>;
 
 template <typename... Args>
-using llvm_match_tuple = decltype(std::tuple_cat(std::declval<llvm_expr_t<Args>&>().match(std::declval<llvm::Value*&>())...));
+using llvm_match_tuple = decltype(std::tuple_cat(std::declval<llvm_expr_t<Args>&>().match(std::declval<llvm::Value*&>(), nullptr)...));
+
+// Helper function
+llvm::Value* peek_through_bitcasts(llvm::Value*);
 
 template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
 struct llvm_match_t
@@ -440,7 +458,8 @@ struct llvm_match_t
 	template <typename... Args>
 	bool eq(const Args&... args) const
 	{
-		return value && ((value == args.value) && ...);
+		llvm::Value* lhs = nullptr;
+		return value && (lhs = peek_through_bitcasts(value)) && ((lhs == peek_through_bitcasts(args.value)) && ...);
 	}
 
 	llvm::Value* eval(llvm::IRBuilder<>*) const
@@ -448,7 +467,7 @@ struct llvm_match_t
 		return value;
 	}
 
-	std::tuple<> match(llvm::Value*& value) const
+	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
 	{
 		if (value != this->value)
 		{
@@ -471,7 +490,7 @@ struct llvm_placeholder_t
 		return nullptr;
 	}
 
-	std::tuple<llvm_match_t<T>> match(llvm::Value*& value) const
+	std::tuple<llvm_match_t<T>> match(llvm::Value*& value, llvm::Module*) const
 	{
 		if (value && value->getType() == llvm_value_t<T>::get_type(value->getContext()))
 		{
@@ -499,7 +518,7 @@ struct llvm_const_int
 		return llvm::ConstantInt::get(llvm_value_t<T>::get_type(ir->getContext()), val, ForceSigned || llvm_value_t<T>::is_sint);
 	}
 
-	std::tuple<> match(llvm::Value*& value) const
+	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
 	{
 		if (value && value == llvm::ConstantInt::get(llvm_value_t<T>::get_type(value->getContext()), val, ForceSigned || llvm_value_t<T>::is_sint))
 		{
@@ -527,7 +546,7 @@ struct llvm_const_float
 		return llvm::ConstantFP::get(llvm_value_t<T>::get_type(ir->getContext()), val);
 	}
 
-	std::tuple<> match(llvm::Value*& value) const
+	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
 	{
 		if (value && value == llvm::ConstantFP::get(llvm_value_t<T>::get_type(value->getContext()), val))
 		{
@@ -555,7 +574,7 @@ struct llvm_const_vector
 		return llvm::ConstantDataVector::get(ir->getContext(), data);
 	}
 
-	std::tuple<> match(llvm::Value*& value) const
+	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
 	{
 		if (value && value == llvm::ConstantDataVector::get(value->getContext(), data))
 		{
@@ -586,7 +605,7 @@ struct llvm_add
 		return ir->CreateBinOp(opc, v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -596,9 +615,9 @@ struct llvm_add
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -641,7 +660,7 @@ struct llvm_sum
 		return ir->CreateAdd(ir->CreateAdd(v1, v2), v3);
 	}
 
-	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -651,7 +670,7 @@ struct llvm_sum
 		{
 			v3 = i->getOperand(1);
 
-			if (auto r3 = a3.match(v3); v3)
+			if (auto r3 = a3.match(v3, _m); v3)
 			{
 				i = llvm::dyn_cast<llvm::BinaryOperator>(i->getOperand(0));
 
@@ -660,9 +679,9 @@ struct llvm_sum
 					v1 = i->getOperand(0);
 					v2 = i->getOperand(1);
 
-					if (auto r1 = a1.match(v1); v1)
+					if (auto r1 = a1.match(v1, _m); v1)
 					{
-						if (auto r2 = a2.match(v2); v2)
+						if (auto r2 = a2.match(v2, _m); v2)
 						{
 							return std::tuple_cat(r1, r2, r3);
 						}
@@ -698,7 +717,7 @@ struct llvm_sub
 		return ir->CreateBinOp(opc, v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -708,9 +727,9 @@ struct llvm_sub
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -759,7 +778,7 @@ struct llvm_mul
 		return ir->CreateBinOp(opc, v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -769,9 +788,9 @@ struct llvm_mul
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -810,7 +829,7 @@ struct llvm_div
 		return ir->CreateBinOp(opc, v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -820,9 +839,9 @@ struct llvm_div
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -868,7 +887,7 @@ struct llvm_neg
 		// TODO: return value ?
 	}
 
-	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 
@@ -878,7 +897,7 @@ struct llvm_neg
 			{
 				v1 = i->getOperand(0);
 
-				if (auto r1 = a1.match(v1); v1)
+				if (auto r1 = a1.match(v1, _m); v1)
 				{
 					return r1;
 				}
@@ -891,7 +910,7 @@ struct llvm_neg
 
 			if (i->getOperand(0) == llvm::ConstantFP::getZeroValueForNegation(v1->getType()))
 			{
-				if (auto r1 = a1.match(v1); v1)
+				if (auto r1 = a1.match(v1, _m); v1)
 				{
 					return r1;
 				}
@@ -926,7 +945,7 @@ struct llvm_shl
 		return ir->CreateShl(v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -936,9 +955,9 @@ struct llvm_shl
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -981,7 +1000,7 @@ struct llvm_shr
 		return ir->CreateBinOp(opc, v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -991,9 +1010,9 @@ struct llvm_shr
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -1060,7 +1079,7 @@ struct llvm_fshl
 		return ir->CreateCall(get_fshl(ir), {v1, v2, v3});
 	}
 
-	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1072,11 +1091,11 @@ struct llvm_fshl
 			v2 = i->getOperand(1);
 			v3 = i->getOperand(2);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
-					if (auto r3 = a3.match(v3); v3)
+					if (auto r3 = a3.match(v3, _m); v3)
 					{
 						return std::tuple_cat(r1, r2, r3);
 					}
@@ -1132,7 +1151,7 @@ struct llvm_fshr
 		return ir->CreateCall(get_fshr(ir), {v1, v2, v3});
 	}
 
-	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1144,11 +1163,11 @@ struct llvm_fshr
 			v2 = i->getOperand(1);
 			v3 = i->getOperand(2);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
-					if (auto r3 = a3.match(v3); v3)
+					if (auto r3 = a3.match(v3, _m); v3)
 					{
 						return std::tuple_cat(r1, r2, r3);
 					}
@@ -1186,7 +1205,7 @@ struct llvm_rol
 		return ir->CreateCall(llvm_fshl<A1, A1, A2>::get_fshl(ir), {v1, v1, v2});
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1198,9 +1217,9 @@ struct llvm_rol
 
 			if (i->getOperand(1) == v1)
 			{
-				if (auto r1 = a1.match(v1); v1)
+				if (auto r1 = a1.match(v1, _m); v1)
 				{
-					if (auto r2 = a2.match(v2); v2)
+					if (auto r2 = a2.match(v2, _m); v2)
 					{
 						return std::tuple_cat(r1, r2);
 					}
@@ -1230,7 +1249,7 @@ struct llvm_and
 		return ir->CreateAnd(v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1240,9 +1259,9 @@ struct llvm_and
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -1283,7 +1302,7 @@ struct llvm_or
 		return ir->CreateOr(v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1293,9 +1312,9 @@ struct llvm_or
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -1336,7 +1355,7 @@ struct llvm_xor
 		return ir->CreateXor(v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1346,9 +1365,9 @@ struct llvm_xor
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -1408,7 +1427,7 @@ struct llvm_cmp
 		return ir->CreateICmp(pred, v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1418,9 +1437,9 @@ struct llvm_cmp
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -1468,7 +1487,7 @@ struct llvm_ord
 		return ir->CreateFCmp(pred, v1, v2);
 	}
 
-	llvm_match_tuple<Cmp> match(llvm::Value*& value) const
+	llvm_match_tuple<Cmp> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1478,9 +1497,9 @@ struct llvm_ord
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = cmp.a1.match(v1); v1)
+			if (auto r1 = cmp.a1.match(v1, _m); v1)
 			{
-				if (auto r2 = cmp.a2.match(v2); v2)
+				if (auto r2 = cmp.a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -1521,7 +1540,7 @@ struct llvm_uno
 		return ir->CreateFCmp(pred, v1, v2);
 	}
 
-	llvm_match_tuple<Cmp> match(llvm::Value*& value) const
+	llvm_match_tuple<Cmp> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1531,9 +1550,9 @@ struct llvm_uno
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = cmp.a1.match(v1); v1)
+			if (auto r1 = cmp.a1.match(v1, _m); v1)
 			{
-				if (auto r2 = cmp.a2.match(v2); v2)
+				if (auto r2 = cmp.a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -1644,11 +1663,11 @@ struct llvm_noncast
 		return a1.eval(ir);
 	}
 
-	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		if (value)
 		{
-			if (auto r1 = a1.match(value); value)
+			if (auto r1 = a1.match(value, _m); value)
 			{
 				return r1;
 			}
@@ -1691,7 +1710,7 @@ struct llvm_bitcast
 
 		if (const auto c1 = llvm::dyn_cast<llvm::Constant>(v1))
 		{
-			const auto result = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, rt, _module->getDataLayout());
+			const auto result = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, rt, ir->GetInsertBlock()->getParent()->getParent()->getDataLayout());
 
 			if (result)
 			{
@@ -1702,13 +1721,13 @@ struct llvm_bitcast
 		return ir->CreateBitCast(v1, rt);
 	}
 
-	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		if constexpr (llvm_value_t<T>::is_int == llvm_value_t<U>::is_int && llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector)
 		{
 			if (value)
 			{
-				if (auto r1 = a1.match(value); value)
+				if (auto r1 = a1.match(value, _m); value)
 				{
 					return r1;
 				}
@@ -1725,7 +1744,7 @@ struct llvm_bitcast
 
 			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
 			{
-				if (auto r1 = a1.match(v1); v1)
+				if (auto r1 = a1.match(v1, _m); v1)
 				{
 					return r1;
 				}
@@ -1737,9 +1756,58 @@ struct llvm_bitcast
 			const auto target = llvm_value_t<T>::get_type(c->getContext());
 
 			// Reverse bitcast on a constant
-			if (llvm::Value* cv = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c, target, _module->getDataLayout()))
+			if (llvm::Value* cv = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c, target, _m->getDataLayout()))
 			{
-				if (auto r1 = a1.match(cv); cv)
+				if (auto r1 = a1.match(cv, _m); cv)
+				{
+					return r1;
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_fpcast
+{
+	using type = U;
+
+	static constexpr auto opc =
+		llvm_value_t<T>::is_sint ? llvm::Instruction::SIToFP :
+		llvm_value_t<U>::is_sint ? llvm::Instruction::FPToSI :
+		llvm_value_t<T>::is_int ? llvm::Instruction::UIToFP :
+		llvm_value_t<U>::is_int ? llvm::Instruction::FPToUI :
+		llvm_value_t<T>::esize > llvm_value_t<U>::esize ? llvm::Instruction::FPTrunc :
+		llvm_value_t<T>::esize < llvm_value_t<U>::esize ? llvm::Instruction::FPExt : llvm::Instruction::BitCast;
+
+	llvm_expr_t<A1> a1;
+	static_assert(llvm_value_t<T>::is_float || llvm_value_t<U>::is_float, "llvm_fpcast<>: invalid type(s)");
+	static_assert(opc != llvm::Instruction::BitCast, "llvm_fpcast<>: possible cast to the same type");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_fpcast<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		(llvm_value_t<T>::is_float || llvm_value_t<U>::is_float) && opc != llvm::Instruction::BitCast &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateCast(opc, a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CastInst>(value); i && i->getOpcode() == opc)
+		{
+			v1 = i->getOperand(0);
+
+			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
+			{
+				if (auto r1 = a1.match(v1, _m); v1)
 				{
 					return r1;
 				}
@@ -1774,7 +1842,7 @@ struct llvm_trunc
 		return ir->CreateTrunc(a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
 	}
 
-	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 
@@ -1784,7 +1852,7 @@ struct llvm_trunc
 
 			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
 			{
-				if (auto r1 = a1.match(v1); v1)
+				if (auto r1 = a1.match(v1, _m); v1)
 				{
 					return r1;
 				}
@@ -1819,7 +1887,7 @@ struct llvm_sext
 		return ir->CreateSExt(a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
 	}
 
-	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 
@@ -1829,7 +1897,7 @@ struct llvm_sext
 
 			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
 			{
-				if (auto r1 = a1.match(v1); v1)
+				if (auto r1 = a1.match(v1, _m); v1)
 				{
 					return r1;
 				}
@@ -1864,7 +1932,7 @@ struct llvm_zext
 		return ir->CreateZExt(a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
 	}
 
-	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 
@@ -1874,7 +1942,7 @@ struct llvm_zext
 
 			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
 			{
-				if (auto r1 = a1.match(v1); v1)
+				if (auto r1 = a1.match(v1, _m); v1)
 				{
 					return r1;
 				}
@@ -1907,7 +1975,7 @@ struct llvm_select
 		return ir->CreateSelect(cond.eval(ir), a2.eval(ir), a3.eval(ir));
 	}
 
-	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1919,11 +1987,11 @@ struct llvm_select
 			v2 = i->getOperand(1);
 			v3 = i->getOperand(2);
 
-			if (auto r1 = cond.match(v1); v1)
+			if (auto r1 = cond.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
-					if (auto r3 = a3.match(v3); v3)
+					if (auto r3 = a3.match(v3, _m); v3)
 					{
 						return std::tuple_cat(r1, r2, r3);
 					}
@@ -1957,7 +2025,7 @@ struct llvm_min
 		return ir->CreateSelect(ir->CreateICmp(pred, v1, v2), v1, v2);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -1971,9 +2039,9 @@ struct llvm_min
 			{
 				if (v1 == j->getOperand(0) && v2 == j->getOperand(1))
 				{
-					if (auto r1 = a1.match(v1); v1)
+					if (auto r1 = a1.match(v1, _m); v1)
 					{
-						if (auto r2 = a2.match(v2); v2)
+						if (auto r2 = a2.match(v2, _m); v2)
 						{
 							return std::tuple_cat(r1, r2);
 						}
@@ -2006,7 +2074,7 @@ struct llvm_max
 		return ir->CreateSelect(ir->CreateICmp(pred, v1, v2), v2, v1);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -2020,9 +2088,9 @@ struct llvm_max
 			{
 				if (v1 == j->getOperand(0) && v2 == j->getOperand(1))
 				{
-					if (auto r1 = a1.match(v1); v1)
+					if (auto r1 = a1.match(v1, _m); v1)
 					{
-						if (auto r2 = a2.match(v2); v2)
+						if (auto r2 = a2.match(v2, _m); v2)
 						{
 							return std::tuple_cat(r1, r2);
 						}
@@ -2083,7 +2151,7 @@ struct llvm_add_sat
 		return ir->CreateCall(get_add_sat(ir), {v1, v2});
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -2093,9 +2161,9 @@ struct llvm_add_sat
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -2153,7 +2221,7 @@ struct llvm_sub_sat
 		return ir->CreateCall(get_sub_sat(ir), {v1, v2});
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -2163,9 +2231,9 @@ struct llvm_sub_sat
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = a2.match(v2); v2)
+				if (auto r2 = a2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -2199,7 +2267,7 @@ struct llvm_extract
 		return ir->CreateExtractElement(v1, v2);
 	}
 
-	llvm_match_tuple<A1, I2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, I2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -2209,9 +2277,9 @@ struct llvm_extract
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = i2.match(v2); v2)
+				if (auto r2 = i2.match(v2, _m); v2)
 				{
 					return std::tuple_cat(r1, r2);
 				}
@@ -2248,7 +2316,7 @@ struct llvm_insert
 		return ir->CreateInsertElement(v1, v3, v2);
 	}
 
-	llvm_match_tuple<A1, I2, A3> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, I2, A3> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -2260,11 +2328,11 @@ struct llvm_insert
 			v2 = i->getOperand(2);
 			v3 = i->getOperand(1);
 
-			if (auto r1 = a1.match(v1); v1)
+			if (auto r1 = a1.match(v1, _m); v1)
 			{
-				if (auto r2 = i2.match(v2); v2)
+				if (auto r2 = i2.match(v2, _m); v2)
 				{
-					if (auto r3 = a3.match(v3); v3)
+					if (auto r3 = a3.match(v3, _m); v3)
 					{
 						return std::tuple_cat(r1, r2, r3);
 					}
@@ -2300,7 +2368,7 @@ struct llvm_splat
 		return ir->CreateVectorSplat(llvm_value_t<U>::is_vector, v1);
 	}
 
-	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 
@@ -2316,7 +2384,7 @@ struct llvm_splat
 					{
 						v1 = j->getOperand(1);
 
-						if (auto r1 = a1.match(v1); v1)
+						if (auto r1 = a1.match(v1, _m); v1)
 						{
 							return r1;
 						}
@@ -2349,7 +2417,7 @@ struct llvm_zshuffle
 		return ir->CreateShuffleVector(v1, llvm::ConstantAggregateZero::get(v1->getType()), index_array);
 	}
 
-	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 
@@ -2361,7 +2429,7 @@ struct llvm_zshuffle
 			{
 				if (i->getShuffleMask().equals(index_array))
 				{
-					if (auto r1 = a1.match(v1); v1)
+					if (auto r1 = a1.match(v1, _m); v1)
 					{
 						return r1;
 					}
@@ -2395,7 +2463,7 @@ struct llvm_shuffle2
 		return ir->CreateShuffleVector(v1, v2, index_array);
 	}
 
-	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
 	{
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
@@ -2409,13 +2477,396 @@ struct llvm_shuffle2
 			{
 				if (i->getShuffleMask().equals(index_array))
 				{
-					if (auto r1 = a1.match(v1); v1)
+					if (auto r1 = a1.match(v1, _m); v1)
 					{
-						if (auto r2 = a2.match(v2); v2)
+						if (auto r2 = a2.match(v2, _m); v2)
 						{
 							return std::tuple_cat(r1, r2);
 						}
 					}
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename T = llvm_common_t<A1>>
+struct llvm_ctlz
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_ctlz<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		llvm::Value* v = a1.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v))
+		{
+			return llvm::ConstantFoldInstruction(ir->CreateIntrinsic(llvm::Intrinsic::ctlz, {v->getType()}, {v, ir->getFalse()}), llvm::DataLayout(""));
+		}
+
+		return ir->CreateIntrinsic(llvm::Intrinsic::ctlz, {v->getType()}, {v, ir->getFalse()});
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::ctlz)
+		{
+			v1 = i->getOperand(0);
+
+			if (i->getOperand(2) == llvm::ConstantInt::getFalse(value->getContext()))
+			{
+				if (auto r1 = a1.match(v1, _m); v1)
+				{
+					return r1;
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename T = llvm_common_t<A1>>
+struct llvm_ctpop
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_ctpop<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		llvm::Value* v = a1.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v))
+		{
+			return llvm::ConstantFoldInstruction(ir->CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, v), llvm::DataLayout(""));
+		}
+
+		return ir->CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, v);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::ctpop)
+		{
+			v1 = i->getOperand(0);
+
+			if (auto r1 = a1.match(v1, _m); v1)
+			{
+				return r1;
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_avg
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_avg<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	static constexpr auto cast_op = llvm_value_t<T>::is_sint ? llvm::Instruction::SExt : llvm::Instruction::ZExt;
+
+	static llvm::Type* cast_dst_type(llvm::LLVMContext& context)
+	{
+		llvm::Type* cast_to = llvm::IntegerType::get(context, llvm_value_t<T>::esize * 2);
+		if constexpr (llvm_value_t<T>::is_vector != 0)
+			cast_to = llvm::VectorType::get(cast_to, llvm_value_t<T>::is_vector, false);
+
+		return cast_to;
+	}
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+
+		const auto dty = cast_dst_type(ir->getContext());
+		const auto axt = ir->CreateCast(cast_op, v1, dty);
+		const auto bxt = ir->CreateCast(cast_op, v2, dty);
+		const auto cxt = llvm::ConstantInt::get(dty, 1, false);
+		const auto abc = ir->CreateAdd(ir->CreateAdd(axt, bxt), cxt);
+		return ir->CreateTrunc(ir->CreateLShr(abc, 1), llvm_value_t<T>::get_type(ir->getContext()));
+	}
+
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value, llvm::Module* _m) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		const auto dty = cast_dst_type(value->getContext());
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CastInst>(value); i && i->getOpcode() == llvm::Instruction::Trunc && i->getSrcTy() == dty)
+		{
+			const auto cxt = llvm::ConstantInt::get(dty, 1, false);
+
+			if (auto j = llvm::dyn_cast_or_null<llvm::BinaryOperator>(i->getOperand(0)); j && j->getOpcode() == llvm::Instruction::LShr && j->getOperand(1) == cxt)
+			{
+				if (j = llvm::dyn_cast_or_null<llvm::BinaryOperator>(j->getOperand(0)); j && j->getOpcode() == llvm::Instruction::Add && j->getOperand(1) == cxt)
+				{
+					if (j = llvm::dyn_cast_or_null<llvm::BinaryOperator>(j->getOperand(0)); j && j->getOpcode() == llvm::Instruction::Add)
+					{
+						auto a = llvm::dyn_cast_or_null<llvm::CastInst>(j->getOperand(0));
+						auto b = llvm::dyn_cast_or_null<llvm::CastInst>(j->getOperand(1));
+
+						if (a && b && a->getOpcode() == cast_op && b->getOpcode() == cast_op)
+						{
+							v1 = a->getOperand(0);
+							v2 = b->getOperand(0);
+
+							if (auto r1 = a1.match(v1, _m); v1)
+							{
+								if (auto r2 = a2.match(v2, _m); v2)
+								{
+									return std::tuple_cat(r1, r2);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename T = llvm_common_t<A1>>
+struct llvm_fsqrt
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_float, "llvm_fsqrt<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_float;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		llvm::Value* v = a1.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v))
+		{
+			if (auto c = llvm::ConstantFoldInstruction(ir->CreateUnaryIntrinsic(llvm::Intrinsic::sqrt, v), llvm::DataLayout("")))
+			{
+				// Will fail in some cases (such as negative constant)
+				return c;
+			}
+		}
+
+		return ir->CreateUnaryIntrinsic(llvm::Intrinsic::sqrt, v);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::sqrt)
+		{
+			v1 = i->getOperand(0);
+
+			if (auto r1 = a1.match(v1, _m); v1)
+			{
+				return r1;
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename T = llvm_common_t<A1>>
+struct llvm_fabs
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_float, "llvm_fabs<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_float;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		llvm::Value* v = a1.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v))
+		{
+			return llvm::ConstantFoldInstruction(ir->CreateUnaryIntrinsic(llvm::Intrinsic::fabs, v), llvm::DataLayout(""));
+		}
+
+		return ir->CreateUnaryIntrinsic(llvm::Intrinsic::fabs, v);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value, llvm::Module* _m) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::fabs)
+		{
+			v1 = i->getOperand(0);
+
+			if (auto r1 = a1.match(v1, _m); v1)
+			{
+				return r1;
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename A2, typename A3, typename T = llvm_common_t<A1, A2, A3>>
+struct llvm_fmuladd
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+	llvm_expr_t<A3> a3;
+	bool strict_fma;
+
+	static_assert(llvm_value_t<T>::is_float, "llvm_fmuladd<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_float;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		llvm::Value* v1 = a1.eval(ir);
+		llvm::Value* v2 = a2.eval(ir);
+		llvm::Value* v3 = a3.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2) && llvm::isa<llvm::Constant>(v3))
+		{
+			return llvm::ConstantFoldInstruction(ir->CreateIntrinsic(llvm::Intrinsic::fma, {v1->getType()}, {v1, v2, v3}), llvm::DataLayout(""));
+		}
+
+		return ir->CreateIntrinsic(strict_fma ? llvm::Intrinsic::fma : llvm::Intrinsic::fmuladd, {v1->getType()}, {v1, v2, v3});
+	}
+
+	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value, llvm::Module* _m) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+		llvm::Value* v3 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == (strict_fma ? llvm::Intrinsic::fma : llvm::Intrinsic::fmuladd))
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+			v3 = i->getOperand(2);
+
+			if (auto r1 = a1.match(v1, _m); v1)
+			{
+				if (auto r2 = a2.match(v2, _m); v2)
+				{
+					if (auto r3 = a3.match(v3, _m); v3)
+					{
+						return std::tuple_cat(r1, r2, r3);
+					}
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename RT, typename... A>
+struct llvm_calli
+{
+	using type = RT;
+
+	llvm::StringRef iname;
+
+	std::tuple<llvm_expr_t<A>...> a;
+
+	llvm::Value*(*c)(llvm::Value**, llvm::IRBuilder<>*){};
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return eval(ir, std::make_index_sequence<sizeof...(A)>());
+	}
+
+	template <usz... I>
+	llvm::Value* eval(llvm::IRBuilder<>* ir, std::index_sequence<I...>) const
+	{
+		llvm::Value* v[sizeof...(A)]{std::get<I>(a).eval(ir)...};
+
+		if (c && (llvm::isa<llvm::Constant>(v[I]) || ...))
+		{
+			if (llvm::Value* r = c(v, ir))
+			{
+				return r;
+			}
+		}
+
+		const auto _rty = llvm_value_t<RT>::get_type(ir->getContext());
+		const auto type = llvm::FunctionType::get(_rty, {v[I]->getType()...}, false);
+		const auto func = llvm::cast<llvm::Function>(ir->GetInsertBlock()->getParent()->getParent()->getOrInsertFunction(iname, type).getCallee());
+		return ir->CreateCall(func, v);
+	}
+
+	template <typename F>
+	llvm_calli& if_const(F func)
+	{
+		c = +func;
+		return *this;
+	}
+
+	llvm_match_tuple<A...> match(llvm::Value*& value, llvm::Module* _m) const
+	{
+		return match(value, _m, std::make_index_sequence<sizeof...(A)>());
+	}
+
+	template <usz... I>
+	llvm_match_tuple<A...> match(llvm::Value*& value, llvm::Module* _m, std::index_sequence<I...>) const
+	{
+		llvm::Value* v[sizeof...(A)]{};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value))
+		{
+			if (auto cf = i->getCalledFunction(); cf && cf->getName() == iname)
+			{
+				((v[I] = i->getOperand(I)), ...);
+
+				std::tuple<decltype(std::get<I>(a).match(v[I], _m))...> r;
+
+				if (((std::get<I>(r) = std::get<I>(a).match(v[I], _m), v[I]) && ...))
+				{
+					return std::tuple_cat(std::get<I>(r)...);
 				}
 			}
 		}
@@ -2448,8 +2899,14 @@ protected:
 	// Allow FMA
 	bool m_use_fma = false;
 
+	// Allow AVX
+	bool m_use_avx = false;
+
 	// Allow skylake-x tier AVX-512
 	bool m_use_avx512 = false;
+
+	// Allow VNNI
+	bool m_use_vnni = false;
 
 	// Allow Icelake tier AVX-512
 	bool m_use_avx512_icl = false;
@@ -2504,7 +2961,7 @@ public:
 	}
 
 	// Call external function: provide name and function pointer
-	template <typename RT, typename... FArgs, typename... Args>
+	template <typename RT, typename... FArgs, LLVMValue... Args>
 	llvm::CallInst* call(std::string_view lame, RT(*_func)(FArgs...), Args... args)
 	{
 		static_assert(sizeof...(FArgs) == sizeof...(Args), "spu_llvm_recompiler::call(): unexpected arg number");
@@ -2522,6 +2979,22 @@ public:
 		return inst;
 	}
 
+	template <typename RT, typename... FArgs, DSLValue... Args> requires (sizeof...(Args) != 0)
+	auto call(std::string_view name, RT(*_func)(FArgs...), Args&&... args)
+	{
+		llvm_value_t<RT> r;
+		r.value = call(name, _func, std::forward<Args>(args).eval(m_ir)...);
+		return r;
+	}
+
+	template <typename RT, DSLValue... Args>
+	auto call(llvm::Function* func, Args&&... args)
+	{
+		llvm_value_t<RT> r;
+		r.value = m_ir->CreateCall(func, {std::forward<Args>(args).eval(m_ir)...});
+		return r;
+	}
+
 	// Bitcast with immediate constant folding
 	llvm::Value* bitcast(llvm::Value* val, llvm::Type* type) const;
 
@@ -2537,11 +3010,18 @@ public:
 		return {};
 	}
 
+	template <typename T, typename = llvm_common_t<T>>
+	static auto match_expr(llvm::Value* v, llvm::Module* _m, T&& expr)
+	{
+		auto r = expr.match(v, _m);
+		return std::tuple_cat(std::make_tuple(v != nullptr), r);
+	}
+
 	template <typename T, typename U, typename = llvm_common_t<T, U>>
-	auto match_expr(T&& arg, U&& expr) -> decltype(std::tuple_cat(std::make_tuple(false), expr.match(std::declval<llvm::Value*&>())))
+	auto match_expr(T&& arg, U&& expr) -> decltype(std::tuple_cat(std::make_tuple(false), expr.match(std::declval<llvm::Value*&>(), nullptr)))
 	{
 		auto v = arg.eval(m_ir);
-		auto r = expr.match(v);
+		auto r = expr.match(v, m_module);
 		return std::tuple_cat(std::make_tuple(v != nullptr), r);
 	}
 
@@ -2550,6 +3030,26 @@ public:
 	{
 		// Execute pred(.) for each type until one of them returns true
 		return (pred(llvm_placeholder_t<Types>{}) || ...);
+	}
+
+	template <typename T, typename F>
+	struct expr_t
+	{
+		using type = llvm_common_t<T>;
+
+		T a;
+		F match;
+
+		llvm::Value* eval(llvm::IRBuilder<>* ir) const
+		{
+			return a.eval(ir);
+		}
+	};
+
+	template <typename T, typename F>
+	static auto expr(T&& expr, F matcher)
+	{
+		return expr_t<T, F>{std::forward<T>(expr), std::move(matcher)};
 	}
 
 	template <typename T, typename = std::enable_if_t<is_llvm_cmp<std::decay_t<T>>::value>>
@@ -2571,9 +3071,15 @@ public:
 	}
 
 	template <typename U, typename T, typename = std::enable_if_t<llvm_bitcast<U, T>::is_ok>>
-	auto bitcast(T&& expr)
+	static auto bitcast(T&& expr)
 	{
-		return llvm_bitcast<U, T>{std::forward<T>(expr), m_module};
+		return llvm_bitcast<U, T>{std::forward<T>(expr)};
+	}
+
+	template <typename U, typename T, typename = std::enable_if_t<llvm_fpcast<U, T>::is_ok>>
+	static auto fpcast(T&& expr)
+	{
+		return llvm_fpcast<U, T>{std::forward<T>(expr)};
 	}
 
 	template <typename U, typename T, typename = std::enable_if_t<llvm_trunc<U, T>::is_ok>>
@@ -2702,25 +3208,160 @@ public:
 		return llvm_shuffle2<sizeof...(Args), T, U>{std::forward<T>(v1), std::forward<U>(v2), {static_cast<int>(indices)...}};
 	}
 
-	// Average: (a + b + 1) >> 1
-	template <typename T>
-	inline auto avg(T a, T b)
+	template <typename T, typename = std::enable_if_t<llvm_ctlz<T>::is_ok>>
+	static auto ctlz(T&& a)
 	{
-		//return (a >> 1) + (b >> 1) + ((a | b) & 1);
+		return llvm_ctlz<T>{std::forward<T>(a)};
+	}
 
-		value_t<typename T::type> result;
-		static_assert(result.is_sint || result.is_uint);
-		const auto cast_op = result.is_sint ? llvm::Instruction::SExt : llvm::Instruction::ZExt;
-		llvm::Type* cast_to = m_ir->getIntNTy(result.esize * 2);
-		if constexpr (result.is_vector != 0)
-			cast_to = llvm::VectorType::get(cast_to, result.is_vector, false);
+	template <typename T, typename = std::enable_if_t<llvm_ctpop<T>::is_ok>>
+	static auto ctpop(T&& a)
+	{
+		return llvm_ctpop<T>{std::forward<T>(a)};
+	}
 
-		const auto axt = m_ir->CreateCast(cast_op, a.eval(m_ir), cast_to);
-		const auto bxt = m_ir->CreateCast(cast_op, b.eval(m_ir), cast_to);
-		const auto cxt = llvm::ConstantInt::get(cast_to, 1, false);
-		const auto abc = m_ir->CreateAdd(m_ir->CreateAdd(axt, bxt), cxt);
-		result.value = m_ir->CreateTrunc(m_ir->CreateLShr(abc, 1), result.get_type(m_context));
-		return result;
+	// Average: (a + b + 1) >> 1
+	template <typename T, typename U, typename = std::enable_if_t<llvm_avg<T, U>::is_ok>>
+	static auto avg(T&& a, U&& b)
+	{
+		return llvm_avg<T, U>{std::forward<T>(a), std::forward<U>(b)};
+	}
+
+	template <typename T, typename = std::enable_if_t<llvm_fsqrt<T>::is_ok>>
+	static auto fsqrt(T&& a)
+	{
+		return llvm_fsqrt<T>{std::forward<T>(a)};
+	}
+
+	template <typename T, typename = std::enable_if_t<llvm_fabs<T>::is_ok>>
+	static auto fabs(T&& a)
+	{
+		return llvm_fabs<T>{std::forward<T>(a)};
+	}
+
+	// Optionally opportunistic hardware FMA, can be used if results are identical for all possible input values
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_fmuladd<T, U, V>::is_ok>>
+	static auto fmuladd(T&& a, U&& b, V&& c, bool strict_fma)
+	{
+		return llvm_fmuladd<T, U, V>{std::forward<T>(a), std::forward<U>(b), std::forward<V>(c), strict_fma};
+	}
+
+	// Opportunistic hardware FMA, can be used if results are identical for all possible input values
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_fmuladd<T, U, V>::is_ok>>
+	auto fmuladd(T&& a, U&& b, V&& c)
+	{
+		return llvm_fmuladd<T, U, V>{std::forward<T>(a), std::forward<U>(b), std::forward<V>(c), m_use_fma};
+	}
+
+	// Absolute difference
+	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
+	static auto absd(T&& a, U&& b)
+	{
+		return expr(max(a, b) - min(a, b), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+		{
+			static const auto M = match<CT>();
+
+			if (auto [ok, _max, _min] = match_expr(value, _m, M - M); ok)
+			{
+				if (auto [ok1, a, b] = match_expr(_max.value, _m, max(M, M)); ok1 && !a.eq(b))
+				{
+					if (auto [ok2, c, d] = match_expr(_min.value, _m, min(M, M)); ok2 && !c.eq(d))
+					{
+						if ((a.eq(c) && b.eq(d)) || (a.eq(d) && b.eq(c)))
+						{
+							if (auto r1 = llvm_expr_t<T>{}.match(a.value, _m); a.eq())
+							{
+								if (auto r2 = llvm_expr_t<U>{}.match(b.value, _m); b.eq())
+								{
+									return std::tuple_cat(r1, r2);
+								}
+							}
+						}
+					}
+				}
+			}
+
+			value = nullptr;
+			return {};
+		});
+	}
+
+	// Infinite-precision shift left
+	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
+	static auto inf_shl(T&& a, U&& b)
+	{
+		static constexpr u32 esz = llvm_value_t<CT>::esize;
+
+		return expr(select(b < esz, a << b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+		{
+			static const auto M = match<CT>();
+
+			if (auto [ok, b, a, b2] = match_expr(value, _m, select(M < esz, M << M, splat<CT>(0))); ok && b.eq(b2))
+			{
+				if (auto r1 = llvm_expr_t<T>{}.match(a.value, _m); a.eq())
+				{
+					if (auto r2 = llvm_expr_t<U>{}.match(b.value, _m); b.eq())
+					{
+						return std::tuple_cat(r1, r2);
+					}
+				}
+			}
+
+			value = nullptr;
+			return {};
+		});
+	}
+
+	// Infinite-precision logical shift right (unsigned)
+	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
+	static auto inf_lshr(T&& a, U&& b)
+	{
+		static constexpr u32 esz = llvm_value_t<CT>::esize;
+
+		return expr(select(b < esz, a >> b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+		{
+			static const auto M = match<CT>();
+
+			if (auto [ok, b, a, b2] = match_expr(value, _m, select(M < esz, M >> M, splat<CT>(0))); ok && b.eq(b2))
+			{
+				if (auto r1 = llvm_expr_t<T>{}.match(a.value, _m); a.eq())
+				{
+					if (auto r2 = llvm_expr_t<U>{}.match(b.value, _m); b.eq())
+					{
+						return std::tuple_cat(r1, r2);
+					}
+				}
+			}
+
+			value = nullptr;
+			return {};
+		});
+	}
+
+	// Infinite-precision arithmetic shift right (signed)
+	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
+	static auto inf_ashr(T&& a, U&& b)
+	{
+		static constexpr u32 esz = llvm_value_t<CT>::esize;
+
+		return expr(a >> select(b > (esz - 1), splat<CT>(esz - 1), b), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+		{
+			static const auto M = match<CT>();
+
+			if (auto [ok, a, b, b2] = match_expr(value, _m, M >> select(M > (esz - 1), splat<CT>(esz - 1), M)); ok && b.eq(b2))
+			{
+				if (auto r1 = llvm_expr_t<T>{}.match(a.value, _m); a.eq())
+				{
+					if (auto r2 = llvm_expr_t<U>{}.match(b.value, _m); b.eq())
+					{
+						return std::tuple_cat(r1, r2);
+					}
+				}
+			}
+
+			value = nullptr;
+			return {};
+		});
 	}
 
 	template <typename... Types>
@@ -2728,89 +3369,6 @@ public:
 	{
 		const auto _module = m_ir->GetInsertBlock()->getParent()->getParent();
 		return llvm::Intrinsic::getDeclaration(_module, id, {get_type<Types>()...});
-	}
-
-	template <typename T>
-	auto ctlz(T a)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::ctlz), {a.eval(m_ir), m_ir->getFalse()});
-		return result;
-	}
-
-	template <typename T>
-	auto ctpop(T a)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::ctpop), {a.eval(m_ir)});
-		return result;
-	}
-
-	template <typename T>
-	auto sqrt(T a)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::sqrt), {a.eval(m_ir)});
-		return result;
-	}
-
-	template <typename T>
-	auto fabs(T a)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::fabs), {a.eval(m_ir)});
-		return result;
-	}
-
-	// Opportunistic hardware FMA, can be used if results are identical for all possible input values
-	template <typename T>
-	auto fmuladd(T a, T b, T c)
-	{
-		value_t<typename T::type> result;
-		const auto av = a.eval(m_ir);
-		const auto bv = b.eval(m_ir);
-		const auto cv = c.eval(m_ir);
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::fmuladd), {av, bv, cv});
-		return result;
-	}
-
-	// TODO: Support doubles
-	template <typename T, typename = std::enable_if_t<llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
-	auto fre(T a)
-	{
-		value_t<typename T::type> result;
-		const auto av = a.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rcp.ps", av->getType(), av->getType()), {av});
-		return result;
-	}
-
-	template <typename T, typename = std::enable_if_t<llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
-	auto frsqe(T a)
-	{
-		value_t<typename T::type> result;
-		const auto av = a.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rsqrt.ps", av->getType(), av->getType()), {av});
-		return result;
-	}
-
-	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<typename T::type, typename U::type> && llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
-	auto fmax(T a, U b)
-	{
-		value_t<typename T::type> result;
-		const auto av = a.eval(m_ir);
-		const auto bv = b.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.max.ps", av->getType(), av->getType(), av->getType()), {av, bv});
-		return result;
-	}
-
-	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<typename T::type, typename U::type> && llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
-	auto fmin(T a, U b)
-	{
-		value_t<typename T::type> result;
-		const auto av = a.eval(m_ir);
-		const auto bv = b.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.min.ps", av->getType(), av->getType(), av->getType()), {av, bv});
-		return result;
 	}
 
 	template <typename T1, typename T2>
@@ -2825,6 +3383,18 @@ public:
 		const auto imm8 = immediate.eval(m_ir);
 
 		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_vgf2p8affineqb_128), {data0, data1, imm8});
+		return result;
+	}
+
+	template <typename T1, typename T2, typename T3>
+	value_t<u32[4]> vpdpbusd(T1 a, T2 b, T3 c)
+	{
+		value_t<u32[4]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+		const auto data2 = c.eval(m_ir);
+		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpdpbusd_128), {data0, data1, data2});
 		return result;
 	}
 
@@ -2904,18 +3474,20 @@ public:
 		return result;
 	}
 
-	template <typename T1, typename T2>
-	value_t<u8[16]> pshufb(T1 a, T2 b)
+	// Emulate the behavior of VPERM2B by using a 256 bit wide VPERMB
+	template <typename T1, typename T2, typename T3>
+	value_t<u8[16]> vperm2b256to128(T1 a, T2 b, T3 c)
 	{
 		value_t<u8[16]> result;
 
 		const auto data0 = a.eval(m_ir);
-		const auto index = b.eval(m_ir);
-		const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
+		const auto data1 = b.eval(m_ir);
+		const auto index = c.eval(m_ir);
 
+		// May be slower than non constant path?
 		if (auto c = llvm::dyn_cast<llvm::Constant>(index))
 		{
-			// Convert PSHUFB index back to LLVM vector shuffle mask
+			// Convert VPERM2B index back to LLVM vector shuffle mask
 			v128 mask{};
 
 			const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
@@ -2925,7 +3497,7 @@ public:
 				for (u32 i = 0; i < 16; i++)
 				{
 					const u64 b = cv->getElementAsInteger(i);
-					mask._u8[i] = b < 128 ? b % 16 : 16;
+					mask._u8[i] = b & 0x1f;
 				}
 			}
 
@@ -2933,37 +3505,36 @@ public:
 			{
 				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
-				result.value = m_ir->CreateShuffleVector(data0, zeros, result.value);
+				result.value = m_ir->CreateShuffleVector(data0, data1, result.value);
 				return result;
 			}
 		}
 
-		if (m_use_ssse3)
-		{
-			result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {data0, index});
-		}
-		else
-		{
-			// Emulate PSHUFB (TODO)
-			const auto mask = m_ir->CreateAnd(index, 0xf);
-			const auto loop = llvm::BasicBlock::Create(m_context, "", m_ir->GetInsertBlock()->getParent());
-			const auto next = llvm::BasicBlock::Create(m_context, "", m_ir->GetInsertBlock()->getParent());
-			const auto prev = m_ir->GetInsertBlock();
+		const auto zeroes = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
+		const auto zeroes32 = llvm::ConstantAggregateZero::get(get_type<u8[32]>());
 
-			m_ir->CreateBr(loop);
-			m_ir->SetInsertPoint(loop);
-			const auto i = m_ir->CreatePHI(get_type<u32>(), 2);
-			const auto v = m_ir->CreatePHI(get_type<u8[16]>(), 2);
-			i->addIncoming(m_ir->getInt32(0), prev);
-			i->addIncoming(m_ir->CreateAdd(i, m_ir->getInt32(1)), loop);
-			v->addIncoming(zeros, prev);
-			result.value = m_ir->CreateInsertElement(v, m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i)), i);
-			v->addIncoming(result.value, loop);
-			m_ir->CreateCondBr(m_ir->CreateICmpULT(i, m_ir->getInt32(16)), loop, next);
-			m_ir->SetInsertPoint(next);
-			result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zeros), zeros, result.value);
-		}
+		value_t<u8[32]> intermediate;
+		value_t<u8[32]> shuffle;
+		value_t<u8[32]> shuffleindex;
 
+		u8 mask32[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
+		u8 mask16[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+		// insert the second source operand into the same vector as the first source operand and expand to 256 bit width
+		shuffle.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask32), 32));
+		shuffle.value = m_ir->CreateZExt(shuffle.value, get_type<u32[32]>());
+		intermediate.value = m_ir->CreateShuffleVector(data0, data1, shuffle.value);
+
+		// expand the shuffle index to 256 bits with zeroes
+		shuffleindex.value = m_ir->CreateShuffleVector(index, zeroes, shuffle.value);
+
+		// permute
+		intermediate.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_permvar_qi_256), {intermediate.value, shuffleindex.value});
+
+		// convert the 256 bit vector back to 128 bits
+		result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask16), 16));
+		result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
+		result.value = m_ir->CreateShuffleVector(intermediate.value, zeroes32, result.value);
 		return result;
 	}
 
@@ -2981,10 +3552,120 @@ public:
 	}
 
 	template <typename R = v128>
-	std::pair<bool, R> get_const_vector(llvm::Value*, u32 a, u32 b);
+	std::pair<bool, R> get_const_vector(llvm::Value*, u32 pos, u32 = __builtin_LINE());
 
 	template <typename T = v128>
-	llvm::Constant* make_const_vector(T, llvm::Type*);
+	llvm::Constant* make_const_vector(T, llvm::Type*, u32 = __builtin_LINE());
+
+private:
+	// Custom intrinsic table
+	std::unordered_map<std::string_view, std::function<llvm::Value*(llvm::CallInst*)>> m_intrinsics;
+
+public:
+	// Call custom intrinsic by name
+	template <typename RT, typename... Args>
+	llvm::CallInst* _calli(std::string_view name, Args... args)
+	{
+		const auto type = llvm::FunctionType::get(get_type<RT>(), {args->getType()...}, false);
+		const auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({name.data(), name.size()}, type).getCallee());
+		return m_ir->CreateCall(func, {args...});
+	}
+
+	// Initialize custom intrinsic
+	template <typename F>
+	void register_intrinsic(std::string_view name, F replace_with)
+	{
+		if constexpr (std::is_same_v<std::invoke_result_t<F, llvm::CallInst*>, llvm::Value*>)
+		{
+			m_intrinsics.try_emplace(name, replace_with);
+		}
+		else
+		{
+			m_intrinsics.try_emplace(name, [=, this](llvm::CallInst* ci)
+			{
+				return replace_with(ci).eval(m_ir);
+			});
+		}
+	}
+
+	// Finalize processing custom intrinsics
+	void replace_intrinsics(llvm::Function&);
+
+	// Erase store instructions of provided
+	void erase_stores(llvm::ArrayRef<llvm::Value*> args);
+
+	template <typename... Args>
+	void erase_stores(Args... args)
+	{
+		erase_stores({args.value...});
+	}
+
+	template <typename T, typename U>
+	static auto pshufb(T&& a, U&& b)
+	{
+		return llvm_calli<u8[16], T, U>{"x86_pshufb", {std::forward<T>(a), std::forward<U>(b)}}.if_const([](llvm::Value* args[], llvm::IRBuilder<>* ir) -> llvm::Value*
+		{
+			const auto zeros = llvm::ConstantAggregateZero::get(llvm_value_t<u8[16]>::get_type(ir->getContext()));
+
+			if (auto c = llvm::dyn_cast<llvm::Constant>(args[1]))
+			{
+				// Convert PSHUFB index back to LLVM vector shuffle mask
+				v128 mask{};
+
+				const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
+
+				if (cv)
+				{
+					for (u32 i = 0; i < 16; i++)
+					{
+						const u64 b = cv->getElementAsInteger(i);
+						mask._u8[i] = b < 128 ? b % 16 : 16;
+					}
+				}
+
+				if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
+				{
+					llvm::Value* r = nullptr;
+					r = llvm::ConstantDataVector::get(ir->getContext(), llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+					r = ir->CreateZExt(r, llvm_value_t<u32[16]>::get_type(ir->getContext()));
+					r = ir->CreateShuffleVector(args[0], zeros, r);
+					return r;
+				}
+			}
+
+			return nullptr;
+		});
+	}
+
+	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
+	static auto fre(T&& a)
+	{
+		return llvm_calli<f32[4], T>{"llvm.x86.sse.rcp.ps", {std::forward<T>(a)}};
+	}
+
+	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
+	static auto frsqe(T&& a)
+	{
+		return llvm_calli<f32[4], T>{"llvm.x86.sse.rsqrt.ps", {std::forward<T>(a)}};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
+	static auto fmax(T&& a, U&& b)
+	{
+		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.max.ps", {std::forward<T>(a), std::forward<U>(b)}};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
+	static auto fmin(T&& a, U&& b)
+	{
+		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.min.ps", {std::forward<T>(a), std::forward<U>(b)}};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, u8[16]>>>
+	static auto vdbpsadbw(T&& a, U&& b, u8 c)
+	{
+		return llvm_calli<u16[8], T, U, llvm_const_int<u32>>{"llvm.x86.avx512.dbpsadbw.128", {std::forward<T>(a), std::forward<U>(b), llvm_const_int<u32>{c}}};
+	}
 };
 
 // Format llvm::SizeType
@@ -3005,10 +3686,22 @@ struct fmt_unveil<llvm::TypeSize, void>
 #endif
 
 template <>
-inline llvm::Type* cpu_translator::get_type<__m128i>()
+struct llvm_value_t<__m128> : llvm_value_t<f32[4]>
 {
-	return llvm::VectorType::get(llvm::Type::getInt8Ty(m_context), 16, false);
-}
+
+};
+
+template <>
+struct llvm_value_t<__m128d> : llvm_value_t<f64[2]>
+{
+
+};
+
+template <>
+struct llvm_value_t<__m128i> : llvm_value_t<u8[16]>
+{
+
+};
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop

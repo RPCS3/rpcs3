@@ -5,7 +5,7 @@
 [submodule "asmjit"]
 	path = 3rdparty/asmjit/asmjit
 	url = ../../asmjit/asmjit.git
-	branch = oldstable
+	branch = aarch64
 	ignore = dirty
 [submodule "llvm"]
 	path = llvm
@@ -41,7 +41,7 @@
 	url = ../../Cyan4973/xxHash.git
 	ignore = dirty
 [submodule "3rdparty/yaml-cpp"]
-	path = 3rdparty/yaml-cpp
+	path = 3rdparty/yaml-cpp/yaml-cpp
 	url = ../../RPCS3/yaml-cpp.git
 	ignore = dirty
 [submodule "3rdparty/libpng"]
@@ -61,10 +61,14 @@
 	url = ../../curl/curl.git
 	ignore = dirty
 [submodule "3rdparty/wolfssl"]
-	path = 3rdparty/wolfssl
+	path = 3rdparty/wolfssl/wolfssl
 	url = ../../wolfSSL/wolfssl.git
 	ignore = dirty
 [submodule "3rdparty/flatbuffers"]
 	path = 3rdparty/flatbuffers
 	url = ../../google/flatbuffers.git
+	ignore = dirty
+[submodule "3rdparty/cubeb/cubeb"]
+	path = 3rdparty/cubeb/cubeb
+	url = ../../mozilla/cubeb.git
 	ignore = dirty

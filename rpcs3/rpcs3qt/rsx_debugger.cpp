@@ -47,8 +47,6 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	QLabel l("000000000"); // hacky way to get the lineedit to resize properly
 	l.setFont(mono);
 
-	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
-
 	// Controls: Breaks
 	QPushButton* b_break_frame = new QPushButton(tr("Frame"));
 	QPushButton* b_break_text  = new QPushButton(tr("Texture"));
@@ -376,11 +374,17 @@ namespace
 	 */
 	u8* convert_to_QImage_buffer(rsx::surface_color_format format, std::span<const std::byte> orig_buffer, usz width, usz height) noexcept
 	{
-		u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
-		if (!buffer || width == 0 || height == 0)
+		if (width == 0 || height == 0)
 		{
 			return nullptr;
 		}
+
+		u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
+		if (!buffer)
+		{
+			return nullptr;
+		}
+
 		for (u32 i = 0; i < width * height; i++)
 		{
 			// depending on original buffer, the colors may need to be reversed

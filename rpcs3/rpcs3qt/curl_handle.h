@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <QObject>
 
 #ifndef CURL_STATICLIB
@@ -7,11 +8,12 @@
 #endif
 #include <curl/curl.h>
 
+namespace rpcs3::curl
+{
+inline bool g_curl_verbose = false;
+
 class curl_handle : public QObject
 {
-private:
-	CURL* m_curl = nullptr;
-
 public:
 	explicit curl_handle(QObject* parent = nullptr);
 	~curl_handle();
@@ -22,4 +24,14 @@ public:
 	{
 		return get_curl();
 	}
+
+	void reset_error_buffer();
+	std::string get_verbose_error(CURLcode code);
+
+private:
+	CURL* m_curl = nullptr;
+	bool m_uses_error_buffer = false;
+	std::array<char, CURL_ERROR_SIZE> m_error_buffer;
 };
+
+}

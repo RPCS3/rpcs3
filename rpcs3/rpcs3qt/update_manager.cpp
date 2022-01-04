@@ -12,6 +12,8 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QMessageBox>
+#include <QLabel>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QThread>
@@ -39,6 +41,7 @@ LOG_CHANNEL(update_log, "UPDATER");
 void update_manager::check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent)
 {
 	m_update_message.clear();
+	m_changelog.clear();
 
 #ifdef __linux__
 	if (automatic && !::getenv("APPIMAGE"))
@@ -77,7 +80,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
 	});
 
-	const std::string url = "https://update.rpcs3.net/?api=v1&c=" + rpcs3::get_commit_and_hash().second;
+	const std::string url = "https://update.rpcs3.net/?api=v2&c=" + rpcs3::get_commit_and_hash().second;
 	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
 }
 
@@ -171,8 +174,12 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	const Localized localized;
 
+	m_new_version = latest["version"].toString().toStdString();
+
 	if (hash_found)
 	{
+		m_old_version = current["version"].toString().toStdString();
+
 		if (diff_msec < 0)
 		{
 			// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
@@ -194,6 +201,8 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	}
 	else
 	{
+		m_old_version = fmt::format("%s-%s-%s", rpcs3::get_full_branch(), rpcs3::get_branch(), rpcs3::get_version().to_string());
+
 		m_update_message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 old.\n\nDo you want to update to the latest official RPCS3 version?")
 			.arg(latest["version"].toString())
 			.arg(lts_str)
@@ -218,6 +227,56 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		return true;
 	}
 
+	if (!auto_accept)
+	{
+		const auto& changelog = json_data["changelog"];
+
+		if (changelog.isArray())
+		{
+			for (const QJsonValue& changelog_entry : changelog.toArray())
+			{
+				if (changelog_entry.isObject())
+				{
+					changelog_data entry;
+
+					if (QJsonValue version = changelog_entry["version"]; version.isString())
+					{
+						entry.version = version.toString();
+					}
+					else
+					{
+						entry.version = tr("N/A");
+						update_log.notice("JSON changelog entry does not contain a version string.");
+					}
+
+					if (QJsonValue title = changelog_entry["title"]; title.isString())
+					{
+						entry.title = title.toString();
+					}
+					else
+					{
+						entry.title = tr("N/A");
+						update_log.notice("JSON changelog entry does not contain a title string.");
+					}
+
+					m_changelog.push_back(entry);
+				}
+				else
+				{
+					update_log.error("JSON changelog entry is not an object.");
+				}
+			}
+		}
+		else if (changelog.isObject())
+		{
+			update_log.error("JSON changelog is not an array.");
+		}
+		else
+		{
+			update_log.notice("JSON does not contain a changelog section.");
+		}
+	}
+
 	update(auto_accept);
 	return true;
 }
@@ -226,11 +285,44 @@ void update_manager::update(bool auto_accept)
 {
 	ensure(m_downloader);
 
-	if (!auto_accept && (m_update_message.isEmpty() ||
-		QMessageBox::question(m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No))
+	if (!auto_accept)
 	{
-		m_downloader->close_progress_dialog();
-		return;
+		if (m_update_message.isEmpty())
+		{
+			m_downloader->close_progress_dialog();
+			return;
+		}
+
+		QString changelog_content;
+
+		for (const changelog_data& entry : m_changelog)
+		{
+			if (!changelog_content.isEmpty())
+				changelog_content.append('\n');
+			changelog_content.append(tr("• %0: %1").arg(entry.version, entry.title));
+		}
+
+		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No,m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
+
+		if (!changelog_content.isEmpty())
+		{
+			mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
+			mb.setDetailedText(tr("Changelog:\n\n%0").arg(changelog_content));
+
+			// Smartass hack to make the unresizeable message box wide enough for the changelog
+			const int changelog_width = QLabel(changelog_content).sizeHint().width();
+			while (QLabel(m_update_message).sizeHint().width() < changelog_width)
+			{
+				m_update_message += "          ";
+			}
+			mb.setText(m_update_message);
+		}
+
+		if (mb.exec() == QMessageBox::No)
+		{
+			m_downloader->close_progress_dialog();
+			return;
+		}
 	}
 
 	if (!Emu.IsStopped())
@@ -544,6 +636,19 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 #endif
 
 	m_downloader->close_progress_dialog();
+
+	// Add new version to log file
+	if (fs::file update_file{fs::get_config_dir() + "update_history.log", fs::create + fs::write + fs::append})
+	{
+		const std::string update_time = QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss").toStdString();
+		const std::string entry = fmt::format("%s: Updated from \"%s\" to \"%s\"", update_time, m_old_version, m_new_version);
+		update_file.write(fmt::format("%s\n", entry));
+		update_log.notice("Added entry '%s' to update_history.log", entry);
+	}
+	else
+	{
+		update_log.error("Failed to append version to update_history.log");
+	}
 
 	if (!auto_accept)
 	{

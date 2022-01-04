@@ -109,13 +109,7 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 #ifdef _WIN32
 		case audio_renderer::xaudio: return "XAudio2";
 #endif
-#ifdef HAVE_ALSA
-		case audio_renderer::alsa: return "ALSA";
-#endif
-#ifdef HAVE_PULSE
-		case audio_renderer::pulse: return "PulseAudio";
-#endif
-		case audio_renderer::openal: return "OpenAL";
+		case audio_renderer::cubeb: return "Cubeb";
 #ifdef HAVE_FAUDIO
 		case audio_renderer::faudio: return "FAudio";
 #endif
@@ -247,8 +241,8 @@ void fmt_class_string<np_psn_status>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case np_psn_status::disabled: return "Disconnected";
-		case np_psn_status::fake: return "Simulated";
-		case np_psn_status::rpcn: return "RPCN";
+		case np_psn_status::psn_fake: return "Simulated";
+		case np_psn_status::psn_rpcn: return "RPCN";
 		}
 
 		return unknown;
@@ -334,6 +328,7 @@ void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
 		{
 		case camera_handler::null: return "Null";
 		case camera_handler::fake: return "Fake";
+		case camera_handler::qt: return "Qt";
 		}
 
 		return unknown;
@@ -351,6 +346,23 @@ void fmt_class_string<fake_camera_type>::format(std::string& out, u64 arg)
 		case fake_camera_type::eyetoy: return "EyeToy";
 		case fake_camera_type::eyetoy2: return "PS Eye";
 		case fake_camera_type::uvc1_1: return "UVC 1.1";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<camera_flip>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case camera_flip::none: return "None";
+		case camera_flip::horizontal: return "Horizontal";
+		case camera_flip::vertical: return "Vertical";
+		case camera_flip::both: return "Both";
 		}
 
 		return unknown;
@@ -390,6 +402,38 @@ void fmt_class_string<buzz_handler>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<turntable_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case turntable_handler::null: return "Null";
+		case turntable_handler::one_controller: return "1 controller";
+		case turntable_handler::two_controllers: return "2 controllers";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<ghltar_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case ghltar_handler::null: return "Null";
+		case ghltar_handler::one_controller: return "1 controller";
+		case ghltar_handler::two_controllers: return "2 controllers";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](ppu_decoder_type type)
@@ -416,6 +460,22 @@ void fmt_class_string<shader_mode>::format(std::string& out, u64 arg)
 		case shader_mode::async_recompiler: return "Async Shader Recompiler";
 		case shader_mode::async_with_interpreter: return "Async with Shader Interpreter";
 		case shader_mode::interpreter_only: return "Shader Interpreter only";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<audio_provider>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_provider value)
+	{
+		switch (value)
+		{
+		case audio_provider::none: return "None";
+		case audio_provider::cell_audio: return "CellAudio";
+		case audio_provider::rsxaudio: return "RSXAudio";
 		}
 
 		return unknown;

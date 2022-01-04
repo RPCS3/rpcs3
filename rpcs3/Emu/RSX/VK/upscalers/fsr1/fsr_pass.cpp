@@ -197,15 +197,15 @@ namespace vk
 	{
 		dispose_images();
 
-		auto initialize_image_impl = [output_w, output_h](VkImageUsageFlags usage)
+		const auto pdev = vk::get_current_renderer();
+		auto initialize_image_impl = [pdev, output_w, output_h](VkImageUsageFlags usage, VkFormat format)
 		{
-			const auto pdev = vk::get_current_renderer();
 			return std::make_unique<vk::viewable_image>(
 				*pdev,                                               // Owner
 				pdev->get_memory_mapping().device_local,             // Must be in device optimal memory
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
-				VK_FORMAT_B8G8R8A8_UNORM,                            // The only format guaranteed by spec
+				format,
 				output_w, output_h, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT,  // Dimensions (w, h, d, mips, layers, samples)
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -215,27 +215,56 @@ namespace vk
 				RSX_FORMAT_CLASS_COLOR);
 		};
 
-		bool failed = false;
-		if (mode & UPSCALE_LEFT_VIEW)
+		const VkFlags usage_mask_output = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+		const VkFlags usage_mask_intermediate = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+
+		bool failed = true;
+		VkFormat data_format = VK_FORMAT_UNDEFINED;
+
+		// Check if it is possible to actually write to the format we want.
+		// Fallback to RGBA8 is supported as well
+		std::array<VkFormat, 2> supported_formats = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
+		for (const auto& format : supported_formats)
 		{
-			m_output_left = initialize_image_impl(VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+			const VkFlags all_required_bits = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_TRANSFER_SRC_BIT;
+			if ((pdev->get_format_properties(format).optimalTilingFeatures & all_required_bits) == all_required_bits)
+			{
+				data_format = format;
+				failed = false;
+				break;
+			}
+		}
+
+		if ((mode & UPSCALE_LEFT_VIEW) && !failed)
+		{
+			m_output_left = initialize_image_impl(usage_mask_output, data_format);
 			failed |= (m_output_left->value == VK_NULL_HANDLE);
 		}
+
 		if ((mode & UPSCALE_RIGHT_VIEW) && !failed)
 		{
-			m_output_right = initialize_image_impl(VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+			m_output_right = initialize_image_impl(usage_mask_output, data_format);
 			failed |= (m_output_right->value == VK_NULL_HANDLE);
 		}
+
 		if (!failed)
 		{
-			m_intermediate_data = initialize_image_impl(VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			m_intermediate_data = initialize_image_impl(usage_mask_intermediate, data_format);
 			failed |= (m_intermediate_data->value == VK_NULL_HANDLE);
 		}
 
 		if (failed)
 		{
-			rsx_log.warning("FSR is enabled, but the system is out of memory. Will fall back to bilinear upscaling");
-			dispose_images();
+			if (data_format != VK_FORMAT_UNDEFINED)
+			{
+				dispose_images();
+				rsx_log.warning("FSR is enabled, but the system is out of memory. Will fall back to bilinear upscaling.");
+			}
+			else
+			{
+				ensure(!m_output_left && !m_output_right && !m_intermediate_data);
+				rsx_log.error("FSR is not supported by this driver and hardware combination.");
+			}
 		}
 	}
 

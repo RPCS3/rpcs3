@@ -53,3 +53,9 @@ void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_
 bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash, int hash_len);
 void cmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash);
 void mbedtls_zeroize(void *v, size_t n);
+
+// SC passphrase crypto
+
+int vtrm_decrypt(int type, u8* iv, u8* input, u8* output);
+int vtrm_decrypt_master(s64 laid, s64 paid, u8* iv, u8* input, u8* output);
+int vtrm_decrypt_with_portability(int type, u8* iv, u8* input, u8* output);

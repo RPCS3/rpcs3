@@ -2,7 +2,8 @@
 
 #include "VulkanAPI.h"
 #include "VKCommonDecompiler.h"
-#include "../Program/GLSLTypes.h"
+
+#include "vkutils/descriptors.h"
 
 #include <string>
 #include <vector>
@@ -99,14 +100,12 @@ namespace vk
 			program& link();
 
 			bool has_uniform(program_input_type type, const std::string &uniform_name);
-			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorType type, VkDescriptorSet &descriptor_set);
-			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, int texture_unit, ::glsl::program_domain domain, VkDescriptorSet &descriptor_set, bool is_stencil_mirror = false);
-			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorSet &descriptor_set);
-			void bind_uniform(const VkBufferView &buffer_view, u32 binding_point, VkDescriptorSet &descriptor_set);
-			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set);
-
-			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set);
-			void bind_descriptor_set(const VkCommandBuffer cmd, VkDescriptorSet descriptor_set);
+			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorType type, vk::descriptor_set &set);
+			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, int texture_unit, ::glsl::program_domain domain, vk::descriptor_set &set, bool is_stencil_mirror = false);
+			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, vk::descriptor_set &set);
+			void bind_uniform(const VkBufferView &buffer_view, u32 binding_point, vk::descriptor_set &set);
+			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, vk::descriptor_set &set);
+			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorType type, vk::descriptor_set &set);
 		};
 	}
 }

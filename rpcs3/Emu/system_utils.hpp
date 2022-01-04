@@ -22,11 +22,12 @@ namespace rpcs3::utils
 	std::string get_hdd1_dir();
 	std::string get_cache_dir();
 
-	std::string get_rap_file_path(const std::string& rap);
+	std::string get_rap_file_path(const std::string_view& rap);
+	bool verify_c00_unlock_edat(const std::string_view& content_id);
 	std::string get_sfo_dir_from_game_path(const std::string& game_path, const std::string& title_id = "");
 
 	std::string get_custom_config_dir();
-	std::string get_custom_config_path(const std::string& title_id, bool get_deprecated_path = false);
+	std::string get_custom_config_path(const std::string& title_id);
 
 	std::string get_input_config_root();
 	std::string get_input_config_dir(const std::string& title_id = "");

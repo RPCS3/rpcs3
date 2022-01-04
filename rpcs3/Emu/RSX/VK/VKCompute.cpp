@@ -39,13 +39,7 @@ namespace vk
 
 		// Reserve descriptor pools
 		m_descriptor_pool.create(*g_render_device, descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_MAX_COMPUTE_TASKS, 3);
-
-		VkDescriptorSetLayoutCreateInfo infos = {};
-		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		infos.pBindings = bindings.data();
-		infos.bindingCount = ::size32(bindings);
-
-		CHECK_RESULT(vkCreateDescriptorSetLayout(*g_render_device, &infos, nullptr, &m_descriptor_layout));
+		m_descriptor_layout = vk::descriptors::create_layout(bindings);
 
 		VkPipelineLayoutCreateInfo layout_info = {};
 		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -162,13 +156,13 @@ namespace vk
 		alloc_info.pSetLayouts = &m_descriptor_layout;
 		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 
-		CHECK_RESULT(vkAllocateDescriptorSets(*g_render_device, &alloc_info, &m_descriptor_set));
+		CHECK_RESULT(vkAllocateDescriptorSets(*g_render_device, &alloc_info, m_descriptor_set.ptr()));
 		m_used_descriptors++;
 
 		bind_resources();
 
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_program->pipeline);
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
+		m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout);
 	}
 
 	void compute_task::run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
@@ -257,7 +251,7 @@ namespace vk
 			"\n";
 
 		const auto parameters_size = utils::align(push_constants_size, 16) / 16;
-		const std::pair<std::string, std::string> syntax_replace[] =
+		const std::pair<std::string_view, std::string> syntax_replace[] =
 		{
 			{ "%ws", std::to_string(optimal_group_size) },
 			{ "%ks", std::to_string(kernel_size) },
@@ -402,7 +396,7 @@ namespace vk
 			"	}\n"
 			"}\n";
 
-		const std::pair<std::string, std::string> syntax_replace[] =
+		const std::pair<std::string_view, std::string> syntax_replace[] =
 		{
 			{ "%ws", std::to_string(optimal_group_size) },
 		};

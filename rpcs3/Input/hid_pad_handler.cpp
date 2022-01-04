@@ -13,8 +13,8 @@ static std::mutex s_hid_mutex; // hid_pad_handler is created by pad_thread and p
 static u8 s_hid_instances{0};
 
 template <class Device>
-hid_pad_handler<Device>::hid_pad_handler(pad_handler type, u16 vid, std::vector<u16> pids)
-    : PadHandlerBase(type), m_vid(vid), m_pids(std::move(pids))
+hid_pad_handler<Device>::hid_pad_handler(pad_handler type, std::vector<id_pair> ids)
+    : PadHandlerBase(type), m_ids(std::move(ids))
 {
 	std::scoped_lock lock(s_hid_mutex);
 	ensure(s_hid_instances++ < 255);
@@ -100,9 +100,9 @@ void hid_pad_handler<Device>::enumerate_devices()
 	std::set<std::string> device_paths;
 	std::map<std::string, std::wstring_view> serials;
 
-	for (const auto& pid : m_pids)
+	for (const auto& [vid, pid] : m_ids)
 	{
-		hid_device_info* dev_info = hid_enumerate(m_vid, pid);
+		hid_device_info* dev_info = hid_enumerate(vid, pid);
 		hid_device_info* head     = dev_info;
 		while (dev_info)
 		{
@@ -153,7 +153,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 		}
 		else
 		{
-			hid_log.error("%s hid_open_path failed! Reason: %s", m_type, hid_error(dev));
+			hid_log.error("%s hid_open_path failed! error='%s', path='%s'", m_type, hid_error(dev), path);
 			warn_about_drivers = true;
 		}
 	}

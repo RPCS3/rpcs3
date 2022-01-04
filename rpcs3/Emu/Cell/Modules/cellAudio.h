@@ -2,6 +2,7 @@
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Utilities/Thread.h"
+#include "Utilities/simple_ringbuf.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/AudioDumper.h"
@@ -70,6 +71,13 @@ enum
 	CELL_AUDIO_STATUS_CLOSE            = 0x1010,
 	CELL_AUDIO_STATUS_READY            = 1,
 	CELL_AUDIO_STATUS_RUN              = 2,
+};
+
+enum class audio_backend_update : u32
+{
+	NONE,
+	PARAM,
+	ALL,
 };
 
 //libaudio datatypes
@@ -195,11 +203,10 @@ struct cell_audio_config
 		s64 desired_buffer_duration = 0;
 		bool enable_time_stretching = false;
 		s64 time_stretching_threshold = 0;
-		bool convert_to_u16 = false;
-		u32 start_threshold = 0;
-		u32 sampling_period_multiplier = 0;
+		bool convert_to_s16 = false;
 		audio_downmix downmix = audio_downmix::downmix_to_stereo;
 		audio_renderer renderer = audio_renderer::null;
+		audio_provider provider = audio_provider::none;
 	} raw;
 
 	std::shared_ptr<AudioBackend> backend = nullptr;
@@ -207,6 +214,8 @@ struct cell_audio_config
 	u32 audio_channels = 0;
 	u32 audio_sampling_rate = 0;
 	u32 audio_block_period = 0;
+	u32 audio_sample_size = 0;
+	f64 audio_min_buffer_duration = 0.0;
 
 	u32 audio_buffer_length = 0;
 	u32 audio_buffer_size = 0;
@@ -253,7 +262,7 @@ struct cell_audio_config
 	/*
 	 * Config changes
 	 */
-	void reset();
+	void reset(bool backend_changed = true);
 };
 
 class audio_ringbuffer
@@ -270,7 +279,9 @@ private:
 	std::unique_ptr<float[]> buffer[MAX_AUDIO_BUFFERS];
 	const float silence_buffer[u32{AUDIO_MAX_CHANNELS_COUNT} * u32{AUDIO_BUFFER_SAMPLES}] = { 0 };
 
-	bool backend_open = false;
+	simple_ringbuf cb_ringbuf{};
+
+	atomic_t<bool> backend_active = false;
 	bool playing = false;
 	bool emu_paused = false;
 
@@ -286,8 +297,10 @@ private:
 
 	bool get_backend_playing() const
 	{
-		return has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING) ? backend->IsPlaying() : playing;
+		return backend->IsPlaying();
 	}
+
+	u32 backend_write_callback(u32 size, void *buf);
 
 public:
 	audio_ringbuffer(cell_audio_config &cfg);
@@ -342,7 +355,12 @@ public:
 		return backend->has_capability(cap);
 	}
 
-	const char* get_backend_name() const
+	bool get_operational_status() const
+	{
+		return backend->Operational();
+	}
+
+	std::string_view get_backend_name() const
 	{
 		return backend->GetName();
 	}
@@ -366,11 +384,12 @@ private:
 		return (time_left > 350) ? time_left - 250 : 100;
 	}
 
-	void update_config();
+	void update_config(bool backend_changed);
+	void reset_counters();
 
 public:
 	cell_audio_config cfg;
-	atomic_t<bool> m_update_configuration = false;
+	atomic_t<audio_backend_update> m_update_configuration = audio_backend_update::NONE;
 
 	shared_mutex mutex;
 	atomic_t<u32> init = 0;
@@ -394,25 +413,13 @@ public:
 	u64 m_start_time = 0;
 	u64 m_dynamic_period = 0;
 	f32 m_average_playtime = 0.0f;
+	bool m_backend_failed = false;
+
+	cell_audio_thread();
 
 	void operator()();
 
-	cell_audio_thread()
-	{
-	}
-
-	audio_port* open_port()
-	{
-		for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
-		{
-			if (ports[i].state.compare_and_swap_test(audio_port_state::closed, audio_port_state::opened))
-			{
-				return &ports[i];
-			}
-		}
-
-		return nullptr;
-	}
+	audio_port* open_port();
 
 	bool has_capability(u32 cap) const
 	{

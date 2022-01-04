@@ -53,7 +53,7 @@ public:
 	{
 		if (path.isEmpty() || !m_icon_callback) return;
 
-		if (QMovie* movie = new QMovie(path); movie && movie->isValid())
+		if (QMovie* movie = new QMovie(path); movie->isValid())
 		{
 			m_movie = movie;
 		}

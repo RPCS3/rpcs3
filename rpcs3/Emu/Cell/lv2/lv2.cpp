@@ -936,9 +936,81 @@ const std::array<std::pair<ppu_function_t, std::string_view>, 1024> g_ppu_syscal
 #undef BIND_SYSC
 #undef NULL_FUNC
 
+// TODO: more enums
+enum CellAdecError : u32;
+enum CellAtracError : u32;
+enum CellAtracMultiError : u32;
+enum CellAudioError : u32;
+enum CellAudioOutError : u32;
+enum CellAudioInError : u32;
+
+enum CellVideoOutError : u32;
+
+enum CellSpursCoreError : u32;
+enum CellSpursPolicyModuleError : u32;
+enum CellSpursTaskError : u32;
+enum CellSpursJobError : u32;
+
+enum CellGameError : u32;
+enum CellGameDataError : u32;
+enum CellDiscGameError : u32;
+enum CellHddGameError : u32;
+
+enum SceNpTrophyError : u32;
+enum SceNpError : u32;
+
+template <u64 EnumMin, typename E>
+constexpr auto formatter_of = std::make_pair(EnumMin, &fmt_class_string<E>::format);
+
+const std::map<u64, void(*)(std::string&, u64)> s_error_codes_formatting_by_type
+{
+	formatter_of<0x80610000, CellAdecError>,
+	formatter_of<0x80612100, CellAdecError>,
+	formatter_of<0x80610300, CellAtracError>,
+	formatter_of<0x80610b00, CellAtracMultiError>,
+	formatter_of<0x80310700, CellAudioError>,
+	formatter_of<0x8002b240, CellAudioOutError>,
+	formatter_of<0x8002b260, CellAudioInError>,
+	formatter_of<0x8002b220, CellVideoOutError>,
+
+	formatter_of<0x80410700, CellSpursCoreError>,
+	formatter_of<0x80410800, CellSpursPolicyModuleError>,
+	formatter_of<0x80410900, CellSpursTaskError>,
+	formatter_of<0x80410A00, CellSpursJobError>,
+
+	formatter_of<0x8002cb00, CellGameError>,
+	formatter_of<0x8002b600, CellGameDataError>,
+	formatter_of<0x8002bd00, CellDiscGameError>,
+	formatter_of<0x8002ba00, CellHddGameError>,
+
+	formatter_of<0x80022900, SceNpTrophyError>,
+	formatter_of<0x80029500, SceNpError>,
+};
+
 template<>
 void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 {
+	// Test if can be formatted by this formatter
+	const bool lv2_cell_error = (arg >> 8) == 0x800100u;
+
+	if (!lv2_cell_error)
+	{
+		// Format by external enum formatters
+		auto upper = s_error_codes_formatting_by_type.upper_bound(arg);
+
+		if (upper == s_error_codes_formatting_by_type.begin())
+		{
+			// Format as unknown by another enum formatter
+			upper->second(out, arg);
+			return;
+		}
+
+		// Find the formatter whose base is the highest that is not more than arg
+		const auto found = std::prev(upper);
+		found->second(out, arg);
+		return;
+	}
+
 	format_enum(out, arg, [](auto error)
 	{
 		switch (error)
@@ -1138,6 +1210,12 @@ bool lv2_obj::awake(cpu_thread* const thread, s32 prio)
 bool lv2_obj::yield(cpu_thread& thread)
 {
 	vm::temporary_unlock(thread);
+
+	if (auto ppu = thread.try_get<ppu_thread>())
+	{
+		ppu->raddr = 0; // Clear reservation
+	}
+
 	return awake(&thread, yield_cmd);
 }
 

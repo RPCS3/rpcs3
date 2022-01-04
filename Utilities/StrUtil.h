@@ -6,8 +6,10 @@
 #include <functional>
 #include <string_view>
 
+#include "util/types.hpp"
+
 #ifdef _WIN32
-std::string wchar_to_utf8(wchar_t *src);
+std::string wchar_to_utf8(const wchar_t *src);
 std::string wchar_path_to_ansi_path(const std::wstring& src);
 std::string utf8_path_to_ansi_path(const std::string& src);
 #endif
@@ -22,17 +24,17 @@ inline void strcpy_trunc(D& dst, const T& src)
 }
 
 // Convert string to signed integer
-bool try_to_int64(s64* out, const std::string& value, s64 min, s64 max);
+bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max);
 
 // Convert string to unsigned integer
-bool try_to_uint64(u64* out, const std::string& value, u64 min, u64 max);
+bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
 
 namespace fmt
 {
 	std::string replace_all(std::string_view src, std::string_view from, std::string_view to, usz count = -1);
 
 	template <usz list_size>
-	std::string replace_all(std::string src, const std::pair<std::string, std::string> (&list)[list_size])
+	std::string replace_all(std::string src, const std::pair<std::string_view, std::string> (&list)[list_size])
 	{
 		for (usz pos = 0; pos < src.length(); ++pos)
 		{
@@ -41,11 +43,14 @@ namespace fmt
 				const usz comp_length = list[i].first.length();
 
 				if (src.length() - pos < comp_length)
+				{
 					continue;
+				}
 
 				if (src.substr(pos, comp_length) == list[i].first)
 				{
-					src = (pos ? src.substr(0, pos) + list[i].second : list[i].second) + src.substr(pos + comp_length);
+					src.erase(pos, comp_length);
+					src.insert(pos, list[i].second.data(), list[i].second.length());
 					pos += list[i].second.length() - 1;
 					break;
 				}
@@ -56,7 +61,7 @@ namespace fmt
 	}
 
 	template <usz list_size>
-	std::string replace_all(std::string src, const std::pair<std::string, std::function<std::string()>> (&list)[list_size])
+	std::string replace_all(std::string src, const std::pair<std::string_view, std::function<std::string()>> (&list)[list_size])
 	{
 		for (usz pos = 0; pos < src.length(); ++pos)
 		{
@@ -65,12 +70,16 @@ namespace fmt
 				const usz comp_length = list[i].first.length();
 
 				if (src.length() - pos < comp_length)
+				{
 					continue;
+				}
 
 				if (src.substr(pos, comp_length) == list[i].first)
 				{
-					src = (pos ? src.substr(0, pos) + list[i].second() : list[i].second()) + src.substr(pos + comp_length);
-					pos += list[i].second().length() - 1;
+					src.erase(pos, comp_length);
+					auto replacement = list[i].second();
+					src.insert(pos, replacement);
+					pos += replacement.length() - 1;
 					break;
 				}
 			}

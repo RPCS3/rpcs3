@@ -8,7 +8,7 @@
 #include "Crypto/sha256.h"
 #include "util/logs.hpp"
 
-LOG_CHANNEL(network_log, "NETWORK");
+LOG_CHANNEL(network_log, "NET");
 
 usz curl_write_cb_compat(char* ptr, usz /*size*/, usz nmemb, void* userdata)
 {
@@ -19,7 +19,7 @@ usz curl_write_cb_compat(char* ptr, usz /*size*/, usz nmemb, void* userdata)
 downloader::downloader(QWidget* parent)
 	: QObject(parent)
 	, m_parent(parent)
-	, m_curl(new curl_handle(this))
+	, m_curl(new rpcs3::curl::curl_handle(this))
 {
 }
 
@@ -34,6 +34,8 @@ downloader::~downloader()
 
 void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title, bool keep_progress_dialog_open, int expected_size)
 {
+	network_log.notice("Starting download from URL: %s", url);
+
 	if (m_thread)
 	{
 		if (m_thread->isRunning())
@@ -48,19 +50,29 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	m_curl_buf.clear();
 	m_curl_abort = false;
 
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, url.c_str());
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, follow_location ? 1 : 0);
+	CURLcode err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, url.c_str());
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_URL, %s) error: %s", url, curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_WRITEFUNCTION, curl_write_cb_compat) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_WRITEDATA) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, follow_location ? 1 : 0);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_FOLLOWLOCATION, %d) error: %s", follow_location, curl_easy_strerror(err));
 
 	m_thread = QThread::create([this]
 	{
-		const auto result = curl_easy_perform(m_curl->get_curl());
+		// Reset error buffer before we call curl_easy_perform
+		m_curl->reset_error_buffer();
+
+		const CURLcode result = curl_easy_perform(m_curl->get_curl());
 		m_curl_success = result == CURLE_OK;
 
 		if (!m_curl_success && !m_curl_abort)
 		{
-			const std::string error = "Curl error: " + std::string{ curl_easy_strerror(result) };
+			const std::string error = fmt::format("curl_easy_perform(): %s", m_curl->get_verbose_error(result));
 			network_log.error("%s", error);
 			Q_EMIT signal_download_error(QString::fromStdString(error));
 		}
@@ -97,7 +109,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 		{
 			m_progress_dialog->setWindowTitle(progress_dialog_title);
 			m_progress_dialog->setAutoClose(!m_keep_progress_dialog_open);
-			m_progress_dialog->setMaximum(maximum);
+			m_progress_dialog->SetRange(0, maximum);
 		}
 		else
 		{
@@ -200,8 +212,8 @@ void downloader::handle_buffer_update(int size, int max) const
 
 	if (m_progress_dialog)
 	{
-		m_progress_dialog->setMaximum(max > 0 ? max : m_progress_dialog->maximum());
-		m_progress_dialog->setValue(size);
+		m_progress_dialog->SetRange(0, max > 0 ? max : m_progress_dialog->maximum());
+		m_progress_dialog->SetValue(size);
 		QApplication::processEvents();
 	}
 }

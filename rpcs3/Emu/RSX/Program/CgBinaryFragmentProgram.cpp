@@ -139,7 +139,7 @@ std::string CgBinaryDisasm::GetCondDisAsm() const
 
 std::string CgBinaryDisasm::FormatDisAsm(const std::string& code)
 {
-	const std::pair<std::string, std::function<std::string()>> repl_list[] =
+	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
 	{
 		{ "$$",    []() -> std::string { return "$"; } },
 		{ "$0",    [this]{ return GetSrcDisAsm<SRC0>(src0); } },
@@ -232,11 +232,6 @@ void CgBinaryDisasm::TaskFP()
 	m_size = 0;
 	u32* data = reinterpret_cast<u32*>(&m_buffer[m_offset]);
 	ensure((m_buffer_size - m_offset) % sizeof(u32) == 0);
-	for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
-	{
-		// Get BE data
-		data[i] = std::bit_cast<u32, be_t<u32>>(data[i]);
-	}
 
 	enum
 	{

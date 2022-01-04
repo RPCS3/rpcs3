@@ -129,7 +129,13 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	u32 buffer_pitch = display_buffers[info.buffer].pitch;
 
 	u32 av_format;
-	auto& avconfig = g_fxo->get<rsx::avconf>();
+	const auto& avconfig = g_fxo->get<rsx::avconf>();
+
+	if (!buffer_width)
+	{
+		buffer_width = avconfig.resolution_x;
+		buffer_height = avconfig.resolution_y;
+	}
 
 	if (avconfig.state)
 	{
@@ -137,7 +143,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		const u32 video_frame_height = (!avconfig._3d? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
+		const u32 video_frame_height = (!avconfig._3d ? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
 		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
 	}
@@ -199,31 +205,19 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	const int height = m_frame->client_height();
 
 	// Calculate blit coordinates
-	coordi aspect_ratio;
-	sizei csize(width, height);
-	sizei new_size = csize;
-
+	areai aspect_ratio;
 	if (!g_cfg.video.stretch_to_display_area)
 	{
-		const double aq = 1. * buffer_width / buffer_height;
-		const double rq = 1. * new_size.width / new_size.height;
-		const double q = aq / rq;
-
-		if (q > 1.0)
-		{
-			new_size.height = static_cast<int>(new_size.height / q);
-			aspect_ratio.y = (csize.height - new_size.height) / 2;
-		}
-		else if (q < 1.0)
-		{
-			new_size.width = static_cast<int>(new_size.width * q);
-			aspect_ratio.x = (csize.width - new_size.width) / 2;
-		}
+		const sizeu csize(width, height);
+		const auto converted = avconfig.aspect_convert_region(size2u{ buffer_width, buffer_height }, csize);
+		aspect_ratio = static_cast<areai>(converted);
+	}
+	else
+	{
+		aspect_ratio = { 0, 0, width, height };
 	}
 
-	aspect_ratio.size = new_size;
-
-	if (!image_to_flip || aspect_ratio.width < csize.width || aspect_ratio.height < csize.height)
+	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
 		// Clear the window background to black
 		gl_state.clear_color(0, 0, 0, 0);
@@ -264,7 +258,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			m_flip_fbo.color = image_to_flip;
 			m_flip_fbo.read_buffer(m_flip_fbo.color);
 			m_flip_fbo.draw_buffer(m_flip_fbo.color);
-			m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
+			m_flip_fbo.blit(gl::screen, screen_area, aspect_ratio.flipped_vertical(), gl::buffers::color, gl::filter::linear);
 		}
 		else
 		{

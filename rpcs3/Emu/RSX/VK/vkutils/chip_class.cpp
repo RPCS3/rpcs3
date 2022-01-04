@@ -9,19 +9,25 @@ namespace vk
 		table.default_ = chip_class::AMD_gcn_generic;
 
 		// AMD cards. See https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
-		table.add(0x67C0, 0x67FF, chip_class::AMD_polaris);
-		table.add(0x6FDF, chip_class::AMD_polaris);         // RX580 2048SP
-		table.add(0x6980, 0x699F, chip_class::AMD_polaris); // Polaris12
-		table.add(0x694C, 0x694F, chip_class::AMD_vega);    // VegaM
-		table.add(0x6860, 0x686F, chip_class::AMD_vega);    // VegaPro
-		table.add(0x687F, chip_class::AMD_vega);            // Vega56/64
-		table.add(0x69A0, 0x69AF, chip_class::AMD_vega);    // Vega12
-		table.add(0x66A0, 0x66AF, chip_class::AMD_vega);    // Vega20
-		table.add(0x15DD, chip_class::AMD_vega);            // Raven Ridge
-		table.add(0x15D8, chip_class::AMD_vega);            // Raven Ridge
-		table.add(0x7310, 0x731F, chip_class::AMD_navi1x);  // Navi10
-		table.add(0x7340, 0x734F, chip_class::AMD_navi1x);  // Navi14
-		table.add(0x73A0, 0x73BF, chip_class::AMD_navi2x);  // Sienna cichlid
+		table.add(0x67C0, 0x67FF, chip_class::AMD_polaris); // Polaris 10/11
+		table.add(0x6FDF,         chip_class::AMD_polaris); // RX 580 2048SP
+		table.add(0x6980, 0x699F, chip_class::AMD_polaris); // Polaris 12
+		table.add(0x694C, 0x694F, chip_class::AMD_vega);    // Vega M
+		table.add(0x6860, 0x686F, chip_class::AMD_vega);    // Vega Pro
+		table.add(0x687F,         chip_class::AMD_vega);    // Vega 56/64
+		table.add(0x69A0, 0x69AF, chip_class::AMD_vega);    // Vega 12
+		table.add(0x66A0, 0x66AF, chip_class::AMD_vega);    // Vega 20
+		table.add(0x15DD,         chip_class::AMD_vega);    // Raven Ridge
+		table.add(0x15D8,         chip_class::AMD_vega);    // Raven Ridge
+		table.add(0x7310, 0x731F, chip_class::AMD_navi1x);  // Navi 10
+		table.add(0x7360, 0x7362, chip_class::AMD_navi1x);  // Navi 12
+		table.add(0x7340, 0x734F, chip_class::AMD_navi1x);  // Navi 14
+		table.add(0x73A0, 0x73BF, chip_class::AMD_navi2x);  // Navi 21 (Sienna Cichlid)
+		table.add(0x73C0, 0x73DF, chip_class::AMD_navi2x);  // Navi 22 (Navy Flounder)
+		table.add(0x73E0, 0x73FF, chip_class::AMD_navi2x);  // Navi 23 (Dimgrey Cavefish)
+		table.add(0x7420, 0x743F, chip_class::AMD_navi2x);  // Navi 24 (Beige Goby)
+		table.add(0x163F,         chip_class::AMD_navi2x);  // Navi 2X (Van Gogh)
+		table.add(0x164D, 0x1681, chip_class::AMD_navi2x);  // Navi 2X (Yellow Carp)
 
 		return table;
 	}();

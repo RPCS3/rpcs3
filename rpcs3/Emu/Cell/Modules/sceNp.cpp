@@ -1,8 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Io/interception.h"
+#include "Utilities/StrUtil.h"
 
 #include "sysPrxForUser.h"
 #include "Emu/IdManager.h"
@@ -13,6 +15,7 @@
 #include "cellSysutil.h"
 
 #include "Emu/Cell/lv2/sys_time.h"
+#include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
 
@@ -396,11 +399,16 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 	});
 }
 
+void message_data::print() const
+{
+	sceNp.notice("commId: %s, msgId: %d, mainType: %d, subType: %d, subject: %s, body: %s, data_size: %d", static_cast<const char *>(commId.data), msgId, mainType, subType, subject, body, data.size());
+}
+
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 {
 	sceNp.warning("sceNpInit(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	std::lock_guard lock(nph.mutex_status);
 
@@ -409,18 +417,14 @@ error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
 	}
 
-	if (poolsize == 0)
+	if (poolsize == 0 || !poolptr)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
-	}
-	else if (poolsize < SCE_NP_MIN_POOLSIZE)
-	{
-		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
 	}
 
-	if (!poolptr)
+	if (poolsize < SCE_NP_MIN_POOLSIZE)
 	{
-		return SCE_NP_ERROR_INVALID_ARGUMENT;
+		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
 	}
 
 	nph.init_NP(poolsize, poolptr);
@@ -433,7 +437,7 @@ error_code sceNpTerm()
 {
 	sceNp.warning("sceNpTerm()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	std::lock_guard lock(nph.mutex_status);
 
@@ -450,6 +454,11 @@ error_code sceNpTerm()
 
 error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
+	if (!drm_path)
+	{
+		return SCE_NP_DRM_ERROR_INVALID_PARAM;
+	}
+
 	u128 k_licensee{};
 
 	if (k_licensee_addr)
@@ -458,7 +467,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		sceNp.notice("npDrmIsAvailable(): KLicense key %s", std::bit_cast<be_t<u128>>(k_licensee));
 	}
 
-	if (Emu.GetCat() == "PE")
+	if (Emu.GetFakeCat() == "PE")
 	{
 		std::memcpy(&k_licensee, NP_PSP_KEY_2, sizeof(k_licensee));
 		sceNp.success("npDrmIsAvailable(): PSP remaster KLicense key applied.");
@@ -468,16 +477,14 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 	sceNp.warning(u8"npDrmIsAvailable(): drm_path=“%s”", enc_drm_path);
 
-	if (!fs::is_file(vfs::get(enc_drm_path)))
-	{
-		sceNp.warning(u8"npDrmIsAvailable(): “%s” not found", enc_drm_path);
-		return CELL_ENOENT;
-	}
-
 	auto& npdrmkeys = g_fxo->get<loaded_npdrm_keys>();
 
-	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
-	const fs::file enc_file(enc_drm_path_local);
+	const auto [fs_error, ppath, real_path, enc_file, type] = lv2_file::open(enc_drm_path, 0, 0);
+
+	if (fs_error)
+	{
+		return {fs_error, enc_drm_path};
+	}
 
 	u32 magic;
 
@@ -491,12 +498,12 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 		if (verify_npdrm_self_headers(enc_file, reinterpret_cast<u8*>(&k_licensee)))
 		{
-			npdrmkeys.devKlic = k_licensee;
+			npdrmkeys.install_decryption_key(k_licensee);
 		}
 		else
 		{
 			sceNp.error(u8"npDrmIsAvailable(): Failed to verify sce file “%s”", enc_drm_path);
-			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
+			return {SCE_NP_DRM_ERROR_NO_ENTITLEMENT, enc_drm_path};
 		}
 	}
 	else if (magic == "NPD\0"_u32)
@@ -504,21 +511,34 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		// edata / sdata files
 
 		std::string contentID;
+		u32 license_type = 0;
 
-		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, reinterpret_cast<u8*>(&k_licensee), &contentID))
+		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path, reinterpret_cast<u8*>(&k_licensee), &contentID, &license_type))
 		{
-			const std::string rap_file = rpcs3::utils::get_rap_file_path(contentID);
-			npdrmkeys.devKlic = k_licensee;
-
-			if (fs::is_file(rap_file))
-				npdrmkeys.rifKey = GetEdatRifKeyFromRapFile(fs::file{rap_file});
+			// Check if RAP-free
+			if (license_type == 3)
+			{
+				npdrmkeys.install_decryption_key(k_licensee);
+			}
 			else
-				sceNp.warning(u8"npDrmIsAvailable(): Rap file not found: “%s”", rap_file.c_str());
+			{
+				const std::string rap_file = rpcs3::utils::get_rap_file_path(contentID);
+
+				if (fs::file rap_fd{rap_file}; rap_fd && rap_fd.size() >= sizeof(u128))
+				{
+					npdrmkeys.install_decryption_key(GetEdatRifKeyFromRapFile(rap_fd));
+				}
+				else
+				{
+					sceNp.error(u8"npDrmIsAvailable(): Rap file not found: “%s”", rap_file);
+					return {SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND, enc_drm_path};
+				}
+			}
 		}
 		else
 		{
 			sceNp.error(u8"npDrmIsAvailable(): Failed to verify npd file “%s”", enc_drm_path);
-			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
+			return {SCE_NP_DRM_ERROR_NO_ENTITLEMENT, enc_drm_path};
 		}
 	}
 	else
@@ -526,6 +546,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		// for now assume its just unencrypted
 		sceNp.notice(u8"npDrmIsAvailable(): Assuming npdrm file is unencrypted at “%s”", enc_drm_path);
 	}
+
 	return CELL_OK;
 }
 
@@ -543,52 +564,34 @@ error_code sceNpDrmIsAvailable2(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
-error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
+error_code npDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
-	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=*0x%x)", content_id);
-
 	if (!content_id)
 	{
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
-	const std::string rap_file = rpcs3::utils::get_rap_file_path(content_str);
+	sceNp.warning("npDrmVerifyUpgradeLicense(): content_id='%s'", content_id);
 
-	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense(): content_id=“%s”", content_id);
-
-	if (fs::stat_t s{}; !fs::stat(rap_file, s) || s.is_directory || s.size < 0x10)
-	{
-		// Game hasn't been purchased therefore no RAP file present
+	if (!rpcs3::utils::verify_c00_unlock_edat(content_str))
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
-	}
 
-	// Game has been purchased and there's a RAP file present
 	return CELL_OK;
+}
+
+error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
+{
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=*0x%x)", content_id);
+
+	return npDrmVerifyUpgradeLicense(content_id);
 }
 
 error_code sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
 	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=*0x%x)", content_id);
 
-	if (!content_id)
-	{
-		return SCE_NP_DRM_ERROR_INVALID_PARAM;
-	}
-
-	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
-	const std::string rap_file = rpcs3::utils::get_rap_file_path(content_str);
-
-	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense2(): content_id=“%s”", content_id);
-
-	if (fs::stat_t s{}; !fs::stat(rap_file, s) || s.is_directory || s.size < 0x10)
-	{
-		// Game hasn't been purchased therefore no RAP file present
-		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
-	}
-
-	// Game has been purchased and there's a RAP file present
-	return CELL_OK;
+	return npDrmVerifyUpgradeLicense(content_id);
 }
 
 error_code sceNpDrmExecuteGamePurchase()
@@ -647,13 +650,18 @@ error_code sceNpDrmProcessExitSpawn2(ppu_thread& ppu, vm::cptr<u8> klicensee, vm
 
 error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.warning("sceNpBasicRegisterHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
+	sceNp.warning("sceNpBasicRegisterHandler(context=*0x%x(%s), handler=*0x%x, arg=*0x%x)", context, context ? static_cast<const char *>(context->data) : "", handler, arg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
 	if (!context || !handler)
@@ -661,21 +669,29 @@ error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm:
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	nph.basic_handler = handler;
-	nph.basic_handler_arg = arg;
+	memcpy(&nph.basic_handler.context, context.get_ptr(), sizeof(nph.basic_handler.context));
+	nph.basic_handler.handler_func = handler;
+	nph.basic_handler.handler_arg = arg;
+	nph.basic_handler.registered = true;
+	nph.basic_handler.context_sensitive = false;
 
 	return CELL_OK;
 }
 
 error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunicationId> context, vm::ptr<SceNpBasicEventHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
+	sceNp.notice("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
 
 	if (!context || !handler)
@@ -683,33 +699,57 @@ error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunication
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	memcpy(&nph.basic_handler.context, context.get_ptr(), sizeof(nph.basic_handler.context));
+	nph.basic_handler.handler_func = handler;
+	nph.basic_handler.handler_arg = arg;
+	nph.basic_handler.registered = true;
+	nph.basic_handler.context_sensitive = true;
+
 	return CELL_OK;
 }
 
 error_code sceNpBasicUnregisterHandler()
 {
-	sceNp.todo("sceNpBasicUnregisterHandler()");
+	sceNp.notice("sceNpBasicUnregisterHandler()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	nph.basic_handler.registered = false;
 
 	return CELL_OK;
 }
 
-error_code sceNpBasicSetPresence(vm::cptr<void> data, u64 size)
+error_code sceNpBasicSetPresence(vm::cptr<u8> data, u32 size)
 {
 	sceNp.todo("sceNpBasicSetPresence(data=*0x%x, size=%d)", data, size);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	// TODO: Correct but causes issues atm(breaks bomberman ultra)
+	// if (!data || !data[0])
+	// {
+	// 	return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	// }
 
 	if (size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 	{
@@ -723,11 +763,16 @@ error_code sceNpBasicSetPresenceDetails(vm::cptr<SceNpBasicPresenceDetails> pres
 {
 	sceNp.todo("sceNpBasicSetPresenceDetails(pres=*0x%x, options=0x%x)", pres, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!pres || options > SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS)
@@ -747,11 +792,16 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 {
 	sceNp.todo("sceNpBasicSetPresenceDetails2(pres=*0x%x, options=0x%x)", pres, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!pres || options > SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS)
@@ -767,15 +817,20 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 	return CELL_OK;
 }
 
-error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u64 size)
+error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u32 size)
 {
 	sceNp.todo("sceNpBasicSendMessage(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!to || to->handle.data[0] == '\0' || !data || !size)
@@ -793,19 +848,38 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u64 
 
 error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpBasicSendMessageGui(msg=*0x%x, containerId=%d)", msg, containerId);
+	sceNp.warning("sceNpBasicSendMessageGui(msg=*0x%x, containerId=%d)", msg, containerId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (msg)
+	{
+		sceNp.notice("sceNpBasicSendMessageGui: msgId: %d, mainType: %d, subType: %d, msgFeatures: %d, count: %d", msg->msgId, msg->mainType, msg->subType, msg->msgFeatures, msg->count);
+		for (u32 i = 0; i < msg->count; i++)
+		{
+			sceNp.trace("sceNpBasicSendMessageGui: NpId[%d] = %s", i, static_cast<char*>(&msg->npids[i].handle.data[0]));
+		}
+		sceNp.notice("sceNpBasicSendMessageGui: subject: %s", msg->subject);
+		sceNp.notice("sceNpBasicSendMessageGui: body: %s", msg->body);
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!msg || msg->count > SCE_NP_BASIC_SEND_MESSAGE_MAX_RECIPIENTS || msg->npids.handle.data[0] == '\0' || !(msg->msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_ALL_FEATURES))
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	if (!msg || msg->count > SCE_NP_BASIC_SEND_MESSAGE_MAX_RECIPIENTS || (msg->msgFeatures & ~SCE_NP_BASIC_MESSAGE_FEATURES_ALL_FEATURES) ||
+		msg->mainType > SCE_NP_BASIC_MESSAGE_MAIN_TYPE_URL_ATTACHMENT || msg->msgId != 0ull)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
 
 	if (msg->size > SCE_NP_BASIC_MAX_MESSAGE_SIZE)
 	{
@@ -817,18 +891,99 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
 
+	// Prepare message data
+	message_data msg_data = {
+		.commId      = nph.basic_handler.context,
+		.msgId       = msg->msgId,
+		.mainType    = msg->mainType,
+		.subType     = msg->subType,
+		.msgFeatures = msg->msgFeatures};
+	std::set<std::string> npids;
+
+	for (u32 i = 0; i < msg->count; i++)
+	{
+		npids.insert(std::string(msg->npids[i].handle.data));
+	}
+
+	if (msg->subject)
+	{
+		msg_data.subject = std::string(msg->subject.get_ptr());
+	}
+
+	if (msg->body)
+	{
+		msg_data.body = std::string(msg->body.get_ptr());
+	}
+
+	if (msg->size)
+	{
+		msg_data.data.assign(msg->data.get_ptr(), msg->data.get_ptr() + msg->size);
+	}
+
+	atomic_t<bool> wake_up = false;
+	bool result            = false;
+
+	input::SetIntercepted(true);
+
+	Emu.CallAfter([=, &wake_up, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
+		{
+			auto send_dlg = Emu.GetCallbacks().get_sendmessage_dialog();
+			result  = send_dlg->Exec(msg_data, npids);
+			wake_up = true;
+			wake_up.notify_one();
+		});
+
+	while (!wake_up && !Emu.IsStopped())
+	{
+		thread_ctrl::wait_on(wake_up, false);
+	}
+
+	input::SetIntercepted(false);
+
+	s32 callback_result = result ? 0 : -1;
+	s32 event           = 0;
+
+	switch (msg->mainType)
+	{
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
+		event = SCE_NP_BASIC_EVENT_SEND_ATTACHMENT_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL:
+		event = SCE_NP_BASIC_EVENT_SEND_MESSAGE_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_ADD_FRIEND:
+		event = SCE_NP_BASIC_EVENT_ADD_FRIEND_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
+		event = SCE_NP_BASIC_EVENT_SEND_INVITATION_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
+		event = SCE_NP_BASIC_EVENT_SEND_CUSTOM_DATA_RESULT;
+		break;
+	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_URL_ATTACHMENT:
+		event = SCE_NP_BASIC_EVENT_SEND_URL_ATTACHMENT_RESULT;
+		break;
+	}
+
+	nph.send_basic_event(event, callback_result, 0);
+
 	return CELL_OK;
 }
 
-error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> subject, vm::cptr<char> body, vm::cptr<char> data, u64 size, sys_memory_container_t containerId)
+error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> subject, vm::cptr<char> body, vm::cptr<char> data, u32 size, sys_memory_container_t containerId)
 {
 	sceNp.todo("sceNpBasicSendMessageAttachment(to=*0x%x, subject=%s, body=%s, data=%s, size=%d, containerId=%d)", to, subject, body, data, size, containerId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!to || to->handle.data[0] == '\0' || !data || !size)
@@ -836,7 +991,9 @@ error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> 
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (strlen(subject.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX || strlen(body.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX)
+	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
+
+	if (strlen(subject.get_ptr()) > SCE_NP_BASIC_SUBJECT_CHARACTER_MAX || strlen(body.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
@@ -853,25 +1010,35 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 {
 	sceNp.todo("sceNpBasicRecvMessageAttachment(containerId=%d)", containerId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	return CELL_OK;
 }
 
-error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm::ptr<u64> size)
+error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
-	sceNp.todo("sceNpBasicRecvMessageAttachmentLoad(id=%d, buffer=*0x%x, size=*0x%x)", id, buffer, size);
+	sceNp.warning("sceNpBasicRecvMessageAttachmentLoad(id=%d, buffer=*0x%x, size=*0x%x)", id, buffer, size);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!buffer || !size)
@@ -879,9 +1046,23 @@ error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm:
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (id > SCE_NP_BASIC_SELECTED_MESSAGE_DATA)
+	const auto opt_msg = nph.get_message(id);
+	if (!opt_msg)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_DATA_ID;
+	}
+
+	const auto msg_pair = opt_msg.value();
+	const auto msg = msg_pair->second;
+
+	const u32 orig_size = *size;
+	const u32 size_to_copy = std::min(static_cast<u32>(msg.data.size()), orig_size);
+	memcpy(buffer.get_ptr(), msg.data.data(), size_to_copy);
+
+	*size = size_to_copy;
+	if (size_to_copy < msg.data.size())
+	{
+		return SCE_NP_BASIC_ERROR_DATA_LOST;
 	}
 
 	return CELL_OK;
@@ -889,19 +1070,74 @@ error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm:
 
 error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpBasicRecvMessageCustom(mainType=%d, recvOptions=%d, containerId=%d)", mainType, recvOptions, containerId);
+	sceNp.warning("sceNpBasicRecvMessageCustom(mainType=%d, recvOptions=%d, containerId=%d)", mainType, recvOptions, containerId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!(recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_ALL_OPTIONS))
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED
+
+	if ((recvOptions & ~SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_ALL_OPTIONS))
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	atomic_t<bool> wake_up = false;
+	bool result            = false;
+
+	input::SetIntercepted(true);
+
+	SceNpBasicMessageRecvAction recv_result;
+	u64 chosen_msg_id;
+
+	Emu.CallAfter([=, &wake_up, &result, &recv_result, &chosen_msg_id]()
+		{
+			auto recv_dlg          = Emu.GetCallbacks().get_recvmessage_dialog();
+			result  = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
+			wake_up = true;
+			wake_up.notify_one();
+		});
+
+	while (!wake_up && !Emu.IsStopped())
+	{
+		thread_ctrl::wait_on(wake_up, false);
+	}
+
+	input::SetIntercepted(false);
+
+	if (!result)
+	{
+		return SCE_NP_BASIC_ERROR_CANCEL;
+	}
+
+	const auto msg_pair = nph.get_message(chosen_msg_id).value();
+	const auto& msg     = msg_pair->second;
+
+	const u32 event_to_send = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT : SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
+	np::basic_event to_add{};
+	to_add.event = event_to_send;
+	strcpy_trunc(to_add.from.userId.handle.data, msg_pair->first);
+	strcpy_trunc(to_add.from.name.data, msg_pair->first);
+	to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
+	SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
+	att_data->flags                            = 0; // ?
+	att_data->msgId                            = chosen_msg_id;
+	att_data->data.id                          = static_cast<u32>(chosen_msg_id);
+	att_data->data.size                        = static_cast<u32>(msg.data.size());
+	att_data->userAction                       = recv_result;
+	att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
+
+	nph.queue_basic_event(to_add);
+	nph.send_basic_event(event_to_send, 0, 0);
 
 	return CELL_OK;
 }
@@ -910,11 +1146,16 @@ error_code sceNpBasicMarkMessageAsUsed(SceNpBasicMessageId msgId)
 {
 	sceNp.todo("sceNpBasicMarkMessageAsUsed(msgId=%d)", msgId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	//if (!msgId > ?)
@@ -929,12 +1170,19 @@ error_code sceNpBasicAbortGui()
 {
 	sceNp.todo("sceNpBasicAbortGui()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	// TODO: abort GUI interaction
 
 	return CELL_OK;
 }
@@ -943,17 +1191,24 @@ error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, s
 {
 	sceNp.todo("sceNpBasicAddFriend(contact=*0x%x, body=%s, containerId=%d)", contact, body, containerId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!contact || contact->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
 
 	if (strlen(body.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX)
 	{
@@ -972,7 +1227,7 @@ error_code sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetFriendListEntryCount(count=*0x%x)", count);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -990,8 +1245,7 @@ error_code sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}
 
-	// TODO: Check if there are any friends
-	*count = 0;
+	*count = nph.get_num_friends();
 
 	return CELL_OK;
 }
@@ -1000,7 +1254,7 @@ error_code sceNpBasicGetFriendListEntry(u32 index, vm::ptr<SceNpId> npid)
 {
 	sceNp.todo("sceNpBasicGetFriendListEntry(index=%d, npid=*0x%x)", index, npid);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -1013,11 +1267,19 @@ error_code sceNpBasicGetFriendListEntry(u32 index, vm::ptr<SceNpId> npid)
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_ERROR_ID_NOT_FOUND;
+		return SCE_NP_BASIC_ERROR_BUSY;
 	}
+
+	const auto [error, res_npid] = nph.get_friend_by_index(index);
+
+	if (error)
+	{
+		return error;
+	}
+
+	memcpy(npid.get_ptr(), &res_npid.value(), sizeof(SceNpId));
 
 	return CELL_OK;
 }
@@ -1026,14 +1288,19 @@ error_code sceNpBasicGetFriendPresenceByIndex(u32 index, vm::ptr<SceNpUserInfo> 
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByIndex(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (!pres)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!user || !pres)
+	if (!user)
 	{
 		// TODO: check index and (options & SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS) depending on fw
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1046,14 +1313,19 @@ error_code sceNpBasicGetFriendPresenceByIndex2(u32 index, vm::ptr<SceNpUserInfo>
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByIndex2(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (!pres)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!user || !pres)
+	if (!user)
 	{
 		// TODO: check index and (options & SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS) depending on fw
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1066,14 +1338,19 @@ error_code sceNpBasicGetFriendPresenceByNpId(vm::cptr<SceNpId> npid, vm::ptr<Sce
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByNpId(npid=*0x%x, pres=*0x%x, options=%d)", npid, pres, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!pres)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npid || !pres)
+	if (!npid)
 	{
 		// TODO: check (options & SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS) depending on fw
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1086,14 +1363,19 @@ error_code sceNpBasicGetFriendPresenceByNpId2(vm::cptr<SceNpId> npid, vm::ptr<Sc
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByNpId2(npid=*0x%x, pres=*0x%x, options=%d)", npid, pres, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!pres)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npid || !pres)
+	if (!npid)
 	{
 		// TODO: check (options & SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS) depending on fw
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1106,7 +1388,7 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> des
 {
 	sceNp.todo("sceNpBasicAddPlayersHistory(npid=*0x%x, description=*0x%x)", npid, description);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -1130,7 +1412,7 @@ error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, 
 {
 	sceNp.todo("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -1179,11 +1461,21 @@ error_code sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count
 {
 	sceNp.todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count=*0x%x)", options, count);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (options > SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!count)
@@ -1207,11 +1499,21 @@ error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceN
 {
 	sceNp.warning("sceNpBasicGetPlayersHistoryEntry(options=%d, index=%d, npid=*0x%x)", options, index, npid);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (options > SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!npid)
@@ -1233,11 +1535,16 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 {
 	sceNp.warning("sceNpBasicAddBlockListEntry(npid=*0x%x)", npid);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!npid || npid->handle.data[0] == '\0')
@@ -1257,7 +1564,7 @@ error_code sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
 {
 	sceNp.warning("sceNpBasicGetBlockListEntryCount(count=*0x%x)", count);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -1276,7 +1583,7 @@ error_code sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
 	}
 
 	// TODO: Check if there are block lists
-	*count = 0;
+	*count = nph.get_num_blocks();
 
 	return CELL_OK;
 }
@@ -1285,7 +1592,7 @@ error_code sceNpBasicGetBlockListEntry(u32 index, vm::ptr<SceNpId> npid)
 {
 	sceNp.todo("sceNpBasicGetBlockListEntry(index=%d, npid=*0x%x)", index, npid);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -1311,11 +1618,16 @@ error_code sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetMessageAttachmentEntryCount(count=*0x%x)", count);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!count)
@@ -1339,11 +1651,16 @@ error_code sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo>
 {
 	sceNp.todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from=*0x%x)", index, from);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!from)
@@ -1365,17 +1682,27 @@ error_code sceNpBasicGetCustomInvitationEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetCustomInvitationEntryCount(count=*0x%x)", count);
 
-	if (!count)
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_init)
 	{
-		return SCE_NP_AUTH_EINVAL;
+		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
 
-	// TODO: Find the correct test which returns SCE_NP_AUTH_ESRCH
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_AUTH_ESRCH;
+		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}
 
 	// TODO: Check if there are custom invitations
@@ -1388,18 +1715,28 @@ error_code sceNpBasicGetCustomInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> 
 {
 	sceNp.todo("sceNpBasicGetCustomInvitationEntry(index=%d, from=*0x%x)", index, from);
 
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_init)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!from)
 	{
 		// TODO: check index
-		return SCE_NP_AUTH_EINVAL;
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
-
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
 	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_AUTH_ESRCH;
+		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}
 
 	return CELL_OK;
@@ -1409,11 +1746,16 @@ error_code sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetMatchingInvitationEntryCount(count=*0x%x)", count);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!count)
@@ -1437,11 +1779,16 @@ error_code sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo
 {
 	sceNp.todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from=*0x%x)", index, from);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!from)
@@ -1463,11 +1810,16 @@ error_code sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetClanMessageEntryCount(count=*0x%x)", count);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!count)
@@ -1491,11 +1843,16 @@ error_code sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.todo("sceNpBasicGetClanMessageEntry(index=%d, from=*0x%x)", index, from);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!from)
@@ -1517,7 +1874,13 @@ error_code sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetMessageEntryCount(type=%d, count=*0x%x)", type, count);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	// TODO: verify this check and its location
+	if (type > SCE_NP_BASIC_MESSAGE_INFO_TYPE_BOOTABLE_CUSTOM_DATA_MESSAGE)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -1545,7 +1908,13 @@ error_code sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo>
 {
 	sceNp.todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from=*0x%x)", type, index, from);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	// TODO: verify this check and its location
+	if (type > SCE_NP_BASIC_MESSAGE_INFO_TYPE_BOOTABLE_CUSTOM_DATA_MESSAGE)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -1571,11 +1940,16 @@ error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, v
 {
 	sceNp.warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!event || !from || !data || !size)
@@ -1583,10 +1957,9 @@ error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, v
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Check for other error and pass other events
 	//*event = SCE_NP_BASIC_EVENT_OFFLINE; // This event only indicates a contact is offline, not the current status of the connection
 
-	return not_an_error(SCE_NP_BASIC_ERROR_NO_EVENT);
+	return nph.get_basic_event(event, from, data, size);
 }
 
 error_code sceNpCommerceCreateCtx(u32 version, vm::ptr<SceNpId> npId, vm::ptr<SceNpCommerceHandler> handler, vm::ptr<void> arg, vm::ptr<u32> ctx_id)
@@ -1807,16 +2180,34 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 {
 	sceNp.todo("sceNpCustomMenuRegisterActions(menu=*0x%x, handler=*0x%x, userArg=*0x%x, options=0x%x)", menu, handler, userArg, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!menu || !handler)
+	if (!menu || !handler) // TODO: handler check might come later
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (menu->numActions > SCE_NP_CUSTOM_MENU_ACTION_ITEMS_TOTAL_MAX)
+	{
+		return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
+	}
+
+	for (u32 i = 0; i < menu->numActions; i++)
+	{
+		if (!menu->actions[i].name)
+		{
+			return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
+		}
+
+		if (!memchr(menu->actions[i].name.get_ptr(), '\0', SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX))
+		{
+			return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
+		}
 	}
 
 	return CELL_OK;
@@ -1826,12 +2217,14 @@ error_code sceNpCustomMenuActionSetActivation(vm::cptr<SceNpCustomMenuIndexArray
 {
 	sceNp.todo("sceNpCustomMenuActionSetActivation(array=*0x%x, options=0x%x)", array, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
+
+	// TODO: SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED
 
 	if (!array)
 	{
@@ -1845,22 +2238,23 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 {
 	sceNp.todo("sceNpCustomMenuRegisterExceptionList(items=*0x%x, numItems=%d, options=0x%x)", items, numItems, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
 
+	// TODO: SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED
+
+	if (numItems > SCE_NP_CUSTOM_MENU_EXCEPTION_ITEMS_MAX)
+	{
+		return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
+	}
+
 	if (!items)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (numItems > SCE_NP_CUSTOM_MENU_ACTION_ITEMS_MAX)
-	{
-		// TODO: what about SCE_NP_CUSTOM_MENU_ACTION_ITEMS_TOTAL_MAX
-		return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
 	}
 
 	return CELL_OK;
@@ -1870,12 +2264,14 @@ error_code sceNpFriendlist(vm::ptr<SceNpFriendlistResultHandler> resultHandler, 
 {
 	sceNp.warning("sceNpFriendlist(resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", resultHandler, userArg, containerId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
-		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
+		return SCE_NP_FRIENDLIST_ERROR_NOT_INITIALIZED;
 	}
+
+	// TODO: SCE_NP_FRIENDLIST_ERROR_BUSY
 
 	if (!resultHandler)
 	{
@@ -1889,12 +2285,14 @@ error_code sceNpFriendlistCustom(SceNpFriendlistCustomOptions options, vm::ptr<S
 {
 	sceNp.warning("sceNpFriendlistCustom(options=0x%x, resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", options, resultHandler, userArg, containerId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
-		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
+		return SCE_NP_FRIENDLIST_ERROR_NOT_INITIALIZED;
 	}
+
+	// TODO: SCE_NP_FRIENDLIST_ERROR_BUSY
 
 	if (!resultHandler)
 	{
@@ -1908,12 +2306,14 @@ error_code sceNpFriendlistAbortGui()
 {
 	sceNp.todo("sceNpFriendlistAbortGui()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
-		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
+		return SCE_NP_FRIENDLIST_ERROR_NOT_INITIALIZED;
 	}
+
+	// TODO: abort friendlist GUI interaction
 
 	return CELL_OK;
 }
@@ -1922,7 +2322,7 @@ error_code sceNpLookupInit()
 {
 	sceNp.warning("sceNpLookupInit()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (nph.is_NP_Lookup_init)
 	{
@@ -1943,7 +2343,7 @@ error_code sceNpLookupTerm()
 {
 	sceNp.todo("sceNpLookupTerm()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -1964,7 +2364,7 @@ error_code sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicatio
 {
 	sceNp.warning("sceNpLookupCreateTitleCtx(communicationId=*0x%x(%s), selfNpId=0x%x)", communicationId, communicationId->data, selfNpId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -1983,7 +2383,7 @@ error_code sceNpLookupDestroyTitleCtx(s32 titleCtxId)
 {
 	sceNp.warning("sceNpLookupDestroyTitleCtx(titleCtxId=%d)", titleCtxId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2000,7 +2400,7 @@ error_code sceNpLookupCreateTransactionCtx(s32 titleCtxId)
 {
 	sceNp.warning("sceNpLookupCreateTransactionCtx(titleCtxId=%d)", titleCtxId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2019,7 +2419,7 @@ error_code sceNpLookupDestroyTransactionCtx(s32 transId)
 {
 	sceNp.warning("sceNpLookupDestroyTransactionCtx(transId=%d)", transId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2038,7 +2438,7 @@ error_code sceNpLookupSetTimeout(s32 ctxId, usecond_t timeout)
 {
 	sceNp.todo("sceNpLookupSetTimeout(ctxId=%d, timeout=%d)", ctxId, timeout);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2057,7 +2457,7 @@ error_code sceNpLookupAbortTransaction(s32 transId)
 {
 	sceNp.todo("sceNpLookupAbortTransaction(transId=%d)", transId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2071,7 +2471,7 @@ error_code sceNpLookupWaitAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNp.todo("sceNpLookupWaitAsync(transId=%d, result=%d)", transId, result);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2085,7 +2485,7 @@ error_code sceNpLookupPollAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNp.todo("sceNpLookupPollAsync(transId=%d, result=*0x%x)", transId, result);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2101,7 +2501,7 @@ error_code sceNpLookupNpId(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::pt
 {
 	sceNp.todo("sceNpLookupNpId(transId=%d, onlineId=*0x%x, npId=*0x%x, option=*0x%x)", transId, onlineId, npId, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2130,7 +2530,7 @@ error_code sceNpLookupNpIdAsync(s32 transId, vm::ptr<SceNpOnlineId> onlineId, vm
 {
 	sceNp.todo("sceNpLookupNpIdAsync(transId=%d, onlineId=*0x%x, npId=*0x%x, prio=%d, option=*0x%x)", transId, onlineId, npId, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2161,7 +2561,7 @@ error_code sceNpLookupUserProfile(s32 transId, vm::cptr<SceNpId> npId, vm::ptr<S
 	sceNp.todo("sceNpLookupUserProfile(transId=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImage=*0x%x, option=*0x%x)", transId, npId, userInfo, aboutMe,
 	    languages, countryCode, avatarImage, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2192,7 +2592,7 @@ error_code sceNpLookupUserProfileAsync(s32 transId, vm::cptr<SceNpId> npId, vm::
 	sceNp.todo("sceNpLookupUserProfile(transId=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImage=*0x%x, prio=%d, option=*0x%x)", transId, npId, userInfo,
 	    aboutMe, languages, countryCode, avatarImage, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2224,7 +2624,7 @@ error_code sceNpLookupUserProfileWithAvatarSize(s32 transId, s32 avatarSizeType,
 	           "avatarImageDataMaxSize=%d, avatarImageDataSize=*0x%x, option=*0x%x)",
 	    transId, avatarSizeType, npId, userInfo, aboutMe, languages, countryCode, avatarImageData, avatarImageDataMaxSize, avatarImageDataSize, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2257,7 +2657,7 @@ error_code sceNpLookupUserProfileWithAvatarSizeAsync(s32 transId, s32 avatarSize
 	           "avatarImageDataMaxSize=%d, avatarImageDataSize=*0x%x, prio=%d, option=*0x%x)",
 	    transId, avatarSizeType, npId, userInfo, aboutMe, languages, countryCode, avatarImageData, avatarImageDataMaxSize, avatarImageDataSize, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2286,7 +2686,7 @@ error_code sceNpLookupAvatarImage(s32 transId, vm::ptr<SceNpAvatarUrl> avatarUrl
 {
 	sceNp.todo("sceNpLookupAvatarImage(transId=%d, avatarUrl=*0x%x, avatarImage=*0x%x, option=*0x%x)", transId, avatarUrl, avatarImage, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2315,7 +2715,7 @@ error_code sceNpLookupAvatarImageAsync(s32 transId, vm::ptr<SceNpAvatarUrl> avat
 {
 	sceNp.todo("sceNpLookupAvatarImageAsync(transId=%d, avatarUrl=*0x%x, avatarImage=*0x%x, prio=%d, option=*0x%x)", transId, avatarUrl, avatarImage, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2344,7 +2744,7 @@ error_code sceNpLookupTitleStorage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2358,7 +2758,7 @@ error_code sceNpLookupTitleStorageAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2372,7 +2772,7 @@ error_code sceNpLookupTitleSmallStorage(s32 transId, vm::ptr<void> data, u64 max
 {
 	sceNp.todo("sceNpLookupTitleSmallStorage(transId=%d, data=*0x%x, maxSize=%d, contentLength=*0x%x, option=*0x%x)", transId, data, maxSize, contentLength, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2406,7 +2806,7 @@ error_code sceNpLookupTitleSmallStorageAsync(s32 transId, vm::ptr<void> data, u6
 {
 	sceNp.todo("sceNpLookupTitleSmallStorageAsync(transId=%d, data=*0x%x, maxSize=%d, contentLength=*0x%x, prio=%d, option=*0x%x)", transId, data, maxSize, contentLength, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
 	{
@@ -2444,7 +2844,7 @@ error_code sceNpManagerRegisterCallback(vm::ptr<SceNpManagerCallback> callback, 
 {
 	sceNp.warning("sceNpManagerRegisterCallback(callback=*0x%x, arg=*0x%x)", callback, arg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2466,7 +2866,7 @@ error_code sceNpManagerUnregisterCallback()
 {
 	sceNp.warning("sceNpManagerUnregisterCallback()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2482,7 +2882,7 @@ error_code sceNpManagerGetStatus(vm::ptr<s32> status)
 {
 	sceNp.trace("sceNpManagerGetStatus(status=*0x%x)", status);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2503,7 +2903,7 @@ error_code sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 {
 	sceNp.warning("sceNpManagerGetNetworkTime(pTick=*0x%x)", pTick);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2545,7 +2945,7 @@ error_code sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 {
 	sceNp.warning("sceNpManagerGetOnlineId(onlineId=*0x%x)", onlineId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2576,7 +2976,7 @@ error_code sceNpManagerGetNpId(ppu_thread&, vm::ptr<SceNpId> npId)
 {
 	sceNp.warning("sceNpManagerGetNpId(npId=*0x%x)", npId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	// if (!nph.is_NP_init)
 	// {
@@ -2607,7 +3007,7 @@ error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 {
 	sceNp.warning("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2638,7 +3038,7 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 {
 	sceNp.warning("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2669,7 +3069,7 @@ error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 {
 	sceNp.warning("sceNpManagerGetMyLanguages(myLanguages=*0x%x)", myLanguages);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2698,7 +3098,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 {
 	sceNp.warning("sceNpManagerGetAccountRegion(countryCode=*0x%x, language=*0x%x)", countryCode, language);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2733,7 +3133,7 @@ error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 {
 	sceNp.warning("sceNpManagerGetAccountAge(age=*0x%x)", age);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2764,7 +3164,7 @@ error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s
 {
 	sceNp.warning("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2797,7 +3197,7 @@ error_code sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 {
 	sceNp.trace("sceNpManagerGetChatRestrictionFlag(isRestricted=*0x%x)", isRestricted);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2829,7 +3229,7 @@ error_code sceNpManagerGetCachedInfo(CellSysutilUserId userId, vm::ptr<SceNpMana
 {
 	sceNp.todo("sceNpManagerGetCachedInfo(userId=%d, param=*0x%x)", userId, param);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2844,17 +3244,18 @@ error_code sceNpManagerGetCachedInfo(CellSysutilUserId userId, vm::ptr<SceNpMana
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetPsHandle()
+error_code sceNpManagerGetPsHandle(vm::ptr<SceNpOnlineId> onlineId)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
-	return CELL_OK;
+	sceNp.warning("sceNpManagerGetPsHandle(onlineId=*0x%x)", onlineId);
+
+	return sceNpManagerGetOnlineId(onlineId);
 }
 
 error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serviceId, vm::cptr<void> cookie, u32 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
 {
 	sceNp.error("sceNpManagerRequestTicket(npId=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)", npId, serviceId, cookie, cookieSize, entitlementId, consumedCount);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2887,7 +3288,7 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 	sceNp.todo("sceNpManagerRequestTicket2(npId=*0x%x, version=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)", npId, version, serviceId, cookie, cookieSize,
 	    entitlementId, consumedCount);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2918,7 +3319,7 @@ error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 {
 	sceNp.error("sceNpManagerGetTicket(buffer=*0x%x, bufferSize=*0x%x)", buffer, bufferSize);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2931,10 +3332,10 @@ error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 	}
 
 	const auto& ticket = nph.get_ticket();
+	*bufferSize = static_cast<u32>(ticket.size());
 
 	if (!buffer)
 	{
-		*bufferSize = static_cast<u32>(ticket.size());
 		return CELL_OK;
 	}
 
@@ -2952,7 +3353,7 @@ error_code sceNpManagerGetTicketParam(s32 paramId, vm::ptr<SceNpTicketParam> par
 {
 	sceNp.todo("sceNpManagerGetTicketParam(paramId=%d, param=*0x%x)", paramId, param);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2972,7 +3373,7 @@ error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdLis
 {
 	sceNp.todo("sceNpManagerGetEntitlementIdList(entIdList=*0x%x, entIdListNum=%d)", entIdList, entIdListNum);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -2986,7 +3387,7 @@ error_code sceNpManagerGetEntitlementById(vm::cptr<char> entId, vm::ptr<SceNpEnt
 {
 	sceNp.todo("sceNpManagerGetEntitlementById(entId=%s, ent=*0x%x)", entId, ent);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -3011,7 +3412,7 @@ error_code sceNpManagerSubSignin(CellSysutilUserId userId, vm::ptr<SceNpManagerS
 {
 	sceNp.todo("sceNpManagerSubSignin(userId=%d, cb_func=*0x%x, cb_arg=*0x%x, flag=%d)", userId, cb_func, cb_arg, flag);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -3031,7 +3432,7 @@ error_code sceNpManagerSubSignout(vm::ptr<SceNpId> npId)
 {
 	sceNp.todo("sceNpManagerSubSignout(npId=*0x%x)", npId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -3205,7 +3606,7 @@ error_code sceNpProfileCallGui(vm::cptr<SceNpId> npid, vm::ptr<SceNpProfileResul
 {
 	sceNp.todo("sceNpProfileCallGui(npid=*0x%x, handler=*0x%x, userArg=*0x%x, options=0x%x)", npid, handler, userArg, options);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -3224,7 +3625,7 @@ error_code sceNpProfileAbortGui()
 {
 	sceNp.todo("sceNpProfileAbortGui()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -3238,7 +3639,7 @@ error_code sceNpScoreInit()
 {
 	sceNp.warning("sceNpScoreInit()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (nph.is_NP_Score_init)
 	{
@@ -3259,7 +3660,7 @@ error_code sceNpScoreTerm()
 {
 	sceNp.warning("sceNpScoreTerm()");
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3280,7 +3681,7 @@ error_code sceNpScoreCreateTitleCtx(vm::cptr<SceNpCommunicationId> communication
 {
 	sceNp.todo("sceNpScoreCreateTitleCtx(communicationId=*0x%x, passphrase=*0x%x, selfNpId=*0x%x)", communicationId, passphrase, selfNpId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3299,7 +3700,7 @@ error_code sceNpScoreDestroyTitleCtx(s32 titleCtxId)
 {
 	sceNp.todo("sceNpScoreDestroyTitleCtx(titleCtxId=%d)", titleCtxId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3316,7 +3717,7 @@ error_code sceNpScoreCreateTransactionCtx(s32 titleCtxId)
 {
 	sceNp.todo("sceNpScoreCreateTransactionCtx(titleCtxId=%d)", titleCtxId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3335,7 +3736,7 @@ error_code sceNpScoreDestroyTransactionCtx(s32 transId)
 {
 	sceNp.todo("sceNpScoreDestroyTransactionCtx(transId=%d)", transId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3349,7 +3750,7 @@ error_code sceNpScoreSetTimeout(s32 ctxId, usecond_t timeout)
 {
 	sceNp.todo("sceNpScoreSetTimeout(ctxId=%d, timeout=%d)", ctxId, timeout);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3368,7 +3769,7 @@ error_code sceNpScoreSetPlayerCharacterId(s32 ctxId, SceNpScorePcId pcId)
 {
 	sceNp.todo("sceNpScoreSetPlayerCharacterId(ctxId=%d, pcId=%d)", ctxId, pcId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3387,7 +3788,7 @@ error_code sceNpScoreWaitAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNp.todo("sceNpScoreWaitAsync(transId=%d, result=*0x%x)", transId, result);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3406,7 +3807,7 @@ error_code sceNpScorePollAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNp.todo("sceNpScorePollAsync(transId=%d, result=*0x%x)", transId, result);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3425,7 +3826,7 @@ error_code sceNpScoreGetBoardInfo(s32 transId, SceNpScoreBoardId boardId, vm::pt
 {
 	sceNp.todo("sceNpScoreGetBoardInfo(transId=%d, boardId=%d, boardInfo=*0x%x, option=*0x%x)", transId, boardId, boardInfo, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3454,7 +3855,7 @@ error_code sceNpScoreGetBoardInfoAsync(s32 transId, SceNpScoreBoardId boardId, v
 {
 	sceNp.todo("sceNpScoreGetBoardInfo(transId=%d, boardId=%d, boardInfo=*0x%x, prio=%d, option=*0x%x)", transId, boardId, boardInfo, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3475,7 +3876,7 @@ error_code sceNpScoreRecordScore(s32 transId, SceNpScoreBoardId boardId, SceNpSc
 	sceNp.todo(
 	    "sceNpScoreRecordScore(transId=%d, boardId=%d, score=%d, scoreComment=*0x%x, gameInfo=*0x%x, tmpRank=*0x%x, option=*0x%x)", transId, boardId, score, scoreComment, gameInfo, tmpRank, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3501,7 +3902,7 @@ error_code sceNpScoreRecordScoreAsync(s32 transId, SceNpScoreBoardId boardId, Sc
 	sceNp.todo("sceNpScoreRecordScoreAsync(transId=%d, boardId=%d, score=%d, scoreComment=*0x%x, gameInfo=*0x%x, tmpRank=*0x%x, prio=%d, option=*0x%x)", transId, boardId, score, scoreComment, gameInfo,
 	    tmpRank, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3520,7 +3921,7 @@ error_code sceNpScoreRecordGameData(s32 transId, SceNpScoreBoardId boardId, SceN
 {
 	sceNp.todo("sceNpScoreRecordGameData(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, score, totalSize, sendSize, data, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3550,7 +3951,7 @@ error_code sceNpScoreRecordGameDataAsync(s32 transId, SceNpScoreBoardId boardId,
 	sceNp.todo(
 	    "sceNpScoreRecordGameDataAsync(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, score, totalSize, sendSize, data, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3569,7 +3970,7 @@ error_code sceNpScoreGetGameData(s32 transId, SceNpScoreBoardId boardId, vm::cpt
 {
 	sceNp.todo("sceNpScoreGetGameDataAsync(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, npId, totalSize, recvSize, data, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3599,7 +4000,7 @@ error_code sceNpScoreGetGameDataAsync(s32 transId, SceNpScoreBoardId boardId, vm
 	sceNp.todo("sceNpScoreGetGameDataAsync(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, npId, totalSize, recvSize, data, prio,
 	    option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3622,7 +4023,7 @@ error_code sceNpScoreGetRankingByNpId(s32 transId, SceNpScoreBoardId boardId, vm
 	           "infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 	    transId, boardId, npIdArray, npIdArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3660,7 +4061,7 @@ error_code sceNpScoreGetRankingByNpIdAsync(s32 transId, SceNpScoreBoardId boardI
 	           "infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 	    transId, boardId, npIdArray, npIdArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3688,7 +4089,7 @@ error_code sceNpScoreGetRankingByRange(s32 transId, SceNpScoreBoardId boardId, S
 	           "arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 	    transId, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3726,7 +4127,7 @@ error_code sceNpScoreGetRankingByRangeAsync(s32 transId, SceNpScoreBoardId board
 	           "infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 	    transId, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3753,7 +4154,7 @@ error_code sceNpScoreGetFriendsRanking(s32 transId, SceNpScoreBoardId boardId, s
 	           "arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 	    transId, boardId, includeSelf, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3781,7 +4182,7 @@ error_code sceNpScoreGetFriendsRankingAsync(s32 transId, SceNpScoreBoardId board
 	           "arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 	    transId, boardId, includeSelf, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3805,7 +4206,7 @@ error_code sceNpScoreCensorComment(s32 transId, vm::cptr<char> comment, vm::ptr<
 {
 	sceNp.todo("sceNpScoreCensorComment(transId=%d, comment=%s, option=*0x%x)", transId, comment, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3835,7 +4236,7 @@ error_code sceNpScoreCensorCommentAsync(s32 transId, vm::cptr<char> comment, s32
 {
 	sceNp.todo("sceNpScoreCensorCommentAsync(transId=%d, comment=%s, prio=%d, option=*0x%x)", transId, comment, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3858,9 +4259,9 @@ error_code sceNpScoreCensorCommentAsync(s32 transId, vm::cptr<char> comment, s32
 
 error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
 {
-	sceNp.todo("sceNpScoreSanitizeComment(transId=%d, comment=%s, sanitizedComment=*0x%x, option=*0x%x)", transId, comment, sanitizedComment, option);
+	sceNp.warning("sceNpScoreSanitizeComment(transId=%d, comment=%s, sanitizedComment=*0x%x, option=*0x%x)", transId, comment, sanitizedComment, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3872,9 +4273,10 @@ error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::pt
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (strlen(comment.get_ptr()) > SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN || option) // option check at least until fw 4.71
+	const auto comment_len = strlen(comment.get_ptr());
+
+	if (comment_len > SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN || option) // option check at least until fw 4.71
 	{
-		// TODO: is SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN + 1 allowed ?
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
@@ -3883,6 +4285,9 @@ error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::pt
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
+	// TODO: send to server and get sanitized version back
+	memcpy(sanitizedComment.get_ptr(), comment.get_ptr(), comment_len + 1);
+
 	return CELL_OK;
 }
 
@@ -3890,7 +4295,7 @@ error_code sceNpScoreSanitizeCommentAsync(s32 transId, vm::cptr<char> comment, v
 {
 	sceNp.todo("sceNpScoreSanitizeCommentAsync(transId=%d, comment=%s, sanitizedComment=*0x%x, prio=%d, option=*0x%x)", transId, comment, sanitizedComment, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3919,7 +4324,7 @@ error_code sceNpScoreGetRankingByNpIdPcId(s32 transId, SceNpScoreBoardId boardId
 	           "infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 	    transId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3957,7 +4362,7 @@ error_code sceNpScoreGetRankingByNpIdPcIdAsync(s32 transId, SceNpScoreBoardId bo
 	           "infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 	    transId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -3981,7 +4386,7 @@ error_code sceNpScoreAbortTransaction(s32 transId)
 {
 	sceNp.todo("sceNpScoreAbortTransaction(transId=%d)", transId);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4000,7 +4405,7 @@ error_code sceNpScoreGetClansMembersRankingByNpId(s32 transId, SceNpClanId clanI
 	    transId, clanId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo,
 	    lastSortDate, totalRecord, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4040,7 +4445,7 @@ error_code sceNpScoreGetClansMembersRankingByNpIdAsync(s32 transId, SceNpClanId 
 	    transId, clanId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo,
 	    lastSortDate, totalRecord, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4070,7 +4475,7 @@ error_code sceNpScoreGetClansMembersRankingByNpIdPcId(s32 transId, SceNpClanId c
 	    transId, clanId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo,
 	    lastSortDate, totalRecord, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4111,7 +4516,7 @@ error_code sceNpScoreGetClansMembersRankingByNpIdPcIdAsync(s32 transId, SceNpCla
 	    transId, clanId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo,
 	    lastSortDate, totalRecord, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4139,7 +4544,7 @@ error_code sceNpScoreGetClansRankingByRange(s32 transId, SceNpScoreClansBoardId 
 	           "arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 	    transId, clanBoardId, startSerialRank, rankArray, rankArraySize, reserved1, reservedSize1, reserved2, reservedSize2, arrayNum, lastSortDate, totalRecord, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4177,7 +4582,7 @@ error_code sceNpScoreGetClansRankingByRangeAsync(s32 transId, SceNpScoreClansBoa
 	           "reservedSize2=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 	    transId, clanBoardId, startSerialRank, rankArray, rankArraySize, reserved1, reservedSize1, reserved2, reservedSize2, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4203,7 +4608,7 @@ error_code sceNpScoreGetClanMemberGameData(
 	sceNp.todo("sceNpScoreGetClanMemberGameData(transId=%d, boardId=%d, clanId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, clanId, npId, totalSize,
 	    recvSize, data, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4234,7 +4639,7 @@ error_code sceNpScoreGetClanMemberGameDataAsync(
 	sceNp.todo("sceNpScoreGetClanMemberGameDataAsync(transId=%d, boardId=%d, clanId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, clanId, npId,
 	    totalSize, recvSize, data, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4257,7 +4662,7 @@ error_code sceNpScoreGetClansRankingByClanId(s32 transId, SceNpScoreClansBoardId
 	           "reserved2=*0x%x, reservedSize2=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 	    transId, clanBoardId, clanIdArray, clanIdArraySize, rankArray, rankArraySize, reserved1, reservedSize1, reserved2, reservedSize2, arrayNum, lastSortDate, totalRecord, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4295,7 +4700,7 @@ error_code sceNpScoreGetClansRankingByClanIdAsync(s32 transId, SceNpScoreClansBo
 	           "reserved2=*0x%x, reservedSize2=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 	    transId, clanBoardId, clanIdArray, clanIdArraySize, rankArray, rankArraySize, reserved1, reservedSize1, reserved2, reservedSize2, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4324,7 +4729,7 @@ error_code sceNpScoreGetClansMembersRankingByRange(s32 transId, SceNpClanId clan
 	    transId, clanId, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo, lastSortDate,
 	    totalRecord, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4363,7 +4768,7 @@ error_code sceNpScoreGetClansMembersRankingByRangeAsync(s32 transId, SceNpClanId
 	    transId, clanId, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo, lastSortDate,
 	    totalRecord, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
 	{
@@ -4387,7 +4792,7 @@ error_code sceNpSignalingCreateCtx(vm::ptr<SceNpId> npId, vm::ptr<SceNpSignaling
 {
 	sceNp.todo("sceNpSignalingCreateCtx(npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", npId, handler, arg, ctx_id);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4416,7 +4821,7 @@ error_code sceNpSignalingDestroyCtx(u32 ctx_id)
 {
 	sceNp.todo("sceNpSignalingDestroyCtx(ctx_id=%d)", ctx_id);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4435,7 +4840,7 @@ error_code sceNpSignalingAddExtendedHandler(u32 ctx_id, vm::ptr<SceNpSignalingHa
 {
 	sceNp.warning("sceNpSignalingAddExtendedHandler(ctx_id=%d, handler=*0x%x, arg=*0x%x)", ctx_id, handler, arg);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4452,7 +4857,7 @@ error_code sceNpSignalingSetCtxOpt(u32 ctx_id, s32 optname, s32 optval)
 {
 	sceNp.todo("sceNpSignalingSetCtxOpt(ctx_id=%d, optname=%d, optval=%d)", ctx_id, optname, optval);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4471,7 +4876,7 @@ error_code sceNpSignalingGetCtxOpt(u32 ctx_id, s32 optname, vm::ptr<s32> optval)
 {
 	sceNp.todo("sceNpSignalingGetCtxOpt(ctx_id=%d, optname=%d, optval=*0x%x)", ctx_id, optname, optval);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4490,7 +4895,7 @@ error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, v
 {
 	sceNp.warning("sceNpSignalingActivateConnection(ctx_id=%d, npId=*0x%x, conn_id=*0x%x)", ctx_id, npId, conn_id);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4515,7 +4920,7 @@ error_code sceNpSignalingDeactivateConnection(u32 ctx_id, u32 conn_id)
 {
 	sceNp.todo("sceNpSignalingDeactivateConnection(ctx_id=%d, conn_id=%d)", ctx_id, conn_id);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4529,7 +4934,7 @@ error_code sceNpSignalingTerminateConnection(u32 ctx_id, u32 conn_id)
 {
 	sceNp.todo("sceNpSignalingTerminateConnection(ctx_id=%d, conn_id=%d)", ctx_id, conn_id);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4543,7 +4948,7 @@ error_code sceNpSignalingGetConnectionStatus(u32 ctx_id, u32 conn_id, vm::ptr<s3
 {
 	sceNp.warning("sceNpSignalingGetConnectionStatus(ctx_id=%d, conn_id=%d, conn_status=*0x%x, peer_addr=*0x%x, peer_port=*0x%x)", ctx_id, conn_id, conn_status, peer_addr, peer_port);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4572,7 +4977,7 @@ error_code sceNpSignalingGetConnectionInfo(u32 ctx_id, u32 conn_id, s32 code, vm
 {
 	sceNp.todo("sceNpSignalingGetConnectionInfo(ctx_id=%d, conn_id=%d, code=%d, info=*0x%x)", ctx_id, conn_id, code, info);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4591,7 +4996,7 @@ error_code sceNpSignalingGetConnectionFromNpId(u32 ctx_id, vm::ptr<SceNpId> npId
 {
 	sceNp.todo("sceNpSignalingGetConnectionFromNpId(ctx_id=%d, npId=*0x%x, conn_id=*0x%x)", ctx_id, npId, conn_id);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4610,7 +5015,7 @@ error_code sceNpSignalingGetConnectionFromPeerAddress(u32 ctx_id, vm::ptr<np_in_
 {
 	sceNp.todo("sceNpSignalingGetConnectionFromPeerAddress(ctx_id=%d, peer_addr=*0x%x, peer_port=%d, conn_id=*0x%x)", ctx_id, peer_addr, peer_port, conn_id);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4629,7 +5034,7 @@ error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetIn
 {
 	sceNp.warning("sceNpSignalingGetLocalNetInfo(ctx_id=%d, info=*0x%x)", ctx_id, info);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4657,7 +5062,7 @@ error_code sceNpSignalingGetPeerNetInfo(u32 ctx_id, vm::ptr<SceNpId> npId, vm::p
 {
 	sceNp.todo("sceNpSignalingGetPeerNetInfo(ctx_id=%d, npId=*0x%x, req_id=*0x%x)", ctx_id, npId, req_id);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4676,7 +5081,7 @@ error_code sceNpSignalingCancelPeerNetInfo(u32 ctx_id, u32 req_id)
 {
 	sceNp.todo("sceNpSignalingCancelPeerNetInfo(ctx_id=%d, req_id=%d)", ctx_id, req_id);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
@@ -4690,7 +5095,7 @@ error_code sceNpSignalingGetPeerNetInfoResult(u32 ctx_id, u32 req_id, vm::ptr<Sc
 {
 	sceNp.todo("sceNpSignalingGetPeerNetInfoResult(ctx_id=%d, req_id=%d, info=*0x%x)", ctx_id, req_id, info);
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
 	{

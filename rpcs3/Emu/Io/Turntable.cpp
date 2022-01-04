@@ -7,7 +7,8 @@
 
 LOG_CHANNEL(turntable_log);
 
-usb_device_turntable::usb_device_turntable()
+usb_device_turntable::usb_device_turntable(int controller_index, const std::array<u8, 7>& location)
+	: usb_device_emulated(location), m_controller_index(controller_index)
 {
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0100, 0x00, 0x00, 0x00, 0x40, 0x12BA, 0x0140, 0x0005, 0x01, 0x02, 0x00, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0029, 0x01, 0x01, 0x00, 0x80, 0x19}));
@@ -50,9 +51,9 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
-	// Interrupt transfers are slow
 	// Turntable runs at 100hz --> 10ms
-	transfer->expected_time = get_timestamp() + 10000;
+	// But make the emulated table go as fast as possible for better input behavior
+	transfer->expected_time = get_timestamp();
 
 	memset(buf, 0, buf_size);
 
@@ -116,8 +117,9 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 
 	// All other bufs are always 0x00
 
+	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
-	const auto& pad    = handler->GetPads()[6];
+	const auto& pad    = handler->GetPads()[m_controller_index];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return;

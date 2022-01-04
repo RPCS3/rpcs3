@@ -505,8 +505,10 @@ namespace rsx
 					AUDIT(other != surface);
 					if (!other->is_flushable())
 					{
-						if (other->overlaps(*surface, section_bounds::full_range))
+						if (other->overlaps(*surface, section_bounds::confirmed_range))
 						{
+							// This should never happen. It will raise exceptions later due to a dirty region being locked
+							rsx_log.error("Excluded region overlaps with flushed surface!");
 							other->set_dirty(true);
 						}
 					}
@@ -1106,7 +1108,7 @@ namespace rsx
 					}
 					else if (best_fit == nullptr && tex.can_be_reused())
 					{
-						//By grabbing a ref to a matching entry, duplicates are avoided
+						// By grabbing a ref to a matching entry, duplicates are avoided
 						best_fit = &tex;
 					}
 				}
@@ -2031,7 +2033,7 @@ namespace rsx
 				if (attributes.pitch = tex.pitch(); !attributes.pitch)
 				{
 					attributes.pitch = packed_pitch;
-					scale = { 0.f, 0.f, 0.f };
+					scale = { 1.f, 0.f, 0.f };
 				}
 				else if (packed_pitch > attributes.pitch && !options.is_compressed_format)
 				{
@@ -2173,6 +2175,7 @@ namespace rsx
 					// NOTE: Do not disable 'cyclic ref' since the texture_barrier may have already been issued!
 					result.image_handle = 0;
 					result.external_subresource_desc = { 0, deferred_request_command::mipmap_gather, attributes, {}, tex.decoded_remap() };
+					result.format_class = rsx::classify_format(attributes.gcm_format);
 
 					if (use_upscaling)
 					{
@@ -2502,6 +2505,7 @@ namespace rsx
 			}
 
 			section_storage_type* cached_dest = nullptr;
+			section_storage_type* cached_src = nullptr;
 			bool dst_is_depth_surface = false;
 			u16 max_dst_width = dst.width;
 			u16 max_dst_height = dst.height;
@@ -2621,7 +2625,6 @@ namespace rsx
 					case CELL_GCM_TEXTURE_A8R8G8B8:
 						if (!dst_is_argb8) continue;
 						break;
-					case CELL_GCM_TEXTURE_X16:
 					case CELL_GCM_TEXTURE_R5G6B5:
 						if (dst_is_argb8) continue;
 						break;
@@ -2688,9 +2691,7 @@ namespace rsx
 				// NOTE: Src address already takes into account the flipped nature of the overlap!
 				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::shader_read;
 				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src_payload_length), src.pitch, lookup_mask);
-
 				auto old_src_area = src_area;
-				section_storage_type *cached_src = nullptr;
 
 				for (const auto &surface : overlapping_surfaces)
 				{
@@ -2704,20 +2705,28 @@ namespace rsx
 					// Force format matching; only accept 16-bit data for 16-bit transfers, 32-bit for 32-bit transfers
 					switch (surface->get_gcm_format())
 					{
-					case CELL_GCM_TEXTURE_A8R8G8B8:
-					case CELL_GCM_TEXTURE_D8R8G8B8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 					case CELL_GCM_TEXTURE_X32_FLOAT:
 					case CELL_GCM_TEXTURE_Y16_X16:
 					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 					{
-						if (!src_is_argb8) continue;
-						break;
+						// Should be copy compatible but not scaling compatible
+						if (src_is_argb8 && (is_copy_op || dst_is_render_target)) break;
+						continue;
 					}
-					case CELL_GCM_TEXTURE_R5G6B5:
-					case CELL_GCM_TEXTURE_DEPTH16:
-					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+					{
+						// Should be copy compatible but not scaling compatible
+						if (src_is_argb8 && (is_copy_op || !dst_is_render_target)) break;
+						continue;
+					}
+					case CELL_GCM_TEXTURE_A8R8G8B8:
+					case CELL_GCM_TEXTURE_D8R8G8B8:
+					{
+						// Perfect match
+						if (src_is_argb8) break;
+						continue;
+					}
 					case CELL_GCM_TEXTURE_X16:
 					case CELL_GCM_TEXTURE_G8B8:
 					case CELL_GCM_TEXTURE_A1R5G5B5:
@@ -2725,8 +2734,22 @@ namespace rsx
 					case CELL_GCM_TEXTURE_D1R5G5B5:
 					case CELL_GCM_TEXTURE_R5G5B5A1:
 					{
-						if (src_is_argb8) continue;
-						break;
+						// Copy compatible
+						if (!src_is_argb8 && (is_copy_op || dst_is_render_target)) break;
+						continue;
+					}
+					case CELL_GCM_TEXTURE_DEPTH16:
+					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					{
+						// Copy compatible
+						if (!src_is_argb8 && (is_copy_op || !dst_is_render_target)) break;
+						continue;
+					}
+					case CELL_GCM_TEXTURE_R5G6B5:
+					{
+						// Perfect match
+						if (!src_is_argb8) break;
+						continue;
 					}
 					default:
 					{
@@ -2816,6 +2839,7 @@ namespace rsx
 					typeless_info.src_gcm_format = cached_src->get_gcm_format();
 				}
 
+				cached_src->add_ref();
 				vram_texture = cached_src->get_raw_texture();
 				typeless_info.src_context = cached_src->get_context();
 			}
@@ -2879,6 +2903,7 @@ namespace rsx
 				lock.upgrade();
 
 				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
+				// NOTE: This step can potentially invalidate the newly created src image as well.
 				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
 
 				if (use_null_region) [[likely]]
@@ -3054,9 +3079,14 @@ namespace rsx
 
 				blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, typeless_info);
 			}
-			else
+			else if (cached_dest)
 			{
 				cached_dest->dma_transfer(cmd, vram_texture, src_area, dst_range, dst.pitch);
+			}
+
+			if (cached_src)
+			{
+				cached_src->release();
 			}
 
 			blit_op_result result = true;

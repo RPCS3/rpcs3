@@ -124,6 +124,7 @@ namespace rsx
 					return_code = CELL_MSGDIALOG_BUTTON_YES;
 				}
 
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
 				break;
 			}
 			case pad_button::circle:
@@ -143,6 +144,7 @@ namespace rsx
 					return_code = CELL_MSGDIALOG_BUTTON_NO;
 				}
 
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
 				break;
 			}
 			default: return;
@@ -242,9 +244,17 @@ namespace rsx
 			{
 				if (!exit)
 				{
-					g_fxo->get<named_thread<msg_dialog_thread>>()([&, tbit = alloc_thread_bit()]()
+					auto& dlg_thread = g_fxo->get<named_thread<msg_dialog_thread>>();
+
+					const auto notify = std::make_shared<atomic_t<bool>>(false);
+
+					dlg_thread([&, notify]()
 					{
+						const u64 tbit = alloc_thread_bit();
 						g_thread_bit = tbit;
+
+						*notify = true;
+						notify->notify_one();
 
 						if (interactive)
 						{
@@ -275,6 +285,11 @@ namespace rsx
 						thread_bits &= ~tbit;
 						thread_bits.notify_all();
 					});
+
+					while (dlg_thread < thread_state::errored && !*notify)
+					{
+						notify->wait(false, atomic_wait_timeout{1'000'000});
+					}
 				}
 			}
 

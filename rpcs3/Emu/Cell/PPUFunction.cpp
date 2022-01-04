@@ -1910,14 +1910,14 @@ std::vector<ppu_function_t>& ppu_function_manager::access(bool ghc)
 
 	static std::vector<ppu_function_t> list_ghc
 	{
-		build_function_asm<ppu_function_t>([](asmjit::X86Assembler& c, auto& args)
+		build_function_asm<ppu_function_t>("ppu_unregistered", [](asmjit::x86::Assembler& c, auto& args)
 		{
 			using namespace asmjit;
 
 			c.mov(args[0], x86::rbp);
 			c.jmp(imm_ptr(list[0]));
 		}),
-		build_function_asm<ppu_function_t>([](asmjit::X86Assembler& c, auto& args)
+		build_function_asm<ppu_function_t>("ppu_return", [](asmjit::x86::Assembler& c, auto& args)
 		{
 			using namespace asmjit;
 
@@ -1937,7 +1937,7 @@ u32 ppu_function_manager::add_function(ppu_function_t function)
 	list.push_back(function);
 
 	// Generate trampoline
-	list2.push_back(build_function_asm<ppu_function_t>([&](asmjit::X86Assembler& c, auto& args)
+	list2.push_back(build_function_asm<ppu_function_t>("ppu_trampolinea", [&](asmjit::x86::Assembler& c, auto& args)
 	{
 		using namespace asmjit;
 

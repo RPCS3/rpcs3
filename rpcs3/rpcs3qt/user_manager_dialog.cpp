@@ -351,14 +351,18 @@ void user_manager_dialog::OnUserCreate()
 
 void user_manager_dialog::OnUserLogin()
 {
-	if (!Emu.IsStopped() && QMessageBox::question(this, tr("Stop emulator?"),
-		tr("In order to change the user you have to stop the emulator first.\n\nStop the emulator now?"),
-		QMessageBox::Yes | QMessageBox::Abort) != QMessageBox::Yes)
+	if (!Emu.IsStopped())
 	{
-		return;
-	}
+		if (QMessageBox::question(this, tr("Stop emulator?"),
+			tr("In order to change the user you have to stop the emulator first.\n\nStop the emulator now?"),
+			QMessageBox::Yes | QMessageBox::Abort) != QMessageBox::Yes)
+		{
+			return;
+		}
 
-	Emu.Stop();
+		gui_log.notice("Stopping current emulation in order to change the current user.");
+		Emu.Stop();
+	}
 
 	const u32 key = GetUserKey();
 	const std::string new_user = m_user_list[key].GetUserId();

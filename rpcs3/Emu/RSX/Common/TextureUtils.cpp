@@ -24,12 +24,128 @@ namespace utils
 namespace
 {
 
+#ifndef __APPLE__
 u16 convert_rgb655_to_rgb565(const u16 bits)
 {
 	// g6 = g5
 	// r5 = (((bits & 0xFC00) >> 1) & 0xFC00) << 1 is equivalent to truncating the least significant bit
 	return (bits & 0xF81F) | (bits & 0x3E0) << 1;
 }
+#else
+u32 convert_rgb565_to_bgra8(const u16 bits)
+{
+	const u8 r5 = ((bits >> 11) & 0x1F);
+	const u8 g6 = ((bits >> 5) & 0x3F);
+	const u8 b5 = (bits & 0x1F);
+
+	const u8 b8 = ((b5 * 527) + 23) >> 6;
+	const u8 g8 = ((g6 * 259) + 33) >> 6;
+	const u8 r8 = ((r5 * 527) + 23) >> 6;
+	const u8 a8 = 255;
+
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
+}
+
+u32 convert_argb4_to_bgra8(const u16 bits)
+{
+	const u8 b8 = (bits & 0xF0);
+	const u8 g8 = ((bits >> 4) & 0xF0);
+	const u8 r8 = ((bits >> 8) & 0xF0);
+	const u8 a8 = ((bits << 4) & 0xF0);
+
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
+}
+
+u32 convert_a1rgb5_to_bgra8(const u16 bits)
+{
+	const u8 a1 = ((bits >> 11) & 0x80);
+	const u8 r5 = ((bits >> 10) & 0x1F);
+	const u8 g5 = ((bits >> 5) & 0x1F);
+	const u8 b5 = (bits & 0x1F);
+
+	const u8 b8 = ((b5 * 527) + 23) >> 6;
+	const u8 g8 = ((g5 * 527) + 23) >> 6;
+	const u8 r8 = ((r5 * 527) + 23) >> 6;
+	const u8 a8 = a1;
+
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
+}
+
+u32 convert_rgb5a1_to_bgra8(const u16 bits)
+{
+	const u8 r5 = ((bits >> 11) & 0x1F);
+	const u8 g5 = ((bits >> 6) & 0x1F);
+	const u8 b5 = ((bits >> 1) & 0x1F);
+	const u8 a1 = (bits & 0x80);
+
+	const u8 b8 = ((b5 * 527) + 23) >> 6;
+	const u8 g8 = ((g5 * 527) + 23) >> 6;
+	const u8 r8 = ((r5 * 527) + 23) >> 6;
+	const u8 a8 = a1;
+
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
+}
+
+u32 convert_rgb655_to_bgra8(const u16 bits)
+{
+	const u8 r6 = ((bits >> 10) & 0x3F);
+	const u8 g5 = ((bits >> 5) & 0x1F);
+	const u8 b5 = ((bits) & 0x1F);
+
+	const u8 b8 = ((b5 * 527) + 23) >> 6;
+	const u8 g8 = ((g5 * 527) + 23) >> 6;
+	const u8 r8 = ((r6 * 259) + 33) >> 6;
+	const u8 a8 = 1;
+
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
+}
+
+u32 convert_d1rgb5_to_bgra8(const u16 bits)
+{
+	const u8 r5 = ((bits >> 10) & 0x1F);
+	const u8 g5 = ((bits >> 5) & 0x1F);
+	const u8 b5 = (bits & 0x1F);
+
+	const u8 b8 = ((b5 * 527) + 23) >> 6;
+	const u8 g8 = ((g5 * 527) + 23) >> 6;
+	const u8 r8 = ((r5 * 527) + 23) >> 6;
+	const u8 a8 = 1;
+
+	return b8 | (g8 << 8) | (r8 << 16) | (a8 << 24);
+}
+
+struct convert_16_block_32
+{
+	template<typename T>
+	static void copy_mipmap_level(std::span<u32> dst, std::span<const T> src, u16 width_in_block, u16 row_count, u16 depth, u8 border, u32 dst_pitch_in_block, u32 src_pitch_in_block, u32 (*converter)(const u16))
+	{
+		static_assert(sizeof(T) == 2, "Type size doesn't match.");
+
+		u32 src_offset = 0, dst_offset = 0;
+		const u32 v_porch = src_pitch_in_block * border;
+
+		for (int layer = 0; layer < depth; ++layer)
+		{
+			// Front
+			src_offset += v_porch;
+
+			for (u32 row = 0; row < row_count; ++row)
+			{
+				for (int col = 0; col < width_in_block; ++col)
+				{
+					dst[dst_offset + col] = converter(src[src_offset + col + border]);
+				}
+
+				src_offset += src_pitch_in_block;
+				dst_offset += dst_pitch_in_block;
+			}
+
+			// Back
+			src_offset += v_porch;
+		}
+	}
+};
+#endif
 
 struct copy_unmodified_block
 {
@@ -436,7 +552,7 @@ namespace
 
 		for (unsigned layer = 0; layer < layer_count; layer++)
 		{
-			u16 miplevel_width_in_texel = width_in_texel, miplevel_height_in_texel = height_in_texel;
+			u16 miplevel_width_in_texel = width_in_texel, miplevel_height_in_texel = height_in_texel, miplevel_depth = depth;
 			for (unsigned mip_level = 0; mip_level < mipmap_count; mip_level++)
 			{
 				result.push_back({});
@@ -446,7 +562,7 @@ namespace
 				current_subresource_layout.height_in_texel = miplevel_height_in_texel;
 				current_subresource_layout.level = mip_level;
 				current_subresource_layout.layer = layer;
-				current_subresource_layout.depth = depth;
+				current_subresource_layout.depth = miplevel_depth;
 				current_subresource_layout.border = border_size;
 
 				if constexpr (block_edge_in_texel == 1)
@@ -482,16 +598,20 @@ namespace
 					full_height_in_block = rsx::next_pow2(current_subresource_layout.height_in_block + border_size + border_size);
 				}
 
-				const u32 slice_sz = src_pitch_in_block * block_size_in_bytes * full_height_in_block * depth;
+				const u32 slice_sz = src_pitch_in_block * block_size_in_bytes * full_height_in_block * miplevel_depth;
 				current_subresource_layout.pitch_in_block = src_pitch_in_block;
 				current_subresource_layout.data = std::span<const std::byte>(texture_data_pointer + offset_in_src, slice_sz);
 
 				offset_in_src += slice_sz;
 				miplevel_width_in_texel = std::max(miplevel_width_in_texel / 2, 1);
 				miplevel_height_in_texel = std::max(miplevel_height_in_texel / 2, 1);
+				miplevel_depth = std::max(miplevel_depth / 2, 1);
 			}
 
-			offset_in_src = utils::align(offset_in_src, 128);
+			if (!padded_row) // Only swizzled textures obey this restriction
+			{
+				offset_in_src = utils::align(offset_in_src, 128);
+			}
 		}
 
 		return result;
@@ -556,7 +676,7 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	std::tie(h, depth, layer) = get_height_depth_layer(texture);
 
 	const auto format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	const auto pitch = texture.pitch();
+	auto pitch = texture.pitch();
 
 	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
 	auto pixels = vm::_ptr<const std::byte>(texaddr);
@@ -566,17 +686,18 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 
 	if (!is_swizzled)
 	{
-		if (pitch) [[likely]]
+		if (const auto packed_pitch = rsx::get_format_packed_pitch(format, w, has_border, false); pitch < packed_pitch) [[unlikely]]
 		{
-			if (pitch < rsx::get_format_packed_pitch(format, w, has_border, false))
+			if (pitch)
 			{
 				const u32 real_width_in_block = pitch / rsx::get_format_block_size_in_bytes(format);
 				w = std::max<u16>(real_width_in_block * rsx::get_format_block_size_in_texel(format), 1);
 			}
-		}
-		else
-		{
-			w = h = depth = 1;
+			else
+			{
+				h = depth = 1;
+				pitch = packed_pitch;
+			}
 		}
 	}
 
@@ -687,6 +808,7 @@ namespace rsx
 			break;
 		}
 
+#ifndef __APPLE__
 		case CELL_GCM_TEXTURE_R6G5B5:
 		{
 			if (is_swizzled)
@@ -696,16 +818,49 @@ namespace rsx
 			break;
 		}
 
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-			// TODO: Test if the HILO compressed formats support swizzling (other compressed_* formats ignore this option)
-		case CELL_GCM_TEXTURE_DEPTH16:
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: // Untested
 		case CELL_GCM_TEXTURE_D1R5G5B5:
 		case CELL_GCM_TEXTURE_A1R5G5B5:
 		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_R5G5B5A1:
 		case CELL_GCM_TEXTURE_R5G6B5:
+#else
+		// convert the following formats to B8G8R8A8_UNORM, because they are not supported by Metal
+		case CELL_GCM_TEXTURE_R6G5B5:
+		{
+			convert_16_block_32::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block, &convert_rgb655_to_bgra8);
+			break;
+		}
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+		{
+			convert_16_block_32::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block, &convert_d1rgb5_to_bgra8);
+			break;
+		}
+		case CELL_GCM_TEXTURE_A1R5G5B5:
+		{
+			convert_16_block_32::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block, &convert_a1rgb5_to_bgra8);
+			break;
+		}
+		case CELL_GCM_TEXTURE_A4R4G4B4:
+		{
+			convert_16_block_32::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block, &convert_argb4_to_bgra8);
+			break;
+		}
+		case CELL_GCM_TEXTURE_R5G5B5A1:
+		{
+			convert_16_block_32::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block, &convert_rgb5a1_to_bgra8);
+			break;
+		}
+		case CELL_GCM_TEXTURE_R5G6B5:
+		{
+			convert_16_block_32::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block, &convert_rgb565_to_bgra8);
+			break;
+		}
+#endif
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+			// TODO: Test if the HILO compressed formats support swizzling (other compressed_* formats ignore this option)
+		case CELL_GCM_TEXTURE_DEPTH16:
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: // Untested
 		case CELL_GCM_TEXTURE_G8B8:
 		{
 			word_size = 2;
@@ -1157,7 +1312,7 @@ namespace rsx
 			if (width > 1 || height > 1)
 			{
 				// If width == 1, the scanning just returns texel 0, so it is a valid setup
-				rsx_log.error("Invalid texture pitch setup, width=%d, height=%d, format=0x%x(0x%x)",
+				rsx_log.warning("Invalid texture pitch setup, width=%d, height=%d, format=0x%x(0x%x)",
 					width, height, format, gcm_format);
 			}
 

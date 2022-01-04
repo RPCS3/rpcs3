@@ -19,19 +19,19 @@ namespace rsx
 			auto_repeat_buttons.insert(pad_button::square);
 		}
 
-		void osk_dialog::Close(bool ok)
+		void osk_dialog::Close(s32 status)
 		{
 			fade_animation.current = color4f(1.f);
 			fade_animation.end = color4f(0.f);
 			fade_animation.duration = 0.5f;
 
-			fade_animation.on_finish = [this, ok]
+			fade_animation.on_finish = [this, status]
 			{
 				if (on_osk_close)
 				{
-					Emu.CallAfter([this, ok]()
+					Emu.CallAfter([this, status]()
 					{
-						on_osk_close(ok ? CELL_MSGDIALOG_BUTTON_OK : CELL_MSGDIALOG_BUTTON_ESCAPE);
+						on_osk_close(status);
 					});
 				}
 
@@ -280,7 +280,7 @@ namespace rsx
 			}
 			else
 			{
-				m_preview.caret_position = ::narrow<u16>(m_preview.value.length());
+				m_preview.caret_position = m_preview.value.length();
 				m_preview.fore_color.a = 1.f;
 			}
 
@@ -420,6 +420,8 @@ namespace rsx
 				}
 			};
 
+			bool play_cursor_sound = true;
+
 			switch (button_press)
 			{
 			case pad_button::L1:
@@ -435,6 +437,7 @@ namespace rsx
 				break;
 			}
 			case pad_button::dpad_right:
+			case pad_button::ls_right:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
 				while (true)
@@ -457,6 +460,7 @@ namespace rsx
 				break;
 			}
 			case pad_button::dpad_left:
+			case pad_button::ls_left:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
 				while (current_index > 0)
@@ -481,6 +485,7 @@ namespace rsx
 				break;
 			}
 			case pad_button::dpad_down:
+			case pad_button::ls_down:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
 				while (true)
@@ -501,6 +506,7 @@ namespace rsx
 				break;
 			}
 			case pad_button::dpad_up:
+			case pad_button::ls_up:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
 				while (current_index >= num_columns)
@@ -522,7 +528,9 @@ namespace rsx
 			}
 			case pad_button::start:
 			{
-				Close(true);
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
+				Close(CELL_OSKDIALOG_CLOSE_CONFIRM);
+				play_cursor_sound = false;
 				break;
 			}
 			case pad_button::triangle:
@@ -537,13 +545,17 @@ namespace rsx
 			}
 			case pad_button::cross:
 			{
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
 				on_accept();
 				m_reset_pulse = true;
+				play_cursor_sound = false;
 				break;
 			}
 			case pad_button::circle:
 			{
-				Close(false);
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				Close(CELL_OSKDIALOG_CLOSE_CANCEL);
+				play_cursor_sound = false;
 				break;
 			}
 			case pad_button::L2:
@@ -558,6 +570,11 @@ namespace rsx
 			}
 			default:
 				break;
+			}
+
+			if (play_cursor_sound)
+			{
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
 			}
 
 			if (m_reset_pulse)
@@ -593,7 +610,7 @@ namespace rsx
 			// Append to output text
 			if (m_preview.value.empty())
 			{
-				m_preview.caret_position = ::narrow<u16>(str.length());
+				m_preview.caret_position = str.length();
 				m_preview.set_unicode_text(str);
 			}
 			else
@@ -1034,9 +1051,17 @@ namespace rsx
 
 			update_panel();
 
-			g_fxo->get<named_thread<osk_dialog_thread>>()([this, tbit = alloc_thread_bit()]
+			auto& osk_thread = g_fxo->get<named_thread<osk_dialog_thread>>();
+
+			const auto notify = std::make_shared<atomic_t<bool>>(false);
+
+			osk_thread([&, notify]()
 			{
+				const u64 tbit = alloc_thread_bit();
 				g_thread_bit = tbit;
+
+				*notify = true;
+				notify->notify_one();
 
 				if (const auto error = run_input_loop())
 				{
@@ -1046,6 +1071,11 @@ namespace rsx
 				thread_bits &= ~tbit;
 				thread_bits.notify_all();
 			});
+
+			while (osk_thread < thread_state::errored && !*notify)
+			{
+				notify->wait(false, atomic_wait_timeout{1'000'000});
+			}
 		}
 	}
 }

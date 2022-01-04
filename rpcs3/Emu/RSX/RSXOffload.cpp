@@ -3,7 +3,6 @@
 #include "Common/BufferUtils.h"
 #include "RSXOffload.h"
 #include "RSXThread.h"
-#include "rsx_utils.h"
 
 #include <thread>
 #include "util/asm.hpp"
@@ -17,7 +16,7 @@ namespace rsx
 		atomic_t<u64> m_processed_count = 0;
 		transport_packet* m_current_job = nullptr;
 
-		std::thread::id m_thread_id;
+		thread_base* current_thread_ = nullptr;
 
 		void operator ()()
 		{
@@ -27,7 +26,8 @@ namespace rsx
 				return;
 			}
 
-			m_thread_id = std::this_thread::get_id();
+			current_thread_ = thread_ctrl::get_current();
+			ensure(current_thread_);
 
 			if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
 			{
@@ -148,7 +148,12 @@ namespace rsx
 	// Synchronization
 	bool dma_manager::is_current_thread()
 	{
-		return std::this_thread::get_id() == g_fxo->get<dma_thread>().m_thread_id;
+		if (auto cpu = thread_ctrl::get_current())
+		{
+			return g_fxo->get<dma_thread>().current_thread_ == cpu;
+		}
+
+		return false;
 	}
 
 	bool dma_manager::sync() const

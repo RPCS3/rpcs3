@@ -9,7 +9,6 @@
 #include "Common/surface_store.h"
 #include "Capture/rsx_capture.h"
 #include "rsx_methods.h"
-#include "rsx_utils.h"
 #include "gcm_printing.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_time.h"
@@ -50,7 +49,7 @@ bool serialize<rsx::frame_capture_data>(utils::serial& ar, rsx::frame_capture_da
 {
 	ar(o.magic, o.version, o.LE_format);
 
-	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != (std::endian::little == std::endian::native))
+	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != u32{std::endian::little == std::endian::native})
 	{
 		return false;
 	}
@@ -474,26 +473,28 @@ namespace rsx
 
 	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
 	{
-		vertex_push_buffers[attribute].size = size;
-		vertex_push_buffers[attribute].append_vertex_data(subreg_index, type, value);
+		if (!(rsx::method_registers.vertex_attrib_input_mask() & (1 << attribute)))
+		{
+			return;
+		}
+
+		// Enforce ATTR0 as vertex attribute for push buffers.
+		// This whole thing becomes a mess if we don't have a provoking attribute.
+		const auto vertex_id = vertex_push_buffers[0].get_vertex_id();
+		vertex_push_buffers[attribute].set_vertex_data(attribute, vertex_id, subreg_index, type, size, value);
 	}
 
 	u32 thread::get_push_buffer_vertex_count() const
 	{
-		//There's no restriction on which attrib shall hold vertex data, so we check them all
-		u32 max_vertex_count = 0;
-		for (auto &buf: vertex_push_buffers)
-		{
-			max_vertex_count = std::max(max_vertex_count, buf.vertex_count);
-		}
-
-		return max_vertex_count;
+		// Enforce ATTR0 as vertex attribute for push buffers.
+		// This whole thing becomes a mess if we don't have a provoking attribute.
+		return vertex_push_buffers[0].vertex_count;
 	}
 
 	void thread::append_array_element(u32 index)
 	{
-		//Endianness is swapped because common upload code expects input in BE
-		//TODO: Implement fast upload path for LE inputs and do away with this
+		// Endianness is swapped because common upload code expects input in BE
+		// TODO: Implement fast upload path for LE inputs and do away with this
 		element_push_buffer.push_back(std::bit_cast<u32, be_t<u32>>(index));
 	}
 
@@ -513,7 +514,7 @@ namespace rsx
 		method_registers.current_draw_clause.post_execute_cleanup();
 
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
-		ROP_sync_timestamp = get_system_time();
+		ROP_sync_timestamp = rsx::get_shared_tag();
 
 		for (auto & push_buf : vertex_push_buffers)
 		{
@@ -555,7 +556,7 @@ namespace rsx
 		on_exit();
 	}
 
-	void thread::cpu_wait(bs_t<cpu_flag>)
+	void thread::cpu_wait(bs_t<cpu_flag> old)
 	{
 		if (external_interrupt_lock)
 		{
@@ -563,13 +564,20 @@ namespace rsx
 		}
 
 		on_semaphore_acquire_wait();
-		std::this_thread::yield();
+
+		if ((state & (cpu_flag::dbg_global_pause + cpu_flag::exit)) == cpu_flag::dbg_global_pause)
+		{
+			// Wait 16ms during emulation pause. This reduces cpu load while still giving us the chance to render overlays.
+			thread_ctrl::wait_on(state, old, 16000);
+		}
+		else
+		{
+			std::this_thread::yield();
+		}
 	}
 
 	void thread::on_task()
 	{
-		m_rsx_thread = std::this_thread::get_id();
-
 		g_tls_log_prefix = []
 		{
 			const auto rsx = get_current_renderer();
@@ -635,20 +643,45 @@ namespace rsx
 #endif
 			u64 start_time = get_system_time();
 
+			u64 vblank_rate = g_cfg.video.vblank_rate;
+			u64 vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
+
+			u64 local_vblank_count = 0;
+
 			// TODO: exit condition
 			while (!is_stopped())
 			{
+				// Get current time
 				const u64 current = get_system_time();
-				const u64 period_time = 1000000 / g_cfg.video.vblank_rate;
-				const u64 wait_for = period_time - std::min<u64>(current - start_time, period_time);
+
+				// Calculate the time at which we need to send a new VBLANK signal
+				const u64 post_event_time = start_time + (local_vblank_count + 1) * vblank_period / vblank_rate;
+
+				// Calculate time remaining to that time (0 if we passed it)
+				const u64 wait_for = current >= post_event_time ? 0 : post_event_time - current;
+
+				// Substract host operating system min sleep quantom to get sleep time
 				const u64 wait_sleep = wait_for - u64{wait_for >= host_min_quantum} * host_min_quantum;
 
 				if (!wait_for)
 				{
 					{
-						start_time += period_time;
+						local_vblank_count++;
 						vblank_count++;
 
+						if (local_vblank_count == vblank_rate)
+						{
+							// Advance start_time to the moment of the current VBLANK
+							// Which is the last VBLANK event in this period
+							// This is in order for multiplication by ratio above to use only small numbers
+							start_time += vblank_period;
+							local_vblank_count = 0;
+
+							// We have a rare chance to update settings without losing precision whenever local_vblank_count is 0
+							vblank_rate = g_cfg.video.vblank_rate;
+							vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
+						}
+	
 						if (isHLE)
 						{
 							if (vblank_handler)
@@ -665,7 +698,7 @@ namespace rsx
 						}
 						else
 						{
-							sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
+							sys_rsx_context_attribute(0x55555555, 0xFED, 1, post_event_time, 0, 0);
 						}
 					}
 				}
@@ -685,7 +718,7 @@ namespace rsx
 
 					while (Emu.IsPaused() && !is_stopped())
 					{
-						thread_ctrl::wait_for(wait_sleep);
+						thread_ctrl::wait_for(5'000);
 					}
 
 					// Restore difference
@@ -1594,6 +1627,8 @@ namespace rsx
 		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
 
 		const auto [program_offset, program_location] = method_registers.shader_program_address();
+		const auto prev_textures_reference_mask = current_fp_metadata.referenced_textures_mask;
+
 		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
 		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
@@ -1618,6 +1653,14 @@ namespace rsx
 				}
 			}
 		}
+
+		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_state_dirty) &&
+			(prev_textures_reference_mask != current_fp_metadata.referenced_textures_mask))
+		{
+			// If different textures are used, upload their coefficients.
+			// The texture parameters transfer routine is optimized and only writes data for textures consumed by the ucode.
+			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
+		}
 	}
 
 	void thread::prefetch_vertex_program()
@@ -1628,9 +1671,6 @@ namespace rsx
 		m_graphics_state &= ~rsx::pipeline_state::vertex_program_ucode_dirty;
 
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
-		current_vertex_program.skip_vertex_input_check = true;
-
-		current_vertex_program.rsx_vertex_inputs.clear();
 		current_vertex_program.data.reserve(512 * 4);
 		current_vertex_program.jump_table.clear();
 
@@ -1694,10 +1734,10 @@ namespace rsx
 		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
 	}
 
-	void thread::analyse_inputs_interleaved(vertex_input_layout& result) const
+	void thread::analyse_inputs_interleaved(vertex_input_layout& result)
 	{
 		const rsx_state& state = rsx::method_registers;
-		const u32 input_mask = state.vertex_attrib_input_mask();
+		const u32 input_mask = state.vertex_attrib_input_mask() & current_vp_metadata.referenced_inputs_mask;
 
 		result.clear();
 
@@ -1743,11 +1783,15 @@ namespace rsx
 		result.interleaved_blocks.reserve(16);
 		result.referenced_registers.reserve(16);
 
-		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		for (auto [ref_mask, index] = std::tuple{ input_mask, u8(0) }; ref_mask; ++index, ref_mask >>= 1)
 		{
-			// Check if vertex stream is enabled
-			if (!(input_mask & (1 << index)))
+			ensure(index < rsx::limits::vertex_count);
+
+			if (!(ref_mask & 1u))
+			{
+				// Nothing to do, uninitialized
 				continue;
+			}
 
 			//Check for interleaving
 			const auto &info = state.vertex_arrays_info[index];
@@ -1758,6 +1802,9 @@ namespace rsx
 				// Observed with GT5, immediate render bypasses array pointers completely, even falling back to fixed-function register defaults
 				if (vertex_push_buffers[index].vertex_count > 1)
 				{
+					// Ensure consistent number of vertices per attribute.
+					vertex_push_buffers[index].pad_to(vertex_push_buffers[0].vertex_count, false);
+
 					// Read temp buffer (register array)
 					std::pair<u8, u32> volatile_range_info = std::make_pair(index, static_cast<u32>(vertex_push_buffers[index].data.size() * sizeof(u32)));
 					result.volatile_blocks.push_back(volatile_range_info);
@@ -1885,6 +1932,8 @@ namespace rsx
 			if (!(textures_ref & 1)) continue;
 
 			auto &tex = rsx::method_registers.fragment_textures[i];
+			current_fp_texture_state.clear(i);
+
 			if (tex.enabled())
 			{
 				current_fragment_program.texture_params[i].scale[0] = sampler_descriptors[i]->scale_x;
@@ -1896,7 +1945,6 @@ namespace rsx
 				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 
 				u32 texture_control = 0;
-				current_fp_texture_state.clear(i);
 				current_fp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
 
 				if (tex.alpha_kill_enabled())
@@ -1911,8 +1959,6 @@ namespace rsx
 
 				if (raw_format & CELL_GCM_TEXTURE_UN)
 				{
-					current_fp_texture_state.unnormalized_coords |= (1 << i);
-
 					if (tex.min_filter() == rsx::texture_minify_filter::nearest ||
 						tex.mag_filter() == rsx::texture_magnify_filter::nearest)
 					{
@@ -1987,11 +2033,16 @@ namespace rsx
 				}
 
 				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
-				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed
+				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed (UE3)
 				// This is a separate method of setting the format to signed mode without doing so per-channel
-				// NOTE2: Modifier precedence is not respected here. This is another TODO (kd-11)
-				u32 argb8_convert = tex.gamma();
-				if (const u32 sign_convert = tex.unsigned_remap() ? 0xF : tex.argb_signed())
+				// Precedence = SIGNED override > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/REMAP relationship, UE3 for REMAP effect)
+
+				const u32 argb8_signed = tex.argb_signed();
+				const u32 gamma = tex.gamma() & ~argb8_signed;
+				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~gamma & 0xF);
+				u32 argb8_convert = gamma;
+
+				if (const u32 sign_convert = (argb8_signed | unsigned_remap))
 				{
 					// Apply remap to avoid mapping 1 to -1. Only the sign conversion needs this check
 					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
@@ -2189,8 +2240,14 @@ namespace rsx
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 		const auto max_index = (first_vertex + vertex_count) - 1;
 
-		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		for (u16 ref_mask = current_vp_metadata.referenced_inputs_mask, index = 0; ref_mask; ++index, ref_mask >>= 1)
 		{
+			if (!(ref_mask & 1u))
+			{
+				// Unused input, ignore this
+				continue;
+			}
+
 			if (layout.attribute_placement[index] == attribute_buffer_placement::none)
 			{
 				static constexpr u64 zero = 0;
@@ -3369,10 +3426,22 @@ namespace rsx
 		{
 			ensure(sink);
 
+			auto scale_result = [](u32 value)
+			{
+				const auto scale = rsx::get_resolution_scale_percent();
+				const auto result = (value * 10000ull) / (scale * scale);
+				return std::max(1u, static_cast<u32>(result));
+			};
+
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
-				value = value ? u16{umax} : 0;
+				if (value)
+				{
+					value = (g_cfg.video.precise_zpass_count) ?
+						scale_result(value) :
+						u16{ umax };
+				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
 				value = value ? 0 : u16{umax};
@@ -3465,7 +3534,9 @@ namespace rsx
 						ensure(query->pending);
 
 						const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-						if (implemented && !result && query->num_draws)
+						const bool have_result = result && !g_cfg.video.precise_zpass_count;
+
+						if (implemented && !have_result && query->num_draws)
 						{
 							get_occlusion_query_result(query);
 
@@ -3617,55 +3688,30 @@ namespace rsx
 					ensure(query->pending);
 
 					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-					if (force_read)
-					{
-						if (implemented && !result && query->num_draws)
-						{
-							get_occlusion_query_result(query);
+					const bool have_result = result && !g_cfg.video.precise_zpass_count;
 
-							if (query->result)
-							{
-								result += query->result;
-								if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-								{
-									m_statistics_map[writer.counter_tag] += query->result;
-								}
-							}
-						}
-						else
+					if (!implemented || !query->num_draws || have_result)
+					{
+						discard_occlusion_query(query);
+					}
+					else if (force_read || check_occlusion_query_status(query))
+					{
+						get_occlusion_query_result(query);
+
+						if (query->result)
 						{
-							//No need to read this
-							discard_occlusion_query(query);
+							result += query->result;
+							if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
+							{
+								m_statistics_map[writer.counter_tag] += query->result;
+							}
 						}
 					}
 					else
 					{
-						if (implemented && !result && query->num_draws)
-						{
-							//Maybe we get lucky and results are ready
-							if (check_occlusion_query_status(query))
-							{
-								get_occlusion_query_result(query);
-								if (query->result)
-								{
-									result += query->result;
-									if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-									{
-										m_statistics_map[writer.counter_tag] += query->result;
-									}
-								}
-							}
-							else
-							{
-								//Too early; abort
-								break;
-							}
-						}
-						else
-						{
-							//Not necessary to read the result anymore
-							discard_occlusion_query(query);
-						}
+						// Too early; abort
+						ensure(!force_read && implemented);
+						break;
 					}
 
 					free_query(query);

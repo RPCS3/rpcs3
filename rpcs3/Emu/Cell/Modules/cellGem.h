@@ -145,7 +145,7 @@ enum
 };
 
 // Video conversion output formats
-enum
+enum CellGemVideoConvertFormatEnum : s32
 {
 	CELL_GEM_NO_VIDEO_OUTPUT           = 1,
 	CELL_GEM_RGBA_640x480              = 2,
@@ -261,13 +261,13 @@ struct CellGemState
 struct CellGemVideoConvertAttribute
 {
 	be_t<s32> version;
-	be_t<s32> output_format;
+	be_t<CellGemVideoConvertFormatEnum> output_format;
 	be_t<s32> conversion_flags;
 	be_t<f32> gain;
 	be_t<f32> red_gain;
 	be_t<f32> green_gain;
 	be_t<f32> blue_gain;
-	vm::ptr<void> buffer_memory;
-	vm::ptr<void> video_data_out;
+	vm::bptr<u8> buffer_memory;
+	vm::bptr<u8> video_data_out;
 	u8 alpha;
 };

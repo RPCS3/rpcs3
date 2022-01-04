@@ -357,13 +357,7 @@ namespace vk
 			push_constants[0].size = 20;
 		}
 
-		VkDescriptorSetLayoutCreateInfo infos = {};
-		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		infos.pBindings = bindings.data();
-		infos.bindingCount = static_cast<u32>(bindings.size());
-
-		VkDescriptorSetLayout set_layout;
-		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
+		const auto set_layout = vk::descriptors::create_layout(bindings);
 
 		VkPipelineLayoutCreateInfo layout_info = {};
 		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -379,13 +373,15 @@ namespace vk
 
 	void shader_interpreter::create_descriptor_pools(const vk::render_device& dev)
 	{
-		std::vector<VkDescriptorPoolSize> sizes;
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * DESCRIPTOR_MAX_DRAW_CALLS });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 * DESCRIPTOR_MAX_DRAW_CALLS });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * DESCRIPTOR_MAX_DRAW_CALLS });
+		const auto max_draw_calls = dev.get_descriptor_max_draw_calls();
 
-		m_descriptor_pool.create(dev, sizes.data(), ::size32(sizes), DESCRIPTOR_MAX_DRAW_CALLS, 2);
+		std::vector<VkDescriptorPoolSize> sizes;
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * max_draw_calls });
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * max_draw_calls });
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 * max_draw_calls });
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * max_draw_calls });
+
+		m_descriptor_pool.create(dev, sizes.data(), ::size32(sizes), max_draw_calls, 2);
 	}
 
 	void shader_interpreter::init(const vk::render_device& dev)
@@ -508,32 +504,18 @@ namespace vk
 		return program.release();
 	}
 
-	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, VkDescriptorSet descriptor_set)
+	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set)
 	{
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
 		for (u32 i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
 		{
-			const VkWriteDescriptorSet descriptor_writer =
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-				nullptr,                                   // pNext
-				descriptor_set,                            // dstSet
-				binding,                                   // dstBinding
-				0,                                         // dstArrayElement
-				16,                                        // descriptorCount
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // descriptorType
-				texture_ptr,                               // pImageInfo
-				nullptr,                                   // pBufferInfo
-				nullptr                                    // pTexelBufferView
-			};
-
-			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+			set.push(texture_ptr, 16, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding);
 		}
 	}
 
 	VkDescriptorSet shader_interpreter::allocate_descriptor_set()
 	{
-		if (m_used_descriptors == DESCRIPTOR_MAX_DRAW_CALLS)
+		if (!m_descriptor_pool.can_allocate(1u, m_used_descriptors))
 		{
 			m_descriptor_pool.reset(0);
 			m_used_descriptors = 0;

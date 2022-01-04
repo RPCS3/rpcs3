@@ -39,6 +39,7 @@ namespace rsx
 			u16 m_font_size{};
 			u32 m_margin_x{}; // horizontal distance to the screen border relative to the screen_quadrant in px
 			u32 m_margin_y{}; // vertical distance to the screen border relative to the screen_quadrant in px
+			u32 m_padding{};  // space between overlay elements
 			f32 m_opacity{};  // 0..1
 
 			bool m_center_x{}; // center the overlay horizontally
@@ -77,10 +78,10 @@ namespace rsx
 			f32 m_rsx_usage{0};
 			u32 m_rsx_load{0};
 
-			void reset_transform(label& elm, u16 bottom_margin = 0) const;
+			void reset_transform(label& elm) const;
 			void reset_transforms();
-			void reset_body(u16 bottom_margin);
-			void reset_titles(u16 bottom_margin);
+			void reset_body();
+			void reset_titles();
 
 		public:
 			void init();

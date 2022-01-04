@@ -8,7 +8,7 @@ table IntAttr {
     num:uint32;
 }
 
-table MemberBinAttrInternal {
+table RoomMemberBinAttrInternal {
     updateDate:uint64;
     data:BinAttr;
 }
@@ -43,10 +43,10 @@ table RoomMemberDataInternal {
     joinDate:uint64;
     memberId:uint16;
     teamId:uint8;
-    roomGroup:uint8;
+    roomGroup:RoomGroup;
     natType:uint8;
     flagAttr:uint32;
-    roomMemberBinAttrInternal:[MemberBinAttrInternal];
+    roomMemberBinAttrInternal:[RoomMemberBinAttrInternal];
 }
 
 table RoomGroup {
@@ -167,6 +167,15 @@ table LeaveRoomRequest {
     optData:PresenceOptionData;
 }
 
+table GetRoomDataExternalListRequest {
+    roomIds:[uint64];
+    attrIds:[uint16];
+}
+
+table GetRoomDataExternalListResponse {
+    rooms:[RoomDataExternal];
+}
+
 table SetRoomDataExternalRequest {
     roomId:uint64;
     roomSearchableIntAttrExternal:[IntAttr];
@@ -184,6 +193,13 @@ table SetRoomDataInternalRequest {
     ownerPrivilegeRank:[uint16];
 }
 
+table SetRoomMemberDataInternalRequest {
+    roomId:uint64;
+    memberId:uint16;
+    teamId:uint8;
+    roomMemberBinAttrInternal:[BinAttr];
+}
+
 table GetRoomDataInternalRequest {
     roomId:uint64;
     attrId:[uint16];
@@ -199,6 +215,21 @@ table RoomUpdateInfo {
     eventCause:uint8;
     errorCode:int32;
     optData:PresenceOptionData;
+}
+
+table RoomDataInternalUpdateInfo {
+    newRoomDataInternal:RoomDataInternal;
+    prevFlagAttr:uint32;
+    prevRoomPasswordSlotMask:uint64;
+    newRoomGroup:[uint8];
+    newRoomBinAttrInternal:[uint16];
+}
+
+table RoomMemberDataInternalUpdateInfo {
+    newRoomMemberDataInternal:RoomMemberDataInternal;
+    prevFlagAttr:uint32;
+    prevTeamId:uint8;
+    newRoomMemberBinAttrInternal:[uint16];
 }
 
 table GetPingInfoResponse {
@@ -222,4 +253,20 @@ table RoomMessageInfo {
     dst:[uint16];
     srcMember:UserInfo2;
     msg:[uint8];
+}
+
+table MessageDetails {
+    communicationId:string;
+    msgId:uint64;
+    mainType:uint16;
+    subType:uint16;
+    msgFeatures:uint32;
+    subject:string;
+    body:string;
+    data:[uint8];
+}
+
+table SendMessageRequest {
+    message:[uint8] (nested_flatbuffer: "MessageDetails");
+    npids:[string];
 }

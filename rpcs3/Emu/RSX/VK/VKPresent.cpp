@@ -446,7 +446,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	u32 buffer_pitch = display_buffers[info.buffer].pitch;
 
 	u32 av_format;
-	auto& avconfig = g_fxo->get<rsx::avconf>();
+	const auto& avconfig = g_fxo->get<rsx::avconf>();
+
+	if (!buffer_width)
+	{
+		buffer_width = avconfig.resolution_x;
+		buffer_height = avconfig.resolution_y;
+	}
 
 	if (avconfig.state)
 	{
@@ -550,29 +556,16 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	ensure(m_current_frame->present_image != umax);
 
 	// Calculate output dimensions. Done after swapchain acquisition in case it was recreated.
-	coordi aspect_ratio;
-	sizei csize = static_cast<sizei>(m_swapchain_dims);
-	sizei new_size = csize;
-
+	areai aspect_ratio;
 	if (!g_cfg.video.stretch_to_display_area)
 	{
-		const double aq = 1. * buffer_width / buffer_height;
-		const double rq = 1. * new_size.width / new_size.height;
-		const double q = aq / rq;
-
-		if (q > 1.0)
-		{
-			new_size.height = static_cast<int>(new_size.height / q);
-			aspect_ratio.y = (csize.height - new_size.height) / 2;
-		}
-		else if (q < 1.0)
-		{
-			new_size.width = static_cast<int>(new_size.width * q);
-			aspect_ratio.x = (csize.width - new_size.width) / 2;
-		}
+		const auto converted = avconfig.aspect_convert_region({ buffer_width, buffer_height }, m_swapchain_dims);
+		aspect_ratio = static_cast<areai>(converted);
 	}
-
-	aspect_ratio.size = new_size;
+	else
+	{
+		aspect_ratio = { 0, 0, s32(m_swapchain_dims.width), s32(m_swapchain_dims.height) };
+	}
 
 	// Blit contents to screen..
 	VkImage target_image = m_swapchain->get_image(m_current_frame->present_image);
@@ -585,7 +578,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	vk::framebuffer_holder* direct_fbo = nullptr;
 	rsx::simple_array<vk::viewable_image*> calibration_src;
 
-	if (!image_to_flip || aspect_ratio.width < csize.width || aspect_ratio.height < csize.height)
+	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
 		// Clear the window background to black
 		VkClearColorValue clear_black {};
@@ -595,9 +588,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
-	if (!m_upscaler)
+	const bool use_fsr_upscaling = g_cfg.video.vk.fsr_upscaling.get();
+
+	if (!m_upscaler || m_use_fsr_upscaling != use_fsr_upscaling)
 	{
-		if (g_cfg.video.vk.fsr_upscaling)
+		m_use_fsr_upscaling = use_fsr_upscaling;
+
+		if (m_use_fsr_upscaling)
 		{
 			m_upscaler = std::make_unique<vk::fsr_upscale_pass>();
 		}
@@ -616,7 +613,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			if (image_to_flip) calibration_src.push_back(image_to_flip);
 			if (image_to_flip2) calibration_src.push_back(image_to_flip2);
 
-			if (g_cfg.video.vk.fsr_upscaling && !avconfig._3d) // 3D will be implemented later
+			if (m_use_fsr_upscaling && !avconfig._3d) // 3D will be implemented later
 			{
 				// Run upscaling pass before the rest of the output effects pipeline
 				// This can be done with all upscalers but we already get bilinear upscaling for free if we just out the filters directly
@@ -626,7 +623,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				request.srcOffsets[0] = { 0, 0, 0 };
 				request.srcOffsets[1] = { s32(buffer_width), s32(buffer_height), 1 };
 				request.dstOffsets[0] = { 0, 0, 0 };
-				request.dstOffsets[1] = { aspect_ratio.width, aspect_ratio.height, 1 };
+				request.dstOffsets[1] = { aspect_ratio.width(), aspect_ratio.height(), 1 };
 
 				for (unsigned i = 0; i < calibration_src.size(); ++i)
 				{
@@ -654,15 +651,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		else
 		{
 			// Do raw transfer here as there is no image object associated with textures owned by the driver (TODO)
-			const areai dst_rect = aspect_ratio;
 			VkImageBlit rgn = {};
-
 			rgn.srcSubresource = { image_to_flip->aspect(), 0, 0, 1 };
 			rgn.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 			rgn.srcOffsets[0] = { 0, 0, 0 };
 			rgn.srcOffsets[1] = { s32(buffer_width), s32(buffer_height), 1 };
-			rgn.dstOffsets[0] = { dst_rect.x1, dst_rect.y1, 0 };
-			rgn.dstOffsets[1] = { dst_rect.x2, dst_rect.y2, 1 };
+			rgn.dstOffsets[0] = { aspect_ratio.x1, aspect_ratio.y1, 0 };
+			rgn.dstOffsets[1] = { aspect_ratio.x2, aspect_ratio.y2, 1 };
 
 			if (target_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 			{

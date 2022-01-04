@@ -6,18 +6,23 @@ LOG_CHANNEL(input_log, "Input");
 
 bool cfg_input::load(const std::string& title_id, const std::string& profile, bool strict)
 {
-	// Check custom config first
+	input_log.notice("Loading pad config (title_id='%s', profile='%s', strict=%d)", title_id, profile, strict);
+
 	std::string cfg_name;
 
-	if (title_id.empty())
-	{
-		cfg_name = rpcs3::utils::get_input_config_dir() + profile + ".yml";
-	}
-	else
+	// Check custom config first
+	if (!title_id.empty())
 	{
 		cfg_name = rpcs3::utils::get_custom_input_config_path(title_id);
 	}
 
+	// Check active global profile next
+	if ((title_id.empty() || !strict) && !fs::is_file(cfg_name))
+	{
+		cfg_name = rpcs3::utils::get_input_config_dir() + profile + ".yml";
+	}
+
+	// Fallback to default profile
 	if (!strict && !fs::is_file(cfg_name))
 	{
 		cfg_name = rpcs3::utils::get_input_config_dir() + g_cfg_profile.default_profile + ".yml";
@@ -63,11 +68,9 @@ void cfg_input::save(const std::string& title_id, const std::string& profile) co
 		input_log.fatal("Failed to create path: %s (%s)", cfg_name, fs::g_tls_error);
 	}
 
-	if (auto cfg_file = fs::file(cfg_name, fs::rewrite))
-	{
-		cfg_file.write(to_string());
-	}
-	else
+	fs::pending_file cfg_file(cfg_name);
+
+	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
 		input_log.error("Failed to save pad config to '%s'", cfg_name);
 	}
@@ -93,11 +96,9 @@ void cfg_profile::save() const
 {
 	input_log.notice("Saving pad profile config to '%s'", path);
 
-	if (auto cfg_file = fs::file(path, fs::rewrite))
-	{
-		cfg_file.write(to_string());
-	}
-	else
+	fs::pending_file cfg_file(path);
+
+	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
 		input_log.error("Failed to save pad profile config to '%s'", path);
 	}

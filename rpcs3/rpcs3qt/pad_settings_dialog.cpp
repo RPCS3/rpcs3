@@ -4,6 +4,7 @@
 #include <QPainterPath>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QSvgRenderer>
 
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
@@ -20,16 +21,6 @@
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
 #include "Input/keyboard_pad_handler.h"
-#include "Input/ds3_pad_handler.h"
-#include "Input/ds4_pad_handler.h"
-#include "Input/dualsense_pad_handler.h"
-#ifdef _WIN32
-#include "Input/xinput_pad_handler.h"
-#include "Input/mm_joystick_handler.h"
-#endif
-#ifdef HAVE_LIBEVDEV
-#include "Input/evdev_joystick_handler.h"
-#endif
 
 LOG_CHANNEL(cfg_log, "CFG");
 
@@ -79,10 +70,10 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	}
 
 	// Load profiles
+	g_cfg_profile.load();
+
 	if (m_title_id.empty())
 	{
-		g_cfg_profile.load();
-
 		const QString profile_dir = qstr(rpcs3::utils::get_input_config_dir(m_title_id));
 		QStringList profiles = gui::utils::get_dir_entries(QDir(profile_dir), QStringList() << "*.yml");
 		QString active_profile = qstr(g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key));
@@ -108,8 +99,6 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	}
 	else
 	{
-		g_cfg_profile.from_default();
-
 		ui->chooseProfile->addItem(qstr(m_title_id));
 		ui->gb_profiles->setEnabled(false);
 	}
@@ -195,26 +184,21 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	SubscribeTooltips();
 
 	// Repaint controller image
-	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(ui->l_controller->pixmap(Qt::ReturnByValue), QColor(), gui::utils::get_label_color("l_controller"), false, true));
+	QSvgRenderer renderer(QStringLiteral(":/Icons/DualShock_3.svg"));
+	QPixmap controller_pixmap(renderer.defaultSize() * 10);
+	controller_pixmap.fill(Qt::transparent);
+	QPainter painter(&controller_pixmap);
+	painter.setRenderHints(QPainter::TextAntialiasing | QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
+	renderer.render(&painter, controller_pixmap.rect());
+	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(controller_pixmap, QColor(), gui::utils::get_label_color("l_controller"), false, true));
 
 	// Show default widgets first in order to calculate the required size for the scroll area (see pad_settings_dialog::ResizeDialog)
 	ui->left_stack->setCurrentIndex(0);
 	ui->right_stack->setCurrentIndex(0);
 
-	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0, 0);
-	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0, 0);
-
-	show();
-
 	// Set up first tab
 	OnTabChanged(0);
 	ChangeProfile(ui->chooseProfile->currentText());
-
-	// Resize in order to fit into our scroll area
-	ResizeDialog();
-
-	// Restrict out inner layout size. This is necessary because redrawing things will slow down the dialog otherwise.
-	ui->mainLayout->setSizeConstraint(QLayout::SizeConstraint::SetFixedSize);
 }
 
 pad_settings_dialog::~pad_settings_dialog()
@@ -227,6 +211,20 @@ pad_settings_dialog::~pad_settings_dialog()
 	}
 
 	pad::set_enabled(true);
+}
+
+void pad_settings_dialog::showEvent(QShowEvent* event)
+{
+	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), 0, 0, 0, 0);
+	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0, 0);
+
+	// Resize in order to fit into our scroll area
+	ResizeDialog();
+
+	// Restrict our inner layout size. This is necessary because redrawing things will slow down the dialog otherwise.
+	ui->mainLayout->setSizeConstraint(QLayout::SizeConstraint::SetFixedSize);
+
+	QDialog::showEvent(event);
 }
 
 void pad_settings_dialog::InitButtons()
@@ -559,18 +557,6 @@ void pad_settings_dialog::ReloadButtons()
 	updateButton(button_ids::id_pad_rstick_up, ui->b_rstick_up, &cfg.rs_up);
 
 	updateButton(button_ids::id_pressure_intensity, ui->b_pressure_intensity, &cfg.pressure_intensity_button);
-
-	m_min_force = m_handler->vibration_min;
-	m_max_force = m_handler->vibration_max;
-
-	// Enable Vibration Checkboxes
-	m_enable_rumble = m_handler->has_rumble();
-
-	// Enable Deadzone Settings
-	m_enable_deadzones = m_handler->has_deadzones();
-
-	// Enable Pressure Sensitivity Settings
-	m_enable_pressure_intensity_button = m_handler->has_pressure_intensity_button();
 
 	UpdateLabels(true);
 }
@@ -917,7 +903,7 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 {
 	if (is_reset)
 	{
-		const auto& cfg = GetPlayerConfig();
+		const cfg_pad& cfg = GetPlayerConfig();
 
 		// Update device class
 		ui->chooseClass->setCurrentIndex(cfg.device_class_type);
@@ -989,10 +975,14 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		range = cfg.lstickmultiplier.to_list();
 		ui->stick_multi_left->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->stick_multi_left->setValue(cfg.lstickmultiplier / 100.0);
+		ui->kb_stick_multi_left->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
+		ui->kb_stick_multi_left->setValue(cfg.lstickmultiplier / 100.0);
 
 		range = cfg.rstickmultiplier.to_list();
 		ui->stick_multi_right->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->stick_multi_right->setValue(cfg.rstickmultiplier / 100.0);
+		ui->kb_stick_multi_right->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
+		ui->kb_stick_multi_right->setValue(cfg.rstickmultiplier / 100.0);
 
 		// Update Squircle Factors
 		range = cfg.lpadsquircling.to_list();
@@ -1037,6 +1027,13 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 {
 	m_enable_buttons = is_enabled;
 
+	ui->chb_show_emulated_values->setEnabled(is_enabled);
+	ui->stick_multi_left->setEnabled(is_enabled);
+	ui->stick_multi_right->setEnabled(is_enabled);
+	ui->kb_stick_multi_left->setEnabled(is_enabled);
+	ui->kb_stick_multi_right->setEnabled(is_enabled);
+	ui->squircle_left->setEnabled(is_enabled);
+	ui->squircle_right->setEnabled(is_enabled);
 	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
@@ -1047,6 +1044,8 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
+	ui->chooseClass->setEnabled(is_enabled && ui->chooseClass->count() > 0);
+	ui->chooseProduct->setEnabled(is_enabled && ui->chooseProduct->count() > 0);
 	ui->buttonBox->button(QDialogButtonBox::Reset)->setEnabled(is_enabled && m_handler->m_type != pad_handler::keyboard);
 
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
@@ -1171,6 +1170,7 @@ void pad_settings_dialog::ChangeHandler()
 	switch (m_handler->m_type)
 	{
 	case pad_handler::null:
+		GetPlayerConfig().from_default();
 		if (is_ldd_pad)
 			m_description = tooltips.gamepad_settings.ldd_pad;
 		else
@@ -1210,6 +1210,25 @@ void pad_settings_dialog::ChangeHandler()
 #endif
 	}
 	ui->l_description->setText(m_description);
+
+	// Update parameters
+	m_min_force = m_handler->vibration_min;
+	m_max_force = m_handler->vibration_max;
+
+	// Reset parameters
+	m_lx = 0;
+	m_ly = 0;
+	m_rx = 0;
+	m_ry = 0;
+
+	// Enable Vibration Checkboxes
+	m_enable_rumble = m_handler->has_rumble();
+
+	// Enable Deadzone Settings
+	m_enable_deadzones = m_handler->has_deadzones();
+
+	// Enable Pressure Sensitivity Settings
+	m_enable_pressure_intensity_button = m_handler->has_pressure_intensity_button();
 
 	// Change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
@@ -1317,8 +1336,6 @@ void pad_settings_dialog::ChangeHandler()
 
 	ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(!is_ldd_pad);
 	ui->chooseDevice->setEnabled(config_enabled && ui->chooseDevice->count() > 0);
-	ui->chooseClass->setEnabled(config_enabled && ui->chooseClass->count() > 0);
-	ui->chooseProduct->setEnabled(config_enabled && ui->chooseProduct->count() > 0);
 	ui->chooseHandler->setEnabled(!is_ldd_pad && ui->chooseHandler->count() > 0);
 
 	// Re-enable input timer
@@ -1515,21 +1532,54 @@ void pad_settings_dialog::RefreshHandlers()
 
 void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 {
-	if (!m_handler || new_player_id < 0)
+	if (!m_handler || new_player_id < 0 || static_cast<u32>(new_player_id) >= g_cfg_input.player.size())
 	{
 		return;
 	}
 
+	m_duplicate_buttons[m_last_player_id] = "";
+
+	auto& player = g_cfg_input.player[m_last_player_id];
+	m_last_player_id = new_player_id;
+
+	// Check for duplicate button choices
+	if (m_handler->m_type != pad_handler::null)
+	{
+		std::set<std::string> unique_keys;
+		for (const auto& entry : m_cfg_entries)
+		{
+			// Let's ignore special keys, unless we're using a keyboard
+			if (entry.first == button_ids::id_pressure_intensity && m_handler->m_type != pad_handler::keyboard)
+				continue;
+
+			if (const auto& [it, ok] = unique_keys.insert(entry.second.key); !ok)
+			{
+				m_duplicate_buttons[m_last_player_id] = entry.second.key;
+				break;
+			}
+		}
+	}
+
+	// Apply buttons
 	for (const auto& entry : m_cfg_entries)
 	{
 		entry.second.cfg_text->from_string(entry.second.key);
 	}
 
-	auto& cfg = g_cfg_input.player[m_last_player_id]->config;
-	m_last_player_id = new_player_id;
+	// Apply rest of config
+	auto& cfg = player->config;
 
-	cfg.lstickmultiplier.set(ui->stick_multi_left->value() * 100);
-	cfg.rstickmultiplier.set(ui->stick_multi_right->value() * 100);
+	if (m_handler->m_type == pad_handler::keyboard)
+	{
+		cfg.lstickmultiplier.set(ui->kb_stick_multi_left->value() * 100);
+		cfg.rstickmultiplier.set(ui->kb_stick_multi_right->value() * 100);
+	}
+	else
+	{
+		cfg.lstickmultiplier.set(ui->stick_multi_left->value() * 100);
+		cfg.rstickmultiplier.set(ui->stick_multi_right->value() * 100);
+	}
+
 	cfg.lpadsquircling.set(ui->squircle_left->value());
 	cfg.rpadsquircling.set(ui->squircle_right->value());
 
@@ -1575,26 +1625,30 @@ void pad_settings_dialog::SaveExit()
 {
 	ApplyCurrentPlayerConfig(m_last_player_id);
 
-	// Check for invalid selection
-	if (!ui->chooseDevice->isEnabled() || ui->chooseDevice->currentIndex() < 0)
+	for (const auto& [player_id, key] : m_duplicate_buttons)
 	{
-		const u32 played_id = GetPlayerIndex();
-		g_cfg_input.player[played_id]->handler.from_default();
-		g_cfg_input.player[played_id]->device.from_default();
-		g_cfg_input.player[played_id]->config.from_default();
+		if (!key.empty())
+		{
+			int result = QMessageBox::Yes;
+			m_gui_settings->ShowConfirmationBox(
+				tr("Warning!"),
+				tr("The %0 button <b>%1</b> of <b>Player %2</b> was assigned at least twice.<br>Please consider adjusting the configuration.<br><br>Continue anyway?<br>")
+					.arg(qstr(g_cfg_input.player[player_id]->handler.to_string())).arg(qstr(key)).arg(player_id + 1),
+				gui::ib_same_buttons, &result, this);
+
+			if (result == QMessageBox::No)
+				return;
+
+			break;
+		}
 	}
 
-	if (m_title_id.empty())
-	{
-		g_cfg_profile.active_profiles.set_value(g_cfg_profile.global_key, m_profile);
-		g_cfg_profile.save();
+	const std::string profile_key = m_title_id.empty() ? g_cfg_profile.global_key : m_title_id;
 
-		g_cfg_input.save(m_title_id, m_profile);
-	}
-	else
-	{
-		g_cfg_input.save(m_title_id);
-	}
+	g_cfg_profile.active_profiles.set_value(profile_key, m_profile);
+	g_cfg_profile.save();
+
+	g_cfg_input.save(m_title_id, m_profile);
 
 	QDialog::accept();
 }
@@ -1688,6 +1742,7 @@ void pad_settings_dialog::SubscribeTooltips()
 	SubscribeTooltip(ui->gb_pressure_intensity, tooltips.gamepad_settings.pressure_intensity);
 	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
 	SubscribeTooltip(ui->gb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
+	SubscribeTooltip(ui->gb_kb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
 	SubscribeTooltip(ui->gb_vibration, tooltips.gamepad_settings.vibration);
 	SubscribeTooltip(ui->gb_sticks, tooltips.gamepad_settings.stick_deadzones);
 	SubscribeTooltip(ui->gb_stick_preview, tooltips.gamepad_settings.emulated_preview);

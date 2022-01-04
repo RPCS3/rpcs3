@@ -5,7 +5,7 @@
 
 LOG_CHANNEL(psf_log, "PSF");
 
-template<>
+template <>
 void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto fmt)
@@ -21,7 +21,7 @@ void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 	});
 }
 
-template<>
+template <>
 void fmt_class_string<psf::error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto fmt)
@@ -36,6 +36,47 @@ void fmt_class_string<psf::error>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+template <>
+void fmt_class_string<psf::registry>::format(std::string& out, u64 arg)
+{
+	const psf::registry& psf = get_object(arg);
+
+	for (const auto& entry : psf)
+	{
+		if (entry.second.type() == psf::format::array)
+		{
+			// Format them last
+			continue;
+		}
+
+		fmt::append(out, "%s: ", entry.first);
+
+		const psf::entry& data = entry.second;
+
+		if (data.type() == psf::format::integer)
+		{
+			fmt::append(out, "0x%x", data.as_integer());
+		}
+		else
+		{
+			fmt::append(out, "\"%s\"", data.as_string());
+		}
+
+		out += '\n';
+	}
+
+	for (const auto& entry : psf)
+	{
+		if (entry.second.type() != psf::format::array)
+		{
+			// Formatted before
+			continue;
+		}
+
+		fmt::append(out, "%s: %s\n", entry.first, std::basic_string_view<u8>(reinterpret_cast<const u8*>(entry.second.as_string().data()), entry.second.size()));
+	}
 }
 
 namespace psf
@@ -148,12 +189,12 @@ namespace psf
 
 		// Get indices
 		std::vector<def_table_t> indices;
-		PSF_CHECK(stream.read<true>(indices, header.entries_num), corrupt);
+		PSF_CHECK(stream.read(indices, header.entries_num), corrupt);
 
 		// Get keys
 		std::string keys;
 		PSF_CHECK(stream.seek(header.off_key_table) == header.off_key_table, corrupt);
-		PSF_CHECK(stream.read<true>(keys, header.off_data_table - header.off_key_table), corrupt);
+		PSF_CHECK(stream.read(keys, header.off_data_table - header.off_key_table), corrupt);
 
 		// Load entries
 		for (u32 i = 0; i < header.entries_num; ++i)
@@ -186,7 +227,7 @@ namespace psf
 			{
 				// String/array data
 				std::string value;
-				PSF_CHECK(stream.read<true>(value, indices[i].param_len), corrupt);
+				PSF_CHECK(stream.read(value, indices[i].param_len), corrupt);
 
 				if (indices[i].param_fmt == format::string)
 				{

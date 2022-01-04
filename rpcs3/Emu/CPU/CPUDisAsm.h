@@ -17,12 +17,13 @@ class cpu_thread;
 class CPUDisAsm
 {
 protected:
-	const cpu_disasm_mode m_mode{};
-	const std::add_pointer_t<const u8> m_offset{};
+	cpu_disasm_mode m_mode{};
+	const u8* m_offset{};
+	const u32 m_start_pc;
 	const std::add_pointer_t<const cpu_thread> m_cpu{};
 	u32 m_op = 0;
 
-	void Write(const std::string& value)
+	void format_by_mode()
 	{
 		switch (m_mode)
 		{
@@ -32,28 +33,27 @@ protected:
 					static_cast<u8>(m_op >> 24),
 					static_cast<u8>(m_op >> 16),
 					static_cast<u8>(m_op >> 8),
-					static_cast<u8>(m_op >> 0), value);
+					static_cast<u8>(m_op >> 0), last_opcode);
 				break;
 			}
 
 			case cpu_disasm_mode::interpreter:
 			{
-				last_opcode = fmt::format("[%08x]  %02x %02x %02x %02x: %s", dump_pc,
+				last_opcode.insert(0, fmt::format("[%08x]  %02x %02x %02x %02x: ", dump_pc,
 					static_cast<u8>(m_op >> 24),
 					static_cast<u8>(m_op >> 16),
 					static_cast<u8>(m_op >> 8),
-					static_cast<u8>(m_op >> 0), value);
+					static_cast<u8>(m_op >> 0)));
 				break;
 			}
 
 			case cpu_disasm_mode::compiler_elf:
 			{
-				last_opcode = value + '\n';
+				last_opcode += '\n';
 				break;
 			}
 			case cpu_disasm_mode::normal:
 			{
-				last_opcode = value;
 				break;
 			}
 			default: fmt::throw_exception("Unreachable");
@@ -64,25 +64,26 @@ public:
 	std::string last_opcode{};
 	u32 dump_pc{};
 
-	template <typename T, std::enable_if_t<std::is_base_of_v<CPUDisAsm, T>, int> = 0>
-	static T copy_and_change_mode(const T& dis, cpu_disasm_mode mode)
+	cpu_disasm_mode change_mode(cpu_disasm_mode mode)
 	{
-		return T{mode, dis.m_offset, dis.m_cpu};
+		return std::exchange(m_mode, mode);
+	}
+
+	const u8* change_ptr(const u8* ptr)
+	{
+		return std::exchange(m_offset, ptr);
 	}
 
 protected:
-	CPUDisAsm(cpu_disasm_mode mode, const u8* offset, const cpu_thread* cpu = nullptr)
+	CPUDisAsm(cpu_disasm_mode mode, const u8* offset, u32 start_pc = 0, const cpu_thread* cpu = nullptr)
 		: m_mode(mode)
-		, m_offset(offset)
+		, m_offset(offset - start_pc)
+		, m_start_pc(start_pc)
 		, m_cpu(cpu)
 	{
 	}
 
-	CPUDisAsm(const CPUDisAsm&) = delete;
-
 	CPUDisAsm& operator=(const CPUDisAsm&) = delete;
-
-	virtual ~CPUDisAsm() = default;
 
 	virtual u32 DisAsmBranchTarget(s32 /*imm*/);
 
@@ -109,16 +110,17 @@ protected:
 		return fmt::format("%s%s", v < 0 ? "-" : "", av);
 	}
 
-	std::string FixOp(std::string op) const
+	// Signify the formatting function the minimum required amount of characters to print for an instruction
+	// Padding with spaces
+	int PadOp(std::string_view op = {}, int min_spaces = 0) const
 	{
-		if (m_mode != cpu_disasm_mode::normal)
-		{
-			op.resize(std::max<usz>(op.length(), 10), ' ');
-		}
-
-		return op;
+		return m_mode == cpu_disasm_mode::normal ? (static_cast<int>(op.size()) + min_spaces) : 10;
 	}
 
 public:
+	virtual ~CPUDisAsm() = default;
+
 	virtual u32 disasm(u32 pc) = 0;
+	virtual std::pair<const void*, usz> get_memory_span() const = 0;
+	virtual std::unique_ptr<CPUDisAsm> copy_type_erased() const = 0;
 };

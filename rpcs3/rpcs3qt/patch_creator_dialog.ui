@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>patch_creator_dialog</class>
+ <widget class="QDialog" name="patch_creator_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1005</width>
+    <height>804</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Patch Creator</string>
+  </property>
+  <layout class="QVBoxLayout" name="dialogLayout">
+   <item>
+    <widget class="QSplitter" name="splitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <widget class="QWidget" name="verticalLayoutWidget">
+      <layout class="QVBoxLayout" name="leftLayout">
+       <item>
+        <widget class="QTableWidget" name="instructionTable">
+         <property name="contextMenuPolicy">
+          <enum>Qt::CustomContextMenu</enum>
+         </property>
+         <property name="selectionBehavior">
+          <enum>QAbstractItemView::SelectRows</enum>
+         </property>
+         <attribute name="horizontalHeaderStretchLastSection">
+          <bool>true</bool>
+         </attribute>
+         <column>
+          <property name="text">
+           <string>Type</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Offset</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Value</string>
+          </property>
+         </column>
+         <column>
+          <property name="text">
+           <string>Comment</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="addPatchLayout" stretch="1,1,1,1,0">
+         <item>
+          <widget class="QComboBox" name="addPatchTypeComboBox"/>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="addPatchOffsetEdit">
+           <property name="placeholderText">
+            <string>Offset</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="addPatchValueEdit">
+           <property name="placeholderText">
+            <string>Value</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="addPatchCommentEdit">
+           <property name="placeholderText">
+            <string>Comment</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="addPatchButton">
+           <property name="text">
+            <string>Add</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="verticalLayoutWidget_2">
+      <layout class="QVBoxLayout" name="rightLayout">
+       <item>
+        <layout class="QGridLayout" name="gridLayout">
+         <item row="0" column="0">
+          <widget class="QLineEdit" name="hashEdit">
+           <property name="placeholderText">
+            <string>Hash</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <layout class="QHBoxLayout" name="versionLayout">
+           <item>
+            <widget class="QLabel" name="label">
+             <property name="text">
+              <string>Patch Version</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="versionMajorSpinBox"/>
+           </item>
+           <item>
+            <widget class="QSpinBox" name="versionMinorSpinBox"/>
+           </item>
+          </layout>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="notesEdit">
+           <property name="text">
+            <string/>
+           </property>
+           <property name="placeholderText">
+            <string>Notes</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="authorEdit">
+           <property name="placeholderText">
+            <string>Author</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="groupEdit">
+           <property name="placeholderText">
+            <string>Group</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="patchNameEdit">
+           <property name="placeholderText">
+            <string>Patch Name</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLineEdit" name="gameEdit">
+           <property name="placeholderText">
+            <string>Game</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLineEdit" name="serialEdit">
+           <property name="placeholderText">
+            <string>Title ID</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLineEdit" name="gameVersionEdit">
+           <property name="placeholderText">
+            <string>Game Versions</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="validLabel">
+           <property name="text">
+            <string>Valid Patch</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="patchEdit">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

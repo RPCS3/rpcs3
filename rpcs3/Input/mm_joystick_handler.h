@@ -16,7 +16,7 @@
 
 class mm_joystick_handler final : public PadHandlerBase
 {
-	static constexpr u64 NO_BUTTON = 0;
+	static constexpr u64 NO_BUTTON = u64{umax};
 
 	// Unique names for the config files and our pad settings dialog
 	const std::unordered_map<u64, std::string> button_list =
@@ -127,7 +127,7 @@ private:
 
 	bool is_init = false;
 
-	std::vector<u64> blacklist;
+	std::vector<u64> m_blacklist;
 	std::shared_ptr<MMJOYDevice> m_dev;
 	std::unordered_map<int, MMJOYDevice> m_devices;
 

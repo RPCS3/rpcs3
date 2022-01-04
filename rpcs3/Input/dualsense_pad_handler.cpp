@@ -24,13 +24,13 @@ namespace
 	constexpr u32 DUALSENSE_ACC_RES_PER_G = 8192;
 	constexpr u32 DUALSENSE_GYRO_RES_PER_DEG_S = 1024;
 	constexpr u32 DUALSENSE_CALIBRATION_REPORT_SIZE = 41;
+	constexpr u32 DUALSENSE_VERSION_REPORT_SIZE = 64;
 	constexpr u32 DUALSENSE_BLUETOOTH_REPORT_SIZE = 78;
 	constexpr u32 DUALSENSE_USB_REPORT_SIZE = 63;
 	constexpr u32 DUALSENSE_COMMON_REPORT_SIZE = 47;
 	constexpr u32 DUALSENSE_INPUT_REPORT_GYRO_X_OFFSET = 15;
 
-	constexpr u16 DUALSENSE_VID = 0x054C;
-	constexpr u16 DUALSENSE_PID = 0x0CE6;
+	constexpr id_pair SONY_DUALSENSE_ID_0 = {0x054C, 0x0CE6};
 
 	enum
 	{
@@ -90,7 +90,7 @@ namespace
 }
 
 dualsense_pad_handler::dualsense_pad_handler()
-    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, DUALSENSE_VID, {DUALSENSE_PID})
+    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, {SONY_DUALSENSE_ID_0})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
@@ -182,7 +182,14 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	// This will give us the bluetooth mac address of the device, regardless if we are on wired or bluetooth.
 	// So we can't use this to determine if it is a bluetooth device or not.
 	// Will also enable enhanced feature reports for bluetooth.
-	if (hid_get_feature_report(hidDevice, buf.data(), 64) == 21)
+	int res = hid_get_feature_report(hidDevice, buf.data(), 64);
+	if (res < 0)
+	{
+		dualsense_log.error("check_add_device: hid_get_feature_report 0x09 failed! result=%d, error=%s", res, hid_error(hidDevice));
+		return;
+	}
+
+	if (res == 21)
 	{
 		serial = fmt::format("%x%x%x%x%x%x", buf[6], buf[5], buf[4], buf[3], buf[2], buf[1]);
 		device->data_mode = DualSenseDevice::DualSenseDataMode::Enhanced;
@@ -191,6 +198,8 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	{
 		// We're probably on Bluetooth in this case, but for whatever reason the feature report failed.
 		// This will give us a less capable fallback.
+		dualsense_log.warning("check_add_device: hid_get_feature_report returned wrong size! Falling back to simple mode. (result=%d)", res);
+
 		device->data_mode = DualSenseDevice::DualSenseDataMode::Simple;
 		for (wchar_t ch : wide_serial)
 			serial += static_cast<uchar>(ch);
@@ -210,14 +219,16 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	u32 fw_version{};
 
 	buf[0] = 0x20;
-	if (hid_get_feature_report(hidDevice, buf.data(), 64) == 65)
+
+	res = hid_get_feature_report(hidDevice, buf.data(), DUALSENSE_VERSION_REPORT_SIZE);
+	if (res == 65)
 	{
 		hw_version = read_u32(&buf[24]);
 		fw_version = read_u32(&buf[28]);
 	}
 	else
 	{
-		dualsense_log.error("Could not retrieve firmware version");
+		dualsense_log.error("check_add_device: hid_get_feature_report 0x20 failed! Could not retrieve firmware version! result=%d, error=%s", res, hid_error(hidDevice));
 	}
 
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
@@ -413,9 +424,9 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 		{
 			buf[0] = 0x05;
 
-			if (hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE) <= 0)
+			if (int res = hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res <= 0)
 			{
-				dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 failed! Reason: %s", hid_error(dualsense_device->hidDevice));
+				dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for bluetooth controller failed! result=%d, error=%s", res, hid_error(dualsense_device->hidDevice));
 				return false;
 			}
 
@@ -440,9 +451,9 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	{
 		buf[0] = 0x05;
 
-		if (hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE) <= 0)
+		if (int res = hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res <= 0)
 		{
-			dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 failed! Reason: %s", hid_error(dualsense_device->hidDevice));
+			dualsense_log.error("get_calibration_data: hid_get_feature_report 0x05 for wired controller failed! result=%d, error=%s", res, hid_error(dualsense_device->hidDevice));
 			return false;
 		}
 	}

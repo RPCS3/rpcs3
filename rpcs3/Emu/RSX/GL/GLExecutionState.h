@@ -15,6 +15,7 @@ namespace gl
 		bool EXT_dsa_supported = false;
 		bool EXT_depth_bounds_test = false;
 		bool ARB_dsa_supported = false;
+		bool ARB_bindless_texture_supported = false;
 		bool ARB_buffer_storage_supported = false;
 		bool ARB_texture_buffer_supported = false;
 		bool ARB_shader_draw_parameters_supported = false;
@@ -44,9 +45,16 @@ namespace gl
 
 		void initialize()
 		{
-			int find_count = 13;
+			int find_count = 14;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
+
+			if (!ext_count)
+			{
+				rsx_log.error("Coult not initialize GL driver capabilities. Is OpenGL initialized?");
+				return;
+			}
+
 			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 			std::string version_string = reinterpret_cast<const char*>(glGetString(GL_VERSION));
 			std::string renderer_string = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
@@ -74,6 +82,13 @@ namespace gl
 				if (check(ext_name, "GL_ARB_direct_state_access"))
 				{
 					ARB_dsa_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (check(ext_name, "GL_ARB_bindless_texture"))
+				{
+					ARB_bindless_texture_supported = true;
 					find_count--;
 					continue;
 				}
@@ -176,11 +191,11 @@ namespace gl
 
 				vendor_INTEL = true;
 
-				//Texture buffers moved into core at GL 3.3
+				// Texture buffers moved into core at GL 3.3
 				if (version_major > 3 || (version_major == 3 && version_minor >= 3))
 					ARB_texture_buffer_supported = true;
 
-				//Check for expected library entry-points for some required functions
+				// Check for expected library entry-points for some required functions
 				if (!ARB_buffer_storage_supported && glBufferStorage && glMapBufferRange)
 					ARB_buffer_storage_supported = true;
 

@@ -462,24 +462,30 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 	auto& pf_events = g_fxo->get<page_fault_event_entries>();
 	std::lock_guard pf_lock(pf_events.pf_mutex);
 
+	const auto mem = vm::get(vm::any, addr);
+
+	if (!mem || mem->addr != addr)
+	{
+		return {CELL_EINVAL, addr};
+	}
+
 	for (const auto& ev : pf_events.events)
 	{
-		auto mem = vm::get(vm::any, addr);
-		if (mem && addr <= ev.second && ev.second <= addr + mem->size - 1)
+		if (addr <= ev.second && ev.second <= addr + mem->size - 1)
 		{
 			return CELL_EBUSY;
 		}
 	}
 
 	// Try to unmap area
-	const auto area = vm::unmap(addr, true);
+	const auto [area, success] = vm::unmap(addr, true, &mem);
 
 	if (!area)
 	{
 		return {CELL_EINVAL, addr};
 	}
 
-	if (area.use_count() != 1)
+	if (!success)
 	{
 		return CELL_EBUSY;
 	}
@@ -586,6 +592,12 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 	if (!area->falloc(addr, mem->size, &mem->shm, mem->align == 0x10000 ? SYS_MEMORY_PAGE_SIZE_64K : SYS_MEMORY_PAGE_SIZE_1M))
 	{
 		mem->counter--;
+
+		if (!area->is_valid())
+		{
+			return {CELL_EINVAL, addr};
+		}
+
 		return CELL_EBUSY;
 	}
 
@@ -634,6 +646,12 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 	if (!addr)
 	{
 		mem->counter--;
+
+		if (!area->is_valid())
+		{
+			return {CELL_EINVAL, start_addr};
+		}
+
 		return CELL_ENOMEM;
 	}
 

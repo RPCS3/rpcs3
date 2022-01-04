@@ -6,6 +6,9 @@
 
 #include "util/asm.hpp"
 
+static u64 timebase_offset;
+static u64 systemtime_offset;
+
 #ifdef _WIN32
 
 #include <Windows.h>
@@ -141,13 +144,21 @@ u64 get_timebased_time()
 	const u64 time = count.QuadPart;
 	const u64 freq = s_time_aux_info.perf_freq;
 
-	return (time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
+	return ((time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u) - timebase_offset;
 #else
 	struct timespec ts;
 	ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
 
-	return (static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u;
+	return ((static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u) - timebase_offset;
 #endif
+}
+
+// Add an offset to get_timebased_time to avoid leaking PC's uptime into the game
+void initalize_timebased_time()
+{
+	timebase_offset = 0;
+	timebase_offset = get_timebased_time();
+	systemtime_offset = timebase_offset / (g_timebase_freq / 1000000);
 }
 
 // Returns some relative time in microseconds, don't change this fact
@@ -175,9 +186,11 @@ u64 get_system_time()
 }
 
 // As get_system_time but obeys Clocks scaling setting
-u64 get_guest_system_time()
+u64 get_guest_system_time(u64 time)
 {
-	return get_system_time() * g_cfg.core.clocks_scale / 100;
+	const u64 result = (time != umax ? time : get_system_time()) * g_cfg.core.clocks_scale / 100;
+	ensure(result >= systemtime_offset);
+	return result - systemtime_offset;
 }
 
 // Functions

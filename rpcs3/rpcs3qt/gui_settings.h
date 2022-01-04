@@ -128,6 +128,7 @@ namespace gui
 	const gui_save ib_confirm_exit = gui_save(main_window, "confirmationBoxExitGame",  true);
 	const gui_save ib_confirm_boot = gui_save(main_window, "confirmationBoxBootGame",  true);
 	const gui_save ib_obsolete_cfg = gui_save(main_window, "confirmationObsoleteCfg",  true);
+	const gui_save ib_same_buttons = gui_save(main_window, "confirmationSameButtons",  true);
 
 	const gui_save fd_install_pkg  = gui_save(main_window, "lastExplorePathPKG",  "");
 	const gui_save fd_install_pup  = gui_save(main_window, "lastExplorePathPUP",  "");

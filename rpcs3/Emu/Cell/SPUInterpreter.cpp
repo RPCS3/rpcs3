@@ -43,7 +43,7 @@ namespace asmjit
 	static constexpr spu_opcode_t s_op{};
 
 	template <uint I, uint N>
-	static void build_spu_gpr_load(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>&, bool store = false)
+	static void build_spu_gpr_load(x86::Assembler& c, x86::Xmm x, const bf_t<u32, I, N>&, bool store = false)
 	{
 		static_assert(N == 7, "Invalid bitfield");
 
@@ -87,7 +87,7 @@ namespace asmjit
 	}
 
 	template <uint I, uint N>
-	static void build_spu_gpr_store(X86Assembler& c, X86Xmm x, const bf_t<u32, I, N>&, bool store = true)
+	static void build_spu_gpr_store(x86::Assembler& c, x86::Xmm x, const bf_t<u32, I, N>&, bool store = true)
 	{
 		build_spu_gpr_load(c, x, bf_t<u32, I, N>{}, store);
 	}
@@ -116,13 +116,22 @@ void spu_interpreter::set_interrupt_status(spu_thread& spu, spu_opcode_t op)
 		spu.set_interrupt_status(false);
 	}
 
-	spu.check_mfc_interrupts(spu.pc);
+	if (spu.check_mfc_interrupts(spu.pc) && spu.state & cpu_flag::pending)
+	{
+		spu.do_mfc();
+	}
 }
 
 
 bool spu_interpreter::STOP(spu_thread& spu, spu_opcode_t op)
 {
-	if (!spu.stop_and_signal(op.opcode & 0x3fff))
+	const bool allow = std::exchange(spu.allow_interrupts_in_cpu_work, false);
+
+	const bool advance_pc = spu.stop_and_signal(op.opcode & 0x3fff);
+
+	spu.allow_interrupts_in_cpu_work = allow;
+
+	if (!advance_pc)
 	{
 		return false;
 	}
@@ -163,7 +172,11 @@ bool spu_interpreter::MFSPR(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::RDCH(spu_thread& spu, spu_opcode_t op)
 {
+	const bool allow = std::exchange(spu.allow_interrupts_in_cpu_work, false);
+
 	const s64 result = spu.get_ch_value(op.ra);
+
+	spu.allow_interrupts_in_cpu_work = allow;
 
 	if (result < 0)
 	{
@@ -425,7 +438,13 @@ bool spu_interpreter::MTSPR(spu_thread&, spu_opcode_t)
 
 bool spu_interpreter::WRCH(spu_thread& spu, spu_opcode_t op)
 {
-	if (!spu.set_ch_value(op.ra, spu.gpr[op.rt]._u32[3]))
+	const bool allow = std::exchange(spu.allow_interrupts_in_cpu_work, false);
+
+	const bool advance_pc = spu.set_ch_value(op.ra, spu.gpr[op.rt]._u32[3]);
+
+	spu.allow_interrupts_in_cpu_work = allow;
+
+	if (!advance_pc)
 	{
 		return false;
 	}
@@ -1714,7 +1733,7 @@ bool spu_interpreter::SHUFB(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>([](asmjit::X86Assembler& c, auto& /*args*/)
+const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>("spu_shufb", [](asmjit::x86::Assembler& c, auto& /*args*/)
 {
 	using namespace asmjit;
 
@@ -1774,7 +1793,7 @@ const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>([]
 	c.mov(x86::eax, 1);
 	c.ret();
 
-	c.align(kAlignData, 16);
+	c.align(AlignMode::kData, 16);
 	c.bind(xc0);
 	c.dq(0xc0c0c0c0c0c0c0c0);
 	c.dq(0xc0c0c0c0c0c0c0c0);

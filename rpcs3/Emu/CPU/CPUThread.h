@@ -21,6 +21,7 @@ enum class cpu_flag : u32
 	ret, // Callback return requested
 	signal, // Thread received a signal (HLE)
 	memory, // Thread must unlock memory mutex
+	pending, // Thread has postponed work
 
 	dbg_global_pause, // Emulation paused
 	dbg_pause, // Thread paused
@@ -168,6 +169,9 @@ public:
 
 	// Callback for cpu_flag::suspend
 	virtual void cpu_sleep() {}
+
+	// Callback for cpu_flag::pending
+	virtual void cpu_work() {}
 
 	// Callback for cpu_flag::ret
 	virtual void cpu_return() {}

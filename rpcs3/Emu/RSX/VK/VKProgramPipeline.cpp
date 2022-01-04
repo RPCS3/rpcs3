@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VKProgramPipeline.h"
+#include "vkutils/descriptors.h"
 #include "vkutils/device.h"
 #include <string>
 
@@ -158,27 +159,13 @@ namespace vk
 			});
 		}
 
-		void program::bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string& uniform_name, VkDescriptorType type, VkDescriptorSet &descriptor_set)
+		void program::bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string& uniform_name, VkDescriptorType type, vk::descriptor_set &set)
 		{
 			for (const auto &uniform : uniforms[program_input_type::input_type_texture])
 			{
 				if (uniform.name == uniform_name)
 				{
-					const VkWriteDescriptorSet descriptor_writer =
-					{
-						VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-						nullptr,                                   // pNext
-						descriptor_set,                            // dstSet
-						uniform.location,                          // dstBinding
-						0,                                         // dstArrayElement
-						1,                                         // descriptorCount
-						type,                                      // descriptorType
-						&image_descriptor,                         // pImageInfo
-						nullptr,                                   // pBufferInfo
-						nullptr                                    // pTexelBufferView
-					};
-
-					vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+					set.push(image_descriptor, type, uniform.location);
 					attribute_location_mask |= (1ull << uniform.location);
 					return;
 				}
@@ -187,7 +174,7 @@ namespace vk
 			rsx_log.notice("texture not found in program: %s", uniform_name.c_str());
 		}
 
-		void program::bind_uniform(const VkDescriptorImageInfo & image_descriptor, int texture_unit, ::glsl::program_domain domain, VkDescriptorSet &descriptor_set, bool is_stencil_mirror)
+		void program::bind_uniform(const VkDescriptorImageInfo & image_descriptor, int texture_unit, ::glsl::program_domain domain, vk::descriptor_set &set, bool is_stencil_mirror)
 		{
 			ensure(domain != ::glsl::program_domain::glsl_compute_program);
 
@@ -203,21 +190,7 @@ namespace vk
 
 			if (binding != ~0u)
 			{
-				const VkWriteDescriptorSet descriptor_writer =
-				{
-					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-					nullptr,                                   // pNext
-					descriptor_set,                            // dstSet
-					binding,                                   // dstBinding
-					0,                                         // dstArrayElement
-					1,                                         // descriptorCount
-					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // descriptorType
-					&image_descriptor,                         // pImageInfo
-					nullptr,                                   // pBufferInfo
-					nullptr                                    // pTexelBufferView
-				};
-
-				vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+				set.push(image_descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding);
 				attribute_location_mask |= (1ull << binding);
 				return;
 			}
@@ -225,38 +198,24 @@ namespace vk
 			rsx_log.notice("texture not found in program: %stex%u", (domain == ::glsl::program_domain::glsl_vertex_program)? "v" : "", texture_unit);
 		}
 
-		void program::bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorSet &descriptor_set)
+		void program::bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, vk::descriptor_set &set)
 		{
-			bind_buffer(buffer_descriptor, binding_point, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptor_set);
+			bind_buffer(buffer_descriptor, binding_point, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, set);
 		}
 
-		void program::bind_uniform(const VkBufferView &buffer_view, u32 binding_point, VkDescriptorSet &descriptor_set)
+		void program::bind_uniform(const VkBufferView &buffer_view, u32 binding_point, vk::descriptor_set &set)
 		{
-			const VkWriteDescriptorSet descriptor_writer =
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
-				nullptr,                                // pNext
-				descriptor_set,                         // dstSet
-				binding_point,                          // dstBinding
-				0,                                      // dstArrayElement
-				1,                                      // descriptorCount
-				VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,// descriptorType
-				nullptr,                                // pImageInfo
-				nullptr,                                // pBufferInfo
-				&buffer_view                            // pTexelBufferView
-			};
-
-			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+			set.push(buffer_view, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, binding_point);
 			attribute_location_mask |= (1ull << binding_point);
 		}
 
-		void program::bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set)
+		void program::bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, vk::descriptor_set &set)
 		{
 			for (const auto &uniform : uniforms[type])
 			{
 				if (uniform.name == binding_name)
 				{
-					bind_uniform(buffer_view, uniform.location, descriptor_set);
+					bind_uniform(buffer_view, uniform.location, set);
 					return;
 				}
 			}
@@ -264,23 +223,9 @@ namespace vk
 			rsx_log.notice("vertex buffer not found in program: %s", binding_name.c_str());
 		}
 
-		void program::bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set)
+		void program::bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorType type, vk::descriptor_set &set)
 		{
-			const VkWriteDescriptorSet descriptor_writer =
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
-				nullptr,                                // pNext
-				descriptor_set,                         // dstSet
-				binding_point,                          // dstBinding
-				0,                                      // dstArrayElement
-				1,                                      // descriptorCount
-				type,                                   // descriptorType
-				nullptr,                                // pImageInfo
-				&buffer_descriptor,                     // pBufferInfo
-				nullptr                                 // pTexelBufferView
-			};
-
-			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+			set.push(buffer_descriptor, type, binding_point);
 			attribute_location_mask |= (1ull << binding_point);
 		}
 	}

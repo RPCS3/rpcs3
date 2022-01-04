@@ -182,11 +182,11 @@ namespace extra_nps
 			print_bin_attr_internal(&room->roomBinAttrInternal[i]);
 	}
 
-	void print_create_room_resp(const SceNpMatching2CreateJoinRoomResponse *resp)
+	void print_create_room_resp(const SceNpMatching2CreateJoinRoomResponse* resp)
 	{
 		sceNp2.warning("SceNpMatching2CreateJoinRoomResponse:");
 		sceNp2.warning("roomDataInternal: *0x%x", resp->roomDataInternal);
-		if(resp->roomDataInternal)
+		if (resp->roomDataInternal)
 			print_room_data_internal(resp->roomDataInternal.get_ptr());
 	}
 
@@ -215,6 +215,20 @@ namespace extra_nps
 		sceNp2.warning("passwordSlotMask: *0x%x", req->passwordSlotMask);
 		sceNp2.warning("ownerPrivilegeRank: *0x%x", req->ownerPrivilegeRank);
 		sceNp2.warning("ownerPrivilegeRankNum: %d", req->ownerPrivilegeRankNum);
+	}
+
+	void print_set_roommemberdata_int_req(const SceNpMatching2SetRoomMemberDataInternalRequest* req)
+	{
+		sceNp2.warning("SceNpMatching2SetRoomMemberDataInternalRequest:");
+		sceNp2.warning("roomId: %d", req->roomId);
+		sceNp2.warning("memberId: %d", req->memberId);
+		sceNp2.warning("teamId: %d", req->teamId);
+		sceNp2.warning("flagFilter: 0x%x", req->flagFilter);
+		sceNp2.warning("flagAttr: 0x%x", req->flagAttr);
+		sceNp2.warning("roomMemberBinAttrInternal: *0x%x", req->roomMemberBinAttrInternal);
+		sceNp2.warning("roomMemberBinAttrInternalNum: %d", req->roomMemberBinAttrInternalNum);
+		for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
+			print_bin_attr(&req->roomMemberBinAttrInternal[i]);
 	}
 
 } // namespace extra_nps

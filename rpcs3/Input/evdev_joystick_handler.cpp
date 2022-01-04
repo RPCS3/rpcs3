@@ -753,6 +753,10 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 
 	auto axis_orientations = m_dev->axis_orientations;
 
+	// Find out if special buttons are pressed (introduced by RPCS3).
+	// These buttons will have a delay of one cycle, but whatever.
+	const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
+
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (int i = 0; i < static_cast<int>(pad->m_buttons.size()); i++)
 	{
@@ -782,8 +786,19 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 			}
 		}
 
-		button.m_value = static_cast<u16>(value);
-		TranslateButtonPress(m_dev, button_code, button.m_pressed, button.m_value);
+		// Using a temporary buffer because the values can change during translation
+		Button tmp = button;
+		tmp.m_value = static_cast<u16>(value);
+
+		TranslateButtonPress(m_dev, button_code, tmp.m_pressed, tmp.m_value);
+
+		// Modify pressure if necessary if the button was pressed
+		if (adjust_pressure && tmp.m_pressed)
+		{
+			tmp.m_value = pad->m_pressure_intensity;
+		}
+
+		button = tmp;
 	}
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
@@ -848,13 +863,13 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 		m_dev->stick_val[idx] = m_dev->val_max[idx] - m_dev->val_min[idx];
 	}
 
-	const auto profile = m_dev->config;
+	const auto cfg = m_dev->config;
 
 	u16 lx, ly, rx, ry;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, m_dev->stick_val[0], m_dev->stick_val[1], profile->lstickdeadzone, profile->lpadsquircling);
-	convert_stick_values(rx, ry, m_dev->stick_val[2], m_dev->stick_val[3], profile->rstickdeadzone, profile->rpadsquircling);
+	convert_stick_values(lx, ly, m_dev->stick_val[0], m_dev->stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
+	convert_stick_values(rx, ry, m_dev->stick_val[2], m_dev->stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
 
 	pad->m_sticks[0].m_value = lx;
 	pad->m_sticks[1].m_value = 255 - ly;
@@ -870,13 +885,13 @@ void evdev_joystick_handler::apply_pad_data(const std::shared_ptr<PadDevice>& de
 	if (!evdev_device)
 		return;
 
-	auto profile = device->config;
+	auto cfg = device->config;
 
 	// Handle vibration
-	const int idx_l       = profile->switch_vibration_motors ? 1 : 0;
-	const int idx_s       = profile->switch_vibration_motors ? 0 : 1;
-	const u16 force_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : vibration_min;
-	const u16 force_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : vibration_min;
+	const int idx_l       = cfg->switch_vibration_motors ? 1 : 0;
+	const int idx_s       = cfg->switch_vibration_motors ? 0 : 1;
+	const u16 force_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : vibration_min;
+	const u16 force_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : vibration_min;
 	SetRumble(evdev_device, force_large, force_small);
 }
 
@@ -982,12 +997,11 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->select).code,   CELL_PAD_CTRL_SELECT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->l3).code,       CELL_PAD_CTRL_L3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->r3).code,       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->ps).code,       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->ps).code,       CELL_PAD_CTRL_PS);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->up).code,       CELL_PAD_CTRL_UP);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->down).code,     CELL_PAD_CTRL_DOWN);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->left).code,     CELL_PAD_CTRL_LEFT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->right).code,    CELL_PAD_CTRL_RIGHT);
-	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0,                                     0x0); // Reserved (and currently not in use by rpcs3 at all)
 
 	m_dev->axis_left[0]  = evdevbutton(cfg->ls_right);
 	m_dev->axis_left[1]  = evdevbutton(cfg->ls_left);
@@ -1032,22 +1046,22 @@ bool evdev_joystick_handler::check_buttons(const std::vector<EvdevButton>& b, co
 
 bool evdev_joystick_handler::get_is_left_trigger(u64 keyCode)
 {
-	return keyCode == check_button(m_dev->trigger_left, static_cast<u32>(keyCode));
+	return check_button(m_dev->trigger_left, static_cast<u32>(keyCode));
 }
 
 bool evdev_joystick_handler::get_is_right_trigger(u64 keyCode)
 {
-	return keyCode == check_button(m_dev->trigger_right, static_cast<u32>(keyCode));
+	return check_button(m_dev->trigger_right, static_cast<u32>(keyCode));
 }
 
 bool evdev_joystick_handler::get_is_left_stick(u64 keyCode)
 {
-	return keyCode == check_buttons(m_dev->axis_left, static_cast<u32>(keyCode));
+	return check_buttons(m_dev->axis_left, static_cast<u32>(keyCode));
 }
 
 bool evdev_joystick_handler::get_is_right_stick(u64 keyCode)
 {
-	return keyCode == check_buttons(m_dev->axis_right, static_cast<u32>(keyCode));
+	return check_buttons(m_dev->axis_right, static_cast<u32>(keyCode));
 }
 
 #endif

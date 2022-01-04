@@ -4,10 +4,11 @@
 
 LOG_CHANNEL(ds4_log, "DS4");
 
-constexpr u16 DS4_VID = 0x054C;
-constexpr u16 DS4_PID_0 = 0xBA0;
-constexpr u16 DS4_PID_1 = 0x5C4;
-constexpr u16 DS4_PID_2 = 0x09CC;
+constexpr id_pair SONY_DS4_ID_0 = {0x054C, 0xBA0};
+constexpr id_pair SONY_DS4_ID_1 = {0x054C, 0x5C4};
+constexpr id_pair SONY_DS4_ID_2 = {0x054C, 0x09CC};
+
+constexpr id_pair ZEROPLUS_ID_0 = {0x0C12, 0x0E20};
 
 namespace
 {
@@ -17,6 +18,7 @@ namespace
 	constexpr u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
 	constexpr u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
 	constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
+	constexpr u32 DS4_FEATURE_REPORT_0xA3_SIZE = 49;
 	constexpr u32 DS4_INPUT_REPORT_0x11_SIZE = 78;
 	constexpr u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
 	constexpr u32 DS4_OUTPUT_REPORT_0x11_SIZE = 78;
@@ -71,7 +73,7 @@ namespace
 }
 
 ds4_pad_handler::ds4_pad_handler()
-    : hid_pad_handler<DS4Device>(pad_handler::ds4, DS4_VID, {DS4_PID_0, DS4_PID_1, DS4_PID_2})
+    : hid_pad_handler<DS4Device>(pad_handler::ds4, {SONY_DS4_ID_0, SONY_DS4_ID_1, SONY_DS4_ID_2, ZEROPLUS_ID_0})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
@@ -382,9 +384,9 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 		{
 			buf[0] = 0x05;
 
-			if (hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x05_SIZE) <= 0)
+			if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x05_SIZE); res <= 0)
 			{
-				ds4_log.error("GetCalibrationData: hid_get_feature_report 0x05 failed! Reason: %s", hid_error(ds4Dev->hidDevice));
+				ds4_log.error("GetCalibrationData: hid_get_feature_report 0x05 for bluetooth controller failed! result=%d, error=%s", res, hid_error(ds4Dev->hidDevice));
 				return false;
 			}
 
@@ -408,9 +410,9 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 	else
 	{
 		buf[0] = 0x02;
-		if (hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x02_SIZE) <= 0)
+		if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x02_SIZE); res <= 0)
 		{
-			ds4_log.error("GetCalibrationData: hid_get_feature_report 0x02 failed! Reason: %s", hid_error(ds4Dev->hidDevice));
+			ds4_log.error("GetCalibrationData: hid_get_feature_report 0x02 for wired controller failed! result=%d, error=%s", res, hid_error(ds4Dev->hidDevice));
 			return false;
 		}
 	}
@@ -527,12 +529,13 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	std::string serial;
 
 	// There isnt a nice 'portable' way with hidapi to detect bt vs wired as the pid/vid's are the same
-	// Let's try getting 0x81 feature report, which should will return mac address on wired, and should error on bluetooth
+	// Let's try getting 0x81 feature report, which should return the mac address on wired, and should an error on bluetooth
 	std::array<u8, 64> buf{};
 	buf[0] = 0x81;
-	if (const auto bytes_read = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE); bytes_read > 0)
+	int res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE);
+	if (res > 0)
 	{
-		if (bytes_read != DS4_FEATURE_REPORT_0x81_SIZE)
+		if (res != DS4_FEATURE_REPORT_0x81_SIZE)
 		{
 			// Controller may not be genuine. These controllers do not have feature 0x81 implemented and calibration data is in bluetooth format even in USB mode!
 			ds4_log.warning("check_add_device: DS4 controller may not be genuine. Workaround enabled.");
@@ -540,9 +543,9 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 			// Read feature report 0x12 instead which is what the console uses.
 			buf[0] = 0x12;
 			buf[1] = 0;
-			if (hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE) == -1)
+			if (res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE); res < 0)
 			{
-				ds4_log.error("check_add_device: hid_get_feature_report 0x12 failed! Reason: %s", hid_error(hidDevice));
+				ds4_log.error("check_add_device: hid_get_feature_report 0x12 failed! result=%d, error=%s", res, hid_error(hidDevice));
 			}
 		}
 
@@ -550,6 +553,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	}
 	else
 	{
+		ds4_log.warning("check_add_device: DS4 Bluetooth controller detected. (hid_get_feature_report 0x81 failed, result=%d, error=%s)", res, hid_error(hidDevice));
 		device->bt_controller = true;
 		for (wchar_t ch : wide_serial)
 			serial += static_cast<uchar>(ch);
@@ -565,6 +569,22 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 		return;
 	}
 
+	u32 hw_version{};
+	u32 fw_version{};
+
+	buf[0] = 0xA3;
+
+	res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0xA3_SIZE);
+	if (res <= 0)
+	{
+		ds4_log.error("check_add_device: hid_get_feature_report 0xA3 failed! Could not retrieve firmware version! result=%d, error=%s", res, hid_error(hidDevice));
+	}
+	else
+	{
+		hw_version = read_u32(&buf[35]);
+		fw_version = read_u32(&buf[41]);
+	}
+
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
 		ds4_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
@@ -578,7 +598,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 
 	send_output_report(device);
 
-	ds4_log.notice("Added device: bluetooth=%d, serial='%s', path='%s'", device->bt_controller, serial, device->path);
+	ds4_log.notice("Added device: bluetooth=%d, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, serial, hw_version, fw_version, device->path);
 }
 
 ds4_pad_handler::~ds4_pad_handler()
@@ -676,9 +696,9 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 		// tells controller to send 0x11 reports
 		std::array<u8, 64> buf_error{};
 		buf_error[0] = 0x2;
-		if (hid_get_feature_report(device->hidDevice, buf_error.data(), buf_error.size()) == -1)
+		if (int res = hid_get_feature_report(device->hidDevice, buf_error.data(), buf_error.size()); res < 0)
 		{
-			ds4_log.error("GetRawData: hid_get_feature_report 0x2 failed! Reason: %s", hid_error(device->hidDevice));
+			ds4_log.error("GetRawData: hid_get_feature_report 0x2 failed! result=%d, error=%s", res, hid_error(device->hidDevice));
 		}
 		return DataStatus::NoNewData;
 	}

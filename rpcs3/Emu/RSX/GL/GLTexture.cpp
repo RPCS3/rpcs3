@@ -548,7 +548,15 @@ namespace gl
 		{
 			mem_info->memory_required = (mem_info->image_size_in_texels * 4);
 			initialize_scratch_mem();
-			get_compute_task<cs_fconvert_task<f16, f32, true, false>>()->run(transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
+
+			if (unpack_info.swap_bytes)
+			{
+				get_compute_task<cs_fconvert_task<f16, f32, true, false>>()->run(transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
+			}
+			else
+			{
+				get_compute_task<cs_fconvert_task<f16, f32, false, false>>()->run(transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
+			}
 		}
 		else if (unpack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
 		{
@@ -578,14 +586,6 @@ namespace gl
 	gl::viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
 			rsx::texture_dimension_extended type)
 	{
-		if (rsx::is_compressed_host_format(gcm_format))
-		{
-			//Compressed formats have a 4-byte alignment
-			//TODO: Verify that samplers are not affected by the padding
-			width = utils::align(width, 4);
-			height = utils::align(height, 4);
-		}
-
 		const GLenum target = get_target(type);
 		const GLenum internal_format = get_sized_internal_format(gcm_format);
 		const auto format_class = rsx::classify_format(gcm_format);
@@ -597,7 +597,14 @@ namespace gl
 			const std::vector<rsx::subresource_layout> &input_layouts,
 			bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
 	{
-		rsx::texture_uploader_capabilities caps{ true, false, false, false, 4 };
+		rsx::texture_uploader_capabilities caps
+		{
+			.supports_byteswap = true,
+			.supports_vtc_decoding = false,
+			.supports_hw_deswizzle = false,
+			.supports_zero_copy = false,
+			.alignment = 4
+		};
 
 		pixel_unpack_settings unpack_settings;
 		unpack_settings.row_length(0).alignment(4);
@@ -605,8 +612,6 @@ namespace gl
 		if (rsx::is_compressed_host_format(format)) [[likely]]
 		{
 			caps.supports_vtc_decoding = gl::get_driver_caps().vendor_NVIDIA;
-
-			unpack_settings.row_length(utils::align(dst->width(), 4));
 			unpack_settings.apply();
 
 			glBindTexture(static_cast<GLenum>(dst->get_target()), dst->id());
@@ -616,32 +621,35 @@ namespace gl
 			for (const rsx::subresource_layout& layout : input_layouts)
 			{
 				upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
-				const sizei image_size{utils::align(layout.width_in_texel, 4), utils::align(layout.height_in_texel, 4)};
 
 				switch (dst->get_target())
 				{
 				case texture::target::texture1D:
 				{
 					const GLsizei size = layout.width_in_block * format_block_size;
-					glCompressedTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, image_size.width, gl_format, size, staging_buffer.data());
+					ensure(usz(size) <= staging_buffer.size());
+					glCompressedTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, layout.width_in_texel, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case texture::target::texture2D:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
-					glCompressedTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
+					ensure(usz(size) <= staging_buffer.size());
+					glCompressedTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case texture::target::textureCUBE:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
-					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, image_size.width, image_size.height, gl_format, size, staging_buffer.data());
+					ensure(usz(size) <= staging_buffer.size());
+					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case texture::target::texture3D:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * layout.depth * format_block_size;
-					glCompressedTexSubImage3D(GL_TEXTURE_3D, layout.level, 0, 0, 0, image_size.width, image_size.height, layout.depth, gl_format, size, staging_buffer.data());
+					ensure(usz(size) <= staging_buffer.size());
+					glCompressedTexSubImage3D(GL_TEXTURE_3D, layout.level, 0, 0, 0, layout.width_in_texel, layout.height_in_texel, layout.depth, gl_format, size, staging_buffer.data());
 					break;
 				}
 				default:
@@ -720,10 +728,13 @@ namespace gl
 					// 2. Upload memory to GPU
 					upload_scratch_mem.copy_to(&compute_scratch_mem, 0, 0, image_linear_size);
 
-					// 3. Dispatch compute routines
+					// 3. Update configuration
+					mem_layout.swap_bytes = op.require_swap;
 					mem_info.image_size_in_texels = image_linear_size / block_size_in_bytes;
 					mem_info.image_size_in_bytes = image_linear_size;
 					mem_info.memory_required = 0;
+
+					// 4. Dispatch compute routines
 					copy_buffer_to_image(mem_layout, &compute_scratch_mem, dst, nullptr, layout.level, region, & mem_info);
 				}
 				else
@@ -782,9 +793,20 @@ namespace gl
 	void upload_texture(texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout)
 	{
 		// Calculate staging buffer size
-		const u32 aligned_pitch = utils::align<u32>(dst->pitch(), 4);
-		usz texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
-		std::vector<std::byte> data_upload_buf(texture_data_sz);
+		std::vector<std::byte> data_upload_buf;
+
+		if (rsx::is_compressed_host_format(gcm_format))
+		{
+			const auto& desc = subresources_layout[0];
+			const usz texture_data_sz = desc.width_in_block * desc.height_in_block * desc.depth * rsx::get_format_block_size_in_bytes(gcm_format);
+			data_upload_buf.resize(texture_data_sz);
+		}
+		else
+		{
+			const auto aligned_pitch = utils::align<u32>(dst->pitch(), 4);
+			const usz texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
+			data_upload_buf.resize(texture_data_sz);
+		}
 
 		// TODO: GL drivers support byteswapping and this should be used instead of doing so manually
 		const auto format_type = get_format_type(gcm_format);

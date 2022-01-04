@@ -290,6 +290,7 @@ void signaling_handler::process_incoming_messages()
 			retire_packet(si, signal_connect);
 			// connection is active
 			update_si_addr(si, op_addr, op_port);
+			update_si_mapped_addr(si, sp->sent_addr, sp->sent_port);
 			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE);
 			break;
 		case signal_confirm:
@@ -299,6 +300,7 @@ void signaling_handler::process_incoming_messages()
 			retire_packet(si, signal_connect_ack);
 			// connection is active
 			update_si_addr(si, op_addr, op_port);
+			update_si_mapped_addr(si, sp->sent_addr, sp->sent_port);
 			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, true);
 			break;
 		case signal_finished:
@@ -418,6 +420,27 @@ void signaling_handler::update_si_addr(std::shared_ptr<signaling_info>& si, u32 
 	}
 }
 
+void signaling_handler::update_si_mapped_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port)
+{
+	ensure(si);
+
+	if (si->addr != new_addr || si->port != new_port)
+	{
+		in_addr addr_old, addr_new;
+		addr_old.s_addr = si->addr;
+		addr_new.s_addr = new_addr;
+
+		char ip_str_old[16];
+		char ip_str_new[16];
+		inet_ntop(AF_INET, &addr_old, ip_str_old, sizeof(ip_str_old));
+		inet_ntop(AF_INET, &addr_new, ip_str_new, sizeof(ip_str_new));
+
+		sign_log.trace("Updated Mapped Address from %s:%d to %s:%d", ip_str_old, si->port, ip_str_new, new_port);
+		si->mapped_addr = new_addr;
+		si->mapped_port = new_port;
+	}
+}
+
 void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status, bool confirm_packet)
 {
 	if (!si)
@@ -485,6 +508,9 @@ void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u1
 
 	sign_log.trace("Sending %s packet to %s:%d", sp.command, ip_str, port);
 
+	sp.sent_addr = addr;
+	sp.sent_port = port;
+
 	if (send_packet_from_p2p_port(packet, dest) == -1)
 	{
 		sign_log.error("Failed to send signaling packet to %s:%d", ip_str, port);
@@ -549,6 +575,7 @@ void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
 	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
+	wake_up();
 }
 
 void signaling_handler::start_sig2(u64 room_id, u16 member_id)
@@ -566,6 +593,7 @@ void signaling_handler::start_sig2(u64 room_id, u16 member_id)
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
 	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
+	wake_up();
 }
 
 void signaling_handler::disconnect_sig2_users(u64 room_id)
@@ -622,7 +650,7 @@ u32 signaling_handler::init_sig_infos(const SceNpId* npid)
 
 		// Request peer infos from RPCN
 		std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
-		auto& nph = g_fxo->get<named_thread<np_handler>>();
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		nph.req_sign_infos(npid_str, conn_id);
 	}
 	else

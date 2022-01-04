@@ -1,12 +1,15 @@
 #include "stdafx.h"
 #include "system_utils.hpp"
 #include "system_config.h"
+#include "vfs_config.h"
 #include "Emu/Io/pad_config.h"
 #include "util/sysinfo.hpp"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
 #include "Crypto/unpkg.h"
+#include "Crypto/unself.h"
+#include "Crypto/unedat.h"
 
 #include <charconv>
 #include <thread>
@@ -37,7 +40,7 @@ namespace rpcs3::utils
 		{
 			if (!was_silenced)
 			{
-				sys_log.notice("Disabling logging...");
+				sys_log.success("Disabling logging! Do not create issues on GitHub or on the forums while logging is disabled.");
 			}
 
 			logs::silence();
@@ -49,7 +52,7 @@ namespace rpcs3::utils
 
 			if (was_silenced)
 			{
-				sys_log.notice("Logging enabled");
+				sys_log.success("Logging enabled");
 			}
 		}
 
@@ -114,18 +117,18 @@ namespace rpcs3::utils
 
 	std::string get_emu_dir()
 	{
-		const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
+		const std::string& emu_dir_ = g_cfg_vfs.emulator_dir;
 		return emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 	}
 
 	std::string get_hdd0_dir()
 	{
-		return g_cfg.vfs.get(g_cfg.vfs.dev_hdd0, get_emu_dir());
+		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, get_emu_dir());
 	}
 
 	std::string get_hdd1_dir()
 	{
-		return g_cfg.vfs.get(g_cfg.vfs.dev_hdd1, get_emu_dir());
+		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, get_emu_dir());
 	}
 
 	std::string get_cache_dir()
@@ -133,9 +136,9 @@ namespace rpcs3::utils
 		return fs::get_cache_dir() + "cache/";
 	}
 
-	std::string get_rap_file_path(const std::string& rap)
+	std::string get_rap_file_path(const std::string_view& rap)
 	{
-		const std::string home_dir = get_hdd0_dir() + "/home";
+		const std::string home_dir = get_hdd0_dir() + "home";
 
 		std::string rap_path;
 
@@ -153,6 +156,86 @@ namespace rpcs3::utils
 
 		// Return a sample path tested for logging purposes
 		return rap_path;
+	}
+
+	std::string get_c00_unlock_edat_path(const std::string_view& content_id)
+	{
+		const std::string home_dir = get_hdd0_dir() + "home";
+
+		std::string edat_path;
+
+		for (auto&& entry : fs::dir(home_dir))
+		{
+			if (entry.is_directory && check_user(entry.name))
+			{
+				edat_path = fmt::format("%s/%s/exdata/%s.edat", home_dir, entry.name, content_id);
+				if (fs::is_file(edat_path))
+				{
+					return edat_path;
+				}
+			}
+		}
+
+		// Return a sample path tested for logging purposes
+		return edat_path;
+	}
+
+	bool verify_c00_unlock_edat(const std::string_view& content_id)
+	{
+		const std::string edat_path = rpcs3::utils::get_c00_unlock_edat_path(content_id);
+
+		// Check if user has unlock EDAT installed
+		fs::file enc_file(edat_path);
+
+		if (!enc_file)
+		{
+			sys_log.notice("verify_c00_unlock_edat(): '%s' not found", edat_path);
+			return false;
+		}
+
+		u128 k_licensee = get_default_self_klic();
+		std::string edat_content_id;
+
+		if (!VerifyEDATHeaderWithKLicense(enc_file, edat_path, reinterpret_cast<u8*>(&k_licensee), &edat_content_id))
+		{
+			sys_log.error("verify_c00_unlock_edat(): Failed to verify npd file '%s'", edat_path);
+			return false;
+		}
+
+		if (edat_content_id != content_id)
+		{
+			sys_log.error("verify_c00_unlock_edat(): Content ID mismatch in npd header of '%s'", edat_path);
+			return false;
+		}
+
+		// Decrypt EDAT and verify its contents
+		fs::file dec_file = DecryptEDAT(enc_file, edat_path, 8, reinterpret_cast<u8*>(&k_licensee), false);
+		if (!dec_file)
+		{
+			sys_log.error("verify_c00_unlock_edat(): Failed to decrypt '%s'", edat_path);
+			return false;
+		}
+
+		u32 magic{};
+		dec_file.read<u32>(magic);
+		if (magic != "GOMA"_u32)
+		{
+			sys_log.error("verify_c00_unlock_edat(): Bad header magic in unlock EDAT '%s'", edat_path);
+			return false;
+		}
+
+		// Read null-terminated string
+		dec_file.seek(0x10);
+		dec_file.read(edat_content_id, 0x30);
+		edat_content_id.resize(std::min<usz>(0x30, edat_content_id.find_first_of('\0')));
+		if (edat_content_id != content_id)
+		{
+			sys_log.error("verify_c00_unlock_edat(): Content ID mismatch in unlock EDAT '%s'", edat_path);
+			return false;
+		}
+
+		// Game has been purchased and EDAT is verified
+		return true;
 	}
 
 	std::string get_sfo_dir_from_game_path(const std::string& game_path, const std::string& title_id)
@@ -189,15 +272,17 @@ namespace rpcs3::utils
 		const auto psf = psf::load_object(fs::file(game_path + "/PARAM.SFO"));
 
 		const auto category = psf::get_string(psf, "CATEGORY");
-		const auto content_id = std::string(psf::get_string(psf, "CONTENT_ID"));
+		const auto content_id = psf::get_string(psf, "CONTENT_ID");
 
 		if (category == "HG" && !content_id.empty())
 		{
-			// This is a trial game. Check if the user has a RAP file to unlock it.
-			if (fs::is_file(game_path + "/C00/PARAM.SFO") && fs::is_file(get_rap_file_path(content_id)))
+			// This is a trial game. Check if the user has EDAT file to unlock it.
+			const auto c00_title_id = psf::get_string(psf, "TITLE_ID");
+
+			if (fs::is_file(game_path + "/C00/PARAM.SFO") && verify_c00_unlock_edat(content_id))
 			{
 				// Load full game data.
-				sys_log.notice("Found RAP file %s.rap for trial game %s", content_id, title_id);
+				sys_log.notice("Verified EDAT file %s.edat for trial game %s", content_id, c00_title_id);
 				return game_path + "/C00";
 			}
 		}
@@ -214,16 +299,9 @@ namespace rpcs3::utils
 #endif
 	}
 
-	std::string get_custom_config_path(const std::string& title_id, bool get_deprecated_path)
+	std::string get_custom_config_path(const std::string& title_id)
 	{
-		std::string path;
-
-		if (get_deprecated_path)
-			path = fs::get_config_dir() + "data/" + title_id + "/config.yml";
-		else
-			path = get_custom_config_dir() + "config_" + title_id + ".yml";
-
-		return path;
+		return get_custom_config_dir() + "config_" + title_id + ".yml";
 	}
 
 	std::string get_input_config_root()

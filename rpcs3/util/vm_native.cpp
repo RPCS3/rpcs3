@@ -15,6 +15,11 @@
 #include <sys/types.h>
 #endif
 
+#if defined(__FreeBSD__)
+#include <sys/sysctl.h>
+#include <vm/vm_param.h>
+#endif
+
 #ifdef __linux__
 #include <sys/syscall.h>
 #include <linux/memfd.h>
@@ -361,7 +366,7 @@ namespace utils
 				MessageBoxW(0, L"RPCS3 needs to be restarted to create sparse file rpcs3_vm.", L"RPCS3", MB_ICONEXCLAMATION);
 			}
 
-			if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) || DeviceIoControl(h, FSCTL_SET_SPARSE, &arg, sizeof(arg), nullptr, 0, nullptr, nullptr))
+			if (DWORD bytesReturned{}; (info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) || DeviceIoControl(h, FSCTL_SET_SPARSE, &arg, sizeof(arg), nullptr, 0, &bytesReturned, nullptr))
 			{
 				if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
 				{
@@ -437,7 +442,6 @@ namespace utils
 		m_handle = ensure(::CreateFileMappingW(f.get_handle(), nullptr, PAGE_READWRITE, 0, 0, nullptr));
 #else
 
-		// TODO: check overcommit configuration of other supported platforms to bypass rpcs3_vm creation
 #ifdef __linux__
 		if (const char c = fs::file("/proc/sys/vm/overcommit_memory").read<char>(); c == '0' || c == '1')
 		{
@@ -450,6 +454,44 @@ namespace utils
 		else
 		{
 			fprintf(stderr, "Reading /proc/sys/vm/overcommit_memory: %c", c);
+		}
+#else
+		int vm_overcommit = 0;
+		auto vm_sz = sizeof(int);
+
+#if defined(__NetBSD__) || defined(__APPLE__)
+		// Always ON
+		vm_overcommit = 0;
+#elif defined(__FreeBSD__)
+		int mib[2]{CTL_VM, VM_OVERCOMMIT};
+		if (::sysctl(mib, 2, &vm_overcommit, &vm_sz, NULL, 0) != 0)
+			vm_overcommit = -1;
+#else
+		vm_overcommit = -1;
+#endif
+
+		if ((vm_overcommit & 3) == 0)
+		{
+#if defined(__FreeBSD__)
+			m_file = ::memfd_create_("", 0);
+			ensure(m_file >= 0);
+#else
+			const std::string name = "/rpcs3-mem2-" + std::to_string(reinterpret_cast<u64>(this));
+
+			while ((m_file = ::shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR)) == -1)
+			{
+				if (errno == EMFILE)
+				{
+					fmt::throw_exception("Too many open files. Raise the limit and try again.");
+				}
+
+				ensure(errno == EEXIST);
+			}
+
+			ensure(::shm_unlink(name.c_str()) >= 0);
+#endif
+			ensure(::ftruncate(m_file, m_size) >= 0);
+			return;
 		}
 #endif
 

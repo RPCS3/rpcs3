@@ -7,7 +7,8 @@
 
 LOG_CHANNEL(buzz_log);
 
-usb_device_buzz::usb_device_buzz(int first_controller, int last_controller)
+usb_device_buzz::usb_device_buzz(int first_controller, int last_controller, const std::array<u8, 7>& location)
+	: usb_device_emulated(location)
 {
 	this->first_controller = first_controller;
 	this->last_controller  = last_controller;

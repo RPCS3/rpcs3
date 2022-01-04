@@ -237,7 +237,7 @@ error_code cellPamfGetStreamOffsetAndSize(vm::ptr<PamfHeader> pAddr, u64 fileSiz
 	return CELL_OK;
 }
 
-error_code cellPamfVerify(vm::ptr<PamfHeader> pAddr, u64 fileSize)
+error_code cellPamfVerify(vm::cptr<PamfHeader> pAddr, u64 fileSize)
 {
 	cellPamf.todo("cellPamfVerify(pAddr=*0x%x, fileSize=0x%llx)", pAddr, fileSize);
 

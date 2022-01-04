@@ -3,11 +3,13 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
+#include "Emu/Cell/lv2/sys_spu.h"
 
 #include <QFontDatabase>
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QCheckBox>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -56,6 +58,19 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 	vbox_right_panel->addWidget(new QLabel(qstr(fmt::format("%08x", m_pc))));
 	vbox_right_panel->addWidget(m_instr);
 	vbox_right_panel->addWidget(m_preview);
+
+	if (cpu && cpu->id_type() == 2)
+	{
+		const auto& spu = static_cast<spu_thread&>(*cpu);
+
+		if (spu.group && spu.group->max_num > 1)
+		{
+			m_apply_for_spu_group = new QCheckBox(tr("For SPUs Group"));
+			vbox_left_panel->addWidget(m_apply_for_spu_group);
+			vbox_right_panel->addWidget(new QLabel("")); // For alignment
+		}
+	}
+
 	vbox_right_panel->setAlignment(Qt::AlignLeft);
 
 	hbox_b_panel->addWidget(button_ok);
@@ -90,6 +105,8 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 			return;
 		}
 
+		const be_t<u32> swapped{static_cast<u32>(opcode)};
+
 		if (cpu->id_type() == 1)
 		{
 			if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
@@ -98,9 +115,18 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 				return;
 			}
 		}
+		else if (m_apply_for_spu_group && m_apply_for_spu_group->isChecked())
+		{
+			for (auto& spu : static_cast<spu_thread&>(*cpu).group->threads)
+			{
+				if (spu)
+				{
+					std::memcpy(spu->ls + m_pc, &swapped, 4);
+				}
+			}
+		}
 		else
 		{
-			const be_t<u32> swapped{static_cast<u32>(opcode)};
 			std::memcpy(m_cpu_offset + m_pc, &swapped, 4);
 		}
 

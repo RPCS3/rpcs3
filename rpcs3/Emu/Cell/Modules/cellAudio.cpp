@@ -47,24 +47,50 @@ void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
 cell_audio_config::cell_audio_config()
 {
 	raw = audio::get_raw_config();
-	reset();
 }
 
-void cell_audio_config::reset()
+void cell_audio_config::reset(bool backend_changed)
 {
-	backend.reset();
-	backend = Emu.GetCallbacks().get_audio();
+	if (!backend || backend_changed)
+	{
+		backend.reset();
+		backend = Emu.GetCallbacks().get_audio();
+	}
+
+	{
+		std::string str;
+		backend->dump_capabilities(str);
+		cellAudio.notice("cellAudio initializing. Backend: %s, Capabilities: %s", backend->GetName(), str.c_str());
+	}
+
+	const AudioFreq freq = AudioFreq::FREQ_48K;
+	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
+	const AudioChannelCnt ch_cnt = [&]()
+	{
+		switch (raw.downmix)
+		{
+		case audio_downmix::no_downmix:               return AudioChannelCnt::SURROUND_7_1;
+		case audio_downmix::downmix_to_5_1:           return AudioChannelCnt::SURROUND_5_1;
+		case audio_downmix::downmix_to_stereo:        return AudioChannelCnt::STEREO;
+		case audio_downmix::use_application_settings: return AudioChannelCnt::STEREO; // TODO
+		default:
+			fmt::throw_exception("Unknown audio channel mode %s (%d)", raw.downmix, static_cast<int>(raw.downmix));
+		}
+	}();
+
+	backend->Open(freq, sample_size, ch_cnt);
 
 	audio_channels = backend->get_channels();
 	audio_sampling_rate = backend->get_sampling_rate();
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1000000 / audio_sampling_rate;
+	audio_sample_size = backend->get_sample_size();
+	audio_min_buffer_duration = backend->GetCallbackFrameLen();
 
 	audio_buffer_length = AUDIO_BUFFER_SAMPLES * audio_channels;
-	audio_buffer_size = audio_buffer_length * backend->get_sample_size();
+	audio_buffer_size = audio_buffer_length * audio_sample_size;
 
 	desired_buffer_duration = raw.desired_buffer_duration * 1000llu;
-
-	buffering_enabled = raw.buffering_enabled && backend->has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING);
+	buffering_enabled = raw.buffering_enabled && raw.renderer != audio_renderer::null;
 
 	minimum_block_period = audio_block_period / 2;
 	maximum_block_period = (6 * audio_block_period) / 5;
@@ -92,7 +118,6 @@ void cell_audio_config::reset()
 	}
 }
 
-
 audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 	: backend(_cfg.backend)
 	, cfg(_cfg)
@@ -113,32 +138,29 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 	// Init audio dumper if enabled
 	if (g_cfg.audio.dump_to_file)
 	{
-		m_dump.reset(new AudioDumper(cfg.audio_channels));
+		m_dump.reset(new AudioDumper(cfg.audio_channels, cfg.audio_sampling_rate, cfg.audio_sample_size));
 	}
 
-	// Initialize backend
+	const f64 buffer_dur_mult = [&]()
 	{
-		std::string str;
-		backend->dump_capabilities(str);
-		cellAudio.notice("cellAudio initializing. Backend: %s, Capabilities: %s", backend->GetName(), str.c_str());
-	}
+		const f64 min_buf_dur = _cfg.audio_min_buffer_duration + 0.01; // Add 10ms to allow jitter compensation
+		if (cfg.raw.buffering_enabled)
+		{
+			return std::max<f64>(min_buf_dur, cfg.raw.desired_buffer_duration / 1000.0 * 2); // Allocate 2x buffer to keep buffering algorithm happy
+		}
 
-	backend->Open(cfg.num_allocated_buffers);
-	backend_open = true;
+		return min_buf_dur;
+	}();
 
-	ensure(!get_backend_playing());
+	cb_ringbuf.set_buf_size(static_cast<u32>(_cfg.audio_channels * _cfg.audio_sampling_rate * _cfg.audio_sample_size * buffer_dur_mult));
+	backend->SetWriteCallback(std::bind(&audio_ringbuffer::backend_write_callback, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 audio_ringbuffer::~audio_ringbuffer()
 {
-	if (!backend_open)
+	if (get_backend_playing())
 	{
-		return;
-	}
-
-	if (get_backend_playing() && has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
-	{
-		backend->Pause();
+		flush();
 	}
 
 	backend->Close();
@@ -159,9 +181,16 @@ f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 	return frequency_ratio;
 }
 
+u32 audio_ringbuffer::backend_write_callback(u32 size, void *buf)
+{
+	if (!backend_active.observe()) backend_active = true;
+
+	return cb_ringbuf.pop(buf, size);
+}
+
 u64 audio_ringbuffer::get_timestamp()
 {
-	return get_system_time() - Emu.GetPauseTime();
+	return get_system_time();
 }
 
 void audio_ringbuffer::enqueue(const float* in_buffer)
@@ -183,28 +212,28 @@ void audio_ringbuffer::enqueue(const float* in_buffer)
 		m_dump->WriteData(buf, cfg.audio_buffer_size);
 	}
 
-	// Enqueue audio
-	const bool success = backend->AddData(buf, AUDIO_BUFFER_SAMPLES * cfg.audio_channels);
-	if (!success)
+	enqueued_samples += AUDIO_BUFFER_SAMPLES;
+
+	// Start playing audio
+	play();
+
+	if (!backend_active.observe())
 	{
-		cellAudio.warning("Could not enqueue buffer onto audio backend. Attempting to recover...");
-		flush();
+		// backend is not ready yet
 		return;
 	}
 
-	if (has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
-	{
-		enqueued_samples += AUDIO_BUFFER_SAMPLES;
+	// Enqueue audio
+	const u32 data_size = AUDIO_BUFFER_SAMPLES * cfg.audio_sample_size * cfg.audio_channels;
 
-		// Start playing audio
-		play();
+	if (cb_ringbuf.get_free_size() >= data_size)
+	{
+		cb_ringbuf.push(buf, data_size);
 	}
 }
 
 void audio_ringbuffer::enqueue_silence(u32 buf_count)
 {
-	AUDIT(has_capability(AudioBackend::PLAY_PAUSE_FLUSH));
-
 	for (u32 i = 0; i < buf_count; i++)
 	{
 		enqueue(silence_buffer);
@@ -213,13 +242,7 @@ void audio_ringbuffer::enqueue_silence(u32 buf_count)
 
 void audio_ringbuffer::play()
 {
-	if (!has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
-	{
-		playing = true;
-		return;
-	}
-
-	if (playing && has_capability(AudioBackend::IS_PLAYING))
+	if (playing)
 	{
 		return;
 	}
@@ -239,18 +262,11 @@ void audio_ringbuffer::play()
 
 void audio_ringbuffer::flush()
 {
-	if (!has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
-	{
-		playing = false;
-		return;
-	}
-
 	//cellAudio.trace("Flushing an estimated %llu enqueued samples", enqueued_samples);
 
 	backend->Pause();
+	cb_ringbuf.flush();
 	playing = false;
-
-	backend->Flush();
 
 	if (frequency_ratio != 1.0f)
 	{
@@ -266,16 +282,16 @@ u64 audio_ringbuffer::update()
 	if (Emu.IsPaused())
 	{
 		// Emulator paused
-		if (playing && has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
+		if (playing)
 		{
-			backend->Pause();
+			flush();
 		}
 		emu_paused = true;
 	}
 	else if (emu_paused)
 	{
 		// Emulator unpaused
-		if (enqueued_samples > 0 && has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
+		if (enqueued_samples > 0)
 		{
 			play();
 		}
@@ -289,38 +305,7 @@ u64 audio_ringbuffer::update()
 	// Calculate how many audio samples have played since last time
 	if (cfg.buffering_enabled && (playing || new_playing))
 	{
-		if (has_capability(AudioBackend::GET_NUM_ENQUEUED_SAMPLES))
-		{
-			// Backend supports querying for the remaining playtime, so just ask it
-			enqueued_samples = backend->GetNumEnqueuedSamples();
-		}
-		else
-		{
-			const u64 play_delta = timestamp - (play_timestamp > update_timestamp ? play_timestamp : update_timestamp);
-
-			const u64 delta_samples_tmp = play_delta * static_cast<u64>(cfg.audio_sampling_rate * frequency_ratio) + last_remainder;
-			last_remainder = delta_samples_tmp % 1'000'000;
-			const u64 delta_samples = delta_samples_tmp / 1'000'000;
-
-			//cellAudio.error("play_delta=%llu delta_samples=%llu", play_delta, delta_samples);
-			if (delta_samples > 0)
-			{
-
-				if (enqueued_samples < delta_samples)
-				{
-					enqueued_samples = 0;
-				}
-				else
-				{
-					enqueued_samples -= delta_samples;
-				}
-
-				if (enqueued_samples == 0)
-				{
-					cellAudio.trace("Audio buffer about to underrun!");
-				}
-			}
-		}
+		enqueued_samples = cb_ringbuf.get_used_size() / cfg.audio_sample_size;
 	}
 
 	// Update playing state
@@ -550,16 +535,20 @@ namespace audio
 			.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
 			.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
 			.time_stretching_threshold = g_cfg.audio.time_stretching_threshold,
-			.convert_to_u16 = static_cast<bool>(g_cfg.audio.convert_to_u16),
-			.start_threshold = static_cast<u32>(g_cfg.audio.start_threshold),
-			.sampling_period_multiplier = static_cast<u32>(g_cfg.audio.sampling_period_multiplier),
+			.convert_to_s16 = static_cast<bool>(g_cfg.audio.convert_to_s16),
 			.downmix = g_cfg.audio.audio_channel_downmix,
-			.renderer = g_cfg.audio.renderer
+			.renderer = g_cfg.audio.renderer,
+			.provider = g_cfg.audio.provider
 		};
 	}
 
 	void configure_audio()
 	{
+		if (g_cfg.audio.provider != audio_provider::cell_audio)
+		{
+			return;
+		}
+
 		if (auto& g_audio = g_fxo->get<cell_audio>(); g_fxo->is_init<cell_audio>())
 		{
 			// Only reboot the audio renderer if a relevant setting changed
@@ -570,20 +559,18 @@ namespace audio
 				raw.buffering_enabled != new_raw.buffering_enabled ||
 				raw.time_stretching_threshold != new_raw.time_stretching_threshold ||
 				raw.enable_time_stretching != new_raw.enable_time_stretching ||
-				raw.convert_to_u16 != new_raw.convert_to_u16 ||
-				raw.start_threshold != new_raw.start_threshold ||
-				raw.sampling_period_multiplier != new_raw.sampling_period_multiplier ||
+				raw.convert_to_s16 != new_raw.convert_to_s16 ||
 				raw.downmix != new_raw.downmix ||
 				raw.renderer != new_raw.renderer)
 			{
 				g_audio.cfg.raw = new_raw;
-				g_audio.m_update_configuration = true;
+				g_audio.m_update_configuration = raw.renderer != new_raw.renderer ? audio_backend_update::ALL : audio_backend_update::PARAM;
 			}
 		}
 	}
 }
 
-void cell_audio_thread::update_config()
+void cell_audio_thread::update_config(bool backend_changed)
 {
 	std::lock_guard lock(mutex);
 
@@ -591,35 +578,81 @@ void cell_audio_thread::update_config()
 	ringbuffer.reset();
 
 	// Reload config
-	cfg.reset();
+	cfg.reset(backend_changed);
 
 	// Allocate ringbuffer
 	ringbuffer.reset(new audio_ringbuffer(cfg));
+
+	// Reset thread state
+	reset_counters();
 }
 
-void cell_audio_thread::operator()()
+void cell_audio_thread::reset_counters()
 {
-	thread_ctrl::scoped_priority high_prio(+1);
+	m_counter = 0;
+	m_start_time = ringbuffer->get_timestamp();
+	m_last_period_end = m_start_time;
+	m_dynamic_period = 0;
+	m_backend_failed = false;
+}
+
+cell_audio_thread::cell_audio_thread()
+{
+	if (cfg.raw.provider != audio_provider::cell_audio)
+	{
+		return;
+	}
+
+	// Init audio config
+	cfg.reset();
 
 	// Allocate ringbuffer
 	ringbuffer.reset(new audio_ringbuffer(cfg));
 
 	// Initialize loop variables
-	m_counter = 0;
-	m_start_time = ringbuffer->get_timestamp();
-	m_last_period_end = m_start_time;
-	m_dynamic_period = 0;
+	reset_counters();
+}
+
+void cell_audio_thread::operator()()
+{
+	if (cfg.raw.provider != audio_provider::cell_audio)
+	{
+		return;
+	}
+
+	thread_ctrl::scoped_priority high_prio(+1);
 
 	u32 untouched_expected = 0;
-	//u32 in_progress_expected = 0;
 
 	// Main cellAudio loop
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (m_update_configuration)
+		const auto update_req = m_update_configuration.observe();
+		if (update_req != audio_backend_update::NONE)
 		{
-			update_config();
-			m_update_configuration = false;
+			cellAudio.warning("Updating cell_audio_thread configuration");
+			update_config(update_req == audio_backend_update::ALL);
+			m_update_configuration = audio_backend_update::NONE;
+		}
+
+		if (!ringbuffer->get_operational_status())
+		{
+			cellAudio.warning("Backend stopped unexpectedly (likely device change). Attempting to recover...");
+
+			if (m_backend_failed)
+			{
+				thread_ctrl::wait_for(500 * 1000);
+			}
+
+			update_config(true);
+			m_backend_failed = true;
+			continue;
+		}
+
+		if (m_backend_failed)
+		{
+			cellAudio.warning("Backend recovered");
+			m_backend_failed = false;
 		}
 
 		const u64 timestamp = ringbuffer->update();
@@ -872,6 +905,19 @@ void cell_audio_thread::operator()()
 	ringbuffer.reset();
 }
 
+audio_port* cell_audio_thread::open_port()
+{
+	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
+	{
+		if (ports[i].state.compare_and_swap_test(audio_port_state::closed, audio_port_state::opened))
+		{
+			return &ports[i];
+		}
+	}
+
+	return nullptr;
+}
+
 template <audio_downmix downmix>
 void cell_audio_thread::mix(float *out_buffer, s32 offset)
 {
@@ -972,10 +1018,10 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					const float center     = buf[in + 2] * m;
 					[[maybe_unused]]
 					const float low_freq   = buf[in + 3] * m;
-					const float rear_left  = buf[in + 4] * m;
-					const float rear_right = buf[in + 5] * m;
-					const float side_left  = buf[in + 6] * m;
-					const float side_right = buf[in + 7] * m;
+					const float side_left  = buf[in + 4] * m;
+					const float side_right = buf[in + 5] * m;
+					const float rear_left  = buf[in + 6] * m;
+					const float rear_right = buf[in + 7] * m;
 
 					if constexpr (downmix == audio_downmix::downmix_to_stereo)
 					{
@@ -1017,10 +1063,10 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					const float right      = buf[in + 1] * m;
 					const float center     = buf[in + 2] * m;
 					const float low_freq   = buf[in + 3] * m;
-					const float rear_left  = buf[in + 4] * m;
-					const float rear_right = buf[in + 5] * m;
-					const float side_left  = buf[in + 6] * m;
-					const float side_right = buf[in + 7] * m;
+					const float side_left  = buf[in + 4] * m;
+					const float side_right = buf[in + 5] * m;
+					const float rear_left  = buf[in + 6] * m;
+					const float rear_right = buf[in + 7] * m;
 
 					if constexpr (downmix == audio_downmix::downmix_to_stereo)
 					{
@@ -1063,9 +1109,9 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 	{
 		std::memset(out_buffer, 0, out_buffer_sz * sizeof(float));
 	}
-	else if (cfg.backend->get_convert_to_u16())
+	else if (cfg.backend->get_convert_to_s16())
 	{
-		// convert the data from float to u16 with clipping:
+		// convert the data from float to s16 with clipping:
 		// 2x MULPS
 		// 2x MAXPS (optional)
 		// 2x MINPS (optional)
@@ -1237,7 +1283,7 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	port->cur_pos        = 0;
 	port->global_counter = g_audio.m_counter;
 	port->active_counter = 0;
-	port->timestamp      = g_audio.m_last_period_end;
+	port->timestamp      = get_guest_system_time(g_audio.m_last_period_end);
 
 	if (attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 	{
@@ -1419,7 +1465,7 @@ error_code cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 	const u64 delta_tag_stamp = delta_tag * g_audio.cfg.audio_block_period;
 
 	// Apparently no error is returned if stamp is null
-	*stamp = port.timestamp - delta_tag_stamp;
+	*stamp = get_guest_system_time(port.timestamp - delta_tag_stamp);
 
 	return CELL_OK;
 }

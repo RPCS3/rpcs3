@@ -117,6 +117,7 @@ struct savedata_manager
 {
 	semaphore<> mutex;
 	atomic_t<bool> enable_overlay{false};
+	atomic_t<s32> last_cbresult_error_dialog{0}; // CBRESULT errors are negative
 };
 
 static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
@@ -150,11 +151,11 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 		}
 
 		SaveDataEntry save_entry;
-		save_entry.dirName   = psf.at("SAVEDATA_DIRECTORY").as_string();
-		save_entry.listParam = psf.at("SAVEDATA_LIST_PARAM").as_string();
-		save_entry.title     = psf.at("TITLE").as_string();
-		save_entry.subtitle  = psf.at("SUB_TITLE").as_string();
-		save_entry.details   = psf.at("DETAIL").as_string();
+		save_entry.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
+		save_entry.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
+		save_entry.title     = psf::get_string(psf, "TITLE");
+		save_entry.subtitle  = psf::get_string(psf, "SUB_TITLE");
+		save_entry.details   = psf::get_string(psf, "DETAIL");
 
 		for (const auto& entry2 : fs::dir(base_dir + entry.name))
 		{
@@ -312,9 +313,12 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 		return {CELL_SAVEDATA_ERROR_PARAM, "22"};
 	}
 
-	// TODO: errDialog == CELL_SAVEDATA_ERRDIALOG_NOREPEAT
-	if (errDialog != CELL_SAVEDATA_ERRDIALOG_ALWAYS)
+	if (errDialog == CELL_SAVEDATA_ERRDIALOG_NONE ||
+		(errDialog == CELL_SAVEDATA_ERRDIALOG_NOREPEAT && result.result == g_fxo->get<savedata_manager>().last_cbresult_error_dialog.exchange(result.result)))
+	{
+		// TODO: Find out if the "last error" is always tracked or only when NOREPEAT is set
 		return CELL_SAVEDATA_ERROR_CBRESULT;
+	}
 
 	// Yield before a blocking dialog is being spawned
 	lv2_obj::sleep(ppu);
@@ -571,6 +575,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
+	if (const auto [ok, list] = setList.try_read(); ok)
+		cellSaveData.notice("savedata_op(): setList = { .sortType=%d, .sortOrder=%d, .dirNamePrefix='%s' }", list.sortType, list.sortOrder, list.dirNamePrefix);
+
+	if (const auto [ok, buf] = setBuf.try_read(); ok)
+		cellSaveData.notice("savedata_op(): setBuf  = { .dirListMax=%d, .fileListMax=%d, .bufSize=%d }", buf.dirListMax, buf.fileListMax, buf.bufSize);
+
 	if (const auto ecode = savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
 		funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{
@@ -668,11 +678,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 						}
 
 						SaveDataEntry save_entry2;
-						save_entry2.dirName = psf.at("SAVEDATA_DIRECTORY").as_string();
-						save_entry2.listParam = psf.at("SAVEDATA_LIST_PARAM").as_string();
-						save_entry2.title = psf.at("TITLE").as_string();
-						save_entry2.subtitle = psf.at("SUB_TITLE").as_string();
-						save_entry2.details = psf.at("DETAIL").as_string();
+						save_entry2.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
+						save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
+						save_entry2.title     = psf::get_string(psf, "TITLE");
+						save_entry2.subtitle  = psf::get_string(psf, "SUB_TITLE");
+						save_entry2.details   = psf::get_string(psf, "DETAIL");
 
 						for (const auto& entry2 : fs::dir(base_dir + entry.name))
 						{
@@ -1281,8 +1291,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	// This section contains the list of files in the save ordered as they would be in BSD filesystem
 	std::vector<std::string> blist;
 
-	if (psf.count("RPCS3_BLIST"))
-		blist = fmt::split(psf.at("RPCS3_BLIST").as_string(), {"/"}, false);
+	if (const auto it = psf.find("RPCS3_BLIST"); it != psf.cend())
+		blist = fmt::split(it->second.as_string(), {"/"}, false);
 
 	// Get save stats
 	{
@@ -1308,12 +1318,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (!psf.empty())
 		{
-			statGet->getParam.parental_level = psf.at("PARENTAL_LEVEL").as_integer();
-			statGet->getParam.attribute = psf.at("ATTRIBUTE").as_integer(); // ???
-			strcpy_trunc(statGet->getParam.title, save_entry.title = psf.at("TITLE").as_string());
-			strcpy_trunc(statGet->getParam.subTitle, save_entry.subtitle = psf.at("SUB_TITLE").as_string());
-			strcpy_trunc(statGet->getParam.detail, save_entry.details = psf.at("DETAIL").as_string());
-			strcpy_trunc(statGet->getParam.listParam, save_entry.listParam = psf.at("SAVEDATA_LIST_PARAM").as_string());
+			statGet->getParam.parental_level = psf::get_integer(psf, "PARENTAL_LEVEL");
+			statGet->getParam.attribute = psf::get_integer(psf, "ATTRIBUTE"); // ???
+			strcpy_trunc(statGet->getParam.title, save_entry.title = psf::get_string(psf, "TITLE"));
+			strcpy_trunc(statGet->getParam.subTitle, save_entry.subtitle = psf::get_string(psf, "SUB_TITLE"));
+			strcpy_trunc(statGet->getParam.detail, save_entry.details = psf::get_string(psf, "DETAIL"));
+			strcpy_trunc(statGet->getParam.listParam, save_entry.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM"));
 		}
 
 		statGet->bind = 0;
@@ -2046,14 +2056,14 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 		return CELL_SAVEDATA_ERROR_NODATA;
 	}
 
-	auto psf = psf::load_object(fs::file(sfo));
+	const psf::registry psf = psf::load_object(fs::file(sfo));
 
 	if (sysFileParam)
 	{
-		strcpy_trunc(sysFileParam->listParam, psf.at("SAVEDATA_LIST_PARAM").as_string());
-		strcpy_trunc(sysFileParam->title, psf.at("TITLE").as_string());
-		strcpy_trunc(sysFileParam->subTitle, psf.at("SUB_TITLE").as_string());
-		strcpy_trunc(sysFileParam->detail, psf.at("DETAIL").as_string());
+		strcpy_trunc(sysFileParam->listParam, psf::get_string(psf, "SAVEDATA_LIST_PARAM"));
+		strcpy_trunc(sysFileParam->title, psf::get_string(psf, "TITLE"));
+		strcpy_trunc(sysFileParam->subTitle, psf::get_string(psf, "SUB_TITLE"));
+		strcpy_trunc(sysFileParam->detail, psf::get_string(psf, "DETAIL"));
 	}
 
 	if (dir)

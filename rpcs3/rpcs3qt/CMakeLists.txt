@@ -7,6 +7,7 @@ set(SRC_FILES
     breakpoint_handler.cpp
     breakpoint_list.cpp
     call_stack_list.cpp
+    camera_settings_dialog.cpp
     cg_disasm_window.cpp
     cheat_manager.cpp
     config_adapter.cpp
@@ -44,12 +45,17 @@ set(SRC_FILES
     osk_dialog_frame.cpp
     pad_led_settings_dialog.cpp
     pad_settings_dialog.cpp
+    patch_creator_dialog.cpp
     patch_manager_dialog.cpp
     persistent_settings.cpp
     pkg_install_dialog.cpp
     progress_dialog.cpp
+    qt_camera_error_handler.cpp
+    qt_camera_handler.cpp
+    qt_camera_video_surface.cpp
     qt_utils.cpp
     register_editor_dialog.cpp
+    recvmessage_dialog_frame.cpp
     render_creator.cpp
     rpcn_settings_dialog.cpp
     rsx_debugger.cpp
@@ -59,6 +65,7 @@ set(SRC_FILES
     save_manager_dialog.cpp
     screenshot_manager_dialog.cpp
     screenshot_preview.cpp
+    sendmessage_dialog_frame.cpp
     settings.cpp
     settings_dialog.cpp
     skylander_dialog.cpp
@@ -77,9 +84,12 @@ set(SRC_FILES
 
 set(UI_FILES
     about_dialog.ui
+    camera_settings_dialog.ui
     main_window.ui
     pad_led_settings_dialog.ui
     pad_settings_dialog.ui
+    patch_creator_dialog.ui
+    patch_manager_dialog.ui
     settings_dialog.ui
     welcome_dialog.ui
 )
@@ -97,6 +107,12 @@ set_target_properties(rpcs3_ui
         AUTOMOC ON
         AUTOUIC ON
         AUTORCC ON)
+
+# AUTOMOC brings Windows.h to the sources, which have some definitions conflicting with winsock2.h
+# define WIN32_LEAN_AND_MEAN resolve the problem
+# https://docs.microsoft.com/en-us/windows/win32/winsock/creating-a-basic-winsock-application
+# https://docs.microsoft.com/en-us/windows/win32/winprog/using-the-windows-headers#faster-builds-with-smaller-header-files
+target_compile_definitions(rpcs3_ui PRIVATE WIN32_LEAN_AND_MEAN)
 
 target_link_libraries(rpcs3_ui
     PUBLIC

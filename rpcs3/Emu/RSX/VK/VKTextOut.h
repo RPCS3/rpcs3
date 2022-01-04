@@ -22,7 +22,7 @@ namespace vk
 		vk::glsl::shader m_fragment_shader;
 
 		vk::descriptor_pool m_descriptor_pool;
-		VkDescriptorSet m_descriptor_set = nullptr;
+		vk::descriptor_set m_descriptor_set;
 		VkDescriptorSetLayout m_descriptor_layout = nullptr;
 		VkPipelineLayout m_pipeline_layout = nullptr;
 		u32 m_used_descriptors = 0;
@@ -45,23 +45,21 @@ namespace vk
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 120 },
 			};
 
-			//Reserve descriptor pools
+			// Reserve descriptor pools
 			m_descriptor_pool.create(dev, descriptor_pools, 1, 120, 2);
 
-			VkDescriptorSetLayoutBinding bindings[1] = {};
-
-			//Scale and offset data plus output color
-			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			bindings[0].descriptorCount = 1;
-			bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[0].binding = 0;
-
-			VkDescriptorSetLayoutCreateInfo infos = {};
-			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			infos.pBindings = bindings;
-			infos.bindingCount = 1;
-
-			CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &m_descriptor_layout));
+			// Scale and offset data plus output color
+			std::vector<VkDescriptorSetLayoutBinding> bindings = 
+			{
+				{
+					.binding = 0,
+					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					.descriptorCount = 1,
+					.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+					.pImmutableSamplers = nullptr
+				}
+			};
+			m_descriptor_layout = vk::descriptors::create_layout(bindings);
 
 			VkPipelineLayoutCreateInfo layout_info = {};
 			layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -213,7 +211,7 @@ namespace vk
 			alloc_info.pSetLayouts = &m_descriptor_layout;
 			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 
-			CHECK_RESULT(vkAllocateDescriptorSets(device, &alloc_info, &m_descriptor_set));
+			CHECK_RESULT(vkAllocateDescriptorSets(device, &alloc_info, m_descriptor_set.ptr()));
 			m_used_descriptors++;
 
 			float scale[] = { scale_x, scale_y };
@@ -236,7 +234,7 @@ namespace vk
 			m_uniform_buffer_offset = (m_uniform_buffer_offset + 8192) % m_uniform_buffer_size;
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
+			m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout);
 
 			VkDeviceSize zero = 0;
 			vkCmdBindVertexBuffers(cmd, 0, 1, &m_vertex_buffer->value, &zero);

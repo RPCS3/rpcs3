@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "overlay_user_list_dialog.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/System.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
 
@@ -98,14 +99,19 @@ namespace rsx
 				{
 					return_code = selection_code::error;
 				}
-				[[fallthrough]];
-			case pad_button::circle:
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
 				close(true, true);
-				break;
+				return;
+			case pad_button::circle:
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				close(true, true);
+				return;
 			case pad_button::dpad_up:
+			case pad_button::ls_up:
 				m_list->select_previous();
 				break;
 			case pad_button::dpad_down:
+			case pad_button::ls_down:
 				m_list->select_next();
 				break;
 			case pad_button::L1:
@@ -118,6 +124,8 @@ namespace rsx
 				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
 				break;
 			}
+
+			Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
 		}
 
 		compiled_resource user_list_dialog::get_compiled()
@@ -170,7 +178,7 @@ namespace rsx
 					}
 
 					// Let's assume there are 26 avatar pngs (like in my installation)
-					const std::string avatar_path = g_cfg.vfs.get_dev_flash() + fmt::format("vsh/resource/explore/user/%03d.png", id % 26);
+					const std::string avatar_path = g_cfg_vfs.get_dev_flash() + fmt::format("vsh/resource/explore/user/%03d.png", id % 26);
 					const std::string username = file.to_string();
 					std::unique_ptr<overlay_element> entry = std::make_unique<user_list_entry>(username, user_id, avatar_path);
 					entries.emplace_back(std::move(entry));
@@ -199,9 +207,17 @@ namespace rsx
 			this->on_close = std::move(on_close);
 			visible = true;
 
-			g_fxo->get<named_thread<user_list_dialog_thread>>()([&, tbit = alloc_thread_bit()]()
+			auto& list_thread = g_fxo->get<named_thread<user_list_dialog_thread>>();
+
+			const auto notify = std::make_shared<atomic_t<bool>>(false);
+
+			list_thread([&, notify]()
 			{
+				const u64 tbit = alloc_thread_bit();
 				g_thread_bit = tbit;
+
+				*notify = true;
+				notify->notify_one();
 
 				auto ref = g_fxo->get<display_manager>().get(uid);
 
@@ -213,6 +229,11 @@ namespace rsx
 				thread_bits &= ~tbit;
 				thread_bits.notify_all();
 			});
+
+			while (list_thread < thread_state::errored && !*notify)
+			{
+				notify->wait(false, atomic_wait_timeout{1'000'000});
+			}
 
 			return CELL_OK;
 		}

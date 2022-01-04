@@ -2,10 +2,12 @@
 #include "cellGem.h"
 #include "cellCamera.h"
 
+#include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/system_config.h"
+#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Input/pad_thread.h"
 
@@ -59,12 +61,39 @@ void fmt_class_string<CellGemStatus>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<CellGemVideoConvertFormatEnum>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto format)
+	{
+		switch (format)
+		{
+			STR_CASE(CELL_GEM_NO_VIDEO_OUTPUT);
+			STR_CASE(CELL_GEM_RGBA_640x480);
+			STR_CASE(CELL_GEM_YUV_640x480);
+			STR_CASE(CELL_GEM_YUV422_640x480);
+			STR_CASE(CELL_GEM_YUV411_640x480);
+			STR_CASE(CELL_GEM_RGBA_320x240);
+			STR_CASE(CELL_GEM_BAYER_RESTORED);
+			STR_CASE(CELL_GEM_BAYER_RESTORED_RGGB);
+			STR_CASE(CELL_GEM_BAYER_RESTORED_RASTERIZED);
+		}
+
+		return unknown;
+	});
+}
+
 // **********************
 // * HLE helper structs *
 // **********************
 
-struct gem_config
+struct gem_config_data
 {
+public:
+	void operator()();
+
+	static constexpr auto thread_name = "Gem Thread"sv;
+
 	atomic_t<u32> state = 0;
 
 	struct gem_color
@@ -106,14 +135,16 @@ struct gem_config
 
 	CellGemAttribute attribute = {};
 	CellGemVideoConvertAttribute vc_attribute = {};
+	s32 video_data_out_size = -1;
+	std::vector<u8> video_data_in;
 	u64 status_flags = 0;
 	bool enable_pitch_correction = false;
 	u32 inertial_counter = 0;
 
 	std::array<gem_controller, CELL_GEM_MAX_NUM> controllers;
 	u32 connected_controllers = 0;
-	bool video_conversion_started{};
-	bool update_started{};
+	atomic_t<bool> video_conversion_in_progress{false};
+	atomic_t<bool> update_started{false};
 	u32 camera_frame{};
 	u32 memory_ptr{};
 
@@ -172,6 +203,186 @@ struct gem_config
 		}
 	}
 };
+
+static inline int32_t cellGemGetVideoConvertSize(s32 output_format)
+{
+	switch (output_format)
+	{
+	case CELL_GEM_RGBA_320x240: // RGBA output; 320*240*4-byte output buffer required
+		return 320 * 240 * 4;
+	case CELL_GEM_RGBA_640x480: // RGBA output; 640*480*4-byte output buffer required
+		return 640 * 480 * 4;
+	case CELL_GEM_YUV_640x480: // YUV output; 640*480+640*480+640*480-byte output buffer required (contiguous)
+		return 640 * 480 + 640 * 480 + 640 * 480;
+	case CELL_GEM_YUV422_640x480: // YUV output; 640*480+320*480+320*480-byte output buffer required (contiguous)
+		return 640 * 480 + 320 * 480 + 320 * 480;
+	case CELL_GEM_YUV411_640x480: // YUV411 output; 640*480+320*240+320*240-byte output buffer required (contiguous)
+		return 640 * 480 + 320 * 240 + 320 * 240;
+	case CELL_GEM_BAYER_RESTORED: // Bayer pattern output, 640x480, gamma and white balance applied, output buffer required
+	case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
+	case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
+		return 640 * 480;
+	case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
+		return 0;
+	default:
+		return -1;
+	}
+}
+
+void gem_config_data::operator()()
+{
+	cellGem.notice("Starting thread");
+
+	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
+	{
+		while (!video_conversion_in_progress && thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
+		{
+			thread_ctrl::wait_for(1000);
+		}
+
+		if (thread_ctrl::state() == thread_state::aborting || Emu.IsStopped())
+		{
+			return;
+		}
+
+		CellGemVideoConvertAttribute vc;
+		{
+			std::scoped_lock lock(mtx);
+			vc = vc_attribute;
+		}
+
+		if (g_cfg.io.camera != camera_handler::qt)
+		{
+			video_conversion_in_progress = false;
+			continue;
+		}
+
+		const auto& shared_data = g_fxo->get<gem_camera_shared>();
+
+		if (vc.output_format != CELL_GEM_NO_VIDEO_OUTPUT && !vc_attribute.video_data_out)
+		{
+			video_conversion_in_progress = false;
+			continue;
+		}
+
+		extern u32 get_buffer_size_by_format(s32, s32, s32);
+		const u32 required_in_size = get_buffer_size_by_format(static_cast<s32>(shared_data.format), shared_data.width, shared_data.height);
+		const s32 required_out_size = cellGemGetVideoConvertSize(vc.output_format);
+
+		if (video_data_in.size() != required_in_size)
+		{
+			cellGem.error("convert: in_size mismatch: required=%d, actual=%d", required_in_size, video_data_in.size());
+			video_conversion_in_progress = false;
+			continue;
+		}
+
+		if (required_out_size < 0 || video_data_out_size != required_out_size)
+		{
+			cellGem.error("convert: out_size unknown: required=%d, format %d", required_out_size, vc.output_format);
+			video_conversion_in_progress = false;
+			continue;
+		}
+
+		if (required_out_size == 0)
+		{
+			video_conversion_in_progress = false;
+			continue;
+		}
+
+		switch (vc.output_format)
+		{
+		case CELL_GEM_RGBA_640x480: // RGBA output; 640*480*4-byte output buffer required
+		{
+			if (shared_data.format == CELL_CAMERA_RAW8)
+			{
+				constexpr u32 in_pitch = 640;
+				constexpr u32 out_pitch = 640 * 4;
+
+				for (u32 y = 0; y < 480 - 1; y += 2)
+				{
+					for (u32 x = 0; x < 640 - 1; x += 2)
+					{
+						const u32 in_offset  = 1 * (y * 640 + x);
+						const u32 out_offset = 4 * (y * 640 + x);
+
+						const u8 b  = video_data_in[in_offset + 0];
+						const u8 g0 = video_data_in[in_offset + 1];
+						const u8 g1 = video_data_in[in_offset + in_pitch + 0];
+						const u8 r  = video_data_in[in_offset + in_pitch + 1];
+
+						// Top-Left
+						vc_attribute.video_data_out[out_offset + 0] = r;   // R
+						vc_attribute.video_data_out[out_offset + 1] = g0;  // G
+						vc_attribute.video_data_out[out_offset + 2] = b;   // B
+						vc_attribute.video_data_out[out_offset + 3] = 255; // A
+
+						// Top-Right Pixel
+						vc_attribute.video_data_out[out_offset + 4] = r;   // R
+						vc_attribute.video_data_out[out_offset + 5] = g0;  // G
+						vc_attribute.video_data_out[out_offset + 6] = b;   // B
+						vc_attribute.video_data_out[out_offset + 7] = 255; // A
+
+						// Bottom-Left Pixel
+						vc_attribute.video_data_out[out_offset + out_pitch + 0] = r;   // R
+						vc_attribute.video_data_out[out_offset + out_pitch + 1] = g1;  // G
+						vc_attribute.video_data_out[out_offset + out_pitch + 2] = b;   // B
+						vc_attribute.video_data_out[out_offset + out_pitch + 3] = 255;  // A
+
+						// Bottom-Right Pixel
+						vc_attribute.video_data_out[out_offset + out_pitch + 4] = r;   // R
+						vc_attribute.video_data_out[out_offset + out_pitch + 5] = g1;  // G
+						vc_attribute.video_data_out[out_offset + out_pitch + 6] = b;   // B
+						vc_attribute.video_data_out[out_offset + out_pitch + 7] = 255; // A
+					}
+				}
+			}
+			else
+			{
+				cellGem.error("Unimplemented: Converting %s to %s", shared_data.format.load(), vc.output_format);
+				std::memcpy(vc_attribute.video_data_out.get_ptr(), video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+			}
+			break;
+		}
+		case CELL_GEM_BAYER_RESTORED: // Bayer pattern output, 640x480, gamma and white balance applied, output buffer required
+		{
+			if (shared_data.format == CELL_CAMERA_RAW8)
+			{
+				std::memcpy(vc_attribute.video_data_out.get_ptr(), video_data_in.data(), std::min<usz>(required_in_size, required_out_size));
+			}
+			else
+			{
+				cellGem.error("Unimplemented: Converting %s to %s", shared_data.format.load(), vc.output_format);
+			}
+			break;
+		}
+		case CELL_GEM_RGBA_320x240: // RGBA output; 320*240*4-byte output buffer required
+		case CELL_GEM_YUV_640x480: // YUV output; 640*480+640*480+640*480-byte output buffer required (contiguous)
+		case CELL_GEM_YUV422_640x480: // YUV output; 640*480+320*480+320*480-byte output buffer required (contiguous)
+		case CELL_GEM_YUV411_640x480: // YUV411 output; 640*480+320*240+320*240-byte output buffer required (contiguous)
+		case CELL_GEM_BAYER_RESTORED_RGGB: // Restored Bayer output, 2x2 pixels rearranged into 320x240 RG1G2B
+		case CELL_GEM_BAYER_RESTORED_RASTERIZED: // Restored Bayer output, R,G1,G2,B rearranged into 4 contiguous 320x240 1-channel rasters
+		{
+			cellGem.error("Unimplemented: Converting %s to %s", shared_data.format.load(), vc.output_format);
+			break;
+		}
+		case CELL_GEM_NO_VIDEO_OUTPUT: // Disable video output
+		{
+			cellGem.trace("Ignoring frame conversion for CELL_GEM_NO_VIDEO_OUTPUT");
+			break;
+		}
+		default:
+		{
+			cellGem.error("Trying to convert %s to %s", shared_data.format.load(), vc.output_format);
+			break;
+		}
+		}
+
+		cellGem.notice("Converted video frame of format %s to %s", shared_data.format.load(), vc.output_format.get());
+		video_conversion_in_progress = false;
+	}
+}
+
+using gem_config = named_thread<gem_config_data>;
 
 /**
  * \brief Verifies that a Move controller id is valid
@@ -286,7 +497,7 @@ static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller
 		return false;
 
 	ext.status = 0; // CELL_GEM_EXT_CONNECTED | CELL_GEM_EXT_EXT0 | CELL_GEM_EXT_EXT1
-	ext.analog_left_x = pad->m_analog_left_x;
+	ext.analog_left_x = pad->m_analog_left_x; // HACK: these pad members are actually only set in cellPad
 	ext.analog_left_y = pad->m_analog_left_y;
 	ext.analog_right_x = pad->m_analog_right_x;
 	ext.analog_right_y = pad->m_analog_right_y;
@@ -519,7 +730,7 @@ error_code cellGemClearStatusFlags(u32 gem_num, u64 mask)
 
 error_code cellGemConvertVideoFinish()
 {
-	cellGem.todo("cellGemConvertVideoFinish()");
+	cellGem.warning("cellGemConvertVideoFinish()");
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -528,19 +739,22 @@ error_code cellGemConvertVideoFinish()
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!std::exchange(gem.video_conversion_started, false))
+	if (!gem.video_conversion_in_progress)
 	{
 		return CELL_GEM_ERROR_CONVERT_NOT_STARTED;
 	}
 
-	// TODO: wait until image is converted
+	while (gem.video_conversion_in_progress && !Emu.IsStopped())
+	{
+		thread_ctrl::wait_for(100);
+	}
 
 	return CELL_OK;
 }
 
 error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
 {
-	cellGem.todo("cellGemConvertVideoStart(video_frame=*0x%x)", video_frame);
+	cellGem.warning("cellGemConvertVideoStart(video_frame=*0x%x)", video_frame);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -554,18 +768,20 @@ error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	// TODO: The alignment checks seem to break Time Crisis Razing Storm [BLUS30528]
-	//if (!video_frame.aligned(128))
-	//{
-	//	return CELL_GEM_ERROR_INVALID_ALIGNMENT;
-	//}
+	if (!video_frame.aligned(128))
+	{
+		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
+	}
 
-	if (std::exchange(gem.video_conversion_started, true))
+	if (gem.video_conversion_in_progress)
 	{
 		return CELL_GEM_ERROR_CONVERT_NOT_FINISHED;
 	}
 
-	// TODO: start image conversion of video_frame async to gem.vc_attribute.video_data_out
+	const auto& shared_data = g_fxo->get<gem_camera_shared>();
+	gem.video_data_in.resize(shared_data.size);
+	std::memcpy(gem.video_data_in.data(), video_frame.get_ptr(), gem.video_data_in.size());
+	gem.video_conversion_in_progress = true;
 
 	return CELL_OK;
 }
@@ -753,11 +969,6 @@ error_code cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 
 	auto& gem = g_fxo->get<gem_config>();
 
-	if (!gem.state)
-	{
-		return CELL_GEM_ERROR_UNINITIALIZED;
-	}
-
 	if (!camera_state)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
@@ -826,7 +1037,7 @@ error_code cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8>
 
 error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_image_state)
 {
-	cellGem.todo("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, gem_image_state);
+	cellGem.warning("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, gem_image_state);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -879,7 +1090,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!check_gem_num(gem_num) || state_flag > CELL_GEM_INERTIAL_STATE_FLAG_NEXT || !inertial_state || !gem.is_controller_ready(gem_num))
+	if (!check_gem_num(gem_num) || !inertial_state || !gem.is_controller_ready(gem_num))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -1303,12 +1514,17 @@ s32 cellGemIsTrackableHue(u32 hue)
 
 	auto& gem = g_fxo->get<gem_config>();
 
-	if (!gem.state || hue > 359)
+	if (!gem.state)
 	{
-		return false;
+		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	return true;
+	if (hue > 359)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	return 1;
 }
 
 error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
@@ -1337,7 +1553,7 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 
 error_code cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribute)
 {
-	cellGem.todo("cellGemPrepareVideoConvert(vc_attribute=*0x%x)", vc_attribute);
+	cellGem.warning("cellGemPrepareVideoConvert(vc_attribute=*0x%x)", vc_attribute);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -1351,28 +1567,35 @@ error_code cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	const auto vc = *vc_attribute;
+	const CellGemVideoConvertAttribute vc = *vc_attribute;
 
-	if (!vc_attribute || vc.version != CELL_GEM_VERSION)
+	if (vc.version != CELL_GEM_VERSION)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
 	if (vc.output_format != CELL_GEM_NO_VIDEO_OUTPUT)
 	{
-		if (!vc.video_data_out || ((vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME) && !vc.buffer_memory))
+		if (!vc.video_data_out)
 		{
 			return CELL_GEM_ERROR_INVALID_PARAMETER;
 		}
 	}
 
-	// TODO: The alignment checks seem to break Time Crisis Razing Storm [BLUS30528]
-	//if (!vc.video_data_out.aligned(16) || !vc.buffer_memory.aligned(128))
-	//{
-	//	return CELL_GEM_ERROR_INVALID_ALIGNMENT;
-	//}
+	if ((vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME) && !vc.buffer_memory)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (!vc.video_data_out.aligned(128) || !vc.buffer_memory.aligned(16))
+	{
+		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
+	}
 
 	gem.vc_attribute = vc;
+
+	const s32 buffer_size = cellGemGetVideoConvertSize(vc.output_format);
+	gem.video_data_out_size = buffer_size;
 
 	return CELL_OK;
 }
@@ -1434,7 +1657,7 @@ error_code cellGemReset(u32 gem_num)
 
 error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 {
-	cellGem.todo("cellGemSetRumble(gem_num=%d, rumble=0x%x)", gem_num, rumble);
+	cellGem.warning("cellGemSetRumble(gem_num=%d, rumble=0x%x)", gem_num, rumble);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -1468,7 +1691,7 @@ error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!z_direction)
+	if (!z_direction || !check_gem_num(gem_num))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -1571,7 +1794,7 @@ error_code cellGemUpdateFinish()
 
 	std::scoped_lock lock(gem.mtx);
 
-	if (!std::exchange(gem.update_started, false))
+	if (!gem.update_started.exchange(false))
 	{
 		return CELL_GEM_ERROR_UPDATE_NOT_STARTED;
 	}
@@ -1598,16 +1821,15 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 	std::scoped_lock lock(gem.mtx);
 
 	// Update is starting even when camera_frame is null
-	if (std::exchange(gem.update_started, true))
+	if (gem.update_started.exchange(true))
 	{
 		return CELL_GEM_ERROR_UPDATE_NOT_FINISHED;
 	}
 
-	// TODO: The alignment checks seem to break Time Crisis Razing Storm [BLUS30528]
-	//if (!camera_frame.aligned(128))
-	//{
-	//	return CELL_GEM_ERROR_INVALID_ALIGNMENT;
-	//}
+	if (!camera_frame.aligned(128))
+	{
+		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
+	}
 
 	gem.camera_frame = camera_frame.addr();
 	if (!camera_frame)

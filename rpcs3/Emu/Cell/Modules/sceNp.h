@@ -3,6 +3,8 @@
 #include "cellRtc.h"
 #include "Emu/Cell/ErrorCodes.h"
 
+#include <set>
+
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr);
 error_code sceNpTerm();
 
@@ -1022,11 +1024,11 @@ struct SceNpBasicMessageDetails
 	be_t<u16> mainType;
 	be_t<u16> subType;
 	be_t<u32> msgFeatures;
-	const SceNpId npids;
+	vm::bptr<SceNpId> npids;
 	be_t<u32> count;
-	const s8 subject;
-	const s8 body;
-	const be_t<u32> data;
+	vm::bptr<char> subject;
+	vm::bptr<char> body;
+	vm::bptr<u8> data;
 	be_t<u32> size;
 };
 
@@ -1203,7 +1205,7 @@ struct SceNpSignalingNetInfo
 struct SceNpCustomMenuAction
 {
 	be_t<u32> options;
-	char name[SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX];
+	vm::bcptr<char> name;
 	be_t<SceNpCustomMenuActionMask> mask;
 };
 
@@ -1359,3 +1361,33 @@ using SceNpMatchingGUIHandler = void(u32 ctx_id, s32 event, s32 error_code, vm::
 using SceNpProfileResultHandler = s32(s32 result, vm::ptr<void> arg);
 
 using SceNpManagerSubSigninCallback = void(s32 result, vm::ptr<SceNpId> npId, vm::ptr<void> cb_arg);
+
+// Used to pass data to UI/RPCN
+struct message_data
+{
+	SceNpCommunicationId commId{};
+	u64 msgId = 0;
+	u16 mainType = 0;
+	u16 subType = 0;
+	u32 msgFeatures = 0;
+	std::string subject;
+	std::string body;
+	std::vector<u8> data;
+	void print() const;
+};
+
+class SendMessageDialogBase
+{
+public:
+	virtual ~SendMessageDialogBase() = default;
+
+	virtual bool Exec(message_data& msg_data, std::set<std::string>& npids) = 0;
+};
+
+class RecvMessageDialogBase
+{
+public:
+	virtual ~RecvMessageDialogBase() = default;
+
+	virtual bool Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id) = 0;
+};

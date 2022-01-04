@@ -9,30 +9,34 @@
 #include <vector>
 #include <unordered_map>
 
+#define DESCRIPTOR_MAX_DRAW_CALLS 16384
+
 namespace vk
 {
 	struct gpu_formats_support
 	{
-		bool d24_unorm_s8;
-		bool d32_sfloat_s8;
-		bool bgra8_linear;
-		bool argb8_linear;
+		bool d24_unorm_s8 : 1;
+		bool d32_sfloat_s8 : 1;
+		bool bgra8_linear : 1;
+		bool argb8_linear : 1;
 	};
 
 	struct gpu_shader_types_support
 	{
-		bool allow_float64;
-		bool allow_float16;
-		bool allow_int8;
+		bool allow_float64 : 1;
+		bool allow_float16 : 1;
+		bool allow_int8 : 1;
 	};
 
 	struct memory_type_mapping
 	{
 		memory_type_info host_visible_coherent;
 		memory_type_info device_local;
+		memory_type_info device_bar;
 
 		u64 device_local_total_bytes;
 		u64 host_visible_total_bytes;
+		u64 device_bar_total_bytes;
 
 		PFN_vkGetMemoryHostPointerPropertiesEXT _vkGetMemoryHostPointerPropertiesEXT;
 	};
@@ -46,20 +50,26 @@ namespace vk
 		VkPhysicalDeviceMemoryProperties memory_properties;
 		std::vector<VkQueueFamilyProperties> queue_props;
 
-		std::unordered_map<VkFormat, VkFormatProperties> format_properties;
+		mutable std::unordered_map<VkFormat, VkFormatProperties> format_properties;
 		gpu_shader_types_support shader_types_support{};
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
 
-		bool stencil_export_support = false;
-		bool conditional_render_support = false;
-		bool external_memory_host_support = false;
-		bool unrestricted_depth_range_support = false;
-		bool surface_capabilities_2_support = false;
-		bool debug_utils_support = false;
+		bool stencil_export_support : 1 = false;
+		bool conditional_render_support : 1 = false;
+		bool external_memory_host_support : 1 = false;
+		bool unrestricted_depth_range_support : 1 = false;
+		bool surface_capabilities_2_support : 1 = false;
+		bool debug_utils_support : 1 = false;
+		bool sampler_mirror_clamped_support : 1 = false;
+		bool descriptor_indexing_support : 1 = false;
+
+		u32 descriptor_max_draw_calls = DESCRIPTOR_MAX_DRAW_CALLS;
+		u64 descriptor_update_after_bind_mask = 0;
 
 		friend class render_device;
 	private:
 		void get_physical_device_features(bool allow_extensions);
+		void get_physical_device_properties(bool allow_extensions);
 
 	public:
 
@@ -117,7 +127,7 @@ namespace vk
 		void create(vk::physical_device& pdev, u32 graphics_queue_idx, u32 present_queue_idx, u32 transfer_queue_idx);
 		void destroy();
 
-		const VkFormatProperties get_format_properties(VkFormat format);
+		const VkFormatProperties get_format_properties(VkFormat format) const;
 
 		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32* type_index) const;
 		void rebalance_memory_type_usage();
@@ -138,6 +148,10 @@ namespace vk
 		bool get_external_memory_host_support() const;
 		bool get_surface_capabilities_2_support() const;
 		bool get_debug_utils_support() const;
+		bool get_descriptor_indexing_support() const;
+
+		u64 get_descriptor_update_after_bind_support() const;
+		u32 get_descriptor_max_draw_calls() const;
 
 		VkQueue get_present_queue() const;
 		VkQueue get_graphics_queue() const;

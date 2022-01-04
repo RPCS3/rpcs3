@@ -2,6 +2,7 @@
 #include "register_editor_dialog.h"
 #include "instruction_editor_dialog.h"
 #include "memory_viewer_panel.h"
+#include "memory_string_searcher.h"
 #include "gui_settings.h"
 #include "debugger_list.h"
 #include "breakpoint_list.h"
@@ -231,13 +232,13 @@ bool debugger_frame::eventFilter(QObject* object, QEvent* event)
 	return false;
 }
 
-void debugger_frame::closeEvent(QCloseEvent *event)
+void debugger_frame::closeEvent(QCloseEvent* event)
 {
 	QDockWidget::closeEvent(event);
 	Q_EMIT DebugFrameClosed();
 }
 
-void debugger_frame::showEvent(QShowEvent * event)
+void debugger_frame::showEvent(QShowEvent* event)
 {
 	// resize splitter widgets
 	if (!m_splitter->restoreState(m_gui_settings->GetValue(gui::d_splitterState).toByteArray()))
@@ -250,7 +251,7 @@ void debugger_frame::showEvent(QShowEvent * event)
 	QDockWidget::showEvent(event);
 }
 
-void debugger_frame::hideEvent(QHideEvent * event)
+void debugger_frame::hideEvent(QHideEvent* event)
 {
 	// save splitter state or it will resume its initial state on next show
 	m_gui_settings->SetValue(gui::d_splitterState, m_splitter->saveState());
@@ -306,6 +307,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		QLabel* l = new QLabel(tr(
 			"Keys Ctrl+G: Go to typed address."
 			"\nKeys Ctrl+B: Open breakpoints settings."
+			"\nKeys Ctrl+S: Search memory string utility."
 			"\nKeys Alt+S: Capture SPU images of selected SPU."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
 			"\nKey D: Also PPU calling history logger, interpreter and non-zero call history size must be used."
@@ -362,6 +364,20 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_B:
 		{
 			open_breakpoints_settings();
+			return;
+		}
+		case Qt::Key_S:
+		{
+			if (m_disasm && (cpu->id_type() == 2 || cpu->id_type() == 1))
+			{
+				if (cpu->id_type() == 2)
+				{
+					// Save shared pointer to shared memory handle, ensure the destructor will not be called until the SPUDisAsm is destroyed
+					static_cast<SPUDisAsm*>(m_disasm.get())->set_shm(static_cast<const spu_thread*>(cpu)->shm);
+				}
+
+				idm::make<memory_searcher_handle>(this, m_disasm, cpu->id_type() == 2 ? cpu->get_name() : "");
+			}
 			return;
 		}
 		default: break;
@@ -911,7 +927,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (get_cpu())
 			{
-				m_disasm = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, m_rsx);
+				m_disasm = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, m_rsx);
 			}
 
 			break;

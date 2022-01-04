@@ -70,12 +70,6 @@
     <Filter Include="Emu\Audio\FAudio">
       <UniqueIdentifier>{7555ff6f-67a9-4d02-b744-0bf896751edb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\Audio\ALSA">
-      <UniqueIdentifier>{c76057f1-bb19-4981-8ab0-5ba20ac27552}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Emu\Audio\Pulse">
-      <UniqueIdentifier>{84c0e40e-efb6-4cfd-b2f5-13c720b09105}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\GPU\RSX\Program">
       <UniqueIdentifier>{d055ca32-157a-4d8c-895e-29509858fcb0}</UniqueIdentifier>
     </Filter>
@@ -140,6 +134,9 @@
     </ClCompile>
     <ClCompile Include="Loader\TRP.cpp">
       <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\simple_ringbuf.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <Filter>Utilities</Filter>
@@ -861,6 +858,9 @@
     <ClCompile Include="Emu\Io\Buzz.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+	<ClCompile Include="Emu\Io\usio.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_crypto_engine.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -891,10 +891,25 @@
     <ClCompile Include="Emu\NP\fb_helpers.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\np_cache.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\NP\np_contexts.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\NP\np_dnshook.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\NP\np_handler.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\np_helpers.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\np_notifications.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\np_requests.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\signaling_handler.cpp">
@@ -908,12 +923,6 @@
     </ClCompile>
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
       <Filter>Emu\Audio\FAudio</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Audio\ALSA\ALSABackend.cpp">
-      <Filter>Emu\Audio\ALSA</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Audio\Pulse\PulseBackend.cpp">
-      <Filter>Emu\Audio\Pulse</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\cheat_info.cpp">
       <Filter>Utilities</Filter>
@@ -982,8 +991,12 @@
     <ClCompile Include="Emu\RSX\Program\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Program\CgBinaryFragmentProgram.cpp" />
-    <ClCompile Include="Emu\RSX\Program\CgBinaryVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\Program\CgBinaryFragmentProgram.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\CgBinaryVertexProgram.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
@@ -998,6 +1011,18 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Audio\audio_device_listener.cpp">
+      <Filter>Emu\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\vfs_config.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\camera_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\rsx_vertex_data.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1808,6 +1833,9 @@
     <ClInclude Include="Emu\Io\Buzz.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\usio.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\NP\np_handler.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
@@ -1852,12 +1880,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
       <Filter>Emu\Audio\FAudio</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Audio\ALSA\ALSABackend.h">
-      <Filter>Emu\Audio\ALSA</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Audio\Pulse\PulseBackend.h">
-      <Filter>Emu\Audio\Pulse</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\cheat_info.h">
       <Filter>Utilities</Filter>
@@ -1973,6 +1995,30 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\libfs_utility_init.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\audio_device_listener.h">
+      <Filter>Emu\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\vfs_config.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\simple_array.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\profiling_timer.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\bitfield.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\camera_handler_base.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Null\null_camera_handler.h">
+      <Filter>Emu\Io\Null</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\camera_config.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

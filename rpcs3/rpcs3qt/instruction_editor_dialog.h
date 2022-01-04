@@ -8,6 +8,7 @@
 
 class CPUDisAsm;
 class cpu_thread;
+class QCheckBox;
 
 class instruction_editor_dialog : public QDialog
 {
@@ -19,6 +20,7 @@ private:
 	CPUDisAsm* m_disasm;
 	QLineEdit* m_instr;
 	QLabel* m_preview;
+	QCheckBox* m_apply_for_spu_group = nullptr;
 
 	const std::function<cpu_thread*()> m_get_cpu;
 

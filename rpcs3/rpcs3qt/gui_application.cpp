@@ -10,18 +10,23 @@
 #include "gl_gs_frame.h"
 #include "display_sleep_control.h"
 #include "localized_emu.h"
+#include "qt_camera_handler.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
 #endif
 
+#include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/vfs_config.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
 #include "osk_dialog_frame.h"
+#include "recvmessage_dialog_frame.h"
+#include "sendmessage_dialog_frame.h"
 #include "stylesheets.h"
 
 #include <QScreen>
@@ -29,13 +34,14 @@
 #include <QLibraryInfo>
 #include <QDirIterator>
 #include <QFileInfo>
+#include <QSound>
 
 #include <clocale>
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
 
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 
@@ -95,7 +101,7 @@ bool gui_application::Init()
 
 	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
 	{
-		welcome_dialog* welcome = new welcome_dialog();
+		welcome_dialog* welcome = new welcome_dialog(m_gui_settings);
 		welcome->exec();
 	}
 
@@ -331,7 +337,7 @@ void gui_application::InitializeCallbacks()
 			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
 			break;
 		}
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
 		{
 			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
@@ -341,10 +347,28 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
+	callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
+	{
+		switch (g_cfg.io.camera.get())
+		{
+		case camera_handler::null:
+		case camera_handler::fake:
+		{
+			return std::make_shared<null_camera_handler>();
+		}
+		case camera_handler::qt:
+		{
+			return std::make_shared<qt_camera_handler>();
+		}
+		}
+		return nullptr;
+	};
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
+	callbacks.get_sendmessage_dialog = [this]() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
+	callbacks.get_recvmessage_dialog = [this]() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
 	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
@@ -384,9 +408,15 @@ void gui_application::InitializeCallbacks()
 		return localized_emu::get_u32string(id, args);
 	};
 
-	callbacks.resolve_path = [](std::string_view sv)
+	callbacks.play_sound = [](const std::string& path)
 	{
-		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
+		Emu.CallAfter([path]()
+		{
+			if (fs::is_file(path))
+			{
+				QSound::play(qstr(path));
+			}
+		});
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
@@ -491,6 +521,10 @@ void gui_application::OnChangeStyleSheetRequest()
 #ifdef __APPLE__
 		locs << QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
 #else
+#ifdef DATADIR
+		const QString data_dir = (DATADIR);
+		locs << data_dir + "/GuiConfigs/";
+#endif
 		locs << QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
 #endif
 		locs << QCoreApplication::applicationDirPath() + "/GuiConfigs/";
@@ -513,7 +547,7 @@ void gui_application::OnChangeStyleSheetRequest()
 			const QString config_dir = qstr(fs::get_config_dir());
 
 			// Add PS3 fonts
-			QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+			QDirIterator ps3_font_it(qstr(g_cfg_vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
 			while (ps3_font_it.hasNext())
 				QFontDatabase::addApplicationFont(ps3_font_it.next());
 

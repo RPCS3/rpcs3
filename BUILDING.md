@@ -29,11 +29,11 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 #### Arch Linux
 
-    sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base qt5-declarative sdl2
+    sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base qt5-declarative sdl2 sndio jack2
 
 #### Debian & Ubuntu
 
-    sudo apt-get install build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl2-2.0 libsdl2-dev
+    sudo apt-get install build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl2-2.0 libsdl2-dev libjack-dev libsndio-dev
 
 Ubuntu is usually horrendously out of date, and some packages need to be downloaded by hand. This part is for Qt, GCC, Vulkan, and CMake
 ##### Qt PPA
@@ -82,11 +82,11 @@ sudo apt-get install cmake
 
 #### Fedora
 
-    sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt5-qtbase-devel qt5-qtbase-private-devel vulkan-devel
+    sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt5-qtbase-devel qt5-qtbase-private-devel vulkan-devel pipewire-jack-audio-connection-kit-devel qt5-qtmultimedia-devel qt5-qtsvg-devel
 
 #### OpenSUSE
 
-    sudo zypper install git cmake libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt5-qtbase-devel libqt5gui-private-headers-devel libevdev-devel
+    sudo zypper install git cmake libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt5-qtbase-devel libqt5-qtmultimedia-devel libqt5-qtsvg-devel libQt5Gui-private-headers-devel libevdev-devel libsndio7_1 libjack-devel
 
 ## Setup the project
 

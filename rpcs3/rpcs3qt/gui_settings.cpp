@@ -160,16 +160,16 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 	if (!Emu.IsStopped())
 	{
 		QString title = tr("Close Running Game?");
-		QString message = tr("Performing this action will close the current game.\nDo you really want to continue?\n\nAny unsaved progress will be lost!\n");
+		QString message = tr("Performing this action will close the current game.<br>Do you really want to continue?<br><br>Any unsaved progress will be lost!<br>");
 
 		if (gui_save_entry == gui::ib_confirm_boot)
 		{
-			message = tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n");
+			message = tr("Booting another game will close the current game.<br>Do you really want to boot another game?<br><br>Any unsaved progress will be lost!<br>");
 		}
 		else if (gui_save_entry == gui::ib_confirm_exit)
 		{
 			title = tr("Exit RPCS3?");
-			message = tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n");
+			message = tr("A game is currently running. Do you really want to close RPCS3?<br><br>Any unsaved progress will be lost!<br>");
 		}
 
 		int result = QMessageBox::Yes;
@@ -180,6 +180,8 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 		{
 			return false;
 		}
+
+		cfg_log.notice("User accepted to stop the current emulation.");
 	}
 
 	return true;
@@ -220,6 +222,10 @@ QStringList gui_settings::GetStylesheetEntries() const
 	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
 #else
 	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+#ifdef DATADIR
+	const QString data_dir = (DATADIR);
+	res.append(gui::utils::get_dir_entries(data_dir + "/GuiConfigs/", name_filter));
+#endif
 #endif
 	res.append(gui::utils::get_dir_entries(QCoreApplication::applicationDirPath() + "/GuiConfigs/", name_filter));
 	res.append(gui::utils::get_dir_entries(platformStylesheetDir, name_filter));

@@ -13,6 +13,15 @@ if(WITH_LLVM)
 		option(LLVM_INCLUDE_UTILS OFF)
 		option(LLVM_CCACHE_BUILD ON)
 
+		if(WIN32)
+			set(LLVM_USE_INTEL_JITEVENTS ON)
+		endif()
+
+		if(CMAKE_SYSTEM MATCHES "Linux")
+			set(LLVM_USE_INTEL_JITEVENTS ON)
+			set(LLVM_USE_PERF ON)
+		endif()
+
 		set(CXX_FLAGS_OLD ${CMAKE_CXX_FLAGS})
 
 		if (MSVC)
@@ -26,7 +35,7 @@ if(WITH_LLVM)
 		set(CMAKE_CXX_FLAGS ${CXX_FLAGS_OLD})
 
 		# now tries to find LLVM again
-		find_package(LLVM 11.0 CONFIG)
+		find_package(LLVM 13.0 CONFIG)
 		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
@@ -39,7 +48,7 @@ if(WITH_LLVM)
 			set(LLVM_DIR ${CMAKE_SOURCE_DIR}/${LLVM_DIR})
 		endif()
 
-		find_package(LLVM 11.0 CONFIG)
+		find_package(LLVM 13.0 CONFIG)
 
 		if (NOT LLVM_FOUND)
 			if (LLVM_VERSION AND LLVM_VERSION_MAJOR LESS 11)
@@ -53,6 +62,14 @@ if(WITH_LLVM)
 	endif()
 
 	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen LLVMX86AsmParser)
+
+	if(WIN32 OR CMAKE_SYSTEM MATCHES "Linux")
+		set(LLVM_LIBS ${LLVM_LIBS} LLVMIntelJITEvents)
+	endif()
+
+	if(CMAKE_SYSTEM MATCHES "Linux")
+		set(LLVM_LIBS ${LLVM_LIBS} LLVMPerfJITEvents)
+	endif()
 
 	add_library(3rdparty_llvm INTERFACE)
 	target_link_libraries(3rdparty_llvm INTERFACE ${LLVM_LIBS})

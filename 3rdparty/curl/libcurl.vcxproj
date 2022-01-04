@@ -43,7 +43,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <AdditionalIncludeDirectories>curl\include;curl\lib;extra;$(SolutionDir)3rdparty\wolfssl;$(SolutionDir)3rdparty\wolfssl\wolfssl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>curl\include;curl\lib;extra;$(SolutionDir)3rdparty\wolfssl\wolfssl\wolfssl;$(SolutionDir)3rdparty\wolfssl\wolfssl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>HAVE_SNI;NDEBUG;BUILDING_LIBCURL;CURL_STATICLIB;USE_WOLFSSL;USE_IPV6;SIZEOF_LONG=4;SIZEOF_LONG_LONG=8;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>

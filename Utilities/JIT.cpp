@@ -16,6 +16,15 @@
 
 LOG_CHANNEL(jit_log, "JIT");
 
+void jit_announce(uptr func, usz size, std::string_view name)
+{
+#ifdef __linux__
+	static const fs::file s_map(fmt::format("/tmp/perf-%d.map", getpid()), fs::rewrite + fs::append);
+
+	s_map.write(fmt::format("%x %x %s\n", func, size, name));
+#endif
+}
+
 static u8* get_jit_memory()
 {
 	// Reserve 2G memory (magic static)
@@ -104,8 +113,32 @@ static u8* add_jit_memory(usz size, uint align)
 	return pointer + pos;
 }
 
+const asmjit::Environment& jit_runtime_base::environment() const noexcept
+{
+	static const asmjit::Environment g_env = asmjit::Environment::host();
+
+	return g_env;
+}
+
+void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
+{
+	ensure(!code->flatten());
+	ensure(!code->resolveUnresolvedLinks());
+	usz codeSize = ensure(code->codeSize());
+	auto p = ensure(this->_alloc(codeSize, 64));
+	ensure(!code->relocateToBase(uptr(p)));
+
+	asmjit::VirtMem::ProtectJitReadWriteScope rwScope(p, codeSize);
+
+	for (asmjit::Section* section : code->_sections)
+	{
+		std::memcpy(p + section->offset(), section->data(), section->bufferSize());
+	}
+
+	return p;
+}
+
 jit_runtime::jit_runtime()
-	: HostRuntime()
 {
 }
 
@@ -113,38 +146,9 @@ jit_runtime::~jit_runtime()
 {
 }
 
-asmjit::Error jit_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
+uchar* jit_runtime::_alloc(usz size, usz align) noexcept
 {
-	usz codeSize = code->getCodeSize();
-	if (!codeSize) [[unlikely]]
-	{
-		*dst = nullptr;
-		return asmjit::kErrorNoCodeGenerated;
-	}
-
-	void* p = jit_runtime::alloc(codeSize, 16);
-	if (!p) [[unlikely]]
-	{
-		*dst = nullptr;
-		return asmjit::kErrorNoVirtualMemory;
-	}
-
-	usz relocSize = code->relocate(p);
-	if (!relocSize) [[unlikely]]
-	{
-		*dst = nullptr;
-		return asmjit::kErrorInvalidState;
-	}
-
-	flush(p, relocSize);
-	*dst = p;
-
-	return asmjit::kErrorOk;
-}
-
-asmjit::Error jit_runtime::_release(void*) noexcept
-{
-	return asmjit::kErrorOk;
+	return jit_runtime::alloc(size, align, true);
 }
 
 u8* jit_runtime::alloc(usz size, uint align, bool exec) noexcept
@@ -191,12 +195,12 @@ void jit_runtime::finalize() noexcept
 	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
 }
 
-asmjit::Runtime& asmjit::get_global_runtime()
+jit_runtime_base& asmjit::get_global_runtime()
 {
 	// 16 MiB for internal needs
 	static constexpr u64 size = 1024 * 1024 * 16;
 
-	struct custom_runtime final : asmjit::HostRuntime
+	struct custom_runtime final : jit_runtime_base
 	{
 		custom_runtime() noexcept
 		{
@@ -205,7 +209,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 			{
 				if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))
 				{
-					m_pos.raw() = static_cast<std::byte*>(ptr);
+					m_pos.raw() = static_cast<uchar*>(ptr);
 					break;
 				}
 			}
@@ -217,55 +221,49 @@ asmjit::Runtime& asmjit::get_global_runtime()
 			utils::memory_commit(m_pos, size, utils::protection::wx);
 		}
 
-		custom_runtime(const custom_runtime&) = delete;
-
-		custom_runtime& operator=(const custom_runtime&) = delete;
-
-		asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override
+		uchar* _alloc(usz size, usz align) noexcept override
 		{
-			usz codeSize = code->getCodeSize();
-			if (!codeSize) [[unlikely]]
+			return m_pos.atomic_op([&](uchar*& pos) -> uchar*
 			{
-				*dst = nullptr;
-				return asmjit::kErrorNoCodeGenerated;
-			}
+				const auto r = reinterpret_cast<uchar*>(utils::align(uptr(pos), align));
 
-			void* p = m_pos.fetch_add(utils::align(codeSize, 4096));
-			if (!p || m_pos > m_max) [[unlikely]]
-			{
-				*dst = nullptr;
-				jit_log.fatal("Out of memory (static asmjit)");
-				return asmjit::kErrorNoVirtualMemory;
-			}
+				if (r >= pos && r + size > pos && r + size <= m_max)
+				{
+					pos = r + size;
+					return r;
+				}
 
-			usz relocSize = code->relocate(p);
-			if (!relocSize) [[unlikely]]
-			{
-				*dst = nullptr;
-				return asmjit::kErrorInvalidState;
-			}
-
-			utils::memory_protect(p, utils::align(codeSize, 4096), utils::protection::rx);
-			flush(p, relocSize);
-			*dst = p;
-
-			return asmjit::kErrorOk;
-		}
-
-		asmjit::Error _release(void*) noexcept override
-		{
-			return asmjit::kErrorOk;
+				return nullptr;
+			});
 		}
 
 	private:
-		atomic_t<std::byte*> m_pos{};
+		atomic_t<uchar*> m_pos{};
 
-		std::byte* m_max{};
+		uchar* m_max{};
 	};
 
 	// Magic static
 	static custom_runtime g_rt;
 	return g_rt;
+}
+
+asmjit::inline_runtime::inline_runtime(uchar* data, usz size)
+	: m_data(data)
+	, m_size(size)
+{
+}
+
+uchar* asmjit::inline_runtime::_alloc(usz size, usz align) noexcept
+{
+	ensure(align <= 4096);
+
+	return size <= m_size ? m_data : nullptr;
+}
+
+asmjit::inline_runtime::~inline_runtime()
+{
+	utils::memory_protect(m_data, m_size, utils::protection::rx);
 }
 
 #ifdef LLVM_AVAILABLE
@@ -293,6 +291,9 @@ asmjit::Runtime& asmjit::get_global_runtime()
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/SymbolSize.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -348,25 +349,61 @@ static u64 make_null_function(const std::string& name)
 		using namespace asmjit;
 
 		// Build a "null" function that contains its name
-		const auto func = build_function_asm<void (*)()>([&](X86Assembler& c, auto& args)
+		const auto func = build_function_asm<void (*)()>("NULL", [&](x86::Assembler& c, auto& args)
 		{
 			Label data = c.newLabel();
 			c.lea(args[0], x86::qword_ptr(data, 0));
-			c.jmp(imm_ptr(&null));
-			c.align(kAlignCode, 16);
+			c.jmp(Imm(&null));
+			c.align(AlignMode::kCode, 16);
 			c.bind(data);
 
 			// Copy function name bytes
 			for (char ch : name)
 				c.db(ch);
 			c.db(0);
-			c.align(kAlignData, 16);
+			c.align(AlignMode::kData, 16);
 		});
 
 		func_ptr = reinterpret_cast<u64>(func);
 		return func_ptr;
 	}
 }
+
+struct JITAnnouncer : llvm::JITEventListener
+{
+	void notifyObjectLoaded(u64, const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& info) override
+	{
+		using namespace llvm;
+
+		object::OwningBinary<object::ObjectFile> debug_obj_ = info.getObjectForDebug(obj);
+		if (!debug_obj_.getBinary())
+		{
+#ifdef __linux__
+			jit_log.error("LLVM: Failed to announce JIT events (no debug object)");
+#endif
+			return;
+		}
+
+		const object::ObjectFile& debug_obj = *debug_obj_.getBinary();
+
+		for (const auto& [sym, size] : computeSymbolSizes(debug_obj))
+		{
+			Expected<object::SymbolRef::Type> type_ = sym.getType();
+			if (!type_ || *type_ != object::SymbolRef::ST_Function)
+				continue;
+
+			Expected<StringRef> name = sym.getName();
+			if (!name)
+				continue;
+
+			Expected<u64> addr = sym.getAddress();
+			if (!addr)
+				continue;
+
+			jit_announce(*addr, size, {name->data(), name->size()});
+		}
+	}
+};
 
 // Simple memory manager
 struct MemoryManager1 : llvm::RTDyldMemoryManager
@@ -391,7 +428,8 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 	~MemoryManager1() override
 	{
-		utils::memory_release(ptr, c_max_size * 2);
+		// Hack: don't release to prevent reuse of address space, see jit_announce
+		utils::memory_decommit(ptr, c_max_size * 2);
 	}
 
 	llvm::JITSymbol findSymbol(const std::string& name) override
@@ -725,11 +763,12 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 }
 
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
-	: m_cpu(cpu(_cpu))
+	: m_context(new llvm::LLVMContext)
+	, m_cpu(cpu(_cpu))
 {
 	std::string result;
 
-	auto null_mod = std::make_unique<llvm::Module> ("null_", m_context);
+	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
 
 	if (_link.empty())
 	{
@@ -771,6 +810,12 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		{
 			m_engine->updateGlobalMapping(name, addr);
 		}
+	}
+
+	if (!_link.empty() || !(flags & 0x1))
+	{
+		m_engine->RegisterJITEventListener(llvm::JITEventListener::createIntelJITEventListener());
+		m_engine->RegisterJITEventListener(new JITAnnouncer);
 	}
 
 	if (!m_engine)

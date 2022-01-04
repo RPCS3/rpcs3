@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_controls.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -121,8 +121,8 @@ namespace rsx
 				result.lookup_font_dirs[0] += "/.fonts/";
 #endif
 			// Search dev_flash for the font too
-			result.lookup_font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
-			result.lookup_font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
+			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/");
+			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/SONY-CC/");
 
 			switch (class_)
 			{
@@ -283,7 +283,7 @@ namespace rsx
 			}
 		}
 
-		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, u32 char_limit, u16 max_width, bool wrap)
+		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap)
 		{
 			x_advance = 0.f;
 			y_advance = 0.f;
@@ -294,7 +294,7 @@ namespace rsx
 				return;
 			}
 
-			u32 i                = 0u;
+			usz i                = 0u;
 			bool skip_whitespace = false;
 
 			while (true)
@@ -335,7 +335,7 @@ namespace rsx
 							if (wrap)
 							{
 								// scan previous chars
-								for (int j = i - 1, nb_chars = 0; j > 0; j--, nb_chars++)
+								for (usz j = i - 1, nb_chars = 0; j > 0; j--, nb_chars++)
 								{
 									if (text[j] == '\n')
 										break;
@@ -428,7 +428,7 @@ namespace rsx
 			return result;
 		}
 
-		std::pair<f32, f32> font::get_char_offset(const char32_t* text, u16 max_length, u16 max_width, bool wrap)
+		std::pair<f32, f32> font::get_char_offset(const char32_t* text, usz max_length, u16 max_width, bool wrap)
 		{
 			std::vector<vertex> unused;
 			f32 loc_x, loc_y;

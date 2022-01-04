@@ -93,6 +93,7 @@ void GLGSRender::on_init_thread()
 	gl::set_primary_context_thread();
 
 	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
+	m_occlusion_type = g_cfg.video.precise_zpass_count ? GL_SAMPLES_PASSED : GL_ANY_SAMPLES_PASSED;
 
 	gl::init();
 
@@ -128,7 +129,21 @@ void GLGSRender::on_init_thread()
 		rsx_log.warning("Texture barriers are not supported by your GPU. Feedback loops will have undefined results.");
 	}
 
-	//Use industry standard resource alignment values as defaults
+	if (!gl_caps.ARB_bindless_texture_supported)
+	{
+		switch (shadermode)
+		{
+		case shader_mode::async_with_interpreter:
+		case shader_mode::interpreter_only:
+			rsx_log.error("Bindless texture extension required for shader interpreter is not supported on your GPU. Will use async recompiler as a fallback.");
+			g_cfg.video.shadermode.set(shader_mode::async_recompiler);
+			break;
+		default:
+			break;
+		}
+	}
+
+	// Use industry standard resource alignment values as defaults
 	m_uniform_buffer_offset_align = 256;
 	m_min_texbuffer_alignment = 256;
 	m_max_texbuffer_size = 0;
@@ -139,7 +154,7 @@ void GLGSRender::on_init_thread()
 	glGetIntegerv(GL_MAX_TEXTURE_BUFFER_SIZE, &m_max_texbuffer_size);
 	m_vao.create();
 
-	//Set min alignment to 16-bytes for SSE optimizations with aligned addresses to work
+	// Set min alignment to 16-bytes for SSE optimizations with aligned addresses to work
 	m_min_texbuffer_alignment = std::max(m_min_texbuffer_alignment, 16);
 	m_uniform_buffer_offset_align = std::max(m_uniform_buffer_offset_align, 16);
 
@@ -150,37 +165,37 @@ void GLGSRender::on_init_thread()
 		m_max_texbuffer_size = (16 * 0x100000);
 	}
 
-	//Array stream buffer
+	// Array stream buffer
 	{
 		m_gl_persistent_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
 		_SelectTexture(GL_STREAM_BUFFER_START + 0);
 		glBindTexture(GL_TEXTURE_BUFFER, m_gl_persistent_stream_buffer->id());
 	}
 
-	//Register stream buffer
+	// Register stream buffer
 	{
 		m_gl_volatile_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
 		_SelectTexture(GL_STREAM_BUFFER_START + 1);
 		glBindTexture(GL_TEXTURE_BUFFER, m_gl_volatile_stream_buffer->id());
 	}
 
-	//Fallback null texture instead of relying on texture0
+	// Fallback null texture instead of relying on texture0
 	{
 		std::vector<u32> pixeldata = { 0, 0, 0, 0 };
 
-		//1D
+		// 1D
 		auto tex1D = std::make_unique<gl::texture>(GL_TEXTURE_1D, 1, 1, 1, 1, GL_RGBA8);
 		tex1D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
-		//2D
+		// 2D
 		auto tex2D = std::make_unique<gl::texture>(GL_TEXTURE_2D, 1, 1, 1, 1, GL_RGBA8);
 		tex2D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
-		//3D
+		// 3D
 		auto tex3D = std::make_unique<gl::texture>(GL_TEXTURE_3D, 1, 1, 1, 1, GL_RGBA8);
 		tex3D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
-		//CUBE
+		// CUBE
 		auto texCUBE = std::make_unique<gl::texture>(GL_TEXTURE_CUBE_MAP, 1, 1, 1, 1, GL_RGBA8);
 		texCUBE->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
@@ -495,14 +510,14 @@ void GLGSRender::clear_surface(u32 arg)
 	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!rsx::method_registers.stencil_mask()) arg &= ~0x2u;
+	if (!rsx::method_registers.stencil_mask()) arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
 
 	// Ignore invalid clear flags
-	if ((arg & 0xf3) == 0) return;
+	if ((arg & RSX_GCM_CLEAR_ANY_MASK) == 0) return;
 
 	u8 ctx = rsx::framebuffer_creation_context::context_draw;
-	if (arg & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
-	if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
+	if (arg & RSX_GCM_CLEAR_COLOR_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+	if (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 
 	init_buffers(static_cast<rsx::framebuffer_creation_context>(ctx), true);
 
@@ -520,9 +535,9 @@ void GLGSRender::clear_surface(u32 arg)
 	bool update_color = false, update_z = false;
 	rsx::surface_depth_format2 surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
-		if (arg & 0x1)
+		if (arg & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
@@ -534,7 +549,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 		if (is_depth_stencil_format(surface_depth_format))
 		{
-			if (arg & 0x2)
+			if (arg & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
 				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 
@@ -543,7 +558,8 @@ void GLGSRender::clear_surface(u32 arg)
 				mask |= GLenum(gl::buffers::stencil);
 			}
 
-			if ((arg & 0x3) != 0x3 || !full_frame)
+			if (const auto ds_mask = (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
+				ds_mask != RSX_GCM_CLEAR_DEPTH_STENCIL_MASK || !full_frame)
 			{
 				ensure(mask);
 
@@ -551,14 +567,14 @@ void GLGSRender::clear_surface(u32 arg)
 					ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
 				{
 					// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
-					if (arg == 1)
+					if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT)
 					{
 						// Depth was cleared, initialize stencil
 						gl_state.stencil_mask(0xFF);
 						gl_state.clear_stencil(0xFF);
 						mask |= GLenum(gl::buffers::stencil);
 					}
-					else
+					else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
 					{
 						// Stencil was cleared, initialize depth
 						gl_state.depth_mask(GL_TRUE);
@@ -657,9 +673,6 @@ bool GLGSRender::load_program()
 		ensure(current_fragment_program.valid);
 
 		get_current_vertex_program(vs_sampler_state);
-
-		current_vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
-		current_fragment_program.texture_state.unnormalized_coords = 0; //unused
 	}
 	else if (m_program)
 	{
@@ -918,7 +931,7 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	const bool can_flush = (std::this_thread::get_id() == m_rsx_thread);
+	const bool can_flush = is_current_thread();
 	const rsx::invalidation_cause cause =
 		is_writing ? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
 		           : (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
@@ -1061,13 +1074,13 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	query->result = 0;
-	glBeginQuery(GL_ANY_SAMPLES_PASSED, query->driver_handle);
+	glBeginQuery(m_occlusion_type, query->driver_handle);
 }
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	ensure(query->active);
-	glEndQuery(GL_ANY_SAMPLES_PASSED);
+	glEndQuery(m_occlusion_type);
 }
 
 bool GLGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info* query)
@@ -1097,6 +1110,6 @@ void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 	if (query->active)
 	{
 		//Discard is being called on an active query, close it
-		glEndQuery(GL_ANY_SAMPLES_PASSED);
+		glEndQuery(m_occlusion_type);
 	}
 }

@@ -1042,7 +1042,7 @@ namespace rsx
 	 * Cached Texture Section
 	 */
 	template <typename derived_type, typename traits>
-	class cached_texture_section : public rsx::buffered_section
+	class cached_texture_section : public rsx::buffered_section, public rsx::ref_counted
 	{
 	public:
 		using ranged_storage_type       = ranged_storage<traits>;
@@ -1312,6 +1312,11 @@ namespace rsx
 
 		bool can_be_reused() const
 		{
+			if (has_refs()) [[unlikely]]
+			{
+				return false;
+			}
+
 			return !exists() || (is_dirty() && !is_locked());
 		}
 
@@ -1762,7 +1767,7 @@ namespace rsx
 			if (!valid_range())
 				return false;
 
-			if ((gcm_format & format) != format)
+			if (format && gcm_format != format)
 				return false;
 
 			if (!width && !height && !depth && !mipmaps)

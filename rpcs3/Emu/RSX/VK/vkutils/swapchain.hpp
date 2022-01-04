@@ -521,10 +521,10 @@ namespace vk
 				{
 				case driver_vendor::AMD:
 				case driver_vendor::INTEL:
+				case driver_vendor::RADV:
 					break;
 				case driver_vendor::ANV:
 				case driver_vendor::NVIDIA:
-				case driver_vendor::RADV:
 					m_wm_reports_flag = true;
 					break;
 				default:

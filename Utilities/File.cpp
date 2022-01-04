@@ -9,6 +9,7 @@
 #include <map>
 
 #include "util/asm.hpp"
+#include "util/coro.hpp"
 
 using namespace std::literals::string_literals;
 
@@ -383,12 +384,12 @@ shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, shar
 	return get_device_manager().set_device(name, std::move(device));
 }
 
-std::string fs::get_parent_dir(const std::string& path)
+std::string fs::get_parent_dir(const std::string& path, u32 levels)
 {
 	std::string_view result = path;
 
 	// Number of path components to remove
-	usz to_remove = 1;
+	usz to_remove = levels;
 
 	while (to_remove--)
 	{
@@ -683,9 +684,9 @@ bool fs::create_path(const std::string& path)
 
 #ifdef _WIN32
 	// Workaround: don't call is_dir with naked drive letter
-	if (!parent.empty() && parent.back() != ':' && !is_dir(parent) && !create_path(parent))
+	if (parent.size() < path.size() && parent.back() != ':' && !is_dir(parent) && !create_path(parent))
 #else
-	if (!parent.empty() && !is_dir(parent) && !create_path(parent))
+	if (parent.size() < path.size() && !is_dir(parent) && !create_path(parent))
 #endif
 	{
 		return false;
@@ -1182,7 +1183,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 			for (const char* data = static_cast<const char*>(buffer); count;)
 			{
-				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096)); 
+				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
 
 				DWORD nwritten = 0;
 				ensure(WriteFile(m_handle, data, size, &nwritten, nullptr)); // "file::write"
@@ -1658,7 +1659,7 @@ bool fs::dir::open(const std::string& path)
 
 bool fs::file::strict_read_check(u64 _size, u64 type_size) const
 {
-	if (usz pos0 = pos(), size0 = size(); pos0 >= size0 || (size0 - pos0) / type_size < _size)
+	if (usz pos0 = pos(), size0 = size(); (pos0 >= size0 ? 0 : (size0 - pos0)) / type_size < _size)
 	{
 		fs::g_tls_error = fs::error::inval;
 		return false;
@@ -2037,6 +2038,30 @@ bool fs::pending_file::commit(bool overwrite)
 #endif
 
 	return false;
+}
+
+stx::generator<fs::dir_entry&> fs::list_dir_recursively(std::string path)
+{
+	for (auto& entry : fs::dir(path))
+	{
+		if (entry.name == "." || entry.name == "..")
+		{
+			continue;
+		}
+
+		std::string new_path = path_append(path, entry.name);
+
+		if (entry.is_directory)
+		{
+			for (auto& nested : fs::list_dir_recursively(new_path))
+			{
+				co_yield nested;
+			}
+		}
+
+		entry.name = std::move(new_path);
+		co_yield entry;
+	}
 }
 
 template<>

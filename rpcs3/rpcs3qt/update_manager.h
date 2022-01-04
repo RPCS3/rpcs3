@@ -19,8 +19,17 @@ private:
 	// This message is empty if there is no download available
 	QString m_update_message;
 
+	struct changelog_data
+	{
+		QString version;
+		QString title;
+	};
+	std::vector<changelog_data> m_changelog;
+
 	std::string m_request_url;
 	std::string m_expected_hash;
+	std::string m_old_version;
+	std::string m_new_version;
 	u64 m_expected_size = 0;
 
 	bool handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data);

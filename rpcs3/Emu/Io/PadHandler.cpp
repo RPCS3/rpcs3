@@ -105,6 +105,12 @@ long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::stri
 	return -1;
 }
 
+// Get new multiplied value based on the multiplier
+s32 PadHandlerBase::MultipliedInput(s32 raw_value, s32 multiplier)
+{
+	return (multiplier * raw_value) / 100;
+}
+
 // Get new scaled value between 0 and 255 based on its minimum and maximum
 float PadHandlerBase::ScaledInput(s32 raw_value, int minimum, int maximum)
 {
@@ -163,7 +169,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 
 u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold) const
 {
-	const s32 scaled_value = (multiplier * raw_value) / 100;
+	const s32 scaled_value = MultipliedInput(raw_value, multiplier);
 
 	if (ignore_threshold)
 	{
@@ -485,8 +491,7 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::r3], CELL_PAD_CTRL_R3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::start], CELL_PAD_CTRL_START);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::select], CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::ps], 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved (and currently not in use by rpcs3 at all)
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::ps], CELL_PAD_CTRL_PS);
 
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, mapping[button::ls_left], mapping[button::ls_right]);
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, mapping[button::ls_down], mapping[button::ls_up]);
@@ -548,15 +553,30 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	if (!device || !pad)
 		return;
 
-	auto profile = device->config;
+	auto cfg = device->config;
 
 	auto button_values = get_button_values(device);
+
+	// Find out if special buttons are pressed (introduced by RPCS3).
+	// These buttons will have a delay of one cycle, but whatever.
+	const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (auto& btn : pad->m_buttons)
 	{
-		btn.m_value = button_values[btn.m_keyCode];
-		TranslateButtonPress(device, btn.m_keyCode, btn.m_pressed, btn.m_value);
+		// Using a temporary buffer because the values can change during translation
+		Button tmp = btn;
+		tmp.m_value = button_values[btn.m_keyCode];
+
+		TranslateButtonPress(device, tmp.m_keyCode, tmp.m_pressed, tmp.m_value);
+
+		// Modify pressure if necessary if the button was pressed
+		if (adjust_pressure && tmp.m_pressed)
+		{
+			tmp.m_value = pad->m_pressure_intensity;
+		}
+
+		btn = tmp;
 	}
 
 	// used to get the absolute value of an axis
@@ -584,8 +604,8 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	u16 lx, ly, rx, ry;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, stick_val[0], stick_val[1], profile->lstickdeadzone, profile->lpadsquircling);
-	convert_stick_values(rx, ry, stick_val[2], stick_val[3], profile->rstickdeadzone, profile->rpadsquircling);
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
 
 	if (m_type == pad_handler::ds4)
 	{

@@ -1,7 +1,7 @@
 #include "util/sysinfo.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/File.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Utilities/Thread.h"
 
 #ifdef _WIN32
@@ -82,6 +82,12 @@ bool utils::has_tsx_force_abort()
 	return g_value;
 }
 
+bool utils::has_rtm_always_abort()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[3] & 0x800) == 0x800;
+	return g_value;
+}
+
 bool utils::has_mpx()
 {
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x4000) == 0x4000;
@@ -129,6 +135,38 @@ bool utils::has_fma3()
 bool utils::has_fma4()
 {
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000001, 0)[2] & 0x10000) == 0x10000;
+	return g_value;
+}
+
+bool utils::has_erms()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x200) == 0x200;
+	return g_value;
+}
+
+bool utils::has_fsrm()
+{
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[3] & 0x10) == 0x10;
+	return g_value;
+}
+
+u32 utils::get_rep_movsb_threshold()
+{
+	static const u32 g_value = []()
+	{
+		u32 thresh_value = 0xFFFFFFFF;
+		if (has_fsrm())
+		{
+			thresh_value = 2047;
+		}
+		else if (has_erms())
+		{
+			thresh_value = 4095;
+		}
+
+		return thresh_value;
+	}();
+
 	return g_value;
 }
 
@@ -230,10 +268,14 @@ std::string utils::get_system_info()
 			result += "-FA";
 		}
 
-		if (!has_mpx())
+		if (!has_mpx() || has_tsx_force_abort())
 		{
 			result += " disabled by default";
 		}
+	}
+	else if (has_rtm_always_abort())
+	{
+		result += " | TSX disabled via microcode";
 	}
 
 	return result;
@@ -241,7 +283,7 @@ std::string utils::get_system_info()
 
 std::string utils::get_firmware_version()
 {
-	const std::string file_path = g_cfg.vfs.get_dev_flash() + "vsh/etc/version.txt";
+	const std::string file_path = g_cfg_vfs.get_dev_flash() + "vsh/etc/version.txt";
 	if (fs::file version_file{file_path})
 	{
 		const std::string version_str = version_file.to_string();

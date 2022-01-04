@@ -158,7 +158,6 @@ void VKGSRender::load_texture_env()
 		return false;
 	};
 
-	vk::clear_status_interrupt(vk::out_of_memory);
 	std::lock_guard lock(m_sampler_mutex);
 
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -368,8 +367,10 @@ void VKGSRender::load_texture_env()
 	}
 }
 
-void VKGSRender::bind_texture_env()
+bool VKGSRender::bind_texture_env()
 {
+	bool out_of_memory = false;
+
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
@@ -386,7 +387,7 @@ void VKGSRender::bind_texture_env()
 				//Requires update, copy subresource
 				if (!(view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc)))
 				{
-					vk::raise_status_interrupt(vk::out_of_memory);
+					out_of_memory = true;
 				}
 			}
 			else
@@ -516,7 +517,7 @@ void VKGSRender::bind_texture_env()
 		{
 			if (!(image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc)))
 			{
-				vk::raise_status_interrupt(vk::out_of_memory);
+				out_of_memory = true;
 			}
 		}
 
@@ -587,14 +588,16 @@ void VKGSRender::bind_texture_env()
 			::glsl::program_domain::glsl_vertex_program,
 			m_current_frame->descriptor_set);
 	}
+
+	return out_of_memory;
 }
 
-void VKGSRender::bind_interpreter_texture_env()
+bool VKGSRender::bind_interpreter_texture_env()
 {
 	if (current_fp_metadata.referenced_textures_mask == 0)
 	{
 		// Nothing to do
-		return;
+		return false;
 	}
 
 	std::array<VkDescriptorImageInfo, 68> texture_env;
@@ -623,6 +626,8 @@ void VKGSRender::bind_interpreter_texture_env()
 	std::advance(end, 16);
 	std::fill(start, end, fallback);
 
+	bool out_of_memory = false;
+
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
@@ -639,7 +644,7 @@ void VKGSRender::bind_interpreter_texture_env()
 				//Requires update, copy subresource
 				if (!(view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc)))
 				{
-					vk::raise_status_interrupt(vk::out_of_memory);
+					out_of_memory = true;
 				}
 			}
 			else
@@ -706,6 +711,7 @@ void VKGSRender::bind_interpreter_texture_env()
 	}
 
 	m_shader_interpreter.update_fragment_textures(texture_env, m_current_frame->descriptor_set);
+	return out_of_memory;
 }
 
 void VKGSRender::emit_geometry(u32 sub_index)
@@ -757,6 +763,36 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	m_frame_stats.vertex_upload_time += m_profiler.duration();
 
+	// Faults are allowed during vertex upload. Ensure consistent CB state after uploads.
+	// Queries are spawned and closed outside render pass scope for consistency reasons.
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
+	{
+		u32 occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
+		if (occlusion_id == umax)
+		{
+			// Force flush
+			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
+			ZCULL_control::sync(this);
+
+			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
+			if (occlusion_id == umax)
+			{
+				//rsx_log.error("Occlusion pool overflow");
+				if (m_current_task) m_current_task->result = 1;
+			}
+		}
+
+		// Begin query
+		m_occlusion_query_manager->begin_query(*m_current_command_buffer, occlusion_id);
+
+		auto& data = m_occlusion_map[m_active_query_info->driver_handle];
+		data.indices.push_back(occlusion_id);
+		data.set_sync_command_buffer(m_current_command_buffer);
+
+		m_current_command_buffer->flags &= ~vk::command_buffer::cb_load_occluson_task;
+		m_current_command_buffer->flags |= (vk::command_buffer::cb_has_occlusion_task | vk::command_buffer::cb_has_open_query);
+	}
+
 	auto persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
 	auto volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
 	bool update_descriptors = false;
@@ -785,28 +821,27 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	else if (persistent_buffer != old_persistent_buffer || volatile_buffer != old_volatile_buffer)
 	{
 		// Need to update descriptors; make a copy for the next draw
-		VkDescriptorSet new_descriptor_set = allocate_descriptor_set();
-		std::vector<VkCopyDescriptorSet> copy_set(binding_table.total_descriptor_bindings);
+		VkDescriptorSet previous_set = m_current_frame->descriptor_set.value();
+		m_current_frame->descriptor_set = allocate_descriptor_set();
+		rsx::simple_array<VkCopyDescriptorSet> copy_cmds(binding_table.total_descriptor_bindings);
 
 		for (u32 n = 0; n < binding_table.total_descriptor_bindings; ++n)
 		{
-			copy_set[n] =
+			copy_cmds[n] =
 			{
 				VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,   // sType
 				nullptr,                                 // pNext
-				m_current_frame->descriptor_set,         // srcSet
+				previous_set,                            // srcSet
 				n,                                       // srcBinding
 				0u,                                      // srcArrayElement
-				new_descriptor_set,                      // dstSet
+				m_current_frame->descriptor_set.value(), // dstSet
 				n,                                       // dstBinding
 				0u,                                      // dstArrayElement
 				1u                                       // descriptorCount
 			};
 		}
 
-		vkUpdateDescriptorSets(*m_device, 0, 0, binding_table.total_descriptor_bindings, copy_set.data());
-		m_current_frame->descriptor_set = new_descriptor_set;
-
+		m_current_frame->descriptor_set.push(copy_cmds);
 		update_descriptors = true;
 	}
 
@@ -860,8 +895,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	}
 
 	// Bind the new set of descriptors for use with this draw call
-	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
-
+	m_current_frame->descriptor_set.bind(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline_layout);
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	if (!upload_info.index_info)
@@ -985,20 +1019,20 @@ void VKGSRender::end()
 		ev->gpu_wait(*m_current_command_buffer);
 	}
 
-	int binding_attempts = 0;
-	while (binding_attempts++ < 3)
+	for (int binding_attempts = 0; binding_attempts < 3; binding_attempts++)
 	{
+		bool out_of_memory;
 		if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
 		{
-			bind_texture_env();
+			out_of_memory = bind_texture_env();
 		}
 		else
 		{
-			bind_interpreter_texture_env();
+			out_of_memory = bind_interpreter_texture_env();
 		}
 
-		// TODO: Replace OOO tracking with ref-counting to simplify the logic
-		if (!vk::test_status_interrupt(vk::out_of_memory))
+		// TODO: Replace OOM tracking with ref-counting to simplify the logic
+		if (!out_of_memory)
 		{
 			break;
 		}
@@ -1014,46 +1048,10 @@ void VKGSRender::end()
 			// Reload texture env if referenced objects were invalidated during OOO handling.
 			load_texture_env();
 		}
-		else
-		{
-			// Nothing to reload, only texture cache references held. Simply attempt to bind again.
-			vk::clear_status_interrupt(vk::out_of_memory);
-		}
 	}
 
 	m_texture_cache.release_uncached_temporary_subresources();
 	m_frame_stats.textures_upload_time += m_profiler.duration();
-
-	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
-	{
-		u32 occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
-		if (occlusion_id == umax)
-		{
-			// Force flush
-			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
-			ZCULL_control::sync(this);
-
-			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
-			if (occlusion_id == umax)
-			{
-				//rsx_log.error("Occlusion pool overflow");
-				if (m_current_task) m_current_task->result = 1;
-			}
-		}
-
-		// Begin query
-		m_occlusion_query_manager->begin_query(*m_current_command_buffer, occlusion_id);
-
-		auto &data = m_occlusion_map[m_active_query_info->driver_handle];
-		data.indices.push_back(occlusion_id);
-		data.set_sync_command_buffer(m_current_command_buffer);
-
-		m_current_command_buffer->flags &= ~vk::command_buffer::cb_load_occluson_task;
-		m_current_command_buffer->flags |= (vk::command_buffer::cb_has_occlusion_task | vk::command_buffer::cb_has_open_query);
-	}
-
-	bool primitive_emulated = false;
-	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
 	// Apply write memory barriers
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(*m_current_command_buffer);

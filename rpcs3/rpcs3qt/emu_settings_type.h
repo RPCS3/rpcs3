@@ -12,7 +12,6 @@ enum class emu_settings_type
 	SPUDecoder,
 	HookStaticFuncs,
 	ThreadSchedulerMode,
-	LowerSPUThreadPrio,
 	SPULoopDetection,
 	PreferredSPUThreads,
 	PPUDebug,
@@ -29,6 +28,7 @@ enum class emu_settings_type
 	AccurateRSXAccess,
 	AccurateXFloat,
 	AccuratePPU128Loop,
+	MFCCommandsShuffling,
 	NumPPUThreads,
 	SetDAZandFTZ,
 	SPUBlockSize,
@@ -81,6 +81,7 @@ enum class emu_settings_type
 	MultithreadedRSX,
 	VBlankRate,
 	RelaxedZCULL,
+	PreciseZCULL,
 	DriverWakeUpDelay,
 	VulkanAsyncTextureUploads,
 	VulkanAsyncSchedulerDriver,
@@ -124,8 +125,12 @@ enum class emu_settings_type
 	MouseHandler,
 	Camera,
 	CameraType,
+	CameraFlip,
+	CameraID,
 	Move,
 	Buzz,
+	Turntable,
+	GHLtar,
 
 	// Misc
 	ExitRPCS3OnFinish,
@@ -152,15 +157,6 @@ enum class emu_settings_type
 	LimitCacheSize,
 	MaximumCacheSize,
 	ConsoleTimeOffset,
-
-	// Virtual File System
-	emulatorLocation,
-	dev_hdd0Location,
-	dev_hdd1Location,
-	dev_flashLocation,
-	dev_flash2Location,
-	dev_flash3Location,
-	dev_usb000Location,
 };
 
 /** A helper map that keeps track of where a given setting type is located*/
@@ -171,7 +167,6 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::SPUDecoder,               { "Core", "SPU Decoder"}},
 	{ emu_settings_type::HookStaticFuncs,          { "Core", "Hook static functions"}},
 	{ emu_settings_type::ThreadSchedulerMode,      { "Core", "Thread Scheduler Mode"}},
-	{ emu_settings_type::LowerSPUThreadPrio,       { "Core", "Lower SPU thread priority"}},
 	{ emu_settings_type::SPULoopDetection,         { "Core", "SPU loop detection"}},
 	{ emu_settings_type::PreferredSPUThreads,      { "Core", "Preferred SPU Threads"}},
 	{ emu_settings_type::PPUDebug,                 { "Core", "PPU Debug"}},
@@ -187,6 +182,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AccurateVectorNaN,        { "Core", "PPU LLVM Accurate Vector NaN values"}},
 	{ emu_settings_type::AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
 	{ emu_settings_type::AccurateXFloat,           { "Core", "Accurate xfloat"}},
+	{ emu_settings_type::MFCCommandsShuffling,     { "Core", "MFC Commands Shuffling Limit"}},
 	{ emu_settings_type::SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
 	{ emu_settings_type::SPUBlockSize,             { "Core", "SPU Block Size"}},
 	{ emu_settings_type::SPUCache,                 { "Core", "SPU Cache"}},
@@ -232,6 +228,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::ShaderCompilerNumThreads,   { "Video", "Shader Compiler Threads"}},
 	{ emu_settings_type::MultithreadedRSX,           { "Video", "Multithreaded RSX"}},
 	{ emu_settings_type::RelaxedZCULL,               { "Video", "Relaxed ZCULL Sync"}},
+	{ emu_settings_type::PreciseZCULL,               { "Video", "Accurate ZCULL stats"}},
 	{ emu_settings_type::AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},
 	{ emu_settings_type::ResolutionScale,            { "Video", "Resolution Scale"}},
 	{ emu_settings_type::MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
@@ -284,8 +281,12 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MouseHandler,    { "Input/Output", "Mouse"}},
 	{ emu_settings_type::Camera,          { "Input/Output", "Camera"}},
 	{ emu_settings_type::CameraType,      { "Input/Output", "Camera type"}},
+	{ emu_settings_type::CameraFlip,      { "Input/Output", "Camera flip"}},
+	{ emu_settings_type::CameraID,        { "Input/Output", "Camera ID"}},
 	{ emu_settings_type::Move,            { "Input/Output", "Move" }},
 	{ emu_settings_type::Buzz,            { "Input/Output", "Buzz emulated controller" }},
+	{ emu_settings_type::Turntable,       { "Input/Output", "Turntable emulated controller" }},
+	{ emu_settings_type::GHLtar,          { "Input/Output", "GHLtar emulated controller" }},
 
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},
@@ -313,13 +314,4 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
 	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
-
-	// Virtual File System
-	{ emu_settings_type::emulatorLocation,   { "VFS", "$(EmulatorDir)"}},
-	{ emu_settings_type::dev_hdd0Location,   { "VFS", "/dev_hdd0/" }},
-	{ emu_settings_type::dev_hdd1Location,   { "VFS", "/dev_hdd1/" }},
-	{ emu_settings_type::dev_flashLocation,  { "VFS", "/dev_flash/"}},
-	{ emu_settings_type::dev_flash2Location, { "VFS", "/dev_flash2/"}},
-	{ emu_settings_type::dev_flash3Location, { "VFS", "/dev_flash3/"}},
-	{ emu_settings_type::dev_usb000Location, { "VFS", "/dev_usb000/"}},
 };

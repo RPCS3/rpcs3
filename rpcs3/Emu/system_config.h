@@ -14,7 +14,7 @@ struct cfg_root : cfg::node
 	{
 	private:
 		/** We don't wanna include the sysinfo header here */
-		static bool has_rtm();
+		static bool enable_tsx_by_default();
 
 	public:
 		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
@@ -31,13 +31,12 @@ struct cfg_root : cfg::node
 		cfg::_enum<thread_scheduler_mode> thread_scheduler{this, "Thread Scheduler Mode", thread_scheduler_mode::os};
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
-		cfg::_bool lower_spu_priority{ this, "Lower SPU thread priority" };
 		cfg::_bool spu_getllar_polling_detection{ this, "SPU GETLLAR polling detection", false, true };
 		cfg::_bool spu_debug{ this, "SPU Debug" };
 		cfg::_bool mfc_debug{ this, "MFC Debug" };
 		cfg::_int<0, 6> preferred_spu_threads{ this, "Preferred SPU Threads", 0, true }; // Number of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{ this, "SPU delay penalty", 3 }; // Number of milliseconds to block a thread if a virtual 'core' isn't free
-		cfg::_bool spu_loop_detection{ this, "SPU loop detection", true, true }; // Try to detect wait loops and trigger thread yield
+		cfg::_bool spu_loop_detection{ this, "SPU loop detection", false, true }; // Try to detect wait loops and trigger thread yield
 		cfg::_int<0, 6> max_spurs_threads{ this, "Max SPURS Threads", 6 }; // HACK. If less then 6, max number of running SPURS threads in each thread group.
 		cfg::_enum<spu_block_size_type> spu_block_size{ this, "SPU Block Size", spu_block_size_type::safe };
 		cfg::_bool spu_accurate_getllar{ this, "Accurate GETLLAR", false, true };
@@ -47,11 +46,14 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_verification{ this, "SPU Verification", true }; // Should be enabled
 		cfg::_bool spu_cache{ this, "SPU Cache", true };
 		cfg::_bool spu_prof{ this, "SPU Profiler", false };
-		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", has_rtm() ? tsx_usage::enabled : tsx_usage::disabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
+		cfg::uint<0, 16> mfc_transfers_shuffling{ this, "MFC Commands Shuffling Limit", 0 };
+		cfg::uint<0, 10000> mfc_transfers_timeout{ this, "MFC Commands Timeout", 0, true };
+		cfg::_bool mfc_shuffling_in_steps{ this, "MFC Commands Shuffling In Steps", false, true };
+		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", enable_tsx_by_default() ? tsx_usage::enabled : tsx_usage::disabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
 		cfg::_bool llvm_accurate_dfma{ this, "LLVM Accurate DFMA", true }; // Enable accurate double-precision FMA for CPUs which do not support it natively
-		cfg::_bool llvm_ppu_jm_handling{ this, "PPU LLVM Java Mode Handling", false }; // Respect current Java Mode for alti-vec ops by PPU LLVM
+		cfg::_bool llvm_ppu_jm_handling{ this, "PPU LLVM Java Mode Handling", true }; // Respect current Java Mode for alti-vec ops by PPU LLVM
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
 		cfg::_bool llvm_ppu_accurate_vector_nan{ this, "PPU LLVM Accurate Vector NaN values", false };
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
@@ -81,33 +83,6 @@ struct cfg_root : cfg::node
 	struct node_vfs : cfg::node
 	{
 		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
-
-		std::string get(const cfg::string&, std::string_view emu_dir = {}) const;
-
-		cfg::string emulator_dir{ this, "$(EmulatorDir)" }; // Default (empty): taken from fs::get_config_dir()
-		cfg::string dev_hdd0{ this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/" };
-		cfg::string dev_hdd1{ this, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/" };
-		cfg::string dev_flash{ this, "/dev_flash/", "$(EmulatorDir)dev_flash/" };
-		cfg::string dev_flash2{ this, "/dev_flash2/", "$(EmulatorDir)dev_flash2/" };
-		cfg::string dev_flash3{ this, "/dev_flash3/", "$(EmulatorDir)dev_flash3/" };
-		cfg::string dev_usb000{ this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/" };
-		cfg::string dev_bdvd{ this, "/dev_bdvd/" }; // Not mounted
-		cfg::string app_home{ this, "/app_home/" }; // Not mounted
-
-		std::string get_dev_flash() const
-		{
-			return get(dev_flash);
-		}
-
-		std::string get_dev_flash2() const
-		{
-			return get(dev_flash2);
-		}
-
-		std::string get_dev_flash3() const
-		{
-			return get(dev_flash3);
-		}
 
 		cfg::_bool host_root{ this, "Enable /host_root/" };
 		cfg::_bool init_dirs{ this, "Initialize Directories", true };
@@ -156,6 +131,7 @@ struct cfg_root : cfg::node
 		cfg::_bool relaxed_zcull_sync{ this, "Relaxed ZCULL Sync", false };
 		cfg::_bool enable_3d{ this, "Enable 3D", false };
 		cfg::_bool debug_program_analyser{ this, "Debug Program Analyser", false };
+		cfg::_bool precise_zpass_count{ this, "Accurate ZCULL stats", true };
 		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};
 		cfg::_int<1, 8> consecutive_frames_to_skip{ this, "Consecutive Frames To Skip", 1, true};
 		cfg::_int<50, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
@@ -166,6 +142,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::_int<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
 		cfg::_int<1, 1800> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
+		cfg::_bool vblank_ntsc{ this, "Vblank NTSC Fixup", false, true };
 		cfg::_bool decr_memory_layout{ this, "DECR memory layout", false}; // Force enable increased allowed main memory range as DECR console
 
 		struct node_vk : cfg::node
@@ -236,23 +213,14 @@ struct cfg_root : cfg::node
 	{
 		node_audio(cfg::node* _this) : cfg::node(_this, "Audio") {}
 
-		cfg::_enum<audio_renderer> renderer{ this, "Renderer",
-#ifdef _WIN32
-			audio_renderer::xaudio, true };
-#elif HAVE_FAUDIO
-			audio_renderer::faudio, true };
-#else
-			audio_renderer::openal, true };
-#endif
-
+		cfg::_enum<audio_renderer> renderer{ this, "Renderer", audio_renderer::cubeb, true };
+		cfg::_enum<audio_provider> provider{ this, "Audio provider", audio_provider::cell_audio, false };
 		cfg::_bool dump_to_file{ this, "Dump to file" };
-		cfg::_bool convert_to_u16{ this, "Convert to 16 bit", false, true };
+		cfg::_bool convert_to_s16{ this, "Convert to 16 bit", false, true };
 		cfg::_enum<audio_downmix> audio_channel_downmix{ this, "Audio Channels", audio_downmix::downmix_to_stereo, true };
-		cfg::_int<1, 128> start_threshold{ this, "Start Threshold", 1, true }; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
 		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
 		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100, true };
-		cfg::_int<1, 1000> sampling_period_multiplier{ this, "Sampling Period Multiplier", 100, true };
 		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
@@ -267,8 +235,12 @@ struct cfg_root : cfg::node
 		cfg::_enum<mouse_handler> mouse{ this, "Mouse", mouse_handler::basic };
 		cfg::_enum<camera_handler> camera{ this, "Camera", camera_handler::null };
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
+		cfg::_enum<camera_flip> camera_flip_option{ this, "Camera flip", camera_flip::none, true };
+		cfg::string camera_id{ this, "Camera ID", "Default", true };
 		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
 		cfg::_enum<buzz_handler> buzz{ this, "Buzz emulated controller", buzz_handler::null };
+		cfg::_enum<turntable_handler> turntable{this, "Turntable emulated controller", turntable_handler::null};
+		cfg::_enum<ghltar_handler> ghltar{this, "GHLtar emulated controller", ghltar_handler::null};
 	} io{ this };
 
 	struct node_sys : cfg::node

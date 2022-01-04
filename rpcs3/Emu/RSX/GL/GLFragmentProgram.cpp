@@ -168,13 +168,13 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (!constants_block.empty())
 	{
-		OS << "layout(std140, binding = 3) uniform FragmentConstantsBuffer\n";
+		OS << "layout(std140, binding = " << GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT << ") uniform FragmentConstantsBuffer\n";
 		OS << "{\n";
 		OS << constants_block;
 		OS << "};\n\n";
 	}
 
-	OS << "layout(std140, binding = 4) uniform FragmentStateBuffer\n";
+	OS << "layout(std140, binding = " << GL_FRAGMENT_STATE_BIND_SLOT << ") uniform FragmentStateBuffer\n";
 	OS << "{\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
@@ -186,7 +186,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	float wpos_bias;\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, binding = 5) uniform TextureParametersBuffer\n";
+	OS << "layout(std140, binding = " << GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT << ") uniform TextureParametersBuffer\n";
 	OS << "{\n";
 	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";

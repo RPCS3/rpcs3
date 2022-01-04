@@ -1,5 +1,5 @@
 ﻿Standard: c++20
-UseTab: ForIndentation
+UseTab: AlignWithSpaces
 TabWidth: 4
 IndentWidth: 4
 AccessModifierOffset: -4
@@ -16,6 +16,7 @@ AllowShortBlocksOnASingleLine: Never
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortLoopsOnASingleLine: false
+AllowShortLambdasOnASingleLine: Inline
 Cpp11BracedListStyle: true
 IndentCaseLabels: false
 SortIncludes: false

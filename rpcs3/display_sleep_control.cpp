@@ -1,7 +1,6 @@
 #include "display_sleep_control.h"
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 #elif defined(__APPLE__)
@@ -23,8 +22,15 @@ bool display_sleep_control_supported()
 #if defined(_WIN32) || defined(__APPLE__)
 	return true;
 #elif defined(HAVE_QTDBUS)
-	QDBusInterface interface("org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver", QDBusConnection::sessionBus());
-	return interface.isValid();
+	for (const QString& service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
+	{
+		QDBusInterface interface(service, "/ScreenSaver", service, QDBusConnection::sessionBus());
+		if (interface.isValid())
+		{
+			return true;
+		}
+	}
+	return false;
 #else
 	return false;
 #endif
@@ -48,8 +54,15 @@ void enable_display_sleep()
 #elif defined(HAVE_QTDBUS)
 	if (s_dbus_cookie != 0)
 	{
-		QDBusInterface interface("org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver", QDBusConnection::sessionBus());
-		interface.call("UnInhibit", s_dbus_cookie);
+		for (const QString& service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
+		{
+			QDBusInterface interface(service, "/ScreenSaver", service, QDBusConnection::sessionBus());
+			if (interface.isValid())
+			{
+				interface.call("UnInhibit", s_dbus_cookie);
+				break;
+			}
+		}
 		s_dbus_cookie = 0;
 	}
 #endif
@@ -67,11 +80,18 @@ void disable_display_sleep()
 #elif defined(__APPLE__)
 	IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleDisplaySleep, kIOPMAssertionLevelOn, CFSTR("Game running"), &s_pm_assertion);
 #elif defined(HAVE_QTDBUS)
-	QDBusInterface interface("org.freedesktop.ScreenSaver", "/ScreenSaver", "org.freedesktop.ScreenSaver", QDBusConnection::sessionBus());
-	QDBusReply<u32> reply = interface.call("Inhibit", "rpcs3", "Game running");
-	if (reply.isValid())
+	for (const QString& service : { "org.freedesktop.ScreenSaver", "org.mate.ScreenSaver" })
 	{
-		s_dbus_cookie = reply.value();
+		QDBusInterface interface(service, "/ScreenSaver", service, QDBusConnection::sessionBus());
+		if (interface.isValid())
+		{
+			QDBusReply<u32> reply = interface.call("Inhibit", "rpcs3", "Game running");
+			if (reply.isValid())
+			{
+				s_dbus_cookie = reply.value();
+			}
+			break;
+		}
 	}
 #endif
 }

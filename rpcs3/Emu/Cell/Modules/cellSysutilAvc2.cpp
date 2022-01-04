@@ -110,6 +110,15 @@ error_code cellSysutilAvc2StartVoiceDetection()
 error_code cellSysutilAvc2UnloadAsync()
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync()");
+
+	if (avc2_cb)
+	{
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+			avc2_cb(cb_ppu, CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0, avc2_cb_arg);
+			return 0;
+		});
+	}
+
 	return CELL_OK;
 }
 

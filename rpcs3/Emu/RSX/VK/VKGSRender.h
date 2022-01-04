@@ -4,7 +4,7 @@
 
 #include "upscalers/upscaling.h"
 
-#include "vkutils/descriptors.hpp"
+#include "vkutils/descriptors.h"
 #include "vkutils/data_heap.h"
 #include "vkutils/instance.hpp"
 #include "vkutils/sync.h"
@@ -196,8 +196,8 @@ namespace vk
 	{
 		VkSemaphore acquire_signal_semaphore = VK_NULL_HANDLE;
 		VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
-		VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
 
+		vk::descriptor_set descriptor_set;
 		vk::descriptor_pool descriptor_pool;
 		u32 used_descriptors = 0;
 
@@ -227,7 +227,7 @@ namespace vk
 		{
 			present_wait_semaphore = other.present_wait_semaphore;
 			acquire_signal_semaphore = other.acquire_signal_semaphore;
-			descriptor_set = other.descriptor_set;
+			descriptor_set.swap(other.descriptor_set);
 			descriptor_pool = other.descriptor_pool;
 			used_descriptors = other.used_descriptors;
 			flags = other.flags;
@@ -384,6 +384,7 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 	std::unique_ptr<vk::upscaler> m_upscaler;
+	bool m_use_fsr_upscaling{false};
 
 	std::unique_ptr<vk::buffer> m_cond_render_buffer;
 	u64 m_cond_render_sync_tag = 0;
@@ -543,8 +544,8 @@ private:
 	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
 
 	void load_texture_env();
-	void bind_texture_env();
-	void bind_interpreter_texture_env();
+	bool bind_texture_env();
+	bool bind_interpreter_texture_env();
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);

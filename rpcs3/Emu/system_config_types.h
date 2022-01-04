@@ -54,16 +54,17 @@ enum class audio_renderer
 #ifdef _WIN32
 	xaudio,
 #endif
-#ifdef HAVE_ALSA
-	alsa,
-#endif
-	openal,
-#ifdef HAVE_PULSE
-	pulse,
-#endif
+	cubeb,
 #ifdef HAVE_FAUDIO
 	faudio,
 #endif
+};
+
+enum class audio_provider
+{
+	none,
+	cell_audio,
+	rsxaudio
 };
 
 enum class audio_downmix
@@ -78,6 +79,15 @@ enum class camera_handler
 {
 	null,
 	fake,
+	qt
+};
+
+enum class camera_flip
+{
+	none,
+	horizontal,
+	vertical,
+	both
 };
 
 enum class fake_camera_type
@@ -96,6 +106,20 @@ enum class move_handler
 };
 
 enum class buzz_handler
+{
+	null,
+	one_controller,
+	two_controllers,
+};
+
+enum class turntable_handler
+{
+	null,
+	one_controller,
+	two_controllers,
+};
+
+enum class ghltar_handler
 {
 	null,
 	one_controller,
@@ -184,8 +208,8 @@ enum class np_internet_status
 enum np_psn_status
 {
 	disabled,
-	fake,
-	rpcn,
+	psn_fake,
+	psn_rpcn,
 };
 
 enum class shader_mode
@@ -215,4 +239,12 @@ enum class perf_graph_detail_level
 	show_min_max,
 	show_one_percent_avg,
 	show_all
+};
+
+enum class zcull_precision_level
+{
+	precise,
+	approximate,
+	relaxed,
+	undefined
 };

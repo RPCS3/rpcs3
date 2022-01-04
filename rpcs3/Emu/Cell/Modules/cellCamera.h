@@ -3,6 +3,7 @@
 #include "Utilities/Timer.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Utilities/Thread.h"
+#include "Emu/Io/camera_handler_base.h"
 
 #include <map>
 
@@ -359,7 +360,7 @@ struct CellCameraInfo
 
 struct CellCameraInfoEx
 {
-	be_t<s32> format;     // CellCameraFormat
+	be_t<CellCameraFormat> format; // CellCameraFormat
 	be_t<s32> resolution; // CellCameraResolution
 	be_t<s32> framerate;
 
@@ -425,17 +426,31 @@ public:
 	atomic_t<bool> is_open{false};
 
 	CellCameraInfoEx info{};
+	atomic_t<u32> pbuf_write_index = 0;
+	std::array<atomic_t<bool>, 2> pbuf_locked = { false, false };
+	u32 pbuf_next_index() const;
 
 	struct attr_t
 	{
 		u32 v1, v2;
 	};
 	attr_t attr[500]{};
-	atomic_t<u32> frame_num;
+	atomic_t<bool> has_new_frame = false;
+	atomic_t<u32> frame_num = 0;
+	atomic_t<u32> frame_timestamp = 0;
+	atomic_t<u32> bytes_read = 0;
 
 	atomic_t<u32> init = 0;
 
 	static constexpr auto thread_name = "Camera Thread"sv;
+
+	std::shared_ptr<camera_handler_base> handler;
+	bool open_camera();
+	bool start_camera();
+	bool get_camera_frame(u8* dst, u32& width, u32& height, u64& frame_number, u64& bytes_read);
+	void stop_camera();
+	void close_camera();
+	bool on_handler_state(camera_handler_base::camera_handler_state state);
 };
 
 using camera_thread = named_thread<camera_context>;
@@ -446,4 +461,8 @@ struct gem_camera_shared
 	atomic_t<s64> frame_timestamp{}; // latest read timestamp from cellCamera (cellCameraRead(Ex))
 	atomic_t<s32> width{640};
 	atomic_t<s32> height{480};
+	atomic_t<s32> size{0};
+	atomic_t<CellCameraFormat> format{CELL_CAMERA_RAW8};
 };
+
+static inline s32 get_video_buffer_size(s32 width, s32 height);

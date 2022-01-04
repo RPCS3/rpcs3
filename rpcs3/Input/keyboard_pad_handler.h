@@ -110,7 +110,7 @@ private:
 	void release_all_keys();
 
 	std::vector<std::shared_ptr<Pad>> m_bindings;
-	std::vector<Pad> m_pads_internal; // Accumulates input until the next poll
+	std::vector<Pad> m_pads_internal; // Accumulates input until the next poll. Only used for user input!
 
 	// Button Movements
 	steady_clock::time_point m_button_time;
@@ -121,6 +121,8 @@ private:
 	steady_clock::time_point m_stick_time;
 	f32 m_l_stick_lerp_factor = 1.0f;
 	f32 m_r_stick_lerp_factor = 1.0f;
+	u32 m_l_stick_multiplier = 100;
+	u32 m_r_stick_multiplier = 100;
 	u8 m_stick_min[4] = { 0, 0, 0, 0 };
 	u8 m_stick_max[4] = { 128, 128, 128, 128 };
 	u8 m_stick_val[4] = { 128, 128, 128, 128 };

@@ -128,6 +128,7 @@ private:
 	QButtonGroup* m_pad_buttons = nullptr;
 	u32 m_button_id = id_pad_begin;
 	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
+	std::map<int /*id*/, std::string> m_duplicate_buttons;
 
 	// Real time stick values
 	int m_lx = 0;
@@ -203,6 +204,8 @@ private:
 	void SubscribeTooltips();
 
 protected:
+	void showEvent(QShowEvent* event) override;
+
 	/** Handle keyboard handler input */
 	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void mouseReleaseEvent(QMouseEvent *event) override;

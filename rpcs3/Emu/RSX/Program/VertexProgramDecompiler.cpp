@@ -222,7 +222,7 @@ std::string VertexProgramDecompiler::GetTex()
 
 std::string VertexProgramDecompiler::Format(const std::string& code)
 {
-	const std::pair<std::string, std::function<std::string()>> repl_list[] =
+	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
 	{
 		{ "$$", []() -> std::string { return "$"; } },
 		{ "$0", std::bind(std::mem_fn(&VertexProgramDecompiler::GetSRC), this, 0) },
@@ -250,13 +250,13 @@ std::string VertexProgramDecompiler::GetRawCond()
 {
 	static const COMPARE cond_string_table[(lt | gt | eq) + 1] =
 	{
-		COMPARE::FUNCTION_SLT, // "error"
-		COMPARE::FUNCTION_SLT,
-		COMPARE::FUNCTION_SEQ,
-		COMPARE::FUNCTION_SLE,
-		COMPARE::FUNCTION_SGT,
-		COMPARE::FUNCTION_SNE,
-		COMPARE::FUNCTION_SGE,
+		COMPARE::SLT, // "error"
+		COMPARE::SLT,
+		COMPARE::SEQ,
+		COMPARE::SLE,
+		COMPARE::SGT,
+		COMPARE::SNE,
+		COMPARE::SGE,
 	};
 
 	static const char f[4] = { 'x', 'y', 'z', 'w' };
@@ -572,23 +572,23 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_MUL: SetDSTVec("($0 * $1)"); break;
 		case RSX_VEC_OPCODE_ADD: SetDSTVec("($0 + $2)"); break;
 		case RSX_VEC_OPCODE_MAD: SetDSTVec("fma($0, $1, $2)"); break;
-		case RSX_VEC_OPCODE_DP3: SetDSTVec(getFunction(FUNCTION::FUNCTION_DP3)); break;
-		case RSX_VEC_OPCODE_DPH: SetDSTVec(getFunction(FUNCTION::FUNCTION_DPH)); break;
-		case RSX_VEC_OPCODE_DP4: SetDSTVec(getFunction(FUNCTION::FUNCTION_DP4)); break;
+		case RSX_VEC_OPCODE_DP3: SetDSTVec(getFunction(FUNCTION::DP3)); break;
+		case RSX_VEC_OPCODE_DPH: SetDSTVec(getFunction(FUNCTION::DPH)); break;
+		case RSX_VEC_OPCODE_DP4: SetDSTVec(getFunction(FUNCTION::DP4)); break;
 		case RSX_VEC_OPCODE_DST: SetDSTVec("vec4(1.0, $0.y * $1.y, $0.z, $1.w)"); break;
 		case RSX_VEC_OPCODE_MIN: SetDSTVec("min($0, $1)"); break;
 		case RSX_VEC_OPCODE_MAX: SetDSTVec("max($0, $1)"); break;
-		case RSX_VEC_OPCODE_SLT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); break;
-		case RSX_VEC_OPCODE_SGE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_SLT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::SLT, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_SGE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::SGE, "$0", "$1") + ")"); break;
 		case RSX_VEC_OPCODE_ARL: SetDSTVec(getIntTypeName(4) + "($0)");  break;
-		case RSX_VEC_OPCODE_FRC: SetDSTVec(getFunction(FUNCTION::FUNCTION_FRACT)); break;
+		case RSX_VEC_OPCODE_FRC: SetDSTVec(getFunction(FUNCTION::FRACT)); break;
 		case RSX_VEC_OPCODE_FLR: SetDSTVec("floor($0)"); break;
-		case RSX_VEC_OPCODE_SEQ: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); break;
-		case RSX_VEC_OPCODE_SFL: SetDSTVec(getFunction(FUNCTION::FUNCTION_SFL)); break;
-		case RSX_VEC_OPCODE_SGT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); break;
-		case RSX_VEC_OPCODE_SLE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")"); break;
-		case RSX_VEC_OPCODE_SNE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); break;
-		case RSX_VEC_OPCODE_STR: SetDSTVec(getFunction(FUNCTION::FUNCTION_STR)); break;
+		case RSX_VEC_OPCODE_SEQ: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::SEQ, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_SFL: SetDSTVec(getFunction(FUNCTION::SFL)); break;
+		case RSX_VEC_OPCODE_SGT: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::SGT, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_SLE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::SLE, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_SNE: SetDSTVec(getFloatTypeName(4) + "(" + compareFunction(COMPARE::SNE, "$0", "$1") + ")"); break;
+		case RSX_VEC_OPCODE_STR: SetDSTVec(getFunction(FUNCTION::STR)); break;
 		case RSX_VEC_OPCODE_SSG: SetDSTVec("sign($0)"); break;
 		case RSX_VEC_OPCODE_TXL:
 		{
@@ -596,16 +596,16 @@ std::string VertexProgramDecompiler::Decompile()
 			switch (m_prog.get_texture_dimension(d2.tex_num))
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
-				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH1D));
+				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCH1D));
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
-				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH2D));
+				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCH2D));
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_3d:
-				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCH3D));
+				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCH3D));
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
-				SetDSTVec(getFunction(FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCHCUBE));
+				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCHCUBE));
 				break;
 			}
 

@@ -19,6 +19,7 @@ namespace rsx
 			std::unique_ptr<image_info> icon_info;
 
 			animation_translate sliding_animation;
+			animation_color_interpolate fade_animation;
 
 		public:
 			trophy_notification();

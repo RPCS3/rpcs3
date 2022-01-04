@@ -72,11 +72,6 @@ bool emu_settings::Init()
 {
 	m_render_creator = new render_creator(this);
 
-	if (!m_render_creator)
-	{
-		fmt::throw_exception("emu_settings::emu_settings() render_creator is null");
-	}
-
 	if (m_render_creator->abort_requested)
 	{
 		return false;
@@ -140,17 +135,12 @@ void emu_settings::LoadSettings(const std::string& title_id)
 		// Otherwise we'll always trigger the "obsolete settings dialog" when editing custom configs.
 		ValidateSettings(true);
 
-		const std::string config_path_new = rpcs3::utils::get_custom_config_path(m_title_id);
-		const std::string config_path_old = rpcs3::utils::get_custom_config_path(m_title_id, true);
+		const std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id);
 		std::string custom_config_path;
 
-		if (fs::is_file(config_path_new))
+		if (fs::is_file(config_path))
 		{
-			custom_config_path = config_path_new;
-		}
-		else if (fs::is_file(config_path_old))
-		{
-			custom_config_path = config_path_old;
+			custom_config_path = config_path;
 		}
 
 		if (!custom_config_path.empty())
@@ -211,6 +201,12 @@ bool emu_settings::ValidateSettings(bool cleanup)
 
 			if (cfg_node)
 			{
+				// Ignore every node in Log subsection
+				if (level == 0 && cfg_node->get_name() == "Log")
+				{
+					continue;
+				}
+
 				YAML::Node next_node = yml_node[key];
 				search_level(next_level, next_node, keys, cfg_node);
 			}
@@ -262,6 +258,12 @@ bool emu_settings::ValidateSettings(bool cleanup)
 	return is_clean;
 }
 
+void emu_settings::RestoreDefaults()
+{
+	m_current_settings = YAML::Clone(m_default_settings);
+	Q_EMIT RestoreDefaultsSignal();
+}
+
 void emu_settings::SaveSettings()
 {
 	YAML::Emitter out;
@@ -273,8 +275,6 @@ void emu_settings::SaveSettings()
 	}
 	else
 	{
-		// VFS paths are being controlled mainly by the main config (needs manual modification for customization of custom configs)
-		m_current_settings.remove("VFS");
 		config_name = rpcs3::utils::get_custom_config_path(m_title_id);
 	}
 
@@ -341,12 +341,20 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	}
 
 	// Since the QComboBox has localised strings, we can't just findText / findData, so we need to manually iterate through it to find our index
-	const auto find_index = [&](const QString& value)
+	const auto find_index = [](QComboBox* combobox, const QString& value)
 	{
+		if (!combobox)
+		{
+			return -1;
+		}
+
 		for (int i = 0; i < combobox->count(); i++)
 		{
 			const QVariantList var_list = combobox->itemData(i).toList();
-			ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
+			if (var_list.size() != 2 || !var_list[0].canConvert<QString>())
+			{
+				fmt::throw_exception("Invalid data found in combobox entry %d (text='%s', listsize=%d, itemcount=%d)", i, sstr(combobox->itemText(i)), var_list.size(), combobox->count());
+			}
 
 			if (value == var_list[0].toString())
 			{
@@ -356,6 +364,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		return -1;
 	};
 
+	const std::string def      = GetSettingDefault(type);
 	const std::string selected = GetSetting(type);
 	const QString selected_q = qstr(selected);
 	int index;
@@ -366,21 +375,20 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	}
 	else
 	{
-		index = find_index(selected_q);
+		index = find_index(combobox, selected_q);
 	}
 
 	if (index == -1)
 	{
-		const std::string def = GetSettingDefault(type);
 		cfg_log.error("EnhanceComboBox '%s' tried to set an invalid value: %s. Setting to default: %s", cfg_adapter::get_setting_name(type), selected, def);
 
 		if (is_ranged)
 		{
-			index = combobox->findData(selected_q);
+			index = combobox->findData(qstr(def));
 		}
 		else
 		{
-			index = find_index(qstr(def));
+			index = find_index(combobox, qstr(def));
 		}
 
 		m_broken_types.insert(type);
@@ -390,6 +398,8 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 	connect(combobox, QOverload<int>::of(&QComboBox::currentIndexChanged), combobox, [this, is_ranged, combobox, type](int index)
 	{
+		if (index < 0) return;
+
 		if (is_ranged)
 		{
 			SetSetting(type, sstr(combobox->itemData(index)));
@@ -397,8 +407,23 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 		else
 		{
 			const QVariantList var_list = combobox->itemData(index).toList();
-			ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
+			if (var_list.size() != 2 || !var_list[0].canConvert<QString>())
+			{
+				fmt::throw_exception("Invalid data found in combobox entry %d (text='%s', listsize=%d, itemcount=%d)", index, sstr(combobox->itemText(index)), var_list.size(), combobox->count());
+			}
 			SetSetting(type, sstr(var_list[0]));
+		}
+	});
+
+	connect(this, &emu_settings::RestoreDefaultsSignal, combobox, [def, combobox, is_ranged, find_index]()
+	{
+		if (is_ranged)
+		{
+			combobox->setCurrentIndex(combobox->findData(qstr(def)));
+		}
+		else
+		{
+			combobox->setCurrentIndex(find_index(combobox, qstr(def)));
 		}
 	});
 }
@@ -434,10 +459,15 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 		m_broken_types.insert(type);
 	}
 
-	connect(checkbox, &QCheckBox::stateChanged, [type, this](int val)
+	connect(checkbox, &QCheckBox::stateChanged, this, [type, this](int val)
 	{
 		const std::string str = val != 0 ? "true" : "false";
 		SetSetting(type, str);
+	});
+
+	connect(this, &emu_settings::RestoreDefaultsSignal, checkbox, [def, checkbox]()
+	{
+		checkbox->setChecked(def == "true");
 	});
 }
 
@@ -492,11 +522,11 @@ void emu_settings::EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settin
 		if (offset_update_time > 0)
 		{
 			QTimer* console_time_update = new QTimer(date_time_edit);
-			connect(console_time_update, &QTimer::timeout, [this, date_time_edit, min, max]()
+			connect(console_time_update, &QTimer::timeout, date_time_edit, [this, date_time_edit, min, max]()
 			{
 				if (!date_time_edit->hasFocus() && (!date_time_edit->calendarPopup() || !date_time_edit->calendarWidget()->hasFocus()))
 				{
-					const auto now   = QDateTime::currentDateTime();
+					const QDateTime now = QDateTime::currentDateTime();
 					const s64 offset = qstr(GetSetting(emu_settings_type::ConsoleTimeOffset)).toLongLong();
 					date_time_edit->setDateTime(now.addSecs(offset));
 					date_time_edit->setDateTimeRange(now.addSecs(min), now.addSecs(max));
@@ -505,14 +535,19 @@ void emu_settings::EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settin
 
 			console_time_update->start(offset_update_time);
 		}
+
+		connect(this, &emu_settings::RestoreDefaultsSignal, date_time_edit, [def, date_time_edit]()
+		{
+			date_time_edit->setDateTime(QDateTime::currentDateTime().addSecs(def));
+		});
 	}
 	else
 	{
-		auto str                = qstr(GetSettingDefault(type));
+		QString str             = qstr(GetSettingDefault(type));
 		const QStringList range = GetSettingOptions(type);
-		const auto def          = QDateTime::fromString(str, Qt::ISODate);
-		const auto min          = QDateTime::fromString(range.first(), Qt::ISODate);
-		const auto max          = QDateTime::fromString(range.last(), Qt::ISODate);
+		const QDateTime def     = QDateTime::fromString(str, Qt::ISODate);
+		const QDateTime min     = QDateTime::fromString(range.first(), Qt::ISODate);
+		const QDateTime max     = QDateTime::fromString(range.last(), Qt::ISODate);
 		if (!def.isValid() || !min.isValid() || !max.isValid())
 		{
 			cfg_log.fatal("EnhanceDateTimeEdit '%s' was used with an invalid emu_settings_type", cfg_adapter::get_setting_name(type));
@@ -520,7 +555,7 @@ void emu_settings::EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settin
 		}
 
 		str = qstr(GetSetting(type));
-		auto val = QDateTime::fromString(str, Qt::ISODate);
+		QDateTime val = QDateTime::fromString(str, Qt::ISODate);
 		if (!val.isValid() || val < min || val > max)
 		{
 			cfg_log.error("EnhanceDateTimeEdit '%s' tried to set an invalid value: %s. Setting to default: %s Allowed range: [%s, %s]",
@@ -536,9 +571,14 @@ void emu_settings::EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settin
 
 		// set the date_time value to the control
 		date_time_edit->setDateTime(val);
+
+		connect(this, &emu_settings::RestoreDefaultsSignal, date_time_edit, [def, date_time_edit]()
+		{
+			date_time_edit->setDateTime(def);
+		});
 	}
 
-	connect(date_time_edit, &QDateTimeEdit::dateTimeChanged, [date_time_edit, type, as_offset_from_now, this](const QDateTime& datetime)
+	connect(date_time_edit, &QDateTimeEdit::dateTimeChanged, this, [date_time_edit, type, as_offset_from_now, this](const QDateTime& datetime)
 	{
 		if (as_offset_from_now)
 		{
@@ -548,7 +588,10 @@ void emu_settings::EnhanceDateTimeEdit(QDateTimeEdit* date_time_edit, emu_settin
 
 			// HACK: We are only looking at whether the control has focus to prevent the time from updating dynamically, so we
 			// clear the focus, so that this dynamic updating isn't suppressed.
-			date_time_edit->clearFocus();
+			if (date_time_edit)
+			{
+				date_time_edit->clearFocus();
+			}
 		}
 		else
 		{
@@ -592,9 +635,14 @@ void emu_settings::EnhanceSlider(QSlider* slider, emu_settings_type type)
 	slider->setRange(min, max);
 	slider->setValue(val);
 
-	connect(slider, &QSlider::valueChanged, [type, this](int value)
+	connect(slider, &QSlider::valueChanged, this, [type, this](int value)
 	{
 		SetSetting(type, sstr(value));
+	});
+
+	connect(this, &emu_settings::RestoreDefaultsSignal, slider, [def, slider]()
+	{
+		slider->setValue(def);
 	});
 }
 
@@ -634,9 +682,15 @@ void emu_settings::EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, con
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-	connect(spinbox, &QSpinBox::textChanged, [=, this](const QString&/* text*/)
+	connect(spinbox, &QSpinBox::textChanged, this, [type, spinbox, this](const QString& /* text*/)
 	{
+		if (!spinbox) return;
 		SetSetting(type, sstr(spinbox->cleanText()));
+	});
+
+	connect(this, &emu_settings::RestoreDefaultsSignal, spinbox, [def, spinbox]()
+	{
+		spinbox->setValue(def);
 	});
 }
 
@@ -676,9 +730,15 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 	spinbox->setRange(min, max);
 	spinbox->setValue(val);
 
-	connect(spinbox, &QDoubleSpinBox::textChanged, [=, this](const QString&/* text*/)
+	connect(spinbox, &QDoubleSpinBox::textChanged, this, [type, spinbox, this](const QString& /* text*/)
 	{
+		if (!spinbox) return;
 		SetSetting(type, sstr(spinbox->cleanText()));
+	});
+
+	connect(this, &emu_settings::RestoreDefaultsSignal, spinbox, [def, spinbox]()
+	{
+		spinbox->setValue(def);
 	});
 }
 
@@ -693,9 +753,14 @@ void emu_settings::EnhanceLineEdit(QLineEdit* edit, emu_settings_type type)
 	const std::string set_text = GetSetting(type);
 	edit->setText(qstr(set_text));
 
-	connect(edit, &QLineEdit::textChanged, [type, this](const QString &text)
+	connect(edit, &QLineEdit::textChanged, this, [type, this](const QString &text)
 	{
 		SetSetting(type, sstr(text));
+	});
+
+	connect(this, &emu_settings::RestoreDefaultsSignal, edit, [this, edit, type]()
+	{
+		edit->setText(qstr(GetSettingDefault(type)));
 	});
 }
 
@@ -722,23 +787,29 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 
 	for (int i = 0; i < options.count(); i++)
 	{
-		const QString localized_setting = GetLocalizedSetting(options[i], type, i);
+		const QString& option = options[i];
+		const QString localized_setting = GetLocalizedSetting(option, type, i);
 
-		button_group->button(i)->setText(localized_setting);
+		QAbstractButton* button = button_group->button(i);
+		button->setText(localized_setting);
 
-		if (!found && options[i] == selected)
+		if (!found && option == selected)
 		{
 			found = true;
-			button_group->button(i)->setChecked(true);
+			button->setChecked(true);
 		}
-		else if (def_pos == -1 && options[i] == def)
+
+		if (def_pos == -1 && option == def)
 		{
 			def_pos = i;
 		}
 
-		connect(button_group->button(i), &QAbstractButton::clicked, [=, this]()
+		connect(button, &QAbstractButton::toggled, this, [this, type, val = sstr(option)](bool checked)
 		{
-			SetSetting(type, sstr(options[i]));
+			if (checked)
+			{
+				SetSetting(type, val);
+			}
 		});
 	}
 
@@ -752,6 +823,14 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 		// Select the default option on invalid setting string
 		button_group->button(def_pos)->setChecked(true);
 	}
+
+	connect(this, &emu_settings::RestoreDefaultsSignal, button_group, [button_group, def_pos]()
+	{
+		if (button_group && button_group->button(def_pos))
+		{
+			button_group->button(def_pos)->setChecked(true);
+		}
+	});
 }
 
 std::vector<std::string> emu_settings::GetLibrariesControl()
@@ -892,13 +971,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 #ifdef _WIN32
 		case audio_renderer::xaudio: return tr("XAudio2", "Audio renderer");
 #endif
-#ifdef HAVE_ALSA
-		case audio_renderer::alsa: return tr("ALSA", "Audio renderer");
-#endif
-#ifdef HAVE_PULSE
-		case audio_renderer::pulse: return tr("PulseAudio", "Audio renderer");
-#endif
-		case audio_renderer::openal: return tr("OpenAL", "Audio renderer");
+		case audio_renderer::cubeb: return tr("Cubeb", "Audio renderer");
 #ifdef HAVE_FAUDIO
 		case audio_renderer::faudio: return tr("FAudio", "Audio renderer");
 #endif
@@ -937,11 +1010,21 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case fake_camera_type::uvc1_1: return tr("UVC 1.1", "Camera type");
 		}
 		break;
+	case emu_settings_type::CameraFlip:
+		switch (static_cast<camera_flip>(index))
+		{
+		case camera_flip::none: return tr("No", "Camera flip");
+		case camera_flip::horizontal: return tr("Flip horizontally", "Camera flip");
+		case camera_flip::vertical: return tr("Flip vertically", "Camera flip");
+		case camera_flip::both: return tr("Flip both axis", "Camera flip");
+		}
+		break;
 	case emu_settings_type::Camera:
 		switch (static_cast<camera_handler>(index))
 		{
 		case camera_handler::null: return tr("Null", "Camera handler");
 		case camera_handler::fake: return tr("Fake", "Camera handler");
+		case camera_handler::qt: return tr("Qt", "Camera handler");
 		}
 		break;
 	case emu_settings_type::Move:
@@ -960,6 +1043,22 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case buzz_handler::two_controllers: return tr("2 controllers (5-7 players)", "Buzz handler");
 		}
 		break;
+	case emu_settings_type::Turntable:
+		switch (static_cast<turntable_handler>(index))
+		{
+		case turntable_handler::null: return tr("Null", "Turntable handler");
+		case turntable_handler::one_controller: return tr("1 controller", "Turntable handler");
+		case turntable_handler::two_controllers: return tr("2 controllers", "Turntable handler");
+		}
+		break;
+	case emu_settings_type::GHLtar:
+		switch (static_cast<ghltar_handler>(index))
+		{
+		case ghltar_handler::null: return tr("Null", "GHLtar handler");
+		case ghltar_handler::one_controller: return tr("1 controller", "GHLtar handler");
+		case ghltar_handler::two_controllers: return tr("2 controllers", "GHLtar handler");
+		}
+		break;
 	case emu_settings_type::InternetStatus:
 		switch (static_cast<np_internet_status>(index))
 		{
@@ -971,8 +1070,8 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		switch (static_cast<np_psn_status>(index))
 		{
 		case np_psn_status::disabled: return tr("Disconnected", "PSN Status");
-		case np_psn_status::fake: return tr("Simulated", "PSN Status");
-		case np_psn_status::rpcn: return tr("RPCN", "PSN Status");
+		case np_psn_status::psn_fake: return tr("Simulated", "PSN Status");
+		case np_psn_status::psn_rpcn: return tr("RPCN", "PSN Status");
 		}
 		break;
 	case emu_settings_type::SleepTimersAccuracy:

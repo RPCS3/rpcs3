@@ -179,7 +179,7 @@ error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenPa
 		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
 	}
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (nph.get_psn_status() == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
@@ -306,7 +306,7 @@ error_code sceNpSnsFbGetLongAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTok
 		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
 	}
 
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (nph.get_psn_status() == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{

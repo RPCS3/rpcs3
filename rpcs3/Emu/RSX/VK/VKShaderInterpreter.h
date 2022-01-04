@@ -1,6 +1,6 @@
 #pragma once
 #include "VKProgramBuffer.h"
-#include "vkutils/descriptors.hpp"
+#include "vkutils/descriptors.h"
 #include <unordered_map>
 
 namespace vk
@@ -42,7 +42,7 @@ namespace vk
 		std::unordered_map<pipeline_key, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
 		std::unordered_map<u64, std::unique_ptr<glsl::shader>> m_fs_cache;
 		vk::descriptor_pool m_descriptor_pool;
-		usz m_used_descriptors = 0;
+		u32 m_used_descriptors = 0;
 
 		u32 m_vertex_instruction_start = 0;
 		u32 m_fragment_instruction_start = 0;
@@ -67,7 +67,7 @@ namespace vk
 		u32 get_vertex_instruction_location() const;
 		u32 get_fragment_instruction_location() const;
 
-		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, VkDescriptorSet descriptor_set);
+		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set);
 		VkDescriptorSet allocate_descriptor_set();
 	};
 }

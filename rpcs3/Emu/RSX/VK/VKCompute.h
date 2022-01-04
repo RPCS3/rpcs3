@@ -1,6 +1,6 @@
 #pragma once
 #include "VKPipelineCompiler.h"
-#include "vkutils/descriptors.hpp"
+#include "vkutils/descriptors.h"
 #include "vkutils/buffer_object.h"
 
 #include "Emu/IdManager.h"
@@ -20,7 +20,7 @@ namespace vk
 		std::unique_ptr<vk::buffer> m_param_buffer;
 
 		vk::descriptor_pool m_descriptor_pool;
-		VkDescriptorSet m_descriptor_set = nullptr;
+		descriptor_set m_descriptor_set;
 		VkDescriptorSetLayout m_descriptor_layout = nullptr;
 		VkPipelineLayout m_pipeline_layout = nullptr;
 		u32 m_used_descriptors = 0;
@@ -565,7 +565,7 @@ namespace vk
 				}
 			}
 
-			const std::pair<std::string, std::string> syntax_replace[] =
+			const std::pair<std::string_view, std::string> syntax_replace[] =
 			{
 				{ "%ws", std::to_string(optimal_group_size) },
 				{ "%_wordcount", std::to_string(sizeof(_BlockType) / 4) },

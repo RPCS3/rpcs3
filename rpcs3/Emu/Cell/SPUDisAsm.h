@@ -2,8 +2,9 @@
 
 #include "PPCDisAsm.h"
 #include "SPUOpcodes.h"
+#include "util/v128.hpp"
 
-union v128;
+enum spu_stop_syscall : u32;
 
 static constexpr const char* spu_reg_name[128] =
 {
@@ -68,15 +69,26 @@ static constexpr const char* spu_ch_name[128] =
 	"ch121", "ch122", "ch123", "ch124", "ch125", "ch126", "ch127",
 };
 
+namespace utils
+{
+	class shm;
+}
+
+void comment_constant(std::string& last_opocde, u64 value, bool print_float = true);
+
 class SPUDisAsm final : public PPCDisAsm
 {
+	std::shared_ptr<utils::shm> m_shm;
 public:
-	SPUDisAsm(cpu_disasm_mode mode, const u8* offset) : PPCDisAsm(mode, offset)
+	SPUDisAsm(cpu_disasm_mode mode, const u8* offset, u32 start_pc = 0) : PPCDisAsm(mode, offset, start_pc)
 	{
 	}
 
-	~SPUDisAsm()
+	~SPUDisAsm() = default;
+
+	void set_shm(std::shared_ptr<utils::shm> shm)
 	{
+		m_shm = std::move(shm);
 	}
 
 private:
@@ -85,84 +97,125 @@ private:
 		return spu_branch_target(dump_pc, imm);
 	}
 
-	static const char* BrIndirectSuffix(u32 de)
+	static char BrIndirectSuffix(u32 de)
 	{
 		switch (de)
 		{
-		case 0b01: return "e";
-		case 0b10: return "d";
-		//case 0b11: return "(undef)";
-		default: return "";
+		case 0b01: return 'e';
+		case 0b10: return 'd';
+		case 0b11: return '!';
+		default: return '\0';
 		}
 	}
 
-	std::string& FixOp(std::string& op) const
-	{
-		if (m_mode != cpu_disasm_mode::normal)
-		{
-			op.append(std::max<int>(10 - ::narrow<int>(op.size()), 0), ' ');
-		}
-
-		return op;
-	}
 	void DisAsm(const char* op)
 	{
-		Write(op);
+		last_opcode += op;
 	}
-	void DisAsm(std::string op, u32 a1)
+	void DisAsm(std::string_view op, u32 a1)
 	{
-		Write(fmt::format("%s 0x%x", FixOp(op), a1));
+		fmt::append(last_opcode, "%-*s 0x%x", PadOp(), op, a1);
 	}
-	void DisAsm(std::string op, const char* a1)
+	void DisAsm(std::string_view op, const char* a1)
 	{
-		Write(fmt::format("%s %s", FixOp(op), a1));
+		fmt::append(last_opcode, "%-*s %s", PadOp(), op, a1);
 	}
-	void DisAsm(std::string op, const char* a1, const char* a2)
+	void DisAsm(std::string_view op, const char* a1, const char* a2)
 	{
-		Write(fmt::format("%s %s,%s", FixOp(op), a1, a2));
+		fmt::append(last_opcode, "%-*s %s,%s", PadOp(), op, a1, a2);
 	}
-	void DisAsm(std::string op, int a1, const char* a2)
+	void DisAsm(std::string_view op, int a1, const char* a2)
 	{
-		Write(fmt::format("%s 0x%x,%s", FixOp(op), a1, a2));
+		fmt::append(last_opcode, "%-*s 0x%x,%s", PadOp(), op, a1, a2);
 	}
-	void DisAsm(std::string op, const char* a1, int a2)
+	void DisAsm(std::string_view op, const char* a1, int a2)
 	{
-		Write(fmt::format("%s %s,%s", FixOp(op), a1, SignedHex(a2)));
+		fmt::append(last_opcode, "%-*s %s,%s", PadOp(), op, a1, SignedHex(a2));
 	}
-	void DisAsm(std::string op, int a1, int a2)
+	void DisAsm(std::string_view op, int a1, int a2)
 	{
-		Write(fmt::format("%s 0x%x,0x%x", FixOp(op), a1, a2));
+		fmt::append(last_opcode, "%-*s 0x%x,0x%x", PadOp(), op, a1, a2);
 	}
-	void DisAsm(std::string op, const char* a1, const char* a2, const char* a3)
+	void DisAsm(std::string_view op, const char* a1, const char* a2, const char* a3)
 	{
-		Write(fmt::format("%s %s,%s,%s", FixOp(op), a1, a2, a3));
+		fmt::append(last_opcode, "%-*s %s,%s,%s", PadOp(), op, a1, a2, a3);
 	}
-	void DisAsm(std::string op, const char* a1, int a2, const char* a3)
+	void DisAsm(std::string_view op, const char* a1, int a2, const char* a3)
 	{
-		Write(fmt::format("%s %s,%s(%s)", FixOp(op), a1, SignedHex(a2), a3));
+		fmt::append(last_opcode, "%-*s %s,%s(%s)", PadOp(), op, a1, SignedHex(a2), a3);
 	}
-	void DisAsm(std::string op, const char* a1, const char* a2, int a3)
+	void DisAsm(std::string_view op, const char* a1, const char* a2, int a3)
 	{
-		Write(fmt::format("%s %s,%s,%s", FixOp(op), a1, a2, SignedHex(a3)));
+		fmt::append(last_opcode, "%-*s %s,%s,%s", PadOp(), op, a1, a2, SignedHex(a3));
 	}
-	void DisAsm(std::string op, const char* a1, const char* a2, const char* a3, const char* a4)
+	void DisAsm(std::string_view op, const char* a1, const char* a2, const char* a3, const char* a4)
 	{
-		Write(fmt::format("%s %s,%s,%s,%s", FixOp(op), a1, a2, a3, a4));
+		fmt::append(last_opcode, "%-*s %s,%s,%s,%s", PadOp(), op, a1, a2, a3, a4);
 	}
 
 	using field_de_t = decltype(spu_opcode_t::de);
-	void DisAsm(std::string op, field_de_t de, const char* a1)
+	void DisAsm(std::string_view op, field_de_t de, const char* a1)
 	{
-		Write(fmt::format("%s %s", FixOp(op.append(BrIndirectSuffix(de))), a1));
+		const char c = BrIndirectSuffix(de);
+
+		if (c == '!')
+		{
+			// Invalid
+			fmt::append(last_opcode, "?? ?? (%s)", op);
+			return;
+		}
+
+		fmt::append(last_opcode, "%-*s %s", PadOp(op, c ? 1 : 0), op, a1);
+		insert_char_if(op, !!c, c);
 	}
-	void DisAsm(std::string op, field_de_t de, const char* a1, const char* a2)
+	void DisAsm(std::string_view op, field_de_t de, const char* a1, const char* a2)
 	{
-		Write(fmt::format("%s %s,%s", FixOp(op.append(BrIndirectSuffix(de))), a1, a2));
+		const char c = BrIndirectSuffix(de);
+
+		if (c == '!')
+		{
+			fmt::append(last_opcode, "?? ?? (%s)", op);
+			return;
+		}
+
+		fmt::append(last_opcode, "%-*s %s,%s", PadOp(op, c ? 1 : 0), op, a1, a2);
+		insert_char_if(op, !!c, c);
 	}
 
 public:
 	u32 disasm(u32 pc) override;
-	std::pair<bool, v128> try_get_const_value(u32 reg, u32 pc = -1) const;
+	std::pair<const void*, usz> get_memory_span() const override;
+	std::unique_ptr<CPUDisAsm> copy_type_erased() const override;
+	std::pair<bool, v128> try_get_const_value(u32 reg, u32 pc = -1, u32 TTL = 10) const;
+
+	// Get constant value if the original array is made of only repetitions of the same value 
+	template <typename T> requires (sizeof(T) < sizeof(v128) && !(sizeof(v128) % sizeof(T)))
+	std::pair<bool, T> try_get_const_equal_value_array(u32 reg, u32 pc = -1, u32 TTL = 10) const
+	{
+		auto [ok, res] = try_get_const_value(reg, pc, TTL);
+
+		if (!ok)
+		{
+			return {};
+		}
+
+		v128 test_value{};
+
+		T sample{};
+		std::memcpy(&sample, res._bytes, sizeof(T));
+
+		for (u32 i = 0; i < sizeof(v128); i += sizeof(T))
+		{
+			std::memcpy(test_value._bytes + i, &sample, sizeof(T));
+		}
+
+		if (test_value != res)
+		{
+			return {};
+		}
+
+		return {ok, sample};
+	}
 
 	struct insert_mask_info
 	{
@@ -176,7 +229,7 @@ public:
 	//0 - 10
 	void STOP(spu_opcode_t op)
 	{
-		op.rb ? UNK(op) : DisAsm("stop", op.opcode & 0x3fff);
+		op.rb ? UNK(op) : DisAsm("stop", fmt::format("0x%x #%s", op.opcode & 0x3fff, spu_stop_syscall{op.opcode & 0x3fff}).c_str());
 	}
 	void LNOP(spu_opcode_t /*op*/)
 	{
@@ -819,10 +872,12 @@ public:
 	void ILHU(spu_opcode_t op)
 	{
 		DisAsm("ilhu", spu_reg_name[op.rt], op.i16);
+		comment_constant(last_opcode, op.i16 << 16);
 	}
 	void ILH(spu_opcode_t op)
 	{
 		DisAsm("ilh", spu_reg_name[op.rt], op.i16);
+		comment_constant(last_opcode, (op.i16 << 16) | op.i16);
 	}
 
 	void IOHL(spu_opcode_t op);
@@ -838,6 +893,12 @@ public:
 		}
 
 		DisAsm("ori", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
+
+		if (auto [is_const, value] = try_get_const_equal_value_array<u32>(+op.ra); is_const)
+		{
+			// Comment constant formation
+			comment_constant(last_opcode, value | static_cast<u32>(op.si10));
+		}
 	}
 	void ORHI(spu_opcode_t op)
 	{
@@ -870,6 +931,12 @@ public:
 	void AI(spu_opcode_t op)
 	{
 		DisAsm("ai", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
+
+		if (auto [is_const, value] = try_get_const_equal_value_array<u32>(op.ra); is_const)
+		{
+			// Comment constant formation
+			comment_constant(last_opcode, value + static_cast<u32>(op.si10));
+		}
 	}
 	void AHI(spu_opcode_t op)
 	{
@@ -886,6 +953,12 @@ public:
 	void XORI(spu_opcode_t op)
 	{
 		DisAsm("xori", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
+
+		if (auto [is_const, value] = try_get_const_equal_value_array<u32>(op.ra); is_const)
+		{
+			// Comment constant formation
+			comment_constant(last_opcode, value ^ static_cast<u32>(op.si10));
+		}
 	}
 	void XORHI(spu_opcode_t op)
 	{
@@ -991,6 +1064,6 @@ public:
 
 	void UNK(spu_opcode_t /*op*/)
 	{
-		Write("?? ??");
+		DisAsm("?? ??");
 	}
 };

@@ -12,30 +12,58 @@ const spu_decoder<spu_iflag> s_spu_iflag;
 
 u32 SPUDisAsm::disasm(u32 pc)
 {
+	last_opcode.clear();
+
+	if (pc < m_start_pc || pc >= SPU_LS_SIZE)
+	{
+		return 0;
+	}
+
 	dump_pc = pc;
 	be_t<u32> op;
 	std::memcpy(&op, m_offset + pc, 4);
 	m_op = op;
 	(this->*(s_spu_disasm.decode(m_op)))({ m_op });
+
+	format_by_mode();
 	return 4;
 }
 
-std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
+std::pair<const void*, usz> SPUDisAsm::get_memory_span() const
 {
-	if (m_mode != cpu_disasm_mode::interpreter)
+	return {m_offset + m_start_pc, SPU_LS_SIZE - m_start_pc};
+}
+
+std::unique_ptr<CPUDisAsm> SPUDisAsm::copy_type_erased() const
+{
+	return std::make_unique<SPUDisAsm>(*this);
+}
+
+std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) const
+{
+	if (!TTL)
 	{
+		// Recursion limit (Time To Live)
 		return {};
 	}
 
 	if (pc == umax)
 	{
-		pc = dump_pc;
+		// Default arg: choose pc of previous instruction 
+
+		if (dump_pc == 0)
+		{
+			// Do not underflow
+			return {};
+		}
+
+		pc = dump_pc - 4;
 	}
 
 	// Scan LS backwards from this instruction (until PC=0)
 	// Search for the first register modification or branch instruction
 
-	for (s32 i = pc - 4; i >= 0; i -= 4)
+	for (s32 i = static_cast<s32>(pc); i >= static_cast<s32>(m_start_pc); i -= 4)
 	{
 		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
 		const spu_opcode_t op0{ opcode };
@@ -58,6 +86,21 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 			continue;
 		}
 
+		// Get constant register value
+		#define GET_CONST_REG(var, reg) \
+		{\
+			/* Search for the constant value of the register*/\
+			const auto [is_const, value] = try_get_const_value(reg, i - 4, TTL - 1);\
+		\
+			if (!is_const)\
+			{\
+				/* Cannot compute constant value if register is not constant*/\
+				return {};\
+			}\
+		\
+			var = value;\
+		} void() /*<- Require a semicolon*/
+
 		//const auto flag = s_spu_iflag.decode(opcode);
 
 		// TODO: It detects spurious register modifications
@@ -77,6 +120,10 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 			case spu_itype::ILHU:
 			{
 				return { true, v128::from32p(op0.i16 << 16) };
+			}
+			case spu_itype::ILH:
+			{
+				return { true, v128::from16p(op0.i16) };
 			}
 			case spu_itype::CBD:
 			case spu_itype::CHD:
@@ -127,25 +174,13 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 			}
 			case spu_itype::IOHL:
 			{
-				// Avoid multi-recursion for now
-				if (dump_pc != pc)
-				{
-					return {};
-				}
+				v128 reg_val{};
 
-				if (i >= 4)
-				{
-					// Search for ILHU+IOHL pattern (common pattern for 32-bit constants formation)
-					// But don't limit to it
-					const auto [is_const, value] = try_get_const_value(reg, i);
+				// Search for ILHU+IOHL pattern (common pattern for 32-bit constants formation)
+				// But don't limit to it
+				GET_CONST_REG(reg_val, op0.rt);
 
-					if (is_const)
-					{
-						return { true, value | v128::from32p(op0.i16) };
-					}
-				}
-
-				return {};
+				return { true, reg_val | v128::from32p(op0.i16) };
 			}
 			case spu_itype::STQA:
 			case spu_itype::STQD:
@@ -155,6 +190,27 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 			{
 				// Do not modify RT
 				break;
+			}
+			case spu_itype::SHLQBYI:
+			{
+				if (op0.si7)
+				{
+					// Unimplemented, doubt needed
+					return {};
+				}
+
+				// Move register value operation
+				v128 reg_val{};
+				GET_CONST_REG(reg_val, op0.ra);
+
+				return { true, reg_val };	
+			}
+			case spu_itype::ORI:
+			{
+				v128 reg_val{};
+				GET_CONST_REG(reg_val, op0.ra);
+
+				return { true, reg_val | v128::from32p(op0.si10) };	
 			}
 			default: return {};
 			}
@@ -236,6 +292,8 @@ SPUDisAsm::insert_mask_info SPUDisAsm::try_get_insert_mask_info(const v128& mask
 
 void SPUDisAsm::WRCH(spu_opcode_t op)
 {
+	DisAsm("wrch", spu_ch_name[op.ra], spu_reg_name[op.rt]);
+
 	const auto [is_const, value] = try_get_const_value(op.rt);
 
 	if (is_const)
@@ -244,7 +302,7 @@ void SPUDisAsm::WRCH(spu_opcode_t op)
 		{
 		case MFC_Cmd:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], MFC(value._u8[12])).c_str());
+			fmt::append(last_opcode, " #%s", MFC(value._u8[12]));
 			return;
 		}
 		case MFC_WrListStallAck:
@@ -252,62 +310,60 @@ void SPUDisAsm::WRCH(spu_opcode_t op)
 		{
 			const u32 v = value._u32[3];
 			if (v && !(v & (v - 1)))
-				DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s (tag=%u)", spu_reg_name[op.rt], SignedHex(v), std::countr_zero(v)).c_str()); // Single-tag mask
+				fmt::append(last_opcode, " #%s (tag=%u)", SignedHex(v), std::countr_zero(v)); // Single-tag mask
 			else
-				DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], SignedHex(v)).c_str()); // Multi-tag mask (or zero)
+				fmt::append(last_opcode, " #%s", SignedHex(v)); // Multi-tag mask (or zero)
 			return;
 		}
 		case MFC_EAH:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], SignedHex(value._u32[3])).c_str());
+			fmt::append(last_opcode, " #%s", SignedHex(value._u32[3]));
 			return;
 		}
 		case MFC_Size:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], SignedHex(value._u16[6])).c_str());
+			fmt::append(last_opcode, " #%s", SignedHex(value._u16[6]));
 			return;
 		}
 		case MFC_TagID:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%u", spu_reg_name[op.rt], value._u8[12]).c_str());
+			fmt::append(last_opcode, " #%u", value._u8[12]);
 			return;
 		}
 		case MFC_WrTagUpdate:
 		{
 			const auto upd = fmt::format("%s", mfc_tag_update(value._u32[3]));
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], upd == "empty" ? "IMMEDIATE" : upd).c_str());
+			fmt::append(last_opcode, " #%s", upd == "empty" ? "IMMEDIATE" : upd);
 			return;
 		}
 		default:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], SignedHex(value._u32[3])).c_str());
+			fmt::append(last_opcode, " #%s", SignedHex(value._u32[3]));
 			return;
 		}
 		}
 	}
-
-	DisAsm("wrch", spu_ch_name[op.ra], spu_reg_name[op.rt]);
 }
+
+enum CellError : u32;
 
 void SPUDisAsm::IOHL(spu_opcode_t op)
 {
-	const auto [is_const, value] = try_get_const_value(op.rt);
+	DisAsm("iohl", spu_reg_name[op.rt], op.i16);
 
+	const auto [is_const, value] = try_get_const_equal_value_array<u32>(op.rt);
+
+	// Only print constant for a 4 equal 32-bit constants array
 	if (is_const)
 	{
-		// Only print constant for a 4 equal 32-bit constants array
-		if (value == v128::from32p(value._u32[0]))
-		{
-			DisAsm("iohl", spu_reg_name[op.rt], fmt::format("%s #%s", SignedHex(+op.i16), (value._u32[0] | op.i16)).c_str());
-			return;
-		}
+		comment_constant(last_opcode, value | op.i16);
 	}
-
-	DisAsm("iohl", spu_reg_name[op.rt], op.i16);
 }
 
 void SPUDisAsm::SHUFB(spu_opcode_t op)
 {
+	DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);
+
 	const auto [is_const, value] = try_get_const_value(op.rc);
 
 	if (is_const)
@@ -319,15 +375,13 @@ void SPUDisAsm::SHUFB(spu_opcode_t op)
 			if ((size >= 4u && !src) || (size == 2u && src == 1u) || (size == 1u && src == 3u))
 			{
 				// Comment insertion pattern for CWD-alike instruction
-				DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u]", spu_reg_name[op.rc], size * 8, dst).c_str());
+				fmt::append(last_opcode, " #i%u[%u]", size * 8, dst);
 				return;
 			}
 
 			// Comment insertion pattern for unknown instruction formations
-			DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u] = [%u]", spu_reg_name[op.rc], size * 8, dst, src).c_str());
+			fmt::append(last_opcode, " #i%u[%u] = [%u]", size * 8, dst, src);
 			return;
 		}
 	}
-
-	DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);
 }

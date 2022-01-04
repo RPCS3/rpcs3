@@ -90,6 +90,22 @@ static const bool s_tsx_avx = utils::has_avx();
 // For special case
 static const bool s_tsx_haswell = utils::has_rtm() && !utils::has_mpx();
 
+// Threshold for when rep mosvb is expected to outperform simd copies
+// The threshold will be 0xFFFFFFFF when the performance of rep movsb is expected to be bad
+static const u32 s_rep_movsb_threshold = utils::get_rep_movsb_threshold();
+
+#ifndef _MSC_VER
+static FORCE_INLINE void __movsb(unsigned char * Dst, const unsigned char * Src, size_t Size)
+{
+	__asm__ __volatile__
+	(
+		"rep; movsb" :
+		[Dst] "=D" (Dst), [Src] "=S" (Src), [Size] "=c" (Size) :
+		"[Dst]" (Dst), "[Src]" (Src), "[Size]" (Size)
+	);
+}
+#endif
+
 static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 {
 #if defined(_MSC_VER) || defined(__AVX__)
@@ -405,15 +421,13 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	return res;
 }
 
-const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putllc_tx = built_function<u64(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>("spu_putllc_tx", [](asmjit::x86::Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
 	Label fall = c.newLabel();
 	Label fail = c.newLabel();
 	Label _ret = c.newLabel();
-	Label skip = c.newLabel();
-	Label next = c.newLabel();
 	Label load = c.newLabel();
 
 	//if (utils::has_avx() && !s_tsx_avx)
@@ -422,12 +436,8 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 	//}
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
-	c.push(x86::rbp);
-	c.push(x86::r13);
-	c.push(x86::r12);
-	c.push(x86::rbx);
-	c.sub(x86::rsp, 168);
 #ifdef _WIN32
+	c.sub(x86::rsp, 168);
 	if (s_tsx_avx)
 	{
 		c.vmovups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
@@ -449,28 +459,26 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 #endif
 
 	// Prepare registers
-	build_swap_rdx_with(c, args, x86::r12);
-	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
-	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
-	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
+	build_swap_rdx_with(c, args, x86::r10);
+	c.mov(args[1], x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
+	c.lea(args[1], x86::qword_ptr(args[1], args[0]));
+	c.prefetchw(x86::byte_ptr(args[1], 0));
+	c.prefetchw(x86::byte_ptr(args[1], 64));
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
-	c.prefetchw(x86::byte_ptr(x86::rbx));
-	c.mov(x86::r13, args[1]);
+	c.lea(x86::r11, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
 
 	// Prepare data
 	if (s_tsx_avx)
 	{
-		c.vmovups(x86::ymm0, x86::yword_ptr(args[2], 0));
-		c.vmovups(x86::ymm1, x86::yword_ptr(args[2], 32));
-		c.vmovups(x86::ymm2, x86::yword_ptr(args[2], 64));
-		c.vmovups(x86::ymm3, x86::yword_ptr(args[2], 96));
-		c.vmovups(x86::ymm4, x86::yword_ptr(args[3], 0));
-		c.vmovups(x86::ymm5, x86::yword_ptr(args[3], 32));
-		c.vmovups(x86::ymm6, x86::yword_ptr(args[3], 64));
-		c.vmovups(x86::ymm7, x86::yword_ptr(args[3], 96));
+		c.vmovups(x86::ymm0, x86::ymmword_ptr(args[2], 0));
+		c.vmovups(x86::ymm1, x86::ymmword_ptr(args[2], 32));
+		c.vmovups(x86::ymm2, x86::ymmword_ptr(args[2], 64));
+		c.vmovups(x86::ymm3, x86::ymmword_ptr(args[2], 96));
+		c.vmovups(x86::ymm4, x86::ymmword_ptr(args[3], 0));
+		c.vmovups(x86::ymm5, x86::ymmword_ptr(args[3], 32));
+		c.vmovups(x86::ymm6, x86::ymmword_ptr(args[3], 64));
+		c.vmovups(x86::ymm7, x86::ymmword_ptr(args[3], 96));
 	}
 	else
 	{
@@ -494,35 +502,30 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 
 	// Alloc args[0] to stamp0
 	const auto stamp0 = args[0];
-	const auto stamp1 = args[1];
 	build_get_tsc(c, stamp0);
 
-	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, [&]()
+	Label fail2 = c.newLabel();
+
+	Label tx1 = build_transaction_enter(c, fall, [&]()
 	{
 		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx) - ::offset32(&spu_thread::rdata)), 1);
-		build_get_tsc(c, stamp1);
-		c.sub(stamp1, stamp0);
-		c.xor_(x86::eax, x86::eax);
-		c.cmp(stamp1, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit1)));
+		build_get_tsc(c);
+		c.sub(x86::rax, stamp0);
+		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
 		c.jae(fall);
 	});
+
+	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall);
-	c.xbegin(tx0);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.test(x86::eax, vm::rsrv_unique_lock);
-	c.jnz(skip);
-	c.and_(x86::rax, -128);
-	c.cmp(x86::rax, x86::r13);
-	c.jne(fail);
+	c.xbegin(tx1);
 
 	if (s_tsx_avx)
 	{
-		c.vxorps(x86::ymm0, x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vxorps(x86::ymm1, x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vxorps(x86::ymm2, x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vxorps(x86::ymm3, x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+		c.vxorps(x86::ymm0, x86::ymm0, x86::ymmword_ptr(args[1], 0));
+		c.vxorps(x86::ymm1, x86::ymm1, x86::ymmword_ptr(args[1], 32));
+		c.vxorps(x86::ymm2, x86::ymm2, x86::ymmword_ptr(args[1], 64));
+		c.vxorps(x86::ymm3, x86::ymm3, x86::ymmword_ptr(args[1], 96));
 		c.vorps(x86::ymm0, x86::ymm0, x86::ymm1);
 		c.vorps(x86::ymm1, x86::ymm2, x86::ymm3);
 		c.vorps(x86::ymm0, x86::ymm1, x86::ymm0);
@@ -530,14 +533,14 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 	}
 	else
 	{
-		c.xorps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
-		c.xorps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
-		c.xorps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
-		c.xorps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
-		c.xorps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
-		c.xorps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
-		c.xorps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
-		c.xorps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
+		c.xorps(x86::xmm0, x86::oword_ptr(args[1], 0));
+		c.xorps(x86::xmm1, x86::oword_ptr(args[1], 16));
+		c.xorps(x86::xmm2, x86::oword_ptr(args[1], 32));
+		c.xorps(x86::xmm3, x86::oword_ptr(args[1], 48));
+		c.xorps(x86::xmm4, x86::oword_ptr(args[1], 64));
+		c.xorps(x86::xmm5, x86::oword_ptr(args[1], 80));
+		c.xorps(x86::xmm6, x86::oword_ptr(args[1], 96));
+		c.xorps(x86::xmm7, x86::oword_ptr(args[1], 112));
 		c.orps(x86::xmm0, x86::xmm1);
 		c.orps(x86::xmm2, x86::xmm3);
 		c.orps(x86::xmm4, x86::xmm5);
@@ -552,214 +555,72 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 
 	if (s_tsx_avx)
 	{
-		c.vmovaps(x86::yword_ptr(x86::rbp, 0), x86::ymm4);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 32), x86::ymm5);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 64), x86::ymm6);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 96), x86::ymm7);
+		c.vmovaps(x86::ymmword_ptr(args[1], 0), x86::ymm4);
+		c.vmovaps(x86::ymmword_ptr(args[1], 32), x86::ymm5);
+		c.vmovaps(x86::ymmword_ptr(args[1], 64), x86::ymm6);
+		c.vmovaps(x86::ymmword_ptr(args[1], 96), x86::ymm7);
 	}
 	else
 	{
-		c.movaps(x86::oword_ptr(x86::rbp, 0), x86::xmm8);
-		c.movaps(x86::oword_ptr(x86::rbp, 16), x86::xmm9);
-		c.movaps(x86::oword_ptr(x86::rbp, 32), x86::xmm10);
-		c.movaps(x86::oword_ptr(x86::rbp, 48), x86::xmm11);
-		c.movaps(x86::oword_ptr(x86::rbp, 64), x86::xmm12);
-		c.movaps(x86::oword_ptr(x86::rbp, 80), x86::xmm13);
-		c.movaps(x86::oword_ptr(x86::rbp, 96), x86::xmm14);
-		c.movaps(x86::oword_ptr(x86::rbp, 112), x86::xmm15);
-	}
-
-	c.sub(x86::qword_ptr(x86::rbx), -128);
-	c.xend();
-	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
-	build_get_tsc(c);
-	c.sub(x86::rax, stamp0);
-	c.jmp(_ret);
-
-	// XABORT is expensive so finish with xend instead
-	c.bind(fail);
-
-	// Load old data to store back in rdata
-	if (s_tsx_avx)
-	{
-		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
-	}
-	else
-	{
-		c.movaps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
-		c.movaps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
-		c.movaps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
-		c.movaps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
-		c.movaps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
-		c.movaps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
-		c.movaps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
-		c.movaps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
+		c.movaps(x86::oword_ptr(args[1], 0), x86::xmm8);
+		c.movaps(x86::oword_ptr(args[1], 16), x86::xmm9);
+		c.movaps(x86::oword_ptr(args[1], 32), x86::xmm10);
+		c.movaps(x86::oword_ptr(args[1], 48), x86::xmm11);
+		c.movaps(x86::oword_ptr(args[1], 64), x86::xmm12);
+		c.movaps(x86::oword_ptr(args[1], 80), x86::xmm13);
+		c.movaps(x86::oword_ptr(args[1], 96), x86::xmm14);
+		c.movaps(x86::oword_ptr(args[1], 112), x86::xmm15);
 	}
 
 	c.xend();
+	c.lock().add(x86::qword_ptr(x86::r11), 64);
 	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
-	c.jmp(load);
-
-	c.bind(skip);
-	c.xend();
-	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
-	build_get_tsc(c, stamp1);
-	//c.jmp(fall);
-
-	c.bind(fall);
-
-	Label fall2 = c.newLabel();
-	Label fail2 = c.newLabel();
-	Label fail3 = c.newLabel();
-
-	// Lightened transaction: only compare and swap data
-	c.bind(next);
-
-	// Try to "lock" reservation
-	c.mov(x86::eax, 1);
-	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
-	c.test(x86::eax, vm::rsrv_unique_lock);
-	c.jnz(fail2);
-
-	// Check if already updated
-	c.and_(x86::rax, -128);
-	c.cmp(x86::rax, x86::r13);
-	c.jne(fail2);
-
-	// Exclude some time spent on touching memory: stamp1 contains last success or failure
-	c.mov(x86::rax, stamp1);
-	c.sub(x86::rax, stamp0);
-	build_get_tsc(c, stamp1);
-	c.sub(stamp1, x86::rax);
-	c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
-	c.jae(fall2);
-
-	Label tx1 = build_transaction_enter(c, fall2, [&]()
-	{
-		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx) - ::offset32(&spu_thread::rdata)), 1);
-		build_get_tsc(c);
-		c.sub(x86::rax, stamp1);
-		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
-		c.jae(fall2);
-		c.test(x86::qword_ptr(x86::rbx), 127 - 1);
-		c.jnz(fall2);
-	});
-	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
-	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
-
-	// Check pause flag
-	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
-	c.jc(fall2);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.and_(x86::rax, -128);
-	c.cmp(x86::rax, x86::r13);
-	c.jne(fail2);
-	c.xbegin(tx1);
-
-	if (s_tsx_avx)
-	{
-		c.vxorps(x86::ymm0, x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vxorps(x86::ymm1, x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vxorps(x86::ymm2, x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vxorps(x86::ymm3, x86::ymm3, x86::yword_ptr(x86::rbp, 96));
-		c.vorps(x86::ymm0, x86::ymm0, x86::ymm1);
-		c.vorps(x86::ymm1, x86::ymm2, x86::ymm3);
-		c.vorps(x86::ymm0, x86::ymm1, x86::ymm0);
-		c.vptest(x86::ymm0, x86::ymm0);
-	}
-	else
-	{
-		c.xorps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
-		c.xorps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
-		c.xorps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
-		c.xorps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
-		c.xorps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
-		c.xorps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
-		c.xorps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
-		c.xorps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
-		c.orps(x86::xmm0, x86::xmm1);
-		c.orps(x86::xmm2, x86::xmm3);
-		c.orps(x86::xmm4, x86::xmm5);
-		c.orps(x86::xmm6, x86::xmm7);
-		c.orps(x86::xmm0, x86::xmm2);
-		c.orps(x86::xmm4, x86::xmm6);
-		c.orps(x86::xmm0, x86::xmm4);
-		c.ptest(x86::xmm0, x86::xmm0);
-	}
-
-	c.jnz(fail3);
-
-	if (s_tsx_avx)
-	{
-		c.vmovaps(x86::yword_ptr(x86::rbp, 0), x86::ymm4);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 32), x86::ymm5);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 64), x86::ymm6);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 96), x86::ymm7);
-	}
-	else
-	{
-		c.movaps(x86::oword_ptr(x86::rbp, 0), x86::xmm8);
-		c.movaps(x86::oword_ptr(x86::rbp, 16), x86::xmm9);
-		c.movaps(x86::oword_ptr(x86::rbp, 32), x86::xmm10);
-		c.movaps(x86::oword_ptr(x86::rbp, 48), x86::xmm11);
-		c.movaps(x86::oword_ptr(x86::rbp, 64), x86::xmm12);
-		c.movaps(x86::oword_ptr(x86::rbp, 80), x86::xmm13);
-		c.movaps(x86::oword_ptr(x86::rbp, 96), x86::xmm14);
-		c.movaps(x86::oword_ptr(x86::rbp, 112), x86::xmm15);
-	}
-
-	c.xend();
-	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
-	c.lock().add(x86::qword_ptr(x86::rbx), 127);
 	build_get_tsc(c);
 	c.sub(x86::rax, stamp0);
 	c.jmp(_ret);
 
 	// XABORT is expensive so try to finish with xend instead
-	c.bind(fail3);
+	c.bind(fail);
 
 	// Load previous data to store back to rdata
 	if (s_tsx_avx)
 	{
-		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+		c.vmovaps(x86::ymm0, x86::ymmword_ptr(args[1], 0));
+		c.vmovaps(x86::ymm1, x86::ymmword_ptr(args[1], 32));
+		c.vmovaps(x86::ymm2, x86::ymmword_ptr(args[1], 64));
+		c.vmovaps(x86::ymm3, x86::ymmword_ptr(args[1], 96));
 	}
 	else
 	{
-		c.movaps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
-		c.movaps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
-		c.movaps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
-		c.movaps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
-		c.movaps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
-		c.movaps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
-		c.movaps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
-		c.movaps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
+		c.movaps(x86::xmm0, x86::oword_ptr(args[1], 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(args[1], 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(args[1], 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(args[1], 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(args[1], 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(args[1], 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(args[1], 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(args[1], 112));
 	}
 
 	c.xend();
 	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
 	c.jmp(fail2);
 
-	c.bind(fall2);
+	c.bind(fall);
 	c.mov(x86::rax, -1);
 	c.jmp(_ret);
 
 	c.bind(fail2);
-	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
+	c.lock().sub(x86::qword_ptr(x86::r11), 64);
 	c.bind(load);
 
 	// Store previous data back to rdata
 	if (s_tsx_avx)
 	{
-		c.vmovaps(x86::yword_ptr(args[2], 0), x86::ymm0);
-		c.vmovaps(x86::yword_ptr(args[2], 32), x86::ymm1);
-		c.vmovaps(x86::yword_ptr(args[2], 64), x86::ymm2);
-		c.vmovaps(x86::yword_ptr(args[2], 96), x86::ymm3);
+		c.vmovaps(x86::ymmword_ptr(args[2], 0), x86::ymm0);
+		c.vmovaps(x86::ymmword_ptr(args[2], 32), x86::ymm1);
+		c.vmovaps(x86::ymmword_ptr(args[2], 64), x86::ymm2);
+		c.vmovaps(x86::ymmword_ptr(args[2], 96), x86::ymm3);
 	}
 	else
 	{
@@ -799,6 +660,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 		c.movups(x86::xmm14, x86::oword_ptr(x86::rsp, 128));
 		c.movups(x86::xmm15, x86::oword_ptr(x86::rsp, 144));
 	}
+	c.add(x86::rsp, 168);
 #endif
 
 	if (s_tsx_avx)
@@ -806,22 +668,23 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 		c.vzeroupper();
 	}
 
-	c.add(x86::rsp, 168);
-	c.pop(x86::rbx);
-	c.pop(x86::r12);
-	c.pop(x86::r13);
-	c.pop(x86::rbp);
+#ifdef __linux__
+	// Hack for perf profiling (TODO)
+	Label ret2 = c.newLabel();
+	c.lea(x86::rdx, x86::qword_ptr(ret2));
+	c.push(x86::rdx);
+	c.push(x86::rdx);
+	c.bind(ret2);
+#endif
 	c.ret();
 });
 
-const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rdata, cpu_thread* _spu)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putlluc_tx = built_function<u64(*)(u32 raddr, const void* rdata, u64* _stx, u64* _ftx)>("spu_putlluc_tx", [](asmjit::x86::Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
 	Label fall = c.newLabel();
 	Label _ret = c.newLabel();
-	Label skip = c.newLabel();
-	Label next = c.newLabel();
 
 	//if (utils::has_avx() && !s_tsx_avx)
 	//{
@@ -829,38 +692,28 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	//}
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
-	c.push(x86::rbp);
-	c.push(x86::r13);
-	c.push(x86::r12);
-	c.push(x86::rbx);
-	c.sub(x86::rsp, 40);
 #ifdef _WIN32
+	c.sub(x86::rsp, 40);
 	if (!s_tsx_avx)
 	{
 		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
 		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
 	}
 #endif
-
 	// Prepare registers
-	build_swap_rdx_with(c, args, x86::r12);
-	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
-	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
-	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
-	c.and_(args[0].r32(), 0xff80);
-	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
-	c.prefetchw(x86::byte_ptr(x86::rbx));
-	c.mov(x86::r13, args[1]);
+	build_swap_rdx_with(c, args, x86::r10);
+	c.mov(x86::r11, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
+	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
+	c.prefetchw(x86::byte_ptr(x86::r11, 0));
+	c.prefetchw(x86::byte_ptr(x86::r11, 64));
 
 	// Prepare data
 	if (s_tsx_avx)
 	{
-		c.vmovups(x86::ymm0, x86::yword_ptr(args[1], 0));
-		c.vmovups(x86::ymm1, x86::yword_ptr(args[1], 32));
-		c.vmovups(x86::ymm2, x86::yword_ptr(args[1], 64));
-		c.vmovups(x86::ymm3, x86::yword_ptr(args[1], 96));
+		c.vmovups(x86::ymm0, x86::ymmword_ptr(args[1], 0));
+		c.vmovups(x86::ymm1, x86::ymmword_ptr(args[1], 32));
+		c.vmovups(x86::ymm2, x86::ymmword_ptr(args[1], 64));
+		c.vmovups(x86::ymm3, x86::ymmword_ptr(args[1], 96));
 	}
 	else
 	{
@@ -874,125 +727,54 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 		c.movaps(x86::xmm7, x86::oword_ptr(args[1], 112));
 	}
 
+	c.and_(args[0].r32(), 0xff80);
+	c.shr(args[0].r32(), 1);
+	c.lea(args[1], x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
+
 	// Alloc args[0] to stamp0
 	const auto stamp0 = args[0];
-	const auto stamp1 = args[1];
 	build_get_tsc(c, stamp0);
 
-	// Begin transaction
-	Label tx0 = build_transaction_enter(c, fall, [&]()
+	Label tx1 = build_transaction_enter(c, fall, [&]()
 	{
-		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx)), 1);
-		build_get_tsc(c, stamp1);
-		c.sub(stamp1, stamp0);
-		c.xor_(x86::eax, x86::eax);
-		c.cmp(stamp1, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit1)));
+		// ftx++;
+		c.add(x86::qword_ptr(args[3]), 1);
+		build_get_tsc(c);
+		c.sub(x86::rax, stamp0);
+		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
 		c.jae(fall);
 	});
-	c.xbegin(tx0);
-	c.test(x86::qword_ptr(x86::rbx), vm::rsrv_unique_lock);
-	c.jnz(skip);
 
-	if (s_tsx_avx)
-	{
-		c.vmovaps(x86::yword_ptr(x86::rbp, 0), x86::ymm0);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 32), x86::ymm1);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 64), x86::ymm2);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 96), x86::ymm3);
-	}
-	else
-	{
-		c.movaps(x86::oword_ptr(x86::rbp, 0), x86::xmm0);
-		c.movaps(x86::oword_ptr(x86::rbp, 16), x86::xmm1);
-		c.movaps(x86::oword_ptr(x86::rbp, 32), x86::xmm2);
-		c.movaps(x86::oword_ptr(x86::rbp, 48), x86::xmm3);
-		c.movaps(x86::oword_ptr(x86::rbp, 64), x86::xmm4);
-		c.movaps(x86::oword_ptr(x86::rbp, 80), x86::xmm5);
-		c.movaps(x86::oword_ptr(x86::rbp, 96), x86::xmm6);
-		c.movaps(x86::oword_ptr(x86::rbp, 112), x86::xmm7);
-	}
-
-	c.sub(x86::qword_ptr(x86::rbx), -128);
-	c.xend();
-	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
-	build_get_tsc(c);
-	c.sub(x86::rax, stamp0);
-	c.jmp(_ret);
-
-	c.bind(skip);
-	c.xend();
-	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
-	build_get_tsc(c, stamp1);
-	//c.jmp(fall);
-
-	c.bind(fall);
-
-	Label fall2 = c.newLabel();
-
-	// Lightened transaction
-	c.bind(next);
-
-	// Lock reservation
-	c.mov(x86::eax, 1);
-	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
-	c.test(x86::eax, 127 - 1);
-	c.jnz(fall2);
-
-	// Exclude some time spent on touching memory: stamp1 contains last success or failure
-	c.mov(x86::rax, stamp1);
-	c.sub(x86::rax, stamp0);
-	c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
-	c.jae(fall2);
-	build_get_tsc(c, stamp1);
-	c.sub(stamp1, x86::rax);
-
-	Label tx1 = build_transaction_enter(c, fall2, [&]()
-	{
-		c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::ftx)), 1);
-		build_get_tsc(c);
-		c.sub(x86::rax, stamp1);
-		c.cmp(x86::rax, x86::qword_ptr(reinterpret_cast<u64>(&g_rtm_tx_limit2)));
-		c.jae(fall2);
-	});
-
-	c.prefetchw(x86::byte_ptr(x86::rbp, 0));
-	c.prefetchw(x86::byte_ptr(x86::rbp, 64));
-
-	// Check pause flag
-	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
-	c.jc(fall2);
-	// Check contention
-	c.test(x86::qword_ptr(x86::rbx), 127 - 1);
-	c.jc(fall2);
 	c.xbegin(tx1);
 
 	if (s_tsx_avx)
 	{
-		c.vmovaps(x86::yword_ptr(x86::rbp, 0), x86::ymm0);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 32), x86::ymm1);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 64), x86::ymm2);
-		c.vmovaps(x86::yword_ptr(x86::rbp, 96), x86::ymm3);
+		c.vmovaps(x86::ymmword_ptr(x86::r11, 0), x86::ymm0);
+		c.vmovaps(x86::ymmword_ptr(x86::r11, 32), x86::ymm1);
+		c.vmovaps(x86::ymmword_ptr(x86::r11, 64), x86::ymm2);
+		c.vmovaps(x86::ymmword_ptr(x86::r11, 96), x86::ymm3);
 	}
 	else
 	{
-		c.movaps(x86::oword_ptr(x86::rbp, 0), x86::xmm0);
-		c.movaps(x86::oword_ptr(x86::rbp, 16), x86::xmm1);
-		c.movaps(x86::oword_ptr(x86::rbp, 32), x86::xmm2);
-		c.movaps(x86::oword_ptr(x86::rbp, 48), x86::xmm3);
-		c.movaps(x86::oword_ptr(x86::rbp, 64), x86::xmm4);
-		c.movaps(x86::oword_ptr(x86::rbp, 80), x86::xmm5);
-		c.movaps(x86::oword_ptr(x86::rbp, 96), x86::xmm6);
-		c.movaps(x86::oword_ptr(x86::rbp, 112), x86::xmm7);
+		c.movaps(x86::oword_ptr(x86::r11, 0), x86::xmm0);
+		c.movaps(x86::oword_ptr(x86::r11, 16), x86::xmm1);
+		c.movaps(x86::oword_ptr(x86::r11, 32), x86::xmm2);
+		c.movaps(x86::oword_ptr(x86::r11, 48), x86::xmm3);
+		c.movaps(x86::oword_ptr(x86::r11, 64), x86::xmm4);
+		c.movaps(x86::oword_ptr(x86::r11, 80), x86::xmm5);
+		c.movaps(x86::oword_ptr(x86::r11, 96), x86::xmm6);
+		c.movaps(x86::oword_ptr(x86::r11, 112), x86::xmm7);
 	}
 
 	c.xend();
-	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
-	c.lock().add(x86::qword_ptr(x86::rbx), 127);
+	c.lock().add(x86::qword_ptr(args[1]), 32);
+	// stx++
+	c.add(x86::qword_ptr(args[2]), 1);
 	build_get_tsc(c);
 	c.sub(x86::rax, stamp0);
 	c.jmp(_ret);
 
-	c.bind(fall2);
+	c.bind(fall);
 	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
 
@@ -1004,6 +786,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
 		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
 	}
+	c.add(x86::rsp, 40);
 #endif
 
 	if (s_tsx_avx)
@@ -1011,15 +794,18 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 		c.vzeroupper();
 	}
 
-	c.add(x86::rsp, 40);
-	c.pop(x86::rbx);
-	c.pop(x86::r12);
-	c.pop(x86::r13);
-	c.pop(x86::rbp);
+#ifdef __linux__
+	// Hack for perf profiling (TODO)
+	Label ret2 = c.newLabel();
+	c.lea(x86::rdx, x86::qword_ptr(ret2));
+	c.push(x86::rdx);
+	c.push(x86::rdx);
+	c.bind(ret2);
+#endif
 	c.ret();
 });
 
-const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_getllar_tx = built_function<u64(*)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime)>("spu_getllar_tx", [](asmjit::x86::Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -1033,8 +819,6 @@ const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rd
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
 	c.push(x86::rbp);
-	c.push(x86::r13);
-	c.push(x86::r12);
 	c.push(x86::rbx);
 	c.sub(x86::rsp, 40);
 #ifdef _WIN32
@@ -1046,13 +830,12 @@ const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rd
 #endif
 
 	// Prepare registers
-	build_swap_rdx_with(c, args, x86::r12);
+	build_swap_rdx_with(c, args, x86::r10);
 	c.mov(x86::rbp, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_sudo_addr)));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.and_(args[0].r32(), 0xff80);
 	c.shr(args[0].r32(), 1);
-	c.lea(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
-	c.mov(x86::r13, args[1]);
+	c.lea(x86::r11, x86::qword_ptr(reinterpret_cast<u64>(+vm::g_reservations), args[0]));
 
 	// Alloc args[0] to stamp0
 	const auto stamp0 = args[0];
@@ -1071,8 +854,8 @@ const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rd
 	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.and_(x86::rax, ~vm::rsrv_shared_mask);
+	c.mov(x86::rax, x86::qword_ptr(x86::r11));
+	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, args[3]);
 	c.jne(fall);
 	c.xbegin(tx0);
@@ -1080,10 +863,10 @@ const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rd
 	// Just read data to registers
 	if (s_tsx_avx)
 	{
-		c.vmovups(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
-		c.vmovups(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
-		c.vmovups(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
-		c.vmovups(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
+		c.vmovups(x86::ymm0, x86::ymmword_ptr(x86::rbp, 0));
+		c.vmovups(x86::ymm1, x86::ymmword_ptr(x86::rbp, 32));
+		c.vmovups(x86::ymm2, x86::ymmword_ptr(x86::rbp, 64));
+		c.vmovups(x86::ymm3, x86::ymmword_ptr(x86::rbp, 96));
 	}
 	else
 	{
@@ -1105,10 +888,10 @@ const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rd
 	// Store data
 	if (s_tsx_avx)
 	{
-		c.vmovaps(x86::yword_ptr(args[1], 0), x86::ymm0);
-		c.vmovaps(x86::yword_ptr(args[1], 32), x86::ymm1);
-		c.vmovaps(x86::yword_ptr(args[1], 64), x86::ymm2);
-		c.vmovaps(x86::yword_ptr(args[1], 96), x86::ymm3);
+		c.vmovaps(x86::ymmword_ptr(args[1], 0), x86::ymm0);
+		c.vmovaps(x86::ymmword_ptr(args[1], 32), x86::ymm1);
+		c.vmovaps(x86::ymmword_ptr(args[1], 64), x86::ymm2);
+		c.vmovaps(x86::ymmword_ptr(args[1], 96), x86::ymm3);
 	}
 	else
 	{
@@ -1144,9 +927,16 @@ const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rd
 
 	c.add(x86::rsp, 40);
 	c.pop(x86::rbx);
-	c.pop(x86::r12);
-	c.pop(x86::r13);
 	c.pop(x86::rbp);
+
+#ifdef __linux__
+	// Hack for perf profiling (TODO)
+	Label ret2 = c.newLabel();
+	c.lea(x86::rdx, x86::qword_ptr(ret2));
+	c.push(x86::rdx);
+	c.push(x86::rdx);
+	c.bind(ret2);
+#endif
 	c.ret();
 });
 
@@ -1216,6 +1006,8 @@ std::string spu_thread::dump_regs() const
 
 	const bool floats_only = debugger_float_mode.load();
 
+	SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
+
 	for (u32 i = 0; i < 128; i++, ret += '\n')
 	{
 		fmt::append(ret, "%s: ", spu_reg_name[i]);
@@ -1269,7 +1061,6 @@ std::string spu_thread::dump_regs() const
 
 		if (i3 >= 0x80 && is_exec_code(i3))
 		{
-			SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
 		}
@@ -1642,6 +1433,8 @@ void spu_thread::cpu_task()
 	{
 		ensure(spu_runtime::g_interpreter);
 
+		allow_interrupts_in_cpu_work = true;
+
 		while (true)
 		{
 			if (state) [[unlikely]]
@@ -1652,6 +1445,68 @@ void spu_thread::cpu_task()
 
 			spu_runtime::g_interpreter(*this, _ptr<u8>(0), nullptr);
 		}
+
+		allow_interrupts_in_cpu_work = false;
+	}
+}
+
+void spu_thread::cpu_work()
+{
+	if (std::exchange(in_cpu_work, true))
+	{
+		return;
+	}
+
+	const u32 old_iter_count = cpu_work_iteration_count++;
+
+	const auto timeout = +g_cfg.core.mfc_transfers_timeout;
+
+	bool work_left = false;
+
+	if (u32 shuffle_count = g_cfg.core.mfc_transfers_shuffling)
+	{
+		// If either MFC size exceeds limit or timeout has been reached execute pending MFC commands
+		if (mfc_size > shuffle_count || (timeout && get_system_time() - mfc_last_timestamp >= timeout))
+		{
+			work_left = do_mfc(false, false);
+		}
+		else
+		{
+			work_left = mfc_size != 0; // TODO: Optimize
+		}
+	}
+
+	bool gen_interrupt = false;
+
+	// Check interrupts every 16 iterations
+	if (!(old_iter_count % 16) && allow_interrupts_in_cpu_work)
+	{
+		if (u32 mask = ch_events.load().mask & SPU_EVENT_INTR_BUSY_CHECK)
+		{
+			// LR check is expensive, do it once in a while
+			if (old_iter_count /*% 256*/)
+			{
+				mask &= ~SPU_EVENT_LR;
+			}
+
+			get_events(mask);
+		}
+
+		gen_interrupt = check_mfc_interrupts(pc);
+		work_left |= interrupts_enabled;
+	}
+
+	in_cpu_work = false;
+
+	if (!work_left)
+	{
+		state -= cpu_flag::pending;
+	}
+
+	if (gen_interrupt)
+	{
+		// Interrupt! escape everything and restart execution
+		spu_runtime::g_escape(this);
 	}
 }
 
@@ -1710,12 +1565,12 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	{
 		if (!group)
 		{
-			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, 0x200));
+			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, vm::page_size_64k));
 		}
 		else
 		{
-			// 0x1000 indicates falloc to allocate page with no access rights in base memory
-			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, 0x1200));
+			// alloc_hidden indicates falloc to allocate page with no access rights in base memory
+			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, vm::page_size_64k | vm::alloc_hidden));
 		}
 
 		// Try to guess free area
@@ -2395,32 +2250,41 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				// Split locking + transfer in two parts (before 64K border, and after it)
 				vm::range_lock(range_lock, range_addr, size0);
 
-				// Avoid unaligned stores in mov_rdata_avx
-				if (reinterpret_cast<u64>(dst) & 0x10)
+				if (size > s_rep_movsb_threshold)
 				{
-					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
-
-					dst += 16;
-					src += 16;
-					size0 -= 16;
+					__movsb(dst, src, size0);
+					dst += size0;
+					src += size0;
 				}
-
-				while (size0 >= 128)
+				else
 				{
-					mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+					// Avoid unaligned stores in mov_rdata_avx
+					if (reinterpret_cast<u64>(dst) & 0x10)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
 
-					dst += 128;
-					src += 128;
-					size0 -= 128;
-				}
+						dst += 16;
+						src += 16;
+						size0 -= 16;
+					}
 
-				while (size0)
-				{
-					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+					while (size0 >= 128)
+					{
+						mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
 
-					dst += 16;
-					src += 16;
-					size0 -= 16;
+						dst += 128;
+						src += 128;
+						size0 -= 128;
+					}
+
+					while (size0)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+						dst += 16;
+						src += 16;
+						size0 -= 16;
+					}
 				}
 
 				range_lock->release(0);
@@ -2429,32 +2293,39 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 			vm::range_lock(range_lock, range_addr, range_end - range_addr);
 
-			// Avoid unaligned stores in mov_rdata_avx
-			if (reinterpret_cast<u64>(dst) & 0x10)
+			if (size > s_rep_movsb_threshold)
 			{
-				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
-
-				dst += 16;
-				src += 16;
-				size -= 16;
+				__movsb(dst, src, size);
 			}
-
-			while (size >= 128)
+			else
 			{
-				mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+				// Avoid unaligned stores in mov_rdata_avx
+				if (reinterpret_cast<u64>(dst) & 0x10)
+				{
+					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
 
-				dst += 128;
-				src += 128;
-				size -= 128;
-			}
+					dst += 16;
+					src += 16;
+					size -= 16;
+				}
 
-			while (size)
-			{
-				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+				while (size >= 128)
+				{
+					mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
 
-				dst += 16;
-				src += 16;
-				size -= 16;
+					dst += 128;
+					src += 128;
+					size -= 128;
+				}
+
+				while (size)
+				{
+					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+					dst += 16;
+					src += 16;
+					size -= 16;
+				}
 			}
 
 			range_lock->release(0);
@@ -2499,32 +2370,39 @@ plain_access:
 	}
 	default:
 	{
-		// Avoid unaligned stores in mov_rdata_avx
-		if (reinterpret_cast<u64>(dst) & 0x10)
+		if (size > s_rep_movsb_threshold)
 		{
-			*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
-
-			dst += 16;
-			src += 16;
-			size -= 16;
+			__movsb(dst, src, size);
 		}
-
-		while (size >= 128)
+		else
 		{
-			mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+			// Avoid unaligned stores in mov_rdata_avx
+			if (reinterpret_cast<u64>(dst) & 0x10)
+			{
+				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
 
-			dst += 128;
-			src += 128;
-			size -= 128;
-		}
+				dst += 16;
+				src += 16;
+				size -= 16;
+			}
 
-		while (size)
-		{
-			*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+			while (size >= 128)
+			{
+				mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
 
-			dst += 16;
-			src += 16;
-			size -= 16;
+				dst += 128;
+				src += 128;
+				size -= 128;
+			}
+
+			while (size)
+			{
+				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+				dst += 16;
+				src += 16;
+				size -= 16;
+			}
 		}
 
 		break;
@@ -2708,15 +2586,32 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		// TODO: Limit scope!!
 		rsx::reservation_lock rsx_lock(addr, 128);
 
-		if (!g_use_rtm && rtime != res)
+		if (rtime != res)
 		{
 			return false;
 		}
 
-		if (!g_use_rtm && cmp_rdata(to_write, rdata))
+		if (cmp_rdata(to_write, rdata))
 		{
 			// Writeback of unchanged data. Only check memory change
 			return cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);
+		}
+
+		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
+		{
+			if ((r & -128) != rtime || (r & 127))
+			{
+				return false;
+			}
+
+			r += vm::rsrv_unique_lock;
+			return true;
+		});
+
+		if (!_ok)
+		{
+			// Already locked or updated: give up
+			return false;
 		}
 
 		if (g_use_rtm) [[likely]]
@@ -2734,14 +2629,14 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 						if (cmp_rdata(rdata, data))
 						{
 							mov_rdata(data, to_write);
-							res += 127;
+							res += 64;
 							return true;
 						}
 					}
 
 					// Save previous data
 					mov_rdata_nt(rdata, data);
-					res -= 1;
+					res -= 64;
 					return false;
 				});
 
@@ -2798,23 +2693,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 			last_faddr = 0;
 			return true;
-		}
-
-		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
-		{
-			if ((r & -128) != rtime || (r & 127))
-			{
-				return false;
-			}
-
-			r += vm::rsrv_unique_lock;
-			return true;
-		});
-
-		if (!_ok)
-		{
-			// Already locked or updated: give up
-			return false;
 		}
 
 		vm::_ref<atomic_t<u32>>(addr) += 0;
@@ -2878,24 +2756,104 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 	const auto cpu = get_current_cpu_thread();
 	rsx::reservation_lock rsx_lock(addr, 128);
 
+	u64 shared_mem = vm::g_shmem[addr >> 16];
+
+	if (!shared_mem)
+	{
+		shared_mem = addr;
+	}
+
 	if (g_use_rtm) [[likely]]
 	{
-		u64 result = spu_putlluc_tx(addr, to_write, cpu);
+		auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
+		auto& res = *utils::bless<atomic_t<u128>>(vm::g_reservations + (addr & 0xff80) / 2);
+
+		for (u64 j = 0;; j++)
+		{
+			auto [_oldd, _ok] = res.fetch_op([&](u128& r)
+			{
+				if (r & 127)
+				{
+					return false;
+				}
+
+				r &= static_cast<u64>(r);
+				r |= u128{shared_mem} << 64;
+				r |= u128{vm::rsrv_unique_lock | vm::rsrv_putunc_flag};
+				return true;
+			});
+
+			if (_ok)
+			{
+				break;
+			}
+
+			if (static_cast<u64>(_oldd) & vm::rsrv_putunc_flag && static_cast<u64>(_oldd >> 64) == shared_mem)
+			{
+				// Abandon store
+				for (u64 k = 0;; k++)
+				{
+					if (res ^ _oldd)
+					{
+						break;
+					}
+
+					if (auto cpu = get_current_cpu_thread(); cpu && cpu->state)
+					{
+						cpu->check_state();
+					}
+					else if (k < 15)
+					{
+						busy_wait(500);
+					}
+					else
+					{
+						std::this_thread::yield();
+					}
+				}
+
+				return static_cast<void>(cpu->test_stopped());
+			}
+
+			if (auto cpu = get_current_cpu_thread(); cpu && cpu->state)
+			{
+				cpu->check_state();
+			}
+			else if (j < 15)
+			{
+				busy_wait(500);
+			}
+			else
+			{
+				std::this_thread::yield();
+			}
+		}
+
+		u64 result = 0;
+
+		if (cpu->state & cpu_flag::pause)
+		{
+			result = 0;
+		}
+		else if (cpu->id_type() != 2)
+		{
+			u64 stx, ftx;
+			result = spu_putlluc_tx(addr, to_write, &stx, &ftx);
+		}
+		else
+		{
+			auto _spu = static_cast<spu_thread*>(cpu);
+			result = spu_putlluc_tx(addr, to_write, &_spu->stx, &_spu->ftx);
+		}
 
 		if (result == 0)
 		{
-			auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
-			auto& res = vm::reservation_acquire(addr);
-
-			cpu_thread::suspend_all<+2>(cpu, {&res}, [&]
+			cpu_thread::suspend_all<+2>(cpu, {}, [&]
 			{
-				mov_rdata_nt(sdata, *static_cast<const spu_rdata_t*>(to_write));
-				res += 127;
+				mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
 			});
-		}
 
-		if (!result)
-		{
+			vm::reservation_acquire(addr) += 32;
 			result = __rdtsc() - perf0.get();
 		}
 
@@ -2948,14 +2906,15 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	vm::reservation_notifier(addr).notify_all(-128);
 }
 
-void spu_thread::do_mfc(bool /*wait*/)
+bool spu_thread::do_mfc(bool can_escape, bool must_finish)
 {
 	u32 removed = 0;
 	u32 barrier = 0;
 	u32 fence = 0;
+	u16 exec_mask = 0;
+	bool pending = false;
 
-	// Process enqueued commands
-	static_cast<void>(std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
+	auto process_command = [&](spu_mfc_cmd& args)
 	{
 		// Select tag bit in the tag mask or the stall mask
 		const u32 mask = utils::rol32(1, args.tag);
@@ -2989,6 +2948,20 @@ void spu_thread::do_mfc(bool /*wait*/)
 				barrier |= mask;
 			}
 
+			return false;
+		}
+
+		// If command is not enabled in execution mask, execute it later
+		if (!(exec_mask & (1u << (&args - mfc_queue))))
+		{
+			if (args.cmd & MFC_BARRIER_MASK)
+			{
+				barrier |= mask;
+			}
+
+			// Fence is set for any command
+			fence |= mask;
+			pending = true;
 			return false;
 		}
 
@@ -3028,32 +3001,68 @@ void spu_thread::do_mfc(bool /*wait*/)
 
 		removed++;
 		return true;
-	}));
+	};
 
-	mfc_size -= removed;
-	mfc_barrier = barrier;
-	mfc_fence = fence;
-
-	if (removed && ch_tag_upd)
+	auto get_exec_mask = [&size = mfc_size]
 	{
-		const u32 completed = get_mfc_completed();
+		// Get commands' execution mask
+		// Mask bits are always set when mfc_transfers_shuffling is 0
+		return static_cast<u16>((0 - (1u << std::min<u32>(g_cfg.core.mfc_transfers_shuffling, size))) | __rdtsc());
+	};
 
-		if (completed && ch_tag_upd == MFC_TAG_UPDATE_ANY)
+	// Process enqueued commands
+	while (true)
+	{
+		removed = 0;
+		barrier = 0;
+		fence = 0;
+
+		// Shuffle commands execution (if enabled), explicit barriers are obeyed
+		pending = false;
+		exec_mask = get_exec_mask();
+
+		static_cast<void>(std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, process_command));
+
+		mfc_size -= removed;
+		mfc_barrier = barrier;
+		mfc_fence = fence;
+
+		if (removed && ch_tag_upd)
 		{
-			ch_tag_stat.set_value(completed);
-			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			const u32 completed = get_mfc_completed();
+
+			if (completed && ch_tag_upd == MFC_TAG_UPDATE_ANY)
+			{
+				ch_tag_stat.set_value(completed);
+				ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			}
+			else if (completed == ch_tag_mask && ch_tag_upd == MFC_TAG_UPDATE_ALL)
+			{
+				ch_tag_stat.set_value(completed);
+				ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			}
 		}
-		else if (completed == ch_tag_mask && ch_tag_upd == MFC_TAG_UPDATE_ALL)
+
+		if (can_escape && check_mfc_interrupts(pc + 4))
 		{
-			ch_tag_stat.set_value(completed);
-			ch_tag_upd = MFC_TAG_UPDATE_IMMEDIATE;
+			spu_runtime::g_escape(this);
+		}
+
+		if (!pending)
+		{
+			break;
+		}
+
+		if (!must_finish && g_cfg.core.mfc_shuffling_in_steps)
+		{
+			// Exit early, not all pending commands have to be executed at a single iteration
+			// Update last timestamp so the next MFC timeout check will use the current time
+			mfc_last_timestamp = get_system_time();
+			return true;
 		}
 	}
 
-	if (check_mfc_interrupts(pc + 4))
-	{
-		spu_runtime::g_escape(this);
-	}
+	return false;
 }
 
 bool spu_thread::check_mfc_interrupts(u32 next_pc)
@@ -3109,6 +3118,22 @@ bool spu_thread::process_mfc_cmd()
 	// Stall infinitely if MFC queue is full
 	while (mfc_size >= 16) [[unlikely]]
 	{
+		// Reset MFC timestamp in the case of full queue
+		mfc_last_timestamp = 0;
+
+		if (test_stopped())
+		{
+			return false;
+		}
+
+		// Process MFC commands
+		do_mfc();
+
+		if (mfc_size < 16)
+		{
+			break;
+		}
+
 		auto old = state.add_fetch(cpu_flag::wait);
 
 		if (is_stopped(old))
@@ -3205,7 +3230,7 @@ bool spu_thread::process_mfc_cmd()
 			{
 				state += cpu_flag::wait + cpu_flag::temp;
 				std::this_thread::yield();
-				!check_state();
+				static_cast<void>(check_state());
 			}
 		}())
 		{
@@ -3226,11 +3251,6 @@ bool spu_thread::process_mfc_cmd()
 				{
 					// See previous ntime check.
 					continue;
-				}
-				else
-				{
-					// If succeeded, only need to check unique lock bit
-					test_mask = ~vm::rsrv_shared_mask;
 				}
 			}
 			else
@@ -3382,12 +3402,18 @@ bool spu_thread::process_mfc_cmd()
 		{
 			if (do_dma_check(ch_mfc_cmd)) [[likely]]
 			{
-				if (ch_mfc_cmd.size)
+				if (!g_cfg.core.mfc_transfers_shuffling)
 				{
-					do_dma_transfer(this, ch_mfc_cmd, ls);
+					if (ch_mfc_cmd.size)
+					{
+						do_dma_transfer(this, ch_mfc_cmd, ls);
+					}
+
+					return true;
 				}
 
-				return true;
+				if (!state.test_and_set(cpu_flag::pending))
+					mfc_last_timestamp = get_system_time();
 			}
 
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
@@ -3429,9 +3455,17 @@ bool spu_thread::process_mfc_cmd()
 
 			if (do_dma_check(cmd)) [[likely]]
 			{
-				if (!cmd.size || do_list_transfer(cmd)) [[likely]]
+				if (!g_cfg.core.mfc_transfers_shuffling)
 				{
-					return true;
+					if (!cmd.size || do_list_transfer(cmd)) [[likely]]
+					{
+						return true;
+					}
+				}
+				else
+				{
+					if (!state.test_and_set(cpu_flag::pending))
+						mfc_last_timestamp = get_system_time();
 				}
 			}
 
@@ -3445,6 +3479,7 @@ bool spu_thread::process_mfc_cmd()
 
 			if (check_mfc_interrupts(pc + 4))
 			{
+				do_mfc(false);
 				spu_runtime::g_escape(this);
 			}
 
@@ -3647,9 +3682,20 @@ void spu_thread::set_interrupt_status(bool enable)
 	if (enable)
 	{
 		// Detect enabling interrupts with events masked
-		if (auto mask = ch_events.load().mask; mask & ~SPU_EVENT_INTR_IMPLEMENTED)
+		if (auto mask = ch_events.load().mask; mask & SPU_EVENT_INTR_BUSY_CHECK)
 		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)", mask);
+			if (g_cfg.core.spu_decoder != spu_decoder_type::precise && g_cfg.core.spu_decoder != spu_decoder_type::fast)
+			{
+				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use interpreterts", mask);
+			}
+
+			spu_log.trace("SPU Interrupts (mask=0x%x) are using CPU busy checking mode", mask);
+
+			// Process interrupts in cpu_work()
+			if (state.none_of(cpu_flag::pending))
+			{
+				state += cpu_flag::pending;
+			}
 		}
 	}
 
@@ -3714,6 +3760,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 			state += cpu_flag::wait + cpu_flag::temp;
 		}
 
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
+		}
+
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
 			busy_wait();
@@ -3739,6 +3790,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		while (true)
 		{
+			if (state & cpu_flag::pending)
+			{
+				do_mfc();
+			}
+
 			for (int i = 0; i < 10 && ch_in_mbox.get_count() == 0; i++)
 			{
 				busy_wait();
@@ -3770,13 +3826,17 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case MFC_RdTagStat:
 	{
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
+		}
+
 		if (u32 out; ch_tag_stat.try_read(out))
 		{
 			ch_tag_stat.set_value(0, false);
 			return out;
 		}
 
-		// Will stall infinitely
 		return read_channel(ch_tag_stat);
 	}
 
@@ -3929,6 +3989,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	{
 		if (get_type() >= spu_type::raw)
 		{
+			if (state & cpu_flag::pending)
+			{
+				do_mfc();
+			}
+
 			if (ch_out_intr_mbox.get_count())
 			{
 				state += cpu_flag::wait;
@@ -4060,6 +4125,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 	case SPU_WrOutMbox:
 	{
+		if (state & cpu_flag::pending)
+		{
+			do_mfc();
+		}
+
 		if (ch_out_mbox.get_count())
 		{
 			state += cpu_flag::wait;
@@ -4393,7 +4463,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		spu_function_logger logger(*this, "sys_spu_thread_receive_event");
 
 		std::shared_ptr<lv2_event_queue> queue;
-	
+
 		while (true)
 		{
 			// Check group status, wait if necessary

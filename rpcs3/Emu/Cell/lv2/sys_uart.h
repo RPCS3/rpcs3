@@ -3,6 +3,7 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Utilities/mutex.h"
 #include "Utilities/cond.h"
+#include "Utilities/simple_ringbuf.h"
 
 enum : u32
 {
@@ -108,85 +109,6 @@ struct ps3av_cmd
 	virtual bool execute(vuart_av_thread &vuart, const void *pkt_buf, u32 reply_max_size) = 0;
 };
 
-template<u32 Size>
-class vuart_av_ringbuf
-{
-private:
-
-	atomic_t<u32> rd_ptr = 0;
-	atomic_t<u32> wr_ptr = 0;
-	u8 buf[Size + 1];
-
-public:
-
-	u32 get_free_size()
-	{
-		const u32 rd = rd_ptr.observe();
-		const u32 wr = wr_ptr.observe();
-
-		return wr >= rd ? Size - (wr - rd) : rd - wr - 1U;
-	}
-
-	u32 get_used_size()
-	{
-		return Size - get_free_size();
-	}
-
-	u32 push(const void *data, u32 size)
-	{
-		const u32 old     = wr_ptr.observe();
-		const u32 to_push = std::min(size, get_free_size());
-		const u8 *b_data  = static_cast<const u8*>(data);
-
-		if (!to_push || !data)
-		{
-			return 0;
-		}
-
-		if (old + to_push > sizeof(buf))
-		{
-			const u32 first_write_sz = sizeof(buf) - old;
-			memcpy(&buf[old], b_data, first_write_sz);
-			memcpy(&buf[0], b_data + first_write_sz, to_push - first_write_sz);
-		}
-		else
-		{
-			memcpy(&buf[old], b_data, to_push);
-		}
-
-		wr_ptr = (old + to_push) % sizeof(buf);
-
-		return to_push;
-	}
-
-	u32 pop(void *data, u32 size)
-	{
-		const u32 old    = rd_ptr.observe();
-		const u32 to_pop = std::min(size, get_used_size());
-		u8 *b_data       = static_cast<u8*>(data);
-
-		if (!to_pop || !data)
-		{
-			return 0;
-		}
-
-		if (old + to_pop > sizeof(buf))
-		{
-			const u32 first_read_sz = sizeof(buf) - old;
-			memcpy(b_data, &buf[old], first_read_sz);
-			memcpy(b_data + first_read_sz, &buf[0], to_pop - first_read_sz);
-		}
-		else
-		{
-			memcpy(b_data, &buf[old], to_pop);
-		}
-
-		rd_ptr = (old + to_pop) % sizeof(buf);
-
-		return to_pop;
-	}
-};
-
 class vuart_av_thread
 {
 public:
@@ -216,10 +138,10 @@ public:
 
 private:
 
-	vuart_av_ringbuf<PS3AV_TX_BUF_SIZE> tx_buf{};
-	vuart_av_ringbuf<PS3AV_RX_BUF_SIZE> rx_buf{};
+	simple_ringbuf tx_buf{PS3AV_TX_BUF_SIZE};
+	simple_ringbuf rx_buf{PS3AV_RX_BUF_SIZE};
 	u8 temp_tx_buf[PS3AV_TX_BUF_SIZE];
-	u8 temp_rx_buf[PS3AV_TX_BUF_SIZE];
+	u8 temp_rx_buf[PS3AV_RX_BUF_SIZE];
 	u32 temp_rx_buf_size = 0;
 
 	u32 read_tx_data(void *data, u32 data_sz);

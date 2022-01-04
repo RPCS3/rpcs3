@@ -32,9 +32,26 @@ namespace vk
 
 		switch (color_format)
 		{
+#ifndef __APPLE__
 		case rsx::surface_color_format::r5g6b5:
 			return std::make_pair(VK_FORMAT_R5G6B5_UNORM_PACK16, vk::default_component_map);
 
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, o_rgb);
+
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, z_rgb);
+#else
+		// assign B8G8R8A8_UNORM to formats that are not supported by Metal
+		case rsx::surface_color_format::r5g6b5:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map);
+
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, o_rgb);
+
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, z_rgb);
+#endif
 		case rsx::surface_color_format::a8r8g8b8:
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map);
 
@@ -58,12 +75,6 @@ namespace vk
 
 		case rsx::surface_color_format::w32z32y32x32:
 			return std::make_pair(VK_FORMAT_R32G32B32A32_SFLOAT, vk::default_component_map);
-
-		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, o_rgb);
-
-		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, z_rgb);
 
 		case rsx::surface_color_format::b8:
 		{
@@ -301,13 +312,7 @@ namespace
 			push_constants[0].size = 20;
 		}
 
-		VkDescriptorSetLayoutCreateInfo infos = {};
-		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		infos.pBindings = bindings.data();
-		infos.bindingCount = static_cast<u32>(bindings.size());
-
-		VkDescriptorSetLayout set_layout;
-		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
+		const auto set_layout = vk::descriptors::create_layout(bindings);
 
 		VkPipelineLayoutCreateInfo layout_info = {};
 		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -426,22 +431,28 @@ VKGSRender::VKGSRender() : GSRender()
 	for (u32 n = 0; n < occlusion_query_count; ++n)
 		m_occlusion_query_data[n].driver_handle = n;
 
-	//Generate frame contexts
+	if (g_cfg.video.precise_zpass_count)
+	{
+		m_occlusion_query_manager->set_control_flags(VK_QUERY_CONTROL_PRECISE_BIT, 0);
+	}
+
+	// Generate frame contexts
+	const u32 max_draw_calls = m_device->get_descriptor_max_draw_calls();
 	const auto& binding_table = m_device->get_pipeline_binding_table();
 	const u32 num_fs_samplers = binding_table.vertex_textures_first_bind_slot - binding_table.textures_first_bind_slot;
 
 	std::vector<VkDescriptorPoolSize> sizes;
-	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * DESCRIPTOR_MAX_DRAW_CALLS });
-	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS });
-	sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , (num_fs_samplers + 4) * DESCRIPTOR_MAX_DRAW_CALLS });
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * max_draw_calls });
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * max_draw_calls });
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , (num_fs_samplers + 4) * max_draw_calls });
 
 	// Conditional rendering predicate slot; refactor to allow skipping this when not needed
-	sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 * DESCRIPTOR_MAX_DRAW_CALLS });
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 * max_draw_calls });
 
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	//VRAM allocation
+	// VRAM allocation
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000, VK_TRUE);
 	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment env buffer");
 	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex env buffer");
@@ -477,7 +488,7 @@ VKGSRender::VKGSRender() : GSRender()
 	{
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_wait_semaphore);
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.acquire_signal_semaphore);
-		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<u32>(sizes.size()), DESCRIPTOR_MAX_DRAW_CALLS, 1);
+		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<u32>(sizes.size()), max_draw_calls, 1);
 	}
 
 	const auto& memory_map = m_device->get_memory_mapping();
@@ -761,9 +772,9 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		}
 
 		bool has_queue_ref = false;
-		if (!is_current_thread())
+		if (!is_current_thread()) [[likely]]
 		{
-			//Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
+			// Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
 			vm::temporary_unlock();
 
 			std::lock_guard lock(m_flush_queue_mutex);
@@ -778,13 +789,13 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 				rsx_log.error("Fault in uninterruptible code!");
 			}
 
-			//Flush primary cb queue to sync pending changes (e.g image transitions!)
+			// Flush primary cb queue to sync pending changes (e.g image transitions!)
 			flush_command_queue();
 		}
 
 		if (has_queue_ref)
 		{
-			//Wait for the RSX thread to process request if it hasn't already
+			// Wait for the RSX thread to process request if it hasn't already
 			m_flush_requests.producer_wait();
 		}
 
@@ -792,7 +803,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 		if (has_queue_ref)
 		{
-			//Release RSX thread
+			// Release RSX thread
 			m_flush_requests.remove_one();
 		}
 	}
@@ -1064,8 +1075,7 @@ void VKGSRender::check_descriptors()
 {
 	// Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
 	const auto required_descriptors = rsx::method_registers.current_draw_clause.pass_count();
-	ensure(required_descriptors < DESCRIPTOR_MAX_DRAW_CALLS);
-	if ((required_descriptors + m_current_frame->used_descriptors) > DESCRIPTOR_MAX_DRAW_CALLS)
+	if (!m_current_frame->descriptor_pool.can_allocate(required_descriptors, m_current_frame->used_descriptors))
 	{
 		// Should hard sync before resetting descriptors for spec compliance
 		flush_command_queue(true);
@@ -1079,19 +1089,7 @@ VkDescriptorSet VKGSRender::allocate_descriptor_set()
 {
 	if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
 	{
-		ensure(m_current_frame->used_descriptors < DESCRIPTOR_MAX_DRAW_CALLS);
-
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.descriptorPool = m_current_frame->descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &descriptor_layouts;
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-		VkDescriptorSet new_descriptor_set;
-		CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
-		m_current_frame->used_descriptors++;
-
-		return new_descriptor_set;
+		return m_current_frame->descriptor_pool.allocate(descriptor_layouts, VK_TRUE, m_current_frame->used_descriptors++);
 	}
 	else
 	{
@@ -1192,14 +1190,14 @@ void VKGSRender::clear_surface(u32 mask)
 	if (skip_current_frame || swapchain_unavailable) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!rsx::method_registers.stencil_mask()) mask &= ~0x2u;
+	if (!rsx::method_registers.stencil_mask()) mask &= ~RSX_GCM_CLEAR_STENCIL_BIT;
 
 	// Ignore invalid clear flags
-	if (!(mask & 0xF3)) return;
+	if (!(mask & RSX_GCM_CLEAR_ANY_MASK)) return;
 
 	u8 ctx = rsx::framebuffer_creation_context::context_draw;
-	if (mask & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
-	if (mask & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
+	if (mask & RSX_GCM_CLEAR_COLOR_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+	if (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 	init_buffers(rsx::framebuffer_creation_context{ctx});
 
 	if (!framebuffer_status_valid) return;
@@ -1227,9 +1225,9 @@ void VKGSRender::clear_surface(u32 mask)
 	bool update_color = false, update_z = false;
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & 0x3)
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
-		if (mask & 0x1)
+		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
@@ -1244,7 +1242,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 		if (is_depth_stencil_format(surface_depth_format))
 		{
-			if (mask & 0x2)
+			if (mask & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
 				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
@@ -1268,13 +1266,14 @@ void VKGSRender::clear_surface(u32 mask)
 				ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
 			{
 				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
-				if (mask == 1)
+				const auto ds_mask = (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
+				if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT && (ds->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT))
 				{
 					// Depth was cleared, initialize stencil
 					depth_stencil_clear_values.depthStencil.stencil = 0xFF;
 					depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				}
-				else
+				else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
 				{
 					// Stencil was cleared, initialize depth
 					depth_stencil_clear_values.depthStencil.depth = 1.f;
@@ -1289,7 +1288,7 @@ void VKGSRender::clear_surface(u32 mask)
 		}
 	}
 
-	if (auto colormask = (mask & 0xF0))
+	if (auto colormask = (mask & RSX_GCM_CLEAR_COLOR_MASK))
 	{
 		if (!m_draw_buffers.empty())
 		{
@@ -1313,7 +1312,7 @@ void VKGSRender::clear_surface(u32 mask)
 			{
 				rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
 				colormask = rsx::get_g8b8_r8g8_colormask(colormask);
-				use_fast_clear = (colormask == (0x10 | 0x20));
+				use_fast_clear = (colormask == (RSX_GCM_CLEAR_RED_BIT | RSX_GCM_CLEAR_GREEN_BIT));
 				break;
 			}
 			case rsx::surface_color_format::a8b8g8r8:
@@ -1326,7 +1325,7 @@ void VKGSRender::clear_surface(u32 mask)
 			}
 			default:
 			{
-				use_fast_clear = (colormask == (0x10 | 0x20 | 0x40 | 0x80));
+				use_fast_clear = (colormask == RSX_GCM_CLEAR_COLOR_MASK);
 				break;
 			}
 			}
@@ -1765,9 +1764,7 @@ bool VKGSRender::load_program()
 	{
 		vk::enter_uninterruptible();
 
-		// Load current program from buffer
-		vertex_program.skip_vertex_input_check = true;
-		fragment_program.texture_state.unnormalized_coords = 0;
+		// Load current program from cache
 		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
 			shadermode != shader_mode::recompiler, true, pipeline_layout);
 
@@ -2353,8 +2350,8 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 	{
 	case vk::rctrl_queue_submit:
 	{
-		auto packet = reinterpret_cast<vk::submit_packet*>(args);
-		vk::queue_submit(packet->queue, &packet->submit_info, packet->pfence, VK_TRUE);
+		const auto packet = reinterpret_cast<vk::submit_packet*>(args);
+		vk::queue_submit(packet);
 		free(packet);
 		break;
 	}
@@ -2437,7 +2434,7 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 	if (data.is_current(m_current_command_buffer))
 		return false;
 
-	u32 oldest = data.indices.front();
+	const u32 oldest = data.indices.front();
 	return m_occlusion_query_manager->check_query_status(oldest);
 }
 
@@ -2468,10 +2465,10 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		// Gather data
 		for (const auto occlusion_id : data.indices)
 		{
-			// We only need one hit
-			if (m_occlusion_query_manager->get_query_result(occlusion_id))
+			query->result += m_occlusion_query_manager->get_query_result(occlusion_id);
+			if (query->result && !g_cfg.video.precise_zpass_count)
 			{
-				query->result = 1;
+				// We only need one hit unless precise zcull is requested
 				break;
 			}
 		}

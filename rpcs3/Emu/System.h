@@ -26,6 +26,7 @@ enum class system_state : u32
 	running,
 	stopped,
 	paused,
+	frozen, // paused but cannot resume
 	ready,
 };
 
@@ -41,6 +42,16 @@ enum class game_boot_result : u32
 	file_creation_error,
 	firmware_missing,
 	unsupported_disc_type
+};
+
+enum class cfg_mode
+{
+	custom,           // Prefer regular custom config. Fall back to global config.
+	custom_selection, // Use user-selected custom config. Fall back to global config.
+	global,           // Use global config.
+	config_override,  // Use config override. This does not use the global VFS settings! Fall back to global config.
+	continuous,       // Use same config as on last boot. Fall back to global config.
+	default_config    // Use the default values of the config entries.
 };
 
 struct EmuCallbacks
@@ -59,13 +70,17 @@ struct EmuCallbacks
 	std::function<void(std::string_view title_id)> init_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<void()> init_gs_render;
+	std::function<std::shared_ptr<class camera_handler_base>()> get_camera_handler;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
+	std::function<std::shared_ptr<class SendMessageDialogBase>()> get_sendmessage_dialog;
+	std::function<std::shared_ptr<class RecvMessageDialogBase>()> get_recvmessage_dialog;
 	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
 	std::function<std::string(localized_string_id, const char*)> get_localized_string;
 	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
+	std::function<void(const std::string&)> play_sound;
 	std::string(*resolve_path)(std::string_view) = nullptr; // Resolve path using Qt
 };
 
@@ -82,7 +97,8 @@ class Emulator final
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
 
-	std::string m_config_override_path;
+	cfg_mode m_config_mode = cfg_mode::custom;
+	std::string m_config_path;
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_title_id;
@@ -94,8 +110,6 @@ class Emulator final
 	std::string m_game_dir{"PS3_GAME"};
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
-
-	bool m_force_global_config = false;
 
 	// This flag should be adjusted before each Stop() or each BootGame() and similar because:
 	// 1. It forces an application to boot immediately by calling Run() in Load().
@@ -183,6 +197,8 @@ public:
 		return m_cat;
 	}
 
+	const std::string& GetFakeCat() const;
+
 	const std::string& GetDir() const
 	{
 		return m_dir;
@@ -214,14 +230,19 @@ public:
 		return m_pause_amend_time;
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
+	const std::string& GetUsedConfig() const
+	{
+		return m_config_path;
+	}
+
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);
 
-	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false, bool is_disc_patch = false);
+	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool is_disc_patch = false);
 	void Run(bool start_playtime);
-	bool Pause();
+	bool Pause(bool freeze_emulation = false);
 	void Resume();
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
@@ -232,14 +253,13 @@ public:
 	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
-	auto GetStatus() const { return m_state.load(); }
+	auto GetStatus() const { system_state state = m_state; return state == system_state::frozen ? system_state::paused : state; }
 
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
 
 	void SetDefaultRenderer(video_renderer renderer) { m_default_renderer = renderer; }
 	void SetDefaultGraphicsAdapter(std::string adapter) { m_default_graphics_adapter = std::move(adapter); }
-	void SetConfigOverride(std::string path) { m_config_override_path = std::move(path); }
 
 	std::string GetFormattedTitle(double fps) const;
 
