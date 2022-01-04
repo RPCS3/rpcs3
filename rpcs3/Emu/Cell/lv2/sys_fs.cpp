@@ -1649,7 +1649,10 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 	case 0xc0000007: // cellFsArcadeHddSerialNumber
 	{
-		break;
+		const auto arg = vm::static_ptr_cast<lv2_file_c000007>(_arg);
+		// TODO populate arg-> unk1+2
+		arg->out_code = CELL_OK;
+		return CELL_OK;
 	}
 
 	case 0xc0000008: // cellFsSetDefaultContainer, cellFsSetIoBuffer, cellFsSetIoBufferFromDefaultContainer
@@ -1657,9 +1660,35 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		break;
 	}
 
-	case 0xc0000015: // Unknown
+	case 0xc0000015: // USB Vid/Pid lookup - Used by arcade games on dev_usbXXX
 	{
-		break;
+		const auto arg = vm::static_ptr_cast<lv2_file_c0000015>(_arg);
+
+		if (arg->size != 0x20u)
+		{
+			sys_fs.error("sys_fs_fcntl(0xc0000015): invalid size (0x%x)", arg->size);
+			break;
+		}
+
+		if (arg->_x4 != 0x10u || arg->_x8 != 0x18u)
+		{
+			sys_fs.error("sys_fs_fcntl(0xc0000015): invalid args (0x%x, 0x%x)", arg->_x4, arg->_x8);
+			break;
+		}
+
+		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
+		if (!vpath.starts_with("/dev_usb"sv))
+		{
+			arg->out_code = CELL_ENOTSUP;
+			break;
+		}
+
+		// TODO hook up to config for dev_usb
+		// arg->vendorID = 0x0000;
+		// arg->productID = 0x0000;
+
+		arg->out_code = CELL_OK;
+		return CELL_OK;
 	}
 
 	case 0xc0000016: // ps2disc_8160A811
@@ -1670,6 +1699,38 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	case 0xc000001a: // cellFsSetDiscReadRetrySetting, 5731DF45
 	{
 		break;
+	}
+
+	case 0xc000001c: // USB Vid/Pid/Serial lookup
+	{
+		const auto arg = vm::static_ptr_cast<lv2_file_c000001c>(_arg);
+
+		if (arg->size != 0x60u)
+		{
+			sys_fs.error("sys_fs_fcntl(0xc000001c): invalid size (0x%x)", arg->size);
+			break;
+		}
+
+		if (arg->_x4 != 0x10u || arg->_x8 != 0x18u)
+		{
+			sys_fs.error("sys_fs_fcntl(0xc000001c): invalid args (0x%x, 0x%x)", arg->_x4, arg->_x8);
+			break;
+		}
+
+		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
+		if (!vpath.starts_with("/dev_usb"sv))
+		{
+			arg->out_code = CELL_ENOTSUP;
+			break;
+		}
+
+		// TODO hook up to config for dev_usb
+		// arg->vendorID = 0x0000;
+		// arg->productID = 0x0000;
+		// arg->serial = "blabla"; // String needs to be encoded to utf-16 BE
+
+		arg->out_code = CELL_OK;
+		return CELL_OK;
 	}
 
 	case 0xc0000021: // 9FDBBA89

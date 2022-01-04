@@ -81,8 +81,8 @@ avconf_manager::avconf_manager()
 			devices[curindex].portType                  = CELL_AUDIO_IN_PORT_USB;
 			devices[curindex].availableModeCount        = 1;
 			devices[curindex].state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
-			devices[curindex].deviceId                  = 0x57A3C0DE;
-			devices[curindex].type                      = 0xC0DE57A3;
+			devices[curindex].deviceId                  = 0x00000001;
+			devices[curindex].type                      = 0x14150000;
 			devices[curindex].availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
 			devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
 			devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
