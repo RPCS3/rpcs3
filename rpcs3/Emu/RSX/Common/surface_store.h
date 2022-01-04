@@ -592,6 +592,115 @@ namespace rsx
 			invalidated_resources.push_back(std::move(storage));
 		}
 
+		int remove_duplicates_fast_impl(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
+		{
+			// Range tests to check for gaps
+			std::list<utils::address_range> m_ranges;
+			bool invalidate_sections = false;
+			int removed_count = 0;
+
+			for (auto it = sections.crbegin(); it != sections.crend(); ++it)
+			{
+				auto this_range = it->surface->get_memory_range();
+				if (invalidate_sections)
+				{
+					if (this_range.inside(range))
+					{
+						invalidate_surface_address(it->base_address, it->is_depth);
+						removed_count++;
+					}
+					continue;
+				}
+
+				if (it->surface->get_rsx_pitch() != it->surface->get_native_pitch() &&
+					it->surface->get_surface_height() != 1)
+				{
+					// Memory gap in descriptor
+					continue;
+				}
+
+				// Insert the range, respecting sort order
+				bool inserted = false;
+				for (auto iter = m_ranges.begin(); iter != m_ranges.end(); ++iter)
+				{
+					if (this_range.start < iter->start)
+					{
+						// This range slots in here. Test ranges after this one to find the end position
+						auto pos = iter;
+						for (auto _p = ++iter; _p != m_ranges.end();)
+						{
+							if (_p->start > (this_range.end + 1))
+							{
+								// Gap
+								break;
+							}
+
+							// Consume
+							this_range.end = std::max(this_range.end, _p->end);
+							_p = m_ranges.erase(_p);
+						}
+
+						m_ranges.insert(pos, this_range);
+						break;
+					}
+				}
+
+				if (!inserted)
+				{
+					m_ranges.push_back(this_range);
+				}
+				else if (m_ranges.size() == 1 && range.inside(m_ranges.front()))
+				{
+					invalidate_sections = true;
+				}
+			}
+
+			return removed_count;
+		}
+
+		void remove_duplicates_fallback_impl(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
+		{
+			// Generic painter's algorithm to detect obsolete sections
+			ensure(range.length() < 64 * 0x100000);
+			std::vector<u8> marker(range.length());
+			std::memset(marker.data(), 0, range.length());
+
+			for (auto it = sections.crbegin(); it != sections.crend(); ++it)
+			{
+				if (!it->surface->get_memory_range().inside(range))
+				{
+					continue;
+				}
+
+				const auto true_pitch_in_bytes = it->surface->get_surface_width(rsx::surface_metrics::bytes);
+				const auto true_height_in_rows = it->surface->get_surface_height(rsx::surface_metrics::samples);
+
+				bool valid = false;
+				auto addr = it->base_address - range.start;
+				auto data = marker.data();
+
+				for (usz row = 0; row < true_height_in_rows; ++row)
+				{
+					for (usz col = 0; col < true_pitch_in_bytes; ++col)
+					{
+						if (const auto loc = col + addr; !data[loc])
+						{
+							valid = true;
+							data[loc] = 1;
+						}
+					}
+
+					addr += true_pitch_in_bytes;
+				}
+
+				if (!valid)
+				{
+					rsx_log.error("Stale surface at address 0x%x will be deleted", it->base_address);
+					invalidate_surface_address(it->base_address, it->is_depth);
+				}
+			}
+		}
+
 	protected:
 		/**
 		* If render target already exists at address, issue state change operation on cmdList.
@@ -923,44 +1032,9 @@ namespace rsx
 
 		void check_for_duplicates(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
 		{
-			// Generic painter's algorithm to detect obsolete sections
-			ensure(range.length() < 64 * 0x100000);
-			std::vector<u8> marker(range.length());
-			std::memset(marker.data(), 0, range.length());
-
-			for (auto it = sections.crbegin(); it != sections.crend(); ++it)
+			if (!remove_duplicates_fast_impl(sections, range))
 			{
-				if (!it->surface->get_memory_range().inside(range))
-				{
-					continue;
-				}
-
-				const auto true_pitch_in_bytes = it->surface->get_surface_width(rsx::surface_metrics::bytes);
-				const auto true_height_in_rows = it->surface->get_surface_height(rsx::surface_metrics::samples);
-
-				bool valid = false;
-				auto addr = it->base_address - range.start;
-				auto data = marker.data();
-
-				for (usz row = 0; row < true_height_in_rows; ++row)
-				{
-					for (usz col = 0; col < true_pitch_in_bytes; ++col)
-					{
-						if (const auto loc = col + addr; !data[loc])
-						{
-							valid = true;
-							data[loc] = 1;
-						}
-					}
-
-					addr += true_pitch_in_bytes;
-				}
-
-				if (!valid)
-				{
-					rsx_log.error("Stale surface at address 0x%x will be deleted", it->base_address);
-					invalidate_surface_address(it->base_address, it->is_depth);
-				}
+				remove_duplicates_fallback_impl(sections, range);
 			}
 		}
 
