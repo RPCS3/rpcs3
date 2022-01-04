@@ -2849,7 +2849,7 @@ void thread_ctrl::set_native_priority(int priority)
 
 	if (int err = pthread_setschedparam(pthread_self(), policy, &param))
 	{
-		sig_log.error("pthraed_setschedparam() failed: %d", err);
+		sig_log.error("pthread_setschedparam() failed: %d", err);
 	}
 #endif
 }

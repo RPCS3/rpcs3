@@ -1196,7 +1196,10 @@ void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 {
 	vm::temporary_unlock(cpu);
 	cpu_counter::remove(&cpu);
-	std::lock_guard{g_mutex}, sleep_unlocked(cpu, timeout);
+	{
+		std::lock_guard lock{g_mutex};
+		sleep_unlocked(cpu, timeout);
+	}
 	g_to_awake.clear();
 }
 
