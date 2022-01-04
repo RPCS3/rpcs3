@@ -1,8 +1,12 @@
 RPCS3
 =====
 
-[![Azure Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build?definitionId=4&branchName=master)
-[![Cirrus CI - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20(FreeBSD)&logo=cirrus-ci)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Cirrus CI (Windows) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28Windows%29&logo=cirrus-ci&task=Cirrus%20Windows)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Cirrus CI (Linux GCC) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28Linux%20GCC%29&logo=cirrus-ci&task=Cirrus%20Linux%20GCC)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Cirrus CI (Linux Clang) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28Linux%20Clang%29&logo=cirrus-ci&task=Cirrus%20Linux%20Clang)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Cirrus CI (FreeBSD) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28FreeBSD%29&logo=cirrus-ci&task=Cirrus%20FreeBSD)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Cirrus CI (macOS) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28macOS%29&logo=cirrus-ci&style=for-the-badge&task=Cirrus%20macOS)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+
 [![RPCS3 discord server](https://img.shields.io/discord/272035812277878785?color=5865F2&label=RPCS3%20Discord&logo=discord&logoColor=white)](https://discord.me/rpcs3)
 
 The world's first free and open-source PlayStation 3 emulator/debugger, written in C++ for Windows and Linux.
