@@ -2,10 +2,22 @@ RPCS3
 =====
 
 [![Cirrus CI (Windows) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28Windows%29&logo=cirrus-ci&task=Cirrus%20Windows)](https://cirrus-ci.com/github/RPCS3/rpcs3)
-[![Cirrus CI (Linux GCC) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28Linux%20GCC%29&logo=cirrus-ci&task=Cirrus%20Linux%20GCC)](https://cirrus-ci.com/github/RPCS3/rpcs3)
-[![Cirrus CI (Linux Clang) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28Linux%20Clang%29&logo=cirrus-ci&task=Cirrus%20Linux%20Clang)](https://cirrus-ci.com/github/RPCS3/rpcs3)
-[![Cirrus CI (FreeBSD) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28FreeBSD%29&logo=cirrus-ci&task=Cirrus%20FreeBSD)](https://cirrus-ci.com/github/RPCS3/rpcs3)
-[![Cirrus CI (macOS) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28macOS%29&logo=cirrus-ci&style=for-the-badge&task=Cirrus%20macOS)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Cirrus CI (Linux GCC) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28Linux%20GCC%29&task=Cirrus%20Linux%20GCC)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Cirrus CI (Linux Clang) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28Linux%20Clang%29&task=Cirrus%20Linux%20Clang)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Cirrus CI (FreeBSD) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28FreeBSD%29&task=Cirrus%20FreeBSD)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+[![Cirrus CI (macOS) - Base Branch Build Status](https://img.shields.io/cirrus/github/RPCS3/rpcs3?label=Cirrus%20CI%20%28macOS%29&task=Cirrus%20macOS)](https://cirrus-ci.com/github/RPCS3/rpcs3)
+
+![GitHub commit activity](https://img.shields.io/github/commit-activity/y/RPCS3/rpcs3?logo=Github&style=flat-square)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/RPCS3/rpcs3?style=flat-square)
+![GitHub contributors](https://img.shields.io/github/contributors/RPCS3/rpcs3?color=lightblue&style=flat-square)
+![GitHub last commit](https://img.shields.io/github/last-commit/RPCS3/rpcs3?color=blue&style=flat-square)
+![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/RPCS3/rpcs3?style=flat-square)
+![GitHub repo size](https://img.shields.io/github/repo-size/RPCS3/rpcs3?style=flat-square)
+
+![GitHub issues](https://img.shields.io/github/issues/RPCS3/rpcs3?color=orange&style=flat-square)
+![GitHub closed issues](https://img.shields.io/github/issues-closed/RPCS3/rpcs3?color=blueviolet&style=flat-square)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/RPCS3/rpcs3?style=flat-square)
+![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/RPCS3/rpcs3?color=yellowgreen&style=flat-square)
 
 [![RPCS3 discord server](https://img.shields.io/discord/272035812277878785?color=5865F2&label=RPCS3%20Discord&logo=discord&logoColor=white)](https://discord.me/rpcs3)
 
