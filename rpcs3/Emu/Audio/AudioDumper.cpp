@@ -4,11 +4,22 @@
 #include "Utilities/date_time.h"
 #include "Emu/System.h"
 
-AudioDumper::AudioDumper(u16 ch, u32 sample_rate, u32 sample_size)
-	: m_header(ch, sample_rate, sample_size)
+AudioDumper::AudioDumper()
 {
-	if (GetCh())
+}
+
+AudioDumper::~AudioDumper()
+{
+	Close();
+}
+
+void AudioDumper::Open(u16 ch, u32 sample_rate, u32 sample_size)
+{
+	Close();
+
+	if (ch)
 	{
+		m_header = WAVHeader(ch, sample_rate, sample_size);
 		std::string path = fs::get_cache_dir() + "audio_";
 		if (const std::string id = Emu.GetTitleID(); !id.empty())
 		{
@@ -20,12 +31,14 @@ AudioDumper::AudioDumper(u16 ch, u32 sample_rate, u32 sample_size)
 	}
 }
 
-AudioDumper::~AudioDumper()
+void AudioDumper::Close()
 {
 	if (GetCh())
 	{
 		m_output.seek(0);
 		m_output.write(m_header); // rewrite file header
+		m_output.close();
+		m_header.FMT.NumChannels = 0;
 	}
 }
 

@@ -131,6 +131,9 @@ add_subdirectory(discord-rpc)
 # Cubeb
 add_subdirectory(cubeb EXCLUDE_FROM_ALL)
 
+# SoundTouch
+add_subdirectory(SoundTouch EXCLUDE_FROM_ALL)
+
 # libevdev
 set(LIBEVDEV_TARGET 3rdparty_dummy_lib)
 if(USE_LIBEVDEV)
@@ -312,3 +315,4 @@ add_library(3rdparty::ffmpeg ALIAS 3rdparty_ffmpeg)
 add_library(3rdparty::glew ALIAS 3rdparty_glew)
 add_library(3rdparty::wolfssl ALIAS wolfssl)
 add_library(3rdparty::libcurl ALIAS libcurl)
+add_library(3rdparty::soundtouch ALIAS soundtouch)

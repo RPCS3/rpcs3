@@ -18,9 +18,6 @@ public:
 
 	std::string_view GetName() const override { return "Cubeb"sv; }
 
-	static const u32 capabilities = 0;
-	u32 GetCapabilities() const override { return capabilities; }
-
 	bool Initialized() override;
 	bool Operational() override;
 

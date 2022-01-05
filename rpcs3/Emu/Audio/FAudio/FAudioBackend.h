@@ -21,9 +21,6 @@ public:
 
 	std::string_view GetName() const override { return "FAudio"sv; }
 
-	static const u32 capabilities = SET_FREQUENCY_RATIO;
-	u32 GetCapabilities() const override { return capabilities; }
-
 	bool Initialized() override;
 	bool Operational() override;
 
@@ -36,8 +33,6 @@ public:
 	void Play() override;
 	void Pause() override;
 	bool IsPlaying() override;
-
-	f32 SetFrequencyRatio(f32 new_ratio) override;
 
 private:
 	static constexpr u32 INTERNAL_BUF_SIZE_MS = 25;

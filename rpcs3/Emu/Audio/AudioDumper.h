@@ -67,8 +67,11 @@ class AudioDumper
 	fs::file m_output{};
 
 public:
-	AudioDumper(u16 ch, u32 sample_rate, u32 sample_size);
+	AudioDumper();
 	~AudioDumper();
+
+	void Open(u16 ch, u32 sample_rate, u32 sample_size);
+	void Close();
 
 	void WriteData(const void* buffer, u32 size);
 	u16 GetCh() const { return m_header.FMT.NumChannels; }
