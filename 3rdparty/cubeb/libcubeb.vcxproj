@@ -19,7 +19,7 @@
     <ClCompile Include="cubeb\src\cubeb_utils.cpp" />
     <ClCompile Include="cubeb\src\cubeb_wasapi.cpp" />
     <ClCompile Include="cubeb\src\cubeb_winmm.c" />
-    <ClCompile Include="cubeb\src\speex\resample.c" />
+    <ClCompile Include="cubeb\subprojects\speex\resample.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cubeb\include\cubeb\cubeb.h" />
@@ -36,13 +36,13 @@
     <ClInclude Include="cubeb\src\cubeb_strings.h" />
     <ClInclude Include="cubeb\src\cubeb_utils.h" />
     <ClInclude Include="cubeb\src\cubeb_utils_win.h" />
-    <ClInclude Include="cubeb\src\speex\arch.h" />
-    <ClInclude Include="cubeb\src\speex\fixed_generic.h" />
-    <ClInclude Include="cubeb\src\speex\resample_neon.h" />
-    <ClInclude Include="cubeb\src\speex\resample_sse.h" />
-    <ClInclude Include="cubeb\src\speex\speex_config_types.h" />
-    <ClInclude Include="cubeb\src\speex\speex_resampler.h" />
-    <ClInclude Include="cubeb\src\speex\stack_alloc.h" />
+    <ClInclude Include="cubeb\subprojects\speex\arch.h" />
+    <ClInclude Include="cubeb\subprojects\speex\fixed_generic.h" />
+    <ClInclude Include="cubeb\subprojects\speex\resample_neon.h" />
+    <ClInclude Include="cubeb\subprojects\speex\resample_sse.h" />
+    <ClInclude Include="cubeb\subprojects\speex\speex_config_types.h" />
+    <ClInclude Include="cubeb\subprojects\speex\speex_resampler.h" />
+    <ClInclude Include="cubeb\subprojects\speex\stack_alloc.h" />
     <ClInclude Include="extra\cubeb_export.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -77,8 +77,8 @@
     <ClCompile>
       <WarningLevel>TurnOffAllWarnings</WarningLevel>
       <SDLCheck>false</SDLCheck>
-      <PreprocessorDefinitions>OUTSIDE_SPEEX;RANDOM_PREFIX=speex;FLOATING_POINT;EXPORT=;USE_WASAPI;USE_WINMM;CUBEB_WASAPI_USE_IAUDIOSTREAMVOLUME;_HAS_DEPRECATED_RESULT_OF;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>./cubeb/src/speex/;./extra/;./cubeb/src/;./cubeb/include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>OUTSIDE_SPEEX;RANDOM_PREFIX=speex;FLOATING_POINT;_USE_SSE;_USE_SSE2;EXPORT=;USE_WASAPI;USE_WINMM;CUBEB_WASAPI_USE_IAUDIOSTREAMVOLUME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>./cubeb/subprojects/;./extra/;./cubeb/src/;./cubeb/include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
