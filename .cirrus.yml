@@ -4,7 +4,7 @@ env:
   SYSTEM_PULLREQUEST_SOURCEBRANCH: $CIRRUS_BRANCH
   SYSTEM_PULLREQUEST_PULLREQUESTID: $CIRRUS_PR
   BUILD_SOURCEVERSION: $CIRRUS_CHANGE_IN_REPO
-#  RPCS3_TOKEN: ENCRYPTED[13a0f18de9285e6c880e3aecbb54258245a74872af7d0fcb92447fa1200ceb6a4dc8acc880ddbf5e653d46336563ca72] # Replace this when we're using Cirrus for master releases!!
+  RPCS3_TOKEN: ENCRYPTED[!ae41646bdbbd52b490521e11e95583983708ac43befebf6b556767cac37bd8be65fb2a51ef2f215befbd487c24c3e67a!]
 
 windows_task:
   matrix:
@@ -52,11 +52,11 @@ windows_task:
   artifacts:
     name: Artifact
     path: "*.7z*"
-#  push_script: |
-#    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
-#      source './.ci/export-cirrus-vars.sh'
-#      './.ci/github-upload.sh'
-#    fi;
+  push_script: |
+    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
+      source './.ci/export-cirrus-vars.sh'
+      './.ci/github-upload.sh'
+    fi;
 
 linux_task:
   container:
@@ -65,6 +65,7 @@ linux_task:
     memory: 16G
   env:
     BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}/artifacts
+    ARTDIR: ${CIRRUS_WORKING_DIR}/artifacts/
     CCACHE_DIR: "/tmp/ccache_dir"
     CCACHE_MAXSIZE: 300M
     CI_HAS_ARTIFACTS: true
@@ -72,7 +73,6 @@ linux_task:
     UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-linux"
     DEPLOY_APPIMAGE: true
     APPDIR: "./appdir"
-    ARTDIR: ${CIRRUS_WORKING_DIR}/artifacts/
     RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
   ccache_cache:
     folder: "/tmp/ccache_dir"
@@ -92,10 +92,16 @@ linux_task:
   artifacts:
     name: Artifact
     path: "artifacts/*"
-#  push_script: |
-#    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ] && [ "$COMPILER" = "gcc" ]; then
-#      '.ci/github-upload.sh'
-#    fi;
+  push_script: |
+    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ] && [ "$COMPILER" = "gcc" ]; then
+      COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ./rpcs3/rpcs3_version.cpp)
+      COMM_COUNT=$(git rev-list --count HEAD)
+      COMM_HASH=$(git rev-parse --short=8 HEAD)
+
+      export AVVER="${COMM_TAG}-${COMM_COUNT}"
+
+      .ci/github-upload.sh
+    fi;
 
 freebsd_task:
   matrix:
@@ -124,10 +130,19 @@ macos_task:
         - mkdir artifacts
         - ".ci/build-mac.sh"
   env:
+    BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}/artifacts
     ARTDIR: ${CIRRUS_WORKING_DIR}/artifacts/
     CCACHE_DIR: "/tmp/ccache_dir"
     CCACHE_MAXSIZE: 300M
     CI_HAS_ARTIFACTS: true
+    UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
+    UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-mac"
+    RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
   artifacts:
     name: Artifact
     path: "artifacts/rpcs3-*_macos.*"
+  push_script: |
+    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
+      source './.ci/export-cirrus-vars.sh'
+      .ci/github-upload.sh
+    fi;

@@ -114,6 +114,6 @@ fi
 # BUILD is the name of the release artifact
 # AVVER is used for GitHub releases, it is the version number.
 BRANCH="${REPO_NAME}/${REPO_BRANCH}"
-echo "BRANCH=$BRANCH" > .ci/azure-vars.env
-echo "BUILD=$BUILD" >> .ci/azure-vars.env
-echo "AVVER=$AVVER" >> .ci/azure-vars.env
+echo "BRANCH=$BRANCH" > .ci/ci-vars.env
+echo "BUILD=$BUILD" >> .ci/ci-vars.env
+echo "AVVER=$AVVER" >> .ci/ci-vars.env
