@@ -210,26 +210,6 @@ bool XAudio2Backend::IsPlaying()
 	return m_playing;
 }
 
-f32 XAudio2Backend::SetFrequencyRatio(f32 new_ratio)
-{
-	if (m_source_voice == nullptr)
-	{
-		XAudio.error("SetFrequencyRatio() called uninitialized");
-		return 1.0f;
-	}
-
-	new_ratio = std::clamp(new_ratio, XAUDIO2_MIN_FREQ_RATIO, XAUDIO2_DEFAULT_FREQ_RATIO);
-
-	const HRESULT hr = m_source_voice->SetFrequencyRatio(new_ratio);
-	if (FAILED(hr))
-	{
-		XAudio.error("SetFrequencyRatio() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		return 1.0f;
-	}
-
-	return new_ratio;
-}
-
 void XAudio2Backend::SetWriteCallback(std::function<u32(u32, void *)> cb)
 {
 	std::lock_guard lock(m_cb_mutex);

@@ -6,6 +6,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/AudioDumper.h"
+#include "Emu/Audio/audio_resampler.h"
 #include "Emu/system_config_types.h"
 
 struct lv2_event_queue;
@@ -204,6 +205,7 @@ struct cell_audio_config
 		bool enable_time_stretching = false;
 		s64 time_stretching_threshold = 0;
 		bool convert_to_s16 = false;
+		bool dump_to_file = false;
 		audio_downmix downmix = audio_downmix::downmix_to_stereo;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
@@ -236,9 +238,9 @@ struct cell_audio_config
 	u32 desired_full_buffers = 0;
 	u32 num_allocated_buffers = 0; // number of ringbuffer buffers
 
-	const f32 period_average_alpha = 0.02f; // alpha factor for the m_average_period rolling average
+	static constexpr f32 period_average_alpha = 0.02f; // alpha factor for the m_average_period rolling average
 
-	const s64 period_comparison_margin = 250; // when comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
+	static constexpr s64 period_comparison_margin = 250; // when comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
 
 	u64 fully_untouched_timeout = 0; // timeout if the game has not touched any audio buffer yet
 	u64 partially_untouched_timeout = 0; // timeout if the game has not touched all audio buffers yet
@@ -251,8 +253,8 @@ struct cell_audio_config
 	bool time_stretching_enabled = false;
 
 	f32 time_stretching_threshold = 0.0f; // we only apply time stretching below this buffer fill rate (adjusted for average period)
-	const f32 time_stretching_step = 0.1f; // will only reduce/increase the frequency ratio in steps of at least this value
-	const f32 time_stretching_scale = 0.9f;
+	static constexpr f32 time_stretching_step = 0.1f; // will only reduce/increase the frequency ratio in steps of at least this value
+	static constexpr f32 time_stretching_scale = 0.9f;
 
 	/*
 	 * Constructor
@@ -274,24 +276,22 @@ private:
 
 	const u32 buf_sz;
 
-	std::unique_ptr<AudioDumper> m_dump;
+	AudioDumper m_dump{};
 
 	std::unique_ptr<float[]> buffer[MAX_AUDIO_BUFFERS];
-	const float silence_buffer[u32{AUDIO_MAX_CHANNELS_COUNT} * u32{AUDIO_BUFFER_SAMPLES}] = { 0 };
 
 	simple_ringbuf cb_ringbuf{};
+	audio_resampler resampler{};
 
 	atomic_t<bool> backend_active = false;
 	bool playing = false;
-	bool emu_paused = false;
 
 	u64 update_timestamp = 0;
 	u64 play_timestamp = 0;
 
 	u64 last_remainder = 0;
-	u64 enqueued_samples = 0;
 
-	f32 frequency_ratio = 1.0f;
+	f32 frequency_ratio = RESAMPLER_MAX_FREQ_VAL;
 
 	u32 cur_pos = 0;
 
@@ -300,6 +300,7 @@ private:
 		return backend->IsPlaying();
 	}
 
+	void commit_data(f32* buf, u32 sample_cnt);
 	u32 backend_write_callback(u32 size, void *buf);
 
 public:
@@ -307,38 +308,19 @@ public:
 	~audio_ringbuffer();
 
 	void play();
-	void enqueue(const float* in_buffer = nullptr);
 	void flush();
-	u64 update();
-	void enqueue_silence(u32 buf_count = 1);
+	u64 update(bool emu_is_paused);
+	void enqueue(bool enqueue_silence = false, bool force = false);
+	void enqueue_silence(u32 buf_count = 1, bool force = false);
+	void process_resampled_data();
 	f32 set_frequency_ratio(f32 new_ratio);
 
-	float* get_buffer(u32 num) const
-	{
-		AUDIT(num < cfg.num_allocated_buffers);
-		AUDIT(buffer[num].get() != nullptr);
-		return buffer[num].get();
-	}
-
+	float* get_buffer(u32 num) const;
 	static u64 get_timestamp();
+	float* get_current_buffer() const;
 
-	float* get_current_buffer() const
-	{
-		return get_buffer(cur_pos);
-	}
-
-	u64 get_enqueued_samples() const
-	{
-		AUDIT(cfg.buffering_enabled);
-		return enqueued_samples;
-	}
-
-	u64 get_enqueued_playtime(bool raw = false) const
-	{
-		AUDIT(cfg.buffering_enabled);
-		u64 sampling_rate = raw ? cfg.audio_sampling_rate : static_cast<u64>(cfg.audio_sampling_rate * frequency_ratio);
-		return enqueued_samples * 1'000'000 / sampling_rate;
-	}
+	u64 get_enqueued_samples() const;
+	u64 get_enqueued_playtime() const;
 
 	bool is_playing() const
 	{
@@ -348,11 +330,6 @@ public:
 	f32 get_frequency_ratio() const
 	{
 		return frequency_ratio;
-	}
-
-	u32 has_capability(u32 cap) const
-	{
-		return backend->has_capability(cap);
 	}
 
 	bool get_operational_status() const
@@ -373,7 +350,7 @@ private:
 	std::unique_ptr<audio_ringbuffer> ringbuffer;
 
 	void reset_ports(s32 offset = 0);
-	void advance(u64 timestamp, bool reset = true);
+	void advance(u64 timestamp);
 	std::tuple<u32, u32, u32, u32> count_port_buffer_tags();
 	template <audio_downmix downmix>
 	void mix(float *out_buffer, s32 offset = 0);
@@ -414,17 +391,13 @@ public:
 	u64 m_dynamic_period = 0;
 	f32 m_average_playtime = 0.0f;
 	bool m_backend_failed = false;
+	bool m_audio_should_restart = false;
 
 	cell_audio_thread();
 
 	void operator()();
 
 	audio_port* open_port();
-
-	bool has_capability(u32 cap) const
-	{
-		return ringbuffer->has_capability(cap);
-	}
 
 	static constexpr auto thread_name = "cellAudio Thread"sv;
 };

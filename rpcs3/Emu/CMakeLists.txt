@@ -114,6 +114,7 @@ target_sources(rpcs3_emu PRIVATE
 # Audio
 target_sources(rpcs3_emu PRIVATE
     Audio/audio_device_listener.cpp
+    Audio/audio_resampler.cpp
     Audio/AudioDumper.cpp
     Audio/AudioBackend.cpp
     Audio/Cubeb/CubebBackend.cpp
@@ -143,6 +144,10 @@ target_link_libraries(rpcs3_emu
 target_link_libraries(rpcs3_emu
     PUBLIC
         3rdparty::cubeb)
+
+target_link_libraries(rpcs3_emu
+    PUBLIC
+        3rdparty::soundtouch)
 
 # Cell
 target_sources(rpcs3_emu PRIVATE

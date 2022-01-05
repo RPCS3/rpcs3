@@ -72,3 +72,7 @@
 	path = 3rdparty/cubeb/cubeb
 	url = ../../mozilla/cubeb.git
 	ignore = dirty
+[submodule "3rdparty/SoundTouch/soundtouch"]
+	path = 3rdparty/SoundTouch/soundtouch
+	url = ../../RPCS3/soundtouch.git
+	ignore = dirty
