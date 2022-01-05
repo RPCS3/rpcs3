@@ -662,35 +662,97 @@ namespace rsx
 		{
 			// Generic painter's algorithm to detect obsolete sections
 			ensure(range.length() < 64 * 0x100000);
-			std::vector<u8> marker(range.length());
-			std::memset(marker.data(), 0, range.length());
+			std::vector<u8> marker(range.length(), 0);
+
+			auto compare_and_tag_row = [&](u32 offset, u32 length) -> bool
+			{
+				bool valid = false;
+				for (u32 i = 0; i < (length / 8); ++i, offset += 8, length -= 8)
+				{
+					auto dest = reinterpret_cast<u64*>(marker.data() + offset);
+					valid |= (*dest != umax);
+					*dest = umax;
+				}
+
+				if (length >= 4)
+				{
+					auto dest = reinterpret_cast<u32*>(marker.data() + offset);
+					valid |= (*dest != umax);
+					*dest = umax;
+
+					offset += 4;
+					length -= 4;
+				}
+
+				if (length >= 2)
+				{
+					auto dest = reinterpret_cast<u16*>(marker.data() + offset);
+					valid |= (*dest != umax);
+					*dest = umax;
+
+					offset += 2;
+					length -= 2;
+				}
+
+				if (length)
+				{
+					auto dest = (marker.data() + offset);
+					valid |= (*dest != umax);
+					*dest = umax;
+				}
+
+				return valid;
+			};
 
 			for (auto it = sections.crbegin(); it != sections.crend(); ++it)
 			{
-				if (!it->surface->get_memory_range().inside(range))
-				{
-					continue;
-				}
+				auto this_range = it->surface->get_memory_range();
+				ensure(this_range.overlaps(range));
 
-				const auto true_pitch_in_bytes = it->surface->get_surface_width(rsx::surface_metrics::bytes);
-				const auto true_height_in_rows = it->surface->get_surface_height(rsx::surface_metrics::samples);
-
+				const auto native_pitch = it->surface->get_surface_width(rsx::surface_metrics::bytes);
+				const auto rsx_pitch = it->surface->get_rsx_pitch();
+				auto num_rows = it->surface->get_surface_height(rsx::surface_metrics::samples);
 				bool valid = false;
-				auto addr = it->base_address - range.start;
-				auto data = marker.data();
 
-				for (usz row = 0; row < true_height_in_rows; ++row)
+				if (this_range.start < range.start)
 				{
-					for (usz col = 0; col < true_pitch_in_bytes; ++col)
+					// Starts outside bounds
+					const auto internal_offset = (range.start - this_range.start);
+					const auto row_num = internal_offset / rsx_pitch;
+					const auto row_offset = internal_offset % rsx_pitch;
+
+					// This section is unconditionally valid
+					valid = true;
+
+					if (row_offset < native_pitch)
 					{
-						if (const auto loc = col + addr; !data[loc])
-						{
-							valid = true;
-							data[loc] = 1;
-						}
+						compare_and_tag_row(0, native_pitch - row_offset);
 					}
 
-					addr += true_pitch_in_bytes;
+					// Jump to next row...
+					this_range.start = this_range.start + (row_num + 1) * rsx_pitch;
+				}
+
+				if (this_range.end > range.end)
+				{
+					// Unconditionally valid
+					valid = true;
+					this_range.end = range.end;
+				}
+
+				if (valid)
+				{
+					if (this_range.start >= this_range.end)
+					{
+						continue;
+					}
+
+					num_rows = utils::aligned_div(this_range.length(), rsx_pitch);
+				}
+
+				for (u32 row = 0, offset = (this_range.start - range.start); row < num_rows; ++row, offset += rsx_pitch)
+				{
+					valid |= compare_and_tag_row(offset, std::min<u32>(native_pitch, (this_range.end - offset + 1)));
 				}
 
 				if (!valid)
