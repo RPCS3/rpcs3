@@ -58,7 +58,7 @@ ninja; build_status=$?;
 
 cd ..
 
-shellcheck .ci/*.sh
+shellcheck .ci/build-linux.sh .ci/deploy-linux.sh .ci/export-azure-vars.sh .ci/export-cirrus-vars.sh .ci/github-upload.sh
 
 # If it compiled succesfully let's deploy.
 # Azure and Cirrus publish PRs as artifacts only.
