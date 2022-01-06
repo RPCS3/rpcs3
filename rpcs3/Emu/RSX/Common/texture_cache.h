@@ -1875,23 +1875,45 @@ namespace rsx
 						if (result_is_valid)
 						{
 							// Check for possible duplicates
-							usz max_safe_sections = u32{umax};
+							usz max_overdraw_ratio = u32{ umax };
+							usz max_safe_sections = u32{ umax };
+
 							switch (result.external_subresource_desc.op)
 							{
 							case deferred_request_command::atlas_gather:
-								max_safe_sections = 8 + 2 * attr.mipmaps; break;
+								max_overdraw_ratio = 150;
+								max_safe_sections = 8 + 2 * attr.mipmaps;
+								break;
 							case deferred_request_command::cubemap_gather:
-								max_safe_sections = 6 * 2 * attr.mipmaps; break;
+								max_overdraw_ratio = 150;
+								max_safe_sections = 6 * 2 * attr.mipmaps;
+								break;
 							case deferred_request_command::_3d_gather:
-								max_safe_sections = (attr.depth * attr.mipmaps * 150) / 100; break;
+								// 3D gather can have very many input sections, try to keep section count low
+								max_overdraw_ratio = 125;
+								max_safe_sections = (attr.depth * attr.mipmaps * 110) / 100;
+								break;
 							default:
 								break;
 							}
 
 							if (overlapping_fbos.size() > max_safe_sections)
 							{
-								rsx_log.error("[Performance warning] Texture gather routine encountered too many objects!");
-								m_rtts.check_for_duplicates(overlapping_fbos, memory_range);
+								// Are we really over-budget?
+								u32 coverage_size = 0;
+								for (const auto& section : overlapping_fbos)
+								{
+									const auto area = section.surface->get_native_pitch() * section.surface->get_surface_height(rsx::surface_metrics::bytes);
+									coverage_size += area;
+								}
+
+								if (const auto coverage_ratio = (coverage_size * 100ull) / memory_range.length();
+									coverage_ratio > max_overdraw_ratio)
+								{
+									rsx_log.error("[Performance warning] Texture gather routine encountered too many objects! Operation=%d, Mipmaps=%d, Depth=%d, Sections=%zu, Ratio=%llu%",
+										static_cast<int>(result.external_subresource_desc.op), attr.mipmaps, attr.depth, overlapping_fbos.size(), coverage_ratio);
+									m_rtts.check_for_duplicates(overlapping_fbos, memory_range);
+								}
 							}
 
 							// Optionally disallow caching if resource is being written to as it is being read from
