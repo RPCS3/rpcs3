@@ -17,7 +17,6 @@ git submodule update --init --recursive --depth 1
 
 # 3rdparty fixes
 ln -s "$VULKAN_SDK/lib/libMoltenVK.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
-sed -i '' "s/if(APPLE)/if(CMAKE_C_COMPILER_ID MATCHES \"AppleClang\")/g" 3rdparty/wolfssl/wolfssl/CMakeLists.txt
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
 
 cd ..
