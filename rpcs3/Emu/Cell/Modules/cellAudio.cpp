@@ -305,7 +305,7 @@ u64 audio_ringbuffer::update()
 	// Calculate how many audio samples have played since last time
 	if (cfg.buffering_enabled && (playing || new_playing))
 	{
-		enqueued_samples = cb_ringbuf.get_used_size() / cfg.audio_sample_size;
+		enqueued_samples = cb_ringbuf.get_used_size() / (cfg.audio_sample_size * cfg.audio_channels);
 	}
 
 	// Update playing state
