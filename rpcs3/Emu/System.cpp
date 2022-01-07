@@ -347,6 +347,12 @@ void Emulator::Init(bool add_only)
 		}
 	}
 
+	if (is_exitspawn)
+	{
+		// Actions not taken during exitspawn
+		return;
+	}
+
 	// Fixup savedata
 	for (const auto& entry : fs::dir(save_path))
 	{
@@ -380,15 +386,29 @@ void Emulator::Init(bool add_only)
 	}
 
 	// Limit cache size
-	if (!is_exitspawn && g_cfg.vfs.limit_cache_size)
+	if (g_cfg.vfs.limit_cache_size)
 	{
 		rpcs3::cache::limit_cache_size();
 	}
 
 	// Wipe clean VSH's temporary directory of choice
-	if (g_cfg.vfs.empty_hdd0_tmp && !is_exitspawn && !fs::remove_all(dev_hdd0 + "tmp/", false, true))
+	if (g_cfg.vfs.empty_hdd0_tmp && !fs::remove_all(dev_hdd0 + "tmp/", false, true))
 	{
 		sys_log.error("Could not clean /dev_hdd0/tmp/ (%s)", fs::g_tls_error);
+	}
+
+	// Remove temporary game data that would have been removed when cellGame has been properly shut
+	for (const auto& entry : fs::dir(dev_hdd0 + "game/"))
+	{
+		if (entry.name.starts_with("_GDATA_") && fs::is_dir(dev_hdd0 + "game/" + entry.name + "/USRDIR/"))
+		{
+			const std::string target = dev_hdd0 + "game/" + entry.name;
+
+			if (!fs::remove_all(target, true, true))
+			{
+				sys_log.error("Could not clean \"%s\" (%s)", target, fs::g_tls_error);
+			}
+		}
 	}
 }
 
