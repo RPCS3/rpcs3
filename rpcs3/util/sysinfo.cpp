@@ -356,8 +356,7 @@ std::string utils::get_OS_version()
 	const int minorVersion = Darwin_Version::getNSminorVersion();
 	const int patchVersion = Darwin_Version::getNSpatchVersion();
 
-	fmt::append(output, "Operating system: macOS, Version %i.%i.%i", majorVersion, minorVersion, patchVersion);
-
+	fmt::append(output, "Operating system: macOS, Version: %i.%i.%i", majorVersion, minorVersion, patchVersion);
 #else
 	struct utsname details = {};
 
