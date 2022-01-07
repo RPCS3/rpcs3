@@ -42,7 +42,7 @@
 /bin/*
 
 # Scripts
-!/bin/Increase Maxfiles.app/
+!/bin_mac/Increase Maxfiles.app/
 
 # Audio DLLs
 !/bin/soft_oal.dll
