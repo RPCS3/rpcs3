@@ -204,6 +204,8 @@ void Emulator::Init(bool add_only)
 		sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
 	}
 
+	const bool is_exitspawn = m_config_mode == cfg_mode::continuous;
+
 	// Load config file
 	if (m_config_mode == cfg_mode::config_override)
 	{
@@ -378,7 +380,7 @@ void Emulator::Init(bool add_only)
 	}
 
 	// Limit cache size
-	if (g_cfg.vfs.limit_cache_size)
+	if (!is_exitspawn && g_cfg.vfs.limit_cache_size)
 		rpcs3::cache::limit_cache_size();
 }
 
