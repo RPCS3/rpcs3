@@ -47,14 +47,16 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 
 # workaround for some games (force RPCS3 to run in Terminal)
 mv "rpcs3.app/Contents/MacOS/rpcs3" "rpcs3.app/Contents/MacOS/rpcs3-bin"
-echo "#!/bin/bash" > "rpcs3.app/Contents/MacOS/rpcs3"
-echo "" >> "rpcs3.app/Contents/MacOS/rpcs3"
-echo "if [ -d /System/Applications/Utilities/Terminal.app ]" >> "rpcs3.app/Contents/MacOS/rpcs3"
-echo "then" >> "rpcs3.app/Contents/MacOS/rpcs3"
-echo "    open /System/Applications/Utilities/Terminal.app \"\$(dirname \$0)/rpcs3-bin\"" >> "rpcs3.app/Contents/MacOS/rpcs3"
-echo "else" >> "rpcs3.app/Contents/MacOS/rpcs3"
-echo "    open /Applications/Utilities/Terminal.app \"\$(dirname \$0)/rpcs3-bin\"" >> "rpcs3.app/Contents/MacOS/rpcs3"
-echo "fi" >> "rpcs3.app/Contents/MacOS/rpcs3"
+{
+  echo "#!/bin/bash"
+  echo ""
+  echo "if [ -d /System/Applications/Utilities/Terminal.app ]"
+  echo "then"
+  echo "    open /System/Applications/Utilities/Terminal.app \"\$(dirname \$0)/rpcs3-bin\""
+  echo "else"
+  echo "    open /Applications/Utilities/Terminal.app \"\$(dirname \$0)/rpcs3-bin\""
+  echo "fi"
+} > "rpcs3.app/Contents/MacOS/rpcs3"
 chmod +x "rpcs3.app/Contents/MacOS/rpcs3"
 
 mv rpcs3.app RPCS3_.app
