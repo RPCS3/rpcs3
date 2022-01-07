@@ -38,7 +38,10 @@
 #include <QMessageBox>
 
 #include <clocale>
+
+#ifndef _WIN32
 #include <sys/resource.h>
+#endif
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
@@ -107,6 +110,7 @@ bool gui_application::Init()
 		welcome->exec();
 	}
 
+#ifndef _WIN32
 	//Check maxfiles
 	struct rlimit limits;
 	getrlimit(RLIMIT_NOFILE, &limits);
@@ -120,6 +124,7 @@ bool gui_application::Init()
 								"Please increase the limit before running RPCS3."),
 							 QMessageBox::Ok, QMessageBox::NoButton);
 	}
+#endif
 
 	if (m_main_window && !m_main_window->Init(m_with_cli_boot))
 	{
