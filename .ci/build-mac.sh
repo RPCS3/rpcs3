@@ -47,16 +47,16 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 
 # workaround for some games (force RPCS3 to run in Terminal)
 mv "rpcs3.app/Contents/MacOS/rpcs3" "rpcs3.app/Contents/MacOS/rpcs3-bin"
-{
-  echo "#!/bin/bash"
-  echo ""
-  echo "if [ -d /System/Applications/Utilities/Terminal.app ]"
-  echo "then"
-  echo "    open /System/Applications/Utilities/Terminal.app \"\$(dirname \$0)/rpcs3-bin\""
-  echo "else"
-  echo "    open /Applications/Utilities/Terminal.app \"\$(dirname \$0)/rpcs3-bin\""
-  echo "fi"
-} > "rpcs3.app/Contents/MacOS/rpcs3"
+cat <<EOT > "rpcs3.app/Contents/MacOS/rpcs3"
+#!/bin/bash
+
+if [ -d /System/Applications/Utilities/Terminal.app ]
+then
+    open /System/Applications/Utilities/Terminal.app "$(dirname $0)/rpcs3-bin"
+else
+    open /Applications/Utilities/Terminal.app "$(dirname $0)/rpcs3-bin"
+fi
+EOT
 chmod +x "rpcs3.app/Contents/MacOS/rpcs3"
 
 mv rpcs3.app RPCS3_.app
