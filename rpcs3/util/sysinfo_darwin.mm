@@ -1,4 +1,3 @@
-#ifdef __APPLE__
 #import <Foundation/Foundation.h>
 
 namespace Darwin_Version
@@ -20,4 +19,3 @@ namespace Darwin_Version
         return osver.patchVersion;
     }
 }
-#endif

@@ -42,7 +42,6 @@ target_sources(rpcs3_emu PRIVATE
     ../util/yaml.cpp
     ../util/vm_native.cpp
     ../util/dyn_lib.cpp
-    ../util/sysinfo_darwin.mm
     ../util/sysinfo.cpp
     ../util/cpu_stats.cpp
     ../../Utilities/bin_patch.cpp
@@ -60,6 +59,11 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/Thread.cpp
     ../../Utilities/version.cpp
 )
+if(APPLE)
+	target_sources(rpcs3_emu PRIVATE
+	    ../util/sysinfo_darwin.mm
+	)
+endif()
 
 target_include_directories(rpcs3_emu PUBLIC "${CMAKE_SOURCE_DIR}")
 
