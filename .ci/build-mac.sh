@@ -52,9 +52,9 @@ cat <<EOT > "rpcs3.app/Contents/MacOS/rpcs3"
 
 if [ -d /System/Applications/Utilities/Terminal.app ]
 then
-    open /System/Applications/Utilities/Terminal.app "$(dirname \"$0\")/rpcs3-bin"
+    open /System/Applications/Utilities/Terminal.app "$(dirname \"\$0\")/rpcs3-bin"
 else
-    open /Applications/Utilities/Terminal.app "$(dirname \"$0\")/rpcs3-bin"
+    open /Applications/Utilities/Terminal.app "$(dirname \"\$0\")/rpcs3-bin"
 fi
 EOT
 chmod +x "rpcs3.app/Contents/MacOS/rpcs3"
