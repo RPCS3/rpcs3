@@ -41,6 +41,9 @@
 !/bin
 /bin/*
 
+# Scripts
+!/bin/Increase Maxfiles.app/
+
 # Audio DLLs
 !/bin/soft_oal.dll
 !/bin/xaudio2_9redist.dll

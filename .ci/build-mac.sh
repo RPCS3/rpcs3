@@ -45,19 +45,19 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Plugins/platforminputcontexts" \
 "rpcs3.app/Contents/Plugins/virtualkeyboard"
 
-# workaround for some games (force RPCS3 to run in Terminal)
-mv "rpcs3.app/Contents/MacOS/rpcs3" "rpcs3.app/Contents/MacOS/rpcs3-bin"
-cat <<EOT > "rpcs3.app/Contents/MacOS/rpcs3"
-#!/bin/bash
-
-if [ -d /System/Applications/Utilities/Terminal.app ]
-then
-    open /System/Applications/Utilities/Terminal.app "\$(dirname \$0)/rpcs3-bin"
-else
-    open /Applications/Utilities/Terminal.app "\$(dirname \$0)/rpcs3-bin"
-fi
-EOT
-chmod +x "rpcs3.app/Contents/MacOS/rpcs3"
+# no-root workaround for file size limit
+#mv "rpcs3.app/Contents/MacOS/rpcs3" "rpcs3.app/Contents/MacOS/rpcs3-bin"
+#cat <<EOT > "rpcs3.app/Contents/MacOS/rpcs3"
+##!/bin/bash
+#
+#if [ -d /System/Applications/Utilities/Terminal.app ]
+#then
+#    open /System/Applications/Utilities/Terminal.app "\$(dirname \$0)/rpcs3-bin"
+#else
+#    open /Applications/Utilities/Terminal.app "\$(dirname \$0)/rpcs3-bin"
+#fi
+#EOT
+#chmod +x "rpcs3.app/Contents/MacOS/rpcs3"
 
 mv rpcs3.app RPCS3_.app
 mv RPCS3_.app RPCS3.app
@@ -70,9 +70,11 @@ create-dmg --volname RPCS3 \
 --window-size 800 400 \
 --icon-size 100 \
 --icon rpcs3.app 200 190 \
---add-file Quickstart.url Quickstart.url 400 20 \
+--add-file Quickstart.url Quickstart.url 200 20 \
+--add-file "../../rpcs3/bin/Increase Maxfiles.app" "Increase Maxfiles.app" 600 20 \
 --hide-extension rpcs3.app \
 --hide-extension Quickstart.url \
+--hide-extension "Increase Maxfiles.app" \
 --app-drop-link 600 185 \
 --skip-jenkins \
 "$ARTDIR/rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_macos.dmg" \
