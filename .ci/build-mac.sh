@@ -71,7 +71,7 @@ create-dmg --volname RPCS3 \
 --icon-size 100 \
 --icon rpcs3.app 200 190 \
 --add-file Quickstart.url Quickstart.url 200 20 \
---add-file "Increase Maxfiles.app" "../../rpcs3/bin/Increase Maxfiles.app" 600 20 \
+--add-file "Increase Maxfiles.app" "../../cirrus-ci-build/bin/Increase Maxfiles.app" 600 20 \
 --hide-extension rpcs3.app \
 --hide-extension Quickstart.url \
 --hide-extension "Increase Maxfiles.app" \
