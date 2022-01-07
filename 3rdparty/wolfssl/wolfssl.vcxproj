@@ -105,6 +105,7 @@
     <ClCompile Include="wolfssl\wolfcrypt\src\hmac.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\idea.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\integer.c" />
+    <ClCompile Include="wolfssl\wolfcrypt\src\kdf.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\logging.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\md2.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\md4.c" />
