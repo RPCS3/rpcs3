@@ -381,7 +381,15 @@ void Emulator::Init(bool add_only)
 
 	// Limit cache size
 	if (!is_exitspawn && g_cfg.vfs.limit_cache_size)
+	{
 		rpcs3::cache::limit_cache_size();
+	}
+
+	// Wipe clean VSH's temporary directory of choice
+	if (g_cfg.vfs.empty_hdd0_tmp && !is_exitspawn && !fs::remove_all(dev_hdd0 + "tmp/", false, true))
+	{
+		sys_log.error("Could not clean /dev_hdd0/tmp/ (%s)", fs::g_tls_error);
+	}
 }
 
 void Emulator::SetUsr(const std::string& user)
