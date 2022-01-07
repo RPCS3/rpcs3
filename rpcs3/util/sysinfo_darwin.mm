@@ -3,7 +3,7 @@
 
 namespace Darwin_Version
 {
-    NSOperatingSystemVersion osver = NSProcessInfo.processInfo.operatingSystemVersion;;
+    NSOperatingSystemVersion osver = NSProcessInfo.processInfo.operatingSystemVersion;
 
     int getNSmajorVersion()
     {
