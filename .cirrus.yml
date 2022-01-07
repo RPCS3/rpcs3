@@ -111,3 +111,23 @@ freebsd_task:
     folder: /tmp/ccache_dir
   install_script: "sh -ex ./.ci/install-freebsd.sh"
   script: "./.ci/build-freebsd.sh"
+
+macos_task:
+  timeout_in: 120m
+  ccache_cache:
+    folder: /tmp/ccache_dir
+  matrix:
+    - name: Cirrus macOS
+      osx_instance:
+        image: big-sur-base
+      mac_script:
+        - mkdir artifacts
+        - ".ci/build-mac.sh"
+  env:
+    ARTDIR: ${CIRRUS_WORKING_DIR}/artifacts/
+    CCACHE_DIR: "/tmp/ccache_dir"
+    CCACHE_MAXSIZE: 300M
+    CI_HAS_ARTIFACTS: true
+  artifacts:
+    name: Artifact
+    path: "artifacts/rpcs3-*_macos.*"

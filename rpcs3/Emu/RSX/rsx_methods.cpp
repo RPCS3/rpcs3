@@ -405,13 +405,13 @@ namespace rsx
 			rsx::method_registers.current_draw_clause.inline_vertex_array.push_back(arg);
 		}
 
-		template<u32 index>
 		struct set_transform_constant
 		{
-			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
+			static void impl(thread* rsx, u32 _reg, u32 /*arg*/)
 			{
-				static constexpr u32 reg = index / 4;
-				static constexpr u8 subreg = index % 4;
+				const u32 index = _reg - NV4097_SET_TRANSFORM_CONSTANT;
+				const u32 reg = index / 4;
+				const u8 subreg = index % 4;
 
 				// Get real args count
 				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
@@ -451,11 +451,12 @@ namespace rsx
 			}
 		};
 
-		template<u32 index>
 		struct set_transform_program
 		{
-			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
+			static void impl(thread* rsx, u32 reg, u32 /*arg*/)
 			{
+				const u32 index = reg - NV4097_SET_TRANSFORM_PROGRAM;
+
 				// Get real args count
 				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
 					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
@@ -1752,7 +1753,6 @@ namespace rsx
 		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_R;
 		registers[NV4097_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
 
-		if (get_current_renderer()->isHLE)
 		{
 			// Commands injected by cellGcmInit
 			registers[NV406E_SEMAPHORE_OFFSET] = 0x30;
@@ -2284,7 +2284,8 @@ namespace rsx
 			registers[NV308A_POINT] = 0x0;
 			registers[NV308A_SIZE_OUT] = 0x0;
 			registers[NV308A_SIZE_IN] = 0x0;
-			registers[NV406E_SET_REFERENCE] = get_current_renderer()->ctrl->ref = 0xffffffff;
+			registers[NV406E_SET_REFERENCE] = umax;
+			if (auto rsx = Emu.IsStopped() ? nullptr : get_current_renderer(); rsx && rsx->ctrl) rsx->ctrl->ref = u32{umax};
 		}
 	}
 
@@ -2830,25 +2831,6 @@ namespace rsx
 
 			bind_range_impl_t<Id, Step, Count, T, Index>::impl();
 		}
-
-		template<u32 Id, rsx_method_t Func>
-		static void bind()
-		{
-			static_assert(Id < 0x10000 / 4);
-
-			methods[Id] = Func;
-		}
-
-		template <u32 Id, u32 Step, u32 Count, rsx_method_t Func>
-		static void bind_array()
-		{
-			static_assert(Step && Count && Id + u64{Step} * (Count - 1) < 0x10000 / 4);
-
-			for (u32 i = Id; i < Id + Count * Step; i += Step)
-			{
-				methods[i] = Func;
-			}
-		}
 	}
 
 	// TODO: implement this as virtual function: rsx::thread::init_methods() or something
@@ -2858,6 +2840,21 @@ namespace rsx
 		using namespace method_detail;
 
 		methods.fill(&invalid_method);
+
+		auto bind = [](u32 id, rsx_method_t func)
+		{
+			methods.at(id) = func;
+		};
+
+		auto bind_array = [](u32 id, u32 step, u32 count, rsx_method_t func)
+		{
+			ensure(step && count && id + u64{step} * (count - 1) < 0x10000 / 4);
+
+			for (u32 i = id; i < id + count * step; i += step)
+			{
+				methods[i] = func;
+			}
+		};
 
 		// NV40_CHANNEL_DMA (NV406E)
 		methods[NV406E_SET_REFERENCE]                     = nullptr;
@@ -3184,50 +3181,50 @@ namespace rsx
 		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
 		methods[FIFO::FIFO_DRAW_BARRIER >> 2]             = nullptr;
 
-		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
-		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
+		bind_array(GCM_FLIP_HEAD, 1, 2, nullptr);
+		bind_array(GCM_DRIVER_QUEUE, 1, 8, nullptr);
 
-		bind_array<(0x400 >> 2), 1, 0x10, nullptr>();
-		bind_array<(0x440 >> 2), 1, 0x20, nullptr>();
-		bind_array<NV4097_SET_ANISO_SPREAD, 1, 16, nullptr>();
-		bind_array<NV4097_SET_VERTEX_TEXTURE_OFFSET, 1, 8 * 4, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nullptr>();
-		bind_array<NV4097_SET_TEXTURE_CONTROL2, 1, 16, nullptr>();
-		bind_array<NV4097_SET_TEX_COORD_CONTROL, 1, 10, nullptr>();
-		bind_array<NV4097_SET_TRANSFORM_PROGRAM, 1, 32, nullptr>();
-		bind_array<NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA3F_M, 1, 64, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nullptr>();
-		bind_array<NV4097_SET_TEXTURE_CONTROL3, 1, 16, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA2F_M, 1, 32, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nullptr>();
-		bind_array<NV4097_SET_TEXTURE_OFFSET, 1, 8 * 16, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nullptr>();
-		bind_array<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nullptr>();
-		bind_array<NV4097_SET_COLOR_KEY_COLOR, 1, 16, nullptr>();
+		bind_array(0x400 >> 2, 1, 0x10, nullptr);
+		bind_array(0x440 >> 2, 1, 0x20, nullptr);
+		bind_array(NV4097_SET_ANISO_SPREAD, 1, 16, nullptr);
+		bind_array(NV4097_SET_VERTEX_TEXTURE_OFFSET, 1, 8 * 4, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nullptr);
+		bind_array(NV4097_SET_TEXTURE_CONTROL2, 1, 16, nullptr);
+		bind_array(NV4097_SET_TEX_COORD_CONTROL, 1, 10, nullptr);
+		bind_array(NV4097_SET_TRANSFORM_PROGRAM, 1, 32, nullptr);
+		bind_array(NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA3F_M, 1, 64, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 1, 16, nullptr);
+		bind_array(NV4097_SET_TEXTURE_CONTROL3, 1, 16, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA2F_M, 1, 32, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA2S_M, 1, 16, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA4S_M, 1, 32, nullptr);
+		bind_array(NV4097_SET_TEXTURE_OFFSET, 1, 8 * 16, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA4F_M, 1, 64, nullptr);
+		bind_array(NV4097_SET_VERTEX_DATA1F_M, 1, 16, nullptr);
+		bind_array(NV4097_SET_COLOR_KEY_COLOR, 1, 16, nullptr);
 
 		// Unknown (NV4097?)
-		bind<(0x171c >> 2), trace_method>();
+		bind(0x171c >> 2, trace_method);
 
 		// NV406E
-		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
-		bind<NV406E_SEMAPHORE_ACQUIRE, nv406e::semaphore_acquire>();
-		bind<NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release>();
+		bind(NV406E_SET_REFERENCE, nv406e::set_reference);
+		bind(NV406E_SEMAPHORE_ACQUIRE, nv406e::semaphore_acquire);
+		bind(NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release);
 
 		// NV4097
-		bind<NV4097_SET_CULL_FACE, nv4097::set_cull_face>();
-		bind<NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release>();
-		bind<NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release>();
-		bind<NV4097_SET_BEGIN_END, nv4097::set_begin_end>();
-		bind<NV4097_CLEAR_SURFACE, nv4097::clear>();
-		bind<NV4097_DRAW_ARRAYS, nv4097::draw_arrays>();
-		bind<NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array>();
-		bind<NV4097_INLINE_ARRAY, nv4097::draw_inline_array>();
-		bind<NV4097_ARRAY_ELEMENT16, nv4097::set_array_element16>();
-		bind<NV4097_ARRAY_ELEMENT32, nv4097::set_array_element32>();
+		bind(NV4097_SET_CULL_FACE, nv4097::set_cull_face);
+		bind(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release);
+		bind(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release);
+		bind(NV4097_SET_BEGIN_END, nv4097::set_begin_end);
+		bind(NV4097_CLEAR_SURFACE, nv4097::clear);
+		bind(NV4097_DRAW_ARRAYS, nv4097::draw_arrays);
+		bind(NV4097_DRAW_INDEX_ARRAY, nv4097::draw_index_array);
+		bind(NV4097_INLINE_ARRAY, nv4097::draw_inline_array);
+		bind(NV4097_ARRAY_ELEMENT16, nv4097::set_array_element16);
+		bind(NV4097_ARRAY_ELEMENT32, nv4097::set_array_element32);
 		bind_range<NV4097_SET_VERTEX_DATA_SCALED4S_M, 1, 32, nv4097::set_vertex_data_scaled4s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4UB_M, 1, 16, nv4097::set_vertex_data4ub_m>();
 		bind_range<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nv4097::set_vertex_data1f_m>();
@@ -3236,30 +3233,30 @@ namespace rsx
 		bind_range<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nv4097::set_vertex_data4f_m>();
 		bind_range<NV4097_SET_VERTEX_DATA2S_M, 1, 16, nv4097::set_vertex_data2s_m>();
 		bind_range<NV4097_SET_VERTEX_DATA4S_M, 1, 32, nv4097::set_vertex_data4s_m>();
-		bind_range<NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant>();
-		bind_range<NV4097_SET_TRANSFORM_PROGRAM, 1, 32, nv4097::set_transform_program>();
-		bind<NV4097_GET_REPORT, nv4097::get_report>();
-		bind<NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value>();
-		bind<NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_CLIP_VERTICAL, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_COLOR_AOFFSET, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_COLOR_BOFFSET, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_COLOR_COFFSET, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_COLOR_DOFFSET, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_ZETA_OFFSET, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_CONTEXT_DMA_COLOR_A, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_CONTEXT_DMA_COLOR_B, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_CONTEXT_DMA_COLOR_C, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_NOTIFY, nv4097::set_notify>();
-		bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_format>();
-		bind<NV4097_SET_SURFACE_PITCH_A, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_PITCH_B, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_PITCH_C, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_PITCH_D, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_PITCH_Z, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_WINDOW_OFFSET, nv4097::set_surface_dirty_bit>();
+		bind_array(NV4097_SET_TRANSFORM_CONSTANT, 1, 32, nv4097::set_transform_constant::impl);
+		bind_array(NV4097_SET_TRANSFORM_PROGRAM, 1, 32, nv4097::set_transform_program::impl);
+		bind(NV4097_GET_REPORT, nv4097::get_report);
+		bind(NV4097_CLEAR_REPORT_VALUE, nv4097::clear_report_value);
+		bind(NV4097_SET_SURFACE_CLIP_HORIZONTAL, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_CLIP_VERTICAL, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_COLOR_AOFFSET, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_COLOR_BOFFSET, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_COLOR_COFFSET, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_COLOR_DOFFSET, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_ZETA_OFFSET, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_CONTEXT_DMA_COLOR_A, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_CONTEXT_DMA_COLOR_B, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_CONTEXT_DMA_COLOR_C, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit);
+		bind(NV4097_NOTIFY, nv4097::set_notify);
+		bind(NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_format);
+		bind(NV4097_SET_SURFACE_PITCH_A, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_PITCH_B, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_PITCH_C, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_PITCH_D, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_PITCH_Z, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_WINDOW_OFFSET, nv4097::set_surface_dirty_bit);
 		bind_range<NV4097_SET_TEXTURE_OFFSET, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_FORMAT, 8, 16, nv4097::set_texture_dirty_bit>();
 		bind_range<NV4097_SET_TEXTURE_ADDRESS, 8, 16, nv4097::set_texture_dirty_bit>();
@@ -3278,84 +3275,86 @@ namespace rsx
 		bind_range<NV4097_SET_VERTEX_TEXTURE_FILTER, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
 		bind_range<NV4097_SET_VERTEX_TEXTURE_IMAGE_RECT, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
 		bind_range<NV4097_SET_VERTEX_TEXTURE_BORDER_COLOR, 8, 4, nv4097::set_vertex_texture_dirty_bit>();
-		bind<NV4097_SET_RENDER_ENABLE, nv4097::set_render_mode>();
-		bind<NV4097_SET_ZCULL_EN, nv4097::set_zcull_render_enable>();
-		bind<NV4097_SET_ZCULL_STATS_ENABLE, nv4097::set_zcull_stats_enable>();
-		bind<NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE, nv4097::set_zcull_pixel_count_enable>();
-		bind<NV4097_CLEAR_ZCULL_SURFACE, nv4097::clear_zcull>();
-		bind<NV4097_SET_DEPTH_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_DEPTH_FUNC, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_COLOR_MASK_MRT, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_MASK, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_STENCIL_OP_ZPASS, nv4097::set_stencil_op>();
-		bind<NV4097_SET_STENCIL_OP_FAIL, nv4097::set_stencil_op>();
-		bind<NV4097_SET_STENCIL_OP_ZFAIL, nv4097::set_stencil_op>();
-		bind<NV4097_SET_BACK_STENCIL_MASK, nv4097::set_surface_options_dirty_bit>();
-		bind<NV4097_SET_BACK_STENCIL_OP_ZPASS, nv4097::set_stencil_op>();
-		bind<NV4097_SET_BACK_STENCIL_OP_FAIL, nv4097::set_stencil_op>();
-		bind<NV4097_SET_BACK_STENCIL_OP_ZFAIL, nv4097::set_stencil_op>();
-		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
-		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
-		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
-		bind<NV4097_SET_SHADER_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>>();
-		bind_array<NV4097_SET_TEX_COORD_CONTROL, 1, 10, nv4097::notify_state_changed<fragment_program_state_dirty>>();
-		bind<NV4097_SET_TWO_SIDE_LIGHT_EN, nv4097::notify_state_changed<fragment_program_state_dirty>>();
-		bind<NV4097_SET_POINT_SPRITE_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>>();
-		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
-		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
-		bind<NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset>();
-		bind<NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset>();
+		bind(NV4097_SET_RENDER_ENABLE, nv4097::set_render_mode);
+		bind(NV4097_SET_ZCULL_EN, nv4097::set_zcull_render_enable);
+		bind(NV4097_SET_ZCULL_STATS_ENABLE, nv4097::set_zcull_stats_enable);
+		bind(NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE, nv4097::set_zcull_pixel_count_enable);
+		bind(NV4097_CLEAR_ZCULL_SURFACE, nv4097::clear_zcull);
+		bind(NV4097_SET_DEPTH_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_DEPTH_FUNC, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_COLOR_MASK_MRT, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_STENCIL_MASK, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_STENCIL_OP_ZPASS, nv4097::set_stencil_op);
+		bind(NV4097_SET_STENCIL_OP_FAIL, nv4097::set_stencil_op);
+		bind(NV4097_SET_STENCIL_OP_ZFAIL, nv4097::set_stencil_op);
+		bind(NV4097_SET_BACK_STENCIL_MASK, nv4097::set_surface_options_dirty_bit);
+		bind(NV4097_SET_BACK_STENCIL_OP_ZPASS, nv4097::set_stencil_op);
+		bind(NV4097_SET_BACK_STENCIL_OP_FAIL, nv4097::set_stencil_op);
+		bind(NV4097_SET_BACK_STENCIL_OP_ZFAIL, nv4097::set_stencil_op);
+		bind(NV4097_WAIT_FOR_IDLE, nv4097::sync);
+		bind(NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty);
+		bind(NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty);
+		bind(NV4097_SET_SHADER_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>);
+		bind_array(NV4097_SET_TEX_COORD_CONTROL, 1, 10, nv4097::notify_state_changed<fragment_program_state_dirty>);
+		bind(NV4097_SET_TWO_SIDE_LIGHT_EN, nv4097::notify_state_changed<fragment_program_state_dirty>);
+		bind(NV4097_SET_POINT_SPRITE_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>);
+		bind(NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start);
+		bind(NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask);
+		bind(NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset);
+		bind(NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset);
 		bind_range<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nv4097::set_vertex_array_offset>();
-		bind<NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::notify_state_changed<vertex_state_dirty>>();
-		bind<NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::notify_state_changed<vertex_state_dirty>>();
-		bind<NV4097_SET_CLIP_MIN, nv4097::notify_state_changed<invalidate_zclip_bits>>();
-		bind<NV4097_SET_CLIP_MAX, nv4097::notify_state_changed<invalidate_zclip_bits>>();
-		bind<NV4097_SET_POINT_SIZE, nv4097::notify_state_changed<vertex_state_dirty>>();
-		bind<NV4097_SET_ALPHA_FUNC, nv4097::notify_state_changed<fragment_state_dirty>>();
-		bind<NV4097_SET_ALPHA_REF, nv4097::notify_state_changed<fragment_state_dirty>>();
-		bind<NV4097_SET_ALPHA_TEST_ENABLE, nv4097::notify_state_changed<fragment_state_dirty>>();
-		bind<NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::notify_state_changed<fragment_state_dirty>>();
-		bind<NV4097_SET_SHADER_PACKER, nv4097::notify_state_changed<fragment_state_dirty>>();
-		bind<NV4097_SET_SHADER_WINDOW, nv4097::notify_state_changed<fragment_state_dirty>>();
-		bind<NV4097_SET_FOG_MODE, nv4097::notify_state_changed<fragment_state_dirty>>();
-		bind<NV4097_SET_SCISSOR_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
-		bind<NV4097_SET_SCISSOR_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
-		bind<NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
-		bind<NV4097_SET_VIEWPORT_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>>();
-		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::notify_state_changed<fragment_state_dirty>>();
-		bind_array<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::notify_state_changed<vertex_state_dirty>>();
-		bind_array<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::notify_state_changed<vertex_state_dirty>>();
-		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
-		bind<NV4097_SET_BLEND_EQUATION, nv4097::set_blend_equation>();
-		bind<NV4097_SET_BLEND_FUNC_SFACTOR, nv4097::set_blend_factor>();
-		bind<NV4097_SET_BLEND_FUNC_DFACTOR, nv4097::set_blend_factor>();
-		bind<NV4097_SET_POLYGON_STIPPLE, nv4097::notify_state_changed<fragment_state_dirty>>();
-		bind_array<NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>>();
+		bind(NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::notify_state_changed<vertex_state_dirty>);
+		bind(NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::notify_state_changed<vertex_state_dirty>);
+		bind(NV4097_SET_CLIP_MIN, nv4097::notify_state_changed<invalidate_zclip_bits>);
+		bind(NV4097_SET_CLIP_MAX, nv4097::notify_state_changed<invalidate_zclip_bits>);
+		bind(NV4097_SET_POINT_SIZE, nv4097::notify_state_changed<vertex_state_dirty>);
+		bind(NV4097_SET_ALPHA_FUNC, nv4097::notify_state_changed<fragment_state_dirty>);
+		bind(NV4097_SET_ALPHA_REF, nv4097::notify_state_changed<fragment_state_dirty>);
+		bind(NV4097_SET_ALPHA_TEST_ENABLE, nv4097::notify_state_changed<fragment_state_dirty>);
+		bind(NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::notify_state_changed<fragment_state_dirty>);
+		bind(NV4097_SET_SHADER_PACKER, nv4097::notify_state_changed<fragment_state_dirty>);
+		bind(NV4097_SET_SHADER_WINDOW, nv4097::notify_state_changed<fragment_state_dirty>);
+		bind(NV4097_SET_FOG_MODE, nv4097::notify_state_changed<fragment_state_dirty>);
+		bind(NV4097_SET_SCISSOR_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
+		bind(NV4097_SET_SCISSOR_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
+		bind(NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
+		bind(NV4097_SET_VIEWPORT_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
+		bind_array(NV4097_SET_FOG_PARAMS, 1, 2, nv4097::notify_state_changed<fragment_state_dirty>);
+		bind_array(NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::notify_state_changed<vertex_state_dirty>);
+		bind_array(NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::notify_state_changed<vertex_state_dirty>);
+		bind(NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma);
+		bind(NV4097_SET_BLEND_EQUATION, nv4097::set_blend_equation);
+		bind(NV4097_SET_BLEND_FUNC_SFACTOR, nv4097::set_blend_factor);
+		bind(NV4097_SET_BLEND_FUNC_DFACTOR, nv4097::set_blend_factor);
+		bind(NV4097_SET_POLYGON_STIPPLE, nv4097::notify_state_changed<fragment_state_dirty>);
+		bind_array(NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>);
 
 		//NV308A (0xa400..0xbffc!)
-		bind_array<NV308A_COLOR, 1, 256 * 7, nv308a::color::impl>();
+		bind_array(NV308A_COLOR, 1, 256 * 7, nv308a::color::impl);
 
 		//NV3089
-		bind<NV3089_IMAGE_IN, nv3089::image_in>();
+		bind(NV3089_IMAGE_IN, nv3089::image_in);
 
 		//NV0039
-		bind<NV0039_BUFFER_NOTIFY, nv0039::buffer_notify>();
+		bind(NV0039_BUFFER_NOTIFY, nv0039::buffer_notify);
 
 		// lv1 hypervisor
-		bind_array<GCM_SET_USER_COMMAND, 1, 2, user_command>();
+		bind_array(GCM_SET_USER_COMMAND, 1, 2, user_command);
 		bind_range<GCM_FLIP_HEAD, 1, 2, gcm::driver_flip>();
 		bind_range<GCM_DRIVER_QUEUE, 1, 8, gcm::queue_flip>();
 
 		// custom methods
-		bind<GCM_FLIP_COMMAND, flip_command>();
+		bind(GCM_FLIP_COMMAND, flip_command);
 
 		// FIFO
-		bind<(FIFO::FIFO_DRAW_BARRIER >> 2), fifo::draw_barrier>();
+		bind(FIFO::FIFO_DRAW_BARRIER >> 2, fifo::draw_barrier);
+
+		method_registers.init();
 
 		return true;
 	}();
