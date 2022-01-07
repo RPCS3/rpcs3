@@ -9,6 +9,13 @@
 #include "sysinfoapi.h"
 #include "subauth.h"
 #include "stringapiset.h"
+#elif defined (__APPLE__)
+// sysinfo_darwin.mm
+extern void fetchNSVer();
+extern int getNSmajorVersion();
+extern int getNSminorVersion();
+extern int getNSpatchVersion();
+#include <unistd.h>
 #else
 #include <unistd.h>
 #include <sys/utsname.h>
@@ -342,6 +349,14 @@ std::string utils::get_OS_version()
 	fmt::append(output,
 		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %u, Service Pack: %s, Compatibility mode: %llu",
 		version_major, version_minor, build, has_sp ? holder.data() : "none", compatibility_mode);
+#elif defined (__APPLE__)
+	fetchNSVer();
+	const int majorVersion = getNSmajorVersion();
+	const int minorVersion = getNSminorVersion();
+	const int patchVersion = getNSpatchVersion();
+
+	fmt::append(output, "Operating system: macOS, Version %i.%i.%i", majorVersion, minorVersion, patchVersion);
+
 #else
 	struct utsname details = {};
 

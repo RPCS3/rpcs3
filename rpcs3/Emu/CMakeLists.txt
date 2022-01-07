@@ -42,6 +42,7 @@ target_sources(rpcs3_emu PRIVATE
     ../util/yaml.cpp
     ../util/vm_native.cpp
     ../util/dyn_lib.cpp
+    ../util/sysinfo_darwin.mm
     ../util/sysinfo.cpp
     ../util/cpu_stats.cpp
     ../../Utilities/bin_patch.cpp
