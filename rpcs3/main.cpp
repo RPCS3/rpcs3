@@ -508,6 +508,14 @@ int main(int argc, char** argv)
 	setenv( "KDE_DEBUG", "1", 0 );
 #endif
 
+#ifdef __APPLE__
+	struct ::rlimit rlim;
+	::getrlimit(RLIMIT_NOFILE, &rlim);
+	rlim.rlim_cur = OPEN_MAX;
+	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
+		std::cerr << "Failed to set max open file limit (" << OPEN_MAX << ").\n";
+#endif
+
 #ifndef _WIN32
 	// Write file limits
 	sys_log.notice("Maximum open file descriptors: %i", utils::get_maxfiles());
