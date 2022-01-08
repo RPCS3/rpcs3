@@ -3,6 +3,16 @@
 #include "util/types.hpp"
 #include <string>
 
+#ifdef __APPLE__
+// sysinfo_darwin.mm
+namespace Darwin_Version
+{
+	extern int getNSmajorVersion();
+	extern int getNSminorVersion();
+	extern int getNSpatchVersion();
+}
+#endif
+
 namespace utils
 {
 	std::array<u32, 4> get_cpuid(u32 func, u32 subfunc);

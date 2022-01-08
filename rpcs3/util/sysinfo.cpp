@@ -9,21 +9,13 @@
 #include "sysinfoapi.h"
 #include "subauth.h"
 #include "stringapiset.h"
-#elif defined (__APPLE__)
-// sysinfo_darwin.mm
-namespace Darwin_Version
-{
-	extern int getNSmajorVersion();
-	extern int getNSminorVersion();
-	extern int getNSpatchVersion();
-}
-#include <unistd.h>
-#include <sys/resource.h>
 #else
 #include <unistd.h>
 #include <sys/resource.h>
+#ifndef __APPLE__
 #include <sys/utsname.h>
 #include <errno.h>
+#endif
 #endif
 
 #include "util/asm.hpp"
