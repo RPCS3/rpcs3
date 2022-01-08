@@ -39,10 +39,6 @@
 
 #include <clocale>
 
-#ifndef _WIN32
-#include <sys/resource.h>
-#endif
-
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
 
@@ -112,9 +108,7 @@ bool gui_application::Init()
 
 #ifndef _WIN32
 	//Check maxfiles
-	struct rlimit limits;
-	getrlimit(RLIMIT_NOFILE, &limits);
-	if(limits.rlim_cur < 2560)
+	if(utils::get_maxfiles() < 2560)
 	{
 		QMessageBox::warning(nullptr,
 							 tr("Warning"),

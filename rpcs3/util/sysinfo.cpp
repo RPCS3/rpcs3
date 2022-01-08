@@ -18,8 +18,10 @@ namespace Darwin_Version
 	extern int getNSpatchVersion();
 }
 #include <unistd.h>
+#include <sys/resource.h>
 #else
 #include <unistd.h>
+#include <sys/resource.h>
 #include <sys/utsname.h>
 #include <errno.h>
 #endif
@@ -372,6 +374,24 @@ std::string utils::get_OS_version()
 #endif
 	return output;
 }
+
+#ifndef _WIN32
+int utils::get_maxfiles()
+{
+	struct rlimit limits;
+	getrlimit(RLIMIT_NOFILE, &limits);
+
+	return limits.rlim_cur;
+}
+
+std::string utils::get_maxfiles_s()
+{
+	std::string output;
+	fmt::append(output, "Maximum open file descriptors: %i", get_maxfiles());
+
+	return output;
+}
+#endif
 
 static constexpr ullong round_tsc(ullong val)
 {
