@@ -51,7 +51,7 @@
 				<key>ActionParameters</key>
 				<dict>
 					<key>source</key>
-					<string>do shell script "/bin/bash -s &lt;&lt;'EOF'launchctl limit maxfiles 2000000 2147483647EOF" with administrator privileges</string>
+					<string>do shell script "/bin/bash -s &lt;&lt;'EOF'launchctl limit maxfiles 4096 2147483647EOF" with administrator privileges</string>
 				</dict>
 				<key>BundleIdentifier</key>
 				<string>com.apple.Automator.RunScript</string>
