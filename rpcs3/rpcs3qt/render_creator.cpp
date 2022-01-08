@@ -112,8 +112,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 		QMessageBox::warning(nullptr,
 							 tr("Warning"),
 							 tr("Vulkan is not supported on this Mac.\n"
-								"No graphics will be rendered."),
-							 QMessageBox::Ok, QMessageBox::NoButton);
+								"No graphics will be rendered."));
 	}
 #endif
 

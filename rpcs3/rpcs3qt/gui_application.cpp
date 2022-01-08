@@ -115,8 +115,7 @@ bool gui_application::Init()
 							 tr("The current limit of maximum file descriptors is too low.\n"
 								"Some games will crash.\n"
 								"\n"
-								"Please increase the limit before running RPCS3."),
-							 QMessageBox::Ok, QMessageBox::NoButton);
+								"Please increase the limit before running RPCS3."));
 	}
 #endif
 

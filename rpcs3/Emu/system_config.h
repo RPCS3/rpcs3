@@ -96,10 +96,10 @@ struct cfg_root : cfg::node
 	{
 		node_video(cfg::node* _this) : cfg::node(_this, "Video") {}
 
-#ifndef __APPLE__
-		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl };
-#else
+#ifdef __APPLE__
 		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::vulkan };
+#else
+		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl };
 #endif
 
 		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720 };
