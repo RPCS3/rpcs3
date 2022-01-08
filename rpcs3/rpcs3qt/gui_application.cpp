@@ -107,8 +107,8 @@ bool gui_application::Init()
 	}
 
 #ifndef _WIN32
-	//Check maxfiles
-	if(utils::get_maxfiles() < 4096)
+	// Check maxfiles
+	if (utils::get_maxfiles() < 4096)
 	{
 		QMessageBox::warning(nullptr,
 							 tr("Warning"),

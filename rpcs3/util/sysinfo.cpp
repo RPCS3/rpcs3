@@ -49,6 +49,16 @@ inline u64 utils::get_xgetbv(u32 xcr)
 #endif
 }
 
+#ifdef __APPLE__
+// sysinfo_darwin.mm
+namespace Darwin_Version
+{
+	extern int getNSmajorVersion();
+	extern int getNSminorVersion();
+	extern int getNSpatchVersion();
+}
+#endif
+
 bool utils::has_ssse3()
 {
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x200;
@@ -350,7 +360,8 @@ std::string utils::get_OS_version()
 	const int minorVersion = Darwin_Version::getNSminorVersion();
 	const int patchVersion = Darwin_Version::getNSpatchVersion();
 
-	fmt::append(output, "Operating system: macOS, Version: %i.%i.%i", majorVersion, minorVersion, patchVersion);
+	fmt::append(output, "Operating system: macOS, Version: %i.%i.%i",
+		majorVersion, minorVersion, patchVersion);
 #else
 	struct utsname details = {};
 
