@@ -53,8 +53,6 @@ namespace utils
 
 #ifndef _WIN32
 	int get_maxfiles();
-
-	std::string get_maxfiles_s();
 #endif
 
 	ullong get_tsc_freq();

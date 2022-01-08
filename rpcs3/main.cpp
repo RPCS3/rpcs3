@@ -468,23 +468,11 @@ int main(int argc, char** argv)
 		logs::stored_message os{sys_log.always()};
 		os.text  = utils::get_OS_version();
 
-#ifndef _WIN32
-		// Write file limits
-		logs::stored_message maxfiles{sys_log.always()};
-		maxfiles.text  = utils::get_maxfiles_s();
-#endif
-
 		// Write Qt version
 		logs::stored_message qt{(strcmp(QT_VERSION_STR, qVersion()) != 0) ? sys_log.error : sys_log.notice};
 		qt.text  = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
 
-		logs::set_init({std::move(ver),
-						std::move(sys),
-						std::move(os),
-#ifndef _WIN32
-						std::move(maxfiles),
-#endif
-						std::move(qt)});
+		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt)});
 	}
 
 #ifdef _WIN32
@@ -518,6 +506,11 @@ int main(int argc, char** argv)
 #endif
 	// Work around crash on startup on KDE: https://bugs.kde.org/show_bug.cgi?id=401637
 	setenv( "KDE_DEBUG", "1", 0 );
+#endif
+
+#ifndef _WIN32
+	// Write file limits
+	sys_log.notice("Maximum open file descriptors: %i", utils::get_maxfiles());
 #endif
 
 	std::lock_guard qt_init(s_qt_init);

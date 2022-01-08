@@ -383,14 +383,6 @@ int utils::get_maxfiles()
 
 	return limits.rlim_cur;
 }
-
-std::string utils::get_maxfiles_s()
-{
-	std::string output;
-	fmt::append(output, "Maximum open file descriptors: %i", get_maxfiles());
-
-	return output;
-}
 #endif
 
 static constexpr ullong round_tsc(ullong val)
