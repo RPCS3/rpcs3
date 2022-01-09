@@ -180,7 +180,7 @@ namespace rsx
 		u16 offset_y;
 		u16 width;
 		u16 height;
-		u16 pitch;
+		u32 pitch;
 		u32 rsx_address;
 		void *pixels;
 	};
@@ -192,14 +192,14 @@ namespace rsx
 		u16 offset_y;
 		u16 width;
 		u16 height;
-		u16 pitch;
 		u16 clip_x;
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
 		f32 scale_x;
 		f32 scale_y;
-		u32  rsx_address;
+		u32 pitch;
+		u32 rsx_address;
 		void *pixels;
 		bool swizzled;
 	};
@@ -442,7 +442,7 @@ namespace rsx
 	 * TODO: Variable src/dst and optional se conversion
 	 */
 	template <typename T>
-	void shuffle_texel_data_wzyx(void* data, u16 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
+	void shuffle_texel_data_wzyx(void* data, u32 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
 	{
 		char* raw_src = static_cast<char*>(data);
 		T tmp[4];
@@ -649,7 +649,7 @@ namespace rsx
 	}
 
 	template <bool __is_surface = true, typename SurfaceType>
-	inline bool pitch_compatible(const SurfaceType* surface, u16 pitch_required, u16 height_required)
+	inline bool pitch_compatible(const SurfaceType* surface, u32 pitch_required, u16 height_required)
 	{
 		if constexpr (__is_surface)
 		{
