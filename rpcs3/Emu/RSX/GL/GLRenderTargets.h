@@ -57,19 +57,19 @@ namespace gl
 		{}
 
 		// Internal pitch is the actual row length in bytes of the openGL texture
-		void set_native_pitch(u16 pitch)
+		void set_native_pitch(u32 pitch)
 		{
 			native_pitch = pitch;
 		}
 
-		void set_surface_dimensions(u16 w, u16 h, u16 pitch)
+		void set_surface_dimensions(u16 w, u16 h, u32 pitch)
 		{
 			surface_width = w;
 			surface_height = h;
 			rsx_pitch = pitch;
 		}
 
-		void set_rsx_pitch(u16 pitch)
+		void set_rsx_pitch(u32 pitch)
 		{
 			rsx_pitch = pitch;
 		}
@@ -141,8 +141,8 @@ struct gl_render_target_traits
 			static_cast<GLenum>(format.internal_format), RSX_FORMAT_CLASS_COLOR));
 
 		result->set_aa_mode(antialias);
-		result->set_native_pitch(static_cast<u16>(width) * get_format_block_size_in_bytes(surface_color_format) * result->samples_x);
-		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u16>(pitch));
+		result->set_native_pitch(static_cast<u32>(width) * get_format_block_size_in_bytes(surface_color_format) * result->samples_x);
+		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u32>(pitch));
 		result->set_format(surface_color_format);
 
 		std::array<GLenum, 4> native_layout = { static_cast<GLenum>(format.swizzle.a), static_cast<GLenum>(format.swizzle.r), static_cast<GLenum>(format.swizzle.g), static_cast<GLenum>(format.swizzle.b) };
@@ -170,9 +170,9 @@ struct gl_render_target_traits
 			static_cast<GLenum>(format.internal_format), rsx::classify_format(surface_depth_format)));
 
 		result->set_aa_mode(antialias);
-		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u16>(pitch));
+		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u32>(pitch));
 		result->set_format(surface_depth_format);
-		result->set_native_pitch(static_cast<u16>(width) * get_format_block_size_in_bytes(surface_depth_format) * result->samples_x);
+		result->set_native_pitch(static_cast<u32>(width) * get_format_block_size_in_bytes(surface_depth_format) * result->samples_x);
 
 		std::array<GLenum, 4> native_layout = { GL_RED, GL_RED, GL_RED, GL_RED };
 		result->set_native_component_layout(native_layout);
@@ -204,7 +204,7 @@ struct gl_render_target_traits
 			sink->format_info = ref->format_info;
 
 			sink->set_spp(ref->get_spp());
-			sink->set_native_pitch(prev.width * ref->get_bpp() * ref->samples_x);
+			sink->set_native_pitch(static_cast<u32>(prev.width) * ref->get_bpp() * ref->samples_x);
 			sink->set_rsx_pitch(ref->get_rsx_pitch());
 			sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());
 			sink->set_native_component_layout(ref->get_native_component_layout());
@@ -260,7 +260,7 @@ struct gl_render_target_traits
 	static
 	void invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, usz pitch)
 	{
-		surface->set_rsx_pitch(static_cast<u16>(pitch));
+		surface->set_rsx_pitch(static_cast<u32>(pitch));
 		surface->queue_tag(address);
 		surface->last_use_tag = 0;
 		surface->stencil_init_flags = 0;

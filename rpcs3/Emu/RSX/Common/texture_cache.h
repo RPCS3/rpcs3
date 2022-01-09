@@ -354,9 +354,9 @@ namespace rsx
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_resource_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void release_temporary_subresource(image_view_type rsc) = 0;
-		virtual section_storage_type* create_new_texture(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
+		virtual section_storage_type* create_new_texture(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, component_order swizzle_flags, rsx::flags32_t flags) = 0;
-		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format, texture_upload_context context,
+		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format, texture_upload_context context,
 			const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
 		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, bool memory_load) = 0;
 		virtual void set_component_order(section_storage_type& section, u32 gcm_format, component_order expected) = 0;
@@ -1019,7 +1019,7 @@ namespace rsx
 		}
 
 		template <bool check_unlocked = false>
-		std::vector<section_storage_type*> find_texture_from_range(const address_range &test_range, u16 required_pitch = 0, u32 context_mask = 0xFF)
+		std::vector<section_storage_type*> find_texture_from_range(const address_range &test_range, u32 required_pitch = 0, u32 context_mask = 0xFF)
 		{
 			std::vector<section_storage_type*> results;
 
@@ -1177,7 +1177,7 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, bool is_active_surface, u16 width, u16 height, u16 pitch, Args&&... extras)
+		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, bool is_active_surface, u16 width, u16 height, u32 pitch, Args&&... extras)
 		{
 			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
@@ -2534,7 +2534,7 @@ namespace rsx
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst_w, dst_h };
 
-			size2i dst_dimensions = { dst.pitch / dst_bpp, dst.height };
+			size2i dst_dimensions = { static_cast<s32>(dst.pitch / dst_bpp), dst.height };
 			position2i dst_offset = { dst.offset_x, dst.offset_y };
 			u32 dst_base_address = dst.rsx_address;
 
@@ -2657,9 +2657,9 @@ namespace rsx
 					if (const auto this_address = surface->get_section_base();
 						const u32 address_offset = dst_address - this_address)
 					{
-						const u16 offset_y = address_offset / dst.pitch;
-						const u16 offset_x = address_offset % dst.pitch;
-						const u16 offset_x_in_block = offset_x / dst_bpp;
+						const u32 offset_y = address_offset / dst.pitch;
+						const u32 offset_x = address_offset % dst.pitch;
+						const u32 offset_x_in_block = offset_x / dst_bpp;
 
 						dst_area.x1 += offset_x_in_block;
 						dst_area.x2 += offset_x_in_block;
@@ -2787,9 +2787,9 @@ namespace rsx
 
 					if (const u32 address_offset = src_address - this_address)
 					{
-						const u16 offset_y = address_offset / src.pitch;
-						const u16 offset_x = address_offset % src.pitch;
-						const u16 offset_x_in_block = offset_x / src_bpp;
+						const u32 offset_y = address_offset / src.pitch;
+						const u32 offset_x = address_offset % src.pitch;
+						const u32 offset_x_in_block = offset_x / src_bpp;
 
 						src_area.x1 += offset_x_in_block;
 						src_area.x2 += offset_x_in_block;
@@ -2968,7 +2968,7 @@ namespace rsx
 						const auto prot_range = dst_range.to_page_range();
 						utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
 
-						const u16 pitch_in_block = dst.pitch / dst_bpp;
+						const auto pitch_in_block = dst.pitch / dst_bpp;
 						std::vector<rsx::subresource_layout> subresource_layout;
 						rsx::subresource_layout subres = {};
 						subres.width_in_block = subres.width_in_texel = dst_dimensions.width;

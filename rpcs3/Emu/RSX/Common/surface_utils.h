@@ -139,8 +139,8 @@ namespace rsx
 		std::vector<deferred_clipped_region<image_storage_type>> old_contents;
 
 		// Surface properties
-		u16 rsx_pitch = 0;
-		u16 native_pitch = 0;
+		u32 rsx_pitch = 0;
+		u32 native_pitch = 0;
 		u16 surface_width = 0;
 		u16 surface_height = 0;
 		u8  spp = 1;
@@ -178,7 +178,7 @@ namespace rsx
 		virtual bool is_depth_surface() const = 0;
 		virtual void release_ref(image_storage_type) const = 0;
 
-		virtual u16 get_surface_width(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
+		virtual u32 get_surface_width(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
 		{
 			switch (metrics)
 			{
@@ -193,7 +193,7 @@ namespace rsx
 			}
 		}
 
-		virtual u16 get_surface_height(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
+		virtual u32 get_surface_height(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
 		{
 			switch (metrics)
 			{
@@ -207,12 +207,12 @@ namespace rsx
 			}
 		}
 
-		virtual u16 get_rsx_pitch() const
+		virtual u32 get_rsx_pitch() const
 		{
 			return rsx_pitch;
 		}
 
-		virtual u16 get_native_pitch() const
+		virtual u32 get_native_pitch() const
 		{
 			return native_pitch;
 		}

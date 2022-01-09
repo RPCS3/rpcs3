@@ -50,11 +50,11 @@ namespace rsx
 	{
 		u32 address;
 		u32 gcm_format;
+		u32 pitch;
 		u16 width;
 		u16 height;
 		u16 depth;
 		u16 mipmaps;
-		u16 pitch;
 		u16 slice_h;
 		u8  bpp;
 		bool swizzled;
@@ -487,9 +487,9 @@ namespace rsx
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				return (surface_width >= attr.width && surface_height >= attr.height);
 			case rsx::texture_dimension_extended::texture_dimension_3d:
-				return (surface_width >= attr.width && surface_height >= (attr.slice_h * attr.depth));
+				return (surface_width >= attr.width && surface_height >= u32{attr.slice_h} * attr.depth);
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
-				return (surface_width == attr.height && surface_width >= attr.width && surface_height >= (attr.slice_h * 6));
+				return (surface_width == attr.height && surface_width >= attr.width && surface_height >= (u32{attr.slice_h} * 6));
 			}
 
 			return false;
