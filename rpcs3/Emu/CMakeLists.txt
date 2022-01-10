@@ -59,6 +59,11 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/Thread.cpp
     ../../Utilities/version.cpp
 )
+if(APPLE)
+    target_sources(rpcs3_emu PRIVATE
+        ../../darwin/util/sysinfo_darwin.mm
+    )
+endif()
 
 target_include_directories(rpcs3_emu PUBLIC "${CMAKE_SOURCE_DIR}")
 
