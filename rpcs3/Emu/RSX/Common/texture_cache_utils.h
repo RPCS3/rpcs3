@@ -1079,8 +1079,8 @@ namespace rsx
 		u16 depth;
 		u16 mipmaps;
 
-		u16 real_pitch;
-		u16 rsx_pitch;
+		u32 real_pitch;
+		u32 rsx_pitch;
 
 		u32 gcm_format = 0;
 		bool pack_unpack_swap_bytes = false;
@@ -1704,7 +1704,7 @@ namespace rsx
 			return mipmaps;
 		}
 
-		u16 get_rsx_pitch() const
+		u32 get_rsx_pitch() const
 		{
 			return rsx_pitch;
 		}
