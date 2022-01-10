@@ -324,8 +324,8 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 				image_to_flip = section.surface->get_surface(rsx::surface_access::shader_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
-					std::min(surface_width, static_cast<u16>(info->width)),
-					std::min(surface_height, static_cast<u16>(info->height)));
+					std::min(surface_width, info->width),
+					std::min(surface_height, info->height));
 			}
 		}
 	}

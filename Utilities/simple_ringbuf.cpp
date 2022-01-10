@@ -5,6 +5,34 @@ simple_ringbuf::simple_ringbuf(u32 size)
 	set_buf_size(size);
 }
 
+simple_ringbuf::simple_ringbuf(simple_ringbuf&& other)
+{
+	rw_ptr = other.rw_ptr.load();
+	buf_size = other.buf_size;
+	buf = std::move(other.buf);
+	initialized = other.initialized.observe();
+
+	other.buf_size = 0;
+	other.rw_ptr = 0;
+	other.initialized = false;
+}
+
+simple_ringbuf& simple_ringbuf::operator=(simple_ringbuf&& other)
+{
+	if (this == &other) return *this;
+
+	rw_ptr = other.rw_ptr.load();
+	buf_size = other.buf_size;
+	buf = std::move(other.buf);
+	initialized = other.initialized.observe();
+
+	other.buf_size = 0;
+	other.rw_ptr = 0;
+	other.initialized = false;
+
+	return *this;
+}
+
 u32 simple_ringbuf::get_free_size()
 {
 	const u64 _rw_ptr = rw_ptr;
@@ -17,6 +45,11 @@ u32 simple_ringbuf::get_free_size()
 u32 simple_ringbuf::get_used_size()
 {
 	return buf_size - 1 - get_free_size();
+}
+
+u32 simple_ringbuf::get_total_size()
+{
+	return buf_size;
 }
 
 void simple_ringbuf::set_buf_size(u32 size)
