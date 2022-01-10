@@ -104,6 +104,10 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	OpenGL = render_info();
 	NullRender = render_info();
 
+#ifdef __APPLE__
+	OpenGL.supported = false;
+#endif
+
 	renderers = { &Vulkan, &OpenGL, &NullRender };
 }
 
