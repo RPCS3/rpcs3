@@ -138,7 +138,7 @@ void VKGSRender::update_draw_state()
 		//offst_scale is the slope factor, multiplied by the triangle slope factor M
 		const auto constant_factor = rsx::method_registers.poly_offset_bias();
 		auto slope_factor = rsx::method_registers.poly_offset_scale();
-		if (slope_factor == 0)
+		if (g_cfg.video.mgs4_hack && slope_factor == 0)
 		{
 			slope_factor = constant_factor * 0.5f;
 			if (slope_factor < 0)
