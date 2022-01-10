@@ -106,6 +106,14 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 #ifdef __APPLE__
 	OpenGL.supported = false;
+
+	if (!Vulkan.supported)
+	{
+		QMessageBox::warning(nullptr,
+							 tr("Warning"),
+							 tr("Vulkan is not supported on this Mac.\n"
+								"No graphics will be rendered."));
+	}
 #endif
 
 	renderers = { &Vulkan, &OpenGL, &NullRender };
