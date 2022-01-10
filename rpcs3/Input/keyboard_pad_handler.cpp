@@ -638,6 +638,19 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 		return "Meta";
 	case Qt::Key_NumLock:
 		return sstr(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
+#ifdef __APPLE__
+	// On macOS, the arrow keys are considered to be part of the keypad;
+	// since most Mac keyboards lack a keypad to begin with,
+	// we change them to regular arrows to avoid confusion
+	case Qt::Key_Left:
+		return "←";
+	case Qt::Key_Up:
+		return "↑";
+	case Qt::Key_Right:
+		return "→";
+	case Qt::Key_Down:
+		return "↓";
+#endif
 	default:
 		break;
 	}
@@ -670,6 +683,17 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 		return Qt::Key_Control;
 	if (keyName == "Meta")
 		return Qt::Key_Meta;
+#ifdef __APPLE__
+	// QKeySequence doesn't work properly for the arrow keys on macOS
+	if (keyName == "Num←")
+		return Qt::Key_Left;
+	if (keyName == "Num↑")
+		return Qt::Key_Up;
+	if (keyName == "Num→")
+		return Qt::Key_Right;
+	if (keyName == "Num↓")
+		return Qt::Key_Down;
+#endif
 
 	const QKeySequence seq(keyName);
 	u32 key_code = 0;
