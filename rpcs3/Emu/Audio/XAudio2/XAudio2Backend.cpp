@@ -103,12 +103,6 @@ void XAudio2Backend::Play()
 
 void XAudio2Backend::CloseUnlocked()
 {
-	if (m_master_voice != nullptr)
-	{
-		m_master_voice->DestroyVoice();
-		m_master_voice = nullptr;
-	}
-
 	if (m_source_voice != nullptr)
 	{
 		const HRESULT hr = m_source_voice->Stop();
@@ -119,6 +113,12 @@ void XAudio2Backend::CloseUnlocked()
 
 		m_source_voice->DestroyVoice();
 		m_source_voice = nullptr;
+	}
+
+	if (m_master_voice != nullptr)
+	{
+		m_master_voice->DestroyVoice();
+		m_master_voice = nullptr;
 	}
 
 	m_playing = false;
