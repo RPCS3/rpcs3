@@ -47,8 +47,8 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>./wolfssl;./wolfssl/IDE/WIN;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WOLFSSL_LIB;WOLFSSL_DES_ECB;HAVE_FFDHE_2048;TFM_TIMING_RESISTANT;NO_DSA;TFM_ECC256;NO_RC4;NO_HC128;NO_RABBIT;WOLFSSL_SHA224;WOLFSSL_SHA3;WOLFSSL_SHAKE256;HAVE_POLY1305;HAVE_ONE_TIME_AUTH;HAVE_CHACHA;HAVE_HASHDRBG;HAVE_SNI;HAVE_ENCRYPT_THEN_MAC;NO_MD4;WC_NO_ASYNC_THREADING;CYASSL_USER_SETTINGS;WC_NO_HARDEN;HAVE_WRITE_DUP;WC_RSA_BLINDING;NO_MULTIBYTE_PRINT;OPENSSL_EXTRA;WOLFSSL_RIPEMD;NO_PSK;HAVE_EXTENDED_MASTER;WOLFSSL_SNIFFER;HAVE_AESGCM;WOLFSSL_SHA384;WOLFSSL_SHA512;HAVE_SUPPORTED_CURVES;HAVE_TLS_EXTENSIONS;HAVE_ECC;ECC_SHAMIR;ECC_TIMING_RESISTANT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>./wolfssl;./extra/win32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WOLFSSL_LIB;WOLFSSL_USER_SETTINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -61,8 +61,8 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>./wolfssl;./wolfssl/IDE/WIN;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WOLFSSL_LIB;WOLFSSL_DES_ECB;HAVE_FFDHE_2048;TFM_TIMING_RESISTANT;NO_DSA;TFM_ECC256;NO_RC4;NO_HC128;NO_RABBIT;WOLFSSL_SHA224;WOLFSSL_SHA3;WOLFSSL_SHAKE256;HAVE_POLY1305;HAVE_ONE_TIME_AUTH;HAVE_CHACHA;HAVE_HASHDRBG;HAVE_SNI;HAVE_ENCRYPT_THEN_MAC;NO_MD4;WC_NO_ASYNC_THREADING;CYASSL_USER_SETTINGS;WC_NO_HARDEN;HAVE_WRITE_DUP;WC_RSA_BLINDING;NO_MULTIBYTE_PRINT;OPENSSL_EXTRA;WOLFSSL_RIPEMD;NO_PSK;HAVE_EXTENDED_MASTER;WOLFSSL_SNIFFER;HAVE_AESGCM;WOLFSSL_SHA384;WOLFSSL_SHA512;HAVE_SUPPORTED_CURVES;HAVE_TLS_EXTENSIONS;HAVE_ECC;ECC_SHAMIR;ECC_TIMING_RESISTANT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>./wolfssl;./extra/win32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WOLFSSL_LIB;WOLFSSL_USER_SETTINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -137,6 +137,7 @@
     <ClCompile Include="wolfssl\wolfcrypt\src\wolfevent.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="extra\win32\user_settings.h" />
     <ClInclude Include="wolfssl\resource.h" />
     <CustomBuild Include="wolfssl\wolfcrypt\src\aes_asm.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
@@ -152,7 +153,6 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)%(Filename).obj</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='DLL Release|x64'">$(IntDir)%(Filename).obj</Outputs>
     </CustomBuild>
-    <ClInclude Include="wolfssl\IDE\WIN\user_settings.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="wolfssl\wolfssl.rc">
