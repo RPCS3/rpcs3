@@ -28,10 +28,9 @@ curl_handle::curl_handle(QObject* parent) : QObject(parent)
 #ifdef _WIN32
 	// This shouldn't be needed on linux
 	const std::string path_to_cert = rpcs3::utils::get_exe_dir() + "cacert.pem";
-	const std::string ansi_path = utf8_path_to_ansi_path(path_to_cert);
 
-	err = curl_easy_setopt(m_curl, CURLOPT_CAINFO, ansi_path.data());
-	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_CAINFO, %s) error: %s", ansi_path, curl_easy_strerror(err));
+	err = curl_easy_setopt(m_curl, CURLOPT_CAINFO, path_to_cert.data());
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_CAINFO, %s) error: %s", path_to_cert, curl_easy_strerror(err));
 #endif
 }
 
@@ -66,3 +65,11 @@ std::string curl_handle::get_verbose_error(CURLcode code)
 }
 
 }
+
+#ifdef _WIN32
+// Function exported from our user_settings.h in WolfSSL, implemented in RPCS3
+extern "C" FILE* wolfSSL_fopen_utf8(const char* name, const char* mode)
+{
+	return _wfopen(utf8_to_wchar(name).c_str(), utf8_to_wchar(mode).c_str());
+}
+#endif
