@@ -12,8 +12,10 @@
 #else
 #include <unistd.h>
 #include <sys/resource.h>
+#ifndef __APPLE__
 #include <sys/utsname.h>
 #include <errno.h>
+#endif
 #endif
 
 #include "util/asm.hpp"
@@ -46,6 +48,16 @@ inline u64 utils::get_xgetbv(u32 xcr)
 	return eax | (u64(edx) << 32);
 #endif
 }
+
+#ifdef __APPLE__
+// sysinfo_darwin.mm
+namespace Darwin_Version
+{
+	extern int getNSmajorVersion();
+	extern int getNSminorVersion();
+	extern int getNSpatchVersion();
+}
+#endif
 
 bool utils::has_ssse3()
 {
@@ -343,6 +355,13 @@ std::string utils::get_OS_version()
 	fmt::append(output,
 		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %u, Service Pack: %s, Compatibility mode: %llu",
 		version_major, version_minor, build, has_sp ? holder.data() : "none", compatibility_mode);
+#elif defined (__APPLE__)
+	const int major_version = Darwin_Version::getNSmajorVersion();
+	const int minor_version = Darwin_Version::getNSminorVersion();
+	const int patch_version = Darwin_Version::getNSpatchVersion();
+
+	fmt::append(output, "Operating system: macOS, Version: %d.%d.%d",
+		major_version, minor_version, patch_version);
 #else
 	struct utsname details = {};
 
