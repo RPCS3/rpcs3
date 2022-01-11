@@ -71,7 +71,9 @@ void headless_application::InitializeCallbacks()
 			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
 			break;
 		}
+#if not defined(__APPLE__)
 		case video_renderer::opengl:
+#endif
 #if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
 #endif

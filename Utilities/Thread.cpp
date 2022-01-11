@@ -1905,6 +1905,11 @@ void thread_base::start()
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	ensure(m_thread);
 	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1);
+#elif defined(__APPLE__)
+	pthread_attr_t stack_size_attr;
+	pthread_attr_init(&stack_size_attr);
+	pthread_attr_setstacksize(&stack_size_attr, 0x800000);
+	ensure(pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), &stack_size_attr, entry_point, this) == 0);
 #else
 	ensure(pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry_point, this) == 0);
 #endif
@@ -2849,7 +2854,7 @@ void thread_ctrl::set_native_priority(int priority)
 
 	if (int err = pthread_setschedparam(pthread_self(), policy, &param))
 	{
-		sig_log.error("pthraed_setschedparam() failed: %d", err);
+		sig_log.error("pthread_setschedparam() failed: %d", err);
 	}
 #endif
 }

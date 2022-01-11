@@ -11,6 +11,7 @@
 #include "stringapiset.h"
 #else
 #include <unistd.h>
+#include <sys/resource.h>
 #ifndef __APPLE__
 #include <sys/utsname.h>
 #include <errno.h>
@@ -375,6 +376,19 @@ std::string utils::get_OS_version()
 	}
 #endif
 	return output;
+}
+
+int utils::get_maxfiles()
+{
+#ifdef _WIN32
+	// Virtually unlimited on Windows
+	return INT_MAX;
+#else
+	struct rlimit limits;
+	ensure(getrlimit(RLIMIT_NOFILE, &limits) == 0);
+
+	return limits.rlim_cur;
+#endif
 }
 
 static constexpr ullong round_tsc(ullong val)

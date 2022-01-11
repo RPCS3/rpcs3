@@ -51,6 +51,8 @@ namespace utils
 
 	std::string get_OS_version();
 
+	int get_maxfiles();
+
 	ullong get_tsc_freq();
 
 	u64 get_total_memory();

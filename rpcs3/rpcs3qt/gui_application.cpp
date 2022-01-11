@@ -35,6 +35,7 @@
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QSound>
+#include <QMessageBox>
 
 #include <clocale>
 
@@ -103,6 +104,17 @@ bool gui_application::Init()
 	{
 		welcome_dialog* welcome = new welcome_dialog(m_gui_settings);
 		welcome->exec();
+	}
+
+	// Check maxfiles
+	if (utils::get_maxfiles() < 4096)
+	{
+		QMessageBox::warning(nullptr,
+							 tr("Warning"),
+							 tr("The current limit of maximum file descriptors is too low.\n"
+								"Some games will crash.\n"
+								"\n"
+								"Please increase the limit before running RPCS3."));
 	}
 
 	if (m_main_window && !m_main_window->Init(m_with_cli_boot))
@@ -332,11 +344,13 @@ void gui_application::InitializeCallbacks()
 			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
 			break;
 		}
+#if not defined(__APPLE__)
 		case video_renderer::opengl:
 		{
 			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
 			break;
 		}
+#endif
 #if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
 		{
