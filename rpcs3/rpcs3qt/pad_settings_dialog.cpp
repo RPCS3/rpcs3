@@ -707,11 +707,6 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	else
 	{
-#ifdef __APPLE__
-		// Arrow keys are considered to be part of the keypad on macOS, so we change them to regular arrow keys for consistency
-		if(keyEvent->key() >= Qt::Key_Left && keyEvent->key() <= Qt::Key_Down)
-			keyEvent = new QKeyEvent(QEvent::KeyPress, keyEvent->key(), Qt::NoModifier, keyEvent->nativeScanCode(), keyEvent->nativeVirtualKey(), 0);
-#endif
 		m_cfg_entries[m_button_id].key = keyboard_pad_handler::GetKeyName(keyEvent);
 		m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
 	}

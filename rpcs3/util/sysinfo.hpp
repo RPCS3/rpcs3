@@ -51,9 +51,7 @@ namespace utils
 
 	std::string get_OS_version();
 
-#ifndef _WIN32
 	int get_maxfiles();
-#endif
 
 	ullong get_tsc_freq();
 

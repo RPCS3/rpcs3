@@ -356,12 +356,12 @@ std::string utils::get_OS_version()
 		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %u, Service Pack: %s, Compatibility mode: %llu",
 		version_major, version_minor, build, has_sp ? holder.data() : "none", compatibility_mode);
 #elif defined (__APPLE__)
-	const int majorVersion = Darwin_Version::getNSmajorVersion();
-	const int minorVersion = Darwin_Version::getNSminorVersion();
-	const int patchVersion = Darwin_Version::getNSpatchVersion();
+	const int major_version = Darwin_Version::getNSmajorVersion();
+	const int minor_version = Darwin_Version::getNSminorVersion();
+	const int patch_version = Darwin_Version::getNSpatchVersion();
 
-	fmt::append(output, "Operating system: macOS, Version: %i.%i.%i",
-		majorVersion, minorVersion, patchVersion);
+	fmt::append(output, "Operating system: macOS, Version: %d.%d.%d",
+		major_version, minor_version, patch_version);
 #else
 	struct utsname details = {};
 
@@ -378,15 +378,18 @@ std::string utils::get_OS_version()
 	return output;
 }
 
-#ifndef _WIN32
 int utils::get_maxfiles()
 {
+#ifdef _WIN32
+	// Virtually unlimited on Windows
+	return INT_MAX;
+#else
 	struct rlimit limits;
-	getrlimit(RLIMIT_NOFILE, &limits);
+	ensure(getrlimit(RLIMIT_NOFILE, &limits) == 0);
 
 	return limits.rlim_cur;
-}
 #endif
+}
 
 static constexpr ullong round_tsc(ullong val)
 {

@@ -106,7 +106,6 @@ bool gui_application::Init()
 		welcome->exec();
 	}
 
-#ifndef _WIN32
 	// Check maxfiles
 	if (utils::get_maxfiles() < 4096)
 	{
@@ -117,7 +116,6 @@ bool gui_application::Init()
 								"\n"
 								"Please increase the limit before running RPCS3."));
 	}
-#endif
 
 	if (m_main_window && !m_main_window->Init(m_with_cli_boot))
 	{

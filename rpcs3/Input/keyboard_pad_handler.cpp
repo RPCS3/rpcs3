@@ -5,7 +5,6 @@
 #include "rpcs3qt/gs_frame.h"
 
 #include <QApplication>
-#include <QDebug>
 
 LOG_CHANNEL(input_log, "Input");
 
@@ -253,12 +252,6 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 		event->ignore();
 		return;
 	}
-
-#ifdef __APPLE__
-	// Arrow keys are considered to be part of the keypad on macOS, so we change them to regular arrow keys for consistency
-	if(event->key() >= Qt::Key_Left && event->key() <= Qt::Key_Down)
-		event = new QKeyEvent(QEvent::KeyPress, event->key(), Qt::NoModifier, event->nativeScanCode(), event->nativeVirtualKey(), 0);
-#endif
 
 	auto handle_key = [this, pressed, event]()
 	{
