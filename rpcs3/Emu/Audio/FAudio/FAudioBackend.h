@@ -45,7 +45,7 @@ private:
 	std::function<u32(u32, void *)> m_write_callback{};
 	std::unique_ptr<u8[]> m_data_buf{};
 	u64 m_data_buf_len = 0;
-	u8 m_last_sample[sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)]{};
+	std::array<u8, sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)> m_last_sample{};
 
 	bool m_playing = false;
 	atomic_t<bool> m_reset_req = false;

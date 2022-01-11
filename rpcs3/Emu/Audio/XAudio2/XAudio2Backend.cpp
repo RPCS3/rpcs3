@@ -124,7 +124,7 @@ void XAudio2Backend::CloseUnlocked()
 	m_playing = false;
 	m_data_buf = nullptr;
 	m_data_buf_len = 0;
-	memset(m_last_sample, 0, sizeof(m_last_sample));
+	m_last_sample.fill(0);
 }
 
 void XAudio2Backend::Close()
@@ -156,6 +156,7 @@ void XAudio2Backend::Pause()
 
 	std::lock_guard lock(m_cb_mutex);
 	m_playing = false;
+	m_last_sample.fill(0);
 }
 
 void XAudio2Backend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
@@ -261,12 +262,12 @@ void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired)
 
 		if (written >= sample_size)
 		{
-			memcpy(m_last_sample, m_data_buf.get() + written - sample_size, sample_size);
+			memcpy(m_last_sample.data(), m_data_buf.get() + written - sample_size, sample_size);
 		}
 
 		for (u32 i = written; i < BytesRequired; i += sample_size)
 		{
-			memcpy(m_data_buf.get() + i, m_last_sample, sample_size);
+			memcpy(m_data_buf.get() + i, m_last_sample.data(), sample_size);
 		}
 
 		XAUDIO2_BUFFER buffer{};
