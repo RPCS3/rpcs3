@@ -61,7 +61,7 @@ target_sources(rpcs3_emu PRIVATE
 )
 if(APPLE)
 	target_sources(rpcs3_emu PRIVATE
-	    ../util/sysinfo_darwin.mm
+	    ../../darwin/util/sysinfo_darwin.mm
 	)
 endif()
 
