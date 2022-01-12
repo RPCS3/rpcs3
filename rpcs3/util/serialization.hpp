@@ -52,7 +52,7 @@ namespace utils
 		std::vector<u8> data;
 		usz pos = umax;
 
-		// Checks if this strcuture is currently used for serialization
+		// Checks if this instance is currently used for serialization
 		bool is_writing() const
 		{
 			return pos == umax;
@@ -133,7 +133,7 @@ namespace utils
 			return ::serialize(*this, obj);
 		}
 
-		// Enabled for fundamental types, enumerations and if specfied explicitly that type can be saved in pure bitwise manner
+		// Enabled for fundamental types, enumerations and if specified explicitly that type can be saved in pure bitwise manner
 		template <typename T> requires Bitcopy<T>
 		bool serialize(T& obj)
 		{

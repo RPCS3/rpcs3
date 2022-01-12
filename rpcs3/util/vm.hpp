@@ -17,7 +17,7 @@ namespace utils
 
 	/**
 	* Reserve `size` bytes of virtual memory and returns it.
-	* The memory should be commited before usage.
+	* The memory should be committed before usage.
 	*/
 	void* memory_reserve(usz size, void* use_addr = nullptr);
 
