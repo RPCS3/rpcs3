@@ -52,7 +52,7 @@ namespace utils
 		std::vector<u8> data;
 		usz pos = umax;
 
-		// Checks if this structure is currently used for serialization
+		// Checks if this instance is currently used for serialization
 		bool is_writing() const
 		{
 			return pos == umax;
