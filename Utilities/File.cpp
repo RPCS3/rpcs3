@@ -1826,7 +1826,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 std::string fs::resolve_path(std::string_view path)
 {
 	std::error_code ec{};
-	const auto result = std::filesystem::weakly_canonical(std::filesystem::path(path), ec);
+	const auto result = std::filesystem::weakly_canonical(std::filesystem::u8path(path), ec);
 
 	if (ec)
 	{
