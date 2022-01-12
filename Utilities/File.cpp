@@ -1,6 +1,7 @@
 #include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
+#include "StrUtil.h"
 #include "Crypto/sha1.h"
 
 #include <unordered_map>
@@ -1834,7 +1835,8 @@ std::string fs::resolve_path(std::string_view path)
 		return {};
 	}
 
-	return result.string();
+	std::vector<std::string> escaped = fmt::split(result.string(), {std::string_view{&fs::delim[0], 1}, std::string_view{&fs::delim[1], 1}});
+	return fmt::merge(escaped, "/");
 }
 
 u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
