@@ -16,43 +16,22 @@
 #endif
 
 #ifdef _WIN32
-std::string wchar_to_utf8(const wchar_t *src)
+std::string wchar_to_utf8(std::wstring_view src)
 {
 	std::string utf8_string;
-	const auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src, -1, nullptr, 0, nullptr, nullptr);
+	const auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), nullptr, 0, nullptr, nullptr);
 	utf8_string.resize(tmp_size);
-	WideCharToMultiByte(CP_UTF8, 0, src, -1, utf8_string.data(), tmp_size, nullptr, nullptr);
+	WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), utf8_string.data(), tmp_size, nullptr, nullptr);
 	return utf8_string;
 }
 
-std::string wchar_path_to_ansi_path(const std::wstring& src)
+std::wstring utf8_to_wchar(std::string_view src)
 {
-	std::wstring buf_short;
-	std::string buf_final;
-
-	// Get the short path from the wide char path(short path should only contain ansi characters)
-	auto tmp_size = GetShortPathNameW(src.data(), nullptr, 0);
-	buf_short.resize(tmp_size);
-	GetShortPathNameW(src.data(), buf_short.data(), tmp_size);
-
-	// Convert wide char to ansi
-	tmp_size = WideCharToMultiByte(CP_ACP, 0, buf_short.data(), -1, nullptr, 0, nullptr, nullptr);
-	buf_final.resize(tmp_size);
-	WideCharToMultiByte(CP_ACP, 0, buf_short.data(), -1, buf_final.data(), tmp_size, nullptr, nullptr);
-
-	return buf_final;
-}
-
-std::string utf8_path_to_ansi_path(const std::string& src)
-{
-	std::wstring buf_wide;
-
-	// Converts the utf-8 path to wide char
-	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, src.c_str(), -1, nullptr, 0);
-	buf_wide.resize(tmp_size);
-	MultiByteToWideChar(CP_UTF8, 0, src.c_str(), -1, buf_wide.data(), tmp_size);
-
-	return wchar_path_to_ansi_path(buf_wide);
+	std::wstring wchar_string;
+	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, src.data(), src.size(), nullptr, 0);
+	wchar_string.resize(tmp_size);
+	MultiByteToWideChar(CP_UTF8, 0, src.data(), src.size(), wchar_string.data(), tmp_size);
+	return wchar_string;
 }
 #endif
 

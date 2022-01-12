@@ -4178,8 +4178,13 @@ void PPUTranslator::MTFSB0(ppu_opcode_t op)
 void PPUTranslator::MTFSFI(ppu_opcode_t op)
 {
 	SetFPSCRBit(op.crfd * 4 + 0, m_ir->getInt1((op.i & 8) != 0), false);
-	if (op.crfd != 0) SetFPSCRBit(op.crfd * 4 + 1, m_ir->getInt1((op.i & 4) != 0), false);
-	if (op.crfd != 0) SetFPSCRBit(op.crfd * 4 + 2, m_ir->getInt1((op.i & 2) != 0), false);
+
+	if (op.crfd != 0)
+	{
+		SetFPSCRBit(op.crfd * 4 + 1, m_ir->getInt1((op.i & 4) != 0), false);
+		SetFPSCRBit(op.crfd * 4 + 2, m_ir->getInt1((op.i & 2) != 0), false);
+	}
+
 	SetFPSCRBit(op.crfd * 4 + 3, m_ir->getInt1((op.i & 1) != 0), false);
 
 	if (op.rc) SetCrFieldFPCC(1);

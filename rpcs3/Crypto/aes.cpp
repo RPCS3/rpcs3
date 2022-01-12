@@ -32,6 +32,8 @@
 #include "aes.h"
 #include "aesni.h"
 
+#include <algorithm>
+
 /*
  * 32-bit integer manipulation macros (little endian)
  */
@@ -593,7 +595,8 @@ int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int key
     *RK++ = *SK++;
 
 done:
-    memset( &cty, 0, sizeof( aes_context ) );
+    // Wipe the stack buffer clean
+    std::fill_n(reinterpret_cast<volatile char*>(&cty), sizeof(cty), 0);
 
     return( 0 );
 }

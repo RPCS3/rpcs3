@@ -9,9 +9,8 @@
 #include "util/types.hpp"
 
 #ifdef _WIN32
-std::string wchar_to_utf8(const wchar_t *src);
-std::string wchar_path_to_ansi_path(const std::wstring& src);
-std::string utf8_path_to_ansi_path(const std::string& src);
+std::wstring utf8_to_wchar(std::string_view src);
+std::string wchar_to_utf8(std::wstring_view src);
 #endif
 
 // Copy null-terminated string from a std::string or a char array to a char array with truncation

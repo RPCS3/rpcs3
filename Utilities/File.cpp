@@ -4,6 +4,7 @@
 #include "Crypto/sha1.h"
 
 #include <unordered_map>
+#include <filesystem>
 #include <algorithm>
 #include <cstring>
 #include <map>
@@ -1820,6 +1821,20 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 	}
 
 	return true;
+}
+
+std::string fs::resolve_path(std::string_view path)
+{
+	std::error_code ec{};
+	const auto result = std::filesystem::weakly_canonical(std::filesystem::path(path), ec);
+
+	if (ec)
+	{
+		g_tls_error = error::inval;
+		return {};
+	}
+
+	return result.string();
 }
 
 u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
