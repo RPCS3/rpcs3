@@ -49,6 +49,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		return false;
 	}
 
+	const bool delim_suffixed = path.ends_with(fs::delim);
 	std::string final_path = fs::resolve_path(path);
 
 	if (final_path.empty())
@@ -57,7 +58,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		return false;
 	}
 
-	if (!final_path.ends_with(fs::delim[0]) && !final_path.ends_with(fs::delim[1]) && (path.ends_with(fs::delim[0]) || path.ends_with(fs::delim[1])))
+	if (!final_path.ends_with(fs::delim) && delim_suffixed)
 	{
 		final_path += '/';
 	}
@@ -82,7 +83,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		{
 			// Mounting completed
 			list.back()->path = std::move(final_path);
-			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, list.back()->path);
+			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, final_path);
 			return true;
 		}
 
