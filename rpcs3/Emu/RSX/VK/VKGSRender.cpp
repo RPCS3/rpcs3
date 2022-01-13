@@ -1737,14 +1737,10 @@ bool VKGSRender::load_program()
 			rsx::method_registers.msaa_alpha_to_coverage_enabled(),
 			alpha_to_one_enable);
 
-		if (const auto chip_family = vk::get_chip_family();
-			chip_family == vk::chip_class::AMD_navi1x ||
-			chip_family == vk::chip_class::AMD_navi2x)
-		{
-			// NAVI family has a GPU bug with MSAA where shading rate is not correctly initialized if left disabled
-			// Manually initialize it and set it to spec default (full shading)
-			properties.state.set_multisample_shading_rate(1.f);
-		}
+		// A problem observed on multiple GPUs is that interior geometry edges can resolve 0 samples unless we force shading rate of 1.
+		// For whatever reason, the way MSAA images are 'resolved' on PS3 bypasses this issue.
+		// NOTE: We do not do image resolve at all, the output is merely 'exploded' and the guest application is responsible for doing the resolve in software as it is on real hardware.
+		properties.state.set_multisample_shading_rate(1.f);
 	}
 
 	properties.renderpass_key = m_current_renderpass_key;
