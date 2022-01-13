@@ -42,6 +42,8 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 
 	// TODO: scan roots of mounted devices for undeleted vfs::host::unlink remnants, and try to delete them (_WIN32 only)
 
+	std::lock_guard lock(table.mutex);
+
 	if (vpath.empty())
 	{
 		// Empty relative path, should set relative path base; unsupported
@@ -49,22 +51,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		return false;
 	}
 
-	std::string final_path = fs::resolve_path(path);
-
-	if (final_path.empty())
-	{
-		vfs_log.error("Cannot mount path \"%s\" due to invalid host path \"%s\" (%s)", vpath, path, fs::g_tls_error);
-		return false;
-	}
-
-	if (!final_path.ends_with(fs::delim[0]) && !final_path.ends_with(fs::delim[1]) && (path.ends_with(fs::delim[0]) || path.ends_with(fs::delim[1])))
-	{
-		final_path += '/';
-	}
-
 	const std::string_view vpath_backup = vpath;
-
-	std::lock_guard lock(table.mutex);
 
 	for (std::vector<vfs_directory*> list{&table.root};;)
 	{
@@ -81,8 +68,8 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		if (pos == umax)
 		{
 			// Mounting completed
-			list.back()->path = std::move(final_path);
-			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, list.back()->path);
+			list.back()->path = path;
+			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, path);
 			return true;
 		}
 
@@ -756,7 +743,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 {
 	// Lock mount point, close file descriptors, retry
 	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
-	const auto escaped_from = fs::resolve_path(from);
+	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
 
 	std::lock_guard lock(mp->mutex);
 
@@ -767,7 +754,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
 	{
-		if (check_path(fs::resolve_path(file.real_path)))
+		if (check_path(Emu.GetCallbacks().resolve_path(file.real_path)))
 		{
 			ensure(file.mp == mp);
 
@@ -809,7 +796,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
 	{
-		const auto escaped_real = fs::resolve_path(file.real_path);
+		const auto escaped_real = Emu.GetCallbacks().resolve_path(file.real_path);
 
 		if (check_path(escaped_real))
 		{

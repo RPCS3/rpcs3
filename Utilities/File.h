@@ -645,9 +645,6 @@ namespace fs
 		std::string m_dest{}; // Destination file path
 	};
 
-	// Get real path for comparisons
-	std::string resolve_path(std::string_view path);
-
 	// Delete directory and all its contents recursively
 	bool remove_all(const std::string& path, bool remove_root = true);
 
