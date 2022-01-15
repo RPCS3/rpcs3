@@ -1518,9 +1518,8 @@ void PPUTranslator::VSEL(ppu_opcode_t op)
 
 void PPUTranslator::VSL(ppu_opcode_t op)
 {
-	// TODO (very rare)
-	const auto [a, b] = get_vrs<u128>(op.va, op.vb);
-	set_vr(op.vd, a << (b & 7));
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, fshl(a, zshuffle(a, 16, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14), b));
 }
 
 void PPUTranslator::VSLB(ppu_opcode_t op)
@@ -1612,9 +1611,8 @@ void PPUTranslator::VSPLTW(ppu_opcode_t op)
 
 void PPUTranslator::VSR(ppu_opcode_t op)
 {
-	// TODO (very rare)
-	const auto [a, b] = get_vrs<u128>(op.va, op.vb);
-	set_vr(op.vd, a >> (b & 7));
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, fshr(zshuffle(a, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), a, b));
 }
 
 void PPUTranslator::VSRAB(ppu_opcode_t op)
