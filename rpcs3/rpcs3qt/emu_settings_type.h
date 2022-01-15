@@ -199,7 +199,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PPUNJFixup,               { "Core", "PPU LLVM Java Mode Handling"}},
 	{ emu_settings_type::AccurateDFMA,             { "Core", "Use Accurate DFMA"}},
 	{ emu_settings_type::AccuratePPUSAT,           { "Core", "PPU Set Saturation Bit"}},
-	{ emu_settings_type::AccuratePPUNJ,            { "Core", "PPU Use Non-Java Mode Bit"}},
+	{ emu_settings_type::AccuratePPUNJ,            { "Core", "PPU Accurate Non-Java Mode"}},
 	{ emu_settings_type::FixupPPUVNAN,             { "Core", "PPU Fixup Vector NaN Values"}},
 	{ emu_settings_type::AccuratePPUVNAN,          { "Core", "PPU Accurate Vector NaN Values"}},
 	{ emu_settings_type::AccuratePPUFPCC,          { "Core", "PPU Set FPCC Bits"}},

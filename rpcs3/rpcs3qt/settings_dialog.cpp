@@ -330,6 +330,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceRadioButton(ppu_bg, emu_settings_type::PPUDecoder);
 
+	connect(ppu_bg, &QButtonGroup::idToggled, [this](int id, bool checked)
+	{
+		if (!checked) return;
+
+		switch (id)
+		{
+		case static_cast<int>(ppu_decoder_type::_static):
+			ui->accuratePPUFPCC->setEnabled(true);
+			ui->accuratePPUNJ->setEnabled(true);
+			ui->accuratePPUVNAN->setEnabled(true);
+			break;
+		case static_cast<int>(ppu_decoder_type::dynamic):
+		case static_cast<int>(ppu_decoder_type::llvm):
+			ui->accuratePPUFPCC->setEnabled(false);
+			ui->accuratePPUNJ->setEnabled(false);
+			ui->accuratePPUVNAN->setEnabled(false);
+			break;
+		default:
+			break;
+		}
+	});
+
 	// SPU tool tips
 	SubscribeTooltip(ui->spu__static, tooltips.settings.spu__static);
 	SubscribeTooltip(ui->spu_dynamic, tooltips.settings.spu_dynamic);
