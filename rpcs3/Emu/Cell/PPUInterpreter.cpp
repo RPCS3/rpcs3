@@ -54,6 +54,7 @@ enum class ppu_exec_bit : u64
 	has_rc,
 	set_sat,
 	use_nj,
+	fix_nj,
 	set_vnan,
 	fix_vnan,
 	set_fpcc,
@@ -73,7 +74,7 @@ struct ppu_exec_select
 	static ppu_intrp_func_t select(bs_t<ppu_exec_bit> selected, F func)
 	{
 		// Make sure there is no flag duplication, otherwise skip flag
-		if constexpr (((Flags0 != Flag) && ...))
+		if constexpr (((Flags0 != Flag) && ...) && (Flag != fix_vnan || ((Flags0 != set_vnan) && ...)) && (Flag != fix_nj || ((Flags0 != use_nj) && ...)))
 		{
 			// Test only relevant flags at runtime initialization (compile both variants)
 			if (selected & Flag)
@@ -766,10 +767,10 @@ inline v128 ppu_select_vnan(v128 a, v128 b, Vector128 auto... args)
 }
 
 // Flush denormals to zero if NJ is 1
-template <ppu_exec_bit... Flags>
+template <bool Result = false, ppu_exec_bit... Flags>
 inline v128 ppu_flush_denormal(const v128& mask, const v128& a)
 {
-	if constexpr (((Flags == use_nj) || ...))
+	if constexpr (((Flags == use_nj) || ...) || (Result && ((Flags == fix_nj) || ...)))
 	{
 		return gv_andn(gv_shr32(gv_eq32(mask & a, gv_bcst32(0)), 1), a);
 	}
@@ -826,14 +827,14 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto MTVSCR()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<set_sat, use_nj>();
+		return ppu_exec_select<Flags...>::template select<set_sat, use_nj, fix_nj>();
 
 	static const auto exec = [](auto&& sat, auto&& nj, auto&& jm_mask, auto&& b)
 	{
 		const u32 vscr = b._u32[3];
 		if constexpr (((Flags == set_sat) || ...))
 			sat._u = vscr & 1;
-		if constexpr (((Flags == use_nj) || ...))
+		if constexpr (((Flags == use_nj || Flags == fix_nj) || ...))
 			jm_mask = (vscr & 0x10000) ? 0x7f80'0000 : 0x7fff'ffff;
 		nj = (vscr & 0x10000) != 0;
 	};
@@ -860,14 +861,14 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VADDFP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](auto&& d, auto&& a_, auto&& b_, auto&& jm_mask)
 	{
 		const auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
-		const auto a = ppu_flush_denormal<Flags...>(m, a_);
-		const auto b = ppu_flush_denormal<Flags...>(m, b_);
-		d = ppu_flush_denormal<Flags...>(m, ppu_set_vnan<Flags...>(gv_addfs(a, b), a, b));
+		const auto a = ppu_flush_denormal<false, Flags...>(m, a_);
+		const auto b = ppu_flush_denormal<false, Flags...>(m, b_);
+		d = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(gv_addfs(a, b), a, b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.jm_mask);
@@ -1508,15 +1509,15 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VMADDFP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](auto&& d, auto&& a_, auto&& b_, auto&& c_, auto&& jm_mask)
 	{
 		const auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
-		const auto a = ppu_flush_denormal<Flags...>(m, a_);
-		const auto b = ppu_flush_denormal<Flags...>(m, b_);
-		const auto c = ppu_flush_denormal<Flags...>(m, c_);
-		d = ppu_flush_denormal<Flags...>(m, ppu_set_vnan<Flags...>(gv_fmafs(a, c, b)));
+		const auto a = ppu_flush_denormal<false, Flags...>(m, a_);
+		const auto b = ppu_flush_denormal<false, Flags...>(m, b_);
+		const auto c = ppu_flush_denormal<false, Flags...>(m, c_);
+		d = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(gv_fmafs(a, c, b)));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc], ppu.jm_mask);
@@ -1526,11 +1527,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VMAXFP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& jm_mask)
 	{
-		d = ppu_flush_denormal<Flags...>(gv_bcst32(jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(gv_maxfs(a, b), a, b));
+		d = ppu_flush_denormal<true, Flags...>(gv_bcst32(jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(gv_maxfs(a, b), a, b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.jm_mask);
@@ -1673,11 +1674,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VMINFP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& jm_mask)
 	{
-		d = ppu_flush_denormal<Flags...>(gv_bcst32(jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(gv_minfs(a, b), a, b));
+		d = ppu_flush_denormal<true, Flags...>(gv_bcst32(jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(gv_minfs(a, b), a, b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.jm_mask);
@@ -2087,17 +2088,17 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VNMSUBFP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	// An odd case with (FLT_MIN, FLT_MIN, FLT_MIN) produces FLT_MIN instead of 0
 	const auto s = _mm_set1_ps(-0.0f);
 	const auto m = gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask);
-	const auto a = ppu_flush_denormal<Flags...>(m, ppu.vr[op.va]);
-	const auto b = ppu_flush_denormal<Flags...>(m, ppu.vr[op.vb]);
-	const auto c = ppu_flush_denormal<Flags...>(m, ppu.vr[op.vc]);
+	const auto a = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.va]);
+	const auto b = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vb]);
+	const auto c = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vc]);
 	const auto r = _mm_xor_ps(gv_fmafs(a, c, _mm_xor_ps(b, s)), s);
-	ppu.vr[op.rd] = ppu_flush_denormal<Flags...>(m, ppu_set_vnan<Flags...>(r));
+	ppu.vr[op.rd] = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(r));
 	};
 	RETURN_(ppu, op);
 }
@@ -2315,14 +2316,14 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VREFP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const auto a = _mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f);
 	const auto m = gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask);
-	const auto b = ppu_flush_denormal<Flags...>(m, ppu.vr[op.vb]);
+	const auto b = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vb]);
 	const auto result = _mm_div_ps(a, b);
-	ppu.vr[op.vd] = ppu_flush_denormal<Flags...>(m, ppu_set_vnan<Flags...>(result, a, b));
+	ppu.vr[op.vd] = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(result, a, b));
 	};
 	RETURN_(ppu, op);
 }
@@ -2331,11 +2332,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VRFIM()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const auto m = gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask);
-	const auto b = ppu_flush_denormal<Flags...>(m, ppu.vr[op.vb]);
+	const auto b = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vb]);
 	v128 d;
 
 	for (uint w = 0; w < 4; w++)
@@ -2343,7 +2344,7 @@ auto VRFIM()
 		d._f[w] = std::floor(b._f[w]);
 	}
 
-	ppu.vr[op.vd] = ppu_flush_denormal<Flags...>(m, ppu_set_vnan<Flags...>(d, b));
+	ppu.vr[op.vd] = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(d, b));
 	};
 	RETURN_(ppu, op);
 }
@@ -2352,7 +2353,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VRFIN()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const auto b = ppu.vr[op.vb];
@@ -2363,7 +2364,7 @@ auto VRFIN()
 		d._f[w] = std::nearbyint(b._f[w]);
 	}
 
-	ppu.vr[op.vd] = ppu_flush_denormal<Flags...>(gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(d, b));
+	ppu.vr[op.vd] = ppu_flush_denormal<true, Flags...>(gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(d, b));
 	};
 	RETURN_(ppu, op);
 }
@@ -2372,11 +2373,11 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VRFIP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const auto m = gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask);
-	const auto b = ppu_flush_denormal<Flags...>(m, ppu.vr[op.vb]);
+	const auto b = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vb]);
 	v128 d;
 
 	for (uint w = 0; w < 4; w++)
@@ -2384,7 +2385,7 @@ auto VRFIP()
 		d._f[w] = std::ceil(b._f[w]);
 	}
 
-	ppu.vr[op.vd] = ppu_flush_denormal<Flags...>(m, ppu_set_vnan<Flags...>(d, b));
+	ppu.vr[op.vd] = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(d, b));
 	};
 	RETURN_(ppu, op);
 }
@@ -2393,7 +2394,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VRFIZ()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const auto b = ppu.vr[op.vb];
@@ -2404,7 +2405,7 @@ auto VRFIZ()
 		d._f[w] = std::truncf(b._f[w]);
 	}
 
-	ppu.vr[op.vd] = ppu_flush_denormal<Flags...>(gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(d, b));
+	ppu.vr[op.vd] = ppu_flush_denormal<true, Flags...>(gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask), ppu_set_vnan<Flags...>(d, b));
 	};
 	RETURN_(ppu, op);
 }
@@ -2470,14 +2471,14 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VRSQRTEFP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const auto a = _mm_set_ps(1.0f, 1.0f, 1.0f, 1.0f);
 	const auto m = gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask);
-	const auto b = ppu_flush_denormal<Flags...>(m, ppu.vr[op.vb]);
+	const auto b = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vb]);
 	const auto result = _mm_div_ps(a, _mm_sqrt_ps(b));
-	ppu.vr[op.vd] = ppu_flush_denormal<Flags...>(m, ppu_set_vnan<Flags...>(result, a, b));
+	ppu.vr[op.vd] = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(result, a, b));
 	};
 	RETURN_(ppu, op);
 }
@@ -2905,14 +2906,14 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto VSUBFP()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<use_nj, set_vnan, fix_vnan>();
+		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	const auto m = gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask);
-	const auto a = ppu_flush_denormal<Flags...>(m, ppu.vr[op.va]);
-	const auto b = ppu_flush_denormal<Flags...>(m, ppu.vr[op.vb]);
+	const auto a = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.va]);
+	const auto b = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vb]);
 	const auto r = gv_subfs(a, b);
-	ppu.vr[op.vd] = ppu_flush_denormal<Flags...>(m, ppu_set_vnan<Flags...>(r, a, b));
+	ppu.vr[op.vd] = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(r, a, b));
 	};
 	RETURN_(ppu, op);
 }
@@ -7583,6 +7584,8 @@ ppu_interpreter_rt_base::ppu_interpreter_rt_base() noexcept
 		selected += set_sat;
 	if (g_cfg.core.ppu_use_nj_bit)
 		selected += use_nj;
+	if (g_cfg.core.ppu_llvm_nj_fixup)
+		selected += fix_nj;
 	if (g_cfg.core.ppu_set_vnan)
 		selected += set_vnan;
 	if (g_cfg.core.ppu_fix_vnan)

@@ -2064,6 +2064,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="ppuNJFixup">
+                <property name="text">
+                 <string>PPU Non-Java Mode Fixup</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QCheckBox" name="accuratePPUSAT">
                 <property name="text">
                  <string>Accurate PPU Saturation Bit</string>

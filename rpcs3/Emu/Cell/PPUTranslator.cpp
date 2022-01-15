@@ -291,7 +291,7 @@ Value* PPUTranslator::VecHandleDenormal(Value* val)
 Value* PPUTranslator::VecHandleResult(Value* val)
 {
 	val = g_cfg.core.ppu_fix_vnan ? VecHandleNan(val) : val;
-	val = g_cfg.core.ppu_use_nj_bit ? VecHandleDenormal(val) : val;
+	val = g_cfg.core.ppu_llvm_nj_fixup ? VecHandleDenormal(val) : val;
 	return val;
 }
 
@@ -649,7 +649,7 @@ void PPUTranslator::MTVSCR(ppu_opcode_t op)
 	const auto vscr = m_ir->CreateExtractElement(GetVr(op.vb, VrType::vi32), m_ir->getInt32(m_is_be ? 3 : 0));
 	const auto nj = Trunc(m_ir->CreateLShr(vscr, 16), GetType<bool>());
 	RegStore(nj, m_nj);
-	if (g_cfg.core.ppu_use_nj_bit)
+	if (g_cfg.core.ppu_llvm_nj_fixup)
 		RegStore(m_ir->CreateSelect(nj, m_ir->getInt32(0x7f80'0000), m_ir->getInt32(0x7fff'ffff)), m_jm_mask);
 	if (g_cfg.core.ppu_set_sat_bit)
 		RegStore(m_ir->CreateInsertElement(ConstantAggregateZero::get(GetType<u32[4]>()), m_ir->CreateAnd(vscr, 1), m_ir->getInt32(0)), m_sat);

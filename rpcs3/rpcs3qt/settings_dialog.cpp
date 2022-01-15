@@ -1151,6 +1151,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->accurateDFMA, tooltips.settings.accurate_dfma);
 	ui->accurateDFMA->setDisabled(utils::has_fma3() || utils::has_fma4());
 
+	m_emu_settings->EnhanceCheckBox(ui->ppuNJFixup, emu_settings_type::PPUNJFixup);
+	SubscribeTooltip(ui->ppuNJFixup, tooltips.settings.fixup_ppunj);
+
 	m_emu_settings->EnhanceCheckBox(ui->accuratePPUSAT, emu_settings_type::AccuratePPUSAT);
 	SubscribeTooltip(ui->accuratePPUSAT, tooltips.settings.accurate_ppusat);
 

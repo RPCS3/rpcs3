@@ -3071,13 +3071,14 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				non_win32,
 				accurate_dfma,
 				fixup_vnan,
-				accurate_jm,
+				fixup_nj_denormals,
 				accurate_cache_line_stores,
 				reservations_128_byte,
 				greedy_mode,
 				accurate_sat,
 				accurate_fpcc,
 				accurate_vnan,
+				accurate_nj_mode,
 
 				__bitset_enum_max
 			};
@@ -3091,8 +3092,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				settings += ppu_settings::accurate_dfma;
 			if (g_cfg.core.ppu_fix_vnan)
 				settings += ppu_settings::fixup_vnan;
-			if (g_cfg.core.ppu_use_nj_bit)
-				settings += ppu_settings::accurate_jm;
+			if (g_cfg.core.ppu_llvm_nj_fixup)
+				settings += ppu_settings::fixup_nj_denormals;
 			if (has_dcbz == 2)
 				settings += ppu_settings::accurate_cache_line_stores;
 			if (g_cfg.core.ppu_128_reservations_loop_max_length)
@@ -3104,7 +3105,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			if (g_cfg.core.ppu_set_fpcc)
 				settings += ppu_settings::accurate_fpcc, fmt::throw_exception("FPCC Not implemented");
 			if (g_cfg.core.ppu_set_vnan)
-				settings += ppu_settings::accurate_vnan, fmt::throw_exception("VNAN Not implemented");
+				settings += ppu_settings::accurate_vnan, settings -= ppu_settings::fixup_vnan, fmt::throw_exception("VNAN Not implemented");
+			if (g_cfg.core.ppu_use_nj_bit)
+				settings += ppu_settings::accurate_nj_mode, settings -= ppu_settings::fixup_nj_denormals, fmt::throw_exception("NJ Not implemented");
 
 			// Write version, hash, CPU, settings
 			fmt::append(obj_name, "v5-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
