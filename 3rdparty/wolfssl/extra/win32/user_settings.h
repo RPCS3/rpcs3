@@ -67,7 +67,9 @@ extern FILE* wolfSSL_fopen_utf8(const char* name, const char* mode);
 #define XFFLUSH    fflush
 
 #include <sys/stat.h>
-#define XSTAT       _stat
+extern int wolfSSL_stat_utf8(const char* path, struct _stat* buffer);
+#define XSTAT       wolfSSL_stat_utf8
+#define XSTAT_TYPE struct _stat
 #define XS_ISREG(s) (s & _S_IFREG)
 #define SEPARATOR_CHAR ';'
 
