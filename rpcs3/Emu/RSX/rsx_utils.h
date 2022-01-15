@@ -726,11 +726,11 @@ namespace rsx
 	}
 
 	// Convert color write mask for G8B8 to R8G8
-	static inline u32 get_g8b8_r8g8_colormask(u32 mask)
+	static inline u32 get_g8b8_r8g8_clearmask(u32 mask)
 	{
 		u32 result = 0;
-		if (mask & 0x20) result |= 0x20;
-		if (mask & 0x40) result |= 0x10;
+		if (mask & RSX_GCM_CLEAR_GREEN_BIT) result |= RSX_GCM_CLEAR_GREEN_BIT;
+		if (mask & RSX_GCM_CLEAR_BLUE_BIT) result |= RSX_GCM_CLEAR_RED_BIT;
 
 		return result;
 	}
@@ -747,13 +747,13 @@ namespace rsx
 		red = blue;
 	}
 
-	static inline u32 get_abgr8_colormask(u32 mask)
+	static inline u32 get_abgr8_clearmask(u32 mask)
 	{
 		u32 result = 0;
-		if (mask & 0x10) result |= 0x40;
-		if (mask & 0x20) result |= 0x20;
-		if (mask & 0x40) result |= 0x10;
-		if (mask & 0x80) result |= 0x80;
+		if (mask & RSX_GCM_CLEAR_RED_BIT) result |= RSX_GCM_CLEAR_BLUE_BIT;
+		if (mask & RSX_GCM_CLEAR_GREEN_BIT) result |= RSX_GCM_CLEAR_GREEN_BIT;
+		if (mask & RSX_GCM_CLEAR_BLUE_BIT) result |= RSX_GCM_CLEAR_RED_BIT;
+		if (mask & RSX_GCM_CLEAR_ALPHA_BIT) result |= RSX_GCM_CLEAR_ALPHA_BIT;
 		return result;
 	}
 
@@ -763,6 +763,26 @@ namespace rsx
 	}
 
 	static inline void get_abgr8_clear_color(u8& red, u8& /*green*/, u8& blue, u8& /*alpha*/)
+	{
+		std::swap(red, blue);
+	}
+
+	static inline u32 get_b8_clearmask(u32 mask)
+	{
+		u32 result = 0;
+		if (mask & RSX_GCM_CLEAR_BLUE_BIT) result |= RSX_GCM_CLEAR_RED_BIT;
+		return result;
+	}
+
+	static inline void get_b8_colormask(bool& red, bool& green, bool& blue, bool& alpha)
+	{
+		red = blue;
+		green = false;
+		blue = false;
+		alpha = false;
+	}
+
+	static inline void get_b8_clear_color(u8& red, u8& /*green*/, u8& blue, u8& /*alpha*/)
 	{
 		std::swap(red, blue);
 	}
