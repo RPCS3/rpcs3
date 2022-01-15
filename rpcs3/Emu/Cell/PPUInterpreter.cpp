@@ -74,7 +74,7 @@ struct ppu_exec_select
 	static ppu_intrp_func_t select(bs_t<ppu_exec_bit> selected, F func)
 	{
 		// Make sure there is no flag duplication, otherwise skip flag
-		if constexpr (((Flags0 != Flag) && ...) && (Flag != fix_vnan || ((Flags0 != set_vnan) && ...)) && (Flag != fix_nj || ((Flags0 != use_nj) && ...)))
+		if constexpr (((Flags0 != Flag) && ...))
 		{
 			// Test only relevant flags at runtime initialization (compile both variants)
 			if (selected & Flag)
@@ -7583,11 +7583,11 @@ ppu_interpreter_rt_base::ppu_interpreter_rt_base() noexcept
 	if (g_cfg.core.ppu_set_sat_bit)
 		selected += set_sat;
 	if (g_cfg.core.ppu_use_nj_bit)
-		selected += use_nj;
+		selected += use_nj + fix_nj;
 	if (g_cfg.core.ppu_llvm_nj_fixup)
 		selected += fix_nj;
 	if (g_cfg.core.ppu_set_vnan)
-		selected += set_vnan;
+		selected += set_vnan + fix_vnan;
 	if (g_cfg.core.ppu_fix_vnan)
 		selected += fix_vnan;
 	if (g_cfg.core.ppu_set_fpcc)
