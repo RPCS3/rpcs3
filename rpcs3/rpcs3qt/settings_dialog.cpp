@@ -336,30 +336,32 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->spu_asmjit,  tooltips.settings.spu_asmjit);
 	SubscribeTooltip(ui->spu_llvm,    tooltips.settings.spu_llvm);
 
-	QButtonGroup *spu_bg = new QButtonGroup(this);
+	QButtonGroup* spu_bg = new QButtonGroup(this);
 	spu_bg->addButton(ui->spu__static, static_cast<int>(spu_decoder_type::_static));
 	spu_bg->addButton(ui->spu_dynamic, static_cast<int>(spu_decoder_type::dynamic));
 	spu_bg->addButton(ui->spu_asmjit,  static_cast<int>(spu_decoder_type::asmjit));
 	spu_bg->addButton(ui->spu_llvm,    static_cast<int>(spu_decoder_type::llvm));
 
+	connect(spu_bg, &QButtonGroup::idToggled, [this](int id, bool checked)
+	{
+		if (!checked) return;
+
+		switch (id)
+		{
+		case static_cast<int>(spu_decoder_type::_static):
+		case static_cast<int>(spu_decoder_type::dynamic):
+		case static_cast<int>(spu_decoder_type::llvm):
+			ui->accurateXFloat->setEnabled(true);
+			break;
+		case static_cast<int>(spu_decoder_type::asmjit):
+			ui->accurateXFloat->setEnabled(false);
+			break;
+		default:
+			break;
+		}
+	});
+
 	m_emu_settings->EnhanceRadioButton(spu_bg, emu_settings_type::SPUDecoder);
-
-	connect(ui->spu_llvm, &QAbstractButton::toggled, [this](bool checked)
-	{
-		ui->accurateXFloat->setEnabled(checked);
-	});
-
-	connect(ui->spu__static, &QAbstractButton::toggled, [this](bool checked)
-	{
-		ui->accurateXFloat->setEnabled(checked);
-	});
-
-	connect(ui->spu_dynamic, &QAbstractButton::toggled, [this](bool checked)
-	{
-		ui->accurateXFloat->setEnabled(checked);
-	});
-
-	ui->accurateXFloat->setEnabled(ui->spu_llvm->isChecked() || ui->spu_dynamic->isChecked());
 
 #ifndef LLVM_AVAILABLE
 	ui->ppu_llvm->setEnabled(false);
