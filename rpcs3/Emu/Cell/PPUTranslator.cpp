@@ -1260,14 +1260,14 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	{
 		if (data == v128{})
 		{
-			set_vr(op.vd, vec_handle_result(-a * c));
+			set_vr(op.vd, vec_handle_result(-(a * c)));
 			ppu_log.notice("LLVM: VNMSUBFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
 
 		if (!m_use_fma && data == v128::from32p(1u << 31))
 		{
-			set_vr(op.vd, vec_handle_result(-a * c + fsplat<f32[4]>(0.f)));
+			set_vr(op.vd, vec_handle_result(-(a * c - fsplat<f32[4]>(0.f))));
 			ppu_log.notice("LLVM: VNMSUBFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
 			return;
 		}
@@ -1276,7 +1276,7 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	// Differs from the emulated path with regards to negative zero
 	if (m_use_fma)
 	{
-		set_vr(op.vd, vec_handle_result(fmuladd(-a, c, b)));
+		set_vr(op.vd, vec_handle_result(-fmuladd(a, c, -b)));
 		return;
 	}
 
