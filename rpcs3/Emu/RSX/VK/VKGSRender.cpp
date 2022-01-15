@@ -1308,10 +1308,17 @@ void VKGSRender::clear_surface(u32 mask)
 				colormask = 0;
 				break;
 			}
+			case rsx::surface_color_format::b8:
+			{
+				rsx::get_b8_clear_color(clear_r, clear_g, clear_b, clear_a);
+				colormask = rsx::get_b8_clearmask(colormask);
+				use_fast_clear = (colormask == RSX_GCM_CLEAR_RED_BIT);
+				break;
+			}
 			case rsx::surface_color_format::g8b8:
 			{
 				rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
-				colormask = rsx::get_g8b8_r8g8_colormask(colormask);
+				colormask = rsx::get_g8b8_r8g8_clearmask(colormask);
 				use_fast_clear = (colormask == (RSX_GCM_CLEAR_RED_BIT | RSX_GCM_CLEAR_GREEN_BIT));
 				break;
 			}
@@ -1320,7 +1327,7 @@ void VKGSRender::clear_surface(u32 mask)
 			case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 			{
 				rsx::get_abgr8_clear_color(clear_r, clear_g, clear_b, clear_a);
-				colormask = rsx::get_abgr8_colormask(colormask);
+				colormask = rsx::get_abgr8_clearmask(colormask);
 				[[fallthrough]];
 			}
 			default:
@@ -1646,8 +1653,17 @@ bool VKGSRender::load_program()
 		bool color_mask_r = rsx::method_registers.color_mask_r(index);
 		bool color_mask_a = rsx::method_registers.color_mask_a(index);
 
-		if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+		switch (rsx::method_registers.surface_color())
+		{
+		case rsx::surface_color_format::b8:
+			rsx::get_b8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+			break;
+		case rsx::surface_color_format::g8b8:
 			rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+			break;
+		default:
+			break;
+		}
 
 		properties.state.set_color_mask(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	}
