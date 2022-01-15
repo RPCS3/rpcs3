@@ -214,6 +214,7 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
 	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
+	m_shader_props.srgb_output_rounding = ::gl::get_driver_caps().vendor_NVIDIA;
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
