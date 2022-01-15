@@ -510,10 +510,10 @@ namespace glsl
 				OS <<
 				"		else if (srgb_convert)\n"
 				"		{\n"
-				"			" << reg0 << ".rgb = clamp16(linear_to_srgb(" << reg0 << ")).rgb;\n"
-				"			" << reg1 << ".rgb = clamp16(linear_to_srgb(" << reg1 << ")).rgb;\n"
-				"			" << reg2 << ".rgb = clamp16(linear_to_srgb(" << reg2 << ")).rgb;\n"
-				"			" << reg3 << ".rgb = clamp16(linear_to_srgb(" << reg3 << ")).rgb;\n"
+				"			" << reg0 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
+				"			" << reg1 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
+				"			" << reg2 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
+				"			" << reg3 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
 				"		}\n";
 			}
 			else
@@ -521,10 +521,10 @@ namespace glsl
 				OS <<
 				"		else if (srgb_convert)\n"
 				"		{\n"
-				"			" << reg0 << ".rgb = linear_to_srgb(" << reg0 << ").rgb;\n"
-				"			" << reg1 << ".rgb = linear_to_srgb(" << reg1 << ").rgb;\n"
-				"			" << reg2 << ".rgb = linear_to_srgb(" << reg2 << ").rgb;\n"
-				"			" << reg3 << ".rgb = linear_to_srgb(" << reg3 << ").rgb;\n"
+				"			" << reg0 << " = round_to_8bit(vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
+				"			" << reg1 << " = round_to_8bit(vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
+				"			" << reg2 << " = round_to_8bit(vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
+				"			" << reg3 << " = round_to_8bit(vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
 				"		}\n";
 			}
 		}
@@ -559,6 +559,20 @@ namespace glsl
 			else
 			{
 				OS << "#define _kill() discard\n\n";
+			}
+
+			if (!props.fp32_outputs)
+			{
+				OS << "// Workaround broken output rounding behavior\n";
+				if (props.srgb_output_rounding)
+				{
+					const auto scale = (props.supports_native_fp16) ? "float16_t(255.)" : "255.";
+					OS << "#define round_to_8bit(v4) (round(v4 * " << scale << ") / " << scale << ")\n\n";
+				}
+				else
+				{
+					OS << "#define round_to_8bit(v4) (v4)\n\n";
+				}
 			}
 
 			if (props.require_texture_ops)
