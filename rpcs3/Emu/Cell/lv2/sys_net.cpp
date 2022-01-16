@@ -1331,7 +1331,7 @@ lv2_socket::lv2_socket(lv2_socket::socket_type s, s32 s_type, s32 family)
 
 lv2_socket::~lv2_socket()
 {
-	if (type != SYS_NET_SOCK_DGRAM_P2P && type != SYS_NET_SOCK_STREAM_P2P)
+	if (type != SYS_NET_SOCK_DGRAM_P2P && type != SYS_NET_SOCK_STREAM_P2P && socket)
 	{
 #ifdef _WIN32
 		::closesocket(socket);
@@ -3464,8 +3464,13 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 		sys_net.error("CLOSE");
 
 	// If it's a bound socket we "close" the vport
-	if ((sock->type == SYS_NET_SOCK_DGRAM_P2P || sock->type == SYS_NET_SOCK_STREAM_P2P) && sock->p2p.port && sock->p2p.vport)
+	if (sock->type == SYS_NET_SOCK_DGRAM_P2P || sock->type == SYS_NET_SOCK_STREAM_P2P)
 	{
+		if (!sock->p2p.port || !sock->p2p.vport)
+		{
+			return CELL_OK;
+		}
+
 		auto& nc = g_fxo->get<network_context>();
 		{
 			std::lock_guard lock(nc.list_p2p_ports_mutex);
@@ -3493,9 +3498,19 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 			}
 		}
 	}
+	else
+	{
+		auto& dnshook = g_fxo->get<np::dnshook>();
+		dnshook.remove_dns_spy(s);
 
-	auto& dnshook = g_fxo->get<np::dnshook>();
-	dnshook.remove_dns_spy(s);
+		std::lock_guard lock(sock->mutex);
+#ifdef _WIN32
+		::closesocket(sock->socket);
+#else
+		::close(sock->socket);
+#endif
+		sock->socket = 0;
+	}
 
 	return CELL_OK;
 }
