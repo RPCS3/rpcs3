@@ -662,6 +662,24 @@ inline auto gv_xorfs(A&& a, B&& b)
 	FOR_X64(binary_op, 4, kIdMovaps, kIdXorps, kIdVxorps, kIdVxorps, std::forward<A>(a), std::forward<B>(b));
 }
 
+inline v128 gv_not32(const v128& a)
+{
+#if defined(ARCH_X64)
+	return _mm_xor_si128(a, _mm_set1_epi32(-1));
+#elif defined(ARCH_ARM64)
+	return vmvnq_u32(a);
+#endif
+}
+
+inline v128 gv_notfs(const v128& a)
+{
+#if defined(ARCH_X64)
+	return _mm_xor_ps(a, _mm_castsi128_ps(_mm_set1_epi32(-1)));
+#elif defined(ARCH_ARM64)
+	return vmvnq_u32(a);
+#endif
+}
+
 inline v128 gv_shl16(const v128& a, u32 count)
 {
 	if (count >= 16)
@@ -1644,7 +1662,7 @@ inline v128 gv_mul32(const v128& a, const v128& b)
 #elif defined(ARCH_X64)
 	const __m128i lows = _mm_shuffle_epi32(_mm_mul_epu32(a, b), 8);
 	const __m128i highs = _mm_shuffle_epi32(_mm_mul_epu32(_mm_srli_epi64(a, 32), _mm_srli_epi64(b, 32)), 8);
-	return _mm_unpacklo_epi64(lows, highs);
+	return _mm_unpacklo_epi32(lows, highs);
 #elif defined(ARCH_ARM64)
 	return vmulq_s32(a, b);
 #endif
@@ -1810,6 +1828,53 @@ inline v128 gv_dots_s16x2(const v128& a, const v128& b, const v128& c)
 	const auto s1 = gv_eq32(ab, gv_bcst32(0x80000000)); // +0x80000000, negative c -> c^0x80000000; otherwise 0x7fffffff
 	const auto s2 = gv_select32(gv_gts32(gv_bcst32(0), c), gv_xor32(c, gv_bcst32(0x80000000)), gv_bcst32(0x7fffffff));
 	return gv_select32(s1, s2, s0);
+#endif
+}
+
+// Multiply s16 elements 0, 2, 4, 6 to produce s32 results in corresponding lanes
+inline v128 gv_mul_even_s16(const v128& a, const v128& b)
+{
+#if defined(ARCH_X64)
+	const auto c = _mm_set1_epi32(0x0000ffff);
+	return _mm_madd_epi16(_mm_and_si128(a, c), _mm_and_si128(b, c));
+#else
+	// TODO
+	return gv_mul32(gv_sar32(gv_shl32(a, 16), 16), gv_sar32(gv_shl32(b, 16), 16));
+#endif
+}
+
+// Multiply u16 elements 0, 2, 4, 6 to produce u32 results in corresponding lanes
+inline v128 gv_mul_even_u16(const v128& a, const v128& b)
+{
+#if defined(__SSE4_1__) || defined(ARCH_ARM64)
+	const auto c = gv_bcst32(0x0000ffff);
+	return gv_mul32(a & c, b & c);
+#elif defined(ARCH_X64)
+	const auto ml = _mm_mullo_epi16(a, b);
+	const auto mh = _mm_mulhi_epu16(a, b);
+	return _mm_or_si128(_mm_and_si128(ml, _mm_set1_epi32(0x0000ffff)), _mm_slli_epi32(mh, 16));
+#endif
+}
+
+// Multiply s16 elements 1, 3, 5, 7 to produce s32 results in corresponding lanes
+inline v128 gv_mul_odds_s16(const v128& a, const v128& b)
+{
+#if defined(ARCH_X64)
+	return _mm_madd_epi16(_mm_srli_epi32(a, 16), _mm_srli_epi32(b, 16));
+#else
+	return gv_mul32(gv_sar32(a, 16), gv_sar32(b, 16));
+#endif
+}
+
+// Multiply u16 elements 1, 3, 5, 7 to produce u32 results in corresponding lanes
+inline v128 gv_mul_odds_u16(const v128& a, const v128& b)
+{
+#if defined(__SSE4_1__) || defined(ARCH_ARM64)
+	return gv_mul32(gv_shr32(a, 16), gv_shr32(b, 16));
+#elif defined(ARCH_X64)
+	const auto ml = _mm_mullo_epi16(a, b);
+	const auto mh = _mm_mulhi_epu16(a, b);
+	return _mm_or_si128(_mm_and_si128(mh, _mm_set1_epi32(0xffff0000)), _mm_srli_epi32(ml, 16));
 #endif
 }
 

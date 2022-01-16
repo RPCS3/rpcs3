@@ -532,29 +532,6 @@ extern SAFE_BUFFERS(__m128i) sse_pshufb(__m128i data, __m128i index)
 	return _mm_and_si128(r, _mm_cmpgt_epi8(index, _mm_set1_epi8(-1)));
 }
 
-extern SSSE3_FUNC __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
-{
-	const auto index = _mm_andnot_si128(C, _mm_set1_epi8(0x1f));
-	const auto mask = _mm_cmpgt_epi8(index, _mm_set1_epi8(0xf));
-	const auto sa = _mm_shuffle_epi8(A, index);
-	const auto sb = _mm_shuffle_epi8(B, index);
-	return _mm_or_si128(_mm_and_si128(mask, sa), _mm_andnot_si128(mask, sb));
-}
-
-extern SAFE_BUFFERS(__m128i) sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C)
-{
-	__m128i ab[2]{B, A};
-	v128 index = _mm_andnot_si128(C, _mm_set1_epi8(0x1f));
-	v128 res;
-
-	for (int i = 0; i < 16; i++)
-	{
-		res._u8[i] = reinterpret_cast<u8*>(+ab)[index._u8[i]];
-	}
-
-	return res;
-}
-
 extern __m128i sse_altivec_lvsl(u64 addr)
 {
 	alignas(16) static const u8 lvsl_values[0x10][0x10] =
@@ -851,7 +828,7 @@ auto VADDCUW()
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
 		// ~a is how much can be added to a without carry
-		d = gv_sub32(gv_geu32(~a, b), gv_bcst32(-1));
+		d = gv_sub32(gv_geu32(gv_not32(std::move(a)), std::move(b)), gv_bcst32(-1));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -865,10 +842,10 @@ auto VADDFP()
 
 	static const auto exec = [](auto&& d, auto&& a_, auto&& b_, auto&& jm_mask)
 	{
-		const auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
-		const auto a = ppu_flush_denormal<false, Flags...>(m, a_);
-		const auto b = ppu_flush_denormal<false, Flags...>(m, b_);
-		d = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(gv_addfs(a, b), a, b));
+		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto a = ppu_flush_denormal<false, Flags...>(m, std::move(a_));
+		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
+		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_addfs(a, b), a, b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.jm_mask);
@@ -885,8 +862,8 @@ auto VADDSBS()
 		if constexpr (((Flags == set_sat) || ...))
 		{
 			auto r = gv_adds_s8(a, b);
-			sat = gv_or32(gv_xor32(gv_add8(std::move(a), std::move(b)), std::move(r)), std::move(sat));
-			d = r;
+			sat = gv_or32(gv_xor32(gv_add8(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
 		}
 		else
 		{
@@ -908,8 +885,8 @@ auto VADDSHS()
 		if constexpr (((Flags == set_sat) || ...))
 		{
 			auto r = gv_adds_s16(a, b);
-			sat = gv_or32(gv_xor32(gv_add16(std::move(a), std::move(b)), std::move(r)), std::move(sat));
-			d = r;
+			sat = gv_or32(gv_xor32(gv_add16(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
 		}
 		else
 		{
@@ -931,8 +908,8 @@ auto VADDSWS()
 		if constexpr (((Flags == set_sat) || ...))
 		{
 			auto r = gv_adds_s32(a, b);
-			sat = gv_or32(gv_xor32(gv_add32(std::move(a), std::move(b)), std::move(r)), std::move(sat));
-			d = r;
+			sat = gv_or32(gv_xor32(gv_add32(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
 		}
 		else
 		{
@@ -968,8 +945,8 @@ auto VADDUBS()
 		if constexpr (((Flags == set_sat) || ...))
 		{
 			auto r = gv_addus_u8(a, b);
-			sat = gv_or32(gv_xor32(gv_add8(std::move(a), std::move(b)), std::move(r)), std::move(sat));
-			d = r;
+			sat = gv_or32(gv_xor32(gv_add8(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
 		}
 		else
 		{
@@ -1005,8 +982,8 @@ auto VADDUHS()
 		if constexpr (((Flags == set_sat) || ...))
 		{
 			auto r = gv_addus_u16(a, b);
-			sat = gv_or32(gv_xor32(gv_add16(std::move(a), std::move(b)), std::move(r)), std::move(sat));
-			d = r;
+			sat = gv_or32(gv_xor32(gv_add16(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
 		}
 		else
 		{
@@ -1042,8 +1019,8 @@ auto VADDUWS()
 		if constexpr (((Flags == set_sat) || ...))
 		{
 			auto r = gv_addus_u32(a, b);
-			sat = gv_or32(gv_xor32(gv_add32(std::move(a), std::move(b)), std::move(r)), std::move(sat));
-			d = r;
+			sat = gv_or32(gv_xor32(gv_add32(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
 		}
 		else
 		{
@@ -1090,7 +1067,7 @@ auto VAVGSB()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_avgs8(a, b);
+		d = gv_avgs8(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1104,7 +1081,7 @@ auto VAVGSH()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_avgs16(a, b);
+		d = gv_avgs16(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1118,7 +1095,7 @@ auto VAVGSW()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_avgs32(a, b);
+		d = gv_avgs32(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1132,7 +1109,7 @@ auto VAVGUB()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_avgu8(a, b);
+		d = gv_avgu8(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1146,7 +1123,7 @@ auto VAVGUH()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_avgu16(a, b);
+		d = gv_avgu16(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1160,7 +1137,7 @@ auto VAVGUW()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_avgu32(a, b);
+		d = gv_avgu32(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1174,7 +1151,7 @@ auto VCFSX()
 
 	static const auto exec = [](auto&& d, auto&& b, u32 i)
 	{
-		d = gv_subus_u16(gv_cvts32_tofs(b), gv_bcst32(i));
+		d = gv_subus_u16(gv_cvts32_tofs(std::move(b)), gv_bcst32(i));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.vb], op.vuimm << 23);
@@ -1188,7 +1165,7 @@ auto VCFUX()
 
 	static const auto exec = [](auto&& d, auto&& b, u32 i)
 	{
-		d = gv_subus_u16(gv_cvtu32_tofs(b), gv_bcst32(i));
+		d = gv_subus_u16(gv_cvtu32_tofs(std::move(b)), gv_bcst32(i));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.vb], op.vuimm << 23);
@@ -1202,13 +1179,13 @@ auto VCMPBFP()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto sign = gv_bcstfs(-0.);
-		const auto cmp1 = gv_nlefs(a, b);
-		const auto cmp2 = gv_ngefs(a, b ^ sign);
-		const auto r = (cmp1 & sign) | gv_shr32(cmp2 & sign, 1);
+		auto sign = gv_bcstfs(-0.);
+		auto cmp1 = gv_nlefs(a, b);
+		auto cmp2 = gv_ngefs(a, b ^ sign);
+		auto r = (std::move(cmp1) & sign) | gv_shr32(std::move(cmp2) & sign, 1);
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, false, false, gv_testz(r), false);
-		d = r;
+		d = std::move(r);
 	};
 
 	RETURN_(ppu, ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1222,7 +1199,7 @@ auto VCMPEQFP()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_eqfs(a, b);
+		auto r = gv_eqfs(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1239,7 +1216,7 @@ auto VCMPEQUB()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_eq8(a, b);
+		auto r = gv_eq8(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1256,7 +1233,7 @@ auto VCMPEQUH()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_eq16(a, b);
+		auto r = gv_eq16(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1273,7 +1250,7 @@ auto VCMPEQUW()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_eq32(a, b);
+		auto r = gv_eq32(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1290,7 +1267,7 @@ auto VCMPGEFP()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_gefs(a, b);
+		auto r = gv_gefs(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1307,7 +1284,7 @@ auto VCMPGTFP()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_gtfs(a, b);
+		auto r = gv_gtfs(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1324,7 +1301,7 @@ auto VCMPGTSB()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_gts8(a, b);
+		auto r = gv_gts8(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1341,7 +1318,7 @@ auto VCMPGTSH()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_gts16(a, b);
+		auto r = gv_gts16(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1358,7 +1335,7 @@ auto VCMPGTSW()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_gts32(a, b);
+		auto r = gv_gts32(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1375,7 +1352,7 @@ auto VCMPGTUB()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_gtu8(a, b);
+		auto r = gv_gtu8(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1392,7 +1369,7 @@ auto VCMPGTUH()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_gtu16(a, b);
+		auto r = gv_gtu16(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1409,7 +1386,7 @@ auto VCMPGTUW()
 
 	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& a, auto&& b)
 	{
-		const auto r = gv_gtu32(a, b);
+		auto r = gv_gtu32(std::move(a), std::move(b));
 		if constexpr (((Flags == has_oe) || ...))
 			ppu_cr_set(ppu, 6, gv_testall1(r), false, gv_testall0(r), false);
 		d = r;
@@ -1426,22 +1403,21 @@ auto VCTSXS()
 
 	static const auto exec = [](auto&& d, auto&& b, auto&& sat, u32 i)
 	{
-		const auto s = gv_mulfs(b, gv_bcst32(i));
-		const auto l = gv_ltfs(s, gv_bcstfs(-2147483648.));
-		const auto h = gv_gefs(s, gv_bcstfs(2147483648.));
-		v128 r = s;
+		auto r = gv_mulfs(b, gv_bcst32(i));
+		auto l = gv_ltfs(r, gv_bcstfs(-2147483648.));
+		auto h = gv_gefs(r, gv_bcstfs(2147483648.));
 #if !defined(ARCH_X64) && !defined(ARCH_ARM64)
-		r = gv_selectfs(l, gv_bcstfs(-2147483648.), r);
+		r = gv_selectfs(l, gv_bcstfs(-2147483648.), std::move(r));
 #endif
-		r = gv_cvtfs_tos32(s);
+		r = gv_cvtfs_tos32(std::move(r));
 #if !defined(ARCH_ARM64)
-		r = gv_select32(h, gv_bcst32(0x7fffffff), r);
+		r = gv_select32(h, gv_bcst32(0x7fffffff), std::move(r));
 #endif
 		if constexpr (((Flags == fix_vnan) || ...))
-			r = r & gv_eqfs(b, b);
+			r = gv_and32(std::move(r), gv_eqfs(b, b));
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | l | h;
-		d = r;
+			sat = gv_or32(gv_or32(std::move(l), std::move(h)), std::move(sat));
+		d = std::move(r);
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.vb], ppu.sat, (op.vuimm + 127) << 23);
@@ -1455,21 +1431,21 @@ auto VCTUXS()
 
 	static const auto exec = [](auto&& d, auto&& b, auto&& sat, u32 i)
 	{
-		const auto s = gv_mulfs(b, gv_bcst32(i));
-		const auto l = gv_ltfs(s, gv_bcstfs(0.));
-		const auto h = gv_gefs(s, gv_bcstfs(4294967296.));
-		v128 r = gv_cvtfs_tou32(s);
+		auto r = gv_mulfs(b, gv_bcst32(i));
+		auto l = gv_ltfs(r, gv_bcstfs(0.));
+		auto h = gv_gefs(r, gv_bcstfs(4294967296.));
+		r = gv_cvtfs_tou32(std::move(r));
 #if !defined(ARCH_ARM64)
-		r = gv_andn(l, r); // saturate to zero
+		r = gv_andn32(l, std::move(r)); // saturate to zero
 #endif
 #if !defined(__AVX512VL__) && !defined(ARCH_ARM64)
-		r = r | h; // saturate to 0xffffffff
+		r = gv_or32(std::move(r), h); // saturate to 0xffffffff
 #endif
 		if constexpr (((Flags == fix_vnan) || ...))
-			r = r & gv_eqfs(b, b);
+			r = gv_and32(std::move(r), gv_eqfs(b, b));
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | l | h;
-		d = r;
+			sat = gv_or32(gv_or32(std::move(l), std::move(h)), std::move(sat));
+		d = std::move(r);
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.vb], ppu.sat, (op.vuimm + 127) << 23);
@@ -1484,7 +1460,7 @@ auto VEXPTEFP()
 	static const auto exec = [](auto&& d, auto&& b)
 	{
 		// for (u32 i = 0; i < 4; i++) d._f[i] = std::exp2f(b._f[i]);
-		d = ppu_set_vnan<Flags...>(gv_exp2_approxfs(b));
+		d = ppu_set_vnan<Flags...>(gv_exp2_approxfs(std::move(b)));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.vb]);
@@ -1499,7 +1475,7 @@ auto VLOGEFP()
 	static const auto exec = [](auto&& d, auto&& b)
 	{
 		// for (u32 i = 0; i < 4; i++) d._f[i] = std::log2f(b._f[i]);
-		d = ppu_set_vnan<Flags...>(gv_log2_approxfs(b));
+		d = ppu_set_vnan<Flags...>(gv_log2_approxfs(std::move(b)));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.vb]);
@@ -1513,11 +1489,11 @@ auto VMADDFP()
 
 	static const auto exec = [](auto&& d, auto&& a_, auto&& b_, auto&& c_, auto&& jm_mask)
 	{
-		const auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
-		const auto a = ppu_flush_denormal<false, Flags...>(m, a_);
-		const auto b = ppu_flush_denormal<false, Flags...>(m, b_);
-		const auto c = ppu_flush_denormal<false, Flags...>(m, c_);
-		d = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(gv_fmafs(a, c, b)));
+		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto a = ppu_flush_denormal<false, Flags...>(m, std::move(a_));
+		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
+		auto c = ppu_flush_denormal<false, Flags...>(m, std::move(c_));
+		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_fmafs(a, c, b)));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc], ppu.jm_mask);
@@ -1545,7 +1521,7 @@ auto VMAXSB()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_maxs8(a, b);
+		d = gv_maxs8(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1559,7 +1535,7 @@ auto VMAXSH()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_maxs16(a, b);
+		d = gv_maxs16(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1573,7 +1549,7 @@ auto VMAXSW()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_maxs32(a, b);
+		d = gv_maxs32(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1587,7 +1563,7 @@ auto VMAXUB()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_maxu8(a, b);
+		d = gv_maxu8(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1601,7 +1577,7 @@ auto VMAXUH()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_maxu16(a, b);
+		d = gv_maxu16(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1615,7 +1591,7 @@ auto VMAXUW()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_maxu32(a, b);
+		d = gv_maxu32(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1629,14 +1605,14 @@ auto VMHADDSHS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c, auto&& sat)
 	{
-		const auto m = gv_muls_hds16(a, b);
-		const auto f = gv_gts16(gv_bcst16(0), c);
-		const auto x = gv_eq16(gv_maxs16(a, b), gv_bcst16(0x8000));
-		const auto r = gv_sub16(gv_adds_s16(m, c), x & f);
-		const auto s = gv_add16(m, c);
+		auto m = gv_muls_hds16(a, b);
+		auto f = gv_gts16(gv_bcst16(0), c);
+		auto x = gv_eq16(gv_maxs16(std::move(a), std::move(b)), gv_bcst16(0x8000));
+		auto r = gv_sub16(gv_adds_s16(m, c), gv_and32(x, f));
+		auto s = gv_add16(std::move(m), std::move(c));
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | gv_andn(x, s ^ r) | gv_andn(f, x);
-		d = r;
+			sat = gv_or32(gv_or32(gv_andn32(std::move(f), x), gv_andn32(x, gv_xor32(std::move(s), r))), sat);
+		d = std::move(r);
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc], ppu.sat);
@@ -1652,18 +1628,18 @@ auto VMHRADDSHS()
 	{
 		if constexpr (((Flags != set_sat) && ...))
 		{
-			d = gv_rmuladds_hds16(a, b, c);
+			d = gv_rmuladds_hds16(std::move(a), std::move(b), std::move(c));
 		}
 		else
 		{
-			const auto m = gv_rmuls_hds16(a, b);
-			const auto f = gv_gts16(gv_bcst16(0), c);
-			const auto x = gv_eq16(gv_maxs16(a, b), gv_bcst16(0x8000));
-			const auto r = gv_sub16(gv_adds_s16(m, c), x & f);
-			const auto s = gv_add16(m, c);
+			auto m = gv_rmuls_hds16(a, b);
+			auto f = gv_gts16(gv_bcst16(0), c);
+			auto x = gv_eq16(gv_maxs16(std::move(a), std::move(b)), gv_bcst16(0x8000));
+			auto r = gv_sub16(gv_adds_s16(m, c), gv_and32(x, f));
+			auto s = gv_add16(std::move(m), std::move(c));
 			if constexpr (((Flags == set_sat) || ...))
-				sat = sat | gv_andn(x, s ^ r) | gv_andn(f, x);
-			d = r;
+				sat = gv_or32(gv_or32(gv_andn32(std::move(f), x), gv_andn32(x, gv_xor32(std::move(s), r))), sat);
+			d = std::move(r);
 		}
 	};
 
@@ -1692,7 +1668,7 @@ auto VMINSB()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_mins8(a, b);
+		d = gv_mins8(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1706,7 +1682,7 @@ auto VMINSH()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_mins16(a, b);
+		d = gv_mins16(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1720,7 +1696,7 @@ auto VMINSW()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_mins32(a, b);
+		d = gv_mins32(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1734,7 +1710,7 @@ auto VMINUB()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_minu8(a, b);
+		d = gv_minu8(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1748,7 +1724,7 @@ auto VMINUH()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_minu16(a, b);
+		d = gv_minu16(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1762,7 +1738,7 @@ auto VMINUW()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_minu32(a, b);
+		d = gv_minu32(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1776,7 +1752,7 @@ auto VMLADDUHM()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c)
 	{
-		d = gv_muladd16(a, b, c);
+		d = gv_muladd16(std::move(a), std::move(b), std::move(c));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc]);
@@ -1790,7 +1766,7 @@ auto VMRGHB()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_unpackhi8(b, a);
+		d = gv_unpackhi8(std::move(b), std::move(a));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1804,7 +1780,7 @@ auto VMRGHH()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_unpackhi16(b, a);
+		d = gv_unpackhi16(std::move(b), std::move(a));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1818,7 +1794,7 @@ auto VMRGHW()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_unpackhi32(b, a);
+		d = gv_unpackhi32(std::move(b), std::move(a));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1832,7 +1808,7 @@ auto VMRGLB()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_unpacklo8(b, a);
+		d = gv_unpacklo8(std::move(b), std::move(a));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1846,7 +1822,7 @@ auto VMRGLH()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_unpacklo16(b, a);
+		d = gv_unpacklo16(std::move(b), std::move(a));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1860,7 +1836,7 @@ auto VMRGLW()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_unpacklo32(b, a);
+		d = gv_unpacklo32(std::move(b), std::move(a));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1874,7 +1850,7 @@ auto VMSUMMBM()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c)
 	{
-		d = gv_dotu8s8x4(b, a, c);
+		d = gv_dotu8s8x4(std::move(b), std::move(a), std::move(c));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc]);
@@ -1888,7 +1864,7 @@ auto VMSUMSHM()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c)
 	{
-		d = gv_dots16x2(a, b, c);
+		d = gv_dots16x2(std::move(a), std::move(b), std::move(c));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc]);
@@ -1902,11 +1878,11 @@ auto VMSUMSHS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c, auto&& sat)
 	{
-		const auto r = gv_dots_s16x2(a, b, c);
-		const auto s = gv_dots16x2(a, b, c);
-		d = r;
+		auto r = gv_dots_s16x2(std::move(a), std::move(b), std::move(c));
+		auto s = gv_dots16x2(std::move(a), std::move(b), std::move(c));
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (s ^ r);
+			sat = gv_or32(gv_xor32(std::move(s), r), std::move(sat));
+		d = std::move(r);
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc], ppu.sat);
@@ -1920,7 +1896,7 @@ auto VMSUMUBM()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c)
 	{
-		d = gv_dotu8x4(a, b, c);
+		d = gv_dotu8x4(std::move(a), std::move(b), std::move(c));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc]);
@@ -1934,7 +1910,7 @@ auto VMSUMUHM()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c)
 	{
-		d = gv_add32(c, gv_dotu16x2(a, b));
+		d = gv_add32(std::move(c), gv_dotu16x2(std::move(a), std::move(b)));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc]);
@@ -1948,29 +1924,15 @@ auto VMSUMUHS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c, auto&& sat)
 	{
-		for (uint w = 0; w < 4; w++)
-		{
-			u64 result = 0;
-			u32 saturated = 0;
-
-			for (uint h = 0; h < 2; h++)
-			{
-				result += u64{a._u16[w * 2 + h]} * b._u16[w * 2 + h];
-			}
-
-			result += c._u32[w];
-
-			if (result > 0xffffffffu)
-			{
-				saturated = 0xffffffff;
-				if constexpr (((Flags == set_sat) || ...))
-					sat._u32[0] = 1;
-			}
-			else
-				saturated = static_cast<u32>(result);
-
-			d._u32[w] = saturated;
-		}
+		auto m1 = gv_mul_even_u16(a, b);
+		auto m2 = gv_mul_odds_u16(std::move(a), std::move(b));
+		auto s1 = gv_add32(m1, m2);
+		auto x1 = gv_gtu32(m1, s1);
+		auto s2 = gv_or32(gv_add32(s1, std::move(c)), x1);
+		auto x2 = gv_gtu32(std::move(s1), s2);
+		if constexpr (((Flags == set_sat) || ...))
+			sat = gv_or32(gv_or32(std::move(x1), x2), std::move(sat));
+		d = gv_or32(std::move(s2), std::move(x2));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc], ppu.sat);
@@ -1984,7 +1946,7 @@ auto VMULESB()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = _mm_mullo_epi16(_mm_srai_epi16(a, 8), _mm_srai_epi16(b, 8));
+		d = gv_mul16(gv_sar16(std::move(a), 8), gv_sar16(std::move(b), 8));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -1996,10 +1958,12 @@ auto VMULESH()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.vr[op.vd] = _mm_madd_epi16(_mm_srli_epi32(ppu.vr[op.va], 16), _mm_srli_epi32(ppu.vr[op.vb], 16));
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_mul_odds_s16(std::move(a), std::move(b));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2008,10 +1972,12 @@ auto VMULEUB()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.vr[op.vd] = _mm_mullo_epi16(_mm_srli_epi16(ppu.vr[op.va], 8), _mm_srli_epi16(ppu.vr[op.vb], 8));
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_mul16(gv_shr16(std::move(a), 8), gv_shr16(std::move(b), 8));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2020,14 +1986,12 @@ auto VMULEUH()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-	const auto ml = _mm_mullo_epi16(a, b);
-	const auto mh = _mm_mulhi_epu16(a, b);
-	ppu.vr[op.vd] = _mm_or_si128(_mm_srli_epi32(ml, 16), _mm_and_si128(mh, _mm_set1_epi32(0xffff0000)));
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_mul_odds_u16(std::move(a), std::move(b));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2036,10 +2000,12 @@ auto VMULOSB()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.vr[op.vd] = _mm_mullo_epi16(_mm_srai_epi16(_mm_slli_epi16(ppu.vr[op.va], 8), 8), _mm_srai_epi16(_mm_slli_epi16(ppu.vr[op.vb], 8), 8));
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_mul16(gv_sar16(gv_shl16(std::move(a), 8), 8), gv_sar16(gv_shl16(std::move(b), 8), 8));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2048,11 +2014,12 @@ auto VMULOSH()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto mask = _mm_set1_epi32(0x0000ffff);
-	ppu.vr[op.vd] = _mm_madd_epi16(_mm_and_si128(ppu.vr[op.va], mask), _mm_and_si128(ppu.vr[op.vb], mask));
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_mul_even_s16(std::move(a), std::move(b));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2061,11 +2028,13 @@ auto VMULOUB()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto mask = _mm_set1_epi16(0x00ff);
-	ppu.vr[op.vd] = _mm_mullo_epi16(_mm_and_si128(ppu.vr[op.va], mask), _mm_and_si128(ppu.vr[op.vb], mask));
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		auto mask = gv_bcst16(0x00ff);
+		d = gv_mul16(gv_and32(std::move(a), mask), gv_and32(std::move(b), mask));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2074,14 +2043,12 @@ auto VMULOUH()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-	const auto ml = _mm_mullo_epi16(a, b);
-	const auto mh = _mm_mulhi_epu16(a, b);
-	ppu.vr[op.vd] = _mm_or_si128(_mm_slli_epi32(mh, 16), _mm_and_si128(ml, _mm_set1_epi32(0x0000ffff)));
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_mul_even_u16(std::move(a), std::move(b));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2090,17 +2057,19 @@ auto VNMSUBFP()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	// An odd case with (FLT_MIN, FLT_MIN, FLT_MIN) produces FLT_MIN instead of 0
-	const auto s = _mm_set1_ps(-0.0f);
-	const auto m = gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask);
-	const auto a = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.va]);
-	const auto b = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vb]);
-	const auto c = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vc]);
-	const auto r = _mm_xor_ps(gv_fmafs(a, c, _mm_xor_ps(b, s)), s);
-	ppu.vr[op.rd] = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(r));
+	static const auto exec = [](auto&& d, auto&& a_, auto&& b_, auto&& c_, auto&& jm_mask)
+	{
+		// An odd case with (FLT_MIN, FLT_MIN, FLT_MIN) produces FLT_MIN instead of 0
+		auto s = gv_bcstfs(-0.0f);
+		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto a = ppu_flush_denormal<false, Flags...>(m, std::move(a_));
+		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
+		auto c = ppu_flush_denormal<false, Flags...>(m, std::move(c_));
+		auto r = gv_xorfs(std::move(s), gv_fmafs(std::move(a), std::move(c), gv_xorfs(std::move(b), s)));
+		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(std::move(r)));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc], ppu.jm_mask);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2109,10 +2078,12 @@ auto VNOR()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.vr[op.vd] = ~(ppu.vr[op.va] | ppu.vr[op.vb]);
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_notfs(gv_orfs(std::move(a), std::move(b)));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2121,10 +2092,12 @@ auto VOR()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.vr[op.vd] = ppu.vr[op.va] | ppu.vr[op.vb];
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_orfs(std::move(a), std::move(b));
 	};
-	RETURN_(ppu, op);
+
+	RETURN(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2133,12 +2106,54 @@ auto VPERM()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.vr[op.vd] = s_use_ssse3
-		? sse_altivec_vperm(ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc])
-		: sse_altivec_vperm_v0(ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc]);
+#if defined (ARCH_X64)
+	if constexpr (Build == 0)
+	{
+		static const ppu_intrp_func_t f = build_function_asm<ppu_intrp_func_t, asmjit::ppu_builder>("ppu_VPERM", [&](asmjit::ppu_builder& c)
+		{
+			const auto [v0, v1, v2, v3] = c.vec_alloc<4>();
+			c.movdqa(v0, c.ppu_vr(s_op.vc));
+			c.pandn(v0, c.get_const(v128::from8p(0x1f)));
+			c.movdqa(v1, v0);
+			c.pcmpgtb(v1, c.get_const(v128::from8p(0xf)));
+			c.movdqa(v2, c.ppu_vr(s_op.va));
+			c.movdqa(v3, c.ppu_vr(s_op.vb));
+			c.pshufb(v2, v0);
+			c.pshufb(v3, v0);
+			c.pand(v2, v1);
+			c.pandn(v1, v3);
+			c.por(v1, v2);
+			c.movdqa(c.ppu_vr(s_op.vd), v1);
+			c.ppu_ret();
+		});
+
+		if (utils::has_ssse3())
+		{
+			return f;
+		}
+	}
+#endif
+
+	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c)
+	{
+	#if defined(ARCH_ARM64)
+		uint8x16x2_t ab;
+		ab.val[0] = b;
+		ab.val[1] = a;
+		d = vqtbl2q_u8(ab, vbicq_u8(vdupq_n_u8(0x1f), c));
+	#else
+		u8 ab[32];
+		std::memcpy(ab + 0, &b, 16);
+		std::memcpy(ab + 16, &a, 16);
+
+		for (u32 i = 0; i < 16; i++)
+		{
+			d._u8[i] = ab[~c._u8[i] & 0x1f];
+		}
+	#endif
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.vr[op.vc]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2893,13 +2908,12 @@ auto VSUBCUW()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-	const auto r = gv_shr32(gv_geu32(a, b), 31);
-	ppu.vr[op.vd] = r;
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_shr32(gv_geu32(std::move(a), std::move(b)), 31);
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2908,14 +2922,15 @@ auto VSUBFP()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<use_nj, fix_nj, set_vnan, fix_vnan>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto m = gv_bcst32(ppu.jm_mask, &ppu_thread::jm_mask);
-	const auto a = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.va]);
-	const auto b = ppu_flush_denormal<false, Flags...>(m, ppu.vr[op.vb]);
-	const auto r = gv_subfs(a, b);
-	ppu.vr[op.vd] = ppu_flush_denormal<true, Flags...>(m, ppu_set_vnan<Flags...>(r, a, b));
+	static const auto exec = [](auto&& d, auto&& a_, auto&& b_, auto&& jm_mask)
+	{
+		auto m = gv_bcst32(jm_mask, &ppu_thread::jm_mask);
+		auto a = ppu_flush_denormal<false, Flags...>(m, std::move(a_));
+		auto b = ppu_flush_denormal<false, Flags...>(m, std::move(b_));
+		d = ppu_flush_denormal<true, Flags...>(std::move(m), ppu_set_vnan<Flags...>(gv_subfs(a, b), a, b));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.jm_mask);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2926,11 +2941,16 @@ auto VSUBSBS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		const auto s = gv_sub8(a, b);
-		const auto r = gv_subs_s8(a, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (s ^ r);
-		d = r;
+		{
+			auto r = gv_subs_s8(a, b);
+			sat = gv_or32(gv_xor32(gv_sub8(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
+		}
+		else
+		{
+			d = gv_subs_s8(std::move(a), std::move(b));
+		}
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
@@ -2944,11 +2964,16 @@ auto VSUBSHS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		const auto s = gv_sub16(a, b);
-		const auto r = gv_subs_s16(a, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (s ^ r);
-		d = r;
+		{
+			auto r = gv_subs_s16(a, b);
+			sat = gv_or32(gv_xor32(gv_sub16(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
+		}
+		else
+		{
+			d = gv_subs_s16(std::move(a), std::move(b));
+		}
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
@@ -2962,11 +2987,16 @@ auto VSUBSWS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		const auto s = gv_sub32(a, b);
-		const auto r = gv_subs_s32(a, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (s ^ r);
-		d = r;
+		{
+			auto r = gv_subs_s32(a, b);
+			sat = gv_or32(gv_xor32(gv_sub32(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
+		}
+		else
+		{
+			d = gv_subs_s32(std::move(a), std::move(b));
+		}
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
@@ -2980,7 +3010,7 @@ auto VSUBUBM()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_sub8(a, b);
+		d = gv_sub8(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -2994,11 +3024,16 @@ auto VSUBUBS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		const auto s = gv_sub8(a, b);
-		const auto r = gv_subus_u8(a, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (s ^ r);
-		d = r;
+		{
+			auto r = gv_subus_u8(a, b);
+			sat = gv_or32(gv_xor32(gv_sub8(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
+		}
+		else
+		{
+			d = gv_subus_u8(std::move(a), std::move(b));
+		}
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
@@ -3012,7 +3047,7 @@ auto VSUBUHM()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_sub16(a, b);
+		d = gv_sub16(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -3026,11 +3061,16 @@ auto VSUBUHS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		const auto s = gv_sub16(a, b);
-		const auto r = gv_subus_u16(a, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (s ^ r);
-		d = r;
+		{
+			auto r = gv_subus_u16(a, b);
+			sat = gv_or32(gv_xor32(gv_sub16(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
+		}
+		else
+		{
+			d = gv_subus_u16(std::move(a), std::move(b));
+		}
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
@@ -3044,7 +3084,7 @@ auto VSUBUWM()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		d = gv_sub32(a, b);
+		d = gv_sub32(std::move(a), std::move(b));
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
@@ -3058,11 +3098,16 @@ auto VSUBUWS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		const auto s = gv_sub32(a, b);
-		const auto r = gv_subus_u32(a, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (s ^ r);
-		d = r;
+		{
+			auto r = gv_subus_u32(a, b);
+			sat = gv_or32(gv_xor32(gv_sub32(std::move(a), std::move(b)), r), std::move(sat));
+			d = std::move(r);
+		}
+		else
+		{
+			d = gv_subus_u32(std::move(a), std::move(b));
+		}
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
@@ -7596,6 +7641,19 @@ ppu_interpreter_rt_base::ppu_interpreter_rt_base() noexcept
 		selected += use_dfma;
 	if (g_cfg.core.ppu_debug)
 		selected += set_cr_stats; // TODO
+
+	if (selected & use_nj)
+		ppu_log.success("Enabled: Accurate Non-Java Mode");
+	else if (selected & fix_nj)
+		ppu_log.success("Enabled: Non-Java Mode Fixup");
+	if (selected & set_vnan)
+		ppu_log.success("Enabled: Accurate VNAN");
+	else if (selected & fix_vnan)
+		ppu_log.success("Enabled: VNAN Fixup");
+	if (selected & set_sat)
+		ppu_log.success("Enabled: Accurate SAT");
+	if (selected & set_fpcc)
+		ppu_log.success("Enabled: Accurate FPCC");
 
 	ptrs = std::make_unique<decltype(ptrs)::element_type>();
 
