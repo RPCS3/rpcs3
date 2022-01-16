@@ -288,6 +288,7 @@ namespace asmjit
 			if constexpr (arg_classify<B> == arg_class::reg_rv)
 			{
 				g_vc->vec_dealloc(vec_type{b.id()});
+				//b = Operand();
 			}
 		}
 		else if (utils::has_avx() && avx_op && (arg_classify<A> == arg_class::reg_lv || arg_classify<A> == arg_class::mem_lv))
@@ -317,6 +318,7 @@ namespace asmjit
 				if constexpr (arg_classify<B> == arg_class::reg_rv)
 				{
 					g_vc->vec_dealloc(vec_type{b.id()});
+					//b = Operand();
 				}
 			}
 
@@ -334,6 +336,7 @@ namespace asmjit
 			if constexpr (arg_classify<B> == arg_class::reg_rv)
 			{
 				g_vc->vec_dealloc(vec_type{b.id()});
+				//b = Operand();
 			}
 
 			if (arg_classify<A> == arg_class::mem_rv && a.isReg())
@@ -2017,6 +2020,90 @@ inline v128 gv_selectfs(const v128& _cmp, const v128& _true, const v128& _false)
 	return vbslq_f32(_cmp, _true, _false);
 #else
 	return _mm_or_ps(_mm_and_ps(_cmp, _true), _mm_andnot_ps(_cmp, _false));
+#endif
+}
+
+inline v128 gv_packss_s16(const v128& low, const v128& high)
+{
+#if defined(ARCH_X64)
+	return _mm_packs_epi16(low, high);
+#elif defined(ARCH_ARM64)
+	return vcombine_s8(vqmovn_s16(low), vqmovn_s16(high));
+#endif
+}
+
+inline v128 gv_packus_s16(const v128& low, const v128& high)
+{
+#if defined(ARCH_X64)
+	return _mm_packus_epi16(low, high);
+#elif defined(ARCH_ARM64)
+	return vcombine_u8(vqmovun_s16(low), vqmovun_s16(high));
+#endif
+}
+
+inline v128 gv_packus_u16(const v128& low, const v128& high)
+{
+#if defined(__SSE4_1__)
+	return _mm_packus_epi16(_mm_min_epu16(low, _mm_set1_epi16(0xff)), _mm_min_epu16(high, _mm_set1_epi16(0xff)));
+#elif defined(ARCH_X64)
+	return _mm_packus_epi16(_mm_sub_epi16(low, _mm_subs_epu16(low, _mm_set1_epi16(0xff))), _mm_sub_epi16(high, _mm_subs_epu16(high, _mm_set1_epi16(0xff))));
+#elif defined(ARCH_ARM64)
+	return vcombine_u8(vqmovn_u16(low), vqmovn_u16(high));
+#endif
+}
+
+inline v128 gv_packtu16(const v128& low, const v128& high)
+{
+#if defined(ARCH_X64)
+	return _mm_packus_epi16(low & _mm_set1_epi16(0xff), high & _mm_set1_epi16(0xff));
+#elif defined(ARCH_ARM64)
+	return vuzp1q_s8(low, high);
+#endif
+}
+
+inline v128 gv_packss_s32(const v128& low, const v128& high)
+{
+#if defined(ARCH_X64)
+	return _mm_packs_epi32(low, high);
+#elif defined(ARCH_ARM64)
+	return vcombine_s16(vqmovn_s32(low), vqmovn_s32(high));
+#endif
+}
+
+inline v128 gv_packus_s32(const v128& low, const v128& high)
+{
+#if defined(__SSE4_1__)
+	return _mm_packus_epi32(low, high);
+#elif defined(ARCH_X64)
+	const auto s = _mm_srai_epi16(_mm_packs_epi32(low, high), 15);
+	const auto r = gv_add16(_mm_packs_epi32(gv_sub32(low, gv_bcst32(0x8000)), gv_sub32(high, gv_bcst32(0x8000))), gv_bcst16(0x8000));
+	return gv_andn(s, r);
+#elif defined(ARCH_ARM64)
+	return vcombine_u16(vqmovun_s32(low), vqmovun_s32(high));
+#endif
+}
+
+inline v128 gv_packus_u32(const v128& low, const v128& high)
+{
+#if defined(__SSE4_1__)
+	return _mm_packus_epi32(_mm_min_epu32(low, _mm_set1_epi32(0xffff)), _mm_min_epu32(high, _mm_set1_epi32(0xffff)));
+#elif defined(ARCH_X64)
+	const v128 s = _mm_cmpgt_epi16(_mm_packs_epi32(_mm_srli_epi32(low, 16), _mm_srli_epi32(high, 16)), _mm_setzero_si128());
+	const v128 r = _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(low, 16), 16), _mm_srai_epi32(_mm_slli_epi32(high, 16), 16));
+	return _mm_or_si128(r, s);
+#elif defined(ARCH_ARM64)
+	return vcombine_u16(vqmovn_u32(low), vqmovn_u32(high));
+#endif
+}
+
+inline v128 gv_packtu32(const v128& low, const v128& high)
+{
+#if defined(__SSE4_1__)
+	return _mm_packus_epi32(low & _mm_set1_epi32(0xffff), high & _mm_set1_epi32(0xffff));
+#elif defined(ARCH_X64)
+	return _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(low, 16), 16), _mm_srai_epi32(_mm_slli_epi32(high, 16), 16));
+#elif defined(ARCH_ARM64)
+	return vuzp1q_s16(low, high);
 #endif
 }
 

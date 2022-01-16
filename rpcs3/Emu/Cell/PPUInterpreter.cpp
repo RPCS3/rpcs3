@@ -1878,7 +1878,7 @@ auto VMSUMSHS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& c, auto&& sat)
 	{
-		auto r = gv_dots_s16x2(std::move(a), std::move(b), std::move(c));
+		auto r = gv_dots_s16x2(a, b, c);
 		auto s = gv_dots16x2(std::move(a), std::move(b), std::move(c));
 		if constexpr (((Flags == set_sat) || ...))
 			sat = gv_or32(gv_xor32(std::move(s), r), std::move(sat));
@@ -2162,26 +2162,18 @@ auto VPKPX()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	auto& d = ppu.vr[op.vd];
-	v128 VA = ppu.vr[op.va];
-	v128 VB = ppu.vr[op.vb];
-	for (uint h = 0; h < 4; h++)
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
 	{
-		u16 bb7 = VB._u8[15 - (h * 4 + 0)] & 0x1;
-		u16 bb8 = VB._u8[15 - (h * 4 + 1)] >> 3;
-		u16 bb16 = VB._u8[15 - (h * 4 + 2)] >> 3;
-		u16 bb24 = VB._u8[15 - (h * 4 + 3)] >> 3;
-		u16 ab7 = VA._u8[15 - (h * 4 + 0)] & 0x1;
-		u16 ab8 = VA._u8[15 - (h * 4 + 1)] >> 3;
-		u16 ab16 = VA._u8[15 - (h * 4 + 2)] >> 3;
-		u16 ab24 = VA._u8[15 - (h * 4 + 3)] >> 3;
-
-		d._u16[3 - h] = (bb7 << 15) | (bb8 << 10) | (bb16 << 5) | bb24;
-		d._u16[4 + (3 - h)] = (ab7 << 15) | (ab8 << 10) | (ab16 << 5) | ab24;
-	}
+		auto a1 = gv_sar32(gv_shl32(a, 7), 7 + 9);
+		auto b1 = gv_sar32(gv_shl32(b, 7), 7 + 9);
+		auto a2 = gv_sar32(gv_shl32(a, 16), 16 + 3);
+		auto b2 = gv_sar32(gv_shl32(b, 16), 16 + 3);
+		auto p1 = gv_packss_s32(b1, a1);
+		auto p2 = gv_packss_s32(b2, a2);
+		d = gv_or32(gv_or32(gv_and32(p1, gv_bcst16(0xfc00)), gv_shl16(gv_and32(p1, gv_bcst16(0x7c)), 3)), gv_and32(p2, gv_bcst16(0x1f)));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2190,14 +2182,14 @@ auto VPKSHSS()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_sat>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-	ppu.vr[op.vd] = _mm_packs_epi16(b, a);
-	if constexpr (((Flags == set_sat) || ...))
-		ppu.sat = ppu.sat | gv_shr16(gv_add16(a, gv_bcst16(0x80)) | gv_add16(b, gv_bcst16(0x80)), 8);
+	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
+	{
+		if constexpr (((Flags == set_sat) || ...))
+			sat = gv_or32(gv_shr16(gv_add16(a, gv_bcst16(0x80)) | gv_add16(b, gv_bcst16(0x80)), 8), std::move(sat));
+		d = gv_packss_s16(std::move(b), std::move(a));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2206,14 +2198,14 @@ auto VPKSHUS()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_sat>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-	ppu.vr[op.vd] = _mm_packus_epi16(b, a);
-	if constexpr (((Flags == set_sat) || ...))
-		ppu.sat = ppu.sat | gv_shr16(a | b, 8);
+	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
+	{
+		if constexpr (((Flags == set_sat) || ...))
+			sat = gv_or32(gv_shr16(a | b, 8), std::move(sat));
+		d = gv_packus_s16(std::move(b), std::move(a));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2222,14 +2214,14 @@ auto VPKSWSS()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_sat>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-	ppu.vr[op.vd] = _mm_packs_epi32(b, a);
-	if constexpr (((Flags == set_sat) || ...))
-		ppu.sat = ppu.sat | gv_shr32(gv_add32(a, gv_bcst32(0x8000)) | gv_add32(b, gv_bcst32(0x8000)), 16);
+	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
+	{
+		if constexpr (((Flags == set_sat) || ...))
+			sat = gv_or32(gv_shr32(gv_add32(a, gv_bcst32(0x8000)) | gv_add32(b, gv_bcst32(0x8000)), 16), std::move(sat));
+		d = gv_packss_s32(std::move(b), std::move(a));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2238,20 +2230,14 @@ auto VPKSWUS()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_sat>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-#if defined(__SSE4_1__) || defined(ARCH_ARM64)
-	ppu.vr[op.vd] = _mm_packus_epi32(b, a);
-#else
-	const auto s = _mm_srai_epi16(_mm_packs_epi32(b, a), 15);
-	const auto r = gv_add16(_mm_packs_epi32(gv_sub32(b, gv_bcst32(0x8000)), gv_sub32(a, gv_bcst32(0x8000))), gv_bcst16(0x8000));
-	ppu.vr[op.vd] = gv_andn(s, r);
-#endif
-	if constexpr (((Flags == set_sat) || ...))
-		ppu.sat = ppu.sat | gv_shr32(a | b, 16);
+	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
+	{
+		if constexpr (((Flags == set_sat) || ...))
+			sat = gv_or32(gv_shr32(a | b, 16), std::move(sat));
+		d = gv_packus_s32(std::move(b), std::move(a));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2260,12 +2246,12 @@ auto VPKUHUM()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-	ppu.vr[op.vd] = _mm_packus_epi16(b & _mm_set1_epi16(0xff), a & _mm_set1_epi16(0xff));
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_packtu16(std::move(b), std::move(a));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2274,16 +2260,13 @@ auto VPKUHUS()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_sat>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-	const v128 s = _mm_cmpeq_epi8(_mm_packs_epi16(_mm_srai_epi16(b, 8), _mm_srai_epi16(a, 8)), _mm_setzero_si128());
-	const v128 r = _mm_packus_epi16(b & _mm_set1_epi16(0xff), a & _mm_set1_epi16(0xff));
-	ppu.vr[op.vd] = r | ~s;
-	if constexpr (((Flags == set_sat) || ...))
-		ppu.sat = ppu.sat | gv_shr16(a | b, 8);
+	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
+	{
+		if constexpr (((Flags == set_sat) || ...))
+			sat = gv_or32(gv_shr16(a | b, 8), std::move(sat));
+		d = gv_packus_u16(std::move(b), std::move(a));
 	};
-	RETURN_(ppu, op);
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2292,17 +2275,12 @@ auto VPKUWUM()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-#if defined(__SSE4_1__) || defined(ARCH_ARM64)
-	const auto r = _mm_packus_epi32(b & _mm_set1_epi32(0xffff), a & _mm_set1_epi32(0xffff));
-#else
-	const auto r = _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(b, 16), 16), _mm_srai_epi32(_mm_slli_epi32(a, 16), 16));
-#endif
-	ppu.vr[op.vd] = r;
+	static const auto exec = [](auto&& d, auto&& a, auto&& b)
+	{
+		d = gv_packtu32(std::move(b), std::move(a));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -2311,20 +2289,14 @@ auto VPKUWUS()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_sat>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto a = ppu.vr[op.va];
-	const auto b = ppu.vr[op.vb];
-	const v128 s = _mm_cmpeq_epi16(_mm_packs_epi32(_mm_srai_epi32(b, 16), _mm_srai_epi32(a, 16)), _mm_setzero_si128());
-#if defined(__SSE4_1__) || defined(ARCH_ARM64)
-	const v128 r = _mm_packus_epi32(b & _mm_set1_epi32(0xffff), a & _mm_set1_epi32(0xffff));
-#else
-	const v128 r = _mm_packs_epi32(_mm_srai_epi32(_mm_slli_epi32(b, 16), 16), _mm_srai_epi32(_mm_slli_epi32(a, 16), 16));
-#endif
-	ppu.vr[op.vd] = r | ~s;
-	if constexpr (((Flags == set_sat) || ...))
-		ppu.sat = ppu.sat | gv_shr32(a | b, 16);
+	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
+	{
+		if constexpr (((Flags == set_sat) || ...))
+			sat = gv_or32(gv_shr32(a | b, 16), std::move(sat));
+		d = gv_packus_u32(std::move(b), std::move(a));
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -3170,7 +3142,7 @@ auto VSUM2SWS()
 		r._u64[1] = y._s64[1] > INT32_MAX ? INT32_MAX : y._s64[1] < INT32_MIN ? u32(INT32_MIN) : static_cast<u32>(y._s64[1]);
 #endif
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | gv_shr64(gv_add64(y, gv_bcst64(0x80000000u)), 32);
+			sat = gv_or32(gv_shr64(gv_add64(y, gv_bcst64(0x80000000u)), 32), std::move(sat));
 		d = r;
 	};
 
@@ -3187,12 +3159,11 @@ auto VSUM4SBS()
 	{
 		//const auto r = _mm_dpbusds_epi32(b, _mm_set1_epi8(1), a);
 		//const auto s = _mm_dpbusd_epi32(b, _mm_set1_epi8(1), a);
-		const auto x = gv_hadds8x4(a);
-		const auto r = gv_adds_s32(x, b);
-		const auto s = gv_add32(x, b);
+		auto x = gv_hadds8x4(a);
+		auto r = gv_adds_s32(x, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (r ^ s);
-		d = r;
+			sat = gv_or32(gv_xor32(gv_add32(std::move(x), std::move(b)), r), std::move(sat));
+		d = std::move(r);
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
@@ -3208,12 +3179,11 @@ auto VSUM4SHS()
 	{
 		//const auto r = _mm_dpwssds_epi32(b, a, _mm_set1_epi16(1));
 		//const auto s = _mm_dpwssd_epi32(b, a, _mm_set1_epi16(1));
-		const auto x = gv_hadds16x2(a);
-		const auto r = gv_adds_s32(x, b);
-		const auto s = gv_add32(x, b);
+		auto x = gv_hadds16x2(a);
+		auto r = gv_adds_s32(x, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (r ^ s);
-		d = r;
+			sat = gv_or32(gv_xor32(gv_add32(std::move(x), std::move(b)), r), std::move(sat));
+		d = std::move(r);
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
@@ -3227,11 +3197,11 @@ auto VSUM4UBS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		const auto x = gv_haddu8x4(a);
-		const auto r = gv_addus_u32(x, b);
+		auto x = gv_haddu8x4(a);
+		auto r = gv_addus_u32(x, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = sat | (r ^ gv_add32(x, b));
-		d = r;
+			sat = gv_or32(gv_xor32(gv_add32(std::move(x), std::move(b)), r), std::move(sat));
+		d = std::move(r);
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.vr[op.va], ppu.vr[op.vb], ppu.sat);
