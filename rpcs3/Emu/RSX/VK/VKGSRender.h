@@ -332,6 +332,11 @@ namespace vk
 		u32 height;
 		u32 pitch;
 	};
+
+	struct draw_call_t
+	{
+		u32 subdraw_id;
+	};
 }
 
 using namespace vk::vmm_allocation_pool_; // clang workaround.
@@ -483,7 +488,7 @@ private:
 	utils::address_range m_offloader_fault_range;
 	rsx::invalidation_cause m_offloader_fault_cause;
 
-	u32 m_current_subdraw_id = 0;
+	vk::draw_call_t m_current_draw = {};
 	u64 m_current_renderpass_key = 0;
 	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
 	std::vector<vk::image*> m_fbo_images;
