@@ -799,7 +799,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	const auto& binding_table = m_device->get_pipeline_binding_table();
 
-	if (sub_index == 0)
+	if (m_current_draw.subdraw_id == 0)
 	{
 		update_descriptors = true;
 
@@ -856,7 +856,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		m_program->bind_uniform(m_vertex_layout_storage->value, binding_table.vertex_buffers_first_bind_slot + 2, m_current_frame->descriptor_set);
 	}
 
-	bool reload_state = (!m_current_subdraw_id++);
+	bool reload_state = (!m_current_draw.subdraw_id++);
 	vk::renderpass_op(*m_current_command_buffer, [&](VkCommandBuffer cmd, VkRenderPass pass, VkFramebuffer fbo)
 	{
 		if (get_render_pass() == pass && m_draw_fbo->value == fbo)
@@ -1067,8 +1067,8 @@ void VKGSRender::end()
 	// Final heap check...
 	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
 
-	u32 sub_index = 0;
-	m_current_subdraw_id = 0;
+	u32 sub_index = 0;               // RSX subdraw ID
+	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value
 
 	rsx::method_registers.current_draw_clause.begin();
 	do
