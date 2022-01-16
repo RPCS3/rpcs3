@@ -566,8 +566,9 @@ namespace glsl
 				OS << "// Workaround broken output rounding behavior\n";
 				if (props.srgb_output_rounding)
 				{
-					const auto scale = (props.supports_native_fp16) ? "float16_t(255.)" : "255.";
-					OS << "#define round_to_8bit(v4) (round(v4 * " << scale << ") / " << scale << ")\n\n";
+					const auto _255 = (props.supports_native_fp16) ? "f16vec4(255.)" : "vec4(255.)";
+					const auto _1_over_2 = (props.supports_native_fp16) ? "f16vec4(0.5)" : "vec4(0.5)";
+					OS << "#define round_to_8bit(v4) (floor(fma(v4, " << _255 << ", " << _1_over_2 << ")) / " << _255 << ")\n\n";
 				}
 				else
 				{
