@@ -3497,6 +3497,9 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 	auto& dnshook = g_fxo->get<np::dnshook>();
 	dnshook.remove_dns_spy(s);
 
+	// Ensures the socket has no lingering copy from network thread
+	g_fxo->get<network_context>().s_nw_mutex.lock_unlock();
+
 	return CELL_OK;
 }
 
