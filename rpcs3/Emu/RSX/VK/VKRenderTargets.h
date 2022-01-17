@@ -115,6 +115,7 @@ namespace vk
 				[[ fallthrough ]];
 			case driver_vendor::NVIDIA:
 			case driver_vendor::INTEL:
+			case driver_vendor::MVK:
 				break;
 			}
 

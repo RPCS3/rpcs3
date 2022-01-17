@@ -73,11 +73,10 @@ struct cfg_root : cfg::node
 		cfg::uint64 tx_limit2_ns{this, "TSX Transaction Second Limit", 2000}; // In nanoseconds
 
 		cfg::_int<10, 3000> clocks_scale{ this, "Clocks scale", 100 }; // Changing this from 100 (percentage) may affect game speed in unexpected ways
-		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy",
-#ifdef __linux__
-			sleep_timers_accuracy_level::_as_host, true };
+#if defined (__linux__) || defined (__APPLE__)
+		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy", sleep_timers_accuracy_level::_as_host, true };
 #else
-			sleep_timers_accuracy_level::_usleep, true };
+		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy", sleep_timers_accuracy_level::_usleep, true };
 #endif
 
 		cfg::uint64 perf_report_threshold{this, "Performance Report Threshold", 500, true}; // In µs, 0.5ms = default, 0 = everything
@@ -134,7 +133,11 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_vulkan_mem_allocator{ this, "Disable Vulkan Memory Allocator", false };
 		cfg::_bool full_rgb_range_output{ this, "Use full RGB output range", true, true }; // Video out dynamic range
 		cfg::_bool strict_texture_flushing{ this, "Strict Texture Flushing", false };
+#ifdef __APPLE__
+		cfg::_bool disable_native_float16{ this, "Disable native float16 support", true };
+#else
 		cfg::_bool disable_native_float16{ this, "Disable native float16 support", false };
+#endif
 		cfg::_bool multithreaded_rsx{ this, "Multithreaded RSX", false };
 		cfg::_bool relaxed_zcull_sync{ this, "Relaxed ZCULL Sync", false };
 		cfg::_bool enable_3d{ this, "Enable 3D", false };

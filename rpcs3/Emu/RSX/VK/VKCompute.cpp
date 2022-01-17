@@ -79,8 +79,8 @@ namespace vk
 			case vk::driver_vendor::NVIDIA:
 				// Warps are multiples of 32. Increasing kernel depth seems to hurt performance (Nier, Big Duck sample)
 				unroll_loops = true;
-				optimal_group_size = 32;
 				optimal_kernel_size = 1;
+				optimal_group_size = 32;
 				break;
 			case vk::driver_vendor::AMD:
 			case vk::driver_vendor::RADV:
@@ -88,6 +88,11 @@ namespace vk
 				unroll_loops = false;
 				optimal_kernel_size = 1;
 				optimal_group_size = 64;
+				break;
+			case vk::driver_vendor::MVK:
+				unroll_loops = true;
+				optimal_kernel_size = 1;
+				optimal_group_size = 256;
 				break;
 			}
 

@@ -124,6 +124,9 @@ namespace vk
 		case driver_vendor::ANV:
 			// INTEL vulkan drivers are mostly OK, workarounds are applied when creating the device
 			break;
+		case driver_vendor::MVK:
+			// Apple GPUs / moltenVK need more testing
+			break;
 		default:
 			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}
