@@ -196,6 +196,11 @@ namespace asmjit
 		return mem.eval(std::is_reference_v<T>);
 	}
 
+	inline decltype(auto) arg_eval(const Operand& mem, u32)
+	{
+		return mem;
+	}
+
 	inline decltype(auto) arg_eval(Operand& mem, u32)
 	{
 		return mem;
@@ -204,6 +209,31 @@ namespace asmjit
 	inline decltype(auto) arg_eval(Operand&& mem, u32)
 	{
 		return std::move(mem);
+	}
+
+	template <typename T>
+	inline bool arg_use_evex(const auto& op)
+	{
+		constexpr auto _class = arg_classify<T>;
+		if constexpr (_class == arg_class::imm_rv)
+			return true;
+		else if constexpr (_class == arg_class::imm_lv)
+			return false;
+		else if (op.isMem())
+		{
+			// Check if broadcast is set, or if the offset immediate can use disp8*N encoding
+			mem_type mem{};
+			mem.copyFrom(op);
+			if (mem.hasBaseLabel())
+				return false;
+			if (mem.hasBroadcast())
+				return true;
+			if (!mem.hasOffset() || mem.offset() % mem.size() || u64(mem.offset() + 128) < 256 || u64(mem.offset() / mem.size() + 128) >= 256)
+				return false;
+			return true;
+		}
+
+		return false;
 	}
 
 	template <typename A, typename... Args>
@@ -259,7 +289,7 @@ namespace asmjit
 
 		if (utils::has_avx512() && evex_op)
 		{
-			if (!dst.hasBaseLabel() && dst.hasOffset() && dst.offset() % dst.size() == 0 && dst.offset() / dst.size() + 128 < 256)
+			if (!dst.hasBaseLabel() && dst.hasOffset() && dst.offset() % dst.size() == 0 && u64(dst.offset() + 128) >= 256 && u64(dst.offset() / dst.size() + 128) < 256)
 			{
 				ensure(!g_vc->evex().emit(evex_op, dst, arg_eval(std::forward<S>(s), 16)));
 				return;
@@ -279,7 +309,7 @@ namespace asmjit
 			// Use src1 as a destination
 			src1 = arg_eval(std::forward<A>(a), 16);
 
-			if (utils::has_avx512() && evex_op && (arg_classify<B> == arg_class::imm_rv || arg_classify<B> == arg_class::mem_rv || b.isMem()))
+			if (utils::has_avx512() && evex_op && arg_use_evex<B>(b))
 			{
 				ensure(!g_vc->evex().emit(evex_op, src1, src1, arg_eval(std::forward<B>(b), esize), std::forward<Args>(args)...));
 				return vec_type{src1.id()};
@@ -322,7 +352,7 @@ namespace asmjit
 				}
 			}
 
-			if (utils::has_avx512() && evex_op && (arg_classify<B> == arg_class::imm_rv || arg_classify<B> == arg_class::mem_rv || b.isMem()))
+			if (utils::has_avx512() && evex_op && arg_use_evex<B>(b))
 			{
 				ensure(!g_vc->evex().emit(evex_op, src1, vec_type{a.id()}, arg_eval(std::forward<B>(b), esize), std::forward<Args>(args)...));
 				return vec_type{src1.id()};
@@ -352,7 +382,7 @@ namespace asmjit
 		}
 		while (0);
 
-		if (utils::has_avx512() && evex_op && (arg_classify<B> == arg_class::imm_rv || arg_classify<B> == arg_class::mem_rv || b.isMem()))
+		if (utils::has_avx512() && evex_op && arg_use_evex<B>(b))
 		{
 			ensure(!g_vc->evex().emit(evex_op, src1, src1, arg_eval(std::forward<B>(b), esize), std::forward<Args>(args)...));
 		}

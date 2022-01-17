@@ -223,14 +223,7 @@ namespace asmjit
 		template <auto MPtr, u32 Size = sizeof(std::declval<ppu_thread&>().*MPtr)>
 		x86::Mem ppu_mem()
 		{
-			if (ppu_base == 0)
-			{
-				return x86::ptr(arg_ppu, static_cast<s32>(::offset32(MPtr)), Size);
-			}
-			else
-			{
-				return x86::ptr(x86::r10, static_cast<s32>(::offset32(MPtr) - ppu_base), Size);
-			}
+			return x86::ptr(arg_ppu, static_cast<s32>(::offset32(MPtr)), Size);
 		}
 
 		template <u32 Size = 16, uint I, uint N>
@@ -316,22 +309,20 @@ struct ppu_abstract_t
 		}
 	} vr;
 
-	struct abstract_sat : asmjit::mem_lazy
+	struct abstract_sat : asmjit::mem_type
 	{
-		const asmjit::Operand& eval(bool)
-		{
+		abstract_sat()
 		#if defined(ARCH_X64)
-			Operand::operator=(static_cast<asmjit::ppu_builder*>(g_vc)->ppu_sat());
+			: asmjit::mem_type(static_cast<asmjit::ppu_builder*>(g_vc)->ppu_sat())
 		#endif
-
-			return *this;
+		{
 		}
 
 		template <typename T>
 		void operator=(T&& _val) const
 		{
 		#if defined(ARCH_X64)
-			FOR_X64(store_op, kIdMovaps, kIdVmovaps, static_cast<asmjit::ppu_builder*>(g_vc)->ppu_sat(), std::forward<T>(_val));
+			FOR_X64(store_op, kIdMovaps, kIdVmovaps, *this, std::forward<T>(_val));
 		#endif
 		}
 	} sat{};
