@@ -20,7 +20,8 @@ namespace vk
 		NV_pascal,
 		NV_volta,
 		NV_turing,
-		NV_ampere
+		NV_ampere,
+		MVK_apple
 	};
 
 	enum class driver_vendor
@@ -30,7 +31,8 @@ namespace vk
 		NVIDIA,
 		RADV,
 		INTEL,
-		ANV
+		ANV,
+		MVK
 	};
 
 	driver_vendor get_driver_vendor();

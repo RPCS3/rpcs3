@@ -603,6 +603,11 @@ VKGSRender::VKGSRender() : GSRender()
 			}
 			break;
 #endif
+		case vk::driver_vendor::MVK:
+			// Async compute crashes immediately on Apple GPUs
+			rsx_log.error("Apple GPUs are incompatible with the current implementation of asynchronous texture decoding.");
+			backend_config.supports_asynchronous_compute = false;
+			break;
 		default: break;
 		}
 

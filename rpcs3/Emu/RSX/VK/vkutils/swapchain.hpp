@@ -522,6 +522,7 @@ namespace vk
 				case driver_vendor::AMD:
 				case driver_vendor::INTEL:
 				case driver_vendor::RADV:
+				case driver_vendor::MVK:
 					break;
 				case driver_vendor::ANV:
 				case driver_vendor::NVIDIA:
