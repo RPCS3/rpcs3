@@ -12,11 +12,7 @@
 //using enum rsx::format_class;
 using namespace ::rsx::format_class_;
 
-#ifdef __APPLE__
-#define VK_DISABLE_COMPONENT_SWIZZLE 1
-#else
 #define VK_DISABLE_COMPONENT_SWIZZLE 0
-#endif
 
 namespace vk
 {

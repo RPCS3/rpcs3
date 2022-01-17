@@ -2086,9 +2086,6 @@ namespace rsx
 					}
 				}
 
-#ifdef __APPLE__
-				texture_control |= (sampler_descriptors[i]->encoded_component_map() << 16);
-#endif
 				current_fragment_program.texture_params[i].control = texture_control;
 			}
 		}
