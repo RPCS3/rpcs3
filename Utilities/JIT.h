@@ -211,8 +211,6 @@ namespace asmjit
 		static_cast<void>(args);
 #endif
 	}
-
-	using imm_ptr = Imm;
 }
 
 // Build runtime function with asmjit::X86Assembler

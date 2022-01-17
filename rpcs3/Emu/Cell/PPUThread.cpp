@@ -273,7 +273,7 @@ const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& 
 	using namespace asmjit;
 
 	c.mov(args[0], x86::rbp);
-	c.jmp(imm_ptr(ppu_recompiler_fallback));
+	c.jmp(ppu_recompiler_fallback);
 });
 #elif defined(ARCH_ARM64)
 const auto ppu_recompiler_fallback_ghc = &ppu_recompiler_fallback;

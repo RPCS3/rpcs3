@@ -207,7 +207,7 @@ DECLARE(spu_runtime::g_gateway) = built_function<spu_function_t>("spu_gateway", 
 		c.vzeroupper();
 	}
 
-	c.call(asmjit::imm_ptr(spu_runtime::tr_all));
+	c.call(spu_runtime::tr_all);
 
 	if (utils::has_avx())
 	{

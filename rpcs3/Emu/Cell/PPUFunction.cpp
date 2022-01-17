@@ -1918,7 +1918,7 @@ std::vector<ppu_intrp_func_t>& ppu_function_manager::access(bool ghc)
 			c.mov(args[0], x86::rbp);
 			c.mov(args[2].r32(), x86::dword_ptr(args[0], ::offset32(&ppu_thread::cia)));
 			c.add(args[2], x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
-			c.jmp(imm_ptr(list[0]));
+			c.jmp(list[0]);
 		}),
 		build_function_asm<ppu_intrp_func_t>("ppu_return", [](native_asm& c, auto& args)
 		{
@@ -1928,7 +1928,7 @@ std::vector<ppu_intrp_func_t>& ppu_function_manager::access(bool ghc)
 			c.mov(args[0], x86::rbp);
 			c.mov(args[2].r32(), x86::dword_ptr(args[0], ::offset32(&ppu_thread::cia)));
 			c.add(args[2], x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
-			c.jmp(imm_ptr(list[1]));
+			c.jmp(list[1]);
 		}),
 	};
 #elif defined(ARCH_ARM64)
@@ -1955,7 +1955,7 @@ u32 ppu_function_manager::add_function(ppu_intrp_func_t function)
 		c.mov(args[0], x86::rbp);
 		c.mov(args[2].r32(), x86::dword_ptr(args[0], ::offset32(&ppu_thread::cia)));
 		c.add(args[2], x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
-		c.jmp(imm_ptr(function));
+		c.jmp(function);
 	}));
 #elif defined(ARCH_ARM64)
 	list2.push_back(function);

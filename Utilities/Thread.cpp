@@ -2260,17 +2260,17 @@ thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* 
 		c.sub(x86::rsp, 0x20);
 
 		// Call entry point (TODO: support for detached threads missing?)
-		c.call(imm_ptr(entry));
+		c.call(entry);
 
 		// Call finalize, return if zero
 		c.mov(args[0], x86::rax);
-		c.call(imm_ptr(static_cast<native_entry(*)(u64)>(&finalize)));
+		c.call(static_cast<native_entry(*)(u64)>(&finalize));
 		c.test(x86::rax, x86::rax);
 		c.jz(_ret);
 
 		// Otherwise, call it as an entry point with first arg = new current thread
 		c.mov(x86::rbp, x86::rax);
-		c.call(imm_ptr(thread_ctrl::get_current));
+		c.call(thread_ctrl::get_current);
 		c.mov(args[0], x86::rax);
 		c.add(x86::rsp, 0x28);
 		c.jmp(x86::rbp);
