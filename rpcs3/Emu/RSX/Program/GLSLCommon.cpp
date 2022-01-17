@@ -770,26 +770,9 @@ namespace glsl
 		{
 			OS <<
 
-#ifdef __APPLE__
-			"vec4 remap_vector_m(const in vec4 rgba, const in uint remap_bits)\n"
-			"{\n"
-			"	uvec4 selector = (uvec4(remap_bits) >> uvec4(3, 6, 9, 0)) & 0x7;\n"
-			"	bvec4 choice = greaterThan(selector, uvec4(1));\n"
-			"\n"
-			"	vec4 direct = vec4(selector);\n"
-			"	selector = min(selector - 2, selector);\n"
-			"	vec4 indexed = vec4(rgba[selector.r], rgba[selector.g], rgba[selector.b], rgba[selector.a]);\n"
-			"	return mix(direct, indexed, choice);\n"
-			"}\n\n"
-#endif
-
 			//TODO: Move all the texture read control operations here
 			"vec4 process_texel(in vec4 rgba, const in uint control_bits)\n"
 			"{\n"
-#ifdef __APPLE__
-			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
-			"	if (remap_bits != 0x8D5) rgba = remap_vector_m(rgba, remap_bits);\n\n"
-#endif
 			"	if (control_bits == 0)\n"
 			"	{\n"
 			"		return rgba;\n"
