@@ -613,10 +613,16 @@ void GLGSRender::clear_surface(u32 arg)
 			colormask = 0;
 			break;
 		}
+		case rsx::surface_color_format::b8:
+		{
+			rsx::get_b8_clear_color(clear_r, clear_g, clear_b, clear_a);
+			colormask = rsx::get_b8_clearmask(colormask);
+			break;
+		}
 		case rsx::surface_color_format::g8b8:
 		{
 			rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
-			colormask = rsx::get_g8b8_r8g8_colormask(colormask);
+			colormask = rsx::get_g8b8_r8g8_clearmask(colormask);
 			break;
 		}
 		case rsx::surface_color_format::a8b8g8r8:
@@ -624,7 +630,7 @@ void GLGSRender::clear_surface(u32 arg)
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 		{
 			rsx::get_abgr8_clear_color(clear_r, clear_g, clear_b, clear_a);
-			colormask = rsx::get_abgr8_colormask(colormask);
+			colormask = rsx::get_abgr8_clearmask(colormask);
 			break;
 		}
 		default:

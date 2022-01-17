@@ -251,6 +251,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding;
 	m_shader_props.disable_early_discard = vk::get_driver_vendor() != vk::driver_vendor::NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
+	m_shader_props.srgb_output_rounding = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }

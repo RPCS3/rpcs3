@@ -37,5 +37,6 @@ namespace glsl
 		bool low_precision_tests : 1;
 		bool disable_early_discard : 1;
 		bool supports_native_fp16 : 1;
+		bool srgb_output_rounding : 1;
 	};
 };
