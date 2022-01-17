@@ -1419,7 +1419,7 @@ void PPUTranslator::VRFIM(ppu_opcode_t op)
 
 void PPUTranslator::VRFIN(ppu_opcode_t op)
 {
-	set_vr(op.vd, vec_handle_result(call<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::nearbyint), get_vr<f32[4]>(op.vb))));
+	set_vr(op.vd, vec_handle_result(call<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::roundeven), get_vr<f32[4]>(op.vb))));
 }
 
 void PPUTranslator::VRFIP(ppu_opcode_t op)

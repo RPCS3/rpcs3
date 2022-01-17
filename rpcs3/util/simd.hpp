@@ -14,7 +14,6 @@
 
 #include <immintrin.h>
 #include <emmintrin.h>
-#include <cmath>
 #endif
 
 #if defined(ARCH_ARM64)
@@ -22,6 +21,7 @@
 #endif
 
 #include <cmath>
+#include <math.h>
 #include <cfenv>
 
 namespace asmjit
@@ -1541,6 +1541,24 @@ inline v128 gv_avgs32(const v128& a, const v128& b)
 #endif
 }
 
+inline v128 gv_divfs(const v128& a, const v128& b)
+{
+#if defined(ARCH_X64)
+	return _mm_div_ps(a, b);
+#elif defined(ARCH_ARM64)
+	return vdivq_f32(a, b);
+#endif
+}
+
+inline v128 gv_sqrtfs(const v128& a)
+{
+#if defined(ARCH_X64)
+	return _mm_sqrt_ps(a);
+#elif defined(ARCH_ARM64)
+	return vsqrtq_f32(a);
+#endif
+}
+
 inline v128 gv_fmafs(const v128& a, const v128& b, const v128& c)
 {
 #if defined(ARCH_X64) && defined(__FMA__)
@@ -1922,6 +1940,136 @@ inline v128 gv_cvtfs_tou32(const v128& src)
 	return _mm_or_si128(c1, _mm_and_si128(c2, s1));
 #elif defined(ARCH_ARM64)
 	return vcvtq_u32_f32(src);
+#endif
+}
+
+namespace utils
+{
+	inline f32 roundevenf32(f32 arg)
+	{
+		u32 val = std::bit_cast<u32>(arg);
+		u32 exp = (val >> 23) & 0xff;
+		u32 abs = val & 0x7fffffff;
+
+		if (exp >= 127 + 23)
+		{
+			// Big enough, NaN or INF
+			return arg;
+		}
+		else if (exp >= 127)
+		{
+			u32 int_pos = (127 + 23) - exp;
+			u32 half_pos = int_pos - 1;
+			u32 half_bit = 1u << half_pos;
+			u32 int_bit = 1u << int_pos;
+			if (val & (int_bit | (half_bit - 1)))
+				val += half_bit;
+			val &= ~(int_bit - 1);
+		}
+		else if (exp == 126 && abs > 0x3f000000)
+		{
+			val &= 0x80000000;
+			val |= 0x3f800000;
+		}
+		else
+		{
+			val &= 0x80000000;
+		}
+
+		return std::bit_cast<f32>(val);
+	}
+}
+
+#if defined(ARCH_X64)
+template <uint Mode>
+inline built_function<__m128(*)(__m128)> sse41_roundf("sse41_roundf", [](native_asm& c, native_args&)
+{
+	static_assert(Mode < 4);
+	using namespace asmjit;
+	if (utils::has_avx())
+		c.vroundps(x86::xmm0, x86::xmm0, 8 + Mode);
+	else if (utils::has_sse41())
+		c.roundps(x86::xmm0, x86::xmm0, 8 + Mode);
+	else
+		c.jmp(+[](__m128 a) -> __m128
+		{
+			v128 r = a;
+			for (u32 i = 0; i < 4; i++)
+				if constexpr (Mode == 0)
+					r._f[i] = utils::roundevenf32(r._f[i]);
+				else if constexpr (Mode == 1)
+					r._f[i] = ::floorf(r._f[i]);
+				else if constexpr (Mode == 2)
+					r._f[i] = ::ceilf(r._f[i]);
+				else if constexpr (Mode == 3)
+					r._f[i] = ::truncf(r._f[i]);
+			return r;
+		});
+	c.ret();
+});
+#endif
+
+inline v128 gv_roundfs_even(const v128& a)
+{
+#if defined(__SSE4_1__)
+	return _mm_round_ps(a, 8 + 0);
+#elif defined(ARCH_ARM64)
+	return vrndnq_f32(a);
+#elif defined(ARCH_X64)
+	return sse41_roundf<0>(a);
+#else
+	v128 r;
+	for (u32 i = 0; i < 4; i++)
+		r._f[i] = utils::roundevenf32(a._f[i]);
+	return r;
+#endif
+}
+
+inline v128 gv_roundfs_ceil(const v128& a)
+{
+#if defined(__SSE4_1__)
+	return _mm_round_ps(a, 8 + 2);
+#elif defined(ARCH_ARM64)
+	return vrndpq_f32(a);
+#elif defined(ARCH_X64)
+	return sse41_roundf<2>(a);
+#else
+	v128 r;
+	for (u32 i = 0; i < 4; i++)
+		r._f[i] = ::ceilf(a._f[i]);
+	return r;
+#endif
+}
+
+inline v128 gv_roundfs_floor(const v128& a)
+{
+#if defined(__SSE4_1__)
+	return _mm_round_ps(a, 8 + 1);
+#elif defined(ARCH_ARM64)
+	return vrndmq_f32(a);
+#elif defined(ARCH_X64)
+	return sse41_roundf<1>(a);
+#else
+	v128 r;
+	for (u32 i = 0; i < 4; i++)
+		r._f[i] = ::floorf(a._f[i]);
+	return r;
+#endif
+}
+
+inline v128 gv_roundfs_trunc(const v128& a)
+{
+#if defined(__SSE4_1__)
+	return _mm_round_ps(a, 8 + 3);
+#elif defined(ARCH_ARM64)
+	return vrndq_f32(a);
+#elif defined(ARCH_X64)
+	return sse41_roundf<3>(a);
+#else
+	v128 r;
+	for (u32 i = 0; i < 4; i++)
+		r._f[i] = ::truncf(a._f[i]);
+	return r;
 #endif
 }
 

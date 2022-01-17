@@ -275,11 +275,11 @@ namespace
 
 		c.jmp(asmjit::imm_ptr(&copy_data_swap_u32_naive<Compare>));
 	}
-#else
+#elif defined(ARCH_ARM64)
 	template <bool Compare>
-	constexpr auto build_copy_data_swap_u32()
+	void build_copy_data_swap_u32(native_asm& c, native_args& args)
 	{
-		return &copy_data_swap_u32_naive<Compare>;
+		c.b(asmjit::imm_ptr(&copy_data_swap_u32_naive<Compare>));
 	}
 #endif
 }
