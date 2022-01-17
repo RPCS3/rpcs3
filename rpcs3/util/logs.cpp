@@ -195,6 +195,8 @@ namespace logs
 		for (auto&& pair : get_logger()->channels)
 		{
 			pair.second->enabled.release(level::always);
+			pair.second->enabled.release(level::fatal);
+			pair.second->enabled.release(level::error);
 		}
 	}
 
