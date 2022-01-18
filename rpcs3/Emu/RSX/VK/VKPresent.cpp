@@ -223,6 +223,8 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
+		vk::get_resource_manager()->trim();
+
 		vk::reset_global_resources();
 
 		ctx->buffer_views_to_clean.clear();

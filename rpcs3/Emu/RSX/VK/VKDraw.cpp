@@ -285,8 +285,14 @@ void VKGSRender::load_texture_env()
 
 				if (replace)
 				{
-					fs_sampler_handles[i] = vk::get_resource_manager()->find_sampler(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-						min_filter.filter, mag_filter, min_filter.mipmap_mode, border_color, compare_enabled, depth_compare_mode);
+					fs_sampler_handles[i] = vk::get_resource_manager()->get_sampler(
+						*m_device,
+						fs_sampler_handles[i],
+						wrap_s, wrap_t, wrap_r,
+						false,
+						lod_bias, af_level, min_lod, max_lod,
+						min_filter.filter, mag_filter, min_filter.mipmap_mode,
+						border_color, compare_enabled, depth_compare_mode);
 				}
 			}
 			else
@@ -338,8 +344,9 @@ void VKGSRender::load_texture_env()
 
 				if (replace)
 				{
-					vs_sampler_handles[i] = vk::get_resource_manager()->find_sampler(
+					vs_sampler_handles[i] = vk::get_resource_manager()->get_sampler(
 						*m_device,
+						vs_sampler_handles[i],
 						VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 						unnormalized_coords,
 						0.f, 1.f, min_lod, max_lod,
