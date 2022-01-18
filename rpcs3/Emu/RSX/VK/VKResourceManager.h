@@ -23,6 +23,7 @@ namespace vk
 		std::vector<std::unique_ptr<vk::image>> m_disposed_images;
 		std::vector<std::unique_ptr<vk::event>> m_disposed_events;
 		std::vector<std::unique_ptr<vk::query_pool>> m_disposed_query_pools;
+		std::vector<std::unique_ptr<vk::sampler>> m_disposed_samplers;
 
 		eid_scope_t(u64 _eid):
 			eid(_eid), m_device(g_render_device)
@@ -40,13 +41,19 @@ namespace vk
 			m_disposed_image_views.clear();
 			m_disposed_images.clear();
 			m_disposed_query_pools.clear();
+			m_disposed_samplers.clear();
 		}
 	};
 
 	class resource_manager
 	{
 	private:
-		std::unordered_map<u64, std::unique_ptr<vk::sampler>> m_sampler_pool;
+		struct cached_sampler_object_t : public vk::sampler, public rsx::ref_counted
+		{
+			using vk::sampler::sampler;
+		};
+
+		std::unordered_map<u64, std::unique_ptr<cached_sampler_object_t>> m_sampler_pool;
 		std::deque<eid_scope_t> m_eid_map;
 
 		eid_scope_t& get_current_eid_scope()
@@ -98,7 +105,8 @@ namespace vk
 			m_sampler_pool.clear();
 		}
 
-		vk::sampler* find_sampler(const vk::render_device& dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
+		vk::sampler* get_sampler(const vk::render_device& dev, vk::sampler* previous,
+			VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
 			VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
 			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
 			VkBool32 depth_compare = VK_FALSE, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
@@ -115,20 +123,30 @@ namespace vk
 			key |= u64(encode_fxp<true>(mipLodBias)) << 44; // 13 bits
 			key |= u64(max_anisotropy) << 57;               // 4 bits
 
+			if (previous)
+			{
+				auto as_cached_object = static_cast<cached_sampler_object_t*>(previous);
+				ensure(as_cached_object->has_refs());
+				as_cached_object->release();
+			}
+
 			if (const auto found = m_sampler_pool.find(key);
 				found != m_sampler_pool.end())
 			{
+				found->second->add_ref();
 				return found->second.get();
 			}
 
-			auto result = std::make_unique<vk::sampler>(
+			auto result = std::make_unique<cached_sampler_object_t>(
 				dev, clamp_u, clamp_v, clamp_w, unnormalized_coordinates,
 				mipLodBias, max_anisotropy, min_lod, max_lod,
 				min_filter, mag_filter, mipmap_mode, border_color,
 				depth_compare, depth_compare_mode);
 
 			auto It = m_sampler_pool.emplace(key, std::move(result));
-			return It.first->second.get();
+			auto ret = It.first->second.get();
+			ret->add_ref();
+			return ret;
 		}
 
 		void dispose(std::unique_ptr<vk::buffer>& buf)
@@ -162,6 +180,11 @@ namespace vk
 			get_current_eid_scope().m_disposed_query_pools.emplace_back(std::move(pool));
 		}
 
+		void dispose(std::unique_ptr<vk::sampler>& sampler)
+		{
+			get_current_eid_scope().m_disposed_samplers.emplace_back(std::move(sampler));
+		}
+
 		void eid_completed(u64 eid)
 		{
 			while (!m_eid_map.empty())
@@ -177,6 +200,8 @@ namespace vk
 				}
 			}
 		}
+
+		void trim();
 	};
 
 	struct vmm_allocation_t

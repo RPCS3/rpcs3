@@ -1,3 +1,4 @@
+#include "memory.h"
 #include "sampler.h"
 #include "../../rsx_utils.h"
 
@@ -27,11 +28,13 @@ namespace vk
 		info.borderColor = border_color;
 
 		CHECK_RESULT(vkCreateSampler(m_device, &info, nullptr, &value));
+		vmm_notify_object_allocated(VMM_ALLOCATION_POOL_SAMPLER);
 	}
 
 	sampler::~sampler()
 	{
 		vkDestroySampler(m_device, value, nullptr);
+		vmm_notify_object_freed(VMM_ALLOCATION_POOL_SAMPLER);
 	}
 
 	bool sampler::matches(VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,

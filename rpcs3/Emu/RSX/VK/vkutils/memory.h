@@ -18,6 +18,7 @@ namespace vk
 			VMM_ALLOCATION_POOL_TEXTURE_CACHE,
 			VMM_ALLOCATION_POOL_SWAPCHAIN,
 			VMM_ALLOCATION_POOL_SCRATCH,
+			VMM_ALLOCATION_POOL_SAMPLER,
 		};
 	}
 
@@ -173,6 +174,7 @@ namespace vk
 		void* m_host_pointer;
 	};
 
+	// Tracking for memory usage. Constrained largely by amount of VRAM + shared video memory.
 	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size, vmm_allocation_pool pool);
 	void vmm_notify_memory_freed(void* handle);
 	void vmm_reset();
@@ -181,6 +183,10 @@ namespace vk
 	u64  vmm_get_application_pool_usage(vmm_allocation_pool pool);
 	bool vmm_handle_memory_pressure(rsx::problem_severity severity);
 	rsx::problem_severity vmm_determine_memory_load_severity();
+
+	// Tracking for host memory objects. Allocated count is more important than actual memory amount.
+	void vmm_notify_object_allocated(vmm_allocation_pool pool);
+	void vmm_notify_object_freed(vmm_allocation_pool pool);
 
 	mem_allocator_base* get_current_mem_allocator();
 }
