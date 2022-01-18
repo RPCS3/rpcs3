@@ -193,7 +193,7 @@ namespace utils
 #elif defined(__clang__)
 		return __builtin_rotateleft32(x, n);
 #else
-		return (x << n) | (x >> (32 - n));
+		return (x << (n & 31)) | (x >> (((0 - n) & 31)));
 #endif
 	}
 
@@ -209,7 +209,7 @@ namespace utils
 #elif defined(__clang__)
 		return __builtin_rotateleft64(x, n);
 #else
-		return (x << n) | (x >> (64 - n));
+		return (x << (n & 63)) | (x >> (((0 - n) & 63)));
 #endif
 	}
 

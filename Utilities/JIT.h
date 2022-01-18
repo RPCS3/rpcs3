@@ -247,10 +247,16 @@ inline FT build_function_asm(std::string_view name, F&& builder)
 
 	Asm compiler(&code);
 	compiler.addEncodingOptions(EncodingOptions::kOptimizedAlign);
-	if constexpr (std::is_invocable_v<F, Asm&, native_args&>)
-		builder(compiler, args);
+	if constexpr (std::is_invocable_r_v<bool, F, Asm&, native_args&>)
+	{
+		if (!builder(compiler, args))
+			return nullptr;
+	}
 	else
-		builder(compiler);
+	{
+		builder(compiler, args);
+	}
+
 	rt.dump_name = name;
 	const auto result = rt._add(&code);
 	jit_announce(result, code.codeSize(), name);
