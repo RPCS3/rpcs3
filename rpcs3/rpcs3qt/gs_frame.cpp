@@ -363,7 +363,7 @@ void gs_frame::close()
 
 		if (!Emu.IsStopped())
 		{
-			Emu.Stop();
+			Emu.GracefulShutdown(true, false);
 		}
 
 		deleteLater();

@@ -92,7 +92,7 @@ void progress_dialog_server::operator()()
 				{
 					// Abort everything
 					sys_log.notice("Aborted progress dialog");
-					Emu.Stop();
+					Emu.GracefulShutdown(false, true);
 				});
 
 				g_system_progress_canceled = true;
