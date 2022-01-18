@@ -483,6 +483,12 @@ ullong utils::get_tsc_freq()
 {
 	static const ullong cal_tsc = []() -> ullong
 	{
+#ifdef ARCH_ARM64
+		u64 r = 0;
+		__asm__ volatile("mrs %0, cntfrq_el0" : "=r" (r));
+		return r;
+#endif
+
 		if (!has_invariant_tsc())
 			return 0;
 
