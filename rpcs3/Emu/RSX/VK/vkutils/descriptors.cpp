@@ -346,8 +346,10 @@ namespace vk
 		vkUpdateDescriptorSets(*g_render_device, 1, &writer, 0, nullptr);
 	}
 
-	void descriptor_set::push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd)
+	void descriptor_set::push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask)
 	{
+		m_push_type_mask |= type_mask;
+
 		if (m_pending_copies.empty()) [[likely]]
 		{
 			m_pending_copies = std::move(copy_cmd);
