@@ -168,7 +168,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	};
 
-	connect(ui->buttonBox, &QDialogButtonBox::clicked, [apply_configs, this](QAbstractButton* button)
+	connect(ui->buttonBox, &QDialogButtonBox::clicked, this, [apply_configs, this](QAbstractButton* button)
 	{
 		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
 		{
@@ -189,7 +189,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 
-	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, [this]()
+	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, this, [this]()
 	{
 		ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	});
@@ -945,8 +945,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	for (u32 i = 0; i < m_mics_combo.size(); i++)
 	{
-		connect(m_mics_combo[i], &QComboBox::currentTextChanged, [change_microphone_device, i](const QString& text) { change_microphone_device(i, text); });
-		connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, [change_microphone_device, i, mic_none]() { change_microphone_device(i, mic_none); });
+		connect(m_mics_combo[i], &QComboBox::currentTextChanged, this, [change_microphone_device, i](const QString& text) { change_microphone_device(i, text); });
+		connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [change_microphone_device, i, mic_none]() { change_microphone_device(i, mic_none); });
 	}
 
 	m_emu_settings->m_microphone_creator.refresh_list();
@@ -1052,7 +1052,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			if (index >= 0) m_emu_settings->SetSetting(emu_settings_type::CameraID, ui->cameraIdBox->itemData(index).toString().toStdString());
 		});
-		connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, this, [this, default_camera]()
+		connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [this, default_camera]()
 		{
 			m_emu_settings->SetSetting(emu_settings_type::CameraID, default_camera);
 			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(qstr(default_camera)));
@@ -1386,7 +1386,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	});
 
-	connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, reset_library_lists);
+	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, reset_library_lists);
 
 	//    ______                 _       _               _______    _
 	//   |  ____|               | |     | |             |__   __|  | |
