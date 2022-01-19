@@ -829,6 +829,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	{
 		// Need to update descriptors; make a copy for the next draw
 		VkDescriptorSet previous_set = m_current_frame->descriptor_set.value();
+		m_current_frame->descriptor_set.flush();
 		m_current_frame->descriptor_set = allocate_descriptor_set();
 		rsx::simple_array<VkCopyDescriptorSet> copy_cmds(binding_table.total_descriptor_bindings);
 
