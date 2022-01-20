@@ -119,6 +119,7 @@ struct ppu_exec_select
 			return !c.fail_flag; \
 		}); \
 		if (f) return f; \
+		ppu_log.error("Can't build instruction %s", __func__); \
 		RETURN_(__VA_ARGS__); \
 	}
 #else
