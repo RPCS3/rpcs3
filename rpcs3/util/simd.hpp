@@ -590,10 +590,12 @@ inline void gv_unset_zeroing_denormals()
 #endif
 }
 
+inline bool g_use_avx = utils::has_avx();
+
 inline void gv_zeroupper()
 {
 #if defined(ARCH_X64)
-	if (!utils::has_avx())
+	if (!g_use_avx)
 		return;
 #if defined(_M_X64)
 	_mm256_zeroupper();
