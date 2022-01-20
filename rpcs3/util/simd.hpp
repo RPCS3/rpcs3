@@ -2579,7 +2579,7 @@ inline auto gv_extend_lo_s8(A&& a)
 #if defined(ARCH_X64)
 	using enum asmjit::x86::Inst::Id;
 	if (utils::has_sse41())
-		return asmjit::unary_op(kIdPmovsxbw, kIdVpmovsxbw, std::forward<A>(a));
+		return asmjit::unary_op(kIdNone, kIdPmovsxbw, std::forward<A>(a));
 	return asmjit::unary_op(kIdPsraw, kIdVpsraw, asmjit::unary_op(kIdNone, kIdPunpcklbw, std::forward<A>(a)), 8);
 #endif
 }
@@ -2630,7 +2630,7 @@ inline auto gv_extend_lo_s16(A&& a)
 #if defined(ARCH_X64)
 	using enum asmjit::x86::Inst::Id;
 	if (utils::has_sse41())
-		return asmjit::unary_op(kIdPmovsxwd, kIdVpmovsxwd, std::forward<A>(a));
+		return asmjit::unary_op(kIdNone, kIdPmovsxwd, std::forward<A>(a));
 	return asmjit::unary_op(kIdPsrad, kIdVpsrad, asmjit::unary_op(kIdNone, kIdPunpcklwd, std::forward<A>(a)), 16);
 #endif
 }
