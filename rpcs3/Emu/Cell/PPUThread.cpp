@@ -704,7 +704,7 @@ static void ppu_break(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_int
 	if (pause_all)
 	{
 		// Pause all other threads
-		Emu.CallAfter([]() { Emu.Pause(); });
+		Emu.CallFromMainThread([]() { Emu.Pause(); });
 	}
 
 	if (ppu.check_state() || old_cia != atomic_storage<u32>::load(ppu.cia))
@@ -3405,7 +3405,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		{
 			out.flush();
 			ppu_log.error("LLVM: Verification failed for %s:\n%s", obj_name, result);
-			Emu.CallAfter([]{ Emu.GracefulShutdown(false, true); });
+			Emu.CallFromMainThread([]{ Emu.GracefulShutdown(false, true); });
 			return;
 		}
 

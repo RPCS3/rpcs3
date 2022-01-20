@@ -262,7 +262,7 @@ void gui_application::InitializeConnects()
 #endif
 
 	qRegisterMetaType<std::function<void()>>("std::function<void()>");
-	connect(this, &gui_application::RequestCallAfter, this, &gui_application::HandleCallAfter);
+	connect(this, &gui_application::RequestCallFromMainThread, this, &gui_application::CallFromMainThread);
 }
 
 std::unique_ptr<gs_frame> gui_application::get_gs_frame()
@@ -330,9 +330,9 @@ void gui_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_after = [this](std::function<void()> func)
+	callbacks.call_from_main_thread = [this](std::function<void()> func)
 	{
-		RequestCallAfter(std::move(func));
+		RequestCallFromMainThread(std::move(func));
 	};
 
 	callbacks.init_gs_render = []()
@@ -424,7 +424,7 @@ void gui_application::InitializeCallbacks()
 
 	callbacks.play_sound = [](const std::string& path)
 	{
-		Emu.CallAfter([path]()
+		Emu.CallFromMainThread([path]()
 		{
 			if (fs::is_file(path))
 			{
@@ -614,7 +614,7 @@ void gui_application::OnEmuSettingsChange()
 /**
  * Using connects avoids timers being unable to be used in a non-qt thread. So, even if this looks stupid to just call func, it's succinct.
  */
-void gui_application::HandleCallAfter(const std::function<void()>& func)
+void gui_application::CallFromMainThread(const std::function<void()>& func)
 {
 	func();
 }

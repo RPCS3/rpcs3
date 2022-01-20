@@ -29,8 +29,8 @@ private:
 	}
 
 Q_SIGNALS:
-	void RequestCallAfter(std::function<void()> func);
+	void RequestCallFromMainThread(std::function<void()> func);
 
 private Q_SLOTS:
-	static void HandleCallAfter(const std::function<void()>& func);
+	static void CallFromMainThread(const std::function<void()>& func);
 };

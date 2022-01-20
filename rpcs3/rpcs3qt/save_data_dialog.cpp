@@ -29,7 +29,7 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 
 	input::SetIntercepted(true);
 
-	Emu.CallAfter([&]()
+	Emu.CallFromMainThread([&]()
 	{
 		save_data_list_dialog sdid(save_entries, focused, op, listSet);
 		sdid.exec();

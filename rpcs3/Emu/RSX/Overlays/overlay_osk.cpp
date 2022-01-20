@@ -29,7 +29,7 @@ namespace rsx
 			{
 				if (on_osk_close)
 				{
-					Emu.CallAfter([this, status]()
+					Emu.CallFromMainThread([this, status]()
 					{
 						on_osk_close(status);
 					});
