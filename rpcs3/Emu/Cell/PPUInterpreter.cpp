@@ -25,24 +25,12 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 
-#if defined(_MSC_VER) || !defined(__SSE2__)
-#define SSSE3_FUNC
-#else
-#define SSSE3_FUNC __attribute__((__target__("ssse3")))
-#endif
-
 #if defined(ARCH_ARM64)
 #if !defined(_MSC_VER)
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 #undef FORCE_INLINE
 #include "Emu/CPU/sse2neon.h"
-#endif
-
-#if (defined(ARCH_X64)) && !defined(__SSSE3__)
-const bool s_use_ssse3 = utils::has_ssse3();
-#else
-constexpr bool s_use_ssse3 = true; // Including non-x86
 #endif
 
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
@@ -574,106 +562,6 @@ extern __m128i sse_altivec_lvsr(u64 addr)
 	};
 
 	return _mm_load_si128(reinterpret_cast<const __m128i*>(+lvsr_values[addr & 0xf]));
-}
-
-static const __m128i lvlx_masks[0x10] =
-{
-	_mm_set_epi8(0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf),
-	_mm_set_epi8(0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1),
-	_mm_set_epi8(0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1),
-	_mm_set_epi8(0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1),
-	_mm_set_epi8(0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1),
-	_mm_set_epi8(0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-};
-
-static const __m128i lvrx_masks[0x10] =
-{
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9),
-	_mm_set_epi8(-1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa),
-	_mm_set_epi8(-1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb),
-	_mm_set_epi8(-1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc),
-	_mm_set_epi8(-1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd),
-	_mm_set_epi8(-1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe),
-};
-
-static SSSE3_FUNC __m128i sse_cellbe_lvlx(ppu_thread& ppu, u64 addr)
-{
-	return _mm_shuffle_epi8(ppu_feed_data<__m128i>(ppu, addr & -16), lvlx_masks[addr & 0xf]);
-}
-
-extern SSSE3_FUNC __m128i sse_cellbe_lvlx(u64 addr)
-{
-	return _mm_shuffle_epi8(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvlx_masks[addr & 0xf]);
-}
-
-extern SSSE3_FUNC void sse_cellbe_stvlx(u64 addr, __m128i a)
-{
-	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
-}
-
-static SSSE3_FUNC __m128i sse_cellbe_lvrx(ppu_thread& ppu, u64 addr)
-{
-	return _mm_shuffle_epi8(ppu_feed_data<__m128i>(ppu, addr & -16), lvrx_masks[addr & 0xf]);
-}
-
-extern SSSE3_FUNC __m128i sse_cellbe_lvrx(u64 addr)
-{
-	return _mm_shuffle_epi8(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvrx_masks[addr & 0xf]);
-}
-
-extern SSSE3_FUNC void sse_cellbe_stvrx(u64 addr, __m128i a)
-{
-	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
-}
-
-static __m128i sse_cellbe_lvlx_v0(ppu_thread& ppu, u64 addr)
-{
-	return sse_pshufb(ppu_feed_data<__m128i>(ppu, addr & -16), lvlx_masks[addr & 0xf]);
-}
-
-extern __m128i sse_cellbe_lvlx_v0(u64 addr)
-{
-	return sse_pshufb(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvlx_masks[addr & 0xf]);
-}
-
-extern void sse_cellbe_stvlx_v0(u64 addr, __m128i a)
-{
-	_mm_maskmoveu_si128(sse_pshufb(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
-}
-
-static __m128i sse_cellbe_lvrx_v0(ppu_thread& ppu, u64 addr)
-{
-	return sse_pshufb(ppu_feed_data<__m128i>(ppu, addr & -16), lvrx_masks[addr & 0xf]);
-}
-
-extern __m128i sse_cellbe_lvrx_v0(u64 addr)
-{
-	return sse_pshufb(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvrx_masks[addr & 0xf]);
-}
-
-extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a)
-{
-	_mm_maskmoveu_si128(sse_pshufb(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
 }
 
 template<typename T>
@@ -5193,10 +5081,13 @@ auto LVLX()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd] = s_use_ssse3 ? sse_cellbe_lvlx(ppu, addr) : sse_cellbe_lvlx_v0(ppu, addr);
+	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
+	{
+		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+		const u128 data = ppu_feed_data<u128>(ppu, addr & -16);
+		ppu.vr[op.vd] = data << ((addr & 15) * 8);
 	};
+
 	RETURN_(ppu, op);
 }
 
@@ -5301,10 +5192,13 @@ auto LVRX()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd] = s_use_ssse3 ? sse_cellbe_lvrx(ppu, addr) : sse_cellbe_lvrx_v0(ppu, addr);
+	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
+	{
+		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+		const u128 data = ppu_feed_data<u128>(ppu, addr & -16);
+		ppu.vr[op.vd] = data >> ((~addr & 15) * 8) >> 8;
 	};
+
 	RETURN_(ppu, op);
 }
 
@@ -5405,11 +5299,16 @@ auto STVLX()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	s_use_ssse3 ? sse_cellbe_stvlx(addr, ppu.vr[op.vs]) : sse_cellbe_stvlx_v0(addr, ppu.vr[op.vs]);
+	static const auto exec = [](auto&& s, ppu_opcode_t op, auto&& a, auto&& b)
+	{
+		const u64 addr = op.ra ? a + b : b;
+		const u32 tail = u32(addr & 15);
+		u8* ptr = vm::_ptr<u8>(addr & -16);
+		for (u32 j = 0; j < 16 - tail; j++)
+			ptr[j] = s.u8r[j];
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vs], op, ppu.gpr[op.ra], ppu.gpr[op.rb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -5483,11 +5382,16 @@ auto STVRX()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	s_use_ssse3 ? sse_cellbe_stvrx(addr, ppu.vr[op.vs]) : sse_cellbe_stvrx_v0(addr, ppu.vr[op.vs]);
+	static const auto exec = [](auto&& s, ppu_opcode_t op, auto&& a, auto&& b)
+	{
+		const u64 addr = op.ra ? a + b : b;
+		const u32 tail = u32(addr & 15);
+		u8* ptr = vm::_ptr<u8>(addr - 16);
+		for (u32 i = 15; i > 15 - tail; i--)
+			ptr[i] = s.u8r[i];
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vs], op, ppu.gpr[op.ra], ppu.gpr[op.rb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
