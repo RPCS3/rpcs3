@@ -346,7 +346,7 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 
 	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
 
-	Emu.CallAfter([]()
+	Emu.CallFromMainThread([]()
 	{
 		sys_process.success("Process finished");
 		Emu.Kill();
@@ -411,7 +411,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	if (disc.empty() && !Emu.GetTitleID().empty())
 		disc = vfs::get(Emu.GetDir());
 
-	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc)
+	Emu.CallFromMainThread([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc)
 		, hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>().last_key(), old_config = Emu.GetUsedConfig()]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);

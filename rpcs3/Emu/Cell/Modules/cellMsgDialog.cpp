@@ -209,7 +209,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 	lv2_obj::sleep(ppu);
 
 	// Run asynchronously in GUI thread
-	Emu.CallAfter([&]()
+	Emu.CallFromMainThread([&]()
 	{
 		g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
 		dlg->Create(msgString.get_ptr());
@@ -533,7 +533,7 @@ error_code cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> m
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	Emu.CallAfter([=, msg = std::string{ msgString.get_ptr() }]
+	Emu.CallFromMainThread([=, msg = std::string{ msgString.get_ptr() }]
 	{
 		dlg->ProgressBarSetMsg(progressBarIndex, msg);
 	});
@@ -565,7 +565,7 @@ error_code cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	Emu.CallAfter([=]
+	Emu.CallFromMainThread([=]
 	{
 		dlg->ProgressBarReset(progressBarIndex);
 	});
@@ -597,7 +597,7 @@ error_code cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	Emu.CallAfter([=]
+	Emu.CallFromMainThread([=]
 	{
 		dlg->ProgressBarInc(progressBarIndex, delta);
 	});

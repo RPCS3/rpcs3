@@ -345,7 +345,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	input::SetIntercepted(true);
 
-	Emu.CallAfter([=, &result]()
+	Emu.CallFromMainThread([=, &result]()
 	{
 		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel);
 		result = true;

@@ -25,7 +25,7 @@ qt_camera_handler::~qt_camera_handler()
 {
 	atomic_t<bool> wake_up = false;
 
-	Emu.CallAfter([&]()
+	Emu.CallFromMainThread([&]()
 	{
 		close_camera();
 		m_surface.reset();

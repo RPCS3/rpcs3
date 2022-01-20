@@ -93,8 +93,8 @@ Q_SIGNALS:
 	void OnEmulatorStop();
 	void OnEmulatorReady();
 
-	void RequestCallAfter(const std::function<void()>& func);
+	void RequestCallFromMainThread(const std::function<void()>& func);
 
 private Q_SLOTS:
-	static void HandleCallAfter(const std::function<void()>& func);
+	static void CallFromMainThread(const std::function<void()>& func);
 };

@@ -279,7 +279,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 
 void gs_frame::toggle_fullscreen()
 {
-	Emu.CallAfter([this]()
+	Emu.CallFromMainThread([this]()
 	{
 		if (visibility() == FullScreen)
 		{
@@ -352,7 +352,7 @@ void gs_frame::close()
 {
 	gui_log.notice("Closing game window");
 
-	Emu.CallAfter([this]()
+	Emu.CallFromMainThread([this]()
 	{
 		if (!(+g_progr))
 		{
@@ -377,12 +377,12 @@ bool gs_frame::shown()
 
 void gs_frame::hide()
 {
-	Emu.CallAfter([this]() { QWindow::hide(); });
+	Emu.CallFromMainThread([this]() { QWindow::hide(); });
 }
 
 void gs_frame::show()
 {
-	Emu.CallAfter([this]()
+	Emu.CallFromMainThread([this]()
 	{
 		QWindow::show();
 		if (g_cfg.misc.start_fullscreen)
@@ -498,7 +498,7 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 		{
 			m_window_title = new_title;
 
-			Emu.CallAfter([this, title = std::move(new_title)]()
+			Emu.CallFromMainThread([this, title = std::move(new_title)]()
 			{
 				setTitle(qstr(title));
 			});
@@ -736,7 +736,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			}
 
 			// Play a sound
-			Emu.CallAfter([]()
+			Emu.CallFromMainThread([]()
 			{
 				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
 				{
@@ -810,7 +810,7 @@ bool gs_frame::event(QEvent* ev)
 			int result = QMessageBox::Yes;
 			atomic_t<bool> called = false;
 
-			Emu.CallAfter([this, &result, &called]()
+			Emu.CallFromMainThread([this, &result, &called]()
 			{
 				m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
 					tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>"),
