@@ -117,7 +117,12 @@ namespace asmjit
 
 		vec_type vec_alloc()
 		{
-			ensure(~vec_allocated);
+			if (!~vec_allocated)
+			{
+				fail_flag = true;
+				return vec_type{0};
+			}
+
 			const u32 idx = std::countr_one(vec_allocated);
 			vec_allocated |= vec_allocated + 1;
 			return vec_type{idx};
