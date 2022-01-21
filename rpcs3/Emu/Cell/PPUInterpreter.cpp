@@ -2839,12 +2839,9 @@ auto VSUM4SBS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		//const auto r = _mm_dpbusds_epi32(b, _mm_set1_epi8(1), a);
-		//const auto s = _mm_dpbusd_epi32(b, _mm_set1_epi8(1), a);
-		auto x = gv_hadds8x4(a);
-		auto r = gv_adds_s32(x, b);
+		auto r = gv_dots_u8s8x4(gv_bcst8(1), a, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = gv_or32(gv_xor32(gv_add32(std::move(x), std::move(b)), r), std::move(sat));
+			sat = gv_or32(gv_xor32(gv_hadds8x4(std::move(a), std::move(b)), r), std::move(sat));
 		d = std::move(r);
 	};
 
@@ -2859,12 +2856,9 @@ auto VSUM4SHS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		//const auto r = _mm_dpwssds_epi32(b, a, _mm_set1_epi16(1));
-		//const auto s = _mm_dpwssd_epi32(b, a, _mm_set1_epi16(1));
-		auto x = gv_hadds16x2(a);
-		auto r = gv_adds_s32(x, b);
+		auto r = gv_dots_s16x2(a, gv_bcst16(1), b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = gv_or32(gv_xor32(gv_add32(std::move(x), std::move(b)), r), std::move(sat));
+			sat = gv_or32(gv_xor32(gv_hadds16x2(std::move(a), std::move(b)), r), std::move(sat));
 		d = std::move(r);
 	};
 
