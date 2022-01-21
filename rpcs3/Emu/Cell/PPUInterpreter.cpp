@@ -3795,36 +3795,52 @@ auto MULHWU()
 	RETURN_(ppu, op);
 }
 
+template <u32 N>
+struct MFOCRF
+{
+	template <ppu_exec_bit... Flags>
+	static auto select(bs_t<ppu_exec_bit> selected, auto func)
+	{
+		return ppu_exec_select<>::select<Flags...>(selected, func);
+	}
+
+	template <u32 Build, ppu_exec_bit... Flags>
+	static auto impl()
+	{
+		static const auto exec = [](ppu_thread& ppu, auto&& d)
+		{
+			const u32 p = N * 4;
+			const u32 v = ppu.cr[p + 0] << 3 | ppu.cr[p + 1] << 2 | ppu.cr[p + 2] << 1 | ppu.cr[p + 3] << 0;
+
+			d = v << (p ^ 0x1c);
+		};
+
+		RETURN_(ppu, ppu.gpr[op.rd]);
+	}
+};
+
 template <u32 Build, ppu_exec_bit... Flags>
-auto MFOCRF()
+auto MFCR()
 {
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	if (op.l11)
+	static const auto exec = [](ppu_thread& ppu, auto&& d)
 	{
-		// MFOCRF
-		const u32 n = std::countl_zero<u32>(op.crm) & 7;
-		const u32 p = n * 4;
-		const u32 v = ppu.cr[p + 0] << 3 | ppu.cr[p + 1] << 2 | ppu.cr[p + 2] << 1 | ppu.cr[p + 3] << 0;
-
-		ppu.gpr[op.rd] = v << (p ^ 0x1c);
-	}
-	else
-	{
-		// MFCR
+#if defined(ARCH_X64)
 		be_t<v128> lane0, lane1;
 		std::memcpy(&lane0, ppu.cr.bits, sizeof(v128));
 		std::memcpy(&lane1, ppu.cr.bits + 16, sizeof(v128));
 		const u32 mh = _mm_movemask_epi8(_mm_slli_epi64(lane0.value(), 7));
 		const u32 ml = _mm_movemask_epi8(_mm_slli_epi64(lane1.value(), 7));
 
-		ppu.gpr[op.rd] = (mh << 16) | ml;
-	}
-
+		d = (mh << 16) | ml;
+#else
+		d = ppu.cr.pack();
+#endif
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.gpr[op.rd]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6926,7 +6942,9 @@ struct ppu_interpreter_t
 	IT ADDC;
 	IT MULHDU;
 	IT MULHWU;
-	IT MFOCRF;
+	IT MFOCRF{};
+	IT MFOCRF_[8];
+	IT MFCR; //+
 	IT LWARX;
 	IT LDX;
 	IT LWZX;
@@ -7522,7 +7540,8 @@ ppu_interpreter_rt_base::ppu_interpreter_rt_base() noexcept
 	INIT_RC_OV(ADDC);
 	INIT_RC(MULHDU);
 	INIT_RC(MULHWU);
-	INIT(MFOCRF);
+	INIT_PACK8(MFOCRF,);
+	INIT(MFCR); //+
 	INIT(LWARX);
 	INIT(LDX);
 	INIT(LWZX);
@@ -7754,6 +7773,25 @@ ppu_intrp_func_t ppu_interpreter_rt::decode(u32 opv) const noexcept
 		break;
 	}
 	case ppu_itype::VSLDOI: return ptrs->VSLDOI_[op.vsh];
+	case ppu_itype::MFOCRF:
+	{
+		if (op.l11)
+		{
+			const u32 n = std::countl_zero<u32>(op.crm) & 7;
+
+			if (0x80u >> n != op.crm)
+			{
+				return [](ppu_thread&, ppu_opcode_t op, be_t<u32>*, ppu_intrp_func*)
+				{
+					fmt::throw_exception("Invalid instruction: MFOCRF with bits 0x%x", op.crm);
+				};
+			}
+
+			return ptrs->MFOCRF_[n];
+		}
+
+		return ptrs->MFCR;
+	}
 	default: break;
 	}
 

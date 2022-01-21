@@ -2495,8 +2495,8 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 			ln1 = Shuffle(ln1, nullptr, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		}
 
-		const auto m0 = Call(GetType<u32>(), m_pure_attr, "llvm.x86.sse2.pmovmskb.128", m_ir->CreateShl(ln0, 7));
-		const auto m1 = Call(GetType<u32>(), m_pure_attr, "llvm.x86.sse2.pmovmskb.128", m_ir->CreateShl(ln1, 7));
+		const auto m0 = ZExt(bitcast<u16>(Trunc(ln0, GetType<bool[16]>())));
+		const auto m1 = ZExt(bitcast<u16>(Trunc(ln1, GetType<bool[16]>())));
 		SetGpr(op.rd, m_ir->CreateOr(m_ir->CreateShl(m0, 16), m1));
 		return;
 	}
