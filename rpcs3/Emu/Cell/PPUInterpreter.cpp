@@ -25,14 +25,6 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 
-#if defined(ARCH_ARM64)
-#if !defined(_MSC_VER)
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
-#undef FORCE_INLINE
-#include "Emu/CPU/sse2neon.h"
-#endif
-
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
 extern const ppu_decoder<ppu_iname> g_ppu_iname;
 
@@ -6397,13 +6389,19 @@ auto FCTIW()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
-	const auto res = _mm_xor_si128(_mm_cvtpd_epi32(b), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(0x80000000))));
-	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvtsi128_si32(res));
-	ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+	#if defined(ARCH_X64)
+		const auto val = _mm_set_sd(b);
+		const auto res = _mm_xor_si128(_mm_cvtpd_epi32(val), _mm_castpd_si128(_mm_cmpge_pd(val, _mm_set1_pd(0x80000000))));
+		d = std::bit_cast<f64, s64>(_mm_cvtsi128_si32(res));
+	#elif defined(ARCH_ARM64)
+		d = std::bit_cast<f64, s64>(!(b == b) ? INT32_MIN : vqmovnd_s64(std::bit_cast<f64>(vrndi_f64(std::bit_cast<float64x1_t>(b)))));
+	#endif
+		ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6412,13 +6410,19 @@ auto FCTIWZ()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
-	const auto res = _mm_xor_si128(_mm_cvttpd_epi32(b), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(0x80000000))));
-	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvtsi128_si32(res));
-	ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+	#if defined(ARCH_X64)
+		const auto val = _mm_set_sd(b);
+		const auto res = _mm_xor_si128(_mm_cvttpd_epi32(val), _mm_castpd_si128(_mm_cmpge_pd(val, _mm_set1_pd(0x80000000))));
+		d = std::bit_cast<f64, s64>(_mm_cvtsi128_si32(res));
+	#elif defined(ARCH_ARM64)
+		d = std::bit_cast<f64, s64>(!(b == b) ? INT32_MIN : vqmovnd_s64(std::bit_cast<s64>(vcvt_s64_f64(std::bit_cast<float64x1_t>(b)))));
+	#endif
+		ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6662,13 +6666,19 @@ auto FCTID()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
-	const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvtsd_si64(b)), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(f64(1ull << 63)))));
-	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
-	ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+	#if defined(ARCH_X64)
+		const auto val = _mm_set_sd(b);
+		const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvtsd_si64(val)), _mm_castpd_si128(_mm_cmpge_pd(val, _mm_set1_pd(f64(1ull << 63)))));
+		d = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
+	#elif defined(ARCH_ARM64)
+		d = std::bit_cast<f64, s64>(!(b == b) ? f64{INT64_MIN} : std::bit_cast<f64>(vrndi_f64(std::bit_cast<float64x1_t>(b))));
+	#endif
+		ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6677,13 +6687,19 @@ auto FCTIDZ()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
-	const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvttsd_si64(b)), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(f64(1ull << 63)))));
-	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
-	ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+	#if defined(ARCH_X64)
+		const auto val = _mm_set_sd(b);
+		const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvttsd_si64(val)), _mm_castpd_si128(_mm_cmpge_pd(val, _mm_set1_pd(f64(1ull << 63)))));
+		d = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
+	#elif defined(ARCH_ARM64)
+		d = std::bit_cast<f64>(!(b == b) ? int64x1_t{INT64_MIN} : vcvt_s64_f64(std::bit_cast<float64x1_t>(b)));
+	#endif
+		ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6692,11 +6708,14 @@ auto FCFID()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	_mm_store_sd(&ppu.fpr[op.frd], _mm_cvtsi64_sd(_mm_setzero_pd(), std::bit_cast<s64>(ppu.fpr[op.frb])));
-	ppu_set_fpcc<Flags...>(ppu, ppu.fpr[op.frd], 0.);
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+		f64 r = std::bit_cast<s64>(b);
+		d = r;
+		ppu_set_fpcc<Flags...>(ppu, r, 0.);
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
