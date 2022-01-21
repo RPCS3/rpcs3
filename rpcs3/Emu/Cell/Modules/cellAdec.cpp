@@ -269,7 +269,7 @@ public:
 	bool just_started = false;
 	bool just_finished = false;
 
-	AVCodec* codec = nullptr;
+	const AVCodec* codec = nullptr;
 	AVInputFormat* input_format = nullptr;
 	AVCodecContext* ctx = nullptr;
 	AVFormatContext* fmt = nullptr;
