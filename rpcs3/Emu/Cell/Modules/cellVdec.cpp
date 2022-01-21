@@ -102,7 +102,7 @@ struct vdec_context final
 	static const u32 id_step = 0x00000100;
 	static const u32 id_count = 1024;
 
-	AVCodec* codec{};
+	const AVCodec* codec{};
 	AVCodecContext* ctx{};
 	SwsContext* sws{};
 
