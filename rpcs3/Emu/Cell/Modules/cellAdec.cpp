@@ -269,8 +269,12 @@ public:
 	bool just_started = false;
 	bool just_finished = false;
 
-	AVCodec* codec = nullptr;
+	const AVCodec* codec = nullptr;
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 0, 0)
+	const AVInputFormat* input_format = nullptr;
+#else
 	AVInputFormat* input_format = nullptr;
+#endif
 	AVCodecContext* ctx = nullptr;
 	AVFormatContext* fmt = nullptr;
 	u8* io_buf;

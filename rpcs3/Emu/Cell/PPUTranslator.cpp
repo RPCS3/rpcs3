@@ -2495,8 +2495,8 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 			ln1 = Shuffle(ln1, nullptr, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		}
 
-		const auto m0 = Call(GetType<u32>(), m_pure_attr, "llvm.x86.sse2.pmovmskb.128", m_ir->CreateShl(ln0, 7));
-		const auto m1 = Call(GetType<u32>(), m_pure_attr, "llvm.x86.sse2.pmovmskb.128", m_ir->CreateShl(ln1, 7));
+		const auto m0 = ZExt(bitcast<u16>(Trunc(ln0, GetType<bool[16]>())));
+		const auto m1 = ZExt(bitcast<u16>(Trunc(ln1, GetType<bool[16]>())));
 		SetGpr(op.rd, m_ir->CreateOr(m_ir->CreateShl(m0, 16), m1));
 		return;
 	}
@@ -3319,9 +3319,10 @@ void PPUTranslator::STVLX(ppu_opcode_t op)
 {
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
 	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
-	const auto mask = sext<s8[16]>(bitcast<bool[16]>(splat<u16>(0xffff) << trunc<u16>(value<u64>(addr) & 0xf)));
-	const auto ptr = value<u8*>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8>()));
-	eval(llvm_calli<void, decltype(data), decltype(mask), decltype(ptr)>{"llvm.x86.sse2.maskmov.dqu", {data, mask, ptr}});
+	const auto mask = bitcast<bool[16]>(splat<u16>(0xffff) << trunc<u16>(value<u64>(addr) & 0xf));
+	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8[16]>()));
+	const auto align = splat<u32>(16);
+	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0v16i8", {data, ptr, align, mask}});
 }
 
 void PPUTranslator::STDBRX(ppu_opcode_t op)
@@ -3348,9 +3349,10 @@ void PPUTranslator::STVRX(ppu_opcode_t op)
 {
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
 	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
-	const auto mask = sext<s8[16]>(bitcast<bool[16]>(trunc<u16>(splat<u64>(0xffff) << (value<u64>(addr) & 0xf) >> 16)));
-	const auto ptr = value<u8*>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8>()));
-	eval(llvm_calli<void, decltype(data), decltype(mask), decltype(ptr)>{"llvm.x86.sse2.maskmov.dqu", {data, mask, ptr}});
+	const auto mask = bitcast<bool[16]>(trunc<u16>(splat<u64>(0xffff) << (value<u64>(addr) & 0xf) >> 16));
+	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8[16]>()));
+	const auto align = splat<u32>(16);
+	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0v16i8", {data, ptr, align, mask}});
 }
 
 void PPUTranslator::STFSUX(ppu_opcode_t op)

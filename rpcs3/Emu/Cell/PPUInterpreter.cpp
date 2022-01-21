@@ -25,26 +25,6 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 
-#if defined(_MSC_VER) || !defined(__SSE2__)
-#define SSSE3_FUNC
-#else
-#define SSSE3_FUNC __attribute__((__target__("ssse3")))
-#endif
-
-#if defined(ARCH_ARM64)
-#if !defined(_MSC_VER)
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
-#undef FORCE_INLINE
-#include "Emu/CPU/sse2neon.h"
-#endif
-
-#if (defined(ARCH_X64)) && !defined(__SSSE3__)
-const bool s_use_ssse3 = utils::has_ssse3();
-#else
-constexpr bool s_use_ssse3 = true; // Including non-x86
-#endif
-
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
 extern const ppu_decoder<ppu_iname> g_ppu_iname;
 
@@ -510,170 +490,6 @@ inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool i
 		history.last_r1 = ppu.gpr[1];
 		history.last_r2 = ppu.gpr[2];
 	}
-}
-
-extern SAFE_BUFFERS(__m128i) sse_pshufb(__m128i data, __m128i index)
-{
-	v128 m = _mm_and_si128(index, _mm_set1_epi8(0xf));
-	v128 a = data;
-	v128 r;
-
-	for (int i = 0; i < 16; i++)
-	{
-		r._u8[i] = a._u8[m._u8[i]];
-	}
-
-	return _mm_and_si128(r, _mm_cmpgt_epi8(index, _mm_set1_epi8(-1)));
-}
-
-extern __m128i sse_altivec_lvsl(u64 addr)
-{
-	alignas(16) static const u8 lvsl_values[0x10][0x10] =
-	{
-		{ 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01, 0x00 },
-		{ 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 },
-		{ 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02 },
-		{ 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03 },
-		{ 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04 },
-		{ 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05 },
-		{ 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06 },
-		{ 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07 },
-		{ 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08 },
-		{ 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09 },
-		{ 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a },
-		{ 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b },
-		{ 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c },
-		{ 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d },
-		{ 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e },
-		{ 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f },
-	};
-
-	return _mm_load_si128(reinterpret_cast<const __m128i*>(+lvsl_values[addr & 0xf]));
-}
-
-extern __m128i sse_altivec_lvsr(u64 addr)
-{
-	alignas(16) static const u8 lvsr_values[0x10][0x10] =
-	{
-		{ 0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10 },
-		{ 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f },
-		{ 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e },
-		{ 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d },
-		{ 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c },
-		{ 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b },
-		{ 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a },
-		{ 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09 },
-		{ 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08 },
-		{ 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07 },
-		{ 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06 },
-		{ 0x14, 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05 },
-		{ 0x13, 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04 },
-		{ 0x12, 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03 },
-		{ 0x11, 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02 },
-		{ 0x10, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 },
-	};
-
-	return _mm_load_si128(reinterpret_cast<const __m128i*>(+lvsr_values[addr & 0xf]));
-}
-
-static const __m128i lvlx_masks[0x10] =
-{
-	_mm_set_epi8(0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf),
-	_mm_set_epi8(0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1),
-	_mm_set_epi8(0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1),
-	_mm_set_epi8(0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1),
-	_mm_set_epi8(0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1),
-	_mm_set_epi8(0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xa, 0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xb, 0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xc, 0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xd, 0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xe, 0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(0xf, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-};
-
-static const __m128i lvrx_masks[0x10] =
-{
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8),
-	_mm_set_epi8(-1, -1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9),
-	_mm_set_epi8(-1, -1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa),
-	_mm_set_epi8(-1, -1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb),
-	_mm_set_epi8(-1, -1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc),
-	_mm_set_epi8(-1, -1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd),
-	_mm_set_epi8(-1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe),
-};
-
-static SSSE3_FUNC __m128i sse_cellbe_lvlx(ppu_thread& ppu, u64 addr)
-{
-	return _mm_shuffle_epi8(ppu_feed_data<__m128i>(ppu, addr & -16), lvlx_masks[addr & 0xf]);
-}
-
-extern SSSE3_FUNC __m128i sse_cellbe_lvlx(u64 addr)
-{
-	return _mm_shuffle_epi8(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvlx_masks[addr & 0xf]);
-}
-
-extern SSSE3_FUNC void sse_cellbe_stvlx(u64 addr, __m128i a)
-{
-	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
-}
-
-static SSSE3_FUNC __m128i sse_cellbe_lvrx(ppu_thread& ppu, u64 addr)
-{
-	return _mm_shuffle_epi8(ppu_feed_data<__m128i>(ppu, addr & -16), lvrx_masks[addr & 0xf]);
-}
-
-extern SSSE3_FUNC __m128i sse_cellbe_lvrx(u64 addr)
-{
-	return _mm_shuffle_epi8(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvrx_masks[addr & 0xf]);
-}
-
-extern SSSE3_FUNC void sse_cellbe_stvrx(u64 addr, __m128i a)
-{
-	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
-}
-
-static __m128i sse_cellbe_lvlx_v0(ppu_thread& ppu, u64 addr)
-{
-	return sse_pshufb(ppu_feed_data<__m128i>(ppu, addr & -16), lvlx_masks[addr & 0xf]);
-}
-
-extern __m128i sse_cellbe_lvlx_v0(u64 addr)
-{
-	return sse_pshufb(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvlx_masks[addr & 0xf]);
-}
-
-extern void sse_cellbe_stvlx_v0(u64 addr, __m128i a)
-{
-	_mm_maskmoveu_si128(sse_pshufb(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
-}
-
-static __m128i sse_cellbe_lvrx_v0(ppu_thread& ppu, u64 addr)
-{
-	return sse_pshufb(ppu_feed_data<__m128i>(ppu, addr & -16), lvrx_masks[addr & 0xf]);
-}
-
-extern __m128i sse_cellbe_lvrx_v0(u64 addr)
-{
-	return sse_pshufb(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvrx_masks[addr & 0xf]);
-}
-
-extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a)
-{
-	_mm_maskmoveu_si128(sse_pshufb(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
 }
 
 template<typename T>
@@ -3015,12 +2831,9 @@ auto VSUM4SBS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		//const auto r = _mm_dpbusds_epi32(b, _mm_set1_epi8(1), a);
-		//const auto s = _mm_dpbusd_epi32(b, _mm_set1_epi8(1), a);
-		auto x = gv_hadds8x4(a);
-		auto r = gv_adds_s32(x, b);
+		auto r = gv_dots_u8s8x4(gv_bcst8(1), a, b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = gv_or32(gv_xor32(gv_add32(std::move(x), std::move(b)), r), std::move(sat));
+			sat = gv_or32(gv_xor32(gv_hadds8x4(std::move(a), std::move(b)), r), std::move(sat));
 		d = std::move(r);
 	};
 
@@ -3035,12 +2848,9 @@ auto VSUM4SHS()
 
 	static const auto exec = [](auto&& d, auto&& a, auto&& b, auto&& sat)
 	{
-		//const auto r = _mm_dpwssds_epi32(b, a, _mm_set1_epi16(1));
-		//const auto s = _mm_dpwssd_epi32(b, a, _mm_set1_epi16(1));
-		auto x = gv_hadds16x2(a);
-		auto r = gv_adds_s32(x, b);
+		auto r = gv_dots_s16x2(a, gv_bcst16(1), b);
 		if constexpr (((Flags == set_sat) || ...))
-			sat = gv_or32(gv_xor32(gv_add32(std::move(x), std::move(b)), r), std::move(sat));
+			sat = gv_or32(gv_xor32(gv_hadds16x2(std::move(a), std::move(b)), r), std::move(sat));
 		d = std::move(r);
 	};
 
@@ -3851,16 +3661,40 @@ auto TW()
 	};
 }
 
+const v128 s_lvsl_base = v128::from64r(0x0001020304050607, 0x08090a0b0c0d0e0f);
+
+const v128 s_lvsl_consts[16] =
+{
+	gv_add8(s_lvsl_base, gv_bcst8(0)),
+	gv_add8(s_lvsl_base, gv_bcst8(1)),
+	gv_add8(s_lvsl_base, gv_bcst8(2)),
+	gv_add8(s_lvsl_base, gv_bcst8(3)),
+	gv_add8(s_lvsl_base, gv_bcst8(4)),
+	gv_add8(s_lvsl_base, gv_bcst8(5)),
+	gv_add8(s_lvsl_base, gv_bcst8(6)),
+	gv_add8(s_lvsl_base, gv_bcst8(7)),
+	gv_add8(s_lvsl_base, gv_bcst8(8)),
+	gv_add8(s_lvsl_base, gv_bcst8(9)),
+	gv_add8(s_lvsl_base, gv_bcst8(10)),
+	gv_add8(s_lvsl_base, gv_bcst8(11)),
+	gv_add8(s_lvsl_base, gv_bcst8(12)),
+	gv_add8(s_lvsl_base, gv_bcst8(13)),
+	gv_add8(s_lvsl_base, gv_bcst8(14)),
+	gv_add8(s_lvsl_base, gv_bcst8(15)),
+};
+
 template <u32 Build, ppu_exec_bit... Flags>
 auto LVSL()
 {
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd] = sse_altivec_lvsl(addr);
+	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
+	{
+		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+		ppu.vr[op.vd] = s_lvsl_consts[addr % 16];
 	};
+
 	RETURN_(ppu, op);
 }
 
@@ -3947,36 +3781,52 @@ auto MULHWU()
 	RETURN_(ppu, op);
 }
 
+template <u32 N>
+struct MFOCRF
+{
+	template <ppu_exec_bit... Flags>
+	static auto select(bs_t<ppu_exec_bit> selected, auto func)
+	{
+		return ppu_exec_select<>::select<Flags...>(selected, func);
+	}
+
+	template <u32 Build, ppu_exec_bit... Flags>
+	static auto impl()
+	{
+		static const auto exec = [](ppu_thread& ppu, auto&& d)
+		{
+			const u32 p = N * 4;
+			const u32 v = ppu.cr[p + 0] << 3 | ppu.cr[p + 1] << 2 | ppu.cr[p + 2] << 1 | ppu.cr[p + 3] << 0;
+
+			d = v << (p ^ 0x1c);
+		};
+
+		RETURN_(ppu, ppu.gpr[op.rd]);
+	}
+};
+
 template <u32 Build, ppu_exec_bit... Flags>
-auto MFOCRF()
+auto MFCR()
 {
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	if (op.l11)
+	static const auto exec = [](ppu_thread& ppu, auto&& d)
 	{
-		// MFOCRF
-		const u32 n = std::countl_zero<u32>(op.crm) & 7;
-		const u32 p = n * 4;
-		const u32 v = ppu.cr[p + 0] << 3 | ppu.cr[p + 1] << 2 | ppu.cr[p + 2] << 1 | ppu.cr[p + 3] << 0;
-
-		ppu.gpr[op.rd] = v << (p ^ 0x1c);
-	}
-	else
-	{
-		// MFCR
+#if defined(ARCH_X64)
 		be_t<v128> lane0, lane1;
 		std::memcpy(&lane0, ppu.cr.bits, sizeof(v128));
 		std::memcpy(&lane1, ppu.cr.bits + 16, sizeof(v128));
 		const u32 mh = _mm_movemask_epi8(_mm_slli_epi64(lane0.value(), 7));
 		const u32 ml = _mm_movemask_epi8(_mm_slli_epi64(lane1.value(), 7));
 
-		ppu.gpr[op.rd] = (mh << 16) | ml;
-	}
-
+		d = (mh << 16) | ml;
+#else
+		d = ppu.cr.pack();
+#endif
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.gpr[op.rd]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -4094,16 +3944,38 @@ auto CMPL()
 	RETURN_(ppu, op);
 }
 
+const v128 s_lvsr_consts[16] =
+{
+	gv_add8(s_lvsl_base, gv_bcst8(16)),
+	gv_add8(s_lvsl_base, gv_bcst8(15)),
+	gv_add8(s_lvsl_base, gv_bcst8(14)),
+	gv_add8(s_lvsl_base, gv_bcst8(13)),
+	gv_add8(s_lvsl_base, gv_bcst8(12)),
+	gv_add8(s_lvsl_base, gv_bcst8(11)),
+	gv_add8(s_lvsl_base, gv_bcst8(10)),
+	gv_add8(s_lvsl_base, gv_bcst8(9)),
+	gv_add8(s_lvsl_base, gv_bcst8(8)),
+	gv_add8(s_lvsl_base, gv_bcst8(7)),
+	gv_add8(s_lvsl_base, gv_bcst8(6)),
+	gv_add8(s_lvsl_base, gv_bcst8(5)),
+	gv_add8(s_lvsl_base, gv_bcst8(4)),
+	gv_add8(s_lvsl_base, gv_bcst8(3)),
+	gv_add8(s_lvsl_base, gv_bcst8(2)),
+	gv_add8(s_lvsl_base, gv_bcst8(1)),
+};
+
 template <u32 Build, ppu_exec_bit... Flags>
 auto LVSR()
 {
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd] = sse_altivec_lvsr(addr);
+	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
+	{
+		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+		ppu.vr[op.vd] = s_lvsr_consts[addr % 16];
 	};
+
 	RETURN_(ppu, op);
 }
 
@@ -5193,10 +5065,13 @@ auto LVLX()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd] = s_use_ssse3 ? sse_cellbe_lvlx(ppu, addr) : sse_cellbe_lvlx_v0(ppu, addr);
+	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
+	{
+		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+		const u128 data = ppu_feed_data<u128>(ppu, addr & -16);
+		ppu.vr[op.vd] = data << ((addr & 15) * 8);
 	};
+
 	RETURN_(ppu, op);
 }
 
@@ -5301,10 +5176,13 @@ auto LVRX()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd] = s_use_ssse3 ? sse_cellbe_lvrx(ppu, addr) : sse_cellbe_lvrx_v0(ppu, addr);
+	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
+	{
+		const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
+		const u128 data = ppu_feed_data<u128>(ppu, addr & -16);
+		ppu.vr[op.vd] = data >> ((~addr & 15) * 8) >> 8;
 	};
+
 	RETURN_(ppu, op);
 }
 
@@ -5405,11 +5283,16 @@ auto STVLX()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	s_use_ssse3 ? sse_cellbe_stvlx(addr, ppu.vr[op.vs]) : sse_cellbe_stvlx_v0(addr, ppu.vr[op.vs]);
+	static const auto exec = [](auto&& s, ppu_opcode_t op, auto&& a, auto&& b)
+	{
+		const u64 addr = op.ra ? a + b : b;
+		const u32 tail = u32(addr & 15);
+		u8* ptr = vm::_ptr<u8>(addr & -16);
+		for (u32 j = 0; j < 16 - tail; j++)
+			ptr[j] = s.u8r[j];
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vs], op, ppu.gpr[op.ra], ppu.gpr[op.rb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -5483,11 +5366,16 @@ auto STVRX()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	s_use_ssse3 ? sse_cellbe_stvrx(addr, ppu.vr[op.vs]) : sse_cellbe_stvrx_v0(addr, ppu.vr[op.vs]);
+	static const auto exec = [](auto&& s, ppu_opcode_t op, auto&& a, auto&& b)
+	{
+		const u64 addr = op.ra ? a + b : b;
+		const u32 tail = u32(addr & 15);
+		u8* ptr = vm::_ptr<u8>(addr - 16);
+		for (u32 i = 15; i > 15 - tail; i--)
+			ptr[i] = s.u8r[i];
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu.vr[op.vs], op, ppu.gpr[op.ra], ppu.gpr[op.rb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6501,13 +6389,19 @@ auto FCTIW()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
-	const auto res = _mm_xor_si128(_mm_cvtpd_epi32(b), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(0x80000000))));
-	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvtsi128_si32(res));
-	ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+	#if defined(ARCH_X64)
+		const auto val = _mm_set_sd(b);
+		const auto res = _mm_xor_si128(_mm_cvtpd_epi32(val), _mm_castpd_si128(_mm_cmpge_pd(val, _mm_set1_pd(0x80000000))));
+		d = std::bit_cast<f64, s64>(_mm_cvtsi128_si32(res));
+	#elif defined(ARCH_ARM64)
+		d = std::bit_cast<f64, s64>(!(b == b) ? INT32_MIN : vqmovnd_s64(std::bit_cast<f64>(vrndi_f64(std::bit_cast<float64x1_t>(b)))));
+	#endif
+		ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6516,13 +6410,19 @@ auto FCTIWZ()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
-	const auto res = _mm_xor_si128(_mm_cvttpd_epi32(b), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(0x80000000))));
-	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvtsi128_si32(res));
-	ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+	#if defined(ARCH_X64)
+		const auto val = _mm_set_sd(b);
+		const auto res = _mm_xor_si128(_mm_cvttpd_epi32(val), _mm_castpd_si128(_mm_cmpge_pd(val, _mm_set1_pd(0x80000000))));
+		d = std::bit_cast<f64, s64>(_mm_cvtsi128_si32(res));
+	#elif defined(ARCH_ARM64)
+		d = std::bit_cast<f64, s64>(!(b == b) ? INT32_MIN : vqmovnd_s64(std::bit_cast<s64>(vcvt_s64_f64(std::bit_cast<float64x1_t>(b)))));
+	#endif
+		ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6766,13 +6666,19 @@ auto FCTID()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
-	const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvtsd_si64(b)), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(f64(1ull << 63)))));
-	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
-	ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+	#if defined(ARCH_X64)
+		const auto val = _mm_set_sd(b);
+		const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvtsd_si64(val)), _mm_castpd_si128(_mm_cmpge_pd(val, _mm_set1_pd(f64(1ull << 63)))));
+		d = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
+	#elif defined(ARCH_ARM64)
+		d = std::bit_cast<f64, s64>(!(b == b) ? f64{INT64_MIN} : std::bit_cast<f64>(vrndi_f64(std::bit_cast<float64x1_t>(b))));
+	#endif
+		ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6781,13 +6687,19 @@ auto FCTIDZ()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
-	const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvttsd_si64(b)), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(f64(1ull << 63)))));
-	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
-	ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+	#if defined(ARCH_X64)
+		const auto val = _mm_set_sd(b);
+		const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvttsd_si64(val)), _mm_castpd_si128(_mm_cmpge_pd(val, _mm_set1_pd(f64(1ull << 63)))));
+		d = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
+	#elif defined(ARCH_ARM64)
+		d = std::bit_cast<f64>(!(b == b) ? int64x1_t{INT64_MIN} : vcvt_s64_f64(std::bit_cast<float64x1_t>(b)));
+	#endif
+		ppu_set_fpcc<Flags...>(ppu, 0., 0.); // undefined (TODO)
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -6796,11 +6708,14 @@ auto FCFID()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	_mm_store_sd(&ppu.fpr[op.frd], _mm_cvtsi64_sd(_mm_setzero_pd(), std::bit_cast<s64>(ppu.fpr[op.frb])));
-	ppu_set_fpcc<Flags...>(ppu, ppu.fpr[op.frd], 0.);
+	static const auto exec = [](ppu_thread& ppu, auto&& d, auto&& b)
+	{
+		f64 r = std::bit_cast<s64>(b);
+		d = r;
+		ppu_set_fpcc<Flags...>(ppu, r, 0.);
 	};
-	RETURN_(ppu, op);
+
+	RETURN_(ppu, ppu.fpr[op.frd], ppu.fpr[op.frb]);
 }
 
 template <u32 Build, ppu_exec_bit... Flags>
@@ -7040,7 +6955,9 @@ struct ppu_interpreter_t
 	IT ADDC;
 	IT MULHDU;
 	IT MULHWU;
-	IT MFOCRF;
+	IT MFOCRF{};
+	IT MFOCRF_[8];
+	IT MFCR; //+
 	IT LWARX;
 	IT LDX;
 	IT LWZX;
@@ -7636,7 +7553,8 @@ ppu_interpreter_rt_base::ppu_interpreter_rt_base() noexcept
 	INIT_RC_OV(ADDC);
 	INIT_RC(MULHDU);
 	INIT_RC(MULHWU);
-	INIT(MFOCRF);
+	INIT_PACK8(MFOCRF,);
+	INIT(MFCR); //+
 	INIT(LWARX);
 	INIT(LDX);
 	INIT(LWZX);
@@ -7868,6 +7786,25 @@ ppu_intrp_func_t ppu_interpreter_rt::decode(u32 opv) const noexcept
 		break;
 	}
 	case ppu_itype::VSLDOI: return ptrs->VSLDOI_[op.vsh];
+	case ppu_itype::MFOCRF:
+	{
+		if (op.l11)
+		{
+			const u32 n = std::countl_zero<u32>(op.crm) & 7;
+
+			if (0x80u >> n != op.crm)
+			{
+				return [](ppu_thread&, ppu_opcode_t op, be_t<u32>*, ppu_intrp_func*)
+				{
+					fmt::throw_exception("Invalid instruction: MFOCRF with bits 0x%x", op.crm);
+				};
+			}
+
+			return ptrs->MFOCRF_[n];
+		}
+
+		return ptrs->MFCR;
+	}
 	default: break;
 	}
 

@@ -590,10 +590,12 @@ inline void gv_unset_zeroing_denormals()
 #endif
 }
 
+inline bool g_use_avx = utils::has_avx();
+
 inline void gv_zeroupper()
 {
 #if defined(ARCH_X64)
-	if (!utils::has_avx())
+	if (!g_use_avx)
 		return;
 #if defined(_M_X64)
 	_mm256_zeroupper();
@@ -1968,16 +1970,16 @@ inline v128 gv_hadds8x2(const v128& a)
 #endif
 }
 
-inline v128 gv_hadds8x4(const v128& a)
+inline v128 gv_hadds8x4(const v128& a, const v128& c)
 {
 #if (defined(__AVX512VL__) && defined(__AVX512VNNI__)) || defined(__AVXVNNI__)
-	return _mm_dpbusd_epi32(_mm_setzero_si128(), _mm_set1_epi8(1), a);
+	return _mm_dpbusd_epi32(c, _mm_set1_epi8(1), a);
 #elif defined(__SSSE3__)
-	return _mm_madd_epi16(_mm_maddubs_epi16(_mm_set1_epi8(1), a), _mm_set1_epi16(1));
+	return _mm_add_epi32(_mm_madd_epi16(_mm_maddubs_epi16(_mm_set1_epi8(1), a), _mm_set1_epi16(1)), c);
 #elif defined(ARCH_X64)
-	return _mm_madd_epi16(_mm_add_epi16(_mm_srai_epi16(a, 8), _mm_srai_epi16(_mm_slli_epi16(a, 8), 8)), _mm_set1_epi16(1));
+	return _mm_add_epi32(_mm_madd_epi16(_mm_add_epi16(_mm_srai_epi16(a, 8), _mm_srai_epi16(_mm_slli_epi16(a, 8), 8)), _mm_set1_epi16(1)), c);
 #elif defined(ARCH_ARM64)
-	return vpaddlq_s16(vpaddlq_s8(a));
+	return vaddq_s32(vpaddlq_s16(vpaddlq_s8(a)), c);
 #endif
 }
 
@@ -2005,12 +2007,14 @@ inline v128 gv_haddu8x4(const v128& a)
 #endif
 }
 
-inline v128 gv_hadds16x2(const v128& a)
+inline v128 gv_hadds16x2(const v128& a, const v128& c)
 {
-#if defined(ARCH_X64)
-	return _mm_madd_epi16(a, _mm_set1_epi16(1));
+#if (defined(__AVX512VL__) && defined(__AVX512VNNI__)) || defined(__AVXVNNI__)
+	return _mm_dpwssd_epi32(c, a, _mm_set1_epi8(1));
+#elif defined(ARCH_X64)
+	return _mm_add_epi32(_mm_madd_epi16(a, _mm_set1_epi16(1)), c);
 #elif defined(ARCH_ARM64)
-	return vpaddlq_s16(a);
+	return vaddq_s32(vpaddlq_s16(a), c);
 #endif
 }
 
@@ -2094,6 +2098,26 @@ inline v128 gv_dotu16x2(const v128& a, const v128& b)
 	const auto sl = vpadd_u32(vget_low_u32(ml), vget_high_u32(ml));
 	const auto sh = vpadd_u32(vget_low_u32(mh), vget_high_u32(mh));
 	return vcombine_u32(sl, sh);
+#endif
+}
+
+// Unsigned bytes from a, signed bytes from b, 32-bit accumulator c
+inline v128 gv_dots_u8s8x4(const v128& a, const v128& b, const v128& c)
+{
+#if (defined(__AVX512VL__) && defined(__AVX512VNNI__)) || defined(__AVXVNNI__)
+	return _mm_dpbusds_epi32(c, a, b);
+#elif defined(ARCH_X64)
+	const __m128i ah = _mm_srli_epi16(a, 8);
+	const __m128i al = _mm_and_si128(a, _mm_set1_epi16(0x00ff));
+	const __m128i bh = _mm_srai_epi16(b, 8);
+	const __m128i bl = _mm_srai_epi16(_mm_slli_epi16(b, 8), 8);
+	const __m128i mh = _mm_madd_epi16(ah, bh);
+	const __m128i ml = _mm_madd_epi16(al, bl);
+	return gv_adds_s32(c, _mm_add_epi32(mh, ml));
+#elif defined(ARCH_ARM64)
+    const auto l = vpaddlq_s16(vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(a))), vmovl_s8(vget_low_s8(b))));
+	const auto h = vpaddlq_s16(vmulq_s16(vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(a))), vmovl_s8(vget_high_s8(b))));
+    return vqaddq_s32(c, vaddq_s32(vuzp1q_s32(l, h), vuzp2q_s32(l, h)));
 #endif
 }
 
