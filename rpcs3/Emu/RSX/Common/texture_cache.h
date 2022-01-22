@@ -226,7 +226,7 @@ namespace rsx
 				if (external_subresource_desc.op != deferred_request_command::atlas_gather)
 					return true;
 
-				const int target_area = (external_subresource_desc.width * external_subresource_desc.height * threshold) / 100;
+				const int target_area = (external_subresource_desc.width * external_subresource_desc.height * external_subresource_desc.depth * threshold) / 100;
 				int covered_area = 0;
 				areai bbox{smax, smax, 0, 0};
 
