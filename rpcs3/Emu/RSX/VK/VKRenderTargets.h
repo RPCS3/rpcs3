@@ -89,7 +89,7 @@ namespace vk
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
 
-		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(u8 samples)
+		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, u8 samples)
 		{
 			if (g_cfg.video.strict_rendering_mode || samples > 1)
 			{
@@ -101,7 +101,13 @@ namespace vk
 			switch (vk::get_driver_vendor())
 			{
 			case driver_vendor::ANV:
-				return { VK_IMAGE_USAGE_STORAGE_BIT, 0 };
+				if (const auto format_features = vk::get_current_renderer()->get_format_properties(format);
+					format_features.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
+				{
+					// Only set if supported by hw
+					return { VK_IMAGE_USAGE_STORAGE_BIT, 0 };
+				}
+				break;
 			case driver_vendor::AMD:
 			case driver_vendor::RADV:
 				if (vk::get_chip_family() >= chip_class::AMD_navi1x)
@@ -145,7 +151,7 @@ namespace vk
 				sample_layout = rsx::surface_sample_layout::null;
 			}
 
-			auto [usage_flags, create_flags] = get_attachment_create_flags(samples);
+			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples);
 			usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 			if (samples == 1) [[likely]]
@@ -214,7 +220,7 @@ namespace vk
 				sample_layout = rsx::surface_sample_layout::null;
 			}
 
-			auto [usage_flags, create_flags] = get_attachment_create_flags(samples);
+			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples);
 			usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			if (samples == 1) [[likely]]
