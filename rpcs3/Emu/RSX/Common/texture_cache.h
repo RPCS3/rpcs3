@@ -223,21 +223,29 @@ namespace rsx
 			// Returns true if at least threshold% is covered in pixels
 			bool atlas_covers_target_area(int threshold) const
 			{
-				if (external_subresource_desc.op != deferred_request_command::atlas_gather)
-					return true;
-
 				const int target_area = (external_subresource_desc.width * external_subresource_desc.height * external_subresource_desc.depth * threshold) / 100;
 				int covered_area = 0;
 				areai bbox{smax, smax, 0, 0};
 
 				for (const auto& section : external_subresource_desc.sections_to_copy)
 				{
+					if (section.level != 0)
+					{
+						// Ignore other slices other than mip0
+						continue;
+					}
+
+					// Calculate virtual Y coordinate
+					const auto dst_y = (section.dst_z * external_subresource_desc.height) + section.dst_y;
+
+					// Add this slice's dimensions to the total
 					covered_area += section.dst_w * section.dst_h;
 
+					// Extend the covered bbox
 					bbox.x1 = std::min<int>(section.dst_x, bbox.x1);
 					bbox.x2 = std::max<int>(section.dst_x + section.dst_w, bbox.x2);
-					bbox.y1 = std::min<int>(section.dst_y, bbox.y1);
-					bbox.y2 = std::max<int>(section.dst_y + section.dst_h, bbox.y2);
+					bbox.y1 = std::min<int>(dst_y, bbox.y1);
+					bbox.y2 = std::max<int>(dst_y + section.dst_h, bbox.y2);
 				}
 
 				if (covered_area < target_area)
@@ -1861,8 +1869,8 @@ namespace rsx
 					if (const auto section_count = result.external_subresource_desc.sections_to_copy.size();
 						section_count > 0)
 					{
-						bool result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
-						if (!result_is_valid && _pool == 0 && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
+						bool result_is_valid;
+						if (_pool == 0 && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
 						{
 							// HACK: Avoid WCB requirement for some games with wrongly declared sampler dimensions.
 							// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
@@ -1870,6 +1878,10 @@ namespace rsx
 							// Properly fix this by introducing partial data upload into the surface cache in such cases and making RCB/RDB
 							// enabled by default. Blit engine already handles this correctly.
 							result_is_valid = true;
+						}
+						else
+						{
+							result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
 						}
 
 						if (result_is_valid)

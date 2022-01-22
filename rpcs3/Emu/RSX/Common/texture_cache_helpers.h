@@ -658,7 +658,6 @@ namespace rsx
 			{
 				attr2.width = scaled_w;
 				attr2.height = scaled_h;
-				attr2.depth = 1;
 
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::cubemap_gather,
 						attr2, {},
