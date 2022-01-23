@@ -77,8 +77,6 @@ struct jit_runtime_base
 	const asmjit::Environment& environment() const noexcept;
 	void* _add(asmjit::CodeHolder* code) noexcept;
 	virtual uchar* _alloc(usz size, usz align) noexcept = 0;
-
-	std::string_view dump_name;
 };
 
 // ASMJIT runtime for emitting code in a single 2G region
@@ -257,7 +255,6 @@ inline FT build_function_asm(std::string_view name, F&& builder)
 		builder(compiler, args);
 	}
 
-	rt.dump_name = name;
 	const auto result = rt._add(&code);
 	jit_announce(result, code.codeSize(), name);
 	return reinterpret_cast<FT>(uptr(result));
