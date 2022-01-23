@@ -324,6 +324,9 @@ rpcn_ask_password_dialog::rpcn_ask_password_dialog(QWidget* parent)
 	QVBoxLayout* vbox_global  = new QVBoxLayout();
 	QHBoxLayout* hbox_buttons = new QHBoxLayout();
 
+	QGroupBox* gbox_password = new QGroupBox();
+	QVBoxLayout* vbox_gbox = new QVBoxLayout();
+
 	QLabel* label_pass1 = new QLabel(tr("Enter your password:"));
 	m_edit_pass1        = new QLineEdit();
 	m_edit_pass1->setEchoMode(QLineEdit::Password);
@@ -331,18 +334,20 @@ rpcn_ask_password_dialog::rpcn_ask_password_dialog(QWidget* parent)
 	m_edit_pass2        = new QLineEdit();
 	m_edit_pass2->setEchoMode(QLineEdit::Password);
 
+	vbox_gbox->addWidget(label_pass1);
+	vbox_gbox->addWidget(m_edit_pass1);
+	vbox_gbox->addWidget(label_pass2);
+	vbox_gbox->addWidget(m_edit_pass2);
+	gbox_password->setLayout(vbox_gbox);
+
 	QPushButton* btn_ok     = new QPushButton(tr("Ok"));
 	QPushButton* btn_cancel = new QPushButton(tr("Cancel"));
-
-	vbox_global->addWidget(label_pass1);
-	vbox_global->addWidget(m_edit_pass1);
-	vbox_global->addWidget(label_pass2);
-	vbox_global->addWidget(m_edit_pass2);
 
 	hbox_buttons->addStretch();
 	hbox_buttons->addWidget(btn_ok);
 	hbox_buttons->addWidget(btn_cancel);
 
+	vbox_global->addWidget(gbox_password);
 	vbox_global->addLayout(hbox_buttons);
 
 	setLayout(vbox_global);
