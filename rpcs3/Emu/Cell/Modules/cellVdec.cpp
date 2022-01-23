@@ -1219,6 +1219,10 @@ error_code cellVdecSetPts(u32 handle, vm::ptr<void> unk)
 
 DECLARE(ppu_module_manager::cellVdec)("libvdec", []()
 {
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 10, 100)
+	avcodec_register_all();
+#endif
+
 	static ppu_static_module libavcdec("libavcdec");
 	static ppu_static_module libdivx311dec("libdivx311dec");
 	static ppu_static_module libdivxdec("libdivxdec");
