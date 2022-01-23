@@ -7,11 +7,11 @@
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
 #include "Utilities/address_range.h"
+#include "Utilities/JIT.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/perf_meter.hpp"
-#include <thread>
 #include <deque>
 #include <shared_mutex>
 

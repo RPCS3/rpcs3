@@ -157,7 +157,7 @@ DECLARE(spu_runtime::tr_all) = []
 	return reinterpret_cast<spu_function_t>(trptr);
 }();
 
-DECLARE(spu_runtime::g_gateway) = built_function<spu_function_t>("spu_gateway", [](native_asm& c, auto& args)
+DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gateway", [](native_asm& c, auto& args)
 {
 	// Gateway for SPU dispatcher, converts from native to GHC calling convention, also saves RSP value for spu_escape
 	using namespace asmjit;

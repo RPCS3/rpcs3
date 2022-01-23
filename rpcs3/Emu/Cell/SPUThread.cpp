@@ -439,7 +439,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	return res;
 }
 
-const auto spu_putllc_tx = built_function<u64(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>("spu_putllc_tx", [](native_asm& c, auto& args)
+const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void* _old, const void* _new)>("spu_putllc_tx", [](native_asm& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -701,7 +701,7 @@ const auto spu_putllc_tx = built_function<u64(*)(u32 raddr, u64 rtime, void* _ol
 #endif
 });
 
-const auto spu_putlluc_tx = built_function<u64(*)(u32 raddr, const void* rdata, u64* _stx, u64* _ftx)>("spu_putlluc_tx", [](native_asm& c, auto& args)
+const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rdata, u64* _stx, u64* _ftx)>("spu_putlluc_tx", [](native_asm& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -831,7 +831,7 @@ const auto spu_putlluc_tx = built_function<u64(*)(u32 raddr, const void* rdata, 
 #endif
 });
 
-const auto spu_getllar_tx = built_function<u64(*)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime)>("spu_getllar_tx", [](native_asm& c, auto& args)
+const auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, cpu_thread* _cpu, u64 rtime)>("spu_getllar_tx", [](native_asm& c, auto& args)
 {
 	using namespace asmjit;
 

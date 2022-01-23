@@ -5,6 +5,7 @@
 
 #include "util/to_endian.hpp"
 #include "util/sysinfo.hpp"
+#include "Utilities/JIT.h"
 #include "util/asm.hpp"
 
 #if defined(ARCH_X64)
@@ -284,9 +285,9 @@ namespace
 #endif
 }
 
-built_function<void(*)(u32*, const u32*, u32)> copy_data_swap_u32("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
+DECLARE(copy_data_swap_u32) = build_function_asm<void(*)(u32*, const u32*, u32)>("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
 
-built_function<bool(*)(u32*, const u32*, u32)> copy_data_swap_u32_cmp("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
+DECLARE(copy_data_swap_u32_cmp) = build_function_asm<bool(*)(u32*, const u32*, u32)>("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
 
 namespace
 {

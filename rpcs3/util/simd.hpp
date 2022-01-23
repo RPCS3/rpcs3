@@ -2265,7 +2265,7 @@ namespace utils
 
 #if defined(ARCH_X64)
 template <uint Mode>
-inline built_function<__m128(*)(__m128)> sse41_roundf("sse41_roundf", [](native_asm& c, native_args&)
+const auto sse41_roundf = build_function_asm<__m128(*)(__m128)>("sse41_roundf", [](native_asm& c, native_args&)
 {
 	static_assert(Mode < 4);
 	using namespace asmjit;
