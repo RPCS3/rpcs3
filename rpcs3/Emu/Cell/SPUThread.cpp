@@ -4889,19 +4889,19 @@ bool spu_thread::capture_local_storage() const
 		}
 	}
 
-	fs::pending_file temp(elf_path);
+	fs::file temp(elf_path, fs::rewrite);
 
-	if (!temp.file)
+	if (!temp)
 	{
-		spu_log.error("Failed to create temporary file for '%s' (error=%s)", elf_path, fs::g_tls_error);
+		spu_log.error("Failed to create file '%s' (error=%s)", elf_path, fs::g_tls_error);
 		return false;
 	}
 
-	temp.file.write(spu_exec.save());
+	auto data = spu_exec.save();
 
-	if (!temp.commit(false))
+	if (temp.write(data.data(), data.size()) != data.size())
 	{
-		spu_log.error("Failed to create rename temporary file to '%s' (error=%s)", elf_path, fs::g_tls_error);
+		spu_log.error("Failed to write file '%s' (error=%s)", elf_path, fs::g_tls_error);
 		return false;
 	}
 
