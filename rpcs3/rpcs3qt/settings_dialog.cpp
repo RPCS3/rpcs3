@@ -62,6 +62,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	if (!m_gui_settings->GetValue(gui::m_showDebugTab).toBool())
 	{
 		ui->tab_widget_settings->removeTab(9);
+		ui->audioDump->setVisible(false);
+		ui->audioDump->setChecked(false);
 		m_gui_settings->SetValue(gui::m_showDebugTab, false);
 	}
 	if (game)
@@ -879,6 +881,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		enable_buffering_options(enabled && ui->enableBuffering->isChecked());
 	};
 
+	const auto enable_avport_option = [this](int index)
+	{
+		if (index < 0) return;
+		const QVariantList var_list = ui->audioProviderBox->itemData(index).toList();
+		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
+		const QString text = var_list[0].toString();
+		const bool enabled = text == "RSXAudio";
+		ui->audioAvportBox->setEnabled(enabled);
+	};
+
 	const QString mic_none = m_emu_settings->m_microphone_creator.get_none();
 
 	const auto change_microphone_type = [mic_none, this](int index)
@@ -958,6 +970,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// TODO: enable this setting once cellAudioOutConfigure can change downmix on the fly
 	ui->combo_audio_downmix->removeItem(static_cast<int>(audio_downmix::use_application_settings));
 
+	m_emu_settings->EnhanceComboBox(ui->audioProviderBox, emu_settings_type::AudioProvider);
+	SubscribeTooltip(ui->gb_audio_provider, tooltips.settings.audio_provider);
+	connect(ui->audioProviderBox, QOverload<int>::of(&QComboBox::currentIndexChanged), enable_avport_option);
+
+	m_emu_settings->EnhanceComboBox(ui->audioAvportBox, emu_settings_type::AudioAvport);
+	SubscribeTooltip(ui->gb_audio_avport, tooltips.settings.audio_avport);
+
 	// Microphone Comboboxes
 	m_mics_combo[0] = ui->microphone1Box;
 	m_mics_combo[1] = ui->microphone2Box;
@@ -1014,6 +1033,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->enableTimeStretching, &QCheckBox::toggled, enable_time_stretching_options);
 
 	enable_buffering(ui->audioOutBox->currentIndex());
+	enable_avport_option(ui->audioProviderBox->currentIndex());
 
 	// Sliders
 

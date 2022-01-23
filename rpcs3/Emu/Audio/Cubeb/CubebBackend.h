@@ -21,11 +21,13 @@ public:
 	bool Initialized() override;
 	bool Operational() override;
 
-	void Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
+	bool Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
 	void Close() override;
 
 	void SetWriteCallback(std::function<u32(u32, void *)> cb) override;
 	f64 GetCallbackFrameLen() override;
+
+	void SetErrorCallback(std::function<void()> cb) override;
 
 	void Play() override;
 	void Pause() override;
@@ -41,12 +43,14 @@ private:
 #endif
 
 	shared_mutex m_cb_mutex{};
+	shared_mutex m_error_cb_mutex{};
 	std::function<u32(u32, void *)> m_write_callback{};
+	std::function<void()> m_error_callback{};
 	std::array<u8, sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)> m_last_sample{};
 	atomic_t<u8> full_sample_size = 0;
 
 	bool m_playing = false;
-	atomic_t<bool> m_reset_req = false;
+	bool m_reset_req = false;
 
 	// Cubeb callbacks
 	static long data_cb(cubeb_stream* stream, void* user_ptr, void const* input_buffer, void* output_buffer, long nframes);
