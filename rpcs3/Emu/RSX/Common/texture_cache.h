@@ -2868,7 +2868,7 @@ namespace rsx
 
 					typeless_info.src_gcm_format = gcm_format;
 				}
-				else if (cached_src->is_depth_texture() != dst_is_depth_surface)
+				else
 				{
 					typeless_info.src_gcm_format = cached_src->get_gcm_format();
 				}
