@@ -209,6 +209,60 @@ namespace asmjit
 		static_cast<void>(args);
 #endif
 	}
+
+#if defined(ARCH_X64)
+	template <uint Size>
+	struct native_vec;
+
+	template <>
+	struct native_vec<16> { using type = x86::Xmm; };
+
+	template <>
+	struct native_vec<32> { using type = x86::Ymm; };
+
+	template <>
+	struct native_vec<64> { using type = x86::Zmm; };
+
+	template <uint Size>
+	using native_vec_t = typename native_vec<Size>::type;
+
+	// if (count > step) { for (; ctr < (count - step); ctr += step) {...} count -= ctr; }
+	inline void build_incomplete_loop(native_asm& c, auto ctr, auto count, u32 step, auto&& build)
+	{
+		asmjit::Label body = c.newLabel();
+		asmjit::Label exit = c.newLabel();
+
+		ensure((step & (step - 1)) == 0);
+		c.cmp(count, step);
+		c.jbe(exit);
+		c.sub(count, step);
+		c.align(asmjit::AlignMode::kCode, 16);
+		c.bind(body);
+		build();
+		c.add(ctr, step);
+		c.sub(count, step);
+		c.ja(body);
+		c.add(count, step);
+		c.bind(exit);
+	}
+
+	// for (; count > 0; ctr++, count--)
+	inline void build_loop(native_asm& c, auto ctr, auto count, auto&& build)
+	{
+		asmjit::Label body = c.newLabel();
+		asmjit::Label exit = c.newLabel();
+
+		c.test(count, count);
+		c.jz(exit);
+		c.align(asmjit::AlignMode::kCode, 16);
+		c.bind(body);
+		build();
+		c.inc(ctr);
+		c.sub(count, 1);
+		c.ja(body);
+		c.bind(exit);
+	}
+#endif
 }
 
 // Build runtime function with asmjit::X86Assembler
