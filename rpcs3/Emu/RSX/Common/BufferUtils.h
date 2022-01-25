@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../gcm_enums.h"
-#include "Utilities/JIT.h"
 
 #include <span>
 
@@ -51,7 +50,7 @@ void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w);
 void stream_vector_from_memory(void *dst, void *src);
 
 // Copy and swap data in 32-bit units
-extern built_function<void(*)(u32*, const u32*, u32)> copy_data_swap_u32;
+extern void(*const copy_data_swap_u32)(u32*, const u32*, u32);
 
 // Copy and swap data in 32-bit units, return true if changed
-extern built_function<bool(*)(u32*, const u32*, u32)> copy_data_swap_u32_cmp;
+extern bool(*const copy_data_swap_u32_cmp)(u32*, const u32*, u32);

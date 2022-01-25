@@ -1947,7 +1947,7 @@ u32 ppu_function_manager::add_function(ppu_intrp_func_t function)
 
 	// Generate trampoline
 #if defined(ARCH_X64)
-	list2.push_back(build_function_asm<ppu_intrp_func_t>("ppu_trampolinea", [&](native_asm& c, auto& args)
+	list2.push_back(build_function_asm<ppu_intrp_func_t>("", [&](native_asm& c, auto& args)
 	{
 		using namespace asmjit;
 

@@ -77,8 +77,6 @@ struct jit_runtime_base
 	const asmjit::Environment& environment() const noexcept;
 	void* _add(asmjit::CodeHolder* code) noexcept;
 	virtual uchar* _alloc(usz size, usz align) noexcept = 0;
-
-	std::string_view dump_name;
 };
 
 // ASMJIT runtime for emitting code in a single 2G region
@@ -211,6 +209,60 @@ namespace asmjit
 		static_cast<void>(args);
 #endif
 	}
+
+#if defined(ARCH_X64)
+	template <uint Size>
+	struct native_vec;
+
+	template <>
+	struct native_vec<16> { using type = x86::Xmm; };
+
+	template <>
+	struct native_vec<32> { using type = x86::Ymm; };
+
+	template <>
+	struct native_vec<64> { using type = x86::Zmm; };
+
+	template <uint Size>
+	using native_vec_t = typename native_vec<Size>::type;
+
+	// if (count > step) { for (; ctr < (count - step); ctr += step) {...} count -= ctr; }
+	inline void build_incomplete_loop(native_asm& c, auto ctr, auto count, u32 step, auto&& build)
+	{
+		asmjit::Label body = c.newLabel();
+		asmjit::Label exit = c.newLabel();
+
+		ensure((step & (step - 1)) == 0);
+		c.cmp(count, step);
+		c.jbe(exit);
+		c.sub(count, step);
+		c.align(asmjit::AlignMode::kCode, 16);
+		c.bind(body);
+		build();
+		c.add(ctr, step);
+		c.sub(count, step);
+		c.ja(body);
+		c.add(count, step);
+		c.bind(exit);
+	}
+
+	// for (; count > 0; ctr++, count--)
+	inline void build_loop(native_asm& c, auto ctr, auto count, auto&& build)
+	{
+		asmjit::Label body = c.newLabel();
+		asmjit::Label exit = c.newLabel();
+
+		c.test(count, count);
+		c.jz(exit);
+		c.align(asmjit::AlignMode::kCode, 16);
+		c.bind(body);
+		build();
+		c.inc(ctr);
+		c.sub(count, 1);
+		c.ja(body);
+		c.bind(exit);
+	}
+#endif
 }
 
 // Build runtime function with asmjit::X86Assembler
@@ -257,105 +309,10 @@ inline FT build_function_asm(std::string_view name, F&& builder)
 		builder(compiler, args);
 	}
 
-	rt.dump_name = name;
 	const auto result = rt._add(&code);
 	jit_announce(result, code.codeSize(), name);
 	return reinterpret_cast<FT>(uptr(result));
 }
-
-#if !defined(ARCH_X64) || defined(__APPLE__)
-template <typename FT, usz = 4096>
-class built_function
-{
-	FT m_func;
-
-public:
-	built_function(const built_function&) = delete;
-
-	built_function& operator=(const built_function&) = delete;
-
-	template <typename F>
-	built_function(std::string_view name, F&& builder,
-		u32 line = __builtin_LINE(),
-		u32 col = __builtin_COLUMN(),
-		const char* file = __builtin_FILE(),
-		const char* func = __builtin_FUNCTION())
-		: m_func(ensure(build_function_asm<FT>(name, std::forward<F>(builder)), const_str(), line, col, file, func))
-	{
-	}
-
-	operator FT() const noexcept
-	{
-		return m_func;
-	}
-
-	template <typename... Args>
-	auto operator()(Args&&... args) const noexcept
-	{
-		return m_func(std::forward<Args>(args)...);
-	}
-};
-#else
-template <typename FT, usz Size = 4096>
-class built_function
-{
-	alignas(4096) uchar m_data[Size];
-
-public:
-	built_function(const built_function&) = delete;
-
-	built_function& operator=(const built_function&) = delete;
-
-	template <typename F>
-	built_function(std::string_view name, F&& builder)
-	{
-		using namespace asmjit;
-
-		inline_runtime rt(m_data, Size);
-
-		CodeHolder code;
-		code.init(rt.environment());
-
-#if defined(ARCH_X64)
-		native_args args;
-	#ifdef _WIN32
-		args[0] = x86::rcx;
-		args[1] = x86::rdx;
-		args[2] = x86::r8;
-		args[3] = x86::r9;
-	#else
-		args[0] = x86::rdi;
-		args[1] = x86::rsi;
-		args[2] = x86::rdx;
-		args[3] = x86::rcx;
-	#endif
-#elif defined(ARCH_ARM64)
-		native_args args;
-		args[0] = a64::x0;
-		args[1] = a64::x1;
-		args[2] = a64::x2;
-		args[3] = a64::x3;
-#endif
-
-		native_asm compiler(&code);
-		compiler.addEncodingOptions(EncodingOptions::kOptimizedAlign);
-		builder(compiler, args);
-		rt.dump_name = name;
-		jit_announce(rt._add(&code), code.codeSize(), name);
-	}
-
-	operator FT() const noexcept
-	{
-		return FT(+m_data);
-	}
-
-	template <typename... Args>
-	auto operator()(Args&&... args) const noexcept
-	{
-		return FT(+m_data)(std::forward<Args>(args)...);
-	}
-};
-#endif
 
 #ifdef LLVM_AVAILABLE
 

@@ -539,6 +539,7 @@ namespace vk
 			// Allow use of f16 type in shaders if possible
 			shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
 			shader_support_info.shaderFloat16 = VK_TRUE;
+			shader_support_info.pNext = const_cast<void*>(device.pNext);
 			device.pNext = &shader_support_info;
 
 			rsx_log.notice("GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
@@ -562,6 +563,7 @@ namespace vk
 #undef SET_DESCRIPTOR_BITFLAG
 
 			indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+			indexing_features.pNext = const_cast<void*>(device.pNext);
 			device.pNext = &indexing_features;
 		}
 

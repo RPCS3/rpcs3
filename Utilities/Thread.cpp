@@ -2250,7 +2250,7 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 
 thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* _base))
 {
-	return build_function_asm<native_entry>("thread_base_trampoline", [&](native_asm& c, auto& args)
+	return build_function_asm<native_entry>("", [&](native_asm& c, auto& args)
 	{
 		using namespace asmjit;
 
