@@ -859,9 +859,9 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 
 		if (g_cfg.core.spu_debug)
 		{
-			fs::pending_file temp(fs::get_cache_dir() + "/spu_progs/" + vfs::escape(name.substr(name.find_last_of('/') + 1)) + '_' + hash.substr(4) + ".elf");
+			fs::file temp(fs::get_cache_dir() + "/spu_progs/" + vfs::escape(name.substr(name.find_last_of('/') + 1)) + '_' + hash.substr(4) + ".elf", fs::rewrite);
 
-			if (!temp.file || !(temp.file.write(obj.save()), temp.commit()))
+			if (!temp || !temp.write(obj.save()))
 			{
 				ppu_loader.error("Failed to dump SPU program from PPU executable: name='%s', hash=%s", name, hash);
 			}

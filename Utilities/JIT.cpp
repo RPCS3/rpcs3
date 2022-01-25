@@ -24,6 +24,37 @@ void jit_announce(uptr func, usz size, std::string_view name)
 		return;
 	}
 
+	if (!name.empty())
+	{
+		// If directory ASMJIT doesn't exist, nothing will be written
+		static const fs::file s_asm = []()
+		{
+			fs::remove_all(fs::get_cache_dir() + "/ASMJIT/", false);
+
+			return fs::file(fmt::format("%s/ASMJIT/.objects", fs::get_cache_dir()), fs::rewrite + fs::append);
+		}();
+
+		if (s_asm)
+		{
+			// Dump object: addr + size + bytes
+			s_asm.write(fmt::format("%s%s%s",
+				std::string_view(reinterpret_cast<char*>(&func), 8),
+				std::string_view(reinterpret_cast<char*>(&size), 8),
+				std::string_view(reinterpret_cast<char*>(func), size)));
+		}
+
+		if (s_asm && name[0] != '_')
+		{
+			// Save some objects separately
+			fs::file dump(fmt::format("%s/ASMJIT/%s", fs::get_cache_dir(), name), fs::rewrite);
+
+			if (dump)
+			{
+				dump.write(reinterpret_cast<uchar*>(func), size);
+			}
+		}
+	}
+
 #ifdef __linux__
 	static const fs::file s_map(fmt::format("/tmp/perf-%d.map", getpid()), fs::rewrite + fs::append);
 
@@ -143,17 +174,6 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
 		for (asmjit::Section* section : code->_sections)
 		{
 			std::memcpy(p + section->offset(), section->data(), section->bufferSize());
-		}
-	}
-
-	if (!dump_name.empty())
-	{
-		// If directory ASMJIT doesn't exist, nothing will be written
-		fs::file dump(fmt::format("%s/ASMJIT/%s", fs::get_cache_dir(), dump_name), fs::rewrite);
-
-		if (dump)
-		{
-			dump.write(p, codeSize);
 		}
 	}
 
