@@ -145,8 +145,8 @@ namespace gl
 			if (!slice.src)
 				continue;
 
-			const bool typeless = dst_aspect != slice.src->aspect() ||
-				!formats_are_bitcast_compatible(static_cast<GLenum>(slice.src->get_internal_format()), static_cast<GLenum>(dst_image->get_internal_format()));
+			const bool typeless = !formats_are_bitcast_compatible(slice.src, dst_image);
+			ensure(typeless || dst_aspect == slice.src->aspect());
 
 			std::unique_ptr<gl::texture> tmp;
 			auto src_image = slice.src;

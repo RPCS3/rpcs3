@@ -23,7 +23,6 @@ namespace vk
 	u8 get_format_texel_width(VkFormat format);
 	std::pair<u8, u8> get_format_element_size(VkFormat format);
 	std::pair<bool, u32> get_format_convert_flags(VkFormat format);
-	bool formats_are_bitcast_compatible(VkFormat format1, VkFormat format2);
 	bool formats_are_bitcast_compatible(image* image1, image* image2);
 
 	minification_filter get_min_filter(rsx::texture_minify_filter min_filter);

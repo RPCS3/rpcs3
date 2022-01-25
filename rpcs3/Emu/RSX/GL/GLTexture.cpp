@@ -838,6 +838,7 @@ namespace gl
 		case GL_RGBA32F:
 			return 16;
 		case GL_DEPTH_COMPONENT16:
+		case GL_DEPTH_COMPONENT32F:
 			return 2;
 		case GL_DEPTH24_STENCIL8:
 		case GL_DEPTH32F_STENCIL8:
@@ -869,6 +870,7 @@ namespace gl
 		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
 			return { false, 4 };
 		case GL_DEPTH_COMPONENT16:
+		case GL_DEPTH_COMPONENT32F:
 			return { true, 2 };
 		case GL_DEPTH24_STENCIL8:
 		case GL_DEPTH32F_STENCIL8:
@@ -904,6 +906,18 @@ namespace gl
 		}
 
 		return false;
+	}
+
+	bool formats_are_bitcast_compatible(const texture* texture1, const texture* texture2)
+	{
+		if (const u32 transfer_class = texture1->format_class() | texture2->format_class();
+			transfer_class & RSX_FORMAT_CLASS_DEPTH_FLOAT_MASK)
+		{
+			// If any one of the two images is a depth float, the other must match exactly or bust
+			return (texture1->format_class() == texture2->format_class());
+		}
+
+		return formats_are_bitcast_compatible(static_cast<GLenum>(texture1->get_internal_format()), static_cast<GLenum>(texture2->get_internal_format()));
 	}
 
 	void copy_typeless(texture * dst, const texture * src, const coord3u& dst_region, const coord3u& src_region)
