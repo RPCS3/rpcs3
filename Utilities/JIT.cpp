@@ -24,34 +24,61 @@ void jit_announce(uptr func, usz size, std::string_view name)
 		return;
 	}
 
-	if (!name.empty())
+	// If directory ASMJIT doesn't exist, nothing will be written
+	static constexpr u64 c_dump_size = 0x1'0000'0000;
+	static constexpr u64 c_index_size = c_dump_size / 16;
+	static atomic_t<u64> g_index_off = 0;
+	static atomic_t<u64> g_data_off = c_index_size;
+
+	static void* g_asm = []() -> void*
 	{
-		// If directory ASMJIT doesn't exist, nothing will be written
-		static const fs::file s_asm = []()
-		{
-			fs::remove_all(fs::get_cache_dir() + "/ASMJIT/", false);
+		fs::remove_all(fs::get_cache_dir() + "/ASMJIT/", false);
 
-			return fs::file(fmt::format("%s/ASMJIT/.objects", fs::get_cache_dir()), fs::rewrite + fs::append);
-		}();
+		fs::file objs(fmt::format("%s/ASMJIT/.objects", fs::get_cache_dir()), fs::read + fs::rewrite);
 
-		if (s_asm)
+		if (!objs || !objs.trunc(c_dump_size))
 		{
-			// Dump object: addr + size + bytes
-			s_asm.write(fmt::format("%s%s%s",
-				std::string_view(reinterpret_cast<char*>(&func), 8),
-				std::string_view(reinterpret_cast<char*>(&size), 8),
-				std::string_view(reinterpret_cast<char*>(func), size)));
+			return nullptr;
 		}
 
-		if (s_asm && name[0] != '_')
-		{
-			// Save some objects separately
-			fs::file dump(fmt::format("%s/ASMJIT/%s", fs::get_cache_dir(), name), fs::rewrite);
+		return utils::memory_map_fd(objs.get_handle(), c_dump_size, utils::protection::rw);
+	}();
 
-			if (dump)
-			{
-				dump.write(reinterpret_cast<uchar*>(func), size);
-			}
+	if (g_asm && size < c_index_size)
+	{
+		struct entry
+		{
+			u64 addr; // RPCS3 process address
+			u32 size; // Function size
+			u32 off; // Function offset
+		};
+
+		// Write index entry at the beginning of file, and data + NTS name at fixed offset
+		const u64 index_off = g_index_off.fetch_add(1);
+		const u64 size_all = size + name.size() + 1;
+		const u64 data_off = g_data_off.fetch_add(size_all);
+
+		// If either index or data area is exhausted, nothing will be written
+		if (index_off < c_index_size / sizeof(entry) && data_off + size_all < c_dump_size)
+		{
+			entry& index = static_cast<entry*>(g_asm)[index_off];
+
+			std::memcpy(static_cast<char*>(g_asm) + data_off, reinterpret_cast<char*>(func), size);
+			std::memcpy(static_cast<char*>(g_asm) + data_off + size, name.data(), name.size());
+			index.size = static_cast<u32>(size);
+			index.off = static_cast<u32>(data_off);
+			atomic_storage<u64>::store(index.addr, func);
+		}
+	}
+
+	if (g_asm && !name.empty() && name[0] != '_')
+	{
+		// Save some objects separately
+		fs::file dump(fmt::format("%s/ASMJIT/%s", fs::get_cache_dir(), name), fs::rewrite);
+
+		if (dump)
+		{
+			dump.write(reinterpret_cast<uchar*>(func), size);
 		}
 	}
 

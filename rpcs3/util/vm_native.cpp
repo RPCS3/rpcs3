@@ -296,6 +296,23 @@ namespace utils
 #endif
 	}
 
+	void* memory_map_fd(native_handle fd, usz size, protection prot)
+	{
+#ifdef _WIN32
+		// TODO
+		return nullptr;
+#else
+		const auto result = ::mmap(nullptr, size, +prot, MAP_SHARED, fd, 0);
+
+		if (result == reinterpret_cast<void*>(uptr{umax}))
+		{
+			[[unlikely]] return nullptr;
+		}
+
+		return result;
+#endif
+	}
+
 	shm::shm(u32 size, u32 flags)
 		: m_flags(flags)
 		, m_size(utils::align(size, 0x10000))

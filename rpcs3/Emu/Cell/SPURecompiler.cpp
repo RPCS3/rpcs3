@@ -1074,7 +1074,9 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		workload.clear();
 		result = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
 
-		jit_announce(wxptr, raw - wxptr, "spu_ubertrampoline");
+		std::string fname;
+		fmt::append(fname, "__ub%u", m_flat_list.size());
+		jit_announce(wxptr, raw - wxptr, fname);
 	}
 
 	if (auto _old = stuff_it->trampoline.compare_and_swap(nullptr, result))

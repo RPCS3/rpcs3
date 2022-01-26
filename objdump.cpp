@@ -21,10 +21,7 @@
 #include <cstdint>
 #include <unistd.h>
 #include <sys/file.h>
-#include <sys/wait.h>
-#include <sys/sendfile.h>
-#include <spawn.h>
-#include <unordered_map>
+#include <sys/mman.h>
 #include <string>
 #include <vector>
 #include <charconv>
@@ -53,58 +50,92 @@ int main(int argc, char* argv[])
 	// Get cache path
 	home += "/rpcs3/ASMJIT/";
 
-	// Get object names
+	// Get objects
 	int fd = open((home + ".objects").c_str(), O_RDONLY);
 
 	if (fd < 0)
 		return 1;
 
-	// Addr -> offset;size in .objects
-	std::unordered_map<std::uint64_t, std::pair<std::uint64_t, std::uint64_t>> objects;
+	// Map 4GiB (full size)
+	const auto data = mmap(nullptr, 0x10000'0000, PROT_READ, MAP_SHARED, fd, 0);
 
-	while (true)
+	struct entry
 	{
-		// Size is name size, not object size
-		std::uint64_t ptr, size;
-		if (read(fd, &ptr, 8) != 8 || read(fd, &size, 8) != 8)
-			break;
-		std::uint64_t off = lseek(fd, 0, SEEK_CUR);
-		objects.emplace(ptr, std::make_pair(off, size));
-		lseek(fd, size, SEEK_CUR);
-	}
+		std::uint64_t addr;
+		std::uint32_t size;
+		std::uint32_t off;
+	};
+
+	// Index part (precedes actual data)
+	const auto index = static_cast<const entry*>(data);
+
+	const entry* found = nullptr;
+
+	std::string out_file;
 
 	std::vector<std::string> args;
-
-	std::uint64_t addr = 0;
 
 	for (int i = 0; i < argc; i++)
 	{
 		// Replace args
 		std::string arg = argv[i];
 
-		if (arg.find("--start-address=0x") == 0)
+		if (std::uintptr_t(data) != -1 && arg.find("--start-address=0x") == 0)
 		{
+			// Decode address and try to find the object
+			std::uint64_t addr = -1;
+
 			std::from_chars(arg.data() + strlen("--start-address=0x"), arg.data() + arg.size(), addr, 16);
 
-			if (objects.count(addr))
+			for (int j = 0; j < 0x100'0000; j++)
 			{
-				// Extract object into a tmp file
-				lseek(fd, objects[addr].first, SEEK_SET);
-				const int fd2 = open("/tmp/rpcs3.objdump.tmp", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-				sendfile(fd2, fd, nullptr, objects[addr].second);
-				close(fd2);
+				if (index[j].addr == 0)
+				{
+					break;
+				}
+
+				if (index[j].addr == addr)
+				{
+					found = index + j;
+					break;
+				}
+			}
+
+			if (found)
+			{
+				// Extract object into a new file (read file name from the mapped memory)
+				const char* name = static_cast<char*>(data) + found->off + found->size;
+
+				if (name[0])
+				{
+					out_file = home + name;
+				}
+				else
+				{
+					out_file = "/tmp/rpcs3.objdump." + std::to_string(getpid());
+					unlink(out_file.c_str());
+				}
+
+				const int fd2 = open(out_file.c_str(), O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+
+				if (fd2 > 0)
+				{
+					// Don't overwrite if exists
+					write(fd2, static_cast<char*>(data) + found->off, found->size);
+					close(fd2);
+				}
 
 				args.emplace_back("--adjust-vma=" + to_hex(addr));
 				continue;
 			}
 		}
 
-		if (objects.count(addr) && arg.find("--stop-address=0x") == 0)
+		if (found && arg.find("--stop-address=0x") == 0)
 		{
 			continue;
 		}
 
-		if (objects.count(addr) && arg == "-d")
+		if (found && arg == "-d")
 		{
 			arg = "-D";
 		}
@@ -117,14 +148,14 @@ int main(int argc, char* argv[])
 		args.emplace_back(std::move(arg));
 	}
 
-	if (objects.count(addr))
+	if (found)
 	{
 		args.pop_back();
 		args.emplace_back("-b");
 		args.emplace_back("binary");
 		args.emplace_back("-m");
-		args.emplace_back("i386");
-		args.emplace_back("/tmp/rpcs3.objdump.tmp");
+		args.emplace_back("i386:x86-64");
+		args.emplace_back(std::move(out_file));
 	}
 
 	args[0] = "/usr/bin/objdump";
@@ -138,12 +169,11 @@ int main(int argc, char* argv[])
 
 	new_argv.push_back(nullptr);
 
-	if (objects.count(addr))
+	if (found)
 	{
 		int fds[2];
 		pipe(fds);
 
-		// objdump is broken; fix address truncation
 		if (fork() > 0)
 		{
 			close(fds[1]);
@@ -158,20 +188,6 @@ int main(int argc, char* argv[])
 
 					if (c == '\n')
 					{
-						// Replace broken address
-						if ((buf[0] >= '0' && buf[0] <= '9') || (buf[0] >= 'a' && buf[0] <= 'f'))
-						{
-							std::uint64_t ptr = -1;
-							auto cvt = std::from_chars(buf.data(), buf.data() + buf.size(), ptr, 16);
-
-							if (cvt.ec == std::errc() && ptr < addr)
-							{
-								auto fix = to_hex((ptr - std::uint32_t(addr)) + addr, false);
-								write(STDOUT_FILENO, fix.data(), fix.size());
-								buf = std::string(cvt.ptr);
-							}
-						}
-
 						write(STDOUT_FILENO, buf.data(), buf.size());
 						buf.clear();
 					}
