@@ -29,7 +29,7 @@ namespace rsx
 		{
 			fs::file f(filename);
 
-			if (!f)
+			if (!f || f.stat().is_directory)
 			{
 				rsx_log.error("Image resource file `%s' could not be opened (%s)", filename, fs::g_tls_error);
 				return;
