@@ -27,15 +27,15 @@ namespace rsx
 	{
 		image_info::image_info(const char* filename)
 		{
-			if (!fs::is_file(filename))
+			fs::file f(filename);
+
+			if (!f)
 			{
-				rsx_log.error("Image resource file `%s' not found", filename);
+				rsx_log.error("Image resource file `%s' could not be opened (%s)", filename, fs::g_tls_error);
 				return;
 			}
 
-			std::vector<u8> bytes;
-			fs::file f(filename);
-			f.read(bytes, f.size());
+			auto bytes = f.to_vector<u8>();
 			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(f.size()), &w, &h, &bpp, STBI_rgb_alpha);
 		}
 
@@ -46,9 +46,7 @@ namespace rsx
 
 		image_info::~image_info()
 		{
-			stbi_image_free(data);
-			data = nullptr;
-			w = h = bpp = 0;
+			if (data) stbi_image_free(data);
 		}
 
 		resource_config::resource_config()
