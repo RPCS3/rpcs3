@@ -142,7 +142,7 @@ namespace rsx
 					if (info->data != nullptr)
 					{
 						// Install the image to config dir
-						fs::create_path(image_path);
+						fs::create_path(fs::get_parent_dir(image_path));
 						fs::copy_file(src, image_path, true);
 					}
 				}
