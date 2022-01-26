@@ -1413,6 +1413,12 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	};
 
 	m_file = std::make_unique<unix_file>(fd);
+
+	if (mode & fs::isfile && !(mode & fs::write) && stat().is_directory)
+	{
+		m_file.reset();
+		g_tls_error = error::isdir;
+	}
 #endif
 }
 
