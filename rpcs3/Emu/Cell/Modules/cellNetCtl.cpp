@@ -2,7 +2,6 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
-#include "Emu/Cell/lv2/sys_sync.h"
 
 #include "cellGame.h"
 #include "cellSysutil.h"

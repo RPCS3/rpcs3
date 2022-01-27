@@ -2020,6 +2020,9 @@
     <ClInclude Include="Emu\Io\camera_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\lv2.h">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">

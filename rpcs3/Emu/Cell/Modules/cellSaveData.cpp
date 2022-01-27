@@ -4,8 +4,8 @@
 #include "Emu/IdManager.h"
 #include "Emu/localized_string.h"
 #include "Emu/Cell/lv2/sys_fs.h"
-#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/lv2.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Cell/Modules/cellUserInfo.h"
@@ -16,6 +16,8 @@
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/date_time.h"
+#include "Utilities/sema.h"
+#include "Utilities/mutex.h"
 
 #include <mutex>
 #include <algorithm>

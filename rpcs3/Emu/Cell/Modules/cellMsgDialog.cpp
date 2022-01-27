@@ -2,8 +2,8 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Cell/lv2/lv2.h"
 #include "Emu/Io/interception.h"
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
 

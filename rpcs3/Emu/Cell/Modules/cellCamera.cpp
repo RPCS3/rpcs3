@@ -4,7 +4,9 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/lv2.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 
 LOG_CHANNEL(cellCamera);
 

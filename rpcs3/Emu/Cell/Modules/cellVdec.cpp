@@ -2,9 +2,9 @@
 #include "Emu/IdManager.h"
 #include "Emu/perf_meter.hpp"
 #include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/lv2.h"
 #include "sysPrxForUser.h"
 
 #ifdef _MSC_VER

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sys_sync.h"
+#include "lv2.h"
 #include "sys_mutex.h"
 
 struct lv2_mutex;

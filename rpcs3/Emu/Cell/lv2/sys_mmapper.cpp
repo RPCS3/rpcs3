@@ -5,7 +5,6 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Memory/vm_var.h"
 #include "sys_memory.h"
-#include "sys_sync.h"
 #include "sys_process.h"
 
 #include "util/vm.hpp"

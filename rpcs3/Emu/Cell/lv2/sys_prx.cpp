@@ -3,6 +3,7 @@
 
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 

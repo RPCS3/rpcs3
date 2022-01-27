@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "sys_usbd.h"
 #include "sys_ppu_thread.h"
-#include "sys_sync.h"
+#include "lv2.h"
 
 #include <queue>
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 

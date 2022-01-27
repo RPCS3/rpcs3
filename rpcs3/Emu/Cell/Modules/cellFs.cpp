@@ -4,7 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_fs.h"
-#include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/lv2.h"
 #include "cellFs.h"
 
 #include <mutex>

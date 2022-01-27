@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sys_sync.h"
+#include "lv2.h"
 
 #include "Emu/Memory/vm_ptr.h"
 
@@ -102,10 +102,6 @@ struct lv2_event_queue final : public lv2_obj
 
 	// Get event queue by its global key
 	static std::shared_ptr<lv2_event_queue> find(u64 ipc_key);
-
-	// Check queue ptr validity (use 'exists' member)
-	static bool check(const std::weak_ptr<lv2_event_queue>&);
-	static bool check(const std::shared_ptr<lv2_event_queue>&);
 };
 
 struct lv2_event_port final : lv2_obj

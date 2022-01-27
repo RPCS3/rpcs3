@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sys_sync.h"
+#include "lv2.h"
 #include "sys_event.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"

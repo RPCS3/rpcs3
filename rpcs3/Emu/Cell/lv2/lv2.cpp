@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Memory/vm_locking.h"
 
@@ -1468,6 +1469,101 @@ void lv2_obj::schedule_all()
 		}
 	}
 }
+
+template <bool IsUsleep, bool Scale>
+bool lv2_obj::wait_timeout(u64 usec, cpu_thread* const cpu)
+{
+	static_assert(u64{umax} / max_timeout >= 100, "max timeout is not valid for scaling");
+
+	if constexpr (Scale)
+	{
+		// Scale time
+		usec = std::min<u64>(usec, u64{umax} / 100) * 100 / g_cfg.core.clocks_scale;
+	}
+
+	// Clamp
+	usec = std::min<u64>(usec, max_timeout);
+
+	u64 passed = 0;
+
+	const u64 start_time = get_system_time();
+
+	auto wait_for = [cpu](u64 timeout)
+	{
+		atomic_bs_t<cpu_flag> dummy{};
+		auto& state = cpu ? cpu->state : dummy;
+		const auto old = +state;
+
+		if (old & cpu_flag::signal)
+		{
+			return true;
+		}
+
+		thread_ctrl::wait_on(state, old, timeout);
+		return false;
+	};
+
+	while (usec >= passed)
+	{
+			u64 remaining = usec - passed;
+#ifdef __linux__
+		// NOTE: Assumption that timer initialization has succeeded
+		u64 host_min_quantum = IsUsleep && remaining <= 1000 ? 10 : 50;
+#else
+		// Host scheduler quantum for windows (worst case)
+		// NOTE: On ps3 this function has very high accuracy
+		constexpr u64 host_min_quantum = 500;
+#endif
+		// TODO: Tune for other non windows operating sytems
+		bool escape = false;
+		if (g_cfg.core.sleep_timers_accuracy < (IsUsleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
+		{
+			escape = wait_for(remaining);
+		}
+		else
+		{
+			if (remaining > host_min_quantum)
+			{
+#ifdef __linux__
+				// Do not wait for the last quantum to avoid loss of accuracy
+				escape = wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
+#else
+				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
+				escape = wait_for(remaining - (remaining % host_min_quantum));
+#endif
+			}
+			else
+			{
+				// Try yielding. May cause long wake latency but helps weaker CPUs a lot by alleviating resource pressure
+				std::this_thread::yield();
+			}
+		}
+
+		if (auto cpu0 = get_current_cpu_thread(); cpu0 && cpu0->is_stopped())
+		{
+			return false;
+		}
+
+		if (thread_ctrl::state() == thread_state::aborting)
+		{
+			return false;
+		}
+
+		if (escape)
+		{
+			return false;
+		}
+
+		passed = get_system_time() - start_time;
+	}
+
+	return true;
+}
+
+template bool lv2_obj::wait_timeout<false, false>(u64 usec, cpu_thread* const cpu);
+template bool lv2_obj::wait_timeout<true, false>(u64 usec, cpu_thread* const cpu);
+template bool lv2_obj::wait_timeout<false, true>(u64 usec, cpu_thread* const cpu);
+template bool lv2_obj::wait_timeout<true, true>(u64 usec, cpu_thread* const cpu);
 
 ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_lv2)
 {
