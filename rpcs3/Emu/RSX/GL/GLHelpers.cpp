@@ -3,6 +3,7 @@
 #include "GLTexture.h"
 #include "GLCompute.h"
 #include "util/logs.hpp"
+#include "Emu/system_config.h"
 
 #include <unordered_map>
 
@@ -670,5 +671,38 @@ namespace gl
 
 		glClear(clear_mask);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+	}
+
+	namespace glsl
+	{
+		void shader::precompile()
+		{
+			const char* str = source.c_str();
+			const GLint length = ::narrow<GLint>(source.length());
+
+			if (g_cfg.video.log_programs)
+			{
+				std::string base_name;
+				switch (type)
+				{
+				case ::glsl::program_domain::glsl_vertex_program:
+					base_name = "shaderlog/VertexProgram";
+					break;
+				case ::glsl::program_domain::glsl_fragment_program:
+					base_name = "shaderlog/FragmentProgram";
+					break;
+				case ::glsl::program_domain::glsl_compute_program:
+					base_name = "shaderlog/ComputeProgram";
+					break;
+				}
+
+				fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str, length);
+			}
+
+			glShaderSource(m_id, 1, &str, &length);
+
+			m_init_fence.create();
+			flush_command_queue(m_init_fence);
+		}
 	}
 }

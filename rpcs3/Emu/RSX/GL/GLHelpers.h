@@ -12,10 +12,8 @@
 #include "../Common/TextureUtils.h"
 #include "../Program/GLSLTypes.h"
 
-#include "Emu/system_config.h"
 #include "Utilities/mutex.h"
 #include "Utilities/geometry.h"
-#include "Utilities/File.h"
 #include "util/logs.hpp"
 #include "util/asm.hpp"
 
@@ -2238,35 +2236,7 @@ public:
 			shared_mutex m_compile_lock;
 			atomic_t<bool> m_is_compiled{};
 
-			void precompile()
-			{
-				const char* str = source.c_str();
-				const GLint length = ::narrow<GLint>(source.length());
-
-				if (g_cfg.video.log_programs)
-				{
-					std::string base_name;
-					switch (type)
-					{
-					case ::glsl::program_domain::glsl_vertex_program:
-						base_name = "shaderlog/VertexProgram";
-						break;
-					case ::glsl::program_domain::glsl_fragment_program:
-						base_name = "shaderlog/FragmentProgram";
-						break;
-					case ::glsl::program_domain::glsl_compute_program:
-						base_name = "shaderlog/ComputeProgram";
-						break;
-					}
-
-					fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str, length);
-				}
-
-				glShaderSource(m_id, 1, &str, &length);
-
-				m_init_fence.create();
-				flush_command_queue(m_init_fence);
-			}
+			void precompile();
 
 		public:
 			shader() = default;
