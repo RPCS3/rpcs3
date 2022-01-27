@@ -12,7 +12,7 @@ private:
 	steady_clock::time_point m_end;
 
 public:
-	Timer() : m_stopped(false)
+	Timer() : m_stopped(false), m_start(steady_clock::now())
 	{
 	}
 

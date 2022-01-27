@@ -2,6 +2,7 @@
 
 #include "Emu/Io/PadHandler.h"
 #include "Utilities/CRC.h"
+#include "Utilities/Thread.h"
 
 #include "hidapi.h"
 
@@ -77,10 +78,14 @@ protected:
 	std::map<std::string, std::shared_ptr<Device>> m_controllers;
 
 	bool m_is_init = false;
-	std::chrono::system_clock::time_point m_last_enumeration;
 	std::set<std::string> m_last_enumerated_devices;
+	std::set<std::string> m_new_enumerated_devices;
+	std::map<std::string, std::wstring_view> m_enumerated_serials;
+	std::mutex m_enumeration_mutex;
+	std::unique_ptr<named_thread<std::function<void()>>> m_enumeration_thread;
 
 	void enumerate_devices();
+	void update_devices();
 	std::shared_ptr<Device> get_hid_device(const std::string& padId);
 
 	virtual void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial) = 0;
