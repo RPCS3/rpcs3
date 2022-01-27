@@ -386,6 +386,21 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<pad_handler_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case pad_handler_mode::single_threaded: return "Single-threaded";
+		case pad_handler_mode::multi_threaded: return "Multi-threaded";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<buzz_handler>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)

@@ -193,8 +193,7 @@ public:
 
 		// input
 
-		const QString pad_handler       = tr("If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.\nIf you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with MMJoystick.\nCheck button mappings in the Windows control panel.");
-		const QString pad_handler_linux = tr("If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.");
+		const QString pad_mode          = tr("Single-threaded: All pad handlers run on the same thread sequentially.\nMulti-threaded: Each pad handler has its own thread.\nOnly use multi-threaded if you can spare the extra threads.");
 		const QString keyboard_handler  = tr("Some games support native keyboard input.\nBasic will work in these cases.");
 		const QString mouse_handler     = tr("Some games support native mouse input.\nBasic will work in these cases.");
 		const QString camera            = tr("Select Qt Camera to use the default camera device of your operating system.");
