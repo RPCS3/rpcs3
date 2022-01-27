@@ -135,6 +135,12 @@ enum class microphone_handler
 	rocksmith,
 };
 
+enum class pad_handler_mode
+{
+	single_threaded, // All pad handlers run on the same thread sequentially.
+	multi_threaded   // Each pad handler has its own thread.
+};
+
 enum class video_resolution
 {
 	_1080,

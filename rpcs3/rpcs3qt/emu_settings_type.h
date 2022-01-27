@@ -126,6 +126,7 @@ enum class emu_settings_type
 	MicrophoneDevices,
 
 	// Input / Output
+	PadHandlerMode,
 	KeyboardHandler,
 	MouseHandler,
 	Camera,
@@ -287,6 +288,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MicrophoneDevices,       { "Audio", "Microphone Devices" }},
 
 	// Input / Output
+	{ emu_settings_type::PadHandlerMode,  { "Input/Output", "Pad handler mode"}},
 	{ emu_settings_type::KeyboardHandler, { "Input/Output", "Keyboard"}},
 	{ emu_settings_type::MouseHandler,    { "Input/Output", "Mouse"}},
 	{ emu_settings_type::Camera,          { "Input/Output", "Camera"}},
