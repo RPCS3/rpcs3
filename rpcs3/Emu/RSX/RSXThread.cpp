@@ -1934,7 +1934,7 @@ namespace rsx
 			auto &tex = rsx::method_registers.fragment_textures[i];
 			current_fp_texture_state.clear(i);
 
-			if (tex.enabled())
+			if (tex.enabled() && sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_UNDEFINED)
 			{
 				current_fragment_program.texture_params[i].scale[0] = sampler_descriptors[i]->scale_x;
 				current_fragment_program.texture_params[i].scale[1] = sampler_descriptors[i]->scale_y;
