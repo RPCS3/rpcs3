@@ -931,7 +931,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					break;
 				}
 
-				if (fs::file sfb_file{parent_dir + "/PS3_DISC.SFB"}; sfb_file && sfb_file.size() >= 4 && sfb_file.read<u32>() == ".SFB"_u32)
+				if (fs::file sfb_file{parent_dir + "/PS3_DISC.SFB", fs::read + fs::isfile}; sfb_file && sfb_file.size() >= 4 && sfb_file.read<u32>() == ".SFB"_u32)
 				{
 					main_dir_name = std::string_view{search_dir}.substr(search_dir.find_last_of(fs::delim) + 1);
 
