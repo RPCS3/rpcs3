@@ -657,6 +657,17 @@ void main_window::InstallPackages(QStringList file_paths)
 		}
 	}
 
+	if (!m_gui_settings->GetBootConfirmation(this))
+	{
+		// Last chance to cancel the operation
+		return;
+	}
+
+	if (!Emu.IsStopped())
+	{
+		Emu.GracefulShutdown(false);
+	}
+
 	// Install rap files if available
 	int installed_rap_and_edat_count = 0;
 
@@ -665,17 +676,6 @@ void main_window::InstallPackages(QStringList file_paths)
 		const QString pattern = QString(".*\\.%1").arg(QString::fromStdString(extension));
 		for (const auto& file : file_paths.filter(QRegExp(pattern, Qt::CaseInsensitive)))
 		{
-			if (!m_gui_settings->GetBootConfirmation(this))
-			{
-				// Last chance to cancel the operation
-				return;
-			}
-
-			if (!Emu.IsStopped())
-			{
-				Emu.GracefulShutdown(false);
-			}
-
 			const QFileInfo file_info(file);
 			const std::string filename = sstr(file_info.fileName());
 

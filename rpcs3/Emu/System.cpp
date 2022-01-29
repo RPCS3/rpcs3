@@ -1690,7 +1690,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 			process_qt_events(); // Is nullified when performed on non-main thread
 		}
 
-		// An inevitable attempt to terminate the *current* emulation course will be issues after 5s
+		// An inevitable attempt to terminate the *current* emulation course will be issued after 5s
 		CallAfter([allow_autoexit, this, info]()
 		{
 			Kill(allow_autoexit);
