@@ -77,11 +77,14 @@ namespace vk
 		rsx::format_class format_class() const;
 
 		// Pipeline management
-		void push_layout(VkCommandBuffer cmd, VkImageLayout layout);
-		void push_barrier(VkCommandBuffer cmd, VkImageLayout layout);
-		void pop_layout(VkCommandBuffer cmd);
+		void push_layout(const command_buffer& cmd, VkImageLayout layout);
+		void push_barrier(const command_buffer& cmd, VkImageLayout layout);
+		void pop_layout(const command_buffer& cmd);
 		void change_layout(const command_buffer& cmd, VkImageLayout new_layout);
-		void change_layout(const command_buffer& cmd, VkImageLayout new_layout, u32 new_queue_family);
+
+		// Queue transfer
+		void queue_acquire(const command_buffer& cmd, VkImageLayout new_layout);
+		void queue_release(const command_buffer& src_queue_cmd, u32 dst_queue_family, VkImageLayout new_layout);
 
 		// Debug utils
 		void set_debug_name(const std::string& name);

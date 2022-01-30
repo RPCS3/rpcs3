@@ -380,6 +380,29 @@ void VKGSRender::load_texture_env()
 			m_cached_renderpass = VK_NULL_HANDLE;
 		}
 	}
+
+	if (g_cfg.video.vk.asynchronous_texture_streaming)
+	{
+		// We have to do this here, because we have to assume the CB will be dumped
+		auto& async_task_scheduler = g_fxo->get<vk::AsyncTaskScheduler>();
+
+		if (async_task_scheduler.is_recording())
+		{
+			if (async_task_scheduler.is_host_mode())
+			{
+				flush_command_queue();
+				ensure(!async_task_scheduler.is_recording());
+			}
+			else
+			{
+				// Sync any async scheduler tasks
+				if (auto ev = async_task_scheduler.get_primary_sync_label())
+				{
+					ev->gpu_wait(*m_current_command_buffer);
+				}
+			}
+		}
+	}
 }
 
 bool VKGSRender::bind_texture_env()
@@ -1028,12 +1051,6 @@ void VKGSRender::end()
 	// Load program execution environment
 	load_program_env();
 	m_frame_stats.setup_time += m_profiler.duration();
-
-	// Sync any async scheduler tasks
-	if (auto ev = g_fxo->get<vk::async_scheduler_thread>().get_primary_sync_label())
-	{
-		ev->gpu_wait(*m_current_command_buffer);
-	}
 
 	for (int binding_attempts = 0; binding_attempts < 3; binding_attempts++)
 	{

@@ -521,8 +521,8 @@ void fmt_class_string<vk_gpu_scheduler_mode>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case vk_gpu_scheduler_mode::host: return "Host";
-		case vk_gpu_scheduler_mode::device: return "Device";
+		case vk_gpu_scheduler_mode::safe: return "Safe";
+		case vk_gpu_scheduler_mode::fast: return "Fast";
 		}
 
 		return unknown;

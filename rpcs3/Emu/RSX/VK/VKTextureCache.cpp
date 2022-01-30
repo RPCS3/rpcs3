@@ -935,8 +935,9 @@ namespace vk
 			}
 		}
 
+		const rsx::flags32_t create_flags = g_fxo->get<AsyncTaskScheduler>().is_host_mode() ? texture_create_flags::do_not_reuse : 0;
 		auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, swizzled,
-			rsx::component_order::default_, 0);
+			rsx::component_order::default_, create_flags);
 
 		auto image = section->get_raw_texture();
 		image->set_debug_name(fmt::format("Raw Texture @0x%x", rsx_range.start));
@@ -950,8 +951,12 @@ namespace vk
 			input_swizzled = false;
 		}
 
-		rsx::flags32_t upload_command_flags = initialize_image_layout |
-			(rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute ? upload_contents_async : upload_contents_inline);
+		rsx::flags32_t upload_command_flags = initialize_image_layout | upload_contents_inline;
+		if (context == rsx::texture_upload_context::shader_read &&
+			rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute)
+		{
+			upload_command_flags |= upload_contents_async;
+		}
 
 		const u16 layer_count = (type == rsx::texture_dimension_extended::texture_dimension_cubemap) ? 6 : 1;
 		vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, layer_count, image->aspect(),
@@ -1086,11 +1091,40 @@ namespace vk
 		{
 			// Flush any pending async jobs in case of blockers
 			// TODO: Context-level manager should handle this logic
-			g_fxo->get<async_scheduler_thread>().flush(VK_TRUE);
+			auto& async_scheduler = g_fxo->get<AsyncTaskScheduler>();
+			vk::semaphore* async_sema = nullptr;
+
+			if (async_scheduler.is_recording())
+			{
+				if (async_scheduler.is_host_mode())
+				{
+					async_sema = async_scheduler.get_sema();
+				}
+				else
+				{
+					vk::queue_submit_t submit_info{};
+					async_scheduler.flush(submit_info, VK_TRUE);
+				}
+			}
 
 			// Primary access command queue, must restart it after
+			// Primary access command queue, must restart it after
 			vk::fence submit_fence(*m_device);
-			cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, &submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_TRUE);
+			vk::queue_submit_t submit_info{ m_submit_queue, &submit_fence };
+
+			if (async_sema)
+			{
+				submit_info.queue_signal(*async_sema);
+			}
+
+			cmd.submit(submit_info, VK_TRUE);
+
+			if (async_sema)
+			{
+				vk::queue_submit_t submit_info2{};
+				submit_info2.wait_on(*async_sema, VK_PIPELINE_STAGE_TRANSFER_BIT);
+				async_scheduler.flush(submit_info2, VK_FALSE);
+			}
 
 			vk::wait_for_fence(&submit_fence, GENERAL_WAIT_TIMEOUT);
 
@@ -1100,7 +1134,8 @@ namespace vk
 		else
 		{
 			// Auxilliary command queue with auto-restart capability
-			cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_TRUE);
+			vk::queue_submit_t submit_info{ m_submit_queue, nullptr };
+			cmd.submit(submit_info, VK_TRUE);
 		}
 
 		ensure(cmd.flags == 0);
