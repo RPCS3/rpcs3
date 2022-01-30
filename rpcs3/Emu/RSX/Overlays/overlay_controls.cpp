@@ -27,9 +27,9 @@ namespace rsx
 	{
 		image_info::image_info(const char* filename)
 		{
-			fs::file f(filename);
+			fs::file f(filename, fs::read + fs::isfile);
 
-			if (!f || f.stat().is_directory)
+			if (!f)
 			{
 				rsx_log.error("Image resource file `%s' could not be opened (%s)", filename, fs::g_tls_error);
 				return;
