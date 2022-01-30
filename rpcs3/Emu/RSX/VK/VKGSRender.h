@@ -429,6 +429,7 @@ private:
 	u32 m_current_cb_index = 0;
 	std::array<vk::command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
+	VkSemaphore m_dangling_semaphore_signal = VK_NULL_HANDLE;
 
 	VkDescriptorSetLayout descriptor_layouts;
 	VkPipelineLayout pipeline_layout;

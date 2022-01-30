@@ -53,9 +53,27 @@ namespace vk
 		return (handle != VK_NULL_HANDLE);
 	}
 
-	event::event(const render_device& dev, sync_domain domain)
+	semaphore::semaphore(const render_device& dev)
+		: m_device(dev)
 	{
-		m_device = dev;
+		VkSemaphoreCreateInfo info{};
+		info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		CHECK_RESULT(vkCreateSemaphore(m_device, &info, nullptr, &m_handle));
+	}
+
+	semaphore::~semaphore()
+	{
+		vkDestroySemaphore(m_device, m_handle, nullptr);
+	}
+
+	semaphore::operator VkSemaphore() const
+	{
+		return m_handle;
+	}
+
+	event::event(const render_device& dev, sync_domain domain)
+		: m_device(dev)
+	{
 		if (domain == sync_domain::gpu || dev.gpu().get_driver_vendor() != driver_vendor::AMD)
 		{
 			VkEventCreateInfo info

@@ -811,7 +811,7 @@ namespace vk
 		const vk::command_buffer* pcmd = nullptr;
 		if (flags & image_upload_options::upload_contents_async)
 		{
-			auto async_cmd = g_fxo->get<vk::async_scheduler_thread>().get_current();
+			auto async_cmd = g_fxo->get<AsyncTaskScheduler>().get_current();
 			async_cmd->begin();
 			pcmd = async_cmd;
 
@@ -832,9 +832,20 @@ namespace vk
 
 		ensure(pcmd);
 
+		// Queue transfer stuff. Must release from primary if owned and acquire in secondary.
+		const bool need_queue_xfer = dst_image->current_layout != VK_IMAGE_LAYOUT_UNDEFINED && primary_cb.get_queue_family() != pcmd->get_queue_family();
+		if (need_queue_xfer)
+		{
+			dst_image->queue_release(primary_cb, pcmd->get_queue_family(), dst_image->current_layout);
+		}
+
 		if (flags & image_upload_options::initialize_image_layout)
 		{
-			dst_image->change_layout(*pcmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pcmd->get_queue_family());
+			dst_image->change_layout(*pcmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		}
+		else if (need_queue_xfer)
+		{
+			dst_image->queue_acquire(*pcmd, dst_image->current_layout);
 		}
 
 		return *pcmd;
@@ -1118,6 +1129,12 @@ namespace vk
 		else
 		{
 			vkCmdCopyBufferToImage(cmd2, upload_buffer->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
+		}
+
+		if (cmd2.get_queue_family() != cmd.get_queue_family())
+		{
+			// Release from async chain, the primary chain will acquire later
+			dst_image->queue_release(cmd2, cmd.get_queue_family(), dst_image->current_layout);
 		}
 	}
 

@@ -56,7 +56,7 @@ namespace vk
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range,
-		u32 src_queue_family, u32 dst_queue_family)
+		u32 src_queue_family, u32 dst_queue_family, u32 src_access_mask_bits, u32 dst_access_mask_bits)
 	{
 		if (vk::is_renderpass_open(cmd))
 		{
@@ -195,6 +195,12 @@ namespace vk
 		default:
 			break; //TODO Investigate what happens here
 		}
+
+		barrier.srcAccessMask &= src_access_mask_bits;
+		barrier.dstAccessMask &= dst_access_mask_bits;
+
+		if (!barrier.srcAccessMask) src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		if (!barrier.dstAccessMask) dst_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}

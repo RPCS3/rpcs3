@@ -31,7 +31,7 @@ namespace vk
 	class image;
 	class instance;
 	class render_device;
-	struct submit_packet;
+	struct queue_submit_t;
 
 	enum runtime_state
 	{
@@ -53,7 +53,7 @@ namespace vk
 	// Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
 	void release_global_submit_lock();
-	void queue_submit(const vk::submit_packet* packet);
+	void queue_submit(const vk::queue_submit_t* packet);
 
 	template<class T>
 	T* get_compute_task();
