@@ -172,10 +172,10 @@ struct spu_channel
 	atomic_t<u64> data;
 
 public:
-	static const u32 off_wait = 32;
-	static const u32 off_count = 63;
-	static const u64 bit_wait = 1ull << off_wait;
-	static const u64 bit_count = 1ull << off_count;
+	static constexpr u32 off_wait  = 32;
+	static constexpr u32 off_count = 63;
+	static constexpr u64 bit_wait  = 1ull << off_wait;
+	static constexpr u64 bit_count = 1ull << off_count;
 
 	// Returns true on success
 	bool try_push(u32 value)
