@@ -2084,6 +2084,7 @@ namespace rsx
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
 				attributes.depth = 1;
+				attributes.height = 1;
 				attributes.slice_h = 1;
 				scale.height = scale.depth = 0.f;
 				subsurface_count = 1;
@@ -2111,6 +2112,15 @@ namespace rsx
 				break;
 			default:
 				fmt::throw_exception("Unsupported texture dimension %d", static_cast<int>(extended_dimension));
+			}
+
+			// Validation
+			if (!attributes.width || !attributes.height || !attributes.depth)
+			{
+				rsx_log.warning("Image at address 0x%x has invalid dimensions. Type=%d, Dims=%dx%dx%d",
+					attributes.address, static_cast<s32>(extended_dimension),
+					attributes.width, attributes.height, attributes.depth);
+				return {};
 			}
 
 			if (options.is_compressed_format)

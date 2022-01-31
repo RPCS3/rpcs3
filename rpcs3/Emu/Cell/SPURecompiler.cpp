@@ -8020,7 +8020,7 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
 			}
 
-			if (g_cfg.core.spu_approx_xfloat)
+			if (g_cfg.core.spu_approx_xfloat || g_cfg.core.spu_relaxed_xfloat)
 			{
 				const auto ai = eval(bitcast<s32[4]>(a));
 				const auto bi = eval(bitcast<s32[4]>(b));
@@ -8480,7 +8480,7 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			if (g_cfg.core.spu_approx_xfloat)
+			if (g_cfg.core.spu_approx_xfloat || g_cfg.core.spu_relaxed_xfloat)
 			{
 				return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
 			}

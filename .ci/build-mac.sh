@@ -10,7 +10,7 @@ export PATH="/usr/local/opt/llvm/bin:/usr/local/bin:/usr/local/sbin:/usr/local/b
 export LDFLAGS="-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib"
 export CPPFLAGS="-I/usr/local/opt/llvm/include -msse -msse2 -mcx16 -no-pie"
 export CXXFLAGS="-I/usr/local/opt/llvm/include -msse -msse2 -mcx16 -no-pie"
-export VULKAN_SDK="/usr/local/Cellar/molten-vk/1.1.6"
+export VULKAN_SDK="/usr/local/opt/molten-vk"
 export VK_ICD_FILENAMES="$VULKAN_SDK/share/vulkan/icd.d/MoltenVK_icd.json"
 
 git submodule update --init --recursive --depth 1
@@ -36,7 +36,7 @@ COMM_HASH="$(git rev-parse --short=8 HEAD)"
 cd ../build/bin
 
 mkdir "rpcs3.app/Contents/lib/"
-cp "/usr/local/Cellar/llvm/13.0.0_2/lib/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+cp "/usr/local/opt/llvm/lib/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \
 "rpcs3.app/Contents/Frameworks/QtQmlModels.framework" \

@@ -177,7 +177,14 @@ void VKGSRender::load_texture_env()
 			{
 				check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
 				*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
+			}
+			else
+			{
+				*sampler_state = {};
+			}
 
+			if (sampler_state->validate())
+			{
 				if (sampler_state->is_cyclic_reference)
 				{
 					check_for_cyclic_refs |= true;
@@ -295,10 +302,6 @@ void VKGSRender::load_texture_env()
 						border_color, compare_enabled, depth_compare_mode);
 				}
 			}
-			else
-			{
-				*sampler_state = {};
-			}
 
 			m_textures_dirty[i] = false;
 		}
@@ -321,7 +324,14 @@ void VKGSRender::load_texture_env()
 			{
 				check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
 				*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
+			}
+			else
+			{
+				*sampler_state = {};
+			}
 
+			if (sampler_state->validate())
+			{
 				if (sampler_state->is_cyclic_reference || sampler_state->external_subresource_desc.do_not_cache)
 				{
 					check_for_cyclic_refs |= true;
@@ -353,8 +363,6 @@ void VKGSRender::load_texture_env()
 						VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color);
 				}
 			}
-			else
-				*sampler_state = {};
 
 			m_vertex_textures_dirty[i] = false;
 		}

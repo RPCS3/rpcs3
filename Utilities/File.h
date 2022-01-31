@@ -32,6 +32,7 @@ namespace fs
 		excl,
 		lock,
 		unread,
+		isfile,
 
 		__bitset_enum_max
 	};
@@ -44,6 +45,7 @@ namespace fs
 	constexpr auto excl    = +open_mode::excl; // Failure if the file already exists (used with `create`)
 	constexpr auto lock    = +open_mode::lock; // Prevent opening the file more than once
 	constexpr auto unread  = +open_mode::unread; // Aggressively prevent reading the opened file (do not use)
+	constexpr auto isfile  = +open_mode::isfile; // Ensure valid fs::file handle is not of directory
 
 	constexpr auto write_new = write + create + excl;
 	constexpr auto rewrite = write + create + trunc;
