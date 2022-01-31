@@ -191,7 +191,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		}
 		else
 		{
-			m_update_message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
+			m_update_message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 behind.\n\nDo you want to update?")
 				.arg(current["version"].toString())
 				.arg(cur_str)
 				.arg(latest["version"].toString())
