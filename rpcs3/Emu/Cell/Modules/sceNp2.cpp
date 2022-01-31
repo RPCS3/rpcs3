@@ -1109,7 +1109,7 @@ error_code sceNpMatching2GetServerIdListLocal(SceNpMatching2ContextId ctxId, vm:
 
 	const auto slist = nph.get_match2_server_list(ctxId);
 
-	u32 num_servs = std::min(static_cast<u32>(slist.size()), serverIdNum);
+	const u32 num_servs = std::min(::narrow<u32>(slist.size()), serverIdNum);
 
 	if (serverId)
 	{
@@ -1119,7 +1119,7 @@ error_code sceNpMatching2GetServerIdListLocal(SceNpMatching2ContextId ctxId, vm:
 		}
 	}
 
-	return not_an_error(static_cast<s32>(slist.size()));
+	return not_an_error(::narrow<s32>(num_servs));
 }
 
 error_code sceNpUtilBuildCdnUrl(vm::cptr<char> url, vm::ptr<char> buf, u64 bufSize, vm::ptr<u64> required, vm::ptr<void> option)
