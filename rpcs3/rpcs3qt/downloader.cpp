@@ -123,6 +123,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 			{
 				m_curl_abort = true;
 				close_progress_dialog();
+				Q_EMIT signal_download_canceled();
 			});
 			connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
 		}

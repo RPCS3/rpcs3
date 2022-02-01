@@ -77,6 +77,7 @@ public Q_SLOTS:
 private Q_SLOTS:
 	void OnRefreshFinished();
 	void OnRepaintFinished();
+	void OnCompatFinished();
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);

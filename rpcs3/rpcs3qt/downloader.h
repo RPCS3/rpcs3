@@ -37,6 +37,7 @@ private Q_SLOTS:
 Q_SIGNALS:
 	void signal_download_error(const QString& error);
 	void signal_download_finished(const QByteArray& data);
+	void signal_download_canceled();
 	void signal_buffer_update(int size, int max);
 
 private:

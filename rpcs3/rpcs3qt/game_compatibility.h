@@ -157,9 +157,11 @@ public:
 Q_SIGNALS:
 	void DownloadStarted();
 	void DownloadFinished();
+	void DownloadCanceled();
 	void DownloadError(const QString& error);
 
 private Q_SLOTS:
 	void handle_download_error(const QString& error);
 	void handle_download_finished(const QByteArray& content);
+	void handle_download_canceled();
 };

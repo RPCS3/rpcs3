@@ -162,7 +162,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 
 	connect(m_game_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
-	connect(m_game_list->horizontalHeader(), &QHeaderView::customContextMenuRequested, [this](const QPoint& pos)
+	connect(m_game_list->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, [this](const QPoint& pos)
 	{
 		QMenu* configure = new QMenu(this);
 		configure->addActions(m_columnActs);
@@ -173,7 +173,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
 	connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 
-	connect(m_game_compat, &game_compatibility::DownloadStarted, [this]()
+	connect(m_game_compat, &game_compatibility::DownloadStarted, this, [this]()
 	{
 		for (const auto& game : m_game_data)
 		{
@@ -181,21 +181,11 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		}
 		Refresh();
 	});
-	connect(m_game_compat, &game_compatibility::DownloadFinished, [this]()
+	connect(m_game_compat, &game_compatibility::DownloadFinished, this, &game_list_frame::OnCompatFinished);
+	connect(m_game_compat, &game_compatibility::DownloadCanceled, this, &game_list_frame::OnCompatFinished);
+	connect(m_game_compat, &game_compatibility::DownloadError, this, [this](const QString& error)
 	{
-		for (const auto& game : m_game_data)
-		{
-			game->compat = m_game_compat->GetCompatibility(game->info.serial);
-		}
-		Refresh();
-	});
-	connect(m_game_compat, &game_compatibility::DownloadError, [this](const QString& error)
-	{
-		for (const auto& game : m_game_data)
-		{
-			game->compat = m_game_compat->GetCompatibility(game->info.serial);
-		}
-		Refresh();
+		OnCompatFinished();
 		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online compatibility database!\nFalling back to local database.\n\n%0").arg(error));
 	});
 
@@ -203,7 +193,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		m_columnActs[col]->setCheckable(true);
 
-		connect(m_columnActs[col], &QAction::triggered, [this, col](bool checked)
+		connect(m_columnActs[col], &QAction::triggered, this, [this, col](bool checked)
 		{
 			if (!checked) // be sure to have at least one column left so you can call the context menu at all time
 			{
@@ -810,6 +800,15 @@ void game_list_frame::OnRepaintFinished()
 		m_central_widget->setCurrentWidget(m_game_grid);
 		m_game_grid->verticalScrollBar()->setValue(scroll_position);
 	}
+}
+
+void game_list_frame::OnCompatFinished()
+{
+	for (const auto& game : m_game_data)
+	{
+		game->compat = m_game_compat->GetCompatibility(game->info.serial);
+	}
+	Refresh();
 }
 
 void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool show)
