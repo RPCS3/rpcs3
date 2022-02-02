@@ -103,6 +103,9 @@ namespace rsx
 		// apply memory needed for command
 		for (const auto& state : replay_cmd.memory_state)
 		{
+			if (is_stopped())
+				return;
+
 			auto it = frame->memory_map.find(state);
 			if (it == frame->memory_map.end())
 				fmt::throw_exception("requested memory state for command not found in memory_map");
@@ -115,6 +118,9 @@ namespace rsx
 			const auto& data_block = it_data->second;
 			std::memcpy(vm::base(get_address(memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
 		}
+
+		if (is_stopped())
+			return;
 
 		if (replay_cmd.display_buffer_state != 0 && replay_cmd.display_buffer_state != cs.display_buffer_hash)
 		{
@@ -136,6 +142,9 @@ namespace rsx
 			cs.display_buffer_hash = replay_cmd.display_buffer_state;
 		}
 
+		if (is_stopped())
+			return;
+
 		if (replay_cmd.tile_state != 0 && replay_cmd.tile_state != cs.tile_hash)
 		{
 			auto it = frame->tile_map.find(replay_cmd.tile_state);
@@ -145,6 +154,9 @@ namespace rsx
 			const auto& tstate = it->second;
 			for (u32 i = 0; i < limits::tiles_count; ++i)
 			{
+				if (is_stopped())
+					return;
+
 				const auto& ti = tstate.tiles[i];
 				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.tiles[i], &ti, sizeof(rsx::frame_capture_data::tile_info)) == 0)
 					continue;
@@ -155,6 +167,9 @@ namespace rsx
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
 			{
+				if (is_stopped())
+					return;
+
 				const auto& zci = tstate.zculls[i];
 				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.zculls[i], &zci, sizeof(rsx::frame_capture_data::zcull_info)) == 0)
 					continue;
@@ -173,7 +188,7 @@ namespace rsx
 
 		auto fifo_stops = alloc_write_fifo(context_id);
 
-		while (!Emu.IsStopped())
+		while (!test_stopped())
 		{
 			// Load registers while the RSX is still idle
 			method_registers = frame->reg_state;
@@ -183,15 +198,21 @@ namespace rsx
 			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);
 
 			auto render = get_current_renderer();
+			if (!render)
+			{
+				fmt::throw_exception("Capture Replay: RSX Thread is null");
+				break;
+			}
+
 			auto last_flip = render->int_flip_index;
 
 			usz stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
 			{
-				while (Emu.IsPaused())
+				while (Emu.IsPaused() && !is_stopped())
 					thread_ctrl::wait_for(10'000);
 
-				if (Emu.IsStopped())
+				if (is_stopped())
 					break;
 
 				// Loop and hunt down our next state change that needs to be done
@@ -199,12 +220,15 @@ namespace rsx
 					continue;
 
 				// wait until rsx idle and at our first 'stop' to apply state
-				while (!Emu.IsStopped() && !render->is_fifo_idle() && (render->ctrl->get != fifo_stops[stopIdx]))
+				while (!is_stopped() && !render->is_fifo_idle() && (render->ctrl->get != fifo_stops[stopIdx]))
 				{
-					while (Emu.IsPaused())
+					while (Emu.IsPaused() && !is_stopped())
 						thread_ctrl::wait_for(10'000);
 					std::this_thread::yield();
 				}
+
+				if (is_stopped())
+					break;
 
 				stopIdx++;
 
@@ -217,13 +241,16 @@ namespace rsx
 				render->ctrl->put = fifo_stops[stopIdx];
 			}
 
+			if (is_stopped())
+				break;
+
 			// dump put to end of stops, which should have actual end
 			u32 end = fifo_stops.back();
 			render->ctrl->put = end;
 
-			while (!render->is_fifo_idle() && !Emu.IsStopped())
+			while (!render->is_fifo_idle() && !is_stopped())
 			{
-				while (Emu.IsPaused())
+				while (Emu.IsPaused() && !is_stopped())
 					thread_ctrl::wait_for(10'000);
 			}
 
@@ -238,6 +265,6 @@ namespace rsx
 			thread_ctrl::wait_for(10'000);
 		}
 
-		get_current_cpu_thread()->state += (cpu_flag::exit + cpu_flag::wait);
+		get_current_cpu_thread()->state += cpu_flag::exit;
 	}
 }
