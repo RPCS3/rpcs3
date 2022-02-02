@@ -6,6 +6,8 @@
 #include "gui_settings.h"
 
 #include <QDialog>
+#include <QLabel>
+#include <QPushButton>
 #include <QTableWidget>
 
 class save_manager_dialog : public QDialog
@@ -20,14 +22,15 @@ public:
 	*/
 	explicit save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::string dir = "", QWidget* parent = nullptr);
 private Q_SLOTS:
-	void OnEntryInfo();
 	void OnEntryRemove();
 	void OnEntriesRemove();
 	void OnSort(int logicalIndex);
+	void SetIconSize(int size);
+	void UpdateDetails();
 private:
 	void Init(std::string dir);
 	void UpdateList();
-
+	void UpdateIcons();
 	void ShowContextMenu(const QPoint &pos);
 
 	void closeEvent(QCloseEvent* event) override;
@@ -40,4 +43,15 @@ private:
 
 	int m_sort_column;
 	bool m_sort_ascending;
+	QSize m_icon_size;
+
+	QLabel* m_details_icon = nullptr;
+	QLabel* m_details_title = nullptr;
+	QLabel* m_details_subtitle = nullptr;
+	QLabel* m_details_modified = nullptr;
+	QLabel* m_details_details = nullptr;
+	QLabel* m_details_note = nullptr;
+
+	QPushButton* m_button_delete = nullptr;
+	QPushButton* m_button_folder = nullptr;
 };
