@@ -1021,6 +1021,12 @@ namespace rsx
 
 		virtual void on_frame_end()
 		{
+			// Must manually release each cached entry
+			for (auto& entry : m_temporary_subresource_cache)
+			{
+				release_temporary_subresource(entry.second.second);
+			}
+
 			m_temporary_subresource_cache.clear();
 			m_predictor.on_frame_end();
 			reset_frame_statistics();

@@ -14,6 +14,11 @@ namespace vk
 	u64 last_completed_event_id();
 	void on_event_completed(u64 event_id, bool flush = false);
 
+	struct disposable_t
+	{
+		virtual void dispose() = 0;
+	};
+
 	struct eid_scope_t
 	{
 		u64 eid;
@@ -24,6 +29,7 @@ namespace vk
 		std::vector<std::unique_ptr<vk::event>> m_disposed_events;
 		std::vector<std::unique_ptr<vk::query_pool>> m_disposed_query_pools;
 		std::vector<std::unique_ptr<vk::sampler>> m_disposed_samplers;
+		std::vector<std::unique_ptr<vk::disposable_t>> m_disposables;
 
 		eid_scope_t(u64 _eid):
 			eid(_eid), m_device(g_render_device)
@@ -42,6 +48,12 @@ namespace vk
 			m_disposed_images.clear();
 			m_disposed_query_pools.clear();
 			m_disposed_samplers.clear();
+
+			for (auto& disposable : m_disposables)
+			{
+				disposable->dispose();
+			}
+			m_disposables.clear();
 		}
 	};
 
@@ -183,6 +195,11 @@ namespace vk
 		void dispose(std::unique_ptr<vk::sampler>& sampler)
 		{
 			get_current_eid_scope().m_disposed_samplers.emplace_back(std::move(sampler));
+		}
+
+		void dispose(std::unique_ptr<vk::disposable_t>& disposable)
+		{
+			get_current_eid_scope().m_disposables.emplace_back(std::move(disposable));
 		}
 
 		void eid_completed(u64 eid)

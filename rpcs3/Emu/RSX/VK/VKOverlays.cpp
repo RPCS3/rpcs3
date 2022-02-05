@@ -589,6 +589,13 @@ namespace vk
 
 		for (const auto& _key : keys_to_remove)
 		{
+			auto& img_data = temp_image_cache[_key];
+			auto& view_data = temp_view_cache[_key];
+
+			auto gc = vk::get_resource_manager();
+			gc->dispose(img_data.second);
+			gc->dispose(view_data);
+
 			temp_image_cache.erase(_key);
 			temp_view_cache.erase(_key);
 		}

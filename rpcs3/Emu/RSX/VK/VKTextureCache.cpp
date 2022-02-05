@@ -7,6 +7,23 @@
 
 namespace vk
 {
+	texture_cache::cached_image_reference_t::cached_image_reference_t(texture_cache* parent, std::unique_ptr<vk::viewable_image>& previous)
+	{
+		this->parent = parent;
+		this->data = std::move(previous);
+	}
+
+	void texture_cache::cached_image_reference_t::dispose()
+	{
+		// Erase layout information to force TOP_OF_PIPE transition next time.
+		data->current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		// Move this object to the cached image pool
+		std::lock_guard lock(parent->m_cached_pool_lock);
+		parent->m_cached_memory_size += data->memory->size();
+		parent->m_cached_images.emplace_front(std::move(data));
+	}
+
 	void cached_texture_section::dma_transfer(vk::command_buffer& cmd, vk::image* src, const areai& src_area, const utils::address_range& valid_range, u32 pitch)
 	{
 		ensure(src->samples() == 1);
@@ -167,7 +184,8 @@ namespace vk
 	{
 		if (tex.is_managed())
 		{
-			vk::get_resource_manager()->dispose(tex.get_texture());
+			auto disposable = std::unique_ptr<vk::disposable_t>(new cached_image_reference_t(this, tex.get_texture()));
+			vk::get_resource_manager()->dispose(disposable);
 		}
 	}
 
@@ -175,8 +193,8 @@ namespace vk
 	{
 		baseclass::clear();
 
-		m_temporary_storage.clear();
-		m_temporary_memory_size = 0;
+		m_cached_images.clear();
+		m_cached_memory_size = 0;
 	}
 
 	void texture_cache::copy_transfer_regions_impl(vk::command_buffer& cmd, vk::image* dst, const std::vector<copy_region_descriptor>& sections_to_transfer) const
@@ -449,36 +467,47 @@ namespace vk
 		return result;
 	}
 
-	std::unique_ptr<vk::viewable_image> texture_cache::find_temporary_image(VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps)
+	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps, VkFlags flags)
 	{
-		for (auto& e : m_temporary_storage)
+		auto hash_properties = [](VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps, VkFlags flags)
 		{
-			if (e.can_reuse && e.matches(format, w, h, d, mipmaps, 0))
+			ensure(static_cast<u32>(format) < 0xFF);
+			return (static_cast<u64>(format) & 0xFF) |
+				(static_cast<u64>(w) << 8) |
+				(static_cast<u64>(h) << 24) |
+				(static_cast<u64>(d) << 40) |
+				(static_cast<u64>(mipmaps) << 48) |
+				(static_cast<u64>(flags) << 56);
+		};
+
+		reader_lock lock(m_cached_pool_lock);
+
+		if (!m_cached_images.empty())
+		{
+			const u64 desired_key = hash_properties(format, w, h, d, mipmaps, flags);
+			lock.upgrade();
+
+			for (auto it = m_cached_images.begin(); it != m_cached_images.end(); ++it)
 			{
-				m_temporary_memory_size -= e.block_size;
-				e.block_size = 0;
-				e.can_reuse = false;
-				return std::move(e.combined_image);
+				const auto& info = (*it)->info;
+				const u64 this_key = hash_properties(info.format, info.extent.width, info.extent.height, info.extent.depth, info.mipLevels, info.flags);
+
+				if (this_key == desired_key)
+				{
+					auto ret = std::move(*it);
+					m_cached_images.erase(it);
+					m_cached_memory_size -= ret->memory->size();
+					return ret;
+				}
 			}
 		}
 
 		return {};
 	}
 
-	std::unique_ptr<vk::viewable_image> texture_cache::find_temporary_cubemap(VkFormat format, u16 size)
+	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_cubemap(VkFormat format, u16 size)
 	{
-		for (auto& e : m_temporary_storage)
-		{
-			if (e.can_reuse && e.matches(format, size, size, 1, 1, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT))
-			{
-				m_temporary_memory_size -= e.block_size;
-				e.block_size = 0;
-				e.can_reuse = false;
-				return std::move(e.combined_image);
-			}
-		}
-
-		return {};
+		return find_cached_image(format, size, size, 1, 1, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 	}
 
 	vk::image_view* texture_cache::create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
@@ -492,11 +521,11 @@ namespace vk
 
 		if (!image_flags) [[likely]]
 		{
-			image = find_temporary_image(dst_format, w, h, 1, mips);
+			image = find_cached_image(dst_format, w, h, 1, mips, 0);
 		}
 		else
 		{
-			image = find_temporary_cubemap(dst_format, w);
+			image = find_cached_cubemap(dst_format, w);
 			layers = 6;
 		}
 
@@ -551,11 +580,8 @@ namespace vk
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 
-		const u32 resource_memory = w * h * 4; //Rough approximate
-		m_temporary_storage.emplace_back(image);
-		m_temporary_storage.back().block_size = resource_memory;
-		m_temporary_memory_size += resource_memory;
-
+		// TODO: Floating reference. We can do better with some restructuring.
+		image.release();
 		return view;
 	}
 
@@ -715,15 +741,12 @@ namespace vk
 
 	void texture_cache::release_temporary_subresource(vk::image_view* view)
 	{
-		auto handle = dynamic_cast<vk::viewable_image*>(view->image());
-		for (auto& e : m_temporary_storage)
-		{
-			if (e.combined_image.get() == handle)
-			{
-				e.can_reuse = true;
-				return;
-			}
-		}
+		auto resource = dynamic_cast<vk::viewable_image*>(view->image());
+		ensure(resource);
+
+		auto image = std::unique_ptr<vk::viewable_image>(resource);
+		auto disposable = std::unique_ptr<vk::disposable_t>(new cached_image_reference_t(this, image));
+		vk::get_resource_manager()->dispose(disposable);
 	}
 
 	void texture_cache::update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, vk::image* src, u16 width, u16 height)
@@ -826,13 +849,21 @@ namespace vk
 		{
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			const VkFormat vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
+			const VkFlags flags = is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 
-			image = new vk::viewable_image(*m_device,
-				m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				image_type, vk_format,
-				width, height, depth, mipmaps, layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, usage_flags, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
-				VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
+			if (auto found = find_cached_image(vk_format, width, height, depth, mipmaps, flags))
+			{
+				image = found.release();
+			}
+			else
+			{
+				image = new vk::viewable_image(*m_device,
+					m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					image_type, vk_format,
+					width, height, depth, mipmaps, layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_TILING_OPTIMAL, usage_flags, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+					VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
+			}
 
 			// New section, we must prepare it
 			region.reset(rsx_range);
@@ -1135,14 +1166,14 @@ namespace vk
 		auto any_released = baseclass::handle_memory_pressure(severity);
 
 		// TODO: This can cause invalidation of in-flight resources
-		if (severity <= rsx::problem_severity::low || !m_temporary_memory_size)
+		if (severity <= rsx::problem_severity::low || !m_cached_memory_size)
 		{
 			// Nothing left to do
 			return any_released;
 		}
 
 		constexpr u64 _1M = 0x100000;
-		if (severity <= rsx::problem_severity::moderate && m_temporary_memory_size < (64 * _1M))
+		if (severity <= rsx::problem_severity::moderate && m_cached_memory_size < (64 * _1M))
 		{
 			// Some memory is consumed by the temporary resources, but no need to panic just yet
 			return any_released;
@@ -1159,20 +1190,9 @@ namespace vk
 		auto gc = vk::get_resource_manager();
 		u64 actual_released_memory = 0;
 
-		for (auto& entry : m_temporary_storage)
-		{
-			if (!entry.combined_image)
-			{
-				continue;
-			}
+		m_cached_images.clear();
+		m_cached_memory_size = 0;
 
-			actual_released_memory += entry.combined_image->memory->size();
-			gc->dispose(entry.combined_image);
-			m_temporary_memory_size -= entry.block_size;
-		}
-
-		ensure(m_temporary_memory_size == 0);
-		m_temporary_storage.clear();
 		m_temporary_subresource_cache.clear();
 
 		rsx_log.warning("Texture cache released %lluM of temporary resources.", (actual_released_memory / _1M));
@@ -1183,27 +1203,27 @@ namespace vk
 	{
 		trim_sections();
 
-		if (m_storage.m_unreleased_texture_objects >= m_max_zombie_objects ||
-			m_temporary_memory_size > 0x4000000) //If already holding over 64M in discardable memory, be frugal with memory resources
+		if (m_storage.m_unreleased_texture_objects >= m_max_zombie_objects)
 		{
 			purge_unreleased_sections();
 		}
 
-		const u64 last_complete_frame = vk::get_last_completed_frame_id();
-		m_temporary_storage.remove_if([&](const temporary_storage& o)
+		if (m_cached_images.size() > max_cached_image_pool_size ||
+			m_cached_memory_size > 256 * 0x100000)
 		{
-			if (!o.block_size || o.test(last_complete_frame))
-			{
-				m_temporary_memory_size -= o.block_size;
-				return true;
-			}
-			return false;
-		});
+			std::lock_guard lock(m_cached_pool_lock);
 
-		m_temporary_subresource_cache.clear();
-		reset_frame_statistics();
+			const auto new_size = m_cached_images.size() / 2;
+			for (usz i = new_size; i < m_cached_images.size(); ++i)
+			{
+				m_cached_memory_size -= m_cached_images[i]->memory->size();
+			}
+
+			m_cached_images.resize(new_size);
+		}
 
 		baseclass::on_frame_end();
+		reset_frame_statistics();
 	}
 
 	vk::viewable_image* texture_cache::upload_image_simple(vk::command_buffer& cmd, VkFormat format, u32 address, u32 width, u32 height, u32 pitch)
@@ -1266,10 +1286,9 @@ namespace vk
 		vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 		auto result = image.get();
-		const u32 resource_memory = width * height * 4; //Rough approximate
-		m_temporary_storage.emplace_back(image);
-		m_temporary_storage.back().block_size = resource_memory;
-		m_temporary_memory_size += resource_memory;
+		const u32 resource_memory = image->memory->size();
+		auto disposable = std::unique_ptr<vk::disposable_t>(new cached_image_reference_t(this, image));
+		vk::get_resource_manager()->dispose(disposable);
 
 		return result;
 	}
@@ -1294,12 +1313,12 @@ namespace vk
 
 	u32 texture_cache::get_unreleased_textures_count() const
 	{
-		return baseclass::get_unreleased_textures_count() + ::size32(m_temporary_storage);
+		return baseclass::get_unreleased_textures_count() + ::size32(m_cached_images);
 	}
 
 	u32 texture_cache::get_temporary_memory_in_use() const
 	{
-		return m_temporary_memory_size;
+		return m_cached_memory_size;
 	}
 
 	bool texture_cache::is_overallocated() const
