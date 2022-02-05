@@ -179,7 +179,7 @@ public:
 	// Callback for thread_ctrl::wait or RSX wait
 	virtual void cpu_wait(bs_t<cpu_flag> old);
 
-	// Callback for function abortion stats on Emu.Stop()
+	// Callback for function abortion stats on Emu.Kill()
 	virtual void cpu_on_stop() {}
 
 	// For internal use

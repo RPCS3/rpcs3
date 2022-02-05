@@ -21,7 +21,7 @@ namespace rsx
 				Emu.CallAfter([]()
 				{
 					rsx_log.notice("Aborted shader loading dialog");
-					Emu.Stop();
+					Emu.Kill(false);
 				});
 			};
 

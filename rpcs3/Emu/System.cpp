@@ -558,7 +558,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 	if (!IsStopped())
 	{
-		Stop();
+		Kill();
 	}
 
 	if (!title_id.empty())
@@ -886,8 +886,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				// Exit "process"
 				CallAfter([]
 				{
-					Emu.SetForceBoot(true);
-					Emu.Stop();
+					Emu.Kill(false);
 				});
 
 				m_path = m_path_old; // Reset m_path to fix boot from gui
@@ -1408,8 +1407,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			if (ppu_exec != elf_error::ok)
 			{
-				SetForceBoot(true);
-				Stop();
+				Kill(false);
 
 				sys_log.error("Invalid or unsupported PPU executable format: %s", elf_path);
 
@@ -1440,8 +1438,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			sys_log.warning("** ppu_prx  -> %s", ppu_prx.get_error());
 			sys_log.warning("** spu_exec -> %s", spu_exec.get_error());
 
-			SetForceBoot(true);
-			Stop();
+			Kill(false);
 			return game_boot_result::invalid_file_or_folder;
 		}
 
@@ -1458,8 +1455,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				return libs.count(std::string(lib.first) + ":lle") || (!lib.second && !libs.count(std::string(lib.first) + ":hle"));
 			}))
 			{
-				SetForceBoot(true);
-				Stop();
+				Kill(false);
 
 				CallAfter([this]()
 				{
@@ -1581,17 +1577,13 @@ bool Emulator::Pause(bool freeze_emulation)
 
 void Emulator::Resume()
 {
-	// Get pause start time
-	const u64 time = m_pause_start_time.exchange(0);
-
-	// Try to increment summary pause time
-	if (time)
+	if (m_state != system_state::paused)
 	{
-		m_pause_amend_time += get_system_time() - time;
+		return;
 	}
 
 	// Print and reset debug data collected
-	if (m_state == system_state::paused && g_cfg.core.ppu_debug)
+	if (g_cfg.core.ppu_debug)
 	{
 		PPUDisAsm dis_asm(cpu_disasm_mode::dump, vm::g_sudo_addr);
 
@@ -1619,18 +1611,26 @@ void Emulator::Resume()
 		ppu_log.notice("[RESUME] Dumping instruction stats:%s", dump);
 	}
 
-	perf_stat_base::report();
-
 	// Try to resume
 	if (!m_state.compare_and_swap_test(system_state::paused, system_state::running))
 	{
 		return;
 	}
 
-	if (!time)
+	// Get pause start time
+	const u64 time = m_pause_start_time.exchange(0);
+
+	// Try to increment summary pause time
+	if (time)
+	{
+		m_pause_amend_time += get_system_time() - time;
+	}
+	else
 	{
 		sys_log.error("Emulator::Resume() error: concurrent access");
 	}
+
+	perf_stat_base::report();
 
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
@@ -1657,25 +1657,70 @@ void Emulator::Resume()
 	}
 }
 
-void Emulator::Stop(bool restart)
+u32 sysutil_send_system_cmd(u64 status, u64 param);
+void process_qt_events();
+
+void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
+{
+	const auto old_state = m_state.load();
+
+	if (old_state == system_state::stopped)
+	{
+		return;
+	}
+
+	if (old_state == system_state::paused)
+	{
+		Resume();
+	}
+
+	if (old_state == system_state::frozen || !sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0))
+	{
+		// The callback has been rudely ignored, we have no other option but to force termination
+		Kill(allow_autoexit);
+		return;
+	}
+
+	auto perform_kill = [allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
+	{
+		for (u32 i = 0; i < 50; i++)
+		{
+			std::this_thread::sleep_for(50ms);
+			Resume(); // TODO: Prevent pausing by other threads while in this loop
+			process_qt_events(); // Is nullified when performed on non-main thread
+
+			if (static_cast<u64>(info) != m_stop_ctr)
+			{
+				return;
+			}
+		}
+
+		// An inevitable attempt to terminate the *current* emulation course will be issued after 5s
+		CallAfter([allow_autoexit, this]()
+		{
+			Kill(allow_autoexit);
+		}, info);
+	};
+
+	if (async_op)
+	{
+		std::thread{perform_kill}.detach();
+	}
+	else
+	{
+		perform_kill();
+	}
+}
+
+void Emulator::Kill(bool allow_autoexit)
 {
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
-		if (restart)
-		{
-			// Reload with prior configs.
-			if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
-				sys_log.error("Restart failed: %s", error);
-			return;
-		}
-
-		m_force_boot = false;
 		return;
 	}
 
 	sys_log.notice("Stopping emulator...");
 
-	if (!restart)
 	{
 		// Show visual feedback to the user in case that stopping takes a while.
 		// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
@@ -1783,15 +1828,7 @@ void Emulator::Stop(bool restart)
 	m_stop_ctr++;
 	m_stop_ctr.notify_all();
 
-	if (restart)
-	{
-		// Reload with prior configs.
-		if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
-			sys_log.error("Restart failed: %s", error);
-		return;
-	}
-
-	// Boot arg cleanup (preserved in the case restarting)
+	// Boot arg cleanup
 	argv.clear();
 	envp.clear();
 	data.clear();
@@ -1804,15 +1841,36 @@ void Emulator::Stop(bool restart)
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
 
-	if (!m_force_boot)
+	if (allow_autoexit)
 	{
 		if (Quit(g_cfg.misc.autoexit.get()))
 		{
 			return;
 		}
 	}
+}
 
-	m_force_boot = false;
+game_boot_result Emulator::Restart()
+{
+	if (m_state == system_state::stopped)
+	{
+		return game_boot_result::generic_error;
+	}
+
+	auto save_args = std::make_tuple(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode);
+
+	GracefulShutdown(false, false);
+
+	std::tie(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode) = std::move(save_args);
+
+	// Reload with prior configs.
+	if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
+	{
+		sys_log.error("Restart failed: %s", error);
+		return error;
+	}
+
+	return game_boot_result::no_errors;
 }
 
 bool Emulator::Quit(bool force_quit)

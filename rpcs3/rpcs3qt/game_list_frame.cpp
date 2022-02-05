@@ -1402,8 +1402,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 bool game_list_frame::CreatePPUCache(const std::string& path, const std::string& serial)
 {
-	Emu.SetForceBoot(true);
-	Emu.Stop();
+	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
 	if (const auto error = Emu.BootGame(path, serial, true); error != game_boot_result::no_errors)
@@ -1701,7 +1700,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		if (!Emu.IsStopped())
 		{
 			QApplication::processEvents();
-			Emu.Stop();
+			Emu.GracefulShutdown(false);
 		}
 
 		if (!pdlg->wasCanceled())

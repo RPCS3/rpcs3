@@ -3405,7 +3405,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		{
 			out.flush();
 			ppu_log.error("LLVM: Verification failed for %s:\n%s", obj_name, result);
-			Emu.CallAfter([]{ Emu.Stop(); });
+			Emu.CallAfter([]{ Emu.GracefulShutdown(false, true); });
 			return;
 		}
 

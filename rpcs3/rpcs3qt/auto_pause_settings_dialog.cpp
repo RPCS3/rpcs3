@@ -62,8 +62,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	});
 	connect(cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
-	Emu.SetForceBoot(true);
-	Emu.Stop();
+	Emu.GracefulShutdown(false);
 
 	LoadEntries();
 	UpdateList();

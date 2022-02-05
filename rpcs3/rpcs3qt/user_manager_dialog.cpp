@@ -361,7 +361,7 @@ void user_manager_dialog::OnUserLogin()
 		}
 
 		gui_log.notice("Stopping current emulation in order to change the current user.");
-		Emu.Stop();
+		Emu.GracefulShutdown(false);
 	}
 
 	const u32 key = GetUserKey();
