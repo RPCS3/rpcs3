@@ -463,8 +463,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		const QVariantList var_list = ui->resBox->itemData(i).toList();
 		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
+		const QString text = var_list[0].toString();
 
-		if (var_list[0].toString() == "1280x720")
+		if (text == "1280x720")
 		{
 			// Rename the default resolution for users
 			ui->resBox->setItemText(i, tr("1280x720 (Recommended)", "Resolution"));
@@ -475,6 +476,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				ui->resBox->setCurrentIndex(i);
 			}
 			break;
+		}
+		else if (text == "1920x1080")
+		{
+			// Rename the "good" resolution for users
+			ui->resBox->setItemText(i, tr("1920x1080 (Not recommended)", "Resolution"));
 		}
 	}
 

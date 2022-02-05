@@ -514,7 +514,7 @@
             <item>
              <widget class="QGroupBox" name="gb_default_resolution">
               <property name="title">
-               <string>Default Resolution</string>
+               <string>Virtual TV-Resolution</string>
               </property>
               <layout class="QVBoxLayout" name="gb_default_resolution_layout">
                <item>
