@@ -8,7 +8,6 @@ enum : u32
 	DEFAULT_AUDIO_SAMPLING_RATE = 48000,
 	MAX_AUDIO_BUFFERS = 64,
 	AUDIO_BUFFER_SAMPLES = 256,
-	AUDIO_MIN_LATENCY = 512,
 	AUDIO_MAX_CHANNELS = 8,
 };
 
@@ -39,11 +38,6 @@ enum class AudioChannelCnt : u32
 class AudioBackend
 {
 public:
-	enum Capabilities : u32
-	{
-		SET_FREQUENCY_RATIO = 0x1, // Implements SetFrequencyRatio
-	};
-
 	AudioBackend();
 
 	virtual ~AudioBackend() = default;
@@ -52,7 +46,6 @@ public:
 	 * Pure virtual methods
 	 */
 	virtual std::string_view GetName() const = 0;
-	virtual u32 GetCapabilities() const = 0;
 
 	virtual void Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) = 0;
 	virtual void Close() = 0;
@@ -85,19 +78,6 @@ public:
 	virtual bool Operational() { return true; }
 
 	/*
-	 * Virtual methods - should be implemented depending on backend capabilities
-	 */
-
-	// Sets a new frequency ratio. Backend is allowed to modify the ratio value, e.g. clamping it to the allowed range
-	// Returns the new frequency ratio set
-	// Should be implemented if capabilities & SET_FREQUENCY_RATIO
-	virtual f32 SetFrequencyRatio(f32 /* new_ratio */) // returns the new ratio
-	{
-		fmt::throw_exception("SetFrequencyRatio() not implemented");
-		return 1.0f;
-	}
-
-	/*
 	 * Helper methods
 	 */
 	u32 get_sampling_rate() const;
@@ -108,9 +88,10 @@ public:
 
 	bool get_convert_to_s16() const;
 
-	bool has_capability(u32 cap) const;
-
-	void dump_capabilities(std::string& out) const;
+	/*
+	 * Convert float buffer to s16 one. src and dst could be the same. cnt is number of buffer elements.
+	 */
+	static void convert_to_s16(u32 cnt, const f32* src, void* dst);
 
 protected:
 	AudioSampleSize m_sample_size = AudioSampleSize::FLOAT;

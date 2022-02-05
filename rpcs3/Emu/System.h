@@ -111,9 +111,9 @@ class Emulator final
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
 
-	// This flag should be adjusted before each Stop() or each BootGame() and similar because:
+	// This flag should be adjusted before each Kill() or each BootGame() and similar because:
 	// 1. It forces an application to boot immediately by calling Run() in Load().
-	// 2. It signifies that we don't want to exit on Stop(), for example if we want to transition to another application.
+	// 2. It signifies that we don't want to exit on Kill(), for example if we want to transition to another application.
 	bool m_force_boot = false;
 
 	bool m_has_gui = true;
@@ -132,14 +132,14 @@ public:
 	}
 
 	// Call from the GUI thread
-	void CallAfter(std::function<void()>&& func, bool track_emu_state = true) const
+	void CallAfter(std::function<void()>&& func, bool track_emu_state = true, u64 stop_ctr = umax) const
 	{
 		if (!track_emu_state)
 		{
 			return m_cb.call_after(std::move(func));
 		}
 
-		std::function<void()> final_func = [this, before = IsStopped(), count = +m_stop_ctr, func = std::move(func)]
+		std::function<void()> final_func = [this, before = IsStopped(), count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
 		{
 			if (count == m_stop_ctr && before == IsStopped())
 			{
@@ -148,6 +148,18 @@ public:
 		};
 
 		return m_cb.call_after(std::move(final_func));
+	}
+
+	enum class stop_counter_t : u64{};
+
+	stop_counter_t ProcureCurrentEmulationCourseInformation() const
+	{
+		return stop_counter_t{+m_stop_ctr};
+	}
+
+	void CallAfter(std::function<void()>&& func, stop_counter_t counter) const
+	{
+		CallAfter(std::move(func), true, static_cast<u64>(counter));
 	}
 
 	/** Set emulator mode to running unconditionnaly.
@@ -244,8 +256,9 @@ public:
 	void Run(bool start_playtime);
 	bool Pause(bool freeze_emulation = false);
 	void Resume();
-	void Stop(bool restart = false);
-	void Restart() { Stop(true); }
+	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false);
+	void Kill(bool allow_autoexit = true);
+	game_boot_result Restart();
 	bool Quit(bool force_quit);
 	static void CleanUp();
 

@@ -40,7 +40,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\zlib\zlib;..\llvm\include;..\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\zlib\zlib;..\llvm\include;..\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">HAVE_VULKAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">HAVE_VULKAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -53,6 +53,7 @@
   <ItemGroup>
     <ClCompile Include="..\Utilities\cheat_info.cpp" />
     <ClCompile Include="Emu\Audio\audio_device_listener.cpp" />
+    <ClCompile Include="Emu\Audio\audio_resampler.cpp" />
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
@@ -435,6 +436,7 @@
     <ClInclude Include="..\Utilities\address_range.h" />
     <ClInclude Include="..\Utilities\cheat_info.h" />
     <ClInclude Include="Emu\Audio\audio_device_listener.h" />
+    <ClInclude Include="Emu\Audio\audio_resampler.h" />
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>

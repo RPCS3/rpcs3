@@ -69,6 +69,14 @@ std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
+extern void process_qt_events()
+{
+	if (thread_ctrl::is_main())
+	{
+		QApplication::processEvents();
+	}
+}
+
 main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
 	: QMainWindow(parent)
 	, ui(new Ui::main_window)
@@ -189,7 +197,7 @@ bool main_window::Init(bool with_cli_boot)
 	connect(m_thumb_stop, &QWinThumbnailToolButton::clicked, this, []()
 	{
 		gui_log.notice("User clicked stop button on thumbnail toolbar");
-		Emu.Stop();
+		Emu.GracefulShutdown(false, true);
 	});
 	connect(m_thumb_restart, &QWinThumbnailToolButton::clicked, this, []()
 	{
@@ -399,10 +407,9 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 		return;
 	}
 
-	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
+	Emu.GracefulShutdown(false);
 
-	Emu.SetForceBoot(true);
-	Emu.Stop();
+	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
 
 	if (const auto error = Emu.BootGame(path, title_id, direct, add_only, config_mode, config_path); error != game_boot_result::no_errors)
 	{
@@ -524,8 +531,7 @@ void main_window::BootRsxCapture(std::string path)
 		return;
 	}
 
-	Emu.SetForceBoot(true);
-	Emu.Stop();
+	Emu.GracefulShutdown(false);
 
 	if (!Emu.BootRsxCapture(path))
 	{
@@ -651,6 +657,17 @@ void main_window::InstallPackages(QStringList file_paths)
 		}
 	}
 
+	if (!m_gui_settings->GetBootConfirmation(this))
+	{
+		// Last chance to cancel the operation
+		return;
+	}
+
+	if (!Emu.IsStopped())
+	{
+		Emu.GracefulShutdown(false);
+	}
+
 	// Install rap files if available
 	int installed_rap_and_edat_count = 0;
 
@@ -732,6 +749,8 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		return;
 	}
 
+	Emu.GracefulShutdown(false);
+
 	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
 	pdlg.setAutoClose(false);
 	pdlg.show();
@@ -773,9 +792,6 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		pdlg.SetValue(0);
 		pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(i + 1).arg(count).arg(app_info));
 		pdlg.show();
-
-		Emu.SetForceBoot(true);
-		Emu.Stop();
 
 		const QFileInfo file_info(package.path);
 		const std::string path      = sstr(package.path);
@@ -934,8 +950,7 @@ void main_window::ExtractTar()
 		return;
 	}
 
-	Emu.SetForceBoot(true);
-	Emu.Stop();
+	Emu.GracefulShutdown(false);
 
 	const QString path_last_tar = m_gui_settings->GetValue(gui::fd_ext_tar).toString();
 	QStringList files = QFileDialog::getOpenFileNames(this, tr("Select TAR To extract"), path_last_tar, tr("All tar files (*.tar *.TAR *.tar.aa.* *.TAR.AA.*);;All files (*.*)"));
@@ -1011,8 +1026,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		return;
 	}
 
-	Emu.SetForceBoot(true);
-	Emu.Stop();
+	Emu.GracefulShutdown(false);
 
 	m_gui_settings->SetValue(gui::fd_install_pup, QFileInfo(file_path).path());
 
@@ -1257,7 +1271,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 }
 
 // This is ugly, but PS3 headers shall not be included there.
-extern void sysutil_send_system_cmd(u64 status, u64 param);
+extern u32 sysutil_send_system_cmd(u64 status, u64 param);
 
 void main_window::DecryptSPRXLibraries()
 {
@@ -2026,6 +2040,8 @@ void main_window::CreateConnects()
 
 		if (!paths.isEmpty())
 		{
+			Emu.GracefulShutdown(false);
+
 			for (const QString& path : paths)
 			{
 				AddGamesFromDir(path);
@@ -2087,7 +2103,7 @@ void main_window::CreateConnects()
 	connect(ui->sysStopAct, &QAction::triggered, this, []()
 	{
 		gui_log.notice("User triggered stop action in menu bar");
-		Emu.Stop();
+		Emu.GracefulShutdown(false, true);
 	});
 	connect(ui->sysRebootAct, &QAction::triggered, this, []()
 	{
@@ -2415,7 +2431,7 @@ void main_window::CreateConnects()
 	connect(ui->toolbar_stop, &QAction::triggered, this, []()
 	{
 		gui_log.notice("User triggered stop action in toolbar");
-		Emu.Stop();
+		Emu.GracefulShutdown(false);
 	});
 	connect(ui->toolbar_start, &QAction::triggered, this, &main_window::OnPlayOrPause);
 
@@ -2762,8 +2778,7 @@ void main_window::CreateFirmwareCache()
 		return;
 	}
 
-	Emu.SetForceBoot(true);
-	Emu.Stop();
+	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
 	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash() + "sys", "", true);
@@ -2811,8 +2826,9 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 	// Cleanly stop and quit the emulator.
 	if (!Emu.IsStopped())
 	{
-		Emu.Stop();
+		Emu.GracefulShutdown(false);
 	}
+
 	Emu.Quit(true);
 }
 
@@ -3007,10 +3023,13 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			return;
 		}
+
 		for (const auto& path : drop_paths)
 		{
+			Emu.GracefulShutdown(false);
 			AddGamesFromDir(path);
 		}
+
 		m_game_list_frame->Refresh(true);
 		break;
 	}
@@ -3021,8 +3040,7 @@ void main_window::dropEvent(QDropEvent* event)
 			return;
 		}
 
-		Emu.SetForceBoot(true);
-		Emu.Stop();
+		Emu.GracefulShutdown(false);
 
 		if (const auto error = Emu.BootGame(sstr(drop_paths.first()), "", true); error != game_boot_result::no_errors)
 		{

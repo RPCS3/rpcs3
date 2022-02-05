@@ -10,9 +10,6 @@ public:
 
 	std::string_view GetName() const override { return "Null"sv; }
 
-	static const u32 capabilities = 0;
-	u32 GetCapabilities() const override { return capabilities; }
-
 	void Open(AudioFreq /* freq */, AudioSampleSize /* sample_size */, AudioChannelCnt /* ch_cnt */) override { m_playing = false; }
 	void Close() override { m_playing = false; }
 

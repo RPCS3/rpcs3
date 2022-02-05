@@ -103,12 +103,6 @@ void XAudio2Backend::Play()
 
 void XAudio2Backend::CloseUnlocked()
 {
-	if (m_master_voice != nullptr)
-	{
-		m_master_voice->DestroyVoice();
-		m_master_voice = nullptr;
-	}
-
 	if (m_source_voice != nullptr)
 	{
 		const HRESULT hr = m_source_voice->Stop();
@@ -121,10 +115,16 @@ void XAudio2Backend::CloseUnlocked()
 		m_source_voice = nullptr;
 	}
 
+	if (m_master_voice != nullptr)
+	{
+		m_master_voice->DestroyVoice();
+		m_master_voice = nullptr;
+	}
+
 	m_playing = false;
 	m_data_buf = nullptr;
 	m_data_buf_len = 0;
-	memset(m_last_sample, 0, sizeof(m_last_sample));
+	m_last_sample.fill(0);
 }
 
 void XAudio2Backend::Close()
@@ -156,6 +156,7 @@ void XAudio2Backend::Pause()
 
 	std::lock_guard lock(m_cb_mutex);
 	m_playing = false;
+	m_last_sample.fill(0);
 }
 
 void XAudio2Backend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
@@ -210,26 +211,6 @@ bool XAudio2Backend::IsPlaying()
 	return m_playing;
 }
 
-f32 XAudio2Backend::SetFrequencyRatio(f32 new_ratio)
-{
-	if (m_source_voice == nullptr)
-	{
-		XAudio.error("SetFrequencyRatio() called uninitialized");
-		return 1.0f;
-	}
-
-	new_ratio = std::clamp(new_ratio, XAUDIO2_MIN_FREQ_RATIO, XAUDIO2_DEFAULT_FREQ_RATIO);
-
-	const HRESULT hr = m_source_voice->SetFrequencyRatio(new_ratio);
-	if (FAILED(hr))
-	{
-		XAudio.error("SetFrequencyRatio() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		return 1.0f;
-	}
-
-	return new_ratio;
-}
-
 void XAudio2Backend::SetWriteCallback(std::function<u32(u32, void *)> cb)
 {
 	std::lock_guard lock(m_cb_mutex);
@@ -281,12 +262,12 @@ void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired)
 
 		if (written >= sample_size)
 		{
-			memcpy(m_last_sample, m_data_buf.get() + written - sample_size, sample_size);
+			memcpy(m_last_sample.data(), m_data_buf.get() + written - sample_size, sample_size);
 		}
 
 		for (u32 i = written; i < BytesRequired; i += sample_size)
 		{
-			memcpy(m_data_buf.get() + i, m_last_sample, sample_size);
+			memcpy(m_data_buf.get() + i, m_last_sample.data(), sample_size);
 		}
 
 		XAUDIO2_BUFFER buffer{};

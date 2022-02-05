@@ -102,6 +102,7 @@ void FAudioBackend::Pause()
 
 	std::lock_guard lock(m_cb_mutex);
 	m_playing = false;
+	m_last_sample.fill(0);
 }
 
 void FAudioBackend::CloseUnlocked()
@@ -119,7 +120,7 @@ void FAudioBackend::CloseUnlocked()
 	m_source_voice = nullptr;
 	m_data_buf = nullptr;
 	m_data_buf_len = 0;
-	memset(m_last_sample, 0, sizeof(m_last_sample));
+	m_last_sample.fill(0);
 }
 
 void FAudioBackend::Close()
@@ -189,26 +190,6 @@ bool FAudioBackend::IsPlaying()
 	return m_playing;
 }
 
-f32 FAudioBackend::SetFrequencyRatio(f32 new_ratio)
-{
-	new_ratio = std::clamp(new_ratio, FAUDIO_MIN_FREQ_RATIO, FAUDIO_DEFAULT_FREQ_RATIO);
-
-	if (m_source_voice == nullptr)
-	{
-		FAudio_.error("SetFrequencyRatio() called uninitialized");
-		return 1.0f;
-	}
-
-	const u32 res = FAudioSourceVoice_SetFrequencyRatio(m_source_voice, new_ratio, FAUDIO_COMMIT_NOW);
-	if (res)
-	{
-		FAudio_.error("FAudioSourceVoice_SetFrequencyRatio() failed(0x%08x)", res);
-		return 1.0f;
-	}
-
-	return new_ratio;
-}
-
 void FAudioBackend::SetWriteCallback(std::function<u32(u32, void *)> cb)
 {
 	std::lock_guard lock(m_cb_mutex);
@@ -253,12 +234,12 @@ void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj,
 
 		if (written >= sample_size)
 		{
-			memcpy(faudio->m_last_sample, faudio->m_data_buf.get() + written - sample_size, sample_size);
+			memcpy(faudio->m_last_sample.data(), faudio->m_data_buf.get() + written - sample_size, sample_size);
 		}
 
 		for (u32 i = written; i < BytesRequired; i += sample_size)
 		{
-			memcpy(faudio->m_data_buf.get() + i, faudio->m_last_sample, sample_size);
+			memcpy(faudio->m_data_buf.get() + i, faudio->m_last_sample.data(), sample_size);
 		}
 
 		FAudioBuffer buffer{};
