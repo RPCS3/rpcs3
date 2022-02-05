@@ -9,6 +9,8 @@ namespace vk
 {
 	texture_cache::cached_image_reference_t::cached_image_reference_t(texture_cache* parent, std::unique_ptr<vk::viewable_image>& previous)
 	{
+		ensure(previous);
+
 		this->parent = parent;
 		this->data = std::move(previous);
 	}
@@ -182,7 +184,7 @@ namespace vk
 
 	void texture_cache::on_section_destroyed(cached_texture_section& tex)
 	{
-		if (tex.is_managed())
+		if (tex.is_managed() && tex.exists())
 		{
 			auto disposable = std::unique_ptr<vk::disposable_t>(new cached_image_reference_t(this, tex.get_texture()));
 			vk::get_resource_manager()->dispose(disposable);
