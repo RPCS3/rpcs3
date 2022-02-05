@@ -350,55 +350,20 @@ namespace vk
 		}
 	};
 
-	struct temporary_storage
-	{
-		std::unique_ptr<vk::viewable_image> combined_image;
-		bool can_reuse = false;
-
-		// Memory held by this temp storage object
-		u32 block_size = 0;
-
-		// Frame id tag
-		const u64 frame_tag = vk::get_current_frame_id();
-
-		temporary_storage(std::unique_ptr<vk::viewable_image>& _img)
-		{
-			combined_image = std::move(_img);
-		}
-
-		temporary_storage(vk::cached_texture_section& tex)
-		{
-			combined_image = std::move(tex.get_texture());
-			block_size = tex.get_section_size();
-		}
-
-		bool test(u64 ref_frame) const
-		{
-			return ref_frame > 0 && frame_tag <= ref_frame;
-		}
-
-		bool matches(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags) const
-		{
-			if (combined_image &&
-				combined_image->info.flags == flags &&
-				combined_image->format() == format &&
-				combined_image->width() == w &&
-				combined_image->height() == h &&
-				combined_image->depth() == d &&
-				combined_image->mipmaps() == mipmaps)
-			{
-				return true;
-			}
-
-			return false;
-		}
-	};
-
 	class texture_cache : public rsx::texture_cache<vk::texture_cache, vk::texture_cache_traits>
 	{
 	private:
 		using baseclass = rsx::texture_cache<vk::texture_cache, vk::texture_cache_traits>;
 		friend baseclass;
+
+		struct cached_image_reference_t : vk::disposable_t
+		{
+			std::unique_ptr<vk::viewable_image> data;
+			texture_cache* parent;
+
+			cached_image_reference_t(texture_cache* parent, std::unique_ptr<vk::viewable_image>& previous);
+			void dispose() override;
+		};
 
 	public:
 		enum texture_create_flags : u32
@@ -418,8 +383,10 @@ namespace vk
 		vk::data_heap* m_texture_upload_heap;
 
 		//Stuff that has been dereferenced goes into these
-		std::list<temporary_storage> m_temporary_storage;
-		atomic_t<u32> m_temporary_memory_size = { 0 };
+		const u32 max_cached_image_pool_size = 256;
+		std::deque<std::unique_ptr<vk::viewable_image>> m_cached_images;
+		atomic_t<u32> m_cached_memory_size = { 0 };
+		shared_mutex m_cached_pool_lock;
 
 		void clear();
 
@@ -429,9 +396,9 @@ namespace vk
 
 		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const;
 
-		std::unique_ptr<vk::viewable_image> find_temporary_image(VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps);
+		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps, VkFlags flags);
 
-		std::unique_ptr<vk::viewable_image> find_temporary_cubemap(VkFormat format, u16 size);
+		std::unique_ptr<vk::viewable_image> find_cached_cubemap(VkFormat format, u16 size);
 
 	protected:
 		vk::image_view* create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
