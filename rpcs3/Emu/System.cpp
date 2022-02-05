@@ -1683,7 +1683,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 
 	auto perform_kill = [allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
 	{
-		for (u32 i = 0; i < 50; i++)
+		for (u32 i = 0; static_cast<u64>(info) == m_stop_ctr && i < 50; i++)
 		{
 			std::this_thread::sleep_for(100ms);
 			Resume(); // TODO: Prevent pausing by other threads while in this loop
@@ -1691,7 +1691,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 		}
 
 		// An inevitable attempt to terminate the *current* emulation course will be issued after 5s
-		CallAfter([allow_autoexit, this, info]()
+		CallAfter([allow_autoexit, this]()
 		{
 			Kill(allow_autoexit);
 		}, info);
