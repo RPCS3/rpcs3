@@ -467,9 +467,9 @@ namespace vk
 		return result;
 	}
 
-	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps, VkFlags flags)
+	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags)
 	{
-		auto hash_properties = [](VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps, VkFlags flags)
+		auto hash_properties = [](VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags)
 		{
 			ensure(static_cast<u32>(format) < 0xFF);
 			return (static_cast<u64>(format) & 0xFF) |
@@ -1286,7 +1286,7 @@ namespace vk
 		vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 		auto result = image.get();
-		const u32 resource_memory = image->memory->size();
+		const auto resource_memory = image->memory->size();
 		auto disposable = std::unique_ptr<vk::disposable_t>(new cached_image_reference_t(this, image));
 		vk::get_resource_manager()->dispose(disposable);
 
@@ -1316,8 +1316,9 @@ namespace vk
 		return baseclass::get_unreleased_textures_count() + ::size32(m_cached_images);
 	}
 
-	u32 texture_cache::get_temporary_memory_in_use() const
+	u64 texture_cache::get_temporary_memory_in_use() const
 	{
+		// TODO: Technically incorrect, we should have separate metrics for cached evictable resources (this value) and temporary active resources.
 		return m_cached_memory_size;
 	}
 
