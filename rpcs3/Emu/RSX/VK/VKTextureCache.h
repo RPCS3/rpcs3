@@ -385,7 +385,7 @@ namespace vk
 		//Stuff that has been dereferenced goes into these
 		const u32 max_cached_image_pool_size = 256;
 		std::deque<std::unique_ptr<vk::viewable_image>> m_cached_images;
-		atomic_t<u32> m_cached_memory_size = { 0 };
+		atomic_t<u64> m_cached_memory_size = { 0 };
 		shared_mutex m_cached_pool_lock;
 
 		void clear();
@@ -396,7 +396,7 @@ namespace vk
 
 		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const;
 
-		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps, VkFlags flags);
+		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags);
 
 		std::unique_ptr<vk::viewable_image> find_cached_cubemap(VkFormat format, u16 size);
 
@@ -463,7 +463,7 @@ namespace vk
 
 		bool handle_memory_pressure(rsx::problem_severity severity) override;
 
-		u32 get_temporary_memory_in_use() const;
+		u64 get_temporary_memory_in_use() const;
 
 		bool is_overallocated() const;
 	};
