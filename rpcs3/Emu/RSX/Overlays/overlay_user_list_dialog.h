@@ -25,9 +25,12 @@ namespace rsx
 			std::unique_ptr<list_view> m_list;
 			std::unique_ptr<label> m_description;
 
+			animation_color_interpolate fade_animation;
+
 		public:
 			user_list_dialog();
 
+			void update() override;
 			void on_button_pressed(pad_button button_press) override;
 
 			compiled_resource get_compiled() override;

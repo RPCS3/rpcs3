@@ -528,7 +528,7 @@ namespace rsx
 			}
 			case pad_button::start:
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_oskenter.wav");
 				Close(CELL_OSKDIALOG_CLOSE_CONFIRM);
 				play_cursor_sound = false;
 				break;
@@ -545,7 +545,7 @@ namespace rsx
 			}
 			case pad_button::cross:
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_oskenter.wav");
 				on_accept();
 				m_reset_pulse = true;
 				play_cursor_sound = false;
@@ -553,7 +553,7 @@ namespace rsx
 			}
 			case pad_button::circle:
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_oskcancel.wav");
 				Close(CELL_OSKDIALOG_CLOSE_CANCEL);
 				play_cursor_sound = false;
 				break;

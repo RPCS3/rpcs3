@@ -3,6 +3,7 @@
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/System.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
 
@@ -80,11 +81,25 @@ namespace rsx
 			m_description->auto_resize();
 			m_description->back_color.a	= 0.f;
 
+			fade_animation.duration = 0.15f;
+
 			return_code = selection_code::canceled;
+		}
+
+		void user_list_dialog::update()
+		{
+			if (fade_animation.active)
+			{
+				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+			}
 		}
 
 		void user_list_dialog::on_button_pressed(pad_button button_press)
 		{
+			if (fade_animation.active) return;
+
+			bool close_dialog = false;
+
 			switch (button_press)
 			{
 			case pad_button::cross:
@@ -99,13 +114,13 @@ namespace rsx
 				{
 					return_code = selection_code::error;
 				}
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
-				close(true, true);
-				return;
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				close_dialog = true;
+				break;
 			case pad_button::circle:
 				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
-				close(true, true);
-				return;
+				close_dialog = true;
+				break;
 			case pad_button::dpad_up:
 			case pad_button::ls_up:
 				m_list->select_previous();
@@ -125,7 +140,21 @@ namespace rsx
 				break;
 			}
 
-			Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+			if (close_dialog)
+			{
+				fade_animation.current = color4f(1.f);
+				fade_animation.end = color4f(0.f);
+				fade_animation.active = true;
+
+				fade_animation.on_finish = [this]
+				{
+					close(true, true);
+				};
+			}
+			else
+			{
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
+			}
 		}
 
 		compiled_resource user_list_dialog::get_compiled()
@@ -139,6 +168,9 @@ namespace rsx
 			result.add(m_dim_background->get_compiled());
 			result.add(m_list->get_compiled());
 			result.add(m_description->get_compiled());
+
+			fade_animation.apply(result);
+
 			return result;
 		}
 
@@ -203,6 +235,10 @@ namespace rsx
 
 			m_description->set_text(title);
 			m_description->auto_resize();
+
+			fade_animation.current = color4f(0.f);
+			fade_animation.end = color4f(1.f);
+			fade_animation.active = true;
 
 			this->on_close = std::move(on_close);
 			visible = true;
