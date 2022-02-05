@@ -70,6 +70,7 @@ void progress_dialog_server::operator()()
 			if (manager && !skip_this_one)
 			{
 				MsgDialogType type{};
+				type.se_mute_on         = true;
 				type.se_normal          = true;
 				type.bg_invisible       = true;
 				type.disable_cancel     = true;

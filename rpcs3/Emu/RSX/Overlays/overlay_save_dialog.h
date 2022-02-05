@@ -28,6 +28,8 @@ namespace rsx
 
 			bool m_no_saves = false;
 
+			animation_color_interpolate fade_animation;
+
 		public:
 			save_dialog();
 
