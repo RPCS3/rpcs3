@@ -157,6 +157,13 @@
                 </property>
                </widget>
               </item>
+             <item>
+               <widget class="QCheckBox" name="approximateXFloat">
+                <property name="text">
+                 <string>Approximate xfloat</string>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QCheckBox" name="fullWidthAVX512">
                 <property name="text">

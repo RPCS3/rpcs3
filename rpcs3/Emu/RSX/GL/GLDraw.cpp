@@ -298,13 +298,15 @@ void GLGSRender::load_texture_env()
 			if (tex.enabled())
 			{
 				*sampler_state = m_gl_texture_cache.upload_texture(cmd, tex, m_rtts);
-
-				if (m_textures_dirty[i])
-					m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
 			}
 			else
 			{
 				*sampler_state = {};
+			}
+
+			if (m_textures_dirty[i] && sampler_state->validate())
+			{
+				m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
 			}
 
 			m_textures_dirty[i] = false;
@@ -327,12 +329,16 @@ void GLGSRender::load_texture_env()
 			if (rsx::method_registers.vertex_textures[i].enabled())
 			{
 				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.vertex_textures[i], m_rtts);
-
-				if (m_vertex_textures_dirty[i])
-					m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
 			}
 			else
+			{
 				*sampler_state = {};
+			}
+
+			if (m_vertex_textures_dirty[i] && sampler_state->validate())
+			{
+				m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
+			}
 
 			m_vertex_textures_dirty[i] = false;
 		}

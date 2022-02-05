@@ -33,7 +33,7 @@ simple_ringbuf& simple_ringbuf::operator=(simple_ringbuf&& other)
 	return *this;
 }
 
-u32 simple_ringbuf::get_free_size()
+u32 simple_ringbuf::get_free_size() const
 {
 	const u64 _rw_ptr = rw_ptr;
 	const u32 rd = static_cast<u32>(_rw_ptr);
@@ -42,12 +42,12 @@ u32 simple_ringbuf::get_free_size()
 	return wr >= rd ? buf_size - 1 - (wr - rd) : rd - wr - 1U;
 }
 
-u32 simple_ringbuf::get_used_size()
+u32 simple_ringbuf::get_used_size() const
 {
 	return buf_size - 1 - get_free_size();
 }
 
-u32 simple_ringbuf::get_total_size()
+u32 simple_ringbuf::get_total_size() const
 {
 	return buf_size;
 }

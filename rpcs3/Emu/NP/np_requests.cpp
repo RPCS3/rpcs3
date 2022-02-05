@@ -609,13 +609,19 @@ namespace np
 		return true;
 	}
 
-	void np_handler::req_ticket(u32 /*version*/, const SceNpId* /*npid*/, const char* service_id, const u8* /*cookie*/, u32 /*cookie_size*/, const char* /*entitlement_id*/, u32 /*consumed_count*/)
+	void np_handler::req_ticket([[maybe_unused]] u32 version, [[maybe_unused]] const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, [[maybe_unused]] const char* entitlement_id, [[maybe_unused]] u32 consumed_count)
 	{
 		u32 req_id = get_req_id(0x3333);
 
 		std::string service_id_str(service_id);
 
-		if (!rpcn->req_ticket(req_id, service_id_str))
+		std::vector<u8> cookie_vec;
+		if (cookie && cookie_size)
+		{
+			cookie_vec.assign(cookie, cookie + cookie_size);
+		}
+
+		if (!rpcn->req_ticket(req_id, service_id_str, cookie_vec))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;

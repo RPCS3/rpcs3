@@ -23,9 +23,6 @@ public:
 
 	std::string_view GetName() const override { return "XAudio2"sv; }
 
-	static const u32 capabilities = SET_FREQUENCY_RATIO;
-	u32 GetCapabilities() const override { return capabilities;	}
-
 	bool Initialized() override;
 	bool Operational() override;
 
@@ -39,8 +36,6 @@ public:
 	void Pause() override;
 	bool IsPlaying() override;
 
-	f32 SetFrequencyRatio(f32 new_ratio) override;
-
 private:
 	static constexpr u32 INTERNAL_BUF_SIZE_MS = 25;
 
@@ -53,7 +48,7 @@ private:
 	std::function<u32(u32, void *)> m_write_callback{};
 	std::unique_ptr<u8[]> m_data_buf{};
 	u64 m_data_buf_len = 0;
-	u8 m_last_sample[sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)]{};
+	std::array<u8, sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)> m_last_sample{};
 
 	bool m_playing = false;
 	atomic_t<bool> m_reset_req = false;

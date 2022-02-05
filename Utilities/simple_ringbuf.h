@@ -25,9 +25,9 @@ public:
 	simple_ringbuf(simple_ringbuf&& other);
 	simple_ringbuf& operator=(simple_ringbuf&& other);
 
-	u32 get_free_size();
-	u32 get_used_size();
-	u32 get_total_size();
+	u32 get_free_size() const;
+	u32 get_used_size() const;
+	u32 get_total_size() const;
 
 	// Thread unsafe functions.
 	void set_buf_size(u32 size);

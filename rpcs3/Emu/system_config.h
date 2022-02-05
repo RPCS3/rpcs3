@@ -52,6 +52,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<tsx_usage> enable_TSX{ this, "Enable TSX", enable_tsx_by_default() ? tsx_usage::enabled : tsx_usage::disabled }; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{ this, "Accurate xfloat", false };
 		cfg::_bool spu_approx_xfloat{ this, "Approximate xfloat", true };
+		cfg::_bool spu_relaxed_xfloat{ this, "Relaxed xfloat", true }; // Approximate accuracy for only the "FCGT" and "FNMS" instructions
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
 		cfg::_bool full_width_avx512{ this, "Full Width AVX-512", false };
@@ -226,7 +227,7 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<audio_renderer> renderer{ this, "Renderer", audio_renderer::cubeb, true };
 		cfg::_enum<audio_provider> provider{ this, "Audio provider", audio_provider::cell_audio, false };
-		cfg::_bool dump_to_file{ this, "Dump to file" };
+		cfg::_bool dump_to_file{ this, "Dump to file", false, true };
 		cfg::_bool convert_to_s16{ this, "Convert to 16 bit", false, true };
 		cfg::_enum<audio_downmix> audio_channel_downmix{ this, "Audio Channels", audio_downmix::downmix_to_stereo, true };
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };

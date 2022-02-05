@@ -344,7 +344,7 @@ namespace rpcn
 		bool ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id);
 		bool send_room_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomMessageRequest* req);
 		bool req_sign_infos(u32 req_id, const std::string& npid);
-		bool req_ticket(u32 req_id, const std::string& service_id);
+		bool req_ticket(u32 req_id, const std::string& service_id, const std::vector<u8>& cookie);
 		bool sendmessage(const message_data& msg_data, const std::set<std::string>& npids);
 
 		const std::string& get_online_name() const

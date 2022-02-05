@@ -27,24 +27,10 @@ bool AudioBackend::get_convert_to_s16() const
 	return m_sample_size == AudioSampleSize::S16;
 }
 
-bool AudioBackend::has_capability(u32 cap) const
+void AudioBackend::convert_to_s16(u32 cnt, const f32* src, void* dst)
 {
-	return (cap & GetCapabilities()) == cap;
-}
-
-void AudioBackend::dump_capabilities(std::string& out) const
-{
-	u32 count = 0;
-	const u32 capabilities = GetCapabilities();
-
-	if (capabilities & SET_FREQUENCY_RATIO)
+	for (usz i = 0; i < cnt; i++)
 	{
-		fmt::append(out, "%sSET_FREQUENCY_RATIO", count > 0 ? " | " : "");
-		count++;
-	}
-
-	if (count == 0)
-	{
-		fmt::append(out, "NONE");
+		static_cast<s16 *>(dst)[i] = static_cast<s16>(std::clamp(src[i] * 32768.5f, -32768.0f, 32767.0f));
 	}
 }

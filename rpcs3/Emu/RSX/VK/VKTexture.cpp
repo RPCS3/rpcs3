@@ -41,7 +41,7 @@ namespace vk
 		}
 		else if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT)
 		{
-			return base_size * 2;
+			return (base_size * 6) / 2;
 		}
 		else
 		{
