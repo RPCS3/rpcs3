@@ -7,6 +7,17 @@
 
 namespace vk
 {
+	u64 hash_image_properties(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags)
+	{
+		ensure(static_cast<u32>(format) < 0xFF);
+		return (static_cast<u64>(format) & 0xFF) |
+			(static_cast<u64>(w) << 8) |
+			(static_cast<u64>(h) << 24) |
+			(static_cast<u64>(d) << 40) |
+			(static_cast<u64>(mipmaps) << 48) |
+			(static_cast<u64>(flags) << 56);
+	}
+
 	texture_cache::cached_image_reference_t::cached_image_reference_t(texture_cache* parent, std::unique_ptr<vk::viewable_image>& previous)
 	{
 		ensure(previous);
@@ -21,9 +32,10 @@ namespace vk
 		data->current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		// Move this object to the cached image pool
+		const auto key = hash_image_properties(data->format(), data->width(), data->height(), data->depth(), data->mipmaps(), data->info.flags);
 		std::lock_guard lock(parent->m_cached_pool_lock);
 		parent->m_cached_memory_size += data->memory->size();
-		parent->m_cached_images.emplace_front(std::move(data));
+		parent->m_cached_images.emplace_front(key, data);
 	}
 
 	void cached_texture_section::dma_transfer(vk::command_buffer& cmd, vk::image* src, const areai& src_area, const utils::address_range& valid_range, u32 pitch)
@@ -471,32 +483,18 @@ namespace vk
 
 	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags)
 	{
-		auto hash_properties = [](VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags)
-		{
-			ensure(static_cast<u32>(format) < 0xFF);
-			return (static_cast<u64>(format) & 0xFF) |
-				(static_cast<u64>(w) << 8) |
-				(static_cast<u64>(h) << 24) |
-				(static_cast<u64>(d) << 40) |
-				(static_cast<u64>(mipmaps) << 48) |
-				(static_cast<u64>(flags) << 56);
-		};
-
 		reader_lock lock(m_cached_pool_lock);
 
 		if (!m_cached_images.empty())
 		{
-			const u64 desired_key = hash_properties(format, w, h, d, mipmaps, flags);
+			const u64 desired_key = hash_image_properties(format, w, h, d, mipmaps, flags);
 			lock.upgrade();
 
 			for (auto it = m_cached_images.begin(); it != m_cached_images.end(); ++it)
 			{
-				const auto& info = (*it)->info;
-				const u64 this_key = hash_properties(info.format, info.extent.width, info.extent.height, info.extent.depth, info.mipLevels, info.flags);
-
-				if (this_key == desired_key)
+				if (it->key == desired_key)
 				{
-					auto ret = std::move(*it);
+					auto ret = std::move(it->data);
 					m_cached_images.erase(it);
 					m_cached_memory_size -= ret->memory->size();
 					return ret;
@@ -1218,7 +1216,7 @@ namespace vk
 			const auto new_size = m_cached_images.size() / 2;
 			for (usz i = new_size; i < m_cached_images.size(); ++i)
 			{
-				m_cached_memory_size -= m_cached_images[i]->memory->size();
+				m_cached_memory_size -= m_cached_images[i].data->memory->size();
 			}
 
 			m_cached_images.resize(new_size);

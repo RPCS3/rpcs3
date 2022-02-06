@@ -365,6 +365,16 @@ namespace vk
 			void dispose() override;
 		};
 
+		struct cached_image_t
+		{
+			u64 key;
+			std::unique_ptr<vk::viewable_image> data;
+
+			cached_image_t() = default;
+			cached_image_t(u64 key_, std::unique_ptr<vk::viewable_image>& data_) :
+				key(key_), data(std::move(data_)) {}
+		};
+
 	public:
 		enum texture_create_flags : u32
 		{
@@ -384,7 +394,7 @@ namespace vk
 
 		//Stuff that has been dereferenced goes into these
 		const u32 max_cached_image_pool_size = 256;
-		std::deque<std::unique_ptr<vk::viewable_image>> m_cached_images;
+		std::deque<cached_image_t> m_cached_images;
 		atomic_t<u64> m_cached_memory_size = { 0 };
 		shared_mutex m_cached_pool_lock;
 
