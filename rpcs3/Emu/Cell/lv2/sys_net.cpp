@@ -3050,6 +3050,7 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 	const void* native_val = &native_int;
 	::socklen_t native_len = sizeof(int);
 	::linger native_linger;
+	::ip_mreq native_mreq;
 
 #ifdef _WIN32
 	u32 native_timeo;
@@ -3261,13 +3262,16 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				break;
 			}
 			case SYS_NET_IP_ADD_MEMBERSHIP:
-			{
-				native_opt = IP_ADD_MEMBERSHIP;
-				break;
-			}
 			case SYS_NET_IP_DROP_MEMBERSHIP:
 			{
-				native_opt = IP_DROP_MEMBERSHIP;
+				if (optlen < sizeof(sys_net_ip_mreq))
+					return SYS_NET_EINVAL;
+
+				native_opt = optname == SYS_NET_IP_ADD_MEMBERSHIP ? IP_ADD_MEMBERSHIP : IP_DROP_MEMBERSHIP;
+				native_val = &native_mreq;
+				native_len = sizeof(::ip_mreq);
+				native_mreq.imr_interface.s_addr = std::bit_cast<u32>(reinterpret_cast<sys_net_ip_mreq*>(optval_buf.data())->imr_interface);
+				native_mreq.imr_multiaddr.s_addr = std::bit_cast<u32>(reinterpret_cast<sys_net_ip_mreq*>(optval_buf.data())->imr_multiaddr);
 				break;
 			}
 			case SYS_NET_IP_TTLCHK:
