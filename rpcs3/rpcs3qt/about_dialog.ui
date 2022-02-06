@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>880</width>
-    <height>630</height>
+    <width>805</width>
+    <height>555</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,7 +17,7 @@
    <iconset resource="../resources.qrc">
     <normaloff>:/rpcs3.ico</normaloff>:/rpcs3.ico</iconset>
   </property>
-  <layout class="QVBoxLayout" name="about_dialog_layout">
+  <layout class="QVBoxLayout" name="about_dialog_layout" stretch="0,1,0">
    <property name="spacing">
     <number>6</number>
    </property>
@@ -41,9 +41,15 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <layout class="QHBoxLayout" name="header_section_layout">
+     <layout class="QHBoxLayout" name="header_section_layout" stretch="0,1">
       <item>
        <widget class="QWidget" name="icon_widget" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <layout class="QVBoxLayout" name="icon_widget_layout">
          <property name="leftMargin">
           <number>0</number>
@@ -170,7 +176,7 @@
    <item>
     <widget class="QScrollArea" name="name_section">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
@@ -178,7 +184,7 @@
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>400</height>
+       <height>200</height>
       </size>
      </property>
      <property name="frameShape">
@@ -198,8 +204,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>863</width>
-        <height>1376</height>
+        <width>788</width>
+        <height>2076</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="names_layout" stretch="1,1,1,1">

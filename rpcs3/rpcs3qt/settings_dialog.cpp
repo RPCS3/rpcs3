@@ -1994,9 +1994,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->combo_num_ppu_threads, emu_settings_type::NumPPUThreads, true);
 	SubscribeTooltip(ui->gb_num_ppu_threads, tooltips.settings.num_ppu_threads);
-
-	// Layout fix for High Dpi
-	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
 
 settings_dialog::~settings_dialog()
