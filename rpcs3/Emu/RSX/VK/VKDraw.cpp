@@ -786,7 +786,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		if (occlusion_id == umax)
 		{
 			// Force flush
-			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
+			rsx_log.warning("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
 			ZCULL_control::sync(this);
 
 			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);

@@ -1928,7 +1928,7 @@ namespace rsx
 								if (const auto coverage_ratio = (coverage_size * 100ull) / memory_range.length();
 									coverage_ratio > max_overdraw_ratio)
 								{
-									rsx_log.error("[Performance warning] Texture gather routine encountered too many objects! Operation=%d, Mipmaps=%d, Depth=%d, Sections=%zu, Ratio=%llu%",
+									rsx_log.warning("[Performance warning] Texture gather routine encountered too many objects! Operation=%d, Mipmaps=%d, Depth=%d, Sections=%zu, Ratio=%llu%",
 										static_cast<int>(result.external_subresource_desc.op), attr.mipmaps, attr.depth, overlapping_fbos.size(), coverage_ratio);
 									m_rtts.check_for_duplicates(overlapping_fbos, memory_range);
 								}
