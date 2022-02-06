@@ -30,11 +30,14 @@ namespace rsx
 			u32 background_darkening_strength = 0;
 			std::unique_ptr<image_info> background_image;
 
+			animation_color_interpolate fade_animation;
+
 		public:
 			message_dialog(bool allow_custom_background = false);
 
 			compiled_resource get_compiled() override;
 
+			void update() override;
 			void on_button_pressed(pad_button button_press) override;
 			void close(bool use_callback, bool stop_pad_interception) override;
 
