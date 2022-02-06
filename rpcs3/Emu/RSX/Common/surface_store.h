@@ -660,48 +660,61 @@ namespace rsx
 
 		void remove_duplicates_fallback_impl(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
 		{
+			// Originally used to debug crashes but this function breaks often enough that I'll leave the checks in for now.
+			// Safe to remove after some time if no asserts are reported.
+			constexpr u32 overrun_cookie_value = 0xCAFEBABEu;
+
 			// Generic painter's algorithm to detect obsolete sections
 			ensure(range.length() < 64 * 0x100000);
-			std::vector<u8> marker(range.length(), 0);
+			std::vector<u8> marker(range.length() + sizeof(overrun_cookie_value), 0);
 
-			auto compare_and_tag_row = [&](u32 offset, u32 length) -> bool
+			// Tag end
+			u32* overrun_test_ptr = utils::bless<u32>(marker.data() + range.length());
+			*overrun_test_ptr = overrun_cookie_value;
+
+			auto compare_and_tag_row = [&](const u32 offset, u32 length) -> bool
 			{
-				bool valid = false;
-				for (u32 i = 0; i < (length / 8); ++i, offset += 8, length -= 8)
+				u64 mask = 0;
+				u8* dst_ptr = marker.data() + offset;
+
+				while (length >= 8)
 				{
-					auto dest = reinterpret_cast<u64*>(marker.data() + offset);
-					valid |= (*dest != umax);
-					*dest = umax;
+					auto& value = *utils::bless<u64>(dst_ptr);
+					mask |= (~value);                          // If the value is not all 1s, set valid to true
+					value = umax;
+
+					dst_ptr += 8;
+					length -= 8;
 				}
 
 				if (length >= 4)
 				{
-					auto dest = reinterpret_cast<u32*>(marker.data() + offset);
-					valid |= (*dest != umax);
-					*dest = umax;
+					auto& value = *utils::bless<u32>(dst_ptr);
+					mask |= (~value);
+					value = umax;
 
-					offset += 4;
+					dst_ptr += 4;
 					length -= 4;
 				}
 
 				if (length >= 2)
 				{
-					auto dest = reinterpret_cast<u16*>(marker.data() + offset);
-					valid |= (*dest != umax);
-					*dest = umax;
+					auto& value = *utils::bless<u16>(dst_ptr);
+					mask |= (~value);
+					value = umax;
 
-					offset += 2;
+					dst_ptr += 2;
 					length -= 2;
 				}
 
 				if (length)
 				{
-					auto dest = (marker.data() + offset);
-					valid |= (*dest != umax);
-					*dest = umax;
+					auto& value = *dst_ptr;
+					mask |= (~value);
+					value = umax;
 				}
 
-				return valid;
+				return !!mask;
 			};
 
 			for (auto it = sections.crbegin(); it != sections.crend(); ++it)
@@ -750,9 +763,11 @@ namespace rsx
 					num_rows = utils::aligned_div(this_range.length(), rsx_pitch);
 				}
 
-				for (u32 row = 0, offset = (this_range.start - range.start); row < num_rows; ++row, offset += rsx_pitch)
+				for (u32 row = 0, offset = (this_range.start - range.start), section_len = (this_range.end - range.start + 1);
+					row < num_rows;
+					++row, offset += rsx_pitch)
 				{
-					valid |= compare_and_tag_row(offset, std::min<u32>(native_pitch, (this_range.end - offset + 1)));
+					valid |= compare_and_tag_row(offset, std::min<u32>(native_pitch, (section_len - offset)));
 				}
 
 				if (!valid)
@@ -761,6 +776,9 @@ namespace rsx
 					invalidate_surface_address(it->base_address, it->is_depth);
 				}
 			}
+
+			// Verify no OOB
+			ensure(*overrun_test_ptr == overrun_cookie_value);
 		}
 
 	protected:
