@@ -111,6 +111,7 @@ namespace gui
 	const QString patches      = "Patches";
 	const QString localization = "Localization";
 	const QString pad_settings = "PadSettings";
+	const QString config       = "Config";
 	
 	const QString update_on   = "true";
 	const QString update_off  = "false";
@@ -238,6 +239,8 @@ namespace gui
 	const gui_save sd_icon_color = gui_save(savedata, "icon_color", gl_icon_color);
 
 	const gui_save um_geometry    = gui_save(users, "geometry",    QByteArray());
+
+	const gui_save cfg_geometry = gui_save(config, "geometry", QByteArray());
 
 	const gui_save loc_language = gui_save(localization, "language", "en");
 
