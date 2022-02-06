@@ -1994,10 +1994,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->combo_num_ppu_threads, emu_settings_type::NumPPUThreads, true);
 	SubscribeTooltip(ui->gb_num_ppu_threads, tooltips.settings.num_ppu_threads);
+
+	if (!restoreGeometry(m_gui_settings->GetValue(gui::cfg_geometry).toByteArray()))
+	{
+		// Ignore. This will most likely only fail if the setting doesn't contain any values
+	}
 }
 
 settings_dialog::~settings_dialog()
 {
+	m_gui_settings->SetValue(gui::cfg_geometry, saveGeometry());
+
 	delete ui;
 }
 
