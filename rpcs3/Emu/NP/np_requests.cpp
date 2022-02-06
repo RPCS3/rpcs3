@@ -53,7 +53,7 @@ namespace np
 		return req_id;
 	}
 
-	u32 np_handler::create_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 /*server_id*/)
+	u32 np_handler::create_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, [[maybe_unused]] u16 server_id)
 	{
 		u32 req_id    = generate_callback_info(ctx_id, optParam);
 		u32 event_key = get_event_key();
@@ -69,7 +69,7 @@ namespace np
 		return req_id;
 	}
 
-	u32 np_handler::delete_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 /*server_id*/)
+	u32 np_handler::delete_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, [[maybe_unused]] u16 server_id)
 	{
 		u32 req_id    = generate_callback_info(ctx_id, optParam);
 		u32 event_key = get_event_key();
@@ -276,15 +276,13 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to LeaveRoom command");
 
-		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
-
 		// Disconnect all users from that room
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh.disconnect_sig2_users(room_id);
 
 		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
 			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom, event_key, 0, 0, cb_info.cb_arg);
+				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom, 0, 0, 0, cb_info.cb_arg);
 				return 0;
 			});
 
@@ -384,15 +382,13 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_set_roomdata_external(u32 req_id, std::vector<u8>& /*reply_data*/)
+	bool np_handler::reply_set_roomdata_external(u32 req_id, [[maybe_unused]] std::vector<u8>& reply_data)
 	{
 		const auto cb_info = take_pending_request(req_id);
 
-		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
-
 		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
 			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal, event_key, 0, 0, cb_info.cb_arg);
+				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal, 0, 0, 0, cb_info.cb_arg);
 				return 0;
 			});
 
@@ -460,15 +456,13 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_set_roomdata_internal(u32 req_id, std::vector<u8>& /*reply_data*/)
+	bool np_handler::reply_set_roomdata_internal(u32 req_id, [[maybe_unused]] std::vector<u8>& reply_data)
 	{
 		const auto cb_info = take_pending_request(req_id);
 
-		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
-
 		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
 			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal, event_key, 0, 0, cb_info.cb_arg);
+				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal, 0, 0, 0, cb_info.cb_arg);
 				return 0;
 			});
 
@@ -488,15 +482,13 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_set_roommemberdata_internal(u32 req_id, std::vector<u8>& /*reply_data*/)
+	bool np_handler::reply_set_roommemberdata_internal(u32 req_id, [[maybe_unused]] std::vector<u8>& reply_data)
 	{
 		const auto cb_info = take_pending_request(req_id);
 
-		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
-
 		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
 			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal, event_key, 0, 0, cb_info.cb_arg);
+				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal, 0, 0, 0, cb_info.cb_arg);
 				return 0;
 			});
 
@@ -557,7 +549,7 @@ namespace np
 		return req_id;
 	}
 
-	bool np_handler::reply_send_room_message(u32 req_id, std::vector<u8>& /*reply_data*/)
+	bool np_handler::reply_send_room_message(u32 req_id, [[maybe_unused]] std::vector<u8>& reply_data)
 	{
 		const auto cb_info = take_pending_request(req_id);
 
@@ -630,7 +622,7 @@ namespace np
 		return;
 	}
 
-	bool np_handler::reply_req_ticket(u32 /*req_id*/, std::vector<u8>& reply_data)
+	bool np_handler::reply_req_ticket([[maybe_unused]] u32 req_id, std::vector<u8>& reply_data)
 	{
 		vec_stream reply(reply_data, 1);
 		auto ticket_raw = reply.get_rawdata();
