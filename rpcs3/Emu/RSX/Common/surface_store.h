@@ -772,7 +772,7 @@ namespace rsx
 
 				if (!valid)
 				{
-					rsx_log.error("Stale surface at address 0x%x will be deleted", it->base_address);
+					rsx_log.warning("Stale surface at address 0x%x will be deleted", it->base_address);
 					invalidate_surface_address(it->base_address, it->is_depth);
 				}
 			}

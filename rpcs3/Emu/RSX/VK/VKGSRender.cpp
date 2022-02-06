@@ -2473,7 +2473,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 				m_flush_requests.clear_pending_flag();
 			}
 
-			rsx_log.error("[Performance warning] Unexpected ZCULL read caused a hard sync");
+			rsx_log.warning("[Performance warning] Unexpected ZCULL read caused a hard sync");
 			busy_wait();
 		}
 
