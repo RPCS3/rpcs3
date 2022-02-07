@@ -1360,6 +1360,20 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					continue; // system files are not included in the file list
 				}
 
+				if (!g_cfg.misc.allow_filesystem_metadata_in_save_folders && entry.name.starts_with("._"sv))
+				{
+					fs::file entry2(dir_path + entry.name);
+
+					const char resfork_magic[] = "\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X";
+					char file_magic[16];
+					u64 bytes_read = entry2.read(file_magic, 16);
+					if (bytes_read == 16 && std::memcmp(resfork_magic, file_magic, 16) == 0)
+					{
+						cellSaveData.warning("savedata_op(): skipped %s", entry.name.c_str()); // skip macOS resource forks
+						continue;
+					}
+				}
+
 				files_sorted.push_back(entry);
 			}
 		}

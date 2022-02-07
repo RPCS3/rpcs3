@@ -2154,6 +2154,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="allowFilesystemMetadataInSaveFolders">
+                 <property name="text">
+                  <string>Allow filesystem metadata in save folders</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="silenceAllLogs">
                  <property name="text">
                   <string>Silence All Logs</string>
