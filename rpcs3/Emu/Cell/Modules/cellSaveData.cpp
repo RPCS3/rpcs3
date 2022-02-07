@@ -695,7 +695,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			// Copy file extension
 			std::span dst(name, file_path.size() - dotpos);
-			strcpy_trunc(dst, file_path.operator std::string_view().substr(dotpos + 1));
+			strcpy_trunc(dst, file_path.substr(dotpos + 1));
 
 			// Allow '_' at start even though sysutil_check_name_string does not
 			if (name[0] == '_')
