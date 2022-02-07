@@ -120,6 +120,91 @@ struct savedata_manager
 	atomic_t<s32> last_cbresult_error_dialog{0}; // CBRESULT errors are negative
 };
 
+int check_filename(std::string_view file_path, bool disallow_system_files)
+{
+	if (file_path.size() >= CELL_SAVEDATA_FILENAME_SIZE)
+	{
+		// ****** sysutil savedata parameter error : 71 ******
+		return 71;
+	}
+
+	auto dotpos = file_path.find_last_of('.');
+
+	if (dotpos == umax)
+	{
+		// Point to end of string instead
+		dotpos = file_path.size();
+	}
+
+	if (file_path.empty() || dotpos > 8u || file_path.size() - dotpos > 4u)
+	{
+		// ****** sysutil savedata parameter error : 70 ******
+		return 70;
+	}
+
+	if (file_path == "PARAM.SFO"sv || file_path == "PARAM.PFD"sv)
+	{
+		// ****** sysutil savedata parameter error : 70 ******
+		return 70;
+	}
+
+	char name[CELL_SAVEDATA_FILENAME_SIZE - 3];
+
+	if (dotpos)
+	{
+		// Copy file name
+		std::span dst(name, dotpos + 1);
+		strcpy_trunc(dst, file_path);
+
+		// Allow multiple '.' even though sysutil_check_name_string does not
+		std::replace(name, name + dotpos, '.', '-');
+
+		// Allow '_' at start even though sysutil_check_name_string does not
+		if (name[0] == '_')
+		{
+			name[0] = '-';
+		}
+
+		if (disallow_system_files && ((dotpos >= 5u && std::memcmp(name, "PARAM", 5) == 0) ||
+			(dotpos >= 4u && std::memcmp(name, "ICON", 4) == 0) ||
+			(dotpos >= 3u && std::memcmp(name, "PIC", 3) == 0) ||
+			(dotpos >= 3u && std::memcmp(name, "SND", 3) == 0)))
+		{
+			// ****** sysutil savedata parameter error : 70 ******
+			return 70;
+		}
+
+		// Check filename
+		if (sysutil_check_name_string(name, 1, 9) == -1)
+		{
+			// ****** sysutil savedata parameter error : 70 ******
+			return 70;
+		}
+	}
+
+	if (file_path.size() > dotpos + 1)
+	{
+		// Copy file extension
+		std::span dst(name, file_path.size() - dotpos);
+		strcpy_trunc(dst, file_path.substr(dotpos + 1));
+
+		// Allow '_' at start even though sysutil_check_name_string does not
+		if (name[0] == '_')
+		{
+			name[0] = '-';
+		}
+
+		// Check file extension
+		if (sysutil_check_name_string(name, 1, 4) == -1)
+		{
+			// ****** sysutil savedata parameter error : 70 ******
+			return 70;
+		}
+	}
+
+	return 0;
+}
+
 static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
 {
 	std::vector<SaveDataEntry> save_entries;
@@ -159,7 +244,7 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 
 		for (const auto& entry2 : fs::dir(base_dir + entry.name))
 		{
-			if (entry2.is_directory)
+			if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false))
 			{
 				continue;
 			}
@@ -629,91 +714,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	SaveDataEntry save_entry;
 
-	auto check_filename = [](std::string_view file_path, bool disallow_system_files)
-	{
-		if (file_path.size() >= CELL_SAVEDATA_FILENAME_SIZE)
-		{
-			// ****** sysutil savedata parameter error : 71 ******
-			return 71;
-		}
-
-		auto dotpos = file_path.find_last_of('.');
-
-		if (dotpos == umax)
-		{
-			// Point to end of string instead
-			dotpos = file_path.size();
-		}
-
-		if (file_path.empty() || dotpos > 8u || file_path.size() - dotpos > 4u)
-		{
-			// ****** sysutil savedata parameter error : 70 ******
-			return 70;
-		}
-
-		if (file_path == "PARAM.SFO"sv || file_path == "PARAM.PFD"sv)
-		{
-			// ****** sysutil savedata parameter error : 70 ******
-			return 70;
-		}
-
-		char name[CELL_SAVEDATA_FILENAME_SIZE - 3];
-
-		if (dotpos)
-		{
-			// Copy file name
-			std::span dst(name, dotpos + 1);
-			strcpy_trunc(dst, file_path);
-
-			// Allow multiple '.' even though sysutil_check_name_string does not
-			std::replace(name, name + dotpos, '.', '-');
-
-			// Allow '_' at start even though sysutil_check_name_string does not
-			if (name[0] == '_')
-			{
-				name[0] = '-';
-			}
-
-			if (disallow_system_files && ((dotpos >= 5u && std::memcmp(name, "PARAM", 5) == 0) ||
-				(dotpos >= 4u && std::memcmp(name, "ICON", 4) == 0) ||
-				(dotpos >= 3u && std::memcmp(name, "PIC", 3) == 0) ||
-				(dotpos >= 3u && std::memcmp(name, "SND", 3) == 0)))
-			{
-				// ****** sysutil savedata parameter error : 70 ******
-				return 70;
-			}
-
-			// Check filename
-			if (sysutil_check_name_string(name, 1, 9) == -1)
-			{
-				// ****** sysutil savedata parameter error : 70 ******
-				return 70;
-			}
-		}
-
-		if (file_path.size() > dotpos + 1)
-		{
-			// Copy file extension
-			std::span dst(name, file_path.size() - dotpos);
-			strcpy_trunc(dst, file_path.substr(dotpos + 1));
-
-			// Allow '_' at start even though sysutil_check_name_string does not
-			if (name[0] == '_')
-			{
-				name[0] = '-';
-			}
-
-			// Check file extension
-			if (sysutil_check_name_string(name, 1, 4) == -1)
-			{
-				// ****** sysutil savedata parameter error : 70 ******
-				return 70;
-			}
-		}
-
-		return 0;
-	};
-
 	if (setList)
 	{
 		std::vector<SaveDataEntry> save_entries;
@@ -771,7 +771,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 						for (const auto& entry2 : fs::dir(base_dir + entry.name))
 						{
-							if (entry2.is_directory)
+							if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false))
 							{
 								continue;
 							}
@@ -1440,7 +1440,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					continue;
 				}
 
-				if (check_filename(entry.name, false))
+				if (check_filename(vfs::unescape(entry.name), false))
 				{
 					continue; // system files are not included in the file list
 				}
