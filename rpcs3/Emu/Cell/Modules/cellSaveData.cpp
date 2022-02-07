@@ -1440,7 +1440,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					continue;
 				}
 
-				if (check_filename(vfs::unescape(entry.name), false))
+				if (check_filename(entry.name, false))
 				{
 					continue; // system files are not included in the file list
 				}
@@ -1660,7 +1660,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// Read file into a vector and make a memory file
 			entry.name = vfs::unescape(entry.name);
 
-			if (entry.name == ".")
+			if (entry.name == "." || check_filename(entry.name, false))
 			{
 				continue;
 			}
@@ -2099,7 +2099,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 
 		for (const auto& entry : fs::dir(save_path))
 		{
-			if (entry.is_directory)
+			if (entry.is_directory || check_filename(vfs::unescape(entry.name), false))
 			{
 				continue;
 			}
