@@ -651,6 +651,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			return 70;
 		}
 
+		if (file_path == "PARAM.SFO"sv || file_path == "PARAM.PFD"sv)
+		{
+			// ****** sysutil savedata parameter error : 70 ******
+			return 70;
+		}
+
 		char name[CELL_SAVEDATA_FILENAME_SIZE - 3];
 
 		if (dotpos)
@@ -668,11 +674,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				name[0] = '-';
 			}
 
-			if (disallow_system_files ? ((dotpos >= 5u && std::memcmp(name, "PARAM", 5) == 0) ||
+			if (disallow_system_files && ((dotpos >= 5u && std::memcmp(name, "PARAM", 5) == 0) ||
 				(dotpos >= 4u && std::memcmp(name, "ICON", 4) == 0) ||
 				(dotpos >= 3u && std::memcmp(name, "PIC", 3) == 0) ||
-				(dotpos >= 3u && std::memcmp(name, "SND", 3) == 0)) :
-				(entry.name == "PARAM.SFO"sv || entry.name == "PARAM.PFD"sv))
+				(dotpos >= 3u && std::memcmp(name, "SND", 3) == 0)))
 			{
 				// ****** sysutil savedata parameter error : 70 ******
 				return 70;
