@@ -655,9 +655,6 @@ VKGSRender::~VKGSRender()
 	// Upscaler (references some global resources)
 	m_upscaler.reset();
 
-	// Global resources
-	vk::destroy_global_resources();
-
 	// Heaps
 	m_attrib_ring_info.destroy();
 	m_fragment_env_ring_info.destroy();
@@ -721,6 +718,9 @@ VKGSRender::~VKGSRender()
 
 	m_secondary_command_buffer.destroy();
 	m_secondary_command_buffer_pool.destroy();
+
+	// Global resources
+	vk::destroy_global_resources();
 
 	// Device handles/contexts
 	m_swapchain->destroy();
