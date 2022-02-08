@@ -7,7 +7,7 @@
 
 namespace vk
 {
-	u64 hash_image_properties(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags)
+	u64 hash_image_properties(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageCreateFlags create_flags)
 	{
 		ensure(static_cast<u32>(format) < 0xFF);
 		return (static_cast<u64>(format) & 0xFF) |
@@ -15,7 +15,7 @@ namespace vk
 			(static_cast<u64>(h) << 24) |
 			(static_cast<u64>(d) << 40) |
 			(static_cast<u64>(mipmaps) << 48) |
-			(static_cast<u64>(flags) << 56);
+			(static_cast<u64>(create_flags) << 56);
 	}
 
 	texture_cache::cached_image_reference_t::cached_image_reference_t(texture_cache* parent, std::unique_ptr<vk::viewable_image>& previous)
@@ -30,12 +30,22 @@ namespace vk
 	{
 		// Erase layout information to force TOP_OF_PIPE transition next time.
 		data->current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		data->current_queue_family = VK_QUEUE_FAMILY_IGNORED;
 
 		// Move this object to the cached image pool
 		const auto key = hash_image_properties(data->format(), data->width(), data->height(), data->depth(), data->mipmaps(), data->info.flags);
 		std::lock_guard lock(parent->m_cached_pool_lock);
-		parent->m_cached_memory_size += data->memory->size();
-		parent->m_cached_images.emplace_front(key, data);
+
+		if (!parent->m_cache_is_exiting)
+		{
+			parent->m_cached_memory_size += data->memory->size();
+			parent->m_cached_images.emplace_front(key, data);
+		}
+		else
+		{
+			// Destroy if the cache is closed. The GPU is done with this resource anyway.
+			data.reset();
+		}
 	}
 
 	void cached_texture_section::dma_transfer(vk::command_buffer& cmd, vk::image* src, const areai& src_area, const utils::address_range& valid_range, u32 pitch)
@@ -205,6 +215,10 @@ namespace vk
 
 	void texture_cache::clear()
 	{
+		{
+			std::lock_guard lock(m_cached_pool_lock);
+			m_cache_is_exiting = true;
+		}
 		baseclass::clear();
 
 		m_cached_images.clear();
@@ -481,18 +495,18 @@ namespace vk
 		return result;
 	}
 
-	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags)
+	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageCreateFlags create_flags, VkImageUsageFlags usage)
 	{
 		reader_lock lock(m_cached_pool_lock);
 
 		if (!m_cached_images.empty())
 		{
-			const u64 desired_key = hash_image_properties(format, w, h, d, mipmaps, flags);
+			const u64 desired_key = hash_image_properties(format, w, h, d, mipmaps, create_flags);
 			lock.upgrade();
 
 			for (auto it = m_cached_images.begin(); it != m_cached_images.end(); ++it)
 			{
-				if (it->key == desired_key)
+				if (it->key == desired_key && (it->data->info.usage & usage) == usage)
 				{
 					auto ret = std::move(it->data);
 					m_cached_images.erase(it);
@@ -505,29 +519,15 @@ namespace vk
 		return {};
 	}
 
-	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_cubemap(VkFormat format, u16 size)
-	{
-		return find_cached_image(format, size, size, 1, 1, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
-	}
-
 	vk::image_view* texture_cache::create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
 		u32 gcm_format, u16 x, u16 y, u16 w, u16 h, u16 d, u8 mips, const rsx::texture_channel_remap_t& remap_vector, bool copy)
 	{
-		std::unique_ptr<vk::viewable_image> image;
+		const VkImageCreateFlags image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+		const VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		const VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
+		const u16 layers = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? 6 : 1;
 
-		VkImageCreateFlags image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
-		VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
-		u16 layers = 1;
-
-		if (!image_flags) [[likely]]
-		{
-			image = find_cached_image(dst_format, w, h, 1, mips, 0);
-		}
-		else
-		{
-			image = find_cached_cubemap(dst_format, w);
-			layers = 6;
-		}
+		auto image = find_cached_image(dst_format, w, h, d, mips, image_flags, usage_flags);
 
 		if (!image)
 		{
@@ -812,7 +812,7 @@ namespace vk
 		if (region.exists())
 		{
 			image = dynamic_cast<vk::viewable_image*>(region.get_raw_texture());
-			if (!image || region.get_image_type() != type || image->depth() != depth) // TODO
+			if ((flags & texture_create_flags::do_not_reuse) || !image || region.get_image_type() != type || image->depth() != depth) // TODO
 			{
 				// Incompatible view/type
 				region.destroy();
@@ -849,9 +849,9 @@ namespace vk
 		{
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			const VkFormat vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
-			const VkFlags flags = is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+			const VkImageCreateFlags create_flags = is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 
-			if (auto found = find_cached_image(vk_format, width, height, depth, mipmaps, flags))
+			if (auto found = find_cached_image(vk_format, width, height, depth, mipmaps, create_flags, usage_flags))
 			{
 				image = found.release();
 			}
@@ -861,7 +861,7 @@ namespace vk
 					m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					image_type, vk_format,
 					width, height, depth, mipmaps, layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-					VK_IMAGE_TILING_OPTIMAL, usage_flags, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+					VK_IMAGE_TILING_OPTIMAL, usage_flags, create_flags,
 					VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
 			}
 
@@ -934,6 +934,7 @@ namespace vk
 				vk::end_renderpass(cmd);
 			}
 		}
+
 		auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, swizzled,
 			rsx::component_order::default_, 0);
 
@@ -1255,7 +1256,7 @@ namespace vk
 			format,
 			width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 			VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0,
-			VMM_ALLOCATION_POOL_UNDEFINED);
+			VMM_ALLOCATION_POOL_SWAPCHAIN);
 
 		VkImageSubresource subresource{};
 		subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
