@@ -26,7 +26,7 @@ namespace vk
 		this->data = std::move(previous);
 	}
 
-	void texture_cache::cached_image_reference_t::dispose()
+	texture_cache::cached_image_reference_t::~cached_image_reference_t()
 	{
 		// Erase layout information to force TOP_OF_PIPE transition next time.
 		data->current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -208,7 +208,7 @@ namespace vk
 	{
 		if (tex.is_managed() && tex.exists())
 		{
-			auto disposable = std::unique_ptr<vk::disposable_t>(new cached_image_reference_t(this, tex.get_texture()));
+			auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, tex.get_texture()));
 			vk::get_resource_manager()->dispose(disposable);
 		}
 	}
@@ -745,7 +745,7 @@ namespace vk
 		ensure(resource);
 
 		auto image = std::unique_ptr<vk::viewable_image>(resource);
-		auto disposable = std::unique_ptr<vk::disposable_t>(new cached_image_reference_t(this, image));
+		auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, image));
 		vk::get_resource_manager()->dispose(disposable);
 	}
 
@@ -1288,7 +1288,7 @@ namespace vk
 
 		auto result = image.get();
 		const auto resource_memory = image->memory->size();
-		auto disposable = std::unique_ptr<vk::disposable_t>(new cached_image_reference_t(this, image));
+		auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, image));
 		vk::get_resource_manager()->dispose(disposable);
 
 		return result;

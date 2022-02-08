@@ -67,7 +67,6 @@ namespace vk
 		vk::clear_framebuffer_cache();
 		vk::clear_resolve_helpers();
 		vk::clear_dma_resources();
-		vk::vmm_reset();
 		vk::clear_scratch_resources();
 
 		vk::get_upload_heap()->destroy();
@@ -82,6 +81,9 @@ namespace vk
 
 		// This must be the last item destroyed
 		vk::get_resource_manager()->destroy();
+
+		// Statistics counter reset. Also verifies that everything was deleted.
+		vk::vmm_reset();
 	}
 
 	const vk::render_device *get_current_renderer()

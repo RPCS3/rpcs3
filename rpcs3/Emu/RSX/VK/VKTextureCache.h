@@ -356,13 +356,13 @@ namespace vk
 		using baseclass = rsx::texture_cache<vk::texture_cache, vk::texture_cache_traits>;
 		friend baseclass;
 
-		struct cached_image_reference_t : vk::disposable_t
+		struct cached_image_reference_t
 		{
 			std::unique_ptr<vk::viewable_image> data;
 			texture_cache* parent;
 
 			cached_image_reference_t(texture_cache* parent, std::unique_ptr<vk::viewable_image>& previous);
-			void dispose() override;
+			~cached_image_reference_t();
 		};
 
 		struct cached_image_t
