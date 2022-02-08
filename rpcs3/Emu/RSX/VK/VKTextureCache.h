@@ -379,24 +379,28 @@ namespace vk
 		enum texture_create_flags : u32
 		{
 			initialize_image_contents = 1,
+			do_not_reuse = 2
 		};
 
 		void on_section_destroyed(cached_texture_section& tex) override;
 
 	private:
 
-		//Vulkan internals
+		// Vulkan internals
 		vk::render_device* m_device;
 		vk::memory_type_mapping m_memory_types;
 		vk::gpu_formats_support m_formats_support;
 		VkQueue m_submit_queue;
 		vk::data_heap* m_texture_upload_heap;
 
-		//Stuff that has been dereferenced goes into these
+		// Stuff that has been dereferenced by the GPU goes into these
 		const u32 max_cached_image_pool_size = 256;
 		std::deque<cached_image_t> m_cached_images;
 		atomic_t<u64> m_cached_memory_size = { 0 };
 		shared_mutex m_cached_pool_lock;
+
+		// Blocks some operations when exiting
+		atomic_t<bool> m_cache_is_exiting = false;
 
 		void clear();
 
@@ -406,9 +410,7 @@ namespace vk
 
 		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const;
 
-		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkFlags flags);
-
-		std::unique_ptr<vk::viewable_image> find_cached_cubemap(VkFormat format, u16 size);
+		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageCreateFlags create_flags, VkImageUsageFlags usage);
 
 	protected:
 		vk::image_view* create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
