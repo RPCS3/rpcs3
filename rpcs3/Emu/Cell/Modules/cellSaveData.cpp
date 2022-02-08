@@ -142,7 +142,7 @@ int check_filename(std::string_view file_path, bool disallow_system_files)
 		return 70;
 	}
 
-	if (file_path == "PARAM.SFO"sv || file_path == "PARAM.PFD"sv)
+	if (file_path == "."sv || file_path == "PARAM.SFO"sv || file_path == "PARAM.PFD"sv)
 	{
 		// ****** sysutil savedata parameter error : 70 ******
 		return 70;
@@ -1435,11 +1435,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (!entry.is_directory)
 			{
-				if (entry.name == "."sv)
-				{
-					continue;
-				}
-
 				if (check_filename(entry.name, false))
 				{
 					continue; // system files are not included in the file list
@@ -1660,7 +1655,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// Read file into a vector and make a memory file
 			entry.name = vfs::unescape(entry.name);
 
-			if (entry.name == "." || check_filename(entry.name, false))
+			if (check_filename(entry.name, false))
 			{
 				continue;
 			}
