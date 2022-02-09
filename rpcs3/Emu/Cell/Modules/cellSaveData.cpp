@@ -1729,7 +1729,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (int error = check_filename(file_path, true))
 			{
-				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "%d" ,error};
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "%d", error};
 				break;
 			}
 
