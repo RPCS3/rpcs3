@@ -120,7 +120,7 @@ struct savedata_manager
 	atomic_t<s32> last_cbresult_error_dialog{0}; // CBRESULT errors are negative
 };
 
-int check_filename(std::string_view file_path, bool disallow_system_files)
+int check_filename(std::string_view file_path, bool disallow_system_files, account_sfo_pfd)
 {
 	if (file_path.size() >= CELL_SAVEDATA_FILENAME_SIZE)
 	{
@@ -142,7 +142,7 @@ int check_filename(std::string_view file_path, bool disallow_system_files)
 		return 70;
 	}
 
-	if (file_path == "."sv || file_path == "PARAM.SFO"sv || file_path == "PARAM.PFD"sv)
+	if (file_path == "."sv || (!account_sfo_pfd && (file_path == "PARAM.SFO"sv || file_path == "PARAM.PFD"sv)))
 	{
 		// ****** sysutil savedata parameter error : 70 ******
 		return 70;
@@ -244,7 +244,7 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 
 		for (const auto& entry2 : fs::dir(base_dir + entry.name))
 		{
-			if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false))
+			if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false, true))
 			{
 				continue;
 			}
@@ -771,7 +771,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 						for (const auto& entry2 : fs::dir(base_dir + entry.name))
 						{
-							if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false))
+							if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false, true))
 							{
 								continue;
 							}
@@ -1435,7 +1435,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (!entry.is_directory)
 			{
-				if (check_filename(entry.name, false))
+				if (check_filename(entry.name, false, false))
 				{
 					continue; // system files are not included in the file list
 				}
@@ -1655,7 +1655,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// Read file into a vector and make a memory file
 			entry.name = vfs::unescape(entry.name);
 
-			if (check_filename(entry.name, false))
+			if (check_filename(entry.name, false, true))
 			{
 				continue;
 			}
@@ -2094,7 +2094,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 
 		for (const auto& entry : fs::dir(save_path))
 		{
-			if (entry.is_directory || check_filename(vfs::unescape(entry.name), false))
+			if (entry.is_directory || check_filename(vfs::unescape(entry.name), false, false))
 			{
 				continue;
 			}
@@ -2102,7 +2102,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 			size_kbytes += ::narrow<u32>((entry.size + 1023) / 1024); // firmware rounds this value up
 		}
 
-		*sizeKB = size_kbytes;
+		*sizeKB = size_kbytes + 53;
 	}
 
 	if (bind)
