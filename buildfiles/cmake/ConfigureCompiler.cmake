@@ -78,7 +78,7 @@ else()
 		add_compile_options(-Wno-class-memaccess)
 	endif()
 
-	if(USE_NATIVE_INSTRUCTIONS AND COMPILER_SUPPORTS_MARCH_NATIVE)
+	if(USE_NATIVE_INSTRUCTIONS AND COMPILER_SUPPORTS_MARCH_NATIVE AND NOT COMPILER_ARM)
 		add_compile_options(-march=native)
 	endif()
 
