@@ -120,7 +120,7 @@ struct savedata_manager
 	atomic_t<s32> last_cbresult_error_dialog{0}; // CBRESULT errors are negative
 };
 
-int check_filename(std::string_view file_path, bool disallow_system_files, account_sfo_pfd)
+int check_filename(std::string_view file_path, bool disallow_system_files, bool account_sfo_pfd)
 {
 	if (file_path.size() >= CELL_SAVEDATA_FILENAME_SIZE)
 	{
