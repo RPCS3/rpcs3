@@ -13,6 +13,16 @@ namespace vk
 
 		void clear()
 		{
+			if (!allocations.empty())
+			{
+				rsx_log.error("Leaking memory allocations!");
+				for (auto& leak : allocations)
+				{
+					rsx_log.error("Memory handle 0x%llx (%llu bytes) allocated from pool %d was not freed.",
+						leak.first, leak.second.size, static_cast<int>(leak.second.pool));
+				}
+			}
+
 			allocations.clear();
 			memory_usage.clear();
 			pool_usage.clear();
@@ -44,12 +54,11 @@ namespace vk
 			ensure(max_allowed_samplers);
 			rsx_log.warning("Trimming allocated samplers. Allocated = %u, Max = %u", allocated_sampler_count, limits.maxSamplerAllocationCount);
 
-			auto& disposed_samplers_pool = get_current_eid_scope().m_disposed_samplers;
 			for (auto It = m_sampler_pool.begin(); It != m_sampler_pool.end();)
 			{
 				if (!It->second->has_refs())
 				{
-					disposed_samplers_pool.emplace_back(std::move(It->second));
+					dispose(It->second);
 					It = m_sampler_pool.erase(It);
 					continue;
 				}
