@@ -884,7 +884,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				ppu_precompile(dir_queue, nullptr);
 
 				// Exit "process"
-				CallAfter([]
+				CallFromMainThread([]
 				{
 					Emu.Kill(false);
 				});
@@ -1457,7 +1457,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				Kill(false);
 
-				CallAfter([this]()
+				CallFromMainThread([this]()
 				{
 					GetCallbacks().on_missing_fw();
 				});
@@ -1696,7 +1696,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 		}
 
 		// An inevitable attempt to terminate the *current* emulation course will be issued after 5s
-		CallAfter([allow_autoexit, this]()
+		CallFromMainThread([allow_autoexit, this]()
 		{
 			Kill(allow_autoexit);
 		}, info);

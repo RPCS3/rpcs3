@@ -53,6 +53,9 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
       <widget class="QWidget" name="coreTab">
        <attribute name="title">
         <string>CPU</string>
@@ -1568,6 +1571,18 @@
             <layout class="QVBoxLayout" name="camera_id_layout">
              <item>
               <widget class="QComboBox" name="cameraIdBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QGroupBox" name="gb_pad_mode">
+            <property name="title">
+             <string>Pad Handler Mode</string>
+            </property>
+            <layout class="QVBoxLayout" name="gb_pad_mode_layout">
+             <item>
+              <widget class="QComboBox" name="padModeBox"/>
              </item>
             </layout>
            </widget>

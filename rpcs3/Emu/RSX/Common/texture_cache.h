@@ -1015,6 +1015,10 @@ namespace rsx
 
 		void clear()
 		{
+			// Release objects used for frame data
+			on_frame_end();
+
+			// Nuke the permanent storage pool
 			m_storage.clear();
 			m_predictor.clear();
 		}

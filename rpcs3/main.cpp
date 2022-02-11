@@ -981,7 +981,7 @@ int main(int argc, char** argv)
 		}
 
 		// Postpone startup to main event loop
-		Emu.CallAfter([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
+		Emu.CallFromMainThread([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
 		{
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);

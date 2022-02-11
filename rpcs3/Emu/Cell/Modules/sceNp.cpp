@@ -925,7 +925,7 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 
 	input::SetIntercepted(true);
 
-	Emu.CallAfter([=, &wake_up, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
+	Emu.CallFromMainThread([=, &wake_up, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
 		{
 			auto send_dlg = Emu.GetCallbacks().get_sendmessage_dialog();
 			result  = send_dlg->Exec(msg_data, npids);
@@ -1099,7 +1099,7 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 	SceNpBasicMessageRecvAction recv_result;
 	u64 chosen_msg_id;
 
-	Emu.CallAfter([=, &wake_up, &result, &recv_result, &chosen_msg_id]()
+	Emu.CallFromMainThread([=, &wake_up, &result, &recv_result, &chosen_msg_id]()
 		{
 			auto recv_dlg          = Emu.GetCallbacks().get_recvmessage_dialog();
 			result  = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);

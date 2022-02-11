@@ -1063,6 +1063,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gb_camera_id, tooltips.settings.camera_id);
 	}
 
+	m_emu_settings->EnhanceComboBox(ui->padModeBox, emu_settings_type::PadHandlerMode);
+	SubscribeTooltip(ui->gb_pad_mode, tooltips.settings.pad_mode);
+
 	m_emu_settings->EnhanceComboBox(ui->moveBox, emu_settings_type::Move);
 	SubscribeTooltip(ui->gb_move_handler, tooltips.settings.move);
 

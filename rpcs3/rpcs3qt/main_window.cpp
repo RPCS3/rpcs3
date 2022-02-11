@@ -1008,7 +1008,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 {
 	const auto critical = [this](QString str)
 	{
-		Emu.CallAfter([this, str = std::move(str)]()
+		Emu.CallFromMainThread([this, str = std::move(str)]()
 		{
 			QMessageBox::critical(this, tr("Firmware Installation Failed"), str);
 		}, false);

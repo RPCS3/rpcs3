@@ -15,7 +15,9 @@
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Utilities/Thread.h"
+#include "util/atomic.hpp"
 
 LOG_CHANNEL(input_log, "Input");
 
@@ -212,6 +214,55 @@ void pad_thread::operator()()
 {
 	pad::g_reset = true;
 
+	atomic_t<pad_handler_mode> pad_mode{g_cfg.io.pad_mode.get()};
+	std::vector<std::unique_ptr<named_thread<std::function<void()>>>> threads;
+
+	const auto stop_threads = [&threads]()
+	{
+		for (auto& thread : threads)
+		{
+			if (thread)
+			{
+				auto& enumeration_thread = *thread;
+				enumeration_thread = thread_state::aborting;
+				enumeration_thread();
+			}
+		}
+		threads.clear();
+	};
+
+	const auto start_threads = [this, &threads, &pad_mode]()
+	{
+		if (pad_mode == pad_handler_mode::single_threaded)
+		{
+			return;
+		}
+
+		for (const auto& handler : handlers)
+		{
+			if (handler.first == pad_handler::null)
+			{
+				continue;
+			}
+			
+			threads.push_back(std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Thread", handler.second->m_type), [&handler = handler.second, &pad_mode]()
+			{
+				while (thread_ctrl::state() != thread_state::aborting)
+				{
+					if (!pad::g_enabled || Emu.IsPaused())
+					{
+						thread_ctrl::wait_for(10'000);
+						continue;
+					}
+
+					handler->ThreadProc();
+
+					thread_ctrl::wait_for(g_cfg.io.pad_sleep);
+				}
+			}));
+		}
+	};
+
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		if (!pad::g_enabled || Emu.IsPaused())
@@ -220,17 +271,43 @@ void pad_thread::operator()()
 			continue;
 		}
 
-		if (pad::g_reset && pad::g_reset.exchange(false))
+		// Update variables
+		const bool needs_reset = pad::g_reset && pad::g_reset.exchange(false);
+		const bool mode_changed = pad_mode != pad_mode.exchange(g_cfg.io.pad_mode.get());
+
+		// Reset pad handlers if necessary
+		if (needs_reset || mode_changed)
 		{
-			Init();
+			stop_threads();
+
+			if (needs_reset)
+			{
+				Init();
+			}
+			else
+			{
+				input_log.success("The pad mode was changed to %s", pad_mode.load());
+			}
+
+			start_threads();
 		}
 
 		u32 connected_devices = 0;
 
-		for (auto& cur_pad_handler : handlers)
+		if (pad_mode == pad_handler_mode::single_threaded)
 		{
-			cur_pad_handler.second->ThreadProc();
-			connected_devices += cur_pad_handler.second->connected_devices;
+			for (auto& handler : handlers)
+			{
+				handler.second->ThreadProc();
+				connected_devices += handler.second->connected_devices;
+			}
+		}
+		else
+		{
+			for (auto& handler : handlers)
+			{
+				connected_devices += handler.second->connected_devices;
+			}
 		}
 
 		m_info.now_connect = connected_devices + num_ldd_pad;
@@ -271,8 +348,10 @@ void pad_thread::operator()()
 			}
 		}
 
-		thread_ctrl::wait_for(1000);
+		thread_ctrl::wait_for(g_cfg.io.pad_sleep);
 	}
+
+	stop_threads();
 }
 
 void pad_thread::InitLddPad(u32 handle)

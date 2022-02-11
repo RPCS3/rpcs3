@@ -1629,7 +1629,7 @@ void camera_context::operator()()
 				std::lock_guard lock(mutex);
 				atomic_t<bool> wake_up = false;
 
-				Emu.CallAfter([&]()
+				Emu.CallFromMainThread([&]()
 				{
 					send_frame_update_event = handler ? on_handler_state(handler->get_state()) : true;
 					wake_up = true;
@@ -1706,7 +1706,7 @@ bool camera_context::open_camera()
 	bool result = true;
 	atomic_t<bool> wake_up = false;
 
-	Emu.CallAfter([&wake_up, &result, this]()
+	Emu.CallFromMainThread([&wake_up, &result, this]()
 	{
 		handler.reset();
 		handler = Emu.GetCallbacks().get_camera_handler();
@@ -1740,7 +1740,7 @@ bool camera_context::start_camera()
 
 		atomic_t<bool> wake_up = false;
 
-		Emu.CallAfter([&wake_up, &result, this]()
+		Emu.CallFromMainThread([&wake_up, &result, this]()
 		{
 			handler->start_camera();
 			result = on_handler_state(handler->get_state());
@@ -1765,7 +1765,7 @@ bool camera_context::get_camera_frame(u8* dst, u32& width, u32& height, u64& fra
 	{
 		atomic_t<bool> wake_up = false;
 
-		Emu.CallAfter([&]()
+		Emu.CallFromMainThread([&]()
 		{
 			result = on_handler_state(handler->get_image(dst, info.bytesize, width, height, frame_number, bytes_read));
 			wake_up = true;
@@ -1787,7 +1787,7 @@ void camera_context::stop_camera()
 	{
 		atomic_t<bool> wake_up = false;
 
-		Emu.CallAfter([&wake_up, this]()
+		Emu.CallFromMainThread([&wake_up, this]()
 		{
 			handler->stop_camera();
 			wake_up = true;
@@ -1807,7 +1807,7 @@ void camera_context::close_camera()
 	{
 		atomic_t<bool> wake_up = false;
 
-		Emu.CallAfter([&wake_up, this]()
+		Emu.CallFromMainThread([&wake_up, this]()
 		{
 			handler->close_camera();
 			wake_up = true;
