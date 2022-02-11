@@ -811,13 +811,28 @@ namespace vk
 		const vk::command_buffer* pcmd = nullptr;
 		if (flags & image_upload_options::upload_contents_async)
 		{
-			auto async_cmd = g_fxo->get<AsyncTaskScheduler>().get_current();
+			auto& async_scheduler = g_fxo->get<AsyncTaskScheduler>();
+			auto async_cmd = async_scheduler.get_current();
 			async_cmd->begin();
 			pcmd = async_cmd;
 
 			if (!(flags & image_upload_options::preserve_image_layout))
 			{
 				flags |= image_upload_options::initialize_image_layout;
+			}
+
+			// Queue transfer stuff. Must release from primary if owned and acquire in secondary.
+			// Ignore queue transfers when running in the hacky "fast" mode. We're already violating spec there.
+			if (dst_image->current_layout != VK_IMAGE_LAYOUT_UNDEFINED && async_scheduler.is_host_mode())
+			{
+				// Release barrier
+				dst_image->queue_release(primary_cb, pcmd->get_queue_family(), dst_image->current_layout);
+
+				// Acquire barrier. This is not needed if we're going to be changing layouts later anyway (implicit acquire)
+				if (!(flags & image_upload_options::initialize_image_layout))
+				{
+					dst_image->queue_acquire(*pcmd, dst_image->current_layout);
+				}
 			}
 		}
 		else
@@ -832,20 +847,9 @@ namespace vk
 
 		ensure(pcmd);
 
-		// Queue transfer stuff. Must release from primary if owned and acquire in secondary.
-		const bool need_queue_xfer = dst_image->current_layout != VK_IMAGE_LAYOUT_UNDEFINED && primary_cb.get_queue_family() != pcmd->get_queue_family();
-		if (need_queue_xfer)
-		{
-			dst_image->queue_release(primary_cb, pcmd->get_queue_family(), dst_image->current_layout);
-		}
-
 		if (flags & image_upload_options::initialize_image_layout)
 		{
 			dst_image->change_layout(*pcmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		}
-		else if (need_queue_xfer)
-		{
-			dst_image->queue_acquire(*pcmd, dst_image->current_layout);
 		}
 
 		return *pcmd;
