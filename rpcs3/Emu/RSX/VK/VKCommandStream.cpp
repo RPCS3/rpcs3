@@ -26,7 +26,7 @@ namespace vk
 	FORCE_INLINE
 	static void queue_submit_impl(const queue_submit_t& submit_info)
 	{
-		ensure(submit_info.fence);
+		ensure(submit_info.pfence);
 		acquire_global_submit_lock();
 		VkSubmitInfo info
 		{
@@ -41,11 +41,11 @@ namespace vk
 			.pSignalSemaphores = submit_info.signal_semaphores.data()
 		};
 
-		vkQueueSubmit(submit_info.queue, 1, &info, submit_info.fence->handle);
+		vkQueueSubmit(submit_info.queue, 1, &info, submit_info.pfence->handle);
 		release_global_submit_lock();
 
 		// Signal fence
-		submit_info.fence->signal_flushed();
+		submit_info.pfence->signal_flushed();
 	}
 
 	void queue_submit(const queue_submit_t& submit_info, VkBool32 flush)

@@ -123,10 +123,10 @@ namespace vk
 		// Check for hanging queries to avoid driver hang
 		ensure((flags & cb_has_open_query) == 0); // "close and submit of commandbuffer with a hanging query!"
 
-		if (!submit_info.fence)
+		if (!submit_info.pfence)
 		{
-			submit_info.fence = m_submit_fence;
-			is_pending = bool(submit_info.fence);
+			submit_info.pfence = m_submit_fence;
+			is_pending = bool(submit_info.pfence);
 		}
 
 		submit_info.commands = this->commands;

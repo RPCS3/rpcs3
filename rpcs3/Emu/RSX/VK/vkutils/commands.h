@@ -28,7 +28,7 @@ namespace vk
 	struct queue_submit_t
 	{
 		VkQueue queue = VK_NULL_HANDLE;
-		fence* fence = nullptr;
+		fence* pfence = nullptr;
 		VkCommandBuffer commands = VK_NULL_HANDLE;
 		std::array<VkSemaphore, 4> wait_semaphores;
 		std::array<VkSemaphore, 4> signal_semaphores;
@@ -38,7 +38,7 @@ namespace vk
 
 		queue_submit_t() = default;
 		queue_submit_t(VkQueue queue_, vk::fence* fence_)
-			: queue(queue_), fence(fence_) {}
+			: queue(queue_), pfence(fence_) {}
 
 		queue_submit_t(const queue_submit_t& other)
 		{
