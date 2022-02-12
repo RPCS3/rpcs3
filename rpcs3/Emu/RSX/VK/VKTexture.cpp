@@ -347,7 +347,7 @@ namespace vk
 		const auto min_scratch_size = calculate_working_buffer_size(src_length, src->aspect() | dst->aspect());
 
 		// Initialize scratch memory
-		auto scratch_buf = vk::get_scratch_buffer(min_scratch_size);
+		auto scratch_buf = vk::get_scratch_buffer(cmd, min_scratch_size);
 
 		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 		{
@@ -552,7 +552,7 @@ namespace vk
 					const auto dst_w = dst_rect.width();
 					const auto dst_h = dst_rect.height();
 
-					auto scratch_buf = vk::get_scratch_buffer(std::max(src_w, dst_w) * std::max(src_h, dst_h) * 4);
+					auto scratch_buf = vk::get_scratch_buffer(cmd, std::max(src_w, dst_w) * std::max(src_h, dst_h) * 4);
 
 					//1. Copy unscaled to typeless surface
 					VkBufferImageCopy info{};
@@ -1014,7 +1014,13 @@ namespace vk
 						scratch_buf_size += dst_image->width() * dst_image->height() * 5;
 					}
 
-					scratch_buf = vk::get_scratch_buffer(scratch_buf_size);
+					// Must acquire scratch buffer owned by the processing command queue!
+					auto pdev = vk::get_current_renderer();
+					const u32 queue_family = (image_setup_flags & vk::upload_contents_async) ?
+						pdev->get_transfer_queue_family() :
+						pdev->get_graphics_queue_family();
+
+					scratch_buf = vk::get_scratch_buffer(queue_family, scratch_buf_size);
 					buffer_copies.reserve(subresource_layout.size());
 				}
 

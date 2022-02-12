@@ -86,7 +86,7 @@ namespace vk
 			const auto task_length = transfer_pitch * src_area.height();
 			const auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
 
-			auto working_buffer = vk::get_scratch_buffer(working_buffer_length);
+			auto working_buffer = vk::get_scratch_buffer(cmd, working_buffer_length);
 			auto final_mapping = vk::map_dma(valid_range.start, section_length);
 
 			VkBufferImageCopy region = {};
@@ -358,7 +358,7 @@ namespace vk
 					copy.imageSubresource = { src_image->aspect(), 0, 0, 1 };
 
 					const auto mem_length = src_w * src_h * dst_bpp;
-					auto scratch_buf = vk::get_scratch_buffer(mem_length);
+					auto scratch_buf = vk::get_scratch_buffer(cmd, mem_length);
 					vkCmdCopyImageToBuffer(cmd, src_image->value, src_image->current_layout, scratch_buf->value, 1, &copy);
 
 					vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
