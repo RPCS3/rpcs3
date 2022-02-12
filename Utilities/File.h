@@ -71,6 +71,11 @@ namespace fs
 		s64 atime;
 		s64 mtime;
 		s64 ctime;
+
+		constexpr bool is_file() const noexcept
+		{
+			return !is_directory;
+		}
 	};
 
 	// Helper, layout is equal to iovec struct

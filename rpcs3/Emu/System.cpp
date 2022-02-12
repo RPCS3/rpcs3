@@ -276,6 +276,7 @@ void Emulator::Init(bool add_only)
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
+	make_path_verbose(fs::get_config_dir() + "old_logs/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
 	make_path_verbose(fs::get_config_dir() + "sounds/");
 	make_path_verbose(patch_engine::get_patches_path());
@@ -350,6 +351,52 @@ void Emulator::Init(bool add_only)
 			{
 				sys_log.success("Removed save data backup: %s%s", save_path, entry.name);
 			}
+		}
+	}
+
+	const std::string old_logs = fs::get_cache_dir() + "old_logs/";
+
+	for (auto&& entry : fs::dir(fs::get_cache_dir()))
+	{
+		if (entry.is_file() && entry.size && entry.name != "Log, close RPCS3 to view.log.gz" && entry.name.ends_with(".log.gz"))
+		{
+			// Move the most recent written log into old_logs directory
+			fs::rename(fs::get_cache_dir() + entry.name, old_logs + entry.name, true);
+		}
+	}
+
+	usz old_logs_size = 0;
+
+	std::vector<fs::dir_entry> entries;
+
+	for (auto&& entry : fs::dir(old_logs))
+	{
+		if (entry.is_file() && entry.size && entry.name.starts_with("Log ") && entry.name.ends_with(".log.gz"))
+		{
+			old_logs_size += entry.size;
+			entries.emplace_back(std::move(entry));
+		}
+	}
+
+	std::sort(entries.begin(), entries.end(), [](auto& a, auto& b)
+	{
+		// Oldest log will be the first to be attempted removal if deemed necessary
+		return a.mtime < b.mtime;
+	});
+
+	for (auto&& entry : entries)
+	{
+		// Limit to constant 100MB at the moment
+		if (old_logs_size < 100 * 1024 * 1024)
+		{
+			break;
+		}
+
+		// Remove old logs until they occupy less than the upper limit of reasources we allot to it
+		// Do not bother with failed attempts, continue onwards
+		if (fs::remove_file(old_logs + entry.name))
+		{
+			old_logs_size -= entry.size;
 		}
 	}
 
@@ -646,8 +693,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return game_boot_result::invalid_file_or_folder;
 		}
 
-		sys_log.notice("Title: %s", GetTitle());
-		sys_log.notice("Serial: %s", GetTitleID());
+		sys_log.always()("Title: %s, Serial: %s", GetTitle(), GetTitleID());
 		sys_log.notice("Category: %s", GetCat());
 		sys_log.notice("Version: APP_VER=%s VERSION=%s", version_app, version_disc);
 

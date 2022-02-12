@@ -3,6 +3,8 @@
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
 #include "Utilities/StrFmt.h"
+#include "Utilities/date_time.h"
+
 #include <cstring>
 #include <cstdarg>
 #include <string>
@@ -94,6 +96,11 @@ namespace logs
 
 		// Write buffered logs immediately
 		bool flush(u64 bufv);
+
+	protected:
+		std::string m_name{};
+		std::string m_title{};
+		std::string m_serial{};
 
 	public:
 		file_writer(const std::string& name, u64 max_size);
@@ -390,6 +397,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 
 logs::file_writer::file_writer(const std::string& name, u64 max_size)
 	: m_max_size(max_size)
+	, m_name(name)
 {
 	if (!name.empty() && max_size)
 	{
@@ -397,13 +405,13 @@ logs::file_writer::file_writer(const std::string& name, u64 max_size)
 		m_fptr = std::make_unique<uchar[]>(s_log_size);
 
 		// Actual log file (allowed to fail)
-		if (!m_fout.open(name, fs::rewrite))
+		if (!m_fout.open(name + ".log", fs::rewrite))
 		{
-			fprintf(stderr, "Log file open failed: %s (error %d)\n", name.c_str(), errno);
+			fprintf(stderr, "Log file open failed: %s.log (error %d)\n", name.c_str(), errno);
 		}
 
 		// Compressed log, make it inaccessible (foolproof)
-		if (m_fout2.open(name + ".gz", fs::rewrite + fs::unread))
+		if (m_fout2.open(name + ", close RPCS3 to view.log.gz", fs::rewrite + fs::unread))
 		{
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -506,6 +514,56 @@ logs::file_writer::~file_writer()
 	// Restore compressed log file permissions
 	::fchmod(m_fout2.get_handle(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 #endif
+	m_fout2.close();
+
+	if (!m_title.empty())
+	{
+		// Turn non-latin characters (or other characters which may be used in a word) into spaces
+		std::replace_if(m_title.begin(), m_title.end(), [](u8 c){ return !std::isalpha(c) && !std::isdigit(c) && c != '\''; }, ' ');
+
+		// Remove any space which sequences another, effectively we are left only with english words
+		m_title.erase(std::remove_if(m_title.begin() + 1, m_title.end(), [](char& c){ return c == ' ' && (&c)[-1] == ' '; }), m_title.end());
+	}
+
+	if (m_title.empty() || m_title == " ")
+	{
+		if (!m_serial.empty())
+		{
+			// Use game serial if possible
+			m_title = m_serial;
+		}
+		else
+		{
+			m_title.clear();
+		}
+	}
+
+	if (!m_title.empty())
+	{
+		m_title.insert(0, "of ");
+		m_title += ' ';
+	}
+
+	const std::string from = m_name + ", close RPCS3 to view.log.gz";
+
+	auto form_dest_string = [&]() { return fs::get_parent_dir(m_name) + "/Log " + m_title + date_time::current_time_narrow<'-'>() + ".log.gz"; };
+
+	const std::string dest = form_dest_string();
+ 
+	if (!fs::rename(from, dest, false) && fs::g_tls_error == fs::error::exist)
+	{
+		std::string recontested_dest;
+
+		do
+		{
+			// Wait for the second to pass impatiently, for a different string
+			std::this_thread::sleep_for(100ms);
+			recontested_dest = form_dest_string();
+		}
+		while (dest == recontested_dest);
+
+		fs::rename(from, recontested_dest, false);
+	}
 }
 
 bool logs::file_writer::flush(u64 bufv)
@@ -672,6 +730,35 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	text += '\n';
 
 	file_writer::log(text.data(), text.size());
+
+	// Specialized detection of the title of last game executed
+	if (msg->name && std::strcmp(msg->name, "SYS") == 0 && _text.starts_with("Title: "sv))
+	{
+		static shared_mutex g_m;
+		std::lock_guard lock(g_m);
+
+		const s64 title_end = static_cast<s64>(_text.rfind(", Serial: "));
+
+		// Compare against NPOS as well
+		if (title_end < 7)
+		{
+			return;
+		}
+
+		std::string title = _text.substr(7, title_end - 7);
+		std::string serial = _text.substr(title_end + 10);
+
+		if ((title.empty() && serial.empty()) || (title != m_title && !m_title.empty()) || (serial != m_serial && !m_serial.empty()) || m_title == " ")
+		{
+			// If a different game has been executed after the first
+			// Put a brand that ensures that neither title nor serial will be used for log naming 
+			m_title = " ";
+			return;
+		}
+
+		m_title = std::move(title);
+		m_serial = std::move(serial);
+	}
 }
 
 std::unique_ptr<logs::listener> logs::make_file_listener(const std::string& path, u64 max_size)
