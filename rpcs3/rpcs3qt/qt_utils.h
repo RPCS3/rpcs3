@@ -45,6 +45,9 @@ namespace gui
 		// while still considering screen boundaries.
 		QRect create_centered_window_geometry(const QScreen* screen, const QRect& base, s32 target_width, s32 target_height);
 
+		// Creates a square pixmap while keeping the original aspect ratio of the image.
+		bool create_square_pixmap(QPixmap& pixmap, int target_size);
+
 		// Returns a custom colored QPixmap based on another QPixmap.
 		// use colorize_all to repaint every opaque pixel with the chosen color
 		// use_special_masks is only used for pixmaps with multiple predefined colors

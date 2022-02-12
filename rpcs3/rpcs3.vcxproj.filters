@@ -804,6 +804,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_camera_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\shortcut_utils.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -946,6 +949,9 @@
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\shortcut_utils.h">
+      <Filter>Gui\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

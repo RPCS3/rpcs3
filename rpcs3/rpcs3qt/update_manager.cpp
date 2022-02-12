@@ -584,30 +584,10 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 #else
 
-	std::string replace_path;
-
-	const char* appimage_path = ::getenv("APPIMAGE");
-	if (appimage_path != nullptr)
+	std::string replace_path = rpcs3::utils::get_executable_path();
+	if (replace_path.empty())
 	{
-		replace_path = appimage_path;
-		update_log.notice("Found AppImage path: %s", appimage_path);
-	}
-	else
-	{
-		update_log.warning("Failed to find AppImage path");
-		char exe_path[PATH_MAX];
-		ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-
-		if (len == -1)
-		{
-			update_log.error("Failed to find executable path");
-			return false;
-		}
-
-		exe_path[len] = '\0';
-		update_log.trace("Found exec path: %s", exe_path);
-
-		replace_path = exe_path;
+		return false;
 	}
 
 	// Move the appimage/exe and replace with new appimage
