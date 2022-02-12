@@ -1,5 +1,6 @@
 #include "game_list_frame.h"
 #include "qt_utils.h"
+#include "shortcut_utils.h"
 #include "settings_dialog.h"
 #include "pad_settings_dialog.h"
 #include "table_item_delegate.h"
@@ -980,6 +981,34 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		: tr("&Create Custom Gamepad Configuration"));
 	QAction* configure_patches = menu.addAction(tr("&Manage Game Patches"));
 	QAction* create_ppu_cache = menu.addAction(tr("&Create PPU Cache"));
+#ifndef __APPLE__
+	menu.addSeparator();
+	const auto on_shortcut = [this, gameinfo](bool is_desktop_shortcut)
+	{
+		const std::string target_cli_args = fmt::format("--no-gui \"%s\"", gameinfo->info.path);
+		const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
+
+		if (gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, is_desktop_shortcut))
+		{
+			game_list_log.success("Created %s shortcut for %s", is_desktop_shortcut ? "desktop" : "application menu", sstr(qstr(gameinfo->info.name).simplified()));
+			QMessageBox::information(this, tr("Success!"), tr("Successfully created a shortcut."));
+		}
+		else
+		{
+			game_list_log.error("Failed to create %s shortcut for %s", is_desktop_shortcut ? "desktop" : "application menu", sstr(qstr(gameinfo->info.name).simplified()));
+			QMessageBox::warning(this, tr("Warning!"), tr("Failed to create a shortcut!"));
+		}
+	};
+	QMenu* shortcut_menu = menu.addMenu(tr("&Create Shortcut"));
+	QAction* create_desktop_shortcut = shortcut_menu->addAction(tr("&Create Desktop Shortcut"));
+	connect(create_desktop_shortcut, &QAction::triggered, this, [this, gameinfo, on_shortcut](){ on_shortcut(true); });
+#ifdef _WIN32
+	QAction* create_start_menu_shortcut = shortcut_menu->addAction(tr("&Create Start Menu Shortcut"));
+#else
+	QAction* create_start_menu_shortcut = shortcut_menu->addAction(tr("&Create Application Menu Shortcut"));
+#endif
+	connect(create_start_menu_shortcut, &QAction::triggered, this, [this, gameinfo, on_shortcut](){ on_shortcut(false); });
+#endif
 	menu.addSeparator();
 	QAction* rename_title = menu.addAction(tr("&Rename In Game List"));
 	QAction* hide_serial = menu.addAction(tr("&Hide From Game List"));

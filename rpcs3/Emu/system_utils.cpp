@@ -16,6 +16,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h>
 #endif
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -112,6 +114,31 @@ namespace rpcs3::utils
 		const std::string path_to_exe = wchar_to_utf8(buffer);
 		const usz last = path_to_exe.find_last_of('\\');
 		return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last + 1);
+	}
+#elif !defined(__APPLE__)
+	std::string get_executable_path()
+	{
+		if (const char* appimage_path = ::getenv("APPIMAGE"))
+		{
+			sys_log.notice("Found AppImage path: %s", appimage_path);
+			return std::string(appimage_path);
+		}
+
+		sys_log.warning("Failed to find AppImage path");
+
+		char exe_path[PATH_MAX];
+		const ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+
+		if (len == -1)
+		{
+			sys_log.error("Failed to find executable path");
+			return {};
+		}
+
+		exe_path[len] = '\0';
+		sys_log.trace("Found exec path: %s", exe_path);
+
+		return std::string(exe_path);
 	}
 #endif
 

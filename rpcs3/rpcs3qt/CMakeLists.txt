@@ -68,6 +68,7 @@ set(SRC_FILES
     sendmessage_dialog_frame.cpp
     settings.cpp
     settings_dialog.cpp
+    shortcut_utils.cpp
     skylander_dialog.cpp
     syntax_highlighter.cpp
     tooltips.cpp
