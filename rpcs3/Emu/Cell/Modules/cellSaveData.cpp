@@ -2102,6 +2102,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 			size_kbytes += ::narrow<u32>((entry.size + 1023) / 1024); // firmware rounds this value up
 		}
 
+		// Add a seemingly constant allocation disk space of PARAM.SFO + PARAM.PFD
 		*sizeKB = size_kbytes + 35;
 	}
 
