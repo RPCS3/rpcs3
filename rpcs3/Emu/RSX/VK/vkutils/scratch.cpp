@@ -55,7 +55,7 @@ namespace vk
 		return g_null_sampler;
 	}
 
-	vk::image_view* null_image_view(vk::command_buffer& cmd, VkImageViewType type)
+	vk::image_view* null_image_view(const vk::command_buffer& cmd, VkImageViewType type)
 	{
 		if (auto found = g_null_image_views.find(type);
 			found != g_null_image_views.end())
@@ -151,9 +151,9 @@ namespace vk
 		return ptr.get();
 	}
 
-	vk::buffer* get_scratch_buffer(u64 min_required_size)
+	vk::buffer* get_scratch_buffer(u32 queue_family, u64 min_required_size)
 	{
-		auto& scratch_buffer = g_scratch_buffers_pool[0 /*TODO: Replace with Queue Family ID*/].get_buf();
+		auto& scratch_buffer = g_scratch_buffers_pool[queue_family].get_buf();
 
 		if (scratch_buffer && scratch_buffer->size() < min_required_size)
 		{
@@ -172,6 +172,11 @@ namespace vk
 		}
 
 		return scratch_buffer.get();
+	}
+
+	vk::buffer* get_scratch_buffer(const vk::command_buffer& cmd, u64 min_required_size)
+	{
+		return get_scratch_buffer(cmd.get_queue_family(), min_required_size);
 	}
 
 	void clear_scratch_resources()
