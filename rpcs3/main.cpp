@@ -999,6 +999,24 @@ int main(int argc, char** argv)
 			}
 		});
 	}
+	else if (s_headless || s_no_gui)
+	{
+#ifdef _WIN32
+		// If launched from CMD
+		if (AttachConsole(ATTACH_PARENT_PROCESS))
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
+#endif
+		sys_log.error("Cannot run %s mode without boot target. Terminating...", s_headless ? "headless" : "no-gui");
+		fprintf(stderr, "Cannot run %s mode without boot target. Terminating...\n", s_headless ? "headless" : "no-gui");
+
+		if (s_no_gui)
+		{
+			QMessageBox::warning(nullptr, QObject::tr("Missing command-line arguments!"), QObject::tr("Cannot run no-gui mode without boot target.\nTerminating..."));
+		}
+
+		Emu.Quit(true);
+		return 0;
+	}
 
 	// run event loop (maybe only needed for the gui application)
 	return app->exec();
