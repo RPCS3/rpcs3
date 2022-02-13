@@ -1153,6 +1153,13 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case CellSysutilLicenseArea::CELL_SYSUTIL_LICENSE_AREA_OTHER: return tr("Other", "License Area");
 		}
 		break;
+	case emu_settings_type::VulkanAsyncSchedulerDriver:
+		switch (static_cast<vk_gpu_scheduler_mode>(index))
+		{
+		case vk_gpu_scheduler_mode::safe: return tr("Safe");
+		case vk_gpu_scheduler_mode::fast: return tr("Fast");
+		}
+		break;
 	default:
 		break;
 	}
