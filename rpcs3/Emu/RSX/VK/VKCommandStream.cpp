@@ -24,17 +24,31 @@ namespace vk
 	}
 
 	FORCE_INLINE
-	static void queue_submit_impl(VkQueue queue, const VkSubmitInfo* info, fence* pfence)
+	static void queue_submit_impl(const queue_submit_t& submit_info)
 	{
+		ensure(submit_info.pfence);
 		acquire_global_submit_lock();
-		vkQueueSubmit(queue, 1, info, pfence->handle);
+		VkSubmitInfo info
+		{
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = submit_info.wait_semaphores_count,
+			.pWaitSemaphores = submit_info.wait_semaphores.data(),
+			.pWaitDstStageMask = submit_info.wait_stages.data(),
+			.commandBufferCount = 1,
+			.pCommandBuffers = &submit_info.commands,
+			.signalSemaphoreCount = submit_info.signal_semaphores_count,
+			.pSignalSemaphores = submit_info.signal_semaphores.data()
+		};
+
+		vkQueueSubmit(submit_info.queue, 1, &info, submit_info.pfence->handle);
 		release_global_submit_lock();
 
 		// Signal fence
-		pfence->signal_flushed();
+		submit_info.pfence->signal_flushed();
 	}
 
-	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush)
+	void queue_submit(const queue_submit_t& submit_info, VkBool32 flush)
 	{
 		// Access to this method must be externally synchronized.
 		// Offloader is guaranteed to never call this for async flushes.
@@ -42,18 +56,18 @@ namespace vk
 
 		if (!flush && g_cfg.video.multithreaded_rsx)
 		{
-			auto packet = new submit_packet(queue, pfence, info);
+			auto packet = new queue_submit_t(submit_info);
 			g_fxo->get<rsx::dma_manager>().backend_ctrl(rctrl_queue_submit, packet);
 		}
 		else
 		{
-			queue_submit_impl(queue, info, pfence);
+			queue_submit_impl(submit_info);
 		}
 	}
 
-	void queue_submit(const vk::submit_packet* packet)
+	void queue_submit(const queue_submit_t* packet)
 	{
 		// Flush-only version used by asynchronous submit processing (MTRSX)
-		queue_submit_impl(packet->queue, &packet->submit_info, packet->pfence);
+		queue_submit_impl(*packet);
 	}
 }

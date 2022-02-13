@@ -6,7 +6,7 @@
 namespace vk
 {
 	// This queue flushing method to be implemented by the backend as behavior depends on config
-	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush);
+	void queue_submit(const queue_submit_t& submit_info, VkBool32 flush);
 
 	void command_pool::create(vk::render_device& dev, u32 queue_family_id)
 	{
@@ -112,7 +112,7 @@ namespace vk
 		is_open = false;
 	}
 
-	void command_buffer::submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, fence* pfence, VkPipelineStageFlags pipeline_stage_flags, VkBool32 flush)
+	void command_buffer::submit(queue_submit_t& submit_info, VkBool32 flush)
 	{
 		if (is_open)
 		{
@@ -123,31 +123,14 @@ namespace vk
 		// Check for hanging queries to avoid driver hang
 		ensure((flags & cb_has_open_query) == 0); // "close and submit of commandbuffer with a hanging query!"
 
-		if (!pfence)
+		if (!submit_info.pfence)
 		{
-			pfence = m_submit_fence;
-			is_pending = bool(pfence);
+			submit_info.pfence = m_submit_fence;
+			is_pending = bool(submit_info.pfence);
 		}
 
-		VkSubmitInfo infos = {};
-		infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		infos.commandBufferCount = 1;
-		infos.pCommandBuffers = &commands;
-		infos.pWaitDstStageMask = &pipeline_stage_flags;
-
-		if (wait_semaphore)
-		{
-			infos.waitSemaphoreCount = 1;
-			infos.pWaitSemaphores = &wait_semaphore;
-		}
-
-		if (signal_semaphore)
-		{
-			infos.signalSemaphoreCount = 1;
-			infos.pSignalSemaphores = &signal_semaphore;
-		}
-
-		queue_submit(queue, &infos, pfence, flush);
+		submit_info.commands = this->commands;
+		queue_submit(submit_info, flush);
 		clear_flags();
 	}
 }

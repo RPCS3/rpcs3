@@ -194,6 +194,11 @@ namespace vk
 			dispose(ptr);
 		}
 
+		void push_down_current_scope()
+		{
+			get_current_eid_scope().eid++;
+		}
+
 		void eid_completed(u64 eid)
 		{
 			while (!m_eid_map.empty())

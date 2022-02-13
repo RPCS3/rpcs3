@@ -168,7 +168,7 @@ struct cfg_root : cfg::node
 			cfg::_bool asynchronous_texture_streaming{ this, "Asynchronous Texture Streaming 2", false };
 			cfg::_bool fsr_upscaling{ this, "Enable FidelityFX Super Resolution Upscaling", false, true };
 			cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
-			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::device };
+			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
 
 		} vk{ this };
 

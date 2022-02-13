@@ -24,6 +24,7 @@ namespace vk
 
 		fence(VkDevice dev);
 		~fence();
+		fence(const fence&) = delete;
 
 		void reset();
 		void signal_flushed();
@@ -43,12 +44,28 @@ namespace vk
 	public:
 		event(const render_device& dev, sync_domain domain);
 		~event();
+		event(const event&) = delete;
 
 		void signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access);
 		void host_signal() const;
 		void gpu_wait(const command_buffer& cmd) const;
 		VkResult status() const;
 		void reset() const;
+	};
+
+	class semaphore
+	{
+		VkSemaphore m_handle = VK_NULL_HANDLE;
+		VkDevice m_device = VK_NULL_HANDLE;
+
+		semaphore() = default;
+
+	public:
+		semaphore(const render_device& dev);
+		~semaphore();
+		semaphore(const semaphore&) = delete;
+
+		operator VkSemaphore() const;
 	};
 
 	VkResult wait_for_fence(fence* pFence, u64 timeout = 0ull);

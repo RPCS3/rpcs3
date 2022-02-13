@@ -25,6 +25,42 @@ namespace vk
 		operator VkCommandPool() const;
 	};
 
+	struct queue_submit_t
+	{
+		VkQueue queue = VK_NULL_HANDLE;
+		fence* pfence = nullptr;
+		VkCommandBuffer commands = VK_NULL_HANDLE;
+		std::array<VkSemaphore, 4> wait_semaphores;
+		std::array<VkSemaphore, 4> signal_semaphores;
+		std::array<VkPipelineStageFlags, 4> wait_stages;
+		u32 wait_semaphores_count = 0;
+		u32 signal_semaphores_count = 0;
+
+		queue_submit_t() = default;
+		queue_submit_t(VkQueue queue_, vk::fence* fence_)
+			: queue(queue_), pfence(fence_) {}
+
+		queue_submit_t(const queue_submit_t& other)
+		{
+			std::memcpy(this, &other, sizeof(queue_submit_t));
+		}
+
+		inline queue_submit_t& wait_on(VkSemaphore semaphore, VkPipelineStageFlags stage)
+		{
+			ensure(wait_semaphores_count < 4);
+			wait_semaphores[wait_semaphores_count] = semaphore;
+			wait_stages[wait_semaphores_count++] = stage;
+			return *this;
+		}
+
+		inline queue_submit_t& queue_signal(VkSemaphore semaphore)
+		{
+			ensure(signal_semaphores_count < 4);
+			signal_semaphores[signal_semaphores_count++] = semaphore;
+			return *this;
+		}
+	};
+
 	class command_buffer
 	{
 	private:
@@ -64,7 +100,7 @@ namespace vk
 
 		void begin();
 		void end();
-		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, fence* pfence, VkPipelineStageFlags pipeline_stage_flags, VkBool32 flush = VK_FALSE);
+		void submit(queue_submit_t& submit_info, VkBool32 flush = VK_FALSE);
 
 		// Properties
 		command_pool& get_command_pool() const

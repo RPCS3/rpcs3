@@ -37,7 +37,7 @@ public:
 		const QString clocks_scale                 = tr("Changes the scale of emulated system time.\nAffects software which uses system time to calculate things such as dynamic timesteps.");
 		const QString wake_up_delay                = tr("Try fiddling with this setting when encountering unstable games. The higher value, the better stability it may provide.\nIncrements/Decrements for each test should be around 100μs to 200μs until finding the best value for optimal stability.\nValues above 1000μs may cause noticeable performance penalties, use with caution.");
 		const QString disabled_from_global         = tr("Do not change this setting globally.\nRight-click a game in the game list and choose \"Configure\" instead.");
-		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Host' mode for more spec compliant behavior at the cost of CPU overhead.\nUse 'Device' to let your driver handle this. Beware that 'device' mode technically violates official spec but is the superior option.");
+		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Safe' mode for more spec compliant behavior at the cost of some CPU overhead. This setting works with all devices.\nUse 'Fast' to use a faster but hacky version. This option is internally disabled for NVIDIA GPUs due to causing GPU hangs.");
 
 		// audio
 
@@ -161,7 +161,7 @@ public:
 		const QString strict_rendering_mode      = tr("Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.");
 		const QString disable_vertex_cache       = tr("Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.");
 		const QString stretch_to_display_area    = tr("Overrides the aspect ratio and stretches the image to the full display area.");
-		const QString multithreaded_rsx          = tr("Offloads some RSX operations to a secondary thread.\nMay improve performance for some high-core processors.\nMay cause slowdown in some situations due to the extra worker thread load.");
+		const QString multithreaded_rsx          = tr("Offloads some RSX operations to a secondary thread.\nImproves performance for high-core processors.\nMay cause slowdown in weaker CPUs due to the extra worker thread load.");
 
 		const QString legacy_shader_recompiler        = tr("Disables asynchronous shader compilation.\nFixes missing graphics while shaders are compiling but introduces severe stuttering or lag.\nUse this if you do not want to deal with graphics pop-in, or for testing before filing any bug reports.");
 		const QString async_shader_recompiler         = tr("This is the recommended option.\nIf a shader is not found in the cache, nothing will be rendered for this shader until it has compiled.\nYou may experience graphics pop-in.");
@@ -169,7 +169,7 @@ public:
 		const QString shader_interpreter_only         = tr("All rendering is handled by the interpreter with no attempt to compile native shaders.\nThis mode is very slow and experimental.");
 		const QString shader_compiler_threads         = tr("Number of threads to use for the shader compiler backend.\nOnly has an impact when shader mode is set to one of the asynchronous modes.");
 
-		const QString async_texture_streaming         = tr("Stream textures to GPU in parallel with 3D rendering.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer.");
+		const QString async_texture_streaming         = tr("Stream textures to GPU in parallel with 3D rendering using asynchronous compute.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer and greatly benefits from having MTRSX enabled if you have a capable CPU.");
 
 		const QString fsr_upscaling     = tr("Enable FidelityFX Super Resolution upscaling filter to improve the look of upscaled images.\nIf the game is rendering at an internal resolution lower than your window resolution, FidelityFX will handle the upscale.\nCan cause visual artifacts.\nDoes not work with stereo 3D output for now.");
 		const QString fsr_rcas_strength = tr("Control the sharpening strength applied by FidelityFX Super Resolution. Higher values will give sharper output but may introduce artifacts.");

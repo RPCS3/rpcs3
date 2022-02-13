@@ -228,8 +228,8 @@ enum class shader_mode
 
 enum class vk_gpu_scheduler_mode
 {
-	host,
-	device
+	safe,
+	fast
 };
 
 enum class thread_scheduler_mode

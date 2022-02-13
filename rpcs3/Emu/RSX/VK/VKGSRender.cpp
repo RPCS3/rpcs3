@@ -575,18 +575,13 @@ VKGSRender::VKGSRender() : GSRender()
 		{
 		case vk::driver_vendor::NVIDIA:
 			if (auto chip_family = vk::get_chip_family();
-				chip_family == vk::chip_class::NV_kepler ||
-				chip_family == vk::chip_class::NV_maxwell)
+				chip_family == vk::chip_class::NV_kepler || chip_family == vk::chip_class::NV_maxwell)
 			{
-				rsx_log.error("Older NVIDIA cards do not meet requirements for asynchronous compute due to some driver fakery.");
-				backend_config.supports_asynchronous_compute = false;
+				rsx_log.warning("Older NVIDIA cards do not meet requirements for true asynchronous compute due to some driver fakery.");
 			}
-			else // Workaround. Remove once the async decoder is re-written
-			{
-				// NVIDIA 471 and newer are completely borked. Queue priority is not observed and any queue waiting on another just causes deadlock.
-				rsx_log.error("NVIDIA GPUs are incompatible with the current implementation of asynchronous texture decoding.");
-				backend_config.supports_asynchronous_compute = false;
-			}
+
+			rsx_log.notice("Forcing safe async compute for NVIDIA device to avoid crashing.");
+			g_cfg.video.vk.asynchronous_scheduler.set(vk_gpu_scheduler_mode::safe);
 			break;
 #if !defined(_WIN32)
 			// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
@@ -614,7 +609,7 @@ VKGSRender::VKGSRender() : GSRender()
 		if (backend_config.supports_asynchronous_compute)
 		{
 			// Run only if async compute can be used.
-			g_fxo->init<vk::async_scheduler_thread>("Vulkan Async Scheduler"sv);
+			g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler);
 		}
 	}
 }
@@ -627,20 +622,23 @@ VKGSRender::~VKGSRender()
 		return;
 	}
 
-	// Globals. TODO: Refactor lifetime management
-	if (backend_config.supports_asynchronous_compute)
+	// Flush DMA queue
+	while (!g_fxo->get<rsx::dma_manager>().sync())
 	{
-		g_fxo->get<vk::async_scheduler_thread>().kill();
+		do_local_task(rsx::FIFO_state::lock_wait);
 	}
 
 	//Wait for device to finish up with resources
 	vkDeviceWaitIdle(*m_device);
 
+	// Globals. TODO: Refactor lifetime management
+	if (backend_config.supports_asynchronous_compute)
+	{
+		g_fxo->get<vk::AsyncTaskScheduler>().destroy();
+	}
+
 	// Clear flush requests
 	m_flush_requests.clear_pending_flag();
-
-	// Texture cache
-	m_texture_cache.destroy();
 
 	// Shaders
 	vk::destroy_pipe_compiler();      // Ensure no pending shaders being compiled
@@ -1996,7 +1994,7 @@ void VKGSRender::load_program_env()
 
 	if (vk::emulate_conditional_rendering())
 	{
-		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(4)->value;
+		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(*m_current_command_buffer, 4)->value;
 		m_program->bind_buffer({ predicate, 0, 4 }, binding_table.conditional_render_predicate_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
 	}
 
@@ -2064,9 +2062,6 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	const bool sync_success = g_fxo->get<rsx::dma_manager>().sync();
 	const VkBool32 force_flush = !sync_success;
 
-	// Flush any asynchronously scheduled jobs
-	g_fxo->get<vk::async_scheduler_thread>().flush(force_flush);
-
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
 		if (m_attrib_ring_info.is_dirty() ||
@@ -2096,8 +2091,8 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 			m_secondary_command_buffer.end();
 
-			m_secondary_command_buffer.submit(m_device->get_graphics_queue(),
-				VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, force_flush);
+			vk::queue_submit_t submit_info{ m_device->get_graphics_queue(), nullptr };
+			m_secondary_command_buffer.submit(submit_info, force_flush);
 		}
 
 		vk::clear_status_interrupt(vk::heap_dirty);
@@ -2128,8 +2123,54 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	m_current_command_buffer->end();
 	m_current_command_buffer->tag();
 
-	m_current_command_buffer->submit(m_device->get_graphics_queue(),
-		wait_semaphore, signal_semaphore, pFence, pipeline_stage_flags, force_flush);
+	// Flush any asynchronously scheduled jobs
+	// So this is a bit trippy, but, in this case, the primary CB contains the 'release' operations, not the acquire ones.
+	// The CB that comes in after this submit will acquire the yielded resources automatically.
+	// This means the primary CB is the precursor to the async CB not the other way around.
+	// Async CB should wait for the primary CB to signal.
+	vk::queue_submit_t primary_submit_info{ m_device->get_graphics_queue(), pFence };
+	vk::queue_submit_t secondary_submit_info{};
+
+	if (wait_semaphore)
+	{
+		primary_submit_info.wait_on(wait_semaphore, pipeline_stage_flags);
+	}
+
+	if (const auto wait_sema = std::exchange(m_dangling_semaphore_signal, VK_NULL_HANDLE))
+	{
+		// TODO: Sync on VS stage
+		primary_submit_info.wait_on(wait_sema, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	}
+
+	auto& async_scheduler = g_fxo->get<vk::AsyncTaskScheduler>();
+	const bool require_secondary_flush = async_scheduler.is_recording();
+
+	if (async_scheduler.is_recording())
+	{
+		if (async_scheduler.is_host_mode())
+		{
+			// Inject dependency chain using semaphores.
+			// HEAD = externally synchronized.
+			// TAIL = insert dangling wait, from the async CB to the next CB down.
+			m_dangling_semaphore_signal = *async_scheduler.get_sema();
+			secondary_submit_info.queue_signal(m_dangling_semaphore_signal);
+
+			// Delay object destruction by one cycle
+			vk::get_resource_manager()->push_down_current_scope();
+		}
+	}
+
+	if (signal_semaphore)
+	{
+		primary_submit_info.queue_signal(signal_semaphore);
+	}
+
+	m_current_command_buffer->submit(primary_submit_info, force_flush);
+
+	if (require_secondary_flush)
+	{
+		async_scheduler.flush(secondary_submit_info, force_flush);
+	}
 
 	if (force_flush)
 	{
@@ -2367,7 +2408,7 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 	{
 	case vk::rctrl_queue_submit:
 	{
-		const auto packet = reinterpret_cast<vk::submit_packet*>(args);
+		const auto packet = reinterpret_cast<vk::queue_submit_t*>(args);
 		vk::queue_submit(packet);
 		free(packet);
 		break;
@@ -2599,7 +2640,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		}
 	}
 
-	auto scratch = vk::get_scratch_buffer(OCCLUSION_MAX_POOL_SIZE * 4);
+	auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, OCCLUSION_MAX_POOL_SIZE * 4);
 	u32 dst_offset = 0;
 	usz first = 0;
 	usz last;
