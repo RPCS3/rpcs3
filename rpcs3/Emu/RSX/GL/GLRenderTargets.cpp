@@ -509,7 +509,6 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 			// Mem cast, generate typeless xfer info
 			if (!formats_are_bitcast_compatible(this, src_texture))
 			{
-				ensure(aspect() != src_texture->aspect());
 				typeless_info.src_is_typeless = true;
 				typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
 				typeless_info.src_native_format_override = static_cast<u32>(get_internal_format());
