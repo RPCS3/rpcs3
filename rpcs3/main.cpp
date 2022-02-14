@@ -450,11 +450,6 @@ int main(int argc, char** argv)
 			report_fatal_error(fmt::format("Not enough free space (%f KB)", stats.avail_free / 1000000.));
 		}
 
-		if (!fs::create_path(fs::get_cache_dir() + "logs/"))
-		{
-			report_fatal_error(fmt::format("Could not create a directory for logs (%s)", fs::g_tls_error));
-		}
-
 		// Limit log size to ~25% of free space
 		log_file = logs::make_file_listener(fs::get_cache_dir() + "Log", stats.avail_free / 4);
 	}
