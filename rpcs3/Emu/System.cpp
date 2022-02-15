@@ -1755,6 +1755,30 @@ void Emulator::Kill(bool allow_autoexit)
 	});
 
 	// Signal threads
+
+	// Stop the replay thread "game" first
+	if (auto thr = g_fxo->try_get<named_thread<rsx::rsx_replay_thread>>())
+	{
+		sys_log.notice("Stopping RSX replay thread...");
+		thr->state += cpu_flag::stop;
+
+		// Wait for a couple of seconds
+		for (int i = 0; *thr <= thread_state::aborting && i < 300; i++)
+		{
+			std::this_thread::sleep_for(10ms);
+			process_qt_events();
+		}
+
+		if (*thr <= thread_state::aborting)
+		{
+			sys_log.error("Failed to stop RSX replay thread in time.");
+		}
+		else
+		{
+			sys_log.notice("RSX replay thread stopped");
+		}
+	}
+
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
 		*static_cast<cpu_thread*>(rsx) = thread_state::aborting;
