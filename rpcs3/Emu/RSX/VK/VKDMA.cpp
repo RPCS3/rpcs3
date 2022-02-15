@@ -70,6 +70,14 @@ namespace vk
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0,
 			VMM_ALLOCATION_POOL_UNDEFINED);
 
+		// Initialize memory contents. This isn't something that happens often.
+		// Pre-loading the contents helps to avoid leakage when mixed types of allocations are in use (NVIDIA)
+		// TODO: Fix memory lost when old object goes out of use with in-flight data.
+		auto dst = allocated_memory->map(0, size);
+		auto src = vm::get_super_ptr(base_address);
+		std::memcpy(dst, src, size);
+		allocated_memory->unmap();
+
 		s_allocated_dma_pool_size += allocated_memory->size();
 	}
 
