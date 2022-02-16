@@ -258,6 +258,13 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 		info.status = CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED;
 		break;
 	}
+
+	cellSearch.notice("CellSearchMusicInfo:\ntitle=%s\nalbumTitle=%s\nartistName=%s\ngenreName=%s\ndiskNumber=%s\n"
+		"trackNumber=%d\nduration=%d\nsize=%d\nimportedDate=%d\nlastPlayedDate=%d\nreleasedYear=%d\nbitrate=%d\n"
+		"samplingRate=%d\nquantizationBitrate=%d\nplayCount=%d\ndrmEncrypted=%d\ncodec=%d\nstatus=%d)",
+		info.title, info.albumTitle, info.artistName, info.genreName, info.diskNumber,
+		info.trackNumber, info.duration, info.size, info.importedDate, info.lastPlayedDate, info.releasedYear, info.bitrate,
+		info.samplingRate, info.quantizationBitrate, info.playCount, info.drmEncrypted, info.codec, info.status);
 }
 
 void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi, const fs::dir_entry& item)
@@ -356,6 +363,11 @@ void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi,
 		info.status = CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED;
 		break;
 	}
+
+	cellSearch.notice("CellSearchVideoInfo:\ntitle=%s\nalbumTitle=%s\nduration=%d\nsize=%d\nimportedDate=%d\takenDate=%d\n"
+		"videoBitrate=%d\audioBitrate=%d\nplayCount=%d\ndrmEncrypted=%d\nvideoCodec=%d\naudioCodec=%d\nstatus=%d)",
+		info.title, info.albumTitle, info.duration, info.size, info.importedDate, info.takenDate,
+		info.videoBitrate, info.audioBitrate, info.playCount, info.drmEncrypted, info.videoCodec, info.audioCodec, info.status);
 }
 
 error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<void> userData)
