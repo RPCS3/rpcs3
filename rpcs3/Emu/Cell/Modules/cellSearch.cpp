@@ -199,9 +199,12 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 	// Special case: track is usually stored as e.g. 2/11
 	const std::string tmp = mi.get_metadata<std::string>("track", ""s);
 	s64 value{};
-	const bool success = try_to_int64(&value, tmp.substr(0, tmp.find('/')).c_str(), s32{smin}, s32{smax});
-	info.trackNumber = success ? static_cast<s32>(value) : -1;
+	if (tmp.empty() || !try_to_int64(&value, tmp.substr(0, tmp.find('/')).c_str(), s32{smin}, s32{smax}))
+	{
+		value = -1;
+	}
 
+	info.trackNumber = static_cast<s32>(value);
 	info.size = item.size;
 	info.releasedYear = static_cast<s32>(mi.get_metadata<s64>("date", -1));
 	info.duration = mi.duration_us / 1000; // we need microseconds
