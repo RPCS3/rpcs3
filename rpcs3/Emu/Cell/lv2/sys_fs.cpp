@@ -834,11 +834,19 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 		return {CELL_EBADF, fd};
 	}
 
+	std::string FD_state_log;
+
+	if (sys_fs.warning)
+	{
+		FD_state_log = fmt::format("sys_fs_close(fd=%u)", fd);
+	}
+
 	{
 		std::lock_guard lock(file->mp->mutex);
 
 		if (!file->file)
 		{
+			sys_fs.warning("%s", FD_state_log);
 			return {CELL_EBADF, fd};
 		}
 
@@ -848,32 +856,24 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 			file->file.sync(); // For cellGameContentPermit atomicity
 		}
 
+		if (!FD_state_log.empty())
+		{
+			sys_fs.warning("%s: %s", FD_state_log, *file);
+		}
+
 		// Ensure Host file handle won't be kept open after this syscall
 		file->file.close();
 	}
 
-	const auto ret = idm::withdraw<lv2_fs_object, lv2_file>(fd, [&](lv2_file& _file) -> CellError
+	ensure(idm::withdraw<lv2_fs_object, lv2_file>(fd, [&](lv2_file& _file) -> CellError
 	{
-		if (file.get() != std::addressof(_file))
-		{
-			// Other thread destroyed the object inbetween
-			return CELL_EBADF;
-		}
-
 		if (_file.type >= lv2_file_type::sdata)
 		{
 			g_fxo->get<loaded_npdrm_keys>().npdrm_fds--;
 		}
 
 		return {};
-	});
-
-	if (!ret || ret.ret == CELL_EBADF)
-	{
-		return {CELL_EBADF, fd};
-	}
-
-	sys_fs.warning("sys_fs_close(fd=%u): %s", fd, *file);
+	}));
 
 	if (file->lock == 1)
 	{

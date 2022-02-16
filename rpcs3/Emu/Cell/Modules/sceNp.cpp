@@ -2362,7 +2362,7 @@ error_code sceNpLookupTerm()
 
 error_code sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpId> selfNpId)
 {
-	sceNp.warning("sceNpLookupCreateTitleCtx(communicationId=*0x%x(%s), selfNpId=0x%x)", communicationId, communicationId->data, selfNpId);
+	sceNp.warning("sceNpLookupCreateTitleCtx(communicationId=*0x%x(%s), selfNpId=0x%x)", communicationId, communicationId ? communicationId->data : "", selfNpId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -5125,7 +5125,7 @@ error_code sceNpUtilCanonicalizeNpIdForPsp()
 
 error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 {
-	sceNp.warning("sceNpUtilCmpNpId(id1=*0x%x(%s), id2=*0x%x(%s))", id1, id1->handle.data, id2, id2->handle.data);
+	sceNp.warning("sceNpUtilCmpNpId(id1=*0x%x(%s), id2=*0x%x(%s))", id1, id1 ? id1->handle.data : "", id2, id2 ? id2->handle.data : "");
 
 	if (!id1 || !id2)
 	{
