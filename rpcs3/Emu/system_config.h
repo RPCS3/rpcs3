@@ -169,6 +169,7 @@ struct cfg_root : cfg::node
 			cfg::_bool fsr_upscaling{ this, "Enable FidelityFX Super Resolution Upscaling", false, true };
 			cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
+			cfg::_enum<vk_metal_semaphore_mode> metal_semaphore{ this, "Metal Semaphore", vk_metal_semaphore_mode::mtlevent_preferred };
 
 		} vk{ this };
 
