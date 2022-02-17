@@ -1232,6 +1232,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
 
+	m_emu_settings->EnhanceComboBox(ui->metalsemaphore, emu_settings_type::MetalSemaphore);
+#ifdef __APPLE__
+	SubscribeTooltip(ui->gb_metalsemaphore, tooltips.settings.metal_semaphore);
+#else
+	ui->metalsemaphore->setVisible(false);
+#endif
+
 	// Sliders
 
 	EnhanceSlider(emu_settings_type::DriverWakeUpDelay, ui->wakeupDelay, ui->wakeupText, tr(reinterpret_cast<const char*>(u8"%0 µs"), "Driver wake up delay"));

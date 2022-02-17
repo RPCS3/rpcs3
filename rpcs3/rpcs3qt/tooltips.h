@@ -107,6 +107,7 @@ public:
 		const QString accurate_ppu_128_loop        = tr("When enabled, PPU atomic operations will operate on entire cache line data, as opposed to a single 64bit block of memory when disabled.\nNumerical values control whether or not to enable the accurate version based on the atomic operation's length.");
 		const QString enable_performance_report    = tr("Measure certain events and print a chart after the emulator is stopped. Don't enable if not asked to.");
 		const QString num_ppu_threads              = tr("Affects maximum amount of PPU threads running concurrently, the value of 1 has very low compatibility with games.\n2 is the default, if unsure do not modify this setting.");
+		const QString metal_semaphore              = tr("Determines how MoltenVK will simulate vkSemaphore on the Metal API.\nSoftware emulation is the slowest, but most accurate option. However, it can cause tearing.\nMTLEvent is faster, but not available under Rosetta (if MTLEvent preferred is selected, MTLFence is used; otherwise, emulation is used).\nMTLFence is faster than emulation, but can randomly cause synchronization issues.");
 
 		// emulator
 
