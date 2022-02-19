@@ -616,14 +616,21 @@ VKGSRender::VKGSRender() : GSRender()
 
 	if (backend_config.supports_host_gpu_labels)
 	{
-		m_host_object_data = std::make_unique<vk::buffer>(*m_device,
-			0x100000,
-			memory_map.device_bar, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0,
-			VMM_ALLOCATION_POOL_SYSTEM);
+		if (backend_config.supports_passthrough_dma)
+		{
+			m_host_object_data = std::make_unique<vk::buffer>(*m_device,
+				0x10000,
+				memory_map.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+				VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0,
+				VMM_ALLOCATION_POOL_SYSTEM);
 
-		m_host_data_ptr = new (m_host_object_data->map(0, 0x100000)) vk::host_data_t();
-		ensure(m_host_data_ptr->magic == 0xCAFEBABE);
+			m_host_data_ptr = new (m_host_object_data->map(0, 0x100000)) vk::host_data_t();
+			ensure(m_host_data_ptr->magic == 0xCAFEBABE);
+		}
+		else
+		{
+			rsx_log.error("Your GPU/driver does not support extensions required to enable passthrough DMA emulation. Host GPU labels will be disabled.");
+		}
 	}
 }
 
@@ -1493,20 +1500,67 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 	{
 		// All texture loads already seen by the host GPU
 		// Wait for all previously submitted labels to be flushed
-		while (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
+		if (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
 		{
-			_mm_pause();
+			//const u64 wait_start = utils::get_tsc();
+
+			while (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
+			{
+				_mm_pause();
+
+				if (thread_ctrl::state() == thread_state::aborting)
+				{
+					break;
+				}
+			}
+
+			//const u64 now = utils::get_tsc();
+			//const u64 divisor = utils::get_tsc_freq() / 1000000;
+			//const u64 full_duration = (now - m_host_data_ptr->last_label_request_timestamp) / divisor;
+			//const u64 wait_duration = (now - wait_start) / divisor;
+			//rsx_log.error("GPU sync took [%llu, %llu] microseconds to complete", full_duration, wait_duration);
 		}
 
 		return false;
 	}
 
-	m_host_data_ptr->last_label_release_event = ++m_host_data_ptr->event_counter;
-
 	const auto mapping = vk::map_dma(address, 4);
 	const auto write_data = std::bit_cast<u32, be_t<u32>>(args);
-	vkCmdUpdateBuffer(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
-	flush_command_queue();
+
+	if (!dynamic_cast<vk::memory_block_host*>(mapping.second->memory.get()))
+	{
+		// NVIDIA GPUs can disappoint when DMA blocks straddle VirtualAlloc boundaries.
+		// Take the L and try the fallback.
+		rsx_log.warning("Host label update at 0x%x was not possible.", address);
+		return false;
+	}
+
+	m_host_data_ptr->last_label_release_event = ++m_host_data_ptr->event_counter;
+	//m_host_data_ptr->last_label_request_timestamp = utils::get_tsc();
+
+	if (m_host_data_ptr->texture_load_request_event > m_host_data_ptr->last_label_submit_event)
+	{
+		if (vk::is_renderpass_open(*m_current_command_buffer))
+		{
+			vk::end_renderpass(*m_current_command_buffer);
+		}
+
+		vkCmdUpdateBuffer(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
+		flush_command_queue();
+	}
+	else
+	{
+		auto cmd = m_secondary_cb_list.next();
+		cmd->begin();
+		vkCmdUpdateBuffer(*cmd, mapping.second->value, mapping.first, 4, &write_data);
+		vkCmdUpdateBuffer(*cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::commands_complete_event), 8, const_cast<u64*>(&m_host_data_ptr->last_label_release_event));
+		cmd->end();
+
+		vk::queue_submit_t submit_info = { m_device->get_graphics_queue(), nullptr };
+		cmd->submit(submit_info);
+
+		m_host_data_ptr->last_label_submit_event = m_host_data_ptr->last_label_release_event;
+	}
 	return true;
 }
 
@@ -2145,13 +2199,15 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 
-	if (m_host_data_ptr && m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
+	if (m_host_data_ptr && m_host_data_ptr->last_label_release_event > m_host_data_ptr->last_label_submit_event)
 	{
 		vkCmdUpdateBuffer(*m_current_command_buffer,
 			m_host_object_data->value,
 			::offset32(&vk::host_data_t::commands_complete_event),
 			sizeof(u64),
-			const_cast<u64*>(&m_host_data_ptr->event_counter));
+			const_cast<u64*>(&m_host_data_ptr->last_label_release_event));
+
+		m_host_data_ptr->last_label_submit_event = m_host_data_ptr->last_label_release_event;
 	}
 
 	m_current_command_buffer->end();

@@ -23,7 +23,9 @@ namespace vk
 		u64 texture_load_request_event = 0;
 		u64 texture_load_complete_event = 0;
 		u64 last_label_release_event = 0;
+		u64 last_label_submit_event = 0;
 		u64 commands_complete_event = 0;
+		u64 last_label_request_timestamp = 0;
 	};
 
 	struct fence
