@@ -35,23 +35,26 @@ namespace rsx
 		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->label_addr + 0x30));
 		if (!is_flip_sema)
 		{
-			if constexpr (FlushPipe)
-			{
-				// Ignoring these can cause very poor performance due to timestamp queries taking too long.
-				rsx->sync();
-			}
-
-			if (rsx->get_backend_config().supports_host_gpu_labels &&
-				rsx->release_GCM_label(address, data))
-			{
-				// Backend will handle it, nothing to do.
-				// Implicitly handles DMA sync.
-				return;
-			}
+			// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
+			const bool handled = rsx->get_backend_config().supports_host_gpu_labels && rsx->release_GCM_label(address, data);
 
 			if constexpr (FlushDMA)
 			{
+				// If the backend handled the request, this call will basically be a NOP
 				g_fxo->get<rsx::dma_manager>().sync();
+			}
+
+			if constexpr (FlushPipe)
+			{
+				// Manually flush the pipeline.
+				// It is possible to stream report writes using the host GPU, but that generates too much submit traffic.
+				rsx->sync();
+			}
+
+			if (handled)
+			{
+				// Backend will handle it, nothing to write.
+				return;
 			}
 		}
 
@@ -255,7 +258,7 @@ namespace rsx
 			}
 			else
 			{
-				write_gcm_label<true, false>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
+				write_gcm_label<false, false>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
 			}
 		}
 
