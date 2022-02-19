@@ -117,6 +117,9 @@ private:
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
 	VkSemaphore m_dangling_semaphore_signal = VK_NULL_HANDLE;
 
+	volatile vk::host_data_t* m_host_data_ptr = nullptr;
+	std::unique_ptr<vk::buffer> m_host_object_data;
+
 	VkDescriptorSetLayout descriptor_layouts;
 	VkPipelineLayout pipeline_layout;
 
@@ -242,6 +245,7 @@ public:
 	void bind_viewport();
 
 	void sync_hint(rsx::FIFO_hint hint, void* args) override;
+	bool release_GCM_label(u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -258,6 +262,9 @@ public:
 	// Conditional rendering
 	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
 	void end_conditional_rendering() override;
+
+	// Host sync object
+	inline std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() { return { m_host_data_ptr, m_host_object_data->value }; }
 
 protected:
 	void clear_surface(u32 mask) override;

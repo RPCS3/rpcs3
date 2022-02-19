@@ -156,6 +156,7 @@ struct cfg_root : cfg::node
 		cfg::_int<1, 1800> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
 		cfg::_bool vblank_ntsc{ this, "Vblank NTSC Fixup", false, true };
 		cfg::_bool decr_memory_layout{ this, "DECR memory layout", false}; // Force enable increased allowed main memory range as DECR console
+		cfg::_bool host_label_synchronization{ this, "Use Host GPU Labels", false };
 
 		struct node_vk : cfg::node
 		{
