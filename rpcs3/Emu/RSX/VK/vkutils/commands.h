@@ -63,12 +63,11 @@ namespace vk
 
 	class command_buffer
 	{
-	private:
+	protected:
 		bool is_open = false;
 		bool is_pending = false;
 		fence* m_submit_fence = nullptr;
 
-	protected:
 		command_pool* pool = nullptr;
 		VkCommandBuffer commands = nullptr;
 
@@ -95,7 +94,7 @@ namespace vk
 		command_buffer() = default;
 		~command_buffer() = default;
 
-		void create(command_pool& cmd_pool, bool auto_reset = false);
+		void create(command_pool& cmd_pool);
 		void destroy();
 
 		void begin();

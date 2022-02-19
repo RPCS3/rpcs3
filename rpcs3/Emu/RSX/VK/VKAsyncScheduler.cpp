@@ -113,7 +113,7 @@ namespace vk
 			{
 				m_async_command_queue.emplace_back();
 				m_current_cb = &m_async_command_queue.back();
-				m_current_cb->create(m_command_pool, true);
+				m_current_cb->create(m_command_pool);
 			}
 		}
 

@@ -66,27 +66,11 @@ namespace vk
 
 	struct command_buffer_chunk: public vk::command_buffer
 	{
-		vk::fence* submit_fence = nullptr;
-		VkDevice m_device = VK_NULL_HANDLE;
-
-		atomic_t<bool> pending = { false };
 		u64 eid_tag = 0;
 		u64 reset_id = 0;
 		shared_mutex guard_mutex;
 
 		command_buffer_chunk() = default;
-
-		void init_fence(VkDevice dev)
-		{
-			m_device = dev;
-			submit_fence = new vk::fence(dev);
-		}
-
-		void destroy()
-		{
-			vk::command_buffer::destroy();
-			delete submit_fence;
-		}
 
 		void tag()
 		{
@@ -95,11 +79,10 @@ namespace vk
 
 		void reset()
 		{
-			if (pending)
-				poke();
-
-			if (pending)
+			if (is_pending && !poke())
+			{
 				wait(FRAME_PRESENT_TIMEOUT);
+			}
 
 			++reset_id;
 			CHECK_RESULT(vkResetCommandBuffer(commands, 0));
@@ -109,46 +92,52 @@ namespace vk
 		{
 			reader_lock lock(guard_mutex);
 
-			if (!pending)
+			if (!is_pending)
+			{
 				return true;
+			}
 
-			if (!submit_fence->flushed)
+			if (!m_submit_fence->flushed)
+			{
 				return false;
+			}
 
-			if (vkGetFenceStatus(m_device, submit_fence->handle) == VK_SUCCESS)
+			if (vkGetFenceStatus(pool->get_owner(), m_submit_fence->handle) == VK_SUCCESS)
 			{
 				lock.upgrade();
 
-				if (pending)
+				if (is_pending)
 				{
-					submit_fence->reset();
+					m_submit_fence->reset();
 					vk::on_event_completed(eid_tag);
 
-					pending = false;
+					is_pending = false;
 					eid_tag = 0;
 				}
 			}
 
-			return !pending;
+			return !is_pending;
 		}
 
 		VkResult wait(u64 timeout = 0ull)
 		{
 			reader_lock lock(guard_mutex);
 
-			if (!pending)
+			if (!is_pending)
+			{
 				return VK_SUCCESS;
+			}
 
-			const auto ret = vk::wait_for_fence(submit_fence, timeout);
+			const auto ret = vk::wait_for_fence(m_submit_fence, timeout);
 
 			lock.upgrade();
 
-			if (pending)
+			if (is_pending)
 			{
-				submit_fence->reset();
+				m_submit_fence->reset();
 				vk::on_event_completed(eid_tag);
 
-				pending = false;
+				is_pending = false;
 				eid_tag = 0;
 			}
 
@@ -159,10 +148,12 @@ namespace vk
 		{
 			reader_lock lock(guard_mutex);
 
-			if (!pending)
+			if (!is_pending)
+			{
 				return;
+			}
 
-			submit_fence->wait_flush();
+			m_submit_fence->wait_flush();
 		}
 	};
 
@@ -337,6 +328,59 @@ namespace vk
 	{
 		u32 subdraw_id;
 	};
+
+	template<int Count>
+	class command_buffer_chain
+	{
+		atomic_t<u32> m_current_index = 0;
+		std::array<vk::command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_cb_list;
+
+	public:
+		command_buffer_chain() = default;
+
+		void create(command_pool& pool, vk::command_buffer::access_type_hint access)
+		{
+			for (auto& cb : m_cb_list)
+			{
+				cb.create(pool);
+				cb.access_hint = access;
+			}
+		}
+
+		void destroy()
+		{
+			for (auto& cb : m_cb_list)
+			{
+				cb.destroy();
+			}
+		}
+
+		void poke_all()
+		{
+			for (auto& cb : m_cb_list)
+			{
+				cb.poke();
+			}
+		}
+
+		inline command_buffer_chunk* next()
+		{
+			const auto result_id = ++m_current_index % VK_MAX_ASYNC_CB_COUNT;
+			auto result = &m_cb_list[result_id];
+
+			if (!result->poke())
+			{
+				rsx_log.error("CB chain has run out of free entries!");
+			}
+
+			return result;
+		}
+
+		inline command_buffer_chunk* get()
+		{
+			return &m_cb_list[m_current_index];
+		}
+	};
 }
 
 using namespace vk::vmm_allocation_pool_; // clang workaround.
@@ -416,7 +460,6 @@ private:
 	vk::render_device *m_device;
 
 	//Vulkan internals
-	vk::command_pool m_command_buffer_pool;
 	std::unique_ptr<vk::query_pool_manager> m_occlusion_query_manager;
 	bool m_occlusion_query_active = false;
 	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
@@ -424,10 +467,10 @@ private:
 
 	shared_mutex m_secondary_cb_guard;
 	vk::command_pool m_secondary_command_buffer_pool;
-	vk::command_buffer m_secondary_command_buffer;  //command buffer used for setup operations
+	vk::command_buffer_chain<VK_MAX_ASYNC_CB_COUNT> m_secondary_cb_list;
 
-	u32 m_current_cb_index = 0;
-	std::array<vk::command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
+	vk::command_pool m_command_buffer_pool;
+	vk::command_buffer_chain<VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
 	VkSemaphore m_dangling_semaphore_signal = VK_NULL_HANDLE;
 
@@ -521,7 +564,7 @@ private:
 
 	void flush_command_queue(bool hard_sync = false, bool do_not_switch = false);
 	void queue_swap_request();
-	void frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources = false);
+	void frame_context_cleanup(vk::frame_context_t *ctx);
 	void advance_queued_frames();
 	void present(vk::frame_context_t *ctx);
 	void reinitialize_swapchain();
