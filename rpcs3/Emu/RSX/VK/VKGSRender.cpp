@@ -407,19 +407,12 @@ VKGSRender::VKGSRender() : GSRender()
 
 	//create command buffer...
 	m_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
-
-	for (auto &cb : m_primary_cb_list)
-	{
-		cb.create(m_command_buffer_pool);
-		cb.init_fence(*m_device);
-	}
-
-	m_current_command_buffer = &m_primary_cb_list[0];
+	m_primary_cb_list.create(m_command_buffer_pool, vk::command_buffer::access_type_hint::flush_only);
+	m_current_command_buffer = m_primary_cb_list.get();
 
 	//Create secondary command_buffer for parallel operations
 	m_secondary_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
-	m_secondary_command_buffer.create(m_secondary_command_buffer_pool, true);
-	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
+	m_secondary_cb_list.create(m_secondary_command_buffer_pool, vk::command_buffer::access_type_hint::all);
 
 	//Precalculated stuff
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
@@ -709,12 +702,10 @@ VKGSRender::~VKGSRender()
 	m_cond_render_buffer.reset();
 
 	// Command buffer
-	for (auto &cb : m_primary_cb_list)
-		cb.destroy();
+	m_primary_cb_list.destroy();
+	m_secondary_cb_list.destroy();
 
 	m_command_buffer_pool.destroy();
-
-	m_secondary_command_buffer.destroy();
 	m_secondary_command_buffer_pool.destroy();
 
 	// Global resources
@@ -734,10 +725,8 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	vk::texture_cache::thrashed_set result;
 	{
-		std::lock_guard lock(m_secondary_cb_guard);
-
 		const rsx::invalidation_cause cause = is_writing ? rsx::invalidation_cause::deferred_write : rsx::invalidation_cause::deferred_read;
-		result = m_texture_cache.invalidate_address(m_secondary_command_buffer, address, cause);
+		result = m_texture_cache.invalidate_address(*m_secondary_cb_list.get(), address, cause);
 	}
 
 	if (result.invalidate_samplers)
@@ -802,7 +791,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			m_flush_requests.producer_wait();
 		}
 
-		m_texture_cache.flush_all(m_secondary_command_buffer, result);
+		m_texture_cache.flush_all(*m_secondary_cb_list.next(), result);
 
 		if (has_queue_ref)
 		{
@@ -818,7 +807,7 @@ void VKGSRender::on_invalidate_memory_range(const utils::address_range &range, r
 {
 	std::lock_guard lock(m_secondary_cb_guard);
 
-	auto data = m_texture_cache.invalidate_range(m_secondary_command_buffer, range, cause);
+	auto data = m_texture_cache.invalidate_range(*m_secondary_cb_list.next(), range, cause);
 	AUDIT(data.empty());
 
 	if (cause == rsx::invalidation_cause::unmap)
@@ -1050,7 +1039,7 @@ void VKGSRender::check_heap_status(u32 flags)
 		else
 		{
 			// Flush the frame context
-			frame_context_cleanup(target_frame, true);
+			frame_context_cleanup(target_frame);
 		}
 
 		m_frame_stats.flip_time += m_profiler.duration();
@@ -1062,15 +1051,12 @@ void VKGSRender::check_present_status()
 	while (!m_queued_frames.empty())
 	{
 		auto ctx = m_queued_frames.front();
-		if (ctx->swap_command_buffer->pending)
+		if (!ctx->swap_command_buffer->poke())
 		{
-			if (!ctx->swap_command_buffer->poke())
-			{
-				return;
-			}
+			return;
 		}
 
-		frame_context_cleanup(ctx, true);
+		frame_context_cleanup(ctx);
 	}
 }
 
@@ -1425,20 +1411,15 @@ void VKGSRender::clear_surface(u32 mask)
 
 void VKGSRender::flush_command_queue(bool hard_sync, bool do_not_switch)
 {
-	close_and_submit_command_buffer(m_current_command_buffer->submit_fence);
+	close_and_submit_command_buffer();
 
 	if (hard_sync)
 	{
 		// wait for the latest instruction to execute
-		m_current_command_buffer->pending = true;
 		m_current_command_buffer->reset();
 
 		// Clear all command buffer statuses
-		for (auto &cb : m_primary_cb_list)
-		{
-			if (cb.pending)
-				cb.poke();
-		}
+		m_primary_cb_list.poke_all();
 
 		// Drain present queue
 		while (!m_queued_frames.empty())
@@ -1448,24 +1429,12 @@ void VKGSRender::flush_command_queue(bool hard_sync, bool do_not_switch)
 
 		m_flush_requests.clear_pending_flag();
 	}
-	else
-	{
-		// Mark this queue as pending and proceed
-		m_current_command_buffer->pending = true;
-	}
 
 	if (!do_not_switch)
 	{
 		// Grab next cb in line and make it usable
 		// NOTE: Even in the case of a hard sync, this is required to free any waiters on the CB (ZCULL)
-		m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
-		m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
-
-		if (!m_current_command_buffer->poke())
-		{
-			rsx_log.error("CB chain has run out of free entries!");
-		}
-
+		m_current_command_buffer = m_primary_cb_list.next();
 		m_current_command_buffer->reset();
 	}
 	else
@@ -2075,24 +2044,24 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 			m_texture_upload_buffer_ring_info.is_dirty() ||
 			m_raster_env_ring_info.is_dirty())
 		{
-			std::lock_guard lock(m_secondary_cb_guard);
-			m_secondary_command_buffer.begin();
+			auto secondary_command_buffer = m_secondary_cb_list.next();
+			secondary_command_buffer->begin();
 
-			m_attrib_ring_info.sync(m_secondary_command_buffer);
-			m_fragment_env_ring_info.sync(m_secondary_command_buffer);
-			m_vertex_env_ring_info.sync(m_secondary_command_buffer);
-			m_fragment_texture_params_ring_info.sync(m_secondary_command_buffer);
-			m_vertex_layout_ring_info.sync(m_secondary_command_buffer);
-			m_fragment_constants_ring_info.sync(m_secondary_command_buffer);
-			m_index_buffer_ring_info.sync(m_secondary_command_buffer);
-			m_transform_constants_ring_info.sync(m_secondary_command_buffer);
-			m_texture_upload_buffer_ring_info.sync(m_secondary_command_buffer);
-			m_raster_env_ring_info.sync(m_secondary_command_buffer);
+			m_attrib_ring_info.sync(*secondary_command_buffer);
+			m_fragment_env_ring_info.sync(*secondary_command_buffer);
+			m_vertex_env_ring_info.sync(*secondary_command_buffer);
+			m_fragment_texture_params_ring_info.sync(*secondary_command_buffer);
+			m_vertex_layout_ring_info.sync(*secondary_command_buffer);
+			m_fragment_constants_ring_info.sync(*secondary_command_buffer);
+			m_index_buffer_ring_info.sync(*secondary_command_buffer);
+			m_transform_constants_ring_info.sync(*secondary_command_buffer);
+			m_texture_upload_buffer_ring_info.sync(*secondary_command_buffer);
+			m_raster_env_ring_info.sync(*secondary_command_buffer);
 
-			m_secondary_command_buffer.end();
+			secondary_command_buffer->end();
 
 			vk::queue_submit_t submit_info{ m_device->get_graphics_queue(), nullptr };
-			m_secondary_command_buffer.submit(submit_info, force_flush);
+			secondary_command_buffer->submit(submit_info, force_flush);
 		}
 
 		vk::clear_status_interrupt(vk::heap_dirty);
@@ -2170,11 +2139,6 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	if (require_secondary_flush)
 	{
 		async_scheduler.flush(secondary_submit_info, force_flush);
-	}
-
-	if (force_flush)
-	{
-		ensure(m_current_command_buffer->submit_fence->flushed);
 	}
 
 	m_queue_status.clear(flush_queue_state::flushing);
