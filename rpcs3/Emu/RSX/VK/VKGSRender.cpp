@@ -550,11 +550,16 @@ VKGSRender::VKGSRender() : GSRender()
 	// Relaxed query synchronization
 	backend_config.supports_hw_conditional_render = !!g_cfg.video.relaxed_zcull_sync;
 
+	// Passthrough DMA
+	backend_config.supports_passthrough_dma = m_device->get_external_memory_host_support();
+
+	// Host sync
+	backend_config.supports_host_gpu_labels = !!g_cfg.video.host_label_synchronization;
+
 	// Async compute and related operations
 	if (g_cfg.video.vk.asynchronous_texture_streaming)
 	{
-		// Optimistic, enable async compute and passthrough DMA
-		backend_config.supports_passthrough_dma = m_device->get_external_memory_host_support();
+		// Optimistic, enable async compute
 		backend_config.supports_asynchronous_compute = true;
 
 		if (m_device->get_graphics_queue() == m_device->get_transfer_queue())
@@ -562,10 +567,14 @@ VKGSRender::VKGSRender() : GSRender()
 			rsx_log.error("Cannot run graphics and async transfer in the same queue. Async uploads are disabled. This is a limitation of your GPU");
 			backend_config.supports_asynchronous_compute = false;
 		}
+	}
 
-		switch (vk::get_driver_vendor())
+	// Sanity checks
+	switch (vk::get_driver_vendor())
+	{
+	case vk::driver_vendor::NVIDIA:
+		if (backend_config.supports_asynchronous_compute)
 		{
-		case vk::driver_vendor::NVIDIA:
 			if (auto chip_family = vk::get_chip_family();
 				chip_family == vk::chip_class::NV_kepler || chip_family == vk::chip_class::NV_maxwell)
 			{
@@ -574,35 +583,47 @@ VKGSRender::VKGSRender() : GSRender()
 
 			rsx_log.notice("Forcing safe async compute for NVIDIA device to avoid crashing.");
 			g_cfg.video.vk.asynchronous_scheduler.set(vk_gpu_scheduler_mode::safe);
-			break;
+		}
+		break;
 #if !defined(_WIN32)
-			// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
-		case vk::driver_vendor::RADV:
-		case vk::driver_vendor::AMD:
+		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
+	case vk::driver_vendor::RADV:
+	case vk::driver_vendor::AMD:
 #if !defined(__linux__)
-			// Intel chipsets would fail on BSD in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
-		case vk::driver_vendor::ANV:
+		// Intel chipsets would fail on BSD in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
+	case vk::driver_vendor::ANV:
 #endif
-			if (backend_config.supports_passthrough_dma)
-			{
-				rsx_log.error("AMDGPU kernel driver on linux and INTEL driver on some platforms cannot support passthrough DMA buffers.");
-				backend_config.supports_passthrough_dma = false;
-			}
-			break;
-#endif
-		case vk::driver_vendor::MVK:
-			// Async compute crashes immediately on Apple GPUs
-			rsx_log.error("Apple GPUs are incompatible with the current implementation of asynchronous texture decoding.");
-			backend_config.supports_asynchronous_compute = false;
-			break;
-		default: break;
-		}
-
-		if (backend_config.supports_asynchronous_compute)
+		if (backend_config.supports_passthrough_dma)
 		{
-			// Run only if async compute can be used.
-			g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler);
+			rsx_log.error("AMDGPU kernel driver on linux and INTEL driver on some platforms cannot support passthrough DMA buffers.");
+			backend_config.supports_passthrough_dma = false;
 		}
+		break;
+#endif
+	case vk::driver_vendor::MVK:
+		// Async compute crashes immediately on Apple GPUs
+		rsx_log.error("Apple GPUs are incompatible with the current implementation of asynchronous texture decoding.");
+		backend_config.supports_asynchronous_compute = false;
+		break;
+	default: break;
+	}
+
+	if (backend_config.supports_asynchronous_compute)
+	{
+		// Run only if async compute can be used.
+		g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler);
+	}
+
+	if (backend_config.supports_host_gpu_labels)
+	{
+		m_host_object_data = std::make_unique<vk::buffer>(*m_device,
+			0x100000,
+			memory_map.device_bar, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0,
+			VMM_ALLOCATION_POOL_SYSTEM);
+
+		m_host_data_ptr = new (m_host_object_data->map(0, 0x100000)) vk::host_data_t();
+		ensure(m_host_data_ptr->magic == 0xCAFEBABE);
 	}
 }
 
@@ -627,6 +648,13 @@ VKGSRender::~VKGSRender()
 	if (backend_config.supports_asynchronous_compute)
 	{
 		g_fxo->get<vk::AsyncTaskScheduler>().destroy();
+	}
+
+	// Host data
+	if (m_host_object_data)
+	{
+		m_host_object_data->unmap();
+		m_host_object_data.reset();
 	}
 
 	// Clear flush requests
@@ -1453,6 +1481,35 @@ void VKGSRender::flush_command_queue(bool hard_sync, bool do_not_switch)
 	m_current_command_buffer->begin();
 }
 
+bool VKGSRender::release_GCM_label(u32 address, u32 args)
+{
+	if (!backend_config.supports_host_gpu_labels)
+	{
+		return false;
+	}
+
+	ensure(m_host_data_ptr);
+	if (m_host_data_ptr->texture_load_complete_event == m_host_data_ptr->texture_load_request_event)
+	{
+		// All texture loads already seen by the host GPU
+		// Wait for all previously submitted labels to be flushed
+		while (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
+		{
+			_mm_pause();
+		}
+
+		return false;
+	}
+
+	m_host_data_ptr->last_label_release_event = ++m_host_data_ptr->event_counter;
+
+	const auto mapping = vk::map_dma(address, 4);
+	const auto write_data = std::bit_cast<u32, be_t<u32>>(args);
+	vkCmdUpdateBuffer(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
+	flush_command_queue();
+	return true;
+}
+
 void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 {
 	ensure(args);
@@ -2086,6 +2143,15 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
 		m_occlusion_query_manager->end_query(*m_current_command_buffer, open_query);
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
+	}
+
+	if (m_host_data_ptr && m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
+	{
+		vkCmdUpdateBuffer(*m_current_command_buffer,
+			m_host_object_data->value,
+			::offset32(&vk::host_data_t::commands_complete_event),
+			sizeof(u64),
+			const_cast<u64*>(&m_host_data_ptr->event_counter));
 	}
 
 	m_current_command_buffer->end();

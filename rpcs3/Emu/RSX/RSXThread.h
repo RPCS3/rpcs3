@@ -590,6 +590,7 @@ namespace rsx
 		bool supports_hw_conditional_render; // Conditional render
 		bool supports_passthrough_dma;       // DMA passthrough
 		bool supports_asynchronous_compute;  // Async compute
+		bool supports_host_gpu_labels;       // Advanced host synchronization
 	};
 
 	struct sampled_image_descriptor_base;
@@ -859,6 +860,7 @@ namespace rsx
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		virtual void sync_hint(FIFO_hint hint, void* args);
+		virtual bool release_GCM_label(u32 /*address*/, u32 /*value*/) { return false; }
 
 		std::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 
