@@ -38,6 +38,7 @@ public:
 		const QString wake_up_delay                = tr("Try fiddling with this setting when encountering unstable games. The higher value, the better stability it may provide.\nIncrements/Decrements for each test should be around 100μs to 200μs until finding the best value for optimal stability.\nValues above 1000μs may cause noticeable performance penalties, use with caution.");
 		const QString disabled_from_global         = tr("Do not change this setting globally.\nRight-click a game in the game list and choose \"Configure\" instead.");
 		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Safe' mode for more spec compliant behavior at the cost of some CPU overhead. This setting works with all devices.\nUse 'Fast' to use a faster but hacky version. This option is internally disabled for NVIDIA GPUs due to causing GPU hangs.");
+		const QString allow_host_labels            = tr("Allows the host GPU to synchronize with CELL directly. This incurs a performance penalty, but exposes the true state of GPU objects to the guest CPU. Can help eliminate visual noise and glitching at the cost of performance. Use with caution.");
 
 		// audio
 

@@ -235,7 +235,8 @@ namespace rsx
 
 		void texture_read_semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
-			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
+			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier.
+			// Ideally the GPU only needs to have cached all textures declared up to this point before writing the label.
 
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
@@ -260,7 +261,7 @@ namespace rsx
 
 		void back_end_write_semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
-			// Full pipeline barrier
+			// Full pipeline barrier. GPU must flush pipeline before writing the label
 
 			const u32 offset = method_registers.semaphore_offset_4097();
 
