@@ -199,9 +199,12 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 	// Special case: track is usually stored as e.g. 2/11
 	const std::string tmp = mi.get_metadata<std::string>("track", ""s);
 	s64 value{};
-	const bool success = try_to_int64(&value, tmp.substr(0, tmp.find('/')).c_str(), s32{smin}, s32{smax});
-	info.trackNumber = success ? static_cast<s32>(value) : -1;
+	if (tmp.empty() || !try_to_int64(&value, tmp.substr(0, tmp.find('/')).c_str(), s32{smin}, s32{smax}))
+	{
+		value = -1;
+	}
 
+	info.trackNumber = static_cast<s32>(value);
 	info.size = item.size;
 	info.releasedYear = static_cast<s32>(mi.get_metadata<s64>("date", -1));
 	info.duration = mi.duration_us / 1000; // we need microseconds
@@ -255,6 +258,13 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 		info.status = CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED;
 		break;
 	}
+
+	cellSearch.notice("CellSearchMusicInfo:\ntitle=%s\nalbumTitle=%s\nartistName=%s\ngenreName=%s\ndiskNumber=%s\n"
+		"trackNumber=%d\nduration=%d\nsize=%d\nimportedDate=%d\nlastPlayedDate=%d\nreleasedYear=%d\nbitrate=%d\n"
+		"samplingRate=%d\nquantizationBitrate=%d\nplayCount=%d\ndrmEncrypted=%d\ncodec=%d\nstatus=%d)",
+		info.title, info.albumTitle, info.artistName, info.genreName, info.diskNumber,
+		info.trackNumber, info.duration, info.size, info.importedDate, info.lastPlayedDate, info.releasedYear, info.bitrate,
+		info.samplingRate, info.quantizationBitrate, info.playCount, info.drmEncrypted, info.codec, info.status);
 }
 
 void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi, const fs::dir_entry& item)
@@ -353,6 +363,11 @@ void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi,
 		info.status = CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED;
 		break;
 	}
+
+	cellSearch.notice("CellSearchVideoInfo:\ntitle=%s\nalbumTitle=%s\nduration=%d\nsize=%d\nimportedDate=%d\takenDate=%d\n"
+		"videoBitrate=%d\audioBitrate=%d\nplayCount=%d\ndrmEncrypted=%d\nvideoCodec=%d\naudioCodec=%d\nstatus=%d)",
+		info.title, info.albumTitle, info.duration, info.size, info.importedDate, info.takenDate,
+		info.videoBitrate, info.audioBitrate, info.playCount, info.drmEncrypted, info.videoCodec, info.audioCodec, info.status);
 }
 
 error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<void> userData)
