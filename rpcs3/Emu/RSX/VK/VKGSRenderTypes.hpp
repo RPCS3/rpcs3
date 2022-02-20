@@ -319,7 +319,7 @@ namespace vk
 	class command_buffer_chain
 	{
 		atomic_t<u32> m_current_index = 0;
-		std::array<vk::command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_cb_list;
+		std::array<vk::command_buffer_chunk, Count> m_cb_list;
 
 	public:
 		command_buffer_chain() = default;
@@ -351,7 +351,7 @@ namespace vk
 
 		inline command_buffer_chunk* next()
 		{
-			const auto result_id = ++m_current_index % VK_MAX_ASYNC_CB_COUNT;
+			const auto result_id = ++m_current_index % Count;
 			auto result = &m_cb_list[result_id];
 
 			if (!result->poke())
