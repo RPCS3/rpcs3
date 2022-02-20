@@ -255,7 +255,7 @@ namespace gui::utils
 				return false;
 			}
 
-			fmt::append(file_content, "Icon=%s\n", src_icon_path);
+			fmt::append(file_content, "Icon=%s\n", target_icon_path);
 		}
 
 		fs::file shortcut_file(link_path, fs::read + fs::rewrite);
