@@ -18,9 +18,6 @@
 
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
-#define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
-#define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
-
 namespace vk
 {
 	// Forward declarations

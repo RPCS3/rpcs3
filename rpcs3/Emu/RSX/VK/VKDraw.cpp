@@ -757,8 +757,8 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	auto &draw_call = rsx::method_registers.current_draw_clause;
 	m_profiler.start();
 
-	const flags32_t vertex_state_mask = rsx::vertex_base_changed | rsx::vertex_arrays_changed;
-	const flags32_t vertex_state = (sub_index == 0) ? rsx::vertex_arrays_changed : draw_call.execute_pipeline_dependencies() & vertex_state_mask;
+	const rsx::flags32_t vertex_state_mask = rsx::vertex_base_changed | rsx::vertex_arrays_changed;
+	const rsx::flags32_t vertex_state = (sub_index == 0) ? rsx::vertex_arrays_changed : draw_call.execute_pipeline_dependencies() & vertex_state_mask;
 
 	if (vertex_state & rsx::vertex_arrays_changed)
 	{
