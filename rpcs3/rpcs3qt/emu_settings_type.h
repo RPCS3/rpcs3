@@ -126,6 +126,7 @@ enum class emu_settings_type
 	TimeStretchingThreshold,
 	MicrophoneType,
 	MicrophoneDevices,
+	MusicHandler,
 
 	// Input / Output
 	PadHandlerMode,
@@ -290,6 +291,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::TimeStretchingThreshold, { "Audio", "Time Stretching Threshold"}},
 	{ emu_settings_type::MicrophoneType,          { "Audio", "Microphone Type" }},
 	{ emu_settings_type::MicrophoneDevices,       { "Audio", "Microphone Devices" }},
+	{ emu_settings_type::MusicHandler,            { "Audio", "Music Handler"}},
 
 	// Input / Output
 	{ emu_settings_type::PadHandlerMode,  { "Input/Output", "Pad handler mode"}},

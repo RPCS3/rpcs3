@@ -59,6 +59,7 @@ namespace utils
 	std::pair<bool, media_info> get_media_info(const std::string& path, s32 av_media_type)
 	{
 		media_info info;
+		info.path = path;
 
 		// Only print FFMPEG errors, fatals and panics
 		av_log_set_level(AV_LOG_ERROR);

@@ -43,8 +43,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>821</width>
-        <height>667</height>
+        <width>838</width>
+        <height>641</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -54,7 +54,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>6</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="coreTab">
        <attribute name="title">
@@ -1077,6 +1077,34 @@
               </layout>
              </widget>
             </item>
+            <item>
+             <widget class="QGroupBox" name="gb_music_handler">
+              <property name="title">
+               <string>Music Handler</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_music_handler_layout">
+               <item>
+                <widget class="QComboBox" name="musicHandlerBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacerAudioLeft">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
            </layout>
           </item>
           <item>
@@ -1243,6 +1271,22 @@
                   </item>
                  </layout>
                 </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacerAudioRight">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::MinimumExpanding</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
               </layout>
              </widget>

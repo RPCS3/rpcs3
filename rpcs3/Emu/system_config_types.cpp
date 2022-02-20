@@ -336,6 +336,21 @@ void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<music_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case music_handler::null: return "Null";
+		case music_handler::qt: return "Qt";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<fake_camera_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)

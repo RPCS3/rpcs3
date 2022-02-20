@@ -75,6 +75,12 @@ enum class audio_downmix
 	use_application_settings
 };
 
+enum class music_handler
+{
+	null,
+	qt
+};
+
 enum class camera_handler
 {
 	null,
