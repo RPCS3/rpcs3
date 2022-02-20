@@ -1236,7 +1236,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #ifdef __APPLE__
 	SubscribeTooltip(ui->gb_metalsemaphore, tooltips.settings.metal_semaphore);
 #else
-	ui->metalsemaphore->setVisible(false);
+	ui->gb_metalsemaphore->setVisible(false);
 #endif
 
 	// Sliders
