@@ -25,6 +25,7 @@ void VKGSRender::reinitialize_swapchain()
 	// NOTE: This operation will create a hard sync point
 	close_and_submit_command_buffer();
 	m_current_command_buffer->reset();
+	m_current_command_buffer->begin();
 
 	for (auto &ctx : frame_context_storage)
 	{
@@ -46,13 +47,10 @@ void VKGSRender::reinitialize_swapchain()
 	{
 		rsx_log.warning("Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
 		swapchain_unavailable = true;
-		open_command_buffer();
 		return;
 	}
 
 	// Prepare new swapchain images for use
-	open_command_buffer();
-
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
 	{
 		const auto target_layout = m_swapchain->get_optimal_present_layout();
@@ -73,7 +71,7 @@ void VKGSRender::reinitialize_swapchain()
 	vk::wait_for_fence(&resize_fence);
 
 	m_current_command_buffer->reset();
-	open_command_buffer();
+	m_current_command_buffer->begin();
 
 	swapchain_unavailable = false;
 	should_reinitialize_swapchain = false;
