@@ -82,39 +82,46 @@ namespace gui::utils
 		}
 
 #ifdef _WIN32
-		std::string link_file;
-
-		if (const char* home = getenv("USERPROFILE"))
-		{
-			if (is_desktop_shortcut)
-			{
-				link_file = fmt::format("%s/Desktop/%s.lnk", home, simple_name);
-			}
-			else
-			{
-				const std::string programs_dir = fmt::format("%s/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/RPCS3", home);
-				if (!fs::create_path(programs_dir))
-				{
-					sys_log.error("Failed to create shortcut: Could not create start menu directory: %s", programs_dir);
-					return false;
-				}
-				link_file = fmt::format("%s/%s.lnk", programs_dir, simple_name);
-			}
-		}
-		else
-		{
-			sys_log.error("Failed to create shortcut: home path empty");
-			return false;
-		}
-
-		sys_log.notice("Creating shortcut '%s' with arguments '%s' and .ico dir '%s'", link_file, target_cli_args, target_icon_dir);
-
 		const auto str_error = [](HRESULT hr) -> std::string
 		{
 			_com_error err(hr);
 			const TCHAR* errMsg = err.ErrorMessage();
 			return fmt::format("%s [%d]", wchar_to_utf8(errMsg), hr);
 		};
+
+		std::string link_file;
+
+		if (is_desktop_shortcut)
+		{
+			TCHAR path[_MAX_PATH];
+			HRESULT res = SHGetFolderPath(NULL, CSIDL_DESKTOP, 0, NULL, path);
+			if (FAILED(res))
+			{
+				sys_log.error("Failed to create shortcut: SHGetFolderPath(CSIDL_DESKTOP) failed (%s)", str_error(res));
+				return false;
+			}
+			link_file = fmt::format("%s/%s.lnk", wchar_to_utf8(std::wstring(path)), simple_name);
+		}
+		else
+		{
+			TCHAR path[_MAX_PATH];
+			HRESULT res = SHGetFolderPath(NULL, CSIDL_PROGRAMS, 0, NULL, path);
+			if (FAILED(res))
+			{
+				sys_log.error("Failed to create shortcut: SHGetFolderPath(CSIDL_PROGRAMS) failed (%s)", str_error(res));
+				return false;
+			}
+
+			const std::string programs_dir = fmt::format("%s/RPCS3", wchar_to_utf8(std::wstring(path)));
+			if (!fs::create_path(programs_dir))
+			{
+				sys_log.error("Failed to create shortcut: Could not create start menu directory: %s", programs_dir);
+				return false;
+			}
+			link_file = fmt::format("%s/%s.lnk", programs_dir, simple_name);
+		}
+
+		sys_log.notice("Creating shortcut '%s' with arguments '%s' and .ico dir '%s'", link_file, target_cli_args, target_icon_dir);
 
 		// https://stackoverflow.com/questions/3906974/how-to-programmatically-create-a-shortcut-using-win32
 		HRESULT res = CoInitialize(NULL);
