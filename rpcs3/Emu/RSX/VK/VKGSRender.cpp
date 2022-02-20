@@ -409,6 +409,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
 	m_primary_cb_list.create(m_command_buffer_pool, vk::command_buffer::access_type_hint::flush_only);
 	m_current_command_buffer = m_primary_cb_list.get();
+	m_current_command_buffer->begin();
 
 	//Create secondary command_buffer for parallel operations
 	m_secondary_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
@@ -506,8 +507,6 @@ VKGSRender::VKGSRender() : GSRender()
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
 	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.92");
-
-	open_command_buffer();
 
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
 	{
@@ -1451,7 +1450,7 @@ void VKGSRender::flush_command_queue(bool hard_sync, bool do_not_switch)
 		m_current_command_buffer->flags |= vk::command_buffer::cb_load_occluson_task;
 	}
 
-	open_command_buffer();
+	m_current_command_buffer->begin();
 }
 
 void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
@@ -2142,11 +2141,6 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	}
 
 	m_queue_status.clear(flush_queue_state::flushing);
-}
-
-void VKGSRender::open_command_buffer()
-{
-	m_current_command_buffer->begin();
 }
 
 void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)

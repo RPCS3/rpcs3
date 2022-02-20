@@ -198,7 +198,6 @@ public:
 private:
 	void prepare_rtts(rsx::framebuffer_creation_context context);
 
-	void open_command_buffer();
 	void close_and_submit_command_buffer(
 		vk::fence* fence = nullptr,
 		VkSemaphore wait_semaphore = VK_NULL_HANDLE,
