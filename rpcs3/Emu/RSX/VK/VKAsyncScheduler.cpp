@@ -144,7 +144,7 @@ namespace vk
 			ensure(!m_semaphore_pool.empty());
 		}
 
-		const u32 sema_id = (m_next_semaphore_id++ % m_semaphore_pool.size());
+		const u32 sema_id = static_cast<u32>(m_next_semaphore_id++ % m_semaphore_pool.size());
 		return m_semaphore_pool[sema_id].get();
 	}
 
