@@ -7,6 +7,47 @@
 
 namespace vk
 {
+	u64 hash_image_properties(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageCreateFlags create_flags)
+	{
+		ensure(static_cast<u32>(format) < 0xFF);
+		return (static_cast<u64>(format) & 0xFF) |
+			(static_cast<u64>(w) << 8) |
+			(static_cast<u64>(h) << 24) |
+			(static_cast<u64>(d) << 40) |
+			(static_cast<u64>(mipmaps) << 48) |
+			(static_cast<u64>(create_flags) << 56);
+	}
+
+	texture_cache::cached_image_reference_t::cached_image_reference_t(texture_cache* parent, std::unique_ptr<vk::viewable_image>& previous)
+	{
+		ensure(previous);
+
+		this->parent = parent;
+		this->data = std::move(previous);
+	}
+
+	texture_cache::cached_image_reference_t::~cached_image_reference_t()
+	{
+		// Erase layout information to force TOP_OF_PIPE transition next time.
+		data->current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		data->current_queue_family = VK_QUEUE_FAMILY_IGNORED;
+
+		// Move this object to the cached image pool
+		const auto key = hash_image_properties(data->format(), data->width(), data->height(), data->depth(), data->mipmaps(), data->info.flags);
+		std::lock_guard lock(parent->m_cached_pool_lock);
+
+		if (!parent->m_cache_is_exiting)
+		{
+			parent->m_cached_memory_size += data->memory->size();
+			parent->m_cached_images.emplace_front(key, data);
+		}
+		else
+		{
+			// Destroy if the cache is closed. The GPU is done with this resource anyway.
+			data.reset();
+		}
+	}
+
 	void cached_texture_section::dma_transfer(vk::command_buffer& cmd, vk::image* src, const areai& src_area, const utils::address_range& valid_range, u32 pitch)
 	{
 		ensure(src->samples() == 1);
@@ -45,7 +86,7 @@ namespace vk
 			const auto task_length = transfer_pitch * src_area.height();
 			const auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
 
-			auto working_buffer = vk::get_scratch_buffer(working_buffer_length);
+			auto working_buffer = vk::get_scratch_buffer(cmd, working_buffer_length);
 			auto final_mapping = vk::map_dma(valid_range.start, section_length);
 
 			VkBufferImageCopy region = {};
@@ -160,23 +201,28 @@ namespace vk
 		}
 
 		synchronized = true;
-		sync_timestamp = get_system_time();
+		sync_timestamp = rsx::get_shared_tag();
 	}
 
 	void texture_cache::on_section_destroyed(cached_texture_section& tex)
 	{
-		if (tex.is_managed())
+		if (tex.is_managed() && tex.exists())
 		{
-			vk::get_resource_manager()->dispose(tex.get_texture());
+			auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, tex.get_texture()));
+			vk::get_resource_manager()->dispose(disposable);
 		}
 	}
 
 	void texture_cache::clear()
 	{
+		{
+			std::lock_guard lock(m_cached_pool_lock);
+			m_cache_is_exiting = true;
+		}
 		baseclass::clear();
 
-		m_temporary_storage.clear();
-		m_temporary_memory_size = 0;
+		m_cached_images.clear();
+		m_cached_memory_size = 0;
 	}
 
 	void texture_cache::copy_transfer_regions_impl(vk::command_buffer& cmd, vk::image* dst, const std::vector<copy_region_descriptor>& sections_to_transfer) const
@@ -312,7 +358,7 @@ namespace vk
 					copy.imageSubresource = { src_image->aspect(), 0, 0, 1 };
 
 					const auto mem_length = src_w * src_h * dst_bpp;
-					auto scratch_buf = vk::get_scratch_buffer(mem_length);
+					auto scratch_buf = vk::get_scratch_buffer(cmd, mem_length);
 					vkCmdCopyImageToBuffer(cmd, src_image->value, src_image->current_layout, scratch_buf->value, 1, &copy);
 
 					vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -449,32 +495,24 @@ namespace vk
 		return result;
 	}
 
-	std::unique_ptr<vk::viewable_image> texture_cache::find_temporary_image(VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps)
+	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageCreateFlags create_flags, VkImageUsageFlags usage)
 	{
-		for (auto& e : m_temporary_storage)
-		{
-			if (e.can_reuse && e.matches(format, w, h, d, mipmaps, 0))
-			{
-				m_temporary_memory_size -= e.block_size;
-				e.block_size = 0;
-				e.can_reuse = false;
-				return std::move(e.combined_image);
-			}
-		}
+		reader_lock lock(m_cached_pool_lock);
 
-		return {};
-	}
-
-	std::unique_ptr<vk::viewable_image> texture_cache::find_temporary_cubemap(VkFormat format, u16 size)
-	{
-		for (auto& e : m_temporary_storage)
+		if (!m_cached_images.empty())
 		{
-			if (e.can_reuse && e.matches(format, size, size, 1, 1, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT))
+			const u64 desired_key = hash_image_properties(format, w, h, d, mipmaps, create_flags);
+			lock.upgrade();
+
+			for (auto it = m_cached_images.begin(); it != m_cached_images.end(); ++it)
 			{
-				m_temporary_memory_size -= e.block_size;
-				e.block_size = 0;
-				e.can_reuse = false;
-				return std::move(e.combined_image);
+				if (it->key == desired_key && (it->data->info.usage & usage) == usage)
+				{
+					auto ret = std::move(it->data);
+					m_cached_images.erase(it);
+					m_cached_memory_size -= ret->memory->size();
+					return ret;
+				}
 			}
 		}
 
@@ -484,21 +522,12 @@ namespace vk
 	vk::image_view* texture_cache::create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
 		u32 gcm_format, u16 x, u16 y, u16 w, u16 h, u16 d, u8 mips, const rsx::texture_channel_remap_t& remap_vector, bool copy)
 	{
-		std::unique_ptr<vk::viewable_image> image;
+		const VkImageCreateFlags image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+		const VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+		const VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
+		const u16 layers = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? 6 : 1;
 
-		VkImageCreateFlags image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
-		VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
-		u16 layers = 1;
-
-		if (!image_flags) [[likely]]
-		{
-			image = find_temporary_image(dst_format, w, h, 1, mips);
-		}
-		else
-		{
-			image = find_temporary_cubemap(dst_format, w);
-			layers = 6;
-		}
+		auto image = find_cached_image(dst_format, w, h, d, mips, image_flags, usage_flags);
 
 		if (!image)
 		{
@@ -551,11 +580,8 @@ namespace vk
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 
-		const u32 resource_memory = w * h * 4; //Rough approximate
-		m_temporary_storage.emplace_back(image);
-		m_temporary_storage.back().block_size = resource_memory;
-		m_temporary_memory_size += resource_memory;
-
+		// TODO: Floating reference. We can do better with some restructuring.
+		image.release();
 		return view;
 	}
 
@@ -715,15 +741,12 @@ namespace vk
 
 	void texture_cache::release_temporary_subresource(vk::image_view* view)
 	{
-		auto handle = dynamic_cast<vk::viewable_image*>(view->image());
-		for (auto& e : m_temporary_storage)
-		{
-			if (e.combined_image.get() == handle)
-			{
-				e.can_reuse = true;
-				return;
-			}
-		}
+		auto resource = dynamic_cast<vk::viewable_image*>(view->image());
+		ensure(resource);
+
+		auto image = std::unique_ptr<vk::viewable_image>(resource);
+		auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, image));
+		vk::get_resource_manager()->dispose(disposable);
 	}
 
 	void texture_cache::update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, vk::image* src, u16 width, u16 height)
@@ -743,7 +766,7 @@ namespace vk
 		dst->pop_layout(cmd);
 	}
 
-	cached_texture_section* texture_cache::create_new_texture(vk::command_buffer& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
+	cached_texture_section* texture_cache::create_new_texture(vk::command_buffer& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch,
 		u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::component_order swizzle_flags, rsx::flags32_t flags)
 	{
 		const auto section_depth = depth;
@@ -789,7 +812,7 @@ namespace vk
 		if (region.exists())
 		{
 			image = dynamic_cast<vk::viewable_image*>(region.get_raw_texture());
-			if (!image || region.get_image_type() != type || image->depth() != depth) // TODO
+			if ((flags & texture_create_flags::do_not_reuse) || !image || region.get_image_type() != type || image->depth() != depth) // TODO
 			{
 				// Incompatible view/type
 				region.destroy();
@@ -826,13 +849,21 @@ namespace vk
 		{
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			const VkFormat vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
+			const VkImageCreateFlags create_flags = is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 
-			image = new vk::viewable_image(*m_device,
-				m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				image_type, vk_format,
-				width, height, depth, mipmaps, layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, usage_flags, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
-				VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
+			if (auto found = find_cached_image(vk_format, width, height, depth, mipmaps, create_flags, usage_flags))
+			{
+				image = found.release();
+			}
+			else
+			{
+				image = new vk::viewable_image(*m_device,
+					m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					image_type, vk_format,
+					width, height, depth, mipmaps, layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_TILING_OPTIMAL, usage_flags, create_flags,
+					VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
+			}
 
 			// New section, we must prepare it
 			region.reset(rsx_range);
@@ -893,7 +924,7 @@ namespace vk
 		return &region;
 	}
 
-	cached_texture_section* texture_cache::upload_image_from_cpu(vk::command_buffer& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
+	cached_texture_section* texture_cache::upload_image_from_cpu(vk::command_buffer& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format,
 		rsx::texture_upload_context context, const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled)
 	{
 		if (context != rsx::texture_upload_context::shader_read)
@@ -903,8 +934,10 @@ namespace vk
 				vk::end_renderpass(cmd);
 			}
 		}
+
+		const rsx::flags32_t create_flags = g_fxo->get<AsyncTaskScheduler>().is_host_mode() ? texture_create_flags::do_not_reuse : 0;
 		auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, swizzled,
-			rsx::component_order::default_, 0);
+			rsx::component_order::default_, create_flags);
 
 		auto image = section->get_raw_texture();
 		image->set_debug_name(fmt::format("Raw Texture @0x%x", rsx_range.start));
@@ -918,8 +951,12 @@ namespace vk
 			input_swizzled = false;
 		}
 
-		rsx::flags32_t upload_command_flags = initialize_image_layout |
-			(rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute ? upload_contents_async : upload_contents_inline);
+		rsx::flags32_t upload_command_flags = initialize_image_layout | upload_contents_inline;
+		if (context == rsx::texture_upload_context::shader_read &&
+			rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute)
+		{
+			upload_command_flags |= upload_contents_async;
+		}
 
 		const u16 layer_count = (type == rsx::texture_dimension_extended::texture_dimension_cubemap) ? 6 : 1;
 		vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, layer_count, image->aspect(),
@@ -999,14 +1036,20 @@ namespace vk
 			//TODO
 			warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(vk_format), gcm_format);
 			return false;
+#ifndef __APPLE__
+		case CELL_GCM_TEXTURE_R5G6B5:
+			return (vk_format == VK_FORMAT_R5G6B5_UNORM_PACK16);
+#else
+		// R5G6B5 is not supported by Metal
+		case CELL_GCM_TEXTURE_R5G6B5:
+			return (vk_format == VK_FORMAT_B8G8R8A8_UNORM);
+#endif
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 			return (vk_format == VK_FORMAT_R16G16B16A16_SFLOAT);
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 			return (vk_format == VK_FORMAT_R32G32B32A32_SFLOAT);
 		case CELL_GCM_TEXTURE_X32_FLOAT:
 			return (vk_format == VK_FORMAT_R32_SFLOAT);
-		case CELL_GCM_TEXTURE_R5G6B5:
-			return (vk_format == VK_FORMAT_R5G6B5_UNORM_PACK16);
 		case CELL_GCM_TEXTURE_A8R8G8B8:
 		case CELL_GCM_TEXTURE_D8R8G8B8:
 			return (vk_format == VK_FORMAT_B8G8R8A8_UNORM || vk_format == VK_FORMAT_D24_UNORM_S8_UINT || vk_format == VK_FORMAT_D32_SFLOAT_S8_UINT);
@@ -1048,11 +1091,40 @@ namespace vk
 		{
 			// Flush any pending async jobs in case of blockers
 			// TODO: Context-level manager should handle this logic
-			g_fxo->get<async_scheduler_thread>().flush(VK_TRUE);
+			auto& async_scheduler = g_fxo->get<AsyncTaskScheduler>();
+			vk::semaphore* async_sema = nullptr;
+
+			if (async_scheduler.is_recording())
+			{
+				if (async_scheduler.is_host_mode())
+				{
+					async_sema = async_scheduler.get_sema();
+				}
+				else
+				{
+					vk::queue_submit_t submit_info{};
+					async_scheduler.flush(submit_info, VK_TRUE);
+				}
+			}
 
 			// Primary access command queue, must restart it after
+			// Primary access command queue, must restart it after
 			vk::fence submit_fence(*m_device);
-			cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, &submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_TRUE);
+			vk::queue_submit_t submit_info{ m_submit_queue, &submit_fence };
+
+			if (async_sema)
+			{
+				submit_info.queue_signal(*async_sema);
+			}
+
+			cmd.submit(submit_info, VK_TRUE);
+
+			if (async_sema)
+			{
+				vk::queue_submit_t submit_info2{};
+				submit_info2.wait_on(*async_sema, VK_PIPELINE_STAGE_TRANSFER_BIT);
+				async_scheduler.flush(submit_info2, VK_FALSE);
+			}
 
 			vk::wait_for_fence(&submit_fence, GENERAL_WAIT_TIMEOUT);
 
@@ -1062,7 +1134,8 @@ namespace vk
 		else
 		{
 			// Auxilliary command queue with auto-restart capability
-			cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_TRUE);
+			vk::queue_submit_t submit_info{ m_submit_queue, nullptr };
+			cmd.submit(submit_info, VK_TRUE);
 		}
 
 		ensure(cmd.flags == 0);
@@ -1129,14 +1202,14 @@ namespace vk
 		auto any_released = baseclass::handle_memory_pressure(severity);
 
 		// TODO: This can cause invalidation of in-flight resources
-		if (severity <= rsx::problem_severity::low || !m_temporary_memory_size)
+		if (severity <= rsx::problem_severity::low || !m_cached_memory_size)
 		{
 			// Nothing left to do
 			return any_released;
 		}
 
 		constexpr u64 _1M = 0x100000;
-		if (severity <= rsx::problem_severity::moderate && m_temporary_memory_size < (64 * _1M))
+		if (severity <= rsx::problem_severity::moderate && m_cached_memory_size < (64 * _1M))
 		{
 			// Some memory is consumed by the temporary resources, but no need to panic just yet
 			return any_released;
@@ -1153,20 +1226,9 @@ namespace vk
 		auto gc = vk::get_resource_manager();
 		u64 actual_released_memory = 0;
 
-		for (auto& entry : m_temporary_storage)
-		{
-			if (!entry.combined_image)
-			{
-				continue;
-			}
+		m_cached_images.clear();
+		m_cached_memory_size = 0;
 
-			actual_released_memory += entry.combined_image->memory->size();
-			gc->dispose(entry.combined_image);
-			m_temporary_memory_size -= entry.block_size;
-		}
-
-		ensure(m_temporary_memory_size == 0);
-		m_temporary_storage.clear();
 		m_temporary_subresource_cache.clear();
 
 		rsx_log.warning("Texture cache released %lluM of temporary resources.", (actual_released_memory / _1M));
@@ -1177,27 +1239,27 @@ namespace vk
 	{
 		trim_sections();
 
-		if (m_storage.m_unreleased_texture_objects >= m_max_zombie_objects ||
-			m_temporary_memory_size > 0x4000000) //If already holding over 64M in discardable memory, be frugal with memory resources
+		if (m_storage.m_unreleased_texture_objects >= m_max_zombie_objects)
 		{
 			purge_unreleased_sections();
 		}
 
-		const u64 last_complete_frame = vk::get_last_completed_frame_id();
-		m_temporary_storage.remove_if([&](const temporary_storage& o)
+		if (m_cached_images.size() > max_cached_image_pool_size ||
+			m_cached_memory_size > 256 * 0x100000)
 		{
-			if (!o.block_size || o.test(last_complete_frame))
-			{
-				m_temporary_memory_size -= o.block_size;
-				return true;
-			}
-			return false;
-		});
+			std::lock_guard lock(m_cached_pool_lock);
 
-		m_temporary_subresource_cache.clear();
-		reset_frame_statistics();
+			const auto new_size = m_cached_images.size() / 2;
+			for (usz i = new_size; i < m_cached_images.size(); ++i)
+			{
+				m_cached_memory_size -= m_cached_images[i].data->memory->size();
+			}
+
+			m_cached_images.resize(new_size);
+		}
 
 		baseclass::on_frame_end();
+		reset_frame_statistics();
 	}
 
 	vk::viewable_image* texture_cache::upload_image_simple(vk::command_buffer& cmd, VkFormat format, u32 address, u32 width, u32 height, u32 pitch)
@@ -1229,7 +1291,7 @@ namespace vk
 			format,
 			width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
 			VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0,
-			VMM_ALLOCATION_POOL_UNDEFINED);
+			VMM_ALLOCATION_POOL_SWAPCHAIN);
 
 		VkImageSubresource subresource{};
 		subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1260,10 +1322,9 @@ namespace vk
 		vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 		auto result = image.get();
-		const u32 resource_memory = width * height * 4; //Rough approximate
-		m_temporary_storage.emplace_back(image);
-		m_temporary_storage.back().block_size = resource_memory;
-		m_temporary_memory_size += resource_memory;
+		const auto resource_memory = image->memory->size();
+		auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, image));
+		vk::get_resource_manager()->dispose(disposable);
 
 		return result;
 	}
@@ -1288,12 +1349,13 @@ namespace vk
 
 	u32 texture_cache::get_unreleased_textures_count() const
 	{
-		return baseclass::get_unreleased_textures_count() + ::size32(m_temporary_storage);
+		return baseclass::get_unreleased_textures_count() + ::size32(m_cached_images);
 	}
 
-	u32 texture_cache::get_temporary_memory_in_use() const
+	u64 texture_cache::get_temporary_memory_in_use() const
 	{
-		return m_temporary_memory_size;
+		// TODO: Technically incorrect, we should have separate metrics for cached evictable resources (this value) and temporary active resources.
+		return m_cached_memory_size;
 	}
 
 	bool texture_cache::is_overallocated() const

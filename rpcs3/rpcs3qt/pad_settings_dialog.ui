@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>866</width>
-    <height>715</height>
+    <width>500</width>
+    <height>380</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -37,8 +37,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>848</width>
-        <height>668</height>
+        <width>858</width>
+        <height>715</height>
        </rect>
       </property>
       <widget class="QWidget" name="tab">
@@ -1414,14 +1414,8 @@
                    <height>256</height>
                   </size>
                  </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="textFormat">
-                  <enum>Qt::AutoText</enum>
-                 </property>
                  <property name="pixmap">
-                  <pixmap resource="../resources.qrc">:/Icons/controller.png</pixmap>
+                  <pixmap resource="../resources.qrc">:/Icons/DualShock_3.svg</pixmap>
                  </property>
                  <property name="scaledContents">
                   <bool>true</bool>
@@ -2375,8 +2369,8 @@
                 </item>
                </layout>
               </widget>
-              <widget class="QWidget" name="smooth_page">
-               <layout class="QVBoxLayout" name="smooth_page_layout">
+              <widget class="QWidget" name="keyboard_page">
+               <layout class="QVBoxLayout" name="keyboard_page_layout">
                 <property name="leftMargin">
                  <number>0</number>
                 </property>
@@ -2389,6 +2383,81 @@
                 <property name="bottomMargin">
                  <number>0</number>
                 </property>
+                <item>
+                 <widget class="QGroupBox" name="gb_kb_stick_multi">
+                  <property name="title">
+                   <string>Stick Multipliers</string>
+                  </property>
+                  <layout class="QHBoxLayout" name="gb_kb_stick_multi_layout">
+                   <property name="leftMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>5</number>
+                   </property>
+                   <item>
+                    <widget class="QLabel" name="label_kb_stick_multi_left">
+                     <property name="text">
+                      <string>Left</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QDoubleSpinBox" name="kb_stick_multi_left">
+                     <property name="singleStep">
+                      <double>0.100000000000000</double>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="spacer_kb_stick_multi_left">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="label_kb_stick_multi_right">
+                     <property name="text">
+                      <string>Right</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QDoubleSpinBox" name="kb_stick_multi_right">
+                     <property name="singleStep">
+                      <double>0.100000000000000</double>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="spacer_kb_stick_multi_right">
+                     <property name="orientation">
+                      <enum>Qt::Horizontal</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>0</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
                 <item>
                  <widget class="QGroupBox" name="gb_stick_lerp">
                   <property name="title">
@@ -2471,7 +2540,7 @@
                  </widget>
                 </item>
                 <item>
-                 <spacer name="smooth_page_spacer">
+                 <spacer name="keyboard_page_spacer">
                   <property name="orientation">
                    <enum>Qt::Vertical</enum>
                   </property>

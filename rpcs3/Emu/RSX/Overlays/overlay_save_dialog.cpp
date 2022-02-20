@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "overlay_save_dialog.h"
 #include "Utilities/date_time.h"
+#include "Emu/System.h"
+#include "Emu/RSX/RSXThread.h"
 
 namespace rsx
 {
@@ -103,6 +105,8 @@ namespace rsx
 			m_description->back_color.a    = 0.f;
 			m_time_thingy->back_color.a    = 0.f;
 
+			fade_animation.duration = 0.15f;
+
 			return_code = selection_code::canceled;
 		}
 
@@ -110,24 +114,38 @@ namespace rsx
 		{
 			m_time_thingy->set_text(date_time::current_time());
 			m_time_thingy->auto_resize();
+
+			if (fade_animation.active)
+			{
+				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+			}
 		}
 
 		void save_dialog::on_button_pressed(pad_button button_press)
 		{
+			if (fade_animation.active) return;
+
+			bool close_dialog = false;
+
 			switch (button_press)
 			{
 			case pad_button::cross:
 				if (m_no_saves)
 					break;
 				return_code = m_list->get_selected_index();
-				[[fallthrough]];
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				close_dialog = true;
+				break;
 			case pad_button::circle:
-				close(true, true);
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				close_dialog = true;
 				break;
 			case pad_button::dpad_up:
+			case pad_button::ls_up:
 				m_list->select_previous();
 				break;
 			case pad_button::dpad_down:
+			case pad_button::ls_down:
 				m_list->select_next();
 				break;
 			case pad_button::L1:
@@ -139,6 +157,22 @@ namespace rsx
 			default:
 				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
 				break;
+			}
+
+			if (close_dialog)
+			{
+				fade_animation.current = color4f(1.f);
+				fade_animation.end = color4f(0.f);
+				fade_animation.active = true;
+
+				fade_animation.on_finish = [this]
+				{
+					close(true, true);
+				};
+			}
+			else
+			{
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
 			}
 		}
 
@@ -157,6 +191,8 @@ namespace rsx
 
 			if (m_no_saves)
 				result.add(m_no_saves_text->get_compiled());
+
+			fade_animation.apply(result);
 
 			return result;
 		}
@@ -264,6 +300,11 @@ namespace rsx
 			}
 
 			m_description->auto_resize();
+
+			fade_animation.current = color4f(0.f);
+			fade_animation.end = color4f(1.f);
+			fade_animation.active = true;
+
 			visible = true;
 
 			if (const auto err = run_input_loop())

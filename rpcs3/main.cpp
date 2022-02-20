@@ -26,6 +26,15 @@
 #ifdef _WIN32
 #include <windows.h>
 #include "util/dyn_lib.hpp"
+
+// TODO(cjj19970505@live.cn)
+// When compiling with WIN32_LEAN_AND_MEAN definition
+// NTSTATUS is defined in CMake build but not in VS build
+// May be caused by some different header pre-inclusion between CMake and VS configurations.
+#if !defined(NTSTATUS)
+// Copied from ntdef.h
+typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
+#endif
 DYNAMIC_IMPORT("ntdll.dll", NtQueryTimerResolution, NTSTATUS(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution));
 DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
 #else
@@ -33,6 +42,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <spawn.h>
 #include <sys/wait.h>
 #include <stdlib.h>
+#include <signal.h>
 #endif
 
 #ifdef __linux__
@@ -40,7 +50,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <sys/resource.h>
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 #include <dispatch/dispatch.h>
 #endif
 
@@ -87,7 +97,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		fmt::append(buf, "\nThread id = %s.", std::this_thread::get_id());
 	}
 
-	const std::string_view text = buf.empty() ? _text : buf;
+	std::string_view text = buf.empty() ? _text : buf;
 
 	if (s_headless)
 	{
@@ -115,17 +125,16 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		std::cerr << fmt::format("RPCS3: %s\n", text);
 	}
 
-	auto show_report = [](std::string_view text)
+	static auto show_report = [](std::string_view text)
 	{
 		fatal_error_dialog dlg(text);
 		dlg.exec();
 	};
 
-#ifdef __APPLE__
-	// Cocoa access is not allowed outside of the main thread
+#if defined(__APPLE__)
 	if (!pthread_main_np())
 	{
-		dispatch_sync(dispatch_get_main_queue(), ^ { show_report(text); });
+		dispatch_sync_f(dispatch_get_main_queue(), &text, [](void* text){ show_report(*static_cast<std::string_view*>(text)); });
 	}
 	else
 #endif
@@ -133,9 +142,12 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		// If Qt is already initialized, spawn a new RPCS3 process with an --error argument
 		if (local)
 		{
-			// Since we only show an error, we can hope for a graceful exit
 			show_report(text);
-			std::exit(0);
+#ifdef _WIN32
+			ExitProcess(0);
+#else
+			kill(getpid(), SIGKILL);
+#endif
 		}
 
 #ifdef _WIN32
@@ -221,26 +233,28 @@ struct fatal_error_listener final : logs::listener
 			}
 #endif
 			// Pause emulation if fatal error encountered
-			Emu.Pause();
+			Emu.Pause(true);
 		}
 	}
 };
 
-constexpr auto arg_headless   = "headless";
-constexpr auto arg_no_gui     = "no-gui";
-constexpr auto arg_high_dpi   = "hidpi";
-constexpr auto arg_rounding   = "dpi-rounding";
-constexpr auto arg_styles     = "styles";
-constexpr auto arg_style      = "style";
-constexpr auto arg_stylesheet = "stylesheet";
-constexpr auto arg_config     = "config";
-constexpr auto arg_q_debug    = "qDebug";
-constexpr auto arg_error      = "error";
-constexpr auto arg_updating   = "updating";
-constexpr auto arg_user_id    = "user-id";
-constexpr auto arg_installfw  = "installfw";
-constexpr auto arg_installpkg = "installpkg";
-constexpr auto arg_commit_db  = "get-commit-db";
+constexpr auto arg_headless     = "headless";
+constexpr auto arg_no_gui       = "no-gui";
+constexpr auto arg_high_dpi     = "hidpi";
+constexpr auto arg_rounding     = "dpi-rounding";
+constexpr auto arg_styles       = "styles";
+constexpr auto arg_style        = "style";
+constexpr auto arg_stylesheet   = "stylesheet";
+constexpr auto arg_config       = "config";
+constexpr auto arg_q_debug      = "qDebug";
+constexpr auto arg_error        = "error";
+constexpr auto arg_updating     = "updating";
+constexpr auto arg_user_id      = "user-id";
+constexpr auto arg_installfw    = "installfw";
+constexpr auto arg_installpkg   = "installpkg";
+constexpr auto arg_commit_db    = "get-commit-db";
+constexpr auto arg_timer        = "high-res-timer";
+constexpr auto arg_verbose_curl = "verbose-curl";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -496,6 +510,19 @@ int main(int argc, char** argv)
 	setenv( "KDE_DEBUG", "1", 0 );
 #endif
 
+#ifdef __APPLE__
+	struct ::rlimit rlim;
+	::getrlimit(RLIMIT_NOFILE, &rlim);
+	rlim.rlim_cur = OPEN_MAX;
+	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
+		std::cerr << "Failed to set max open file limit (" << OPEN_MAX << ").\n";
+#endif
+
+#ifndef _WIN32
+	// Write file limits
+	sys_log.notice("Maximum open file descriptors: %i", utils::get_maxfiles());
+#endif
+
 	std::lock_guard qt_init(s_qt_init);
 
 	// The constructor of QApplication eats the --style and --stylesheet arguments.
@@ -522,7 +549,7 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
 	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
-	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file.", "path", "");
+	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file for CLI-booted game.", "path", "");
 	parser.addOption(config_option);
 	const QCommandLineOption installfw_option(arg_installfw, "Forces the emulator to install this firmware file.", "path", "");
 	parser.addOption(installfw_option);
@@ -534,18 +561,39 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_commit_db, "Update commits.lst cache. Optional arguments: <path> <sha>"));
+	parser.addOption(QCommandLineOption(arg_timer, "Enable high resolution timer for better performance (windows)", "enabled", "1"));
+	parser.addOption(QCommandLineOption(arg_verbose_curl, "Enable verbose curl logging."));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(version_option) || parser.isSet(help_option))
 		return 0;
 
+	// Set curl to verbose if needed
+	rpcs3::curl::g_curl_verbose = parser.isSet(arg_verbose_curl);
+
+	if (rpcs3::curl::g_curl_verbose)
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
+			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
+		}
+#endif
+		fprintf(stdout, "Enabled Curl verbose logging.\n");
+		sys_log.always()("Enabled Curl verbose logging. Please look at your console output.");
+	}
+
+	// Handle update of commit database
 	if (parser.isSet(arg_commit_db))
 	{
 #ifdef _WIN32
 		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
 			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
 			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
+		}
 
 		std::string path;
 #else
@@ -615,7 +663,7 @@ int main(int argc, char** argv)
 		QByteArray buf;
 
 		// CURL handle to work with GitHub API
-		curl_handle curl;
+		rpcs3::curl::curl_handle curl;
 
 		struct curl_slist* hhdr{};
 		hhdr = curl_slist_append(hhdr, "Accept: application/vnd.github.v3+json");
@@ -653,10 +701,14 @@ int main(int argc, char** argv)
 				break;
 			}
 
+			// Reset error buffer before we call curl_easy_perform
+			curl.reset_error_buffer();
+
 			err = curl_easy_perform(curl);
 			if (err != CURLE_OK)
 			{
-				fprintf(stderr, "Curl error:\n%s", curl_easy_strerror(err));
+				const std::string error_string = curl.get_verbose_error(err);
+				fprintf(stderr, "curl_easy_perform(): %s", error_string.c_str());
 				break;
 			}
 
@@ -751,7 +803,7 @@ int main(int argc, char** argv)
 
 		curl_slist_free_all(hhdr);
 
-		fprintf(stdout, "Finished fetching commits\n", path.c_str());
+		fprintf(stdout, "Finished fetching commits: %s\n", path.c_str());
 		return 0;
 	}
 
@@ -826,26 +878,35 @@ int main(int argc, char** argv)
 	QTimer* dummy_timer = new QTimer(app.data());
 	dummy_timer->start(13);
 
+	ULONG min_res, max_res, orig_res;
+	bool got_timer_resolution = NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0;
+
 	// Set 0.5 msec timer resolution for best performance
 	// - As QT5 timers (QTimer) sets the timer resolution to 1 msec, override it here.
-	ULONG min_res, max_res, orig_res, new_res;
-	if (NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0)
+	if (parser.value(arg_timer).toStdString() == "1")
 	{
-		NtSetTimerResolution(max_res, TRUE, &new_res);
+		ULONG new_res;
+		if (got_timer_resolution && NtSetTimerResolution(max_res, TRUE, &new_res) == 0)
+		{
+			NtSetTimerResolution(max_res, TRUE, &new_res);
+			sys_log.notice("New timer resolution: %d us (old=%d us, min=%d us, max=%d us)", new_res / 10, orig_res / 10, min_res / 10, max_res / 10);
+			got_timer_resolution = false; // Invalidate for log message later
+		}
+		else
+		{
+			sys_log.error("Failed to set timer resolution!");
+		}
+	}
+	else
+	{
+		sys_log.warning("High resolution timer disabled!");
+	}
+
+	if (got_timer_resolution)
+	{
+		sys_log.notice("Timer resolution: %d us (min=%d us, max=%d us)", orig_res / 10, min_res / 10, max_res / 10);
 	}
 #endif
-
-	if (parser.isSet(arg_config))
-	{
-		const std::string config_override_path = parser.value(config_option).toStdString();
-
-		if (!fs::is_file(config_override_path))
-		{
-			report_fatal_error(fmt::format("No config file found: %s", config_override_path));
-		}
-
-		Emu.SetConfigOverride(config_override_path);
-	}
 
 	// Force install firmware or pkg first if specified through command-line
 	if (parser.isSet(arg_installfw) || parser.isSet(arg_installpkg))
@@ -907,13 +968,27 @@ int main(int argc, char** argv)
 			}
 		}
 
+		std::string config_path;
+
+		if (parser.isSet(arg_config))
+		{
+			config_path = parser.value(config_option).toStdString();
+
+			if (!fs::is_file(config_path))
+			{
+				report_fatal_error(fmt::format("No config file found: %s", config_path));
+			}
+		}
+
 		// Postpone startup to main event loop
-		Emu.CallAfter([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv)]() mutable
+		Emu.CallFromMainThread([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
 		{
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);
 
-			if (const game_boot_result error = Emu.BootGame(path, ""); error != game_boot_result::no_errors)
+			const cfg_mode config_mode = config_path.empty() ? cfg_mode::custom : cfg_mode::config_override;
+
+			if (const game_boot_result error = Emu.BootGame(path, "", false, false, config_mode, config_path); error != game_boot_result::no_errors)
 			{
 				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
 
@@ -923,6 +998,24 @@ int main(int argc, char** argv)
 				}
 			}
 		});
+	}
+	else if (s_headless || s_no_gui)
+	{
+#ifdef _WIN32
+		// If launched from CMD
+		if (AttachConsole(ATTACH_PARENT_PROCESS))
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
+#endif
+		sys_log.error("Cannot run %s mode without boot target. Terminating...", s_headless ? "headless" : "no-gui");
+		fprintf(stderr, "Cannot run %s mode without boot target. Terminating...\n", s_headless ? "headless" : "no-gui");
+
+		if (s_no_gui)
+		{
+			QMessageBox::warning(nullptr, QObject::tr("Missing command-line arguments!"), QObject::tr("Cannot run no-gui mode without boot target.\nTerminating..."));
+		}
+
+		Emu.Quit(true);
+		return 0;
 	}
 
 	// run event loop (maybe only needed for the gui application)

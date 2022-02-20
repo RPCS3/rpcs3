@@ -17,7 +17,7 @@
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"
-#include "util/v128sse.hpp"
+#include "util/simd.hpp"
 
 LOG_CHANNEL(cellSpurs);
 
@@ -738,7 +738,7 @@ s32 _spurs::create_handler(vm::ptr<CellSpurs> spurs, u32 ppuPriority)
 
 		void non_task()
 		{
-			BIND_FUNC(_spurs::handler_entry)(*this);
+			//BIND_FUNC(_spurs::handler_entry)(*this);
 		}
 	};
 
@@ -933,7 +933,7 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 
 		void non_task()
 		{
-			BIND_FUNC(_spurs::event_helper_entry)(*this);
+			//BIND_FUNC(_spurs::event_helper_entry)(*this);
 		}
 	};
 

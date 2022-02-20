@@ -91,13 +91,11 @@ namespace vk
 		template <typename... Args>
 		void add_pipeline_entry(RSXVertexProgram& vp, RSXFragmentProgram& fp, vk::pipeline_props& props, Args&& ...args)
 		{
-			vp.skip_vertex_input_check = true;
 			get_graphics_pipeline(vp, fp, props, false, false, std::forward<Args>(args)...);
 		}
 
 		void preload_programs(RSXVertexProgram& vp, RSXFragmentProgram& fp)
 		{
-			vp.skip_vertex_input_check = true;
 			search_vertex_program(vp);
 			search_fragment_program(fp);
 		}

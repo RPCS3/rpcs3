@@ -2,15 +2,15 @@
 
 enum class ppu_decoder_type : unsigned
 {
-	precise = 0, // Don't change (0)
-	fast, // Don't change (1)
+	_static,
+	dynamic,
 	llvm,
 };
 
 enum class spu_decoder_type : unsigned
 {
-	precise = 0, // Don't change (0)
-	fast, // Don't change (1)
+	_static,
+	dynamic,
 	asmjit,
 	llvm,
 };
@@ -54,16 +54,17 @@ enum class audio_renderer
 #ifdef _WIN32
 	xaudio,
 #endif
-#ifdef HAVE_ALSA
-	alsa,
-#endif
-	openal,
-#ifdef HAVE_PULSE
-	pulse,
-#endif
+	cubeb,
 #ifdef HAVE_FAUDIO
 	faudio,
 #endif
+};
+
+enum class audio_provider
+{
+	none,
+	cell_audio,
+	rsxaudio
 };
 
 enum class audio_downmix
@@ -78,6 +79,15 @@ enum class camera_handler
 {
 	null,
 	fake,
+	qt
+};
+
+enum class camera_flip
+{
+	none,
+	horizontal,
+	vertical,
+	both
 };
 
 enum class fake_camera_type
@@ -102,6 +112,20 @@ enum class buzz_handler
 	two_controllers,
 };
 
+enum class turntable_handler
+{
+	null,
+	one_controller,
+	two_controllers,
+};
+
+enum class ghltar_handler
+{
+	null,
+	one_controller,
+	two_controllers,
+};
+
 enum class microphone_handler
 {
 	null,
@@ -109,6 +133,12 @@ enum class microphone_handler
 	singstar,
 	real_singstar,
 	rocksmith,
+};
+
+enum class pad_handler_mode
+{
+	single_threaded, // All pad handlers run on the same thread sequentially.
+	multi_threaded   // Each pad handler has its own thread.
 };
 
 enum class video_resolution
@@ -184,8 +214,8 @@ enum class np_internet_status
 enum np_psn_status
 {
 	disabled,
-	fake,
-	rpcn,
+	psn_fake,
+	psn_rpcn,
 };
 
 enum class shader_mode
@@ -198,8 +228,16 @@ enum class shader_mode
 
 enum class vk_gpu_scheduler_mode
 {
-	host,
-	device
+	safe,
+	fast
+};
+
+enum class vk_metal_semaphore_mode
+{
+	software,
+	mtlevent_preferred,
+	mtlevent,
+	mtlfence
 };
 
 enum class thread_scheduler_mode
@@ -215,4 +253,12 @@ enum class perf_graph_detail_level
 	show_min_max,
 	show_one_percent_avg,
 	show_all
+};
+
+enum class zcull_precision_level
+{
+	precise,
+	approximate,
+	relaxed,
+	undefined
 };

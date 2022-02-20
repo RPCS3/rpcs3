@@ -4,8 +4,8 @@
 	ignore = dirty
 [submodule "asmjit"]
 	path = 3rdparty/asmjit/asmjit
-	url = ../../asmjit/asmjit.git
-	branch = oldstable
+	url = ../../RPCS3/asmjit.git
+	branch = aarch64
 	ignore = dirty
 [submodule "llvm"]
 	path = llvm
@@ -61,10 +61,18 @@
 	url = ../../curl/curl.git
 	ignore = dirty
 [submodule "3rdparty/wolfssl"]
-	path = 3rdparty/wolfssl
+	path = 3rdparty/wolfssl/wolfssl
 	url = ../../wolfSSL/wolfssl.git
 	ignore = dirty
 [submodule "3rdparty/flatbuffers"]
 	path = 3rdparty/flatbuffers
 	url = ../../google/flatbuffers.git
+	ignore = dirty
+[submodule "3rdparty/cubeb/cubeb"]
+	path = 3rdparty/cubeb/cubeb
+	url = ../../mozilla/cubeb.git
+	ignore = dirty
+[submodule "3rdparty/SoundTouch/soundtouch"]
+	path = 3rdparty/SoundTouch/soundtouch
+	url = ../../RPCS3/soundtouch.git
 	ignore = dirty

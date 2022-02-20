@@ -1,15 +1,15 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/tsc.hpp"
 #include <functional>
 
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 extern "C"
 {
-	u64 __rdtsc();
 	u32 _xbegin();
 	void _xend();
 	void _mm_pause();
@@ -27,24 +27,17 @@ extern "C"
 
 	s64 _div128(s64, s64, s64, s64*);
 	u64 _udiv128(u64, u64, u64, u64*);
+	void __debugbreak();
 }
 #endif
 
 namespace utils
 {
-	inline u64 get_tsc()
-	{
-#ifdef _MSC_VER
-		return __rdtsc();
-#else
-		return __builtin_ia32_rdtsc();
-#endif
-	}
-
 	// Transaction helper (result = pair of success and op result, or just bool)
 	template <typename F, typename R = std::invoke_result_t<F>>
 	inline auto tx_start(F op)
 	{
+#if defined(ARCH_X64)
 		uint status = -1;
 
 		for (auto stamp0 = get_tsc(), stamp1 = stamp0; g_use_rtm && stamp1 - stamp0 <= g_rtm_tx_limit1; stamp1 = get_tsc())
@@ -90,6 +83,9 @@ namespace utils
 				break;
 			}
 		}
+#else
+		static_cast<void>(op);
+#endif
 
 		if constexpr (std::is_void_v<R>)
 		{
@@ -113,7 +109,7 @@ namespace utils
 		const u64 value = reinterpret_cast<u64>(func);
 		const void* ptr = reinterpret_cast<const void*>(value);
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 		return _mm_prefetch(static_cast<const char*>(ptr), 2);
 #else
 		return __builtin_prefetch(ptr, 0, 2);
@@ -128,7 +124,7 @@ namespace utils
 			return;
 		}
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 		return _mm_prefetch(static_cast<const char*>(ptr), 3);
 #else
 		return __builtin_prefetch(ptr, 0, 3);
@@ -142,7 +138,7 @@ namespace utils
 			return;
 		}
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 		return _m_prefetchw(ptr);
 #else
 		return __builtin_prefetch(ptr, 1, 0);
@@ -160,8 +156,10 @@ namespace utils
 		return _rotl8(x, n);
 #elif defined(__clang__)
 		return __builtin_rotateleft8(x, n);
-#else
+#elif defined(ARCH_X64)
 		return __builtin_ia32_rolqi(x, n);
+#else
+		return (x << (n & 7)) | (x >> ((-n & 7)));
 #endif
 	}
 
@@ -176,8 +174,10 @@ namespace utils
 		return _rotl16(x, static_cast<uchar>(n));
 #elif defined(__clang__)
 		return __builtin_rotateleft16(x, n);
-#else
+#elif defined(ARCH_X64)
 		return __builtin_ia32_rolhi(x, n);
+#else
+		return (x << (n & 15)) | (x >> ((-n & 15)));
 #endif
 	}
 
@@ -193,7 +193,7 @@ namespace utils
 #elif defined(__clang__)
 		return __builtin_rotateleft32(x, n);
 #else
-		return (x << n) | (x >> (32 - n));
+		return (x << (n & 31)) | (x >> (((0 - n) & 31)));
 #endif
 	}
 
@@ -209,7 +209,7 @@ namespace utils
 #elif defined(__clang__)
 		return __builtin_rotateleft64(x, n);
 #else
-		return (x << n) | (x >> (64 - n));
+		return (x << (n & 63)) | (x >> (((0 - n) & 63)));
 #endif
 	}
 
@@ -344,10 +344,14 @@ namespace utils
 
 	inline void pause()
 	{
-#ifdef _MSC_VER
+#if defined(ARCH_ARM64)
+		__asm__ volatile("yield");
+#elif defined(_M_X64)
 		_mm_pause();
-#else
+#elif defined(ARCH_X64)
 		__builtin_ia32_pause();
+#else
+#error "Missing utils::pause() implementation"
 #endif
 	}
 
@@ -391,10 +395,27 @@ namespace utils
 	{
 #ifdef _MSC_VER
 		return (T*)ptr;
-#else
+#elif defined(ARCH_X64)
 		T* result;
 		__asm__("movq %1, %0;" : "=r" (result) : "r" (ptr) : "memory");
 		return result;
+#elif defined(ARCH_ARM64)
+		T* result;
+		__asm__("mov %0, %1" : "=r" (result) : "r" (ptr) : "memory");
+		return result;
+#endif
+	}
+
+	inline void trap()
+	{
+#ifdef _M_X64
+		__debugbreak();
+#elif defined(ARCH_X64)
+		__asm__ volatile("int3");
+#elif defined(ARCH_ARM64)
+		__asm__ volatile("brk 0x42");
+#else
+#error "Missing utils::trap() implementation"
 #endif
 	}
 } // namespace utils

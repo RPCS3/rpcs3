@@ -519,15 +519,15 @@ void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device
 		return;
 
 	const auto padnum = dev->deviceNumber;
-	const auto profile = dev->config;
+	const auto cfg = dev->config;
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-	const usz idx_l = profile->switch_vibration_motors ? 1 : 0;
-	const usz idx_s = profile->switch_vibration_motors ? 0 : 1;
+	const usz idx_l = cfg->switch_vibration_motors ? 1 : 0;
+	const usz idx_s = cfg->switch_vibration_motors ? 0 : 1;
 
-	const u16 speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : static_cast<u16>(vibration_min);
-	const u16 speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : static_cast<u16>(vibration_min);
+	const u16 speed_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : static_cast<u16>(vibration_min);
+	const u16 speed_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : static_cast<u16>(vibration_min);
 
 	dev->newVibrateData |= dev->largeVibrate != speed_large || dev->smallVibrate != speed_small;
 

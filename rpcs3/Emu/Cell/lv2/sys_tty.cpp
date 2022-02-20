@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "Emu/system_config.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "sys_tty.h"
 
@@ -86,7 +88,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 	return CELL_OK;
 }
 
-error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
+error_code sys_tty_write(ppu_thread& ppu, s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 {
 	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x, len=%d, pwritelen=*0x%x)", ch, buf, len, pwritelen);
 
@@ -100,6 +102,19 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 		{
 			msg.clear();
 		}
+	}
+
+	if (msg.find("abort"sv) != umax || msg.find("error"sv) != umax || [&]()
+	{
+		static atomic_t<u64> last_write = 0;
+
+		// Dump thread about every period which TTY was not being touched for about half a second
+		const u64 current = get_system_time();
+		return current - last_write.exchange(current) >= 500'000;
+	}())
+	{
+		std::string dump_useful_thread_info();
+		ppu_log.notice("\n%s", dump_useful_thread_info());
 	}
 
 	// Hack: write to tty even on CEX mode, but disable all error checks

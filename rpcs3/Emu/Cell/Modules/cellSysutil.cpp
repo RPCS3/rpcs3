@@ -56,8 +56,10 @@ extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 	cbm.registered.push(std::move(cb));
 }
 
-extern void sysutil_send_system_cmd(u64 status, u64 param)
+extern u32 sysutil_send_system_cmd(u64 status, u64 param)
 {
+	u32 count = 0;
+
 	if (auto cbm = g_fxo->try_get<sysutil_cb_manager>())
 	{
 		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
@@ -70,9 +72,13 @@ extern void sysutil_send_system_cmd(u64 status, u64 param)
 					cb.first(ppu, status, param, cb.second);
 					return CELL_OK;
 				});
+
+				count++;
 			}
 		}
 	}
+
+	return count;
 }
 
 template <>

@@ -12,6 +12,8 @@
 #include "RSXFIFO.h"
 #include "RSXOffload.h"
 #include "rsx_utils.h"
+#include "Common/bitfield.hpp"
+#include "Common/profiling_timer.hpp"
 #include "Common/texture_cache_types.h"
 #include "Program/RSXVertexProgram.h"
 #include "Program/RSXFragmentProgram.h"
@@ -26,6 +28,7 @@
 #include "Emu/system_config.h"
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_disable_frame_limit; 
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
 
@@ -600,7 +603,6 @@ namespace rsx
 
 		void cpu_task() override;
 	protected:
-		std::thread::id m_rsx_thread;
 		atomic_t<bool> m_rsx_thread_exiting{ true };
 
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
@@ -744,7 +746,7 @@ namespace rsx
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks
 		 */
-		void analyse_inputs_interleaved(vertex_input_layout&) const;
+		void analyse_inputs_interleaved(vertex_input_layout&);
 
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
@@ -961,7 +963,10 @@ namespace rsx
 		u32 get_load();
 
 		// Returns true if the current thread is the active RSX thread
-		bool is_current_thread() const { return std::this_thread::get_id() == m_rsx_thread; }
+		inline bool is_current_thread() const
+		{
+			return !!cpu_thread::get_current<rsx::thread>();
+		}
 	};
 
 	inline thread* get_current_renderer()

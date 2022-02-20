@@ -1,23 +1,22 @@
 #pragma once
 
 #include "PPUThread.h"
+#include "PPUInterpreter.h"
 
 #include "util/v128.hpp"
 
-using ppu_function_t = bool(*)(ppu_thread&);
-
-// BIND_FUNC macro "converts" any appropriate HLE function to ppu_function_t, binding it to PPU thread context.
-#define BIND_FUNC(func, ...) (static_cast<ppu_function_t>([](ppu_thread& ppu) -> bool {\
+// BIND_FUNC macro "converts" any appropriate HLE function to ppu_intrp_func_t, binding it to PPU thread context.
+#define BIND_FUNC(func, ...) (static_cast<ppu_intrp_func_t>([](ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func*) {\
 	const auto old_f = ppu.current_function;\
 	if (!old_f) ppu.last_function = #func;\
 	ppu.current_function = #func;\
+	ppu.cia = vm::get_addr(this_op); \
 	std::memcpy(ppu.syscall_args, ppu.gpr + 3, sizeof(ppu.syscall_args)); \
 	ppu_func_detail::do_call(ppu, func);\
 	static_cast<void>(ppu.test_stopped());\
 	ppu.current_function = old_f;\
 	ppu.cia += 4;\
 	__VA_ARGS__;\
-	return false;\
 }))
 
 struct ppu_va_args_t
@@ -257,9 +256,9 @@ class ppu_function_manager
 	};
 
 	// Access global function list
-	static std::vector<ppu_function_t>& access(bool ghc = false);
+	static std::vector<ppu_intrp_func_t>& access(bool ghc = false);
 
-	static u32 add_function(ppu_function_t function);
+	static u32 add_function(ppu_intrp_func_t function);
 
 public:
 	ppu_function_manager() = default;
@@ -270,7 +269,7 @@ public:
 
 	// Register function (shall only be called during global initialization)
 	template<typename T, T Func>
-	static inline u32 register_function(ppu_function_t func)
+	static inline u32 register_function(ppu_intrp_func_t func)
 	{
 		return registered<T, Func>::index = add_function(func);
 	}

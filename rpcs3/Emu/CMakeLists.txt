@@ -1,4 +1,4 @@
-﻿add_library(rpcs3_emu
+add_library(rpcs3_emu
     cache_utils.cpp
     IdManager.cpp
     localized_string.cpp
@@ -7,6 +7,7 @@
     system_config_types.cpp
     system_progress.cpp
     system_utils.cpp
+    vfs_config.cpp
     VFS.cpp
     GDB.cpp
     title.cpp
@@ -53,10 +54,16 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/mutex.cpp
     ../../Utilities/rXml.cpp
     ../../Utilities/sema.cpp
+    ../../Utilities/simple_ringbuf.cpp
     ../../Utilities/StrFmt.cpp
     ../../Utilities/Thread.cpp
     ../../Utilities/version.cpp
 )
+if(APPLE)
+    target_sources(rpcs3_emu PRIVATE
+        ../../darwin/util/sysinfo_darwin.mm
+    )
+endif()
 
 target_include_directories(rpcs3_emu PUBLIC "${CMAKE_SOURCE_DIR}")
 
@@ -107,23 +114,11 @@ target_sources(rpcs3_emu PRIVATE
 # Audio
 target_sources(rpcs3_emu PRIVATE
     Audio/audio_device_listener.cpp
+    Audio/audio_resampler.cpp
     Audio/AudioDumper.cpp
     Audio/AudioBackend.cpp
-    Audio/AL/OpenALBackend.cpp
+    Audio/Cubeb/CubebBackend.cpp
 )
-
-if(USE_ALSA)
-    find_package(ALSA)
-    if(ALSA_FOUND)
-        target_sources(rpcs3_emu PRIVATE Audio/ALSA/ALSABackend.cpp)
-        target_link_libraries(rpcs3_emu PUBLIC 3rdparty::alsa)
-    endif()
-endif()
-
-if(USE_PULSE AND PULSE_FOUND)
-    target_sources(rpcs3_emu PRIVATE Audio/Pulse/PulseBackend.cpp)
-    target_link_libraries(rpcs3_emu PUBLIC 3rdparty::pulse)
-endif()
 
 if(USE_FAUDIO)
     find_package(SDL2)
@@ -146,6 +141,13 @@ target_link_libraries(rpcs3_emu
     PUBLIC
         3rdparty::openal)
 
+target_link_libraries(rpcs3_emu
+    PUBLIC
+        3rdparty::cubeb)
+
+target_link_libraries(rpcs3_emu
+    PUBLIC
+        3rdparty::soundtouch)
 
 # Cell
 target_sources(rpcs3_emu PRIVATE
@@ -358,6 +360,7 @@ target_link_libraries(rpcs3_emu
 
 # Io
 target_sources(rpcs3_emu PRIVATE
+    Io/camera_config.cpp
     Io/interception.cpp
     Io/KeyboardHandler.cpp
     Io/pad_config.cpp
@@ -368,13 +371,19 @@ target_sources(rpcs3_emu PRIVATE
     Io/GHLtar.cpp
     Io/Buzz.cpp
     Io/Turntable.cpp
+    Io/usio.cpp
 )
 
 # Np
 target_sources(rpcs3_emu PRIVATE
     NP/fb_helpers.cpp
+    NP/np_cache.cpp
     NP/np_contexts.cpp
+    NP/np_dnshook.cpp
     NP/np_handler.cpp
+    NP/np_helpers.cpp
+    NP/np_notifications.cpp
+    NP/np_requests.cpp
     NP/signaling_handler.cpp
     NP/np_structs_extra.cpp
     NP/rpcn_client.cpp
@@ -394,6 +403,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GSRender.cpp
     RSX/RSXFIFO.cpp
     RSX/rsx_methods.cpp
+    RSX/rsx_vertex_data.cpp
     RSX/RSXOffload.cpp
     RSX/RSXTexture.cpp
     RSX/RSXThread.cpp
@@ -457,6 +467,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/vkutils/chip_class.cpp
         RSX/VK/vkutils/commands.cpp
         RSX/VK/vkutils/data_heap.cpp
+        RSX/VK/vkutils/descriptors.cpp
         RSX/VK/vkutils/image.cpp
         RSX/VK/vkutils/image_helpers.cpp
         RSX/VK/vkutils/scratch.cpp

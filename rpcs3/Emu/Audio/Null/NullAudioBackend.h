@@ -6,19 +6,20 @@ class NullAudioBackend : public AudioBackend
 {
 public:
 	NullAudioBackend() {}
-	virtual ~NullAudioBackend() {}
+	~NullAudioBackend() {}
 
-	virtual const char* GetName() const override { return "Null"; }
+	std::string_view GetName() const override { return "Null"sv; }
 
-	static const u32 capabilities = PLAY_PAUSE_FLUSH;
-	virtual u32 GetCapabilities() const override { return capabilities; }
+	void Open(AudioFreq /* freq */, AudioSampleSize /* sample_size */, AudioChannelCnt /* ch_cnt */) override { m_playing = false; }
+	void Close() override { m_playing = false; }
 
-	virtual void Open(u32) override {}
-	virtual void Close() override {}
+	void SetWriteCallback(std::function<u32(u32, void *)> /* cb */) override {};
+	f64 GetCallbackFrameLen() override { return 0.01; };
 
-	virtual void Play() override {}
-	virtual void Pause() override {}
+	void Play() override { m_playing = true; }
+	void Pause() override { m_playing = false; }
+	bool IsPlaying() override { return m_playing; }
 
-	virtual bool AddData(const void*, u32) override { return true; }
-	virtual void Flush() override {}
+private:
+	bool m_playing = false;
 };

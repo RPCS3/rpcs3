@@ -3,6 +3,9 @@
 #include "ds4_pad_handler.h"
 #include "dualsense_pad_handler.h"
 #include "util/logs.hpp"
+#include "Utilities/Timer.h"
+#include "Emu/System.h"
+#include "pad_thread.h"
 
 #include <algorithm>
 #include <memory>
@@ -13,8 +16,8 @@ static std::mutex s_hid_mutex; // hid_pad_handler is created by pad_thread and p
 static u8 s_hid_instances{0};
 
 template <class Device>
-hid_pad_handler<Device>::hid_pad_handler(pad_handler type, u16 vid, std::vector<u16> pids)
-    : PadHandlerBase(type), m_vid(vid), m_pids(std::move(pids))
+hid_pad_handler<Device>::hid_pad_handler(pad_handler type, std::vector<id_pair> ids)
+    : PadHandlerBase(type), m_ids(std::move(ids))
 {
 	std::scoped_lock lock(s_hid_mutex);
 	ensure(s_hid_instances++ < 255);
@@ -23,6 +26,13 @@ hid_pad_handler<Device>::hid_pad_handler(pad_handler type, u16 vid, std::vector<
 template <class Device>
 hid_pad_handler<Device>::~hid_pad_handler()
 {
+	if (m_enumeration_thread)
+	{
+		auto& enumeration_thread = *m_enumeration_thread;
+		enumeration_thread = thread_state::aborting;
+		enumeration_thread();
+	}
+
 	for (auto& controller : m_controllers)
 	{
 		if (controller.second && controller.second->hidDevice)
@@ -59,21 +69,30 @@ bool hid_pad_handler<Device>::Init()
 	}
 
 	enumerate_devices();
+	update_devices();
 
 	m_is_init = true;
+
+	m_enumeration_thread = std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Enumerator", m_type), [this]()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			if (pad::g_enabled && Emu.IsRunning())
+			{
+				enumerate_devices();
+			}
+
+			thread_ctrl::wait_for(2'000'000);
+		}
+	});
+
 	return true;
 }
 
 template <class Device>
 void hid_pad_handler<Device>::ThreadProc()
 {
-	const auto now     = std::chrono::system_clock::now();
-	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_enumeration).count();
-	if (elapsed > 2000)
-	{
-		m_last_enumeration = now;
-		enumerate_devices();
-	}
+	update_devices();
 
 	PadHandlerBase::ThreadProc();
 }
@@ -97,12 +116,13 @@ std::vector<std::string> hid_pad_handler<Device>::ListDevices()
 template <class Device>
 void hid_pad_handler<Device>::enumerate_devices()
 {
+	Timer timer;
 	std::set<std::string> device_paths;
 	std::map<std::string, std::wstring_view> serials;
 
-	for (const auto& pid : m_pids)
+	for (const auto& [vid, pid] : m_ids)
 	{
-		hid_device_info* dev_info = hid_enumerate(m_vid, pid);
+		hid_device_info* dev_info = hid_enumerate(vid, pid);
 		hid_device_info* head     = dev_info;
 		while (dev_info)
 		{
@@ -113,18 +133,29 @@ void hid_pad_handler<Device>::enumerate_devices()
 		}
 		hid_free_enumeration(head);
 	}
+	hid_log.notice("%s enumeration found %d devices (%f ms)", m_type, device_paths.size(), timer.GetElapsedTimeInMilliSec());
 
-	if (m_last_enumerated_devices == device_paths)
+	std::lock_guard lock(m_enumeration_mutex);
+	m_new_enumerated_devices = device_paths;
+	m_enumerated_serials = serials;
+}
+
+template <class Device>
+void hid_pad_handler<Device>::update_devices()
+{
+	std::lock_guard lock(m_enumeration_mutex);
+
+	if (m_last_enumerated_devices == m_new_enumerated_devices)
 	{
 		return;
 	}
 
-	m_last_enumerated_devices = device_paths;
+	m_last_enumerated_devices = m_new_enumerated_devices;
 
 	// Scrap devices that are not in the new list
 	for (auto& controller : m_controllers)
 	{
-		if (controller.second && !controller.second->path.empty() && !device_paths.contains(controller.second->path))
+		if (controller.second && !controller.second->path.empty() && !m_new_enumerated_devices.contains(controller.second->path))
 		{
 			hid_close(controller.second->hidDevice);
 			cfg_pad* config = controller.second->config;
@@ -136,7 +167,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 	bool warn_about_drivers = false;
 
 	// Find and add new devices
-	for (const auto& path : device_paths)
+	for (const auto& path : m_new_enumerated_devices)
 	{
 		// Check if we have at least one virtual controller left
 		if (std::none_of(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c) { return !c.second || !c.second->hidDevice; }))
@@ -149,11 +180,11 @@ void hid_pad_handler<Device>::enumerate_devices()
 		hid_device* dev = hid_open_path(path.c_str());
 		if (dev)
 		{
-			check_add_device(dev, path, serials[path]);
+			check_add_device(dev, path, m_enumerated_serials[path]);
 		}
 		else
 		{
-			hid_log.error("%s hid_open_path failed! Reason: %s", m_type, hid_error(dev));
+			hid_log.error("%s hid_open_path failed! error='%s', path='%s'", m_type, hid_error(dev), path);
 			warn_about_drivers = true;
 		}
 	}

@@ -28,12 +28,14 @@ Q_SIGNALS:
 	void GuiStylesheetRequest();
 	void GuiRepaintRequest();
 	void EmuSettingsApplied();
+	void signal_restore_dependant_defaults();
 private:
 	void EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text) const;
 
 	// Snapping of sliders when moved with mouse
 	void SnapSlider(QSlider* slider, int interval);
 	QSlider* m_current_slider = nullptr;
+	std::set<QObject*> m_snap_sliders;
 
 	// Gui tab
 	void AddStylesheets();
@@ -42,7 +44,7 @@ private:
 	// Gpu tab
 	QString m_old_renderer;
 	// Audio tab
-	QComboBox *m_mics_combo[4];
+	std::array<QComboBox*, 4> m_mics_combo;
 
 	int m_tab_index;
 	Ui::settings_dialog *ui;

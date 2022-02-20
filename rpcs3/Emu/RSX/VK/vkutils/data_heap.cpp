@@ -51,20 +51,22 @@ namespace vk
 
 	bool data_heap::grow(usz size)
 	{
-		// Create new heap. All sizes are aligned up by 64M, upto 1GiB
-		const usz size_limit = 1024 * 0x100000;
-		const usz aligned_new_size = utils::align(m_size + size, 64 * 0x100000);
-
-		if (aligned_new_size >= size_limit)
-		{
-			// Too large
-			return false;
-		}
-
 		if (shadow)
 		{
 			// Shadowed. Growing this can be messy as it requires double allocation (macOS only)
+			rsx_log.error("[%s] Auto-grow of shadowed heaps is not currently supported. This error should typically only be seen on MacOS.", m_name);
 			return false;
+		}
+
+		// Create new heap. All sizes are aligned up by 64M, upto 1GiB
+		const usz size_limit = 1024 * 0x100000;
+		usz aligned_new_size = utils::align(m_size + size, 64 * 0x100000);
+
+		if (aligned_new_size >= size_limit)
+		{
+			// Too large, try to swap out the heap instead of growing.
+			rsx_log.error("[%s] Pool limit was reached. Will attempt to swap out the current heap.", m_name);
+			aligned_new_size = size_limit;
 		}
 
 		// Wait for DMA activity to end

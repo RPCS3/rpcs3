@@ -80,7 +80,7 @@ bool TROPUSRLoader::LoadTableHeaders()
 	m_file.seek(0x30);
 	m_tableHeaders.clear();
 
-	if (!m_file.read<true>(m_tableHeaders, m_header.tables_count))
+	if (!m_file.read(m_tableHeaders, m_header.tables_count))
 	{
 		return false;
 	}
@@ -103,7 +103,7 @@ bool TROPUSRLoader::LoadTables()
 		{
 			m_table4.clear();
 
-			if (!m_file.read<true>(m_table4, tableHeader.entries_count))
+			if (!m_file.read(m_table4, tableHeader.entries_count))
 				return false;
 		}
 
@@ -111,7 +111,7 @@ bool TROPUSRLoader::LoadTables()
 		{
 			m_table6.clear();
 
-			if (!m_file.read<true>(m_table6, tableHeader.entries_count))
+			if (!m_file.read(m_table6, tableHeader.entries_count))
 				return false;
 		}
 
@@ -204,12 +204,12 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	return Save(filepath);
 }
 
-u32 TROPUSRLoader::GetTrophiesCount()
+u32 TROPUSRLoader::GetTrophiesCount() const
 {
 	return ::size32(m_table6);
 }
 
-u32 TROPUSRLoader::GetUnlockedTrophiesCount()
+u32 TROPUSRLoader::GetUnlockedTrophiesCount() const
 {
 	u32 count = 0;
 	for (const auto& trophy : m_table6)
@@ -296,7 +296,7 @@ u32 TROPUSRLoader::GetUnlockedPlatinumID(u32 trophy_id, const std::string& confi
 	return pid;
 }
 
-u32 TROPUSRLoader::GetTrophyGrade(u32 id)
+u32 TROPUSRLoader::GetTrophyGrade(u32 id) const
 {
 	if (id >= m_table4.size())
 	{
@@ -307,7 +307,7 @@ u32 TROPUSRLoader::GetTrophyGrade(u32 id)
 	return m_table4[id].trophy_grade; // Let's assume the trophies are stored ordered
 }
 
-u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
+u32 TROPUSRLoader::GetTrophyUnlockState(u32 id) const
 {
 	if (id >= m_table6.size())
 	{
@@ -318,7 +318,7 @@ u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 	return m_table6[id].trophy_state; // Let's assume the trophies are stored ordered
 }
 
-u64 TROPUSRLoader::GetTrophyTimestamp(u32 id)
+u64 TROPUSRLoader::GetTrophyTimestamp(u32 id) const
 {
 	if (id >= m_table6.size())
 	{

@@ -3,6 +3,10 @@
 #include "util/logs.hpp"
 #include "Emu/system_config.h"
 
+#ifdef __APPLE__
+#include <MoltenVK/vk_mvk_moltenvk.h>
+#endif
+
 namespace vk
 {
 	// Global shared render device
@@ -30,6 +34,7 @@ namespace vk
 			features2.pNext = nullptr;
 
 			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+			VkPhysicalDeviceDescriptorIndexingFeatures  descriptor_indexing_info{};
 
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
@@ -44,6 +49,14 @@ namespace vk
 				features2.pNext         = &driver_properties;
 			}
 
+			if (device_extensions.is_supported(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME))
+			{
+				descriptor_indexing_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+				descriptor_indexing_info.pNext = features2.pNext;
+				features2.pNext                = &descriptor_indexing_info;
+				descriptor_indexing_support    = true;
+			}
+
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
@@ -52,23 +65,116 @@ namespace vk
 			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
 			features                           = features2.features;
+
+			if (descriptor_indexing_support)
+			{
+#define SET_DESCRIPTOR_BITFLAG(field, bit) if (descriptor_indexing_info.field) descriptor_update_after_bind_mask |= (1ull << bit)
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER);
+#undef SET_DESCRIPTOR_BITFLAG
+			}
 		}
 
 		stencil_export_support           = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		conditional_render_support       = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 		external_memory_host_support     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+		sampler_mirror_clamped_support   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 		unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 		debug_utils_support              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		surface_capabilities_2_support   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+	}
+
+	void physical_device::get_physical_device_properties(bool allow_extensions)
+	{
+		vkGetPhysicalDeviceMemoryProperties(dev, &memory_properties);
+
+		if (!allow_extensions)
+		{
+			vkGetPhysicalDeviceProperties(dev, &props);
+			return;
+		}
+
+		supported_extensions instance_extensions(supported_extensions::instance);
+		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+		{
+			vkGetPhysicalDeviceProperties(dev, &props);
+		}
+		else
+		{
+			VkPhysicalDeviceProperties2KHR properties2;
+			properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+			properties2.pNext = nullptr;
+
+			VkPhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_props{};
+
+			if (descriptor_indexing_support)
+			{
+				descriptor_indexing_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
+				descriptor_indexing_props.pNext = properties2.pNext;
+				properties2.pNext = &descriptor_indexing_props;
+			}
+
+			auto _vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceProperties2KHR"));
+			ensure(_vkGetPhysicalDeviceProperties2KHR);
+
+			_vkGetPhysicalDeviceProperties2KHR(dev, &properties2);
+			props = properties2.properties;
+
+#ifdef __APPLE__
+		if (instance_extensions.is_supported(VK_MVK_MOLTENVK_EXTENSION_NAME))
+		{
+			MVKConfiguration mvk_config = {};
+			size_t mvk_config_size = sizeof(MVKConfiguration);
+
+			PFN_vkGetMoltenVKConfigurationMVK _vkGetMoltenVKConfigurationMVK = nullptr;
+			_vkGetMoltenVKConfigurationMVK = reinterpret_cast<PFN_vkGetMoltenVKConfigurationMVK>(vkGetInstanceProcAddr(parent, "vkGetMoltenVKConfigurationMVK"));
+			ensure(_vkGetMoltenVKConfigurationMVK);
+
+			PFN_vkSetMoltenVKConfigurationMVK _vkSetMoltenVKConfigurationMVK = nullptr;
+			_vkSetMoltenVKConfigurationMVK = reinterpret_cast<PFN_vkSetMoltenVKConfigurationMVK>(vkGetInstanceProcAddr(parent, "vkSetMoltenVKConfigurationMVK"));
+			ensure(_vkSetMoltenVKConfigurationMVK);
+
+			CHECK_RESULT_EX(_vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not get MoltenVK configuration."));
+
+			mvk_config.semaphoreUseMTLEvent = (g_cfg.video.vk.metal_semaphore == vk_metal_semaphore_mode::mtlevent_preferred || g_cfg.video.vk.metal_semaphore == vk_metal_semaphore_mode::mtlevent);
+			mvk_config.semaphoreUseMTLFence = (g_cfg.video.vk.metal_semaphore == vk_metal_semaphore_mode::mtlevent_preferred || g_cfg.video.vk.metal_semaphore == vk_metal_semaphore_mode::mtlfence);
+
+			CHECK_RESULT_EX(_vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not set MoltenVK configuration."));
+		}
+		else
+		{
+			rsx_log.error("Cannot set Metal Semaphore because VK_MVK_moltenvk is not supported.\nIf you're using MoltenVK through libvulkan, manually set the MVK_ALLOW_METAL_EVENTS and/or MVK_ALLOW_METAL_FENCES environment variables instead.");
+		}
+#endif
+
+			if (descriptor_indexing_support)
+			{
+				if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 800'000)
+				{
+					rsx_log.error("Physical device does not support enough descriptors for deferred updates to work effectively. Deferred updates are disabled.");
+					descriptor_update_after_bind_mask = 0;
+				}
+				else if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 2'000'000)
+				{
+					rsx_log.warning("Physical device reports a low amount of allowed deferred descriptor updates. Draw call threshold will be lowered accordingly.");
+					descriptor_max_draw_calls = 8192;
+				}
+			}
+		}
 	}
 
 	void physical_device::create(VkInstance context, VkPhysicalDevice pdev, bool allow_extensions)
 	{
 		dev    = pdev;
 		parent = context;
-		vkGetPhysicalDeviceProperties(pdev, &props);
-		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+
 		get_physical_device_features(allow_extensions);
+		get_physical_device_properties(allow_extensions);
 
 		rsx_log.always()("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 
@@ -82,10 +188,10 @@ namespace vk
 		{
 #ifdef _WIN32
 			// SPIRV bugs were fixed in 452.28 for windows
-			const u32 threshold_version = (452u >> 22) | (28 >> 14);
+			const u32 threshold_version = (452u << 22) | (28 << 14);
 #else
 			// SPIRV bugs were fixed in 450.56 for linux/BSD
-			const u32 threshold_version = (450u >> 22) | (56 >> 14);
+			const u32 threshold_version = (450u << 22) | (56 << 14);
 #endif
 			const auto current_version = props.driverVersion & ~0x3fffu; // Clear patch and revision fields
 			if (current_version < threshold_version)
@@ -108,9 +214,16 @@ namespace vk
 
 	driver_vendor physical_device::get_driver_vendor() const
 	{
+#ifdef __APPLE__
+		// moltenVK currently returns DRIVER_ID_MOLTENVK (0).
+		// For now, assume the vendor is moltenVK on Apple devices.
+		return driver_vendor::MVK;
+#endif
+
 		if (!driver_properties.driverID)
 		{
 			const auto gpu_name = get_name();
+
 			if (gpu_name.find("Radeon") != umax)
 			{
 				return driver_vendor::AMD;
@@ -312,6 +425,22 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		}
 
+		if (pgpu->stencil_export_support)
+		{
+			requested_extensions.push_back(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
+		}
+
+		if (pgpu->sampler_mirror_clamped_support)
+		{
+			requested_extensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+		}
+
+		if (pgpu->descriptor_indexing_support)
+		{
+			requested_extensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
+			requested_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+		}
+
 		enabled_features.robustBufferAccess = VK_TRUE;
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
 		enabled_features.independentBlend = VK_TRUE;
@@ -332,6 +461,11 @@ namespace vk
 			enabled_features.shaderStorageImageWriteWithoutFormat = VK_TRUE;
 		}
 
+		if (g_cfg.video.precise_zpass_count)
+		{
+			enabled_features.occlusionQueryPrecise = VK_TRUE;
+		}
+
 		// enabled_features.shaderSampledImageArrayDynamicIndexing = TRUE;  // Unused currently but will be needed soon
 		enabled_features.shaderClipDistance = VK_TRUE;
 		// enabled_features.shaderCullDistance = VK_TRUE;  // Alt notation of clip distance
@@ -339,19 +473,6 @@ namespace vk
 		enabled_features.samplerAnisotropy = VK_TRUE;
 		enabled_features.textureCompressionBC = VK_TRUE;
 		enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
-
-		// If we're on lavapipe / llvmpipe, disable unimplemented features:
-		// - shaderStorageBufferArrayDynamicIndexing
-		// as of mesa 21.1.0-dev (aea36ee05e9, 2020-02-10)
-		// Several games work even if we disable these, testing purpose only
-		if (pgpu->get_name().find("llvmpipe") != umax)
-		{
-			if (!pgpu->features.shaderStorageBufferArrayDynamicIndexing)
-			{
-				rsx_log.error("Running lavapipe without support for shaderStorageBufferArrayDynamicIndexing");
-				enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
-			}
-		}
 
 		// Optionally disable unsupported stuff
 		if (!pgpu->features.shaderStorageImageMultisample || !pgpu->features.shaderStorageImageWriteWithoutFormat)
@@ -367,6 +488,18 @@ namespace vk
 			enabled_features.alphaToOne = VK_FALSE;
 			enabled_features.shaderStorageImageMultisample = VK_FALSE;
 			enabled_features.shaderStorageImageWriteWithoutFormat = VK_FALSE;
+		}
+
+		if (!pgpu->features.shaderClipDistance)
+		{
+			rsx_log.error("Your GPU does not support shader clip distance. Graphics will not render correctly.");
+			enabled_features.shaderClipDistance = VK_FALSE;
+		}
+
+		if (!pgpu->features.shaderStorageBufferArrayDynamicIndexing)
+		{
+			rsx_log.error("Your GPU does not support shader storage buffer array dynamic indexing. Graphics will not render correctly.");
+			enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
 		}
 
 		if (!pgpu->features.samplerAnisotropy)
@@ -406,6 +539,20 @@ namespace vk
 			enabled_features.alphaToOne = VK_FALSE;
 		}
 
+		if (!pgpu->features.occlusionQueryPrecise && enabled_features.occlusionQueryPrecise)
+		{
+			rsx_log.error("Your GPU does not support precise occlusion queries. Graphics may not render correctly.");
+			enabled_features.occlusionQueryPrecise = VK_FALSE;
+		}
+
+#ifdef __APPLE__
+		if (!pgpu->features.logicOp)
+		{
+			rsx_log.error("Your GPU does not support framebuffer logical operations. Graphics may not render correctly.");
+			enabled_features.logicOp = VK_FALSE;
+		}
+#endif
+
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device.pNext = nullptr;
@@ -423,6 +570,7 @@ namespace vk
 			// Allow use of f16 type in shaders if possible
 			shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
 			shader_support_info.shaderFloat16 = VK_TRUE;
+			shader_support_info.pNext = const_cast<void*>(device.pNext);
 			device.pNext = &shader_support_info;
 
 			rsx_log.notice("GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
@@ -430,6 +578,24 @@ namespace vk
 		else
 		{
 			rsx_log.notice("GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
+		}
+
+		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features{};
+		if (pgpu->descriptor_indexing_support)
+		{
+#define SET_DESCRIPTOR_BITFLAG(field, bit) if (pgpu->descriptor_update_after_bind_mask & (1ull << bit)) indexing_features.field = VK_TRUE
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER);
+#undef SET_DESCRIPTOR_BITFLAG
+
+			indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+			indexing_features.pNext = const_cast<void*>(device.pNext);
+			device.pNext = &indexing_features;
 		}
 
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
@@ -637,6 +803,21 @@ namespace vk
 		return g_cfg.video.renderdoc_compatiblity && pgpu->debug_utils_support;
 	}
 
+	bool render_device::get_descriptor_indexing_support() const
+	{
+		return pgpu->descriptor_indexing_support;
+	}
+
+	u64 render_device::get_descriptor_update_after_bind_support() const
+	{
+		return pgpu->descriptor_update_after_bind_mask;
+	}
+
+	u32 render_device::get_descriptor_max_draw_calls() const
+	{
+		return pgpu->descriptor_max_draw_calls;
+	}
+
 	mem_allocator_base* render_device::get_allocator() const
 	{
 		return m_allocator.get();
@@ -663,75 +844,169 @@ namespace vk
 		memory_type_mapping result;
 		result.device_local_total_bytes = 0;
 		result.host_visible_total_bytes = 0;
-		bool host_visible_cached = false;
+		result.device_bar_total_bytes = 0;
+
+		// Sort the confusingly laid out heap-type map into something easier to scan.
+		// Not performance-critical, this method is called once at initialization.
+		struct memory_type
+		{
+			u32 type_index;
+			VkFlags flags;
+			VkDeviceSize size;
+		};
+
+		struct heap_type_map_entry
+		{
+			VkMemoryHeap heap;
+			std::vector<memory_type> types;
+		};
+
+		std::vector<heap_type_map_entry> memory_heap_map;
+		for (u32 i = 0; i < memory_properties.memoryHeapCount; ++i)
+		{
+			memory_heap_map.push_back(
+			{
+				.heap = memory_properties.memoryHeaps[i],
+				.types = {}
+			});
+		}
 
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
-			VkMemoryHeap& heap = memory_properties.memoryHeaps[memory_properties.memoryTypes[i].heapIndex];
-
-			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			if (is_device_local)
-			{
-				// Allow multiple device_local heaps
-				result.device_local.push(i, heap.size);
-				result.device_local_total_bytes += heap.size;
-			}
-
-			bool is_host_visible = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			bool is_host_coherent = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			bool is_cached = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
-
-			if (is_host_coherent && is_host_visible)
-			{
-				if ((is_cached && !host_visible_cached) || (result.host_visible_total_bytes < heap.size))
-				{
-					// Allow only a single host_visible heap. It makes no sense to have multiple of these otherwise
-					result.host_visible_coherent = { i, heap.size };
-					result.host_visible_total_bytes = heap.size;
-					host_visible_cached = is_cached;
-				}
-			}
+			auto& type_info = memory_properties.memoryTypes[i];
+			memory_heap_map[type_info.heapIndex].types.push_back({ i, type_info.propertyFlags, 0 });
 		}
 
-		if (!result.device_local)
-			fmt::throw_exception("GPU doesn't support device local memory");
-		if (!result.host_visible_coherent)
-			fmt::throw_exception("GPU doesn't support host coherent device local memory");
+		auto find_memory_type_with_property = [&memory_heap_map](VkFlags desired_flags, VkFlags excluded_flags)
+		{
+			std::vector<memory_type> results;
+
+			for (auto& heap : memory_heap_map)
+			{
+				for (auto &type : heap.types)
+				{
+					if (((type.flags & desired_flags) == desired_flags) && !(type.flags & excluded_flags))
+					{
+						// Match, only once allowed per heap!
+						results.push_back({ type.type_index, type.flags, heap.heap.size });
+						break;
+					}
+				}
+			}
+
+			return results;
+		};
+
+		auto device_local_types = find_memory_type_with_property(
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			(VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD | VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD));
+		auto host_coherent_types = find_memory_type_with_property(
+			(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+			0);
+		auto bar_memory_types = find_memory_type_with_property(
+			(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+			0);
+
+		if (host_coherent_types.empty())
+		{
+			rsx_log.warning("[Performance Warning] Could not identify a cached upload heap. Will fall back to uncached transport.");
+			host_coherent_types = find_memory_type_with_property(
+				(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+				0);
+		}
+
+		ensure(!device_local_types.empty());
+		ensure(!host_coherent_types.empty());
+
+		// BAR heap, currently parked for future use, I have some plans for it (kd-11)
+		for (auto& type : bar_memory_types)
+		{
+			result.device_bar.push(type.type_index, type.size);
+			result.device_bar_total_bytes += type.size;
+		}
+
+		// Generic VRAM access, requires some minor prioritization based on flags
+		// Most devices have a 'PURE' device local type, pin that as the first priority
+		// Internally, there will be some reshuffling based on memory load later, but this is rare
+		if (device_local_types.size() > 1)
+		{
+			std::sort(device_local_types.begin(), device_local_types.end(), [](const auto& a, const auto& b)
+			{
+				if (a.flags == b.flags)
+				{
+					return a.size > b.size;
+				}
+
+				return (a.flags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) || (b.flags != VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT && a.size > b.size);
+			});
+		}
+
+		for (auto& type : device_local_types)
+		{
+			result.device_local.push(type.type_index, type.size);
+			result.device_local_total_bytes += type.size;
+		}
+
+		// Sort upload heap entries based on size.
+		if (host_coherent_types.size() > 1)
+		{
+			std::sort(host_coherent_types.begin(), host_coherent_types.end(), [](const auto& a, const auto& b)
+			{
+				return a.size > b.size;
+			});
+		}
+
+		for (auto& type : host_coherent_types)
+		{
+			result.host_visible_coherent.push(type.type_index, type.size);
+			result.host_visible_total_bytes += type.size;
+		}
+
+		rsx_log.notice("Detected %llu MB of device local memory", result.device_local_total_bytes / (0x100000));
+		rsx_log.notice("Detected %llu MB of host coherent memory", result.host_visible_total_bytes / (0x100000));
+		rsx_log.notice("Detected %llu MB of BAR memory", result.device_bar_total_bytes / (0x100000));
+
 		return result;
 	}
 
 	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev)
 	{
+		const auto test_format_features = [&dev](VkFormat format, VkFlags required_features, VkBool32 linear_features) -> bool
+		{
+			VkFormatProperties props;
+			vkGetPhysicalDeviceFormatProperties(dev, format, &props);
+
+			const auto supported_features_mask = (linear_features) ? props.linearTilingFeatures : props.optimalTilingFeatures;
+			return (supported_features_mask & required_features) == required_features;
+		};
+
 		gpu_formats_support result = {};
+		const VkFlags required_zbuffer_features = (VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+		const VkFlags required_colorbuffer_features = (VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT | VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT);
 
-		VkFormatProperties props;
-		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_D24_UNORM_S8_UINT, &props);
-
-		result.d24_unorm_s8 = !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) && !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) &&
-			!!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) && !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
-
-		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_D32_SFLOAT_S8_UINT, &props);
-		result.d32_sfloat_s8 = !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) && !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) &&
-			!!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
+		// Check supported depth formats
+		result.d24_unorm_s8 = test_format_features(VK_FORMAT_D24_UNORM_S8_UINT, required_zbuffer_features, VK_FALSE);
+		result.d32_sfloat_s8 = test_format_features(VK_FORMAT_D32_SFLOAT_S8_UINT, required_zbuffer_features, VK_FALSE);
 
 		// Hide d24_s8 if force high precision z buffer is enabled
 		if (g_cfg.video.force_high_precision_z_buffer && result.d32_sfloat_s8)
+		{
 			result.d24_unorm_s8 = false;
+		}
 
-		// Checks if BGRA8 images can be used for blitting
-		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_B8G8R8A8_UNORM, &props);
-		result.bgra8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
+		// Checks if linear BGRA8 images can be used for present
+		result.bgra8_linear = test_format_features(VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_FEATURE_BLIT_SRC_BIT, VK_TRUE);
 
-		// Check if device supports RGBA8 format
-		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_R8G8B8A8_UNORM, &props);
-		if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) || !(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) ||
-			!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT))
+		// Check if device supports RGBA8 format for rendering
+		if (!test_format_features(VK_FORMAT_R8G8B8A8_UNORM, required_colorbuffer_features, VK_FALSE))
 		{
 			// Non-fatal. Most games use BGRA layout due to legacy reasons as old GPUs typically supported BGRA and RGBA was emulated.
 			rsx_log.error("Your GPU and/or driver does not support RGBA8 format. This can cause problems in some rare games that use this memory layout.");
 		}
 
-		result.argb8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
+		// Check if linear RGBA8 images can be used for present
+		result.argb8_linear = test_format_features(VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_FEATURE_BLIT_SRC_BIT, VK_TRUE);
+
 		return result;
 	}
 

@@ -38,16 +38,16 @@ namespace gl
 				ensure(real_pitch == (width * 4));
 				if (rsx_pitch == real_pitch) [[likely]]
 				{
-					stream_data_to_memory_swapped_u32<true>(dst, dst, valid_length / 4, 4);
+					copy_data_swap_u32(static_cast<u32*>(dst), static_cast<u32*>(dst), valid_length / 4);
 				}
 				else
 				{
 					const u32 num_rows = utils::align(valid_length, rsx_pitch) / rsx_pitch;
-					u8* data = static_cast<u8*>(dst);
+					u32* data = static_cast<u32*>(dst);
 					for (u32 row = 0; row < num_rows; ++row)
 					{
-						stream_data_to_memory_swapped_u32<true>(data, data, width, 4);
-						data += rsx_pitch;
+						copy_data_swap_u32(data, data, width);
+						data += rsx_pitch / 4;
 					}
 				}
 				break;
@@ -145,8 +145,8 @@ namespace gl
 			if (!slice.src)
 				continue;
 
-			const bool typeless = dst_aspect != slice.src->aspect() ||
-				!formats_are_bitcast_compatible(static_cast<GLenum>(slice.src->get_internal_format()), static_cast<GLenum>(dst_image->get_internal_format()));
+			const bool typeless = !formats_are_bitcast_compatible(slice.src, dst_image);
+			ensure(typeless || dst_aspect == slice.src->aspect());
 
 			std::unique_ptr<gl::texture> tmp;
 			auto src_image = slice.src;

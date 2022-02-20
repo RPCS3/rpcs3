@@ -17,7 +17,9 @@
 #include <unordered_map>
 #include <map>
 
+#if defined(ARCH_X64)
 #include <emmintrin.h>
+#endif
 
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
@@ -49,6 +51,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::ret: return "ret";
 		case cpu_flag::signal: return "sig";
 		case cpu_flag::memory: return "mem";
+		case cpu_flag::pending: return "pend";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
@@ -409,25 +412,6 @@ void cpu_thread::operator()()
 	{
 		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(id_type() == 1 ? thread_class::ppu : thread_class::spu));
 	}
-	if (id_type() == 2)
-	{
-		if (g_cfg.core.lower_spu_priority)
-		{
-			thread_ctrl::set_native_priority(-1);
-		}
-
-		// force input/output denormals to zero for SPU threads (FTZ/DAZ)
-		_mm_setcsr( _mm_getcsr() | 0x8040 );
-
-		const volatile int a = 0x1fc00000;
-		__m128 b = _mm_castsi128_ps(_mm_set1_epi32(a));
-		int c = _mm_cvtsi128_si32(_mm_castps_si128(_mm_mul_ps(b,b)));
-
-		if (c != 0)
-		{
-			sys_log.fatal("Could not disable denormals.");
-		}
-	}
 
 	while (!g_fxo->is_init<cpu_profiler>())
 	{
@@ -469,7 +453,7 @@ void cpu_thread::operator()()
 		cpu_thread* _cpu = get_current_cpu_thread();
 
 		// Wait flag isn't set asynchronously so this should be thread-safe
-		if (progress == 0 && cpu_flag::wait - _cpu->state)
+		if (progress == 0 && _cpu->state.none_of(cpu_flag::wait + cpu_flag::temp))
 		{
 			// Operation just started and syscall is imminent
 			_cpu->state += cpu_flag::wait + cpu_flag::temp;
@@ -737,6 +721,12 @@ bool cpu_thread::check_state() noexcept
 			{
 				// Restore thread in the suspend list
 				cpu_counter::add(this);
+			}
+
+			if ((state0 & (cpu_flag::pending + cpu_flag::temp)) == cpu_flag::pending)
+			{
+				// Execute pending work
+				cpu_work();
 			}
 
 			if (retval)

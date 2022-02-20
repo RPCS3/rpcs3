@@ -223,7 +223,8 @@ void debugger_list::create_rsx_command_detail(u32 pc, int row)
 		pc += std::max<u32>(m_disasm->disasm(pc), 4);
 	}
 
-	RSXDisAsm rsx_dis = CPUDisAsm::copy_and_change_mode(*static_cast<RSXDisAsm*>(m_disasm), cpu_disasm_mode::list);
+	RSXDisAsm rsx_dis = *static_cast<RSXDisAsm*>(m_disasm);
+	rsx_dis.change_mode(cpu_disasm_mode::list);
 
 	// Either invalid or not a method
 	if (rsx_dis.disasm(pc) <= 4) return;

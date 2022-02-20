@@ -102,7 +102,7 @@ struct vdec_context final
 	static const u32 id_step = 0x00000100;
 	static const u32 id_count = 1024;
 
-	AVCodec* codec{};
+	const AVCodec* codec{};
 	AVCodecContext* ctx{};
 	SwsContext* sws{};
 
@@ -136,21 +136,6 @@ struct vdec_context final
 		, cb_func(func)
 		, cb_arg(arg)
 	{
-#ifdef _MSC_VER
-#pragma warning(push, 0)
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-		// TODO: This function should be removed at some point, since ffmpeg does it automatically now.
-		//       We'll keep it for compatibility for now until more system ffmpeg libs are up to date.
-		avcodec_register_all();
-#ifdef _MSC_VER
-#pragma warning(pop)
-#else
-#pragma GCC diagnostic pop
-#endif
-
 		switch (type)
 		{
 		case CELL_VDEC_CODEC_TYPE_MPEG2:
@@ -1234,6 +1219,10 @@ error_code cellVdecSetPts(u32 handle, vm::ptr<void> unk)
 
 DECLARE(ppu_module_manager::cellVdec)("libvdec", []()
 {
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 10, 100)
+	avcodec_register_all();
+#endif
+
 	static ppu_static_module libavcdec("libavcdec");
 	static ppu_static_module libdivx311dec("libdivx311dec");
 	static ppu_static_module libdivxdec("libdivxdec");
@@ -1265,5 +1254,5 @@ DECLARE(ppu_module_manager::cellVdec)("libvdec", []()
 	REG_FUNC(libvdec, cellVdecSetFrameRateExt); // 0xcffc42a5
 	REG_FUNC(libvdec, cellVdecSetPts); // 0x3ce2e4f8
 
-	REG_FUNC(libvdec, vdecEntry).flag(MFF_HIDDEN);
+	REG_HIDDEN_FUNC(vdecEntry);
 });

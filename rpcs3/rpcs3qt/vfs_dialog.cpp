@@ -1,7 +1,6 @@
 #include "vfs_dialog.h"
 #include "vfs_dialog_tab.h"
 #include "gui_settings.h"
-#include "emu_settings_type.h"
 
 #include <QTabWidget>
 #include <QDialogButtonBox>
@@ -10,7 +9,7 @@
 #include <QVBoxLayout>
 
 #include "Emu/System.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -20,29 +19,29 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	QTabWidget* tabs = new QTabWidget();
 	tabs->setUsesScrollButtons(false);
 
-	m_emu_settings->LoadSettings();
+	g_cfg_vfs.load();
 
 	// Create tabs
-	vfs_dialog_tab* emulator_tab = new vfs_dialog_tab({ "$(EmulatorDir)", emu_settings_type::emulatorLocation, gui::fs_emulator_dir_list, &g_cfg.vfs.emulator_dir },
-		m_gui_settings, m_emu_settings, this);
+	vfs_dialog_tab* emulator_tab = new vfs_dialog_tab({ "$(EmulatorDir)", gui::fs_emulator_dir_list, &g_cfg_vfs.emulator_dir },
+		m_gui_settings, this);
 
-	vfs_dialog_tab* dev_hdd0_tab = new vfs_dialog_tab({ "dev_hdd0", emu_settings_type::dev_hdd0Location, gui::fs_dev_hdd0_list, &g_cfg.vfs.dev_hdd0 },
-		m_gui_settings, m_emu_settings, this);
+	vfs_dialog_tab* dev_hdd0_tab = new vfs_dialog_tab({ "dev_hdd0", gui::fs_dev_hdd0_list, &g_cfg_vfs.dev_hdd0 },
+		m_gui_settings, this);
 
-	vfs_dialog_tab* dev_hdd1_tab = new vfs_dialog_tab({ "dev_hdd1", emu_settings_type::dev_hdd1Location, gui::fs_dev_hdd1_list, &g_cfg.vfs.dev_hdd1 },
-		m_gui_settings, m_emu_settings, this);
+	vfs_dialog_tab* dev_hdd1_tab = new vfs_dialog_tab({ "dev_hdd1", gui::fs_dev_hdd1_list, &g_cfg_vfs.dev_hdd1 },
+		m_gui_settings, this);
 
-	vfs_dialog_tab* dev_flash_tab = new vfs_dialog_tab({ "dev_flash", emu_settings_type::dev_flashLocation, gui::fs_dev_flash_list, &g_cfg.vfs.dev_flash },
-		m_gui_settings, m_emu_settings, this);
+	vfs_dialog_tab* dev_flash_tab = new vfs_dialog_tab({ "dev_flash", gui::fs_dev_flash_list, &g_cfg_vfs.dev_flash },
+		m_gui_settings, this);
 
-	vfs_dialog_tab* dev_flash2_tab = new vfs_dialog_tab({ "dev_flash2", emu_settings_type::dev_flash2Location, gui::fs_dev_flash2_list, &g_cfg.vfs.dev_flash2 },
-		m_gui_settings, m_emu_settings, this);
+	vfs_dialog_tab* dev_flash2_tab = new vfs_dialog_tab({ "dev_flash2", gui::fs_dev_flash2_list, &g_cfg_vfs.dev_flash2 },
+		m_gui_settings, this);
 
-	vfs_dialog_tab* dev_flash3_tab = new vfs_dialog_tab({ "dev_flash3", emu_settings_type::dev_flash3Location, gui::fs_dev_flash3_list, &g_cfg.vfs.dev_flash3 },
-		m_gui_settings, m_emu_settings, this);
+	vfs_dialog_tab* dev_flash3_tab = new vfs_dialog_tab({ "dev_flash3", gui::fs_dev_flash3_list, &g_cfg_vfs.dev_flash3 },
+		m_gui_settings, this);
 
-	vfs_dialog_tab* dev_usb000_tab = new vfs_dialog_tab({ "dev_usb000", emu_settings_type::dev_usb000Location, gui::fs_dev_usb000_list, &g_cfg.vfs.dev_usb000 },
-		m_gui_settings, m_emu_settings, this);
+	vfs_dialog_tab* dev_usb000_tab = new vfs_dialog_tab({ "dev_usb000", gui::fs_dev_usb000_list, &g_cfg_vfs.dev_usb000 },
+		m_gui_settings, this);
 
 	tabs->addTab(emulator_tab, "$(EmulatorDir)");
 	tabs->addTab(dev_hdd0_tab, "dev_hdd0");
@@ -75,7 +74,8 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 			{
 				static_cast<vfs_dialog_tab*>(tabs->widget(i))->SetSettings();
 			}
-			m_emu_settings->SaveSettings();
+
+			g_cfg_vfs.save();
 
 			// Recreate folder structure for new VFS paths
 			if (Emu.IsStopped())

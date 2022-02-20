@@ -92,9 +92,16 @@ public:
 	/** Validates the settings and logs unused entries or cleans up the yaml*/
 	bool ValidateSettings(bool cleanup);
 
+	/** Resets the current settings to the global default. This includes all connected widgets. */
+	void RestoreDefaults();
+
+Q_SIGNALS:
+	void RestoreDefaultsSignal();
+
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
+
 private:
 	YAML::Node m_default_settings; // The default settings as a YAML node.
 	YAML::Node m_current_settings; // The current settings as a YAML node.

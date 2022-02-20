@@ -1,7 +1,7 @@
 #include "util/sysinfo.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/File.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Utilities/Thread.h"
 
 #ifdef _WIN32
@@ -11,20 +11,22 @@
 #include "stringapiset.h"
 #else
 #include <unistd.h>
+#include <sys/resource.h>
+#ifndef __APPLE__
 #include <sys/utsname.h>
 #include <errno.h>
 #endif
-
-#include "util/asm.hpp"
-
-#ifdef _MSC_VER
-extern "C"
-{
-	u64 _xgetbv(u32);
-}
 #endif
 
-inline std::array<u32, 4> utils::get_cpuid(u32 func, u32 subfunc)
+#include "util/asm.hpp"
+#include "util/fence.hpp"
+
+#ifdef _M_X64
+extern "C" u64 _xgetbv(u32);
+#endif
+
+#if defined(ARCH_X64)
+static inline std::array<u32, 4> get_cpuid(u32 func, u32 subfunc)
 {
 	int regs[4];
 #ifdef _MSC_VER
@@ -35,7 +37,7 @@ inline std::array<u32, 4> utils::get_cpuid(u32 func, u32 subfunc)
 	return {0u+regs[0], 0u+regs[1], 0u+regs[2], 0u+regs[3]};
 }
 
-inline u64 utils::get_xgetbv(u32 xcr)
+static inline u64 get_xgetbv(u32 xcr)
 {
 #ifdef _MSC_VER
 	return _xgetbv(xcr);
@@ -45,90 +47,218 @@ inline u64 utils::get_xgetbv(u32 xcr)
 	return eax | (u64(edx) << 32);
 #endif
 }
+#endif
+
+#ifdef __APPLE__
+// sysinfo_darwin.mm
+namespace Darwin_Version
+{
+	extern int getNSmajorVersion();
+	extern int getNSminorVersion();
+	extern int getNSpatchVersion();
+}
+#endif
 
 bool utils::has_ssse3()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x200;
 	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_sse41()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x80000;
 	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_avx()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x10000000 && (get_cpuid(1, 0)[2] & 0x0C000000) == 0x0C000000 && (get_xgetbv(0) & 0x6) == 0x6;
 	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_avx2()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && get_cpuid(7, 0)[1] & 0x20 && (get_cpuid(1, 0)[2] & 0x0C000000) == 0x0C000000 && (get_xgetbv(0) & 0x6) == 0x6;
 	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_rtm()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x800) == 0x800;
 	return g_value;
+#elif defined(ARCH_ARM64)
+	return false;
+#endif
 }
 
 bool utils::has_tsx_force_abort()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[3] & 0x2000) == 0x2000;
 	return g_value;
+#else
+	return false;
+#endif
+}
+
+bool utils::has_rtm_always_abort()
+{
+#if defined(ARCH_X64)
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[3] & 0x800) == 0x800;
+	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_mpx()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x4000) == 0x4000;
 	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_avx512()
 {
+#if defined(ARCH_X64)
 	// Check AVX512F, AVX512CD, AVX512DQ, AVX512BW, AVX512VL extensions (Skylake-X level support)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0xd0030000) == 0xd0030000 && (get_cpuid(1, 0)[2] & 0x0C000000) == 0x0C000000 && (get_xgetbv(0) & 0xe6) == 0xe6;
 	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_avx512_icl()
 {
+#if defined(ARCH_X64)
 	// Check AVX512IFMA, AVX512VBMI, AVX512VBMI2, AVX512VPOPCNTDQ, AVX512BITALG, AVX512VNNI, AVX512VPCLMULQDQ, AVX512GFNI, AVX512VAES (Icelake-client level support)
 	static const bool g_value = has_avx512() && (get_cpuid(7, 0)[1] & 0x00200000) == 0x00200000 && (get_cpuid(7, 0)[2] & 0x00005f42) == 0x00005f42;
 	return g_value;
+#else
+	return false;
+#endif
+}
+
+bool utils::has_avx512_vnni()
+{
+#if defined(ARCH_X64)
+	// Check AVX512VNNI
+	static const bool g_value = has_avx512() && get_cpuid(7, 0)[2] & 0x00000800;
+	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_xop()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = has_avx() && get_cpuid(0x80000001, 0)[2] & 0x800;
 	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_clwb()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x1000000) == 0x1000000;
 	return g_value;
+#else
+	return false;
+#endif
 }
 
 bool utils::has_invariant_tsc()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000007, 0)[3] & 0x100) == 0x100;
 	return g_value;
+#elif defined(ARCH_ARM64)
+	return true;
+#endif
 }
 
 bool utils::has_fma3()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x1 && get_cpuid(1, 0)[2] & 0x1000;
 	return g_value;
+#elif defined(ARCH_ARM64)
+	return true;
+#endif
 }
 
 bool utils::has_fma4()
 {
+#if defined(ARCH_X64)
 	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000001, 0)[2] & 0x10000) == 0x10000;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
+bool utils::has_erms()
+{
+#if defined(ARCH_X64)
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[1] & 0x200) == 0x200;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
+bool utils::has_fsrm()
+{
+#if defined(ARCH_X64)
+	static const bool g_value = get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(7, 0)[3] & 0x10) == 0x10;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
+u32 utils::get_rep_movsb_threshold()
+{
+	static const u32 g_value = []()
+	{
+		u32 thresh_value = umax;
+		if (has_fsrm())
+		{
+			thresh_value = 2047;
+		}
+		else if (has_erms())
+		{
+			thresh_value = 4095;
+		}
+
+		return thresh_value;
+	}();
+
 	return g_value;
 }
 
@@ -136,6 +266,7 @@ std::string utils::get_cpu_brand()
 {
 	std::string brand;
 
+#if defined(ARCH_X64)
 	if (get_cpuid(0x80000000, 0)[0] >= 0x80000004)
 	{
 		for (u32 i = 0; i < 3; i++)
@@ -147,6 +278,9 @@ std::string utils::get_cpu_brand()
 	{
 		brand = "Unknown CPU";
 	}
+#else
+	brand = "Unidentified CPU";
+#endif
 
 	brand.erase(brand.find_last_not_of('\0') + 1);
 	brand.erase(brand.find_last_not_of(' ') + 1);
@@ -230,10 +364,14 @@ std::string utils::get_system_info()
 			result += "-FA";
 		}
 
-		if (!has_mpx())
+		if (!has_mpx() || has_tsx_force_abort())
 		{
 			result += " disabled by default";
 		}
+	}
+	else if (has_rtm_always_abort())
+	{
+		result += " | TSX disabled via microcode";
 	}
 
 	return result;
@@ -241,7 +379,7 @@ std::string utils::get_system_info()
 
 std::string utils::get_firmware_version()
 {
-	const std::string file_path = g_cfg.vfs.get_dev_flash() + "vsh/etc/version.txt";
+	const std::string file_path = g_cfg_vfs.get_dev_flash() + "vsh/etc/version.txt";
 	if (fs::file version_file{file_path})
 	{
 		const std::string version_str = version_file.to_string();
@@ -300,6 +438,13 @@ std::string utils::get_OS_version()
 	fmt::append(output,
 		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %u, Service Pack: %s, Compatibility mode: %llu",
 		version_major, version_minor, build, has_sp ? holder.data() : "none", compatibility_mode);
+#elif defined (__APPLE__)
+	const int major_version = Darwin_Version::getNSmajorVersion();
+	const int minor_version = Darwin_Version::getNSminorVersion();
+	const int patch_version = Darwin_Version::getNSpatchVersion();
+
+	fmt::append(output, "Operating system: macOS, Version: %d.%d.%d",
+		major_version, minor_version, patch_version);
 #else
 	struct utsname details = {};
 
@@ -316,28 +461,34 @@ std::string utils::get_OS_version()
 	return output;
 }
 
+int utils::get_maxfiles()
+{
+#ifdef _WIN32
+	// Virtually unlimited on Windows
+	return INT_MAX;
+#else
+	struct rlimit limits;
+	ensure(getrlimit(RLIMIT_NOFILE, &limits) == 0);
+
+	return limits.rlim_cur;
+#endif
+}
+
 static constexpr ullong round_tsc(ullong val)
 {
 	return utils::rounded_div(val, 1'000'000) * 1'000'000;
-}
-
-#ifdef _MSC_VER
-extern "C" void _mm_lfence();
-#endif
-
-static inline void lfence()
-{
-#ifdef _MSC_VER
-	_mm_lfence();
-#else
-	__builtin_ia32_lfence();
-#endif
 }
 
 ullong utils::get_tsc_freq()
 {
 	static const ullong cal_tsc = []() -> ullong
 	{
+#ifdef ARCH_ARM64
+		u64 r = 0;
+		__asm__ volatile("mrs %0, cntfrq_el0" : "=r" (r));
+		return r;
+#endif
+
 		if (!has_invariant_tsc())
 			return 0;
 
@@ -374,17 +525,17 @@ ullong utils::get_tsc_freq()
 		{
 #ifdef _WIN32
 			Sleep(1);
-			error_data[i] = (lfence(), utils::get_tsc());
+			error_data[i] = (utils::lfence(), utils::get_tsc());
 			LARGE_INTEGER ctr;
 			QueryPerformanceCounter(&ctr);
-			rdtsc_data[i] = (lfence(), utils::get_tsc());
+			rdtsc_data[i] = (utils::lfence(), utils::get_tsc());
 			timer_data[i] = ctr.QuadPart;
 #else
 			usleep(200);
-			error_data[i] = (lfence(), utils::get_tsc());
+			error_data[i] = (utils::lfence(), utils::get_tsc());
 			struct timespec ts;
 			clock_gettime(CLOCK_MONOTONIC, &ts);
-			rdtsc_data[i] = (lfence(), utils::get_tsc());
+			rdtsc_data[i] = (utils::lfence(), utils::get_tsc());
 			timer_data[i] = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
 #endif
 		}
@@ -436,6 +587,7 @@ u32 utils::get_thread_count()
 
 u32 utils::get_cpu_family()
 {
+#if defined(ARCH_X64)
 	static const u32 g_value = []()
 	{
 		const u32 reg_value = get_cpuid(0x00000001, 0)[0]; // Processor feature info
@@ -453,10 +605,14 @@ u32 utils::get_cpu_family()
 	}();
 
 	return g_value;
+#elif defined(ARCH_ARM64)
+	return 0;
+#endif
 }
 
 u32 utils::get_cpu_model()
 {
+#if defined(ARCH_X64)
 	static const u32 g_value = []()
 	{
 		const u32 reg_value = get_cpuid(0x00000001, 0)[0]; // Processor feature info
@@ -475,16 +631,19 @@ u32 utils::get_cpu_model()
 	}();
 
 	return g_value;
+#elif defined(ARCH_ARM64)
+	return 0;
+#endif
 }
 
 namespace utils
 {
 	extern const u64 main_tid = []() -> u64
 	{
-	#ifdef _WIN32
+#ifdef _WIN32
 		return GetCurrentThreadId();
-	#else
+#else
 		return reinterpret_cast<u64>(pthread_self());
-	#endif
+#endif
 	}();
 }

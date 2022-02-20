@@ -10,6 +10,7 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QTreeWidgetItem>
+#include <QPainter>
 
 #include <string>
 
@@ -17,6 +18,23 @@ namespace gui
 {
 	namespace utils
 	{
+		class circle_pixmap : public QPixmap
+		{
+		public:
+			circle_pixmap(const QColor& color, qreal pixel_ratio)
+			    : QPixmap(pixel_ratio * 16, pixel_ratio * 16)
+			{
+				fill(Qt::transparent);
+
+				QPainter painter(this);
+				setDevicePixelRatio(pixel_ratio);
+				painter.setRenderHint(QPainter::Antialiasing);
+				painter.setPen(Qt::NoPen);
+				painter.setBrush(color);
+				painter.drawEllipse(0, 0, width(), height());
+			}
+		};
+
 		template<typename T>
 		static QSet<T> list_to_set(const QList<T>& list)
 		{
@@ -26,6 +44,9 @@ namespace gui
 		// Creates a frame geometry rectangle with target width and height that's centered inside the base,
 		// while still considering screen boundaries.
 		QRect create_centered_window_geometry(const QScreen* screen, const QRect& base, s32 target_width, s32 target_height);
+
+		// Creates a square pixmap while keeping the original aspect ratio of the image.
+		bool create_square_pixmap(QPixmap& pixmap, int target_size);
 
 		// Returns a custom colored QPixmap based on another QPixmap.
 		// use colorize_all to repaint every opaque pixel with the chosen color

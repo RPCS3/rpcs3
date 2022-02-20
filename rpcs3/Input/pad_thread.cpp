@@ -14,6 +14,10 @@
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/pad_config.h"
+#include "Emu/System.h"
+#include "Emu/system_config.h"
+#include "Utilities/Thread.h"
+#include "util/atomic.hpp"
 
 LOG_CHANNEL(input_log, "Input");
 
@@ -24,7 +28,6 @@ namespace pad
 	std::string g_title_id;
 	atomic_t<bool> g_reset{false};
 	atomic_t<bool> g_enabled{true};
-	atomic_t<bool> g_active{false};
 }
 
 struct pad_setting
@@ -38,19 +41,12 @@ struct pad_setting
 pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view title_id) : curthread(_curthread), curwindow(_curwindow)
 {
 	pad::g_title_id = title_id;
-	Init();
-
-	thread = std::make_shared<std::thread>(&pad_thread::ThreadFunc, this);
 	pad::g_current = this;
 }
 
 pad_thread::~pad_thread()
 {
 	pad::g_current = nullptr;
-	pad::g_active = false;
-	thread->join();
-
-	handlers.clear();
 }
 
 void pad_thread::Init()
@@ -91,8 +87,14 @@ void pad_thread::Init()
 
 	g_cfg_profile.load();
 
+	std::string active_profile = g_cfg_profile.active_profiles.get_value(pad::g_title_id);
+	if (active_profile.empty())
+	{
+		active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
+	}
+
 	// Load in order to get the pad handlers
-	if (!g_cfg_input.load(pad::g_title_id, g_cfg_profile.active_profiles.get_value(pad::g_title_id)))
+	if (!g_cfg_input.load(pad::g_title_id, active_profile))
 	{
 		input_log.notice("Loaded empty pad config");
 	}
@@ -105,7 +107,7 @@ void pad_thread::Init()
 	}
 
 	// Reload with proper defaults
-	if (!g_cfg_input.load(pad::g_title_id, g_cfg_profile.active_profiles.get_value(pad::g_title_id)))
+	if (!g_cfg_input.load(pad::g_title_id, active_profile))
 	{
 		input_log.notice("Reloaded empty pad config");
 	}
@@ -185,7 +187,7 @@ void pad_thread::Init()
 
 void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
 {
-	if (pad > m_pads.size())
+	if (pad >= m_pads.size())
 		return;
 
 	if (m_pads[pad]->m_vibrateMotors.size() >= 2)
@@ -208,81 +210,148 @@ void pad_thread::SetIntercepted(bool intercepted)
 	}
 }
 
-void pad_thread::ThreadFunc()
+void pad_thread::operator()()
 {
-	pad::g_active = true;
-	while (pad::g_active)
+	pad::g_reset = true;
+
+	atomic_t<pad_handler_mode> pad_mode{g_cfg.io.pad_mode.get()};
+	std::vector<std::unique_ptr<named_thread<std::function<void()>>>> threads;
+
+	const auto stop_threads = [&threads]()
 	{
-		if (!pad::g_enabled)
+		for (auto& thread : threads)
 		{
-			std::this_thread::sleep_for(1ms);
+			if (thread)
+			{
+				auto& enumeration_thread = *thread;
+				enumeration_thread = thread_state::aborting;
+				enumeration_thread();
+			}
+		}
+		threads.clear();
+	};
+
+	const auto start_threads = [this, &threads, &pad_mode]()
+	{
+		if (pad_mode == pad_handler_mode::single_threaded)
+		{
+			return;
+		}
+
+		for (const auto& handler : handlers)
+		{
+			if (handler.first == pad_handler::null)
+			{
+				continue;
+			}
+			
+			threads.push_back(std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Thread", handler.second->m_type), [&handler = handler.second, &pad_mode]()
+			{
+				while (thread_ctrl::state() != thread_state::aborting)
+				{
+					if (!pad::g_enabled || Emu.IsPaused())
+					{
+						thread_ctrl::wait_for(10'000);
+						continue;
+					}
+
+					handler->ThreadProc();
+
+					thread_ctrl::wait_for(g_cfg.io.pad_sleep);
+				}
+			}));
+		}
+	};
+
+	while (thread_ctrl::state() != thread_state::aborting)
+	{
+		if (!pad::g_enabled || Emu.IsPaused())
+		{
+			thread_ctrl::wait_for(10000);
 			continue;
 		}
 
-		if (pad::g_reset && pad::g_reset.exchange(false))
+		// Update variables
+		const bool needs_reset = pad::g_reset && pad::g_reset.exchange(false);
+		const bool mode_changed = pad_mode != pad_mode.exchange(g_cfg.io.pad_mode.get());
+
+		// Reset pad handlers if necessary
+		if (needs_reset || mode_changed)
 		{
-			Init();
+			stop_threads();
+
+			if (needs_reset)
+			{
+				Init();
+			}
+			else
+			{
+				input_log.success("The pad mode was changed to %s", pad_mode.load());
+			}
+
+			start_threads();
 		}
 
 		u32 connected_devices = 0;
 
+		if (pad_mode == pad_handler_mode::single_threaded)
 		{
-			std::lock_guard lock(pad::g_pad_mutex);
-
-			for (auto& cur_pad_handler : handlers)
+			for (auto& handler : handlers)
 			{
-				cur_pad_handler.second->ThreadProc();
-				connected_devices += cur_pad_handler.second->connected_devices;
+				handler.second->ThreadProc();
+				connected_devices += handler.second->connected_devices;
 			}
+		}
+		else
+		{
+			for (auto& handler : handlers)
+			{
+				connected_devices += handler.second->connected_devices;
+			}
+		}
 
-			m_info.now_connect = connected_devices + num_ldd_pad;
+		m_info.now_connect = connected_devices + num_ldd_pad;
 
-			// The input_ignored section is only reached when a dialog was closed and the pads are still intercepted.
-			// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
-			// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
-			const bool input_ignored = m_info.ignore_input && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED);
+		// The ignore_input section is only reached when a dialog was closed and the pads are still intercepted.
+		// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
+		// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
+		if (m_info.ignore_input && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED))
+		{
 			bool any_button_pressed = false;
 
-			for (usz i = 0; i < m_pads.size(); i++)
+			for (usz i = 0; i < m_pads.size() && !any_button_pressed; i++)
 			{
 				const auto& pad = m_pads[i];
 
-				// I guess this is the best place to add pressure sensitivity without too much code duplication.
-				if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
+				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+					continue;
+
+				for (auto& button : pad->m_buttons)
 				{
-					const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
-
-					for (auto& button : pad->m_buttons)
+					if (button.m_pressed && (
+						button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
+						button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
+						button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
+						button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
+						button.m_outKeyCode == CELL_PAD_CTRL_START ||
+						button.m_outKeyCode == CELL_PAD_CTRL_SELECT))
 					{
-						if (button.m_pressed)
-						{
-							if (button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
-								button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
-								button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
-								button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
-								button.m_outKeyCode == CELL_PAD_CTRL_START ||
-								button.m_outKeyCode == CELL_PAD_CTRL_SELECT)
-							{
-								any_button_pressed = true;
-							}
-
-							if (adjust_pressure)
-							{
-								button.m_value = pad->m_pressure_intensity;
-							}
-						}
+						any_button_pressed = true;
+						break;
 					}
 				}
 			}
 
-			if (input_ignored && !any_button_pressed)
+			if (!any_button_pressed)
 			{
 				m_info.ignore_input = false;
 			}
 		}
 
-		std::this_thread::sleep_for(1ms);
+		thread_ctrl::wait_for(g_cfg.io.pad_sleep);
 	}
+
+	stop_threads();
 }
 
 void pad_thread::InitLddPad(u32 handle)

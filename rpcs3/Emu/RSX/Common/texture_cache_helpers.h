@@ -50,11 +50,11 @@ namespace rsx
 	{
 		u32 address;
 		u32 gcm_format;
+		u32 pitch;
 		u16 width;
 		u16 height;
 		u16 depth;
 		u16 mipmaps;
-		u16 pitch;
 		u16 slice_h;
 		u8  bpp;
 		bool swizzled;
@@ -133,19 +133,15 @@ namespace rsx
 			return gcm_format;
 		}
 
-		static inline u32 get_sized_blit_format(bool is_32_bit, bool depth_format, bool format_conversion)
+		static inline u32 get_sized_blit_format(bool is_32_bit, bool depth_format, bool /*is_format_convert*/)
 		{
-			if (format_conversion)
-			{
-				return (is_32_bit) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-			}
-			else if (is_32_bit)
+			if (is_32_bit)
 			{
 				return (!depth_format) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			}
 			else
 			{
-				return (!depth_format) ? CELL_GCM_TEXTURE_X16 : CELL_GCM_TEXTURE_DEPTH16;
+				return (!depth_format) ? CELL_GCM_TEXTURE_R5G6B5 : CELL_GCM_TEXTURE_DEPTH16;
 			}
 		}
 
@@ -364,7 +360,7 @@ namespace rsx
 
 				const u16 dst_w = static_cast<u16>(std::get<2>(clipped).width);
 				const u16 src_w = static_cast<u16>(dst_w * attr.bpp) / section_bpp;
-				const u16 height = static_cast<u16>(dst_h);
+				const u16 height = std::min(slice_end, section_end) - dst_y;
 
 				if (scaling)
 				{
@@ -491,9 +487,9 @@ namespace rsx
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				return (surface_width >= attr.width && surface_height >= attr.height);
 			case rsx::texture_dimension_extended::texture_dimension_3d:
-				return (surface_width >= attr.width && surface_height >= (attr.slice_h * attr.depth));
+				return (surface_width >= attr.width && surface_height >= u32{attr.slice_h} * attr.depth);
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
-				return (surface_width == attr.height && surface_width >= attr.width && surface_height >= (attr.slice_h * 6));
+				return (surface_width == attr.height && surface_width >= attr.width && surface_height >= (u32{attr.slice_h} * 6));
 			}
 
 			return false;
@@ -662,7 +658,6 @@ namespace rsx
 			{
 				attr2.width = scaled_w;
 				attr2.height = scaled_h;
-				attr2.depth = 1;
 
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::cubemap_gather,
 						attr2, {},

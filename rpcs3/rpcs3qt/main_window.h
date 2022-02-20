@@ -12,6 +12,7 @@
 
 #include "update_manager.h"
 #include "settings.h"
+#include "Emu/System.h"
 
 #include <memory>
 
@@ -73,7 +74,8 @@ class main_window : public QMainWindow
 		drop_error,
 		drop_pkg,
 		drop_pup,
-		drop_rap,
+		drop_rap_edat,
+		drop_psf,
 		drop_dir,
 		drop_game,
 		drop_rrc
@@ -106,7 +108,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnPlayOrPause();
-	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
+	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	void BootElf();
 	void BootGame();
 	void BootVSH();
@@ -141,7 +143,7 @@ private:
 	void EnableMenus(bool enabled) const;
 	void ShowTitleBars(bool show) const;
 
-	static bool InstallRapFile(const QString& path, const std::string& filename);
+	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
 
 	void HandlePackageInstallation(QStringList file_paths);
 

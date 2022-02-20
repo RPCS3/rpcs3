@@ -109,9 +109,16 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	sys_io.trace("cellKbCnvRawCode(arrange=%d, mkey=%d, led=%d, rawcode=0x%x)", arrange, mkey, led, rawcode);
 
 	// CELL_KB_RAWDAT
-	if (rawcode <= 0x03 || rawcode == 0x29 || rawcode == 0x35 || (rawcode >= 0x39 && rawcode <= 0x53) || rawcode == 0x65 || rawcode == 0x88 || rawcode == 0x8A || rawcode == 0x8B)
+	if (rawcode <= CELL_KEYC_E_UNDEF ||
+		rawcode == CELL_KEYC_ESCAPE ||
+		rawcode == CELL_KEYC_106_KANJI ||
+		(rawcode >= CELL_KEYC_CAPS_LOCK && rawcode <= CELL_KEYC_NUM_LOCK) ||
+		rawcode == CELL_KEYC_APPLICATION ||
+		rawcode == CELL_KEYC_KANA ||
+		rawcode == CELL_KEYC_HENKAN ||
+		rawcode == CELL_KEYC_MUHENKAN)
 	{
-		return rawcode | 0x8000;
+		return rawcode | CELL_KB_RAWDAT;
 	}
 
 	const bool is_alt = mkey & (CELL_KB_MKEY_L_ALT | CELL_KB_MKEY_R_ALT);
@@ -123,14 +130,14 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 
 	if (is_num_lock)
 	{
-		if (rawcode == CELL_KEYC_KPAD_NUMLOCK)  return 0x00 | 0x4000;                                     // 'Num Lock'
-		if (rawcode == CELL_KEYC_KPAD_SLASH)    return 0x2F | 0x4000;                                     // '/'
-		if (rawcode == CELL_KEYC_KPAD_ASTERISK) return 0x2A | 0x4000;                                     // '*'
-		if (rawcode == CELL_KEYC_KPAD_MINUS)    return 0x2D | 0x4000;                                     // '-'
-		if (rawcode == CELL_KEYC_KPAD_PLUS)     return 0x2B | 0x4000;                                     // '+'
-		if (rawcode == CELL_KEYC_KPAD_ENTER)    return 0x0A | 0x4000;                                     // '\n'
-		if (rawcode == CELL_KEYC_KPAD_0)        return 0x30 | 0x4000;                                     // '0'
-		if (rawcode >= CELL_KEYC_KPAD_1 && rawcode <= CELL_KEYC_KPAD_9) return (rawcode - 0x28) | 0x4000; // '1' - '9'
+		//if (rawcode == CELL_KEYC_KPAD_NUMLOCK)  return 0x00 | CELL_KB_KEYPAD;                                     // 'Num Lock' (unreachable)
+		if (rawcode == CELL_KEYC_KPAD_SLASH)    return 0x2F | CELL_KB_KEYPAD;                                     // '/'
+		if (rawcode == CELL_KEYC_KPAD_ASTERISK) return 0x2A | CELL_KB_KEYPAD;                                     // '*'
+		if (rawcode == CELL_KEYC_KPAD_MINUS)    return 0x2D | CELL_KB_KEYPAD;                                     // '-'
+		if (rawcode == CELL_KEYC_KPAD_PLUS)     return 0x2B | CELL_KB_KEYPAD;                                     // '+'
+		if (rawcode == CELL_KEYC_KPAD_ENTER)    return 0x0A | CELL_KB_KEYPAD;                                     // '\n'
+		if (rawcode == CELL_KEYC_KPAD_0)        return 0x30 | CELL_KB_KEYPAD;                                     // '0'
+		if (rawcode >= CELL_KEYC_KPAD_1 && rawcode <= CELL_KEYC_KPAD_9) return (rawcode - 0x28) | CELL_KB_KEYPAD; // '1' - '9'
 	}
 
 	// ASCII
@@ -223,7 +230,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 		if (rawcode == CELL_KEYC_Q)                     return get_ascii('q', 'Q', '@');
 	}
 
-	if (rawcode >= 0x04 && rawcode <= 0x1D)                                   // 'A' - 'Z'
+	if (rawcode >= CELL_KEYC_A && rawcode <= CELL_KEYC_Z) // 'A' - 'Z'
 	{
 		rawcode -=
 			(is_shift)
@@ -231,13 +238,13 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 				: ((led & (CELL_KB_LED_CAPS_LOCK)) ? 0x20 : 0);
 		return rawcode + 0x5D;
 	}
-	if (rawcode >= 0x1E && rawcode <= 0x26) return rawcode + 0x13;            // '1' - '9'
-	if (rawcode == 0x27) return 0x30;                                         // '0'
-	if (rawcode == 0x28) return 0x0A;                                         // '\n'
-	if (rawcode == 0x29) return 0x1B;                                         // 'ESC'
-	if (rawcode == 0x2A) return 0x08;                                         // '\b'
-	if (rawcode == 0x2B) return 0x09;                                         // '\t'
-	if (rawcode == 0x2C) return 0x20;                                         // 'space'
+	if (rawcode >= CELL_KEYC_1 && rawcode <= CELL_KEYC_9) return rawcode + 0x13; // '1' - '9'
+	if (rawcode == CELL_KEYC_0) return 0x30;                                     // '0'
+	if (rawcode == CELL_KEYC_ENTER) return 0x0A;                                 // '\n'
+	//if (rawcode == CELL_KEYC_ESC) return 0x1B;                                   // 'ESC' (unreachable)
+	if (rawcode == CELL_KEYC_BS) return 0x08;                                    // '\b'
+	if (rawcode == CELL_KEYC_TAB) return 0x09;                                   // '\t'
+	if (rawcode == CELL_KEYC_SPACE) return 0x20;                                 // 'space'
 
 	// TODO: Add more keys and layouts
 
@@ -301,9 +308,22 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	data->mkey = current_data.mkey;
 	data->len = std::min<s32>(CELL_KB_MAX_KEYCODES, current_data.len);
 
-	for (s32 i = 0; i < current_data.len; i++)
+	if (current_data.len > 0)
 	{
-		data->keycode[i] = current_data.keycode[i].first;
+		for (s32 i = 0; i < current_data.len; i++)
+		{
+			data->keycode[i] = current_data.keycode[i].first;
+		}
+
+		KbConfig& current_config = handler.GetConfig(port_no);
+
+		// For single character mode to work properly we need to "flush" the buffer after reading or else we'll constantly get the same key presses with each call.
+		// Actual key repeats are handled by adding a new key code to the buffer periodically. Key releases are handled in a similar fashion.
+		// Warning: Don't do this in packet mode, which is basically the mouse and keyboard gaming mode. Otherwise games like Unreal Tournament will be unplayable.
+		if (current_config.read_mode == CELL_KB_RMODE_INPUTCHAR)
+		{
+			current_data.len = 0;
+		}
 	}
 
 	return CELL_OK;
@@ -385,6 +405,10 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 
 	KbConfig& current_config = handler.GetConfig(port_no);
 	current_config.read_mode = rmode;
+
+	// Key repeat must be disabled in packet mode. But let's just always enable it otherwise.
+	Keyboard& keyboard = handler.GetKeyboards()[port_no];
+	keyboard.m_key_repeat = rmode != CELL_KB_RMODE_PACKET;
 
 	// can also return CELL_KB_ERROR_SYS_SETTING_FAILED
 

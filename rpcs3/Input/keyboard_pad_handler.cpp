@@ -79,6 +79,24 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 	for (auto& pad : m_pads_internal)
 	{
+		// Find out if special buttons are pressed (introduced by RPCS3).
+		// Activate the buttons here if possible since keys don't auto-repeat. This ensures that they are already pressed in the following loop.
+		bool adjust_pressure = false;
+
+		if (pad.m_pressure_intensity_button_index >= 0)
+		{
+			Button& pressure_intensity_button = pad.m_buttons[pad.m_pressure_intensity_button_index];
+
+			if (pressure_intensity_button.m_keyCode == code)
+			{
+				pressure_intensity_button.m_pressed = pressed;
+				pressure_intensity_button.m_value = value;
+			}
+
+			adjust_pressure = pressure_intensity_button.m_pressed;
+		}
+
+		// Handle buttons
 		for (Button& button : pad.m_buttons)
 		{
 			if (button.m_keyCode != code)
@@ -100,35 +118,54 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 			if (update_button)
 			{
-				button.m_value = pressed ? value : 0;
+				if (pressed)
+				{
+					// Modify pressure if necessary if the button was pressed
+					button.m_value = adjust_pressure ? pad.m_pressure_intensity : value;
+				}
+				else
+				{
+					button.m_value = 0;
+				}
+
 				button.m_pressed = pressed;
 			}
 		}
 
+		// Handle sticks
 		for (usz i = 0; i < pad.m_sticks.size(); i++)
 		{
 			const bool is_max = pad.m_sticks[i].m_keyCodeMax == code;
 			const bool is_min = pad.m_sticks[i].m_keyCodeMin == code;
 
-			const u16 normalized_value = std::max<u16>(1, static_cast<u16>(std::floor(value / 2.0)));
+			if (!is_max && !is_min)
+			{
+				continue;
+			}
+
+			const bool is_left_stick = i < 2;
+
+			if (pressed)
+			{
+				value = MultipliedInput(value, is_left_stick ? m_l_stick_multiplier : m_r_stick_multiplier);
+			}
+
+			const u16 normalized_value = std::ceil(value / 2.0);
 
 			if (is_max)
-				m_stick_max[i] = pressed ? 128 + normalized_value : 128;
+				m_stick_max[i] = pressed ? std::min<int>(128 + normalized_value, 255) : 128;
 
 			if (is_min)
-				m_stick_min[i] = pressed ? normalized_value : 0;
+				m_stick_min[i] = pressed ? std::min<u8>(normalized_value, 128) : 0;
 
-			if (is_max || is_min)
+			m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
+
+			const f32 stick_lerp_factor = is_left_stick ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
+
+			// to get the fastest response time possible we don't wanna use any lerp with factor 1
+			if (stick_lerp_factor >= 1.0f)
 			{
-				m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
-
-				const f32 stick_lerp_factor = (i < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
-
-				// to get the fastest response time possible we don't wanna use any lerp with factor 1
-				if (stick_lerp_factor >= 1.0f)
-				{
-					pad.m_sticks[i].m_value = m_stick_val[i];
-				}
+				pad.m_sticks[i].m_value = m_stick_val[i];
 			}
 		}
 	}
@@ -262,6 +299,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 	case Qt::Key_S:
 	case Qt::Key_R:
 	case Qt::Key_E:
+	case Qt::Key_0:
 		if (event->modifiers() != Qt::ControlModifier)
 			handle_key();
 		break;
@@ -392,8 +430,8 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 		last_pos_y = event->y();
 	}
 
-	movement_x = m_multi_x * movement_x;
-	movement_y = m_multi_y * movement_y;
+	movement_x *= m_multi_x;
+	movement_y *= m_multi_y;
 
 	int deadzone_x = 0;
 	int deadzone_y = 0;
@@ -601,6 +639,19 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 		return "Meta";
 	case Qt::Key_NumLock:
 		return sstr(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
+#ifdef __APPLE__
+	// On macOS, the arrow keys are considered to be part of the keypad;
+	// since most Mac keyboards lack a keypad to begin with,
+	// we change them to regular arrows to avoid confusion
+	case Qt::Key_Left:
+		return "←";
+	case Qt::Key_Up:
+		return "↑";
+	case Qt::Key_Right:
+		return "→";
+	case Qt::Key_Down:
+		return "↓";
+#endif
 	default:
 		break;
 	}
@@ -633,6 +684,17 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 		return Qt::Key_Control;
 	if (keyName == "Meta")
 		return Qt::Key_Meta;
+#ifdef __APPLE__
+	// QKeySequence doesn't work properly for the arrow keys on macOS
+	if (keyName == "Num←")
+		return Qt::Key_Left;
+	if (keyName == "Num↑")
+		return Qt::Key_Up;
+	if (keyName == "Num→")
+		return Qt::Key_Right;
+	if (keyName == "Num↓")
+		return Qt::Key_Down;
+#endif
 
 	const QKeySequence seq(keyName);
 	u32 key_code = 0;
@@ -689,7 +751,7 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 
 bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id)
 {
-	if (device != pad::keyboard_device_name)
+	if (!pad || device != pad::keyboard_device_name)
 		return false;
 
 	m_pad_configs[player_id].from_string(g_cfg_input.player[player_id]->config.to_string());
@@ -707,6 +769,8 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	m_r_stick_lerp_factor = cfg->r_stick_lerp_factor / 100.0f;
 	m_analog_lerp_factor  = cfg->analog_lerp_factor / 100.0f;
 	m_trigger_lerp_factor = cfg->trigger_lerp_factor / 100.0f;
+	m_l_stick_multiplier = cfg->lstickmultiplier;
+	m_r_stick_multiplier = cfg->rstickmultiplier;
 
 	const auto find_key = [this](const cfg::string& name)
 	{
@@ -756,8 +820,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->r3),       CELL_PAD_CTRL_R3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->l3),       CELL_PAD_CTRL_L3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0,                             0x0); // Reserved (and currently not in use by rpcs3 at all)
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->ps),       CELL_PAD_CTRL_PS);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->square),   CELL_PAD_CTRL_SQUARE);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->cross),    CELL_PAD_CTRL_CROSS);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->circle),   CELL_PAD_CTRL_CIRCLE);

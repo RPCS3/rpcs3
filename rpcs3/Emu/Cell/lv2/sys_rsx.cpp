@@ -6,7 +6,9 @@
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/RSXThread.h"
+#include "util/asm.hpp"
 #include "sys_event.h"
+#include "sys_vm.h"
 
 LOG_CHANNEL(sys_rsx);
 
@@ -322,6 +324,12 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 	{
 		if (!vm::check_addr(addr, vm::page_readable | (addr < 0x20000000 ? 0 : vm::page_1m_size)))
 		{
+			return CELL_EINVAL;
+		}
+
+		if ((addr == ea || !(addr % 0x1000'0000)) && idm::check<sys_vm_t>(sys_vm_t::find_id(addr)))
+		{
+			// Virtual memory is disallowed
 			return CELL_EINVAL;
 		}
 	}
@@ -732,13 +740,20 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	case 0xFED: // hack: vblank command
 	{
+		if (get_current_cpu_thread())
+		{
+			// VBLANK thread only
+			return CELL_EINVAL;
+		}
+
 		// NOTE: There currently seem to only be 2 active heads on PS3
 		ensure(a3 < 2);
 
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
 		vm::_ref<u32>(render->device_addr + 0x30) = 1;
 
-		const u64 current_time = rsxTimeStamp();
+		// Time point is supplied in argument 4
+		const u64 current_time = a4;
 
 		driverInfo.head[a3].lastSecondVTime = current_time;
 

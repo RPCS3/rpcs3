@@ -1,8 +1,12 @@
 #pragma once
 
+#include "util/types.hpp"
+
 // Include asmjit with warnings ignored
 #define ASMJIT_EMBED
-#define ASMJIT_DEBUG
+#define ASMJIT_STATIC
+#define ASMJIT_BUILD_DEBUG
+#undef Bool
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -18,15 +22,41 @@
 #pragma GCC diagnostic ignored "-Wredundant-decls"
 #pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #pragma GCC diagnostic ignored "-Weffc++"
-#ifndef __clang__
+#ifdef __clang__
+#pragma GCC diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#else
 #pragma GCC diagnostic ignored "-Wduplicated-branches"
+#pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
 #endif
 #include <asmjit/asmjit.h>
+#if defined(ARCH_ARM64)
+#include <asmjit/a64.h>
+#endif
 #pragma GCC diagnostic pop
 #endif
 
 #include <array>
 #include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+
+#if defined(ARCH_X64)
+using native_asm = asmjit::x86::Assembler;
+using native_args = std::array<asmjit::x86::Gp, 4>;
+#elif defined(ARCH_ARM64)
+using native_asm = asmjit::a64::Assembler;
+using native_args = std::array<asmjit::a64::Gp, 4>;
+#endif
+
+void jit_announce(uptr func, usz size, std::string_view name);
+
+void jit_announce(auto* func, usz size, std::string_view name)
+{
+	jit_announce(uptr(func), size, name);
+}
 
 enum class jit_class
 {
@@ -36,17 +66,27 @@ enum class jit_class
 	spu_data,
 };
 
+struct jit_runtime_base
+{
+	jit_runtime_base() noexcept = default;
+	virtual ~jit_runtime_base() = default;
+
+	jit_runtime_base(const jit_runtime_base&) = delete;
+	jit_runtime_base& operator=(const jit_runtime_base&) = delete;
+
+	const asmjit::Environment& environment() const noexcept;
+	void* _add(asmjit::CodeHolder* code) noexcept;
+	virtual uchar* _alloc(usz size, usz align) noexcept = 0;
+};
+
 // ASMJIT runtime for emitting code in a single 2G region
-struct jit_runtime final : asmjit::HostRuntime
+struct jit_runtime final : jit_runtime_base
 {
 	jit_runtime();
 	~jit_runtime() override;
 
 	// Allocate executable memory
-	asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override;
-
-	// Do nothing (deallocation is delayed)
-	asmjit::Error _release(void* p) noexcept override;
+	uchar* _alloc(usz size, usz align) noexcept override;
 
 	// Allocate memory
 	static u8* alloc(usz size, uint align, bool exec = true) noexcept;
@@ -61,11 +101,25 @@ struct jit_runtime final : asmjit::HostRuntime
 namespace asmjit
 {
 	// Should only be used to build global functions
-	asmjit::Runtime& get_global_runtime();
+	jit_runtime_base& get_global_runtime();
+
+	// Don't use directly
+	class inline_runtime : public jit_runtime_base
+	{
+		uchar* m_data;
+		usz m_size;
+
+	public:
+		inline_runtime(uchar* data, usz size);
+
+		~inline_runtime();
+
+		uchar* _alloc(usz size, usz align) noexcept override;
+	};
 
 	// Emit xbegin and adjacent loop, return label at xbegin (don't use xabort please)
 	template <typename F>
-	[[nodiscard]] inline asmjit::Label build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback, F func)
+	[[nodiscard]] inline asmjit::Label build_transaction_enter(asmjit::x86::Assembler& c, asmjit::Label fallback, F func)
 	{
 		Label fall = c.newLabel();
 		Label begin = c.newLabel();
@@ -80,7 +134,7 @@ namespace asmjit
 		func();
 
 		// Other bad statuses are ignored regardless of repeat flag (TODO)
-		c.align(kAlignCode, 16);
+		c.align(AlignMode::kCode, 16);
 		c.bind(begin);
 		return fall;
 
@@ -88,7 +142,7 @@ namespace asmjit
 	}
 
 	// Helper to spill RDX (EDX) register for RDTSC
-	inline void build_swap_rdx_with(asmjit::X86Assembler& c, std::array<X86Gp, 4>& args, const asmjit::X86Gp& with)
+	inline void build_swap_rdx_with(asmjit::x86::Assembler& c, std::array<x86::Gp, 4>& args, const asmjit::x86::Gp& with)
 	{
 #ifdef _WIN32
 		c.xchg(args[1], with);
@@ -100,7 +154,7 @@ namespace asmjit
 	}
 
 	// Get full RDTSC value into chosen register (clobbers rax/rdx or saves only rax with other target)
-	inline void build_get_tsc(asmjit::X86Assembler& c, const asmjit::X86Gp& to = asmjit::x86::rax)
+	inline void build_get_tsc(asmjit::x86::Assembler& c, const asmjit::x86::Gp& to = asmjit::x86::rax)
 	{
 		if (&to != &x86::rax && &to != &x86::rdx)
 		{
@@ -127,21 +181,103 @@ namespace asmjit
 			c.or_(to.r64(), x86::rdx);
 		}
 	}
+
+	inline void build_init_args_from_ghc(native_asm& c, native_args& args)
+	{
+#if defined(ARCH_X64)
+		// TODO: handle case when args don't overlap with r13/rbp/r12/rbx
+		c.mov(args[0], x86::r13);
+		c.mov(args[1], x86::rbp);
+		c.mov(args[2], x86::r12);
+		c.mov(args[3], x86::rbx);
+#else
+		static_cast<void>(c);
+		static_cast<void>(args);
+#endif
+	}
+
+	inline void build_init_ghc_args(native_asm& c, native_args& args)
+	{
+#if defined(ARCH_X64)
+		// TODO: handle case when args don't overlap with r13/rbp/r12/rbx
+		c.mov(x86::r13, args[0]);
+		c.mov(x86::rbp, args[1]);
+		c.mov(x86::r12, args[2]);
+		c.mov(x86::rbx, args[3]);
+#else
+		static_cast<void>(c);
+		static_cast<void>(args);
+#endif
+	}
+
+#if defined(ARCH_X64)
+	template <uint Size>
+	struct native_vec;
+
+	template <>
+	struct native_vec<16> { using type = x86::Xmm; };
+
+	template <>
+	struct native_vec<32> { using type = x86::Ymm; };
+
+	template <>
+	struct native_vec<64> { using type = x86::Zmm; };
+
+	template <uint Size>
+	using native_vec_t = typename native_vec<Size>::type;
+
+	// if (count > step) { for (; ctr < (count - step); ctr += step) {...} count -= ctr; }
+	inline void build_incomplete_loop(native_asm& c, auto ctr, auto count, u32 step, auto&& build)
+	{
+		asmjit::Label body = c.newLabel();
+		asmjit::Label exit = c.newLabel();
+
+		ensure((step & (step - 1)) == 0);
+		c.cmp(count, step);
+		c.jbe(exit);
+		c.sub(count, step);
+		c.align(asmjit::AlignMode::kCode, 16);
+		c.bind(body);
+		build();
+		c.add(ctr, step);
+		c.sub(count, step);
+		c.ja(body);
+		c.add(count, step);
+		c.bind(exit);
+	}
+
+	// for (; count > 0; ctr++, count--)
+	inline void build_loop(native_asm& c, auto ctr, auto count, auto&& build)
+	{
+		asmjit::Label body = c.newLabel();
+		asmjit::Label exit = c.newLabel();
+
+		c.test(count, count);
+		c.jz(exit);
+		c.align(asmjit::AlignMode::kCode, 16);
+		c.bind(body);
+		build();
+		c.inc(ctr);
+		c.sub(count, 1);
+		c.ja(body);
+		c.bind(exit);
+	}
+#endif
 }
 
 // Build runtime function with asmjit::X86Assembler
-template <typename FT, typename F>
-inline FT build_function_asm(F&& builder)
+template <typename FT, typename Asm = native_asm, typename F>
+inline FT build_function_asm(std::string_view name, F&& builder)
 {
 	using namespace asmjit;
 
 	auto& rt = get_global_runtime();
 
 	CodeHolder code;
-	code.init(rt.getCodeInfo());
-	code._globalHints = asmjit::CodeEmitter::kHintOptimizedAlign;
+	code.init(rt.environment());
 
-	std::array<X86Gp, 4> args;
+#if defined(ARCH_X64)
+	native_args args;
 #ifdef _WIN32
 	args[0] = x86::rcx;
 	args[1] = x86::rdx;
@@ -153,60 +289,45 @@ inline FT build_function_asm(F&& builder)
 	args[2] = x86::rdx;
 	args[3] = x86::rcx;
 #endif
+#elif defined(ARCH_ARM64)
+	native_args args;
+	args[0] = a64::x0;
+	args[1] = a64::x1;
+	args[2] = a64::x2;
+	args[3] = a64::x3;
+#endif
 
-	X86Assembler compiler(&code);
-	builder(std::ref(compiler), args);
-	ensure(compiler.getLastError() == 0);
-
-	FT result;
-
-	if (rt.add(&result, &code))
+	Asm compiler(&code);
+	compiler.addEncodingOptions(EncodingOptions::kOptimizedAlign);
+	if constexpr (std::is_invocable_r_v<bool, F, Asm&, native_args&>)
 	{
-		return nullptr;
+		if (!builder(compiler, args))
+			return nullptr;
+	}
+	else
+	{
+		builder(compiler, args);
 	}
 
-	return result;
+	const auto result = rt._add(&code);
+	jit_announce(result, code.codeSize(), name);
+	return reinterpret_cast<FT>(uptr(result));
 }
 
 #ifdef LLVM_AVAILABLE
 
-#include <memory>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-
-#include "util/types.hpp"
-
-#ifdef _MSC_VER
-#pragma warning(push, 0)
-#else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wall"
-#pragma GCC diagnostic ignored "-Wextra"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wsuggest-override"
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Weffc++"
-#pragma GCC diagnostic ignored "-Wmissing-noreturn"
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Winconsistent-missing-override"
-#endif
-#endif
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#ifdef _MSC_VER
-#pragma warning(pop)
-#else
-#pragma GCC diagnostic pop
-#endif
+namespace llvm
+{
+	class LLVMContext;
+	class ExecutionEngine;
+	class Module;
+}
 
 // Temporary compiler interface
 class jit_compiler final
 {
 	// Local LLVM context
-	llvm::LLVMContext m_context{};
+	std::unique_ptr<llvm::LLVMContext> m_context{};
 
 	// Execution instance
 	std::unique_ptr<llvm::ExecutionEngine> m_engine{};
@@ -221,7 +342,7 @@ public:
 	// Get LLVM context
 	auto& get_context()
 	{
-		return m_context;
+		return *m_context;
 	}
 
 	auto& get_engine() const

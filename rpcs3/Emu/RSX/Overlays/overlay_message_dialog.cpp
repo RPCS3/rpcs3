@@ -5,6 +5,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
 #include "Utilities/Thread.h"
+#include "Emu/RSX/RSXThread.h"
 
 #include <thread>
 
@@ -55,6 +56,8 @@ namespace rsx
 				btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
 			}
 
+			fade_animation.duration = 0.15f;
+
 			update_custom_background();
 
 			return_code = CELL_MSGDIALOG_BUTTON_NONE;
@@ -101,11 +104,15 @@ namespace rsx
 					result.add(btn_cancel.get_compiled());
 			}
 
+			fade_animation.apply(result);
+
 			return result;
 		}
 
 		void message_dialog::on_button_pressed(pad_button button_press)
 		{
+			if (fade_animation.active) return;
+
 			switch (button_press)
 			{
 			case pad_button::cross:
@@ -124,6 +131,7 @@ namespace rsx
 					return_code = CELL_MSGDIALOG_BUTTON_YES;
 				}
 
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
 				break;
 			}
 			case pad_button::circle:
@@ -143,12 +151,20 @@ namespace rsx
 					return_code = CELL_MSGDIALOG_BUTTON_NO;
 				}
 
+				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
 				break;
 			}
 			default: return;
 			}
 
-			close(true, true);
+			fade_animation.current = color4f(1.f);
+			fade_animation.end = color4f(0.f);
+			fade_animation.active = true;
+
+			fade_animation.on_finish = [this]
+			{
+				close(true, true);
+			};
 		}
 
 		void message_dialog::close(bool use_callback, bool stop_pad_interception)
@@ -165,6 +181,12 @@ namespace rsx
 		{
 			static constexpr auto thread_name = "MsgDialog Thread"sv;
 		};
+
+		void message_dialog::update()
+		{
+			if (fade_animation.active)
+				fade_animation.update(rsx::get_current_renderer()->vblank_count);
+		}
 
 		error_code message_dialog::show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close)
 		{
@@ -186,6 +208,20 @@ namespace rsx
 				bottom_bar.translate(0, offset);
 				btn_ok.translate(0, offset);
 				btn_cancel.translate(0, offset);
+			}
+			else
+			{
+				fade_animation.current = color4f(0.f);
+				fade_animation.end = color4f(1.f);
+				fade_animation.active = true;
+			}
+
+			if (!type.se_mute_on)
+			{
+				if (type.se_normal)
+					Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ok.wav");
+				else
+					Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_system_ng.wav");
 			}
 
 			set_text(text);
@@ -242,9 +278,17 @@ namespace rsx
 			{
 				if (!exit)
 				{
-					g_fxo->get<named_thread<msg_dialog_thread>>()([&, tbit = alloc_thread_bit()]()
+					auto& dlg_thread = g_fxo->get<named_thread<msg_dialog_thread>>();
+
+					const auto notify = std::make_shared<atomic_t<bool>>(false);
+
+					dlg_thread([&, notify]()
 					{
+						const u64 tbit = alloc_thread_bit();
 						g_thread_bit = tbit;
+
+						*notify = true;
+						notify->notify_one();
 
 						if (interactive)
 						{
@@ -275,6 +319,11 @@ namespace rsx
 						thread_bits &= ~tbit;
 						thread_bits.notify_all();
 					});
+
+					while (dlg_thread < thread_state::errored && !*notify)
+					{
+						notify->wait(false, atomic_wait_timeout{1'000'000});
+					}
 				}
 			}
 

@@ -67,7 +67,6 @@ namespace vk
 		vk::clear_framebuffer_cache();
 		vk::clear_resolve_helpers();
 		vk::clear_dma_resources();
-		vk::vmm_reset();
 		vk::clear_scratch_resources();
 
 		vk::get_upload_heap()->destroy();
@@ -82,6 +81,9 @@ namespace vk
 
 		// This must be the last item destroyed
 		vk::get_resource_manager()->destroy();
+
+		// Statistics counter reset. Also verifies that everything was deleted.
+		vk::vmm_reset();
 	}
 
 	const vk::render_device *get_current_renderer()
@@ -123,6 +125,9 @@ namespace vk
 		case driver_vendor::INTEL:
 		case driver_vendor::ANV:
 			// INTEL vulkan drivers are mostly OK, workarounds are applied when creating the device
+			break;
+		case driver_vendor::MVK:
+			// Apple GPUs / moltenVK need more testing
 			break;
 		default:
 			rsx_log.warning("Unsupported device: %s", gpu_name);
@@ -167,6 +172,8 @@ namespace vk
 				vkDestroyBuffer(*g_render_device, tmp, nullptr);
 			}
 		}
+
+		descriptors::init();
 	}
 
 	VkFlags get_heap_compatible_buffer_types()

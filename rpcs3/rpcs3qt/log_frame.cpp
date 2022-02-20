@@ -60,7 +60,7 @@ struct gui_listener : logs::listener
 			packet_t p,* _new = &p;
 			_new->sev = msg;
 
-			if (show_prefix && !prefix.empty())
+			if ((msg == logs::level::fatal || show_prefix) && !prefix.empty())
 			{
 				_new->msg += "{";
 				_new->msg += prefix;
@@ -135,7 +135,7 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	}
 	else
 	{
-		m_tty_input->setPlaceholderText(tr("All User Channels"));
+		m_tty_input->setPlaceholderText(tr("All user channels"));
 	}
 
 	QVBoxLayout* tty_layout = new QVBoxLayout();
@@ -683,7 +683,7 @@ bool log_frame::eventFilter(QObject* object, QEvent* event)
 	if (event->type() == QEvent::KeyPress)
 	{
 		QKeyEvent* e = static_cast<QKeyEvent*>(event);
-		if (e->modifiers() == Qt::ControlModifier && e->key() == Qt::Key_F)
+		if (e && !e->isAutoRepeat() && e->modifiers() == Qt::ControlModifier && e->key() == Qt::Key_F)
 		{
 			if (m_find_dialog && m_find_dialog->isVisible())
 				m_find_dialog->close();

@@ -30,28 +30,30 @@ LOG_CHANNEL(ppu_loader);
 extern std::string ppu_get_function_name(const std::string& _module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
-extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr);
+extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr);
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
 // HLE function name cache
 std::vector<std::string> g_ppu_function_names;
 
-extern u32 ppu_generate_id(const char* name)
+extern u32 ppu_generate_id(std::string_view name)
 {
 	// Symbol name suffix
-	const auto suffix = "\x67\x59\x65\x99\x04\x25\x04\x90\x56\x64\x27\x49\x94\x89\x74\x1A";
+	constexpr auto suffix = "\x67\x59\x65\x99\x04\x25\x04\x90\x56\x64\x27\x49\x94\x89\x74\x1A"sv;
 
 	sha1_context ctx;
 	u8 output[20];
 
 	// Compute SHA-1 hash
 	sha1_starts(&ctx);
-	sha1_update(&ctx, reinterpret_cast<const u8*>(name), std::strlen(name));
-	sha1_update(&ctx, reinterpret_cast<const u8*>(suffix), std::strlen(suffix));
+	sha1_update(&ctx, reinterpret_cast<const u8*>(name.data()), name.size());
+	sha1_update(&ctx, reinterpret_cast<const u8*>(suffix.data()), suffix.size());
 	sha1_finish(&ctx, output);
 
-	return reinterpret_cast<le_t<u32>&>(output[0]);
+	le_t<u32> result = 0;
+	std::memcpy(&result, output, sizeof(result));
+	return result;
 }
 
 ppu_static_module::ppu_static_module(const char* name)
@@ -273,7 +275,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	};
 
 	// Initialize double-purpose fake OPD array for HLE functions
-	const auto& hle_funcs = ppu_function_manager::get(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm);
+	const auto& hle_funcs = ppu_function_manager::get(g_cfg.core.ppu_decoder != ppu_decoder_type::_static);
 
 	u32& hle_funcs_addr = g_fxo->get<ppu_function_manager>().addr;
 
@@ -331,14 +333,11 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 				g_ppu_function_names[function.second.index] = fmt::format("%s:%s", function.second.name, _module->name);
 			}
 
-			if ((function.second.flags & MFF_HIDDEN) == 0)
-			{
-				auto& flink = linkage.functions[function.first];
+			auto& flink = linkage.functions[function.first];
 
-				flink.static_func = &function.second;
-				flink.export_addr = g_fxo->get<ppu_function_manager>().func_addr(function.second.index);
-				function.second.export_addr = &flink.export_addr;
-			}
+			flink.static_func = &function.second;
+			flink.export_addr = g_fxo->get<ppu_function_manager>().func_addr(function.second.index);
+			function.second.export_addr = &flink.export_addr;
 		}
 
 		for (auto& variable : _module->variables)
@@ -392,8 +391,21 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 // For the debugger (g_ppu_function_names shouldn't change, string_view should suffice)
 extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map()
 {
-	static std::unordered_map<u32, std::string_view> res;
-	static u64 update_time = 0;
+	struct info_t
+	{
+		std::unordered_map<u32, std::string_view> res;
+		u64 update_time = 0;
+	};
+
+	static thread_local std::unique_ptr<info_t> info;
+
+	if (!info)
+	{
+		info = std::make_unique<info_t>();
+		info->res.reserve(ppu_module_manager::get().size());
+	}
+
+	auto& [res, update_time] = *info;
 
 	const auto link = g_fxo->try_get<ppu_linkage_info>();
 	const auto hle_funcs = g_fxo->try_get<ppu_function_manager>();
@@ -415,7 +427,6 @@ extern const std::unordered_map<u32, std::string_view>& get_exported_function_na
 	update_time = current_time;
 
 	res.clear();
-	res.reserve(ppu_module_manager::get().size());
 
 	for (auto& pair : ppu_module_manager::get())
 	{
@@ -528,6 +539,13 @@ struct ppu_prx_module_info
 	be_t<u32> unk5;
 };
 
+bool ppu_form_branch_to_code(u32 entry, u32 target);
+
+extern u32 ppu_get_exported_func_addr(u32 fnid, const std::string& module_name)
+{
+	return g_fxo->get<ppu_linkage_info>().modules[module_name].functions[fnid].export_addr;
+}
+
 // Load and register exports; return special exports found (nameless module)
 static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end)
 {
@@ -606,26 +624,12 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				if (_sf && (_sf->flags & MFF_FORCED_HLE))
 				{
 					// Inject a branch to the HLE implementation
-					const u32 _entry = vm::read32(faddr);
 					const u32 target = g_fxo->get<ppu_function_manager>().func_addr(_sf->index) + 4;
 
 					// Set exported function
 					flink.export_addr = target - 4;
 
-					if ((target <= _entry && _entry - target <= 0x2000000) || (target > _entry && target - _entry < 0x2000000))
-					{
-						// Use relative branch
-						vm::write32(_entry, ppu_instructions::B(target - _entry));
-					}
-					else if (target < 0x2000000)
-					{
-						// Use absolute branch if possible
-						vm::write32(_entry, ppu_instructions::B(target, true));
-					}
-					else
-					{
-						ppu_loader.fatal("Failed to patch function at 0x%x (0x%x)", _entry, target);
-					}
+					ppu_form_branch_to_code(faddr, target);
 				}
 				else
 				{
@@ -855,9 +859,9 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 
 		if (g_cfg.core.spu_debug)
 		{
-			fs::pending_file temp(fs::get_cache_dir() + "/spu_progs/" + vfs::escape(name.substr(name.find_last_of('/') + 1)) + '_' + hash.substr(4) + ".elf");
+			fs::file temp(fs::get_cache_dir() + "/spu_progs/" + vfs::escape(name.substr(name.find_last_of('/') + 1)) + '_' + hash.substr(4) + ".elf", fs::rewrite);
 
-			if (!temp.file || !(temp.file.write(obj.save()), temp.commit()))
+			if (!temp || !temp.write(obj.save()))
 			{
 				ppu_loader.error("Failed to dump SPU program from PPU executable: name='%s', hash=%s", name, hash);
 			}
@@ -1267,9 +1271,25 @@ void ppu_unload_prx(const lv2_prx& prx)
 	//	}
 	//}
 
+	// Format patch name
+	std::string hash = fmt::format("PRX-%s", fmt::base57(prx.sha1));
+
 	for (auto& seg : prx.segs)
 	{
+		if (!seg.size) continue;
+
 		vm::dealloc(seg.addr, vm::main);
+
+		const std::string hash_seg = fmt::format("%s-%u", hash, &seg - prx.segs.data());
+
+		// Deallocatte memory used for patches
+		g_fxo->get<patch_engine>().unload(hash_seg);
+
+		if (!Emu.GetTitleID().empty())
+		{
+			// Alternative patch
+			g_fxo->get<patch_engine>().unload(Emu.GetTitleID() + '-' + hash_seg);
+		}
 	}
 }
 

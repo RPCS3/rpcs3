@@ -144,10 +144,16 @@ void GLGSRender::update_draw_state()
 		bool color_mask_r = rsx::method_registers.color_mask_r(index);
 		bool color_mask_a = rsx::method_registers.color_mask_a(index);
 
-		if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+		switch (rsx::method_registers.surface_color())
 		{
-			//Map GB components onto RG
+		case rsx::surface_color_format::b8:
+			rsx::get_b8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+			break;
+		case rsx::surface_color_format::g8b8:
 			rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+			break;
+		default:
+			break;
 		}
 
 		gl_state.color_maski(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
@@ -292,13 +298,15 @@ void GLGSRender::load_texture_env()
 			if (tex.enabled())
 			{
 				*sampler_state = m_gl_texture_cache.upload_texture(cmd, tex, m_rtts);
-
-				if (m_textures_dirty[i])
-					m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
 			}
 			else
 			{
 				*sampler_state = {};
+			}
+
+			if (m_textures_dirty[i] && sampler_state->validate())
+			{
+				m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
 			}
 
 			m_textures_dirty[i] = false;
@@ -321,12 +329,16 @@ void GLGSRender::load_texture_env()
 			if (rsx::method_registers.vertex_textures[i].enabled())
 			{
 				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.vertex_textures[i], m_rtts);
-
-				if (m_vertex_textures_dirty[i])
-					m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
 			}
 			else
+			{
 				*sampler_state = {};
+			}
+
+			if (m_vertex_textures_dirty[i] && sampler_state->validate())
+			{
+				m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
+			}
 
 			m_vertex_textures_dirty[i] = false;
 		}

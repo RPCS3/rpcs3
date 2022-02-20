@@ -1,5 +1,6 @@
 #include "game_list_frame.h"
 #include "qt_utils.h"
+#include "shortcut_utils.h"
 #include "settings_dialog.h"
 #include "pad_settings_dialog.h"
 #include "table_item_delegate.h"
@@ -16,7 +17,7 @@
 
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
 #include "util/types.hpp"
@@ -162,7 +163,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 
 	connect(m_game_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
-	connect(m_game_list->horizontalHeader(), &QHeaderView::customContextMenuRequested, [this](const QPoint& pos)
+	connect(m_game_list->horizontalHeader(), &QHeaderView::customContextMenuRequested, this, [this](const QPoint& pos)
 	{
 		QMenu* configure = new QMenu(this);
 		configure->addActions(m_columnActs);
@@ -173,7 +174,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
 	connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 
-	connect(m_game_compat, &game_compatibility::DownloadStarted, [this]()
+	connect(m_game_compat, &game_compatibility::DownloadStarted, this, [this]()
 	{
 		for (const auto& game : m_game_data)
 		{
@@ -181,21 +182,11 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		}
 		Refresh();
 	});
-	connect(m_game_compat, &game_compatibility::DownloadFinished, [this]()
+	connect(m_game_compat, &game_compatibility::DownloadFinished, this, &game_list_frame::OnCompatFinished);
+	connect(m_game_compat, &game_compatibility::DownloadCanceled, this, &game_list_frame::OnCompatFinished);
+	connect(m_game_compat, &game_compatibility::DownloadError, this, [this](const QString& error)
 	{
-		for (const auto& game : m_game_data)
-		{
-			game->compat = m_game_compat->GetCompatibility(game->info.serial);
-		}
-		Refresh();
-	});
-	connect(m_game_compat, &game_compatibility::DownloadError, [this](const QString& error)
-	{
-		for (const auto& game : m_game_data)
-		{
-			game->compat = m_game_compat->GetCompatibility(game->info.serial);
-		}
-		Refresh();
+		OnCompatFinished();
 		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online compatibility database!\nFalling back to local database.\n\n%0").arg(error));
 	});
 
@@ -203,7 +194,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		m_columnActs[col]->setCheckable(true);
 
-		connect(m_columnActs[col], &QAction::triggered, [this, col](bool checked)
+		connect(m_columnActs[col], &QAction::triggered, this, [this, col](bool checked)
 		{
 			if (!checked) // be sure to have at least one column left so you can call the context menu at all time
 			{
@@ -621,19 +612,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
 			quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
 
-			// Read deprecated gui_setting values first for backwards compatibility (older than January 12th 2020).
-			// Restrict this to empty persistent settings to keep continuity.
-			if (last_played.isEmpty())
-			{
-				last_played = m_gui_settings->GetValue(gui::persistent::last_played, serial, "").toString();
-				m_gui_settings->RemoveValue(gui::persistent::last_played, serial);
-			}
-			if (playtime <= 0)
-			{
-				playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
-				m_gui_settings->RemoveValue(gui::persistent::playtime, serial);
-			}
-
 			// Set persistent_settings values if values exist
 			if (!last_played.isEmpty())
 			{
@@ -678,7 +656,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			m_mutex_cat.unlock();
 
 			const auto compat = m_game_compat->GetCompatibility(game.serial);
-			const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial)) || fs::is_file(rpcs3::utils::get_custom_config_path(game.serial, true));
+			const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
 			const bool hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
 			const bool has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
@@ -825,6 +803,15 @@ void game_list_frame::OnRepaintFinished()
 	}
 }
 
+void game_list_frame::OnCompatFinished()
+{
+	for (const auto& game : m_game_data)
+	{
+		game->compat = m_game_compat->GetCompatibility(game->info.serial);
+	}
+	Refresh();
+}
+
 void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool show)
 {
 	if (show)
@@ -954,6 +941,36 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 
 	menu.addAction(boot);
+
+	{
+		QAction* boot_default = menu.addAction(is_current_running_game
+			? tr("&Reboot with default configuration")
+			: tr("&Boot with default configuration"));
+
+		connect(boot_default, &QAction::triggered, [this, gameinfo]
+		{
+			sys_log.notice("Booting from gamelist per context menu...");
+			Q_EMIT RequestBoot(gameinfo, cfg_mode::default_config);
+		});
+
+		QAction* boot_manual = menu.addAction(is_current_running_game
+			? tr("&Reboot with manually selected configuration")
+			: tr("&Boot with manually selected configuration"));
+
+		connect(boot_manual, &QAction::triggered, [this, gameinfo]
+		{
+			if (std::string file_path = sstr(QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)"))); !file_path.empty())
+			{
+				sys_log.notice("Booting from gamelist per context menu...");
+				Q_EMIT RequestBoot(gameinfo, cfg_mode::custom_selection, file_path);
+			}
+			else
+			{
+				sys_log.notice("Manual config selection aborted.");
+			}
+		});
+	}
+
 	menu.addSeparator();
 
 	QAction* configure = menu.addAction(gameinfo->hasCustomConfig
@@ -964,6 +981,34 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		: tr("&Create Custom Gamepad Configuration"));
 	QAction* configure_patches = menu.addAction(tr("&Manage Game Patches"));
 	QAction* create_ppu_cache = menu.addAction(tr("&Create PPU Cache"));
+#ifndef __APPLE__
+	menu.addSeparator();
+	const auto on_shortcut = [this, gameinfo](bool is_desktop_shortcut)
+	{
+		const std::string target_cli_args = fmt::format("--no-gui \"%s\"", gameinfo->info.path);
+		const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
+
+		if (gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, is_desktop_shortcut))
+		{
+			game_list_log.success("Created %s shortcut for %s", is_desktop_shortcut ? "desktop" : "application menu", sstr(qstr(gameinfo->info.name).simplified()));
+			QMessageBox::information(this, tr("Success!"), tr("Successfully created a shortcut."));
+		}
+		else
+		{
+			game_list_log.error("Failed to create %s shortcut for %s", is_desktop_shortcut ? "desktop" : "application menu", sstr(qstr(gameinfo->info.name).simplified()));
+			QMessageBox::warning(this, tr("Warning!"), tr("Failed to create a shortcut!"));
+		}
+	};
+	QMenu* shortcut_menu = menu.addMenu(tr("&Create Shortcut"));
+	QAction* create_desktop_shortcut = shortcut_menu->addAction(tr("&Create Desktop Shortcut"));
+	connect(create_desktop_shortcut, &QAction::triggered, this, [this, gameinfo, on_shortcut](){ on_shortcut(true); });
+#ifdef _WIN32
+	QAction* create_start_menu_shortcut = shortcut_menu->addAction(tr("&Create Start Menu Shortcut"));
+#else
+	QAction* create_start_menu_shortcut = shortcut_menu->addAction(tr("&Create Application Menu Shortcut"));
+#endif
+	connect(create_start_menu_shortcut, &QAction::triggered, this, [this, gameinfo, on_shortcut](){ on_shortcut(false); });
+#endif
 	menu.addSeparator();
 	QAction* rename_title = menu.addAction(tr("&Rename In Game List"));
 	QAction* hide_serial = menu.addAction(tr("&Hide From Game List"));
@@ -1030,15 +1075,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_config_dir = menu.addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [current_game]()
 		{
-			const std::string new_config_path = rpcs3::utils::get_custom_config_path(current_game.serial);
+			const std::string config_path = rpcs3::utils::get_custom_config_path(current_game.serial);
 
-			if (fs::is_file(new_config_path))
-				gui::utils::open_dir(new_config_path);
-
-			const std::string old_config_path = rpcs3::utils::get_custom_config_path(current_game.serial, true);
-
-			if (fs::is_file(old_config_path))
-				gui::utils::open_dir(old_config_path);
+			if (fs::is_file(config_path))
+				gui::utils::open_dir(config_path);
 		});
 	}
 	if (fs::is_dir(data_base_dir))
@@ -1209,7 +1249,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(boot, &QAction::triggered, this, [this, gameinfo]()
 	{
 		sys_log.notice("Booting from gamelist per context menu...");
-		Q_EMIT RequestBoot(gameinfo, gameinfo->hasCustomConfig);
+		Q_EMIT RequestBoot(gameinfo, cfg_mode::global);
 	});
 	connect(configure, &QAction::triggered, this, [this, current_game, gameinfo]()
 	{
@@ -1391,8 +1431,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 bool game_list_frame::CreatePPUCache(const std::string& path, const std::string& serial)
 {
-	Emu.SetForceBoot(true);
-	Emu.Stop();
+	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
 	if (const auto error = Emu.BootGame(path, serial, true); error != game_boot_result::no_errors)
@@ -1411,10 +1450,9 @@ bool game_list_frame::CreatePPUCache(const game_info& game)
 
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
 {
-	const std::string config_path_new = rpcs3::utils::get_custom_config_path(title_id);
-	const std::string config_path_old = rpcs3::utils::get_custom_config_path(title_id, true);
+	const std::string path = rpcs3::utils::get_custom_config_path(title_id);
 
-	if (!fs::is_file(config_path_new) && !fs::is_file(config_path_old))
+	if (!fs::is_file(path))
 		return true;
 
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove custom game configuration?")) != QMessageBox::Yes)
@@ -1422,12 +1460,8 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, con
 
 	bool result = true;
 
-	for (const std::string& path : { config_path_new, config_path_old })
+	if (fs::is_file(path))
 	{
-		if (!fs::is_file(path))
-		{
-			continue;
-		}
 		if (fs::remove_file(path))
 		{
 			if (game)
@@ -1465,6 +1499,11 @@ bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, 
 		? tr("Remove custom pad configuration?\nYour configuration will revert to the global pad settings.")
 		: tr("Remove custom pad configuration?")) != QMessageBox::Yes)
 		return true;
+
+	g_cfg_profile.load();
+	g_cfg_profile.active_profiles.erase(title_id);
+	g_cfg_profile.save();
+	game_list_log.notice("Removed active pad profile entry for key '%s'", title_id);
 
 	if (QDir(qstr(config_dir)).removeRecursively())
 	{
@@ -1618,7 +1657,7 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 
 void game_list_frame::BatchCreatePPUCaches()
 {
-	const std::string vsh_path = g_cfg.vfs.get_dev_flash() + "vsh/module/";
+	const std::string vsh_path = g_cfg_vfs.get_dev_flash() + "vsh/module/";
 	const bool vsh_exists = fs::is_file(vsh_path + "vsh.self");
 	const u32 total = m_game_data.size() + (vsh_exists ? 1 : 0);
 
@@ -1690,7 +1729,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		if (!Emu.IsStopped())
 		{
 			QApplication::processEvents();
-			Emu.Stop();
+			Emu.GracefulShutdown(false);
 		}
 
 		if (!pdlg->wasCanceled())
@@ -2211,7 +2250,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 				return true;
 			}
 		}
-		else
+		else if (!key_event->isAutoRepeat())
 		{
 			if (key_event->key() == Qt::Key_Enter || key_event->key() == Qt::Key_Return)
 			{
@@ -2250,7 +2289,10 @@ void game_list_frame::PopulateGameList()
 
 	const std::string selected_item = CurrentSelectionPath();
 
+	// Release old data
+	m_game_grid->clear_list();
 	m_game_list->clear_list();
+
 	m_game_list->setRowCount(m_game_data.size());
 
 	// Default locale. Uses current Qt application language.
@@ -2281,7 +2323,7 @@ void game_list_frame::PopulateGameList()
 
 		icon_item->set_icon_func([this, icon_item, game](int)
 		{
-			ensure(icon_item);
+			ensure(icon_item && game);
 
 			if (QMovie* movie = icon_item->movie(); movie && icon_item->get_active())
 			{
@@ -2290,6 +2332,12 @@ void game_list_frame::PopulateGameList()
 			else
 			{
 				icon_item->setData(Qt::DecorationRole, game->pxmap);
+
+				if (!game->has_hover_gif)
+				{
+					game->pxmap = {};
+				}
+
 				if (movie)
 				{
 					movie->stop();
@@ -2329,7 +2377,7 @@ void game_list_frame::PopulateGameList()
 		compat_item->setToolTip(game->compat.tooltip);
 		if (!game->compat.color.isEmpty())
 		{
-			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatioF() * 2));
+			compat_item->setData(Qt::DecorationRole, gui::utils::circle_pixmap(game->compat.color, devicePixelRatioF() * 2));
 		}
 
 		// Version
@@ -2396,6 +2444,8 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	const std::string selected_item = CurrentSelectionPath();
 
+	// Release old data
+	m_game_list->clear_list();
 	m_game_grid->deleteLater();
 
 	const bool show_text = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
@@ -2511,7 +2561,7 @@ std::string game_list_frame::CurrentSelectionPath()
 			item = m_game_list->item(m_game_list->currentRow(), 0);
 		}
 	}
-	else
+	else if (m_game_grid)
 	{
 		if (!m_game_grid->selectedItems().isEmpty())
 		{

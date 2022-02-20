@@ -157,25 +157,11 @@ public:
 Q_SIGNALS:
 	void DownloadStarted();
 	void DownloadFinished();
+	void DownloadCanceled();
 	void DownloadError(const QString& error);
 
 private Q_SLOTS:
 	void handle_download_error(const QString& error);
 	void handle_download_finished(const QByteArray& content);
-};
-
-class compat_pixmap : public QPixmap
-{
-public:
-	compat_pixmap(const QColor& color, qreal pixel_ratio) : QPixmap(pixel_ratio * 16, pixel_ratio * 16)
-	{
-		fill(Qt::transparent);
-
-		QPainter painter(this);
-		setDevicePixelRatio(pixel_ratio);
-		painter.setRenderHint(QPainter::Antialiasing);
-		painter.setPen(Qt::NoPen);
-		painter.setBrush(color);
-		painter.drawEllipse(0, 0, width(), height());
-	}
+	void handle_download_canceled();
 };

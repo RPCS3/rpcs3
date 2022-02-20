@@ -43,7 +43,7 @@ extern sky_portal g_skyportal;
 class usb_device_skylander : public usb_device_emulated
 {
 public:
-	usb_device_skylander();
+	usb_device_skylander(const std::array<u8, 7>& location);
 	~usb_device_skylander();
 
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;

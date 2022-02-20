@@ -5,6 +5,12 @@
 
 namespace utils
 {
+#ifdef _WIN32
+	using native_handle = void*;
+#else
+	using native_handle = int;
+#endif
+
 	// Memory protection type
 	enum class protection
 	{
@@ -17,7 +23,7 @@ namespace utils
 
 	/**
 	* Reserve `size` bytes of virtual memory and returns it.
-	* The memory should be commited before usage.
+	* The memory should be committed before usage.
 	*/
 	void* memory_reserve(usz size, void* use_addr = nullptr);
 
@@ -42,6 +48,9 @@ namespace utils
 
 	// Lock pages in memory
 	bool memory_lock(void* pointer, usz size);
+
+	// Map file descriptor
+	void* memory_map_fd(native_handle fd, usz size, protection prot);
 
 	// Shared memory handle
 	class shm

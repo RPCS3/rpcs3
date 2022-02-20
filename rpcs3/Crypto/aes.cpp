@@ -32,6 +32,8 @@
 #include "aes.h"
 #include "aesni.h"
 
+#include <algorithm>
+
 /*
  * 32-bit integer manipulation macros (little endian)
  */
@@ -459,8 +461,10 @@ int aes_setkey_enc( aes_context *ctx, const unsigned char *key, unsigned int key
 
     ctx->rk = RK = ctx->buf;
 
+#if defined(__SSE2__) || defined(_M_X64)
     if( aesni_supports( POLARSSL_AESNI_AES ) )
         return( aesni_setkey_enc( reinterpret_cast<unsigned char*>(ctx->rk), key, keysize ) );
+#endif
 
     for( i = 0; i < (keysize >> 5); i++ )
     {
@@ -562,12 +566,14 @@ int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int key
     if( ret != 0 )
         return( ret );
 
+#if defined(__SSE2__) || defined(_M_X64)
     if( aesni_supports( POLARSSL_AESNI_AES ) )
     {
         aesni_inverse_key( reinterpret_cast<unsigned char*>(ctx->rk),
                            reinterpret_cast<const unsigned char*>(cty.rk), ctx->nr );
         goto done;
     }
+#endif
 
     SK = cty.rk + cty.nr * 4;
 
@@ -593,7 +599,8 @@ int aes_setkey_dec( aes_context *ctx, const unsigned char *key, unsigned int key
     *RK++ = *SK++;
 
 done:
-    memset( &cty, 0, sizeof( aes_context ) );
+    // Wipe the stack buffer clean
+    std::fill_n(reinterpret_cast<volatile char*>(&cty), sizeof(cty), 0);
 
     return( 0 );
 }
@@ -655,8 +662,10 @@ int aes_crypt_ecb( aes_context *ctx,
     int i;
     uint32_t *RK, X0, X1, X2, X3, Y0, Y1, Y2, Y3;
 
+#if defined(__SSE2__) || defined(_M_X64)
     if( aesni_supports( POLARSSL_AESNI_AES ) )
         return( aesni_crypt_ecb( ctx, mode, input, output ) );
+#endif
 
     RK = ctx->rk;
 

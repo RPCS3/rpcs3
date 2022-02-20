@@ -114,6 +114,11 @@ movie_item* game_list_grid::addItem(const game_info& app, const QString& name, c
 			painter.drawImage(offset, bg_img);
 			painter.drawPixmap(offset, app->pxmap);
 
+			if (!app->has_hover_gif)
+			{
+				app->pxmap = {};
+			}
+
 			if (movie)
 			{
 				movie->stop();

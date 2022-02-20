@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Utilities/File.h"
-#include "Utilities/JIT.h"
 #include "Utilities/lockless.h"
 #include "SPUThread.h"
 #include <vector>

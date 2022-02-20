@@ -1343,6 +1343,27 @@ static bool IsSelfElf32(const fs::file& f)
 	return (elf_class[4] == 1);
 }
 
+static bool IsDebugSelf(const fs::file& f)
+{
+	if (f.size() < 0x18)
+	{
+		return false;
+	}
+
+	// Get the key version.
+	f.seek(0x08);
+
+	const u16 key_version = f.read<le_t<u16>>();
+
+	// Check for DEBUG version.
+	if (key_version == 0x80 || key_version == 0xc0)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 static bool CheckDebugSelf(fs::file& s)
 {
 	if (s.size() < 0x18)
@@ -1442,7 +1463,7 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 
 	self.seek(0);
 
-	if (self.size() >= 4 && self.read<u32>() == "SCE\0"_u32)
+	if (self.size() >= 4 && self.read<u32>() == "SCE\0"_u32 && !IsDebugSelf(self))
 	{
 		// Check the ELF file class (32 or 64 bit).
 		const bool isElf32 = IsSelfElf32(self);

@@ -13,6 +13,16 @@ namespace vk
 
 		void clear()
 		{
+			if (!allocations.empty())
+			{
+				rsx_log.error("Leaking memory allocations!");
+				for (auto& leak : allocations)
+				{
+					rsx_log.error("Memory handle 0x%llx (%llu bytes) allocated from pool %d was not freed.",
+						leak.first, leak.second.size, static_cast<int>(leak.second.pool));
+				}
+			}
+
 			allocations.clear();
 			memory_usage.clear();
 			pool_usage.clear();
@@ -29,6 +39,33 @@ namespace vk
 	resource_manager* get_resource_manager()
 	{
 		return &g_resource_manager;
+	}
+
+	void resource_manager::trim()
+	{
+		// For any managed resources, try to keep the number of unused/idle resources as low as possible.
+		// Improves search times as well as keeping us below the hardware limit.
+		const auto limits = get_current_renderer()->gpu().get_limits();
+		const auto allocated_sampler_count = vmm_get_application_pool_usage(VMM_ALLOCATION_POOL_SAMPLER);
+		const auto max_allowed_samplers = std::min((limits.maxSamplerAllocationCount * 3u) / 4u, 2048u);
+
+		if (allocated_sampler_count > max_allowed_samplers)
+		{
+			ensure(max_allowed_samplers);
+			rsx_log.warning("Trimming allocated samplers. Allocated = %u, Max = %u", allocated_sampler_count, limits.maxSamplerAllocationCount);
+
+			for (auto It = m_sampler_pool.begin(); It != m_sampler_pool.end();)
+			{
+				if (!It->second->has_refs())
+				{
+					dispose(It->second);
+					It = m_sampler_pool.erase(It);
+					continue;
+				}
+
+				++It;
+			}
+		}
 	}
 
 	u64 get_event_id()
@@ -211,5 +248,17 @@ namespace vk
 		{
 			vmm_handle_memory_pressure(load_severity);
 		}
+	}
+
+	void vmm_notify_object_allocated(vmm_allocation_pool pool)
+	{
+		ensure(pool >= VMM_ALLOCATION_POOL_SAMPLER);
+		g_vmm_stats.pool_usage[pool]++;
+	}
+
+	void vmm_notify_object_freed(vmm_allocation_pool pool)
+	{
+		ensure(pool >= VMM_ALLOCATION_POOL_SAMPLER);
+		g_vmm_stats.pool_usage[pool]--;
 	}
 }

@@ -3,7 +3,14 @@
 #include <QObject>
 #include "util/atomic.hpp"
 
-class curl_handle;
+namespace rpcs3
+{
+	namespace curl
+	{
+		class curl_handle;
+	}
+}
+
 class progress_dialog;
 
 class downloader : public QObject
@@ -30,12 +37,13 @@ private Q_SLOTS:
 Q_SIGNALS:
 	void signal_download_error(const QString& error);
 	void signal_download_finished(const QByteArray& data);
+	void signal_download_canceled();
 	void signal_buffer_update(int size, int max);
 
 private:
 	QWidget* m_parent = nullptr;
 
-	curl_handle* m_curl = nullptr;
+	rpcs3::curl::curl_handle* m_curl = nullptr;
 	QByteArray m_curl_buf;
 	atomic_t<bool> m_curl_abort = false;
 	atomic_t<bool> m_curl_success = false;

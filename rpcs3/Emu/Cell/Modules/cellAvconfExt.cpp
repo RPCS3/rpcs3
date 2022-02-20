@@ -81,8 +81,8 @@ avconf_manager::avconf_manager()
 			devices[curindex].portType                  = CELL_AUDIO_IN_PORT_USB;
 			devices[curindex].availableModeCount        = 1;
 			devices[curindex].state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
-			devices[curindex].deviceId                  = 0x57A3C0DE;
-			devices[curindex].type                      = 0xC0DE57A3;
+			devices[curindex].deviceId                  = 0x00000001;
+			devices[curindex].type                      = 0x14150000;
 			devices[curindex].availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
 			devices[curindex].availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
 			devices[curindex].availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
@@ -201,12 +201,17 @@ error_code cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 {
 	cellAvconfExt.warning("cellVideoOutGetGamma(videoOut=%d, gamma=*0x%x)", videoOut, gamma);
 
+	if (!gamma)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
-	auto& conf = g_fxo->get<rsx::avconf>();
+	const auto& conf = g_fxo->get<rsx::avconf>();
 
 	*gamma = conf.gamma;
 
@@ -300,6 +305,11 @@ error_code cellAudioInUnregisterDevice(u32 deviceNumber)
 error_code cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 {
 	cellAvconfExt.warning("cellVideoOutGetScreenSize(videoOut=%d, screenSize=*0x%x)", videoOut, screenSize);
+
+	if (!screenSize)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{

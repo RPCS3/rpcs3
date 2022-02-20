@@ -89,17 +89,32 @@ namespace rsx
 			return color4f(r / 255.f, g / 255.f, b / 255.f, a / 255.f * opacity);
 		}
 
-		void perf_metrics_overlay::reset_transform(label& elm, u16 bottom_margin) const
+		void perf_metrics_overlay::reset_transform(label& elm) const
 		{
-			const u32 text_padding = m_font_size / 2;
-
 			// left, top, right, bottom
-			const areau padding { text_padding, text_padding - 4, text_padding, text_padding };
+			const areau padding { m_padding, m_padding - std::min<u32>(4, m_padding), m_padding, m_padding };
 			const positionu margin { m_margin_x, m_margin_y };
 			positionu pos;
 
-			const auto overlay_width = m_body.w + margin.x;
-			const auto overlay_height = m_body.h + margin.y;
+			u16 graph_width = 0;
+			u16 graph_height = 0;
+
+			if (m_framerate_graph_enabled)
+			{
+				graph_width = std::max(graph_width, m_fps_graph.w);
+				graph_height += m_fps_graph.get_height();
+			}
+
+			if (m_frametime_graph_enabled)
+			{
+				graph_width = std::max(graph_width, m_frametime_graph.w);
+				graph_height += m_frametime_graph.get_height();
+			}
+
+			if (graph_height > 0 && m_body.h > 0)
+			{
+				graph_height += m_padding;
+			}
 
 			switch (m_quadrant)
 			{
@@ -108,27 +123,27 @@ namespace rsx
 				pos.y = margin.y;
 				break;
 			case screen_quadrant::top_right:
-				pos.x = virtual_width - overlay_width;
+				pos.x = virtual_width - std::max(m_body.w, graph_width) - margin.x;
 				pos.y = margin.y;
 				break;
 			case screen_quadrant::bottom_left:
 				pos.x = margin.x;
-				pos.y = virtual_height - overlay_height - bottom_margin;
+				pos.y = virtual_height - m_body.h - graph_height - margin.y;
 				break;
 			case screen_quadrant::bottom_right:
-				pos.x = virtual_width - overlay_width;
-				pos.y = virtual_height - overlay_height - bottom_margin;
+				pos.x = virtual_width - std::max(m_body.w, graph_width) - margin.x;
+				pos.y = virtual_height - m_body.h - graph_height - margin.y;
 				break;
 			}
 
 			if (m_center_x)
 			{
-				pos.x = (virtual_width - m_body.w) / 2;
+				pos.x = (virtual_width - std::max(m_body.w, graph_width)) / 2;
 			}
 
 			if (m_center_y)
 			{
-				pos.y = (virtual_height - m_body.h - bottom_margin) / 2;
+				pos.y = (virtual_height - m_body.h - graph_height) / 2;
 			}
 
 			elm.set_pos(pos.x, pos.y);
@@ -137,42 +152,29 @@ namespace rsx
 
 		void perf_metrics_overlay::reset_transforms()
 		{
-			const u16 perf_overlay_padding = m_font_size / 2;
-
 			const u16 fps_graph_h = 60;
 			const u16 frametime_graph_h = 45;
 
-			u16 bottom_margin{};
-
-			if (m_framerate_graph_enabled || m_frametime_graph_enabled)
+			if (m_framerate_graph_enabled)
 			{
-				// Adjust body size to account for the graphs
-				// TODO: Bit hacky, could do this with margins if overlay_element had bottom margin (or negative top at least)
-				bottom_margin = perf_overlay_padding;
+				m_fps_graph.set_size(m_fps_graph.w, fps_graph_h);
+			}
 
-				if (m_framerate_graph_enabled)
-				{
-					m_fps_graph.set_size(m_fps_graph.w, fps_graph_h);
-					bottom_margin += m_fps_graph.get_height();
-				}
-
-				if (m_frametime_graph_enabled)
-				{
-					m_frametime_graph.set_size(m_frametime_graph.w, frametime_graph_h);
-					bottom_margin += m_frametime_graph.get_height();
-				}
+			if (m_frametime_graph_enabled)
+			{
+				m_frametime_graph.set_size(m_frametime_graph.w, frametime_graph_h);
 			}
 
 			// Set body/titles transform
 			if (m_force_repaint)
 			{
-				reset_body(bottom_margin);
-				reset_titles(bottom_margin);
+				reset_body();
+				reset_titles();
 			}
 			else
 			{
-				reset_transform(m_body, bottom_margin);
-				reset_transform(m_titles, bottom_margin);
+				reset_transform(m_body);
+				reset_transform(m_titles);
 			}
 
 			if (m_framerate_graph_enabled || m_frametime_graph_enabled)
@@ -184,7 +186,7 @@ namespace rsx
 
 				if (m_body.h > 0)
 				{
-					y_offset += m_body.h + perf_overlay_padding;
+					y_offset += m_body.h + m_padding;
 				}
 
 				if (m_framerate_graph_enabled)
@@ -215,20 +217,20 @@ namespace rsx
 			m_force_repaint = false;
 		}
 
-		void perf_metrics_overlay::reset_body(u16 bottom_margin)
+		void perf_metrics_overlay::reset_body()
 		{
 			m_body.set_font(m_font.c_str(), m_font_size);
 			m_body.fore_color = convert_color_code(m_color_body, m_opacity);
 			m_body.back_color = convert_color_code(m_background_body, m_opacity);
-			reset_transform(m_body, bottom_margin);
+			reset_transform(m_body);
 		}
 
-		void perf_metrics_overlay::reset_titles(u16 bottom_margin)
+		void perf_metrics_overlay::reset_titles()
 		{
 			m_titles.set_font(m_font.c_str(), m_font_size);
 			m_titles.fore_color = convert_color_code(m_color_title, m_opacity);
 			m_titles.back_color = convert_color_code(m_background_title, m_opacity);
-			reset_transform(m_titles, bottom_margin);
+			reset_transform(m_titles);
 
 			switch (m_detail)
 			{
@@ -244,22 +246,23 @@ namespace rsx
 
 		void perf_metrics_overlay::init()
 		{
+			m_padding = m_font_size / 2;
 			m_fps_graph.set_one_percent_sort_high(false);
 			m_frametime_graph.set_one_percent_sort_high(true);
 
 			reset_transforms();
 			force_next_update();
 
-			if (m_is_initialised)
+			if (!m_is_initialised)
 			{
-				update();
-				return;
+				m_update_timer.Start();
+				m_frametime_timer.Start();
 			}
 
-			m_update_timer.Start();
-			m_frametime_timer.Start();
-
 			update();
+
+			// The text might have changed during the update. Recalculate positions.
+			reset_transforms();
 
 			m_is_initialised = true;
 			visible = true;
@@ -373,6 +376,7 @@ namespace rsx
 				return;
 
 			m_font_size = font_size;
+			m_padding = m_font_size / 2;
 
 			m_force_repaint = true;
 		}

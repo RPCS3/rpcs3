@@ -7,16 +7,19 @@
 #include "Utilities/File.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_progress.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
+#include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/RSX/rsx_utils.h"
 
-#include <QCoreApplication>
+#include <QApplication>
 #include <QDateTime>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <QPainter>
 #include <QScreen>
+#include <QSound>
 
 #include <string>
 #include <thread>
@@ -46,8 +49,10 @@
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 LOG_CHANNEL(mark_log, "MARK");
+LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_disable_frame_limit;
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -123,7 +128,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	m_tb_progress->setVisible(false);
 
 #elif HAVE_QTDBUS
-	UpdateProgress(0);
+	UpdateProgress(0, false);
 	m_progress_value = 0;
 #endif
 }
@@ -265,6 +270,14 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			return;
 		}
 		break;
+	case Qt::Key_F10:
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+		{
+			g_disable_frame_limit = !g_disable_frame_limit;
+			gui_log.warning("%s boost mode", g_disable_frame_limit.load() ? "Enabled" : "Disabled");
+			return;
+		}
+		break;
 	case Qt::Key_F12:
 		screenshot_toggle = true;
 		break;
@@ -275,7 +288,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 
 void gs_frame::toggle_fullscreen()
 {
-	Emu.CallAfter([this]()
+	Emu.CallFromMainThread([this]()
 	{
 		if (visibility() == FullScreen)
 		{
@@ -346,13 +359,20 @@ bool gs_frame::get_mouse_lock_state()
 
 void gs_frame::close()
 {
-	Emu.CallAfter([this]()
+	gui_log.notice("Closing game window");
+
+	Emu.CallFromMainThread([this]()
 	{
-		QWindow::hide(); // Workaround
+		if (!(+g_progr))
+		{
+			// Hide the dialog before stopping if no progress bar is being shown.
+			// Otherwise users might think that the game softlocked if stopping takes too long.
+			QWindow::hide();
+		}
 
 		if (!Emu.IsStopped())
 		{
-			Emu.Stop();
+			Emu.GracefulShutdown(true, false);
 		}
 
 		deleteLater();
@@ -366,12 +386,12 @@ bool gs_frame::shown()
 
 void gs_frame::hide()
 {
-	Emu.CallAfter([this]() { QWindow::hide(); });
+	Emu.CallFromMainThread([this]() { QWindow::hide(); });
 }
 
 void gs_frame::show()
 {
-	Emu.CallAfter([this]()
+	Emu.CallFromMainThread([this]()
 	{
 		QWindow::show();
 		if (g_cfg.misc.start_fullscreen)
@@ -487,7 +507,7 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 		{
 			m_window_title = new_title;
 
-			Emu.CallAfter([this, title = std::move(new_title)]()
+			Emu.CallFromMainThread([this, title = std::move(new_title)]()
 			{
 				setTitle(qstr(title));
 			});
@@ -505,15 +525,26 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 		{
 			screenshot_log.notice("Taking screenshot (%dx%d)", sshot_width, sshot_height);
 
+			const std::string& id = Emu.GetTitleID();
 			std::string screen_path = fs::get_config_dir() + "screenshots/";
+			if (!id.empty())
+			{
+				screen_path += id + "/";
+			};
 
-			if (!fs::create_dir(screen_path) && fs::g_tls_error != fs::error::exist)
+			if (!fs::create_path(screen_path) && fs::g_tls_error != fs::error::exist)
 			{
 				screenshot_log.error("Failed to create screenshot path \"%s\" : %s", screen_path, fs::g_tls_error);
 				return;
 			}
 
-			const std::string filename = screen_path + "screenshot-" + date_time::current_time_narrow<'_'>() + ".png";
+			std::string filename = screen_path;
+			if (!id.empty())
+			{
+				filename += id + "_";
+			};
+
+			filename += "screenshot_" + date_time::current_time_narrow<'_'>() + ".png";
 
 			fs::file sshot_file(filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
 			if (!sshot_file)
@@ -597,16 +628,30 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			text[num_text].key         = const_cast<char*>("Comment");
 			text[num_text].text        = const_cast<char*>(game_comment.c_str());
 
-			std::vector<u8*> rows(sshot_height);
-			for (usz y = 0; y < sshot_height; y++)
-				rows[y] = sshot_data_alpha.data() + y * sshot_width * 4;
+			// Create image from data
+			QImage img(sshot_data_alpha.data(), sshot_width, sshot_height, sshot_width * 4, QImage::Format_RGBA8888);
+
+			// Scale image if necessary
+			const auto& avconf = g_fxo->get<rsx::avconf>();
+			auto new_size = avconf.aspect_convert_dimensions(size2u{ u32(img.width()), u32(img.height()) });
+
+			if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
+			{
+				img = img.scaled(QSize(new_size.width, new_size.height), Qt::AspectRatioMode::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
+				img.convertTo(QImage::Format_RGBA8888); // The current Qt version changes the image format during smooth scaling, so we have to change it back.
+			}
+
+			// Create row pointers for libpng
+			std::vector<u8*> rows(img.height());
+			for (int y = 0; y < img.height(); y++)
+				rows[y] = img.scanLine(y);
 
 			std::vector<u8> encoded_png;
 
 			const auto write_png = [&]()
 			{
 				const scoped_png_ptrs ptrs;
-				png_set_IHDR(ptrs.write_ptr, ptrs.info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+				png_set_IHDR(ptrs.write_ptr, ptrs.info_ptr, img.width(), img.height(), 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 				png_set_text(ptrs.write_ptr, ptrs.info_ptr, text, 6);
 				png_set_rows(ptrs.write_ptr, ptrs.info_ptr, &rows[0]);
 				png_set_write_fn(ptrs.write_ptr, &encoded_png, [](png_structp png_ptr, png_bytep data, png_size_t length)
@@ -639,10 +684,11 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 
 					// Games choose the overlay file and the offset based on the current video resolution.
 					// We need to scale the overlay if our resolution scaling causes the image to have a different size.
-					auto& avconf = g_fxo->get<rsx::avconf>();
 
-					// TODO: handle wacky PS3 resolutions (without resolution scaling)
-					if (avconf.resolution_x != sshot_width || avconf.resolution_y != sshot_height)
+					// Scale the resolution first (as seen before with the image)
+					new_size = avconf.aspect_convert_dimensions(size2u{ avconf.resolution_x, avconf.resolution_y });
+
+					if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
 					{
 						const int scale = rsx::get_resolution_scale_percent();
 						const int x = (scale * manager.overlay_offset_x) / 100;
@@ -658,16 +704,16 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 						overlay_img = overlay_img.scaled(QSize(width, height), Qt::AspectRatioMode::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
 					}
 
-					if (manager.overlay_offset_x < static_cast<s64>(sshot_width) &&
-					    manager.overlay_offset_y < static_cast<s64>(sshot_height) &&
+					if (manager.overlay_offset_x < static_cast<s64>(img.width()) &&
+					    manager.overlay_offset_y < static_cast<s64>(img.height()) &&
 					    manager.overlay_offset_x + overlay_img.width() > 0 &&
 					    manager.overlay_offset_y + overlay_img.height() > 0)
 					{
-						QImage screenshot_img(rows[0], sshot_width, sshot_height, QImage::Format_RGBA8888);
+						QImage screenshot_img(rows[0], img.width(), img.height(), QImage::Format_RGBA8888);
 						QPainter painter(&screenshot_img);
 						painter.drawImage(manager.overlay_offset_x, manager.overlay_offset_y, overlay_img);
 
-						std::memcpy(rows[0], screenshot_img.constBits(), static_cast<usz>(sshot_height) * screenshot_img.bytesPerLine());
+						std::memcpy(rows[0], screenshot_img.constBits(), screenshot_img.sizeInBytes());
 
 						screenshot_log.success("Applied screenshot overlay '%s'", cell_sshot_overlay_path);
 					}
@@ -697,6 +743,19 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 
 				screenshot_log.success("Successfully saved cell screenshot to %s", cell_sshot_filename);
 			}
+
+			// Play a sound
+			Emu.CallFromMainThread([]()
+			{
+				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
+				{
+					QSound::play(qstr(sound_path));
+				}
+				else
+				{
+					QApplication::beep();
+				}
+			});
 
 			return;
 		},
@@ -760,7 +819,7 @@ bool gs_frame::event(QEvent* ev)
 			int result = QMessageBox::Yes;
 			atomic_t<bool> called = false;
 
-			Emu.CallAfter([this, &result, &called]()
+			Emu.CallFromMainThread([this, &result, &called]()
 			{
 				m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
 					tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>"),
@@ -777,6 +836,8 @@ bool gs_frame::event(QEvent* ev)
 				return true;
 			}
 		}
+
+		gui_log.notice("Game window close event issued");
 		close();
 	}
 	else if (ev->type() == QEvent::MouseMove && (!m_show_mouse || m_mousehide_timer.isActive()))
@@ -795,7 +856,7 @@ void gs_frame::progress_reset(bool reset_limit)
 		m_tb_progress->reset();
 	}
 #elif HAVE_QTDBUS
-	UpdateProgress(0);
+	UpdateProgress(0, false);
 #endif
 
 	if (reset_limit)
@@ -813,7 +874,7 @@ void gs_frame::progress_set_value(int value)
 	}
 #elif HAVE_QTDBUS
 	m_progress_value = std::clamp(value, 0, m_gauge_max);
-	UpdateProgress(m_progress_value);
+	UpdateProgress(m_progress_value, true);
 #endif
 }
 
@@ -847,7 +908,7 @@ void gs_frame::progress_set_limit(int limit)
 }
 
 #ifdef HAVE_QTDBUS
-void gs_frame::UpdateProgress(int progress, bool disable)
+void gs_frame::UpdateProgress(int progress, bool progress_visible)
 {
 	QDBusMessage message = QDBusMessage::createSignal
 	(
@@ -856,12 +917,9 @@ void gs_frame::UpdateProgress(int progress, bool disable)
 		QStringLiteral("Update")
 	);
 	QVariantMap properties;
-	if (disable)
-		properties.insert(QStringLiteral("progress-visible"), false);
-	else
-		properties.insert(QStringLiteral("progress-visible"), true);
-	//Progress takes a value from 0.0 to 0.1
+	// Progress takes a value from 0.0 to 0.1
 	properties.insert(QStringLiteral("progress"), 1. * progress / m_gauge_max);
+	properties.insert(QStringLiteral("progress-visible"), progress_visible);
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }

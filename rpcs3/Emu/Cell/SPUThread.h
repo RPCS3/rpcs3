@@ -82,8 +82,7 @@ enum : u32
 
 	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN | SPU_EVENT_S1 | SPU_EVENT_S2, // Mask of implemented events
 	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
-
-	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_IMPLEMENTED,
+	SPU_EVENT_INTR_BUSY_CHECK = SPU_EVENT_IMPLEMENTED & ~SPU_EVENT_INTR_IMPLEMENTED,
 };
 
 // SPU Class 0 Interrupts
@@ -173,10 +172,10 @@ struct spu_channel
 	atomic_t<u64> data;
 
 public:
-	static const u32 off_wait = 32;
-	static const u32 off_count = 63;
-	static const u64 bit_wait = 1ull << off_wait;
-	static const u64 bit_count = 1ull << off_count;
+	static constexpr u32 off_wait  = 32;
+	static constexpr u32 off_count = 63;
+	static constexpr u64 bit_wait  = 1ull << off_wait;
+	static constexpr u64 bit_count = 1ull << off_count;
 
 	// Returns true on success
 	bool try_push(u32 value)
@@ -504,9 +503,9 @@ struct spu_imm_table_t
 	public:
 		scale_table_t();
 
-		FORCE_INLINE const auto& operator [](s32 scale) const
+		FORCE_INLINE const v128& operator [](s32 scale) const
 		{
-			return m_data[scale + 155].vf;
+			return m_data[scale + 155];
 		}
 	}
 	const scale;
@@ -631,6 +630,7 @@ public:
 	virtual std::string dump_misc() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_return() override;
+	virtual void cpu_work() override;
 	virtual ~spu_thread() override;
 	void cleanup();
 	void cpu_init();
@@ -667,6 +667,9 @@ public:
 	u32 mfc_size = 0;
 	u32 mfc_barrier = -1;
 	u32 mfc_fence = -1;
+
+	// Timestamp of the first postponed command (transfers shuffling related)
+	u64 mfc_last_timestamp = 0;
 
 	// MFC proxy command data
 	spu_mfc_cmd mfc_prxy_cmd;
@@ -774,6 +777,10 @@ public:
 	u64 mfc_dump_idx = 0;
 	static constexpr u32 max_mfc_dump_idx = 2048;
 
+	bool in_cpu_work = false;
+	bool allow_interrupts_in_cpu_work = false;
+	u8 cpu_work_iteration_count = 0;
+
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
 	const char* current_func{}; // Current STOP or RDCH blocking function
@@ -787,7 +794,7 @@ public:
 	bool do_list_transfer(spu_mfc_cmd& args);
 	void do_putlluc(const spu_mfc_cmd& args);
 	bool do_putllc(const spu_mfc_cmd& args);
-	void do_mfc(bool wait = true);
+	bool do_mfc(bool can_escape = true, bool must_finish = true);
 	u32 get_mfc_completed() const;
 
 	bool process_mfc_cmd();

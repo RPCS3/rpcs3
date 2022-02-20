@@ -42,8 +42,6 @@ void fmt_class_string<CellKbMappingType>::format(std::string& out, u64 arg)
 
 void KeyboardHandlerBase::Key(u32 code, bool pressed)
 {
-	// TODO: Key Repeat
-
 	std::lock_guard<std::mutex> lock(m_mutex);
 
 	for (Keyboard& keyboard : m_keyboards)

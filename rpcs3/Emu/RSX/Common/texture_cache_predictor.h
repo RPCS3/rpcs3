@@ -396,17 +396,14 @@ namespace rsx
 	};
 } // namespace rsx
 
-namespace std
+template <typename Traits>
+struct std::hash<rsx::texture_cache_predictor_key<Traits>>
 {
-	template <typename traits>
-	struct hash<rsx::texture_cache_predictor_key<traits>>
+	usz operator()(const rsx::texture_cache_predictor_key<Traits>& k) const
 	{
-		usz operator()(const rsx::texture_cache_predictor_key<traits>& k) const
-		{
-			usz result = std::hash<utils::address_range>{}(k.cpu_range);
-			result ^= static_cast<usz>(k.format);
-			result ^= (static_cast<usz>(k.context) << 16);
-			return result;
-		}
-	};
-} // namespace std
+		usz result = std::hash<utils::address_range>{}(k.cpu_range);
+		result ^= static_cast<usz>(k.format);
+		result ^= (static_cast<usz>(k.context) << 16);
+		return result;
+	}
+};

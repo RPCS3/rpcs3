@@ -3,12 +3,17 @@ if(USE_PRECOMPILED_HEADERS AND NOT COMMAND target_precompile_headers)
     include(cotire)
 endif()
 
+# Define GNU standard installation directories
+include(GNUInstallDirs)
+
 # Generate git-version.h at build time.
 include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
 include(CheckFunctionExists)
+
+set(CMAKE_CXX_STANDARD 20)
 
 set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM MATCHES "Linux")
@@ -21,6 +26,7 @@ elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 endif()
 
 if(UNIX AND NOT APPLE)
+    add_definitions(-DDATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
     # Optionally enable X11 for window management
     find_package(X11)
     if(X11_FOUND)
@@ -149,29 +155,55 @@ elseif(UNIX)
             COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git)
 elseif(WIN32)
+    # TODO(cjj19970505@live.cn)
+    # offical Qt binaries are built with -MD(d) only as stated in offical wiki
+    # https://wiki.qt.io/Technical_FAQ#Why_does_a_statically_built_Qt_use_the_dynamic_Visual_Studio_runtime_libraries_.3F_Do_I_need_to_deploy_those_with_my_application_.3F
+    # If we build our libs with /MT(d), we might encounter some issues.
+    # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
+
+    # Qt installed from Qt installer has following hierarchy:
+    # bin/ for release and debug dlls and windeployqt tools
+    # lib/cmake/Qt5/ for Qt5_Dir
+    # Qt installed from vcpkg has following hierarchy:
+    # bin/ for release dlls
+    # debug/bin/ for debug dlls
+    # tools/qt5/bin/ for tools including windeployqt
+    # tools/qt5/debug/bin/ for tools with debug build including windeployqt
+    # share/cmake/Qt5/ for Qt5_Dir
+
+    # If Qt5 is installed from official Qt installer
+    list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../bin/")
+
+    # If Qt5 is installed from vcpkg
+    list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5$<$<CONFIG:Debug>:/debug>/bin/")
+    
     add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
-            COMMAND "${Qt5_DIR}/../../../bin/windeployqt" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-svg --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" --release "$<TARGET_FILE:rpcs3>")
+        COMMAND set PATH=${_QT5_TOOLS_PATHS}$<SEMICOLON>%PATH%
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
+        # If Qt5 is installed from vcpkg, add binary path to PATH
+        # otherwise windeployqt tool won't be able to locate necessary dlls
+        COMMAND set PATH=${Qt5_DIR}/../../../$<$<CONFIG:Debug>:debug/>bin/$<SEMICOLON>%PATH% 
+        COMMAND "${_WINDEPLOYQT}" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" $<$<CONFIG:Debug>:--debug> $<$<CONFIG:Release>:--release> "$<TARGET_FILE:rpcs3>")
 endif()
 
 # Unix installation
 if(UNIX AND NOT APPLE)
     # Install the binary
-    install(TARGETS rpcs3 RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+    install(TARGETS rpcs3 RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     # Install the application icon and menu item
     install(FILES rpcs3.svg
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/scalable/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps)
     install(FILES rpcs3.png
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/icons/hicolor/48x48/apps)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/48x48/apps)
     install(FILES rpcs3.desktop
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/applications)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications)
     install(FILES rpcs3.metainfo.xml
-            DESTINATION ${CMAKE_INSTALL_PREFIX}/share/metainfo)
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/metainfo)
     # Install other files
     install(DIRECTORY ../bin/Icons
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
     install(DIRECTORY ../bin/GuiConfigs
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
     install(DIRECTORY ../bin/git
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/share/rpcs3)
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
 endif()

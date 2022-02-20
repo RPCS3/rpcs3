@@ -15,13 +15,11 @@ LOG_CHANNEL(pkg_log, "PKG");
 package_reader::package_reader(const std::string& path)
 	: m_path(path)
 {
-	if (!fs::is_file(path))
+	if (!m_file.open(path))
 	{
 		pkg_log.error("PKG file not found!");
 		return;
 	}
-
-	m_filelist.emplace_back(fs::file{path});
 
 	m_is_valid = read_header();
 
@@ -51,7 +49,7 @@ package_reader::~package_reader()
 
 bool package_reader::read_header()
 {
-	if (m_path.empty() || m_filelist.empty())
+	if (m_path.empty() || !m_file)
 	{
 		pkg_log.error("Reading PKG header: no file to read!");
 		return false;
@@ -75,7 +73,7 @@ bool package_reader::read_header()
 	pkg_log.notice("Header: data_size = 0x%x = %d", m_header.data_size, m_header.data_size);
 	pkg_log.notice("Header: title_id = %s", m_header.title_id);
 	pkg_log.notice("Header: qa_digest = 0x%x 0x%x", m_header.qa_digest[0], m_header.qa_digest[1]);
-	//pkg_log.notice("Header: klicensee = 0x%x = %d", header.klicensee, header.klicensee);
+	pkg_log.notice("Header: klicensee = %s", m_header.klicensee.value());
 
 	// Get extended PKG information for PSP or PSVita
 	if (m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA)
@@ -131,7 +129,7 @@ bool package_reader::read_header()
 	}
 	}
 
-	if (m_header.pkg_size > m_filelist[0].size())
+	if (m_header.pkg_size > m_file.size())
 	{
 		// Check if multi-files pkg
 		if (!m_path.ends_with("_00.pkg"))
@@ -140,11 +138,15 @@ bool package_reader::read_header()
 			return false;
 		}
 
+		std::vector<fs::file> filelist;
+		filelist.emplace_back(std::move(m_file));
+
 		const std::string name_wo_number = m_path.substr(0, m_path.size() - 7);
-		u64 cursize = m_filelist[0].size();
+		u64 cursize = filelist[0].size();
+
 		while (cursize < m_header.pkg_size)
 		{
-			const std::string archive_filename = fmt::format("%s_%02d.pkg", name_wo_number, m_filelist.size());
+			const std::string archive_filename = fmt::format("%s_%02d.pkg", name_wo_number, filelist.size());
 
 			fs::file archive_file(archive_filename);
 			if (!archive_file)
@@ -153,9 +155,20 @@ bool package_reader::read_header()
 				return false;
 			}
 
-			cursize += archive_file.size();
-			m_filelist.emplace_back(std::move(archive_file));
+			const usz add_size = archive_file.size();
+
+			if (!add_size)
+			{
+				pkg_log.error("%s is empty, cannot read PKG", archive_filename);
+				return false;
+			}
+
+			cursize += add_size;
+			filelist.emplace_back(std::move(archive_file));
 		}
+
+		// Gather files
+		m_file = fs::make_gather(std::move(filelist));
 	}
 
 	if (m_header.data_size + m_header.data_offset > m_header.pkg_size)
@@ -510,10 +523,10 @@ bool package_reader::read_param_sfo()
 
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
 
-		const std::string name{reinterpret_cast<char*>(m_buf.get()), entry.name_size};
+		const std::string_view name{reinterpret_cast<char*>(m_buf.get()), entry.name_size};
 
 		// We're looking for the PARAM.SFO file, if there is any
-		if (name != "PARAM.SFO")
+		if (usz ndelim = name.find_first_not_of('/'); ndelim == umax || name.substr(ndelim) != "PARAM.SFO")
 		{
 			continue;
 		}
@@ -541,6 +554,12 @@ bool package_reader::read_param_sfo()
 			tmp.seek(0);
 
 			m_psf = psf::load_object(tmp);
+
+			if (m_psf.empty())
+			{
+				// Invalid
+				continue;
+			}
 
 			return true;
 		}
@@ -667,6 +686,8 @@ package_error package_reader::check_target_app_version() const
 	return package_error::app_version;
 }
 
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose = false);
+
 bool package_reader::extract_data(atomic_t<double>& sync)
 {
 	if (!m_is_valid)
@@ -704,7 +725,9 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 		break;
 	}
 
-	dir += m_install_dir + '/';
+	// TODO: Verify whether other content types require appending title ID
+	if (m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
+		dir += m_install_dir + '/';
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
 	const bool was_null = !fs::is_dir(dir);
@@ -742,9 +765,10 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 		const std::string name{reinterpret_cast<char*>(m_buf.get()), entry.name_size};
 		const std::string path = dir + vfs::escape(name);
 
-		pkg_log.notice("Entry 0x%08x: %s", entry.type, name);
+		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
+		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
 
-		switch (entry.type & 0xff)
+		switch (const u8 entry_type = entry.type & 0xff)
 		{
 		case PKG_FILE_ENTRY_NPDRM:
 		case PKG_FILE_ENTRY_NPDRMEDAT:
@@ -770,7 +794,14 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 				break;
 			}
 
-			if (fs::file out{ path, fs::rewrite })
+			const bool is_buffered = entry_type == PKG_FILE_ENTRY_SDAT;
+
+			if (entry_type == PKG_FILE_ENTRY_NPDRMEDAT)
+			{
+				pkg_log.todo("NPDRM EDAT!");
+			}
+
+			if (fs::file out = is_buffered ? fs::make_stream<std::vector<u8>>() : fs::file{ path, fs::rewrite })
 			{
 				bool extract_success = true;
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
@@ -803,6 +834,17 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 
 						// Cannot cancel the installation
 						sync += 1.;
+					}
+				}
+
+				if (is_buffered)
+				{
+					out = DecryptEDAT(out, name, 1, reinterpret_cast<u8*>(&m_header.klicensee), true);
+					if (!out || !fs::write_file(path, fs::rewrite, static_cast<fs::container_stream<std::vector<u8>>*>(out.release().get())->obj))
+					{
+						num_failures++;
+						pkg_log.error("Failed to create file %s", path);
+						break;
 					}
 				}
 
@@ -874,58 +916,12 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 
 void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damode)
 {
-	if (damode == fs::seek_set)
-		m_cur_offset = new_offset;
-	else if (damode == fs::seek_cur)
-		m_cur_offset += new_offset;
-
-	u64 _offset = 0;
-	for (usz i = 0; i < m_filelist.size(); i++)
-	{
-		if (m_cur_offset < (_offset + m_filelist[i].size()))
-		{
-			m_cur_file = i;
-			m_cur_file_offset = m_cur_offset - _offset;
-			m_filelist[i].seek(m_cur_file_offset);
-			break;
-		}
-		_offset += m_filelist[i].size();
-	}
+	if (m_file) m_file.seek(new_offset, damode);
 };
 
 u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
 {
-	ensure(m_filelist.size() > m_cur_file && m_filelist[m_cur_file]);
-
-	const u64 num_bytes_left = m_filelist[m_cur_file].size() - m_cur_file_offset;
-
-	// check if it continues in another file
-	if (num_bytes > num_bytes_left)
-	{
-		m_filelist[m_cur_file].read(data_ptr, num_bytes_left);
-
-		if ((m_cur_file + 1) < m_filelist.size())
-		{
-			++m_cur_file;
-		}
-		else
-		{
-			m_cur_offset += num_bytes_left;
-			m_cur_file_offset = m_filelist[m_cur_file].size();
-			return num_bytes_left;
-		}
-		const u64 num_read = m_filelist[m_cur_file].read(static_cast<u8*>(data_ptr) + num_bytes_left, num_bytes - num_bytes_left);
-		m_cur_offset += (num_read + num_bytes_left);
-		m_cur_file_offset = num_read;
-		return (num_read + num_bytes_left);
-	}
-
-	const u64 num_read = m_filelist[m_cur_file].read(data_ptr, num_bytes);
-
-	m_cur_offset += num_read;
-	m_cur_file_offset += num_read;
-
-	return num_read;
+	return m_file ? m_file.read(data_ptr, num_bytes) : 0;
 };
 
 u64 package_reader::decrypt(u64 offset, u64 size, const uchar* key)

@@ -4,7 +4,7 @@
 
 #include "upscalers/upscaling.h"
 
-#include "vkutils/descriptors.hpp"
+#include "vkutils/descriptors.h"
 #include "vkutils/data_heap.h"
 #include "vkutils/instance.hpp"
 #include "vkutils/sync.h"
@@ -20,6 +20,7 @@
 #include "VKShaderInterpreter.h"
 #include "VKQueryPool.h"
 #include "../GCM.h"
+#include "util/asm.hpp"
 
 #include <thread>
 #include <optional>
@@ -196,8 +197,8 @@ namespace vk
 	{
 		VkSemaphore acquire_signal_semaphore = VK_NULL_HANDLE;
 		VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
-		VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
 
+		vk::descriptor_set descriptor_set;
 		vk::descriptor_pool descriptor_pool;
 		u32 used_descriptors = 0;
 
@@ -227,7 +228,7 @@ namespace vk
 		{
 			present_wait_semaphore = other.present_wait_semaphore;
 			acquire_signal_semaphore = other.acquire_signal_semaphore;
-			descriptor_set = other.descriptor_set;
+			descriptor_set.swap(other.descriptor_set);
 			descriptor_pool = other.descriptor_pool;
 			used_descriptors = other.used_descriptors;
 			flags = other.flags;
@@ -310,11 +311,7 @@ namespace vk
 		{
 			while (num_waiters.load() != 0)
 			{
-#ifdef _MSC_VER
-				_mm_pause();
-#else
-				__builtin_ia32_pause();
-#endif
+				utils::pause();
 			}
 		}
 
@@ -334,6 +331,11 @@ namespace vk
 		u32 width;
 		u32 height;
 		u32 pitch;
+	};
+
+	struct draw_call_t
+	{
+		u32 subdraw_id;
 	};
 }
 
@@ -384,6 +386,7 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 	std::unique_ptr<vk::upscaler> m_upscaler;
+	bool m_use_fsr_upscaling{false};
 
 	std::unique_ptr<vk::buffer> m_cond_render_buffer;
 	u64 m_cond_render_sync_tag = 0;
@@ -426,6 +429,7 @@ private:
 	u32 m_current_cb_index = 0;
 	std::array<vk::command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
+	VkSemaphore m_dangling_semaphore_signal = VK_NULL_HANDLE;
 
 	VkDescriptorSetLayout descriptor_layouts;
 	VkPipelineLayout pipeline_layout;
@@ -485,7 +489,7 @@ private:
 	utils::address_range m_offloader_fault_range;
 	rsx::invalidation_cause m_offloader_fault_cause;
 
-	u32 m_current_subdraw_id = 0;
+	vk::draw_call_t m_current_draw = {};
 	u64 m_current_renderpass_key = 0;
 	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
 	std::vector<vk::image*> m_fbo_images;
@@ -543,8 +547,8 @@ private:
 	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
 
 	void load_texture_env();
-	void bind_texture_env();
-	void bind_interpreter_texture_env();
+	bool bind_texture_env();
+	bool bind_interpreter_texture_env();
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);

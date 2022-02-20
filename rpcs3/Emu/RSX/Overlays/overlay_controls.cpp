@@ -27,15 +27,15 @@ namespace rsx
 	{
 		image_info::image_info(const char* filename)
 		{
-			if (!fs::is_file(filename))
+			fs::file f(filename, fs::read + fs::isfile);
+
+			if (!f)
 			{
-				rsx_log.error("Image resource file `%s' not found", filename);
+				rsx_log.error("Image resource file `%s' could not be opened (%s)", filename, fs::g_tls_error);
 				return;
 			}
 
-			std::vector<u8> bytes;
-			fs::file f(filename);
-			f.read(bytes, f.size());
+			auto bytes = f.to_vector<u8>();
 			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(f.size()), &w, &h, &bpp, STBI_rgb_alpha);
 		}
 
@@ -46,9 +46,7 @@ namespace rsx
 
 		image_info::~image_info()
 		{
-			stbi_image_free(data);
-			data = nullptr;
-			w = h = bpp = 0;
+			if (data) stbi_image_free(data);
 		}
 
 		resource_config::resource_config()
@@ -74,12 +72,23 @@ namespace rsx
 			for (const auto &res : texture_resource_files)
 			{
 				// First check the global config dir
-				auto info = std::make_unique<image_info>((fs::get_config_dir() + "Icons/ui/" + res).c_str());
+				const std::string image_path = fs::get_config_dir() + "Icons/ui/" + res;
+				auto info = std::make_unique<image_info>(image_path.c_str());
+
+#if !defined(_WIN32) && !defined(__APPLE__) && defined(DATADIR)
+				// Check the DATADIR if defined
+				if (info->data == nullptr)
+				{
+					const std::string data_dir (DATADIR);
+					const std::string image_data = data_dir + "/Icons/ui/" + res;
+					info = std::make_unique<image_info>(image_data.c_str());
+				}
+#endif
 
 				if (info->data == nullptr)
 				{
-					// Resource was not found in config dir, try and grab from relative path (linux)
-					auto src = "Icons/ui/" + res;
+					// Resource was not found in the DATADIR or config dir, try and grab from relative path (linux)
+					std::string src = "Icons/ui/" + res;
 					info = std::make_unique<image_info>(src.c_str());
 #ifndef _WIN32
 					// Check for Icons in ../share/rpcs3 for AppImages,
@@ -133,19 +142,8 @@ namespace rsx
 					if (info->data != nullptr)
 					{
 						// Install the image to config dir
-						auto dst_dir = fs::get_config_dir() + "Icons/ui/";
-						auto dst = dst_dir + res;
-
-						if (!fs::is_dir(dst_dir))
-						{
-							auto root_folder = fs::get_config_dir() + "Icons/";
-							if (!fs::is_dir(root_folder))
-								fs::create_dir(root_folder);
-
-							fs::create_dir(dst_dir);
-						}
-
-						fs::copy_file(src, dst, true);
+						fs::create_path(fs::get_parent_dir(image_path));
+						fs::copy_file(src, image_path, true);
 					}
 				}
 

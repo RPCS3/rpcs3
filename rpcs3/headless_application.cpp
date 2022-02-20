@@ -5,10 +5,9 @@
 #include "Emu/Cell/Modules/cellOskDialog.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Emu/Io/Null/null_camera_handler.h"
 
 #include <clocale>
-
-#include <QFileInfo>
 
 // For now, a trivial constructor/destructor. May add command line usage later.
 headless_application::headless_application(int& argc, char** argv) : QCoreApplication(argc, argv)
@@ -35,7 +34,7 @@ bool headless_application::Init()
 void headless_application::InitializeConnects() const
 {
 	qRegisterMetaType<std::function<void()>>("std::function<void()>");
-	connect(this, &headless_application::RequestCallAfter, this, &headless_application::HandleCallAfter);
+	connect(this, &headless_application::RequestCallFromMainThread, this, &headless_application::CallFromMainThread);
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
@@ -58,9 +57,9 @@ void headless_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_after = [this](std::function<void()> func)
+	callbacks.call_from_main_thread = [this](std::function<void()> func)
 	{
-		RequestCallAfter(std::move(func));
+		RequestCallFromMainThread(std::move(func));
 	};
 
 	callbacks.init_gs_render = []()
@@ -72,8 +71,10 @@ void headless_application::InitializeCallbacks()
 			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
 			break;
 		}
+#if not defined(__APPLE__)
 		case video_renderer::opengl:
-#if defined(_WIN32) || defined(HAVE_VULKAN)
+#endif
+#if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
 #endif
 		{
@@ -85,6 +86,23 @@ void headless_application::InitializeCallbacks()
 			fmt::throw_exception("Invalid video renderer: %s", type);
 		}
 		}
+	};
+
+	callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
+	{
+		switch (g_cfg.io.camera.get())
+		{
+		case camera_handler::null:
+		case camera_handler::fake:
+		{
+			return std::make_shared<null_camera_handler>();
+		}
+		case camera_handler::qt:
+		{
+			fmt::throw_exception("Headless mode can not be used with this camera handler. Current handler: %s", g_cfg.io.camera.get());
+		}
+		}
+		return nullptr;
 	};
 
 	callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
@@ -107,13 +125,14 @@ void headless_application::InitializeCallbacks()
 	callbacks.on_stop   = []() {};
 	callbacks.on_ready  = []() {};
 
+	callbacks.on_missing_fw = []() { return false; };
+
+	callbacks.handle_taskbar_progress = [](s32, s32) {};
+
 	callbacks.get_localized_string    = [](localized_string_id, const char*) -> std::string { return {}; };
 	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };
 
-	callbacks.resolve_path = [](std::string_view sv)
-	{
-		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
-	};
+	callbacks.play_sound = [](const std::string&){};
 
 	Emu.SetCallbacks(std::move(callbacks));
 }
@@ -121,7 +140,7 @@ void headless_application::InitializeCallbacks()
 /**
  * Using connects avoids timers being unable to be used in a non-qt thread. So, even if this looks stupid to just call func, it's succinct.
  */
-void headless_application::HandleCallAfter(const std::function<void()>& func)
+void headless_application::CallFromMainThread(const std::function<void()>& func)
 {
 	func();
 }

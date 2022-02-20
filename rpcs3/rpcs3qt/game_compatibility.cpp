@@ -26,6 +26,7 @@ game_compatibility::game_compatibility(std::shared_ptr<gui_settings> gui_setting
 
 	connect(m_downloader, &downloader::signal_download_error, this, &game_compatibility::handle_download_error);
 	connect(m_downloader, &downloader::signal_download_finished, this, &game_compatibility::handle_download_finished);
+	connect(m_downloader, &downloader::signal_download_canceled, this, &game_compatibility::handle_download_canceled);
 }
 
 void game_compatibility::handle_download_error(const QString& error)
@@ -40,9 +41,6 @@ void game_compatibility::handle_download_finished(const QByteArray& content)
 	// Create new map from database and write database to file if database was valid
 	if (ReadJSON(QJsonDocument::fromJson(content).object(), true))
 	{
-		// We have a new database in map, therefore refresh gamelist to new state
-		Q_EMIT DownloadFinished();
-
 		// Write database to file
 		QFile file(m_filepath);
 
@@ -62,6 +60,14 @@ void game_compatibility::handle_download_finished(const QByteArray& content)
 
 		compat_log.success("Wrote database to file: %s", sstr(m_filepath));
 	}
+
+	// We have a new database in map, therefore refresh gamelist to new state
+	Q_EMIT DownloadFinished();
+}
+
+void game_compatibility::handle_download_canceled()
+{
+	Q_EMIT DownloadCanceled();
 }
 
 bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_download)

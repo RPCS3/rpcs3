@@ -15,6 +15,10 @@
 #include <WS2tcpip.h>
 #include <afunix.h> // sockaddr_un
 #else
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -25,10 +29,14 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/un.h> // sockaddr_un
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
 #endif
 
-#include <regex>
 #include <charconv>
+#include <regex>
+#include <string_view>
 
 extern bool ppu_breakpoint(u32 addr, bool is_adding);
 
@@ -46,8 +54,6 @@ void set_nonblocking(int s)
 }
 
 #define sscanf_s sscanf
-#define HEX_U32 "x"
-#define HEX_U64 "lx"
 #else
 
 void set_nonblocking(int s)
@@ -56,8 +62,6 @@ void set_nonblocking(int s)
 	ioctlsocket(s, FIONBIO, &mode);
 }
 
-#define HEX_U32 "lx"
-#define HEX_U64 "llx"
 #endif
 
 struct gdb_cmd
@@ -79,34 +83,33 @@ bool check_errno_again()
 }
 
 std::string u32_to_hex(u32 i) {
-	return fmt::format("%" HEX_U32, i);
+	return fmt::format("%x", i);
 }
 
 std::string u64_to_padded_hex(u64 value) {
-	return fmt::format("%.16" HEX_U64, value);
+	return fmt::format("%.16x", value);
 }
 
 std::string u32_to_padded_hex(u32 value) {
-	return fmt::format("%.8" HEX_U32, value);
+	return fmt::format("%.8x", value);
 }
 
-u8 hex_to_u8(std::string val) {
-	u8 result;
-	sscanf_s(val.c_str(), "%02hhX", &result);
+template <typename T>
+T hex_to(std::string_view val)
+{
+	T result;
+	auto [ptr, err] = std::from_chars(val.data(), val.data() + val.size(), result, 16);
+	if (err != std::errc())
+	{
+		fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
+	}
+
 	return result;
 }
 
-u32 hex_to_u32(std::string val) {
-	u32 result;
-	sscanf_s(val.c_str(), "%" HEX_U32, &result);
-	return result;
-}
-
-u64 hex_to_u64(std::string val) {
-	u64 result;
-	sscanf_s(val.c_str(), "%" HEX_U64, &result);
-	return result;
-}
+constexpr auto& hex_to_u8 = hex_to<u8>;
+constexpr auto& hex_to_u32 = hex_to<u32>;
+constexpr auto& hex_to_u64 = hex_to<u64>;
 
 void gdb_thread::start_server()
 {
@@ -715,7 +718,8 @@ bool gdb_thread::cmd_attached_to_what(gdb_cmd&)
 
 bool gdb_thread::cmd_kill(gdb_cmd&)
 {
-	Emu.Stop();
+	GDB.notice("Kill command issued");
+	Emu.CallFromMainThread([](){ Emu.GracefulShutdown(); });
 	return true;
 }
 

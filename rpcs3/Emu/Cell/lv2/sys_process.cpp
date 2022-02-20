@@ -231,7 +231,7 @@ CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 		return CELL_EPERM;
 	default:
 	{
-		if (auto vm0 = idm::get<sys_vm_t>(sys_vm_t::find_id(addr & -0x1000'0000)))
+		if (auto vm0 = idm::get<sys_vm_t>(sys_vm_t::find_id(addr)))
 		{
 			// sys_vm area was not covering the address specified but made a reservation on the entire 256mb region
 			if (vm0->addr + vm0->size - 1 < addr)
@@ -346,10 +346,10 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 
 	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
 
-	Emu.CallAfter([]()
+	Emu.CallFromMainThread([]()
 	{
 		sys_process.success("Process finished");
-		Emu.Stop();
+		Emu.Kill();
 	});
 
 	// Wait for GUI thread
@@ -411,11 +411,11 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	if (disc.empty() && !Emu.GetTitleID().empty())
 		disc = vfs::get(Emu.GetDir());
 
-	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>().devKlic.load()]() mutable
+	Emu.CallFromMainThread([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc)
+		, hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>().last_key(), old_config = Emu.GetUsedConfig()]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
-		Emu.SetForceBoot(true);
-		Emu.Stop();
+		Emu.Kill(false);
 		Emu.argv = std::move(argv);
 		Emu.envp = std::move(envp);
 		Emu.data = std::move(data);
@@ -429,12 +429,12 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 		Emu.SetForceBoot(true);
 
-		auto res = Emu.BootGame(path, "", true);
+		auto res = Emu.BootGame(path, "", true, false, cfg_mode::continuous, old_config);
 
 		if (res != game_boot_result::no_errors)
 		{
 			sys_process.fatal("Failed to boot from exitspawn! (path=\"%s\", error=%s)", path, res);
-			Emu.Stop();
+			Emu.Kill();
 		}
 	});
 

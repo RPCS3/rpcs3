@@ -89,7 +89,7 @@ namespace vk
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
 
-		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(u8 samples)
+		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, u8 samples)
 		{
 			if (g_cfg.video.strict_rendering_mode || samples > 1)
 			{
@@ -101,7 +101,13 @@ namespace vk
 			switch (vk::get_driver_vendor())
 			{
 			case driver_vendor::ANV:
-				return { VK_IMAGE_USAGE_STORAGE_BIT, 0 };
+				if (const auto format_features = vk::get_current_renderer()->get_format_properties(format);
+					format_features.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
+				{
+					// Only set if supported by hw
+					return { VK_IMAGE_USAGE_STORAGE_BIT, 0 };
+				}
+				break;
 			case driver_vendor::AMD:
 			case driver_vendor::RADV:
 				if (vk::get_chip_family() >= chip_class::AMD_navi1x)
@@ -115,6 +121,7 @@ namespace vk
 				[[ fallthrough ]];
 			case driver_vendor::NVIDIA:
 			case driver_vendor::INTEL:
+			case driver_vendor::MVK:
 				break;
 			}
 
@@ -144,7 +151,7 @@ namespace vk
 				sample_layout = rsx::surface_sample_layout::null;
 			}
 
-			auto [usage_flags, create_flags] = get_attachment_create_flags(samples);
+			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples);
 			usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
 			if (samples == 1) [[likely]]
@@ -181,8 +188,8 @@ namespace vk
 			rtt->memory_usage_flags = rsx::surface_usage_flags::attachment;
 			rtt->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			rtt->native_component_map = fmt.second;
-			rtt->rsx_pitch = static_cast<u16>(pitch);
-			rtt->native_pitch = static_cast<u16>(width) * get_format_block_size_in_bytes(format) * rtt->samples_x;
+			rtt->rsx_pitch = static_cast<u32>(pitch);
+			rtt->native_pitch = static_cast<u32>(width) * get_format_block_size_in_bytes(format) * rtt->samples_x;
 			rtt->surface_width = static_cast<u16>(width);
 			rtt->surface_height = static_cast<u16>(height);
 			rtt->queue_tag(address);
@@ -213,7 +220,7 @@ namespace vk
 				sample_layout = rsx::surface_sample_layout::null;
 			}
 
-			auto [usage_flags, create_flags] = get_attachment_create_flags(samples);
+			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples);
 			usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			if (samples == 1) [[likely]]
@@ -246,8 +253,8 @@ namespace vk
 			ds->memory_usage_flags = rsx::surface_usage_flags::attachment;
 			ds->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
-			ds->native_pitch = static_cast<u16>(width) * get_format_block_size_in_bytes(format) * ds->samples_x;
-			ds->rsx_pitch = static_cast<u16>(pitch);
+			ds->native_pitch = static_cast<u32>(width) * get_format_block_size_in_bytes(format) * ds->samples_x;
+			ds->rsx_pitch = static_cast<u32>(pitch);
 			ds->surface_width = static_cast<u16>(width);
 			ds->surface_height = static_cast<u16>(height);
 			ds->queue_tag(address);
@@ -288,7 +295,7 @@ namespace vk
 				sink->native_component_map = ref->native_component_map;
 				sink->sample_layout = ref->sample_layout;
 				sink->stencil_init_flags = ref->stencil_init_flags;
-				sink->native_pitch = u16(prev.width * ref->get_bpp() * ref->samples_x);
+				sink->native_pitch = static_cast<u32>(prev.width) * ref->get_bpp() * ref->samples_x;
 				sink->rsx_pitch = ref->get_rsx_pitch();
 				sink->surface_width = prev.width;
 				sink->surface_height = prev.height;
@@ -361,7 +368,7 @@ namespace vk
 
 		static void invalidate_surface_contents(vk::command_buffer& /*cmd*/, vk::render_target* surface, u32 address, usz pitch)
 		{
-			surface->rsx_pitch = static_cast<u16>(pitch);
+			surface->rsx_pitch = static_cast<u32>(pitch);
 			surface->queue_tag(address);
 			surface->last_use_tag = 0;
 			surface->stencil_init_flags = 0;

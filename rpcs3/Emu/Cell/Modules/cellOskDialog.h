@@ -83,6 +83,11 @@ enum CellOskDialogFinishReason
 	CELL_OSKDIALOG_CLOSE_CANCEL = 1,
 };
 
+enum CellOskDialogFinishReasonFake // Helper. Must be negative values.
+{
+	FAKE_CELL_OSKDIALOG_CLOSE_ABORT = -1,
+};
+
 enum CellOskDialogType
 {
 	CELL_OSKDIALOG_TYPE_SINGLELINE_OSK = 0,
@@ -239,24 +244,28 @@ using cellOskDialogForceFinishCallback = class b8();
 
 enum class OskDialogState
 {
+	Unloaded,
 	Open,
 	Abort,
-	Close,
+	Closed
 };
 
 class OskDialogBase
 {
 public:
 	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel) = 0;
-	virtual void Close(bool accepted) = 0;
+
+	// Closes the dialog.
+	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.
+	// Set status to -1 if closed by the game or system.
+	virtual void Close(s32 status) = 0;
 	virtual ~OskDialogBase();
 
 	std::function<void(s32 status)> on_osk_close;
 	std::function<void()> on_osk_input_entered;
 
-	atomic_t<OskDialogState> state{ OskDialogState::Close };
+	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
 
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
 	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE]{};
-	char16_t osk_text_old[CELL_OSKDIALOG_STRING_SIZE]{};
 };

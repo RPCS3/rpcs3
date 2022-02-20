@@ -3,6 +3,8 @@
 #include "vkutils/query_pool.hpp"
 #include "vkutils/sampler.h"
 
+#include "Utilities/mutex.h"
+
 #include <unordered_map>
 #include <deque>
 #include <memory>
@@ -14,15 +16,47 @@ namespace vk
 	u64 last_completed_event_id();
 	void on_event_completed(u64 event_id, bool flush = false);
 
+	class disposable_t
+	{
+		void* ptr;
+		std::function<void(void*)> deleter;
+
+		disposable_t(void* ptr_, std::function<void(void*)> deleter_) :
+			ptr(ptr_), deleter(deleter_) {}
+	public:
+
+		disposable_t() = delete;
+		disposable_t(const disposable_t&) = delete;
+
+		disposable_t(disposable_t&& other):
+			ptr(std::exchange(other.ptr, nullptr)),
+			deleter(other.deleter)
+		{}
+
+		~disposable_t()
+		{
+			if (ptr)
+			{
+				deleter(ptr);
+				ptr = nullptr;
+			}
+		}
+
+		template <typename T>
+		static disposable_t make(T* raw)
+		{
+			return disposable_t(raw, [](void *raw)
+			{
+				delete static_cast<T*>(raw);
+			});
+		}
+	};
+
 	struct eid_scope_t
 	{
 		u64 eid;
 		const vk::render_device* m_device;
-		std::vector<std::unique_ptr<vk::buffer>> m_disposed_buffers;
-		std::vector<std::unique_ptr<vk::image_view>> m_disposed_image_views;
-		std::vector<std::unique_ptr<vk::image>> m_disposed_images;
-		std::vector<std::unique_ptr<vk::event>> m_disposed_events;
-		std::vector<std::unique_ptr<vk::query_pool>> m_disposed_query_pools;
+		std::vector<disposable_t> m_disposables;
 
 		eid_scope_t(u64 _eid):
 			eid(_eid), m_device(g_render_device)
@@ -33,35 +67,41 @@ namespace vk
 			discard();
 		}
 
+		void swap(eid_scope_t& other)
+		{
+			std::swap(eid, other.eid);
+			std::swap(m_device, other.m_device);
+			std::swap(m_disposables, other.m_disposables);
+		}
+
 		void discard()
 		{
-			m_disposed_buffers.clear();
-			m_disposed_events.clear();
-			m_disposed_image_views.clear();
-			m_disposed_images.clear();
-			m_disposed_query_pools.clear();
+			m_disposables.clear();
 		}
 	};
 
 	class resource_manager
 	{
 	private:
-		std::unordered_map<u64, std::unique_ptr<vk::sampler>> m_sampler_pool;
-		std::deque<eid_scope_t> m_eid_map;
+		struct cached_sampler_object_t : public vk::sampler, public rsx::ref_counted
+		{
+			using vk::sampler::sampler;
+		};
 
-		eid_scope_t& get_current_eid_scope()
+		std::unordered_map<u64, std::unique_ptr<cached_sampler_object_t>> m_sampler_pool;
+		std::deque<eid_scope_t> m_eid_map;
+		shared_mutex m_eid_map_lock;
+
+		inline eid_scope_t& get_current_eid_scope()
 		{
 			const auto eid = current_event_id();
-			if (!m_eid_map.empty())
 			{
-				// Elements are insterted in order, so just check the last entry for a match
-				if (auto &old = m_eid_map.back(); old.eid == eid)
+				std::lock_guard lock(m_eid_map_lock);
+				if (m_eid_map.empty() || m_eid_map.back().eid != eid)
 				{
-					return old;
+					m_eid_map.emplace_back(eid);
 				}
 			}
-
-			m_eid_map.emplace_back(eid);
 			return m_eid_map.back();
 		}
 
@@ -98,7 +138,8 @@ namespace vk
 			m_sampler_pool.clear();
 		}
 
-		vk::sampler* find_sampler(const vk::render_device& dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
+		vk::sampler* get_sampler(const vk::render_device& dev, vk::sampler* previous,
+			VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
 			VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
 			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
 			VkBool32 depth_compare = VK_FALSE, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
@@ -115,51 +156,47 @@ namespace vk
 			key |= u64(encode_fxp<true>(mipLodBias)) << 44; // 13 bits
 			key |= u64(max_anisotropy) << 57;               // 4 bits
 
+			if (previous)
+			{
+				auto as_cached_object = static_cast<cached_sampler_object_t*>(previous);
+				ensure(as_cached_object->has_refs());
+				as_cached_object->release();
+			}
+
 			if (const auto found = m_sampler_pool.find(key);
 				found != m_sampler_pool.end())
 			{
+				found->second->add_ref();
 				return found->second.get();
 			}
 
-			auto result = std::make_unique<vk::sampler>(
+			auto result = std::make_unique<cached_sampler_object_t>(
 				dev, clamp_u, clamp_v, clamp_w, unnormalized_coordinates,
 				mipLodBias, max_anisotropy, min_lod, max_lod,
 				min_filter, mag_filter, mipmap_mode, border_color,
 				depth_compare, depth_compare_mode);
 
 			auto It = m_sampler_pool.emplace(key, std::move(result));
-			return It.first->second.get();
+			auto ret = It.first->second.get();
+			ret->add_ref();
+			return ret;
 		}
 
-		void dispose(std::unique_ptr<vk::buffer>& buf)
+		inline void dispose(vk::disposable_t& disposable)
 		{
-			get_current_eid_scope().m_disposed_buffers.emplace_back(std::move(buf));
+			get_current_eid_scope().m_disposables.emplace_back(std::move(disposable));
 		}
 
-		void dispose(std::unique_ptr<vk::image_view>& view)
+		template<typename T>
+		inline void dispose(std::unique_ptr<T>& object)
 		{
-			get_current_eid_scope().m_disposed_image_views.emplace_back(std::move(view));
+			auto ptr = vk::disposable_t::make(object.release());
+			dispose(ptr);
 		}
 
-		void dispose(std::unique_ptr<vk::image>& img)
+		void push_down_current_scope()
 		{
-			get_current_eid_scope().m_disposed_images.emplace_back(std::move(img));
-		}
-
-		void dispose(std::unique_ptr<vk::viewable_image>& img)
-		{
-			get_current_eid_scope().m_disposed_images.emplace_back(std::move(img));
-		}
-
-		void dispose(std::unique_ptr<vk::event>& event)
-		{
-			get_current_eid_scope().m_disposed_events.emplace_back(std::move(event));
-			event = VK_NULL_HANDLE;
-		}
-
-		void dispose(std::unique_ptr<vk::query_pool>& pool)
-		{
-			get_current_eid_scope().m_disposed_query_pools.emplace_back(std::move(pool));
+			get_current_eid_scope().eid++;
 		}
 
 		void eid_completed(u64 eid)
@@ -173,10 +210,17 @@ namespace vk
 				}
 				else
 				{
-					m_eid_map.pop_front();
+					eid_scope_t tmp(0);
+					{
+						std::lock_guard lock(m_eid_map_lock);
+						m_eid_map.front().swap(tmp);
+						m_eid_map.pop_front();
+					}
 				}
 			}
 		}
+
+		void trim();
 	};
 
 	struct vmm_allocation_t

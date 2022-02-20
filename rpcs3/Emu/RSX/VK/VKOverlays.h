@@ -1,11 +1,13 @@
 #pragma once
 
+#include "../Common/simple_array.hpp"
 #include "../Overlays/overlay_controls.h"
+
 #include "VKProgramPipeline.h"
 #include "VKHelpers.h"
 
 #include "vkutils/data_heap.h"
-#include "vkutils/descriptors.hpp"
+#include "vkutils/descriptors.h"
 #include "vkutils/graphics_pipeline_state.hpp"
 
 #include "Emu/IdManager.h"
@@ -42,7 +44,7 @@ namespace vk
 		vk::glsl::shader m_fragment_shader;
 
 		vk::descriptor_pool m_descriptor_pool;
-		VkDescriptorSet m_descriptor_set = nullptr;
+		descriptor_set m_descriptor_set;
 		VkDescriptorSetLayout m_descriptor_layout = nullptr;
 		VkPipelineLayout m_pipeline_layout = nullptr;
 		u32 m_used_descriptors = 0;

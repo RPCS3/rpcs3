@@ -193,7 +193,8 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 	return found_slot;
 }
 
-usb_device_skylander::usb_device_skylander()
+usb_device_skylander::usb_device_skylander(const std::array<u8, 7>& location)
+	: usb_device_emulated(location)
 {
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x20, 0x1430, 0x0150, 0x0100, 0x01, 0x02, 0x00, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0029, 0x01, 0x01, 0x00, 0x80, 0x96}));

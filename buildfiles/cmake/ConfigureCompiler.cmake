@@ -2,8 +2,7 @@
 
 if(MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew- /constexpr:steps16777216 /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D NOMINMAX /D _ENABLE_EXTENDED_ALIGNED_STORAGE=1 /D _HAS_EXCEPTIONS=0 /MT")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D NOMINMAX /D _ENABLE_EXTENDED_ALIGNED_STORAGE=1 /D _HAS_EXCEPTIONS=0")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
 
 	#TODO: Some of these could be cleaned up
@@ -21,11 +20,20 @@ else()
 	# Some distros have the compilers set to use PIE by default, but RPCS3 doesn't work with PIE, so we need to disable it.
 	CHECK_CXX_COMPILER_FLAG("-no-pie" HAS_NO_PIE)
 	CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+	CHECK_CXX_COMPILER_FLAG("-msse -msse2 -mcx16" COMPILER_X86)
+	CHECK_CXX_COMPILER_FLAG("-march=armv8.1-a" COMPILER_ARM)
 
 	add_compile_options(-Wall)
 	add_compile_options(-fno-exceptions)
 	add_compile_options(-fstack-protector)
-	add_compile_options(-msse -msse2 -mcx16)
+
+	if (COMPILER_X86)
+		add_compile_options(-msse -msse2 -mcx16)
+	endif()
+
+	if (COMPILER_ARM)
+		add_compile_options(-march=armv8.1-a)
+	endif()
 
 	add_compile_options(-Werror=old-style-cast)
 	add_compile_options(-Werror=sign-compare)
@@ -82,7 +90,9 @@ else()
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie")
 		endif()
 	elseif(APPLE)
-		add_compile_options(-stdlib=libc++)
+		if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+			add_compile_options(-stdlib=libc++)
+		endif()
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no_pie")
 	elseif(WIN32)

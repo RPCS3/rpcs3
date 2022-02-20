@@ -220,6 +220,7 @@
     <addaction name="confGPUAct"/>
     <addaction name="separator"/>
     <addaction name="confPadsAct"/>
+    <addaction name="confCamerasAct"/>
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
@@ -255,6 +256,7 @@
     <addaction name="toolsmemory_viewerAct"/>
     <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="toolsStringSearchAct"/>
+    <addaction name="patchCreatorAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
     <addaction name="separator"/>
@@ -405,7 +407,7 @@
   </action>
   <action name="bootInstallPkgAct">
    <property name="text">
-    <string>Install Packages/Raps</string>
+    <string>Install Packages/Raps/Edats</string>
    </property>
    <property name="toolTip">
     <string>Install application from a .pkg file</string>
@@ -626,7 +628,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>String Search</string>
+    <string>Memory Searcher</string>
    </property>
   </action>
   <action name="toolsDecryptSprxLibsAct">
@@ -1167,6 +1169,16 @@
   <action name="bootVSHAct">
    <property name="text">
     <string>Boot VSH/XMB</string>
+   </property>
+  </action>
+  <action name="patchCreatorAct">
+   <property name="text">
+    <string>Patch Creator</string>
+   </property>
+  </action>
+  <action name="confCamerasAct">
+   <property name="text">
+    <string>Cameras</string>
    </property>
   </action>
  </widget>

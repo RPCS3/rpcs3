@@ -89,14 +89,14 @@ public:
 	virtual load_result Load(const std::string& filepath, const std::string& configpath);
 	virtual bool Save(const std::string& filepath);
 
-	virtual u32 GetTrophiesCount();
-	virtual u32 GetUnlockedTrophiesCount();
+	virtual u32 GetTrophiesCount() const;
+	virtual u32 GetUnlockedTrophiesCount() const;
 
 	virtual u32 GetUnlockedPlatinumID(u32 trophy_id, const std::string& config_path);
 
-	virtual u32 GetTrophyGrade(u32 id);
-	virtual u32 GetTrophyUnlockState(u32 id);
-	virtual u64 GetTrophyTimestamp(u32 id);
+	virtual u32 GetTrophyGrade(u32 id) const;
+	virtual u32 GetTrophyUnlockState(u32 id) const;
+	virtual u64 GetTrophyTimestamp(u32 id) const;
 
 	virtual bool UnlockTrophy(u32 id, u64 timestamp1, u64 timestamp2);
 };

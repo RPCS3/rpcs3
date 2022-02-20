@@ -408,7 +408,7 @@ bool cheat_engine::set_value(const u32 offset, const T value)
 
 		if (exec_code_at_end || exec_code_at_start)
 		{
-			extern void ppu_register_function_at(u32, u32, ppu_function_t);
+			extern void ppu_register_function_at(u32, u32, ppu_intrp_func_t);
 
 			u32 addr = offset, size = sizeof(T);
 

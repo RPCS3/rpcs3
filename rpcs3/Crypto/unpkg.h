@@ -35,6 +35,8 @@ enum : u32
 
 	PKG_FILE_ENTRY_OVERWRITE      = 0x80000000,
 	PKG_FILE_ENTRY_PSP            = 0x10000000,
+
+	PKG_FILE_ENTRY_KNOWN_BITS     = 0xff | PKG_FILE_ENTRY_PSP | PKG_FILE_ENTRY_OVERWRITE,
 };
 
 enum : u32
@@ -325,10 +327,7 @@ private:
 
 	std::string m_path{};
 	std::string m_install_dir{};
-	std::vector<fs::file> m_filelist{};
-	usz m_cur_file = 0;
-	u64 m_cur_offset = 0;
-	u64 m_cur_file_offset = 0;
+	fs::file m_file{};
 	std::unique_ptr<u128[]> m_buf{};
 	std::array<uchar, 16> m_dec_key{};
 

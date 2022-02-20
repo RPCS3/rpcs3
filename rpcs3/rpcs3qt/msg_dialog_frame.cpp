@@ -66,7 +66,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 		m_tb_progress->setRange(0, 100);
 		m_tb_progress->setVisible(true);
 #elif HAVE_QTDBUS
-		UpdateProgress(0);
+		UpdateProgress(0, true);
 		m_progress_value = 0;
 #endif
 	}
@@ -249,7 +249,7 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 			m_tb_progress->reset();
 		}
 #elif HAVE_QTDBUS
-		UpdateProgress(0);
+		UpdateProgress(0, false);
 #endif
 	}
 }
@@ -285,7 +285,7 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 		}
 #elif HAVE_QTDBUS
 		m_progress_value = std::min(m_progress_value + static_cast<int>(delta), m_gauge_max);
-		UpdateProgress(m_progress_value);
+		UpdateProgress(m_progress_value, true);
 #endif
 	}
 }
@@ -321,7 +321,7 @@ void msg_dialog_frame::ProgressBarSetValue(u32 index, u32 value)
 		}
 #elif HAVE_QTDBUS
 		m_progress_value = std::min(static_cast<int>(value), m_gauge_max);
-		UpdateProgress(m_progress_value);
+		UpdateProgress(m_progress_value, true);
 #endif
 	}
 }
@@ -370,21 +370,16 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 }
 
 #ifdef HAVE_QTDBUS
-void msg_dialog_frame::UpdateProgress(int progress, bool disable)
+void msg_dialog_frame::UpdateProgress(int progress, bool progress_visible)
 {
-	QDBusMessage message = QDBusMessage::createSignal
-	(
+	QDBusMessage message = QDBusMessage::createSignal(
 		QStringLiteral("/"),
 		QStringLiteral("com.canonical.Unity.LauncherEntry"),
-		QStringLiteral("Update")
-	);
+		QStringLiteral("Update"));
 	QVariantMap properties;
-	if (disable)
-		properties.insert(QStringLiteral("progress-visible"), false);
-	else
-		properties.insert(QStringLiteral("progress-visible"), true);
 	// Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), 1.* progress / m_gauge_max);
+	properties.insert(QStringLiteral("progress"), 1. * progress / m_gauge_max);
+	properties.insert(QStringLiteral("progress-visible"), progress_visible);
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }

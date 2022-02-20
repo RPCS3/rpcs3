@@ -136,7 +136,6 @@ struct GLProgramBuffer : public program_state_cache<GLTraits>
 	template <typename... Args>
 	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, void* &props, Args&& ...args)
 	{
-		vp.skip_vertex_input_check = true;
 		get_graphics_pipeline(vp, fp, props, false, false, std::forward<Args>(args)...);
 	}
 

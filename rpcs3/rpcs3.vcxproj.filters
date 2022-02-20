@@ -130,6 +130,12 @@
     <Filter Include="Gui\custom items">
       <UniqueIdentifier>{949cff6d-9cc5-4a8a-a453-a5144da8ecf4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\rpcn">
+      <UniqueIdentifier>{dfd401ec-dd22-4f8a-9dea-565a03efab6a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Io\camera">
+      <UniqueIdentifier>{f1996891-48b7-441a-b3fe-52794cbebe80}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -711,9 +717,6 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_downloader.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp">
-      <Filter>Gui\settings</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_rpcn_settings_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -746,6 +749,63 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\game_list.cpp">
       <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_patch_creator_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\patch_creator_dialog.cpp">
+      <Filter>Gui\patch manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_patch_creator_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp">
+      <Filter>Gui\rpcn</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\sendmessage_dialog_frame.cpp">
+      <Filter>Gui\message dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_sendmessage_dialog_frame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_sendmessage_dialog_frame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\recvmessage_dialog_frame.cpp">
+      <Filter>Gui\message dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_recvmessage_dialog_frame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_recvmessage_dialog_frame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_camera_handler.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_camera_video_surface.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_camera_error_handler.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_camera_error_handler.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_camera_error_handler.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\camera_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_camera_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_camera_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\shortcut_utils.cpp">
+      <Filter>Gui\utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -877,6 +937,21 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\movie_item.h">
       <Filter>Gui\custom items</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_patch_creator_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\qt_camera_video_surface.h">
+      <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\qt_camera_handler.h">
+      <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\shortcut_utils.h">
+      <Filter>Gui\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1084,14 +1159,35 @@
     <CustomBuild Include="rpcs3qt\downloader.h">
       <Filter>Gui\network</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\rpcn_settings_dialog.h">
-      <Filter>Gui\settings</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\localized_emu.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\log_viewer.h">
       <Filter>Gui\log</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\patch_creator_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\patch_creator_dialog.h">
+      <Filter>Gui\patch manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\rpcn_settings_dialog.h">
+      <Filter>Gui\rpcn</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\sendmessage_dialog_frame.h">
+      <Filter>Gui\message dialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\recvmessage_dialog_frame.h">
+      <Filter>Gui\message dialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\qt_camera_error_handler.h">
+      <Filter>Io\camera</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\camera_settings_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\camera_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

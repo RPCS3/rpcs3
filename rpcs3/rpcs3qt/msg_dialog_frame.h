@@ -48,6 +48,6 @@ public:
 	void ProgressBarSetLimit(u32 index, u32 limit) override;
 #ifdef HAVE_QTDBUS
 private:
-	void UpdateProgress(int progress, bool disable = false);
+	void UpdateProgress(int progress, bool progress_visible);
 #endif
 };

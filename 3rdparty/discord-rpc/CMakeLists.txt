@@ -2,7 +2,7 @@
 add_library(3rdparty_discordRPC INTERFACE)
 
 # We don't want Discord Rich Presence on the BSDs and other OSes
-if (USE_DISCORD_RPC AND (WIN32 OR CMAKE_SYSTEM MATCHES "Linux" OR APPLE))
+if (USE_DISCORD_RPC AND (WIN32 OR CMAKE_SYSTEM MATCHES "Linux" OR APPLE) AND COMPILER_X86)
 	if (WIN32 AND NOT MSVC)
 		ExternalProject_Add(discordRPC
 				GIT_REPOSITORY https://github.com/discordapp/discord-rpc

@@ -2,13 +2,13 @@
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
 #include "Utilities/Thread.h"
-#include "Program/ProgramStateCache.h"
+#include "Common/bitfield.hpp"
 #include "Emu/System.h"
 #include "Emu/cache_utils.hpp"
+#include "Program/ProgramStateCache.h"
 #include "Common/texture_cache_checker.h"
 #include "Overlays/Shaders/shader_loading_dialog.h"
 
-#include "rsx_utils.h"
 #include <chrono>
 #include <unordered_map>
 
@@ -39,7 +39,6 @@ namespace rsx
 			u32 fp_ctrl;
 			u32 fp_texture_dimensions;
 			u32 fp_texcoord_control;
-			u16 fp_unnormalized_coords;
 			u16 fp_height;
 			u16 fp_pixel_layout;
 			u16 fp_lighting_flags;
@@ -307,7 +306,6 @@ namespace rsx
 			state_hash ^= rpcs3::hash_base<u32>(data.vp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_texcoord_control);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_unnormalized_coords);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_height);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_pixel_layout);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_lighting_flags);
@@ -325,8 +323,6 @@ namespace rsx
 
 			fs::file f(fmt::format("%s/raw/%llX.vp", root_path, program_hash));
 			if (f) f.read(vp.data, f.size() / sizeof(u32));
-
-			vp.skip_vertex_input_check = true;
 
 			return vp;
 		}
@@ -381,7 +377,6 @@ namespace rsx
 
 			fp.ctrl = data.fp_ctrl;
 			fp.texture_state.texture_dimensions = data.fp_texture_dimensions;
-			fp.texture_state.unnormalized_coords = data.fp_unnormalized_coords;
 			fp.texture_state.shadow_textures = data.fp_shadow_textures;
 			fp.texture_state.redirected_textures = data.fp_redirected_textures;
 			fp.texcoord_control_mask = data.fp_texcoord_control;
@@ -426,7 +421,6 @@ namespace rsx
 			data_block.fp_ctrl = fp.ctrl;
 			data_block.fp_texture_dimensions = fp.texture_state.texture_dimensions;
 			data_block.fp_texcoord_control = fp.texcoord_control_mask;
-			data_block.fp_unnormalized_coords = fp.texture_state.unnormalized_coords;
 			data_block.fp_lighting_flags = u16(fp.two_sided_lighting);
 			data_block.fp_shadow_textures = fp.texture_state.shadow_textures;
 			data_block.fp_redirected_textures = fp.texture_state.redirected_textures;

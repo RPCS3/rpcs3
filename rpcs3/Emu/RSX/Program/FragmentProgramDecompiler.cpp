@@ -330,7 +330,7 @@ bool FragmentProgramDecompiler::DstExpectsSca() const
 
 std::string FragmentProgramDecompiler::Format(const std::string& code, bool ignore_redirects)
 {
-	const std::pair<std::string, std::function<std::string()>> repl_list[] =
+	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
 	{
 		{ "$$", []() -> std::string { return "$"; } },
 		{ "$0", [this]() -> std::string {return GetSRC<SRC0>(src0);} },
@@ -369,7 +369,7 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 		{
 			//Redirect parameter 0 to the x2d temp register for TEXBEM
 			//TODO: Organize this a little better
-			std::pair<std::string, std::string> repl[] = { { "$0", "x2d" } };
+			std::pair<std::string_view, std::string> repl[] = { { "$0", "x2d" } };
 			std::string result = fmt::replace_all(code, repl);
 
 			return fmt::replace_all(result, repl_list);
@@ -399,17 +399,17 @@ std::string FragmentProgramDecompiler::GetRawCond()
 	}
 
 	if (src0.exec_if_gr && src0.exec_if_eq)
-		cond = compareFunction(COMPARE::FUNCTION_SGE, AddCond() + swizzle, zero);
+		cond = compareFunction(COMPARE::SGE, AddCond() + swizzle, zero);
 	else if (src0.exec_if_lt && src0.exec_if_eq)
-		cond = compareFunction(COMPARE::FUNCTION_SLE, AddCond() + swizzle, zero);
+		cond = compareFunction(COMPARE::SLE, AddCond() + swizzle, zero);
 	else if (src0.exec_if_gr && src0.exec_if_lt)
-		cond = compareFunction(COMPARE::FUNCTION_SNE, AddCond() + swizzle, zero);
+		cond = compareFunction(COMPARE::SNE, AddCond() + swizzle, zero);
 	else if (src0.exec_if_gr)
-		cond = compareFunction(COMPARE::FUNCTION_SGT, AddCond() + swizzle, zero);
+		cond = compareFunction(COMPARE::SGT, AddCond() + swizzle, zero);
 	else if (src0.exec_if_lt)
-		cond = compareFunction(COMPARE::FUNCTION_SLT, AddCond() + swizzle, zero);
+		cond = compareFunction(COMPARE::SLT, AddCond() + swizzle, zero);
 	else //if(src0.exec_if_eq)
-		cond = compareFunction(COMPARE::FUNCTION_SEQ, AddCond() + swizzle, zero);
+		cond = compareFunction(COMPARE::SEQ, AddCond() + swizzle, zero);
 
 	return cond;
 }
@@ -1018,10 +1018,10 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		SetDst("_builtin_divsq($0, $1.x)");
 		properties.has_divsq = true;
 		return true;
-	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2), OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3), OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4), OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::DP2), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::DP3), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::DP4), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::DP2A), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("fma($0, $1, $2)", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)", OPFLAGS::src_cast_f32); return true;
@@ -1029,22 +1029,22 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
 	case RSX_FP_OPCODE_RCP: SetDst("_builtin_rcp($0.x).xxxx"); return true;
 	case RSX_FP_OPCODE_RSQ: SetDst("_builtin_rsq($0.x).xxxx"); return true;
-	case RSX_FP_OPCODE_SEQ: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL), OPFLAGS::skip_type_cast); return true;
-	case RSX_FP_OPCODE_SGE: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_SGT: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_SLE: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_SLT: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_SNE: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR), OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_SEQ: SetDst("$Ty(" + compareFunction(COMPARE::SEQ, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::SFL), OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_SGE: SetDst("$Ty(" + compareFunction(COMPARE::SGE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SGT: SetDst("$Ty(" + compareFunction(COMPARE::SGT, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SLE: SetDst("$Ty(" + compareFunction(COMPARE::SLE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SLT: SetDst("$Ty(" + compareFunction(COMPARE::SLT, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SNE: SetDst("$Ty(" + compareFunction(COMPARE::SNE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::STR), OPFLAGS::skip_type_cast); return true;
 
 	// SCB-only ops
 	case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_DST: SetDst("$Ty(1.0, $0.y * $1.y, $0.z, $1.w)", OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::FUNCTION_REFL), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::REFL), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_FLR: SetDst("_builtin_floor($0)"); return true;
-	case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FUNCTION_FRACT)); return true;
+	case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FRACT)); return true;
 	case RSX_FP_OPCODE_LIT:
 		SetDst("_builtin_lit($0)");
 		properties.has_lit_op = true;
@@ -1074,31 +1074,36 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 
 bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 {
-	auto insert_texture_fetch = [this](const std::array<FUNCTION, 6>& functions)
+	auto insert_texture_fetch = [this](FUNCTION base_func)
 	{
 		const auto type = m_prog.get_texture_dimension(dst.tex_num);
 		const auto ref_mask = (1 << dst.tex_num);
 		std::string swz_mask = "";
-		auto select = static_cast<u8>(type);
 
-		if (type != rsx::texture_dimension_extended::texture_dimension_3d)
+		auto func_id = base_func;
+
+		if (m_prog.texture_state.shadow_textures & ref_mask)
 		{
-			if (m_prog.texture_state.shadow_textures & ref_mask)
+			properties.shadow_sampler_mask |= ref_mask;
+			swz_mask = ".xxxx";
+
+			func_id = (base_func == FUNCTION::TEXTURE_SAMPLE_PROJ_BASE) ? FUNCTION::TEXTURE_SAMPLE_SHADOW_PROJ_BASE : FUNCTION::TEXTURE_SAMPLE_SHADOW_BASE;
+		}
+		else
+		{
+			properties.common_access_sampler_mask |= ref_mask;
+			if (m_prog.texture_state.redirected_textures & ref_mask)
 			{
-				properties.shadow_sampler_mask |= ref_mask;
-				select = 4;
-				swz_mask = ".xxxx";
-			}
-			else
-			{
-				properties.common_access_sampler_mask |= ref_mask;
-				if (m_prog.texture_state.redirected_textures & ref_mask)
-				{
-					properties.redirected_sampler_mask |= ref_mask;
-					select = 5;
-				}
+				properties.redirected_sampler_mask |= ref_mask;
+				func_id = (base_func == FUNCTION::TEXTURE_SAMPLE_PROJ_BASE) ? FUNCTION::TEXTURE_SAMPLE_DEPTH_RGBA_PROJ_BASE : FUNCTION::TEXTURE_SAMPLE_DEPTH_RGBA_BASE;
 			}
 		}
+
+		ensure(func_id <= FUNCTION::TEXTURE_SAMPLE_MAX_BASE_ENUM && func_id >= FUNCTION::TEXTURE_SAMPLE_BASE);
+
+		// Clamp type to 3 types (1d, 2d, cube+3d) and offset into sampling redirection table
+		const auto type_offset = (std::min(static_cast<int>(type), 2) + 1) * static_cast<int>(FUNCTION::TEXTURE_SAMPLE_BASE_ENUM_COUNT);
+		func_id = static_cast<FUNCTION>(static_cast<int>(func_id) + type_offset);
 
 		if (dst.exp_tex)
 		{
@@ -1106,16 +1111,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			AddCode("_enable_texture_expand();");
 		}
 
-		auto function = functions[select];
-
-		if (function == FUNCTION::FUNCTION_TEXTURE_SHADOW2D &&
-			type == rsx::texture_dimension_extended::texture_dimension_cubemap)
-		{
-			// Cubemap shadow override
-			function = FUNCTION::FUNCTION_TEXTURE_SHADOWCUBE;
-		}
-
-		SetDst(getFunction(function) + swz_mask);
+		SetDst(getFunction(func_id) + swz_mask);
 
 		if (dst.exp_tex)
 		{
@@ -1126,8 +1122,8 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 	switch (opcode)
 	{
-	case RSX_FP_OPCODE_DDX: SetDst(getFunction(FUNCTION::FUNCTION_DFDX)); return true;
-	case RSX_FP_OPCODE_DDY: SetDst(getFunction(FUNCTION::FUNCTION_DFDY)); return true;
+	case RSX_FP_OPCODE_DDX: SetDst(getFunction(FUNCTION::DFDX)); return true;
+	case RSX_FP_OPCODE_DDY: SetDst(getFunction(FUNCTION::DFDY)); return true;
 	case RSX_FP_OPCODE_NRM: SetDst("_builtin_normalize($0.xyz).xyzz", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_BEM: SetDst("$0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw"); return true;
 	case RSX_FP_OPCODE_TEXBEM:
@@ -1140,15 +1136,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TEX:
 	{
 		AddTex();
-		insert_texture_fetch({
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D,
-			FUNCTION::FUNCTION_TEXTURE_SHADOW2D,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA
-		});
-
+		insert_texture_fetch(FUNCTION::TEXTURE_SAMPLE_BASE);
 		return true;
 	}
 	case RSX_FP_OPCODE_TXPBEM:
@@ -1161,65 +1149,25 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_TXP:
 	{
 		AddTex();
-		insert_texture_fetch({
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ,
-			FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA_PROJ
-		});
-
+		insert_texture_fetch(FUNCTION::TEXTURE_SAMPLE_PROJ_BASE);
 		return true;
 	}
 	case RSX_FP_OPCODE_TXD:
 	{
 		AddTex();
-
-		if (m_prog.texture_state.redirected_textures & (1 << dst.tex_num) ||
-			m_prog.texture_state.shadow_textures & (1 << dst.tex_num))
-		{
-			// Doesn't make sense to sample with derivates for these types
-			rsx_log.error("[Unimplemented warning] TXD operation performed on shadow/redirected texture!");
-		}
-
-		insert_texture_fetch({
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD
-		});
-
+		insert_texture_fetch(FUNCTION::TEXTURE_SAMPLE_GRAD_BASE);
 		return true;
 	}
 	case RSX_FP_OPCODE_TXB:
 	{
 		AddTex();
-		insert_texture_fetch({
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_BIAS,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_BIAS,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_BIAS,
-			FUNCTION::FUNCTION_TEXTURE_SHADOW2D,              // Shadow and depth_rgba variants are generated for framebuffers where only LOD0 exists
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA
-		});
-
+		insert_texture_fetch(FUNCTION::TEXTURE_SAMPLE_BIAS_BASE);
 		return true;
 	}
 	case RSX_FP_OPCODE_TXL:
 	{
 		AddTex();
-		insert_texture_fetch({
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD,
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD,
-			FUNCTION::FUNCTION_TEXTURE_SHADOW2D,              // Shadow and depth_rgba variants are generated for framebuffers where only LOD0 exists
-			FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA
-		});
-
+		insert_texture_fetch(FUNCTION::TEXTURE_SAMPLE_LOD_BASE);
 		return true;
 	}
 	// Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt

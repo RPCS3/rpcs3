@@ -1,9 +1,9 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "../Common/simple_array.hpp"
 #include "../Overlays/overlays.h"
 #include "GLTexture.h"
-#include "Emu/RSX/rsx_utils.h"
 #include <string>
 #include <unordered_map>
 

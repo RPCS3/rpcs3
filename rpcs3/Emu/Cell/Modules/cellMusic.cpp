@@ -102,7 +102,7 @@ error_code cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 
 error_code cellMusicSetVolume2(f32 level)
 {
-	cellMusic.todo("cellMusicSetVolume2(level=0x%x)", level);
+	cellMusic.todo("cellMusicSetVolume2(level=%f)", level);
 
 	level = std::clamp(level, 0.0f, 1.0f);
 
@@ -421,7 +421,7 @@ error_code cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Cal
 
 error_code cellMusicSetVolume(f32 level)
 {
-	cellMusic.todo("cellMusicSetVolume(level=0x%x)", level);
+	cellMusic.todo("cellMusicSetVolume(level=%f)", level);
 
 	level = std::clamp(level, 0.0f, 1.0f);
 

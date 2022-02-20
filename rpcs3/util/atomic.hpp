@@ -4,7 +4,7 @@
 #include <functional>
 #include <mutex>
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 #pragma warning(push)
 #pragma warning(disable: 4996)
 
@@ -67,7 +67,7 @@ namespace utils
 
 FORCE_INLINE void atomic_fence_consume()
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	_ReadWriteBarrier();
 #else
 	__atomic_thread_fence(__ATOMIC_CONSUME);
@@ -76,7 +76,7 @@ FORCE_INLINE void atomic_fence_consume()
 
 FORCE_INLINE void atomic_fence_acquire()
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	_ReadWriteBarrier();
 #else
 	__atomic_thread_fence(__ATOMIC_ACQUIRE);
@@ -85,7 +85,7 @@ FORCE_INLINE void atomic_fence_acquire()
 
 FORCE_INLINE void atomic_fence_release()
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	_ReadWriteBarrier();
 #else
 	__atomic_thread_fence(__ATOMIC_RELEASE);
@@ -94,7 +94,7 @@ FORCE_INLINE void atomic_fence_release()
 
 FORCE_INLINE void atomic_fence_acq_rel()
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	_ReadWriteBarrier();
 #else
 	__atomic_thread_fence(__ATOMIC_ACQ_REL);
@@ -103,16 +103,18 @@ FORCE_INLINE void atomic_fence_acq_rel()
 
 FORCE_INLINE void atomic_fence_seq_cst()
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	_ReadWriteBarrier();
 	_InterlockedOr(static_cast<long*>(_AddressOfReturnAddress()), 0);
 	_ReadWriteBarrier();
-#else
+#elif defined(ARCH_X64)
 	__asm__ volatile ("lock orl $0, 0(%%rsp);" ::: "cc", "memory");
+#else
+	__atomic_thread_fence(__ATOMIC_SEQ_CST);
 #endif
 }
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 #pragma warning(pop)
 #endif
 
@@ -342,7 +344,7 @@ struct atomic_storage
 
 	using type = get_uint_t<sizeof(T)>;
 
-#ifndef _MSC_VER
+#ifndef _M_X64
 
 #if defined(__ATOMIC_HLE_ACQUIRE) && defined(__ATOMIC_HLE_RELEASE)
 	static constexpr int s_hle_ack = __ATOMIC_SEQ_CST | __ATOMIC_HLE_ACQUIRE;
@@ -472,7 +474,7 @@ struct atomic_storage
 
 	/* Second part: MSVC-specific */
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 	static inline T add_fetch(T& dest, T value)
 	{
 		return atomic_storage<T>::fetch_add(dest, value) + value;
@@ -529,6 +531,7 @@ struct atomic_storage
 
 	static inline bool bts(T& dest, uint bit)
 	{
+#if defined(ARCH_X64)
 		uchar* dst = reinterpret_cast<uchar*>(&dest);
 
 		if constexpr (sizeof(T) < 4)
@@ -539,18 +542,23 @@ struct atomic_storage
 			bit = bit + (ptr & 3) * 8;
 			dst = reinterpret_cast<T*>(ptr & -4);
 		}
+#endif
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 		return _interlockedbittestandset((long*)dst, bit) != 0;
-#else
+#elif defined(ARCH_X64)
 		bool result;
 		__asm__ volatile ("lock btsl %2, 0(%1)\n" : "=@ccc" (result) : "r" (dst), "Ir" (bit) : "cc", "memory");
 		return result;
+#else
+		const T value = static_cast<T>(1) << bit;
+		return (__atomic_fetch_or(&dest, value, __ATOMIC_SEQ_CST) & value) != 0;
 #endif
 	}
 
 	static inline bool btr(T& dest, uint bit)
 	{
+#if defined(ARCH_X64)
 		uchar* dst = reinterpret_cast<uchar*>(&dest);
 
 		if constexpr (sizeof(T) < 4)
@@ -561,18 +569,23 @@ struct atomic_storage
 			bit = bit + (ptr & 3) * 8;
 			dst = reinterpret_cast<T*>(ptr & -4);
 		}
+#endif
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 		return _interlockedbittestandreset((long*)dst, bit) != 0;
-#else
+#elif defined(ARCH_X64)
 		bool result;
 		__asm__ volatile ("lock btrl %2, 0(%1)\n" : "=@ccc" (result) : "r" (dst), "Ir" (bit) : "cc", "memory");
 		return result;
+#else
+		const T value = static_cast<T>(1) << bit;
+		return (__atomic_fetch_and(&dest, ~value, __ATOMIC_SEQ_CST) & value) != 0;
 #endif
 	}
 
 	static inline bool btc(T& dest, uint bit)
 	{
+#if defined(ARCH_X64)
 		uchar* dst = reinterpret_cast<uchar*>(&dest);
 
 		if constexpr (sizeof(T) < 4)
@@ -583,8 +596,9 @@ struct atomic_storage
 			bit = bit + (ptr & 3) * 8;
 			dst = reinterpret_cast<T*>(ptr & -4);
 		}
+#endif
 
-#ifdef _MSC_VER
+#ifdef _M_X64
 		while (true)
 		{
 			// Keep trying until we actually invert desired bit
@@ -593,10 +607,13 @@ struct atomic_storage
 			if (_interlockedbittestandreset((long*)dst, bit))
 				return true;
 		}
-#else
+#elif defined(ARCH_X64)
 		bool result;
 		__asm__ volatile ("lock btcl %2, 0(%1)\n" : "=@ccc" (result) : "r" (dst), "Ir" (bit) : "cc", "memory");
 		return result;
+#else
+		const T value = static_cast<T>(1) << bit;
+		return (__atomic_fetch_xor(&dest, value, __ATOMIC_SEQ_CST) & value) != 0;
 #endif
 	}
 };
@@ -606,7 +623,7 @@ struct atomic_storage
 template <typename T>
 struct atomic_storage<T, 1> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		const char v = std::bit_cast<char>(comp);
@@ -676,7 +693,7 @@ struct atomic_storage<T, 1> : atomic_storage<T, 0>
 template <typename T>
 struct atomic_storage<T, 2> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		const short v = std::bit_cast<short>(comp);
@@ -758,7 +775,7 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 template <typename T>
 struct atomic_storage<T, 4> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		const long v = std::bit_cast<long>(comp);
@@ -854,7 +871,7 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 template <typename T>
 struct atomic_storage<T, 8> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
 		const llong v = std::bit_cast<llong>(comp);
@@ -950,7 +967,7 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 template <typename T>
 struct atomic_storage<T, 16> : atomic_storage<T, 0>
 {
-#ifdef _MSC_VER
+#ifdef _M_X64
 	static inline T load(const T& dest)
 	{
 		atomic_fence_acquire();
@@ -995,7 +1012,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 		utils::atomic_store16(&dest, std::bit_cast<u128>(value));
 		atomic_fence_release();
 	}
-#else
+#elif defined(ARCH_X64)
 	static inline T load(const T& dest)
 	{
 		alignas(16) T r;
@@ -1077,6 +1094,91 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 #else
 		__asm__ volatile("movdqa %0, %1;" :: "x" (val), "m" (dest) : "memory");
 #endif
+	}
+#elif defined(ARCH_ARM64)
+	static inline T load(const T& dest)
+	{
+		u32 tmp;
+		u64 data[2];
+		__asm__ volatile("1:\n"
+			"ldaxp %x[data0], %x[data1], %[dest]\n"
+			"stlxp %w[tmp], %x[data0], %x[data1], %[dest]\n"
+			"cbnz %w[tmp], 1b\n"
+			: [tmp] "=&r" (tmp), [data0] "=&r" (data[0]), [data1] "=&r" (data[1])
+			: [dest] "Q" (dest)
+			: "memory"
+		);
+		T result;
+		std::memcpy(&result, data, 16);
+		return result;
+	}
+
+	static inline T observe(const T& dest)
+	{
+		// TODO
+		return load(dest);
+	}
+
+	static inline bool compare_exchange(T& dest, T& comp, T exch)
+	{
+		bool result;
+		u64 cmp[2];
+		std::memcpy(cmp, &comp, 16);
+		u64 data[2];
+		std::memcpy(data, &exch, 16);
+		u64 prev[2];
+		__asm__ volatile("1:\n"
+			"ldaxp %x[prev0], %x[prev1], %[storage]\n"
+			"cmp %x[prev0], %x[cmp0]\n"
+			"ccmp %x[prev1], %x[cmp1], #0, eq\n"
+			"b.ne 2f\n"
+			"stlxp %w[result], %x[data0], %x[data1], %[storage]\n"
+			"cbnz %w[result], 1b\n"
+			"2:\n"
+			"cset %w[result], eq\n"
+			: [result] "=&r" (result), [storage] "+Q" (dest), [prev0] "=&r" (prev[0]), [prev1] "=&r" (prev[1])
+			: [data0] "r" (data[0]), [data1] "r" (data[1]), [cmp0] "r" (cmp[0]), [cmp1] "r" (cmp[1])
+			: "cc", "memory"
+		);
+
+		if (result)
+		{
+			return true;
+		}
+
+		std::memcpy(&comp, prev, 16);
+		return false;
+	}
+
+	static inline T exchange(T& dest, T value)
+	{
+		u32 tmp;
+		u64 src[2];
+		u64 data[2];
+		std::memcpy(src, &value, 16);
+		__asm__ volatile("1:\n"
+			"ldaxp %x[data0], %x[data1], %[dest]\n"
+			"stlxp %w[tmp], %x[src0], %x[src1], %[dest]\n"
+			"cbnz %w[tmp], 1b\n"
+			: [tmp] "=&r" (tmp), [dest] "+Q" (dest), [data0] "=&r" (data[0]), [data1] "=&r" (data[1])
+			: [src0] "r" (src[0]), [src1] "r" (src[1])
+			: "memory"
+		);
+		T result;
+		std::memcpy(&result, data, 16);
+		return result;
+	}
+
+	static inline void store(T& dest, T value)
+	{
+		// TODO
+		exchange(dest, value);
+	}
+
+	static inline void release(T& dest, T value)
+	{
+		// TODO
+		exchange(dest, value);
 	}
 #endif
 
@@ -1562,17 +1664,50 @@ public:
 
 	bool bit_test_set(uint bit)
 	{
-		return atomic_storage<type>::bts(m_data, bit & (sizeof(T) * 8 - 1));
+		if constexpr (std::is_integral<type>::value)
+		{
+			return atomic_storage<type>::bts(m_data, bit & (sizeof(T) * 8 - 1));
+		}
+
+		return atomic_op([](type& v)
+		{
+			const auto old = v;
+			const auto bit = type(1) << (sizeof(T) * 8 - 1);
+			v |= bit;
+			return !!(old & bit);
+		});
 	}
 
 	bool bit_test_reset(uint bit)
 	{
-		return atomic_storage<type>::btr(m_data, bit & (sizeof(T) * 8 - 1));
+		if constexpr (std::is_integral<type>::value)
+		{
+			return atomic_storage<type>::btr(m_data, bit & (sizeof(T) * 8 - 1));
+		}
+
+		return atomic_op([](type& v)
+		{
+			const auto old = v;
+			const auto bit = type(1) << (sizeof(T) * 8 - 1);
+			v &= ~bit;
+			return !!(old & bit);
+		});
 	}
 
 	bool bit_test_invert(uint bit)
 	{
-		return atomic_storage<type>::btc(m_data, bit & (sizeof(T) * 8 - 1));
+		if constexpr (std::is_integral<type>::value)
+		{
+			return atomic_storage<type>::btc(m_data, bit & (sizeof(T) * 8 - 1));
+		}
+
+		return atomic_op([](type& v)
+		{
+			const auto old = v;
+			const auto bit = type(1) << (sizeof(T) * 8 - 1);
+			v ^= bit;
+			return !!(old & bit);
+		});
 	}
 
 	// Timeout is discouraged

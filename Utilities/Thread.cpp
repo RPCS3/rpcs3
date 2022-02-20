@@ -77,7 +77,7 @@
 #include "util/logs.hpp"
 #include "util/asm.hpp"
 #include "util/v128.hpp"
-#include "util/v128sse.hpp"
+#include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 #include "Emu/Memory/vm_locking.h"
 
@@ -189,6 +189,7 @@ bool IsDebuggerPresent()
 }
 #endif
 
+#if defined(ARCH_X64)
 enum x64_reg_t : u32
 {
 	X64R_RAX = 0,
@@ -839,6 +840,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 #ifdef _WIN32
 
 typedef CONTEXT x64_context;
+typedef CONTEXT ucontext_t;
 
 #define X64REG(context, reg) (&(&(context)->Rax)[reg])
 #define XMMREG(context, reg) (reinterpret_cast<v128*>(&(&(context)->Xmm0)[reg]))
@@ -1211,12 +1213,18 @@ usz get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, usz d_
 	return d_size;
 }
 
+#elif defined(ARCH_ARM64)
+
+#define RIP(context) ((context)->uc_mcontext.pc)
+
+#endif /* ARCH_ */
+
 namespace rsx
 {
 	extern std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 }
 
-bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) noexcept
+bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noexcept
 {
 	g_tls_fault_all++;
 
@@ -1231,22 +1239,19 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 		bool handled = rsx::g_access_violation_handler(addr, is_writing);
 
+		if (cpu && (cpu->state += cpu_flag::temp, cpu->test_stopped()))
+		{
+			//
+		}
+
 		if (handled)
 		{
 			g_tls_fault_rsx++;
-			if (cpu && cpu->test_stopped())
-			{
-				//
-			}
-
 			return true;
-		}
-
-		if (cpu && cpu->test_stopped())
-		{
 		}
 	}
 
+#if defined(ARCH_X64)
 	const u8* const code = reinterpret_cast<u8*>(RIP(context));
 
 	x64_op_t op;
@@ -1386,14 +1391,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		g_tls_fault_spu++;
 		return true;
 	} while (0);
+#else
+	static_cast<void>(context);
+#endif /* ARCH_ */
 
 	if (vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable))
 	{
-		if (cpu && cpu->test_stopped())
-		{
-			//
-		}
-
 		return true;
 	}
 
@@ -1554,7 +1557,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			if (!g_tls_access_violation_recovered)
 			{
 				vm_log.notice("\n%s", dump_useful_thread_info());
-				vm_log.error("Access violation %s location 0x%x (%s) [type=u%u]", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory", d_size * 8);
+				vm_log.error("Access violation %s location 0x%x (%s)", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 			}
 
 			// TODO:
@@ -1580,7 +1583,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		}
 	}
 
-	Emu.Pause();
+	Emu.Pause(true);
 
 	if (!g_tls_access_violation_recovered)
 	{
@@ -1591,7 +1594,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	// Do not log any further access violations in this case.
 	if (!g_tls_access_violation_recovered)
 	{
-		vm_log.fatal("Access violation %s location 0x%x (%s) [type=u%u]", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory", d_size * 8);
+		vm_log.fatal("Access violation %s location 0x%x (%s)", is_writing ? "writing" : (cpu && cpu->id_type() == 1 && cpu->get_pc() == addr ? "executing" : "reading"), addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory");
 	}
 
 	while (Emu.IsPaused())
@@ -1763,8 +1766,9 @@ const bool s_exception_handler_set = []() -> bool
 
 static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 {
-	x64_context* context = static_cast<ucontext_t*>(uct);
+	ucontext_t* context = static_cast<ucontext_t*>(uct);
 
+#if defined(ARCH_X64)
 #ifdef __APPLE__
 	const u64 err = context->uc_mcontext->__es.__err;
 #elif defined(__DragonFly__) || defined(__FreeBSD__)
@@ -1779,6 +1783,23 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 
 	const bool is_executing = err & 0x10;
 	const bool is_writing = err & 0x2;
+#elif defined(ARCH_ARM64)
+	const bool is_executing = uptr(info->si_addr) == RIP(context);
+	const u32 insn = is_executing ? 0 : *reinterpret_cast<u32*>(RIP(context));
+	const bool is_writing = (insn & 0xbfff0000) == 0x0c000000
+		|| (insn & 0xbfe00000) == 0x0c800000
+		|| (insn & 0xbfdf0000) == 0x0d000000
+		|| (insn & 0xbfc00000) == 0x0d800000
+		|| (insn & 0x3f400000) == 0x08000000
+		|| (insn & 0x3bc00000) == 0x39000000
+		|| (insn & 0x3fc00000) == 0x3d800000
+		|| (insn & 0x3bc00000) == 0x38000000
+		|| (insn & 0x3fe00000) == 0x3c800000
+		|| (insn & 0x3a400000) == 0x28000000;
+
+#else
+#error "signal_handler not implemented"
+#endif
 
 	const u64 exec64 = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
 	const auto cause = is_executing ? "executing" : is_writing ? "writing" : "reading";
@@ -1818,6 +1839,26 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	thread_ctrl::emergency_exit(msg);
 }
 
+static void sigill_handler(int /*sig*/, siginfo_t* info, void* /*uct*/) noexcept
+{
+	std::string msg = fmt::format("Illegal instruction at %p (%s).\n", info->si_addr, *reinterpret_cast<be_t<u128>*>(info->si_addr));
+
+	append_thread_name(msg);
+
+	if (IsDebuggerPresent())
+	{
+		sys_log.fatal("\n%s", msg);
+
+		sys_log.notice("\n%s", dump_useful_thread_info());
+
+		// Convert to SIGTRAP
+		raise(SIGTRAP);
+		return;
+	}
+
+	thread_ctrl::emergency_exit(msg);
+}
+
 void sigpipe_signaling_handler(int)
 {
 }
@@ -1832,6 +1873,21 @@ const bool s_exception_handler_set = []() -> bool
 	if (::sigaction(SIGSEGV, &sa, NULL) == -1)
 	{
 		std::fprintf(stderr, "sigaction(SIGSEGV) failed (%d).\n", errno);
+		std::abort();
+	}
+
+#ifdef __APPLE__
+	if (::sigaction(SIGBUS, &sa, NULL) == -1)
+	{
+		std::fprintf(stderr, "sigaction(SIGBUS) failed (%d).\n", errno);
+		std::abort();
+	}
+#endif
+
+	sa.sa_sigaction = sigill_handler;
+	if (::sigaction(SIGILL, &sa, NULL) == -1)
+	{
+		std::fprintf(stderr, "sigaction(SIGILL) failed (%d).\n", errno);
 		std::abort();
 	}
 
@@ -1853,11 +1909,7 @@ const bool s_terminate_handler_set = []() -> bool
 	std::set_terminate([]()
 	{
 		if (IsDebuggerPresent())
-#ifdef _MSC_VER
-			__debugbreak();
-#else
-			__asm("int3;");
-#endif
+			utils::trap();
 
 		report_fatal_error("RPCS3 has abnormally terminated.");
 	});
@@ -1906,6 +1958,11 @@ void thread_base::start()
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	ensure(m_thread);
 	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1);
+#elif defined(__APPLE__)
+	pthread_attr_t stack_size_attr;
+	pthread_attr_init(&stack_size_attr);
+	pthread_attr_setstacksize(&stack_size_attr, 0x800000);
+	ensure(pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), &stack_size_attr, entry_point, this) == 0);
 #else
 	ensure(pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry_point, this) == 0);
 #endif
@@ -1931,7 +1988,7 @@ void thread_base::initialize(void (*error_cb)())
 	{
 		if (attempts == umax)
 		{
-			g_tls_wait_time += __rdtsc() - stamp0;
+			g_tls_wait_time += utils::get_tsc() - stamp0;
 		}
 		else if (attempts > 1)
 		{
@@ -2092,6 +2149,8 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 
 	std::fesetround(FE_TONEAREST);
 
+	gv_unset_zeroing_denormals();
+
 	static constexpr u64 s_stop_bit = 0x8000'0000'0000'0000ull;
 
 	static atomic_t<u64> s_pool_ctr = []
@@ -2191,26 +2250,27 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 
 thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* _base))
 {
-	return build_function_asm<native_entry>([&](asmjit::X86Assembler& c, auto& args)
+	return build_function_asm<native_entry>("", [&](native_asm& c, auto& args)
 	{
 		using namespace asmjit;
 
+#if defined(ARCH_X64)
 		Label _ret = c.newLabel();
 		c.push(x86::rbp);
 		c.sub(x86::rsp, 0x20);
 
 		// Call entry point (TODO: support for detached threads missing?)
-		c.call(imm_ptr(entry));
+		c.call(entry);
 
 		// Call finalize, return if zero
 		c.mov(args[0], x86::rax);
-		c.call(imm_ptr<native_entry(*)(u64)>(finalize));
+		c.call(static_cast<native_entry(*)(u64)>(&finalize));
 		c.test(x86::rax, x86::rax);
 		c.jz(_ret);
 
 		// Otherwise, call it as an entry point with first arg = new current thread
 		c.mov(x86::rbp, x86::rax);
-		c.call(imm_ptr(thread_ctrl::get_current));
+		c.call(thread_ctrl::get_current);
 		c.mov(args[0], x86::rax);
 		c.add(x86::rsp, 0x28);
 		c.jmp(x86::rbp);
@@ -2218,6 +2278,7 @@ thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* 
 		c.bind(_ret);
 		c.add(x86::rsp, 0x28);
 		c.ret();
+#endif
 	});
 }
 
@@ -2360,7 +2421,7 @@ bool thread_base::join(bool dtor) const
 	// Hacked for too sleepy threads (1ms) TODO: make sure it's unneeded and remove
 	const auto timeout = dtor && Emu.IsStopped() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
 
-	auto stamp0 = __rdtsc();
+	auto stamp0 = utils::get_tsc();
 
 	for (u64 i = 0; (m_sync & 3) <= 1; i++)
 	{
@@ -2373,7 +2434,7 @@ bool thread_base::join(bool dtor) const
 
 		if (i >= 16 && !(i & (i - 1)) && timeout != atomic_wait_timeout::inf)
 		{
-			sig_log.error(u8"Thread [%s] is too sleepy. Waiting for it %.3fµs already!", *m_tname.load(), (__rdtsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
+			sig_log.error(u8"Thread [%s] is too sleepy. Waiting for it %.3fµs already!", *m_tname.load(), (utils::get_tsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
 		}
 	}
 
@@ -2518,17 +2579,8 @@ void thread_base::exec()
 
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
-#ifdef _WIN32
 	if (IsDebuggerPresent())
-	{
-		__debugbreak();
-	}
-#else
-	if (IsDebuggerPresent())
-	{
-		__asm("int3;");
-	}
-#endif
+		utils::trap();
 
 	if (const auto _this = g_tls_this_thread)
 	{
@@ -2850,7 +2902,7 @@ void thread_ctrl::set_native_priority(int priority)
 
 	if (int err = pthread_setschedparam(pthread_self(), policy, &param))
 	{
-		sig_log.error("pthraed_setschedparam() failed: %d", err);
+		sig_log.error("pthread_setschedparam() failed: %d", err);
 	}
 #endif
 }

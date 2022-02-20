@@ -230,13 +230,13 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		const auto& psf = psf::load_object(fs::file(local_dir +"/PARAM.SFO"));
 
 		// Some following fields may be zero in old FW 1.00 version PARAM.SFO
-		if (psf.count("PARENTAL_LEVEL") != 0) get->getParam.parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
-		if (psf.count("ATTRIBUTE") != 0) get->getParam.attribute = psf.at("ATTRIBUTE").as_integer();
-		if (psf.count("RESOLUTION") != 0) get->getParam.resolution = psf.at("RESOLUTION").as_integer();
-		if (psf.count("SOUND_FORMAT") != 0) get->getParam.soundFormat = psf.at("SOUND_FORMAT").as_integer();
-		if (psf.count("TITLE") != 0) strcpy_trunc(get->getParam.title, psf.at("TITLE").as_string());
-		if (psf.count("APP_VER") != 0) strcpy_trunc(get->getParam.dataVersion, psf.at("APP_VER").as_string());
-		if (psf.count("TITLE_ID") != 0) strcpy_trunc(get->getParam.titleId, psf.at("TITLE_ID").as_string());
+		if (psf.contains("PARENTAL_LEVEL")) get->getParam.parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
+		if (psf.contains("ATTRIBUTE")) get->getParam.attribute = psf.at("ATTRIBUTE").as_integer();
+		if (psf.contains("RESOLUTION")) get->getParam.resolution = psf.at("RESOLUTION").as_integer();
+		if (psf.contains("SOUND_FORMAT")) get->getParam.soundFormat = psf.at("SOUND_FORMAT").as_integer();
+		if (psf.contains("TITLE")) strcpy_trunc(get->getParam.title, psf.at("TITLE").as_string());
+		if (psf.contains("APP_VER")) strcpy_trunc(get->getParam.dataVersion, psf.at("APP_VER").as_string());
+		if (psf.contains("TITLE_ID")) strcpy_trunc(get->getParam.titleId, psf.at("TITLE_ID").as_string());
 
 		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 		{
@@ -472,7 +472,9 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	std::string dir;
 	psf::registry sfo;
 
-	if (Emu.GetCat() == "DG")
+	const std::string& cat = Emu.GetFakeCat();
+
+	if (cat == "DG")
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = 0; // TODO
@@ -480,7 +482,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 		sfo = psf::load_object(fs::file(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")));
 	}
-	else if (Emu.GetCat() == "GD")
+	else if (cat == "GD")
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
@@ -752,7 +754,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	cbGet->getParam.attribute = CELL_GAMEDATA_ATTR_NORMAL;
 	cbGet->getParam.parentalLevel = psf::get_integer(sfo, "PARENTAL_LEVEL", 0);
-	strcpy_trunc(cbGet->getParam.dataVersion, psf::get_string(sfo, "APP_VER", ""));
+	strcpy_trunc(cbGet->getParam.dataVersion, psf::get_string(sfo, "APP_VER", psf::get_string(sfo, "VERSION", ""))); // Old games do not have APP_VER key
 	strcpy_trunc(cbGet->getParam.titleId, psf::get_string(sfo, "TITLE_ID", ""));
 	strcpy_trunc(cbGet->getParam.title, psf::get_string(sfo, "TITLE", ""));
 	for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
@@ -1354,10 +1356,10 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 		return CELL_DISCGAME_ERROR_NOT_DISCBOOT;
 	}
 
-	const auto& psf = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	const psf::registry psf = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
-	if (psf.count("PARENTAL_LEVEL") != 0) getParam->parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
-	if (psf.count("TITLE_ID") != 0) strcpy_trunc(getParam->titleId, psf.at("TITLE_ID").as_string());
+	if (psf.contains("PARENTAL_LEVEL")) getParam->parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
+	if (psf.contains("TITLE_ID")) strcpy_trunc(getParam->titleId, psf.at("TITLE_ID").as_string());
 
 	return CELL_OK;
 }

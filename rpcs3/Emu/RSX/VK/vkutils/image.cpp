@@ -179,20 +179,25 @@ namespace vk
 		return m_format_class;
 	}
 
-	void image::push_layout(VkCommandBuffer cmd, VkImageLayout layout)
+	void image::push_layout(const command_buffer& cmd, VkImageLayout layout)
 	{
+		ensure(current_queue_family == VK_QUEUE_FAMILY_IGNORED || current_queue_family == cmd.get_queue_family());
+
 		m_layout_stack.push(current_layout);
 		change_image_layout(cmd, this, layout);
 	}
 
-	void image::push_barrier(VkCommandBuffer cmd, VkImageLayout layout)
+	void image::push_barrier(const command_buffer& cmd, VkImageLayout layout)
 	{
+		ensure(current_queue_family == VK_QUEUE_FAMILY_IGNORED || current_queue_family == cmd.get_queue_family());
+
 		m_layout_stack.push(current_layout);
 		insert_texture_barrier(cmd, this, layout);
 	}
 
-	void image::pop_layout(VkCommandBuffer cmd)
+	void image::pop_layout(const command_buffer& cmd)
 	{
+		ensure(current_queue_family == VK_QUEUE_FAMILY_IGNORED || current_queue_family == cmd.get_queue_family());
 		ensure(!m_layout_stack.empty());
 
 		auto layout = m_layout_stack.top();
@@ -200,37 +205,48 @@ namespace vk
 		change_image_layout(cmd, this, layout);
 	}
 
+	void image::queue_acquire(const command_buffer& cmd, VkImageLayout new_layout)
+	{
+		ensure(m_layout_stack.empty());
+		ensure(current_queue_family != cmd.get_queue_family());
+		VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
+		change_image_layout(cmd, value, current_layout, new_layout, range, current_queue_family, cmd.get_queue_family(), 0u, ~0u);
+
+		current_layout = new_layout;
+		current_queue_family = cmd.get_queue_family();
+	}
+
+	void image::queue_release(const command_buffer& src_queue_cmd, u32 dst_queue_family, VkImageLayout new_layout)
+	{
+		ensure(current_queue_family == src_queue_cmd.get_queue_family());
+		ensure(m_layout_stack.empty());
+		VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
+		change_image_layout(src_queue_cmd, value, current_layout, new_layout, range, current_queue_family, dst_queue_family, ~0u, 0u);
+	}
+
 	void image::change_layout(const command_buffer& cmd, VkImageLayout new_layout)
 	{
-		if (current_layout == new_layout)
+		// This is implicitly an acquire op
+		if (const auto new_queue_family = cmd.get_queue_family();
+			current_queue_family == VK_QUEUE_FAMILY_IGNORED)
+		{
+			current_queue_family = new_queue_family;
+		}
+		else if (current_queue_family != new_queue_family)
+		{
+			queue_acquire(cmd, new_layout);
 			return;
+		}
+
+		if (current_layout == new_layout)
+		{
+			return;
+		}
 
 		ensure(m_layout_stack.empty());
 		change_image_layout(cmd, this, new_layout);
-	}
 
-	void image::change_layout(const command_buffer& cmd, VkImageLayout new_layout, u32 new_queue_family)
-	{
-		if (current_layout == new_layout && current_queue_family == new_queue_family)
-		{
-			// Nothing to do
-			return;
-		}
-
-		ensure(m_layout_stack.empty());
-		u32 dst_queue = new_queue_family;
-
-		if (current_queue_family == VK_QUEUE_FAMILY_IGNORED)
-		{
-			// Implicit acquisition
-			dst_queue = VK_QUEUE_FAMILY_IGNORED;
-		}
-
-		VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
-		change_image_layout(cmd, value, current_layout, new_layout, range, current_queue_family, dst_queue);
-
-		current_layout = new_layout;
-		current_queue_family = new_queue_family;
+		current_queue_family = cmd.get_queue_family();
 	}
 
 	void image::set_debug_name(const std::string& name)

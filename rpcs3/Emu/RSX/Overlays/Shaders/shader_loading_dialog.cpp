@@ -16,11 +16,18 @@ namespace rsx
 			dlg->type.bg_invisible = true;
 			dlg->type.progress_bar_count = 2;
 			dlg->ProgressBarSetTaskbarIndex(-1); // -1 to combine all progressbars in the taskbar progress
-			dlg->on_close = [](s32 /*status*/) { Emu.CallAfter([]() { Emu.Stop(); }); };
+			dlg->on_close = [](s32 /*status*/)
+			{
+				Emu.CallFromMainThread([]()
+				{
+					rsx_log.notice("Aborted shader loading dialog");
+					Emu.Kill(false);
+				});
+			};
 
 			ref_cnt++;
 
-			Emu.CallAfter([&]()
+			Emu.CallFromMainThread([&]()
 			{
 				dlg->Create(msg, title);
 				ref_cnt--;
@@ -42,7 +49,7 @@ namespace rsx
 
 		ref_cnt++;
 
-		Emu.CallAfter([&, index, msg]()
+		Emu.CallFromMainThread([&, index, msg]()
 		{
 			dlg->ProgressBarSetMsg(index, msg);
 			ref_cnt--;
@@ -58,7 +65,7 @@ namespace rsx
 
 		ref_cnt++;
 
-		Emu.CallAfter([&, index, value]()
+		Emu.CallFromMainThread([&, index, value]()
 		{
 			dlg->ProgressBarInc(index, value);
 			ref_cnt--;
@@ -74,7 +81,7 @@ namespace rsx
 
 		ref_cnt++;
 
-		Emu.CallAfter([&, index, value]()
+		Emu.CallFromMainThread([&, index, value]()
 		{
 			dlg->ProgressBarSetValue(index, value);
 			ref_cnt--;
@@ -90,7 +97,7 @@ namespace rsx
 
 		ref_cnt++;
 
-		Emu.CallAfter([&, index, limit]()
+		Emu.CallFromMainThread([&, index, limit]()
 		{
 			dlg->ProgressBarSetLimit(index, limit);
 			ref_cnt--;

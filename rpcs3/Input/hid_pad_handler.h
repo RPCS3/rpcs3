@@ -2,6 +2,7 @@
 
 #include "Emu/Io/PadHandler.h"
 #include "Utilities/CRC.h"
+#include "Utilities/Thread.h"
 
 #include "hidapi.h"
 
@@ -44,11 +45,17 @@ public:
 	u8 cable_state{0};
 };
 
+struct id_pair
+{
+	u16 m_vid = 0;
+	u16 m_pid = 0;
+};
+
 template <class Device>
 class hid_pad_handler : public PadHandlerBase
 {
 public:
-	hid_pad_handler(pad_handler type, u16 vid, std::vector<u16> pids);
+	hid_pad_handler(pad_handler type, std::vector<id_pair> ids);
 	~hid_pad_handler();
 
 	bool Init() override;
@@ -65,17 +72,20 @@ protected:
 
 	CRCPP::CRC::Table<u32, 32> crcTable{CRCPP::CRC::CRC_32()};
 
-	u16 m_vid;
-	std::vector<u16> m_pids;
+	std::vector<id_pair> m_ids;
 
 	// pseudo 'controller id' to keep track of unique controllers
 	std::map<std::string, std::shared_ptr<Device>> m_controllers;
 
 	bool m_is_init = false;
-	std::chrono::system_clock::time_point m_last_enumeration;
 	std::set<std::string> m_last_enumerated_devices;
+	std::set<std::string> m_new_enumerated_devices;
+	std::map<std::string, std::wstring_view> m_enumerated_serials;
+	std::mutex m_enumeration_mutex;
+	std::unique_ptr<named_thread<std::function<void()>>> m_enumeration_thread;
 
 	void enumerate_devices();
+	void update_devices();
 	std::shared_ptr<Device> get_hid_device(const std::string& padId);
 
 	virtual void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial) = 0;

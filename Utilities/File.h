@@ -32,6 +32,7 @@ namespace fs
 		excl,
 		lock,
 		unread,
+		isfile,
 
 		__bitset_enum_max
 	};
@@ -44,8 +45,10 @@ namespace fs
 	constexpr auto excl    = +open_mode::excl; // Failure if the file already exists (used with `create`)
 	constexpr auto lock    = +open_mode::lock; // Prevent opening the file more than once
 	constexpr auto unread  = +open_mode::unread; // Aggressively prevent reading the opened file (do not use)
+	constexpr auto isfile  = +open_mode::isfile; // Ensure valid fs::file handle is not of directory
 
-	constexpr auto rewrite = open_mode::write + open_mode::create + open_mode::trunc;
+	constexpr auto write_new = write + create + excl;
+	constexpr auto rewrite = write + create + trunc;
 
 	// File seek mode
 	enum class seek_mode : u32
@@ -156,7 +159,7 @@ namespace fs
 	shared_ptr<device_base> set_virtual_device(const std::string& name, shared_ptr<device_base> device);
 
 	// Try to get parent directory (returns empty string on failure)
-	std::string get_parent_dir(const std::string& path);
+	std::string get_parent_dir(const std::string& path, u32 levels = 1);
 
 	// Get file information
 	bool stat(const std::string& path, stat_t& info);
@@ -203,8 +206,6 @@ namespace fs
 	class file final
 	{
 		std::unique_ptr<file_base> m_file{};
-
-		bool strict_read_check(u64 size, u64 type_size) const;
 
 	public:
 		// Default constructor
@@ -280,6 +281,9 @@ namespace fs
 			return m_file->sync();
 		}
 
+		// Check if the handle is capable of reading (size * type_size) of bytes at the time of calling
+		bool strict_read_check(u64 size, u64 type_size = 1) const;
+
 		// Read the data from the file and return the amount of data written in buffer
 		u64 read(void* buffer, u64 count,
 			u32 line = __builtin_LINE(),
@@ -336,8 +340,8 @@ namespace fs
 		}
 
 		// Write std::basic_string unconditionally
-		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const std::basic_string<T>& str,
+		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		const file& write(const std::basic_string<T>& str,
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
@@ -348,8 +352,8 @@ namespace fs
 		}
 
 		// Write POD unconditionally
-		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const T& data,
+		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		const file& write(const T& data,
 			pod_tag_t = pod_tag,
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
@@ -361,8 +365,8 @@ namespace fs
 		}
 
 		// Write POD std::vector unconditionally
-		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const std::vector<T>& vec,
+		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		const file& write(const std::vector<T>& vec,
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
@@ -372,84 +376,69 @@ namespace fs
 			return *this;
 		}
 
-		// Read std::basic_string, size must be set by resize() method
-		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
-		{
-			return read(&str[0], str.size() * sizeof(T), line, col, file, func) == str.size() * sizeof(T);
-		}
-
 		// Read std::basic_string
-		template <bool IsStrict = false, typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str, usz _size,
+		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		bool read(std::basic_string<T>& str, usz _size = umax,
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION(),
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN()) const
 		{
 			if (!m_file) xnull({line, col, file, func});
-			if (!_size) return true;
 
-			if constexpr (IsStrict)
+			if (_size != umax)
 			{
-				// If _size arg is too high std::bad_alloc may happen in resize and then we cannot error check
-				if (!strict_read_check(_size, sizeof(T))) return false;
+				// If _size arg is too high std::bad_alloc may happen during resize and then we cannot error check
+				if ((_size >= 0x10'0000 / sizeof(T)) && !strict_read_check(_size, sizeof(T)))
+				{
+					return false;
+				}
+
+				str.resize(_size);
 			}
 
-			str.resize(_size);
-			return read(str.data(), sizeof(T) * _size, line, col, file, func) == sizeof(T) * _size;
+			return read(str.data(), sizeof(T) * str.size(), line, col, file, func) == sizeof(T) * str.size();
 		}
 
 		// Read POD, sizeof(T) is used
-		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(T& data,
+		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		bool read(T& data,
 			pod_tag_t = pod_tag,
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION()) const
 		{
-			return read(&data, sizeof(T), line, col, file, func) == sizeof(T);
-		}
-
-		// Read POD std::vector, size must be set by resize() method
-		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec,
-			const char* file = __builtin_FILE(),
-			const char* func = __builtin_FUNCTION(),
-			u32 line = __builtin_LINE(),
-			u32 col = __builtin_COLUMN()) const
-		{
-			return read(vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
+			return read(std::addressof(data), sizeof(T), line, col, file, func) == sizeof(T);
 		}
 
 		// Read POD std::vector
-		template <bool IsStrict = false, typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, usz _size,
+		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		bool read(std::vector<T>& vec, usz _size = umax,
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION(),
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN()) const
 		{
 			if (!m_file) xnull({line, col, file, func});
-			if (!_size) return true;
 
-			if constexpr (IsStrict)
+			if (_size != umax)
 			{
-				if (!strict_read_check(_size, sizeof(T))) return false;
+				// If _size arg is too high std::bad_alloc may happen during resize and then we cannot error check
+				if ((_size >= 0x10'0000 / sizeof(T)) && !strict_read_check(_size, sizeof(T)))
+				{
+					return false;
+				}
+
+				vec.resize(_size);
 			}
 
-			vec.resize(_size);
-			return read(vec.data(), sizeof(T) * _size, line, col, file, func) == sizeof(T) * _size;
+			return read(vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
 		}
 
 		// Read POD (experimental)
-		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, T> read(
+		template <typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		T read(
 			pod_tag_t = pod_tag,
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
@@ -471,13 +460,13 @@ namespace fs
 		{
 			std::basic_string<T> result;
 			result.resize(size() / sizeof(T));
-			if (seek(0), !read(result, file, func, line, col)) xfail({line, col, file, func});
+			if (seek(0), !read(result, result.size(), file, func, line, col)) xfail({line, col, file, func});
 			return result;
 		}
 
 		// Read full file to std::vector
-		template<typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, std::vector<T>> to_vector(
+		template<typename T> requires (std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>)
+		std::vector<T> to_vector(
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),
@@ -485,7 +474,7 @@ namespace fs
 		{
 			std::vector<T> result;
 			result.resize(size() / sizeof(T));
-			if (seek(0), !read(result, file, func, line, col)) xfail({line, col, file, func});
+			if (seek(0), !read(result, result.size(), file, func, line, col)) xfail({line, col, file, func});
 			return result;
 		}
 
@@ -817,4 +806,6 @@ namespace fs
 	}
 
 	file make_gather(std::vector<file>);
+
+	stx::generator<dir_entry&> list_dir_recursively(std::string path);
 }

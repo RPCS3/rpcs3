@@ -11,7 +11,7 @@
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"
-#include "util/v128sse.hpp"
+#include "util/simd.hpp"
 
 LOG_CHANNEL(cellSpurs);
 
@@ -1434,7 +1434,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 
 		// Verify taskset state is valid
 		if ((waiting & running) != v128{} || (ready & pready) != v128{} ||
-			(v128::andnot(enabled, running | ready | pready | signalled | waiting) != v128{}))
+			(gv_andn(enabled, running | ready | pready | signalled | waiting) != v128{}))
 		{
 			spu_log.error("Invalid taskset state");
 			spursHalt(spu);
@@ -1442,7 +1442,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 
 		// Find the number of tasks that have become ready since the last iteration
 		{
-			v128 newlyReadyTasks = v128::andnot(ready, signalled | pready);
+			v128 newlyReadyTasks = gv_andn(ready, signalled | pready);
 
 			numNewlyReadyTasks = utils::popcnt128(newlyReadyTasks._u);
 		}
@@ -1491,7 +1491,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 		}
 		case SPURS_TASKSET_REQUEST_POLL:
 		{
-			readyButNotRunning = v128::andnot(running, ready0);
+			readyButNotRunning = gv_andn(running, ready0);
 			if (taskset->wkl_flag_wait_task < CELL_SPURS_MAX_TASK)
 			{
 				readyButNotRunning._u &= ~(u128{1} << (~taskset->wkl_flag_wait_task & 127));
@@ -1526,7 +1526,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 		}
 		case SPURS_TASKSET_REQUEST_SELECT_TASK:
 		{
-			readyButNotRunning = v128::andnot(running, ready0);
+			readyButNotRunning = gv_andn(running, ready0);
 			if (taskset->wkl_flag_wait_task < CELL_SPURS_MAX_TASK)
 			{
 				readyButNotRunning._u &= ~(u128{1} << (~taskset->wkl_flag_wait_task & 127));

@@ -227,7 +227,7 @@ namespace logs
 		}
 	}
 
-	void set_channel_levels(const std::map<std::string, logs::level>& map)
+	void set_channel_levels(const std::map<std::string, logs::level, std::less<>>& map)
 	{
 		for (auto&& pair : map)
 		{

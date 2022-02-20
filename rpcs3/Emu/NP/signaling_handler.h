@@ -21,6 +21,10 @@ struct signaling_info
 	u32 addr       = 0;
 	u16 port       = 0;
 
+	// User seen from that peer
+	u32 mapped_addr = 0;
+	u16 mapped_port = 0;
+
 	// For handler
 	steady_clock::time_point time_last_msg_recvd = steady_clock::now();
 
@@ -84,6 +88,8 @@ private:
 		be_t<u32> signature = SIGNALING_SIGNATURE;
 		le_t<u32> version;
 		le_t<SignalingCommand> command;
+		le_t<u32> sent_addr;
+		le_t<u16> sent_port;
 		union {
 			struct
 			{
@@ -117,6 +123,7 @@ private:
 
 	u32 create_sig_infos(const SceNpId* npid);
 	static void update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
+	static void update_si_mapped_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
 	void update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status, bool confirm_packet = false);
 	void signal_sig_callback(u32 conn_id, int event);
 	void signal_ext_sig_callback(u32 conn_id, int event) const;

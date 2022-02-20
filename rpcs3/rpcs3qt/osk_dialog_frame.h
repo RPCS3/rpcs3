@@ -17,7 +17,7 @@ public:
 	osk_dialog_frame() = default;
 	~osk_dialog_frame();
 	void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel) override;
-	void Close(bool accepted) override;
+	void Close(s32 status) override;
 
 private:
 	void SetOskText(const QString& text);

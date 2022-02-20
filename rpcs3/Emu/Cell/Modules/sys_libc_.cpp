@@ -416,7 +416,7 @@ error_code _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_arg
 
 	const auto buf = vm::make_str(ps3_fmt(ppu, fmt, va_args.count));
 
-	sys_tty_write(0, buf, buf.get_count() - 1, vm::var<u32>{});
+	sys_tty_write(ppu, 0, buf, buf.get_count() - 1, vm::var<u32>{});
 
 	return CELL_OK;
 }

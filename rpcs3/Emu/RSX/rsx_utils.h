@@ -161,35 +161,15 @@ namespace rsx
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
-		u32 get_compatible_gcm_format() const
-		{
-			switch (format)
-			{
-			default:
-				rsx_log.error("Invalid AV format 0x%x", format);
-				[[fallthrough]];
-			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
-			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
-				return CELL_GCM_TEXTURE_A8R8G8B8;
-			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
-				return CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
-			}
-		}
+		avconf() noexcept;
+		~avconf() = default;
 
-		u8 get_bpp() const
-		{
-			switch (format)
-			{
-			default:
-				rsx_log.error("Invalid AV format 0x%x", format);
-				[[fallthrough]];
-			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
-			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
-				return 4;
-			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
-				return 8;
-			}
-		}
+		u32 get_compatible_gcm_format() const;
+		u8 get_bpp() const;
+		double get_aspect_ratio() const;
+
+		areau aspect_convert_region(const size2u& image_dimensions, const size2u& output_dimensions) const;
+		size2u aspect_convert_dimensions(const size2u& image_dimensions) const;
 	};
 
 	struct blit_src_info
@@ -200,7 +180,7 @@ namespace rsx
 		u16 offset_y;
 		u16 width;
 		u16 height;
-		u16 pitch;
+		u32 pitch;
 		u32 rsx_address;
 		void *pixels;
 	};
@@ -212,14 +192,14 @@ namespace rsx
 		u16 offset_y;
 		u16 width;
 		u16 height;
-		u16 pitch;
 		u16 clip_x;
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
 		f32 scale_x;
 		f32 scale_y;
-		u32  rsx_address;
+		u32 pitch;
+		u32 rsx_address;
 		void *pixels;
 		bool swizzled;
 	};
@@ -462,7 +442,7 @@ namespace rsx
 	 * TODO: Variable src/dst and optional se conversion
 	 */
 	template <typename T>
-	void shuffle_texel_data_wzyx(void* data, u16 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
+	void shuffle_texel_data_wzyx(void* data, u32 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
 	{
 		char* raw_src = static_cast<char*>(data);
 		T tmp[4];
@@ -669,7 +649,7 @@ namespace rsx
 	}
 
 	template <bool __is_surface = true, typename SurfaceType>
-	inline bool pitch_compatible(const SurfaceType* surface, u16 pitch_required, u16 height_required)
+	inline bool pitch_compatible(const SurfaceType* surface, u32 pitch_required, u16 height_required)
 	{
 		if constexpr (__is_surface)
 		{
@@ -746,11 +726,11 @@ namespace rsx
 	}
 
 	// Convert color write mask for G8B8 to R8G8
-	static inline u32 get_g8b8_r8g8_colormask(u32 mask)
+	static inline u32 get_g8b8_r8g8_clearmask(u32 mask)
 	{
 		u32 result = 0;
-		if (mask & 0x20) result |= 0x20;
-		if (mask & 0x40) result |= 0x10;
+		if (mask & RSX_GCM_CLEAR_GREEN_BIT) result |= RSX_GCM_CLEAR_GREEN_BIT;
+		if (mask & RSX_GCM_CLEAR_BLUE_BIT) result |= RSX_GCM_CLEAR_RED_BIT;
 
 		return result;
 	}
@@ -767,13 +747,13 @@ namespace rsx
 		red = blue;
 	}
 
-	static inline u32 get_abgr8_colormask(u32 mask)
+	static inline u32 get_abgr8_clearmask(u32 mask)
 	{
 		u32 result = 0;
-		if (mask & 0x10) result |= 0x40;
-		if (mask & 0x20) result |= 0x20;
-		if (mask & 0x40) result |= 0x10;
-		if (mask & 0x80) result |= 0x80;
+		if (mask & RSX_GCM_CLEAR_RED_BIT) result |= RSX_GCM_CLEAR_BLUE_BIT;
+		if (mask & RSX_GCM_CLEAR_GREEN_BIT) result |= RSX_GCM_CLEAR_GREEN_BIT;
+		if (mask & RSX_GCM_CLEAR_BLUE_BIT) result |= RSX_GCM_CLEAR_RED_BIT;
+		if (mask & RSX_GCM_CLEAR_ALPHA_BIT) result |= RSX_GCM_CLEAR_ALPHA_BIT;
 		return result;
 	}
 
@@ -783,6 +763,26 @@ namespace rsx
 	}
 
 	static inline void get_abgr8_clear_color(u8& red, u8& /*green*/, u8& blue, u8& /*alpha*/)
+	{
+		std::swap(red, blue);
+	}
+
+	static inline u32 get_b8_clearmask(u32 mask)
+	{
+		u32 result = 0;
+		if (mask & RSX_GCM_CLEAR_BLUE_BIT) result |= RSX_GCM_CLEAR_RED_BIT;
+		return result;
+	}
+
+	static inline void get_b8_colormask(bool& red, bool& green, bool& blue, bool& alpha)
+	{
+		red = blue;
+		green = false;
+		blue = false;
+		alpha = false;
+	}
+
+	static inline void get_b8_clear_color(u8& red, u8& /*green*/, u8& blue, u8& /*alpha*/)
 	{
 		std::swap(red, blue);
 	}
@@ -851,380 +851,4 @@ namespace rsx
 
 		return base * scale;
 	}
-
-	template <int N>
-	void unpack_bitset(const std::bitset<N>& block, u64* values)
-	{
-		for (int bit = 0, n = -1, shift = 0; bit < N; ++bit, ++shift)
-		{
-			if ((bit % 64) == 0)
-			{
-				values[++n] = 0;
-				shift = 0;
-			}
-
-			if (block[bit])
-			{
-				values[n] |= (1ull << shift);
-			}
-		}
-	}
-
-	template <int N>
-	void pack_bitset(std::bitset<N>& block, u64* values)
-	{
-		for (int n = 0, shift = 0; shift < N; ++n, shift += 64)
-		{
-			std::bitset<N> tmp = values[n];
-			tmp <<= shift;
-			block |= tmp;
-		}
-	}
-
-	template <typename T, typename bitmask_type = u32>
-	class atomic_bitmask_t
-	{
-	private:
-		atomic_t<bitmask_type> m_data{0};
-
-	public:
-		atomic_bitmask_t() = default;
-
-		T load() const
-		{
-			return static_cast<T>(m_data.load());
-		}
-
-		void store(T value)
-		{
-			m_data.store(static_cast<bitmask_type>(value));
-		}
-
-		bool operator & (T mask) const
-		{
-			return ((m_data.load() & static_cast<bitmask_type>(mask)) != 0);
-		}
-
-		T operator | (T mask) const
-		{
-			return static_cast<T>(m_data.load() | static_cast<bitmask_type>(mask));
-		}
-
-		void operator &= (T mask)
-		{
-			m_data.fetch_and(static_cast<bitmask_type>(mask));
-		}
-
-		void operator |= (T mask)
-		{
-			m_data.fetch_or(static_cast<bitmask_type>(mask));
-		}
-
-		bool test_and_set(T mask)
-		{
-			const auto old = m_data.fetch_or(static_cast<bitmask_type>(mask));
-			return (old & static_cast<bitmask_type>(mask)) != 0;
-		}
-
-		auto clear(T mask)
-		{
-			bitmask_type clear_mask = ~(static_cast<bitmask_type>(mask));
-			return m_data.and_fetch(clear_mask);
-		}
-
-		void clear()
-		{
-			m_data.store(0);
-		}
-	};
-
-	template <typename Ty>
-	struct simple_array
-	{
-	public:
-		using iterator = Ty*;
-		using const_iterator = const Ty*;
-		using value_type = Ty;
-
-	private:
-		u32 _capacity = 0;
-		u32 _size = 0;
-		Ty* _data = nullptr;
-
-		inline u64 offset(const_iterator pos)
-		{
-			return (_data) ? u64(pos - _data) : 0ull;
-		}
-
-	public:
-		simple_array() = default;
-
-		simple_array(u32 initial_size, const Ty val = {})
-		{
-			reserve(initial_size);
-			_size = initial_size;
-
-			for (u32 n = 0; n < initial_size; ++n)
-			{
-				_data[n] = val;
-			}
-		}
-
-		simple_array(const std::initializer_list<Ty>& args)
-		{
-			reserve(::size32(args));
-
-			for (const auto& arg : args)
-			{
-				push_back(arg);
-			}
-		}
-
-		simple_array(const simple_array& other)
-		{
-			_capacity = other._capacity;
-			_size = other._size;
-
-			const auto size_bytes = sizeof(Ty) * _capacity;
-			_data = static_cast<Ty*>(malloc(size_bytes));
-			std::memcpy(_data, other._data, size_bytes);
-		}
-
-		simple_array(simple_array&& other) noexcept
-		{
-			swap(other);
-		}
-
-		simple_array& operator=(const simple_array& other)
-		{
-			if (&other != this)
-			{
-				simple_array{other}.swap(*this);
-			}
-
-			return *this;
-		}
-
-		simple_array& operator=(simple_array&& other) noexcept
-		{
-			swap(other);
-			return *this;
-		}
-
-		~simple_array()
-		{
-			if (_data)
-			{
-				free(_data);
-				_data = nullptr;
-				_size = _capacity = 0;
-			}
-		}
-
-		void swap(simple_array<Ty>& other) noexcept
-		{
-			std::swap(_capacity, other._capacity);
-			std::swap(_size, other._size);
-			std::swap(_data, other._data);
-		}
-
-		void reserve(u32 size)
-		{
-			if (_capacity >= size)
-				return;
-
-			ensure(_data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size))); // "realloc() failed!"
-			_capacity = size;
-		}
-
-		void resize(u32 size)
-		{
-			reserve(size);
-			_size = size;
-		}
-
-		void push_back(const Ty& val)
-		{
-			if (_size >= _capacity)
-			{
-				reserve(_capacity + 16);
-			}
-
-			_data[_size++] = val;
-		}
-
-		void push_back(Ty&& val)
-		{
-			if (_size >= _capacity)
-			{
-				reserve(_capacity + 16);
-			}
-
-			_data[_size++] = val;
-		}
-
-		iterator insert(iterator pos, const Ty& val)
-		{
-			ensure(pos >= _data);
-			const auto _loc = offset(pos);
-
-			if (_size >= _capacity)
-			{
-				reserve(_capacity + 16);
-				pos = _data + _loc;
-			}
-
-			if (_loc >= _size)
-			{
-				_data[_size++] = val;
-				return pos;
-			}
-
-			ensure(_loc < _size);
-
-			const auto remaining = (_size - _loc);
-			memmove(pos + 1, pos, remaining * sizeof(Ty));
-
-			*pos = val;
-			_size++;
-
-			return pos;
-		}
-
-		iterator insert(iterator pos, Ty&& val)
-		{
-			ensure(pos >= _data);
-			const auto _loc = offset(pos);
-
-			if (_size >= _capacity)
-			{
-				reserve(_capacity + 16);
-				pos = _data + _loc;
-			}
-
-			if (_loc >= _size)
-			{
-				_data[_size++] = val;
-				return pos;
-			}
-
-			ensure(_loc < _size);
-
-			const u32 remaining = (_size - _loc);
-			memmove(pos + 1, pos, remaining * sizeof(Ty));
-
-			*pos = val;
-			_size++;
-
-			return pos;
-		}
-
-		void clear()
-		{
-			_size = 0;
-		}
-
-		bool empty() const
-		{
-			return _size == 0;
-		}
-
-		u32 size() const
-		{
-			return _size;
-		}
-
-		u32 capacity() const
-		{
-			return _capacity;
-		}
-
-		Ty& operator[] (u32 index)
-		{
-			return _data[index];
-		}
-
-		const Ty& operator[] (u32 index) const
-		{
-			return _data[index];
-		}
-
-		Ty* data()
-		{
-			return _data;
-		}
-
-		const Ty* data() const
-		{
-			return _data;
-		}
-
-		Ty& back()
-		{
-			return _data[_size - 1];
-		}
-
-		const Ty& back() const
-		{
-			return _data[_size - 1];
-		}
-
-		Ty& front()
-		{
-			return _data[0];
-		}
-
-		const Ty& front() const
-		{
-			return _data[0];
-		}
-
-		iterator begin()
-		{
-			return _data;
-		}
-
-		iterator end()
-		{
-			return _data ? _data + _size : nullptr;
-		}
-
-		const_iterator begin() const
-		{
-			return _data;
-		}
-
-		const_iterator end() const
-		{
-			return _data ? _data + _size : nullptr;
-		}
-	};
-
-	struct profiling_timer
-	{
-		bool enabled = false;
-		steady_clock::time_point last;
-
-		profiling_timer() = default;
-
-		void start()
-		{
-			if (enabled) [[unlikely]]
-			{
-				last = steady_clock::now();
-			}
-		}
-
-		s64 duration()
-		{
-			if (!enabled) [[likely]]
-			{
-				return 0ll;
-			}
-
-			auto old = last;
-			last = steady_clock::now();
-			return std::chrono::duration_cast<std::chrono::microseconds>(last - old).count();
-		}
-	};
 }
