@@ -102,17 +102,6 @@ struct search_object_t
 	std::vector<content_id_type> content_ids;
 };
 
-template <typename D>
-void parse_metadata(D& dst, const utils::media_info& mi, const std::string& key, const std::string& def, usz max_length)
-{
-	std::string value = mi.get_metadata<std::string>(key, def);
-	if (value.size() > max_length)
-	{
-		value.resize(max_length);
-	}
-	strcpy_trunc(dst, value);
-};
-
 error_code check_search_state(search_state state, search_state action)
 {
 	switch (action)
@@ -651,7 +640,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 					content_map.map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
-					cellSearch.notice("cellSearchStartListSearch(): Content ID: %08X, Path: \"%s\"", hash, item_path);
+					cellSearch.notice("cellSearchStartListSearch(): CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 				else // list is already stored and tracked
 				{
@@ -659,8 +648,9 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 					// Perform checks to see if the identified list has been modified since last checked
 					// In which case, update the stored content's properties
 					// auto content_found = &content_map->at(content_id);
-					// curr_search->content_ids.emplace_back(found->first, found->second);
-					cellSearch.notice("cellSearchStartListSearch(): Already tracked: Content ID: %08X, Path: \"%s\"", hash, item_path);
+					curr_search->content_ids.emplace_back(found->first, found->second);
+
+					cellSearch.notice("cellSearchStartListSearch(): Already tracked: CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 			}
 		};
@@ -870,7 +860,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 					content_map.map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
-					cellSearch.notice("cellSearchStartContentSearchInList(): Content ID: %08X, Path: \"%s\"", hash, item_path);
+					cellSearch.notice("cellSearchStartContentSearchInList(): CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 				else // file is already stored and tracked
 				{
@@ -880,7 +870,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 					// auto content_found = &content_map->at(content_id);
 					curr_search->content_ids.emplace_back(found->first, found->second);
 
-					cellSearch.notice("cellSearchStartContentSearchInList(): Already Tracked: Content ID: %08X, Path: \"%s\"", hash, item_path);
+					cellSearch.notice("cellSearchStartContentSearchInList(): Already Tracked: CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 			}
 		};
@@ -1052,7 +1042,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 					content_map.map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
-					cellSearch.notice("cellSearchStartContentSearch(): Content ID: %08X, Path: \"%s\"", hash, item_path);
+					cellSearch.notice("cellSearchStartContentSearch(): CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 				else // file is already stored and tracked
 				{ // TODO
@@ -1061,7 +1051,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 					// auto content_found = &content_map->at(content_id);
 					curr_search->content_ids.emplace_back(found->first, found->second);
 
-					cellSearch.notice("cellSearchStartContentSearch(): Already Tracked: Content ID: %08X, Path: \"%s\"", hash, item_path);
+					cellSearch.notice("cellSearchStartContentSearch(): Already Tracked: CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 			}
 		};
@@ -1480,34 +1470,43 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 		if (content != searchObject->content_ids.cend() && content->second)
 		{
 			// Check if the type of the found content is correct
+			if (content->second->type != CELL_SEARCH_CONTENTTYPE_MUSIC)
+			{
+				return { CELL_SEARCH_ERROR_INVALID_CONTENTTYPE, fmt::format("Type: %d, Expected: CELL_SEARCH_CONTENTTYPE_MUSIC")};
+			}
+
+			// Check if the type of the found content matches our search content type
 			if (content->second->type != first_content->type)
 			{
-				return CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT;
+				return { CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT, fmt::format("Type: %d, Expected: %d", +content->second->type, +first_content->type) };
 			}
 
 			// TODO: Use the found content
 			// first track/playlist of context = content->second;
+			cellSearch.todo("cellSearchGetMusicSelectionContext(): Hash=%08X, Assign found track: Type=0x%x, Path=%s", content_hash, +content->second->type, content->second->infoPath.contentPath);
 		}
 		else if (first_content->type == CELL_SEARCH_CONTENTTYPE_MUSICLIST)
 		{
 			// Abort if we can't find the playlist.
-			return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
+			return { CELL_SEARCH_ERROR_CONTENT_NOT_FOUND, "Type: CELL_SEARCH_CONTENTTYPE_MUSICLIST" };
 		}
 		else
 		{
 			// TODO: Select the first track by default
 			// first track of context = first_content;
+			cellSearch.todo("cellSearchGetMusicSelectionContext(): Hash=%08X, Assign first track: Type=0x%x, Path=%s", content_hash, +first_content->type, first_content->infoPath.contentPath);
 		}
 	}
 	else if (first_content->type == CELL_SEARCH_CONTENTTYPE_MUSICLIST)
 	{
 		// Abort if we don't have the necessary info to select a playlist.
-		return CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT;
+		return { CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT, "Type: CELL_SEARCH_CONTENTTYPE_MUSICLIST" };
 	}
 	else
 	{
 		// TODO: Select the first track by default
 		// first track of context = first_content;
+		cellSearch.todo("cellSearchGetMusicSelectionContext(): Assign first track: Type=0x%x, Path=%s", +first_content->type, first_content->infoPath.contentPath);
 	}
 
 	// TODO: Use repeatMode and option in our context, depending on the type (list vs single)
