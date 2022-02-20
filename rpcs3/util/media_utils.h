@@ -6,6 +6,8 @@ namespace utils
 {
 	struct media_info
 	{
+		std::string path;
+
 		s32 audio_av_codec_id = 0; // 0 = AV_CODEC_ID_NONE
 		s32 video_av_codec_id = 0; // 0 = AV_CODEC_ID_NONE
 		s32 audio_bitrate_bps = 0; // Bit rate in bit/s

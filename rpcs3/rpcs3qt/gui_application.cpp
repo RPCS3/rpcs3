@@ -11,12 +11,14 @@
 #include "display_sleep_control.h"
 #include "localized_emu.h"
 #include "qt_camera_handler.h"
+#include "qt_music_handler.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
 #endif
 
 #include "Emu/Io/Null/null_camera_handler.h"
+#include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "Emu/system_utils.hpp"
@@ -377,6 +379,23 @@ void gui_application::InitializeCallbacks()
 		}
 		return nullptr;
 	};
+
+	callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
+	{
+		switch (g_cfg.audio.music.get())
+		{
+		case music_handler::null:
+		{
+			return std::make_shared<null_music_handler>();
+		}
+		case music_handler::qt:
+		{
+			return std::make_shared<qt_music_handler>();
+		}
+		}
+		return nullptr;
+	};
+
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };

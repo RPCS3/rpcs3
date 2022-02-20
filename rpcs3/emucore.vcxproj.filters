@@ -2041,6 +2041,12 @@
     <ClInclude Include="Emu\NP\np_helpers.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\music_handler_base.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Null\null_music_handler.h">
+      <Filter>Emu\Io\Null</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">

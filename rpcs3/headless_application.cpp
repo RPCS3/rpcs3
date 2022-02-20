@@ -6,6 +6,7 @@
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "Emu/Io/Null/null_camera_handler.h"
+#include "Emu/Io/Null/null_music_handler.h"
 
 #include <clocale>
 
@@ -100,6 +101,22 @@ void headless_application::InitializeCallbacks()
 		case camera_handler::qt:
 		{
 			fmt::throw_exception("Headless mode can not be used with this camera handler. Current handler: %s", g_cfg.io.camera.get());
+		}
+		}
+		return nullptr;
+	};
+
+	callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
+	{
+		switch (g_cfg.audio.music.get())
+		{
+		case music_handler::null:
+		{
+			return std::make_shared<null_music_handler>();
+		}
+		case music_handler::qt:
+		{
+			fmt::throw_exception("Headless mode can not be used with this music handler. Current handler: %s", g_cfg.audio.music.get());
 		}
 		}
 		return nullptr;

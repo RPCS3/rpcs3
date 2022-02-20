@@ -450,7 +450,9 @@
     <ClInclude Include="Emu\Cell\Modules\sys_crashdump.h" />
     <ClInclude Include="Emu\Io\camera_config.h" />
     <ClInclude Include="Emu\Io\camera_handler_base.h" />
+    <ClInclude Include="Emu\Io\music_handler_base.h" />
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h" />
+    <ClInclude Include="Emu\Io\Null\null_music_handler.h" />
     <ClInclude Include="Emu\Io\Turntable.h" />
     <ClInclude Include="Emu\Io\GHLtar.h" />
     <ClInclude Include="Emu\Io\Buzz.h" />
