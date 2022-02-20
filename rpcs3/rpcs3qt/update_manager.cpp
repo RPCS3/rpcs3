@@ -582,7 +582,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	if (res)
 		return false;
 
-#else
+#elif not defined(__APPLE__)
 
 	std::string replace_path = rpcs3::utils::get_executable_path();
 	if (replace_path.empty())
