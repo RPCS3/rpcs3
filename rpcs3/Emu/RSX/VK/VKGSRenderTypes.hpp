@@ -25,8 +25,6 @@
 #define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
 #define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
 
-u64 get_system_time();
-
 namespace vk
 {
 	struct buffer_view;
