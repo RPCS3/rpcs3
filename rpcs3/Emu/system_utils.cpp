@@ -20,6 +20,12 @@
 #include <unistd.h>
 #endif
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#include <limits.h>
+#include <filesystem>
+#endif
+
 LOG_CHANNEL(sys_log, "SYS");
 
 namespace rpcs3::utils
@@ -115,7 +121,20 @@ namespace rpcs3::utils
 		const usz last = path_to_exe.find_last_of('\\');
 		return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last + 1);
 	}
-#elif !defined(__APPLE__)
+#elif defined(__APPLE__)
+	std::string get_app_bundle_path()
+	{
+		char bin_path[PATH_MAX];
+		uint32_t bin_path_size = sizeof(bin_path);
+		if (_NSGetExecutablePath(bin_path, &bin_path_size) != 0)
+		{
+			sys_log.error("Failed to find app binary path");
+			return {};
+		}
+
+		return std::filesystem::path(bin_path).parent_path().parent_path().parent_path();
+	}
+#else
 	std::string get_executable_path()
 	{
 		if (const char* appimage_path = ::getenv("APPIMAGE"))

@@ -361,6 +361,11 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 {
 	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
 
+#ifdef __APPLE__
+	update_log.error("Unsupported operating system.");
+	return false;
+#else
+
 	if (m_expected_size != static_cast<u64>(data.size()))
 	{
 		update_log.error("Download size mismatch: %d expected: %d", data.size(), m_expected_size);
@@ -650,4 +655,5 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 
 	return true;
+#endif //def __APPLE__
 }

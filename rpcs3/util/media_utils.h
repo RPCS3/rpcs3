@@ -21,4 +21,15 @@ namespace utils
 	};
 
 	std::pair<bool, media_info> get_media_info(const std::string& path, s32 av_media_type);
+
+	template <typename D>
+	void parse_metadata(D& dst, const utils::media_info& mi, const std::string& key, const std::string& def, usz max_length)
+	{
+		std::string value = mi.get_metadata<std::string>(key, def);
+		if (value.size() > max_length)
+		{
+			value.resize(max_length);
+		}
+		strcpy_trunc(dst, value);
+	};
 }

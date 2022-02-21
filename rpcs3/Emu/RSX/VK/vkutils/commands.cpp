@@ -45,7 +45,7 @@ namespace vk
 		return pool;
 	}
 
-	void command_buffer::create(command_pool& cmd_pool, bool auto_reset)
+	void command_buffer::create(command_pool& cmd_pool)
 	{
 		VkCommandBufferAllocateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -54,11 +54,7 @@ namespace vk
 		infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
 
-		if (auto_reset)
-		{
-			m_submit_fence = new fence(cmd_pool.get_owner());
-		}
-
+		m_submit_fence = new fence(cmd_pool.get_owner());
 		pool = &cmd_pool;
 	}
 

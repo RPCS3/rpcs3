@@ -167,6 +167,7 @@
     <ClInclude Include="Emu\RSX\VK\upscalers\upscaling.h">
       <Filter>upscalers</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKGSRenderTypes.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="vkutils">
