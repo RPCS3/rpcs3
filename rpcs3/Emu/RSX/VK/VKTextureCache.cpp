@@ -1223,16 +1223,14 @@ namespace vk
 		}
 
 		// Nuke temporary resources. They will still be visible to the GPU.
-		auto gc = vk::get_resource_manager();
-		u64 actual_released_memory = 0;
-
+		any_released |= !m_cached_images.empty();
 		m_cached_images.clear();
 		m_cached_memory_size = 0;
 
+		any_released |= !m_temporary_subresource_cache.empty();
 		m_temporary_subresource_cache.clear();
 
-		rsx_log.warning("Texture cache released %lluM of temporary resources.", (actual_released_memory / _1M));
-		return any_released || (actual_released_memory > 0);
+		return any_released;
 	}
 
 	void texture_cache::on_frame_end()
@@ -1322,7 +1320,6 @@ namespace vk
 		vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 		auto result = image.get();
-		const auto resource_memory = image->memory->size();
 		auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, image));
 		vk::get_resource_manager()->dispose(disposable);
 
