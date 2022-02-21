@@ -14,7 +14,7 @@
 #include <objidl.h>
 #include <shlguid.h>
 #include <comdef.h>
-#elif !defined(__APPLE__)
+#else
 #include <sys/stat.h>
 #include <errno.h>
 #endif
@@ -210,7 +210,112 @@ namespace gui::utils
 
 		return cleanup(true, {});
 
-#elif !defined(__APPLE__)
+#elif defined(__APPLE__)
+
+		const std::string app_bundle_path = rpcs3::utils::get_app_bundle_path();
+		if (app_bundle_path.empty())
+		{
+			sys_log.error("Failed to create shortcut. App bundle path empty.");
+			return false;
+		}
+
+		std::string link_path;
+
+		if (const char* home = ::getenv("HOME"))
+		{
+			if (is_desktop_shortcut)
+			{
+				link_path = fmt::format("%s/Desktop/%s.app", home, simple_name);
+			}
+			else
+			{
+				link_path = fmt::format("%s/Applications/RPCS3/%s.app", home, simple_name);
+			}
+		}
+		else
+		{
+			sys_log.error("Failed to create shortcut. home path empty.");
+			return false;
+		}
+
+		const std::string contents_dir = link_path + "/Contents/";
+		const std::string macos_dir = contents_dir + "/MacOS/";
+		const std::string resources_dir = contents_dir + "/Resources/";
+
+		if (!fs::create_path(contents_dir) || !fs::create_path(macos_dir) || !fs::create_path(resources_dir))
+		{
+			sys_log.error("Failed to create shortcut. Could not create app bundle structure.");
+			return false;
+		}
+
+		const std::string plist_path = contents_dir + "Info.plist";
+		const std::string launcher_path = macos_dir + "launcher";
+
+		std::string launcher_content;
+		fmt::append(launcher_content, "#!/bin/bash\nopen \"%s\" --args %s", app_bundle_path, target_cli_args);
+
+		fs::file launcher_file(launcher_path, fs::read + fs::rewrite);
+		if (!launcher_file)
+		{
+			sys_log.error("Failed to create launcher file: %s", launcher_path);
+			return false;
+		}
+		if (launcher_file.write(launcher_content.data(), launcher_content.size()) != launcher_content.size())
+		{
+			sys_log.error("Failed to write launcher file: %s", launcher_path);
+			return false;
+		}
+		launcher_file.close();
+
+		if (chmod(launcher_path.c_str(), S_IRWXU) != 0)
+		{
+			sys_log.error("Failed to change file permissions for launcher file: %s (%d)", strerror(errno), errno);
+			return false;
+		}
+
+		const std::string plist_content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+										  "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+										  "<plist version=\"1.0\">\n"
+										  "<dict>\n"
+										  "\t<key>CFBundleExecutable</key>\n"
+										  "\t<string>launcher</string>\n"
+										  "\t<key>CFBundleIconFile</key>\n"
+										  "\t<string>shortcut.icns</string>\n"
+										  "\t<key>CFBundleInfoDictionaryVersion</key>\n"
+										  "\t<string>1.0</string>\n"
+										  "\t<key>CFBundlePackageType</key>\n"
+										  "\t<string>APPL</string>\n"
+										  "\t<key>CFBundleSignature</key>\n"
+										  "\t<string>\?\?\?\?</string>\n"
+										  "</dict>\n"
+										  "</plist>\n";
+
+		fs::file plist_file(plist_path, fs::read + fs::rewrite);
+		if (!plist_file)
+		{
+			sys_log.error("Failed to create plist file: %s", plist_path);
+			return false;
+		}
+		if (plist_file.write(plist_content.data(), plist_content.size()) != plist_content.size())
+		{
+			sys_log.error("Failed to write plist file: %s", plist_path);
+			return false;
+		}
+		plist_file.close();
+
+		if (!src_icon_path.empty())
+		{
+			std::string target_icon_path = resources_dir;
+			if (!create_square_shortcut_icon_file(src_icon_path, resources_dir, target_icon_path, "icns", 512))
+			{
+				// Error is logged in create_square_shortcut_icon_file
+				return false;
+			}
+		}
+
+		return true;
+
+#else
 
 		const std::string exe_path = rpcs3::utils::get_executable_path();
 		if (exe_path.empty())
@@ -288,9 +393,6 @@ namespace gui::utils
 		}
 
 		return true;
-#else
-		sys_log.error("Cannot create shortcuts on this operating system");
-		return false;
 #endif
 	}
 }
