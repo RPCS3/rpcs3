@@ -106,8 +106,6 @@ namespace rsx
 				rsx->flush_fifo();
 			}
 
-			//rsx_log.error("Wait for address at 0x%x to change to 0x%x", addr, arg);
-
 			u64 start = get_system_time();
 			while (sema != arg)
 			{
