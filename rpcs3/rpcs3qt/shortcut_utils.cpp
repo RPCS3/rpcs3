@@ -21,6 +21,7 @@
 
 #include <QFile>
 #include <QPixmap>
+#include <QStandardPaths>
 
 LOG_CHANNEL(sys_log, "SYS");
 
@@ -81,6 +82,34 @@ namespace gui::utils
 			return false;
 		}
 
+		std::string link_path;
+
+		if (is_desktop_shortcut)
+		{
+			link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::DesktopLocation).toStdString();
+		}
+		else
+		{
+			link_path = QStandardPaths::writableLocation(QStandardPaths::StandardLocation::ApplicationsLocation).toStdString();
+		}
+
+		if (!fs::is_dir(link_path))
+		{
+			sys_log.error("Failed to create shortcut. Folder does not exist: %s", link_path);
+			return false;
+		}
+
+		if (!is_desktop_shortcut)
+		{
+			link_path += "/RPCS3";
+
+			if (!fs::create_path(link_path))
+			{
+				sys_log.error("Failed to create shortcut. Could not create path: %s (%s)", link_path, fs::g_tls_error);
+				return false;
+			}
+		}
+
 #ifdef _WIN32
 		const auto str_error = [](HRESULT hr) -> std::string
 		{
@@ -89,39 +118,9 @@ namespace gui::utils
 			return fmt::format("%s [%d]", wchar_to_utf8(errMsg), hr);
 		};
 
-		std::string link_file;
+		fmt::append(link_path, "/%s.lnk", simple_name);
 
-		if (is_desktop_shortcut)
-		{
-			TCHAR path[_MAX_PATH];
-			HRESULT res = SHGetFolderPath(NULL, CSIDL_DESKTOP, 0, NULL, path);
-			if (FAILED(res))
-			{
-				sys_log.error("Failed to create shortcut: SHGetFolderPath(CSIDL_DESKTOP) failed (%s)", str_error(res));
-				return false;
-			}
-			link_file = fmt::format("%s/%s.lnk", wchar_to_utf8(std::wstring(path)), simple_name);
-		}
-		else
-		{
-			TCHAR path[_MAX_PATH];
-			HRESULT res = SHGetFolderPath(NULL, CSIDL_PROGRAMS, 0, NULL, path);
-			if (FAILED(res))
-			{
-				sys_log.error("Failed to create shortcut: SHGetFolderPath(CSIDL_PROGRAMS) failed (%s)", str_error(res));
-				return false;
-			}
-
-			const std::string programs_dir = fmt::format("%s/RPCS3", wchar_to_utf8(std::wstring(path)));
-			if (!fs::create_path(programs_dir))
-			{
-				sys_log.error("Failed to create shortcut: Could not create start menu directory: %s", programs_dir);
-				return false;
-			}
-			link_file = fmt::format("%s/%s.lnk", programs_dir, simple_name);
-		}
-
-		sys_log.notice("Creating shortcut '%s' with arguments '%s' and .ico dir '%s'", link_file, target_cli_args, target_icon_dir);
+		sys_log.notice("Creating shortcut '%s' with arguments '%s' and .ico dir '%s'", link_path, target_cli_args, target_icon_dir);
 
 		// https://stackoverflow.com/questions/3906974/how-to-programmatically-create-a-shortcut-using-win32
 		HRESULT res = CoInitialize(NULL);
@@ -194,7 +193,7 @@ namespace gui::utils
 			return cleanup(false, fmt::format("QueryInterface failed (%s)", str_error(res)));
 
 		// Save shortcut
-		const std::wstring w_link_file = utf8_to_wchar(link_file);
+		const std::wstring w_link_file = utf8_to_wchar(link_path);
 		res = pPersistFile->Save(w_link_file.c_str(), TRUE);
 		if (FAILED(res))
 		{
@@ -219,24 +218,7 @@ namespace gui::utils
 			return false;
 		}
 
-		std::string link_path;
-
-		if (const char* home = ::getenv("HOME"))
-		{
-			if (is_desktop_shortcut)
-			{
-				link_path = fmt::format("%s/Desktop/%s.app", home, simple_name);
-			}
-			else
-			{
-				link_path = fmt::format("%s/Applications/RPCS3/%s.app", home, simple_name);
-			}
-		}
-		else
-		{
-			sys_log.error("Failed to create shortcut. home path empty.");
-			return false;
-		}
+		fmt::append(link_path, "/%s.app", simple_name);
 
 		const std::string contents_dir = link_path + "/Contents/";
 		const std::string macos_dir = contents_dir + "/MacOS/";
@@ -244,7 +226,7 @@ namespace gui::utils
 
 		if (!fs::create_path(contents_dir) || !fs::create_path(macos_dir) || !fs::create_path(resources_dir))
 		{
-			sys_log.error("Failed to create shortcut. Could not create app bundle structure.");
+			sys_log.error("Failed to create shortcut. Could not create app bundle structure. (%s)", fs::g_tls_error);
 			return false;
 		}
 
@@ -257,7 +239,7 @@ namespace gui::utils
 		fs::file launcher_file(launcher_path, fs::read + fs::rewrite);
 		if (!launcher_file)
 		{
-			sys_log.error("Failed to create launcher file: %s", launcher_path);
+			sys_log.error("Failed to create launcher file: %s (%s)", launcher_path, fs::g_tls_error);
 			return false;
 		}
 		if (launcher_file.write(launcher_content.data(), launcher_content.size()) != launcher_content.size())
@@ -293,7 +275,7 @@ namespace gui::utils
 		fs::file plist_file(plist_path, fs::read + fs::rewrite);
 		if (!plist_file)
 		{
-			sys_log.error("Failed to create plist file: %s", plist_path);
+			sys_log.error("Failed to create plist file: %s (%s)", plist_path, fs::g_tls_error);
 			return false;
 		}
 		if (plist_file.write(plist_content.data(), plist_content.size()) != plist_content.size())
@@ -324,24 +306,7 @@ namespace gui::utils
 			return false;
 		}
 
-		std::string link_path;
-
-		if (const char* home = ::getenv("HOME"))
-		{
-			if (is_desktop_shortcut)
-			{
-				link_path = fmt::format("%s/Desktop/%s.desktop", home, simple_name);
-			}
-			else
-			{
-				link_path = fmt::format("%s/.local/share/applications/%s.desktop", home, simple_name);
-			}
-		}
-		else
-		{
-			sys_log.error("Failed to create shortcut. home path empty.");
-			return false;
-		}
+		fmt::append(link_path, "/%s.desktop", simple_name);
 
 		std::string file_content;
 		fmt::append(file_content, "[Desktop Entry]\n");
@@ -373,7 +338,7 @@ namespace gui::utils
 		fs::file shortcut_file(link_path, fs::read + fs::rewrite);
 		if (!shortcut_file)
 		{
-			sys_log.error("Failed to create .desktop file: %s", link_path);
+			sys_log.error("Failed to create .desktop file: %s (%s)", link_path, fs::g_tls_error);
 			return false;
 		}
 		if (shortcut_file.write(file_content.data(), file_content.size()) != file_content.size())
