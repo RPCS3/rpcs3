@@ -630,6 +630,7 @@ VKGSRender::VKGSRender() : GSRender()
 		else
 		{
 			rsx_log.error("Your GPU/driver does not support extensions required to enable passthrough DMA emulation. Host GPU labels will be disabled.");
+			backend_config.supports_host_gpu_labels = false;
 		}
 	}
 }
@@ -1502,8 +1503,6 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		// Wait for all previously submitted labels to be flushed
 		if (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
 		{
-			//const u64 wait_start = utils::get_tsc();
-
 			while (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
 			{
 				_mm_pause();
@@ -1513,12 +1512,6 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 					break;
 				}
 			}
-
-			//const u64 now = utils::get_tsc();
-			//const u64 divisor = utils::get_tsc_freq() / 1000000;
-			//const u64 full_duration = (now - m_host_data_ptr->last_label_request_timestamp) / divisor;
-			//const u64 wait_duration = (now - wait_start) / divisor;
-			//rsx_log.error("GPU sync took [%llu, %llu] microseconds to complete", full_duration, wait_duration);
 		}
 
 		return false;
@@ -1536,7 +1529,6 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 	}
 
 	m_host_data_ptr->last_label_release_event = ++m_host_data_ptr->event_counter;
-	//m_host_data_ptr->last_label_request_timestamp = utils::get_tsc();
 
 	if (m_host_data_ptr->texture_load_request_event > m_host_data_ptr->last_label_submit_event)
 	{
