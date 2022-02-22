@@ -1496,24 +1496,25 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		return false;
 	}
 
+	auto drain_label_queue = [this]()
+	{
+		while (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
+		{
+			_mm_pause();
+
+			if (thread_ctrl::state() == thread_state::aborting)
+			{
+				break;
+			}
+		}
+	};
+
 	ensure(m_host_data_ptr);
 	if (m_host_data_ptr->texture_load_complete_event == m_host_data_ptr->texture_load_request_event)
 	{
 		// All texture loads already seen by the host GPU
 		// Wait for all previously submitted labels to be flushed
-		if (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
-		{
-			while (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
-			{
-				_mm_pause();
-
-				if (thread_ctrl::state() == thread_state::aborting)
-				{
-					break;
-				}
-			}
-		}
-
+		drain_label_queue();
 		return false;
 	}
 
@@ -1525,6 +1526,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		// NVIDIA GPUs can disappoint when DMA blocks straddle VirtualAlloc boundaries.
 		// Take the L and try the fallback.
 		rsx_log.warning("Host label update at 0x%x was not possible.", address);
+		drain_label_queue();
 		return false;
 	}
 
