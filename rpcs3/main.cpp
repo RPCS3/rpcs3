@@ -371,7 +371,7 @@ void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::
 	std::ostringstream ss;
 	const std::time_t dateTime = std::chrono::system_clock::to_time_t(get_object(arg));
  	const std::tm tm = *std::localtime(&dateTime);
-	ss << std::put_time(&tm, "%Y-%m-%e");
+	ss << std::put_time(&tm, "%Y-%m-%e-%H-%0M");
  	out += ss.str();
 }
 
