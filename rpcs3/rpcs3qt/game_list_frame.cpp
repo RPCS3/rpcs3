@@ -981,8 +981,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		: tr("&Create Custom Gamepad Configuration"));
 	QAction* configure_patches = menu.addAction(tr("&Manage Game Patches"));
 	QAction* create_ppu_cache = menu.addAction(tr("&Create PPU Cache"));
-#ifndef __APPLE__
+
 	menu.addSeparator();
+
 	const auto on_shortcut = [this, gameinfo](bool is_desktop_shortcut)
 	{
 		const std::string target_cli_args = fmt::format("--no-gui \"%s\"", gameinfo->info.path);
@@ -1004,12 +1005,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(create_desktop_shortcut, &QAction::triggered, this, [this, gameinfo, on_shortcut](){ on_shortcut(true); });
 #ifdef _WIN32
 	QAction* create_start_menu_shortcut = shortcut_menu->addAction(tr("&Create Start Menu Shortcut"));
+#elif defined(__APPLE__)
+	QAction* create_start_menu_shortcut = shortcut_menu->addAction(tr("&Create Launchpad Shortcut"));
 #else
 	QAction* create_start_menu_shortcut = shortcut_menu->addAction(tr("&Create Application Menu Shortcut"));
 #endif
 	connect(create_start_menu_shortcut, &QAction::triggered, this, [this, gameinfo, on_shortcut](){ on_shortcut(false); });
-#endif
+
 	menu.addSeparator();
+
 	QAction* rename_title = menu.addAction(tr("&Rename In Game List"));
 	QAction* hide_serial = menu.addAction(tr("&Hide From Game List"));
 	hide_serial->setCheckable(true);

@@ -361,6 +361,11 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 {
 	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
 
+#ifdef __APPLE__
+	update_log.error("Unsupported operating system.");
+	return false;
+#else
+
 	if (m_expected_size != static_cast<u64>(data.size()))
 	{
 		update_log.error("Download size mismatch: %d expected: %d", data.size(), m_expected_size);
@@ -592,11 +597,15 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 	// Move the appimage/exe and replace with new appimage
 	const std::string move_dest = replace_path + "_old";
-	fs::rename(replace_path, move_dest, true);
+	if (!fs::rename(replace_path, move_dest, true))
+	{
+		// Simply log error for now
+		update_log.error("Failed to move old AppImage file: %s (%s)", replace_path, fs::g_tls_error);
+	}
 	fs::file new_appimage(replace_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!new_appimage)
 	{
-		update_log.error("Failed to create new AppImage file: %s", replace_path);
+		update_log.error("Failed to create new AppImage file: %s (%s)", replace_path, fs::g_tls_error);
 		return false;
 	}
 	if (new_appimage.write(data.data(), data.size()) != data.size() + 0u)
@@ -606,7 +615,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 	if (fchmod(new_appimage.get_handle(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1)
 	{
-		update_log.error("Failed to chmod rwxrxrx %s", replace_path);
+		update_log.error("Failed to chmod rwxrxrx %s (%s)", replace_path, strerror(errno));
 		return false;
 	}
 	new_appimage.close();
@@ -650,4 +659,5 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 
 	return true;
+#endif //def __APPLE__
 }

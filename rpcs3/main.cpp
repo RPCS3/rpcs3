@@ -546,6 +546,7 @@ int main(int argc, char** argv)
 	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
 	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
+	app->setOrganizationName("RPCS3");
 
 	// Command line args
 	static QCommandLineParser parser;
