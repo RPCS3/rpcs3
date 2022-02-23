@@ -605,6 +605,14 @@ VKGSRender::VKGSRender() : GSRender()
 		rsx_log.error("Apple GPUs are incompatible with the current implementation of asynchronous texture decoding.");
 		backend_config.supports_asynchronous_compute = false;
 		break;
+	case vk::driver_vendor::INTEL:
+		// As expected host allocations won't work on INTEL despite the extension being present
+		if (backend_config.supports_passthrough_dma)
+		{
+			rsx_log.error("INTEL driver does not support passthrough DMA buffers");
+			backend_config.supports_passthrough_dma = false;
+		}
+		break;
 	default: break;
 	}
 
