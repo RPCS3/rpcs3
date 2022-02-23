@@ -368,8 +368,10 @@ template <>
 void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::duration>>::format(std::string& out, u64 arg)
 {
 	std::ostringstream ss;
-	ss << get_object(arg);
-	out += ss.str();
+	const std::time_t dateTime = std::chrono::system_clock::to_time_t(get_object(arg));
+ 	const std::tm tm = *std::localtime(&dateTime);
+	ss << std::put_time(&tm, "%Y-%m-%e");
+ 	out += ss.str();
 }
 
 
