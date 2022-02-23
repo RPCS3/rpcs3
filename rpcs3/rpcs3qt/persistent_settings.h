@@ -16,9 +16,10 @@ namespace gui
 		const QString titles      = "Titles";
 
 		// Date format
-		const QString last_played_date_format_old    = "MMMM d yyyy";
-		const QString last_played_date_format_new    = "MMMM d, yyyy";
-		const Qt::DateFormat last_played_date_format = Qt::DateFormat::ISODate;
+		const QString last_played_date_format_old                  = "MMMM d yyyy";
+		const QString last_played_date_format_new                  = "MMMM d, yyyy";
+		const QString last_played_date_with_time_of_day_format     = "MMMM d, yyyy HH:mm";
+		const Qt::DateFormat last_played_date_format               = Qt::DateFormat::ISODate;
 
 		// GUI Saves
 		const gui_save save_notes  = gui_save(savedata, "notes",       QVariantMap());
