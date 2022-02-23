@@ -43,8 +43,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>838</width>
-        <height>641</height>
+        <width>821</width>
+        <height>667</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -54,7 +54,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>6</number>
       </property>
       <widget class="QWidget" name="coreTab">
        <attribute name="title">
@@ -2325,9 +2325,16 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="DisableNativefp16">
+                <widget class="QCheckBox" name="disableNativefp16">
                  <property name="text">
                   <string>Disable native float16 support</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="allowHostGPULabels">
+                 <property name="text">
+                  <string>Allow Host GPU Labels (Experimental)</string>
                  </property>
                 </widget>
                </item>

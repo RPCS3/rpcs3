@@ -16,6 +16,18 @@ namespace vk
 		gpu = 1
 	};
 
+	struct host_data_t // Pick a better name
+	{
+		u64 magic = 0xCAFEBABE;
+		u64 event_counter = 0;
+		u64 texture_load_request_event = 0;
+		u64 texture_load_complete_event = 0;
+		u64 last_label_release_event = 0;
+		u64 last_label_submit_event = 0;
+		u64 commands_complete_event = 0;
+		u64 last_label_request_timestamp = 0;
+	};
+
 	struct fence
 	{
 		atomic_t<bool> flushed = false;
