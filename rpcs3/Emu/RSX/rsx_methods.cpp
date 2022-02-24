@@ -256,7 +256,7 @@ namespace rsx
 			}
 			else
 			{
-				write_gcm_label<false, false>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
+				write_gcm_label<true, false>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
 			}
 		}
 
