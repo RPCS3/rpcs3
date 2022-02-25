@@ -72,12 +72,8 @@ void headless_application::InitializeCallbacks()
 			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
 			break;
 		}
-#if not defined(__APPLE__)
 		case video_renderer::opengl:
-#endif
-#if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
-#endif
 		{
 			fmt::throw_exception("Headless mode can only be used with the %s video renderer. Current renderer: %s", video_renderer::null, type);
 			[[fallthrough]];
