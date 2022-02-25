@@ -641,6 +641,14 @@ VKGSRender::VKGSRender() : GSRender()
 			backend_config.supports_host_gpu_labels = false;
 		}
 	}
+
+	if (!backend_config.supports_host_gpu_labels &&
+		!backend_config.supports_asynchronous_compute)
+	{
+		// Disable passthrough DMA unless we enable a feature that requires it.
+		// I'm avoiding an explicit checkbox for this until I figure out why host labels don't fix all problems with passthrough.
+		backend_config.supports_passthrough_dma = false;
+	}
 }
 
 VKGSRender::~VKGSRender()
