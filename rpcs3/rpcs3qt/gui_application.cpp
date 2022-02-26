@@ -61,7 +61,9 @@ gui_application::~gui_application()
 
 bool gui_application::Init()
 {
+#ifndef __APPLE__
 	setWindowIcon(QIcon(":/rpcs3.ico"));
+#endif
 
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
