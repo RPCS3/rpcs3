@@ -404,7 +404,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	Emu.CallFromMainThread([argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
 	{
-		sys_process.success("Process finished -> %s", argv[0]);
+		sys_process.always()("Process finished -> %s", argv[0]);
 
 		std::string disc;
 

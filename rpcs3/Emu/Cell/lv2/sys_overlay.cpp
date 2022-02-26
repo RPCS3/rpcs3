@@ -53,7 +53,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 
 	ppu_initialize(*ovlm);
 
-	sys_overlay.success(u8"Loaded overlay: “%s” (id=0x%x)", vpath, idm::last_id());
+	sys_overlay.always()(u8"Loaded overlay: “%s” (id=0x%x)", vpath, idm::last_id());
 
 	*ovlmid = idm::last_id();
 	*entry  = ovlm->entry;

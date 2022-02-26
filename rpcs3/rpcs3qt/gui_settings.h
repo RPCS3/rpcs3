@@ -188,12 +188,12 @@ namespace gui
 
 	const gui_save l_tty       = gui_save(logger, "TTY",       true);
 	const gui_save l_level     = gui_save(logger, "level",     static_cast<uchar>(logs::level::success));
-	const gui_save l_prefix    = gui_save(logger, "prefix_on", false);
+	const gui_save l_prefix    = gui_save(logger, "prefix_on", true);
 	const gui_save l_stack_err = gui_save(logger, "ERR_stack", true);
 	const gui_save l_stack     = gui_save(logger, "stack",     true);
-	const gui_save l_stack_tty = gui_save(logger, "TTY_stack", false);
-	const gui_save l_limit     = gui_save(logger, "limit",     1000);
-	const gui_save l_limit_tty = gui_save(logger, "TTY_limit", 1000);
+	const gui_save l_stack_tty = gui_save(logger, "TTY_stack", true);
+	const gui_save l_limit     = gui_save(logger, "limit",     1024);
+	const gui_save l_limit_tty = gui_save(logger, "TTY_limit", 1024);
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
 
@@ -201,7 +201,7 @@ namespace gui
 	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
 	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", DefaultStylesheet);
-	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      false);
+	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      true);
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
 	const gui_save m_richPresence      = gui_save(meta, "useRichPresence",   true);
 	const gui_save m_discordState      = gui_save(meta, "discordState",      "");

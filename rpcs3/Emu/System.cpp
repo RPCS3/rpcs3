@@ -1789,7 +1789,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					m_dir = "/app_home/";
 				}
 
-				sys_log.notice("Elf path: %s", argv[0]);
+				sys_log.always()("Elf path: %s", argv[0]);
 			}
 
 			if (!argv[0].starts_with("/dev_hdd0/game"sv) && m_cat == "HG"sv)
