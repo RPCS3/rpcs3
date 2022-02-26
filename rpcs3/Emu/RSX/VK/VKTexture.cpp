@@ -9,6 +9,7 @@
 
 #include "vkutils/data_heap.h"
 #include "vkutils/image_helpers.h"
+#include "VKGSRender.h"
 
 #include "../GCM.h"
 #include "../rsx_utils.h"
@@ -1145,6 +1146,17 @@ namespace vk
 		{
 			// Release from async chain, the primary chain will acquire later
 			dst_image->queue_release(cmd2, cmd.get_queue_family(), dst_image->current_layout);
+		}
+
+		if (auto rsxthr = rsx::get_current_renderer();
+			rsxthr->get_backend_config().supports_host_gpu_labels)
+		{
+			// Queue a sync update on the CB doing the load
+			auto [host_data, host_buffer] = static_cast<VKGSRender*>(rsxthr)->map_host_object_data();
+			ensure(host_data);
+			const auto event_id = ++host_data->event_counter;
+			host_data->texture_load_request_event = event_id;
+			vkCmdUpdateBuffer(cmd2, host_buffer, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
 		}
 	}
 

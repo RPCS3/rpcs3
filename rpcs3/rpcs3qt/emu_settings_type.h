@@ -90,6 +90,7 @@ enum class emu_settings_type
 	DriverWakeUpDelay,
 	VulkanAsyncTextureUploads,
 	VulkanAsyncSchedulerDriver,
+	AllowHostGPULabels,
 	MetalSemaphore,
 
 	// Performance Overlay
@@ -247,6 +248,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::VulkanAdapter,              { "Video", "Vulkan", "Adapter"}},
 	{ emu_settings_type::VBlankRate,                 { "Video", "Vblank Rate"}},
 	{ emu_settings_type::DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
+	{ emu_settings_type::AllowHostGPULabels,         { "Video", "Allow Host GPU Labels"}},
 
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,        { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},

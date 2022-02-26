@@ -29,6 +29,38 @@ namespace rsx
 		rsx_log.trace("RSX method 0x%x (arg=0x%x)", reg << 2, arg);
 	}
 
+	template<bool FlushDMA, bool FlushPipe>
+	void write_gcm_label(thread* rsx, u32 address, u32 data)
+	{
+		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->label_addr + 0x30));
+		if (!is_flip_sema)
+		{
+			// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
+			const bool handled = rsx->get_backend_config().supports_host_gpu_labels && rsx->release_GCM_label(address, data);
+
+			if constexpr (FlushDMA)
+			{
+				// If the backend handled the request, this call will basically be a NOP
+				g_fxo->get<rsx::dma_manager>().sync();
+			}
+
+			if constexpr (FlushPipe)
+			{
+				// Manually flush the pipeline.
+				// It is possible to stream report writes using the host GPU, but that generates too much submit traffic.
+				rsx->sync();
+			}
+
+			if (handled)
+			{
+				// Backend will handle it, nothing to write.
+				return;
+			}
+		}
+
+		vm::_ref<RsxSemaphore>(address).val = data;
+	}
+
 	template<typename Type> struct vertex_data_type_from_element_type;
 	template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
 	template<> struct vertex_data_type_from_element_type<f16> { static const vertex_base_type type = vertex_base_type::sf; };
@@ -116,8 +148,6 @@ namespace rsx
 
 		void semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
-			rsx->sync();
-
 			const u32 offset = method_registers.semaphore_offset_406e();
 
 			if (offset % 4)
@@ -144,7 +174,7 @@ namespace rsx
 				rsx_log.fatal("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 			}
 
-			vm::_ref<RsxSemaphore>(addr).val = arg;
+			write_gcm_label<false, true>(rsx, addr, arg);
 		}
 	}
 
@@ -206,12 +236,8 @@ namespace rsx
 
 		void texture_read_semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
-			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
-			g_fxo->get<rsx::dma_manager>().sync();
-			if (g_cfg.video.strict_rendering_mode)
-			{
-				rsx->sync();
-			}
+			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier.
+			// Ideally the GPU only needs to have cached all textures declared up to this point before writing the label.
 
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
@@ -224,14 +250,19 @@ namespace rsx
 				return;
 			}
 
-			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097())).val = arg;
+			if (g_cfg.video.strict_rendering_mode) [[ unlikely ]]
+			{
+				write_gcm_label<true, true>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
+			}
+			else
+			{
+				write_gcm_label<true, false>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
+			}
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
-			// Full pipeline barrier
-			g_fxo->get<rsx::dma_manager>().sync();
-			rsx->sync();
+			// Full pipeline barrier. GPU must flush pipeline before writing the label
 
 			const u32 offset = method_registers.semaphore_offset_4097();
 
@@ -243,7 +274,7 @@ namespace rsx
 			}
 
 			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097())).val = val;
+			write_gcm_label<true, true>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), val);
 		}
 
 		/**

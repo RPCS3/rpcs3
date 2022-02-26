@@ -2,6 +2,9 @@
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <iostream>
+#include <chrono>
+#include <sstream>
+#include <iomanip>
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -362,6 +365,16 @@ void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QStrin
 	}
 }
 
+template <>
+void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::duration>>::format(std::string& out, u64 arg)
+{
+	std::ostringstream ss;
+	const std::time_t dateTime = std::chrono::system_clock::to_time_t(get_object(arg));
+ 	const std::tm tm = *std::localtime(&dateTime);
+	ss << std::put_time(&tm, "%Y-%m-%eT%H:%M:%S");
+ 	out += ss.str();
+}
+
 
 
 int main(int argc, char** argv)
@@ -460,21 +473,24 @@ int main(int argc, char** argv)
 	{
 		// Write RPCS3 version
 		logs::stored_message ver{sys_log.always()};
-		ver.text  = fmt::format("RPCS3 v%s | %s", rpcs3::get_version().to_string(), rpcs3::get_branch());
+		ver.text = fmt::format("RPCS3 v%s | %s", rpcs3::get_version().to_string(), rpcs3::get_branch());
 
 		// Write System information
 		logs::stored_message sys{sys_log.always()};
-		sys.text  = utils::get_system_info();
+		sys.text = utils::get_system_info();
 
 		// Write OS version
 		logs::stored_message os{sys_log.always()};
-		os.text  = utils::get_OS_version();
+		os.text = utils::get_OS_version();
 
 		// Write Qt version
 		logs::stored_message qt{(strcmp(QT_VERSION_STR, qVersion()) != 0) ? sys_log.error : sys_log.notice};
-		qt.text  = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
+		qt.text = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
 
-		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt)});
+		logs::stored_message time{sys_log.always()};
+		time.text = fmt::format("Current Time: %s", std::chrono::system_clock::now());
+
+		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt), std::move(time)});
 	}
 
 #ifdef _WIN32
@@ -533,6 +549,7 @@ int main(int argc, char** argv)
 	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
 	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
+	app->setOrganizationName("RPCS3");
 
 	// Command line args
 	static QCommandLineParser parser;
