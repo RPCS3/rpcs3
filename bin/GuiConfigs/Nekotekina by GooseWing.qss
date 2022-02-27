@@ -1,6 +1,6 @@
 /*
 Nekotekina Theme for RPCS3 by GooseWing
-v1.0
+v1.1
 
 Based on YoRHa Theme for RPCS3
 by Ani @ https://github.com/AniLeo
@@ -60,21 +60,21 @@ QWidget {
 }
 
 
-/* LLE: Style QListWidget checkboxes (QListWidget) */
-#lleList::indicator {
+/* HLE/LLE: Style QListWidget checkboxes (QListWidget) */
+QListWidget::indicator, QTreeWidget::indicator {
 	border: 0.05em solid #4d4940;
 }
-#lleList::indicator::unchecked {
-	background-color: #b3ac98;
+QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
+	background-color: #705722; /* Dark */
 }
-#lleList::indicator::checked {
-	background-color: #4d4940;
+QListWidget::indicator::checked, QTreeWidget::indicator::checked {
+	background-color: #ffd785; /* Light */
 }
-#lleList::indicator::disabled {
-	background-color: #828790;
+QListWidget::indicator::disabled, QTreeWidget::indicator::disabled {
+	background-color: #828790; /* Gray */
 }
-#lleList::item::selected {
-	color: #4d4940;
+QListWidget::item::selected, QTreeWidget::item::selected {
+	background-color: #5c471c;
 }
 
 
@@ -85,10 +85,9 @@ QToolTip {
 	border: 0.10em solid #705722;
 }
 
-
-/* CG Disasm and Trophy Manager: background-image doesn't work, use static color */
-QWidget#cg_disasm, QWidget#trophy_manager {
-	background: #6e695c;
+/* CG Disasm and Trophy Manager */
+QWidget#trophy_manager, QWidget#cg_disasm, QWidget#log_viewer {
+	border-image: url("GuiConfigs/kot-bg.jpg");
 }
 
 
@@ -254,6 +253,9 @@ QSpinBox, QDoubleSpinBox {
 	border-radius: 0.10em;
 	color: #ffd785;
 }
+QSpinBox::disabled, QDoubleSpinBox::disabled {
+	background-color: #828790;
+}
 
 
 /* Styles Sliders */
@@ -273,9 +275,19 @@ QSlider#sizeSlider::groove:horizontal {
 	height: 1.5em;
 }
 
+
 /* Log and Debugger borders */
-QTextEdit {
-	border: 0.05em solid #4d4940;
+QTextEdit, QPlainTextEdit {
+	background: rgba(52, 49, 40, 0.9);
+	/*border: 0.05em solid #ffd785;*/
+	color: #ffd785;
+	font-family: none;
+	font-size: 8.50pt;
+}
+
+#debugger QListWidget, #debugger QTextEdit {
+	border: 0.05em solid #ffd785;
+	background: rgba(52, 49, 40, 0.9);
 }
 
 
@@ -295,6 +307,19 @@ QDockWidget::title {
 }
 QDockWidget::close-button, QDockWidget::float-button {
 	background-color: #bfa163;
+}
+
+
+/* Calendar fixes */
+QDateTimeEdit, QDateTimeEdit::drop-down {
+	background: transparent;
+	border: 0.05em solid #ffd785;
+	border-radius: 0.10em;
+	color: #ffd785;
+}
+QCalendarWidget QWidget{
+	background-color: #bfa163;
+	color: #4d4940;
 }
 
 
@@ -353,9 +378,9 @@ QLabel#l_controller {
 /* Game Grid Font */
 QTableWidget#game_grid {
 	font-weight: 600;
-	color: #4d4940;
+	color: #ffd785;
 	text-transform: uppercase;
-	selection-color: #aea993;
+	selection-color: #ffd785;
 }
 QTableWidget#game_grid::item:selected:active {
 	selection-background-color: #4d4940;
@@ -374,7 +399,7 @@ QLabel#color_button {
 /* Search bar on main Toolbar */
 QLineEdit#mw_searchbar {
 	margin-left: 0.7em;
-	color: #4d4940;
+	color: #ffd785;
 	font-size: 10.25pt;
 }
 
@@ -397,7 +422,7 @@ QLabel#gamelist_icon_background_color {
 
 /* Set Windows Taskbar Thumbnail colors */
 QLabel#thumbnail_icon_color {
-	color: #4d4940;
+	color: #ffd785;
 }
 
 
@@ -437,13 +462,19 @@ QLabel#log_stack {
 
 /* Memory Viewer */
 QLabel#memory_viewer_address_panel {
-	color: #0000ff; /* Font Color: Blue */
+	color: #ffd785; /* Font Color: Light */
+	border: 0.05em solid #ffd785;
+	background: rgba(52, 49, 40, 0.9);
 }
 QLabel#memory_viewer_hex_panel {
-	color: #4d4940; /* Font Color: Grey */
+	color: #bfa163; /* Font Color: Grey */
+	border: 0.05em solid #ffd785;
+	background: rgba(52, 49, 40, 0.9);
 }
 QLabel#memory_viewer_ascii_panel {
-	color: #4d4940; /* Font Color: Grey */
+	color: #bfa163; /* Font Color: Grey */
+	border: 0.05em solid #ffd785;
+	background: rgba(52, 49, 40, 0.9);
 }
 
 
