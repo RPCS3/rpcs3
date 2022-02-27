@@ -203,6 +203,8 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 pad_settings_dialog::~pad_settings_dialog()
 {
+	m_gui_settings->SetValue(gui::pads_geometry, saveGeometry());
+
 	delete ui;
 
 	if (!Emu.IsStopped())
@@ -219,10 +221,10 @@ void pad_settings_dialog::showEvent(QShowEvent* event)
 	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0, 0);
 
 	// Resize in order to fit into our scroll area
-	ResizeDialog();
-
-	// Restrict our inner layout size. This is necessary because redrawing things will slow down the dialog otherwise.
-	ui->mainLayout->setSizeConstraint(QLayout::SizeConstraint::SetFixedSize);
+	if (!restoreGeometry(m_gui_settings->GetValue(gui::pads_geometry).toByteArray()))
+	{
+		ResizeDialog();
+	}
 
 	QDialog::showEvent(event);
 }
@@ -603,6 +605,7 @@ void pad_settings_dialog::ReactivateButtons()
 
 void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier) const
 {
+	desired_width = 100; // Let's keep a fixed size for these labels for now
 	const int deadzone_max = m_handler ? m_handler->thumb_max : 255; // 255 used as fallback. The deadzone circle shall be small.
 
 	constexpr qreal relative_size = 0.9;
@@ -1725,7 +1728,6 @@ void pad_settings_dialog::ResizeDialog()
 	const QSize margin_size(margins.left() + margins.right(), margins.top() + margins.bottom());
 
 	resize(tabwidget_size + buttons_size + margin_size + spacing_size);
-	setMaximumSize(size());
 }
 
 void pad_settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
