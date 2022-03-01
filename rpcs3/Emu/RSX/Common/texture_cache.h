@@ -2092,6 +2092,20 @@ namespace rsx
 
 			switch (extended_dimension)
 			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				attributes.depth = 1;
+				attributes.height = 1;
+				attributes.slice_h = 1;
+				scale.height = scale.depth = 0.f;
+				subsurface_count = 1;
+				required_surface_height = 1;
+				break;
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				attributes.depth = 1;
+				scale.depth = 0.f;
+				subsurface_count = options.is_compressed_format? 1 : tex.get_exact_mipmap_count();
+				attributes.slice_h = required_surface_height = attributes.height;
+				break;
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
 				attributes.depth = 6;
 				subsurface_count = 1;
@@ -2101,30 +2115,10 @@ namespace rsx
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_3d:
 				attributes.depth = tex.depth();
-				if (attributes.depth > 1)
-				{
-					subsurface_count = 1;
-					tex_size = static_cast<u32>(get_texture_size(tex));
-					required_surface_height = tex_size / attributes.pitch;
-					attributes.slice_h = required_surface_height / attributes.depth;
-					break;
-				}
-				// Downgrade to 2D
-				extended_dimension = rsx::texture_dimension_extended::texture_dimension_2d;
-				[[ fallthrough ]];
-			case rsx::texture_dimension_extended::texture_dimension_2d:
-				attributes.depth = 1;
-				scale.depth = 0.f;
-				subsurface_count = options.is_compressed_format? 1 : tex.get_exact_mipmap_count();
-				attributes.slice_h = required_surface_height = attributes.height;
-				break;
-			case rsx::texture_dimension_extended::texture_dimension_1d:
-				attributes.depth = 1;
-				attributes.height = 1;
-				attributes.slice_h = 1;
-				scale.height = scale.depth = 0.f;
 				subsurface_count = 1;
-				required_surface_height = 1;
+				tex_size = static_cast<u32>(get_texture_size(tex));
+				required_surface_height = tex_size / attributes.pitch;
+				attributes.slice_h = required_surface_height / attributes.depth;
 				break;
 			default:
 				fmt::throw_exception("Unsupported texture dimension %d", static_cast<int>(extended_dimension));
