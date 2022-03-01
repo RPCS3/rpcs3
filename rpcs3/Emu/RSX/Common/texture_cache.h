@@ -2109,12 +2109,9 @@ namespace rsx
 					attributes.slice_h = required_surface_height / attributes.depth;
 					break;
 				}
-				else
-				{
-					// Downgrade to 2D
-					extended_dimension = rsx::texture_dimension_extended::texture_dimension_2d;
-					[[ fallthrough ]];
-				}
+				// Downgrade to 2D
+				extended_dimension = rsx::texture_dimension_extended::texture_dimension_2d;
+				[[ fallthrough ]];
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				attributes.depth = 1;
 				scale.depth = 0.f;
