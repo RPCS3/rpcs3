@@ -24,7 +24,6 @@ namespace vk
 			dim_limit = (info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? gpu_limits.maxImageDimensionCube : gpu_limits.maxImageDimension2D;
 			break;
 		case VK_IMAGE_TYPE_3D:
-			ensure(info.extent.depth > 1);
 			longest_dim = std::max({ info.extent.width, info.extent.height, info.extent.depth });
 			dim_limit = gpu_limits.maxImageDimension3D;
 			break;
