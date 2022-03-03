@@ -6,7 +6,9 @@
 
 fatal_error_dialog::fatal_error_dialog(std::string_view text) : QMessageBox()
 {
+#ifndef __APPLE__
 	setWindowIcon(QIcon(":/rpcs3.ico"));
+#endif
 	setWindowTitle(tr("RPCS3: Fatal Error"));
 	setIcon(QMessageBox::Icon::Critical);
 	setTextFormat(Qt::TextFormat::RichText);
