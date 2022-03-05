@@ -2463,7 +2463,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, surface, surface->get_memory_range(), false,
-				surface->get_surface_width(rsx::surface_metrics::pixels), surface->get_surface_height(rsx::surface_metrics::pixels), surface->get_rsx_pitch(),
+				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
 				gcm_format, swap_bytes);
 		}
 

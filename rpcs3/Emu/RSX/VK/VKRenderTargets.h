@@ -271,7 +271,7 @@ namespace vk
 			if (!sink)
 			{
 				const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(prev.width, prev.height,
-					ref->get_surface_width(rsx::surface_metrics::pixels), ref->get_surface_height(rsx::surface_metrics::pixels));
+					ref->get_surface_width<rsx::surface_metrics::pixels>(), ref->get_surface_height<rsx::surface_metrics::pixels>());
 
 				auto& dev = cmd.get_command_pool().get_owner();
 				sink = std::make_unique<vk::render_target>(dev, dev.get_memory_mapping().device_local,

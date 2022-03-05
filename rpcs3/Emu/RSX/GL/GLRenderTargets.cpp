@@ -382,7 +382,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 			m_gl_texture_cache.lock_memory_region(
 				cmd, surface, surface->get_memory_range(), false,
-				surface->get_surface_width(rsx::surface_metrics::pixels), surface->get_surface_height(rsx::surface_metrics::pixels), surface->get_rsx_pitch(),
+				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
 				format, type, swap_bytes);
 		}
 
