@@ -119,7 +119,7 @@ macos_task:
   matrix:
     - name: Cirrus macOS
       osx_instance:
-        image: big-sur-base
+        image: monterey-base
       mac_script:
         - mkdir artifacts
         - ".ci/build-mac.sh"

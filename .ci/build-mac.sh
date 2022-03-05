@@ -3,6 +3,7 @@
 brew update
 brew install llvm@13 molten-vk vulkan-headers sdl2 nasm qt@5 ninja cmake glew git p7zip create-dmg ccache
 
+export MACOSX_DEPLOYMENT_TARGET=11.6
 export CXX=clang++
 export CC=clang
 export Qt5_DIR="/usr/local/opt/qt@5/lib/cmake/Qt5"
