@@ -1,4 +1,4 @@
-# - Try to find ffmpeg libraries (libavcodec, libavformat, libavutil and libswscale)
+# - Try to find ffmpeg libraries (libavcodec, libavformat, libavutil, libswresample and libswscale)
 # Once done this will define
 #
 #  FFMPEG_FOUND - system has ffmpeg or libav
@@ -8,6 +8,7 @@
 #  FFMPEG_LIBAVFORMAT
 #  FFMPEG_LIBAVUTIL
 #  FFMPEG_LIBSWSCALE
+#  FFMPEG_LIBSWRESAMPLE
 #
 #  Copyright (c) 2008 Andreas Schneider <mail@cynapses.org>
 #  Modified for other libraries by Lasse Kärkkäinen <tronic>
@@ -29,6 +30,7 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
     pkg_check_modules(_FFMPEG_AVFORMAT libavformat)
     pkg_check_modules(_FFMPEG_AVUTIL libavutil)
     pkg_check_modules(_FFMPEG_SWSCALE libswscale)
+    pkg_check_modules(_FFMPEG_SWRESAMPLE libswresample)
   endif (PKG_CONFIG_FOUND)
 
   find_path(FFMPEG_AVCODEC_INCLUDE_DIR
@@ -57,7 +59,12 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
     PATHS ${_FFMPEG_SWSCALE_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
   )
 
-  if (FFMPEG_LIBAVCODEC AND FFMPEG_LIBAVFORMAT AND FFMPEG_LIBSWSCALE)
+  find_library(FFMPEG_LIBSWRESAMPLE
+    NAMES swresample
+    PATHS ${_FFMPEG_SWRESAMPLE_LIBRARY_DIRS} /usr/lib /usr/local/lib /opt/local/lib /sw/lib
+  )
+
+  if (FFMPEG_LIBAVCODEC AND FFMPEG_LIBAVFORMAT AND FFMPEG_LIBSWSCALE AND FFMPEG_LIBSWRESAMPLE)
     set(FFMPEG_FOUND TRUE)
   endif()
 
@@ -69,6 +76,7 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
       ${FFMPEG_LIBAVFORMAT}
       ${FFMPEG_LIBAVUTIL}
       ${FFMPEG_LIBSWSCALE}
+      ${FFMPEG_LIBSWRESAMPLE}
     )
 
   endif (FFMPEG_FOUND)
@@ -79,7 +87,7 @@ else (FFMPEG_LIBRARIES AND FFMPEG_INCLUDE_DIR)
     endif (NOT FFMPEG_FIND_QUIETLY)
   else (FFMPEG_FOUND)
     if (FFMPEG_FIND_REQUIRED)
-      message(FATAL_ERROR "Could not find libavcodec or libavformat or libavutil or libswscale")
+      message(FATAL_ERROR "Could not find libavcodec or libavformat or libavutil or libswscale or libswresample")
     endif (FFMPEG_FIND_REQUIRED)
   endif (FFMPEG_FOUND)
 

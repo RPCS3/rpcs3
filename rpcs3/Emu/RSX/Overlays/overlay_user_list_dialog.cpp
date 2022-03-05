@@ -25,6 +25,7 @@ namespace rsx
 			else
 			{
 				// Fallback
+				// TODO: use proper icon
 				static_cast<image_view*>(image.get())->set_image_resource(resource_config::standard_image_resource::square);
 			}
 
@@ -192,7 +193,6 @@ namespace rsx
 				m_dim_background->back_color.a = 0.5f;
 			}
 
-			std::vector<u8> icon;
 			std::vector<std::unique_ptr<overlay_element>> entries;
 
 			const std::string home_dir = rpcs3::utils::get_hdd0_dir() + "home/";
