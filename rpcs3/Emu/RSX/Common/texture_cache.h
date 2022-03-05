@@ -1952,7 +1952,7 @@ namespace rsx
 								u32 coverage_size = 0;
 								for (const auto& section : overlapping_fbos)
 								{
-									const auto area = section.surface->get_native_pitch() * section.surface->get_surface_height<rsx::surface_metrics::bytes>();
+									const auto area = section.surface->get_native_pitch() * section.surface->template get_surface_height<rsx::surface_metrics::bytes>();
 									coverage_size += area;
 								}
 
@@ -2509,8 +2509,8 @@ namespace rsx
 					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, is_format_convert);
 				}
 
-				if (surf->get_surface_width<rsx::surface_metrics::pixels>() != surf->width() ||
-					surf->get_surface_height<rsx::surface_metrics::pixels>() != surf->height())
+				if (surf->template get_surface_width<rsx::surface_metrics::pixels>() != surf->width() ||
+					surf->template get_surface_height<rsx::surface_metrics::pixels>() != surf->height())
 				{
 					// Must go through a scaling operation due to resolution scaling being present
 					ensure(g_cfg.video.resolution_scale_percent != 100);
@@ -2606,8 +2606,8 @@ namespace rsx
 				size2u src_dimensions = { 0, 0 };
 				if (src_is_render_target)
 				{
-					src_dimensions.width = src_subres.surface->get_surface_width<rsx::surface_metrics::samples>();
-					src_dimensions.height = src_subres.surface->get_surface_height<rsx::surface_metrics::samples>();
+					src_dimensions.width = src_subres.surface->template get_surface_width<rsx::surface_metrics::samples>();
+					src_dimensions.height = src_subres.surface->template get_surface_height<rsx::surface_metrics::samples>();
 				}
 
 				const auto props = texture_cache_helpers::get_optimal_blit_target_properties(
@@ -2761,8 +2761,8 @@ namespace rsx
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
 				dst_is_depth_surface = typeless_info.dst_is_typeless ? false : dst_subres.is_depth;
 
-				max_dst_width = static_cast<u16>(dst_subres.surface->get_surface_width<rsx::surface_metrics::samples>() * typeless_info.dst_scaling_hint);
-				max_dst_height = dst_subres.surface->get_surface_height<rsx::surface_metrics::samples>();
+				max_dst_width = static_cast<u16>(dst_subres.surface->template get_surface_width<rsx::surface_metrics::samples>() * typeless_info.dst_scaling_hint);
+				max_dst_height = dst_subres.surface->template get_surface_height<rsx::surface_metrics::samples>();
 			}
 
 			// Create source texture if does not exist
@@ -3109,8 +3109,8 @@ namespace rsx
 
 			if (src_is_render_target)
 			{
-				const auto surface_width = src_subres.surface->get_surface_width<rsx::surface_metrics::pixels>();
-				const auto surface_height = src_subres.surface->get_surface_height<rsx::surface_metrics::pixels>();
+				const auto surface_width = src_subres.surface->template get_surface_width<rsx::surface_metrics::pixels>();
+				const auto surface_height = src_subres.surface->template get_surface_height<rsx::surface_metrics::pixels>();
 				std::tie(src_area.x1, src_area.y1) = rsx::apply_resolution_scale<false>(src_area.x1, src_area.y1, surface_width, surface_height);
 				std::tie(src_area.x2, src_area.y2) = rsx::apply_resolution_scale<true>(src_area.x2, src_area.y2, surface_width, surface_height);
 
@@ -3120,8 +3120,8 @@ namespace rsx
 
 			if (dst_is_render_target)
 			{
-				const auto surface_width = dst_subres.surface->get_surface_width<rsx::surface_metrics::pixels>();
-				const auto surface_height = dst_subres.surface->get_surface_height<rsx::surface_metrics::pixels>();
+				const auto surface_width = dst_subres.surface->template get_surface_width<rsx::surface_metrics::pixels>();
+				const auto surface_height = dst_subres.surface->template get_surface_height<rsx::surface_metrics::pixels>();
 				std::tie(dst_area.x1, dst_area.y1) = rsx::apply_resolution_scale<false>(dst_area.x1, dst_area.y1, surface_width, surface_height);
 				std::tie(dst_area.x2, dst_area.y2) = rsx::apply_resolution_scale<true>(dst_area.x2, dst_area.y2, surface_width, surface_height);
 

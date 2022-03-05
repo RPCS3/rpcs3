@@ -94,12 +94,12 @@ namespace rsx
 					auto src = static_cast<T>(source);
 
 					std::tie(src_w, src_h) = rsx::apply_resolution_scale<true>(src_w, src_h,
-						src->get_surface_width<rsx::surface_metrics::pixels>(),
-						src->get_surface_height<rsx::surface_metrics::pixels>());
+						src->template get_surface_width<rsx::surface_metrics::pixels>(),
+						src->template get_surface_height<rsx::surface_metrics::pixels>());
 
 					std::tie(dst_w, dst_h) = rsx::apply_resolution_scale<true>(dst_w, dst_h,
-						target_surface->get_surface_width<rsx::surface_metrics::pixels>()),
-						target_surface->get_surface_height<rsx::surface_metrics::pixels>()));
+						target_surface->template get_surface_width<rsx::surface_metrics::pixels>(),
+						target_surface->template get_surface_height<rsx::surface_metrics::pixels>());
 				}
 
 				width = src_w;
@@ -181,27 +181,42 @@ namespace rsx
 		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
 		u32 get_surface_width() const
 		{
-			switch constexpr (Metrics)
+			if constexpr (Metrics == rsx::surface_metrics::samples)
 			{
-				case rsx::surface_metrics::samples:
-					return surface_width * samples_x;
-				case rsx::surface_metrics::pixels:
-					return surface_width;
-				case rsx::surface_metrics::bytes:
-					return native_pitch;
+				return surface_width * samples_x;
+			}
+			else if constexpr (Metrics == rsx::surface_metrics::pixels)
+			{
+				return surface_width;
+			}
+			else if constexpr (Metrics == rsx::surface_metrics::bytes)
+			{
+				return native_pitch;
+			}
+			else
+			{
+				static_assert(false);
 			}
 		}
 
 		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
 		u32 get_surface_height() const
 		{
-			switch constexpr (Metrics)
+			if constexpr (Metrics == rsx::surface_metrics::samples)
 			{
-				case rsx::surface_metrics::samples:
-				case rsx::surface_metrics::bytes:
-					return surface_height * samples_y;
-				case rsx::surface_metrics::pixels:
-					return surface_height;
+				return surface_height * samples_y;
+			}
+			else if constexpr (Metrics == rsx::surface_metrics::pixels)
+			{
+				return surface_height;
+			}
+			else if constexpr (Metrics == rsx::surface_metrics::bytes)
+			{
+				return surface_height * samples_y;
+			}
+			else
+			{
+				static_assert(false);
 			}
 		}
 
@@ -614,7 +629,7 @@ namespace rsx
 
 		inline rsx::address_range get_memory_range() const
 		{
-			const u32 internal_height = get_surface_height<rsx::surface_metrics::samples>());
+			const u32 internal_height = get_surface_height<rsx::surface_metrics::samples>();
 			const u32 excess = (rsx_pitch - native_pitch);
 			return rsx::address_range::start_length(base_addr, internal_height * rsx_pitch - excess);
 		}
