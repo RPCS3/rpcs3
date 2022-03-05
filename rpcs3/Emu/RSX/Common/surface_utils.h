@@ -94,12 +94,12 @@ namespace rsx
 					auto src = static_cast<T>(source);
 
 					std::tie(src_w, src_h) = rsx::apply_resolution_scale<true>(src_w, src_h,
-						src->get_surface_width(rsx::surface_metrics::pixels),
-						src->get_surface_height(rsx::surface_metrics::pixels));
+						src->get_surface_width<rsx::surface_metrics::pixels>(),
+						src->get_surface_height<rsx::surface_metrics::pixels>());
 
 					std::tie(dst_w, dst_h) = rsx::apply_resolution_scale<true>(dst_w, dst_h,
-						target_surface->get_surface_width(rsx::surface_metrics::pixels),
-						target_surface->get_surface_height(rsx::surface_metrics::pixels));
+						target_surface->get_surface_width<rsx::surface_metrics::pixels>()),
+						target_surface->get_surface_height<rsx::surface_metrics::pixels>()));
 				}
 
 				width = src_w;
@@ -178,9 +178,10 @@ namespace rsx
 		virtual bool is_depth_surface() const = 0;
 		virtual void release_ref(image_storage_type) const = 0;
 
-		inline u32 get_surface_width(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
+		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
+		u32 get_surface_width() const
 		{
-			switch (metrics)
+			switch constexpr (Metrics)
 			{
 				case rsx::surface_metrics::samples:
 					return surface_width * samples_x;
@@ -188,22 +189,19 @@ namespace rsx
 					return surface_width;
 				case rsx::surface_metrics::bytes:
 					return native_pitch;
-				default:
-					fmt::throw_exception("Unknown surface metric %d", u32(metrics));
 			}
 		}
 
-		inline u32 get_surface_height(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
+		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
+		u32 get_surface_height() const
 		{
-			switch (metrics)
+			switch constexpr (Metrics)
 			{
 				case rsx::surface_metrics::samples:
 				case rsx::surface_metrics::bytes:
 					return surface_height * samples_y;
 				case rsx::surface_metrics::pixels:
 					return surface_height;
-				default:
-					fmt::throw_exception("Unknown surface metric %d", u32(metrics));
 			}
 		}
 
@@ -219,7 +217,7 @@ namespace rsx
 
 		inline u8 get_bpp() const
 		{
-			return u8(get_native_pitch() / get_surface_width(rsx::surface_metrics::samples));
+			return u8(get_native_pitch() / get_surface_width<rsx::surface_metrics::samples>());
 		}
 
 		inline u8 get_spp() const
@@ -514,11 +512,11 @@ namespace rsx
 		template <typename T>
 		surface_inheritance_result inherit_surface_contents(T* surface)
 		{
-			const auto child_w = get_surface_width(rsx::surface_metrics::bytes);
-			const auto child_h = get_surface_height(rsx::surface_metrics::bytes);
+			const auto child_w = get_surface_width<rsx::surface_metrics::bytes>();
+			const auto child_h = get_surface_height<rsx::surface_metrics::bytes>();
 
-			const auto parent_w = surface->get_surface_width(rsx::surface_metrics::bytes);
-			const auto parent_h = surface->get_surface_height(rsx::surface_metrics::bytes);
+			const auto parent_w = surface->get_surface_width<rsx::surface_metrics::bytes>();
+			const auto parent_h = surface->get_surface_height<rsx::surface_metrics::bytes>();
 
 			const auto rect = rsx::intersect_region(surface->base_addr, parent_w, parent_h, 1, base_addr, child_w, child_h, 1, get_rsx_pitch());
 			const auto src_offset = std::get<0>(rect);
@@ -606,17 +604,17 @@ namespace rsx
 		}
 
 		// Returns the rect area occupied by this surface expressed as an 8bpp image with no AA
-		areau get_normalized_memory_area() const
+		inline areau get_normalized_memory_area() const
 		{
-			const u16 internal_width = get_surface_width(rsx::surface_metrics::bytes);
-			const u16 internal_height = get_surface_height(rsx::surface_metrics::bytes);
+			const u16 internal_width = get_surface_width<rsx::surface_metrics::bytes>();
+			const u16 internal_height = get_surface_height<rsx::surface_metrics::bytes>();
 
 			return { 0, 0, internal_width, internal_height };
 		}
 
-		rsx::address_range get_memory_range() const
+		inline rsx::address_range get_memory_range() const
 		{
-			const u32 internal_height = get_surface_height(rsx::surface_metrics::samples);
+			const u32 internal_height = get_surface_height<rsx::surface_metrics::samples>());
 			const u32 excess = (rsx_pitch - native_pitch);
 			return rsx::address_range::start_length(base_addr, internal_height * rsx_pitch - excess);
 		}

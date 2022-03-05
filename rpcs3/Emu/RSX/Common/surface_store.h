@@ -721,9 +721,9 @@ namespace rsx
 				auto this_range = it->surface->get_memory_range();
 				ensure(this_range.overlaps(range));
 
-				const auto native_pitch = it->surface->get_surface_width(rsx::surface_metrics::bytes);
+				const auto native_pitch = it->surface->get_surface_width<rsx::surface_metrics::bytes>();
 				const auto rsx_pitch = it->surface->get_rsx_pitch();
-				auto num_rows = it->surface->get_surface_height(rsx::surface_metrics::samples);
+				auto num_rows = it->surface->get_surface_height<rsx::surface_metrics::samples>();
 				bool valid = false;
 
 				if (this_range.start < range.start)
@@ -1002,8 +1002,8 @@ namespace rsx
 					info.base_address = range.start;
 					info.is_depth = is_depth;
 
-					const u32 normalized_surface_width = surface->get_surface_width(rsx::surface_metrics::bytes) / required_bpp;
-					const u32 normalized_surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
+					const u32 normalized_surface_width = surface->get_surface_width<rsx::surface_metrics::bytes>() / required_bpp;
+					const u32 normalized_surface_height = surface->get_surface_height<rsx::surface_metrics::samples>();
 
 					if (range.start >= texaddr) [[likely]]
 					{

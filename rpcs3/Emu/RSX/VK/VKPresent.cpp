@@ -288,8 +288,8 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 
 		if (section.base_address >= info->address)
 		{
-			const auto surface_width = surface->get_surface_width(rsx::surface_metrics::samples);
-			const auto surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
+			const auto surface_width = surface->get_surface_width<rsx::surface_metrics::samples>();
+			const auto surface_height = surface->get_surface_height<rsx::surface_metrics::samples>();
 
 			if (section.base_address == info->address)
 			{

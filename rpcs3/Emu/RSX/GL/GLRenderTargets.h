@@ -194,7 +194,7 @@ struct gl_render_target_traits
 		{
 			auto internal_format = static_cast<GLenum>(ref->get_internal_format());
 			const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(prev.width, prev.height,
-				ref->get_surface_width(rsx::surface_metrics::pixels), ref->get_surface_height(rsx::surface_metrics::pixels));
+				ref->get_surface_width<rsx::surface_metrics::pixels>(), ref->get_surface_height<rsx::surface_metrics::pixels>());
 
 			sink = std::make_unique<gl::render_target>(new_w, new_h, internal_format, ref->format_class());
 			sink->add_ref();
@@ -237,8 +237,8 @@ struct gl_render_target_traits
 	{
 		return (surface->get_internal_format() == ref->get_internal_format() &&
 				surface->get_spp() == sample_count &&
-				surface->get_surface_width(rsx::surface_metrics::pixels) >= width &&
-				surface->get_surface_height(rsx::surface_metrics::pixels) >= height);
+				surface->get_surface_width<rsx::surface_metrics::pixels>() >= width &&
+				surface->get_surface_height<rsx::surface_metrics::pixels>() >= height);
 	}
 
 	static
