@@ -242,6 +242,7 @@ else()
 		set(FFMPEG_LIB_AVCODEC "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libavcodec.a")
 		set(FFMPEG_LIB_AVUTIL "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libavutil.a")
 		set(FFMPEG_LIB_SWSCALE "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libswscale.a")
+		set(FFMPEG_LIB_SWRESAMPLE "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libswresample.a")
 	else()
 		message("-- RPCS3: using builtin ffmpeg")
 
@@ -260,6 +261,7 @@ else()
 		find_library(FFMPEG_LIB_AVCODEC avcodec PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
 		find_library(FFMPEG_LIB_AVUTIL avutil PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
 		find_library(FFMPEG_LIB_SWSCALE swscale PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+		find_library(FFMPEG_LIB_SWRESAMPLE swresample PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
 	endif()
 
 	target_include_directories(3rdparty_ffmpeg INTERFACE "ffmpeg/include")
@@ -269,7 +271,9 @@ else()
 			${FFMPEG_LIB_AVFORMAT}
 			${FFMPEG_LIB_AVCODEC}
 			${FFMPEG_LIB_AVUTIL}
-			${FFMPEG_LIB_SWSCALE})
+			${FFMPEG_LIB_SWSCALE}
+			${FFMPEG_LIB_SWRESAMPLE}
+	)
 endif()
 
 
