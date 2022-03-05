@@ -772,6 +772,12 @@ namespace vk
 			return this;
 		}
 
+		if (access_type == rsx::surface_access::gpu_reference)
+		{
+			// WARNING: Can return MSAA data result if no read barrier was issued
+			return resolve_surface ? resolve_surface.get() : this;
+		}
+
 		// A read barrier should have been called before this!
 		ensure(resolve_surface); // "Read access without explicit barrier"
 		ensure(!(msaa_flags & rsx::surface_state_flags::require_resolve));
@@ -801,9 +807,15 @@ namespace vk
 		{
 			if (!write_barrier_sync_tag) write_barrier_sync_tag++; // Activate barrier sync
 			cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
+
+			vk::insert_texture_barrier(cmd, this, VK_IMAGE_LAYOUT_GENERAL);
+			return;
 		}
 
-		vk::insert_texture_barrier(cmd, this, VK_IMAGE_LAYOUT_GENERAL);
+		if (msaa_flags & rsx::surface_state_flags::require_resolve)
+		{
+			resolve(cmd);
+		}
 	}
 
 	void render_target::reset_surface_counters()

@@ -52,7 +52,6 @@ namespace rsx
 		rsx::address_range m_depth_stencil_memory_range;
 
 		bool m_invalidate_on_write = false;
-		bool m_skip_write_updates = false;
 
 		rsx::surface_raster_type m_active_raster_type = rsx::surface_raster_type::linear;
 
@@ -1118,62 +1117,31 @@ namespace rsx
 			}
 		}
 
-		void on_write(const bool* color, bool z)
+		void on_write(const std::array<bool, 4>& color_mrt_writes_enabled, const bool depth_stencil_writes_enabled)
 		{
-			if (write_tag == cache_tag && m_skip_write_updates)
+			if (write_tag >= cache_tag && !m_invalidate_on_write)
 			{
-				// Nothing to do
-				ensure(!m_invalidate_on_write);
 				return;
 			}
 
-			write_tag = cache_tag;
-			m_skip_write_updates = false;
-			int tagged = 0;
+			// TODO: Take WCB/WDB into account. Should speed this up a bit by skipping sync_tag calls
+			write_tag = rsx::get_shared_tag();
 
-			// Tag surfaces
-			if (color)
+			for (u8 i = m_bound_render_targets_config.first, count = 0;
+				count < m_bound_render_targets_config.second;
+				++count, ++i)
 			{
-				for (int i = m_bound_render_targets_config.first, count = 0;
-					count < m_bound_render_targets_config.second;
-					++i, ++count)
+				if (auto surface = m_bound_render_targets[i].second;
+					surface && color_mrt_writes_enabled[i])
 				{
-					if (!color[i])
-						continue;
-
-					auto& surface = m_bound_render_targets[i].second;
-					if (surface->last_use_tag != write_tag)
-					{
-						m_bound_render_targets[i].second->on_write(write_tag, surface_state_flags::require_resolve, m_active_raster_type);
-					}
-					else if (m_invalidate_on_write)
-					{
-						m_bound_render_targets[i].second->on_invalidate_children();
-					}
-
-					++tagged;
+					surface->on_write(write_tag);
 				}
 			}
 
-			if (z && m_bound_depth_stencil.first)
+			if (auto zsurface = m_bound_depth_stencil.second;
+				zsurface && depth_stencil_writes_enabled)
 			{
-				auto& surface = m_bound_depth_stencil.second;
-				if (surface->last_use_tag != write_tag)
-				{
-					m_bound_depth_stencil.second->on_write(write_tag, surface_state_flags::require_resolve, m_active_raster_type);
-				}
-				else if (m_invalidate_on_write)
-				{
-					m_bound_depth_stencil.second->on_invalidate_children();
-				}
-
-				++tagged;
-			}
-
-			if (!m_invalidate_on_write && tagged == m_bound_buffers_count)
-			{
-				// Skip any further updates as all active surfaces have been updated
-				m_skip_write_updates = true;
+				zsurface->on_write(write_tag);
 			}
 		}
 

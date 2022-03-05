@@ -662,8 +662,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 	if (update_color || update_z)
 	{
-		const bool write_all_mask[] = { true, true, true, true };
-		m_rtts.on_write(update_color ? write_all_mask : nullptr, update_z);
+		m_rtts.on_write({ update_color, update_color, update_color, update_color }, update_z);
 	}
 
 	glClear(mask);
