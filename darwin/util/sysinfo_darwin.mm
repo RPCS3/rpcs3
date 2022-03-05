@@ -19,3 +19,11 @@ namespace Darwin_Version
         return osver.patchVersion;
     }
 }
+
+namespace Darwin_ProcessInfo
+{
+	bool getLowPowerModeEnabled()
+	{
+		return NSProcessInfo.processInfo.isLowPowerModeEnabled;
+	}
+}

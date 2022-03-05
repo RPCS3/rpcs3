@@ -513,14 +513,18 @@ int main(int argc, char** argv)
 	rlim.rlim_max = 4096;
 #ifdef RLIMIT_NOFILE
 	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
+	{
 		std::cerr << "Failed to set max open file limit (4096).\n";
+	}
 #endif
 
 	rlim.rlim_cur = 0x80000000;
 	rlim.rlim_max = 0x80000000;
 #ifdef RLIMIT_MEMLOCK
 	if (::setrlimit(RLIMIT_MEMLOCK, &rlim) != 0)
+	{
 		std::cerr << "Failed to set RLIMIT_MEMLOCK size to 2 GiB. Try to update your system configuration.\n";
+	}
 #endif
 	// Work around crash on startup on KDE: https://bugs.kde.org/show_bug.cgi?id=401637
 	setenv( "KDE_DEBUG", "1", 0 );
@@ -531,13 +535,20 @@ int main(int argc, char** argv)
 	::getrlimit(RLIMIT_NOFILE, &rlim);
 	rlim.rlim_cur = OPEN_MAX;
 	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
+	{
 		std::cerr << "Failed to set max open file limit (" << OPEN_MAX << ").\n";
+	}
 #endif
 
 #ifndef _WIN32
 	// Write file limits
 	sys_log.notice("Maximum open file descriptors: %i", utils::get_maxfiles());
 #endif
+
+	if (utils::get_low_power_mode())
+	{
+		sys_log.error("Low Power Mode is enabled, performance may be reduced.");
+	}
 
 	std::lock_guard qt_init(s_qt_init);
 
