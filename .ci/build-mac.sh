@@ -5,7 +5,7 @@ brew install llvm@13 molten-vk vulkan-headers sdl2 nasm qt@5 ninja cmake glew gi
 
 export CXX=clang++
 export CC=clang
-export Qt5_DIR="/usr/local/Cellar/qt@5/5.15.2_1/lib/cmake/Qt5"
+export Qt5_DIR="/usr/local/opt/qt@5/lib/cmake/Qt5"
 export PATH="/usr/local/opt/llvm/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
 export LDFLAGS="-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib"
 export CPPFLAGS="-I/usr/local/opt/llvm/include -msse -msse2 -mcx16 -no-pie"
