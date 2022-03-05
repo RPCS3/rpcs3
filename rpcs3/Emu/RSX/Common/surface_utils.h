@@ -178,7 +178,7 @@ namespace rsx
 		virtual bool is_depth_surface() const = 0;
 		virtual void release_ref(image_storage_type) const = 0;
 
-		virtual u32 get_surface_width(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
+		inline u32 get_surface_width(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
 		{
 			switch (metrics)
 			{
@@ -193,7 +193,7 @@ namespace rsx
 			}
 		}
 
-		virtual u32 get_surface_height(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
+		inline u32 get_surface_height(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
 		{
 			switch (metrics)
 			{
@@ -207,22 +207,22 @@ namespace rsx
 			}
 		}
 
-		virtual u32 get_rsx_pitch() const
+		inline u32 get_rsx_pitch() const
 		{
 			return rsx_pitch;
 		}
 
-		virtual u32 get_native_pitch() const
+		inline u32 get_native_pitch() const
 		{
 			return native_pitch;
 		}
 
-		u8 get_bpp() const
+		inline u8 get_bpp() const
 		{
 			return u8(get_native_pitch() / get_surface_width(rsx::surface_metrics::samples));
 		}
 
-		u8 get_spp() const
+		inline u8 get_spp() const
 		{
 			return spp;
 		}
@@ -278,17 +278,17 @@ namespace rsx
 			format_info.gcm_depth_format = format;
 		}
 
-		rsx::surface_color_format get_surface_color_format() const
+		inline rsx::surface_color_format get_surface_color_format() const
 		{
 			return format_info.gcm_color_format;
 		}
 
-		rsx::surface_depth_format2 get_surface_depth_format() const
+		inline rsx::surface_depth_format2 get_surface_depth_format() const
 		{
 			return format_info.gcm_depth_format;
 		}
 
-		u32 get_gcm_format() const
+		inline u32 get_gcm_format() const
 		{
 			return
 			(
@@ -298,12 +298,12 @@ namespace rsx
 			);
 		}
 
-		bool dirty() const
+		inline bool dirty() const
 		{
 			return (state_flags != rsx::surface_state_flags::ready) || !old_contents.empty();
 		}
 
-		bool write_through() const
+		inline bool write_through() const
 		{
 			return (state_flags & rsx::surface_state_flags::erase_bkgnd) && old_contents.empty();
 		}

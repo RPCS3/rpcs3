@@ -285,26 +285,53 @@ namespace rsx
 			template <typename surface_store_type, typename surface_type = typename surface_store_type::surface_type>
 			std::pair<bool, surface_type> is_expired(surface_store_type& surface_cache)
 			{
-				if (upload_context != rsx::texture_upload_context::framebuffer_storage ||
-					surface_cache_tag == surface_cache.cache_tag)
+				if (upload_context != rsx::texture_upload_context::framebuffer_storage)
 				{
-					return { false, nullptr };
+					return {};
 				}
 
 				// Expired, but may still be valid. Check if the texture is still accessible
 				auto ref_image = image_handle ? image_handle->image() : external_subresource_desc.external_handle;
-				if (ref_image)
+				surface_type surface = dynamic_cast<surface_type>(ref_image);
+
+				// Try and grab a cache reference in case of MSAA resolve target or compositing op
+				if (!surface)
 				{
-					if (auto surface = dynamic_cast<surface_type>(ref_image);
-						surface && surface == surface_cache.get_surface_at(ref_address))
+					if (!(surface = surface_cache.get_surface_at(ref_address)))
 					{
-						// Fast sync
-						surface_cache_tag = surface_cache.cache_tag;
-						is_cyclic_reference = surface_cache.address_is_bound(ref_address);
+						// Compositing op. Just ignore expiry for now
+						ensure(!ref_image);
+						return {};
+					}
+				}
+
+				ensure(surface);
+				if (!ref_image || surface->get_surface(rsx::surface_access::gpu_reference) == ref_image)
+				{
+					// Same image, so configuration did not change.
+					if (surface->last_use_tag <= surface_cache_tag)
+					{
+						external_subresource_desc.do_not_cache = false;
+						return {};
+					}
+
+					// Image was written to since last bind. Insert texture barrier.
+					surface_cache_tag = surface->last_use_tag;
+					is_cyclic_reference = surface_cache.address_is_bound(ref_address);
+					external_subresource_desc.do_not_cache = is_cyclic_reference;
+
+					switch (external_subresource_desc.op)
+					{
+					case deferred_request_command::copy_image_dynamic:
+					case deferred_request_command::copy_image_static:
+						external_subresource_desc.op = (is_cyclic_reference) ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
+						[[ fallthrough ]];
+					default:
 						return { false, surface };
 					}
 				}
 
+				// Reupload
 				return { true, nullptr };
 			}
 		};
@@ -2155,7 +2182,7 @@ namespace rsx
 				}
 
 				result.ref_address = attributes.address;
-				result.surface_cache_tag = m_rtts.cache_tag;
+				result.surface_cache_tag = m_rtts.write_tag;
 
 				if (subsurface_count == 1)
 				{
