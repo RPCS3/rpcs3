@@ -1,13 +1,14 @@
 #pragma once
 
 #include <util/types.hpp>
+#include "time.hpp"
 
 namespace rsx
 {
 	struct profiling_timer
 	{
 		bool enabled = false;
-		steady_clock::time_point last;
+		u64 last;
 
 		profiling_timer() = default;
 
@@ -15,7 +16,7 @@ namespace rsx
 		{
 			if (enabled) [[unlikely]]
 			{
-				last = steady_clock::now();
+				last = rsx::uclock();
 			}
 		}
 
@@ -27,8 +28,8 @@ namespace rsx
 			}
 
 			auto old = last;
-			last = steady_clock::now();
-			return std::chrono::duration_cast<std::chrono::microseconds>(last - old).count();
+			last = rsx::uclock();
+			return static_cast<s64>(last - old);
 		}
 	};
 }
