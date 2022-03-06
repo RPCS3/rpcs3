@@ -197,7 +197,7 @@ namespace rsx
 			}
 			else
 			{
-				static_assert(false);
+				fmt::throw_exception("Unreachable");
 			}
 		}
 
@@ -218,7 +218,7 @@ namespace rsx
 			}
 			else
 			{
-				static_assert(false);
+				fmt::throw_exception("Unreachable");
 			}
 		}
 
@@ -543,8 +543,8 @@ namespace rsx
 			const auto child_w = get_surface_width<rsx::surface_metrics::bytes>();
 			const auto child_h = get_surface_height<rsx::surface_metrics::bytes>();
 
-			const auto parent_w = surface->get_surface_width<rsx::surface_metrics::bytes>();
-			const auto parent_h = surface->get_surface_height<rsx::surface_metrics::bytes>();
+			const auto parent_w = surface->template get_surface_width<rsx::surface_metrics::bytes>();
+			const auto parent_h = surface->template get_surface_height<rsx::surface_metrics::bytes>();
 
 			const auto rect = rsx::intersect_region(surface->base_addr, parent_w, parent_h, 1, base_addr, child_w, child_h, 1, get_rsx_pitch());
 			const auto src_offset = std::get<0>(rect);
