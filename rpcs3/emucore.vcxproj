@@ -479,6 +479,7 @@
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
     <ClInclude Include="Emu\RSX\Common\profiling_timer.hpp" />
     <ClInclude Include="Emu\RSX\Common\simple_array.hpp" />
+    <ClInclude Include="Emu\RSX\Common\time.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_list_view.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h" />

@@ -1085,7 +1085,7 @@ void VKGSRender::check_heap_status(u32 flags)
 			m_texture_upload_buffer_ring_info.reset_allocation_stats();
 			m_raster_env_ring_info.reset_allocation_stats();
 			m_current_frame->reset_heap_ptrs();
-			m_last_heap_sync_time = get_system_time();
+			m_last_heap_sync_time = rsx::get_shared_tag();
 		}
 		else
 		{

@@ -2053,6 +2053,9 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\time.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">

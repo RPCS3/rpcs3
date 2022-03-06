@@ -7,6 +7,7 @@
 #include "Common/BufferUtils.h"
 #include "Common/texture_cache.h"
 #include "Common/surface_store.h"
+#include "Common/time.hpp"
 #include "Capture/rsx_capture.h"
 #include "rsx_methods.h"
 #include "gcm_printing.h"
@@ -483,6 +484,7 @@ namespace rsx
 		// This whole thing becomes a mess if we don't have a provoking attribute.
 		const auto vertex_id = vertex_push_buffers[0].get_vertex_id();
 		vertex_push_buffers[attribute].set_vertex_data(attribute, vertex_id, subreg_index, type, size, value);
+		m_graphics_state |= rsx::pipeline_state::push_buffer_arrays_dirty;
 	}
 
 	u32 thread::get_push_buffer_vertex_count() const
@@ -507,7 +509,9 @@ namespace rsx
 	void thread::end()
 	{
 		if (capture_current_frame)
+		{
 			capture::capture_draw_memory(this);
+		}
 
 		in_begin_end = false;
 		m_frame_stats.draw_calls++;
@@ -517,12 +521,17 @@ namespace rsx
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		ROP_sync_timestamp = rsx::get_shared_tag();
 
-		for (auto & push_buf : vertex_push_buffers)
+		if (m_graphics_state & rsx::pipeline_state::push_buffer_arrays_dirty)
 		{
-			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
-			//rsx::method_registers.register_vertex_info[index].size = 0;
+			for (auto& push_buf : vertex_push_buffers)
+			{
+				//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
+				//rsx::method_registers.register_vertex_info[index].size = 0;
 
-			push_buf.clear();
+				push_buf.clear();
+			}
+
+			m_graphics_state &= ~rsx::pipeline_state::push_buffer_arrays_dirty;
 		}
 
 		element_push_buffer.clear();
@@ -630,7 +639,7 @@ namespace rsx
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 
-		last_flip_time = get_system_time() - 1000000;
+		last_flip_time = rsx::uclock() - 1000000;
 
 		vblank_count = 0;
 
@@ -642,7 +651,7 @@ namespace rsx
 #else
 			constexpr u32 host_min_quantum = 500;
 #endif
-			u64 start_time = get_system_time();
+			u64 start_time = rsx::uclock();
 
 			u64 vblank_rate = g_cfg.video.vblank_rate;
 			u64 vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
@@ -653,7 +662,7 @@ namespace rsx
 			while (!is_stopped())
 			{
 				// Get current time
-				const u64 current = get_system_time();
+				const u64 current = rsx::uclock();
 
 				// Calculate the time at which we need to send a new VBLANK signal
 				const u64 post_event_time = start_time + (local_vblank_count + 1) * vblank_period / vblank_rate;
@@ -715,7 +724,7 @@ namespace rsx
 				if (Emu.IsPaused())
 				{
 					// Save the difference before pause
-					start_time = get_system_time() - start_time;
+					start_time = rsx::uclock() - start_time;
 
 					while (Emu.IsPaused() && !is_stopped())
 					{
@@ -723,7 +732,7 @@ namespace rsx
 					}
 
 					// Restore difference
-					start_time = get_system_time() - start_time;
+					start_time = rsx::uclock() - start_time;
 				}
 			}
 		});
@@ -2602,7 +2611,7 @@ namespace rsx
 
 	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
 	{
-		const u64 current_time = get_system_time();
+		const u64 current_time = rsx::uclock();
 
 		if (recovered_fifo_cmds_history.size() == 20u)
 		{
@@ -2659,7 +2668,7 @@ namespace rsx
 
 		// Some cases do not need full delay
 		remaining = utils::aligned_div(remaining, div);
-		const u64 until = get_system_time() + remaining;
+		const u64 until = rsx::uclock() + remaining;
 
 		while (true)
 		{
@@ -2691,7 +2700,7 @@ namespace rsx
 				busy_wait(100);
 			}
 
-			const u64 current = get_system_time();
+			const u64 current = rsx::uclock();
 
 			if (current >= until)
 			{
@@ -2922,7 +2931,7 @@ namespace rsx
 		//Average load over around 30 frames
 		if (!performance_counters.last_update_timestamp || performance_counters.sampled_frames > 30)
 		{
-			const auto timestamp = get_system_time();
+			const auto timestamp = rsx::uclock();
 			const auto idle = performance_counters.idle_time.load();
 			const auto elapsed = timestamp - performance_counters.last_update_timestamp;
 
@@ -3086,7 +3095,7 @@ namespace rsx
 
 		if (limit)
 		{
-			const u64 time = get_system_time() - Emu.GetPauseTime();
+			const u64 time = rsx::uclock() - Emu.GetPauseTime();
 			const u64 needed_us = static_cast<u64>(1000000 / limit);
 
 			if (int_flip_index == 0)
@@ -3124,7 +3133,7 @@ namespace rsx
 
 		flip(m_queued_flip);
 
-		last_flip_time = get_system_time() - 1000000;
+		last_flip_time = rsx::uclock() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
 
@@ -3630,7 +3639,7 @@ namespace rsx
 					}
 				}
 
-				if (m_tsc = get_system_time(); m_tsc < m_next_tsc)
+				if (m_tsc = rsx::uclock(); m_tsc < m_next_tsc)
 				{
 					return;
 				}
