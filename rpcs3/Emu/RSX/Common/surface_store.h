@@ -190,7 +190,7 @@ namespace rsx
 				copy.dst_x = 0;
 				copy.dst_y = 0;
 				copy.width = std::max<u16>((old.width - _new.width) / bytes_to_texels_x, 1);
-				copy.height = prev_surface->template get_surface_height();
+				copy.height = prev_surface->template get_surface_height<>();
 				copy.transfer_scale_x = 1.f;
 				copy.transfer_scale_y = 1.f;
 				copy.target = nullptr;
@@ -612,7 +612,7 @@ namespace rsx
 				}
 
 				if (it->surface->get_rsx_pitch() != it->surface->get_native_pitch() &&
-					it->surface->template get_surface_height() != 1)
+					it->surface->template get_surface_height<>() != 1)
 				{
 					// Memory gap in descriptor
 					continue;
