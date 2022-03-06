@@ -309,7 +309,8 @@ namespace rsx
 				if (!ref_image || surface->get_surface(rsx::surface_access::gpu_reference) == ref_image)
 				{
 					// Same image, so configuration did not change.
-					if (surface->last_use_tag <= surface_cache_tag)
+					if (surface_cache.cache_tag <= surface_cache_tag &&
+						surface->last_use_tag <= surface_cache_tag)
 					{
 						external_subresource_desc.do_not_cache = false;
 						return {};
