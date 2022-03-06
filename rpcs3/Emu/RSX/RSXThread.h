@@ -129,6 +129,8 @@ namespace rsx
 		polygon_stipple_pattern_dirty = 0x8000,  // Rasterizer stippling pattern changed
 		line_stipple_pattern_dirty = 0x10000,    // Line stippling pattern changed
 
+		push_buffer_arrays_dirty = 0x20000,   // Push buffers have data written to them (immediate mode vertex buffers)
+
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
