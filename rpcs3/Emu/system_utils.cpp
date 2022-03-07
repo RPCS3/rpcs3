@@ -226,7 +226,7 @@ namespace rpcs3::utils
 		return edat_path;
 	}
 
-	bool verify_c00_unlock_edat(const std::string_view& content_id)
+	bool verify_c00_unlock_edat(const std::string_view& content_id, bool fast)
 	{
 		const std::string edat_path = rpcs3::utils::get_c00_unlock_edat_path(content_id);
 
@@ -238,6 +238,10 @@ namespace rpcs3::utils
 			sys_log.notice("verify_c00_unlock_edat(): '%s' not found", edat_path);
 			return false;
 		}
+
+		// Use simple check for GUI
+		if (fast)
+			return true;
 
 		u128 k_licensee = get_default_self_klic();
 		std::string edat_content_id;
@@ -325,10 +329,10 @@ namespace rpcs3::utils
 			// This is a trial game. Check if the user has EDAT file to unlock it.
 			const auto c00_title_id = psf::get_string(psf, "TITLE_ID");
 
-			if (fs::is_file(game_path + "/C00/PARAM.SFO") && verify_c00_unlock_edat(content_id))
+			if (fs::is_file(game_path + "/C00/PARAM.SFO") && verify_c00_unlock_edat(content_id, true))
 			{
 				// Load full game data.
-				sys_log.notice("Verified EDAT file %s.edat for trial game %s", content_id, c00_title_id);
+				sys_log.notice("Found EDAT file %s.edat for trial game %s", content_id, c00_title_id);
 				return game_path + "/C00";
 			}
 		}
