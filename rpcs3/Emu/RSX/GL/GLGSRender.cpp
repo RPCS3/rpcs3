@@ -644,16 +644,15 @@ void GLGSRender::clear_surface(u32 arg)
 			gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
 			mask |= GLenum(gl::buffers::color);
 
-			for (u8 index = m_rtts.m_bound_render_targets_config.first, count = 0;
-				 count < m_rtts.m_bound_render_targets_config.second;
-				 ++count, ++index)
+			int hw_index = 0;
+			for (const auto& index : m_rtts.m_bound_render_target_ids)
 			{
 				if (!full_frame)
 				{
 					m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
 				}
 
-				gl_state.color_maski(count, colormask);
+				gl_state.color_maski(hw_index++, colormask);
 			}
 
 			update_color = true;

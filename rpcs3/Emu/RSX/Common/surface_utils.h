@@ -623,11 +623,14 @@ namespace rsx
 			}
 		}
 
-		void on_invalidate_children()
+		inline void on_write_fast(u64 write_tag)
 		{
+			ensure(write_tag);
+			last_use_tag = write_tag;
+
 			if (resolve_surface)
 			{
-				msaa_flags = rsx::surface_state_flags::require_resolve;
+				msaa_flags |= rsx::surface_state_flags::require_resolve;
 			}
 		}
 
