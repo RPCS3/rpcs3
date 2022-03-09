@@ -1382,9 +1382,7 @@ void VKGSRender::clear_surface(u32 mask)
 				if (!use_fast_clear || !full_frame)
 				{
 					// If we're not clobber all the memory, a barrier is required
-					for (u8 index = m_rtts.m_bound_render_targets_config.first, count = 0;
-						count < m_rtts.m_bound_render_targets_config.second;
-						++count, ++index)
+					for (const auto& index : m_rtts.m_bound_render_target_ids)
 					{
 						m_rtts.m_bound_render_targets[index].second->write_barrier(*m_current_command_buffer);
 					}
