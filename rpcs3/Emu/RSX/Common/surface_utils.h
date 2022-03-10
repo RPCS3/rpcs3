@@ -628,7 +628,7 @@ namespace rsx
 			ensure(write_tag);
 			last_use_tag = write_tag;
 
-			if (resolve_surface)
+			if (spp > 1 && sample_layout != surface_sample_layout::null)
 			{
 				msaa_flags |= rsx::surface_state_flags::require_resolve;
 			}
