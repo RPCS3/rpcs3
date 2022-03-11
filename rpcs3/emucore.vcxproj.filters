@@ -1030,6 +1030,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_media_list_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\perf_monitor.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2055,6 +2058,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\time.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\perf_monitor.hpp">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
