@@ -1101,9 +1101,19 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 		ensure(func_id <= FUNCTION::TEXTURE_SAMPLE_MAX_BASE_ENUM && func_id >= FUNCTION::TEXTURE_SAMPLE_BASE);
 
-		// Clamp type to 3 types (1d, 2d, cube+3d) and offset into sampling redirection table
-		const auto type_offset = (std::min(static_cast<int>(type), 2) + 1) * static_cast<int>(FUNCTION::TEXTURE_SAMPLE_BASE_ENUM_COUNT);
-		func_id = static_cast<FUNCTION>(static_cast<int>(func_id) + type_offset);
+		if (!(m_prog.texture_state.multisampled_textures & ref_mask)) [[ likely ]]
+		{
+			// Clamp type to 3 types (1d, 2d, cube+3d) and offset into sampling redirection table
+			const auto type_offset = (std::min(static_cast<int>(type), 2) + 1) * static_cast<int>(FUNCTION::TEXTURE_SAMPLE_BASE_ENUM_COUNT);
+			func_id = static_cast<FUNCTION>(static_cast<int>(func_id) + type_offset);
+		}
+		else
+		{
+			// Map to multisample op
+			ensure(type <= rsx::texture_dimension_extended::texture_dimension_2d);
+			properties.multisampled_sampler_mask |= ref_mask;
+			func_id = static_cast<FUNCTION>(static_cast<int>(func_id) - static_cast<int>(FUNCTION::TEXTURE_SAMPLE_BASE) + static_cast<int>(FUNCTION::TEXTURE_SAMPLE2DMS));
+		}
 
 		if (dst.exp_tex)
 		{

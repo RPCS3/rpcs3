@@ -593,13 +593,15 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_TXL:
 		{
 			GetTex();
+			const bool is_multisampled = m_prog.texture_state.multisampled_textures & (1 << d2.tex_num);
+
 			switch (m_prog.get_texture_dimension(d2.tex_num))
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
-				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCH1D));
+				SetDSTVec(is_multisampled ? getFunction(FUNCTION::VERTEX_TEXTURE_FETCH2DMS) : getFunction(FUNCTION::VERTEX_TEXTURE_FETCH1D));
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
-				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCH2D));
+				SetDSTVec(getFunction(is_multisampled ? FUNCTION::VERTEX_TEXTURE_FETCH2DMS : FUNCTION::VERTEX_TEXTURE_FETCH2D));
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_3d:
 				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCH3D));

@@ -1738,6 +1738,12 @@ namespace rsx
 			{
 				current_vp_texture_state.clear(i);
 				current_vp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
+
+				if (backend_config.supports_hw_msaa &&
+					sampler_descriptors[i]->samples > 1)
+				{
+					current_vp_texture_state.multisampled_textures |= (1 << i);
+				}
 			}
 		}
 
@@ -1976,6 +1982,15 @@ namespace rsx
 						// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
 						current_fragment_program.texture_params[i].subpixel_bias = 0.01f;
 					}
+				}
+
+				if (backend_config.supports_hw_msaa &&
+					sampler_descriptors[i]->samples > 1)
+				{
+					current_fp_texture_state.multisampled_textures |= (1 << i);
+					texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
+					texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED);
+					texture_control |= (((tex.format() & CELL_GCM_TEXTURE_UN) >> 6) << texture_control_bits::UNNORMALIZED_COORDS);
 				}
 
 				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)

@@ -275,6 +275,7 @@ public:
 		u16 common_access_sampler_mask = 0;
 		u16 shadow_sampler_mask = 0;
 		u16 redirected_sampler_mask = 0;
+		u16 multisampled_sampler_mask = 0;
 
 		bool has_lit_op = false;
 		bool has_gather_op = false;

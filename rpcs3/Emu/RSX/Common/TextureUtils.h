@@ -129,6 +129,7 @@ namespace rsx
 		rsx::texture_dimension_extended image_type = texture_dimension_extended::texture_dimension_2d;
 		rsx::format_class format_class = RSX_FORMAT_CLASS_UNDEFINED;
 		bool is_cyclic_reference = false;
+		u8 samples = 1;
 		u32 ref_address = 0;
 		u64 surface_cache_tag = 0;
 		f32 scale_x = 1.f;

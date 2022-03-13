@@ -113,12 +113,6 @@ namespace vk
 
 	void insert_texture_barrier(VkCommandBuffer cmd, vk::image* image, VkImageLayout new_layout)
 	{
-		if (image->samples() > 1)
-		{
-			// This barrier is pointless for multisampled images as they require a resolve operation before access anyway
-			return;
-		}
-
 		insert_texture_barrier(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
 		image->current_layout = new_layout;
 	}

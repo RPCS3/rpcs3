@@ -307,6 +307,7 @@ usz vertex_program_storage_hash::operator()(const RSXVertexProgram &program) con
 	usz hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
 	hash ^= program.output_mask;
 	hash ^= program.texture_state.texture_dimensions;
+	hash ^= program.texture_state.multisampled_textures;
 	return hash;
 }
 
@@ -507,6 +508,7 @@ usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program)
 	hash ^= program.texture_state.texture_dimensions;
 	hash ^= program.texture_state.shadow_textures;
 	hash ^= program.texture_state.redirected_textures;
+	hash ^= program.texture_state.multisampled_textures;
 	hash ^= program.texcoord_control_mask;
 
 	return hash;

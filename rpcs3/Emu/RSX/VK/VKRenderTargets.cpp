@@ -337,8 +337,6 @@ namespace vk
 
 		if (!is_depth_surface()) [[likely]]
 		{
-			ensure(current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
 			// This is the source; finish writing before reading
 			vk::insert_image_memory_barrier(
 				cmd, this->value,
@@ -767,15 +765,9 @@ namespace vk
 	{
 		last_rw_access_tag = rsx::get_shared_tag();
 
-		if (samples() == 1 || access_type == rsx::surface_access::shader_write)
+		if (samples() == 1 || !access_type.is_transfer())
 		{
 			return this;
-		}
-
-		if (access_type == rsx::surface_access::gpu_reference)
-		{
-			// WARNING: Can return MSAA data result if no read barrier was issued
-			return resolve_surface ? resolve_surface.get() : this;
 		}
 
 		// A read barrier should have been called before this!
@@ -803,19 +795,10 @@ namespace vk
 
 	void render_target::texture_barrier(vk::command_buffer& cmd)
 	{
-		if (samples() == 1)
-		{
-			if (!write_barrier_sync_tag) write_barrier_sync_tag++; // Activate barrier sync
-			cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
+		if (!write_barrier_sync_tag) write_barrier_sync_tag++; // Activate barrier sync
+		cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
 
-			vk::insert_texture_barrier(cmd, this, VK_IMAGE_LAYOUT_GENERAL);
-			return;
-		}
-
-		if (msaa_flags & rsx::surface_state_flags::require_resolve)
-		{
-			resolve(cmd);
-		}
+		vk::insert_texture_barrier(cmd, this, VK_IMAGE_LAYOUT_GENERAL);
 	}
 
 	void render_target::reset_surface_counters()
@@ -832,14 +815,7 @@ namespace vk
 			return vk::viewable_image::get_view(VK_REMAP_IDENTITY, remap, mask);
 		}
 
-		if (!resolve_surface) [[likely]]
-		{
-			return vk::viewable_image::get_view(remap_encoding, remap, mask);
-		}
-		else
-		{
-			return resolve_surface->get_view(remap_encoding, remap, mask);
-		}
+		return vk::viewable_image::get_view(remap_encoding, remap, mask);
 	}
 
 	void render_target::memory_barrier(vk::command_buffer& cmd, rsx::surface_access access)
@@ -933,7 +909,7 @@ namespace vk
 
 			if (msaa_flags & rsx::surface_state_flags::require_resolve)
 			{
-				if (access.is_transfer_or_read())
+				if (access.is_transfer() && access.is_read())
 				{
 					// Only do this step when read access is required
 					get_resolve_target_safe(cmd);
@@ -967,7 +943,7 @@ namespace vk
 		{
 			auto& section = old_contents[i];
 			auto src_texture = static_cast<vk::render_target*>(section.source);
-			src_texture->read_barrier(cmd);
+			src_texture->memory_barrier(cmd, rsx::surface_access::transfer_read);
 
 			if (!accept_all && !src_texture->test()) [[likely]]
 			{
