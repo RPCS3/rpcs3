@@ -591,7 +591,10 @@ namespace glsl
 
 				"#define ALPHAKILL    " << rsx::texture_control_bits::ALPHAKILL << "\n"
 				"#define RENORMALIZE  " << rsx::texture_control_bits::RENORMALIZE << "\n"
-				"#define DEPTH_FLOAT    " << rsx::texture_control_bits::DEPTH_FLOAT << "\n"
+				"#define DEPTH_FLOAT   " << rsx::texture_control_bits::DEPTH_FLOAT << "\n"
+				"#define DEPTH_COMPARE " << rsx::texture_control_bits::DEPTH_COMPARE_OP << "\n"
+				"#define FILTERED_BIT  " << rsx::texture_control_bits::FILTERED << "\n"
+				"#define INT_COORDS_BIT " << rsx::texture_control_bits::UNNORMALIZED_COORDS << "\n"
 				"#define GAMMA_CTRL_MASK  (GAMMA_R_MASK|GAMMA_G_MASK|GAMMA_B_MASK|GAMMA_A_MASK)\n"
 				"#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n\n";
 			}
@@ -887,6 +890,40 @@ namespace glsl
 				"#define TEX2D_Z24X8_RGBA8(index, coord2) process_texel(convert_z24x8_to_rgba8(ZS_READ(index, COORD_SCALE2(index, coord2)), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n"
 				"#define TEX3D_Z24X8_RGBA8(index, coord3) process_texel(convert_z24x8_to_rgba8(ZS_READ(index, COORD_SCALE3(index, coord3)), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n\n";
 			}
+
+			if (props.require_msaa_ops)
+			{
+				OS <<
+				"#define ZCOMPARE_FUNC(index) _get_bits(TEX_FLAGS(index), DEPTH_COMPARE, 3)\n"
+				"#define ZS_READ_MS(index, coord) vec2(sampleTexture2DMS(TEX_NAME(index), coord, index).r, float(sampleTexture2DMS(TEX_NAME_STENCIL(index), coord, index).x))\n"
+				"#define TEX2D_MS(index, coord2) process_texel(sampleTexture2DMS(TEX_NAME(index), coord2, index), TEX_FLAGS(index))\n"
+				"#define TEX2D_SHADOW_MS(index, coord3) vec4(comparison_passes(sampleTexture2DMS(TEX_NAME(index), coord3.xy, index).x, coord3.z, ZCOMPARE_FUNC(index)))\n"
+				"#define TEX2D_SHADOWPROJ_MS(index, coord4) TEX2D_SHADOW_MS(index, (coord4.xyz / coord4.w))\n"
+				"#define TEX2D_Z24X8_RGBA8_MS(index, coord2) process_texel(convert_z24x8_to_rgba8(ZS_READ_MS(index, coord2), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n\n";
+
+				auto insert_msaa_sample_code = [&OS](const std::string_view& sampler_type)
+				{
+					OS <<
+					"vec4 sampleTexture2DMS(in " << sampler_type << " tex, const in vec2 coords, const in int index)\n"
+					"{\n"
+					"	const uint flags = TEX_FLAGS(index);\n"
+					"	const ivec2 sample_count = ivec2(2, textureSamples(tex) / 2);\n"
+					"	const ivec2 icoords = ivec2(COORD_SCALE2(index, coords) * textureSize(tex) * sample_count);\n"
+					"\n"
+					"	const ivec2 resolve_coords = icoords * ivec2(bvec2(texture_parameters[index].scale_bias.xy));\n"
+					"	const ivec2 aa_coords = resolve_coords / sample_count;\n"
+					"	const ivec2 sample_loc = ivec2(resolve_coords % sample_count);\n"
+					"	const int sample_index = sample_loc.x + (sample_loc.y * sample_count.y);\n"
+					"	return texelFetch(tex, aa_coords, sample_index);\n"
+					"}\n\n";
+				};
+
+				insert_msaa_sample_code("sampler2DMS");
+				if (props.require_depth_conversion)
+				{
+					insert_msaa_sample_code("usampler2DMS");
+				}
+			}
 		}
 
 		if (props.require_wpos)
@@ -984,6 +1021,22 @@ namespace glsl
 			return "TEX3D_Z24X8_RGBA8($_i, $0.xyz)";
 		case FUNCTION::TEXTURE_SAMPLE3D_DEPTH_RGBA_PROJ:
 			return "TEX3D_Z24X8_RGBA8($_i, ($0.xyz / $0.w))";
+		case FUNCTION::TEXTURE_SAMPLE2DMS:
+		case FUNCTION::TEXTURE_SAMPLE2DMS_BIAS:
+			return "TEX2D_MS($_i, $0.xy)";
+		case FUNCTION::TEXTURE_SAMPLE2DMS_PROJ:
+			return "TEX2D_MS($_i, $0.xy / $0.w)";
+		case FUNCTION::TEXTURE_SAMPLE2DMS_LOD:
+		case FUNCTION::TEXTURE_SAMPLE2DMS_GRAD:
+			return "TEX2D_MS($_i, $0.xy)";
+		case FUNCTION::TEXTURE_SAMPLE2DMS_SHADOW:
+			return "TEX2D_SHADOW_MS($_i, $0.xyz)";
+		case FUNCTION::TEXTURE_SAMPLE2DMS_SHADOW_PROJ:
+			return "TEX2D_SHADOWPROJ_MS($_i, $0)";
+		case FUNCTION::TEXTURE_SAMPLE2DMS_DEPTH_RGBA:
+			return "TEX2D_Z24X8_RGBA8_MS($_i, $0.xy)";
+		case FUNCTION::TEXTURE_SAMPLE2DMS_DEPTH_RGBA_PROJ:
+			return "TEX2D_Z24X8_RGBA8_MS($_i, ($0.xy / $0.w))";
 		case FUNCTION::DFDX:
 			return "dFdx($0)";
 		case FUNCTION::DFDY:
@@ -995,6 +1048,8 @@ namespace glsl
 		case FUNCTION::VERTEX_TEXTURE_FETCH3D:
 		case FUNCTION::VERTEX_TEXTURE_FETCHCUBE:
 			return "textureLod($t, $0.xyz, 0)";
+		case FUNCTION::VERTEX_TEXTURE_FETCH2DMS:
+			return "texelFetch($t, ivec2($0.xy * textureSize($t)), 0)";
 		}
 
 		rsx_log.error("Unexpected function request: %d", static_cast<int>(f));

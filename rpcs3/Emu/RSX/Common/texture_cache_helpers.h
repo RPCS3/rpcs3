@@ -228,8 +228,9 @@ namespace rsx
 			return { false, 0, dst_dimensions.width, dst_dimensions.height };
 		}
 
-		template<typename section_storage_type, typename copy_region_type, typename surface_store_list_type>
+		template<typename commandbuffer_type, typename section_storage_type, typename copy_region_type, typename surface_store_list_type>
 		void gather_texture_slices(
+			commandbuffer_type& cmd,
 			std::vector<copy_region_type>& out,
 			const surface_store_list_type& fbos,
 			const std::vector<section_storage_type*>& local,
@@ -311,9 +312,11 @@ namespace rsx
 				std::tie(src_x, src_y) = rsx::apply_resolution_scale<false>(src_x, src_y, surface_width, surface_height);
 				std::tie(dst_x, dst_y) = rsx::apply_resolution_scale<false>(dst_x, dst_y, attr.width, attr.height);
 
+				section.surface->memory_barrier(cmd, rsx::surface_access::transfer_read);
+
 				out.push_back
 				({
-					section.surface->get_surface(rsx::surface_access::shader_read),
+					section.surface->get_surface(rsx::surface_access::transfer_read),
 					surface_transform::identity,
 					0,
 					static_cast<u16>(src_x),
@@ -505,8 +508,6 @@ namespace rsx
 			bool surface_is_rop_target,
 			bool force_convert)
 		{
-			texptr->read_barrier(cmd);
-
 			const auto surface_width = texptr->template get_surface_width<rsx::surface_metrics::samples>();
 			const auto surface_height = texptr->template get_surface_height<rsx::surface_metrics::samples>();
 
@@ -553,26 +554,50 @@ namespace rsx
 					ensure(attr.height == 1);
 				}
 
-				if ((surface_is_rop_target && g_cfg.video.strict_rendering_mode) ||
-					attr.width < surface_width ||
-					attr.height < surface_height ||
-					force_convert)
+				bool requires_processing = false;
+				rsx::surface_access access_type = rsx::surface_access::shader_read;
+
+				if (attr.width != surface_width || attr.height != surface_height || force_convert)
+				{
+					// A GPU operation must be performed on the data before sampling. Implies transfer_read access
+					requires_processing = true;
+				}
+				else if (surface_is_rop_target && g_cfg.video.strict_rendering_mode)
+				{
+					// Framebuffer feedback avoidance. For MSAA, we do not need to make copies; just use the resolve target
+					if (texptr->samples() == 1)
+					{
+						requires_processing = true;
+					}
+					else
+					{
+						// Select resolve target instead of MSAA image
+						access_type = rsx::surface_access::transfer_read;
+					}
+				}
+
+				if (requires_processing)
 				{
 					const auto format_class = (force_convert) ? classify_format(attr2.gcm_format) : texptr->format_class();
 					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
 
-					return { texptr->get_surface(rsx::surface_access::shader_read), command, attr2, {},
+					texptr->memory_barrier(cmd, rsx::surface_access::transfer_read);
+					return { texptr->get_surface(rsx::surface_access::transfer_read), command, attr2, {},
 							texture_upload_context::framebuffer_storage, format_class, scale,
 							extended_dimension, decoded_remap };
 				}
 
-				return{ texptr->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
-						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target };
+				texptr->memory_barrier(cmd, access_type);
+				auto viewed_surface = texptr->get_surface(access_type);
+				return { viewed_surface->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
+						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target, viewed_surface->samples() };
 			}
+
+			texptr->memory_barrier(cmd, rsx::surface_access::transfer_read);
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
 			{
-				return{ texptr->get_surface(rsx::surface_access::shader_read), deferred_request_command::_3d_unwrap,
+				return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::_3d_unwrap,
 						attr2, {},
 						texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
 						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
@@ -580,14 +605,15 @@ namespace rsx
 
 			ensure(extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap);
 
-			return{ texptr->get_surface(rsx::surface_access::shader_read), deferred_request_command::cubemap_unwrap,
+			return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::cubemap_unwrap,
 					attr2, {},
 					texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
 					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 		}
 
-		template <typename sampled_image_descriptor, typename surface_store_list_type, typename section_storage_type>
+		template <typename sampled_image_descriptor, typename commandbuffer_type, typename surface_store_list_type, typename section_storage_type>
 		sampled_image_descriptor merge_cache_resources(
+			commandbuffer_type& cmd,
 			const surface_store_list_type& fbos, const std::vector<section_storage_type*>& local,
 			const image_section_attributes_t& attr,
 			const size3f& scale,
@@ -664,7 +690,7 @@ namespace rsx
 						upload_context, format_class, scale,
 						rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 
-				gather_texture_slices(desc.external_subresource_desc.sections_to_copy, fbos, local, attr, 6, is_depth);
+				gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, 6, is_depth);
 				return desc;
 			}
 			else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d && attr.depth > 1)
@@ -677,7 +703,7 @@ namespace rsx
 					upload_context, format_class, scale,
 					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 
-				gather_texture_slices(desc.external_subresource_desc.sections_to_copy, fbos, local, attr, attr.depth, is_depth);
+				gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, attr.depth, is_depth);
 				return desc;
 			}
 
@@ -696,7 +722,7 @@ namespace rsx
 					attr2, {}, upload_context, format_class,
 					scale, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
 
-			gather_texture_slices(result.external_subresource_desc.sections_to_copy, fbos, local, attr, 1, is_depth);
+			gather_texture_slices(cmd, result.external_subresource_desc.sections_to_copy, fbos, local, attr, 1, is_depth);
 			result.simplify();
 			return result;
 		}

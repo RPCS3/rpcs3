@@ -172,7 +172,8 @@ namespace rsx
 			sampled_image_descriptor() = default;
 
 			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, rsx::format_class ftype,
-				size3f scale, rsx::texture_dimension_extended type, bool cyclic_reference = false)
+				size3f scale, rsx::texture_dimension_extended type, bool cyclic_reference = false,
+				u8 msaa_samples = 1)
 			{
 				image_handle = handle;
 				upload_context = ctx;
@@ -182,6 +183,7 @@ namespace rsx
 				scale_y = scale.height;
 				scale_z = scale.depth;
 				image_type = type;
+				samples = msaa_samples;	
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
@@ -1888,7 +1890,7 @@ namespace rsx
 					}
 
 					auto result = helpers::merge_cache_resources<sampled_image_descriptor>(
-						overlapping_fbos, overlapping_locals, attr, scale, extended_dimension, encoded_remap, remap, _pool);
+						cmd, overlapping_fbos, overlapping_locals, attr, scale, extended_dimension, encoded_remap, remap, _pool);
 
 					if (options.skip_texture_merge)
 					{

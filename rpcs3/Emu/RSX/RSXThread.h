@@ -588,6 +588,7 @@ namespace rsx
 		bool supports_multidraw;             // Draw call batching
 		bool supports_hw_a2c;                // Alpha to coverage
 		bool supports_hw_renormalization;    // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_msaa;               // MSAA support
 		bool supports_hw_a2one;              // Alpha to one
 		bool supports_hw_conditional_render; // Conditional render
 		bool supports_passthrough_dma;       // DMA passthrough

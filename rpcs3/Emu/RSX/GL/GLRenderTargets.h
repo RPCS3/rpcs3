@@ -84,10 +84,10 @@ namespace gl
 			static_cast<gl::render_target*>(t)->release();
 		}
 
-		texture* get_surface(rsx::surface_access /*access_type*/) override
+		viewable_image* get_surface(rsx::surface_access /*access_type*/) override
 		{
 			// TODO
-			return static_cast<gl::texture*>(this);
+			return static_cast<gl::viewable_image*>(this);
 		}
 
 		u32 raw_handle() const

@@ -3,7 +3,7 @@
 #include <util/asm.hpp>
 #include <util/sysinfo.hpp>
 
-extern u64 get_system_time();
+#include "Emu/Cell/timers.hpp"
 
 namespace rsx
 {

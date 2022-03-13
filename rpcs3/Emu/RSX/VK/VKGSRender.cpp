@@ -506,7 +506,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.92");
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.93");
 
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
 	{
@@ -539,7 +539,8 @@ VKGSRender::VKGSRender() : GSRender()
 	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
-		backend_config.supports_hw_a2c = VK_TRUE;
+		backend_config.supports_hw_msaa = true;
+		backend_config.supports_hw_a2c = true;
 		backend_config.supports_hw_a2one = m_device->get_alpha_to_one_support();
 	}
 
@@ -2233,7 +2234,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 		primary_submit_info.wait_on(wait_semaphore, pipeline_stage_flags);
 	}
 
-	if (const auto wait_sema = std::exchange(m_dangling_semaphore_signal, VK_NULL_HANDLE))
+	if (const auto wait_sema = std::exchange(m_dangling_semaphore_signal, nullptr))
 	{
 		// TODO: Sync on VS stage
 		primary_submit_info.wait_on(wait_sema, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);

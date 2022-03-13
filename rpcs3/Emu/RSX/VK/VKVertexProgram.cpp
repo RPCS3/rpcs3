@@ -134,7 +134,25 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 
 				inputs.push_back(in);
 
-				OS << "layout(set = 0, binding=" << location++ << ") uniform " << PT.type << " " << PI.name << ";\n";
+				auto samplerType = PT.type;
+
+				if (m_prog.texture_state.multisampled_textures) [[ unlikely ]]
+				{
+					ensure(PI.name.length() > 3);
+					int index = atoi(&PI.name[3]);
+
+					if (m_prog.texture_state.multisampled_textures & (1 << index))
+					{
+						if (samplerType != "sampler1D" && samplerType != "sampler2D")
+						{
+							rsx_log.error("Unexpected multisampled sampler type '%s'", samplerType);
+						}
+
+						samplerType = "sampler2DMS";
+					}
+				}
+
+				OS << "layout(set = 0, binding=" << location++ << ") uniform " << samplerType << " " << PI.name << ";\n";
 			}
 		}
 	}
