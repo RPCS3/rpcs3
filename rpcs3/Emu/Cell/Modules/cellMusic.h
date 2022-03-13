@@ -145,7 +145,7 @@ struct music_selection_context
 	u32 content_type{0};
 	u32 repeat_mode{0};
 	u32 context_option{0};
-	std::string path;
+	std::string content_path;
 
 	static constexpr u32 max_depth = 2; // root + 1 folder + file
 
@@ -161,14 +161,14 @@ struct music_selection_context
 		pos += sizeof(content_type);
 		repeat_mode = in.data[pos++];
 		context_option = in.data[pos++];
-		path = &in.data[pos];
+		content_path = &in.data[pos];
 
 		return true;
 	}
 
 	CellMusicSelectionContext get() const
 	{
-		if (path.size() + 2 + sizeof(content_type) + sizeof(magic) > CELL_MUSIC_SELECTION_CONTEXT_SIZE)
+		if (content_path.size() + 2 + sizeof(content_type) + sizeof(magic) > CELL_MUSIC_SELECTION_CONTEXT_SIZE)
 		{
 			fmt::throw_exception("Contents of music_selection_context are too large");
 		}
@@ -183,14 +183,14 @@ struct music_selection_context
 		pos += sizeof(content_type);
 		out.data[pos++] = repeat_mode;
 		out.data[pos++] = context_option;
-		std::memcpy(&out.data[pos], path.c_str(), path.size());
+		std::memcpy(&out.data[pos], content_path.c_str(), content_path.size());
 
 		return out;
 	}
 
 	std::string to_string() const
 	{
-		return fmt::format("{ .magic='%s', .content_type=%d, .repeat_mode=%d, .context_option=%d, .path='%s' }", magic, content_type, repeat_mode, context_option, path);
+		return fmt::format("{ .magic='%s', .content_type=%d, .repeat_mode=%d, .context_option=%d, .path='%s' }", magic, content_type, repeat_mode, context_option, content_path);
 	}
 
 	// Helper

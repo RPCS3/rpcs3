@@ -11,7 +11,10 @@ LOG_CHANNEL(music_log, "Music");
 qt_music_handler::qt_music_handler()
 {
 	music_log.notice("Constructing Qt music handler...");
+
 	m_media_player = std::make_shared<QMediaPlayer>();
+	m_media_player->setAudioRole(QAudio::Role::MusicRole);
+
 	m_error_handler = std::make_unique<qt_music_error_handler>(m_media_player);
 }
 
@@ -40,10 +43,17 @@ void qt_music_handler::play(const std::string& path)
 
 	Emu.CallFromMainThread([&wake_up, &path, this]()
 	{
-		music_log.notice("Playing music: %s", path);
-		m_media_player->setAudioRole(QAudio::Role::MusicRole);
-		m_media_player->setPlaybackRate(1.0);
-		m_media_player->setMedia(QUrl(QString::fromStdString(path)));
+		if (m_state == CELL_MUSIC_PB_STATUS_PAUSE)
+		{
+			music_log.notice("Resuming music: %s", path);
+		}
+		else
+		{
+			music_log.notice("Playing music: %s", path);
+			m_media_player->setPlaybackRate(1.0);
+			m_media_player->setMedia(QUrl(QString::fromStdString(path)));
+		}
+
 		m_media_player->play();
 		wake_up = true;
 		wake_up.notify_one();

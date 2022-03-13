@@ -285,26 +285,54 @@ namespace rsx
 			template <typename surface_store_type, typename surface_type = typename surface_store_type::surface_type>
 			std::pair<bool, surface_type> is_expired(surface_store_type& surface_cache)
 			{
-				if (upload_context != rsx::texture_upload_context::framebuffer_storage ||
-					surface_cache_tag == surface_cache.cache_tag)
+				if (upload_context != rsx::texture_upload_context::framebuffer_storage)
 				{
-					return { false, nullptr };
+					return {};
 				}
 
 				// Expired, but may still be valid. Check if the texture is still accessible
 				auto ref_image = image_handle ? image_handle->image() : external_subresource_desc.external_handle;
-				if (ref_image)
+				surface_type surface = dynamic_cast<surface_type>(ref_image);
+
+				// Try and grab a cache reference in case of MSAA resolve target or compositing op
+				if (!surface)
 				{
-					if (auto surface = dynamic_cast<surface_type>(ref_image);
-						surface && surface == surface_cache.get_surface_at(ref_address))
+					if (!(surface = surface_cache.get_surface_at(ref_address)))
 					{
-						// Fast sync
-						surface_cache_tag = surface_cache.cache_tag;
-						is_cyclic_reference = surface_cache.address_is_bound(ref_address);
+						// Compositing op. Just ignore expiry for now
+						ensure(!ref_image);
+						return {};
+					}
+				}
+
+				ensure(surface);
+				if (!ref_image || surface->get_surface(rsx::surface_access::gpu_reference) == ref_image)
+				{
+					// Same image, so configuration did not change.
+					if (surface_cache.cache_tag <= surface_cache_tag &&
+						surface->last_use_tag <= surface_cache_tag)
+					{
+						external_subresource_desc.do_not_cache = false;
+						return {};
+					}
+
+					// Image was written to since last bind. Insert texture barrier.
+					surface_cache_tag = surface->last_use_tag;
+					is_cyclic_reference = surface_cache.address_is_bound(ref_address);
+					external_subresource_desc.do_not_cache = is_cyclic_reference;
+
+					switch (external_subresource_desc.op)
+					{
+					case deferred_request_command::copy_image_dynamic:
+					case deferred_request_command::copy_image_static:
+						external_subresource_desc.op = (is_cyclic_reference) ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
+						[[ fallthrough ]];
+					default:
 						return { false, surface };
 					}
 				}
 
+				// Reupload
 				return { true, nullptr };
 			}
 		};
@@ -1925,7 +1953,7 @@ namespace rsx
 								u32 coverage_size = 0;
 								for (const auto& section : overlapping_fbos)
 								{
-									const auto area = section.surface->get_native_pitch() * section.surface->get_surface_height(rsx::surface_metrics::bytes);
+									const auto area = section.surface->get_native_pitch() * section.surface->template get_surface_height<rsx::surface_metrics::bytes>();
 									coverage_size += area;
 								}
 
@@ -2155,7 +2183,7 @@ namespace rsx
 				}
 
 				result.ref_address = attributes.address;
-				result.surface_cache_tag = m_rtts.cache_tag;
+				result.surface_cache_tag = m_rtts.write_tag;
 
 				if (subsurface_count == 1)
 				{
@@ -2482,8 +2510,8 @@ namespace rsx
 					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, is_format_convert);
 				}
 
-				if (surf->get_surface_width(rsx::surface_metrics::pixels) != surf->width() ||
-					surf->get_surface_height(rsx::surface_metrics::pixels) != surf->height())
+				if (surf->template get_surface_width<rsx::surface_metrics::pixels>() != surf->width() ||
+					surf->template get_surface_height<rsx::surface_metrics::pixels>() != surf->height())
 				{
 					// Must go through a scaling operation due to resolution scaling being present
 					ensure(g_cfg.video.resolution_scale_percent != 100);
@@ -2579,8 +2607,8 @@ namespace rsx
 				size2u src_dimensions = { 0, 0 };
 				if (src_is_render_target)
 				{
-					src_dimensions.width = src_subres.surface->get_surface_width(rsx::surface_metrics::samples);
-					src_dimensions.height = src_subres.surface->get_surface_height(rsx::surface_metrics::samples);
+					src_dimensions.width = src_subres.surface->template get_surface_width<rsx::surface_metrics::samples>();
+					src_dimensions.height = src_subres.surface->template get_surface_height<rsx::surface_metrics::samples>();
 				}
 
 				const auto props = texture_cache_helpers::get_optimal_blit_target_properties(
@@ -2734,8 +2762,8 @@ namespace rsx
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
 				dst_is_depth_surface = typeless_info.dst_is_typeless ? false : dst_subres.is_depth;
 
-				max_dst_width = static_cast<u16>(dst_subres.surface->get_surface_width(rsx::surface_metrics::samples) * typeless_info.dst_scaling_hint);
-				max_dst_height = dst_subres.surface->get_surface_height(rsx::surface_metrics::samples);
+				max_dst_width = static_cast<u16>(dst_subres.surface->template get_surface_width<rsx::surface_metrics::samples>() * typeless_info.dst_scaling_hint);
+				max_dst_height = dst_subres.surface->template get_surface_height<rsx::surface_metrics::samples>();
 			}
 
 			// Create source texture if does not exist
@@ -3082,8 +3110,8 @@ namespace rsx
 
 			if (src_is_render_target)
 			{
-				const auto surface_width = src_subres.surface->get_surface_width(rsx::surface_metrics::pixels);
-				const auto surface_height = src_subres.surface->get_surface_height(rsx::surface_metrics::pixels);
+				const auto surface_width = src_subres.surface->template get_surface_width<rsx::surface_metrics::pixels>();
+				const auto surface_height = src_subres.surface->template get_surface_height<rsx::surface_metrics::pixels>();
 				std::tie(src_area.x1, src_area.y1) = rsx::apply_resolution_scale<false>(src_area.x1, src_area.y1, surface_width, surface_height);
 				std::tie(src_area.x2, src_area.y2) = rsx::apply_resolution_scale<true>(src_area.x2, src_area.y2, surface_width, surface_height);
 
@@ -3093,8 +3121,8 @@ namespace rsx
 
 			if (dst_is_render_target)
 			{
-				const auto surface_width = dst_subres.surface->get_surface_width(rsx::surface_metrics::pixels);
-				const auto surface_height = dst_subres.surface->get_surface_height(rsx::surface_metrics::pixels);
+				const auto surface_width = dst_subres.surface->template get_surface_width<rsx::surface_metrics::pixels>();
+				const auto surface_height = dst_subres.surface->template get_surface_height<rsx::surface_metrics::pixels>();
 				std::tie(dst_area.x1, dst_area.y1) = rsx::apply_resolution_scale<false>(dst_area.x1, dst_area.y1, surface_width, surface_height);
 				std::tie(dst_area.x2, dst_area.y2) = rsx::apply_resolution_scale<true>(dst_area.x2, dst_area.y2, surface_width, surface_height);
 

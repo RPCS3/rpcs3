@@ -1085,7 +1085,7 @@ void VKGSRender::check_heap_status(u32 flags)
 			m_texture_upload_buffer_ring_info.reset_allocation_stats();
 			m_raster_env_ring_info.reset_allocation_stats();
 			m_current_frame->reset_heap_ptrs();
-			m_last_heap_sync_time = get_system_time();
+			m_last_heap_sync_time = rsx::get_shared_tag();
 		}
 		else
 		{
@@ -1382,9 +1382,7 @@ void VKGSRender::clear_surface(u32 mask)
 				if (!use_fast_clear || !full_frame)
 				{
 					// If we're not clobber all the memory, a barrier is required
-					for (u8 index = m_rtts.m_bound_render_targets_config.first, count = 0;
-						count < m_rtts.m_bound_render_targets_config.second;
-						++count, ++index)
+					for (const auto& index : m_rtts.m_bound_render_target_ids)
 					{
 						m_rtts.m_bound_render_targets[index].second->write_barrier(*m_current_command_buffer);
 					}
@@ -1449,8 +1447,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (update_color || update_z)
 	{
-		const bool write_all_mask[] = { true, true, true, true };
-		m_rtts.on_write(update_color ? write_all_mask : nullptr, update_z);
+		m_rtts.on_write({ update_color, update_color, update_color, update_color }, update_z);
 	}
 
 	if (!clear_descriptors.empty())
@@ -2464,7 +2461,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, surface, surface->get_memory_range(), false,
-				surface->get_surface_width(rsx::surface_metrics::pixels), surface->get_surface_height(rsx::surface_metrics::pixels), surface->get_rsx_pitch(),
+				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
 				gcm_format, swap_bytes);
 		}
 

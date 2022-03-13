@@ -303,8 +303,8 @@ namespace rsx
 				const auto h = std::min(section_end, slice_end) - dst_y;
 				dst_y = (dst_y - slice_begin);
 
-				const auto surface_width = section.surface->get_surface_width(rsx::surface_metrics::pixels);
-				const auto surface_height = section.surface->get_surface_height(rsx::surface_metrics::pixels);
+				const auto surface_width = section.surface->template get_surface_width<rsx::surface_metrics::pixels>();
+				const auto surface_height = section.surface->template get_surface_height<rsx::surface_metrics::pixels>();
 				const auto [src_width, src_height] = rsx::apply_resolution_scale<true>(section.src_area.width, h, surface_width, surface_height);
 				const auto [dst_width, dst_height] = rsx::apply_resolution_scale<true>(section.dst_area.width, h, attr.width, attr.height);
 
@@ -477,8 +477,8 @@ namespace rsx
 				return false;
 			}
 
-			const auto surface_width = texptr->get_surface_width(rsx::surface_metrics::samples);
-			const auto surface_height = texptr->get_surface_height(rsx::surface_metrics::samples);
+			const auto surface_width = texptr->template get_surface_width<rsx::surface_metrics::samples>();
+			const auto surface_height = texptr->template get_surface_height<rsx::surface_metrics::samples>();
 
 			switch (extended_dimension)
 			{
@@ -507,8 +507,8 @@ namespace rsx
 		{
 			texptr->read_barrier(cmd);
 
-			const auto surface_width = texptr->get_surface_width(rsx::surface_metrics::samples);
-			const auto surface_height = texptr->get_surface_height(rsx::surface_metrics::samples);
+			const auto surface_width = texptr->template get_surface_width<rsx::surface_metrics::samples>();
+			const auto surface_height = texptr->template get_surface_height<rsx::surface_metrics::samples>();
 
 			bool is_depth = texptr->is_depth_surface();
 			auto attr2 = attr;
