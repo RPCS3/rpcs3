@@ -8,6 +8,11 @@ namespace fmt
 {
 	template <typename CharT, usz N, typename... Args>
 	static std::string format(const CharT(&)[N], const Args&...);
+
+#ifdef _WIN32
+	// Get a string for a windows error (DWORD)
+	std::string win_error_to_string(unsigned long error);
+#endif
 }
 
 template <typename T, typename = void>
