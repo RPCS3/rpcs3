@@ -56,17 +56,7 @@ namespace utils
 #ifdef _WIN32
 	std::string pdh_error(PDH_STATUS status)
 	{
-		HANDLE hPdhLibrary = LoadLibrary(L"pdh.dll");
-		LPWSTR pMessage    = NULL;
-	
-		if (hPdhLibrary &&
-			FormatMessage(FORMAT_MESSAGE_FROM_HMODULE | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
-				hPdhLibrary, status, 0, (LPWSTR)&pMessage, 0, NULL))
-		{
-			return fmt::format("%s (0x%x)", fmt::trim(wchar_to_utf8(pMessage), " \t\n\r\f\v"), status);
-		}
-	
-		return fmt::format("0x%x", status);
+		return fmt::win_error_to_string(status, LoadLibrary(L"pdh.dll"));
 	}
 #endif
 

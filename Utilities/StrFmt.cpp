@@ -34,12 +34,12 @@ std::wstring utf8_to_wchar(std::string_view src)
 	return wchar_string;
 }
 
-std::string fmt::win_error_to_string(unsigned long error)
+std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
 {
 	std::string message;
 	LPWSTR message_buffer = nullptr;
-	if (FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
-			nullptr, error, 0, (LPWSTR)&message_buffer, 0, nullptr))
+	if (FormatMessageW((module_handle ? FORMAT_MESSAGE_FROM_HMODULE : FORMAT_MESSAGE_FROM_SYSTEM) | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
+			module_handle, error, 0, (LPWSTR)&message_buffer, 0, nullptr))
 	{
 		message = fmt::format("%s (0x%x)", fmt::trim(wchar_to_utf8(message_buffer), " \t\n\r\f\v"), error);
 	}
