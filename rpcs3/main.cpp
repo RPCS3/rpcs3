@@ -921,23 +921,6 @@ int main(int argc, char** argv)
 				return 1;
 			}
 		}
-
-		// Check if the directory is writable
-		fs::stat_t info{};
-		if (!fs::stat(emu_dir, info))
-		{
-			report_fatal_error(fmt::format("Unable to query folder stats. Error: %s\nCurrent location:\n%s", fs::g_tls_error, emu_dir));
-			return 1;
-		}
-
-		if (!info.is_writable)
-		{
-			report_fatal_error(fmt::format(
-				"The RPCS3 folder has no write permissions!\n"
-				"Please make sure that the current user has write permissions.\n"
-				"Current location:\n%s", emu_dir));
-			return 1;
-		}
 	}
 
 #ifdef _WIN32
