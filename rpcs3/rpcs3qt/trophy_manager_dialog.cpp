@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "trophy_manager_dialog.h"
 #include "custom_table_widget_item.h"
 #include "table_item_delegate.h"
@@ -12,8 +13,6 @@
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
-
-#include "Loader/TROPUSR.h"
 
 #include <QtConcurrent>
 #include <QFutureWatcher>
@@ -409,12 +408,16 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 	}
 
 	// Get game name
-	game_trophy_data->trop_config.Read(config.to_string());
-	std::shared_ptr<rXmlNode> trophy_base = game_trophy_data->trop_config.GetRoot();
-	if (trophy_base->GetChildren()->GetName() == "trophyconf")
+	pugi::xml_parse_result res = game_trophy_data->trop_config.Read(config.to_string());
+	if (!res)
 	{
-		trophy_base = trophy_base->GetChildren();
+		gui_log.error("Failed to read trophy xml: %s", tropconf_path);
+		return false;
 	}
+
+	std::shared_ptr<rXmlNode> trophy_base = game_trophy_data->trop_config.GetRoot();
+	ensure(trophy_base);
+
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
 		if (n->GetName() == "title-name")
@@ -872,15 +875,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 	m_trophy_table->setSortingEnabled(false); // Disable sorting before using setItem calls
 
 	std::shared_ptr<rXmlNode> trophy_base = data->trop_config.GetRoot();
-	if (trophy_base->GetChildren()->GetName() == "trophyconf")
-	{
-		trophy_base = trophy_base->GetChildren();
-	}
-	else
-	{
-		gui_log.error("Root name does not match trophyconf in trophy. Name received: %s", trophy_base->GetChildren()->GetName());
-		return;
-	}
+	ensure(trophy_base);
 
 	QPixmap placeholder(m_icon_height, m_icon_height);
 	placeholder.fill(Qt::transparent);
@@ -895,7 +890,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		}
 
 		// Get data (stolen graciously from sceNpTrophy.cpp)
-		SceNpTrophyDetails details;
+		SceNpTrophyDetails details{};
 
 		// Get trophy id
 		const s32 trophy_id = atoi(n->GetAttribute("id").c_str());
