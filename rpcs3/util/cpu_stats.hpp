@@ -19,7 +19,6 @@ namespace utils
 
 #ifdef _WIN32
 		PDH_HQUERY m_cpu_query = nullptr;
-		PDH_HCOUNTER m_cpu_total = nullptr;
 		PDH_HCOUNTER m_cpu_cores = nullptr;
 #elif __linux__
 		size_t m_previous_idle_time_total = 0;
