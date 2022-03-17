@@ -746,21 +746,25 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	fs::file config(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM"));
+	const std::string config_path = vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
+
+	fs::file config(config_path);
 
 	if (!config)
 	{
-		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
+		return { SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, config_path };
 	}
 
-	rXmlDocument doc;
-	doc.Read(config.to_string());
+	trophy_xml_document doc{};
+	pugi::xml_parse_result res = doc.Read(config.to_string());
+	if (!res)
+	{
+		sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM: %s", config_path);
+		// TODO: return some error
+	}
 
 	auto trophy_base = doc.GetRoot();
-	if (trophy_base->GetChildren()->GetName() == "trophyconf")
-	{
-		trophy_base = trophy_base->GetChildren();
-	}
+	ensure(trophy_base);
 
 	if (details)
 		*details = {};
@@ -979,24 +983,28 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 		return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
 	}
 
-	fs::file config(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM"));
+	const std::string config_path = vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
+
+	fs::file config(config_path);
 
 	if (!config)
 	{
-		return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST;
+		return { SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, config_path };
 	}
 
 	SceNpTrophyDetails tmp_details{};
 	SceNpTrophyData tmp_data{};
 
-	rXmlDocument doc;
-	doc.Read(config.to_string());
+	trophy_xml_document doc{};
+	pugi::xml_parse_result res = doc.Read(config.to_string());
+	if (!res)
+	{
+		sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM: %s", config_path);
+		// TODO: return some error
+	}
 
 	auto trophy_base = doc.GetRoot();
-	if (trophy_base->GetChildren()->GetName() == "trophyconf")
-	{
-		trophy_base = trophy_base->GetChildren();
-	}
+	ensure(trophy_base);
 
 	bool found = false;
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
@@ -1232,8 +1240,36 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 
 	if (!ctxt->tropusr->GetTrophyUnlockState(trophyId))
 	{
-		bool hidden = false; // TODO obtain this value
-		return hidden ? SCE_NP_TROPHY_ERROR_HIDDEN : SCE_NP_TROPHY_ERROR_LOCKED;
+		const std::string config_path = vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROPCONF.SFM");
+
+		fs::file config(config_path);
+		if (config)
+		{
+			trophy_xml_document doc{};
+			pugi::xml_parse_result res = doc.Read(config.to_string());
+			if (!res)
+			{
+				sceNpTrophy.error("sceNpTrophyGetGameInfo: Failed to read TROPCONF.SFM: %s", config_path);
+				// TODO: return some error
+			}
+
+			auto trophy_base = doc.GetRoot();
+			ensure(trophy_base);
+
+			for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
+			{
+				if (n->GetName() == "trophy" && trophyId == atoi(n->GetAttribute("id").c_str()) && n->GetAttribute("hidden")[0] == 'y')
+				{
+					return SCE_NP_TROPHY_ERROR_HIDDEN;
+				}
+			}
+		}
+		else
+		{
+			// TODO: Maybe return SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST
+		}
+
+		return SCE_NP_TROPHY_ERROR_LOCKED;
 	}
 
 	fs::file icon_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + fmt::format("/TROP%03d.PNG", trophyId)));

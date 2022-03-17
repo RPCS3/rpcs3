@@ -59,9 +59,9 @@ rXmlDocument::rXmlDocument()
 {
 }
 
-void rXmlDocument::Read(const std::string& data)
+pugi::xml_parse_result rXmlDocument::Read(const std::string& data)
 {
-	handle.load_buffer(data.data(), data.size());
+	return handle.load_buffer(data.data(), data.size());
 }
 
 std::shared_ptr<rXmlNode> rXmlDocument::GetRoot()
