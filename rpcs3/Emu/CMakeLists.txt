@@ -12,6 +12,7 @@ add_library(rpcs3_emu
     GDB.cpp
     title.cpp
     perf_meter.cpp
+    perf_monitor.cpp
 )
 
 # prevent WolfSSL from warning about not having harden options
