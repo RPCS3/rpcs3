@@ -125,6 +125,11 @@ namespace utils
 		};
 
 #ifdef _WIN32
+		if (!m_cpu_cores || !m_cpu_query)
+		{
+			perf_log.warning("Can not collect per core cpu usage: The required API is not initialized.");
+			return;
+		}
 
 		PDH_STATUS status = PdhCollectQueryData(m_cpu_query);
 		if (ERROR_SUCCESS != status)
