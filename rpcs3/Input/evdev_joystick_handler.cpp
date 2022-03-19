@@ -294,13 +294,24 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	}
 	libevdev* dev = device->device;
 
-	// Try to query the latest event from the joystick.
+	// Try to fetch all new events from the joystick.
 	input_event evt;
-	int ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &evt);
+	bool has_new_event = false;
+	int ret = LIBEVDEV_READ_STATUS_SUCCESS;
+	while (ret >= 0)
+	{
+		if (ret == LIBEVDEV_READ_STATUS_SYNC)
+		{
+			// Grab any pending sync event.
+			ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_SYNC, &evt);
+		}
+		else
+		{
+			ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &evt);
+		}
 
-	// Grab any pending sync event.
-	if (ret == LIBEVDEV_READ_STATUS_SYNC)
-		ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
+		has_new_event |= ret == LIBEVDEV_READ_STATUS_SUCCESS;
+	}
 
 	auto data = GetButtonValues(device);
 
@@ -329,14 +340,18 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	}
 
 	// return if nothing new has happened. ignore this to get the current state for blacklist
-	if (!get_blacklist && ret < 0)
+	if (!get_blacklist && !has_new_event)
 	{
 		if (callback)
 			callback(0, "", padId, 0, preview_values);
 		return;
 	}
 
-	std::pair<u16, std::string> pressed_button = { 0, "" };
+	struct
+	{
+		u16 value = 0;
+		std::string name;
+	} pressed_button;
 
 	for (const auto& [code, name] : button_list)
 	{
@@ -359,8 +374,10 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 				m_blacklist.emplace_back(name);
 				evdev_log.error("Evdev Calibration: Added button [ %d = %s = %s ] to blacklist. Value = %d", code, libevdev_event_code_get_name(EV_KEY, code), name, value);
 			}
-			else if (value > pressed_button.first)
+			else if (value > pressed_button.value)
+			{
 				pressed_button = { value, name };
+			}
 		}
 	}
 
@@ -382,8 +399,10 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 				m_blacklist.emplace_back(name);
 				evdev_log.error("Evdev Calibration: Added axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
 			}
-			else if (value > pressed_button.first)
+			else if (value > pressed_button.value)
+			{
 				pressed_button = { value, name };
+			}
 		}
 	}
 
@@ -405,8 +424,10 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 				m_blacklist.emplace_back(name);
 				evdev_log.error("Evdev Calibration: Added rev axis [ %d = %s = %s ] to blacklist. [ Value = %d ] [ Min = %d ] [ Max = %d ]", code, libevdev_event_code_get_name(EV_ABS, code), name, value, min, max);
 			}
-			else if (value > pressed_button.first)
+			else if (value > pressed_button.value)
+			{
 				pressed_button = { value, name };
+			}
 		}
 	}
 
@@ -419,8 +440,8 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 
 	if (callback)
 	{
-		if (pressed_button.first > 0)
-			return callback(pressed_button.first, pressed_button.second, padId, 0, preview_values);
+		if (pressed_button.value > 0)
+			return callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
 		else
 			return callback(0, "", padId, 0, preview_values);
 	}
@@ -725,15 +746,25 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 	if (dev == nullptr)
 		return;
 
-	// Try to query the latest event from the joystick.
+	// Try to fetch all new events from the joystick.
 	input_event evt;
-	int ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &evt);
-
-	// Grab any pending sync event.
-	if (ret == LIBEVDEV_READ_STATUS_SYNC)
+	int ret = LIBEVDEV_READ_STATUS_SUCCESS;
+	while (ret >= 0)
 	{
-		evdev_log.notice("Captured sync event");
-		ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
+		if (ret == LIBEVDEV_READ_STATUS_SYNC)
+		{
+			// Grab any pending sync event.
+			ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
+		}
+		else
+		{
+			ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &evt);
+		}
+
+		if (ret == LIBEVDEV_READ_STATUS_SUCCESS)
+		{
+			handle_input_event(evt, pad);
+		}
 	}
 
 	if (ret < 0)
@@ -743,6 +774,12 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 			evdev_log.error("Failed to read latest event from joystick: %s [errno %d]", strerror(-ret), -ret);
 		return;
 	}
+}
+
+void evdev_joystick_handler::handle_input_event(const input_event& evt, const std::shared_ptr<Pad>& pad)
+{
+	if (!pad)
+		return;
 
 	m_dev->cur_type = evt.type;
 
@@ -875,8 +912,6 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 	pad->m_sticks[1].m_value = 255 - ly;
 	pad->m_sticks[2].m_value = rx;
 	pad->m_sticks[3].m_value = 255 - ry;
-
-	return;
 }
 
 void evdev_joystick_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)

@@ -362,7 +362,7 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Enable Button Remapping
-	const auto& callback = [this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
+	const auto callback = [this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 	{
 		SwitchPadInfo(pad_name, true);
 
@@ -408,7 +408,7 @@ void pad_settings_dialog::InitButtons()
 	};
 
 	// Disable Button Remapping
-	const auto& fail_callback = [this](const std::string& pad_name)
+	const auto fail_callback = [this](const std::string& pad_name)
 	{
 		SwitchPadInfo(pad_name, false);
 
