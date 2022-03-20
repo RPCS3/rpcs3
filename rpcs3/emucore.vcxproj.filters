@@ -2062,6 +2062,9 @@
     <ClInclude Include="Emu\perf_monitor.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\ranged_map.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">
