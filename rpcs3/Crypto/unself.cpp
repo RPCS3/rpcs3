@@ -1497,7 +1497,40 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key, NPD_HEADER* n
 			}
 		}
 	}
+
 	return true;
+}
+
+bool get_npdrm_self_header(const fs::file& self, NPD_HEADER &npd_out)
+{
+	if (!self)
+		return false;
+
+	self.seek(0);
+
+	if (self.size() >= 4 && self.read<u32>() == "SCE\0"_u32 && !IsDebugSelf(self))
+	{
+		// Check the ELF file class (32 or 64 bit).
+		const bool isElf32 = IsSelfElf32(self);
+
+		// Start the decrypter on this SELF file.
+		SELFDecrypter self_dec(self);
+
+		// Load the SELF file headers.
+		if (!self_dec.LoadHeaders(isElf32))
+		{
+			self_log.error("Failed to load SELF file headers!");
+			return false;
+		}
+
+		if (const NPD_HEADER* npd = self_dec.GetNPDHeader())
+		{
+			memcpy(&npd_out, npd, sizeof(NPD_HEADER));
+			return true;
+		}
+	}
+
+	return false;
 }
 
 u128 get_default_self_klic()

@@ -608,15 +608,79 @@ error_code sceNpDrmExecuteGamePurchase()
 
 error_code sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 {
-	sceNp.todo("sceNpDrmGetTimelimit(path=%s, time_remain=*0x%x)", path, time_remain);
+	sceNp.warning("sceNpDrmGetTimelimit(path=%s, time_remain=*0x%x)", path, time_remain);
 
 	if (!path || !time_remain)
 	{
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	*time_remain = SCE_NP_DRM_TIME_INFO_ENDLESS;
+	vm::var<s64> sec;
+	vm::var<s64> nsec;
 
+	// Get system time (real or fake) to compare to
+	error_code ret = sys_time_get_current_time(sec, nsec);
+	if (ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	const std::string enc_drm_path(path.get_ptr(), std::find(path.get_ptr(), path.get_ptr() + 0x100, '\0'));
+	const auto [fs_error, ppath, real_path, enc_file, type] = lv2_file::open(enc_drm_path, 0, 0);
+
+	if (fs_error)
+	{
+		return {fs_error, enc_drm_path};
+	}
+
+	u32 magic;
+	NPD_HEADER npd;
+
+	enc_file.read<u32>(magic);
+	enc_file.seek(0);
+
+	// Read expiration time from NPD header which is Unix timestamp in milliseconds
+	if (magic == "SCE\0"_u32)
+	{
+		if (!get_npdrm_self_header(enc_file, npd))
+		{
+			sceNp.error("sceNpDrmGetTimelimit(): Failed to read NPD header from sce file '%s'", enc_drm_path);
+			return {SCE_NP_DRM_ERROR_BAD_FORMAT, enc_drm_path};
+		}
+	}
+	else if (magic == "NPD\0"_u32)
+	{
+		// edata / sdata files
+		EDAT_HEADER edat;
+		read_npd_edat_header(&enc_file, npd, edat);
+	}
+	else
+	{
+		// Unknown file type
+		return {SCE_NP_DRM_ERROR_BAD_FORMAT, enc_drm_path};
+	}
+
+	// Convert time to milliseconds
+	s64 msec = *sec * 1000ll + *nsec / 1000ll;
+
+	// Return the remaining time in microseconds
+	if (npd.activate_time != 0 && msec < npd.activate_time)
+	{
+		return SCE_NP_DRM_ERROR_SERVICE_NOT_STARTED;
+	}
+
+	if (npd.expire_time == 0)
+	{
+		*time_remain = SCE_NP_DRM_TIME_INFO_ENDLESS;
+		return CELL_OK;
+	}
+
+	if (msec >= npd.expire_time)
+	{
+		return SCE_NP_DRM_ERROR_TIME_LIMIT;
+	}
+
+	*time_remain = (npd.expire_time - msec) * 1000ll;
 	return CELL_OK;
 }
 
