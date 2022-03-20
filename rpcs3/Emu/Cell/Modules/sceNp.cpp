@@ -510,19 +510,18 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 	{
 		// edata / sdata files
 
-		std::string contentID;
-		u32 license_type = 0;
+		NPD_HEADER npd;
 
-		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path, reinterpret_cast<u8*>(&k_licensee), &contentID, &license_type))
+		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path, reinterpret_cast<u8*>(&k_licensee), &npd))
 		{
 			// Check if RAP-free
-			if (license_type == 3)
+			if (npd.license == 3)
 			{
 				npdrmkeys.install_decryption_key(k_licensee);
 			}
 			else
 			{
-				const std::string rap_file = rpcs3::utils::get_rap_file_path(contentID);
+				const std::string rap_file = rpcs3::utils::get_rap_file_path(npd.content_id);
 
 				if (fs::file rap_fd{rap_file}; rap_fd && rap_fd.size() >= sizeof(u128))
 				{
@@ -572,7 +571,7 @@ error_code npDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 	}
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
-	sceNp.warning("npDrmVerifyUpgradeLicense(): content_id='%s'", content_id);
+	sceNp.warning("npDrmVerifyUpgradeLicense(): content_id=%s", content_id);
 
 	if (!rpcs3::utils::verify_c00_unlock_edat(content_str))
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
