@@ -279,15 +279,15 @@ void ControlInfo::Load(const fs::file& f)
 	else if (type == 3)
 	{
 		npdrm.magic = Read32(f);
-		npdrm.unknown1 = Read32(f);
+		npdrm.version = Read32(f);
 		npdrm.license = Read32(f);
 		npdrm.type = Read32(f);
 		f.read(npdrm.content_id, 48);
 		f.read(npdrm.digest, 16);
-		f.read(npdrm.invdigest, 16);
-		f.read(npdrm.xordigest, 16);
-		npdrm.unknown2 = Read64(f);
-		npdrm.unknown3 = Read64(f);
+		f.read(npdrm.title_hash, 16);
+		f.read(npdrm.dev_hash, 16);
+		npdrm.activate_time = Read64(f);
+		npdrm.expire_time = Read64(f);
 	}
 }
 
@@ -325,15 +325,15 @@ void ControlInfo::Show() const
 	else if (type == 3)
 	{
 		self_log.notice("Magic: 0x%08x", npdrm.magic);
-		self_log.notice("Unknown1: 0x%08x", npdrm.unknown1);
+		self_log.notice("Version: 0x%08x", npdrm.version);
 		self_log.notice("License: 0x%08x", npdrm.license);
 		self_log.notice("Type: 0x%08x", npdrm.type);
 		self_log.notice("ContentID: %s", npdrm.content_id);
 		self_log.notice("Digest: %s", npdrm.digest);
-		self_log.notice("Inverse digest: %s", npdrm.invdigest);
-		self_log.notice("XOR digest: %s", npdrm.xordigest);
-		self_log.notice("Unknown2: 0x%llx", npdrm.unknown2);
-		self_log.notice("Unknown3: 0x%llx", npdrm.unknown3);
+		self_log.notice("Inverse digest: %s", npdrm.title_hash);
+		self_log.notice("XOR digest: %s", npdrm.dev_hash);
+		self_log.notice("Activation time: 0x%llx", npdrm.activate_time);
+		self_log.notice("Expiration time: 0x%llx", npdrm.expire_time);
 	}
 }
 
@@ -1062,47 +1062,37 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 {
 	aes_context aes;
-	ControlInfo *ctrl = NULL;
 	u8 npdrm_key[0x10];
 	u8 npdrm_iv[0x10];
 
-	// Parse the control info structures to find the NPDRM control info.
-	for(unsigned int i = 0; i < ctrlinfo_arr.size(); i++)
-	{
-		if (ctrlinfo_arr[i].type == 3)
-		{
-			ctrl = &ctrlinfo_arr[i];
-			break;
-		}
-	}
-
 	// Check if we have a valid NPDRM control info structure.
 	// If not, the data has no NPDRM layer.
-	if (!ctrl)
+	const NPD_HEADER* npd = GetNPDHeader();
+	if (!npd)
 	{
 		self_log.trace("SELF: No NPDRM control info found!");
 		return true;
 	}
 
-	if (ctrl->npdrm.license == 1)  // Network license.
+	if (npd->license == 1)  // Network license.
 	{
 		// Try to find a RAP file to get the key.
-		if (!GetKeyFromRap(ctrl->npdrm.content_id, npdrm_key))
+		if (!GetKeyFromRap(npd->content_id, npdrm_key))
 		{
 			self_log.error("SELF: Can't decrypt network NPDRM!");
 			return false;
 		}
 	}
-	else if (ctrl->npdrm.license == 2)  // Local license.
+	else if (npd->license == 2)  // Local license.
 	{
 		// Try to find a RAP file to get the key.
-		if (!GetKeyFromRap(ctrl->npdrm.content_id, npdrm_key))
+		if (!GetKeyFromRap(npd->content_id, npdrm_key))
 		{
 			self_log.error("SELF: Can't find RAP file for NPDRM decryption!");
 			return false;
 		}
 	}
-	else if (ctrl->npdrm.license == 3)  // Free license.
+	else if (npd->license == 3)  // Free license.
 	{
 		// Use klicensee if available.
 		if (key_v.GetKlicenseeKey() != nullptr)
@@ -1128,6 +1118,20 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	aes_crypt_cbc(&aes, AES_DECRYPT, metadata_size, npdrm_iv, metadata, metadata);
 
 	return true;
+}
+
+const NPD_HEADER* SELFDecrypter::GetNPDHeader() const
+{
+	// Parse the control info structures to find the NPDRM control info.
+	for (const ControlInfo& info : ctrlinfo_arr)
+	{
+		if (info.type == 3)
+		{
+			return &info.npdrm;
+		}
+	}
+
+	return nullptr;
 }
 
 bool SELFDecrypter::LoadMetadata(u8* klic_key)
@@ -1288,14 +1292,14 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 	return e;
 }
 
-bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
+bool SELFDecrypter::GetKeyFromRap(const char* content_id, u8* npdrm_key)
 {
 	// Set empty RAP key.
 	u8 rap_key[0x10];
 	memset(rap_key, 0, 0x10);
 
 	// Try to find a matching RAP file under exdata folder.
-	const std::string ci_str = reinterpret_cast<const char*>(content_id);
+	const std::string ci_str = content_id;
 	const std::string rap_path = rpcs3::utils::get_rap_file_path(ci_str);
 
 	// Open the RAP file and read the key.
