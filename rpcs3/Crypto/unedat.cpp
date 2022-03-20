@@ -785,7 +785,7 @@ u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file)
 	return rifkey;
 }
 
-bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, std::string* contentID, u32* license)
+bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, NPD_HEADER* npd_out)
 {
 	// Setup NPD and EDAT/SDAT structs.
 	NPD_HEADER NPD;
@@ -818,8 +818,11 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 	std::string_view sv{NPD.content_id, std::size(NPD.content_id)};
 	sv = sv.substr(0, sv.find_first_of('\0'));
 
-	if (contentID) *contentID = std::string(sv);
-	if (license) *license = (NPD.license & 3);
+	if (npd_out)
+	{
+		memcpy(npd_out, &NPD, sizeof(NPD_HEADER));
+	}
+
 	return true;
 }
 

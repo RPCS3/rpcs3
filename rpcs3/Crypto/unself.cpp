@@ -1460,7 +1460,7 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 	return elf_or_self;
 }
 
-bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
+bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key, NPD_HEADER* npd_out)
 {
 	if (!self)
 		return false;
@@ -1487,6 +1487,14 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 		{
 			self_log.error("SELF: Failed to load SELF file metadata!");
 			return false;
+		}
+
+		if (npd_out)
+		{
+			if (const NPD_HEADER* npd = self_dec.GetNPDHeader())
+			{
+				memcpy(npd_out, npd, sizeof(NPD_HEADER));
+			}
 		}
 	}
 	return true;
