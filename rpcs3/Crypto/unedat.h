@@ -43,8 +43,8 @@ struct NPD_HEADER
 	u8 digest[0x10];
 	u8 title_hash[0x10];
 	u8 dev_hash[0x10];
-	u64 unk1;
-	u64 unk2;
+	s64 activate_time;
+	s64 expire_time;
 };
 
 struct EDAT_HEADER

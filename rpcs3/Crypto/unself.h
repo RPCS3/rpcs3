@@ -7,6 +7,8 @@
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 
+#include "unedat.h"
+
 LOG_CHANNEL(self_log, "SELF");
 
 struct AppInfo
@@ -85,20 +87,7 @@ struct ControlInfo
 		} file_digest_40;
 
 		// type 3 0x90 bytes
-		struct
-		{
-			u32 magic;
-			u32 unknown1;
-			u32 license;
-			u32 type;
-			u8 content_id[48];
-			u8 digest[16];
-			u8 invdigest[16];
-			u8 xordigest[16];
-			u64 unknown2;
-			u64 unknown3;
-
-		} npdrm;
+		NPD_HEADER npdrm;
 	};
 
 	void Load(const fs::file& f);
@@ -427,7 +416,8 @@ public:
 	bool LoadMetadata(u8* klic_key);
 	bool DecryptData();
 	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);
-	static bool GetKeyFromRap(u8 *content_id, u8 *npdrm_key);
+	const NPD_HEADER* GetNPDHeader() const;
+	static bool GetKeyFromRap(const char *content_id, u8 *npdrm_key);
 
 private:
 	template<typename EHdr, typename SHdr, typename PHdr>
