@@ -10,9 +10,11 @@ namespace rsx
 	template<typename T, int BlockSize>
 	class ranged_map
 	{
+	public:
 		using inner_type = typename std::unordered_map<u32, T>;
 		using outer_type = typename std::array<inner_type, 0x100000000ull / BlockSize>;
 
+	protected:
 		outer_type m_data;
 
 		static inline u32 block_for(u32 address)
@@ -23,15 +25,16 @@ namespace rsx
 	public:
 		class iterator
 		{
-			using super = typename ranged_map<T, BlockSize>;
-			friend class super;
+			using super = typename rsx::ranged_map<T, BlockSize>;
+			using inner_iterator = typename inner_type::iterator;
+			friend super;
 
 		protected:
 			inner_type* m_current = nullptr;
 			inner_type* m_end = nullptr;
 
 			outer_type* m_data_ptr = nullptr;
-			inner_type::iterator m_it{};
+			inner_iterator m_it{};
 
 			inline void forward_scan()
 			{
@@ -64,14 +67,14 @@ namespace rsx
 				forward_scan();
 			}
 
-			inline void begin_range(const utils::address_range& range, inner_type::iterator& where)
+			inline void begin_range(const utils::address_range& range, inner_iterator& where)
 			{
 				m_it = where;
 				m_current = &(*m_data_ptr)[range.start / BlockSize];
 				m_end = &(*m_data_ptr)[(range.end + 1) / BlockSize];
 			}
 
-			inline void begin_range(u32 address, inner_type::iterator& where)
+			inline void begin_range(u32 address, inner_iterator& where)
 			{
 				begin_range(utils::address_range::start_length(address, 1), where);
 			}
