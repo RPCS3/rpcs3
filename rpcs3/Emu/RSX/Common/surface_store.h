@@ -45,7 +45,7 @@ namespace rsx
 		using surface_type = typename Traits::surface_type;
 		using command_list_type = typename Traits::command_list_type;
 		using surface_overlap_info = surface_overlap_info_t<surface_type>;
-		using surface_ranged_map = typename rsx::ranged_map<surface_storage_type, 0x1000000>;
+		using surface_ranged_map = typename rsx::ranged_map<surface_storage_type, 0x400000>;
 
 	protected:
 		surface_ranged_map m_render_targets_storage = {};
