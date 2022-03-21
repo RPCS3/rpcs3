@@ -10,16 +10,33 @@ namespace rsx
 	template<typename T, int BlockSize>
 	class ranged_map
 	{
+		struct block_metadata_t
+		{
+			u32 id = umax;             // ID of the matadata blob
+			u32 head_block = umax;     // Earliest block that may have an object that intersects with the data at the block with ID 'id'
+		};
+
 	public:
 		using inner_type = typename std::unordered_map<u32, T>;
 		using outer_type = typename std::array<inner_type, 0x100000000ull / BlockSize>;
+		using metadata_array = typename std::array<block_metadata_t, 0x100000000ull / BlockSize>;
 
 	protected:
 		outer_type m_data;
+		metadata_array m_metadata;
 
 		static inline u32 block_for(u32 address)
 		{
 			return address / BlockSize;
+		}
+
+		void broadcast_insert(const utils::address_range& range)
+		{
+			const auto head_block = block_for(range.start);
+			for (auto meta = &m_metadata[head_block]; meta <= &m_metadata[block_for(range.end)]; ++meta)
+			{
+				meta->head_block = std::min(head_block, meta->head_block);
+			}
 		}
 
 	public:
@@ -33,7 +50,8 @@ namespace rsx
 			inner_type* m_current = nullptr;
 			inner_type* m_end = nullptr;
 
-			outer_type* m_data_ptr = nullptr;
+			inner_type* m_data_ptr = nullptr;
+			block_metadata_t* m_metadata_ptr = nullptr;
 			inner_iterator m_it{};
 
 			inline void forward_scan()
@@ -67,22 +85,19 @@ namespace rsx
 				forward_scan();
 			}
 
-			inline void begin_range(const utils::address_range& range, inner_iterator& where)
-			{
-				m_it = where;
-				m_current = &(*m_data_ptr)[range.start / BlockSize];
-				m_end = &(*m_data_ptr)[(range.end + 1) / BlockSize];
-			}
-
 			inline void begin_range(u32 address, inner_iterator& where)
 			{
-				begin_range(utils::address_range::start_length(address, 1), where);
+				m_current = &m_data_ptr[address / BlockSize];
+				m_end = m_current;
+				m_it = where;
 			}
 
 			inline void begin_range(const utils::address_range& range)
 			{
-				m_current = &(*m_data_ptr)[range.start / BlockSize];
-				m_end = &(*m_data_ptr)[(range.end + 1) / BlockSize];
+				const auto start_block_id = range.start / BlockSize;
+				const auto& metadata = m_metadata_ptr[start_block_id];
+				m_current = &m_data_ptr[std::min(start_block_id, metadata.head_block)];
+				m_end = &m_data_ptr[range.end / BlockSize];
 
 				--m_current;
 				forward_scan();
@@ -99,8 +114,9 @@ namespace rsx
 				forward_scan();
 			}
 
-			iterator(super* parent)
-				: m_data_ptr(&parent->m_data)
+			iterator(super* parent):
+				m_data_ptr(parent->m_data.data()),
+				m_metadata_ptr(parent->m_metadata.data())
 			{}
 
 		public:
@@ -154,12 +170,19 @@ namespace rsx
 			}
 		};
 
-		inline T& operator[](const u32& key)
+	public:
+		ranged_map()
 		{
-			return m_data[block_for(key)][key];
+			std::for_each(m_metadata.begin(), m_metadata.end(), [&](auto& meta) { meta.id = static_cast<u32>(&meta - m_metadata.data()); });
 		}
 
-		inline auto find(const u32& key)
+		inline void emplace(const utils::address_range& range, T&& value)
+		{
+			broadcast_insert(range);
+			m_data[block_for(range.start)].insert_or_assign(range.start, std::forward<T>(value));
+		}
+
+		inline iterator find(const u32 key)
 		{
 			auto& block = m_data[block_for(key)];
 			iterator ret = { this };
@@ -171,6 +194,18 @@ namespace rsx
 			}
 
 			return ret;
+		}
+
+		inline T& at(const u32 key)
+		{
+			auto& block = m_data[block_for(key)];
+			if (auto found = block.find(key);
+				found != block.end())
+			{
+				return (*found).second;
+			}
+
+			fmt::throw_exception("Object not found");
 		}
 
 		inline iterator erase(iterator& where)

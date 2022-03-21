@@ -153,7 +153,7 @@ namespace rsx
 
 				ensure(region.target == Traits::get(sink));
 				orphaned_surfaces.push_back(region.target);
-				data[new_address] = std::move(sink);
+				data.emplace(region.target->get_memory_range(), std::move(sink));
 			};
 
 			// Define incoming region
@@ -370,7 +370,7 @@ namespace rsx
 				{
 					// This has been 'swallowed' by the new surface and can be safely freed
 					auto &storage = surface->is_depth_surface() ? m_depth_stencil_storage : m_render_targets_storage;
-					auto &object = storage[e.first];
+					auto &object = storage.at(e.first);
 
 					ensure(object);
 
@@ -556,7 +556,7 @@ namespace rsx
 			if (store)
 			{
 				// New surface was found among invalidated surfaces or created from scratch
-				(*primary_storage)[address] = std::move(new_surface_storage);
+				primary_storage->emplace(new_surface->get_memory_range(), std::move(new_surface_storage));
 			}
 
 			ensure(!old_surface_storage);
