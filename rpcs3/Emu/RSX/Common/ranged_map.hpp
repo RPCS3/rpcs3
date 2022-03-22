@@ -120,14 +120,9 @@ namespace rsx
 			{}
 
 		public:
-			inline bool operator == (const iterator& other)
+			inline bool operator == (const iterator& other) const
 			{
 				return m_it == other.m_it;
-			}
-
-			inline bool operator != (const iterator& other)
-			{
-				return m_it != other.m_it;
 			}
 
 			inline auto* operator -> ()
