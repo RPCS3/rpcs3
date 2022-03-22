@@ -1544,7 +1544,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		return false;
 	}
 
-	m_host_data_ptr->last_label_release_event = ++m_host_data_ptr->event_counter;
+	m_host_data_ptr->last_label_release_event = m_host_data_ptr->inc_counter();
 
 	if (m_host_data_ptr->texture_load_request_event > m_host_data_ptr->last_label_submit_event)
 	{
