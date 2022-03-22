@@ -26,6 +26,13 @@ namespace vk
 		u64 last_label_submit_event = 0;
 		u64 commands_complete_event = 0;
 		u64 last_label_request_timestamp = 0;
+
+		inline u64 inc_counter() volatile
+		{
+			// Workaround for volatile increment warning. GPU can see this value directly, but currently we do not modify it on the device.
+			event_counter = event_counter + 1;
+			return event_counter;
+		}
 	};
 
 	struct fence
