@@ -978,12 +978,12 @@ private:
 		return commit_param(rsxaudio_port, avport_idx, avport_src, freq, bit_cnt, spdif_use_serial_buf, pkt.audio_cs_info);
 	}
 
-	bool commit_param(u8 rsxaudio_port, RsxaudioAvportIdx avport, u8 avport_src, u32 freq,
-						UartAudioSampleSize bit_cnt, bool spdif_use_serial_buf, const u8 *cs_data)
+	bool commit_param(u8 rsxaudio_port, RsxaudioAvportIdx avport, [[maybe_unused]] u8 avport_src, [[maybe_unused]] u32 freq,
+						UartAudioSampleSize bit_cnt, [[maybe_unused]] bool spdif_use_serial_buf, [[maybe_unused]] const u8 *cs_data)
 	{
 		// TBA
-		const auto avport_idx = static_cast<std::underlying_type_t<decltype(avport)>>(avport);
-		const auto rsxaudio_word_depth = bit_cnt == UartAudioSampleSize::_16BIT ? RsxaudioSampleSize::_16BIT : RsxaudioSampleSize::_32BIT;
+		[[maybe_unused]] const auto avport_idx = static_cast<std::underlying_type_t<decltype(avport)>>(avport);
+		[[maybe_unused]] const auto rsxaudio_word_depth = bit_cnt == UartAudioSampleSize::_16BIT ? RsxaudioSampleSize::_16BIT : RsxaudioSampleSize::_32BIT;
 
 		switch (rsxaudio_port)
 		{
@@ -995,7 +995,7 @@ private:
 		case SYS_RSXAUDIO_PORT_SPDIF_0:
 		case SYS_RSXAUDIO_PORT_SPDIF_1:
 		{
-			const u8 spdif_idx = rsxaudio_port == SYS_RSXAUDIO_PORT_SPDIF_1;
+			[[maybe_unused]] const u8 spdif_idx = rsxaudio_port == SYS_RSXAUDIO_PORT_SPDIF_1;
 
 			// TBA
 			break;
@@ -1067,7 +1067,7 @@ struct audio_set_active_cmd : public ps3av_cmd
 			return;
 		}
 
-		const bool requested_avports[SYS_RSXAUDIO_AVPORT_CNT] =
+		[[maybe_unused]] const bool requested_avports[SYS_RSXAUDIO_AVPORT_CNT] =
 		{
 			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0U,
 			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0U,
@@ -1122,7 +1122,7 @@ struct audio_spdif_bit_cmd : public ps3av_cmd
 			return;
 		}
 
-		const bool requested_avports[SYS_RSXAUDIO_AVPORT_CNT] =
+		[[maybe_unused]] const bool requested_avports[SYS_RSXAUDIO_AVPORT_CNT] =
 		{
 			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_0) != 0U,
 			(pkt->audio_port & PS3AV_AUDIO_PORT_HDMI_1) != 0U,
@@ -1301,7 +1301,7 @@ struct inc_avset_cmd : public ps3av_cmd
 					break;
 				}
 
-				const u8 hdmi_idx = av_audio_pkt->avport == static_cast<u16>(UartAudioAvport::HDMI_1);
+				[[maybe_unused]] const u8 hdmi_idx = av_audio_pkt->avport == static_cast<u16>(UartAudioAvport::HDMI_1);
 
 				// TBA
 			}

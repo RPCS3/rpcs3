@@ -10,7 +10,7 @@
 
 namespace vk
 {
-	AsyncTaskScheduler::AsyncTaskScheduler(vk_gpu_scheduler_mode mode)
+	AsyncTaskScheduler::AsyncTaskScheduler([[maybe_unused]] vk_gpu_scheduler_mode mode)
 	{
 		if (g_cfg.video.renderer != video_renderer::vulkan || !g_cfg.video.vk.asynchronous_texture_streaming)
 		{
