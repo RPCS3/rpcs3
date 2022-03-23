@@ -274,6 +274,8 @@ void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 
 	shader.create(::glsl::program_domain::glsl_vertex_program, source);
 	id = shader.id();
+	has_indexed_constants = decompiler.properties.has_indexed_constants;
+	constant_ids = std::move(decompiler.m_constant_ids);
 }
 
 void GLVertexProgram::Delete()

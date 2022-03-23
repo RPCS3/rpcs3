@@ -350,6 +350,8 @@ void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 	decompiler.Task();
 
 	shader.create(::glsl::program_domain::glsl_vertex_program, source);
+	has_indexed_constants = decompiler.properties.has_indexed_constants;
+	constant_ids = std::move(decompiler.m_constant_ids);
 }
 
 void VKVertexProgram::Compile()

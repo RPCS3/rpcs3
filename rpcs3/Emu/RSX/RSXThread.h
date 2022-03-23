@@ -921,9 +921,9 @@ namespace rsx
 
 		/**
 		* Fill buffer with vertex program constants.
-		* Buffer must be at least 512 float4 wide.
+		* Relocation table allows to do a partial fill with only selected registers.
 		*/
-		void fill_vertex_program_constants_data(void* buffer);
+		void fill_vertex_program_constants_data(void* buffer, const std::vector<u16>& reloc_table);
 
 		/**
 		 * Fill buffer with fragment rasterization state.

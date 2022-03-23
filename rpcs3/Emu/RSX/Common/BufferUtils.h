@@ -38,17 +38,6 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(std::span<std::byte> 
  */
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count);
 
-/**
- * Stream a 128 bits vector to dst.
- */
-void stream_vector(void *dst, f32 x, f32 y, f32 z, f32 w);
-void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w);
-
-/**
- * Stream a 128 bits vector from src to dst.
- */
-void stream_vector_from_memory(void *dst, void *src);
-
 // Copy and swap data in 32-bit units
 extern void(*const copy_data_swap_u32)(u32*, const u32*, u32);
 

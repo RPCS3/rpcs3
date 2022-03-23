@@ -1861,13 +1861,15 @@ bool VKGSRender::load_program()
 	}
 
 	const auto shadermode = g_cfg.video.shadermode.get();
+	m_vertex_prog = nullptr;
+	m_fragment_prog = nullptr;
 
 	if (shadermode != shader_mode::interpreter_only) [[likely]]
 	{
 		vk::enter_uninterruptible();
 
 		// Load current program from cache
-		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
+		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
 			shadermode != shader_mode::recompiler, true, pipeline_layout);
 
 		vk::leave_uninterruptible();
@@ -1956,7 +1958,7 @@ void VKGSRender::load_program_env()
 		auto mem = m_transform_constants_ring_info.alloc<256>(8192);
 		auto buf = m_transform_constants_ring_info.map(mem, 8192);
 
-		fill_vertex_program_constants_data(buf);
+		fill_vertex_program_constants_data(buf, m_vertex_prog ? m_vertex_prog->constant_ids : std::vector<u16>{});
 		m_transform_constants_ring_info.unmap();
 		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, 8192 };
 	}
@@ -1972,7 +1974,7 @@ void VKGSRender::load_program_env()
 			auto buf = m_fragment_constants_ring_info.map(mem, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-				current_fragment_program, true);
+				*ensure(m_fragment_prog), current_fragment_program, true);
 
 			m_fragment_constants_ring_info.unmap();
 			m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, mem, fragment_constants_size };

@@ -63,6 +63,8 @@ public:
 	u32 id;
 	vk::glsl::shader shader;
 	std::vector<vk::glsl::program_input> uniforms;
+	std::vector<u16> constant_ids;
+	bool has_indexed_constants;
 
 	void Decompile(const RSXVertexProgram& prog);
 	void Compile();
