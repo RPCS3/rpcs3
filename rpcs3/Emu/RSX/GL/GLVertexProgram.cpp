@@ -276,11 +276,8 @@ void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 	GLVertexDecompilerThread decompiler(prog, source, parr);
 	decompiler.Task();
 
-	if (has_indexed_constants = decompiler.properties.has_indexed_constants;
-		!has_indexed_constants)
-	{
-		constant_ids = std::vector<u16>(decompiler.m_constant_ids.begin(), decompiler.m_constant_ids.end());
-	}
+	has_indexed_constants = decompiler.properties.has_indexed_constants;
+	constant_ids = std::vector<u16>(decompiler.m_constant_ids.begin(), decompiler.m_constant_ids.end());
 
 	shader.create(::glsl::program_domain::glsl_vertex_program, source);
 	id = shader.id();

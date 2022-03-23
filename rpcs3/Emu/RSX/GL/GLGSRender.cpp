@@ -800,14 +800,17 @@ void GLGSRender::load_program_env()
 	if (update_transform_constants)
 	{
 		// Vertex constants
-		const std::vector<u16>& constant_ids = m_vertex_prog ? m_vertex_prog->constant_ids : std::vector<u16>{};
-		const usz transform_constants_size = constant_ids.empty() ? 8192 : constant_ids.size() * 16;
+		const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+		if (transform_constants_size)
+		{
+			auto mapping = m_transform_constants_buffer->alloc_from_heap(transform_constants_size, m_uniform_buffer_offset_align);
+			auto buf = static_cast<u8*>(mapping.first);
 
-		auto mapping = m_transform_constants_buffer->alloc_from_heap(transform_constants_size, m_uniform_buffer_offset_align);
-		auto buf = static_cast<u8*>(mapping.first);
-		fill_vertex_program_constants_data(buf, m_vertex_prog ? m_vertex_prog->constant_ids : std::vector<u16>{});
+			const std::vector<u16>& constant_ids = (transform_constants_size == 8192) ? std::vector<u16>{} : m_vertex_prog->constant_ids;
+			fill_vertex_program_constants_data(buf, m_vertex_prog ? m_vertex_prog->constant_ids : std::vector<u16>{});
 
-		m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, transform_constants_size);
+			m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, transform_constants_size);
+		}
 	}
 
 	if (update_fragment_constants && !update_instruction_buffers)
