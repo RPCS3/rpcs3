@@ -693,10 +693,13 @@ bool GLGSRender::load_program()
 	}
 
 	const bool was_interpreter = m_shader_interpreter.is_interpreter(m_program);
+	m_vertex_prog = nullptr;
+	m_fragment_prog = nullptr;
+
 	if (shadermode != shader_mode::interpreter_only) [[likely]]
 	{
 		void* pipeline_properties = nullptr;
-		m_program = m_prog_buffer.get_graphics_pipeline(current_vertex_program, current_fragment_program, pipeline_properties,
+		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer.get_graphics_pipeline(current_vertex_program, current_fragment_program, pipeline_properties,
 			shadermode != shader_mode::recompiler, true);
 
 		if (m_prog_buffer.check_cache_missed())
@@ -799,7 +802,7 @@ void GLGSRender::load_program_env()
 		// Vertex constants
 		auto mapping = m_transform_constants_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
-		fill_vertex_program_constants_data(buf);
+		fill_vertex_program_constants_data(buf, m_vertex_prog ? m_vertex_prog->constant_ids : std::vector<u16>{});
 
 		m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, 8192);
 	}
@@ -811,7 +814,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-			current_fragment_program, true);
+			*ensure(m_fragment_prog), current_fragment_program, true);
 
 		m_fragment_constants_buffer->bind_range(GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, fragment_constants_size);
 	}

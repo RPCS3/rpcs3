@@ -9,19 +9,15 @@
 #endif
 
 template <typename Traits>
-void program_state_cache<Traits>::fill_fragment_constants_buffer(std::span<f32> dst_buffer, const RSXFragmentProgram &fragment_program, bool sanitize) const
+void program_state_cache<Traits>::fill_fragment_constants_buffer(std::span<f32> dst_buffer, const typename Traits::fragment_program_type& fragment_program, const RSXFragmentProgram& rsx_prog, bool sanitize) const
 {
-	const auto I = m_fragment_shader_cache.find(fragment_program);
-	if (I == m_fragment_shader_cache.end())
-		return;
-
-	ensure((dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16u));
+	ensure((dst_buffer.size_bytes() >= ::narrow<int>(fragment_program.FragmentConstantOffsetCache.size()) * 16u));
 
 	f32* dst = dst_buffer.data();
 	alignas(16) f32 tmp[4];
-	for (usz offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
+	for (usz offset_in_fragment_program : fragment_program.FragmentConstantOffsetCache)
 	{
-		char* data = static_cast<char*>(fragment_program.get_data()) + offset_in_fragment_program;
+		char* data = static_cast<char*>(rsx_prog.get_data()) + offset_in_fragment_program;
 
 #if defined(ARCH_X64)
 		const __m128i vector = _mm_loadu_si128(reinterpret_cast<__m128i*>(data));

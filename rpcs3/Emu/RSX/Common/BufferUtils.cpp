@@ -869,19 +869,3 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(std::span<std::byte> 
 		fmt::throw_exception("Unreachable");
 	}
 }
-
-void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)
-{
-	const __m128i vector = _mm_set_epi32(w, z, y, x);
-	_mm_stream_si128(reinterpret_cast<__m128i*>(dst), vector);
-}
-
-void stream_vector(void *dst, f32 x, f32 y, f32 z, f32 w)
-{
-	stream_vector(dst, std::bit_cast<u32>(x), std::bit_cast<u32>(y), std::bit_cast<u32>(z), std::bit_cast<u32>(w));
-}
-void stream_vector_from_memory(void *dst, void *src)
-{
-	const __m128i vector = _mm_loadu_si128(reinterpret_cast<__m128i*>(src));
-	_mm_stream_si128(reinterpret_cast<__m128i*>(dst), vector);
-}

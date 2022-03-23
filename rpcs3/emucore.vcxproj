@@ -450,6 +450,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
     <ClInclude Include="Emu\Cell\Modules\libfs_utility_init.h" />
     <ClInclude Include="Emu\Cell\Modules\sys_crashdump.h" />
+    <ClInclude Include="Emu\CPU\sse2neon.h" />
     <ClInclude Include="Emu\Io\camera_config.h" />
     <ClInclude Include="Emu\Io\camera_handler_base.h" />
     <ClInclude Include="Emu\Io\music_handler_base.h" />
@@ -479,6 +480,7 @@
     <ClInclude Include="Emu\NP\rpcn_config.h" />
     <ClInclude Include="Emu\perf_monitor.hpp" />
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
+    <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp" />
     <ClInclude Include="Emu\RSX\Common\profiling_timer.hpp" />
     <ClInclude Include="Emu\RSX\Common\ranged_map.hpp" />
     <ClInclude Include="Emu\RSX\Common\simple_array.hpp" />

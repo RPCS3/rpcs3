@@ -2065,6 +2065,12 @@
     <ClInclude Include="Emu\RSX\Common\ranged_map.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\CPU\sse2neon.h">
+      <Filter>Emu\CPU</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">

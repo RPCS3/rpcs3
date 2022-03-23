@@ -619,7 +619,18 @@ void GLGSRender::end()
 		return;
 	}
 
-	analyse_current_rsx_pipeline();
+	if (m_graphics_state & (rsx::pipeline_state::fragment_program_ucode_dirty | rsx::pipeline_state::vertex_program_ucode_dirty))
+	{
+		// TODO: Move to shared code
+		if ((m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty) &&
+			m_vertex_prog && !m_vertex_prog->has_indexed_constants)
+		{
+			m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		}
+
+		analyse_current_rsx_pipeline();
+	}
+
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	// Active texture environment is used to decode shaders
