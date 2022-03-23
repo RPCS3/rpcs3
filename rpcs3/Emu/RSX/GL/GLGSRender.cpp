@@ -807,7 +807,7 @@ void GLGSRender::load_program_env()
 			auto buf = static_cast<u8*>(mapping.first);
 
 			const std::vector<u16>& constant_ids = (transform_constants_size == 8192) ? std::vector<u16>{} : m_vertex_prog->constant_ids;
-			fill_vertex_program_constants_data(buf, m_vertex_prog ? m_vertex_prog->constant_ids : std::vector<u16>{});
+			fill_vertex_program_constants_data(buf, constant_ids);
 
 			m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, transform_constants_size);
 		}
