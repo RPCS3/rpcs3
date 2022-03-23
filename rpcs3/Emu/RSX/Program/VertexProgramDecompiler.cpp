@@ -127,7 +127,7 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 	case RSX_VP_REGISTER_TYPE_CONSTANT:
 		m_parr.AddParam(PF_PARAM_UNIFORM, getFloatTypeName(4), std::string("vc[468]"));
 		properties.has_indexed_constants |= !!d3.index_const;
-		m_constant_ids.push_back(d1.const_src);
+		m_constant_ids.insert(static_cast<u16>(d1.const_src));
 		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
 		break;
 
@@ -399,20 +399,20 @@ std::string VertexProgramDecompiler::BuildCode()
 		std::vector<std::pair<std::string, std::string>> reloc_table;
 		reloc_table.reserve(m_constant_ids.size());
 
-		// First sort the data in ascending order
-		std::sort(m_constant_ids.begin(), m_constant_ids.end());
-
 		// Build the string lookup table
+		int offset = 0;
 		for (const auto& index : m_constant_ids)
 		{
-			reloc_table.emplace_back(fmt::format("vc[%d]", index), fmt::format("vc[%llu]", reloc_table.size()));
+			const auto i = offset++;
+			if (i == index) continue; // Replace with self
+			reloc_table.emplace_back(fmt::format("vc[%d]", index), fmt::format("vc[%d]", i));
 		}
 
 		// One-time patch
 		main_body = fmt::replace_all(main_body, reloc_table);
 
 		// Rename the array type
-		auto type_list = ensure(m_parr.SearchParam(PF_PARAM_CONST, getFloatTypeName(4)));
+		auto type_list = ensure(m_parr.SearchParam(PF_PARAM_UNIFORM, getFloatTypeName(4)));
 		const auto item = ParamItem(fmt::format("vc[%llu]", m_constant_ids.size()), -1);
 		type_list->ReplaceOrInsert("vc[468]", item);
 	}

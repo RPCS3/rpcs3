@@ -1955,12 +1955,15 @@ void VKGSRender::load_program_env()
 		check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);
 
 		// Transform constants
-		auto mem = m_transform_constants_ring_info.alloc<256>(8192);
-		auto buf = m_transform_constants_ring_info.map(mem, 8192);
+		const std::vector<u16>& constant_ids = m_vertex_prog ? m_vertex_prog->constant_ids : std::vector<u16>{};
+		const usz transform_constants_size = constant_ids.empty() ? 8192 : utils::align(constant_ids.size() * 16, m_device->gpu().get_limits().minUniformBufferOffsetAlignment);
 
-		fill_vertex_program_constants_data(buf, m_vertex_prog ? m_vertex_prog->constant_ids : std::vector<u16>{});
+		auto mem = m_transform_constants_ring_info.alloc<1>(transform_constants_size);
+		auto buf = m_transform_constants_ring_info.map(mem, transform_constants_size);
+
+		fill_vertex_program_constants_data(buf, constant_ids);
 		m_transform_constants_ring_info.unmap();
-		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, 8192 };
+		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, transform_constants_size };
 	}
 
 	if (update_fragment_constants && !update_instruction_buffers)

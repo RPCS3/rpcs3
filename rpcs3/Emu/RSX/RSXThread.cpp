@@ -864,16 +864,16 @@ namespace rsx
 	{
 		if (!reloc_table.empty()) [[ likely ]]
 		{
-			memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
-		}
-		else
-		{
 			char* dst = reinterpret_cast<char*>(buffer);
 			for (const auto& index : reloc_table)
 			{
 				utils::stream_vector_from_memory(dst, &rsx::method_registers.transform_constants[index]);
 				dst += 16;
 			}
+		}
+		else
+		{
+			memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
 		}
 	}
 
