@@ -933,7 +933,7 @@ template <typename F>
 FORCE_INLINE auto root_info::slot_search(uptr iptr, u128 mask, F func) noexcept
 {
 	u32 index = 0;
-	u32 total = 0;
+	[[maybe_unused]] u32 total = 0;
 
 	for (hash_engine _this(iptr);; _this.advance())
 	{

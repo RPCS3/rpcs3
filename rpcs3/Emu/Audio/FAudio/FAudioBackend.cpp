@@ -90,7 +90,7 @@ void FAudioBackend::Pause()
 			FAudio_.error("FAudioSourceVoice_Stop() failed(0x%08x)", res);
 		}
 
-		if (res = FAudioSourceVoice_FlushSourceBuffers(m_source_voice))
+		if ((res = FAudioSourceVoice_FlushSourceBuffers(m_source_voice)))
 		{
 			FAudio_.error("FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
 		}

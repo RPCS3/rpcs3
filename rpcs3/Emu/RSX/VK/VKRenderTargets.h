@@ -89,7 +89,7 @@ namespace vk
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
 
-		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, u8 /*samples*/)
+		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, [[maybe_unused]] u8 samples)
 		{
 			if (g_cfg.video.strict_rendering_mode)
 			{
