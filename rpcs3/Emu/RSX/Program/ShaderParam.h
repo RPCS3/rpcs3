@@ -145,7 +145,7 @@ struct ParamType
 			std::vector<ParamItem> new_list;
 			for (const auto& it : items)
 			{
-				if (it.name != item.name)
+				if (it.name != name)
 				{
 					new_list.emplace_back(it.name, it.location, it.value);
 				}
@@ -156,6 +156,7 @@ struct ParamType
 			}
 
 			std::swap(items, new_list);
+			return true;
 		}
 
 		items.push_back(item);

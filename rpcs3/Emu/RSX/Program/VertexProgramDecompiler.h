@@ -63,7 +63,7 @@ struct VertexProgramDecompiler
 	const RSXVertexProgram& m_prog;
 	ParamArray m_parr;
 
-	std::vector<u16> m_constant_ids;
+	std::set<u16> m_constant_ids;
 
 	static std::string NotZeroPositive(const std::string& code);
 	std::string GetMask(bool is_sca) const;
