@@ -1958,7 +1958,8 @@ void VKGSRender::load_program_env()
 		{
 			check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);
 
-			auto mem = m_transform_constants_ring_info.alloc<1>(transform_constants_size);
+			const auto alignment = m_device->gpu().get_limits().minUniformBufferOffsetAlignment;
+			auto mem = m_transform_constants_ring_info.alloc<1>(utils::align(transform_constants_size, alignment));
 			auto buf = m_transform_constants_ring_info.map(mem, transform_constants_size);
 
 			const std::vector<u16>& constant_ids = (transform_constants_size == 8192) ? std::vector<u16>{} : m_vertex_prog->constant_ids;
