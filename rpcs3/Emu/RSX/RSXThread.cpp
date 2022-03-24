@@ -1649,6 +1649,9 @@ namespace rsx
 
 		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
 
+		// Request for update of fragment constants if the program block is invalidated
+		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
+
 		const auto [program_offset, program_location] = method_registers.shader_program_address();
 		const auto prev_textures_reference_mask = current_fp_metadata.referenced_textures_mask;
 
@@ -1693,6 +1696,9 @@ namespace rsx
 
 		m_graphics_state &= ~rsx::pipeline_state::vertex_program_ucode_dirty;
 
+		// Reload transform constants unconditionally for now
+		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		current_vertex_program.data.reserve(512 * 4);
 		current_vertex_program.jump_table.clear();
@@ -1724,12 +1730,6 @@ namespace rsx
 
 	void thread::analyse_current_rsx_pipeline()
 	{
-		if (m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty)
-		{
-			// Request for update of fragment constants if the program block is invalidated
-			m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
-		}
-
 		prefetch_vertex_program();
 		prefetch_fragment_program();
 	}
