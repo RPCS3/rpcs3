@@ -339,7 +339,7 @@ namespace psf
 		return std::move(static_cast<fs::container_stream<std::vector<u8>>*>(stream.release().get())->obj);
 	}
 
-	std::string_view get_string(const registry& psf, const std::string& key, std::string_view def)
+	std::string_view get_string(const registry& psf, std::string_view key, std::string_view def)
 	{
 		const auto found = psf.find(key);
 
@@ -351,7 +351,7 @@ namespace psf
 		return found->second.as_string();
 	}
 
-	u32 get_integer(const registry& psf, const std::string& key, u32 def)
+	u32 get_integer(const registry& psf, std::string_view key, u32 def)
 	{
 		const auto found = psf.find(key);
 
