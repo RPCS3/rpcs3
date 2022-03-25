@@ -654,11 +654,15 @@ namespace rsx
 		rsx_iomap_table iomap_table;
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
+		u32 last_known_code_start = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		atomic_t<bool> is_inited{ false };
 		bool is_fifo_idle() const;
 		void flush_fifo();
+
+		// Returns [count of found commands, PC of their start]
+		std::pair<u32, u32> try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const;
 
 		void recover_fifo(u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
