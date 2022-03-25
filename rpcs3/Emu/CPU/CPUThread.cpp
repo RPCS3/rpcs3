@@ -892,6 +892,8 @@ u32* cpu_thread::get_pc2()
 	return nullptr;
 }
 
+std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu);
+
 std::string cpu_thread::dump_all() const
 {
 	std::string ret = cpu_thread::dump_misc();
@@ -901,6 +903,24 @@ std::string cpu_thread::dump_all() const
 	ret += dump_regs();
 	ret += '\n';
 	ret += dump_callstack();
+	ret += '\n';
+
+	if (u32 cur_pc = get_pc(); cur_pc != umax)
+	{
+		// Dump a snippet of currently executed code (may be unreliable with non-static-interpreter decoders)
+		auto disasm = make_disasm(this);
+
+		auto rsx = try_get<rsx::thread>();
+
+		for (u32 i = (rsx ? rsx->try_get_pc_of_x_cmds_backwards(10, cur_pc).second : cur_pc - 4 * 10), count = 0; count < 20; count++)
+		{
+			u32 advance = disasm->disasm(i);
+			ret += disasm->last_opcode;
+			i += std::max(advance, 4u);
+			disasm->dump_pc = i;
+			ret += '\n';
+		}
+	}
 
 	return ret;
 }
