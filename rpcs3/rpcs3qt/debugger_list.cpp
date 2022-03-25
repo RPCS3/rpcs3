@@ -8,6 +8,7 @@
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/RSXDisAsm.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/System.h"
 
 #include <QMouseEvent>
@@ -162,6 +163,16 @@ void debugger_list::scroll(s32 steps)
 		// Backwards is impossible though
 		m_pc += std::max<u32>(m_disasm->disasm(m_pc), 4);
 		steps--;
+	}
+
+	if (m_cpu && m_cpu->id_type() == 0x55 && steps < 0)
+	{
+		// If scrolling backwards (upwards), try to obtain the start of commands tail 
+		if (auto [count, res] = static_cast<rsx::thread*>(m_cpu)->try_get_pc_of_x_cmds_backwards(-steps, m_pc); count == 0u - steps)
+		{
+			steps = 0;
+			m_pc = res;
+		}
 	}
 
 	ShowAddress(m_pc + (steps * 4), false, true);
