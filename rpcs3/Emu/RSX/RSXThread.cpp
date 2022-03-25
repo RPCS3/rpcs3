@@ -2672,13 +2672,13 @@ namespace rsx
 				}
 				else
 				{
-					return {0, umax};
+					return {0, get};
 				}
 			}
 
 			if (pcs_of_valid_cmds.size() == 1u || pcs_of_valid_cmds.back() != get)
 			{
-				return {0, umax};
+				return {0, get};
 			}
 
 			u32 found_cmds_count = std::min(count, ::size32(pcs_of_valid_cmds) - 1);
