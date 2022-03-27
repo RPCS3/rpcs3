@@ -97,7 +97,11 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 			swapchain_unavailable = true;
 			break;
 		default:
-			vk::die_with_error(error);
+			// Other errors not part of rpcs3. This can be caused by 3rd party injectors with bad code, of which we have no control over.
+			// Let the application attempt to recover instead of crashing outright.
+			rsx_log.error("VkPresent returned unexpected error code %lld. Will attempt to recreate the swapchain. Please disable 3rd party injector tools.", static_cast<s64>(error));
+			swapchain_unavailable = true;
+			break;
 		}
 	}
 
