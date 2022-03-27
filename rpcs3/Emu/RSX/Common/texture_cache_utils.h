@@ -1354,7 +1354,7 @@ namespace rsx
 				set_dirty(false);
 			}
 
-			if (context == rsx::texture_upload_context::framebuffer_storage)
+			if (context == rsx::texture_upload_context::framebuffer_storage && !Emu.IsStopped())
 			{
 				// Lock, unlock
 				if (prot == utils::protection::no && old_prot != utils::protection::no)
