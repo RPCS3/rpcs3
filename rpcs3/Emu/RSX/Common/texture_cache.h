@@ -874,6 +874,12 @@ namespace rsx
 							tex.set_dirty(true);
 							result.invalidate_samplers = true;
 						}
+
+						if (tex.is_dirty() && tex.get_context() == rsx::texture_upload_context::framebuffer_storage)
+						{
+							// Make sure the region is not going to get immediately reprotected
+							m_flush_always_cache.erase(tex.get_section_range());
+						}
 					}
 				}
 
