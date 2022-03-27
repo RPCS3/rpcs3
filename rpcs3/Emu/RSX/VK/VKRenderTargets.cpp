@@ -910,7 +910,7 @@ namespace vk
 
 			if (msaa_flags & rsx::surface_state_flags::require_resolve)
 			{
-				if (access.is_transfer() && access.is_read())
+				if (access.is_transfer())
 				{
 					// Only do this step when read access is required
 					get_resolve_target_safe(cmd);
