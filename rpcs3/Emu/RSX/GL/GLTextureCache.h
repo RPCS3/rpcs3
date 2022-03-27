@@ -406,6 +406,11 @@ namespace gl
 			return managed_texture.get();
 		}
 
+		gl::render_target* get_render_target()
+		{
+			return gl::as_rtt(vram_texture);
+		}
+
 		gl::texture_view* get_raw_view()
 		{
 			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);

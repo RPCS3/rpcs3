@@ -151,6 +151,11 @@ namespace vk
 			return managed_texture;
 		}
 
+		vk::render_target* get_render_target()
+		{
+			return vk::as_rtt(vram_texture);
+		}
+
 		VkFormat get_format() const
 		{
 			if (context == rsx::texture_upload_context::dma)
@@ -292,12 +297,6 @@ namespace vk
 				default:
 					rsx_log.error("Unexpected swizzled texture format 0x%x", gcm_format);
 				}
-			}
-
-			if (context == rsx::texture_upload_context::framebuffer_storage)
-			{
-				// Update memory tag
-				static_cast<vk::render_target*>(vram_texture)->sync_tag();
 			}
 		}
 
