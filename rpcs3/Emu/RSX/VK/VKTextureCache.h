@@ -47,6 +47,18 @@ namespace vk
 
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image* image, u32 rsx_pitch, bool managed, u32 gcm_format, bool pack_swap_bytes = false)
 		{
+			if (vram_texture && !managed_texture && get_protection() == utils::protection::no)
+			{
+				// In-place image swap, still locked. Likely a color buffer that got rebound as depth buffer or vice-versa.
+				vk::as_rtt(vram_texture)->release();
+
+				if (!managed)
+				{
+					// Incoming is also an external resource, reference it immediately
+					vk::as_rtt(image)->add_ref();
+				}
+			}
+
 			auto new_texture = static_cast<vk::viewable_image*>(image);
 			ensure(!exists() || !is_managed() || vram_texture == new_texture);
 			vram_texture = new_texture;
