@@ -1544,7 +1544,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		return false;
 	}
 
-	m_host_data_ptr->last_label_release_event = ++m_host_data_ptr->event_counter;
+	m_host_data_ptr->last_label_release_event = m_host_data_ptr->inc_counter();
 
 	if (m_host_data_ptr->texture_load_request_event > m_host_data_ptr->last_label_submit_event)
 	{
@@ -1861,13 +1861,15 @@ bool VKGSRender::load_program()
 	}
 
 	const auto shadermode = g_cfg.video.shadermode.get();
+	m_vertex_prog = nullptr;
+	m_fragment_prog = nullptr;
 
 	if (shadermode != shader_mode::interpreter_only) [[likely]]
 	{
 		vk::enter_uninterruptible();
 
 		// Load current program from cache
-		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
+		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
 			shadermode != shader_mode::recompiler, true, pipeline_layout);
 
 		vk::leave_uninterruptible();
@@ -1950,15 +1952,21 @@ void VKGSRender::load_program_env()
 
 	if (update_transform_constants)
 	{
-		check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);
-
 		// Transform constants
-		auto mem = m_transform_constants_ring_info.alloc<256>(8192);
-		auto buf = m_transform_constants_ring_info.map(mem, 8192);
+		const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+		if (transform_constants_size)
+		{
+			check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);
 
-		fill_vertex_program_constants_data(buf);
-		m_transform_constants_ring_info.unmap();
-		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, 8192 };
+			const auto alignment = m_device->gpu().get_limits().minUniformBufferOffsetAlignment;
+			auto mem = m_transform_constants_ring_info.alloc<1>(utils::align(transform_constants_size, alignment));
+			auto buf = m_transform_constants_ring_info.map(mem, transform_constants_size);
+
+			const std::vector<u16>& constant_ids = (transform_constants_size == 8192) ? std::vector<u16>{} : m_vertex_prog->constant_ids;
+			fill_vertex_program_constants_data(buf, constant_ids);
+			m_transform_constants_ring_info.unmap();
+			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, transform_constants_size };
+		}
 	}
 
 	if (update_fragment_constants && !update_instruction_buffers)
@@ -1972,7 +1980,7 @@ void VKGSRender::load_program_env()
 			auto buf = m_fragment_constants_ring_info.map(mem, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-				current_fragment_program, true);
+				*ensure(m_fragment_prog), current_fragment_program, true);
 
 			m_fragment_constants_ring_info.unmap();
 			m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, mem, fragment_constants_size };

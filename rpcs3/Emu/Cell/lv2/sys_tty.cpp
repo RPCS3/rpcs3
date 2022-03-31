@@ -88,7 +88,9 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 	return CELL_OK;
 }
 
-error_code sys_tty_write(ppu_thread& ppu, s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
+std::string dump_useful_thread_info();
+
+error_code sys_tty_write([[maybe_unused]] ppu_thread& ppu, s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 {
 	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x, len=%d, pwritelen=*0x%x)", ch, buf, len, pwritelen);
 
@@ -113,7 +115,6 @@ error_code sys_tty_write(ppu_thread& ppu, s32 ch, vm::cptr<char> buf, u32 len, v
 		return current - last_write.exchange(current) >= 500'000;
 	}())
 	{
-		std::string dump_useful_thread_info();
 		ppu_log.notice("\n%s", dump_useful_thread_info());
 	}
 

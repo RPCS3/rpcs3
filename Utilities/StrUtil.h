@@ -87,6 +87,33 @@ namespace fmt
 		return src;
 	}
 
+	static inline
+	std::string replace_all(std::string src, const std::vector<std::pair<std::string, std::string>>& list)
+	{
+		for (usz pos = 0; pos < src.length(); ++pos)
+		{
+			for (usz i = 0; i < list.size(); ++i)
+			{
+				const usz comp_length = list[i].first.length();
+
+				if (src.length() - pos < comp_length)
+				{
+					continue;
+				}
+
+				if (src.substr(pos, comp_length) == list[i].first)
+				{
+					src.erase(pos, comp_length);
+					src.insert(pos, list[i].second);
+					pos += list[i].second.length() - 1;
+					break;
+				}
+			}
+		}
+
+		return src;
+	}
+
 	std::vector<std::string> split(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty = true);
 	std::string trim(const std::string& source, const std::string& values = " \t");
 

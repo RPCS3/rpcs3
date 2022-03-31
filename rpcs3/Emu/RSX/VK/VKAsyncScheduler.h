@@ -39,7 +39,7 @@ namespace vk
 
 		shared_mutex m_submit_mutex;
 
-		void init_config_options();
+		void init_config_options(vk_gpu_scheduler_mode mode);
 		void delayed_init();
 		void insert_sync_event();
 

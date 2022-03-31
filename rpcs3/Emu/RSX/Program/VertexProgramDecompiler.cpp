@@ -126,6 +126,8 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		break;
 	case RSX_VP_REGISTER_TYPE_CONSTANT:
 		m_parr.AddParam(PF_PARAM_UNIFORM, getFloatTypeName(4), std::string("vc[468]"));
+		properties.has_indexed_constants |= !!d3.index_const;
+		m_constant_ids.insert(static_cast<u16>(d1.const_src));
 		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
 		break;
 
@@ -389,6 +391,30 @@ std::string VertexProgramDecompiler::BuildCode()
 
 		// Initialize vertex output register to all 0, GPU hw does not always clear position register
 		m_parr.AddParam(PF_PARAM_OUT, float4_type, "dst_reg0", float4_type + "(0., 0., 0., 1.)");
+	}
+
+	if (!properties.has_indexed_constants && !m_constant_ids.empty())
+	{
+		// Relocate transform constants
+		std::vector<std::pair<std::string, std::string>> reloc_table;
+		reloc_table.reserve(m_constant_ids.size());
+
+		// Build the string lookup table
+		int offset = 0;
+		for (const auto& index : m_constant_ids)
+		{
+			const auto i = offset++;
+			if (i == index) continue; // Replace with self
+			reloc_table.emplace_back(fmt::format("vc[%d]", index), fmt::format("vc[%d]", i));
+		}
+
+		// One-time patch
+		main_body = fmt::replace_all(main_body, reloc_table);
+
+		// Rename the array type
+		auto type_list = ensure(m_parr.SearchParam(PF_PARAM_UNIFORM, getFloatTypeName(4)));
+		const auto item = ParamItem(fmt::format("vc[%llu]", m_constant_ids.size()), -1);
+		type_list->ReplaceOrInsert("vc[468]", item);
 	}
 
 	std::stringstream OS;

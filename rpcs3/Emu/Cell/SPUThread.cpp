@@ -1602,7 +1602,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 		else
 		{
 			// alloc_hidden indicates falloc to allocate page with no access rights in base memory
-			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, vm::page_size_64k | vm::alloc_hidden));
+			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, static_cast<u64>(vm::page_size_64k) | static_cast<u64>(vm::alloc_hidden)));
 		}
 
 		// Try to guess free area

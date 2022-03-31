@@ -10,7 +10,7 @@
 
 namespace vk
 {
-	AsyncTaskScheduler::AsyncTaskScheduler(vk_gpu_scheduler_mode mode)
+	AsyncTaskScheduler::AsyncTaskScheduler([[maybe_unused]] vk_gpu_scheduler_mode mode)
 	{
 		if (g_cfg.video.renderer != video_renderer::vulkan || !g_cfg.video.vk.asynchronous_texture_streaming)
 		{
@@ -20,7 +20,7 @@ namespace vk
 			return;
 		}
 
-		init_config_options();
+		init_config_options(mode);
 	}
 
 	AsyncTaskScheduler::~AsyncTaskScheduler()
@@ -32,7 +32,7 @@ namespace vk
 		}
 	}
 
-	void AsyncTaskScheduler::init_config_options()
+	void AsyncTaskScheduler::init_config_options(vk_gpu_scheduler_mode mode)
 	{
 		std::lock_guard lock(m_config_mutex);
 		if (std::exchange(m_options_initialized, true))
@@ -41,13 +41,13 @@ namespace vk
 			return;
 		}
 
-		m_use_host_scheduler = g_cfg.video.vk.asynchronous_scheduler == vk_gpu_scheduler_mode::safe || g_cfg.video.strict_rendering_mode;
+		m_use_host_scheduler = (mode == vk_gpu_scheduler_mode::safe) || g_cfg.video.strict_rendering_mode;
 		rsx_log.notice("Asynchronous task scheduler is active running in %s mode", m_use_host_scheduler? "'Safe'" : "'Fast'");
 	}
 
 	void AsyncTaskScheduler::delayed_init()
 	{
-		init_config_options();
+		ensure(m_options_initialized);
 
 		auto pdev = get_current_renderer();
 		m_command_pool.create(*const_cast<render_device*>(pdev), pdev->get_transfer_queue_family());

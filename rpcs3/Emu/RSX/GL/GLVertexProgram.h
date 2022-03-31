@@ -58,6 +58,8 @@ public:
 	ParamArray parr;
 	u32 id;
 	gl::glsl::shader shader;
+	std::vector<u16> constant_ids;
+	bool has_indexed_constants;
 
 	void Decompile(const RSXVertexProgram& prog);
 

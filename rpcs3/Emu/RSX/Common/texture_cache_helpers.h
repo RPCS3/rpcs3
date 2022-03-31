@@ -459,8 +459,8 @@ namespace rsx
 			{
 				if (found_slices > 0)
 				{
-					//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
-					rsx_log.error("Could not gather all required slices for cubemap/3d generation");
+					// TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
+					rsx_log.warning("Could not gather all required slices for cubemap/3d generation");
 				}
 				else
 				{

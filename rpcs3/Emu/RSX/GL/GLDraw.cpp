@@ -619,7 +619,11 @@ void GLGSRender::end()
 		return;
 	}
 
-	analyse_current_rsx_pipeline();
+	if (m_graphics_state & (rsx::pipeline_state::fragment_program_ucode_dirty | rsx::pipeline_state::vertex_program_ucode_dirty))
+	{
+		analyse_current_rsx_pipeline();
+	}
+
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	// Active texture environment is used to decode shaders

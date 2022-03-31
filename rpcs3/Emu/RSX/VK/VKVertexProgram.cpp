@@ -101,27 +101,28 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 
 void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
 {
-	OS << "layout(std140, set=0, binding = 1) uniform VertexConstantsBuffer\n";
-	OS << "{\n";
-	OS << "	vec4 vc[468];\n";
-	OS << "};\n\n";
-
 	vk::glsl::program_input in;
-	in.location = m_binding_table.vertex_constant_buffers_bind_slot;
-	in.domain = glsl::glsl_vertex_program;
-	in.name = "VertexConstantsBuffer";
-	in.type = vk::glsl::input_type_uniform_buffer;
-
-	inputs.push_back(in);
-
-
 	u32 location = m_binding_table.vertex_textures_first_bind_slot;
+
 	for (const ParamType &PT : constants)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
-			if (PI.name == "vc[468]")
+			if (PI.name.starts_with("vc["))
+			{
+				OS << "layout(std140, set=0, binding = " << static_cast<int>(m_binding_table.vertex_constant_buffers_bind_slot) << ") uniform VertexConstantsBuffer\n";
+				OS << "{\n";
+				OS << "	vec4 " << PI.name << ";\n";
+				OS << "};\n\n";
+
+				in.location = m_binding_table.vertex_constant_buffers_bind_slot;
+				in.domain = glsl::glsl_vertex_program;
+				in.name = "VertexConstantsBuffer";
+				in.type = vk::glsl::input_type_uniform_buffer;
+
+				inputs.push_back(in);
 				continue;
+			}
 
 			if (PT.type == "sampler2D" ||
 				PT.type == "samplerCube" ||
@@ -348,6 +349,9 @@ void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 	std::string source;
 	VKVertexDecompilerThread decompiler(prog, source, parr, *this);
 	decompiler.Task();
+
+	has_indexed_constants = decompiler.properties.has_indexed_constants;
+	constant_ids = std::vector<u16>(decompiler.m_constant_ids.begin(), decompiler.m_constant_ids.end());
 
 	shader.create(::glsl::program_domain::glsl_vertex_program, source);
 }

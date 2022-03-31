@@ -714,7 +714,7 @@ static void ppu_break(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_int
 	}
 
 	// Fallback to the interpreter function
-	return ppu_cache(ppu.cia)(ppu, {*this_op}, this_op, next_fn);
+	return ppu_cache(ppu.cia)(ppu, {*this_op}, this_op, ppu.state ? &ppu_ret : next_fn);
 }
 
 // Set or remove breakpoint

@@ -1154,7 +1154,7 @@ namespace vk
 			// Queue a sync update on the CB doing the load
 			auto [host_data, host_buffer] = static_cast<VKGSRender*>(rsxthr)->map_host_object_data();
 			ensure(host_data);
-			const auto event_id = ++host_data->event_counter;
+			const auto event_id = host_data->inc_counter();
 			host_data->texture_load_request_event = event_id;
 			vkCmdUpdateBuffer(cmd2, host_buffer, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
 		}

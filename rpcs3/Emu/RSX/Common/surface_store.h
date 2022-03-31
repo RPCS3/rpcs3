@@ -2,6 +2,7 @@
 
 #include "surface_utils.h"
 #include "simple_array.hpp"
+#include "ranged_map.hpp"
 #include "../gcm_enums.h"
 #include "../rsx_utils.h"
 #include <list>
@@ -44,10 +45,11 @@ namespace rsx
 		using surface_type = typename Traits::surface_type;
 		using command_list_type = typename Traits::command_list_type;
 		using surface_overlap_info = surface_overlap_info_t<surface_type>;
+		using surface_ranged_map = typename rsx::ranged_map<surface_storage_type, 0x400000>;
 
 	protected:
-		std::unordered_map<u32, surface_storage_type> m_render_targets_storage = {};
-		std::unordered_map<u32, surface_storage_type> m_depth_stencil_storage = {};
+		surface_ranged_map m_render_targets_storage = {};
+		surface_ranged_map m_depth_stencil_storage = {};
 
 		rsx::address_range m_render_targets_memory_range;
 		rsx::address_range m_depth_stencil_memory_range;
@@ -85,7 +87,7 @@ namespace rsx
 			auto insert_new_surface = [&](
 				u32 new_address,
 				deferred_clipped_region<surface_type>& region,
-				std::unordered_map<u32, surface_storage_type>& data)
+				surface_ranged_map& data)
 			{
 				surface_storage_type sink;
 				surface_type invalidated = 0;
@@ -151,7 +153,7 @@ namespace rsx
 
 				ensure(region.target == Traits::get(sink));
 				orphaned_surfaces.push_back(region.target);
-				data[new_address] = std::move(sink);
+				data.emplace(region.target->get_memory_range(), std::move(sink));
 			};
 
 			// Define incoming region
@@ -239,16 +241,16 @@ namespace rsx
 		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface, surface_type prev_surface)
 		{
 			auto scan_list = [&new_surface, address](const rsx::address_range& mem_range,
-				std::unordered_map<u32, surface_storage_type>& data) -> std::vector<std::pair<u32, surface_type>>
+				surface_ranged_map& data) -> std::vector<std::pair<u32, surface_type>>
 			{
 				std::vector<std::pair<u32, surface_type>> result;
-				for (const auto &e : data)
+				for (auto it = data.begin_range(mem_range); it != data.end(); ++it)
 				{
-					auto surface = Traits::get(e.second);
+					auto surface = Traits::get(it->second);
 
 					if (new_surface->last_use_tag >= surface->last_use_tag ||
 						new_surface == surface ||
-						address == e.first)
+						address == it->first)
 					{
 						// Do not bother synchronizing with uninitialized data
 						continue;
@@ -257,11 +259,11 @@ namespace rsx
 					// Memory partition check
 					if (mem_range.start >= constants::local_mem_base)
 					{
-						if (e.first < constants::local_mem_base) continue;
+						if (it->first < constants::local_mem_base) continue;
 					}
 					else
 					{
-						if (e.first >= constants::local_mem_base) continue;
+						if (it->first >= constants::local_mem_base) continue;
 					}
 
 					// Pitch check
@@ -277,8 +279,8 @@ namespace rsx
 						continue;
 					}
 
-					result.push_back({ e.first, surface });
-					ensure(e.first == surface->base_addr);
+					result.push_back({ it->first, surface });
+					ensure(it->first == surface->base_addr);
 				}
 
 				return result;
@@ -368,7 +370,7 @@ namespace rsx
 				{
 					// This has been 'swallowed' by the new surface and can be safely freed
 					auto &storage = surface->is_depth_surface() ? m_depth_stencil_storage : m_render_targets_storage;
-					auto &object = storage[e.first];
+					auto &object = storage.at(e.first);
 
 					ensure(object);
 
@@ -402,7 +404,7 @@ namespace rsx
 			bool store = true;
 
 			address_range *storage_bounds;
-			std::unordered_map<u32, surface_storage_type> *primary_storage, *secondary_storage;
+			surface_ranged_map *primary_storage, *secondary_storage;
 			if constexpr (depth)
 			{
 				primary_storage = &m_depth_stencil_storage;
@@ -554,7 +556,7 @@ namespace rsx
 			if (store)
 			{
 				// New surface was found among invalidated surfaces or created from scratch
-				(*primary_storage)[address] = std::move(new_surface_storage);
+				primary_storage->emplace(new_surface->get_memory_range(), std::move(new_surface_storage));
 			}
 
 			ensure(!old_surface_storage);
@@ -968,15 +970,15 @@ namespace rsx
 
 			const auto test_range = utils::address_range::start_length(texaddr, (required_pitch * required_height) - (required_pitch - surface_internal_pitch));
 
-			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data, bool is_depth)
+			auto process_list_function = [&](surface_ranged_map& data, bool is_depth)
 			{
-				for (auto& tex_info : data)
+				for (auto it = data.begin_range(test_range); it != data.end(); ++it)
 				{
-					const auto range = tex_info.second->get_memory_range();
+					const auto range = it->second->get_memory_range();
 					if (!range.overlaps(test_range))
 						continue;
 
-					auto surface = tex_info.second.get();
+					auto surface = it->second.get();
 					if (access.is_transfer() && access.is_read() && surface->write_through())
 					{
 						// The surface has no data other than what can be loaded from CPU
@@ -1150,18 +1152,18 @@ namespace rsx
 		void invalidate_all()
 		{
 			// Unbind and invalidate all resources
-			auto free_resource_list = [&](auto &data)
+			auto free_resource_list = [&](auto &data, const utils::address_range& range)
 			{
-				for (auto &e : data)
+				for (auto it = data.begin_range(range); it != data.end(); ++it)
 				{
-					invalidate(e.second);
+					invalidate(it->second);
 				}
 
 				data.clear();
 			};
 
-			free_resource_list(m_render_targets_storage);
-			free_resource_list(m_depth_stencil_storage);
+			free_resource_list(m_render_targets_storage, m_render_targets_memory_range);
+			free_resource_list(m_depth_stencil_storage, m_depth_stencil_memory_range);
 
 			ensure(m_active_memory_used == 0);
 
@@ -1175,21 +1177,23 @@ namespace rsx
 
 		void invalidate_range(const rsx::address_range& range)
 		{
-			for (auto &rtt : m_render_targets_storage)
+			for (auto it = m_render_targets_storage.begin_range(range); it != m_render_targets_storage.end(); ++it)
 			{
-				if (range.overlaps(rtt.second->get_memory_range()))
+				auto& rtt = it->second;
+				if (range.overlaps(rtt->get_memory_range()))
 				{
-					rtt.second->clear_rw_barrier();
-					rtt.second->state_flags |= rsx::surface_state_flags::erase_bkgnd;
+					rtt->clear_rw_barrier();
+					rtt->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 				}
 			}
 
-			for (auto &ds : m_depth_stencil_storage)
+			for (auto it = m_depth_stencil_storage.begin_range(range); it != m_depth_stencil_storage.end(); ++it)
 			{
-				if (range.overlaps(ds.second->get_memory_range()))
+				auto& ds = it->second;
+				if (range.overlaps(ds->get_memory_range()))
 				{
-					ds.second->clear_rw_barrier();
-					ds.second->state_flags |= rsx::surface_state_flags::erase_bkgnd;
+					ds->clear_rw_barrier();
+					ds->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 				}
 			}
 		}
@@ -1219,9 +1223,9 @@ namespace rsx
 
 		virtual bool handle_memory_pressure(command_list_type cmd, problem_severity severity)
 		{
-			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
+			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range& range)
 			{
-				for (auto It = data.begin(); It != data.end();)
+				for (auto It = data.begin_range(range); It != data.end();)
 				{
 					auto surface = Traits::get(It->second);
 					if (surface->dirty())
@@ -1250,8 +1254,8 @@ namespace rsx
 			const auto old_usage = m_active_memory_used;
 
 			// Try and find old surfaces to remove
-			process_list_function(m_render_targets_storage);
-			process_list_function(m_depth_stencil_storage);
+			process_list_function(m_render_targets_storage, m_render_targets_memory_range);
+			process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
 
 			return (m_active_memory_used < old_usage);
 		}

@@ -5,6 +5,7 @@
 #include "Emu/Cell/timers.hpp"
 
 #include "Common/BufferUtils.h"
+#include "Common/buffer_stream.hpp"
 #include "Common/texture_cache.h"
 #include "Common/surface_store.h"
 #include "Common/time.hpp"
@@ -805,10 +806,10 @@ namespace rsx
 		float offset_z = rsx::method_registers.viewport_offset_z();
 		float one = 1.f;
 
-		stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
-		stream_vector(static_cast<char*>(buffer) + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
-		stream_vector(static_cast<char*>(buffer) + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
-		stream_vector(static_cast<char*>(buffer) + 48, 0, 0, 0, std::bit_cast<u32>(one));
+		utils::stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
+		utils::stream_vector(static_cast<char*>(buffer) + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
+		utils::stream_vector(static_cast<char*>(buffer) + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
+		utils::stream_vector(static_cast<char*>(buffer) + 48, 0, 0, 0, std::bit_cast<u32>(one));
 	}
 
 	void thread::fill_user_clip_data(void *buffer) const
@@ -859,9 +860,21 @@ namespace rsx
 	* Fill buffer with vertex program constants.
 	* Buffer must be at least 512 float4 wide.
 	*/
-	void thread::fill_vertex_program_constants_data(void* buffer)
+	void thread::fill_vertex_program_constants_data(void* buffer, const std::vector<u16>& reloc_table)
 	{
-		memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
+		if (!reloc_table.empty()) [[ likely ]]
+		{
+			char* dst = reinterpret_cast<char*>(buffer);
+			for (const auto& index : reloc_table)
+			{
+				utils::stream_vector_from_memory(dst, &rsx::method_registers.transform_constants[index]);
+				dst += 16;
+			}
+		}
+		else
+		{
+			memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
+		}
 	}
 
 	void thread::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/)
@@ -936,8 +949,8 @@ namespace rsx
 		const f32 alpha_ref = rsx::method_registers.alpha_ref();
 
 		u32 *dst = static_cast<u32*>(buffer);
-		stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
-		stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
+		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
+		utils::stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
 	u64 thread::timestamp()
@@ -1636,6 +1649,9 @@ namespace rsx
 
 		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
 
+		// Request for update of fragment constants if the program block is invalidated
+		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
+
 		const auto [program_offset, program_location] = method_registers.shader_program_address();
 		const auto prev_textures_reference_mask = current_fp_metadata.referenced_textures_mask;
 
@@ -1680,6 +1696,9 @@ namespace rsx
 
 		m_graphics_state &= ~rsx::pipeline_state::vertex_program_ucode_dirty;
 
+		// Reload transform constants unconditionally for now
+		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		current_vertex_program.data.reserve(512 * 4);
 		current_vertex_program.jump_table.clear();
@@ -1711,12 +1730,6 @@ namespace rsx
 
 	void thread::analyse_current_rsx_pipeline()
 	{
-		if (m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty)
-		{
-			// Request for update of fragment constants if the program block is invalidated
-			m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
-		}
-
 		prefetch_vertex_program();
 		prefetch_fragment_program();
 	}
