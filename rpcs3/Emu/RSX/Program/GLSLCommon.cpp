@@ -901,6 +901,22 @@ namespace glsl
 				"#define TEX2D_SHADOWPROJ_MS(index, coord4) TEX2D_SHADOW_MS(index, (coord4.xyz / coord4.w))\n"
 				"#define TEX2D_Z24X8_RGBA8_MS(index, coord2) process_texel(convert_z24x8_to_rgba8(ZS_READ_MS(index, coord2), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n\n";
 
+				OS <<
+				R"(
+				vec3 compute2x2DownsampleWeights(const in float coord, const in float uv_step, const in float actual_step)
+				{
+					const float last_sample_point = max(coord - actual_step, 0.);
+					const float next_sample_point = min(coord + actual_step, 1.);
+					const float last_coord_step = floor(coord / uv_step) * uv_step;
+					const float next_coord_step = last_coord_step + uv_step;
+					const float next_next_coord_step = next_coord_step + uv_step;
+					const vec3 weights = vec3(next_coord_step - coord,
+								min(next_next_coord_step, next_sample_point) - next_coord_step,
+								max(next_next_coord_step, next_sample_point) - next_next_coord_step);
+					return weights / dot(weights, vec3(1));
+				}
+				)";
+
 				auto insert_msaa_sample_code = [&OS](const std::string_view& sampler_type)
 				{
 					OS <<
@@ -937,9 +953,9 @@ namespace glsl
 					"	}\n"
 					"\n"
 					"	// Fetch remaining samples\n"
-					"	const vec4 sample1 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 0));\n"
-					"	const vec4 sample2 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(0, 1));\n"
-					"	const vec4 sample3 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 1));\n"
+					"	const vec4 sample1 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 0));\n"     // Bottom right
+					"	const vec4 sample2 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(0, 1));\n"     // Top left
+					"	const vec4 sample3 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 1));\n"     // Top right
 					"\n"
 					"	vec4 a, b;\n"
 					"	float factor;\n"
@@ -947,13 +963,12 @@ namespace glsl
 					"	if (actual_step.x > uv_step.x)\n"
 					"	{\n"
 					"		// Downscale in X, centered\n"
-					"		const vec4 sample4 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(-1, 0));\n"
-					"		const vec4 sample5 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(-1, 1));\n"
+					"		const vec4 sample4 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(2, 0));\n"    // Further bottom right
+					"		const vec4 sample5 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(2, 1));\n"    // Further top right
+					"		const vec3 weights = compute2x2DownsampleWeights(normalized_coords.x, uv_step.x, actual_step.x);\n"
 					"\n"
-					"		factor = min(actual_step.x / uv_step.x, 2.0);\n"
-					"		const float half_factor = (factor - 1.) * 0.5;\n"
-					"		a = fma((sample1 + sample4), half_factor.xxxx, sample0) / factor;\n"
-					"		b = fma((sample3 + sample5), half_factor.xxxx, sample2) / factor;\n"
+					"		a = (sample0 * weights.x + sample1 * weights.y + sample4 * weights.z);\n"  // Weighted sum
+					"		b = (sample2 * weights.x + sample3 * weights.y + sample5 * weights.z);\n"  // Weighted sum
 					"	}\n"
 					"	else if (actual_step.x < uv_step.x)\n"
 					"	{\n"
@@ -972,8 +987,9 @@ namespace glsl
 					"	if (actual_step.y > uv_step.y)\n"
 					"	{\n"
 					"		// Downscale in Y\n"
-					"		factor = min(actual_step.y / uv_step.y, 2.0);\n"
-					"		return fma(b, (factor - 1).xxxx, a) / factor;\n"
+					"		const vec3 weights = compute2x2DownsampleWeights(normalized_coords.y, uv_step.y, actual_step.y);\n"
+					"		// We only have 2 rows computed for performance reasons, so combine rows 1 and 2\n"
+					"		return a * weights.x + b * (weights.y + weights.z);\n"
 					"	}\n"
 					"	else if (actual_step.y < uv_step.y)\n"
 					"	{\n"
