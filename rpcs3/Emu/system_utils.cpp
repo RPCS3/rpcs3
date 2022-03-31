@@ -70,12 +70,12 @@ namespace rpcs3::utils
 	u32 check_user(const std::string& user)
 	{
 		u32 id = 0;
-	
+
 		if (user.size() == 8)
 		{
 			std::from_chars(&user.front(), &user.back() + 1, id);
 		}
-	
+
 		return id;
 	}
 
