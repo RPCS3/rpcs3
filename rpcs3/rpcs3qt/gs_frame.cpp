@@ -830,19 +830,9 @@ bool gs_frame::event(QEvent* ev)
 			}
 
 			int result = QMessageBox::Yes;
-			atomic_t<bool> called = false;
-
-			Emu.CallFromMainThread([this, &result, &called]()
-			{
-				m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
-					tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>"),
-					gui::ib_confirm_exit, &result, nullptr);
-
-				called = true;
-				called.notify_one();
-			});
-
-			called.wait(false);
+			m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
+				tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>"),
+				gui::ib_confirm_exit, &result, nullptr);
 
 			if (result != QMessageBox::Yes)
 			{
