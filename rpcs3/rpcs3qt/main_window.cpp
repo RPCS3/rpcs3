@@ -73,6 +73,10 @@ extern void process_qt_events()
 {
 	if (thread_ctrl::is_main())
 	{
+		// NOTE:
+		// I noticed that calling this from an Emu callback can cause the
+		// caller to get stuck for a while during newly opened Qt dialogs.
+		// Adding a timeout here doesn't seem to do anything in that case.
 		QApplication::processEvents();
 	}
 }
