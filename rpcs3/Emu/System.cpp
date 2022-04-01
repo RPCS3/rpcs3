@@ -1690,7 +1690,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 
 	auto perform_kill = [allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
 	{
-		for (u32 i = 0; i < 50; i++)
+		for (u32 i = 0; i < 100; i++)
 		{
 			std::this_thread::sleep_for(50ms);
 			Resume(); // TODO: Prevent pausing by other threads while in this loop
