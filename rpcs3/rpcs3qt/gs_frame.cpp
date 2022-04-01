@@ -69,7 +69,6 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 
 	m_window_title = Emu.GetFormattedTitle(0);
-
 	if (!appIcon.isNull())
 	{
 		setIcon(appIcon);
@@ -502,6 +501,28 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
 	static Timer fps_t;
 
+	const auto is_cuda = [](double val)
+	{
+		if (g_cfg.video.renderer == video_renderer::cuda)
+		{
+			double limit = 0.0;
+			switch (g_disable_frame_limit ? frame_limit_type::none : g_cfg.video.frame_limit)
+			{
+			case frame_limit_type::none: limit = 0.; break;
+			case frame_limit_type::_59_94: limit = 59.94; break;
+			case frame_limit_type::_50: limit = 50.; break;
+			case frame_limit_type::_60: limit = 60.; break;
+			case frame_limit_type::_30: limit = 30.; break;
+			case frame_limit_type::_auto: limit = static_cast<double>(g_cfg.video.vblank_rate); break;
+			default:
+				break;
+			}
+			val = val * 1.3;
+			if (limit) val = std::min(limit, val);
+		}
+		return val;
+	};
+
 	if (!m_flip_showed_frame)
 	{
 		// Show on first flip
@@ -514,7 +535,7 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
-		std::string new_title = Emu.GetFormattedTitle(m_frames / fps_t.GetElapsedTimeInSec());
+		std::string new_title = Emu.GetFormattedTitle(is_cuda(m_frames / fps_t.GetElapsedTimeInSec()));
 
 		if (new_title != m_window_title)
 		{

@@ -43,6 +43,7 @@
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
+#include "Emu/RSX/GL/CudaRender.h"
 
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
@@ -291,6 +292,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	switch (g_cfg.video.renderer.get())
 	{
 	case video_renderer::opengl:
+	case video_renderer::cuda:
 	{
 		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
 		break;
@@ -359,6 +361,13 @@ void gui_application::InitializeCallbacks()
 		{
 #if defined(HAVE_VULKAN)
 			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+#endif
+			break;
+		}
+		case video_renderer::cuda:
+		{
+#if not defined(__APPLE__)
+			g_fxo->init<rsx::thread, named_thread<CudaRender>>();
 #endif
 			break;
 		}

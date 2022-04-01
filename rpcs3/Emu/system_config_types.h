@@ -46,6 +46,7 @@ enum class video_renderer
 	null,
 	opengl,
 	vulkan,
+	cuda,
 };
 
 enum class audio_renderer

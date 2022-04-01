@@ -74,6 +74,7 @@ void headless_application::InitializeCallbacks()
 		}
 		case video_renderer::opengl:
 		case video_renderer::vulkan:
+		case video_renderer::cuda:
 		{
 			fmt::throw_exception("Headless mode can only be used with the %s video renderer. Current renderer: %s", video_renderer::null, type);
 			[[fallthrough]];

@@ -51,6 +51,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Emu\RSX\GL\CudaRender.h" />
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
     <ClInclude Include="Emu\RSX\GL\GLExecutionState.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
@@ -70,6 +71,7 @@
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Emu\RSX\GL\CudaRender.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCompute.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLDraw.cpp" />
