@@ -593,10 +593,12 @@ namespace glsl
 				"#define RENORMALIZE  " << rsx::texture_control_bits::RENORMALIZE << "\n"
 				"#define DEPTH_FLOAT   " << rsx::texture_control_bits::DEPTH_FLOAT << "\n"
 				"#define DEPTH_COMPARE " << rsx::texture_control_bits::DEPTH_COMPARE_OP << "\n"
-				"#define FILTERED_BIT  " << rsx::texture_control_bits::FILTERED << "\n"
+				"#define FILTERED_MAG_BIT  " << rsx::texture_control_bits::FILTERED_MAG << "\n"
+				"#define FILTERED_MIN_BIT  " << rsx::texture_control_bits::FILTERED_MIN << "\n"
 				"#define INT_COORDS_BIT " << rsx::texture_control_bits::UNNORMALIZED_COORDS << "\n"
 				"#define GAMMA_CTRL_MASK  (GAMMA_R_MASK|GAMMA_G_MASK|GAMMA_B_MASK|GAMMA_A_MASK)\n"
-				"#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n\n";
+				"#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n"
+				"#define FILTERED_MASK    (FILTERED_MAG_BIT|FILTERED_MIN_BIT)\n\n";
 			}
 		}
 
@@ -902,43 +904,37 @@ namespace glsl
 				"#define TEX2D_Z24X8_RGBA8_MS(index, coord2) process_texel(convert_z24x8_to_rgba8(ZS_READ_MS(index, coord2), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n\n";
 
 				OS <<
-				R"(
-				vec3 compute2x2DownsampleWeights(const in float coord, const in float uv_step, const in float actual_step)
-				{
-					const float last_sample_point = max(coord - actual_step, 0.);
-					const float next_sample_point = min(coord + actual_step, 1.);
-					const float last_coord_step = floor(coord / uv_step) * uv_step;
-					const float next_coord_step = last_coord_step + uv_step;
-					const float next_next_coord_step = next_coord_step + uv_step;
-					const vec3 weights = vec3(next_coord_step - coord,
-								min(next_next_coord_step, next_sample_point) - next_coord_step,
-								max(next_next_coord_step, next_sample_point) - next_next_coord_step);
-					return weights / dot(weights, vec3(1));
-				}
-				)";
+				"vec3 compute2x2DownsampleWeights(const in float coord, const in float uv_step, const in float actual_step)"
+				"{\n"
+				"	const float next_sample_point = coord + actual_step;\n"
+				"	const float next_coord_step = fma(floor(coord / uv_step), uv_step, uv_step);\n"
+				"	const float next_coord_step_plus_one = next_coord_step + uv_step;\n"
+				"	vec3 weights = vec3(next_coord_step, min(next_coord_step_plus_one, next_sample_point), max(next_coord_step_plus_one, next_sample_point)) - vec3(coord, next_coord_step, next_coord_step_plus_one);\n"
+				"	return weights / actual_step;\n"
+				"}\n\n";
 
 				auto insert_msaa_sample_code = [&OS](const std::string_view& sampler_type)
 				{
 					OS <<
-					"vec4 texelFetch2DMS(in " << sampler_type << " tex, const in ivec2 sample_count, const in ivec2 icoords, const in int index, const in ivec2 offset)\n"
+					"vec4 texelFetch2DMS(in " << sampler_type << " tex, const in vec2 sample_count, const in ivec2 icoords, const in int index, const in ivec2 offset)\n"
 					"{\n"
-					"	const ivec2 resolve_coords = (icoords + offset) * ivec2(bvec2(texture_parameters[index].scale_bias.xy));\n"
-					"	const ivec2 aa_coords = resolve_coords / sample_count;\n"
-					"	const ivec2 sample_loc = ivec2(resolve_coords % sample_count);\n"
-					"	const int sample_index = sample_loc.x + (sample_loc.y * sample_count.y);\n"
-					"	return texelFetch(tex, aa_coords, sample_index);\n"
+					"	const vec2 resolve_coords = vec2(icoords + offset);\n"
+					"	const vec2 aa_coords = floor(resolve_coords / sample_count);\n"               // AA coords = real_coords / sample_count
+					"	const vec2 sample_loc = fma(aa_coords, -sample_count, resolve_coords);\n"     // Sample ID = real_coords % sample_count
+					"	const float sample_index = fma(sample_loc.y, sample_count.y, sample_loc.x);\n"
+					"	return texelFetch(tex, ivec2(aa_coords), int(sample_index));\n"
 					"}\n\n"
 
 					"vec4 sampleTexture2DMS(in " << sampler_type << " tex, const in vec2 coords, const in int index)\n"
 					"{\n"
 					"	const uint flags = TEX_FLAGS(index);\n"
 					"	const vec2 normalized_coords = COORD_SCALE2(index, coords);\n"
-					"	const ivec2 sample_count = ivec2(2, textureSamples(tex) / 2);\n"
-					"	const ivec2 image_size = textureSize(tex) * sample_count;\n"
+					"	const vec2 sample_count = vec2(2., textureSamples(tex) * 0.5);\n"
+					"	const vec2 image_size = textureSize(tex) * sample_count;\n"
 					"	const ivec2 icoords = ivec2(normalized_coords * image_size);\n"
 					"	const vec4 sample0 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(0));\n"
 					"\n"
-					"	if (!_test_bit(flags, FILTERED_BIT))\n"
+					"	if (_get_bits(flags, FILTERED_MAG_BIT, 2) == 0)\n"
 					"	{\n"
 					"		return sample0;\n"
 					"	}\n"
@@ -947,44 +943,57 @@ namespace glsl
 					"	const vec2 uv_step = 1.0 / vec2(image_size);\n"
 					"	const vec2 actual_step = vec2(dFdx(normalized_coords.x), dFdy(normalized_coords.y));\n"
 					"\n"
-					"	if (uv_step.x == actual_step.x && uv_step.y == actual_step.y)\n"
+					"	const bvec2 no_filter = lessThan(abs(uv_step - actual_step), vec2(0.000001));\n"
+					"	if (no_filter.x && no_filter.y)\n"
 					"	{\n"
 					"		return sample0;\n"
 					"	}\n"
 					"\n"
-					"	// Fetch remaining samples\n"
-					"	const vec4 sample1 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 0));\n"     // Bottom right
-					"	const vec4 sample2 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(0, 1));\n"     // Top left
-					"	const vec4 sample3 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 1));\n"     // Top right
-					"\n"
 					"	vec4 a, b;\n"
 					"	float factor;\n"
+					"	const vec4 sample2 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(0, 1));     // Top left\n"
 					"\n"
-					"	if (actual_step.x > uv_step.x)\n"
-					"	{\n"
-					"		// Downscale in X, centered\n"
-					"		const vec4 sample4 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(2, 0));\n"    // Further bottom right
-					"		const vec4 sample5 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(2, 1));\n"    // Further top right
-					"		const vec3 weights = compute2x2DownsampleWeights(normalized_coords.x, uv_step.x, actual_step.x);\n"
-					"\n"
-					"		a = (sample0 * weights.x + sample1 * weights.y + sample4 * weights.z);\n"  // Weighted sum
-					"		b = (sample2 * weights.x + sample3 * weights.y + sample5 * weights.z);\n"  // Weighted sum
-					"	}\n"
-					"	else if (actual_step.x < uv_step.x)\n"
-					"	{\n"
-					"		// Upscale in X\n"
-					"		factor = fract(normalized_coords.x * image_size.x);\n"
-					"		a = mix(sample0, sample1, factor);\n"
-					"		b = mix(sample2, sample3, factor);\n"
-					"	}\n"
-					"	else\n"
+					"	if (no_filter.x)\n"
 					"	{\n"
 					"		// No scaling, 1:1\n"
 					"		a = sample0;\n"
 					"		b = sample2;\n"
 					"	}\n"
+					"	else\n"
+					"	{\n"
+					"		// Filter required, sample more data\n"
+					"		const vec4 sample1 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 0));     // Bottom right\n"
+					"		const vec4 sample3 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 1));     // Top right\n"
 					"\n"
-					"	if (actual_step.y > uv_step.y)\n"
+					"		if (actual_step.x > uv_step.x)\n"
+					"		{\n"
+					"		    // Downscale in X, centered\n"
+					"		    const vec3 weights = compute2x2DownsampleWeights(normalized_coords.x, uv_step.x, actual_step.x);\n"
+					"\n"
+					"		    const vec4 sample4 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(2, 0));    // Further bottom right\n"
+					"		    a = fma(sample0, weights.xxxx, sample1 * weights.y) + (sample4 * weights.z);  // Weighted sum\n"
+					"\n"
+					"		    if (!no_filter.y)\n"
+					"		    {\n"
+					"		        const vec4 sample5 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(2, 1));    // Further top right\n"
+					"		        b = fma(sample2, weights.xxxx, sample3 * weights.y) + (sample5 * weights.z);  // Weighted sum\n"
+					"		    }\n"
+					"		}\n"
+					"		else if (actual_step.x < uv_step.x)\n"
+					"		{\n"
+					"		    // Upscale in X\n"
+					"		    factor = fract(normalized_coords.x * image_size.x);\n"
+					"		    a = mix(sample0, sample1, factor);\n"
+					"		    b = mix(sample2, sample3, factor);\n"
+					"		}\n"
+					"	}\n"
+					"\n"
+					"	if (no_filter.y)\n"
+					"	{\n"
+					"		// 1:1 no scale\n"
+					"		return a;\n"
+					"	}\n"
+					"	else if (actual_step.y > uv_step.y)\n"
 					"	{\n"
 					"		// Downscale in Y\n"
 					"		const vec3 weights = compute2x2DownsampleWeights(normalized_coords.y, uv_step.y, actual_step.y);\n"
@@ -996,11 +1005,6 @@ namespace glsl
 					"		// Upscale in Y\n"
 					"		factor = fract(normalized_coords.y * image_size.y);\n"
 					"		return mix(a, b, factor);\n"
-					"	}\n"
-					"	else\n"
-					"	{\n"
-					"		// 1:1 no scale\n"
-					"		return a;\n"
 					"	}\n"
 					"}\n\n";
 				};
