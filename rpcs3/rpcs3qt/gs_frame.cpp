@@ -357,21 +357,34 @@ bool gs_frame::get_mouse_lock_state()
 	return isActive() && m_mouse_hide_and_lock;
 }
 
+void gs_frame::hide_on_close()
+{
+	if (!(+g_progr))
+	{
+		// Hide the dialog before stopping if no progress bar is being shown.
+		// Otherwise users might think that the game softlocked if stopping takes too long.
+		QWindow::hide();
+	}
+}
+
 void gs_frame::close()
 {
+	if (m_is_closing.exchange(true))
+	{
+		gui_log.notice("Closing game window (ignored, already closing)");
+		return;
+	}
+
 	gui_log.notice("Closing game window");
 
 	Emu.CallFromMainThread([this]()
 	{
-		if (!(+g_progr))
-		{
-			// Hide the dialog before stopping if no progress bar is being shown.
-			// Otherwise users might think that the game softlocked if stopping takes too long.
-			QWindow::hide();
-		}
+		// Hide window if necessary
+		hide_on_close();
 
 		if (!Emu.IsStopped())
 		{
+			// Blocking shutdown request. Obsolete, but I'm keeping it here as last resort.
 			Emu.GracefulShutdown(true, false);
 		}
 
@@ -838,7 +851,23 @@ bool gs_frame::event(QEvent* ev)
 		}
 
 		gui_log.notice("Game window close event issued");
-		close();
+
+		if (Emu.IsStopped())
+		{
+			// This should be unreachable, but never say never. Properly close the window anyway.
+			close();
+		}
+		else
+		{
+			// Issue async shutdown
+			Emu.GracefulShutdown(true, true);
+
+			// Hide window if necessary
+			hide_on_close();
+
+			// Do not propagate the close event. It will be closed by the rsx_thread.
+			return true;
+		}
 	}
 	else if (ev->type() == QEvent::MouseMove && (!m_show_mouse || m_mousehide_timer.isActive()))
 	{
