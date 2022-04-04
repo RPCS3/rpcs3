@@ -166,7 +166,7 @@ namespace utils
 	struct scoped_av
 	{
 		AVFormatContext* format = nullptr;
-		AVCodec* codec = nullptr;
+		const AVCodec* codec = nullptr;
 		AVCodecContext* context = nullptr;
 		AVFrame* frame = nullptr;
 		SwrContext* swr = nullptr;
@@ -180,8 +180,8 @@ namespace utils
 				swr_free(&swr);
 			if (context)
 				avcodec_close(context);
-			if (codec)
-				av_free(codec);
+			// AVCodec is managed by libavformat, no need to free it
+			// see: https://stackoverflow.com/a/18047320
 			if (format)
 				avformat_free_context(format);
 		}
