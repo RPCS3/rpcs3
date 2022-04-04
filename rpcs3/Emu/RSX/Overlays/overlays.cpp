@@ -3,6 +3,7 @@
 #include "overlay_message_dialog.h"
 #include "Input/pad_thread.h"
 #include "Emu/Io/interception.h"
+#include "Emu/Io/KeyboardHandler.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Common/time.hpp"
 
@@ -64,7 +65,7 @@ namespace rsx
 				state.fill(true);
 			}
 
-			input_timer.Start();
+			m_input_timer.Start();
 
 			input::SetIntercepted(true);
 
@@ -77,7 +78,7 @@ namespace rsx
 
 				if (pressed)
 				{
-					const bool is_auto_repeat_button = auto_repeat_buttons.contains(button_id);
+					const bool is_auto_repeat_button = m_auto_repeat_buttons.contains(button_id);
 
 					if (!last_button_state[pad_index][button_id])
 					{
@@ -90,8 +91,8 @@ namespace rsx
 					else if (is_auto_repeat_button)
 					{
 						if (last_auto_repeat_button[pad_index] == button_id
-						    && input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold
-						    && input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
+						    && m_input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold
+						    && m_input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
 						{
 							// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
 							timestamp[pad_index] = steady_clock::now();
@@ -115,18 +116,60 @@ namespace rsx
 
 			while (!exit)
 			{
+				std::this_thread::sleep_for(1ms);
+
 				if (Emu.IsStopped())
 					return selection_code::canceled;
 
-				std::this_thread::sleep_for(1ms);
+				if (Emu.IsPaused())
+					continue;
 
+				// Get keyboard input
+				if (m_keyboard_input_enabled)
+				{
+					auto& handler = g_fxo->get<KeyboardHandlerBase>();
+					std::lock_guard<std::mutex> lock(handler.m_mutex);
+
+					const KbInfo& current_info = handler.GetInfo();
+
+					if (!handler.GetKeyboards().empty() && current_info.status[0] == CELL_KB_STATUS_CONNECTED)
+					{
+						KbData& current_data = handler.GetData(0);
+
+						if (current_data.len > 0)
+						{
+							for (s32 i = 0; i < current_data.len; i++)
+							{
+								const KbButton& key = current_data.buttons[i];
+								on_key_pressed(current_data.led, current_data.mkey, key.m_keyCode, key.m_outKeyCode, key.m_pressed);
+							}
+
+							// TODO: is the following step necessary in the overlays?
+							KbConfig& current_config = handler.GetConfig(0);
+
+							// For single character mode to work properly we need to "flush" the buffer after reading or else we'll constantly get the same key presses with each call.
+							// Actual key repeats are handled by adding a new key code to the buffer periodically. Key releases are handled in a similar fashion.
+							// Warning: Don't do this in packet mode, which is basically the mouse and keyboard gaming mode. Otherwise games like Unreal Tournament will be unplayable.
+							if (current_config.read_mode == CELL_KB_RMODE_INPUTCHAR)
+							{
+								current_data.len = 0;
+							}
+						}
+					}
+					else
+					{
+						// TODO: Init handler only if the game requests keyboard input.
+						//       This probably needs to happen completely seperate from cellKb.
+						handler.Init(1);
+					}
+				}
+
+				// Get gamepad input
 				std::lock_guard lock(pad::g_pad_mutex);
-
 				const auto handler = pad::get_current_handler();
-
 				const PadInfo& rinfo = handler->GetInfo();
 
-				if (Emu.IsPaused() || !rinfo.now_connect)
+				if (!rinfo.now_connect)
 				{
 					continue;
 				}
