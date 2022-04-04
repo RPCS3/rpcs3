@@ -24,10 +24,25 @@ enum QtKeys
 
 struct KbInfo
 {
-	u32 max_connect;
-	u32 now_connect;
-	u32 info;
-	u8 status[CELL_KB_MAX_KEYBOARDS];
+	u32 max_connect = 0;
+	u32 now_connect = 0;
+	u32 info = 0;
+	std::array<u8, CELL_KB_MAX_KEYBOARDS> status{};
+};
+
+struct KbButton
+{
+	u32 m_keyCode = 0;
+	u32 m_outKeyCode = 0;
+	bool m_pressed = false;
+	
+	KbButton() = default;
+	KbButton(u32 keyCode, u32 outKeyCode, bool pressed = false)
+		: m_keyCode(keyCode)
+		, m_outKeyCode(outKeyCode)
+		, m_pressed(pressed)
+	{
+	}
 };
 
 struct KbData
@@ -35,7 +50,7 @@ struct KbData
 	u32 led;  // Active led lights
 	u32 mkey; // Active key modifiers
 	s32 len;  // Number of key codes (0 means no data available)
-	std::pair<u16, u32> keycode[CELL_KB_MAX_KEYCODES];
+	std::array<KbButton, CELL_KB_MAX_KEYCODES> buttons{};
 
 	KbData()
 		: led(0)
@@ -59,24 +74,11 @@ struct KbConfig
 	}
 };
 
-struct KbButton
-{
-	u32 m_keyCode;
-	u32 m_outKeyCode;
-	bool m_pressed = false;
-
-	KbButton(u32 keyCode, u32 outKeyCode)
-		: m_keyCode(keyCode)
-		, m_outKeyCode(outKeyCode)
-	{
-	}
-};
-
 struct Keyboard
 {
 	bool m_key_repeat = false;
-	KbData m_data;
-	KbConfig m_config;
+	KbData m_data{};
+	KbConfig m_config{};
 	std::vector<KbButton> m_buttons;
 
 	Keyboard()
@@ -109,6 +111,6 @@ public:
 protected:
 	void ReleaseAllKeys();
 
-	KbInfo m_info;
+	KbInfo m_info{};
 	std::vector<Keyboard> m_keyboards;
 };
