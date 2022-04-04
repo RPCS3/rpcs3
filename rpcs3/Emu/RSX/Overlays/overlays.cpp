@@ -154,6 +154,10 @@ namespace rsx
 							{
 								current_data.len = 0;
 							}
+
+							// Ignore gamepad input if a key was recognized
+							refresh();
+							continue;
 						}
 					}
 					else
@@ -171,6 +175,7 @@ namespace rsx
 
 				if (!rinfo.now_connect)
 				{
+					refresh();
 					continue;
 				}
 
