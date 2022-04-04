@@ -98,7 +98,7 @@ error_code cellKbClearBuf(u32 port_no)
 
 	for (int i = 0; i < CELL_KB_MAX_KEYCODES; i++)
 	{
-		current_data.keycode[i] = { 0, 0 };
+		current_data.buttons[i] = KbButton(CELL_KEYC_NO_EVENT, 0, false);
 	}
 
 	return CELL_OK;
@@ -312,7 +312,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	{
 		for (s32 i = 0; i < current_data.len; i++)
 		{
-			data->keycode[i] = current_data.keycode[i].first;
+			data->keycode[i] = current_data.buttons[i].m_keyCode;
 		}
 
 		KbConfig& current_config = handler.GetConfig(port_no);
