@@ -656,6 +656,7 @@ namespace rsx
 				}
 			}
 
+			rsx_log.notice("rsx::surface_cache::check_for_duplicates_fast analysed %u overlapping sections and removed %u", ::size32(sections), removed_count);
 			return removed_count;
 		}
 
@@ -672,6 +673,8 @@ namespace rsx
 			// Tag end
 			u32* overrun_test_ptr = utils::bless<u32>(marker.data() + range.length());
 			*overrun_test_ptr = overrun_cookie_value;
+
+			u32 removed_count = 0;
 
 			auto compare_and_tag_row = [&](const u32 offset, u32 length) -> bool
 			{
@@ -740,7 +743,7 @@ namespace rsx
 
 					if (row_offset < native_pitch)
 					{
-						compare_and_tag_row(0, native_pitch - row_offset);
+						compare_and_tag_row(0, std::min(native_pitch - row_offset, range.length()));
 					}
 
 					// Jump to next row...
@@ -773,10 +776,14 @@ namespace rsx
 
 				if (!valid)
 				{
+					removed_count++;
 					rsx_log.warning("Stale surface at address 0x%x will be deleted", it->base_address);
 					invalidate_surface_address(it->base_address, it->is_depth);
 				}
 			}
+
+			// Notify
+			rsx_log.notice("rsx::surface_cache::check_for_duplicates_fallback analysed %u overlapping sections and removed %u", ::size32(sections), removed_count);
 
 			// Verify no OOB
 			ensure(*overrun_test_ptr == overrun_cookie_value);
@@ -1103,9 +1110,17 @@ namespace rsx
 
 		void check_for_duplicates(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
 		{
-			if (!remove_duplicates_fast_impl(sections, range))
+			utils::address_range test_range;
+			for (const auto& section : sections)
 			{
-				remove_duplicates_fallback_impl(sections, range);
+				const auto range = section.surface->get_memory_range();
+				test_range.start = std::min(test_range.start, range.start);
+				test_range.end = std::max(test_range.end, range.end);
+			}
+
+			if (!remove_duplicates_fast_impl(sections, test_range))
+			{
+				remove_duplicates_fallback_impl(sections, test_range);
 			}
 		}
 
