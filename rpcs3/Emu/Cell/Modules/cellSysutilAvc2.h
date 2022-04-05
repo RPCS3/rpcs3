@@ -181,7 +181,7 @@ enum
 
 enum
 {
-	CELL_SYSUTIL_AVC2_INIT_PARAM_VERSION = 140 // Older versions may be 110, 120, 130
+	CELL_SYSUTIL_AVC2_INIT_PARAM_VERSION = 140 // Older versions may be 100, 110, 120, 130
 };
 
 enum

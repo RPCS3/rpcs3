@@ -42,6 +42,8 @@ error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> pla
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetPlayerInfo(player_id=*0x%x, player_info=*0x%x)", player_id, player_info);
 
+	// TODO: check arguments ?
+
 	player_info->connected = 1;
 	player_info->joined = 1;
 	player_info->mic_attached = 0;
@@ -50,9 +52,12 @@ error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> pla
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2JoinChat(vm::cptr<SceNpMatching2RoomId> room_id)
+error_code cellSysutilAvc2JoinChat(vm::cptr<SceNpMatching2RoomId> room_id, vm::ptr<CellSysutilAvc2EventId> eventId, vm::ptr<CellSysutilAvc2EventParam> eventParam)
 {
-	cellSysutilAvc2.todo("cellSysutilAvc2JoinChat(room_id=*0x%x)", room_id);
+	cellSysutilAvc2.todo("cellSysutilAvc2JoinChat(room_id=*0x%x, eventId=*0x%x, eventParam=*0x%x)", room_id, eventId, eventParam);
+
+	// TODO: check arguments ?
+
 	return CELL_OK;
 }
 
@@ -78,6 +83,9 @@ error_code cellSysutilAvc2GetVideoMuting(vm::ptr<u8> muting)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetVideoMuting(muting=*0x%x)", muting);
 
+	if (!muting)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	*muting = 1;
 
 	return CELL_OK;
@@ -86,12 +94,40 @@ error_code cellSysutilAvc2GetVideoMuting(vm::ptr<u8> muting)
 error_code cellSysutilAvc2GetWindowAttribute(SceNpMatching2RoomMemberId member_id, vm::ptr<CellSysutilAvc2WindowAttribute> attr)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowAttribute(member_id=0x%x, attr=*0x%x)", member_id, attr);
+
+	if (!attr)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	switch (attr->attr_id)
+	{
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_ALPHA:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_TRANSITION_TYPE:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_TRANSITION_DURATION:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_STRING_VISIBLE:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_ROTATION:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_ZORDER:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_SURFACE:
+		break;
+	default:
+		break;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2StopStreaming2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2StopStreaming2(mediaType=0x%x)", mediaType);
+
+	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
@@ -132,12 +168,59 @@ error_code cellSysutilAvc2StopVoiceDetection()
 error_code cellSysutilAvc2GetAttribute(vm::ptr<CellSysutilAvc2Attribute> attr)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetAttribute(attr=*0x%x)", attr);
+
+	if (!attr)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	switch (attr->attr_id)
+	{
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_EVENT_TYPE:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_INTERVAL_TIME:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_SIGNAL_LEVEL:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MAX_BITRATE:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DATA_FEC:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_PACKET_CONTENTION:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DTX_MODE:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_STATUS_DETECTION:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_SETTING_NOTIFICATION:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MUTING_NOTIFICATION:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_CAMERA_STATUS_DETECTION:
+		break;
+	default:
+		break;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
 {
 	cellSysutilAvc2.warning("cellSysutilAvc2LoadAsync(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
+
+	if (!init_param)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	switch (init_param->avc_init_param_version)
+	{
+	case 100:
+	case 110:
+	case 120:
+	case 130:
+	case 140:
+		break;
+	default:
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+	}
 
 	avc2_cb = callback_func;
 	avc2_cb_arg = user_data;
@@ -163,6 +246,10 @@ error_code cellSysutilAvc2SetSpeakerVolumeLevel(f32 level)
 error_code cellSysutilAvc2SetWindowString(SceNpMatching2RoomMemberId member_id, vm::cptr<char> string)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetWindowString(member_id=0x%x, string=%s)", member_id, string);
+
+	if (!string) // TODO something > 0x3F (63)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
@@ -175,6 +262,10 @@ error_code cellSysutilAvc2EstimateMemoryContainerSize(vm::cptr<CellSysutilAvc2In
 error_code cellSysutilAvc2SetVideoMuting(u8 muting)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetVideoMuting(muting=0x%x)", muting);
+
+	if (muting > 1) // Weird check, lol
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
@@ -184,15 +275,22 @@ error_code cellSysutilAvc2SetPlayerVoiceMuting(SceNpMatching2RoomMemberId member
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2SetStreamingTarget()
+error_code cellSysutilAvc2SetStreamingTarget(vm::cptr<CellSysutilAvc2StreamingTarget> target)
 {
-	UNIMPLEMENTED_FUNC(cellSysutilAvc2);
+	cellSysutilAvc2.todo("cellSysutilAvc2SetStreamingTarget(target=*0x%x)", target);
+
+	// target should never be null
+	ensure(!!target);
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2Unload()
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2Unload()");
+
+	// TODO: CELL_AVC2_ERROR_NOT_INITIALIZED
+
 	return CELL_OK;
 }
 
@@ -211,12 +309,21 @@ error_code cellSysutilAvc2SetWindowPosition(SceNpMatching2RoomMemberId member_id
 error_code cellSysutilAvc2GetSpeakerVolumeLevel(vm::ptr<f32> level)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetSpeakerVolumeLevel(level=*0x%x)", level);
+
+	if (!level)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	*level = 100;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2IsCameraAttached(vm::ptr<u8> status)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2IsCameraAttached(status=*0x%x)", status);
+
+	if (!status)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
 	*status = CELL_AVC2_CAMERA_STATUS_DETACHED;
 
@@ -226,18 +333,29 @@ error_code cellSysutilAvc2IsCameraAttached(vm::ptr<u8> status)
 error_code cellSysutilAvc2MicRead(vm::ptr<void> ptr, vm::ptr<u32> pSize)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2MicRead(ptr=*0x%x, pSize=*0x%x)", ptr, pSize);
+
+	// TODO: check arguments ?
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2GetPlayerVoiceMuting(SceNpMatching2RoomMemberId member_id, vm::ptr<u8> muting)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetPlayerVoiceMuting(member_id=0x%x, muting=*0x%x)", member_id, muting);
+
+	if (!muting)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	*muting = 0;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id)
 {
 	cellSysutilAvc2.warning("cellSysutilAvc2JoinChatRequest(room_id=*0x%x)", room_id);
+
+	// NOTE: room_id should be null if the current mode is Direct WAN/LAN
 
 	if (avc2_cb)
 	{
@@ -260,26 +378,65 @@ error_code cellSysutilAvc2StartStreaming()
 error_code cellSysutilAvc2SetWindowAttribute(SceNpMatching2RoomMemberId member_id, vm::cptr<CellSysutilAvc2WindowAttribute> attr)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetWindowAttribute(member_id=0x%x, attr=*0x%x)", member_id, attr);
+
+	if (!attr)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	switch (attr->attr_id)
+	{
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_ALPHA:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_TRANSITION_TYPE:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_TRANSITION_DURATION:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_STRING_VISIBLE:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_ROTATION:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_ZORDER:
+		break;
+	case CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_SURFACE:
+		break;
+	default:
+		break;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2GetWindowShowStatus(SceNpMatching2RoomMemberId member_id, vm::ptr<u8> visible)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowShowStatus(member_id=0x%x, visible=*0x%x)", member_id, visible);
+
+	if (!visible)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	*visible = 0;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitParam> option)
 {
-	cellSysutilAvc2.warning("cellSysutilAvc2InitParam(version=%d, option=*0x%x)", version, option);
+	cellSysutilAvc2.todo("cellSysutilAvc2InitParam(version=%d, option=*0x%x)", version, option);
 
-	if (version >= 110)
+	if (!option)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	switch (version)
+	{
+	case 100:
+	case 110:
+	case 120:
+	case 130:
+	case 140:
 	{
 		// Notify the user that, a version different from the one, that we know the constants for, is used.
 		// Other versions shouldn't differ by too much, if at all - they most likely differ in other functions.
 		if (version != 140)
 		{
-			cellSysutilAvc2.todo("cellSysutilAvc2InitParam(): Older/newer version %d used, might cause problems.", version);
+			cellSysutilAvc2.warning("cellSysutilAvc2InitParam(): Older/newer version %d used, might cause problems.", version);
 		}
 
 		option->avc_init_param_version = version;
@@ -307,10 +464,12 @@ error_code cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitPara
 		{
 			cellSysutilAvc2.error("Unknown media type 0x%x", option->media_type);
 		}
+		break;
 	}
-	else
+	default:
 	{
-		cellSysutilAvc2.error("cellSysutilAvc2InitParam(): Unknown version %d used, please report this to a developer.", version);
+		return { CELL_AVC2_ERROR_INVALID_ARGUMENT, version };
+	}
 	}
 
 	return CELL_OK;
@@ -319,6 +478,10 @@ error_code cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitPara
 error_code cellSysutilAvc2GetWindowSize(SceNpMatching2RoomMemberId member_id, vm::ptr<f32> width, vm::ptr<f32> height)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowSize(member_id=0x%x, width=*0x%x, height=*0x%x)", member_id, width, height);
+
+	if (!width || !height)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
@@ -348,6 +511,8 @@ error_code cellSysutilAvc2IsMicAttached(vm::ptr<u8> status)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2IsMicAttached(status=*0x%x)", status);
 
+	ensure(!!status); // I couldn't find any error value for this (should be CELL_AVC2_ERROR_INVALID_ARGUMENT if anything)
+
 	*status = CELL_AVC2_MIC_STATUS_DETACHED;
 
 	return CELL_OK;
@@ -362,7 +527,12 @@ error_code cellSysutilAvc2CreateWindow(SceNpMatching2RoomMemberId member_id)
 error_code cellSysutilAvc2GetSpeakerMuting(vm::ptr<u8> muting)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetSpeakerMuting(muting=*0x%x)", muting);
+
+	if (!muting)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	*muting = 1;
+
 	return CELL_OK;
 }
 
@@ -382,6 +552,8 @@ error_code cellSysutilAvc2EnumPlayers(vm::ptr<s32> players_num, vm::ptr<SceNpMat
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2EnumPlayers(players_num=*0x%x, players_id=*0x%x)", players_num, players_id);
 
+	// TODO: check arguments ?
+
 	if (players_num)
 		*players_num = 1;
 
@@ -394,6 +566,10 @@ error_code cellSysutilAvc2EnumPlayers(vm::ptr<s32> players_num, vm::ptr<SceNpMat
 error_code cellSysutilAvc2GetWindowString(SceNpMatching2RoomMemberId member_id, vm::ptr<char> string, vm::ptr<u8> len)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowString(member_id=0x%x, string=*0x%x, len=*0x%x)", member_id, string, len);
+
+	if (!string || !len)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
@@ -418,18 +594,58 @@ error_code cellSysutilAvc2Load(SceNpMatching2ContextId ctx_id, u32 container, vm
 error_code cellSysutilAvc2SetAttribute(vm::cptr<CellSysutilAvc2Attribute> attr)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetAttribute(attr=*0x%x)", attr);
+
+	if (!attr)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	switch (attr->attr_id)
+	{
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_EVENT_TYPE:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_INTERVAL_TIME:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_SIGNAL_LEVEL:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MAX_BITRATE:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DATA_FEC:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_PACKET_CONTENTION:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DTX_MODE:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_STATUS_DETECTION:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_MIC_SETTING_NOTIFICATION:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_MUTING_NOTIFICATION:
+		break;
+	case CELL_SYSUTIL_AVC2_ATTRIBUTE_CAMERA_STATUS_DETECTION:
+		break;
+	default:
+		break;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2UnloadAsync2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync2(mediaType=0x%x)", mediaType);
+
+	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2StartStreaming2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2StartStreaming2(mediaType=0x%x)", mediaType);
+
+	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
@@ -449,6 +665,9 @@ error_code cellSysutilAvc2GetVoiceMuting(vm::ptr<u8> muting)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetVoiceMuting(muting=*0x%x)", muting);
 
+	if (!muting)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	*muting = 1;
 
 	return CELL_OK;
@@ -457,18 +676,32 @@ error_code cellSysutilAvc2GetVoiceMuting(vm::ptr<u8> muting)
 error_code cellSysutilAvc2GetScreenShowStatus(vm::ptr<u8> visible)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetScreenShowStatus(visible=*0x%x)", visible);
+
+	if (!visible)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	*visible = 0;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2Unload2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2Unload2(mediaType=0x%x)", mediaType);
+
+	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
 error_code cellSysutilAvc2GetWindowPosition(SceNpMatching2RoomMemberId member_id, vm::ptr<f32> x, vm::ptr<f32> y, vm::ptr<f32> z)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetWindowPosition(member_id=0x%x, x=*0x%x, y=*0x%x, z=*0x%x)", member_id, x, y, z);
+
+	if (!x || !y || !z)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
 	return CELL_OK;
 }
 
