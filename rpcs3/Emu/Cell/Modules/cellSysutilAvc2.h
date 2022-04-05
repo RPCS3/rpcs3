@@ -23,41 +23,41 @@ enum CellSysutilAvc2Error : u32
 	CELL_AVC2_ERROR_WINDOW_NOT_FOUND      = 0x8002b712,
 };
 
-enum
+enum CellSysutilAvc2MediaType : u32
 {
 	CELL_SYSUTIL_AVC2_VOICE_CHAT = 0x00000001,
 	CELL_SYSUTIL_AVC2_VIDEO_CHAT = 0x00000010,
 };
 
-enum
+enum CellSysutilAvc2VoiceQuality : u32
 {
 	CELL_SYSUTIL_AVC2_VOICE_QUALITY_NORMAL = 0x00000001,
 };
 
-enum
+enum CellSysutilAvc2VideoQuality : u32
 {
 	CELL_SYSUTIL_AVC2_VIDEO_QUALITY_NORMAL = 0x00000001,
 };
 
-enum
+enum CellSysutilAvc2FrameMode : u32
 {
 	CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL     = 0x00000001,
 	CELL_SYSUTIL_AVC2_FRAME_MODE_INTRA_ONLY = 0x00000002,
 };
 
-enum
+enum CellSysutilAvc2CoordinatesForm : u32
 {
 	CELL_SYSUTIL_AVC2_VIRTUAL_COORDINATES  = 0x00000001,
 	CELL_SYSUTIL_AVC2_ABSOLUTE_COORDINATES = 0x00000002,
 };
 
-enum
+enum CellSysutilAvc2VideoResolution : u32
 {
 	CELL_SYSUTIL_AVC2_VIDEO_RESOLUTION_QQVGA = 0x00000001,
 	CELL_SYSUTIL_AVC2_VIDEO_RESOLUTION_QVGA  = 0x00000002,
 };
 
-enum
+enum CellSysutilAvc2ChatTargetMode : u32
 {
 	CELL_SYSUTIL_AVC2_CHAT_TARGET_MODE_ROOM    = 0x00000100,
 	CELL_SYSUTIL_AVC2_CHAT_TARGET_MODE_TEAM    = 0x00000200,
@@ -65,7 +65,7 @@ enum
 	CELL_SYSUTIL_AVC2_CHAT_TARGET_MODE_DIRECT  = 0x00001000,
 };
 
-enum
+enum CellSysutilAvc2AttributeId : u32
 {
 	CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_EVENT_TYPE    = 0x00001001,
 	CELL_SYSUTIL_AVC2_ATTRIBUTE_VOICE_DETECT_INTERVAL_TIME = 0x00001002,
@@ -80,7 +80,7 @@ enum
 	CELL_SYSUTIL_AVC2_ATTRIBUTE_CAMERA_STATUS_DETECTION    = 0x0000100B,
 };
 
-enum
+enum CellSysutilAvc2WindowAttributeId : u32
 {
 	CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_ALPHA               = 0x00002001,
 	CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_TRANSITION_TYPE     = 0x00002002,
@@ -91,7 +91,7 @@ enum
 	CELL_SYSUTIL_AVC2_WINDOW_ATTRIBUTE_SURFACE             = 0x00002007,
 };
 
-enum
+enum CellSysutilAvc2TransitionType : u32
 {
 	CELL_SYSUTIL_AVC2_TRANSITION_NONE     = 0xffffffff,
 	CELL_SYSUTIL_AVC2_TRANSITION_LINEAR   = 0x00000000,
@@ -101,7 +101,7 @@ enum
 	CELL_SYSUTIL_AVC2_TRANSITION_EXPONENT = 0x00000004,
 };
 
-enum
+enum CellSysutilAvc2WindowZorderMode : u32
 {
 	CELL_SYSUTIL_AVC2_ZORDER_FORWARD_MOST = 0x00000001,
 	CELL_SYSUTIL_AVC2_ZORDER_BEHIND_MOST  = 0x00000002,
@@ -125,6 +125,21 @@ enum
 
 enum
 {
+	CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL     = 0,
+	CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_WAN = 1,
+	CELL_SYSUTIL_AVC2_STREAMING_MODE_DIRECT_LAN = 2,
+};
+
+enum
+{
+	CELL_SYSUTIL_AVC2_VIDEO_SHARING_MODE_DISABLE = 0,
+	CELL_SYSUTIL_AVC2_VIDEO_SHARING_MODE_1       = 1,
+	CELL_SYSUTIL_AVC2_VIDEO_SHARING_MODE_2       = 2,
+	CELL_SYSUTIL_AVC2_VIDEO_SHARING_MODE_3       = 3,
+};
+
+enum
+{
 	CELL_AVC2_EVENT_LOAD_SUCCEEDED   = 0x00000001,
 	CELL_AVC2_EVENT_LOAD_FAILED      = 0x00000002,
 	CELL_AVC2_EVENT_UNLOAD_SUCCEEDED = 0x00000003,
@@ -135,20 +150,49 @@ enum
 	CELL_AVC2_EVENT_LEAVE_FAILED     = 0x00000008,
 };
 
-typedef u32 CellSysutilAvc2AttributeId;
-typedef u32 CellSysutilAvc2WindowAttributeId;
+enum
+{
+	CELL_AVC2_EVENT_SYSTEM_NEW_MEMBER_JOINED          = 0x10000001,
+	CELL_AVC2_EVENT_SYSTEM_MEMBER_LEFT                = 0x10000002,
+	CELL_AVC2_EVENT_SYSTEM_SESSION_ESTABLISHED        = 0x10000003,
+	CELL_AVC2_EVENT_SYSTEM_SESSION_CANNOT_ESTABLISHED = 0x10000004,
+	CELL_AVC2_EVENT_SYSTEM_SESSION_DISCONNECTED       = 0x10000005,
+	CELL_AVC2_EVENT_SYSTEM_VOICE_DETECTED             = 0x10000006,
+	CELL_AVC2_EVENT_SYSTEM_MIC_DETECTED               = 0x10000007,
+	CELL_AVC2_EVENT_SYSTEM_CAMERA_DETECTED            = 0x10000008,
+};
+
+enum
+{
+	CELL_AVC2_EVENT_PARAM_ERROR_UNKNOWN                = 0x0000000000000001,
+	CELL_AVC2_EVENT_PARAM_ERROR_NOT_SUPPORTED          = 0x0000000000000002,
+	CELL_AVC2_EVENT_PARAM_ERROR_INVALID_ARGUMENT       = 0x0000000000000003,
+	CELL_AVC2_EVENT_PARAM_ERROR_OUT_OF_MEMORY          = 0x0000000000000004,
+	CELL_AVC2_EVENT_PARAM_ERROR_INVALID_STATUS         = 0x0000000000000005,
+	CELL_AVC2_EVENT_PARAM_ERROR_CONTEXT_DOES_NOT_EXIST = 0x0000000000000006,
+	CELL_AVC2_EVENT_PARAM_ERROR_ROOM_DOES_NOT_EXIST    = 0x0000000000000007,
+	CELL_AVC2_EVENT_PARAM_ERROR_NETWORK_ERROR          = 0x0000000000000008,
+};
+
+enum
+{
+	CELL_AVC2_REQUEST_ID_SYSTEM_EVENT = 0x00000000
+};
+
+enum
+{
+	CELL_SYSUTIL_AVC2_INIT_PARAM_VERSION = 140 // Older versions may be 110, 120, 130
+};
+
+enum
+{
+	AVC2_SPECIAL_ROOM_MEMBER_ID_CUSTOM_VIDEO_WINDOW = 0xfff0
+};
 
 typedef u32 CellSysutilAvc2EventId;
 typedef u64 CellSysutilAvc2EventParam;
 
 using CellSysutilAvc2Callback = void(CellSysutilAvc2EventId event_id, CellSysutilAvc2EventParam event_param, vm::ptr<void> userdata);
-
-typedef u32 CellSysutilAvc2MediaType;
-typedef u32 CellSysutilAvc2VoiceQuality;
-typedef u32 CellSysutilAvc2VideoQuality;
-typedef u32 CellSysutilAvc2FrameMode;
-typedef u32 CellSysutilAvc2VideoResolution;
-typedef u32 CellSysutilAvc2CoordinatesForm;
 
 struct CellSysutilAvc2VoiceInitParam
 {
@@ -159,14 +203,15 @@ struct CellSysutilAvc2VoiceInitParam
 
 struct CellSysutilAvc2VideoInitParam
 {
-	be_t<CellSysutilAvc2VideoQuality> video_quality;
-	be_t<CellSysutilAvc2FrameMode> frame_mode;
-	be_t<CellSysutilAvc2VideoResolution> max_video_resolution;
+	be_t<u32> video_quality;
+	be_t<u32> frame_mode;
+	be_t<u32> max_video_resolution;
 	be_t<u16> max_video_windows;
 	be_t<u16> max_video_framerate;
 	be_t<u32> max_video_bitrate;
-	be_t<CellSysutilAvc2CoordinatesForm> coordinates_form;
+	be_t<u32> coordinates_form;
 	u8 video_stream_sharing;
+	//u8 no_use_camera_device; // TODO: possible member?
 };
 
 struct CellSysutilAvc2StreamingModeParam
@@ -181,7 +226,7 @@ struct CellSysutilAvc2InitParam
 	be_t<u16> max_players;
 	be_t<u16> spu_load_average;
 	CellSysutilAvc2StreamingModeParam streaming_mode;
-	be_t<CellSysutilAvc2MediaType> media_type;
+	be_t<u32> media_type;
 	CellSysutilAvc2VoiceInitParam voice_param;
 	CellSysutilAvc2VideoInitParam video_param;
 };
@@ -234,4 +279,15 @@ struct CellSysutilAvc2PlayerInfo
 	u8 connected;
 	u8 mic_attached;
 	u8 reserved[11];
+};
+
+struct CellSysutilAvc2StreamingTarget
+{
+	be_t<CellSysutilAvc2ChatTargetMode> target_mode;
+	union
+	{
+		CellSysutilAvc2RoomMemberList room_member_list;
+		SceNpMatching2TeamId team_id;
+		CellSysutilAvc2MemberIpAndPortList ip_and_port_list;
+	};
 };
