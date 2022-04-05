@@ -62,7 +62,7 @@ error_code cellSysutilAvc2StopStreaming()
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2ChangeVideoResolution(CellSysutilAvc2VideoResolution resolution)
+error_code cellSysutilAvc2ChangeVideoResolution(u32 resolution)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2ChangeVideoResolution(resolution=0x%x)", resolution);
 	return CELL_OK;
@@ -89,7 +89,7 @@ error_code cellSysutilAvc2GetWindowAttribute(SceNpMatching2RoomMemberId member_i
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2StopStreaming2(CellSysutilAvc2MediaType mediaType)
+error_code cellSysutilAvc2StopStreaming2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2StopStreaming2(mediaType=0x%x)", mediaType);
 	return CELL_OK;
@@ -113,7 +113,8 @@ error_code cellSysutilAvc2UnloadAsync()
 
 	if (avc2_cb)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		{
 			avc2_cb(cb_ppu, CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0, avc2_cb_arg);
 			return 0;
 		});
@@ -420,13 +421,13 @@ error_code cellSysutilAvc2SetAttribute(vm::cptr<CellSysutilAvc2Attribute> attr)
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2UnloadAsync2(CellSysutilAvc2MediaType mediaType)
+error_code cellSysutilAvc2UnloadAsync2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync2(mediaType=0x%x)", mediaType);
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2StartStreaming2(CellSysutilAvc2MediaType mediaType)
+error_code cellSysutilAvc2StartStreaming2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2StartStreaming2(mediaType=0x%x)", mediaType);
 	return CELL_OK;
@@ -459,7 +460,7 @@ error_code cellSysutilAvc2GetScreenShowStatus(vm::ptr<u8> visible)
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2Unload2(CellSysutilAvc2MediaType mediaType)
+error_code cellSysutilAvc2Unload2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2Unload2(mediaType=0x%x)", mediaType);
 	return CELL_OK;
