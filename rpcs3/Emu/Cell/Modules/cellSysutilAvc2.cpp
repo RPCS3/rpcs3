@@ -247,7 +247,7 @@ error_code cellSysutilAvc2SetWindowString(SceNpMatching2RoomMemberId member_id, 
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetWindowString(member_id=0x%x, string=%s)", member_id, string);
 
-	if (!string) // TODO something > 0x3F (63)
+	if (!string || std::strlen(string.get_ptr()) >= 64)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
 	return CELL_OK;
