@@ -199,6 +199,7 @@ struct CellSysutilAvc2VoiceInitParam
 	be_t<CellSysutilAvc2VoiceQuality> voice_quality;
 	be_t<u16> max_speakers;
 	u8 mic_out_stream_sharing;
+	u8 reserved[25];
 };
 
 struct CellSysutilAvc2VideoInitParam
@@ -211,13 +212,15 @@ struct CellSysutilAvc2VideoInitParam
 	be_t<u32> max_video_bitrate;
 	be_t<u32> coordinates_form;
 	u8 video_stream_sharing;
-	//u8 no_use_camera_device; // TODO: possible member?
+	u8 no_use_camera_device;
+	u8 reserved[6];
 };
 
 struct CellSysutilAvc2StreamingModeParam
 {
 	be_t<u16> mode;
 	be_t<u16> port;
+	u8 reserved[10];
 };
 
 struct CellSysutilAvc2InitParam
@@ -225,10 +228,16 @@ struct CellSysutilAvc2InitParam
 	be_t<u16> avc_init_param_version;
 	be_t<u16> max_players;
 	be_t<u16> spu_load_average;
-	CellSysutilAvc2StreamingModeParam streaming_mode;
+	union
+	{
+		be_t<u16> direct_streaming_mode;
+		CellSysutilAvc2StreamingModeParam streaming_mode;
+	};
 	be_t<u32> media_type;
+	u8 reserved[18];
 	CellSysutilAvc2VoiceInitParam voice_param;
 	CellSysutilAvc2VideoInitParam video_param;
+	u8 reserved2[22];
 };
 
 struct CellSysutilAvc2RoomMemberList
