@@ -42,7 +42,8 @@ error_code cellSysutilAvc2GetPlayerInfo(vm::cptr<SceNpMatching2RoomMemberId> pla
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2GetPlayerInfo(player_id=*0x%x, player_info=*0x%x)", player_id, player_info);
 
-	// TODO: check arguments ?
+	if (!player_id || !player_info)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
 	player_info->connected = 1;
 	player_info->joined = 1;
@@ -56,7 +57,20 @@ error_code cellSysutilAvc2JoinChat(vm::cptr<SceNpMatching2RoomId> room_id, vm::p
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2JoinChat(room_id=*0x%x, eventId=*0x%x, eventParam=*0x%x)", room_id, eventId, eventParam);
 
-	// TODO: check arguments ?
+	// NOTE: room_id should be null if the current mode is Direct WAN/LAN
+
+	u64 id = 0UL;
+
+	if (room_id)
+	{
+		id = *room_id;
+	}
+	else if (false/*streaming_mode != CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL*/) // TODO
+	{
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: join chat
 
 	return CELL_OK;
 }
@@ -125,7 +139,7 @@ error_code cellSysutilAvc2StopStreaming2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2StopStreaming2(mediaType=0x%x)", mediaType);
 
-	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT)
+	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT && mediaType != CELL_SYSUTIL_AVC2_VIDEO_CHAT)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
 	return CELL_OK;
@@ -222,6 +236,19 @@ error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 containe
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 	}
 
+	if (init_param->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
+	{
+		// TODO
+	}
+	else if (init_param->media_type == CELL_SYSUTIL_AVC2_VIDEO_CHAT)
+	{
+		// TODO
+	}
+	else
+	{
+		return CELL_AVC2_ERROR_NOT_SUPPORTED;
+	}
+
 	avc2_cb = callback_func;
 	avc2_cb_arg = user_data;
 
@@ -256,6 +283,44 @@ error_code cellSysutilAvc2SetWindowString(SceNpMatching2RoomMemberId member_id, 
 error_code cellSysutilAvc2EstimateMemoryContainerSize(vm::cptr<CellSysutilAvc2InitParam> initparam, vm::ptr<u32> size)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2EstimateMemoryContainerSize(initparam=*0x%x, size=*0x%x)", initparam, size);
+
+	if (!initparam || !size)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	switch (initparam->avc_init_param_version)
+	{
+	case 100:
+	{
+		*size = 0x400000;
+		break;
+	}
+	case 110:
+	case 120:
+	case 130:
+	case 140:
+	{
+		if (initparam->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
+		{
+			*size = 0x300000;
+		}
+		else if (initparam->media_type == CELL_SYSUTIL_AVC2_VIDEO_CHAT)
+		{
+			// TODO
+			cellSysutilAvc2.todo("cellSysutilAvc2EstimateMemoryContainerSize is not implemented for CELL_SYSUTIL_AVC2_VIDEO_CHAT");
+		}
+		else
+		{
+			*size = 0;
+			return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+		}
+		break;
+	}
+	default:
+	{
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+	}
+	}
+
 	return CELL_OK;
 }
 
@@ -356,6 +421,19 @@ error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id
 	cellSysutilAvc2.warning("cellSysutilAvc2JoinChatRequest(room_id=*0x%x)", room_id);
 
 	// NOTE: room_id should be null if the current mode is Direct WAN/LAN
+	
+	u64 id = 0UL;
+
+	if (room_id)
+	{
+		id = *room_id;
+	}
+	else if (false/*streaming_mode != CELL_SYSUTIL_AVC2_STREAMING_MODE_NORMAL*/) // TODO
+	{
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: join chat
 
 	if (avc2_cb)
 	{
@@ -515,17 +593,27 @@ error_code cellSysutilAvc2SetWindowSize(SceNpMatching2RoomMemberId member_id, f3
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2EnumPlayers(vm::ptr<s32> players_num, vm::ptr<SceNpMatching2RoomMemberId> players_id)
+error_code cellSysutilAvc2EnumPlayers(vm::ptr<s32> players_num, vm::pptr<SceNpMatching2RoomMemberId> players_id)
 {
-	cellSysutilAvc2.todo("cellSysutilAvc2EnumPlayers(players_num=*0x%x, players_id=*0x%x)", players_num, players_id);
+	cellSysutilAvc2.todo("cellSysutilAvc2EnumPlayers(players_num=*0x%x, players_id_list=*0x%x)", players_num, players_id);
 
-	// TODO: check arguments ?
+	if (!players_num)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
-	if (players_num)
-		*players_num = 1;
-
+	// Apparently this function is supposed to be called twice.
+	// Once with null to get the player count and then again to fill the ID list.
 	if (players_id)
-		*players_id = 1;
+	{
+		// TODO: is it safe to assume that players_num is set by the user ?
+		for (int i = 0; i < *players_num; i++)
+		{
+			*players_id[i] = 1;
+		}
+	}
+	else
+	{
+		*players_num = 1;
+	}
 
 	return CELL_OK;
 }
@@ -555,6 +643,35 @@ error_code cellSysutilAvc2SetSpeakerMuting(u8 muting)
 error_code cellSysutilAvc2Load(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2Load(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
+
+	if (!init_param)
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+
+	switch (init_param->avc_init_param_version)
+	{
+	case 100:
+	case 110:
+	case 120:
+	case 130:
+	case 140:
+		break;
+	default:
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (init_param->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
+	{
+		// TODO
+	}
+	else if (init_param->media_type == CELL_SYSUTIL_AVC2_VIDEO_CHAT)
+	{
+		// TODO
+	}
+	else
+	{
+		return CELL_AVC2_ERROR_NOT_SUPPORTED;
+	}
+
 	return CELL_OK;
 }
 
@@ -600,7 +717,7 @@ error_code cellSysutilAvc2UnloadAsync2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync2(mediaType=0x%x)", mediaType);
 
-	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT)
+	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT && mediaType != CELL_SYSUTIL_AVC2_VIDEO_CHAT)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
 	return CELL_OK;
@@ -610,7 +727,7 @@ error_code cellSysutilAvc2StartStreaming2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2StartStreaming2(mediaType=0x%x)", mediaType);
 
-	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT)
+	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT && mediaType != CELL_SYSUTIL_AVC2_VIDEO_CHAT)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
 	return CELL_OK;
@@ -656,7 +773,7 @@ error_code cellSysutilAvc2Unload2(u32 mediaType)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2Unload2(mediaType=0x%x)", mediaType);
 
-	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT)
+	if (mediaType != CELL_SYSUTIL_AVC2_VOICE_CHAT && mediaType != CELL_SYSUTIL_AVC2_VIDEO_CHAT)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
 	return CELL_OK;
