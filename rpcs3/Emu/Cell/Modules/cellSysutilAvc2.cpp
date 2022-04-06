@@ -424,6 +424,9 @@ error_code cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitPara
 	if (!option)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
+	option = {};
+	option->avc_init_param_version = version;
+
 	switch (version)
 	{
 	case 100:
@@ -431,45 +434,9 @@ error_code cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitPara
 	case 120:
 	case 130:
 	case 140:
-	{
-		// Notify the user that, a version different from the one, that we know the constants for, is used.
-		// Other versions shouldn't differ by too much, if at all - they most likely differ in other functions.
-		if (version != 140)
-		{
-			cellSysutilAvc2.warning("cellSysutilAvc2InitParam(): Older/newer version %d used, might cause problems.", version);
-		}
-
-		option->avc_init_param_version = version;
-
-		if (option->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
-		{
-			option->max_players = 16;
-		}
-		else if (option->media_type == CELL_SYSUTIL_AVC2_VIDEO_CHAT)
-		{
-			if (option->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL)
-			{
-				option->max_players = 6;
-			}
-			else if (option->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_INTRA_ONLY)
-			{
-				option->max_players = 16;
-			}
-			else
-			{
-				cellSysutilAvc2.error("Unknown frame mode 0x%x", option->video_param.frame_mode);
-			}
-		}
-		else
-		{
-			cellSysutilAvc2.error("Unknown media type 0x%x", option->media_type);
-		}
 		break;
-	}
 	default:
-	{
-		return { CELL_AVC2_ERROR_INVALID_ARGUMENT, version };
-	}
+		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 	}
 
 	return CELL_OK;
