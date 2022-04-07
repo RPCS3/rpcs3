@@ -541,7 +541,7 @@ error_code cellSysutilAvc2InitParam(u16 version, vm::ptr<CellSysutilAvc2InitPara
 	if (!option)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
 
-	option = {};
+	*option = {};
 	option->avc_init_param_version = version;
 
 	switch (version)
@@ -632,9 +632,9 @@ error_code cellSysutilAvc2SetWindowSize(SceNpMatching2RoomMemberId member_id, f3
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2EnumPlayers(vm::ptr<s32> players_num, vm::pptr<SceNpMatching2RoomMemberId> players_id)
+error_code cellSysutilAvc2EnumPlayers(vm::ptr<s32> players_num, vm::ptr<SceNpMatching2RoomMemberId> players_id)
 {
-	cellSysutilAvc2.todo("cellSysutilAvc2EnumPlayers(players_num=*0x%x, players_id_list=*0x%x)", players_num, players_id);
+	cellSysutilAvc2.todo("cellSysutilAvc2EnumPlayers(players_num=*0x%x, players_id=*0x%x)", players_num, players_id);
 
 	if (!players_num)
 		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
@@ -643,10 +643,9 @@ error_code cellSysutilAvc2EnumPlayers(vm::ptr<s32> players_num, vm::pptr<SceNpMa
 	// Once with null to get the player count and then again to fill the ID list.
 	if (players_id)
 	{
-		// TODO: is it safe to assume that players_num is set by the user ?
 		for (int i = 0; i < *players_num; i++)
 		{
-			*players_id[i] = 1;
+			players_id[i] = i + 1;
 		}
 	}
 	else
