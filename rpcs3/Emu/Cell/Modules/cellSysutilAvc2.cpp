@@ -59,7 +59,7 @@ error_code cellSysutilAvc2JoinChat(vm::cptr<SceNpMatching2RoomId> room_id, vm::p
 
 	// NOTE: room_id should be null if the current mode is Direct WAN/LAN
 
-	u64 id = 0UL;
+	[[maybe_unused]] u64 id = 0UL;
 
 	if (room_id)
 	{
@@ -305,8 +305,47 @@ error_code cellSysutilAvc2EstimateMemoryContainerSize(vm::cptr<CellSysutilAvc2In
 		}
 		else if (initparam->media_type == CELL_SYSUTIL_AVC2_VIDEO_CHAT)
 		{
-			// TODO
-			cellSysutilAvc2.todo("cellSysutilAvc2EstimateMemoryContainerSize is not implemented for CELL_SYSUTIL_AVC2_VIDEO_CHAT");
+			u32 estimated_size = 0x40e666;
+			u32 max_windows    = initparam->video_param.max_video_windows;
+			s32 window_count   = max_windows;
+
+			if (initparam->video_param.video_stream_sharing == CELL_SYSUTIL_AVC2_VIDEO_SHARING_MODE_2)
+			{
+				window_count++;
+			}
+
+			if (initparam->video_param.max_video_resolution == CELL_SYSUTIL_AVC2_VIDEO_RESOLUTION_QQVGA)
+			{
+				estimated_size = (static_cast<u32>(window_count) * 0x12c00 & 0xfff00000) + 0x50e666;
+			}
+			else if (initparam->video_param.max_video_resolution == CELL_SYSUTIL_AVC2_VIDEO_RESOLUTION_QVGA)
+			{
+				estimated_size += (static_cast<u32>(window_count) * 0x4b000 & 0xfff00000) + 0x100000;
+			}
+
+			if (initparam->video_param.frame_mode == CELL_SYSUTIL_AVC2_FRAME_MODE_NORMAL)
+			{
+				window_count = max_windows - 1;
+			}
+			else
+			{
+				window_count = 1;
+			}
+
+			u32 val = max_windows * 10000;
+
+			if (initparam->video_param.max_video_resolution == CELL_SYSUTIL_AVC2_VIDEO_RESOLUTION_QQVGA)
+			{
+				val += window_count * 0x96000 + 0x10c9e0; // 0x96000 = 160x120x32
+			}
+			else
+			{
+				val += static_cast<s32>(static_cast<f64>(window_count) * 1258291.2) + 0x1ed846;
+			}
+
+			estimated_size = (estimated_size + ((static_cast<int>(val) >> 7) + static_cast<u32>(static_cast<int>(val) < 0 && (val & 0x7f) != 0)) * 0x80 + 0x80080 & 0xfff00000) + 0x100000;
+
+			*size = estimated_size;
 		}
 		else
 		{
@@ -421,8 +460,8 @@ error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id
 	cellSysutilAvc2.warning("cellSysutilAvc2JoinChatRequest(room_id=*0x%x)", room_id);
 
 	// NOTE: room_id should be null if the current mode is Direct WAN/LAN
-	
-	u64 id = 0UL;
+
+	[[maybe_unused]] u64 id = 0UL;
 
 	if (room_id)
 	{
