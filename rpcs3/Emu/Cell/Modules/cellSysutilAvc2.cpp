@@ -221,34 +221,6 @@ error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 containe
 {
 	cellSysutilAvc2.warning("cellSysutilAvc2LoadAsync(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
 
-	if (!init_param)
-		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
-
-	switch (init_param->avc_init_param_version)
-	{
-	case 100:
-	case 110:
-	case 120:
-	case 130:
-	case 140:
-		break;
-	default:
-		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (init_param->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
-	{
-		// TODO
-	}
-	else if (init_param->media_type == CELL_SYSUTIL_AVC2_VIDEO_CHAT)
-	{
-		// TODO
-	}
-	else
-	{
-		return CELL_AVC2_ERROR_NOT_SUPPORTED;
-	}
-
 	avc2_cb = callback_func;
 	avc2_cb_arg = user_data;
 
@@ -681,35 +653,6 @@ error_code cellSysutilAvc2SetSpeakerMuting(u8 muting)
 error_code cellSysutilAvc2Load(SceNpMatching2ContextId ctx_id, u32 container, vm::ptr<CellSysutilAvc2Callback> callback_func, vm::ptr<void> user_data, vm::cptr<CellSysutilAvc2InitParam> init_param)
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2Load(ctx_id=0x%x, container=0x%x, callback_func=*0x%x, user_data=*0x%x, init_param=*0x%x)", ctx_id, container, callback_func, user_data, init_param);
-
-	if (!init_param)
-		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
-
-	switch (init_param->avc_init_param_version)
-	{
-	case 100:
-	case 110:
-	case 120:
-	case 130:
-	case 140:
-		break;
-	default:
-		return CELL_AVC2_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (init_param->media_type == CELL_SYSUTIL_AVC2_VOICE_CHAT)
-	{
-		// TODO
-	}
-	else if (init_param->media_type == CELL_SYSUTIL_AVC2_VIDEO_CHAT)
-	{
-		// TODO
-	}
-	else
-	{
-		return CELL_AVC2_ERROR_NOT_SUPPORTED;
-	}
-
 	return CELL_OK;
 }
 
