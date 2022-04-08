@@ -270,9 +270,19 @@ namespace
 #endif
 }
 
+#if !defined(__APPLE__) || defined(ARCH_X64)
 DECLARE(copy_data_swap_u32) = build_function_asm<void(*)(u32*, const u32*, u32)>("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
-
 DECLARE(copy_data_swap_u32_cmp) = build_function_asm<bool(*)(u32*, const u32*, u32)>("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
+#else
+// Apple enforces ASLR on Aarch64.
+// ASLR breaks AsmJit by making relative branch jump offsets unencodeable in 32bits.
+// We can fix this by passing a preallocated baseAddress to Asmjit's CodeHolder on init (see JIT.h/cpp)
+// to force absolute jumps, but this requires some jank workarounds to not waste memory.
+// Since the arm64 codegen just jumps to the naive copy fn, using this here doesn't
+// do anything anyways.
+DECLARE(copy_data_swap_u32) = copy_data_swap_u32_naive<false>;
+DECLARE(copy_data_swap_u32_cmp) = copy_data_swap_u32_naive<true>;
+#endif
 
 namespace
 {

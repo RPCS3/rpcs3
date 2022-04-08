@@ -224,7 +224,7 @@ u8* jit_runtime::alloc(usz size, uint align, bool exec) noexcept
 {
 	if (exec)
 	{
-		return add_jit_memory<s_code_pos, 0x0, utils::protection::wx>(size, align);
+		return add_jit_memory<s_code_pos, 0x0, utils::protection::rw>(size, align);
 	}
 	else
 	{
@@ -287,7 +287,7 @@ jit_runtime_base& asmjit::get_global_runtime()
 			m_max = m_pos + size;
 
 			// Make memory writable + executable
-			utils::memory_commit(m_pos, size, utils::protection::wx);
+			utils::memory_commit(m_pos, size, utils::protection::rw);
 		}
 
 		uchar* _alloc(usz size, usz align) noexcept override
@@ -553,7 +553,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 	u8* allocateCodeSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/) override
 	{
-		return allocate(code_ptr, size, align, utils::protection::wx);
+		return allocate(code_ptr, size, align, utils::protection::rw);
 	}
 
 	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool /*is_ro*/) override
