@@ -59,6 +59,23 @@ T get_yaml_node_value(YAML::Node node, std::string& error_message)
 	return {};
 }
 
+std::string get_yaml_node_location(YAML::Node node)
+{
+	try
+	{
+		const auto mark = node.Mark();
+
+		if (mark.is_null())
+			return "unknown";
+
+		return fmt::format("line %d, column %d", mark.line, mark.column); // Don't need the pos. It's not really useful.
+	}
+	catch (const std::exception& e)
+	{
+		return e.what();
+	}
+}
+
 template u32 get_yaml_node_value<u32>(YAML::Node, std::string&);
 template u64 get_yaml_node_value<u64>(YAML::Node, std::string&);
 template f64 get_yaml_node_value<f64>(YAML::Node, std::string&);
