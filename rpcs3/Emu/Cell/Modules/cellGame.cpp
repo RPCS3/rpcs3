@@ -594,7 +594,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	{
 		switch (type)
 		{
-		case CELL_GAME_GAMETYPE_HDD: return cat != "HG"sv && cat != "AM"sv && cat != "AP"sv && cat != "AT"sv && cat != "AV"sv && cat != "BV"sv && cat != "WT"sv;
+		case CELL_GAME_GAMETYPE_HDD: return cat != "HG"sv && cat != "HM"sv && cat != "AM"sv && cat != "AP"sv && cat != "AT"sv && cat != "AV"sv && cat != "BV"sv && cat != "WT"sv;
 		case CELL_GAME_GAMETYPE_GAMEDATA: return cat != "GD"sv;
 		case CELL_GAME_GAMETYPE_DISC: return cat != "DG"sv;
 		default: fmt::throw_exception("Unreachable");
