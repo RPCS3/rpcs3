@@ -112,7 +112,8 @@ public:
 						{
 							ensure(sock.get_type() == SYS_NET_SOCK_STREAM_P2P);
 							auto& sock_p2ps = reinterpret_cast<lv2_socket_p2ps&>(sock);
-							sock_p2ps.set_status(p2ps_stream_status::stream_closed); });
+							sock_p2ps.set_status(p2ps_stream_status::stream_closed);
+						});
 					it = msgs.erase(it);
 					continue;
 				}
@@ -128,7 +129,8 @@ public:
 							sock_p2ps.set_status(p2ps_stream_status::stream_closed);
 							return false;
 						}
-						return true; });
+						return true;
+					});
 
 				if (!res || !res.ret)
 				{

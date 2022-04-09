@@ -154,7 +154,9 @@ sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_ad
 void network_clear_queue(ppu_thread& ppu)
 {
 	idm::select<lv2_socket>([&](u32, lv2_socket& sock)
-		{ sock.clear_queue(ppu.id); });
+		{
+			sock.clear_queue(ppu.id);
+		});
 }
 
 #ifdef _WIN32
@@ -165,7 +167,9 @@ void windows_poll(pollfd* fds, unsigned long nfds, int timeout, bool* connecting
 
 	// Don't call WSAPoll with zero nfds (errors 10022 or 10038)
 	if (std::none_of(fds, fds + nfds, [](pollfd& pfd)
-			{ return pfd.fd != INVALID_SOCKET; }))
+			{
+				return pfd.fd != INVALID_SOCKET;
+			}))
 	{
 		if (timeout > 0)
 		{

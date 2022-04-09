@@ -27,7 +27,7 @@ nt_p2p_port::nt_p2p_port(u16 port)
 	::fcntl(p2p_socket, F_SETFL, ::fcntl(p2p_socket, F_GETFL, 0) | O_NONBLOCK);
 #endif
 
-	u32 optval = 131072;
+	u32 optval = 131072; // value obtained from DECR for a SOCK_DGRAM_P2P socket(should maybe be bigger for actual socket?)
 	if (setsockopt(p2p_socket, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<const char*>(&optval), sizeof(optval)) != 0)
 		sys_net.fatal("Error setsockopt SO_RCVBUF on P2P socket");
 

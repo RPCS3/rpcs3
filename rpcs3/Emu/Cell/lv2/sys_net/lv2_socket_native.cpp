@@ -167,7 +167,8 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 					}
 
 					events += lv2_socket::poll_t::write;
-					return false; });
+					return false;
+				});
 		}
 
 		return -result;
@@ -485,6 +486,7 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_native::getsockopt(s32
 			out_len        = sizeof(sys_net_linger);
 			return {CELL_OK, out_val, out_len};
 		}
+		default: break;
 		}
 	}
 
@@ -660,7 +662,7 @@ s32 lv2_socket_native::setsockopt(s32 level, s32 optname, const std::vector<u8>&
 	else if (level == SYS_NET_IPPROTO_IP)
 	{
 		native_level = IPPROTO_IP;
-		
+
 		switch (optname)
 		{
 		case SYS_NET_IP_HDRINCL:

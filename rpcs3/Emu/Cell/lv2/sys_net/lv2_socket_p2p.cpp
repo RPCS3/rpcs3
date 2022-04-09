@@ -217,7 +217,7 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 		native_flags |= MSG_WAITALL;
 	}
 
-	auto native_result = ::sendto(socket, reinterpret_cast<const char *>(p2p_data.data()), p2p_data.size(), native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), sizeof(native_addr));
+	auto native_result = ::sendto(socket, reinterpret_cast<const char*>(p2p_data.data()), p2p_data.size(), native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), sizeof(native_addr));
 
 	if (native_result >= 0)
 	{

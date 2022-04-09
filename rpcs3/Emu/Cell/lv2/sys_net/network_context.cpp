@@ -188,8 +188,9 @@ void network_thread::operator()()
 			{
 				if (s.get_type() != SYS_NET_SOCK_DGRAM_P2P && s.get_type() != SYS_NET_SOCK_STREAM_P2P)
 				{
-					socklist.emplace_back(idm::get_unlocked<lv2_socket>(id)); 
-				} });
+					socklist.emplace_back(idm::get_unlocked<lv2_socket>(id));
+				}
+			});
 
 		for (usz i = 0; i < socklist.size(); i++)
 		{

@@ -101,7 +101,8 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 #undef SYS_NET_ERROR_CASE
 			}
 
-			return unknown; });
+			return unknown;
+		});
 }
 
 template <>
@@ -118,7 +119,8 @@ void fmt_class_string<lv2_socket_type>::format(std::string& out, u64 arg)
 			case SYS_NET_SOCK_STREAM_P2P: return "STREAM-P2P";
 			}
 
-			return unknown; });
+			return unknown;
+		});
 }
 
 template <>
@@ -134,7 +136,8 @@ void fmt_class_string<lv2_socket_family>::format(std::string& out, u64 arg)
 			case SYS_NET_AF_INET6: return "INET6";
 			}
 
-			return unknown; });
+			return unknown;
+		});
 }
 
 template <>
@@ -152,7 +155,8 @@ void fmt_class_string<lv2_ip_protocol>::format(std::string& out, u64 arg)
 			case SYS_NET_IPPROTO_ICMPV6: return "IPPROTO_ICMPV6";
 			}
 
-			return unknown; });
+			return unknown;
+		});
 }
 
 template <>
@@ -167,7 +171,8 @@ void fmt_class_string<lv2_tcp_option>::format(std::string& out, u64 arg)
 			case SYS_NET_TCP_MSS_TO_ADVERTISE: return "TCP_MSS_TO_ADVERTISE";
 			}
 
-			return unknown; });
+			return unknown;
+		});
 }
 
 template <>
@@ -199,7 +204,8 @@ void fmt_class_string<lv2_socket_option>::format(std::string& out, u64 arg)
 			case SYS_NET_SOL_SOCKET: return "SOL_SOCKET";
 			}
 
-			return unknown; });
+			return unknown;
+		});
 }
 
 template <>
@@ -222,7 +228,8 @@ void fmt_class_string<lv2_ip_option>::format(std::string& out, u64 arg)
 			case SYS_NET_IP_DONTFRAG: return "IP_DONTFRAG";
 			}
 
-			return unknown; });
+			return unknown;
+		});
 }
 
 template <>
@@ -297,7 +304,8 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 				});
 
 			lv2_obj::sleep(ppu);
-			return false; });
+			return false;
+		});
 
 	if (!sock)
 	{
@@ -378,7 +386,9 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 	}
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
-		{ return sock.bind(sn_addr, s); });
+		{
+			return sock.bind(sn_addr, s);
+		});
 
 	if (!sock)
 	{
@@ -437,7 +447,8 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 			lv2_obj::sleep(ppu);
 
-			return false; });
+			return false;
+		});
 
 	if (!sock)
 	{
@@ -502,7 +513,8 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 				*addr     = sn_addr;
 			}
 
-			return sys_net_error{res}; });
+			return sys_net_error{res};
+		});
 
 	if (!sock)
 	{
@@ -539,7 +551,8 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 				*addr     = sn_addr;
 			}
 
-			return res; });
+			return res;
+		});
 
 	if (!sock)
 	{
@@ -601,7 +614,8 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				*optlen = out_len;
 			}
 
-			return static_cast<sys_net_error>(res); });
+			return static_cast<sys_net_error>(res);
+		});
 
 	if (!sock)
 	{
@@ -623,7 +637,9 @@ error_code sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
 	}
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
-		{ return static_cast<sys_net_error>(sock.listen(backlog)); });
+		{
+			return static_cast<sys_net_error>(sock.listen(backlog));
+		});
 
 	if (!sock)
 	{
@@ -701,7 +717,8 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 				});
 
 			lv2_obj::sleep(ppu);
-			return false; });
+			return false;
+		});
 
 	if (!sock)
 	{
@@ -827,7 +844,8 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 				});
 
 			lv2_obj::sleep(ppu);
-			return false; });
+			return false;
+		});
 
 	if (!sock)
 	{
@@ -903,7 +921,9 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 	std::vector<u8> optval_copy(vm::_ptr<u8>(optval.addr()), vm::_ptr<u8>(optval.addr() + optlen));
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
-		{ return sock.setsockopt(level, optname, optval_copy); });
+		{
+			return sock.setsockopt(level, optname, optval_copy);
+		});
 
 	if (!sock)
 	{
@@ -925,7 +945,9 @@ error_code sys_net_bnet_shutdown(ppu_thread& ppu, s32 s, s32 how)
 	}
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
-		{ return sock.shutdown(how); });
+		{
+			return sock.shutdown(how);
+		});
 
 	if (!sock)
 	{
@@ -1123,22 +1145,23 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 			sock->poll_queue(ppu.id, selected, [sock, selected, &fds_buf, i, &signaled, &ppu](bs_t<lv2_socket::poll_t> events)
 				{
-						if (events & selected)
-						{
-							if (events & selected & lv2_socket::poll_t::read)
-								fds_buf[i].revents |= SYS_NET_POLLIN;
-							if (events & selected & lv2_socket::poll_t::write)
-								fds_buf[i].revents |= SYS_NET_POLLOUT;
-							if (events & selected & lv2_socket::poll_t::error)
-								fds_buf[i].revents |= SYS_NET_POLLERR;
+					if (events & selected)
+					{
+						if (events & selected & lv2_socket::poll_t::read)
+							fds_buf[i].revents |= SYS_NET_POLLIN;
+						if (events & selected & lv2_socket::poll_t::write)
+							fds_buf[i].revents |= SYS_NET_POLLOUT;
+						if (events & selected & lv2_socket::poll_t::error)
+							fds_buf[i].revents |= SYS_NET_POLLERR;
 
-							signaled++;
-							g_fxo->get<network_context>().s_to_awake.emplace_back(&ppu);
-							return true;
-						}
+						signaled++;
+						g_fxo->get<network_context>().s_to_awake.emplace_back(&ppu);
+						return true;
+					}
 
-						sock->set_poll_event(selected);
-						return false; });
+					sock->set_poll_event(selected);
+					return false;
+				});
 		}
 	}
 
@@ -1335,8 +1358,8 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 								rread.set(i);
 							if (selected & lv2_socket::poll_t::write && events & (lv2_socket::poll_t::write + lv2_socket::poll_t::error))
 								rwrite.set(i);
-							//if (events & (selected & lv2_socket::poll::error))
-							//	rexcept.set(i);
+							// if (events & (selected & lv2_socket::poll::error))
+						    //	rexcept.set(i);
 
 							signaled++;
 							g_fxo->get<network_context>().s_to_awake.emplace_back(&ppu);
@@ -1344,7 +1367,8 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 						}
 
 						sock->set_poll_event(selected);
-						return false; });
+						return false;
+					});
 			}
 			else
 			{
