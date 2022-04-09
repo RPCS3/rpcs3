@@ -524,13 +524,11 @@ error_code cellOskDialogAbort()
 		return CELL_OK;
 	});
 
-	if (result != CELL_OK)
+	if (result == CELL_OK)
 	{
-		return result;
+		osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
+		osk->Close(FAKE_CELL_OSKDIALOG_CLOSE_ABORT);
 	}
-
-	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
-	osk->Close(FAKE_CELL_OSKDIALOG_CLOSE_ABORT);
 
 	g_fxo->get<osk_info>().last_dialog_state = CELL_SYSUTIL_OSKDIALOG_FINISHED;
 	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
