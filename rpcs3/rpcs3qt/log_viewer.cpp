@@ -9,6 +9,7 @@
 #include <QMenu>
 #include <QFile>
 #include <QFileDialog>
+#include <QInputDialog>
 #include <QTextStream>
 #include <QHBoxLayout>
 #include <QFontDatabase>
@@ -57,25 +58,36 @@ log_viewer::log_viewer(std::shared_ptr<gui_settings> gui_settings)
 void log_viewer::show_context_menu(const QPoint& pos)
 {
 	QMenu menu;
-	QAction* clear = new QAction(tr("&Clear"));
-	QAction* open  = new QAction(tr("&Open log file"));
+	QAction* clear  = new QAction(tr("&Clear"));
+	QAction* open   = new QAction(tr("&Open log file"));
+	QAction* filter = new QAction(tr("&Filter log"));
 
 	menu.addAction(open);
 	menu.addSeparator();
+	menu.addAction(filter);
+	menu.addSeparator();
 	menu.addAction(clear);
 
-	connect(clear, &QAction::triggered, [this]()
+	connect(clear, &QAction::triggered, this, [this]()
 	{
 		m_log_text->clear();
 	});
 
-	connect(open, &QAction::triggered, [this]()
+	connect(open, &QAction::triggered, this, [this]()
 	{
 		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select log file"), m_path_last, tr("Log files (*.log);;"));
 		if (file_path.isEmpty())
 			return;
 		m_path_last = file_path;
 		show_log();
+	});
+
+	connect(filter, &QAction::triggered, this, [this]()
+	{
+		m_filter_term = QInputDialog::getText(this, tr("Filter log"), tr("Enter text"), QLineEdit::EchoMode::Normal, m_filter_term);
+		if (m_filter_term.isEmpty())
+			return;
+		filter_log();
 	});
 
 	const auto obj = qobject_cast<QPlainTextEdit*>(sender());
@@ -119,6 +131,33 @@ void log_viewer::show_log() const
 		gui_log.error("log_viewer: Failed to open %s", sstr(m_path_last));
 		m_log_text->setPlainText(tr("Failed to open '%0'").arg(m_path_last));
 	}
+}
+
+void log_viewer::filter_log()
+{
+	if (m_filter_term.isEmpty())
+	{
+		return;
+	}
+
+	QString result;
+	QString text = m_log_text->toPlainText();
+
+	if (text.isEmpty())
+	{
+		return;
+	}
+
+	QTextStream stream(&text);
+	for (QString line = stream.readLine(); !line.isNull(); line = stream.readLine())
+	{
+		if (line.contains(m_filter_term))
+		{
+			result += line + "\n";
+		}
+	};
+
+	m_log_text->setPlainText(result);
 }
 
 bool log_viewer::is_valid_file(const QMimeData& md, bool save)
