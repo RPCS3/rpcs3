@@ -48,7 +48,7 @@ public:
 	std::optional<s32> sendto(s32 flags, const std::vector<u8>& buf, std::optional<sys_net_sockaddr> opt_sn_addr, bool is_lock = true) override;
 
 	s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
-	s32 select(bs_t<poll_t> selected, pollfd& native_pfd) override;
+	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
 
 	s32 listen(s32 backlog) override;
 	void close() override;

@@ -21,8 +21,8 @@ constexpr be_t<u32> P2PS_U2S_SIG = (static_cast<u32>('U') << 24 | static_cast<u3
 struct p2ps_encapsulated_tcp
 {
 	be_t<u32> signature = P2PS_U2S_SIG; // Signature to verify it's P2P Stream data
-	be_t<u32> length    = 0;                        // Length of data
-	be_t<u64> seq       = 0;                        // This should be u32 but changed to u64 for simplicity
+	be_t<u32> length    = 0;            // Length of data
+	be_t<u64> seq       = 0;            // This should be u32 but changed to u64 for simplicity
 	be_t<u64> ack       = 0;
 	be_t<u16> src_port  = 0; // fake source tcp port
 	be_t<u16> dst_port  = 0; // fake dest tcp port(should be == vport)
@@ -71,7 +71,7 @@ public:
 
 	std::optional<s32> connect(const sys_net_sockaddr& addr) override;
 
-	//std::pair<s32, sys_net_sockaddr> getsockname() override;
+	// std::pair<s32, sys_net_sockaddr> getsockname() override;
 
 	s32 listen(s32 backlog) override;
 
@@ -82,6 +82,7 @@ public:
 	s32 shutdown(s32 how) override;
 
 	s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
+	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
 
 protected:
 	static constexpr usz MAX_RECEIVED_BUFFER = (1024 * 1024 * 10);

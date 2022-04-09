@@ -1279,10 +1279,26 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 
 			if (auto sock = idm::check_unlocked<lv2_socket>((lv2_socket::id_base & -1024) + i))
 			{
-				if (sock->select(selected, _fds[i]))
+				auto [read_set, write_set, except_set] = sock->select(selected, _fds[i]);
+
+				if (read_set || write_set || except_set)
+				{
+					signaled++;
+				}
+
+				if (read_set)
 				{
 					rread.set(i);
-					signaled++;
+				}
+
+				if (write_set)
+				{
+					rwrite.set(i);
+				}
+
+				if (except_set)
+				{
+					rexcept.set(i);
 				}
 
 #ifdef _WIN32

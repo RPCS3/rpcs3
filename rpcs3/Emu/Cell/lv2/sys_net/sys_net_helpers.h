@@ -15,7 +15,6 @@
 #endif
 #endif
 
-
 #include "Emu/Cell/lv2/sys_net.h"
 
 int get_native_error();

@@ -796,3 +796,37 @@ s32 lv2_socket_p2ps::poll(sys_net_pollfd& sn_pfd, [[maybe_unused]] pollfd& nativ
 
 	return 0;
 }
+
+std::tuple<bool, bool, bool> lv2_socket_p2ps::select(bs_t<lv2_socket::poll_t> selected, [[maybe_unused]] pollfd& native_pfd)
+{
+	std::lock_guard lock(mutex);
+
+	bool read_set  = false;
+	bool write_set = false;
+
+	if (status == p2ps_stream_status::stream_connected)
+	{
+		if ((selected & lv2_socket::poll_t::read) && data_available)
+		{
+			sys_net.trace("[P2PS] socket has %d bytes available", data_available);
+			read_set = true;
+		}
+
+		if (selected & lv2_socket::poll_t::write)
+		{
+			sys_net.trace("[P2PS] socket is writeable");
+			write_set = true;
+		}
+	}
+	else if (status == p2ps_stream_status::stream_listening)
+	{
+		const auto bsize = backlog.size();
+		if ((selected & lv2_socket::poll_t::read) && bsize)
+		{
+			sys_net.trace("[P2PS] socket has %d clients available", bsize);
+			read_set = true;
+		}
+	}
+
+	return {read_set, write_set, false};
+}
