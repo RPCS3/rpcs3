@@ -1057,115 +1057,117 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 	std::vector<sys_net_pollfd> fds_buf;
 
-	fds_buf.assign(fds.get_ptr(), fds.get_ptr() + nfds);
-
-	std::unique_lock nw_lock(g_fxo->get<network_context>().s_nw_mutex);
-	std::shared_lock lock(id_manager::g_mutex);
-
-	::pollfd _fds[1024]{};
-#ifdef _WIN32
-	bool connecting[1024]{};
-#endif
-
-	for (s32 i = 0; i < nfds; i++)
 	{
-		_fds[i].fd         = -1;
-		fds_buf[i].revents = 0;
+		fds_buf.assign(fds.get_ptr(), fds.get_ptr() + nfds);
 
-		if (fds_buf[i].fd < 0)
-		{
-			continue;
-		}
+		std::unique_lock nw_lock(g_fxo->get<network_context>().s_nw_mutex);
+		std::shared_lock lock(id_manager::g_mutex);
 
-		if (auto sock = idm::check_unlocked<lv2_socket>(fds_buf[i].fd))
-		{
-			signaled += sock->poll(fds[i], _fds[i]);
+		::pollfd _fds[1024]{};
 #ifdef _WIN32
-			connecting[i] = sock->is_connecting();
+		bool connecting[1024]{};
 #endif
-		}
-		else
+
+		for (s32 i = 0; i < nfds; i++)
 		{
-			fds_buf[i].revents |= SYS_NET_POLLNVAL;
-			signaled++;
+			_fds[i].fd         = -1;
+			fds_buf[i].revents = 0;
+
+			if (fds_buf[i].fd < 0)
+			{
+				continue;
+			}
+
+			if (auto sock = idm::check_unlocked<lv2_socket>(fds_buf[i].fd))
+			{
+				signaled += sock->poll(fds[i], _fds[i]);
+#ifdef _WIN32
+				connecting[i] = sock->is_connecting();
+#endif
+			}
+			else
+			{
+				fds_buf[i].revents |= SYS_NET_POLLNVAL;
+				signaled++;
+			}
 		}
-	}
 
 #ifdef _WIN32
-	windows_poll(_fds, nfds, 0, connecting);
+		windows_poll(_fds, nfds, 0, connecting);
 #else
-	::poll(_fds, nfds, 0);
+		::poll(_fds, nfds, 0);
 #endif
-	for (s32 i = 0; i < nfds; i++)
-	{
-		if (_fds[i].revents & (POLLIN | POLLHUP))
-			fds_buf[i].revents |= SYS_NET_POLLIN;
-		if (_fds[i].revents & POLLOUT)
-			fds_buf[i].revents |= SYS_NET_POLLOUT;
-		if (_fds[i].revents & POLLERR)
-			fds_buf[i].revents |= SYS_NET_POLLERR;
-
-		if (fds_buf[i].revents)
+		for (s32 i = 0; i < nfds; i++)
 		{
-			signaled++;
-		}
-	}
+			if (_fds[i].revents & (POLLIN | POLLHUP))
+				fds_buf[i].revents |= SYS_NET_POLLIN;
+			if (_fds[i].revents & POLLOUT)
+				fds_buf[i].revents |= SYS_NET_POLLOUT;
+			if (_fds[i].revents & POLLERR)
+				fds_buf[i].revents |= SYS_NET_POLLERR;
 
-	if (ms == 0 || signaled)
-	{
-		lock.unlock();
-		nw_lock.unlock();
-		std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
-		return not_an_error(signaled);
-	}
-
-	for (s32 i = 0; i < nfds; i++)
-	{
-		if (fds_buf[i].fd < 0)
-		{
-			continue;
+			if (fds_buf[i].revents)
+			{
+				signaled++;
+			}
 		}
 
-		if (auto sock = idm::check_unlocked<lv2_socket>(fds_buf[i].fd))
+		if (ms == 0 || signaled)
 		{
-			auto lock = sock->lock();
+			lock.unlock();
+			nw_lock.unlock();
+			std::memcpy(fds.get_ptr(), fds_buf.data(), nfds * sizeof(fds[0]));
+			return not_an_error(signaled);
+		}
+
+		for (s32 i = 0; i < nfds; i++)
+		{
+			if (fds_buf[i].fd < 0)
+			{
+				continue;
+			}
+
+			if (auto sock = idm::check_unlocked<lv2_socket>(fds_buf[i].fd))
+			{
+				auto lock = sock->lock();
 
 #ifdef _WIN32
-			sock->set_connecting(connecting[i]);
+				sock->set_connecting(connecting[i]);
 #endif
 
-			bs_t<lv2_socket::poll_t> selected = +lv2_socket::poll_t::error;
+				bs_t<lv2_socket::poll_t> selected = +lv2_socket::poll_t::error;
 
-			if (fds_buf[i].events & SYS_NET_POLLIN)
-				selected += lv2_socket::poll_t::read;
-			if (fds_buf[i].events & SYS_NET_POLLOUT)
-				selected += lv2_socket::poll_t::write;
-			// if (fds_buf[i].events & SYS_NET_POLLPRI) // Unimplemented
-			//	selected += lv2_socket::poll::error;
+				if (fds_buf[i].events & SYS_NET_POLLIN)
+					selected += lv2_socket::poll_t::read;
+				if (fds_buf[i].events & SYS_NET_POLLOUT)
+					selected += lv2_socket::poll_t::write;
+				// if (fds_buf[i].events & SYS_NET_POLLPRI) // Unimplemented
+				//	selected += lv2_socket::poll::error;
 
-			sock->poll_queue(ppu.id, selected, [sock, selected, &fds_buf, i, &signaled, &ppu](bs_t<lv2_socket::poll_t> events)
-				{
-					if (events & selected)
+				sock->poll_queue(ppu.id, selected, [sock, selected, &fds_buf, i, &signaled, &ppu](bs_t<lv2_socket::poll_t> events)
 					{
-						if (events & selected & lv2_socket::poll_t::read)
-							fds_buf[i].revents |= SYS_NET_POLLIN;
-						if (events & selected & lv2_socket::poll_t::write)
-							fds_buf[i].revents |= SYS_NET_POLLOUT;
-						if (events & selected & lv2_socket::poll_t::error)
-							fds_buf[i].revents |= SYS_NET_POLLERR;
+						if (events & selected)
+						{
+							if (events & selected & lv2_socket::poll_t::read)
+								fds_buf[i].revents |= SYS_NET_POLLIN;
+							if (events & selected & lv2_socket::poll_t::write)
+								fds_buf[i].revents |= SYS_NET_POLLOUT;
+							if (events & selected & lv2_socket::poll_t::error)
+								fds_buf[i].revents |= SYS_NET_POLLERR;
 
-						signaled++;
-						g_fxo->get<network_context>().s_to_awake.emplace_back(&ppu);
-						return true;
-					}
+							signaled++;
+							g_fxo->get<network_context>().s_to_awake.emplace_back(&ppu);
+							return true;
+						}
 
-					sock->set_poll_event(selected);
-					return false;
-				});
+						sock->set_poll_event(selected);
+						return false;
+					});
+			}
 		}
-	}
 
-	lv2_obj::sleep(ppu, timeout);
+		lv2_obj::sleep(ppu, timeout);
+	}
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
