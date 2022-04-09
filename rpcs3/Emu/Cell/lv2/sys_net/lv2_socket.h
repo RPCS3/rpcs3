@@ -21,11 +21,10 @@
 #endif
 #endif
 
-
 #ifdef _WIN32
-	using socket_type = uptr;
+using socket_type = uptr;
 #else
-	using socket_type = int;
+using socket_type = int;
 #endif
 
 class lv2_socket
@@ -73,34 +72,33 @@ public:
 #endif
 
 public:
-
 	virtual std::tuple<bool, s32, sys_net_sockaddr> accept(bool is_lock = true) = 0;
-	virtual s32 bind(const sys_net_sockaddr &addr, s32 ps3_id) = 0;
-	
-	virtual std::optional<s32> connect(const sys_net_sockaddr &addr) = 0;
-	virtual s32 connect_followup() = 0;
+	virtual s32 bind(const sys_net_sockaddr& addr, s32 ps3_id)                  = 0;
+
+	virtual std::optional<s32> connect(const sys_net_sockaddr& addr) = 0;
+	virtual s32 connect_followup()                                   = 0;
 
 	virtual std::pair<s32, sys_net_sockaddr> getpeername() = 0;
 	virtual std::pair<s32, sys_net_sockaddr> getsockname() = 0;
 
 	virtual std::tuple<s32, sockopt_data, u32> getsockopt(s32 level, s32 optname, u32 len) = 0;
-	virtual s32 setsockopt(s32 level, s32 optname, const std::vector<u8>& optval) = 0;
+	virtual s32 setsockopt(s32 level, s32 optname, const std::vector<u8>& optval)          = 0;
 
 	virtual s32 listen(s32 backlog) = 0;
 
-	virtual std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> recvfrom(s32 flags, u32 len, bool is_lock = true) = 0;
+	virtual std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> recvfrom(s32 flags, u32 len, bool is_lock = true)                = 0;
 	virtual std::optional<s32> sendto(s32 flags, const std::vector<u8>& buf, std::optional<sys_net_sockaddr> opt_sn_addr, bool is_lock = true) = 0;
 
-	virtual void close() = 0;
+	virtual void close()          = 0;
 	virtual s32 shutdown(s32 how) = 0;
 
-	virtual s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) = 0;
-	virtual s32 select(bs_t<poll_t> selected, pollfd& native_pfd) = 0;
+	virtual s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)                           = 0;
+	virtual std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) = 0;
 
 public:
 	// IDM data
-	static const u32 id_base = 24;
-	static const u32 id_step = 1;
+	static const u32 id_base  = 24;
+	static const u32 id_step  = 1;
 	static const u32 id_count = 1000;
 
 protected:

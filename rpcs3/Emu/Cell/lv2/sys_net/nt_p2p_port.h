@@ -22,7 +22,7 @@ struct nt_p2p_port
 {
 	// Real socket where P2P packets are received/sent
 	socket_type p2p_socket = 0;
-	u16 port = 0;
+	u16 port               = 0;
 
 	shared_mutex bound_p2p_vports_mutex;
 	// For DGRAM_P2P sockets(vport, sock_id)

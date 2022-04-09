@@ -4,13 +4,13 @@
 
 class lv2_socket_p2p : public lv2_socket
 {
-	public:
+public:
 	lv2_socket_p2p(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 
 	std::tuple<bool, s32, sys_net_sockaddr> accept(bool is_lock = true) override;
-	s32 bind(const sys_net_sockaddr &addr, s32 ps3_id) override;
+	s32 bind(const sys_net_sockaddr& addr, s32 ps3_id) override;
 
-	std::optional<s32> connect(const sys_net_sockaddr &addr) override;
+	std::optional<s32> connect(const sys_net_sockaddr& addr) override;
 	s32 connect_followup() override;
 
 	std::pair<s32, sys_net_sockaddr> getpeername() override;
@@ -28,11 +28,11 @@ class lv2_socket_p2p : public lv2_socket
 	s32 shutdown(s32 how) override;
 
 	s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
-	s32 select(bs_t<poll_t> selected, pollfd& native_pfd) override;
+	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
 
 	void handle_new_data(sys_net_sockaddr_in_p2p p2p_addr, std::vector<u8> p2p_data);
 
-	protected:
+protected:
 	// Port(actual bound port) and Virtual Port(indicated by u16 at the start of the packet)
 	u16 port = 3658, vport = 0;
 	u32 bound_addr = 0;

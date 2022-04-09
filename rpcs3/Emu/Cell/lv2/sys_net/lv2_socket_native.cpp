@@ -969,7 +969,7 @@ s32 lv2_socket_native::poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)
 	return 0;
 }
 
-s32 lv2_socket_native::select(bs_t<lv2_socket::poll_t> selected, pollfd& native_pfd)
+std::tuple<bool, bool, bool> lv2_socket_native::select(bs_t<lv2_socket::poll_t> selected, pollfd& native_pfd)
 {
 	native_pfd.fd = socket;
 	if (selected & lv2_socket::poll_t::read)
@@ -981,7 +981,7 @@ s32 lv2_socket_native::select(bs_t<lv2_socket::poll_t> selected, pollfd& native_
 		native_pfd.events |= POLLOUT;
 	}
 
-	return 0;
+	return {};
 }
 
 void lv2_socket_native::set_default_buffers()
