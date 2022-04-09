@@ -436,8 +436,8 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		// Check if the anchor was resolved.
 		if (const auto yml_type = addr_node.Type(); yml_type != YAML::NodeType::Sequence)
 		{
-			append_log_message(log_messages, fmt::format("Skipping sequence: expected Sequence, found %s (key: %s, location: %s)", yml_type, info.hash, get_yaml_node_location(node)));
-			patch_log.error("Skipping sequence: expected Sequence, found %s (key: %s, location: %s)", yml_type, info.hash, get_yaml_node_location(node));
+			append_log_message(log_messages, fmt::format("Skipping patch node %s: expected Sequence, found %s (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node)));
+			patch_log.error("Skipping patch node %s: expected Sequence, found %s (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node));
 			return false;
 		}
 
@@ -457,10 +457,17 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		return is_valid;
 	}
 
+	if (const auto yml_type = value_node.Type(); yml_type != YAML::NodeType::Scalar)
+	{
+		append_log_message(log_messages, fmt::format("Skipping patch node %s. Value element has wrong type %s. (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node)));
+		patch_log.error("Skipping patch node %s. Value element has wrong type %s. (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node));
+		return false;
+	}
+
 	struct patch_data p_data{};
 	p_data.type           = type;
 	p_data.offset         = addr_node.as<u32>(0) + modifier;
-	p_data.original_value = value_node.IsScalar() ? value_node.Scalar() : "";
+	p_data.original_value = value_node.Scalar();
 
 	std::string error_message;
 
