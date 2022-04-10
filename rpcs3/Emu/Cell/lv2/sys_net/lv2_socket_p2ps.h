@@ -71,7 +71,7 @@ public:
 
 	std::optional<s32> connect(const sys_net_sockaddr& addr) override;
 
-	// std::pair<s32, sys_net_sockaddr> getsockname() override;
+	std::pair<s32, sys_net_sockaddr> getsockname() override;
 
 	s32 listen(s32 backlog) override;
 
