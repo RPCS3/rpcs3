@@ -852,7 +852,11 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		else
 		{
 			mem = std::make_unique<MemoryManager2>();
+#if defined(ARCH_X64)
 			null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
+#else
+			null_mod->setTargetTriple(llvm::Triple::normalize("arm64-unknown-linux-gnu"));
+#endif
 		}
 
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
