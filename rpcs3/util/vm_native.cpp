@@ -47,6 +47,11 @@ static int memfd_create_(const char *name, uint flags)
 
 namespace utils
 {
+#if defined(__APPLE__) && defined(ARCH_ARM64)
+	constexpr u64 pg_size = 16384;
+#else
+	constexpr u64 pg_size = 4096;
+#endif
 #ifdef MAP_NORESERVE
 	constexpr int c_map_noreserve = MAP_NORESERVE;
 #else
