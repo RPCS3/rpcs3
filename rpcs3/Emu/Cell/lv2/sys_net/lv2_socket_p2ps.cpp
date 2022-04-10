@@ -519,7 +519,11 @@ s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 
 	sys_net.notice("[P2PS] Trying to bind %s:%d:%d", np::ip_to_string(std::bit_cast<u32>(psa_in_p2p->sin_addr)), p2p_port, p2p_vport);
 
-	ensure(p2p_vport != 0);
+	if (p2p_port == 0)
+	{
+		p2p_port = 3658;
+	}
+
 	if (p2p_port != 3658)
 	{
 		sys_net.warning("[P2PS] Attempting to bind a socket to a port != 3658");
@@ -542,8 +546,24 @@ s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 			std::lock_guard vport_lock(pport.bound_p2p_vports_mutex);
 			std::lock_guard sock_lock(mutex);
 
-			const u64 key = (static_cast<u64>(p2p_vport) << 32);
-			pport.bound_p2p_streams.emplace(key, ps3_id);
+			if (p2p_vport == 0)
+			{
+				p2p_vport = 30000;
+				while (pport.bound_p2p_streams.contains((static_cast<u64>(p2p_vport) << 32)))
+				{
+					p2p_vport++;
+				}
+				pport.bound_p2p_streams.emplace((static_cast<u64>(p2p_vport) << 32), ps3_id);
+			}
+			else
+			{
+				const u64 key = (static_cast<u64>(p2p_vport) << 32);
+				if (pport.bound_p2p_streams.contains(key))
+				{
+					return -SYS_NET_EADDRINUSE;
+				}
+				pport.bound_p2p_streams.emplace(key, ps3_id);
+			}
 
 			port   = p2p_port;
 			vport  = p2p_vport;
@@ -552,6 +572,28 @@ s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 	}
 
 	return CELL_OK;
+}
+
+std::pair<s32, sys_net_sockaddr> lv2_socket_p2ps::getsockname()
+{
+	std::lock_guard lock(mutex);
+
+	// Unbound socket
+	if (!socket)
+	{
+		return {CELL_OK, {}};
+	}
+
+	sys_net_sockaddr sn_addr{};
+	sys_net_sockaddr_in_p2p* paddr = reinterpret_cast<sys_net_sockaddr_in_p2p*>(&sn_addr);
+
+	paddr->sin_len    = sizeof(sys_net_sockaddr_in);
+	paddr->sin_family = SYS_NET_AF_INET;
+	paddr->sin_port   = vport;
+	paddr->sin_vport  = port;
+	paddr->sin_addr   = bound_addr;
+
+	return {CELL_OK, sn_addr};
 }
 
 std::optional<s32> lv2_socket_p2ps::connect(const sys_net_sockaddr& addr)
