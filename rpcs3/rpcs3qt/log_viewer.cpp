@@ -62,9 +62,42 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	QAction* open   = new QAction(tr("&Open log file"));
 	QAction* filter = new QAction(tr("&Filter log"));
 
+	QActionGroup* log_level_acts = new QActionGroup(this);
+	QAction* fatal_act = new QAction(tr("Fatal"), log_level_acts);
+	QAction* error_act = new QAction(tr("Error"), log_level_acts);
+	QAction* todo_act = new QAction(tr("Todo"), log_level_acts);
+	QAction* success_act = new QAction(tr("Success"), log_level_acts);
+	QAction* warning_act = new QAction(tr("Warning"), log_level_acts);
+	QAction* notice_act = new QAction(tr("Notice"), log_level_acts);
+	QAction* trace_act = new QAction(tr("Trace"), log_level_acts);
+	log_level_acts->setExclusive(false);
+
+	auto init_action = [this](QAction* act, logs::level logLevel)
+	{
+		act->setCheckable(true);
+		act->setChecked(m_log_levels.test(static_cast<u32>(logLevel)));
+
+		// This sets the log level properly when the action is triggered.
+		connect(act, &QAction::triggered, this, [this, logLevel](bool checked)
+		{
+			m_log_levels.set(static_cast<u32>(logLevel), checked);
+			filter_log();
+		});
+	};
+
+	init_action(fatal_act, logs::level::fatal);
+	init_action(error_act, logs::level::error);
+	init_action(todo_act, logs::level::todo);
+	init_action(success_act, logs::level::success);
+	init_action(warning_act, logs::level::warning);
+	init_action(notice_act, logs::level::notice);
+	init_action(trace_act, logs::level::trace);
+
 	menu.addAction(open);
 	menu.addSeparator();
 	menu.addAction(filter);
+	menu.addSeparator();
+	menu.addActions(log_level_acts->actions());
 	menu.addSeparator();
 	menu.addAction(clear);
 
@@ -86,8 +119,6 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	connect(filter, &QAction::triggered, this, [this]()
 	{
 		m_filter_term = QInputDialog::getText(this, tr("Filter log"), tr("Enter text"), QLineEdit::EchoMode::Normal, m_filter_term);
-		if (m_filter_term.isEmpty())
-			return;
 		filter_log();
 	});
 
@@ -137,15 +168,6 @@ void log_viewer::show_log()
 
 void log_viewer::filter_log()
 {
-	if (m_filter_term.isEmpty())
-	{
-		if (!m_full_log.isEmpty())
-		{
-			m_log_text->setPlainText(m_full_log);
-		}
-		return;
-	}
-
 	if (m_full_log.isEmpty())
 	{
 		m_full_log = m_log_text->toPlainText();
@@ -156,12 +178,43 @@ void log_viewer::filter_log()
 		}
 	}
 
+	std::vector<QString> excluded_log_levels;
+	if (!m_log_levels.test(static_cast<u32>(logs::level::fatal)))   excluded_log_levels.push_back("·F ");
+	if (!m_log_levels.test(static_cast<u32>(logs::level::error)))   excluded_log_levels.push_back("·E ");
+	if (!m_log_levels.test(static_cast<u32>(logs::level::todo)))    excluded_log_levels.push_back("·U ");
+	if (!m_log_levels.test(static_cast<u32>(logs::level::success))) excluded_log_levels.push_back("·S ");
+	if (!m_log_levels.test(static_cast<u32>(logs::level::warning))) excluded_log_levels.push_back("·W ");
+	if (!m_log_levels.test(static_cast<u32>(logs::level::notice)))  excluded_log_levels.push_back("·! ");
+	if (!m_log_levels.test(static_cast<u32>(logs::level::trace)))   excluded_log_levels.push_back("·T ");
+
+	if (m_filter_term.isEmpty() && excluded_log_levels.empty())
+	{
+		m_log_text->setPlainText(m_full_log);
+		return;
+	}
+
 	QString result;
 
 	QTextStream stream(&m_full_log);
 	for (QString line = stream.readLine(); !line.isNull(); line = stream.readLine())
 	{
-		if (line.contains(m_filter_term))
+		bool exclude_line = false;
+
+		for (const QString& log_level_prefix : excluded_log_levels)
+		{
+			if (line.startsWith(log_level_prefix))
+			{
+				exclude_line = true;
+				break;
+			}
+		}
+
+		if (exclude_line)
+		{
+			continue;
+		}
+
+		if (m_filter_term.isEmpty() || line.contains(m_filter_term))
 		{
 			result += line + "\n";
 		}
