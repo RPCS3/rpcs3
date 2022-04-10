@@ -77,10 +77,10 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 
 	sys_net.notice("[P2P] Trying to bind %s:%d:%d", np::ip_to_string(std::bit_cast<u32>(psa_in_p2p->sin_addr)), p2p_port, p2p_vport);
 
-	ensure(p2p_vport != 0);
 	if (p2p_port != 3658)
 	{
 		sys_net.warning("[P2P] Attempting to bind a socket to a port != 3658");
+		ensure(p2p_port != 0);
 	}
 
 	socket_type real_socket{};
@@ -97,10 +97,24 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 		real_socket = pport.p2p_socket;
 		{
 			std::lock_guard lock(pport.bound_p2p_vports_mutex);
-			if (pport.bound_p2p_vports.count(p2p_vport) != 0)
+
+			if (p2p_vport == 0)
 			{
-				return -SYS_NET_EADDRINUSE;
+				// Find a free vport starting at 30000
+				p2p_vport = 30000;
+				while (pport.bound_p2p_vports.contains(p2p_vport))
+				{
+					p2p_vport++;
+				}
 			}
+			else
+			{
+				if (pport.bound_p2p_vports.contains(p2p_vport))
+				{
+					return -SYS_NET_EADDRINUSE;
+				}
+			}
+
 			pport.bound_p2p_vports.insert(std::make_pair(p2p_vport, ps3_id));
 		}
 	}
