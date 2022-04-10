@@ -457,7 +457,12 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 	if (sock.ret)
 	{
-		return (result < 0) ? sys_net_error{result} : result;
+		if (result < 0)
+		{
+			return sys_net_error{result};
+		}
+
+		return not_an_error(result);
 	}
 
 	if (!sock.ret)
@@ -484,7 +489,12 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 		if (result)
 		{
-			return (result < 0) ? sys_net_error{result} : result;
+			if (result < 0)
+			{
+				return sys_net_error{result};
+			}
+
+			return not_an_error(result);
 		}
 	}
 
@@ -503,7 +513,7 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 		return -SYS_NET_EINVAL;
 	}
 
-	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
+	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 		{
 			auto [res, sn_addr] = sock.getpeername();
 
@@ -513,7 +523,7 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 				*addr     = sn_addr;
 			}
 
-			return sys_net_error{res};
+			return res;
 		});
 
 	if (!sock)
@@ -521,9 +531,9 @@ error_code sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 		return -SYS_NET_EBADF;
 	}
 
-	if (sock.ret)
+	if (sock.ret < 0)
 	{
-		return sock.ret;
+		return sys_net_error{sock.ret};
 	}
 
 	return CELL_OK;
@@ -559,7 +569,7 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 		return -SYS_NET_EBADF;
 	}
 
-	if (sock.ret)
+	if (sock.ret < 0)
 	{
 		return sys_net_error{sock.ret};
 	}
@@ -599,7 +609,7 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 		return -SYS_NET_EINVAL;
 	}
 
-	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
+	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 		{
 			if (len < sizeof(s32))
 			{
@@ -614,7 +624,7 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				*optlen = out_len;
 			}
 
-			return static_cast<sys_net_error>(res);
+			return res;
 		});
 
 	if (!sock)
@@ -622,7 +632,12 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 		return -SYS_NET_EBADF;
 	}
 
-	return sock.ret;
+	if (sock.ret < 0)
+	{
+		return sys_net_error{sock.ret};
+	}
+
+	return CELL_OK;
 }
 
 error_code sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
@@ -636,9 +651,9 @@ error_code sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
 		return -SYS_NET_EINVAL;
 	}
 
-	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> sys_net_error
+	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 		{
-			return static_cast<sys_net_error>(sock.listen(backlog));
+			return sock.listen(backlog);
 		});
 
 	if (!sock)
@@ -646,9 +661,9 @@ error_code sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
 		return -SYS_NET_EBADF;
 	}
 
-	if (sock.ret)
+	if (sock.ret < 0)
 	{
-		return sock.ret;
+		return sys_net_error{sock.ret};
 	}
 
 	return CELL_OK;
@@ -759,7 +774,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		return not_an_error(result);
 	}
 
-	if (result > 0)
+	if (result >= 0)
 	{
 		if (addr)
 		{
@@ -770,7 +785,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		return not_an_error(result);
 	}
 
-	return result;
+	return sys_net_error{result};
 }
 
 error_code sys_net_bnet_recvmsg(ppu_thread& ppu, s32 s, vm::ptr<sys_net_msghdr> msg, s32 flags)
@@ -870,10 +885,11 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		}
 	}
 
-	if (result > 0 || result == -SYS_NET_EWOULDBLOCK)
+	if (result >= 0 || result == -SYS_NET_EWOULDBLOCK)
 	{
 		return not_an_error(result);
 	}
+
 	return sys_net_error{result};
 }
 
@@ -930,7 +946,12 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 		return -SYS_NET_EBADF;
 	}
 
-	return sock.ret;
+	if (sock.ret < 0)
+	{
+		return sys_net_error{sock.ret};
+	}
+
+	return not_an_error(sock.ret);
 }
 
 error_code sys_net_bnet_shutdown(ppu_thread& ppu, s32 s, s32 how)
@@ -954,9 +975,9 @@ error_code sys_net_bnet_shutdown(ppu_thread& ppu, s32 s, s32 how)
 		return -SYS_NET_EBADF;
 	}
 
-	if (sock.ret)
+	if (sock.ret < 0)
 	{
-		return sock.ret;
+		return sys_net_error{sock.ret};
 	}
 
 	return CELL_OK;
@@ -989,7 +1010,7 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, lv2_socket_family family, lv2_so
 		auto lv2_native = std::make_shared<lv2_socket_native>(family, type, protocol);
 		if (s32 result = lv2_native->create_socket(); result < 0)
 		{
-			return result;
+			return sys_net_error{result};
 		}
 
 		sock_lv2 = std::move(lv2_native);
