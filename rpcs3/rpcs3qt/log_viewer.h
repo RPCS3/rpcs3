@@ -3,6 +3,7 @@
 #include <QPlainTextEdit>
 #include <QDropEvent>
 
+#include <bitset>
 #include <memory>
 
 class LogHighlighter;
@@ -31,6 +32,7 @@ private:
 	QPlainTextEdit* m_log_text;
 	LogHighlighter* m_log_highlighter;
 	std::unique_ptr<find_dialog> m_find_dialog;
+	std::bitset<32> m_log_levels = std::bitset<32>(0b11111111u);
 
 protected:
 	void dropEvent(QDropEvent* ev) override;
