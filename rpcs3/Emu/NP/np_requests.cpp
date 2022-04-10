@@ -388,7 +388,7 @@ namespace np
 		{
 			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
 				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom, event_key, 0, size, cb_info.cb_arg);
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList, event_key, 0, size, cb_info.cb_arg);
 					return 0;
 				});
 		}
