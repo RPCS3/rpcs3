@@ -636,6 +636,9 @@
     <ClCompile Include="Emu\Cell\Modules\sceNpUtil.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\sceNpPlus.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\sys_game.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -1573,6 +1576,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\sceNpUtil.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\sceNpPlus.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\sys_crashdump.h">

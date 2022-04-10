@@ -328,6 +328,7 @@
     <ClCompile Include="Emu\Cell\Modules\sceNpTrophy.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpTus.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpUtil.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNpPlus.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_game.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_heap.cpp" />
@@ -704,6 +705,7 @@
     <ClInclude Include="Emu\Cell\Modules\sceNpTrophy.h" />
     <ClInclude Include="Emu\Cell\Modules\sceNpTus.h" />
     <ClInclude Include="Emu\Cell\Modules\sceNpUtil.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNpPlus.h" />
     <ClInclude Include="Emu\Cell\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\Cell\Modules\sys_lv2dbg.h" />
     <ClInclude Include="Emu\Cell\Modules\sys_net_.h" />
