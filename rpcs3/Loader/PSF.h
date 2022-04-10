@@ -41,7 +41,7 @@ namespace psf
 		// Construct integer entry, assign the value
 		entry(u32 value);
 
-		~entry();
+		~entry() = default;
 
 		const std::string& as_string() const;
 		u32 as_integer() const;
@@ -55,7 +55,7 @@ namespace psf
 	};
 
 	// Define PSF registry as a sorted map of entries:
-	using registry = std::map<std::string, entry>;
+	using registry = std::map<std::string, entry, std::less<>>;
 
 	struct load_result_t
 	{
@@ -77,13 +77,13 @@ namespace psf
 	std::vector<u8> save_object(const registry&, std::vector<u8>&& init = std::vector<u8>{});
 
 	// Get string value or default value
-	std::string_view get_string(const registry& psf, const std::string& key, std::string_view def = ""sv);
+	std::string_view get_string(const registry& psf, std::string_view key, std::string_view def = ""sv);
 
 	// Get integer value or default value
-	u32 get_integer(const registry& psf, const std::string& key, u32 def = 0);
+	u32 get_integer(const registry& psf, std::string_view key, u32 def = 0);
 
 	// Assign new entry
-	inline void assign(registry& psf, const std::string& key, entry&& _entry)
+	inline void assign(registry& psf, std::string_view key, entry&& _entry)
 	{
 		const auto found = psf.find(key);
 
@@ -107,5 +107,11 @@ namespace psf
 	inline entry array(u32 max_size, std::string_view value)
 	{
 		return {format::array, max_size, value};
+	}
+
+	// Checks if of HDD catgeory (assumes a valid category is being passed)
+	constexpr bool is_cat_hdd(std::string_view cat)
+	{
+		return cat.size() == 2u && cat[1] != 'D' && cat != "DG"sv && cat != "MS"sv;
 	}
 }
