@@ -129,7 +129,7 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 		// Add socket to the dns hook list
 		sys_net.notice("[Native] sys_net_bnet_connect: using DNS...");
 		auto& dnshook = g_fxo->get<np::dnshook>();
-		dnshook.add_dns_spy(socket);
+		dnshook.add_dns_spy(lv2_id);
 	}
 
 	if (::connect(socket, reinterpret_cast<struct sockaddr*>(&native_addr), native_addr_len) == 0)
@@ -949,6 +949,7 @@ s32 lv2_socket_native::poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)
 	if (sn_pfd.events & SYS_NET_POLLIN && dnshook.is_dns(sn_pfd.fd) && dnshook.is_dns_queue(sn_pfd.fd))
 	{
 		sn_pfd.revents |= SYS_NET_POLLIN;
+		return 1;
 	}
 	if (sn_pfd.events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT | SYS_NET_POLLERR))
 	{
