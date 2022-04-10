@@ -302,7 +302,7 @@ void update_manager::update(bool auto_accept)
 			changelog_content.append(tr("• %0: %1").arg(entry.version, entry.title));
 		}
 
-		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No,m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
+		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
 
 		if (!changelog_content.isEmpty())
 		{

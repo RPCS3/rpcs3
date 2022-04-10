@@ -60,10 +60,6 @@ namespace rpcn
 		  thread_rpcn(std::thread(&rpcn_client::rpcn_thread, this)), thread_rpcn_reader(std::thread(&rpcn_client::rpcn_reader_thread, this)),
 		  thread_rpcn_writer(std::thread(&rpcn_client::rpcn_writer_thread, this))
 	{
-#ifdef _WIN32
-		WSADATA wsa_data;
-		WSAStartup(MAKEWORD(2, 2), &wsa_data);
-#endif
 		g_cfg_rpcn.load();
 
 		sem_rpcn.release();

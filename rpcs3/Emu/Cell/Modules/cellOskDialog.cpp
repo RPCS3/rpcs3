@@ -217,7 +217,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	osk->on_osk_close = [wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
-		cellOskDialog.error("on_osk_close(status=%d)", status);
+		cellOskDialog.notice("on_osk_close(status=%d)", status);
 
 		const auto osk = wptr.lock();
 		osk->state = OskDialogState::Closed;
@@ -511,26 +511,24 @@ error_code cellOskDialogAbort()
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	const s32 result = osk->state.atomic_op([](OskDialogState& state)
+	const error_code result = osk->state.atomic_op([](OskDialogState& state) -> error_code
 	{
 		// Check for open dialog. In this case the dialog is "Open" if it was not unloaded before.
 		if (state == OskDialogState::Unloaded)
 		{
-			return static_cast<s32>(CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED);
+			return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 		}
 
 		state = OskDialogState::Abort;
 
-		return static_cast<s32>(CELL_OK);
+		return CELL_OK;
 	});
 
-	if (result != CELL_OK)
+	if (result == CELL_OK)
 	{
-		return result;
+		osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
+		osk->Close(FAKE_CELL_OSKDIALOG_CLOSE_ABORT);
 	}
-
-	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
-	osk->Close(FAKE_CELL_OSKDIALOG_CLOSE_ABORT);
 
 	g_fxo->get<osk_info>().last_dialog_state = CELL_SYSUTIL_OSKDIALOG_FINISHED;
 	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
