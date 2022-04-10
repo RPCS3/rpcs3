@@ -71,6 +71,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	connect(clear, &QAction::triggered, this, [this]()
 	{
 		m_log_text->clear();
+		m_full_log.clear();
 	});
 
 	connect(open, &QAction::triggered, this, [this]()
@@ -106,13 +107,14 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	menu.exec(origin);
 }
 
-void log_viewer::show_log() const
+void log_viewer::show_log()
 {
 	if (m_path_last.isEmpty())
 	{
 		return;
 	}
 
+	m_full_log.clear();
 	m_log_text->clear();
 	m_log_text->setPlainText(tr("Loading file..."));
 	QApplication::processEvents();
@@ -137,18 +139,26 @@ void log_viewer::filter_log()
 {
 	if (m_filter_term.isEmpty())
 	{
+		if (!m_full_log.isEmpty())
+		{
+			m_log_text->setPlainText(m_full_log);
+		}
 		return;
+	}
+
+	if (m_full_log.isEmpty())
+	{
+		m_full_log = m_log_text->toPlainText();
+
+		if (m_full_log.isEmpty())
+		{
+			return;
+		}
 	}
 
 	QString result;
-	QString text = m_log_text->toPlainText();
 
-	if (text.isEmpty())
-	{
-		return;
-	}
-
-	QTextStream stream(&text);
+	QTextStream stream(&m_full_log);
 	for (QString line = stream.readLine(); !line.isNull(); line = stream.readLine())
 	{
 		if (line.contains(m_filter_term))

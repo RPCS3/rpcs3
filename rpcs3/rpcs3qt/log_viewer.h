@@ -15,7 +15,7 @@ class log_viewer : public QWidget
 
 public:
 	explicit log_viewer(std::shared_ptr<gui_settings> gui_settings);
-	void show_log() const;
+	void show_log();
 
 private Q_SLOTS:
 	void show_context_menu(const QPoint& pos);
@@ -27,6 +27,7 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QString m_path_last;
 	QString m_filter_term;
+	QString m_full_log;
 	QPlainTextEdit* m_log_text;
 	LogHighlighter* m_log_highlighter;
 	std::unique_ptr<find_dialog> m_find_dialog;
