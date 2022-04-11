@@ -719,9 +719,39 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 	{
 		cellVdec.warning("cellVdecQueryAttr: DivX (profile=%d)", profile);
 
-		//const vm::ptr<CellVdecDivxSpecificInfo2> sinfo = vm::cast(spec_addr);
+		const vm::ptr<CellVdecDivxSpecificInfo2> sinfo = vm::cast(spec_addr);
+
+		if (sinfo)
+		{
+			if (sinfo->thisSize != sizeof(CellVdecDivxSpecificInfo2))
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+		}
 
 		// TODO: sinfo
+
+		//const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
+		//const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
+		u32 nrOfBuf       = sinfo ? +sinfo->numberOfDecodedFrameBuffer : 0;
+
+		if (nrOfBuf == 0)
+		{
+			nrOfBuf = 4;
+		}
+		else if (nrOfBuf == 2)
+		{
+			if (profile != CELL_VDEC_DIVX_QMOBILE && profile != CELL_VDEC_DIVX_MOBILE)
+			{
+				return CELL_VDEC_ERROR_ARG;
+			}
+		}
+		else if (nrOfBuf != 4 && nrOfBuf != 3)
+		{
+			return CELL_VDEC_ERROR_ARG;
+		}
+
+		// TODO: change memSize based on buffercount.
 
 		switch (profile)
 		{
