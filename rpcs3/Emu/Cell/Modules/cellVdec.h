@@ -71,6 +71,12 @@ enum CellVdecFrameRate : s32
 	CELL_VDEC_FRC_60           = 0x87,
 };
 
+enum
+{
+	CELL_CODEC_PTS_INVALID = 0xffffffff,
+	CELL_CODEC_DTS_INVALID = 0xffffffff,
+};
+
 // Codec Type Information
 struct CellVdecType
 {
