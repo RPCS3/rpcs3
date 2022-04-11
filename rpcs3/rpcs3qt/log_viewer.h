@@ -33,6 +33,7 @@ private:
 	LogHighlighter* m_log_highlighter;
 	std::unique_ptr<find_dialog> m_find_dialog;
 	std::bitset<32> m_log_levels = std::bitset<32>(0b11111111u);
+	bool m_show_threads = true;
 
 protected:
 	void dropEvent(QDropEvent* ev) override;
