@@ -15,6 +15,10 @@
 #include <QFontDatabase>
 #include <QMimeData>
 #include <QScrollBar>
+#include <QMessageBox>
+
+#include <deque>
+#include <map>
 
 LOG_CHANNEL(gui_log, "GUI");
 
@@ -67,6 +71,10 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	threads->setCheckable(true);
 	threads->setChecked(m_show_threads);
 
+	QAction* last_actions_only = new QAction(tr("&Last actions only"));
+	last_actions_only->setCheckable(true);
+	last_actions_only->setChecked(m_last_actions_only);
+
 	QActionGroup* log_level_acts = new QActionGroup(this);
 	QAction* fatal_act = new QAction(tr("Fatal"), log_level_acts);
 	QAction* error_act = new QAction(tr("Error"), log_level_acts);
@@ -104,6 +112,8 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	menu.addSeparator();
 	menu.addAction(threads);
 	menu.addSeparator();
+	menu.addAction(last_actions_only);
+	menu.addSeparator();
 	menu.addActions(log_level_acts->actions());
 	menu.addSeparator();
 	menu.addAction(clear);
@@ -132,6 +142,12 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	connect(threads, &QAction::toggled, this, [this](bool checked)
 	{
 		m_show_threads = checked;
+		filter_log();
+	});
+
+	connect(last_actions_only, &QAction::toggled, this, [this](bool checked)
+	{
+		m_last_actions_only = checked;
 		filter_log();
 	});
 
@@ -179,6 +195,13 @@ void log_viewer::show_log()
 	}
 }
 
+void log_viewer::set_text_and_keep_position(const QString& text)
+{
+	const int pos = m_log_text->verticalScrollBar()->value();
+	m_log_text->setPlainText(text);
+	m_log_text->verticalScrollBar()->setValue(pos);
+}
+
 void log_viewer::filter_log()
 {
 	if (m_full_log.isEmpty())
@@ -200,19 +223,17 @@ void log_viewer::filter_log()
 	if (!m_log_levels.test(static_cast<u32>(logs::level::notice)))  excluded_log_levels.push_back("·! ");
 	if (!m_log_levels.test(static_cast<u32>(logs::level::trace)))   excluded_log_levels.push_back("·T ");
 
-	if (m_filter_term.isEmpty() && excluded_log_levels.empty() && m_show_threads)
+	if (m_filter_term.isEmpty() && excluded_log_levels.empty() && m_show_threads && !m_last_actions_only)
 	{
-		const int pos = m_log_text->verticalScrollBar()->value();
-		m_log_text->setPlainText(m_full_log);
-		m_log_text->verticalScrollBar()->setValue(pos);
+		set_text_and_keep_position(m_full_log);
 		return;
 	}
 
 	QString result;
-
-	QRegularExpression regexp("\{.*\} ");
 	QTextStream stream(&m_full_log);
-	for (QString line = stream.readLine(); !line.isNull(); line = stream.readLine())
+	const QRegularExpression thread_regexp("\{.*\} ");
+
+	const auto add_line = [this, &result, &excluded_log_levels, &thread_regexp](QString& line)
 	{
 		bool exclude_line = false;
 
@@ -227,14 +248,14 @@ void log_viewer::filter_log()
 
 		if (exclude_line)
 		{
-			continue;
+			return;
 		}
 
 		if (m_filter_term.isEmpty() || line.contains(m_filter_term))
 		{
 			if (!m_show_threads)
 			{
-				line.remove(regexp);
+				line.remove(thread_regexp);
 			}
 
 			if (!line.isEmpty())
@@ -244,9 +265,63 @@ void log_viewer::filter_log()
 		}
 	};
 
-	const int pos = m_log_text->verticalScrollBar()->value();
-	m_log_text->setPlainText(result);
-	m_log_text->verticalScrollBar()->setValue(pos);
+	if (m_last_actions_only)
+	{
+		if (const int start_pos = m_full_log.lastIndexOf("LDR: Used configuration:"); start_pos >= 0)
+		{
+			if (!stream.seek(start_pos)) // TODO: is this correct ?
+			{
+				gui_log.error("Log viewer failed to seek to pos %d of log.", start_pos);
+			}
+
+			std::map<QString, std::deque<QString>> all_thread_actions;
+
+			for (QString line = stream.readLine(); !line.isNull(); line = stream.readLine())
+			{
+				if (const QRegularExpressionMatch match = thread_regexp.match(line); match.hasMatch())
+				{
+					if (const QString thread_name = match.captured(); !thread_name.isEmpty())
+					{
+						std::deque<QString>& actions = all_thread_actions[thread_name];
+						actions.push_back(line);
+
+						if (actions.size() > 10)
+						{
+							actions.pop_front();
+						}
+					}
+				}
+			}
+
+			for (auto& [thread_name, actions] : all_thread_actions)
+			{
+				for (QString& line : actions)
+				{
+					add_line(line);
+				}
+			}
+
+			set_text_and_keep_position(result);
+			return;
+		}
+		else
+		{
+			QMessageBox::information(this, tr("Ooops!"), tr("Cannot find any game boot!"));
+			// Pass through to regular log filter
+		}
+	}
+
+	if (!stream.seek(0))
+	{
+		gui_log.error("Log viewer failed to seek to beginning of log.");
+	}
+
+	for (QString line = stream.readLine(); !line.isNull(); line = stream.readLine())
+	{
+		add_line(line);
+	};
+
+	set_text_and_keep_position(result);
 }
 
 bool log_viewer::is_valid_file(const QMimeData& md, bool save)
