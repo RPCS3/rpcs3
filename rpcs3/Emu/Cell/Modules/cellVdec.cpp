@@ -1243,12 +1243,12 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	info->auNum = 1;
 	info->auPts[0].lower = static_cast<u32>(pts);
 	info->auPts[0].upper = static_cast<u32>(pts >> 32);
-	info->auPts[1].lower = -1;
-	info->auPts[1].upper = -1;
+	info->auPts[1].lower = CELL_CODEC_PTS_INVALID;
+	info->auPts[1].upper = CELL_CODEC_PTS_INVALID;
 	info->auDts[0].lower = static_cast<u32>(dts);
 	info->auDts[0].upper = static_cast<u32>(dts >> 32);
-	info->auDts[1].lower = -1;
-	info->auDts[1].upper = -1;
+	info->auDts[1].lower = CELL_CODEC_DTS_INVALID;
+	info->auDts[1].upper = CELL_CODEC_DTS_INVALID;
 	info->auUserData[0] = usrd;
 	info->auUserData[1] = 0;
 	info->status = CELL_OK;
