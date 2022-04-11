@@ -158,7 +158,11 @@ namespace utils
 			size += 0x10000;
 		}
 
+#ifdef __APPLE__
+        auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+#else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
+#endif
 
 		if (ptr == reinterpret_cast<void*>(uptr{umax}))
 		{

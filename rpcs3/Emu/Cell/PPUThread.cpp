@@ -65,6 +65,10 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
+#ifdef __APPLE__
+#include <libkern/OSCacheControl.h>
+#endif
+
 extern atomic_t<u64> g_watchdog_hold_ctr;
 
 // Should be of the same type
@@ -1252,6 +1256,9 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::initialize:
 		{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(false);
+#endif
 			cmd_pop();
 
 			while (!g_fxo->get<rsx::thread>().is_inited && !is_stopped())
@@ -1266,6 +1273,13 @@ void ppu_thread::cpu_task()
 			// We don't want to open a cell dialog while a native progress dialog is still open.
 			thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
 			g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog = true;
+
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(true);
+			// Flush all cache lines after toggling write protections
+			asm("ISB");
+			asm("DSB ISH");
+#endif
 
 			break;
 		}
@@ -2552,6 +2566,9 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 
 	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
 	{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(false);
+#endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
 
@@ -3226,6 +3243,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			// Set low priority
 			thread_ctrl::scoped_priority low_prio(-1);
 
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(false);
+#endif
 			for (u32 i = work_cv++; i < workload.size(); i = work_cv++, g_progr_pdone++)
 			{
 				if (Emu.IsStopped())
@@ -3287,6 +3307,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	}
 
 	// Jit can be null if the loop doesn't ever enter.
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(false);
+#endif
 	if (jit && !jit_mod.init)
 	{
 		jit->fin();

@@ -196,7 +196,11 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
 	ensure(!code->relocateToBase(uptr(p)));
 
 	{
+		// We manage rw <-> rx transitions manually on Apple
+		// because it's easier to keep track of when and where we need to toggle W^X
+#if !(defined(ARCH_ARM64) && defined(__APPLE__))
 		asmjit::VirtMem::ProtectJitReadWriteScope rwScope(p, codeSize);
+#endif
 
 		for (asmjit::Section* section : code->_sections)
 		{
@@ -224,7 +228,7 @@ u8* jit_runtime::alloc(usz size, uint align, bool exec) noexcept
 {
 	if (exec)
 	{
-		return add_jit_memory<s_code_pos, 0x0, utils::protection::rw>(size, align);
+		return add_jit_memory<s_code_pos, 0x0, utils::protection::wx>(size, align);
 	}
 	else
 	{
@@ -287,7 +291,7 @@ jit_runtime_base& asmjit::get_global_runtime()
 			m_max = m_pos + size;
 
 			// Make memory writable + executable
-			utils::memory_commit(m_pos, size, utils::protection::rw);
+			utils::memory_commit(m_pos, size, utils::protection::wx);
 		}
 
 		uchar* _alloc(usz size, usz align) noexcept override
@@ -568,7 +572,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 	u8* allocateCodeSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/) override
 	{
-		return allocate(code_ptr, size, align, utils::protection::rw);
+		return allocate(code_ptr, size, align, utils::protection::wx);
 	}
 
 	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool /*is_ro*/) override

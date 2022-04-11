@@ -53,6 +53,9 @@ static u8* move_args_ghc_to_native(u8* raw)
 
 DECLARE(spu_runtime::tr_dispatch) = []
 {
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(false);
+#endif
 	// Generate a special trampoline to spu_recompiler_base::dispatch with pause instruction
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = move_args_ghc_to_native(trptr);
@@ -439,6 +442,9 @@ void spu_cache::initialize()
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 	{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(false);
+#endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
 
