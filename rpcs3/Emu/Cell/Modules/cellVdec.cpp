@@ -154,7 +154,8 @@ struct vdec_frame
 	u64 pts{};
 	u64 userdata{};
 	u32 frc{};
-	bool PicItemRecieved = false;
+	bool pic_item_received = false;
+	CellVdecPicAttr attr = CELL_VDEC_PICITEM_ATTR_NORMAL;
 
 	AVFrame* operator ->() const
 	{
@@ -377,6 +378,8 @@ struct vdec_context final
 					next_dts = au_dts;
 				}
 
+				const CellVdecPicAttr attr = au_mode == CELL_VDEC_DEC_MODE_NORMAL ? CELL_VDEC_PICITEM_ATTR_NORMAL : CELL_VDEC_PICITEM_ATTR_SKIPPED;
+
 				ctx->skip_frame =
 					au_mode == CELL_VDEC_DEC_MODE_NORMAL ? AVDISCARD_DEFAULT :
 					au_mode == CELL_VDEC_DEC_MODE_B_SKIP ? AVDISCARD_NONREF : AVDISCARD_NONINTRA;
@@ -441,6 +444,7 @@ struct vdec_context final
 						frame.pts = next_pts;
 						frame.dts = next_dts;
 						frame.userdata = au_usrd;
+						frame.attr = attr;
 
 						if (frc_set)
 						{
@@ -1199,20 +1203,22 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	u64 dts;
 	u64 usrd;
 	u32 frc = 0;
+	CellVdecPicAttr attr = CELL_VDEC_PICITEM_ATTR_NORMAL;
 	vm::ptr<CellVdecPicItem> info;
 	{
 		std::lock_guard lock(vdec->mutex);
 
 		for (auto& picture : vdec->out_queue)
 		{
-			if (!picture.PicItemRecieved)
+			if (!picture.pic_item_received)
 			{
-				picture.PicItemRecieved = true;
+				picture.pic_item_received = true;
 				frame = picture.avf.get();
 				pts = picture.pts;
 				dts = picture.dts;
 				usrd = picture.userdata;
 				frc = picture.frc;
+				attr = picture.attr;
 				info.set(vdec->mem_addr + vdec->mem_bias);
 
 				constexpr u64 size_needed = sizeof(all_info_t);
@@ -1252,7 +1258,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	info->auUserData[0] = usrd;
 	info->auUserData[1] = 0;
 	info->status = CELL_OK;
-	info->attr = CELL_VDEC_PICITEM_ATTR_NORMAL;
+	info->attr = attr;
 
 	const vm::addr_t picinfo_addr{info.addr() + ::offset32(&all_info_t::picInfo)};
 	info->picInfo_addr = picinfo_addr;
