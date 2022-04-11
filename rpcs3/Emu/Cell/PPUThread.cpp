@@ -3432,7 +3432,6 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 		std::string result;
 		raw_string_ostream out(result);
-
 		if (g_cfg.core.llvm_logs)
 		{
 			out << *_module; // print IR

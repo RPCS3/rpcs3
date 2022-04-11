@@ -24,7 +24,7 @@ cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
 	, m_module(_module)
 	, m_is_be(is_be)
 {
-	register_intrinsic("x86_pshufb", [&](llvm::CallInst* ci) -> llvm::Value*
+	register_intrinsic("pshufb", [&](llvm::CallInst* ci) -> llvm::Value*
 	{
 		const auto data0 = ci->getOperand(0);
 		const auto index = ci->getOperand(1);

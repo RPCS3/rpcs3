@@ -432,6 +432,21 @@ static u64 make_null_function(const std::string& name)
 				c.db(ch);
 			c.db(0);
 			c.align(AlignMode::kData, 16);
+#else
+			// AArch64 implementation
+			Label jmp_address = c.newLabel();
+			Label data = c.newLabel();
+			// Force absolute jump to prevent out of bounds PC-rel jmp
+			c.bind(jmp_address);
+			c.embedUInt64(reinterpret_cast<u64>(&null));
+			c.ldr(args[0], arm::ptr(jmp_address));
+			c.br(args[0]);
+			c.align(AlignMode::kCode, 16);
+
+			c.bind(data);
+			c.embed(name.c_str(), name.size());
+			c.embedUInt8(0U);
+			c.align(AlignMode::kData, 16);
 #endif
 		});
 

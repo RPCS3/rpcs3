@@ -5069,7 +5069,11 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
+#ifdef ARCH_X64
 		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
+#else
+		_module->setTargetTriple(Triple::normalize("arm64-unknown-linux-gnu"));
+#endif
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -5114,7 +5118,11 @@ public:
 
 		// Save host thread's stack pointer
 		const auto native_sp = spu_ptr<u64>(&spu_thread::saved_native_sp);
+#ifdef ARCH_X64
 		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "rsp")}));
+#else
+		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "sp")}));
+#endif
 		m_ir->CreateStore(m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::read_register), {rsp_name}), native_sp);
 
 		// Decode (shift) and load function pointer
@@ -5328,7 +5336,11 @@ public:
 							else if (!(itype & spu_itype::branch))
 							{
 								// Hack: inline ret instruction before final jmp; this is not reliable.
+#ifdef ARCH_X64
 								m_ir->CreateCall(InlineAsm::get(get_ftype<void>(), "ret", "", true, false, InlineAsm::AD_Intel));
+#else
+								m_ir->CreateCall(InlineAsm::get(get_ftype<void>(), "ret", "", true, false));
+#endif
 								fret = ret_func;
 							}
 

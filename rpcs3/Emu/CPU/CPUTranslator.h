@@ -21,6 +21,8 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
+
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -2894,8 +2896,12 @@ protected:
 	bool m_is_be;
 
 	// Allow PSHUFB intrinsic
+#ifdef ARCH_X64
 	bool m_use_ssse3 = true;
-
+#else
+	// TODO: fix the pshufb arm64 native impl using TBL instruction
+	bool m_use_ssse3 = false;
+#endif
 	// Allow FMA
 	bool m_use_fma = false;
 
@@ -3603,7 +3609,7 @@ public:
 	template <typename T, typename U>
 	static auto pshufb(T&& a, U&& b)
 	{
-		return llvm_calli<u8[16], T, U>{"x86_pshufb", {std::forward<T>(a), std::forward<U>(b)}}.if_const([](llvm::Value* args[], llvm::IRBuilder<>* ir) -> llvm::Value*
+		return llvm_calli<u8[16], T, U>{"pshufb", {std::forward<T>(a), std::forward<U>(b)}}.if_const([](llvm::Value* args[], llvm::IRBuilder<>* ir) -> llvm::Value*
 		{
 			const auto zeros = llvm::ConstantAggregateZero::get(llvm_value_t<u8[16]>::get_type(ir->getContext()));
 
@@ -3640,25 +3646,41 @@ public:
 	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
 	static auto fre(T&& a)
 	{
+#ifdef ARCH_X64
 		return llvm_calli<f32[4], T>{"llvm.x86.sse.rcp.ps", {std::forward<T>(a)}};
+#else
+		return llvm_calli<f32[4], T>{"llvm.aarch64.neon.frecpe.v4f32", {std::forward<T>(a)}};
+#endif
 	}
 
 	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
 	static auto frsqe(T&& a)
 	{
+#ifdef ARCH_X64
 		return llvm_calli<f32[4], T>{"llvm.x86.sse.rsqrt.ps", {std::forward<T>(a)}};
+#else
+		return llvm_calli<f32[4], T>{"llvm.aarch64.neon.frsqrte.v4f32", {std::forward<T>(a)}};
+#endif
 	}
 
 	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
 	static auto fmax(T&& a, U&& b)
 	{
+#ifdef ARCH_X64
 		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.max.ps", {std::forward<T>(a), std::forward<U>(b)}};
+#else
+		return llvm_calli<f32[4], T, U>{"llvm.aarch64.neon.fmax.v4f32", {std::forward<T>(a), std::forward<U>(b)}};
+#endif
 	}
 
 	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
 	static auto fmin(T&& a, U&& b)
 	{
+#ifdef ARCH_X64
 		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.min.ps", {std::forward<T>(a), std::forward<U>(b)}};
+#else
+		return llvm_calli<f32[4], T, U>{"llvm.aarch64.neon.fmin.v4f32", {std::forward<T>(a), std::forward<U>(b)}};
+#endif
 	}
 
 	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, u8[16]>>>
