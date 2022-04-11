@@ -977,7 +977,7 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 
 	if (!vdec || !auInfo || !auInfo->pts.upper || !auInfo->startAddr)
 	{
-		return CELL_VDEC_ERROR_ARG;
+		return { CELL_VDEC_ERROR_ARG, fmt::format("vdec=%d, auInfo=%d, upper=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->pts.upper.value() : 0, auInfo ? auInfo->startAddr.value() : 0) };
 	}
 
 	{
@@ -991,7 +991,7 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 
 	if (mode < 0 || mode > CELL_VDEC_DEC_MODE_PB_SKIP)
 	{
-		return CELL_VDEC_ERROR_ARG;
+		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d", +mode) };
 	}
 
 	// TODO:
