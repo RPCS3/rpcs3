@@ -14,6 +14,7 @@
 #include <QHBoxLayout>
 #include <QFontDatabase>
 #include <QMimeData>
+#include <QScrollBar>
 
 LOG_CHANNEL(gui_log, "GUI");
 
@@ -62,6 +63,10 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	QAction* open   = new QAction(tr("&Open log file"));
 	QAction* filter = new QAction(tr("&Filter log"));
 
+	QAction* threads = new QAction(tr("&Show Threads"));
+	threads->setCheckable(true);
+	threads->setChecked(m_show_threads);
+
 	QActionGroup* log_level_acts = new QActionGroup(this);
 	QAction* fatal_act = new QAction(tr("Fatal"), log_level_acts);
 	QAction* error_act = new QAction(tr("Error"), log_level_acts);
@@ -97,6 +102,8 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	menu.addSeparator();
 	menu.addAction(filter);
 	menu.addSeparator();
+	menu.addAction(threads);
+	menu.addSeparator();
 	menu.addActions(log_level_acts->actions());
 	menu.addSeparator();
 	menu.addAction(clear);
@@ -119,6 +126,12 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	connect(filter, &QAction::triggered, this, [this]()
 	{
 		m_filter_term = QInputDialog::getText(this, tr("Filter log"), tr("Enter text"), QLineEdit::EchoMode::Normal, m_filter_term);
+		filter_log();
+	});
+
+	connect(threads, &QAction::toggled, this, [this](bool checked)
+	{
+		m_show_threads = checked;
 		filter_log();
 	});
 
@@ -187,14 +200,17 @@ void log_viewer::filter_log()
 	if (!m_log_levels.test(static_cast<u32>(logs::level::notice)))  excluded_log_levels.push_back("·! ");
 	if (!m_log_levels.test(static_cast<u32>(logs::level::trace)))   excluded_log_levels.push_back("·T ");
 
-	if (m_filter_term.isEmpty() && excluded_log_levels.empty())
+	if (m_filter_term.isEmpty() && excluded_log_levels.empty() && m_show_threads)
 	{
+		const int pos = m_log_text->verticalScrollBar()->value();
 		m_log_text->setPlainText(m_full_log);
+		m_log_text->verticalScrollBar()->setValue(pos);
 		return;
 	}
 
 	QString result;
 
+	QRegularExpression regexp("\{.*\} ");
 	QTextStream stream(&m_full_log);
 	for (QString line = stream.readLine(); !line.isNull(); line = stream.readLine())
 	{
@@ -216,11 +232,21 @@ void log_viewer::filter_log()
 
 		if (m_filter_term.isEmpty() || line.contains(m_filter_term))
 		{
-			result += line + "\n";
+			if (!m_show_threads)
+			{
+				line.remove(regexp);
+			}
+
+			if (!line.isEmpty())
+			{
+				result += line + "\n";
+			}
 		}
 	};
 
+	const int pos = m_log_text->verticalScrollBar()->value();
 	m_log_text->setPlainText(result);
+	m_log_text->verticalScrollBar()->setValue(pos);
 }
 
 bool log_viewer::is_valid_file(const QMimeData& md, bool save)
