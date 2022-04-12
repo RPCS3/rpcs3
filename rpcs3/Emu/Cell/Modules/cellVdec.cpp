@@ -1192,15 +1192,20 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 		u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], alpha_plane.get() };
 		int in_line[4] = { frame->linesize[0], frame->linesize[1], frame->linesize[2], w * 1 };
 		u8* out_data[4] = { outBuff.get_ptr() };
-		int out_line[4] = { w * 4 };
+		int out_line[4] = { w * 4 }; // RGBA32 or ARGB32
 
 		if (!alpha_plane)
 		{
+			// YUV420P or UYVY422
 			out_data[1] = out_data[0] + w * h;
 			out_data[2] = out_data[0] + w * h * 5 / 4;
-			out_line[0] = w;
-			out_line[1] = w / 2;
-			out_line[2] = w / 2;
+
+			if (const int ret = av_image_fill_linesizes(out_line, out_f, w); ret < 0)
+			{
+				char av_error[AV_ERROR_MAX_STRING_SIZE]{};
+				av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
+				fmt::throw_exception("cellVdecGetPicture: av_image_fill_linesizes failed (ret=0x%x): %s", ret, av_error);
+			}
 		}
 
 		sws_scale(vdec->sws, in_data, in_line, 0, h, out_data, out_line);
@@ -1212,7 +1217,7 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 		//int err = av_image_copy_to_buffer(outBuff.get_ptr(), buf_size, frame->data, frame->linesize, vdec->ctx->pix_fmt, frame->width, frame->height, 1);
 		//if (err < 0)
 		//{
-		//	cellVdec.Fatal("cellVdecGetPicture: av_image_copy_to_buffer failed (err=0x%x)", err);
+		//	cellVdec.fatal("cellVdecGetPicture: av_image_copy_to_buffer failed (err=0x%x)", err);
 		//}
 	}
 
