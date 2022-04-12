@@ -268,6 +268,8 @@ struct vdec_context final
 			fmt::throw_exception("avcodec_open2() failed (err=0x%x='%s', opts=%s)", err, utils::av_error_to_string(err), dict_content);
 		}
 
+		av_dict_free(&opts);
+
 		seq_state = sequence_state::dormant;
 	}
 
@@ -412,12 +414,10 @@ struct vdec_context final
 							{
 								break;
 							}
-							else
-							{
-								char av_error[AV_ERROR_MAX_STRING_SIZE];
-								av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
-								fmt::throw_exception("AU decoding error(0x%x): %s", ret, av_error);
-							}
+
+							char av_error[AV_ERROR_MAX_STRING_SIZE]{};
+							av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
+							fmt::throw_exception("AU decoding error(0x%x): %s", ret, av_error);
 						}
 
 						if (frame->interlaced_frame)
