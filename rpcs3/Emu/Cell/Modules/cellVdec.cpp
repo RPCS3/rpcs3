@@ -1023,17 +1023,17 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 		}
 	}
 
-	if (mode < 0 || mode > CELL_VDEC_DEC_MODE_PB_SKIP)
+	if (mode < 0 || mode > (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP))
 	{
 		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d", +mode) };
 	}
 
-	// TODO:
-	//if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && something != 3) ||
-	//	(mode == CELL_VDEC_DEC_MODE_PB_SKIP && something != 1))
-	//{
-	//	return CELL_VDEC_ERROR_ARG;
-	//}
+	// TODO: what does the 3 stand for ?
+	if ((mode == CELL_VDEC_CODEC_TYPE_MAX && vdec->type != 3) ||
+		(mode == CELL_VDEC_DEC_MODE_PB_SKIP && vdec->type != CELL_VDEC_CODEC_TYPE_AVC))
+	{
+		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d, type=%d", +mode, vdec->type) };
+	}
 
 	if (!vdec->au_count.try_inc(4))
 	{
