@@ -144,6 +144,19 @@ struct CellVdecAuInfo
 	be_t<u64> codecSpecificData;
 };
 
+// Access Unit Information
+struct CellVdecAuInfoEx2 // Speculative name
+{
+	be_t<u32> startAddr;
+	be_t<u32> unk1; // Speculative
+	be_t<u32> size;
+	be_t<u32> unk2; // Speculative
+	CellCodecTimeStamp pts;
+	CellCodecTimeStamp dts;
+	be_t<u64> userData;
+	be_t<u64> codecSpecificData;
+};
+
 // Output Picture Information
 struct CellVdecPicItem
 {

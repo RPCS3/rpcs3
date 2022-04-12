@@ -1029,7 +1029,7 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 	}
 
 	// TODO: what does the 3 stand for ?
-	if ((mode == CELL_VDEC_CODEC_TYPE_MAX && vdec->type != 3) ||
+	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != 3) ||
 		(mode == CELL_VDEC_DEC_MODE_PB_SKIP && vdec->type != CELL_VDEC_CODEC_TYPE_AVC))
 	{
 		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d, type=%d", +mode, vdec->type) };
@@ -1045,9 +1045,53 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 	return CELL_OK;
 }
 
-error_code cellVdecDecodeAuEx2()
+error_code cellVdecDecodeAuEx2(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfoEx2> auInfo)
 {
-	UNIMPLEMENTED_FUNC(cellVdec);
+	cellVdec.todo("cellVdecDecodeAuEx2(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, +mode, auInfo);
+
+	const auto vdec = idm::get<vdec_context>(handle);
+
+	if (!vdec || !auInfo || !auInfo->pts.upper || !auInfo->startAddr)
+	{
+		return { CELL_VDEC_ERROR_ARG, fmt::format("vdec=%d, auInfo=%d, upper=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->pts.upper.value() : 0, auInfo ? auInfo->startAddr.value() : 0) };
+	}
+
+	{
+		std::lock_guard lock{vdec->mutex};
+
+		if (vdec->seq_state != sequence_state::ready)
+		{
+			return { CELL_VDEC_ERROR_SEQ, vdec->seq_state.load() };
+		}
+	}
+
+	if (mode < 0 || mode > (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP))
+	{
+		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d", +mode) };
+	}
+
+	// TODO: what does the 3 stand for ?
+	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != 3) ||
+		(mode == CELL_VDEC_DEC_MODE_PB_SKIP && vdec->type != CELL_VDEC_CODEC_TYPE_AVC))
+	{
+		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d, type=%d", +mode, vdec->type) };
+	}
+
+	if (!vdec->au_count.try_inc(4))
+	{
+		return CELL_VDEC_ERROR_BUSY;
+	}
+
+	CellVdecAuInfo au_info{};
+	au_info.startAddr = auInfo->startAddr;
+	au_info.size = auInfo->size;
+	au_info.pts = auInfo->pts;
+	au_info.dts = auInfo->dts;
+	au_info.userData = auInfo->userData;
+	au_info.codecSpecificData = auInfo->codecSpecificData;
+
+	// TODO: check info
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::au_decode, mode, au_info));
 	return CELL_OK;
 }
 
