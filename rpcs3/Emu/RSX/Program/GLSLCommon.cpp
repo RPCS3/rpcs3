@@ -636,7 +636,8 @@ namespace glsl
 				"		const double inv_range = (depth_range > 0.000001) ? (1.0 / (depth_range * pos.w)) : 0.0;\n"
 				"		const double actual_d = (double(pos.z) - double(real_n * pos.w)) * inv_range;\n"
 				"		const double nearest_d = floor(actual_d + 0.5);\n"
-				"		const double d = _select(actual_d, nearest_d, abs(actual_d - nearest_d) < 0.000002);\n"  // Epsilon value settled on empirically
+				"		const double epsilon = (inv_range * pos.w) / 16777215.;\n"     // Epsilon value is the minimum discernable change in Z that should affect the stored Z
+				"		const double d = _select(actual_d, nearest_d, abs(actual_d - nearest_d) < epsilon);\n"
 				"		return vec4(pos.xy, float(d * pos.w), pos.w);\n"
 				"	}\n"
 				"	else\n"
