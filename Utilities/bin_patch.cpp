@@ -464,6 +464,13 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		return false;
 	}
 
+	if (!addr_node.Scalar().starts_with("0x"))
+	{
+		append_log_message(log_messages, fmt::format("Skipping patch node %s. Address element has wrong format %s. (key: %s, location: %s)", info.description, addr_node.Scalar(), info.hash, get_yaml_node_location(node)));
+		patch_log.error("Skipping patch node %s. Address element has wrong format %s. (key: %s, location: %s)", info.description, addr_node.Scalar(), info.hash, get_yaml_node_location(node));
+		return false;
+	}
+
 	struct patch_data p_data{};
 	p_data.type           = type;
 	p_data.offset         = addr_node.as<u32>(0) + modifier;
