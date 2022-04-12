@@ -17,6 +17,7 @@ enum CellVdecCodecType : s32
 	CELL_VDEC_CODEC_TYPE_MPEG2 = 0,
 	CELL_VDEC_CODEC_TYPE_AVC   = 1,
 	CELL_VDEC_CODEC_TYPE_DIVX  = 5,
+	CELL_VDEC_CODEC_TYPE_MAX
 };
 
 // Callback Messages
