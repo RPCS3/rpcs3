@@ -38,6 +38,7 @@ namespace rsx
 		u32 texture_dimensions = 0;
 		u16 redirected_textures = 0;
 		u16 shadow_textures = 0;
+		u16 multisampled_textures = 0;
 
 		void clear(u32 index);
 		void import(const fragment_program_texture_state& other, u16 mask);
@@ -48,6 +49,7 @@ namespace rsx
 	struct vertex_program_texture_state
 	{
 		u32 texture_dimensions = 0;
+		u16 multisampled_textures = 0;
 
 		void clear(u32 index);
 		void import(const vertex_program_texture_state& other, u16 mask);

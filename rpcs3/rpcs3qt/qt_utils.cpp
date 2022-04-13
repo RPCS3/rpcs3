@@ -10,6 +10,7 @@
 
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
+#include <cmath>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
@@ -38,6 +39,60 @@ namespace gui
 			const s32 frame_y = std::clamp(frame_y_raw, min_screen_y, max_screen_y);
 
 			return QRect(frame_x, frame_y, target_width, target_height);
+		}
+
+		bool create_square_pixmap(QPixmap& pixmap, int target_size)
+		{
+			if (pixmap.isNull())
+				return false;
+
+			QSize canvas_size(target_size, target_size);
+			QSize pixmap_size(pixmap.size());
+			QPoint target_pos;
+
+			// Let's upscale the original pixmap to at least fit into the outer rect.
+			if (pixmap_size.width() < target_size || pixmap_size.height() < target_size)
+			{
+				pixmap_size.scale(target_size, target_size, Qt::KeepAspectRatio);
+			}
+
+			canvas_size = pixmap_size;
+
+			// Calculate the centered size and position of the icon on our canvas.
+			if (pixmap_size.width() != target_size || pixmap_size.height() != target_size)
+			{
+				ensure(pixmap_size.height() > 0);
+				constexpr double target_ratio = 1.0; // square icon
+
+				if ((pixmap_size.width() / static_cast<double>(pixmap_size.height())) > target_ratio)
+				{
+					canvas_size.setHeight(std::ceil(pixmap_size.width() / target_ratio));
+				}
+				else
+				{
+					canvas_size.setWidth(std::ceil(pixmap_size.height() * target_ratio));
+				}
+
+				target_pos.setX(std::max<int>(0, (canvas_size.width() - pixmap_size.width()) / 2.0));
+				target_pos.setY(std::max<int>(0, (canvas_size.height() - pixmap_size.height()) / 2.0));
+			}
+
+			// Create a canvas large enough to fit our entire scaled icon
+			QPixmap canvas(canvas_size);
+			canvas.fill(Qt::transparent);
+
+			// Create a painter for our canvas
+			QPainter painter(&canvas);
+			painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+			// Draw the icon onto our canvas
+			painter.drawPixmap(target_pos.x(), target_pos.y(), pixmap_size.width(), pixmap_size.height(), pixmap);
+
+			// Finish the painting
+			painter.end();
+
+			pixmap = canvas;
+			return true;
 		}
 
 		QPixmap get_colorized_pixmap(const QPixmap& old_pixmap, const QColor& old_color, const QColor& new_color, bool use_special_masks, bool colorize_all)

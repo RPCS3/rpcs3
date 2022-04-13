@@ -29,14 +29,25 @@ std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
+	int version = 420;
+	std::vector<const char*> required_extensions;
+
 	if (device_props.has_native_half_support)
 	{
-		OS << "#version 450\n";
-		OS << "#extension GL_EXT_shader_explicit_arithmetic_types_float16: enable\n";
+		version = std::max(version, 450);
+		required_extensions.emplace_back("GL_EXT_shader_explicit_arithmetic_types_float16");
 	}
-	else
+
+	if (properties.multisampled_sampler_mask)
 	{
-		OS << "#version 420\n";
+		version = std::max(version, 450);
+		required_extensions.emplace_back("GL_ARB_shader_texture_image_samples");
+	}
+
+	OS << "#version " << version << "\n";
+	for (const auto ext : required_extensions)
+	{
+		OS << "#extension " << ext << ": require\n";
 	}
 
 	OS << "#extension GL_ARB_separate_shader_objects: enable\n\n";
@@ -128,11 +139,21 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		for (const ParamItem& PI : PT.items)
 		{
 			std::string samplerType = PT.type;
-			int index = atoi(&PI.name[3]);
 
+			ensure(PI.name.length() > 3);
+			int index = atoi(&PI.name[3]);
 			const auto mask = (1 << index);
 
-			if (properties.shadow_sampler_mask & mask)
+			if (properties.multisampled_sampler_mask & mask)
+			{
+				if (samplerType != "sampler1D" && samplerType != "sampler2D")
+				{
+					rsx_log.error("Unexpected multisampled image type '%s'", samplerType);
+				}
+
+				samplerType = "sampler2DMS";
+			}
+			else if (properties.shadow_sampler_mask & mask)
 			{
 				if (properties.common_access_sampler_mask & mask)
 				{
@@ -162,7 +183,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 				inputs.push_back(in);
 
-				OS << "layout(set=0, binding=" << location++ << ") uniform u" << PT.type << " " << in.name << ";\n";
+				OS << "layout(set=0, binding=" << location++ << ") uniform u" << samplerType << " " << in.name << ";\n";
 			}
 		}
 	}
@@ -243,6 +264,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_wpos = !!(properties.in_register_mask & in_wpos);
 	m_shader_props.require_texture_ops = properties.has_tex_op;
 	m_shader_props.require_shadow_ops = properties.shadow_sampler_mask != 0;
+	m_shader_props.require_msaa_ops = m_prog.texture_state.multisampled_textures != 0;
 	m_shader_props.require_texture_expand = properties.has_exp_tex_op;
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;

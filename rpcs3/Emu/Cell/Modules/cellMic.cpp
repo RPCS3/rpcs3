@@ -931,6 +931,8 @@ error_code cellMicReadRaw(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
 {
 	cellMic.trace("cellMicReadRaw(dev_num=%d, data=0x%x, maxBytes=%d)", dev_num, data, max_bytes);
 
+	// TODO: CELL_MICIN_ERROR_PARAM
+
 	auto& mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr.mutex);
 	if (!mic_thr.init)
@@ -944,12 +946,14 @@ error_code cellMicReadRaw(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
 	if (!mic.is_opened() || !(mic.get_signal_types() & CELLMIC_SIGTYPE_RAW))
 		return CELL_MICIN_ERROR_NOT_OPEN;
 
-	return mic.read_raw(vm::_ptr<u8>(data.addr()), max_bytes);
+	return not_an_error(mic.read_raw(vm::_ptr<u8>(data.addr()), max_bytes));
 }
 
 error_code cellMicRead(s32 dev_num, vm::ptr<void> data, u32 max_bytes)
 {
 	cellMic.warning("cellMicRead(dev_num=%d, data=0x%x, maxBytes=0x%x)", dev_num, data, max_bytes);
+
+	// TODO: CELL_MICIN_ERROR_PARAM
 
 	auto& mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr.mutex);
@@ -964,7 +968,7 @@ error_code cellMicRead(s32 dev_num, vm::ptr<void> data, u32 max_bytes)
 	if (!mic.is_opened() || !(mic.get_signal_types() & CELLMIC_SIGTYPE_DSP))
 		return CELL_MICIN_ERROR_NOT_OPEN;
 
-	return mic.read_dsp(vm::_ptr<u8>(data.addr()), max_bytes);
+	return not_an_error(mic.read_dsp(vm::_ptr<u8>(data.addr()), max_bytes));
 }
 
 error_code cellMicReadAux(s32 dev_num, vm::ptr<void> data, s32 max_bytes)

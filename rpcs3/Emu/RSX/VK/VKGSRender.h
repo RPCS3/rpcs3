@@ -10,6 +10,7 @@
 #include "vkutils/sync.h"
 #include "vkutils/swapchain.hpp"
 
+#include "VKGSRenderTypes.hpp"
 #include "VKTextureCache.h"
 #include "VKRenderTargets.h"
 #include "VKFormats.h"
@@ -24,320 +25,6 @@
 
 #include <thread>
 #include <optional>
-
-namespace vk
-{
-	using vertex_cache = rsx::vertex_cache::default_vertex_cache<rsx::vertex_cache::uploaded_range<VkFormat>, VkFormat>;
-	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<VkFormat>;
-	using null_vertex_cache = vertex_cache;
-
-	using shader_cache = rsx::shaders_cache<vk::pipeline_props, vk::program_cache>;
-
-	struct vertex_upload_info
-	{
-		VkPrimitiveTopology primitive;
-		u32 vertex_draw_count;
-		u32 allocated_vertex_count;
-		u32 first_vertex;
-		u32 vertex_index_base;
-		u32 vertex_index_offset;
-		u32 persistent_window_offset;
-		u32 volatile_window_offset;
-		std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
-	};
-}
-
-// Initial heap allocation values. The heaps are growable and will automatically increase in size to accomodate demands
-#define VK_ATTRIB_RING_BUFFER_SIZE_M 64
-#define VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M 64
-#define VK_UBO_RING_BUFFER_SIZE_M 16
-#define VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M 16
-#define VK_FRAGMENT_CONSTANTS_BUFFER_SIZE_M 16
-#define VK_INDEX_RING_BUFFER_SIZE_M 16
-
-#define VK_MAX_ASYNC_CB_COUNT 256
-#define VK_MAX_ASYNC_FRAMES 2
-
-using rsx::flags32_t;
-
-namespace vk
-{
-	struct buffer_view;
-
-	struct command_buffer_chunk: public vk::command_buffer
-	{
-		vk::fence* submit_fence = nullptr;
-		VkDevice m_device = VK_NULL_HANDLE;
-
-		atomic_t<bool> pending = { false };
-		u64 eid_tag = 0;
-		u64 reset_id = 0;
-		shared_mutex guard_mutex;
-
-		command_buffer_chunk() = default;
-
-		void init_fence(VkDevice dev)
-		{
-			m_device = dev;
-			submit_fence = new vk::fence(dev);
-		}
-
-		void destroy()
-		{
-			vk::command_buffer::destroy();
-			delete submit_fence;
-		}
-
-		void tag()
-		{
-			eid_tag = vk::get_event_id();
-		}
-
-		void reset()
-		{
-			if (pending)
-				poke();
-
-			if (pending)
-				wait(FRAME_PRESENT_TIMEOUT);
-
-			++reset_id;
-			CHECK_RESULT(vkResetCommandBuffer(commands, 0));
-		}
-
-		bool poke()
-		{
-			reader_lock lock(guard_mutex);
-
-			if (!pending)
-				return true;
-
-			if (!submit_fence->flushed)
-				return false;
-
-			if (vkGetFenceStatus(m_device, submit_fence->handle) == VK_SUCCESS)
-			{
-				lock.upgrade();
-
-				if (pending)
-				{
-					submit_fence->reset();
-					vk::on_event_completed(eid_tag);
-
-					pending = false;
-					eid_tag = 0;
-				}
-			}
-
-			return !pending;
-		}
-
-		VkResult wait(u64 timeout = 0ull)
-		{
-			reader_lock lock(guard_mutex);
-
-			if (!pending)
-				return VK_SUCCESS;
-
-			const auto ret = vk::wait_for_fence(submit_fence, timeout);
-
-			lock.upgrade();
-
-			if (pending)
-			{
-				submit_fence->reset();
-				vk::on_event_completed(eid_tag);
-
-				pending = false;
-				eid_tag = 0;
-			}
-
-			return ret;
-		}
-
-		void flush()
-		{
-			reader_lock lock(guard_mutex);
-
-			if (!pending)
-				return;
-
-			submit_fence->wait_flush();
-		}
-	};
-
-	struct occlusion_data
-	{
-		rsx::simple_array<u32> indices;
-		command_buffer_chunk* command_buffer_to_wait = nullptr;
-		u64 command_buffer_sync_id = 0;
-
-		bool is_current(command_buffer_chunk* cmd) const
-		{
-			return (command_buffer_to_wait == cmd && command_buffer_sync_id == cmd->reset_id);
-		}
-
-		void set_sync_command_buffer(command_buffer_chunk* cmd)
-		{
-			command_buffer_to_wait = cmd;
-			command_buffer_sync_id = cmd->reset_id;
-		}
-
-		void sync()
-		{
-			if (command_buffer_to_wait->reset_id == command_buffer_sync_id)
-			{
-				// Allocation stack is FIFO and very long so no need to actually wait for fence signal
-				command_buffer_to_wait->flush();
-			}
-		}
-	};
-
-	struct frame_context_t
-	{
-		VkSemaphore acquire_signal_semaphore = VK_NULL_HANDLE;
-		VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
-
-		vk::descriptor_set descriptor_set;
-		vk::descriptor_pool descriptor_pool;
-		u32 used_descriptors = 0;
-
-		flags32_t flags = 0;
-
-		std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
-
-		u32 present_image = -1;
-		command_buffer_chunk* swap_command_buffer = nullptr;
-
-		//Heap pointers
-		s64 attrib_heap_ptr = 0;
-		s64 vtx_env_heap_ptr = 0;
-		s64 frag_env_heap_ptr = 0;
-		s64 frag_const_heap_ptr = 0;
-		s64 vtx_const_heap_ptr = 0;
-		s64 vtx_layout_heap_ptr = 0;
-		s64 frag_texparam_heap_ptr = 0;
-		s64 index_heap_ptr = 0;
-		s64 texture_upload_heap_ptr = 0;
-		s64 rasterizer_env_heap_ptr = 0;
-
-		u64 last_frame_sync_time = 0;
-
-		//Copy shareable information
-		void grab_resources(frame_context_t &other)
-		{
-			present_wait_semaphore = other.present_wait_semaphore;
-			acquire_signal_semaphore = other.acquire_signal_semaphore;
-			descriptor_set.swap(other.descriptor_set);
-			descriptor_pool = other.descriptor_pool;
-			used_descriptors = other.used_descriptors;
-			flags = other.flags;
-
-			attrib_heap_ptr = other.attrib_heap_ptr;
-			vtx_env_heap_ptr = other.vtx_env_heap_ptr;
-			frag_env_heap_ptr = other.frag_env_heap_ptr;
-			vtx_layout_heap_ptr = other.vtx_layout_heap_ptr;
-			frag_texparam_heap_ptr = other.frag_texparam_heap_ptr;
-			frag_const_heap_ptr = other.frag_const_heap_ptr;
-			vtx_const_heap_ptr = other.vtx_const_heap_ptr;
-			index_heap_ptr = other.index_heap_ptr;
-			texture_upload_heap_ptr = other.texture_upload_heap_ptr;
-			rasterizer_env_heap_ptr = other.rasterizer_env_heap_ptr;
-		}
-
-		//Exchange storage (non-copyable)
-		void swap_storage(frame_context_t &other)
-		{
-			std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
-		}
-
-		void tag_frame_end(
-			s64 attrib_loc, s64 vtxenv_loc, s64 fragenv_loc, s64 vtxlayout_loc,
-			s64 fragtex_loc, s64 fragconst_loc,s64 vtxconst_loc, s64 index_loc,
-			s64 texture_loc, s64 rasterizer_loc)
-		{
-			attrib_heap_ptr = attrib_loc;
-			vtx_env_heap_ptr = vtxenv_loc;
-			frag_env_heap_ptr = fragenv_loc;
-			vtx_layout_heap_ptr = vtxlayout_loc;
-			frag_texparam_heap_ptr = fragtex_loc;
-			frag_const_heap_ptr = fragconst_loc;
-			vtx_const_heap_ptr = vtxconst_loc;
-			index_heap_ptr = index_loc;
-			texture_upload_heap_ptr = texture_loc;
-			rasterizer_env_heap_ptr = rasterizer_loc;
-
-			last_frame_sync_time = get_system_time();
-		}
-
-		void reset_heap_ptrs()
-		{
-			last_frame_sync_time = 0;
-		}
-	};
-
-	struct flush_request_task
-	{
-		atomic_t<bool> pending_state{ false };  //Flush request status; true if rsx::thread is yet to service this request
-		atomic_t<int> num_waiters{ 0 };  //Number of threads waiting for this request to be serviced
-		bool hard_sync = false;
-
-		flush_request_task() = default;
-
-		void post(bool _hard_sync)
-		{
-			hard_sync = (hard_sync || _hard_sync);
-			pending_state = true;
-			num_waiters++;
-		}
-
-		void remove_one()
-		{
-			num_waiters--;
-		}
-
-		void clear_pending_flag()
-		{
-			hard_sync = false;
-			pending_state.store(false);
-		}
-
-		bool pending() const
-		{
-			return pending_state.load();
-		}
-
-		void consumer_wait() const
-		{
-			while (num_waiters.load() != 0)
-			{
-				utils::pause();
-			}
-		}
-
-		void producer_wait() const
-		{
-			while (pending_state.load())
-			{
-				std::this_thread::yield();
-			}
-		}
-	};
-
-	struct present_surface_info
-	{
-		u32 address;
-		u32 format;
-		u32 width;
-		u32 height;
-		u32 pitch;
-	};
-
-	struct draw_call_t
-	{
-		u32 subdraw_id;
-	};
-}
 
 using namespace vk::vmm_allocation_pool_; // clang workaround.
 using namespace vk::upscaling_flags_;     // ditto
@@ -373,8 +60,8 @@ private:
 	};
 
 private:
-	VKFragmentProgram m_fragment_prog;
-	VKVertexProgram m_vertex_prog;
+	const VKFragmentProgram *m_fragment_prog = nullptr;
+	const VKVertexProgram *m_vertex_prog = nullptr;
 	vk::glsl::program *m_program = nullptr;
 	vk::pipeline_props m_pipeline_properties;
 
@@ -416,7 +103,6 @@ private:
 	vk::render_device *m_device;
 
 	//Vulkan internals
-	vk::command_pool m_command_buffer_pool;
 	std::unique_ptr<vk::query_pool_manager> m_occlusion_query_manager;
 	bool m_occlusion_query_active = false;
 	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
@@ -424,12 +110,15 @@ private:
 
 	shared_mutex m_secondary_cb_guard;
 	vk::command_pool m_secondary_command_buffer_pool;
-	vk::command_buffer m_secondary_command_buffer;  //command buffer used for setup operations
+	vk::command_buffer_chain<VK_MAX_ASYNC_CB_COUNT> m_secondary_cb_list;
 
-	u32 m_current_cb_index = 0;
-	std::array<vk::command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
+	vk::command_pool m_command_buffer_pool;
+	vk::command_buffer_chain<VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
 	VkSemaphore m_dangling_semaphore_signal = VK_NULL_HANDLE;
+
+	volatile vk::host_data_t* m_host_data_ptr = nullptr;
+	std::unique_ptr<vk::buffer> m_host_object_data;
 
 	VkDescriptorSetLayout descriptor_layouts;
 	VkPipelineLayout pipeline_layout;
@@ -512,7 +201,6 @@ public:
 private:
 	void prepare_rtts(rsx::framebuffer_creation_context context);
 
-	void open_command_buffer();
 	void close_and_submit_command_buffer(
 		vk::fence* fence = nullptr,
 		VkSemaphore wait_semaphore = VK_NULL_HANDLE,
@@ -521,7 +209,7 @@ private:
 
 	void flush_command_queue(bool hard_sync = false, bool do_not_switch = false);
 	void queue_swap_request();
-	void frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources = false);
+	void frame_context_cleanup(vk::frame_context_t *ctx);
 	void advance_queued_frames();
 	void present(vk::frame_context_t *ctx);
 	void reinitialize_swapchain();
@@ -557,6 +245,7 @@ public:
 	void bind_viewport();
 
 	void sync_hint(rsx::FIFO_hint hint, void* args) override;
+	bool release_GCM_label(u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -573,6 +262,9 @@ public:
 	// Conditional rendering
 	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
 	void end_conditional_rendering() override;
+
+	// Host sync object
+	inline std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() { return { m_host_data_ptr, m_host_object_data->value }; }
 
 protected:
 	void clear_surface(u32 mask) override;

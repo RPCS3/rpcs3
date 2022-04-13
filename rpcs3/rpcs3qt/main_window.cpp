@@ -73,6 +73,10 @@ extern void process_qt_events()
 {
 	if (thread_ctrl::is_main())
 	{
+		// NOTE:
+		// I noticed that calling this from an Emu callback can cause the
+		// caller to get stuck for a while during newly opened Qt dialogs.
+		// Adding a timeout here doesn't seem to do anything in that case.
 		QApplication::processEvents();
 	}
 }
@@ -649,7 +653,7 @@ void main_window::InstallPackages(QStringList file_paths)
 		const QString info_string = QStringLiteral("%0\n\n%1%2%3%4%5").arg(file_info.fileName()).arg(info.title).arg(info.local_cat)
 			.arg(info.title_id).arg(info.version).arg(info.changelog);
 
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string), 
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("PKG: Cancelled installation from drop.\n%s", sstr(info_string));

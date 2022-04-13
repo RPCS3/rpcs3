@@ -75,6 +75,12 @@ enum class audio_downmix
 	use_application_settings
 };
 
+enum class music_handler
+{
+	null,
+	qt
+};
+
 enum class camera_handler
 {
 	null,
@@ -230,6 +236,14 @@ enum class vk_gpu_scheduler_mode
 {
 	safe,
 	fast
+};
+
+enum class vk_metal_semaphore_mode
+{
+	software,
+	mtlevent_preferred,
+	mtlevent,
+	mtlfence
 };
 
 enum class thread_scheduler_mode

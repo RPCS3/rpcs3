@@ -144,8 +144,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 		if (version != patch_engine_version)
 		{
-			append_log_message(log_messages, fmt::format("Error: File version %s does not match patch engine target version %s (file: %s)", version, patch_engine_version, path));
-			patch_log.error("File version %s does not match patch engine target version %s (file: %s)", version, patch_engine_version, path);
+			append_log_message(log_messages, fmt::format("Error: File version %s does not match patch engine target version %s (location: %s, file: %s)", version, patch_engine_version, get_yaml_node_location(version_node), path));
+			patch_log.error("File version %s does not match patch engine target version %s (location: %s, file: %s)", version, patch_engine_version, get_yaml_node_location(version_node), path);
 			return false;
 		}
 
@@ -168,16 +168,16 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 		if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
 		{
-			append_log_message(log_messages, fmt::format("Error: Skipping key %s: expected Map, found %s", main_key, yml_type));
-			patch_log.error("Skipping key %s: expected Map, found %s (file: %s)", main_key, yml_type, path);
+			append_log_message(log_messages, fmt::format("Error: Skipping key %s: expected Map, found %s (location: %s)", main_key, yml_type, get_yaml_node_location(pair.second)));
+			patch_log.error("Skipping key %s: expected Map, found %s (location: %s, file: %s)", main_key, yml_type, get_yaml_node_location(pair.second), path);
 			is_valid = false;
 			continue;
 		}
 
 		if (main_key.empty())
 		{
-			append_log_message(log_messages, "Error: Skipping empty key");
-			patch_log.error("Skipping empty key (file: %s)", path);
+			append_log_message(log_messages, fmt::format("Error: Skipping empty key (location: %s)", get_yaml_node_location(pair.second)));
+			patch_log.error("Skipping empty key (location: %s, file: %s)", get_yaml_node_location(pair.second), path);
 			is_valid = false;
 			continue;
 		}
@@ -203,8 +203,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 			if (const auto yml_type = patches_entry.second.Type(); yml_type != YAML::NodeType::Map)
 			{
-				append_log_message(log_messages, fmt::format("Error: Skipping Patch key %s: expected Map, found %s (key: %s)", description, yml_type, main_key));
-				patch_log.error("Skipping Patch key %s: expected Map, found %s (key: %s, file: %s)", description, yml_type, main_key, path);
+				append_log_message(log_messages, fmt::format("Error: Skipping Patch key %s: expected Map, found %s (key: %s, location: %s)", description, yml_type, main_key, get_yaml_node_location(patches_entry.second)));
+				patch_log.error("Skipping Patch key %s: expected Map, found %s (key: %s, location: %s, file: %s)", description, yml_type, main_key, get_yaml_node_location(patches_entry.second), path);
 				is_valid = false;
 				continue;
 			}
@@ -219,8 +219,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 			{
 				if (const auto yml_type = games_node.Type(); yml_type != YAML::NodeType::Map)
 				{
-					append_log_message(log_messages, fmt::format("Error: Skipping Games key: expected Map, found %s (patch: %s, key: %s)", yml_type, description, main_key));
-					patch_log.error("Skipping Games key: expected Map, found %s (patch: %s, key: %s, file: %s)", yml_type, description, main_key, path);
+					append_log_message(log_messages, fmt::format("Error: Skipping Games key: expected Map, found %s (patch: %s, key: %s, location: %s)", yml_type, description, main_key, get_yaml_node_location(games_node)));
+					patch_log.error("Skipping Games key: expected Map, found %s (patch: %s, key: %s, location: %s, file: %s)", yml_type, description, main_key, get_yaml_node_location(games_node), path);
 					is_valid = false;
 					continue;
 				}
@@ -231,16 +231,16 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 					if (title.empty())
 					{
-						append_log_message(log_messages, fmt::format("Error: Empty game title (key: %s, file: %s)", main_key, path));
-						patch_log.error("Empty game title (key: %s, file: %s)", main_key, path);
+						append_log_message(log_messages, fmt::format("Error: Empty game title (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(game_node), path));
+						patch_log.error("Empty game title (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(game_node), path);
 						is_valid = false;
 						continue;
 					}
 
 					if (const auto yml_type = game_node.second.Type(); yml_type != YAML::NodeType::Map)
 					{
-						append_log_message(log_messages, fmt::format("Error: Skipping game %s: expected Map, found %s (patch: %s, key: %s)", title, yml_type, description, main_key));
-						patch_log.error("Skipping game %s: expected Map, found %s (patch: %s, key: %s, file: %s)", title, yml_type, description, main_key, path);
+						append_log_message(log_messages, fmt::format("Error: Skipping game %s: expected Map, found %s (patch: %s, key: %s, location: %s)", title, yml_type, description, main_key, get_yaml_node_location(game_node)));
+						patch_log.error("Skipping game %s: expected Map, found %s (patch: %s, key: %s, location: %s, file: %s)", title, yml_type, description, main_key, get_yaml_node_location(game_node), path);
 						is_valid = false;
 						continue;
 					}
@@ -253,8 +253,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 						if (serial.empty())
 						{
-							append_log_message(log_messages, fmt::format("Error: Using empty serial (title: %s, patch: %s, key: %s)", title, description, main_key));
-							patch_log.error("Using empty serial (title: %s, patch: %s, key: %s, file: %s)", title, description, main_key, path);
+							append_log_message(log_messages, fmt::format("Error: Using empty serial (title: %s, patch: %s, key: %s, location: %s)", title, description, main_key, get_yaml_node_location(serial_node)));
+							patch_log.error("Using empty serial (title: %s, patch: %s, key: %s, location: %s, file: %s)", title, description, main_key, get_yaml_node_location(serial_node), path);
 							is_valid = false;
 							continue;
 						}
@@ -262,24 +262,24 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 						{
 							if (!title_is_all_key)
 							{
-								append_log_message(log_messages, fmt::format("Error: Using '%s' as serial is not allowed for titles other than '%s' (title: %s, patch: %s, key: %s)", patch_key::all, patch_key::all, title, description, main_key));
-								patch_log.error("Error: Using '%s' as serial is not allowed for titles other than '%s' (title: %s, patch: %s, key: %s, file: %s)", patch_key::all, patch_key::all, title, description, main_key, path);
+								append_log_message(log_messages, fmt::format("Error: Using '%s' as serial is not allowed for titles other than '%s' (title: %s, patch: %s, key: %s, location: %s)", patch_key::all, patch_key::all, title, description, main_key, get_yaml_node_location(serial_node)));
+								patch_log.error("Error: Using '%s' as serial is not allowed for titles other than '%s' (title: %s, patch: %s, key: %s, location: %s, file: %s)", patch_key::all, patch_key::all, title, description, main_key, get_yaml_node_location(serial_node), path);
 								is_valid = false;
 								continue;
 							}
 						}
 						else if (title_is_all_key)
 						{
-							append_log_message(log_messages, fmt::format("Error: Only '%s' is allowed as serial if the title is '%s' (serial: %s, patch: %s, key: %s)", patch_key::all, patch_key::all, serial, description, main_key));
-							patch_log.error("Error: Only '%s' is allowed as serial if the title is '%s' (serial: %s, patch: %s, key: %s, file: %s)", patch_key::all, patch_key::all, serial, description, main_key, path);
+							append_log_message(log_messages, fmt::format("Error: Only '%s' is allowed as serial if the title is '%s' (serial: %s, patch: %s, key: %s, location: %s)", patch_key::all, patch_key::all, serial, description, main_key, get_yaml_node_location(serial_node)));
+							patch_log.error("Error: Only '%s' is allowed as serial if the title is '%s' (serial: %s, patch: %s, key: %s, location: %s, file: %s)", patch_key::all, patch_key::all, serial, description, main_key, get_yaml_node_location(serial_node), path);
 							is_valid = false;
 							continue;
 						}
 
 						if (const auto yml_type = serial_node.second.Type(); yml_type != YAML::NodeType::Sequence)
 						{
-							append_log_message(log_messages, fmt::format("Error: Skipping %s: expected Sequence, found %s (title: %s, patch: %s, key: %s)", serial, title, yml_type, description, main_key));
-							patch_log.error("Skipping %s: expected Sequence, found %s (title: %s, patch: %s, key: %s, file: %s)", serial, title, yml_type, description, main_key, path);
+							append_log_message(log_messages, fmt::format("Error: Skipping %s: expected Sequence, found %s (title: %s, patch: %s, key: %s, location: %s)", serial, title, yml_type, description, main_key, get_yaml_node_location(serial_node)));
+							patch_log.error("Skipping %s: expected Sequence, found %s (title: %s, patch: %s, key: %s, location: %s, file: %s)", serial, title, yml_type, description, main_key, get_yaml_node_location(serial_node), path);
 							is_valid = false;
 							continue;
 						}
@@ -298,8 +298,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 						if (app_versions.empty())
 						{
-							append_log_message(log_messages, fmt::format("Error: Skipping %s: empty Sequence (title: %s, patch: %s, key: %s)", serial, title, description, main_key));
-							patch_log.error("Skipping %s: empty Sequence (title: %s, patch: %s, key: %s, file: %s)", serial, title, description, main_key, path);
+							append_log_message(log_messages, fmt::format("Error: Skipping %s: empty Sequence (title: %s, patch: %s, key: %s, location: %s)", serial, title, description, main_key, get_yaml_node_location(serial_node)));
+							patch_log.error("Skipping %s: empty Sequence (title: %s, patch: %s, key: %s, location: %s, file: %s)", serial, title, description, main_key, get_yaml_node_location(serial_node), path);
 							is_valid = false;
 						}
 						else
@@ -332,8 +332,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 						}
 						else
 						{
-							append_log_message(log_messages, fmt::format("Error: Skipping sequenced Note (patch: %s, key: %s)", description, main_key));
-							patch_log.error("Skipping sequenced Note (patch: %s, key: %s, file: %s)", description, main_key, path);
+							append_log_message(log_messages, fmt::format("Error: Skipping sequenced Note (patch: %s, key: %s, location: %s)", description, main_key, get_yaml_node_location(note)));
+							patch_log.error("Skipping sequenced Note (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(note), path);
 							is_valid = false;
 						}
 					}
@@ -361,7 +361,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 			if (container.patch_info_map.find(description) != container.patch_info_map.end())
 			{
 				bool ok;
-				const auto existing_version  = container.patch_info_map[description].patch_version;
+				const std::string& existing_version = container.patch_info_map[description].patch_version;
 				const bool version_is_bigger = utils::compare_versions(info.patch_version, existing_version, ok) > 0;
 
 				if (!ok || !version_is_bigger)
@@ -410,13 +410,13 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 {
 	if (!node || !node.IsSequence())
 	{
-		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s)", info.description, info.hash));
-		patch_log.error("Skipping invalid patch node %s. (key: %s)", info.description, info.hash);
+		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s, location: %s)", info.description, info.hash, get_yaml_node_location(node)));
+		patch_log.error("Skipping invalid patch node %s. (key: %s, location: %s)", info.description, info.hash, get_yaml_node_location(node));
 		return false;
 	}
 
 	const auto type_node  = node[0];
-	auto addr_node        = node[1];
+	const auto addr_node  = node[1];
 	const auto value_node = node[2];
 
 	const auto type = get_patch_type(type_node);
@@ -424,8 +424,8 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	if (type == patch_type::invalid)
 	{
 		const auto type_str = type_node && type_node.IsScalar() ? type_node.Scalar() : "";
-		append_log_message(log_messages, fmt::format("Skipping patch node %s: type '%s' is invalid. (key: %s)", info.description, type_str, info.hash));
-		patch_log.error("Skipping patch node %s: type '%s' is invalid. (key: %s)", info.description, type_str, info.hash);
+		append_log_message(log_messages, fmt::format("Skipping patch node %s: type '%s' is invalid. (key: %s, location: %s)", info.description, type_str, info.hash, get_yaml_node_location(node)));
+		patch_log.error("Skipping patch node %s: type '%s' is invalid. (key: %s, location: %s)", info.description, type_str, info.hash, get_yaml_node_location(node));
 		return false;
 	}
 
@@ -436,8 +436,8 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		// Check if the anchor was resolved.
 		if (const auto yml_type = addr_node.Type(); yml_type != YAML::NodeType::Sequence)
 		{
-			append_log_message(log_messages, fmt::format("Skipping sequence: expected Sequence, found %s (key: %s)", yml_type, info.hash));
-			patch_log.error("Skipping sequence: expected Sequence, found %s (key: %s)", yml_type, info.hash);
+			append_log_message(log_messages, fmt::format("Skipping patch node %s: expected Sequence, found %s (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node)));
+			patch_log.error("Skipping patch node %s: expected Sequence, found %s (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node));
 			return false;
 		}
 
@@ -457,10 +457,24 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		return is_valid;
 	}
 
+	if (const auto yml_type = value_node.Type(); yml_type != YAML::NodeType::Scalar)
+	{
+		append_log_message(log_messages, fmt::format("Skipping patch node %s. Value element has wrong type %s. (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node)));
+		patch_log.error("Skipping patch node %s. Value element has wrong type %s. (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node));
+		return false;
+	}
+
+	if (!addr_node.Scalar().starts_with("0x"))
+	{
+		append_log_message(log_messages, fmt::format("Skipping patch node %s. Address element has wrong format %s. (key: %s, location: %s)", info.description, addr_node.Scalar(), info.hash, get_yaml_node_location(node)));
+		patch_log.error("Skipping patch node %s. Address element has wrong format %s. (key: %s, location: %s)", info.description, addr_node.Scalar(), info.hash, get_yaml_node_location(node));
+		return false;
+	}
+
 	struct patch_data p_data{};
 	p_data.type           = type;
 	p_data.offset         = addr_node.as<u32>(0) + modifier;
-	p_data.original_value = value_node.IsScalar() ? value_node.Scalar() : "";
+	p_data.original_value = value_node.Scalar();
 
 	std::string error_message;
 
@@ -488,8 +502,8 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	if (!error_message.empty())
 	{
-		error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s) %s",
-			p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, error_message);
+		error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s) %s",
+			p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), error_message);
 		append_log_message(log_messages, error_message);
 		patch_log.error("%s", error_message);
 		return false;
@@ -504,15 +518,15 @@ bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML
 {
 	if (!node)
 	{
-		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s)", info.description, info.hash));
-		patch_log.error("Skipping invalid patch node %s. (key: %s)", info.description, info.hash);
+		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s, location: %s)", info.description, info.hash, get_yaml_node_location(node)));
+		patch_log.error("Skipping invalid patch node %s. (key: %s, location: %s)", info.description, info.hash, get_yaml_node_location(node));
 		return false;
 	}
 
 	if (const auto yml_type = node.Type(); yml_type != YAML::NodeType::Sequence)
 	{
-		append_log_message(log_messages, fmt::format("Skipping patch node %s: expected Sequence, found %s (key: %s)", info.description, yml_type, info.hash));
-		patch_log.error("Skipping patch node %s: expected Sequence, found %s (key: %s)", info.description, yml_type, info.hash);
+		append_log_message(log_messages, fmt::format("Skipping patch node %s: expected Sequence, found %s (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node)));
+		patch_log.error("Skipping patch node %s: expected Sequence, found %s (key: %s, location: %s)", info.description, yml_type, info.hash, get_yaml_node_location(node));
 		return false;
 	}
 

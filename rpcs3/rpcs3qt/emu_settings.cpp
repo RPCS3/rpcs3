@@ -81,7 +81,7 @@ bool emu_settings::Init()
 	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
 	{
 		const std::string adapter = sstr(m_render_creator->Vulkan.adapters.at(0));
-		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s')", adapter);
+		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s'", adapter);
 		Emu.SetDefaultRenderer(video_renderer::vulkan);
 		Emu.SetDefaultGraphicsAdapter(adapter);
 	}
@@ -1027,6 +1027,13 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case camera_handler::qt: return tr("Qt", "Camera handler");
 		}
 		break;
+	case emu_settings_type::MusicHandler:
+		switch (static_cast<music_handler>(index))
+		{
+		case music_handler::null: return tr("Null", "Music handler");
+		case music_handler::qt: return tr("Qt", "Music handler");
+		}
+		break;
 	case emu_settings_type::PadHandlerMode:
 		switch (static_cast<pad_handler_mode>(index))
 		{
@@ -1158,6 +1165,15 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		{
 		case vk_gpu_scheduler_mode::safe: return tr("Safe");
 		case vk_gpu_scheduler_mode::fast: return tr("Fast");
+		}
+		break;
+	case emu_settings_type::MetalSemaphore:
+		switch (static_cast<vk_metal_semaphore_mode>(index))
+		{
+		case vk_metal_semaphore_mode::software: return tr("Software emulation");
+		case vk_metal_semaphore_mode::mtlevent_preferred: return tr("MTLEvent preferred");
+		case vk_metal_semaphore_mode::mtlevent: return tr("MTLEvent");
+		case vk_metal_semaphore_mode::mtlfence: return tr("MTLFence");
 		}
 		break;
 	default:

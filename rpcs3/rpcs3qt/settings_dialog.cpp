@@ -206,17 +206,35 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings_type::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 
-	m_emu_settings->EnhanceCheckBox(ui->accurateXFloat, emu_settings_type::AccurateXFloat);
-	SubscribeTooltip(ui->accurateXFloat, tooltips.settings.accurate_xfloat);
-
-	m_emu_settings->EnhanceCheckBox(ui->approximateXFloat, emu_settings_type::ApproximateXFloat);
-	SubscribeTooltip(ui->approximateXFloat, tooltips.settings.approximate_xfloat);
-
 	m_emu_settings->EnhanceCheckBox(ui->fullWidthAVX512, emu_settings_type::FullWidthAVX512);
 	SubscribeTooltip(ui->fullWidthAVX512, tooltips.settings.full_width_avx512);
 	ui->fullWidthAVX512->setEnabled(utils::has_avx512());
 
 	// Comboboxes
+	SubscribeTooltip(ui->gb_xfloat_accuracy, tooltips.settings.xfloat);
+	ui->xfloatAccuracy->addItem(tr("Accurate XFloat"));
+	ui->xfloatAccuracy->addItem(tr("Approximate XFloat"));
+	ui->xfloatAccuracy->addItem(tr("Relaxed XFloat"));
+
+	connect(ui->xfloatAccuracy, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		if (index < 0) return;
+
+		m_emu_settings->SetSetting(emu_settings_type::AccurateXFloat, index == 0 ? "true" : "false");
+		m_emu_settings->SetSetting(emu_settings_type::ApproximateXFloat, index == 1 ? "true" : "false");
+	});
+
+	connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, this, [this]()
+	{
+		ui->xfloatAccuracy->setCurrentIndex(1);
+	});
+
+	if (m_emu_settings->GetSetting(emu_settings_type::AccurateXFloat) == "true")
+		ui->xfloatAccuracy->setCurrentIndex(0);
+	else if (m_emu_settings->GetSetting(emu_settings_type::ApproximateXFloat) == "true")
+		ui->xfloatAccuracy->setCurrentIndex(1);
+	else
+		ui->xfloatAccuracy->setCurrentIndex(2);
 
 	m_emu_settings->EnhanceComboBox(ui->spuBlockSize, emu_settings_type::SPUBlockSize);
 	SubscribeTooltip(ui->gb_spuBlockSize, tooltips.settings.spu_block_size);
@@ -376,10 +394,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		case static_cast<int>(spu_decoder_type::_static):
 		case static_cast<int>(spu_decoder_type::dynamic):
 		case static_cast<int>(spu_decoder_type::llvm):
-			ui->accurateXFloat->setEnabled(true);
+			ui->xfloatAccuracy->setEnabled(true);
 			break;
 		case static_cast<int>(spu_decoder_type::asmjit):
-			ui->accurateXFloat->setEnabled(false);
+			ui->xfloatAccuracy->setEnabled(false);
 			break;
 		default:
 			break;
@@ -1063,6 +1081,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gb_camera_id, tooltips.settings.camera_id);
 	}
 
+	m_emu_settings->EnhanceComboBox(ui->musicHandlerBox, emu_settings_type::MusicHandler);
+	SubscribeTooltip(ui->gb_music_handler, tooltips.settings.music_handler);
+
 	m_emu_settings->EnhanceComboBox(ui->padModeBox, emu_settings_type::PadHandlerMode);
 	SubscribeTooltip(ui->gb_pad_mode, tooltips.settings.pad_mode);
 
@@ -1231,6 +1252,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
+
+	m_emu_settings->EnhanceComboBox(ui->metalsemaphore, emu_settings_type::MetalSemaphore);
+#ifdef __APPLE__
+	SubscribeTooltip(ui->gb_metalsemaphore, tooltips.settings.metal_semaphore);
+#else
+	ui->gb_metalsemaphore->setVisible(false);
+#endif
 
 	// Sliders
 
@@ -1945,14 +1973,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->strictTextureFlushing, emu_settings_type::StrictTextureFlushing);
 	SubscribeTooltip(ui->strictTextureFlushing, tooltips.settings.strict_texture_flushing);
 
-	m_emu_settings->EnhanceCheckBox(ui->DisableNativefp16, emu_settings_type::DisableNativefloat16);
-	SubscribeTooltip(ui->DisableNativefp16, tooltips.settings.disable_native_fp16);
+	m_emu_settings->EnhanceCheckBox(ui->disableNativefp16, emu_settings_type::DisableNativefloat16);
+	SubscribeTooltip(ui->disableNativefp16, tooltips.settings.disable_native_fp16);
 
 	m_emu_settings->EnhanceCheckBox(ui->Enable3D, emu_settings_type::Enable3D);
 	SubscribeTooltip(ui->Enable3D, tooltips.settings.enable_3d);
 
 	m_emu_settings->EnhanceCheckBox(ui->gpuTextureScaling, emu_settings_type::GPUTextureScaling);
 	SubscribeTooltip(ui->gpuTextureScaling, tooltips.settings.gpu_texture_scaling);
+
+	m_emu_settings->EnhanceCheckBox(ui->allowHostGPULabels, emu_settings_type::AllowHostGPULabels);
+	SubscribeTooltip(ui->allowHostGPULabels, tooltips.settings.allow_host_labels);
 
 	// Checkboxes: core debug options
 	m_emu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings_type::PPUDebug);

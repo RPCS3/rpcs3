@@ -136,6 +136,9 @@
     <Filter Include="Io\camera">
       <UniqueIdentifier>{f1996891-48b7-441a-b3fe-52794cbebe80}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\music">
+      <UniqueIdentifier>{44c3b8d8-cc4d-4d5f-8681-21241ab220d0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -804,6 +807,21 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_camera_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\shortcut_utils.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_music_handler.cpp">
+      <Filter>Io\music</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_music_error_handler.cpp">
+      <Filter>Io\music</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_music_error_handler.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_music_error_handler.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -946,6 +964,12 @@
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\shortcut_utils.h">
+      <Filter>Gui\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\qt_music_handler.h">
+      <Filter>Io\music</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1182,6 +1206,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\camera_settings_dialog.h">
       <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\qt_music_error_handler.h">
+      <Filter>Io\music</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

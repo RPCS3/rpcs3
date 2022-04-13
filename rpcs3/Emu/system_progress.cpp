@@ -46,7 +46,7 @@ void progress_dialog_server::operator()()
 				break;
 			}
 
-			std::this_thread::sleep_for(5ms);
+			thread_ctrl::wait_for(5000);
 			text0 = +g_progr;
 		}
 
@@ -138,7 +138,7 @@ void progress_dialog_server::operator()()
 				if (skip_this_one)
 				{
 					// Do nothing
-					std::this_thread::sleep_for(10ms);
+					thread_ctrl::wait_for(10000);
 					continue;
 				}
 
@@ -173,7 +173,7 @@ void progress_dialog_server::operator()()
 				}
 			}
 
-			std::this_thread::sleep_for(10ms);
+			thread_ctrl::wait_for(10000);
 		}
 
 		if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)

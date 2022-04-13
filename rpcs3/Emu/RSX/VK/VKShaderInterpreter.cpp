@@ -24,9 +24,12 @@ namespace vk
 		VKVertexProgram vk_prog;
 		VKVertexDecompilerThread comp(null_prog, shader_str, arr, vk_prog);
 
+		ParamType uniforms = { PF_PARAM_UNIFORM, "vec4" };
+		uniforms.items.emplace_back("vc[468]", -1);
+
 		std::stringstream builder;
 		comp.insertHeader(builder);
-		comp.insertConstants(builder, {});
+		comp.insertConstants(builder, { uniforms });
 		comp.insertInputs(builder, {});
 
 		// Insert vp stream input

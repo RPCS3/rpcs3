@@ -6,6 +6,7 @@
 #include "Emu/system_progress.hpp"
 #include "Emu/system_utils.hpp"
 #include "Emu/perf_meter.hpp"
+#include "Emu/perf_monitor.hpp"
 #include "Emu/vfs_config.h"
 
 #include "Emu/Cell/ErrorCodes.h"
@@ -18,6 +19,7 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
+#include "Emu/Cell/Modules/cellGame.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
@@ -463,6 +465,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	// Initialize progress dialog
 	g_fxo->init<named_thread<progress_dialog_server>>();
 
+	// Initialize performance monitor
+	g_fxo->init<named_thread<perf_monitor>>();
+
 	// PS3 'executable'
 	m_state = system_state::ready;
 	GetCallbacks().on_ready();
@@ -555,6 +560,29 @@ void Emulator::SetForceBoot(bool force_boot)
 game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool is_disc_patch)
 {
 	const std::string resolved_path = GetCallbacks().resolve_path(m_path);
+
+	if (m_config_mode == cfg_mode::continuous)
+	{
+		// The program is being booted from another running program
+		// CELL_GAME_GAMETYPE_GAMEDATA is not used as boot type
+
+		if (m_cat == "DG"sv)
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_DISC;
+		}
+		else if (m_cat == "HM"sv)
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_HOME;
+		}
+		else
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_HDD;
+		}
+	}
+	else
+	{
+		m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
+	}
 
 	if (!IsStopped())
 	{
@@ -1114,6 +1142,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		// Initialize progress dialog
 		g_fxo->init<named_thread<progress_dialog_server>>();
+
+		// Initialize performance monitor
+		g_fxo->init<named_thread<perf_monitor>>();
 
 		// Set title to actual disc title if necessary
 		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
@@ -1683,7 +1714,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 
 	auto perform_kill = [allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
 	{
-		for (u32 i = 0; i < 50; i++)
+		for (u32 i = 0; i < 100; i++)
 		{
 			std::this_thread::sleep_for(50ms);
 			Resume(); // TODO: Prevent pausing by other threads while in this loop
@@ -1755,6 +1786,30 @@ void Emulator::Kill(bool allow_autoexit)
 	});
 
 	// Signal threads
+
+	// Stop the replay thread "game" first
+	if (auto thr = g_fxo->try_get<named_thread<rsx::rsx_replay_thread>>())
+	{
+		sys_log.notice("Stopping RSX replay thread...");
+		thr->state += cpu_flag::stop;
+
+		// Wait for a couple of seconds
+		for (int i = 0; *thr <= thread_state::aborting && i < 300; i++)
+		{
+			std::this_thread::sleep_for(10ms);
+			process_qt_events();
+		}
+
+		if (*thr <= thread_state::aborting)
+		{
+			sys_log.error("Failed to stop RSX replay thread in time.");
+		}
+		else
+		{
+			sys_log.notice("RSX replay thread stopped");
+		}
+	}
+
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
 		*static_cast<cpu_thread*>(rsx) = thread_state::aborting;

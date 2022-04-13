@@ -16,6 +16,14 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#include <limits.h>
+#include <filesystem>
 #endif
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -62,12 +70,12 @@ namespace rpcs3::utils
 	u32 check_user(const std::string& user)
 	{
 		u32 id = 0;
-	
+
 		if (user.size() == 8)
 		{
 			std::from_chars(&user.front(), &user.back() + 1, id);
 		}
-	
+
 		return id;
 	}
 
@@ -112,6 +120,44 @@ namespace rpcs3::utils
 		const std::string path_to_exe = wchar_to_utf8(buffer);
 		const usz last = path_to_exe.find_last_of('\\');
 		return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last + 1);
+	}
+#elif defined(__APPLE__)
+	std::string get_app_bundle_path()
+	{
+		char bin_path[PATH_MAX];
+		uint32_t bin_path_size = sizeof(bin_path);
+		if (_NSGetExecutablePath(bin_path, &bin_path_size) != 0)
+		{
+			sys_log.error("Failed to find app binary path");
+			return {};
+		}
+
+		return std::filesystem::path(bin_path).parent_path().parent_path().parent_path();
+	}
+#else
+	std::string get_executable_path()
+	{
+		if (const char* appimage_path = ::getenv("APPIMAGE"))
+		{
+			sys_log.notice("Found AppImage path: %s", appimage_path);
+			return std::string(appimage_path);
+		}
+
+		sys_log.warning("Failed to find AppImage path");
+
+		char exe_path[PATH_MAX];
+		const ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+
+		if (len == -1)
+		{
+			sys_log.error("Failed to find executable path");
+			return {};
+		}
+
+		exe_path[len] = '\0';
+		sys_log.trace("Found exec path: %s", exe_path);
+
+		return std::string(exe_path);
 	}
 #endif
 
@@ -180,7 +226,7 @@ namespace rpcs3::utils
 		return edat_path;
 	}
 
-	bool verify_c00_unlock_edat(const std::string_view& content_id)
+	bool verify_c00_unlock_edat(const std::string_view& content_id, bool fast)
 	{
 		const std::string edat_path = rpcs3::utils::get_c00_unlock_edat_path(content_id);
 
@@ -192,6 +238,10 @@ namespace rpcs3::utils
 			sys_log.notice("verify_c00_unlock_edat(): '%s' not found", edat_path);
 			return false;
 		}
+
+		// Use simple check for GUI
+		if (fast)
+			return true;
 
 		u128 k_licensee = get_default_self_klic();
 		std::string edat_content_id;
@@ -279,10 +329,10 @@ namespace rpcs3::utils
 			// This is a trial game. Check if the user has EDAT file to unlock it.
 			const auto c00_title_id = psf::get_string(psf, "TITLE_ID");
 
-			if (fs::is_file(game_path + "/C00/PARAM.SFO") && verify_c00_unlock_edat(content_id))
+			if (fs::is_file(game_path + "/C00/PARAM.SFO") && verify_c00_unlock_edat(content_id, true))
 			{
 				// Load full game data.
-				sys_log.notice("Verified EDAT file %s.edat for trial game %s", content_id, c00_title_id);
+				sys_log.notice("Found EDAT file %s.edat for trial game %s", content_id, c00_title_id);
 				return game_path + "/C00";
 			}
 		}

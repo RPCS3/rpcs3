@@ -102,17 +102,6 @@ struct search_object_t
 	std::vector<content_id_type> content_ids;
 };
 
-template <typename D>
-void parse_metadata(D& dst, const utils::media_info& mi, const std::string& key, const std::string& def, usz max_length)
-{
-	std::string value = mi.get_metadata<std::string>(key, def);
-	if (value.size() > max_length)
-	{
-		value.resize(max_length);
-	}
-	strcpy_trunc(dst, value);
-};
-
 error_code check_search_state(search_state state, search_state action)
 {
 	switch (action)
@@ -199,9 +188,12 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 	// Special case: track is usually stored as e.g. 2/11
 	const std::string tmp = mi.get_metadata<std::string>("track", ""s);
 	s64 value{};
-	const bool success = try_to_int64(&value, tmp.substr(0, tmp.find('/')).c_str(), s32{smin}, s32{smax});
-	info.trackNumber = success ? static_cast<s32>(value) : -1;
+	if (tmp.empty() || !try_to_int64(&value, tmp.substr(0, tmp.find('/')).c_str(), s32{smin}, s32{smax}))
+	{
+		value = -1;
+	}
 
+	info.trackNumber = static_cast<s32>(value);
 	info.size = item.size;
 	info.releasedYear = static_cast<s32>(mi.get_metadata<s64>("date", -1));
 	info.duration = mi.duration_us / 1000; // we need microseconds
@@ -255,6 +247,13 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 		info.status = CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED;
 		break;
 	}
+
+	cellSearch.notice("CellSearchMusicInfo:, title=%s, albumTitle=%s, artistName=%s, genreName=%s, diskNumber=%s, "
+		"trackNumber=%d, duration=%d, size=%d, importedDate=%d, lastPlayedDate=%d, releasedYear=%d, bitrate=%d, "
+		"samplingRate=%d, quantizationBitrate=%d, playCount=%d, drmEncrypted=%d, codec=%d, status=%d",
+		info.title, info.albumTitle, info.artistName, info.genreName, info.diskNumber,
+		info.trackNumber, info.duration, info.size, info.importedDate, info.lastPlayedDate, info.releasedYear, info.bitrate,
+		info.samplingRate, info.quantizationBitrate, info.playCount, info.drmEncrypted, info.codec, info.status);
 }
 
 void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi, const fs::dir_entry& item)
@@ -353,6 +352,29 @@ void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi,
 		info.status = CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED;
 		break;
 	}
+
+	cellSearch.notice("CellSearchVideoInfo: title='%s', albumTitle='%s', duration=%d, size=%d, importedDate=%d, takenDate=%d, "
+		"videoBitrate=%d, audioBitrate=%d, playCount=%d, drmEncrypted=%d, videoCodec=%d, audioCodec=%d, status=%d",
+		info.title, info.albumTitle, info.duration, info.size, info.importedDate, info.takenDate,
+		info.videoBitrate, info.audioBitrate, info.playCount, info.drmEncrypted, info.videoCodec, info.audioCodec, info.status);
+}
+
+void populate_photo_info(CellSearchPhotoInfo& info, const utils::media_info& /*mi*/, const fs::dir_entry& item)
+{
+	// TODO - Some kinda file photo analysis and assign the values as such
+	info.size = item.size;
+	info.importedDate = -1;
+	info.takenDate = -1;
+	info.width = 0;
+	info.height = 0;
+	info.orientation = CELL_SEARCH_ORIENTATION_UNKNOWN;
+	info.codec = CELL_SEARCH_CODEC_UNKNOWN;
+	info.status = CELL_SEARCH_CONTENTSTATUS_AVAILABLE;
+	strcpy_trunc(info.title, item.name.substr(0, item.name.find_last_of('.')));
+	strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+
+	cellSearch.notice("CellSearchPhotoInfo: title='%s', albumTitle='%s', size=%d, width=%d, height=%d, orientation=%d, codec=%d, status=%d, importedDate=%d, takenDate=%d",
+		info.title, info.albumTitle, info.size, info.width, info.height, info.orientation, info.codec, info.status, info.importedDate, info.takenDate);
 }
 
 error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<void> userData)
@@ -442,6 +464,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 	case CELL_SEARCH_LISTSEARCHTYPE_VIDEO_ALBUM:
 		media_dir = "video";
 		break;
+	case CELL_SEARCH_LISTSEARCHTYPE_NONE:
 	default:
 		return CELL_SEARCH_ERROR_PARAM;
 	}
@@ -536,14 +559,13 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 				auto found = content_map.map.find(hash);
 				if (found == content_map.map.end()) // content isn't yet being tracked
 				{
-					//auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
-
 					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
 					if (item_path.length() > CELL_SEARCH_PATH_LEN_MAX)
 					{
 						// TODO: Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
 						cellSearch.warning("cellSearchStartListSearch(): Directory-Path \"%s\" is too long and will be omitted: %i", item_path, item_path.length());
 						continue;
+						// const size_t ext_offset = item.name.find_last_of('.');
 						// std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
 						// strcpy_trunc(curr_find->infoPath.contentPath, link);
 
@@ -574,6 +596,9 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 						info.duration = 0;
 						strcpy_trunc(info.title, item.name);
 						strcpy_trunc(info.artistName, "ARTIST NAME");
+
+						cellSearch.notice("CellSearchMusicListInfo: title='%s', artistName='%s', listType=%d, numOfItems=%d, duration=%d",
+							info.title, info.artistName, info.listType, info.numOfItems, info.duration);
 						break;
 					}
 					case CELL_SEARCH_LISTSEARCHTYPE_PHOTO_YEAR:
@@ -586,6 +611,9 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 						info.listType = type; // CellSearchListType matches CellSearchListSearchType
 						info.numOfItems = numOfItems;
 						strcpy_trunc(info.title, item.name);
+
+						cellSearch.notice("CellSearchPhotoListInfo: title='%s', listType=%d, numOfItems=%d",
+							info.title, info.listType, info.numOfItems);
 						break;
 					}
 					case CELL_SEARCH_LISTSEARCHTYPE_VIDEO_ALBUM:
@@ -596,10 +624,15 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 						info.numOfItems = numOfItems;
 						info.duration = 0;
 						strcpy_trunc(info.title, item.name);
+
+						cellSearch.notice("CellSearchVideoListInfo: title='%s', listType=%d, numOfItems=%d, duration=%d",
+							info.title, info.listType, info.numOfItems, info.duration);
 						break;
 					}
+					case CELL_SEARCH_LISTSEARCHTYPE_NONE:
 					default:
 					{
+						// Should be unreachable, because it is already handled in the main function
 						break;
 					}
 					}
@@ -607,7 +640,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 					content_map.map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
-					cellSearch.notice("cellSearchStartListSearch(): Content ID: %08X   Path: \"%s\"", hash, item_path);
+					cellSearch.notice("cellSearchStartListSearch(): CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 				else // list is already stored and tracked
 				{
@@ -615,7 +648,9 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 					// Perform checks to see if the identified list has been modified since last checked
 					// In which case, update the stored content's properties
 					// auto content_found = &content_map->at(content_id);
-					// curr_search->content_ids.emplace_back(found->first, found->second);
+					curr_search->content_ids.emplace_back(found->first, found->second);
+
+					cellSearch.notice("cellSearchStartListSearch(): Already tracked: CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 			}
 		};
@@ -695,6 +730,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 	case CELL_SEARCH_CONTENTTYPE_PHOTO:
 	case CELL_SEARCH_CONTENTTYPE_VIDEO:
 	case CELL_SEARCH_CONTENTTYPE_SCENE:
+	case CELL_SEARCH_CONTENTTYPE_NONE:
 	default:
 		return CELL_SEARCH_ERROR_NOT_LIST;
 	}
@@ -758,12 +794,11 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 				auto found = content_map.map.find(hash);
 				if (found == content_map.map.end()) // content isn't yet being tracked
 				{
-					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
-
 					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
 					if (item_path.length() > CELL_SEARCH_PATH_LEN_MAX)
 					{
 						// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
+						const size_t ext_offset = item.name.find_last_of('.');
 						std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
 						strcpy_trunc(curr_find->infoPath.contentPath, link);
 
@@ -777,7 +812,9 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 					// TODO - curr_find.infoPath.thumbnailPath
 
-					if (type == CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL)
+					switch (type)
+					{
+					case CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL:
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSIC;
 
@@ -789,24 +826,16 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 						}
 
 						populate_music_info(curr_find->data.music, mi, item);
+						break;
 					}
-					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL)
+					case CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL:
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_PHOTO;
-						CellSearchPhotoInfo& info = curr_find->data.photo;
-						// TODO - Some kinda file photo analysis and assign the values as such
-						info.size = item.size;
-						info.importedDate = 0;
-						info.takenDate = 0;
-						info.width = 0;
-						info.height = 0;
-						info.orientation = 0;  // CellSearchOrientation
-						info.codec = 0;        // CellSearchCodec
-						info.status = 0;       // CellSearchContentStatus
-						strcpy_trunc(info.title, item.name.substr(0, ext_offset));
-						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+
+						populate_photo_info(curr_find->data.photo, {}, item);
+						break;
 					}
-					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL)
+					case CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL:
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_VIDEO;
 
@@ -818,12 +847,20 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 						}
 
 						populate_video_info(curr_find->data.video, mi, item);
+						break;
+					}
+					case CELL_SEARCH_CONTENTSEARCHTYPE_NONE:
+					default:
+					{
+						// Should be unreachable, because it is already handled in the main function
+						break;
+					}
 					}
 
 					content_map.map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
-					cellSearch.notice("cellSearchStartContentSearchInList(): Content ID: %08X   Path: \"%s\"", hash, item_path);
+					cellSearch.notice("cellSearchStartContentSearchInList(): CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 				else // file is already stored and tracked
 				{
@@ -832,6 +869,8 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 					// In which case, update the stored content's properties
 					// auto content_found = &content_map->at(content_id);
 					curr_search->content_ids.emplace_back(found->first, found->second);
+
+					cellSearch.notice("cellSearchStartContentSearchInList(): Already Tracked: CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 			}
 		};
@@ -869,6 +908,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 	case CELL_SEARCH_SORTKEY_USERDEFINED:
 	case CELL_SEARCH_SORTKEY_MODIFIEDDATE:
 		break;
+	case CELL_SEARCH_SORTKEY_NONE:
 	default:
 		return CELL_SEARCH_ERROR_PARAM;
 	}
@@ -884,6 +924,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 	case CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL: media_dir = "music"; break;
 	case CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL: media_dir = "photo"; break;
 	case CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL: media_dir = "video"; break;
+	case CELL_SEARCH_CONTENTSEARCHTYPE_NONE:
 	default:
 		return CELL_SEARCH_ERROR_PARAM;
 	}
@@ -935,12 +976,11 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				auto found = content_map.map.find(hash);
 				if (found == content_map.map.end()) // content isn't yet being tracked
 				{
-					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
-
 					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
 					if (item_path.length() > CELL_SEARCH_PATH_LEN_MAX)
 					{
 						// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
+						const size_t ext_offset = item.name.find_last_of('.');
 						std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
 						strcpy_trunc(curr_find->infoPath.contentPath, link);
 
@@ -954,7 +994,9 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 					// TODO - curr_find.infoPath.thumbnailPath
 
-					if (type == CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL)
+					switch (type)
+					{
+					case CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL:
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSIC;
 
@@ -966,24 +1008,16 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						}
 
 						populate_music_info(curr_find->data.music, mi, item);
+						break;
 					}
-					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL)
+					case CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL:
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_PHOTO;
-						CellSearchPhotoInfo& info = curr_find->data.photo;
-						// TODO - Some kinda file photo analysis and assign the values as such
-						info.size = item.size;
-						info.importedDate = -1;
-						info.takenDate = -1;
-						info.width = 0;
-						info.height = 0;
-						info.orientation = CELL_SEARCH_ORIENTATION_UNKNOWN;
-						info.codec = CELL_SEARCH_CODEC_UNKNOWN;
-						info.status = CELL_SEARCH_CONTENTSTATUS_AVAILABLE;
-						strcpy_trunc(info.title, item.name.substr(0, ext_offset));
-						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+
+						populate_photo_info(curr_find->data.photo, {}, item);
+						break;
 					}
-					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL)
+					case CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL:
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_VIDEO;
 
@@ -995,19 +1029,30 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						}
 
 						populate_video_info(curr_find->data.video, mi, item);
+						break;
+					}
+					case CELL_SEARCH_CONTENTSEARCHTYPE_NONE:
+					default:
+					{
+						// Should be unreachable, because it is already handled in the main function
+						break;
+					}
 					}
 
 					content_map.map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
-					cellSearch.notice("cellSearchStartContentSearch(): Content ID: %08X   Path: \"%s\"", hash, item_path);
+					cellSearch.notice("cellSearchStartContentSearch(): CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 				else // file is already stored and tracked
-				{ // TODO
+				{
+					// TODO
 					// Perform checks to see if the identified file has been modified since last checked
 					// In which case, update the stored content's properties
 					// auto content_found = &content_map->at(content_id);
 					curr_search->content_ids.emplace_back(found->first, found->second);
+
+					cellSearch.notice("cellSearchStartContentSearch(): Already Tracked: CellSearchId: 0x%x, Content ID: %08X, Path: \"%s\"", id, hash, item_path);
 				}
 			}
 		};
@@ -1402,8 +1447,10 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
 	}
 
+	auto& search = g_fxo->get<search_info>();
+
 	// TODO: find out if this check is correct
-	if (error_code error = check_search_state(g_fxo->get<search_info>().state.load(), search_state::in_progress))
+	if (error_code error = check_search_state(search.state.load(), search_state::in_progress))
 	{
 		return error;
 	}
@@ -1412,6 +1459,8 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 	{
 		return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
 	}
+
+	music_selection_context context;
 
 	// Use the first track in order to get info about this search
 	const auto& first_content_id = searchObject->content_ids[0];
@@ -1426,38 +1475,58 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 		if (content != searchObject->content_ids.cend() && content->second)
 		{
 			// Check if the type of the found content is correct
-			if (content->second->type != first_content->type)
+			if (content->second->type != CELL_SEARCH_CONTENTTYPE_MUSIC)
 			{
-				return CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT;
+				return { CELL_SEARCH_ERROR_INVALID_CONTENTTYPE, fmt::format("Type: %d, Expected: CELL_SEARCH_CONTENTTYPE_MUSIC")};
 			}
 
-			// TODO: Use the found content
-			// first track/playlist of context = content->second;
+			// Check if the type of the found content matches our search content type
+			if (content->second->type != first_content->type)
+			{
+				return { CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT, fmt::format("Type: %d, Expected: %d", +content->second->type, +first_content->type) };
+			}
+
+			// Use the found content
+			context.content_path = content->second->infoPath.contentPath;
+			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning found track: Type=0x%x, Path=%s", content_hash, +content->second->type, context.content_path);
 		}
 		else if (first_content->type == CELL_SEARCH_CONTENTTYPE_MUSICLIST)
 		{
 			// Abort if we can't find the playlist.
-			return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
+			return { CELL_SEARCH_ERROR_CONTENT_NOT_FOUND, "Type: CELL_SEARCH_CONTENTTYPE_MUSICLIST" };
 		}
 		else
 		{
-			// TODO: Select the first track by default
-			// first track of context = first_content;
+			// Select the first track by default
+			context.content_path = first_content->infoPath.contentPath;
+			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning first track: Type=0x%x, Path=%s", content_hash, +first_content->type, context.content_path);
 		}
 	}
 	else if (first_content->type == CELL_SEARCH_CONTENTTYPE_MUSICLIST)
 	{
 		// Abort if we don't have the necessary info to select a playlist.
-		return CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT;
+		return { CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT, "Type: CELL_SEARCH_CONTENTTYPE_MUSICLIST" };
 	}
 	else
 	{
-		// TODO: Select the first track by default
-		// first track of context = first_content;
+		// Select the first track by default
+		context.content_path = first_content->infoPath.contentPath;
+		cellSearch.notice("cellSearchGetMusicSelectionContext(): Assigning first track: Type=0x%x, Path=%s", +first_content->type, context.content_path);
 	}
 
-	// TODO: Use repeatMode and option in our context, depending on the type (list vs single)
-	// TODO: assign outContext
+	context.content_type = first_content->type;
+	context.repeat_mode = repeatMode;
+	context.context_option = option;
+
+	// Resolve hashed paths
+	if (auto found = search.content_links.find(context.content_path); found != search.content_links.end())
+	{
+		context.content_path = found->second;
+	}
+
+	*outContext = context.get();
+
+	cellSearch.success("cellSearchGetMusicSelectionContext: found selection context: %d", context.to_string());
 
 	return CELL_OK;
 }
@@ -1471,8 +1540,10 @@ error_code cellSearchGetMusicSelectionContextOfSingleTrack(vm::cptr<CellSearchCo
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	auto& search = g_fxo->get<search_info>();
+
 	// TODO: find out if this check is correct
-	if (error_code error = check_search_state(g_fxo->get<search_info>().state.load(), search_state::in_progress))
+	if (error_code error = check_search_state(search.state.load(), search_state::in_progress))
 	{
 		return error;
 	}
@@ -1491,7 +1562,18 @@ error_code cellSearchGetMusicSelectionContextOfSingleTrack(vm::cptr<CellSearchCo
 		return CELL_SEARCH_ERROR_INVALID_CONTENTTYPE;
 	}
 
-	// TODO: assign outContext
+	music_selection_context context;
+	context.content_path = content_info->infoPath.contentPath;
+
+	// Resolve hashed paths
+	if (auto found = search.content_links.find(context.content_path); found != search.content_links.end())
+	{
+		context.content_path = found->second;
+	}
+
+	*outContext = context.get();
+
+	cellSearch.success("cellSearchGetMusicSelectionContextOfSingleTrack: found selection context: %s", context.to_string());
 
 	return CELL_OK;
 }
@@ -1513,7 +1595,7 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 	const u64 id = *reinterpret_cast<const u64*>(contentId->data);
 	auto& content_map = g_fxo->get<content_id_map>();
 	auto found = content_map.map.find(id);
-	if(found != content_map.map.end())
+	if (found != content_map.map.end())
 	{
 		std::memcpy(infoPath.get_ptr(), &found->second->infoPath, sizeof(found->second->infoPath));
 	}
@@ -1523,7 +1605,7 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 		return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
 	}
 
-	cellSearch.success("contentId = %08X  contentPath = \"%s\"", id, infoPath->contentPath);
+	cellSearch.success("contentId=%08X, contentPath=\"%s\"", id, infoPath->contentPath);
 
 	return CELL_OK;
 }
@@ -1728,3 +1810,147 @@ DECLARE(ppu_module_manager::cellSearch)("cellSearchUtility", []()
 	REG_FUNC(cellSearchUtility, cellSearchCancel);
 	REG_FUNC(cellSearchUtility, cellSearchEnd);
 });
+
+// Helper
+error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId> contents_id)
+{
+	if (!contents_id)
+		return CELL_MUSIC_ERROR_PARAM;
+
+	// Search for the content that matches our current selection
+	auto& content_map = g_fxo->get<content_id_map>();
+	const u64 hash = std::hash<std::string>()(content_path);
+	auto found = content_map.map.find(hash);
+	if (found != content_map.map.end())
+	{
+		// TODO: check if the content type is correct
+		const u128 content_id_128 = found->first;
+		std::memcpy(contents_id->data, &content_id_128, CELL_SEARCH_CONTENT_ID_SIZE);
+		cellSearch.warning("find_content_id: found existing content for %s (path control: '%s')", to_string(), found->second->infoPath.contentPath);
+		return CELL_OK;
+	}
+
+	// Try to find the content manually
+	auto& search = g_fxo->get<search_info>();
+	const std::string music_dir = "/dev_hdd0/music/";
+	const std::string vfs_music_dir = vfs::get(music_dir);
+
+	for (auto&& entry : fs::dir(vfs_music_dir))
+	{
+		entry.name = vfs::unescape(entry.name);
+
+		if (!entry.is_directory || entry.name == "." || entry.name == "..")
+		{
+			continue;
+		}
+
+		const std::string dir_path = music_dir + entry.name;
+		const std::string vfs_dir_path = vfs_music_dir + entry.name;
+
+		if (content_type == CELL_SEARCH_CONTENTTYPE_MUSICLIST)
+		{
+			const u64 dir_hash = std::hash<std::string>()(dir_path);
+
+			if (hash == dir_hash)
+			{
+				u32 num_of_items = 0;
+				for (auto&& file : fs::dir(vfs_dir_path))
+				{
+					file.name = vfs::unescape(file.name);
+
+					if (file.is_directory || file.name == "." || file.name == "..")
+					{
+						continue;
+					}
+
+					num_of_items++;
+				}
+
+				// TODO: check for actual content inside the directory
+				std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
+				curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSICLIST;
+
+				if (dir_path.length() > CELL_SEARCH_PATH_LEN_MAX)
+				{
+					// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
+					std::string link = "/.tmp/" + std::to_string(hash) + entry.name;
+					strcpy_trunc(curr_find->infoPath.contentPath, link);
+
+					std::lock_guard lock(search.links_mutex);
+					search.content_links.emplace(std::move(link), dir_path);
+				}
+				else
+				{
+					strcpy_trunc(curr_find->infoPath.contentPath, dir_path);
+				}
+
+				CellSearchMusicListInfo& info = curr_find->data.music_list;
+				info.listType = CELL_SEARCH_LISTSEARCHTYPE_MUSIC_ALBUM;
+				info.numOfItems = num_of_items;
+				info.duration = 0;
+				strcpy_trunc(info.title, entry.name);
+				strcpy_trunc(info.artistName, "ARTIST NAME");
+
+				content_map.map.emplace(dir_hash, curr_find);
+				const u128 content_id_128 = dir_hash;
+				std::memcpy(contents_id->data, &content_id_128, CELL_SEARCH_CONTENT_ID_SIZE);
+
+				cellSearch.warning("find_content_id: found music list %s (path control: '%s')", to_string(), dir_path);
+				return CELL_OK;
+			}
+
+			continue;
+		}
+
+		// Search the subfolders. We assume all music is located in a depth of 2 (max_depth, root + 1 folder + file).
+		for (auto&& item : fs::dir(vfs_dir_path))
+		{
+			if (item.is_directory || item.name == "." || item.name == "..")
+			{
+				continue;
+			}
+
+			const std::string file_path = dir_path + "/" + item.name;
+			const u64 file_hash = std::hash<std::string>()(file_path);
+
+			if (hash == file_hash)
+			{
+				const auto [success, mi] = utils::get_media_info(vfs_dir_path + "/" + item.name, 1); // AVMEDIA_TYPE_AUDIO
+				if (!success)
+				{
+					continue;
+				}
+
+				std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
+				curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSIC;
+
+				if (file_path.length() > CELL_SEARCH_PATH_LEN_MAX)
+				{
+					// Create mapping which will be resolved to an actual hard link in VFS by cellSearchPrepareFile
+					const size_t ext_offset = item.name.find_last_of('.');
+					std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
+					strcpy_trunc(curr_find->infoPath.contentPath, link);
+
+					std::lock_guard lock(search.links_mutex);
+					search.content_links.emplace(std::move(link), file_path);
+				}
+				else
+				{
+					strcpy_trunc(curr_find->infoPath.contentPath, file_path);
+				}
+
+				populate_music_info(curr_find->data.music, mi, item);
+
+				content_map.map.emplace(file_hash, curr_find);
+				const u128 content_id_128 = file_hash;
+				std::memcpy(contents_id->data, &content_id_128, CELL_SEARCH_CONTENT_ID_SIZE);
+
+				cellSearch.warning("find_content_id: found music track %s (path control: '%s')", to_string(), file_path);
+				return CELL_OK;
+			}
+		}
+	}
+
+	// content ID not found
+	return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
+}

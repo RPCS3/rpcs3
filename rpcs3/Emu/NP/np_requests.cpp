@@ -44,11 +44,14 @@ namespace np
 
 		const auto cb_info = take_pending_request(req_id);
 
-		sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo, event_key, 0, size, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo, event_key, 0, size, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return req_id;
 	}
@@ -60,11 +63,14 @@ namespace np
 
 		const auto cb_info = take_pending_request(req_id);
 
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_CreateServerContext, event_key, 0, 0, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_CreateServerContext, event_key, 0, 0, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return req_id;
 	}
@@ -76,11 +82,14 @@ namespace np
 
 		const auto cb_info = take_pending_request(req_id);
 
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_DeleteServerContext, event_key, 0, 0, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_DeleteServerContext, event_key, 0, 0, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return req_id;
 	}
@@ -138,11 +147,14 @@ namespace np
 
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList, event_key, 0, size, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList, event_key, 0, size, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -193,12 +205,15 @@ namespace np
 
 		extra_nps::print_create_room_resp(room_resp);
 
-		sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom, event_key, 0, size, cb_info.cb_arg);
-				return 0;
-			});
-
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom, event_key, 0, size, cb_info.cb_arg);
+					return 0;
+				});
+		}
+		
 		return true;
 	}
 
@@ -245,11 +260,14 @@ namespace np
 		sigh.set_sig2_infos(room_info->roomId, member_id, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn->get_addr_sig(), rpcn->get_port_sig(), true);
 		// TODO? Should this send a message to Signaling CB? Is this even necessary?
 
-		sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom, event_key, 0, size, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom, event_key, 0, size, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -282,11 +300,14 @@ namespace np
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh.disconnect_sig2_users(room_id);
 
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom, event_key, 0, 0, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom, event_key, 0, 0, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -321,11 +342,14 @@ namespace np
 		SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(edata, resp, search_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom, event_key, 0, size, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom, event_key, 0, size, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -360,11 +384,14 @@ namespace np
 		GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(edata, resp, sce_get_room_ext_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom, event_key, 0, size, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList, event_key, 0, size, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -390,11 +417,14 @@ namespace np
 
 		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
 
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal, event_key, 0, 0, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal, event_key, 0, 0, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -436,11 +466,14 @@ namespace np
 
 		extra_nps::print_room_data_internal(room_info);
 
-		sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal, event_key, 0, size, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal, event_key, 0, size, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -466,11 +499,14 @@ namespace np
 
 		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
 
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal, event_key, 0, 0, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal, event_key, 0, 0, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -494,11 +530,14 @@ namespace np
 
 		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
 
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal, event_key, 0, 0, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal, event_key, 0, 0, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -535,11 +574,14 @@ namespace np
 		GetPingInfoResponse_to_SceNpMatching2SignalingGetPingInfoResponse(resp, final_ping_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo, event_key, 0, size, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo, event_key, 0, size, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}
@@ -561,11 +603,14 @@ namespace np
 	{
 		const auto cb_info = take_pending_request(req_id);
 
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-			{
-				cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage, 0, 0, 0, cb_info.cb_arg);
-				return 0;
-			});
+		if (cb_info.cb)
+		{
+			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+				{
+					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage, 0, 0, 0, cb_info.cb_arg);
+					return 0;
+				});
+		}
 
 		return true;
 	}

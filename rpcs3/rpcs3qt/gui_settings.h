@@ -245,6 +245,7 @@ namespace gui
 	const gui_save loc_language = gui_save(localization, "language", "en");
 
 	const gui_save pads_show_emulated = gui_save(pad_settings, "show_emulated_values", false);
+	const gui_save pads_geometry      = gui_save(pad_settings, "geometry",             QByteArray());
 }
 
 /** Class for GUI settings..

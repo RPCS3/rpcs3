@@ -967,7 +967,7 @@ error_code cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 {
 	cellGem.todo("cellGemGetCameraState(camera_state=0x%x)", camera_state);
 
-	auto& gem = g_fxo->get<gem_config>();
+	[[maybe_unused]] auto& gem = g_fxo->get<gem_config>();
 
 	if (!camera_state)
 	{

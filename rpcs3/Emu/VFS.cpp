@@ -752,9 +752,11 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		return path.starts_with(from) && (path.size() == from.size() || path[from.size()] == fs::delim[0] || path[from.size()] == fs::delim[1]);
 	};
 
-	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
+	std::map<u32, std::string> escaped_real;
+	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
 	{
-		if (check_path(Emu.GetCallbacks().resolve_path(file.real_path)))
+		escaped_real[id] = Emu.GetCallbacks().resolve_path(file.real_path);
+		if (check_path(escaped_real[id]))
 		{
 			ensure(file.mp == mp);
 
@@ -794,11 +796,9 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	const auto fs_error = fs::g_tls_error;
 
-	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
+	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
 	{
-		const auto escaped_real = Emu.GetCallbacks().resolve_path(file.real_path);
-
-		if (check_path(escaped_real))
+		if (check_path(escaped_real[id]))
 		{
 			if (file.restore_data.seek_pos == umax)
 			{
@@ -808,7 +808,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 			// Update internal path
 			if (res)
 			{
-				file.real_path = to + (escaped_real != escaped_from ? '/' + file.real_path.substr(from0.size()) : ""s);
+				file.real_path = to + (escaped_real[id] != escaped_from ? '/' + file.real_path.substr(from0.size()) : ""s);
 			}
 
 			// Reopen with ignored TRUNC, APPEND, CREATE and EXCL flags

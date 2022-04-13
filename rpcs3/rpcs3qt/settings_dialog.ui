@@ -54,7 +54,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="coreTab">
        <attribute name="title">
@@ -153,6 +153,24 @@
           <item>
            <layout class="QVBoxLayout" name="coreTabMiddleLayout">
             <item>
+             <widget class="QGroupBox" name="gb_xfloat_accuracy">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>SPU XFloat Accuracy</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_xfloat_accuracy_layout">
+               <item>
+                <widget class="QComboBox" name="xfloatAccuracy"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="checkboxes">
               <property name="title">
                <string>Additional Settings</string>
@@ -162,20 +180,6 @@
                 <widget class="QCheckBox" name="spuLoopDetection">
                  <property name="text">
                   <string>Enable SPU loop detection</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="accurateXFloat">
-                 <property name="text">
-                  <string>Accurate xfloat</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="approximateXFloat">
-                 <property name="text">
-                  <string>Approximate xfloat</string>
                  </property>
                 </widget>
                </item>
@@ -1077,6 +1081,34 @@
               </layout>
              </widget>
             </item>
+            <item>
+             <widget class="QGroupBox" name="gb_music_handler">
+              <property name="title">
+               <string>Music Handler</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_music_handler_layout">
+               <item>
+                <widget class="QComboBox" name="musicHandlerBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacerAudioLeft">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
            </layout>
           </item>
           <item>
@@ -1243,6 +1275,22 @@
                   </item>
                  </layout>
                 </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacerAudioRight">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::MinimumExpanding</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>0</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
               </layout>
              </widget>
@@ -2325,9 +2373,16 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="DisableNativefp16">
+                <widget class="QCheckBox" name="disableNativefp16">
                  <property name="text">
                   <string>Disable native float16 support</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="allowHostGPULabels">
+                 <property name="text">
+                  <string>Allow Host GPU Labels (Experimental)</string>
                  </property>
                 </widget>
                </item>
@@ -3900,6 +3955,18 @@
                <layout class="QVBoxLayout" name="vbl_num_ppu_threads">
                 <item>
                  <widget class="QComboBox" name="combo_num_ppu_threads"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="gb_metalsemaphore">
+               <property name="title">
+                <string>Metal Semaphore</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_metalsemaphore_layout">
+                <item>
+                 <widget class="QComboBox" name="metalsemaphore"/>
                 </item>
                </layout>
               </widget>

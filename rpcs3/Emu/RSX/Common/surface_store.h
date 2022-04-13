@@ -1,6 +1,8 @@
 #pragma once
 
 #include "surface_utils.h"
+#include "simple_array.hpp"
+#include "ranged_map.hpp"
 #include "../gcm_enums.h"
 #include "../rsx_utils.h"
 #include <list>
@@ -43,24 +45,23 @@ namespace rsx
 		using surface_type = typename Traits::surface_type;
 		using command_list_type = typename Traits::command_list_type;
 		using surface_overlap_info = surface_overlap_info_t<surface_type>;
+		using surface_ranged_map = typename rsx::ranged_map<surface_storage_type, 0x400000>;
 
 	protected:
-		std::unordered_map<u32, surface_storage_type> m_render_targets_storage = {};
-		std::unordered_map<u32, surface_storage_type> m_depth_stencil_storage = {};
+		surface_ranged_map m_render_targets_storage = {};
+		surface_ranged_map m_depth_stencil_storage = {};
 
 		rsx::address_range m_render_targets_memory_range;
 		rsx::address_range m_depth_stencil_memory_range;
 
 		bool m_invalidate_on_write = false;
-		bool m_skip_write_updates = false;
 
 		rsx::surface_raster_type m_active_raster_type = rsx::surface_raster_type::linear;
 
 	public:
-		std::pair<u8, u8> m_bound_render_targets_config = {};
+		rsx::simple_array<u8> m_bound_render_target_ids = {};
 		std::array<std::pair<u32, surface_type>, 4> m_bound_render_targets = {};
 		std::pair<u32, surface_type> m_bound_depth_stencil = {};
-		u8 m_bound_buffers_count = 0;
 
 		// List of sections derived from a section that has been split and invalidated
 		std::vector<surface_type> orphaned_surfaces;
@@ -86,7 +87,7 @@ namespace rsx
 			auto insert_new_surface = [&](
 				u32 new_address,
 				deferred_clipped_region<surface_type>& region,
-				std::unordered_map<u32, surface_storage_type>& data)
+				surface_ranged_map& data)
 			{
 				surface_storage_type sink;
 				surface_type invalidated = 0;
@@ -152,7 +153,7 @@ namespace rsx
 
 				ensure(region.target == Traits::get(sink));
 				orphaned_surfaces.push_back(region.target);
-				data[new_address] = std::move(sink);
+				data.emplace(region.target->get_memory_range(), std::move(sink));
 			};
 
 			// Define incoming region
@@ -191,7 +192,7 @@ namespace rsx
 				copy.dst_x = 0;
 				copy.dst_y = 0;
 				copy.width = std::max<u16>((old.width - _new.width) / bytes_to_texels_x, 1);
-				copy.height = prev_surface->get_surface_height();
+				copy.height = prev_surface->template get_surface_height<>();
 				copy.transfer_scale_x = 1.f;
 				copy.transfer_scale_y = 1.f;
 				copy.target = nullptr;
@@ -240,16 +241,16 @@ namespace rsx
 		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface, surface_type prev_surface)
 		{
 			auto scan_list = [&new_surface, address](const rsx::address_range& mem_range,
-				std::unordered_map<u32, surface_storage_type>& data) -> std::vector<std::pair<u32, surface_type>>
+				surface_ranged_map& data) -> std::vector<std::pair<u32, surface_type>>
 			{
 				std::vector<std::pair<u32, surface_type>> result;
-				for (const auto &e : data)
+				for (auto it = data.begin_range(mem_range); it != data.end(); ++it)
 				{
-					auto surface = Traits::get(e.second);
+					auto surface = Traits::get(it->second);
 
 					if (new_surface->last_use_tag >= surface->last_use_tag ||
 						new_surface == surface ||
-						address == e.first)
+						address == it->first)
 					{
 						// Do not bother synchronizing with uninitialized data
 						continue;
@@ -258,11 +259,11 @@ namespace rsx
 					// Memory partition check
 					if (mem_range.start >= constants::local_mem_base)
 					{
-						if (e.first < constants::local_mem_base) continue;
+						if (it->first < constants::local_mem_base) continue;
 					}
 					else
 					{
-						if (e.first >= constants::local_mem_base) continue;
+						if (it->first >= constants::local_mem_base) continue;
 					}
 
 					// Pitch check
@@ -278,8 +279,8 @@ namespace rsx
 						continue;
 					}
 
-					result.push_back({ e.first, surface });
-					ensure(e.first == surface->base_addr);
+					result.push_back({ it->first, surface });
+					ensure(it->first == surface->base_addr);
 				}
 
 				return result;
@@ -369,7 +370,7 @@ namespace rsx
 				{
 					// This has been 'swallowed' by the new surface and can be safely freed
 					auto &storage = surface->is_depth_surface() ? m_depth_stencil_storage : m_render_targets_storage;
-					auto &object = storage[e.first];
+					auto &object = storage.at(e.first);
 
 					ensure(object);
 
@@ -403,7 +404,7 @@ namespace rsx
 			bool store = true;
 
 			address_range *storage_bounds;
-			std::unordered_map<u32, surface_storage_type> *primary_storage, *secondary_storage;
+			surface_ranged_map *primary_storage, *secondary_storage;
 			if constexpr (depth)
 			{
 				primary_storage = &m_depth_stencil_storage;
@@ -555,7 +556,7 @@ namespace rsx
 			if (store)
 			{
 				// New surface was found among invalidated surfaces or created from scratch
-				(*primary_storage)[address] = std::move(new_surface_storage);
+				primary_storage->emplace(new_surface->get_memory_range(), std::move(new_surface_storage));
 			}
 
 			ensure(!old_surface_storage);
@@ -613,7 +614,7 @@ namespace rsx
 				}
 
 				if (it->surface->get_rsx_pitch() != it->surface->get_native_pitch() &&
-					it->surface->get_surface_height() != 1)
+					it->surface->template get_surface_height<>() != 1)
 				{
 					// Memory gap in descriptor
 					continue;
@@ -655,6 +656,7 @@ namespace rsx
 				}
 			}
 
+			rsx_log.notice("rsx::surface_cache::check_for_duplicates_fast analysed %u overlapping sections and removed %u", ::size32(sections), removed_count);
 			return removed_count;
 		}
 
@@ -671,6 +673,8 @@ namespace rsx
 			// Tag end
 			u32* overrun_test_ptr = utils::bless<u32>(marker.data() + range.length());
 			*overrun_test_ptr = overrun_cookie_value;
+
+			u32 removed_count = 0;
 
 			auto compare_and_tag_row = [&](const u32 offset, u32 length) -> bool
 			{
@@ -722,9 +726,9 @@ namespace rsx
 				auto this_range = it->surface->get_memory_range();
 				ensure(this_range.overlaps(range));
 
-				const auto native_pitch = it->surface->get_surface_width(rsx::surface_metrics::bytes);
+				const auto native_pitch = it->surface->template get_surface_width<rsx::surface_metrics::bytes>();
 				const auto rsx_pitch = it->surface->get_rsx_pitch();
-				auto num_rows = it->surface->get_surface_height(rsx::surface_metrics::samples);
+				auto num_rows = it->surface->template get_surface_height<rsx::surface_metrics::samples>();
 				bool valid = false;
 
 				if (this_range.start < range.start)
@@ -739,7 +743,7 @@ namespace rsx
 
 					if (row_offset < native_pitch)
 					{
-						compare_and_tag_row(0, native_pitch - row_offset);
+						compare_and_tag_row(0, std::min(native_pitch - row_offset, range.length()));
 					}
 
 					// Jump to next row...
@@ -772,10 +776,14 @@ namespace rsx
 
 				if (!valid)
 				{
+					removed_count++;
 					rsx_log.warning("Stale surface at address 0x%x will be deleted", it->base_address);
 					invalidate_surface_address(it->base_address, it->is_depth);
 				}
 			}
+
+			// Notify
+			rsx_log.notice("rsx::surface_cache::check_for_duplicates_fallback analysed %u overlapping sections and removed %u", ::size32(sections), removed_count);
 
 			// Verify no OOB
 			ensure(*overrun_test_ptr == overrun_cookie_value);
@@ -841,23 +849,19 @@ namespace rsx
 			cache_tag = rsx::get_shared_tag();
 			m_invalidate_on_write = (antialias != rsx::surface_antialiasing::center_1_sample);
 			m_active_raster_type = raster_type;
-			m_bound_buffers_count = 0;
 
 			// Make previous RTTs sampleable
-			for (int i = m_bound_render_targets_config.first, count = 0;
-				count < m_bound_render_targets_config.second;
-				++i, ++count)
+			for (const auto& i : m_bound_render_target_ids)
 			{
 				auto &rtt = m_bound_render_targets[i];
 				Traits::prepare_surface_for_sampling(command_list, std::get<1>(rtt));
 				rtt = std::make_pair(0, nullptr);
 			}
 
-			const auto rtt_indices = utility::get_rtt_indexes(set_surface_target);
-			if (!rtt_indices.empty()) [[likely]]
+			m_bound_render_target_ids.clear();
+			if (const auto rtt_indices = utility::get_rtt_indexes(set_surface_target);
+				!rtt_indices.empty()) [[likely]]
 			{
-				m_bound_render_targets_config = { rtt_indices.front(), 0 };
-
 				// Create/Reuse requested rtts
 				for (u8 surface_index : rtt_indices)
 				{
@@ -868,13 +872,8 @@ namespace rsx
 						bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, antialias,
 							clip_width, clip_height, surface_pitch[surface_index], std::forward<Args>(extra_params)...));
 
-					++m_bound_render_targets_config.second;
-					++m_bound_buffers_count;
+					m_bound_render_target_ids.push_back(surface_index);
 				}
-			}
-			else
-			{
-				m_bound_render_targets_config = { 0, 0 };
 			}
 
 			// Same for depth buffer
@@ -888,8 +887,6 @@ namespace rsx
 				m_bound_depth_stencil = std::make_pair(address_z,
 					bind_address_as_depth_stencil(command_list, address_z, depth_format, antialias,
 						clip_width, clip_height, zeta_pitch, std::forward<Args>(extra_params)...));
-
-				++m_bound_buffers_count;
 			}
 			else
 			{
@@ -899,7 +896,7 @@ namespace rsx
 
 		u8 get_color_surface_count() const
 		{
-			return m_bound_render_targets_config.second;
+			return static_cast<u8>(m_bound_render_target_ids.size());
 		}
 
 		surface_type get_surface_at(u32 address)
@@ -948,14 +945,15 @@ namespace rsx
 			}
 		}
 
-		bool address_is_bound(u32 address) const
+		inline bool address_is_bound(u32 address) const
 		{
-			for (int i = m_bound_render_targets_config.first, count = 0;
-				count < m_bound_render_targets_config.second;
-				++i, ++count)
+			ensure(address);
+			for (int i = 0; i < 4; ++i)
 			{
 				if (m_bound_render_targets[i].first == address)
+				{
 					return true;
+				}
 			}
 
 			return (m_bound_depth_stencil.first == address);
@@ -979,15 +977,15 @@ namespace rsx
 
 			const auto test_range = utils::address_range::start_length(texaddr, (required_pitch * required_height) - (required_pitch - surface_internal_pitch));
 
-			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data, bool is_depth)
+			auto process_list_function = [&](surface_ranged_map& data, bool is_depth)
 			{
-				for (auto& tex_info : data)
+				for (auto it = data.begin_range(test_range); it != data.end(); ++it)
 				{
-					const auto range = tex_info.second->get_memory_range();
+					const auto range = it->second->get_memory_range();
 					if (!range.overlaps(test_range))
 						continue;
 
-					auto surface = tex_info.second.get();
+					auto surface = it->second.get();
 					if (access.is_transfer() && access.is_read() && surface->write_through())
 					{
 						// The surface has no data other than what can be loaded from CPU
@@ -1003,8 +1001,8 @@ namespace rsx
 					info.base_address = range.start;
 					info.is_depth = is_depth;
 
-					const u32 normalized_surface_width = surface->get_surface_width(rsx::surface_metrics::bytes) / required_bpp;
-					const u32 normalized_surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
+					const u32 normalized_surface_width = surface->template get_surface_width<rsx::surface_metrics::bytes>() / required_bpp;
+					const u32 normalized_surface_height = surface->template get_surface_height<rsx::surface_metrics::samples>();
 
 					if (range.start >= texaddr) [[likely]]
 					{
@@ -1112,91 +1110,80 @@ namespace rsx
 
 		void check_for_duplicates(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
 		{
-			if (!remove_duplicates_fast_impl(sections, range))
+			utils::address_range test_range;
+			for (const auto& section : sections)
 			{
-				remove_duplicates_fallback_impl(sections, range);
+				const auto range = section.surface->get_memory_range();
+				test_range.start = std::min(test_range.start, range.start);
+				test_range.end = std::max(test_range.end, range.end);
+			}
+
+			if (!remove_duplicates_fast_impl(sections, test_range))
+			{
+				remove_duplicates_fallback_impl(sections, test_range);
 			}
 		}
 
-		void on_write(const bool* color, bool z)
+		void on_write(const std::array<bool, 4>& color_mrt_writes_enabled, const bool depth_stencil_writes_enabled)
 		{
-			if (write_tag == cache_tag && m_skip_write_updates)
+			if (write_tag >= cache_tag && !m_invalidate_on_write)
 			{
-				// Nothing to do
-				ensure(!m_invalidate_on_write);
 				return;
 			}
 
-			write_tag = cache_tag;
-			m_skip_write_updates = false;
-			int tagged = 0;
+			// TODO: Take WCB/WDB into account. Should speed this up a bit by skipping sync_tag calls
+			write_tag = rsx::get_shared_tag();
 
-			// Tag surfaces
-			if (color)
+			for (const auto& i : m_bound_render_target_ids)
 			{
-				for (int i = m_bound_render_targets_config.first, count = 0;
-					count < m_bound_render_targets_config.second;
-					++i, ++count)
+				if (color_mrt_writes_enabled[i])
 				{
-					if (!color[i])
-						continue;
-
-					auto& surface = m_bound_render_targets[i].second;
-					if (surface->last_use_tag != write_tag)
+					auto surface = m_bound_render_targets[i].second;
+					if (surface->last_use_tag > cache_tag) [[ likely ]]
 					{
-						m_bound_render_targets[i].second->on_write(write_tag, surface_state_flags::require_resolve, m_active_raster_type);
+						surface->on_write_fast(write_tag);
 					}
-					else if (m_invalidate_on_write)
+					else
 					{
-						m_bound_render_targets[i].second->on_invalidate_children();
+						surface->on_write(write_tag, rsx::surface_state_flags::require_resolve, m_active_raster_type);
 					}
-
-					++tagged;
 				}
 			}
 
-			if (z && m_bound_depth_stencil.first)
+			if (auto zsurface = m_bound_depth_stencil.second;
+				zsurface && depth_stencil_writes_enabled)
 			{
-				auto& surface = m_bound_depth_stencil.second;
-				if (surface->last_use_tag != write_tag)
+				if (zsurface->last_use_tag > cache_tag) [[ likely ]]
 				{
-					m_bound_depth_stencil.second->on_write(write_tag, surface_state_flags::require_resolve, m_active_raster_type);
+					zsurface->on_write_fast(write_tag);
 				}
-				else if (m_invalidate_on_write)
+				else
 				{
-					m_bound_depth_stencil.second->on_invalidate_children();
+					zsurface->on_write(write_tag, rsx::surface_state_flags::require_resolve, m_active_raster_type);
 				}
-
-				++tagged;
-			}
-
-			if (!m_invalidate_on_write && tagged == m_bound_buffers_count)
-			{
-				// Skip any further updates as all active surfaces have been updated
-				m_skip_write_updates = true;
 			}
 		}
 
 		void invalidate_all()
 		{
 			// Unbind and invalidate all resources
-			auto free_resource_list = [&](auto &data)
+			auto free_resource_list = [&](auto &data, const utils::address_range& range)
 			{
-				for (auto &e : data)
+				for (auto it = data.begin_range(range); it != data.end(); ++it)
 				{
-					invalidate(e.second);
+					invalidate(it->second);
 				}
 
 				data.clear();
 			};
 
-			free_resource_list(m_render_targets_storage);
-			free_resource_list(m_depth_stencil_storage);
+			free_resource_list(m_render_targets_storage, m_render_targets_memory_range);
+			free_resource_list(m_depth_stencil_storage, m_depth_stencil_memory_range);
 
 			ensure(m_active_memory_used == 0);
 
 			m_bound_depth_stencil = std::make_pair(0, nullptr);
-			m_bound_render_targets_config = { 0, 0 };
+			m_bound_render_target_ids.clear();
 			for (auto &rtt : m_bound_render_targets)
 			{
 				rtt = std::make_pair(0, nullptr);
@@ -1205,21 +1192,23 @@ namespace rsx
 
 		void invalidate_range(const rsx::address_range& range)
 		{
-			for (auto &rtt : m_render_targets_storage)
+			for (auto it = m_render_targets_storage.begin_range(range); it != m_render_targets_storage.end(); ++it)
 			{
-				if (range.overlaps(rtt.second->get_memory_range()))
+				auto& rtt = it->second;
+				if (range.overlaps(rtt->get_memory_range()))
 				{
-					rtt.second->clear_rw_barrier();
-					rtt.second->state_flags |= rsx::surface_state_flags::erase_bkgnd;
+					rtt->clear_rw_barrier();
+					rtt->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 				}
 			}
 
-			for (auto &ds : m_depth_stencil_storage)
+			for (auto it = m_depth_stencil_storage.begin_range(range); it != m_depth_stencil_storage.end(); ++it)
 			{
-				if (range.overlaps(ds.second->get_memory_range()))
+				auto& ds = it->second;
+				if (range.overlaps(ds->get_memory_range()))
 				{
-					ds.second->clear_rw_barrier();
-					ds.second->state_flags |= rsx::surface_state_flags::erase_bkgnd;
+					ds->clear_rw_barrier();
+					ds->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 				}
 			}
 		}
@@ -1249,9 +1238,9 @@ namespace rsx
 
 		virtual bool handle_memory_pressure(command_list_type cmd, problem_severity severity)
 		{
-			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
+			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range& range)
 			{
-				for (auto It = data.begin(); It != data.end();)
+				for (auto It = data.begin_range(range); It != data.end();)
 				{
 					auto surface = Traits::get(It->second);
 					if (surface->dirty())
@@ -1280,8 +1269,8 @@ namespace rsx
 			const auto old_usage = m_active_memory_used;
 
 			// Try and find old surfaces to remove
-			process_list_function(m_render_targets_storage);
-			process_list_function(m_depth_stencil_storage);
+			process_list_function(m_render_targets_storage, m_render_targets_memory_range);
+			process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
 
 			return (m_active_memory_used < old_usage);
 		}

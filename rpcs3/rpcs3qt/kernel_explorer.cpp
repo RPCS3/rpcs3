@@ -26,6 +26,7 @@
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Cell/lv2/sys_vm.h"
 #include "Emu/Cell/lv2/sys_net.h"
+#include "Emu/Cell/lv2/sys_net/lv2_socket.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_interrupt.h"
 #include "Emu/Cell/Modules/cellSpurs.h"
@@ -547,7 +548,7 @@ void kernel_explorer::update()
 
 	idm::select<lv2_socket>([&](u32 id, lv2_socket& sock)
 	{
-		add_leaf(find_node(root, additional_nodes::sockets), qstr(fmt::format("Socket %u: Type: %s, Family: %s, Wq: %zu", id, sock.type, sock.family, sock.queue.size())));
+		add_leaf(find_node(root, additional_nodes::sockets), qstr(fmt::format("Socket %u: Type: %s, Family: %s, Wq: %zu", id, sock.get_type(), sock.get_family(), sock.get_queue_size())));
 	});
 
 	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container& container)

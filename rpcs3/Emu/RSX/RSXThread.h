@@ -28,6 +28,7 @@
 #include "Emu/system_config.h"
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_disable_frame_limit; 
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
 
@@ -127,6 +128,8 @@ namespace rsx
 
 		polygon_stipple_pattern_dirty = 0x8000,  // Rasterizer stippling pattern changed
 		line_stipple_pattern_dirty = 0x10000,    // Line stippling pattern changed
+
+		push_buffer_arrays_dirty = 0x20000,   // Push buffers have data written to them (immediate mode vertex buffers)
 
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
@@ -585,10 +588,12 @@ namespace rsx
 		bool supports_multidraw;             // Draw call batching
 		bool supports_hw_a2c;                // Alpha to coverage
 		bool supports_hw_renormalization;    // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_msaa;               // MSAA support
 		bool supports_hw_a2one;              // Alpha to one
 		bool supports_hw_conditional_render; // Conditional render
 		bool supports_passthrough_dma;       // DMA passthrough
 		bool supports_asynchronous_compute;  // Async compute
+		bool supports_host_gpu_labels;       // Advanced host synchronization
 	};
 
 	struct sampled_image_descriptor_base;
@@ -858,6 +863,7 @@ namespace rsx
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		virtual void sync_hint(FIFO_hint hint, void* args);
+		virtual bool release_GCM_label(u32 /*address*/, u32 /*value*/) { return false; }
 
 		std::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 
@@ -915,9 +921,9 @@ namespace rsx
 
 		/**
 		* Fill buffer with vertex program constants.
-		* Buffer must be at least 512 float4 wide.
+		* Relocation table allows to do a partial fill with only selected registers.
 		*/
-		void fill_vertex_program_constants_data(void* buffer);
+		void fill_vertex_program_constants_data(void* buffer, const std::vector<u16>& reloc_table);
 
 		/**
 		 * Fill buffer with fragment rasterization state.

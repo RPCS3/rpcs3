@@ -38,6 +38,7 @@ public:
 		const QString wake_up_delay                = tr("Try fiddling with this setting when encountering unstable games. The higher value, the better stability it may provide.\nIncrements/Decrements for each test should be around 100μs to 200μs until finding the best value for optimal stability.\nValues above 1000μs may cause noticeable performance penalties, use with caution.");
 		const QString disabled_from_global         = tr("Do not change this setting globally.\nRight-click a game in the game list and choose \"Configure\" instead.");
 		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Safe' mode for more spec compliant behavior at the cost of some CPU overhead. This setting works with all devices.\nUse 'Fast' to use a faster but hacky version. This option is internally disabled for NVIDIA GPUs due to causing GPU hangs.");
+		const QString allow_host_labels            = tr("Allows the host GPU to synchronize with CELL directly. This incurs a performance penalty, but exposes the true state of GPU objects to the guest CPU. Can help eliminate visual noise and glitching at the cost of performance. Use with caution.");
 
 		// audio
 
@@ -63,8 +64,7 @@ public:
 		const QString spu_dynamic               = tr("Alternative interpreter (slow). May be faster than static interpreter. Try this if SPU Recompiler (LLVM) doesn't work.");
 		const QString spu_asmjit                = tr("Recompiles the game's SPU code using the ASMJIT Recompiler.\nThis is the fast option with very good compatibility.\nIf unsure, use this option.");
 		const QString spu_llvm                  = tr("Recompiles and caches the game's SPU code using the LLVM Recompiler before running which adds extra start-up time.\nThis is the fastest option with very good compatibility.\nIf you experience issues, use the ASMJIT Recompiler.");
-		const QString accurate_xfloat           = tr("Adds extra accuracy to SPU float vectors processing.\nFixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU Decoder is set to Dynamic or LLVM.");
-		const QString approximate_xfloat        = tr("Default accuracy for SPU float vectors processing.\nFixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU Decoder is set to Dynamic or LLVM.");
+		const QString xfloat                    = tr("Control accuracy to SPU float vectors processing.\nFixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU Decoder is set to Dynamic or LLVM.");
 		const QString enable_thread_scheduler   = tr("Control how RPCS3 utilizes the threads of your system.\nEach option heavily depends on the game and on your CPU. It's recommended to try each option to find out which performs the best.\nChanging the thread scheduler is not supported on CPUs with less than 12 threads.");
 		const QString spu_loop_detection        = tr("Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases.");
 		const QString enable_tsx                = tr("Enable usage of TSX instructions.\nNeeds to be forced on some Haswell or Broadwell CPUs or CPUs with the TSX-FA instruction set.\nForcing TSX in these cases may lead to system and performance instability, use it with caution.");
@@ -107,6 +107,7 @@ public:
 		const QString accurate_ppu_128_loop        = tr("When enabled, PPU atomic operations will operate on entire cache line data, as opposed to a single 64bit block of memory when disabled.\nNumerical values control whether or not to enable the accurate version based on the atomic operation's length.");
 		const QString enable_performance_report    = tr("Measure certain events and print a chart after the emulator is stopped. Don't enable if not asked to.");
 		const QString num_ppu_threads              = tr("Affects maximum amount of PPU threads running concurrently, the value of 1 has very low compatibility with games.\n2 is the default, if unsure do not modify this setting.");
+		const QString metal_semaphore              = tr("Determines how MoltenVK will simulate vkSemaphore on the Metal API.\nSoftware emulation is the slowest, but most accurate option. However, it can cause tearing.\nMTLEvent is faster, but not available under Rosetta (if MTLEvent preferred is selected, MTLFence is used; otherwise, emulation is used).\nMTLFence is faster than emulation, but can randomly cause synchronization issues.");
 
 		// emulator
 
@@ -196,6 +197,7 @@ public:
 		const QString pad_mode          = tr("Single-threaded: All pad handlers run on the same thread sequentially.\nMulti-threaded: Each pad handler has its own thread.\nOnly use multi-threaded if you can spare the extra threads.");
 		const QString keyboard_handler  = tr("Some games support native keyboard input.\nBasic will work in these cases.");
 		const QString mouse_handler     = tr("Some games support native mouse input.\nBasic will work in these cases.");
+		const QString music_handler     = tr("Currently only used for cellMusic emulation.\nSelect Qt to use the default output device of your operating system.\nThis may not be able to play all audio formats.");
 		const QString camera            = tr("Select Qt Camera to use the default camera device of your operating system.");
 		const QString camera_type       = tr("Depending on the game, you may need to select a specific camera type.");
 		const QString camera_flip       = tr("Flips the camera image either horizontally, vertically, or on both axis.");

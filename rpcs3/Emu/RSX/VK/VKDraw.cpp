@@ -757,8 +757,8 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	auto &draw_call = rsx::method_registers.current_draw_clause;
 	m_profiler.start();
 
-	const flags32_t vertex_state_mask = rsx::vertex_base_changed | rsx::vertex_arrays_changed;
-	const flags32_t vertex_state = (sub_index == 0) ? rsx::vertex_arrays_changed : draw_call.execute_pipeline_dependencies() & vertex_state_mask;
+	const rsx::flags32_t vertex_state_mask = rsx::vertex_base_changed | rsx::vertex_arrays_changed;
+	const rsx::flags32_t vertex_state = (sub_index == 0) ? rsx::vertex_arrays_changed : draw_call.execute_pipeline_dependencies() & vertex_state_mask;
 
 	if (vertex_state & rsx::vertex_arrays_changed)
 	{
@@ -1028,7 +1028,11 @@ void VKGSRender::end()
 		m_current_frame->flags &= ~frame_context_state::dirty;
 	}
 
-	analyse_current_rsx_pipeline();
+	if (m_graphics_state & (rsx::pipeline_state::fragment_program_ucode_dirty | rsx::pipeline_state::vertex_program_ucode_dirty))
+	{
+		analyse_current_rsx_pipeline();
+	}
+
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	load_texture_env();
@@ -1116,7 +1120,7 @@ void VKGSRender::end()
 		m_current_command_buffer->flags &= ~(vk::command_buffer::cb_has_conditional_render);
 	}
 
-	m_rtts.on_write(m_framebuffer_layout.color_write_enabled.data(), m_framebuffer_layout.zeta_write_enabled);
+	m_rtts.on_write(m_framebuffer_layout.color_write_enabled, m_framebuffer_layout.zeta_write_enabled);
 
 	rsx::thread::end();
 }

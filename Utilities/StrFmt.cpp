@@ -33,6 +33,28 @@ std::wstring utf8_to_wchar(std::string_view src)
 	MultiByteToWideChar(CP_UTF8, 0, src.data(), src.size(), wchar_string.data(), tmp_size);
 	return wchar_string;
 }
+
+std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
+{
+	std::string message;
+	LPWSTR message_buffer = nullptr;
+	if (FormatMessageW((module_handle ? FORMAT_MESSAGE_FROM_HMODULE : FORMAT_MESSAGE_FROM_SYSTEM) | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
+			module_handle, error, 0, (LPWSTR)&message_buffer, 0, nullptr))
+	{
+		message = fmt::format("%s (0x%x)", fmt::trim(wchar_to_utf8(message_buffer), " \t\n\r\f\v"), error);
+	}
+	else
+	{
+		message = fmt::format("0x%x", error);
+	}
+
+	if (message_buffer)
+	{
+		LocalFree(message_buffer);
+	}
+
+	return message;
+}
 #endif
 
 template <>
@@ -332,12 +354,12 @@ void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 #ifdef _WIN32
 	if (DWORD error = GetLastError())
 	{
-		fmt::append(out, " (e=0x%08x[%u])", error, error);
+		fmt::append(out, " (error=%s)", error, fmt::win_error_to_string(error));
 	}
 #else
 	if (int error = errno)
 	{
-		fmt::append(out, " (errno=%d)", error);
+		fmt::append(out, " (errno=%d=%s)", error, strerror(errno));
 	}
 #endif
 }

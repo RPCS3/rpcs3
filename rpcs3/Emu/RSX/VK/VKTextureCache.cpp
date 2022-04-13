@@ -7,14 +7,25 @@
 
 namespace vk
 {
-	u64 hash_image_properties(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageCreateFlags create_flags)
+	u64 hash_image_properties(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags)
 	{
+		/**
+		* Key layout:
+		* 00-08: Format  (Max 255)
+		* 08-24: Width   (Max 64K)
+		* 24-40: Height  (Max 64K)
+		* 40-48: Depth   (Max 255)
+		* 48-54: Mipmaps (Max 63)   <- We have some room here, it is not possible to have more than 12 mip levels on PS3 and 16 on PC is pushing it.
+		* 54-56: Type    (Max 3)
+		* 56-64: Flags   (Max 255)  <- We have some room here, we only care about a small subset of create flags.
+		*/
 		ensure(static_cast<u32>(format) < 0xFF);
 		return (static_cast<u64>(format) & 0xFF) |
 			(static_cast<u64>(w) << 8) |
 			(static_cast<u64>(h) << 24) |
 			(static_cast<u64>(d) << 40) |
 			(static_cast<u64>(mipmaps) << 48) |
+			(static_cast<u64>(type) << 54) |
 			(static_cast<u64>(create_flags) << 56);
 	}
 
@@ -33,7 +44,7 @@ namespace vk
 		data->current_queue_family = VK_QUEUE_FAMILY_IGNORED;
 
 		// Move this object to the cached image pool
-		const auto key = hash_image_properties(data->format(), data->width(), data->height(), data->depth(), data->mipmaps(), data->info.flags);
+		const auto key = hash_image_properties(data->format(), data->width(), data->height(), data->depth(), data->mipmaps(), data->info.imageType, data->info.flags);
 		std::lock_guard lock(parent->m_cached_pool_lock);
 
 		if (!parent->m_cache_is_exiting)
@@ -495,13 +506,13 @@ namespace vk
 		return result;
 	}
 
-	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageCreateFlags create_flags, VkImageUsageFlags usage)
+	std::unique_ptr<vk::viewable_image> texture_cache::find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkImageUsageFlags usage)
 	{
 		reader_lock lock(m_cached_pool_lock);
 
 		if (!m_cached_images.empty())
 		{
-			const u64 desired_key = hash_image_properties(format, w, h, d, mipmaps, create_flags);
+			const u64 desired_key = hash_image_properties(format, w, h, d, mipmaps, type, create_flags);
 			lock.upgrade();
 
 			for (auto it = m_cached_images.begin(); it != m_cached_images.end(); ++it)
@@ -527,7 +538,7 @@ namespace vk
 		const VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 		const u16 layers = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? 6 : 1;
 
-		auto image = find_cached_image(dst_format, w, h, d, mips, image_flags, usage_flags);
+		auto image = find_cached_image(dst_format, w, h, d, mips, image_type, image_flags, usage_flags);
 
 		if (!image)
 		{
@@ -851,7 +862,7 @@ namespace vk
 			const VkFormat vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
 			const VkImageCreateFlags create_flags = is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 
-			if (auto found = find_cached_image(vk_format, width, height, depth, mipmaps, create_flags, usage_flags))
+			if (auto found = find_cached_image(vk_format, width, height, depth, mipmaps, image_type, create_flags, usage_flags))
 			{
 				image = found.release();
 			}
@@ -1223,16 +1234,14 @@ namespace vk
 		}
 
 		// Nuke temporary resources. They will still be visible to the GPU.
-		auto gc = vk::get_resource_manager();
-		u64 actual_released_memory = 0;
-
+		any_released |= !m_cached_images.empty();
 		m_cached_images.clear();
 		m_cached_memory_size = 0;
 
+		any_released |= !m_temporary_subresource_cache.empty();
 		m_temporary_subresource_cache.clear();
 
-		rsx_log.warning("Texture cache released %lluM of temporary resources.", (actual_released_memory / _1M));
-		return any_released || (actual_released_memory > 0);
+		return any_released;
 	}
 
 	void texture_cache::on_frame_end()
@@ -1322,7 +1331,6 @@ namespace vk
 		vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 		auto result = image.get();
-		const auto resource_memory = image->memory->size();
 		auto disposable = vk::disposable_t::make(new cached_image_reference_t(this, image));
 		vk::get_resource_manager()->dispose(disposable);
 

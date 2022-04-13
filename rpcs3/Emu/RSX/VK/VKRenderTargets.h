@@ -89,9 +89,9 @@ namespace vk
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
 
-		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, u8 samples)
+		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, [[maybe_unused]] u8 samples)
 		{
-			if (g_cfg.video.strict_rendering_mode || samples > 1)
+			if (g_cfg.video.strict_rendering_mode)
 			{
 				return {};
 			}
@@ -152,11 +152,11 @@ namespace vk
 			}
 
 			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples);
-			usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			if (samples == 1) [[likely]]
 			{
-				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			}
 			else
 			{
@@ -271,7 +271,7 @@ namespace vk
 			if (!sink)
 			{
 				const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(prev.width, prev.height,
-					ref->get_surface_width(rsx::surface_metrics::pixels), ref->get_surface_height(rsx::surface_metrics::pixels));
+					ref->get_surface_width<rsx::surface_metrics::pixels>(), ref->get_surface_height<rsx::surface_metrics::pixels>());
 
 				auto& dev = cmd.get_command_pool().get_owner();
 				sink = std::make_unique<vk::render_target>(dev, dev.get_memory_mapping().device_local,

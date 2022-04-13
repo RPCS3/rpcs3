@@ -67,9 +67,19 @@ std::string curl_handle::get_verbose_error(CURLcode code)
 }
 
 #ifdef _WIN32
-// Function exported from our user_settings.h in WolfSSL, implemented in RPCS3
-extern "C" FILE* wolfSSL_fopen_utf8(const char* name, const char* mode)
+// Functions exported from our user_settings.h in WolfSSL, implemented in RPCS3
+extern "C"
+{
+
+FILE* wolfSSL_fopen_utf8(const char* name, const char* mode)
 {
 	return _wfopen(utf8_to_wchar(name).c_str(), utf8_to_wchar(mode).c_str());
+}
+
+int wolfSSL_stat_utf8(const char* path, struct _stat* buffer)
+{
+	return _wstat(utf8_to_wchar(path).c_str(), buffer);
+}
+
 }
 #endif

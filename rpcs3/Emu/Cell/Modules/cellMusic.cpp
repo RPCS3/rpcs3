@@ -3,10 +3,13 @@
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_spu.h"
+#include "Emu/Io/music_handler_base.h"
+#include "Emu/System.h"
+#include "Emu/VFS.h"
+#include "Emu/RSX/Overlays/overlay_media_list_dialog.h"
 #include "cellSearch.h"
 #include "cellSpurs.h"
 #include "cellSysutil.h"
-
 #include "cellMusic.h"
 
 LOG_CHANNEL(cellMusic);
@@ -67,7 +70,54 @@ struct music_state
 
 	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func{};
 	vm::ptr<void> userData{};
+	std::mutex mtx;
+	std::shared_ptr<music_handler_base> handler;
+	music_selection_context current_selection_context;
+
+	music_state()
+	{
+		handler = Emu.GetCallbacks().get_music_handler();
+	}
 };
+
+error_code cell_music_select_contents()
+{
+	auto& music = g_fxo->get<music_state>();
+
+	if (!music.func)
+		return CELL_MUSIC_ERROR_GENERIC;
+
+	const std::string dir_path = "/dev_hdd0/music";
+	const std::string vfs_dir_path = vfs::get("/dev_hdd0/music");
+	const std::string title = get_localized_string(localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_EMPTY);
+
+	error_code error = rsx::overlays::show_media_list_dialog(rsx::overlays::media_list_dialog::media_type::audio, vfs_dir_path, title,
+		[&music, dir_path, vfs_dir_path](s32 status, utils::media_info info)
+		{
+			sysutil_register_cb([&music, dir_path, vfs_dir_path, info, status](ppu_thread& ppu) -> s32
+			{
+				const u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_MUSIC_CANCELED};
+				if (result == CELL_OK)
+				{
+					music_selection_context context;
+					context.content_path = info.path;
+					context.content_path = dir_path + info.path.substr(vfs_dir_path.length()); // We need the non-vfs path here
+					context.content_type = fs::is_dir(info.path) ? CELL_SEARCH_CONTENTTYPE_MUSICLIST : CELL_SEARCH_CONTENTTYPE_MUSIC;
+					// TODO: context.repeat_mode = CELL_SEARCH_REPEATMODE_NONE;
+					// TODO: context.context_option = CELL_SEARCH_CONTEXTOPTION_NONE;
+					music.current_selection_context = context;
+					cellMusic.success("Media list dialog: selected entry '%s'", context.content_path);
+				}
+				else
+				{
+					cellMusic.warning("Media list dialog was canceled");
+				}
+				music.func(ppu, CELL_MUSIC_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(result), music.userData);
+				return CELL_OK;
+			});
+		});
+	return error;
+}
 
 error_code cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
 {
@@ -75,6 +125,12 @@ error_code cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> conte
 
 	if (!context)
 		return CELL_MUSIC_ERROR_PARAM;
+	
+	auto& music = g_fxo->get<music_state>();
+	std::lock_guard lock(music.mtx);
+
+	*context = music.current_selection_context.get();
+	cellMusic.success("cellMusicGetSelectionContext: selection context = %s", music.current_selection_context.to_string());
 
 	return CELL_OK;
 }
@@ -93,7 +149,17 @@ error_code cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music.func(ppu, CELL_MUSIC2_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), music.userData);
+		bool result = false;
+		{
+			std::lock_guard lock(music.mtx);
+			result = music.current_selection_context.set(*context);
+		}
+		const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC2_ERROR_INVALID_CONTEXT};
+
+		if (result) cellMusic.success("cellMusicSetSelectionContext2: new selection context = %s)", music.current_selection_context.to_string());
+		else cellMusic.todo("cellMusicSetSelectionContext2: failed. context = %s)", context->data);
+
+		music.func(ppu, CELL_MUSIC2_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), music.userData);
 		return CELL_OK;
 	});
 
@@ -102,7 +168,7 @@ error_code cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 
 error_code cellMusicSetVolume2(f32 level)
 {
-	cellMusic.todo("cellMusicSetVolume2(level=0x%x)", level);
+	cellMusic.todo("cellMusicSetVolume2(level=%f)", level);
 
 	level = std::clamp(level, 0.0f, 1.0f);
 
@@ -110,6 +176,8 @@ error_code cellMusicSetVolume2(f32 level)
 
 	if (!music.func)
 		return CELL_MUSIC2_ERROR_GENERIC;
+
+	music.handler->set_volume(level);
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
@@ -127,7 +195,10 @@ error_code cellMusicGetContentsId(vm::ptr<CellSearchContentId> contents_id)
 	if (!contents_id)
 		return CELL_MUSIC_ERROR_PARAM;
 
-	return CELL_OK;
+	// HACKY
+	auto& music = g_fxo->get<music_state>();
+	std::lock_guard lock(music.mtx);
+	return music.current_selection_context.find_content_id(contents_id);
 }
 
 error_code cellMusicSetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
@@ -144,7 +215,17 @@ error_code cellMusicSetSelectionContext(vm::ptr<CellMusicSelectionContext> conte
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music.func(ppu, CELL_MUSIC_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), music.userData);
+		bool result = false;
+		{
+			std::lock_guard lock(music.mtx);
+			result = music.current_selection_context.set(*context);
+		}
+		const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC_ERROR_INVALID_CONTEXT};
+
+		if (result) cellMusic.success("cellMusicSetSelectionContext: new selection context = %s)", music.current_selection_context.to_string());
+		else cellMusic.todo("cellMusicSetSelectionContext: failed. context = %s)", context->data);
+
+		music.func(ppu, CELL_MUSIC_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), music.userData);
 		return CELL_OK;
 	});
 
@@ -184,6 +265,9 @@ error_code cellMusicGetPlaybackStatus2(vm::ptr<s32> status)
 	if (!status)
 		return CELL_MUSIC2_ERROR_PARAM;
 
+	const auto& music = g_fxo->get<music_state>();
+	*status = music.handler->get_state();
+
 	return CELL_OK;
 }
 
@@ -194,7 +278,10 @@ error_code cellMusicGetContentsId2(vm::ptr<CellSearchContentId> contents_id)
 	if (!contents_id)
 		return CELL_MUSIC2_ERROR_PARAM;
 
-	return CELL_OK;
+	// HACKY
+	auto& music = g_fxo->get<music_state>();
+	std::lock_guard lock(music.mtx);
+	return music.current_selection_context.find_content_id(contents_id);
 }
 
 error_code cellMusicFinalize()
@@ -292,6 +379,11 @@ error_code cellMusicGetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 	if (!context)
 		return CELL_MUSIC2_ERROR_PARAM;
 
+	auto& music = g_fxo->get<music_state>();
+	std::lock_guard lock(music.mtx);
+	*context = music.current_selection_context.get();
+	cellMusic.success("cellMusicGetSelectionContext2: selection context = %s", music.current_selection_context.to_string());
+
 	return CELL_OK;
 }
 
@@ -301,6 +393,9 @@ error_code cellMusicGetVolume(vm::ptr<f32> level)
 
 	if (!level)
 		return CELL_MUSIC_ERROR_PARAM;
+
+	const auto& music = g_fxo->get<music_state>();
+	*level = music.handler->get_volume();
 
 	return CELL_OK;
 }
@@ -312,6 +407,9 @@ error_code cellMusicGetPlaybackStatus(vm::ptr<s32> status)
 	if (!status)
 		return CELL_MUSIC_ERROR_PARAM;
 
+	const auto& music = g_fxo->get<music_state>();
+	*status = music.handler->get_state();
+
 	return CELL_OK;
 }
 
@@ -319,7 +417,7 @@ error_code cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
 {
 	cellMusic.todo("cellMusicSetPlaybackCommand2(command=0x%x, param=*0x%x)", command, param);
 
-	if (command < CELL_MUSIC_PB_CMD_STOP || command > CELL_MUSIC_PB_CMD_FASTREVERSE)
+	if (command < CELL_MUSIC2_PB_CMD_STOP || command > CELL_MUSIC2_PB_CMD_FASTREVERSE)
 		return CELL_MUSIC2_ERROR_PARAM;
 
 	auto& music = g_fxo->get<music_state>();
@@ -329,6 +427,41 @@ error_code cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
+		// TODO: play proper song when the context is a playlist
+		std::string path;
+		{
+			std::lock_guard lock(music.mtx);
+			path = vfs::get(music.current_selection_context.content_path);
+			cellMusic.notice("cellMusicSetPlaybackCommand2: current vfs path: '%s' (unresolved='%s')", path, music.current_selection_context.content_path);
+		}
+
+		switch (command)
+		{
+		case CELL_MUSIC2_PB_CMD_STOP:
+			music.handler->stop();
+			break;
+		case CELL_MUSIC2_PB_CMD_PLAY:
+			music.handler->play(path);
+			break;
+		case CELL_MUSIC2_PB_CMD_PAUSE:
+			music.handler->pause();
+			break;
+		case CELL_MUSIC2_PB_CMD_NEXT:
+			music.handler->play(path);
+			break;
+		case CELL_MUSIC2_PB_CMD_PREV:
+			music.handler->play(path);
+			break;
+		case CELL_MUSIC2_PB_CMD_FASTFORWARD:
+			music.handler->fast_forward();
+			break;
+		case CELL_MUSIC2_PB_CMD_FASTREVERSE:
+			music.handler->fast_reverse();
+			break;
+		default:
+			break;
+		}
+
 		music.func(ppu, CELL_MUSIC2_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
@@ -350,6 +483,41 @@ error_code cellMusicSetPlaybackCommand(s32 command, vm::ptr<void> param)
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
+		// TODO: play proper song when the context is a playlist
+		std::string path;
+		{
+			std::lock_guard lock(music.mtx);
+			path = vfs::get(music.current_selection_context.content_path);
+			cellMusic.notice("cellMusicSetPlaybackCommand: current vfs path: '%s' (unresolved='%s')", path, music.current_selection_context.content_path);
+		}
+
+		switch (command)
+		{
+		case CELL_MUSIC_PB_CMD_STOP:
+			music.handler->stop();
+			break;
+		case CELL_MUSIC_PB_CMD_PLAY:
+			music.handler->play(path);
+			break;
+		case CELL_MUSIC_PB_CMD_PAUSE:
+			music.handler->pause();
+			break;
+		case CELL_MUSIC_PB_CMD_NEXT:
+			music.handler->play(path);
+			break;
+		case CELL_MUSIC_PB_CMD_PREV:
+			music.handler->play(path);
+			break;
+		case CELL_MUSIC_PB_CMD_FASTFORWARD:
+			music.handler->fast_forward();
+			break;
+		case CELL_MUSIC_PB_CMD_FASTREVERSE:
+			music.handler->fast_reverse();
+			break;
+		default:
+			break;
+		}
+
 		music.func(ppu, CELL_MUSIC_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
@@ -361,36 +529,14 @@ error_code cellMusicSelectContents2()
 {
 	cellMusic.todo("cellMusicSelectContents2()");
 
-	auto& music = g_fxo->get<music_state>();
-
-	if (!music.func)
-		return CELL_MUSIC2_ERROR_GENERIC;
-
-	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
-	{
-		music.func(ppu, CELL_MUSIC2_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), music.userData);
-		return CELL_OK;
-	});
-
-	return CELL_OK;
+	return cell_music_select_contents();
 }
 
 error_code cellMusicSelectContents(u32 container)
 {
 	cellMusic.todo("cellMusicSelectContents(container=0x%x)", container);
 
-	auto& music = g_fxo->get<music_state>();
-
-	if (!music.func)
-		return CELL_MUSIC_ERROR_GENERIC;
-
-	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
-	{
-		music.func(ppu, CELL_MUSIC_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), music.userData);
-		return CELL_OK;
-	});
-
-	return CELL_OK;
+	return cell_music_select_contents();
 }
 
 error_code cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> func, vm::ptr<void> userData)
@@ -421,7 +567,7 @@ error_code cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Cal
 
 error_code cellMusicSetVolume(f32 level)
 {
-	cellMusic.todo("cellMusicSetVolume(level=0x%x)", level);
+	cellMusic.todo("cellMusicSetVolume(level=%f)", level);
 
 	level = std::clamp(level, 0.0f, 1.0f);
 
@@ -429,6 +575,8 @@ error_code cellMusicSetVolume(f32 level)
 
 	if (!music.func)
 		return CELL_MUSIC_ERROR_GENERIC;
+
+	music.handler->set_volume(level);
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
@@ -445,6 +593,9 @@ error_code cellMusicGetVolume2(vm::ptr<f32> level)
 
 	if (!level)
 		return CELL_MUSIC2_ERROR_PARAM;
+
+	const auto& music = g_fxo->get<music_state>();
+	*level = music.handler->get_volume();
 
 	return CELL_OK;
 }

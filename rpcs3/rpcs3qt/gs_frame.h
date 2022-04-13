@@ -41,6 +41,7 @@ private:
 	u64 m_frames = 0;
 	std::string m_window_title;
 	QWindow::Visibility m_last_visibility = Visibility::Windowed;
+	atomic_t<bool> m_is_closing = false;
 	atomic_t<bool> m_show_mouse = true;
 	bool m_disable_mouse = false;
 	bool m_disable_kb_hotkeys = false;
@@ -97,6 +98,7 @@ protected:
 	bool event(QEvent* ev) override;
 
 private:
+	void hide_on_close();
 	void toggle_mouselock();
 	void update_cursor();
 	void handle_cursor(QWindow::Visibility visibility, bool from_event, bool start_idle_timer);

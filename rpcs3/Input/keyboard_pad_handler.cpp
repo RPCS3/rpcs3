@@ -299,6 +299,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 	case Qt::Key_S:
 	case Qt::Key_R:
 	case Qt::Key_E:
+	case Qt::Key_0:
 		if (event->modifiers() != Qt::ControlModifier)
 			handle_key();
 		break;

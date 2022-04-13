@@ -23,9 +23,9 @@ void VKGSRender::reinitialize_swapchain()
 	}
 
 	// NOTE: This operation will create a hard sync point
-	close_and_submit_command_buffer(m_current_command_buffer->submit_fence);
-	m_current_command_buffer->pending = true;
+	close_and_submit_command_buffer();
 	m_current_command_buffer->reset();
+	m_current_command_buffer->begin();
 
 	for (auto &ctx : frame_context_storage)
 	{
@@ -33,7 +33,7 @@ void VKGSRender::reinitialize_swapchain()
 			continue;
 
 		// Release present image by presenting it
-		frame_context_cleanup(&ctx, true);
+		frame_context_cleanup(&ctx);
 	}
 
 	// Discard the current upscaling pipeline if any
@@ -47,13 +47,10 @@ void VKGSRender::reinitialize_swapchain()
 	{
 		rsx_log.warning("Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
 		swapchain_unavailable = true;
-		open_command_buffer();
 		return;
 	}
 
 	// Prepare new swapchain images for use
-	open_command_buffer();
-
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
 	{
 		const auto target_layout = m_swapchain->get_optimal_present_layout();
@@ -74,7 +71,7 @@ void VKGSRender::reinitialize_swapchain()
 	vk::wait_for_fence(&resize_fence);
 
 	m_current_command_buffer->reset();
-	open_command_buffer();
+	m_current_command_buffer->begin();
 
 	swapchain_unavailable = false;
 	should_reinitialize_swapchain = false;
@@ -100,7 +97,11 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 			swapchain_unavailable = true;
 			break;
 		default:
-			vk::die_with_error(error);
+			// Other errors not part of rpcs3. This can be caused by 3rd party injectors with bad code, of which we have no control over.
+			// Let the application attempt to recover instead of crashing outright.
+			rsx_log.error("VkPresent returned unexpected error code %lld. Will attempt to recreate the swapchain. Please disable 3rd party injector tools.", static_cast<s64>(error));
+			swapchain_unavailable = true;
+			break;
 		}
 	}
 
@@ -156,25 +157,21 @@ void VKGSRender::queue_swap_request()
 	if (m_swapchain->is_headless())
 	{
 		m_swapchain->end_frame(*m_current_command_buffer, m_current_frame->present_image);
-		close_and_submit_command_buffer(m_current_command_buffer->submit_fence);
+		close_and_submit_command_buffer();
 	}
 	else
 	{
-		close_and_submit_command_buffer(m_current_command_buffer->submit_fence,
+		close_and_submit_command_buffer(nullptr,
 			m_current_frame->acquire_signal_semaphore,
 			m_current_frame->present_wait_semaphore,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
 	}
 
-	// Signal pending state as the command queue is now closed
-	m_current_frame->swap_command_buffer->pending = true;
-
 	// Set up a present request for this frame as well
 	present(m_current_frame);
 
 	// Grab next cb in line and make it usable
-	m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
-	m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
+	m_current_command_buffer = m_primary_cb_list.next();
 	m_current_command_buffer->reset();
 	m_current_command_buffer->begin();
 
@@ -182,23 +179,19 @@ void VKGSRender::queue_swap_request()
 	advance_queued_frames();
 }
 
-void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources)
+void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 {
 	ensure(ctx->swap_command_buffer);
 
-	if (ctx->swap_command_buffer->pending)
+	// Perform hard swap here
+	if (ctx->swap_command_buffer->wait(FRAME_PRESENT_TIMEOUT) != VK_SUCCESS)
 	{
-		// Perform hard swap here
-		if (ctx->swap_command_buffer->wait(FRAME_PRESENT_TIMEOUT) != VK_SUCCESS)
-		{
-			// Lost surface/device, release swapchain
-			swapchain_unavailable = true;
-		}
-
-		free_resources = true;
+		// Lost surface/device, release swapchain
+		swapchain_unavailable = true;
 	}
 
-	if (free_resources)
+	// Resource cleanup.
+	// TODO: This is some outdated crap.
 	{
 		if (m_text_writer)
 		{
@@ -289,7 +282,7 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 	// Check the surface store first
 	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
 	const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer,
-		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::shader_read);
+		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::transfer_read);
 
 	if (!overlap_info.empty())
 	{
@@ -299,8 +292,8 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 
 		if (section.base_address >= info->address)
 		{
-			const auto surface_width = surface->get_surface_width(rsx::surface_metrics::samples);
-			const auto surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
+			const auto surface_width = surface->get_surface_width<rsx::surface_metrics::samples>();
+			const auto surface_height = surface->get_surface_height<rsx::surface_metrics::samples>();
 
 			if (section.base_address == info->address)
 			{
@@ -322,8 +315,7 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 
 			if (viable)
 			{
-				surface->read_barrier(*m_current_command_buffer);
-				image_to_flip = section.surface->get_surface(rsx::surface_access::shader_read);
+				image_to_flip = section.surface->get_surface(rsx::surface_access::transfer_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
 					std::min(surface_width, info->width),
@@ -406,7 +398,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (m_current_frame->swap_command_buffer)
 		{
 			// Its possible this flip request is triggered by overlays and the flip queue is in undefined state
-			frame_context_cleanup(m_current_frame, true);
+			frame_context_cleanup(m_current_frame);
 		}
 
 		// Swap aux storage and current frame; aux storage should always be ready for use at all times
@@ -422,7 +414,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 
 		// There were no draws and back-to-back flips happened
-		frame_context_cleanup(m_current_frame, true);
+		frame_context_cleanup(m_current_frame);
 	}
 
 	if (info.skip_frame || swapchain_unavailable)
@@ -435,7 +427,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			m_current_frame->swap_command_buffer = m_current_command_buffer;
 			flush_command_queue(true);
 			vk::advance_frame_counter();
-			frame_context_cleanup(m_current_frame, true);
+			frame_context_cleanup(m_current_frame);
 		}
 
 		m_frame->flip(m_context);

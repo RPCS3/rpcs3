@@ -189,6 +189,13 @@ bool IsDebuggerPresent()
 }
 #endif
 
+bool is_debugger_present()
+{
+	if (g_cfg.core.external_debugger)
+		return true;
+	return IsDebuggerPresent();
+}
+
 #if defined(ARCH_X64)
 enum x64_reg_t : u32
 {
@@ -1630,7 +1637,7 @@ static void append_thread_name(std::string& msg)
 
 static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 {
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT && IsDebuggerPresent())
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
 	{
 		return EXCEPTION_CONTINUE_SEARCH;
 	}

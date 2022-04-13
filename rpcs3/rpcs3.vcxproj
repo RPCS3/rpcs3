@@ -309,6 +309,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_camera_error_handler.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_music_error_handler.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_recvmessage_dialog_frame.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -513,6 +516,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_qt_camera_error_handler.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_music_error_handler.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_recvmessage_dialog_frame.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -609,6 +615,8 @@
     <ClCompile Include="rpcs3qt\persistent_settings.cpp" />
     <ClCompile Include="rpcs3qt\qt_camera_error_handler.cpp" />
     <ClCompile Include="rpcs3qt\qt_camera_handler.cpp" />
+    <ClCompile Include="rpcs3qt\qt_music_error_handler.cpp" />
+    <ClCompile Include="rpcs3qt\qt_music_handler.cpp" />
     <ClCompile Include="rpcs3qt\recvmessage_dialog_frame.cpp" />
     <ClCompile Include="rpcs3qt\render_creator.cpp" />
     <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp" />
@@ -616,6 +624,7 @@
     <ClCompile Include="rpcs3qt\screenshot_preview.cpp" />
     <ClCompile Include="rpcs3qt\sendmessage_dialog_frame.cpp" />
     <ClCompile Include="rpcs3qt\settings.cpp" />
+    <ClCompile Include="rpcs3qt\shortcut_utils.cpp" />
     <ClCompile Include="rpcs3qt\skylander_dialog.cpp" />
     <ClCompile Include="rpcs3qt\tooltips.cpp" />
     <ClCompile Include="rpcs3qt\update_manager.cpp" />
@@ -1126,6 +1135,17 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -DQT_MULTIMEDIA_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent" "-I$(QTDIR)\include\QtMultimedia"</Command>
     </CustomBuild>
     <ClInclude Include="rpcs3qt\qt_camera_handler.h" />
+    <ClInclude Include="rpcs3qt\qt_music_handler.h" />
+    <CustomBuild Include="rpcs3qt\qt_music_error_handler.h">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWIN32_LEAN_AND_MEAN -DHAVE_VULKAN -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -DQT_MULTIMEDIA_LIB -DQT_MULTIMEDIAWIDGETS_LIB -DQT_SVG_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\SoundTouch\soundtouch\include" "-I.\..\3rdparty\cubeb\extra" "-I.\..\3rdparty\cubeb\cubeb\include" "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent" "-I$(QTDIR)\include\QtMultimedia" "-I$(QTDIR)\include\QtMultimediaWidgets" "-I$(QTDIR)\include\QtSvg"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWIN32_LEAN_AND_MEAN -DHAVE_VULKAN -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -DQT_MULTIMEDIA_LIB -DQT_MULTIMEDIAWIDGETS_LIB -DQT_SVG_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\SoundTouch\soundtouch\include" "-I.\..\3rdparty\cubeb\extra" "-I.\..\3rdparty\cubeb\cubeb\include" "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent" "-I$(QTDIR)\include\QtMultimedia" "-I$(QTDIR)\include\QtMultimediaWidgets" "-I$(QTDIR)\include\QtSvg"</Command>
+    </CustomBuild>
     <ClInclude Include="rpcs3qt\richtext_item_delegate.h" />
     <CustomBuild Include="rpcs3qt\sendmessage_dialog_frame.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
@@ -1137,6 +1157,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
     </CustomBuild>
+    <ClInclude Include="rpcs3qt\shortcut_utils.h" />
     <ClInclude Include="rpcs3qt\stylesheets.h" />
     <CustomBuild Include="rpcs3qt\skylander_dialog.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>

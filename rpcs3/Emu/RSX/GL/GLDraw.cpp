@@ -619,7 +619,11 @@ void GLGSRender::end()
 		return;
 	}
 
-	analyse_current_rsx_pipeline();
+	if (m_graphics_state & (rsx::pipeline_state::fragment_program_ucode_dirty | rsx::pipeline_state::vertex_program_ucode_dirty))
+	{
+		analyse_current_rsx_pipeline();
+	}
+
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	// Active texture environment is used to decode shaders
@@ -677,7 +681,7 @@ void GLGSRender::end()
 	}
 	while (rsx::method_registers.current_draw_clause.next());
 
-	m_rtts.on_write(m_framebuffer_layout.color_write_enabled.data(), m_framebuffer_layout.zeta_write_enabled);
+	m_rtts.on_write(m_framebuffer_layout.color_write_enabled, m_framebuffer_layout.zeta_write_enabled);
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();

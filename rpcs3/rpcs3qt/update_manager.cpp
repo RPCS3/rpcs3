@@ -302,7 +302,7 @@ void update_manager::update(bool auto_accept)
 			changelog_content.append(tr("• %0: %1").arg(entry.version, entry.title));
 		}
 
-		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No,m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
+		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
 
 		if (!changelog_content.isEmpty())
 		{
@@ -360,6 +360,11 @@ void update_manager::update(bool auto_accept)
 bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 {
 	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
+
+#ifdef __APPLE__
+	update_log.error("Unsupported operating system.");
+	return false;
+#else
 
 	if (m_expected_size != static_cast<u64>(data.size()))
 	{
@@ -584,39 +589,23 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 #else
 
-	std::string replace_path;
-
-	const char* appimage_path = ::getenv("APPIMAGE");
-	if (appimage_path != nullptr)
+	std::string replace_path = rpcs3::utils::get_executable_path();
+	if (replace_path.empty())
 	{
-		replace_path = appimage_path;
-		update_log.notice("Found AppImage path: %s", appimage_path);
-	}
-	else
-	{
-		update_log.warning("Failed to find AppImage path");
-		char exe_path[PATH_MAX];
-		ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-
-		if (len == -1)
-		{
-			update_log.error("Failed to find executable path");
-			return false;
-		}
-
-		exe_path[len] = '\0';
-		update_log.trace("Found exec path: %s", exe_path);
-
-		replace_path = exe_path;
+		return false;
 	}
 
 	// Move the appimage/exe and replace with new appimage
 	const std::string move_dest = replace_path + "_old";
-	fs::rename(replace_path, move_dest, true);
+	if (!fs::rename(replace_path, move_dest, true))
+	{
+		// Simply log error for now
+		update_log.error("Failed to move old AppImage file: %s (%s)", replace_path, fs::g_tls_error);
+	}
 	fs::file new_appimage(replace_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!new_appimage)
 	{
-		update_log.error("Failed to create new AppImage file: %s", replace_path);
+		update_log.error("Failed to create new AppImage file: %s (%s)", replace_path, fs::g_tls_error);
 		return false;
 	}
 	if (new_appimage.write(data.data(), data.size()) != data.size() + 0u)
@@ -626,7 +615,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 	if (fchmod(new_appimage.get_handle(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1)
 	{
-		update_log.error("Failed to chmod rwxrxrx %s", replace_path);
+		update_log.error("Failed to chmod rwxrxrx %s (%s)", replace_path, strerror(errno));
 		return false;
 	}
 	new_appimage.close();
@@ -670,4 +659,5 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 
 	return true;
+#endif //def __APPLE__
 }

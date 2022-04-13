@@ -336,6 +336,21 @@ void fmt_class_string<camera_handler>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<music_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case music_handler::null: return "Null";
+		case music_handler::qt: return "Qt";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<fake_camera_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)
@@ -523,6 +538,23 @@ void fmt_class_string<vk_gpu_scheduler_mode>::format(std::string& out, u64 arg)
 		{
 		case vk_gpu_scheduler_mode::safe: return "Safe";
 		case vk_gpu_scheduler_mode::fast: return "Fast";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<vk_metal_semaphore_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](vk_metal_semaphore_mode value)
+	{
+		switch (value)
+		{
+		case vk_metal_semaphore_mode::software: return "Software emulation";
+		case vk_metal_semaphore_mode::mtlevent_preferred: return "MTLEvent preferred";
+		case vk_metal_semaphore_mode::mtlevent: return "MTLEvent";
+		case vk_metal_semaphore_mode::mtlfence: return "MTLFence";
 		}
 
 		return unknown;

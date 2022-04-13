@@ -15,6 +15,10 @@ namespace rpcs3::utils
 
 #ifdef _WIN32
 	std::string get_exe_dir();
+#elif defined(__APPLE__)
+	std::string get_app_bundle_path();
+#else
+	std::string get_executable_path();
 #endif
 
 	std::string get_emu_dir();
@@ -23,7 +27,7 @@ namespace rpcs3::utils
 	std::string get_cache_dir();
 
 	std::string get_rap_file_path(const std::string_view& rap);
-	bool verify_c00_unlock_edat(const std::string_view& content_id);
+	bool verify_c00_unlock_edat(const std::string_view& content_id, bool fast = false);
 	std::string get_sfo_dir_from_game_path(const std::string& game_path, const std::string& title_id = "");
 
 	std::string get_custom_config_dir();

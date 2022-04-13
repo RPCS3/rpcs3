@@ -36,6 +36,10 @@ namespace rsx
 			u32 vp_entry;
 			u16 vp_jump_table[32];
 
+			u16 vp_multisampled_textures;
+			u16 vp_reserved_0;
+			u32 vp_reserved_1;
+
 			u32 fp_ctrl;
 			u32 fp_texture_dimensions;
 			u32 fp_texcoord_control;
@@ -44,8 +48,8 @@ namespace rsx
 			u16 fp_lighting_flags;
 			u16 fp_shadow_textures;
 			u16 fp_redirected_textures;
-			u16 unused_0;             // Retained for binary compatibility
-			u64 unused_1;             // Retained for binary compatibility
+			u16 fp_multisampled_textures;
+			u64 fp_reserved_0;
 
 			pipeline_storage_type pipeline_properties;
 		};
@@ -311,6 +315,8 @@ namespace rsx
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_lighting_flags);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_shadow_textures);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_redirected_textures);
+			state_hash ^= rpcs3::hash_base<u16>(data.vp_multisampled_textures);
+			state_hash ^= rpcs3::hash_base<u16>(data.fp_multisampled_textures);
 
 			const std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
 			const std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "/" + pipeline_file_name;
@@ -358,6 +364,7 @@ namespace rsx
 
 			vp.output_mask = data.vp_ctrl;
 			vp.texture_state.texture_dimensions = data.vp_texture_dimensions;
+			vp.texture_state.multisampled_textures = data.vp_multisampled_textures;
 			vp.base_address = data.vp_base_address;
 			vp.entry = data.vp_entry;
 
@@ -379,6 +386,7 @@ namespace rsx
 			fp.texture_state.texture_dimensions = data.fp_texture_dimensions;
 			fp.texture_state.shadow_textures = data.fp_shadow_textures;
 			fp.texture_state.redirected_textures = data.fp_redirected_textures;
+			fp.texture_state.multisampled_textures = data.fp_multisampled_textures;
 			fp.texcoord_control_mask = data.fp_texcoord_control;
 			fp.two_sided_lighting = !!(data.fp_lighting_flags & 0x1);
 
@@ -395,6 +403,7 @@ namespace rsx
 
 			data_block.vp_ctrl = vp.output_mask;
 			data_block.vp_texture_dimensions = vp.texture_state.texture_dimensions;
+			data_block.vp_multisampled_textures = vp.texture_state.multisampled_textures;
 			data_block.vp_base_address = vp.base_address;
 			data_block.vp_entry = vp.entry;
 
@@ -424,6 +433,7 @@ namespace rsx
 			data_block.fp_lighting_flags = u16(fp.two_sided_lighting);
 			data_block.fp_shadow_textures = fp.texture_state.shadow_textures;
 			data_block.fp_redirected_textures = fp.texture_state.redirected_textures;
+			data_block.fp_multisampled_textures = fp.texture_state.multisampled_textures;
 
 			return data_block;
 		}

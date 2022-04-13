@@ -1594,6 +1594,11 @@ namespace gl
 			return m_pitch;
 		}
 
+		constexpr GLubyte samples() const
+		{
+			return 1;
+		}
+
 		GLboolean compressed() const
 		{
 			return m_compressed;

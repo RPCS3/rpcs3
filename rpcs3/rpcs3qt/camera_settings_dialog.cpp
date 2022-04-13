@@ -52,9 +52,8 @@ void fmt_class_string<QVideoFrame::PixelFormat>::format(std::string& out, u64 ar
 		case QVideoFrame::Format_ABGR32: return "ABGR32";
 		case QVideoFrame::Format_YUV422P: return "YUV422P";
 		case QVideoFrame::Format_User: return "User";
+		default: return unknown;
 		}
-
-		return unknown;
 	});
 }
 

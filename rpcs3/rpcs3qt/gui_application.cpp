@@ -11,12 +11,14 @@
 #include "display_sleep_control.h"
 #include "localized_emu.h"
 #include "qt_camera_handler.h"
+#include "qt_music_handler.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
 #endif
 
 #include "Emu/Io/Null/null_camera_handler.h"
+#include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "Emu/system_utils.hpp"
@@ -61,7 +63,9 @@ gui_application::~gui_application()
 
 bool gui_application::Init()
 {
+#ifndef __APPLE__
 	setWindowIcon(QIcon(":/rpcs3.ico"));
+#endif
 
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
@@ -344,20 +348,20 @@ void gui_application::InitializeCallbacks()
 			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
 			break;
 		}
-#if not defined(__APPLE__)
 		case video_renderer::opengl:
 		{
+#if not defined(__APPLE__)
 			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+#endif
 			break;
 		}
-#endif
-#if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
 		{
+#if defined(HAVE_VULKAN)
 			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+#endif
 			break;
 		}
-#endif
 		}
 	};
 
@@ -377,6 +381,23 @@ void gui_application::InitializeCallbacks()
 		}
 		return nullptr;
 	};
+
+	callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
+	{
+		switch (g_cfg.audio.music.get())
+		{
+		case music_handler::null:
+		{
+			return std::make_shared<null_music_handler>();
+		}
+		case music_handler::qt:
+		{
+			return std::make_shared<qt_music_handler>();
+		}
+		}
+		return nullptr;
+	};
+
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
@@ -449,7 +470,7 @@ void gui_application::StartPlaytime(bool start_playtime = true)
 		return;
 	}
 
-	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
+	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format));
 	m_timer_playtime.start();
 	m_timer.start(10000); // Update every 10 seconds in case the emulation crashes
 }
@@ -471,7 +492,7 @@ void gui_application::UpdatePlaytime()
 	}
 
 	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart());
-	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
+	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format));
 }
 
 void gui_application::StopPlaytime()
@@ -489,7 +510,7 @@ void gui_application::StopPlaytime()
 	}
 
 	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart());
-	m_persistent_settings->SetLastPlayed(serial, QDate::currentDate().toString(gui::persistent::last_played_date_format));
+	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format));
 	m_timer_playtime.invalidate();
 }
 
