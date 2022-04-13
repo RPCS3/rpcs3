@@ -20,17 +20,38 @@ setlocal ENABLEEXTENSIONS
 
 set GIT_VERSION_FILE=%~p0..\rpcs3\git-version.h
 if not defined GIT (
-	set GIT="git"
+	echo GIT not defined, using git as command.
+	set GIT='git'
+) else (
+	echo GIT defined as %GIT%
 )
+
 call %GIT% describe > NUL 2> NUL
 if errorlevel 1 (
-	echo Git not on path, trying default Msysgit paths
-	set GIT="%ProgramFiles(x86)%\Git\bin\git.exe"
-	call !GIT! describe > NUL 2> NUL
-	if errorlevel 1 (
-		set GIT="%ProgramFiles%\Git\bin\git.exe"
+	echo Git not on PATH, trying fallback paths
+
+	set git_array[0]="%ProgramFiles(x86)%\Git\bin\git.exe"
+	set git_array[1]="C:\Program Files (x86)\Git\bin\git.exe"
+	set git_array[2]="%ProgramFiles%\Git\bin\git.exe"
+	set git_array[3]="C:\Program Files\Git\bin\git.exe"
+	set git_array[4]="%ProgramFiles(x86)%\Git\cmd\git.exe"
+	set git_array[5]="C:\Program Files (x86)\Git\cmd\git.exe"
+	set git_array[6]="%ProgramFiles%\Git\cmd\git.exe"
+	set git_array[7]="C:\Program Files\Git\cmd\git.exe"
+
+	for /l %%n in (0,1,7) do (
+		set GIT=!git_array[%%n]!
+		echo Trying fallback path !GIT!
+		call !GIT! describe > NUL 2> NUL
+		if errorlevel 1 (
+			echo git not found on path !GIT!
+		) else (
+			echo git found on path !GIT!
+			goto end_of_git_loop
+		)
 	)
 )
+:end_of_git_loop
 
 if exist "%GIT_VERSION_FILE%" (
 	rem // Skip updating the file if RPCS3_GIT_VERSION_NO_UPDATE is 1.
