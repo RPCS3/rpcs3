@@ -1101,7 +1101,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 			if (auto sock = idm::check_unlocked<lv2_socket>(fds_buf[i].fd))
 			{
-				signaled += sock->poll(fds[i], _fds[i]);
+				signaled += sock->poll(fds_buf[i], _fds[i]);
 #ifdef _WIN32
 				connecting[i] = sock->is_connecting();
 #endif

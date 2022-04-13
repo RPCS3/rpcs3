@@ -663,7 +663,7 @@ std::optional<s32> lv2_socket_p2ps::connect(const sys_net_sockaddr& addr)
 	name.sin_port          = std::bit_cast<u16>(psa_in_p2p->sin_vport); // not a bug
 	send_u2s_packet(std::move(packet), reinterpret_cast<::sockaddr_in*>(&name), send_hdr.seq, true);
 
-	return true;
+	return CELL_OK;
 }
 
 s32 lv2_socket_p2ps::listen(s32 backlog)
