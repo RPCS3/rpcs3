@@ -1009,9 +1009,9 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 
 	const auto vdec = idm::get<vdec_context>(handle);
 
-	if (!vdec || !auInfo || !auInfo->pts.upper || !auInfo->startAddr)
+	if (!vdec || !auInfo || !auInfo->size || !auInfo->startAddr)
 	{
-		return { CELL_VDEC_ERROR_ARG, fmt::format("vdec=%d, auInfo=%d, upper=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->pts.upper.value() : 0, auInfo ? auInfo->startAddr.value() : 0) };
+		return { CELL_VDEC_ERROR_ARG, fmt::format("vdec=%d, auInfo=%d, size=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->size.value() : 0, auInfo ? auInfo->startAddr.value() : 0) };
 	}
 
 	{
@@ -1051,9 +1051,9 @@ error_code cellVdecDecodeAuEx2(u32 handle, CellVdecDecodeMode mode, vm::cptr<Cel
 
 	const auto vdec = idm::get<vdec_context>(handle);
 
-	if (!vdec || !auInfo || !auInfo->pts.upper || !auInfo->startAddr)
+	if (!vdec || !auInfo || !auInfo->size || !auInfo->startAddr)
 	{
-		return { CELL_VDEC_ERROR_ARG, fmt::format("vdec=%d, auInfo=%d, upper=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->pts.upper.value() : 0, auInfo ? auInfo->startAddr.value() : 0) };
+		return { CELL_VDEC_ERROR_ARG, fmt::format("vdec=%d, auInfo=%d, size=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->size.value() : 0, auInfo ? auInfo->startAddr.value() : 0) };
 	}
 
 	{
