@@ -1095,9 +1095,9 @@ error_code cellVdecDecodeAuEx2(u32 handle, CellVdecDecodeMode mode, vm::cptr<Cel
 	return CELL_OK;
 }
 
-error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u8> outBuff)
+error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format, vm::ptr<u8> outBuff, u32 arg4)
 {
-	cellVdec.trace("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
+	cellVdec.trace("cellVdecGetPictureExt(handle=0x%x, format=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format, outBuff, arg4);
 
 	const auto vdec = idm::get<vdec_context>(handle);
 
@@ -1118,6 +1118,16 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 	if (format->formatType > 4 || (format->formatType <= CELL_VDEC_PICFMT_RGBA32_ILV && format->colorMatrixType > CELL_VDEC_COLOR_MATRIX_TYPE_BT709))
 	{
 		return CELL_VDEC_ERROR_ARG;
+	}
+
+	if (arg4 && arg4 != 8 && arg4 != 0xc)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	if (arg4 || format->unk0 || format->unk1)
+	{
+		fmt::throw_exception("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format->unk0, format->unk1);
 	}
 
 	vdec_frame frame;
@@ -1224,31 +1234,23 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 	return CELL_OK;
 }
 
-error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
+error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u8> outBuff)
 {
-	cellVdec.warning("cellVdecGetPictureExt(handle=0x%x, format2=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format2, outBuff, arg4);
+	cellVdec.trace("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
 
-	if (!handle || !format2)
+	if (!format)
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	if (arg4 && arg4 != 8 && arg4 != 12)
-	{
-		return CELL_VDEC_ERROR_ARG;
-	}
+	vm::var<CellVdecPicFormat2> format2;
+	format2->formatType = format->formatType;
+	format2->colorMatrixType = format->colorMatrixType;
+	format2->alpha = format->alpha;
+	format2->unk0 = 0;
+	format2->unk1 = 0;
 
-	if (arg4 || format2->unk0 || format2->unk1)
-	{
-		fmt::throw_exception("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format2->unk0, format2->unk1);
-	}
-
-	vm::var<CellVdecPicFormat> format;
-	format->formatType = format2->formatType;
-	format->colorMatrixType = format2->colorMatrixType;
-	format->alpha = format2->alpha;
-
-	return cellVdecGetPicture(handle, format, outBuff);
+	return cellVdecGetPictureExt(handle, format2, outBuff, 0);
 }
 
 error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
