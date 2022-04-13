@@ -388,15 +388,14 @@ struct vdec_context final
 
 				cellVdec.trace("AU decoding: size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", au_size, au_pts, au_dts, au_usrd);
 
-				while (thread_ctrl::state() != thread_state::aborting && !abort_decode)
+				if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
 				{
-					if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
-					{
-						char av_error[AV_ERROR_MAX_STRING_SIZE]{};
-						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
-						fmt::throw_exception("AU queuing error(0x%x): %s", ret, av_error);
-					}
-
+					char av_error[AV_ERROR_MAX_STRING_SIZE]{};
+					av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
+					fmt::throw_exception("AU queuing error(0x%x): %s", ret, av_error);
+				}
+				else
+				{
 					while (!abort_decode)
 					{
 						// Keep receiving frames
@@ -555,8 +554,6 @@ struct vdec_context final
 							}
 						}
 					}
-
-					break;
 				}
 
 				if (thread_ctrl::state() != thread_state::aborting && !abort_decode)
