@@ -326,13 +326,10 @@ namespace rsx
 
 		void overlay::refresh() const
 		{
-			if (auto rsxthr = rsx::get_current_renderer())
+			if (auto rsxthr = rsx::get_current_renderer(); rsxthr &&
+				(min_refresh_duration_us + rsxthr->last_host_flip_timestamp) < rsx::uclock())
 			{
-				const auto now = rsx::uclock() - 1000000;
-				if ((now - rsxthr->last_flip_time) > min_refresh_duration_us)
-				{
-					rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
-				}
+				rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
 			}
 		}
 	} // namespace overlays

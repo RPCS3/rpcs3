@@ -781,7 +781,9 @@ namespace rsx
 	public:
 		u64 target_rsx_flip_time = 0;
 		u64 int_flip_index = 0;
-		u64 last_flip_time = 0;
+		u64 last_guest_flip_timestamp = 0;
+		u64 last_host_flip_timestamp = 0;
+
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
