@@ -4,6 +4,7 @@
 #include "Input/pad_thread.h"
 #include "Emu/Io/interception.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Common/time.hpp"
 
 LOG_CHANNEL(overlays);
 
@@ -327,7 +328,7 @@ namespace rsx
 		{
 			if (auto rsxthr = rsx::get_current_renderer())
 			{
-				const auto now = get_system_time() - 1000000;
+				const auto now = rsx::uclock() - 1000000;
 				if ((now - rsxthr->last_flip_time) > min_refresh_duration_us)
 				{
 					rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
