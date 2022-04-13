@@ -640,7 +640,7 @@ namespace rsx
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 
-		last_flip_time = rsx::uclock() - 1000000;
+		last_guest_flip_timestamp = rsx::uclock() - 1000000;
 
 		vblank_count = 0;
 
@@ -2487,6 +2487,8 @@ namespace rsx
 		{
 			performance_counters.sampled_frames++;
 		}
+
+		last_host_flip_timestamp = rsx::uclock();
 	}
 
 	void thread::check_zcull_status(bool framebuffer_swap)
@@ -3162,7 +3164,7 @@ namespace rsx
 
 		flip(m_queued_flip);
 
-		last_flip_time = rsx::uclock() - 1000000;
+		last_guest_flip_timestamp = rsx::uclock() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
 
