@@ -22,6 +22,7 @@ private Q_SLOTS:
 	void show_context_menu(const QPoint& pos);
 
 private:
+	void set_text_and_keep_position(const QString& text);
 	void filter_log();
 	bool is_valid_file(const QMimeData& md, bool save = false);
 
@@ -33,6 +34,8 @@ private:
 	LogHighlighter* m_log_highlighter;
 	std::unique_ptr<find_dialog> m_find_dialog;
 	std::bitset<32> m_log_levels = std::bitset<32>(0b11111111u);
+	bool m_show_threads = true;
+	bool m_last_actions_only = false;
 
 protected:
 	void dropEvent(QDropEvent* ev) override;
