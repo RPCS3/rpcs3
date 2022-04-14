@@ -115,20 +115,26 @@ if defined SYSTEM_PULLREQUEST_SOURCEBRANCH (
 	rem // BUILD_SOURCEBRANCHNAME will look like "master"
 	rem // See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
 	set GIT_FULL_BRANCH=%BUILD_REPOSITORY_NAME%/%BUILD_SOURCEBRANCHNAME%
-	set GIT_BRANCH=%SYSTEM_PULLREQUEST_SOURCEBRANCH%
+	echo GIT_FULL_BRANCH: !GIT_FULL_BRANCH!
 
-	if "%GIT_FULL_BRANCH%"=="RPCS3/rpcs3/master" (
+	if "!GIT_FULL_BRANCH!"=="RPCS3/rpcs3/master" (
 		rem // Let's assume this is a master release build for now
+		echo Assuming master release build
+
 		rem // Get last commit (shortened) and concat after commit count in GIT_VERSION
 		for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
+		for /F %%I IN ('call %GIT% rev-parse --abbrev-ref HEAD') do set GIT_BRANCH=%%I
 
 	) else (
 		rem // This must be a pull request or a build from a fork.
+		echo Assuming pull request build
 
 		if "%SYSTEM_PULLREQUEST_SOURCEBRANCH%"=="master" (
 			rem // If pull request comes from a master branch, GIT_BRANCH = username/branch in order to distinguish from upstream/master
 			for /f "tokens=1* delims=/" %%a in ("%BUILD_REPOSITORY_NAME%") do set user=%%a
 			set "GIT_BRANCH=!user!/%SYSTEM_PULLREQUEST_SOURCEBRANCH%"
+		) else (
+			set GIT_BRANCH=%SYSTEM_PULLREQUEST_SOURCEBRANCH%
 		)
 
 		rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-release builds
@@ -141,7 +147,6 @@ if defined SYSTEM_PULLREQUEST_SOURCEBRANCH (
 
 	rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-release builds
 	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%%I
-
 	for /F %%I IN ('call %GIT% rev-parse --abbrev-ref HEAD') do set GIT_BRANCH=%%I
 
 	set GIT_FULL_BRANCH=local_build
