@@ -38,6 +38,4 @@ protected:
 	u32 bound_addr = 0;
 	// Queue containing received packets from network_thread for SYS_NET_SOCK_DGRAM_P2P sockets
 	std::queue<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data{};
-	// ID of the real socket for the actual bound udp port
-	socket_type socket{};
 };
