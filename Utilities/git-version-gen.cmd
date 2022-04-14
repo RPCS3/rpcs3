@@ -22,27 +22,31 @@ set GIT_VERSION_FILE=%~p0..\rpcs3\git-version.h
 if not defined GIT (
 	echo GIT not defined, using git as command.
 	set GIT='git'
+	echo PATH is:
+	echo "%PATH%"
 ) else (
 	echo GIT defined as %GIT%
 )
 
-call %GIT% describe > NUL 2> NUL
+call %GIT% describe --always > NUL 2> NUL
 if errorlevel 1 (
 	echo Git not on PATH, trying fallback paths
 
-	set git_array[0]="%ProgramFiles(x86)%\Git\bin\git.exe"
-	set git_array[1]="C:\Program Files (x86)\Git\bin\git.exe"
-	set git_array[2]="%ProgramFiles%\Git\bin\git.exe"
-	set git_array[3]="C:\Program Files\Git\bin\git.exe"
-	set git_array[4]="%ProgramFiles(x86)%\Git\cmd\git.exe"
-	set git_array[5]="C:\Program Files (x86)\Git\cmd\git.exe"
-	set git_array[6]="%ProgramFiles%\Git\cmd\git.exe"
-	set git_array[7]="C:\Program Files\Git\cmd\git.exe"
+	set git_array[0]="%ProgramFiles%\Git\bin\git.exe"
+	set git_array[1]="%ProgramFiles(x86)%\Git\bin\git.exe"
+	set git_array[2]="%ProgramW6432%\Git\bin\git.exe"
+	set git_array[3]="C:\Program Files (x86)\Git\bin\git.exe"
+	set git_array[4]="C:\Program Files\Git\bin\git.exe"
+	set git_array[5]="%ProgramFiles%\Git\cmd\git.exe"
+	set git_array[6]="%ProgramFiles(x86)%\Git\cmd\git.exe"
+	set git_array[7]="%ProgramW6432%\Git\cmd\git.exe"
+	set git_array[8]="C:\Program Files (x86)\Git\cmd\git.exe"
+	set git_array[9]="C:\Program Files\Git\cmd\git.exe"
 
-	for /l %%n in (0,1,7) do (
+	for /l %%n in (0,1,9) do (
 		set GIT=!git_array[%%n]!
 		echo Trying fallback path !GIT!
-		call !GIT! describe > NUL 2> NUL
+		call !GIT! describe --always > NUL 2> NUL
 		if errorlevel 1 (
 			echo git not found on path !GIT!
 		) else (
@@ -50,6 +54,7 @@ if errorlevel 1 (
 			goto end_of_git_loop
 		)
 	)
+	echo git not found
 )
 :end_of_git_loop
 
@@ -57,6 +62,7 @@ if exist "%GIT_VERSION_FILE%" (
 	rem // Skip updating the file if RPCS3_GIT_VERSION_NO_UPDATE is 1.
 	findstr /B /C:"#define RPCS3_GIT_VERSION_NO_UPDATE 1" "%GIT_VERSION_FILE%" > NUL
 	if not errorlevel 1 (
+		echo Skip updating the file: RPCS3_GIT_VERSION_NO_UPDATE is 1.
 		goto done
 	)
 )
@@ -81,6 +87,11 @@ rem // Get commit count from (unshallowed) HEAD
 for /F %%I IN ('call %GIT% rev-list HEAD --count') do set COMMIT_COUNT=%%I
 
 if defined SYSTEM_PULLREQUEST_SOURCEBRANCH (
+	echo defined SYSTEM_PULLREQUEST_SOURCEBRANCH
+	echo SYSTEM_PULLREQUEST_SOURCEBRANCH: %SYSTEM_PULLREQUEST_SOURCEBRANCH%
+	echo BUILD_REPOSITORY_NAME: %BUILD_REPOSITORY_NAME%
+	echo BUILD_SOURCEBRANCHNAME: %BUILD_SOURCEBRANCHNAME%
+
 	rem // These environment variables are defined by Azure pipelines
 	rem // BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
 	rem // SYSTEM_PULLREQUEST_SOURCEBRANCH will look like "master"
@@ -100,6 +111,7 @@ if defined SYSTEM_PULLREQUEST_SOURCEBRANCH (
 	rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-master builds
 	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%%I
 ) else (
+	echo not defined SYSTEM_PULLREQUEST_SOURCEBRANCH
 	rem // Get last commit (shortened) and concat after commit count in GIT_VERSION
 	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
 
@@ -109,24 +121,41 @@ if defined SYSTEM_PULLREQUEST_SOURCEBRANCH (
 )
 
 rem // Echo obtained GIT_VERSION for debug purposes if needed
-echo %GIT_VERSION%
-echo %GIT_FULL_BRANCH%
+echo final variables:
+if defined GIT_VERSION (
+	echo GIT_VERSION: %GIT_VERSION%
+) else (
+	echo GIT_VERSION undefined
+)
+if defined GIT_BRANCH (
+	echo GIT_BRANCH: %GIT_BRANCH%
+) else (
+	echo GIT_BRANCH undefined
+)
+if defined GIT_FULL_BRANCH (
+	echo GIT_FULL_BRANCH: %GIT_FULL_BRANCH%
+) else (
+	echo GIT_FULL_BRANCH undefined
+)
 
 rem // Don't modify the file if it already has the current version.
 if exist "%GIT_VERSION_FILE%" (
 	findstr /C:"%GIT_VERSION%" "%GIT_VERSION_FILE%" > NUL
 	if not errorlevel 1 (
+		echo done, already has the current version...
 		goto done
 	)
 )
 
 echo // This is a generated file. > "%GIT_VERSION_FILE%"
-echo. >> "%GIT_VERSION_FILE%"
 echo #define RPCS3_GIT_VERSION "%GIT_VERSION%" >> "%GIT_VERSION_FILE%"
 echo #define RPCS3_GIT_BRANCH ^"%GIT_BRANCH%^" >> "%GIT_VERSION_FILE%"
 echo #define RPCS3_GIT_FULL_BRANCH ^"%GIT_FULL_BRANCH%^" >> "%GIT_VERSION_FILE%"
-echo. >> "%GIT_VERSION_FILE%"
 echo // If you don't want this file to update/recompile, change to 1. >> "%GIT_VERSION_FILE%"
 echo #define RPCS3_GIT_VERSION_NO_UPDATE 0 >> "%GIT_VERSION_FILE%"
 
 :done
+
+echo File is:
+more %GIT_VERSION_FILE%
+echo File end
