@@ -76,3 +76,6 @@
 	path = 3rdparty/SoundTouch/soundtouch
 	url = ../../RPCS3/soundtouch.git
 	ignore = dirty
+[submodule "3rdparty/MoltenVK/MoltenVK"]
+	path = 3rdparty/MoltenVK/MoltenVK
+	url = ../../KhronosGroup/MoltenVK.git
