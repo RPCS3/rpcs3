@@ -478,7 +478,7 @@ int main(int argc, char** argv)
 	{
 		// Write RPCS3 version
 		logs::stored_message ver{sys_log.always()};
-		ver.text = fmt::format("RPCS3 v%s | %s", rpcs3::get_version().to_string(), rpcs3::get_branch());
+		ver.text = fmt::format("RPCS3 v%s", rpcs3::get_verbose_version());
 
 		// Write System information
 		logs::stored_message sys{sys_log.always()};

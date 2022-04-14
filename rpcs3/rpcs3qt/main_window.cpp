@@ -120,13 +120,14 @@ bool main_window::Init(bool with_cli_boot)
 	CreateConnects();
 
 	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
-	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::get_version().to_string()));
+	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::get_verbose_version()));
 
 	Q_EMIT RequestGlobalStylesheetChange();
 	ConfigureGuiFromSettings();
 
-	if (const std::string_view branch_name = rpcs3::get_full_branch(); branch_name != "RPCS3/rpcs3/master" && branch_name != "local_build")
+	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
 	{
+		const std::string_view branch_name = rpcs3::get_full_branch();
 		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
 
 		QMessageBox msg;
