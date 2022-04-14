@@ -18,6 +18,7 @@ rem // https://github.com/RPCS3/rpcs3 and https://rpcs3.net/.
 setlocal ENABLEDELAYEDEXPANSION
 setlocal ENABLEEXTENSIONS
 
+rem // Try to get git path from environment variable
 set GIT_VERSION_FILE=%~p0..\rpcs3\git-version.h
 if not defined GIT (
 	echo GIT not defined, using git as command.
@@ -28,6 +29,7 @@ if not defined GIT (
 	echo GIT defined as %GIT%
 )
 
+rem // Check if git works. Try to find it manually otherwise.
 call %GIT% describe --always > NUL 2> NUL
 if errorlevel 1 (
 	echo Git not on PATH, trying fallback paths
@@ -45,7 +47,6 @@ if errorlevel 1 (
 
 	for /l %%n in (0,1,9) do (
 		set GIT=!git_array[%%n]!
-		echo Trying fallback path !GIT!
 		call !GIT! describe --always > NUL 2> NUL
 		if errorlevel 1 (
 			echo git not found on path !GIT!
@@ -58,6 +59,7 @@ if errorlevel 1 (
 )
 :end_of_git_loop
 
+rem // Check if the generated file exists and if we should skip the rest of the script.
 if exist "%GIT_VERSION_FILE%" (
 	rem // Skip updating the file if RPCS3_GIT_VERSION_NO_UPDATE is 1.
 	findstr /B /C:"#define RPCS3_GIT_VERSION_NO_UPDATE 1" "%GIT_VERSION_FILE%" > NUL
@@ -67,6 +69,7 @@ if exist "%GIT_VERSION_FILE%" (
 	)
 )
 
+rem // Check if git works. Early out with dummy data if it doesn't.
 call %GIT% describe --always > NUL 2> NUL
 if errorlevel 1 (
 	echo Unable to update git-version.h, git not found.
@@ -86,34 +89,58 @@ if errorlevel 1 (
 rem // Get commit count from (unshallowed) HEAD
 for /F %%I IN ('call %GIT% rev-list HEAD --count') do set COMMIT_COUNT=%%I
 
+rem // Check if the current build system sets the git branch and version.
+rem // The name is misleading. This is also used for master builds.
 if defined SYSTEM_PULLREQUEST_SOURCEBRANCH (
-	echo defined SYSTEM_PULLREQUEST_SOURCEBRANCH
-	echo SYSTEM_PULLREQUEST_SOURCEBRANCH: %SYSTEM_PULLREQUEST_SOURCEBRANCH%
-	echo BUILD_REPOSITORY_NAME: %BUILD_REPOSITORY_NAME%
-	echo BUILD_SOURCEBRANCHNAME: %BUILD_SOURCEBRANCHNAME%
 
-	rem // These environment variables are defined by Azure pipelines
+	rem // This must be a CI build
+
+	echo SYSTEM_PULLREQUEST_SOURCEBRANCH: %SYSTEM_PULLREQUEST_SOURCEBRANCH%
+
+	if defined BUILD_REPOSITORY_NAME (
+		echo BUILD_REPOSITORY_NAME: %BUILD_REPOSITORY_NAME%
+	) else (
+		echo BUILD_REPOSITORY_NAME undefined
+	)
+
+	if defined BUILD_SOURCEBRANCHNAME (
+		echo BUILD_SOURCEBRANCHNAME: %BUILD_SOURCEBRANCHNAME%
+	) else (
+		echo BUILD_SOURCEBRANCHNAME undefined
+	)
+
+	rem // These environment variables are defined by CI
 	rem // BUILD_REPOSITORY_NAME will look like "RPCS3/rpcs3"
 	rem // SYSTEM_PULLREQUEST_SOURCEBRANCH will look like "master"
 	rem // BUILD_SOURCEBRANCHNAME will look like "master"
 	rem // See https://docs.microsoft.com/en-us/azure/devops/pipelines/build/variables
 	set GIT_FULL_BRANCH=%BUILD_REPOSITORY_NAME%/%BUILD_SOURCEBRANCHNAME%
+	set GIT_BRANCH=%SYSTEM_PULLREQUEST_SOURCEBRANCH%
 
-	if "%SYSTEM_PULLREQUEST_SOURCEBRANCH%"=="master" (
-		rem // If pull request comes from a master branch, GIT_BRANCH = username/branch in order to distinguish from upstream/master
-		for /f "tokens=1* delims=/" %%a in ("%BUILD_REPOSITORY_NAME%") do set user=%%a
-		set "GIT_BRANCH=!user!/%SYSTEM_PULLREQUEST_SOURCEBRANCH%"
+	if "%GIT_FULL_BRANCH%"=="RPCS3/rpcs3/master" (
+		rem // Let's assume this is a master release build for now
+		rem // Get last commit (shortened) and concat after commit count in GIT_VERSION
+		for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
+
 	) else (
-		rem // Otherwise, GIT_BRANCH=branch
-		set GIT_BRANCH=%SYSTEM_PULLREQUEST_SOURCEBRANCH%
+		rem // This must be a pull request or a build from a fork.
+
+		if "%SYSTEM_PULLREQUEST_SOURCEBRANCH%"=="master" (
+			rem // If pull request comes from a master branch, GIT_BRANCH = username/branch in order to distinguish from upstream/master
+			for /f "tokens=1* delims=/" %%a in ("%BUILD_REPOSITORY_NAME%") do set user=%%a
+			set "GIT_BRANCH=!user!/%SYSTEM_PULLREQUEST_SOURCEBRANCH%"
+		)
+
+		rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-release builds
+		for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%%I
 	)
 
-	rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-master builds
-	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%%I
 ) else (
-	echo not defined SYSTEM_PULLREQUEST_SOURCEBRANCH
-	rem // Get last commit (shortened) and concat after commit count in GIT_VERSION
-	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%COMMIT_COUNT%-%%I
+	rem // The name is misleading. This is also used for master builds.
+	echo SYSTEM_PULLREQUEST_SOURCEBRANCH undefined
+
+	rem // Make GIT_VERSION the last commit (shortened); Don't include commit count on non-release builds
+	for /F %%I IN ('call %GIT% rev-parse --short^=8 HEAD') do set GIT_VERSION=%%I
 
 	for /F %%I IN ('call %GIT% rev-parse --abbrev-ref HEAD') do set GIT_BRANCH=%%I
 
