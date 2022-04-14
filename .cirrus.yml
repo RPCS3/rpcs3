@@ -126,7 +126,7 @@ macos_task:
   matrix:
     - name: Cirrus macOS
       osx_instance:
-        image: monterey-base
+        image: monterey-xcode-13.3
       mac_script:
         - mkdir artifacts
         - ".ci/build-mac.sh"
