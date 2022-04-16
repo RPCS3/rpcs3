@@ -34,22 +34,40 @@ namespace rpcs3
 
 	std::string get_version_and_branch()
 	{
-		// Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
-		std::string version = rpcs3::get_version().to_string();
-		const auto last_minus = version.find_last_of('-');
-
 		// Add branch and commit hash to version on frame unless it's master.
 		if (rpcs3::get_branch() != "master"sv && rpcs3::get_branch() != "HEAD"sv)
 		{
-			version = version.substr(0, ~last_minus ? last_minus + 9 : last_minus);
-			version += '-';
-			version += rpcs3::get_branch();
-		}
-		else
-		{
-			version = version.substr(0, last_minus);
+			return get_verbose_version();
 		}
 
+		// Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
+		std::string version = rpcs3::get_version().to_string();
+
+		const auto last_minus = version.find_last_of('-');
+		version = version.substr(0, last_minus);
+
 		return version;
+	}
+
+	std::string get_verbose_version()
+	{
+		std::string version = fmt::format("%s | %s", rpcs3::get_version().to_string(), get_branch());
+		if (is_local_build())
+		{
+			fmt::append(version, " | local_build");
+		}
+		return version;
+	}
+
+	bool is_release_build()
+	{
+		static constexpr bool is_release_build = std::string_view(RPCS3_GIT_FULL_BRANCH) == "RPCS3/rpcs3/master"sv;
+		return is_release_build;
+	}
+
+	bool is_local_build()
+	{
+		static constexpr bool is_local_build = std::string_view(RPCS3_GIT_FULL_BRANCH) == "local_build"sv;
+		return is_local_build;
 	}
 }

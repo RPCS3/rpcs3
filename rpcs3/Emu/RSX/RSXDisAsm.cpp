@@ -109,7 +109,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 
 		pc += 4;
 
-		for (u32 i = 0; i < (m_mode == cpu_disasm_mode::list ? count : 1); i++, pc += 4)
+		for (u32 i = 0; i < count; i++, pc += 4)
 		{
 			if (!try_read_op(pc))
 			{
@@ -125,6 +125,16 @@ u32 RSXDisAsm::disasm(u32 pc)
 				last_opcode.clear();
 				Write("?? ??", -1);
 				return 4;
+			}
+
+			if (m_mode == cpu_disasm_mode::survey_cmd_size)
+			{
+				continue;
+			}
+
+			if (m_mode != cpu_disasm_mode::list && !last_opcode.empty())
+			{
+				continue;
 			}
 
 			std::string str = rsx::get_pretty_printing_function(id)(id, m_op);
@@ -145,7 +155,7 @@ std::unique_ptr<CPUDisAsm> RSXDisAsm::copy_type_erased() const
 	return std::make_unique<RSXDisAsm>(*this);
 }
 
-void RSXDisAsm::Write(const std::string& str, s32 count, bool is_non_inc, u32 id)
+void RSXDisAsm::Write(std::string_view str, s32 count, bool is_non_inc, u32 id)
 {
 	switch (m_mode)
 	{
@@ -156,8 +166,7 @@ void RSXDisAsm::Write(const std::string& str, s32 count, bool is_non_inc, u32 id
 
 		auto& res = last_opcode;
 
-		res.resize(7 + 11);
-		std::replace(res.begin(), res.end(), '\0', ' ');
+		res.resize(7 + 11, ' ');
 
 		res += str;
 		break;

@@ -10,6 +10,7 @@ enum class cpu_disasm_mode
 	normal,
 	compiler_elf,
 	list, // RSX exclusive
+	survey_cmd_size, // RSX exclusive
 };
 
 class cpu_thread;

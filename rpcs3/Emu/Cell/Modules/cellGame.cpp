@@ -1146,7 +1146,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
-	const auto value = psf::get_string(perm.sfo, std::string(key.name));
+	const auto value = psf::get_string(perm.sfo, key.name);
 
 	if (value.empty() && !perm.sfo.count(std::string(key.name)))
 	{
@@ -1189,7 +1189,7 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
-	psf::assign(perm.sfo, std::string(key.name), psf::string(key.max_size, buf.get_ptr()));
+	psf::assign(perm.sfo, key.name, psf::string(key.max_size, buf.get_ptr()));
 
 	return CELL_OK;
 }

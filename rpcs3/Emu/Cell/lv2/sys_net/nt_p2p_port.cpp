@@ -70,8 +70,17 @@ bool nt_p2p_port::handle_connected(s32 sock_id, p2ps_encapsulated_tcp* tcp_heade
 			return sock_p2ps.handle_connected(tcp_header, data, op_addr);
 		});
 
-	if (!sock || !sock.ret)
+	if (!sock)
+	{
+		sys_net.error("[P2PS] Couldn't find the socket!");
 		return false;
+	}
+
+	if (!sock.ret)
+	{
+		sys_net.error("[P2PS] handle_connected() failed!");
+		return false;
+	}
 
 	return true;
 }
