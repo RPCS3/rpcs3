@@ -90,6 +90,9 @@ namespace gui
 
 			// pad settings
 			"QLabel#l_controller { color: #434343; }"
+
+			// cheat manager
+			"QLabel#background_queued_cheat { alternate-background-color: #008000; }"
 		);
 	}
 }

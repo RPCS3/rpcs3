@@ -43,6 +43,8 @@
 
 #include "display_sleep_control.h"
 
+#include "Utilities/cheat_info.h"
+
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
@@ -1723,6 +1725,8 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 	{
 		return;
 	}
+
+	g_cheat_engine.clear();
 
 	if (old_state == system_state::paused)
 	{

@@ -2212,7 +2212,7 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Cheats, &QAction::triggered, this, [this]
 	{
-		cheat_manager_dialog* cheat_manager = cheat_manager_dialog::get_dlg(this);
+		cheat_manager_dialog* cheat_manager = cheat_manager_dialog::get_dlg(m_gui_settings, this);
 		cheat_manager->show();
  	});
 

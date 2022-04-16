@@ -109,6 +109,7 @@ namespace gui
 	const QString gs_frame     = "GSFrame";
 	const QString trophy       = "Trophy";
 	const QString patches      = "Patches";
+	const QString cheats       = "Cheats";
 	const QString localization = "Localization";
 	const QString pad_settings = "PadSettings";
 	const QString config       = "Config";
@@ -234,6 +235,9 @@ namespace gui
 	const gui_save pm_show_owned     = gui_save(patches, "show_owned",     false);
 	const gui_save pm_geometry       = gui_save(patches, "geometry",       QByteArray());
 	const gui_save pm_splitter_state = gui_save(patches, "splitter_state", QByteArray());
+
+	const gui_save ch_import_path = gui_save(cheats, "last_ncl_path", "");
+	const gui_save ch_active_game = gui_save(cheats, "only_current_game", true);
 
 	const gui_save sd_geometry   = gui_save(savedata, "geometry",   QByteArray());
 	const gui_save sd_icon_size  = gui_save(savedata, "icon_size",  60);

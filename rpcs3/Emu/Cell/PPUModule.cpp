@@ -20,6 +20,8 @@
 
 #include "Emu/Cell/Modules/StaticHLE.h"
 
+#include "Utilities/cheat_info.h"
+
 #include <map>
 #include <set>
 #include <algorithm>
@@ -1236,6 +1238,8 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	{
 		ppu_check_patch_spu_images(seg);
 	}
+
+	g_cheat_engine.apply_queued_cheats();
 
 	prx->analyse(toc, 0, end, applied);
 
