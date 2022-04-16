@@ -67,6 +67,10 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	QAction* open   = new QAction(tr("&Open log file"));
 	QAction* filter = new QAction(tr("&Filter log"));
 
+	QAction* timestamps = new QAction(tr("&Show Timestamps"));
+	timestamps->setCheckable(true);
+	timestamps->setChecked(m_show_timestamps);
+
 	QAction* threads = new QAction(tr("&Show Threads"));
 	threads->setCheckable(true);
 	threads->setChecked(m_show_threads);
@@ -110,6 +114,8 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	menu.addSeparator();
 	menu.addAction(filter);
 	menu.addSeparator();
+	menu.addAction(timestamps);
+	menu.addSeparator();
 	menu.addAction(threads);
 	menu.addSeparator();
 	menu.addAction(last_actions_only);
@@ -142,6 +148,12 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	connect(threads, &QAction::toggled, this, [this](bool checked)
 	{
 		m_show_threads = checked;
+		filter_log();
+	});
+
+	connect(timestamps, &QAction::toggled, this, [this](bool checked)
+	{
+		m_show_timestamps = checked;
 		filter_log();
 	});
 
@@ -223,7 +235,7 @@ void log_viewer::filter_log()
 	if (!m_log_levels.test(static_cast<u32>(logs::level::notice)))  excluded_log_levels.push_back("·! ");
 	if (!m_log_levels.test(static_cast<u32>(logs::level::trace)))   excluded_log_levels.push_back("·T ");
 
-	if (m_filter_term.isEmpty() && excluded_log_levels.empty() && m_show_threads && !m_last_actions_only)
+	if (m_filter_term.isEmpty() && excluded_log_levels.empty() && m_show_timestamps && m_show_threads && !m_last_actions_only)
 	{
 		set_text_and_keep_position(m_full_log);
 		return;
@@ -231,9 +243,10 @@ void log_viewer::filter_log()
 
 	QString result;
 	QTextStream stream(&m_full_log);
-	const QRegularExpression thread_regexp("\{.*\} ");
+	const QRegularExpression thread_regexp("\\{.*\\} ");
+	const QRegularExpression timestamp_regexp("\\d?\\d:\\d\\d:\\d\\d\\.\\d\\d\\d\\d\\d\\d ");
 
-	const auto add_line = [this, &result, &excluded_log_levels, &thread_regexp](QString& line)
+	const auto add_line = [this, &result, &excluded_log_levels, &timestamp_regexp, &thread_regexp](QString& line)
 	{
 		bool exclude_line = false;
 
@@ -253,6 +266,17 @@ void log_viewer::filter_log()
 
 		if (m_filter_term.isEmpty() || line.contains(m_filter_term))
 		{
+			if (line.isEmpty())
+			{
+				result += "\n";
+				return;
+			}
+
+			if (!m_show_timestamps)
+			{
+				line.remove(timestamp_regexp);
+			}
+
 			if (!m_show_threads)
 			{
 				line.remove(thread_regexp);
