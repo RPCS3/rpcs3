@@ -1137,7 +1137,7 @@ error_code cellAudioQuit(ppu_thread& ppu)
 	if (!g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
-	} for (u64 key : g_audio.keys) { if (auto q = lv2_event_queue::find(key)) { sys_event_queue_destroy(ppu, q->id, 1); } }
+	} for (auto& key : g_audio.keys) { if (auto q = lv2_event_queue::find(key.key)) { sys_event_queue_destroy(ppu, q->id, 1); } }
 
 	g_audio.keys.clear();
 	g_audio.key_count = 0;
