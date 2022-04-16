@@ -1126,7 +1126,7 @@ error_code cellAudioInit()
 	return CELL_OK;
 }
 
-error_code cellAudioQuit()
+error_code cellAudioQuit(ppu_thread& ppu)
 {
 	cellAudio.warning("cellAudioQuit()");
 
@@ -1137,9 +1137,8 @@ error_code cellAudioQuit()
 	if (!g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
-	}
+	} for (u64 key : g_audio.keys) { if (auto q = lv2_event_queue::find(key)) { sys_event_queue_destroy(ppu, q->id, 1); } )
 
-	// TODO
 	g_audio.keys.clear();
 	g_audio.key_count = 0;
 	g_audio.event_period = 0;
