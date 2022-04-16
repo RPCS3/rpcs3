@@ -15,7 +15,15 @@ lv2_socket_native::lv2_socket_native(lv2_socket_family family, lv2_socket_type t
 
 lv2_socket_native::~lv2_socket_native()
 {
-	close();
+	std::lock_guard lock(mutex);
+	if (socket)
+	{
+#ifdef _WIN32
+		::closesocket(socket);
+#else
+		::close(socket);
+#endif
+	}
 }
 
 s32 lv2_socket_native::create_socket()
