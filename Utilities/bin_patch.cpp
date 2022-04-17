@@ -496,6 +496,11 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	default:
 	{
 		p_data.value.long_value = get_yaml_node_value<u64>(value_node, error_message);
+		if (error_message.find("bad conversion") != std::string::npos)
+		{
+			error_message           = "";
+			p_data.value.long_value = get_yaml_node_value<s64>(value_node, error_message);
+		}
 		break;
 	}
 	}
