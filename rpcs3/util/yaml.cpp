@@ -78,5 +78,6 @@ std::string get_yaml_node_location(YAML::Node node)
 
 template u32 get_yaml_node_value<u32>(YAML::Node, std::string&);
 template u64 get_yaml_node_value<u64>(YAML::Node, std::string&);
+template s64 get_yaml_node_value<s64>(YAML::Node, std::string&);
 template f64 get_yaml_node_value<f64>(YAML::Node, std::string&);
 template cheat_info get_yaml_node_value<cheat_info>(YAML::Node, std::string&);
