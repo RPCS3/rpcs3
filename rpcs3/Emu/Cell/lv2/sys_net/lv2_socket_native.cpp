@@ -15,7 +15,15 @@ lv2_socket_native::lv2_socket_native(lv2_socket_family family, lv2_socket_type t
 
 lv2_socket_native::~lv2_socket_native()
 {
-	close();
+	std::lock_guard lock(mutex);
+	if (socket)
+	{
+#ifdef _WIN32
+		::closesocket(socket);
+#else
+		::close(socket);
+#endif
+	}
 }
 
 s32 lv2_socket_native::create_socket()
@@ -869,11 +877,11 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 	{
 		const s32 ret_analyzer = dnshook.analyze_dns_packet(lv2_id, reinterpret_cast<const u8*>(buf.data()), buf.size());
 
-		// If we're not connected just never send the packet and pretend we did
+		// If we're offline return ENETDOWN for dns requests
 		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		if (!nph.get_net_status())
 		{
-			return {::narrow<s32>(buf.size())};
+			return -SYS_NET_ENETDOWN;
 		}
 
 		// Check if the packet is intercepted

@@ -183,10 +183,10 @@ void network_thread::operator()()
 		s_to_awake.clear();
 		socklist.clear();
 
-		// Obtain all non P2P active sockets
+		// Obtain all native active sockets
 		idm::select<lv2_socket>([&](u32 id, lv2_socket& s)
 			{
-				if (s.get_type() != SYS_NET_SOCK_DGRAM_P2P && s.get_type() != SYS_NET_SOCK_STREAM_P2P)
+				if (s.get_type() == SYS_NET_SOCK_DGRAM || s.get_type() == SYS_NET_SOCK_STREAM)
 				{
 					socklist.emplace_back(idm::get_unlocked<lv2_socket>(id));
 				}
