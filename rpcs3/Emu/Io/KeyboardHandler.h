@@ -95,7 +95,6 @@ public:
 	stx::init_mutex init;
 
 protected:
-	void ReleaseAllKeys();
 
 	KbInfo m_info{};
 	std::vector<Keyboard> m_keyboards;

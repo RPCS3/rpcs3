@@ -270,23 +270,17 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		}
 		break;
 	case Qt::Key_S:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && !Emu.IsStopped())
 		{
-			Emu.Kill(false, true);
+			Emu.GracefulShutdown(false, true);
 			return;
 		}
 		break;
 	case Qt::Key_R:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && !Emu.GetBoot().empty())
 		{
-			if (Emu.IsStopped())
-			{
-				Emu.Restart();
-				return;
-			}
-
-			extern bool boot_last_savestate();
-			boot_last_savestate();
+			Emu.Restart();
+			return;
 		}
 		break;
 	case Qt::Key_C:

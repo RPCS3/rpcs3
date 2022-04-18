@@ -171,27 +171,6 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 	}
 }
 
-void keyboard_pad_handler::release_all_keys()
-{
-	for (auto& pad : m_pads_internal)
-	{
-		for (Button& button : pad.m_buttons)
-		{
-			button.m_pressed = false;
-			button.m_value = 0;
-			button.m_actual_value = 0;
-		}
-
-		for (usz i = 0; i < pad.m_sticks.size(); i++)
-		{
-			m_stick_min[i] = 0;
-			m_stick_max[i] = 128;
-			m_stick_val[i] = 128;
-			pad.m_sticks[i].m_value = 128;
-		}
-	}
-}
-
 bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 {
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
@@ -217,9 +196,6 @@ bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 			break;
 		case QEvent::Wheel:
 			mouseWheelEvent(static_cast<QWheelEvent*>(ev));
-			break;
-		case QEvent::FocusOut:
-			release_all_keys();
 			break;
 		default:
 			break;

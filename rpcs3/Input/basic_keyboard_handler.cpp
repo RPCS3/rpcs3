@@ -73,11 +73,6 @@ bool basic_keyboard_handler::eventFilter(QObject* watched, QEvent* event)
 			keyReleaseEvent(static_cast<QKeyEvent*>(event));
 			break;
 		}
-		case QEvent::FocusOut:
-		{
-			ReleaseAllKeys();
-			break;
-		}
 		default:
 		{
 			break;
