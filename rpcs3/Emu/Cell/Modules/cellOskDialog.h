@@ -265,6 +265,10 @@ public:
 	std::function<void()> on_osk_input_entered;
 
 	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
+	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's events.
+	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's events.
+	atomic_t<bool> keyboard_input_enabled{ true }; // Determines if the OSK consumes the device's events.
+	atomic_t<bool> ignore_input_events{ false };   // Determines if the OSK ignores all consumed events.
 
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
 	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE]{};
