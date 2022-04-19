@@ -651,6 +651,7 @@ namespace rsx
 			const std::string out_key_string = utf16_to_ascii8(utf16_string);
 
 			// Find matching key in the OSK
+			bool found_key = false;
 			for (const cell& current_cell : m_grid)
 			{
 				// TODO: maybe just ignore the current charset and check all outputs
@@ -669,29 +670,45 @@ namespace rsx
 							{
 								on_default_callback(str);
 							}
-							return;
+
+							found_key = true;
+							break;
 						}
+					}
+
+					if (found_key)
+					{
+						break;
 					}
 				}
 			}
 
 			// Handle special input
-			if (!out_key_string.empty())
+			if (!found_key && !out_key_string.empty())
 			{
 				switch (out_key_string[0])
 				{
 				case ' ':
 					on_space(u32_string);
-					return;
+					break;
 				case '\b':
 					on_backspace(u32_string);
-					return;
+					break;
 				case '\n':
 					on_enter(u32_string);
-					return;
+					break;
 				default:
 					break;
 				}
+			}
+
+			if (on_osk_key_input_entered)
+			{
+				CellOskDialogKeyMessage key_message{};
+				key_message.led = led;
+				key_message.mkey = mkey;
+				key_message.keycode = key_code;
+				on_osk_key_input_entered(key_message);
 			}
 		}
 
@@ -700,11 +717,6 @@ namespace rsx
 			const auto ws = u32string_to_utf16(m_preview.value);
 			const auto length = (ws.length() + 1) * sizeof(char16_t);
 			memcpy(osk_text, ws.c_str(), length);
-
-			if (on_osk_input_entered)
-			{
-				on_osk_input_entered();
-			}
 
 			// Muted contrast for placeholder text
 			m_preview.fore_color.a = m_preview.value.empty() ? 0.5f : 1.f;

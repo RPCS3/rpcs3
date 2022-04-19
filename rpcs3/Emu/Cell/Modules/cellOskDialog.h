@@ -262,7 +262,7 @@ public:
 	virtual ~OskDialogBase();
 
 	std::function<void(s32 status)> on_osk_close;
-	std::function<void()> on_osk_input_entered;
+	std::function<void(CellOskDialogKeyMessage key_message)> on_osk_key_input_entered;
 
 	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
 	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's events.

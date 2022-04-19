@@ -3,6 +3,7 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Io/interception.h"
+#include "Emu/Io/Keyboard.h"
 #include "Emu/RSX/Overlays/overlay_osk.h"
 #include "Emu/IdManager.h"
 
@@ -91,6 +92,7 @@ struct osk_info
 	atomic_t<vm::ptr<cellOskDialogConfirmWordFilterCallback>> osk_confirm_callback{};
 	atomic_t<vm::ptr<cellOskDialogForceFinishCallback>> osk_force_finish_callback{};
 	atomic_t<vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback>> osk_hardware_keyboard_event_hook_callback{};
+	atomic_t<u16> hook_event_mode{0};
 
 	stx::init_mutex init;
 
@@ -123,6 +125,7 @@ struct osk_info
 		osk_confirm_callback.store({});
 		osk_force_finish_callback.store({});
 		osk_hardware_keyboard_event_hook_callback.store({});
+		hook_event_mode.store(0);
 	}
 };
 
@@ -340,12 +343,155 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		input::SetIntercepted(false);
 	};
 
-	if (info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
+	// Set key callback
+	osk->on_osk_key_input_entered = [wptr = std::weak_ptr<OskDialogBase>(osk)](CellOskDialogKeyMessage key_message)
 	{
-		info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
-		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
-		return CELL_OK;
-	}
+		const auto osk = wptr.lock();
+		auto& info = g_fxo->get<osk_info>();
+		bool is_kook_key = false;
+
+		switch (key_message.keycode)
+		{
+		case CELL_KEYC_NO_EVENT:
+		{
+			// Any shift/alt/ctrl key
+			is_kook_key = key_message.mkey > 0 && (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER);
+			break;
+		}
+		case CELL_KEYC_E_ROLLOVER:
+		case CELL_KEYC_E_POSTFAIL:
+		case CELL_KEYC_E_UNDEF:
+		case CELL_KEYC_ESCAPE:
+		case CELL_KEYC_106_KANJI:
+		case CELL_KEYC_CAPS_LOCK:
+		case CELL_KEYC_F1:
+		case CELL_KEYC_F2:
+		case CELL_KEYC_F3:
+		case CELL_KEYC_F4:
+		case CELL_KEYC_F5:
+		case CELL_KEYC_F6:
+		case CELL_KEYC_F7:
+		case CELL_KEYC_F8:
+		case CELL_KEYC_F9:
+		case CELL_KEYC_F10:
+		case CELL_KEYC_F11:
+		case CELL_KEYC_F12:
+		case CELL_KEYC_PRINTSCREEN:
+		case CELL_KEYC_SCROLL_LOCK:
+		case CELL_KEYC_PAUSE:
+		case CELL_KEYC_INSERT:
+		case CELL_KEYC_HOME:
+		case CELL_KEYC_PAGE_UP:
+		case CELL_KEYC_DELETE:
+		case CELL_KEYC_END:
+		case CELL_KEYC_PAGE_DOWN:
+		case CELL_KEYC_RIGHT_ARROW:
+		case CELL_KEYC_LEFT_ARROW:
+		case CELL_KEYC_DOWN_ARROW:
+		case CELL_KEYC_UP_ARROW:
+		case CELL_KEYC_NUM_LOCK:
+		case CELL_KEYC_APPLICATION:
+		case CELL_KEYC_KANA:
+		case CELL_KEYC_HENKAN:
+		case CELL_KEYC_MUHENKAN:
+		{
+			// Any function key or other special key like Delete
+			is_kook_key = (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY);
+			break;
+		}
+		default:
+		{
+			// Any regular ascii key
+			is_kook_key = (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY);
+			break;
+		}
+		}
+	
+		if (!is_kook_key)
+			return;
+
+		if (auto ccb = info.osk_hardware_keyboard_event_hook_callback.load())
+		{
+			constexpr u32 max_size = 101;
+			std::vector<u16> string_to_send(max_size, 0);
+			atomic_t<bool> done = false;
+
+			for (u32 i = 0; i < max_size - 1; i++)
+			{
+				string_to_send[i] = osk->osk_text[i];
+				if (osk->osk_text[i] == 0) break;
+			}
+
+			sysutil_register_cb([&](ppu_thread& cb_ppu) -> s32
+			{
+				vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
+				vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
+				vm::var<u16[], vm::page_allocator<>> pActionInfo(max_size, string_to_send.data());
+
+				const bool return_value = ccb(cb_ppu, keyMessage, action, pActionInfo.begin());
+				cellOskDialog.warning("osk_hardware_keyboard_event_hook_callback: return_value=%d, action=%d)", return_value, action.get_ptr() ? static_cast<u32>(*action) : 0);
+
+				if (return_value)
+				{
+					ensure(action);
+					ensure(pActionInfo);
+
+					switch (*action)
+					{
+					case CELL_OSKDIALOG_CHANGE_NO_EVENT:
+					case CELL_OSKDIALOG_CHANGE_EVENT_CANCEL:
+					{
+						// Do nothing
+						break;
+					}
+					case CELL_OSKDIALOG_CHANGE_WORDS_INPUT:
+					{
+						// Set unconfirmed string and reset unconfirmed string
+						for (u32 i = 0; i < max_size; i++)
+						{
+							osk->osk_text[i] = pActionInfo.begin()[i];
+						}
+						break;
+					}
+					case CELL_OSKDIALOG_CHANGE_WORDS_INSERT:
+					{
+						// Set confirmed string and reset unconfirmed string
+						for (u32 i = 0; i < max_size; i++)
+						{
+							info.valid_text[i] = pActionInfo.begin()[i];
+							osk->osk_text[i] = 0;
+						}
+						break;
+					}
+					case CELL_OSKDIALOG_CHANGE_WORDS_REPLACE_ALL:
+					{
+						// Set confirmed string and reset all strings
+						for (u32 i = 0; i < max_size; i++)
+						{
+							info.valid_text[i] = pActionInfo.begin()[i];
+							osk->osk_text[i] = 0;
+						}
+						break;
+					}
+					default:
+					{
+						cellOskDialog.error("osk_hardware_keyboard_event_hook_callback returned invalid action (%d)", *action);
+						break;
+					}
+					}
+				}
+
+				done = true;
+				return 0;
+			});
+
+			// wait for callback
+			while (!done && !Emu.IsStopped())
+			{
+				std::this_thread::yield();
+			}
+		}
+	};
 
 	// Set device mask and event lock
 	osk->ignore_input_events = info.lock_ext_input.load();
@@ -357,6 +503,13 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	}
 
 	input::SetIntercepted(osk->pad_input_enabled, osk->keyboard_input_enabled, osk->mouse_input_enabled);
+
+	if (info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
+	{
+		info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
+		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
+		return CELL_OK;
+	}
 
 	Emu.CallFromMainThread([=, &result]()
 	{
@@ -713,25 +866,7 @@ error_code register_keyboard_event_hook_callback(u16 hookEventMode, vm::ptr<cell
 	}
 
 	g_fxo->get<osk_info>().osk_hardware_keyboard_event_hook_callback = pCallback;
-	
-	// TODO: use callback
-	// 1. Check if the callback needs to be called. This depends on the pressed key and on the OR of the hookEventMode parameter:
-	//      CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY: Any function keys + other special keys like Delete
-	//      CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY: Any regular ascii key
-	//      CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER: Any shift/alt/ctrl key
-	// 2. When a hardware key is pressed, call osk_hardware_keyboard_event_hook_callback with the following params:
-	//      keyMessage: our info about the current key press (and release?)
-	//      action: an out pointer. The game will set this value and we will have to react to it
-	//      pActionInfo: the currently unconfirmed string. max 100 characters + '\0' character. This should be the valid_text member of osk_info.
-	// 3. Check return value:
-	//      false: do nothing
-	//      true: go to the next step
-	// 4. Check 'action' pointer value. React accordingly:
-	//      CELL_OSKDIALOG_CHANGE_NO_EVENT: do nothing
-	//      CELL_OSKDIALOG_CHANGE_EVENT_CANCEL: cancel input
-	//      CELL_OSKDIALOG_CHANGE_WORDS_INPUT: change unconfirmed string and delete unconfirmed string
-	//      CELL_OSKDIALOG_CHANGE_WORDS_INSERT: change "confirmed string to insert" and delete unconfirmed string
-	//      CELL_OSKDIALOG_CHANGE_WORDS_REPLACE_ALL: change "confirmed string to insert" and delete ALL strings
+	g_fxo->get<osk_info>().hook_event_mode = hookEventMode;
 
 	return CELL_OK;
 }
