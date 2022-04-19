@@ -75,8 +75,8 @@ struct osk_info
 
 	atomic_t<bool> dimmer_enabled = true;
 	atomic_t<f32> base_color_red = 1.0f;
-	atomic_t<f32> base_color_blue = 1.0f;
 	atomic_t<f32> base_color_green = 1.0f;
+	atomic_t<f32> base_color_blue = 1.0f;
 	atomic_t<f32> base_color_alpha = 1.0f;
 
 	atomic_t<bool> pointer_enabled = false;
@@ -89,6 +89,8 @@ struct osk_info
 	atomic_t<u32> last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED; // Used for continuous seperate window dialog
 
 	atomic_t<vm::ptr<cellOskDialogConfirmWordFilterCallback>> osk_confirm_callback{};
+	atomic_t<vm::ptr<cellOskDialogForceFinishCallback>> osk_force_finish_callback{};
+	atomic_t<vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback>> osk_hardware_keyboard_event_hook_callback{};
 
 	stx::init_mutex init;
 
@@ -119,11 +121,13 @@ struct osk_info
 		osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
 		last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED;
 		osk_confirm_callback.store({});
+		osk_force_finish_callback.store({});
+		osk_hardware_keyboard_event_hook_callback.store({});
 	}
 };
 
 // TODO: don't use this function
-std::shared_ptr<OskDialogBase> _get_osk_dialog(bool create = false)
+std::shared_ptr<OskDialogBase> _get_osk_dialog(bool create)
 {
 	auto& osk = g_fxo->get<osk_info>();
 
@@ -381,7 +385,7 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	const auto osk = _get_osk_dialog();
+	const auto osk = _get_osk_dialog(false);
 
 	if (!osk)
 	{
@@ -504,7 +508,7 @@ error_code cellOskDialogAbort()
 {
 	cellOskDialog.warning("cellOskDialogAbort()");
 
-	const auto osk = _get_osk_dialog();
+	const auto osk = _get_osk_dialog(false);
 
 	if (!osk)
 	{
@@ -540,7 +544,11 @@ error_code cellOskDialogSetDeviceMask(u32 deviceMask)
 {
 	cellOskDialog.todo("cellOskDialogSetDeviceMask(deviceMask=0x%x)", deviceMask);
 
-	// TODO: error checks. It probably checks for use_separate_windows
+	// TODO: It might also return an error if use_separate_windows is not enabled
+	if (deviceMask > CELL_OSKDIALOG_DEVICE_MASK_PAD)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	g_fxo->get<osk_info>().device_mask = deviceMask;
 
@@ -572,7 +580,10 @@ error_code cellOskDialogSetInitialInputDevice(u32 inputDevice)
 {
 	cellOskDialog.todo("cellOskDialogSetInitialInputDevice(inputDevice=%d)", inputDevice);
 
-	// TODO: error checks
+	if (inputDevice > CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	g_fxo->get<osk_info>().initial_input_device = static_cast<CellOskDialogInputDevice>(inputDevice);
 
@@ -585,7 +596,10 @@ error_code cellOskDialogSetInitialKeyLayout(u32 initialKeyLayout)
 {
 	cellOskDialog.todo("cellOskDialogSetInitialKeyLayout(initialKeyLayout=%d)", initialKeyLayout);
 
-	// TODO: error checks
+	if (initialKeyLayout > (CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_10KEY | CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_FULLKEY))
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	g_fxo->get<osk_info>().initial_key_layout = static_cast<CellOskDialogInitialKeyLayout>(initialKeyLayout);
 
@@ -597,8 +611,6 @@ error_code cellOskDialogSetInitialKeyLayout(u32 initialKeyLayout)
 error_code cellOskDialogDisableDimmer()
 {
 	cellOskDialog.todo("cellOskDialogDisableDimmer()");
-
-	// TODO: error checks
 
 	g_fxo->get<osk_info>().dimmer_enabled = false;
 
@@ -675,7 +687,26 @@ error_code register_keyboard_event_hook_callback(u16 hookEventMode, vm::ptr<cell
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	// TODO: register callback and and use it
+	g_fxo->get<osk_info>().osk_hardware_keyboard_event_hook_callback = pCallback;
+	
+	// TODO: use callback
+	// 1. Check if the callback needs to be called. This depends on the pressed key and on the OR of the hookEventMode parameter:
+	//      CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY: Any function keys + other special keys like Delete
+	//      CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY: Any regular ascii key
+	//      CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER: Any shift/alt/ctrl key
+	// 2. When a hardware key is pressed, call osk_hardware_keyboard_event_hook_callback with the following params:
+	//      keyMessage: our info about the current key press (and release?)
+	//      action: an out pointer. The game will set this value and we will have to react to it
+	//      pActionInfo: the currently unconfirmed string. max 100 characters + '\0' character. This should be the valid_text member of osk_info.
+	// 3. Check return value:
+	//      false: do nothing
+	//      true: go to the next step
+	// 4. Check 'action' pointer value. React accordingly:
+	//      CELL_OSKDIALOG_CHANGE_NO_EVENT: do nothing
+	//      CELL_OSKDIALOG_CHANGE_EVENT_CANCEL: cancel input
+	//      CELL_OSKDIALOG_CHANGE_WORDS_INPUT: change unconfirmed string and delete unconfirmed string
+	//      CELL_OSKDIALOG_CHANGE_WORDS_INSERT: change "confirmed string to insert" and delete unconfirmed string
+	//      CELL_OSKDIALOG_CHANGE_WORDS_REPLACE_ALL: change "confirmed string to insert" and delete ALL strings
 
 	return CELL_OK;
 }
@@ -684,7 +715,7 @@ error_code cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, 
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 
-	if (hookEventMode == 0 || hookEventMode > 3) // CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY OR CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY
+	if (hookEventMode == 0 || hookEventMode > (CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY | CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY))
 	{
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
@@ -696,7 +727,7 @@ error_code cellOskDialogExtRegisterKeyboardEventHookCallbackEx(u16 hookEventMode
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallbackEx(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 
-	if (hookEventMode == 0 || hookEventMode > 7) // CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY OR CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY OR CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER
+	if (hookEventMode == 0 || hookEventMode > (CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY | CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY | CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER))
 	{
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
@@ -727,7 +758,7 @@ error_code cellOskDialogExtSendFinishMessage(u32 /*CellOskDialogFinishReason*/ f
 {
 	cellOskDialog.warning("cellOskDialogExtSendFinishMessage(finishReason=%d)", finishReason);
 
-	const auto osk = _get_osk_dialog();
+	const auto osk = _get_osk_dialog(false);
 
 	// Check for "Open" dialog.
 	if (!osk || osk->state.load() == OskDialogState::Unloaded)
@@ -750,7 +781,10 @@ error_code cellOskDialogExtSetInitialScale(f32 initialScale)
 {
 	cellOskDialog.todo("cellOskDialogExtSetInitialScale(initialScale=%f)", initialScale);
 
-	// TODO: error checks (CELL_OSKDIALOG_SCALE_MIN, CELL_OSKDIALOG_SCALE_MAX)
+	if (initialScale < CELL_OSKDIALOG_SCALE_MIN || initialScale > CELL_OSKDIALOG_SCALE_MAX)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	g_fxo->get<osk_info>().initial_scale = initialScale;
 
@@ -785,16 +819,19 @@ error_code cellOskDialogExtInputDeviceUnlock()
 	return CELL_OK;
 }
 
-error_code cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
+error_code cellOskDialogExtSetBaseColor(f32 red, f32 green, f32 blue, f32 alpha)
 {
 	cellOskDialog.todo("cellOskDialogExtSetBaseColor(red=%f, blue=%f, green=%f, alpha=%f)", red, blue, green, alpha);
 
-	// TODO: error checks
+	if (red < 0.0f || red > 1.0f || green < 0.0f || green > 1.0f || blue < 0.0f || blue > 1.0f || alpha < 0.0f || alpha > 1.0f)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	auto& osk = g_fxo->get<osk_info>();
 	osk.base_color_red = red;
-	osk.base_color_blue = blue;
 	osk.base_color_green = green;
+	osk.base_color_blue = blue;
 	osk.base_color_alpha = alpha;
 
 	// TODO: use osk base color
@@ -827,7 +864,7 @@ error_code cellOskDialogExtUpdateInputText()
 
 	// TODO: error checks
 
-	const auto osk = _get_osk_dialog();
+	const auto osk = _get_osk_dialog(false);
 
 	if (osk)
 	{
@@ -907,7 +944,14 @@ error_code cellOskDialogExtRegisterForceFinishCallback(vm::ptr<cellOskDialogForc
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	// TODO: register and use force finish callback (PS button during continuous mode)
+	g_fxo->get<osk_info>().osk_force_finish_callback = pCallback;
+
+	// TODO: use force finish callback when the PS-Button is pressed and a System dialog shall be spawned while the OSK is loaded
+	// 1. Check if current mode is CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE or (CELL_OSKDIALOG_CONTINUOUS_MODE_SHOW && hidden)
+	// 2. If one of the above is true, call osk_force_finish_callback
+	// 3. Check the return value of osk_force_finish_callback. If false, ignore the PS-Button press, else go to the next step
+	// 4. Close dialog etc., send CELL_SYSUTIL_OSKDIALOG_FINISHED
+	// 5. After we return from the System dialog, send CELL_SYSUTIL_SYSTEM_MENU_CLOSE to notify the game that it can load the OSK and resume.
 
 	return CELL_OK;
 }
