@@ -1312,6 +1312,9 @@ void main_window::DecryptSPRXLibraries()
 		}
 	}
 
+	// Try to use the key that has been for the current running ELF
+	klics.insert(klics.end(), Emu.klic.begin(), Emu.klic.end());
+
 	for (const QString& _module : modules)
 	{
 		const std::string old_path = sstr(_module);
