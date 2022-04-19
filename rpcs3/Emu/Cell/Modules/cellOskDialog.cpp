@@ -612,6 +612,7 @@ error_code cellOskDialogSetInitialInputDevice(u32 inputDevice)
 	g_fxo->get<osk_info>().initial_input_device = static_cast<CellOskDialogInputDevice>(inputDevice);
 
 	// TODO: use value
+	// TODO: Signal CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED if the input device changed (probably only when the dialog is already open)
 
 	return CELL_OK;
 }

@@ -50,7 +50,7 @@ void basic_mouse_handler::SetTargetWindow(QWindow* target)
 
 bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 {
-	if (!ev || input::g_mice_intercepted)
+	if (!ev)
 	{
 		return false;
 	}

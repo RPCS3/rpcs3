@@ -96,7 +96,7 @@ namespace rsx
 			atomic_t<bool> m_interactive = false;
 			atomic_t<bool> m_stop_pad_interception = false;
 			atomic_t<u64> thread_bits = 0;
-			bool m_keyboard_input_enabled = false;
+			bool m_keyboard_input_enabled = false; // Allow keyboard events
 
 			static thread_local u64 g_thread_bit;
 
