@@ -15,7 +15,7 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 {
 	for (u32 i = 0; i < max_connect; i++)
 	{
-		Keyboard kb;
+		Keyboard kb{};
 
 		kb.m_config.arrange = g_cfg.sys.keyboard_type;
 
@@ -53,7 +53,7 @@ void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 
 bool basic_keyboard_handler::eventFilter(QObject* watched, QEvent* event)
 {
-	if (!event || input::g_keyboards_intercepted)
+	if (!event)
 	{
 		return false;
 	}

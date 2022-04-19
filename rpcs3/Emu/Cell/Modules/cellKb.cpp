@@ -304,9 +304,19 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 		return CELL_KB_ERROR_NO_DEVICE;
 
 	KbData& current_data = handler.GetData(port_no);
-	data->led = current_data.led;
-	data->mkey = current_data.mkey;
-	data->len = std::min<s32>(CELL_KB_MAX_KEYCODES, current_data.len);
+
+	if (current_info.is_null_handler || (current_info.info & CELL_KB_INFO_INTERCEPTED))
+	{
+		data->led = 0;
+		data->mkey = 0;
+		data->len = 0;
+	}
+	else
+	{
+		data->led = current_data.led;
+		data->mkey = current_data.mkey;
+		data->len = std::min<s32>(CELL_KB_MAX_KEYCODES, current_data.len);
+	}
 
 	if (current_data.len > 0)
 	{

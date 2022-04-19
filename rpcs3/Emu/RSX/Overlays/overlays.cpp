@@ -125,7 +125,7 @@ namespace rsx
 					continue;
 
 				// Get keyboard input
-				if (m_keyboard_input_enabled)
+				if (m_keyboard_input_enabled && input::g_keyboards_intercepted)
 				{
 					auto& handler = g_fxo->get<KeyboardHandlerBase>();
 					std::lock_guard<std::mutex> lock(handler.m_mutex);
@@ -173,7 +173,7 @@ namespace rsx
 				const auto handler = pad::get_current_handler();
 				const PadInfo& rinfo = handler->GetInfo();
 
-				if (!rinfo.now_connect)
+				if (!rinfo.now_connect || !input::g_pads_intercepted)
 				{
 					refresh();
 					continue;
