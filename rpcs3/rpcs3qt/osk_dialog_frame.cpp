@@ -77,7 +77,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		{
 			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
-			on_osk_input_entered();
+			// if (on_osk_key_input_entered) on_osk_key_input_entered({}); // Not applicable
 		});
 		connect(input, &QLineEdit::returnPressed, m_dialog, &QDialog::accept);
 
@@ -141,7 +141,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
-			on_osk_input_entered();
+			// if (on_osk_key_input_entered) on_osk_key_input_entered({}); // Not applicable
 		});
 
 		inputLayout->addWidget(input);
