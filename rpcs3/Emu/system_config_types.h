@@ -238,14 +238,6 @@ enum class vk_gpu_scheduler_mode
 	fast
 };
 
-enum class vk_metal_semaphore_mode
-{
-	software,
-	mtlevent_preferred,
-	mtlevent,
-	mtlfence
-};
-
 enum class thread_scheduler_mode
 {
 	os,
