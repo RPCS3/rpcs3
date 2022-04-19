@@ -393,6 +393,9 @@ namespace rsx
 
 		void osk_dialog::on_button_pressed(pad_button button_press)
 		{
+			if (!pad_input_enabled || ignore_input_events)
+				return;
+
 			const auto index_limit = (num_columns * num_rows) - 1;
 
 			const auto on_accept = [this]()
@@ -588,7 +591,7 @@ namespace rsx
 
 		void osk_dialog::on_key_pressed(u32 led, u32 mkey, u32 key_code, u32 out_key_code, bool pressed)
 		{
-			if (!pressed)
+			if (!pressed || !keyboard_input_enabled || ignore_input_events)
 				return;
 
 			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d)", led, mkey, key_code, out_key_code, pressed);

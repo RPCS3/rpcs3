@@ -181,6 +181,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	}
 
 	// Get the OSK options
+	auto& info = g_fxo->get<osk_info>();
 	u32 maxLength = (inputFieldInfo->limit_length >= CELL_OSKDIALOG_STRING_SIZE) ? 511 : u32{inputFieldInfo->limit_length};
 	const u32 prohibitFlgs = dialogParam->prohibitFlgs;
 	const u32 allowOskPanelFlg = dialogParam->allowOskPanelFlg;
@@ -192,7 +193,6 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	// Also clear the info text just to be sure (it should be zeroed at this point anyway)
 	{
-		auto& info = g_fxo->get<osk_info>();
 		std::lock_guard lock(info.text_mtx);
 		info.valid_text = {};
 	}
@@ -340,14 +340,23 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		input::SetIntercepted(false);
 	};
 
-	if (auto& info = g_fxo->get<osk_info>(); info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
+	if (info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
 	{
 		info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
 		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
 		return CELL_OK;
 	}
 
-	input::SetIntercepted(true);
+	// Set device mask and event lock
+	osk->ignore_input_events = info.lock_ext_input.load();
+
+	if (info.use_separate_windows)
+	{
+		osk->pad_input_enabled = (info.device_mask != CELL_OSKDIALOG_DEVICE_MASK_PAD);
+		osk->mouse_input_enabled = (info.device_mask != CELL_OSKDIALOG_DEVICE_MASK_PAD);
+	}
+
+	input::SetIntercepted(osk->pad_input_enabled, osk->keyboard_input_enabled, osk->mouse_input_enabled);
 
 	Emu.CallFromMainThread([=, &result]()
 	{
@@ -550,9 +559,19 @@ error_code cellOskDialogSetDeviceMask(u32 deviceMask)
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	g_fxo->get<osk_info>().device_mask = deviceMask;
+	auto& info = g_fxo->get<osk_info>();
+	info.device_mask = deviceMask;
 
-	// TODO: change osk device input
+	if (info.use_separate_windows)
+	{
+		if (const auto osk = _get_osk_dialog(false))
+		{
+			osk->pad_input_enabled = (deviceMask != CELL_OSKDIALOG_DEVICE_MASK_PAD);
+			osk->mouse_input_enabled = (deviceMask != CELL_OSKDIALOG_DEVICE_MASK_PAD);
+
+			input::SetIntercepted(osk->pad_input_enabled, osk->keyboard_input_enabled, osk->mouse_input_enabled);
+		}
+	}
 
 	return CELL_OK;
 }
@@ -569,7 +588,12 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 	auto& osk = g_fxo->get<osk_info>();
 	osk.use_separate_windows = true;
 	osk.osk_continuous_mode  = static_cast<CellOskDialogContinuousMode>(+windowOption->continuousMode);
+	osk.device_mask = windowOption->deviceMask;
 	// TODO: handle rest of windowOption
+	// inputFieldWindowWidth;
+	// inputFieldBackgroundTrans;
+	// inputFieldLayoutInfo;
+	// inputPanelLayoutInfo;
 
 	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: continuousMode=%s)", osk.osk_continuous_mode.load());
 
@@ -801,7 +825,10 @@ error_code cellOskDialogExtInputDeviceLock()
 
 	g_fxo->get<osk_info>().lock_ext_input = true;
 
-	// TODO: change osk device input
+	if (const auto osk = _get_osk_dialog(false))
+	{
+		osk->ignore_input_events = true;
+	}
 
 	return CELL_OK;
 }
@@ -814,7 +841,10 @@ error_code cellOskDialogExtInputDeviceUnlock()
 
 	g_fxo->get<osk_info>().lock_ext_input = false;
 
-	// TODO: change osk device input
+	if (const auto osk = _get_osk_dialog(false))
+	{
+		osk->ignore_input_events = false;
+	}
 
 	return CELL_OK;
 }
@@ -888,7 +918,7 @@ error_code cellOskDialogExtSetPointerEnable(b8 enable)
 
 	g_fxo->get<osk_info>().pointer_enabled = enable;
 
-	// TODO: use new value in osk
+	// TODO: Show/hide pointer at the specified position in the OSK overlay.
 
 	return CELL_OK;
 }
@@ -904,7 +934,7 @@ error_code cellOskDialogExtUpdatePointerDisplayPos(vm::cptr<CellOskDialogPoint> 
 		g_fxo->get<osk_info>().pointer_pos = *pos;
 	}
 
-	// TODO: use new value in osk
+	// TODO: Update pointer position in the OSK overlay.
 
 	return CELL_OK;
 }

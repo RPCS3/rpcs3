@@ -112,7 +112,7 @@ namespace rsx
 			compiled_resource get_compiled() override = 0;
 
 			virtual void on_button_pressed(pad_button /*button_press*/) {}
-			virtual void on_key_pressed(u32 led, u32 mkey, u32 key_code, u32 out_key_code, bool pressed) {}
+			virtual void on_key_pressed(u32 /*led*/, u32 /*mkey*/, u32 /*key_code*/, u32 /*out_key_code*/, bool /*pressed*/) {}
 
 			virtual void close(bool use_callback, bool stop_pad_interception);
 
