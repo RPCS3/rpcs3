@@ -91,7 +91,8 @@ enum class emu_settings_type
 	VulkanAsyncTextureUploads,
 	VulkanAsyncSchedulerDriver,
 	AllowHostGPULabels,
-	MetalSemaphore,
+	DisableMSLFastMath,
+	SoftwareVkSemaphore,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -250,13 +251,14 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::VBlankRate,                 { "Video", "Vblank Rate"}},
 	{ emu_settings_type::DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
 	{ emu_settings_type::AllowHostGPULabels,         { "Video", "Allow Host GPU Labels"}},
+	{ emu_settings_type::DisableMSLFastMath,         { "Video", "Disable MSL Fast Math"}},
+	{ emu_settings_type::SoftwareVkSemaphore,        { "Video", "Software VkSemaphore"}},
 
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,        { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
 	{ emu_settings_type::VulkanAsyncSchedulerDriver,       { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
 	{ emu_settings_type::FsrUpscalingEnable,               { "Video", "Vulkan", "Enable FidelityFX Super Resolution Upscaling"}},
 	{ emu_settings_type::FsrSharpeningStrength,            { "Video", "Vulkan", "FidelityFX CAS Sharpening Intensity"}},
-	{ emu_settings_type::MetalSemaphore,                   { "Video", "Vulkan", "Metal Semaphore"}},
 
 	// Performance Overlay
 	{ emu_settings_type::PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },
