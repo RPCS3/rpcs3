@@ -130,9 +130,7 @@ namespace rsx
 					auto& handler = g_fxo->get<KeyboardHandlerBase>();
 					std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-					const KbInfo& current_info = handler.GetInfo();
-
-					if (!handler.GetKeyboards().empty() && current_info.status[0] == CELL_KB_STATUS_CONNECTED)
+					if (!handler.GetKeyboards().empty() && handler.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
 					{
 						KbData& current_data = handler.GetData(0);
 
@@ -144,16 +142,8 @@ namespace rsx
 								on_key_pressed(current_data.led, current_data.mkey, key.m_keyCode, key.m_outKeyCode, key.m_pressed);
 							}
 
-							// TODO: is the following step necessary in the overlays?
-							KbConfig& current_config = handler.GetConfig(0);
-
-							// For single character mode to work properly we need to "flush" the buffer after reading or else we'll constantly get the same key presses with each call.
-							// Actual key repeats are handled by adding a new key code to the buffer periodically. Key releases are handled in a similar fashion.
-							// Warning: Don't do this in packet mode, which is basically the mouse and keyboard gaming mode. Otherwise games like Unreal Tournament will be unplayable.
-							if (current_config.read_mode == CELL_KB_RMODE_INPUTCHAR)
-							{
-								current_data.len = 0;
-							}
+							// Flush buffer unconditionally. Otherwise we get a flood of key events.
+							current_data.len = 0;
 
 							// Ignore gamepad input if a key was recognized
 							refresh();
