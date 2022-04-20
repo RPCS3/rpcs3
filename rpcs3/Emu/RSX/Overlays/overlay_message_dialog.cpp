@@ -259,7 +259,10 @@ namespace rsx
 				{
 					if (const auto error = run_input_loop())
 					{
-						rsx_log.error("Dialog input loop exited with error code=%d", error);
+						if (error != selection_code::canceled)
+						{
+							rsx_log.error("Message dialog input loop exited with error code=%d", error);
+						}
 						return error;
 					}
 				}
@@ -296,7 +299,10 @@ namespace rsx
 
 							if (const auto error = run_input_loop())
 							{
-								rsx_log.error("Dialog input loop exited with error code=%d", error);
+								if (error != selection_code::canceled)
+								{
+									rsx_log.error("Message dialog input loop exited with error code=%d", error);
+								}
 							}
 						}
 						else
