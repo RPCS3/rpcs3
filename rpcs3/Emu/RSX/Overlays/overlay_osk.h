@@ -82,7 +82,7 @@ namespace rsx
 			osk_dialog();
 			~osk_dialog() override = default;
 
-			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel) override;
+			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color) override;
 			void Close(s32 status) override;
 
 			void initialize_layout(const std::u32string& title, const std::u32string& initial_text);

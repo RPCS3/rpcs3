@@ -267,10 +267,8 @@ namespace rsx
 			m_background.set_size(1280, 720);
 			m_background.back_color.a = 0.8f;
 
-			m_frame.back_color = { 0.2f, 0.2f, 0.2f, 1.f };
-
 			m_title.set_unicode_text(title);
-			m_title.back_color.a = 0.f;
+			m_title.back_color.a = 0.7f; // Uses the dimmed color of the frame background
 
 			m_preview.password_mode = m_password_mode;
 			m_preview.set_placeholder(get_placeholder());
@@ -946,11 +944,15 @@ namespace rsx
 			static constexpr auto thread_name = "OSK Thread"sv;
 		};
 
-		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel)
+		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color)
 		{
 			state = OskDialogState::Open;
 			flags = prohibit_flags;
 			char_limit = charlimit;
+			m_frame.back_color.r = base_color.r;
+			m_frame.back_color.g = base_color.g;
+			m_frame.back_color.b = base_color.b;
+			m_frame.back_color.a = base_color.a;
 
 			const callback_t shift_cb  = [this](const std::u32string& text){ on_shift(text); };
 			const callback_t layer_cb  = [this](const std::u32string& text){ on_layer(text); };

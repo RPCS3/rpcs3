@@ -253,7 +253,15 @@ enum class OskDialogState
 class OskDialogBase
 {
 public:
-	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel) = 0;
+	struct color
+	{
+		f32 r = 1.0f;
+		f32 g = 1.0f;
+		f32 b = 1.0f;
+		f32 a = 1.0f;
+	};
+
+	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color) = 0;
 
 	// Closes the dialog.
 	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.

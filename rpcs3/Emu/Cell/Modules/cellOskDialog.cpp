@@ -75,10 +75,7 @@ struct osk_info
 	atomic_t<u32> supported_languages = 0; // Used to enable non-default languages in the OSK
 
 	atomic_t<bool> dimmer_enabled = true;
-	atomic_t<f32> base_color_red = 1.0f;
-	atomic_t<f32> base_color_green = 1.0f;
-	atomic_t<f32> base_color_blue = 1.0f;
-	atomic_t<f32> base_color_alpha = 1.0f;
+	atomic_t<OskDialogBase::color> base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
 
 	atomic_t<bool> pointer_enabled = false;
 	CellOskDialogPoint pointer_pos{0.0f, 0.0f};
@@ -112,10 +109,7 @@ struct osk_info
 		half_byte_kana_enabled = false;
 		supported_languages = 0;
 		dimmer_enabled = true;
-		base_color_red = 1.0f;
-		base_color_blue = 1.0f;
-		base_color_green = 1.0f;
-		base_color_alpha = 1.0f;
+		base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
 		pointer_enabled = false;
 		pointer_pos = {0.0f, 0.0f};
 		initial_scale = 1.0f;
@@ -511,9 +505,9 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		return CELL_OK;
 	}
 
-	Emu.CallFromMainThread([=, &result]()
+	Emu.CallFromMainThread([=, &result, &info]()
 	{
-		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel);
+		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel, info.base_color.load());
 		result = true;
 		result.notify_one();
 
@@ -995,12 +989,7 @@ error_code cellOskDialogExtSetBaseColor(f32 red, f32 green, f32 blue, f32 alpha)
 	}
 
 	auto& osk = g_fxo->get<osk_info>();
-	osk.base_color_red = red;
-	osk.base_color_green = green;
-	osk.base_color_blue = blue;
-	osk.base_color_alpha = alpha;
-
-	// TODO: use osk base color
+	osk.base_color = OskDialogBase::color{ red, green, blue, alpha };
 
 	return CELL_OK;
 }
