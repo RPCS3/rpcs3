@@ -507,7 +507,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	Emu.CallFromMainThread([=, &result, &info]()
 	{
-		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel, info.base_color.load());
+		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel, info.base_color.load(), info.dimmer_enabled.load());
 		result = true;
 		result.notify_one();
 
@@ -698,7 +698,7 @@ error_code cellOskDialogAbort()
 
 error_code cellOskDialogSetDeviceMask(u32 deviceMask)
 {
-	cellOskDialog.todo("cellOskDialogSetDeviceMask(deviceMask=0x%x)", deviceMask);
+	cellOskDialog.warning("cellOskDialogSetDeviceMask(deviceMask=0x%x)", deviceMask);
 
 	// TODO: It might also return an error if use_separate_windows is not enabled
 	if (deviceMask > CELL_OSKDIALOG_DEVICE_MASK_PAD)
@@ -782,11 +782,9 @@ error_code cellOskDialogSetInitialKeyLayout(u32 initialKeyLayout)
 
 error_code cellOskDialogDisableDimmer()
 {
-	cellOskDialog.todo("cellOskDialogDisableDimmer()");
+	cellOskDialog.warning("cellOskDialogDisableDimmer()");
 
 	g_fxo->get<osk_info>().dimmer_enabled = false;
-
-	// TODO: use value
 
 	return CELL_OK;
 }
@@ -852,7 +850,7 @@ error_code cellOskDialogGetInputText(vm::ptr<CellOskDialogCallbackReturnParam> O
 
 error_code register_keyboard_event_hook_callback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
-	cellOskDialog.todo("register_keyboard_event_hook_callback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
+	cellOskDialog.warning("register_keyboard_event_hook_callback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 
 	if (!pCallback)
 	{
@@ -867,7 +865,7 @@ error_code register_keyboard_event_hook_callback(u16 hookEventMode, vm::ptr<cell
 
 error_code cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
-	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
+	cellOskDialog.warning("cellOskDialogExtRegisterKeyboardEventHookCallback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 
 	if (hookEventMode == 0 || hookEventMode > (CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY | CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY))
 	{
@@ -879,7 +877,7 @@ error_code cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, 
 
 error_code cellOskDialogExtRegisterKeyboardEventHookCallbackEx(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
-	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallbackEx(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
+	cellOskDialog.warning("cellOskDialogExtRegisterKeyboardEventHookCallbackEx(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 
 	if (hookEventMode == 0 || hookEventMode > (CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY | CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY | CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER))
 	{
@@ -949,7 +947,7 @@ error_code cellOskDialogExtSetInitialScale(f32 initialScale)
 
 error_code cellOskDialogExtInputDeviceLock()
 {
-	cellOskDialog.todo("cellOskDialogExtInputDeviceLock()");
+	cellOskDialog.warning("cellOskDialogExtInputDeviceLock()");
 
 	// TODO: error checks
 
@@ -965,7 +963,7 @@ error_code cellOskDialogExtInputDeviceLock()
 
 error_code cellOskDialogExtInputDeviceUnlock()
 {
-	cellOskDialog.todo("cellOskDialogExtInputDeviceUnlock()");
+	cellOskDialog.warning("cellOskDialogExtInputDeviceUnlock()");
 
 	// TODO: error checks
 
@@ -981,7 +979,7 @@ error_code cellOskDialogExtInputDeviceUnlock()
 
 error_code cellOskDialogExtSetBaseColor(f32 red, f32 green, f32 blue, f32 alpha)
 {
-	cellOskDialog.todo("cellOskDialogExtSetBaseColor(red=%f, blue=%f, green=%f, alpha=%f)", red, blue, green, alpha);
+	cellOskDialog.warning("cellOskDialogExtSetBaseColor(red=%f, blue=%f, green=%f, alpha=%f)", red, blue, green, alpha);
 
 	if (red < 0.0f || red > 1.0f || green < 0.0f || green > 1.0f || blue < 0.0f || blue > 1.0f || alpha < 0.0f || alpha > 1.0f)
 	{

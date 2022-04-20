@@ -265,7 +265,6 @@ namespace rsx
 		void osk_dialog::initialize_layout(const std::u32string& title, const std::u32string& initial_text)
 		{
 			m_background.set_size(1280, 720);
-			m_background.back_color.a = 0.8f;
 
 			m_title.set_unicode_text(title);
 			m_title.back_color.a = 0.7f; // Uses the dimmed color of the frame background
@@ -944,7 +943,7 @@ namespace rsx
 			static constexpr auto thread_name = "OSK Thread"sv;
 		};
 
-		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color)
+		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled)
 		{
 			state = OskDialogState::Open;
 			flags = prohibit_flags;
@@ -953,6 +952,7 @@ namespace rsx
 			m_frame.back_color.g = base_color.g;
 			m_frame.back_color.b = base_color.b;
 			m_frame.back_color.a = base_color.a;
+			m_background.back_color.a = dimmer_enabled ? 0.8f : 0.0f;
 
 			const callback_t shift_cb  = [this](const std::u32string& text){ on_shift(text); };
 			const callback_t layer_cb  = [this](const std::u32string& text){ on_layer(text); };
