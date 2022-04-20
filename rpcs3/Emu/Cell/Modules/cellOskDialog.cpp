@@ -342,6 +342,17 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	{
 		const auto osk = wptr.lock();
 		auto& info = g_fxo->get<osk_info>();
+		std::lock_guard lock(info.text_mtx);
+		auto event_hook_callback = info.osk_hardware_keyboard_event_hook_callback.load();
+
+		cellOskDialog.notice("on_osk_key_input_entered: led=%d, mkey=%d, keycode=%d, hook_event_mode=%d, event_hook_callback=*0x%x", key_message.led, key_message.mkey, key_message.keycode, info.hook_event_mode.load(), event_hook_callback);
+
+		if (!event_hook_callback)
+		{
+			// Nothing to do here
+			return;
+		}
+
 		bool is_kook_key = false;
 
 		switch (key_message.keycode)
@@ -402,88 +413,103 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		}
 	
 		if (!is_kook_key)
-			return;
-
-		if (auto ccb = info.osk_hardware_keyboard_event_hook_callback.load())
 		{
-			constexpr u32 max_size = 101;
-			std::vector<u16> string_to_send(max_size, 0);
-			atomic_t<bool> done = false;
+			cellOskDialog.notice("on_osk_key_input_entered: not a hook key: led=%d, mkey=%d, keycode=%d, hook_event_mode=%d", key_message.led, key_message.mkey, key_message.keycode, info.hook_event_mode.load());
+			return;
+		}
 
-			for (u32 i = 0; i < max_size - 1; i++)
+		constexpr u32 max_size = 101;
+		std::vector<u16> string_to_send(max_size, 0);
+		atomic_t<bool> done = false;
+
+		for (u32 i = 0; i < max_size - 1; i++)
+		{
+			string_to_send[i] = osk->osk_text[i];
+			if (osk->osk_text[i] == 0) break;
+		}
+
+		sysutil_register_cb([&](ppu_thread& cb_ppu) -> s32
+		{
+			vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
+			vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
+			vm::var<u16[], vm::page_allocator<>> pActionInfo(max_size, string_to_send.data());
+
+			std::u16string utf16_string;
+			utf16_string.insert(0, reinterpret_cast<char16_t*>(string_to_send.data()), string_to_send.size());
+			std::string action_info = utf16_to_ascii8(utf16_string);
+
+			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback(led=%d, mkey=%d, keycode=%d, action=%d, pActionInfo='%s')", keyMessage->led, keyMessage->mkey, keyMessage->keycode, *action, action_info);
+
+			const bool return_value = event_hook_callback(cb_ppu, keyMessage, action, pActionInfo.begin());
+			ensure(action);
+			ensure(pActionInfo);
+
+			utf16_string.clear();
+			for (u32 i = 0; i < max_size; i++)
 			{
-				string_to_send[i] = osk->osk_text[i];
-				if (osk->osk_text[i] == 0) break;
+				const u16 code = pActionInfo[i];
+				if (!code) break;
+				utf16_string.push_back(code);
 			}
+			action_info = utf16_to_ascii8(utf16_string);
 
-			sysutil_register_cb([&](ppu_thread& cb_ppu) -> s32
+			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: return_value=%d, action=%d, pActionInfo='%s'", return_value, *action, action_info);
+
+			if (return_value)
 			{
-				vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
-				vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
-				vm::var<u16[], vm::page_allocator<>> pActionInfo(max_size, string_to_send.data());
-
-				const bool return_value = ccb(cb_ppu, keyMessage, action, pActionInfo.begin());
-				cellOskDialog.warning("osk_hardware_keyboard_event_hook_callback: return_value=%d, action=%d)", return_value, action.get_ptr() ? static_cast<u32>(*action) : 0);
-
-				if (return_value)
+				switch (*action)
 				{
-					ensure(action);
-					ensure(pActionInfo);
-
-					switch (*action)
-					{
-					case CELL_OSKDIALOG_CHANGE_NO_EVENT:
-					case CELL_OSKDIALOG_CHANGE_EVENT_CANCEL:
-					{
-						// Do nothing
-						break;
-					}
-					case CELL_OSKDIALOG_CHANGE_WORDS_INPUT:
-					{
-						// Set unconfirmed string and reset unconfirmed string
-						for (u32 i = 0; i < max_size; i++)
-						{
-							osk->osk_text[i] = pActionInfo.begin()[i];
-						}
-						break;
-					}
-					case CELL_OSKDIALOG_CHANGE_WORDS_INSERT:
-					{
-						// Set confirmed string and reset unconfirmed string
-						for (u32 i = 0; i < max_size; i++)
-						{
-							info.valid_text[i] = pActionInfo.begin()[i];
-							osk->osk_text[i] = 0;
-						}
-						break;
-					}
-					case CELL_OSKDIALOG_CHANGE_WORDS_REPLACE_ALL:
-					{
-						// Set confirmed string and reset all strings
-						for (u32 i = 0; i < max_size; i++)
-						{
-							info.valid_text[i] = pActionInfo.begin()[i];
-							osk->osk_text[i] = 0;
-						}
-						break;
-					}
-					default:
-					{
-						cellOskDialog.error("osk_hardware_keyboard_event_hook_callback returned invalid action (%d)", *action);
-						break;
-					}
-					}
+				case CELL_OSKDIALOG_CHANGE_NO_EVENT:
+				case CELL_OSKDIALOG_CHANGE_EVENT_CANCEL:
+				{
+					// Do nothing
+					break;
 				}
-
-				done = true;
-				return 0;
-			});
-
-			// wait for callback
-			while (!done && !Emu.IsStopped())
-			{
-				std::this_thread::yield();
+				case CELL_OSKDIALOG_CHANGE_WORDS_INPUT:
+				{
+					// Set unconfirmed string and reset unconfirmed string
+					for (u32 i = 0; i < max_size; i++)
+					{
+						osk->osk_text[i] = pActionInfo.begin()[i];
+					}
+					break;
+				}
+				case CELL_OSKDIALOG_CHANGE_WORDS_INSERT:
+				{
+					// Set confirmed string and reset unconfirmed string
+					for (u32 i = 0; i < max_size; i++)
+					{
+						info.valid_text[i] = pActionInfo.begin()[i];
+						osk->osk_text[i] = 0;
+					}
+					break;
+				}
+				case CELL_OSKDIALOG_CHANGE_WORDS_REPLACE_ALL:
+				{
+					// Set confirmed string and reset all strings
+					for (u32 i = 0; i < max_size; i++)
+					{
+						info.valid_text[i] = pActionInfo.begin()[i];
+						osk->osk_text[i] = 0;
+					}
+					break;
+				}
+				default:
+				{
+					cellOskDialog.error("osk_hardware_keyboard_event_hook_callback returned invalid action (%d)", *action);
+					break;
+				}
+				}
 			}
+
+			done = true;
+			return 0;
+		});
+
+		// wait for callback
+		while (!done && !Emu.IsStopped())
+		{
+			std::this_thread::yield();
 		}
 	};
 
