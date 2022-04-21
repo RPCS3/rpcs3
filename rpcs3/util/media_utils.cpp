@@ -57,7 +57,7 @@ namespace utils
 
 	std::string av_error_to_string(int error)
 	{
-		char av_error[AV_ERROR_MAX_STRING_SIZE];
+		char av_error[AV_ERROR_MAX_STRING_SIZE]{};
 		av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, error);
 		return av_error;
 	}
