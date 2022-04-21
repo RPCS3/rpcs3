@@ -1,4 +1,4 @@
-#include <QRegExpValidator>
+#include <QRegularExpressionValidator>
 #include <QInputDialog>
 #include <QKeyEvent>
 #include <QEvent>
@@ -250,7 +250,7 @@ bool user_manager_dialog::ValidateUsername(const QString& text_to_validate)
 {
 	// "Entire string (^...$) must be between 3 and 16 characters
 	// and only consist of letters, numbers, underscores, and hyphens."
-	const QRegExpValidator validator(QRegExp("^[A-Za-z0-9_-]{3,16}$"));
+	const QRegularExpressionValidator validator(QRegularExpression("^[A-Za-z0-9_-]{3,16}$"));
 
 	int pos = 0;
 	QString text = text_to_validate;
