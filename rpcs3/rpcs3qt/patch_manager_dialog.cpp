@@ -745,8 +745,8 @@ bool patch_manager_dialog::is_valid_file(const QMimeData& md, QStringList* drop_
 
 	for (auto&& url : list) // Check each file in url list for valid type
 	{
-		const QString path   = url.toLocalFile(); // Convert url to filepath
-		const QFileInfo info = path;
+		const QString path = url.toLocalFile(); // Convert url to filepath
+		const QFileInfo info(path);
 
 		if (!info.fileName().endsWith("patch.yml"))
 		{

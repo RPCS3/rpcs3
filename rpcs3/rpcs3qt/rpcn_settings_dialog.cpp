@@ -2,7 +2,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
-#include <QRegExpValidator>
+#include <QRegularExpressionValidator>
 #include <QInputDialog>
 #include <QGroupBox>
 #include <QMenu>
@@ -101,7 +101,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	QLabel* label_npid = new QLabel(tr("NPID (username):"));
 	m_edit_npid        = new QLineEdit();
 	m_edit_npid->setMaxLength(16);
-	m_edit_npid->setValidator(new QRegExpValidator(QRegExp("^[a-zA-Z0-9_\\-]*$"), this));
+	m_edit_npid->setValidator(new QRegularExpressionValidator(QRegularExpression("^[a-zA-Z0-9_\\-]*$"), this));
 	QLabel* label_pass        = new QLabel(tr("Password:"));
 	QPushButton* btn_chg_pass = new QPushButton(tr("Set Password"));
 	QLabel* label_token       = new QLabel(tr("Token:"));
@@ -229,7 +229,7 @@ void rpcn_account_dialog::create_account()
 		return;
 
 	QString email;
-	const QRegExpValidator simple_email_validator(QRegExp("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$"));
+	const QRegularExpressionValidator simple_email_validator(QRegularExpression("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$"));
 
 	while (true)
 	{
