@@ -563,12 +563,12 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 	line->setFrameShadow(QFrame::Sunken);
 	vbox_panel->addWidget(line);
 
-	QHBoxLayout* hbox_idvar = new QHBoxLayout();
-	QLabel* label_id        = new QLabel(tr("ID:"));
-	QLabel* label_var       = new QLabel(tr("Variant:"));
-	QLineEdit* edit_id      = new QLineEdit("0");
-	QLineEdit* edit_var     = new QLineEdit("0");
-	QRegExpValidator* rxv   = new QRegExpValidator(QRegExp("\\d*"), this);
+	QHBoxLayout* hbox_idvar          = new QHBoxLayout();
+	QLabel* label_id                 = new QLabel(tr("ID:"));
+	QLabel* label_var                = new QLabel(tr("Variant:"));
+	QLineEdit* edit_id               = new QLineEdit("0");
+	QLineEdit* edit_var              = new QLineEdit("0");
+	QRegularExpressionValidator* rxv = new QRegularExpressionValidator(QRegularExpression("\\d*"), this);
 	edit_id->setValidator(rxv);
 	edit_var->setValidator(rxv);
 	hbox_idvar->addWidget(label_id);
