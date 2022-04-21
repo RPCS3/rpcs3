@@ -390,9 +390,7 @@ struct vdec_context final
 
 				if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
 				{
-					char av_error[AV_ERROR_MAX_STRING_SIZE]{};
-					av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
-					fmt::throw_exception("AU queuing error(0x%x): %s", ret, av_error);
+					fmt::throw_exception("AU queuing error(0x%x): %s", ret, utils::av_error_to_string(ret));
 				}
 				else
 				{
@@ -414,9 +412,7 @@ struct vdec_context final
 								break;
 							}
 
-							char av_error[AV_ERROR_MAX_STRING_SIZE]{};
-							av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
-							fmt::throw_exception("AU decoding error(0x%x): %s", ret, av_error);
+							fmt::throw_exception("AU decoding error(0x%x): %s", ret, utils::av_error_to_string(ret));
 						}
 
 						if (frame->interlaced_frame)
@@ -1209,9 +1205,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 
 			if (const int ret = av_image_fill_linesizes(out_line, out_f, w); ret < 0)
 			{
-				char av_error[AV_ERROR_MAX_STRING_SIZE]{};
-				av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
-				fmt::throw_exception("cellVdecGetPicture: av_image_fill_linesizes failed (ret=0x%x): %s", ret, av_error);
+				fmt::throw_exception("cellVdecGetPicture: av_image_fill_linesizes failed (ret=0x%x): %s", ret, utils::av_error_to_string(ret));
 			}
 		}
 
