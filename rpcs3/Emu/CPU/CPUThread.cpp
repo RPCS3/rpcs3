@@ -446,7 +446,7 @@ void cpu_thread::operator()()
 	// Register thread in g_cpu_array
 	s_cpu_counter++;
 
-	atomic_wait_engine::set_notify_callback([](const void*, u64 progress)
+	atomic_wait_engine::set_notify_callback(g_use_rtm || id_type() != 1 /* PPU */ ? nullptr : +[](const void*, u64 progress)
 	{
 		static thread_local bool wait_set = false;
 

@@ -1310,14 +1310,10 @@ void atomic_wait_engine::notify_one(const void* data, u32 size, u128 mask)
 	if (s_tls_notify_cb)
 		s_tls_notify_cb(data, 0);
 
-	u64 progress = 0;
-
 	root_info::slot_search(iptr, mask, [&](u32 cond_id)
 	{
 		if (alert_sema(cond_id, size, mask))
 		{
-			if (s_tls_notify_cb)
-				s_tls_notify_cb(data, ++progress);
 			return true;
 		}
 
@@ -1334,8 +1330,6 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u1
 
 	if (s_tls_notify_cb)
 		s_tls_notify_cb(data, 0);
-
-	u64 progress = 0;
 
 	// Array count for batch notification
 	u32 count = 0;
@@ -1378,8 +1372,6 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u1
 			{
 				if (s_cond_list[cond_id].try_alert_native())
 				{
-					if (s_tls_notify_cb)
-						s_tls_notify_cb(data, ++progress);
 					*(std::end(cond_ids) - i - 1) = ~cond_id;
 				}
 			}
@@ -1394,8 +1386,6 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u1
 		if (cond_id <= u16{umax})
 		{
 			s_cond_list[cond_id].alert_native();
-			if (s_tls_notify_cb)
-				s_tls_notify_cb(data, ++progress);
 			*(std::end(cond_ids) - i - 1) = ~cond_id;
 		}
 	}
