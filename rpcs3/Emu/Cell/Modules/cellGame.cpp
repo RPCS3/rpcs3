@@ -218,7 +218,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		const auto cat = psf::get_string(sfo, "CATEGORY", "");
 		if (!psf::is_cat_hdd(cat))
 		{
-			return { CELL_GAMEDATA_ERROR_BROKEN, fmt::format("CATEGORY='%s'", cat) };
+			return { CELL_GAMEDATA_ERROR_BROKEN, "CATEGORY='%s'", cat };
 		}
 	}
 
@@ -636,7 +636,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		if (psf_error != psf::error::stream)
 		{
 			init.cancel();
-			return {CELL_GAME_ERROR_BROKEN, fmt::format("psf::error='%s', type='%d' CATEGORY='%s'", psf_error, type, cat)};
+			return {CELL_GAME_ERROR_BROKEN, "psf::error='%s', type='%d' CATEGORY='%s'", psf_error, type, cat};
 		}
 	}
 
