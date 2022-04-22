@@ -1004,7 +1004,7 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 
 	if (!vdec || !auInfo || !auInfo->size || !auInfo->startAddr)
 	{
-		return { CELL_VDEC_ERROR_ARG, fmt::format("vdec=%d, auInfo=%d, size=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->size.value() : 0, auInfo ? auInfo->startAddr.value() : 0) };
+		return { CELL_VDEC_ERROR_ARG, "vdec=%d, auInfo=%d, size=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->size.value() : 0, auInfo ? auInfo->startAddr.value() : 0 };
 	}
 
 	{
@@ -1018,14 +1018,14 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 
 	if (mode < 0 || mode > (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP))
 	{
-		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d", +mode) };
+		return { CELL_VDEC_ERROR_ARG, "mode=%d", +mode };
 	}
 
 	// TODO: what does the 3 stand for ?
 	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != 3) ||
 		(mode == CELL_VDEC_DEC_MODE_PB_SKIP && vdec->type != CELL_VDEC_CODEC_TYPE_AVC))
 	{
-		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d, type=%d", +mode, vdec->type) };
+		return { CELL_VDEC_ERROR_ARG, "mode=%d, type=%d", +mode, vdec->type };
 	}
 
 	if (!vdec->au_count.try_inc(4))
@@ -1046,7 +1046,7 @@ error_code cellVdecDecodeAuEx2(u32 handle, CellVdecDecodeMode mode, vm::cptr<Cel
 
 	if (!vdec || !auInfo || !auInfo->size || !auInfo->startAddr)
 	{
-		return { CELL_VDEC_ERROR_ARG, fmt::format("vdec=%d, auInfo=%d, size=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->size.value() : 0, auInfo ? auInfo->startAddr.value() : 0) };
+		return { CELL_VDEC_ERROR_ARG, "vdec=%d, auInfo=%d, size=%d, startAddr=0x%x", !!vdec, !!auInfo, auInfo ? auInfo->size.value() : 0, auInfo ? auInfo->startAddr.value() : 0 };
 	}
 
 	{
@@ -1060,14 +1060,14 @@ error_code cellVdecDecodeAuEx2(u32 handle, CellVdecDecodeMode mode, vm::cptr<Cel
 
 	if (mode < 0 || mode > (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP))
 	{
-		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d", +mode) };
+		return { CELL_VDEC_ERROR_ARG, "mode=%d", +mode };
 	}
 
 	// TODO: what does the 3 stand for ?
 	if ((mode == (CELL_VDEC_DEC_MODE_B_SKIP | CELL_VDEC_DEC_MODE_PB_SKIP) && vdec->type != 3) ||
 		(mode == CELL_VDEC_DEC_MODE_PB_SKIP && vdec->type != CELL_VDEC_CODEC_TYPE_AVC))
 	{
-		return { CELL_VDEC_ERROR_ARG, fmt::format("mode=%d, type=%d", +mode, vdec->type) };
+		return { CELL_VDEC_ERROR_ARG, "mode=%d, type=%d", +mode, vdec->type };
 	}
 
 	if (!vdec->au_count.try_inc(4))
