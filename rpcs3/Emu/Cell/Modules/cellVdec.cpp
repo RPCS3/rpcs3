@@ -388,6 +388,8 @@ struct vdec_context final
 					au_mode == CELL_VDEC_DEC_MODE_NORMAL ? AVDISCARD_DEFAULT :
 					au_mode == CELL_VDEC_DEC_MODE_B_SKIP ? AVDISCARD_NONREF : AVDISCARD_NONINTRA;
 
+				std::deque<vdec_frame> decoded_frames;
+
 				if (!abort_decode)
 				{
 					cellVdec.trace("AU decoding: handle=0x%x, cmd_id=%d, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, cmd->id, au_size, au_pts, au_dts, au_usrd);
@@ -524,15 +526,23 @@ struct vdec_context final
 
 						cellVdec.trace("Got picture (handle=0x%x, cmd_id=%d, pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", handle, cmd->id, frame.pts, frame->pts, frame.dts, frame->pkt_dts);
 
-						{
-							std::lock_guard lock{mutex};
-							out_queue.push_back(std::move(frame));
-						}
+						decoded_frames.push_back(std::move(frame));
+					}
+				}
 
-						cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_PICOUT (handle=0x%x, cmd_id=%d)", handle, cmd->id);
-						cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
-						lv2_obj::sleep(ppu);
+				if (thread_ctrl::state() != thread_state::aborting && !abort_decode)
+				{
+					cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, cmd_id=%d)", handle, cmd->id);
+					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
+					lv2_obj::sleep(ppu);
 
+					if (au_count > 0)
+					{
+						--au_count;
+					}
+
+					while (!decoded_frames.empty())
+					{
 						// Wait until there is free space in the image queue.
 						// Do this after pushing the frame to the queue. That way the game can consume the frame and we can move on.
 						u32 elapsed = 0;
@@ -554,26 +564,33 @@ struct vdec_context final
 								elapsed = 0;
 							}
 						}
+
+						if (thread_ctrl::state() == thread_state::aborting || abort_decode)
+						{
+							break;
+						}
+
+						{
+							std::lock_guard lock{mutex};
+							out_queue.push_back(std::move(decoded_frames.front()));
+							decoded_frames.pop_front();
+						}
+
+						cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_PICOUT (handle=0x%x, cmd_id=%d)", handle, cmd->id);
+						cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
+						lv2_obj::sleep(ppu);
 					}
 				}
 
-				if (thread_ctrl::state() != thread_state::aborting && !abort_decode)
-				{
-					cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, cmd_id=%d)", handle, cmd->id);
-					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
-					lv2_obj::sleep(ppu);
-				}
-				else
+				if (abort_decode)
 				{
 					cellVdec.warning("AU decoding: aborted (handle=0x%x, cmd_id=%d, abort_decode=%d)", handle, cmd->id, abort_decode.load());
 				}
-
-				if (au_count > 0)
+				else
 				{
-					--au_count;
+					cellVdec.trace("AU decoding: done (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 				}
 
-				cellVdec.trace("AU decoding: done (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 				break;
 			}
 			case vdec_cmd_type::framerate:
