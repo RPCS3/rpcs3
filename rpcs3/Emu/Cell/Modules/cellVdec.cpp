@@ -325,6 +325,7 @@ struct vdec_context final
 
 				out_queue.clear(); // Flush image queue
 				log_time_base = {};
+				au_count = 0;
 
 				frc_set = 0; // TODO: ???
 				next_pts = 0;
@@ -382,14 +383,15 @@ struct vdec_context final
 					au_mode == CELL_VDEC_DEC_MODE_NORMAL ? AVDISCARD_DEFAULT :
 					au_mode == CELL_VDEC_DEC_MODE_B_SKIP ? AVDISCARD_NONREF : AVDISCARD_NONINTRA;
 
-				cellVdec.trace("AU decoding: handle=0x%x, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, au_size, au_pts, au_dts, au_usrd);
+				if (!abort_decode)
+				{
+					cellVdec.trace("AU decoding: handle=0x%x, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, au_size, au_pts, au_dts, au_usrd);
 
-				if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
-				{
-					fmt::throw_exception("AU queuing error (handle=0x%x, error=0x%x): %s", handle, ret, utils::av_error_to_string(ret));
-				}
-				else
-				{
+					if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
+					{
+						fmt::throw_exception("AU queuing error (handle=0x%x, error=0x%x): %s", handle, ret, utils::av_error_to_string(ret));
+					}
+
 					while (!abort_decode)
 					{
 						// Keep receiving frames
@@ -553,9 +555,15 @@ struct vdec_context final
 					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
 					lv2_obj::sleep(ppu);
 				}
-				else cellVdec.error("AU decoding: abort_decode = %d (handle=0x%x)", abort_decode.load(), handle);
+				else
+				{
+					cellVdec.warning("AU decoding: aborted (handle=0x%x, abort_decode=%d)", handle, abort_decode.load());
+				}
 
-				au_count--;
+				if (au_count > 0)
+				{
+					--au_count;
+				}
 
 				cellVdec.trace("AU decoding: done (handle=0x%x)", handle);
 				break;
