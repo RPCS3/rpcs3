@@ -169,6 +169,8 @@ struct vdec_context final
 	static const u32 id_step = 0x00000100;
 	static const u32 id_count = 1024;
 
+	u32 handle = 0;
+
 	atomic_t<bool> abort_decode = false; // Used for thread interaction
 	atomic_t<bool> is_running = false;   // Used for thread interaction
 	atomic_t<sequence_state> seq_state = sequence_state::closed;
@@ -312,11 +314,11 @@ struct vdec_context final
 
 				if (seq_state == sequence_state::resetting)
 				{
-					cellVdec.trace("Reset sequence...");
+					cellVdec.trace("Reset sequence... (handle=0x%x)", handle);
 				}
 				else
 				{
-					cellVdec.trace("Start sequence...");
+					cellVdec.trace("Start sequence... (handle=0x%x)", handle);
 				}
 
 				avcodec_flush_buffers(ctx);
@@ -334,7 +336,7 @@ struct vdec_context final
 			}
 			case vdec_cmd_type::end_sequence:
 			{
-				cellVdec.trace("End sequence...");
+				cellVdec.trace("End sequence... (handle=0x%x)", handle);
 
 				{
 					std::lock_guard lock{mutex};
@@ -380,11 +382,11 @@ struct vdec_context final
 					au_mode == CELL_VDEC_DEC_MODE_NORMAL ? AVDISCARD_DEFAULT :
 					au_mode == CELL_VDEC_DEC_MODE_B_SKIP ? AVDISCARD_NONREF : AVDISCARD_NONINTRA;
 
-				cellVdec.trace("AU decoding: size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", au_size, au_pts, au_dts, au_usrd);
+				cellVdec.trace("AU decoding: handle=0x%x, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, au_size, au_pts, au_dts, au_usrd);
 
 				if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
 				{
-					fmt::throw_exception("AU queuing error(0x%x): %s", ret, utils::av_error_to_string(ret));
+					fmt::throw_exception("AU queuing error (handle=0x%x, error=0x%x): %s", handle, ret, utils::av_error_to_string(ret));
 				}
 				else
 				{
@@ -396,7 +398,7 @@ struct vdec_context final
 
 						if (!frame.avf)
 						{
-							fmt::throw_exception("av_frame_alloc() failed");
+							fmt::throw_exception("av_frame_alloc() failed (handle=0x%x)", handle);
 						}
 
 						if (int ret = avcodec_receive_frame(ctx, frame.avf.get()); ret < 0)
@@ -406,18 +408,18 @@ struct vdec_context final
 								break;
 							}
 
-							fmt::throw_exception("AU decoding error(0x%x): %s", ret, utils::av_error_to_string(ret));
+							fmt::throw_exception("AU decoding error (handle=0x%x, error=0x%x): %s", handle, ret, utils::av_error_to_string(ret));
 						}
 
 						if (frame->interlaced_frame)
 						{
 							// NPEB01838, NPUB31260
-							cellVdec.todo("Interlaced frames not supported (0x%x)", frame->interlaced_frame);
+							cellVdec.todo("Interlaced frames not supported (handle=0x%x, interlaced_frame=0x%x)", handle, frame->interlaced_frame);
 						}
 
 						if (frame->repeat_pict)
 						{
-							fmt::throw_exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
+							fmt::throw_exception("Repeated frames not supported (handle=0x%x, repear_pict=0x%x)", handle, frame->repeat_pict);
 						}
 
 						if (frame->pts != smin)
@@ -451,7 +453,7 @@ struct vdec_context final
 							case CELL_VDEC_FRC_60: amend = 90000 / 60; break;
 							default:
 							{
-								fmt::throw_exception("Invalid frame rate code set (0x%x)", frc_set);
+								fmt::throw_exception("Invalid frame rate code set (handle=0x%x, frc=0x%x)", handle, frc_set);
 							}
 							}
 
@@ -463,7 +465,7 @@ struct vdec_context final
 						{
 							if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
 							{
-								cellVdec.error("time_base.num is 0 (%d/%d, tpf=%d framerate=%d/%d)", ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
+								cellVdec.error("time_base.num is 0 (handle=0x%x, %d/%d, tpf=%d framerate=%d/%d)", handle, ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
 								log_time_base = ctx->time_base;
 							}
 
@@ -499,7 +501,7 @@ struct vdec_context final
 								if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
 								{
 									// 1/1000 usually means that the time stamps are written in 1ms units and that the frame rate may vary.
-									cellVdec.error("Unsupported time_base (%d/%d, tpf=%d framerate=%d/%d)", ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
+									cellVdec.error("Unsupported time_base (handle=0x%x, %d/%d, tpf=%d framerate=%d/%d)", handle, ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
 									log_time_base = ctx->time_base;
 								}
 
@@ -512,7 +514,7 @@ struct vdec_context final
 							next_dts += amend;
 						}
 
-						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pts, frame.dts, frame->pkt_dts);
+						cellVdec.trace("Got picture (handle=0x%x, pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", handle, frame.pts, frame->pts, frame.dts, frame->pkt_dts);
 
 						{
 							std::lock_guard lock{mutex};
@@ -539,7 +541,7 @@ struct vdec_context final
 
 							if (elapsed++ >= 5000) // 5 seconds
 							{
-								cellVdec.error("Video au decode has been waiting for a consumer for 5 seconds.");
+								cellVdec.error("Video au decode has been waiting for a consumer for 5 seconds. (handle=0x%x, queue_size=%d)", handle, out_queue.size());
 								elapsed = 0;
 							}
 						}
@@ -551,11 +553,11 @@ struct vdec_context final
 					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
 					lv2_obj::sleep(ppu);
 				}
-				else cellVdec.error("AU decoding: abort_decode = %d", abort_decode.load());
+				else cellVdec.error("AU decoding: abort_decode = %d (handle=0x%x)", abort_decode.load(), handle);
 
 				au_count--;
 
-				cellVdec.trace("AU decoding: done");
+				cellVdec.trace("AU decoding: done (handle=0x%x)", handle);
 				break;
 			}
 			case vdec_cmd_type::framerate:
@@ -570,7 +572,7 @@ struct vdec_context final
 				break;
 			}
 			default:
-				fmt::throw_exception("Unknown vdec_cmd_type (%d)", static_cast<u32>(cmd->type));
+				fmt::throw_exception("Unknown vdec_cmd_type (handle=0x%x, type=%d)", handle, static_cast<u32>(cmd->type));
 				break;
 			}
 
@@ -817,6 +819,10 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 
 	// Create decoder context
 	const u32 vid = idm::make<vdec_context>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+
+	auto vdec = idm::get<vdec_context>(vid);
+	ensure(vdec);
+	vdec->handle = vid;
 
 	// Run thread
 	vm::var<u64> _tid;
