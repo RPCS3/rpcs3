@@ -113,26 +113,27 @@ enum class vdec_cmd_type : u32
 
 struct vdec_cmd
 {
-	explicit vdec_cmd(vdec_cmd_type _type)
-		: type(_type)
+	explicit vdec_cmd(vdec_cmd_type _type, u64 _id)
+		: type(_type), id(_id)
 	{
 		ensure(_type != vdec_cmd_type::au_decode);
 		ensure(_type != vdec_cmd_type::framerate);
 	}
 
-	explicit vdec_cmd(vdec_cmd_type _type, s32 _mode, CellVdecAuInfo _au)
-		: type(_type), mode(_mode), au(std::move(_au))
+	explicit vdec_cmd(vdec_cmd_type _type, u64 _id, s32 _mode, CellVdecAuInfo _au)
+		: type(_type), id(_id), mode(_mode), au(std::move(_au))
 	{
 		ensure(_type == vdec_cmd_type::au_decode);
 	}
 
-	explicit vdec_cmd(vdec_cmd_type _type, s32 _framerate)
-		: type(_type), framerate(_framerate)
+	explicit vdec_cmd(vdec_cmd_type _type, u64 _id, s32 _framerate)
+		: type(_type), id(_id), framerate(_framerate)
 	{
 		ensure(_type == vdec_cmd_type::framerate);
 	}
 
 	vdec_cmd_type type{};
+	u64 id{};
 	s32 mode{};
 	s32 framerate{};
 	CellVdecAuInfo au{};
@@ -148,6 +149,8 @@ struct vdec_frame
 			av_frame_free(&data);
 		}
 	};
+
+	u64 cmd_id{};
 
 	std::unique_ptr<AVFrame, frame_dtor> avf;
 	u64 dts{};
@@ -171,6 +174,7 @@ struct vdec_context final
 
 	u32 handle = 0;
 
+	atomic_t<u64> next_cmd_id = 0;
 	atomic_t<bool> abort_decode = false; // Used for thread interaction
 	atomic_t<bool> is_running = false;   // Used for thread interaction
 	atomic_t<sequence_state> seq_state = sequence_state::closed;
@@ -314,11 +318,11 @@ struct vdec_context final
 
 				if (seq_state == sequence_state::resetting)
 				{
-					cellVdec.trace("Reset sequence... (handle=0x%x)", handle);
+					cellVdec.trace("Reset sequence... (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 				}
 				else
 				{
-					cellVdec.trace("Start sequence... (handle=0x%x)", handle);
+					cellVdec.trace("Start sequence... (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 				}
 
 				avcodec_flush_buffers(ctx);
@@ -337,13 +341,14 @@ struct vdec_context final
 			}
 			case vdec_cmd_type::end_sequence:
 			{
-				cellVdec.trace("End sequence... (handle=0x%x)", handle);
+				cellVdec.trace("End sequence... (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 
 				{
 					std::lock_guard lock{mutex};
 					seq_state = sequence_state::dormant;
 				}
 
+				cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_SEQDONE (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 				cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_SEQDONE, CELL_OK, cb_arg);
 				lv2_obj::sleep(ppu);
 				break;
@@ -385,22 +390,23 @@ struct vdec_context final
 
 				if (!abort_decode)
 				{
-					cellVdec.trace("AU decoding: handle=0x%x, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, au_size, au_pts, au_dts, au_usrd);
+					cellVdec.trace("AU decoding: handle=0x%x, cmd_id=%d, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, cmd->id, au_size, au_pts, au_dts, au_usrd);
 
 					if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
 					{
-						fmt::throw_exception("AU queuing error (handle=0x%x, error=0x%x): %s", handle, ret, utils::av_error_to_string(ret));
+						fmt::throw_exception("AU queuing error (handle=0x%x, cmd_id=%d, error=0x%x): %s", handle, cmd->id, ret, utils::av_error_to_string(ret));
 					}
 
 					while (!abort_decode)
 					{
 						// Keep receiving frames
 						vdec_frame frame;
+						frame.cmd_id = cmd->id;
 						frame.avf.reset(av_frame_alloc());
 
 						if (!frame.avf)
 						{
-							fmt::throw_exception("av_frame_alloc() failed (handle=0x%x)", handle);
+							fmt::throw_exception("av_frame_alloc() failed (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 						}
 
 						if (int ret = avcodec_receive_frame(ctx, frame.avf.get()); ret < 0)
@@ -410,18 +416,18 @@ struct vdec_context final
 								break;
 							}
 
-							fmt::throw_exception("AU decoding error (handle=0x%x, error=0x%x): %s", handle, ret, utils::av_error_to_string(ret));
+							fmt::throw_exception("AU decoding error (handle=0x%x, cmd_id=%d, error=0x%x): %s", handle, cmd->id, ret, utils::av_error_to_string(ret));
 						}
 
 						if (frame->interlaced_frame)
 						{
 							// NPEB01838, NPUB31260
-							cellVdec.todo("Interlaced frames not supported (handle=0x%x, interlaced_frame=0x%x)", handle, frame->interlaced_frame);
+							cellVdec.todo("Interlaced frames not supported (handle=0x%x, cmd_id=%d, interlaced_frame=0x%x)", handle, cmd->id, frame->interlaced_frame);
 						}
 
 						if (frame->repeat_pict)
 						{
-							fmt::throw_exception("Repeated frames not supported (handle=0x%x, repear_pict=0x%x)", handle, frame->repeat_pict);
+							fmt::throw_exception("Repeated frames not supported (handle=0x%x, cmd_id=%d, repear_pict=0x%x)", handle, cmd->id, frame->repeat_pict);
 						}
 
 						if (frame->pts != smin)
@@ -455,7 +461,7 @@ struct vdec_context final
 							case CELL_VDEC_FRC_60: amend = 90000 / 60; break;
 							default:
 							{
-								fmt::throw_exception("Invalid frame rate code set (handle=0x%x, frc=0x%x)", handle, frc_set);
+								fmt::throw_exception("Invalid frame rate code set (handle=0x%x, cmd_id=%d, frc=0x%x)", handle, cmd->id, frc_set);
 							}
 							}
 
@@ -467,7 +473,7 @@ struct vdec_context final
 						{
 							if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
 							{
-								cellVdec.error("time_base.num is 0 (handle=0x%x, %d/%d, tpf=%d framerate=%d/%d)", handle, ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
+								cellVdec.error("time_base.num is 0 (handle=0x%x, cmd_id=%d, %d/%d, tpf=%d framerate=%d/%d)", handle, cmd->id, ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
 								log_time_base = ctx->time_base;
 							}
 
@@ -503,7 +509,7 @@ struct vdec_context final
 								if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
 								{
 									// 1/1000 usually means that the time stamps are written in 1ms units and that the frame rate may vary.
-									cellVdec.error("Unsupported time_base (handle=0x%x, %d/%d, tpf=%d framerate=%d/%d)", handle, ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
+									cellVdec.error("Unsupported time_base (handle=0x%x, cmd_id=%d, %d/%d, tpf=%d framerate=%d/%d)", handle, cmd->id, ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
 									log_time_base = ctx->time_base;
 								}
 
@@ -516,13 +522,14 @@ struct vdec_context final
 							next_dts += amend;
 						}
 
-						cellVdec.trace("Got picture (handle=0x%x, pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", handle, frame.pts, frame->pts, frame.dts, frame->pkt_dts);
+						cellVdec.trace("Got picture (handle=0x%x, cmd_id=%d, pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", handle, cmd->id, frame.pts, frame->pts, frame.dts, frame->pkt_dts);
 
 						{
 							std::lock_guard lock{mutex};
 							out_queue.push_back(std::move(frame));
 						}
 
+						cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_PICOUT (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 						cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
 						lv2_obj::sleep(ppu);
 
@@ -543,7 +550,7 @@ struct vdec_context final
 
 							if (elapsed++ >= 5000) // 5 seconds
 							{
-								cellVdec.error("Video au decode has been waiting for a consumer for 5 seconds. (handle=0x%x, queue_size=%d)", handle, out_queue.size());
+								cellVdec.error("Video au decode has been waiting for a consumer for 5 seconds. (handle=0x%x, cmd_id=%d, queue_size=%d)", handle, cmd->id, out_queue.size());
 								elapsed = 0;
 							}
 						}
@@ -552,12 +559,13 @@ struct vdec_context final
 
 				if (thread_ctrl::state() != thread_state::aborting && !abort_decode)
 				{
+					cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
 					lv2_obj::sleep(ppu);
 				}
 				else
 				{
-					cellVdec.warning("AU decoding: aborted (handle=0x%x, abort_decode=%d)", handle, abort_decode.load());
+					cellVdec.warning("AU decoding: aborted (handle=0x%x, cmd_id=%d, abort_decode=%d)", handle, cmd->id, abort_decode.load());
 				}
 
 				if (au_count > 0)
@@ -565,7 +573,7 @@ struct vdec_context final
 					--au_count;
 				}
 
-				cellVdec.trace("AU decoding: done (handle=0x%x)", handle);
+				cellVdec.trace("AU decoding: done (handle=0x%x, cmd_id=%d)", handle, cmd->id);
 				break;
 			}
 			case vdec_cmd_type::framerate:
@@ -580,7 +588,7 @@ struct vdec_context final
 				break;
 			}
 			default:
-				fmt::throw_exception("Unknown vdec_cmd_type (handle=0x%x, type=%d)", handle, static_cast<u32>(cmd->type));
+				fmt::throw_exception("Unknown vdec_cmd_type (handle=0x%x, cmd_id=%d, type=%d)", handle, cmd->id, static_cast<u32>(cmd->type));
 				break;
 			}
 
@@ -886,9 +894,12 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 		}
 	}
 
+	const u64 cmd_id = vdec->next_cmd_id++;
+	cellVdec.trace("Adding close cmd (handle=0x%x, cmd_id=%d)", handle, cmd_id);
+
 	lv2_obj::sleep(ppu);
 	vdec->abort_decode = true;
-	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::close));
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::close, cmd_id));
 
 	while (!vdec->ppu_tid)
 	{
@@ -942,9 +953,12 @@ error_code cellVdecStartSeq(u32 handle)
 		}
 	}
 
+	const u64 cmd_id = vdec->next_cmd_id++;
+	cellVdec.trace("Adding start cmd (handle=0x%x, cmd_id=%d)", handle, cmd_id);
+
 	vdec->abort_decode = true;
 	vdec->is_running = false;
-	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::start_sequence));
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::start_sequence, cmd_id));
 
 	// Wait until the thread is ready
 	u32 elapsed = 0;
@@ -999,7 +1013,10 @@ error_code cellVdecEndSeq(u32 handle)
 		vdec->seq_state = sequence_state::ending;
 	}
 
-	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::end_sequence));
+	const u64 cmd_id = vdec->next_cmd_id++;
+	cellVdec.trace("Adding end cmd (handle=0x%x, cmd_id=%d)", handle, cmd_id);
+
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::end_sequence, cmd_id));
 
 	return CELL_OK;
 }
@@ -1041,8 +1058,11 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 		return CELL_VDEC_ERROR_BUSY;
 	}
 
+	const u64 cmd_id = vdec->next_cmd_id++;
+	cellVdec.trace("Adding decode cmd (handle=0x%x, cmd_id=%d)", handle, cmd_id);
+
 	// TODO: check info
-	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::au_decode, mode, *auInfo));
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::au_decode, cmd_id, mode, *auInfo));
 	return CELL_OK;
 }
 
@@ -1091,8 +1111,11 @@ error_code cellVdecDecodeAuEx2(u32 handle, CellVdecDecodeMode mode, vm::cptr<Cel
 	au_info.userData = auInfo->userData;
 	au_info.codecSpecificData = auInfo->codecSpecificData;
 
+	const u64 cmd_id = vdec->next_cmd_id++;
+	cellVdec.trace("Adding decode cmd (handle=0x%x, cmd_id=%d)", handle, cmd_id);
+
 	// TODO: check info
-	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::au_decode, mode, au_info));
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::au_decode, cmd_id, mode, au_info));
 	return CELL_OK;
 }
 
@@ -1171,7 +1194,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 		case CELL_VDEC_PICFMT_YUV420_PLANAR: out_f = AV_PIX_FMT_YUV420P; break;
 		default:
 		{
-			fmt::throw_exception("cellVdecGetPictureExt: Unknown formatType (%d)", type);
+			fmt::throw_exception("cellVdecGetPictureExt: Unknown formatType (handle=0x%x, cmd_id=%d, type=%d)", handle, frame.cmd_id, type);
 		}
 		}
 
@@ -1187,7 +1210,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 		switch (frame->format)
 		{
 		case AV_PIX_FMT_YUVJ420P:
-			cellVdec.error("cellVdecGetPictureExt: experimental AVPixelFormat (%d). This may cause suboptimal video quality.", frame->format);
+			cellVdec.error("cellVdecGetPictureExt: experimental AVPixelFormat (handle=0x%x, cmd_id=%d, format=%d). This may cause suboptimal video quality.", handle, frame.cmd_id, frame->format);
 			[[fallthrough]];
 		case AV_PIX_FMT_YUV420P:
 			in_f = alpha_plane ? AV_PIX_FMT_YUVA420P : static_cast<AVPixelFormat>(frame->format);
@@ -1196,7 +1219,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 			fmt::throw_exception("cellVdecGetPictureExt: Unknown frame format (%d)", frame->format);
 		}
 
-		cellVdec.trace("cellVdecGetPictureExt: handle=0x%x, w=%d, h=%d, frameFormat=%d, formatType=%d, in_f=%d, out_f=%d, alpha_plane=%d, alpha=%d, colorMatrixType=%d", handle, w, h, frame->format, format->formatType, +in_f, +out_f, !!alpha_plane, format->alpha, format->colorMatrixType);
+		cellVdec.trace("cellVdecGetPictureExt: handle=0x%x, cmd_id=%d, w=%d, h=%d, frameFormat=%d, formatType=%d, in_f=%d, out_f=%d, alpha_plane=%d, alpha=%d, colorMatrixType=%d", handle, frame.cmd_id, w, h, frame->format, format->formatType, +in_f, +out_f, !!alpha_plane, format->alpha, format->colorMatrixType);
 
 		vdec->sws = sws_getCachedContext(vdec->sws, w, h, in_f, w, h, out_f, SWS_POINT, nullptr, nullptr, nullptr);
 
@@ -1213,7 +1236,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 
 			if (const int ret = av_image_fill_linesizes(out_line, out_f, w); ret < 0)
 			{
-				fmt::throw_exception("cellVdecGetPictureExt: av_image_fill_linesizes failed (ret=0x%x): %s", ret, utils::av_error_to_string(ret));
+				fmt::throw_exception("cellVdecGetPictureExt: av_image_fill_linesizes failed (handle=0x%x, cmd_id=%d, ret=0x%x): %s", handle, frame.cmd_id, ret, utils::av_error_to_string(ret));
 			}
 		}
 
@@ -1279,6 +1302,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	};
 
 	AVFrame* frame{};
+	u64 cmd_id{};
 	u64 pts;
 	u64 dts;
 	u64 usrd;
@@ -1294,6 +1318,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 			{
 				picture.pic_item_received = true;
 				frame = picture.avf.get();
+				cmd_id = picture.cmd_id;
 				pts = picture.pts;
 				dts = picture.dts;
 				usrd = picture.userdata;
@@ -1358,7 +1383,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		default:
 		{
 			avc->pictureType[0] = CELL_VDEC_AVC_PCT_UNKNOWN;
-			cellVdec.error("cellVdecGetPicItem(AVC): unknown pict_type value (0x%x)", pct);
+			cellVdec.error("cellVdecGetPicItem(AVC): unknown pict_type value (handle=0x%x, cmd_id=%d, pct=0x%x)", handle, cmd_id, pct);
 			break;
 		}
 		}
@@ -1392,7 +1417,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		case CELL_VDEC_FRC_50: avc->frameRateCode = CELL_VDEC_AVC_FRC_50; break;
 		case CELL_VDEC_FRC_60000DIV1001: avc->frameRateCode = CELL_VDEC_AVC_FRC_60000DIV1001; break;
 		case CELL_VDEC_FRC_60: avc->frameRateCode = CELL_VDEC_AVC_FRC_60; break;
-		default: cellVdec.error("cellVdecGetPicItem(AVC): unknown frc value (0x%x)", frc);
+		default: cellVdec.error("cellVdecGetPicItem(AVC): unknown frc value (handle=0x%x, cmd_id=%d, frc=0x%x)", handle, cmd_id, frc);
 		}
 
 		avc->fixed_frame_rate_flag = true;
@@ -1413,7 +1438,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		case AV_PICTURE_TYPE_I: dvx->pictureType = CELL_VDEC_DIVX_VCT_I; break;
 		case AV_PICTURE_TYPE_P: dvx->pictureType = CELL_VDEC_DIVX_VCT_P; break;
 		case AV_PICTURE_TYPE_B: dvx->pictureType = CELL_VDEC_DIVX_VCT_B; break;
-		default: cellVdec.error("cellVdecGetPicItem(DivX): unknown pict_type value (0x%x)", pct);
+		default: cellVdec.error("cellVdecGetPicItem(DivX): unknown pict_type value (handle=0x%x, cmd_id=%d, pct=0x%x)", handle, cmd_id, pct);
 		}
 
 		dvx->horizontalSize = frame->width;
@@ -1437,7 +1462,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		case CELL_VDEC_FRC_50: dvx->frameRateCode = CELL_VDEC_DIVX_FRC_50; break;
 		case CELL_VDEC_FRC_60000DIV1001: dvx->frameRateCode = CELL_VDEC_DIVX_FRC_60000DIV1001; break;
 		case CELL_VDEC_FRC_60: dvx->frameRateCode = CELL_VDEC_DIVX_FRC_60; break;
-		default: cellVdec.error("cellVdecGetPicItem(DivX): unknown frc value (0x%x)", frc);
+		default: cellVdec.error("cellVdecGetPicItem(DivX): unknown frc value (handle=0x%x, cmd_id=%d, frc=0x%x)", handle, cmd_id, frc);
 		}
 	}
 	else if (vdec->type == CELL_VDEC_CODEC_TYPE_MPEG2)
@@ -1459,7 +1484,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		case CELL_VDEC_FRC_50: mp2->frame_rate_code = CELL_VDEC_MPEG2_FRC_50; break;
 		case CELL_VDEC_FRC_60000DIV1001: mp2->frame_rate_code = CELL_VDEC_MPEG2_FRC_60000DIV1001; break;
 		case CELL_VDEC_FRC_60: mp2->frame_rate_code = CELL_VDEC_MPEG2_FRC_60; break;
-		default: cellVdec.error("cellVdecGetPicItem(MPEG2): unknown frc value (0x%x)", frc);
+		default: cellVdec.error("cellVdecGetPicItem(MPEG2): unknown frc value (handle=0x%x, cmd_id=%d, frc=0x%x)", handle, cmd_id, frc);
 		}
 
 		mp2->progressive_sequence = true; // ???
@@ -1472,7 +1497,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		case AV_PICTURE_TYPE_I: mp2->picture_coding_type[0] = CELL_VDEC_MPEG2_PCT_I; break;
 		case AV_PICTURE_TYPE_P: mp2->picture_coding_type[0] = CELL_VDEC_MPEG2_PCT_P; break;
 		case AV_PICTURE_TYPE_B: mp2->picture_coding_type[0] = CELL_VDEC_MPEG2_PCT_B; break;
-		default: cellVdec.error("cellVdecGetPicItem(MPEG2): unknown pict_type value (0x%x)", pct);
+		default: cellVdec.error("cellVdecGetPicItem(MPEG2): unknown pict_type value (handle=0x%x, cmd_id=%d, pct=0x%x)", handle, cmd_id, pct);
 		}
 
 		mp2->picture_coding_type[1] = CELL_VDEC_MPEG2_PCT_FORBIDDEN; // ???
@@ -1505,7 +1530,10 @@ error_code cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frameRateCode)
 		return { CELL_VDEC_ERROR_SEQ, vdec->seq_state.load() };
 	}
 
-	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::framerate, frameRateCode & 0x87));
+	const u64 cmd_id = vdec->next_cmd_id++;
+	cellVdec.trace("Adding framerate cmd (handle=0x%x, cmd_id=%d)", handle, cmd_id);
+
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::framerate, cmd_id, frameRateCode & 0x87));
 	return CELL_OK;
 }
 
