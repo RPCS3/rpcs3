@@ -1120,7 +1120,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 
 	if (arg4 || format->unk0 || format->unk1)
 	{
-		fmt::throw_exception("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format->unk0, format->unk1);
+		fmt::throw_exception("cellVdecGetPictureExt: Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format->unk0, format->unk1);
 	}
 
 	vdec_frame frame;
@@ -1163,7 +1163,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 		case CELL_VDEC_PICFMT_YUV420_PLANAR: out_f = AV_PIX_FMT_YUV420P; break;
 		default:
 		{
-			fmt::throw_exception("Unknown formatType (%d)", type);
+			fmt::throw_exception("cellVdecGetPictureExt: Unknown formatType (%d)", type);
 		}
 		}
 
@@ -1179,16 +1179,16 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 		switch (frame->format)
 		{
 		case AV_PIX_FMT_YUVJ420P:
-			cellVdec.error("cellVdecGetPicture(): experimental AVPixelFormat (%d). This may cause suboptimal video quality.", frame->format);
+			cellVdec.error("cellVdecGetPictureExt: experimental AVPixelFormat (%d). This may cause suboptimal video quality.", frame->format);
 			[[fallthrough]];
 		case AV_PIX_FMT_YUV420P:
 			in_f = alpha_plane ? AV_PIX_FMT_YUVA420P : static_cast<AVPixelFormat>(frame->format);
 			break;
 		default:
-		{
-			fmt::throw_exception("Unknown format (%d)", frame->format);
+			fmt::throw_exception("cellVdecGetPictureExt: Unknown frame format (%d)", frame->format);
 		}
-		}
+
+		cellVdec.trace("cellVdecGetPictureExt: handle=0x%x, w=%d, h=%d, frameFormat=%d, formatType=%d, in_f=%d, out_f=%d, alpha_plane=%d, alpha=%d, colorMatrixType=%d", handle, w, h, frame->format, format->formatType, +in_f, +out_f, !!alpha_plane, format->alpha, format->colorMatrixType);
 
 		vdec->sws = sws_getCachedContext(vdec->sws, w, h, in_f, w, h, out_f, SWS_POINT, nullptr, nullptr, nullptr);
 
@@ -1205,7 +1205,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 
 			if (const int ret = av_image_fill_linesizes(out_line, out_f, w); ret < 0)
 			{
-				fmt::throw_exception("cellVdecGetPicture: av_image_fill_linesizes failed (ret=0x%x): %s", ret, utils::av_error_to_string(ret));
+				fmt::throw_exception("cellVdecGetPictureExt: av_image_fill_linesizes failed (ret=0x%x): %s", ret, utils::av_error_to_string(ret));
 			}
 		}
 
@@ -1218,7 +1218,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 		//int err = av_image_copy_to_buffer(outBuff.get_ptr(), buf_size, frame->data, frame->linesize, vdec->ctx->pix_fmt, frame->width, frame->height, 1);
 		//if (err < 0)
 		//{
-		//	cellVdec.fatal("cellVdecGetPicture: av_image_copy_to_buffer failed (err=0x%x)", err);
+		//	cellVdec.fatal("cellVdecGetPictureExt: av_image_copy_to_buffer failed (err=0x%x)", err);
 		//}
 	}
 
@@ -1347,7 +1347,12 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		case AV_PICTURE_TYPE_I: avc->pictureType[0] = CELL_VDEC_AVC_PCT_I; break;
 		case AV_PICTURE_TYPE_P: avc->pictureType[0] = CELL_VDEC_AVC_PCT_P; break;
 		case AV_PICTURE_TYPE_B: avc->pictureType[0] = CELL_VDEC_AVC_PCT_B; break;
-		default: cellVdec.error("cellVdecGetPicItem(AVC): unknown pict_type value (0x%x)", pct);
+		default:
+		{
+			avc->pictureType[0] = CELL_VDEC_AVC_PCT_UNKNOWN;
+			cellVdec.error("cellVdecGetPicItem(AVC): unknown pict_type value (0x%x)", pct);
+			break;
+		}
 		}
 
 		avc->pictureType[1] = CELL_VDEC_AVC_PCT_UNKNOWN; // ???
