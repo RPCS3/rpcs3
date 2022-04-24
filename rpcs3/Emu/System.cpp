@@ -1989,6 +1989,8 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 		}
 	}
 
+	ensure(fmt);
+
 	logs::channel* channel = &sys_log;
 	const char* func = "Unknown function";
 
