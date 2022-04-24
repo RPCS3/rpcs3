@@ -21,6 +21,7 @@ extern fs::file g_tty;
 extern atomic_t<s64> g_tty_size;
 extern std::array<std::deque<std::string>, 16> g_tty_input;
 extern std::mutex g_tty_mutex;
+extern bool g_log_all_errors;
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -292,6 +293,14 @@ void log_frame::CreateAndConnectActions()
 		m_stack_log = checked;
 	});
 
+	m_stack_act_err = new QAction(tr("Stack Cell Errors"), this);
+	m_stack_act_err->setCheckable(true);
+	connect(m_stack_act_err, &QAction::toggled, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::l_stack_err, checked);
+		g_log_all_errors = !checked;
+	});
+
 	m_show_prefix_act = new QAction(tr("Show Thread Prefix"), this);
 	m_show_prefix_act->setCheckable(true);
 	connect(m_show_prefix_act, &QAction::toggled, [this](bool checked)
@@ -324,6 +333,7 @@ void log_frame::CreateAndConnectActions()
 		menu->addActions(m_log_level_acts->actions());
 		menu->addSeparator();
 		menu->addAction(m_stack_act_log);
+		menu->addAction(m_stack_act_err);
 		menu->addAction(m_show_prefix_act);
 		menu->exec(m_log->viewport()->mapToGlobal(pos));
 	});
@@ -397,6 +407,7 @@ void log_frame::LoadSettings()
 	m_stack_tty = m_gui_settings->GetValue(gui::l_stack_tty).toBool();
 	m_stack_act_log->setChecked(m_stack_log);
 	m_stack_act_tty->setChecked(m_stack_tty);
+	m_stack_act_err->setChecked(!g_log_all_errors);
 
 	s_gui_listener.show_prefix = m_gui_settings->GetValue(gui::l_prefix).toBool();
 	m_show_prefix_act->setChecked(s_gui_listener.show_prefix);
