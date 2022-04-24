@@ -175,6 +175,24 @@ struct content_permission final
 	}
 };
 
+template<>
+void fmt_class_string<content_permission::check_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(content_permission::check_mode::not_set);
+			STR_CASE(content_permission::check_mode::game_data);
+			STR_CASE(content_permission::check_mode::patch);
+			STR_CASE(content_permission::check_mode::hdd_game);
+			STR_CASE(content_permission::check_mode::disc_game);
+		}
+
+		return unknown;
+	});
+}
+
 error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
 	cellGame.warning("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
@@ -200,7 +218,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		const auto cat = psf::get_string(sfo, "CATEGORY", "");
 		if (!psf::is_cat_hdd(cat))
 		{
-			return { CELL_GAMEDATA_ERROR_BROKEN, fmt::format("CATEGORY='%s'", cat) };
+			return { CELL_GAMEDATA_ERROR_BROKEN, "CATEGORY='%s'", cat };
 		}
 	}
 
@@ -618,7 +636,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		if (psf_error != psf::error::stream)
 		{
 			init.cancel();
-			return {CELL_GAME_ERROR_BROKEN, fmt::format("psf::error='%s', type='%d' CATEGORY='%s'", psf_error, type, cat)};
+			return {CELL_GAME_ERROR_BROKEN, "psf::error='%s', type='%d' CATEGORY='%s'", psf_error, type, cat};
 		}
 	}
 
@@ -1099,10 +1117,10 @@ public:
 		switch (mode)
 		{
 		case content_permission::check_mode::game_data:
+		case content_permission::check_mode::patch: // TODO: it's unclear if patch mode should also support these flags
 		{
 			return !!(flags & (is_setter ? strkey_flag::set_game_data : strkey_flag::get_game_data));
 		}
-		case content_permission::check_mode::patch:
 		case content_permission::check_mode::hdd_game:
 		case content_permission::check_mode::disc_game:
 		{
@@ -1185,7 +1203,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 	if (!key.is_supported(false, perm.mode))
 	{
 		// TODO: this error is possibly only returned during debug mode
-		return CELL_GAME_ERROR_NOTSUPPORTED;
+		return { CELL_GAME_ERROR_NOTSUPPORTED, "id %d is not supported in the current check mode: %s", id, perm.mode.load() };
 	}
 
 	const auto value = psf::get_string(perm.sfo, key.name);
