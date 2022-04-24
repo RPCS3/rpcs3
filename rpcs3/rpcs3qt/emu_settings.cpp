@@ -1167,15 +1167,6 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case vk_gpu_scheduler_mode::fast: return tr("Fast");
 		}
 		break;
-	case emu_settings_type::MetalSemaphore:
-		switch (static_cast<vk_metal_semaphore_mode>(index))
-		{
-		case vk_metal_semaphore_mode::software: return tr("Software emulation");
-		case vk_metal_semaphore_mode::mtlevent_preferred: return tr("MTLEvent preferred");
-		case vk_metal_semaphore_mode::mtlevent: return tr("MTLEvent");
-		case vk_metal_semaphore_mode::mtlfence: return tr("MTLFence");
-		}
-		break;
 	default:
 		break;
 	}

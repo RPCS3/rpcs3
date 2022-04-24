@@ -1,5 +1,5 @@
 /* MtCoder.c -- Multi-thread Coder
-2018-07-04 : Igor Pavlov : Public domain */
+2021-12-21 : Igor Pavlov : Public domain */
 
 #include "Precomp.h"
 
@@ -7,7 +7,7 @@
 
 #ifndef _7ZIP_ST
 
-SRes MtProgressThunk_Progress(const ICompressProgress *pp, UInt64 inSize, UInt64 outSize)
+static SRes MtProgressThunk_Progress(const ICompressProgress *pp, UInt64 inSize, UInt64 outSize)
 {
   CMtProgressThunk *thunk = CONTAINER_FROM_VTBL(pp, CMtProgressThunk, vt);
   UInt64 inSize2 = 0;
@@ -44,7 +44,7 @@ static WRes ArEvent_OptCreate_And_Reset(CEvent *p)
 }
 
 
-static THREAD_FUNC_RET_TYPE THREAD_FUNC_CALL_TYPE ThreadFunc(void *pp);
+static THREAD_FUNC_DECL ThreadFunc(void *pp);
 
 
 static SRes MtCoderThread_CreateAndStart(CMtCoderThread *t)
@@ -70,8 +70,7 @@ static void MtCoderThread_Destruct(CMtCoderThread *t)
   {
     t->stop = 1;
     Event_Set(&t->startEvent);
-    Thread_Wait(&t->thread);
-    Thread_Close(&t->thread);
+    Thread_Wait_Close(&t->thread);
   }
 
   Event_Close(&t->startEvent);
@@ -336,13 +335,13 @@ static SRes ThreadFunc2(CMtCoderThread *t)
 }
 
 
-static THREAD_FUNC_RET_TYPE THREAD_FUNC_CALL_TYPE ThreadFunc(void *pp)
+static THREAD_FUNC_DECL ThreadFunc(void *pp)
 {
   CMtCoderThread *t = (CMtCoderThread *)pp;
   for (;;)
   {
     if (Event_Wait(&t->startEvent) != 0)
-      return SZ_ERROR_THREAD;
+      return (THREAD_FUNC_RET_TYPE)SZ_ERROR_THREAD;
     if (t->stop)
       return 0;
     {
@@ -358,7 +357,7 @@ static THREAD_FUNC_RET_TYPE THREAD_FUNC_CALL_TYPE ThreadFunc(void *pp)
         unsigned numFinished = (unsigned)InterlockedIncrement(&mtc->numFinishedThreads);
         if (numFinished == mtc->numStartedThreads)
           if (Event_Set(&mtc->finishedEvent) != 0)
-            return SZ_ERROR_THREAD;
+            return (THREAD_FUNC_RET_TYPE)SZ_ERROR_THREAD;
       }
       #endif
     }
@@ -496,12 +495,7 @@ SRes MtCoder_Code(CMtCoder *p)
 
   {
     RINOK_THREAD(ArEvent_OptCreate_And_Reset(&p->readEvent));
-
-    if (Semaphore_IsCreated(&p->blocksSemaphore))
-    {
-      RINOK_THREAD(Semaphore_Close(&p->blocksSemaphore));
-    }
-    RINOK_THREAD(Semaphore_Create(&p->blocksSemaphore, numBlocksMax, numBlocksMax));
+    RINOK_THREAD(Semaphore_OptCreateInit(&p->blocksSemaphore, numBlocksMax, numBlocksMax));
   }
 
   for (i = 0; i < MTCODER__BLOCKS_MAX - 1; i++)
