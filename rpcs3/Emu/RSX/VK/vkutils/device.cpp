@@ -141,14 +141,15 @@ namespace vk
 
 			CHECK_RESULT_EX(_vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not get MoltenVK configuration."));
 
-			mvk_config.semaphoreUseMTLEvent = (g_cfg.video.vk.metal_semaphore == vk_metal_semaphore_mode::mtlevent_preferred || g_cfg.video.vk.metal_semaphore == vk_metal_semaphore_mode::mtlevent);
-			mvk_config.semaphoreUseMTLFence = (g_cfg.video.vk.metal_semaphore == vk_metal_semaphore_mode::mtlevent_preferred || g_cfg.video.vk.metal_semaphore == vk_metal_semaphore_mode::mtlfence);
+			mvk_config.resumeLostDevice = true;
+			mvk_config.semaphoreUseMTLEvent = mvk_config.semaphoreUseMTLFence = !(g_cfg.video.mvk_software_vksemaphore.get());
+			mvk_config.fastMathEnabled = !(g_cfg.video.disable_msl_fast_math.get());
 
 			CHECK_RESULT_EX(_vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not set MoltenVK configuration."));
 		}
 		else
 		{
-			rsx_log.error("Cannot set Metal Semaphore because VK_MVK_moltenvk is not supported.\nIf you're using MoltenVK through libvulkan, manually set the MVK_ALLOW_METAL_EVENTS and/or MVK_ALLOW_METAL_FENCES environment variables instead.");
+			rsx_log.error("Cannot set the MoltenVK configuration because VK_MVK_moltenvk is not supported.\nIf you're using MoltenVK through libvulkan, please manually set the appropriate environment variables instead.");
 		}
 #endif
 

@@ -521,16 +521,13 @@ public:
 					//ctx = fmt->streams[0]->codec; // TODO: check data
 
 					opts = nullptr;
-					err = av_dict_set(&opts, "refcounted_frames", "1", 0);
-					if (err < 0)
-					{
-						fmt::throw_exception("av_dict_set(refcounted_frames, 1) failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
-					}
+
 					{
 						std::lock_guard lock(g_mutex_avcodec_open2);
 						// not multithread-safe (???)
 						err = avcodec_open2(ctx, codec, &opts);
 					}
+
 					if (err || opts)
 					{
 						std::string dict_content;

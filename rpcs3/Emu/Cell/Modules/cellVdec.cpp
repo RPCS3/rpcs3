@@ -242,17 +242,11 @@ struct vdec_context final
 			fmt::throw_exception("avcodec_alloc_context3() failed (type=0x%x)", type);
 		}
 
-		AVDictionary* opts{};
-		int err = av_dict_set(&opts, "refcounted_frames", "1", 0);
-		if (err < 0)
-		{
-			avcodec_free_context(&ctx);
-			fmt::throw_exception("av_dict_set(refcounted_frames, 1) failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
-		}
+		AVDictionary* opts = nullptr;
 
 		std::lock_guard lock(g_mutex_avcodec_open2);
 
-		err = avcodec_open2(ctx, codec, &opts);
+		int err = avcodec_open2(ctx, codec, &opts);
 		if (err || opts)
 		{
 			avcodec_free_context(&ctx);

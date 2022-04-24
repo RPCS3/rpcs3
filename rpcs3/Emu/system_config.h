@@ -158,6 +158,8 @@ struct cfg_root : cfg::node
 		cfg::_bool vblank_ntsc{ this, "Vblank NTSC Fixup", false, true };
 		cfg::_bool decr_memory_layout{ this, "DECR memory layout", false}; // Force enable increased allowed main memory range as DECR console
 		cfg::_bool host_label_synchronization{ this, "Allow Host GPU Labels", false };
+		cfg::_bool disable_msl_fast_math{ this, "Disable MSL Fast Math", false };
+		cfg::_bool mvk_software_vksemaphore{ this, "Software VkSemaphore", false };
 
 		struct node_vk : cfg::node
 		{
@@ -171,7 +173,6 @@ struct cfg_root : cfg::node
 			cfg::_bool fsr_upscaling{ this, "Enable FidelityFX Super Resolution Upscaling", false, true };
 			cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
-			cfg::_enum<vk_metal_semaphore_mode> metal_semaphore{ this, "Metal Semaphore", vk_metal_semaphore_mode::mtlevent_preferred };
 
 		} vk{ this };
 

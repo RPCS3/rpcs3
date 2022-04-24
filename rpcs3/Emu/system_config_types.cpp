@@ -545,23 +545,6 @@ void fmt_class_string<vk_gpu_scheduler_mode>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<vk_metal_semaphore_mode>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](vk_metal_semaphore_mode value)
-	{
-		switch (value)
-		{
-		case vk_metal_semaphore_mode::software: return "Software emulation";
-		case vk_metal_semaphore_mode::mtlevent_preferred: return "MTLEvent preferred";
-		case vk_metal_semaphore_mode::mtlevent: return "MTLEvent";
-		case vk_metal_semaphore_mode::mtlfence: return "MTLFence";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
 void fmt_class_string<thread_scheduler_mode>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](thread_scheduler_mode value)
