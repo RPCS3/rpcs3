@@ -150,9 +150,9 @@ namespace glsl
 			case COMPARE::SLE:
 				return fmt::format("CMP_FIXUP(%s) <= CMP_FIXUP(%s)", Op0, Op1);
 			case COMPARE::SLT:
-				fmt::format("CMP_FIXUP(%s) < CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("CMP_FIXUP(%s) < CMP_FIXUP(%s)", Op0, Op1);
 			case COMPARE::SNE:
-				return Op0 + " != " + Op1;
+				return fmt::format("CMP_FIXUP(%s) != CMP_FIXUP(%s)", Op0, Op1);
 			}
 		}
 		else
