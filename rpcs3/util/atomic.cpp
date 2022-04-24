@@ -1335,13 +1335,20 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u1
 	u32 count = 0;
 
 	// Array itself.
-	u32 cond_ids[max_threads * max_distance + 128];
+	u32 cond_ids[128];
 
 	root_info::slot_search(iptr, mask, [&](u32 cond_id)
 	{
+		if (count >= 128)
+		{
+			// Unusual big amount of sema: fallback to notify_one alg
+			alert_sema(cond_id, size, mask);
+			return false;
+		}
+
 		u32 res = alert_sema<true>(cond_id, size, mask);
 
-		if (res && ~res <= u16{umax})
+		if (~res <= u16{umax})
 		{
 			// Add to the end of the "stack"
 			*(std::end(cond_ids) - ++count) = ~res;
