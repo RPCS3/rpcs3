@@ -679,7 +679,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	const auto install_filetype = [&installed_rap_and_edat_count, &file_paths](const std::string extension)
 	{
 		const QString pattern = QString(".*\\.%1").arg(QString::fromStdString(extension));
-		for (const auto& file : file_paths.filter(QRegExp(pattern, Qt::CaseInsensitive)))
+		for (const auto& file : file_paths.filter(QRegularExpression(pattern, QRegularExpression::PatternOption::CaseInsensitiveOption)))
 		{
 			const QFileInfo file_info(file);
 			const std::string filename = sstr(file_info.fileName());
@@ -706,7 +706,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	}
 
 	// Find remaining package files
-	file_paths = file_paths.filter(QRegExp(".*\\.pkg", Qt::CaseInsensitive));
+	file_paths = file_paths.filter(QRegularExpression(".*\\.pkg", QRegularExpression::PatternOption::CaseInsensitiveOption));
 
 	if (!file_paths.isEmpty())
 	{
@@ -1312,6 +1312,9 @@ void main_window::DecryptSPRXLibraries()
 		}
 	}
 
+	// Try to use the key that has been for the current running ELF
+	klics.insert(klics.end(), Emu.klic.begin(), Emu.klic.end());
+
 	for (const QString& _module : modules)
 	{
 		const std::string old_path = sstr(_module);
@@ -1415,7 +1418,7 @@ void main_window::DecryptSPRXLibraries()
 				dlg.set_input_font(mono, true, '0');
 				dlg.set_clear_button_enabled(false);
 				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-				dlg.set_validator(new QRegExpValidator(QRegExp("^[a-fA-F0-9]*$"))); // HEX only
+				dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[a-fA-F0-9]*$"))); // HEX only
 
 				connect(&dlg, &input_dialog::text_changed, &dlg, [&dlg](const QString& text)
 				{
@@ -2882,8 +2885,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 	for (auto&& url : list) // check each file in url list for valid type
 	{
 		const QString path = url.toLocalFile(); // convert url to filepath
-
-		const QFileInfo info = path;
+		const QFileInfo info(path);
 
 		// check for directories first, only valid if all other paths led to directories until now.
 		if (info.isDir())

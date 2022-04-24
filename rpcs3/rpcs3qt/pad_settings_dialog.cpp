@@ -1694,7 +1694,12 @@ bool pad_settings_dialog::GetIsLddPad(u32 index) const
 		std::lock_guard lock(pad::g_pad_mutex);
 		if (const auto handler = pad::get_current_handler(true))
 		{
-			return handler->GetPads().at(index)->ldd;
+			ensure(index < handler->GetPads().size());
+
+			if (const std::shared_ptr<Pad> pad = handler->GetPads().at(index))
+			{
+				return pad->ldd;
+			}
 		}
 	}
 

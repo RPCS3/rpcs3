@@ -10,6 +10,8 @@
 
 namespace utils
 {
+	std::string av_error_to_string(int error);
+
 	struct media_info
 	{
 		std::string path;

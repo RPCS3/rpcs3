@@ -147,9 +147,6 @@
     <ClCompile Include="curl\lib\hostasyn.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\hostcheck.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\hostip.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -228,16 +225,7 @@
     <ClCompile Include="curl\lib\netrc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\non-ascii.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\nonblock.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="curl\lib\nwlib.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="curl\lib\nwos.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\openldap.c">
@@ -354,9 +342,6 @@
     <ClCompile Include="curl\lib\wildcard.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\x509asn1.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\vauth\cleartext.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -423,9 +408,6 @@
     <ClCompile Include="curl\lib\vtls\mbedtls_threadlock.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\vtls\mesalink.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\vtls\nss.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -481,6 +463,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\vauth\gsasl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\h2h3.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vtls\hostcheck.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vtls\x509asn1.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -701,9 +692,6 @@
     <ClInclude Include="curl\lib\hash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\hostcheck.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\hostip.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -756,9 +744,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\netrc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\non-ascii.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\nonblock.h">
@@ -881,9 +866,6 @@
     <ClInclude Include="curl\lib\wildcard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\x509asn1.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\vauth\digest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -918,9 +900,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vtls\mbedtls_threadlock.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\vtls\mesalink.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vtls\nssg.h">
@@ -975,6 +954,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vtls\rustls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\h2h3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vtls\hostcheck.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vtls\x509asn1.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
