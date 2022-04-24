@@ -52,6 +52,8 @@ LOG_CHANNEL(sys_log, "SYS");
 // Preallocate 32 MiB
 stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
+bool g_log_all_errors = false;
+
 bool g_use_rtm = false;
 u64 g_rtm_tx_limit1 = 0;
 u64 g_rtm_tx_limit2 = 0;
@@ -1976,6 +1978,13 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 		if (!fmt)
 		{
 			// Report and clean error state
+
+			if (g_log_all_errors) [[unlikely]]
+			{
+				g_tls_error_stats.clear();
+				return 0;
+			}
+
 			for (auto&& pair : g_tls_error_stats)
 			{
 				if (pair.second > 3)
@@ -2013,11 +2022,19 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 	fmt::raw_append(g_tls_error_str, fmt, sup, args);
 
 	// Update stats and check log threshold
-	const auto stat = ++g_tls_error_stats[g_tls_error_str];
 
-	if (stat <= 3)
+	if (g_log_all_errors) [[unlikely]]
 	{
-		channel->error("%s [%u]", g_tls_error_str, stat);
+		channel->error("%s", g_tls_error_str);
+	}
+	else
+	{
+		const auto stat = ++g_tls_error_stats[g_tls_error_str];
+
+		if (stat <= 3)
+		{
+			channel->error("%s [%u]", g_tls_error_str, stat);
+		}
 	}
 
 	return result;

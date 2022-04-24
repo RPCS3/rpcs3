@@ -77,6 +77,7 @@ private:
 
 	QAction* m_stack_act_log = nullptr;
 	QAction* m_stack_act_tty = nullptr;
+	QAction* m_stack_act_err = nullptr;
 
 	QAction* m_show_prefix_act = nullptr;
 
