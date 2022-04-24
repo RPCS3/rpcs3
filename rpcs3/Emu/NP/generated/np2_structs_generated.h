@@ -125,7 +125,7 @@ struct BinAttr FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint16_t>(verifier, VT_ID) &&
+           VerifyField<uint16_t>(verifier, VT_ID, 2) &&
            VerifyOffset(verifier, VT_DATA) &&
            verifier.VerifyVector(data()) &&
            verifier.EndTable();
@@ -188,8 +188,8 @@ struct IntAttr FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint16_t>(verifier, VT_ID) &&
-           VerifyField<uint32_t>(verifier, VT_NUM) &&
+           VerifyField<uint16_t>(verifier, VT_ID, 2) &&
+           VerifyField<uint32_t>(verifier, VT_NUM, 4) &&
            verifier.EndTable();
   }
 };
@@ -239,7 +239,7 @@ struct RoomMemberBinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_UPDATEDATE) &&
+           VerifyField<uint64_t>(verifier, VT_UPDATEDATE, 8) &&
            VerifyOffset(verifier, VT_DATA) &&
            verifier.VerifyTable(data()) &&
            verifier.EndTable();
@@ -295,8 +295,8 @@ struct BinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_UPDATEDATE) &&
-           VerifyField<uint16_t>(verifier, VT_UPDATEMEMBERID) &&
+           VerifyField<uint64_t>(verifier, VT_UPDATEDATE, 8) &&
+           VerifyField<uint16_t>(verifier, VT_UPDATEMEMBERID, 2) &&
            VerifyOffset(verifier, VT_DATA) &&
            verifier.VerifyTable(data()) &&
            verifier.EndTable();
@@ -357,9 +357,9 @@ struct OptParam FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint8_t>(verifier, VT_TYPE) &&
-           VerifyField<uint8_t>(verifier, VT_FLAG) &&
-           VerifyField<uint16_t>(verifier, VT_HUBMEMBERID) &&
+           VerifyField<uint8_t>(verifier, VT_TYPE, 1) &&
+           VerifyField<uint8_t>(verifier, VT_FLAG, 1) &&
+           VerifyField<uint16_t>(verifier, VT_HUBMEMBERID, 2) &&
            verifier.EndTable();
   }
 };
@@ -422,11 +422,11 @@ struct GroupConfig FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_SLOTNUM) &&
-           VerifyField<uint8_t>(verifier, VT_WITHLABEL) &&
+           VerifyField<uint32_t>(verifier, VT_SLOTNUM, 4) &&
+           VerifyField<uint8_t>(verifier, VT_WITHLABEL, 1) &&
            VerifyOffset(verifier, VT_LABEL) &&
            verifier.VerifyVector(label()) &&
-           VerifyField<uint8_t>(verifier, VT_WITHPASSWORD) &&
+           VerifyField<uint8_t>(verifier, VT_WITHPASSWORD, 1) &&
            verifier.EndTable();
   }
 };
@@ -606,13 +606,13 @@ struct RoomMemberDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_USERINFO) &&
            verifier.VerifyTable(userInfo()) &&
-           VerifyField<uint64_t>(verifier, VT_JOINDATE) &&
-           VerifyField<uint16_t>(verifier, VT_MEMBERID) &&
-           VerifyField<uint8_t>(verifier, VT_TEAMID) &&
+           VerifyField<uint64_t>(verifier, VT_JOINDATE, 8) &&
+           VerifyField<uint16_t>(verifier, VT_MEMBERID, 2) &&
+           VerifyField<uint8_t>(verifier, VT_TEAMID, 1) &&
            VerifyOffset(verifier, VT_ROOMGROUP) &&
            verifier.VerifyTable(roomGroup()) &&
-           VerifyField<uint8_t>(verifier, VT_NATTYPE) &&
-           VerifyField<uint32_t>(verifier, VT_FLAGATTR) &&
+           VerifyField<uint8_t>(verifier, VT_NATTYPE, 1) &&
+           VerifyField<uint32_t>(verifier, VT_FLAGATTR, 4) &&
            VerifyOffset(verifier, VT_ROOMMEMBERBINATTRINTERNAL) &&
            verifier.VerifyVector(roomMemberBinAttrInternal()) &&
            verifier.VerifyVectorOfTables(roomMemberBinAttrInternal()) &&
@@ -734,13 +734,13 @@ struct RoomGroup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint8_t>(verifier, VT_GROUPID) &&
-           VerifyField<uint8_t>(verifier, VT_WITHPASSWORD) &&
-           VerifyField<uint8_t>(verifier, VT_WITHLABEL) &&
+           VerifyField<uint8_t>(verifier, VT_GROUPID, 1) &&
+           VerifyField<uint8_t>(verifier, VT_WITHPASSWORD, 1) &&
+           VerifyField<uint8_t>(verifier, VT_WITHLABEL, 1) &&
            VerifyOffset(verifier, VT_LABEL) &&
            verifier.VerifyVector(label()) &&
-           VerifyField<uint32_t>(verifier, VT_SLOTNUM) &&
-           VerifyField<uint32_t>(verifier, VT_CURGROUPMEMBERNUM) &&
+           VerifyField<uint32_t>(verifier, VT_SLOTNUM, 4) &&
+           VerifyField<uint32_t>(verifier, VT_CURGROUPMEMBERNUM, 4) &&
            verifier.EndTable();
   }
 };
@@ -865,20 +865,20 @@ struct RoomDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint16_t>(verifier, VT_SERVERID) &&
-           VerifyField<uint32_t>(verifier, VT_WORLDID) &&
-           VerifyField<uint64_t>(verifier, VT_LOBBYID) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
-           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK) &&
-           VerifyField<uint32_t>(verifier, VT_MAXSLOT) &&
+           VerifyField<uint16_t>(verifier, VT_SERVERID, 2) &&
+           VerifyField<uint32_t>(verifier, VT_WORLDID, 4) &&
+           VerifyField<uint64_t>(verifier, VT_LOBBYID, 8) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
+           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK, 8) &&
+           VerifyField<uint32_t>(verifier, VT_MAXSLOT, 4) &&
            VerifyOffset(verifier, VT_MEMBERLIST) &&
            verifier.VerifyVector(memberList()) &&
            verifier.VerifyVectorOfTables(memberList()) &&
-           VerifyField<uint16_t>(verifier, VT_OWNERID) &&
+           VerifyField<uint16_t>(verifier, VT_OWNERID, 2) &&
            VerifyOffset(verifier, VT_ROOMGROUP) &&
            verifier.VerifyVector(roomGroup()) &&
            verifier.VerifyVectorOfTables(roomGroup()) &&
-           VerifyField<uint32_t>(verifier, VT_FLAGATTR) &&
+           VerifyField<uint32_t>(verifier, VT_FLAGATTR, 4) &&
            VerifyOffset(verifier, VT_ROOMBINATTRINTERNAL) &&
            verifier.VerifyVector(roomBinAttrInternal()) &&
            verifier.VerifyVectorOfTables(roomBinAttrInternal()) &&
@@ -1067,23 +1067,23 @@ struct RoomDataExternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint16_t>(verifier, VT_SERVERID) &&
-           VerifyField<uint32_t>(verifier, VT_WORLDID) &&
-           VerifyField<uint16_t>(verifier, VT_PUBLICSLOTNUM) &&
-           VerifyField<uint16_t>(verifier, VT_PRIVATESLOTNUM) &&
-           VerifyField<uint64_t>(verifier, VT_LOBBYID) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
-           VerifyField<uint16_t>(verifier, VT_OPENPUBLICSLOTNUM) &&
-           VerifyField<uint16_t>(verifier, VT_MAXSLOT) &&
-           VerifyField<uint16_t>(verifier, VT_OPENPRIVATESLOTNUM) &&
-           VerifyField<uint16_t>(verifier, VT_CURMEMBERNUM) &&
-           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK) &&
+           VerifyField<uint16_t>(verifier, VT_SERVERID, 2) &&
+           VerifyField<uint32_t>(verifier, VT_WORLDID, 4) &&
+           VerifyField<uint16_t>(verifier, VT_PUBLICSLOTNUM, 2) &&
+           VerifyField<uint16_t>(verifier, VT_PRIVATESLOTNUM, 2) &&
+           VerifyField<uint64_t>(verifier, VT_LOBBYID, 8) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
+           VerifyField<uint16_t>(verifier, VT_OPENPUBLICSLOTNUM, 2) &&
+           VerifyField<uint16_t>(verifier, VT_MAXSLOT, 2) &&
+           VerifyField<uint16_t>(verifier, VT_OPENPRIVATESLOTNUM, 2) &&
+           VerifyField<uint16_t>(verifier, VT_CURMEMBERNUM, 2) &&
+           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK, 8) &&
            VerifyOffset(verifier, VT_OWNER) &&
            verifier.VerifyTable(owner()) &&
            VerifyOffset(verifier, VT_ROOMGROUP) &&
            verifier.VerifyVector(roomGroup()) &&
            verifier.VerifyVectorOfTables(roomGroup()) &&
-           VerifyField<uint32_t>(verifier, VT_FLAGATTR) &&
+           VerifyField<uint32_t>(verifier, VT_FLAGATTR, 4) &&
            VerifyOffset(verifier, VT_ROOMSEARCHABLEINTATTREXTERNAL) &&
            verifier.VerifyVector(roomSearchableIntAttrExternal()) &&
            verifier.VerifyVectorOfTables(roomSearchableIntAttrExternal()) &&
@@ -1261,7 +1261,7 @@ struct IntSearchFilter FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint8_t>(verifier, VT_SEARCHOPERATOR) &&
+           VerifyField<uint8_t>(verifier, VT_SEARCHOPERATOR, 1) &&
            VerifyOffset(verifier, VT_ATTR) &&
            verifier.VerifyTable(attr()) &&
            verifier.EndTable();
@@ -1313,7 +1313,7 @@ struct BinSearchFilter FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint8_t>(verifier, VT_SEARCHOPERATOR) &&
+           VerifyField<uint8_t>(verifier, VT_SEARCHOPERATOR, 1) &&
            VerifyOffset(verifier, VT_ATTR) &&
            verifier.VerifyTable(attr()) &&
            verifier.EndTable();
@@ -1367,7 +1367,7 @@ struct PresenceOptionData FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_DATA) &&
            verifier.VerifyVector(data()) &&
-           VerifyField<uint32_t>(verifier, VT_LEN) &&
+           VerifyField<uint32_t>(verifier, VT_LEN, 4) &&
            verifier.EndTable();
   }
 };
@@ -1430,7 +1430,7 @@ struct RoomGroupPasswordConfig FLATBUFFERS_FINAL_CLASS : private flatbuffers::Ta
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_GROUPID) &&
            verifier.VerifyVector(groupId()) &&
-           VerifyField<uint8_t>(verifier, VT_WITHPASSWORD) &&
+           VerifyField<uint8_t>(verifier, VT_WITHPASSWORD, 1) &&
            verifier.EndTable();
   }
 };
@@ -1523,13 +1523,13 @@ struct SearchRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<int32_t>(verifier, VT_OPTION) &&
-           VerifyField<uint32_t>(verifier, VT_WORLDID) &&
-           VerifyField<uint64_t>(verifier, VT_LOBBYID) &&
-           VerifyField<uint32_t>(verifier, VT_RANGEFILTER_STARTINDEX) &&
-           VerifyField<uint32_t>(verifier, VT_RANGEFILTER_MAX) &&
-           VerifyField<uint32_t>(verifier, VT_FLAGFILTER) &&
-           VerifyField<uint32_t>(verifier, VT_FLAGATTR) &&
+           VerifyField<int32_t>(verifier, VT_OPTION, 4) &&
+           VerifyField<uint32_t>(verifier, VT_WORLDID, 4) &&
+           VerifyField<uint64_t>(verifier, VT_LOBBYID, 8) &&
+           VerifyField<uint32_t>(verifier, VT_RANGEFILTER_STARTINDEX, 4) &&
+           VerifyField<uint32_t>(verifier, VT_RANGEFILTER_MAX, 4) &&
+           VerifyField<uint32_t>(verifier, VT_FLAGFILTER, 4) &&
+           VerifyField<uint32_t>(verifier, VT_FLAGATTR, 4) &&
            VerifyOffset(verifier, VT_INTFILTER) &&
            verifier.VerifyVector(intFilter()) &&
            verifier.VerifyVectorOfTables(intFilter()) &&
@@ -1664,9 +1664,9 @@ struct SearchRoomResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_STARTINDEX) &&
-           VerifyField<uint32_t>(verifier, VT_TOTAL) &&
-           VerifyField<uint32_t>(verifier, VT_SIZE) &&
+           VerifyField<uint32_t>(verifier, VT_STARTINDEX, 4) &&
+           VerifyField<uint32_t>(verifier, VT_TOTAL, 4) &&
+           VerifyField<uint32_t>(verifier, VT_SIZE, 4) &&
            VerifyOffset(verifier, VT_ROOMS) &&
            verifier.VerifyVector(rooms()) &&
            verifier.VerifyVectorOfTables(rooms()) &&
@@ -1804,10 +1804,10 @@ struct CreateJoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint32_t>(verifier, VT_WORLDID) &&
-           VerifyField<uint64_t>(verifier, VT_LOBBYID) &&
-           VerifyField<uint32_t>(verifier, VT_MAXSLOT) &&
-           VerifyField<uint32_t>(verifier, VT_FLAGATTR) &&
+           VerifyField<uint32_t>(verifier, VT_WORLDID, 4) &&
+           VerifyField<uint64_t>(verifier, VT_LOBBYID, 8) &&
+           VerifyField<uint32_t>(verifier, VT_MAXSLOT, 4) &&
+           VerifyField<uint32_t>(verifier, VT_FLAGATTR, 4) &&
            VerifyOffset(verifier, VT_ROOMBINATTRINTERNAL) &&
            verifier.VerifyVector(roomBinAttrInternal()) &&
            verifier.VerifyVectorOfTables(roomBinAttrInternal()) &&
@@ -1825,7 +1825,7 @@ struct CreateJoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
            VerifyOffset(verifier, VT_GROUPCONFIG) &&
            verifier.VerifyVector(groupConfig()) &&
            verifier.VerifyVectorOfTables(groupConfig()) &&
-           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK) &&
+           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK, 8) &&
            VerifyOffset(verifier, VT_ALLOWEDUSER) &&
            verifier.VerifyVector(allowedUser()) &&
            verifier.VerifyVectorOfStrings(allowedUser()) &&
@@ -1837,7 +1837,7 @@ struct CreateJoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
            VerifyOffset(verifier, VT_ROOMMEMBERBINATTRINTERNAL) &&
            verifier.VerifyVector(roomMemberBinAttrInternal()) &&
            verifier.VerifyVectorOfTables(roomMemberBinAttrInternal()) &&
-           VerifyField<uint8_t>(verifier, VT_TEAMID) &&
+           VerifyField<uint8_t>(verifier, VT_TEAMID, 1) &&
            VerifyOffset(verifier, VT_SIGOPTPARAM) &&
            verifier.VerifyTable(sigOptParam()) &&
            verifier.EndTable();
@@ -2030,7 +2030,7 @@ struct JoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
            VerifyOffset(verifier, VT_ROOMPASSWORD) &&
            verifier.VerifyVector(roomPassword()) &&
            VerifyOffset(verifier, VT_JOINROOMGROUPLABEL) &&
@@ -2040,7 +2040,7 @@ struct JoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVectorOfTables(roomMemberBinAttrInternal()) &&
            VerifyOffset(verifier, VT_OPTDATA) &&
            verifier.VerifyTable(optData()) &&
-           VerifyField<uint8_t>(verifier, VT_TEAMID) &&
+           VerifyField<uint8_t>(verifier, VT_TEAMID, 1) &&
            verifier.EndTable();
   }
 };
@@ -2131,7 +2131,7 @@ struct LeaveRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
            VerifyOffset(verifier, VT_OPTDATA) &&
            verifier.VerifyTable(optData()) &&
            verifier.EndTable();
@@ -2308,7 +2308,7 @@ struct SetRoomDataExternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
            VerifyOffset(verifier, VT_ROOMSEARCHABLEINTATTREXTERNAL) &&
            verifier.VerifyVector(roomSearchableIntAttrExternal()) &&
            verifier.VerifyVectorOfTables(roomSearchableIntAttrExternal()) &&
@@ -2414,16 +2414,16 @@ struct SetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
-           VerifyField<uint32_t>(verifier, VT_FLAGFILTER) &&
-           VerifyField<uint32_t>(verifier, VT_FLAGATTR) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
+           VerifyField<uint32_t>(verifier, VT_FLAGFILTER, 4) &&
+           VerifyField<uint32_t>(verifier, VT_FLAGATTR, 4) &&
            VerifyOffset(verifier, VT_ROOMBINATTRINTERNAL) &&
            verifier.VerifyVector(roomBinAttrInternal()) &&
            verifier.VerifyVectorOfTables(roomBinAttrInternal()) &&
            VerifyOffset(verifier, VT_PASSWORDCONFIG) &&
            verifier.VerifyVector(passwordConfig()) &&
            verifier.VerifyVectorOfTables(passwordConfig()) &&
-           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK) &&
+           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK, 8) &&
            VerifyOffset(verifier, VT_OWNERPRIVILEGERANK) &&
            verifier.VerifyVector(ownerPrivilegeRank()) &&
            verifier.EndTable();
@@ -2531,9 +2531,9 @@ struct SetRoomMemberDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbu
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
-           VerifyField<uint16_t>(verifier, VT_MEMBERID) &&
-           VerifyField<uint8_t>(verifier, VT_TEAMID) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
+           VerifyField<uint16_t>(verifier, VT_MEMBERID, 2) &&
+           VerifyField<uint8_t>(verifier, VT_TEAMID, 1) &&
            VerifyOffset(verifier, VT_ROOMMEMBERBINATTRINTERNAL) &&
            verifier.VerifyVector(roomMemberBinAttrInternal()) &&
            verifier.VerifyVectorOfTables(roomMemberBinAttrInternal()) &&
@@ -2611,7 +2611,7 @@ struct GetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
            VerifyOffset(verifier, VT_ATTRID) &&
            verifier.VerifyVector(attrId()) &&
            verifier.EndTable();
@@ -2680,7 +2680,7 @@ struct RoomMemberUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_ROOMMEMBERDATAINTERNAL) &&
            verifier.VerifyTable(roomMemberDataInternal()) &&
-           VerifyField<uint8_t>(verifier, VT_EVENTCAUSE) &&
+           VerifyField<uint8_t>(verifier, VT_EVENTCAUSE, 1) &&
            VerifyOffset(verifier, VT_OPTDATA) &&
            verifier.VerifyTable(optData()) &&
            verifier.EndTable();
@@ -2741,8 +2741,8 @@ struct RoomUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint8_t>(verifier, VT_EVENTCAUSE) &&
-           VerifyField<int32_t>(verifier, VT_ERRORCODE) &&
+           VerifyField<uint8_t>(verifier, VT_EVENTCAUSE, 1) &&
+           VerifyField<int32_t>(verifier, VT_ERRORCODE, 4) &&
            VerifyOffset(verifier, VT_OPTDATA) &&
            verifier.VerifyTable(optData()) &&
            verifier.EndTable();
@@ -2813,8 +2813,8 @@ struct RoomDataInternalUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers:
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_NEWROOMDATAINTERNAL) &&
            verifier.VerifyTable(newRoomDataInternal()) &&
-           VerifyField<uint32_t>(verifier, VT_PREVFLAGATTR) &&
-           VerifyField<uint64_t>(verifier, VT_PREVROOMPASSWORDSLOTMASK) &&
+           VerifyField<uint32_t>(verifier, VT_PREVFLAGATTR, 4) &&
+           VerifyField<uint64_t>(verifier, VT_PREVROOMPASSWORDSLOTMASK, 8) &&
            VerifyOffset(verifier, VT_NEWROOMGROUP) &&
            verifier.VerifyVector(newRoomGroup()) &&
            VerifyOffset(verifier, VT_NEWROOMBINATTRINTERNAL) &&
@@ -2911,8 +2911,8 @@ struct RoomMemberDataInternalUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbu
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_NEWROOMMEMBERDATAINTERNAL) &&
            verifier.VerifyTable(newRoomMemberDataInternal()) &&
-           VerifyField<uint32_t>(verifier, VT_PREVFLAGATTR) &&
-           VerifyField<uint8_t>(verifier, VT_PREVTEAMID) &&
+           VerifyField<uint32_t>(verifier, VT_PREVFLAGATTR, 4) &&
+           VerifyField<uint8_t>(verifier, VT_PREVTEAMID, 1) &&
            VerifyOffset(verifier, VT_NEWROOMMEMBERBINATTRINTERNAL) &&
            verifier.VerifyVector(newRoomMemberBinAttrInternal()) &&
            verifier.EndTable();
@@ -2997,10 +2997,10 @@ struct GetPingInfoResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table 
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint16_t>(verifier, VT_SERVERID) &&
-           VerifyField<uint32_t>(verifier, VT_WORLDID) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
-           VerifyField<uint32_t>(verifier, VT_RTT) &&
+           VerifyField<uint16_t>(verifier, VT_SERVERID, 2) &&
+           VerifyField<uint32_t>(verifier, VT_WORLDID, 4) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
+           VerifyField<uint32_t>(verifier, VT_RTT, 4) &&
            verifier.EndTable();
   }
 };
@@ -3072,13 +3072,13 @@ struct SendRoomMessageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
-           VerifyField<uint8_t>(verifier, VT_CASTTYPE) &&
+           VerifyField<uint64_t>(verifier, VT_ROOMID, 8) &&
+           VerifyField<uint8_t>(verifier, VT_CASTTYPE, 1) &&
            VerifyOffset(verifier, VT_DST) &&
            verifier.VerifyVector(dst()) &&
            VerifyOffset(verifier, VT_MSG) &&
            verifier.VerifyVector(msg()) &&
-           VerifyField<uint8_t>(verifier, VT_OPTION) &&
+           VerifyField<uint8_t>(verifier, VT_OPTION, 1) &&
            verifier.EndTable();
   }
 };
@@ -3173,8 +3173,8 @@ struct RoomMessageInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint8_t>(verifier, VT_FILTERED) &&
-           VerifyField<uint8_t>(verifier, VT_CASTTYPE) &&
+           VerifyField<uint8_t>(verifier, VT_FILTERED, 1) &&
+           VerifyField<uint8_t>(verifier, VT_CASTTYPE, 1) &&
            VerifyOffset(verifier, VT_DST) &&
            verifier.VerifyVector(dst()) &&
            VerifyOffset(verifier, VT_SRCMEMBER) &&
@@ -3289,10 +3289,10 @@ struct MessageDetails FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_COMMUNICATIONID) &&
            verifier.VerifyString(communicationId()) &&
-           VerifyField<uint64_t>(verifier, VT_MSGID) &&
-           VerifyField<uint16_t>(verifier, VT_MAINTYPE) &&
-           VerifyField<uint16_t>(verifier, VT_SUBTYPE) &&
-           VerifyField<uint32_t>(verifier, VT_MSGFEATURES) &&
+           VerifyField<uint64_t>(verifier, VT_MSGID, 8) &&
+           VerifyField<uint16_t>(verifier, VT_MAINTYPE, 2) &&
+           VerifyField<uint16_t>(verifier, VT_SUBTYPE, 2) &&
+           VerifyField<uint32_t>(verifier, VT_MSGFEATURES, 4) &&
            VerifyOffset(verifier, VT_SUBJECT) &&
            verifier.VerifyString(subject()) &&
            VerifyOffset(verifier, VT_BODY) &&
@@ -3409,6 +3409,7 @@ struct SendMessageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_MESSAGE) &&
            verifier.VerifyVector(message()) &&
+           verifier.VerifyNestedFlatBuffer<MessageDetails>(message(), nullptr) &&
            VerifyOffset(verifier, VT_NPIDS) &&
            verifier.VerifyVector(npids()) &&
            verifier.VerifyVectorOfStrings(npids()) &&
