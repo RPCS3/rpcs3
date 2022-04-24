@@ -393,7 +393,7 @@ struct vdec_context final
 
 				std::deque<vdec_frame> decoded_frames;
 
-				if (!abort_decode)
+				if (!abort_decode && seq_id == cmd->seq_id)
 				{
 					cellVdec.trace("AU decoding: handle=0x%x, seq_id=%d, cmd_id=%d, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, cmd->seq_id, cmd->id, au_size, au_pts, au_dts, au_usrd);
 
@@ -402,11 +402,11 @@ struct vdec_context final
 						fmt::throw_exception("AU queuing error (handle=0x%x, seq_id=%d, cmd_id=%d, error=0x%x): %s", handle, cmd->seq_id, cmd->id, ret, utils::av_error_to_string(ret));
 					}
 
-					while (!abort_decode)
+					while (!abort_decode && seq_id == cmd->seq_id)
 					{
 						// Keep receiving frames
 						vdec_frame frame;
-						frame.cmd_id = cmd->seq_id;
+						frame.seq_id = cmd->seq_id;
 						frame.cmd_id = cmd->id;
 						frame.avf.reset(av_frame_alloc());
 
@@ -534,8 +534,9 @@ struct vdec_context final
 					}
 				}
 
-				if (thread_ctrl::state() != thread_state::aborting && !abort_decode)
+				if (thread_ctrl::state() != thread_state::aborting)
 				{
+					// Send AUDONE even if the current sequence was reset and a new sequence was started.
 					cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
 					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
 					lv2_obj::sleep(ppu);
@@ -545,12 +546,12 @@ struct vdec_context final
 						--au_count;
 					}
 
-					while (!decoded_frames.empty())
+					while (!decoded_frames.empty() && seq_id == cmd->seq_id)
 					{
 						// Wait until there is free space in the image queue.
 						// Do this after pushing the frame to the queue. That way the game can consume the frame and we can move on.
 						u32 elapsed = 0;
-						while (thread_ctrl::state() != thread_state::aborting && !abort_decode)
+						while (thread_ctrl::state() != thread_state::aborting && !abort_decode && seq_id == cmd->seq_id)
 						{
 							{
 								std::lock_guard lock{mutex};
@@ -569,7 +570,7 @@ struct vdec_context final
 							}
 						}
 
-						if (thread_ctrl::state() == thread_state::aborting || abort_decode)
+						if (thread_ctrl::state() == thread_state::aborting || abort_decode || seq_id != cmd->seq_id)
 						{
 							break;
 						}
@@ -586,7 +587,7 @@ struct vdec_context final
 					}
 				}
 
-				if (abort_decode)
+				if (abort_decode || seq_id != cmd->seq_id)
 				{
 					cellVdec.warning("AU decoding: aborted (handle=0x%x, seq_id=%d, cmd_id=%d, abort_decode=%d)", handle, cmd->seq_id, cmd->id, abort_decode.load());
 				}
@@ -979,26 +980,9 @@ error_code cellVdecStartSeq(u32 handle)
 	const u64 cmd_id = vdec->next_cmd_id++;
 	cellVdec.trace("Adding start cmd (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, seq_id, cmd_id);
 
-	vdec->abort_decode = true;
+	vdec->abort_decode = false;
 	vdec->is_running = false;
 	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::start_sequence, seq_id, cmd_id));
-
-	// Wait until the thread is ready
-	u32 elapsed = 0;
-	while (thread_ctrl::state() != thread_state::aborting)
-	{
-		if (vdec->is_running)
-		{
-			break;
-		}
-		thread_ctrl::wait_for(1000);
-
-		if (elapsed++ >= 5000) // 5 seconds
-		{
-			cellVdec.error("Timeout in cellVdecStartSeq.");
-			elapsed = 0;
-		}
-	}
 
 	std::lock_guard lock{vdec->mutex};
 
@@ -1038,7 +1022,7 @@ error_code cellVdecEndSeq(u32 handle)
 
 	const u64 seq_id = vdec->seq_id;
 	const u64 cmd_id = vdec->next_cmd_id++;
-	cellVdec.trace("Adding end cmd (handle=0x%x, seq_id=d, cmd_id=%d)", handle, seq_id, cmd_id);
+	cellVdec.trace("Adding end cmd (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, seq_id, cmd_id);
 
 	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::end_sequence, seq_id, cmd_id));
 
@@ -1182,6 +1166,8 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 
 	vdec_frame frame;
 	bool notify = false;
+	u64 sequence_id{};
+
 	{
 		std::lock_guard lock(vdec->mutex);
 
@@ -1191,6 +1177,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 		}
 
 		frame = std::move(vdec->out_queue.front());
+		sequence_id = vdec->seq_id;
 
 		vdec->out_queue.pop_front();
 		if (vdec->out_queue.size() + 1 == vdec->out_max)
@@ -1201,6 +1188,11 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 	{
 		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(vdec->ppu_tid);
 		if (vdec_ppu) thread_ctrl::notify(*vdec_ppu);
+	}
+
+	if (sequence_id != frame.seq_id)
+	{
+		return { CELL_VDEC_ERROR_EMPTY, "sequence_id=%d, seq_id=%d", sequence_id, frame.seq_id };
 	}
 
 	if (outBuff)
@@ -1245,7 +1237,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 			fmt::throw_exception("cellVdecGetPictureExt: Unknown frame format (%d)", frame->format);
 		}
 
-		cellVdec.trace("cellVdecGetPictureExt: handle=0x%x, seq_id=d, cmd_id=%d, w=%d, h=%d, frameFormat=%d, formatType=%d, in_f=%d, out_f=%d, alpha_plane=%d, alpha=%d, colorMatrixType=%d", handle, frame.seq_id, frame.cmd_id, w, h, frame->format, format->formatType, +in_f, +out_f, !!alpha_plane, format->alpha, format->colorMatrixType);
+		cellVdec.trace("cellVdecGetPictureExt: handle=0x%x, seq_id=%d, cmd_id=%d, w=%d, h=%d, frameFormat=%d, formatType=%d, in_f=%d, out_f=%d, alpha_plane=%d, alpha=%d, colorMatrixType=%d", handle, frame.seq_id, frame.cmd_id, w, h, frame->format, format->formatType, +in_f, +out_f, !!alpha_plane, format->alpha, format->colorMatrixType);
 
 		vdec->sws = sws_getCachedContext(vdec->sws, w, h, in_f, w, h, out_f, SWS_POINT, nullptr, nullptr, nullptr);
 
@@ -1312,6 +1304,8 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		return CELL_VDEC_ERROR_ARG;
 	}
 
+	u64 sequence_id{};
+
 	{
 		std::lock_guard lock{vdec->mutex};
 
@@ -1319,6 +1313,8 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		{
 			return { CELL_VDEC_ERROR_SEQ, vdec->seq_state.load() };
 		}
+
+		sequence_id = vdec->seq_id;
 	}
 
 	struct all_info_t
@@ -1368,10 +1364,10 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 		}
 	}
 
-	if (!frame)
+	if (!frame || seq_id != sequence_id)
 	{
 		// If frame is empty info was not found
-		return CELL_VDEC_ERROR_EMPTY;
+		return { CELL_VDEC_ERROR_EMPTY, " frame=%d, sequence_id=%d, seq_id=%d", !!frame, sequence_id, seq_id };
 	}
 
 	info->codecType = vdec->type;
