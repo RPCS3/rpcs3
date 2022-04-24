@@ -944,7 +944,7 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 
 error_code cellVdecStartSeq(u32 handle)
 {
-	cellVdec.trace("cellVdecStartSeq(handle=0x%x)", handle);
+	cellVdec.warning("cellVdecStartSeq(handle=0x%x)", handle);
 
 	const auto vdec = idm::get<vdec_context>(handle);
 
