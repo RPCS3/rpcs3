@@ -768,7 +768,7 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 	// inputFieldLayoutInfo;
 	// inputPanelLayoutInfo;
 
-	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: continuousMode=%s)", osk.osk_continuous_mode.load());
+	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: use_separate_windows=true, continuous_mode=%s, device_mask=0x%x)", osk.osk_continuous_mode.load(), osk.device_mask.load());
 
 	return CELL_OK;
 }
