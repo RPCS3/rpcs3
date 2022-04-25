@@ -155,6 +155,11 @@ namespace rsx
 					{
 						// Workaround if cellKb did not init the keyboard handler.
 						handler.Init(1);
+
+						// Enable key repeat
+						std::vector<Keyboard>& keyboards = handler.GetKeyboards();
+						ensure(!keyboards.empty());
+						keyboards.at(0).m_key_repeat = true;
 					}
 				}
 
