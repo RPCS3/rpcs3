@@ -681,18 +681,28 @@ namespace rsx
 			}
 
 			// Handle special input
-			if (!found_key && !out_key_string.empty())
+			if (!found_key)
 			{
-				switch (out_key_string[0])
+				switch (out_key_code)
 				{
-				case ' ':
+				case CELL_KEYC_SPACE:
 					on_space(u32_string);
 					break;
-				case '\b':
+				case CELL_KEYC_BS:
 					on_backspace(u32_string);
 					break;
-				case '\n':
-					on_enter(u32_string);
+				case CELL_KEYC_ESCAPE:
+					Close(CELL_OSKDIALOG_CLOSE_CANCEL);
+					break;
+				case CELL_KEYC_ENTER:
+					if ((flags & CELL_OSKDIALOG_NO_RETURN))
+					{
+						Close(CELL_OSKDIALOG_CLOSE_CONFIRM);
+					}
+					else
+					{
+						on_enter(u32_string);
+					}
 					break;
 				default:
 					break;
