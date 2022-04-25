@@ -14,7 +14,7 @@ QWidget {
 
 /* Log, TTY, Log Viewer, CG Disasm */
 QTextEdit, QPlainTextEdit {
-	background: rgba(0, 0, 0, 0.9);
+	background: rgba(13, 13, 13, 0.9);
 	border: 0.05em solid #333333;
 	color: #f1f1f1;
 	font-family: none;
@@ -29,13 +29,13 @@ QListWidget::indicator, QTreeWidget::indicator {
 	border: 0.05em solid #333333;
 }
 QListWidget::indicator::unchecked, QTreeWidget::indicator::unchecked {
-	background-color: #000000;
+	background-color: #0D0D0D;
 }
 QListWidget::indicator::checked, QTreeWidget::indicator::checked {
 	background-color: #039ce1;
 }
 QListWidget::indicator::disabled, QTreeWidget::indicator::disabled {
-	background-color: #ff0000;
+	background-color: #A80000;
 }
 QListWidget::item::selected, QTreeWidget::item::selected {
 	background-color: #212947;
@@ -48,14 +48,14 @@ QTableView {
 
 /* Mouse Tooltips */
 QToolTip {
-	background-color: #000000;
+	background-color: #0D0D0D;
 	border: 0.05em solid #333333;
 	color: #f1f1f1;
 }
 
 /* Table headers: List View */
 QHeaderView::section {
-	background: #000000;
+	background: #0D0D0D;
 	color: #f1f1f1;
 	padding-left: 0.20em;
 	padding-top: 0.25em;
@@ -114,10 +114,10 @@ QCheckBox::indicator:checked, QRadioButton::indicator:checked {
 	background-color: #039ce1;
 }
 QCheckBox::indicator:unchecked, QRadioButton::indicator:unchecked {
-	background-color: #000000;
+	background-color: #0D0D0D;
 }
 QCheckBox::indicator::disabled, QRadioButton::indicator::disabled {
-	background-color: #ff0000;
+	background-color: #a80000;
 }
 
 /* Combo Boxes */
@@ -132,7 +132,7 @@ QComboBox QAbstractItemView {
 	background: #333333;
 }
 QComboBox::disabled {
-	background: #ff0000;
+	background: #a80000;
 	color: #f1f1f1;
 }
 
@@ -153,7 +153,7 @@ QPushButton {
 	background: #333333;
 }
 QPushButton::disabled {
-	background: #ff0000;
+	background: #a80000;
 }
 
 /* QSpinBox (Settings -> Emulator -> width/height) */
@@ -162,7 +162,7 @@ QSpinBox, QDoubleSpinBox {
 	background-color: #333333;
 }
 QSpinBox::disabled, QDoubleSpinBox::disabled {
-	background-color: #ff0000;
+	background-color: #a80000;
 }
 
 /* Styles Sliders */
@@ -175,7 +175,7 @@ QSlider::handle:horizontal {
 	width: 0.50em;
 }
 QSlider::disabled {
-	background: #ff0000;
+	background: #a80000;
 }
 
 /* For dock buttons to be visible */
@@ -195,7 +195,7 @@ QDockWidget::close-button, QDockWidget::float-button {
 
 /* Disable ugly borders */
 QTabWidget::pane {
-	border: 0em solid #000000;
+	border: 0em solid #0D0D0D;
 }
 /* Center tabs */
 QTabWidget::tab-bar {
@@ -219,7 +219,7 @@ QMenuBar::item:selected {
 }
 
 QMenu {
-	background: #000000;
+	background: #0D0D0D;
 	color: #f1f1f1;
 }
 QMenu::item {
@@ -234,7 +234,7 @@ QMenu::item:selected {
 	border: 0.05em solid #333333;
 }
 QMenu::item:disabled {
-	background-color: #ff0000;
+	background-color: #a80000;
 	color: #f1f1f1;
 }
 
