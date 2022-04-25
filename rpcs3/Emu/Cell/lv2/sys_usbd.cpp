@@ -119,7 +119,7 @@ private:
 	std::map<u32, UsbPipe> open_pipes;
 	// Transfers infos
 	shared_mutex mutex_transfers;
-	std::array<UsbTransfer, 0x44> transfers;
+	std::array<UsbTransfer, MAX_SYS_USBD_TRANSFERS> transfers;
 	std::vector<UsbTransfer*> fake_transfers;
 
 	// Queue of pending usbd events
@@ -143,12 +143,27 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 
 usb_handler_thread::usb_handler_thread()
 {
-	if (libusb_init(&ctx) < 0)
+	if (int res = libusb_init(&ctx); res < 0)
+	{
+		sys_usbd.error("Failed to initialize sys_usbd: %s", libusb_error_name(res));
 		return;
+	}
+
+	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
+	{
+		transfers[index].transfer    = libusb_alloc_transfer(8);
+		transfers[index].transfer_id = index;
+	}
 
 	// look if any device which we could be interested in is actually connected
 	libusb_device** list = nullptr;
 	ssize_t ndev         = libusb_get_device_list(ctx, &list);
+
+	if (ndev < 0)
+	{
+		sys_usbd.error("Failed to get device list: %s", libusb_error_name(ndev));
+		return;
+	}
 
 	std::array<u8, 7> location{};
 
@@ -164,7 +179,11 @@ usb_handler_thread::usb_handler_thread()
 	for (ssize_t index = 0; index < ndev; index++)
 	{
 		libusb_device_descriptor desc;
-		libusb_get_device_descriptor(list[index], &desc);
+		if (int res = libusb_get_device_descriptor(list[index], &desc); res < 0)
+		{
+			sys_usbd.error("Failed to get device descriptor: %s", libusb_error_name(res));
+			continue;
+		}
 
 		auto check_device = [&](const u16 id_vendor, const u16 id_product_min, const u16 id_product_max, const char* s_name) -> bool
 		{
@@ -190,11 +209,11 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal");
 
 		// Cameras
-		//check_device(0x1415, 0x0020, 0x2000, "Sony Playstation Eye"); // TODO: verifiy
+		// check_device(0x1415, 0x0020, 0x2000, "Sony Playstation Eye"); // TODO: verifiy
 
 		// Music devices
 		check_device(0x1415, 0x0000, 0x0000, "SingStar Microphone");
-		//check_device(0x1415, 0x0020, 0x0020, "SingStar Microphone Wireless"); // TODO: verifiy
+		// check_device(0x1415, 0x0020, 0x0020, "SingStar Microphone Wireless"); // TODO: verifiy
 		check_device(0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar");
 		check_device(0x12BA, 0x0120, 0x0120, "Guitar Hero Drums");
 		check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar");
@@ -287,12 +306,6 @@ usb_handler_thread::usb_handler_thread()
 		// Since there can only be 7 pads connected on a PS3 the 8th player is currently not supported
 		sys_usbd.notice("Adding emulated Buzz! buzzer (5-7 players)");
 		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6, get_new_location()));
-	}
-
-	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
-	{
-		transfers[index].transfer    = libusb_alloc_transfer(8);
-		transfers[index].transfer_id = index;
 	}
 }
 

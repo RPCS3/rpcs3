@@ -161,6 +161,14 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_net.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_net\lv2_socket.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_net\lv2_socket_native.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_net\lv2_socket_raw.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_net\lv2_socket_p2p.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_net\lv2_socket_p2ps.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_net\network_context.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_net\nt_p2p_port.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_net\sys_net_helpers.cpp" />
     <ClCompile Include="Emu\Cell\Modules\StaticHLE.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_overlay.cpp" />
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp" />
@@ -320,6 +328,7 @@
     <ClCompile Include="Emu\Cell\Modules\sceNpTrophy.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpTus.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpUtil.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sceNpPlus.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sysPrxForUser.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_game.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_heap.cpp" />
@@ -696,6 +705,7 @@
     <ClInclude Include="Emu\Cell\Modules\sceNpTrophy.h" />
     <ClInclude Include="Emu\Cell\Modules\sceNpTus.h" />
     <ClInclude Include="Emu\Cell\Modules\sceNpUtil.h" />
+    <ClInclude Include="Emu\Cell\Modules\sceNpPlus.h" />
     <ClInclude Include="Emu\Cell\Modules\sysPrxForUser.h" />
     <ClInclude Include="Emu\Cell\Modules\sys_lv2dbg.h" />
     <ClInclude Include="Emu\Cell\Modules\sys_net_.h" />

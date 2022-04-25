@@ -50,6 +50,17 @@ extern bool is_using_interpreter(u32 id_type)
 	}
 }
 
+extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu)
+{
+	switch (cpu->id_type())
+	{
+	case 1: return std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
+	case 2: return std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu)->ls);
+	case 0x55: return std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, cpu);
+	default: return nullptr;
+	}
+}
+
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
 	: custom_dock_widget(tr("Debugger"), parent)
 	, m_gui_settings(std::move(gui_settings))
@@ -401,7 +412,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				dlg.set_input_font(mono, false);
 				dlg.set_clear_button_enabled(false);
 				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-				dlg.set_validator(new QRegExpValidator(QRegExp("^[1-9][0-9]*$")));
+				dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[1-9][0-9]*$")));
 
 				u32 max = 0;
 
@@ -895,7 +906,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (selected == m_cpu.get())
 			{
-				m_disasm = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
+				m_disasm = make_disasm(selected);
 			}
 			else
 			{
@@ -911,7 +922,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (selected == m_cpu.get())
 			{
-				m_disasm = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(m_cpu.get())->ls);
+				m_disasm = make_disasm(selected);
 			}
 			else
 			{
@@ -927,7 +938,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (get_cpu())
 			{
-				m_disasm = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, m_rsx);
+				m_disasm = make_disasm(m_rsx);
 			}
 
 			break;
@@ -999,11 +1010,11 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	if (const auto thread = get_cpu(); !thread || thread->id_type() != 2)
 	{
-		expression_input->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
 	}
 	else
 	{
-		expression_input->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,5}$")));
+		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,5}$")));
 	}
 
 	// Ok/Cancel
@@ -1047,8 +1058,8 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 {
 	bool ok = false;
 
-	// Parse expression(or at least used to, was nuked to remove the need for QtJsEngine)
-	const QString fixed_expression = QRegExp("^[A-Fa-f0-9]+$").exactMatch(expression) ? "0x" + expression : expression;
+	// Parse expression (or at least used to, was nuked to remove the need for QtJsEngine)
+	const QString fixed_expression = QRegularExpression(QRegularExpression::anchoredPattern("a .*|^[A-Fa-f0-9]+$")).match(expression).hasMatch() ? "0x" + expression : expression;
 	const u64 res = static_cast<u64>(fixed_expression.toULong(&ok, 16));
 
 	if (ok) return res;

@@ -3141,6 +3141,7 @@ namespace rsx
 
 		// NV03_MEMORY_TO_MEMORY_FORMAT	(NV0039)
 		methods[NV0039_SET_OBJECT]                        = nullptr;
+		bind(0x2100 >> 2, trace_method);
 		methods[NV0039_SET_CONTEXT_DMA_NOTIFIES]          = nullptr;
 		methods[NV0039_SET_CONTEXT_DMA_BUFFER_IN]         = nullptr;
 		methods[NV0039_SET_CONTEXT_DMA_BUFFER_OUT]        = nullptr;

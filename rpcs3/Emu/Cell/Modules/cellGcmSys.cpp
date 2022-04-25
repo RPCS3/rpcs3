@@ -807,7 +807,7 @@ u64 cellGcmGetLastFlipTime()
 {
 	cellGcmSys.trace("cellGcmGetLastFlipTime()");
 
-	return rsx::get_current_renderer()->last_flip_time;
+	return rsx::get_current_renderer()->last_guest_flip_timestamp;
 }
 
 error_code cellGcmGetLastFlipTime2()

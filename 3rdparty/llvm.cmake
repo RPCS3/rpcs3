@@ -70,7 +70,7 @@ if(WITH_LLVM)
 	endif()
 
 	if(COMPILER_ARM)
-		set(LLVM_LIBS ${LLVM_LIBS} LLVMX86CodeGen LLVMX86AsmParser LLVMARMCodeGen LLVMARMAsmParser)
+		set(LLVM_LIBS ${LLVM_LIBS} LLVMX86CodeGen LLVMX86AsmParser LLVMAArch64CodeGen LLVMAArch64AsmParser)
 	endif()
 
 	if(WIN32 OR CMAKE_SYSTEM MATCHES "Linux")

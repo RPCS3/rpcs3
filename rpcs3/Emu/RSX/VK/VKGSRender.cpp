@@ -1514,7 +1514,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 	{
 		while (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
 		{
-			_mm_pause();
+			utils::pause();
 
 			if (thread_ctrl::state() == thread_state::aborting)
 			{

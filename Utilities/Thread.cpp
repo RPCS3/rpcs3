@@ -1222,7 +1222,18 @@ usz get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, usz d_
 
 #elif defined(ARCH_ARM64)
 
+#if defined(__APPLE__)
+// https://github.com/bombela/backward-cpp/issues/200
+#define RIP(context) ((context)->uc_mcontext->__ss.__pc)
+#elif defined(__FreeBSD__)
+#define RIP(context) ((context)->uc_mcontext.mc_gpregs.gp_elr)
+#elif defined(__NetBSD__)
+#define RIP(context) ((context)->uc_mcontext.__gregs[_REG_PC])
+#elif defined(__OpenBSD__)
+#define RIP(context) ((context)->sc_elr)
+#else
 #define RIP(context) ((context)->uc_mcontext.pc)
+#endif
 
 #endif /* ARCH_ */
 

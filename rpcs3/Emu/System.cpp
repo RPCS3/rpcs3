@@ -19,6 +19,7 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
+#include "Emu/Cell/Modules/cellGame.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
@@ -50,6 +51,8 @@ LOG_CHANNEL(sys_log, "SYS");
 
 // Preallocate 32 MiB
 stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
+
+bool g_log_all_errors = false;
 
 bool g_use_rtm = false;
 u64 g_rtm_tx_limit1 = 0;
@@ -559,6 +562,29 @@ void Emulator::SetForceBoot(bool force_boot)
 game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool is_disc_patch)
 {
 	const std::string resolved_path = GetCallbacks().resolve_path(m_path);
+
+	if (m_config_mode == cfg_mode::continuous)
+	{
+		// The program is being booted from another running program
+		// CELL_GAME_GAMETYPE_GAMEDATA is not used as boot type
+
+		if (m_cat == "DG"sv)
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_DISC;
+		}
+		else if (m_cat == "HM"sv)
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_HOME;
+		}
+		else
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_HDD;
+		}
+	}
+	else
+	{
+		m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
+	}
 
 	if (!IsStopped())
 	{
@@ -1952,6 +1978,13 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 		if (!fmt)
 		{
 			// Report and clean error state
+
+			if (g_log_all_errors) [[unlikely]]
+			{
+				g_tls_error_stats.clear();
+				return 0;
+			}
+
 			for (auto&& pair : g_tls_error_stats)
 			{
 				if (pair.second > 3)
@@ -1964,6 +1997,8 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 			return 0;
 		}
 	}
+
+	ensure(fmt);
 
 	logs::channel* channel = &sys_log;
 	const char* func = "Unknown function";
@@ -1979,14 +2014,27 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 	// Format log message (use preallocated buffer)
 	g_tls_error_str.clear();
 	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x", func, result);
+
+	// Add spacer between error and fmt if necessary
+	if (fmt[0] != ' ')
+		g_tls_error_str += " : ";
+
 	fmt::raw_append(g_tls_error_str, fmt, sup, args);
 
 	// Update stats and check log threshold
-	const auto stat = ++g_tls_error_stats[g_tls_error_str];
 
-	if (stat <= 3)
+	if (g_log_all_errors) [[unlikely]]
 	{
-		channel->error("%s [%u]", g_tls_error_str, stat);
+		channel->error("%s", g_tls_error_str);
+	}
+	else
+	{
+		const auto stat = ++g_tls_error_stats[g_tls_error_str];
+
+		if (stat <= 3)
+		{
+			channel->error("%s [%u]", g_tls_error_str, stat);
+		}
 	}
 
 	return result;

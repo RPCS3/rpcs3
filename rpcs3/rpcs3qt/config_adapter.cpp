@@ -36,7 +36,7 @@ namespace cfg_adapter
 
 		if (!node || !node.IsMap())
 		{
-			cfg_log.fatal("Node error. A cfg_location does not match its cfg::node");
+			cfg_log.fatal("Node error. A cfg_location does not match its cfg::node (location: %s)", get_yaml_node_location(node));
 			return YAML::Node();
 		}
 

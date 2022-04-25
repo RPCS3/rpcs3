@@ -2386,6 +2386,20 @@
                  </property>
                 </widget>
                </item>
+               <item>
+                <widget class="QCheckBox" name="disableMslFastMath">
+                 <property name="text">
+                  <string>Disable MSL Fast Math</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="softwareVkSemaphore">
+                 <property name="text">
+                  <string>Software VkSemaphore</string>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </widget>
             </item>
@@ -3955,18 +3969,6 @@
                <layout class="QVBoxLayout" name="vbl_num_ppu_threads">
                 <item>
                  <widget class="QComboBox" name="combo_num_ppu_threads"/>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <item>
-              <widget class="QGroupBox" name="gb_metalsemaphore">
-               <property name="title">
-                <string>Metal Semaphore</string>
-               </property>
-               <layout class="QVBoxLayout" name="gb_metalsemaphore_layout">
-                <item>
-                 <widget class="QComboBox" name="metalsemaphore"/>
                 </item>
                </layout>
               </widget>

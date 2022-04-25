@@ -1,13 +1,23 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
 
 #include "cellGame.h"
 
 LOG_CHANNEL(cellGameExec);
 
+struct game_exec_data
+{
+	atomic_t<u32> execdata = 0; // TODO: pass this to the source application after closing the current application
+};
+
 error_code cellGameSetExitParam(u32 execdata)
 {
 	cellGameExec.todo("cellGameSetExitParam(execdata=0x%x)", execdata);
+
+	g_fxo->get<game_exec_data>().execdata = execdata;
+
 	return CELL_OK;
 }
 
@@ -25,9 +35,17 @@ error_code cellGameGetHomeDataExportPath(vm::ptr<char> exportPath)
 	return CELL_GAME_ERROR_NOAPP;
 }
 
-error_code cellGameGetHomePath()
+error_code cellGameGetHomePath(vm::ptr<char> homePath)
 {
-	UNIMPLEMENTED_FUNC(cellGameExec);
+	cellGameExec.todo("cellGameGetHomePath(homePath=*0x%x)", homePath);
+
+	if (!homePath)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
+	// TODO: PlayStation home is defunct.
+
 	return CELL_OK;
 }
 
@@ -58,7 +76,13 @@ error_code cellGameGetHomeLaunchOptionPath(vm::ptr<char> commonPath, vm::ptr<cha
 	return CELL_GAME_ERROR_NOAPP;
 }
 
-error_code cellGameExecGame()
+error_code cellGameExecGame(u32 type, vm::ptr<char> dirName, u32 options, u32 memContainer, u32 execData, u32 userData)
+{
+	UNIMPLEMENTED_FUNC(cellGameExec);
+	return CELL_OK;
+}
+
+error_code cellGameDeleteGame(vm::ptr<char> dirName, u32 memContainer)
 {
 	UNIMPLEMENTED_FUNC(cellGameExec);
 	return CELL_OK;
@@ -73,9 +97,39 @@ error_code cellGameGetBootGameInfo(vm::ptr<u32> type, vm::ptr<char> dirName, vm:
 		return CELL_GAME_ERROR_PARAM;
 	}
 
-	// TODO: Support more boot types
-	*type = CELL_GAME_GAMETYPE_SYS;
+	const u32 source_type = Emu.GetBootSourceType();
 
+	*type = source_type;
+
+	if (execdata)
+	{
+		*execdata = g_fxo->get<game_exec_data>().execdata;
+	}
+
+	if (source_type == CELL_GAME_GAMETYPE_HDD)
+	{
+		const std::string dir_name = Emu.GetDir();
+
+		if (dir_name.size() >= CELL_GAME_DIRNAME_SIZE)
+		{
+			return CELL_HDDGAME_ERROR_INTERNAL; // Speculative
+		}
+
+		std::memcpy(dirName.get_ptr(), dir_name.c_str(), dir_name.size() + 1);
+	}
+
+	return CELL_OK;
+}
+
+error_code cellGameGetExitGameInfo(vm::ptr<u32> status, vm::ptr<u32> type, vm::ptr<char> dirName, vm::ptr<u32> execData, vm::ptr<u32> userData)
+{
+	UNIMPLEMENTED_FUNC(cellGameExec);
+	return CELL_OK;
+}
+
+error_code cellGameGetList(u32 listBufNum, u32 unk, vm::ptr<u32> listNum, vm::ptr<u32> getListNum, u32 memContainer)
+{
+	UNIMPLEMENTED_FUNC(cellGameExec);
 	return CELL_OK;
 }
 
@@ -87,5 +141,8 @@ DECLARE(ppu_module_manager::cellGameExec)("cellGameExec", []()
 	REG_FUNC(cellGameExec, cellGameGetHomeDataImportPath);
 	REG_FUNC(cellGameExec, cellGameGetHomeLaunchOptionPath);
 	REG_FUNC(cellGameExec, cellGameExecGame);
+	REG_FUNC(cellGameExec, cellGameDeleteGame);
 	REG_FUNC(cellGameExec, cellGameGetBootGameInfo);
+	REG_FUNC(cellGameExec, cellGameGetExitGameInfo);
+	REG_FUNC(cellGameExec, cellGameGetList);
 });

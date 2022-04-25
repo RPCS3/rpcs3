@@ -189,6 +189,14 @@ target_sources(rpcs3_emu PRIVATE
     Cell/lv2/sys_mmapper.cpp
     Cell/lv2/sys_mutex.cpp
     Cell/lv2/sys_net.cpp
+    Cell/lv2/sys_net/lv2_socket.cpp
+    Cell/lv2/sys_net/lv2_socket_native.cpp
+    Cell/lv2/sys_net/lv2_socket_raw.cpp
+    Cell/lv2/sys_net/lv2_socket_p2p.cpp
+    Cell/lv2/sys_net/lv2_socket_p2ps.cpp
+    Cell/lv2/sys_net/network_context.cpp
+    Cell/lv2/sys_net/nt_p2p_port.cpp
+    Cell/lv2/sys_net/sys_net_helpers.cpp
     Cell/lv2/sys_overlay.cpp
     Cell/lv2/sys_ppu_thread.cpp
     Cell/lv2/sys_process.cpp

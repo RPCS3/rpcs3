@@ -66,7 +66,6 @@ class main_window : public QMainWindow
 	QWinThumbnailToolButton *m_thumb_playPause = nullptr;
 	QWinThumbnailToolButton *m_thumb_stop = nullptr;
 	QWinThumbnailToolButton *m_thumb_restart = nullptr;
-	QStringList m_vulkan_adapters;
 #endif
 
 	enum class drop_type

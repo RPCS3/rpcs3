@@ -10,7 +10,7 @@ public:
 	}
 
 private:
-	void Write(const std::string& str, s32 count, bool is_non_inc = false, u32 id = 0);
+	void Write(std::string_view str, s32 count, bool is_non_inc = false, u32 id = 0);
 
 public:
 	u32 disasm(u32 pc) override;

@@ -1241,6 +1241,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		m_emu_settings->SetSetting(emu_settings_type::MFCCommandsShuffling, str);
 	});
 
+	m_emu_settings->EnhanceCheckBox(ui->disableMslFastMath, emu_settings_type::DisableMSLFastMath);
+	m_emu_settings->EnhanceCheckBox(ui->softwareVkSemaphore, emu_settings_type::SoftwareVkSemaphore);
+#ifdef __APPLE__
+	SubscribeTooltip(ui->disableMslFastMath, tooltips.settings.disable_msl_fast_math);
+	SubscribeTooltip(ui->softwareVkSemaphore, tooltips.settings.mvk_software_vksemaphore);
+#else
+	ui->disableMslFastMath->setVisible(false);
+	ui->softwareVkSemaphore->setVisible(false);
+#endif
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
@@ -1252,13 +1262,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
-
-	m_emu_settings->EnhanceComboBox(ui->metalsemaphore, emu_settings_type::MetalSemaphore);
-#ifdef __APPLE__
-	SubscribeTooltip(ui->gb_metalsemaphore, tooltips.settings.metal_semaphore);
-#else
-	ui->gb_metalsemaphore->setVisible(false);
-#endif
 
 	// Sliders
 
