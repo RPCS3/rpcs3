@@ -54,58 +54,37 @@ static const u32 MOUSE_MAX_CODES = 64;
 
 struct MouseInfo
 {
-	u32 max_connect;
-	u32 now_connect;
-	u32 info;
-	u32 mode[MAX_MICE]; // TODO: tablet support
-	u32 tablet_is_supported[MAX_MICE]; // TODO: tablet support
-	u16 vendor_id[MAX_MICE];
-	u16 product_id[MAX_MICE];
-	u8 status[MAX_MICE];
+	u32 max_connect = 0;
+	u32 now_connect = 0;
+	u32 info = 0;
+	u32 mode[MAX_MICE]{}; // TODO: tablet support
+	u32 tablet_is_supported[MAX_MICE]{}; // TODO: tablet support
+	u16 vendor_id[MAX_MICE]{};
+	u16 product_id[MAX_MICE]{};
+	u8 status[MAX_MICE]{};
+	bool is_null_handler = false;
 };
 
 struct MouseRawData
 {
-	s32 len;
-	u8 data[MOUSE_MAX_CODES];
-
-	MouseRawData()
-		: len(0)
-		, data()
-	{
-	}
+	s32 len = 0;
+	u8 data[MOUSE_MAX_CODES]{};
 };
 
 struct MouseData
 {
-	u8 update;
-	u8 buttons;
-	s8 x_axis;
-	s8 y_axis;
-	s8 wheel;
-	s8 tilt;  // (TODO)
-
-	MouseData()
-		: update(0)
-		, buttons(0)
-		, x_axis(0)
-		, y_axis(0)
-		, wheel(0)
-		, tilt(0)
-	{
-	}
+	u8 update = 0;
+	u8 buttons = 0;
+	s8 x_axis = 0;
+	s8 y_axis = 0;
+	s8 wheel = 0;
+	s8 tilt = 0; // (TODO)
 };
 
 struct MouseTabletData
 {
-	s32 len;
-	u8 data[MOUSE_MAX_CODES];
-
-	MouseTabletData()
-		: len(0)
-		, data()
-	{
-	}
+	s32 len = 0;
+	u8 data[MOUSE_MAX_CODES]{};
 };
 
 using MouseTabletDataList = std::list<MouseTabletData>;
@@ -113,32 +92,23 @@ using MouseDataList = std::list<MouseData>;
 
 struct Mouse
 {
-	s32 x_pos;
-	s32 y_pos;
-	s32 x_max;
-	s32 y_max;
-	u8 buttons; // actual mouse button positions
+	s32 x_pos = 0;
+	s32 y_pos = 0;
+	s32 x_max = 0;
+	s32 y_max = 0;
+	u8 buttons = 0; // actual mouse button positions
 
-	MouseTabletDataList m_tablet_datalist;
-	MouseDataList m_datalist;
-	MouseRawData m_rawdata;
-
-	Mouse()
-		: x_pos(0)
-		, y_pos(0)
-		, x_max(0)
-		, y_max(0)
-		, buttons(0)
-	{
-	}
+	MouseTabletDataList m_tablet_datalist{};
+	MouseDataList m_datalist{};
+	MouseRawData m_rawdata{};
 };
 
 class MouseHandlerBase
 {
 protected:
-	MouseInfo m_info;
+	MouseInfo m_info{};
 	std::vector<Mouse> m_mice;
-	steady_clock::time_point last_update;
+	steady_clock::time_point last_update{};
 
 	bool is_time_for_update(double elapsed_time = 10.0) // 4-10 ms, let's use 10 for now
 	{

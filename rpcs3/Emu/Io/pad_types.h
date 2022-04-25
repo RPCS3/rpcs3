@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "Emu/Io/pad_config_types.h"
 
 #include <vector>
 
@@ -250,6 +251,8 @@ struct VibrateMotor
 
 struct Pad
 {
+	const pad_handler m_pad_handler;
+
 	bool m_buffer_cleared{true};
 	u32 m_port_status{0};
 	u32 m_device_capability{0};
@@ -308,8 +311,9 @@ struct Pad
 	bool ldd{false};
 	u8 ldd_data[132] = {};
 
-	explicit Pad(u32 port_status, u32 device_capability, u32 device_type)
-		: m_port_status(port_status)
+	explicit Pad(pad_handler handler, u32 port_status, u32 device_capability, u32 device_type)
+		: m_pad_handler(handler)
+		, m_port_status(port_status)
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
 	{

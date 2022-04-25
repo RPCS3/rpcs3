@@ -168,7 +168,7 @@ error_code cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 
 error_code cellMusicSetVolume2(f32 level)
 {
-	cellMusic.todo("cellMusicSetVolume2(level=%f)", level);
+	cellMusic.warning("cellMusicSetVolume2(level=%f)", level);
 
 	level = std::clamp(level, 0.0f, 1.0f);
 
@@ -260,7 +260,7 @@ error_code cellMusicInitialize2SystemWorkload(s32 mode, vm::ptr<CellMusic2Callba
 
 error_code cellMusicGetPlaybackStatus2(vm::ptr<s32> status)
 {
-	cellMusic.todo("cellMusicGetPlaybackStatus2(status=*0x%x)", status);
+	cellMusic.warning("cellMusicGetPlaybackStatus2(status=*0x%x)", status);
 
 	if (!status)
 		return CELL_MUSIC2_ERROR_PARAM;
@@ -389,7 +389,7 @@ error_code cellMusicGetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 
 error_code cellMusicGetVolume(vm::ptr<f32> level)
 {
-	cellMusic.todo("cellMusicGetVolume(level=*0x%x)", level);
+	cellMusic.warning("cellMusicGetVolume(level=*0x%x)", level);
 
 	if (!level)
 		return CELL_MUSIC_ERROR_PARAM;
@@ -402,7 +402,7 @@ error_code cellMusicGetVolume(vm::ptr<f32> level)
 
 error_code cellMusicGetPlaybackStatus(vm::ptr<s32> status)
 {
-	cellMusic.todo("cellMusicGetPlaybackStatus(status=*0x%x)", status);
+	cellMusic.warning("cellMusicGetPlaybackStatus(status=*0x%x)", status);
 
 	if (!status)
 		return CELL_MUSIC_ERROR_PARAM;
@@ -567,7 +567,7 @@ error_code cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Cal
 
 error_code cellMusicSetVolume(f32 level)
 {
-	cellMusic.todo("cellMusicSetVolume(level=%f)", level);
+	cellMusic.warning("cellMusicSetVolume(level=%f)", level);
 
 	level = std::clamp(level, 0.0f, 1.0f);
 
@@ -589,7 +589,7 @@ error_code cellMusicSetVolume(f32 level)
 
 error_code cellMusicGetVolume2(vm::ptr<f32> level)
 {
-	cellMusic.todo("cellMusicGetVolume2(level=*0x%x)", level);
+	cellMusic.warning("cellMusicGetVolume2(level=*0x%x)", level);
 
 	if (!level)
 		return CELL_MUSIC2_ERROR_PARAM;

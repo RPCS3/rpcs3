@@ -98,7 +98,7 @@ error_code cellKbClearBuf(u32 port_no)
 
 	for (int i = 0; i < CELL_KB_MAX_KEYCODES; i++)
 	{
-		current_data.keycode[i] = { 0, 0 };
+		current_data.buttons[i] = KbButton(CELL_KEYC_NO_EVENT, 0, false);
 	}
 
 	return CELL_OK;
@@ -304,15 +304,25 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 		return CELL_KB_ERROR_NO_DEVICE;
 
 	KbData& current_data = handler.GetData(port_no);
-	data->led = current_data.led;
-	data->mkey = current_data.mkey;
-	data->len = std::min<s32>(CELL_KB_MAX_KEYCODES, current_data.len);
+
+	if (current_info.is_null_handler || (current_info.info & CELL_KB_INFO_INTERCEPTED))
+	{
+		data->led = 0;
+		data->mkey = 0;
+		data->len = 0;
+	}
+	else
+	{
+		data->led = current_data.led;
+		data->mkey = current_data.mkey;
+		data->len = std::min<s32>(CELL_KB_MAX_KEYCODES, current_data.len);
+	}
 
 	if (current_data.len > 0)
 	{
 		for (s32 i = 0; i < current_data.len; i++)
 		{
-			data->keycode[i] = current_data.keycode[i].first;
+			data->keycode[i] = current_data.buttons[i].m_keyCode;
 		}
 
 		KbConfig& current_config = handler.GetConfig(port_no);
