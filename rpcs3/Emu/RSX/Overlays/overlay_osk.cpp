@@ -953,7 +953,7 @@ namespace rsx
 			static constexpr auto thread_name = "OSK Thread"sv;
 		};
 
-		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled)
+		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled, bool intercept_input)
 		{
 			state = OskDialogState::Open;
 			flags = prohibit_flags;
@@ -963,6 +963,7 @@ namespace rsx
 			m_frame.back_color.b = base_color.b;
 			m_frame.back_color.a = base_color.a;
 			m_background.back_color.a = dimmer_enabled ? 0.8f : 0.0f;
+			m_start_pad_interception = intercept_input;
 
 			const callback_t shift_cb  = [this](const std::u32string& text){ on_shift(text); };
 			const callback_t layer_cb  = [this](const std::u32string& text){ on_layer(text); };

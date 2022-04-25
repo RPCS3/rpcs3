@@ -67,7 +67,11 @@ namespace rsx
 
 			m_input_timer.Start();
 
-			input::SetIntercepted(true);
+			// Only start intercepting input if the the overlay allows it (enabled by default)
+			if (m_start_pad_interception)
+			{
+				input::SetIntercepted(true);
+			}
 
 			const auto handle_button_press = [&](u8 button_id, bool pressed, int pad_index)
 			{
