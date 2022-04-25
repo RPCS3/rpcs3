@@ -124,8 +124,9 @@ namespace rsx
 				if (Emu.IsPaused())
 					continue;
 
-				// Get keyboard input
-				if (m_keyboard_input_enabled && input::g_keyboards_intercepted)
+				// Get keyboard input if supported by the overlay and activated by the game.
+				// Ignored if a keyboard pad handler is active in order to prevent double input.
+				if (m_keyboard_input_enabled && !m_keyboard_pad_handler_active && input::g_keyboards_intercepted)
 				{
 					auto& handler = g_fxo->get<KeyboardHandlerBase>();
 					std::lock_guard<std::mutex> lock(handler.m_mutex);
@@ -150,10 +151,9 @@ namespace rsx
 							continue;
 						}
 					}
-					else
+					else if (g_cfg.io.keyboard != keyboard_handler::null)
 					{
-						// TODO: Init handler only if the game requests keyboard input.
-						//       This probably needs to happen completely seperate from cellKb.
+						// Workaround if cellKb did not init the keyboard handler.
 						handler.Init(1);
 					}
 				}
@@ -168,6 +168,8 @@ namespace rsx
 					refresh();
 					continue;
 				}
+
+				bool keyboard_pad_handler_active = false;
 
 				int pad_index = -1;
 				for (const auto& pad : handler->GetPads())
@@ -190,6 +192,11 @@ namespace rsx
 					if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 					{
 						continue;
+					}
+
+					if (pad->m_pad_handler == pad_handler::keyboard)
+					{
+						m_keyboard_pad_handler_active = true;
 					}
 
 					for (const Button& button : pad->m_buttons)
@@ -309,6 +316,8 @@ namespace rsx
 							break;
 					}
 				}
+
+				m_keyboard_pad_handler_active = keyboard_pad_handler_active;
 
 				refresh();
 			}
