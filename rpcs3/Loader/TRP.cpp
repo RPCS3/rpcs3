@@ -11,7 +11,7 @@ TRPLoader::TRPLoader(const fs::file& f)
 {
 }
 
-bool TRPLoader::Install(const std::string& dest, bool /*show*/)
+bool TRPLoader::Install(std::string_view dest, bool /*show*/)
 {
 	if (!trp_f)
 	{
@@ -151,11 +151,16 @@ u64 TRPLoader::GetRequiredSpace() const
 	return file_size - sizeof(m_header) - file_element_size;
 }
 
-bool TRPLoader::ContainsEntry(const char *filename)
+bool TRPLoader::ContainsEntry(std::string_view filename)
 {
+	if (filename.size() >= sizeof(TRPEntry::name))
+	{
+		return false;
+	}
+
 	for (const TRPEntry& entry : m_entries)
 	{
-		if (!strcmp(entry.name, filename))
+		if (entry.name == filename)
 		{
 			return true;
 		}
@@ -163,12 +168,17 @@ bool TRPLoader::ContainsEntry(const char *filename)
 	return false;
 }
 
-void TRPLoader::RemoveEntry(const char *filename)
+void TRPLoader::RemoveEntry(std::string_view filename)
 {
+	if (filename.size() >= sizeof(TRPEntry::name))
+	{
+		return;
+	}
+
 	std::vector<TRPEntry>::iterator i = m_entries.begin();
 	while (i != m_entries.end())
 	{
-		if (!strcmp(i->name, filename))
+		if (i->name == filename)
 		{
 			i = m_entries.erase(i);
 		}
@@ -179,13 +189,18 @@ void TRPLoader::RemoveEntry(const char *filename)
 	}
 }
 
-void TRPLoader::RenameEntry(const char *oldname, const char *newname)
+void TRPLoader::RenameEntry(std::string_view oldname, std::string_view newname)
 {
+	if (oldname.size() >= sizeof(TRPEntry::name) || newname.size() >= sizeof(TRPEntry::name))
+	{
+		return;
+	}
+
 	for (TRPEntry& entry : m_entries)
 	{
-		if (!strcmp(entry.name, oldname))
+		if (entry.name == oldname)
 		{
-			strcpy_trunc(entry.name, std::string_view(newname));
+			strcpy_trunc(entry.name, newname);
 		}
 	}
 }
