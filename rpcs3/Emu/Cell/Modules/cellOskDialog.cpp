@@ -522,14 +522,14 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		osk->mouse_input_enabled = (info.device_mask != CELL_OSKDIALOG_DEVICE_MASK_PAD);
 	}
 
-	input::SetIntercepted(osk->pad_input_enabled, osk->keyboard_input_enabled, osk->mouse_input_enabled);
-
 	if (info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
 	{
 		info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
 		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
 		return CELL_OK;
 	}
+
+	input::SetIntercepted(osk->pad_input_enabled, osk->keyboard_input_enabled, osk->mouse_input_enabled);
 
 	Emu.CallFromMainThread([=, &result, &info]()
 	{
