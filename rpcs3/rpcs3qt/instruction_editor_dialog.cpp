@@ -18,7 +18,7 @@ extern bool ppu_patch(u32 addr, u32 value);
 instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_pc(_pc)
-	, m_disasm(_disasm)
+	, m_disasm(_disasm->copy_type_erased())
 	, m_get_cpu(std::move(func))
 {
 	setWindowTitle(tr("Edit instruction"));
@@ -28,7 +28,6 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 	const auto cpu = m_get_cpu();
 
 	m_cpu_offset = cpu && cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
-	const QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_panel(new QHBoxLayout());
@@ -43,12 +42,12 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 
 	m_instr = new QLineEdit(this);
 	m_instr->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-	m_instr->setPlaceholderText(instruction);
-	m_instr->setText(instruction);
 	m_instr->setMaxLength(8);
 	m_instr->setMaximumWidth(65);
 
-	m_preview = new QLabel("", this);
+	m_disasm->change_mode(cpu_disasm_mode::normal);
+	m_disasm->disasm(m_pc);
+	m_preview = new QLabel(qstr(m_disasm->last_opcode), this);
 
 	// Layouts
 	vbox_left_panel->addWidget(new QLabel(tr("Address:     ")));
@@ -141,12 +140,12 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 void instruction_editor_dialog::updatePreview() const
 {
 	bool ok;
-	ulong opcode = m_instr->text().toULong(&ok, 16);
-	Q_UNUSED(opcode)
+	const be_t<u32> opcode{static_cast<u32>(m_instr->text().toULong(&ok, 16))};
+	m_disasm->change_ptr(reinterpret_cast<const u8*>(&opcode) - std::intptr_t{m_pc});
 
-	if (ok)
+	if (ok && m_disasm->disasm(m_pc))
 	{
-		m_preview->setText(tr("Preview disabled."));
+		m_preview->setText(qstr(m_disasm->last_opcode));
 	}
 	else
 	{
