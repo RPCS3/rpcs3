@@ -81,8 +81,8 @@ std::string VertexProgramDecompiler::GetDST(bool is_sca)
 		}
 
 		const std::string reg_type = (is_address_reg) ? getIntTypeName(4) : getFloatTypeName(4);
-		const std::string reg_sel = (is_address_reg) ? "a" : "tmp";
-		ret += m_parr.AddParam(PF_PARAM_NONE, reg_type, reg_sel + std::to_string(tmp_index)) + mask;
+		const std::string reg_sel = (is_address_reg) ? "a" : "r";
+		ret += m_parr.AddParam(PF_PARAM_NONE, reg_type, reg_sel + std::to_string(tmp_index), reg_type + "(0.)") + mask;
 	}
 	else if (!is_result)
 	{
@@ -107,25 +107,26 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 	};
 
 	std::string ret;
+	const auto float4 = getFloatTypeName(4);
 
 	switch (src[n].reg_type)
 	{
 	case RSX_VP_REGISTER_TYPE_TEMP:
-		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "tmp" + std::to_string(src[n].tmp_src));
+		ret += m_parr.AddParam(PF_PARAM_NONE, float4, "r" + std::to_string(src[n].tmp_src), float4 + "(0.)");
 		break;
 	case RSX_VP_REGISTER_TYPE_INPUT:
 		if (d1.input_src < std::size(reg_table))
 		{
-			ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[d1.input_src], d1.input_src);
+			ret += m_parr.AddParam(PF_PARAM_IN, float4, reg_table[d1.input_src], d1.input_src);
 		}
 		else
 		{
 			rsx_log.error("Bad input src num: %d", u32{ d1.input_src });
-			ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), "in_unk", d1.input_src);
+			ret += m_parr.AddParam(PF_PARAM_IN, float4, "in_unk", d1.input_src);
 		}
 		break;
 	case RSX_VP_REGISTER_TYPE_CONSTANT:
-		m_parr.AddParam(PF_PARAM_UNIFORM, getFloatTypeName(4), std::string("vc[468]"));
+		m_parr.AddParam(PF_PARAM_UNIFORM, float4, std::string("vc[468]"));
 		properties.has_indexed_constants |= !!d3.index_const;
 		m_constant_ids.insert(static_cast<u16>(d1.const_src));
 		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
