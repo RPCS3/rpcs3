@@ -904,7 +904,7 @@ void try_spawn_ppu_if_exclusive_program(const ppu_module& m)
 
 		auto ppu = idm::make_ptr<named_thread<ppu_thread>>(p, "test_thread", 0);
 
-		ppu->cia = m.funcs[0].addr;
+		ppu->cia = m.funcs.empty() ? m.secs[0].addr : m.funcs[0].addr;
 
 		// For kernel explorer
 		g_fxo->init<lv2_memory_container>(4096);
@@ -995,9 +995,9 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 	for (const auto& s : elf.shdrs)
 	{
-		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", std::bit_cast<u32>(s.sh_type), s.sh_addr, s.sh_size, s._sh_flags);
 
-		if (s.sh_type != 1u) continue;
+		if (s.sh_type != sec_type::sht_progbits) continue;
 
 		const u32 addr = vm::cast(s.sh_addr);
 		const u32 size = vm::cast(s.sh_size);
@@ -1013,8 +1013,8 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 					ppu_segment _sec;
 					_sec.addr = addr - saddr + prx->segs[i].addr;
 					_sec.size = size;
-					_sec.type = s.sh_type;
-					_sec.flags = static_cast<u32>(s.sh_flags & 7);
+					_sec.type = std::bit_cast<u32>(s.sh_type);
+					_sec.flags = static_cast<u32>(s._sh_flags & 7);
 					_sec.filesz = 0;
 					prx->secs.emplace_back(_sec);
 
@@ -1421,16 +1421,16 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 	// Load section list, used by the analyser
 	for (const auto& s : elf.shdrs)
 	{
-		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", std::bit_cast<u32>(s.sh_type), s.sh_addr, s.sh_size, s._sh_flags);
 
-		if (s.sh_type != 1u) continue;
+		if (s.sh_type != sec_type::sht_progbits) continue;
 
 		ppu_segment _sec;
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
 		const u32 size = _sec.size = vm::cast(s.sh_size);
 
-		_sec.type = s.sh_type;
-		_sec.flags = static_cast<u32>(s.sh_flags & 7);
+		_sec.type = std::bit_cast<u32>(s.sh_type);
+		_sec.flags = static_cast<u32>(s._sh_flags & 7);
 		_sec.filesz = 0;
 
 		if (addr && size)
@@ -1997,16 +1997,16 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	// Load section list, used by the analyser
 	for (const auto& s : elf.shdrs)
 	{
-		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", std::bit_cast<u32>(s.sh_type), s.sh_addr, s.sh_size, s._sh_flags);
 
-		if (s.sh_type != 1u) continue;
+		if (s.sh_type != sec_type::sht_progbits) continue;
 
 		ppu_segment _sec;
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
 		const u32 size = _sec.size = vm::cast(s.sh_size);
 
-		_sec.type = s.sh_type;
-		_sec.flags = static_cast<u32>(s.sh_flags & 7);
+		_sec.type = std::bit_cast<u32>(s.sh_type);
+		_sec.flags = static_cast<u32>(s._sh_flags & 7);
 		_sec.filesz = 0;
 
 		if (addr && size)
@@ -2151,4 +2151,94 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	try_spawn_ppu_if_exclusive_program(*ovlm);
 
 	return {std::move(ovlm), {}};
+}
+
+bool ppu_load_rel_exec(const ppu_rel_object& elf)
+{
+	ppu_module relm{};
+
+	struct on_fatal_error
+	{
+		ppu_module& relm;
+		bool errored = true;
+
+		~on_fatal_error()
+		{
+			if (!errored)
+			{
+				return;
+			}
+
+			// Revert previous allocations on an error
+			for (const auto& seg : relm.secs)
+			{
+				vm::dealloc(seg.addr);
+			}
+		}
+
+	} error_handler{relm};
+
+	u32 memsize = 0;
+
+	for (const auto& s : elf.shdrs)
+	{
+		if (s.sh_type != sec_type::sht_progbits)
+		{
+			memsize = utils::align<u32>(memsize + vm::cast(s.sh_size), 128);
+		}
+	}
+
+	u32 addr = vm::alloc(memsize, vm::main);
+
+	if (!addr)
+	{
+		ppu_loader.fatal("ppu_load_rel_exec(): vm::alloc() failed (memsz=0x%x)", memsize);
+		return false;
+	}
+
+	ppu_register_range(addr, memsize);
+
+	// Copy references to sections for the purpose of sorting executable sections before non-executable ones
+	std::vector<const elf_shdata<elf_be, u64>*> shdrs(elf.shdrs.size());
+
+	for (auto& ref : shdrs)
+	{
+		ref = &elf.shdrs[&ref - shdrs.data()];
+	}
+
+	std::stable_sort(shdrs.begin(), shdrs.end(), [](auto& a, auto& b) -> bool
+	{
+		const bs_t<sh_flag> flags_a_has = a->sh_flags() - b->sh_flags();
+		return flags_a_has.all_of(sh_flag::shf_execinstr);
+	});
+
+	// Load sections
+	for (auto ptr : shdrs)
+	{
+		const auto& s = *ptr;
+
+		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", std::bit_cast<u32>(s.sh_type), s.sh_addr, s.sh_size, s._sh_flags);
+	
+		if (s.sh_type == sec_type::sht_progbits && s.sh_size && s.sh_flags().all_of(sh_flag::shf_alloc))
+		{
+			ppu_segment _sec;
+			const u32 size = _sec.size = vm::cast(s.sh_size);
+
+			_sec.type = std::bit_cast<u32>(s.sh_type);
+			_sec.flags = static_cast<u32>(s._sh_flags & 7);
+			_sec.filesz = size;
+
+			_sec.addr = addr;
+			relm.secs.emplace_back(_sec);
+
+			std::memcpy(vm::base(addr), s.bin.data(), size);
+			addr = utils::align<u32>(addr + size, 128);
+		}
+	}
+
+	try_spawn_ppu_if_exclusive_program(relm);
+
+	error_handler.errored = false;
+
+	return true;
 }

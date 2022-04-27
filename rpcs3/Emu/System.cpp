@@ -64,12 +64,14 @@ atomic_t<u64> g_watchdog_hold_ctr{0};
 
 extern bool ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
+extern void spu_load_rel_exec(const spu_rel_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 = 0);
 extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 = 0);
+extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -1340,7 +1342,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
+		ppu_rel_object ppu_rel;
 		spu_exec_object spu_exec;
+		spu_rel_object spu_rel;
 
 		if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -1449,7 +1453,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
-			// PPU PRX (experimental)
+			// PPU PRX
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			ppu_load_prx(ppu_prx, m_path);
@@ -1457,10 +1461,26 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
-			// SPU executable (experimental)
+			// SPU executable
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			spu_load_exec(spu_exec);
+			Pause(true);
+		}
+		else if (spu_rel.open(elf_file) == elf_error::ok)
+		{
+			// SPU linker file
+			GetCallbacks().on_ready();
+			g_fxo->init(false);
+			spu_load_rel_exec(spu_rel);
+			Pause(true);
+		}
+		else if (ppu_rel.open(elf_file) == elf_error::ok)
+		{
+			// PPU linker file
+			GetCallbacks().on_ready();
+			g_fxo->init(false);
+			ppu_load_rel_exec(ppu_rel);
 			Pause(true);
 		}
 		else
@@ -1470,6 +1490,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			sys_log.warning("** ppu_exec -> %s", ppu_exec.get_error());
 			sys_log.warning("** ppu_prx  -> %s", ppu_prx.get_error());
 			sys_log.warning("** spu_exec -> %s", spu_exec.get_error());
+			sys_log.warning("** spu_rel -> %s", spu_rel.get_error());
+			sys_log.warning("** ppu_rel -> %s", ppu_rel.get_error());
 
 			Kill(false);
 			return game_boot_result::invalid_file_or_folder;
