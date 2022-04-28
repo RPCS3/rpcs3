@@ -163,7 +163,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libsysutil_video_upload.sprx", 1 },
 	{ "libusbd.sprx", 0 },
 	{ "libusbpspcm.sprx", 0 },
-	{ "libvdec.sprx", 1 },
+	{ "libvdec.sprx", 0 },
 	{ "libvoice.sprx", 1 },
 	{ "libvpost.sprx", 0 },
 	{ "libvpost2.sprx", 0 },
