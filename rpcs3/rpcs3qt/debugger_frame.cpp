@@ -743,6 +743,7 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
 void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
+	ShowPC();
 
 	const auto cpu = get_cpu();
 
@@ -964,7 +965,6 @@ void debugger_frame::DoUpdate()
 		m_last_step_over_breakpoint = -1;
 	}
 
-	ShowPC();
 	WritePanels();
 }
 
