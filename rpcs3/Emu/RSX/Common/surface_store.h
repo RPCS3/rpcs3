@@ -1108,7 +1108,7 @@ namespace rsx
 			return result;
 		}
 
-		void check_for_duplicates(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
+		void check_for_duplicates(std::vector<surface_overlap_info>& sections)
 		{
 			utils::address_range test_range;
 			for (const auto& section : sections)

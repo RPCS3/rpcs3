@@ -1,6 +1,8 @@
 #ifndef LIBUSB_CONFIG_H
 #define LIBUSB_CONFIG_H
 
+#define PRINTF_FORMAT(a, b) __attribute__ ((__format__ (__printf__, a, b)))
+
 #define DEFAULT_VISIBILITY @DEFAULT_VISIBILITY@
 
 #cmakedefine ENABLE_DEBUG_LOGGING
