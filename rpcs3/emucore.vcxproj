@@ -454,6 +454,7 @@
     <ClInclude Include="Emu\cache_utils.hpp" />
     <ClInclude Include="Emu\Cell\lv2\sys_crypto_engine.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCrossController.h" />
+    <ClInclude Include="Emu\Cell\Modules\cellRec.h" />
     <ClInclude Include="Emu\Cell\Modules\cellRemotePlay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
