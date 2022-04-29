@@ -16,6 +16,9 @@ enum class pad_handler
 #ifdef HAVE_LIBEVDEV
 	evdev,
 #endif
+#ifdef __APPLE__
+	gamecontroller,
+#endif
 };
 
 enum class mouse_movement_mode : s32

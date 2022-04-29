@@ -20,6 +20,9 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 #ifdef HAVE_LIBEVDEV
 		case pad_handler::evdev: return "Evdev";
 #endif
+#ifdef __APPLE__
+		case pad_handler::gamecontroller: return "GameController";
+#endif
 		}
 
 		return unknown;
