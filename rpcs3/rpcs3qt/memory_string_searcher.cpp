@@ -314,7 +314,7 @@ u64 memory_string_searcher::OnSearch(std::string wstr, int mode)
 
 	static constexpr u32 block_size = 0x2000000;
 
-	vm::reader_lock rlock;
+	vm::writer_lock rlock;
 
 	const named_thread_group workers("Memory Searcher "sv, max_threads, [&]()
 	{
@@ -497,7 +497,7 @@ u64 memory_string_searcher::OnSearch(std::string wstr, int mode)
 			auto log_occurance = [&](std::string_view& test_sv, bool always_log_str)
 			{
 				// Cut out a view which may or may not be suffixed by a single null character
-				// This view is a peek at the full string which resides in PS3 memory 
+				// This view is a peek at the full string which resides in PS3 memory
 				test_sv = test_sv.substr(0, std::max<usz>(wstr.size(), 100));
 				const usz null_pos = test_sv.find_first_of("\n\0"sv, wstr.size());
 				test_sv = test_sv.substr(0, null_pos);
