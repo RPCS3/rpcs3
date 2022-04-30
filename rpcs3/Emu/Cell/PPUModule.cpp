@@ -629,7 +629,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 					// Set exported function
 					flink.export_addr = target - 4;
 
-					ppu_form_branch_to_code(faddr, target);
+					ppu_form_branch_to_code(vm::read32(faddr), target);
 				}
 				else
 				{
