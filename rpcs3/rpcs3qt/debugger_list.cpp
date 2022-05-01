@@ -35,7 +35,12 @@ debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_
 
 void debugger_list::UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm)
 {
-	m_cpu = cpu;
+	if (m_cpu != cpu)
+	{
+		m_cpu = cpu;
+		m_selected_instruction = -1;
+	}
+
 	m_disasm = disasm;
 }
 
@@ -77,6 +82,19 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 	const auto& default_foreground = palette().color(foregroundRole());
 	const auto& default_background = palette().color(backgroundRole());
 
+	if (select_addr)
+	{
+		m_selected_instruction = addr;
+	}
+
+	for (uint i = 0; i < m_item_count; ++i)
+	{
+		if (auto list_item = item(i); list_item->isSelected())
+		{
+			list_item->setSelected(false);
+		}
+	}
+
 	if (!m_cpu || !m_disasm || +m_cpu->state + cpu_flag::exit + cpu_flag::wait == +m_cpu->state)
 	{
 		for (uint i = 0; i < m_item_count; ++i)
@@ -103,9 +121,13 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 				list_item->setForeground(m_text_color_pc);
 				list_item->setBackground(m_color_pc);
 			}
-			else if (select_addr && pc == addr)
+			else if (pc == m_selected_instruction)
 			{
-				list_item->setSelected(true);
+				// setSelected may invoke a resize event which causes stack overflow, terminate recursion
+				if (!list_item->isSelected())
+				{
+					list_item->setSelected(true);
+				}
 			}
 			else if (IsBreakpoint(pc))
 			{
