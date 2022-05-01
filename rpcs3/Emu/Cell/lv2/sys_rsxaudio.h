@@ -658,7 +658,8 @@ private:
 
 	simple_ringbuf ringbuf{};
 	simple_ringbuf aux_ringbuf{};
-	std::unique_ptr<u8[]> tmp_buf{};
+	std::vector<u8> thread_tmp_buf{};
+	std::vector<f32> callback_tmp_buf{};
 	bool use_aux_ringbuf = false;
 	shared_mutex ringbuf_mutex{};
 

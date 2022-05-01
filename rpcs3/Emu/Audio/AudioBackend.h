@@ -141,47 +141,47 @@ public:
 		static constexpr f32 center_coef = std::numbers::sqrt2_v<f32> / 2;
 		static constexpr f32 surround_coef = std::numbers::sqrt2_v<f32> / 2;
 
-		for (u32 crnt_sample = 0; crnt_sample < sample_cnt; crnt_sample += static_cast<u32>(from))
+		for (u32 src_sample = 0, dst_sample = 0; src_sample < sample_cnt; src_sample += static_cast<u32>(from), dst_sample += static_cast<u32>(to))
 		{
-			const f32 left       = src[crnt_sample + 0];
-			const f32 right      = src[crnt_sample + 1];
-			const f32 center     = src[crnt_sample + 2];
-			const f32 low_freq   = src[crnt_sample + 3];
+			const f32 left       = src[src_sample + 0];
+			const f32 right      = src[src_sample + 1];
+			const f32 center     = src[src_sample + 2];
+			const f32 low_freq   = src[src_sample + 3];
 
 			if constexpr (from == AudioChannelCnt::SURROUND_5_1)
 			{
 				static_assert(to == AudioChannelCnt::STEREO, "Invalid TO channel count");
 
-				const f32 side_left  = src[crnt_sample + 4];
-				const f32 side_right = src[crnt_sample + 5];
+				const f32 side_left  = src[src_sample + 4];
+				const f32 side_right = src[src_sample + 5];
 
 				const f32 mid = center * center_coef;
-				dst[crnt_sample + 0] = left + mid + side_left * surround_coef;
-				dst[crnt_sample + 1] = right + mid + side_right * surround_coef;
+				dst[dst_sample + 0] = left + mid + side_left * surround_coef;
+				dst[dst_sample + 1] = right + mid + side_right * surround_coef;
 			}
 			else if constexpr (from == AudioChannelCnt::SURROUND_7_1)
 			{
 				static_assert(to == AudioChannelCnt::STEREO || to == AudioChannelCnt::SURROUND_5_1, "Invalid TO channel count");
 
-				const f32 rear_left  = src[crnt_sample + 4];
-				const f32 rear_right = src[crnt_sample + 5];
-				const f32 side_left  = src[crnt_sample + 6];
-				const f32 side_right = src[crnt_sample + 7];
+				const f32 rear_left  = src[src_sample + 4];
+				const f32 rear_right = src[src_sample + 5];
+				const f32 side_left  = src[src_sample + 6];
+				const f32 side_right = src[src_sample + 7];
 
 				if constexpr (to == AudioChannelCnt::SURROUND_5_1)
 				{
-					dst[crnt_sample + 0] = left;
-					dst[crnt_sample + 1] = right;
-					dst[crnt_sample + 2] = center;
-					dst[crnt_sample + 3] = low_freq;
-					dst[crnt_sample + 4] = side_left + rear_left;
-					dst[crnt_sample + 5] = side_right + rear_right;
+					dst[dst_sample + 0] = left;
+					dst[dst_sample + 1] = right;
+					dst[dst_sample + 2] = center;
+					dst[dst_sample + 3] = low_freq;
+					dst[dst_sample + 4] = side_left + rear_left;
+					dst[dst_sample + 5] = side_right + rear_right;
 				}
 				else
 				{
 					const f32 mid = center * center_coef;
-					dst[crnt_sample + 0] = left + mid + (side_left + rear_left) * surround_coef;
-					dst[crnt_sample + 1] = right + mid + (side_right + rear_right) * surround_coef;
+					dst[dst_sample + 0] = left + mid + (side_left + rear_left) * surround_coef;
+					dst[dst_sample + 1] = right + mid + (side_right + rear_right) * surround_coef;
 				}
 			}
 		}

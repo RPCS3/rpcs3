@@ -1533,7 +1533,7 @@ void rsxaudio_backend_thread::operator()()
 
 			if (should_service_stream)
 			{
-				void *crnt_buf = tmp_buf.get();
+				void *crnt_buf = thread_tmp_buf.data();
 
 				const u64 bytes_req = ringbuf.get_free_size();
 				const u64 bytes_read = aux_ringbuf.pop(crnt_buf, bytes_req, true);
@@ -1735,14 +1735,16 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state &ra_state, const
 			const u64 frame_len_bytes = static_cast<u64>(std::round(frame_len * bytes_per_sec));
 			aux_ringbuf.set_buf_size(frame_len_bytes);
 			ringbuf.set_buf_size(frame_len_bytes);
-			tmp_buf = std::make_unique<u8[]>(frame_len_bytes);
+			thread_tmp_buf.resize(frame_len_bytes);
 		}
 		else
 		{
 			const f64 frame_len = std::max<f64>(buffering_len, cb_frame_len) + _10ms;
 			ringbuf.set_buf_size(static_cast<u64>(std::round(frame_len * bytes_per_sec)));
-			tmp_buf = nullptr;
+			thread_tmp_buf.resize(0);
 		}
+
+		callback_tmp_buf.resize(static_cast<usz>((cb_frame_len + _10ms) * static_cast<u32>(AudioSampleSize::FLOAT) * static_cast<u32>(port_cfg.ch_cnt) * static_cast<u32>(port_cfg.freq)));
 	}
 
 	callback_cfg.atomic_op([&](callback_config &val)
@@ -1812,9 +1814,14 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void *buf)
 
 	if (cb_cfg.ready && !mute_state[static_cast<u8>(cb_cfg.avport_idx)] && Emu.IsRunning())
 	{
-		const u32 bytes_from_rb = cb_cfg.convert_to_s16 ? bytes / static_cast<u32>(AudioSampleSize::S16) * static_cast<u32>(AudioSampleSize::FLOAT) : bytes;
-		const u32 byte_cnt = static_cast<u32>(ringbuf.pop(buf, bytes_from_rb, true));
+		const u32 bytes_ch_adjusted = bytes / cb_cfg.output_ch_cnt * cb_cfg.input_ch_cnt;
+		const u32 bytes_from_rb = cb_cfg.convert_to_s16 ? bytes_ch_adjusted / static_cast<u32>(AudioSampleSize::S16) * static_cast<u32>(AudioSampleSize::FLOAT) : bytes_ch_adjusted;
+
+		ensure(callback_tmp_buf.capacity() * static_cast<u32>(AudioSampleSize::FLOAT) >= bytes_from_rb);
+
+		const u32 byte_cnt = static_cast<u32>(ringbuf.pop(callback_tmp_buf.data(), bytes_from_rb, true));
 		const u32 sample_cnt = byte_cnt / static_cast<u32>(AudioSampleSize::FLOAT);
+		const u32 sample_cnt_out = sample_cnt / cb_cfg.input_ch_cnt * cb_cfg.output_ch_cnt;
 
 		// Buffer is in weird state - drop acquired data
 		if (sample_cnt == 0 || sample_cnt % cb_cfg.input_ch_cnt != 0)
@@ -1829,11 +1836,11 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void *buf)
 			{
 				if (cb_cfg.output_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
 				{
-					AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, static_cast<f32*>(buf), static_cast<f32*>(buf));
+					AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
 				}
 				else if (cb_cfg.output_ch_cnt == static_cast<u32>(AudioChannelCnt::STEREO))
 				{
-					AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt, static_cast<f32*>(buf), static_cast<f32*>(buf));
+					AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
 				}
 				else
 				{
@@ -1844,7 +1851,7 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void *buf)
 			{
 				if (cb_cfg.output_ch_cnt == static_cast<u32>(AudioChannelCnt::STEREO))
 				{
-					AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt, static_cast<f32*>(buf), static_cast<f32*>(buf));
+					AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt, callback_tmp_buf.data(), callback_tmp_buf.data());
 				}
 				else
 				{
@@ -1868,7 +1875,7 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void *buf)
 				.ch_cnt = cb_cfg.input_ch_cnt
 			};
 
-			const u16 new_vol = static_cast<u16>(std::round(AudioBackend::apply_volume(param, sample_cnt, static_cast<f32*>(buf), static_cast<f32*>(buf)) * callback_config::VOL_NOMINAL));
+			const u16 new_vol = static_cast<u16>(std::round(AudioBackend::apply_volume(param, sample_cnt_out, callback_tmp_buf.data(), callback_tmp_buf.data()) * callback_config::VOL_NOMINAL));
 			callback_cfg.atomic_op([&](callback_config &val)
 			{
 				if (val.target_volume != cb_cfg.target_volume)
@@ -1882,17 +1889,17 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void *buf)
 		}
 		else if (cb_cfg.current_volume != callback_config::VOL_NOMINAL)
 		{
-			AudioBackend::apply_volume_static(cb_cfg.current_volume * callback_config::VOL_NOMINAL_INV, sample_cnt, static_cast<f32*>(buf), static_cast<f32*>(buf));
+			AudioBackend::apply_volume_static(cb_cfg.current_volume * callback_config::VOL_NOMINAL_INV, sample_cnt_out, callback_tmp_buf.data(), callback_tmp_buf.data());
 		}
 
 		if (cb_cfg.convert_to_s16)
 		{
-			AudioBackend::convert_to_s16(sample_cnt, static_cast<f32*>(buf), buf);
-			return sample_cnt * static_cast<u32>(AudioSampleSize::S16);
+			AudioBackend::convert_to_s16(sample_cnt_out, callback_tmp_buf.data(), buf);
+			return sample_cnt_out * static_cast<u32>(AudioSampleSize::S16);
 		}
 
-		AudioBackend::normalize(sample_cnt, static_cast<f32*>(buf), static_cast<f32*>(buf));
-		return sample_cnt * static_cast<u32>(AudioSampleSize::FLOAT);
+		AudioBackend::normalize(sample_cnt_out, callback_tmp_buf.data(), static_cast<f32*>(buf));
+		return sample_cnt_out * static_cast<u32>(AudioSampleSize::FLOAT);
 	}
 
 	ringbuf.reader_flush();
