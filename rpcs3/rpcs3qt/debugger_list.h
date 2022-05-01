@@ -20,6 +20,7 @@ public:
 	u32 m_pc = 0;
 	u32 m_item_count = 30;
 	bool m_follow_thread = true; // If true, follow the selected thread to wherever it goes in code
+	u32 m_selected_instruction = -1;
 	QColor m_color_bp;
 	QColor m_color_pc;
 	QColor m_text_color_bp;
