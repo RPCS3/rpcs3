@@ -1458,22 +1458,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->maxPreemptCount->setValue(preempt_def);
 	});
 
-	if (!game) // Prevent users from doing dumb things
-	{
-		ui->gb_vblank->setDisabled(true);
-		SubscribeTooltip(ui->gb_vblank, tooltips.settings.disabled_from_global);
-		ui->gb_clockScale->setDisabled(true);
-		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.disabled_from_global);
-		ui->gb_wakeupDelay->setDisabled(true);
-		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.disabled_from_global);
-	}
-	else
-	{
-		SubscribeTooltip(ui->vblankNTSCFixup, tooltips.settings.vblank_ntsc_fixup);
-		SubscribeTooltip(ui->gb_vblank, tooltips.settings.vblank_rate);
-		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.clocks_scale);
-		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);
-	}
+	SubscribeTooltip(ui->vblankNTSCFixup, tooltips.settings.vblank_ntsc_fixup);
+	SubscribeTooltip(ui->gb_vblank, tooltips.settings.vblank_rate);
+	SubscribeTooltip(ui->gb_clockScale, tooltips.settings.clocks_scale);
+	SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);
 
 	std::vector<std::string> loadedLibs = m_emu_settings->GetLibrariesControl();
 
