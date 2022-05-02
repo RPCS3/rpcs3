@@ -1430,7 +1430,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			return false;
 		}
 
-		if (vm::reader_lock rlock; vm::check_addr(addr, 0))
+		if (vm::writer_lock mlock; vm::check_addr(addr, 0))
 		{
 			// For allocated memory with protection lower than required (such as protection::no or read-only while writing to it)
 			utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
@@ -1485,7 +1485,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 
 			u64 data3;
 			{
-				vm::reader_lock rlock;
+				vm::writer_lock rlock;
 				if (vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable))
 				{
 					// Memory was allocated inbetween, retry

@@ -35,7 +35,12 @@ debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_
 
 void debugger_list::UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm)
 {
-	m_cpu = cpu;
+	if (m_cpu != cpu)
+	{
+		m_cpu = cpu;
+		m_selected_instruction = -1;
+	}
+
 	m_disasm = disasm;
 }
 
@@ -56,14 +61,13 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 	// How many spaces addr can move down without us needing to move the entire view
 	const u32 addr_margin = (m_item_count / (center_pc ? 2 : 1) - 4); // 4 is just a buffer of 4 spaces at the bottom
 
-	if (m_cpu && m_cpu->id_type() == 0x55)
+	if (select_addr || force)
 	{
-		// RSX instructions' size is not consistent, this is the only valid mode for it
-		force = true;
-		center_pc = false;
+		// The user wants to survey a specific memory location, do not interfere from this point forth 
+		m_follow_thread = false;
 	}
 
-	if (force || addr - m_pc > addr_margin * 4) // 4 is the number of bytes in each instruction
+	if (force || ((m_follow_thread || select_addr) && addr - m_pc > addr_margin * 4)) // 4 is the number of bytes in each instruction
 	{
 		if (center_pc)
 		{
@@ -77,6 +81,19 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 
 	const auto& default_foreground = palette().color(foregroundRole());
 	const auto& default_background = palette().color(backgroundRole());
+
+	if (select_addr)
+	{
+		m_selected_instruction = addr;
+	}
+
+	for (uint i = 0; i < m_item_count; ++i)
+	{
+		if (auto list_item = item(i); list_item->isSelected())
+		{
+			list_item->setSelected(false);
+		}
+	}
 
 	if (!m_cpu || !m_disasm || +m_cpu->state + cpu_flag::exit + cpu_flag::wait == +m_cpu->state)
 	{
@@ -104,6 +121,14 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 				list_item->setForeground(m_text_color_pc);
 				list_item->setBackground(m_color_pc);
 			}
+			else if (pc == m_selected_instruction)
+			{
+				// setSelected may invoke a resize event which causes stack overflow, terminate recursion
+				if (!list_item->isSelected())
+				{
+					list_item->setSelected(true);
+				}
+			}
 			else if (IsBreakpoint(pc))
 			{
 				list_item->setForeground(m_text_color_bp);
@@ -113,11 +138,6 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 			{
 				list_item->setForeground(default_foreground);
 				list_item->setBackground(default_background);
-			}
-
-			if (select_addr && pc == addr)
-			{
-				list_item->setSelected(true);
 			}
 
 			if (m_cpu->id_type() == 1 && !vm::check_addr(pc, 0))
@@ -155,6 +175,18 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 	setLineWidth(-1);
 }
 
+void debugger_list::RefreshView()
+{
+	const bool old = std::exchange(m_follow_thread, false);
+	ShowAddress(0, false);
+	m_follow_thread = old;
+}
+
+void debugger_list::EnableThreadFollowing(bool enable)
+{
+	m_follow_thread = enable;
+}
+
 void debugger_list::scroll(s32 steps)
 {
 	while (m_cpu && m_cpu->id_type() == 0x55 && steps > 0)
@@ -175,6 +207,7 @@ void debugger_list::scroll(s32 steps)
 		}
 	}
 
+	EnableThreadFollowing(false);
 	ShowAddress(m_pc + (steps * 4), false, true);
 }
 

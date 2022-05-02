@@ -15,7 +15,6 @@
 #include <QTextEdit>
 #include <QComboBox>
 #include <QWheelEvent>
-#include <shared_mutex>
 
 #include "util/asm.hpp"
 #include "util/vm.hpp"
@@ -591,8 +590,6 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		return;
 	}
 
-	std::shared_lock rlock(vm::g_mutex);
-
 	const auto originalBuffer  = static_cast<u8*>(this->to_ptr(addr, memsize));
 	const auto convertedBuffer = new (std::nothrow) u8[memsize];
 
@@ -671,8 +668,6 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		break;
 	}
 	}
-
-	rlock.unlock();
 
 	// Flip vertically
 	if (flipv && height > 1 && memsize > 1)

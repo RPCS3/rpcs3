@@ -110,7 +110,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnSelectUnit();
-	void ShowPC();
+	void ShowPC(bool user_requested = false);
 	void EnableUpdateTimer(bool enable) const;
 };
 

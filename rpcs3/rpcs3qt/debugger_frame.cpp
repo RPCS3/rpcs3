@@ -160,7 +160,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	setWidget(body);
 
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::ShowGotoAddressDialog);
-	connect(m_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::ShowPC);
+	connect(m_go_to_pc, &QAbstractButton::clicked, this, [this]() { ShowPC(true); });
 
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
 	connect(m_btn_step_over, &QAbstractButton::clicked, [this]() { DoStep(true); });
@@ -193,6 +193,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 				}
 
 				cpu->state.notify_one(s_pause_flags);
+				m_debugger_list->EnableThreadFollowing();
 			}
 		}
 		UpdateUI();
@@ -213,7 +214,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	connect(this, &debugger_frame::CallStackUpdateRequested, m_call_stack_list, &call_stack_list::HandleUpdate);
 	connect(m_call_stack_list, &call_stack_list::RequestShowAddress, m_debugger_list, &debugger_list::ShowAddress);
 
-	m_debugger_list->ShowAddress(m_debugger_list->m_pc, false);
+	m_debugger_list->RefreshView();
 	UpdateUnitList();
 }
 
@@ -743,6 +744,7 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
 void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
+	ShowPC();
 
 	const auto cpu = get_cpu();
 
@@ -951,6 +953,7 @@ void debugger_frame::OnSelectUnit()
 
 	m_debugger_list->UpdateCPUData(get_cpu(), m_disasm.get());
 	m_breakpoint_list->UpdateCPUData(get_cpu(), m_disasm.get());
+	ShowPC(true);
 	DoUpdate();
 	UpdateUI();
 }
@@ -964,7 +967,6 @@ void debugger_frame::DoUpdate()
 		m_last_step_over_breakpoint = -1;
 	}
 
-	ShowPC();
 	WritePanels();
 }
 
@@ -1077,13 +1079,18 @@ void debugger_frame::ClearCallStack()
 	Q_EMIT CallStackUpdateRequested({});
 }
 
-void debugger_frame::ShowPC()
+void debugger_frame::ShowPC(bool user_requested)
 {
 	const auto cpu0 = get_cpu();
 
 	const u32 pc = (cpu0 ? cpu0->get_pc() : 0);
 
-	m_debugger_list->ShowAddress(pc, true);
+	if (user_requested)
+	{
+		m_debugger_list->EnableThreadFollowing();
+	}
+
+	m_debugger_list->ShowAddress(pc, false);
 }
 
 void debugger_frame::DoStep(bool step_over)
@@ -1091,6 +1098,15 @@ void debugger_frame::DoStep(bool step_over)
 	if (const auto cpu = get_cpu())
 	{
 		bool should_step_over = step_over && cpu->id_type() == 1;
+
+		// If stepping over, lay at the same spot and wait for the thread to finish the call
+		// If not, fixate on the current pointed instruction
+		m_debugger_list->EnableThreadFollowing(!should_step_over);
+
+		if (should_step_over)
+		{
+			m_debugger_list->ShowAddress(cpu->get_pc() + 4, false);
+		}
 
 		if (const auto _state = +cpu->state; _state & s_pause_flags && _state & cpu_flag::wait && !(_state & cpu_flag::dbg_step))
 		{
