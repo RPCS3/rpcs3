@@ -10,6 +10,9 @@
 #elif HAVE_LIBEVDEV
 #include "evdev_joystick_handler.h"
 #endif
+#ifdef __APPLE__
+#include "GameController_pad_handler.h"
+#endif
 #include "keyboard_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/PadHandler.h"
@@ -244,7 +247,7 @@ void pad_thread::operator()()
 			{
 				continue;
 			}
-			
+
 			threads.push_back(std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Thread", handler.second->m_type), [&handler = handler.second, &pad_mode]()
 			{
 				while (thread_ctrl::state() != thread_state::aborting)
@@ -428,6 +431,10 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
 		return std::make_unique<evdev_joystick_handler>();
+#endif
+#ifdef __APPLE__
+	case pad_handler::gamecontroller:
+		return create_GameController_handler();
 #endif
 	}
 

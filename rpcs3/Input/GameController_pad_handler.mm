@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 #include <chrono>
-#include "xinput_pad_handler.h"
+#include "GameController_pad_handler.h"
 #include "Emu/Io/pad_config.h"
 #import <GameController/GameController.h>
 
@@ -51,6 +51,72 @@ std::shared_ptr<PadHandlerBase> create_GameController_handler()
 	return std::make_shared<GameController_pad_handler>();
 }
 
+GameController_pad_handler::GameController_pad_handler() : PadHandlerBase(pad_handler::gamecontroller)
+{
+	init_configs();
+
+}
+
+u32 GameController_pad_handler::get_battery_level(const std::string& padId)
+{
+	const int device_number = GetDeviceNumber(padId);
+	if (device_number < 0)
+		return 0;
+
+	// Receive Battery Info. If device is not on cable, get battery level, else assume full.
+	XINPUT_BATTERY_INFORMATION battery_info;
+	(*xinputGetBatteryInformation)(device_number, BATTERY_DEVTYPE_GAMEPAD, &battery_info);
+
+	switch (battery_info.BatteryType)
+	{
+	case BATTERY_TYPE_DISCONNECTED:
+		return 0;
+	case BATTERY_TYPE_WIRED:
+		return 100;
+	default:
+		break;
+	}
+
+	switch (battery_info.BatteryLevel)
+	{
+	case BATTERY_LEVEL_EMPTY:
+		return 0;
+	case BATTERY_LEVEL_LOW:
+		return 33;
+	case BATTERY_LEVEL_MEDIUM:
+		return 66;
+	case BATTERY_LEVEL_FULL:
+		return 100;
+	default:
+		return 0;
+	}
+}
+
+PadHandlerBase::connection GameController_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
+{
+	GameControllerDevice* dev = static_cast<GameControllerDevice*>(device.get());
+	if (!dev)
+		return connection::disconnected;
+
+	dev->state = ERROR_NOT_CONNECTED;
+	dev->state_scp = {};
+	dev->state_base = {};
+
+	// Try SCP first, if it fails for that pad then try normal XInput
+	if (xinputGetExtended)
+		dev->state = xinputGetExtended(dev->deviceNumber, &dev->state_scp);
+
+	dev->is_scp_device = dev->state == ERROR_SUCCESS;
+
+	if (!dev->is_scp_device)
+		dev->state = xinputGetState(dev->deviceNumber, &dev->state_base);
+
+	if (dev->state == ERROR_SUCCESS)
+		return connection::connected;
+
+	return connection::disconnected;
+}
+
 void GameController_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
 	GameControllerDevice* dev = static_cast<GameControllerDevice*>(device.get());
@@ -75,3 +141,4 @@ void GameController_pad_handler::get_extended_info(const std::shared_ptr<PadDevi
 // 		pad->m_sensors[3].m_value = sensors.SCP_GYRO;
 	}
 }
+

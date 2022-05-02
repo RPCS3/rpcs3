@@ -65,6 +65,7 @@ target_sources(rpcs3_emu PRIVATE
 if(APPLE)
     target_sources(rpcs3_emu PRIVATE
         ../../darwin/util/sysinfo_darwin.mm
+        ../rpcs3/Input/GameController_pad_handler.mm
     )
 endif()
 
