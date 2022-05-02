@@ -1592,10 +1592,10 @@ private:
 	}
 
 	static rsxaudio_hw_param_t::hdmi_param_t::hdmi_ch_cfg_t hdmi_param_conv(const std::array<u8, SYS_RSXAUDIO_SERIAL_STREAM_CNT> &map,
-																			const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> &en,
-																			const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> &swap)
+                                                                            const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> &en,
+                                                                            const std::array<bool, SYS_RSXAUDIO_SERIAL_STREAM_CNT> &swap)
 	{
-		std::array<u8, SYS_RSXAUDIO_SERIAL_MAX_CH> result;
+		std::array<u8, SYS_RSXAUDIO_SERIAL_MAX_CH> result{};
 		u8 ch_cnt = 0;
 
 		for (usz stream_idx = 0; stream_idx < SYS_RSXAUDIO_SERIAL_STREAM_CNT; stream_idx++)

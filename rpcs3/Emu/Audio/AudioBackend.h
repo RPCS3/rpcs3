@@ -58,8 +58,8 @@ public:
 	 */
 	virtual std::string_view GetName() const = 0;
 
-	// (Re)create output stream with new parameters. Blocks until data callback returns. Should return 'true'
-	// on success.
+	// (Re)create output stream with new parameters. Blocks until data callback returns.
+	// Should return 'true' on success.
 	virtual bool Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) = 0;
 
 	// Reset backend state. Blocks until data callback returns.
@@ -67,7 +67,7 @@ public:
 
 	// Sets write callback. It's called when backend requests new data to be sent.
 	// Callback should return number of submitted bytes. Calling other backend functions from callback is unsafe.
-	virtual void SetWriteCallback(std::function<u32(u32 /* byte_cnt */, void * /* buffer */)> cb) = 0;
+	virtual void SetWriteCallback(std::function<u32(u32 /* byte_cnt */, void* /* buffer */)> cb) = 0;
 
 	// Sets error callback. It's called when backend detects uncorrectable error condition in audio chain.
 	// Calling other backend functions from callback is unsafe.
@@ -121,7 +121,7 @@ public:
 	 * Number of channels must be >1 and multiple of 2.
 	 * sample_cnt is number of buffer elements. Returns current volume.
 	 */
-	static f32 apply_volume(const VolumeParam &param, u32 sample_cnt, const f32* src, f32* dst);
+	static f32 apply_volume(const VolumeParam& param, u32 sample_cnt, const f32* src, f32* dst);
 
 	/*
 	 * Apply volume value to the buffer. src and dst could be the same. sample_cnt is number of buffer elements.

@@ -180,9 +180,9 @@ struct lv2_rsxaudio final : lv2_obj
 		ensure(shmem && vm::page_protect(shmem, sizeof(rsxaudio_shmem), 0, vm::page_readable | vm::page_writable));
 	}
 
-	rsxaudio_shmem *get_rw_shared_page() const
+	rsxaudio_shmem* get_rw_shared_page() const
 	{
-		return reinterpret_cast<rsxaudio_shmem *>(vm::g_sudo_addr + u32{shmem});
+		return reinterpret_cast<rsxaudio_shmem*>(vm::g_sudo_addr + u32{shmem});
 	}
 };
 
@@ -394,7 +394,7 @@ private:
 	void cancel_timer_unlocked();
 	void reset_cancel_flag();
 
-	bool is_vtimer_behind(const vtimer &vtimer, u64 crnt_time) const;
+	bool is_vtimer_behind(const vtimer& vtimer, u64 crnt_time) const;
 
 	u64 get_crnt_blk(u64 crnt_time, f64 blk_time) const;
 	f64 get_blk_time(u32 data_rate) const;
@@ -487,8 +487,8 @@ public:
 
 private:
 
-	const rsxaudio_hw_param_t &hwp;
-	const buf_t &out_buf;
+	const rsxaudio_hw_param_t& hwp;
+	const buf_t& out_buf;
 
 	std::array<bool, 5> avport_data_avail{};
 	u8 hdmi_stream_cnt[2]{};
@@ -573,11 +573,11 @@ public:
 	~rsxaudio_backend_thread();
 
 	void operator()();
-	rsxaudio_backend_thread &operator=(thread_state);
+	rsxaudio_backend_thread& operator=(thread_state state);
 
 	void set_new_stream_param(const std::array<port_config, SYS_RSXAUDIO_AVPORT_CNT> &cfg, avport_bit muted_avports);
 	void set_mute_state(avport_bit muted_avports);
-	void add_data(rsxaudio_data_container &cont);
+	void add_data(rsxaudio_data_container& cont);
 
 	void update_emu_cfg();
 
@@ -672,11 +672,11 @@ private:
 	audio_resampler resampler{};
 
 	// Backend
-	void backend_init(const rsxaudio_state &ra_state, const emu_audio_cfg &emu_cfg, bool reset_backend = true);
+	void backend_init(const rsxaudio_state& ra_state, const emu_audio_cfg& emu_cfg, bool reset_backend = true);
 	void backend_start();
 	void backend_stop();
 	bool backend_playing();
-	u32 write_data_callback(u32 bytes, void *buf);
+	u32 write_data_callback(u32 bytes, void* buf);
 	void error_callback();
 
 	// Time management
@@ -701,11 +701,11 @@ public:
 	std::shared_ptr<lv2_rsxaudio> rsxaudio_obj_ptr{};
 
 	void operator()();
-	rsxaudio_data_thread &operator=(thread_state);
+	rsxaudio_data_thread& operator=(thread_state state);
 
 	rsxaudio_data_thread();
 
-	void update_hw_param(std::function<void(rsxaudio_hw_param_t&)> f);
+	void update_hw_param(std::function<void(rsxaudio_hw_param_t&)> update_callback);
 	void update_mute_state(RsxaudioPort port, bool muted);
 	void update_av_mute_state(RsxaudioAvportIdx avport, bool muted, bool force_mute, bool set = true);
 	void reset_hw();
@@ -727,7 +727,7 @@ private:
 	static f32 pcm_to_float(s16 sample);
 	static void pcm_serial_process_channel(RsxaudioSampleSize word_bits, ra_stream_blk_t& buf_out_l, ra_stream_blk_t& buf_out_r, const void* buf_in, u8 src_stream);
 	static void pcm_spdif_process_channel(RsxaudioSampleSize word_bits, ra_stream_blk_t& buf_out_l, ra_stream_blk_t& buf_out_r, const void* buf_in);
-	bool enqueue_data(RsxaudioPort dst, bool silence, const void *src_addr, const rsxaudio_hw_param_t& hwp);
+	bool enqueue_data(RsxaudioPort dst, bool silence, const void* src_addr, const rsxaudio_hw_param_t& hwp);
 
 	static rsxaudio_backend_thread::avport_bit calc_avport_mute_state(const rsxaudio_hw_param_t& hwp);
 	static bool calc_port_active_state(RsxaudioPort port, const rsxaudio_hw_param_t& hwp);

@@ -11,10 +11,10 @@ public:
 	using ctr_t = u64;
 
 	simple_ringbuf(ctr_t size = 0);
-	~simple_ringbuf();
+	virtual ~simple_ringbuf();
 
-	simple_ringbuf(const simple_ringbuf&);
-	simple_ringbuf& operator=(const simple_ringbuf&);
+	simple_ringbuf(const simple_ringbuf& other);
+	simple_ringbuf& operator=(const simple_ringbuf& other);
 
 	// Thread unsafe functions.
 	simple_ringbuf(simple_ringbuf&& other);
@@ -27,11 +27,11 @@ public:
 	ctr_t get_total_size() const;
 
 	// Writer functions
-	ctr_t push(const void *data, ctr_t size, bool force = false);
+	ctr_t push(const void* data, ctr_t size, bool force = false);
 	void writer_flush(ctr_t cnt = umax);
 
 	// Reader functions
-	ctr_t pop(void *data, ctr_t size, bool force = false);
+	ctr_t pop(void* data, ctr_t size, bool force = false);
 	void reader_flush(ctr_t cnt = umax);
 
 private:
@@ -42,7 +42,7 @@ private:
 		ctr_t read_ptr = 0;
 		ctr_t write_ptr = 0;
 
-		auto operator<=>(const ctr_state&) const = default;
+		auto operator<=>(const ctr_state& other) const = default;
 	};
 
 	static_assert(sizeof(ctr_state) == sizeof(ctr_t) * 2);

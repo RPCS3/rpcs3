@@ -122,7 +122,7 @@ void simple_ringbuf::set_buf_size(simple_ringbuf::ctr_t size)
 
 void simple_ringbuf::writer_flush(ctr_t cnt)
 {
-	rw_ptr.atomic_op([&](ctr_state &val)
+	rw_ptr.atomic_op([&](ctr_state& val)
 	{
 		const ctr_t used = get_used_size(val);
 		if (used == 0) return;
@@ -133,17 +133,17 @@ void simple_ringbuf::writer_flush(ctr_t cnt)
 
 void simple_ringbuf::reader_flush(ctr_t cnt)
 {
-	rw_ptr.atomic_op([&](ctr_state &val)
+	rw_ptr.atomic_op([&](ctr_state& val)
 	{
 		val.read_ptr += std::min(get_used_size(val), cnt);
 	});
 }
 
-simple_ringbuf::ctr_t simple_ringbuf::push(const void *data, simple_ringbuf::ctr_t size, bool force)
+simple_ringbuf::ctr_t simple_ringbuf::push(const void* data, simple_ringbuf::ctr_t size, bool force)
 {
 	ensure(data != nullptr);
 
-	return rw_ptr.atomic_op([&](ctr_state &val) -> simple_ringbuf::ctr_t
+	return rw_ptr.atomic_op([&](ctr_state& val) -> simple_ringbuf::ctr_t
 	{
 		const simple_ringbuf::ctr_t old       = val.write_ptr % buf_size;
 		const simple_ringbuf::ctr_t free_size = get_free_size(val);
@@ -172,11 +172,11 @@ simple_ringbuf::ctr_t simple_ringbuf::push(const void *data, simple_ringbuf::ctr
 	});
 }
 
-simple_ringbuf::ctr_t simple_ringbuf::pop(void *data, simple_ringbuf::ctr_t size, bool force)
+simple_ringbuf::ctr_t simple_ringbuf::pop(void* data, simple_ringbuf::ctr_t size, bool force)
 {
 	ensure(data != nullptr);
 
-	return rw_ptr.atomic_op([&](ctr_state &val) -> simple_ringbuf::ctr_t
+	return rw_ptr.atomic_op([&](ctr_state& val) -> simple_ringbuf::ctr_t
 	{
 		const simple_ringbuf::ctr_t old       = val.read_ptr % buf_size;
 		const simple_ringbuf::ctr_t used_size = get_used_size(val);

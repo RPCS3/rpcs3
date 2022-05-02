@@ -30,7 +30,7 @@ public:
 	void add_op(F func)
 	{
 		std::lock_guard lock(mutex);
-		if (std::shared_ptr<void> new_val = std::invoke(func); new_val.get())
+		if (std::shared_ptr<void> new_val = std::invoke(func); new_val)
 		{
 			storage.push_back(new_val);
 		}
@@ -73,7 +73,7 @@ public:
 
 	transactional_storage(std::shared_ptr<universal_pool> pool, std::shared_ptr<T> obj = std::make_shared<T>())
 	{
-		ensure(pool.get() && obj.get());
+		ensure(pool && obj);
 
 		this->pool = pool;
 		add(obj);
@@ -120,7 +120,7 @@ public:
 
 	void add(std::shared_ptr<T> obj)
 	{
-		if (!obj.get())
+		if (!obj)
 		{
 			return;
 		}
@@ -142,7 +142,7 @@ public:
 		pool->add_op([&]() -> std::shared_ptr<void>
 		{
 			std::shared_ptr<T> obj = std::invoke(func);
-			if (obj.get())
+			if (obj)
 			{
 				std::lock_guard lock{current_mutex};
 				current = obj;

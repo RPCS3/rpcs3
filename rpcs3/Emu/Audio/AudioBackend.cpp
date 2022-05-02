@@ -31,17 +31,17 @@ void AudioBackend::convert_to_s16(u32 cnt, const f32* src, void* dst)
 {
 	for (u32 i = 0; i < cnt; i++)
 	{
-		static_cast<s16 *>(dst)[i] = static_cast<s16>(std::clamp(src[i] * 32768.5f, -32768.0f, 32767.0f));
+		static_cast<s16*>(dst)[i] = static_cast<s16>(std::clamp(src[i] * 32768.5f, -32768.0f, 32767.0f));
 	}
 }
 
-f32 AudioBackend::apply_volume(const VolumeParam &param, u32 sample_cnt, const f32* src, f32* dst)
+f32 AudioBackend::apply_volume(const VolumeParam& param, u32 sample_cnt, const f32* src, f32* dst)
 {
-    ensure(param.ch_cnt > 1 && param.ch_cnt % 2 == 0); // Tends to produce faster code
+	ensure(param.ch_cnt > 1 && param.ch_cnt % 2 == 0); // Tends to produce faster code
 
 	const f32 vol_incr = (param.target_volume - param.initial_volume) / (VOLUME_CHANGE_DURATION * param.freq);
 	f32 crnt_vol = param.current_volume;
-    u32 sample_idx = 0;
+	u32 sample_idx = 0;
 
 	if (vol_incr >= 0)
 	{
@@ -68,9 +68,9 @@ f32 AudioBackend::apply_volume(const VolumeParam &param, u32 sample_cnt, const f
 		}
 	}
 
-    if (sample_cnt > sample_idx)
+	if (sample_cnt > sample_idx)
 	{
-        apply_volume_static(param.target_volume, sample_cnt - sample_idx, &src[sample_idx], &dst[sample_idx]);
+		apply_volume_static(param.target_volume, sample_cnt - sample_idx, &src[sample_idx], &dst[sample_idx]);
 	}
 
 	return crnt_vol;

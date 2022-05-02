@@ -105,7 +105,7 @@ error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
 {
 	sys_rsxaudio.trace("sys_rsxaudio_initialize(handle=*0x%x)", handle);
 
-	auto &rsxaudio_thread = g_fxo->get<rsx_audio_data>();
+	auto& rsxaudio_thread = g_fxo->get<rsx_audio_data>();
 
 	if (rsxaudio_thread.rsxaudio_ctx_allocated.test_and_set())
 	{
@@ -140,7 +140,7 @@ error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
 
 	rsxaudio_obj->page_lock();
 
-	rsxaudio_shmem *sh_page = rsxaudio_obj->get_rw_shared_page();
+	rsxaudio_shmem* sh_page = rsxaudio_obj->get_rw_shared_page();
 	sh_page->ctrl = {};
 
 	for (auto& uf : sh_page->ctrl.channel_uf)
@@ -157,7 +157,6 @@ error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
 	*handle = id;
 
 	return CELL_OK;
-
 }
 
 error_code sys_rsxaudio_finalize(u32 handle)
@@ -178,7 +177,7 @@ error_code sys_rsxaudio_finalize(u32 handle)
 		return CELL_ESRCH;
 	}
 
-	auto &rsxaudio_thread = g_fxo->get<rsx_audio_data>();
+	auto& rsxaudio_thread = g_fxo->get<rsx_audio_data>();
 
 	{
 		std::lock_guard ra_obj_lock{rsxaudio_thread.rsxaudio_obj_upd_m};
@@ -358,7 +357,7 @@ error_code sys_rsxaudio_close_connection(u32 handle)
 	}
 
 	{
-		auto &rsxaudio_thread = g_fxo->get<rsx_audio_data>();
+		auto& rsxaudio_thread = g_fxo->get<rsx_audio_data>();
 		std::lock_guard ra_obj_lock{rsxaudio_thread.rsxaudio_obj_upd_m};
 		rsxaudio_thread.rsxaudio_obj_ptr = {};
 	}
@@ -472,9 +471,9 @@ error_code sys_rsxaudio_stop_process(u32 handle)
 		return CELL_ESRCH;
 	}
 
-	auto &rsxaudio_thread = g_fxo->get<rsx_audio_data>();
+	auto& rsxaudio_thread = g_fxo->get<rsx_audio_data>();
 
-	rsxaudio_thread.update_hw_param([&](auto &param)
+	rsxaudio_thread.update_hw_param([&](auto& param)
 	{
 		param.serial.dma_en  = false;
 		param.serial.muted   = true;
@@ -492,7 +491,7 @@ error_code sys_rsxaudio_stop_process(u32 handle)
 		param.spdif[1].muted  = true;
 	});
 
-	rsxaudio_shmem *sh_page = rsxaudio_obj->get_rw_shared_page();
+	rsxaudio_shmem* sh_page = rsxaudio_obj->get_rw_shared_page();
 
 	for (auto& rb : sh_page->ctrl.ringbuf)
 	{
@@ -792,7 +791,7 @@ void rsxaudio_data_thread::operator()()
 	}
 }
 
-rsxaudio_data_thread &rsxaudio_data_thread::operator=(thread_state)
+rsxaudio_data_thread& rsxaudio_data_thread::operator=(thread_state /* state */)
 {
 	timer.cancel_wait();
 	return *this;
@@ -885,7 +884,7 @@ void rsxaudio_data_thread::extract_audio_data()
 	}
 }
 
-std::pair<bool, void*> rsxaudio_data_thread::get_ringbuf_addr(RsxaudioPort dst, const lv2_rsxaudio &rsxaudio_obj)
+std::pair<bool, void*> rsxaudio_data_thread::get_ringbuf_addr(RsxaudioPort dst, const lv2_rsxaudio& rsxaudio_obj)
 {
 	ensure(dst <= RsxaudioPort::SPDIF_1);
 
@@ -904,7 +903,7 @@ std::pair<bool, void*> rsxaudio_data_thread::get_ringbuf_addr(RsxaudioPort dst, 
 
 void rsxaudio_data_thread::reset_hw()
 {
-	update_hw_param([&](rsxaudio_hw_param_t &current)
+	update_hw_param([&](rsxaudio_hw_param_t& current)
 	{
 		const bool serial_dma_en = current.serial.dma_en;
 		current.serial = {};
@@ -923,13 +922,13 @@ void rsxaudio_data_thread::reset_hw()
 	});
 }
 
-void rsxaudio_data_thread::update_hw_param(std::function<void(rsxaudio_hw_param_t&)> f)
+void rsxaudio_data_thread::update_hw_param(std::function<void(rsxaudio_hw_param_t&)> update_callback)
 {
 	hw_param_ts.add_op([&]()
 	{
 		auto new_hw_param = std::make_shared<rsxaudio_hw_param_t>(*hw_param_ts.get_current());
 
-		f(*new_hw_param);
+		update_callback(*new_hw_param);
 
 		const bool serial_active = calc_port_active_state(RsxaudioPort::SERIAL, *new_hw_param);
 		const bool spdif_active[SYS_RSXAUDIO_SPDIF_CNT] =
@@ -1040,8 +1039,7 @@ void rsxaudio_data_thread::update_mute_state(RsxaudioPort port, bool muted)
 		}
 		default:
 		{
-			ensure(false);
-			break;
+			fmt::throw_exception("Invalid RSXAudio port: %u", static_cast<u8>(port));
 		}
 		}
 
@@ -1085,8 +1083,7 @@ void rsxaudio_data_thread::update_av_mute_state(RsxaudioAvportIdx avport, bool m
 		}
 		default:
 		{
-			ensure(false);
-			break;
+			fmt::throw_exception("Invalid RSXAudio avport: %u", static_cast<u8>(avport));
 		}
 		}
 
@@ -1190,7 +1187,7 @@ f32 rsxaudio_data_thread::pcm_to_float(s16 sample)
 	return sample * (1.0f / 32768.0f);
 }
 
-void rsxaudio_data_thread::pcm_serial_process_channel(RsxaudioSampleSize word_bits, ra_stream_blk_t &buf_out_l, ra_stream_blk_t &buf_out_r, const void* buf_in, u8 src_stream)
+void rsxaudio_data_thread::pcm_serial_process_channel(RsxaudioSampleSize word_bits, ra_stream_blk_t& buf_out_l, ra_stream_blk_t& buf_out_r, const void* buf_in, u8 src_stream)
 {
 	const u8 input_word_sz = static_cast<u8>(word_bits);
 	u64 ch_dst = 0;
@@ -1217,7 +1214,7 @@ void rsxaudio_data_thread::pcm_serial_process_channel(RsxaudioSampleSize word_bi
 	}
 }
 
-void rsxaudio_data_thread::pcm_spdif_process_channel(RsxaudioSampleSize word_bits, ra_stream_blk_t &buf_out_l, ra_stream_blk_t &buf_out_r, const void* buf_in)
+void rsxaudio_data_thread::pcm_spdif_process_channel(RsxaudioSampleSize word_bits, ra_stream_blk_t& buf_out_l, ra_stream_blk_t& buf_out_r, const void* buf_in)
 {
 	const u8 input_word_sz = static_cast<u8>(word_bits);
 
@@ -1240,9 +1237,9 @@ void rsxaudio_data_thread::pcm_spdif_process_channel(RsxaudioSampleSize word_bit
 	}
 }
 
-bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const void *src_addr, const rsxaudio_hw_param_t& hwp)
+bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const void* src_addr, const rsxaudio_hw_param_t& hwp)
 {
-	auto &backend_thread = g_fxo->get<rsx_audio_backend>();
+	auto& backend_thread = g_fxo->get<rsx_audio_backend>();
 
 	if (dst == RsxaudioPort::SERIAL)
 	{
@@ -1311,7 +1308,7 @@ rsxaudio_backend_thread::rsxaudio_backend_thread()
 {
 	const u64 new_vol = g_cfg.audio.volume;
 
-	callback_cfg.atomic_op([&](callback_config &val)
+	callback_cfg.atomic_op([&](callback_config& val)
 	{
 		val.target_volume = static_cast<u16>(new_vol / 100.0 * callback_config::VOL_NOMINAL);
 		val.initial_volume = val.current_volume;
@@ -1335,7 +1332,7 @@ void rsxaudio_backend_thread::update_emu_cfg()
 	const emu_audio_cfg _new_emu_cfg = get_emu_cfg();
 	const u64 new_vol = g_cfg.audio.volume;
 
-	callback_cfg.atomic_op([&](callback_config &val)
+	callback_cfg.atomic_op([&](callback_config& val)
 	{
 		val.target_volume = static_cast<u16>(new_vol / 100.0 * callback_config::VOL_NOMINAL);
 		val.initial_volume = val.current_volume;
@@ -1362,8 +1359,7 @@ rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 		case audio_downmix::no_downmix: return AudioChannelCnt::SURROUND_7_1;
 		default:
 		{
-			ensure(false);
-			return AudioChannelCnt::STEREO;
+			fmt::throw_exception("Unsupported downmix level: %u", static_cast<u64>(g_cfg.audio.audio_channel_downmix.get()));
 		}
 		}
 	}();
@@ -1428,7 +1424,7 @@ void rsxaudio_backend_thread::operator()()
 
 					if (cb_cfg.cfg_changed)
 					{
-						callback_cfg.atomic_op([&](callback_config &val)
+						callback_cfg.atomic_op([&](callback_config& val)
 						{
 							val.cfg_changed = false; // Acknowledge cfg update
 						});
@@ -1533,7 +1529,7 @@ void rsxaudio_backend_thread::operator()()
 
 			if (should_service_stream)
 			{
-				void *crnt_buf = thread_tmp_buf.data();
+				void* crnt_buf = thread_tmp_buf.data();
 
 				const u64 bytes_req = ringbuf.get_free_size();
 				const u64 bytes_read = aux_ringbuf.pop(crnt_buf, bytes_req, true);
@@ -1593,7 +1589,7 @@ void rsxaudio_backend_thread::operator()()
 	}
 }
 
-rsxaudio_backend_thread &rsxaudio_backend_thread::operator=(thread_state)
+rsxaudio_backend_thread& rsxaudio_backend_thread::operator=(thread_state /* state */)
 {
 	{
 		std::lock_guard lock(state_update_m);
@@ -1609,7 +1605,7 @@ void rsxaudio_backend_thread::set_new_stream_param(const std::array<port_config,
 	const auto new_mute_state = gen_mute_state(muted_avports);
 	const bool should_update = backend_current_cfg.cfg != cfg[static_cast<u8>(backend_current_cfg.avport)];
 
-	callback_cfg.atomic_op([&](callback_config &val)
+	callback_cfg.atomic_op([&](callback_config& val)
 	{
 		val.mute_state = new_mute_state;
 
@@ -1633,7 +1629,7 @@ void rsxaudio_backend_thread::set_mute_state(avport_bit muted_avports)
 {
 	const auto new_mute_state = gen_mute_state(muted_avports);
 
-	callback_cfg.atomic_op([&](callback_config &val)
+	callback_cfg.atomic_op([&](callback_config& val)
 	{
 		val.mute_state = new_mute_state;
 	});
@@ -1652,7 +1648,7 @@ u8 rsxaudio_backend_thread::gen_mute_state(avport_bit avports)
 	return static_cast<u8>(mute_state.to_ulong());
 }
 
-void rsxaudio_backend_thread::add_data(rsxaudio_data_container &cont)
+void rsxaudio_backend_thread::add_data(rsxaudio_data_container& cont)
 {
 	std::unique_lock lock(ringbuf_mutex, std::try_to_lock);
 	if (!lock.owns_lock())
@@ -1700,13 +1696,12 @@ RsxaudioAvportIdx rsxaudio_backend_thread::convert_avport(audio_avport avport)
 	case audio_avport::spdif_1: return RsxaudioAvportIdx::SPDIF_1;
 	default:
 	{
-		ensure(false);
-		return RsxaudioAvportIdx::HDMI_0;
+		fmt::throw_exception("Invalid RSXAudio avport: %u", static_cast<u8>(avport));
 	}
 	}
 }
 
-void rsxaudio_backend_thread::backend_init(const rsxaudio_state &ra_state, const emu_audio_cfg &emu_cfg, bool reset_backend)
+void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const emu_audio_cfg& emu_cfg, bool reset_backend)
 {
 	if (reset_backend || !backend)
 	{
@@ -1716,7 +1711,7 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state &ra_state, const
 		backend->SetErrorCallback(std::bind(&rsxaudio_backend_thread::error_callback, this));
 	}
 
-	const port_config &port_cfg = ra_state.port[static_cast<u8>(emu_cfg.avport)];
+	const port_config& port_cfg = ra_state.port[static_cast<u8>(emu_cfg.avport)];
 	const AudioSampleSize sample_size = emu_cfg.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
 	const AudioChannelCnt ch_cnt = static_cast<AudioChannelCnt>(std::min<u32>(static_cast<u32>(port_cfg.ch_cnt), static_cast<u32>(emu_cfg.downmix)));
 
@@ -1747,7 +1742,7 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state &ra_state, const
 		callback_tmp_buf.resize(static_cast<usz>((cb_frame_len + _10ms) * static_cast<u32>(AudioSampleSize::FLOAT) * static_cast<u32>(port_cfg.ch_cnt) * static_cast<u32>(port_cfg.freq)));
 	}
 
-	callback_cfg.atomic_op([&](callback_config &val)
+	callback_cfg.atomic_op([&](callback_config& val)
 	{
 		val.callback_active = false; // Backend may take some time to activate. This prevents overflows on input side.
 
@@ -1786,7 +1781,7 @@ void rsxaudio_backend_thread::backend_stop()
 	}
 
 	backend->Pause();
-	callback_cfg.atomic_op([&](callback_config &val)
+	callback_cfg.atomic_op([&](callback_config& val)
 	{
 		val.callback_active = false;
 	});
@@ -1802,9 +1797,9 @@ bool rsxaudio_backend_thread::backend_playing()
 	return backend->IsPlaying();
 }
 
-u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void *buf)
+u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 {
-	const callback_config cb_cfg = callback_cfg.atomic_op([&](callback_config &val)
+	const callback_config cb_cfg = callback_cfg.atomic_op([&](callback_config& val)
 	{
 		val.callback_active = true;
 		return val;
@@ -1844,7 +1839,7 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void *buf)
 				}
 				else
 				{
-					ensure(false);
+					fmt::throw_exception("Invalid downmix combination: %u -> %u", cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt);
 				}
 			}
 			else if (cb_cfg.input_ch_cnt == static_cast<u32>(AudioChannelCnt::SURROUND_5_1))
@@ -1855,12 +1850,12 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void *buf)
 				}
 				else
 				{
-					ensure(false);
+					fmt::throw_exception("Invalid downmix combination: %u -> %u", cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt);
 				}
 			}
 			else
 			{
-				ensure(false);
+				fmt::throw_exception("Invalid downmix combination: %u -> %u", cb_cfg.input_ch_cnt, cb_cfg.output_ch_cnt);
 			}
 		}
 
@@ -1876,7 +1871,7 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void *buf)
 			};
 
 			const u16 new_vol = static_cast<u16>(std::round(AudioBackend::apply_volume(param, sample_cnt_out, callback_tmp_buf.data(), callback_tmp_buf.data()) * callback_config::VOL_NOMINAL));
-			callback_cfg.atomic_op([&](callback_config &val)
+			callback_cfg.atomic_op([&](callback_config& val)
 			{
 				if (val.target_volume != cb_cfg.target_volume)
 				{
@@ -2087,7 +2082,7 @@ u64 rsxaudio_periodic_tmr::get_rel_next_time()
 	const u64 crnt_time = get_system_time();
 	u64 next_time = UINT64_MAX;
 
-	for (vtimer &vtimer : vtmr_pool)
+	for (vtimer& vtimer : vtmr_pool)
 	{
 		if (!vtimer.active) continue;
 
@@ -2127,7 +2122,7 @@ void rsxaudio_periodic_tmr::enable_vtimer(u32 vtimer_id, u32 rate, u64 crnt_time
 {
 	ensure(vtimer_id < VTIMER_MAX && rate);
 
-	vtimer &vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = vtmr_pool[vtimer_id];
 	const f64 new_blk_time = get_blk_time(rate);
 
 	// Avoid timer reset when possible
@@ -2144,13 +2139,13 @@ void rsxaudio_periodic_tmr::disable_vtimer(u32 vtimer_id)
 {
 	ensure(vtimer_id < VTIMER_MAX);
 
-	vtimer &vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = vtmr_pool[vtimer_id];
 	vtimer.active = false;
 }
 
 bool rsxaudio_periodic_tmr::is_vtimer_behind(u32 vtimer_id, u64 crnt_time) const
 {
-	const vtimer &vtimer = vtmr_pool[vtimer_id];
+	const vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
 
 	return is_vtimer_behind(vtimer, crnt_time);
@@ -2158,7 +2153,7 @@ bool rsxaudio_periodic_tmr::is_vtimer_behind(u32 vtimer_id, u64 crnt_time) const
 
 void rsxaudio_periodic_tmr::vtimer_skip_periods(u32 vtimer_id, u64 crnt_time)
 {
-	vtimer &vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
 
 	if (is_vtimer_behind(vtimer, crnt_time))
@@ -2169,7 +2164,7 @@ void rsxaudio_periodic_tmr::vtimer_skip_periods(u32 vtimer_id, u64 crnt_time)
 
 void rsxaudio_periodic_tmr::vtimer_incr(u32 vtimer_id, u64 crnt_time)
 {
-	vtimer &vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
 
 	if (is_vtimer_behind(vtimer, crnt_time))
@@ -2180,7 +2175,7 @@ void rsxaudio_periodic_tmr::vtimer_incr(u32 vtimer_id, u64 crnt_time)
 
 bool rsxaudio_periodic_tmr::is_vtimer_active(u32 vtimer_id) const
 {
-	const vtimer &vtimer = vtmr_pool[vtimer_id];
+	const vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
 
 	return vtimer.active;
@@ -2188,13 +2183,13 @@ bool rsxaudio_periodic_tmr::is_vtimer_active(u32 vtimer_id) const
 
 u64 rsxaudio_periodic_tmr::vtimer_get_sched_time(u32 vtimer_id) const
 {
-	const vtimer &vtimer = vtmr_pool[vtimer_id];
+	const vtimer& vtimer = vtmr_pool[vtimer_id];
 	ensure(vtimer_id < VTIMER_MAX);
 
 	return static_cast<u64>(vtimer.blk_cnt * vtimer.blk_time);
 }
 
-bool rsxaudio_periodic_tmr::is_vtimer_behind(const vtimer &vtimer, u64 crnt_time) const
+bool rsxaudio_periodic_tmr::is_vtimer_behind(const vtimer& vtimer, u64 crnt_time) const
 {
 	return vtimer.active && vtimer.blk_cnt < get_crnt_blk(crnt_time, vtimer.blk_time);
 }
