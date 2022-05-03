@@ -113,8 +113,6 @@ void XAudio2Backend::CloseUnlocked()
 	}
 
 	m_playing = false;
-	m_data_buf = nullptr;
-	m_data_buf_len = 0;
 	m_last_sample.fill(0);
 }
 
@@ -196,15 +194,9 @@ bool XAudio2Backend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChan
 		return false;
 	}
 
-	m_data_buf_len = get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS * static_cast<u32>(XAUDIO2_DEFAULT_FREQ_RATIO) / 1000;
-	m_data_buf = std::make_unique<u8[]>(m_data_buf_len);
+	m_data_buf.resize(get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS * static_cast<u32>(XAUDIO2_DEFAULT_FREQ_RATIO) / 1000);
 
 	return true;
-}
-
-bool XAudio2Backend::IsPlaying()
-{
-	return m_playing;
 }
 
 void XAudio2Backend::SetWriteCallback(std::function<u32(u32, void *)> cb)
@@ -245,36 +237,31 @@ f64 XAudio2Backend::GetCallbackFrameLen()
 	return std::max<f64>(min_latency, _10ms); // 10ms is the minimum for XAudio
 }
 
-void XAudio2Backend::SetErrorCallback(std::function<void()> cb)
-{
-	std::lock_guard lock(m_error_cb_mutex);
-	m_error_callback = cb;
-}
-
 void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired)
 {
 	std::unique_lock lock(m_cb_mutex, std::defer_lock);
 	if (BytesRequired && lock.try_lock() && m_write_callback && m_playing)
 	{
-		ensure(BytesRequired <= m_data_buf_len, "XAudio internal buffer is too small. Report to developers!");
+		ensure(BytesRequired <= m_data_buf.capacity(), "XAudio internal buffer is too small. Report to developers!");
 
 		const u32 sample_size = get_sample_size() * get_channels();
-		u32 written = std::min(m_write_callback(BytesRequired, m_data_buf.get()), BytesRequired);
+		u32 written = std::min(m_write_callback(BytesRequired, m_data_buf.data()), BytesRequired);
 		written -= written % sample_size;
 
 		if (written >= sample_size)
 		{
-			memcpy(m_last_sample.data(), m_data_buf.get() + written - sample_size, sample_size);
+			memcpy(m_last_sample.data(), m_data_buf.data() + written - sample_size, sample_size);
 		}
 
 		for (u32 i = written; i < BytesRequired; i += sample_size)
 		{
-			memcpy(m_data_buf.get() + i, m_last_sample.data(), sample_size);
+			memcpy(m_data_buf.data() + i, m_last_sample.data(), sample_size);
 		}
 
 		XAUDIO2_BUFFER buffer{};
 		buffer.AudioBytes = BytesRequired;
-		buffer.pAudioData = static_cast<const BYTE*>(m_data_buf.get());
+		buffer.pAudioData = static_cast<const BYTE*>(m_data_buf.data());
+		// Avoid logging in callback and assume that this always succeeds, all errors are caught by error callback anyway
 		m_source_voice->SubmitSourceBuffer(&buffer);
 	}
 }

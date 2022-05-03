@@ -4,6 +4,12 @@
 
 AudioBackend::AudioBackend() {}
 
+void AudioBackend::SetErrorCallback(std::function<void()> cb)
+{
+	std::lock_guard lock(m_error_cb_mutex);
+	m_error_callback = cb;
+}
+
 /*
  * Helper methods
  */

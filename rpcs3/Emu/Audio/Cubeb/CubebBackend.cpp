@@ -177,11 +177,6 @@ void CubebBackend::Pause()
 	m_last_sample.fill(0);
 }
 
-bool CubebBackend::IsPlaying()
-{
-	return m_playing;
-}
-
 void CubebBackend::SetWriteCallback(std::function<u32(u32, void *)> cb)
 {
 	std::lock_guard lock(m_cb_mutex);
@@ -204,12 +199,6 @@ f64 CubebBackend::GetCallbackFrameLen()
 	}
 
 	return std::max<f64>(AUDIO_MIN_LATENCY, static_cast<f64>(stream_latency) / get_sampling_rate());
-}
-
-void CubebBackend::SetErrorCallback(std::function<void()> cb)
-{
-	std::lock_guard lock(m_error_cb_mutex);
-	m_error_callback = cb;
 }
 
 long CubebBackend::data_cb(cubeb_stream* /* stream */, void* user_ptr, void const* /* input_buffer */, void* output_buffer, long nframes)

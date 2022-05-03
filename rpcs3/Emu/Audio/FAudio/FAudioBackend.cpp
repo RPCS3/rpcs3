@@ -101,8 +101,6 @@ void FAudioBackend::CloseUnlocked()
 	}
 
 	m_playing = false;
-	m_data_buf = nullptr;
-	m_data_buf_len = 0;
 	m_last_sample.fill(0);
 }
 
@@ -181,15 +179,9 @@ bool FAudioBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChann
 		return false;
 	}
 
-	m_data_buf_len = get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS * static_cast<u32>(FAUDIO_DEFAULT_FREQ_RATIO) / 1000;
-	m_data_buf = std::make_unique<u8[]>(m_data_buf_len);
+	m_data_buf.resize(get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS * static_cast<u32>(FAUDIO_DEFAULT_FREQ_RATIO) / 1000);
 
 	return true;
-}
-
-bool FAudioBackend::IsPlaying()
-{
-	return m_playing;
 }
 
 void FAudioBackend::SetWriteCallback(std::function<u32(u32, void *)> cb)
@@ -221,12 +213,6 @@ f64 FAudioBackend::GetCallbackFrameLen()
 	return std::max<f64>(min_latency, _10ms);
 }
 
-void FAudioBackend::SetErrorCallback(std::function<void()> cb)
-{
-	std::lock_guard lock(m_error_cb_mutex);
-	m_error_callback = cb;
-}
-
 void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj, u32 BytesRequired)
 {
 	FAudioBackend *faudio = static_cast<FAudioBackend *>(cb_obj);
@@ -234,25 +220,26 @@ void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj,
 	std::unique_lock lock(faudio->m_cb_mutex, std::defer_lock);
 	if (BytesRequired && lock.try_lock() && faudio->m_write_callback && faudio->m_playing)
 	{
-		ensure(BytesRequired <= faudio->m_data_buf_len, "FAudio internal buffer is too small. Report to developers!");
+		ensure(BytesRequired <= faudio->m_data_buf.capacity(), "FAudio internal buffer is too small. Report to developers!");
 
 		const u32 sample_size = faudio->get_sample_size() * faudio->get_channels();
-		u32 written = std::min(faudio->m_write_callback(BytesRequired, faudio->m_data_buf.get()), BytesRequired);
+		u32 written = std::min(faudio->m_write_callback(BytesRequired, faudio->m_data_buf.data()), BytesRequired);
 		written -= written % sample_size;
 
 		if (written >= sample_size)
 		{
-			memcpy(faudio->m_last_sample.data(), faudio->m_data_buf.get() + written - sample_size, sample_size);
+			memcpy(faudio->m_last_sample.data(), faudio->m_data_buf.data() + written - sample_size, sample_size);
 		}
 
 		for (u32 i = written; i < BytesRequired; i += sample_size)
 		{
-			memcpy(faudio->m_data_buf.get() + i, faudio->m_last_sample.data(), sample_size);
+			memcpy(faudio->m_data_buf.data() + i, faudio->m_last_sample.data(), sample_size);
 		}
 
 		FAudioBuffer buffer{};
 		buffer.AudioBytes = BytesRequired;
-		buffer.pAudioData = static_cast<const u8*>(faudio->m_data_buf.get());
+		buffer.pAudioData = static_cast<const u8*>(faudio->m_data_buf.data());
+		// Avoid logging in callback and assume that this always succeeds, all errors are caught by error callback anyway
 		FAudioSourceVoice_SubmitSourceBuffer(faudio->m_source_voice, &buffer, nullptr);
 	}
 }

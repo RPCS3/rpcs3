@@ -8,9 +8,7 @@ class simple_ringbuf
 {
 public:
 
-	using ctr_t = u64;
-
-	simple_ringbuf(ctr_t size = 0);
+	simple_ringbuf(u64 size = 0);
 	virtual ~simple_ringbuf();
 
 	simple_ringbuf(const simple_ringbuf& other);
@@ -19,38 +17,38 @@ public:
 	// Thread unsafe functions.
 	simple_ringbuf(simple_ringbuf&& other);
 	simple_ringbuf& operator=(simple_ringbuf&& other);
-	void set_buf_size(ctr_t size);
+	void set_buf_size(u64 size);
 
 	// Helper functions
-	ctr_t get_free_size() const;
-	ctr_t get_used_size() const;
-	ctr_t get_total_size() const;
+	u64 get_free_size() const;
+	u64 get_used_size() const;
+	u64 get_total_size() const;
 
 	// Writer functions
-	ctr_t push(const void* data, ctr_t size, bool force = false);
-	void writer_flush(ctr_t cnt = umax);
+	u64 push(const void* data, u64 size, bool force = false);
+	void writer_flush(u64 cnt = umax);
 
 	// Reader functions
-	ctr_t pop(void* data, ctr_t size, bool force = false);
-	void reader_flush(ctr_t cnt = umax);
+	u64 pop(void* data, u64 size, bool force = false);
+	void reader_flush(u64 cnt = umax);
 
 private:
 
 	struct ctr_state
 	{
-		alignas(sizeof(ctr_t) * 2)
-		ctr_t read_ptr = 0;
-		ctr_t write_ptr = 0;
+		alignas(sizeof(u64) * 2)
+		u64 read_ptr = 0;
+		u64 write_ptr = 0;
 
 		auto operator<=>(const ctr_state& other) const = default;
 	};
 
-	static_assert(sizeof(ctr_state) == sizeof(ctr_t) * 2);
+	static_assert(sizeof(ctr_state) == sizeof(u64) * 2);
 
 	atomic_t<ctr_state> rw_ptr{};
-	ctr_t buf_size = 0;
+	u64 buf_size = 0;
 	std::unique_ptr<u8[]> buf{};
 
-	ctr_t get_free_size(ctr_state val) const;
-	ctr_t get_used_size(ctr_state val) const;
+	u64 get_free_size(ctr_state val) const;
+	u64 get_used_size(ctr_state val) const;
 };

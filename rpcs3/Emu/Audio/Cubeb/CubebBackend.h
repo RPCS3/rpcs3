@@ -27,11 +27,8 @@ public:
 	void SetWriteCallback(std::function<u32(u32, void *)> cb) override;
 	f64 GetCallbackFrameLen() override;
 
-	void SetErrorCallback(std::function<void()> cb) override;
-
 	void Play() override;
 	void Pause() override;
-	bool IsPlaying() override;
 
 private:
 	static constexpr f64 AUDIO_MIN_LATENCY = 512.0 / 48000; // 10ms
@@ -43,13 +40,10 @@ private:
 #endif
 
 	shared_mutex m_cb_mutex{};
-	shared_mutex m_error_cb_mutex{};
 	std::function<u32(u32, void *)> m_write_callback{};
-	std::function<void()> m_error_callback{};
 	std::array<u8, sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)> m_last_sample{};
 	atomic_t<u8> full_sample_size = 0;
 
-	bool m_playing = false;
 	bool m_reset_req = false;
 
 	// Cubeb callbacks

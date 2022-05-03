@@ -1,6 +1,6 @@
 #include "Utilities/simple_ringbuf.h"
 
-simple_ringbuf::simple_ringbuf(simple_ringbuf::ctr_t size)
+simple_ringbuf::simple_ringbuf(u64 size)
 {
 	set_buf_size(size);
 }
@@ -79,39 +79,39 @@ simple_ringbuf& simple_ringbuf::operator=(simple_ringbuf&& other)
 	return *this;
 }
 
-simple_ringbuf::ctr_t simple_ringbuf::get_free_size() const
+u64 simple_ringbuf::get_free_size() const
 {
 	return get_free_size(rw_ptr);
 }
 
-simple_ringbuf::ctr_t simple_ringbuf::get_used_size() const
+u64 simple_ringbuf::get_used_size() const
 {
 	return get_used_size(rw_ptr);
 }
 
-simple_ringbuf::ctr_t simple_ringbuf::get_total_size() const
+u64 simple_ringbuf::get_total_size() const
 {
 	rw_ptr.load(); // Sync
 	return buf_size - 1;
 }
 
-simple_ringbuf::ctr_t simple_ringbuf::get_free_size(ctr_state val) const
+u64 simple_ringbuf::get_free_size(ctr_state val) const
 {
-	const simple_ringbuf::ctr_t rd = val.read_ptr % buf_size;
-	const simple_ringbuf::ctr_t wr = val.write_ptr % buf_size;
+	const u64 rd = val.read_ptr % buf_size;
+	const u64 wr = val.write_ptr % buf_size;
 
 	return (wr >= rd ? buf_size + rd - wr : rd - wr) - 1;
 }
 
-simple_ringbuf::ctr_t simple_ringbuf::get_used_size(ctr_state val) const
+u64 simple_ringbuf::get_used_size(ctr_state val) const
 {
-	const simple_ringbuf::ctr_t rd = val.read_ptr % buf_size;
-	const simple_ringbuf::ctr_t wr = val.write_ptr % buf_size;
+	const u64 rd = val.read_ptr % buf_size;
+	const u64 wr = val.write_ptr % buf_size;
 
 	return wr >= rd ? wr - rd : buf_size + wr - rd;
 }
 
-void simple_ringbuf::set_buf_size(simple_ringbuf::ctr_t size)
+void simple_ringbuf::set_buf_size(u64 size)
 {
 	ensure(size != umax);
 
@@ -120,18 +120,18 @@ void simple_ringbuf::set_buf_size(simple_ringbuf::ctr_t size)
 	rw_ptr.store({});
 }
 
-void simple_ringbuf::writer_flush(ctr_t cnt)
+void simple_ringbuf::writer_flush(u64 cnt)
 {
 	rw_ptr.atomic_op([&](ctr_state& val)
 	{
-		const ctr_t used = get_used_size(val);
+		const u64 used = get_used_size(val);
 		if (used == 0) return;
 
 		val.write_ptr += buf_size - std::min<u64>(used, cnt);
 	});
 }
 
-void simple_ringbuf::reader_flush(ctr_t cnt)
+void simple_ringbuf::reader_flush(u64 cnt)
 {
 	rw_ptr.atomic_op([&](ctr_state& val)
 	{
@@ -139,16 +139,16 @@ void simple_ringbuf::reader_flush(ctr_t cnt)
 	});
 }
 
-simple_ringbuf::ctr_t simple_ringbuf::push(const void* data, simple_ringbuf::ctr_t size, bool force)
+u64 simple_ringbuf::push(const void* data, u64 size, bool force)
 {
 	ensure(data != nullptr);
 
-	return rw_ptr.atomic_op([&](ctr_state& val) -> simple_ringbuf::ctr_t
+	return rw_ptr.atomic_op([&](ctr_state& val) -> u64
 	{
-		const simple_ringbuf::ctr_t old       = val.write_ptr % buf_size;
-		const simple_ringbuf::ctr_t free_size = get_free_size(val);
-		const simple_ringbuf::ctr_t to_push   = std::min(size, free_size);
-		const auto b_data                     = static_cast<const u8*>(data);
+		const u64 old       = val.write_ptr % buf_size;
+		const u64 free_size = get_free_size(val);
+		const u64 to_push   = std::min(size, free_size);
+		const auto b_data   = static_cast<const u8*>(data);
 
 		if (!to_push || (!force && free_size < size))
 		{
@@ -172,16 +172,16 @@ simple_ringbuf::ctr_t simple_ringbuf::push(const void* data, simple_ringbuf::ctr
 	});
 }
 
-simple_ringbuf::ctr_t simple_ringbuf::pop(void* data, simple_ringbuf::ctr_t size, bool force)
+u64 simple_ringbuf::pop(void* data, u64 size, bool force)
 {
 	ensure(data != nullptr);
 
-	return rw_ptr.atomic_op([&](ctr_state& val) -> simple_ringbuf::ctr_t
+	return rw_ptr.atomic_op([&](ctr_state& val) -> u64
 	{
-		const simple_ringbuf::ctr_t old       = val.read_ptr % buf_size;
-		const simple_ringbuf::ctr_t used_size = get_used_size(val);
-		const simple_ringbuf::ctr_t to_pop    = std::min(size, used_size);
-		const auto b_data                     = static_cast<u8*>(data);
+		const u64 old       = val.read_ptr % buf_size;
+		const u64 used_size = get_used_size(val);
+		const u64 to_pop    = std::min(size, used_size);
+		const auto b_data   = static_cast<u8*>(data);
 
 		if (!to_pop || (!force && used_size < size))
 		{

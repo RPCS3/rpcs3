@@ -30,11 +30,8 @@ public:
 	void SetWriteCallback(std::function<u32(u32, void *)> cb) override;
 	f64 GetCallbackFrameLen() override;
 
-	void SetErrorCallback(std::function<void()> cb) override;
-
 	void Play() override;
 	void Pause() override;
-	bool IsPlaying() override;
 
 private:
 	static constexpr u32 INTERNAL_BUF_SIZE_MS = 25;
@@ -44,14 +41,10 @@ private:
 	FAudioSourceVoice* m_source_voice{};
 
 	shared_mutex m_cb_mutex{};
-	shared_mutex m_error_cb_mutex{};
 	std::function<u32(u32, void *)> m_write_callback{};
-	std::function<void()> m_error_callback{};
-	std::unique_ptr<u8[]> m_data_buf{};
-	u64 m_data_buf_len = 0;
+	std::vector<u8> m_data_buf{};
 	std::array<u8, sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)> m_last_sample{};
 
-	bool m_playing = false;
 	bool m_reset_req = false;
 
 	// FAudio voice callbacks

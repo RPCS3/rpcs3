@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "Utilities/mutex.h"
 #include "Utilities/StrFmt.h"
 #include <numbers>
 
@@ -54,7 +55,7 @@ public:
 	virtual ~AudioBackend() = default;
 
 	/*
-	 * Pure virtual methods
+	 * Virtual methods
 	 */
 	virtual std::string_view GetName() const = 0;
 
@@ -71,7 +72,7 @@ public:
 
 	// Sets error callback. It's called when backend detects uncorrectable error condition in audio chain.
 	// Calling other backend functions from callback is unsafe.
-	virtual void SetErrorCallback(std::function<void()> cb) = 0;
+	virtual void SetErrorCallback(std::function<void()> cb);
 
 	/*
 	 * All functions below require that Open() was called prior.
@@ -81,7 +82,7 @@ public:
 	virtual f64 GetCallbackFrameLen() = 0;
 
 	// Returns true if audio is currently being played, false otherwise. Reflects end result of Play() and Pause() calls.
-	virtual bool IsPlaying() = 0;
+	virtual bool IsPlaying() { return m_playing; }
 
 	// Start playing enqueued data.
 	virtual void Play() = 0;
@@ -196,6 +197,11 @@ protected:
 	AudioSampleSize m_sample_size = AudioSampleSize::FLOAT;
 	AudioFreq       m_sampling_rate = AudioFreq::FREQ_48K;
 	AudioChannelCnt m_channels = AudioChannelCnt::STEREO;
+
+	shared_mutex m_error_cb_mutex{};
+	std::function<void()> m_error_callback{};
+
+	bool m_playing = false;
 
 private:
 

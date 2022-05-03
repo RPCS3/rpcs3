@@ -19,8 +19,6 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#elif defined(__linux__)
-#include <sys/epoll.h>
 #elif defined(BSD) || defined(__APPLE__)
 #include <sys/event.h>
 #endif
@@ -206,125 +204,7 @@ public:
 	rsxaudio_periodic_tmr& operator=(const rsxaudio_periodic_tmr&) = delete;
 
 	// Wait until timer fires and calls callback.
-	wait_result wait(std::invocable<> auto callback)
-	{
-		std::unique_lock lock(mutex);
-
-		if (in_wait)
-		{
-			return wait_result::INVALID_PARAM;
-		}
-
-		in_wait = true;
-
-		bool tmr_error     = false;
-		bool timeout       = false;
-		bool wait_canceled = false;
-
-		if (!zero_period)
-		{
-			lock.unlock();
-			constexpr u8 obj_wait_cnt = 2;
-
-#if defined(_WIN32)
-			const HANDLE wait_arr[obj_wait_cnt] = { timer_handle, cancel_event };
-			const auto wait_status = WaitForMultipleObjects(obj_wait_cnt, wait_arr, false, INFINITE);
-
-			if (wait_status == WAIT_FAILED || wait_status >= WAIT_ABANDONED_0 && wait_status < WAIT_ABANDONED_0 + obj_wait_cnt)
-			{
-				tmr_error = true;
-			}
-			else if (wait_status == WAIT_TIMEOUT)
-			{
-				timeout = true;
-			}
-			else if (wait_status == WAIT_OBJECT_0 + 1)
-			{
-				wait_canceled = true;
-			}
-#elif defined(__linux__)
-			epoll_event event[obj_wait_cnt]{};
-			const auto wait_status = epoll_wait(epoll_fd, event, obj_wait_cnt, -1);
-
-			if (wait_status < 0 || wait_status > obj_wait_cnt)
-			{
-				tmr_error = true;
-			}
-			else if (wait_status == 0)
-			{
-				timeout = true;
-			}
-			else
-			{
-				for (int i = 0; i < wait_status; i++)
-				{
-					if (event[i].data.fd == cancel_event)
-					{
-						wait_canceled = true;
-						break;
-					}
-				}
-			}
-#elif defined(BSD) || defined(__APPLE__)
-			struct kevent event[obj_wait_cnt]{};
-			const auto wait_status = kevent(kq, nullptr, 0, event, obj_wait_cnt, nullptr);
-
-			if (wait_status < 0 || wait_status > obj_wait_cnt)
-			{
-				tmr_error = true;
-			}
-			else if (wait_status == 0)
-			{
-				timeout = true;
-			}
-			else
-			{
-				for (int i = 0; i < wait_status; i++)
-				{
-					if (event[i].ident == CANCEL_ID)
-					{
-						wait_canceled = true;
-						break;
-					}
-				}
-			}
-#else
-#error "Implement"
-#endif
-			lock.lock();
-		}
-		else
-		{
-			zero_period = false;
-		}
-
-		in_wait = false;
-
-		if (wait_canceled)
-		{
-			reset_cancel_flag();
-		}
-
-		if (tmr_error)
-		{
-			return wait_result::TIMER_ERROR;
-		}
-		else if (timeout)
-		{
-			return wait_result::TIMEOUT;
-		}
-		else if (wait_canceled)
-		{
-			sched_timer();
-			return wait_result::TIMER_CANCELED;
-		}
-		else
-		{
-			std::invoke(callback);
-			sched_timer();
-			return wait_result::SUCCESS;
-		}
-	}
+	wait_result wait(const std::function<void()> &callback);
 
 	// Cancel wait() call
 	void cancel_wait();

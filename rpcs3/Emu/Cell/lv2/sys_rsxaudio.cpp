@@ -11,6 +11,7 @@
 #include <optional>
 
 #ifdef __linux__
+#include <sys/epoll.h>
 #include <sys/timerfd.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
@@ -773,7 +774,9 @@ void rsxaudio_data_thread::operator()()
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		switch (timer.wait([&]() { extract_audio_data(); }))
+		static const std::function<void()> tmr_callback = [this]() { extract_audio_data(); };
+
+		switch (timer.wait(tmr_callback))
 		{
 		case rsxaudio_periodic_tmr::wait_result::SUCCESS:
 		case rsxaudio_periodic_tmr::wait_result::TIMEOUT:
@@ -924,6 +927,8 @@ void rsxaudio_data_thread::reset_hw()
 
 void rsxaudio_data_thread::update_hw_param(std::function<void(rsxaudio_hw_param_t&)> update_callback)
 {
+	ensure(update_callback);
+
 	hw_param_ts.add_op([&]()
 	{
 		auto new_hw_param = std::make_shared<rsxaudio_hw_param_t>(*hw_param_ts.get_current());
@@ -2075,6 +2080,126 @@ rsxaudio_periodic_tmr::~rsxaudio_periodic_tmr()
 #else
 #error "Implement"
 #endif
+}
+
+rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::function<void()> &callback)
+{
+	std::unique_lock lock(mutex);
+
+	if (in_wait || !callback)
+	{
+		return wait_result::INVALID_PARAM;
+	}
+
+	in_wait = true;
+
+	bool tmr_error     = false;
+	bool timeout       = false;
+	bool wait_canceled = false;
+
+	if (!zero_period)
+	{
+		lock.unlock();
+		constexpr u8 obj_wait_cnt = 2;
+
+#if defined(_WIN32)
+		const HANDLE wait_arr[obj_wait_cnt] = { timer_handle, cancel_event };
+		const auto wait_status = WaitForMultipleObjects(obj_wait_cnt, wait_arr, false, INFINITE);
+
+		if (wait_status == WAIT_FAILED || wait_status >= WAIT_ABANDONED_0 && wait_status < WAIT_ABANDONED_0 + obj_wait_cnt)
+		{
+			tmr_error = true;
+		}
+		else if (wait_status == WAIT_TIMEOUT)
+		{
+			timeout = true;
+		}
+		else if (wait_status == WAIT_OBJECT_0 + 1)
+		{
+			wait_canceled = true;
+		}
+#elif defined(__linux__)
+		epoll_event event[obj_wait_cnt]{};
+		const auto wait_status = epoll_wait(epoll_fd, event, obj_wait_cnt, -1);
+
+		if (wait_status < 0 || wait_status > obj_wait_cnt)
+		{
+			tmr_error = true;
+		}
+		else if (wait_status == 0)
+		{
+			timeout = true;
+		}
+		else
+		{
+			for (int i = 0; i < wait_status; i++)
+			{
+				if (event[i].data.fd == cancel_event)
+				{
+					wait_canceled = true;
+					break;
+				}
+			}
+		}
+#elif defined(BSD) || defined(__APPLE__)
+		struct kevent event[obj_wait_cnt]{};
+		const auto wait_status = kevent(kq, nullptr, 0, event, obj_wait_cnt, nullptr);
+
+		if (wait_status < 0 || wait_status > obj_wait_cnt)
+		{
+			tmr_error = true;
+		}
+		else if (wait_status == 0)
+		{
+			timeout = true;
+		}
+		else
+		{
+			for (int i = 0; i < wait_status; i++)
+			{
+				if (event[i].ident == CANCEL_ID)
+				{
+					wait_canceled = true;
+					break;
+				}
+			}
+		}
+#else
+#error "Implement"
+#endif
+		lock.lock();
+	}
+	else
+	{
+		zero_period = false;
+	}
+
+	in_wait = false;
+
+	if (wait_canceled)
+	{
+		reset_cancel_flag();
+	}
+
+	if (tmr_error)
+	{
+		return wait_result::TIMER_ERROR;
+	}
+	else if (timeout)
+	{
+		return wait_result::TIMEOUT;
+	}
+	else if (wait_canceled)
+	{
+		sched_timer();
+		return wait_result::TIMER_CANCELED;
+	}
+	else
+	{
+		callback();
+		sched_timer();
+		return wait_result::SUCCESS;
+	}
 }
 
 u64 rsxaudio_periodic_tmr::get_rel_next_time()

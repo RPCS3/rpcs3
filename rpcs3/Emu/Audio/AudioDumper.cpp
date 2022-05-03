@@ -59,24 +59,24 @@ void AudioDumper::WriteData(const void* buffer, u32 size)
 
 		if constexpr (std::endian::big == std::endian::native)
 		{
-			const std::unique_ptr<u8[]> tmp_buf = std::make_unique<u8[]>(size);
+			std::vector<u8> tmp_buf{(size, 0U)};
 
 			if (GetSampleSize() == sizeof(f32))
 			{
 				for (u32 sample_idx = 0; sample_idx < sample_cnt_per_ch * GetCh(); sample_idx++)
 				{
-					std::bit_cast<f32*>(tmp_buf.get())[sample_idx] = static_cast<const be_t<f32>*>(buffer)[sample_idx];
+					std::bit_cast<f32*>(tmp_buf.data())[sample_idx] = static_cast<const be_t<f32>*>(buffer)[sample_idx];
 				}
 			}
 			else
 			{
 				for (u32 sample_idx = 0; sample_idx < sample_cnt_per_ch * GetCh(); sample_idx++)
 				{
-					std::bit_cast<s16*>(tmp_buf.get())[sample_idx] = static_cast<const be_t<s16>*>(buffer)[sample_idx];
+					std::bit_cast<s16*>(tmp_buf.data())[sample_idx] = static_cast<const be_t<s16>*>(buffer)[sample_idx];
 				}
 			}
 
-			ensure(m_output.write(tmp_buf.get(), size) == size);
+			ensure(m_output.write(tmp_buf.data(), size) == size);
 		}
 		else
 		{
