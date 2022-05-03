@@ -59,7 +59,7 @@ void AudioDumper::WriteData(const void* buffer, u32 size)
 
 		if constexpr (std::endian::big == std::endian::native)
 		{
-			std::vector<u8> tmp_buf{(size, 0U)};
+			std::vector<u8> tmp_buf(size);
 
 			if (GetSampleSize() == sizeof(f32))
 			{
