@@ -940,6 +940,13 @@
                  </property>
                 </widget>
                </item>
+			   <item>
+                <widget class="QCheckBox" name="ForceDisableExclusiveFullscreenMode">
+                 <property name="text">
+                  <string>Force Disable Exclusive Fullscreen Mode</string>
+                 </property>
+                </widget>
+               </item>
                <item>
                 <spacer name="additional_settings_spacer">
                  <property name="orientation">
