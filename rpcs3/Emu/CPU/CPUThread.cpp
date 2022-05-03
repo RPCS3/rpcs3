@@ -76,41 +76,28 @@ struct cpu_prof
 
 	struct sample_info
 	{
-		// Pointer to the thread
-		std::shared_ptr<cpu_thread> ptr;
-
 		// Block occurences: name -> sample_count
 		std::unordered_map<u64, u64, value_hash<u64>> freq;
 
 		// Total number of samples
 		u64 samples = 0, idle = 0;
 
-		sample_info(const std::shared_ptr<cpu_thread>& ptr)
-			: ptr(ptr)
-		{
-		}
+		// Avoid printing replicas
+		bool printed = false;
 
 		void reset()
 		{
 			freq.clear();
 			samples = 0;
 			idle = 0;
+			printed = false;
 		}
 
-		// Print info
-		void print(u32 id) const
+		static std::string format(const std::multimap<u64, u64, std::greater<u64>>& chart, u64 samples, u64 idle, bool extended_print = false)
 		{
-			// Make reversed map: sample_count -> name
-			std::multimap<u64, u64, std::greater<u64>> chart;
-
-			for (auto& [name, count] : freq)
-			{
-				chart.emplace(count, name);
-			}
-
 			// Print results
 			std::string results;
-			results.reserve(5100);
+			results.reserve(extended_print ? 10100 : 5100);
 
 			// Fraction of non-idle samples
 			const f64 busy = 1. * (samples - idle) / samples;
@@ -126,20 +113,77 @@ struct cpu_prof
 				// Print chunk address from lowest 16 bits
 				fmt::append(results, "...chunk-0x%05x]: %.4f%% (%u)", (name & 0xffff) * 4, _frac * 100., count);
 
-				if (results.size() >= 5000)
+				if (results.size() >= (extended_print ? 10000 : 5000))
 				{
 					// Stop printing after reaching some arbitrary limit in characters
 					break;
 				}
 			}
 
-			profiler.notice("Thread [0x%08x]: %u samples (%.4f%% idle):%s", id, samples, 100. * idle / samples, results);
+			return results;
+		}
+
+		// Print info
+		void print(const std::shared_ptr<cpu_thread>& ptr)
+		{
+			if (printed || samples == idle)
+			{
+				return;
+			}
+
+			// Make reversed map: sample_count -> name
+			std::multimap<u64, u64, std::greater<u64>> chart;
+
+			for (auto& [name, count] : freq)
+			{
+				chart.emplace(count, name);
+			}
+
+			// Print results
+			const std::string results = format(chart, samples, idle);
+			profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle):%s", ptr->get_name(), ptr->id, samples, 100. * idle / samples, results);
+
+			printed = true;
+		}
+
+		static void print_all(const std::unordered_map<std::shared_ptr<cpu_thread>, sample_info>& threads)
+		{
+			std::multimap<u64, u64, std::greater<u64>> chart;
+
+			std::unordered_map<u64, u64, value_hash<u64>> freq;
+
+			u64 samples = 0, idle = 0;
+
+			for (auto& [_, info] : threads)
+			{
+				// This function collects thread information regardless of 'printed' member state
+				for (auto& [name, count] : info.freq)
+				{
+					freq[name] += count;
+				}
+
+				samples += info.samples;
+				idle += info.idle;
+			}
+
+			for (auto& [name, count] : freq)
+			{
+				chart.emplace(count, name);
+			}
+
+			if (samples == idle)
+			{
+				return;
+			}
+	
+			const std::string results = format(chart, samples, idle, true);
+			profiler.notice("All Threads: %u samples (%.4f%% idle):%s", samples, 100. * idle / samples, results);
 		}
 	};
 
 	void operator()()
 	{
-		std::unordered_map<u32, sample_info, value_hash<u64>> threads;
+		std::unordered_map<std::shared_ptr<cpu_thread>, sample_info> threads;
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
@@ -173,14 +217,13 @@ struct cpu_prof
 
 				if (ptr && cpu_flag::exit - ptr->state)
 				{
-					auto [found, add] = threads.try_emplace(id, ptr);
+					auto [found, add] = threads.try_emplace(std::move(ptr));
 
 					if (!add)
 					{
-						// Overwritten: print previous data
-						found->second.print(id);
+						// Overwritten (impossible?): print previous data
+						found->second.print(found->first);
 						found->second.reset();
-						found->second.ptr = std::move(ptr);
 					}
 				}
 			}
@@ -193,17 +236,17 @@ struct cpu_prof
 			}
 
 			// Sample active threads
-			for (auto& [id, info] : threads)
+			for (auto& [ptr, info] : threads)
 			{
-				if (cpu_flag::exit - info.ptr->state)
+				if (cpu_flag::exit - ptr->state)
 				{
 					// Get short function hash
-					const u64 name = atomic_storage<u64>::load(info.ptr->block_hash);
+					const u64 name = atomic_storage<u64>::load(ptr->block_hash);
 
 					// Append occurrence
 					info.samples++;
 
-					if (!(info.ptr->state & (cpu_flag::wait + cpu_flag::stop + cpu_flag::dbg_global_pause)))
+					if (auto state = +ptr->state; !::is_paused(state) && !::is_stopped(state) && cpu_flag::wait - state)
 					{
 						info.freq[name]++;
 
@@ -216,15 +259,10 @@ struct cpu_prof
 						info.idle++;
 					}
 				}
-			}
-
-			// Cleanup and print results for deleted threads
-			for (auto it = threads.begin(), end = threads.end(); it != end;)
-			{
-				if (cpu_flag::exit & it->second.ptr->state)
-					it->second.print(it->first), it = threads.erase(it);
 				else
-					it++;
+				{
+					info.print(ptr);
+				}
 			}
 
 			if (flush)
@@ -232,10 +270,9 @@ struct cpu_prof
 				profiler.success("Flushing profiling results...");
 
 				// Print all results and cleanup
-				for (auto& [id, info] : threads)
+				for (auto& [ptr, info] : threads)
 				{
-					info.print(id);
-					info.reset();
+					info.print(ptr);
 				}
 			}
 
@@ -244,10 +281,12 @@ struct cpu_prof
 		}
 
 		// Print all remaining results
-		for (auto& [id, info] : threads)
+		for (auto& [ptr, info] : threads)
 		{
-			info.print(id);
+			info.print(ptr);
 		}
+
+		sample_info::print_all(threads);
 	}
 
 	static constexpr auto thread_name = "CPU Profiler"sv;
