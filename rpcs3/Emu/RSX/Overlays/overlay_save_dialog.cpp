@@ -307,8 +307,14 @@ namespace rsx
 
 			visible = true;
 
-			if (const auto err = run_input_loop())
-				return err;
+			if (const auto error = run_input_loop())
+			{
+				if (error != selection_code::canceled)
+				{
+					rsx_log.error("Save dialog input loop exited with error code=%d", error);
+				}
+				return error;
+			}
 
 			if (return_code >= 0)
 			{

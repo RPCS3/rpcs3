@@ -9,6 +9,7 @@ public:
 	{
 		m_info = {};
 		m_info.max_connect = max_connect;
+		m_info.is_null_handler = true;
 		m_mice.clear();
 	}
 };

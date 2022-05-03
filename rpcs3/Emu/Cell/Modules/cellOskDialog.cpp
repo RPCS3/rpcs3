@@ -3,6 +3,7 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Io/interception.h"
+#include "Emu/Io/Keyboard.h"
 #include "Emu/RSX/Overlays/overlay_osk.h"
 #include "Emu/IdManager.h"
 
@@ -74,10 +75,7 @@ struct osk_info
 	atomic_t<u32> supported_languages = 0; // Used to enable non-default languages in the OSK
 
 	atomic_t<bool> dimmer_enabled = true;
-	atomic_t<f32> base_color_red = 1.0f;
-	atomic_t<f32> base_color_blue = 1.0f;
-	atomic_t<f32> base_color_green = 1.0f;
-	atomic_t<f32> base_color_alpha = 1.0f;
+	atomic_t<OskDialogBase::color> base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
 
 	atomic_t<bool> pointer_enabled = false;
 	CellOskDialogPoint pointer_pos{0.0f, 0.0f};
@@ -89,6 +87,9 @@ struct osk_info
 	atomic_t<u32> last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED; // Used for continuous seperate window dialog
 
 	atomic_t<vm::ptr<cellOskDialogConfirmWordFilterCallback>> osk_confirm_callback{};
+	atomic_t<vm::ptr<cellOskDialogForceFinishCallback>> osk_force_finish_callback{};
+	atomic_t<vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback>> osk_hardware_keyboard_event_hook_callback{};
+	atomic_t<u16> hook_event_mode{0};
 
 	stx::init_mutex init;
 
@@ -108,10 +109,7 @@ struct osk_info
 		half_byte_kana_enabled = false;
 		supported_languages = 0;
 		dimmer_enabled = true;
-		base_color_red = 1.0f;
-		base_color_blue = 1.0f;
-		base_color_green = 1.0f;
-		base_color_alpha = 1.0f;
+		base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
 		pointer_enabled = false;
 		pointer_pos = {0.0f, 0.0f};
 		initial_scale = 1.0f;
@@ -119,11 +117,14 @@ struct osk_info
 		osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
 		last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED;
 		osk_confirm_callback.store({});
+		osk_force_finish_callback.store({});
+		osk_hardware_keyboard_event_hook_callback.store({});
+		hook_event_mode.store(0);
 	}
 };
 
 // TODO: don't use this function
-std::shared_ptr<OskDialogBase> _get_osk_dialog(bool create = false)
+std::shared_ptr<OskDialogBase> _get_osk_dialog(bool create)
 {
 	auto& osk = g_fxo->get<osk_info>();
 
@@ -177,6 +178,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	}
 
 	// Get the OSK options
+	auto& info = g_fxo->get<osk_info>();
 	u32 maxLength = (inputFieldInfo->limit_length >= CELL_OSKDIALOG_STRING_SIZE) ? 511 : u32{inputFieldInfo->limit_length};
 	const u32 prohibitFlgs = dialogParam->prohibitFlgs;
 	const u32 allowOskPanelFlg = dialogParam->allowOskPanelFlg;
@@ -188,7 +190,6 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	// Also clear the info text just to be sure (it should be zeroed at this point anyway)
 	{
-		auto& info = g_fxo->get<osk_info>();
 		std::lock_guard lock(info.text_mtx);
 		info.valid_text = {};
 	}
@@ -336,18 +337,203 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		input::SetIntercepted(false);
 	};
 
-	if (auto& info = g_fxo->get<osk_info>(); info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
+	// Set key callback
+	osk->on_osk_key_input_entered = [wptr = std::weak_ptr<OskDialogBase>(osk)](CellOskDialogKeyMessage key_message)
+	{
+		const auto osk = wptr.lock();
+		auto& info = g_fxo->get<osk_info>();
+		std::lock_guard lock(info.text_mtx);
+		auto event_hook_callback = info.osk_hardware_keyboard_event_hook_callback.load();
+
+		cellOskDialog.notice("on_osk_key_input_entered: led=%d, mkey=%d, keycode=%d, hook_event_mode=%d, event_hook_callback=*0x%x", key_message.led, key_message.mkey, key_message.keycode, info.hook_event_mode.load(), event_hook_callback);
+
+		if (!event_hook_callback)
+		{
+			// Nothing to do here
+			return;
+		}
+
+		bool is_kook_key = false;
+
+		switch (key_message.keycode)
+		{
+		case CELL_KEYC_NO_EVENT:
+		{
+			// Any shift/alt/ctrl key
+			is_kook_key = key_message.mkey > 0 && (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER);
+			break;
+		}
+		case CELL_KEYC_E_ROLLOVER:
+		case CELL_KEYC_E_POSTFAIL:
+		case CELL_KEYC_E_UNDEF:
+		case CELL_KEYC_ESCAPE:
+		case CELL_KEYC_106_KANJI:
+		case CELL_KEYC_CAPS_LOCK:
+		case CELL_KEYC_F1:
+		case CELL_KEYC_F2:
+		case CELL_KEYC_F3:
+		case CELL_KEYC_F4:
+		case CELL_KEYC_F5:
+		case CELL_KEYC_F6:
+		case CELL_KEYC_F7:
+		case CELL_KEYC_F8:
+		case CELL_KEYC_F9:
+		case CELL_KEYC_F10:
+		case CELL_KEYC_F11:
+		case CELL_KEYC_F12:
+		case CELL_KEYC_PRINTSCREEN:
+		case CELL_KEYC_SCROLL_LOCK:
+		case CELL_KEYC_PAUSE:
+		case CELL_KEYC_INSERT:
+		case CELL_KEYC_HOME:
+		case CELL_KEYC_PAGE_UP:
+		case CELL_KEYC_DELETE:
+		case CELL_KEYC_END:
+		case CELL_KEYC_PAGE_DOWN:
+		case CELL_KEYC_RIGHT_ARROW:
+		case CELL_KEYC_LEFT_ARROW:
+		case CELL_KEYC_DOWN_ARROW:
+		case CELL_KEYC_UP_ARROW:
+		case CELL_KEYC_NUM_LOCK:
+		case CELL_KEYC_APPLICATION:
+		case CELL_KEYC_KANA:
+		case CELL_KEYC_HENKAN:
+		case CELL_KEYC_MUHENKAN:
+		{
+			// Any function key or other special key like Delete
+			is_kook_key = (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY);
+			break;
+		}
+		default:
+		{
+			// Any regular ascii key
+			is_kook_key = (info.hook_event_mode & CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY);
+			break;
+		}
+		}
+	
+		if (!is_kook_key)
+		{
+			cellOskDialog.notice("on_osk_key_input_entered: not a hook key: led=%d, mkey=%d, keycode=%d, hook_event_mode=%d", key_message.led, key_message.mkey, key_message.keycode, info.hook_event_mode.load());
+			return;
+		}
+
+		constexpr u32 max_size = 101;
+		std::vector<u16> string_to_send(max_size, 0);
+		atomic_t<bool> done = false;
+
+		for (u32 i = 0; i < max_size - 1; i++)
+		{
+			string_to_send[i] = osk->osk_text[i];
+			if (osk->osk_text[i] == 0) break;
+		}
+
+		sysutil_register_cb([&](ppu_thread& cb_ppu) -> s32
+		{
+			vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
+			vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
+			vm::var<u16[], vm::page_allocator<>> pActionInfo(max_size, string_to_send.data());
+
+			std::u16string utf16_string;
+			utf16_string.insert(0, reinterpret_cast<char16_t*>(string_to_send.data()), string_to_send.size());
+			std::string action_info = utf16_to_ascii8(utf16_string);
+
+			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback(led=%d, mkey=%d, keycode=%d, action=%d, pActionInfo='%s')", keyMessage->led, keyMessage->mkey, keyMessage->keycode, *action, action_info);
+
+			const bool return_value = event_hook_callback(cb_ppu, keyMessage, action, pActionInfo.begin());
+			ensure(action);
+			ensure(pActionInfo);
+
+			utf16_string.clear();
+			for (u32 i = 0; i < max_size; i++)
+			{
+				const u16 code = pActionInfo[i];
+				if (!code) break;
+				utf16_string.push_back(code);
+			}
+			action_info = utf16_to_ascii8(utf16_string);
+
+			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: return_value=%d, action=%d, pActionInfo='%s'", return_value, *action, action_info);
+
+			if (return_value)
+			{
+				switch (*action)
+				{
+				case CELL_OSKDIALOG_CHANGE_NO_EVENT:
+				case CELL_OSKDIALOG_CHANGE_EVENT_CANCEL:
+				{
+					// Do nothing
+					break;
+				}
+				case CELL_OSKDIALOG_CHANGE_WORDS_INPUT:
+				{
+					// Set unconfirmed string and reset unconfirmed string
+					for (u32 i = 0; i < max_size; i++)
+					{
+						osk->osk_text[i] = pActionInfo.begin()[i];
+					}
+					break;
+				}
+				case CELL_OSKDIALOG_CHANGE_WORDS_INSERT:
+				{
+					// Set confirmed string and reset unconfirmed string
+					for (u32 i = 0; i < max_size; i++)
+					{
+						info.valid_text[i] = pActionInfo.begin()[i];
+						osk->osk_text[i] = 0;
+					}
+					break;
+				}
+				case CELL_OSKDIALOG_CHANGE_WORDS_REPLACE_ALL:
+				{
+					// Set confirmed string and reset all strings
+					for (u32 i = 0; i < max_size; i++)
+					{
+						info.valid_text[i] = pActionInfo.begin()[i];
+						osk->osk_text[i] = 0;
+					}
+					break;
+				}
+				default:
+				{
+					cellOskDialog.error("osk_hardware_keyboard_event_hook_callback returned invalid action (%d)", *action);
+					break;
+				}
+				}
+			}
+
+			done = true;
+			return 0;
+		});
+
+		// wait for callback
+		while (!done && !Emu.IsStopped())
+		{
+			std::this_thread::yield();
+		}
+	};
+
+	// Set device mask and event lock
+	osk->ignore_input_events = info.lock_ext_input.load();
+
+	if (info.use_separate_windows)
+	{
+		osk->pad_input_enabled = (info.device_mask != CELL_OSKDIALOG_DEVICE_MASK_PAD);
+		osk->mouse_input_enabled = (info.device_mask != CELL_OSKDIALOG_DEVICE_MASK_PAD);
+	}
+
+	if (info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
 	{
 		info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
 		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
 		return CELL_OK;
 	}
 
-	input::SetIntercepted(true);
+	input::SetIntercepted(osk->pad_input_enabled, osk->keyboard_input_enabled, osk->mouse_input_enabled);
 
-	Emu.CallFromMainThread([=, &result]()
+	Emu.CallFromMainThread([=, &result, &info]()
 	{
-		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel);
+		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel, info.base_color.load(), info.dimmer_enabled.load(), false);
 		result = true;
 		result.notify_one();
 
@@ -381,7 +567,7 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	const auto osk = _get_osk_dialog();
+	const auto osk = _get_osk_dialog(false);
 
 	if (!osk)
 	{
@@ -504,7 +690,7 @@ error_code cellOskDialogAbort()
 {
 	cellOskDialog.warning("cellOskDialogAbort()");
 
-	const auto osk = _get_osk_dialog();
+	const auto osk = _get_osk_dialog(false);
 
 	if (!osk)
 	{
@@ -538,13 +724,27 @@ error_code cellOskDialogAbort()
 
 error_code cellOskDialogSetDeviceMask(u32 deviceMask)
 {
-	cellOskDialog.todo("cellOskDialogSetDeviceMask(deviceMask=0x%x)", deviceMask);
+	cellOskDialog.warning("cellOskDialogSetDeviceMask(deviceMask=0x%x)", deviceMask);
 
-	// TODO: error checks. It probably checks for use_separate_windows
+	// TODO: It might also return an error if use_separate_windows is not enabled
+	if (deviceMask > CELL_OSKDIALOG_DEVICE_MASK_PAD)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
-	g_fxo->get<osk_info>().device_mask = deviceMask;
+	auto& info = g_fxo->get<osk_info>();
+	info.device_mask = deviceMask;
 
-	// TODO: change osk device input
+	if (info.use_separate_windows)
+	{
+		if (const auto osk = _get_osk_dialog(false))
+		{
+			osk->pad_input_enabled = (deviceMask != CELL_OSKDIALOG_DEVICE_MASK_PAD);
+			osk->mouse_input_enabled = (deviceMask != CELL_OSKDIALOG_DEVICE_MASK_PAD);
+
+			input::SetIntercepted(osk->pad_input_enabled, osk->keyboard_input_enabled, osk->mouse_input_enabled);
+		}
+	}
 
 	return CELL_OK;
 }
@@ -561,9 +761,14 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 	auto& osk = g_fxo->get<osk_info>();
 	osk.use_separate_windows = true;
 	osk.osk_continuous_mode  = static_cast<CellOskDialogContinuousMode>(+windowOption->continuousMode);
+	osk.device_mask = windowOption->deviceMask;
 	// TODO: handle rest of windowOption
+	// inputFieldWindowWidth;
+	// inputFieldBackgroundTrans;
+	// inputFieldLayoutInfo;
+	// inputPanelLayoutInfo;
 
-	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: continuousMode=%s)", osk.osk_continuous_mode.load());
+	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: use_separate_windows=true, continuous_mode=%s, device_mask=0x%x)", osk.osk_continuous_mode.load(), osk.device_mask.load());
 
 	return CELL_OK;
 }
@@ -572,11 +777,15 @@ error_code cellOskDialogSetInitialInputDevice(u32 inputDevice)
 {
 	cellOskDialog.todo("cellOskDialogSetInitialInputDevice(inputDevice=%d)", inputDevice);
 
-	// TODO: error checks
+	if (inputDevice > CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	g_fxo->get<osk_info>().initial_input_device = static_cast<CellOskDialogInputDevice>(inputDevice);
 
 	// TODO: use value
+	// TODO: Signal CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED if the input device changed (probably only when the dialog is already open)
 
 	return CELL_OK;
 }
@@ -585,7 +794,10 @@ error_code cellOskDialogSetInitialKeyLayout(u32 initialKeyLayout)
 {
 	cellOskDialog.todo("cellOskDialogSetInitialKeyLayout(initialKeyLayout=%d)", initialKeyLayout);
 
-	// TODO: error checks
+	if (initialKeyLayout > (CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_10KEY | CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_FULLKEY))
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	g_fxo->get<osk_info>().initial_key_layout = static_cast<CellOskDialogInitialKeyLayout>(initialKeyLayout);
 
@@ -596,13 +808,9 @@ error_code cellOskDialogSetInitialKeyLayout(u32 initialKeyLayout)
 
 error_code cellOskDialogDisableDimmer()
 {
-	cellOskDialog.todo("cellOskDialogDisableDimmer()");
-
-	// TODO: error checks
+	cellOskDialog.warning("cellOskDialogDisableDimmer()");
 
 	g_fxo->get<osk_info>().dimmer_enabled = false;
-
-	// TODO: use value
 
 	return CELL_OK;
 }
@@ -668,23 +876,24 @@ error_code cellOskDialogGetInputText(vm::ptr<CellOskDialogCallbackReturnParam> O
 
 error_code register_keyboard_event_hook_callback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
-	cellOskDialog.todo("register_keyboard_event_hook_callback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
+	cellOskDialog.warning("register_keyboard_event_hook_callback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 
 	if (!pCallback)
 	{
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	// TODO: register callback and and use it
+	g_fxo->get<osk_info>().osk_hardware_keyboard_event_hook_callback = pCallback;
+	g_fxo->get<osk_info>().hook_event_mode = hookEventMode;
 
 	return CELL_OK;
 }
 
 error_code cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
-	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
+	cellOskDialog.warning("cellOskDialogExtRegisterKeyboardEventHookCallback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 
-	if (hookEventMode == 0 || hookEventMode > 3) // CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY OR CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY
+	if (hookEventMode == 0 || hookEventMode > (CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY | CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY))
 	{
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
@@ -694,9 +903,9 @@ error_code cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, 
 
 error_code cellOskDialogExtRegisterKeyboardEventHookCallbackEx(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
-	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallbackEx(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
+	cellOskDialog.warning("cellOskDialogExtRegisterKeyboardEventHookCallbackEx(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 
-	if (hookEventMode == 0 || hookEventMode > 7) // CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY OR CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY OR CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER
+	if (hookEventMode == 0 || hookEventMode > (CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY | CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY | CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER))
 	{
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
@@ -727,7 +936,7 @@ error_code cellOskDialogExtSendFinishMessage(u32 /*CellOskDialogFinishReason*/ f
 {
 	cellOskDialog.warning("cellOskDialogExtSendFinishMessage(finishReason=%d)", finishReason);
 
-	const auto osk = _get_osk_dialog();
+	const auto osk = _get_osk_dialog(false);
 
 	// Check for "Open" dialog.
 	if (!osk || osk->state.load() == OskDialogState::Unloaded)
@@ -750,7 +959,10 @@ error_code cellOskDialogExtSetInitialScale(f32 initialScale)
 {
 	cellOskDialog.todo("cellOskDialogExtSetInitialScale(initialScale=%f)", initialScale);
 
-	// TODO: error checks (CELL_OSKDIALOG_SCALE_MIN, CELL_OSKDIALOG_SCALE_MAX)
+	if (initialScale < CELL_OSKDIALOG_SCALE_MIN || initialScale > CELL_OSKDIALOG_SCALE_MAX)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	g_fxo->get<osk_info>().initial_scale = initialScale;
 
@@ -761,43 +973,47 @@ error_code cellOskDialogExtSetInitialScale(f32 initialScale)
 
 error_code cellOskDialogExtInputDeviceLock()
 {
-	cellOskDialog.todo("cellOskDialogExtInputDeviceLock()");
+	cellOskDialog.warning("cellOskDialogExtInputDeviceLock()");
 
 	// TODO: error checks
 
 	g_fxo->get<osk_info>().lock_ext_input = true;
 
-	// TODO: change osk device input
+	if (const auto osk = _get_osk_dialog(false))
+	{
+		osk->ignore_input_events = true;
+	}
 
 	return CELL_OK;
 }
 
 error_code cellOskDialogExtInputDeviceUnlock()
 {
-	cellOskDialog.todo("cellOskDialogExtInputDeviceUnlock()");
+	cellOskDialog.warning("cellOskDialogExtInputDeviceUnlock()");
 
 	// TODO: error checks
 
 	g_fxo->get<osk_info>().lock_ext_input = false;
 
-	// TODO: change osk device input
+	if (const auto osk = _get_osk_dialog(false))
+	{
+		osk->ignore_input_events = false;
+	}
 
 	return CELL_OK;
 }
 
-error_code cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
+error_code cellOskDialogExtSetBaseColor(f32 red, f32 green, f32 blue, f32 alpha)
 {
-	cellOskDialog.todo("cellOskDialogExtSetBaseColor(red=%f, blue=%f, green=%f, alpha=%f)", red, blue, green, alpha);
+	cellOskDialog.warning("cellOskDialogExtSetBaseColor(red=%f, blue=%f, green=%f, alpha=%f)", red, blue, green, alpha);
 
-	// TODO: error checks
+	if (red < 0.0f || red > 1.0f || green < 0.0f || green > 1.0f || blue < 0.0f || blue > 1.0f || alpha < 0.0f || alpha > 1.0f)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	auto& osk = g_fxo->get<osk_info>();
-	osk.base_color_red = red;
-	osk.base_color_blue = blue;
-	osk.base_color_green = green;
-	osk.base_color_alpha = alpha;
-
-	// TODO: use osk base color
+	osk.base_color = OskDialogBase::color{ red, green, blue, alpha };
 
 	return CELL_OK;
 }
@@ -827,7 +1043,7 @@ error_code cellOskDialogExtUpdateInputText()
 
 	// TODO: error checks
 
-	const auto osk = _get_osk_dialog();
+	const auto osk = _get_osk_dialog(false);
 
 	if (osk)
 	{
@@ -851,7 +1067,7 @@ error_code cellOskDialogExtSetPointerEnable(b8 enable)
 
 	g_fxo->get<osk_info>().pointer_enabled = enable;
 
-	// TODO: use new value in osk
+	// TODO: Show/hide pointer at the specified position in the OSK overlay.
 
 	return CELL_OK;
 }
@@ -867,7 +1083,7 @@ error_code cellOskDialogExtUpdatePointerDisplayPos(vm::cptr<CellOskDialogPoint> 
 		g_fxo->get<osk_info>().pointer_pos = *pos;
 	}
 
-	// TODO: use new value in osk
+	// TODO: Update pointer position in the OSK overlay.
 
 	return CELL_OK;
 }
@@ -907,7 +1123,14 @@ error_code cellOskDialogExtRegisterForceFinishCallback(vm::ptr<cellOskDialogForc
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	// TODO: register and use force finish callback (PS button during continuous mode)
+	g_fxo->get<osk_info>().osk_force_finish_callback = pCallback;
+
+	// TODO: use force finish callback when the PS-Button is pressed and a System dialog shall be spawned while the OSK is loaded
+	// 1. Check if current mode is CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE or (CELL_OSKDIALOG_CONTINUOUS_MODE_SHOW && hidden)
+	// 2. If one of the above is true, call osk_force_finish_callback
+	// 3. Check the return value of osk_force_finish_callback. If false, ignore the PS-Button press, else go to the next step
+	// 4. Close dialog etc., send CELL_SYSUTIL_OSKDIALOG_FINISHED
+	// 5. After we return from the System dialog, send CELL_SYSUTIL_SYSTEM_MENU_CLOSE to notify the game that it can load the OSK and resume.
 
 	return CELL_OK;
 }

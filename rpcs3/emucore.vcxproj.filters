@@ -2101,6 +2101,9 @@
     <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellRec.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">

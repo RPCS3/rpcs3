@@ -5,55 +5,24 @@
 
 namespace program_common
 {
-	void insert_compare_op(std::ostream& OS, bool low_precision)
+	void insert_compare_op(std::ostream& OS)
 	{
-		if (low_precision)
-		{
-			OS <<
-				"int compare(const in float a, const in float b)\n"
-				"{\n"
-				"	if (abs(a - b) < 0.000001) return 2;\n"
-				"	return (a > b)? 4 : 1;\n"
-				"}\n\n"
-
-				"bool comparison_passes(const in float a, const in float b, const in uint func)\n"
-				"{\n"
-				"	if (func == 0) return false; // never\n"
-				"	if (func == 7) return true;  // always\n\n"
-
-				"	int op = compare(a, b);\n"
-				"	switch (func)\n"
-				"	{\n"
-				"		case 1: return op == 1; // less\n"
-				"		case 2: return op == 2; // equal\n"
-				"		case 3: return op <= 2; // lequal\n"
-				"		case 4: return op == 4; // greater\n"
-				"		case 5: return op != 2; // nequal\n"
-				"		case 6: return (op == 4 || op == 2); // gequal\n"
-				"	}\n\n"
-
-				"	return false; // unreachable\n"
-				"}\n\n";
-		}
-		else
-		{
-			OS <<
-			"bool comparison_passes(const in float a, const in float b, const in uint func)\n"
-			"{\n"
-			"	switch (func)\n"
-			"	{\n"
-			"		default:\n"
-			"		case 0: return false; //never\n"
-			"		case 1: return (a < b); //less\n"
-			"		case 2: return (a == b); //equal\n"
-			"		case 3: return (a <= b); //lequal\n"
-			"		case 4: return (a > b); //greater\n"
-			"		case 5: return (a != b); //nequal\n"
-			"		case 6: return (a >= b); //gequal\n"
-			"		case 7: return true; //always\n"
-			"	}\n"
-			"}\n\n";
-		}
+		OS <<
+		"bool comparison_passes(const in float a, const in float b, const in uint func)\n"
+		"{\n"
+		"	switch (func)\n"
+		"	{\n"
+		"		default:\n"
+		"		case 0: return false; //never\n"
+		"		case 1: return (CMP_FIXUP(a) < CMP_FIXUP(b)); //less\n"
+		"		case 2: return (CMP_FIXUP(a) == CMP_FIXUP(b)); //equal\n"
+		"		case 3: return (CMP_FIXUP(a) <= CMP_FIXUP(b)); //lequal\n"
+		"		case 4: return (CMP_FIXUP(a) > CMP_FIXUP(b)); //greater\n"
+		"		case 5: return (CMP_FIXUP(a) != CMP_FIXUP(b)); //nequal\n"
+		"		case 6: return (CMP_FIXUP(a) >= CMP_FIXUP(b)); //gequal\n"
+		"		case 7: return true; //always\n"
+		"	}\n"
+		"}\n\n";
 	}
 
 	void insert_compare_op_vector(std::ostream& OS)
@@ -65,12 +34,12 @@ namespace program_common
 		"	{\n"
 		"		default:\n"
 		"		case 0: return bvec4(false); //never\n"
-		"		case 1: return lessThan(a, b); //less\n"
-		"		case 2: return equal(a, b); //equal\n"
-		"		case 3: return lessThanEqual(a, b); //lequal\n"
-		"		case 4: return greaterThan(a, b); //greater\n"
-		"		case 5: return notEqual(a, b); //nequal\n"
-		"		case 6: return greaterThanEqual(a, b); //gequal\n"
+		"		case 1: return lessThan(CMP_FIXUP(a), CMP_FIXUP(b)); //less\n"
+		"		case 2: return equal(CMP_FIXUP(a), CMP_FIXUP(b)); //equal\n"
+		"		case 3: return lessThanEqual(CMP_FIXUP(a), CMP_FIXUP(b)); //lequal\n"
+		"		case 4: return greaterThan(CMP_FIXUP(a), CMP_FIXUP(b)); //greater\n"
+		"		case 5: return notEqual(CMP_FIXUP(a), CMP_FIXUP(b)); //nequal\n"
+		"		case 6: return greaterThanEqual(CMP_FIXUP(a), CMP_FIXUP(b)); //gequal\n"
 		"		case 7: return bvec4(true); //always\n"
 		"	}\n"
 		"}\n\n";
@@ -173,17 +142,17 @@ namespace glsl
 			switch (f)
 			{
 			case COMPARE::SEQ:
-				return Op0 + " == " + Op1;
+				return fmt::format("CMP_FIXUP(%s) == CMP_FIXUP(%s)", Op0, Op1);
 			case COMPARE::SGE:
-				return Op0 + " >= " + Op1;
+				return fmt::format("CMP_FIXUP(%s) >= CMP_FIXUP(%s)", Op0, Op1);
 			case COMPARE::SGT:
-				return Op0 + " > " + Op1;
+				return fmt::format("CMP_FIXUP(%s) > CMP_FIXUP(%s)", Op0, Op1);
 			case COMPARE::SLE:
-				return Op0 + " <= " + Op1;
+				return fmt::format("CMP_FIXUP(%s) <= CMP_FIXUP(%s)", Op0, Op1);
 			case COMPARE::SLT:
-				return Op0 + " < " + Op1;
+				return fmt::format("CMP_FIXUP(%s) < CMP_FIXUP(%s)", Op0, Op1);
 			case COMPARE::SNE:
-				return Op0 + " != " + Op1;
+				return fmt::format("CMP_FIXUP(%s) != CMP_FIXUP(%s)", Op0, Op1);
 			}
 		}
 		else
@@ -191,17 +160,17 @@ namespace glsl
 			switch (f)
 			{
 			case COMPARE::SEQ:
-				return "equal(" + Op0 + ", " + Op1 + ")";
+				return fmt::format("equal(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
 			case COMPARE::SGE:
-				return "greaterThanEqual(" + Op0 + ", " + Op1 + ")";
+				return fmt::format("greaterThanEqual(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
 			case COMPARE::SGT:
-				return "greaterThan(" + Op0 + ", " + Op1 + ")";
+				return fmt::format("greaterThan(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
 			case COMPARE::SLE:
-				return "lessThanEqual(" + Op0 + ", " + Op1 + ")";
+				return fmt::format("lessThanEqual(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
 			case COMPARE::SLT:
-				return "lessThan(" + Op0 + ", " + Op1 + ")";
+				return fmt::format("lessThan(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
 			case COMPARE::SNE:
-				return "notEqual(" + Op0 + ", " + Op1 + ")";
+				return fmt::format("notEqual(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
 			}
 		}
 
@@ -547,6 +516,15 @@ namespace glsl
 		OS << "#define _test_bit(x, y) (_get_bits(x, y, 1) != 0)\n";
 		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
 
+		if (props.low_precision_tests)
+		{
+			OS << "#define CMP_FIXUP(a) (sign(a) * 16. + a)\n\n";
+		}
+		else
+		{
+			OS << "#define CMP_FIXUP(a) (a)\n\n";
+		}
+
 		if (props.domain == glsl::program_domain::glsl_fragment_program)
 		{
 			OS << "// Workaround for broken early discard in some drivers\n";
@@ -674,7 +652,7 @@ namespace glsl
 			return;
 		}
 
-		program_common::insert_compare_op(OS, props.low_precision_tests);
+		program_common::insert_compare_op(OS);
 
 		if (props.emulate_coverage_tests)
 		{

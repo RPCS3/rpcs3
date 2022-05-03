@@ -13,7 +13,7 @@ option(WITHOUT_PTHREADS "force pthreads to not be used.  if on, then they are us
 
 set(LIBUSB_MAJOR 1)
 set(LIBUSB_MINOR 0)
-set(LIBUSB_MICRO 23)
+set(LIBUSB_MICRO 26)
 
 macro(append_compiler_flags)
 	foreach(FLAG IN ITEMS ${ARGN})

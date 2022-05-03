@@ -3,6 +3,7 @@
 #include "overlay_message_dialog.h"
 #include "Input/pad_thread.h"
 #include "Emu/Io/interception.h"
+#include "Emu/Io/KeyboardHandler.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Common/time.hpp"
 
@@ -64,9 +65,13 @@ namespace rsx
 				state.fill(true);
 			}
 
-			input_timer.Start();
+			m_input_timer.Start();
 
-			input::SetIntercepted(true);
+			// Only start intercepting input if the the overlay allows it (enabled by default)
+			if (m_start_pad_interception)
+			{
+				input::SetIntercepted(true);
+			}
 
 			const auto handle_button_press = [&](u8 button_id, bool pressed, int pad_index)
 			{
@@ -77,7 +82,7 @@ namespace rsx
 
 				if (pressed)
 				{
-					const bool is_auto_repeat_button = auto_repeat_buttons.contains(button_id);
+					const bool is_auto_repeat_button = m_auto_repeat_buttons.contains(button_id);
 
 					if (!last_button_state[pad_index][button_id])
 					{
@@ -90,8 +95,8 @@ namespace rsx
 					else if (is_auto_repeat_button)
 					{
 						if (last_auto_repeat_button[pad_index] == button_id
-						    && input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold
-						    && input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
+						    && m_input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold
+						    && m_input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
 						{
 							// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
 							timestamp[pad_index] = steady_clock::now();
@@ -115,21 +120,65 @@ namespace rsx
 
 			while (!exit)
 			{
+				std::this_thread::sleep_for(1ms);
+
 				if (Emu.IsStopped())
 					return selection_code::canceled;
 
-				std::this_thread::sleep_for(1ms);
+				if (Emu.IsPaused())
+					continue;
 
+				// Get keyboard input if supported by the overlay and activated by the game.
+				// Ignored if a keyboard pad handler is active in order to prevent double input.
+				if (m_keyboard_input_enabled && !m_keyboard_pad_handler_active && input::g_keyboards_intercepted)
+				{
+					auto& handler = g_fxo->get<KeyboardHandlerBase>();
+					std::lock_guard<std::mutex> lock(handler.m_mutex);
+
+					if (!handler.GetKeyboards().empty() && handler.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
+					{
+						KbData& current_data = handler.GetData(0);
+
+						if (current_data.len > 0)
+						{
+							for (s32 i = 0; i < current_data.len; i++)
+							{
+								const KbButton& key = current_data.buttons[i];
+								on_key_pressed(current_data.led, current_data.mkey, key.m_keyCode, key.m_outKeyCode, key.m_pressed);
+							}
+
+							// Flush buffer unconditionally. Otherwise we get a flood of key events.
+							current_data.len = 0;
+
+							// Ignore gamepad input if a key was recognized
+							refresh();
+							continue;
+						}
+					}
+					else if (g_cfg.io.keyboard != keyboard_handler::null)
+					{
+						// Workaround if cellKb did not init the keyboard handler.
+						handler.Init(1);
+
+						// Enable key repeat
+						std::vector<Keyboard>& keyboards = handler.GetKeyboards();
+						ensure(!keyboards.empty());
+						keyboards.at(0).m_key_repeat = true;
+					}
+				}
+
+				// Get gamepad input
 				std::lock_guard lock(pad::g_pad_mutex);
-
 				const auto handler = pad::get_current_handler();
-
 				const PadInfo& rinfo = handler->GetInfo();
 
-				if (Emu.IsPaused() || !rinfo.now_connect)
+				if (!rinfo.now_connect || !input::g_pads_intercepted)
 				{
+					refresh();
 					continue;
 				}
+
+				bool keyboard_pad_handler_active = false;
 
 				int pad_index = -1;
 				for (const auto& pad : handler->GetPads())
@@ -152,6 +201,11 @@ namespace rsx
 					if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 					{
 						continue;
+					}
+
+					if (pad->m_pad_handler == pad_handler::keyboard)
+					{
+						m_keyboard_pad_handler_active = true;
 					}
 
 					for (const Button& button : pad->m_buttons)
@@ -271,6 +325,8 @@ namespace rsx
 							break;
 					}
 				}
+
+				m_keyboard_pad_handler_active = keyboard_pad_handler_active;
 
 				refresh();
 			}

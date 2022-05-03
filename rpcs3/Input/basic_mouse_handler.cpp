@@ -16,7 +16,7 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	memset(&m_info, 0, sizeof(MouseInfo));
 	m_info.max_connect = max_connect;
 	m_info.now_connect = std::min(::size32(m_mice), max_connect);
-	m_info.info = input::g_intercepted ? CELL_MOUSE_INFO_INTERCEPTED : 0; // Ownership of mouse data: 0=Application, 1=System
+	m_info.info = input::g_mice_intercepted ? CELL_MOUSE_INFO_INTERCEPTED : 0; // Ownership of mouse data: 0=Application, 1=System
 	for (u32 i = 1; i < max_connect; i++)
 	{
 		m_info.status[i] = CELL_MOUSE_STATUS_DISCONNECTED;
@@ -50,7 +50,7 @@ void basic_mouse_handler::SetTargetWindow(QWindow* target)
 
 bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 {
-	if (!ev || input::g_intercepted)
+	if (!ev)
 	{
 		return false;
 	}

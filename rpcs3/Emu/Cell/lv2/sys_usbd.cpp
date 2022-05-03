@@ -720,12 +720,12 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_pr
 	// The register_ldd appears to be a more promiscuous mode function, where all device 'inserts' would be presented to the cellUsbd for Probing.
 	// Unsure how many more devices might need similar treatment (i.e. just a compare and force VID/PID add), or if it's worth adding a full promiscuous
 	// capability
-	if (strcmp(s_product.get_ptr(), "guncon3") == 0)
+	if (s_product.get_ptr() == "guncon3"sv)
 	{
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
 		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0800, 0x0800);
 	}
-	else if (strcmp(s_product.get_ptr(), "PS3A-USJ") == 0)
+	else if (s_product.get_ptr() == "PS3A-USJ"sv)
 	{
 		// Arcade v406 USIO board
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
