@@ -1771,6 +1771,15 @@ void Emulator::Kill(bool allow_autoexit)
 {
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
+		// Ensure clean state
+		argv.clear();
+		envp.clear();
+		data.clear();
+		disc.clear();
+		klic.clear();
+		hdd1.clear();
+		m_config_path.clear();
+		m_config_mode = cfg_mode::custom;
 		return;
 	}
 
