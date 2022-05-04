@@ -56,7 +56,7 @@ enum class sh_flag : u32
 	__bitset_enum_max
 };
 
-constexpr bool is_memorizable_section(sec_type type)
+constexpr bool is_memorizable_section(sec_type type, bs_t<sh_flag> flags)
 {
 	switch (type)
 	{
@@ -64,6 +64,10 @@ constexpr bool is_memorizable_section(sec_type type)
 	case sec_type::sht_nobits:
 	{
 		return false;
+	}
+	case sec_type::sht_progbits:
+	{
+		return flags.all_of(sh_flag::shf_alloc);
 	}
 	default:
 	{
@@ -334,7 +338,7 @@ public:
 		{
 			static_cast<shdr_t&>(shdrs.emplace_back()) = shdr;
 
-			if (!(opts & elf_opt::no_data) && is_memorizable_section(shdr.sh_type))
+			if (!(opts & elf_opt::no_data) && is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
 			{
 				stream.seek(offset + shdr.sh_offset);
 				if (!stream.read(shdrs.back().bin, shdr.sh_size))
@@ -393,7 +397,7 @@ public:
 
 		for (shdr_t shdr : shdrs)
 		{
-			if (is_memorizable_section(shdr.sh_type))
+			if (is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
 			{
 				shdr.sh_offset = std::exchange(off, off + shdr.sh_size);
 			}
@@ -409,7 +413,7 @@ public:
 
 		for (const auto& shdr : shdrs)
 		{
-			if (!is_memorizable_section(shdr.sh_type))
+			if (!is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
 			{
 				continue;
 			}
