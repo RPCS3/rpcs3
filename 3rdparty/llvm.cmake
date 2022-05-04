@@ -5,6 +5,7 @@ if(WITH_LLVM)
 	if(BUILD_LLVM_SUBMODULE)
 		message(STATUS "LLVM will be built from the submodule.")
 
+		set(LLVM_TARGETS_TO_BUILD "AArch64;X86")
 		option(LLVM_BUILD_RUNTIME OFF)
 		option(LLVM_BUILD_TOOLS OFF)
 		option(LLVM_INCLUDE_BENCHMARKS OFF)
