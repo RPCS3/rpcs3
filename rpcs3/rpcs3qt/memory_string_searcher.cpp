@@ -53,12 +53,12 @@ void fmt_class_string<search_mode>::format(std::string& out, u64 arg)
 		{
 			switch (mode)
 			{
-			case as_string: return "String"; 
-			case as_hex: return "HEX bytes/integer"; 
-			case as_f64: return "Double"; 
-			case as_f32: return "Float"; 
-			case as_inst: return "Instruction"; 
-			case as_fake_spu_inst: return "SPU Instruction"; 
+			case as_string: return "String";
+			case as_hex: return "HEX bytes/integer";
+			case as_f64: return "Double";
+			case as_f32: return "Float";
+			case as_inst: return "Instruction";
+			case as_fake_spu_inst: return "SPU Instruction";
 			default: return "";
 			}
 		}();
