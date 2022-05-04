@@ -940,13 +940,6 @@
                  </property>
                 </widget>
                </item>
-			   <item>
-                <widget class="QCheckBox" name="ForceDisableExclusiveFullscreenMode">
-                 <property name="text">
-                  <string>Force Disable Exclusive Fullscreen Mode</string>
-                 </property>
-                </widget>
-               </item>
                <item>
                 <spacer name="additional_settings_spacer">
                  <property name="orientation">
@@ -2369,6 +2362,13 @@
                 <widget class="QCheckBox" name="readColor">
                  <property name="text">
                   <string>Read Color Buffers</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="forceDisableExclusiveFullscreenMode">
+                 <property name="text">
+                  <string>Force Disable Exclusive Fullscreen Mode</string>
                  </property>
                 </widget>
                </item>
