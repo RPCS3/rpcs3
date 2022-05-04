@@ -1890,9 +1890,9 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		const u32 addr = static_cast<u32>(prog.p_vaddr);
 		const u32 size = static_cast<u32>(prog.p_memsz);
 
-		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x2) == 0u /* W */)
+		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x022000002) == 0u /* W */)
 		{
-			// Set memory protection to read-only when necessary
+			// Set memory protection to read-only when necessary (only if PPU-W, SPU-W, RSX-W are all disabled)
 			ensure(vm::page_protect(addr, utils::align(size, 0x1000), 0, 0, vm::page_writable));
 		}
 	}
