@@ -299,7 +299,10 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 		}
 		case CELL_REC_OPTION_USE_SYSTEM_SPU:
 		{
-			// TODO: Seems differ if video_quality is VIDEO_QUALITY_6 or VIDEO_QUALITY_7
+			if (video_quality == VIDEO_QUALITY_6 || video_quality == VIDEO_QUALITY_7)
+			{
+				// TODO: Seems differ if video_quality is VIDEO_QUALITY_6 or VIDEO_QUALITY_7
+			}
 			rec.param.use_system_spu = opt->value.use_system_spu;
 			break;
 		}
