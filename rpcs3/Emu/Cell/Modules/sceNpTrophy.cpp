@@ -36,7 +36,7 @@ struct trophy_context_t
 
 	std::string trp_name;
 	std::unique_ptr<TROPUSRLoader> tropusr;
-	bool read_only = false; // TODO
+	bool read_only = false;
 };
 
 struct trophy_handle_t
@@ -54,7 +54,7 @@ struct sce_np_trophy_manager
 	atomic_t<bool> is_initialized = false;
 
 	// Get context + check handle given
-	static std::pair<trophy_context_t*, SceNpTrophyError> get_context_ex(u32 context, u32 handle)
+	static std::pair<trophy_context_t*, SceNpTrophyError> get_context_ex(u32 context, u32 handle, bool test_writeable = false)
 	{
 		decltype(get_context_ex(0, 0)) res{};
 		auto& [ctxt, error] = res;
@@ -72,6 +72,12 @@ struct sce_np_trophy_manager
 		if (!ctxt)
 		{
 			error = SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+			return res;
+		}
+
+		if (test_writeable && ctxt->read_only)
+		{
+			error = SCE_NP_TROPHY_ERROR_INVALID_CONTEXT;
 			return res;
 		}
 
@@ -440,7 +446,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle, true);
 	const auto handle_ptr = idm::get<trophy_handle_t>(handle);
 
 	if (error)
