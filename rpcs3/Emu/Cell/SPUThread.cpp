@@ -2795,7 +2795,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 		shared_mem = addr;
 	}
 
-	if (g_use_rtm) [[likely]]
 	{
 		auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
 		auto& res = *utils::bless<atomic_t<u128>>(vm::g_reservations + (addr & 0xff80) / 2);
@@ -2861,11 +2860,21 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			}
 		}
 
-		u64 result = 0;
+		u64 result = 1;
 
 		if (cpu->state & cpu_flag::pause)
 		{
 			result = 0;
+		}
+		else if (!g_use_rtm)
+		{
+			// Provoke page fault
+			vm::_ref<atomic_t<u32>>(addr) += 0;
+
+			// Hard lock
+			vm::writer_lock lock(addr);
+			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
+			vm::reservation_acquire(addr) += 32;
 		}
 		else if (cpu->id_type() != 2)
 		{
@@ -2895,22 +2904,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 		}
 
 		static_cast<void>(cpu->test_stopped());
-	}
-	else
-	{
-		auto& data = vm::_ref<spu_rdata_t>(addr);
-		auto [res, time0] = vm::reservation_lock(addr);
-
-		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
-
-		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
-		{
-			// Full lock (heavyweight)
-			// TODO: vm::check_addr
-			vm::writer_lock lock(addr);
-			mov_rdata(super_data, *static_cast<const spu_rdata_t*>(to_write));
-			res += 64;
-		}
 	}
 }
 
@@ -3945,7 +3938,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 		state += cpu_flag::wait;
 
 		using resrv_ptr = std::add_pointer_t<const decltype(rdata)>;
-	
+
 		resrv_ptr resrv_mem = vm::get_super_ptr<decltype(rdata)>(raddr);
 		std::shared_ptr<utils::shm> rdata_shm;
 
