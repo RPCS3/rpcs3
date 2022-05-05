@@ -1110,7 +1110,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		{
 			gui_log.error("Error while extracting firmware: Failed to mount '%s'", sstr(dir_path));
 			critical(tr("Firmware extraction failed: VFS mounting failed."));
-			return;	
+			return;
 		}
 
 		if (!update_files.extract("/pup_extract"))
@@ -2789,7 +2789,7 @@ void main_window::CreateFirmwareCache()
 	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
-	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash() + "sys", "", true);
+	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash(), "", true);
 		error != game_boot_result::no_errors)
 	{
 		gui_log.error("Creating firmware cache failed: reason: %s", error);
@@ -3004,7 +3004,7 @@ void main_window::dropEvent(QDropEvent* event)
 			// Refresh game list since we probably unlocked some games now.
 			m_game_list_frame->Refresh(true);
 		}
-		
+
 		break;
 	}
 	case drop_type::drop_psf: // Display PARAM.SFO content

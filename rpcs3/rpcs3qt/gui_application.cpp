@@ -20,6 +20,7 @@
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/Cell/Modules/cellAudio.h"
+#include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/vfs_config.h"
@@ -629,6 +630,7 @@ void gui_application::OnEmuSettingsChange()
 
 	rpcs3::utils::configure_logs();
 	audio::configure_audio();
+	audio::configure_rsxaudio();
 	rsx::overlays::reset_performance_overlay();
 }
 

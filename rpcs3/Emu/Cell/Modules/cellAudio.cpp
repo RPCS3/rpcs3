@@ -73,16 +73,15 @@ void cell_audio_config::reset(bool backend_changed)
 		}
 	}();
 
-	backend->Open(freq, sample_size, ch_cnt);
+	const f64 cb_frame_len = backend->Open(freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
 
-	audio_channels = backend->get_channels();
-	audio_sampling_rate = backend->get_sampling_rate();
+	audio_channels = static_cast<u32>(ch_cnt);
+	audio_sampling_rate = static_cast<u32>(freq);
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1'000'000 / audio_sampling_rate;
-	audio_sample_size = backend->get_sample_size();
-	audio_min_buffer_duration = backend->GetCallbackFrameLen() + u32{AUDIO_BUFFER_SAMPLES} * 2.0 / audio_sampling_rate; // Add 2 blocks to allow jitter compensation
+	audio_sample_size = static_cast<u32>(sample_size);
+	audio_min_buffer_duration = cb_frame_len + u32{AUDIO_BUFFER_SAMPLES} * 2.0 / audio_sampling_rate; // Add 2 blocks to allow jitter compensation
 
 	audio_buffer_length = AUDIO_BUFFER_SAMPLES * audio_channels;
-	audio_buffer_size = audio_buffer_length * audio_sample_size;
 
 	desired_buffer_duration = std::max(static_cast<s64>(audio_min_buffer_duration * 1000), raw.desired_buffer_duration) * 1000llu;
 	buffering_enabled = raw.buffering_enabled && raw.renderer != audio_renderer::null;
@@ -132,11 +131,11 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 	// Init audio dumper if enabled
 	if (cfg.raw.dump_to_file)
 	{
-		m_dump.Open(cfg.audio_channels, cfg.audio_sampling_rate, cfg.audio_sample_size);
+		m_dump.Open(static_cast<AudioChannelCnt>(cfg.audio_channels), static_cast<AudioFreq>(cfg.audio_sampling_rate), AudioSampleSize::FLOAT);
 	}
 
 	// Configure resampler
-	resampler.set_params(static_cast<AudioChannelCnt>(cfg.audio_channels), AudioFreq::FREQ_48K);
+	resampler.set_params(static_cast<AudioChannelCnt>(cfg.audio_channels), static_cast<AudioFreq>(cfg.audio_sampling_rate));
 	resampler.set_tempo(RESAMPLER_MAX_FREQ_VAL);
 
 	const f64 buffer_dur_mult = [&]()
@@ -165,7 +164,7 @@ audio_ringbuffer::~audio_ringbuffer()
 
 f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 {
-	frequency_ratio = resampler.set_tempo(new_ratio);
+	frequency_ratio = static_cast<f32>(resampler.set_tempo(new_ratio));
 
 	return frequency_ratio;
 }
@@ -181,7 +180,7 @@ u32 audio_ringbuffer::backend_write_callback(u32 size, void *buf)
 {
 	if (!backend_active.observe()) backend_active = true;
 
-	return cb_ringbuf.pop(buf, size);
+	return static_cast<u32>(cb_ringbuf.pop(buf, size, true));
 }
 
 u64 audio_ringbuffer::get_timestamp()
@@ -228,9 +227,6 @@ void audio_ringbuffer::enqueue(bool enqueue_silence, bool force)
 		cur_pos = (cur_pos + 1) % cfg.num_allocated_buffers;
 	}
 
-	// Dump audio if enabled
-	m_dump.WriteData(buf, cfg.audio_buffer_size);
-
 	if (!backend_active.observe() && !force)
 	{
 		// backend is not ready yet
@@ -261,7 +257,7 @@ void audio_ringbuffer::process_resampled_data()
 {
 	if (!cfg.time_stretching_enabled) return;
 
-	const auto samples = resampler.get_samples(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * cfg.audio_channels));
+	const auto samples = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * cfg.audio_channels)));
 	commit_data(samples.first, samples.second);
 }
 
@@ -269,17 +265,15 @@ void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
 {
 	sample_cnt *= cfg.audio_channels;
 
+	// Dump audio if enabled
+	m_dump.WriteData(buf, sample_cnt * static_cast<u32>(AudioSampleSize::FLOAT));
+
 	if (cfg.backend->get_convert_to_s16())
 	{
 		AudioBackend::convert_to_s16(sample_cnt, buf, buf);
 	}
 
-	sample_cnt *= cfg.audio_sample_size;
-
-	if (cb_ringbuf.get_free_size() >= sample_cnt)
-	{
-		cb_ringbuf.push(buf, sample_cnt);
-	}
+	cb_ringbuf.push(buf, sample_cnt * cfg.audio_sample_size);
 }
 
 void audio_ringbuffer::play()
@@ -297,7 +291,7 @@ void audio_ringbuffer::play()
 void audio_ringbuffer::flush()
 {
 	backend->Pause();
-	cb_ringbuf.flush();
+	cb_ringbuf.writer_flush();
 	resampler.flush();
 	backend_active = false;
 	playing = false;
@@ -566,7 +560,8 @@ namespace audio
 				raw.renderer != new_raw.renderer ||
 				raw.dump_to_file != new_raw.dump_to_file)
 			{
-				g_audio.cfg.raw = new_raw;
+				std::lock_guard lock{g_audio.emu_cfg_upd_m};
+				g_audio.cfg.new_raw = new_raw;
 				g_audio.m_update_configuration = raw.renderer != new_raw.renderer ? audio_backend_update::ALL : audio_backend_update::PARAM;
 			}
 		}
@@ -635,17 +630,23 @@ void cell_audio_thread::operator()()
 		if (update_req != audio_backend_update::NONE)
 		{
 			cellAudio.warning("Updating cell_audio_thread configuration");
+			{
+				std::lock_guard lock{emu_cfg_upd_m};
+				cfg.raw = cfg.new_raw;
+				m_update_configuration = audio_backend_update::NONE;
+			}
 			update_config(update_req == audio_backend_update::ALL);
-			m_update_configuration = audio_backend_update::NONE;
 		}
 
 		if (!ringbuffer->get_operational_status())
 		{
-			cellAudio.warning("Backend stopped unexpectedly (likely device change). Attempting to recover...");
-
 			if (m_backend_failed)
 			{
 				thread_ctrl::wait_for(500 * 1000);
+			}
+			else
+			{
+				cellAudio.warning("Backend stopped unexpectedly (likely device change). Attempting to recover...");
 			}
 
 			update_config(true);
@@ -743,12 +744,10 @@ void cell_audio_thread::operator()()
 				if (desired_duration_rate < cfg.time_stretching_threshold)
 				{
 					const f32 normalized_desired_duration_rate = desired_duration_rate / cfg.time_stretching_threshold;
-					const f32 request_ratio = normalized_desired_duration_rate * cfg.time_stretching_scale;
-					AUDIT(request_ratio <= RESAMPLER_MAX_FREQ_VAL);
 
 					// change frequency ratio in steps
-					const f32 req_time_stretching_step = (request_ratio + frequency_ratio) / 2.0f;
-					if (req_time_stretching_step > cfg.time_stretching_step)
+					const f32 req_time_stretching_step = (normalized_desired_duration_rate + frequency_ratio) / 2.0f;
+					if (std::abs(req_time_stretching_step - frequency_ratio) > cfg.time_stretching_step)
 					{
 						ringbuffer->set_frequency_ratio(req_time_stretching_step);
 					}
