@@ -30,7 +30,9 @@ void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 	std::string datrace;
 	const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
-	for (int index = 0; index < transfer.actual_length; index++)
+	const int data_start = transfer.type == LIBUSB_TRANSFER_TYPE_CONTROL ? LIBUSB_CONTROL_SETUP_SIZE : 0;
+
+	for (int index = data_start; index < data_start + transfer.actual_length; index++)
 	{
 		datrace += hex[transfer.buffer[index] >> 4];
 		datrace += hex[(transfer.buffer[index]) & 15];
@@ -421,6 +423,12 @@ void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 		}
 
 		usbd_transfer->iso_request.packets[index] = ((iso_status & 0xF) << 12 | (transfer->iso_packet_desc[index].actual_length & 0xFFF));
+	}
+
+	if (transfer->type == LIBUSB_TRANSFER_TYPE_CONTROL && usbd_transfer->control_destbuf)
+	{
+		memcpy(usbd_transfer->control_destbuf, transfer->buffer + LIBUSB_CONTROL_SETUP_SIZE, transfer->actual_length);
+		usbd_transfer->control_destbuf = nullptr;
 	}
 
 	usbd_transfer->busy = false;
