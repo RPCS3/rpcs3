@@ -3944,19 +3944,23 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		state += cpu_flag::wait;
 
-		using resrv_ptr = std::add_pointer_t<decltype(rdata)>;
+		using resrv_ptr = std::add_pointer_t<const decltype(rdata)>;
 	
-		resrv_ptr resrv_mem{};
+		resrv_ptr resrv_mem = vm::get_super_ptr<decltype(rdata)>(raddr);
 		std::shared_ptr<utils::shm> rdata_shm;
 
-		if (raddr && mask1 & SPU_EVENT_LR)
+		// Does not need to safe-access reservation if LR is the only event masked
+		// Because it's either an access violation or a livelock if an invalid memory is passed
+		if (raddr && mask1 > SPU_EVENT_LR)
 		{
 			auto area = vm::get(vm::any, raddr);
 
-			if (area && (area->flags & vm::preallocated) && vm::check_addr(raddr))
+			if (area && (area->flags & vm::preallocated))
 			{
-				// Obtain pointer to pre-allocated storage
-				resrv_mem = vm::get_super_ptr<decltype(rdata)>(raddr);
+				if (!vm::check_addr(raddr))
+				{
+					resrv_mem = nullptr;
+				}
 			}
 			else if (area)
 			{
@@ -3967,7 +3971,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 				{
 					const u32 data_offs = raddr - base_addr;
 					rdata_shm = std::move(shm_);
-					vm::writer_lock{}, resrv_mem = reinterpret_cast<resrv_ptr>(rdata_shm->map_self() + data_offs);
+					resrv_mem = reinterpret_cast<resrv_ptr>(rdata_shm->get() + data_offs);
 				}
 			}
 
