@@ -35,8 +35,8 @@ struct trophy_context_t
 	static const u32 id_count = 4;
 
 	std::string trp_name;
-	fs::file trp_stream;
 	std::unique_ptr<TROPUSRLoader> tropusr;
+	bool read_only = false; // TODO
 };
 
 struct trophy_handle_t
@@ -384,23 +384,6 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	// append the commId number as "_xx"
 	std::string name = fmt::format("%s_%02d", name_sv, commId->num);
 
-	// open trophy pack file
-	std::string trophy_path = vfs::get(Emu.GetDir() + "TROPDIR/" + name + "/TROPHY.TRP");
-	fs::file stream(trophy_path);
-
-	if (!stream && Emu.GetCat() == "GD")
-	{
-		sceNpTrophy.warning("sceNpTrophyCreateContext failed to open trophy file from boot path: '%s'", trophy_path);
-		trophy_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + name + "/TROPHY.TRP");
-		stream.open(trophy_path);
-	}
-
-	// check if exists and opened
-	if (!stream)
-	{
-		return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, trophy_path};
-	}
-
 	// create trophy context
 	const auto ctxt = idm::make_ptr<trophy_context_t>();
 
@@ -411,7 +394,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
 	ctxt->trp_name = std::move(name);
-	ctxt->trp_stream = std::move(stream);
+	ctxt->read_only = !!(options & SCE_NP_TROPHY_OPTIONS_CREATE_CONTEXT_READ_ONLY);
 	*context = idm::last_id();
 
 	return CELL_OK;
@@ -483,48 +466,6 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		}
 	};
 
-	TRPLoader trp(ctxt->trp_stream);
-	if (!trp.LoadHeader())
-	{
-		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to load trophy config header");
-		on_error();
-		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
-	}
-
-	// Rename or discard certain entries based on the files found
-	const usz kTargetBufferLength = 31;
-	char target[kTargetBufferLength + 1];
-	target[kTargetBufferLength] = 0;
-	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
-
-	if (trp.ContainsEntry(target))
-	{
-		trp.RemoveEntry("TROPCONF.SFM");
-		trp.RemoveEntry("TROP.SFM");
-		trp.RenameEntry(target, "TROPCONF.SFM");
-	}
-	else if (trp.ContainsEntry("TROP.SFM"))
-	{
-		trp.RemoveEntry("TROPCONF.SFM");
-		trp.RenameEntry("TROP.SFM", "TROPCONF.SFM");
-	}
-	else if (!trp.ContainsEntry("TROPCONF.SFM"))
-	{
-		sceNpTrophy.error("sceNpTrophyRegisterContext(): Invalid/Incomplete trophy config");
-		on_error();
-		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
-	}
-
-	// Discard unnecessary TROP_XX.SFM files
-	for (s32 i = 0; i <= 18; i++)
-	{
-		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
-		if (i != g_cfg.sys.language)
-		{
-			trp.RemoveEntry(target);
-		}
-	}
-
 	// TODO: Callbacks
 	// From RE-ing a game's state machine, it seems the possible order is one of the following:
 	// * Install (Not installed)  - Setup - Progress * ? - Finalize - Complete - Installed
@@ -576,6 +517,64 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	{
 		on_error();
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+	}
+
+	// open trophy pack file
+	std::string trp_path = vfs::get(Emu.GetDir() + "TROPDIR/" + ctxt->trp_name + "/TROPHY.TRP");
+	fs::file stream(trp_path);
+
+	if (!stream && Emu.GetCat() == "GD")
+	{
+		sceNpTrophy.warning("sceNpTrophyRegisterContext failed to open trophy file from boot path: '%s'", trp_path);
+		trp_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + ctxt->trp_name + "/TROPHY.TRP");
+		stream.open(trp_path);
+	}
+
+	// check if exists and opened
+	if (!stream)
+	{
+		return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, trp_path};
+	}
+
+	TRPLoader trp(stream);
+	if (!trp.LoadHeader())
+	{
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to load trophy config header");
+		on_error();
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	}
+
+	// Rename or discard certain entries based on the files found
+	const usz kTargetBufferLength = 31;
+	char target[kTargetBufferLength + 1]{};
+	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
+
+	if (trp.ContainsEntry(target))
+	{
+		trp.RemoveEntry("TROPCONF.SFM");
+		trp.RemoveEntry("TROP.SFM");
+		trp.RenameEntry(target, "TROPCONF.SFM");
+	}
+	else if (trp.ContainsEntry("TROP.SFM"))
+	{
+		trp.RemoveEntry("TROPCONF.SFM");
+		trp.RenameEntry("TROP.SFM", "TROPCONF.SFM");
+	}
+	else if (!trp.ContainsEntry("TROPCONF.SFM"))
+	{
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): Invalid/Incomplete trophy config");
+		on_error();
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	}
+
+	// Discard unnecessary TROP_XX.SFM files
+	for (s32 i = 0; i <= 18; i++)
+	{
+		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
+		if (i != g_cfg.sys.language)
+		{
+			trp.RemoveEntry(target);
+		}
 	}
 
 	if (!trp.Install(trophyPath))
@@ -681,7 +680,24 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 
 	if (!fs::is_dir(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name)))
 	{
-		TRPLoader trp(ctxt->trp_stream);
+		// open trophy pack file
+		std::string trophy_path = vfs::get(Emu.GetDir() + "TROPDIR/" + ctxt->trp_name + "/TROPHY.TRP");
+		fs::file stream(trophy_path);
+
+		if (!stream && Emu.GetCat() == "GD")
+		{
+			sceNpTrophy.warning("sceNpTrophyGetRequiredDiskSpace failed to open trophy file from boot path: '%s'", trophy_path);
+			trophy_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + ctxt->trp_name + "/TROPHY.TRP");
+			stream.open(trophy_path);
+		}
+
+		// check if exists and opened
+		if (!stream)
+		{
+			return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, trophy_path};
+		}
+
+		TRPLoader trp(stream);
 
 		if (trp.LoadHeader())
 		{
