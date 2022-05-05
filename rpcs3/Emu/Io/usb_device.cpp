@@ -135,13 +135,15 @@ bool usb_device_passthrough::set_interface(u8 int_num)
 	return (libusb_claim_interface(lusb_handle, int_num) == LIBUSB_SUCCESS);
 }
 
-void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 /*wLength*/, u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, [[maybe_unused]] u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
-	if (transfer->setup_buf.size() < buf_size + 8)
-		transfer->setup_buf.resize(buf_size + 8);
+	if (transfer->setup_buf.size() < buf_size + LIBUSB_CONTROL_SETUP_SIZE)
+		transfer->setup_buf.resize(buf_size + LIBUSB_CONTROL_SETUP_SIZE);
+
+	transfer->control_destbuf = (bmRequestType & LIBUSB_ENDPOINT_IN) ? buf : nullptr;
 
 	libusb_fill_control_setup(transfer->setup_buf.data(), bmRequestType, bRequest, wValue, wIndex, buf_size);
-	memcpy(transfer->setup_buf.data() + 8, buf, buf_size);
+	memcpy(transfer->setup_buf.data() + LIBUSB_CONTROL_SETUP_SIZE, buf, buf_size);
 	libusb_fill_control_transfer(transfer->transfer, lusb_handle, transfer->setup_buf.data(), callback_transfer, transfer, 0);
 	send_libusb_transfer(transfer->transfer);
 }
