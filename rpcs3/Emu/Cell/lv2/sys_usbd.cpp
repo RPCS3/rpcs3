@@ -225,6 +225,11 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x12BA, 0x2430, 0x243F, "Harmonix Button Guitar");
 		check_device(0x12BA, 0x2530, 0x253F, "Harmonix Real Guitar");
 
+		// Top Shot Elite controllers
+		check_device(0x12BA, 0x04A0, 0x04A0, "RO Gun Controller");
+		check_device(0x12BA, 0x04A1, 0x04A1, "RO Gun Controller 2012");
+		check_device(0x12BA, 0x04B0, 0x04B0, "RO Fishing Rod");
+
 		// GT5 Wheels&co
 		check_device(0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b");
 		check_device(0x044F, 0xB653, 0xB653, "Thrustmaster RGT FFB Pro");
