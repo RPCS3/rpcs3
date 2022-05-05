@@ -219,7 +219,7 @@ struct CellRecParam
 	be_t<s32> videoFmt;
 	be_t<s32> audioFmt;
 	be_t<s32> numOfOpt;
-	vm::bpptr<CellRecOption> pOpt;
+	vm::bptr<CellRecOption> pOpt;
 };
 
 struct CellRecMovieMetadata
