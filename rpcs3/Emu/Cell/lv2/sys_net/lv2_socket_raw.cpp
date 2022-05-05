@@ -23,19 +23,19 @@ s32 lv2_socket_raw::bind([[maybe_unused]] const sys_net_sockaddr& addr, [[maybe_
 std::optional<s32> lv2_socket_raw::connect([[maybe_unused]] const sys_net_sockaddr& addr)
 {
 	sys_net.todo("lv2_socket_raw::connect");
-	return {};
+	return CELL_OK;
 }
 
 s32 lv2_socket_raw::connect_followup()
 {
 	sys_net.todo("lv2_socket_raw::connect_followup");
-	return {};
+	return CELL_OK;
 }
 
 std::pair<s32, sys_net_sockaddr> lv2_socket_raw::getpeername()
 {
 	sys_net.todo("lv2_socket_raw::getpeername");
-	return {{}, {}};
+	return {};
 }
 
 std::pair<s32, sys_net_sockaddr> lv2_socket_raw::getsockname()
@@ -65,13 +65,13 @@ s32 lv2_socket_raw::listen([[maybe_unused]] s32 backlog)
 std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_raw::recvfrom([[maybe_unused]] s32 flags, [[maybe_unused]] u32 len, [[maybe_unused]] bool is_lock)
 {
 	sys_net.todo("lv2_socket_raw::recvfrom");
-	return {};
+	return {{{}, {}, {}}};
 }
 
 std::optional<s32> lv2_socket_raw::sendto([[maybe_unused]] s32 flags, [[maybe_unused]] const std::vector<u8>& buf, [[maybe_unused]] std::optional<sys_net_sockaddr> opt_sn_addr, [[maybe_unused]] bool is_lock)
 {
 	sys_net.todo("lv2_socket_raw::sendto");
-	return {};
+	return buf.size();
 }
 
 void lv2_socket_raw::close()
