@@ -182,7 +182,7 @@ error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_
 
 	sys_memory.trace("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
 
-	vm::reader_lock rlock;
+	vm::writer_lock rlock;
 
 	if (!vm::check_addr(addr) || addr >= SPU_FAKE_BASE_ADDR)
 	{
