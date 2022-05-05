@@ -938,7 +938,7 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyUnlockState(context=0x%x, handle=0x%x, flags=*0x%x, count=*0x%x)", context, handle, flags, count);
 
-	if (!flags || !count) // is count really checked here?
+	if (!flags || !count)
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
