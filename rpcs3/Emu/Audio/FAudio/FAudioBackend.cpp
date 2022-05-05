@@ -220,7 +220,7 @@ void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj,
 	std::unique_lock lock(faudio->m_cb_mutex, std::defer_lock);
 	if (BytesRequired && lock.try_lock() && faudio->m_write_callback && faudio->m_playing)
 	{
-		ensure(BytesRequired <= faudio->m_data_buf.capacity(), "FAudio internal buffer is too small. Report to developers!");
+		ensure(BytesRequired <= faudio->m_data_buf.size(), "FAudio internal buffer is too small. Report to developers!");
 
 		const u32 sample_size = faudio->get_sample_size() * faudio->get_channels();
 		u32 written = std::min(faudio->m_write_callback(BytesRequired, faudio->m_data_buf.data()), BytesRequired);

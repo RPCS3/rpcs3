@@ -1817,7 +1817,7 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 		const u32 bytes_ch_adjusted = bytes / cb_cfg.output_ch_cnt * cb_cfg.input_ch_cnt;
 		const u32 bytes_from_rb = cb_cfg.convert_to_s16 ? bytes_ch_adjusted / static_cast<u32>(AudioSampleSize::S16) * static_cast<u32>(AudioSampleSize::FLOAT) : bytes_ch_adjusted;
 
-		ensure(callback_tmp_buf.capacity() * static_cast<u32>(AudioSampleSize::FLOAT) >= bytes_from_rb);
+		ensure(callback_tmp_buf.size() * static_cast<u32>(AudioSampleSize::FLOAT) >= bytes_from_rb);
 
 		const u32 byte_cnt = static_cast<u32>(ringbuf.pop(callback_tmp_buf.data(), bytes_from_rb, true));
 		const u32 sample_cnt = byte_cnt / static_cast<u32>(AudioSampleSize::FLOAT);

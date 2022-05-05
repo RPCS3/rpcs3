@@ -242,7 +242,7 @@ void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired)
 	std::unique_lock lock(m_cb_mutex, std::defer_lock);
 	if (BytesRequired && lock.try_lock() && m_write_callback && m_playing)
 	{
-		ensure(BytesRequired <= m_data_buf.capacity(), "XAudio internal buffer is too small. Report to developers!");
+		ensure(BytesRequired <= m_data_buf.size(), "XAudio internal buffer is too small. Report to developers!");
 
 		const u32 sample_size = get_sample_size() * get_channels();
 		u32 written = std::min(m_write_callback(BytesRequired, m_data_buf.data()), BytesRequired);

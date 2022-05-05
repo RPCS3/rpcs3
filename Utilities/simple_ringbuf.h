@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include <vector>
 
 // Single reader/writer simple ringbuffer.
 class simple_ringbuf
