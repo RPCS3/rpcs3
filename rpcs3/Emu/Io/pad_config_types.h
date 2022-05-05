@@ -18,6 +18,12 @@ enum class pad_handler
 #endif
 };
 
+enum class mouse_movement_mode : s32
+{
+	relative = 0,
+	absolute = 1
+};
+
 struct PadInfo
 {
 	u32 now_connect;
