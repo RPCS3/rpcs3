@@ -2366,6 +2366,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="forceDisableExclusiveFullscreenMode">
+                 <property name="text">
+                  <string>Force Disable Exclusive Fullscreen Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="disableOnDiskShaderCache">
                  <property name="text">
                   <string>Disable On-Disk Shader Cache</string>
