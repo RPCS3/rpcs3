@@ -164,12 +164,12 @@ public:
 		return r;
 	}
 
-	constexpr bool all_of(bs_t arg)
+	constexpr bool all_of(bs_t arg) const
 	{
 		return (m_data & arg.m_data) == arg.m_data;
 	}
 
-	constexpr bool none_of(bs_t arg)
+	constexpr bool none_of(bs_t arg) const
 	{
 		return (m_data & arg.m_data) == 0;
 	}
