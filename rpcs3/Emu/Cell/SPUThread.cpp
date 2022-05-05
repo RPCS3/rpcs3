@@ -3227,6 +3227,12 @@ bool spu_thread::process_mfc_cmd()
 		u64 ntime;
 		rsx::reservation_lock rsx_lock(addr, 128);
 
+		if (ch_events.load().events & SPU_EVENT_LR)
+		{
+			// There is no longer a need to concern about LR event if it has already been raised.
+			raddr = 0;
+		}
+
 		if (raddr)
 		{
 			// Save rdata from previous reservation
