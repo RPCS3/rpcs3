@@ -46,8 +46,7 @@ private:
 	static_assert(sizeof(ctr_state) == sizeof(u64) * 2);
 
 	atomic_t<ctr_state> rw_ptr{};
-	u64 buf_size = 0;
-	std::unique_ptr<u8[]> buf{};
+	std::vector<u8> buf{};
 
 	u64 get_free_size(ctr_state val) const;
 	u64 get_used_size(ctr_state val) const;

@@ -7,8 +7,7 @@ simple_ringbuf::simple_ringbuf(u64 size)
 
 simple_ringbuf::~simple_ringbuf()
 {
-	rw_ptr.load();
-	buf = nullptr;
+	rw_ptr.load(); // Sync
 }
 
 simple_ringbuf::simple_ringbuf(const simple_ringbuf& other)
@@ -17,8 +16,7 @@ simple_ringbuf::simple_ringbuf(const simple_ringbuf& other)
 
 	for (;;)
 	{
-		buf_size = other.buf_size;
-		memcpy(buf.get(), other.buf.get(), buf_size);
+		buf = other.buf;
 		rw_ptr = old;
 
 		const ctr_state current = other.rw_ptr.load();
@@ -38,8 +36,7 @@ simple_ringbuf& simple_ringbuf::operator=(const simple_ringbuf& other)
 
 	for (;;)
 	{
-		buf_size = other.buf_size;
-		memcpy(buf.get(), other.buf.get(), buf_size);
+		buf = other.buf;
 		rw_ptr = old;
 
 		const ctr_state current = other.rw_ptr.load();
@@ -56,11 +53,9 @@ simple_ringbuf& simple_ringbuf::operator=(const simple_ringbuf& other)
 simple_ringbuf::simple_ringbuf(simple_ringbuf&& other)
 {
 	const ctr_state other_rw_ptr = other.rw_ptr.load();
-	buf_size = other.buf_size;
 	buf = std::move(other.buf);
 	rw_ptr = other_rw_ptr;
 
-	other.buf_size = 0;
 	other.rw_ptr.store({});
 }
 
@@ -69,11 +64,9 @@ simple_ringbuf& simple_ringbuf::operator=(simple_ringbuf&& other)
 	if (this == &other) return *this;
 
 	const ctr_state other_rw_ptr = other.rw_ptr.load();
-	buf_size = other.buf_size;
 	buf = std::move(other.buf);
 	rw_ptr = other_rw_ptr;
 
-	other.buf_size = 0;
 	other.rw_ptr.store({});
 
 	return *this;
@@ -92,11 +85,12 @@ u64 simple_ringbuf::get_used_size() const
 u64 simple_ringbuf::get_total_size() const
 {
 	rw_ptr.load(); // Sync
-	return buf_size - 1;
+	return buf.capacity() - 1;
 }
 
 u64 simple_ringbuf::get_free_size(ctr_state val) const
 {
+	const u64 buf_size = buf.capacity();
 	const u64 rd = val.read_ptr % buf_size;
 	const u64 wr = val.write_ptr % buf_size;
 
@@ -105,6 +99,7 @@ u64 simple_ringbuf::get_free_size(ctr_state val) const
 
 u64 simple_ringbuf::get_used_size(ctr_state val) const
 {
+	const u64 buf_size = buf.capacity();
 	const u64 rd = val.read_ptr % buf_size;
 	const u64 wr = val.write_ptr % buf_size;
 
@@ -115,8 +110,7 @@ void simple_ringbuf::set_buf_size(u64 size)
 {
 	ensure(size != umax);
 
-	buf_size = size + 1;
-	buf = std::make_unique<u8[]>(buf_size);
+	buf.resize(size + 1);
 	rw_ptr.store({});
 }
 
@@ -127,7 +121,7 @@ void simple_ringbuf::writer_flush(u64 cnt)
 		const u64 used = get_used_size(val);
 		if (used == 0) return;
 
-		val.write_ptr += buf_size - std::min<u64>(used, cnt);
+		val.write_ptr += buf.capacity() - std::min<u64>(used, cnt);
 	});
 }
 
@@ -145,6 +139,7 @@ u64 simple_ringbuf::push(const void* data, u64 size, bool force)
 
 	return rw_ptr.atomic_op([&](ctr_state& val) -> u64
 	{
+		const u64 buf_size  = buf.capacity();
 		const u64 old       = val.write_ptr % buf_size;
 		const u64 free_size = get_free_size(val);
 		const u64 to_push   = std::min(size, free_size);
@@ -178,6 +173,7 @@ u64 simple_ringbuf::pop(void* data, u64 size, bool force)
 
 	return rw_ptr.atomic_op([&](ctr_state& val) -> u64
 	{
+		const u64 buf_size  = buf.capacity();
 		const u64 old       = val.read_ptr % buf_size;
 		const u64 used_size = get_used_size(val);
 		const u64 to_pop    = std::min(size, used_size);
