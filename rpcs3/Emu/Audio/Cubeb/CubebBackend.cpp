@@ -56,12 +56,17 @@ bool CubebBackend::Initialized()
 
 bool CubebBackend::Operational()
 {
-	return m_ctx != nullptr && m_stream != nullptr && !m_reset_req.observe();
+	std::lock_guard lock(m_error_cb_mutex);
+	return m_stream != nullptr && !m_reset_req;
 }
 
-void CubebBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
+bool CubebBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
 {
-	if (m_ctx == nullptr) return;
+	if (!Initialized())
+	{
+		Cubeb.error("Open() called uninitialized");
+		return false;
+	}
 
 	std::lock_guard lock(m_cb_mutex);
 	CloseUnlocked();
@@ -92,46 +97,48 @@ void CubebBackend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChanne
 	if (int err = cubeb_get_min_latency(m_ctx, &stream_param, &min_latency))
 	{
 		Cubeb.error("cubeb_get_min_latency() failed: 0x%08x", err);
+		min_latency = 0;
 	}
 
 	const u32 stream_latency = std::max(static_cast<u32>(AUDIO_MIN_LATENCY * get_sampling_rate()), min_latency);
 	if (int err = cubeb_stream_init(m_ctx, &m_stream, "Main stream", nullptr, nullptr, nullptr, &stream_param, stream_latency, data_cb, state_cb, this))
 	{
-		m_stream = nullptr;
 		Cubeb.error("cubeb_stream_init() failed: 0x%08x", err);
+		m_stream = nullptr;
+	}
+	else if (int err = cubeb_stream_start(m_stream))
+	{
+		Cubeb.error("cubeb_stream_start() failed: 0x%08x", err);
+		CloseUnlocked();
+	}
+	else if (int err = cubeb_stream_set_volume(m_stream, 1.0))
+	{
+		Cubeb.error("cubeb_stream_set_volume() failed: 0x%08x", err);
 	}
 
 	if (m_stream == nullptr)
 	{
 		Cubeb.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
-		CloseUnlocked();
-		return;
+		return false;
 	}
 
-	if (int err = cubeb_stream_set_volume(m_stream, 1.0))
-	{
-		Cubeb.error("cubeb_stream_set_volume() failed: 0x%08x", err);
-	}
-
-	if (int err = cubeb_stream_start(m_stream))
-	{
-		Cubeb.error("cubeb_stream_start() failed: 0x%08x", err);
-	}
+	return true;
 }
 
 void CubebBackend::CloseUnlocked()
 {
-	if (m_stream == nullptr) return;
-
-	if (int err = cubeb_stream_stop(m_stream))
+	if (m_stream != nullptr)
 	{
-		Cubeb.error("cubeb_stream_stop() failed: 0x%08x", err);
+		if (int err = cubeb_stream_stop(m_stream))
+		{
+			Cubeb.error("cubeb_stream_stop() failed: 0x%08x", err);
+		}
+
+		cubeb_stream_destroy(m_stream);
+		m_stream = nullptr;
 	}
 
-	cubeb_stream_destroy(m_stream);
-
 	m_playing = false;
-	m_stream = nullptr;
 	m_last_sample.fill(0);
 }
 
@@ -143,6 +150,12 @@ void CubebBackend::Close()
 
 void CubebBackend::Play()
 {
+	if (m_stream == nullptr)
+	{
+		Cubeb.error("Play() called uninitialized");
+		return;
+	}
+
 	if (m_playing) return;
 
 	std::lock_guard lock(m_cb_mutex);
@@ -151,14 +164,17 @@ void CubebBackend::Play()
 
 void CubebBackend::Pause()
 {
+	if (m_stream == nullptr)
+	{
+		Cubeb.error("Pause() called uninitialized");
+		return;
+	}
+
+	if (!m_playing) return;
+
 	std::lock_guard lock(m_cb_mutex);
 	m_playing = false;
 	m_last_sample.fill(0);
-}
-
-bool CubebBackend::IsPlaying()
-{
-	return m_playing;
 }
 
 void CubebBackend::SetWriteCallback(std::function<u32(u32, void *)> cb)
@@ -169,10 +185,17 @@ void CubebBackend::SetWriteCallback(std::function<u32(u32, void *)> cb)
 
 f64 CubebBackend::GetCallbackFrameLen()
 {
+	if (m_stream == nullptr)
+	{
+		Cubeb.error("GetCallbackFrameLen() called uninitialized");
+		return AUDIO_MIN_LATENCY;
+	}
+
 	u32 stream_latency{};
 	if (int err = cubeb_stream_get_latency(m_stream, &stream_latency))
 	{
 		Cubeb.error("cubeb_stream_get_latency() failed: 0x%08x", err);
+		stream_latency = 0;
 	}
 
 	return std::max<f64>(AUDIO_MIN_LATENCY, static_cast<f64>(stream_latency) / get_sampling_rate());
@@ -217,6 +240,13 @@ void CubebBackend::state_cb(cubeb_stream* /* stream */, void* user_ptr, cubeb_st
 	if (state == CUBEB_STATE_ERROR)
 	{
 		Cubeb.error("Stream entered error state");
+
+		std::lock_guard lock(cubeb->m_error_cb_mutex);
 		cubeb->m_reset_req = true;
+
+		if (cubeb->m_error_callback)
+		{
+			cubeb->m_error_callback();
+		}
 	}
 }

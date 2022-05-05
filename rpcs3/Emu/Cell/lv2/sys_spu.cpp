@@ -78,7 +78,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 	for (const auto& shdr : obj.shdrs)
 	{
-		spu_log.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", shdr.sh_type, shdr.sh_addr, shdr.sh_size, shdr.sh_flags);
+		spu_log.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", std::bit_cast<u32>(shdr.sh_type), shdr.sh_addr, shdr.sh_size, shdr._sh_flags);
 	}
 
 	for (const auto& prog : obj.progs)

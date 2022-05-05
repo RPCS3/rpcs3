@@ -78,6 +78,7 @@ enum class emu_settings_type
 	MinimumScalableDimension,
 	FsrUpscalingEnable,
 	FsrSharpeningStrength,
+	ForceDisableExclusiveFullscreenMode,
 	ForceCPUBlitEmulation,
 	DisableOnDiskShaderCache,
 	DisableVulkanMemAllocator,
@@ -120,6 +121,8 @@ enum class emu_settings_type
 	DumpToFile,
 	ConvertTo16Bit,
 	AudioChannels,
+	AudioProvider,
+	AudioAvport,
 	MasterVolume,
 	EnableBuffering,
 	AudioBufferDuration,
@@ -255,10 +258,11 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::SoftwareVkSemaphore,        { "Video", "Software VkSemaphore"}},
 
 	// Vulkan
-	{ emu_settings_type::VulkanAsyncTextureUploads,        { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
-	{ emu_settings_type::VulkanAsyncSchedulerDriver,       { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
-	{ emu_settings_type::FsrUpscalingEnable,               { "Video", "Vulkan", "Enable FidelityFX Super Resolution Upscaling"}},
-	{ emu_settings_type::FsrSharpeningStrength,            { "Video", "Vulkan", "FidelityFX CAS Sharpening Intensity"}},
+	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
+	{ emu_settings_type::VulkanAsyncSchedulerDriver,          { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
+	{ emu_settings_type::FsrUpscalingEnable,                  { "Video", "Vulkan", "Enable FidelityFX Super Resolution Upscaling"}},
+	{ emu_settings_type::FsrSharpeningStrength,               { "Video", "Vulkan", "FidelityFX CAS Sharpening Intensity"}},
+	{ emu_settings_type::ForceDisableExclusiveFullscreenMode, { "Video", "Vulkan", "Force Disable Exclusive Fullscreen Mode"}},
 
 	// Performance Overlay
 	{ emu_settings_type::PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },
@@ -286,6 +290,8 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DumpToFile,              { "Audio", "Dump to file"}},
 	{ emu_settings_type::ConvertTo16Bit,          { "Audio", "Convert to 16 bit"}},
 	{ emu_settings_type::AudioChannels,           { "Audio", "Audio Channels"}},
+	{ emu_settings_type::AudioProvider,           { "Audio", "Audio Provider"}},
+	{ emu_settings_type::AudioAvport,             { "Audio", "RSXAudio Avport"}},
 	{ emu_settings_type::MasterVolume,            { "Audio", "Master Volume"}},
 	{ emu_settings_type::EnableBuffering,         { "Audio", "Enable Buffering"}},
 	{ emu_settings_type::AudioBufferDuration,     { "Audio", "Desired Audio Buffer Duration"}},

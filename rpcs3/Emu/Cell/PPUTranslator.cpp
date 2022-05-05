@@ -932,31 +932,13 @@ void PPUTranslator::VCTUXS(ppu_opcode_t op)
 void PPUTranslator::VEXPTEFP(ppu_opcode_t op)
 {
 	const auto b = get_vr<f32[4]>(op.vb);
-	const auto x0 = eval(fmax(fmin(b, fsplat<f32[4]>(127.4999961f)), fsplat<f32[4]>(-127.4999961f)));
-	const auto x1 = eval(x0 + fsplat<f32[4]>(0.5f));
-	const auto x2 = eval(llvm_calli<s32[4], decltype(x1)>{"llvm.x86.sse2.cvtps2dq", {x1}} - noncast<s32[4]>(zext<u32[4]>(fcmp_ord(x1 <= fsplat<f32[4]>(0)))));
-	const auto x3 = eval(x0 - fpcast<f32[4]>(x2));
-	const auto x4 = eval(x3 * x3);
-	const auto x5 = eval(x3 * fmuladd(fmuladd(x4, fsplat<f32[4]>(0.023093347705f), fsplat<f32[4]>(20.20206567f)), x4, fsplat<f32[4]>(1513.906801f)));
-	const auto x6 = eval(x5 * fre(fmuladd(x4, fsplat<f32[4]>(233.1842117f), fsplat<f32[4]>(4368.211667f)) - x5));
-	set_vr(op.vd, (x6 + x6 + fsplat<f32[4]>(1.0f)) * bitcast<f32[4]>((x2 + 127) << 23));
+	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.exp2.v4f32", {b}}));
 }
 
 void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 {
 	const auto b = get_vr<f32[4]>(op.vb);
-	const auto _1 = fsplat<f32[4]>(1.0f);
-	const auto _c = fsplat<f32[4]>(1.442695040f);
-	const auto x0 = eval(fmax(b, bitcast<f32[4]>(splat<s32[4]>(0x00800000))));
-	const auto x1 = eval(bitcast<f32[4]>((bitcast<u32[4]>(x0) & 0x807fffff) | bitcast<u32[4]>(_1)));
-	const auto x2 = eval(fre(x1 + _1));
-	const auto x3 = eval((x1 - _1) * x2);
-	const auto x4 = eval(x3 + x3);
-	const auto x5 = eval(x4 * x4);
-	const auto x6 = eval(fmuladd(fmuladd(x5, fsplat<f32[4]>(-0.7895802789f), fsplat<f32[4]>(16.38666457f)), x5, fsplat<f32[4]>(-64.1409953f)));
-	const auto x7 = eval(fre(fmuladd(fmuladd(x5, fsplat<f32[4]>(-35.67227983f), fsplat<f32[4]>(312.0937664f)), x5, fsplat<f32[4]>(-769.6919436f))));
-	const auto x8 = eval(fpcast<f32[4]>(bitcast<s32[4]>((bitcast<u32[4]>(x0) >> 23) - 127)));
-	set_vr(op.vd, fmuladd(x5 * x6 * x7 * x4, _c, fmuladd(x4, _c, x8)));
+	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.log2.v4f32", {b}}));
 }
 
 void PPUTranslator::VMADDFP(ppu_opcode_t op)

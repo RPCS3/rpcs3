@@ -1,8 +1,9 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include <queue>
 #include <vector>
+#include <optional>
 
 #include "util/types.hpp"
 #include "Utilities/mutex.h"
@@ -24,8 +25,11 @@ namespace np
 		s32 analyze_dns_packet(s32 s, const u8* buf, u32 len);
 
 	private:
+		std::optional<u32> get_redir(const std::string& hostname);
+
+	private:
 		shared_mutex mutex;
-		std::map<s32, std::queue<std::vector<u8>>> dns_spylist{};
-		std::map<std::string, u32> switch_map{};
+		std::unordered_map<s32, std::queue<std::vector<u8>>> m_dns_spylist;
+		std::vector<std::pair<std::string, u32>> m_redirs;
 	};
 } // namespace np

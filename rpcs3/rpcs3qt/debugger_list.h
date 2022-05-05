@@ -19,6 +19,8 @@ class debugger_list : public QListWidget
 public:
 	u32 m_pc = 0;
 	u32 m_item_count = 30;
+	bool m_follow_thread = true; // If true, follow the selected thread to wherever it goes in code
+	u32 m_selected_instruction = -1;
 	QColor m_color_bp;
 	QColor m_color_pc;
 	QColor m_text_color_bp;
@@ -29,8 +31,10 @@ Q_SIGNALS:
 public:
 	debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler);
 	void UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm);
+	void EnableThreadFollowing(bool enable = true);
 public Q_SLOTS:
 	void ShowAddress(u32 addr, bool select_addr = true, bool force = false);
+	void RefreshView();
 protected:
 	void keyPressEvent(QKeyEvent* event) override;
 	void mouseDoubleClickEvent(QMouseEvent* event) override;
