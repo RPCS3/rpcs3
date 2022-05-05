@@ -2925,13 +2925,14 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		// Try to process PUTLLUC using PUTLLC when a reservation is active:
 		// If it fails the reservation is cleared, LR event is set and we fallback to the main implementation
 		// All of this is done atomically in PUTLLC
-		if (do_putllc(args))
+		if (!(ch_events.load().events & SPU_EVENT_LR) && do_putllc(args))
 		{
 			// Success, return as our job was done here
 			return;
 		}
 
 		// Failure, fallback to the main implementation
+		raddr = 0;
 	}
 
 	do_cell_atomic_128_store(addr, _ptr<spu_rdata_t>(args.lsa & 0x3ff80));
