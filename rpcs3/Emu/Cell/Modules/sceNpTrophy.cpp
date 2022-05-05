@@ -3,6 +3,7 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Utilities/rXml.h"
 #include "Loader/TRP.h"
@@ -351,7 +352,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!context || !commId || !commSign)
+	if (!context || !commId)
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
@@ -381,7 +382,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	sceNpTrophy.warning("sceNpTrophyCreateContext(): data='%s' term='%c' (0x%x) num=%d", name_sv, commId->data[9], commId->data[9], commId->num);
 
 	// append the commId number as "_xx"
-	const std::string name = fmt::format("%s_%02d", name_sv, commId->num);
+	std::string name = fmt::format("%s_%02d", name_sv, commId->num);
 
 	// open trophy pack file
 	std::string trophy_path = vfs::get(Emu.GetDir() + "TROPDIR/" + name + "/TROPHY.TRP");
@@ -469,10 +470,24 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
+	if (options > SCE_NP_TROPHY_OPTIONS_REGISTER_CONTEXT_SHOW_ERROR_EXIT)
+	{
+		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
+	}
+
+	const auto on_error = [options]()
+	{
+		if (!!(options & SCE_NP_TROPHY_OPTIONS_REGISTER_CONTEXT_SHOW_ERROR_EXIT))
+		{
+			static_cast<void>(open_exit_dialog("Error during trophy registration! The game will now be terminated.", true));
+		}
+	};
+
 	TRPLoader trp(ctxt->trp_stream);
 	if (!trp.LoadHeader())
 	{
 		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to load trophy config header");
+		on_error();
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
@@ -496,6 +511,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	else if (!trp.ContainsEntry("TROPCONF.SFM"))
 	{
 		sceNpTrophy.error("sceNpTrophyRegisterContext(): Invalid/Incomplete trophy config");
+		on_error();
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
@@ -526,6 +542,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
 	if (statusCb(ppu, context, trp_status, 0, 0, arg) < 0)
 	{
+		on_error();
 		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
 	}
 
@@ -535,6 +552,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	if (!trophy_manager.is_initialized)
 	{
+		on_error();
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
@@ -550,17 +568,20 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// Return an error for such cases
 	if (ctxt2 != ctxt)
 	{
+		on_error();
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
 	if (handle_ptr.get() != idm::check<trophy_handle_t>(handle))
 	{
+		on_error();
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
 	if (!trp.Install(trophyPath))
 	{
 		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to install trophy context '%s' (%s)", trophyPath, fs::g_tls_error);
+		on_error();
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
