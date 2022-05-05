@@ -981,13 +981,41 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 		return error;
 	}
 
-	if (!ctxt->tropusr)
+	TROPUSRLoader* tropusr = nullptr;
+	TROPUSRLoader local_tropusr{};
+
+	if (ctxt->read_only)
 	{
-		// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
-		return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
+		const std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name;
+		const std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
+		const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
+
+		if (local_tropusr.Load(trophyUsrPath, trophyConfPath).success)
+		{
+			tropusr = &local_tropusr;
+		}
+		else
+		{
+			// TODO: confirm
+			*count = 0;
+			*flags = {};
+			return CELL_OK;
+		}
+	}
+	else
+	{
+		if (!ctxt->tropusr)
+		{
+			// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
+			return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
+		}
+
+		tropusr = ctxt->tropusr.get();
 	}
 
-	const u32 count_ = ctxt->tropusr->GetTrophiesCount();
+	ensure(tropusr);
+
+	const u32 count_ = tropusr->GetTrophiesCount();
 	*count = count_;
 	if (count_ > 128)
 		sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
@@ -998,7 +1026,7 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 	// Pack up to 128 bools in u32 flag_bits[4]
 	for (u32 id = 0; id < count_; id++)
 	{
-		if (ctxt->tropusr->GetTrophyUnlockState(id))
+		if (tropusr->GetTrophyUnlockState(id))
 			flags->flag_bits[id / 32] |= 1 << (id % 32);
 		else
 			flags->flag_bits[id / 32] &= ~(1 << (id % 32));
