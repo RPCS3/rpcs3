@@ -49,9 +49,9 @@ enum class sec_type : u32
 
 enum class sh_flag : u32
 {
-	shf_write = 1,
-	shf_alloc = 2,
-	shf_execinstr = 4,
+	shf_write,
+	shf_alloc,
+	shf_execinstr,
 
 	__bitset_enum_max
 };
