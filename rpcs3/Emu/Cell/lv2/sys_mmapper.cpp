@@ -529,7 +529,7 @@ error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 		if (!mem.exists)
 		{
 			// Return "physical memory" to the memory container
-			mem.ct->used -= mem.size;
+			mem.ct->free(mem.size);
 		}
 
 		return {};

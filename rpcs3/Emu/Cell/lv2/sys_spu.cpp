@@ -780,7 +780,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	if (!limits.check(use_scheduler ? limits_data{.controllable = num} : limits_data{.physical = num}))
 	{
-		ct->used -= mem_size;
+		ct->free(mem_size);
 		return CELL_EBUSY;
 	}
 
@@ -788,7 +788,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	if (!group)
 	{
-		ct->used -= mem_size;
+		ct->free(mem_size);
 		return CELL_EAGAIN;
 	}
 
@@ -823,7 +823,7 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 			return CELL_EBUSY;
 		}
 
-		group.ct->used -= group.mem_size;
+		group.ct->free(group.mem_size);
 		return {};
 	});
 

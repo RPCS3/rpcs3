@@ -1850,7 +1850,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		g_fxo->init<lv2_memory_container>(mem_size);
 	}
 
-	g_fxo->get<lv2_memory_container>().used += primary_stacksize;
+	ensure(g_fxo->get<lv2_memory_container>().take(primary_stacksize));
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
