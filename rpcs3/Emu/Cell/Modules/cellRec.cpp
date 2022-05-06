@@ -269,63 +269,65 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 
 	for (s32 i = 0; i < pParam->numOfOpt; i++)
 	{
-		const auto& opt = pParam->pOpt[i];
-		ensure(!!opt);
+		const CellRecOption& opt = pParam->pOpt[i];
 
-		switch (opt->option)
+		switch (opt.option)
 		{
 		case CELL_REC_OPTION_PPU_THREAD_PRIORITY:
 		{
-			if (opt->value.ppu_thread_priority > 0xbff)
+			if (opt.value.ppu_thread_priority > 0xbff)
 			{
 				return CELL_REC_ERROR_INVALID_VALUE;
 			}
-			rec.param.ppu_thread_priority = opt->value.ppu_thread_priority;
+			rec.param.ppu_thread_priority = opt.value.ppu_thread_priority;
 			break;
 		}
 		case CELL_REC_OPTION_SPU_THREAD_PRIORITY:
 		{
-			if (opt->value.spu_thread_priority - 0x10U > 0xef)
+			if (opt.value.spu_thread_priority - 0x10U > 0xef)
 			{
 				return CELL_REC_ERROR_INVALID_VALUE;
 			}
-			rec.param.spu_thread_priority = opt->value.spu_thread_priority;
+			rec.param.spu_thread_priority = opt.value.spu_thread_priority;
 			break;
 		}
 		case CELL_REC_OPTION_CAPTURE_PRIORITY:
 		{
-			rec.param.capture_priority = opt->value.capture_priority;
+			rec.param.capture_priority = opt.value.capture_priority;
 			break;
 		}
 		case CELL_REC_OPTION_USE_SYSTEM_SPU:
 		{
-			// TODO: Seems differ if video_quality is VIDEO_QUALITY_6 or VIDEO_QUALITY_7
-			rec.param.use_system_spu = opt->value.use_system_spu;
+			if (video_quality == VIDEO_QUALITY_6 || video_quality == VIDEO_QUALITY_7)
+			{
+				// TODO: Seems differ if video_quality is VIDEO_QUALITY_6 or VIDEO_QUALITY_7
+			}
+			rec.param.use_system_spu = opt.value.use_system_spu;
 			break;
 		}
 		case CELL_REC_OPTION_FIT_TO_YOUTUBE:
 		{
-			rec.param.fit_to_youtube = opt->value.fit_to_youtube;
+			rec.param.fit_to_youtube = opt.value.fit_to_youtube;
 			break;
 		}
 		case CELL_REC_OPTION_XMB_BGM:
 		{
-			rec.param.xmb_bgm = opt->value.xmb_bgm;
+			rec.param.xmb_bgm = opt.value.xmb_bgm;
 			break;
 		}
 		case CELL_REC_OPTION_RING_SEC:
 		{
-			rec.param.ring_sec = opt->value.ring_sec;
+			rec.param.ring_sec = opt.value.ring_sec;
 			break;
 		}
 		case CELL_REC_OPTION_MPEG4_FAST_ENCODE:
 		{
-			rec.param.mpeg4_fast_encode = opt->value.mpeg4_fast_encode;
+			rec.param.mpeg4_fast_encode = opt.value.mpeg4_fast_encode;
 			break;
 		}
 		case CELL_REC_OPTION_VIDEO_INPUT:
 		{
-			const u32 v_input = (opt->value.video_input & 0xffU);
+			const u32 v_input = (opt.value.video_input & 0xffU);
 			if (v_input > CELL_REC_PARAM_VIDEO_INPUT_YUV420PLANAR_16_9)
 			{
 				return CELL_REC_ERROR_INVALID_VALUE;
@@ -335,7 +337,7 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 		}
 		case CELL_REC_OPTION_AUDIO_INPUT:
 		{
-			if (opt->value.audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE)
+			if (opt.value.audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE)
 			{
 				rec.param.audio_input_mix_vol = 0;
 			}
@@ -347,25 +349,25 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 		}
 		case CELL_REC_OPTION_AUDIO_INPUT_MIX_VOL:
 		{
-			rec.param.audio_input_mix_vol = opt->value.audio_input_mix_vol;
+			rec.param.audio_input_mix_vol = opt.value.audio_input_mix_vol;
 			break;
 		}
 		case CELL_REC_OPTION_REDUCE_MEMSIZE:
 		{
-			rec.param.reduce_memsize = opt->value.reduce_memsize != CELL_REC_PARAM_REDUCE_MEMSIZE_DISABLE;
+			rec.param.reduce_memsize = opt.value.reduce_memsize != CELL_REC_PARAM_REDUCE_MEMSIZE_DISABLE;
 			break;
 		}
 		case CELL_REC_OPTION_SHOW_XMB:
 		{
-			rec.param.show_xmb = (opt->value.show_xmb != 0);
+			rec.param.show_xmb = (opt.value.show_xmb != 0);
 			break;
 		}
 		case CELL_REC_OPTION_METADATA_FILENAME:
 		{
-			if (opt->value.metadata_filename)
+			if (opt.value.metadata_filename)
 			{
 				std::string path;
-				if (!create_path(path, pDirName.get_ptr(), opt->value.metadata_filename.get_ptr()))
+				if (!create_path(path, pDirName.get_ptr(), opt.value.metadata_filename.get_ptr()))
 				{
 					return CELL_REC_ERROR_INVALID_VALUE;
 				}
@@ -379,19 +381,19 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 		}
 		case CELL_REC_OPTION_SPURS:
 		{
-			spurs_param = opt->value.pSpursParam.addr();
+			spurs_param = opt.value.pSpursParam.addr();
 
-			if (!opt->value.pSpursParam || !opt->value.pSpursParam->pSpurs) // TODO: check both or only pSpursParam ?
+			if (!opt.value.pSpursParam || !opt.value.pSpursParam->pSpurs) // TODO: check both or only pSpursParam ?
 			{
 				return CELL_REC_ERROR_INVALID_VALUE;
 			}
 
-			if (opt->value.pSpursParam->spu_usage_rate < 1 || opt->value.pSpursParam->spu_usage_rate > 100)
+			if (opt.value.pSpursParam->spu_usage_rate < 1 || opt.value.pSpursParam->spu_usage_rate > 100)
 			{
 				return CELL_REC_ERROR_INVALID_VALUE;
 			}
 
-			rec.param.spurs_param.spu_usage_rate = opt->value.pSpursParam->spu_usage_rate;
+			rec.param.spurs_param.spu_usage_rate = opt.value.pSpursParam->spu_usage_rate;
 			[[fallthrough]];
 		}
 		case 100:
@@ -658,14 +660,13 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 
 	for (s32 i = 0; i < pParam->numOfOpt; i++)
 	{
-		const auto& opt = pParam->pOpt[i];
-		ensure(!!opt);
+		const CellRecOption& opt = pParam->pOpt[i];
 
-		switch (opt->option)
+		switch (opt.option)
 		{
 		case CELL_REC_OPTION_REDUCE_MEMSIZE:
 		{
-			if (opt->value.reduce_memsize == CELL_REC_PARAM_REDUCE_MEMSIZE_DISABLE)
+			if (opt.value.reduce_memsize == CELL_REC_PARAM_REDUCE_MEMSIZE_DISABLE)
 			{
 				reduce_memsize = 0; // 0 MB
 			}
@@ -685,7 +686,7 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 		case CELL_REC_OPTION_VIDEO_INPUT:
 		case CELL_REC_OPTION_AUDIO_INPUT:
 		{
-			if (opt->value.audio_input != CELL_REC_PARAM_AUDIO_INPUT_DISABLE)
+			if (opt.value.audio_input != CELL_REC_PARAM_AUDIO_INPUT_DISABLE)
 			{
 				if (video_type == VIDEO_TYPE_MJPEG || (video_type == VIDEO_TYPE_M4HD && video_quality != VIDEO_QUALITY_6))
 				{
@@ -696,7 +697,7 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 		}
 		case CELL_REC_OPTION_AUDIO_INPUT_MIX_VOL:
 		{
-			// NOTE: Doesn't seem to check opt->value.audio_input
+			// NOTE: Doesn't seem to check opt.value.audio_input
 			if (video_type == VIDEO_TYPE_MJPEG || (video_type == VIDEO_TYPE_M4HD && video_quality != VIDEO_QUALITY_6))
 			{
 				external_input_size = 0x100000; // 1MB

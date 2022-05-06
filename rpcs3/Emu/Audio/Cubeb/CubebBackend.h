@@ -21,7 +21,7 @@ public:
 	bool Initialized() override;
 	bool Operational() override;
 
-	void Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
+	bool Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
 	void Close() override;
 
 	void SetWriteCallback(std::function<u32(u32, void *)> cb) override;
@@ -29,7 +29,6 @@ public:
 
 	void Play() override;
 	void Pause() override;
-	bool IsPlaying() override;
 
 private:
 	static constexpr f64 AUDIO_MIN_LATENCY = 512.0 / 48000; // 10ms
@@ -45,8 +44,7 @@ private:
 	std::array<u8, sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)> m_last_sample{};
 	atomic_t<u8> full_sample_size = 0;
 
-	bool m_playing = false;
-	atomic_t<bool> m_reset_req = false;
+	bool m_reset_req = false;
 
 	// Cubeb callbacks
 	static long data_cb(cubeb_stream* stream, void* user_ptr, void const* input_buffer, void* output_buffer, long nframes);

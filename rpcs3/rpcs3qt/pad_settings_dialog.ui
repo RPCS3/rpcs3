@@ -1027,6 +1027,30 @@
                  </widget>
                 </item>
                 <item>
+                 <widget class="QGroupBox" name="gb_mouse_movement">
+                  <property name="title">
+                   <string>Mouse Movement Mode</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="gb_mouse_movement_layout">
+                   <property name="leftMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="topMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="rightMargin">
+                    <number>5</number>
+                   </property>
+                   <property name="bottomMargin">
+                    <number>5</number>
+                   </property>
+                   <item>
+                    <widget class="QComboBox" name="mouse_movement"/>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
                  <spacer name="mouse_page_spacer">
                   <property name="orientation">
                    <enum>Qt::Vertical</enum>

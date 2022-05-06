@@ -67,6 +67,15 @@ enum class audio_provider
 	rsxaudio
 };
 
+enum class audio_avport
+{
+	hdmi_0,
+	hdmi_1,
+	avmulti,
+	spdif_0,
+	spdif_1
+};
+
 enum class audio_downmix
 {
 	no_downmix, // Surround 7.1

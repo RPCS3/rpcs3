@@ -2083,6 +2083,12 @@
     <ClInclude Include="Emu\Io\Null\null_music_handler.h">
       <Filter>Emu\Io\Null</Filter>
     </ClInclude>
+    <ClInclude Include="..\Utilities\simple_ringbuf.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\transactional_storage.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>

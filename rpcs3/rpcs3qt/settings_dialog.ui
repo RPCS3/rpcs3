@@ -1049,16 +1049,16 @@
               </property>
               <layout class="QVBoxLayout" name="gb_audio_settings_layout">
                <item>
-                <widget class="QCheckBox" name="audioDump">
+                <widget class="QCheckBox" name="convert">
                  <property name="text">
-                  <string>Dump to File</string>
+                  <string>Convert to 16-bit</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="convert">
+                <widget class="QCheckBox" name="audioDump">
                  <property name="text">
-                  <string>Convert to 16-bit</string>
+                  <string>Dump to File</string>
                  </property>
                 </widget>
                </item>
@@ -1113,6 +1113,30 @@
           </item>
           <item>
            <layout class="QVBoxLayout" name="audioTabLayoutTopMiddle">
+            <item>
+             <widget class="QGroupBox" name="gb_audio_provider">
+              <property name="title">
+               <string>Audio Provider</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_audio_provider_layout">
+               <item>
+                <widget class="QComboBox" name="audioProviderBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_audio_avport">
+              <property name="title">
+               <string>RSXAudio Avport</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_audio_avport_layout">
+               <item>
+                <widget class="QComboBox" name="audioAvportBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
             <item>
              <widget class="QGroupBox" name="gb_audio_volume">
               <property name="title">
@@ -2362,6 +2386,13 @@
                 <widget class="QCheckBox" name="readColor">
                  <property name="text">
                   <string>Read Color Buffers</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="forceDisableExclusiveFullscreenMode">
+                 <property name="text">
+                  <string>Force Disable Exclusive Fullscreen Mode</string>
                  </property>
                 </widget>
                </item>

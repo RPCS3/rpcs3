@@ -415,10 +415,28 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 		// get the delta of the mouse position to the screen center
 		const QPoint p_delta = event->pos() - p_center;
 
-		movement_x = p_delta.x();
-		movement_y = p_delta.y();
+		if (m_mouse_movement_mode == mouse_movement_mode::relative)
+		{
+			movement_x = p_delta.x();
+			movement_y = p_delta.y();
+		}
+		else
+		{
+			// current mouse position, starting at the center
+			static QPoint p_real(p_center);
+
+			// update the current position without leaving the screen borders
+			p_real.setX(std::clamp(p_real.x() + p_delta.x(), 0, screen.width()));
+			p_real.setY(std::clamp(p_real.y() + p_delta.y(), 0, screen.height()));
+
+			// get the delta of the real mouse position to the screen center
+			const QPoint p_real_delta = p_real - p_center;
+
+			movement_x = p_real_delta.x();
+			movement_y = p_real_delta.y();
+		}
 	}
-	else
+	else if (m_mouse_movement_mode == mouse_movement_mode::relative)
 	{
 		static int last_pos_x = 0;
 		static int last_pos_y = 0;
@@ -428,6 +446,23 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 
 		last_pos_x = event->x();
 		last_pos_y = event->y();
+	}
+	else if (m_target && m_target->isActive())
+	{
+		// get the screen dimensions
+		const QSize screen = m_target->size();
+
+		// get the center of the screen in global coordinates
+		QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
+
+		// convert the center into screen coordinates
+		p_center = m_target->mapFromGlobal(p_center);
+
+		// get the delta of the mouse position to the screen center
+		const QPoint p_delta = event->pos() - p_center;
+
+		movement_x = p_delta.x();
+		movement_y = p_delta.y();
 	}
 
 	movement_x *= m_multi_x;
@@ -759,6 +794,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	if (cfg == nullptr)
 		return false;
 
+	m_mouse_movement_mode = cfg->mouse_move_mode;
 	m_mouse_move_used = false;
 	m_mouse_wheel_used = false;
 	m_deadzone_x = cfg->mouse_deadzone_x;
@@ -872,7 +908,7 @@ void keyboard_pad_handler::ThreadProc()
 		m_button_time = now;
 	}
 
-	if (m_mouse_move_used)
+	if (m_mouse_move_used && m_mouse_movement_mode == mouse_movement_mode::relative)
 	{
 		static const double mouse_interval = 30.0;
 

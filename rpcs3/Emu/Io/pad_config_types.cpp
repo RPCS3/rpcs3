@@ -25,3 +25,18 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<mouse_movement_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](mouse_movement_mode value)
+	{
+		switch (value)
+		{
+		case mouse_movement_mode::relative: return "Relative";
+		case mouse_movement_mode::absolute: return "Absolute";
+		}
+
+		return unknown;
+	});
+}

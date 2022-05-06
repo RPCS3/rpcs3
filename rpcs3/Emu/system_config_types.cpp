@@ -513,6 +513,24 @@ void fmt_class_string<audio_provider>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<audio_avport>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](audio_avport value)
+	{
+		switch (value)
+		{
+		case audio_avport::hdmi_0: return "HDMI 0";
+		case audio_avport::hdmi_1: return "HDMI 1";
+		case audio_avport::avmulti: return "AV multiout";
+		case audio_avport::spdif_0: return "SPDIF 0";
+		case audio_avport::spdif_1: return "SPDIF 1";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<audio_downmix>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](audio_downmix value)

@@ -177,6 +177,9 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, cfg.rpadsquircling, cfg.rstickmultiplier / 100.0);
 	});
 
+	ui->mouse_movement->addItem(tr("Relative"), static_cast<int>(mouse_movement_mode::relative));
+	ui->mouse_movement->addItem(tr("Absolute"), static_cast<int>(mouse_movement_mode::absolute));
+
 	// Initialize configurable buttons
 	InitButtons();
 
@@ -947,6 +950,11 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 
 		std::vector<std::string> range;
 
+		// Update Mouse Movement Mode
+		const int mouse_movement_index = ui->mouse_movement->findData(static_cast<int>(cfg.mouse_move_mode.get()));
+		ensure(mouse_movement_index >= 0);
+		ui->mouse_movement->setCurrentIndex(mouse_movement_index);
+
 		// Update Mouse Deadzones
 		range = cfg.mouse_deadzone_x.to_list();
 		ui->mouse_dz_x->setRange(std::stoi(range.front()), std::stoi(range.back()));
@@ -1044,6 +1052,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_battery->setEnabled(is_enabled && (m_enable_battery || m_enable_led));
 	ui->pb_battery->setEnabled(is_enabled && m_enable_battery);
 	ui->b_led_settings->setEnabled(is_enabled && m_enable_led);
+	ui->gb_mouse_movement->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
@@ -1608,6 +1617,9 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 
 	if (m_handler->m_type == pad_handler::keyboard)
 	{
+		const int mouse_move_mode = ui->mouse_movement->currentData().toInt();
+		ensure(mouse_move_mode >= 0 && mouse_move_mode <= 1);
+		cfg.mouse_move_mode.set(static_cast<mouse_movement_mode>(mouse_move_mode));
 		cfg.mouse_acceleration_x.set(ui->mouse_accel_x->value() * 100);
 		cfg.mouse_acceleration_y.set(ui->mouse_accel_y->value() * 100);
 		cfg.mouse_deadzone_x.set(ui->mouse_dz_x->value());
@@ -1757,4 +1769,5 @@ void pad_settings_dialog::SubscribeTooltips()
 	SubscribeTooltip(ui->gb_stick_lerp, tooltips.gamepad_settings.stick_lerp);
 	SubscribeTooltip(ui->gb_mouse_accel, tooltips.gamepad_settings.mouse_acceleration);
 	SubscribeTooltip(ui->gb_mouse_dz, tooltips.gamepad_settings.mouse_deadzones);
+	SubscribeTooltip(ui->gb_mouse_movement, tooltips.gamepad_settings.mouse_movement);
 }

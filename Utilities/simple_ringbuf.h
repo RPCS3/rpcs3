@@ -2,37 +2,53 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include <vector>
 
 // Single reader/writer simple ringbuffer.
-// Counters are 32-bit.
 class simple_ringbuf
 {
-private:
-
-	atomic_t<u64> rw_ptr = 0;
-	u32 buf_size = 0;
-	std::unique_ptr<u8[]> buf{};
-	atomic_t<bool> initialized = false;
-
 public:
 
-	simple_ringbuf() {};
-	simple_ringbuf(u32 size);
+	simple_ringbuf(u64 size = 0);
+	virtual ~simple_ringbuf();
 
-	simple_ringbuf(const simple_ringbuf&) = delete;
-	simple_ringbuf& operator=(const simple_ringbuf&) = delete;
-
-	simple_ringbuf(simple_ringbuf&& other);
-	simple_ringbuf& operator=(simple_ringbuf&& other);
-
-	u32 get_free_size() const;
-	u32 get_used_size() const;
-	u32 get_total_size() const;
+	simple_ringbuf(const simple_ringbuf& other);
+	simple_ringbuf& operator=(const simple_ringbuf& other);
 
 	// Thread unsafe functions.
-	void set_buf_size(u32 size);
-	void flush(); // Could be safely called from reader.
+	simple_ringbuf(simple_ringbuf&& other);
+	simple_ringbuf& operator=(simple_ringbuf&& other);
+	void set_buf_size(u64 size);
 
-	u32 push(const void *data, u32 size);
-	u32 pop(void *data, u32 size);
+	// Helper functions
+	u64 get_free_size() const;
+	u64 get_used_size() const;
+	u64 get_total_size() const;
+
+	// Writer functions
+	u64 push(const void* data, u64 size, bool force = false);
+	void writer_flush(u64 cnt = umax);
+
+	// Reader functions
+	u64 pop(void* data, u64 size, bool force = false);
+	void reader_flush(u64 cnt = umax);
+
+private:
+
+	struct ctr_state
+	{
+		alignas(sizeof(u64) * 2)
+		u64 read_ptr = 0;
+		u64 write_ptr = 0;
+
+		auto operator<=>(const ctr_state& other) const = default;
+	};
+
+	static_assert(sizeof(ctr_state) == sizeof(u64) * 2);
+
+	atomic_t<ctr_state> rw_ptr{};
+	std::vector<u8> buf{};
+
+	u64 get_free_size(ctr_state val) const;
+	u64 get_used_size(ctr_state val) const;
 };
