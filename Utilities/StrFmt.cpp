@@ -13,27 +13,39 @@
 #include <Windows.h>
 #else
 #include <errno.h>
+#include <locale>
+#include <codecvt>
 #endif
 
-#ifdef _WIN32
 std::string wchar_to_utf8(std::wstring_view src)
 {
+#ifdef _WIN32
 	std::string utf8_string;
 	const auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), nullptr, 0, nullptr, nullptr);
 	utf8_string.resize(tmp_size);
 	WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), utf8_string.data(), tmp_size, nullptr, nullptr);
 	return utf8_string;
+#else
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter{};
+	return converter.to_bytes(src.data());
+#endif
 }
 
 std::wstring utf8_to_wchar(std::string_view src)
 {
+#ifdef _WIN32
 	std::wstring wchar_string;
 	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, src.data(), src.size(), nullptr, 0);
 	wchar_string.resize(tmp_size);
 	MultiByteToWideChar(CP_UTF8, 0, src.data(), src.size(), wchar_string.data(), tmp_size);
 	return wchar_string;
+#else
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter{};
+	return converter.from_bytes(src.data());
+#endif
 }
 
+#ifdef _WIN32
 std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
 {
 	std::string message;
@@ -132,6 +144,11 @@ void fmt_class_string<const char*>::format(std::string& out, u64 arg)
 	{
 		out += "(NULLSTR)";
 	}
+}
+
+void fmt_class_string<const wchar_t*>::format(std::string& out, u64 arg)
+{
+	out += wchar_to_utf8(reinterpret_cast<const wchar_t*>(arg));
 }
 
 template <>
