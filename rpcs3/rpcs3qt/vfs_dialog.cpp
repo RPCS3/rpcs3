@@ -40,16 +40,12 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	vfs_dialog_tab* dev_flash3_tab = new vfs_dialog_tab({ "dev_flash3", gui::fs_dev_flash3_list, &g_cfg_vfs.dev_flash3 },
 		m_gui_settings, this);
 
-	vfs_dialog_tab* dev_usb000_tab = new vfs_dialog_tab({ "dev_usb000", gui::fs_dev_usb000_list, &g_cfg_vfs.dev_usb000 },
-		m_gui_settings, this);
-
 	tabs->addTab(emulator_tab, "$(EmulatorDir)");
 	tabs->addTab(dev_hdd0_tab, "dev_hdd0");
 	tabs->addTab(dev_hdd1_tab, "dev_hdd1");
 	tabs->addTab(dev_flash_tab, "dev_flash");
 	tabs->addTab(dev_flash2_tab, "dev_flash2");
 	tabs->addTab(dev_flash3_tab, "dev_flash3");
-	tabs->addTab(dev_usb000_tab, "dev_usb000");
 
 	// Create buttons
 	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Close | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);

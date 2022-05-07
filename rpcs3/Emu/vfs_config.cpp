@@ -9,6 +9,11 @@ cfg_vfs g_cfg_vfs{};
 
 std::string cfg_vfs::get(const cfg::string& _cfg, std::string_view emu_dir) const
 {
+	return get(_cfg.to_string(), _cfg.def, emu_dir);
+}
+
+std::string cfg_vfs::get(const std::string& _cfg, const std::string& def, std::string_view emu_dir) const
+{
 	std::string _emu_dir; // Storage only
 
 	if (emu_dir.empty())
@@ -29,12 +34,12 @@ std::string cfg_vfs::get(const cfg::string& _cfg, std::string_view emu_dir) cons
 		emu_dir = _emu_dir;
 	}
 
-	std::string path = _cfg.to_string();
+	std::string path = _cfg;
 
 	if (path.empty())
 	{
 		// Fallback
-		path = _cfg.def;
+		path = def;
 	}
 
 	path = fmt::replace_all(path, "$(EmulatorDir)", emu_dir);
@@ -46,6 +51,34 @@ std::string cfg_vfs::get(const cfg::string& _cfg, std::string_view emu_dir) cons
 	}
 
 	return path;
+}
+
+cfg::device_info cfg_vfs::get_device(const cfg::device_entry& _cfg, std::string_view key, std::string_view emu_dir) const
+{
+	return get_device_info(_cfg, key, emu_dir);
+}
+
+cfg::device_info cfg_vfs::get_device_info(const cfg::device_entry& _cfg, std::string_view key, std::string_view emu_dir) const
+{
+	const auto& device_map = _cfg.get_map();
+
+	if (auto it = device_map.find(key); it != device_map.cend())
+	{
+		// Make sure the path is properly resolved
+		cfg::device_info info = it->second;
+		const auto& def_map = _cfg.get_default();
+		std::string def_path;
+
+		if (auto def_it = def_map.find(key); def_it != def_map.cend())
+		{
+			def_path = def_it->second.path;
+		}
+
+		info.path = get(info.path, def_path, emu_dir);
+		return info;
+	}
+
+	return {};
 }
 
 void cfg_vfs::load()
