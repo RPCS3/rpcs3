@@ -3,6 +3,7 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Utilities/rXml.h"
 #include "Loader/TRP.h"
@@ -34,8 +35,8 @@ struct trophy_context_t
 	static const u32 id_count = 4;
 
 	std::string trp_name;
-	fs::file trp_stream;
 	std::unique_ptr<TROPUSRLoader> tropusr;
+	bool read_only = false;
 };
 
 struct trophy_handle_t
@@ -53,7 +54,7 @@ struct sce_np_trophy_manager
 	atomic_t<bool> is_initialized = false;
 
 	// Get context + check handle given
-	static std::pair<trophy_context_t*, SceNpTrophyError> get_context_ex(u32 context, u32 handle)
+	static std::pair<trophy_context_t*, SceNpTrophyError> get_context_ex(u32 context, u32 handle, bool test_writeable = false)
 	{
 		decltype(get_context_ex(0, 0)) res{};
 		auto& [ctxt, error] = res;
@@ -71,6 +72,12 @@ struct sce_np_trophy_manager
 		if (!ctxt)
 		{
 			error = SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+			return res;
+		}
+
+		if (test_writeable && ctxt->read_only)
+		{
+			error = SCE_NP_TROPHY_ERROR_INVALID_CONTEXT;
 			return res;
 		}
 
@@ -351,7 +358,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!context || !commId || !commSign)
+	if (!context || !commId)
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
@@ -381,24 +388,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	sceNpTrophy.warning("sceNpTrophyCreateContext(): data='%s' term='%c' (0x%x) num=%d", name_sv, commId->data[9], commId->data[9], commId->num);
 
 	// append the commId number as "_xx"
-	const std::string name = fmt::format("%s_%02d", name_sv, commId->num);
-
-	// open trophy pack file
-	std::string trophy_path = vfs::get(Emu.GetDir() + "TROPDIR/" + name + "/TROPHY.TRP");
-	fs::file stream(trophy_path);
-
-	if (!stream && Emu.GetCat() == "GD")
-	{
-		sceNpTrophy.warning("sceNpTrophyCreateContext failed to open trophy file from boot path: '%s'", trophy_path);
-		trophy_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + name + "/TROPHY.TRP");
-		stream.open(trophy_path);
-	}
-
-	// check if exists and opened
-	if (!stream)
-	{
-		return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, trophy_path};
-	}
+	std::string name = fmt::format("%s_%02d", name_sv, commId->num);
 
 	// create trophy context
 	const auto ctxt = idm::make_ptr<trophy_context_t>();
@@ -410,7 +400,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
 	ctxt->trp_name = std::move(name);
-	ctxt->trp_stream = std::move(stream);
+	ctxt->read_only = !!(options & SCE_NP_TROPHY_OPTIONS_CREATE_CONTEXT_READ_ONLY);
 	*context = idm::last_id();
 
 	return CELL_OK;
@@ -456,7 +446,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle, true);
 	const auto handle_ptr = idm::get<trophy_handle_t>(handle);
 
 	if (error)
@@ -469,45 +459,18 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	TRPLoader trp(ctxt->trp_stream);
-	if (!trp.LoadHeader())
+	if (options > SCE_NP_TROPHY_OPTIONS_REGISTER_CONTEXT_SHOW_ERROR_EXIT)
 	{
-		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to load trophy config header");
-		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	}
 
-	// Rename or discard certain entries based on the files found
-	const usz kTargetBufferLength = 31;
-	char target[kTargetBufferLength + 1];
-	target[kTargetBufferLength] = 0;
-	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
-
-	if (trp.ContainsEntry(target))
+	const auto on_error = [options]()
 	{
-		trp.RemoveEntry("TROPCONF.SFM");
-		trp.RemoveEntry("TROP.SFM");
-		trp.RenameEntry(target, "TROPCONF.SFM");
-	}
-	else if (trp.ContainsEntry("TROP.SFM"))
-	{
-		trp.RemoveEntry("TROPCONF.SFM");
-		trp.RenameEntry("TROP.SFM", "TROPCONF.SFM");
-	}
-	else if (!trp.ContainsEntry("TROPCONF.SFM"))
-	{
-		sceNpTrophy.error("sceNpTrophyRegisterContext(): Invalid/Incomplete trophy config");
-		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
-	}
-
-	// Discard unnecessary TROP_XX.SFM files
-	for (s32 i = 0; i <= 18; i++)
-	{
-		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
-		if (i != g_cfg.sys.language)
+		if (!!(options & SCE_NP_TROPHY_OPTIONS_REGISTER_CONTEXT_SHOW_ERROR_EXIT))
 		{
-			trp.RemoveEntry(target);
+			static_cast<void>(open_exit_dialog("Error during trophy registration! The game will now be terminated.", true));
 		}
-	}
+	};
 
 	// TODO: Callbacks
 	// From RE-ing a game's state machine, it seems the possible order is one of the following:
@@ -526,6 +489,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
 	if (statusCb(ppu, context, trp_status, 0, 0, arg) < 0)
 	{
+		on_error();
 		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
 	}
 
@@ -535,6 +499,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	if (!trophy_manager.is_initialized)
 	{
+		on_error();
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
@@ -550,17 +515,78 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// Return an error for such cases
 	if (ctxt2 != ctxt)
 	{
+		on_error();
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
 	if (handle_ptr.get() != idm::check<trophy_handle_t>(handle))
 	{
+		on_error();
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+	}
+
+	// open trophy pack file
+	std::string trp_path = vfs::get(Emu.GetDir() + "TROPDIR/" + ctxt->trp_name + "/TROPHY.TRP");
+	fs::file stream(trp_path);
+
+	if (!stream && Emu.GetCat() == "GD")
+	{
+		sceNpTrophy.warning("sceNpTrophyRegisterContext failed to open trophy file from boot path: '%s'", trp_path);
+		trp_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + ctxt->trp_name + "/TROPHY.TRP");
+		stream.open(trp_path);
+	}
+
+	// check if exists and opened
+	if (!stream)
+	{
+		return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, trp_path};
+	}
+
+	TRPLoader trp(stream);
+	if (!trp.LoadHeader())
+	{
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to load trophy config header");
+		on_error();
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	}
+
+	// Rename or discard certain entries based on the files found
+	const usz kTargetBufferLength = 31;
+	char target[kTargetBufferLength + 1]{};
+	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
+
+	if (trp.ContainsEntry(target))
+	{
+		trp.RemoveEntry("TROPCONF.SFM");
+		trp.RemoveEntry("TROP.SFM");
+		trp.RenameEntry(target, "TROPCONF.SFM");
+	}
+	else if (trp.ContainsEntry("TROP.SFM"))
+	{
+		trp.RemoveEntry("TROPCONF.SFM");
+		trp.RenameEntry("TROP.SFM", "TROPCONF.SFM");
+	}
+	else if (!trp.ContainsEntry("TROPCONF.SFM"))
+	{
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): Invalid/Incomplete trophy config");
+		on_error();
+		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
+	}
+
+	// Discard unnecessary TROP_XX.SFM files
+	for (s32 i = 0; i <= 18; i++)
+	{
+		strcpy_trunc(target, fmt::format("TROP_%02d.SFM", i));
+		if (i != g_cfg.sys.language)
+		{
+			trp.RemoveEntry(target);
+		}
 	}
 
 	if (!trp.Install(trophyPath))
 	{
 		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to install trophy context '%s' (%s)", trophyPath, fs::g_tls_error);
+		on_error();
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
@@ -660,7 +686,24 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 
 	if (!fs::is_dir(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name)))
 	{
-		TRPLoader trp(ctxt->trp_stream);
+		// open trophy pack file
+		std::string trophy_path = vfs::get(Emu.GetDir() + "TROPDIR/" + ctxt->trp_name + "/TROPHY.TRP");
+		fs::file stream(trophy_path);
+
+		if (!stream && Emu.GetCat() == "GD")
+		{
+			sceNpTrophy.warning("sceNpTrophyGetRequiredDiskSpace failed to open trophy file from boot path: '%s'", trophy_path);
+			trophy_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + ctxt->trp_name + "/TROPHY.TRP");
+			stream.open(trophy_path);
+		}
+
+		// check if exists and opened
+		if (!stream)
+		{
+			return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, trophy_path};
+		}
+
+		TRPLoader trp(stream);
 
 		if (trp.LoadHeader())
 		{
@@ -917,7 +960,7 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyUnlockState(context=0x%x, handle=0x%x, flags=*0x%x, count=*0x%x)", context, handle, flags, count);
 
-	if (!flags || !count) // is count really checked here?
+	if (!flags || !count)
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
@@ -938,13 +981,41 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 		return error;
 	}
 
-	if (!ctxt->tropusr)
+	TROPUSRLoader* tropusr = nullptr;
+	TROPUSRLoader local_tropusr{};
+
+	if (ctxt->read_only)
 	{
-		// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
-		return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
+		const std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name;
+		const std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
+		const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
+
+		if (local_tropusr.Load(trophyUsrPath, trophyConfPath).success)
+		{
+			tropusr = &local_tropusr;
+		}
+		else
+		{
+			// TODO: confirm
+			*count = 0;
+			*flags = {};
+			return CELL_OK;
+		}
+	}
+	else
+	{
+		if (!ctxt->tropusr)
+		{
+			// TODO: May return SCE_NP_TROPHY_ERROR_UNKNOWN_TITLE for older sdk version
+			return SCE_NP_TROPHY_ERROR_CONTEXT_NOT_REGISTERED;
+		}
+
+		tropusr = ctxt->tropusr.get();
 	}
 
-	const u32 count_ = ctxt->tropusr->GetTrophiesCount();
+	ensure(tropusr);
+
+	const u32 count_ = tropusr->GetTrophiesCount();
 	*count = count_;
 	if (count_ > 128)
 		sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
@@ -955,7 +1026,7 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 	// Pack up to 128 bools in u32 flag_bits[4]
 	for (u32 id = 0; id < count_; id++)
 	{
-		if (ctxt->tropusr->GetTrophyUnlockState(id))
+		if (tropusr->GetTrophyUnlockState(id))
 			flags->flag_bits[id / 32] |= 1 << (id % 32);
 		else
 			flags->flag_bits[id / 32] &= ~(1 << (id % 32));
