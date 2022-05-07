@@ -597,6 +597,9 @@ void cell_audio_thread::reset_counters()
 
 cell_audio_thread::cell_audio_thread()
 {
+	// Initialize loop variables (regardless of provider in order to initialize timestamps)
+	reset_counters();
+
 	if (cfg.raw.provider != audio_provider::cell_audio)
 	{
 		return;
@@ -607,9 +610,6 @@ cell_audio_thread::cell_audio_thread()
 
 	// Allocate ringbuffer
 	ringbuffer.reset(new audio_ringbuffer(cfg));
-
-	// Initialize loop variables
-	reset_counters();
 }
 
 void cell_audio_thread::operator()()
