@@ -446,6 +446,9 @@ int main(int argc, char** argv)
 	{
 		report_fatal_error("Not enough memory for RPCS3 process.");
 	}
+
+	WSADATA wsa_data;
+	WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
 
 	ensure(thread_ctrl::is_main(), "Not main thread");
@@ -475,7 +478,7 @@ int main(int argc, char** argv)
 	{
 		// Write RPCS3 version
 		logs::stored_message ver{sys_log.always()};
-		ver.text = fmt::format("RPCS3 v%s | %s", rpcs3::get_version().to_string(), rpcs3::get_branch());
+		ver.text = fmt::format("RPCS3 v%s", rpcs3::get_verbose_version());
 
 		// Write System information
 		logs::stored_message sys{sys_log.always()};

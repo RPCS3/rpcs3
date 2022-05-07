@@ -2795,7 +2795,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 		shared_mem = addr;
 	}
 
-	if (g_use_rtm) [[likely]]
 	{
 		auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
 		auto& res = *utils::bless<atomic_t<u128>>(vm::g_reservations + (addr & 0xff80) / 2);
@@ -2861,11 +2860,21 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			}
 		}
 
-		u64 result = 0;
+		u64 result = 1;
 
 		if (cpu->state & cpu_flag::pause)
 		{
 			result = 0;
+		}
+		else if (!g_use_rtm)
+		{
+			// Provoke page fault
+			vm::_ref<atomic_t<u32>>(addr) += 0;
+
+			// Hard lock
+			vm::writer_lock lock(addr);
+			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
+			vm::reservation_acquire(addr) += 32;
 		}
 		else if (cpu->id_type() != 2)
 		{
@@ -2896,22 +2905,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 		static_cast<void>(cpu->test_stopped());
 	}
-	else
-	{
-		auto& data = vm::_ref<spu_rdata_t>(addr);
-		auto [res, time0] = vm::reservation_lock(addr);
-
-		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
-
-		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
-		{
-			// Full lock (heavyweight)
-			// TODO: vm::check_addr
-			vm::writer_lock lock(addr);
-			mov_rdata(super_data, *static_cast<const spu_rdata_t*>(to_write));
-			res += 64;
-		}
-	}
 }
 
 void spu_thread::do_putlluc(const spu_mfc_cmd& args)
@@ -2925,13 +2918,14 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		// Try to process PUTLLUC using PUTLLC when a reservation is active:
 		// If it fails the reservation is cleared, LR event is set and we fallback to the main implementation
 		// All of this is done atomically in PUTLLC
-		if (do_putllc(args))
+		if (!(ch_events.load().events & SPU_EVENT_LR) && do_putllc(args))
 		{
 			// Success, return as our job was done here
 			return;
 		}
 
 		// Failure, fallback to the main implementation
+		raddr = 0;
 	}
 
 	do_cell_atomic_128_store(addr, _ptr<spu_rdata_t>(args.lsa & 0x3ff80));
@@ -3225,6 +3219,12 @@ bool spu_thread::process_mfc_cmd()
 		alignas(64) spu_rdata_t temp;
 		u64 ntime;
 		rsx::reservation_lock rsx_lock(addr, 128);
+
+		if (ch_events.load().events & SPU_EVENT_LR)
+		{
+			// There is no longer a need to concern about LR event if it has already been raised.
+			raddr = 0;
+		}
 
 		if (raddr)
 		{
@@ -3942,40 +3942,50 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		spu_function_logger logger(*this, "MFC Events read");
 
-		if (mask1 & SPU_EVENT_LR && raddr)
+		state += cpu_flag::wait;
+
+		using resrv_ptr = std::add_pointer_t<const decltype(rdata)>;
+
+		resrv_ptr resrv_mem = vm::get_super_ptr<decltype(rdata)>(raddr);
+		std::shared_ptr<utils::shm> rdata_shm;
+
+		// Does not need to safe-access reservation if LR is the only event masked
+		// Because it's either an access violation or a livelock if an invalid memory is passed
+		if (raddr && mask1 > SPU_EVENT_LR)
 		{
-			if (mask1 != SPU_EVENT_LR && mask1 != SPU_EVENT_LR + SPU_EVENT_TM)
+			auto area = vm::get(vm::any, raddr);
+
+			if (area && (area->flags & vm::preallocated))
 			{
-				// Combining LR with other flags needs another solution
-				fmt::throw_exception("Not supported: event mask 0x%x", mask1);
+				if (!vm::check_addr(raddr))
+				{
+					resrv_mem = nullptr;
+				}
+			}
+			else if (area)
+			{
+				// Ensure possesion over reservation memory so it won't be deallocated
+				auto [base_addr, shm_] = area->peek(raddr);
+
+				if (shm_)
+				{
+					const u32 data_offs = raddr - base_addr;
+					rdata_shm = std::move(shm_);
+					resrv_mem = reinterpret_cast<resrv_ptr>(rdata_shm->get() + data_offs);
+				}
 			}
 
-			for (; !events.count; events = get_events(mask1, false, true))
+			if (!resrv_mem)
 			{
-				const auto old = state.add_fetch(cpu_flag::wait);
-
-				if (is_stopped(old))
-				{
-					return -1;
-				}
-
-				if (is_paused(old))
-				{
-					// Ensure reservation data won't change while paused for debugging purposes
-					check_state();
-					continue;
-				}
-
-				vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{100'000});
+				spu_log.error("A dangling reservation address has been found while reading SPU_RdEventStat channel. (addr=0x%x, events_mask=0x%x)", raddr, mask1);
+				raddr = 0;
+				set_events(SPU_EVENT_LR);
 			}
-
-			check_state();
-			return events.events & mask1;
 		}
 
-		for (; !events.count; events = get_events(mask1, true, true))
+		for (; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true))
 		{
-			const auto old = state.add_fetch(cpu_flag::wait);
+			const auto old = +state;
 
 			if (is_stopped(old))
 			{
@@ -3984,7 +3994,28 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			if (is_paused(old))
 			{
+				// Ensure spu_thread::rdata's stagnancy while the thread is paused for debugging purposes
 				check_state();
+				state += cpu_flag::wait;
+				continue;
+			}
+
+			// Optimized check
+			if (raddr && (!vm::check_addr(raddr) || rtime != vm::reservation_acquire(raddr) || !cmp_rdata(rdata, *resrv_mem)))
+			{
+				raddr = 0;
+				set_events(SPU_EVENT_LR);
+				continue;
+			}
+
+			if (raddr)
+			{
+				thread_ctrl::wait_on_custom<2>([&](atomic_wait::list<4>& list)
+				{
+					list.set<0>(state, old);
+					list.set<1>(vm::reservation_notifier(raddr), rtime, -128);
+				}, 100);
+
 				continue;
 			}
 

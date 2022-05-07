@@ -1222,7 +1222,18 @@ usz get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, usz d_
 
 #elif defined(ARCH_ARM64)
 
+#if defined(__APPLE__)
+// https://github.com/bombela/backward-cpp/issues/200
+#define RIP(context) ((context)->uc_mcontext->__ss.__pc)
+#elif defined(__FreeBSD__)
+#define RIP(context) ((context)->uc_mcontext.mc_gpregs.gp_elr)
+#elif defined(__NetBSD__)
+#define RIP(context) ((context)->uc_mcontext.__gregs[_REG_PC])
+#elif defined(__OpenBSD__)
+#define RIP(context) ((context)->sc_elr)
+#else
 #define RIP(context) ((context)->uc_mcontext.pc)
+#endif
 
 #endif /* ARCH_ */
 
@@ -1419,7 +1430,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			return false;
 		}
 
-		if (vm::reader_lock rlock; vm::check_addr(addr, 0))
+		if (vm::writer_lock mlock; vm::check_addr(addr, 0))
 		{
 			// For allocated memory with protection lower than required (such as protection::no or read-only while writing to it)
 			utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
@@ -1474,7 +1485,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 
 			u64 data3;
 			{
-				vm::reader_lock rlock;
+				vm::writer_lock rlock;
 				if (vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable))
 				{
 					// Memory was allocated inbetween, retry

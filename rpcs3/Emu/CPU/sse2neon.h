@@ -48,6 +48,12 @@
  * SOFTWARE.
  */
 
+// Suppress old-style casts in this file on Clang ARM64
+#if defined(__clang__) && defined(ARCH_ARM64)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#endif
+
 /* Tunable configurations */
 
 /* Enable precise implementation of math operations
@@ -8773,4 +8779,8 @@ FORCE_INLINE void _sse2neon_mm_set_denormals_zero_mode(unsigned int flag)
 #pragma GCC pop_options
 #endif
 
+#endif
+
+#if defined(__clang__) && defined(ARCH_ARM64)
+#pragma clang diagnostic pop
 #endif

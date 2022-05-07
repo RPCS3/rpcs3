@@ -19,6 +19,7 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
+#include "Emu/Cell/Modules/cellGame.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
@@ -51,6 +52,8 @@ LOG_CHANNEL(sys_log, "SYS");
 // Preallocate 32 MiB
 stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
+bool g_log_all_errors = false;
+
 bool g_use_rtm = false;
 u64 g_rtm_tx_limit1 = 0;
 u64 g_rtm_tx_limit2 = 0;
@@ -61,12 +64,14 @@ atomic_t<u64> g_watchdog_hold_ctr{0};
 
 extern bool ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
+extern void spu_load_rel_exec(const spu_rel_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 = 0);
 extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 = 0);
+extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -559,6 +564,29 @@ void Emulator::SetForceBoot(bool force_boot)
 game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool is_disc_patch)
 {
 	const std::string resolved_path = GetCallbacks().resolve_path(m_path);
+
+	if (m_config_mode == cfg_mode::continuous)
+	{
+		// The program is being booted from another running program
+		// CELL_GAME_GAMETYPE_GAMEDATA is not used as boot type
+
+		if (m_cat == "DG"sv)
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_DISC;
+		}
+		else if (m_cat == "HM"sv)
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_HOME;
+		}
+		else
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_HDD;
+		}
+	}
+	else
+	{
+		m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
+	}
 
 	if (!IsStopped())
 	{
@@ -1314,7 +1342,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
+		ppu_rel_object ppu_rel;
 		spu_exec_object spu_exec;
+		spu_rel_object spu_rel;
 
 		if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -1423,7 +1453,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
-			// PPU PRX (experimental)
+			// PPU PRX
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			ppu_load_prx(ppu_prx, m_path);
@@ -1431,10 +1461,26 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
-			// SPU executable (experimental)
+			// SPU executable
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			spu_load_exec(spu_exec);
+			Pause(true);
+		}
+		else if (spu_rel.open(elf_file) == elf_error::ok)
+		{
+			// SPU linker file
+			GetCallbacks().on_ready();
+			g_fxo->init(false);
+			spu_load_rel_exec(spu_rel);
+			Pause(true);
+		}
+		else if (ppu_rel.open(elf_file) == elf_error::ok)
+		{
+			// PPU linker file
+			GetCallbacks().on_ready();
+			g_fxo->init(false);
+			ppu_load_rel_exec(ppu_rel);
 			Pause(true);
 		}
 		else
@@ -1444,6 +1490,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			sys_log.warning("** ppu_exec -> %s", ppu_exec.get_error());
 			sys_log.warning("** ppu_prx  -> %s", ppu_prx.get_error());
 			sys_log.warning("** spu_exec -> %s", spu_exec.get_error());
+			sys_log.warning("** spu_rel -> %s", spu_rel.get_error());
+			sys_log.warning("** ppu_rel -> %s", ppu_rel.get_error());
 
 			Kill(false);
 			return game_boot_result::invalid_file_or_folder;
@@ -1723,6 +1771,15 @@ void Emulator::Kill(bool allow_autoexit)
 {
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
+		// Ensure clean state
+		argv.clear();
+		envp.clear();
+		data.clear();
+		disc.clear();
+		klic.clear();
+		hdd1.clear();
+		m_config_path.clear();
+		m_config_mode = cfg_mode::custom;
 		return;
 	}
 
@@ -1952,6 +2009,13 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 		if (!fmt)
 		{
 			// Report and clean error state
+
+			if (g_log_all_errors) [[unlikely]]
+			{
+				g_tls_error_stats.clear();
+				return 0;
+			}
+
 			for (auto&& pair : g_tls_error_stats)
 			{
 				if (pair.second > 3)
@@ -1964,6 +2028,8 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 			return 0;
 		}
 	}
+
+	ensure(fmt);
 
 	logs::channel* channel = &sys_log;
 	const char* func = "Unknown function";
@@ -1979,14 +2045,27 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 	// Format log message (use preallocated buffer)
 	g_tls_error_str.clear();
 	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x", func, result);
+
+	// Add spacer between error and fmt if necessary
+	if (fmt[0] != ' ')
+		g_tls_error_str += " : ";
+
 	fmt::raw_append(g_tls_error_str, fmt, sup, args);
 
 	// Update stats and check log threshold
-	const auto stat = ++g_tls_error_stats[g_tls_error_str];
 
-	if (stat <= 3)
+	if (g_log_all_errors) [[unlikely]]
 	{
-		channel->error("%s [%u]", g_tls_error_str, stat);
+		channel->error("%s", g_tls_error_str);
+	}
+	else
+	{
+		const auto stat = ++g_tls_error_stats[g_tls_error_str];
+
+		if (stat <= 3)
+		{
+			channel->error("%s [%u]", g_tls_error_str, stat);
+		}
 	}
 
 	return result;

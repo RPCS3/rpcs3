@@ -12,6 +12,7 @@
 #include "Capture/rsx_capture.h"
 #include "rsx_methods.h"
 #include "gcm_printing.h"
+#include "RSXDisAsm.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
@@ -640,7 +641,7 @@ namespace rsx
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 
-		last_flip_time = rsx::uclock() - 1000000;
+		last_guest_flip_timestamp = rsx::uclock() - 1000000;
 
 		vblank_count = 0;
 
@@ -2002,7 +2003,8 @@ namespace rsx
 				{
 					current_fp_texture_state.multisampled_textures |= (1 << i);
 					texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
-					texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED);
+					texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED_MAG);
+					texture_control |= (static_cast<u32>(tex.min_filter() != rsx::texture_minify_filter::nearest) << texture_control_bits::FILTERED_MIN);
 					texture_control |= (((tex.format() & CELL_GCM_TEXTURE_UN) >> 6) << texture_control_bits::UNNORMALIZED_COORDS);
 				}
 
@@ -2486,6 +2488,8 @@ namespace rsx
 		{
 			performance_counters.sampled_frames++;
 		}
+
+		last_host_flip_timestamp = rsx::uclock();
 	}
 
 	void thread::check_zcull_status(bool framebuffer_swap)
@@ -2635,6 +2639,63 @@ namespace rsx
 	{
 		// Make sure GET value is exposed before sync points
 		fifo_ctrl->sync_get();
+	}
+
+	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const
+	{
+		if (!ctrl)
+		{
+			return {0, umax};
+		}
+
+		if (!count)
+		{
+			return {0, get};
+		}
+
+		u32 true_get = ctrl->get;
+		u32 start = last_known_code_start;
+
+		RSXDisAsm disasm(cpu_disasm_mode::survey_cmd_size, vm::g_sudo_addr, 0, this);
+
+		std::vector<u32> pcs_of_valid_cmds;
+		pcs_of_valid_cmds.reserve(std::min<u32>((get - start) / 16, 0x4000)); // Rough estimation of final array size
+
+		auto probe_code_region = [&](u32 probe_start) -> std::pair<u32, u32>
+		{
+			pcs_of_valid_cmds.clear();
+			pcs_of_valid_cmds.push_back(probe_start);
+
+			while (pcs_of_valid_cmds.back() < get)
+			{
+				if (u32 advance = disasm.disasm(pcs_of_valid_cmds.back()))
+				{
+					pcs_of_valid_cmds.push_back(pcs_of_valid_cmds.back() + advance);
+				}
+				else
+				{
+					return {0, get};
+				}
+			}
+
+			if (pcs_of_valid_cmds.size() == 1u || pcs_of_valid_cmds.back() != get)
+			{
+				return {0, get};
+			}
+
+			u32 found_cmds_count = std::min(count, ::size32(pcs_of_valid_cmds) - 1);
+
+			return {found_cmds_count, *(pcs_of_valid_cmds.end() - 1 - found_cmds_count)};
+		};
+
+		auto pair = probe_code_region(start);
+
+		if (!pair.first)
+		{
+			pair = probe_code_region(true_get);
+		}
+
+		return pair;
 	}
 
 	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
@@ -3161,7 +3222,7 @@ namespace rsx
 
 		flip(m_queued_flip);
 
-		last_flip_time = rsx::uclock() - 1000000;
+		last_guest_flip_timestamp = rsx::uclock() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
 

@@ -71,7 +71,7 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 
 			if (pressed)
 			{
-				if (data.len == 1 && data.keycode[0].first == CELL_KEYC_NO_EVENT)
+				if (data.len == 1 && data.buttons[0].m_keyCode == CELL_KEYC_NO_EVENT)
 				{
 					data.len = 0;
 				}
@@ -83,11 +83,11 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 
 					if (config.read_mode == CELL_KB_RMODE_INPUTCHAR)
 					{
-						data.keycode[0] = { CELL_KEYC_NO_EVENT, button.m_outKeyCode };
+						data.buttons[0] = KbButton(CELL_KEYC_NO_EVENT, button.m_outKeyCode, true);
 					}
 					else
 					{
-						data.keycode[data.len % CELL_KB_MAX_KEYCODES] = { CELL_KEYC_NO_EVENT, button.m_outKeyCode };
+						data.buttons[data.len % CELL_KB_MAX_KEYCODES] = KbButton(CELL_KEYC_NO_EVENT, button.m_outKeyCode, true);
 					}
 				}
 				else
@@ -101,11 +101,11 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 
 					if (config.read_mode == CELL_KB_RMODE_INPUTCHAR)
 					{
-						data.keycode[0] = { kcode, 0 };
+						data.buttons[0] = KbButton(kcode, button.m_outKeyCode, true);
 					}
 					else
 					{
-						data.keycode[data.len % CELL_KB_MAX_KEYCODES] = { kcode, 0 };
+						data.buttons[data.len % CELL_KB_MAX_KEYCODES] = KbButton(kcode, button.m_outKeyCode, true);
 					}
 				}
 
@@ -122,7 +122,7 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 				// Needed to indicate key releases. Without this you have to tap another key before using the same key again
 				if (config.read_mode == CELL_KB_RMODE_INPUTCHAR)
 				{
-					data.keycode[0] = { CELL_KEYC_NO_EVENT, 0 };
+					data.buttons[0] = KbButton(CELL_KEYC_NO_EVENT, button.m_outKeyCode, false);
 					data.len = 1;
 				}
 				else
@@ -131,7 +131,7 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 
 					for (s32 i = 0; i < data.len; i++)
 					{
-						if (data.keycode[i].first == kcode && (!is_meta_key || data.keycode[i].second == button.m_outKeyCode))
+						if (data.buttons[i].m_keyCode == kcode && (!is_meta_key || data.buttons[i].m_outKeyCode == button.m_outKeyCode))
 						{
 							index = i;
 							break;
@@ -140,12 +140,12 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 
 					for (s32 i = index; i < data.len - 1; i++)
 					{
-						data.keycode[i] = data.keycode[i + 1];
+						data.buttons[i] = data.buttons[i + 1];
 					}
 
 					if (data.len <= 1)
 					{
-						data.keycode[0] = { CELL_KEYC_NO_EVENT, 0 };
+						data.buttons[0] = KbButton(CELL_KEYC_NO_EVENT, button.m_outKeyCode, false);
 					}
 
 					data.len = std::max(1, data.len - 1);
@@ -177,9 +177,9 @@ void KeyboardHandlerBase::SetIntercepted(bool intercepted)
 			keyboard.m_data.mkey = 0;
 			keyboard.m_data.len  = 0;
 
-			for (auto& keycode : keyboard.m_data.keycode)
+			for (auto& button : keyboard.m_data.buttons)
 			{
-				keycode.first = CELL_KEYC_NO_EVENT;
+				button.m_keyCode = CELL_KEYC_NO_EVENT;
 			}
 		}
 	}

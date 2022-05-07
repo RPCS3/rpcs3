@@ -180,6 +180,13 @@ public:
 	std::string disc;
 	std::string hdd1;
 
+	u32 m_boot_source_type = 0; // CELL_GAME_GAMETYPE_SYS
+
+	const u32& GetBootSourceType() const
+	{
+		return m_boot_source_type;
+	}
+
 	const std::string& GetBoot() const
 	{
 		return m_path;
@@ -286,6 +293,8 @@ public:
 };
 
 extern Emulator Emu;
+
+extern bool g_log_all_errors;
 
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;

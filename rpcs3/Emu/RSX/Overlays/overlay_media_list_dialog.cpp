@@ -218,7 +218,10 @@ namespace rsx
 
 			if (const auto error = run_input_loop())
 			{
-				rsx_log.error("Media dialog input loop exited with error code=%d", error);
+				if (error != selection_code::canceled)
+				{
+					rsx_log.error("Media list dialog input loop exited with error code=%d", error);
+				}
 				return error;
 			}
 

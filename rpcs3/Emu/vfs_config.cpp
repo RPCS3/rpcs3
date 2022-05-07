@@ -2,7 +2,6 @@
 #include "vfs_config.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/StrFmt.h"
-#include "util/yaml.hpp"
 
 LOG_CHANNEL(vfs_log, "VFS");
 

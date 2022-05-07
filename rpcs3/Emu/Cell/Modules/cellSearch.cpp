@@ -1477,13 +1477,13 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 			// Check if the type of the found content is correct
 			if (content->second->type != CELL_SEARCH_CONTENTTYPE_MUSIC)
 			{
-				return { CELL_SEARCH_ERROR_INVALID_CONTENTTYPE, fmt::format("Type: %d, Expected: CELL_SEARCH_CONTENTTYPE_MUSIC")};
+				return { CELL_SEARCH_ERROR_INVALID_CONTENTTYPE, "Type: %d, Expected: CELL_SEARCH_CONTENTTYPE_MUSIC"};
 			}
 
 			// Check if the type of the found content matches our search content type
 			if (content->second->type != first_content->type)
 			{
-				return { CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT, fmt::format("Type: %d, Expected: %d", +content->second->type, +first_content->type) };
+				return { CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT, "Type: %d, Expected: %d", +content->second->type, +first_content->type };
 			}
 
 			// Use the found content

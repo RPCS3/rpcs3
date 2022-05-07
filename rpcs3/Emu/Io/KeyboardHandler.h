@@ -24,64 +24,49 @@ enum QtKeys
 
 struct KbInfo
 {
-	u32 max_connect;
-	u32 now_connect;
-	u32 info;
-	u8 status[CELL_KB_MAX_KEYBOARDS];
-};
-
-struct KbData
-{
-	u32 led;  // Active led lights
-	u32 mkey; // Active key modifiers
-	s32 len;  // Number of key codes (0 means no data available)
-	std::pair<u16, u32> keycode[CELL_KB_MAX_KEYCODES];
-
-	KbData()
-		: led(0)
-		, mkey(0)
-		, len(0)
-	{ // (TODO: Set initial state of led)
-	}
-};
-
-struct KbConfig
-{
-	u32 arrange;
-	u32 read_mode;
-	u32 code_type;
-
-	KbConfig()
-		: arrange(CELL_KB_MAPPING_101)
-		, read_mode(CELL_KB_RMODE_INPUTCHAR)
-		, code_type(CELL_KB_CODETYPE_ASCII)
-	{
-	}
+	u32 max_connect = 0;
+	u32 now_connect = 0;
+	u32 info = 0;
+	bool is_null_handler = false;
+	std::array<u8, CELL_KB_MAX_KEYBOARDS> status{};
 };
 
 struct KbButton
 {
-	u32 m_keyCode;
-	u32 m_outKeyCode;
+	u32 m_keyCode = 0;
+	u32 m_outKeyCode = 0;
 	bool m_pressed = false;
-
-	KbButton(u32 keyCode, u32 outKeyCode)
+	
+	KbButton() = default;
+	KbButton(u32 keyCode, u32 outKeyCode, bool pressed = false)
 		: m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
+		, m_pressed(pressed)
 	{
 	}
+};
+
+struct KbData
+{
+	u32 led = 0;  // Active led lights     TODO: Set initial state of led
+	u32 mkey = 0; // Active key modifiers
+	s32 len = 0;  // Number of key codes (0 means no data available)
+	std::array<KbButton, CELL_KB_MAX_KEYCODES> buttons{};
+};
+
+struct KbConfig
+{
+	u32 arrange = CELL_KB_MAPPING_101;
+	u32 read_mode = CELL_KB_RMODE_INPUTCHAR;
+	u32 code_type = CELL_KB_CODETYPE_ASCII;
 };
 
 struct Keyboard
 {
 	bool m_key_repeat = false;
-	KbData m_data;
-	KbConfig m_config;
+	KbData m_data{};
+	KbConfig m_config{};
 	std::vector<KbButton> m_buttons;
-
-	Keyboard()
-	{
-	}
 };
 
 class KeyboardHandlerBase
@@ -109,6 +94,6 @@ public:
 protected:
 	void ReleaseAllKeys();
 
-	KbInfo m_info;
+	KbInfo m_info{};
 	std::vector<Keyboard> m_keyboards;
 };

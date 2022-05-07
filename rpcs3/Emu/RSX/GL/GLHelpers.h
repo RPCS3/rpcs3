@@ -1474,14 +1474,14 @@ namespace gl
 				case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
 				{
 					m_compressed = true;
-					m_pitch = width / 2;
+					m_pitch = utils::align(width, 4) / 2;
 					break;
 				}
 				case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
 				case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
 				{
 					m_compressed = true;
-					m_pitch = width;
+					m_pitch = utils::align(width, 4);
 					break;
 				}
 				default:

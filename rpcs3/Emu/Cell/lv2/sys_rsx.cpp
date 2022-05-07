@@ -318,7 +318,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 	// Wait until we have no active RSX locks and reserve iomap for use. Must do so before acquiring vm lock to avoid deadlocks
 	rsx::reservation_lock<true> rsx_lock(ea, size);
 
-	vm::reader_lock rlock;
+	vm::writer_lock rlock;
 
 	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
 	{
@@ -379,7 +379,7 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u32 io, u32 
 		sys_rsx.warning("sys_rsx_context_iounmap(): RSX is not idle while unmapping io");
 	}
 
-	vm::reader_lock rlock;
+	vm::writer_lock rlock;
 
 	std::scoped_lock lock(render->sys_rsx_mtx);
 
@@ -433,6 +433,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u64 get = static_cast<u32>(a3);
 		const u64 put = static_cast<u32>(a4);
 		vm::_ref<atomic_be_t<u64>>(render->dma_address + ::offset32(&RsxDmaControl::put)).release(put << 32 | get);
+		render->last_known_code_start = get;
 		render->sync_point_request.release(true);
 		render->unpause();
 		break;
@@ -626,7 +627,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		if (location == CELL_GCM_LOCATION_MAIN && bound)
 		{
-			vm::reader_lock rlock;
+			vm::writer_lock rlock;
 
 			for (u32 io = (offset >> 20), end = (range.end >> 20); io <= end; io++)
 			{

@@ -13,7 +13,6 @@
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/perf_meter.hpp"
 #include <deque>
-#include <shared_mutex>
 
 #include "util/vm.hpp"
 #include "util/asm.hpp"
@@ -63,9 +62,6 @@ namespace vm
 
 	// Memory locations
 	alignas(64) std::vector<std::shared_ptr<block_t>> g_locations;
-
-	// Memory mutex core
-	shared_mutex g_mutex;
 
 	// Memory mutex acknowledgement
 	thread_local atomic_t<cpu_thread*>* g_tls_locked = nullptr;
@@ -199,47 +195,32 @@ namespace vm
 				{
 					break;
 				}
-			}
 
-			// Wait a bit before accessing g_mutex
-			range_lock->store(0);
-			busy_wait(200);
+				u32 test = 0;
 
-			std::shared_lock lock(g_mutex, std::try_to_lock);
-
-			if (!lock && i < 15)
-			{
-				busy_wait(200);
-				continue;
-			}
-			else if (!lock)
-			{
-				lock.lock();
-			}
-
-			u32 test = 0;
-
-			for (u32 i = begin / 4096, max = (begin + size - 1) / 4096; i <= max; i++)
-			{
-				if (!(g_pages[i] & (vm::page_readable)))
+				for (u32 i = begin / 4096, max = (begin + size - 1) / 4096; i <= max; i++)
 				{
-					test = i * 4096;
-					break;
+					if (!(g_pages[i] & (vm::page_readable)))
+					{
+						test = i * 4096;
+						break;
+					}
+				}
+
+				if (test)
+				{
+					range_lock->release(0);
+
+					// Try triggering a page fault (write)
+					// TODO: Read memory if needed
+					vm::_ref<atomic_t<u8>>(test) += 0;
+					continue;
 				}
 			}
 
-			if (test)
-			{
-				lock.unlock();
-
-				// Try tiggering a page fault (write)
-				// TODO: Read memory if needed
-				vm::_ref<atomic_t<u8>>(test) += 0;
-				continue;
-			}
-
-			range_lock->release(begin | (u64{size} << 32));
-			break;
+			// Wait a bit before accessing global lock
+			range_lock->store(0);
+			busy_wait(200);
 		}
 
 		if (_cpu)
@@ -295,7 +276,6 @@ namespace vm
 		if (size == 0)
 		{
 			vm_log.warning("Tried to lock empty range (flags=0x%x, addr=0x%x)", flags >> 32, addr);
-			g_range_lock.release(0);
 			return;
 		}
 
@@ -350,7 +330,7 @@ namespace vm
 				cpu.state -= cpu_flag::memory;
 			}
 
-			if (g_mutex.is_lockable())
+			if (!g_range_lock)
 			{
 				return;
 			}
@@ -360,12 +340,21 @@ namespace vm
 
 		if (!ok || cpu.state & cpu_flag::memory)
 		{
-			while (true)
+			for (u64 i = 0;; i++)
 			{
-				g_mutex.lock_unlock();
+				if (i < 100)
+					busy_wait(200);
+				else
+					std::this_thread::yield();
+
+				if (g_range_lock)
+				{
+					continue;
+				}
+
 				cpu.state -= cpu_flag::memory;
 
-				if (g_mutex.is_lockable()) [[likely]]
+				if (!g_range_lock) [[likely]]
 				{
 					return;
 				}
@@ -405,7 +394,12 @@ namespace vm
 		}
 	}
 
-	reader_lock::reader_lock()
+	writer_lock::writer_lock()
+		: writer_lock(0, 1)
+	{
+	}
+
+	writer_lock::writer_lock(u32 const addr, u32 const size, u64 const flags)
 	{
 		auto cpu = get_current_cpu_thread();
 
@@ -421,54 +415,20 @@ namespace vm
 			}
 		}
 
-		g_mutex.lock_shared();
-
-		if (cpu)
+		for (u64 i = 0;; i++)
 		{
-			cpu->state -= cpu_flag::memory + cpu_flag::wait;
-		}
-	}
-
-	reader_lock::~reader_lock()
-	{
-		if (m_upgraded)
-		{
-			g_mutex.unlock();
-		}
-		else
-		{
-			g_mutex.unlock_shared();
-		}
-	}
-
-	void reader_lock::upgrade()
-	{
-		if (m_upgraded)
-		{
-			return;
-		}
-
-		g_mutex.lock_upgrade();
-		m_upgraded = true;
-	}
-
-	writer_lock::writer_lock(u32 addr /*mutable*/)
-	{
-		auto cpu = get_current_cpu_thread();
-
-		if (cpu)
-		{
-			if (!g_tls_locked || *g_tls_locked != cpu || cpu->state & cpu_flag::wait)
+			if (g_range_lock || !g_range_lock.compare_and_swap_test(0, addr | u64{size} << 32 | flags))
 			{
-				cpu = nullptr;
+				if (i < 100)
+					busy_wait(200);
+				else
+					std::this_thread::yield();
 			}
 			else
 			{
-				cpu->state += cpu_flag::wait;
+				break;
 			}
 		}
-
-		g_mutex.lock();
 
 		if (addr >= 0x10000)
 		{
@@ -489,8 +449,6 @@ namespace vm
 				// Reservation address in shareable memory range
 				addr1 = static_cast<u16>(addr) | is_shared;
 			}
-
-			g_range_lock = addr | range_locked;
 
 			utils::prefetch_read(g_range_lock_set + 0);
 			utils::prefetch_read(g_range_lock_set + 2);
@@ -546,8 +504,7 @@ namespace vm
 
 	writer_lock::~writer_lock()
 	{
-		g_range_lock.release(0);
-		g_mutex.unlock();
+		g_range_lock = 0;
 	}
 
 	u64 reservation_lock_internal(u32 addr, atomic_t<u64>& res)
@@ -741,7 +698,7 @@ namespace vm
 		{
 			utils::memory_protect(g_base_addr + addr, size, prot);
 		}
-		else if (shm->map_critical(g_base_addr + addr, prot) != g_base_addr + addr || shm->map_critical(g_sudo_addr + addr) != g_sudo_addr + addr)
+		else if (shm->map_critical(g_base_addr + addr, prot) != g_base_addr + addr || shm->map_critical(g_sudo_addr + addr) != g_sudo_addr + addr || !shm->map_self())
 		{
 			fmt::throw_exception("Memory mapping failed - blame Windows (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
 		}
@@ -764,16 +721,13 @@ namespace vm
 				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
 		}
-
-		// Unlock
-		g_range_lock.release(0);
 	}
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
 		perf_meter<"PAGE_PRO"_u64> perf0;
 
-		vm::writer_lock lock(0);
+		vm::writer_lock lock;
 
 		if (!size || (size | addr) % 4096)
 		{
@@ -837,17 +791,11 @@ namespace vm
 						utils::memory_protect(g_base_addr + start * 4096, page_size, protection);
 					}
 				}
-				else
-				{
-					g_range_lock.release(0);
-				}
 
 				start_value = new_val;
 				start = i;
 			}
 		}
-
-		g_range_lock.release(0);
 
 		return true;
 	}
@@ -942,9 +890,6 @@ namespace vm
 				utils::memory_decommit(g_stat_addr + addr, size);
 			}
 		}
-
-		// Unlock
-		g_range_lock.release(0);
 
 		return size;
 	}
@@ -1268,7 +1213,7 @@ namespace vm
 			return 0;
 		}
 
-		vm::writer_lock lock(0);
+		vm::writer_lock lock;
 
 		if (!is_valid())
 		{
@@ -1338,7 +1283,7 @@ namespace vm
 			shm = std::make_shared<utils::shm>(size);
 		}
 
-		vm::writer_lock lock(0);
+		vm::writer_lock lock;
 
 		if (!is_valid())
 		{
@@ -1358,7 +1303,7 @@ namespace vm
 	{
 		auto& m_map = (m.*block_map)();
 		{
-			vm::writer_lock lock(0);
+			vm::writer_lock lock;
 
 			const auto found = m_map.find(addr - (flags & stack_guarded ? 0x1000 : 0));
 
@@ -1408,7 +1353,7 @@ namespace vm
 
 		auto& m_map = (m.*block_map)();
 
-		vm::reader_lock lock;
+		vm::writer_lock lock;
 
 		const auto upper = m_map.upper_bound(addr);
 
@@ -1454,7 +1399,7 @@ namespace vm
 
 	u32 block_t::used()
 	{
-		vm::writer_lock lock(0);
+		vm::writer_lock lock;
 
 		return imp_used(lock);
 	}
@@ -1563,14 +1508,14 @@ namespace vm
 
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
 	{
-		vm::writer_lock lock(0);
+		vm::writer_lock lock;
 
 		return _map(addr, size, flags);
 	}
 
 	std::shared_ptr<block_t> find_map(u32 orig_size, u32 align, u64 flags)
 	{
-		vm::writer_lock lock(0);
+		vm::writer_lock lock;
 
 		// Align to minimal page size
 		const u32 size = utils::align(orig_size, 0x10000);
@@ -1603,7 +1548,7 @@ namespace vm
 
 		std::pair<std::shared_ptr<block_t>, bool> result{};
 
-		vm::writer_lock lock(0);
+		vm::writer_lock lock;
 
 		for (auto it = g_locations.begin() + memory_location_max; it != g_locations.end(); it++)
 		{
@@ -1643,14 +1588,14 @@ namespace vm
 
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
 	{
-		vm::reader_lock lock;
+		vm::writer_lock lock;
 
 		return _get_map(location, addr);
 	}
 
 	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags)
 	{
-		vm::reader_lock lock;
+		vm::writer_lock lock;
 
 		auto area = _get_map(location, addr);
 
@@ -1658,8 +1603,6 @@ namespace vm
 		{
 			return area;
 		}
-
-		lock.upgrade();
 
 		// Allocation on arbitrary address
 		if (location != any && location < g_locations.size())
@@ -1689,7 +1632,7 @@ namespace vm
 
 	bool try_access(u32 addr, void* ptr, u32 size, bool is_write)
 	{
-		vm::reader_lock lock;
+		vm::writer_lock lock;
 
 		if (vm::check_addr(addr, is_write ? page_writable : page_readable, size))
 		{
@@ -1771,7 +1714,7 @@ namespace vm
 	void close()
 	{
 		{
-			vm::writer_lock lock(0);
+			vm::writer_lock lock;
 
 			for (auto& block : g_locations)
 			{

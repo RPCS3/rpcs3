@@ -772,7 +772,7 @@ extern bool ppu_patch(u32 addr, u32 value)
 		return false;
 	}
 
-	vm::reader_lock rlock;
+	vm::writer_lock rlock;
 
 	if (!vm::check_addr(addr))
 	{

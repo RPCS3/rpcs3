@@ -809,10 +809,6 @@ bool gdb_thread::cmd_remove_breakpoint(gdb_cmd& cmd)
 
 gdb_thread::gdb_thread() noexcept
 {
-#ifdef _WIN32
-	WSADATA wsa_data;
-	WSAStartup(MAKEWORD(2, 2), &wsa_data);
-#endif
 }
 
 gdb_thread::~gdb_thread()
@@ -826,10 +822,6 @@ gdb_thread::~gdb_thread()
 	{
 		closesocket(client_socket);
 	}
-
-#ifdef _WIN32
-	WSACleanup();
-#endif
 }
 
 void gdb_thread::operator()()

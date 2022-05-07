@@ -50,6 +50,17 @@ extern bool is_using_interpreter(u32 id_type)
 	}
 }
 
+extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu)
+{
+	switch (cpu->id_type())
+	{
+	case 1: return std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
+	case 2: return std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu)->ls);
+	case 0x55: return std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, cpu);
+	default: return nullptr;
+	}
+}
+
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
 	: custom_dock_widget(tr("Debugger"), parent)
 	, m_gui_settings(std::move(gui_settings))
@@ -149,7 +160,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	setWidget(body);
 
 	connect(m_go_to_addr, &QAbstractButton::clicked, this, &debugger_frame::ShowGotoAddressDialog);
-	connect(m_go_to_pc, &QAbstractButton::clicked, this, &debugger_frame::ShowPC);
+	connect(m_go_to_pc, &QAbstractButton::clicked, this, [this]() { ShowPC(true); });
 
 	connect(m_btn_step, &QAbstractButton::clicked, this, &debugger_frame::DoStep);
 	connect(m_btn_step_over, &QAbstractButton::clicked, [this]() { DoStep(true); });
@@ -182,6 +193,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 				}
 
 				cpu->state.notify_one(s_pause_flags);
+				m_debugger_list->EnableThreadFollowing();
 			}
 		}
 		UpdateUI();
@@ -202,7 +214,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	connect(this, &debugger_frame::CallStackUpdateRequested, m_call_stack_list, &call_stack_list::HandleUpdate);
 	connect(m_call_stack_list, &call_stack_list::RequestShowAddress, m_debugger_list, &debugger_list::ShowAddress);
 
-	m_debugger_list->ShowAddress(m_debugger_list->m_pc, false);
+	m_debugger_list->RefreshView();
 	UpdateUnitList();
 }
 
@@ -401,7 +413,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				dlg.set_input_font(mono, false);
 				dlg.set_clear_button_enabled(false);
 				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-				dlg.set_validator(new QRegExpValidator(QRegExp("^[1-9][0-9]*$")));
+				dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[1-9][0-9]*$")));
 
 				u32 max = 0;
 
@@ -732,6 +744,7 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
 void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
+	ShowPC();
 
 	const auto cpu = get_cpu();
 
@@ -895,7 +908,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (selected == m_cpu.get())
 			{
-				m_disasm = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
+				m_disasm = make_disasm(selected);
 			}
 			else
 			{
@@ -911,7 +924,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (selected == m_cpu.get())
 			{
-				m_disasm = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(m_cpu.get())->ls);
+				m_disasm = make_disasm(selected);
 			}
 			else
 			{
@@ -927,7 +940,7 @@ void debugger_frame::OnSelectUnit()
 
 			if (get_cpu())
 			{
-				m_disasm = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, m_rsx);
+				m_disasm = make_disasm(m_rsx);
 			}
 
 			break;
@@ -940,6 +953,7 @@ void debugger_frame::OnSelectUnit()
 
 	m_debugger_list->UpdateCPUData(get_cpu(), m_disasm.get());
 	m_breakpoint_list->UpdateCPUData(get_cpu(), m_disasm.get());
+	ShowPC(true);
 	DoUpdate();
 	UpdateUI();
 }
@@ -953,7 +967,6 @@ void debugger_frame::DoUpdate()
 		m_last_step_over_breakpoint = -1;
 	}
 
-	ShowPC();
 	WritePanels();
 }
 
@@ -999,11 +1012,11 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	if (const auto thread = get_cpu(); !thread || thread->id_type() != 2)
 	{
-		expression_input->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
 	}
 	else
 	{
-		expression_input->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,5}$")));
+		expression_input->setValidator(new QRegularExpressionValidator(QRegularExpression("^(0[xX])?0*[a-fA-F0-9]{0,5}$")));
 	}
 
 	// Ok/Cancel
@@ -1047,8 +1060,8 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 {
 	bool ok = false;
 
-	// Parse expression(or at least used to, was nuked to remove the need for QtJsEngine)
-	const QString fixed_expression = QRegExp("^[A-Fa-f0-9]+$").exactMatch(expression) ? "0x" + expression : expression;
+	// Parse expression (or at least used to, was nuked to remove the need for QtJsEngine)
+	const QString fixed_expression = QRegularExpression(QRegularExpression::anchoredPattern("a .*|^[A-Fa-f0-9]+$")).match(expression).hasMatch() ? "0x" + expression : expression;
 	const u64 res = static_cast<u64>(fixed_expression.toULong(&ok, 16));
 
 	if (ok) return res;
@@ -1066,13 +1079,18 @@ void debugger_frame::ClearCallStack()
 	Q_EMIT CallStackUpdateRequested({});
 }
 
-void debugger_frame::ShowPC()
+void debugger_frame::ShowPC(bool user_requested)
 {
 	const auto cpu0 = get_cpu();
 
 	const u32 pc = (cpu0 ? cpu0->get_pc() : 0);
 
-	m_debugger_list->ShowAddress(pc, true);
+	if (user_requested)
+	{
+		m_debugger_list->EnableThreadFollowing();
+	}
+
+	m_debugger_list->ShowAddress(pc, false);
 }
 
 void debugger_frame::DoStep(bool step_over)
@@ -1080,6 +1098,15 @@ void debugger_frame::DoStep(bool step_over)
 	if (const auto cpu = get_cpu())
 	{
 		bool should_step_over = step_over && cpu->id_type() == 1;
+
+		// If stepping over, lay at the same spot and wait for the thread to finish the call
+		// If not, fixate on the current pointed instruction
+		m_debugger_list->EnableThreadFollowing(!should_step_over);
+
+		if (should_step_over)
+		{
+			m_debugger_list->ShowAddress(cpu->get_pc() + 4, false);
+		}
 
 		if (const auto _state = +cpu->state; _state & s_pause_flags && _state & cpu_flag::wait && !(_state & cpu_flag::dbg_step))
 		{

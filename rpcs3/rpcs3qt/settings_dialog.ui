@@ -153,6 +153,24 @@
           <item>
            <layout class="QVBoxLayout" name="coreTabMiddleLayout">
             <item>
+             <widget class="QGroupBox" name="gb_xfloat_accuracy">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>SPU XFloat Accuracy</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_xfloat_accuracy_layout">
+               <item>
+                <widget class="QComboBox" name="xfloatAccuracy"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="checkboxes">
               <property name="title">
                <string>Additional Settings</string>
@@ -162,20 +180,6 @@
                 <widget class="QCheckBox" name="spuLoopDetection">
                  <property name="text">
                   <string>Enable SPU loop detection</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="accurateXFloat">
-                 <property name="text">
-                  <string>Accurate xfloat</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="approximateXFloat">
-                 <property name="text">
-                  <string>Approximate xfloat</string>
                  </property>
                 </widget>
                </item>
@@ -1045,16 +1049,16 @@
               </property>
               <layout class="QVBoxLayout" name="gb_audio_settings_layout">
                <item>
-                <widget class="QCheckBox" name="audioDump">
+                <widget class="QCheckBox" name="convert">
                  <property name="text">
-                  <string>Dump to File</string>
+                  <string>Convert to 16-bit</string>
                  </property>
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="convert">
+                <widget class="QCheckBox" name="audioDump">
                  <property name="text">
-                  <string>Convert to 16-bit</string>
+                  <string>Dump to File</string>
                  </property>
                 </widget>
                </item>
@@ -1109,6 +1113,30 @@
           </item>
           <item>
            <layout class="QVBoxLayout" name="audioTabLayoutTopMiddle">
+            <item>
+             <widget class="QGroupBox" name="gb_audio_provider">
+              <property name="title">
+               <string>Audio Provider</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_audio_provider_layout">
+               <item>
+                <widget class="QComboBox" name="audioProviderBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_audio_avport">
+              <property name="title">
+               <string>RSXAudio Avport</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_audio_avport_layout">
+               <item>
+                <widget class="QComboBox" name="audioAvportBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
             <item>
              <widget class="QGroupBox" name="gb_audio_volume">
               <property name="title">
@@ -2362,6 +2390,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="forceDisableExclusiveFullscreenMode">
+                 <property name="text">
+                  <string>Force Disable Exclusive Fullscreen Mode</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="disableOnDiskShaderCache">
                  <property name="text">
                   <string>Disable On-Disk Shader Cache</string>
@@ -2379,6 +2414,20 @@
                 <widget class="QCheckBox" name="allowHostGPULabels">
                  <property name="text">
                   <string>Allow Host GPU Labels (Experimental)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="disableMslFastMath">
+                 <property name="text">
+                  <string>Disable MSL Fast Math</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="softwareVkSemaphore">
+                 <property name="text">
+                  <string>Software VkSemaphore</string>
                  </property>
                 </widget>
                </item>
@@ -3951,18 +4000,6 @@
                <layout class="QVBoxLayout" name="vbl_num_ppu_threads">
                 <item>
                  <widget class="QComboBox" name="combo_num_ppu_threads"/>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <item>
-              <widget class="QGroupBox" name="gb_metalsemaphore">
-               <property name="title">
-                <string>Metal Semaphore</string>
-               </property>
-               <layout class="QVBoxLayout" name="gb_metalsemaphore_layout">
-                <item>
-                 <widget class="QComboBox" name="metalsemaphore"/>
                 </item>
                </layout>
               </widget>

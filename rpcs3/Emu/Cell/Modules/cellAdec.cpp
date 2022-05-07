@@ -3,6 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "util/media_utils.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -489,16 +490,29 @@ public:
 				else if (just_started) // deferred initialization
 				{
 					AVDictionary* opts = nullptr;
-					av_dict_set(&opts, "probesize", "96", 0);
+					err = av_dict_set(&opts, "probesize", "96", 0);
+					if (err < 0)
+					{
+						fmt::throw_exception("av_dict_set(probesize, 96) failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
+					}
 					err = avformat_open_input(&fmt, nullptr, input_format, &opts);
 					if (err || opts)
 					{
-						fmt::throw_exception("avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+						std::string dict_content;
+						if (opts)
+						{
+							AVDictionaryEntry* tag = nullptr;
+							while ((tag = av_dict_get(opts, "", tag, AV_DICT_IGNORE_SUFFIX)))
+							{
+								fmt::append(dict_content, "['%s': '%s']", tag->key, tag->value);
+							}
+						}
+						fmt::throw_exception("avformat_open_input() failed (err=0x%x='%s', opts=%s)", err, utils::av_error_to_string(err), dict_content);
 					}
 					//err = avformat_find_stream_info(fmt, NULL);
 					//if (err || !fmt->nb_streams)
 					//{
-					//	ADEC_ERROR("adecDecodeAu: avformat_find_stream_info() failed (err=0x%x, nb_streams=%d)", err, fmt->nb_streams);
+					//	fmt::throw_exception("avformat_find_stream_info() failed (err=0x%x='%s', nb_streams=%d)", err, utils::av_error_to_string(err), fmt->nb_streams);
 					//}
 					if (!avformat_new_stream(fmt, codec))
 					{
@@ -507,15 +521,25 @@ public:
 					//ctx = fmt->streams[0]->codec; // TODO: check data
 
 					opts = nullptr;
-					av_dict_set(&opts, "refcounted_frames", "1", 0);
+
 					{
 						std::lock_guard lock(g_mutex_avcodec_open2);
 						// not multithread-safe (???)
 						err = avcodec_open2(ctx, codec, &opts);
 					}
+
 					if (err || opts)
 					{
-						fmt::throw_exception("avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
+						std::string dict_content;
+						if (opts)
+						{
+							AVDictionaryEntry* tag = nullptr;
+							while ((tag = av_dict_get(opts, "", tag, AV_DICT_IGNORE_SUFFIX)))
+							{
+								fmt::append(dict_content, "['%s': '%s']", tag->key, tag->value);
+							}
+						}
+						fmt::throw_exception("avcodec_open2() failed (err=0x%x='%s', opts=%s)", err, utils::av_error_to_string(err), dict_content);
 					}
 					just_started = false;
 				}

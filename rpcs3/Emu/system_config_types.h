@@ -67,6 +67,15 @@ enum class audio_provider
 	rsxaudio
 };
 
+enum class audio_avport
+{
+	hdmi_0,
+	hdmi_1,
+	avmulti,
+	spdif_0,
+	spdif_1
+};
+
 enum class audio_downmix
 {
 	no_downmix, // Surround 7.1
@@ -236,14 +245,6 @@ enum class vk_gpu_scheduler_mode
 {
 	safe,
 	fast
-};
-
-enum class vk_metal_semaphore_mode
-{
-	software,
-	mtlevent_preferred,
-	mtlevent,
-	mtlfence
 };
 
 enum class thread_scheduler_mode

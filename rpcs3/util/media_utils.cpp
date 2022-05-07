@@ -55,9 +55,9 @@ namespace utils
 		return def;
 	}
 
-	std::string error_to_string(int error)
+	std::string av_error_to_string(int error)
 	{
-		char av_error[AV_ERROR_MAX_STRING_SIZE];
+		char av_error[AV_ERROR_MAX_STRING_SIZE]{};
 		av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, error);
 		return av_error;
 	}
@@ -73,7 +73,7 @@ namespace utils
 		AVDictionary* av_dict_opts = nullptr;
 		if (int err = av_dict_set(&av_dict_opts, "probesize", "96", 0); err < 0)
 		{
-			media_log.error("av_dict_set: returned with error=%d='%s'", err, error_to_string(err));
+			media_log.error("av_dict_set: returned with error=%d='%s'", err, av_error_to_string(err));
 			return { false, std::move(info) };
 		}
 
@@ -85,7 +85,7 @@ namespace utils
 			// Failed to open file
 			av_dict_free(&av_dict_opts);
 			avformat_free_context(av_format_ctx);
-			media_log.notice("avformat_open_input: could not open file. error=%d='%s' file='%s'", err, error_to_string(err), path);
+			media_log.notice("avformat_open_input: could not open file. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
 			return { false, std::move(info) };
 		}
 		av_dict_free(&av_dict_opts);
@@ -96,7 +96,7 @@ namespace utils
 			// Failed to load stream information
 			avformat_close_input(&av_format_ctx);
 			avformat_free_context(av_format_ctx);
-			media_log.notice("avformat_find_stream_info: could not load stream information. error=%d='%s' file='%s'", err, error_to_string(err), path);
+			media_log.notice("avformat_find_stream_info: could not load stream information. error=%d='%s' file='%s'", err, av_error_to_string(err), path);
 			return { false, std::move(info) };
 		}
 
@@ -166,7 +166,7 @@ namespace utils
 	struct scoped_av
 	{
 		AVFormatContext* format = nullptr;
-		AVCodec* codec = nullptr;
+		const AVCodec* codec = nullptr;
 		AVCodecContext* context = nullptr;
 		AVFrame* frame = nullptr;
 		SwrContext* swr = nullptr;
@@ -180,8 +180,8 @@ namespace utils
 				swr_free(&swr);
 			if (context)
 				avcodec_close(context);
-			if (codec)
-				av_free(codec);
+			// AVCodec is managed by libavformat, no need to free it
+			// see: https://stackoverflow.com/a/18047320
 			if (format)
 				avformat_free_context(format);
 		}
@@ -233,13 +233,13 @@ namespace utils
 			av.format = avformat_alloc_context();
 			if (int err = avformat_open_input(&av.format, path.c_str(), nullptr, nullptr); err < 0)
 			{
-				media_log.error("audio_decoder: Could not open file '%s'. Error: %d='%s'", path, err, error_to_string(err));
+				media_log.error("audio_decoder: Could not open file '%s'. Error: %d='%s'", path, err, av_error_to_string(err));
 				has_error = true;
 				return;
 			}
 			if (int err = avformat_find_stream_info(av.format, nullptr); err < 0)
 			{
-				media_log.error("audio_decoder: Could not retrieve stream info from file '%s'. Error: %d='%s'", path, err, error_to_string(err));
+				media_log.error("audio_decoder: Could not retrieve stream info from file '%s'. Error: %d='%s'", path, err, av_error_to_string(err));
 				has_error = true;
 				return;
 			}
@@ -283,7 +283,7 @@ namespace utils
 			// Open decoder
 			if (int err = avcodec_open2(av.context, av.codec, nullptr); err < 0)
 			{
-				media_log.error("audio_decoder: Failed to open decoder for stream #%u in file '%s'. Error: %d='%s'", stream_index, path, err, error_to_string(err));
+				media_log.error("audio_decoder: Failed to open decoder for stream #%u in file '%s'. Error: %d='%s'", stream_index, path, err, av_error_to_string(err));
 				has_error = true;
 				return;
 			}
@@ -311,14 +311,14 @@ namespace utils
 				(set_err = av_opt_set_sample_fmt(av.swr, "in_sample_fmt", static_cast<AVSampleFormat>(stream->codecpar->format), 0)) ||
 				(set_err = av_opt_set_sample_fmt(av.swr, "out_sample_fmt", dst_format, 0)))
 			{
-				media_log.error("audio_decoder: Failed to set resampler options: Error: %d='%s'", set_err, error_to_string(set_err));
+				media_log.error("audio_decoder: Failed to set resampler options: Error: %d='%s'", set_err, av_error_to_string(set_err));
 				has_error = true;
 				return;
 			}
 
 			if (int err = swr_init(av.swr); err < 0 || !swr_is_initialized(av.swr))
 			{
-				media_log.error("audio_decoder: Resampler has not been properly initialized: %d='%s'", err, error_to_string(err));
+				media_log.error("audio_decoder: Resampler has not been properly initialized: %d='%s'", err, av_error_to_string(err));
 				has_error = true;
 				return;
 			}
@@ -341,7 +341,7 @@ namespace utils
 			{
 				if (int err = avcodec_send_packet(av.context, &packet); err < 0)
 				{
-					media_log.error("audio_decoder: Queuing error: %d='%s'", err, error_to_string(err));
+					media_log.error("audio_decoder: Queuing error: %d='%s'", err, av_error_to_string(err));
 					has_error = true;
 					return;
 				}
@@ -353,7 +353,7 @@ namespace utils
 						if (err == AVERROR(EAGAIN) || err == averror_eof)
 							break;
 
-						media_log.error("audio_decoder: Decoding error: %d='%s'", err, error_to_string(err));
+						media_log.error("audio_decoder: Decoding error: %d='%s'", err, av_error_to_string(err));
 						has_error = true;
 						return;
 					}
@@ -364,7 +364,7 @@ namespace utils
 					const int buffer_size = av_samples_alloc(&buffer, nullptr, dst_channels, av.frame->nb_samples, dst_format, align);
 					if (buffer_size < 0)
 					{
-						media_log.error("audio_decoder: Error allocating buffer: %d='%s'", buffer_size, error_to_string(buffer_size));
+						media_log.error("audio_decoder: Error allocating buffer: %d='%s'", buffer_size, av_error_to_string(buffer_size));
 						has_error = true;
 						return;
 					}
@@ -372,7 +372,7 @@ namespace utils
 					const int frame_count = swr_convert(av.swr, &buffer, av.frame->nb_samples, const_cast<const uint8_t**>(av.frame->data), av.frame->nb_samples);
 					if (frame_count < 0)
 					{
-						media_log.error("audio_decoder: Error converting frame: %d='%s'", frame_count, error_to_string(frame_count));
+						media_log.error("audio_decoder: Error converting frame: %d='%s'", frame_count, av_error_to_string(frame_count));
 						has_error = true;
 						if (buffer)
 							av_free(buffer);
