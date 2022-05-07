@@ -741,6 +741,16 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					}
 				}
 			}
+
+			// Force audio provider
+			if (m_path.ends_with("vsh.self"sv))
+			{
+				g_cfg.audio.provider.set(audio_provider::rsxaudio);
+			}
+			else
+			{
+				g_cfg.audio.provider.set(audio_provider::cell_audio);
+			}
 		}
 
 		initalize_timebased_time();
