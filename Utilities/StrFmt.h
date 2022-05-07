@@ -226,6 +226,17 @@ struct fmt_class_string<char8_t*, void> : fmt_class_string<const char8_t*>
 {
 };
 
+template <>
+struct fmt_class_string<const wchar_t*, void>
+{
+	static void format(std::string& out, u64 arg);
+};
+
+template <>
+struct fmt_class_string<wchar_t*, void> : fmt_class_string<const wchar_t*>
+{
+};
+
 namespace fmt
 {
 	// Both uchar and std::byte are allowed
