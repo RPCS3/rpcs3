@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 #include <chrono>
-#include "GameController_pad_handler.h"
+#include "rpcs3/Input/GameController_pad_handler.h"
 #include "Emu/Io/pad_config.h"
 #import <GameController/GameController.h>
 
