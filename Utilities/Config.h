@@ -534,14 +534,14 @@ namespace cfg
 	class device_entry final : public _base
 	{
 		map_of_type<device_info> m_map{};
-		map_of_type<device_info> m_def{};
+		map_of_type<device_info> m_default{};
 
 	public:
 		device_entry(node* owner, const std::string& name, map_of_type<device_info> def = {})
 			: _base(type::device, owner, name, true)
 			, m_map(std::move(def))
 		{
-			m_def = m_map;
+			m_default = m_map;
 		}
 
 		const map_of_type<device_info>& get_map() const
@@ -551,7 +551,7 @@ namespace cfg
 
 		const map_of_type<device_info>& get_default() const
 		{
-			return m_def;
+			return m_default;
 		}
 
 		void set_map(map_of_type<device_info>&& map);
