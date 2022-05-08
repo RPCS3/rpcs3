@@ -848,7 +848,15 @@ std::string ppu_thread::dump_regs() const
 		// Fixup for syscall arguments
 		if (current_function && i >= 3 && i <= 10) reg = syscall_args[i - 3];
 
-		fmt::append(ret, "r%d%s: 0x%-8llx", i, i <= 9 ? " " : "", reg);
+		auto [is_const, const_value] = dis_asm.try_get_const_gpr_value(i, cia);
+
+		if (const_value != reg)
+		{
+			// Expectation of pretictable code path has not been met (such as a branch directly to the instruction)
+			is_const = false;
+		}
+
+		fmt::append(ret, "r%d%s%s 0x%-8llx", i, i <= 9 ? " " : "", is_const ? "©" : ":", reg);
 
 		constexpr u32 max_str_len = 32;
 		constexpr u32 hex_count = 8;

@@ -1040,9 +1040,17 @@ std::string spu_thread::dump_regs() const
 
 	for (u32 i = 0; i < 128; i++, ret += '\n')
 	{
-		fmt::append(ret, "%s: ", spu_reg_name[i]);
-
 		const auto r = gpr[i];
+
+		auto [is_const, const_value] = dis_asm.try_get_const_value(i, pc);
+
+		if (const_value != r)
+		{
+			// Expectation of pretictable code path has not been met (such as a branch directly to the instruction)
+			is_const = false;
+		}
+
+		fmt::append(ret, "%s%s ", spu_reg_name[i], is_const ? "©" : ":");
 
 		if (auto [size, dst, src] = SPUDisAsm::try_get_insert_mask_info(r); size)
 		{
