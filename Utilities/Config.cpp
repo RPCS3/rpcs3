@@ -518,5 +518,5 @@ void cfg::device_entry::set_map(map_of_type<device_info>&& map)
 
 void cfg::device_entry::from_default()
 {
-	m_map = m_def;
+	m_map = m_default;
 }
