@@ -473,8 +473,6 @@ auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 // Push called address to custom call history for debugging
 inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool indirect = false)
 {
-	return new_cia;
-
 	if (auto& history = ppu.call_history; !history.data.empty())
 	{
 		if (!op.lk)
