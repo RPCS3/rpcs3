@@ -164,6 +164,11 @@ void pad_thread::Init()
 				cur_pad_handler = std::make_shared<evdev_joystick_handler>();
 				break;
 #endif
+#ifdef __APPLE__
+			case pad_handler::gamecontroller:
+				cur_pad_handler = create_GameController_handler();
+				break;
+#endif
 			case pad_handler::null:
 				break;
 			}
@@ -476,6 +481,11 @@ void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<P
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
 		static_cast<evdev_joystick_handler*>(handler.get())->init_config(&cfg);
+		break;
+#endif
+#ifdef __APPLE__
+	case pad_handler::gamecontroller:
+		handle_GameController_pad_config(cfg, handler);
 		break;
 #endif
 	}
