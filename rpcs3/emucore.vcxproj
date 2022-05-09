@@ -85,6 +85,7 @@
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Program\program_util.cpp" />
     <ClCompile Include="Emu\RSX\RSXDisAsm.cpp" />
+    <ClCompile Include="Emu\RSX\RSXZCULL.cpp" />
     <ClCompile Include="Emu\RSX\rsx_vertex_data.cpp" />
     <ClCompile Include="Emu\system_config_types.cpp" />
     <ClCompile Include="Emu\perf_meter.cpp" />
@@ -524,6 +525,7 @@
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h" />
     <ClInclude Include="Emu\RSX\RSXDisAsm.h" />
+    <ClInclude Include="Emu\RSX\RSXZCULL.h" />
     <ClInclude Include="Emu\system_progress.hpp" />
     <ClInclude Include="Emu\system_utils.hpp" />
     <ClInclude Include="Emu\title.h" />
