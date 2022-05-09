@@ -45,6 +45,12 @@ namespace rsx
 			std::vector<occlusion_query_info*> queries;
 		};
 
+		struct query_stat_counter
+		{
+			u32 result;
+			u32 reserved;
+		};
+
 		enum sync_control
 		{
 			sync_none = 0,
@@ -84,7 +90,7 @@ namespace rsx
 			u64 m_timer = 0;
 
 			std::vector<queued_report_write> m_pending_writes{};
-			std::unordered_map<u32, u32> m_statistics_map{};
+			std::unordered_map<u32, query_stat_counter> m_statistics_map{};
 
 			// Enables/disables the ZCULL unit
 			void set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue);
