@@ -183,6 +183,7 @@
      <property name="title">
       <string>Firmware</string>
      </property>
+     <addaction name="createFullFirmwareCacheAct"/>
      <addaction name="createFirmwareCacheAct"/>
      <addaction name="removeFirmwareCacheAct"/>
     </widget>
@@ -1116,6 +1117,11 @@
   <action name="createFirmwareCacheAct">
    <property name="text">
     <string>Create Firmware Cache</string>
+   </property>
+  </action>
+  <action name="createFullFirmwareCacheAct">
+   <property name="text">
+    <string>Create Full Firmware Cache</string>
    </property>
   </action>
   <action name="actionCreate_RSX_Capture">

@@ -122,7 +122,7 @@ private Q_SLOTS:
 
 	void RemoveDiskCache();
 	void RemoveFirmwareCache();
-	void CreateFirmwareCache();
+	void CreateFirmwareCache(bool full);
 
 protected:
 	void closeEvent(QCloseEvent *event) override;

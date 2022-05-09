@@ -1271,7 +1271,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		gui_log.success("Successfully installed PS3 firmware version %s.", version_string);
 		m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, this);
 
-		CreateFirmwareCache();
+		CreateFirmwareCache(false);
 	}
 }
 
@@ -2105,7 +2105,8 @@ void main_window::CreateConnects()
 	connect(ui->removeDiskCacheAct, &QAction::triggered, this, &main_window::RemoveDiskCache);
 
 	connect(ui->removeFirmwareCacheAct, &QAction::triggered, this, &main_window::RemoveFirmwareCache);
-	connect(ui->createFirmwareCacheAct, &QAction::triggered, this, &main_window::CreateFirmwareCache);
+	connect(ui->createFirmwareCacheAct, &QAction::triggered, this, [this] {CreateFirmwareCache(false); });
+	connect(ui->createFullFirmwareCacheAct, &QAction::triggered, this, [this] {CreateFirmwareCache(true); });
 
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
 	connect(ui->sysStopAct, &QAction::triggered, this, []()
@@ -2779,7 +2780,7 @@ void main_window::RemoveFirmwareCache()
 	return;
 }
 
-void main_window::CreateFirmwareCache()
+void main_window::CreateFirmwareCache(bool full)
 {
 	if (!m_gui_settings->GetBootConfirmation(this))
 	{
@@ -2789,7 +2790,7 @@ void main_window::CreateFirmwareCache()
 	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
-	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash(), "", true);
+	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash() + (full ? "" : "sys"), "", true);
 		error != game_boot_result::no_errors)
 	{
 		gui_log.error("Creating firmware cache failed: reason: %s", error);
