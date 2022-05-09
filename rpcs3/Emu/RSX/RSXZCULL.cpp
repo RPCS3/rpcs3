@@ -102,9 +102,9 @@ namespace rsx
 				{
 					rsx_log.error("ZCULL queue interrupted by data type change!");
 
-				// Stop+start the current setup
-				set_active(ptimer, false, false);
-				set_active(ptimer, true, false);
+					// Stop+start the current setup
+					set_active(ptimer, false, false);
+					set_active(ptimer, true, false);
 				}
 			}
 		}
@@ -134,7 +134,7 @@ namespace rsx
 				if (m_pending_writes.empty())
 				{
 					// No need to queue this if there is no pending request in the pipeline anyway
-					write(sink, ptimer->timestamp(), type, m_statistics_map[m_statistics_tag_id]);
+					write(sink, ptimer->timestamp(), type, m_statistics_map[m_statistics_tag_id].result);
 					return;
 				}
 
@@ -168,7 +168,7 @@ namespace rsx
 
 			ptimer->async_tasks_pending++;
 
-			if (m_statistics_map[m_statistics_tag_id] != 0)
+			if (m_statistics_map[m_statistics_tag_id].result != 0)
 			{
 				// Flush guaranteed results; only one positive is needed
 				update(ptimer);
@@ -256,7 +256,7 @@ namespace rsx
 			}
 
 			m_statistics_tag_id++;
-			m_statistics_map[m_statistics_tag_id] = 0;
+			m_statistics_map[m_statistics_tag_id] = {};
 		}
 
 		void ZCULL_control::on_draw()
@@ -326,7 +326,7 @@ namespace rsx
 			if (!writer->forwarder)
 			{
 				// No other queries in the chain, write result
-				const auto value = (writer->type == CELL_GCM_ZPASS_PIXEL_CNT) ? m_statistics_map[writer->counter_tag] : result;
+				const auto value = (writer->type == CELL_GCM_ZPASS_PIXEL_CNT) ? m_statistics_map[writer->counter_tag].result : result;
 				write(writer, ptimer->timestamp(), value);
 			}
 
@@ -379,38 +379,30 @@ namespace rsx
 						break;
 
 					auto query = writer.query;
-					u32 result = m_statistics_map[writer.counter_tag];
+					auto& counter = m_statistics_map[writer.counter_tag];
 
 					if (query)
 					{
 						ensure(query->pending);
 
 						const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-						const bool have_result = result && !g_cfg.video.precise_zpass_count;
+						const bool have_result = counter.result && !g_cfg.video.precise_zpass_count;
 
 						if (implemented && !have_result && query->num_draws)
 						{
 							get_occlusion_query_result(query);
-
-							if (query->result)
-							{
-								result += query->result;
-								if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-								{
-									m_statistics_map[writer.counter_tag] += query->result;
-								}
-							}
+							counter.result += query->result;
 						}
 						else
 						{
-							//Already have a hit, no need to retest
+							// Already have a hit, no need to retest
 							discard_occlusion_query(query);
 						}
 
 						free_query(query);
 					}
 
-					retire(ptimer, &writer, result);
+					retire(ptimer, &writer, counter.result);
 					processed++;
 				}
 
@@ -526,7 +518,7 @@ namespace rsx
 				}
 
 				auto query = writer.query;
-				u32 result = m_statistics_map[writer.counter_tag];
+				auto& counter = m_statistics_map[writer.counter_tag];
 
 				const bool force_read = (sync_address != 0);
 				if (force_read && writer.sink == sync_address && !writer.forwarder)
@@ -540,7 +532,7 @@ namespace rsx
 					ensure(query->pending);
 
 					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-					const bool have_result = result && !g_cfg.video.precise_zpass_count;
+					const bool have_result = counter.result && !g_cfg.video.precise_zpass_count;
 
 					if (!implemented || !query->num_draws || have_result)
 					{
@@ -549,15 +541,7 @@ namespace rsx
 					else if (force_read || check_occlusion_query_status(query))
 					{
 						get_occlusion_query_result(query);
-
-						if (query->result)
-						{
-							result += query->result;
-							if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-							{
-								m_statistics_map[writer.counter_tag] += query->result;
-							}
-						}
+						counter.result += query->result;
 					}
 					else
 					{
@@ -571,7 +555,7 @@ namespace rsx
 
 				stat_tag_to_remove = writer.counter_tag;
 
-				retire(ptimer, &writer, result);
+				retire(ptimer, &writer, counter.result);
 				processed++;
 			}
 
