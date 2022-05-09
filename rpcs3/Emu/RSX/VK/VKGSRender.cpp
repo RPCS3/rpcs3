@@ -548,8 +548,8 @@ VKGSRender::VKGSRender() : GSRender()
 	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
 	backend_config.supports_hw_renormalization = (vk::get_driver_vendor() == vk::driver_vendor::NVIDIA);
 
-	// Relaxed query synchronization
-	backend_config.supports_hw_conditional_render = !!g_cfg.video.relaxed_zcull_sync;
+	// Conditional rendering support
+	backend_config.supports_hw_conditional_render = true;
 
 	// Passthrough DMA
 	backend_config.supports_passthrough_dma = m_device->get_external_memory_host_support();
