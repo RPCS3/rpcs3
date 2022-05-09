@@ -498,8 +498,9 @@ inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool i
 		history.data[history.index++ % ppu.call_history_max_size] = new_cia;
 		history.last_r1 = ppu.gpr[1];
 		history.last_r2 = ppu.gpr[2];
-		return new_cia;
 	}
+
+	return new_cia;
 }
 
 template<typename T>
