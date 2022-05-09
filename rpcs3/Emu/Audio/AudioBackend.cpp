@@ -6,10 +6,16 @@
 
 AudioBackend::AudioBackend() {}
 
-void AudioBackend::SetErrorCallback(std::function<void()> cb)
+void AudioBackend::SetWriteCallback(std::function<u32(u32 /* byte_cnt */, void* /* buffer */)> cb)
 {
-	std::lock_guard lock(m_error_cb_mutex);
-	m_error_callback = cb;
+	std::lock_guard lock(m_cb_mutex);
+	m_write_callback = cb;
+}
+
+void AudioBackend::SetStateCallback(std::function<void(AudioStateEvent)> cb)
+{
+	std::lock_guard lock(m_state_cb_mutex);
+	m_state_callback = cb;
 }
 
 /*
@@ -169,4 +175,25 @@ AudioChannelCnt AudioBackend::get_max_channel_count(u32 device_index)
 	}
 
 	return count;
+}
+
+AudioChannelCnt AudioBackend::convert_channel_count(u64 raw)
+{
+	switch (raw)
+	{
+	default:
+	case 8:
+		return AudioChannelCnt::SURROUND_7_1;
+	case 7:
+	case 6:
+		return AudioChannelCnt::SURROUND_5_1;
+	case 5:
+	case 4:
+	case 3:
+	case 2:
+	case 1:
+		return AudioChannelCnt::STEREO;
+	case 0:
+		fmt::throw_exception("Usupported channel count");
+	}
 }

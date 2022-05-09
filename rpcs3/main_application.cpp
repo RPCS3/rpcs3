@@ -18,12 +18,16 @@
 
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/Null/NullAudioBackend.h"
+#include "Emu/Audio/Null/null_enumerator.h"
 #include "Emu/Audio/Cubeb/CubebBackend.h"
+#include "Emu/Audio/Cubeb/cubeb_enumerator.h"
 #ifdef _WIN32
 #include "Emu/Audio/XAudio2/XAudio2Backend.h"
+#include "Emu/Audio/XAudio2/xaudio2_enumerator.h"
 #endif
 #ifdef HAVE_FAUDIO
 #include "Emu/Audio/FAudio/FAudioBackend.h"
+#include "Emu/Audio/FAudio/faudio_enumerator.h"
 #endif
 
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
@@ -120,6 +124,24 @@ EmuCallbacks main_application::CreateCallbacks()
 			sys_log.error("Audio renderer %s could not be initialized, using a Null renderer instead. Make sure that no other application is running that might block audio access (e.g. Netflix).", result->GetName());
 			result = std::make_shared<NullAudioBackend>();
 		}
+		return result;
+	};
+
+	callbacks.get_audio_enumerator = []() -> std::shared_ptr<audio_device_enumerator>
+	{
+		std::shared_ptr<audio_device_enumerator> result;
+		switch (g_cfg.audio.renderer.get())
+		{
+		case audio_renderer::null: result = std::make_shared<null_enumerator>(); break;
+#ifdef _WIN32
+		case audio_renderer::xaudio: result = std::make_shared<xaudio2_enumerator>(); break;
+#endif
+		case audio_renderer::cubeb: result = std::make_shared<cubeb_enumerator>(); break;
+#ifdef HAVE_FAUDIO
+		case audio_renderer::faudio: result = std::make_shared<faudio_enumerator>(); break;
+#endif
+		}
+
 		return result;
 	};
 

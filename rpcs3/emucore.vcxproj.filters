@@ -957,6 +957,9 @@
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
       <Filter>Emu\Audio\FAudio</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Audio\FAudio\faudio_enumerator.cpp">
+      <Filter>Emu\Audio\FAudio</Filter>
+    </ClCompile>
     <ClCompile Include="..\Utilities\cheat_info.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1044,9 +1047,6 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp">
       <Filter>Emu\Cell\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Audio\audio_device_listener.cpp">
-      <Filter>Emu\Audio</Filter>
     </ClCompile>
     <ClCompile Include="Emu\vfs_config.cpp">
       <Filter>Emu</Filter>
@@ -1791,6 +1791,9 @@
     <ClInclude Include="Emu\Audio\Null\NullAudioBackend.h">
       <Filter>Emu\Audio\Null</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Audio\Null\null_enumerator.h">
+      <Filter>Emu\Audio\Null</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_config.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
@@ -1935,6 +1938,9 @@
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
       <Filter>Emu\Audio\FAudio</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Audio\FAudio\faudio_enumerator.h">
+      <Filter>Emu\Audio\FAudio</Filter>
+    </ClInclude>
     <ClInclude Include="..\Utilities\cheat_info.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -2050,9 +2056,6 @@
     <ClInclude Include="Emu\Cell\Modules\libfs_utility_init.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Audio\audio_device_listener.h">
-      <Filter>Emu\Audio</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\vfs_config.h">
       <Filter>Emu</Filter>
     </ClInclude>
@@ -2075,6 +2078,9 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Audio\audio_resampler.h">
+      <Filter>Emu\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\audio_device_enumerator.h">
       <Filter>Emu\Audio</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\np_allocator.h">

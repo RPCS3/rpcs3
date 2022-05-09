@@ -1115,6 +1115,18 @@
           <item>
            <layout class="QVBoxLayout" name="audioTabLayoutTopMiddle">
             <item>
+             <widget class="QGroupBox" name="gb_audio_device">
+              <property name="title">
+               <string>Audio Device</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_4">
+               <item>
+                <widget class="QComboBox" name="audioDeviceBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="gb_audio_provider">
               <property name="title">
                <string>Audio Provider</string>

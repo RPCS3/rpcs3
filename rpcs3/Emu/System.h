@@ -73,6 +73,7 @@ struct EmuCallbacks
 	std::function<std::shared_ptr<class camera_handler_base>()> get_camera_handler;
 	std::function<std::shared_ptr<class music_handler_base>()> get_music_handler;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
+	std::function<std::shared_ptr<class audio_device_enumerator>()> get_audio_enumerator;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
