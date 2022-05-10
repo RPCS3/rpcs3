@@ -3,6 +3,18 @@
 
 namespace rsx
 {
+	static inline std::string_view location_tostring(u32 location)
+	{
+		ensure(location < 2);
+		const char* location_names[] = {"CELL_GCM_LOCATION_LOCAL", "CELL_GCM_LOCATION_MAIN"};
+		return location_names[location];
+	}
+
+	static inline u32 classify_location(u32 address)
+	{
+		return (address >= rsx::constants::local_mem_base) ? CELL_GCM_LOCATION_LOCAL : CELL_GCM_LOCATION_MAIN;
+	}
+
 	namespace reports
 	{
 		ZCULL_control::ZCULL_control()
@@ -166,6 +178,8 @@ namespace rsx
 				break;
 			}
 
+			on_report_enqueued(sink);
+
 			ptimer->async_tasks_pending++;
 
 			if (m_statistics_map[m_statistics_tag_id].result != 0)
@@ -308,12 +322,14 @@ namespace rsx
 			}
 
 			rsx::reservation_lock<true> lock(sink, 16);
-			vm::_ref<atomic_t<CellGcmReportData>>(sink).store({ timestamp, value, 0 });
+			auto report = vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink);
+			report->store({ timestamp, value, 0 });
 		}
 
 		void ZCULL_control::write(queued_report_write* writer, u64 timestamp, u32 value)
 		{
 			write(writer->sink, timestamp, writer->type, value);
+			on_report_completed(writer->sink);
 
 			for (auto& addr : writer->sink_alias)
 			{
@@ -352,94 +368,109 @@ namespace rsx
 
 		void ZCULL_control::sync(::rsx::thread* ptimer)
 		{
-			if (!m_pending_writes.empty())
+			if (m_pending_writes.empty())
 			{
-				// Quick reverse scan to push commands ahead of time
-				for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
+				// Nothing to do
+				return;
+			}
+
+			if (!m_critical_reports_in_flight)
+			{
+				// Valid call, but nothing important queued up
+				return;
+			}
+
+			if (g_cfg.video.relaxed_zcull_sync)
+			{
+				update(ptimer, 0, true);
+				return;
+			}
+
+			// Quick reverse scan to push commands ahead of time
+			for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
+			{
+				if (It->query && It->query->num_draws)
 				{
-					if (It->query && It->query->num_draws)
+					if (It->query->sync_tag > m_sync_tag)
 					{
-						if (It->query->sync_tag > m_sync_tag)
-						{
-							// rsx_log.trace("[Performance warning] Query hint emit during sync command.");
-							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, It->query);
-						}
-
-						break;
-					}
-				}
-
-				u32 processed = 0;
-				const bool has_unclaimed = (m_pending_writes.back().sink == 0);
-
-				// Write all claimed reports unconditionally
-				for (auto& writer : m_pending_writes)
-				{
-					if (!writer.sink)
-						break;
-
-					auto query = writer.query;
-					auto& counter = m_statistics_map[writer.counter_tag];
-
-					if (query)
-					{
-						ensure(query->pending);
-
-						const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-						const bool have_result = counter.result && !g_cfg.video.precise_zpass_count;
-
-						if (implemented && !have_result && query->num_draws)
-						{
-							get_occlusion_query_result(query);
-							counter.result += query->result;
-						}
-						else
-						{
-							// Already have a hit, no need to retest
-							discard_occlusion_query(query);
-						}
-
-						free_query(query);
+						// rsx_log.trace("[Performance warning] Query hint emit during sync command.");
+						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, It->query);
 					}
 
-					retire(ptimer, &writer, counter.result);
-					processed++;
+					break;
+				}
+			}
+
+			u32 processed = 0;
+			const bool has_unclaimed = (m_pending_writes.back().sink == 0);
+
+			// Write all claimed reports unconditionally
+			for (auto& writer : m_pending_writes)
+			{
+				if (!writer.sink)
+					break;
+
+				auto query = writer.query;
+				auto& counter = m_statistics_map[writer.counter_tag];
+
+				if (query)
+				{
+					ensure(query->pending);
+
+					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
+					const bool have_result = counter.result && !g_cfg.video.precise_zpass_count;
+
+					if (implemented && !have_result && query->num_draws)
+					{
+						get_occlusion_query_result(query);
+						counter.result += query->result;
+					}
+					else
+					{
+						// Already have a hit, no need to retest
+						discard_occlusion_query(query);
+					}
+
+					free_query(query);
 				}
 
-				if (!has_unclaimed)
+				retire(ptimer, &writer, counter.result);
+				processed++;
+			}
+
+			if (!has_unclaimed)
+			{
+				ensure(processed == m_pending_writes.size());
+				m_pending_writes.clear();
+			}
+			else
+			{
+				auto remaining = m_pending_writes.size() - processed;
+				ensure(remaining > 0);
+
+				if (remaining == 1)
 				{
-					ensure(processed == m_pending_writes.size());
-					m_pending_writes.clear();
+					m_pending_writes[0] = std::move(m_pending_writes.back());
+					m_pending_writes.resize(1);
 				}
 				else
 				{
-					auto remaining = m_pending_writes.size() - processed;
-					ensure(remaining > 0);
-
-					if (remaining == 1)
-					{
-						m_pending_writes[0] = std::move(m_pending_writes.back());
-						m_pending_writes.resize(1);
-					}
-					else
-					{
-						std::move(m_pending_writes.begin() + processed, m_pending_writes.end(), m_pending_writes.begin());
-						m_pending_writes.resize(remaining);
-					}
+					std::move(m_pending_writes.begin() + processed, m_pending_writes.end(), m_pending_writes.begin());
+					m_pending_writes.resize(remaining);
 				}
-
-				//Delete all statistics caches but leave the current one
-				for (auto It = m_statistics_map.begin(); It != m_statistics_map.end(); )
-				{
-					if (It->first == m_statistics_tag_id)
-						++It;
-					else
-						It = m_statistics_map.erase(It);
-				}
-
-				//Decrement jobs counter
-				ptimer->async_tasks_pending -= processed;
 			}
+
+			//Delete all statistics caches but leave the current one
+			for (auto It = m_statistics_map.begin(); It != m_statistics_map.end(); )
+			{
+				if (It->first == m_statistics_tag_id)
+					++It;
+				else
+					It = m_statistics_map.erase(It);
+			}
+
+			//Decrement jobs counter
+			ptimer->async_tasks_pending -= processed;
 		}
 
 		void ZCULL_control::update(::rsx::thread* ptimer, u32 sync_address, bool hint)
@@ -486,7 +517,7 @@ namespace rsx
 					m_next_tsc = m_tsc + min_zcull_tick_us;
 
 					// Schedule a queue flush if needed
-					if (!g_cfg.video.relaxed_zcull_sync &&
+					if (!g_cfg.video.relaxed_zcull_sync && m_critical_reports_in_flight &&
 						front.query && front.query->num_draws && front.query->sync_tag > m_sync_tag)
 					{
 						const auto elapsed = m_tsc - front.query->timestamp;
@@ -624,7 +655,27 @@ namespace rsx
 			}
 
 			if (!sync_address || !query)
+			{
 				return result_none;
+			}
+
+			// Disable optimizations across the accessed range if reports reside within
+			{
+				std::scoped_lock lock(m_pages_mutex);
+
+				const auto location1 = rsx::classify_location(memory_address);
+				const auto location2 = rsx::classify_location(memory_end - 1);
+
+				if (!m_pages_accessed[location1])
+				{
+					disable_optimizations(ptimer, location1);
+				}
+
+				if (!m_pages_accessed[location2])
+				{
+					disable_optimizations(ptimer, location2);
+				}
+			}
 
 			if (!(flags & sync_defer_copy))
 			{
@@ -650,6 +701,7 @@ namespace rsx
 
 		flags32_t ZCULL_control::read_barrier(class ::rsx::thread* ptimer, u32 memory_address, occlusion_query_info* query)
 		{
+			// Called by cond render control. Internal RSX usage, do not disable optimizations
 			while (query->pending && !Emu.IsStopped())
 			{
 				update(ptimer, memory_address);
@@ -727,6 +779,127 @@ namespace rsx
 			}
 
 			return bytes_to_write;
+		}
+
+		void ZCULL_control::on_report_enqueued(vm::addr_t address)
+		{
+			const auto location = (address >= rsx::constants::local_mem_base) ? CELL_GCM_LOCATION_LOCAL : CELL_GCM_LOCATION_MAIN;
+			std::scoped_lock lock(m_pages_mutex);
+
+			if (!m_pages_accessed[location]) [[ likely ]]
+			{
+				const auto page_address = static_cast<u32>(address) & ~0xfff;
+				auto& page = m_locked_pages[location][page_address];
+				page.add_ref();
+
+				if (page.prot == utils::protection::rw)
+				{
+					utils::memory_protect(vm::base(page_address), 4096, utils::protection::no);
+					page.prot = utils::protection::no;
+				}
+			}
+			else
+			{
+				m_critical_reports_in_flight++;
+			}
+		}
+
+		void ZCULL_control::on_report_completed(vm::addr_t address)
+		{
+			const auto location = (address >= rsx::constants::local_mem_base) ? CELL_GCM_LOCATION_LOCAL : CELL_GCM_LOCATION_MAIN;
+			if (!m_pages_accessed[location])
+			{
+				const auto page_address = static_cast<u32>(address) & ~0xfff;
+				std::scoped_lock lock(m_pages_mutex);
+
+				if (auto found = m_locked_pages[location].find(page_address);
+					found != m_locked_pages[location].end())
+				{
+					auto& page = found->second;
+
+					ensure(page.has_refs());
+					page.release();
+
+					if (!page.has_refs())
+					{
+						if (page.prot != utils::protection::rw)
+						{
+							utils::memory_protect(vm::base(page_address), 4096, utils::protection::rw);
+						}
+
+						m_locked_pages[location].erase(page_address);
+					}
+				}
+			}
+
+			if (m_pages_accessed[location])
+			{
+				m_critical_reports_in_flight--;
+			}
+		}
+
+		void ZCULL_control::disable_optimizations(::rsx::thread* ptimer, u32 location)
+		{
+			// Externally synchronized
+			rsx_log.warning("Reports area at location %s was accessed. ZCULL optimizations will be disabled.", location_tostring(location));
+			m_pages_accessed[location] = true;
+
+			// Flush all pending writes
+			m_critical_reports_in_flight += 0x100000;
+			sync(ptimer);
+			m_critical_reports_in_flight -= 0x100000;
+
+			// Unlock pages
+			for (auto& p : m_locked_pages[location])
+			{
+				const auto this_address = p.first;
+				auto& page = p.second;
+
+				if (page.prot != utils::protection::rw)
+				{
+					utils::memory_protect(vm::base(this_address), 4096, utils::protection::rw);
+					page.prot = utils::protection::rw;
+				}
+
+				while (page.has_refs())
+				{
+					m_critical_reports_in_flight++;
+					page.release();
+				}
+			}
+
+			m_locked_pages[location].clear();
+		}
+
+		bool ZCULL_control::on_access_violation(u32 address)
+		{
+			const auto page_address = address & ~0xfff;
+			const auto location = rsx::classify_location(address);
+
+			if (m_pages_accessed[location])
+			{
+				// Already faulted, no locks possible
+				return false;
+			}
+
+			{
+				reader_lock lock(m_pages_mutex);
+
+				if (auto found = m_locked_pages[location].find(page_address);
+					found != m_locked_pages[location].end())
+				{
+					lock.upgrade();
+
+					auto& fault_page = m_locked_pages[location][page_address];
+					if (fault_page.prot != utils::protection::rw)
+					{
+						disable_optimizations(rsx::get_current_renderer(), location);
+						return true;
+					}
+				}
+			}
+
+			return false;
 		}
 
 
