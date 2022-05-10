@@ -3351,7 +3351,7 @@ error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 
 error_code sceNpManagerGetTicketParam(s32 paramId, vm::ptr<SceNpTicketParam> param)
 {
-	sceNp.todo("sceNpManagerGetTicketParam(paramId=%d, param=*0x%x)", paramId, param);
+	sceNp.notice("sceNpManagerGetTicketParam(paramId=%d, param=*0x%x)", paramId, param);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -3360,10 +3360,21 @@ error_code sceNpManagerGetTicketParam(s32 paramId, vm::ptr<SceNpTicketParam> par
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!param)
+	if (!param || paramId < SCE_NP_TICKET_PARAM_SERIAL_ID || paramId > SCE_NP_TICKET_PARAM_SUBJECT_DOB)
 	{
-		// TODO: check paramId
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	const auto& ticket = nph.get_ticket();
+
+	if (ticket.empty())
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
+	if (!ticket.get_value(paramId, param))
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
 	return CELL_OK;
@@ -3380,7 +3391,7 @@ error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdLis
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	return CELL_OK;
+	return not_an_error(0);
 }
 
 error_code sceNpManagerGetEntitlementById(vm::cptr<char> entId, vm::ptr<SceNpEntitlement> ent)
