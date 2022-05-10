@@ -515,7 +515,8 @@ enum
 
 enum
 {
-	SCE_NP_MIN_POOLSIZE = 128 * 1024
+	SCE_NP_PORT          = 3658,
+	SCE_NP_MIN_POOL_SIZE = 128 * 1024
 };
 
 enum
@@ -529,6 +530,17 @@ enum : u64
 	SCE_NP_DRM_TIME_INFO_ENDLESS       = 0x7FFFFFFFFFFFFFFFULL
 };
 
+enum
+{
+	SCE_NP_MANAGER_SUB_SIGNIN_MAX = 3,
+};
+
+enum
+{
+	SCE_NP_MANAGER_SUB_SIGNIN_RESULT_OK     = 0,
+	SCE_NP_MANAGER_SUB_SIGNIN_RESULT_CANCEL = 1,
+};
+
 // NP Manager Utility statuses
 enum
 {
@@ -539,7 +551,10 @@ enum
 	SCE_NP_MANAGER_STATUS_ONLINE          = 3,
 };
 
-#define SCE_NP_MANAGER_EVENT_GOT_TICKET 255
+enum
+{
+	SCE_NP_MANAGER_EVENT_GOT_TICKET = 255
+};
 
 // Event types
 enum
@@ -824,6 +839,12 @@ enum
 	SCE_NP_ENTITLEMENT_ID_SIZE   = 32,
 };
 
+enum
+{
+    SCE_NP_ENTITLEMENT_TYPE_NON_CONSUMABLE = 0,
+    SCE_NP_ENTITLEMENT_TYPE_CONSUMABLE     = 1
+};
+
 // Constants for ranking (score) functions and structures
 enum
 {
@@ -904,6 +925,16 @@ enum
 	SCE_NP_SUBJECT_REGION_SIZE   = 4,
 	SCE_NP_SUBJECT_DOMAIN_SIZE   = 4,
 	SCE_NP_SERVICE_ID_SIZE       = 24,
+};
+
+enum
+{
+	SCE_NP_LOOKUP_MAX_CTX_NUM = 32
+};
+
+enum
+{
+	SCE_NP_AUTH_OAUTH_REQUEST_ID_MAX = 4
 };
 
 struct SceNpDrmKey
