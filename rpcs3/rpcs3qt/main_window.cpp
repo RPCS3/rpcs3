@@ -2184,7 +2184,7 @@ void main_window::CreateConnects()
 
 	connect(ui->confVFSDialogAct, &QAction::triggered, this, [this]()
 	{
-		vfs_dialog dlg(m_gui_settings, m_emu_settings, this);
+		vfs_dialog dlg(m_gui_settings, this);
 		dlg.exec();
 		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
 		m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.

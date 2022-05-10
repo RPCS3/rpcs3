@@ -1,11 +1,6 @@
 #pragma once
 
-#include "util/types.hpp"
-
-#include "gui_settings.h"
-
-#include <QListWidget>
-#include <QLabel>
+#include "vfs_dialog_path_widget.h"
 
 #include <memory>
 
@@ -14,35 +9,17 @@ namespace cfg
 	class string;
 }
 
-struct vfs_settings_info
-{
-	QString name; // name of tab
-	gui_save listLocation; // Where the list of dir options are saved
-	cfg::string* cfg_node; // Needed since emu_settings overrides settings file and doesn't touch g_cfg currently.
-};
+class gui_settings;
 
-class vfs_dialog_tab : public QWidget
+class vfs_dialog_tab : public vfs_dialog_path_widget
 {
 	Q_OBJECT
 
 public:
-	explicit vfs_dialog_tab(vfs_settings_info info, std::shared_ptr<gui_settings> guiSettings, QWidget* parent = nullptr);
+	explicit vfs_dialog_tab(const QString& name, gui_save list_location, cfg::string* cfg_node, std::shared_ptr<gui_settings> _gui_settings, QWidget* parent = nullptr);
 
-	void SetSettings() const;
-
-	// Reset this tab without saving the settings yet
-	void Reset() const;
+	void set_settings() const;
 
 private:
-	void AddNewDirectory() const;
-	void RemoveDirectory() const;
-
-	const QString EmptyPath = tr("Empty Path");
-
-	vfs_settings_info m_info;
-	std::shared_ptr<gui_settings> m_gui_settings;
-
-	// UI variables needed in higher scope
-	QListWidget* m_dir_dist;
-	QLabel* m_selected_config_label;
+	cfg::string* m_cfg_node;
 };

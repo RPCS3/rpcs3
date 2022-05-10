@@ -213,7 +213,7 @@ namespace np
 					return 0;
 				});
 		}
-		
+
 		return true;
 	}
 
@@ -675,7 +675,12 @@ namespace np
 		return;
 	}
 
-	bool np_handler::reply_req_ticket(u32 /*req_id*/, std::vector<u8>& reply_data)
+	const ticket& np_handler::get_ticket() const
+	{
+		return current_ticket;
+	}
+
+	bool np_handler::reply_req_ticket([[maybe_unused]] u32 req_id, std::vector<u8>& reply_data)
 	{
 		vec_stream reply(reply_data, 1);
 		auto ticket_raw = reply.get_rawdata();
@@ -683,7 +688,7 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to RequestTicket command");
 
-		current_ticket   = std::move(ticket_raw);
+		current_ticket   = ticket(std::move(ticket_raw));
 		auto ticket_size = static_cast<s32>(current_ticket.size());
 
 		if (manager_cb)
