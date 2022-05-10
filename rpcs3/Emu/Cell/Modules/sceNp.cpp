@@ -422,7 +422,7 @@ error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (poolsize < SCE_NP_MIN_POOLSIZE)
+	if (poolsize < SCE_NP_MIN_POOL_SIZE)
 	{
 		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
 	}
@@ -5064,7 +5064,7 @@ error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetIn
 	info->nat_status    = 0;
 	info->upnp_status   = 0;
 	info->npport_status = 0;
-	info->npport        = 3658;
+	info->npport        = SCE_NP_PORT;
 
 	return CELL_OK;
 }
