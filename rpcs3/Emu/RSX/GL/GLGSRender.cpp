@@ -960,7 +960,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 	{
-		return false;
+		return zcull_ctrl->on_access_violation(address);
 	}
 
 	if (result.num_flushable > 0)

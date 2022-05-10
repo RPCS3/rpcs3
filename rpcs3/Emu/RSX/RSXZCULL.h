@@ -1,7 +1,9 @@
 #pragma once
 
 #include <util/types.hpp>
+#include <util/vm.hpp>
 #include <Emu/Memory/vm.h>
+
 #include "rsx_utils.h"
 
 #include <vector>
@@ -51,6 +53,11 @@ namespace rsx
 			u32 reserved;
 		};
 
+		struct MMIO_page_data_t : public rsx::ref_counted
+		{
+			utils::protection prot = utils::protection::rw;
+		};
+
 		enum sync_control
 		{
 			sync_none = 0,
@@ -60,6 +67,16 @@ namespace rsx
 
 		class ZCULL_control
 		{
+		private:
+			std::unordered_map<u32, MMIO_page_data_t> m_locked_pages[2];
+			atomic_t<bool> m_pages_accessed[2] = { false, false };
+			atomic_t<s32> m_critical_reports_in_flight = { 0 };
+			shared_mutex m_pages_mutex;
+
+			void on_report_enqueued(vm::addr_t address);
+			void on_report_completed(vm::addr_t address);
+			void disable_optimizations(class ::rsx::thread* ptimer, u32 location);
+
 		protected:
 			// Delay before a report update operation is forced to retire
 			const u32 max_zcull_delay_us = 300;
@@ -152,6 +169,9 @@ namespace rsx
 
 			// Copies queries in range rebased from source range to destination range
 			u32 copy_reports_to(u32 start, u32 range, u32 dest);
+
+			// Check paging issues
+			bool on_access_violation(u32 address);
 
 			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}

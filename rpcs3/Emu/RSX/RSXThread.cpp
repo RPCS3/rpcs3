@@ -2603,15 +2603,7 @@ namespace rsx
 	{
 		if (zcull_ctrl->has_pending())
 		{
-			if (g_cfg.video.relaxed_zcull_sync)
-			{
-				// Emit zcull sync hint and update; guarantees results to be written shortly after this event
-				zcull_ctrl->update(this, 0, true);
-			}
-			else
-			{
-				zcull_ctrl->sync(this);
-			}
+			zcull_ctrl->sync(this);
 		}
 
 		// Fragment constants may have been updated
