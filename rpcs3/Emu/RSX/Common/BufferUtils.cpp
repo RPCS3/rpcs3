@@ -56,35 +56,35 @@ SSE4_1_FUNC static inline u16 sse41_hmax_epu16(__m128i x)
 }
 
 #if defined(__AVX512F__) && defined(__AVX512VL__) && defined(__AVX512DQ__) && defined(__AVX512CD__) && defined(__AVX512BW__)
-constexpr bool s_use_ssse3 = true;
+[[maybe_unused]] constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = true;
 constexpr bool s_use_avx2 = true;
-constexpr bool s_use_avx3 = true;
+[[maybe_unused]] constexpr bool s_use_avx3 = true;
 #elif defined(__AVX2__)
-constexpr bool s_use_ssse3 = true;
+[[maybe_unused]] constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = true;
 constexpr bool s_use_avx2 = true;
-constexpr bool s_use_avx3 = false;
+[[maybe_unused]] constexpr bool s_use_avx3 = false;
 #elif defined(__SSE4_1__)
-constexpr bool s_use_ssse3 = true;
+[[maybe_unused]] constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = true;
 constexpr bool s_use_avx2 = false;
-constexpr bool s_use_avx3 = false;
+[[maybe_unused]] constexpr bool s_use_avx3 = false;
 #elif defined(__SSSE3__)
-constexpr bool s_use_ssse3 = true;
+[[maybe_unused]] constexpr bool s_use_ssse3 = true;
 constexpr bool s_use_sse4_1 = false;
 constexpr bool s_use_avx2 = false;
-constexpr bool s_use_avx3 = false;
+[[maybe_unused]] constexpr bool s_use_avx3 = false;
 #elif defined(ARCH_X64)
-const bool s_use_ssse3 = utils::has_ssse3();
+[[maybe_unused]] const bool s_use_ssse3 = utils::has_ssse3();
 const bool s_use_sse4_1 = utils::has_sse41();
 const bool s_use_avx2 = utils::has_avx2();
-const bool s_use_avx3 = utils::has_avx512();
+[[maybe_unused]] const bool s_use_avx3 = utils::has_avx512();
 #else
-constexpr bool s_use_ssse3 = true; // Non x86
+[[maybe_unused]] constexpr bool s_use_ssse3 = true; // Non x86
 constexpr bool s_use_sse4_1 = true; // Non x86
 constexpr bool s_use_avx2 = false;
-constexpr bool s_use_avx3 = false;
+[[maybe_unused]] constexpr bool s_use_avx3 = false;
 #endif
 
 const __m128i s_bswap_u32_mask = _mm_set_epi8(
@@ -868,20 +868,4 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(std::span<std::byte> 
 	default:
 		fmt::throw_exception("Unreachable");
 	}
-}
-
-void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)
-{
-	const __m128i vector = _mm_set_epi32(w, z, y, x);
-	_mm_stream_si128(reinterpret_cast<__m128i*>(dst), vector);
-}
-
-void stream_vector(void *dst, f32 x, f32 y, f32 z, f32 w)
-{
-	stream_vector(dst, std::bit_cast<u32>(x), std::bit_cast<u32>(y), std::bit_cast<u32>(z), std::bit_cast<u32>(w));
-}
-void stream_vector_from_memory(void *dst, void *src)
-{
-	const __m128i vector = _mm_loadu_si128(reinterpret_cast<__m128i*>(src));
-	_mm_stream_si128(reinterpret_cast<__m128i*>(dst), vector);
 }

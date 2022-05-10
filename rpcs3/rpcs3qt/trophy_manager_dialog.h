@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/rXml.h"
+#include "Loader/TROPUSR.h"
 
 #include <QWidget>
 #include <QComboBox>
@@ -22,7 +22,7 @@ class TROPUSRLoader;
 struct GameTrophiesData
 {
 	std::unique_ptr<TROPUSRLoader> trop_usr;
-	rXmlDocument trop_config; // I'd like to use unique but the protocol inside of the function passes around shared pointers..
+	trophy_xml_document trop_config; // I'd like to use unique but the protocol inside of the function passes around shared pointers..
 	std::unordered_map<int, QPixmap> trophy_images; // Cache trophy images to avoid loading from disk as much as possible.
 	std::unordered_map<int, QString> trophy_image_paths;
 	std::string game_name;

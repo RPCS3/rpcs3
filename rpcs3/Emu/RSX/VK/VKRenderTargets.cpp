@@ -91,12 +91,12 @@ namespace vk
 
 			// Drop MSAA resolve/unresolve caches. Only trigger when a hard sync is guaranteed to follow else it will cause even more problems!
 			// 2-pass to ensure resources are available where they are most needed
-			auto relieve_memory_pressure = [&](const auto& list)
+			auto relieve_memory_pressure = [&](auto& list, const utils::address_range& range)
 			{
-				for (auto& surface : list)
+				for (auto it = list.begin_range(range); it != list.end(); ++it)
 				{
-					auto& rtt = surface.second;
-					if (!rtt->spill_request_tag || rtt->spill_request_tag < surface.second->last_rw_access_tag)
+					auto& rtt = it->second;
+					if (!rtt->spill_request_tag || rtt->spill_request_tag < rtt->last_rw_access_tag)
 					{
 						// We're not going to be spilling into system RAM. If a MSAA resolve target exists, remove it to save memory.
 						if (rtt->resolve_surface)
@@ -151,8 +151,8 @@ namespace vk
 			}
 
 			// 2. Scan the list and spill resources that can be spilled immediately if requested. Also gather resources from those that don't need it.
-			relieve_memory_pressure(m_render_targets_storage);
-			relieve_memory_pressure(m_depth_stencil_storage);
+			relieve_memory_pressure(m_render_targets_storage, m_render_targets_memory_range);
+			relieve_memory_pressure(m_depth_stencil_storage, m_depth_stencil_memory_range);
 
 			// 3. Write to system heap everything marked to spill
 			for (auto& surface : deferred_spills)
@@ -251,22 +251,23 @@ namespace vk
 
 		// Very slow, but should only be called when the situation is dire
 		std::vector<render_target*> sorted_list;
-		sorted_list.reserve(m_render_targets_storage.size() + m_depth_stencil_storage.size());
+		sorted_list.reserve(1024);
 
-		auto process_list_function = [&](const auto& list)
+		auto process_list_function = [&](auto& list, const utils::address_range& range)
 		{
-			for (auto& surface : list)
+			for (auto it = list.begin_range(range); it != list.end(); ++it)
 			{
 				// NOTE: Check if memory is available instead of value in case we ran out of memory during unspill
-				if (surface.second->memory && !surface.second->is_bound)
+				auto& surface = it->second;
+				if (surface->memory && !surface->is_bound)
 				{
-					sorted_list.push_back(surface.second.get());
+					sorted_list.push_back(surface.get());
 				}
 			}
 		};
 
-		process_list_function(m_render_targets_storage);
-		process_list_function(m_depth_stencil_storage);
+		process_list_function(m_render_targets_storage, m_render_targets_memory_range);
+		process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
 
 		std::sort(sorted_list.begin(), sorted_list.end(), [](const auto& a, const auto& b)
 		{
@@ -337,8 +338,6 @@ namespace vk
 
 		if (!is_depth_surface()) [[likely]]
 		{
-			ensure(current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
 			// This is the source; finish writing before reading
 			vk::insert_image_memory_barrier(
 				cmd, this->value,
@@ -767,7 +766,7 @@ namespace vk
 	{
 		last_rw_access_tag = rsx::get_shared_tag();
 
-		if (samples() == 1 || access_type == rsx::surface_access::shader_write)
+		if (samples() == 1 || !access_type.is_transfer())
 		{
 			return this;
 		}
@@ -797,11 +796,8 @@ namespace vk
 
 	void render_target::texture_barrier(vk::command_buffer& cmd)
 	{
-		if (samples() == 1)
-		{
-			if (!write_barrier_sync_tag) write_barrier_sync_tag++; // Activate barrier sync
-			cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
-		}
+		if (!write_barrier_sync_tag) write_barrier_sync_tag++; // Activate barrier sync
+		cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
 
 		vk::insert_texture_barrier(cmd, this, VK_IMAGE_LAYOUT_GENERAL);
 	}
@@ -820,14 +816,7 @@ namespace vk
 			return vk::viewable_image::get_view(VK_REMAP_IDENTITY, remap, mask);
 		}
 
-		if (!resolve_surface) [[likely]]
-		{
-			return vk::viewable_image::get_view(remap_encoding, remap, mask);
-		}
-		else
-		{
-			return resolve_surface->get_view(remap_encoding, remap, mask);
-		}
+		return vk::viewable_image::get_view(remap_encoding, remap, mask);
 	}
 
 	void render_target::memory_barrier(vk::command_buffer& cmd, rsx::surface_access access)
@@ -921,7 +910,7 @@ namespace vk
 
 			if (msaa_flags & rsx::surface_state_flags::require_resolve)
 			{
-				if (access.is_transfer_or_read())
+				if (access.is_transfer())
 				{
 					// Only do this step when read access is required
 					get_resolve_target_safe(cmd);
@@ -955,7 +944,7 @@ namespace vk
 		{
 			auto& section = old_contents[i];
 			auto src_texture = static_cast<vk::render_target*>(section.source);
-			src_texture->read_barrier(cmd);
+			src_texture->memory_barrier(cmd, rsx::surface_access::transfer_read);
 
 			if (!accept_all && !src_texture->test()) [[likely]]
 			{

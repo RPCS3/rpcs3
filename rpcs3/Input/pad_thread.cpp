@@ -168,7 +168,7 @@ void pad_thread::Init()
 		}
 		cur_pad_handler->Init();
 
-		m_pads[i] = std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
+		m_pads[i] = std::make_shared<Pad>(handler_type, CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
 
 		if (is_ldd_pad)
 		{

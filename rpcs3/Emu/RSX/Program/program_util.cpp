@@ -57,12 +57,14 @@ namespace rsx
 		const u16 clear_mask = ~(static_cast<u16>(1 << index));
 		redirected_textures &= clear_mask;
 		shadow_textures &= clear_mask;
+		multisampled_textures &= clear_mask;
 	}
 
 	void fragment_program_texture_state::import(const fragment_program_texture_state& other, u16 mask)
 	{
 		redirected_textures = other.redirected_textures & mask;
 		shadow_textures = other.shadow_textures & mask;
+		multisampled_textures = other.multisampled_textures & mask;
 		texture_dimensions = other.texture_dimensions & duplicate_and_extend(mask);
 	}
 
@@ -78,16 +80,19 @@ namespace rsx
 	{
 		return texture_dimensions == other.texture_dimensions &&
 			redirected_textures == other.redirected_textures &&
-			shadow_textures == other.shadow_textures;
+			shadow_textures == other.shadow_textures &&
+			multisampled_textures == other.multisampled_textures;
 	}
 
-	void vertex_program_texture_state::clear(u32 /*index*/)
+	void vertex_program_texture_state::clear(u32 index)
 	{
-		// Nothing to do yet
+		const u16 clear_mask = ~(static_cast<u16>(1 << index));
+		multisampled_textures &= clear_mask;
 	}
 
 	void vertex_program_texture_state::import(const vertex_program_texture_state& other, u16 mask)
 	{
+		multisampled_textures = other.multisampled_textures & mask;
 		texture_dimensions = other.texture_dimensions & duplicate_and_extend(mask);
 	}
 
@@ -101,6 +106,7 @@ namespace rsx
 
 	bool vertex_program_texture_state::operator == (const vertex_program_texture_state& other) const
 	{
-		return texture_dimensions == other.texture_dimensions;
+		return texture_dimensions == other.texture_dimensions &&
+			multisampled_textures == other.multisampled_textures;
 	}
 }

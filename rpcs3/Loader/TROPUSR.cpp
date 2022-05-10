@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Utilities/rXml.h"
 #include "Emu/VFS.h"
 #include "TROPUSR.h"
 
@@ -9,6 +8,25 @@ enum : u32
 {
 	TROPUSR_MAGIC = 0x818F54AD
 };
+
+std::shared_ptr<rXmlNode> trophy_xml_document::GetRoot()
+{
+	auto trophy_base = rXmlDocument::GetRoot();
+	ensure(trophy_base);
+
+	if (auto trophy_conf = trophy_base->GetChildren();
+		trophy_conf && trophy_conf->GetName() == "trophyconf")
+	{
+		trophy_base = trophy_conf;
+	}
+	else
+	{
+		trp_log.error("trophy_xml_document: Root name does not match trophyconf in trophy. Name: %s", trophy_conf ? trophy_conf->GetName() : trophy_base->GetName());
+		// TODO: return nullptr or is this possible?
+	}
+
+	return trophy_base;
+}
 
 TROPUSRLoader::load_result TROPUSRLoader::Load(const std::string& filepath, const std::string& configpath)
 {
@@ -148,17 +166,19 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 		return false;
 	}
 
-	rXmlDocument doc;
-	doc.Read(config.to_string());
+	trophy_xml_document doc{};
+	pugi::xml_parse_result res = doc.Read(config.to_string());
+	if (!res)
+	{
+		trp_log.error("TROPUSRLoader::Generate: Failed to read file: %s", filepath);
+		return false;
+	}
 
 	m_table4.clear();
 	m_table6.clear();
 
 	auto trophy_base = doc.GetRoot();
-	if (trophy_base->GetChildren()->GetName() == "trophyconf")
-	{
-		trophy_base = trophy_base->GetChildren();
-	}
+	ensure(trophy_base);
 
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
@@ -247,14 +267,16 @@ u32 TROPUSRLoader::GetUnlockedPlatinumID(u32 trophy_id, const std::string& confi
 		return invalid_trophy_id;
 	}
 
-	rXmlDocument doc;
-	doc.Read(config.to_string());
+	trophy_xml_document doc{};
+	pugi::xml_parse_result res = doc.Read(config.to_string());
+	if (!res)
+	{
+		trp_log.error("TROPUSRLoader::GetUnlockedPlatinumID: Failed to read file: %s", config_path);
+		return invalid_trophy_id;
+	}
 
 	auto trophy_base = doc.GetRoot();
-	if (trophy_base->GetChildren()->GetName() == "trophyconf")
-	{
-		trophy_base = trophy_base->GetChildren();
-	}
+	ensure(trophy_base);
 
 	const usz trophy_count = m_table4.size();
 

@@ -116,10 +116,6 @@ namespace psf
 	{
 	}
 
-	entry::~entry()
-	{
-	}
-
 	const std::string& entry::as_string() const
 	{
 		ensure(m_type == format::string || m_type == format::array);
@@ -246,6 +242,15 @@ namespace psf
 			}
 		}
 
+		const auto cat = get_string(pair.sfo, "CATEGORY", "");
+		constexpr std::string_view valid_cats[]{"GD", "DG", "HG", "AM", "AP", "AT", "AV", "BV", "WT", "HM", "CB", "SF", "2P", "2G", "1P", "PP", "MN", "PE", "2D", "SD", "MS"};
+
+		if (std::find(std::begin(valid_cats), std::end(valid_cats), cat) == std::end(valid_cats))
+		{
+			psf_log.error("Unknown category ('%s')", cat);
+			PSF_CHECK(false, corrupt);
+		}
+
 #undef PSF_CHECK
 		return pair;
 	}
@@ -339,7 +344,7 @@ namespace psf
 		return std::move(static_cast<fs::container_stream<std::vector<u8>>*>(stream.release().get())->obj);
 	}
 
-	std::string_view get_string(const registry& psf, const std::string& key, std::string_view def)
+	std::string_view get_string(const registry& psf, std::string_view key, std::string_view def)
 	{
 		const auto found = psf.find(key);
 
@@ -351,7 +356,7 @@ namespace psf
 		return found->second.as_string();
 	}
 
-	u32 get_integer(const registry& psf, const std::string& key, u32 def)
+	u32 get_integer(const registry& psf, std::string_view key, u32 def)
 	{
 		const auto found = psf.find(key);
 

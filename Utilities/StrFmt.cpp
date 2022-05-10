@@ -13,25 +13,59 @@
 #include <Windows.h>
 #else
 #include <errno.h>
+#include <locale>
+#include <codecvt>
 #endif
 
-#ifdef _WIN32
 std::string wchar_to_utf8(std::wstring_view src)
 {
+#ifdef _WIN32
 	std::string utf8_string;
 	const auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), nullptr, 0, nullptr, nullptr);
 	utf8_string.resize(tmp_size);
 	WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), utf8_string.data(), tmp_size, nullptr, nullptr);
 	return utf8_string;
+#else
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter{};
+	return converter.to_bytes(src.data());
+#endif
 }
 
 std::wstring utf8_to_wchar(std::string_view src)
 {
+#ifdef _WIN32
 	std::wstring wchar_string;
 	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, src.data(), src.size(), nullptr, 0);
 	wchar_string.resize(tmp_size);
 	MultiByteToWideChar(CP_UTF8, 0, src.data(), src.size(), wchar_string.data(), tmp_size);
 	return wchar_string;
+#else
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter{};
+	return converter.from_bytes(src.data());
+#endif
+}
+
+#ifdef _WIN32
+std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
+{
+	std::string message;
+	LPWSTR message_buffer = nullptr;
+	if (FormatMessageW((module_handle ? FORMAT_MESSAGE_FROM_HMODULE : FORMAT_MESSAGE_FROM_SYSTEM) | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
+			module_handle, error, 0, (LPWSTR)&message_buffer, 0, nullptr))
+	{
+		message = fmt::format("%s (0x%x)", fmt::trim(wchar_to_utf8(message_buffer), " \t\n\r\f\v"), error);
+	}
+	else
+	{
+		message = fmt::format("0x%x", error);
+	}
+
+	if (message_buffer)
+	{
+		LocalFree(message_buffer);
+	}
+
+	return message;
 }
 #endif
 
@@ -110,6 +144,11 @@ void fmt_class_string<const char*>::format(std::string& out, u64 arg)
 	{
 		out += "(NULLSTR)";
 	}
+}
+
+void fmt_class_string<const wchar_t*>::format(std::string& out, u64 arg)
+{
+	out += wchar_to_utf8(reinterpret_cast<const wchar_t*>(arg));
 }
 
 template <>
@@ -332,12 +371,12 @@ void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 #ifdef _WIN32
 	if (DWORD error = GetLastError())
 	{
-		fmt::append(out, " (e=0x%08x[%u])", error, error);
+		fmt::append(out, " (error=%s)", error, fmt::win_error_to_string(error));
 	}
 #else
 	if (int error = errno)
 	{
-		fmt::append(out, " (errno=%d)", error);
+		fmt::append(out, " (errno=%d=%s)", error, strerror(errno));
 	}
 #endif
 }

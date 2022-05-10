@@ -94,12 +94,12 @@ namespace rsx
 					auto src = static_cast<T>(source);
 
 					std::tie(src_w, src_h) = rsx::apply_resolution_scale<true>(src_w, src_h,
-						src->get_surface_width(rsx::surface_metrics::pixels),
-						src->get_surface_height(rsx::surface_metrics::pixels));
+						src->template get_surface_width<rsx::surface_metrics::pixels>(),
+						src->template get_surface_height<rsx::surface_metrics::pixels>());
 
 					std::tie(dst_w, dst_h) = rsx::apply_resolution_scale<true>(dst_w, dst_h,
-						target_surface->get_surface_width(rsx::surface_metrics::pixels),
-						target_surface->get_surface_height(rsx::surface_metrics::pixels));
+						target_surface->template get_surface_width<rsx::surface_metrics::pixels>(),
+						target_surface->template get_surface_height<rsx::surface_metrics::pixels>());
 				}
 
 				width = src_w;
@@ -147,6 +147,8 @@ namespace rsx
 		u8  samples_x = 1;
 		u8  samples_y = 1;
 
+		rsx::address_range memory_range;
+
 		std::unique_ptr<typename std::remove_pointer<image_storage_type>::type> resolve_surface;
 		surface_sample_layout sample_layout = surface_sample_layout::null;
 		surface_raster_type raster_type = surface_raster_type::linear;
@@ -178,51 +180,64 @@ namespace rsx
 		virtual bool is_depth_surface() const = 0;
 		virtual void release_ref(image_storage_type) const = 0;
 
-		virtual u32 get_surface_width(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
+		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
+		u32 get_surface_width() const
 		{
-			switch (metrics)
+			if constexpr (Metrics == rsx::surface_metrics::samples)
 			{
-				case rsx::surface_metrics::samples:
-					return surface_width * samples_x;
-				case rsx::surface_metrics::pixels:
-					return surface_width;
-				case rsx::surface_metrics::bytes:
-					return native_pitch;
-				default:
-					fmt::throw_exception("Unknown surface metric %d", u32(metrics));
+				return surface_width * samples_x;
+			}
+			else if constexpr (Metrics == rsx::surface_metrics::pixels)
+			{
+				return surface_width;
+			}
+			else if constexpr (Metrics == rsx::surface_metrics::bytes)
+			{
+				return native_pitch;
+			}
+			else
+			{
+				fmt::throw_exception("Unreachable");
 			}
 		}
 
-		virtual u32 get_surface_height(rsx::surface_metrics metrics = rsx::surface_metrics::pixels) const
+		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
+		u32 get_surface_height() const
 		{
-			switch (metrics)
+			if constexpr (Metrics == rsx::surface_metrics::samples)
 			{
-				case rsx::surface_metrics::samples:
-				case rsx::surface_metrics::bytes:
-					return surface_height * samples_y;
-				case rsx::surface_metrics::pixels:
-					return surface_height;
-				default:
-					fmt::throw_exception("Unknown surface metric %d", u32(metrics));
+				return surface_height * samples_y;
+			}
+			else if constexpr (Metrics == rsx::surface_metrics::pixels)
+			{
+				return surface_height;
+			}
+			else if constexpr (Metrics == rsx::surface_metrics::bytes)
+			{
+				return surface_height * samples_y;
+			}
+			else
+			{
+				fmt::throw_exception("Unreachable");
 			}
 		}
 
-		virtual u32 get_rsx_pitch() const
+		inline u32 get_rsx_pitch() const
 		{
 			return rsx_pitch;
 		}
 
-		virtual u32 get_native_pitch() const
+		inline u32 get_native_pitch() const
 		{
 			return native_pitch;
 		}
 
-		u8 get_bpp() const
+		inline u8 get_bpp() const
 		{
-			return u8(get_native_pitch() / get_surface_width(rsx::surface_metrics::samples));
+			return u8(get_native_pitch() / get_surface_width<rsx::surface_metrics::samples>());
 		}
 
-		u8 get_spp() const
+		inline u8 get_spp() const
 		{
 			return spp;
 		}
@@ -278,17 +293,17 @@ namespace rsx
 			format_info.gcm_depth_format = format;
 		}
 
-		rsx::surface_color_format get_surface_color_format() const
+		inline rsx::surface_color_format get_surface_color_format() const
 		{
 			return format_info.gcm_color_format;
 		}
 
-		rsx::surface_depth_format2 get_surface_depth_format() const
+		inline rsx::surface_depth_format2 get_surface_depth_format() const
 		{
 			return format_info.gcm_depth_format;
 		}
 
-		u32 get_gcm_format() const
+		inline u32 get_gcm_format() const
 		{
 			return
 			(
@@ -298,12 +313,12 @@ namespace rsx
 			);
 		}
 
-		bool dirty() const
+		inline bool dirty() const
 		{
 			return (state_flags != rsx::surface_state_flags::ready) || !old_contents.empty();
 		}
 
-		bool write_through() const
+		inline bool write_through() const
 		{
 			return (state_flags & rsx::surface_state_flags::erase_bkgnd) && old_contents.empty();
 		}
@@ -335,7 +350,14 @@ namespace rsx
 
 		void queue_tag(u32 address)
 		{
+			ensure(native_pitch);
+			ensure(rsx_pitch);
+
 			base_addr = address;
+
+			const u32 internal_height = get_surface_height<rsx::surface_metrics::samples>();
+			const u32 excess = (rsx_pitch - native_pitch);
+			memory_range = rsx::address_range::start_length(base_addr, internal_height * rsx_pitch - excess);
 		}
 
 		void sync_tag()
@@ -381,6 +403,10 @@ namespace rsx
 				const auto sample_offset = (samples[n].y * rsx_pitch) + samples[n].x;
 				memory_tag_samples[n].first = (sample_offset + base_addr);
 			}
+
+			const u32 internal_height = get_surface_height<rsx::surface_metrics::samples>();
+			const u32 excess = (rsx_pitch - native_pitch);
+			memory_range = rsx::address_range::start_length(base_addr, internal_height * rsx_pitch - excess);
 		}
 
 		void sync_tag()
@@ -514,11 +540,11 @@ namespace rsx
 		template <typename T>
 		surface_inheritance_result inherit_surface_contents(T* surface)
 		{
-			const auto child_w = get_surface_width(rsx::surface_metrics::bytes);
-			const auto child_h = get_surface_height(rsx::surface_metrics::bytes);
+			const auto child_w = get_surface_width<rsx::surface_metrics::bytes>();
+			const auto child_h = get_surface_height<rsx::surface_metrics::bytes>();
 
-			const auto parent_w = surface->get_surface_width(rsx::surface_metrics::bytes);
-			const auto parent_h = surface->get_surface_height(rsx::surface_metrics::bytes);
+			const auto parent_w = surface->template get_surface_width<rsx::surface_metrics::bytes>();
+			const auto parent_h = surface->template get_surface_height<rsx::surface_metrics::bytes>();
 
 			const auto rect = rsx::intersect_region(surface->base_addr, parent_w, parent_h, 1, base_addr, child_w, child_h, 1, get_rsx_pitch());
 			const auto src_offset = std::get<0>(rect);
@@ -597,28 +623,29 @@ namespace rsx
 			}
 		}
 
-		void on_invalidate_children()
+		inline void on_write_fast(u64 write_tag)
 		{
-			if (resolve_surface)
+			ensure(write_tag);
+			last_use_tag = write_tag;
+
+			if (spp > 1 && sample_layout != surface_sample_layout::null)
 			{
-				msaa_flags = rsx::surface_state_flags::require_resolve;
+				msaa_flags |= rsx::surface_state_flags::require_resolve;
 			}
 		}
 
 		// Returns the rect area occupied by this surface expressed as an 8bpp image with no AA
-		areau get_normalized_memory_area() const
+		inline areau get_normalized_memory_area() const
 		{
-			const u16 internal_width = get_surface_width(rsx::surface_metrics::bytes);
-			const u16 internal_height = get_surface_height(rsx::surface_metrics::bytes);
+			const u16 internal_width = get_surface_width<rsx::surface_metrics::bytes>();
+			const u16 internal_height = get_surface_height<rsx::surface_metrics::bytes>();
 
 			return { 0, 0, internal_width, internal_height };
 		}
 
-		rsx::address_range get_memory_range() const
+		inline rsx::address_range get_memory_range() const
 		{
-			const u32 internal_height = get_surface_height(rsx::surface_metrics::samples);
-			const u32 excess = (rsx_pitch - native_pitch);
-			return rsx::address_range::start_length(base_addr, internal_height * rsx_pitch - excess);
+			return memory_range;
 		}
 
 		template <typename T>

@@ -81,12 +81,6 @@ namespace gl
 				rsx_log.error("Unexpected swizzled texture format 0x%x", static_cast<u32>(format));
 			}
 		}
-
-		if (context == rsx::texture_upload_context::framebuffer_storage)
-		{
-			// Update memory tag
-			static_cast<gl::render_target*>(vram_texture)->sync_tag();
-		}
 	}
 
 	gl::texture_view* texture_cache::create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type,

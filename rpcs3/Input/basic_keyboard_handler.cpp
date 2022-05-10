@@ -13,9 +13,12 @@ LOG_CHANNEL(input_log, "Input");
 
 void basic_keyboard_handler::Init(const u32 max_connect)
 {
+	m_keyboards.clear();
+	m_info = {};
+
 	for (u32 i = 0; i < max_connect; i++)
 	{
-		Keyboard kb;
+		Keyboard kb{};
 
 		kb.m_config.arrange = g_cfg.sys.keyboard_type;
 
@@ -23,10 +26,10 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 	}
 
 	LoadSettings();
-	memset(&m_info, 0, sizeof(KbInfo));
+
 	m_info.max_connect = max_connect;
 	m_info.now_connect = std::min(::size32(m_keyboards), max_connect);
-	m_info.info        = input::g_intercepted ? CELL_KB_INFO_INTERCEPTED : 0; // Ownership of keyboard data: 0=Application, 1=System
+	m_info.info        = input::g_keyboards_intercepted ? CELL_KB_INFO_INTERCEPTED : 0; // Ownership of keyboard data: 0=Application, 1=System
 	m_info.status[0]   = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
 }
 
@@ -53,7 +56,7 @@ void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 
 bool basic_keyboard_handler::eventFilter(QObject* watched, QEvent* event)
 {
-	if (!event || input::g_intercepted)
+	if (!event)
 	{
 		return false;
 	}

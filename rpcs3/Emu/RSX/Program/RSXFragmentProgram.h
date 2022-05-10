@@ -308,6 +308,8 @@ struct RSXFragmentProgram
 
 	bool valid = false;
 
+	RSXFragmentProgram() = default;
+
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
 		return rsx::texture_dimension_extended{static_cast<u8>((texture_state.texture_dimensions >> (id * 2)) & 0x3)};
@@ -322,10 +324,6 @@ struct RSXFragmentProgram
 	{
 		index += 16;
 		return !!(texcoord_control_mask & (1u << index));
-	}
-
-	RSXFragmentProgram()
-	{
 	}
 
 	static RSXFragmentProgram clone(const RSXFragmentProgram& prog)

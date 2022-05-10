@@ -73,6 +73,10 @@ extern void process_qt_events()
 {
 	if (thread_ctrl::is_main())
 	{
+		// NOTE:
+		// I noticed that calling this from an Emu callback can cause the
+		// caller to get stuck for a while during newly opened Qt dialogs.
+		// Adding a timeout here doesn't seem to do anything in that case.
 		QApplication::processEvents();
 	}
 }
@@ -116,13 +120,14 @@ bool main_window::Init(bool with_cli_boot)
 	CreateConnects();
 
 	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
-	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::get_version().to_string()));
+	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::get_verbose_version()));
 
 	Q_EMIT RequestGlobalStylesheetChange();
 	ConfigureGuiFromSettings();
 
-	if (const std::string_view branch_name = rpcs3::get_full_branch(); branch_name != "RPCS3/rpcs3/master" && branch_name != "local_build")
+	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
 	{
+		const std::string_view branch_name = rpcs3::get_full_branch();
 		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
 
 		QMessageBox msg;
@@ -649,7 +654,7 @@ void main_window::InstallPackages(QStringList file_paths)
 		const QString info_string = QStringLiteral("%0\n\n%1%2%3%4%5").arg(file_info.fileName()).arg(info.title).arg(info.local_cat)
 			.arg(info.title_id).arg(info.version).arg(info.changelog);
 
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string), 
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("PKG: Cancelled installation from drop.\n%s", sstr(info_string));
@@ -674,7 +679,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	const auto install_filetype = [&installed_rap_and_edat_count, &file_paths](const std::string extension)
 	{
 		const QString pattern = QString(".*\\.%1").arg(QString::fromStdString(extension));
-		for (const auto& file : file_paths.filter(QRegExp(pattern, Qt::CaseInsensitive)))
+		for (const auto& file : file_paths.filter(QRegularExpression(pattern, QRegularExpression::PatternOption::CaseInsensitiveOption)))
 		{
 			const QFileInfo file_info(file);
 			const std::string filename = sstr(file_info.fileName());
@@ -701,7 +706,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	}
 
 	// Find remaining package files
-	file_paths = file_paths.filter(QRegExp(".*\\.pkg", Qt::CaseInsensitive));
+	file_paths = file_paths.filter(QRegularExpression(".*\\.pkg", QRegularExpression::PatternOption::CaseInsensitiveOption));
 
 	if (!file_paths.isEmpty())
 	{
@@ -1105,7 +1110,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		{
 			gui_log.error("Error while extracting firmware: Failed to mount '%s'", sstr(dir_path));
 			critical(tr("Firmware extraction failed: VFS mounting failed."));
-			return;	
+			return;
 		}
 
 		if (!update_files.extract("/pup_extract"))
@@ -1134,7 +1139,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		return;
 	}
 
-	static constexpr std::string_view cur_version = "4.88";
+	static constexpr std::string_view cur_version = "4.89";
 
 	std::string version_string;
 
@@ -1307,6 +1312,9 @@ void main_window::DecryptSPRXLibraries()
 		}
 	}
 
+	// Try to use the key that has been for the current running ELF
+	klics.insert(klics.end(), Emu.klic.begin(), Emu.klic.end());
+
 	for (const QString& _module : modules)
 	{
 		const std::string old_path = sstr(_module);
@@ -1410,7 +1418,7 @@ void main_window::DecryptSPRXLibraries()
 				dlg.set_input_font(mono, true, '0');
 				dlg.set_clear_button_enabled(false);
 				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-				dlg.set_validator(new QRegExpValidator(QRegExp("^[a-fA-F0-9]*$"))); // HEX only
+				dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[a-fA-F0-9]*$"))); // HEX only
 
 				connect(&dlg, &input_dialog::text_changed, &dlg, [&dlg](const QString& text)
 				{
@@ -2176,7 +2184,7 @@ void main_window::CreateConnects()
 
 	connect(ui->confVFSDialogAct, &QAction::triggered, this, [this]()
 	{
-		vfs_dialog dlg(m_gui_settings, m_emu_settings, this);
+		vfs_dialog dlg(m_gui_settings, this);
 		dlg.exec();
 		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
 		m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
@@ -2781,7 +2789,7 @@ void main_window::CreateFirmwareCache()
 	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
-	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash() + "sys", "", true);
+	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash(), "", true);
 		error != game_boot_result::no_errors)
 	{
 		gui_log.error("Creating firmware cache failed: reason: %s", error);
@@ -2877,8 +2885,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 	for (auto&& url : list) // check each file in url list for valid type
 	{
 		const QString path = url.toLocalFile(); // convert url to filepath
-
-		const QFileInfo info = path;
+		const QFileInfo info(path);
 
 		// check for directories first, only valid if all other paths led to directories until now.
 		if (info.isDir())
@@ -2997,7 +3004,7 @@ void main_window::dropEvent(QDropEvent* event)
 			// Refresh game list since we probably unlocked some games now.
 			m_game_list_frame->Refresh(true);
 		}
-		
+
 		break;
 	}
 	case drop_type::drop_psf: // Display PARAM.SFO content

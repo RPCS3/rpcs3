@@ -3,7 +3,10 @@
 #include "RSXFIFO.h"
 #include "RSXThread.h"
 #include "Capture/rsx_capture.h"
+#include "Common/time.hpp"
 #include "Emu/Cell/lv2/sys_rsx.h"
+
+#include <bitset>
 
 namespace rsx
 {
@@ -37,10 +40,10 @@ namespace rsx
 			}
 		}
 
-		template <bool full>
+		template <bool Full>
 		inline u32 FIFO_control::read_put() const
 		{
-			if constexpr (!full)
+			if constexpr (!Full)
 			{
 				return m_ctrl->put & ~3;
 			}
@@ -55,9 +58,9 @@ namespace rsx
 			}
 		}
 
-		void FIFO_control::set_get(u32 get)
+		void FIFO_control::set_get(u32 get, bool check_spin)
 		{
-			if (m_ctrl->get == get)
+			if (check_spin && m_ctrl->get == get)
 			{
 				if (const u32 addr = m_iotable->get_addr(m_memwatch_addr); addr + 1)
 				{
@@ -71,9 +74,6 @@ namespace rsx
 			// Update ctrl registers
 			m_ctrl->get.release(m_internal_get = get);
 			m_remaining_commands = 0;
-
-			// Clear memwatch spinner
-			m_memwatch_addr = 0;
 		}
 
 		bool FIFO_control::read_unsafe(register_pair& data)
@@ -395,7 +395,7 @@ namespace rsx
 			{
 				if (performance_counters.state == FIFO_state::running)
 				{
-					performance_counters.FIFO_idle_timestamp = get_system_time();
+					performance_counters.FIFO_idle_timestamp = rsx::uclock();
 					performance_counters.state = FIFO_state::nop;
 				}
 
@@ -405,7 +405,7 @@ namespace rsx
 			{
 				if (performance_counters.state == FIFO_state::running)
 				{
-					performance_counters.FIFO_idle_timestamp = get_system_time();
+					performance_counters.FIFO_idle_timestamp = rsx::uclock();
 					performance_counters.state = FIFO_state::empty;
 				}
 				else
@@ -429,38 +429,26 @@ namespace rsx
 			}
 
 			// Check for flow control
-			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
+			if (std::bitset<2> jump_type; jump_type
+				.set(0, (cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
+				.set(1, (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
+				.any())
 			{
-				const u32 offs = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
+				const u32 offs = cmd & (jump_type.test(0) ? RSX_METHOD_OLD_JUMP_OFFSET_MASK : RSX_METHOD_NEW_JUMP_OFFSET_MASK);
 				if (offs == fifo_ctrl->get_pos())
 				{
 					//Jump to self. Often preceded by NOP
 					if (performance_counters.state == FIFO_state::running)
 					{
-						performance_counters.FIFO_idle_timestamp = get_system_time();
+						performance_counters.FIFO_idle_timestamp = rsx::uclock();
 						sync_point_request.release(true);
 					}
 
 					performance_counters.state = FIFO_state::spinning;
 				}
-
-				//rsx_log.warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				fifo_ctrl->set_get(offs);
-				return;
-			}
-			if ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-			{
-				const u32 offs = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
-				if (offs == fifo_ctrl->get_pos())
+				else
 				{
-					//Jump to self. Often preceded by NOP
-					if (performance_counters.state == FIFO_state::running)
-					{
-						performance_counters.FIFO_idle_timestamp = get_system_time();
-						sync_point_request.release(true);
-					}
-
-					performance_counters.state = FIFO_state::spinning;
+					last_known_code_start = offs;
 				}
 
 				//rsx_log.warning("rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
@@ -480,6 +468,7 @@ namespace rsx
 				const u32 offs = cmd & RSX_METHOD_CALL_OFFSET_MASK;
 				fifo_ret_addr = fifo_ctrl->get_pos() + 4;
 				fifo_ctrl->set_get(offs);
+				last_known_code_start = offs;
 				return;
 			}
 			if ((cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
@@ -492,6 +481,7 @@ namespace rsx
 				}
 
 				fifo_ctrl->set_get(std::exchange(fifo_ret_addr, RSX_CALL_STACK_EMPTY));
+				last_known_code_start = ctrl->get;
 				return;
 			}
 
@@ -513,7 +503,7 @@ namespace rsx
 			}
 
 			// Update performance counters with time spent in idle mode
-			performance_counters.idle_time += (get_system_time() - performance_counters.FIFO_idle_timestamp);
+			performance_counters.idle_time += (rsx::uclock() - performance_counters.FIFO_idle_timestamp);
 		}
 
 		do

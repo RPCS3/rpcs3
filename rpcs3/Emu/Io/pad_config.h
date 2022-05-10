@@ -66,6 +66,7 @@ struct cfg_pad final : cfg::node
 	cfg::_bool enable_vibration_motor_small{ this, "Enable Small Vibration Motor", true };
 	cfg::_bool switch_vibration_motors{ this, "Switch Vibration Motors", false };
 
+	cfg::_enum<mouse_movement_mode> mouse_move_mode{ this, "Mouse Movement Mode", mouse_movement_mode::relative };
 	cfg::uint<0, 255> mouse_deadzone_x{ this, "Mouse Deadzone X Axis", 60 };
 	cfg::uint<0, 255> mouse_deadzone_y{ this, "Mouse Deadzone Y Axis", 60 };
 	cfg::uint<0, 999999> mouse_acceleration_x{ this, "Mouse Acceleration X Axis", 200 };

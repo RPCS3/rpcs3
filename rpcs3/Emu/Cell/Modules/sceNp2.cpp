@@ -1171,6 +1171,11 @@ error_code sceNpMatching2CreateContext(
 		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
 	}
 
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_NP_SIGN_IN;
+	}
+
 	*ctxId = create_match2_context(commId, passPhrase);
 
 	return CELL_OK;

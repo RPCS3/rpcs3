@@ -127,12 +127,15 @@ namespace gl
 		ParamArray arr;
 		GLVertexDecompilerThread comp(null_prog, shader_str, arr);
 
+		ParamType uniforms = { PF_PARAM_UNIFORM, "vec4" };
+		uniforms.items.emplace_back("vc[468]", -1);
+
 		std::stringstream builder;
 		comp.insertHeader(builder);
 
 		builder << "#define Z_NEGATIVE_ONE_TO_ONE\n\n";
 
-		comp.insertConstants(builder, {});
+		comp.insertConstants(builder, { uniforms });
 		comp.insertInputs(builder, {});
 
 		// Insert vp stream input

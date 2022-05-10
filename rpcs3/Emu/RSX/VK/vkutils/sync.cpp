@@ -181,6 +181,7 @@ namespace vk
 				switch (status)
 				{
 				case VK_NOT_READY:
+					utils::pause();
 					continue;
 				default:
 					die_with_error(status);

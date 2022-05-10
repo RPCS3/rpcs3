@@ -3,6 +3,7 @@
 #include "RSXThread.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"
+#include "Common/time.hpp"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/RSX/Common/BufferUtils.h"
@@ -106,7 +107,7 @@ namespace rsx
 				rsx->flush_fifo();
 			}
 
-			u64 start = get_system_time();
+			u64 start = rsx::uclock();
 			while (sema != arg)
 			{
 				if (rsx->is_stopped())
@@ -118,7 +119,7 @@ namespace rsx
 				{
 					if (rsx->is_paused())
 					{
-						const u64 start0 = get_system_time();
+						const u64 start0 = rsx::uclock();
 
 						while (rsx->is_paused())
 						{
@@ -126,11 +127,11 @@ namespace rsx
 						}
 
 						// Reset
-						start += get_system_time() - start0;
+						start += rsx::uclock() - start0;
 					}
 					else
 					{
-						if ((get_system_time() - start) > tdr)
+						if ((rsx::uclock() - start) > tdr)
 						{
 							// If longer than driver timeout force exit
 							rsx_log.error("nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
@@ -143,7 +144,7 @@ namespace rsx
 			}
 
 			rsx->fifo_wake_delay();
-			rsx->performance_counters.idle_time += (get_system_time() - start);
+			rsx->performance_counters.idle_time += (rsx::uclock() - start);
 		}
 
 		void semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
@@ -3140,6 +3141,7 @@ namespace rsx
 
 		// NV03_MEMORY_TO_MEMORY_FORMAT	(NV0039)
 		methods[NV0039_SET_OBJECT]                        = nullptr;
+		bind(0x2100 >> 2, trace_method);
 		methods[NV0039_SET_CONTEXT_DMA_NOTIFIES]          = nullptr;
 		methods[NV0039_SET_CONTEXT_DMA_BUFFER_IN]         = nullptr;
 		methods[NV0039_SET_CONTEXT_DMA_BUFFER_OUT]        = nullptr;

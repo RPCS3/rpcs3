@@ -129,6 +129,8 @@ namespace rsx
 		polygon_stipple_pattern_dirty = 0x8000,  // Rasterizer stippling pattern changed
 		line_stipple_pattern_dirty = 0x10000,    // Line stippling pattern changed
 
+		push_buffer_arrays_dirty = 0x20000,   // Push buffers have data written to them (immediate mode vertex buffers)
+
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
@@ -586,6 +588,7 @@ namespace rsx
 		bool supports_multidraw;             // Draw call batching
 		bool supports_hw_a2c;                // Alpha to coverage
 		bool supports_hw_renormalization;    // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_msaa;               // MSAA support
 		bool supports_hw_a2one;              // Alpha to one
 		bool supports_hw_conditional_render; // Conditional render
 		bool supports_passthrough_dma;       // DMA passthrough
@@ -651,11 +654,15 @@ namespace rsx
 		rsx_iomap_table iomap_table;
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
+		u32 last_known_code_start = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		atomic_t<bool> is_inited{ false };
 		bool is_fifo_idle() const;
 		void flush_fifo();
+
+		// Returns [count of found commands, PC of their start]
+		std::pair<u32, u32> try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const;
 
 		void recover_fifo(u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
@@ -778,7 +785,9 @@ namespace rsx
 	public:
 		u64 target_rsx_flip_time = 0;
 		u64 int_flip_index = 0;
-		u64 last_flip_time = 0;
+		u64 last_guest_flip_timestamp = 0;
+		u64 last_host_flip_timestamp = 0;
+
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
@@ -918,9 +927,9 @@ namespace rsx
 
 		/**
 		* Fill buffer with vertex program constants.
-		* Buffer must be at least 512 float4 wide.
+		* Relocation table allows to do a partial fill with only selected registers.
 		*/
-		void fill_vertex_program_constants_data(void* buffer);
+		void fill_vertex_program_constants_data(void* buffer, const std::vector<u16>& reloc_table);
 
 		/**
 		 * Fill buffer with fragment rasterization state.

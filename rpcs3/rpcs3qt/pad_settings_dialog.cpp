@@ -177,6 +177,9 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, cfg.rpadsquircling, cfg.rstickmultiplier / 100.0);
 	});
 
+	ui->mouse_movement->addItem(tr("Relative"), static_cast<int>(mouse_movement_mode::relative));
+	ui->mouse_movement->addItem(tr("Absolute"), static_cast<int>(mouse_movement_mode::absolute));
+
 	// Initialize configurable buttons
 	InitButtons();
 
@@ -203,6 +206,8 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 pad_settings_dialog::~pad_settings_dialog()
 {
+	m_gui_settings->SetValue(gui::pads_geometry, saveGeometry());
+
 	delete ui;
 
 	if (!Emu.IsStopped())
@@ -219,10 +224,10 @@ void pad_settings_dialog::showEvent(QShowEvent* event)
 	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), 0, 0, 0, 0);
 
 	// Resize in order to fit into our scroll area
-	ResizeDialog();
-
-	// Restrict our inner layout size. This is necessary because redrawing things will slow down the dialog otherwise.
-	ui->mainLayout->setSizeConstraint(QLayout::SizeConstraint::SetFixedSize);
+	if (!restoreGeometry(m_gui_settings->GetValue(gui::pads_geometry).toByteArray()))
+	{
+		ResizeDialog();
+	}
 
 	QDialog::showEvent(event);
 }
@@ -360,7 +365,7 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Enable Button Remapping
-	const auto& callback = [this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
+	const auto callback = [this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 	{
 		SwitchPadInfo(pad_name, true);
 
@@ -406,7 +411,7 @@ void pad_settings_dialog::InitButtons()
 	};
 
 	// Disable Button Remapping
-	const auto& fail_callback = [this](const std::string& pad_name)
+	const auto fail_callback = [this](const std::string& pad_name)
 	{
 		SwitchPadInfo(pad_name, false);
 
@@ -603,6 +608,7 @@ void pad_settings_dialog::ReactivateButtons()
 
 void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier) const
 {
+	desired_width = 100; // Let's keep a fixed size for these labels for now
 	const int deadzone_max = m_handler ? m_handler->thumb_max : 255; // 255 used as fallback. The deadzone circle shall be small.
 
 	constexpr qreal relative_size = 0.9;
@@ -944,6 +950,11 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 
 		std::vector<std::string> range;
 
+		// Update Mouse Movement Mode
+		const int mouse_movement_index = ui->mouse_movement->findData(static_cast<int>(cfg.mouse_move_mode.get()));
+		ensure(mouse_movement_index >= 0);
+		ui->mouse_movement->setCurrentIndex(mouse_movement_index);
+
 		// Update Mouse Deadzones
 		range = cfg.mouse_deadzone_x.to_list();
 		ui->mouse_dz_x->setRange(std::stoi(range.front()), std::stoi(range.back()));
@@ -1041,6 +1052,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_battery->setEnabled(is_enabled && (m_enable_battery || m_enable_led));
 	ui->pb_battery->setEnabled(is_enabled && m_enable_battery);
 	ui->b_led_settings->setEnabled(is_enabled && m_enable_led);
+	ui->gb_mouse_movement->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
@@ -1605,6 +1617,9 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 
 	if (m_handler->m_type == pad_handler::keyboard)
 	{
+		const int mouse_move_mode = ui->mouse_movement->currentData().toInt();
+		ensure(mouse_move_mode >= 0 && mouse_move_mode <= 1);
+		cfg.mouse_move_mode.set(static_cast<mouse_movement_mode>(mouse_move_mode));
 		cfg.mouse_acceleration_x.set(ui->mouse_accel_x->value() * 100);
 		cfg.mouse_acceleration_y.set(ui->mouse_accel_y->value() * 100);
 		cfg.mouse_deadzone_x.set(ui->mouse_dz_x->value());
@@ -1691,7 +1706,12 @@ bool pad_settings_dialog::GetIsLddPad(u32 index) const
 		std::lock_guard lock(pad::g_pad_mutex);
 		if (const auto handler = pad::get_current_handler(true))
 		{
-			return handler->GetPads().at(index)->ldd;
+			ensure(index < handler->GetPads().size());
+
+			if (const std::shared_ptr<Pad> pad = handler->GetPads().at(index))
+			{
+				return pad->ldd;
+			}
 		}
 	}
 
@@ -1725,7 +1745,6 @@ void pad_settings_dialog::ResizeDialog()
 	const QSize margin_size(margins.left() + margins.right(), margins.top() + margins.bottom());
 
 	resize(tabwidget_size + buttons_size + margin_size + spacing_size);
-	setMaximumSize(size());
 }
 
 void pad_settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
@@ -1750,4 +1769,5 @@ void pad_settings_dialog::SubscribeTooltips()
 	SubscribeTooltip(ui->gb_stick_lerp, tooltips.gamepad_settings.stick_lerp);
 	SubscribeTooltip(ui->gb_mouse_accel, tooltips.gamepad_settings.mouse_acceleration);
 	SubscribeTooltip(ui->gb_mouse_dz, tooltips.gamepad_settings.mouse_deadzones);
+	SubscribeTooltip(ui->gb_mouse_movement, tooltips.gamepad_settings.mouse_movement);
 }

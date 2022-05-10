@@ -506,7 +506,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.92");
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.93");
 
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
 	{
@@ -539,7 +539,8 @@ VKGSRender::VKGSRender() : GSRender()
 	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
-		backend_config.supports_hw_a2c = VK_TRUE;
+		backend_config.supports_hw_msaa = true;
+		backend_config.supports_hw_a2c = true;
 		backend_config.supports_hw_a2one = m_device->get_alpha_to_one_support();
 	}
 
@@ -1085,7 +1086,7 @@ void VKGSRender::check_heap_status(u32 flags)
 			m_texture_upload_buffer_ring_info.reset_allocation_stats();
 			m_raster_env_ring_info.reset_allocation_stats();
 			m_current_frame->reset_heap_ptrs();
-			m_last_heap_sync_time = get_system_time();
+			m_last_heap_sync_time = rsx::get_shared_tag();
 		}
 		else
 		{
@@ -1382,9 +1383,7 @@ void VKGSRender::clear_surface(u32 mask)
 				if (!use_fast_clear || !full_frame)
 				{
 					// If we're not clobber all the memory, a barrier is required
-					for (u8 index = m_rtts.m_bound_render_targets_config.first, count = 0;
-						count < m_rtts.m_bound_render_targets_config.second;
-						++count, ++index)
+					for (const auto& index : m_rtts.m_bound_render_target_ids)
 					{
 						m_rtts.m_bound_render_targets[index].second->write_barrier(*m_current_command_buffer);
 					}
@@ -1449,8 +1448,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (update_color || update_z)
 	{
-		const bool write_all_mask[] = { true, true, true, true };
-		m_rtts.on_write(update_color ? write_all_mask : nullptr, update_z);
+		m_rtts.on_write({ update_color, update_color, update_color, update_color }, update_z);
 	}
 
 	if (!clear_descriptors.empty())
@@ -1516,7 +1514,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 	{
 		while (m_host_data_ptr->last_label_release_event > m_host_data_ptr->commands_complete_event)
 		{
-			_mm_pause();
+			utils::pause();
 
 			if (thread_ctrl::state() == thread_state::aborting)
 			{
@@ -1546,7 +1544,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 		return false;
 	}
 
-	m_host_data_ptr->last_label_release_event = ++m_host_data_ptr->event_counter;
+	m_host_data_ptr->last_label_release_event = m_host_data_ptr->inc_counter();
 
 	if (m_host_data_ptr->texture_load_request_event > m_host_data_ptr->last_label_submit_event)
 	{
@@ -1863,13 +1861,15 @@ bool VKGSRender::load_program()
 	}
 
 	const auto shadermode = g_cfg.video.shadermode.get();
+	m_vertex_prog = nullptr;
+	m_fragment_prog = nullptr;
 
 	if (shadermode != shader_mode::interpreter_only) [[likely]]
 	{
 		vk::enter_uninterruptible();
 
 		// Load current program from cache
-		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
+		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
 			shadermode != shader_mode::recompiler, true, pipeline_layout);
 
 		vk::leave_uninterruptible();
@@ -1952,15 +1952,21 @@ void VKGSRender::load_program_env()
 
 	if (update_transform_constants)
 	{
-		check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);
-
 		// Transform constants
-		auto mem = m_transform_constants_ring_info.alloc<256>(8192);
-		auto buf = m_transform_constants_ring_info.map(mem, 8192);
+		const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
+		if (transform_constants_size)
+		{
+			check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);
 
-		fill_vertex_program_constants_data(buf);
-		m_transform_constants_ring_info.unmap();
-		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, 8192 };
+			const auto alignment = m_device->gpu().get_limits().minUniformBufferOffsetAlignment;
+			auto mem = m_transform_constants_ring_info.alloc<1>(utils::align(transform_constants_size, alignment));
+			auto buf = m_transform_constants_ring_info.map(mem, transform_constants_size);
+
+			const std::vector<u16>& constant_ids = (transform_constants_size == 8192) ? std::vector<u16>{} : m_vertex_prog->constant_ids;
+			fill_vertex_program_constants_data(buf, constant_ids);
+			m_transform_constants_ring_info.unmap();
+			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, transform_constants_size };
+		}
 	}
 
 	if (update_fragment_constants && !update_instruction_buffers)
@@ -1974,7 +1980,7 @@ void VKGSRender::load_program_env()
 			auto buf = m_fragment_constants_ring_info.map(mem, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-				current_fragment_program, true);
+				*ensure(m_fragment_prog), current_fragment_program, true);
 
 			m_fragment_constants_ring_info.unmap();
 			m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, mem, fragment_constants_size };
@@ -2236,7 +2242,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 		primary_submit_info.wait_on(wait_semaphore, pipeline_stage_flags);
 	}
 
-	if (const auto wait_sema = std::exchange(m_dangling_semaphore_signal, VK_NULL_HANDLE))
+	if (const auto wait_sema = std::exchange(m_dangling_semaphore_signal, nullptr))
 	{
 		// TODO: Sync on VS stage
 		primary_submit_info.wait_on(wait_sema, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
@@ -2464,7 +2470,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, surface, surface->get_memory_range(), false,
-				surface->get_surface_width(rsx::surface_metrics::pixels), surface->get_surface_height(rsx::surface_metrics::pixels), surface->get_rsx_pitch(),
+				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
 				gcm_format, swap_bytes);
 		}
 

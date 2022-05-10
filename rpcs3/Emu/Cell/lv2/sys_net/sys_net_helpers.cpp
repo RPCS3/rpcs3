@@ -1,0 +1,212 @@
+#include "stdafx.h"
+
+#include "Emu/IdManager.h"
+#include "Emu/Cell/PPUThread.h"
+
+#include "lv2_socket.h"
+#include "sys_net_helpers.h"
+
+LOG_CHANNEL(sys_net);
+
+int get_native_error()
+{
+	int native_error;
+#ifdef _WIN32
+	native_error = WSAGetLastError();
+#else
+	native_error = errno;
+#endif
+
+	return native_error;
+}
+
+sys_net_error get_last_error(bool is_blocking, int native_error)
+{
+	// Convert the error code for socket functions to a one for sys_net
+	sys_net_error result{};
+	const char* name{};
+
+	if (!native_error)
+	{
+		native_error = get_native_error();
+	}
+
+#ifdef _WIN32
+#define ERROR_CASE(error)         \
+	case WSA##error:              \
+		result = SYS_NET_##error; \
+		name   = #error;          \
+		break;
+#else
+#define ERROR_CASE(error)         \
+	case error:                   \
+		result = SYS_NET_##error; \
+		name   = #error;          \
+		break;
+#endif
+	switch (native_error)
+	{
+#ifndef _WIN32
+		ERROR_CASE(ENOENT);
+		ERROR_CASE(ENOMEM);
+		ERROR_CASE(EBUSY);
+		ERROR_CASE(ENOSPC);
+		ERROR_CASE(EPIPE);
+#endif
+
+		// TODO: We don't currently support EFAULT or EINTR
+		// ERROR_CASE(EFAULT);
+		// ERROR_CASE(EINTR);
+
+		ERROR_CASE(EBADF);
+		ERROR_CASE(EACCES);
+		ERROR_CASE(EINVAL);
+		ERROR_CASE(EMFILE);
+		ERROR_CASE(EWOULDBLOCK);
+		ERROR_CASE(EINPROGRESS);
+		ERROR_CASE(EALREADY);
+		ERROR_CASE(EDESTADDRREQ);
+		ERROR_CASE(EMSGSIZE);
+		ERROR_CASE(EPROTOTYPE);
+		ERROR_CASE(ENOPROTOOPT);
+		ERROR_CASE(EPROTONOSUPPORT);
+		ERROR_CASE(EOPNOTSUPP);
+		ERROR_CASE(EPFNOSUPPORT);
+		ERROR_CASE(EAFNOSUPPORT);
+		ERROR_CASE(EADDRINUSE);
+		ERROR_CASE(EADDRNOTAVAIL);
+		ERROR_CASE(ENETDOWN);
+		ERROR_CASE(ENETUNREACH);
+		ERROR_CASE(ECONNABORTED);
+		ERROR_CASE(ECONNRESET);
+		ERROR_CASE(ENOBUFS);
+		ERROR_CASE(EISCONN);
+		ERROR_CASE(ENOTCONN);
+		ERROR_CASE(ESHUTDOWN);
+		ERROR_CASE(ETOOMANYREFS);
+		ERROR_CASE(ETIMEDOUT);
+		ERROR_CASE(ECONNREFUSED);
+		ERROR_CASE(EHOSTDOWN);
+		ERROR_CASE(EHOSTUNREACH);
+	default:
+		fmt::throw_exception("sys_net get_last_error(is_blocking=%d, native_error=%d): Unknown/illegal socket error", is_blocking, native_error);
+	}
+
+	if (name && result != SYS_NET_EWOULDBLOCK && result != SYS_NET_EINPROGRESS)
+	{
+		sys_net.error("Socket error %s", name);
+	}
+
+	if (is_blocking && result == SYS_NET_EWOULDBLOCK)
+	{
+		return {};
+	}
+
+	if (is_blocking && result == SYS_NET_EINPROGRESS)
+	{
+		return {};
+	}
+
+	return result;
+#undef ERROR_CASE
+}
+
+sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_addr)
+{
+	ensure(native_addr.ss_family == AF_INET || native_addr.ss_family == AF_UNSPEC);
+
+	sys_net_sockaddr sn_addr;
+
+	sys_net_sockaddr_in* paddr = reinterpret_cast<sys_net_sockaddr_in*>(&sn_addr);
+
+	paddr->sin_len    = sizeof(sys_net_sockaddr_in);
+	paddr->sin_family = SYS_NET_AF_INET;
+	paddr->sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<const sockaddr_in*>(&native_addr)->sin_port);
+	paddr->sin_addr   = std::bit_cast<be_t<u32>, u32>(reinterpret_cast<const sockaddr_in*>(&native_addr)->sin_addr.s_addr);
+	paddr->sin_zero   = 0;
+
+	return sn_addr;
+}
+
+::sockaddr_in sys_net_addr_to_native_addr(const sys_net_sockaddr& sn_addr)
+{
+	ensure(sn_addr.sa_family == SYS_NET_AF_INET);
+
+	const sys_net_sockaddr_in* psa_in = reinterpret_cast<const sys_net_sockaddr_in*>(&sn_addr);
+
+	::sockaddr_in native_addr{};
+	native_addr.sin_family      = AF_INET;
+	native_addr.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
+	native_addr.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+
+#ifdef _WIN32
+	// Windows doesn't support sending packets to 0.0.0.0 but it works on unixes, send to 127.0.0.1 instead
+	if (native_addr.sin_addr.s_addr == 0x00000000)
+	{
+		sys_net.warning("[Native] Redirected 0.0.0.0 to 127.0.0.1");
+		native_addr.sin_addr.s_addr = std::bit_cast<u32, be_t<u32>>(0x7F000001);
+	}
+#endif
+
+	return native_addr;
+}
+
+void network_clear_queue(ppu_thread& ppu)
+{
+	idm::select<lv2_socket>([&](u32, lv2_socket& sock)
+		{
+			sock.clear_queue(ppu.id);
+		});
+}
+
+#ifdef _WIN32
+// Workaround function for WSAPoll not reporting failed connections
+void windows_poll(pollfd* fds, unsigned long nfds, int timeout, bool* connecting)
+{
+	ensure(connecting);
+
+	// Don't call WSAPoll with zero nfds (errors 10022 or 10038)
+	if (std::none_of(fds, fds + nfds, [](pollfd& pfd)
+			{
+				return pfd.fd != INVALID_SOCKET;
+			}))
+	{
+		if (timeout > 0)
+		{
+			Sleep(timeout);
+		}
+
+		return;
+	}
+
+	int r = ::WSAPoll(fds, nfds, timeout);
+
+	if (r == SOCKET_ERROR)
+	{
+		sys_net.error("WSAPoll failed: %u", WSAGetLastError());
+		return;
+	}
+
+	for (unsigned long i = 0; i < nfds; i++)
+	{
+		if (connecting[i])
+		{
+			if (!fds[i].revents)
+			{
+				int error        = 0;
+				socklen_t intlen = sizeof(error);
+				if (getsockopt(fds[i].fd, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&error), &intlen) == -1 || error != 0)
+				{
+					// Connection silently failed
+					connecting[i]  = false;
+					fds[i].revents = POLLERR | POLLHUP | (fds[i].events & (POLLIN | POLLOUT));
+				}
+			}
+			else
+			{
+				connecting[i] = false;
+			}
+		}
+	}
+}
+#endif

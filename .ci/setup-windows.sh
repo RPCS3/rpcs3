@@ -21,7 +21,7 @@ QT_MM_URL="${QT_HOST}${QT_PREFIX}qtmultimedia${QT_SUFFIX}"
 QT_SVG_URL="${QT_HOST}${QT_PREFIX}qtsvg${QT_SUFFIX}"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z'
 GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
-VULKAN_SDK_URL="https://www.dropbox.com/s/fjlh97hrz0crqxv/VulkanSDK-1.2.182.0-Installer.exe"
+VULKAN_SDK_URL="https://www.dropbox.com/s/o918fc11pfk8x9c/VulkanSDK-${VULKAN_VER}-Installer.exe"
 
 DEP_URLS="         \
     $QT_BASE_URL   \
@@ -29,7 +29,7 @@ DEP_URLS="         \
     $QT_DECL_URL   \
     $QT_TOOL_URL   \
     $QT_MM_URL     \
-    $QT_SVG_URL     \
+    $QT_SVG_URL    \
     $LLVMLIBS_URL  \
     $GLSLANG_URL   \
     $VULKAN_SDK_URL"
@@ -86,7 +86,7 @@ for url in $DEP_URLS; do
         # Need to subshell this or else it doesn't wait
         download_and_verify "$url" "$VULKAN_SDK_SHA" "sha256" "$fileName"
         cp "$CACHE_DIR/$fileName" .
-        _=$(echo "$fileName /S" | cmd)
+        _=$(echo "$fileName --accept-licenses --default-answer --confirm-command install" | cmd)
         continue
     ;;
     *) echo "Unknown url resource: $url"; exit 1 ;;
@@ -114,6 +114,6 @@ fi
 # BUILD is the name of the release artifact
 # AVVER is used for GitHub releases, it is the version number.
 BRANCH="${REPO_NAME}/${REPO_BRANCH}"
-echo "BRANCH=$BRANCH" > .ci/azure-vars.env
-echo "BUILD=$BUILD" >> .ci/azure-vars.env
-echo "AVVER=$AVVER" >> .ci/azure-vars.env
+echo "BRANCH=$BRANCH" > .ci/ci-vars.env
+echo "BUILD=$BUILD" >> .ci/ci-vars.env
+echo "AVVER=$AVVER" >> .ci/ci-vars.env

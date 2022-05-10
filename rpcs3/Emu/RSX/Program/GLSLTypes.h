@@ -27,6 +27,7 @@ namespace glsl
 		bool require_depth_conversion : 1;
 		bool require_texture_ops : 1;
 		bool require_shadow_ops : 1;
+		bool require_msaa_ops : 1;
 		bool require_texture_expand : 1;
 		bool require_srgb_to_linear : 1;
 		bool require_linear_to_srgb : 1;

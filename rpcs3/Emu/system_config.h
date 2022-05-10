@@ -82,6 +82,7 @@ struct cfg_root : cfg::node
 
 		cfg::uint64 perf_report_threshold{this, "Performance Report Threshold", 500, true}; // In µs, 0.5ms = default, 0 = everything
 		cfg::_bool perf_report{this, "Enable Performance Report", false, true}; // Show certain perf-related logs
+		cfg::_bool external_debugger{this, "Assume External Debugger"};
 	} core{ this };
 
 	struct node_vfs : cfg::node
@@ -157,6 +158,8 @@ struct cfg_root : cfg::node
 		cfg::_bool vblank_ntsc{ this, "Vblank NTSC Fixup", false, true };
 		cfg::_bool decr_memory_layout{ this, "DECR memory layout", false}; // Force enable increased allowed main memory range as DECR console
 		cfg::_bool host_label_synchronization{ this, "Allow Host GPU Labels", false };
+		cfg::_bool disable_msl_fast_math{ this, "Disable MSL Fast Math", false };
+		cfg::_bool mvk_software_vksemaphore{ this, "Software VkSemaphore", false };
 
 		struct node_vk : cfg::node
 		{
@@ -165,12 +168,11 @@ struct cfg_root : cfg::node
 			cfg::string adapter{ this, "Adapter" };
 			cfg::_bool force_fifo{ this, "Force FIFO present mode" };
 			cfg::_bool force_primitive_restart{ this, "Force primitive restart flag" };
-			cfg::_bool force_disable_exclusive_fullscreen_mode{ this, "Force Disable Exclusive Fullscreen Mode" };
+			cfg::_bool force_disable_exclusive_fullscreen_mode{ this, "Force Disable Exclusive Fullscreen Mode", false };
 			cfg::_bool asynchronous_texture_streaming{ this, "Asynchronous Texture Streaming 2", false };
 			cfg::_bool fsr_upscaling{ this, "Enable FidelityFX Super Resolution Upscaling", false, true };
 			cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
-			cfg::_enum<vk_metal_semaphore_mode> metal_semaphore{ this, "Metal Semaphore", vk_metal_semaphore_mode::mtlevent_preferred };
 
 		} vk{ this };
 
@@ -228,7 +230,8 @@ struct cfg_root : cfg::node
 		node_audio(cfg::node* _this) : cfg::node(_this, "Audio") {}
 
 		cfg::_enum<audio_renderer> renderer{ this, "Renderer", audio_renderer::cubeb, true };
-		cfg::_enum<audio_provider> provider{ this, "Audio provider", audio_provider::cell_audio, false };
+		cfg::_enum<audio_provider> provider{ this, "Audio Provider", audio_provider::cell_audio, false };
+		cfg::_enum<audio_avport> rsxaudio_port{ this, "RSXAudio Avport", audio_avport::hdmi_0, true };
 		cfg::_bool dump_to_file{ this, "Dump to file", false, true };
 		cfg::_bool convert_to_s16{ this, "Convert to 16 bit", false, true };
 		cfg::_enum<audio_downmix> audio_channel_downmix{ this, "Audio Channels", audio_downmix::downmix_to_stereo, true };
@@ -239,6 +242,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
 		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@" };
+		cfg::_enum<music_handler> music{ this, "Music Handler", music_handler::qt };
 	} audio{ this };
 
 	struct node_io : cfg::node

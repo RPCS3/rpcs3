@@ -392,6 +392,8 @@ private:
 	bool check_button(const EvdevButton& b, const u32 code);
 	bool check_buttons(const std::vector<EvdevButton>& b, const u32 code);
 
+	void handle_input_event(const input_event& evt, const std::shared_ptr<Pad>& pad);
+
 protected:
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	void get_mapping(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;

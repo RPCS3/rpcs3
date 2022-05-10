@@ -30,11 +30,11 @@ class TRPLoader final
 public:
 	TRPLoader(const fs::file& f);
 
-	bool Install(const std::string& dest, bool show = false);
+	bool Install(std::string_view dest, bool show = false);
 	bool LoadHeader(bool show = false);
 	u64 GetRequiredSpace() const;
 
-	bool ContainsEntry(const char *filename);
-	void RemoveEntry(const char *filename);
-	void RenameEntry(const char *oldname, const char *newname);
+	bool ContainsEntry(std::string_view filename);
+	void RemoveEntry(std::string_view filename);
+	void RenameEntry(std::string_view oldname, std::string_view newname);
 };

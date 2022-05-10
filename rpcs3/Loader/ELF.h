@@ -33,6 +33,54 @@ enum class elf_machine : u16
 	mips = 0x08,
 };
 
+enum class sec_type : u32
+{
+	sht_null = 0,
+	sht_progbits = 1,
+	sht_symtab = 2,
+	sht_strtab = 3,
+	sht_rela = 4,
+	sht_hash = 5,
+	sht_dynamic = 6,
+	sht_note = 7,
+	sht_nobits = 8,
+	sht_rel = 9,
+};
+
+enum class sh_flag : u32
+{
+	shf_write,
+	shf_alloc,
+	shf_execinstr,
+
+	__bitset_enum_max
+};
+
+constexpr bool is_memorizable_section(sec_type type, bs_t<sh_flag> flags)
+{
+	switch (type)
+	{
+	case sec_type::sht_null:
+	case sec_type::sht_nobits:
+	{
+		return false;
+	}
+	case sec_type::sht_progbits:
+	{
+		return flags.all_of(sh_flag::shf_alloc);
+	}
+	default:
+	{
+		if (type > sec_type::sht_rel)
+		{
+			return false;
+		}
+
+		return true;
+	}
+	}
+}
+
 template<typename T>
 using elf_be = be_t<T>;
 
@@ -123,8 +171,8 @@ template<template<typename T> class en_t, typename sz_t>
 struct elf_shdr
 {
 	en_t<u32> sh_name;
-	en_t<u32> sh_type;
-	en_t<sz_t> sh_flags;
+	en_t<sec_type> sh_type;
+	en_t<sz_t> _sh_flags;
 	en_t<sz_t> sh_addr;
 	en_t<sz_t> sh_offset;
 	en_t<sz_t> sh_size;
@@ -132,6 +180,21 @@ struct elf_shdr
 	en_t<u32> sh_info;
 	en_t<sz_t> sh_addralign;
 	en_t<sz_t> sh_entsize;
+
+	bs_t<sh_flag> sh_flags() const
+	{
+		return std::bit_cast<bs_t<sh_flag>>(static_cast<u32>(+_sh_flags));
+	}
+};
+
+template<template<typename T> class en_t, typename sz_t>
+struct elf_shdata final : elf_shdr<en_t, sz_t>
+{
+	std::vector<uchar> bin{};
+
+	using base = elf_shdr<en_t, sz_t>;
+
+	elf_shdata() = default;
 };
 
 // ELF loading options
@@ -177,11 +240,12 @@ public:
 	using phdr_t = elf_phdr<en_t, sz_t>;
 	using shdr_t = elf_shdr<en_t, sz_t>;
 	using prog_t = elf_prog<en_t, sz_t>;
+	using shdata_t = elf_shdata<en_t, sz_t>;
 
 	ehdr_t header{};
 
 	std::vector<prog_t> progs{};
-	std::vector<shdr_t> shdrs{};
+	std::vector<shdata_t> shdrs{};
 
 public:
 	elf_object() = default;
@@ -238,6 +302,7 @@ public:
 
 		// Load program headers
 		std::vector<phdr_t> _phdrs;
+		std::vector<shdr_t> _shdrs;
 
 		if (!(opts & elf_opt::no_programs))
 		{
@@ -249,7 +314,7 @@ public:
 		if (!(opts & elf_opt::no_sections))
 		{
 			stream.seek(offset + header.e_shoff);
-			if (!stream.read(shdrs, header.e_shnum))
+			if (!stream.read(_shdrs, header.e_shnum))
 				return set_error(elf_error::stream_shdrs);
 		}
 
@@ -257,14 +322,26 @@ public:
 		progs.reserve(_phdrs.size());
 		for (const auto& hdr : _phdrs)
 		{
-			progs.emplace_back();
-
-			static_cast<phdr_t&>(progs.back()) = hdr;
+			static_cast<phdr_t&>(progs.emplace_back()) = hdr;
 
 			if (!(opts & elf_opt::no_data))
 			{
 				stream.seek(offset + hdr.p_offset);
 				if (!stream.read(progs.back().bin, hdr.p_filesz))
+					return set_error(elf_error::stream_data);
+			}
+		}
+
+		shdrs.clear();
+		shdrs.reserve(_shdrs.size());
+		for (const auto& shdr : _shdrs)
+		{
+			static_cast<shdr_t&>(shdrs.emplace_back()) = shdr;
+
+			if (!(opts & elf_opt::no_data) && is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
+			{
+				stream.seek(offset + shdr.sh_offset);
+				if (!stream.read(shdrs.back().bin, shdr.sh_size))
 					return set_error(elf_error::stream_data);
 			}
 		}
@@ -278,6 +355,8 @@ public:
 	std::vector<u8> save(std::vector<u8>&& init = std::vector<u8>{}) const
 	{
 		fs::file stream = fs::make_stream<std::vector<u8>>(std::move(init));
+
+		const bool fixup_shdrs = shdrs.empty() || shdrs[0].sh_type != sec_type::sht_null;
 
 		// Write header
 		ehdr_t header{};
@@ -298,7 +377,7 @@ public:
 		header.e_phentsize = u32{sizeof(phdr_t)};
 		header.e_phnum = ::size32(progs);
 		header.e_shentsize = u32{sizeof(shdr_t)};
-		header.e_shnum = ::size32(shdrs);
+		header.e_shnum = ::size32(shdrs) + u32{fixup_shdrs};
 		header.e_shstrndx = this->header.e_shstrndx;
 		stream.write(header);
 
@@ -310,9 +389,19 @@ public:
 			stream.write(phdr);
 		}
 
+		if (fixup_shdrs)
+		{
+			// Insert a must-have empty section at the start
+			stream.write(shdr_t{});
+		}
+
 		for (shdr_t shdr : shdrs)
 		{
-			// TODO?
+			if (is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
+			{
+				shdr.sh_offset = std::exchange(off, off + shdr.sh_size);
+			}
+
 			stream.write(shdr);
 		}
 
@@ -320,6 +409,16 @@ public:
 		for (const auto& prog : progs)
 		{
 			stream.write(prog.bin);
+		}
+
+		for (const auto& shdr : shdrs)
+		{
+			if (!is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
+			{
+				continue;
+			}
+
+			stream.write(shdr.bin);
 		}
 
 		return std::move(static_cast<fs::container_stream<std::vector<u8>>*>(stream.release().get())->obj);
@@ -364,5 +463,7 @@ public:
 
 using ppu_exec_object = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::none, elf_type::exec>;
 using ppu_prx_object  = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::lv2, elf_type::prx>;
+using ppu_rel_object  = elf_object<elf_be, u64, elf_machine::ppc64, elf_os::lv2, elf_type::rel>;
 using spu_exec_object = elf_object<elf_be, u32, elf_machine::spu, elf_os::none, elf_type::exec>;
+using spu_rel_object  = elf_object<elf_be, u32, elf_machine::spu, elf_os::none, elf_type::rel>;
 using arm_exec_object = elf_object<elf_le, u32, elf_machine::arm, elf_os::none, elf_type::none>;

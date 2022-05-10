@@ -51,6 +51,8 @@ namespace utils
 
 	int get_maxfiles();
 
+	bool get_low_power_mode();
+
 	ullong get_tsc_freq();
 
 	u64 get_total_memory();

@@ -18,6 +18,7 @@
 #include <QJsonDocument>
 #include <QMessageBox>
 #include <QMetaEnum>
+#include <QStandardPaths>
 
 #include "rpcs3qt/gui_application.h"
 #include "rpcs3qt/fatal_error_dialog.h"
@@ -97,7 +98,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		buf = std::string(_text);
 
 		// Always print thread id
-		fmt::append(buf, "\nThread id = %s.", std::this_thread::get_id());
+		fmt::append(buf, "\n\nThread id = %s.", std::this_thread::get_id());
 	}
 
 	std::string_view text = buf.empty() ? _text : buf;
@@ -258,6 +259,7 @@ constexpr auto arg_installpkg   = "installpkg";
 constexpr auto arg_commit_db    = "get-commit-db";
 constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
+constexpr auto arg_any_location = "allow-any-location";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -444,6 +446,9 @@ int main(int argc, char** argv)
 	{
 		report_fatal_error("Not enough memory for RPCS3 process.");
 	}
+
+	WSADATA wsa_data;
+	WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #endif
 
 	ensure(thread_ctrl::is_main(), "Not main thread");
@@ -473,7 +478,7 @@ int main(int argc, char** argv)
 	{
 		// Write RPCS3 version
 		logs::stored_message ver{sys_log.always()};
-		ver.text = fmt::format("RPCS3 v%s | %s", rpcs3::get_version().to_string(), rpcs3::get_branch());
+		ver.text = fmt::format("RPCS3 v%s", rpcs3::get_verbose_version());
 
 		// Write System information
 		logs::stored_message sys{sys_log.always()};
@@ -513,14 +518,18 @@ int main(int argc, char** argv)
 	rlim.rlim_max = 4096;
 #ifdef RLIMIT_NOFILE
 	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
+	{
 		std::cerr << "Failed to set max open file limit (4096).\n";
+	}
 #endif
 
 	rlim.rlim_cur = 0x80000000;
 	rlim.rlim_max = 0x80000000;
 #ifdef RLIMIT_MEMLOCK
 	if (::setrlimit(RLIMIT_MEMLOCK, &rlim) != 0)
+	{
 		std::cerr << "Failed to set RLIMIT_MEMLOCK size to 2 GiB. Try to update your system configuration.\n";
+	}
 #endif
 	// Work around crash on startup on KDE: https://bugs.kde.org/show_bug.cgi?id=401637
 	setenv( "KDE_DEBUG", "1", 0 );
@@ -531,13 +540,20 @@ int main(int argc, char** argv)
 	::getrlimit(RLIMIT_NOFILE, &rlim);
 	rlim.rlim_cur = OPEN_MAX;
 	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
+	{
 		std::cerr << "Failed to set max open file limit (" << OPEN_MAX << ").\n";
+	}
 #endif
 
 #ifndef _WIN32
 	// Write file limits
 	sys_log.notice("Maximum open file descriptors: %i", utils::get_maxfiles());
 #endif
+
+	if (utils::get_low_power_mode())
+	{
+		sys_log.error("Low Power Mode is enabled, performance may be reduced.");
+	}
 
 	std::lock_guard qt_init(s_qt_init);
 
@@ -580,6 +596,7 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_commit_db, "Update commits.lst cache. Optional arguments: <path> <sha>"));
 	parser.addOption(QCommandLineOption(arg_timer, "Enable high resolution timer for better performance (windows)", "enabled", "1"));
 	parser.addOption(QCommandLineOption(arg_verbose_curl, "Enable verbose curl logging."));
+	parser.addOption(QCommandLineOption(arg_any_location, "Allow RPCS3 to be run from any location. Dangerous"));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
@@ -888,6 +905,25 @@ int main(int argc, char** argv)
 	{
 		// Should be unreachable
 		report_fatal_error("RPCS3 initialization failed!");
+	}
+
+	// Check if the current location is actually useable
+	if (!parser.isSet(arg_any_location))
+	{
+		const std::string emu_dir = rpcs3::utils::get_emu_dir();
+
+		// Check temporary directories
+		for (const QString& path : QStandardPaths::standardLocations(QStandardPaths::StandardLocation::TempLocation))
+		{
+			if (Emu.IsPathInsideDir(emu_dir, path.toStdString()))
+			{
+				report_fatal_error(fmt::format(
+					"RPCS3 should never be run from a temporary location!\n"
+					"Please install RPCS3 in a persistent location.\n"
+					"Current location:\n%s", emu_dir));
+				return 1;
+			}
+		}
 	}
 
 #ifdef _WIN32

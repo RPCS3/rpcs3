@@ -17,7 +17,7 @@ class instruction_editor_dialog : public QDialog
 private:
 	u32 m_pc;
 	u8* m_cpu_offset;
-	CPUDisAsm* m_disasm;
+	std::shared_ptr<CPUDisAsm> m_disasm; // shared in order to allow an incomplete type
 	QLineEdit* m_instr;
 	QLabel* m_preview;
 	QCheckBox* m_apply_for_spu_group = nullptr;

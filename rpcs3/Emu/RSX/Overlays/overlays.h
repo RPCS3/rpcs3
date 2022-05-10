@@ -81,8 +81,8 @@ namespace rsx
 			};
 
 		protected:
-			Timer input_timer;
-			std::set<u8> auto_repeat_buttons = {
+			Timer m_input_timer;
+			std::set<u8> m_auto_repeat_buttons = {
 				pad_button::dpad_up,
 				pad_button::dpad_down,
 				pad_button::dpad_left,
@@ -94,14 +94,17 @@ namespace rsx
 			};
 			atomic_t<bool> exit = false;
 			atomic_t<bool> m_interactive = false;
+			bool m_start_pad_interception = true;
 			atomic_t<bool> m_stop_pad_interception = false;
 			atomic_t<u64> thread_bits = 0;
+			bool m_keyboard_input_enabled = false; // Allow keyboard events
+			bool m_keyboard_pad_handler_active = true; // Initialized as true to prevent keyboard input until proven otherwise.
 
 			static thread_local u64 g_thread_bit;
 
 			u64 alloc_thread_bit();
 
-			std::function<void(s32 status)> on_close;
+			std::function<void(s32 status)> on_close = nullptr;
 
 		public:
 			s32 return_code = 0; // CELL_OK
@@ -111,6 +114,7 @@ namespace rsx
 			compiled_resource get_compiled() override = 0;
 
 			virtual void on_button_pressed(pad_button /*button_press*/) {}
+			virtual void on_key_pressed(u32 /*led*/, u32 /*mkey*/, u32 /*key_code*/, u32 /*out_key_code*/, bool /*pressed*/) {}
 
 			virtual void close(bool use_callback, bool stop_pad_interception);
 

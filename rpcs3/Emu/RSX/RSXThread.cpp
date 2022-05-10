@@ -5,11 +5,14 @@
 #include "Emu/Cell/timers.hpp"
 
 #include "Common/BufferUtils.h"
+#include "Common/buffer_stream.hpp"
 #include "Common/texture_cache.h"
 #include "Common/surface_store.h"
+#include "Common/time.hpp"
 #include "Capture/rsx_capture.h"
 #include "rsx_methods.h"
 #include "gcm_printing.h"
+#include "RSXDisAsm.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
@@ -483,6 +486,7 @@ namespace rsx
 		// This whole thing becomes a mess if we don't have a provoking attribute.
 		const auto vertex_id = vertex_push_buffers[0].get_vertex_id();
 		vertex_push_buffers[attribute].set_vertex_data(attribute, vertex_id, subreg_index, type, size, value);
+		m_graphics_state |= rsx::pipeline_state::push_buffer_arrays_dirty;
 	}
 
 	u32 thread::get_push_buffer_vertex_count() const
@@ -507,7 +511,9 @@ namespace rsx
 	void thread::end()
 	{
 		if (capture_current_frame)
+		{
 			capture::capture_draw_memory(this);
+		}
 
 		in_begin_end = false;
 		m_frame_stats.draw_calls++;
@@ -517,12 +523,17 @@ namespace rsx
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		ROP_sync_timestamp = rsx::get_shared_tag();
 
-		for (auto & push_buf : vertex_push_buffers)
+		if (m_graphics_state & rsx::pipeline_state::push_buffer_arrays_dirty)
 		{
-			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
-			//rsx::method_registers.register_vertex_info[index].size = 0;
+			for (auto& push_buf : vertex_push_buffers)
+			{
+				//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
+				//rsx::method_registers.register_vertex_info[index].size = 0;
 
-			push_buf.clear();
+				push_buf.clear();
+			}
+
+			m_graphics_state &= ~rsx::pipeline_state::push_buffer_arrays_dirty;
 		}
 
 		element_push_buffer.clear();
@@ -630,7 +641,7 @@ namespace rsx
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 
-		last_flip_time = get_system_time() - 1000000;
+		last_guest_flip_timestamp = rsx::uclock() - 1000000;
 
 		vblank_count = 0;
 
@@ -642,7 +653,7 @@ namespace rsx
 #else
 			constexpr u32 host_min_quantum = 500;
 #endif
-			u64 start_time = get_system_time();
+			u64 start_time = rsx::uclock();
 
 			u64 vblank_rate = g_cfg.video.vblank_rate;
 			u64 vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
@@ -653,7 +664,7 @@ namespace rsx
 			while (!is_stopped())
 			{
 				// Get current time
-				const u64 current = get_system_time();
+				const u64 current = rsx::uclock();
 
 				// Calculate the time at which we need to send a new VBLANK signal
 				const u64 post_event_time = start_time + (local_vblank_count + 1) * vblank_period / vblank_rate;
@@ -715,7 +726,7 @@ namespace rsx
 				if (Emu.IsPaused())
 				{
 					// Save the difference before pause
-					start_time = get_system_time() - start_time;
+					start_time = rsx::uclock() - start_time;
 
 					while (Emu.IsPaused() && !is_stopped())
 					{
@@ -723,7 +734,7 @@ namespace rsx
 					}
 
 					// Restore difference
-					start_time = get_system_time() - start_time;
+					start_time = rsx::uclock() - start_time;
 				}
 			}
 		});
@@ -796,10 +807,10 @@ namespace rsx
 		float offset_z = rsx::method_registers.viewport_offset_z();
 		float one = 1.f;
 
-		stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
-		stream_vector(static_cast<char*>(buffer) + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
-		stream_vector(static_cast<char*>(buffer) + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
-		stream_vector(static_cast<char*>(buffer) + 48, 0, 0, 0, std::bit_cast<u32>(one));
+		utils::stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
+		utils::stream_vector(static_cast<char*>(buffer) + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
+		utils::stream_vector(static_cast<char*>(buffer) + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
+		utils::stream_vector(static_cast<char*>(buffer) + 48, 0, 0, 0, std::bit_cast<u32>(one));
 	}
 
 	void thread::fill_user_clip_data(void *buffer) const
@@ -850,9 +861,21 @@ namespace rsx
 	* Fill buffer with vertex program constants.
 	* Buffer must be at least 512 float4 wide.
 	*/
-	void thread::fill_vertex_program_constants_data(void* buffer)
+	void thread::fill_vertex_program_constants_data(void* buffer, const std::vector<u16>& reloc_table)
 	{
-		memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
+		if (!reloc_table.empty()) [[ likely ]]
+		{
+			char* dst = reinterpret_cast<char*>(buffer);
+			for (const auto& index : reloc_table)
+			{
+				utils::stream_vector_from_memory(dst, &rsx::method_registers.transform_constants[index]);
+				dst += 16;
+			}
+		}
+		else
+		{
+			memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
+		}
 	}
 
 	void thread::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/)
@@ -927,8 +950,8 @@ namespace rsx
 		const f32 alpha_ref = rsx::method_registers.alpha_ref();
 
 		u32 *dst = static_cast<u32*>(buffer);
-		stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
-		stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
+		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
+		utils::stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
 	u64 thread::timestamp()
@@ -1627,6 +1650,9 @@ namespace rsx
 
 		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
 
+		// Request for update of fragment constants if the program block is invalidated
+		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
+
 		const auto [program_offset, program_location] = method_registers.shader_program_address();
 		const auto prev_textures_reference_mask = current_fp_metadata.referenced_textures_mask;
 
@@ -1671,6 +1697,9 @@ namespace rsx
 
 		m_graphics_state &= ~rsx::pipeline_state::vertex_program_ucode_dirty;
 
+		// Reload transform constants unconditionally for now
+		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
 		current_vertex_program.data.reserve(512 * 4);
 		current_vertex_program.jump_table.clear();
@@ -1702,12 +1731,6 @@ namespace rsx
 
 	void thread::analyse_current_rsx_pipeline()
 	{
-		if (m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty)
-		{
-			// Request for update of fragment constants if the program block is invalidated
-			m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
-		}
-
 		prefetch_vertex_program();
 		prefetch_fragment_program();
 	}
@@ -1729,6 +1752,12 @@ namespace rsx
 			{
 				current_vp_texture_state.clear(i);
 				current_vp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
+
+				if (backend_config.supports_hw_msaa &&
+					sampler_descriptors[i]->samples > 1)
+				{
+					current_vp_texture_state.multisampled_textures |= (1 << i);
+				}
 			}
 		}
 
@@ -1967,6 +1996,16 @@ namespace rsx
 						// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
 						current_fragment_program.texture_params[i].subpixel_bias = 0.01f;
 					}
+				}
+
+				if (backend_config.supports_hw_msaa &&
+					sampler_descriptors[i]->samples > 1)
+				{
+					current_fp_texture_state.multisampled_textures |= (1 << i);
+					texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
+					texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED_MAG);
+					texture_control |= (static_cast<u32>(tex.min_filter() != rsx::texture_minify_filter::nearest) << texture_control_bits::FILTERED_MIN);
+					texture_control |= (((tex.format() & CELL_GCM_TEXTURE_UN) >> 6) << texture_control_bits::UNNORMALIZED_COORDS);
 				}
 
 				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
@@ -2449,6 +2488,8 @@ namespace rsx
 		{
 			performance_counters.sampled_frames++;
 		}
+
+		last_host_flip_timestamp = rsx::uclock();
 	}
 
 	void thread::check_zcull_status(bool framebuffer_swap)
@@ -2600,9 +2641,66 @@ namespace rsx
 		fifo_ctrl->sync_get();
 	}
 
+	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const
+	{
+		if (!ctrl)
+		{
+			return {0, umax};
+		}
+
+		if (!count)
+		{
+			return {0, get};
+		}
+
+		u32 true_get = ctrl->get;
+		u32 start = last_known_code_start;
+
+		RSXDisAsm disasm(cpu_disasm_mode::survey_cmd_size, vm::g_sudo_addr, 0, this);
+
+		std::vector<u32> pcs_of_valid_cmds;
+		pcs_of_valid_cmds.reserve(std::min<u32>((get - start) / 16, 0x4000)); // Rough estimation of final array size
+
+		auto probe_code_region = [&](u32 probe_start) -> std::pair<u32, u32>
+		{
+			pcs_of_valid_cmds.clear();
+			pcs_of_valid_cmds.push_back(probe_start);
+
+			while (pcs_of_valid_cmds.back() < get)
+			{
+				if (u32 advance = disasm.disasm(pcs_of_valid_cmds.back()))
+				{
+					pcs_of_valid_cmds.push_back(pcs_of_valid_cmds.back() + advance);
+				}
+				else
+				{
+					return {0, get};
+				}
+			}
+
+			if (pcs_of_valid_cmds.size() == 1u || pcs_of_valid_cmds.back() != get)
+			{
+				return {0, get};
+			}
+
+			u32 found_cmds_count = std::min(count, ::size32(pcs_of_valid_cmds) - 1);
+
+			return {found_cmds_count, *(pcs_of_valid_cmds.end() - 1 - found_cmds_count)};
+		};
+
+		auto pair = probe_code_region(start);
+
+		if (!pair.first)
+		{
+			pair = probe_code_region(true_get);
+		}
+
+		return pair;
+	}
+
 	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
 	{
-		const u64 current_time = get_system_time();
+		const u64 current_time = rsx::uclock();
 
 		if (recovered_fifo_cmds_history.size() == 20u)
 		{
@@ -2659,7 +2757,7 @@ namespace rsx
 
 		// Some cases do not need full delay
 		remaining = utils::aligned_div(remaining, div);
-		const u64 until = get_system_time() + remaining;
+		const u64 until = rsx::uclock() + remaining;
 
 		while (true)
 		{
@@ -2691,7 +2789,7 @@ namespace rsx
 				busy_wait(100);
 			}
 
-			const u64 current = get_system_time();
+			const u64 current = rsx::uclock();
 
 			if (current >= until)
 			{
@@ -2922,7 +3020,7 @@ namespace rsx
 		//Average load over around 30 frames
 		if (!performance_counters.last_update_timestamp || performance_counters.sampled_frames > 30)
 		{
-			const auto timestamp = get_system_time();
+			const auto timestamp = rsx::uclock();
 			const auto idle = performance_counters.idle_time.load();
 			const auto elapsed = timestamp - performance_counters.last_update_timestamp;
 
@@ -3086,7 +3184,7 @@ namespace rsx
 
 		if (limit)
 		{
-			const u64 time = get_system_time() - Emu.GetPauseTime();
+			const u64 time = rsx::uclock() - Emu.GetPauseTime();
 			const u64 needed_us = static_cast<u64>(1000000 / limit);
 
 			if (int_flip_index == 0)
@@ -3124,7 +3222,7 @@ namespace rsx
 
 		flip(m_queued_flip);
 
-		last_flip_time = get_system_time() - 1000000;
+		last_guest_flip_timestamp = rsx::uclock() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
 
@@ -3630,7 +3728,7 @@ namespace rsx
 					}
 				}
 
-				if (m_tsc = get_system_time(); m_tsc < m_next_tsc)
+				if (m_tsc = rsx::uclock(); m_tsc < m_next_tsc)
 				{
 					return;
 				}

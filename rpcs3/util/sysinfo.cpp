@@ -57,6 +57,11 @@ namespace Darwin_Version
 	extern int getNSminorVersion();
 	extern int getNSpatchVersion();
 }
+
+namespace Darwin_ProcessInfo
+{
+	extern bool getLowPowerModeEnabled();
+}
 #endif
 
 bool utils::has_ssse3()
@@ -471,6 +476,15 @@ int utils::get_maxfiles()
 	ensure(getrlimit(RLIMIT_NOFILE, &limits) == 0);
 
 	return limits.rlim_cur;
+#endif
+}
+
+bool utils::get_low_power_mode()
+{
+#ifdef __APPLE__
+	return Darwin_ProcessInfo::getLowPowerModeEnabled();
+#else
+	return false;
 #endif
 }
 

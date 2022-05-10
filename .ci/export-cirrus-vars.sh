@@ -10,4 +10,4 @@ while IFS='=' read -r key val; do
     # Skip over lines containing comments.
     [ "${key##\#*}" ] || continue
     export "$key"="$val"
-done < ".ci/azure-vars.env"
+done < ".ci/ci-vars.env"

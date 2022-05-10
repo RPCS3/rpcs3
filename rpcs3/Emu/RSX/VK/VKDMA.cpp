@@ -73,9 +73,29 @@ namespace vk
 		// Initialize memory contents. This isn't something that happens often.
 		// Pre-loading the contents helps to avoid leakage when mixed types of allocations are in use (NVIDIA)
 		// TODO: Fix memory lost when old object goes out of use with in-flight data.
-		auto dst = allocated_memory->map(0, size);
-		auto src = vm::get_super_ptr(base_address);
-		std::memcpy(dst, src, size);
+		auto dst = static_cast<u8*>(allocated_memory->map(0, size));
+		auto src = vm::get_super_ptr<u8>(base_address);
+
+		if (rsx::get_location(base_address) == CELL_GCM_LOCATION_LOCAL ||
+			vm::check_addr(base_address, 0, static_cast<u32>(size))) [[ likely ]]
+		{
+			// Linear virtual memory space. Copy all at once.
+			std::memcpy(dst, src, size);
+		}
+		else
+		{
+			// Some games will have address holes in the range and page in data using faults.
+			// Copy page by page. Slow, but we only really have to do this a handful of times.
+			// Note that base_address is 16k aligned.
+			for (u32 address = base_address; address < (base_address + size); address += 4096, src += 4096, dst += 4096)
+			{
+				if (vm::check_addr(address, 0))
+				{
+					std::memcpy(dst, src, 4096);
+				}
+			}
+		}
+
 		allocated_memory->unmap();
 
 		s_allocated_dma_pool_size += allocated_memory->size();

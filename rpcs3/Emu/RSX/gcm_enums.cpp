@@ -390,9 +390,8 @@ void fmt_class_string<blit_engine::transfer_operation>::format(std::string& out,
 		case blit_engine::transfer_operation::srccopy: return "srccopy";
 		case blit_engine::transfer_operation::srccopy_and: return "srccopy_and";
 		case blit_engine::transfer_operation::srccopy_premult: return "srccopy_premult";
+		default: return unknown;
 		}
-
-		return unknown;
 	});
 }
 
@@ -416,9 +415,8 @@ void fmt_class_string<blit_engine::transfer_source_format>::format(std::string& 
 		case blit_engine::transfer_source_format::x8r8g8b8: return "x8r8g8b8";
 		case blit_engine::transfer_source_format::y8: return "y8";
 		case blit_engine::transfer_source_format::yb8cr8ya8cb8: return "yb8cr8ya8cb8";
+		default: return unknown;
 		}
-
-		return unknown;
 	});
 }
 
@@ -447,9 +445,8 @@ void fmt_class_string<blit_engine::transfer_destination_format>::format(std::str
 		case blit_engine::transfer_destination_format::a8r8g8b8: return "a8r8g8b8";
 		case blit_engine::transfer_destination_format::r5g6b5: return "r5g6b5";
 		case blit_engine::transfer_destination_format::y32: return "y32";
+		default: return unknown;
 		}
-
-		return unknown;
 	});
 }
 

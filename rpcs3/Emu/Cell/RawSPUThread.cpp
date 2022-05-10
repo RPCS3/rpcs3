@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Loader/ELF.h"
+#include "util/asm.hpp"
 
 #include "Emu/Cell/RawSPUThread.h"
 
@@ -330,6 +331,43 @@ void spu_load_exec(const spu_exec_object& elf)
 			std::memcpy(spu->_ptr<void>(prog.p_vaddr), prog.bin.data(), prog.p_filesz);
 		}
 	}
+
+	spu_thread::g_raw_spu_id[0] = spu->id;
+
+	spu->status_npc = {SPU_STATUS_RUNNING, elf.header.e_entry};
+	atomic_storage<u32>::release(spu->pc, elf.header.e_entry);
+}
+
+void spu_load_rel_exec(const spu_rel_object& elf)
+{
+	spu_thread::g_raw_spu_ctr++;
+
+	auto spu = idm::make_ptr<named_thread<spu_thread>>(nullptr, 0, "test_spu", 0);
+
+	u64 total_memsize = 0;
+
+	// Compute executable data size
+	for (const auto& shdr : elf.shdrs)
+	{
+		if (shdr.sh_type == sec_type::sht_progbits && shdr.sh_flags().all_of(sh_flag::shf_alloc))
+		{
+			total_memsize = utils::align<u32>(total_memsize + shdr.sh_size, 4);
+		}
+	}
+
+	// Place executable data in SPU local memory
+	u32 offs = 0;
+
+	for (const auto& shdr : elf.shdrs)
+	{
+		if (shdr.sh_type == sec_type::sht_progbits && shdr.sh_flags().all_of(sh_flag::shf_alloc))
+		{
+			std::memcpy(spu->_ptr<void>(offs), shdr.bin.data(), shdr.sh_size);
+			offs = utils::align<u32>(offs + shdr.sh_size, 4);
+		}
+	}
+
+	spu_log.success("Loaded 0x%x of SPU relocatable executable data", total_memsize);
 
 	spu_thread::g_raw_spu_id[0] = spu->id;
 

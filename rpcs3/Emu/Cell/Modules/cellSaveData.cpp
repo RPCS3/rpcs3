@@ -1045,8 +1045,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					return {CELL_SAVEDATA_ERROR_PARAM, "34"};
 				}
 
-				// TODO: If adding the new data to the save_entries vector
-				// to be displayed in the save mangaer UI, it should be focused here
+				if (listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_TAIL)
+				{
+					focused = ::size32(save_entries);
+				}
+				else
+				{
+					focused = 0;
+				}
 				break;
 			}
 			default:
@@ -1793,7 +1799,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		};
 		// clang-format on
 
-		cellSaveData.warning("savedata_op(): Fileop: file=\"%s\", type=%d, op=%d", file_path, fileSet->fileType, fileSet->fileOperation);
+		cellSaveData.warning("savedata_op(): Fileop: file='%s', type=%d, op=%d, bufSize=%d, fileSize=%d, offset=%d",
+			file_path, fileSet->fileType, fileSet->fileOperation, fileSet->fileBufSize, fileSet->fileSize, fileSet->fileOffset);
 
 		if ((file_path == "." || file_path == "..") && fileSet->fileOperation <= CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC)
 		{

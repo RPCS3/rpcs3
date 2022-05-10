@@ -3,6 +3,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
+#include "Emu/Cell/Modules/cellKb.h"
 
 LOG_CHANNEL(osk, "OSK");
 
@@ -12,11 +13,13 @@ namespace rsx
 	{
 		osk_dialog::osk_dialog()
 		{
-			auto_repeat_buttons.insert(pad_button::L1);
-			auto_repeat_buttons.insert(pad_button::R1);
-			auto_repeat_buttons.insert(pad_button::cross);
-			auto_repeat_buttons.insert(pad_button::triangle);
-			auto_repeat_buttons.insert(pad_button::square);
+			m_auto_repeat_buttons.insert(pad_button::L1);
+			m_auto_repeat_buttons.insert(pad_button::R1);
+			m_auto_repeat_buttons.insert(pad_button::cross);
+			m_auto_repeat_buttons.insert(pad_button::triangle);
+			m_auto_repeat_buttons.insert(pad_button::square);
+
+			m_keyboard_input_enabled = true;
 		}
 
 		void osk_dialog::Close(s32 status)
@@ -262,12 +265,9 @@ namespace rsx
 		void osk_dialog::initialize_layout(const std::u32string& title, const std::u32string& initial_text)
 		{
 			m_background.set_size(1280, 720);
-			m_background.back_color.a = 0.8f;
-
-			m_frame.back_color = { 0.2f, 0.2f, 0.2f, 1.f };
 
 			m_title.set_unicode_text(title);
-			m_title.back_color.a = 0.f;
+			m_title.back_color.a = 0.7f; // Uses the dimmed color of the frame background
 
 			m_preview.password_mode = m_password_mode;
 			m_preview.set_placeholder(get_placeholder());
@@ -390,6 +390,9 @@ namespace rsx
 
 		void osk_dialog::on_button_pressed(pad_button button_press)
 		{
+			if (!pad_input_enabled || ignore_input_events)
+				return;
+
 			const auto index_limit = (num_columns * num_rows) - 1;
 
 			const auto on_accept = [this]()
@@ -583,16 +586,144 @@ namespace rsx
 			}
 		}
 
+		void osk_dialog::on_key_pressed(u32 led, u32 mkey, u32 key_code, u32 out_key_code, bool pressed)
+		{
+			if (!pressed || !keyboard_input_enabled || ignore_input_events)
+				return;
+
+			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d)", led, mkey, key_code, out_key_code, pressed);
+
+			// Get keyboard layout
+			u32 kb_mapping = CELL_KB_MAPPING_101;
+			u32 osk_panel_mode = CELL_OSKDIALOG_PANELMODE_DEFAULT;
+			for (usz i = 0; i < m_panels.size(); ++i)
+			{
+				if (m_panel_index == i)
+				{
+					osk_panel_mode = m_panels[i].osk_panel_mode;
+					break;
+				}
+			}
+
+			switch (osk_panel_mode)
+			{
+			case CELL_OSKDIALOG_PANELMODE_DEFAULT            : kb_mapping = CELL_KB_MAPPING_101; break;
+			case CELL_OSKDIALOG_PANELMODE_GERMAN             : kb_mapping = CELL_KB_MAPPING_GERMAN_GERMANY; break;
+			case CELL_OSKDIALOG_PANELMODE_ENGLISH            : kb_mapping = CELL_KB_MAPPING_ENGLISH_UK; break;
+			case CELL_OSKDIALOG_PANELMODE_SPANISH            : kb_mapping = CELL_KB_MAPPING_SPANISH_SPAIN; break;
+			case CELL_OSKDIALOG_PANELMODE_FRENCH             : kb_mapping = CELL_KB_MAPPING_FRENCH_FRANCE; break;
+			case CELL_OSKDIALOG_PANELMODE_ITALIAN            : kb_mapping = CELL_KB_MAPPING_ITALIAN_ITALY; break;
+			case CELL_OSKDIALOG_PANELMODE_DUTCH              : kb_mapping = CELL_KB_MAPPING_DUTCH_NETHERLANDS; break;
+			case CELL_OSKDIALOG_PANELMODE_PORTUGUESE         : kb_mapping = CELL_KB_MAPPING_PORTUGUESE_PORTUGAL; break;
+			case CELL_OSKDIALOG_PANELMODE_RUSSIAN            : kb_mapping = CELL_KB_MAPPING_RUSSIAN_RUSSIA; break;
+			case CELL_OSKDIALOG_PANELMODE_JAPANESE           : kb_mapping = CELL_KB_MAPPING_106; break;
+			case CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE: kb_mapping = CELL_KB_MAPPING_106; break;
+			case CELL_OSKDIALOG_PANELMODE_POLISH             : kb_mapping = CELL_KB_MAPPING_POLISH_POLAND; break;
+			case CELL_OSKDIALOG_PANELMODE_KOREAN             : kb_mapping = CELL_KB_MAPPING_KOREAN_KOREA; break;
+			case CELL_OSKDIALOG_PANELMODE_TURKEY             : kb_mapping = CELL_KB_MAPPING_TURKISH_TURKEY; break;
+			case CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE: kb_mapping = CELL_KB_MAPPING_CHINESE_TRADITIONAL; break;
+			case CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE : kb_mapping = CELL_KB_MAPPING_CHINESE_SIMPLIFIED; break;
+			case CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL  : kb_mapping = CELL_KB_MAPPING_PORTUGUESE_BRAZIL; break;
+			case CELL_OSKDIALOG_PANELMODE_DANISH             : kb_mapping = CELL_KB_MAPPING_DANISH_DENMARK; break;
+			case CELL_OSKDIALOG_PANELMODE_SWEDISH            : kb_mapping = CELL_KB_MAPPING_SWEDISH_SWEDEN; break;
+			case CELL_OSKDIALOG_PANELMODE_NORWEGIAN          : kb_mapping = CELL_KB_MAPPING_NORWEGIAN_NORWAY; break;
+			case CELL_OSKDIALOG_PANELMODE_FINNISH            : kb_mapping = CELL_KB_MAPPING_FINNISH_FINLAND; break;
+			case CELL_OSKDIALOG_PANELMODE_JAPANESE_HIRAGANA  : kb_mapping = CELL_KB_MAPPING_106; break;
+			case CELL_OSKDIALOG_PANELMODE_JAPANESE_KATAKANA  : kb_mapping = CELL_KB_MAPPING_106_KANA; break;
+			case CELL_OSKDIALOG_PANELMODE_ALPHABET_FULL_WIDTH: kb_mapping = CELL_KB_MAPPING_106; break;
+			case CELL_OSKDIALOG_PANELMODE_ALPHABET           : kb_mapping = CELL_KB_MAPPING_101; break;
+			case CELL_OSKDIALOG_PANELMODE_LATIN              : kb_mapping = CELL_KB_MAPPING_101; break;
+			case CELL_OSKDIALOG_PANELMODE_NUMERAL_FULL_WIDTH : kb_mapping = CELL_KB_MAPPING_101; break;
+			case CELL_OSKDIALOG_PANELMODE_NUMERAL            : kb_mapping = CELL_KB_MAPPING_101; break;
+			case CELL_OSKDIALOG_PANELMODE_URL                : kb_mapping = CELL_KB_MAPPING_101; break;
+			case CELL_OSKDIALOG_PANELMODE_PASSWORD           : kb_mapping = CELL_KB_MAPPING_101; break;
+			default                                          : kb_mapping = CELL_KB_MAPPING_101; break;
+			}
+
+			// Convert key to its u32string presentation
+			const u16 converted_out_key = cellKbCnvRawCode(kb_mapping, mkey, led, out_key_code);
+			std::u16string utf16_string;
+			utf16_string.push_back(converted_out_key);
+			const std::u32string u32_string = utf16_to_u32string(utf16_string);
+			const std::string out_key_string = utf16_to_ascii8(utf16_string);
+
+			// Find matching key in the OSK
+			bool found_key = false;
+			for (const cell& current_cell : m_grid)
+			{
+				// TODO: maybe just ignore the current charset and check all outputs
+				if (m_selected_charset < current_cell.outputs.size())
+				{
+					for (const auto& str : current_cell.outputs[m_selected_charset])
+					{
+						if (str == u32_string)
+						{
+							// Apply key press
+							if (current_cell.callback)
+							{
+								current_cell.callback(str);
+							}
+							else
+							{
+								on_default_callback(str);
+							}
+
+							found_key = true;
+							break;
+						}
+					}
+
+					if (found_key)
+					{
+						break;
+					}
+				}
+			}
+
+			// Handle special input
+			if (!found_key)
+			{
+				switch (out_key_code)
+				{
+				case CELL_KEYC_SPACE:
+					on_space(u32_string);
+					break;
+				case CELL_KEYC_BS:
+					on_backspace(u32_string);
+					break;
+				case CELL_KEYC_ESCAPE:
+					Close(CELL_OSKDIALOG_CLOSE_CANCEL);
+					break;
+				case CELL_KEYC_ENTER:
+					if ((flags & CELL_OSKDIALOG_NO_RETURN))
+					{
+						Close(CELL_OSKDIALOG_CLOSE_CONFIRM);
+					}
+					else
+					{
+						on_enter(u32_string);
+					}
+					break;
+				default:
+					break;
+				}
+			}
+
+			if (on_osk_key_input_entered)
+			{
+				CellOskDialogKeyMessage key_message{};
+				key_message.led = led;
+				key_message.mkey = mkey;
+				key_message.keycode = key_code;
+				on_osk_key_input_entered(key_message);
+			}
+		}
+
 		void osk_dialog::on_text_changed()
 		{
 			const auto ws = u32string_to_utf16(m_preview.value);
 			const auto length = (ws.length() + 1) * sizeof(char16_t);
 			memcpy(osk_text, ws.c_str(), length);
-
-			if (on_osk_input_entered)
-			{
-				on_osk_input_entered();
-			}
 
 			// Muted contrast for placeholder text
 			m_preview.fore_color.a = m_preview.value.empty() ? 0.5f : 1.f;
@@ -822,11 +953,17 @@ namespace rsx
 			static constexpr auto thread_name = "OSK Thread"sv;
 		};
 
-		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel)
+		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled, bool intercept_input)
 		{
 			state = OskDialogState::Open;
 			flags = prohibit_flags;
 			char_limit = charlimit;
+			m_frame.back_color.r = base_color.r;
+			m_frame.back_color.g = base_color.g;
+			m_frame.back_color.b = base_color.b;
+			m_frame.back_color.a = base_color.a;
+			m_background.back_color.a = dimmer_enabled ? 0.8f : 0.0f;
+			m_start_pad_interception = intercept_input;
 
 			const callback_t shift_cb  = [this](const std::u32string& text){ on_shift(text); };
 			const callback_t layer_cb  = [this](const std::u32string& text){ on_layer(text); };
@@ -1065,7 +1202,10 @@ namespace rsx
 
 				if (const auto error = run_input_loop())
 				{
-					rsx_log.error("Osk input loop exited with error code=%d", error);
+					if (error != selection_code::canceled)
+					{
+						rsx_log.error("Osk input loop exited with error code=%d", error);
+					}
 				}
 
 				thread_bits &= ~tbit;

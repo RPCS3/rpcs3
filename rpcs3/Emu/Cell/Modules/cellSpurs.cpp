@@ -1642,7 +1642,7 @@ s32 cellSpursFinalize(vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	u32 wklEnabled = spurs->wklEnabled.load();
+	[[maybe_unused]] u32 wklEnabled = spurs->wklEnabled.load();
 
 	if (spurs->flags1 & SF1_32_WORKLOADS)
 	{

@@ -10,7 +10,7 @@
 #include <QTextEdit>
 #include <QHBoxLayout>
 #include <QFormLayout>
-#include <QRegExpValidator>
+#include <QRegularExpressionValidator>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -22,7 +22,7 @@ osk_dialog_frame::~osk_dialog_frame()
 	}
 }
 
-void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 /*first_view_panel*/)
+void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 /*first_view_panel*/, color /*base_color*/, bool /*dimmer_enabled*/, bool /*intercept_input*/)
 {
 	state = OskDialogState::Open;
 
@@ -70,14 +70,14 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 		if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
 		{
-			input->setValidator(new QRegExpValidator(QRegExp("^\\S*$"), this));
+			input->setValidator(new QRegularExpressionValidator(QRegularExpression("^\\S*$"), this));
 		}
 
 		connect(input, &QLineEdit::textChanged, input_count_label, [input_count_label, charlimit, this](const QString& text)
 		{
 			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
-			on_osk_input_entered();
+			// if (on_osk_key_input_entered) on_osk_key_input_entered({}); // Not applicable
 		});
 		connect(input, &QLineEdit::returnPressed, m_dialog, &QDialog::accept);
 
@@ -122,7 +122,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
 			{
 				int trim_len = text.length();
-				text.remove(QRegExp("\\s+"));
+				text.remove(QRegularExpression("\\s+"));
 				trim_len -= text.length();
 				cursor_pos -= trim_len;
 			}
@@ -141,7 +141,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
-			on_osk_input_entered();
+			// if (on_osk_key_input_entered) on_osk_key_input_entered({}); // Not applicable
 		});
 
 		inputLayout->addWidget(input);

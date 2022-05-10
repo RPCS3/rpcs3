@@ -43,8 +43,8 @@ struct NPD_HEADER
 	u8 digest[0x10];
 	u8 title_hash[0x10];
 	u8 dev_hash[0x10];
-	u64 unk1;
-	u64 unk2;
+	s64 activate_time;
+	s64 expire_time;
 };
 
 struct EDAT_HEADER
@@ -57,7 +57,8 @@ struct EDAT_HEADER
 // Decrypts full file, or null/empty file
 extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose);
 
-extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, std::string* contentID = nullptr, u32* license = nullptr);
+extern void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& EDAT);
+extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, NPD_HEADER *npd_out = nullptr);
 
 u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 

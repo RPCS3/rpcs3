@@ -1,12 +1,17 @@
 #include "util/types.hpp"
 #include "util/cpu_stats.hpp"
 #include "util/sysinfo.hpp"
+#include "util/logs.hpp"
+#include "Utilities/StrUtil.h"
 #include <algorithm>
 
 #ifdef _WIN32
 #include "windows.h"
 #include "tlhelp32.h"
+#pragma comment(lib, "pdh.lib")
 #else
+#include "fstream"
+#include "sstream"
 #include "stdlib.h"
 #include "sys/times.h"
 #include "sys/types.h"
@@ -44,8 +49,17 @@
 # endif
 #endif
 
+LOG_CHANNEL(perf_log, "PERF");
+
 namespace utils
 {
+#ifdef _WIN32
+	std::string pdh_error(PDH_STATUS status)
+	{
+		return fmt::win_error_to_string(status, LoadLibrary(L"pdh.dll"));
+	}
+#endif
+
 	cpu_stats::cpu_stats()
 	{
 #ifdef _WIN32
@@ -63,6 +77,215 @@ namespace utils
 		m_last_cpu = times(&timeSample);
 		m_sys_cpu  = timeSample.tms_stime;
 		m_usr_cpu  = timeSample.tms_utime;
+#endif
+	}
+
+	void cpu_stats::init_cpu_query()
+	{
+#ifdef _WIN32
+		PDH_STATUS status = PdhOpenQuery(NULL, NULL, &m_cpu_query);
+		if (ERROR_SUCCESS != status)
+		{
+			perf_log.error("Failed to open cpu query for per core cpu usage: %s", pdh_error(status));
+			return;
+		}
+		status = PdhAddEnglishCounter(m_cpu_query, L"\\Processor(*)\\% Processor Time", NULL, &m_cpu_cores);
+		if (ERROR_SUCCESS != status)
+		{
+			perf_log.error("Failed to add processor time counter for per core cpu usage: %s", pdh_error(status));
+			return;
+		}
+		status = PdhCollectQueryData(m_cpu_query);
+		if (ERROR_SUCCESS != status)
+		{
+			perf_log.error("Failed to collect per core cpu usage: %s", pdh_error(status));
+			return;
+		}
+#endif
+	}
+
+	void cpu_stats::get_per_core_usage(std::vector<double>& per_core_usage, double& total_usage)
+	{
+		total_usage = 0.0;
+
+		per_core_usage.resize(utils::get_thread_count());
+		std::fill(per_core_usage.begin(), per_core_usage.end(), 0.0);
+
+		const auto string_to_number = [](const std::string& str) -> std::pair<bool, size_t>
+		{
+			std::add_pointer_t<char> eval;
+			const size_t number = std::strtol(str.c_str(), &eval, 10);
+
+			if (str.c_str() + str.size() == eval)
+			{
+				return { true, number };
+			}
+
+			return { false, 0 };
+		};
+
+#ifdef _WIN32
+		if (!m_cpu_cores || !m_cpu_query)
+		{
+			perf_log.warning("Can not collect per core cpu usage: The required API is not initialized.");
+			return;
+		}
+
+		PDH_STATUS status = PdhCollectQueryData(m_cpu_query);
+		if (ERROR_SUCCESS != status)
+		{
+			perf_log.error("Failed to collect per core cpu usage: %s", pdh_error(status));
+			return;
+		}
+
+		PDH_FMT_COUNTERVALUE counterVal{};
+		DWORD dwBufferSize = 0; // Size of the pItems buffer
+		DWORD dwItemCount = 0;  // Number of items in the pItems buffer
+		PDH_FMT_COUNTERVALUE_ITEM *pItems = NULL; // Array of PDH_FMT_COUNTERVALUE_ITEM structures
+
+		status = PdhGetFormattedCounterArray(m_cpu_cores, PDH_FMT_DOUBLE, &dwBufferSize, &dwItemCount, pItems);
+		if (PDH_MORE_DATA == status)
+		{
+			pItems = (PDH_FMT_COUNTERVALUE_ITEM*)malloc(dwBufferSize);
+			if (pItems)
+			{
+				status = PdhGetFormattedCounterArray(m_cpu_cores, PDH_FMT_DOUBLE, &dwBufferSize, &dwItemCount, pItems);
+				if (ERROR_SUCCESS == status)
+				{
+					ensure(dwItemCount > 0);
+					ensure((dwItemCount - 1) == per_core_usage.size()); // Remove one for _Total
+
+					// Loop through the array and get the instance name and percentage.
+					for (DWORD i = 0; i < dwItemCount; i++)
+					{
+						const std::string token = wchar_to_utf8(pItems[i].szName);
+
+						if (const std::string lower = fmt::to_lower(token); lower.find("total") != umax)
+						{
+							total_usage = pItems[i].FmtValue.doubleValue;
+							continue;
+						}
+
+						if (const auto [success, cpu_index] = string_to_number(token); success && cpu_index < dwItemCount)
+						{
+							per_core_usage[cpu_index] = pItems[i].FmtValue.doubleValue;
+						}
+						else if (!success)
+						{
+							perf_log.error("Can not convert string to cpu index for per core cpu usage. (token='%s')", token);
+						}
+						else
+						{
+							perf_log.error("Invalid cpu index for per core cpu usage. (token='%s', cpu_index=%d, cores=%d)", token, cpu_index, dwItemCount);
+						}
+					}
+				}
+				else
+				{
+					perf_log.error("Failed to get per core cpu usage: %s", pdh_error(status));
+				}
+			}
+			else
+			{
+				perf_log.error("Failed to allocate buffer for per core cpu usage.");
+			}
+		}
+		if (pItems) free(pItems);
+
+#elif __linux__
+
+		m_previous_idle_times_per_cpu.resize(utils::get_thread_count(), 0.0);
+		m_previous_total_times_per_cpu.resize(utils::get_thread_count(), 0.0);
+
+		if (std::ifstream proc_stat("/proc/stat"); proc_stat.good())
+		{
+			std::stringstream content;
+			content << proc_stat.rdbuf();
+			proc_stat.close();
+
+			const std::vector<std::string> lines = fmt::split(content.str(), {"\n"});
+			if (lines.empty())
+			{
+				perf_log.error("/proc/stat is empty");
+				return;
+			}
+
+			for (const std::string& line : lines)
+			{
+				const std::vector<std::string> tokens = fmt::split(line, {" "});
+				if (tokens.size() < 5)
+				{
+					return;
+				}
+
+				const std::string& token = tokens[0];
+				if (!token.starts_with("cpu"))
+				{
+					return;
+				}
+
+				// Get CPU index
+				int cpu_index = -1; // -1 for total
+
+				constexpr size_t size_of_cpu = 3;
+				if (token.size() > size_of_cpu)
+				{
+					if (const auto [success, val] = string_to_number(token.substr(size_of_cpu)); success && val < per_core_usage.size())
+					{
+						cpu_index = val;
+					}
+					else if (!success)
+					{
+						perf_log.error("Can not convert string to cpu index for per core cpu usage. (token='%s', line='%s')", token, line);
+						continue;
+					}
+					else
+					{
+						perf_log.error("Invalid cpu index for per core cpu usage. (cpu_index=%d, cores=%d, token='%s', line='%s')", cpu_index, per_core_usage.size(), token, line);
+						continue;
+					}
+				}
+
+				size_t idle_time = 0;
+				size_t total_time = 0;
+
+				for (size_t i = 1; i < tokens.size(); i++)
+				{
+					if (const auto [success, val] = string_to_number(tokens[i]); success)
+					{
+						if (i == 4)
+						{
+							idle_time = val;
+						}
+
+						total_time += val;
+					}
+					else
+					{
+						perf_log.error("Can not convert string to time for per core cpu usage. (i=%d, token='%s', line='%s')", i, tokens[i], line);
+					}
+				}
+
+				if (cpu_index < 0)
+				{
+					const double idle_time_delta = idle_time - std::exchange(m_previous_idle_time_total, idle_time);
+					const double total_time_delta = total_time - std::exchange(m_previous_total_time_total, total_time);
+					total_usage = 100.0 * (1.0 - idle_time_delta / total_time_delta);
+				}
+				else
+				{
+					const double idle_time_delta = idle_time - std::exchange(m_previous_idle_times_per_cpu[cpu_index], idle_time);
+					const double total_time_delta = total_time - std::exchange(m_previous_total_times_per_cpu[cpu_index], total_time);
+					per_core_usage[cpu_index] = 100.0 * (1.0 - idle_time_delta / total_time_delta);
+				}
+			}
+		}
+		else
+		{
+			perf_log.error("Failed to open /proc/stat (%s)", strerror(errno));
+		}
+#else
+		total_usage = get_usage();
 #endif
 	}
 
@@ -123,7 +346,7 @@ namespace utils
 #endif
 	}
 
-	u32 cpu_stats::get_thread_count() // static
+	u32 cpu_stats::get_current_thread_count() // static
 	{
 #ifdef _WIN32
 		// first determine the id of the current process
