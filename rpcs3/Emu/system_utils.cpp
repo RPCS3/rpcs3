@@ -244,13 +244,15 @@ namespace rpcs3::utils
 			return true;
 
 		u128 k_licensee = get_default_self_klic();
-		std::string edat_content_id;
+		NPD_HEADER npd;
 
-		if (!VerifyEDATHeaderWithKLicense(enc_file, edat_path, reinterpret_cast<u8*>(&k_licensee), &edat_content_id))
+		if (!VerifyEDATHeaderWithKLicense(enc_file, edat_path, reinterpret_cast<u8*>(&k_licensee), &npd))
 		{
 			sys_log.error("verify_c00_unlock_edat(): Failed to verify npd file '%s'", edat_path);
 			return false;
 		}
+
+		std::string edat_content_id = npd.content_id;
 
 		if (edat_content_id != content_id)
 		{

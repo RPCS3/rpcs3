@@ -647,8 +647,8 @@ void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& E
 	memcpy(NPD.digest, &npd_header[64], 0x10);
 	memcpy(NPD.title_hash, &npd_header[80], 0x10);
 	memcpy(NPD.dev_hash, &npd_header[96], 0x10);
-	NPD.unk1 = swap64(*reinterpret_cast<u64*>(&npd_header[112]));
-	NPD.unk2 = swap64(*reinterpret_cast<u64*>(&npd_header[120]));
+	NPD.activate_time = swap64(*reinterpret_cast<s64*>(&npd_header[112]));
+	NPD.expire_time = swap64(*reinterpret_cast<s64*>(&npd_header[120]));
 
 	EDAT.flags = swap32(*reinterpret_cast<s32*>(&edat_header[0]));
 	EDAT.block_size = swap32(*reinterpret_cast<s32*>(&edat_header[4]));
@@ -785,7 +785,7 @@ u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file)
 	return rifkey;
 }
 
-bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, std::string* contentID, u32* license)
+bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, NPD_HEADER* npd_out)
 {
 	// Setup NPD and EDAT/SDAT structs.
 	NPD_HEADER NPD;
@@ -818,8 +818,11 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 	std::string_view sv{NPD.content_id, std::size(NPD.content_id)};
 	sv = sv.substr(0, sv.find_first_of('\0'));
 
-	if (contentID) *contentID = std::string(sv);
-	if (license) *license = (NPD.license & 3);
+	if (npd_out)
+	{
+		memcpy(npd_out, &NPD, sizeof(NPD_HEADER));
+	}
+
 	return true;
 }
 

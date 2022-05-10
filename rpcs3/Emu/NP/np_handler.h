@@ -17,6 +17,45 @@
 
 namespace np
 {
+	struct ticket_data
+	{
+		u16 id{}, len{};
+
+		struct
+		{
+			u32 data_u32{};
+			u64 data_u64{};
+			std::vector<u8> data_vec;
+			std::vector<ticket_data> data_nodes;
+		} data;
+	};
+
+	class ticket
+	{
+	public:
+		ticket() = default;
+		ticket(std::vector<u8>&& raw_data);
+
+		std::size_t size() const;
+		const u8* data() const;
+		bool empty() const;
+
+		bool get_value(s32 param_id, vm::ptr<SceNpTicketParam> param) const;
+
+	private:
+		std::optional<ticket_data> parse_node(std::size_t index) const;
+		void parse();
+
+	private:
+		static constexpr std::size_t MIN_TICKET_DATA_SIZE = 4;
+
+		std::vector<u8> raw_data;
+
+		bool parse_success = false;
+		u32 version{};
+		std::vector<ticket_data> nodes;
+	};
+
 	struct basic_event
 	{
 		s32 event = 0;
@@ -121,10 +160,7 @@ namespace np
 
 		// Misc stuff
 		void req_ticket(u32 version, const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, const char* entitlement_id, u32 consumed_count);
-		const std::vector<u8>& get_ticket() const
-		{
-			return current_ticket;
-		}
+		const ticket& get_ticket() const;
 		u32 add_players_to_history(vm::cptr<SceNpId> npids, u32 count);
 
 		// For signaling
@@ -207,7 +243,7 @@ namespace np
 		bool is_connected  = false;
 		bool is_psn_active = false;
 
-		std::vector<u8> current_ticket;
+		ticket current_ticket;
 
 		// IP & DNS info
 		std::string hostname = "localhost";
