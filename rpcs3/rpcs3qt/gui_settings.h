@@ -182,7 +182,7 @@ namespace gui
 	const gui_save fs_dev_flash_list    = gui_save(fs, "dev_flash_list",    QStringList());
 	const gui_save fs_dev_flash2_list   = gui_save(fs, "dev_flash2_list",   QStringList());
 	const gui_save fs_dev_flash3_list   = gui_save(fs, "dev_flash3_list",   QStringList());
-	const gui_save fs_dev_usb000_list   = gui_save(fs, "dev_usb000_list",   QStringList());
+	const gui_save fs_dev_usb_list      = gui_save(fs, "dev_usb00X_list",   QStringList()); // Used as a template for all usb paths
 
 	const gui_save l_tty       = gui_save(logger, "TTY",       true);
 	const gui_save l_level     = gui_save(logger, "level",     static_cast<uchar>(logs::level::success));
