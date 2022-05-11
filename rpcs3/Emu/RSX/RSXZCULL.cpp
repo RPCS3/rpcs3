@@ -389,7 +389,7 @@ namespace rsx
 			// Quick reverse scan to push commands ahead of time
 			for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
 			{
-				if (It->query && It->query->num_draws)
+				if (It->sink && It->query && It->query->num_draws)
 				{
 					if (It->query->sync_tag > m_sync_tag)
 					{
