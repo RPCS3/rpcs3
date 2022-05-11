@@ -187,10 +187,6 @@ error_code sys_rsxaudio_finalize(u32 handle)
 
 	rsxaudio_obj->init = false;
 	vm::dealloc(rsxaudio_obj->shmem, vm::main);
-	for (const auto port : rsxaudio_obj->event_port)
-	{
-		idm::remove<lv2_obj, lv2_event_port>(port);
-	}
 
 	idm::remove<lv2_obj, lv2_rsxaudio>(handle);
 	rsxaudio_thread.rsxaudio_ctx_allocated = false;
@@ -284,32 +280,6 @@ error_code sys_rsxaudio_create_connection(u32 handle)
 				{
 					rsxaudio_obj->event_queue[2] = queue3;
 
-					if (auto port1 = idm::make<lv2_obj, lv2_event_port>(SYS_EVENT_PORT_LOCAL, 0))
-					{
-						idm::remove<lv2_obj, lv2_event_port>(rsxaudio_obj->event_port[0]);
-						rsxaudio_obj->event_port[0] = port1;
-
-						if (auto port2 = idm::make<lv2_obj, lv2_event_port>(SYS_EVENT_PORT_LOCAL, 0))
-						{
-							idm::remove<lv2_obj, lv2_event_port>(rsxaudio_obj->event_port[1]);
-							rsxaudio_obj->event_port[1] = port2;
-
-							if (auto port3 = idm::make<lv2_obj, lv2_event_port>(SYS_EVENT_PORT_LOCAL, 0))
-							{
-								idm::remove<lv2_obj, lv2_event_port>(rsxaudio_obj->event_port[2]);
-								rsxaudio_obj->event_port[2] = port3;
-
-								return CELL_OK;
-							}
-
-							idm::remove<lv2_obj, lv2_event_port>(port2);
-							rsxaudio_obj->event_port[1] = 0;
-						}
-
-						idm::remove<lv2_obj, lv2_event_port>(port1);
-						rsxaudio_obj->event_port[0] = 0;
-					}
-
 					return CELL_OK;
 				}
 			}
@@ -365,8 +335,6 @@ error_code sys_rsxaudio_close_connection(u32 handle)
 
 	for (u32 q_idx = 0; q_idx < SYS_RSXAUDIO_PORT_CNT; q_idx++)
 	{
-		idm::remove<lv2_obj, lv2_event_port>(rsxaudio_obj->event_port[q_idx]);
-		rsxaudio_obj->event_port[q_idx] = 0;
 		rsxaudio_obj->event_queue[q_idx].reset();
 	}
 
@@ -445,9 +413,9 @@ error_code sys_rsxaudio_start_process(u32 handle)
 
 	for (u32 q_idx = 0; q_idx < SYS_RSXAUDIO_PORT_CNT; q_idx++)
 	{
-		if (auto queue = rsxaudio_obj->event_queue[q_idx].lock(); rsxaudio_obj->event_port[q_idx] && sh_page->ctrl.ringbuf[q_idx].active)
+		if (auto queue = rsxaudio_obj->event_queue[q_idx].lock(); queue && sh_page->ctrl.ringbuf[q_idx].active)
 		{
-			queue->send(s64{process_getpid()} << 32 | u64{rsxaudio_obj->event_port[q_idx]}, q_idx, 0, 0);
+			queue->send(rsxaudio_obj->event_port_name[q_idx], q_idx, 0, 0);
 		}
 	}
 
@@ -854,9 +822,9 @@ void rsxaudio_data_thread::extract_audio_data()
 				// Too late to recover
 				reset_periods = true;
 
-				if (auto queue = rsxaudio_obj->event_queue[dst_raw].lock(); rsxaudio_obj->event_port[dst_raw])
+				if (auto queue = rsxaudio_obj->event_queue[dst_raw].lock())
 				{
-					queue->send(s64{process_getpid()} << 32 | u64{rsxaudio_obj->event_port[dst_raw]}, dst_raw, blk_idx, timestamp);
+					queue->send(rsxaudio_obj->event_port_name[dst_raw], dst_raw, blk_idx, timestamp);
 				}
 			}
 		}
@@ -2120,7 +2088,12 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		}
 #elif defined(__linux__)
 		epoll_event event[obj_wait_cnt]{};
-		const auto wait_status = epoll_wait(epoll_fd, event, obj_wait_cnt, -1);
+		int wait_status = 0;
+		do
+		{
+			wait_status = epoll_wait(epoll_fd, event, obj_wait_cnt, -1);
+		}
+		while (wait_status == -EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{
@@ -2143,7 +2116,12 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		}
 #elif defined(BSD) || defined(__APPLE__)
 		struct kevent event[obj_wait_cnt]{};
-		const auto wait_status = kevent(kq, nullptr, 0, event, obj_wait_cnt, nullptr);
+		int wait_status = 0;
+		do
+		{
+			wait_status = kevent(kq, nullptr, 0, event, obj_wait_cnt, nullptr);
+		}
+		while (wait_status == -EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{

@@ -26,6 +26,7 @@ enum : u32
 	SYS_FS_FD_OBJECT                 = 0x73,
 	SYS_LWCOND_OBJECT                = 0x97,
 	SYS_EVENT_FLAG_OBJECT            = 0x98,
+	SYS_RSXAUDIO_OBJECT              = 0x60,
 };
 
 enum : u64
