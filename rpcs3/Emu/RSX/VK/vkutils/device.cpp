@@ -200,6 +200,13 @@ namespace vk
 				rsx_log.error("Your current NVIDIA graphics driver version %s has known issues and is unsupported. Update to the latest NVIDIA driver.", get_driver_version());
 			}
 		}
+		else if (get_driver_vendor() == driver_vendor::ANV)
+		{
+			// Workaround for broken UBO descriptor indexing
+			// See https://gitlab.freedesktop.org/mesa/mesa/-/issues/5526
+			rsx_log.warning("Descriptor indexing is broken on ANV drivers. This extension will be disabled.");
+			descriptor_update_after_bind_mask = 0;
+		}
 
 		if (get_chip_class() == chip_class::AMD_vega)
 		{
