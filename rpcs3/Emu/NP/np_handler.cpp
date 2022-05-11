@@ -192,7 +192,7 @@ namespace np
 		const auto* ptr      = data() + index;
 		tdata.id             = *reinterpret_cast<const be_t<u16>*>(ptr);
 		tdata.len            = *reinterpret_cast<const be_t<u16>*>(ptr + 2);
-		const auto* data_ptr = data() + 4;
+		const auto* data_ptr = data() + index + 4;
 
 		auto check_size = [&](std::size_t expected) -> bool
 		{
