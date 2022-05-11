@@ -12,7 +12,13 @@ LOG_CHANNEL(cellAudio);
 
 vm::gvar<char, AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT> g_audio_buffer;
 
-vm::gvar<u64, AUDIO_PORT_COUNT> g_audio_indices;
+struct alignas(16) aligned_index_t
+{
+	be_t<u64> index;
+	u8 pad[8];
+};
+
+vm::gvar<aligned_index_t, AUDIO_PORT_COUNT> g_audio_indices;
 
 template <>
 void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
@@ -335,8 +341,8 @@ void audio_port::tag(s32 offset)
 	// We use -0.0f in case games check if the buffer is empty. -0.0f == 0.0f evaluates to true, but std::signbit can be used to distinguish them
 	const f32 tag = -0.0f;
 
-	const u32 tag_first_pos = num_channels == 2 ? PORT_BUFFER_TAG_FIRST_2CH : num_channels == 6 ? PORT_BUFFER_TAG_FIRST_6CH : PORT_BUFFER_TAG_FIRST_8CH;
-	const u32 tag_delta = num_channels == 2 ? PORT_BUFFER_TAG_DELTA_2CH : num_channels == 6 ? PORT_BUFFER_TAG_DELTA_6CH : PORT_BUFFER_TAG_DELTA_8CH;
+	const u32 tag_first_pos = num_channels == 2 ? PORT_BUFFER_TAG_FIRST_2CH : PORT_BUFFER_TAG_FIRST_8CH;
+	const u32 tag_delta = num_channels == 2 ? PORT_BUFFER_TAG_DELTA_2CH : PORT_BUFFER_TAG_DELTA_8CH;
 
 	for (u32 tag_pos = tag_first_pos, tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_pos += tag_delta, tag_nr++)
 	{
@@ -364,8 +370,8 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 		auto port_buf = port.get_vm_ptr();
 
 		// Find the last tag that has been touched
-		const u32 tag_first_pos = port.num_channels == 2 ? PORT_BUFFER_TAG_FIRST_2CH : port.num_channels == 6 ? PORT_BUFFER_TAG_FIRST_6CH : PORT_BUFFER_TAG_FIRST_8CH;
-		const u32 tag_delta = port.num_channels == 2 ? PORT_BUFFER_TAG_DELTA_2CH : port.num_channels == 6 ? PORT_BUFFER_TAG_DELTA_6CH : PORT_BUFFER_TAG_DELTA_8CH;
+		const u32 tag_first_pos = port.num_channels == 2 ? PORT_BUFFER_TAG_FIRST_2CH : PORT_BUFFER_TAG_FIRST_8CH;
+		const u32 tag_delta = port.num_channels == 2 ? PORT_BUFFER_TAG_DELTA_2CH : PORT_BUFFER_TAG_DELTA_8CH;
 
 		u32 last_touched_tag_nr = port.prev_touched_tag_nr;
 		bool retouched = false;
@@ -458,7 +464,7 @@ void cell_audio_thread::advance(u64 timestamp)
 		port.timestamp = timestamp;
 
 		port.cur_pos = port.position(1);
-		g_audio_indices[port.number] = port.cur_pos;
+		*port.index = port.cur_pos;
 	}
 
 	if (cfg.buffering_enabled)
@@ -597,6 +603,9 @@ void cell_audio_thread::reset_counters()
 
 cell_audio_thread::cell_audio_thread()
 {
+	// Initialize loop variables (regardless of provider in order to initialize timestamps)
+	reset_counters();
+
 	if (cfg.raw.provider != audio_provider::cell_audio)
 	{
 		return;
@@ -607,9 +616,6 @@ cell_audio_thread::cell_audio_thread()
 
 	// Allocate ringbuffer
 	ringbuffer.reset(new audio_ringbuffer(cfg));
-
-	// Initialize loop variables
-	reset_counters();
 }
 
 void cell_audio_thread::operator()()
@@ -1116,7 +1122,7 @@ error_code cellAudioInit()
 	{
 		g_audio.ports[i].number = i;
 		g_audio.ports[i].addr   = g_audio_buffer + AUDIO_PORT_OFFSET * i;
-		g_audio.ports[i].index  = g_audio_indices + i;
+		g_audio.ports[i].index  = (g_audio_indices + i).ptr(&aligned_index_t::index);
 		g_audio.ports[i].state  = audio_port_state::closed;
 	}
 
@@ -1234,7 +1240,7 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	port->num_channels   = ::narrow<u32>(num_channels);
 	port->num_blocks     = ::narrow<u32>(num_blocks);
 	port->attr           = attr;
-	port->size           = ::narrow<u32>(num_channels * num_blocks * port->block_size());
+	port->size           = ::narrow<u32>(num_channels * num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(f32));
 	port->cur_pos        = 0;
 	port->global_counter = g_audio.m_counter;
 	port->active_counter = 0;
@@ -1729,18 +1735,6 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 			dst[i * 2 + 1] += src[i * 2 + 1] * volume; // mix R ch
 		}
 	}
-	else if (port.num_channels == 6)
-	{
-		for (u32 i = 0; i < samples; i++)
-		{
-			dst[i * 6 + 0] += src[i * 2 + 0] * volume; // mix L ch
-			dst[i * 6 + 1] += src[i * 2 + 1] * volume; // mix R ch
-			//dst[i * 6 + 2] += 0.0f; // center
-			//dst[i * 6 + 3] += 0.0f; // LFE
-			//dst[i * 6 + 4] += 0.0f; // rear L
-			//dst[i * 6 + 5] += 0.0f; // rear R
-		}
-	}
 	else if (port.num_channels == 8)
 	{
 		for (u32 i = 0; i < samples; i++)
@@ -1789,19 +1783,7 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
-	if (port.num_channels == 6)
-	{
-		for (u32 i = 0; i < CELL_AUDIO_BLOCK_SAMPLES; i++)
-		{
-			dst[i * 6 + 0] += src[i * 6 + 0] * volume; // mix L ch
-			dst[i * 6 + 1] += src[i * 6 + 1] * volume; // mix R ch
-			dst[i * 6 + 2] += src[i * 6 + 2] * volume; // mix center
-			dst[i * 6 + 3] += src[i * 6 + 3] * volume; // mix LFE
-			dst[i * 6 + 4] += src[i * 6 + 4] * volume; // mix rear L
-			dst[i * 6 + 5] += src[i * 6 + 5] * volume; // mix rear R
-		}
-	}
-	else if (port.num_channels == 8)
+	if (port.num_channels == 8)
 	{
 		for (u32 i = 0; i < CELL_AUDIO_BLOCK_SAMPLES; i++)
 		{

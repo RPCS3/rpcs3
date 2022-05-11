@@ -822,6 +822,33 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_qt_music_error_handler.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\vfs_dialog_usb_tab.cpp">
+      <Filter>Gui\vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_vfs_dialog_usb_tab.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_vfs_dialog_usb_tab.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\vfs_dialog_usb_input.cpp">
+      <Filter>Gui\vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_vfs_dialog_usb_input.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_vfs_dialog_usb_input.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\vfs_dialog_path_widget.cpp">
+      <Filter>Gui\vfs</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_vfs_dialog_path_widget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_vfs_dialog_path_widget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1209,6 +1236,15 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\qt_music_error_handler.h">
       <Filter>Io\music</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\vfs_dialog_usb_tab.h">
+      <Filter>Gui\vfs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\vfs_dialog_usb_input.h">
+      <Filter>Gui\vfs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\vfs_dialog_path_widget.h">
+      <Filter>Gui\vfs</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

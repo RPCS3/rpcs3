@@ -164,14 +164,39 @@ void Emulator::Init(bool add_only)
 	// Mount all devices
 	const std::string emu_dir = rpcs3::utils::get_emu_dir();
 	const std::string elf_dir = fs::get_parent_dir(m_path);
+	const std::string dev_hdd0 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir);
+	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
+	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
+	const std::string dev_flsh2 = g_cfg_vfs.get_dev_flash2();
+	const std::string dev_flsh3 = g_cfg_vfs.get_dev_flash3();
 
-	vfs::mount("/dev_hdd0", g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir));
-	vfs::mount("/dev_flash", g_cfg_vfs.get_dev_flash());
-	vfs::mount("/dev_flash2", g_cfg_vfs.get_dev_flash2());
-	vfs::mount("/dev_flash3", g_cfg_vfs.get_dev_flash3());
-	vfs::mount("/dev_usb", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
-	vfs::mount("/dev_usb000", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
+	vfs::mount("/dev_hdd0", dev_hdd0);
+	vfs::mount("/dev_flash", dev_flsh);
+	vfs::mount("/dev_flash2", dev_flsh2);
+	vfs::mount("/dev_flash3", dev_flsh3);
 	vfs::mount("/app_home", g_cfg_vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg_vfs.get(g_cfg_vfs.app_home, emu_dir));
+
+	std::string dev_usb;
+
+	for (const auto& [key, value] : g_cfg_vfs.dev_usb.get_map())
+	{
+		const cfg::device_info usb_info = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, key, emu_dir);
+
+		if (key.size() != 11 || !key.starts_with("/dev_usb00"sv) || key.back() < '0' || key.back() > '7')
+		{
+			sys_log.error("Trying to mount unsupported usb device: %s", key);
+			continue;
+		}
+
+		vfs::mount(key, usb_info.path);
+
+		if (key == "/dev_usb000"sv)
+		{
+			dev_usb = usb_info.path;
+		}
+	}
+
+	ensure(!dev_usb.empty());
 
 	if (!hdd1.empty())
 	{
@@ -229,13 +254,6 @@ void Emulator::Init(bool add_only)
 	}
 
 	// Create directories (can be disabled if necessary)
-	const std::string dev_hdd0 = rpcs3::utils::get_hdd0_dir();
-	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
-	const std::string dev_usb = g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir);
-	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
-	const std::string dev_flsh2 = g_cfg_vfs.get_dev_flash2();
-	const std::string dev_flsh3 = g_cfg_vfs.get_dev_flash3();
-
 	auto make_path_verbose = [](const std::string& path)
 	{
 		if (!fs::create_path(path))
@@ -740,6 +758,16 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 						sys_log.fatal("Failed to apply custom config: %s.yml", m_path);
 					}
 				}
+			}
+
+			// Force audio provider
+			if (m_path.ends_with("vsh.self"sv))
+			{
+				g_cfg.audio.provider.set(audio_provider::rsxaudio);
+			}
+			else
+			{
+				g_cfg.audio.provider.set(audio_provider::cell_audio);
 			}
 		}
 

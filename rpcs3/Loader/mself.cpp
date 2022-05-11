@@ -63,6 +63,12 @@ bool extract_mself(const std::string& file, const std::string& extract_to)
 		mself.seek(pos);
 		mself.read(buffer.data(), rec.size);
 
+		if (!fs::create_path(fs::get_parent_dir(extract_to + name)))
+		{
+			mself_log.error("Error creating directory %s (%s)", fs::get_parent_dir(extract_to + name), fs::g_tls_error);
+			return false;
+		}
+
 		if (!fs::write_file(extract_to + name, fs::rewrite, buffer))
 		{
 			mself_log.error("Error creating %s (%s)", extract_to + name, fs::g_tls_error);

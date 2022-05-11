@@ -881,16 +881,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		enable_buffering_options(enabled && ui->enableBuffering->isChecked());
 	};
 
-	const auto enable_avport_option = [this](int index)
-	{
-		if (index < 0) return;
-		const QVariantList var_list = ui->audioProviderBox->itemData(index).toList();
-		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
-		const QString text = var_list[0].toString();
-		const bool enabled = text == "RSXAudio";
-		ui->audioAvportBox->setEnabled(enabled);
-	};
-
 	const QString mic_none = m_emu_settings->m_microphone_creator.get_none();
 
 	const auto change_microphone_type = [mic_none, this](int index)
@@ -972,7 +962,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->audioProviderBox, emu_settings_type::AudioProvider);
 	SubscribeTooltip(ui->gb_audio_provider, tooltips.settings.audio_provider);
-	connect(ui->audioProviderBox, QOverload<int>::of(&QComboBox::currentIndexChanged), enable_avport_option);
+	ui->gb_audio_provider->setVisible(false); // Hidden for now. This option is forced on boot.
 
 	m_emu_settings->EnhanceComboBox(ui->audioAvportBox, emu_settings_type::AudioAvport);
 	SubscribeTooltip(ui->gb_audio_avport, tooltips.settings.audio_avport);
@@ -1033,7 +1023,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->enableTimeStretching, &QCheckBox::toggled, enable_time_stretching_options);
 
 	enable_buffering(ui->audioOutBox->currentIndex());
-	enable_avport_option(ui->audioProviderBox->currentIndex());
 
 	// Sliders
 

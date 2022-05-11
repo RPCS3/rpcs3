@@ -665,10 +665,17 @@ static void cond_free(u32 cond_id, u32 tls_slot = -1)
 
 static cond_handle* cond_id_lock(u32 cond_id, u128 mask, uptr iptr = 0)
 {
-	if (cond_id - 1 < u16{umax})
-	{
-		const auto cond = s_cond_list + cond_id;
+	bool did_ref = false;
 
+	if (cond_id - 1 >= u16{umax})
+	{
+		return nullptr;
+	}
+
+	const auto cond = s_cond_list + cond_id;
+
+	while (true)
+	{
 		const auto [old, ok] = cond->ptr_ref.fetch_op([&](u64& val)
 		{
 			if (!val || (val & s_ref_mask) == s_ref_mask)
@@ -695,12 +702,23 @@ static cond_handle* cond_id_lock(u32 cond_id, u128 mask, uptr iptr = 0)
 				return false;
 			}
 
-			val++;
+			if (!did_ref)
+			{
+				val++;
+			}
+
 			return true;
 		});
 
 		if (ok)
 		{
+			// Check other fields again
+			if (const u32 sync_val = cond->sync; sync_val == 0 || sync_val == 3 || (cond->size && !(mask & cond->mask)))
+			{
+				did_ref = true;
+				continue;
+			}
+
 			return cond;
 		}
 
@@ -708,6 +726,13 @@ static cond_handle* cond_id_lock(u32 cond_id, u128 mask, uptr iptr = 0)
 		{
 			fmt::throw_exception("Reference count limit (131071) reached in an atomic notifier.");
 		}
+
+		break;
+	}
+
+	if (did_ref)
+	{
+		cond_free(cond_id, -1);
 	}
 
 	return nullptr;

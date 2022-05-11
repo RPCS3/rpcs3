@@ -531,12 +531,12 @@ s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 
 	if (p2p_port == 0)
 	{
-		p2p_port = 3658;
+		p2p_port = SCE_NP_PORT;
 	}
 
-	if (p2p_port != 3658)
+	if (p2p_port != SCE_NP_PORT)
 	{
-		sys_net.warning("[P2PS] Attempting to bind a socket to a port != 3658");
+		sys_net.warning("[P2PS] Attempting to bind a socket to a port != %d", +SCE_NP_PORT);
 	}
 
 	socket_type real_socket{};

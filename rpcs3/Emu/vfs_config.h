@@ -4,7 +4,7 @@
 
 struct cfg_vfs : cfg::node
 {
-	std::string get(const cfg::string&, std::string_view emu_dir = {}) const;
+	std::string get(const cfg::string& _cfg, std::string_view emu_dir = {}) const;
 	void load();
 	void save() const;
 	static std::string get_path();
@@ -15,9 +15,13 @@ struct cfg_vfs : cfg::node
 	cfg::string dev_flash{ this, "/dev_flash/", "$(EmulatorDir)dev_flash/" };
 	cfg::string dev_flash2{ this, "/dev_flash2/", "$(EmulatorDir)dev_flash2/" };
 	cfg::string dev_flash3{ this, "/dev_flash3/", "$(EmulatorDir)dev_flash3/" };
-	cfg::string dev_usb000{ this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/" };
 	cfg::string dev_bdvd{ this, "/dev_bdvd/" }; // Not mounted
 	cfg::string app_home{ this, "/app_home/" }; // Not mounted
+
+	cfg::device_entry dev_usb{ this, "/dev_usb***/",
+		{
+			{ "/dev_usb000", cfg::device_info{.path = "$(EmulatorDir)dev_usb000/"} }
+		}};
 
 	std::string get_dev_flash() const
 	{
@@ -33,6 +37,12 @@ struct cfg_vfs : cfg::node
 	{
 		return get(dev_flash3);
 	}
+
+	cfg::device_info get_device(const cfg::device_entry& _cfg, std::string_view key, std::string_view emu_dir = {}) const;
+
+private:
+	std::string get(const std::string& _cfg, const std::string& def, std::string_view emu_dir) const;
+	cfg::device_info get_device_info(const cfg::device_entry& _cfg, std::string_view key, std::string_view emu_dir = {}) const;
 };
 
 extern cfg_vfs g_cfg_vfs;

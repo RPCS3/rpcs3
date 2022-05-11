@@ -81,7 +81,10 @@ set(SRC_FILES
     user_account.cpp
     user_manager_dialog.cpp
     vfs_dialog.cpp
+    vfs_dialog_path_widget.cpp
     vfs_dialog_tab.cpp
+    vfs_dialog_usb_input.cpp
+    vfs_dialog_usb_tab.cpp
     welcome_dialog.cpp
 )
 

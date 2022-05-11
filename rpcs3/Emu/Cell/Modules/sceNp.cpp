@@ -422,7 +422,7 @@ error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (poolsize < SCE_NP_MIN_POOLSIZE)
+	if (poolsize < SCE_NP_MIN_POOL_SIZE)
 	{
 		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
 	}
@@ -510,19 +510,18 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 	{
 		// edata / sdata files
 
-		std::string contentID;
-		u32 license_type = 0;
+		NPD_HEADER npd;
 
-		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path, reinterpret_cast<u8*>(&k_licensee), &contentID, &license_type))
+		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path, reinterpret_cast<u8*>(&k_licensee), &npd))
 		{
 			// Check if RAP-free
-			if (license_type == 3)
+			if (npd.license == 3)
 			{
 				npdrmkeys.install_decryption_key(k_licensee);
 			}
 			else
 			{
-				const std::string rap_file = rpcs3::utils::get_rap_file_path(contentID);
+				const std::string rap_file = rpcs3::utils::get_rap_file_path(npd.content_id);
 
 				if (fs::file rap_fd{rap_file}; rap_fd && rap_fd.size() >= sizeof(u128))
 				{
@@ -572,7 +571,7 @@ error_code npDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 	}
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
-	sceNp.warning("npDrmVerifyUpgradeLicense(): content_id='%s'", content_id);
+	sceNp.warning("npDrmVerifyUpgradeLicense(): content_id=%s", content_id);
 
 	if (!rpcs3::utils::verify_c00_unlock_edat(content_str))
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -609,15 +608,79 @@ error_code sceNpDrmExecuteGamePurchase()
 
 error_code sceNpDrmGetTimelimit(vm::cptr<char> path, vm::ptr<u64> time_remain)
 {
-	sceNp.todo("sceNpDrmGetTimelimit(path=%s, time_remain=*0x%x)", path, time_remain);
+	sceNp.warning("sceNpDrmGetTimelimit(path=%s, time_remain=*0x%x)", path, time_remain);
 
 	if (!path || !time_remain)
 	{
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
-	*time_remain = SCE_NP_DRM_TIME_INFO_ENDLESS;
+	vm::var<s64> sec;
+	vm::var<s64> nsec;
 
+	// Get system time (real or fake) to compare to
+	error_code ret = sys_time_get_current_time(sec, nsec);
+	if (ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	const std::string enc_drm_path(path.get_ptr(), std::find(path.get_ptr(), path.get_ptr() + 0x100, '\0'));
+	const auto [fs_error, ppath, real_path, enc_file, type] = lv2_file::open(enc_drm_path, 0, 0);
+
+	if (fs_error)
+	{
+		return {fs_error, enc_drm_path};
+	}
+
+	u32 magic;
+	NPD_HEADER npd;
+
+	enc_file.read<u32>(magic);
+	enc_file.seek(0);
+
+	// Read expiration time from NPD header which is Unix timestamp in milliseconds
+	if (magic == "SCE\0"_u32)
+	{
+		if (!get_npdrm_self_header(enc_file, npd))
+		{
+			sceNp.error("sceNpDrmGetTimelimit(): Failed to read NPD header from sce file '%s'", enc_drm_path);
+			return {SCE_NP_DRM_ERROR_BAD_FORMAT, enc_drm_path};
+		}
+	}
+	else if (magic == "NPD\0"_u32)
+	{
+		// edata / sdata files
+		EDAT_HEADER edat;
+		read_npd_edat_header(&enc_file, npd, edat);
+	}
+	else
+	{
+		// Unknown file type
+		return {SCE_NP_DRM_ERROR_BAD_FORMAT, enc_drm_path};
+	}
+
+	// Convert time to milliseconds
+	s64 msec = *sec * 1000ll + *nsec / 1000ll;
+
+	// Return the remaining time in microseconds
+	if (npd.activate_time != 0 && msec < npd.activate_time)
+	{
+		return SCE_NP_DRM_ERROR_SERVICE_NOT_STARTED;
+	}
+
+	if (npd.expire_time == 0)
+	{
+		*time_remain = SCE_NP_DRM_TIME_INFO_ENDLESS;
+		return CELL_OK;
+	}
+
+	if (msec >= npd.expire_time)
+	{
+		return SCE_NP_DRM_ERROR_TIME_LIMIT;
+	}
+
+	*time_remain = (npd.expire_time - msec) * 1000ll;
 	return CELL_OK;
 }
 
@@ -3351,7 +3414,7 @@ error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 
 error_code sceNpManagerGetTicketParam(s32 paramId, vm::ptr<SceNpTicketParam> param)
 {
-	sceNp.todo("sceNpManagerGetTicketParam(paramId=%d, param=*0x%x)", paramId, param);
+	sceNp.notice("sceNpManagerGetTicketParam(paramId=%d, param=*0x%x)", paramId, param);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -3360,10 +3423,21 @@ error_code sceNpManagerGetTicketParam(s32 paramId, vm::ptr<SceNpTicketParam> par
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!param)
+	if (!param || paramId < SCE_NP_TICKET_PARAM_SERIAL_ID || paramId > SCE_NP_TICKET_PARAM_SUBJECT_DOB)
 	{
-		// TODO: check paramId
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
+	}
+
+	const auto& ticket = nph.get_ticket();
+
+	if (ticket.empty())
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
+	if (!ticket.get_value(paramId, param))
+	{
+		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
 	return CELL_OK;
@@ -3380,7 +3454,7 @@ error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdLis
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	return CELL_OK;
+	return not_an_error(0);
 }
 
 error_code sceNpManagerGetEntitlementById(vm::cptr<char> entId, vm::ptr<SceNpEntitlement> ent)
@@ -5053,7 +5127,7 @@ error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetIn
 	info->nat_status    = 0;
 	info->upnp_status   = 0;
 	info->npport_status = 0;
-	info->npport        = 3658;
+	info->npport        = SCE_NP_PORT;
 
 	return CELL_OK;
 }
