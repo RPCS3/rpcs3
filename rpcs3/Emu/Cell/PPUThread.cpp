@@ -2343,7 +2343,7 @@ extern void ppu_finalize(const ppu_module& info)
 		// Get PPU cache location
 		cache_path = fs::get_cache_dir() + "cache/";
 
-		const std::string dev_flash = vfs::get("/dev_flash/");
+		const std::string dev_flash = vfs::get("/dev_flash/sys/");
 
 		if (info.path.starts_with(dev_flash) || Emu.GetCat() == "1P")
 		{
@@ -2699,9 +2699,26 @@ extern void ppu_initialize()
 
 	std::vector<std::string> dir_queue;
 
-	if (compile_fw)
+	const std::string mount_point = vfs::get("/dev_flash/");
+
+	bool dev_flash_located = Emu.GetCat().back() != 'P' && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point);
+
+	if (compile_fw || dev_flash_located)
 	{
-		const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
+		if (dev_flash_located)
+		{
+			const std::string eseibrd = mount_point + "/vsh/module/eseibrd.sprx";
+
+			if (auto prx = ppu_load_prx(ppu_prx_object{decrypt_self(fs::file{eseibrd})}, eseibrd, 0))
+			{
+				// Check if cache exists for this infinitesimally small prx
+				dev_flash_located = ppu_initialize(*prx, true);
+				idm::remove<lv2_obj, lv2_prx>(idm::last_id());
+				ppu_unload_prx(*prx);
+			}
+		}
+
+		const std::string firmware_sprx_path = vfs::get(dev_flash_located ? "/dev_flash/"sv : "/dev_flash/sys/"sv);
 		dir_queue.emplace_back(firmware_sprx_path);
 	}
 
