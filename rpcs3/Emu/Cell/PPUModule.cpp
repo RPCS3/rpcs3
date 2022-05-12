@@ -1840,7 +1840,17 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		mem_size += 0xC000000;
 	}
 
-	g_fxo->init<lv2_memory_container>(mem_size)->used += primary_stacksize;
+	if (Emu.init_mem_containers)
+	{
+		// Refer to sys_process_exit2 for explanation
+		Emu.init_mem_containers(mem_size);
+	}
+	else
+	{
+		g_fxo->init<lv2_memory_container>(mem_size);
+	}
+
+	g_fxo->get<lv2_memory_container>().used += primary_stacksize;
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 

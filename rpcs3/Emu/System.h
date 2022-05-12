@@ -179,6 +179,7 @@ public:
 	std::vector<u128> klic;
 	std::string disc;
 	std::string hdd1;
+	std::function<void(u32)> init_mem_containers;
 
 	u32 m_boot_source_type = 0; // CELL_GAME_GAMETYPE_SYS
 
