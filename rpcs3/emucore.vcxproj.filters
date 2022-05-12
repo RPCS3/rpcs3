@@ -1060,6 +1060,9 @@
     <ClCompile Include="Emu\perf_monitor.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="Crypto\decrypt_binaries.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2109,6 +2112,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellRec.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\decrypt_binaries.h">
+      <Filter>Crypto</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,6 +1,7 @@
 #ifdef LLVM_AVAILABLE
 
 #include "Emu/system_config.h"
+#include "Emu/Cell/Common.h"
 #include "PPUTranslator.h"
 #include "PPUThread.h"
 
@@ -3990,9 +3991,22 @@ void PPUTranslator::FSQRTS(ppu_opcode_t op)
 
 void PPUTranslator::FRES(ppu_opcode_t op)
 {
-	const auto b = GetFpr(op.frb, 32);
-	const auto result = m_ir->CreateFDiv(ConstantFP::get(GetType<f32>(), 1.0), b);
-	SetFpr(op.frd, result);
+	if (!m_fres_table)
+	{
+		m_fres_table = new GlobalVariable(*m_module, ArrayType::get(GetType<u32>(), 128), true, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, ppu_fres_mantissas));
+	}
+
+	const auto a = GetFpr(op.frb);
+	const auto b = bitcast<u64>(a);
+	const auto n = m_ir->CreateFCmpUNO(a, a); // test for NaN
+	const auto e = m_ir->CreateAnd(m_ir->CreateLShr(b, 52), 0x7ff); // double exp
+	const auto i = m_ir->CreateAnd(m_ir->CreateLShr(b, 45), 0x7f); // mantissa LUT index
+	const auto m = m_ir->CreateShl(ZExt(m_ir->CreateLoad(m_ir->CreateGEP(m_fres_table, {m_ir->getInt64(0), i}))), 29);
+	const auto c = m_ir->CreateICmpUGE(e, m_ir->getInt64(0x3ff + 0x80)); // test for INF
+	const auto x = m_ir->CreateShl(m_ir->CreateSub(m_ir->getInt64(0x7ff - 2), e), 52);
+	const auto s = m_ir->CreateSelect(c, m_ir->getInt64(0), m_ir->CreateOr(x, m));
+	const auto r = bitcast<f64>(m_ir->CreateSelect(n, m_ir->CreateOr(b, 0x8'0000'0000'0000), m_ir->CreateOr(s, m_ir->CreateAnd(b, 0x8000'0000'0000'0000))));
+	SetFpr(op.frd, m_ir->CreateFPTrunc(r, GetType<f32>()));
 
 	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
 	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fi);
@@ -4001,7 +4015,7 @@ void PPUTranslator::FRES(ppu_opcode_t op)
 	//SetFPSCRException(m_fpscr_ux, Call(GetType<bool>(), m_pure_attr, "__fres_get_ux", b));
 	//SetFPSCRException(m_fpscr_zx, Call(GetType<bool>(), m_pure_attr, "__fres_get_zx", b));
 	//SetFPSCRException(m_fpscr_vxsnan, Call(GetType<bool>(), m_pure_attr, "__fres_get_vxsnan", b));
-	SetFPRF(result, op.rc != 0);
+	SetFPRF(r, op.rc != 0);
 }
 
 void PPUTranslator::FMULS(ppu_opcode_t op)
@@ -4344,8 +4358,14 @@ void PPUTranslator::FMUL(ppu_opcode_t op)
 
 void PPUTranslator::FRSQRTE(ppu_opcode_t op)
 {
-	const auto b = GetFpr(op.frb, 32);
-	const auto result = m_ir->CreateFDiv(ConstantFP::get(GetType<f32>(), 1.0), Call(GetType<f32>(), "llvm.sqrt.f32", b));
+	if (!m_frsqrte_table)
+	{
+		m_frsqrte_table = new GlobalVariable(*m_module, ArrayType::get(GetType<u32>(), 0x8000), true, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, ppu_frqrte_lut.data));
+	}
+
+	const auto b = m_ir->CreateBitCast(GetFpr(op.frb), GetType<u64>());
+	const auto v = m_ir->CreateLoad(m_ir->CreateGEP(m_frsqrte_table, {m_ir->getInt64(0), m_ir->CreateLShr(b, 49)}));
+	const auto result = m_ir->CreateBitCast(m_ir->CreateShl(ZExt(v), 32), GetType<f64>());
 	SetFpr(op.frd, result);
 
 	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
