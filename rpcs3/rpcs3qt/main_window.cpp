@@ -2666,7 +2666,7 @@ void main_window::CreateFirmwareCache()
 	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
-	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash(), "", true);
+	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash() + "sys", "", true);
 		error != game_boot_result::no_errors)
 	{
 		gui_log.error("Creating firmware cache failed: reason: %s", error);
