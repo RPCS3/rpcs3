@@ -110,32 +110,20 @@ QHeaderView::section {
 }
 
 
-/* All other Tabs */
+
+/* All Tabs */
+QTabWidget::tab-bar {
+	alignment: center; /* Centel all tabs */
+}
+/* Move tabs on log viewer back to left side */
+QTabWidget#tab_widget_log::tab-bar {
+	alignment: left;
+}
 QTabBar {
+	border-bottom: 0.05em solid #ffd785;
 	text-transform: uppercase;
 }
-
 QTabBar::tab {
-	background: transparent;
-	padding-left: 0.50em;
-	padding-right: 0.50em;
-	padding-top: 0.25em;
-	padding-bottom: 0.25em;
-	margin-right: 0.25em;
-}
-QTabBar::tab::selected {
-	background: #705722;
-	color: #ffd785;
-	border-bottom-style: solid;
-}
-
-
-/* Settings Dialog: Tabs */
-QTabBar#tab_bar_settings {
-	border-bottom: 0.05em solid #705722;
-	text-transform: uppercase;
-}
-QTabBar::tab#tab_bar_settings {
 	background: transparent;
 	width: 5.20em;
 	padding-left: 0.50em;
@@ -146,19 +134,17 @@ QTabBar::tab#tab_bar_settings {
 	font-size: 10.5pt;
 	font-weight: 550;
 }
-QTabBar::tab:last#tab_bar_settings {
+QTabBar::tab:last {
 	margin-right: 0em;
 }
-QTabBar::tab:!selected:hover#tab_bar_settings {
-	background: transparent;
-	color: #705722;
-}
-QTabBar::tab::selected#tab_bar_settings {
+QTabBar::tab::selected {
 	background: #bfa163;
 	color: #705722;
-	border-bottom-style: solid;
 	margin-top: 0.15em;
+	border-top-left-radius: 0.3em;
+	border-top-right-radius: 0.3em;
 }
+
 
 
 /* Checkboxes */
@@ -279,7 +265,6 @@ QSlider#sizeSlider::groove:horizontal {
 /* Log and Debugger borders */
 QTextEdit, QPlainTextEdit {
 	background: rgba(52, 49, 40, 0.9);
-	/*border: 0.05em solid #ffd785;*/
 	color: #ffd785;
 	font-family: none;
 	font-size: 8.50pt;
@@ -465,16 +450,19 @@ QLabel#memory_viewer_address_panel {
 	color: #ffd785; /* Font Color: Light */
 	border: 0.05em solid #ffd785;
 	background: rgba(52, 49, 40, 0.9);
+	font-family: none;
 }
 QLabel#memory_viewer_hex_panel {
 	color: #bfa163; /* Font Color: Grey */
 	border: 0.05em solid #ffd785;
 	background: rgba(52, 49, 40, 0.9);
+	font-family: none;
 }
 QLabel#memory_viewer_ascii_panel {
 	color: #bfa163; /* Font Color: Grey */
 	border: 0.05em solid #ffd785;
 	background: rgba(52, 49, 40, 0.9);
+	font-family: none;
 }
 
 
