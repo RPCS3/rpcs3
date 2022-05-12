@@ -8,6 +8,11 @@ namespace fmt
 {
 	template <typename CharT, usz N, typename... Args>
 	static std::string format(const CharT(&)[N], const Args&...);
+
+#ifdef _WIN32
+	// Get a string for a windows error (DWORD). Optionally a module HANDLE can be passed.
+	std::string win_error_to_string(unsigned long error, void* module_handle = nullptr);
+#endif
 }
 
 template <typename T, typename = void>
@@ -218,6 +223,17 @@ struct fmt_class_string<const char8_t*, void> : fmt_class_string<const char*>
 
 template <>
 struct fmt_class_string<char8_t*, void> : fmt_class_string<const char8_t*>
+{
+};
+
+template <>
+struct fmt_class_string<const wchar_t*, void>
+{
+	static void format(std::string& out, u64 arg);
+};
+
+template <>
+struct fmt_class_string<wchar_t*, void> : fmt_class_string<const wchar_t*>
 {
 };
 

@@ -46,9 +46,9 @@ namespace vk
 			}
 		}
 
-		bool is_supported(const char* ext)
+		bool is_supported(std::string_view ext)
 		{
-			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(), [&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
+			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(), [&](const VkExtensionProperties& p) { return p.extensionName == ext; });
 		}
 	};
 

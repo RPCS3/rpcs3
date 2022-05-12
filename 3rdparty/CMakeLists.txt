@@ -153,6 +153,33 @@ endif()
 # Vulkan
 set(VULKAN_TARGET 3rdparty_dummy_lib)
 if(USE_VULKAN)
+	if(APPLE)
+		if(USE_SYSTEM_MVK)
+			message("-- RPCS3: Using system MoltenVK")
+		else()
+			message("-- RPCS3: MoltenVK submodule")
+
+			execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+    				WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
+			)
+			execute_process(COMMAND "${CMAKE_COMMAND}" --build .
+   	 			WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
+			)
+
+			add_library(moltenvk_lib SHARED IMPORTED)
+			add_dependencies(moltenvk_lib moltenvk)
+			set_target_properties(moltenvk_lib
+				PROPERTIES IMPORTED_LOCATION "{Vulkan_LIBRARY}"
+			)
+
+			set(VULKAN_SDK "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK/MoltenVK/MoltenVK")
+			set(VK_ICD_FILENAMES "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK/MoltenVK/MoltenVK/icd/MoltenVK_icd.json")
+			set(Vulkan_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK/MoltenVK/MoltenVK/include")
+			set(Vulkan_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK/MoltenVK/Build/Products/Release/dynamic/libMoltenVK.dylib")
+			set(Vulkan_TOOLS "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK/MoltenVK/Build/Products/Release")
+		endif()
+	endif()
+
 	find_package(Vulkan)
 	if(VULKAN_FOUND)
 		add_library(3rdparty_vulkan INTERFACE)
@@ -173,6 +200,9 @@ if(USE_VULKAN)
 		set(VULKAN_TARGET 3rdparty_vulkan)
 	else()
 		message("WARNING! USE_VULKAN was enabled, but libvulkan was not found. RPCS3 will be compiled without Vulkan support.")
+		if(APPLE)
+			message( FATAL_ERROR "ERROR! To build without Vulkan support on macOS, please disable USE_VULKAN.")
+		endif()
 	endif()
 endif()
 
@@ -242,6 +272,7 @@ else()
 		set(FFMPEG_LIB_AVCODEC "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libavcodec.a")
 		set(FFMPEG_LIB_AVUTIL "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libavutil.a")
 		set(FFMPEG_LIB_SWSCALE "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libswscale.a")
+		set(FFMPEG_LIB_SWRESAMPLE "${CMAKE_CURRENT_BINARY_DIR}/ffmpeg/windows/x86_64/lib/libswresample.a")
 	else()
 		message("-- RPCS3: using builtin ffmpeg")
 
@@ -260,6 +291,7 @@ else()
 		find_library(FFMPEG_LIB_AVCODEC avcodec PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
 		find_library(FFMPEG_LIB_AVUTIL avutil PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
 		find_library(FFMPEG_LIB_SWSCALE swscale PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
+		find_library(FFMPEG_LIB_SWRESAMPLE swresample PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
 	endif()
 
 	target_include_directories(3rdparty_ffmpeg INTERFACE "ffmpeg/include")
@@ -269,7 +301,9 @@ else()
 			${FFMPEG_LIB_AVFORMAT}
 			${FFMPEG_LIB_AVCODEC}
 			${FFMPEG_LIB_AVUTIL}
-			${FFMPEG_LIB_SWSCALE})
+			${FFMPEG_LIB_SWSCALE}
+			${FFMPEG_LIB_SWRESAMPLE}
+	)
 endif()
 
 

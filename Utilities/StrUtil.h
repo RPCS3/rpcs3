@@ -8,10 +8,8 @@
 
 #include "util/types.hpp"
 
-#ifdef _WIN32
 std::wstring utf8_to_wchar(std::string_view src);
 std::string wchar_to_utf8(std::wstring_view src);
-#endif
 
 // Copy null-terminated string from a std::string or a char array to a char array with truncation
 template <typename D, typename T>
@@ -79,6 +77,33 @@ namespace fmt
 					auto replacement = list[i].second();
 					src.insert(pos, replacement);
 					pos += replacement.length() - 1;
+					break;
+				}
+			}
+		}
+
+		return src;
+	}
+
+	static inline
+	std::string replace_all(std::string src, const std::vector<std::pair<std::string, std::string>>& list)
+	{
+		for (usz pos = 0; pos < src.length(); ++pos)
+		{
+			for (usz i = 0; i < list.size(); ++i)
+			{
+				const usz comp_length = list[i].first.length();
+
+				if (src.length() - pos < comp_length)
+				{
+					continue;
+				}
+
+				if (src.substr(pos, comp_length) == list[i].first)
+				{
+					src.erase(pos, comp_length);
+					src.insert(pos, list[i].second);
+					pos += list[i].second.length() - 1;
 					break;
 				}
 			}

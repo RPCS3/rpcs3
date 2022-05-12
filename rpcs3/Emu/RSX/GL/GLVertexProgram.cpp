@@ -58,17 +58,21 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 
 void GLVertexDecompilerThread::insertConstants(std::stringstream& OS, const std::vector<ParamType>& constants)
 {
-	OS << "layout(std140, binding = 2) uniform VertexConstantsBuffer\n";
-	OS << "{\n";
-	OS << "	vec4 vc[468];\n";
-	OS << "};\n\n";
+
 
 	for (const ParamType &PT: constants)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
-			if (PI.name == "vc[468]")
+			if (PI.name.starts_with("vc["))
+			{
+				OS << "layout(std140, binding = 2) uniform VertexConstantsBuffer\n";
+				OS << "{\n";
+				OS << "	vec4 " << PI.name << ";\n";
+				OS << "};\n\n";
+
 				continue;
+			}
 
 			OS << "uniform " << PT.type << " " << PI.name << ";\n";
 		}
@@ -126,6 +130,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.require_lit_emulation = properties.has_lit_op;
 	properties2.emulate_zclip_transform = true;
 	properties2.emulate_depth_clip_only = dev_caps.NV_depth_buffer_float_supported;
+	properties2.low_precision_tests = dev_caps.vendor_NVIDIA;
 
 	insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);
@@ -271,6 +276,9 @@ void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 	std::string source;
 	GLVertexDecompilerThread decompiler(prog, source, parr);
 	decompiler.Task();
+
+	has_indexed_constants = decompiler.properties.has_indexed_constants;
+	constant_ids = std::vector<u16>(decompiler.m_constant_ids.begin(), decompiler.m_constant_ids.end());
 
 	shader.create(::glsl::program_domain::glsl_vertex_program, source);
 	id = shader.id();

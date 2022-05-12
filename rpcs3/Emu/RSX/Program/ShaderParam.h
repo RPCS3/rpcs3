@@ -64,10 +64,21 @@ enum class FUNCTION
 	TEXTURE_SAMPLE3D_DEPTH_RGBA,
 	TEXTURE_SAMPLE3D_DEPTH_RGBA_PROJ,
 
+	TEXTURE_SAMPLE2DMS,
+	TEXTURE_SAMPLE2DMS_BIAS,
+	TEXTURE_SAMPLE2DMS_PROJ,
+	TEXTURE_SAMPLE2DMS_LOD,
+	TEXTURE_SAMPLE2DMS_GRAD,
+	TEXTURE_SAMPLE2DMS_SHADOW,
+	TEXTURE_SAMPLE2DMS_SHADOW_PROJ,
+	TEXTURE_SAMPLE2DMS_DEPTH_RGBA,
+	TEXTURE_SAMPLE2DMS_DEPTH_RGBA_PROJ,
+
 	VERTEX_TEXTURE_FETCH1D,
 	VERTEX_TEXTURE_FETCH2D,
 	VERTEX_TEXTURE_FETCH3D,
 	VERTEX_TEXTURE_FETCHCUBE,
+	VERTEX_TEXTURE_FETCH2DMS,
 
 	// Meta
 	TEXTURE_SAMPLE_MAX_BASE_ENUM = TEXTURE_SAMPLE_DEPTH_RGBA_PROJ_BASE, // Update if more base enums are added
@@ -119,12 +130,37 @@ struct ParamType
 	{
 	}
 
-	bool SearchName(const std::string& name) const
+	bool HasItem(const std::string& name) const
 	{
 		return std::any_of(items.cbegin(), items.cend(), [&name](const auto& item)
 		{
 			return item.name == name;
 		});
+	}
+
+	bool ReplaceOrInsert(const std::string& name, const ParamItem& item)
+	{
+		if (HasItem(name))
+		{
+			std::vector<ParamItem> new_list;
+			for (const auto& it : items)
+			{
+				if (it.name != name)
+				{
+					new_list.emplace_back(it.name, it.location, it.value);
+				}
+				else
+				{
+					new_list.emplace_back(item.name, item.location, item.value);
+				}
+			}
+
+			std::swap(items, new_list);
+			return true;
+		}
+
+		items.push_back(item);
+		return false;
 	}
 };
 
@@ -148,14 +184,14 @@ struct ParamArray
 		const auto& p = params[flag];
 		return std::any_of(p.cbegin(), p.cend(), [&name](const auto& param)
 		{
-			return param.SearchName(name);
+			return param.HasItem(name);
 		});
 	}
 
 	bool HasParam(const ParamFlag flag, const std::string& type, const std::string& name)
 	{
 		ParamType* t = SearchParam(flag, type);
-		return t && t->SearchName(name);
+		return t && t->HasItem(name);
 	}
 
 	std::string AddParam(const ParamFlag flag, const std::string& type, const std::string& name, const std::string& value)
@@ -164,7 +200,7 @@ struct ParamArray
 
 		if (t)
 		{
-			if (!t->SearchName(name)) t->items.emplace_back(name, -1, value);
+			if (!t->HasItem(name)) t->items.emplace_back(name, -1, value);
 		}
 		else
 		{
@@ -181,7 +217,7 @@ struct ParamArray
 
 		if (t)
 		{
-			if (!t->SearchName(name)) t->items.emplace_back(name, location);
+			if (!t->HasItem(name)) t->items.emplace_back(name, location);
 		}
 		else
 		{

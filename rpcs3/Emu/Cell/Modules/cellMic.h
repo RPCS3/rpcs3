@@ -121,8 +121,7 @@ enum CellMicType : s32
 
 enum
 {
-	MaxNumMicInputs = 8,
-	CELL_MAX_MICS = MaxNumMicInputs,
+	CELL_MAX_MICS = 8,
 	MAX_MICS_PERMISSABLE = 4,
 
 	NullDeviceID = -1,
@@ -198,6 +197,8 @@ public:
 
 	u32 read_bytes(u8* buf, const u32 size)
 	{
+		ensure(buf);
+
 		u32 to_read = size > m_used ? m_used : size;
 		if (!to_read)
 			return 0;

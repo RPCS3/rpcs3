@@ -1028,7 +1028,11 @@ void VKGSRender::end()
 		m_current_frame->flags &= ~frame_context_state::dirty;
 	}
 
-	analyse_current_rsx_pipeline();
+	if (m_graphics_state & (rsx::pipeline_state::fragment_program_ucode_dirty | rsx::pipeline_state::vertex_program_ucode_dirty))
+	{
+		analyse_current_rsx_pipeline();
+	}
+
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	load_texture_env();
@@ -1116,7 +1120,7 @@ void VKGSRender::end()
 		m_current_command_buffer->flags &= ~(vk::command_buffer::cb_has_conditional_render);
 	}
 
-	m_rtts.on_write(m_framebuffer_layout.color_write_enabled.data(), m_framebuffer_layout.zeta_write_enabled);
+	m_rtts.on_write(m_framebuffer_layout.color_write_enabled, m_framebuffer_layout.zeta_write_enabled);
 
 	rsx::thread::end();
 }

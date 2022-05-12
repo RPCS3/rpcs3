@@ -62,6 +62,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	if (!m_gui_settings->GetValue(gui::m_showDebugTab).toBool())
 	{
 		ui->tab_widget_settings->removeTab(9);
+		ui->audioDump->setVisible(false);
+		ui->audioDump->setChecked(false);
 		m_gui_settings->SetValue(gui::m_showDebugTab, false);
 	}
 	if (game)
@@ -206,17 +208,35 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings_type::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 
-	m_emu_settings->EnhanceCheckBox(ui->accurateXFloat, emu_settings_type::AccurateXFloat);
-	SubscribeTooltip(ui->accurateXFloat, tooltips.settings.accurate_xfloat);
-
-	m_emu_settings->EnhanceCheckBox(ui->approximateXFloat, emu_settings_type::ApproximateXFloat);
-	SubscribeTooltip(ui->approximateXFloat, tooltips.settings.approximate_xfloat);
-
 	m_emu_settings->EnhanceCheckBox(ui->fullWidthAVX512, emu_settings_type::FullWidthAVX512);
 	SubscribeTooltip(ui->fullWidthAVX512, tooltips.settings.full_width_avx512);
 	ui->fullWidthAVX512->setEnabled(utils::has_avx512());
 
 	// Comboboxes
+	SubscribeTooltip(ui->gb_xfloat_accuracy, tooltips.settings.xfloat);
+	ui->xfloatAccuracy->addItem(tr("Accurate XFloat"));
+	ui->xfloatAccuracy->addItem(tr("Approximate XFloat"));
+	ui->xfloatAccuracy->addItem(tr("Relaxed XFloat"));
+
+	connect(ui->xfloatAccuracy, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		if (index < 0) return;
+
+		m_emu_settings->SetSetting(emu_settings_type::AccurateXFloat, index == 0 ? "true" : "false");
+		m_emu_settings->SetSetting(emu_settings_type::ApproximateXFloat, index == 1 ? "true" : "false");
+	});
+
+	connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, this, [this]()
+	{
+		ui->xfloatAccuracy->setCurrentIndex(1);
+	});
+
+	if (m_emu_settings->GetSetting(emu_settings_type::AccurateXFloat) == "true")
+		ui->xfloatAccuracy->setCurrentIndex(0);
+	else if (m_emu_settings->GetSetting(emu_settings_type::ApproximateXFloat) == "true")
+		ui->xfloatAccuracy->setCurrentIndex(1);
+	else
+		ui->xfloatAccuracy->setCurrentIndex(2);
 
 	m_emu_settings->EnhanceComboBox(ui->spuBlockSize, emu_settings_type::SPUBlockSize);
 	SubscribeTooltip(ui->gb_spuBlockSize, tooltips.settings.spu_block_size);
@@ -376,10 +396,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		case static_cast<int>(spu_decoder_type::_static):
 		case static_cast<int>(spu_decoder_type::dynamic):
 		case static_cast<int>(spu_decoder_type::llvm):
-			ui->accurateXFloat->setEnabled(true);
+			ui->xfloatAccuracy->setEnabled(true);
 			break;
 		case static_cast<int>(spu_decoder_type::asmjit):
-			ui->accurateXFloat->setEnabled(false);
+			ui->xfloatAccuracy->setEnabled(false);
 			break;
 		default:
 			break;
@@ -940,6 +960,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// TODO: enable this setting once cellAudioOutConfigure can change downmix on the fly
 	ui->combo_audio_downmix->removeItem(static_cast<int>(audio_downmix::use_application_settings));
 
+	m_emu_settings->EnhanceComboBox(ui->audioProviderBox, emu_settings_type::AudioProvider);
+	SubscribeTooltip(ui->gb_audio_provider, tooltips.settings.audio_provider);
+	ui->gb_audio_provider->setVisible(false); // Hidden for now. This option is forced on boot.
+
+	m_emu_settings->EnhanceComboBox(ui->audioAvportBox, emu_settings_type::AudioAvport);
+	SubscribeTooltip(ui->gb_audio_avport, tooltips.settings.audio_avport);
+
 	// Microphone Comboboxes
 	m_mics_combo[0] = ui->microphone1Box;
 	m_mics_combo[1] = ui->microphone2Box;
@@ -1062,6 +1089,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		});
 		SubscribeTooltip(ui->gb_camera_id, tooltips.settings.camera_id);
 	}
+
+	m_emu_settings->EnhanceComboBox(ui->musicHandlerBox, emu_settings_type::MusicHandler);
+	SubscribeTooltip(ui->gb_music_handler, tooltips.settings.music_handler);
 
 	m_emu_settings->EnhanceComboBox(ui->padModeBox, emu_settings_type::PadHandlerMode);
 	SubscribeTooltip(ui->gb_pad_mode, tooltips.settings.pad_mode);
@@ -1211,6 +1241,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
+	
+	m_emu_settings->EnhanceCheckBox(ui->forceDisableExclusiveFullscreenMode, emu_settings_type::ForceDisableExclusiveFullscreenMode);
+	SubscribeTooltip(ui->forceDisableExclusiveFullscreenMode, tooltips.settings.force_disable_exclusive_fullscreen_mode);
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
 	SubscribeTooltip(ui->mfcDelayCommand, tooltips.settings.mfc_delay_command);
@@ -1219,6 +1252,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const std::string str = val != Qt::Unchecked ? "1" : "0";
 		m_emu_settings->SetSetting(emu_settings_type::MFCCommandsShuffling, str);
 	});
+
+	m_emu_settings->EnhanceCheckBox(ui->disableMslFastMath, emu_settings_type::DisableMSLFastMath);
+	m_emu_settings->EnhanceCheckBox(ui->softwareVkSemaphore, emu_settings_type::SoftwareVkSemaphore);
+#ifdef __APPLE__
+	SubscribeTooltip(ui->disableMslFastMath, tooltips.settings.disable_msl_fast_math);
+	SubscribeTooltip(ui->softwareVkSemaphore, tooltips.settings.mvk_software_vksemaphore);
+#else
+	ui->disableMslFastMath->setVisible(false);
+	ui->softwareVkSemaphore->setVisible(false);
+#endif
 
 	// Comboboxes
 
@@ -1231,13 +1274,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
-
-	m_emu_settings->EnhanceComboBox(ui->metalsemaphore, emu_settings_type::MetalSemaphore);
-#ifdef __APPLE__
-	SubscribeTooltip(ui->gb_metalsemaphore, tooltips.settings.metal_semaphore);
-#else
-	ui->gb_metalsemaphore->setVisible(false);
-#endif
 
 	// Sliders
 

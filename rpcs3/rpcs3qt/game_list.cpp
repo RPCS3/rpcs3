@@ -10,7 +10,7 @@ void game_list::clear_list()
 
 void game_list::mousePressEvent(QMouseEvent *event)
 {
-	if (!indexAt(event->pos()).isValid() || !itemAt(event->pos())->data(Qt::UserRole).isValid())
+	if (QTableWidgetItem* item = itemAt(event->pos()); !item || !item->data(Qt::UserRole).isValid())
 	{
 		clearSelection();
 		setCurrentItem(nullptr); // Needed for currentItemChanged

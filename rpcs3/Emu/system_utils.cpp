@@ -70,12 +70,12 @@ namespace rpcs3::utils
 	u32 check_user(const std::string& user)
 	{
 		u32 id = 0;
-	
+
 		if (user.size() == 8)
 		{
 			std::from_chars(&user.front(), &user.back() + 1, id);
 		}
-	
+
 		return id;
 	}
 
@@ -226,7 +226,7 @@ namespace rpcs3::utils
 		return edat_path;
 	}
 
-	bool verify_c00_unlock_edat(const std::string_view& content_id)
+	bool verify_c00_unlock_edat(const std::string_view& content_id, bool fast)
 	{
 		const std::string edat_path = rpcs3::utils::get_c00_unlock_edat_path(content_id);
 
@@ -239,14 +239,20 @@ namespace rpcs3::utils
 			return false;
 		}
 
-		u128 k_licensee = get_default_self_klic();
-		std::string edat_content_id;
+		// Use simple check for GUI
+		if (fast)
+			return true;
 
-		if (!VerifyEDATHeaderWithKLicense(enc_file, edat_path, reinterpret_cast<u8*>(&k_licensee), &edat_content_id))
+		u128 k_licensee = get_default_self_klic();
+		NPD_HEADER npd;
+
+		if (!VerifyEDATHeaderWithKLicense(enc_file, edat_path, reinterpret_cast<u8*>(&k_licensee), &npd))
 		{
 			sys_log.error("verify_c00_unlock_edat(): Failed to verify npd file '%s'", edat_path);
 			return false;
 		}
+
+		std::string edat_content_id = npd.content_id;
 
 		if (edat_content_id != content_id)
 		{
@@ -325,10 +331,10 @@ namespace rpcs3::utils
 			// This is a trial game. Check if the user has EDAT file to unlock it.
 			const auto c00_title_id = psf::get_string(psf, "TITLE_ID");
 
-			if (fs::is_file(game_path + "/C00/PARAM.SFO") && verify_c00_unlock_edat(content_id))
+			if (fs::is_file(game_path + "/C00/PARAM.SFO") && verify_c00_unlock_edat(content_id, true))
 			{
 				// Load full game data.
-				sys_log.notice("Verified EDAT file %s.edat for trial game %s", content_id, c00_title_id);
+				sys_log.notice("Found EDAT file %s.edat for trial game %s", content_id, c00_title_id);
 				return game_path + "/C00";
 			}
 		}

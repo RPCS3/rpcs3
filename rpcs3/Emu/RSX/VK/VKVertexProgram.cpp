@@ -101,27 +101,28 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 
 void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
 {
-	OS << "layout(std140, set=0, binding = 1) uniform VertexConstantsBuffer\n";
-	OS << "{\n";
-	OS << "	vec4 vc[468];\n";
-	OS << "};\n\n";
-
 	vk::glsl::program_input in;
-	in.location = m_binding_table.vertex_constant_buffers_bind_slot;
-	in.domain = glsl::glsl_vertex_program;
-	in.name = "VertexConstantsBuffer";
-	in.type = vk::glsl::input_type_uniform_buffer;
-
-	inputs.push_back(in);
-
-
 	u32 location = m_binding_table.vertex_textures_first_bind_slot;
+
 	for (const ParamType &PT : constants)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
-			if (PI.name == "vc[468]")
+			if (PI.name.starts_with("vc["))
+			{
+				OS << "layout(std140, set=0, binding = " << static_cast<int>(m_binding_table.vertex_constant_buffers_bind_slot) << ") uniform VertexConstantsBuffer\n";
+				OS << "{\n";
+				OS << "	vec4 " << PI.name << ";\n";
+				OS << "};\n\n";
+
+				in.location = m_binding_table.vertex_constant_buffers_bind_slot;
+				in.domain = glsl::glsl_vertex_program;
+				in.name = "VertexConstantsBuffer";
+				in.type = vk::glsl::input_type_uniform_buffer;
+
+				inputs.push_back(in);
 				continue;
+			}
 
 			if (PT.type == "sampler2D" ||
 				PT.type == "samplerCube" ||
@@ -134,7 +135,25 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 
 				inputs.push_back(in);
 
-				OS << "layout(set = 0, binding=" << location++ << ") uniform " << PT.type << " " << PI.name << ";\n";
+				auto samplerType = PT.type;
+
+				if (m_prog.texture_state.multisampled_textures) [[ unlikely ]]
+				{
+					ensure(PI.name.length() > 3);
+					int index = atoi(&PI.name[3]);
+
+					if (m_prog.texture_state.multisampled_textures & (1 << index))
+					{
+						if (samplerType != "sampler1D" && samplerType != "sampler2D")
+						{
+							rsx_log.error("Unexpected multisampled sampler type '%s'", samplerType);
+						}
+
+						samplerType = "sampler2DMS";
+					}
+				}
+
+				OS << "layout(set = 0, binding=" << location++ << ") uniform " << samplerType << " " << PI.name << ";\n";
 			}
 		}
 	}
@@ -188,6 +207,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.require_lit_emulation = properties.has_lit_op;
 	properties2.emulate_zclip_transform = true;
 	properties2.emulate_depth_clip_only = vk::g_render_device->get_shader_types_support().allow_float64;
+	properties2.low_precision_tests = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
@@ -330,6 +350,9 @@ void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 	std::string source;
 	VKVertexDecompilerThread decompiler(prog, source, parr, *this);
 	decompiler.Task();
+
+	has_indexed_constants = decompiler.properties.has_indexed_constants;
+	constant_ids = std::vector<u16>(decompiler.m_constant_ids.begin(), decompiler.m_constant_ids.end());
 
 	shader.create(::glsl::program_domain::glsl_vertex_program, source);
 }

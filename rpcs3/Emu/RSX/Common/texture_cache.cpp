@@ -96,6 +96,9 @@ namespace rsx
 			tex_cache_checker.remove(locked_range, protection);
 #endif
 
+		// Save previous state to compare for changes
+		const auto prev_confirmed_range = confirmed_range;
+
 		if (prot != utils::protection::rw)
 		{
 			if (confirmed_range.valid())
@@ -113,7 +116,7 @@ namespace rsx
 			init_lockable_range(confirmed_range);
 		}
 
-		protect(prot, true);
+		protect(prot, confirmed_range != prev_confirmed_range);
 	}
 
 	void buffered_section::unprotect()

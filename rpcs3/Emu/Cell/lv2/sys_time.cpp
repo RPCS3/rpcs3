@@ -3,6 +3,7 @@
 
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "util/asm.hpp"
 
@@ -134,23 +135,34 @@ LOG_CHANNEL(sys_time);
 
 static constexpr u64 g_timebase_freq = /*79800000*/ 80000000ull; // 80 Mhz
 
-// Auxiliary functions
+// Convert time is microseconds to timebased time
+u64 convert_to_timebased_time(u64 time)
+{
+	const u64 result = time * (g_timebase_freq / 1000000ull) * g_cfg.core.clocks_scale / 100u;
+	ensure(result >= timebase_offset);
+	return result - timebase_offset;
+}
+
 u64 get_timebased_time()
 {
+	while (true)
+	{
 #ifdef _WIN32
-	LARGE_INTEGER count;
-	ensure(QueryPerformanceCounter(&count));
+		LARGE_INTEGER count;
+		ensure(QueryPerformanceCounter(&count));
 
-	const u64 time = count.QuadPart;
-	const u64 freq = s_time_aux_info.perf_freq;
+		const u64 time = count.QuadPart;
+		const u64 freq = s_time_aux_info.perf_freq;
 
-	return ((time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u) - timebase_offset;
+		const u64 result = (time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
 #else
-	struct timespec ts;
-	ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
+		struct timespec ts;
+		ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
 
-	return ((static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u) - timebase_offset;
+		const u64 result = (static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u;
 #endif
+		if (result) return result - timebase_offset;
+	}
 }
 
 // Add an offset to get_timebased_time to avoid leaking PC's uptime into the game

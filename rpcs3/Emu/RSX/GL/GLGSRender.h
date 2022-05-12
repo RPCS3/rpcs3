@@ -69,14 +69,14 @@ namespace gl
 class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
 private:
-	GLFragmentProgram m_fragment_prog;
-	GLVertexProgram m_vertex_prog;
 
 	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
 	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
 	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];           // Vertex textures
 
 	gl::glsl::program *m_program = nullptr;
+	const GLFragmentProgram *m_fragment_prog = nullptr;
+	const GLVertexProgram *m_vertex_prog = nullptr;
 
 	u32 m_interpreter_state = 0;
 	gl::shader_interpreter m_shader_interpreter;

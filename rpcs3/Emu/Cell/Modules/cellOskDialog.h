@@ -253,7 +253,15 @@ enum class OskDialogState
 class OskDialogBase
 {
 public:
-	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel) = 0;
+	struct color
+	{
+		f32 r = 1.0f;
+		f32 g = 1.0f;
+		f32 b = 1.0f;
+		f32 a = 1.0f;
+	};
+
+	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled, bool intercept_input) = 0;
 
 	// Closes the dialog.
 	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.
@@ -262,9 +270,13 @@ public:
 	virtual ~OskDialogBase();
 
 	std::function<void(s32 status)> on_osk_close;
-	std::function<void()> on_osk_input_entered;
+	std::function<void(CellOskDialogKeyMessage key_message)> on_osk_key_input_entered;
 
 	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
+	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's events.
+	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's events.
+	atomic_t<bool> keyboard_input_enabled{ true }; // Determines if the OSK consumes the device's events.
+	atomic_t<bool> ignore_input_events{ false };   // Determines if the OSK ignores all consumed events.
 
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
 	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE]{};

@@ -49,6 +49,7 @@ elseif (APPLE)
 
 		find_package(IOKit REQUIRED)
 		list(APPEND LIBUSB_LIBRARIES ${IOKit_LIBRARIES})
+		list(APPEND LIBUSB_LIBRARIES "-framework Security")
 
 		# Currently only objc_registerThreadWithCollector requires linking against it
 		# which is only for MAC_OS_X_VERSION_MIN_REQUIRED >= 1060

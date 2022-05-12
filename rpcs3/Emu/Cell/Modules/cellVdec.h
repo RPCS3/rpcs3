@@ -17,6 +17,7 @@ enum CellVdecCodecType : s32
 	CELL_VDEC_CODEC_TYPE_MPEG2 = 0,
 	CELL_VDEC_CODEC_TYPE_AVC   = 1,
 	CELL_VDEC_CODEC_TYPE_DIVX  = 5,
+	CELL_VDEC_CODEC_TYPE_MAX
 };
 
 // Callback Messages
@@ -69,6 +70,12 @@ enum CellVdecFrameRate : s32
 	CELL_VDEC_FRC_50           = 0x85,
 	CELL_VDEC_FRC_60000DIV1001 = 0x86,
 	CELL_VDEC_FRC_60           = 0x87,
+};
+
+enum
+{
+	CELL_CODEC_PTS_INVALID = 0xffffffff,
+	CELL_CODEC_DTS_INVALID = 0xffffffff,
 };
 
 // Codec Type Information
@@ -131,6 +138,19 @@ struct CellVdecAuInfo
 {
 	be_t<u32> startAddr;
 	be_t<u32> size;
+	CellCodecTimeStamp pts;
+	CellCodecTimeStamp dts;
+	be_t<u64> userData;
+	be_t<u64> codecSpecificData;
+};
+
+// Access Unit Information
+struct CellVdecAuInfoEx2 // Speculative name
+{
+	be_t<u32> startAddr;
+	be_t<u32> unk1; // Speculative
+	be_t<u32> size;
+	be_t<u32> unk2; // Speculative
 	CellCodecTimeStamp pts;
 	CellCodecTimeStamp dts;
 	be_t<u64> userData;

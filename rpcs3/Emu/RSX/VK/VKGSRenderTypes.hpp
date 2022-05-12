@@ -244,7 +244,7 @@ namespace vk
 			texture_upload_heap_ptr = texture_loc;
 			rasterizer_env_heap_ptr = rasterizer_loc;
 
-			last_frame_sync_time = get_system_time();
+			last_frame_sync_time = rsx::get_shared_tag();
 		}
 
 		void reset_heap_ptrs()

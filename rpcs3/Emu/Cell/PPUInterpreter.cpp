@@ -25,6 +25,8 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 
+extern bool is_debugger_present();
+
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
 extern const ppu_decoder<ppu_iname> g_ppu_iname;
 
@@ -109,10 +111,17 @@ struct ppu_exec_select
 #define RETURN_(...) \
 	if constexpr (Build == 0) { \
 		static_cast<void>(exec); \
-		return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn) { \
-			const auto fn = atomic_storage<ppu_intrp_func_t>::observe(next_fn->fn); \
+		if (is_debugger_present()) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn) { \
 			exec(__VA_ARGS__); \
 			const auto next_op = this_op + 1; \
+			const auto fn = atomic_storage<ppu_intrp_func_t>::load(next_fn->fn); \
+			ppu.cia = vm::get_addr(next_op); \
+			return fn(ppu, {*next_op}, next_op, next_fn + 1); \
+		}; \
+		return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn) { \
+			exec(__VA_ARGS__); \
+			const auto next_op = this_op + 1; \
+			const auto fn = atomic_storage<ppu_intrp_func_t>::observe(next_fn->fn); \
 			return fn(ppu, {*next_op}, next_op, next_fn + 1); \
 		}; \
 	}
@@ -145,8 +154,6 @@ namespace asmjit
 		ppu_builder(CodeHolder* ch)
 			: base(ch)
 		{
-			// Initialize pointer to next function
-			base::mov(x86::r11, x86::qword_ptr(arg_next_fn));
 		}
 
 		// Indexed offset to ppu.member
@@ -222,11 +229,15 @@ namespace asmjit
 
 		void ppu_ret(bool last = true)
 		{
+			// Initialize pointer to next function
+			base::mov(x86::rax, x86::qword_ptr(arg_next_fn));
 			base::add(arg_this_op, 4);
+			if (is_debugger_present())
+				base::mov(ppu_mem<&ppu_thread::cia>(), arg_this_op.r32());
 			base::mov(arg_op, x86::dword_ptr(arg_this_op));
 			base::bswap(arg_op);
 			base::add(arg_next_fn, 8);
-			base::jmp(x86::r11);
+			base::jmp(x86::rax);
 
 			// Embed constants (TODO: after last return)
 			if (last)
@@ -6165,9 +6176,16 @@ auto FRES()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.fpr[op.frd] = f32(1.0 / ppu.fpr[op.frb]);
-	ppu_set_fpcc<Flags...>(ppu, ppu.fpr[op.frd], 0.);
+	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
+	{
+		const f64 a = ppu.fpr[op.frb];
+		const u64 b = std::bit_cast<u64>(a);
+		const u64 e = (b >> 52) & 0x7ff; // double exp
+		const u64 i = (b >> 45) & 0x7f; // mantissa LUT index
+		const u64 r = e >= (0x3ff + 0x80) ? 0 : (0x7ff - 2 - e) << 52 | u64{ppu_fres_mantissas[i]} << (32 - 3);
+
+		ppu.fpr[op.frd] = f32(std::bit_cast<f64>(a == a ? (b & 0x8000'0000'0000'0000) | r : (0x8'0000'0000'0000 | b)));
+		ppu_set_fpcc<Flags...>(ppu, ppu.fpr[op.frd], 0.);
 	};
 	RETURN_(ppu, op);
 }
@@ -6523,10 +6541,13 @@ auto FRSQRTE()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.fpr[op.frd] = 1.0 / std::sqrt(ppu.fpr[op.frb]);
-	ppu_set_fpcc<Flags...>(ppu, ppu.fpr[op.frd], 0.);
+	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
+	{
+		const u64 b = std::bit_cast<u64>(ppu.fpr[op.frb]);
+		ppu.fpr[op.frd] = std::bit_cast<f64>(u64{ppu_frqrte_lut.data[b >> 49]} << 32);
+		ppu_set_fpcc<Flags...>(ppu, ppu.fpr[op.frd], 0.);
 	};
+
 	RETURN_(ppu, op);
 }
 

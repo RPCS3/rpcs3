@@ -19,7 +19,7 @@ class log_frame : public custom_dock_widget
 	Q_OBJECT
 
 public:
-	explicit log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent = nullptr);
+	explicit log_frame(std::shared_ptr<gui_settings> _gui_settings, QWidget* parent = nullptr);
 
 	/** Repaint log colors after new stylesheet was applied */
 	void RepaintTextColors();
@@ -77,6 +77,7 @@ private:
 
 	QAction* m_stack_act_log = nullptr;
 	QAction* m_stack_act_tty = nullptr;
+	QAction* m_stack_act_err = nullptr;
 
 	QAction* m_show_prefix_act = nullptr;
 

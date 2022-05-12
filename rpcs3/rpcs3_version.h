@@ -9,4 +9,7 @@ namespace rpcs3
 	std::pair<std::string, std::string> get_commit_and_hash();
 	const utils::version& get_version();
 	std::string get_version_and_branch();
+	std::string get_verbose_version();
+	bool is_release_build();
+	bool is_local_build();
 }

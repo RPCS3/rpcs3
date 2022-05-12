@@ -109,6 +109,8 @@ class program_state_cache
 	using binary_to_vertex_program = std::unordered_map<RSXVertexProgram, vertex_program_type, program_hash_util::vertex_program_storage_hash, program_hash_util::vertex_program_compare> ;
 	using binary_to_fragment_program = std::unordered_map<RSXFragmentProgram, fragment_program_type, program_hash_util::fragment_program_storage_hash, program_hash_util::fragment_program_compare>;
 
+	using pipeline_data_type = std::tuple<pipeline_type*, const vertex_program_type*, const fragment_program_type*>;
+
 	struct pipeline_key
 	{
 		u32 vertex_program_id;
@@ -305,7 +307,7 @@ public:
 	{}
 
 	template<typename... Args>
-	pipeline_type* get_graphics_pipeline(
+	pipeline_data_type get_graphics_pipeline(
 		const RSXVertexProgram& vertexShader,
 		const RSXFragmentProgram& fragmentShader,
 		pipeline_properties& pipelineProperties,
@@ -334,7 +336,7 @@ public:
 			if (const auto I = m_storage.find(key); I != m_storage.end())
 			{
 				m_cache_miss_flag = (I->second == __null_pipeline_handle);
-				return I->second.get();
+				return { I->second.get(), &vertex_program, &fragment_program };
 			}
 		}
 
@@ -345,7 +347,7 @@ public:
 			if (const auto I = m_storage.find(key); I != m_storage.end())
 			{
 				m_cache_miss_flag = (I->second == __null_pipeline_handle);
-				return I->second.get();
+				return { I->second.get(), &vertex_program, &fragment_program };
 			}
 
 			// Insert a placeholder if the key still doesn't exist to avoid re-linking of the same pipeline
@@ -391,16 +393,18 @@ public:
 			};
 		}
 
-		return backend_traits::build_pipeline(
+		auto result = backend_traits::build_pipeline(
 			vertex_program,                 // VS, must already be decompiled and recompiled above
 			fragment_program,               // FS, must already be decompiled and recompiled above
 			pipelineProperties,             // Pipeline state
 			compile_async,                  // Allow asynchronous compilation
 			callback,                       // Insertion and notification callback
 			std::forward<Args>(args)...);   // Other arguments
+
+		return { result, &vertex_program, &fragment_program };
 	}
 
-	void fill_fragment_constants_buffer(std::span<f32> dst_buffer, const RSXFragmentProgram& fragment_program, bool sanitize = false) const;
+	void fill_fragment_constants_buffer(std::span<f32> dst_buffer, const fragment_program_type& fragment_program, const RSXFragmentProgram& rsx_prog, bool sanitize = false) const;
 
 	void clear()
 	{

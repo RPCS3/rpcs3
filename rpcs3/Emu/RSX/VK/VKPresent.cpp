@@ -97,7 +97,11 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 			swapchain_unavailable = true;
 			break;
 		default:
-			vk::die_with_error(error);
+			// Other errors not part of rpcs3. This can be caused by 3rd party injectors with bad code, of which we have no control over.
+			// Let the application attempt to recover instead of crashing outright.
+			rsx_log.error("VkPresent returned unexpected error code %lld. Will attempt to recreate the swapchain. Please disable 3rd party injector tools.", static_cast<s64>(error));
+			swapchain_unavailable = true;
+			break;
 		}
 	}
 
@@ -278,7 +282,7 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 	// Check the surface store first
 	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
 	const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer,
-		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::shader_read);
+		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::transfer_read);
 
 	if (!overlap_info.empty())
 	{
@@ -288,8 +292,8 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 
 		if (section.base_address >= info->address)
 		{
-			const auto surface_width = surface->get_surface_width(rsx::surface_metrics::samples);
-			const auto surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
+			const auto surface_width = surface->get_surface_width<rsx::surface_metrics::samples>();
+			const auto surface_height = surface->get_surface_height<rsx::surface_metrics::samples>();
 
 			if (section.base_address == info->address)
 			{
@@ -311,8 +315,7 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 
 			if (viable)
 			{
-				surface->read_barrier(*m_current_command_buffer);
-				image_to_flip = section.surface->get_surface(rsx::surface_access::shader_read);
+				image_to_flip = section.surface->get_surface(rsx::surface_access::transfer_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
 					std::min(surface_width, info->width),

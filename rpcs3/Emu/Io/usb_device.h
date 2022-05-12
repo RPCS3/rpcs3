@@ -98,6 +98,9 @@ struct UsbTransfer
 	libusb_transfer* transfer = nullptr;
 	bool busy                 = false;
 
+	// For control transfers
+	u8 *control_destbuf = nullptr;
+
 	// For fake transfers
 	bool fake           = false;
 	u64 expected_time   = 0;

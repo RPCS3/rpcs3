@@ -30,7 +30,9 @@ void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 	std::string datrace;
 	const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
-	for (int index = 0; index < transfer.actual_length; index++)
+	const int data_start = transfer.type == LIBUSB_TRANSFER_TYPE_CONTROL ? LIBUSB_CONTROL_SETUP_SIZE : 0;
+
+	for (int index = data_start; index < data_start + transfer.actual_length; index++)
 	{
 		datrace += hex[transfer.buffer[index] >> 4];
 		datrace += hex[(transfer.buffer[index]) & 15];
@@ -119,7 +121,7 @@ private:
 	std::map<u32, UsbPipe> open_pipes;
 	// Transfers infos
 	shared_mutex mutex_transfers;
-	std::array<UsbTransfer, 0x44> transfers;
+	std::array<UsbTransfer, MAX_SYS_USBD_TRANSFERS> transfers;
 	std::vector<UsbTransfer*> fake_transfers;
 
 	// Queue of pending usbd events
@@ -143,12 +145,27 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 
 usb_handler_thread::usb_handler_thread()
 {
-	if (libusb_init(&ctx) < 0)
+	if (int res = libusb_init(&ctx); res < 0)
+	{
+		sys_usbd.error("Failed to initialize sys_usbd: %s", libusb_error_name(res));
 		return;
+	}
+
+	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
+	{
+		transfers[index].transfer    = libusb_alloc_transfer(8);
+		transfers[index].transfer_id = index;
+	}
 
 	// look if any device which we could be interested in is actually connected
 	libusb_device** list = nullptr;
 	ssize_t ndev         = libusb_get_device_list(ctx, &list);
+
+	if (ndev < 0)
+	{
+		sys_usbd.error("Failed to get device list: %s", libusb_error_name(ndev));
+		return;
+	}
 
 	std::array<u8, 7> location{};
 
@@ -164,7 +181,11 @@ usb_handler_thread::usb_handler_thread()
 	for (ssize_t index = 0; index < ndev; index++)
 	{
 		libusb_device_descriptor desc;
-		libusb_get_device_descriptor(list[index], &desc);
+		if (int res = libusb_get_device_descriptor(list[index], &desc); res < 0)
+		{
+			sys_usbd.error("Failed to get device descriptor: %s", libusb_error_name(res));
+			continue;
+		}
 
 		auto check_device = [&](const u16 id_vendor, const u16 id_product_min, const u16 id_product_max, const char* s_name) -> bool
 		{
@@ -190,11 +211,11 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal");
 
 		// Cameras
-		//check_device(0x1415, 0x0020, 0x2000, "Sony Playstation Eye"); // TODO: verifiy
+		// check_device(0x1415, 0x0020, 0x2000, "Sony Playstation Eye"); // TODO: verifiy
 
 		// Music devices
 		check_device(0x1415, 0x0000, 0x0000, "SingStar Microphone");
-		//check_device(0x1415, 0x0020, 0x0020, "SingStar Microphone Wireless"); // TODO: verifiy
+		// check_device(0x1415, 0x0020, 0x0020, "SingStar Microphone Wireless"); // TODO: verifiy
 		check_device(0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar");
 		check_device(0x12BA, 0x0120, 0x0120, "Guitar Hero Drums");
 		check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar");
@@ -205,6 +226,11 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x12BA, 0x2330, 0x233F, "Harmonix Keyboard");
 		check_device(0x12BA, 0x2430, 0x243F, "Harmonix Button Guitar");
 		check_device(0x12BA, 0x2530, 0x253F, "Harmonix Real Guitar");
+
+		// Top Shot Elite controllers
+		check_device(0x12BA, 0x04A0, 0x04A0, "RO Gun Controller");
+		check_device(0x12BA, 0x04A1, 0x04A1, "RO Gun Controller 2012");
+		check_device(0x12BA, 0x04B0, 0x04B0, "RO Fishing Rod");
 
 		// GT5 Wheels&co
 		check_device(0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b");
@@ -287,12 +313,6 @@ usb_handler_thread::usb_handler_thread()
 		// Since there can only be 7 pads connected on a PS3 the 8th player is currently not supported
 		sys_usbd.notice("Adding emulated Buzz! buzzer (5-7 players)");
 		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6, get_new_location()));
-	}
-
-	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
-	{
-		transfers[index].transfer    = libusb_alloc_transfer(8);
-		transfers[index].transfer_id = index;
 	}
 }
 
@@ -403,6 +423,12 @@ void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 		}
 
 		usbd_transfer->iso_request.packets[index] = ((iso_status & 0xF) << 12 | (transfer->iso_packet_desc[index].actual_length & 0xFFF));
+	}
+
+	if (transfer->type == LIBUSB_TRANSFER_TYPE_CONTROL && usbd_transfer->control_destbuf)
+	{
+		memcpy(usbd_transfer->control_destbuf, transfer->buffer + LIBUSB_CONTROL_SETUP_SIZE, transfer->actual_length);
+		usbd_transfer->control_destbuf = nullptr;
 	}
 
 	usbd_transfer->busy = false;
@@ -707,12 +733,12 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_pr
 	// The register_ldd appears to be a more promiscuous mode function, where all device 'inserts' would be presented to the cellUsbd for Probing.
 	// Unsure how many more devices might need similar treatment (i.e. just a compare and force VID/PID add), or if it's worth adding a full promiscuous
 	// capability
-	if (strcmp(s_product.get_ptr(), "guncon3") == 0)
+	if (s_product.get_ptr() == "guncon3"sv)
 	{
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
 		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0800, 0x0800);
 	}
-	else if (strcmp(s_product.get_ptr(), "PS3A-USJ") == 0)
+	else if (s_product.get_ptr() == "PS3A-USJ"sv)
 	{
 		// Arcade v406 USIO board
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);

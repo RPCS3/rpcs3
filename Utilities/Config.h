@@ -37,7 +37,8 @@ namespace cfg
 		string, // cfg::string type
 		set, // cfg::set_entry type
 		map, // cfg::map_entry type
-		log,
+		log, // cfg::log_entry type
+		device, // cfg::device_entry type
 	};
 
 	// Config tree entry abstract base class
@@ -518,6 +519,42 @@ namespace cfg
 		}
 
 		void set_map(map_of_type<logs::level>&& map);
+
+		void from_default() override;
+	};
+
+	struct device_info
+	{
+		std::string path;
+		std::string serial;
+		std::string vid;
+		std::string pid;
+	};
+
+	class device_entry final : public _base
+	{
+		map_of_type<device_info> m_map{};
+		map_of_type<device_info> m_default{};
+
+	public:
+		device_entry(node* owner, const std::string& name, map_of_type<device_info> def = {})
+			: _base(type::device, owner, name, true)
+			, m_map(std::move(def))
+		{
+			m_default = m_map;
+		}
+
+		const map_of_type<device_info>& get_map() const
+		{
+			return m_map;
+		}
+
+		const map_of_type<device_info>& get_default() const
+		{
+			return m_default;
+		}
+
+		void set_map(map_of_type<device_info>&& map);
 
 		void from_default() override;
 	};

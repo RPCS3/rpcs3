@@ -48,7 +48,7 @@
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
-#include "Crypto/unedat.h"
+#include "Crypto/decrypt_binaries.h"
 
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
@@ -73,6 +73,10 @@ extern void process_qt_events()
 {
 	if (thread_ctrl::is_main())
 	{
+		// NOTE:
+		// I noticed that calling this from an Emu callback can cause the
+		// caller to get stuck for a while during newly opened Qt dialogs.
+		// Adding a timeout here doesn't seem to do anything in that case.
 		QApplication::processEvents();
 	}
 }
@@ -116,13 +120,14 @@ bool main_window::Init(bool with_cli_boot)
 	CreateConnects();
 
 	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
-	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::get_version().to_string()));
+	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::get_verbose_version()));
 
 	Q_EMIT RequestGlobalStylesheetChange();
 	ConfigureGuiFromSettings();
 
-	if (const std::string_view branch_name = rpcs3::get_full_branch(); branch_name != "RPCS3/rpcs3/master" && branch_name != "local_build")
+	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
 	{
+		const std::string_view branch_name = rpcs3::get_full_branch();
 		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
 
 		QMessageBox msg;
@@ -649,7 +654,7 @@ void main_window::InstallPackages(QStringList file_paths)
 		const QString info_string = QStringLiteral("%0\n\n%1%2%3%4%5").arg(file_info.fileName()).arg(info.title).arg(info.local_cat)
 			.arg(info.title_id).arg(info.version).arg(info.changelog);
 
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string), 
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0").arg(info_string),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("PKG: Cancelled installation from drop.\n%s", sstr(info_string));
@@ -674,7 +679,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	const auto install_filetype = [&installed_rap_and_edat_count, &file_paths](const std::string extension)
 	{
 		const QString pattern = QString(".*\\.%1").arg(QString::fromStdString(extension));
-		for (const auto& file : file_paths.filter(QRegExp(pattern, Qt::CaseInsensitive)))
+		for (const auto& file : file_paths.filter(QRegularExpression(pattern, QRegularExpression::PatternOption::CaseInsensitiveOption)))
 		{
 			const QFileInfo file_info(file);
 			const std::string filename = sstr(file_info.fileName());
@@ -701,7 +706,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	}
 
 	// Find remaining package files
-	file_paths = file_paths.filter(QRegExp(".*\\.pkg", Qt::CaseInsensitive));
+	file_paths = file_paths.filter(QRegularExpression(".*\\.pkg", QRegularExpression::PatternOption::CaseInsensitiveOption));
 
 	if (!file_paths.isEmpty())
 	{
@@ -1105,7 +1110,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		{
 			gui_log.error("Error while extracting firmware: Failed to mount '%s'", sstr(dir_path));
 			critical(tr("Firmware extraction failed: VFS mounting failed."));
-			return;	
+			return;
 		}
 
 		if (!update_files.extract("/pup_extract"))
@@ -1134,7 +1139,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		return;
 	}
 
-	static constexpr std::string_view cur_version = "4.88";
+	static constexpr std::string_view cur_version = "4.89";
 
 	std::string version_string;
 
@@ -1293,166 +1298,46 @@ void main_window::DecryptSPRXLibraries()
 
 	m_gui_settings->SetValue(gui::fd_decrypt_sprx, QFileInfo(modules.first()).path());
 
-	gui_log.notice("Decrypting binaries...");
-
-	// Always start with no KLIC
-	std::vector<u128> klics{u128{}};
-
-	if (const auto keys = g_fxo->try_get<loaded_npdrm_keys>())
+	std::vector<std::string> vec_modules;
+	for (const QString& mod : modules)
 	{
-		// Second klic: get it from a running game
-		if (const u128 klic = keys->last_key())
-		{
-			klics.emplace_back(klic);
-		}
+		vec_modules.push_back(mod.toStdString());
 	}
 
-	for (const QString& _module : modules)
+	const auto input_cb = [this](std::string old_path, std::string path, bool tried) -> std::string
 	{
-		const std::string old_path = sstr(_module);
+		const QString hint = tr("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
+			"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.").arg(qstr(path));
 
-		fs::file elf_file;
-
-		bool tried = false;
-		bool invalid = false;
-		usz key_it = 0;
-		u32 file_magic{};
-
-		while (true)
+		if (tried)
 		{
-			for (; key_it < klics.size(); key_it++)
-			{
-				if (!elf_file.open(old_path) || !elf_file.read(file_magic))
-				{
-					file_magic = 0;
-				}
-
-				switch (file_magic)
-				{
-				case "SCE\0"_u32:
-				{
-					// First KLIC is no KLIC
-					elf_file = decrypt_self(std::move(elf_file), key_it != 0 ? reinterpret_cast<u8*>(&klics[key_it]) : nullptr);
-
-					if (!elf_file)
-					{
-						// Try another key
-						continue;
-					}
-
-					break;
-				}
-				case "NPD\0"_u32:
-				{
-					// EDAT / SDAT
-					elf_file = DecryptEDAT(elf_file, old_path, key_it != 0 ? 8 : 1, reinterpret_cast<u8*>(&klics[key_it]), true);
-
-					if (!elf_file)
-					{
-						// Try another key
-						continue;
-					}
-
-					break;
-				}
-				default:
-				{
-					invalid = true;
-					break;
-				}
-				}
-
-				if (invalid)
-				{
-					elf_file.close();
-				}
-
-				break;
-			}
-
-			if (elf_file)
-			{
-				const std::string exec_ext = _module.toLower().endsWith(".sprx") ? ".prx" : ".elf";
-				const std::string new_path = file_magic == "NPD\0"_u32 ? old_path + ".unedat" :
-					old_path.substr(0, old_path.find_last_of('.')) + exec_ext;
-
-				if (fs::file new_file{new_path, fs::rewrite})
-				{
-					new_file.write(elf_file.to_string());
-					gui_log.success("Decrypted %s -> %s", old_path, new_path);
-				}
-				else
-				{
-					gui_log.error("Failed to create %s", new_path);
-				}
-
-				break;
-			}
-			else if (!invalid)
-			{
-				// Allow the user to manually type KLIC if decryption failed
-
-				const std::string filename = old_path.substr(old_path.find_last_of(fs::delim) + 1);
-
-				const QString hint = tr("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
-							"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.").arg(qstr(filename));
-
-				if (tried)
-				{
-					gui_log.error("Failed to decrypt %s with specfied KLIC, retrying.\n%s", old_path, sstr(hint));
-				}
-
-				input_dialog dlg(32, "", tr("Enter KLIC of %0").arg(qstr(filename)),
-					tried ? tr("Decryption failed with provided KLIC.\n%0").arg(hint) : tr("Hexadecimal only."), "00000000000000000000000000000000", this);
-
-				QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-				mono.setPointSize(8);
-				dlg.set_input_font(mono, true, '0');
-				dlg.set_clear_button_enabled(false);
-				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
-				dlg.set_validator(new QRegExpValidator(QRegExp("^[a-fA-F0-9]*$"))); // HEX only
-
-				connect(&dlg, &input_dialog::text_changed, &dlg, [&dlg](const QString& text)
-				{
-					dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, text.size() == 32);
-				});
-
-				if (dlg.exec() == QDialog::Accepted)
-				{
-					const std::string text = sstr(dlg.get_input_text());
-
-					auto& klic = (tried ? klics.back() : klics.emplace_back());
-
-					ensure(text.size() == 32);
-
-					// It must succeed (only hex characters are present)
-					u64 lo_ = 0;
-					u64 hi_ = 0;
-					std::from_chars(&text[0], &text[16], lo_, 16);
-					std::from_chars(&text[16], &text[32], hi_, 16);
-
-					be_t<u64> lo = std::bit_cast<be_t<u64>>(lo_);
-					be_t<u64> hi = std::bit_cast<be_t<u64>>(hi_);
-
-					klic = (u128{+hi} << 64) | +lo;
-
-					// Retry with specified KLIC
-					key_it -= +std::exchange(tried, true); // Rewind on second and above attempt
-					gui_log.notice("KLIC entered for %s: %s", filename, klic);
-					continue;
-				}
-				else
-				{
-					gui_log.notice("User has cancelled entering KLIC.");
-				}
-			}
-
-			gui_log.error("Failed to decrypt \"%s\".", old_path);
-			break;
+			gui_log.error("Failed to decrypt %s with specfied KLIC, retrying.\n%s", old_path, sstr(hint));
 		}
-	}
 
-	gui_log.notice("Finished decrypting all binaries.");
+		input_dialog dlg(32, "", tr("Enter KLIC of %0").arg(qstr(path)),
+			tried ? tr("Decryption failed with provided KLIC.\n%0").arg(hint) : tr("Hexadecimal only."), "00000000000000000000000000000000", this);
+
+		QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+		mono.setPointSize(8);
+		dlg.set_input_font(mono, true, '0');
+		dlg.set_clear_button_enabled(false);
+		dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
+		dlg.set_validator(new QRegularExpressionValidator(QRegularExpression("^[a-fA-F0-9]*$"))); // HEX only
+
+		connect(&dlg, &input_dialog::text_changed, &dlg, [&dlg](const QString& text)
+		{
+			dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, text.size() == 32);
+		});
+
+		if (dlg.exec() == QDialog::Accepted)
+		{
+			return sstr(dlg.get_input_text());
+		}
+
+		return {};
+	};
+
+	decrypt_sprx_libraries(vec_modules, input_cb);
 }
 
 /** Needed so that when a backup occurs of window state in gui_settings, the state is current.
@@ -2176,7 +2061,7 @@ void main_window::CreateConnects()
 
 	connect(ui->confVFSDialogAct, &QAction::triggered, this, [this]()
 	{
-		vfs_dialog dlg(m_gui_settings, m_emu_settings, this);
+		vfs_dialog dlg(m_gui_settings, this);
 		dlg.exec();
 		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
 		m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
@@ -2781,7 +2666,7 @@ void main_window::CreateFirmwareCache()
 	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
-	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash() + "sys", "", true);
+	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash(), "", true);
 		error != game_boot_result::no_errors)
 	{
 		gui_log.error("Creating firmware cache failed: reason: %s", error);
@@ -2877,8 +2762,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 	for (auto&& url : list) // check each file in url list for valid type
 	{
 		const QString path = url.toLocalFile(); // convert url to filepath
-
-		const QFileInfo info = path;
+		const QFileInfo info(path);
 
 		// check for directories first, only valid if all other paths led to directories until now.
 		if (info.isDir())
@@ -2997,7 +2881,7 @@ void main_window::dropEvent(QDropEvent* event)
 			// Refresh game list since we probably unlocked some games now.
 			m_game_list_frame->Refresh(true);
 		}
-		
+
 		break;
 	}
 	case drop_type::drop_psf: // Display PARAM.SFO content

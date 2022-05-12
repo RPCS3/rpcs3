@@ -182,11 +182,12 @@ namespace gui
 	const gui_save fs_dev_flash_list    = gui_save(fs, "dev_flash_list",    QStringList());
 	const gui_save fs_dev_flash2_list   = gui_save(fs, "dev_flash2_list",   QStringList());
 	const gui_save fs_dev_flash3_list   = gui_save(fs, "dev_flash3_list",   QStringList());
-	const gui_save fs_dev_usb000_list   = gui_save(fs, "dev_usb000_list",   QStringList());
+	const gui_save fs_dev_usb_list      = gui_save(fs, "dev_usb00X_list",   QStringList()); // Used as a template for all usb paths
 
 	const gui_save l_tty       = gui_save(logger, "TTY",       true);
 	const gui_save l_level     = gui_save(logger, "level",     static_cast<uchar>(logs::level::success));
 	const gui_save l_prefix    = gui_save(logger, "prefix_on", false);
+	const gui_save l_stack_err = gui_save(logger, "ERR_stack", true);
 	const gui_save l_stack     = gui_save(logger, "stack",     true);
 	const gui_save l_stack_tty = gui_save(logger, "TTY_stack", false);
 	const gui_save l_limit     = gui_save(logger, "limit",     1000);
@@ -245,6 +246,7 @@ namespace gui
 	const gui_save loc_language = gui_save(localization, "language", "en");
 
 	const gui_save pads_show_emulated = gui_save(pad_settings, "show_emulated_values", false);
+	const gui_save pads_geometry      = gui_save(pad_settings, "geometry",             QByteArray());
 }
 
 /** Class for GUI settings..

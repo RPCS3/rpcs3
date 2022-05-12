@@ -1,11 +1,21 @@
 #pragma once
 
 #include <unordered_map>
+#include <atomic>
+#include <deque>
+#include <mutex>
+#include <thread>
+#include "Utilities/StrUtil.h"
+#include "Utilities/Thread.h"
 
 namespace utils
 {
+	std::string av_error_to_string(int error);
+
 	struct media_info
 	{
+		std::string path;
+
 		s32 audio_av_codec_id = 0; // 0 = AV_CODEC_ID_NONE
 		s32 video_av_codec_id = 0; // 0 = AV_CODEC_ID_NONE
 		s32 audio_bitrate_bps = 0; // Bit rate in bit/s
@@ -31,5 +41,30 @@ namespace utils
 			value.resize(max_length);
 		}
 		strcpy_trunc(dst, value);
+	};
+
+	class audio_decoder
+	{
+	public:
+		audio_decoder();
+		~audio_decoder();
+
+		void set_path(const std::string& path);
+		void set_swap_endianness(bool swapped);
+		void stop();
+		void decode();
+
+		std::mutex m_mtx;
+		const s32 sample_rate = 48000;
+		std::vector<u8> data;
+		atomic_t<u64> m_size = 0;
+		atomic_t<u64> duration_ms = 0;
+		atomic_t<bool> has_error{false};
+		std::deque<std::pair<u64, u64>> timestamps_ms;
+
+	private:
+		bool m_swap_endianness = false;
+		std::string m_path;
+		std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 	};
 }

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
+#include "cellSearch.h"
 
 // Error Codes
 enum CellMusicError : u32
@@ -132,5 +134,65 @@ using CellMusic2Callback = void(u32 event, vm::ptr<void> param, vm::ptr<void> us
 
 struct CellMusicSelectionContext
 {
+	// TODO: find out what fw does with it
+	// Let's just hijack it with our own data.
 	char data[CELL_MUSIC_SELECTION_CONTEXT_SIZE];
+};
+
+struct music_selection_context
+{
+	char magic[4] = "SUS";
+	u32 content_type{0};
+	u32 repeat_mode{0};
+	u32 context_option{0};
+	std::string content_path;
+
+	static constexpr u32 max_depth = 2; // root + 1 folder + file
+
+	bool set(const CellMusicSelectionContext& in)
+	{
+		if (memcmp(in.data, magic, sizeof(magic)) != 0)
+		{
+			return false;
+		}
+
+		u32 pos = sizeof(magic);
+		memcpy(&content_type, &in.data[pos], sizeof(content_type));
+		pos += sizeof(content_type);
+		repeat_mode = in.data[pos++];
+		context_option = in.data[pos++];
+		content_path = &in.data[pos];
+
+		return true;
+	}
+
+	CellMusicSelectionContext get() const
+	{
+		if (content_path.size() + 2 + sizeof(content_type) + sizeof(magic) > CELL_MUSIC_SELECTION_CONTEXT_SIZE)
+		{
+			fmt::throw_exception("Contents of music_selection_context are too large");
+		}
+
+		CellMusicSelectionContext out{};
+		u32 pos = 0;
+
+		std::memset(out.data, 0, CELL_MUSIC_SELECTION_CONTEXT_SIZE);
+		std::memcpy(out.data, magic, sizeof(magic));
+		pos += sizeof(magic);
+		std::memcpy(&out.data[pos], &content_type, sizeof(content_type));
+		pos += sizeof(content_type);
+		out.data[pos++] = repeat_mode;
+		out.data[pos++] = context_option;
+		std::memcpy(&out.data[pos], content_path.c_str(), content_path.size());
+
+		return out;
+	}
+
+	std::string to_string() const
+	{
+		return fmt::format("{ .magic='%s', .content_type=%d, .repeat_mode=%d, .context_option=%d, .path='%s' }", magic, content_type, repeat_mode, context_option, content_path);
+	}
+
+	// Helper
+	error_code find_content_id(vm::ptr<CellSearchContentId> contents_id);
 };

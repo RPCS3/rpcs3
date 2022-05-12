@@ -1,4 +1,7 @@
 #pragma once
+#include "stdafx.h"
+#include "Utilities/rXml.h"
+#include "Utilities/File.h"
 
 struct TROPUSRHeader
 {
@@ -52,6 +55,12 @@ struct TROPUSREntry6
 	char unk6[64];           // Just zeroes?
 
 	// Note: One of the fields should hold a flag showing whether the trophy is hidden or not
+};
+
+struct trophy_xml_document : public rXmlDocument
+{
+	trophy_xml_document() : rXmlDocument() {}
+	std::shared_ptr<rXmlNode> GetRoot() override;
 };
 
 class TROPUSRLoader

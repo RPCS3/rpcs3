@@ -81,8 +81,8 @@ std::string VertexProgramDecompiler::GetDST(bool is_sca)
 		}
 
 		const std::string reg_type = (is_address_reg) ? getIntTypeName(4) : getFloatTypeName(4);
-		const std::string reg_sel = (is_address_reg) ? "a" : "tmp";
-		ret += m_parr.AddParam(PF_PARAM_NONE, reg_type, reg_sel + std::to_string(tmp_index)) + mask;
+		const std::string reg_sel = (is_address_reg) ? "a" : "r";
+		ret += m_parr.AddParam(PF_PARAM_NONE, reg_type, reg_sel + std::to_string(tmp_index), reg_type + "(0.)") + mask;
 	}
 	else if (!is_result)
 	{
@@ -107,25 +107,28 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 	};
 
 	std::string ret;
+	const auto float4 = getFloatTypeName(4);
 
 	switch (src[n].reg_type)
 	{
 	case RSX_VP_REGISTER_TYPE_TEMP:
-		ret += m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "tmp" + std::to_string(src[n].tmp_src));
+		ret += m_parr.AddParam(PF_PARAM_NONE, float4, "r" + std::to_string(src[n].tmp_src), float4 + "(0.)");
 		break;
 	case RSX_VP_REGISTER_TYPE_INPUT:
 		if (d1.input_src < std::size(reg_table))
 		{
-			ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[d1.input_src], d1.input_src);
+			ret += m_parr.AddParam(PF_PARAM_IN, float4, reg_table[d1.input_src], d1.input_src);
 		}
 		else
 		{
 			rsx_log.error("Bad input src num: %d", u32{ d1.input_src });
-			ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), "in_unk", d1.input_src);
+			ret += m_parr.AddParam(PF_PARAM_IN, float4, "in_unk", d1.input_src);
 		}
 		break;
 	case RSX_VP_REGISTER_TYPE_CONSTANT:
-		m_parr.AddParam(PF_PARAM_UNIFORM, getFloatTypeName(4), std::string("vc[468]"));
+		m_parr.AddParam(PF_PARAM_UNIFORM, float4, std::string("vc[468]"));
+		properties.has_indexed_constants |= !!d3.index_const;
+		m_constant_ids.insert(static_cast<u16>(d1.const_src));
 		ret += std::string("vc[") + std::to_string(d1.const_src) + (d3.index_const ? " + " + AddAddrReg() : "") + "]";
 		break;
 
@@ -391,6 +394,30 @@ std::string VertexProgramDecompiler::BuildCode()
 		m_parr.AddParam(PF_PARAM_OUT, float4_type, "dst_reg0", float4_type + "(0., 0., 0., 1.)");
 	}
 
+	if (!properties.has_indexed_constants && !m_constant_ids.empty())
+	{
+		// Relocate transform constants
+		std::vector<std::pair<std::string, std::string>> reloc_table;
+		reloc_table.reserve(m_constant_ids.size());
+
+		// Build the string lookup table
+		int offset = 0;
+		for (const auto& index : m_constant_ids)
+		{
+			const auto i = offset++;
+			if (i == index) continue; // Replace with self
+			reloc_table.emplace_back(fmt::format("vc[%d]", index), fmt::format("vc[%d]", i));
+		}
+
+		// One-time patch
+		main_body = fmt::replace_all(main_body, reloc_table);
+
+		// Rename the array type
+		auto type_list = ensure(m_parr.SearchParam(PF_PARAM_UNIFORM, getFloatTypeName(4)));
+		const auto item = ParamItem(fmt::format("vc[%llu]", m_constant_ids.size()), -1);
+		type_list->ReplaceOrInsert("vc[468]", item);
+	}
+
 	std::stringstream OS;
 	insertHeader(OS);
 
@@ -593,13 +620,15 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_TXL:
 		{
 			GetTex();
+			const bool is_multisampled = m_prog.texture_state.multisampled_textures & (1 << d2.tex_num);
+
 			switch (m_prog.get_texture_dimension(d2.tex_num))
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
-				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCH1D));
+				SetDSTVec(is_multisampled ? getFunction(FUNCTION::VERTEX_TEXTURE_FETCH2DMS) : getFunction(FUNCTION::VERTEX_TEXTURE_FETCH1D));
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
-				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCH2D));
+				SetDSTVec(getFunction(is_multisampled ? FUNCTION::VERTEX_TEXTURE_FETCH2DMS : FUNCTION::VERTEX_TEXTURE_FETCH2D));
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_3d:
 				SetDSTVec(getFunction(FUNCTION::VERTEX_TEXTURE_FETCH3D));

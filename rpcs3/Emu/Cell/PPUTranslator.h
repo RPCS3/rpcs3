@@ -55,6 +55,8 @@ class PPUTranslator final : public cpu_translator
 	llvm::StructType* m_thread_type;
 
 	llvm::Value* m_mtocr_table{};
+	llvm::Value* m_frsqrte_table{};
+	llvm::Value* m_fres_table{};
 
 	llvm::Value* m_globals[175];
 	llvm::Value** const m_g_cr = m_globals + 99;

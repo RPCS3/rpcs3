@@ -12,6 +12,7 @@ add_library(rpcs3_emu
     GDB.cpp
     title.cpp
     perf_meter.cpp
+    perf_monitor.cpp
 )
 
 # prevent WolfSSL from warning about not having harden options
@@ -87,6 +88,7 @@ endif()
 target_sources(rpcs3_emu PRIVATE
     ../Crypto/aes.cpp
     ../Crypto/aesni.cpp
+    ../Crypto/decrypt_binaries.cpp
     ../Crypto/ec.cpp
     ../Crypto/key_vault.cpp
     ../Crypto/lz.cpp
@@ -188,6 +190,14 @@ target_sources(rpcs3_emu PRIVATE
     Cell/lv2/sys_mmapper.cpp
     Cell/lv2/sys_mutex.cpp
     Cell/lv2/sys_net.cpp
+    Cell/lv2/sys_net/lv2_socket.cpp
+    Cell/lv2/sys_net/lv2_socket_native.cpp
+    Cell/lv2/sys_net/lv2_socket_raw.cpp
+    Cell/lv2/sys_net/lv2_socket_p2p.cpp
+    Cell/lv2/sys_net/lv2_socket_p2ps.cpp
+    Cell/lv2/sys_net/network_context.cpp
+    Cell/lv2/sys_net/nt_p2p_port.cpp
+    Cell/lv2/sys_net/sys_net_helpers.cpp
     Cell/lv2/sys_overlay.cpp
     Cell/lv2/sys_ppu_thread.cpp
     Cell/lv2/sys_process.cpp
@@ -419,6 +429,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_edit_text.cpp
     RSX/Overlays/overlay_fonts.cpp
     RSX/Overlays/overlay_list_view.cpp
+    RSX/Overlays/overlay_media_list_dialog.cpp
     RSX/Overlays/overlay_message_dialog.cpp
     RSX/Overlays/overlay_osk.cpp
     RSX/Overlays/overlay_osk_panel.cpp

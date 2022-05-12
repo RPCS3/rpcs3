@@ -15,6 +15,8 @@ C-style format parser. Appends formatted string to `out`, returns number of char
 template<typename Dst, typename Char, typename Src>
 usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 {
+	ensure(fmt);
+
 	const usz start_pos = out.size();
 
 	struct cfmt_context

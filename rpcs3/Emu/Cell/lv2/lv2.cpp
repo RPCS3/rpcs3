@@ -664,12 +664,12 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_rsxaudio_finalize),                       //651 (0x28B)
 	BIND_SYSC(sys_rsxaudio_import_shared_memory),           //652 (0x28C)
 	BIND_SYSC(sys_rsxaudio_unimport_shared_memory),         //653 (0x28D)
-	NULL_FUNC(sys_rsxaudio_create_connection),              //654 (0x28E)
-	NULL_FUNC(sys_rsxaudio_close_connection),               //655 (0x28F)
-	NULL_FUNC(sys_rsxaudio_prepare_process),                //656 (0x290)
-	NULL_FUNC(sys_rsxaudio_start_process),                  //657 (0x291)
-	NULL_FUNC(sys_rsxaudio_stop_process),                   //658 (0x292)
-	null_func, //BIND_SYSC(sys_rsxaudio_...),               //659 (0x293)
+	BIND_SYSC(sys_rsxaudio_create_connection),              //654 (0x28E)
+	BIND_SYSC(sys_rsxaudio_close_connection),               //655 (0x28F)
+	BIND_SYSC(sys_rsxaudio_prepare_process),                //656 (0x290)
+	BIND_SYSC(sys_rsxaudio_start_process),                  //657 (0x291)
+	BIND_SYSC(sys_rsxaudio_stop_process),                   //658 (0x292)
+	BIND_SYSC(sys_rsxaudio_get_dma_param),                  //659 (0x293)
 
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //660-665  UNS
 

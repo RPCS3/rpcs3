@@ -5,6 +5,8 @@
 #include "Utilities/StrUtil.h"
 #include "util/logs.hpp"
 
+#include <regex>
+
 #ifdef _WIN32
 #include <WS2tcpip.h>
 #else
@@ -32,7 +34,7 @@ namespace np
 			auto host_and_ip = fmt::split(swaps[i], {"="});
 			if (host_and_ip.size() != 2)
 			{
-				dnshook_log.error("Pattern <%s> contains more than one '='", swaps[i]);
+				dnshook_log.error("Pattern <%s> contains none or more than one '='", swaps[i]);
 				continue;
 			}
 
@@ -43,7 +45,7 @@ namespace np
 			}
 			else
 			{
-				switch_map[host_and_ip[0]] = conv.s_addr;
+				m_redirs.push_back({std::move(host_and_ip[0]), conv.s_addr});
 			}
 		}
 	}
@@ -51,34 +53,50 @@ namespace np
 	void dnshook::add_dns_spy(u32 sock)
 	{
 		std::lock_guard lock(mutex);
-		dns_spylist.emplace(std::make_pair(sock, std::queue<std::vector<u8>>()));
+		m_dns_spylist.emplace(std::make_pair(sock, std::queue<std::vector<u8>>()));
 	}
 
 	void dnshook::remove_dns_spy(u32 sock)
 	{
 		std::lock_guard lock(mutex);
-		dns_spylist.erase(sock);
+		m_dns_spylist.erase(sock);
 	}
 
 	bool dnshook::is_dns(u32 sock)
 	{
 		std::lock_guard lock(mutex);
-		return dns_spylist.contains(sock);
+		return m_dns_spylist.contains(sock);
 	}
 
 	bool dnshook::is_dns_queue(u32 sock)
 	{
 		std::lock_guard lock(mutex);
-		return !dns_spylist.at(sock).empty();
+		return !m_dns_spylist.at(sock).empty();
 	}
 
 	std::vector<u8> dnshook::get_dns_packet(u32 sock)
 	{
 		std::lock_guard lock(mutex);
-		auto ret_vec = std::move(dns_spylist.at(sock).front());
-		dns_spylist.at(sock).pop();
+		auto ret_vec = std::move(m_dns_spylist.at(sock).front());
+		m_dns_spylist.at(sock).pop();
 
 		return ret_vec;
+	}
+
+	std::optional<u32> dnshook::get_redir(const std::string& hostname)
+	{
+		for (const auto& [pattern, ip] : m_redirs)
+		{
+			const std::regex regex_pattern(fmt::replace_all(pattern, {{".", "\\."}, {"*", ".*"}}), std::regex_constants::icase);
+
+			if (std::regex_match(hostname, regex_pattern))
+			{
+				dnshook_log.trace("Matched '%s' to pattern '%s'", hostname, pattern);
+				return ip;
+			}
+		}
+
+		return std::nullopt;
 	}
 
 	s32 dnshook::analyze_dns_packet(s32 s, const u8* buf, u32 len)
@@ -153,7 +171,7 @@ namespace np
 
 		dnshook_log.warning("DNS query for %s", host);
 
-		if (switch_map.contains(host))
+		if (auto ip = get_redir(host))
 		{
 			// design fake packet
 			std::vector<u8> fake(len);
@@ -167,13 +185,12 @@ namespace np
 			fake.insert(fake.end(), {0x00, 0x01});             // Class?
 			fake.insert(fake.end(), {0x00, 0x00, 0x00, 0x3B}); // TTL
 			fake.insert(fake.end(), {0x00, 0x04});             // Size of data
-			u32 ip     = switch_map[host];
-			u8* ptr_ip = reinterpret_cast<u8*>(&ip);
+			u8* ptr_ip = reinterpret_cast<u8*>(&(*ip));
 			fake.insert(fake.end(), ptr_ip, ptr_ip + 4); // IP
 
 			dnshook_log.warning("Solving %s to %d.%d.%d.%d", host, ptr_ip[0], ptr_ip[1], ptr_ip[2], ptr_ip[3]);
 
-			dns_spylist[s].push(std::move(fake));
+			m_dns_spylist[s].push(std::move(fake));
 			return len;
 		}
 		return -1;

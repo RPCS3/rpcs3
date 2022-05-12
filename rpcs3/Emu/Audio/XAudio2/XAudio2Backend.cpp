@@ -53,10 +53,7 @@ XAudio2Backend::~XAudio2Backend()
 	if (m_xaudio2_instance != nullptr)
 	{
 		m_xaudio2_instance->StopEngine();
-
-		// TODO: Enabling this might crash afterwards in ComPtr::InternalRelease.
-		//       Maybe it's both trying to do the same thing?
-		//m_xaudio2_instance->Release();
+		m_xaudio2_instance = nullptr;
 	}
 
 	if (m_com_init_success)
@@ -72,12 +69,14 @@ bool XAudio2Backend::Initialized()
 
 bool XAudio2Backend::Operational()
 {
+	std::lock_guard lock(m_error_cb_mutex);
+
 	if (m_dev_listener.output_device_changed())
 	{
 		m_reset_req = true;
 	}
 
-	return m_xaudio2_instance != nullptr && m_source_voice != nullptr && !m_reset_req.observe();
+	return m_source_voice != nullptr && !m_reset_req;
 }
 
 void XAudio2Backend::Play()
@@ -90,13 +89,6 @@ void XAudio2Backend::Play()
 
 	if (m_playing) return;
 
-	const HRESULT hr = m_source_voice->Start();
-	if (FAILED(hr))
-	{
-		XAudio.error("Start() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		return;
-	}
-
 	std::lock_guard lock(m_cb_mutex);
 	m_playing = true;
 }
@@ -105,8 +97,7 @@ void XAudio2Backend::CloseUnlocked()
 {
 	if (m_source_voice != nullptr)
 	{
-		const HRESULT hr = m_source_voice->Stop();
-		if (FAILED(hr))
+		if (HRESULT hr = m_source_voice->Stop(); FAILED(hr))
 		{
 			XAudio.error("Stop() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		}
@@ -122,8 +113,6 @@ void XAudio2Backend::CloseUnlocked()
 	}
 
 	m_playing = false;
-	m_data_buf = nullptr;
-	m_data_buf_len = 0;
 	m_last_sample.fill(0);
 }
 
@@ -135,49 +124,36 @@ void XAudio2Backend::Close()
 
 void XAudio2Backend::Pause()
 {
-	if (m_source_voice)
-	{
-		HRESULT hr = m_source_voice->Stop();
-		if (FAILED(hr))
-		{
-			XAudio.error("Stop() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		}
-
-		hr = m_source_voice->FlushSourceBuffers();
-		if (FAILED(hr))
-		{
-			XAudio.error("FlushSourceBuffers() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		}
-	}
-	else
+	if (m_source_voice == nullptr)
 	{
 		XAudio.error("Pause() called uninitialized");
+		return;
 	}
 
-	std::lock_guard lock(m_cb_mutex);
-	m_playing = false;
-	m_last_sample.fill(0);
+	if (!m_playing) return;
+
+	{
+		std::lock_guard lock(m_cb_mutex);
+		m_playing = false;
+		m_last_sample.fill(0);
+	}
+
+	if (HRESULT hr = m_source_voice->FlushSourceBuffers(); FAILED(hr))
+	{
+		XAudio.error("FlushSourceBuffers() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+	}
 }
 
-void XAudio2Backend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
+bool XAudio2Backend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
 {
+	if (!Initialized())
+	{
+		XAudio.error("Open() called uninitialized");
+		return false;
+	}
+
 	std::lock_guard lock(m_cb_mutex);
 	CloseUnlocked();
-
-	if (m_xaudio2_instance == nullptr)
-	{
-		XAudio.error("Open() called unitiliazed");
-		return;
-	}
-
-	HRESULT hr = m_xaudio2_instance->CreateMasteringVoice(&m_master_voice);
-	if (FAILED(hr))
-	{
-		XAudio.error("CreateMasteringVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		XAudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
-		m_reset_req = true;
-		return;
-	}
 
 	m_sampling_rate = freq;
 	m_sample_size = sample_size;
@@ -192,23 +168,35 @@ void XAudio2Backend::Open(AudioFreq freq, AudioSampleSize sample_size, AudioChan
 	waveformatex.wBitsPerSample = get_sample_size() * 8;
 	waveformatex.cbSize = 0;
 
-	hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO, this);
-	if (FAILED(hr))
+	if (HRESULT hr = m_xaudio2_instance->CreateMasteringVoice(&m_master_voice); FAILED(hr))
+	{
+		XAudio.error("CreateMasteringVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+		m_master_voice = nullptr;
+	}
+	else if (HRESULT hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO, this); FAILED(hr))
 	{
 		XAudio.error("CreateSourceVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		return;
+		CloseUnlocked();
+	}
+	else if (HRESULT hr = m_source_voice->Start(); FAILED(hr))
+	{
+		XAudio.error("Start() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+		CloseUnlocked();
+	}
+	else if (HRESULT hr = m_source_voice->SetVolume(1.0f); FAILED(hr))
+	{
+		XAudio.error("SetVolume() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 
-	ensure(m_source_voice != nullptr);
-	m_source_voice->SetVolume(1.0f);
+	if (m_source_voice == nullptr)
+	{
+		XAudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
+		return false;
+	}
 
-	m_data_buf_len = get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS * static_cast<u32>(XAUDIO2_DEFAULT_FREQ_RATIO) / 1000;
-	m_data_buf = std::make_unique<u8[]>(m_data_buf_len);
-}
+	m_data_buf.resize(get_sampling_rate() * get_sample_size() * get_channels() * INTERNAL_BUF_SIZE_MS * static_cast<u32>(XAUDIO2_DEFAULT_FREQ_RATIO) / 1000);
 
-bool XAudio2Backend::IsPlaying()
-{
-	return m_playing;
+	return true;
 }
 
 void XAudio2Backend::SetWriteCallback(std::function<u32(u32, void *)> cb)
@@ -230,7 +218,7 @@ f64 XAudio2Backend::GetCallbackFrameLen()
 	void *ext;
 	f64 min_latency{};
 
-	HRESULT hr = m_xaudio2_instance->QueryInterface(IID_IXAudio2Extension, &ext);
+	const HRESULT hr = m_xaudio2_instance->QueryInterface(IID_IXAudio2Extension, &ext);
 	if (FAILED(hr))
 	{
 		XAudio.error("QueryInterface() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
@@ -254,37 +242,39 @@ void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired)
 	std::unique_lock lock(m_cb_mutex, std::defer_lock);
 	if (BytesRequired && lock.try_lock() && m_write_callback && m_playing)
 	{
-		ensure(BytesRequired <= m_data_buf_len, "XAudio internal buffer is too small. Report to developers!");
+		ensure(BytesRequired <= m_data_buf.size(), "XAudio internal buffer is too small. Report to developers!");
 
 		const u32 sample_size = get_sample_size() * get_channels();
-		u32 written = std::min(m_write_callback(BytesRequired, m_data_buf.get()), BytesRequired);
+		u32 written = std::min(m_write_callback(BytesRequired, m_data_buf.data()), BytesRequired);
 		written -= written % sample_size;
 
 		if (written >= sample_size)
 		{
-			memcpy(m_last_sample.data(), m_data_buf.get() + written - sample_size, sample_size);
+			memcpy(m_last_sample.data(), m_data_buf.data() + written - sample_size, sample_size);
 		}
 
 		for (u32 i = written; i < BytesRequired; i += sample_size)
 		{
-			memcpy(m_data_buf.get() + i, m_last_sample.data(), sample_size);
+			memcpy(m_data_buf.data() + i, m_last_sample.data(), sample_size);
 		}
 
 		XAUDIO2_BUFFER buffer{};
 		buffer.AudioBytes = BytesRequired;
-		buffer.LoopBegin = XAUDIO2_NO_LOOP_REGION;
-		buffer.pAudioData = static_cast<const BYTE*>(m_data_buf.get());
-
-		const HRESULT hr = m_source_voice->SubmitSourceBuffer(&buffer);
-		if (FAILED(hr))
-		{
-			XAudio.error("SubmitSourceBuffer() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		}
+		buffer.pAudioData = static_cast<const BYTE*>(m_data_buf.data());
+		// Avoid logging in callback and assume that this always succeeds, all errors are caught by error callback anyway
+		m_source_voice->SubmitSourceBuffer(&buffer);
 	}
 }
 
 void XAudio2Backend::OnCriticalError(HRESULT Error)
 {
 	XAudio.error("OnCriticalError() called: %s (0x%08x)", std::system_category().message(Error), static_cast<u32>(Error));
+
+	std::lock_guard lock(m_error_cb_mutex);
 	m_reset_req = true;
+
+	if (m_error_callback)
+	{
+		m_error_callback();
+	}
 }

@@ -71,6 +71,7 @@ struct EmuCallbacks
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<void()> init_gs_render;
 	std::function<std::shared_ptr<class camera_handler_base>()> get_camera_handler;
+	std::function<std::shared_ptr<class music_handler_base>()> get_music_handler;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
@@ -179,6 +180,13 @@ public:
 	std::string disc;
 	std::string hdd1;
 
+	u32 m_boot_source_type = 0; // CELL_GAME_GAMETYPE_SYS
+
+	const u32& GetBootSourceType() const
+	{
+		return m_boot_source_type;
+	}
+
 	const std::string& GetBoot() const
 	{
 		return m_path;
@@ -285,6 +293,8 @@ public:
 };
 
 extern Emulator Emu;
+
+extern bool g_log_all_errors;
 
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;

@@ -47,6 +47,18 @@ namespace vk
 
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image* image, u32 rsx_pitch, bool managed, u32 gcm_format, bool pack_swap_bytes = false)
 		{
+			if (vram_texture && !managed_texture && get_protection() == utils::protection::no)
+			{
+				// In-place image swap, still locked. Likely a color buffer that got rebound as depth buffer or vice-versa.
+				vk::as_rtt(vram_texture)->release();
+
+				if (!managed)
+				{
+					// Incoming is also an external resource, reference it immediately
+					vk::as_rtt(image)->add_ref();
+				}
+			}
+
 			auto new_texture = static_cast<vk::viewable_image*>(image);
 			ensure(!exists() || !is_managed() || vram_texture == new_texture);
 			vram_texture = new_texture;
@@ -151,6 +163,11 @@ namespace vk
 			return managed_texture;
 		}
 
+		vk::render_target* get_render_target()
+		{
+			return vk::as_rtt(vram_texture);
+		}
+
 		VkFormat get_format() const
 		{
 			if (context == rsx::texture_upload_context::dma)
@@ -197,8 +214,8 @@ namespace vk
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
 				auto surface = vk::as_rtt(vram_texture);
-				surface->read_barrier(cmd);
-				locked_resource = surface->get_surface(rsx::surface_access::shader_read);
+				surface->memory_barrier(cmd, rsx::surface_access::transfer_read);
+				locked_resource = surface->get_surface(rsx::surface_access::transfer_read);
 				transfer_width *= surface->samples_x;
 				transfer_height *= surface->samples_y;
 			}
@@ -292,12 +309,6 @@ namespace vk
 				default:
 					rsx_log.error("Unexpected swizzled texture format 0x%x", gcm_format);
 				}
-			}
-
-			if (context == rsx::texture_upload_context::framebuffer_storage)
-			{
-				// Update memory tag
-				static_cast<vk::render_target*>(vram_texture)->sync_tag();
 			}
 		}
 
@@ -410,7 +421,7 @@ namespace vk
 
 		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const;
 
-		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageCreateFlags create_flags, VkImageUsageFlags usage);
+		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkImageUsageFlags usage);
 
 	protected:
 		vk::image_view* create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,

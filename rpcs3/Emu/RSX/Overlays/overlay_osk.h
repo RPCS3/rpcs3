@@ -82,7 +82,7 @@ namespace rsx
 			osk_dialog();
 			~osk_dialog() override = default;
 
-			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel) override;
+			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled, bool intercept_input) override;
 			void Close(s32 status) override;
 
 			void initialize_layout(const std::u32string& title, const std::u32string& initial_text);
@@ -96,6 +96,7 @@ namespace rsx
 			void update_selection_by_index(u32 index);
 
 			void on_button_pressed(pad_button button_press) override;
+			void on_key_pressed(u32 led, u32 mkey, u32 key_code, u32 out_key_code, bool pressed) override;
 			void on_text_changed();
 
 			void on_default_callback(const std::u32string& str);

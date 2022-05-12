@@ -84,20 +84,20 @@ enum class audio_backend_update : u32
 //libaudio datatypes
 struct CellAudioPortParam
 {
-	be_t<u64> nChannel;
-	be_t<u64> nBlock;
-	be_t<u64> attr;
-	be_t<float> level;
+	be_t<u64> nChannel{};
+	be_t<u64> nBlock{};
+	be_t<u64> attr{};
+	be_t<float> level{};
 };
 
 struct CellAudioPortConfig
 {
-	vm::bptr<u64> readIndexAddr;
-	be_t<u32> status;
-	be_t<u64> nChannel;
-	be_t<u64> nBlock;
-	be_t<u32> portSize;
-	be_t<u32> portAddr;
+	vm::bptr<u64> readIndexAddr{};
+	be_t<u32> status{};
+	be_t<u64> nChannel{};
+	be_t<u64> nBlock{};
+	be_t<u32> portSize{};
+	be_t<u32> portAddr{};
 };
 
 enum : u32
@@ -111,7 +111,6 @@ enum : u32
 	MAX_AUDIO_EVENT_QUEUES = 64,
 
 	AUDIO_BLOCK_SIZE_2CH = 2 * AUDIO_BUFFER_SAMPLES,
-	AUDIO_BLOCK_SIZE_6CH = 6 * AUDIO_BUFFER_SAMPLES,
 	AUDIO_BLOCK_SIZE_8CH = 8 * AUDIO_BUFFER_SAMPLES,
 
 	PORT_BUFFER_TAG_COUNT = 6,
@@ -119,10 +118,6 @@ enum : u32
 	PORT_BUFFER_TAG_LAST_2CH = AUDIO_BLOCK_SIZE_2CH - 1,
 	PORT_BUFFER_TAG_DELTA_2CH = PORT_BUFFER_TAG_LAST_2CH / (PORT_BUFFER_TAG_COUNT - 1),
 	PORT_BUFFER_TAG_FIRST_2CH = PORT_BUFFER_TAG_LAST_2CH % (PORT_BUFFER_TAG_COUNT - 1),
-
-	PORT_BUFFER_TAG_LAST_6CH = AUDIO_BLOCK_SIZE_6CH - 1,
-	PORT_BUFFER_TAG_DELTA_6CH = PORT_BUFFER_TAG_LAST_6CH / (PORT_BUFFER_TAG_COUNT - 1),
-	PORT_BUFFER_TAG_FIRST_6CH = PORT_BUFFER_TAG_LAST_6CH % (PORT_BUFFER_TAG_COUNT - 1),
 
 	PORT_BUFFER_TAG_LAST_8CH = AUDIO_BLOCK_SIZE_8CH - 1,
 	PORT_BUFFER_TAG_DELTA_8CH = PORT_BUFFER_TAG_LAST_8CH / (PORT_BUFFER_TAG_COUNT - 1),
@@ -140,27 +135,27 @@ struct audio_port
 {
 	atomic_t<audio_port_state> state = audio_port_state::closed;
 
-	u32 number;
+	u32 number = 0;
 	vm::ptr<char> addr{};
 	vm::ptr<u64> index{};
 
-	u32 num_channels;
-	u32 num_blocks;
-	u64 attr;
-	u64 cur_pos;
-	u64 global_counter; // copy of global counter
-	u64 active_counter;
-	u32 size;
-	u64 timestamp; // copy of global timestamp
+	u32 num_channels = 0;
+	u32 num_blocks = 0;
+	u64 attr = 0;
+	u64 cur_pos = 0;
+	u64 global_counter = 0; // copy of global counter
+	u64 active_counter = 0;
+	u32 size = 0;
+	u64 timestamp = 0; // copy of global timestamp
 
 	struct level_set_t
 	{
-		float value;
-		float inc;
+		float value = 0.0f;
+		float inc = 0.0f;
 	};
 
-	float level;
-	atomic_t<level_set_t> level_set;
+	float level = 0.0f;
+	atomic_t<level_set_t> level_set{};
 
 	u32 block_size() const
 	{
@@ -190,7 +185,7 @@ struct audio_port
 
 
 	// Tags
-	u32 prev_touched_tag_nr;
+	u32 prev_touched_tag_nr = 0;
 	f32 last_tag_value[PORT_BUFFER_TAG_COUNT] = { 0 };
 
 	void tag(s32 offset = 0);
@@ -209,7 +204,10 @@ struct cell_audio_config
 		audio_downmix downmix = audio_downmix::downmix_to_stereo;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
-	} raw;
+	};
+
+	raw_config new_raw{};
+	raw_config raw{};
 
 	std::shared_ptr<AudioBackend> backend = nullptr;
 
@@ -220,7 +218,6 @@ struct cell_audio_config
 	f64 audio_min_buffer_duration = 0.0;
 
 	u32 audio_buffer_length = 0;
-	u32 audio_buffer_size = 0;
 
 	/*
 	 * Buffering
@@ -254,7 +251,6 @@ struct cell_audio_config
 
 	f32 time_stretching_threshold = 0.0f; // we only apply time stretching below this buffer fill rate (adjusted for average period)
 	static constexpr f32 time_stretching_step = 0.1f; // will only reduce/increase the frequency ratio in steps of at least this value
-	static constexpr f32 time_stretching_scale = 0.9f;
 
 	/*
 	 * Constructor
@@ -278,7 +274,7 @@ private:
 
 	AudioDumper m_dump{};
 
-	std::unique_ptr<float[]> buffer[MAX_AUDIO_BUFFERS];
+	std::unique_ptr<float[]> buffer[MAX_AUDIO_BUFFERS]{};
 
 	simple_ringbuf cb_ringbuf{};
 	audio_resampler resampler{};
@@ -347,7 +343,7 @@ public:
 class cell_audio_thread
 {
 private:
-	std::unique_ptr<audio_ringbuffer> ringbuffer;
+	std::unique_ptr<audio_ringbuffer> ringbuffer{};
 
 	void reset_ports(s32 offset = 0);
 	void advance(u64 timestamp);
@@ -365,10 +361,11 @@ private:
 	void reset_counters();
 
 public:
-	cell_audio_config cfg;
+	shared_mutex emu_cfg_upd_m{};
+	cell_audio_config cfg{};
 	atomic_t<audio_backend_update> m_update_configuration = audio_backend_update::NONE;
 
-	shared_mutex mutex;
+	shared_mutex mutex{};
 	atomic_t<u32> init = 0;
 
 	u32 key_count = 0;
@@ -376,14 +373,14 @@ public:
 
 	struct key_info
 	{
-		u8 start_period; // Starting event_period
-		u32 flags; // iFlags
-		u64 source; // Event source
-		std::shared_ptr<lv2_event_queue> port; // Underlying event port
+		u8 start_period = 0; // Starting event_period
+		u32 flags = 0; // iFlags
+		u64 source = 0; // Event source
+		std::shared_ptr<lv2_event_queue> port{}; // Underlying event port
 	};
 
-	std::vector<key_info> keys;
-	std::array<audio_port, AUDIO_PORT_COUNT> ports;
+	std::vector<key_info> keys{};
+	std::array<audio_port, AUDIO_PORT_COUNT> ports{};
 
 	u64 m_last_period_end = 0;
 	u64 m_counter = 0;

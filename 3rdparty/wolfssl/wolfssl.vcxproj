@@ -101,9 +101,7 @@
     <ClCompile Include="wolfssl\wolfcrypt\src\ge_low_mem.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\ge_operations.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\hash.c" />
-    <ClCompile Include="wolfssl\wolfcrypt\src\hc128.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\hmac.c" />
-    <ClCompile Include="wolfssl\wolfcrypt\src\idea.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\integer.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\kdf.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\logging.c" />
@@ -115,10 +113,11 @@
     <ClCompile Include="wolfssl\wolfcrypt\src\pkcs12.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\poly1305.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\pwdbased.c" />
-    <ClCompile Include="wolfssl\wolfcrypt\src\rabbit.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\random.c" />
+    <ClCompile Include="wolfssl\wolfcrypt\src\rc2.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\ripemd.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\rsa.c" />
+    <ClCompile Include="wolfssl\wolfcrypt\src\sakke.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\sha.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\sha256.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\sha3.c" />

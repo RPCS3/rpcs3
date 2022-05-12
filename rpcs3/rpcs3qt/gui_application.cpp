@@ -11,13 +11,17 @@
 #include "display_sleep_control.h"
 #include "localized_emu.h"
 #include "qt_camera_handler.h"
+#include "qt_music_handler.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
 #endif
 
 #include "Emu/Io/Null/null_camera_handler.h"
+#include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/Cell/Modules/cellAudio.h"
+#include "Emu/Cell/lv2/sys_rsxaudio.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/vfs_config.h"
@@ -346,20 +350,20 @@ void gui_application::InitializeCallbacks()
 			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
 			break;
 		}
-#if not defined(__APPLE__)
 		case video_renderer::opengl:
 		{
+#if not defined(__APPLE__)
 			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+#endif
 			break;
 		}
-#endif
-#if defined(HAVE_VULKAN)
 		case video_renderer::vulkan:
 		{
+#if defined(HAVE_VULKAN)
 			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+#endif
 			break;
 		}
-#endif
 		}
 	};
 
@@ -379,6 +383,23 @@ void gui_application::InitializeCallbacks()
 		}
 		return nullptr;
 	};
+
+	callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
+	{
+		switch (g_cfg.audio.music.get())
+		{
+		case music_handler::null:
+		{
+			return std::make_shared<null_music_handler>();
+		}
+		case music_handler::qt:
+		{
+			return std::make_shared<qt_music_handler>();
+		}
+		}
+		return nullptr;
+	};
+
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
@@ -609,7 +630,22 @@ void gui_application::OnEmuSettingsChange()
 	}
 
 	rpcs3::utils::configure_logs();
+
+	if (!Emu.IsStopped())
+	{
+		// Force audio provider
+		if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+		{
+			g_cfg.audio.provider.set(audio_provider::rsxaudio);
+		}
+		else
+		{
+			g_cfg.audio.provider.set(audio_provider::cell_audio);
+		}
+	}
+
 	audio::configure_audio();
+	audio::configure_rsxaudio();
 	rsx::overlays::reset_performance_overlay();
 }
 

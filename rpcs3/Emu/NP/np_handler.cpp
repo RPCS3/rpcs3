@@ -47,9 +47,294 @@ LOG_CHANNEL(sceNp);
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 LOG_CHANNEL(nph_log, "NPHandler");
+LOG_CHANNEL(ticket_log, "Ticket");
 
 namespace np
 {
+	ticket::ticket(std::vector<u8>&& raw_data)
+		: raw_data(raw_data)
+	{
+		parse();
+	}
+
+	std::size_t ticket::size() const
+	{
+		return raw_data.size();
+	}
+
+	const u8* ticket::data() const
+	{
+		return raw_data.data();
+	}
+
+	bool ticket::empty() const
+	{
+		return raw_data.empty();
+	}
+
+	bool ticket::get_value(s32 param_id, vm::ptr<SceNpTicketParam> param) const
+	{
+		if (!parse_success)
+		{
+			return false;
+		}
+
+		switch (param_id)
+		{
+		case SCE_NP_TICKET_PARAM_SERIAL_ID:
+		{
+			const auto& node = nodes[0].data.data_nodes[0];
+			if (node.len != SCE_NP_TICKET_SERIAL_ID_SIZE)
+			{
+				return false;
+			}
+
+			memcpy(param->data, node.data.data_vec.data(), SCE_NP_TICKET_SERIAL_ID_SIZE);
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_ISSUER_ID:
+		{
+			const auto& node = nodes[0].data.data_nodes[1];
+			param->ui32      = node.data.data_u32;
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_ISSUED_DATE:
+		{
+			const auto& node = nodes[0].data.data_nodes[2];
+			param->ui64      = node.data.data_u64;
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_EXPIRE_DATE:
+		{
+			const auto& node = nodes[0].data.data_nodes[3];
+			param->ui64      = node.data.data_u64;
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_SUBJECT_ACCOUNT_ID:
+		{
+			const auto& node = nodes[0].data.data_nodes[4];
+			param->ui64      = node.data.data_u64;
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_SUBJECT_ONLINE_ID:
+		{
+			const auto& node = nodes[0].data.data_nodes[5];
+			if (node.len != 0x20)
+			{
+				return false;
+			}
+
+			memcpy(param->data, node.data.data_vec.data(), 0x20);
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_SUBJECT_REGION:
+		{
+			const auto& node = nodes[0].data.data_nodes[6];
+			if (node.len != SCE_NP_SUBJECT_REGION_SIZE)
+			{
+				return false;
+			}
+
+			memcpy(param->data, node.data.data_vec.data(), SCE_NP_SUBJECT_REGION_SIZE);
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_SUBJECT_DOMAIN:
+		{
+			const auto& node = nodes[0].data.data_nodes[7];
+			if (node.len != SCE_NP_SUBJECT_DOMAIN_SIZE)
+			{
+				return false;
+			}
+
+			memcpy(param->data, node.data.data_vec.data(), SCE_NP_SUBJECT_DOMAIN_SIZE);
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_SERVICE_ID:
+		{
+			const auto& node = nodes[0].data.data_nodes[8];
+			if (node.len != SCE_NP_SERVICE_ID_SIZE)
+			{
+				return false;
+			}
+
+			memcpy(param->data, node.data.data_vec.data(), SCE_NP_SERVICE_ID_SIZE);
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_SUBJECT_STATUS:
+		{
+			const auto& node = nodes[0].data.data_nodes[9];
+			param->ui32      = node.data.data_u32;
+			break;
+		}
+		case SCE_NP_TICKET_PARAM_STATUS_DURATION:
+		case SCE_NP_TICKET_PARAM_SUBJECT_DOB:
+		{
+			param->ui64 = 0;
+			break;
+		}
+		default:
+			sceNp.fatal("Invalid ticket param id requested!");
+			return false;
+		}
+
+		return true;
+	}
+
+	std::optional<ticket_data> ticket::parse_node(std::size_t index) const
+	{
+		if ((index + MIN_TICKET_DATA_SIZE) > size())
+		{
+			ticket_log.error("node didn't meet minimum size requirements");
+			return std::nullopt;
+		}
+
+		ticket_data tdata{};
+		const auto* ptr      = data() + index;
+		tdata.id             = *reinterpret_cast<const be_t<u16>*>(ptr);
+		tdata.len            = *reinterpret_cast<const be_t<u16>*>(ptr + 2);
+		const auto* data_ptr = data() + index + 4;
+
+		auto check_size = [&](std::size_t expected) -> bool
+		{
+			if ((index + MIN_TICKET_DATA_SIZE + expected) > size())
+			{
+				return false;
+			}
+			return true;
+		};
+
+		switch (tdata.id)
+		{
+		case 0:
+			if (tdata.len != 0)
+			{
+				return std::nullopt;
+			}
+			break;
+		case 1:
+			if (tdata.len != 4 || !check_size(4))
+			{
+				return std::nullopt;
+			}
+			tdata.data.data_u32 = *reinterpret_cast<const be_t<u32>*>(data_ptr);
+			break;
+		case 2:
+		case 7:
+			if (tdata.len != 8 || !check_size(8))
+			{
+				return std::nullopt;
+			}
+			tdata.data.data_u64 = *reinterpret_cast<const be_t<u64>*>(data_ptr);
+			break;
+		case 4:
+		case 8:
+			if (!check_size(tdata.len))
+			{
+				return std::nullopt;
+			}
+			tdata.data.data_vec = std::vector<u8>(tdata.len);
+			memcpy(tdata.data.data_vec.data(), data_ptr, tdata.len);
+			break;
+		default:
+			if ((tdata.id & 0x3000) == 0x3000)
+			{
+				if (!check_size(tdata.len))
+				{
+					return std::nullopt;
+				}
+
+				std::size_t sub_index = 0;
+				tdata.data.data_nodes = {};
+				while (sub_index < tdata.len)
+				{
+					auto sub_node = parse_node(sub_index + index + 4);
+					if (!sub_node)
+					{
+						ticket_log.error("Failed to parse subnode at %d", sub_index + index + 4);
+						return std::nullopt;
+					}
+					sub_index += sub_node->len + MIN_TICKET_DATA_SIZE;
+					tdata.data.data_nodes.push_back(std::move(*sub_node));
+				}
+				break;
+			}
+			return std::nullopt;
+		}
+
+		return tdata;
+	}
+
+	void ticket::parse()
+	{
+		nodes.clear();
+		parse_success = false;
+
+		if (size() < (sizeof(u32) * 2))
+		{
+			return;
+		}
+
+		version = *reinterpret_cast<const be_t<u32>*>(data());
+		if (version != 0x21010000)
+		{
+			ticket_log.error("Invalid version: 0x%08x", version);
+			return;
+		}
+
+		u32 given_size = *reinterpret_cast<const be_t<u32>*>(data() + 4);
+		if ((given_size + 8) != size())
+		{
+			ticket_log.error("Size mismatch (gs: %d vs s: %d)", given_size, size());
+			return;
+		}
+
+		std::size_t index = 8;
+		while (index < size())
+		{
+			auto node = parse_node(index);
+			if (!node)
+			{
+				ticket_log.error("Failed to parse node at index %d", index);
+				return;
+			}
+
+			index += (node->len + MIN_TICKET_DATA_SIZE);
+			nodes.push_back(std::move(*node));
+		}
+
+		// Check that everything expected is there
+		if (nodes.size() != 2)
+		{
+			ticket_log.error("Expected 2 blobs, found %d", nodes.size());
+			return;
+		}
+
+		if (nodes[0].id != 0x3000 && nodes[1].id != 0x3002)
+		{
+			ticket_log.error("The 2 blobs ids are incorrect");
+			return;
+		}
+
+		if (nodes[0].data.data_nodes.size() < 12)
+		{
+			ticket_log.error("Expected at least 12 sub-nodes, found %d", nodes[0].data.data_nodes.size());
+			return;
+		}
+
+		const auto& subnodes = nodes[0].data.data_nodes;
+
+		if (subnodes[0].id != 8 || subnodes[1].id != 1 || subnodes[2].id != 7 || subnodes[3].id != 7 ||
+			subnodes[4].id != 2 || subnodes[5].id != 4 || subnodes[6].id != 8 || subnodes[7].id != 4 ||
+			subnodes[8].id != 8 || subnodes[9].id != 1)
+		{
+			ticket_log.error("Mismatched node");
+			return;
+		}
+
+		parse_success = true;
+		return;
+	}
+
 	np_handler::np_handler()
 	{
 		g_fxo->need<named_thread<signaling_handler>>();

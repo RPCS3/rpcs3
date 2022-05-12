@@ -6,6 +6,7 @@
 #include "Emu/system_progress.hpp"
 #include "Emu/system_utils.hpp"
 #include "Emu/perf_meter.hpp"
+#include "Emu/perf_monitor.hpp"
 #include "Emu/vfs_config.h"
 
 #include "Emu/Cell/ErrorCodes.h"
@@ -18,6 +19,7 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
+#include "Emu/Cell/Modules/cellGame.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
@@ -50,6 +52,8 @@ LOG_CHANNEL(sys_log, "SYS");
 // Preallocate 32 MiB
 stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
+bool g_log_all_errors = false;
+
 bool g_use_rtm = false;
 u64 g_rtm_tx_limit1 = 0;
 u64 g_rtm_tx_limit2 = 0;
@@ -60,12 +64,14 @@ atomic_t<u64> g_watchdog_hold_ctr{0};
 
 extern bool ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
+extern void spu_load_rel_exec(const spu_rel_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 = 0);
 extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 = 0);
+extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -158,14 +164,39 @@ void Emulator::Init(bool add_only)
 	// Mount all devices
 	const std::string emu_dir = rpcs3::utils::get_emu_dir();
 	const std::string elf_dir = fs::get_parent_dir(m_path);
+	const std::string dev_hdd0 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir);
+	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
+	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
+	const std::string dev_flsh2 = g_cfg_vfs.get_dev_flash2();
+	const std::string dev_flsh3 = g_cfg_vfs.get_dev_flash3();
 
-	vfs::mount("/dev_hdd0", g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir));
-	vfs::mount("/dev_flash", g_cfg_vfs.get_dev_flash());
-	vfs::mount("/dev_flash2", g_cfg_vfs.get_dev_flash2());
-	vfs::mount("/dev_flash3", g_cfg_vfs.get_dev_flash3());
-	vfs::mount("/dev_usb", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
-	vfs::mount("/dev_usb000", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
+	vfs::mount("/dev_hdd0", dev_hdd0);
+	vfs::mount("/dev_flash", dev_flsh);
+	vfs::mount("/dev_flash2", dev_flsh2);
+	vfs::mount("/dev_flash3", dev_flsh3);
 	vfs::mount("/app_home", g_cfg_vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg_vfs.get(g_cfg_vfs.app_home, emu_dir));
+
+	std::string dev_usb;
+
+	for (const auto& [key, value] : g_cfg_vfs.dev_usb.get_map())
+	{
+		const cfg::device_info usb_info = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, key, emu_dir);
+
+		if (key.size() != 11 || !key.starts_with("/dev_usb00"sv) || key.back() < '0' || key.back() > '7')
+		{
+			sys_log.error("Trying to mount unsupported usb device: %s", key);
+			continue;
+		}
+
+		vfs::mount(key, usb_info.path);
+
+		if (key == "/dev_usb000"sv)
+		{
+			dev_usb = usb_info.path;
+		}
+	}
+
+	ensure(!dev_usb.empty());
 
 	if (!hdd1.empty())
 	{
@@ -223,13 +254,6 @@ void Emulator::Init(bool add_only)
 	}
 
 	// Create directories (can be disabled if necessary)
-	const std::string dev_hdd0 = rpcs3::utils::get_hdd0_dir();
-	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
-	const std::string dev_usb = g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir);
-	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
-	const std::string dev_flsh2 = g_cfg_vfs.get_dev_flash2();
-	const std::string dev_flsh3 = g_cfg_vfs.get_dev_flash3();
-
 	auto make_path_verbose = [](const std::string& path)
 	{
 		if (!fs::create_path(path))
@@ -463,6 +487,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	// Initialize progress dialog
 	g_fxo->init<named_thread<progress_dialog_server>>();
 
+	// Initialize performance monitor
+	g_fxo->init<named_thread<perf_monitor>>();
+
 	// PS3 'executable'
 	m_state = system_state::ready;
 	GetCallbacks().on_ready();
@@ -555,6 +582,29 @@ void Emulator::SetForceBoot(bool force_boot)
 game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool is_disc_patch)
 {
 	const std::string resolved_path = GetCallbacks().resolve_path(m_path);
+
+	if (m_config_mode == cfg_mode::continuous)
+	{
+		// The program is being booted from another running program
+		// CELL_GAME_GAMETYPE_GAMEDATA is not used as boot type
+
+		if (m_cat == "DG"sv)
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_DISC;
+		}
+		else if (m_cat == "HM"sv)
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_HOME;
+		}
+		else
+		{
+			m_boot_source_type = CELL_GAME_GAMETYPE_HDD;
+		}
+	}
+	else
+	{
+		m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
+	}
 
 	if (!IsStopped())
 	{
@@ -708,6 +758,16 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 						sys_log.fatal("Failed to apply custom config: %s.yml", m_path);
 					}
 				}
+			}
+
+			// Force audio provider
+			if (m_path.ends_with("vsh.self"sv))
+			{
+				g_cfg.audio.provider.set(audio_provider::rsxaudio);
+			}
+			else
+			{
+				g_cfg.audio.provider.set(audio_provider::cell_audio);
 			}
 		}
 
@@ -1115,6 +1175,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Initialize progress dialog
 		g_fxo->init<named_thread<progress_dialog_server>>();
 
+		// Initialize performance monitor
+		g_fxo->init<named_thread<perf_monitor>>();
+
 		// Set title to actual disc title if necessary
 		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
 
@@ -1307,7 +1370,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
+		ppu_rel_object ppu_rel;
 		spu_exec_object spu_exec;
+		spu_rel_object spu_rel;
 
 		if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -1416,7 +1481,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
-			// PPU PRX (experimental)
+			// PPU PRX
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			ppu_load_prx(ppu_prx, m_path);
@@ -1424,10 +1489,26 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
-			// SPU executable (experimental)
+			// SPU executable
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			spu_load_exec(spu_exec);
+			Pause(true);
+		}
+		else if (spu_rel.open(elf_file) == elf_error::ok)
+		{
+			// SPU linker file
+			GetCallbacks().on_ready();
+			g_fxo->init(false);
+			spu_load_rel_exec(spu_rel);
+			Pause(true);
+		}
+		else if (ppu_rel.open(elf_file) == elf_error::ok)
+		{
+			// PPU linker file
+			GetCallbacks().on_ready();
+			g_fxo->init(false);
+			ppu_load_rel_exec(ppu_rel);
 			Pause(true);
 		}
 		else
@@ -1437,6 +1518,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			sys_log.warning("** ppu_exec -> %s", ppu_exec.get_error());
 			sys_log.warning("** ppu_prx  -> %s", ppu_prx.get_error());
 			sys_log.warning("** spu_exec -> %s", spu_exec.get_error());
+			sys_log.warning("** spu_rel -> %s", spu_rel.get_error());
+			sys_log.warning("** ppu_rel -> %s", ppu_rel.get_error());
 
 			Kill(false);
 			return game_boot_result::invalid_file_or_folder;
@@ -1683,7 +1766,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 
 	auto perform_kill = [allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
 	{
-		for (u32 i = 0; i < 50; i++)
+		for (u32 i = 0; i < 100; i++)
 		{
 			std::this_thread::sleep_for(50ms);
 			Resume(); // TODO: Prevent pausing by other threads while in this loop
@@ -1716,6 +1799,15 @@ void Emulator::Kill(bool allow_autoexit)
 {
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
+		// Ensure clean state
+		argv.clear();
+		envp.clear();
+		data.clear();
+		disc.clear();
+		klic.clear();
+		hdd1.clear();
+		m_config_path.clear();
+		m_config_mode = cfg_mode::custom;
 		return;
 	}
 
@@ -1945,6 +2037,13 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 		if (!fmt)
 		{
 			// Report and clean error state
+
+			if (g_log_all_errors) [[unlikely]]
+			{
+				g_tls_error_stats.clear();
+				return 0;
+			}
+
 			for (auto&& pair : g_tls_error_stats)
 			{
 				if (pair.second > 3)
@@ -1957,6 +2056,8 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 			return 0;
 		}
 	}
+
+	ensure(fmt);
 
 	logs::channel* channel = &sys_log;
 	const char* func = "Unknown function";
@@ -1972,14 +2073,27 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 	// Format log message (use preallocated buffer)
 	g_tls_error_str.clear();
 	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x", func, result);
+
+	// Add spacer between error and fmt if necessary
+	if (fmt[0] != ' ')
+		g_tls_error_str += " : ";
+
 	fmt::raw_append(g_tls_error_str, fmt, sup, args);
 
 	// Update stats and check log threshold
-	const auto stat = ++g_tls_error_stats[g_tls_error_str];
 
-	if (stat <= 3)
+	if (g_log_all_errors) [[unlikely]]
 	{
-		channel->error("%s [%u]", g_tls_error_str, stat);
+		channel->error("%s", g_tls_error_str);
+	}
+	else
+	{
+		const auto stat = ++g_tls_error_stats[g_tls_error_str];
+
+		if (stat <= 3)
+		{
+			channel->error("%s [%u]", g_tls_error_str, stat);
+		}
 	}
 
 	return result;
