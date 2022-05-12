@@ -1806,6 +1806,7 @@ void Emulator::Kill(bool allow_autoexit)
 		disc.clear();
 		klic.clear();
 		hdd1.clear();
+		init_mem_containers = nullptr;
 		m_config_path.clear();
 		m_config_mode = cfg_mode::custom;
 		return;
@@ -1951,6 +1952,7 @@ void Emulator::Kill(bool allow_autoexit)
 	disc.clear();
 	klic.clear();
 	hdd1.clear();
+	init_mem_containers = nullptr;
 	m_config_path.clear();
 	m_config_mode = cfg_mode::custom;
 
