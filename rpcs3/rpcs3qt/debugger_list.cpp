@@ -336,20 +336,27 @@ void debugger_list::resizeEvent(QResizeEvent* event)
 		return;
 	}
 
+	const u32 old_size = m_item_count;
+
 	m_item_count = (rect().height() - frameWidth() * 2) / visualItemRect(item(0)).height();
-
-	clear();
-
-	for (u32 i = 0; i < m_item_count; ++i)
-	{
-		insertItem(i, new QListWidgetItem(""));
-	}
 
 	if (horizontalScrollBar())
 	{
 		m_item_count--;
-		delete item(m_item_count);
 	}
 
-	ShowAddress(m_pc, false);
+	if (old_size <= m_item_count)
+	{
+		for (u32 i = old_size; i < m_item_count; ++i)
+		{
+			insertItem(i, new QListWidgetItem(""));
+		}
+	}
+	else
+	{
+		for (u32 i = old_size - 1; i >= m_item_count; --i)
+		{
+			delete takeItem(i);
+		}
+	}
 }
