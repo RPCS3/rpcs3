@@ -26,11 +26,14 @@ debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_
 	, m_breakpoint_handler(handler)
 {
 	setWindowTitle(tr("ASM"));
+
 	for (uint i = 0; i < m_item_count; ++i)
 	{
 		insertItem(i, new QListWidgetItem(""));
 	}
+
 	setSizeAdjustPolicy(QListWidget::AdjustToContents);
+	setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 }
 
 void debugger_list::UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm)
@@ -329,7 +332,7 @@ void debugger_list::wheelEvent(QWheelEvent* event)
 
 void debugger_list::resizeEvent(QResizeEvent* event)
 {
-	Q_UNUSED(event)
+	QListWidget::resizeEvent(event);
 
 	if (count() < 1 || visualItemRect(item(0)).height() < 1)
 	{
@@ -338,12 +341,8 @@ void debugger_list::resizeEvent(QResizeEvent* event)
 
 	const u32 old_size = m_item_count;
 
-	m_item_count = (rect().height() - frameWidth() * 2) / visualItemRect(item(0)).height();
-
-	if (horizontalScrollBar())
-	{
-		m_item_count--;
-	}
+	// It is fine if the QWidgetList is a tad bit larger than the frame 
+	m_item_count = utils::aligned_div<u32>(rect().height() - frameWidth() * 2, visualItemRect(item(0)).height());
 
 	if (old_size <= m_item_count)
 	{
