@@ -402,25 +402,52 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	// TODO: set prio, flags
 
-	std::string path = vfs::get(argv[0]);
-	std::string hdd1 = vfs::get("/dev_hdd1/");
-	std::string disc;
-
-	if (Emu.GetCat() == "DG" || Emu.GetCat() == "GD")
-		disc = vfs::get("/dev_bdvd/");
-	if (disc.empty() && !Emu.GetTitleID().empty())
-		disc = vfs::get(Emu.GetDir());
-
-	Emu.CallFromMainThread([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc)
-		, hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>().last_key(), old_config = Emu.GetUsedConfig()]() mutable
+	Emu.CallFromMainThread([argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
+
+		std::string disc;
+
+		if (Emu.GetCat() == "DG" || Emu.GetCat() == "GD")
+			disc = vfs::get("/dev_bdvd/");
+		if (disc.empty() && !Emu.GetTitleID().empty())
+			disc = vfs::get(Emu.GetDir());
+
+		std::string path = vfs::get(argv[0]);
+		std::string hdd1 = vfs::get("/dev_hdd1/");
+		std::string old_config = Emu.GetUsedConfig();
+
+		const u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
+
+		using namespace id_manager;
+
+		auto func = [old_size = g_fxo->get<lv2_memory_container>().size, vec = (reader_lock{g_mutex}, g_fxo->get<id_map<lv2_memory_container>>().vec)](u32 sdk_suggested_mem) mutable
+		{
+			// Save LV2 memory containers
+			g_fxo->init<id_map<lv2_memory_container>>()->vec = std::move(vec);
+
+			// Empty the containers, accumulate their total size
+			u32 total_size = 0;
+			idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ctr)
+			{
+				ctr.used = 0;
+				total_size += ctr.size;
+			});
+
+			// The default memory container capacity can only decrease after exitspawn
+			// 1. If newer SDK version suggests higher memory capacity - it is ignored
+			// 2. If newer SDK version suggests lower memory capacity - it is lowered
+			// And if 2. happens while user memory containers exist, the left space can be spent on user memory containers
+			g_fxo->init<lv2_memory_container>(std::min(old_size - total_size, sdk_suggested_mem) + total_size);
+		};
+
 		Emu.Kill(false);
 		Emu.argv = std::move(argv);
 		Emu.envp = std::move(envp);
 		Emu.data = std::move(data);
 		Emu.disc = std::move(disc);
 		Emu.hdd1 = std::move(hdd1);
+		Emu.init_mem_containers = std::move(func);
 
 		if (klic)
 		{
