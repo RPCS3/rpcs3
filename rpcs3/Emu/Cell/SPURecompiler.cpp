@@ -5579,7 +5579,7 @@ public:
 
 	static u32 exec_read_dec(spu_thread* _spu)
 	{
-		const u32 res = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
+		const u32 res = _spu->read_dec().first;
 
 		if (res > 1500 && g_cfg.core.spu_loop_detection)
 		{
@@ -6331,6 +6331,7 @@ public:
 			call("spu_get_events", &exec_get_events, m_thread, m_ir->getInt32(SPU_EVENT_TM));
 			m_ir->CreateStore(call("get_timebased_time", &get_timebased_time), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
 			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_dec_value));
+			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::is_dec_frozen));
 			return;
 		}
 		case SPU_Set_Bkmk_Tag:

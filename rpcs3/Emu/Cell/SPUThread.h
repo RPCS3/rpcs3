@@ -733,6 +733,8 @@ public:
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
+	bool is_dec_frozen = false;
+	std::pair<u32, u32> read_dec() const; // Read decrementer
 
 	atomic_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
 	shared_mutex run_ctrl_mtx;
