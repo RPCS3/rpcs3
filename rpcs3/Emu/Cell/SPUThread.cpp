@@ -1309,6 +1309,7 @@ void spu_thread::cpu_init()
 
 	ch_dec_start_timestamp = get_timebased_time();
 	ch_dec_value = option & SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE ? ~static_cast<u32>(ch_dec_start_timestamp) : 0;
+	is_dec_frozen = false;
 
 	if (get_type() >= spu_type::raw)
 	{
@@ -3641,6 +3642,12 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 	return !res;
 }
 
+std::pair<u32, u32> spu_thread::read_dec() const
+{
+	const u64 res = ch_dec_value - (is_dec_frozen ? 0 : (get_timebased_time() - ch_dec_start_timestamp));
+	return {static_cast<u32>(res), static_cast<u32>(res >> 32)};
+}
+
 spu_thread::ch_events_t spu_thread::get_events(u32 mask_hint, bool waiting, bool reading)
 {
 	if (auto mask1 = ch_events.load().mask; mask1 & ~SPU_EVENT_IMPLEMENTED)
@@ -3664,7 +3671,7 @@ retry:
 	// SPU Decrementer Event on underflow (use the upper 32-bits to determine it)
 	if (mask_hint & SPU_EVENT_TM)
 	{
-		if (const u64 res = (ch_dec_value - (get_timebased_time() - ch_dec_start_timestamp)) >> 32)
+		if (const u64 res = read_dec().second)
 		{
 			// Set next event to the next time the decrementer underflows
 			ch_dec_start_timestamp -= res << 32;
@@ -3921,7 +3928,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case SPU_RdDec:
 	{
-		u32 out = ch_dec_value - static_cast<u32>(get_timebased_time() - ch_dec_start_timestamp);
+		u32 out = read_dec().first;
 
 		//Polling: We might as well hint to the scheduler to slot in another thread since this one is counting down
 		if (g_cfg.core.spu_loop_detection && out > spu::scheduler::native_jiffy_duration_us)
@@ -4337,6 +4344,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 		get_events(SPU_EVENT_TM); // Don't discard possibly occured old event
 		ch_dec_start_timestamp = get_timebased_time();
 		ch_dec_value = value;
+		is_dec_frozen = false;
 		return true;
 	}
 
@@ -4372,9 +4380,13 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 		// "Collect" events before final acknowledgment
 		get_events(value);
 
-		if (ch_events.atomic_op([&](ch_events_t& events)
+		bool freeze_dec = false;
+
+		const bool check_intr = ch_events.atomic_op([&](ch_events_t& events)
 		{
 			events.events &= ~value;
+
+			freeze_dec = !!((value & SPU_EVENT_TM) & ~events.mask);
 
 			if (events.events & events.mask)
 			{
@@ -4383,7 +4395,16 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 			}
 
 			return false;
-		}))
+		});
+
+		if (!is_dec_frozen && freeze_dec)
+		{
+			// Save current time, this will be the reported value until the decrementer resumes
+			ch_dec_value = read_dec().first;
+			is_dec_frozen = true;
+		}
+
+		if (check_intr)
 		{
 			// Check interrupts in case count is 1
 			if (check_mfc_interrupts(pc + 4))
