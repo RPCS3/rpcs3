@@ -804,6 +804,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			g_fxo->get<rsx::dma_manager>().set_mem_fault_flag();
 			m_queue_status |= flush_queue_state::deadlock;
+			m_graphics_state |= rsx::pipeline_state::backend_interrupt;
 
 			// Wait for deadlock to clear
 			while (m_queue_status & flush_queue_state::deadlock)
@@ -1646,6 +1647,9 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 
 void VKGSRender::do_local_task(rsx::FIFO_state state)
 {
+	// Clear interrupt bit if set
+	m_graphics_state &= ~rsx::pipeline_state::backend_interrupt;
+
 	if (m_queue_status & flush_queue_state::deadlock)
 	{
 		// Clear offloader deadlock

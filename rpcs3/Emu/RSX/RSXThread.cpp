@@ -763,11 +763,18 @@ namespace rsx
 				sync_point_request.release(false);
 			}
 
-			// Execute backend-local tasks first
-			do_local_task(performance_counters.state);
+			// Update sub-units every 64 cycles. The local handler is invoked for other functions externally on-demand anyway.
+			// This avoids expensive calls to check timestamps which involves reading some values from TLS storage on windows.
+			// If something is going on in the backend that requires an update, set the interrupt bit explicitly.
+			if ((m_cycles_counter++ & 63) == 0 ||
+				m_graphics_state & (rsx::pipeline_state::backend_interrupt_bits))
+			{
+				// Execute backend-local tasks first
+				do_local_task(performance_counters.state);
 
-			// Update sub-units
-			zcull_ctrl->update(this);
+				// Update other sub-units
+				zcull_ctrl->update(this);
+			}
 
 			// Execute FIFO queue
 			run_FIFO();
@@ -2952,6 +2959,8 @@ namespace rsx
 
 				m_invalidated_memory_range = unmap_range;
 			}
+
+			m_graphics_state |= rsx::pipeline_state::backend_interrupt;
 		}
 	}
 
@@ -3143,6 +3152,7 @@ namespace rsx
 
 			async_flip_buffer = buffer;
 			async_flip_requested |= flip_request::emu_requested;
+			m_graphics_state |= rsx::pipeline_state::backend_interrupt;
 		}
 	}
 

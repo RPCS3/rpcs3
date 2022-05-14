@@ -132,11 +132,15 @@ namespace rsx
 
 		push_buffer_arrays_dirty = 0x20000,   // Push buffers have data written to them (immediate mode vertex buffers)
 
+		backend_interrupt = 0x80000000,       // Backend interrupt, must serve immediately
+
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
+		backend_interrupt_bits = memory_barrier_bits | backend_interrupt,
+
 		all_dirty = ~0u
 	};
 
@@ -424,6 +428,7 @@ namespace rsx
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
+		u64 m_cycles_counter = 0;
 
 		display_flip_info_t m_queued_flip{};
 

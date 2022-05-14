@@ -14,7 +14,22 @@ namespace rsx
 		}
 
 		ZCULL_control::~ZCULL_control()
-		{}
+		{
+			std::scoped_lock lock(m_pages_mutex);
+
+			for (auto& block : m_locked_pages)
+			{
+				for (auto& p : block)
+				{
+					if (p.second.prot != utils::protection::rw)
+					{
+						utils::memory_protect(vm::base(p.first), 4096, utils::protection::rw);
+					}
+				}
+
+				block.clear();
+			}
+		}
 
 		void ZCULL_control::set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue)
 		{
