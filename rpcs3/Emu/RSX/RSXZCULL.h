@@ -14,6 +14,18 @@ namespace rsx
 {
 	class thread;
 
+	static inline std::string_view location_tostring(u32 location)
+	{
+		ensure(location < 2);
+		const char* location_names[] = { "CELL_GCM_LOCATION_LOCAL", "CELL_GCM_LOCATION_MAIN" };
+		return location_names[location];
+	}
+
+	static inline u32 classify_location(u32 address)
+	{
+		return (address >= rsx::constants::local_mem_base) ? CELL_GCM_LOCATION_LOCAL : CELL_GCM_LOCATION_MAIN;
+	}
+
 	namespace reports
 	{
 		struct occlusion_query_info
@@ -172,6 +184,9 @@ namespace rsx
 
 			// Check paging issues
 			bool on_access_violation(u32 address);
+
+			// Optimization check
+			bool is_query_result_urgent(u32 address) const { return m_pages_accessed[rsx::classify_location(address)]; }
 
 			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}

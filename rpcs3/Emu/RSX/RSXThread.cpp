@@ -2569,7 +2569,7 @@ namespace rsx
 			if (!result.queries.empty())
 			{
 				cond_render_ctrl.set_eval_sources(result.queries);
-				sync_hint(FIFO_hint::hint_conditional_render_eval, cond_render_ctrl.eval_sources.front());
+				sync_hint(FIFO_hint::hint_conditional_render_eval, reinterpret_cast<void*>(ref));
 			}
 			else
 			{

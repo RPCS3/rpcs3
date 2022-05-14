@@ -3,18 +3,6 @@
 
 namespace rsx
 {
-	static inline std::string_view location_tostring(u32 location)
-	{
-		ensure(location < 2);
-		const char* location_names[] = {"CELL_GCM_LOCATION_LOCAL", "CELL_GCM_LOCATION_MAIN"};
-		return location_names[location];
-	}
-
-	static inline u32 classify_location(u32 address)
-	{
-		return (address >= rsx::constants::local_mem_base) ? CELL_GCM_LOCATION_LOCAL : CELL_GCM_LOCATION_MAIN;
-	}
-
 	namespace reports
 	{
 		ZCULL_control::ZCULL_control()
@@ -783,7 +771,7 @@ namespace rsx
 
 		void ZCULL_control::on_report_enqueued(vm::addr_t address)
 		{
-			const auto location = (address >= rsx::constants::local_mem_base) ? CELL_GCM_LOCATION_LOCAL : CELL_GCM_LOCATION_MAIN;
+			const auto location = rsx::classify_location(address);
 			std::scoped_lock lock(m_pages_mutex);
 
 			if (!m_pages_accessed[location]) [[ likely ]]
@@ -806,7 +794,7 @@ namespace rsx
 
 		void ZCULL_control::on_report_completed(vm::addr_t address)
 		{
-			const auto location = (address >= rsx::constants::local_mem_base) ? CELL_GCM_LOCATION_LOCAL : CELL_GCM_LOCATION_MAIN;
+			const auto location = rsx::classify_location(address);
 			if (!m_pages_accessed[location])
 			{
 				const auto page_address = static_cast<u32>(address) & ~0xfff;
@@ -820,7 +808,7 @@ namespace rsx
 					ensure(page.has_refs());
 					page.release();
 
-					if (!page.has_refs())
+					if (!page.has_refs() && location != CELL_GCM_LOCATION_LOCAL)
 					{
 						if (page.prot != utils::protection::rw)
 						{
