@@ -2576,7 +2576,7 @@ namespace rsx
 			if (!result.queries.empty())
 			{
 				cond_render_ctrl.set_eval_sources(result.queries);
-				sync_hint(FIFO_hint::hint_conditional_render_eval, { .query = result.queries.front(), .address = ref });
+				sync_hint(FIFO_hint::hint_conditional_render_eval, { .query = cond_render_ctrl.eval_sources.front(), .address = ref });
 			}
 			else
 			{
