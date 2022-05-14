@@ -285,10 +285,9 @@ namespace rsx
 			}
 		}
 
-		void ZCULL_control::on_sync_hint(void* args)
+		void ZCULL_control::on_sync_hint(sync_hint_payload_t payload)
 		{
-			auto query = static_cast<occlusion_query_info*>(args);
-			m_sync_tag = std::max(m_sync_tag, query->sync_tag);
+			m_sync_tag = std::max(m_sync_tag, payload.query->sync_tag);
 		}
 
 		void ZCULL_control::write(vm::addr_t sink, u64 timestamp, u32 type, u32 value)
@@ -397,7 +396,7 @@ namespace rsx
 					if (It->query->sync_tag > m_sync_tag)
 					{
 						// rsx_log.trace("[Performance warning] Query hint emit during sync command.");
-						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, It->query);
+						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, { .query = It->query });
 					}
 
 					break;
@@ -501,7 +500,7 @@ namespace rsx
 						{
 							if (It->query->num_draws && It->query->sync_tag > m_sync_tag)
 							{
-								ptimer->sync_hint(FIFO_hint::hint_zcull_sync, It->query);
+								ptimer->sync_hint(FIFO_hint::hint_zcull_sync, { .query = It->query });
 								ensure(It->query->sync_tag <= m_sync_tag);
 							}
 
@@ -526,7 +525,7 @@ namespace rsx
 						const auto elapsed = m_tsc - front.query->timestamp;
 						if (elapsed > max_zcull_delay_us)
 						{
-							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, front.query);
+							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, { .query = front.query });
 							ensure(front.query->sync_tag <= m_sync_tag);
 						}
 
@@ -686,7 +685,7 @@ namespace rsx
 				{
 					if (query->sync_tag > m_sync_tag) [[unlikely]]
 					{
-						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, query);
+						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, { .query = query });
 						ensure(m_sync_tag >= query->sync_tag);
 					}
 				}

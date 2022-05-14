@@ -246,7 +246,7 @@ public:
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
-	void sync_hint(rsx::FIFO_hint hint, void* args) override;
+	void sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_t payload) override;
 	bool release_GCM_label(u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
