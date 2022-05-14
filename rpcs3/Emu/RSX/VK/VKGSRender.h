@@ -173,6 +173,8 @@ private:
 	shared_mutex m_flush_queue_mutex;
 	vk::flush_request_task m_flush_requests;
 
+	ullong m_last_cond_render_eval_hint = 0;
+
 	// Offloader thread deadlock recovery
 	rsx::atomic_bitmask_t<flush_queue_state> m_queue_status;
 	utils::address_range m_offloader_fault_range;

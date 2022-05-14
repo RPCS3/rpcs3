@@ -356,6 +356,8 @@ namespace rsx
 	struct frame_statistics_t
 	{
 		u32 draw_calls;
+		u32 submit_count;
+
 		s64 setup_time;
 		s64 vertex_upload_time;
 		s64 textures_upload_time;
@@ -434,7 +436,6 @@ namespace rsx
 
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
-		frame_statistics_t stats{};
 
 		backend_configuration backend_config{};
 
@@ -792,6 +793,9 @@ namespace rsx
 
 		// Get RSX approximate load in %
 		u32 get_load();
+
+		// Get stats object
+		frame_statistics_t& get_stats() { return m_frame_stats; }
 
 		// Returns true if the current thread is the active RSX thread
 		inline bool is_current_thread() const
