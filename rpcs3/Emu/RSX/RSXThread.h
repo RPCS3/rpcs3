@@ -694,7 +694,7 @@ namespace rsx
 		// sync
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
-		virtual void sync_hint(FIFO_hint hint, void* args);
+		virtual void sync_hint(FIFO_hint hint, reports::sync_hint_payload_t payload);
 		virtual bool release_GCM_label(u32 /*address*/, u32 /*value*/) { return false; }
 
 		std::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;

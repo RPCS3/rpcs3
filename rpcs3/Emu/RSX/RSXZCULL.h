@@ -65,6 +65,13 @@ namespace rsx
 			u32 reserved;
 		};
 
+		struct sync_hint_payload_t
+		{
+			occlusion_query_info* query;
+			vm::addr_t address;
+			void* other_params;
+		};
+
 		struct MMIO_page_data_t : public rsx::ref_counted
 		{
 			utils::protection prot = utils::protection::rw;
@@ -171,7 +178,7 @@ namespace rsx
 			void on_draw();
 
 			// Sync hint notification
-			void on_sync_hint(void* args);
+			void on_sync_hint(sync_hint_payload_t payload);
 
 			// Check for pending writes
 			bool has_pending() const { return !m_pending_writes.empty(); }

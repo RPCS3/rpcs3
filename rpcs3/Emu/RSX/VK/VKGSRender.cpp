@@ -1573,10 +1573,9 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 	return true;
 }
 
-void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
+void VKGSRender::sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_t payload)
 {
-	ensure(args);
-	rsx::thread::sync_hint(hint, args);
+	rsx::thread::sync_hint(hint, payload);
 
 	if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
 	{
@@ -1596,7 +1595,7 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 		}
 
 		// If the result is not going to be read by CELL, do nothing
-		const auto ref_addr = reinterpret_cast<u32>(args);
+		const auto ref_addr = static_cast<u32>(payload.address);
 		if (!zcull_ctrl->is_query_result_urgent(ref_addr))
 		{
 			// No effect on CELL behaviour, it will be faster to handle this in RSX code
@@ -1620,8 +1619,7 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 	case rsx::FIFO_hint::hint_zcull_sync:
 	{
 		// Check if the required report is synced to this CB
-		auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
-		auto& data = m_occlusion_map[occlusion_info->driver_handle];
+		auto& data = m_occlusion_map[payload.query->driver_handle];
 
 		// NOTE: Currently, a special condition exists where the indices can be empty even with active draw count.
 		// This is caused by async compiler and should be removed when ubershaders are added in

@@ -2576,7 +2576,7 @@ namespace rsx
 			if (!result.queries.empty())
 			{
 				cond_render_ctrl.set_eval_sources(result.queries);
-				sync_hint(FIFO_hint::hint_conditional_render_eval, reinterpret_cast<void*>(ref));
+				sync_hint(FIFO_hint::hint_conditional_render_eval, { .query = result.queries.front(), .address = ref });
 			}
 			else
 			{
@@ -2624,9 +2624,9 @@ namespace rsx
 		//ensure(async_tasks_pending.load() == 0);
 	}
 
-	void thread::sync_hint(FIFO_hint /*hint*/, void* args)
+	void thread::sync_hint(FIFO_hint /*hint*/, rsx::reports::sync_hint_payload_t payload)
 	{
-		zcull_ctrl->on_sync_hint(args);
+		zcull_ctrl->on_sync_hint(payload);
 	}
 
 	bool thread::is_fifo_idle() const
