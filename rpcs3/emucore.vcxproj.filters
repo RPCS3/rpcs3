@@ -2118,7 +2118,7 @@
     </ClInclude>
     <ClInclude Include="Crypto\decrypt_binaries.h">
       <Filter>Crypto</Filter>
-    </ClCompile>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\RSXZCULL.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
