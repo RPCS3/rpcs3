@@ -882,7 +882,14 @@ namespace rsx
 		eng_lock(rsx::thread* target)
 			:pthr(target)
 		{
-			if (pthr) pthr->pause();
+			if (pthr->is_current_thread())
+			{
+				pthr = nullptr;
+			}
+			else
+			{
+				pthr->pause();
+			}
 		}
 
 		~eng_lock()

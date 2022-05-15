@@ -838,10 +838,7 @@ namespace rsx
 
 			// Flush all pending writes
 			m_critical_reports_in_flight += 0x100000;
-			{
-				rsx::eng_lock rlock(ptimer->is_current_thread() ? nullptr : ptimer);
-				ptimer->sync();
-			}
+			ptimer->sync();
 			m_critical_reports_in_flight -= 0x100000;
 
 			// Unlock pages
@@ -877,6 +874,7 @@ namespace rsx
 				return false;
 			}
 
+			bool need_disable_optimizations = false;
 			{
 				reader_lock lock(m_pages_mutex);
 
@@ -891,18 +889,29 @@ namespace rsx
 						if (fault_page.has_refs())
 						{
 							// R/W to active block
-							disable_optimizations(rsx::get_current_renderer(), location);
+							need_disable_optimizations = true;    // Defer actual operation
+							m_pages_accessed[location] = true;
 						}
 						else
 						{
 							// R/W to stale block, unload it and move on
 							utils::memory_protect(vm::base(page_address), 4096, utils::protection::rw);
 							m_locked_pages[location].erase(page_address);
-						}
 
-						return true;
+							return true;
+						}
 					}
 				}
+			}
+
+			// Deadlock avoidance, do not pause RSX FIFO eng while holding the pages lock
+			if (need_disable_optimizations)
+			{
+				auto thr = rsx::get_current_renderer();
+				rsx::eng_lock rlock(thr);
+				std::scoped_lock lock(m_pages_mutex);
+				disable_optimizations(thr, location);
+				return true;
 			}
 
 			return false;
