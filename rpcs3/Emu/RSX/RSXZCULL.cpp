@@ -848,7 +848,10 @@ namespace rsx
 
 			// Flush all pending writes
 			m_critical_reports_in_flight += 0x100000;
-			sync(ptimer);
+			{
+				rsx::eng_lock rlock(ptimer->is_current_thread() ? nullptr : ptimer);
+				ptimer->sync();
+			}
 			m_critical_reports_in_flight -= 0x100000;
 
 			// Unlock pages
