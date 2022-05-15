@@ -391,13 +391,12 @@ namespace vk
 			}
 		}
 
-		auto found = views.equal_range(remap_encoding);
-		for (auto It = found.first; It != found.second; ++It)
+		const auto storage_key = remap_encoding | (mask << 16);
+		auto found = views.find(storage_key);
+		if (found != views.end() &&
+			found->second->info.subresourceRange.aspectMask & mask)
 		{
-			if (It->second->info.subresourceRange.aspectMask & mask)
-			{
-				return It->second.get();
-			}
+			return found->second.get();
 		}
 
 		VkComponentMapping real_mapping;
@@ -423,7 +422,7 @@ namespace vk
 
 		auto view = std::make_unique<vk::image_view>(*g_render_device, this, VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
 		auto result = view.get();
-		views.emplace(remap_encoding, std::move(view));
+		views.emplace(storage_key, std::move(view));
 		return result;
 	}
 
