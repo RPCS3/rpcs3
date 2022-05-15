@@ -821,16 +821,6 @@ namespace rsx
 
 					ensure(page.has_refs());
 					page.release();
-
-					if (!page.has_refs() && location != CELL_GCM_LOCATION_LOCAL)
-					{
-						if (page.prot != utils::protection::rw)
-						{
-							utils::memory_protect(vm::base(page_address), 4096, utils::protection::rw);
-						}
-
-						m_locked_pages[location].erase(page_address);
-					}
 				}
 			}
 
@@ -898,7 +888,18 @@ namespace rsx
 					auto& fault_page = m_locked_pages[location][page_address];
 					if (fault_page.prot != utils::protection::rw)
 					{
-						disable_optimizations(rsx::get_current_renderer(), location);
+						if (fault_page.has_refs())
+						{
+							// R/W to active block
+							disable_optimizations(rsx::get_current_renderer(), location);
+						}
+						else
+						{
+							// R/W to stale block, unload it and move on
+							utils::memory_protect(vm::base(page_address), 4096, utils::protection::rw);
+							m_locked_pages[location].erase(page_address);
+						}
+
 						return true;
 					}
 				}
