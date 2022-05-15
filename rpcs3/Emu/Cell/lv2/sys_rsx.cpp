@@ -336,7 +336,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 
 	io >>= 20, ea >>= 20, size >>= 20;
 
-	render->pause();
+	rsx::eng_lock fifo_lock(render);
 	std::scoped_lock lock(render->sys_rsx_mtx);
 
 	for (u32 i = 0; i < size; i++)
@@ -350,7 +350,6 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 		table.io[ea + i].release((io + i) << 20);
 	}
 
-	render->unpause();
 	return CELL_OK;
 }
 
@@ -429,13 +428,12 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	{
 	case 0x001: // FIFO
 	{
-		render->pause();
+		rsx::eng_lock rlock(render);
 		const u64 get = static_cast<u32>(a3);
 		const u64 put = static_cast<u32>(a4);
 		vm::_ref<atomic_be_t<u64>>(render->dma_address + ::offset32(&RsxDmaControl::put)).release(put << 32 | get);
 		render->last_known_code_start = get;
 		render->sync_point_request.release(true);
-		render->unpause();
 		break;
 	}
 
