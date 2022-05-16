@@ -2423,7 +2423,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 			std::string upper = fmt::to_upper(entry.name);
 
 			// Check .sprx filename
-			if (upper.ends_with(".SPRX"))
+			if (upper.ends_with(".SPRX") && entry.name != "libfs_utility_init.sprx"sv)
 			{
 				// Skip already loaded modules or HLEd ones
 				if (dir_queue[i] == firmware_sprx_path)
