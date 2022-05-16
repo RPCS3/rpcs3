@@ -804,7 +804,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			g_fxo->get<rsx::dma_manager>().set_mem_fault_flag();
 			m_queue_status |= flush_queue_state::deadlock;
-			m_graphics_state |= rsx::pipeline_state::backend_interrupt;
+			m_eng_interrupt_mask |= rsx::backend_interrupt;
 
 			// Wait for deadlock to clear
 			while (m_queue_status & flush_queue_state::deadlock)
@@ -825,7 +825,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			std::lock_guard lock(m_flush_queue_mutex);
 
 			m_flush_requests.post(false);
-			m_graphics_state |= rsx::pipeline_state::backend_interrupt;
+			m_eng_interrupt_mask |= rsx::backend_interrupt;
 			has_queue_ref = true;
 		}
 		else

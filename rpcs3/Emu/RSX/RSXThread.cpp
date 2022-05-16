@@ -521,6 +521,7 @@ namespace rsx
 		method_registers.current_draw_clause.post_execute_cleanup();
 
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
+		m_eng_interrupt_mask |= rsx::backend_interrupt;
 		ROP_sync_timestamp = rsx::get_shared_tag();
 
 		if (m_graphics_state & rsx::pipeline_state::push_buffer_arrays_dirty)
@@ -766,8 +767,7 @@ namespace rsx
 			// Update sub-units every 64 cycles. The local handler is invoked for other functions externally on-demand anyway.
 			// This avoids expensive calls to check timestamps which involves reading some values from TLS storage on windows.
 			// If something is going on in the backend that requires an update, set the interrupt bit explicitly.
-			if ((m_cycles_counter++ & 63) == 0 ||
-				m_graphics_state & rsx::pipeline_state::backend_interrupt_bits)
+			if ((m_cycles_counter++ & 63) == 0 || m_eng_interrupt_mask)
 			{
 				// Execute backend-local tasks first
 				do_local_task(performance_counters.state);
@@ -1049,7 +1049,7 @@ namespace rsx
 
 	void thread::do_local_task(FIFO_state state)
 	{
-		m_graphics_state &= ~rsx::pipeline_state::backend_interrupt;
+		m_eng_interrupt_mask.clear(rsx::backend_interrupt);
 
 		if (async_flip_requested & flip_request::emu_requested)
 		{
@@ -2480,6 +2480,8 @@ namespace rsx
 
 	void thread::flip(const display_flip_info_t& info)
 	{
+		m_eng_interrupt_mask.clear(rsx::display_interrupt);
+
 		if (async_flip_requested & flip_request::any)
 		{
 			// Deferred flip
@@ -2965,14 +2967,14 @@ namespace rsx
 				m_invalidated_memory_range = unmap_range;
 			}
 
-			m_graphics_state |= rsx::pipeline_state::memory_config_interrupt;
+			m_eng_interrupt_mask |= rsx::memory_config_interrupt;
 		}
 	}
 
 	// NOTE: m_mtx_task lock must be acquired before calling this method
 	void thread::handle_invalidated_memory_range()
 	{
-		m_graphics_state &= ~rsx::pipeline_state::memory_config_interrupt;
+		m_eng_interrupt_mask.clear(rsx::memory_config_interrupt);
 
 		if (!m_invalidated_memory_range.valid())
 			return;
@@ -3159,7 +3161,7 @@ namespace rsx
 
 			async_flip_buffer = buffer;
 			async_flip_requested |= flip_request::emu_requested;
-			m_graphics_state |= rsx::pipeline_state::backend_interrupt;
+			m_eng_interrupt_mask |= rsx::display_interrupt;
 		}
 	}
 
