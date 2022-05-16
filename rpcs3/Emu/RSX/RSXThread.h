@@ -132,17 +132,22 @@ namespace rsx
 
 		push_buffer_arrays_dirty = 0x20000,   // Push buffers have data written to them (immediate mode vertex buffers)
 
-		backend_interrupt = 0x80000000,       // Backend interrupt, must serve immediately
-		memory_config_interrupt = 0x40000000, // Memory configuration changed
-
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
-		backend_interrupt_bits = memory_barrier_bits | memory_config_interrupt | backend_interrupt,
 
 		all_dirty = ~0u
+	};
+
+	enum eng_interrupt_reason : u32
+	{
+		backend_interrupt       = 0x0001,        // Backend-related interrupt
+		memory_config_interrupt = 0x0002,        // Memory configuration changed
+		display_interrupt       = 0x0004,        // Display handling
+
+		all_interrupt_bits = memory_config_interrupt | backend_interrupt | display_interrupt
 	};
 
 	enum FIFO_state : u8
@@ -565,6 +570,7 @@ namespace rsx
 		bool m_framebuffer_state_contested = false;
 		rsx::framebuffer_creation_context m_current_framebuffer_context = rsx::framebuffer_creation_context::context_draw;
 
+		rsx::atomic_bitmask_t<rsx::eng_interrupt_reason> m_eng_interrupt_mask;
 		u32 m_graphics_state = 0;
 		u64 ROP_sync_timestamp = 0;
 
