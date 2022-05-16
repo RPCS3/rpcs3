@@ -2945,6 +2945,9 @@ namespace rsx
 			const bool existing_range_valid = m_invalidated_memory_range.valid();
 			const auto unmap_range = address_range::start_length(address, size);
 
+			// Pause RSX thread momentarily to handle unmapping
+			eng_lock elock(this);
+
 			if (existing_range_valid && m_invalidated_memory_range.touches(unmap_range))
 			{
 				// Merge range-to-invalidate in case of consecutive unmaps
