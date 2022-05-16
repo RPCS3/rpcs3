@@ -967,6 +967,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	{
 		auto &task = post_flush_request(address, result);
 
+		m_graphics_state |= ~rsx::pipeline_state::backend_interrupt;
 		vm::temporary_unlock();
 		task.producer_wait();
 	}
