@@ -767,7 +767,7 @@ namespace rsx
 			// This avoids expensive calls to check timestamps which involves reading some values from TLS storage on windows.
 			// If something is going on in the backend that requires an update, set the interrupt bit explicitly.
 			if ((m_cycles_counter++ & 63) == 0 ||
-				m_graphics_state & (rsx::pipeline_state::backend_interrupt_bits))
+				m_graphics_state & rsx::pipeline_state::backend_interrupt_bits)
 			{
 				// Execute backend-local tasks first
 				do_local_task(performance_counters.state);
@@ -1049,6 +1049,8 @@ namespace rsx
 
 	void thread::do_local_task(FIFO_state state)
 	{
+		m_graphics_state &= ~rsx::pipeline_state::backend_interrupt;
+
 		if (async_flip_requested & flip_request::emu_requested)
 		{
 			// NOTE: This has to be executed immediately
@@ -2960,13 +2962,15 @@ namespace rsx
 				m_invalidated_memory_range = unmap_range;
 			}
 
-			m_graphics_state |= rsx::pipeline_state::backend_interrupt;
+			m_graphics_state |= rsx::pipeline_state::memory_config_interrupt;
 		}
 	}
 
 	// NOTE: m_mtx_task lock must be acquired before calling this method
 	void thread::handle_invalidated_memory_range()
 	{
+		m_graphics_state &= ~rsx::pipeline_state::memory_config_interrupt;
+
 		if (!m_invalidated_memory_range.valid())
 			return;
 
