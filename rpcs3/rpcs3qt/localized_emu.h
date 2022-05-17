@@ -151,7 +151,19 @@ private:
 		case localized_string_id::CELL_SAVEDATA_DELETE: return tr("Delete this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_LOAD: return tr("Load this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_OVERWRITE: return tr("Do you want to overwrite the saved data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
-
+		case localized_string_id::RPCN_NO_ERROR: return tr("RPCN: No Error");
+		case localized_string_id::RPCN_ERROR_INVALID_INPUT: return tr("RPCN: Invalid Input (Wrong Host/Port)");
+		case localized_string_id::RPCN_ERROR_WOLFSSL: return tr("RPCN Connection Error: WolfSSL Error");
+		case localized_string_id::RPCN_ERROR_RESOLVE: return tr("RPCN Connection Error: Resolve Error");
+		case localized_string_id::RPCN_ERROR_CONNECT: return tr("RPCN Connection Error");
+		case localized_string_id::RPCN_ERROR_LOGIN_ERROR: return tr("RPCN Login Error: Identification Error");
+		case localized_string_id::RPCN_ERROR_ALREADY_LOGGED: return tr("RPCN Login Error: User Already Logged In");
+		case localized_string_id::RPCN_ERROR_INVALID_LOGIN: return tr("RPCN Login Error: Invalid Username");
+		case localized_string_id::RPCN_ERROR_INVALID_PASSWORD: return tr("RPCN Login Error: Invalid Password");
+		case localized_string_id::RPCN_ERROR_INVALID_TOKEN: return tr("RPCN Login Error: Invalid Token");
+		case localized_string_id::RPCN_ERROR_INVALID_PROTOCOL_VERSION: return tr("RPCN Misc Error: Protocol Version Error (outdated RPCS3?)");
+		case localized_string_id::RPCN_ERROR_UNKNOWN: return tr("RPCN: Unknown Error");
+		case localized_string_id::RPCN_SUCCESS_LOGGED_ON: return tr("Successfully logged on RPCN!");
 		case localized_string_id::INVALID: return tr("Invalid");
 		default: return tr("Unknown");
 		}

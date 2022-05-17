@@ -13,6 +13,7 @@
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_helpers.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -591,6 +592,7 @@ namespace np
 
 			if (auto state = rpcn->wait_for_connection(); state != rpcn::rpcn_state::failure_no_failure)
 			{
+				rsx::overlays::queue_message(rpcn::rpcn_state_to_localized_string_id(state));
 				rpcn_log.error("Connection to RPCN Failed!");
 				is_psn_active = false;
 				return;
@@ -598,10 +600,13 @@ namespace np
 
 			if (auto state = rpcn->wait_for_authentified(); state != rpcn::rpcn_state::failure_no_failure)
 			{
+				rsx::overlays::queue_message(rpcn::rpcn_state_to_localized_string_id(state));
 				rpcn_log.error("RPCN login attempt failed!");
 				is_psn_active = false;
 				return;
 			}
+
+			rsx::overlays::queue_message(localized_string_id::RPCN_SUCCESS_LOGGED_ON);
 
 			string_to_online_name(rpcn->get_online_name(), &online_name);
 			string_to_avatar_url(rpcn->get_avatar_url(), &avatar_url);

@@ -378,6 +378,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_edit_text.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_fonts.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_list_view.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_message.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_message_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp" />
@@ -512,6 +513,7 @@
     <ClInclude Include="Emu\RSX\display.h" />
     <ClInclude Include="Emu\RSX\GSFrameBase.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_message.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_message_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk_panel.h" />
