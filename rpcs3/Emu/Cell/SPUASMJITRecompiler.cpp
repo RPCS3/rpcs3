@@ -1461,7 +1461,7 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 
 		auto sub2 = [](spu_thread* _spu, v128* _res)
 		{
-			const u32 out = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
+			const u32 out = _spu->read_dec().first;
 
 			*_res = v128::from32r(out);
 		};
@@ -2467,6 +2467,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	{
 		auto sub = [](spu_thread* _spu)
 		{
+			_spu->get_events(SPU_EVENT_TM);
 			_spu->ch_dec_start_timestamp = get_timebased_time();
 		};
 
@@ -2474,6 +2475,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->call(+sub);
 		c->mov(qw0->r32(), SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
 		c->mov(SPU_OFF_32(ch_dec_value), qw0->r32());
+		c->mov(SPU_OFF_8(is_dec_frozen), 0);
 		return;
 	}
 	case SPU_WrEventMask:

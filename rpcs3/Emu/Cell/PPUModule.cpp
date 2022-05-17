@@ -1749,7 +1749,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 
 	for (const auto& arg : Emu.argv)
 	{
-		const u32 arg_size = utils::align(::size32(arg) + 1, 0x10);
+		const u32 arg_size = ::size32(arg) + 1;
 		const u32 arg_addr = vm::alloc(arg_size, vm::main);
 
 		std::memcpy(vm::base(arg_addr), arg.data(), arg_size);
@@ -1762,7 +1762,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 
 	for (const auto& arg : Emu.envp)
 	{
-		const u32 arg_size = utils::align(::size32(arg) + 1, 0x10);
+		const u32 arg_size = ::size32(arg) + 1;
 		const u32 arg_addr = vm::alloc(arg_size, vm::main);
 
 		std::memcpy(vm::base(arg_addr), arg.data(), arg_size);
@@ -1840,7 +1840,17 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		mem_size += 0xC000000;
 	}
 
-	g_fxo->init<lv2_memory_container>(mem_size)->used += primary_stacksize;
+	if (Emu.init_mem_containers)
+	{
+		// Refer to sys_process_exit2 for explanation
+		Emu.init_mem_containers(mem_size);
+	}
+	else
+	{
+		g_fxo->init<lv2_memory_container>(mem_size);
+	}
+
+	g_fxo->get<lv2_memory_container>().used += primary_stacksize;
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
