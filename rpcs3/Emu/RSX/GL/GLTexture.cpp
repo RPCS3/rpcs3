@@ -848,10 +848,24 @@ namespace gl
 		}
 	}
 
+	bool is_compressed_gl_format(GLenum format)
+	{
+		switch (format)
+		{
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	std::pair<bool, u32> get_format_convert_flags(GLenum format)
 	{
 		const auto texel_width = get_format_texel_width(format);
-		return { (texel_width > 1), texel_width };
+		const auto needs_byteswap = is_compressed_gl_format(format) ? false : texel_width > 1;
+		return { needs_byteswap, texel_width };
 	}
 
 	bool formats_are_bitcast_compatible(GLenum format1, GLenum format2)
