@@ -1923,6 +1923,9 @@
     <ClInclude Include="Emu\NP\signaling_handler.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\NP\vport0.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk_panel.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>

@@ -703,7 +703,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 
 	if (!data_available)
 	{
-		if (so_nbio)
+		if (so_nbio || (flags & SYS_NET_MSG_DONTWAIT))
 		{
 			return {{-SYS_NET_EWOULDBLOCK, {}, {}}};
 		}

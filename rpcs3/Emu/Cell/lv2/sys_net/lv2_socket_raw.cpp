@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "lv2_socket_raw.h"
+#include "Emu/NP/vport0.h"
 
 LOG_CHANNEL(sys_net);
 
@@ -20,31 +21,37 @@ void lv2_socket_raw::save(utils::serial& ar)
 
 std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_raw::accept([[maybe_unused]] bool is_lock)
 {
-	sys_net.todo("lv2_socket_raw::accept");
+	sys_net.fatal("[RAW] accept() called on a RAW socket");
+	return {};
+}
+
+std::optional<s32> lv2_socket_raw::connect([[maybe_unused]] const sys_net_sockaddr& addr)
+{
+	sys_net.fatal("[RAW] connect() called on a RAW socket");
+	return CELL_OK;
+}
+
+s32 lv2_socket_raw::connect_followup()
+{
+	sys_net.fatal("[RAW] connect_followup() called on a RAW socket");
+	return CELL_OK;
+}
+
+std::pair<s32, sys_net_sockaddr> lv2_socket_raw::getpeername()
+{
+	sys_net.todo("[RAW] getpeername() called on a RAW socket");
+	return {};
+}
+
+s32 lv2_socket_raw::listen([[maybe_unused]] s32 backlog)
+{
+	sys_net.todo("[RAW] listen() called on a RAW socket");
 	return {};
 }
 
 s32 lv2_socket_raw::bind([[maybe_unused]] const sys_net_sockaddr& addr)
 {
 	sys_net.todo("lv2_socket_raw::bind");
-	return {};
-}
-
-std::optional<s32> lv2_socket_raw::connect([[maybe_unused]] const sys_net_sockaddr& addr)
-{
-	sys_net.todo("lv2_socket_raw::connect");
-	return CELL_OK;
-}
-
-s32 lv2_socket_raw::connect_followup()
-{
-	sys_net.todo("lv2_socket_raw::connect_followup");
-	return CELL_OK;
-}
-
-std::pair<s32, sys_net_sockaddr> lv2_socket_raw::getpeername()
-{
-	sys_net.todo("lv2_socket_raw::getpeername");
 	return {};
 }
 
@@ -66,16 +73,10 @@ s32 lv2_socket_raw::setsockopt([[maybe_unused]] s32 level, [[maybe_unused]] s32 
 	return {};
 }
 
-s32 lv2_socket_raw::listen([[maybe_unused]] s32 backlog)
-{
-	sys_net.todo("lv2_socket_raw::listen");
-	return {};
-}
-
 std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_raw::recvfrom([[maybe_unused]] s32 flags, [[maybe_unused]] u32 len, [[maybe_unused]] bool is_lock)
 {
 	sys_net.todo("lv2_socket_raw::recvfrom");
-	return {{{}, {}, {}}};
+	return {};
 }
 
 std::optional<s32> lv2_socket_raw::sendto([[maybe_unused]] s32 flags, [[maybe_unused]] const std::vector<u8>& buf, [[maybe_unused]] std::optional<sys_net_sockaddr> opt_sn_addr, [[maybe_unused]] bool is_lock)

@@ -822,6 +822,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 							{
 								sn_addr = res_addr;
 								std::memcpy(buf.get_ptr(), vec.data(), res);
+								sys_net_dump_data("recvfrom", vec.data(), res);
 							}
 							result = res;
 							lv2_obj::awake(&ppu);
@@ -997,6 +998,8 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		sys_net.error("sys_net_bnet_sendto(s=%d): unsupported sa_family (%d)", s, addr->sa_family);
 		return -SYS_NET_EAFNOSUPPORT;
 	}
+
+	sys_net_dump_data("sendto", static_cast<const u8 *>(buf.get_ptr()), len);
 
 	const std::optional<sys_net_sockaddr> sn_addr = addr ? std::optional<sys_net_sockaddr>(*addr) : std::nullopt;
 	const std::vector<u8> buf_copy(vm::_ptr<const char>(buf.addr()), vm::_ptr<const char>(buf.addr()) + len);
@@ -1222,7 +1225,9 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 	}
 
 	if (sock->get_queue_size())
-		sys_net.error("CLOSE");
+	{
+		sock->abort_socket(0);
+	}
 
 	sock->close();
 
@@ -1718,6 +1723,9 @@ error_code lv2_socket::abort_socket(s32 flags)
 
 	for (auto& [ppu, _] : qcopy)
 	{
+		if (!ppu)
+			continue;
+			
 		sys_net.warning("lv2_socket::abort_socket(): waking up \"%s\": (func: %s, r3=0x%x, r4=0x%x, r5=0x%x, r6=0x%x)", ppu->get_name(), ppu->current_function, ppu->gpr[3], ppu->gpr[4], ppu->gpr[5], ppu->gpr[6]);
 		ppu->gpr[3] = static_cast<u64>(-SYS_NET_EINTR);
 		lv2_obj::append(ppu.get());

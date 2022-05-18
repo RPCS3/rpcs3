@@ -118,6 +118,8 @@ namespace rpcn
 		Terminate,
 		Create,
 		SendToken,
+		SendResetToken,
+		ResetPassword,
 		AddFriend,
 		RemoveFriend,
 		AddBlock,
@@ -138,6 +140,13 @@ namespace rpcn
 		RequestSignalingInfos,
 		RequestTicket,
 		SendMessage,
+		GetBoardInfos,
+		RecordScore,
+		StoreScoreData,
+		GetScoreData,
+		GetScoreRange,
+		GetScoreFriends,
+		GetScoreNpid,
 	};
 
 	enum NotificationType : u16
@@ -204,6 +213,7 @@ namespace rpcn
 		NotFound,                    // Object of the query was not found(room, user, etc)
 		Blocked,                     // The operation can't complete because you've been blocked
 		AlreadyFriend,               // Can't add friend because already friend
+		ScoreNotBest,                // A better score is already registered for that user/character_id
 		Unsupported,
 		__error_last
 	};
@@ -221,6 +231,7 @@ namespace rpcn
 
 	localized_string_id rpcn_state_to_localized_string_id(rpcn::rpcn_state state);
 	std::string rpcn_state_to_string(rpcn::rpcn_state state);
+	bool is_error(ErrorType err);
 
 	class rpcn_client
 	{
@@ -290,7 +301,7 @@ namespace rpcn
 
 	public:
 		~rpcn_client();
-		rpcn_client(rpcn_client& other) = delete;
+		rpcn_client(rpcn_client& other)    = delete;
 		void operator=(const rpcn_client&) = delete;
 		static std::shared_ptr<rpcn_client> get_instance();
 		rpcn_state wait_for_connection();
@@ -299,8 +310,10 @@ namespace rpcn
 		void get_friends_and_register_cb(friend_data& friend_infos, friend_cb_func cb_func, void* cb_param);
 		void remove_friend_cb(friend_cb_func, void* cb_param);
 
-		ErrorType create_user(const std::string& npid, const std::string& password, const std::string& online_name, const std::string& avatar_url, const std::string& email);
+		ErrorType create_user(std::string_view npid, std::string_view password, std::string_view online_name, std::string_view avatar_url, std::string_view email);
 		ErrorType resend_token(const std::string& npid, const std::string& password);
+		ErrorType send_reset_token(std::string_view npid, std::string_view email);
+		ErrorType reset_password(std::string_view npid, std::string_view token, std::string_view password);
 		bool add_friend(const std::string& friend_username);
 		bool remove_friend(const std::string& friend_username);
 
@@ -350,6 +363,11 @@ namespace rpcn
 		bool req_sign_infos(u32 req_id, const std::string& npid);
 		bool req_ticket(u32 req_id, const std::string& service_id, const std::vector<u8>& cookie);
 		bool sendmessage(const message_data& msg_data, const std::set<std::string>& npids);
+		bool get_board_infos(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id);
+		bool record_score(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, SceNpScorePcId char_id, SceNpScoreValue score, const std::optional<std::string> comment, const std::optional<std::vector<u8>> score_data);
+		bool get_score_range(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, u32 start_rank, u32 num_rank, bool with_comment, bool with_gameinfo);
+		bool get_score_npid(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, const std::vector<std::pair<SceNpId, s32>>& npids, bool with_comment, bool with_gameinfo);
+		bool get_score_friend(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, bool with_comment, bool with_gameinfo);
 
 		const std::string& get_online_name() const
 		{
@@ -368,6 +386,15 @@ namespace rpcn
 		{
 			return port_sig.load();
 		}
+		u32 get_addr_local() const
+		{
+			return local_addr_sig.load();
+		}
+
+		void update_local_addr(u32 addr)
+		{
+			local_addr_sig = std::bit_cast<u32, be_t<u32>>(addr);
+		}
 
 	private:
 		bool get_reply(u64 expected_id, std::vector<u8>& data);
@@ -376,7 +403,6 @@ namespace rpcn
 		bool forge_send(u16 command, u64 packet_id, const std::vector<u8>& data);
 		bool forge_send_reply(u16 command, u64 packet_id, const std::vector<u8>& data, std::vector<u8>& reply_data);
 
-		bool is_error(ErrorType err) const;
 		bool error_and_disconnect(const std::string& error_mgs);
 
 		std::string get_wolfssl_error(WOLFSSL* wssl, int error) const;
@@ -432,6 +458,7 @@ namespace rpcn
 
 		atomic_t<u32> addr_sig{};
 		atomic_t<u16> port_sig{};
+		atomic_t<u32> local_addr_sig{};
 	};
 
 } // namespace rpcn

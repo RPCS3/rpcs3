@@ -6,6 +6,7 @@
 #include "Emu/IdManager.h"
 #include "np_handler.h"
 #include "np_contexts.h"
+#include "np_helpers.h"
 #include "np_structs_extra.h"
 
 LOG_CHANNEL(rpcn_log, "rpcn");
@@ -163,6 +164,8 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam);
 
+		extra_nps::print_createjoinroom(req);
+
 		if (!rpcn->createjoin_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
@@ -200,7 +203,7 @@ namespace np
 		// Establish Matching2 self signaling info
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh.set_self_sig2_info(room_info->roomId, 1);
-		sigh.set_sig2_infos(room_info->roomId, 1, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn->get_addr_sig(), rpcn->get_port_sig(), true);
+		sigh.set_sig2_infos(room_info->roomId, 1, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn->get_addr_sig(), rpcn->get_port_sig(), get_npid(), true);
 		// TODO? Should this send a message to Signaling CB? Is this even necessary?
 
 		extra_nps::print_create_room_resp(room_resp);
@@ -220,6 +223,8 @@ namespace np
 	u32 np_handler::join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2JoinRoomRequest* req)
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam);
+
+		extra_nps::print_joinroom(req);
 
 		if (!rpcn->join_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -257,7 +262,7 @@ namespace np
 		// Establish Matching2 self signaling info
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh.set_self_sig2_info(room_info->roomId, member_id);
-		sigh.set_sig2_infos(room_info->roomId, member_id, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn->get_addr_sig(), rpcn->get_port_sig(), true);
+		sigh.set_sig2_infos(room_info->roomId, member_id, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn->get_addr_sig(), rpcn->get_port_sig(), get_npid(), true);
 		// TODO? Should this send a message to Signaling CB? Is this even necessary?
 
 		if (cb_info.cb)
@@ -316,6 +321,8 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam);
 
+		extra_nps::print_search_room(req);
+
 		if (!rpcn->search_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
@@ -342,6 +349,8 @@ namespace np
 		SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(edata, resp, search_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
+		extra_nps::print_search_room_resp(search_resp);
+
 		if (cb_info.cb)
 		{
 			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
@@ -357,6 +366,8 @@ namespace np
 	u32 np_handler::get_roomdata_external_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataExternalListRequest* req)
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam);
+
+		extra_nps::print_get_roomdata_external_list_req(req);
 
 		if (!rpcn->get_roomdata_external_list(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -383,6 +394,8 @@ namespace np
 		auto* sce_get_room_ext_resp = reinterpret_cast<SceNpMatching2GetRoomDataExternalListResponse*>(edata.data());
 		GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(edata, resp, sce_get_room_ext_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		extra_nps::print_get_roomdata_external_list_resp(sce_get_room_ext_resp);
 
 		if (cb_info.cb)
 		{
@@ -482,6 +495,8 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam);
 
+		// TODO: extra_nps::print_set_roomdata_req(req);
+
 		extra_nps::print_set_roomdata_int_req(req);
 
 		if (!rpcn->set_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
@@ -514,6 +529,8 @@ namespace np
 	u32 np_handler::set_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam);
+
+		extra_nps::print_set_roommemberdata_int_req(req);
 
 		if (!rpcn->set_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -701,6 +718,344 @@ namespace np
 		}
 
 		return true;
+	}
+
+	void np_handler::score_async_handler(std::unique_lock<shared_mutex> lock, const std::shared_ptr<score_transaction_ctx>& trans_ctx, u32 req_id, bool async)
+	{
+		auto worker_function = [trans_ctx = trans_ctx, req_id, this](std::unique_lock<shared_mutex> lock)
+		{
+			auto res = trans_ctx->wake_cond.wait_for(lock, std::chrono::microseconds(trans_ctx->timeout));
+			{
+				std::lock_guard lock_threads(this->mutex_score_transactions);
+				this->score_transactions.erase(req_id);
+			}
+
+			if (res == std::cv_status::timeout)
+			{
+				trans_ctx->result = SCE_NP_COMMUNITY_ERROR_TIMEOUT;
+				return;
+			}
+
+			// Only 2 cases should be timeout or caller setting result
+			ensure(trans_ctx->result);
+
+			trans_ctx->completion_cond.notify_one();
+		};
+
+		{
+			std::lock_guard lock_score(mutex_score_transactions);
+			ensure(score_transactions.insert({req_id, trans_ctx}).second);
+		}
+
+		if (async)
+		{
+			trans_ctx->thread = std::thread(worker_function, std::move(lock));
+			return;
+		}
+
+		return worker_function(std::move(lock));
+	}
+
+	void np_handler::get_board_infos(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId board_id, vm::ptr<SceNpScoreBoardInfo> board_info, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+
+		u32 req_id = get_req_id(0x3334);
+		std::string comm_id(static_cast<const char*>(trans_ctx->communicationId.data));
+
+		trans_ctx->data.clear();
+		trans_ctx->data.push_back(board_info.addr());
+		rpcn->get_board_infos(req_id, trans_ctx->communicationId, board_id);
+
+		return score_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_get_board_infos(u32 req_id, std::vector<u8>& reply_data)
+	{
+		vec_stream reply(reply_data, 1);
+
+		auto raw_board_info = reply.get_rawdata();
+		auto* resp          = flatbuffers::GetRoot<BoardInfo>(raw_board_info.data());
+
+		SceNpScoreBoardInfo board_info;
+
+		board_info.rankLimit       = resp->rankLimit();
+		board_info.updateMode      = resp->updateMode();
+		board_info.sortMode        = resp->sortMode();
+		board_info.uploadNumLimit  = resp->uploadNumLimit();
+		board_info.uploadSizeLimit = resp->uploadSizeLimit();
+
+		std::lock_guard lock_trans(mutex_score_transactions);
+		if (!score_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return false;
+		}
+
+		auto trans = ::at32(score_transactions, req_id);
+		std::lock_guard lock(trans->mutex);
+		ensure(trans->data.size() == 1);
+		vm::ptr<SceNpScoreBoardInfo> boardinfo_ptr = vm::cast(trans->data[0]);
+		memcpy(reinterpret_cast<u8*>(boardinfo_ptr.get_ptr()), &board_info, sizeof(SceNpScoreBoardInfo));
+		trans->result = CELL_OK;
+		trans->wake_cond.notify_one();
+
+		return true;
+	}
+
+	void np_handler::record_score(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId board_id, SceNpScoreValue score, vm::cptr<SceNpScoreComment> comment, const u8* data, u32 data_size, vm::ptr<SceNpScoreRankNumber> tmp_rank, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id                              = get_req_id(0x3334);
+		std::optional<std::string> str_comment  = comment ? std::optional(std::string(reinterpret_cast<const char*>(comment->data))) : std::nullopt;
+		std::optional<std::vector<u8>> vec_data = data ? std::optional(std::vector(data, data + data_size)) : std::nullopt;
+		trans_ctx->data.clear();
+		if (tmp_rank)
+		{
+			trans_ctx->data.push_back(tmp_rank.addr());
+		}
+
+		rpcn->record_score(req_id, trans_ctx->communicationId, board_id, trans_ctx->pcId, score, str_comment, vec_data);
+
+		return score_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_record_score(u32 req_id, std::vector<u8>& reply_data)
+	{
+		std::lock_guard lock_trans(mutex_score_transactions);
+		if (!score_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return false;
+		}
+
+		auto trans = ::at32(score_transactions, req_id);
+		std::lock_guard lock(trans->mutex);
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			case rpcn::ErrorType::ScoreNotBest:
+			{
+				trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_NOT_BEST_SCORE;
+				trans->wake_cond.notify_one();
+				return true;
+			}
+			default: return false;
+			}
+		}
+
+		vec_stream reply(reply_data, 1);
+		auto tmp_rank = reply.get<u32>();
+
+		if (reply.is_error())
+		{
+			rpcn_log.error("Error parsing response in reply_record_score");
+			return false;
+		}
+
+		ensure(trans->data.size() == 1 || trans->data.size() == 0);
+		if (!trans->data.empty())
+		{
+			vm::ptr<u32> tmprank_ptr = vm::cast(trans->data[0]);
+			*tmprank_ptr             = tmp_rank;
+		}
+
+		trans->result = CELL_OK;
+		trans->wake_cond.notify_one();
+		return true;
+	}
+
+	bool np_handler::reply_store_score_data(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return true;
+	}
+	bool np_handler::reply_get_score_data(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return true;
+	}
+
+	void np_handler::get_score_range(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, [[maybe_unused]] u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(0x3334);
+		trans_ctx->data.clear();
+		trans_ctx->data.push_back(static_cast<u32>(arrayNum));
+		trans_ctx->data.push_back(rankArray.addr());
+		trans_ctx->data.push_back(commentArray.addr());
+		trans_ctx->data.push_back(infoArray.addr());
+		trans_ctx->data.push_back(static_cast<u32>((arrayNum * sizeof(SceNpScoreGameInfo)) == infoArraySize));
+		trans_ctx->data.push_back(lastSortDate.addr());
+		trans_ctx->data.push_back(totalRecord.addr());
+
+		bool with_comments = !!commentArray;
+		bool with_gameinfo = !!infoArray;
+
+		rpcn->get_score_range(req_id, trans_ctx->communicationId, boardId, startSerialRank, arrayNum, with_comments, with_gameinfo);
+
+		return score_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data)
+	{
+		std::lock_guard lock_trans(mutex_score_transactions);
+		if (!score_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return false;
+		}
+
+		auto trans_ctx = ::at32(score_transactions, req_id);
+		std::lock_guard lock(trans_ctx->mutex);
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			return false;
+		}
+
+		vec_stream reply(reply_data, 1);
+		auto raw_getscore_response = reply.get_rawdata();
+		auto* resp                 = flatbuffers::GetRoot<GetScoreResponse>(raw_getscore_response.data());
+		flatbuffers::Verifier verifier(raw_getscore_response.data(), raw_getscore_response.size());
+
+		if (reply.is_error() || !resp->Verify(verifier))
+		{
+			rpcn_log.error("Error parsing response in reply_record_score");
+			return false;
+		}
+
+		ensure(trans_ctx->data.size() == 7);
+		u32 arrayNum                              = trans_ctx->data[0];
+		vm::ptr<SceNpScoreRankData> rankArray     = vm::cast(trans_ctx->data[1]);
+		vm::ptr<SceNpScoreComment> commentArray   = vm::cast(trans_ctx->data[2]);
+		vm::ptr<void> infoArray                   = vm::cast(trans_ctx->data[3]);
+		bool info_array_is_SceNpScoreGameInfo     = trans_ctx->data[4];
+		vm::ptr<CellRtcTick> lastSortDate         = vm::cast(trans_ctx->data[5]);
+		vm::ptr<SceNpScoreRankNumber> totalRecord = vm::cast(trans_ctx->data[6]);
+
+		ensure(resp->rankArray() && resp->rankArray()->size() <= arrayNum);
+
+		memset(rankArray.get_ptr(), 0, sizeof(SceNpScoreRankData) * arrayNum);
+		auto* fb_rankarray = resp->rankArray();
+		for (flatbuffers::uoffset_t i = 0; i < fb_rankarray->size(); i++)
+		{
+			const auto* fb_rankdata = fb_rankarray->Get(i);
+			ensure(fb_rankdata->npId() && fb_rankdata->onlineName());
+			string_to_npid(fb_rankdata->npId()->string_view(), &rankArray[i].npId);
+			string_to_online_name(fb_rankdata->onlineName()->string_view(), &rankArray[i].onlineName);
+			rankArray[i].pcId            = fb_rankdata->pcId();
+			rankArray[i].serialRank      = fb_rankdata->rank();
+			rankArray[i].rank            = fb_rankdata->rank();
+			rankArray[i].highestRank     = fb_rankdata->rank();
+			rankArray[i].scoreValue      = fb_rankdata->score();
+			rankArray[i].hasGameData     = fb_rankdata->hasGameData();
+			rankArray[i].recordDate.tick = fb_rankdata->recordDate();
+		}
+
+		if (commentArray)
+		{
+			ensure(resp->commentArray() && resp->commentArray()->size() <= arrayNum);
+			memset(commentArray.get_ptr(), 0, sizeof(SceNpScoreComment) * arrayNum);
+
+			auto* fb_commentarray = resp->commentArray();
+			for (flatbuffers::uoffset_t i = 0; i < fb_commentarray->size(); i++)
+			{
+				const auto* fb_comment = fb_commentarray->Get(i);
+				strcpy_trunc(commentArray[i].data, fb_comment->string_view());
+			}
+		}
+
+		if (infoArray)
+		{
+			ensure(resp->infoArray() && resp->infoArray()->size() <= arrayNum);
+			auto* fb_infoarray = resp->infoArray();
+
+			if (info_array_is_SceNpScoreGameInfo)
+			{
+				vm::ptr<SceNpScoreGameInfo> ptr_gameinfo = vm::static_ptr_cast<SceNpScoreGameInfo>(infoArray);
+				memset(ptr_gameinfo.get_ptr(), 0, sizeof(SceNpScoreGameInfo) * arrayNum);
+				for (flatbuffers::uoffset_t i = 0; i < fb_infoarray->size(); i++)
+				{
+					const auto* fb_info = fb_infoarray->Get(i);
+					ensure(fb_info->data()->size() <= SCE_NP_SCORE_GAMEINFO_SIZE);
+					memcpy(ptr_gameinfo[i].nativeData, fb_info->data()->data(), fb_info->data()->size());
+				}
+			}
+			else
+			{
+				vm::ptr<SceNpScoreVariableSizeGameInfo> ptr_vargameinfo = vm::static_ptr_cast<SceNpScoreVariableSizeGameInfo>(infoArray);
+				memset(ptr_vargameinfo.get_ptr(), 0, sizeof(SceNpScoreVariableSizeGameInfo) * arrayNum);
+				for (flatbuffers::uoffset_t i = 0; i < fb_infoarray->size(); i++)
+				{
+					const auto* fb_info = fb_infoarray->Get(i);
+					ensure(fb_info->data()->size() <= SCE_NP_SCORE_VARIABLE_SIZE_GAMEINFO_MAXSIZE);
+					ptr_vargameinfo[i].infoSize = fb_info->data()->size();
+					memcpy(ptr_vargameinfo[i].data, fb_info->data(), fb_info->data()->size());
+				}
+			}
+		}
+
+		lastSortDate->tick = resp->lastSortDate();
+		*totalRecord       = resp->totalRecord();
+
+		trans_ctx->result = not_an_error(fb_rankarray->size());
+		trans_ctx->wake_cond.notify_one();
+		return true;
+	}
+	bool np_handler::reply_get_score_range(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_GetScoreResponse(req_id, reply_data);
+	}
+
+	void np_handler::get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, vm::ptr<SceNpScoreRankData> rankArray, [[maybe_unused]] u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(0x3334);
+		trans_ctx->data.clear();
+		trans_ctx->data.push_back(static_cast<u32>(arrayNum));
+		trans_ctx->data.push_back(rankArray.addr());
+		trans_ctx->data.push_back(commentArray.addr());
+		trans_ctx->data.push_back(infoArray.addr());
+		trans_ctx->data.push_back(static_cast<u32>((arrayNum * sizeof(SceNpScoreGameInfo)) == infoArraySize));
+		trans_ctx->data.push_back(lastSortDate.addr());
+		trans_ctx->data.push_back(totalRecord.addr());
+
+		bool with_comments = !!commentArray;
+		bool with_gameinfo = !!infoArray;
+
+		rpcn->get_score_friend(req_id, trans_ctx->communicationId, boardId, with_comments, with_gameinfo);
+
+		return score_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+	bool np_handler::reply_get_score_friends(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_GetScoreResponse(req_id, reply_data);
+	}
+
+	void np_handler::get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, [[maybe_unused]] u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(0x3334);
+		trans_ctx->data.clear();
+		trans_ctx->data.push_back(static_cast<u32>(arrayNum));
+		trans_ctx->data.push_back(rankArray.addr());
+		trans_ctx->data.push_back(commentArray.addr());
+		trans_ctx->data.push_back(infoArray.addr());
+		trans_ctx->data.push_back(static_cast<u32>((arrayNum * sizeof(SceNpScoreGameInfo)) == infoArraySize));
+		trans_ctx->data.push_back(lastSortDate.addr());
+		trans_ctx->data.push_back(totalRecord.addr());
+
+		bool with_comments = !!commentArray;
+		bool with_gameinfo = !!infoArray;
+
+		rpcn->get_score_npid(req_id, trans_ctx->communicationId, boardId, npid_vec, with_comments, with_gameinfo);
+
+		return score_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+	bool np_handler::reply_get_score_npid(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_GetScoreResponse(req_id, reply_data);
 	}
 
 } // namespace np

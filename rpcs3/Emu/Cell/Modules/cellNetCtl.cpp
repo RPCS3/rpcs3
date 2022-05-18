@@ -237,7 +237,7 @@ struct netstart_hack
 
 error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogParam> param)
 {
-	cellNetCtl.error("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
+	cellNetCtl.warning("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

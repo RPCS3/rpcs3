@@ -75,6 +75,7 @@ namespace np
 		std::pair<error_code, std::vector<SceNpMatching2RoomMemberId>> get_memberids(u64 room_id, s32 sort_method);
 		std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> get_password(SceNpMatching2RoomId room_id);
 		error_code get_member_and_attrs(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data);
+		SceNpId get_npid(u64 room_id, u16 member_id);
 
 	private:
 		shared_mutex mutex;
