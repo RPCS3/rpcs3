@@ -879,7 +879,7 @@ std::string ppu_thread::dump_regs() const
 				{
 					toc = *vm::get_super_ptr<u32>(static_cast<u32>(reg + 4));
 
-					if (toc % 4 == 0 && vm::check_addr(toc) && !vm::check_addr(toc, vm::page_executable))
+					if (toc % 4 == 0 && (toc >> 29) == (reg_ptr >> 29) && vm::check_addr(toc) && !vm::check_addr(toc, vm::page_executable))
 					{
 						is_function = true;
 						reg = reg_ptr;
