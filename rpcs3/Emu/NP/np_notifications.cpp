@@ -221,7 +221,7 @@ namespace np
 
 		// Attempt Signaling
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-		sigh.set_sig2_infos(room_id, member_id, SCE_NP_SIGNALING_CONN_STATUS_PENDING, addr_p2p, port_p2p);
+		sigh.set_sig2_infos(room_id, member_id, SCE_NP_SIGNALING_CONN_STATUS_PENDING, addr_p2p, port_p2p, np_cache.get_npid(room_id, member_id));
 		sigh.start_sig2(room_id, member_id);
 	}
 } // namespace np

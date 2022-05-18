@@ -53,9 +53,9 @@ std::vector<std::vector<u8>> get_rpcn_msgs()
 	return msgs;
 }
 
-std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs()
+std::vector<signaling_message> get_sign_msgs()
 {
-	std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> msgs;
+	std::vector<signaling_message> msgs;
 	auto& nc = g_fxo->get<network_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);

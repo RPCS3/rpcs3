@@ -9,6 +9,7 @@
 #include "sys_net_helpers.h"
 #include "Emu/NP/signaling_handler.h"
 #include "sys_net_helpers.h"
+#include "Emu/NP/vport0.h"
 
 LOG_CHANNEL(sys_net);
 
@@ -119,35 +120,48 @@ bool nt_p2p_port::recv_data()
 
 	u16 dst_vport = reinterpret_cast<le_t<u16>&>(p2p_recv_data[0]);
 
-	if (dst_vport == 0) // Reserved for messages from RPCN server
+	if (dst_vport == 0)
 	{
-		std::vector<u8> rpcn_msg(recv_res - sizeof(u16));
-		memcpy(rpcn_msg.data(), p2p_recv_data.data() + sizeof(u16), recv_res - sizeof(u16));
-
-		std::lock_guard lock(s_rpcn_mutex);
-		rpcn_msgs.push_back(std::move(rpcn_msg));
-		return true;
-	}
-
-	if (dst_vport == 65535) // Reserved for signaling
-	{
-		std::vector<u8> sign_msg(recv_res - sizeof(u16));
-		memcpy(sign_msg.data(), p2p_recv_data.data() + sizeof(u16), recv_res - sizeof(u16));
-
-		std::pair<std::pair<u32, u16>, std::vector<u8>> msg;
-		msg.first.first  = reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr;
-		msg.first.second = std::bit_cast<u16, be_t<u16>>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
-		msg.second       = std::move(sign_msg);
-
+		if (recv_res < VPORT_0_HEADER_SIZE)
 		{
-			std::lock_guard lock(s_sign_mutex);
-			sign_msgs.push_back(std::move(msg));
+			sys_net.error("Bad vport 0 packet(no subset)!");
+			return true;
 		}
 
-		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-		sigh.wake_up();
+		const u8 subset      = p2p_recv_data[2];
+		const auto data_size = recv_res - VPORT_0_HEADER_SIZE;
+		std::vector<u8> vport_0_data(p2p_recv_data.data() + VPORT_0_HEADER_SIZE, p2p_recv_data.data() + VPORT_0_HEADER_SIZE + data_size);
 
-		return true;
+		switch (subset)
+		{
+		case SUBSET_RPCN:
+		{
+			std::lock_guard lock(s_rpcn_mutex);
+			rpcn_msgs.push_back(std::move(vport_0_data));
+			return true;
+		}
+		case SUBSET_SIGNALING:
+		{
+			signaling_message msg;
+			msg.src_addr = reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr;
+			msg.src_port = std::bit_cast<u16, be_t<u16>>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+			msg.data     = std::move(vport_0_data);
+
+			{
+				std::lock_guard lock(s_sign_mutex);
+				sign_msgs.push_back(std::move(msg));
+			}
+
+			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+			sigh.wake_up();
+			return true;
+		}
+		default:
+		{
+			sys_net.error("Invalid vport 0 subset!");
+			return true;
+		}
+		}
 	}
 
 	{

@@ -504,6 +504,7 @@
     <ClInclude Include="Emu\NP\generated\np2_structs_generated.h" />
     <ClInclude Include="Emu\NP\np_handler.h" />
     <ClInclude Include="Emu\NP\signaling_handler.h" />
+    <ClInclude Include="Emu\NP\vport0.h" />
     <ClInclude Include="Emu\NP\np_allocator.h" />
     <ClInclude Include="Emu\NP\np_cache.h" />
     <ClInclude Include="Emu\NP\np_dnshook.h" />

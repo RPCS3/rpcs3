@@ -18,6 +18,14 @@
 #endif
 #endif
 
+struct signaling_message
+{
+	u32 src_addr = 0;
+	u16 src_port = 0;
+
+	std::vector<u8> data;
+};
+
 struct nt_p2p_port
 {
 	// Real socket where P2P packets are received/sent
@@ -36,7 +44,7 @@ struct nt_p2p_port
 	std::vector<std::vector<u8>> rpcn_msgs{};
 	// Queued signaling messages
 	shared_mutex s_sign_mutex;
-	std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> sign_msgs{};
+	std::vector<signaling_message> sign_msgs{};
 
 	std::array<u8, 65535> p2p_recv_data{};
 

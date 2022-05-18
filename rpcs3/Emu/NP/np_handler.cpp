@@ -384,9 +384,7 @@ namespace np
 			return;
 		}
 
-		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init
-			, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active
-			, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
+		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
 
 		// Call init func if needed (np_memory is unaffected when an empty pool is provided)
 		init_NP(0, vm::null);
@@ -394,6 +392,27 @@ namespace np
 		np_memory.save(ar);
 
 		// TODO: IDM-tied objects are not yet saved
+	}
+
+	np_handler::~np_handler()
+	{
+		std::unordered_map<u32, std::shared_ptr<score_transaction_ctx>> moved_trans;
+		{
+			std::lock_guard lock(mutex_score_transactions);
+			moved_trans = std::move(score_transactions);
+			score_transactions.clear();
+		}
+
+		for (auto& [trans_id, trans] : moved_trans)
+		{
+			trans->abort_score_transaction();
+		}
+
+		for (auto& [trans_id, trans] : moved_trans)
+		{
+			if (trans->thread.joinable())
+				trans->thread.join();
+		}
 	}
 
 	void np_handler::save(utils::serial& ar)
@@ -408,9 +427,7 @@ namespace np
 
 		USING_SERIALIZATION_VERSION(sceNp);
 
-		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init
-			, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active
-			, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
+		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
 
 		np_memory.save(ar);
 	}
@@ -454,10 +471,9 @@ namespace np
 			return;
 		}
 
-		// First address is used for now, (TODO combobox with possible local addresses to use?)
 		local_ip_addr = *reinterpret_cast<u32*>(host->h_addr_list[0]);
 
-		// Set public address to local discovered address for now, may be updated later;
+		// Set public address to local discovered address for now, may be updated later from RPCN socket
 		public_ip_addr = local_ip_addr;
 
 		nph_log.notice("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
@@ -662,6 +678,7 @@ namespace np
 			string_to_online_name(rpcn->get_online_name(), &online_name);
 			string_to_avatar_url(rpcn->get_avatar_url(), &avatar_url);
 			public_ip_addr = rpcn->get_addr_sig();
+			local_ip_addr  = std::bit_cast<u32, be_t<u32>>(rpcn->get_addr_local());
 
 			break;
 		}
@@ -799,6 +816,13 @@ namespace np
 					case rpcn::CommandType::SendRoomMessage: reply_send_room_message(req_id, data); break;
 					case rpcn::CommandType::RequestSignalingInfos: reply_req_sign_infos(req_id, data); break;
 					case rpcn::CommandType::RequestTicket: reply_req_ticket(req_id, data); break;
+					case rpcn::CommandType::GetBoardInfos: reply_get_board_infos(req_id, data); break;
+					case rpcn::CommandType::RecordScore: reply_record_score(req_id, data); break;
+					case rpcn::CommandType::StoreScoreData: reply_store_score_data(req_id, data); break;
+					case rpcn::CommandType::GetScoreData: reply_get_score_data(req_id, data); break;
+					case rpcn::CommandType::GetScoreRange: reply_get_score_range(req_id, data); break;
+					case rpcn::CommandType::GetScoreFriends: reply_get_score_friends(req_id, data); break;
+					case rpcn::CommandType::GetScoreNpid: reply_get_score_npid(req_id, data); break;
 					default: rpcn_log.error("Unknown reply(%d) received!", command); break;
 					}
 				}
@@ -896,16 +920,8 @@ namespace np
 		const u32 req_id = get_req_id(optParam ? optParam->appReqId : ctx->default_match2_optparam.appReqId);
 
 		ret.ctx_id = ctx_id;
-		ret.cb_arg = optParam ? optParam->cbFuncArg : ctx->default_match2_optparam.cbFuncArg;
-
-		if (optParam && optParam->cbFunc)
-		{
-			ret.cb = optParam->cbFunc;
-		}
-		else
-		{
-			ret.cb = ctx->default_match2_optparam.cbFunc;
-		}
+		ret.cb_arg = (optParam && optParam->cbFuncArg) ? optParam->cbFuncArg : ctx->default_match2_optparam.cbFuncArg;
+		ret.cb     = (optParam && optParam->cbFunc) ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc;
 
 		nph_log.warning("Callback used is 0x%x", ret.cb);
 

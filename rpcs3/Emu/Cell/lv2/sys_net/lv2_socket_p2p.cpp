@@ -204,7 +204,7 @@ s32 lv2_socket_p2p::setsockopt(s32 level, s32 optname, const std::vector<u8>& op
 	return {};
 }
 
-std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p::recvfrom([[maybe_unused]] s32 flags, u32 len, bool is_lock)
+std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p::recvfrom(s32 flags, u32 len, bool is_lock)
 {
 	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
 
@@ -217,7 +217,10 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 
 	if (data.empty())
 	{
-		return {{-SYS_NET_EWOULDBLOCK, {}, {}}};
+		if (so_nbio || (flags & SYS_NET_MSG_DONTWAIT))
+			return {{-SYS_NET_EWOULDBLOCK, {}, {}}};
+
+		return std::nullopt;
 	}
 
 	std::vector<u8> res_buf(len);

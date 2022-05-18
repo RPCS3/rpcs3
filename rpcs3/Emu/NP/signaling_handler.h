@@ -7,11 +7,12 @@
 #include <unordered_map>
 #include <condition_variable>
 #include <chrono>
+#include <optional>
 
 enum ext_signaling_status : u8
 {
-	ext_sign_none = 0,
-	ext_sign_peer = 1,
+	ext_sign_none   = 0,
+	ext_sign_peer   = 1,
 	ext_sign_mutual = 2,
 };
 
@@ -27,15 +28,24 @@ struct signaling_info
 
 	// For handler
 	steady_clock::time_point time_last_msg_recvd = steady_clock::now();
-
 	bool self   = false;
 	u32 version = 0;
+	SceNpId npid{};
+
 	// Signaling
 	u32 conn_id                     = 0;
 	ext_signaling_status ext_status = ext_sign_none;
+
 	// Matching2
 	u64 room_id   = 0;
 	u16 member_id = 0;
+
+	// Stats
+	u64 last_rtts[6] = {};
+	std::size_t rtt_counters = 0;
+	u32 rtt = 0;
+	u32 pings_sent = 1, lost_pings = 0;
+	u32 packet_loss = 0;
 };
 
 enum SignalingCommand : u32
@@ -62,8 +72,10 @@ public:
 
 	u32 init_sig_infos(const SceNpId* npid);
 	signaling_info get_sig_infos(u32 conn_id);
+	std::optional<u32> get_conn_id_from_npid(const SceNpId* npid);
+	std::optional<u32> get_conn_id_from_addr(u32 addr, u16 port);
 
-	void set_sig2_infos(u64 room_id, u16 member_id, s32 status, u32 addr, u16 port, bool self = false);
+	void set_sig2_infos(u64 room_id, u16 member_id, s32 status, u32 addr, u16 port, const SceNpId& npid, bool self = false);
 	signaling_info get_sig2_infos(u64 room_id, u16 member_id);
 
 	void set_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_cb, vm::ptr<void> sig_cb_arg);
@@ -71,6 +83,7 @@ public:
 	void set_sig2_cb(u16 sig2_cb_ctx, vm::ptr<SceNpMatching2SignalingCallback> sig2_cb, vm::ptr<void> sig2_cb_arg);
 
 	void start_sig(u32 conn_id, u32 addr, u16 port);
+	void stop_sig(u32 conn_id);
 
 	void start_sig2(u64 room_id, u16 member_id);
 	void disconnect_sig2_users(u64 room_id);
@@ -78,19 +91,21 @@ public:
 	static constexpr auto thread_name = "Signaling Manager Thread"sv;
 
 private:
-	static constexpr auto REPEAT_CONNECT_DELAY  = std::chrono::milliseconds(200);
-	static constexpr auto REPEAT_PING_DELAY     = std::chrono::milliseconds(500);
-	static constexpr auto REPEAT_FINISHED_DELAY = std::chrono::milliseconds(500);
+	static constexpr auto REPEAT_CONNECT_DELAY     = std::chrono::milliseconds(200);
+	static constexpr auto REPEAT_PING_DELAY        = std::chrono::milliseconds(500);
+	static constexpr auto REPEAT_FINISHED_DELAY    = std::chrono::milliseconds(500);
 	static constexpr be_t<u32> SIGNALING_SIGNATURE = (static_cast<u32>('S') << 24 | static_cast<u32>('I') << 16 | static_cast<u32>('G') << 8 | static_cast<u32>('N'));
 
 	struct signaling_packet
 	{
 		be_t<u32> signature = SIGNALING_SIGNATURE;
 		le_t<u32> version;
+		le_t<u64> timestamp;
 		le_t<SignalingCommand> command;
 		le_t<u32> sent_addr;
 		le_t<u16> sent_port;
-		union {
+		union
+		{
 			struct
 			{
 				SceNpId npid;

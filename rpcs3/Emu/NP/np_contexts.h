@@ -1,5 +1,11 @@
 #pragma once
 
+#include <optional>
+#include <condition_variable>
+#include <thread>
+
+#include "Utilities/mutex.h"
+
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
@@ -10,29 +16,51 @@ struct score_ctx
 {
 	score_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
 
-	static const u32 id_base  = 1;
+	static const u32 id_base  = 0x2001;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
 	SAVESTATE_INIT_POS(25);
 
+	shared_mutex mutex;
+
+	u64 timeout = 60'000'000; // 60 seconds
+
 	SceNpCommunicationId communicationId{};
 	SceNpCommunicationPassphrase passphrase{};
+	s32 pcId = 0;
 };
 s32 create_score_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
 bool destroy_score_context(s32 ctx_id);
 
 struct score_transaction_ctx
 {
-	score_transaction_ctx(s32 score_context_id);
+	score_transaction_ctx(const std::shared_ptr<score_ctx>& score);
+	~score_transaction_ctx();
+	std::optional<s32> get_score_transaction_status();
+	void abort_score_transaction();
+	void wait_for_completion();
 
-	static const u32 id_base  = 1;
+	static const u32 id_base  = 0x1001;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
 	SAVESTATE_INIT_POS(26);
 
-	s32 score_context_id      = 0;
+	shared_mutex mutex;
+	std::condition_variable_any wake_cond, completion_cond;
+
+	std::optional<error_code> result;
+	std::vector<u32> data;
+	std::vector<u8> game_data;
+
+	u64 timeout = 60'000'000; // 60 seconds;
+
+	SceNpCommunicationId communicationId{};
+	SceNpCommunicationPassphrase passphrase{};
+	s32 pcId = 0;
+
+	std::thread thread;
 };
-s32 create_score_transaction_context(s32 score_context_id);
+s32 create_score_transaction_context(const std::shared_ptr<score_ctx>& score);
 bool destroy_score_transaction_context(s32 ctx_id);
 
 // Match2 related
@@ -62,7 +90,7 @@ struct lookup_title_ctx
 {
 	lookup_title_ctx(vm::cptr<SceNpCommunicationId> communicationId);
 
-	static const u32 id_base  = 1;
+	static const u32 id_base  = 0x3001;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
 	SAVESTATE_INIT_POS(28);
@@ -77,7 +105,7 @@ struct lookup_transaction_ctx
 {
 	lookup_transaction_ctx(s32 lt_ctx);
 
-	static const u32 id_base  = 1;
+	static const u32 id_base  = 0x4001;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
 	SAVESTATE_INIT_POS(29);
@@ -91,7 +119,7 @@ struct commerce2_ctx
 {
 	commerce2_ctx(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg);
 
-	static const u32 id_base  = 1;
+	static const u32 id_base  = 0x5001;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
 	SAVESTATE_INIT_POS(30);
@@ -109,7 +137,7 @@ struct signaling_ctx
 {
 	signaling_ctx(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg);
 
-	static const u32 id_base  = 1;
+	static const u32 id_base  = 0x6001;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
 	SAVESTATE_INIT_POS(31);

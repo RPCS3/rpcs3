@@ -278,7 +278,7 @@ namespace np
 		if (num_binattrs)
 		{
 			ptr_member->roomMemberBinAttrInternal.set(mem.allocate(sizeof(SceNpMatching2RoomMemberBinAttrInternal) * num_binattrs));
-			ptr_member->roomMemberBinAttrInternalNum = num_binattrs;
+			ptr_member->roomMemberBinAttrInternalNum         = num_binattrs;
 			SceNpMatching2RoomMemberBinAttrInternal* bin_ptr = ptr_member->roomMemberBinAttrInternal.get_ptr();
 
 			u32 actual_cnt = 0;
@@ -288,8 +288,8 @@ namespace np
 				{
 					const auto& bin = ::at32(member.bins, binattrs_list[i]);
 					bin_ptr[actual_cnt].updateDate.tick = bin.updateDate.tick;
-					bin_ptr[actual_cnt].data.id = bin.id;
-					bin_ptr[actual_cnt].data.size = bin.data.size();
+					bin_ptr[actual_cnt].data.id         = bin.id;
+					bin_ptr[actual_cnt].data.size       = bin.data.size();
 					bin_ptr[actual_cnt].data.ptr.set(mem.allocate(bin.data.size()));
 					memcpy(bin_ptr[actual_cnt].data.ptr.get_ptr(), bin.data.data(), bin.data.size());
 					actual_cnt++;
@@ -299,4 +299,15 @@ namespace np
 
 		return needed_data_size;
 	}
+
+	SceNpId cache_manager::get_npid(u64 room_id, u16 member_id)
+	{
+		std::lock_guard lock(mutex);
+
+		ensure(rooms.contains(room_id), "cache_manager::get_npid: Room not cached!");
+		ensure(::at32(rooms, room_id).members.contains(member_id), "cache_manager::get_npid: Member not cached!");
+
+		return ::at32(::at32(rooms, room_id).members, member_id).userInfo.npId;
+	}
+
 } // namespace np

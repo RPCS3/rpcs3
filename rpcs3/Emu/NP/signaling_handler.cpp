@@ -4,6 +4,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "np_handler.h"
+#include "Emu/NP/vport0.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -15,28 +16,26 @@
 
 LOG_CHANNEL(sign_log, "Signaling");
 
-std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs();
-s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& addr);
 void need_network();
 
 template <>
 void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto value)
-	{
-		switch (value)
 		{
-		case signal_ping: return "PING";
-		case signal_pong: return "PONG";
-		case signal_connect: return "CONNECT";
-		case signal_connect_ack: return "CONNECT_ACK";
-		case signal_confirm: return "CONFIRM";
-		case signal_finished: return "FINISHED";
-		case signal_finished_ack: return "FINISHED_ACK";
-		}
+			switch (value)
+			{
+			case signal_ping: return "PING";
+			case signal_pong: return "PONG";
+			case signal_connect: return "CONNECT";
+			case signal_connect_ack: return "CONNECT_ACK";
+			case signal_confirm: return "CONFIRM";
+			case signal_finished: return "FINISHED";
+			case signal_finished_ack: return "FINISHED_ACK";
+			}
 
-		return unknown;
-	});
+			return unknown;
+		});
 }
 
 signaling_handler::signaling_handler()
@@ -77,10 +76,10 @@ void signaling_handler::signal_sig_callback(u32 conn_id, int event)
 	if (sig_cb)
 	{
 		sysutil_register_cb([sig_cb = this->sig_cb, sig_cb_ctx = this->sig_cb_ctx, conn_id, event, sig_cb_arg = this->sig_cb_arg](ppu_thread& cb_ppu) -> s32
-		{
-			sig_cb(cb_ppu, sig_cb_ctx, conn_id, event, 0, sig_cb_arg);
-			return 0;
-		});
+			{
+				sig_cb(cb_ppu, sig_cb_ctx, conn_id, event, 0, sig_cb_arg);
+				return 0;
+			});
 		sign_log.notice("Called sig CB: 0x%x (conn_id: %d)", event, conn_id);
 	}
 
@@ -93,11 +92,11 @@ void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event) const
 	if (sig_ext_cb)
 	{
 		sysutil_register_cb([sig_ext_cb = this->sig_ext_cb, sig_ext_cb_ctx = this->sig_ext_cb_ctx, conn_id, event, sig_ext_cb_arg = this->sig_ext_cb_arg](ppu_thread& cb_ppu) -> s32
-		{
-			sig_ext_cb(cb_ppu, sig_ext_cb_ctx, conn_id, event, 0, sig_ext_cb_arg);
-			return 0;
-		});
-		sign_log.notice("Called EXT sig CB: 0x%x (conn_id: %d, member_id: %d)", event, conn_id);
+			{
+				sig_ext_cb(cb_ppu, sig_ext_cb_ctx, conn_id, event, 0, sig_ext_cb_arg);
+				return 0;
+			});
+		sign_log.notice("Called EXT sig CB: 0x%x (conn_id: %d)", event, conn_id);
 	}
 }
 
@@ -107,10 +106,10 @@ void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMa
 	if (sig2_cb)
 	{
 		sysutil_register_cb([sig2_cb = this->sig2_cb, sig2_cb_ctx = this->sig2_cb_ctx, room_id, member_id, event, sig2_cb_arg = this->sig2_cb_arg](ppu_thread& cb_ppu) -> s32
-		{
-			sig2_cb(cb_ppu, sig2_cb_ctx, room_id, member_id, event, 0, sig2_cb_arg);
-			return 0;
-		});
+			{
+				sig2_cb(cb_ppu, sig2_cb_ctx, room_id, member_id, event, 0, sig2_cb_arg);
+				return 0;
+			});
 	}
 
 	sign_log.notice("Called sig2 CB: 0x%x (room_id: %d, member_id: %d)", event, room_id, member_id);
@@ -180,15 +179,15 @@ void signaling_handler::process_incoming_messages()
 
 	for (const auto& msg : msgs)
 	{
-		if (msg.second.size() != sizeof(signaling_packet))
+		if (msg.data.size() != sizeof(signaling_packet))
 		{
 			sign_log.error("Received an invalid signaling packet");
 			continue;
 		}
 
-		auto op_addr = msg.first.first;
-		auto op_port = msg.first.second;
-		auto* sp     = reinterpret_cast<const signaling_packet*>(msg.second.data());
+		auto op_addr = msg.src_addr;
+		auto op_port = msg.src_port;
+		auto* sp     = reinterpret_cast<const signaling_packet*>(msg.data.data());
 
 		if (!validate_signaling_packet(sp))
 			continue;
@@ -231,8 +230,8 @@ void signaling_handler::process_incoming_messages()
 			si = ::at32(sig1_peers, conn_id);
 			// Activate the connection without triggering the main CB
 			si->connStatus = SCE_NP_SIGNALING_CONN_STATUS_ACTIVE;
-			si->addr = op_addr;
-			si->port = op_port;
+			si->addr       = op_addr;
+			si->port       = op_port;
 			si->ext_status = ext_sign_peer;
 			// Notify extended callback that peer activated
 			signal_ext_sig_callback(conn_id, SCE_NP_SIGNALING_EVENT_EXT_PEER_ACTIVATED);
@@ -259,30 +258,51 @@ void signaling_handler::process_incoming_messages()
 				}
 			}
 
-			sent_packet.command = signal_ping;
+			sent_packet.command   = signal_ping;
+			sent_packet.timestamp = now.time_since_epoch().count();
+			send_signaling_packet(sent_packet, si->addr, si->port);
 			queue_signaling_packet(sent_packet, si, now + REPEAT_PING_DELAY);
+		};
+
+		const auto update_rtt = [&]()
+		{
+			u32 rtt                               = now.time_since_epoch().count() - sp->timestamp;
+			si->last_rtts[(si->rtt_counters % 6)] = rtt;
+			si->rtt_counters++;
+
+			std::size_t num_rtts = std::min(static_cast<std::size_t>(6), si->rtt_counters);
+			u64 sum              = 0;
+			for (std::size_t index = 0; index < num_rtts; index++)
+			{
+				sum += si->last_rtts[index];
+			}
+
+			si->rtt = (sum / num_rtts) / 1000;
 		};
 
 		switch (sp->command)
 		{
 		case signal_ping:
-			reply               = true;
-			schedule_repeat     = false;
-			sent_packet.command = signal_pong;
+			reply                 = true;
+			schedule_repeat       = false;
+			sent_packet.command   = signal_pong;
+			sent_packet.timestamp = sp->timestamp;
 			break;
 		case signal_pong:
+			update_rtt();
 			reply           = false;
 			schedule_repeat = false;
-			reschedule_packet(si, signal_ping, now + 15s);
+			reschedule_packet(si, signal_ping, now + 10s);
 			break;
 		case signal_connect:
-			reply               = true;
-			schedule_repeat     = true;
-			sent_packet.command = signal_connect_ack;
+			reply                 = true;
+			schedule_repeat       = true;
+			sent_packet.command   = signal_connect_ack;
+			sent_packet.timestamp = sp->timestamp;
 			// connection is established
-			// TODO: notify extended callback!
 			break;
 		case signal_connect_ack:
+			update_rtt();
 			reply           = true;
 			schedule_repeat = false;
 			setup_ping();
@@ -357,6 +377,17 @@ void signaling_handler::operator()()
 				break; // qpackets will be emptied of all packets from this user so we're requeuing
 			}
 
+			// Update the timestamp if necessary
+			switch (it->second.packet.command)
+			{
+			case signal_connect:
+			case signal_ping:
+				it->second.packet.timestamp = now.time_since_epoch().count();
+				break;
+			default:
+				break;
+			}
+
 			// Resend the packet
 			send_signaling_packet(it->second.packet, it->second.sig_info->addr, it->second.sig_info->port);
 
@@ -427,7 +458,7 @@ void signaling_handler::update_si_mapped_addr(std::shared_ptr<signaling_info>& s
 	if (si->addr != new_addr || si->port != new_port)
 	{
 		in_addr addr_old, addr_new;
-		addr_old.s_addr = si->addr;
+		addr_old.s_addr = si->mapped_addr;
 		addr_new.s_addr = new_addr;
 
 		char ip_str_old[16];
@@ -435,7 +466,7 @@ void signaling_handler::update_si_mapped_addr(std::shared_ptr<signaling_info>& s
 		inet_ntop(AF_INET, &addr_old, ip_str_old, sizeof(ip_str_old));
 		inet_ntop(AF_INET, &addr_new, ip_str_new, sizeof(ip_str_new));
 
-		sign_log.trace("Updated Mapped Address from %s:%d to %s:%d", ip_str_old, si->port, ip_str_new, new_port);
+		sign_log.trace("Updated Mapped Address from %s:%d to %s:%d", ip_str_old, si->mapped_port, ip_str_new, new_port);
 		si->mapped_addr = new_addr;
 		si->mapped_port = new_port;
 	}
@@ -493,9 +524,12 @@ void signaling_handler::set_self_sig2_info(u64 room_id, u16 member_id)
 
 void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u16 port) const
 {
-	std::vector<u8> packet(sizeof(signaling_packet) + sizeof(u16));
-	reinterpret_cast<le_t<u16>&>(packet[0]) = 65535;
-	memcpy(packet.data() + sizeof(u16), &sp, sizeof(signaling_packet));
+	std::vector<u8> packet(sizeof(signaling_packet) + VPORT_0_HEADER_SIZE);
+	reinterpret_cast<le_t<u16>&>(packet[0]) = 0; // VPort 0
+	packet[2]                               = SUBSET_SIGNALING;
+	sp.sent_addr                            = addr;
+	sp.sent_port                            = port;
+	memcpy(packet.data() + VPORT_0_HEADER_SIZE, &sp, sizeof(signaling_packet));
 
 	sockaddr_in dest;
 	memset(&dest, 0, sizeof(sockaddr_in));
@@ -507,9 +541,6 @@ void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u1
 	inet_ntop(AF_INET, &dest.sin_addr, ip_str, sizeof(ip_str));
 
 	sign_log.trace("Sending %s packet to %s:%d", sp.command, ip_str, port);
-
-	sp.sent_addr = addr;
-	sp.sent_port = port;
 
 	if (send_packet_from_p2p_port(packet, dest) == -1)
 	{
@@ -534,7 +565,7 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 		memcpy(npid_buf, sp->V1.npid.handle.data, 16);
 		std::string npid(npid_buf);
 
-		if (!npid_to_conn_id.count(npid))
+		if (!npid_to_conn_id.contains(npid))
 			return nullptr;
 
 		const u32 conn_id = ::at32(npid_to_conn_id, npid);
@@ -566,6 +597,7 @@ void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
 {
 	auto& sent_packet   = sig1_packet;
 	sent_packet.command = signal_connect;
+	sent_packet.timestamp = steady_clock::now().time_since_epoch().count();
 
 	ensure(sig1_peers.contains(conn_id));
 	std::shared_ptr<signaling_info> si = ::at32(sig1_peers, conn_id);
@@ -578,12 +610,29 @@ void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
 	wake_up();
 }
 
+void signaling_handler::stop_sig(u32 conn_id)
+{
+	std::lock_guard lock(data_mutex);
+
+	if (!sig1_peers.contains(conn_id))
+		return;
+
+	auto& sent_packet   = sig1_packet;
+	sent_packet.command = signal_finished;
+
+	std::shared_ptr<signaling_info> si = ::at32(sig1_peers, conn_id);
+
+	send_signaling_packet(sent_packet, si->addr, si->port);
+	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_FINISHED_DELAY);
+}
+
 void signaling_handler::start_sig2(u64 room_id, u16 member_id)
 {
 	std::lock_guard lock(data_mutex);
 
 	auto& sent_packet   = sig2_packet;
 	sent_packet.command = signal_connect;
+	sent_packet.timestamp = steady_clock::now().time_since_epoch().count();
 
 	ensure(sig2_peers.contains(room_id));
 	const auto& sp = ::at32(sig2_peers, room_id);
@@ -633,6 +682,7 @@ u32 signaling_handler::create_sig_infos(const SceNpId* npid)
 	sig1_peers.emplace(conn_id, std::make_shared<signaling_info>());
 	::at32(sig1_peers, conn_id)->version = 1;
 	::at32(sig1_peers, conn_id)->conn_id = conn_id;
+	::at32(sig1_peers, conn_id)->npid    = *npid;
 
 	return conn_id;
 }
@@ -671,10 +721,33 @@ u32 signaling_handler::init_sig_infos(const SceNpId* npid)
 
 signaling_info signaling_handler::get_sig_infos(u32 conn_id)
 {
+	std::lock_guard lock(data_mutex);
 	return *sig1_peers[conn_id];
 }
 
-void signaling_handler::set_sig2_infos(u64 room_id, u16 member_id, s32 status, u32 addr, u16 port, bool self)
+std::optional<u32> signaling_handler::get_conn_id_from_npid(const SceNpId* npid)
+{
+	std::lock_guard lock(data_mutex);
+	// Diff behaviour here depending on SDK version, 420+ always succeeds
+	return create_sig_infos(npid);
+}
+
+std::optional<u32> signaling_handler::get_conn_id_from_addr(u32 addr, u16 port)
+{
+	std::lock_guard lock(data_mutex);
+
+	for (const auto& [conn_id, conn_info] : sig1_peers)
+	{
+		if (conn_info && std::bit_cast<u32, be_t<u32>>(conn_info->addr) == addr && conn_info->port == port)
+		{
+			return conn_id;
+		}
+	}
+
+	return std::nullopt;
+}
+
+void signaling_handler::set_sig2_infos(u64 room_id, u16 member_id, s32 status, u32 addr, u16 port, const SceNpId& npid, bool self)
 {
 	std::lock_guard lock(data_mutex);
 	if (!sig2_peers[room_id][member_id])
@@ -688,6 +761,7 @@ void signaling_handler::set_sig2_infos(u64 room_id, u16 member_id, s32 status, u
 	peer->version    = 2;
 	peer->room_id    = room_id;
 	peer->member_id  = member_id;
+	peer->npid       = npid;
 }
 
 signaling_info signaling_handler::get_sig2_infos(u64 room_id, u16 member_id)
@@ -697,10 +771,10 @@ signaling_info signaling_handler::get_sig2_infos(u64 room_id, u16 member_id)
 	if (!sig2_peers[room_id][member_id])
 	{
 		sig2_peers[room_id][member_id] = std::make_shared<signaling_info>();
-		auto& peer = sig2_peers[room_id][member_id];
-		peer->room_id = room_id;
-		peer->member_id = member_id;
-		peer->version = 2;
+		auto& peer                     = sig2_peers[room_id][member_id];
+		peer->room_id                  = room_id;
+		peer->member_id                = member_id;
+		peer->version                  = 2;
 	}
 
 	return *sig2_peers[room_id][member_id];
