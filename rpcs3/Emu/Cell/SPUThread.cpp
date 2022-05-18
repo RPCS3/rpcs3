@@ -2624,18 +2624,31 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		const auto& to_write = _ref<spu_rdata_t>(args.lsa & 0x3ff80);
 		auto& res = vm::reservation_acquire(addr);
 
+		if (cmp_rdata(to_write, rdata))
+		{
+			if (!g_cfg.core.spu_accurate_dma)
+			{
+				// As far as we know GETLLAR/GET had been the only source of reliable reservation information
+				// So if the SPU had concluded the information GETLLAR provided did not require an update of reservation data at the time of GETLLAR -
+				// We do not need to question it and cause a loop restart
+				if (rtime != res || !res.compare_and_swap_test(rtime, rtime + 128))
+				{
+					rtime = 0;
+				}
+
+				return true;
+			}
+
+			// Writeback of unchanged data. Only check memory change
+			return rtime == res && cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);
+		}
+
 		// TODO: Limit scope!!
 		rsx::reservation_lock rsx_lock(addr, 128);
 
 		if (rtime != res)
 		{
 			return false;
-		}
-
-		if (cmp_rdata(to_write, rdata))
-		{
-			// Writeback of unchanged data. Only check memory change
-			return cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);
 		}
 
 		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
@@ -2759,7 +2772,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		return success;
 	}())
 	{
-		vm::reservation_notifier(addr).notify_all(-128);
+		if (rtime) vm::reservation_notifier(addr).notify_all(-128);
 		raddr = 0;
 		perf0.reset();
 		return true;

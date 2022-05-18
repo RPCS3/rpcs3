@@ -2011,13 +2011,28 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		}
 	}
 
-	if (old_data != data || rtime != (res & -128))
-	{
-		return false;
-	}
-
 	if ([&]()
 	{
+		if (new_data == old_data && !g_cfg.core.ppu_128_reservations_loop_max_length)
+		{
+			// As far as we know loads had been the only source of reliable reservation information
+			// So if the PPU had concluded the information loads provided did not require an update of reservation data at the time - 
+			// We do not need to question it and cause a loop restart
+			ppu.last_faddr = 0;
+
+			if (rtime != res || !res.compare_and_swap_test(rtime, rtime + 128))
+			{
+				ppu.rtime = 0;
+			}
+
+			return true;
+		}
+
+		if (old_data != data || rtime != (res & -128))
+		{
+			return false;
+		}
+
 		if (ppu.use_full_rdata) [[unlikely]]
 		{
 			auto [_oldd, _ok] = res.fetch_op([&](u64& r)
@@ -2138,12 +2153,6 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			return success;
 		}
 
-		if (new_data == old_data)
-		{
-			ppu.last_faddr = 0;
-			return res.compare_and_swap_test(rtime, rtime + 128);
-		}
-
 		// Aligned 8-byte reservations will be used here
 		addr &= -8;
 
@@ -2194,7 +2203,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}())
 	{
-		res.notify_all(-128);
+		if (ppu.rtime) res.notify_all(-128);
 
 		if (addr == ppu.last_faddr)
 		{
