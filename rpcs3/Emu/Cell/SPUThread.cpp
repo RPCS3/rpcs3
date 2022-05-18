@@ -3207,10 +3207,28 @@ bool spu_thread::process_mfc_cmd()
 		const u32 addr = ch_mfc_cmd.eal & -128;
 		const auto& data = vm::_ref<spu_rdata_t>(addr);
 
+		if (addr == raddr && !g_cfg.core.spu_accurate_dma && !g_cfg.core.spu_getllar_polling_detection)
+		{
+			if (perf0.get() - last_ftsc < 1000)
+			{
+				mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
+				ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
+				return true;
+			}
+
+			last_ftsc = perf0.get();
+		}
+
 		if (addr == last_faddr)
 		{
-			// TODO: make this configurable and possible to disable
-			spu_log.trace(u8"GETLLAR after fail: addr=0x%x, time=%u c", last_faddr, (perf0.get() - last_ftsc));
+			if (g_cfg.core.spu_accurate_dma)
+			{
+				last_faddr = 0;
+			}
+			else
+			{
+				spu_log.trace(u8"GETLLAR after fail: addr=0x%x, time=%u c", last_faddr, (perf0.get() - last_ftsc));
+			}
 		}
 
 		if (addr == last_faddr && perf0.get() - last_ftsc < 1000 && (vm::reservation_acquire(addr) & -128) == last_ftime)
@@ -3229,7 +3247,7 @@ bool spu_thread::process_mfc_cmd()
 			last_faddr = 0;
 		}
 
-		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_getllar_polling_detection && rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
+		if (addr == raddr && g_cfg.core.spu_getllar_polling_detection && rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
 		{
 			// Spinning, might as well yield cpu resources
 			std::this_thread::yield();
