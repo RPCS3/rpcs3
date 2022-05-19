@@ -109,7 +109,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	null_func,
 	BIND_SYSC(sys_process_getpid),                          //1   (0x001)
 	BIND_SYSC(sys_process_wait_for_child),                  //2   (0x002)  ROOT
-	null_func,                                              //3   (0x003)
+	BIND_SYSC(sys_process_exit3),                           //3   (0x003)
 	BIND_SYSC(sys_process_get_status),                      //4   (0x004)  DBG
 	BIND_SYSC(sys_process_detach_child),                    //5   (0x005)  DBG
 

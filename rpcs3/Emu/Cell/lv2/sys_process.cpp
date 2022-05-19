@@ -477,6 +477,15 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	}
 }
 
+void sys_process_exit3(ppu_thread& ppu, s32 status)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_process.warning("_sys_process_exit3(status=%d)", status);
+
+	return _sys_process_exit(ppu, status, 0, 0);
+}
+
 error_code sys_process_spawns_a_self2(vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data)
 {
 	sys_process.todo("sys_process_spawns_a_self2(pid=*0x%x, primary_prio=0x%x, flags=0x%llx, stack=*0x%x, stack_size=0x%x, mem_id=0x%x, param_sfo=*0x%x, dbg_data=*0x%x"
