@@ -2160,7 +2160,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
 		{
-			if ((r & -128) != rtime || (r & 127))
+			if ((g_cfg.core.spu_accurate_dma ? (r & -128) != rtime : ((r >> 16) != (rtime >> 16))) || (r & 127))
 			{
 				return false;
 			}
@@ -2179,7 +2179,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		// Store previous value in old_data on failure
 		if (data.compare_exchange(old_data, new_data))
 		{
-			res += 128 - lock_bits;
+			res.release(utils::align<u64>(_oldd + 64, 0x10000));
 			return true;
 		}
 

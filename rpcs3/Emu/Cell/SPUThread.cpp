@@ -2646,14 +2646,9 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		// TODO: Limit scope!!
 		rsx::reservation_lock rsx_lock(addr, 128);
 
-		if (rtime != res)
-		{
-			return false;
-		}
-
 		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
 		{
-			if ((r & -128) != rtime || (r & 127))
+			if ((g_cfg.core.spu_accurate_dma ? (r & -128) != rtime : ((r >> 16) != (rtime >> 16))) || (r & 127))
 			{
 				return false;
 			}
@@ -2752,7 +2747,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		vm::_ref<atomic_t<u32>>(addr) += 0;
 
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
-		const bool success = [&]()
+		const bool success = [&, &_oldd = _oldd]()
 		{
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
@@ -2761,7 +2756,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			if (cmp_rdata(rdata, super_data))
 			{
 				mov_rdata(super_data, to_write);
-				res += 64;
+				res.release(utils::align<u64>(_oldd + 64, 0x10000));
 				return true;
 			}
 
@@ -2896,7 +2891,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			// Hard lock
 			vm::writer_lock lock(addr);
 			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
-			vm::reservation_acquire(addr) += 32;
+			auto& res = vm::reservation_acquire(addr);
+			res.release(utils::align<u64>(res + 32, 0x10000));
 		}
 		else if (cpu->id_type() != 2)
 		{
