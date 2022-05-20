@@ -1070,6 +1070,11 @@ namespace rsx
 				}
 			}
 		}
+
+		if (m_eng_interrupt_mask & rsx::pipe_flush_interrupt)
+		{
+			sync();
+		}
 	}
 
 	std::array<u32, 4> thread::get_color_surface_addresses() const
@@ -2612,6 +2617,8 @@ namespace rsx
 
 	void thread::sync()
 	{
+		m_eng_interrupt_mask.clear(rsx::pipe_flush_interrupt);
+
 		if (zcull_ctrl->has_pending())
 		{
 			zcull_ctrl->sync(this);
