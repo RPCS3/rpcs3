@@ -88,9 +88,6 @@ namespace rsx
 
 			const auto& sema = vm::_ref<RsxSemaphore>(addr).val;
 
-			// TODO: Remove vblank semaphore hack
-			if (addr == rsx->device_addr + 0x30) return;
-
 			if (sema == arg)
 			{
 				// Flip semaphore doesnt need wake-up delay
@@ -107,10 +104,15 @@ namespace rsx
 				rsx->flush_fifo();
 			}
 
+			if (addr == rsx->device_addr + 0x30 && g_cfg.video.frame_limit == frame_limit_type::none)
+			{
+				return;
+			}
+
 			u64 start = rsx::uclock();
 			while (sema != arg)
 			{
-				if (rsx->is_stopped())
+				if (rsx->test_stopped())
 				{
 					return;
 				}
@@ -123,7 +125,7 @@ namespace rsx
 
 						while (rsx->is_paused())
 						{
-							rsx->cpu_wait({});
+							rsx->check_state();
 						}
 
 						// Reset
