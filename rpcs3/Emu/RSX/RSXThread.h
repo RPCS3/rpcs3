@@ -60,20 +60,42 @@ namespace rsx
 		}
 
 		template<bool IsFullLock>
-		bool lock(u32 addr, u32 len) noexcept
+		bool lock(u32 addr, u32 len, cpu_thread* self = nullptr) noexcept
 		{
 			if (len <= 1) return false;
 			const u32 end = addr + len - 1;
 
 			for (u32 block = (addr >> 20); block <= (end >> 20); ++block)
 			{
+				auto& mutex_ = rs[block];
+
 				if constexpr (IsFullLock)
 				{
-					rs[block].lock();
+					if (self) [[ likely ]]
+					{
+						while (!mutex_.try_lock())
+						{
+							self->cpu_wait({});
+						}
+					}
+					else
+					{
+						mutex_.lock();
+					}
 				}
 				else
 				{
-					rs[block].lock_shared();
+					if (!self) [[ likely ]]
+					{
+						mutex_.lock_shared();
+					}
+					else
+					{
+						while (!mutex_.try_lock_shared())
+						{
+							self->cpu_wait({});
+						}
+					}
 				}
 			}
 
@@ -833,7 +855,8 @@ namespace rsx
 			this->length = length;
 
 			auto renderer = get_current_renderer();
-			this->locked = renderer->iomap_table.lock<IsFullLock>(addr, length);
+			cpu_thread* lock_owner = renderer->is_current_thread() ? renderer : nullptr;
+			this->locked = renderer->iomap_table.lock<IsFullLock>(addr, length, lock_owner);
 		}
 
 	public:
