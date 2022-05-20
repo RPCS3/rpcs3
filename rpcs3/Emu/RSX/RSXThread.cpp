@@ -3188,7 +3188,7 @@ namespace rsx
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
-		case frame_limit_type::_auto: limit = static_cast<double>(g_cfg.video.vblank_rate); break;
+		case frame_limit_type::_auto: limit = 0.; break; // Handled in RSX semaphore_acquire
 		default:
 			break;
 		}
