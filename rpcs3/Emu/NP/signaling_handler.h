@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <condition_variable>
 #include <chrono>
+#include <optional>
 
 enum ext_signaling_status : u8
 {
@@ -62,6 +63,7 @@ public:
 
 	u32 init_sig_infos(const SceNpId* npid);
 	signaling_info get_sig_infos(u32 conn_id);
+	std::optional<u32> get_conn_id_from_npid(const SceNpId* npid);
 
 	void set_sig2_infos(u64 room_id, u16 member_id, s32 status, u32 addr, u16 port, bool self = false);
 	signaling_info get_sig2_infos(u64 room_id, u16 member_id);

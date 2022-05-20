@@ -534,7 +534,7 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 		memcpy(npid_buf, sp->V1.npid.handle.data, 16);
 		std::string npid(npid_buf);
 
-		if (!npid_to_conn_id.count(npid))
+		if (!npid_to_conn_id.contains(npid))
 			return nullptr;
 
 		const u32 conn_id = npid_to_conn_id.at(npid);
@@ -672,6 +672,12 @@ u32 signaling_handler::init_sig_infos(const SceNpId* npid)
 signaling_info signaling_handler::get_sig_infos(u32 conn_id)
 {
 	return *sig1_peers[conn_id];
+}
+
+std::optional<u32> signaling_handler::get_conn_id_from_npid(const SceNpId* npid)
+{
+	// Diff behaviour here depending on SDK version, 420+ always succeeds
+	return create_sig_infos(npid);
 }
 
 void signaling_handler::set_sig2_infos(u64 room_id, u16 member_id, s32 status, u32 addr, u16 port, bool self)

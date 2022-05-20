@@ -5122,7 +5122,7 @@ error_code sceNpSignalingGetConnectionInfo(u32 ctx_id, u32 conn_id, s32 code, vm
 
 error_code sceNpSignalingGetConnectionFromNpId(u32 ctx_id, vm::ptr<SceNpId> npId, vm::ptr<u32> conn_id)
 {
-	sceNp.todo("sceNpSignalingGetConnectionFromNpId(ctx_id=%d, npId=*0x%x, conn_id=*0x%x)", ctx_id, npId, conn_id);
+	sceNp.notice("sceNpSignalingGetConnectionFromNpId(ctx_id=%d, npId=*0x%x, conn_id=*0x%x)", ctx_id, npId, conn_id);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -5135,6 +5135,16 @@ error_code sceNpSignalingGetConnectionFromNpId(u32 ctx_id, vm::ptr<SceNpId> npId
 	{
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	const auto found_conn_id = sigh.get_conn_id_from_npid(npId.get_ptr());
+
+	if (!found_conn_id)
+	{
+		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+	}
+
+	*conn_id = *found_conn_id;
 
 	return CELL_OK;
 }
