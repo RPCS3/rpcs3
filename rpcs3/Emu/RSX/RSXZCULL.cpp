@@ -836,11 +836,6 @@ namespace rsx
 			rsx_log.warning("Reports area at location %s was accessed. ZCULL optimizations will be disabled.", location_tostring(location));
 			m_pages_accessed[location] = true;
 
-			// Flush all pending writes
-			m_critical_reports_in_flight += 0x100000;
-			ptimer->sync();
-			m_critical_reports_in_flight -= 0x100000;
-
 			// Unlock pages
 			for (auto& p : m_locked_pages[location])
 			{
@@ -911,6 +906,8 @@ namespace rsx
 				rsx::eng_lock rlock(thr);
 				std::scoped_lock lock(m_pages_mutex);
 				disable_optimizations(thr, location);
+
+				thr->m_eng_interrupt_mask |= rsx::pipe_flush_interrupt;
 				return true;
 			}
 
