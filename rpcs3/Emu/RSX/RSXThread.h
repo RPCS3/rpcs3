@@ -650,6 +650,9 @@ namespace rsx
 		atomic_t<u64> vblank_count{0};
 		bool capture_current_frame = false;
 
+		bool wait_for_flip_sema = false;
+		u32 flip_sema_wait_val = 0;
+
 	public:
 		atomic_t<bool> sync_point_request = false;
 		bool in_begin_end = false;

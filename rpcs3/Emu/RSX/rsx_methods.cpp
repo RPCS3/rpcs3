@@ -104,8 +104,13 @@ namespace rsx
 				rsx->flush_fifo();
 			}
 
-			if (addr == rsx->device_addr + 0x30 && g_cfg.video.frame_limit == frame_limit_type::none)
+			if (addr == rsx->device_addr + 0x30)
 			{
+				if (g_cfg.video.frame_limit == frame_limit_type::_auto)
+				{
+					rsx->flip_sema_wait_val = arg;
+					rsx->wait_for_flip_sema = (sema != arg);
+				}
 				return;
 			}
 
@@ -1733,7 +1738,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread* /*rsx*/, u32 /*reg*/, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
@@ -1742,7 +1747,7 @@ namespace rsx
 		template<u32 index>
 		struct queue_flip
 		{
-			static void impl(thread* /*rsx*/, u32 /*reg*/, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
