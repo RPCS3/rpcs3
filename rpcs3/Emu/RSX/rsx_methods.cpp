@@ -37,7 +37,7 @@ namespace rsx
 	template<bool FlushDMA, bool FlushPipe>
 	void write_gcm_label(thread* rsx, u32 address, u32 data)
 	{
-		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->label_addr + 0x30));
+		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->device_addr + 0x30));
 		if (!is_flip_sema)
 		{
 			// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
@@ -108,18 +108,6 @@ namespace rsx
 				rsx->flush_fifo();
 			}
 
-			if (addr == rsx->device_addr + 0x30)
-			{
-				if (g_cfg.video.frame_limit == frame_limit_type::_ps3 && rsx->requested_vsync)
-				{
-					// Enables PS3-compliant vblank behavior
-					rsx->flip_sema_wait_val = arg;
-					rsx->wait_for_flip_sema = (sema != arg);
-				}
-
-				return;
-			}
-
 			u64 start = rsx::uclock();
 			u64 last_check_val = start;
 
@@ -187,6 +175,12 @@ namespace rsx
 				rsx_log.error("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 				rsx->recover_fifo();
 				return;
+			}
+
+			if (addr == rsx->device_addr + 0x30 && !arg)
+			{
+				// HW flip synchronization related, 1 is not written without display queue command (TODO: make it behave as real hw)
+				arg = 1;
 			}
 
 			write_gcm_label<false, true>(rsx, addr, arg);

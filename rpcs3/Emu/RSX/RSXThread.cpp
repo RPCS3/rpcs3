@@ -595,6 +595,31 @@ namespace rsx
 		}
 	}
 
+	void thread::post_vblank_event(u64 post_event_time)
+	{
+		vblank_count++;
+
+		if (isHLE)
+		{
+			if (auto ptr = vblank_handler)
+			{
+				intr_thread->cmd_list
+				({
+					{ ppu_cmd::set_args, 1 }, u64{1},
+					{ ppu_cmd::lle_call, ptr },
+					{ ppu_cmd::sleep, 0 }
+				});
+
+				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.notify_one();
+			}
+		}
+		else
+		{
+			sys_rsx_context_attribute(0x55555555, 0xFED, 1, get_guest_system_time(post_event_time), 0, 0);
+		}
+	}
+
 	void thread::on_task()
 	{
 		g_tls_log_prefix = []
@@ -686,7 +711,6 @@ namespace rsx
 				{
 					{
 						local_vblank_count++;
-						vblank_count++;
 
 						if (local_vblank_count == vblank_rate)
 						{
@@ -701,25 +725,7 @@ namespace rsx
 							vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
 						}
 	
-						if (isHLE)
-						{
-							if (auto ptr = vblank_handler)
-							{
-								intr_thread->cmd_list
-								({
-									{ ppu_cmd::set_args, 1 }, u64{1},
-									{ ppu_cmd::lle_call, ptr },
-									{ ppu_cmd::sleep, 0 }
-								});
-
-								intr_thread->cmd_notify++;
-								intr_thread->cmd_notify.notify_one();
-							}
-						}
-						else
-						{
-							sys_rsx_context_attribute(0x55555555, 0xFED, 1, get_guest_system_time(post_event_time), 0, 0);
-						}
+						post_vblank_event(post_event_time);
 					}
 				}
 				else if (wait_sleep)
@@ -3203,15 +3209,17 @@ namespace rsx
 		}
 
 		double limit = 0.;
-		switch (g_disable_frame_limit ? frame_limit_type::none : g_cfg.video.frame_limit)
+		const auto frame_limit = g_disable_frame_limit ? frame_limit_type::none : g_cfg.video.frame_limit;
+
+		switch (frame_limit)
 		{
 		case frame_limit_type::none: limit = 0.; break;
-		case frame_limit_type::_59_94: limit = 59.94; break;
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
 		case frame_limit_type::_auto: limit = static_cast<double>(g_cfg.video.vblank_rate); break;
 		case frame_limit_type::_ps3: limit = 0.; break;
+		case frame_limit_type::infinite: limit = 0.; break;
 		default:
 			break;
 		}
@@ -3247,10 +3255,17 @@ namespace rsx
 				}
 			}
 		}
-		else if (wait_for_flip_sema)
+		else if (frame_limit == frame_limit_type::_ps3)
 		{
-			const auto& value = vm::_ref<RsxSemaphore>(device_addr + 0x30).val;
-			if (value != flip_sema_wait_val)
+			bool exit = false;
+
+			if (vblank_at_flip == umax)
+			{
+				vblank_at_flip = +vblank_count;
+				exit = true;
+			}
+
+			if (requested_vsync && (exit || vblank_at_flip == vblank_count))
 			{
 				// Not yet signaled, handle it later
 				async_flip_requested |= flip_request::emu_requested;
@@ -3258,7 +3273,7 @@ namespace rsx
 				return;
 			}
 
-			wait_for_flip_sema = false;
+			vblank_at_flip = umax;
 		}
 
 		int_flip_index++;

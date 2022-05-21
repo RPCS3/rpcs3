@@ -1874,10 +1874,9 @@ struct registers_decoder<NV406E_SEMAPHORE_RELEASE>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV409E semaphore: release: 0x%x", decoded.value);
+		return fmt::format("NV406E semaphore: release: 0x%x", decoded.value);
 	}
 };
-
 
 template <>
 struct registers_decoder<NV406E_SEMAPHORE_ACQUIRE>
@@ -1891,7 +1890,7 @@ struct registers_decoder<NV406E_SEMAPHORE_ACQUIRE>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV409E semaphore: acquire: 0x%x", decoded.value);
+		return fmt::format("NV406E semaphore: acquire: 0x%x", decoded.value);
 	}
 };
 

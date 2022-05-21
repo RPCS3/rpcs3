@@ -564,7 +564,7 @@ namespace rsx
 		u32 flip_status;
 		int debug_level;
 
-		atomic_t<bool> requested_vsync{false};
+		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};
 
 		RsxDisplayInfo display_buffers[8];
@@ -645,8 +645,8 @@ namespace rsx
 		atomic_t<u64> vblank_count{0};
 		bool capture_current_frame = false;
 
-		bool wait_for_flip_sema = false;
-		u32 flip_sema_wait_val = 0;
+		u64 vblank_at_flip = umax;
+		void post_vblank_event(u64 post_event_time);
 
 	public:
 		atomic_t<bool> sync_point_request = false;
