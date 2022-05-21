@@ -106,11 +106,13 @@ namespace rsx
 
 			if (addr == rsx->device_addr + 0x30)
 			{
-				if (g_cfg.video.frame_limit == frame_limit_type::_auto)
+				if (g_cfg.video.frame_limit == frame_limit_type::_ps3 && rsx->requested_vsync)
 				{
+					// Enables PS3-compliant vblank behavior
 					rsx->flip_sema_wait_val = arg;
 					rsx->wait_for_flip_sema = (sema != arg);
 				}
+
 				return;
 			}
 
