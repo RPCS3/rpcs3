@@ -498,9 +498,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[a3].lastQueuedBufferId = static_cast<u32>(a4);
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
-		render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0);
-
 		render->on_frame_end(static_cast<u32>(a4));
+		render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0);
 	}
 	break;
 

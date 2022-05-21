@@ -3099,6 +3099,18 @@ namespace rsx
 			Emu.Pause();
 		}
 
+		if (false && wait_for_flip_sema) // Breaks framepacing
+		{
+			const auto& value = vm::_ref<RsxSemaphore>(device_addr + 0x30).val;
+			while (value != flip_sema_wait_val && !test_stopped())
+			{
+				_mm_pause();
+			}
+
+			wait_for_flip_sema = false;
+			m_eng_interrupt_mask |= rsx::display_interrupt;
+		}
+
 		if (zcull_ctrl->has_pending())
 		{
 			// NOTE: This is a workaround for buggy games.
@@ -3195,7 +3207,7 @@ namespace rsx
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
-		case frame_limit_type::_auto: limit = 0.; break; // Handled in RSX semaphore_acquire
+		case frame_limit_type::_auto: limit = 0.; break;
 		default:
 			break;
 		}
@@ -3230,6 +3242,18 @@ namespace rsx
 					performance_counters.idle_time += delay_us;
 				}
 			}
+		}
+		else if (wait_for_flip_sema)
+		{
+			const auto& value = vm::_ref<RsxSemaphore>(device_addr + 0x30).val;
+			if (value != flip_sema_wait_val)
+			{
+				// Not yet signaled, handle it later
+				async_flip_requested |= flip_request::emu_requested;
+				return;
+			}
+
+			wait_for_flip_sema = false;
 		}
 
 		int_flip_index++;
