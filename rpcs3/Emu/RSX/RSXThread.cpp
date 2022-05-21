@@ -3099,18 +3099,6 @@ namespace rsx
 			Emu.Pause();
 		}
 
-		if (false && wait_for_flip_sema) // Breaks framepacing
-		{
-			const auto& value = vm::_ref<RsxSemaphore>(device_addr + 0x30).val;
-			while (value != flip_sema_wait_val && !test_stopped())
-			{
-				_mm_pause();
-			}
-
-			wait_for_flip_sema = false;
-			m_eng_interrupt_mask |= rsx::display_interrupt;
-		}
-
 		if (zcull_ctrl->has_pending())
 		{
 			// NOTE: This is a workaround for buggy games.
@@ -3250,6 +3238,7 @@ namespace rsx
 			{
 				// Not yet signaled, handle it later
 				async_flip_requested |= flip_request::emu_requested;
+				async_flip_buffer = buffer;
 				return;
 			}
 
