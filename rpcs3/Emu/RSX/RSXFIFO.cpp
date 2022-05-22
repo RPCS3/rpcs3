@@ -4,9 +4,16 @@
 #include "RSXThread.h"
 #include "Capture/rsx_capture.h"
 #include "Common/time.hpp"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "util/asm.hpp"
 
 #include <bitset>
+
+using spu_rdata_t = std::byte[128];
+
+extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src);
+extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs);
 
 namespace rsx
 {
@@ -58,8 +65,53 @@ namespace rsx
 			}
 		}
 
+		u32 FIFO_control::fetch_u32(u32 addr)
+		{
+			if (addr - m_cache_addr >= m_cache_size)
+			{
+				m_cache_addr = addr & -128;
+				m_cache_size = std::min<u32>(utils::align<u32>(+m_ctrl->put, 128) - m_cache_addr, u32{sizeof(m_cache)});
+				m_cache_size = m_cache_size ? m_cache_size : u32{sizeof(m_cache)};
+
+				u8 to_fetch = static_cast<u8>((1u << (m_cache_size / 128)) - 1);
+
+				const auto src = vm::_ptr<spu_rdata_t>(m_cache_addr);
+
+				for (u32 i = 0;; i = (std::countr_zero<u32>(utils::rol8(to_fetch, 0 - i - 1)) + i + 1) % 8)
+				{
+					// If reservation is being updated, try to load another
+					const auto& res = vm::reservation_acquire(m_cache_addr + i * 128);
+					const u64 time0 = res;
+
+					if (time0 & 127)
+					{
+						busy_wait(200);
+						continue;
+					}
+
+					mov_rdata(m_cache[i], src[i]);
+
+					if (time0 != res || !cmp_rdata(m_cache[i], src[i]))
+					{
+						busy_wait(200);
+						continue;
+					}
+
+					to_fetch &= ~(1u << i);
+
+					if (!to_fetch) break;
+				}
+			}
+
+			be_t<u32> ret;
+			std::memcpy(&ret, reinterpret_cast<const u8*>(&m_cache) + (addr - m_cache_addr), sizeof(u32));
+			return ret;
+		}
+
 		void FIFO_control::set_get(u32 get, bool check_spin)
 		{
+			m_cache_addr = 0;
+
 			if (check_spin && m_ctrl->get == get)
 			{
 				if (const u32 addr = m_iotable->get_addr(m_memwatch_addr); addr + 1)
@@ -87,7 +139,7 @@ namespace rsx
 				m_remaining_commands--;
 				m_internal_get += 4;
 
-				data.set(m_command_reg, vm::read32(m_args_ptr));
+				data.set(m_command_reg, fetch_u32(m_args_ptr));
 				return true;
 			}
 
@@ -127,6 +179,7 @@ namespace rsx
 			{
 				// Nothing to do
 				data.reg = FIFO_EMPTY;
+				m_cache_addr = 0;
 				return;
 			}
 
@@ -157,7 +210,7 @@ namespace rsx
 
 			if (const u32 addr = m_iotable->get_addr(m_internal_get); addr + 1)
 			{
-				m_cmd = vm::read32(addr);
+				m_cmd = fetch_u32(addr);
 			}
 			else
 			{
@@ -213,7 +266,7 @@ namespace rsx
 			inc_get(true); // Wait for data block to become available
 			m_internal_get += 4;
 
-			data.set(m_cmd & 0xfffc, vm::read32(m_args_ptr));
+			data.set(m_cmd & 0xfffc, fetch_u32(m_args_ptr));
 		}
 
 		void flattening_helper::reset(bool _enabled)

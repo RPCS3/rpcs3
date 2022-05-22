@@ -2649,6 +2649,7 @@ namespace rsx
 	{
 		// Make sure GET value is exposed before sync points
 		fifo_ctrl->sync_get();
+		fifo_ctrl->invalidate_cache();
 	}
 
 	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const
