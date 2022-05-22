@@ -295,6 +295,7 @@ void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 		case frame_limit_type::_60: return "60";
 		case frame_limit_type::_30: return "30";
 		case frame_limit_type::_auto: return "Auto";
+		case frame_limit_type::_ps3: return "PS3 Native";
 		}
 
 		return unknown;
