@@ -747,6 +747,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (g_cfg.video.overlay)
 		{
+			// TODO: Move this to native overlay! It is both faster and easier to manage
 			if (!m_text_writer)
 			{
 				auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
@@ -756,13 +757,14 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			m_text_writer->set_scale(m_frame->client_device_pixel_ratio());
 
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4,   0, direct_fbo->width(), direct_fbo->height(), fmt::format("RSX Load:                 %3d%%", get_load()));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4,  18, direct_fbo->width(), direct_fbo->height(), fmt::format("draw calls: %17d", info.stats.draw_calls));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4,  36, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call setup: %12dus", info.stats.setup_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4,  54, direct_fbo->width(), direct_fbo->height(), fmt::format("vertex upload time: %9dus", info.stats.vertex_upload_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4,  72, direct_fbo->width(), direct_fbo->height(), fmt::format("texture upload time: %8dus", info.stats.textures_upload_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4,  90, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call execution: %8dus", info.stats.draw_exec_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 108, direct_fbo->width(), direct_fbo->height(), fmt::format("submit and flip: %12dus", info.stats.flip_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4,  0, direct_fbo->width(), direct_fbo->height(), fmt::format("RSX Load:                 %3d%%", get_load()));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 18, direct_fbo->width(), direct_fbo->height(), fmt::format("draw calls: %17d", info.stats.draw_calls));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 36, direct_fbo->width(), direct_fbo->height(), fmt::format("submits: %20d", info.stats.submit_count));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 54, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call setup: %12dus", info.stats.setup_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 72, direct_fbo->width(), direct_fbo->height(), fmt::format("vertex upload time: %9dus", info.stats.vertex_upload_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 90, direct_fbo->width(), direct_fbo->height(), fmt::format("texture upload time: %8dus", info.stats.textures_upload_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 108, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call execution: %8dus", info.stats.draw_exec_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 4, 126, direct_fbo->width(), direct_fbo->height(), fmt::format("submit and flip: %12dus", info.stats.flip_time));
 
 			const auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
 			const auto texture_memory_size = m_texture_cache.get_texture_memory_in_use() / (1024 * 1024);

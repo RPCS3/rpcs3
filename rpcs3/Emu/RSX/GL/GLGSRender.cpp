@@ -960,13 +960,14 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 	{
-		return false;
+		return zcull_ctrl->on_access_violation(address);
 	}
 
 	if (result.num_flushable > 0)
 	{
 		auto &task = post_flush_request(address, result);
 
+		m_eng_interrupt_mask |= rsx::backend_interrupt;
 		vm::temporary_unlock();
 		task.producer_wait();
 	}

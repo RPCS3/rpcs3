@@ -2602,7 +2602,7 @@ void main_window::RemoveDiskCache()
 {
 	const std::string cache_dir = rpcs3::utils::get_hdd1_dir() + "/caches";
 
-	if (fs::is_dir(cache_dir) && fs::remove_all(cache_dir, false))
+	if (fs::remove_all(cache_dir, false))
 	{
 		QMessageBox::information(this, tr("Cache Cleared"), tr("Disk cache was cleared successfully"));
 	}

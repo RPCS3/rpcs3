@@ -11,6 +11,7 @@
 #include "rsx_cache.h"
 #include "RSXFIFO.h"
 #include "RSXOffload.h"
+#include "RSXZCULL.h"
 #include "rsx_utils.h"
 #include "Common/bitfield.hpp"
 #include "Common/profiling_timer.hpp"
@@ -59,20 +60,42 @@ namespace rsx
 		}
 
 		template<bool IsFullLock>
-		bool lock(u32 addr, u32 len) noexcept
+		bool lock(u32 addr, u32 len, cpu_thread* self = nullptr) noexcept
 		{
 			if (len <= 1) return false;
 			const u32 end = addr + len - 1;
 
 			for (u32 block = (addr >> 20); block <= (end >> 20); ++block)
 			{
+				auto& mutex_ = rs[block];
+
 				if constexpr (IsFullLock)
 				{
-					rs[block].lock();
+					if (self) [[ likely ]]
+					{
+						while (!mutex_.try_lock())
+						{
+							self->cpu_wait({});
+						}
+					}
+					else
+					{
+						mutex_.lock();
+					}
 				}
 				else
 				{
-					rs[block].lock_shared();
+					if (!self) [[ likely ]]
+					{
+						mutex_.lock_shared();
+					}
+					else
+					{
+						while (!mutex_.try_lock_shared())
+						{
+							self->cpu_wait({});
+						}
+					}
 				}
 			}
 
@@ -136,7 +159,18 @@ namespace rsx
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
+
 		all_dirty = ~0u
+	};
+
+	enum eng_interrupt_reason : u32
+	{
+		backend_interrupt       = 0x0001,        // Backend-related interrupt
+		memory_config_interrupt = 0x0002,        // Memory configuration changed
+		display_interrupt       = 0x0004,        // Display handling
+		pipe_flush_interrupt    = 0x0008,        // Flush pipelines
+
+		all_interrupt_bits = memory_config_interrupt | backend_interrupt | display_interrupt | pipe_flush_interrupt
 	};
 
 	enum FIFO_state : u8
@@ -352,190 +386,11 @@ namespace rsx
 		bool ignore_change;
 	};
 
-	namespace reports
-	{
-		struct occlusion_query_info
-		{
-			u32 driver_handle;
-			u32 result;
-			u32 num_draws;
-			u32 data_type;
-			u64 sync_tag;
-			u64 timestamp;
-			bool pending;
-			bool active;
-			bool owned;
-		};
-
-		struct queued_report_write
-		{
-			u32 type = CELL_GCM_ZPASS_PIXEL_CNT;
-			u32 counter_tag;
-			occlusion_query_info* query;
-			queued_report_write* forwarder;
-
-			vm::addr_t sink;                      // Memory location of the report
-			std::vector<vm::addr_t> sink_alias;   // Aliased memory addresses
-		};
-
-		struct query_search_result
-		{
-			bool found;
-			u32  raw_zpass_result;
-			std::vector<occlusion_query_info*> queries;
-		};
-
-		enum sync_control
-		{
-			sync_none = 0,
-			sync_defer_copy = 1, // If set, return a zcull intr code instead of forcefully reading zcull data
-			sync_no_notify = 2   // If set, backend hint notifications will not be made
-		};
-
-		class ZCULL_control
-		{
-		protected:
-			// Delay before a report update operation is forced to retire
-			const u32 max_zcull_delay_us = 300;
-			const u32 min_zcull_tick_us = 100;
-
-			// Number of occlusion query slots available. Real hardware actually has far fewer units before choking
-			const u32 occlusion_query_count = 1024;
-			const u32 max_safe_queue_depth = 892;
-
-			bool unit_enabled = false;           // The ZCULL unit is on
-			bool write_enabled = false;          // A surface in the ZCULL-monitored tile region has been loaded for rasterization
-			bool stats_enabled = false;          // Collecting of ZCULL statistics is enabled (not same as pixels passing Z test!)
-			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
-			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
-
-			std::array<occlusion_query_info, 1024> m_occlusion_query_data = {};
-			std::stack<occlusion_query_info*> m_free_occlusion_pool{};
-
-			occlusion_query_info* m_current_task = nullptr;
-			u32 m_statistics_tag_id = 0;
-
-			// Scheduling clock. Granunlarity is min_zcull_tick value.
-			u64 m_tsc = 0;
-			u64 m_next_tsc = 0;
-
-			// Incremental tag used for tracking sync events. Hardware clock resolution is too low for the job.
-			u64 m_sync_tag = 0;
-			u64 m_timer = 0;
-
-			std::vector<queued_report_write> m_pending_writes{};
-			std::unordered_map<u32, u32> m_statistics_map{};
-
-			// Enables/disables the ZCULL unit
-			void set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue);
-
-			// Checks current state of the unit and applies changes
-			void check_state(class ::rsx::thread* ptimer, bool flush_queue);
-
-			// Sets up a new query slot and sets it to the current task
-			void allocate_new_query(class ::rsx::thread* ptimer);
-
-			// Free a query slot in use
-			void free_query(occlusion_query_info* query);
-
-			// Write report to memory
-			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
-			void write(queued_report_write* writer, u64 timestamp, u32 value);
-
-			// Retire operation
-			void retire(class ::rsx::thread* ptimer, queued_report_write* writer, u32 result);
-
-		public:
-
-			ZCULL_control();
-			virtual ~ZCULL_control();
-
-			ZCULL_control(const ZCULL_control&) = delete;
-			ZCULL_control& operator=(const ZCULL_control&) = delete;
-
-			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
-			void set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue = false);
-
-			// Read current zcull statistics into the address provided
-			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
-
-			// Clears current stat block and increments stat_tag_id
-			void clear(class ::rsx::thread* ptimer, u32 type);
-
-			// Forcefully flushes all
-			void sync(class ::rsx::thread* ptimer);
-
-			// Conditionally sync any pending writes if range overlaps
-			flags32_t read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range, flags32_t flags);
-			flags32_t read_barrier(class ::rsx::thread* ptimer, u32 memory_address, occlusion_query_info* query);
-
-			// Call once every 'tick' to update, optional address provided to partially sync until address is processed
-			void update(class ::rsx::thread* ptimer, u32 sync_address = 0, bool hint = false);
-
-			// Draw call notification
-			void on_draw();
-
-			// Sync hint notification
-			void on_sync_hint(void* args);
-
-			// Check for pending writes
-			bool has_pending() const { return !m_pending_writes.empty(); }
-
-			// Search for query synchronized at address
-			query_search_result find_query(vm::addr_t sink_address, bool all);
-
-			// Copies queries in range rebased from source range to destination range
-			u32 copy_reports_to(u32 start, u32 range, u32 dest);
-
-			// Backend methods (optional, will return everything as always visible by default)
-			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
-			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
-			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
-			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = -1; }
-			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
-		};
-
-		// Helper class for conditional rendering
-		struct conditional_render_eval
-		{
-			bool enabled = false;
-			bool eval_failed = false;
-			bool hw_cond_active = false;
-			bool reserved = false;
-
-			std::vector<occlusion_query_info*> eval_sources;
-			u64 eval_sync_tag = 0;
-			u32 eval_address = 0;
-
-			// Resets common data
-			void reset();
-
-			// Returns true if rendering is disabled as per conditional render test
-			bool disable_rendering() const;
-
-			// Returns true if a conditional render is active but not yet evaluated
-			bool eval_pending() const;
-
-			// Enable conditional rendering
-			void enable_conditional_render(thread* pthr, u32 address);
-
-			// Disable conditional rendering
-			void disable_conditional_render(thread* pthr);
-
-			// Sets data sources for predicate evaluation
-			void set_eval_sources(std::vector<occlusion_query_info*>& sources);
-
-			// Sets evaluation result. Result is true if conditional evaluation failed
-			void set_eval_result(thread* pthr, bool failed);
-
-			// Evaluates the condition by accessing memory directly
-			void eval_result(thread* pthr);
-		};
-	}
-
 	struct frame_statistics_t
 	{
 		u32 draw_calls;
+		u32 submit_count;
+
 		s64 setup_time;
 		s64 vertex_upload_time;
 		s64 textures_upload_time;
@@ -602,6 +457,7 @@ namespace rsx
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
+		u64 m_cycles_counter = 0;
 
 		display_flip_info_t m_queued_flip{};
 
@@ -614,7 +470,6 @@ namespace rsx
 
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
-		frame_statistics_t stats{};
 
 		backend_configuration backend_config{};
 
@@ -738,6 +593,7 @@ namespace rsx
 		bool m_framebuffer_state_contested = false;
 		rsx::framebuffer_creation_context m_current_framebuffer_context = rsx::framebuffer_creation_context::context_draw;
 
+		rsx::atomic_bitmask_t<rsx::eng_interrupt_reason> m_eng_interrupt_mask;
 		u32 m_graphics_state = 0;
 		u64 ROP_sync_timestamp = 0;
 
@@ -793,6 +649,9 @@ namespace rsx
 		vm::ptr<void(u32)> vblank_handler = vm::null;
 		atomic_t<u64> vblank_count{0};
 		bool capture_current_frame = false;
+
+		bool wait_for_flip_sema = false;
+		u32 flip_sema_wait_val = 0;
 
 	public:
 		atomic_t<bool> sync_point_request = false;
@@ -868,7 +727,7 @@ namespace rsx
 		// sync
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
-		virtual void sync_hint(FIFO_hint hint, void* args);
+		virtual void sync_hint(FIFO_hint hint, reports::sync_hint_payload_t payload);
 		virtual bool release_GCM_label(u32 /*address*/, u32 /*value*/) { return false; }
 
 		std::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
@@ -973,6 +832,9 @@ namespace rsx
 		// Get RSX approximate load in %
 		u32 get_load();
 
+		// Get stats object
+		frame_statistics_t& get_stats() { return m_frame_stats; }
+
 		// Returns true if the current thread is the active RSX thread
 		inline bool is_current_thread() const
 		{
@@ -997,7 +859,8 @@ namespace rsx
 			this->length = length;
 
 			auto renderer = get_current_renderer();
-			this->locked = renderer->iomap_table.lock<IsFullLock>(addr, length);
+			cpu_thread* lock_owner = renderer->is_current_thread() ? renderer : nullptr;
+			this->locked = renderer->iomap_table.lock<IsFullLock>(addr, length, lock_owner);
 		}
 
 	public:
@@ -1043,6 +906,29 @@ namespace rsx
 			{
 				get_current_renderer()->iomap_table.unlock<IsFullLock>(addr, length);
 			}
+		}
+	};
+
+	class eng_lock
+	{
+		rsx::thread* pthr;
+	public:
+		eng_lock(rsx::thread* target)
+			:pthr(target)
+		{
+			if (pthr->is_current_thread())
+			{
+				pthr = nullptr;
+			}
+			else
+			{
+				pthr->pause();
+			}
+		}
+
+		~eng_lock()
+		{
+			if (pthr) pthr->unpause();
 		}
 	};
 }
