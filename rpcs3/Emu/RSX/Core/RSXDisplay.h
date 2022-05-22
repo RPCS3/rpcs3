@@ -69,13 +69,16 @@ namespace rsx
 
 	class vblank_thread
 	{
-		std::shared_ptr<named_thread<std::function<void()>>> m_thread;
+		using thread_t = std::shared_ptr<named_thread<std::function<void()>>>;
+
+		std::shared_ptr<named_thread<std::function<void()>>> m_thread1;
+		std::shared_ptr<named_thread<std::function<void()>>> m_thread2;
 
 	public:
 		vblank_thread() = default;
 		vblank_thread(const vblank_thread&) = delete;
 
-		void set_thread(std::shared_ptr<named_thread<std::function<void()>>> thread);
+		void set_thread(thread_t thread1, thread_t thread2);
 
 		vblank_thread& operator=(thread_state);
 		vblank_thread& operator=(const vblank_thread&) = delete;

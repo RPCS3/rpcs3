@@ -972,8 +972,10 @@ namespace rsx
 			return;
 		}
 
-		g_fxo->get<vblank_thread>().set_thread(std::shared_ptr<named_thread<std::function<void()>>>(new named_thread<std::function<void()>>("VBlank Thread"sv, [this]() -> void
+		auto vblank_func = [this]()
 		{
+			const u32 is_second = (thread_ctrl::get_name().starts_with("Second"sv) ? 1 : 0);
+
 #ifdef __linux__
 			constexpr u32 host_min_quantum = 10;
 #else
@@ -981,10 +983,13 @@ namespace rsx
 #endif
 			u64 start_time = get_system_time();
 
-			u64 vblank_rate = g_cfg.video.vblank_rate;
-			u64 vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
-
+			// Values meant to ensure their initial update
+			u64 vblank_rate = 1;
+			u64 vblank_period = 0;
 			u64 local_vblank_count = 0;
+			bool enabled = true;
+
+			const auto& freq_ref = display_frequency[is_second];
 
 			// TODO: exit condition
 			while (!is_stopped() && !unsent_gcm_events && thread_ctrl::state() != thread_state::aborting)
@@ -1007,23 +1012,53 @@ namespace rsx
 
 				if (!wait_for)
 				{
+					local_vblank_count++;
+
+					if (local_vblank_count == vblank_rate)
 					{
-						local_vblank_count++;
+						// Advance start_time to the moment of the current VBLANK
+						// Which is the last VBLANK event in this period
+						// This is in order for multiplication by ratio above to use only small numbers
+						start_time += vblank_period;
+						local_vblank_count = 0;
 
-						if (local_vblank_count == vblank_rate)
+						const u32 freq = freq_ref;
+
+						// We have a rare chance to update settings without losing precision whenever local_vblank_count is 0
+						vblank_rate = g_cfg.video.vblank_rate;
+						vblank_period = (g_cfg.video.vblank_ntsc || freq == GCM_DISPLAY_FREQUENCY_59_94HZ ? 1001'000 : 1000'000);
+
+						if (is_second)
 						{
-							// Advance start_time to the moment of the current VBLANK
-							// Which is the last VBLANK event in this period
-							// This is in order for multiplication by ratio above to use only small numbers
-							start_time += vblank_period;
-							local_vblank_count = 0;
+							if (u64 rate = g_cfg.video.second_vblank_rate)
+							{
+								vblank_rate = rate;
+							}
 
-							// We have a rare chance to update settings without losing precision whenever local_vblank_count is 0
-							vblank_rate = g_cfg.video.vblank_rate;
-							vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
+							enabled = (freq != GCM_DISPLAY_FREQUENCY_DISABLE);
 						}
+					}
+	
+					if (enabled)
+					{
+						if (isHLE)
+						{
+							if (vblank_handler)
+							{
+								intr_thread->cmd_list
+								({
+									{ ppu_cmd::set_args, 1 }, u64{1},
+									{ ppu_cmd::lle_call, vblank_handler },
+									{ ppu_cmd::sleep, 0 }
+								});
 
-						post_vblank_event(post_event_time);
+								intr_thread->cmd_notify.notify_one();
+							}
+						}
+						else
+						{
+							sys_rsx_context_attribute(0x55555555, 0xFED + is_second, 1, get_guest_system_time(post_event_time), 0, 0);
+						}
 					}
 				}
 				else if (wait_sleep)
@@ -1035,21 +1070,29 @@ namespace rsx
 					std::this_thread::yield();
 				}
 
-				if (Emu.IsPaused())
+				if (Emu.IsPaused() || !enabled)
 				{
 					// Save the difference before pause
 					start_time = rsx::uclock() - start_time;
 
-					while (Emu.IsPaused() && !is_stopped())
+					while ((freq_ref == GCM_DISPLAY_FREQUENCY_DISABLE || Emu.IsPaused()) && !is_stopped())
 					{
 						thread_ctrl::wait_for(5'000);
 					}
 
 					// Restore difference
 					start_time = rsx::uclock() - start_time;
+					enabled = true;
 				}
 			}
-		})));
+		};
+
+		auto make_vblank_thread = [&]()
+		{
+			return std::shared_ptr<named_thread<std::function<void()>>>(vblank_handler);
+		};
+
+		g_fxo->get<vblank_thread>().set_threads(make_vblank_thread(), make_vblank_thread());
 
 		struct join_vblank
 		{
@@ -1059,6 +1102,9 @@ namespace rsx
 			}
 
 		} join_vblank_obj{};
+
+		g_fxo->init<named_thread>("Second VBlank Thread", [this, vblank_func]() { vblank_func(); });
+		g_fxo->init<named_thread>("VBlank Thread", std::move(vblank_func));
 
 		// Raise priority above other threads
 		thread_ctrl::scoped_priority high_prio(+1);
@@ -2641,6 +2687,8 @@ namespace rsx
 		vm::write32(device_addr + 0x30, 1);
 		std::memset(display_buffers, 0, sizeof(display_buffers));
 
+		display_frequency[0] = GCM_DISPLAY_FREQUENCY_SCANOUT;
+		display_frequency[1] = GCM_DISPLAY_FREQUENCY_DISABLE;
 		rsx_thread_running = true;
 	}
 
@@ -4047,16 +4095,22 @@ namespace rsx
 		frame_times.push_back(frame_time_t{preempt_count, current_time, current_tsc});
 	}
 
-	void vblank_thread::set_thread(std::shared_ptr<named_thread<std::function<void()>>> thread)
+	void vblank_thread::set_threads(thread_t thread1, thread_t thread2)
 	{
-		std::swap(m_thread, thread);
+		std::swap(m_thread1, thread1);
+		std::swap(m_thread2, thread2);
 	}
 
 	vblank_thread& vblank_thread::operator=(thread_state state)
 	{
-		if (m_thread)
+		if (m_thread1)
 		{
-			*m_thread = state;
+			*m_thread1 = state;
+		}
+
+		if (m_thread2)
+		{
+			*m_thread2 = state;
 		}
 
 		return *this;

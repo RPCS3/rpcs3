@@ -1144,6 +1144,14 @@ namespace gcm
 		RSX_VERTEX_BASE_TYPE_CMP32,
 		RSX_VERTEX_BASE_TYPE_UINT8,
 	};
+
+	// VBlank frequancy types
+	enum rsx_freq_t : u32
+	{
+		GCM_DISPLAY_FREQUENCY_SCANOUT = 2,
+		GCM_DISPLAY_FREQUENCY_59_94HZ = 3,
+		GCM_DISPLAY_FREQUENCY_DISABLE = 4,
+	};
 }
 
 // Public export
