@@ -218,6 +218,14 @@ enum class screen_quadrant
 	bottom_right
 };
 
+enum class rsx_fifo_mode
+{
+	fast,
+	atomic,
+	atomic_ordered,
+	as_ps3,
+};
+
 enum class tsx_usage
 {
 	disabled,

@@ -2183,6 +2183,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="accurateFIFOAccess">
+                 <property name="text">
+                  <string>Accurate RSX FIFO access</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="ppuNJFixup">
                  <property name="text">
                   <string>PPU Non-Java Mode Fixup</string>
@@ -2280,6 +2287,49 @@
               <layout class="QVBoxLayout" name="gb_max_spurs_threads_layout">
                <item>
                 <widget class="QComboBox" name="maxSPURSThreads"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_clockScale">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Clocks Scale</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_clockScale_layout">
+               <item>
+                <widget class="QSlider" name="clockScale">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="clockScaleLayout" stretch="1,0">
+                 <item>
+                  <widget class="QLabel" name="clockScaleText">
+                   <property name="text">
+                    <string>100%</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="clockScaleReset">
+                   <property name="text">
+                    <string>Reset</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </item>
               </layout>
              </widget>
@@ -2460,6 +2510,24 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_rsx_fifo_accuracy">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>RSX FIFO Accuracy</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_rsx_fifo_accuracy_layout">
+               <item>
+                <widget class="QComboBox" name="FIFOAccuracy"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="gb_wakeupDelay">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -2548,49 +2616,6 @@
                   <string>VBlank NTSC Fixup</string>
                  </property>
                 </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="gb_clockScale">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="title">
-               <string>Clocks Scale</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_clockScale_layout">
-               <item>
-                <widget class="QSlider" name="clockScale">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="clockScaleLayout" stretch="1,0">
-                 <item>
-                  <widget class="QLabel" name="clockScaleText">
-                   <property name="text">
-                    <string>100%</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="clockScaleReset">
-                   <property name="text">
-                    <string>Reset</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
                </item>
               </layout>
              </widget>

@@ -180,7 +180,7 @@ namespace cfg
 
 	// Value node with fixed set of possible values, each maps to an enum value of type T.
 	template <typename T>
-	class _enum final : public _base
+	class _enum : public _base
 	{
 		atomic_t<T> m_value;
 

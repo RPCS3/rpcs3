@@ -44,13 +44,9 @@ namespace rsx
 	{
 		std::array<atomic_t<u32>, 4096> ea;
 		std::array<atomic_t<u32>, 4096> io;
-		std::array<shared_mutex, 4096> rs{};
+		std::array<shared_mutex, 0x8'0000> rs;
 
-		rsx_iomap_table() noexcept
-			: ea(fill_array(-1))
-			, io(fill_array(-1))
-		{
-		}
+		rsx_iomap_table() noexcept;
 
 		// Try to get the real address given a mapped address
 		// Returns -1 on failure
@@ -59,39 +55,32 @@ namespace rsx
 			return this->ea[offs >> 20] | (offs & 0xFFFFF);
 		}
 
-		template<bool IsFullLock>
+		template <bool IsFullLock, uint Stride>
 		bool lock(u32 addr, u32 len, cpu_thread* self = nullptr) noexcept
 		{
 			if (len <= 1) return false;
 			const u32 end = addr + len - 1;
 
-			for (u32 block = (addr >> 20); block <= (end >> 20); ++block)
+			bool added_wait = false;
+
+			for (u32 block = addr / 8192; block <= (end / 8192); block += Stride)
 			{
 				auto& mutex_ = rs[block];
 
-				if constexpr (IsFullLock)
+				if (IsFullLock ? !mutex_.try_lock() : !mutex_.try_lock_shared()) [[ unlikely ]]
 				{
-					if (self) [[ likely ]]
+					if (self)
 					{
-						while (!mutex_.try_lock())
-						{
-							self->cpu_wait({});
-						}
+						added_wait |= !self->state.test_and_set(cpu_flag::wait);
+					}
+					
+					if (!self || self->id_type() != 0x55u)
+					{
+						IsFullLock ? mutex_.lock() : mutex_.lock_shared();
 					}
 					else
 					{
-						mutex_.lock();
-					}
-				}
-				else
-				{
-					if (!self) [[ likely ]]
-					{
-						mutex_.lock_shared();
-					}
-					else
-					{
-						while (!mutex_.try_lock_shared())
+						while (IsFullLock ? !mutex_.try_lock() : !mutex_.try_lock_shared())
 						{
 							self->cpu_wait({});
 						}
@@ -99,16 +88,21 @@ namespace rsx
 				}
 			}
 
+			if (added_wait)
+			{
+				self->check_state();
+			}
+
 			return true;
 		}
 
-		template<bool IsFullLock>
+		template <bool IsFullLock, uint Stride>
 		void unlock(u32 addr, u32 len) noexcept
 		{
 			ensure(len >= 1);
 			const u32 end = addr + len - 1;
 
-			for (u32 block = (addr >> 20); block <= (end >> 20); ++block)
+			for (u32 block = (addr / 8192); block <= (end / 8192); block += Stride)
 			{
 				if constexpr (IsFullLock)
 				{
@@ -847,7 +841,7 @@ namespace rsx
 		return g_fxo->try_get<rsx::thread>();
 	}
 
-	template<bool IsFullLock = false>
+	template<bool IsFullLock = false, uint Stride = 128>
 	class reservation_lock
 	{
 		u32 addr = 0, length = 0;
@@ -858,9 +852,7 @@ namespace rsx
 			this->addr = addr;
 			this->length = length;
 
-			auto renderer = get_current_renderer();
-			cpu_thread* lock_owner = renderer->is_current_thread() ? renderer : nullptr;
-			this->locked = renderer->iomap_table.lock<IsFullLock>(addr, length, lock_owner);
+			this->locked = get_current_renderer()->iomap_table.lock<IsFullLock, Stride>(addr, length, get_current_cpu_thread());
 		}
 
 	public:
@@ -868,6 +860,14 @@ namespace rsx
 		{
 			if (g_cfg.core.rsx_accurate_res_access &&
 				addr < constants::local_mem_base)
+			{
+				lock_range(addr, length);
+			}
+		}
+
+		reservation_lock(u32 addr, u32 length, bool setting)
+		{
+			if (setting && addr < constants::local_mem_base)
 			{
 				lock_range(addr, length);
 			}
@@ -904,7 +904,7 @@ namespace rsx
 		{
 			if (locked)
 			{
-				get_current_renderer()->iomap_table.unlock<IsFullLock>(addr, length);
+				get_current_renderer()->iomap_table.unlock<IsFullLock, Stride>(addr, length);
 			}
 		}
 	};

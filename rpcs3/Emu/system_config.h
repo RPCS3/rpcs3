@@ -43,6 +43,19 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_dma{ this, "Accurate SPU DMA", false };
 		cfg::_bool accurate_cache_line_stores{ this, "Accurate Cache Line Stores", false };
 		cfg::_bool rsx_accurate_res_access{this, "Accurate RSX reservation access", false, true};
+
+		struct fifo_setting : public cfg::_enum<rsx_fifo_mode>
+		{
+			using _enum = cfg::_enum<rsx_fifo_mode>;
+			using _enum::_enum;
+
+			explicit operator bool() const
+			{
+				return get() != rsx_fifo_mode::fast;
+			}
+		};
+
+		fifo_setting rsx_fifo_accuracy{this, "RSX FIFO Accuracy", rsx_fifo_mode::fast };
 		cfg::_bool spu_verification{ this, "SPU Verification", true }; // Should be enabled
 		cfg::_bool spu_cache{ this, "SPU Cache", true };
 		cfg::_bool spu_prof{ this, "SPU Profiler", false };

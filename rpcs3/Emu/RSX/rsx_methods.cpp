@@ -21,7 +21,11 @@ namespace rsx
 		const u32 cmd = rsx->get_fifo_cmd();
 		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
-		rsx->recover_fifo();
+
+		if (g_cfg.core.rsx_fifo_accuracy != rsx_fifo_mode::as_ps3)
+		{
+			rsx->recover_fifo();
+		}
 	}
 
 	static void trace_method(thread* /*rsx*/, u32 reg, u32 arg)
@@ -181,7 +185,9 @@ namespace rsx
 			// TODO: Check if possible to write on reservations
 			if (rsx->label_addr >> 28 != addr >> 28)
 			{
-				rsx_log.fatal("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
+				rsx_log.error("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
+				rsx->recover_fifo();
+				return;
 			}
 
 			write_gcm_label<false, true>(rsx, addr, arg);
@@ -260,13 +266,20 @@ namespace rsx
 				return;
 			}
 
+			const u32 addr = get_address(offset, method_registers.semaphore_context_dma_4097());
+
+			if (rsx->label_addr >> 28 != addr >> 28)
+			{
+				rsx_log.error("NV4097 semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
+			}
+
 			if (g_cfg.video.strict_rendering_mode) [[ unlikely ]]
 			{
-				write_gcm_label<true, true>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
+				write_gcm_label<true, true>(rsx, addr, arg);
 			}
 			else
 			{
-				write_gcm_label<true, false>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), arg);
+				write_gcm_label<true, false>(rsx, addr, arg);
 			}
 		}
 
@@ -283,8 +296,15 @@ namespace rsx
 				return;
 			}
 
+			const u32 addr = get_address(offset, method_registers.semaphore_context_dma_4097());
+
+			if (rsx->label_addr >> 28 != addr >> 28)
+			{
+				rsx_log.error("NV4097 semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
+			}
+
 			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			write_gcm_label<true, true>(rsx, get_address(offset, method_registers.semaphore_context_dma_4097()), val);
+			write_gcm_label<true, true>(rsx, addr, val);
 		}
 
 		/**
@@ -456,9 +476,16 @@ namespace rsx
 				const u32 reg = index / 4;
 				const u8 subreg = index % 4;
 
-				// Get real args count
-				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
-					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
+				// FIFO args count including this one
+				const u32 fifo_args_cnt = rsx->fifo_ctrl->get_remaining_args_count() + 1;
+
+				// The range of methods this function resposible to
+				const u32 method_range = 32 - index;
+
+				// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
+				const u32 fifo_read_limit = static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos())) / 4);
+
+				const u32 count = std::min<u32>({fifo_args_cnt, fifo_read_limit, method_range});
 
 				const u32 load = rsx::method_registers.transform_constant_load();
 
@@ -476,21 +503,28 @@ namespace rsx
 
 				const auto values = &rsx::method_registers.transform_constants[load + reg][subreg];
 
+				const auto fifo_span = rsx->fifo_ctrl->get_current_arg_ptr();
+
+				if (fifo_span.size() < rcount)
+				{
+					rcount = fifo_span.size();
+				}
+
 				if (rsx->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
 				{
 					// Minor optimization: don't compare values if we already know we need invalidation
-					copy_data_swap_u32(values, static_cast<u32*>(vm::base(rsx->fifo_ctrl->get_current_arg_ptr())), rcount);
+					copy_data_swap_u32(values, fifo_span.data(), rcount);
 				}
 				else
 				{
-					if (copy_data_swap_u32_cmp(values, static_cast<u32*>(vm::base(rsx->fifo_ctrl->get_current_arg_ptr())), rcount))
+					if (copy_data_swap_u32_cmp(values, fifo_span.data(), rcount))
 					{
 						// Transform constants invalidation is expensive (~8k bytes per update)
 						rsx->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
 					}
 				}
 
-				rsx->fifo_ctrl->skip_methods(count - 1);
+				rsx->fifo_ctrl->skip_methods(rcount - 1);
 			}
 		};
 
@@ -500,9 +534,16 @@ namespace rsx
 			{
 				const u32 index = reg - NV4097_SET_TRANSFORM_PROGRAM;
 
-				// Get real args count
-				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
-					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
+				// FIFO args count including this one
+				const u32 fifo_args_cnt = rsx->fifo_ctrl->get_remaining_args_count() + 1;
+
+				// The range of methods this function resposible to
+				const u32 method_range = 32 - index;
+
+				// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
+				const u32 fifo_read_limit = static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos())) / 4);
+
+				const u32 count = std::min<u32>({fifo_args_cnt, fifo_read_limit, method_range});
 
 				const u32 load_pos = rsx::method_registers.transform_program_load();
 
@@ -515,11 +556,18 @@ namespace rsx
 					rcount -= max - (max_vertex_program_instructions * 4);
 				}
 
-				copy_data_swap_u32(&rsx::method_registers.transform_program[load_pos * 4 + index % 4], static_cast<u32*>(vm::base(rsx->fifo_ctrl->get_current_arg_ptr())), rcount);
+				const auto fifo_span = rsx->fifo_ctrl->get_current_arg_ptr();
+
+				if (fifo_span.size() < rcount)
+				{
+					rcount = fifo_span.size();
+				}
+
+				copy_data_swap_u32(&rsx::method_registers.transform_program[load_pos * 4 + index % 4], fifo_span.data(), rcount);
 
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
 				rsx::method_registers.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
-				rsx->fifo_ctrl->skip_methods(count - 1);
+				rsx->fifo_ctrl->skip_methods(rcount - 1);
 			}
 		};
 
@@ -953,11 +1001,18 @@ namespace rsx
 				}
 
 				// Get position of the current command arg
-				const u32 src_offset = rsx->fifo_ctrl->get_pos() - 4;
+				const u32 src_offset = rsx->fifo_ctrl->get_pos();
 
-				// Get real args count (starting from NV3089_COLOR)
-				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
-					static_cast<u32>(((rsx->ctrl->put & ~3ull) - src_offset) / 4), 0x700 - index, out_x_max - index});
+				// FIFO args count including this one
+				const u32 fifo_args_cnt = rsx->fifo_ctrl->get_remaining_args_count() + 1;
+
+				// The range of methods this function resposible to
+				const u32 method_range = std::min<u32>(0x700 - index, out_x_max - index);
+
+				// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
+				const u32 fifo_read_limit = static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos())) / 4);
+
+				u32 count = std::min<u32>({fifo_args_cnt, fifo_read_limit, method_range});
 
 				const u32 dst_dma = method_registers.blit_engine_output_location_nv3062();
 				const u32 dst_offset = method_registers.blit_engine_output_offset_nv3062();
@@ -965,6 +1020,13 @@ namespace rsx
 
 				const u32 x = method_registers.nv308a_x() + index;
 				const u32 y = method_registers.nv308a_y();
+
+				const auto fifo_span = rsx->fifo_ctrl->get_current_arg_ptr();
+
+				if (fifo_span.size() < count)
+				{
+					count = fifo_span.size();
+				}
 
 				// Skip "handled methods"
 				rsx->fifo_ctrl->skip_methods(count - 1);
@@ -986,12 +1048,10 @@ namespace rsx
 						return;
 					}
 
-					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
-
 					const auto dst = vm::_ptr<u8>(dst_address);
-					const auto src = vm::_ptr<const u8>(src_address);
+					const auto src = reinterpret_cast<const u8*>(fifo_span.data());
 
-					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
+					rsx::reservation_lock<true> rsx_lock(dst_address, data_length);
 
 					if (rsx->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
 					{
@@ -1022,9 +1082,8 @@ namespace rsx
 					const auto data_length = count * 2;
 
 					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, data_length);
-					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
 					const auto dst = vm::_ptr<u16>(dst_address);
-					const auto src = vm::_ptr<const u32>(src_address);
+					const auto src = reinterpret_cast<const be_t<u32>*>(fifo_span.data());
 
 					if (!dst_address)
 					{
@@ -1032,7 +1091,7 @@ namespace rsx
 						return;
 					}
 
-					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
+					rsx::reservation_lock<true> rsx_lock(dst_address, data_length);
 
 					auto convert = [](u32 input) -> u16
 					{
