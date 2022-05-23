@@ -2728,6 +2728,9 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 
 	VkPipelineStageFlags dst_stage;
 	VkAccessFlags dst_access;
+	u32 dst_offset = 0;
+	usz first = 0;
+	usz last = (!partial_eval) ? sources.size() : 1;
 
 	if (m_device->get_conditional_render_support())
 	{
@@ -2740,7 +2743,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		dst_access = VK_ACCESS_SHADER_READ_BIT;
 	}
 
-	if (sources.size() == 1)
+	if (last == 1)
 	{
 		const auto query = sources.front();
 		const auto& query_info = m_occlusion_map[query->driver_handle];
@@ -2760,19 +2763,6 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	}
 
 	auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, OCCLUSION_MAX_POOL_SIZE * 4);
-	u32 dst_offset = 0;
-	usz first = 0;
-	usz last;
-
-	if (!partial_eval) [[likely]]
-	{
-		last = sources.size();
-	}
-	else
-	{
-		last = 1;
-	}
-
 	for (usz i = first; i < last; ++i)
 	{
 		auto& query_info = m_occlusion_map[sources[i]->driver_handle];
