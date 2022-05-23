@@ -481,7 +481,7 @@ void lv2_socket_p2ps::set_status(p2ps_stream_status new_status)
 	status = new_status;
 }
 
-std::tuple<bool, s32, sys_net_sockaddr> lv2_socket_p2ps::accept(bool is_lock)
+std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2ps::accept(bool is_lock)
 {
 	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
 
@@ -494,10 +494,10 @@ std::tuple<bool, s32, sys_net_sockaddr> lv2_socket_p2ps::accept(bool is_lock)
 	{
 		if (so_nbio)
 		{
-			return {true, -SYS_NET_EWOULDBLOCK, {}};
+			return {true, -SYS_NET_EWOULDBLOCK, {}, {}};
 		}
 
-		return {false, {}, {}};
+		return {false, {}, {}, {}};
 	}
 
 	auto p2ps_client = backlog.front();
@@ -516,7 +516,7 @@ std::tuple<bool, s32, sys_net_sockaddr> lv2_socket_p2ps::accept(bool is_lock)
 		paddr->sin_len    = sizeof(sys_net_sockaddr_in_p2p);
 	}
 
-	return {true, p2ps_client, ps3_addr};
+	return {true, p2ps_client, {}, ps3_addr};
 }
 
 s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr, s32 ps3_id)

@@ -417,6 +417,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/RSXOffload.cpp
     RSX/RSXTexture.cpp
     RSX/RSXThread.cpp
+    RSX/RSXZCULL.cpp
     RSX/rsx_utils.cpp
     RSX/RSXDisAsm.cpp
     RSX/Common/BufferUtils.cpp

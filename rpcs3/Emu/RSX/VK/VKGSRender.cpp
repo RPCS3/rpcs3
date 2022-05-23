@@ -548,8 +548,8 @@ VKGSRender::VKGSRender() : GSRender()
 	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
 	backend_config.supports_hw_renormalization = (vk::get_driver_vendor() == vk::driver_vendor::NVIDIA);
 
-	// Relaxed query synchronization
-	backend_config.supports_hw_conditional_render = !!g_cfg.video.relaxed_zcull_sync;
+	// Conditional rendering support
+	backend_config.supports_hw_conditional_render = true;
 
 	// Passthrough DMA
 	backend_config.supports_passthrough_dma = m_device->get_external_memory_host_support();
@@ -789,7 +789,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 	{
-		return false;
+		return zcull_ctrl->on_access_violation(address);
 	}
 
 	if (result.num_flushable > 0)
@@ -804,6 +804,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			g_fxo->get<rsx::dma_manager>().set_mem_fault_flag();
 			m_queue_status |= flush_queue_state::deadlock;
+			m_eng_interrupt_mask |= rsx::backend_interrupt;
 
 			// Wait for deadlock to clear
 			while (m_queue_status & flush_queue_state::deadlock)
@@ -824,6 +825,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			std::lock_guard lock(m_flush_queue_mutex);
 
 			m_flush_requests.post(false);
+			m_eng_interrupt_mask |= rsx::backend_interrupt;
 			has_queue_ref = true;
 		}
 		else
@@ -1572,23 +1574,15 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 	return true;
 }
 
-void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
+void VKGSRender::sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_t payload)
 {
-	ensure(args);
-	rsx::thread::sync_hint(hint, args);
+	rsx::thread::sync_hint(hint, payload);
 
-	// Occlusion queries not enabled, do nothing
 	if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
+	{
+		// Occlusion queries not enabled, do nothing
 		return;
-
-	// Check if the required report is synced to this CB
-	auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
-	auto& data = m_occlusion_map[occlusion_info->driver_handle];
-
-	// NOTE: Currently, a special condition exists where the indices can be empty even with active draw count.
-	// This is caused by async compiler and should be removed when ubershaders are added in
-	if (!data.is_current(m_current_command_buffer) || data.indices.empty())
-		return;
+	}
 
 	// Occlusion test result evaluation is coming up, avoid a hard sync
 	switch (hint)
@@ -1597,15 +1591,44 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 	{
 		// If a flush request is already enqueued, do nothing
 		if (m_flush_requests.pending())
+		{
 			return;
+		}
 
-		// Schedule a sync on the next loop iteration
-		m_flush_requests.post(false);
-		m_flush_requests.remove_one();
+		// If the result is not going to be read by CELL, do nothing
+		const auto ref_addr = static_cast<u32>(payload.address);
+		if (!zcull_ctrl->is_query_result_urgent(ref_addr))
+		{
+			// No effect on CELL behaviour, it will be faster to handle this in RSX code
+			return;
+		}
+
+		// OK, cell will be accessing the results, probably.
+		// Try to avoid flush spam, it is more costly to flush the CB than it is to just upload the vertex data
+		// This is supposed to be an optimization afterall.
+		const auto now = rsx::uclock();
+		if ((now - m_last_cond_render_eval_hint) > 50)
+		{
+			// Schedule a sync on the next loop iteration
+			m_flush_requests.post(false);
+			m_flush_requests.remove_one();
+		}
+
+		m_last_cond_render_eval_hint = now;
 		break;
 	}
 	case rsx::FIFO_hint::hint_zcull_sync:
 	{
+		// Check if the required report is synced to this CB
+		auto& data = m_occlusion_map[payload.query->driver_handle];
+
+		// NOTE: Currently, a special condition exists where the indices can be empty even with active draw count.
+		// This is caused by async compiler and should be removed when ubershaders are added in
+		if (!data.is_current(m_current_command_buffer) || data.indices.empty())
+		{
+			return;
+		}
+
 		// Unavoidable hard sync coming up, flush immediately
 		// This heavyweight hint should be used with caution
 		std::lock_guard lock(m_flush_queue_mutex);

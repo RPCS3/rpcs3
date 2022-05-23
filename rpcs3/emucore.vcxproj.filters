@@ -1066,6 +1066,9 @@
     <ClCompile Include="Crypto\decrypt_binaries.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXZCULL.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2121,6 +2124,9 @@
     </ClInclude>
     <ClInclude Include="Crypto\decrypt_binaries.h">
       <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXZCULL.h">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

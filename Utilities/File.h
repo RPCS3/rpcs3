@@ -648,7 +648,7 @@ namespace fs
 	};
 
 	// Delete directory and all its contents recursively
-	bool remove_all(const std::string& path, bool remove_root = true);
+	bool remove_all(const std::string& path, bool remove_root = true, bool is_no_dir_ok = false);
 
 	// Get size of all files recursively
 	u64 get_dir_size(const std::string& path, u64 rounding_alignment = 1);

@@ -129,7 +129,7 @@ void InitOffsetTable()
 u32 cellGcmGetLabelAddress(u8 index)
 {
 	cellGcmSys.trace("cellGcmGetLabelAddress(index=%d)", index);
-	return g_fxo->get<gcm_config>().gcm_info.label_addr + 0x10 * index;
+	return rsx::get_current_renderer()->label_addr + 0x10 * index;
 }
 
 vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 location)
@@ -153,7 +153,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 		cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
 	}
 
-	return vm::cast(g_fxo->get<gcm_config>().gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10);
+	return vm::cast(rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10);
 }
 
 u64 cellGcmGetTimeStamp(u32 index)
@@ -165,7 +165,8 @@ u64 cellGcmGetTimeStamp(u32 index)
 		cellGcmSys.error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
 	}
 
-	return vm::read64(g_fxo->get<gcm_config>().gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10);
+	const u32 address = rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10;
+	return *vm::get_super_ptr<u64>(address);
 }
 
 u32 cellGcmGetCurrentField()
@@ -192,7 +193,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
  */
 vm::ptr<CellGcmReportData> _cellGcmFunc12()
 {
-	return vm::ptr<CellGcmReportData>::make(g_fxo->get<gcm_config>().gcm_info.label_addr + ::offset32(&RsxReports::report)); // TODO
+	return vm::ptr<CellGcmReportData>::make(rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report)); // TODO
 }
 
 u32 cellGcmGetReport(u32 type, u32 index)
@@ -221,7 +222,7 @@ u32 cellGcmGetReportDataAddress(u32 index)
 		cellGcmSys.error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
 	}
 
-	return g_fxo->get<gcm_config>().gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10;
+	return rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10;
 }
 
 u32 cellGcmGetReportDataLocation(u32 index, u32 location)
@@ -1462,7 +1463,7 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGetReportDataAddress);
 	REG_FUNC(cellGcmSys, cellGcmGetReportDataAddressLocation);
 	REG_FUNC(cellGcmSys, cellGcmGetReportDataLocation);
-	REG_FUNC(cellGcmSys, cellGcmGetTimeStamp);
+	REG_FUNC(cellGcmSys, cellGcmGetTimeStamp).flag(MFF_FORCED_HLE);     // HLE-ing this allows for optimizations around reports
 	REG_FUNC(cellGcmSys, cellGcmGetTimeStampLocation);
 
 	// Command Buffer Control
