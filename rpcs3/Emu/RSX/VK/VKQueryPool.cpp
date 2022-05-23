@@ -36,15 +36,10 @@ namespace vk
 		}
 		case VK_NOT_READY:
 		{
-			if (result[0] && (flags & VK_QUERY_RESULT_PARTIAL_BIT))
-			{
-				query.any_passed = true;
-				query.ready = true;
-				query.data = result[0];
-				return true;
-			}
-
-			return false;
+			query.any_passed = !!result[0];
+			query.ready = query.any_passed && !!(flags & VK_QUERY_RESULT_PARTIAL_BIT);
+			query.data = result[0];
+			return query.ready;
 		}
 		default:
 			die_with_error(error);

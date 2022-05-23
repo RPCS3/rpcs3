@@ -8,7 +8,7 @@ lv2_socket_raw::lv2_socket_raw(lv2_socket_family family, lv2_socket_type type, l
 {
 }
 
-std::tuple<bool, s32, sys_net_sockaddr> lv2_socket_raw::accept([[maybe_unused]] bool is_lock)
+std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_raw::accept([[maybe_unused]] bool is_lock)
 {
 	sys_net.todo("lv2_socket_raw::accept");
 	return {};

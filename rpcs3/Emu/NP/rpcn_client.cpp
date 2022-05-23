@@ -49,6 +49,31 @@ std::vector<std::vector<u8>> get_rpcn_msgs();
 
 namespace rpcn
 {
+	localized_string_id rpcn_state_to_localized_string_id(rpcn::rpcn_state state)
+	{
+		switch (state)
+		{
+		case rpcn::rpcn_state::failure_no_failure: return localized_string_id::RPCN_NO_ERROR;
+		case rpcn::rpcn_state::failure_input: return localized_string_id::RPCN_ERROR_INVALID_INPUT;
+		case rpcn::rpcn_state::failure_wolfssl: return localized_string_id::RPCN_ERROR_WOLFSSL;
+		case rpcn::rpcn_state::failure_resolve: return localized_string_id::RPCN_ERROR_RESOLVE;
+		case rpcn::rpcn_state::failure_connect: return localized_string_id::RPCN_ERROR_CONNECT;
+		case rpcn::rpcn_state::failure_id: return localized_string_id::RPCN_ERROR_LOGIN_ERROR;
+		case rpcn::rpcn_state::failure_id_already_logged_in: return localized_string_id::RPCN_ERROR_ALREADY_LOGGED;
+		case rpcn::rpcn_state::failure_id_username: return localized_string_id::RPCN_ERROR_INVALID_LOGIN;
+		case rpcn::rpcn_state::failure_id_password: return localized_string_id::RPCN_ERROR_INVALID_PASSWORD;
+		case rpcn::rpcn_state::failure_id_token: return localized_string_id::RPCN_ERROR_INVALID_TOKEN;
+		case rpcn::rpcn_state::failure_protocol: return localized_string_id::RPCN_ERROR_INVALID_PROTOCOL_VERSION;
+		case rpcn::rpcn_state::failure_other: return localized_string_id::RPCN_ERROR_UNKNOWN;
+		default: return localized_string_id::INVALID;
+		}
+	}
+
+	std::string rpcn_state_to_string(rpcn::rpcn_state state)
+	{
+		return get_localized_string(rpcn_state_to_localized_string_id(state));
+	}
+
 	constexpr u32 RPCN_PROTOCOL_VERSION = 15;
 	constexpr usz RPCN_HEADER_SIZE      = 13;
 	constexpr usz COMMUNICATION_ID_SIZE = 9;
@@ -1592,7 +1617,7 @@ namespace rpcn
 		std::copy(service_id.begin(), service_id.end(), std::back_inserter(data));
 		data.push_back(0);
 		const le_t<u32> size = cookie.size();
-		std::copy(reinterpret_cast<const u8 *>(&size), reinterpret_cast<const u8 *>(&size) + sizeof(le_t<u32>), std::back_inserter(data));
+		std::copy(reinterpret_cast<const u8*>(&size), reinterpret_cast<const u8*>(&size) + sizeof(le_t<u32>), std::back_inserter(data));
 		std::copy(cookie.begin(), cookie.end(), std::back_inserter(data));
 
 		if (!forge_send(CommandType::RequestTicket, req_id, data))
@@ -1620,7 +1645,7 @@ namespace rpcn
 		}
 		auto npids_vector = builder.CreateVector(davec);
 
-		//auto npids = builder.Create
+		// auto npids = builder.Create
 		auto fb_sendmessage = CreateSendMessageRequest(builder, nested_flatbuffer_vector, npids_vector);
 
 		builder.Finish(fb_sendmessage);

@@ -7,8 +7,12 @@
 #include "Crypto/unedat.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
+#include "Emu/vfs_config.h"
 #include "Emu/IdManager.h"
+#include "Emu/RSX/Overlays/overlay_utils.h" // for ascii8_to_utf16
 #include "Utilities/StrUtil.h"
+
+#include <charconv>
 
 LOG_CHANNEL(sys_fs);
 
@@ -1677,17 +1681,50 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 
 		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
+
+		// Trim trailing '\0'
+		if (auto trim_pos = vpath.find('\0'); trim_pos != vpath.npos)
+		{
+			vpath.remove_suffix(vpath.size() - trim_pos);
+		}
+
 		if (!vpath.starts_with("/dev_usb"sv))
 		{
 			arg->out_code = CELL_ENOTSUP;
 			break;
 		}
 
-		// TODO hook up to config for dev_usb
-		// arg->vendorID = 0x0000;
-		// arg->productID = 0x0000;
+		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, vpath);
 
+		if (device.path.empty())
+		{
+			arg->out_code = CELL_ENOTSUP;
+			break;
+		}
+
+		u16 vid{};
+		{
+			auto [ptr, err] = std::from_chars(device.vid.data(), device.vid.data() + device.vid.size(), vid, 16);
+			if (err != std::errc())
+			{
+				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
+			}
+		}
+
+		u16 pid{};
+		{
+			auto [ptr, err] = std::from_chars(device.pid.data(), device.pid.data() + device.pid.size(), pid, 16);
+			if (err != std::errc())
+			{
+				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
+			}
+		}
+
+		arg->vendorID = vid;
+		arg->productID = pid;
 		arg->out_code = CELL_OK;
+
+		sys_fs.trace("sys_fs_fcntl(0xc0000015): found device '%s' (vid=0x%x, pid=0x%x)", vpath, arg->vendorID, arg->productID);
 		return CELL_OK;
 	}
 
@@ -1718,18 +1755,67 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 
 		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
+
+		// Trim trailing '\0'
+		if (auto trim_pos = vpath.find('\0'); trim_pos != vpath.npos)
+		{
+			vpath.remove_suffix(vpath.size() - trim_pos);
+		}
+
 		if (!vpath.starts_with("/dev_usb"sv))
 		{
 			arg->out_code = CELL_ENOTSUP;
 			break;
 		}
 
-		// TODO hook up to config for dev_usb
-		// arg->vendorID = 0x0000;
-		// arg->productID = 0x0000;
-		// arg->serial = "blabla"; // String needs to be encoded to utf-16 BE
+		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, vpath);
+
+		if (device.path.empty())
+		{
+			arg->out_code = CELL_ENOTSUP;
+			break;
+		}
+
+		u16 vid{};
+		{
+			auto [ptr, err] = std::from_chars(device.vid.data(), device.vid.data() + device.vid.size(), vid, 16);
+			if (err != std::errc())
+			{
+				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
+			}
+		}
+
+		u16 pid{};
+		{
+			auto [ptr, err] = std::from_chars(device.pid.data(), device.pid.data() + device.pid.size(), pid, 16);
+			if (err != std::errc())
+			{
+				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
+			}
+		}
+
+		arg->vendorID = vid;
+		arg->productID = pid;
+
+		// Serial needs to be encoded to utf-16 BE
+		const std::u16string serial = ascii8_to_utf16(device.serial);
+		ensure((serial.size() * sizeof(u16)) <= sizeof(arg->serial));
+
+		std::memset(arg->serial, 0, sizeof(arg->serial));
+
+		const auto write_byteswapped = [](const void* src, void* dst) -> void
+		{
+			*static_cast<u16*>(dst) = *static_cast<const be_t<u16>*>(src);
+		};
+
+		for (size_t i = 0; i < serial.size(); i++)
+		{
+			write_byteswapped(&serial[i], &arg->serial[i * 2]);
+		}
 
 		arg->out_code = CELL_OK;
+
+		sys_fs.trace("sys_fs_fcntl(0xc000001c): found device '%s' (vid=0x%x, pid=0x%x, serial=%s)", vpath, arg->vendorID, arg->productID, device.serial);
 		return CELL_OK;
 	}
 

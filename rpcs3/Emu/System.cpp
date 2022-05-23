@@ -164,20 +164,47 @@ void Emulator::Init(bool add_only)
 	// Mount all devices
 	const std::string emu_dir = rpcs3::utils::get_emu_dir();
 	const std::string elf_dir = fs::get_parent_dir(m_path);
+	const std::string dev_hdd0 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir);
+	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
+	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
+	const std::string dev_flsh2 = g_cfg_vfs.get_dev_flash2();
+	const std::string dev_flsh3 = g_cfg_vfs.get_dev_flash3();
 
-	vfs::mount("/dev_hdd0", g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir));
-	vfs::mount("/dev_flash", g_cfg_vfs.get_dev_flash());
-	vfs::mount("/dev_flash2", g_cfg_vfs.get_dev_flash2());
-	vfs::mount("/dev_flash3", g_cfg_vfs.get_dev_flash3());
-	vfs::mount("/dev_usb", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
-	vfs::mount("/dev_usb000", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
+	vfs::mount("/dev_hdd0", dev_hdd0);
+	vfs::mount("/dev_flash", dev_flsh);
+	vfs::mount("/dev_flash2", dev_flsh2);
+	vfs::mount("/dev_flash3", dev_flsh3);
 	vfs::mount("/app_home", g_cfg_vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg_vfs.get(g_cfg_vfs.app_home, emu_dir));
+
+	std::string dev_usb;
+
+	for (const auto& [key, value] : g_cfg_vfs.dev_usb.get_map())
+	{
+		const cfg::device_info usb_info = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, key, emu_dir);
+
+		if (key.size() != 11 || !key.starts_with("/dev_usb00"sv) || key.back() < '0' || key.back() > '7')
+		{
+			sys_log.error("Trying to mount unsupported usb device: %s", key);
+			continue;
+		}
+
+		vfs::mount(key, usb_info.path);
+
+		if (key == "/dev_usb000"sv)
+		{
+			dev_usb = usb_info.path;
+		}
+	}
+
+	ensure(!dev_usb.empty());
 
 	if (!hdd1.empty())
 	{
 		vfs::mount("/dev_hdd1", hdd1);
 		sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
 	}
+
+	const bool is_exitspawn = m_config_mode == cfg_mode::continuous;
 
 	// Load config file
 	if (m_config_mode == cfg_mode::config_override)
@@ -229,13 +256,6 @@ void Emulator::Init(bool add_only)
 	}
 
 	// Create directories (can be disabled if necessary)
-	const std::string dev_hdd0 = rpcs3::utils::get_hdd0_dir();
-	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
-	const std::string dev_usb = g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir);
-	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
-	const std::string dev_flsh2 = g_cfg_vfs.get_dev_flash2();
-	const std::string dev_flsh3 = g_cfg_vfs.get_dev_flash3();
-
 	auto make_path_verbose = [](const std::string& path)
 	{
 		if (!fs::create_path(path))
@@ -327,6 +347,12 @@ void Emulator::Init(bool add_only)
 		}
 	}
 
+	if (is_exitspawn)
+	{
+		// Actions not taken during exitspawn
+		return;
+	}
+
 	// Fixup savedata
 	for (const auto& entry : fs::dir(save_path))
 	{
@@ -361,7 +387,29 @@ void Emulator::Init(bool add_only)
 
 	// Limit cache size
 	if (g_cfg.vfs.limit_cache_size)
+	{
 		rpcs3::cache::limit_cache_size();
+	}
+
+	// Wipe clean VSH's temporary directory of choice
+	if (g_cfg.vfs.empty_hdd0_tmp && !fs::remove_all(dev_hdd0 + "tmp/", false, true))
+	{
+		sys_log.error("Could not clean /dev_hdd0/tmp/ (%s)", fs::g_tls_error);
+	}
+
+	// Remove temporary game data that would have been removed when cellGame has been properly shut
+	for (const auto& entry : fs::dir(dev_hdd0 + "game/"))
+	{
+		if (entry.name.starts_with("_GDATA_") && fs::is_dir(dev_hdd0 + "game/" + entry.name + "/USRDIR/"))
+		{
+			const std::string target = dev_hdd0 + "game/" + entry.name;
+
+			if (!fs::remove_all(target, true, true))
+			{
+				sys_log.error("Could not clean \"%s\" (%s)", target, fs::g_tls_error);
+			}
+		}
+	}
 }
 
 void Emulator::SetUsr(const std::string& user)
@@ -1788,6 +1836,7 @@ void Emulator::Kill(bool allow_autoexit)
 		disc.clear();
 		klic.clear();
 		hdd1.clear();
+		init_mem_containers = nullptr;
 		m_config_path.clear();
 		m_config_mode = cfg_mode::custom;
 		return;
@@ -1933,6 +1982,7 @@ void Emulator::Kill(bool allow_autoexit)
 	disc.clear();
 	klic.clear();
 	hdd1.clear();
+	init_mem_containers = nullptr;
 	m_config_path.clear();
 	m_config_mode = cfg_mode::custom;
 

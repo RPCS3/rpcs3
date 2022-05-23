@@ -96,7 +96,7 @@ namespace rpcs3::cache
 				break;
 			}
 
-			if (is_dir ? !fs::remove_all(name, true) : !fs::remove_file(name))
+			if (is_dir ? !fs::remove_all(name, true, true) : !fs::remove_file(name))
 			{
 				sys_log.error("Could not remove cache directory '%s' item '%s' (%s)", cache_location, item.name, fs::g_tls_error);
 				break;

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/Modules/sceNp.h" // for SCE_NP_PORT
 
 #include "network_context.h"
 #include "Emu/system_config.h"
@@ -14,14 +15,14 @@ s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& ad
 	auto& nc = g_fxo->get<network_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-		if (nc.list_p2p_ports.contains(3658))
+		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
 		{
-			auto& def_port = nc.list_p2p_ports.at(3658);
+			auto& def_port = nc.list_p2p_ports.at(SCE_NP_PORT);
 			res            = ::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in));
 		}
 		else
 		{
-			sys_net.error("send_packet_from_p2p_port: port %d not present", 3658);
+			sys_net.error("send_packet_from_p2p_port: port %d not present", +SCE_NP_PORT);
 		}
 	}
 
@@ -34,9 +35,9 @@ std::vector<std::vector<u8>> get_rpcn_msgs()
 	auto& nc = g_fxo->get<network_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-		if (nc.list_p2p_ports.contains(3658))
+		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
 		{
-			auto& def_port = nc.list_p2p_ports.at(3658);
+			auto& def_port = nc.list_p2p_ports.at(SCE_NP_PORT);
 			{
 				std::lock_guard lock(def_port.s_rpcn_mutex);
 				msgs = std::move(def_port.rpcn_msgs);
@@ -45,7 +46,7 @@ std::vector<std::vector<u8>> get_rpcn_msgs()
 		}
 		else
 		{
-			sys_net.error("get_rpcn_msgs: port %d not present", 3658);
+			sys_net.error("get_rpcn_msgs: port %d not present", +SCE_NP_PORT);
 		}
 	}
 
@@ -58,9 +59,9 @@ std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs()
 	auto& nc = g_fxo->get<network_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-		if (nc.list_p2p_ports.contains(3658))
+		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
 		{
-			auto& def_port = nc.list_p2p_ports.at(3658);
+			auto& def_port = nc.list_p2p_ports.at(SCE_NP_PORT);
 			{
 				std::lock_guard lock(def_port.s_sign_mutex);
 				msgs = std::move(def_port.sign_msgs);
@@ -69,7 +70,7 @@ std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs()
 		}
 		else
 		{
-			sys_net.error("get_sign_msgs: port %d not present", 3658);
+			sys_net.error("get_sign_msgs: port %d not present", +SCE_NP_PORT);
 		}
 	}
 
@@ -85,7 +86,7 @@ void need_network()
 network_thread::network_thread() noexcept
 {
 	if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
-		list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(3658), std::forward_as_tuple(3658));
+		list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(SCE_NP_PORT), std::forward_as_tuple(SCE_NP_PORT));
 }
 
 network_thread::~network_thread()

@@ -39,7 +39,7 @@ void lv2_socket_p2p::handle_new_data(sys_net_sockaddr_in_p2p p2p_addr, std::vect
 	}
 }
 
-std::tuple<bool, s32, sys_net_sockaddr> lv2_socket_p2p::accept([[maybe_unused]] bool is_lock)
+std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_p2p::accept([[maybe_unused]] bool is_lock)
 {
 	sys_net.fatal("[P2P] accept() called on a P2P socket");
 	return {};
@@ -77,13 +77,13 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 
 	sys_net.notice("[P2P] Trying to bind %s:%d:%d", np::ip_to_string(std::bit_cast<u32>(psa_in_p2p->sin_addr)), p2p_port, p2p_vport);
 
-	if (p2p_port != 3658)
+	if (p2p_port != SCE_NP_PORT)
 	{
 		if (p2p_port == 0)
 		{
 			return -SYS_NET_EINVAL;
 		}
-		sys_net.warning("[P2P] Attempting to bind a socket to a port != 3658");
+		sys_net.warning("[P2P] Attempting to bind a socket to a port != %d", +SCE_NP_PORT);
 	}
 
 	socket_type real_socket{};

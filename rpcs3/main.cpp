@@ -27,6 +27,7 @@
 
 #include "headless_application.h"
 #include "Utilities/sema.h"
+#include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
 #include <windows.h>
 #include "util/dyn_lib.hpp"
@@ -242,7 +243,12 @@ struct fatal_error_listener final : logs::listener
 	}
 };
 
+// Arguments that force a headless application (need to be checked in create_application)
 constexpr auto arg_headless     = "headless";
+constexpr auto arg_decrypt      = "decrypt";
+constexpr auto arg_commit_db    = "get-commit-db";
+
+// Arguments that can be used with a gui application
 constexpr auto arg_no_gui       = "no-gui";
 constexpr auto arg_high_dpi     = "hidpi";
 constexpr auto arg_rounding     = "dpi-rounding";
@@ -256,7 +262,6 @@ constexpr auto arg_updating     = "updating";
 constexpr auto arg_user_id      = "user-id";
 constexpr auto arg_installfw    = "installfw";
 constexpr auto arg_installpkg   = "installpkg";
-constexpr auto arg_commit_db    = "get-commit-db";
 constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
@@ -270,10 +275,14 @@ int find_arg(std::string arg, int& argc, char* argv[])
 	return -1;
 }
 
-QCoreApplication* createApplication(int& argc, char* argv[])
+QCoreApplication* create_application(int& argc, char* argv[])
 {
-	if (find_arg(arg_headless, argc, argv) != -1)
+	if (find_arg(arg_headless, argc, argv) != -1 ||
+		find_arg(arg_decrypt, argc, argv) != -1 ||
+		find_arg(arg_commit_db, argc, argv) != -1)
+	{
 		return new headless_application(argc, argv);
+	}
 
 #ifdef __linux__
 	// set the DISPLAY variable in order to open web browsers
@@ -562,7 +571,7 @@ int main(int argc, char** argv)
 	// but I haven't found an implicit way to check for style yet, so we naively check them both here for now.
 	const bool use_cli_style = find_arg(arg_style, argc, argv) != -1 || find_arg(arg_stylesheet, argc, argv) != -1;
 
-	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
+	QScopedPointer<QCoreApplication> app(create_application(argc, argv));
 	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
 	app->setOrganizationName("RPCS3");
@@ -588,6 +597,8 @@ int main(int argc, char** argv)
 	parser.addOption(installfw_option);
 	const QCommandLineOption installpkg_option(arg_installpkg, "Forces the emulator to install this pkg file.", "path", "");
 	parser.addOption(installpkg_option);
+	const QCommandLineOption decrypt_option(arg_decrypt, "Decrypt PS3 binaries.", "path(s)", "");
+	parser.addOption(decrypt_option);
 	const QCommandLineOption user_id_option(arg_user_id, "Start RPCS3 as this user.", "user id", "");
 	parser.addOption(user_id_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
@@ -960,6 +971,57 @@ int main(int argc, char** argv)
 		sys_log.notice("Timer resolution: %d us (min=%d us, max=%d us)", orig_res / 10, min_res / 10, max_res / 10);
 	}
 #endif
+
+	if (parser.isSet(arg_decrypt))
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
+			[[maybe_unused]] const auto con_in = freopen("CONIN$", "r", stdin);
+		}
+#endif
+
+		std::vector<std::string> vec_modules;
+		for (const QString& mod : parser.values(decrypt_option))
+		{
+			const QFileInfo fi(mod);
+			if (!fi.exists())
+			{
+				std::cout << "File not found: " << mod.toStdString() << std::endl;
+				return 1;
+			}
+			if (!fi.isFile())
+			{
+				std::cout << "Not a file: " << mod.toStdString() << std::endl;
+				return 1;
+			}
+			vec_modules.push_back(fi.absoluteFilePath().toStdString());
+		}
+
+		const auto input_cb = [](std::string old_path, std::string path, bool tried) -> std::string
+		{
+			const std::string hint = fmt::format("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
+				"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.", path);
+
+			if (tried)
+			{
+				std::cout << "Failed to decrypt " << old_path << " with specfied KLIC, retrying.\n" << hint << std::endl;
+			}
+
+			std::cout << "Enter KLIC of " << path << "\nHexadecimal only, 32 characters:" << std::endl;
+
+			std::string input;
+			std::cin >> input;
+
+			return input;
+		};
+
+		Emu.Init();
+		decrypt_sprx_libraries(vec_modules, input_cb);
+		Emu.Quit(true);
+		return 0;
+	}
 
 	// Force install firmware or pkg first if specified through command-line
 	if (parser.isSet(arg_installfw) || parser.isSet(arg_installpkg))

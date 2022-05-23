@@ -273,15 +273,17 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 	s32 result = 0;
 	sys_net_sockaddr sn_addr{};
+	std::shared_ptr<lv2_socket> new_socket{};
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 		{
-			const auto [success, res, res_addr] = sock.accept();
+			const auto [success, res, res_socket, res_addr] = sock.accept();
 
 			if (success)
 			{
 				result  = res;
 				sn_addr = res_addr;
+				new_socket = std::move(res_socket);
 				return true;
 			}
 
@@ -289,11 +291,12 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 				{
 					if (events & lv2_socket::poll_t::read)
 					{
-						auto [success, res, res_addr] = sock.accept(false);
+						auto [success, res, res_socket, res_addr] = sock.accept(false);
 						if (success)
 						{
 							result  = res;
 							sn_addr = res_addr;
+							new_socket = std::move(res_socket);
 							lv2_obj::awake(&ppu);
 							return success;
 						}
@@ -345,6 +348,18 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 		return sys_net_error{result};
 	}
 
+	s32 id_ps3 = result;
+
+	if (!id_ps3)
+	{
+		ensure(new_socket);
+		id_ps3 = idm::import_existing<lv2_socket>(new_socket);
+		if (id_ps3 == id_manager::id_traits<lv2_socket>::invalid)
+		{
+			return -SYS_NET_EMFILE;
+		}
+	}
+
 	if (ppu.is_stopped())
 	{
 		return {};
@@ -357,7 +372,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 	}
 
 	// Socket ID
-	return not_an_error(result);
+	return not_an_error(id_ps3);
 }
 
 error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> addr, u32 addrlen)

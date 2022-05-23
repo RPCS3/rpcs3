@@ -50,6 +50,8 @@ namespace vk
 
 	void queue_submit(const queue_submit_t& submit_info, VkBool32 flush)
 	{
+		rsx::get_current_renderer()->get_stats().submit_count++;
+
 		// Access to this method must be externally synchronized.
 		// Offloader is guaranteed to never call this for async flushes.
 		vk::descriptors::flush();

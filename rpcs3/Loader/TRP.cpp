@@ -56,7 +56,7 @@ bool TRPLoader::Install(std::string_view dest, bool /*show*/)
 
 	if (success)
 	{
-		success = fs::remove_all(local_path) || !fs::is_dir(local_path);
+		success = fs::remove_all(local_path, true, true);
 
 		if (success)
 		{

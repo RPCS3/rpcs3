@@ -369,7 +369,7 @@ struct spu_channel_4_t
 	{
 		u8 waiting;
 		u8 count;
-		u8 _pad[2];
+		u16 value3_inval;
 		u32 value0;
 		u32 value1;
 		u32 value2;
@@ -396,7 +396,12 @@ public:
 			case 0: data.value0 = value; break;
 			case 1: data.value1 = value; break;
 			case 2: data.value2 = value; break;
-			default: data.count = 4;
+			default:
+			{
+				data.count = 4;
+				data.value3_inval++; // Ensure the SPU reads the most recent value3 write in try_pop by re-loading
+				break;
+			}
 			}
 
 			if (data.waiting)
@@ -728,6 +733,8 @@ public:
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
+	bool is_dec_frozen = false;
+	std::pair<u32, u32> read_dec() const; // Read decrementer
 
 	atomic_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
 	shared_mutex run_ctrl_mtx;

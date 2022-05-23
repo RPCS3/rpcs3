@@ -182,6 +182,7 @@ enum class frame_limit_type
 	_60,
 	_30,
 	_auto,
+	_ps3,
 };
 
 enum class msaa_level

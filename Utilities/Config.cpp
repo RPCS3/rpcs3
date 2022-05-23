@@ -262,6 +262,22 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 		out << YAML::EndMap;
 		return;
 	}
+	case type::device:
+	{
+		out << YAML::BeginMap;
+		for (const auto& [key, info] : static_cast<const device_entry&>(rhs).get_map())
+		{
+			out << YAML::Key << key;
+			out << YAML::BeginMap;
+			out << YAML::Key << "Path" << YAML::Value << info.path;
+			out << YAML::Key << "Serial" << YAML::Value << info.serial;
+			out << YAML::Key << "VID" << YAML::Value << info.vid;
+			out << YAML::Key << "PID" << YAML::Value << info.pid;
+			out << YAML::EndMap;
+		}
+		out << YAML::EndMap;
+		return;
+	}
 	default:
 	{
 		out << rhs.to_string();
@@ -353,6 +369,44 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 		}
 
 		static_cast<log_entry&>(rhs).set_map(std::move(values));
+		break;
+	}
+	case type::device:
+	{
+		if (!data.IsMap())
+		{
+			return; // ???
+		}
+
+		map_of_type<device_info> values;
+
+		for (const auto& pair : data)
+		{
+			if (!pair.first.IsScalar() || !pair.second.IsMap()) continue;
+
+			device_info info{};
+
+			for (const auto& key_value : pair.second)
+			{
+				if (!key_value.first.IsScalar() || !key_value.second.IsScalar()) continue;
+
+				if (key_value.first.Scalar() == "Path")
+					info.path = key_value.second.Scalar();
+
+				if (key_value.first.Scalar() == "Serial")
+					info.serial = key_value.second.Scalar();
+
+				if (key_value.first.Scalar() == "VID")
+					info.vid = key_value.second.Scalar();
+
+				if (key_value.first.Scalar() == "PID")
+					info.pid = key_value.second.Scalar();
+			}
+
+			values.emplace(pair.first.Scalar(), std::move(info));
+		}
+
+		static_cast<device_entry&>(rhs).set_map(std::move(values));
 		break;
 	}
 	default:
@@ -455,4 +509,14 @@ void cfg::log_entry::set_map(map_of_type<logs::level>&& map)
 void cfg::log_entry::from_default()
 {
 	set_map({});
+}
+
+void cfg::device_entry::set_map(map_of_type<device_info>&& map)
+{
+	m_map = std::move(map);
+}
+
+void cfg::device_entry::from_default()
+{
+	m_map = m_default;
 }

@@ -848,7 +848,15 @@ std::string ppu_thread::dump_regs() const
 		// Fixup for syscall arguments
 		if (current_function && i >= 3 && i <= 10) reg = syscall_args[i - 3];
 
-		fmt::append(ret, "r%d%s: 0x%-8llx", i, i <= 9 ? " " : "", reg);
+		auto [is_const, const_value] = dis_asm.try_get_const_gpr_value(i, cia);
+
+		if (const_value != reg)
+		{
+			// Expectation of pretictable code path has not been met (such as a branch directly to the instruction)
+			is_const = false;
+		}
+
+		fmt::append(ret, "r%d%s%s 0x%-8llx", i, i <= 9 ? " " : "", is_const ? "©" : ":", reg);
 
 		constexpr u32 max_str_len = 32;
 		constexpr u32 hex_count = 8;
@@ -858,21 +866,27 @@ std::string ppu_thread::dump_regs() const
 			bool is_function = false;
 			u32 toc = 0;
 
-			if (const u32 reg_ptr = *vm::get_super_ptr<u32>(static_cast<u32>(reg));
-				vm::check_addr<max_str_len>(reg_ptr))
+			auto is_exec_code = [&](u32 addr)
 			{
-				if ((reg | reg_ptr) % 4 == 0 && vm::check_addr(reg_ptr, vm::page_executable))
+				return addr % 4 == 0 && vm::check_addr(addr, vm::page_executable) && g_ppu_itype.decode(*vm::get_super_ptr<u32>(addr)) != ppu_itype::UNK;
+			};
+
+			if (const u32 reg_ptr = *vm::get_super_ptr<u32>(static_cast<u32>(reg));
+				vm::check_addr<8>(reg_ptr) && !vm::check_addr(toc, vm::page_executable))
+			{
+				// Check executability and alignment
+				if (reg % 4 == 0 && is_exec_code(reg_ptr))
 				{
 					toc = *vm::get_super_ptr<u32>(static_cast<u32>(reg + 4));
 
-					if (toc % 4 == 0 && vm::check_addr(toc))
+					if (toc % 4 == 0 && (toc >> 29) == (reg_ptr >> 29) && vm::check_addr(toc) && !vm::check_addr(toc, vm::page_executable))
 					{
 						is_function = true;
 						reg = reg_ptr;
 					}
 				}
 			}
-			else if (reg % 4 == 0 && vm::check_addr(reg, vm::page_executable))
+			else if (is_exec_code(reg))
 			{
 				is_function = true;
 			}
@@ -956,7 +970,7 @@ std::string ppu_thread::dump_regs() const
 	else
 		fmt::append(ret, "Reservation Addr: none");
 
-	fmt::append(ret, "Reservation Data (entire cache line):\n");
+	fmt::append(ret, "\nReservation Data (entire cache line):\n");
 
 	be_t<u32> data[32]{};
 	std::memcpy(data, rdata, sizeof(rdata)); // Show the data even if the reservation was lost inside the atomic loop
@@ -2335,7 +2349,7 @@ extern void ppu_finalize(const ppu_module& info)
 		// Get PPU cache location
 		cache_path = fs::get_cache_dir() + "cache/";
 
-		const std::string dev_flash = vfs::get("/dev_flash/");
+		const std::string dev_flash = vfs::get("/dev_flash/sys/");
 
 		if (info.path.starts_with(dev_flash) || Emu.GetCat() == "1P")
 		{
@@ -2415,7 +2429,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 			std::string upper = fmt::to_upper(entry.name);
 
 			// Check .sprx filename
-			if (upper.ends_with(".SPRX"))
+			if (upper.ends_with(".SPRX") && entry.name != "libfs_utility_init.sprx"sv)
 			{
 				// Skip already loaded modules or HLEd ones
 				if (dir_queue[i] == firmware_sprx_path)
@@ -2691,9 +2705,26 @@ extern void ppu_initialize()
 
 	std::vector<std::string> dir_queue;
 
-	if (compile_fw)
+	const std::string mount_point = vfs::get("/dev_flash/");
+
+	bool dev_flash_located = Emu.GetCat().back() != 'P' && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point);
+
+	if (compile_fw || dev_flash_located)
 	{
-		const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
+		if (dev_flash_located)
+		{
+			const std::string eseibrd = mount_point + "/vsh/module/eseibrd.sprx";
+
+			if (auto prx = ppu_load_prx(ppu_prx_object{decrypt_self(fs::file{eseibrd})}, eseibrd, 0))
+			{
+				// Check if cache exists for this infinitesimally small prx
+				dev_flash_located = ppu_initialize(*prx, true);
+				idm::remove<lv2_obj, lv2_prx>(idm::last_id());
+				ppu_unload_prx(*prx);
+			}
+		}
+
+		const std::string firmware_sprx_path = vfs::get(dev_flash_located ? "/dev_flash/"sv : "/dev_flash/sys/"sv);
 		dir_queue.emplace_back(firmware_sprx_path);
 	}
 

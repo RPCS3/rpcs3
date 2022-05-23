@@ -88,6 +88,7 @@ endif()
 target_sources(rpcs3_emu PRIVATE
     ../Crypto/aes.cpp
     ../Crypto/aesni.cpp
+    ../Crypto/decrypt_binaries.cpp
     ../Crypto/ec.cpp
     ../Crypto/key_vault.cpp
     ../Crypto/lz.cpp
@@ -416,6 +417,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/RSXOffload.cpp
     RSX/RSXTexture.cpp
     RSX/RSXThread.cpp
+    RSX/RSXZCULL.cpp
     RSX/rsx_utils.cpp
     RSX/RSXDisAsm.cpp
     RSX/Common/BufferUtils.cpp
@@ -429,6 +431,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_fonts.cpp
     RSX/Overlays/overlay_list_view.cpp
     RSX/Overlays/overlay_media_list_dialog.cpp
+    RSX/Overlays/overlay_message.cpp
     RSX/Overlays/overlay_message_dialog.cpp
     RSX/Overlays/overlay_osk.cpp
     RSX/Overlays/overlay_osk_panel.cpp
