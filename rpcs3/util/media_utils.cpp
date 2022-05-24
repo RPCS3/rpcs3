@@ -324,8 +324,6 @@ namespace utils
 			}
 
 			// Prepare to read data
-			AVPacket packet;
-			av_init_packet(&packet);
 			av.frame = av_frame_alloc();
 			if (!av.frame)
 			{
@@ -335,6 +333,9 @@ namespace utils
 			}
 
 			duration_ms = stream->duration / 1000;
+			
+			AVPacket packet{};
+			av_init_packet(&packet);
 
 			// Iterate through frames
 			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format, &packet) >= 0)
