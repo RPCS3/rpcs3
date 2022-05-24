@@ -2728,6 +2728,18 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 
 	VkPipelineStageFlags dst_stage;
 	VkAccessFlags dst_access;
+	u32 dst_offset = 0;
+	u32 num_hw_queries = 0;
+	usz first = 0;
+	usz last = (!partial_eval) ? sources.size() : 1;
+
+	// Count number of queries available. This is an "opening" evaluation, if there is only one source, read it as-is.
+	// The idea is to avoid scheduling a compute task unless we have to.
+	for (usz i = first; i < last; ++i)
+	{
+		auto& query_info = m_occlusion_map[sources[i]->driver_handle];
+		num_hw_queries += ::size32(query_info.indices);
+	}
 
 	if (m_device->get_conditional_render_support())
 	{
@@ -2740,56 +2752,51 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		dst_access = VK_ACCESS_SHADER_READ_BIT;
 	}
 
-	if (sources.size() == 1)
+	if (num_hw_queries == 1 && !partial_eval) [[ likely ]]
 	{
-		const auto query = sources.front();
-		const auto& query_info = m_occlusion_map[query->driver_handle];
-
-		if (query_info.indices.size() == 1)
+		// Accept the first available query handle as the source of truth. No aggregation is required.
+		for (usz i = first; i < last; ++i)
 		{
-			const auto& index = query_info.indices.front();
-			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
+			auto& query_info = m_occlusion_map[sources[i]->driver_handle];
+			if (!query_info.indices.empty())
+			{
+				const auto& index = query_info.indices.front();
+				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
 
-			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
-				VK_ACCESS_TRANSFER_WRITE_BIT, dst_access);
+				vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
+					VK_ACCESS_TRANSFER_WRITE_BIT, dst_access);
 
-			rsx::thread::begin_conditional_rendering(sources);
-			return;
+				rsx::thread::begin_conditional_rendering(sources);
+				return;
+			}
 		}
-	}
 
-	auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, OCCLUSION_MAX_POOL_SIZE * 4);
-	u32 dst_offset = 0;
-	usz first = 0;
-	usz last;
-
-	if (!partial_eval) [[likely]]
-	{
-		last = sources.size();
+		// This is unreachable unless something went horribly wrong
+		fmt::throw_exception("Unreachable");
 	}
-	else
+	else if (num_hw_queries > 0)
 	{
-		last = 1;
-	}
-
-	for (usz i = first; i < last; ++i)
-	{
-		auto& query_info = m_occlusion_map[sources[i]->driver_handle];
-		for (const auto& index : query_info.indices)
+		// We'll need to do some result aggregation using a compute shader.
+		auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4);
+		for (usz i = first; i < last; ++i)
 		{
-			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
-			dst_offset += 4;
+			auto& query_info = m_occlusion_map[sources[i]->driver_handle];
+			for (const auto& index : query_info.indices)
+			{
+				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
+				dst_offset += 4;
+			}
 		}
-	}
 
-	if (dst_offset)
-	{
-		// Fast path should have been caught above
-		ensure(dst_offset > 4);
+		// Sanity check
+		ensure(dst_offset <= scratch->size());
 
 		if (!partial_eval)
 		{
+			// Fast path should have been caught above
+			ensure(dst_offset > 4);
+
 			// Clear result to zero
 			vkCmdFillBuffer(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4, 0);
 
