@@ -6,7 +6,8 @@ namespace rsx
 {
 	namespace overlays
 	{
-		message_item::message_item(localized_string_id msg_id)
+		template <typename T>
+		message_item::message_item(T msg_id)
 		{
 			m_expiration_time = get_system_time() + 5'000'000;
 
@@ -20,6 +21,8 @@ namespace rsx
 			m_fade_animation.duration = 2.f;
 			m_fade_animation.active = true;
 		}
+		template message_item::message_item(std::string msg_id);
+		template message_item::message_item(localized_string_id msg_id);
 
 		u64 message_item::get_expiration() const
 		{
