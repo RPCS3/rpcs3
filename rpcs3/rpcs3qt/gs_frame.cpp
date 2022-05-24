@@ -12,6 +12,7 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -769,6 +770,10 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 					QApplication::beep();
 				}
 			});
+
+			ensure(filename.find(fs::get_config_dir()) != filename.npos);
+			const std::string shortpath = filename.substr(fs::get_config_dir().size() - 1); // -1 for /
+			rsx::overlays::queue_message(tr("Screenshot saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
 
 			return;
 		},
