@@ -5,7 +5,6 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUOpcodes.h"
 
 LOG_CHANNEL(sys_interrupt);
@@ -25,8 +24,6 @@ lv2_int_serv::lv2_int_serv(const std::shared_ptr<named_thread<ppu_thread>>& thre
 	exists.release(1);
 }
 
-void ppu_interrupt_thread_entry(ppu_thread&, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*);
-
 void lv2_int_serv::exec() const
 {
 	thread->cmd_list
@@ -34,16 +31,14 @@ void lv2_int_serv::exec() const
 		{ ppu_cmd::reset_stack, 0 },
 		{ ppu_cmd::set_args, 2 }, arg1, arg2,
 		{ ppu_cmd::opd_call, 0 }, thread->entry_func,
-		{ ppu_cmd::sleep, 0 },
-		{ ppu_cmd::ptr_call, 0 },
-		std::bit_cast<u64>(&ppu_interrupt_thread_entry)
+		{ ppu_cmd::sleep, 0 }
 	});
 
 	thread->cmd_notify++;
 	thread->cmd_notify.notify_one();
 }
 
-void ppu_thread_exit(ppu_thread&, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*);
+bool ppu_thread_exit(ppu_thread& ppu);
 
 void lv2_int_serv::join() const
 {
@@ -190,61 +185,4 @@ void sys_interrupt_thread_eoi(ppu_thread& ppu)
 	sys_interrupt.trace("sys_interrupt_thread_eoi()");
 
 	ppu.state += cpu_flag::ret;
-
-	lv2_obj::sleep(ppu);
-}
-
-void ppu_interrupt_thread_entry(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*)
-{
-	while (true)
-	{
-		std::shared_ptr<lv2_int_serv> serv = nullptr;
-
-		// Loop endlessly trying to invoke an interrupt if required
-		idm::select<named_thread<spu_thread>>([&](u32, spu_thread& spu)
-		{
-			if (spu.get_type() != spu_type::threaded)
-			{
-				auto& ctrl = spu.int_ctrl[2];
-
-				if (lv2_obj::check(ctrl.tag))
-				{
-					auto& handler = ctrl.tag->handler;
-
-					if (lv2_obj::check(handler))
-					{
-						if (handler->thread.get() == &ppu)
-						{
-							if (spu.ch_out_intr_mbox.get_count() && ctrl.mask & SPU_INT2_STAT_MAILBOX_INT)
-							{
-								ctrl.stat |= SPU_INT2_STAT_MAILBOX_INT;
-							}
-
-							if (ctrl.mask & ctrl.stat)
-							{
-								ensure(!serv);
-								serv = handler;
-							}
-						}
-					}
-				}
-			}
-		});
-
-		if (serv)
-		{
-			// Queue interrupt, after the interrupt has finished the PPU returns to this loop
-			serv->exec();
-			return;
-		}
-
-		const auto state = +ppu.state;
-
-		if (::is_stopped(state))
-		{
-			return;
-		}
-
-		thread_ctrl::wait_on(ppu.state, state);
-	}
 }

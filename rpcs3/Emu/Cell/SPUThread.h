@@ -171,9 +171,6 @@ struct spu_channel
 	// Low 32 bits contain value
 	atomic_t<u64> data;
 
-	// Pending value to be inserted when it is possible at pop()
-	atomic_t<u32> jostling_value;
-
 public:
 	static constexpr u32 off_wait  = 32;
 	static constexpr u32 off_count = 63;
@@ -261,25 +258,12 @@ public:
 	}
 
 	// Pop unconditionally (loading last value), may require notification
-	// If the SPU tries to insert a value, do it instead the SPU
 	u32 pop()
 	{
 		// Value is not cleared and may be read again
-		constexpr u64 mask = bit_count | bit_wait;
+		const u64 old = data.fetch_and(~(bit_count | bit_wait));
 
-		const u64 old = data.fetch_op([&](u64& data)
-		{
-			if ((data & mask) == mask)
-			{
-				// Insert the pending value, leave no time in which the channel has no data
-				data = bit_count | jostling_value;
-				return;
-			}
-
-			data &= ~mask;
-		});
-
-		if ((old & mask) == mask)
+		if (old & bit_wait)
 		{
 			data.notify_one();
 		}
@@ -316,11 +300,6 @@ public:
 
 			if (spu.is_stopped())
 			{
-				if (u64 old2 = data.exchange(0); old2 & bit_count)
-				{
-					return static_cast<u32>(old2);
-				}
-
 				return -1;
 			}
 
@@ -331,48 +310,40 @@ public:
 	// Waiting for channel push state availability, actually pushing if specified
 	bool push_wait(cpu_thread& spu, u32 value, bool push = true)
 	{
-		u64 state;
-		data.fetch_op([&](u64& data)
-		{
-			if (data & bit_count) [[unlikely]]
-			{
-				jostling_value.release(push ? value : static_cast<u32>(data));
-				data |= bit_wait;
-			}
-			else if (push)
-			{
-				data = bit_count | value;
-			}
-			else
-			{
-				state = data;
-				return false;
-			}
-
-			state = data;
-			return true;
-		});
-
 		while (true)
 		{
-			if (!(state & bit_wait))
+			u64 state;
+			data.fetch_op([&](u64& data)
 			{
-				if (!push)
+				if (data & bit_count) [[unlikely]]
 				{
-					data &= ~bit_count;
+					data |= bit_wait;
+				}
+				else if (push)
+				{
+					data = bit_count | value;
+				}
+				else
+				{
+					state = data;
+					return false;
 				}
 
+				state = data;
+				return true;
+			});
+
+			if (!(state & bit_wait))
+			{
 				return true;
 			}
 
 			if (spu.is_stopped())
 			{
-				data &= ~bit_wait;
 				return false;
 			}
 
 			thread_ctrl::wait_on(data, state);
-			state = data;
 		}
 	}
 

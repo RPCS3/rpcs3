@@ -8,7 +8,6 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUCallback.h"
-#include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Memory/vm_locking.h"
 #include "sys_event.h"
 #include "sys_process.h"
@@ -36,7 +35,7 @@ struct ppu_thread_cleaner
 	ppu_thread_cleaner& operator=(const ppu_thread_cleaner&) = delete;
 };
 
-void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*)
+bool ppu_thread_exit(ppu_thread& ppu)
 {
 	ppu.state += cpu_flag::exit + cpu_flag::wait;
 
@@ -54,6 +53,8 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 		ppu.call_history.index = 0;
 		ppu_log.notice("Calling history: %s", str);
 	}
+
+	return false;
 }
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
@@ -116,7 +117,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 		thread_ctrl::wait_on(ppu.joiner, ppu_join_status::zombie);
 	}
 
-	ppu_thread_exit(ppu, {}, nullptr, nullptr);
+	ppu_thread_exit(ppu);
 }
 
 s32 sys_ppu_thread_yield(ppu_thread& ppu)
