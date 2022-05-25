@@ -232,6 +232,8 @@ namespace gl
 		std::unordered_map<GLenum, u32> properties = {};
 		std::unordered_map<GLenum, std::array<u32, 4>> indexed_properties = {};
 
+		GLuint current_program = GL_NONE;
+
 		bool enable(u32 test, GLenum cap)
 		{
 			auto found = properties.find(cap);
@@ -272,6 +274,26 @@ namespace gl
 				glDisablei(cap, index);
 
 			return !!test;
+		}
+
+		bool enable(GLenum cap)
+		{
+			return enable(GL_TRUE, cap);
+		}
+
+		bool enablei(GLenum cap, u32 index)
+		{
+			return enablei(GL_TRUE, cap, index);
+		}
+
+		bool disable(GLenum cap)
+		{
+			return enable(GL_FALSE, cap);
+		}
+
+		bool disablei(GLenum cap, u32 index)
+		{
+			return enablei(GL_FALSE, cap, index);
 		}
 
 		inline bool test_property(GLenum property, u32 test) const
@@ -467,12 +489,24 @@ namespace gl
 				properties[GL_POLYGON_OFFSET_FACTOR] = _factor;
 			}
 		}
+
+		void use_program(GLuint program)
+		{
+			if (current_program == program)
+			{
+				return;
+			}
+
+			current_program = program;
+			glUseProgram(program);
+		}
 	};
 
-	struct command_context
+	class command_context
 	{
 		driver_state* drv;
 
+	public:
 		command_context()
 			: drv(nullptr)
 		{}
@@ -480,5 +514,9 @@ namespace gl
 		command_context(driver_state& drv_)
 			: drv(&drv_)
 		{}
+
+		driver_state* operator -> () {
+			return drv;
+		}
 	};
 }

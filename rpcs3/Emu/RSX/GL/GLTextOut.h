@@ -69,11 +69,11 @@ namespace gl
 			m_program.link();
 		}
 
-		void load_program(float scale_x, float scale_y, float *offsets, usz nb_offsets, color4f color)
+		void load_program(gl::command_context& cmd, float scale_x, float scale_y, float *offsets, usz nb_offsets, color4f color)
 		{
 			float scale[] = { scale_x, scale_y };
 
-			m_program.use();
+			cmd->use_program(m_program.id());
 
 			m_program.uniforms["draw_color"] = color;
 			glProgramUniform2fv(m_program.id(), m_program.uniforms["offsets"].location(), static_cast<GLsizei>(nb_offsets), offsets);
@@ -128,7 +128,7 @@ namespace gl
 			return enabled;
 		}
 
-		void print_text(int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
+		void print_text(gl::command_context& cmd, int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
 		{
 			if (!enabled) return;
 
@@ -186,7 +186,7 @@ namespace gl
 			int old_vao;
 			glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &old_vao);
 
-			load_program(scale_x, scale_y, shader_offsets.data(), counts.size(), color);
+			load_program(cmd, scale_x, scale_y, shader_offsets.data(), counts.size(), color);
 
 			m_vao.bind();
 

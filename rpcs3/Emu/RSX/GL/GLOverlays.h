@@ -69,7 +69,7 @@ namespace gl
 
 		virtual void emit_geometry();
 
-		void run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false);
+		void run(gl::command_context& cmd, const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false);
 	};
 
 	struct ui_overlay_renderer : public overlay_pass
@@ -99,13 +99,13 @@ namespace gl
 
 		void emit_geometry() override;
 
-		void run(const areau& viewport, GLuint target, rsx::overlays::overlay& ui);
+		void run(gl::command_context& cmd, const areau& viewport, GLuint target, rsx::overlays::overlay& ui);
 	};
 
 	struct video_out_calibration_pass : public overlay_pass
 	{
 		video_out_calibration_pass();
 
-		void run(const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d);
+		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d);
 	};
 }

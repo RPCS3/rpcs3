@@ -26,8 +26,8 @@ namespace gl
 
 		virtual void bind_resources() {}
 
-		void run(u32 invocations_x, u32 invocations_y);
-		void run(u32 num_invocations);
+		void run(gl::command_context& cmd, u32 invocations_x, u32 invocations_y);
+		void run(gl::command_context& cmd, u32 num_invocations);
 	};
 
 	struct cs_shuffle_base : compute_task
@@ -45,7 +45,7 @@ namespace gl
 
 		void bind_resources() override;
 
-		void run(const gl::buffer* data, u32 data_length, u32 data_offset = 0);
+		void run(gl::command_context& cmd, const gl::buffer* data, u32 data_length, u32 data_offset = 0);
 	};
 
 	struct cs_shuffle_16 : cs_shuffle_base
@@ -83,7 +83,7 @@ namespace gl
 
 		void bind_resources() override;
 
-		void run(const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels);
+		void run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels);
 	};
 
 	struct cs_shuffle_x8d24f_to_d32fx8 : cs_shuffle_base
@@ -94,7 +94,7 @@ namespace gl
 
 		void bind_resources() override;
 
-		void run(const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels);
+		void run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels);
 	};
 
 
@@ -204,7 +204,7 @@ namespace gl
 			m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_ssbo_length);
 		}
 
-		void run(const gl::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
+		void run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 src_length, u32 dst_offset)
 		{
 			u32 data_offset;
 			if (src_offset > dst_offset)
@@ -222,7 +222,7 @@ namespace gl
 			m_program.uniforms["in_ptr"] = src_offset - data_offset;
 			m_program.uniforms["out_ptr"] = dst_offset - data_offset;
 
-			cs_shuffle_base::run(data, src_length, data_offset);
+			cs_shuffle_base::run(cmd, data, src_length, data_offset);
 		}
 	};
 

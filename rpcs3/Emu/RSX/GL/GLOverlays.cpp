@@ -69,7 +69,7 @@ namespace gl
 		glBindVertexArray(old_vao);
 	}
 
-	void overlay_pass::run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending)
+	void overlay_pass::run(gl::command_context& cmd, const areau& region, GLuint target_texture, bool depth_target, bool use_blending)
 	{
 		if (!compiled)
 		{
@@ -77,19 +77,8 @@ namespace gl
 			return;
 		}
 
-		GLint program;
 		GLint old_fbo;
-		GLint depth_func;
 		GLint viewport[4];
-		GLboolean color_writes[4];
-		GLboolean depth_write;
-
-		GLint blend_src_rgb;
-		GLint blend_src_a;
-		GLint blend_dst_rgb;
-		GLint blend_dst_a;
-		GLint blend_eq_a;
-		GLint blend_eq_rgb;
 
 		if (target_texture)
 		{
@@ -111,57 +100,32 @@ namespace gl
 
 		if (!target_texture || glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
 		{
-			// Push rasterizer state
-			glGetIntegerv(GL_VIEWPORT, viewport);
-			glGetBooleanv(GL_COLOR_WRITEMASK, color_writes);
-			glGetBooleanv(GL_DEPTH_WRITEMASK, &depth_write);
-			glGetIntegerv(GL_CURRENT_PROGRAM, &program);
-			glGetIntegerv(GL_DEPTH_FUNC, &depth_func);
-
-			GLboolean scissor_enabled = glIsEnabled(GL_SCISSOR_TEST);
-			GLboolean depth_test_enabled = glIsEnabled(GL_DEPTH_TEST);
-			GLboolean cull_face_enabled = glIsEnabled(GL_CULL_FACE);
-			GLboolean blend_enabled = glIsEnabledi(GL_BLEND, 0);
-			GLboolean stencil_test_enabled = glIsEnabled(GL_STENCIL_TEST);
-
-			if (use_blending)
-			{
-				glGetIntegerv(GL_BLEND_SRC_RGB, &blend_src_rgb);
-				glGetIntegerv(GL_BLEND_SRC_ALPHA, &blend_src_a);
-				glGetIntegerv(GL_BLEND_DST_RGB, &blend_dst_rgb);
-				glGetIntegerv(GL_BLEND_DST_ALPHA, &blend_dst_a);
-				glGetIntegerv(GL_BLEND_EQUATION_RGB, &blend_eq_rgb);
-				glGetIntegerv(GL_BLEND_EQUATION_ALPHA, &blend_eq_a);
-			}
-
 			// Set initial state
 			glViewport(region.x1, region.y1, region.width(), region.height());
-			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			glDepthMask(depth_target ? GL_TRUE : GL_FALSE);
+			cmd->color_maski(0, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+			cmd->depth_mask(depth_target ? GL_TRUE : GL_FALSE);
 
 			// Disabling depth test will also disable depth writes which is not desired
-			glDepthFunc(GL_ALWAYS);
-			glEnable(GL_DEPTH_TEST);
+			cmd->depth_func(GL_ALWAYS);
+			cmd->enable(GL_DEPTH_TEST);
 
-			if (scissor_enabled) glDisable(GL_SCISSOR_TEST);
-			if (cull_face_enabled) glDisable(GL_CULL_FACE);
-			if (stencil_test_enabled) glDisable(GL_STENCIL_TEST);
+			cmd->disable(GL_SCISSOR_TEST);
+			cmd->disable(GL_CULL_FACE);
+			cmd->disable(GL_STENCIL_TEST);
 
 			if (use_blending)
 			{
-				if (!blend_enabled)
-					glEnablei(GL_BLEND, 0);
-
+				cmd->enablei(GL_BLEND, 0);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				glBlendEquation(GL_FUNC_ADD);
 			}
-			else if (blend_enabled)
+			else
 			{
-				glDisablei(GL_BLEND, 0);
+				cmd->disablei(GL_BLEND, 0);
 			}
 
 			// Render
-			program_handle.use();
+			cmd->use_program(program_handle.id());
 			on_load();
 			bind_resources();
 			emit_geometry();
@@ -177,30 +141,7 @@ namespace gl
 				glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
 			}
 
-			glUseProgram(program);
-
 			glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-			glColorMask(color_writes[0], color_writes[1], color_writes[2], color_writes[3]);
-			glDepthMask(depth_write);
-			glDepthFunc(depth_func);
-
-			if (!depth_test_enabled) glDisable(GL_DEPTH_TEST);
-			if (scissor_enabled) glEnable(GL_SCISSOR_TEST);
-			if (cull_face_enabled) glEnable(GL_CULL_FACE);
-			if (stencil_test_enabled) glEnable(GL_STENCIL_TEST);
-
-			if (use_blending)
-			{
-				if (!blend_enabled)
-					glDisablei(GL_BLEND, 0);
-
-				glBlendFuncSeparate(blend_src_rgb, blend_dst_rgb, blend_src_a, blend_dst_a);
-				glBlendEquationSeparate(blend_eq_rgb, blend_eq_a);
-			}
-			else if (blend_enabled)
-			{
-				 glEnablei(GL_BLEND, 0);
-			}
 		}
 		else
 		{
@@ -508,7 +449,7 @@ namespace gl
 		}
 	}
 
-	void ui_overlay_renderer::run(const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
+	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
 	{
 		program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
 		program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
@@ -561,7 +502,7 @@ namespace gl
 			program_handle.uniforms["blur_strength"] = static_cast<s32>(cmd.config.blur_strength);
 			program_handle.uniforms["clip_region"] = static_cast<s32>(cmd.config.clip_region);
 			program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
-			overlay_pass::run(viewport, target, false, true);
+			overlay_pass::run(cmd_, viewport, target, false, true);
 		}
 
 		ui.update();
@@ -628,7 +569,7 @@ namespace gl
 		input_filter = GL_LINEAR;
 	}
 
-	void video_out_calibration_pass::run(const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d)
+	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d)
 	{
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
@@ -641,6 +582,6 @@ namespace gl
 		saved_sampler_state saved2(30, m_sampler);
 		glBindTexture(GL_TEXTURE_2D, source[1]);
 
-		overlay_pass::run(viewport, GL_NONE, false, false);
+		overlay_pass::run(cmd, viewport, GL_NONE, false, false);
 	}
 }
