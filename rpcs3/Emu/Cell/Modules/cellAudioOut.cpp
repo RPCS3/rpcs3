@@ -1,9 +1,17 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/system_config.h"
 
 #include "cellAudioOut.h"
 
 LOG_CHANNEL(cellSysutil);
+
+const extern std::unordered_map<audio_downmix, CellAudioOutChnum, value_hash<audio_downmix>> g_audio_out_chnum_id
+{
+	{ audio_downmix::downmix_to_stereo, CELL_AUDIO_OUT_CHNUM_2 },
+	{ audio_downmix::downmix_to_5_1,    CELL_AUDIO_OUT_CHNUM_6 },
+	{ audio_downmix::no_downmix,        CELL_AUDIO_OUT_CHNUM_8 },
+};
 
 template<>
 void fmt_class_string<CellAudioOutError>::format(std::string& out, u64 arg)
@@ -32,11 +40,10 @@ error_code cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 
 {
 	cellSysutil.warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)", audioOut, type, fs, option);
 
-	s32 available = 8; // should be at least 2
+	s32 available = g_audio_out_chnum_id.at(g_cfg.audio.audio_channel_downmix);
 
 	switch (fs)
 	{
-	case CELL_AUDIO_OUT_FS_32KHZ:
 	case CELL_AUDIO_OUT_FS_44KHZ:
 	case CELL_AUDIO_OUT_FS_48KHZ:
 	case CELL_AUDIO_OUT_FS_88KHZ:
@@ -45,36 +52,45 @@ error_code cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 
 	case CELL_AUDIO_OUT_FS_192KHZ:
 		break;
 
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	default: return not_an_error(0);
 	}
 
 	switch (type)
 	{
 	case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
-	case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
-	case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
+	case CELL_AUDIO_OUT_CODING_TYPE_AC3:
+	case CELL_AUDIO_OUT_CODING_TYPE_DTS:
+		if (available > 2) // AC3 and DTS only support 6ch output
+		{
+			available = 6;
+			break;
+		}
 
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	default: return not_an_error(0);
 	}
 
 	switch (audioOut)
 	{
-	case CELL_AUDIO_OUT_PRIMARY: return not_an_error(available);
-	case CELL_AUDIO_OUT_SECONDARY: return not_an_error(0);
+	case CELL_AUDIO_OUT_PRIMARY:
+		break;
+
+	default: return not_an_error(0);
 	}
 
-	return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
+	return not_an_error(available);
 }
 
 error_code cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u32 option)
 {
 	cellSysutil.warning("cellAudioOutGetSoundAvailability2(audioOut=%d, type=%d, fs=0x%x, ch=%d, option=%d)", audioOut, type, fs, ch, option);
 
-	s32 available = 8; // should be at least 2
+	if (ch > g_audio_out_chnum_id.at(g_cfg.audio.audio_channel_downmix))
+	{
+		return not_an_error(0);
+	}
 
 	switch (fs)
 	{
-	case CELL_AUDIO_OUT_FS_32KHZ:
 	case CELL_AUDIO_OUT_FS_44KHZ:
 	case CELL_AUDIO_OUT_FS_48KHZ:
 	case CELL_AUDIO_OUT_FS_88KHZ:
@@ -83,36 +99,41 @@ error_code cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32
 	case CELL_AUDIO_OUT_FS_192KHZ:
 		break;
 
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	default: return not_an_error(0);
 	}
 
 	switch (ch)
 	{
-	case 2: break;
-	case 6: available = 0; break;
-	case 8: available = 0; break;
+	case 2:
+	case 6:
+	case 8:
+		break;
 
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	default: return not_an_error(0);
 	}
 
 	switch (type)
 	{
 	case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
-	case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
-	case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
+	case CELL_AUDIO_OUT_CODING_TYPE_AC3:
+	case CELL_AUDIO_OUT_CODING_TYPE_DTS:
+		if (ch == 6) // AC3 and DTS only support 6ch output
+		{
+			break;
+		}
 
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	default: return not_an_error(0);
 	}
 
 	switch (audioOut)
 	{
-	case CELL_AUDIO_OUT_PRIMARY: return not_an_error(available);
-	case CELL_AUDIO_OUT_SECONDARY: return not_an_error(0);
-	default:
+	case CELL_AUDIO_OUT_PRIMARY:
 		break;
+
+	default: return not_an_error(0);
 	}
 
-	return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
+	return not_an_error(ch);
 }
 
 error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutState> state)
