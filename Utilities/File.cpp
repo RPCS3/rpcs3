@@ -1788,7 +1788,7 @@ const std::string& fs::get_temp_dir()
 	return s_dir;
 }
 
-bool fs::remove_all(const std::string& path, bool remove_root)
+bool fs::remove_all(const std::string& path, bool remove_root, bool is_no_dir_ok)
 {
 	if (const auto root_dir = dir(path))
 	{
@@ -1817,7 +1817,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 	}
 	else
 	{
-		return false;
+		return is_no_dir_ok;
 	}
 
 	if (remove_root)

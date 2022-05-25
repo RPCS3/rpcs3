@@ -456,19 +456,19 @@ public:
 
 				struct AVPacketHolder : AVPacket
 				{
-					AVPacketHolder(u32 size)
+					AVPacketHolder(u32 data_size)
 					{
 						av_init_packet(this);
 
-						if (size)
+						if (data_size)
 						{
-							data = static_cast<u8*>(av_calloc(1, size + AV_INPUT_BUFFER_PADDING_SIZE));
-							this->size = size + AV_INPUT_BUFFER_PADDING_SIZE;
+							this->data = static_cast<u8*>(av_calloc(1, data_size + AV_INPUT_BUFFER_PADDING_SIZE));
+							this->size = data_size + AV_INPUT_BUFFER_PADDING_SIZE;
 						}
 						else
 						{
-							data = nullptr;
-							size = 0;
+							this->data = nullptr;
+							this->size = 0;
 						}
 					}
 

@@ -88,9 +88,6 @@ namespace rsx
 
 			const auto& sema = vm::_ref<RsxSemaphore>(addr).val;
 
-			// TODO: Remove vblank semaphore hack
-			if (addr == rsx->device_addr + 0x30) return;
-
 			if (sema == arg)
 			{
 				// Flip semaphore doesnt need wake-up delay
@@ -107,10 +104,22 @@ namespace rsx
 				rsx->flush_fifo();
 			}
 
+			if (addr == rsx->device_addr + 0x30)
+			{
+				if (g_cfg.video.frame_limit == frame_limit_type::_ps3 && rsx->requested_vsync)
+				{
+					// Enables PS3-compliant vblank behavior
+					rsx->flip_sema_wait_val = arg;
+					rsx->wait_for_flip_sema = (sema != arg);
+				}
+
+				return;
+			}
+
 			u64 start = rsx::uclock();
 			while (sema != arg)
 			{
-				if (rsx->is_stopped())
+				if (rsx->test_stopped())
 				{
 					return;
 				}
@@ -123,7 +132,7 @@ namespace rsx
 
 						while (rsx->is_paused())
 						{
-							rsx->cpu_wait({});
+							rsx->check_state();
 						}
 
 						// Reset
@@ -1731,7 +1740,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread* /*rsx*/, u32 /*reg*/, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
@@ -1740,7 +1749,7 @@ namespace rsx
 		template<u32 index>
 		struct queue_flip
 		{
-			static void impl(thread* /*rsx*/, u32 /*reg*/, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}

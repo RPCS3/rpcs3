@@ -72,7 +72,7 @@ public:
 #endif
 
 public:
-	virtual std::tuple<bool, s32, sys_net_sockaddr> accept(bool is_lock = true) = 0;
+	virtual std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) = 0;
 	virtual s32 bind(const sys_net_sockaddr& addr, s32 ps3_id)                  = 0;
 
 	virtual std::optional<s32> connect(const sys_net_sockaddr& addr) = 0;

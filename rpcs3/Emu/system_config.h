@@ -94,6 +94,7 @@ struct cfg_root : cfg::node
 
 		cfg::_bool limit_cache_size{ this, "Limit disk cache size", false };
 		cfg::_int<0, 10240> cache_max_size{ this, "Disk cache maximum size (MB)", 5120 };
+		cfg::_bool empty_hdd0_tmp{ this, "Empty /dev_hdd0/tmp/", true };
 
 	} vfs{ this };
 

@@ -1281,9 +1281,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Sliders
 
 	EnhanceSlider(emu_settings_type::DriverWakeUpDelay, ui->wakeupDelay, ui->wakeupText, tr(reinterpret_cast<const char*>(u8"%0 µs"), "Driver wake up delay"));
-	SnapSlider(ui->wakeupDelay, 200);
-	ui->wakeupDelay->setMaximum(7000); // Very large values must be entered with config.yml changes
-	ui->wakeupDelay->setPageStep(200);
+	SnapSlider(ui->wakeupDelay, 20);
+	ui->wakeupDelay->setMaximum(800); // Very large values must be entered with config.yml changes
+	ui->wakeupDelay->setPageStep(20);
 	const int wakeup_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::DriverWakeUpDelay));
 	connect(ui->wakeupReset, &QAbstractButton::clicked, [wakeup_def, this]()
 	{
