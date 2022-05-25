@@ -440,6 +440,8 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		}
 	};
 
+	m_profiler.start();
+
 	auto& draw_call = rsx::method_registers.current_draw_clause;
 	const rsx::flags32_t vertex_state_mask = rsx::vertex_base_changed | rsx::vertex_arrays_changed;
 	const rsx::flags32_t vertex_state = (sub_index == 0) ? rsx::vertex_arrays_changed : draw_call.execute_pipeline_dependencies() & vertex_state_mask;
@@ -494,6 +496,8 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	const GLenum draw_mode = gl::draw_mode(draw_call.primitive);
 	update_vertex_env(upload_info);
+
+	m_frame_stats.vertex_upload_time += m_profiler.duration();
 
 	if (!upload_info.index_info)
 	{
@@ -593,6 +597,8 @@ void GLGSRender::emit_geometry(u32 sub_index)
 			glMultiDrawElements(draw_mode, counts, index_type, offsets, static_cast<GLsizei>(draw_count));
 		}
 	}
+
+	m_frame_stats.draw_exec_time += m_profiler.duration();
 }
 
 void GLGSRender::begin()
@@ -692,7 +698,7 @@ void GLGSRender::end()
 	m_fragment_constants_buffer->notify();
 	m_transform_constants_buffer->notify();
 
-	m_frame_stats.textures_upload_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 
 	rsx::thread::end();
 }
