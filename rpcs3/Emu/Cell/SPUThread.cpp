@@ -985,7 +985,7 @@ void spu_int_ctrl_t::set(u64 ints)
 			if (auto handler = tag->handler; lv2_obj::check(handler))
 			{
 				rlock.unlock();
-				handler->exec();
+				thread_ctrl::notify(*handler->thread);
 			}
 		}
 	}

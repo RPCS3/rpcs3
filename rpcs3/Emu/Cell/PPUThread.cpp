@@ -1355,6 +1355,8 @@ ppu_thread::~ppu_thread()
 	perf_log.notice("Perf stats for instructions: total %u", exec_bytes / 4);
 }
 
+void ppu_interrupt_thread_entry(ppu_thread&, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*);
+
 ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 prio, int detached)
 	: cpu_thread(idm::last_id())
 	, prio(prio)
@@ -1374,6 +1376,14 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 		// Initialize thread args
 		gpr[3] = param.arg0;
 		gpr[4] = param.arg1;
+	}
+	else
+	{
+		cmd_list
+		({
+			{ ppu_cmd::ptr_call, 0 },
+			std::bit_cast<u64>(&ppu_interrupt_thread_entry)
+		});
 	}
 
 	// Trigger the scheduler
