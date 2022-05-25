@@ -166,7 +166,7 @@ namespace gl
 			{
 				const auto src_bpp = slice.src->pitch() / slice.src->width();
 				const u16 convert_w = u16(slice.src->width() * src_bpp) / dst_bpp;
-				tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, static_cast<GLenum>(dst_image->get_internal_format()));
+				tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, static_cast<GLenum>(dst_image->get_internal_format()), dst_image->format_class());
 
 				src_image = tmp.get();
 
