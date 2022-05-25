@@ -706,7 +706,7 @@ namespace gl
 				{
 					const u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
 					image_linear_size = row_pitch * layout.height_in_block * layout.depth;
-					dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem.map(buffer::access::write)), image_linear_size };
+					dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem.map(0, image_linear_size, gl::buffer::access::write)), image_linear_size };
 				}
 
 				auto op = upload_texture_subresource(dst_buffer, layout, format, is_swizzled, caps);

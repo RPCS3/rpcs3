@@ -51,11 +51,16 @@ using namespace ::rsx::format_class_;
 namespace gl
 {
 	//Function call wrapped in ARB_DSA vs EXT_DSA compat check
-#define DSA_CALL(func, texture_name, target, ...)\
+#define DSA_CALL(func, object_name, target, ...)\
 	if (::gl::get_driver_caps().ARB_dsa_supported)\
-		gl##func(texture_name, __VA_ARGS__);\
+		gl##func(object_name, __VA_ARGS__);\
 	else\
-		gl##func##EXT(texture_name, target, __VA_ARGS__);
+		gl##func##EXT(object_name, target, __VA_ARGS__);
+
+#define DSA_CALL2(func, object_name, ...)\
+	(::gl::get_driver_caps().ARB_dsa_supported) ?\
+		gl##func(object_name, __VA_ARGS__) :\
+		gl##func##EXT(object_name, __VA_ARGS__)
 
 	class fence;
 
@@ -520,9 +525,9 @@ namespace gl
 
 		enum class access
 		{
-			read = GL_READ_ONLY,
-			write = GL_WRITE_ONLY,
-			read_write = GL_READ_WRITE
+			read = GL_MAP_READ_BIT,
+			write = GL_MAP_WRITE_BIT,
+			read_write = GL_MAP_READ_BIT | GL_MAP_WRITE_BIT
 		};
 
 		enum class memory_type
@@ -735,12 +740,13 @@ namespace gl
 			m_size = size;
 		}
 
-		GLubyte* map(access access_)
+		GLubyte* map(GLsizeiptr offset, GLsizeiptr length, access access_)
 		{
 			ensure(m_memory_type == memory_type::host_visible);
 
-			bind(current_target());
-			return reinterpret_cast<GLubyte*>(glMapBuffer(static_cast<GLenum>(current_target()), static_cast<GLenum>(access_)));
+			const GLenum access_bits = static_cast<GLenum>(access_);
+			auto raw_data = DSA_CALL2(MapNamedBufferRange, id(), offset, length, access_bits | GL_MAP_UNSYNCHRONIZED_BIT);
+			return reinterpret_cast<GLubyte*>(raw_data);
 		}
 
 		void unmap()
