@@ -264,17 +264,15 @@ void GLGSRender::on_init_thread()
 
 	if (gl_caps.vendor_AMD)
 	{
-		m_identity_index_buffer = std::make_unique<gl::buffer>();
-		m_identity_index_buffer->create(gl::buffer::target::element_array, 1 * 0x100000, nullptr, gl::buffer::memory_type::host_visible);
-
 		// Initialize with 256k identity entries
-		auto* dst = reinterpret_cast<u32*>(m_identity_index_buffer->map(gl::buffer::access::write));
+		std::vector<u32> dst(256 * 1024);
 		for (u32 n = 0; n < (0x100000 >> 2); ++n)
 		{
 			dst[n] = n;
 		}
 
-		m_identity_index_buffer->unmap();
+		m_identity_index_buffer = std::make_unique<gl::buffer>();
+		m_identity_index_buffer->create(gl::buffer::target::element_array,dst.size() * sizeof(u32), dst.data(), gl::buffer::memory_type::local);
 	}
 	else if (gl_caps.vendor_NVIDIA)
 	{
