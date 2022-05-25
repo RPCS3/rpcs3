@@ -885,9 +885,9 @@ namespace gl
 	bool formats_are_bitcast_compatible(const texture* texture1, const texture* texture2)
 	{
 		if (const u32 transfer_class = texture1->format_class() | texture2->format_class();
-			transfer_class & RSX_FORMAT_CLASS_DEPTH_FLOAT_MASK)
+			transfer_class > RSX_FORMAT_CLASS_COLOR)
 		{
-			// If any one of the two images is a depth float, the other must match exactly or bust
+			// If any one of the two images is a depth format, the other must match exactly or bust
 			return (texture1->format_class() == texture2->format_class());
 		}
 
