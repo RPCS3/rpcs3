@@ -359,8 +359,6 @@ void GLGSRender::bind_texture_env()
 		if (!(textures_ref & 1))
 			continue;
 
-		_SelectTexture(GL_FRAGMENT_TEXTURES_START + i);
-
 		gl::texture_view* view = nullptr;
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 
@@ -375,26 +373,23 @@ void GLGSRender::bind_texture_env()
 
 		if (view) [[likely]]
 		{
-			view->bind();
+			view->bind(cmd, GL_FRAGMENT_TEXTURES_START + i);
 
 			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
 			{
-				_SelectTexture(GL_STENCIL_MIRRORS_START + i);
-
 				auto root_texture = static_cast<gl::viewable_image*>(view->image());
 				auto stencil_view = root_texture->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::stencil);
-				stencil_view->bind();
+				stencil_view->bind(cmd, GL_STENCIL_MIRRORS_START + i);
 			}
 		}
 		else
 		{
 			auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
-			glBindTexture(target, m_null_textures[target]->id());
+			cmd->bind_texture(GL_FRAGMENT_TEXTURES_START + i, target, m_null_textures[target]->id());
 
 			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
 			{
-				_SelectTexture(GL_STENCIL_MIRRORS_START + i);
-				glBindTexture(target, m_null_textures[target]->id());
+				cmd->bind_texture(GL_STENCIL_MIRRORS_START + i, target, m_null_textures[target]->id());
 			}
 		}
 	}
@@ -405,18 +400,17 @@ void GLGSRender::bind_texture_env()
 			continue;
 
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-		_SelectTexture(GL_VERTEX_TEXTURES_START + i);
 
 		if (rsx::method_registers.vertex_textures[i].enabled() &&
 			sampler_state->validate())
 		{
 			if (sampler_state->image_handle) [[likely]]
 			{
-				sampler_state->image_handle->bind();
+				sampler_state->image_handle->bind(cmd, GL_VERTEX_TEXTURES_START + i);
 			}
 			else
 			{
-				m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc)->bind();
+				m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc)->bind(cmd, GL_VERTEX_TEXTURES_START + i);
 			}
 		}
 		else

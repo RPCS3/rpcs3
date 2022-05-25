@@ -168,15 +168,13 @@ void GLGSRender::on_init_thread()
 	// Array stream buffer
 	{
 		m_gl_persistent_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
-		_SelectTexture(GL_STREAM_BUFFER_START + 0);
-		glBindTexture(GL_TEXTURE_BUFFER, m_gl_persistent_stream_buffer->id());
+		gl_state.bind_texture(GL_STREAM_BUFFER_START + 0, GL_TEXTURE_BUFFER, m_gl_persistent_stream_buffer->id());
 	}
 
 	// Register stream buffer
 	{
 		m_gl_volatile_stream_buffer = std::make_unique<gl::texture>(GL_TEXTURE_BUFFER, 0, 0, 0, 0, GL_R8UI);
-		_SelectTexture(GL_STREAM_BUFFER_START + 1);
-		glBindTexture(GL_TEXTURE_BUFFER, m_gl_volatile_stream_buffer->id());
+		gl_state.bind_texture(GL_STREAM_BUFFER_START + 1, GL_TEXTURE_BUFFER, m_gl_volatile_stream_buffer->id());
 	}
 
 	// Fallback null texture instead of relying on texture0

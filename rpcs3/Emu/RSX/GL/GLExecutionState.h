@@ -233,6 +233,7 @@ namespace gl
 		std::unordered_map<GLenum, std::array<u32, 4>> indexed_properties = {};
 
 		GLuint current_program = GL_NONE;
+		std::array<std::unordered_map<GLenum, GLuint>, 48> bound_textures{ {} };
 
 		bool enable(u32 test, GLenum cap)
 		{
@@ -499,6 +500,20 @@ namespace gl
 
 			current_program = program;
 			glUseProgram(program);
+		}
+
+		void bind_texture(GLuint layer, GLenum target, GLuint name)
+		{
+			ensure(layer < 48);
+
+			auto& bound = bound_textures[layer][target];
+			if (bound != name)
+			{
+				glActiveTexture(GL_TEXTURE0 + layer);
+				glBindTexture(target, name);
+
+				bound = name;
+			}
 		}
 	};
 
