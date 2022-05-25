@@ -137,6 +137,8 @@ void GLGSRender::update_draw_state()
 {
 	m_profiler.start();
 
+	gl_state.enable(GL_SCISSOR_TEST);
+
 	for (int index = 0; index < m_rtts.get_color_surface_count(); ++index)
 	{
 		bool color_mask_b = rsx::method_registers.color_mask_b(index);
@@ -656,8 +658,6 @@ void GLGSRender::end()
 	m_gl_texture_cache.release_uncached_temporary_subresources();
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 
-	gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
-
 	gl::command_context cmd{ gl_state };
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(cmd);
 
@@ -668,9 +668,6 @@ void GLGSRender::end()
 			surface->write_barrier(cmd);
 		}
 	}
-
-	// Unconditionally enable stencil test if it was disabled before
-	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 
 	update_draw_state();
 

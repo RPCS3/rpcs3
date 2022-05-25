@@ -662,6 +662,11 @@ void GLGSRender::clear_surface(u32 arg)
 		m_rtts.on_write({ update_color, update_color, update_color, update_color }, update_z);
 	}
 
+	if (!full_frame)
+	{
+		gl_state.enable(GL_SCISSOR_TEST);
+	}
+
 	glClear(mask);
 }
 
@@ -762,7 +767,7 @@ void GLGSRender::load_program_env()
 	const bool update_instruction_buffers = (!!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program));
 	const bool update_raster_env = (rsx::method_registers.polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
 
-	m_program->use();
+	gl_state.use_program(m_program->id());
 
 	if (manually_flush_ring_buffers)
 	{

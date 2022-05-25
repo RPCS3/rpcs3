@@ -442,7 +442,7 @@ namespace gl
 		}
 	}
 
-	void* copy_image_to_buffer(const pixel_buffer_layout& pack_info, const gl::texture* src, gl::buffer* dst,
+	void* copy_image_to_buffer(gl::command_context& cmd, const pixel_buffer_layout& pack_info, const gl::texture* src, gl::buffer* dst,
 		const int src_level, const coord3u& src_region,  image_memory_requirements* mem_info)
 	{
 		auto initialize_scratch_mem = [&]()
@@ -466,7 +466,7 @@ namespace gl
 			initialize_scratch_mem();
 			if (auto job = get_trivial_transform_job(pack_info))
 			{
-				job->run(dst, static_cast<u32>(mem_info->image_size_in_bytes));
+				job->run(cmd, dst, static_cast<u32>(mem_info->image_size_in_bytes));
 			}
 		}
 		else if (pack_info.type == GL_FLOAT)
@@ -475,7 +475,7 @@ namespace gl
 			mem_info->memory_required = (mem_info->image_size_in_texels * 6);
 			initialize_scratch_mem();
 
-			get_compute_task<cs_fconvert_task<f32, f16, false, true>>()->run(dst, 0,
+			get_compute_task<cs_fconvert_task<f32, f16, false, true>>()->run(cmd, dst, 0,
 				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
 			result = reinterpret_cast<void*>(mem_info->image_size_in_bytes);
 		}
@@ -485,7 +485,7 @@ namespace gl
 			mem_info->memory_required = (mem_info->image_size_in_texels * 12);
 			initialize_scratch_mem();
 
-			get_compute_task<cs_shuffle_d32fx8_to_x8d24f>()->run(dst, 0,
+			get_compute_task<cs_shuffle_d32fx8_to_x8d24f>()->run(cmd, dst, 0,
 				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_texels));
 			result = reinterpret_cast<void*>(mem_info->image_size_in_bytes);
 		}
@@ -498,7 +498,7 @@ namespace gl
 		return result;
 	}
 
-	void copy_buffer_to_image(const pixel_buffer_layout& unpack_info, gl::buffer* src, gl::texture* dst,
+	void copy_buffer_to_image(gl::command_context& cmd, const pixel_buffer_layout& unpack_info, gl::buffer* src, gl::texture* dst,
 		const void* src_offset, const int dst_level, const coord3u& dst_region, image_memory_requirements* mem_info)
 	{
 		buffer scratch_mem;
@@ -537,7 +537,7 @@ namespace gl
 		{
 			if (auto job = get_trivial_transform_job(unpack_info))
 			{
-				job->run(src, static_cast<u32>(mem_info->image_size_in_bytes), in_offset);
+				job->run(cmd, src, static_cast<u32>(mem_info->image_size_in_bytes), in_offset);
 			}
 			else
 			{
@@ -551,18 +551,18 @@ namespace gl
 
 			if (unpack_info.swap_bytes)
 			{
-				get_compute_task<cs_fconvert_task<f16, f32, true, false>>()->run(transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
+				get_compute_task<cs_fconvert_task<f16, f32, true, false>>()->run(cmd, transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
 			}
 			else
 			{
-				get_compute_task<cs_fconvert_task<f16, f32, false, false>>()->run(transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
+				get_compute_task<cs_fconvert_task<f16, f32, false, false>>()->run(cmd, transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
 			}
 		}
 		else if (unpack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
 		{
 			mem_info->memory_required = (mem_info->image_size_in_texels * 8);
 			initialize_scratch_mem();
-			get_compute_task<cs_shuffle_x8d24f_to_d32fx8>()->run(transfer_buf, in_offset, out_offset, static_cast<u32>(mem_info->image_size_in_texels));
+			get_compute_task<cs_shuffle_x8d24f_to_d32fx8>()->run(cmd, transfer_buf, in_offset, out_offset, static_cast<u32>(mem_info->image_size_in_texels));
 		}
 		else
 		{
@@ -593,7 +593,7 @@ namespace gl
 		return new gl::viewable_image(target, width, height, depth, mipmaps, internal_format, format_class);
 	}
 
-	void fill_texture(texture* dst, int format,
+	void fill_texture(gl::command_context& cmd, texture* dst, int format,
 			const std::vector<rsx::subresource_layout> &input_layouts,
 			bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
 	{
@@ -735,7 +735,7 @@ namespace gl
 					mem_info.memory_required = 0;
 
 					// 4. Dispatch compute routines
-					copy_buffer_to_image(mem_layout, &compute_scratch_mem, dst, nullptr, layout.level, region, & mem_info);
+					copy_buffer_to_image(cmd, mem_layout, &compute_scratch_mem, dst, nullptr, layout.level, region, & mem_info);
 				}
 				else
 				{
@@ -790,7 +790,7 @@ namespace gl
 		return remap_values;
 	}
 
-	void upload_texture(texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout)
+	void upload_texture(gl::command_context& cmd, texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout)
 	{
 		// Calculate staging buffer size
 		std::vector<std::byte> data_upload_buf;
@@ -812,7 +812,7 @@ namespace gl
 		const auto format_type = get_format_type(gcm_format);
 		const GLenum gl_format = std::get<0>(format_type);
 		const GLenum gl_type = std::get<1>(format_type);
-		fill_texture(dst, gcm_format, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
+		fill_texture(cmd, dst, gcm_format, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
 	}
 
 	u32 get_format_texel_width(GLenum format)
@@ -894,7 +894,7 @@ namespace gl
 		return formats_are_bitcast_compatible(static_cast<GLenum>(texture1->get_internal_format()), static_cast<GLenum>(texture2->get_internal_format()));
 	}
 
-	void copy_typeless(texture * dst, const texture * src, const coord3u& dst_region, const coord3u& src_region)
+	void copy_typeless(gl::command_context& cmd, texture * dst, const texture * src, const coord3u& dst_region, const coord3u& src_region)
 	{
 		const auto src_bpp = src->pitch() / src->width();
 		const auto dst_bpp = dst->pitch() / dst->width();
@@ -934,8 +934,8 @@ namespace gl
 				unpack_info.swap_bytes = false;
 			}
 
-			void* data_ptr = copy_image_to_buffer(pack_info, src, &g_typeless_transfer_buffer, 0, src_region, &src_mem);
-			copy_buffer_to_image(unpack_info, &g_typeless_transfer_buffer, dst, data_ptr, 0, dst_region, &dst_mem);
+			void* data_ptr = copy_image_to_buffer(cmd, pack_info, src, &g_typeless_transfer_buffer, 0, src_region, &src_mem);
+			copy_buffer_to_image(cmd, unpack_info, &g_typeless_transfer_buffer, dst, data_ptr, 0, dst_region, &dst_mem);
 
 			// Cleanup
 			// NOTE: glBindBufferRange also binds the buffer to the old-school target.
@@ -1022,10 +1022,10 @@ namespace gl
 		}
 	}
 
-	void copy_typeless(texture* dst, const texture* src)
+	void copy_typeless(gl::command_context& cmd, texture* dst, const texture* src)
 	{
 		const coord3u src_area = { {}, src->size3D() };
 		const coord3u dst_area = { {}, dst->size3D() };
-		copy_typeless(dst, src, dst_area, src_area);
+		copy_typeless(cmd, dst, src, dst_area, src_area);
 	}
 }

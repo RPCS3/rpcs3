@@ -179,14 +179,14 @@ namespace gl
 					// Combine the two transfers into one
 					const coord3u src_region = { { src_x, src_y, 0 }, { src_w, src_h, 1 } };
 					const coord3u dst_region = { { slice.dst_x, slice.dst_y, slice.dst_z }, { slice.dst_w, slice.dst_h, 1 } };
-					gl::copy_typeless(dst_image, slice.src, dst_region, src_region);
+					gl::copy_typeless(cmd, dst_image, slice.src, dst_region, src_region);
 
 					continue;
 				}
 
 				const coord3u src_region = { { src_x, src_y, 0 }, { src_w, src_h, 1 } };
 				const coord3u dst_region = { { src_x2, src_y, 0 }, { src_w2, src_h, 1 } };
-				gl::copy_typeless(src_image, slice.src, dst_region, src_region);
+				gl::copy_typeless(cmd, src_image, slice.src, dst_region, src_region);
 
 				src_x = src_x2;
 				src_w = src_w2;

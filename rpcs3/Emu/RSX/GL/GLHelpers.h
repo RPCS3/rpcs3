@@ -2591,11 +2591,6 @@ public:
 				return{ static_cast<GLuint>(id) };
 			}
 
-			void use()
-			{
-				glUseProgram(m_id);
-			}
-
 			void link(std::function<void(program*)> init_func = {})
 			{
 				glLinkProgram(m_id);

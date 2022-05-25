@@ -503,7 +503,7 @@ namespace gl
 				{
 					const coord3i src_region = { { src_rect.x1, src_rect.y1, 0 }, { src_rect.width(), src_rect.height(), 1 } };
 					const coord3i dst_region = { { dst_rect.x1, dst_rect.y1, 0 }, { dst_rect.width(), dst_rect.height(), 1 } };
-					gl::copy_typeless(dst, src, static_cast<coord3u>(dst_region), static_cast<coord3u>(src_region));
+					gl::copy_typeless(cmd, dst, src, static_cast<coord3u>(dst_region), static_cast<coord3u>(src_region));
 				}
 				else
 				{
@@ -526,7 +526,7 @@ namespace gl
 			{
 				const u16 internal_width = static_cast<u16>(src->width() * xfer_info.src_scaling_hint);
 				typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, internal_fmt);
-				copy_typeless(typeless_src.get(), src);
+				copy_typeless(cmd, typeless_src.get(), src);
 
 				real_src = typeless_src.get();
 				src_rect.x1 = static_cast<u16>(src_rect.x1 * xfer_info.src_scaling_hint);
@@ -544,7 +544,7 @@ namespace gl
 			{
 				const auto internal_width = static_cast<u16>(dst->width() * xfer_info.dst_scaling_hint);
 				typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, internal_fmt);
-				copy_typeless(typeless_dst.get(), dst);
+				copy_typeless(cmd, typeless_dst.get(), dst);
 
 				real_dst = typeless_dst.get();
 				dst_rect.x1 = static_cast<u16>(dst_rect.x1 * xfer_info.dst_scaling_hint);
@@ -587,7 +587,7 @@ namespace gl
 				target = gl::buffers::color;
 			}
 
-			cmd.drv->enable(GL_FALSE, GL_SCISSOR_TEST);
+			cmd->disable(GL_SCISSOR_TEST);
 
 			save_binding_state saved;
 
@@ -619,7 +619,7 @@ namespace gl
 		if (xfer_info.dst_is_typeless)
 		{
 			// Transfer contents from typeless dst back to original dst
-			copy_typeless(dst, typeless_dst.get());
+			copy_typeless(cmd, dst, typeless_dst.get());
 		}
 	}
 
@@ -631,8 +631,8 @@ namespace gl
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst->id(), 0);
 		blit_dst.check();
 
-		cmd.drv->clear_color(color);
-		cmd.drv->color_maski(0, true, true, true, true);
+		cmd->clear_color(color);
+		cmd->color_maski(0, true, true, true, true);
 
 		glClear(GL_COLOR_BUFFER_BIT);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GL_NONE, 0);
@@ -665,8 +665,8 @@ namespace gl
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst->id(), 0);
 		blit_dst.check();
 
-		cmd.drv->depth_mask(GL_TRUE);
-		cmd.drv->stencil_mask(0xFF);
+		cmd->depth_mask(GL_TRUE);
+		cmd->stencil_mask(0xFF);
 
 		glClear(clear_mask);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);

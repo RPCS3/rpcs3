@@ -425,12 +425,12 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	// TODO: MSAA support
 	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 	{
-		gl::upload_texture(this, get_gcm_format(), is_swizzled, { subres });
+		gl::upload_texture(cmd, this, get_gcm_format(), is_swizzled, { subres });
 	}
 	else
 	{
 		auto tmp = std::make_unique<gl::texture>(GL_TEXTURE_2D, subres.width_in_block, subres.height_in_block, 1, 1, static_cast<GLenum>(get_internal_format()), format_class());
-		gl::upload_texture(tmp.get(), get_gcm_format(), is_swizzled, { subres });
+		gl::upload_texture(cmd, tmp.get(), get_gcm_format(), is_swizzled, { subres });
 
 		gl::g_hw_blitter->scale_image(cmd, tmp.get(), this,
 			{ 0, 0, subres.width_in_block, subres.height_in_block },
