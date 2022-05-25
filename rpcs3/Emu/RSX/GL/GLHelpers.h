@@ -43,8 +43,6 @@
 #define APIENTRY
 #endif
 
-inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit); }
-
 //using enum rsx::format_class;
 using namespace ::rsx::format_class_;
 
@@ -1861,9 +1859,9 @@ namespace gl
 				argb_swizzle[3] == component_swizzle[2]);
 		}
 
-		void bind() const
+		void bind(gl::command_context& cmd, GLuint layer) const
 		{
-			glBindTexture(m_target, m_id);
+			cmd->bind_texture(layer, m_target, m_id);
 		}
 
 		texture* image() const
@@ -2534,14 +2532,14 @@ public:
 					return result;
 				}
 
-				int texture(GLint location, int active_texture, const gl::texture_view& texture)
+				/*int texture(GLint location, int active_texture, const gl::texture_view& texture)
 				{
 					glActiveTexture(GL_TEXTURE0 + active_texture);
 					texture.bind();
 					(*this)[location] = active_texture;
 
 					return active_texture;
-				}
+				}*/
 
 				uniform_t operator[](GLint location)
 				{
