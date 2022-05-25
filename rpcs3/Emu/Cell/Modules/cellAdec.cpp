@@ -468,7 +468,7 @@ public:
 						else
 						{
 							this->data = nullptr;
-							this->size = data_size;
+							this->size = 0;
 						}
 					}
 
