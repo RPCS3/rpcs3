@@ -58,6 +58,12 @@ namespace gl
 		gl##func##EXT(object_name, target, __VA_ARGS__);
 
 #define DSA_CALL2(func, object_name, ...)\
+	if (::gl::get_driver_caps().ARB_dsa_supported)\
+		gl##func(object_name, __VA_ARGS__);\
+	else\
+		gl##func##EXT(object_name, __VA_ARGS__);
+
+#define DSA_CALL2_RET(func, object_name, ...)\
 	(::gl::get_driver_caps().ARB_dsa_supported) ?\
 		gl##func(object_name, __VA_ARGS__) :\
 		gl##func##EXT(object_name, __VA_ARGS__)
@@ -584,10 +590,7 @@ namespace gl
 			if (const auto& caps = get_driver_caps();
 				caps.ARB_buffer_storage_supported)
 			{
-				target target_ = current_target();
-				save_binding_state save(target_, *this);
 				GLenum flags = 0;
-
 				if (type == memory_type::host_visible)
 				{
 					switch (usage)
@@ -617,7 +620,8 @@ namespace gl
 					flags |= GL_CLIENT_STORAGE_BIT;
 				}
 
-				glBufferStorage(static_cast<GLenum>(target_), size, data_, flags);
+				save_binding_state save(current_target(), *this);
+				DSA_CALL2(NamedBufferStorage, m_id, size, data_, flags);
 				m_size = size;
 			}
 			else
@@ -744,15 +748,17 @@ namespace gl
 		{
 			ensure(m_memory_type == memory_type::host_visible);
 
-			const GLenum access_bits = static_cast<GLenum>(access_);
-			auto raw_data = DSA_CALL2(MapNamedBufferRange, id(), offset, length, access_bits | GL_MAP_UNSYNCHRONIZED_BIT);
+			GLenum access_bits = static_cast<GLenum>(access_);
+			if (access_bits == GL_MAP_WRITE_BIT) access_bits |= GL_MAP_UNSYNCHRONIZED_BIT;
+
+			auto raw_data = DSA_CALL2_RET(MapNamedBufferRange, id(), offset, length, access_bits);
 			return reinterpret_cast<GLubyte*>(raw_data);
 		}
 
 		void unmap()
 		{
 			ensure(m_memory_type == memory_type::host_visible);
-			glUnmapBuffer(static_cast<GLenum>(current_target()));
+			DSA_CALL2(UnmapNamedBuffer, id());
 		}
 
 		void bind_range(u32 index, u32 offset, u32 size) const
@@ -798,17 +804,18 @@ namespace gl
 			}
 
 			buffer::create();
+			save_binding_state save(current_target(), *this);
 
 			GLbitfield buffer_storage_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 			if (gl::get_driver_caps().vendor_MESA) buffer_storage_flags |= GL_CLIENT_STORAGE_BIT;
 
-			glBindBuffer(static_cast<GLenum>(m_target), m_id);
-			glBufferStorage(static_cast<GLenum>(m_target), size, data, buffer_storage_flags);
-			m_memory_mapping = glMapBufferRange(static_cast<GLenum>(m_target), 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+			DSA_CALL2(NamedBufferStorage, m_id, size, data, buffer_storage_flags);
+			m_memory_mapping = DSA_CALL2_RET(MapNamedBufferRange, m_id, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
 			ensure(m_memory_mapping != nullptr);
 			m_data_loc = 0;
 			m_size = ::narrow<u32>(size);
+			m_memory_type = memory_type::host_visible;
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -847,8 +854,7 @@ namespace gl
 		{
 			if (m_memory_mapping)
 			{
-				glBindBuffer(static_cast<GLenum>(m_target), m_id);
-				glUnmapBuffer(static_cast<GLenum>(m_target));
+				buffer::unmap();
 
 				m_memory_mapping = nullptr;
 				m_data_loc = 0;
@@ -919,8 +925,7 @@ namespace gl
 				m_data_loc = 0;
 			}
 
-			glBindBuffer(static_cast<GLenum>(m_target), m_id);
-			m_memory_mapping = glMapBufferRange(static_cast<GLenum>(m_target), m_data_loc, block_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+			m_memory_mapping = DSA_CALL2_RET(MapNamedBufferRange, m_id, m_data_loc, block_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
 			m_mapped_bytes = block_size;
 			m_mapping_offset = m_data_loc;
 			m_alignment_offset = 0;
@@ -979,7 +984,6 @@ namespace gl
 
 		void unmap() override
 		{
-			buffer::bind();
 			buffer::unmap();
 
 			m_memory_mapping = nullptr;

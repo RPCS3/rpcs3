@@ -11,8 +11,7 @@ namespace gl
 	void cached_texture_section::finish_flush()
 	{
 		// Free resources
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+		pbo.unmap();
 
 		const auto valid_range = get_confirmed_range_delta();
 		const u32 valid_offset = valid_range.first;
