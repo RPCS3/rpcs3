@@ -328,9 +328,7 @@ namespace gl
 			m_fence.wait_for_signal();
 
 			ensure(offset + GLsizeiptr{size} <= pbo.size());
-			pbo.bind(buffer::target::pixel_pack);
-
-			return glMapBufferRange(GL_PIXEL_PACK_BUFFER, offset, size, GL_MAP_READ_BIT);
+			return pbo.map(offset, size, gl::buffer::access::read);
 		}
 
 		void finish_flush();

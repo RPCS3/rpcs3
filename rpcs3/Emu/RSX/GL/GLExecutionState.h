@@ -196,7 +196,7 @@ namespace gl
 					ARB_texture_buffer_supported = true;
 
 				// Check for expected library entry-points for some required functions
-				if (!ARB_buffer_storage_supported && glBufferStorage && glMapBufferRange)
+				if (!ARB_buffer_storage_supported && glNamedBufferStorage && glMapNamedBufferRange)
 					ARB_buffer_storage_supported = true;
 
 				if (!ARB_dsa_supported && glGetTextureImage && glTextureBufferRange)
