@@ -731,7 +731,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[1].flipBufferId = static_cast<u32>(a3);
 
 		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
-		vm::_ref<u32>(render->label_addr + 0x10) = 0;
+		// NOTE: Realhw resets 16 bytes of this semaphore for some reason
+		vm::_ref<atomic_t<u128>>(render->label_addr + 0x10).store(u128{});
 
 		render->send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
 		break;
