@@ -164,7 +164,7 @@ struct convert_16_block_32_swizzled
 		}
 
 		u32 size = padded_width * padded_height * depth * 2;
-		std::vector<U> tmp(size);
+		rsx::simple_array<U> tmp(size);
 
 		rsx::convert_linear_swizzle_3d<U>(src.data(), tmp.data(), padded_width, padded_height, depth);
 
@@ -243,7 +243,7 @@ struct copy_unmodified_block_swizzled
 			}
 
 			const u32 size_in_block = padded_width * padded_height * depth * 2;
-			std::vector<U> tmp(size_in_block * words_per_block);
+			rsx::simple_array<U> tmp(size_in_block * words_per_block);
 
 			if (words_per_block == 1) [[likely]]
 			{
@@ -488,7 +488,7 @@ struct copy_rgb655_block_swizzled
 		}
 
 		u32 size = padded_width * padded_height * depth * 2;
-		std::vector<U> tmp(size);
+		rsx::simple_array<U> tmp(size);
 
 		rsx::convert_linear_swizzle_3d<U>(src.data(), tmp.data(), padded_width, padded_height, depth);
 
