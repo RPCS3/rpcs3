@@ -8,6 +8,7 @@
 #include "util/asm.hpp"
 #include "sys_net_helpers.h"
 #include "Emu/NP/signaling_handler.h"
+#include "sys_net_helpers.h"
 
 LOG_CHANNEL(sys_net);
 
@@ -18,7 +19,7 @@ nt_p2p_port::nt_p2p_port(u16 port)
 	p2p_socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
 	if (p2p_socket == -1)
-		sys_net.fatal("Failed to create DGRAM socket for P2P socket!");
+		fmt::throw_exception("Failed to create DGRAM socket for P2P socket: %s!", get_last_error(true));
 
 #ifdef _WIN32
 	u_long _true = 1;
@@ -29,7 +30,7 @@ nt_p2p_port::nt_p2p_port(u16 port)
 
 	u32 optval = 131072; // value obtained from DECR for a SOCK_DGRAM_P2P socket(should maybe be bigger for actual socket?)
 	if (setsockopt(p2p_socket, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<const char*>(&optval), sizeof(optval)) != 0)
-		sys_net.fatal("Error setsockopt SO_RCVBUF on P2P socket");
+		fmt::throw_exception("Error setsockopt SO_RCVBUF on P2P socket: %s", get_last_error(true));
 
 	::sockaddr_in p2p_saddr{};
 	p2p_saddr.sin_family      = AF_INET;
@@ -38,7 +39,7 @@ nt_p2p_port::nt_p2p_port(u16 port)
 	const auto ret_bind       = ::bind(p2p_socket, reinterpret_cast<sockaddr*>(&p2p_saddr), sizeof(p2p_saddr));
 
 	if (ret_bind == -1)
-		sys_net.fatal("Failed to bind DGRAM socket to %d for P2P!", port);
+		fmt::throw_exception("Failed to bind DGRAM socket to %d for P2P: %s!", port, get_last_error(true));
 
 	sys_net.notice("P2P port %d was bound!", port);
 }
