@@ -978,7 +978,8 @@ extern CellGameError check_is_gamedata_removeable(std::string_view vpath, bool a
 	{
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
-	else if (usz pos = vpath.find_first_of('/', hdd_game.size() + 1); pos == umax || (!allow_usrdir && (!vpath.substr(pos).starts_with("/USRDIR/"sv) || vpath.size() == pos + 7)))
+
+	if (usz pos = vpath.find_first_of('/', hdd_game.size() + 1); pos == umax || (!allow_usrdir && (!vpath.substr(pos).starts_with("/USRDIR/"sv) || vpath.size() == pos + 7)))
 	{
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
