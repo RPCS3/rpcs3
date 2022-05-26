@@ -269,7 +269,6 @@ QSlider#sizeSlider::groove:horizontal {
 	height: 1.5em;
 }
 
-
 /* Log and Debugger borders */
 QTextEdit, QPlainTextEdit {
 	background: rgba(52, 49, 40, 0.9);
