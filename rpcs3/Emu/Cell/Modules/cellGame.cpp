@@ -988,7 +988,7 @@ extern CellGameError check_is_gamedata_removeable(std::string_view vpath, bool a
 		name = vpath.substr(hdd_game.size() + 1, pos - hdd_game.size() - 1);
 	}
 
-	if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == vfs::escape(name))
+	if (allow_usrdir && Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == vfs::escape(name))
 	{
 		// Boot patch cannot delete its own directory
 		return CELL_GAME_ERROR_NOTSUPPORTED;
@@ -1007,7 +1007,7 @@ extern CellGameError check_is_gamedata_removeable(std::string_view vpath, bool a
 		return CELL_GAME_ERROR_NOTFOUND;
 	}
 
-	if (psf::get_string(sfo, "CATEGORY") != "GD")
+	if (allow_usrdir && psf::get_string(sfo, "CATEGORY") != "GD")
 	{
 		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
