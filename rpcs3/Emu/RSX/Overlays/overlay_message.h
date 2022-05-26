@@ -10,7 +10,8 @@ namespace rsx
 		class message_item
 		{
 		public:
-			message_item(localized_string_id msg_id);
+			template <typename T>
+			message_item(T msg_id);
 			void update(usz index, u64 time);
 
 			u64 get_expiration() const;
