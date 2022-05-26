@@ -89,5 +89,10 @@ namespace rsx
 		{
 			m_data.release(0);
 		}
+
+		operator bool () const
+		{
+			return m_data.observe() != 0;
+		}
 	};
 }

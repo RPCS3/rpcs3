@@ -2243,6 +2243,8 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 {
 	sceNp.todo("sceNpCustomMenuRegisterActions(menu=*0x%x, handler=*0x%x, userArg=*0x%x, options=0x%x)", menu, handler, userArg, options);
 
+	// TODO: Is there any error if options is not 0 ?
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
@@ -2260,6 +2262,8 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 		return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
 	}
 
+	std::vector<np::np_handler::custom_menu_action> actions;
+
 	for (u32 i = 0; i < menu->numActions; i++)
 	{
 		if (!menu->actions[i].name)
@@ -2267,11 +2271,37 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 			return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
 		}
 
+		// TODO: Is there any error if menu->actions[i].options is not 0 ?
+
+		// TODO: check name
+		if (false)
+		{
+			return SCE_NP_UTIL_ERROR_INVALID_CHARACTER;
+		}
+
 		if (!memchr(menu->actions[i].name.get_ptr(), '\0', SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX))
 		{
 			return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
 		}
+
+		np::np_handler::custom_menu_action action{};
+		action.id   = static_cast<s32>(actions.size());
+		action.mask = menu->actions[i].mask;
+		action.name = menu->actions[i].name.get_ptr();
+
+		sceNp.notice("Registering menu action: id=%d, mask=0x%x, name=%s", action.id, action.mask, action.name);
+
+		actions.push_back(std::move(action));
 	}
+
+	// TODO: add the custom menu to the friendlist and profile dialogs
+	std::lock_guard lock(nph.mutex_custom_menu);
+	nph.custom_menu_handler = handler;
+	nph.custom_menu_user_arg = userArg;
+	nph.custom_menu_actions = std::move(actions);
+	nph.custom_menu_registered = true;
+	nph.custom_menu_activation = {};
+	nph.custom_menu_exception_list = {};
 
 	return CELL_OK;
 }
@@ -2280,6 +2310,8 @@ error_code sceNpCustomMenuActionSetActivation(vm::cptr<SceNpCustomMenuIndexArray
 {
 	sceNp.todo("sceNpCustomMenuActionSetActivation(array=*0x%x, options=0x%x)", array, options);
 
+	// TODO: Is there any error if options is not 0 ?
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
@@ -2287,12 +2319,19 @@ error_code sceNpCustomMenuActionSetActivation(vm::cptr<SceNpCustomMenuIndexArray
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
 
-	// TODO: SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED
+	std::lock_guard lock(nph.mutex_custom_menu);
+
+	if (!nph.custom_menu_registered)
+	{
+		return SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED;
+	}
 
 	if (!array)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
 	}
+
+	nph.custom_menu_activation = *array;
 
 	return CELL_OK;
 }
@@ -2301,6 +2340,8 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 {
 	sceNp.todo("sceNpCustomMenuRegisterExceptionList(items=*0x%x, numItems=%d, options=0x%x)", items, numItems, options);
 
+	// TODO: Is there any error if options is not 0 ?
+
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_init)
@@ -2308,7 +2349,12 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
 
-	// TODO: SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED
+	std::lock_guard lock(nph.mutex_custom_menu);
+
+	if (!nph.custom_menu_registered)
+	{
+		return SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED;
+	}
 
 	if (numItems > SCE_NP_CUSTOM_MENU_EXCEPTION_ITEMS_MAX)
 	{
@@ -2318,6 +2364,14 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 	if (!items)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
+	}
+
+	nph.custom_menu_exception_list.clear();
+
+	for (u32 i = 0; i < numItems; i++)
+	{
+		// TODO: Are the exceptions checked ?
+		nph.custom_menu_exception_list.push_back(items[i]);
 	}
 
 	return CELL_OK;

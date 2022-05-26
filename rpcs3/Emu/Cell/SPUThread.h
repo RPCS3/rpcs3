@@ -171,6 +171,9 @@ struct spu_channel
 	// Low 32 bits contain value
 	atomic_t<u64> data;
 
+	// Pending value to be inserted when it is possible at pop()
+	atomic_t<u32> jostling_value;
+
 public:
 	static constexpr u32 off_wait  = 32;
 	static constexpr u32 off_count = 63;
@@ -258,12 +261,25 @@ public:
 	}
 
 	// Pop unconditionally (loading last value), may require notification
+	// If the SPU tries to insert a value, do it instead the SPU
 	u32 pop()
 	{
 		// Value is not cleared and may be read again
-		const u64 old = data.fetch_and(~(bit_count | bit_wait));
+		constexpr u64 mask = bit_count | bit_wait;
 
-		if (old & bit_wait)
+		const u64 old = data.fetch_op([&](u64& data)
+		{
+			if ((data & mask) == mask)
+			{
+				// Insert the pending value, leave no time in which the channel has no data
+				data = bit_count | jostling_value;
+				return;
+			}
+
+			data &= ~mask;
+		});
+
+		if ((old & mask) == mask)
 		{
 			data.notify_one();
 		}
@@ -300,6 +316,11 @@ public:
 
 			if (spu.is_stopped())
 			{
+				if (u64 old2 = data.exchange(0); old2 & bit_count)
+				{
+					return static_cast<u32>(old2);
+				}
+
 				return -1;
 			}
 
@@ -310,40 +331,48 @@ public:
 	// Waiting for channel push state availability, actually pushing if specified
 	bool push_wait(cpu_thread& spu, u32 value, bool push = true)
 	{
+		u64 state;
+		data.fetch_op([&](u64& data)
+		{
+			if (data & bit_count) [[unlikely]]
+			{
+				jostling_value.release(push ? value : static_cast<u32>(data));
+				data |= bit_wait;
+			}
+			else if (push)
+			{
+				data = bit_count | value;
+			}
+			else
+			{
+				state = data;
+				return false;
+			}
+
+			state = data;
+			return true;
+		});
+
 		while (true)
 		{
-			u64 state;
-			data.fetch_op([&](u64& data)
-			{
-				if (data & bit_count) [[unlikely]]
-				{
-					data |= bit_wait;
-				}
-				else if (push)
-				{
-					data = bit_count | value;
-				}
-				else
-				{
-					state = data;
-					return false;
-				}
-
-				state = data;
-				return true;
-			});
-
 			if (!(state & bit_wait))
 			{
+				if (!push)
+				{
+					data &= ~bit_count;
+				}
+
 				return true;
 			}
 
 			if (spu.is_stopped())
 			{
+				data &= ~bit_wait;
 				return false;
 			}
 
 			thread_ctrl::wait_on(data, state);
+			state = data;
 		}
 	}
 
@@ -369,7 +398,7 @@ struct spu_channel_4_t
 	{
 		u8 waiting;
 		u8 count;
-		u8 _pad[2];
+		u16 value3_inval;
 		u32 value0;
 		u32 value1;
 		u32 value2;
@@ -396,7 +425,12 @@ public:
 			case 0: data.value0 = value; break;
 			case 1: data.value1 = value; break;
 			case 2: data.value2 = value; break;
-			default: data.count = 4;
+			default:
+			{
+				data.count = 4;
+				data.value3_inval++; // Ensure the SPU reads the most recent value3 write in try_pop by re-loading
+				break;
+			}
 			}
 
 			if (data.waiting)
@@ -728,6 +762,8 @@ public:
 
 	u64 ch_dec_start_timestamp; // timestamp of writing decrementer value
 	u32 ch_dec_value; // written decrementer value
+	bool is_dec_frozen = false;
+	std::pair<u32, u32> read_dec() const; // Read decrementer
 
 	atomic_t<u32> run_ctrl; // SPU Run Control register (only provided to get latest data written)
 	shared_mutex run_ctrl_mtx;

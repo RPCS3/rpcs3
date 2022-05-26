@@ -2602,7 +2602,7 @@ void main_window::RemoveDiskCache()
 {
 	const std::string cache_dir = rpcs3::utils::get_hdd1_dir() + "/caches";
 
-	if (fs::is_dir(cache_dir) && fs::remove_all(cache_dir, false))
+	if (fs::remove_all(cache_dir, false))
 	{
 		QMessageBox::information(this, tr("Cache Cleared"), tr("Disk cache was cleared successfully"));
 	}
@@ -2666,7 +2666,7 @@ void main_window::CreateFirmwareCache()
 	Emu.GracefulShutdown(false);
 	Emu.SetForceBoot(true);
 
-	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash(), "", true);
+	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash() + "sys", "", true);
 		error != game_boot_result::no_errors)
 	{
 		gui_log.error("Creating firmware cache failed: reason: %s", error);

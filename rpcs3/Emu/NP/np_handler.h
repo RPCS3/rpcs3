@@ -166,6 +166,21 @@ namespace np
 		// For signaling
 		void req_sign_infos(const std::string& npid, u32 conn_id);
 
+		// For custom menu
+		struct custom_menu_action
+		{
+			s32 id = 0;
+			u32 mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_ME;
+			std::string name;
+		};
+		shared_mutex mutex_custom_menu;
+		bool custom_menu_registered = false;
+		vm::ptr<SceNpCustomMenuEventHandler> custom_menu_handler{};
+		vm::ptr<void> custom_menu_user_arg{};
+		std::vector<custom_menu_action> custom_menu_actions;
+		SceNpCustomMenuIndexArray custom_menu_activation{};
+		std::vector<SceNpCustomMenuActionExceptions> custom_menu_exception_list{};
+
 		// Mutex for NP status change
 		shared_mutex mutex_status;
 

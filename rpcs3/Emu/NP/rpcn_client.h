@@ -5,6 +5,7 @@
 #include <thread>
 #include <semaphore>
 #include "Utilities/mutex.h"
+#include "Emu/localized_string.h"
 
 #include "util/asm.hpp"
 
@@ -217,6 +218,9 @@ namespace rpcn
 		std::set<std::string> requests_received;
 		std::set<std::string> blocked;
 	};
+
+	localized_string_id rpcn_state_to_localized_string_id(rpcn::rpcn_state state);
+	std::string rpcn_state_to_string(rpcn::rpcn_state state);
 
 	class rpcn_client
 	{
