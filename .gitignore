@@ -45,6 +45,9 @@
 !/bin/soft_oal.dll
 !/bin/xaudio2_9redist.dll
 
+# Test Programs
+!/bin/test/
+
 # Themes
 !/bin/GuiConfigs/
 /bin/GuiConfigs/*.ini
