@@ -968,6 +968,57 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	return CELL_OK;
 }
 
+extern CellGameError check_is_gamedata_removeable(std::string_view vpath, bool allow_usrdir = true)
+{
+	constexpr std::string_view hdd_game = "/dev_hdd0/game/";
+
+	std::string_view name;
+
+	if (!vpath.starts_with(hdd_game))
+	{
+		return CELL_GAME_ERROR_NOTSUPPORTED;
+	}
+	else if (usz pos = vpath.find_first_of('/', hdd_game.size() + 1); pos == umax || (!allow_usrdir && (!vpath.substr(pos).starts_with("/USRDIR/"sv) || vpath.size() == pos + 7)))
+	{
+		return CELL_GAME_ERROR_NOTSUPPORTED;
+	}
+	else
+	{
+		name = vpath.substr(hdd_game.size() + 1, pos - hdd_game.size() - 1);
+	}
+
+	if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == vfs::escape(name))
+	{
+		// Boot patch cannot delete its own directory
+		return CELL_GAME_ERROR_NOTSUPPORTED;
+	}
+
+	if (name.starts_with("_GDATA_"sv))
+	{
+		return {};
+	}
+
+	const auto [sfo, psf_error] = psf::load(vfs::get(vpath.substr(0, hdd_game.size() + name.size())) + "/PARAM.SFO");
+
+	if (psf_error == psf::error::stream)
+	{
+		// Nothing to remove
+		return CELL_GAME_ERROR_NOTFOUND;
+	}
+
+	if (psf::get_string(sfo, "CATEGORY") != "GD")
+	{
+		return CELL_GAME_ERROR_NOTSUPPORTED;
+	}
+
+	if (auto id = psf::get_string(sfo, "TITLE_ID"); !id.empty() && id != Emu.GetTitleID())
+	{
+		cellGame.error("cellGameDeleteGameData(%s): Attempts to delete GameData with TITLE ID which does not match the program's (%s)", id, Emu.GetTitleID());
+	}
+
+	return {};
+}
+
 error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 {
 	cellGame.warning("cellGameDeleteGameData(dirName=%s)", dirName);
@@ -984,28 +1035,9 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 
 	auto remove_gd = [&]() -> error_code
 	{
-		if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == vfs::escape(name))
+		if (auto err = check_is_gamedata_removeable("/dev_hdd0/game/"s + name))
 		{
-			// Boot patch cannot delete its own directory
-			return CELL_GAME_ERROR_NOTSUPPORTED;
-		}
-
-		const auto [sfo, psf_error] = psf::load(dir + "/PARAM.SFO");
-
-		if (psf::get_string(sfo, "CATEGORY") != "GD" && psf_error != psf::error::stream)
-		{
-			return {CELL_GAME_ERROR_NOTSUPPORTED, psf_error};
-		}
-
-		if (sfo.empty())
-		{
-			// Nothing to remove
-			return CELL_GAME_ERROR_NOTFOUND;
-		}
-
-		if (auto id = psf::get_string(sfo, "TITLE_ID"); !id.empty() && id != Emu.GetTitleID())
-		{
-			cellGame.error("cellGameDeleteGameData(%s): Attempts to delete GameData with TITLE ID which does not match the program's (%s)", id, Emu.GetTitleID());
+			return err;
 		}
 
 		// Actually remove game data

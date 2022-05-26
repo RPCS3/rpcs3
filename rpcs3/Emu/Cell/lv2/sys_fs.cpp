@@ -8,6 +8,7 @@
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
+#include "sys_process.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Overlays/overlay_utils.h" // for ascii8_to_utf16
 #include "Utilities/StrUtil.h"
@@ -26,6 +27,22 @@ lv2_fs_mount_point g_mp_sys_host_root{"", 512, 512, lv2_mp_flag::strict_get_bloc
 lv2_fs_mount_point g_mp_sys_dev_flash{"", 512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_flash2{ "", 512, 8192, lv2_mp_flag::no_uid_gid }; // TODO confirm
 lv2_fs_mount_point g_mp_sys_dev_flash3{ "", 512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid }; // TODO confirm
+
+enum CellGameError : u32;
+CellGameError check_is_gamedata_removeable(std::string_view vpath, bool allow_usrdir = false);
+
+bool is_writable_check_for_hdd0_data(const lv2_fs_mount_point* mp, std::string_view vpath)
+{
+	if (mp == &g_mp_sys_dev_hdd0 && !g_ps3_process_info.has_root_perm())
+	{
+		if (check_is_gamedata_removeable(vpath))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
 
 template<>
 void fmt_class_string<lv2_file_type>::format(std::string& out, u64 arg)
@@ -406,7 +423,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 	if (mp->flags & lv2_mp_flag::read_only)
 	{
-		if ((flags & CELL_FS_O_ACCMODE) != CELL_FS_O_RDONLY && fs::is_file(local_path))
+		if ((flags & (CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_APPEND)) != CELL_FS_O_RDONLY && fs::is_file(local_path))
 		{
 			return {CELL_EPERM};
 		}
@@ -627,6 +644,11 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 		default:
 			break;
 		}
+	}
+
+	if ((flags & (CELL_FS_O_ACCMODE | CELL_FS_O_CREAT | CELL_FS_O_TRUNC | CELL_FS_O_APPEND)) != CELL_FS_O_RDONLY && !is_writable_check_for_hdd0_data(mp, path))
+	{
+		return {CELL_EPERM, path};
 	}
 
 	auto [error, file] = open_raw(local_path, flags, mode, type, mp);
@@ -1070,7 +1092,8 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		return {path_error, vpath};
 	}
 
-	const std::string local_path = vfs::get(vpath);
+	std::string simple_path;
+	const std::string local_path = vfs::get(vpath, nullptr, &simple_path);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
 
@@ -1144,7 +1167,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	sb->size = info.is_directory ? mp->block_size : info.size;
 	sb->blksize = mp->block_size;
 
-	if (mp->flags & lv2_mp_flag::read_only)
+	if (mp->flags & lv2_mp_flag::read_only || !is_writable_check_for_hdd0_data(mp, simple_path))
 	{
 		// Remove write permissions
 		sb->mode &= ~0222;
@@ -1337,7 +1360,8 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 		return {path_error, vpath};
 	}
 
-	const std::string local_path = vfs::get(vpath);
+	std::string simple_path;
+	const std::string local_path = vfs::get(vpath, nullptr, &simple_path);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
 
@@ -1357,6 +1381,11 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 	}
 
 	std::lock_guard lock(mp->mutex);
+
+	if (!is_writable_check_for_hdd0_data(mp, simple_path))
+	{
+		return {CELL_EPERM, path};
+	}
 
 	if (!fs::remove_dir(local_path))
 	{
@@ -1388,7 +1417,8 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 		return {path_error, vpath};
 	}
 
-	const std::string local_path = vfs::get(vpath);
+	std::string simple_path;
+	const std::string local_path = vfs::get(vpath, nullptr, &simple_path);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
 
@@ -1413,6 +1443,11 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 	}
 
 	std::lock_guard lock(mp->mutex);
+
+	if (!is_writable_check_for_hdd0_data(mp, simple_path))
+	{
+		return {CELL_EPERM, path};
+	}
 
 	// Provide default mp root or use parent directory if not available (such as host_root)
 	if (!vfs::host::unlink(local_path, vfs::get(mp->root.empty() ? vpath.substr(0, vpath.find_last_of('/')) : mp->root)))
@@ -2262,7 +2297,8 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 		return {path_error, vpath};
 	}
 
-	const std::string local_path = vfs::get(vpath);
+	std::string simple_path;
+	const std::string local_path = vfs::get(vpath, nullptr, &simple_path);
 
 	const auto mp = lv2_fs_object::get_mp(vpath);
 
@@ -2282,6 +2318,11 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 	}
 
 	std::lock_guard lock(mp->mutex);
+
+	if (!is_writable_check_for_hdd0_data(mp, simple_path))
+	{
+		return {CELL_EPERM, path};
+	}
 
 	if (!fs::truncate_file(local_path, size))
 	{
