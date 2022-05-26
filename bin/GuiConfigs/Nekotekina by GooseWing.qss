@@ -115,7 +115,7 @@ QHeaderView::section {
 QTabWidget::tab-bar {
 	alignment: center; /* Centel all tabs */
 }
-/* Move tabs on log viewer back to left side */
+/* Move tabs on log viewer back to the left side */
 QTabWidget#tab_widget_log::tab-bar {
 	alignment: left;
 }
@@ -143,6 +143,14 @@ QTabBar::tab::selected {
 	margin-top: 0.15em;
 	border-top-left-radius: 0.3em;
 	border-top-right-radius: 0.3em;
+}
+/* Fix the tabs in VFS being cropped */
+#vfs_dialog QTabBar::tab {
+	width: 5.50em;
+}
+/* The first tab is wider than others */
+#vfs_dialog QTabBar::tab:first {
+	width: 7.45em;
 }
 
 
