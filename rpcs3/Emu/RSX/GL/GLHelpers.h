@@ -66,6 +66,12 @@ namespace gl
 		gl##func(object_name, __VA_ARGS__) :\
 		gl##func##EXT(object_name, __VA_ARGS__)
 
+#define DSA_CALL3(funcARB, funcDSA, ...)\
+	if (::gl::get_driver_caps().ARB_dsa_supported)\
+		gl##funcARB(__VA_ARGS__);\
+	else\
+		gl##funcDSA##EXT(__VA_ARGS__);
+
 	class fence;
 
 	void enable_debugging();
@@ -2090,6 +2096,10 @@ public:
 			GLuint m_id = GL_NONE;
 			fbo &m_parent;
 
+			attachment(fbo& parent)
+				: m_parent(parent)
+			{}
+
 		public:
 			attachment(fbo& parent, type type)
 				: m_id(static_cast<int>(type))
@@ -2120,25 +2130,21 @@ public:
 
 			void operator = (const rbo& rhs)
 			{
-				save_binding_state save(m_parent);
 				m_parent.m_resource_bindings[m_id] = rhs.id();
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, m_id, GL_RENDERBUFFER, rhs.id());
+				DSA_CALL2(NamedFramebufferRenderbuffer, m_parent.id(), m_id, GL_RENDERBUFFER, rhs.id());
 			}
 
 			void operator = (const texture& rhs)
 			{
-				save_binding_state save(m_parent);
-
 				ensure(rhs.get_target() == texture::target::texture2D);
 				m_parent.m_resource_bindings[m_id] = rhs.id();
-				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), 0);
+				DSA_CALL2(NamedFramebufferTexture, m_parent.id(), m_id, rhs.id(), 0);
 			}
 
 			void operator = (const GLuint rhs)
 			{
-				save_binding_state save(m_parent);
 				m_parent.m_resource_bindings[m_id] = rhs;
-				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs, 0);
+				DSA_CALL2(NamedFramebufferTexture, m_parent.id(), m_id, rhs, 0);
 			}
 		};
 
@@ -2167,10 +2173,18 @@ public:
 			using attachment::operator =;
 		};
 
+		struct null_attachment : public attachment
+		{
+			null_attachment(fbo& parent)
+				: attachment(parent)
+			{}
+		};
+
 		indexed_attachment color{ *this, attachment::type::color };
 		attachment depth{ *this, attachment::type::depth };
 		attachment stencil{ *this, attachment::type::stencil };
 		attachment depth_stencil{ *this, attachment::type::depth_stencil };
+		null_attachment no_color{ *this };
 
 		enum class target
 		{

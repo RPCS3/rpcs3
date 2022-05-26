@@ -77,28 +77,26 @@ namespace gl
 			return;
 		}
 
-		GLint old_fbo;
 		GLint viewport[4];
+		std::unique_ptr<fbo::save_binding_state> save_fbo;
 
 		if (target_texture)
 		{
-			glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
-			glBindFramebuffer(GL_FRAMEBUFFER, fbo.id());
+			save_fbo = std::make_unique<fbo::save_binding_state>(fbo);
 
 			if (depth_target)
 			{
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, target_texture, 0);
-				glDrawBuffer(GL_NONE);
+				fbo.draw_buffer(fbo.no_color);
+				fbo.depth_stencil = target_texture;
 			}
 			else
 			{
-				GLenum buffer = GL_COLOR_ATTACHMENT0;
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target_texture, 0);
-				glDrawBuffers(1, &buffer);
+				fbo.color[0] = target_texture;
+				fbo.draw_buffer(fbo.color[0]);
 			}
 		}
 
-		if (!target_texture || glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE)
+		if (!target_texture || fbo.check())
 		{
 			// Set initial state
 			glViewport(region.x1, region.y1, region.width(), region.height());
@@ -130,18 +128,13 @@ namespace gl
 			bind_resources();
 			emit_geometry();
 
-			// Clean up
+			glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+
 			if (target_texture)
 			{
-				if (depth_target)
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
-				else
-					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
-
-				glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
+				fbo.color[0] = GL_NONE;
+				fbo.depth_stencil = GL_NONE;
 			}
-
-			glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
 		}
 		else
 		{
