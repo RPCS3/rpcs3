@@ -21,13 +21,13 @@ namespace gl
 
 	std::pair<buffer*, buffer*> prepare_compute_resources(usz staging_data_length)
 	{
-		if (g_upload_transfer_buffer.size() < staging_data_length)
+		if (g_upload_transfer_buffer.size() < static_cast<GLsizeiptr>(staging_data_length))
 		{
 			g_upload_transfer_buffer.remove();
 			g_upload_transfer_buffer.create(staging_data_length, nullptr, buffer::memory_type::host_visible, GL_STREAM_DRAW);
 		}
 
-		if (g_compute_decode_buffer.size() < staging_data_length * 3)
+		if (g_compute_decode_buffer.size() < static_cast<GLsizeiptr>(staging_data_length) * 3)
 		{
 			g_compute_decode_buffer.remove();
 			g_compute_decode_buffer.create(std::max<GLsizeiptr>(512, staging_data_length * 3), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
@@ -41,6 +41,31 @@ namespace gl
 		g_typeless_transfer_buffer.remove();
 		g_upload_transfer_buffer.remove();
 		g_compute_decode_buffer.remove();
+	}
+
+	template <typename WordType, bool SwapBytes>
+	void do_deswizzle_transformation(gl::command_context& cmd, u32 block_size, buffer* dst, buffer* src, u32 data_length, u16 width, u16 height, u16 depth)
+	{
+		switch (block_size)
+		{
+		case 4:
+			gl::get_compute_task<gl::cs_deswizzle_3d<u32, WordType, SwapBytes>>()->run(
+				cmd, dst, 0, src, 0,
+				data_length, width, height, depth, 1);
+			break;
+		case 8:
+			gl::get_compute_task<gl::cs_deswizzle_3d<u64, WordType, SwapBytes>>()->run(
+				cmd, dst, 0, src, 0,
+				data_length, width, height, depth, 1);
+			break;
+		case 16:
+			gl::get_compute_task<gl::cs_deswizzle_3d<u128, WordType, SwapBytes>>()->run(
+				cmd, dst, 0, src, 0,
+				data_length, width, height, depth, 1);
+			break;
+		default:
+			fmt::throw_exception("Unreachable");
+		}
 	}
 
 	GLenum get_target(rsx::texture_dimension_extended type)
@@ -623,11 +648,12 @@ namespace gl
 			const std::vector<rsx::subresource_layout> &input_layouts,
 			bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
 	{
+		const auto driver_caps = gl::get_driver_caps();
 		rsx::texture_uploader_capabilities caps
 		{
 			.supports_byteswap = true,
 			.supports_vtc_decoding = false,
-			.supports_hw_deswizzle = false,
+			.supports_hw_deswizzle = driver_caps.ARB_compute_shader_supported,
 			.supports_zero_copy = false,
 			.alignment = 4
 		};
@@ -635,9 +661,12 @@ namespace gl
 		pixel_unpack_settings unpack_settings;
 		unpack_settings.row_length(0).alignment(4);
 
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+
 		if (rsx::is_compressed_host_format(format)) [[likely]]
 		{
-			caps.supports_vtc_decoding = gl::get_driver_caps().vendor_NVIDIA;
+			caps.supports_vtc_decoding = driver_caps.vendor_NVIDIA;
 			unpack_settings.apply();
 
 			glBindTexture(static_cast<GLenum>(dst->get_target()), dst->id());
@@ -688,7 +717,7 @@ namespace gl
 		else
 		{
 			bool apply_settings = true;
-			bool use_compute_transform = false;
+			bool use_compute_transform = is_swizzled;
 			buffer *upload_scratch_mem = nullptr, *compute_scratch_mem = nullptr;
 			image_memory_requirements mem_info;
 			pixel_buffer_layout mem_layout;
@@ -697,6 +726,8 @@ namespace gl
 			void* out_pointer = staging_buffer.data();
 			u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
 			u64 image_linear_size;
+
+			gl::buffer deswizzle_buf;
 
 			switch (gl_type)
 			{
@@ -710,8 +741,6 @@ namespace gl
 			case GL_FLOAT:
 			case GL_UNSIGNED_INT_24_8:
 			case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
-				mem_layout.format = gl_format;
-				mem_layout.type = gl_type;
 				mem_layout.swap_bytes = true;
 				mem_layout.size = 4;
 				use_compute_transform = true;
@@ -747,14 +776,61 @@ namespace gl
 
 				if (use_compute_transform)
 				{
+					// 0. Preconf
+					mem_layout.swap_bytes = op.require_swap;
+					mem_layout.format = gl_format;
+					mem_layout.type = gl_type;
+
 					// 1. Unmap buffer
 					upload_scratch_mem->unmap();
 
 					// 2. Upload memory to GPU
-					upload_scratch_mem->copy_to(compute_scratch_mem, 0, 0, image_linear_size);
+					if (!op.require_deswizzle)
+					{
+						upload_scratch_mem->copy_to(compute_scratch_mem, 0, 0, image_linear_size);
+					}
+					else
+					{
+						// 2.1 Copy data to deswizzle buf
+						if (deswizzle_buf.size() < image_linear_size)
+						{
+							deswizzle_buf.remove();
+							deswizzle_buf.create(gl::buffer::target::ssbo, image_linear_size, nullptr, gl::buffer::memory_type::local);
+						}
+
+						upload_scratch_mem->copy_to(&deswizzle_buf, 0, 0, image_linear_size);
+
+						// 2.2 Apply compute transform to deswizzle input and dump it in compute_scratch_mem
+						ensure(op.element_size == 2 || op.element_size == 4);
+						const auto block_size = op.element_size * op.block_length;
+
+						if (op.require_swap)
+						{
+							mem_layout.swap_bytes = false;
+
+							if (op.element_size == 4) [[ likely ]]
+							{
+								do_deswizzle_transformation<u32, true>(cmd, block_size, compute_scratch_mem, &deswizzle_buf, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+							}
+							else
+							{
+								do_deswizzle_transformation<u16, true>(cmd, block_size, compute_scratch_mem, &deswizzle_buf, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+							}
+						}
+						else
+						{
+							if (op.element_size == 4) [[ likely ]]
+							{
+								do_deswizzle_transformation<u32, false>(cmd, block_size, compute_scratch_mem, &deswizzle_buf, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+							}
+							else
+							{
+								do_deswizzle_transformation<u16, false>(cmd, block_size, compute_scratch_mem, &deswizzle_buf, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+							}
+						}
+					}
 
 					// 3. Update configuration
-					mem_layout.swap_bytes = op.require_swap;
 					mem_info.image_size_in_texels = image_linear_size / block_size_in_bytes;
 					mem_info.image_size_in_bytes = image_linear_size;
 					mem_info.memory_required = 0;
@@ -773,6 +849,8 @@ namespace gl
 					dst->copy_from(out_pointer, static_cast<texture::format>(gl_format), static_cast<texture::type>(gl_type), layout.level, region, unpack_settings);
 				}
 			}
+
+			deswizzle_buf.remove();
 		}
 	}
 

@@ -762,8 +762,6 @@ void GLGSRender::load_program_env()
 	const bool update_instruction_buffers = (!!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program));
 	const bool update_raster_env = (rsx::method_registers.polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
 
-	gl_state.use_program(m_program->id());
-
 	if (manually_flush_ring_buffers)
 	{
 		if (update_fragment_env) m_fragment_env_buffer->reserve_storage_on_heap(128);
@@ -801,13 +799,13 @@ void GLGSRender::load_program_env()
 		const usz transform_constants_size = (!m_vertex_prog || m_vertex_prog->has_indexed_constants) ? 8192 : m_vertex_prog->constant_ids.size() * 16;
 		if (transform_constants_size)
 		{
-			auto mapping = m_transform_constants_buffer->alloc_from_heap(transform_constants_size, m_uniform_buffer_offset_align);
+			auto mapping = m_transform_constants_buffer->alloc_from_heap(static_cast<u32>(transform_constants_size), m_uniform_buffer_offset_align);
 			auto buf = static_cast<u8*>(mapping.first);
 
 			const std::vector<u16>& constant_ids = (transform_constants_size == 8192) ? std::vector<u16>{} : m_vertex_prog->constant_ids;
 			fill_vertex_program_constants_data(buf, constant_ids);
 
-			m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, transform_constants_size);
+			m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, static_cast<u32>(transform_constants_size));
 		}
 	}
 
