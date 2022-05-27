@@ -49,7 +49,6 @@ enum class emu_settings_type
 
 	// Graphics
 	Renderer,
-	Resolution,
 	AspectRatio,
 	FrameLimit,
 	MSAA,
@@ -216,7 +215,6 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},
-	{ emu_settings_type::Resolution,                 { "Video", "Resolution"}},
 	{ emu_settings_type::AspectRatio,                { "Video", "Aspect ratio"}},
 	{ emu_settings_type::FrameLimit,                 { "Video", "Frame limit"}},
 	{ emu_settings_type::MSAA,                       { "Video", "MSAA"}},
