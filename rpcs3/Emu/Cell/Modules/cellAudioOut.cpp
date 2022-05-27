@@ -6,7 +6,7 @@
 
 LOG_CHANNEL(cellSysutil);
 
-const extern std::unordered_map<audio_downmix, CellAudioOutChnum, value_hash<audio_downmix>> g_audio_out_chnum_id
+const extern std::unordered_map<audio_downmix, u32, value_hash<audio_downmix>> g_audio_out_chnum_id
 {
 	{ audio_downmix::downmix_to_stereo, CELL_AUDIO_OUT_CHNUM_2 },
 	{ audio_downmix::downmix_to_5_1,    CELL_AUDIO_OUT_CHNUM_6 },
