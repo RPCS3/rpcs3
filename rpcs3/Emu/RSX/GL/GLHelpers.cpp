@@ -252,7 +252,7 @@ namespace gl
 	void fbo::draw_buffers(const std::initializer_list<attachment>& indexes) const
 	{
 		rsx::simple_array<GLenum> ids;
-		ids.reserve(indexes.size());
+		ids.reserve(::size32(indexes));
 
 		for (auto &index : indexes)
 			ids.push_back(index.id());

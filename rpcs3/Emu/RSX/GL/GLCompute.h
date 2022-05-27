@@ -2,6 +2,7 @@
 
 #include "Emu/IdManager.h"
 #include "GLHelpers.h"
+#include "../rsx_utils.h"
 
 #include <unordered_map>
 
@@ -223,6 +224,116 @@ namespace gl
 			m_program.uniforms["out_ptr"] = dst_offset - data_offset;
 
 			cs_shuffle_base::run(cmd, data, src_length, data_offset);
+		}
+	};
+
+	// Reverse morton-order block arrangement
+	template <typename _BlockType, typename _BaseType, bool _SwapBytes>
+	struct cs_deswizzle_3d : compute_task
+	{
+		union params_t
+		{
+			u32 data[7];
+
+			struct
+			{
+				u32 width;
+				u32 height;
+				u32 depth;
+				u32 logw;
+				u32 logh;
+				u32 logd;
+				u32 mipmaps;
+			};
+		}
+		params;
+
+		gl::buffer param_buffer;
+
+		const gl::buffer* src_buffer = nullptr;
+		const gl::buffer* dst_buffer = nullptr;
+		u32 in_offset = 0;
+		u32 out_offset = 0;
+		u32 block_length = 0;
+
+		cs_deswizzle_3d()
+		{
+			ensure((sizeof(_BlockType) & 3) == 0); // "Unsupported block type"
+
+			m_src =
+			#include "../Program/GLSLSnippets/GPUDeswizzle.glsl"
+			;
+
+			std::string transform;
+			if constexpr (_SwapBytes)
+			{
+				if constexpr (sizeof(_BaseType) == 4)
+				{
+					transform = "bswap_u32";
+				}
+				else if constexpr (sizeof(_BaseType) == 2)
+				{
+					transform = "bswap_u16";
+				}
+				else
+				{
+					fmt::throw_exception("Unreachable");
+				}
+			}
+
+			const std::pair<std::string_view, std::string> syntax_replace[] =
+			{
+				{ "%set, ", ""},
+				{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0))},
+				{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(2)) },
+				{ "%ws", std::to_string(optimal_group_size) },
+				{ "%_wordcount", std::to_string(sizeof(_BlockType) / 4) },
+				{ "%f", transform }
+			};
+
+			m_src = fmt::replace_all(m_src, syntax_replace);
+
+			param_buffer.create(gl::buffer::target::uniform, 32, nullptr, gl::buffer::memory_type::local, GL_DYNAMIC_COPY);
+		}
+
+		~cs_deswizzle_3d()
+		{
+			param_buffer.remove();
+		}
+
+		void bind_resources() override
+		{
+			src_buffer->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), in_offset, block_length);
+			dst_buffer->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), in_offset, block_length);
+			param_buffer.bind_range(gl::buffer::target::uniform, GL_COMPUTE_BUFFER_SLOT(2), 0, sizeof(params));
+		}
+
+		void set_parameters(gl::command_context& /*cmd*/)
+		{
+			param_buffer.sub_data(0, sizeof(params), params.data);
+		}
+
+		void run(gl::command_context& cmd, const gl::buffer* dst, u32 out_offset, const gl::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps)
+		{
+			dst_buffer = dst;
+			src_buffer = src;
+
+			this->in_offset = in_offset;
+			this->out_offset = out_offset;
+			this->block_length = data_length;
+
+			params.width = width;
+			params.height = height;
+			params.depth = depth;
+			params.mipmaps = mipmaps;
+			params.logw = rsx::ceil_log2(width);
+			params.logh = rsx::ceil_log2(height);
+			params.logd = rsx::ceil_log2(depth);
+			set_parameters(cmd);
+
+			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
+			const u32 linear_invocations = utils::aligned_div(data_length, num_bytes_per_invocation);
+			compute_task::run(cmd, linear_invocations);
 		}
 	};
 

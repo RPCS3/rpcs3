@@ -613,6 +613,14 @@ namespace gl
 						fmt::throw_exception("Unsupported buffer usage 0x%x", usage);
 					}
 				}
+				else
+				{
+					// Local memory hints
+					if (usage == GL_DYNAMIC_COPY)
+					{
+						flags |= GL_DYNAMIC_STORAGE_BIT;
+					}
+				}
 
 				if ((flags & GL_MAP_READ_BIT) && !caps.vendor_AMD)
 				{
@@ -624,7 +632,6 @@ namespace gl
 					flags |= GL_CLIENT_STORAGE_BIT;
 				}
 
-				save_binding_state save(current_target(), *this);
 				DSA_CALL2(NamedBufferStorage, m_id, size, data_, flags);
 				m_size = size;
 			}
@@ -674,6 +681,7 @@ namespace gl
 		void create()
 		{
 			glGenBuffers(1, &m_id);
+			save_binding_state save(current_target(), *this);
 		}
 
 		void create(GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW)
@@ -684,8 +692,9 @@ namespace gl
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW)
 		{
-			create();
 			m_target = target_;
+
+			create();
 			allocate(size, data_, type, usage);
 		}
 
@@ -748,7 +757,7 @@ namespace gl
 
 		void sub_data(GLsizeiptr offset, GLsizeiptr length, GLvoid* data)
 		{
-			ensure(m_memory_type != memory_type::local);
+			ensure(m_memory_type == memory_type::local);
 			DSA_CALL2(NamedBufferSubData, m_id, offset, length, data);
 		}
 

@@ -19,7 +19,6 @@ namespace gl
 
 		gl::vao m_vao;
 		gl::buffer m_text_buffer;
-		gl::buffer m_scale_offsets_buffer;
 		std::unordered_map<u8, std::pair<u32, u32>> m_offsets;
 
 		bool initialized = false;
@@ -87,18 +86,13 @@ namespace gl
 
 		void init()
 		{
-			m_text_buffer.create();
-			m_scale_offsets_buffer.create();
-
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
 
 			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
-			m_text_buffer.data(buffer_size, points.data());
+			m_text_buffer.create(gl::buffer::target::array, buffer_size, points.data(), gl::buffer::memory_type::host_visible);
 			m_offsets = glyph_source.get_glyph_offsets();
-
-			m_scale_offsets_buffer.data(512 * 4 * sizeof(float));
 
 			//Init VAO
 			int old_vao;
@@ -198,7 +192,6 @@ namespace gl
 		{
 			if (initialized)
 			{
-				m_scale_offsets_buffer.remove();
 				m_text_buffer.remove();
 				m_vao.remove();
 

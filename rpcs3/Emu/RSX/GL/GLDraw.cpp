@@ -495,6 +495,8 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	m_frame_stats.vertex_upload_time += m_profiler.duration();
 
+	gl_state.use_program(m_program->id());
+
 	if (!upload_info.index_info)
 	{
 		if (draw_call.is_single_draw())
