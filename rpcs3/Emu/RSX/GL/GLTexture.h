@@ -124,5 +124,5 @@ namespace gl
 		extern std::unique_ptr<texture> g_vis_texture;
 	}
 
-	extern buffer g_typeless_transfer_buffer;
+	void destroy_global_texture_resources();
 }

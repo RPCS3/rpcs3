@@ -16,6 +16,32 @@ namespace gl
 	}
 
 	buffer g_typeless_transfer_buffer;
+	buffer g_upload_transfer_buffer;
+	buffer g_compute_decode_buffer;
+
+	std::pair<buffer*, buffer*> prepare_compute_resources(usz staging_data_length)
+	{
+		if (g_upload_transfer_buffer.size() < staging_data_length)
+		{
+			g_upload_transfer_buffer.remove();
+			g_upload_transfer_buffer.create(staging_data_length, nullptr, buffer::memory_type::host_visible, GL_STREAM_DRAW);
+		}
+
+		if (g_compute_decode_buffer.size() < staging_data_length * 3)
+		{
+			g_compute_decode_buffer.remove();
+			g_compute_decode_buffer.create(std::max<GLsizeiptr>(512, staging_data_length * 3), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+		}
+
+		return { &g_upload_transfer_buffer, &g_compute_decode_buffer };
+	}
+
+	void destroy_global_texture_resources()
+	{
+		g_typeless_transfer_buffer.remove();
+		g_upload_transfer_buffer.remove();
+		g_compute_decode_buffer.remove();
+	}
 
 	GLenum get_target(rsx::texture_dimension_extended type)
 	{
@@ -663,7 +689,7 @@ namespace gl
 		{
 			bool apply_settings = true;
 			bool use_compute_transform = false;
-			buffer upload_scratch_mem, compute_scratch_mem;
+			buffer *upload_scratch_mem = nullptr, *compute_scratch_mem = nullptr;
 			image_memory_requirements mem_info;
 			pixel_buffer_layout mem_layout;
 
@@ -695,8 +721,7 @@ namespace gl
 
 			if (use_compute_transform)
 			{
-				upload_scratch_mem.create(staging_buffer.size(), nullptr, buffer::memory_type::host_visible, GL_STREAM_DRAW);
-				compute_scratch_mem.create(std::max<GLsizeiptr>(512, staging_buffer.size() * 3), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+				std::tie(upload_scratch_mem, compute_scratch_mem) = prepare_compute_resources(staging_buffer.size());
 				out_pointer = nullptr;
 			}
 
@@ -706,7 +731,7 @@ namespace gl
 				{
 					const u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
 					image_linear_size = row_pitch * layout.height_in_block * layout.depth;
-					dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem.map(0, image_linear_size, gl::buffer::access::write)), image_linear_size };
+					dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem->map(0, image_linear_size, gl::buffer::access::write)), image_linear_size };
 				}
 
 				auto op = upload_texture_subresource(dst_buffer, layout, format, is_swizzled, caps);
@@ -723,10 +748,10 @@ namespace gl
 				if (use_compute_transform)
 				{
 					// 1. Unmap buffer
-					upload_scratch_mem.unmap();
+					upload_scratch_mem->unmap();
 
 					// 2. Upload memory to GPU
-					upload_scratch_mem.copy_to(&compute_scratch_mem, 0, 0, image_linear_size);
+					upload_scratch_mem->copy_to(compute_scratch_mem, 0, 0, image_linear_size);
 
 					// 3. Update configuration
 					mem_layout.swap_bytes = op.require_swap;
@@ -735,7 +760,7 @@ namespace gl
 					mem_info.memory_required = 0;
 
 					// 4. Dispatch compute routines
-					copy_buffer_to_image(cmd, mem_layout, &compute_scratch_mem, dst, nullptr, layout.level, region, & mem_info);
+					copy_buffer_to_image(cmd, mem_layout, compute_scratch_mem, dst, nullptr, layout.level, region, & mem_info);
 				}
 				else
 				{
@@ -747,12 +772,6 @@ namespace gl
 
 					dst->copy_from(out_pointer, static_cast<texture::format>(gl_format), static_cast<texture::type>(gl_type), layout.level, region, unpack_settings);
 				}
-			}
-
-			if (use_compute_transform)
-			{
-				upload_scratch_mem.remove();
-				compute_scratch_mem.remove();
 			}
 		}
 	}

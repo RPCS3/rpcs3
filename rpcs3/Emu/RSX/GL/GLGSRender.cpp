@@ -365,10 +365,7 @@ void GLGSRender::on_exit()
 	// TODO: Move these
 	gl::destroy_compute_tasks();
 
-	if (gl::g_typeless_transfer_buffer)
-	{
-		gl::g_typeless_transfer_buffer.remove();
-	}
+	gl::destroy_global_texture_resources();
 
 	gl::debug::g_vis_texture.reset(); // TODO
 
