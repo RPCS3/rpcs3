@@ -5029,8 +5029,24 @@ void fmt_class_string<spu_channel_4_t>::format(std::string& out, u64 arg)
 {
 	const auto& ch = get_object(arg);
 
-	// TODO (use try_read)
-	fmt::append(out, "count = %d", ch.get_count());
+	u32 vals[4]{};
+	const uint count = ch.try_read(vals);
+
+	fmt::append(out, "count = %d, data:\n", count);
+
+	out += "{ ";
+
+	for (u32 i = 0; i < count;)
+	{
+		fmt::append(out, "0x%x", vals[i]);
+
+		if (++i != count)
+		{
+			out += ", ";
+		}
+	}
+
+	out += " }\n";
 }
 
 DECLARE(spu_thread::g_raw_spu_ctr){};

@@ -38,9 +38,6 @@ void lv2_int_serv::exec() const
 		{ ppu_cmd::ptr_call, 0 },
 		std::bit_cast<u64>(&ppu_interrupt_thread_entry)
 	});
-
-	thread->cmd_notify++;
-	thread->cmd_notify.notify_one();
 }
 
 void ppu_thread_exit(ppu_thread&, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*);
@@ -136,8 +133,16 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 
 		result = std::make_shared<lv2_int_serv>(it, arg1, arg2);
 		tag->handler = result;
+
+		it->cmd_list
+		({
+			{ ppu_cmd::ptr_call, 0 },
+			std::bit_cast<u64>(&ppu_interrupt_thread_entry)
+		});
+
 		it->state -= cpu_flag::stop;
 		it->state.notify_one(cpu_flag::stop);
+
 		return result;
 	});
 
@@ -240,11 +245,11 @@ void ppu_interrupt_thread_entry(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struc
 
 		const auto state = +ppu.state;
 
-		if (::is_stopped(state))
+		if (::is_stopped(state) || ppu.cmd_notify.exchange(0))
 		{
 			return;
 		}
 
-		thread_ctrl::wait_on(ppu.state, state);
+		thread_ctrl::wait_on(ppu.cmd_notify, 0);
 	}
 }
