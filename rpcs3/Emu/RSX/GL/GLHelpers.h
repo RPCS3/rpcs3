@@ -742,10 +742,14 @@ namespace gl
 		{
 			ensure(m_memory_type != memory_type::local);
 
-			target target_ = current_target();
-			save_binding_state save(target_, *this);
-			glBufferData(static_cast<GLenum>(target_), size, data_, usage);
+			DSA_CALL2(NamedBufferData, m_id, size, data_, usage);
 			m_size = size;
+		}
+
+		void sub_data(GLsizeiptr offset, GLsizeiptr length, GLvoid* data)
+		{
+			ensure(m_memory_type != memory_type::local);
+			DSA_CALL2(NamedBufferSubData, m_id, offset, length, data);
 		}
 
 		GLubyte* map(GLsizeiptr offset, GLsizeiptr length, access access_)
