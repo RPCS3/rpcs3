@@ -37,8 +37,6 @@ enum class AudioChannelCnt : u32
 	SURROUND_7_1 = 8,
 };
 
-enum class audio_downmix;
-
 class AudioBackend
 {
 public:
@@ -140,7 +138,7 @@ public:
 	/*
 	 * Returns the channel count based on the downmix mode.
 	 */
-	static AudioChannelCnt get_channel_count(audio_downmix downmix);
+	static AudioChannelCnt get_channel_count();
 
 	/*
 	 * Downmix audio stream.

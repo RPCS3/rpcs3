@@ -1140,13 +1140,15 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case enter_button_assign::cross: return tr("Enter with cross", "Enter button assignment");
 		}
 		break;
-	case emu_settings_type::AudioChannels:
-		switch (static_cast<audio_downmix>(index))
+	case emu_settings_type::AudioFormat:
+		switch (static_cast<audio_format>(index))
 		{
-		case audio_downmix::no_downmix: return tr("Surround 7.1", "Audio downmix");
-		case audio_downmix::downmix_to_stereo: return tr("Downmix to Stereo", "Audio downmix");
-		case audio_downmix::downmix_to_5_1: return tr("Downmix to 5.1", "Audio downmix");
-		case audio_downmix::use_application_settings: return tr("Use application settings", "Audio downmix");
+		case audio_format::automatic: return tr("Automatic", "Audio format");
+		case audio_format::lpcm_2_48khz: return tr("Linear PCM 2 Ch. 48 kHz", "Audio format");
+		case audio_format::lpcm_5_1_48khz: return tr("Linear PCM 5.1 Ch. 48 kHz", "Audio format");
+		case audio_format::lpcm_7_1_48khz: return tr("Linear PCM 7.1 Ch. 48 kHz", "Audio format");
+		case audio_format::dts: return tr("DTS 5.1 Ch.", "Audio format");
+		case audio_format::ac3: return tr("Dolby Digital 5.1 Ch.", "Audio format");
 		}
 		break;
 	case emu_settings_type::LicenseArea:

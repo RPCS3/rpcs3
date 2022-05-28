@@ -1322,7 +1322,7 @@ void rsxaudio_backend_thread::update_emu_cfg()
 
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
-	const AudioChannelCnt out_ch_cnt = AudioBackend::get_channel_count(g_cfg.audio.audio_channel_downmix);
+	const AudioChannelCnt out_ch_cnt = AudioBackend::get_channel_count();
 
 	emu_audio_cfg cfg =
 	{

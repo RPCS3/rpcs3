@@ -532,16 +532,18 @@ void fmt_class_string<audio_avport>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<audio_downmix>::format(std::string& out, u64 arg)
+void fmt_class_string<audio_format>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](audio_downmix value)
+	format_enum(out, arg, [](audio_format value)
 	{
 		switch (value)
 		{
-		case audio_downmix::no_downmix: return "No downmix";
-		case audio_downmix::downmix_to_stereo: return "Downmix to Stereo";
-		case audio_downmix::downmix_to_5_1: return "Downmix to 5.1";
-		case audio_downmix::use_application_settings: return "Use application settings";
+		case audio_format::automatic: return "Automatic";
+		case audio_format::lpcm_2_48khz: return "Linear PCM 2 Ch. 48 kHz";
+		case audio_format::lpcm_5_1_48khz: return "Linear PCM 5.1 Ch. 48 kHz";
+		case audio_format::lpcm_7_1_48khz: return "Linear PCM 7.1 Ch. 48 kHz";
+		case audio_format::dts: return "DTS 5.1 Ch.";
+		case audio_format::ac3: return "Dolby Digital 5.1 Ch.";
 		}
 
 		return unknown;

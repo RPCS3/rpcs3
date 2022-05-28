@@ -254,7 +254,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	else
 	{
 		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
-		const auto& psf = psf::load_object(fs::file(local_dir +"/PARAM.SFO"));
+		const psf::registry psf = psf::load_object(fs::file(local_dir +"/PARAM.SFO"));
 
 		// Some following fields may be zero in old FW 1.00 version PARAM.SFO
 		if (psf.contains("PARENTAL_LEVEL")) get->getParam.parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();

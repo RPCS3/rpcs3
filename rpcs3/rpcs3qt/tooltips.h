@@ -51,7 +51,7 @@ public:
 		const QString audio_avport              = tr("Controls which avport is used to sample audio data from.");
 		const QString audio_dump                = tr("Saves all audio as a raw wave file. If unsure, leave this unchecked.");
 		const QString convert                   = tr("Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.");
-		const QString downmix                   = tr("Uses chosen audio output instead of default 7.1 surround sound.\nUse downmix to stereo with stereo audio devices.\nUse 5.1 or higher only if you are using a surround sound audio system.\nIf you want to let the game decide choose the application settings.");
+		const QString audio_format              = tr("Determines the sound format.\nConfigure this setting if you want to switch between stereo and surround sound.\nChanging this value requires a restart of the game.\nUse automatic if you are unsure.");
 		const QString master_volume             = tr("Controls the overall volume of the emulation.\nValues above 100% might reduce the audio quality.");
 		const QString enable_buffering          = tr("Enables audio buffering, which reduces crackle/stutter but increases audio latency.");
 		const QString audio_buffer_duration     = tr("Target buffer duration in milliseconds.\nHigher values make the buffering algorithm's job easier, but may introduce noticeable audio latency.");
