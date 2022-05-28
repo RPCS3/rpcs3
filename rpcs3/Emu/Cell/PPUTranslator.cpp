@@ -197,7 +197,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 		// Create tail call to the check function
 		m_ir->SetInsertPoint(vcheck);
-		Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
+		Call(GetType<void>(), "__check", m_thread, GetAddr());
 		m_ir->CreateRetVoid();
 	}
 	else
@@ -1937,7 +1937,6 @@ void PPUTranslator::BC(ppu_opcode_t op)
 	}
 
 	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
-
 	CallFunction(target);
 }
 
@@ -1959,13 +1958,13 @@ void PPUTranslator::SC(ppu_opcode_t op)
 
 		if (index < 1024)
 		{
-			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
+			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread);
 			m_ir->CreateRetVoid();
 			return;
 		}
 	}
 
-	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num)->setTailCallKind(llvm::CallInst::TCK_Tail);
+	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num);
 	m_ir->CreateRetVoid();
 }
 
@@ -1983,7 +1982,6 @@ void PPUTranslator::B(ppu_opcode_t op)
 	{
 		RegStore(GetAddr(+4), m_lr);
 	}
-
 	FlushRegisters();
 	CallFunction(target);
 }
@@ -2007,7 +2005,6 @@ void PPUTranslator::BCLR(ppu_opcode_t op)
 	}
 
 	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
-
 	CallFunction(0, target);
 }
 
@@ -2070,7 +2067,6 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 	}
 
 	UseCondition(CheckBranchProbability(op.bo | 0x4), CheckBranchCondition(op.bo | 0x4, op.bi));
-
 	CallFunction(0, target);
 }
 
@@ -2517,11 +2513,10 @@ void PPUTranslator::LWARX(ppu_opcode_t op)
 	{
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
-		Call(GetType<void>(), "__resinterp", m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
+		Call(GetType<void>(), "__resinterp", m_thread);
 		m_ir->CreateRetVoid();
 		return;
 	}
-
 	SetGpr(op.rd, Call(GetType<u32>(), "__lwarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 
@@ -2659,11 +2654,10 @@ void PPUTranslator::LDARX(ppu_opcode_t op)
 	{
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
-		Call(GetType<void>(), "__resinterp", m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
+		Call(GetType<void>(), "__resinterp", m_thread);
 		m_ir->CreateRetVoid();
 		return;
 	}
-
 	SetGpr(op.rd, Call(GetType<u64>(), "__ldarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 
@@ -4599,7 +4593,7 @@ void PPUTranslator::FCFID(ppu_opcode_t op)
 void PPUTranslator::UNK(ppu_opcode_t op)
 {
 	FlushRegisters();
-	Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(op.opcode))->setTailCallKind(llvm::CallInst::TCK_Tail);
+	Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(op.opcode));
 	m_ir->CreateRetVoid();
 }
 
@@ -4860,7 +4854,7 @@ Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)
 
 void PPUTranslator::Trap()
 {
-	Call(GetType<void>(), "__trap", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
+	Call(GetType<void>(), "__trap", m_thread, GetAddr());
 	m_ir->CreateRetVoid();
 }
 
