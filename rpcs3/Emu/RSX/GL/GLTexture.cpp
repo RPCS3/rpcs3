@@ -796,7 +796,6 @@ namespace gl
 						{
 							g_deswizzle_scratch_buffer.remove();
 							g_deswizzle_scratch_buffer.create(gl::buffer::target::ssbo, image_linear_size, nullptr, gl::buffer::memory_type::local);
-							rsx_log.error("DESWZ BUF @0x%x", g_deswizzle_scratch_buffer.id());
 						}
 
 						upload_scratch_mem->copy_to(&g_deswizzle_scratch_buffer, 0, 0, image_linear_size);
