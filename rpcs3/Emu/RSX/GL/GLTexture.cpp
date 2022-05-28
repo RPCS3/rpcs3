@@ -18,19 +18,20 @@ namespace gl
 	buffer g_typeless_transfer_buffer;
 	buffer g_upload_transfer_buffer;
 	buffer g_compute_decode_buffer;
+	buffer g_deswizzle_scratch_buffer;
 
 	std::pair<buffer*, buffer*> prepare_compute_resources(usz staging_data_length)
 	{
 		if (g_upload_transfer_buffer.size() < static_cast<GLsizeiptr>(staging_data_length))
 		{
 			g_upload_transfer_buffer.remove();
-			g_upload_transfer_buffer.create(staging_data_length, nullptr, buffer::memory_type::host_visible, GL_STREAM_DRAW);
+			g_upload_transfer_buffer.create(gl::buffer::target::pixel_unpack, staging_data_length, nullptr, buffer::memory_type::host_visible, GL_STREAM_DRAW);
 		}
 
 		if (g_compute_decode_buffer.size() < static_cast<GLsizeiptr>(staging_data_length) * 3)
 		{
 			g_compute_decode_buffer.remove();
-			g_compute_decode_buffer.create(std::max<GLsizeiptr>(512, staging_data_length * 3), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+			g_compute_decode_buffer.create(gl::buffer::target::pixel_pack, std::max<GLsizeiptr>(512, staging_data_length * 3), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
 		}
 
 		return { &g_upload_transfer_buffer, &g_compute_decode_buffer };
@@ -41,6 +42,7 @@ namespace gl
 		g_typeless_transfer_buffer.remove();
 		g_upload_transfer_buffer.remove();
 		g_compute_decode_buffer.remove();
+		g_deswizzle_scratch_buffer.remove();
 	}
 
 	template <typename WordType, bool SwapBytes>
@@ -727,8 +729,6 @@ namespace gl
 			u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
 			u64 image_linear_size;
 
-			gl::buffer deswizzle_buf;
-
 			switch (gl_type)
 			{
 			case GL_BYTE:
@@ -792,13 +792,14 @@ namespace gl
 					else
 					{
 						// 2.1 Copy data to deswizzle buf
-						if (deswizzle_buf.size() < image_linear_size)
+						if (g_deswizzle_scratch_buffer.size() < image_linear_size)
 						{
-							deswizzle_buf.remove();
-							deswizzle_buf.create(gl::buffer::target::ssbo, image_linear_size, nullptr, gl::buffer::memory_type::local);
+							g_deswizzle_scratch_buffer.remove();
+							g_deswizzle_scratch_buffer.create(gl::buffer::target::ssbo, image_linear_size, nullptr, gl::buffer::memory_type::local);
+							rsx_log.error("DESWZ BUF @0x%x", g_deswizzle_scratch_buffer.id());
 						}
 
-						upload_scratch_mem->copy_to(&deswizzle_buf, 0, 0, image_linear_size);
+						upload_scratch_mem->copy_to(&g_deswizzle_scratch_buffer, 0, 0, image_linear_size);
 
 						// 2.2 Apply compute transform to deswizzle input and dump it in compute_scratch_mem
 						ensure(op.element_size == 2 || op.element_size == 4);
@@ -810,22 +811,22 @@ namespace gl
 
 							if (op.element_size == 4) [[ likely ]]
 							{
-								do_deswizzle_transformation<u32, true>(cmd, block_size, compute_scratch_mem, &deswizzle_buf, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+								do_deswizzle_transformation<u32, true>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
 							}
 							else
 							{
-								do_deswizzle_transformation<u16, true>(cmd, block_size, compute_scratch_mem, &deswizzle_buf, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+								do_deswizzle_transformation<u16, true>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
 							}
 						}
 						else
 						{
 							if (op.element_size == 4) [[ likely ]]
 							{
-								do_deswizzle_transformation<u32, false>(cmd, block_size, compute_scratch_mem, &deswizzle_buf, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+								do_deswizzle_transformation<u32, false>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
 							}
 							else
 							{
-								do_deswizzle_transformation<u16, false>(cmd, block_size, compute_scratch_mem, &deswizzle_buf, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+								do_deswizzle_transformation<u16, false>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
 							}
 						}
 					}
@@ -849,8 +850,6 @@ namespace gl
 					dst->copy_from(out_pointer, static_cast<texture::format>(gl_format), static_cast<texture::type>(gl_type), layout.level, region, unpack_settings);
 				}
 			}
-
-			deswizzle_buf.remove();
 		}
 	}
 

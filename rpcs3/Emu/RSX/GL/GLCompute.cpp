@@ -24,10 +24,17 @@ namespace gl
 		optimal_kernel_size = 256 / optimal_group_size;
 
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, reinterpret_cast<GLint*>(&max_invocations_x));
+
+		initialized = true;
 	}
 
 	void compute_task::create()
 	{
+		if (!initialized)
+		{
+			initialize();
+		}
+
 		if (!compiled)
 		{
 			m_shader.create(::glsl::program_domain::glsl_compute_program, m_src);

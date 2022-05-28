@@ -14,6 +14,7 @@ namespace gl
 		gl::glsl::shader m_shader;
 		gl::glsl::program m_program;
 		bool compiled = false;
+		bool initialized = false;
 
 		// Device-specific options
 		bool unroll_loops = true;
@@ -259,6 +260,8 @@ namespace gl
 		cs_deswizzle_3d()
 		{
 			ensure((sizeof(_BlockType) & 3) == 0); // "Unsupported block type"
+
+			initialize();
 
 			m_src =
 			#include "../Program/GLSLSnippets/GPUDeswizzle.glsl"
