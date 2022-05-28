@@ -1,10 +1,11 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/IdManager.h"
+#include "Emu/System.h"
 
 #include "cellAudioOut.h"
 #include "cellAudio.h"
-#include "Emu/Cell/lv2/sys_rsxaudio.h"
 
 LOG_CHANNEL(cellSysutil);
 
@@ -27,6 +28,35 @@ void fmt_class_string<CellAudioOutError>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+audio_out_configuration::audio_out_configuration()
+{
+	CellAudioOutSoundMode mode{};
+
+	mode.type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+	mode.channel = CELL_AUDIO_OUT_CHNUM_8;
+	mode.fs = CELL_AUDIO_OUT_FS_48KHZ;
+	mode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
+
+	out.at(CELL_AUDIO_OUT_PRIMARY).sound_modes.push_back(mode);
+	out.at(CELL_AUDIO_OUT_SECONDARY).sound_modes.push_back(mode);
+
+	mode.type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+	mode.channel = CELL_AUDIO_OUT_CHNUM_6;
+	mode.fs = CELL_AUDIO_OUT_FS_48KHZ;
+	mode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr;
+
+	out.at(CELL_AUDIO_OUT_PRIMARY).sound_modes.push_back(mode);
+	out.at(CELL_AUDIO_OUT_SECONDARY).sound_modes.push_back(mode);
+
+	mode.type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
+	mode.channel = CELL_AUDIO_OUT_CHNUM_2;
+	mode.fs = CELL_AUDIO_OUT_FS_48KHZ;
+	mode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
+
+	out.at(CELL_AUDIO_OUT_PRIMARY).sound_modes.push_back(mode);
+	out.at(CELL_AUDIO_OUT_SECONDARY).sound_modes.push_back(mode);
 }
 
 error_code cellAudioOutGetNumberOfDevice(u32 audioOut);
@@ -158,14 +188,37 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 	case CELL_AUDIO_OUT_PRIMARY:
 	case CELL_AUDIO_OUT_SECONDARY:
 	{
-		_state.state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
-		_state.encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-		_state.downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
-		_state.soundMode.type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-		_state.soundMode.channel = CELL_AUDIO_OUT_CHNUM_8;
-		_state.soundMode.fs = CELL_AUDIO_OUT_FS_48KHZ;
-		_state.soundMode.reserved = 0;
-		_state.soundMode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
+		const AudioChannelCnt channels = AudioBackend::get_channel_count(g_cfg.audio.audio_channel_downmix);
+
+		audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
+		std::lock_guard lock(cfg.mtx);
+		audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+
+		const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&channels, &out](const CellAudioOutSoundMode& mode)
+		{
+			if (mode.type == out.encoder)
+			{
+				switch (mode.type)
+				{
+				case CELL_AUDIO_OUT_CODING_TYPE_LPCM:
+					return mode.channel == static_cast<u8>(channels);
+				case CELL_AUDIO_OUT_CODING_TYPE_AC3:
+				case CELL_AUDIO_OUT_CODING_TYPE_DTS:
+					return true; // We currently only have one possible sound mode for these types
+				default:
+					return false;
+				}
+			}
+
+			return false;
+		});
+
+		ensure(it != out.sound_modes.cend());
+
+		_state.state = out.state;
+		_state.encoder = out.encoder;
+		_state.downMixer = out.downmixer;
+		_state.soundMode = *it;
 		break;
 	}
 	default:
@@ -198,11 +251,20 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 	audio_out_configuration::audio_out out_old;
 	audio_out_configuration::audio_out out_new;
 
+	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	{
-		audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 		std::lock_guard lock(cfg.mtx);
 
 		audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+
+		if (out.sound_modes.cend() == std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&config](const CellAudioOutSoundMode& mode)
+			{
+				return mode.channel == config->channel && mode.type == config->encoder && config->downMixer <= CELL_AUDIO_OUT_DOWNMIXER_TYPE_B;
+			}))
+		{
+			return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION; // TODO: confirm
+		}
+
 		out_old = out;
 
 		out.channels = config->channel;
@@ -215,8 +277,31 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 	if (g_cfg.audio.audio_channel_downmix == audio_downmix::use_application_settings &&
 		std::memcmp(&out_old, &out_new, sizeof(audio_out_configuration::audio_out)) != 0)
 	{
-		audio::configure_audio();
-		audio::configure_rsxaudio();
+		const auto reset_audio = [audioOut]() -> void
+		{
+			audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
+			{
+				std::lock_guard lock(cfg.mtx);
+				cfg.out.at(audioOut).state = CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED;
+			}
+
+			audio::configure_audio();
+			audio::configure_rsxaudio();
+
+			{
+				std::lock_guard lock(cfg.mtx);
+				cfg.out.at(audioOut).state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
+			}
+		};
+
+		if (waitForEvent)
+		{
+			reset_audio();
+		}
+		else
+		{
+			Emu.CallFromMainThread(reset_audio);
+		}
 	}
 
 	cellSysutil.notice("cellAudioOutConfigure: channels=%d, encoder=%d, downMixer=%d", config->channel, config->encoder, config->downMixer);
@@ -302,24 +387,23 @@ error_code cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<Cell
 		return CELL_AUDIO_OUT_ERROR_PARAMETER_OUT_OF_RANGE;
 	}
 
+	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
+	std::lock_guard lock(cfg.mtx);
+	ensure(audioOut < cfg.out.size());
+	audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+	ensure(out.sound_modes.size() <= 16);
+
 	CellAudioOutDeviceInfo _info{};
 
 	_info.portType = CELL_AUDIO_OUT_PORT_HDMI;
-	_info.availableModeCount = 3;
+	_info.availableModeCount = ::narrow<u8>(out.sound_modes.size());
 	_info.state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
 	_info.latency = 1000;
-	_info.availableModes[0].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-	_info.availableModes[0].channel = CELL_AUDIO_OUT_CHNUM_8;
-	_info.availableModes[0].fs = CELL_AUDIO_OUT_FS_48KHZ;
-	_info.availableModes[0].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy;
-	_info.availableModes[1].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-	_info.availableModes[1].channel = CELL_AUDIO_OUT_CHNUM_2;
-	_info.availableModes[1].fs = CELL_AUDIO_OUT_FS_48KHZ;
-	_info.availableModes[1].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH;
-	_info.availableModes[2].type = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
-	_info.availableModes[2].channel = CELL_AUDIO_OUT_CHNUM_6;
-	_info.availableModes[2].fs = CELL_AUDIO_OUT_FS_48KHZ;
-	_info.availableModes[2].layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr;
+
+	for (usz i = 0; i < out.sound_modes.size(); i++)
+	{
+		_info.availableModes[i] = out.sound_modes.at(i);
+	}
 
 	*info = _info;
 	return CELL_OK;
