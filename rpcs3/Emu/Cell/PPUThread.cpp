@@ -251,7 +251,104 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 
 	c.ret();
 #else
+	// See https://github.com/ghc/ghc/blob/master/rts/include/stg/MachRegs.h
+	// for GHC calling convention definitions on Aarch64
+	// and https://developer.arm.com/documentation/den0024/a/The-ABI-for-ARM-64-bit-Architecture/Register-use-in-the-AArch64-Procedure-Call-Standard/Parameters-in-general-purpose-registers
+	// for AArch64 calling convention
+
+	// Push callee saved registers to the stack
+	// We need to save x18-x30 = 13 x 8B each + 8 bytes for 16B alignment = 112B
+	c.sub(a64::sp, a64::sp, Imm(112));
+	c.stp(a64::x18, a64::x19, arm::Mem(a64::sp));
+	c.stp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
+	c.stp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
+	c.stp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
+	c.stp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
+	c.stp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
+	c.str(a64::x30, arm::Mem(a64::sp, 96));
+
+	// Save sp for native longjmp emulation
+	Label native_sp_offset = c.newLabel();
+	c.ldr(a64::x10, arm::Mem(native_sp_offset));
+	c.str(a64::sp, arm::Mem(args[0], a64::x10));
+
+	// Load REG_Base - use absolute jump target to bypass rel jmp range limits
+	Label exec_addr = c.newLabel();
+	c.ldr(a64::x19, arm::Mem(exec_addr));
+	c.ldr(a64::x19, arm::Mem(a64::x19));
+	// Load PPUThread struct base -> REG_Sp
+	const arm::GpX ppu_t_base = a64::x20;
+	c.mov(ppu_t_base, args[0]);
+	// Load PC
+	const arm::GpX pc = a64::x26;
+	Label cia_offset = c.newLabel();
+	const arm::GpX cia_addr_reg = a64::x11;
+	// Load offset value
+	c.ldr(cia_addr_reg, arm::Mem(cia_offset));
+	// Load cia
+	c.ldr(pc, arm::Mem(ppu_t_base, cia_addr_reg));
+	// Zero top 32 bits
+	c.mov(a64::w26, a64::w26);
+	// Multiply by 2 to index into ptr table
+	const arm::GpX index_shift = a64::x27;
+	c.mov(index_shift, Imm(2));
+	c.mul(pc, pc, index_shift);
+
+	// Load call target
+	const arm::GpX call_target = a64::x28;
+	c.ldr(call_target, arm::Mem(a64::x19, pc));
+	// Compute REG_Hp
+	const arm::GpX reg_hp = a64::x21;
+	c.mov(reg_hp, call_target);
+	c.lsr(reg_hp, reg_hp, 48);
+	c.lsl(reg_hp, reg_hp, 13);
+
+	// Zero top 16 bits of call target
+	c.lsl(call_target, call_target, Imm(16));
+	c.lsr(call_target, call_target, Imm(16));
+
+	// Load registers
+	Label base_addr = c.newLabel();
+	c.ldr(a64::x22, arm::Mem(base_addr));
+	c.ldr(a64::x22, arm::Mem(a64::x22));
+
+	Label gpr_addr_offset = c.newLabel();
+	const arm::GpX gpr_addr_reg = a64::x9;
+	c.ldr(gpr_addr_reg, arm::Mem(gpr_addr_offset));
+	c.add(gpr_addr_reg, gpr_addr_reg, ppu_t_base);
+	c.ldr(a64::x23, arm::Mem(gpr_addr_reg));
+	c.ldr(a64::x24, arm::Mem(gpr_addr_reg, 8));
+	c.ldr(a64::x25, arm::Mem(gpr_addr_reg, 16));
+
+	// Execute LLE call
+	c.blr(call_target);
+
+	// Restore stack ptr
+	c.ldr(a64::x10, arm::Mem(native_sp_offset));
+	c.ldr(a64::sp, arm::Mem(args[0], a64::x10));
+	// Restore registers from the stack
+	c.ldp(a64::x18, a64::x19, arm::Mem(a64::sp));
+	c.ldp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
+	c.ldp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
+	c.ldp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
+	c.ldp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
+	c.ldp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
+	c.ldr(a64::x30, arm::Mem(a64::sp, 96));
+	// Restore stack ptr
+	c.add(a64::sp, a64::sp, Imm(112));
+	// Return
 	c.ret(a64::x30);
+
+	c.bind(exec_addr);
+	c.embedUInt64(reinterpret_cast<u64>(&vm::g_exec_addr));
+	c.bind(base_addr);
+	c.embedUInt64(reinterpret_cast<u64>(&vm::g_base_addr));
+	c.bind(cia_offset);
+	c.embedUInt64(static_cast<u64>(::offset32(&ppu_thread::cia)));
+	c.bind(gpr_addr_offset);
+	c.embedUInt64(static_cast<u64>(::offset32(&ppu_thread::gpr)));
+	c.bind(native_sp_offset);
+	c.embedUInt64(static_cast<u64>(::offset32(&ppu_thread::saved_native_sp)));
 #endif
 });
 
@@ -334,7 +431,6 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 			// We found a recompiler function at cia, return
 			break;
 		}
-
 		// Run one instruction in interpreter (TODO)
 		const u32 op = vm::read32(ppu.cia);
 		table.decode(op)(ppu, {op}, vm::_ptr<u32>(ppu.cia), &ppu_ret);
@@ -1277,8 +1373,10 @@ void ppu_thread::cpu_task()
 #ifdef __APPLE__
 			pthread_jit_write_protect_np(true);
 			// Flush all cache lines after toggling write protections
+#ifdef ARCH_ARM64
 			asm("ISB");
 			asm("DSB ISH");
+#endif
 #endif
 
 			break;
@@ -1410,6 +1508,15 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	{
 		call_history.data.resize(call_history_max_size);
 	}
+
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(true);
+	// Flush all cache lines after toggling write protections
+#ifdef ARCH_ARM64
+	asm("ISB");
+	asm("DSB ISH");
+#endif
+#endif
 }
 
 ppu_thread::thread_name_t::operator std::string() const
@@ -1988,6 +2095,8 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 #endif
 	c.ret();
 #else
+	// Unimplemented should fail.
+	c.brk(Imm(0x42));
 	c.ret(a64::x30);
 #endif
 });
@@ -3368,7 +3477,12 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	std::unique_ptr<Module> _module = std::make_unique<Module>(obj_name, jit.get_context());
 
 	// Initialize target
+#if defined(__APPLE__) && defined(ARCH_ARM64)
+	// Force target linux on macOS arm64 to bypass some 64-bit address space linking issues
+	_module->setTargetTriple(llvm::Triple::normalize("arm64-unknown-linux-gnu"));
+#else
 	_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
+#endif
 	_module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator

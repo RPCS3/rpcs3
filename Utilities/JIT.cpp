@@ -252,6 +252,9 @@ void jit_runtime::initialize()
 
 void jit_runtime::finalize() noexcept
 {
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(false);
+#endif
 	// Reset JIT memory
 #ifdef CAN_OVERCOMMIT
 	utils::memory_reset(get_jit_memory(), 0x80000000);
@@ -266,6 +269,15 @@ void jit_runtime::finalize() noexcept
 	// Restore code/data snapshot
 	std::memcpy(alloc(s_code_init.size(), 1, true), s_code_init.data(), s_code_init.size());
 	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
+
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(true);
+	// Flush all cache lines after toggling write protections
+#ifdef ARCH_ARM64
+	asm("ISB");
+	asm("DSB ISH");
+#endif
+#endif
 }
 
 jit_runtime_base& asmjit::get_global_runtime()
@@ -859,6 +871,11 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	std::string result;
 
 	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
+#if defined(ARCH_X64)
+	null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
+#else
+	null_mod->setTargetTriple(llvm::Triple::normalize("arm64-unknown-linux-gnu"));
+#endif
 
 	if (_link.empty())
 	{
