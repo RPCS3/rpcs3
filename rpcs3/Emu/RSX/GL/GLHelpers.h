@@ -812,6 +812,11 @@ namespace gl
 
 	public:
 
+		virtual void bind()
+		{
+			buffer::bind();
+		}
+
 		virtual void recreate(GLsizeiptr size, const void* data = nullptr)
 		{
 			if (m_id)
@@ -889,6 +894,8 @@ namespace gl
 		virtual void reserve_storage_on_heap(u32 /*alloc_size*/) {}
 
 		virtual void unmap() {}
+
+		virtual void flush() {}
 
 		//Notification of a draw command
 		virtual void notify()
@@ -1009,6 +1016,68 @@ namespace gl
 		}
 
 		void notify() override {}
+	};
+
+	// A non-persistent ring buffer
+	// Internally maps and unmaps data. Uses persistent storage just like the regular persistent variant
+	// Works around drivers that have issues using mapped data for specific sources (e.g AMD proprietary driver with index buffers)
+	class transient_ring_buffer : public ring_buffer
+	{
+		bool dirty = false;
+
+		void* map_internal(u32 offset, u32 length)
+		{
+			flush();
+
+			dirty = true;
+			return DSA_CALL2_RET(MapNamedBufferRange, m_id, offset, length, GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+		}
+
+	public:
+
+		void bind() override
+		{
+			flush();
+			buffer::bind();
+		}
+
+		void recreate(GLsizeiptr size, const void* data = nullptr) override
+		{
+			if (m_id)
+			{
+				m_fence.wait_for_signal();
+				remove();
+			}
+
+			buffer::create();
+			save_binding_state save(current_target(), *this);
+			DSA_CALL2(NamedBufferStorage, m_id, size, data, GL_MAP_WRITE_BIT);
+
+			m_data_loc = 0;
+			m_size = ::narrow<u32>(size);
+			m_memory_type = memory_type::host_visible;
+		}
+
+		std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment) override
+		{
+			ensure(m_memory_mapping == nullptr);
+			const auto allocation = ring_buffer::alloc_from_heap(alloc_size, alignment);
+			return { map_internal(allocation.second, alloc_size), allocation.second };
+		}
+
+		void flush() override
+		{
+			if (dirty)
+			{
+				buffer::unmap();
+				dirty = false;
+			}
+		}
+
+		void unmap() override
+		{
+			flush();
+		}
 	};
 
 	class buffer_view
