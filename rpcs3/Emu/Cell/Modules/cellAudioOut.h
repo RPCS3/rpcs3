@@ -196,11 +196,15 @@ struct audio_out_configuration
 
 	struct audio_out
 	{
+		u32 state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
 		u32 channels = CELL_AUDIO_OUT_CHNUM_8;
 		u32 encoder = CELL_AUDIO_OUT_CODING_TYPE_LPCM;
 		u32 downmixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
 		u32 copy_control = CELL_AUDIO_OUT_COPY_CONTROL_COPY_FREE;
+		std::vector<CellAudioOutSoundMode> sound_modes;
 	};
 
 	std::array<audio_out, 2> out;
+
+	audio_out_configuration();
 };
