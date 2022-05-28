@@ -1322,20 +1322,7 @@ void rsxaudio_backend_thread::update_emu_cfg()
 
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
-	const AudioChannelCnt out_ch_cnt = [&]()
-	{
-		switch (g_cfg.audio.audio_channel_downmix)
-		{
-		case audio_downmix::use_application_settings:
-		case audio_downmix::downmix_to_stereo: return AudioChannelCnt::STEREO;
-		case audio_downmix::downmix_to_5_1: return AudioChannelCnt::SURROUND_5_1;
-		case audio_downmix::no_downmix: return AudioChannelCnt::SURROUND_7_1;
-		default:
-		{
-			fmt::throw_exception("Unsupported downmix level: %u", static_cast<u64>(g_cfg.audio.audio_channel_downmix.get()));
-		}
-		}
-	}();
+	const AudioChannelCnt out_ch_cnt = AudioBackend::get_channel_count(g_cfg.audio.audio_channel_downmix);
 
 	emu_audio_cfg cfg =
 	{

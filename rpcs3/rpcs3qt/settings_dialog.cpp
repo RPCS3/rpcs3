@@ -957,8 +957,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->combo_audio_downmix, emu_settings_type::AudioChannels);
 	SubscribeTooltip(ui->gb_audio_downmix, tooltips.settings.downmix);
-	// TODO: enable this setting once cellAudioOutConfigure can change downmix on the fly
-	ui->combo_audio_downmix->removeItem(static_cast<int>(audio_downmix::use_application_settings));
 
 	m_emu_settings->EnhanceComboBox(ui->audioProviderBox, emu_settings_type::AudioProvider);
 	SubscribeTooltip(ui->gb_audio_provider, tooltips.settings.audio_provider);
