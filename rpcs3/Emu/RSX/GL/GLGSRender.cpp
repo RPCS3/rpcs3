@@ -236,14 +236,14 @@ void GLGSRender::on_init_thread()
 		m_vertex_env_buffer = std::make_unique<gl::ring_buffer>();
 		m_texture_parameters_buffer = std::make_unique<gl::ring_buffer>();
 		m_vertex_layout_buffer = std::make_unique<gl::ring_buffer>();
-		m_index_ring_buffer = std::make_unique<gl::ring_buffer>();
+		m_index_ring_buffer = gl_caps.vendor_AMD ? std::make_unique<gl::transient_ring_buffer>() : std::make_unique<gl::ring_buffer>();
 		m_vertex_instructions_buffer = std::make_unique<gl::ring_buffer>();
 		m_fragment_instructions_buffer = std::make_unique<gl::ring_buffer>();
 		m_raster_env_ring_buffer = std::make_unique<gl::ring_buffer>();
 	}
 
 	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
-	m_index_ring_buffer->create(gl::buffer::target::element_array, 64 * 0x100000);
+	m_index_ring_buffer->create(gl::buffer::target::element_array, 16 * 0x100000);
 	m_transform_constants_buffer->create(gl::buffer::target::uniform, 64 * 0x100000);
 	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_fragment_env_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
