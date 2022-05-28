@@ -792,7 +792,7 @@ namespace gl
 					else
 					{
 						// 2.1 Copy data to deswizzle buf
-						if (g_deswizzle_scratch_buffer.size() < image_linear_size)
+						if (g_deswizzle_scratch_buffer.size() < static_cast<GLsizeiptr>(image_linear_size))
 						{
 							g_deswizzle_scratch_buffer.remove();
 							g_deswizzle_scratch_buffer.create(gl::buffer::target::ssbo, image_linear_size, nullptr, gl::buffer::memory_type::local);
