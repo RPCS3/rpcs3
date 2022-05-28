@@ -34,6 +34,15 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 // Move 4 args for calling native function from a GHC calling convention function
 static u8* move_args_ghc_to_native(u8* raw)
 {
+#ifdef ARCH_ARM64
+	// Note: this is a placeholder to get rpcs3 working for now
+	// mov x0, x22
+	// mov x1, x23
+	// mov x2, x24
+	// mov x3, x25
+	std::memcpy(raw, "\xE0\x03\x16\xAA\xE1\x03\x17\xAA\xE2\x03\x18\xAA\xE3\x03\x19\xAA", 16);
+	return raw + 16;
+#else
 #ifdef _WIN32
 	// mov  rcx, r13
 	// mov  rdx, rbp
@@ -49,6 +58,7 @@ static u8* move_args_ghc_to_native(u8* raw)
 #endif
 
 	return raw + 12;
+#endif
 }
 
 DECLARE(spu_runtime::tr_dispatch) = []
@@ -4418,7 +4428,11 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
+#if defined(ARCH_ARM64)
+		_module->setTargetTriple(Triple::normalize("arm64-unknown-linux-gnu"));
+#else
 		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
+#endif
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -4678,7 +4692,12 @@ public:
 		// Function that executes check_state and escapes if necessary
 		m_test_state = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("spu_test_state", get_ftype<void, u8*>()).getCallee());
 		m_test_state->setLinkage(GlobalValue::InternalLinkage);
+#ifdef ARCH_ARM64
+		// LLVM doesn't support PreserveAll on arm64.
+		m_test_state->setCallingConv(CallingConv::GHC);
+#else
 		m_test_state->setCallingConv(CallingConv::PreserveAll);
+#endif
 		m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", m_test_state));
 		const auto escape_yes = BasicBlock::Create(m_context, "", m_test_state);
 		const auto escape_no = BasicBlock::Create(m_context, "", m_test_state);
