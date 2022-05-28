@@ -57,6 +57,22 @@ audio_out_configuration::audio_out_configuration()
 
 	out.at(CELL_AUDIO_OUT_PRIMARY).sound_modes.push_back(mode);
 	out.at(CELL_AUDIO_OUT_SECONDARY).sound_modes.push_back(mode);
+
+	mode.type = CELL_AUDIO_OUT_CODING_TYPE_DTS;
+	mode.channel = CELL_AUDIO_OUT_CHNUM_6;
+	mode.fs = CELL_AUDIO_OUT_FS_48KHZ;
+	mode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr;
+
+	out.at(CELL_AUDIO_OUT_PRIMARY).sound_modes.push_back(mode);
+	out.at(CELL_AUDIO_OUT_SECONDARY).sound_modes.push_back(mode);
+
+	mode.type = CELL_AUDIO_OUT_CODING_TYPE_AC3;
+	mode.channel = CELL_AUDIO_OUT_CHNUM_6;
+	mode.fs = CELL_AUDIO_OUT_FS_48KHZ;
+	mode.layout = CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr;
+
+	out.at(CELL_AUDIO_OUT_PRIMARY).sound_modes.push_back(mode);
+	out.at(CELL_AUDIO_OUT_SECONDARY).sound_modes.push_back(mode);
 }
 
 error_code cellAudioOutGetNumberOfDevice(u32 audioOut);
@@ -65,87 +81,86 @@ error_code cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 
 {
 	cellSysutil.warning("cellAudioOutGetSoundAvailability(audioOut=%d, type=%d, fs=0x%x, option=%d)", audioOut, type, fs, option);
 
-	s32 available = 8; // should be at least 2
-
-	switch (fs)
+	switch (audioOut)
 	{
-	case CELL_AUDIO_OUT_FS_32KHZ:
-	case CELL_AUDIO_OUT_FS_44KHZ:
-	case CELL_AUDIO_OUT_FS_48KHZ:
-	case CELL_AUDIO_OUT_FS_88KHZ:
-	case CELL_AUDIO_OUT_FS_96KHZ:
-	case CELL_AUDIO_OUT_FS_176KHZ:
-	case CELL_AUDIO_OUT_FS_192KHZ:
-		break;
-
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	case CELL_AUDIO_OUT_PRIMARY: break;
+	default: return not_an_error(0);
 	}
 
 	switch (type)
 	{
-	case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
-	case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
-	case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
-
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
-	}
-
-	switch (audioOut)
+	case CELL_AUDIO_OUT_CODING_TYPE_LPCM:
 	{
-	case CELL_AUDIO_OUT_PRIMARY: return not_an_error(available);
-	case CELL_AUDIO_OUT_SECONDARY: return not_an_error(0);
+		switch (g_cfg.audio.audio_channel_downmix)
+		{
+		case audio_downmix::no_downmix:               return not_an_error(8);
+		case audio_downmix::downmix_to_5_1:           return not_an_error(6);
+		case audio_downmix::downmix_to_stereo:        return not_an_error(2);
+		case audio_downmix::use_application_settings: break;
+		}
+		break;
+	}
+	default: break;
 	}
 
-	return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
+	s32 available = 0;
+
+	// Check if the requested audio parameters are available and find the max supported channel count
+	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
+	std::lock_guard lock(cfg.mtx);
+	audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+
+	for (const CellAudioOutSoundMode& mode : out.sound_modes)
+	{
+		if (mode.type == type && static_cast<u32>(mode.fs) == fs)
+		{
+			available = std::max<u32>(available, mode.channel);
+		}
+	}
+
+	return not_an_error(available);
 }
 
 error_code cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32 ch, u32 option)
 {
 	cellSysutil.warning("cellAudioOutGetSoundAvailability2(audioOut=%d, type=%d, fs=0x%x, ch=%d, option=%d)", audioOut, type, fs, ch, option);
 
-	s32 available = 8; // should be at least 2
-
-	switch (fs)
+	switch (audioOut)
 	{
-	case CELL_AUDIO_OUT_FS_32KHZ:
-	case CELL_AUDIO_OUT_FS_44KHZ:
-	case CELL_AUDIO_OUT_FS_48KHZ:
-	case CELL_AUDIO_OUT_FS_88KHZ:
-	case CELL_AUDIO_OUT_FS_96KHZ:
-	case CELL_AUDIO_OUT_FS_176KHZ:
-	case CELL_AUDIO_OUT_FS_192KHZ:
-		break;
-
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
-	}
-
-	switch (ch)
-	{
-	case 2: break;
-	case 6: available = 0; break;
-	case 8: available = 0; break;
-
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
+	case CELL_AUDIO_OUT_PRIMARY: break;
+	default: return not_an_error(0);
 	}
 
 	switch (type)
 	{
-	case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
-	case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
-	case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
-
-	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
-	}
-
-	switch (audioOut)
+	case CELL_AUDIO_OUT_CODING_TYPE_LPCM:
 	{
-	case CELL_AUDIO_OUT_PRIMARY: return not_an_error(available);
-	case CELL_AUDIO_OUT_SECONDARY: return not_an_error(0);
-	default:
+		switch (g_cfg.audio.audio_channel_downmix)
+		{
+		case audio_downmix::no_downmix:               return not_an_error(8);
+		case audio_downmix::downmix_to_5_1:           return not_an_error(6);
+		case audio_downmix::downmix_to_stereo:        return not_an_error(2);
+		case audio_downmix::use_application_settings: break;
+		}
 		break;
 	}
+	default: break;
+	}
 
-	return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION;
+	// Check if the requested audio parameters are available
+	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
+	std::lock_guard lock(cfg.mtx);
+	audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+
+	for (const CellAudioOutSoundMode& mode : out.sound_modes)
+	{
+		if (mode.type == type && static_cast<u32>(mode.fs) == fs && mode.channel == ch)
+		{
+			return not_an_error(ch);
+		}
+	}
+
+	return not_an_error(0);
 }
 
 error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudioOutState> state)
