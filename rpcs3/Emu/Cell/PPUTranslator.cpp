@@ -933,18 +933,7 @@ void PPUTranslator::VCTUXS(ppu_opcode_t op)
 void PPUTranslator::VEXPTEFP(ppu_opcode_t op)
 {
 	const auto b = get_vr<f32[4]>(op.vb);
-	const auto x0 = eval(fmax(fmin(b, fsplat<f32[4]>(127.4999961f)), fsplat<f32[4]>(-127.4999961f)));
-	const auto x1 = eval(x0 + fsplat<f32[4]>(0.5f));
-#ifdef ARCH_X64
-	const auto x2 = eval(llvm_calli<s32[4], decltype(x1)>{"llvm.x86.sse2.cvtps2dq", {x1}} - noncast<s32[4]>(zext<u32[4]>(fcmp_ord(x1 <= fsplat<f32[4]>(0)))));
-#else
-	const auto x2 = eval(llvm_calli<s32[4], decltype(x1)>{"llvm.aarch64.neon.fcvtns.v4i32.v4f32", {x1}} - noncast<s32[4]>(zext<u32[4]>(fcmp_ord(x1 <= fsplat<f32[4]>(0)))));
-#endif
-	const auto x3 = eval(x0 - fpcast<f32[4]>(x2));
-	const auto x4 = eval(x3 * x3);
-	const auto x5 = eval(x3 * fmuladd(fmuladd(x4, fsplat<f32[4]>(0.023093347705f), fsplat<f32[4]>(20.20206567f)), x4, fsplat<f32[4]>(1513.906801f)));
-	const auto x6 = eval(x5 * fre(fmuladd(x4, fsplat<f32[4]>(233.1842117f), fsplat<f32[4]>(4368.211667f)) - x5));
-	set_vr(op.vd, (x6 + x6 + fsplat<f32[4]>(1.0f)) * bitcast<f32[4]>((x2 + 127) << 23));
+	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.exp2.v4f32", {b}}));
 }
 
 void PPUTranslator::VLOGEFP(ppu_opcode_t op)
