@@ -1031,13 +1031,13 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_audio_downmix">
+             <widget class="QGroupBox" name="gb_audio_format">
               <property name="title">
-               <string>Audio Channels</string>
+               <string>Audio Format</string>
               </property>
-              <layout class="QVBoxLayout" name="gb_audio_channels_layout">
+              <layout class="QVBoxLayout" name="gb_audio_format_layout">
                <item>
-                <widget class="QComboBox" name="combo_audio_downmix"/>
+                <widget class="QComboBox" name="combo_audio_format"/>
                </item>
               </layout>
              </widget>

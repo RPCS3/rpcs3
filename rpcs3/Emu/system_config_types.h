@@ -76,12 +76,14 @@ enum class audio_avport
 	spdif_1
 };
 
-enum class audio_downmix
+enum class audio_format
 {
-	no_downmix, // Surround 7.1
-	downmix_to_stereo,
-	downmix_to_5_1,
-	use_application_settings
+	automatic,
+	lpcm_2_48khz,
+	lpcm_5_1_48khz,
+	lpcm_7_1_48khz,
+	dts,
+	ac3,
 };
 
 enum class music_handler

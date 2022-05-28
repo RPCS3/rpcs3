@@ -235,7 +235,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<audio_avport> rsxaudio_port{ this, "RSXAudio Avport", audio_avport::hdmi_0, true };
 		cfg::_bool dump_to_file{ this, "Dump to file", false, true };
 		cfg::_bool convert_to_s16{ this, "Convert to 16 bit", false, true };
-		cfg::_enum<audio_downmix> audio_channel_downmix{ this, "Audio Channels", audio_downmix::downmix_to_stereo, true };
+		cfg::_enum<audio_format> format{ this, "Audio Format", audio_format::automatic, false };
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
 		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
 		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100, true };

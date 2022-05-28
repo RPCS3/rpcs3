@@ -100,59 +100,48 @@ void AudioBackend::normalize(u32 sample_cnt, const f32* src, f32* dst)
 	}
 }
 
-AudioChannelCnt AudioBackend::get_channel_count(audio_downmix downmix)
+AudioChannelCnt AudioBackend::get_channel_count()
 {
-	switch (downmix)
-	{
-	case audio_downmix::no_downmix:               return AudioChannelCnt::SURROUND_7_1;
-	case audio_downmix::downmix_to_5_1:           return AudioChannelCnt::SURROUND_5_1;
-	case audio_downmix::downmix_to_stereo:        return AudioChannelCnt::STEREO;
-	case audio_downmix::use_application_settings:
-	{
-		audio_out_configuration& audio_out = g_fxo->get<audio_out_configuration>();
-		std::lock_guard lock(audio_out.mtx);
-		ensure(!audio_out.out.empty());
-		audio_out_configuration::audio_out& out = audio_out.out.at(CELL_AUDIO_OUT_PRIMARY);
+	audio_out_configuration& audio_out = g_fxo->get<audio_out_configuration>();
+	std::lock_guard lock(audio_out.mtx);
+	ensure(!audio_out.out.empty());
+	audio_out_configuration::audio_out& out = audio_out.out.at(CELL_AUDIO_OUT_PRIMARY);
 
-		switch (out.downmixer)
+	switch (out.downmixer)
+	{
+	case CELL_AUDIO_OUT_DOWNMIXER_NONE:
+	{
+		switch (out.channels)
 		{
-		case CELL_AUDIO_OUT_DOWNMIXER_NONE:
-		{
-			switch (out.channels)
-			{
-			case 2: return AudioChannelCnt::STEREO;
-			case 6: return AudioChannelCnt::SURROUND_5_1;
-			case 8: return AudioChannelCnt::SURROUND_7_1;
-			default:
-				fmt::throw_exception("Unsupported channel count in cellAudioOut config: %d", out.channels);
-			}
-		}
-		case CELL_AUDIO_OUT_DOWNMIXER_TYPE_A:
-		{
-			switch (out.channels)
-			{
-			case 2:
-				return AudioChannelCnt::STEREO;
-			default:
-				fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_A in cellAudioOut config: %d", out.channels);
-			}
-		}
-		case CELL_AUDIO_OUT_DOWNMIXER_TYPE_B:
-		{
-			switch (out.channels)
-			{
-			case 6:
-			case 8:
-				return AudioChannelCnt::SURROUND_5_1;
-			default:
-				fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_B in cellAudioOut config: %d", out.channels);
-			}
-		}
+		case 2: return AudioChannelCnt::STEREO;
+		case 6: return AudioChannelCnt::SURROUND_5_1;
+		case 8: return AudioChannelCnt::SURROUND_7_1;
 		default:
-			fmt::throw_exception("Unknown downmixer in cellAudioOut config: %d", out.downmixer);
+			fmt::throw_exception("Unsupported channel count in cellAudioOut config: %d", out.channels);
+		}
+	}
+	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_A:
+	{
+		switch (out.channels)
+		{
+		case 2:
+			return AudioChannelCnt::STEREO;
+		default:
+			fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_A in cellAudioOut config: %d", out.channels);
+		}
+	}
+	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_B:
+	{
+		switch (out.channels)
+		{
+		case 6:
+		case 8:
+			return AudioChannelCnt::SURROUND_5_1;
+		default:
+			fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_B in cellAudioOut config: %d", out.channels);
 		}
 	}
 	default:
-		fmt::throw_exception("Unknown audio channel mode %s (%d)", downmix, static_cast<int>(downmix));
+		fmt::throw_exception("Unknown downmixer in cellAudioOut config: %d", out.downmixer);
 	}
 }

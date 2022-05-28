@@ -444,7 +444,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->resBox, emu_settings_type::Resolution);
 	SubscribeTooltip(ui->gb_default_resolution, tooltips.settings.resolution);
 	// remove unsupported resolutions from the dropdown
-	const int saved_index = ui->resBox->currentIndex();
 	bool saved_index_removed = false;
 	if (game && game->resolution > 0)
 	{
@@ -457,6 +456,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			// { 1 << 4, fmt::format("%s", video_resolution::_480p_16:9) },
 			// { 1 << 5, fmt::format("%s", video_resolution::_576p_16:9) },
 		};
+
+		const int saved_index = ui->resBox->currentIndex();
 
 		for (int i = ui->resBox->count() - 1; i >= 0; i--)
 		{
@@ -955,8 +956,63 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #endif
 	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), enable_buffering);
 
-	m_emu_settings->EnhanceComboBox(ui->combo_audio_downmix, emu_settings_type::AudioChannels);
-	SubscribeTooltip(ui->gb_audio_downmix, tooltips.settings.downmix);
+	m_emu_settings->EnhanceComboBox(ui->combo_audio_format, emu_settings_type::AudioFormat);
+	SubscribeTooltip(ui->gb_audio_format, tooltips.settings.audio_format);
+	bool saved_audio_format_index_removed = false;
+	if (game && game->sound_format > 0)
+	{
+		const std::map<u32, std::vector<audio_format>> formats
+		{
+			{ 1 << 0, { audio_format::lpcm_2_48khz } },
+			{ 1 << 2, { audio_format::lpcm_5_1_48khz } },
+			{ 1 << 4, { audio_format::lpcm_7_1_48khz } },
+			{ 1 << 8, { audio_format::ac3 } },
+			{ 1 << 9, { audio_format::dts } },
+		};
+
+		const int saved_index = ui->combo_audio_format->currentIndex();
+
+		for (int i = ui->combo_audio_format->count() - 1; i >= 0; i--)
+		{
+			const QVariantList var_list = ui->combo_audio_format->itemData(i).toList();
+			ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
+
+			const audio_format format = static_cast<audio_format>(var_list[1].toInt());
+
+			bool has_format = false;
+			for (const auto& entry : formats)
+			{
+				if ((game->sound_format & entry.first) && std::find(entry.second.cbegin(), entry.second.cend(), format) != entry.second.cend())
+				{
+					has_format = true;
+					break;
+				}
+			}
+			if (!has_format)
+			{
+				ui->combo_audio_format->removeItem(i);
+				if (i == saved_index)
+				{
+					saved_audio_format_index_removed = true;
+				}
+			}
+		}
+	}
+	// Set the current selection to the default if the original setting wasn't valid
+	if (saved_audio_format_index_removed)
+	{
+		for (int i = 0; i < ui->combo_audio_format->count(); i++)
+		{
+			const QVariantList var_list = ui->combo_audio_format->itemData(i).toList();
+			ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
+
+			if (var_list[1].toInt() == static_cast<int>(g_cfg.audio.format.def))
+			{
+				ui->combo_audio_format->setCurrentIndex(i);
+				break;
+			}
+		}
+	}
 
 	m_emu_settings->EnhanceComboBox(ui->audioProviderBox, emu_settings_type::AudioProvider);
 	SubscribeTooltip(ui->gb_audio_provider, tooltips.settings.audio_provider);
