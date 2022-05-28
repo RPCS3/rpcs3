@@ -441,6 +441,63 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_renderer, tooltips.settings.renderer);
 	SubscribeTooltip(ui->gb_graphicsAdapter, tooltips.settings.graphics_adapter);
 
+	m_emu_settings->EnhanceComboBox(ui->resBox, emu_settings_type::Resolution);
+	SubscribeTooltip(ui->gb_default_resolution, tooltips.settings.resolution);
+	// remove unsupported resolutions from the dropdown
+	const int saved_index = ui->resBox->currentIndex();
+	bool saved_index_removed = false;
+	if (game && game->resolution > 0)
+	{
+		const std::map<u32, std::string> resolutions
+		{
+			{ 1 << 0, fmt::format("%s", video_resolution::_480) },
+			{ 1 << 1, fmt::format("%s", video_resolution::_576) },
+			{ 1 << 2, fmt::format("%s", video_resolution::_720) },
+			{ 1 << 3, fmt::format("%s", video_resolution::_1080) },
+			// { 1 << 4, fmt::format("%s", video_resolution::_480p_16:9) },
+			// { 1 << 5, fmt::format("%s", video_resolution::_576p_16:9) },
+		};
+
+		for (int i = ui->resBox->count() - 1; i >= 0; i--)
+		{
+			bool has_resolution = false;
+			for (const auto& res : resolutions)
+			{
+				if ((game->resolution & res.first) && res.second == sstr(ui->resBox->itemText(i)))
+				{
+					has_resolution = true;
+					break;
+				}
+			}
+			if (!has_resolution)
+			{
+				ui->resBox->removeItem(i);
+				if (i == saved_index)
+				{
+					saved_index_removed = true;
+				}
+			}
+		}
+	}
+	for (int i = 0; i < ui->resBox->count(); i++)
+	{
+		const QVariantList var_list = ui->resBox->itemData(i).toList();
+		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
+
+		if (var_list[0].toString() == "1280x720")
+		{
+			// Rename the default resolution for users
+			ui->resBox->setItemText(i, tr("1280x720 (Recommended)", "Resolution"));
+
+			// Set the current selection to the default if the original setting wasn't valid
+			if (saved_index_removed)
+			{
+				ui->resBox->setCurrentIndex(i);
+			}
+			break;
+		}
+	}
+
 	m_emu_settings->EnhanceComboBox(ui->aspectBox, emu_settings_type::AspectRatio);
 	SubscribeTooltip(ui->gb_aspectRatio, tooltips.settings.aspect_ratio);
 

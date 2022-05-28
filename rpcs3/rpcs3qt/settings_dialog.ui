@@ -519,6 +519,18 @@
           <item>
            <layout class="QVBoxLayout" name="gpuTabLayoutMiddle">
             <item>
+             <widget class="QGroupBox" name="gb_default_resolution">
+              <property name="title">
+               <string>Default Resolution</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_default_resolution_layout">
+               <item>
+                <widget class="QComboBox" name="resBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <layout class="QVBoxLayout" name="layout_resolution_scale">
               <property name="spacing">
                <number>6</number>
