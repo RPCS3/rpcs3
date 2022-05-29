@@ -6208,7 +6208,7 @@ public:
 							}
 							else
 							{
-								m_ir->CreateAlignedStore(m_ir->CreateLoad(m_ir->CreateBitCast(_src, vtype), false), m_ir->CreateBitCast(_dst, vtype), llvm::MaybeAlign{16});
+								m_ir->CreateAlignedStore(m_ir->CreateAlignedLoad(m_ir->CreateBitCast(_src, vtype), llvm::MaybeAlign{16}), m_ir->CreateBitCast(_dst, vtype), llvm::MaybeAlign{16});
 							}
 						}
 					}
