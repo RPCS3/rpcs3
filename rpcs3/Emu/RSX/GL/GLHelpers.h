@@ -1460,7 +1460,7 @@ namespace gl
 
 		rsx::format_class m_format_class = RSX_FORMAT_CLASS_UNDEFINED;
 
-	private:
+	public:
 		class save_binding_state
 		{
 			GLenum target = GL_NONE;
@@ -1498,7 +1498,7 @@ namespace gl
 				glBindTexture(target, old_binding);
 			}
 		};
-	public:
+
 		texture(const texture&) = delete;
 		texture(texture&& texture_) = delete;
 
@@ -1870,6 +1870,7 @@ namespace gl
 				component_swizzle[2] = argb_swizzle[3];
 				component_swizzle[3] = argb_swizzle[0];
 
+				texture::save_binding_state save(m_target);
 				glBindTexture(m_target, m_id);
 				glTexParameteriv(m_target, GL_TEXTURE_SWIZZLE_RGBA, reinterpret_cast<GLint*>(component_swizzle));
 			}
@@ -1886,6 +1887,7 @@ namespace gl
 				constexpr u32 depth_stencil_mask = (image_aspect::depth | image_aspect::stencil);
 				ensure((aspect_flags & depth_stencil_mask) != depth_stencil_mask); // "Invalid aspect mask combination"
 
+				texture::save_binding_state save(m_target);
 				glBindTexture(m_target, m_id);
 				glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
 			}
@@ -2627,15 +2629,6 @@ public:
 					locations[name] = result;
 					return result;
 				}
-
-				/*int texture(GLint location, int active_texture, const gl::texture_view& texture)
-				{
-					glActiveTexture(GL_TEXTURE0 + active_texture);
-					texture.bind();
-					(*this)[location] = active_texture;
-
-					return active_texture;
-				}*/
 
 				uniform_t operator[](GLint location)
 				{

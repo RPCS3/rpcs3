@@ -671,6 +671,7 @@ namespace gl
 			caps.supports_vtc_decoding = driver_caps.vendor_NVIDIA;
 			unpack_settings.apply();
 
+			texture::save_binding_state save(static_cast<GLenum>(dst->get_target()));
 			glBindTexture(static_cast<GLenum>(dst->get_target()), dst->id());
 
 			const GLsizei format_block_size = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16;
