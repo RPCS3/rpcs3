@@ -620,6 +620,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 	new_appimage.close();
 
+	unsetenv("APPDIR");
+
 	update_log.success("Successfully updated %s!", replace_path);
 
 #endif
