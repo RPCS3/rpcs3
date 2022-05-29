@@ -415,7 +415,7 @@ void GLGSRender::bind_texture_env()
 		}
 		else
 		{
-			glBindTexture(GL_TEXTURE_2D, GL_NONE);
+			cmd->bind_texture(GL_VERTEX_TEXTURES_START + i, GL_TEXTURE_2D, GL_NONE);
 		}
 	}
 }
