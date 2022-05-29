@@ -671,9 +671,6 @@ namespace gl
 			caps.supports_vtc_decoding = driver_caps.vendor_NVIDIA;
 			unpack_settings.apply();
 
-			texture::save_binding_state save(static_cast<GLenum>(dst->get_target()));
-			glBindTexture(static_cast<GLenum>(dst->get_target()), dst->id());
-
 			const GLsizei format_block_size = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16;
 
 			for (const rsx::subresource_layout& layout : input_layouts)
@@ -686,28 +683,35 @@ namespace gl
 				{
 					const GLsizei size = layout.width_in_block * format_block_size;
 					ensure(usz(size) <= staging_buffer.size());
-					glCompressedTexSubImage1D(GL_TEXTURE_1D, layout.level, 0, layout.width_in_texel, gl_format, size, staging_buffer.data());
+					DSA_CALL(CompressedTextureSubImage1D, dst->id(), GL_TEXTURE_1D, layout.level, 0, layout.width_in_texel, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case texture::target::texture2D:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
 					ensure(usz(size) <= staging_buffer.size());
-					glCompressedTexSubImage2D(GL_TEXTURE_2D, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, size, staging_buffer.data());
+					DSA_CALL(CompressedTextureSubImage2D, dst->id(), GL_TEXTURE_2D, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, size, staging_buffer.data());
 					break;
 				}
 				case texture::target::textureCUBE:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * format_block_size;
 					ensure(usz(size) <= staging_buffer.size());
-					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, size, staging_buffer.data());
+					if (gl::get_driver_caps().ARB_dsa_supported)
+					{
+						glCompressedTextureSubImage3D(dst->id(), layout.level, 0, 0, layout.layer, layout.width_in_texel, layout.height_in_texel, 1, gl_format, size, staging_buffer.data());
+					}
+					else
+					{
+						glCompressedTextureSubImage2DEXT(dst->id(), GL_TEXTURE_CUBE_MAP_POSITIVE_X + layout.layer, layout.level, 0, 0, layout.width_in_texel, layout.height_in_texel, gl_format, size, staging_buffer.data());
+					}
 					break;
 				}
 				case texture::target::texture3D:
 				{
 					const GLsizei size = layout.width_in_block * layout.height_in_block * layout.depth * format_block_size;
 					ensure(usz(size) <= staging_buffer.size());
-					glCompressedTexSubImage3D(GL_TEXTURE_3D, layout.level, 0, 0, 0, layout.width_in_texel, layout.height_in_texel, layout.depth, gl_format, size, staging_buffer.data());
+					DSA_CALL(CompressedTextureSubImage3D, dst->id(), GL_TEXTURE_3D, layout.level, 0, 0, 0, layout.width_in_texel, layout.height_in_texel, layout.depth, gl_format, size, staging_buffer.data());
 					break;
 				}
 				default:
@@ -811,22 +815,22 @@ namespace gl
 
 							if (op.element_size == 4) [[ likely ]]
 							{
-								do_deswizzle_transformation<u32, true>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+								do_deswizzle_transformation<u32, true>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
 							}
 							else
 							{
-								do_deswizzle_transformation<u16, true>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+								do_deswizzle_transformation<u16, true>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
 							}
 						}
 						else
 						{
 							if (op.element_size == 4) [[ likely ]]
 							{
-								do_deswizzle_transformation<u32, false>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+								do_deswizzle_transformation<u32, false>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
 							}
 							else
 							{
-								do_deswizzle_transformation<u16, false>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, image_linear_size, layout.width_in_texel, layout.height_in_texel, layout.depth);
+								do_deswizzle_transformation<u16, false>(cmd, block_size, compute_scratch_mem, &g_deswizzle_scratch_buffer, static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
 							}
 						}
 					}
