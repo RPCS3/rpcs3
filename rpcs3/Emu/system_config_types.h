@@ -78,12 +78,12 @@ enum class audio_avport
 
 enum class audio_format
 {
-	automatic,
 	lpcm_2_48khz,
 	lpcm_5_1_48khz,
 	lpcm_7_1_48khz,
 	dts,
 	ac3,
+	automatic,
 };
 
 enum class music_handler
