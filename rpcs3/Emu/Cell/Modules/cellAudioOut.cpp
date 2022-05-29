@@ -240,6 +240,7 @@ error_code cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 
 	switch (audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY: break;
+	// case CELL_AUDIO_OUT_SECONDARY: break; // TODO: enable if we ever actually support peripheral output
 	default: return not_an_error(0);
 	}
 
@@ -248,7 +249,7 @@ error_code cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 
 	// Check if the requested audio parameters are available and find the max supported channel count
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
-	audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
 	for (const CellAudioOutSoundMode& mode : out.sound_modes)
 	{
@@ -268,13 +269,14 @@ error_code cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32
 	switch (audioOut)
 	{
 	case CELL_AUDIO_OUT_PRIMARY: break;
+	// case CELL_AUDIO_OUT_SECONDARY: break; // TODO: enable if we ever actually support peripheral output
 	default: return not_an_error(0);
 	}
 
 	// Check if the requested audio parameters are available
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
-	audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
 	for (const CellAudioOutSoundMode& mode : out.sound_modes)
 	{
@@ -327,11 +329,11 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 	case CELL_AUDIO_OUT_PRIMARY:
 	case CELL_AUDIO_OUT_SECONDARY:
 	{
-		const AudioChannelCnt channels = AudioBackend::get_channel_count();
+		const AudioChannelCnt channels = AudioBackend::get_channel_count(audioOut);
 
 		audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 		std::lock_guard lock(cfg.mtx);
-		audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+		const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
 		const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&channels, &out](const CellAudioOutSoundMode& mode)
 		{
@@ -368,13 +370,12 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 	case CELL_AUDIO_OUT_PRIMARY:
 		break;
 	case CELL_AUDIO_OUT_SECONDARY:
-		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT; // TODO: enable if we ever actually support peripheral output
 	default:
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	audio_out_configuration::audio_out out_old;
-	audio_out_configuration::audio_out out_new;
+	bool needs_reset = false;
 
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	{
@@ -390,16 +391,17 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 			return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION; // TODO: confirm
 		}
 
-		out_old = out;
+		if (out.channels != config->channel || out.encoder != config->encoder || out.downmixer != config->downMixer)
+		{
+			out.channels = config->channel;
+			out.encoder = config->encoder;
+			out.downmixer = config->downMixer;
 
-		out.channels = config->channel;
-		out.encoder = config->encoder;
-		out.downmixer = config->downMixer;
-
-		out_new = out;
+			needs_reset = true;
+		}
 	}
 
-	if (std::memcmp(&out_old, &out_new, sizeof(audio_out_configuration::audio_out)) != 0)
+	if (needs_reset)
 	{
 		const auto reset_audio = [audioOut]() -> void
 		{
@@ -447,7 +449,7 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 	case CELL_AUDIO_OUT_PRIMARY:
 		break;
 	case CELL_AUDIO_OUT_SECONDARY:
-		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT; // TODO: enable if we ever actually support peripheral output
 	default:
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
@@ -457,7 +459,7 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 
 	CellAudioOutConfiguration _config{};
 
-	audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 	_config.channel = out.channels;
 	_config.encoder = out.encoder;
 	_config.downMixer = out.downmixer;
@@ -514,7 +516,7 @@ error_code cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<Cell
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
 	ensure(audioOut < cfg.out.size());
-	audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 	ensure(out.sound_modes.size() <= 16);
 
 	CellAudioOutDeviceInfo _info{};
@@ -547,7 +549,7 @@ error_code cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 	case CELL_AUDIO_OUT_PRIMARY:
 		break;
 	case CELL_AUDIO_OUT_SECONDARY:
-		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT;
+		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT; // TODO: enable if we ever actually support peripheral output
 	default:
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}

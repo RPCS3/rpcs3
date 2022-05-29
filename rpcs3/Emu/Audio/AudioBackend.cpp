@@ -100,12 +100,12 @@ void AudioBackend::normalize(u32 sample_cnt, const f32* src, f32* dst)
 	}
 }
 
-AudioChannelCnt AudioBackend::get_channel_count()
+AudioChannelCnt AudioBackend::get_channel_count(u32 device_index)
 {
-	audio_out_configuration& audio_out = g_fxo->get<audio_out_configuration>();
-	std::lock_guard lock(audio_out.mtx);
-	ensure(!audio_out.out.empty());
-	audio_out_configuration::audio_out& out = audio_out.out.at(CELL_AUDIO_OUT_PRIMARY);
+	audio_out_configuration& audio_out_cfg = g_fxo->get<audio_out_configuration>();
+	std::lock_guard lock(audio_out_cfg.mtx);
+	ensure(device_index < audio_out_cfg.out.size());
+	const audio_out_configuration::audio_out& out = audio_out_cfg.out.at(device_index);
 
 	switch (out.downmixer)
 	{

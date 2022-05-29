@@ -66,7 +66,7 @@ void cell_audio_config::reset(bool backend_changed)
 
 	const AudioFreq freq = AudioFreq::FREQ_48K;
 	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
-	const AudioChannelCnt ch_cnt = AudioBackend::get_channel_count();
+	const AudioChannelCnt ch_cnt = AudioBackend::get_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
 	const f64 cb_frame_len = backend->Open(freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
 
 	audio_channels = static_cast<u32>(ch_cnt);

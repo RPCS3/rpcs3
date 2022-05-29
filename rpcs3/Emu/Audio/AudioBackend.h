@@ -138,7 +138,7 @@ public:
 	/*
 	 * Returns the channel count based on the downmix mode.
 	 */
-	static AudioChannelCnt get_channel_count();
+	static AudioChannelCnt get_channel_count(u32 device_index);
 
 	/*
 	 * Downmix audio stream.
