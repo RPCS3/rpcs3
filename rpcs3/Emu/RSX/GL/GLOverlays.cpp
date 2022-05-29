@@ -98,6 +98,9 @@ namespace gl
 
 		if (!target_texture || fbo.check())
 		{
+			// Save state (TODO)
+			glGetIntegerv(GL_VIEWPORT, viewport);
+
 			// Set initial state
 			glViewport(region.x1, region.y1, region.width(), region.height());
 			cmd->color_maski(0, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
