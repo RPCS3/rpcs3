@@ -1144,10 +1144,7 @@ error_code cellAudioQuit()
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	// TODO
-	g_audio.keys.clear();
-	g_audio.key_count = 0;
-	g_audio.event_period = 0;
+	// NOTE: Do not clear event queues here. They are handled independently.
 	g_audio.init = 0;
 
 	return CELL_OK;
