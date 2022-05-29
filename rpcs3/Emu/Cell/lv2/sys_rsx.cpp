@@ -34,7 +34,7 @@ void fmt_class_string<sys_rsx_error>::format(std::string& out, u64 arg)
 
 u64 rsxTimeStamp()
 {
-	return get_guest_system_time();
+	return get_timebased_time();
 }
 
 void rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3) const
