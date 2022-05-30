@@ -1244,6 +1244,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	
 	m_emu_settings->EnhanceCheckBox(ui->forceDisableExclusiveFullscreenMode, emu_settings_type::ForceDisableExclusiveFullscreenMode);
 	SubscribeTooltip(ui->forceDisableExclusiveFullscreenMode, tooltips.settings.force_disable_exclusive_fullscreen_mode);
+	
+	m_emu_settings->EnhanceCheckBox(ui->vblankNTSCFixup, emu_settings_type::VBlankNTSCFixup);
+	SubscribeTooltip(ui->vblankNTSCFixup, tooltips.settings.vblank_ntsc_fixup);
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
 	SubscribeTooltip(ui->mfcDelayCommand, tooltips.settings.mfc_delay_command);
