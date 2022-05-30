@@ -6174,19 +6174,42 @@ public:
 					}
 					}
 
+					// Check if the LS address is constant and 256 bit aligned
+					u64 clsa = umax;
+
+					if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(lsa.value))
+					{
+						clsa = ci->getZExtValue();
+					}
+
+					u32 stride = 16;
+
+					if (m_use_avx && csize >= 32 && !(clsa % 32))
+					{
+						vtype = get_type<u8(*)[32]>();
+						stride = 32;
+					}
+
 					if (csize > 0 && csize <= 16)
 					{
 						// Generate single copy operation
 						m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(src, vtype), true), m_ir->CreateBitCast(dst, vtype), true);
 					}
-					else if (csize <= 256)
+					else if (csize <= stride * 16 && !(csize % 32))
 					{
 						// Generate fixed sequence of copy operations
-						for (u32 i = 0; i < csize; i += 16)
+						for (u32 i = 0; i < csize; i += stride)
 						{
 							const auto _src = m_ir->CreateGEP(src, m_ir->getInt32(i));
 							const auto _dst = m_ir->CreateGEP(dst, m_ir->getInt32(i));
-							m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(_src, vtype), true), m_ir->CreateBitCast(_dst, vtype), true);
+							if (csize - i < stride)
+							{
+								m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(_src, get_type<u8(*)[16]>()), true), m_ir->CreateBitCast(_dst, get_type<u8(*)[16]>()), true);
+							}
+							else
+							{
+								m_ir->CreateAlignedStore(m_ir->CreateAlignedLoad(m_ir->CreateBitCast(_src, vtype), llvm::MaybeAlign{16}), m_ir->CreateBitCast(_dst, vtype), llvm::MaybeAlign{16});
+							}
 						}
 					}
 					else if (csize)

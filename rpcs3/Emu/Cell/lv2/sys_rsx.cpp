@@ -751,8 +751,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
 		vm::_ref<u32>(render->device_addr + 0x30) = 1;
 
-		// Time point is supplied in argument 4
-		const u64 current_time = a4;
+		// Time point is supplied in argument 4 (todo: convert it to MFTB rate and use it)
+		const u64 current_time = rsxTimeStamp();
 
 		driverInfo.head[a3].lastSecondVTime = current_time;
 
