@@ -833,7 +833,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, set_adapter);
 	connect(ui->renderBox, &QComboBox::currentTextChanged, set_renderer);
 
-	const auto apply_renderer_specific_options = [=, this](const QString& text)
+	const auto apply_renderer_specific_options = [r_creator, this](const QString& text)
 	{
 		// Vulkan-only
 		const bool is_vulkan = (text == r_creator->Vulkan.name);
@@ -1246,7 +1246,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->forceDisableExclusiveFullscreenMode, tooltips.settings.force_disable_exclusive_fullscreen_mode);
 	
 	m_emu_settings->EnhanceCheckBox(ui->vblankNTSCFixup, emu_settings_type::VBlankNTSCFixup);
-	SubscribeTooltip(ui->vblankNTSCFixup, tooltips.settings.vblank_ntsc_fixup);
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
 	SubscribeTooltip(ui->mfcDelayCommand, tooltips.settings.mfc_delay_command);
@@ -1310,18 +1309,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	if (!game) // Prevent users from doing dumb things
 	{
-		ui->vblank->setDisabled(true);
-		ui->vblankReset->setDisabled(true);
+		ui->gb_vblank->setDisabled(true);
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.disabled_from_global);
-		ui->clockScale->setDisabled(true);
-		ui->clockScaleReset->setDisabled(true);
+		ui->gb_clockScale->setDisabled(true);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.disabled_from_global);
-		ui->wakeupDelay->setDisabled(true);
-		ui->wakeupReset->setDisabled(true);
+		ui->gb_wakeupDelay->setDisabled(true);
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.disabled_from_global);
 	}
 	else
 	{
+		SubscribeTooltip(ui->vblankNTSCFixup, tooltips.settings.vblank_ntsc_fixup);
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.vblank_rate);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.clocks_scale);
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);
@@ -1935,15 +1932,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			}
 		};
 
-		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=, this]()
+		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [color_dialog, this]()
 		{
 			color_dialog(gui::gl_iconColor, tr("Choose gamelist icon color", "Settings: color dialog"), ui->pb_gl_icon_color);
 		});
-		connect(ui->pb_sd_icon_color, &QAbstractButton::clicked, [=, this]()
+		connect(ui->pb_sd_icon_color, &QAbstractButton::clicked, [color_dialog, this]()
 		{
 			color_dialog(gui::sd_icon_color, tr("Choose save manager icon color", "Settings: color dialog"), ui->pb_sd_icon_color);
 		});
-		connect(ui->pb_tr_icon_color, &QAbstractButton::clicked, [=, this]()
+		connect(ui->pb_tr_icon_color, &QAbstractButton::clicked, [color_dialog, this]()
 		{
 			color_dialog(gui::tr_icon_color, tr("Choose trophy manager icon color", "Settings: color dialog"), ui->pb_tr_icon_color);
 		});
