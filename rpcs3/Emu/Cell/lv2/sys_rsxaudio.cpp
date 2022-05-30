@@ -2093,7 +2093,7 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		{
 			wait_status = epoll_wait(epoll_fd, event, obj_wait_cnt, -1);
 		}
-		while (wait_status == -EINTR);
+		while (wait_status == -1 && errno == EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{
@@ -2121,7 +2121,7 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		{
 			wait_status = kevent(kq, nullptr, 0, event, obj_wait_cnt, nullptr);
 		}
-		while (wait_status == -EINTR);
+		while (wait_status == -1 && errno == EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{
