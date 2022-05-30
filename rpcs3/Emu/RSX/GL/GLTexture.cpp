@@ -2,6 +2,7 @@
 #include "GLTexture.h"
 #include "GLCompute.h"
 #include "GLRenderTargets.h"
+#include "GLOverlays.h"
 #include "../GCM.h"
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
@@ -622,16 +623,36 @@ namespace gl
 			fmt::throw_exception("Invalid depth/stencil type 0x%x", unpack_info.type);
 		}
 
-		if (!skip_barrier)
+		const auto caps = gl::get_driver_caps();
+		if (dst->get_internal_format() == gl::texture::internal_format::depth24_stencil8 &&
+			dst->get_target() == gl::texture::target::texture2D && // Only 2D output supported for the moment.
+			!caps.vendor_NVIDIA &&                    // NVIDIA has native support for D24X8 data as they introduced this extension.
+			caps.ARB_shader_stencil_export_supported) // The driver needs to support stencil export at the very least
 		{
-			glMemoryBarrier(GL_PIXEL_BUFFER_BARRIER_BIT);
+			// This optimized path handles the data load on the GPU without context switching to compute.
+			// The upside is that it is very fast if you have headroom.
+			// The downside is that it is linear. Not that it matters that much as most drivers seem to be downloading the entire data source and doing really slow things with it.
+			if (!skip_barrier)
+			{
+				glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+			}
+
+			auto pass = gl::get_overlay_pass<gl::rp_ssbo_to_d24x8_texture>();
+			pass->run(cmd, transfer_buf, dst, out_offset, {{dst_region.x, dst_region.y}, {dst_region.width, dst_region.height}}, {});
 		}
+		else
+		{
+			if (!skip_barrier)
+			{
+				glMemoryBarrier(GL_PIXEL_BUFFER_BARRIER_BIT);
+			}
 
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
-		transfer_buf->bind(buffer::target::pixel_unpack);
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
+			transfer_buf->bind(buffer::target::pixel_unpack);
 
-		dst->copy_from(reinterpret_cast<void*>(u64(out_offset)), static_cast<texture::format>(unpack_info.format),
-			static_cast<texture::type>(unpack_info.type), dst_level, dst_region, {});
+			dst->copy_from(reinterpret_cast<void*>(u64(out_offset)), static_cast<texture::format>(unpack_info.format),
+				static_cast<texture::type>(unpack_info.type), dst_level, dst_region, {});
+		}
 
 		if (scratch_mem) scratch_mem.remove();
 	}

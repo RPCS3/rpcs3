@@ -2,6 +2,19 @@
 
 namespace gl
 {
+	// Lame
+	std::unordered_map<u32, std::unique_ptr<gl::overlay_pass>> g_overlay_passes;
+
+	void destroy_overlay_passes()
+	{
+		for (auto& [key, prog] : g_overlay_passes)
+		{
+			prog->destroy();
+		}
+
+		g_overlay_passes.clear();
+	}
+
 	void overlay_pass::create()
 	{
 		if (!compiled)
@@ -505,17 +518,8 @@ namespace gl
 	video_out_calibration_pass::video_out_calibration_pass()
 	{
 		vs_src =
-			"#version 420\n\n"
-			"layout(location=0) out vec2 tc0;\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
-			"	vec2 coords[] = {vec2(0., 1.), vec2(1., 1.), vec2(0., 0.), vec2(1., 0.)};\n"
-			"	tc0 = coords[gl_VertexID % 4];\n"
-			"	vec2 pos = positions[gl_VertexID % 4];\n"
-			"	gl_Position = vec4(pos, 0., 1.);\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
+		;
 
 		fs_src =
 			"#version 420\n\n"
@@ -577,5 +581,40 @@ namespace gl
 		glBindTexture(GL_TEXTURE_2D, source[1]);
 
 		overlay_pass::run(cmd, viewport, GL_NONE, false, false);
+	}
+
+	rp_ssbo_to_d24x8_texture::rp_ssbo_to_d24x8_texture()
+	{
+		vs_src =
+		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
+		;
+
+		fs_src =
+		#include "../Program/GLSLSnippets/CopyBufferToD24x8.glsl"
+		;
+
+		std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%set, ", "" },
+			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) }
+		};
+
+		fs_src = fmt::replace_all(fs_src, repl_list);
+	}
+
+	void rp_ssbo_to_d24x8_texture::run(gl::command_context& cmd,
+		const buffer* src, const texture* dst,
+		const u32 src_offset, const coordu& dst_region,
+		const pixel_unpack_settings& settings)
+	{
+		const int row_length = settings.get_row_length();
+		program_handle.uniforms["src_pitch"] = row_length ? row_length : static_cast<int>(dst_region.width);
+		program_handle.uniforms["swap_bytes"] = settings.get_swap_bytes() ? 1 : 0;
+		src->bind_range(GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * dst_region.height);
+
+		cmd->stencil_mask(0xFF);
+
+		overlay_pass::run(cmd, dst_region, dst->id(), true);
 	}
 }

@@ -21,6 +21,7 @@ namespace gl
 		bool ARB_shader_draw_parameters_supported = false;
 		bool ARB_depth_buffer_float_supported = false;
 		bool ARB_texture_barrier_supported = false;
+		bool ARB_shader_stencil_export_supported = false;
 		bool NV_texture_barrier_supported = false;
 		bool NV_gpu_shader5_supported = false;
 		bool AMD_gpu_shader_half_float_supported = false;
@@ -45,7 +46,7 @@ namespace gl
 
 		void initialize()
 		{
-			int find_count = 14;
+			int find_count = 15;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -159,6 +160,13 @@ namespace gl
 				if (check(ext_name, "GL_NV_depth_buffer_float"))
 				{
 					NV_depth_buffer_float_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (check(ext_name, "GL_ARB_shader_stencil_export"))
+				{
+					ARB_shader_stencil_export_supported = true;
 					find_count--;
 					continue;
 				}
