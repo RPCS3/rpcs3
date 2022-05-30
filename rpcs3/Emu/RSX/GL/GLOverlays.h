@@ -108,4 +108,30 @@ namespace gl
 
 		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d);
 	};
+
+	struct rp_ssbo_to_d24x8_texture : public overlay_pass
+	{
+		rp_ssbo_to_d24x8_texture();
+		void run(gl::command_context& cmd, const buffer* src, const texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_unpack_settings& settings);
+	};
+
+	// TODO: Replace with a proper manager
+	extern std::unordered_map<u32, std::unique_ptr<gl::overlay_pass>> g_overlay_passes;
+
+	template<class T>
+	T* get_overlay_pass()
+	{
+		u32 index = id_manager::typeinfo::get_index<T>();
+		auto &e = g_overlay_passes[index];
+
+		if (!e)
+		{
+			e = std::make_unique<T>();
+			e->create();
+		}
+
+		return static_cast<T*>(e.get());
+	}
+
+	void destroy_overlay_passes();
 }

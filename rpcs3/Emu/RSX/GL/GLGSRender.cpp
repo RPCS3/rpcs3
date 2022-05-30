@@ -364,6 +364,7 @@ void GLGSRender::on_exit()
 	// Globals
 	// TODO: Move these
 	gl::destroy_compute_tasks();
+	gl::destroy_overlay_passes();
 
 	gl::destroy_global_texture_resources();
 

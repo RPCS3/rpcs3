@@ -402,6 +402,16 @@ namespace gl
 			m_alignment = value;
 			return *this;
 		}
+
+		bool get_swap_bytes() const
+		{
+			return m_swap_bytes;
+		}
+
+		int get_row_length() const
+		{
+			return m_row_length;
+		}
 	};
 
 	class vao;
