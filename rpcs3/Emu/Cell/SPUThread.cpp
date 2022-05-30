@@ -1695,7 +1695,7 @@ void spu_thread::push_snr(u32 number, u32 value)
 
 	// Prepare some data
 	const u32 event_bit = SPU_EVENT_S1 >> (number & 1);
-	const u32 bitor_bit = (snr_config >> number) & 1;
+	const bool bitor_bit = !!((snr_config >> number) & 1);
 
 	// Redundant, g_use_rtm is checked inside tx_start now.
 	if (g_use_rtm)
@@ -1705,10 +1705,16 @@ void spu_thread::push_snr(u32 number, u32 value)
 
 		const bool ok = utils::tx_start([&]
 		{
-			channel_notify = (channel->data.raw() & spu_channel::bit_wait) != 0;
+			channel_notify = (channel->data.raw() == spu_channel::bit_wait);
 			thread_notify = (channel->data.raw() & spu_channel::bit_count) == 0;
 
-			if (bitor_bit)
+			if (channel_notify)
+			{
+				ensure(channel->jostling_value.raw() == spu_channel::bit_wait);
+				channel->jostling_value.raw() = value;
+				channel->data.raw() = 0;
+			}
+			else if (bitor_bit)
 			{
 				channel->data.raw() &= ~spu_channel::bit_wait;
 				channel->data.raw() |= spu_channel::bit_count | value;
@@ -1752,16 +1758,8 @@ void spu_thread::push_snr(u32 number, u32 value)
 	});
 
 	// Check corresponding SNR register settings
-	if (bitor_bit)
-	{
-		if (channel->push_or(value))
-			set_events(event_bit);
-	}
-	else
-	{
-		if (channel->push(value))
-			set_events(event_bit);
-	}
+	if (channel->push(value, bitor_bit))
+		set_events(event_bit);
 
 	ch_events.atomic_op([](ch_events_t& ev)
 	{
