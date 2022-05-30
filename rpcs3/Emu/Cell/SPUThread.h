@@ -166,13 +166,13 @@ enum : u32
 	SPU_FAKE_BASE_ADDR  = 0xE8000000,
 };
 
-struct spu_channel
+struct alignas(16) spu_channel
 {
 	// Low 32 bits contain value
 	atomic_t<u64> data;
 
-	// Pending value to be inserted when it is possible at pop()
-	atomic_t<u32> jostling_value;
+	// Pending value to be inserted when it is possible in pop() or pop_wait()
+	atomic_t<u64> jostling_value;
 
 public:
 	static constexpr u32 off_wait  = 32;
@@ -195,39 +195,49 @@ public:
 		}).second;
 	}
 
-	// Push performing bitwise OR with previous value, may require notification
-	bool push_or(u32 value)
+	// Push unconditionally, may require notification
+	// Performing bitwise OR with previous value if specified, otherwise overwiting it
+	bool push(u32 value, bool to_or = false)
 	{
-		const u64 old = data.fetch_op([value](u64& data)
+		while (true)
 		{
-			data &= ~bit_wait;
-			data |= bit_count | value;
-		});
+			const auto [old, pushed_to_data] = data.fetch_op([&](u64& data)
+			{
+				if (data == bit_wait)
+				{
+					return false;
+				}
 
-		if (old & bit_wait)
-		{
+				if (to_or)
+				{
+					data |= bit_count | value;
+				}
+				else
+				{
+					data = bit_count | value;
+				}
+
+				return true;
+			});
+
+			if (!pushed_to_data)
+			{
+				// Insert the pending value in special storage for waiting SPUs, leave no time in which the channel has data
+				if (!jostling_value.compare_and_swap_test(bit_wait, value))
+				{
+					// Other thread has inserted a value through jostling_value, retry
+					continue;
+				}
+
+				// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushed to jostling_value)
+				ensure(this->data.bit_test_reset(off_wait));
+			}
+
 			data.notify_one();
+
+			// Return true if count has changed from 0 to 1, this condition is considered satisfied even if we pushed a value directly to the special storage for waiting SPUs 
+			return !pushed_to_data || (old & bit_count) == 0;
 		}
-
-		return (old & bit_count) == 0;
-	}
-
-	bool push_and(u32 value)
-	{
-		return (data.fetch_and(~u64{value}) & value) != 0;
-	}
-
-	// Push unconditionally (overwriting previous value), may require notification
-	bool push(u32 value)
-	{
-		const u64 old = data.exchange(bit_count | value);
-
-		if (old & bit_wait)
-		{
-			data.notify_one();
-		}
-
-		return (old & bit_count) == 0;
 	}
 
 	// Returns true on success
@@ -250,10 +260,10 @@ public:
 	bool try_read(u32& out) const
 	{
 		const u64 old = data.load();
+		out = static_cast<u32>(old);
 
 		if (old & bit_count) [[likely]]
 		{
-			out = static_cast<u32>(old);
 			return true;
 		}
 
@@ -272,7 +282,7 @@ public:
 			if ((data & mask) == mask)
 			{
 				// Insert the pending value, leave no time in which the channel has no data
-				data = bit_count | jostling_value;
+				data = bit_count | static_cast<u32>(jostling_value);
 				return;
 			}
 
@@ -290,41 +300,50 @@ public:
 	// Waiting for channel pop state availability, actually popping if specified
 	s64 pop_wait(cpu_thread& spu, bool pop = true)
 	{
-		while (true)
+		u64 old = data.fetch_op([&](u64& data)
 		{
-			const u64 old = data.fetch_op([&](u64& data)
+			if (data & bit_count) [[likely]]
 			{
-				if (data & bit_count) [[likely]]
+				if (pop)
 				{
-					if (pop)
-					{
-						data = 0;
-						return true;
-					}
-
-					return false;
+					data = 0;
+					return true;
 				}
 
-				data = bit_wait;
-				return true;
-			}).first;
+				return false;
+			}
 
-			if (old & bit_count)
+			data = bit_wait;
+			jostling_value.release(bit_wait);
+			return true;
+		}).first;
+
+		if (old & bit_count)
+		{
+			return static_cast<u32>(old);
+		}
+
+		while (true)
+		{
+			thread_ctrl::wait_on(data, bit_wait);
+			old = data;
+
+			if (!(old & bit_wait))
 			{
-				return static_cast<u32>(old);
+				return static_cast<u32>(jostling_value);
 			}
 
 			if (spu.is_stopped())
 			{
-				if (u64 old2 = data.exchange(0); old2 & bit_count)
+				// Abort waiting and test if a value has been received
+				if (u64 v = jostling_value.exchange(0); !(v & bit_wait))
 				{
-					return static_cast<u32>(old2);
+					return static_cast<u32>(v);
 				}
 
+				ensure(data.bit_test_reset(off_wait));
 				return -1;
 			}
-
-			thread_ctrl::wait_on(data, bit_wait);
 		}
 	}
 
