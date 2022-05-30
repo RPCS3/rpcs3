@@ -1768,7 +1768,7 @@ void Emulator::Resume()
 	}
 }
 
-u32 sysutil_send_system_cmd(u64 status, u64 param);
+s32 sysutil_send_system_cmd(u64 status, u64 param);
 void process_qt_events();
 
 void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
