@@ -924,7 +924,7 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->abort_decode = true;
 	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::close, seq_id, cmd_id));
 
-	while (!vdec->ppu_tid)
+	while (!vdec->ppu_tid || vdec->seq_state != sequence_state::closed)
 	{
 		thread_ctrl::wait_for(1000);
 	}
@@ -937,7 +937,6 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	}
 
 	std::lock_guard lock{vdec->mutex};
-	vdec->seq_state = sequence_state::closed;
 
 	if (!idm::remove_verify<vdec_context>(handle, std::move(vdec)))
 	{
