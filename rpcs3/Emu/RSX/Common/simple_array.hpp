@@ -25,7 +25,13 @@ namespace rsx
 	public:
 		simple_array() = default;
 
-		simple_array(u32 initial_size, const Ty val = {})
+		simple_array(u32 initial_size)
+		{
+			reserve(initial_size);
+			_size = initial_size;
+		}
+
+		simple_array(u32 initial_size, const Ty val)
 		{
 			reserve(initial_size);
 			_size = initial_size;

@@ -4,6 +4,7 @@
 #include "GLCompute.h"
 #include "util/logs.hpp"
 
+#include "../Common/simple_array.hpp"
 #include <unordered_map>
 
 namespace gl
@@ -223,8 +224,7 @@ namespace gl
 
 	bool fbo::check() const
 	{
-		save_binding_state save(*this);
-		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		GLenum status = DSA_CALL2_RET(CheckNamedFramebufferStatus, m_id, GL_FRAMEBUFFER);
 
 		if (status != GL_FRAMEBUFFER_COMPLETE)
 		{
@@ -245,29 +245,24 @@ namespace gl
 
 	void fbo::draw_buffer(const attachment& buffer) const
 	{
-		save_binding_state save(*this);
 		GLenum buf = buffer.id();
-		glDrawBuffers(1, &buf);
+		DSA_CALL3(NamedFramebufferDrawBuffers, FramebufferDrawBuffers, m_id, 1, &buf);
 	}
 
 	void fbo::draw_buffers(const std::initializer_list<attachment>& indexes) const
 	{
-		save_binding_state save(*this);
-		std::vector<GLenum> ids;
-		ids.reserve(indexes.size());
+		rsx::simple_array<GLenum> ids;
+		ids.reserve(::size32(indexes));
 
 		for (auto &index : indexes)
 			ids.push_back(index.id());
 
-		glDrawBuffers(::narrow<GLsizei>(ids.size()), ids.data());
+		DSA_CALL3(NamedFramebufferDrawBuffers, FramebufferDrawBuffers, m_id, static_cast<GLsizei>(ids.size()), ids.data());
 	}
 
 	void fbo::read_buffer(const attachment& buffer) const
 	{
-		save_binding_state save(*this);
-		GLenum buf = buffer.id();
-
-		glReadBuffer(buf);
+		DSA_CALL3(NamedFramebufferReadBuffer, FramebufferReadBuffer, m_id, buffer.id());
 	}
 
 	void fbo::draw_arrays(rsx::primitive_type mode, GLsizei count, GLint first) const
@@ -503,7 +498,7 @@ namespace gl
 				{
 					const coord3i src_region = { { src_rect.x1, src_rect.y1, 0 }, { src_rect.width(), src_rect.height(), 1 } };
 					const coord3i dst_region = { { dst_rect.x1, dst_rect.y1, 0 }, { dst_rect.width(), dst_rect.height(), 1 } };
-					gl::copy_typeless(dst, src, static_cast<coord3u>(dst_region), static_cast<coord3u>(src_region));
+					gl::copy_typeless(cmd, dst, src, static_cast<coord3u>(dst_region), static_cast<coord3u>(src_region));
 				}
 				else
 				{
@@ -526,7 +521,7 @@ namespace gl
 			{
 				const u16 internal_width = static_cast<u16>(src->width() * xfer_info.src_scaling_hint);
 				typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, internal_fmt);
-				copy_typeless(typeless_src.get(), src);
+				copy_typeless(cmd, typeless_src.get(), src);
 
 				real_src = typeless_src.get();
 				src_rect.x1 = static_cast<u16>(src_rect.x1 * xfer_info.src_scaling_hint);
@@ -544,7 +539,7 @@ namespace gl
 			{
 				const auto internal_width = static_cast<u16>(dst->width() * xfer_info.dst_scaling_hint);
 				typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, internal_fmt);
-				copy_typeless(typeless_dst.get(), dst);
+				copy_typeless(cmd, typeless_dst.get(), dst);
 
 				real_dst = typeless_dst.get();
 				dst_rect.x1 = static_cast<u16>(dst_rect.x1 * xfer_info.dst_scaling_hint);
@@ -565,37 +560,37 @@ namespace gl
 		{
 			const bool is_depth_copy = (real_src->aspect() != image_aspect::color);
 			const filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
-			GLenum attachment;
+			gl::fbo::attachment::type attachment;
 			gl::buffers target;
 
 			if (is_depth_copy)
 			{
 				if (real_dst->aspect() & gl::image_aspect::stencil)
 				{
-					attachment = GL_DEPTH_STENCIL_ATTACHMENT;
+					attachment = fbo::attachment::type::depth_stencil;
 					target = gl::buffers::depth_stencil;
 				}
 				else
 				{
-					attachment = GL_DEPTH_ATTACHMENT;
+					attachment = fbo::attachment::type::depth;
 					target = gl::buffers::depth;
 				}
 			}
 			else
 			{
-				attachment = GL_COLOR_ATTACHMENT0;
+				attachment = fbo::attachment::type::color;
 				target = gl::buffers::color;
 			}
 
-			cmd.drv->enable(GL_FALSE, GL_SCISSOR_TEST);
+			cmd->disable(GL_SCISSOR_TEST);
 
 			save_binding_state saved;
 
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, blit_src.id());
-			glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_src->id(), 0);
+			gl::fbo::attachment src_att{blit_src, static_cast<fbo::attachment::type>(attachment)};
+			src_att = *real_src;
 
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, blit_dst.id());
-			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_dst->id(), 0);
+			gl::fbo::attachment dst_att{ blit_dst, static_cast<fbo::attachment::type>(attachment) };
+			dst_att = *real_dst;
 
 			if (xfer_info.flip_horizontal)
 			{
@@ -607,19 +602,17 @@ namespace gl
 				src_rect.flip_vertical();
 			}
 
-			glBlitFramebuffer(src_rect.x1, src_rect.y1, src_rect.x2, src_rect.y2,
-				dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2,
-				static_cast<GLbitfield>(target), static_cast<GLenum>(interp));
+			blit_src.blit(blit_dst, src_rect, dst_rect, target, interp);
 
 			// Release the attachments explicitly (not doing so causes glitches, e.g Journey Menu)
-			glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
-			glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+			src_att = GL_NONE;
+			dst_att = GL_NONE;
 		}
 
 		if (xfer_info.dst_is_typeless)
 		{
 			// Transfer contents from typeless dst back to original dst
-			copy_typeless(dst, typeless_dst.get());
+			copy_typeless(cmd, dst, typeless_dst.get());
 		}
 	}
 
@@ -628,19 +621,19 @@ namespace gl
 		save_binding_state saved;
 
 		blit_dst.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst->id(), 0);
+		blit_dst.color[0] = *dst;
 		blit_dst.check();
 
-		cmd.drv->clear_color(color);
-		cmd.drv->color_maski(0, true, true, true, true);
+		cmd->clear_color(color);
+		cmd->color_maski(0, true, true, true, true);
 
 		glClear(GL_COLOR_BUFFER_BIT);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GL_NONE, 0);
+		blit_dst.color[0] = GL_NONE;
 	}
 
 	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float /*depth*/, u8 /*stencil*/)
 	{
-		GLenum attachment;
+		fbo::attachment::type attachment;
 		GLbitfield clear_mask;
 
 		switch (const auto fmt = dst->get_internal_format())
@@ -648,27 +641,28 @@ namespace gl
 		case texture::internal_format::depth16:
 		case texture::internal_format::depth32f:
 			clear_mask = GL_DEPTH_BUFFER_BIT;
-			attachment = GL_DEPTH_ATTACHMENT;
+			attachment = fbo::attachment::type::depth;
 			break;
 		case texture::internal_format::depth24_stencil8:
 		case texture::internal_format::depth32f_stencil8:
 			clear_mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
-			attachment = GL_DEPTH_STENCIL_ATTACHMENT;
+			attachment = fbo::attachment::type::depth_stencil;
 			break;
 		default:
 			fmt::throw_exception("Invalid texture passed to clear depth function, format=0x%x", static_cast<u32>(fmt));
 		}
 
 		save_binding_state saved;
+		fbo::attachment attach_point{ blit_dst, attachment };
 
 		blit_dst.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst->id(), 0);
+		attach_point = *dst;
 		blit_dst.check();
 
-		cmd.drv->depth_mask(GL_TRUE);
-		cmd.drv->stencil_mask(0xFF);
+		cmd->depth_mask(GL_TRUE);
+		cmd->stencil_mask(0xFF);
 
 		glClear(clear_mask);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+		attach_point = GL_NONE;
 	}
 }

@@ -620,8 +620,6 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	}
 	new_appimage.close();
 
-	unsetenv("APPDIR");
-
 	update_log.success("Successfully updated %s!", replace_path);
 
 #endif
@@ -650,9 +648,11 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	Emu.CleanUp();
 
 #ifdef _WIN32
-	const int ret = _wexecl(wchar_orig_path.data(), L"--updating", nullptr);
+	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--updating", nullptr);
 #else
-	const int ret = execl(replace_path.c_str(), "--updating", nullptr);
+	// execv is used for compatibility with checkrt
+	const char * const params[3] = { replace_path.c_str(), "--updating", nullptr };
+	const int ret = execv(replace_path.c_str(), const_cast<char * const *>(&params[0]));
 #endif
 	if (ret == -1)
 	{
