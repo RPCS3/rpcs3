@@ -2,7 +2,7 @@ R"(
 #version 430
 #extension GL_ARB_shader_stencil_export : enable
 
-layout(%set, binding=%loc) readonly restrict buffer RawDataBlock
+layout(%set, binding=%loc, std430) readonly restrict buffer RawDataBlock
 {
 	uint data[];
 };

@@ -816,6 +816,8 @@
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLInterpreter\FragmentInterpreter.glsl" />
     <None Include="Emu\RSX\Program\GLSLInterpreter\VertexInterpreter.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\CopyBufferToD24x8.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\GenericVSPassthrough.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl" />
   </ItemGroup>
