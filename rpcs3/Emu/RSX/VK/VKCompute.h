@@ -422,131 +422,8 @@ namespace vk
 			create();
 
 			m_src =
-			"#version 450\n"
-			"layout(local_size_x = %ws, local_size_y = 1, local_size_z = 1) in;\n\n"
-
-			"layout(set=0, binding=0, std430) buffer ssbo0{ uint data_in[]; };\n"
-			"layout(set=0, binding=1, std430) buffer ssbo1{ uint data_out[]; };\n"
-			"layout(push_constant) uniform parameters\n"
-			"{\n"
-			"	uint image_width;\n"
-			"	uint image_height;\n"
-			"	uint image_depth;\n"
-			"	uint image_logw;\n"
-			"	uint image_logh;\n"
-			"	uint image_logd;\n"
-			"	uint lod_count;\n"
-			"};\n\n"
-
-			"struct invocation_properties\n"
-			"{\n"
-			"	uint data_offset;\n"
-			"	uvec3 size;\n"
-			"	uvec3 size_log2;\n"
-			"};\n\n"
-
-			"#define bswap_u16(bits) (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
-			"#define bswap_u32(bits) (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n\n"
-
-			"invocation_properties invocation;\n\n"
-
-			"bool init_invocation_properties(const in uint offset)\n"
-			"{\n"
-			"	invocation.data_offset = 0;\n"
-			"	invocation.size.x = image_width;\n"
-			"	invocation.size.y = image_height;\n"
-			"	invocation.size.z = image_depth;\n"
-			"	invocation.size_log2.x = image_logw;\n"
-			"	invocation.size_log2.y = image_logh;\n"
-			"	invocation.size_log2.z = image_logd;\n"
-			"	uint level_end = image_width * image_height * image_depth;\n"
-			"	uint level = 1;\n\n"
-
-			"	while (offset >= level_end && level < lod_count)\n"
-			"	{\n"
-			"		invocation.data_offset = level_end;\n"
-			"		invocation.size.xy /= 2;\n"
-			"		invocation.size.xy = max(invocation.size.xy, uvec2(1));\n"
-			"		invocation.size_log2.xy = max(invocation.size_log2.xy, uvec2(1));\n"
-			"		invocation.size_log2.xy --;\n"
-			"		level_end += (invocation.size.x * invocation.size.y * image_depth);\n"
-			"		level++;"
-			"	}\n\n"
-
-			"	return (offset < level_end);\n"
-			"}\n\n"
-
-			"uint get_z_index(const in uint x_, const in uint y_, const in uint z_)\n"
-			"{\n"
-			"	uint offset = 0;\n"
-			"	uint shift = 0;\n"
-			"	uint x = x_;\n"
-			"	uint y = y_;\n"
-			"	uint z = z_;\n"
-			"	uint log2w = invocation.size_log2.x;\n"
-			"	uint log2h = invocation.size_log2.y;\n"
-			"	uint log2d = invocation.size_log2.z;\n"
-			"\n"
-			"	do\n"
-			"	{\n"
-			"		if (log2w > 0)\n"
-			"		{\n"
-			"			offset |= (x & 1) << shift;\n"
-			"			shift++;\n"
-			"			x >>= 1;\n"
-			"			log2w--;\n"
-			"		}\n"
-			"\n"
-			"		if (log2h > 0)\n"
-			"		{\n"
-			"			offset |= (y & 1) << shift;\n"
-			"			shift++;\n"
-			"			y >>= 1;\n"
-			"			log2h--;\n"
-			"		}\n"
-			"\n"
-			"		if (log2d > 0)\n"
-			"		{\n"
-			"			offset |= (z & 1) << shift;\n"
-			"			shift++;\n"
-			"			z >>= 1;\n"
-			"			log2d--;\n"
-			"		}\n"
-			"	}\n"
-			"	while(x > 0 || y > 0 || z > 0);\n"
-			"\n"
-			"	return offset;\n"
-			"}\n\n"
-
-			"void main()\n"
-			"{\n"
-			"	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);"
-			"	uint texel_id = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
-			"	uint word_count = %_wordcount;\n\n"
-
-			"	if (!init_invocation_properties(texel_id))\n"
-			"		return;\n\n"
-
-			"	// Calculations done in texels, not bytes\n"
-			"	uint row_length = invocation.size.x;\n"
-			"	uint slice_length = (invocation.size.y * row_length);\n"
-			"	uint level_offset = (texel_id - invocation.data_offset);\n"
-			"	uint slice_offset = (level_offset % slice_length);\n"
-			"	uint z = (level_offset / slice_length);\n"
-			"	uint y = (slice_offset / row_length);\n"
-			"	uint x = (slice_offset % row_length);\n\n"
-
-			"	uint src_texel_id = get_z_index(x, y, z);\n"
-			"	uint dst_id = (texel_id * word_count);\n"
-			"	uint src_id = (src_texel_id + invocation.data_offset) * word_count;\n\n"
-
-			"	for (uint i = 0; i < word_count; ++i)\n"
-			"	{\n"
-			"		uint value = data_in[src_id++];\n"
-			"		data_out[dst_id++] = %f(value);\n"
-			"	}\n\n"
-
-			"}\n";
+			#include "../Program/GLSLSnippets/GPUDeswizzle.glsl"
+			;
 
 			std::string transform;
 			if constexpr (_SwapBytes)
@@ -567,6 +444,9 @@ namespace vk
 
 			const std::pair<std::string_view, std::string> syntax_replace[] =
 			{
+				{ "%loc", "0" },
+				{ "%set", "set = 0" },
+				{ "%push_block", "push_constant" },
 				{ "%ws", std::to_string(optimal_group_size) },
 				{ "%_wordcount", std::to_string(sizeof(_BlockType) / 4) },
 				{ "%f", transform }

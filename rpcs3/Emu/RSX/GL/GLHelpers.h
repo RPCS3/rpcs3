@@ -43,19 +43,34 @@
 #define APIENTRY
 #endif
 
-inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit); }
-
 //using enum rsx::format_class;
 using namespace ::rsx::format_class_;
 
 namespace gl
 {
 	//Function call wrapped in ARB_DSA vs EXT_DSA compat check
-#define DSA_CALL(func, texture_name, target, ...)\
+#define DSA_CALL(func, object_name, target, ...)\
 	if (::gl::get_driver_caps().ARB_dsa_supported)\
-		gl##func(texture_name, __VA_ARGS__);\
+		gl##func(object_name, __VA_ARGS__);\
 	else\
-		gl##func##EXT(texture_name, target, __VA_ARGS__);
+		gl##func##EXT(object_name, target, __VA_ARGS__);
+
+#define DSA_CALL2(func, ...)\
+	if (::gl::get_driver_caps().ARB_dsa_supported)\
+		gl##func(__VA_ARGS__);\
+	else\
+		gl##func##EXT(__VA_ARGS__);
+
+#define DSA_CALL2_RET(func, ...)\
+	(::gl::get_driver_caps().ARB_dsa_supported) ?\
+		gl##func(__VA_ARGS__) :\
+		gl##func##EXT(__VA_ARGS__)
+
+#define DSA_CALL3(funcARB, funcDSA, ...)\
+	if (::gl::get_driver_caps().ARB_dsa_supported)\
+		gl##funcARB(__VA_ARGS__);\
+	else\
+		gl##funcDSA##EXT(__VA_ARGS__);
 
 	class fence;
 
@@ -387,6 +402,16 @@ namespace gl
 			m_alignment = value;
 			return *this;
 		}
+
+		bool get_swap_bytes() const
+		{
+			return m_swap_bytes;
+		}
+
+		int get_row_length() const
+		{
+			return m_row_length;
+		}
 	};
 
 	class vao;
@@ -520,9 +545,9 @@ namespace gl
 
 		enum class access
 		{
-			read = GL_READ_ONLY,
-			write = GL_WRITE_ONLY,
-			read_write = GL_READ_WRITE
+			read = GL_MAP_READ_BIT,
+			write = GL_MAP_WRITE_BIT,
+			read_write = GL_MAP_READ_BIT | GL_MAP_WRITE_BIT
 		};
 
 		enum class memory_type
@@ -579,10 +604,7 @@ namespace gl
 			if (const auto& caps = get_driver_caps();
 				caps.ARB_buffer_storage_supported)
 			{
-				target target_ = current_target();
-				save_binding_state save(target_, *this);
 				GLenum flags = 0;
-
 				if (type == memory_type::host_visible)
 				{
 					switch (usage)
@@ -601,6 +623,14 @@ namespace gl
 						fmt::throw_exception("Unsupported buffer usage 0x%x", usage);
 					}
 				}
+				else
+				{
+					// Local memory hints
+					if (usage == GL_DYNAMIC_COPY)
+					{
+						flags |= GL_DYNAMIC_STORAGE_BIT;
+					}
+				}
 
 				if ((flags & GL_MAP_READ_BIT) && !caps.vendor_AMD)
 				{
@@ -612,7 +642,7 @@ namespace gl
 					flags |= GL_CLIENT_STORAGE_BIT;
 				}
 
-				glBufferStorage(static_cast<GLenum>(target_), size, data_, flags);
+				DSA_CALL2(NamedBufferStorage, m_id, size, data_, flags);
 				m_size = size;
 			}
 			else
@@ -661,6 +691,7 @@ namespace gl
 		void create()
 		{
 			glGenBuffers(1, &m_id);
+			save_binding_state save(current_target(), *this);
 		}
 
 		void create(GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW)
@@ -671,8 +702,9 @@ namespace gl
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW)
 		{
-			create();
 			m_target = target_;
+
+			create();
 			allocate(size, data_, type, usage);
 		}
 
@@ -729,24 +761,31 @@ namespace gl
 		{
 			ensure(m_memory_type != memory_type::local);
 
-			target target_ = current_target();
-			save_binding_state save(target_, *this);
-			glBufferData(static_cast<GLenum>(target_), size, data_, usage);
+			DSA_CALL2(NamedBufferData, m_id, size, data_, usage);
 			m_size = size;
 		}
 
-		GLubyte* map(access access_)
+		void sub_data(GLsizeiptr offset, GLsizeiptr length, GLvoid* data)
+		{
+			ensure(m_memory_type == memory_type::local);
+			DSA_CALL2(NamedBufferSubData, m_id, offset, length, data);
+		}
+
+		GLubyte* map(GLsizeiptr offset, GLsizeiptr length, access access_)
 		{
 			ensure(m_memory_type == memory_type::host_visible);
 
-			bind(current_target());
-			return reinterpret_cast<GLubyte*>(glMapBuffer(static_cast<GLenum>(current_target()), static_cast<GLenum>(access_)));
+			GLenum access_bits = static_cast<GLenum>(access_);
+			if (access_bits == GL_MAP_WRITE_BIT) access_bits |= GL_MAP_UNSYNCHRONIZED_BIT;
+
+			auto raw_data = DSA_CALL2_RET(MapNamedBufferRange, id(), offset, length, access_bits);
+			return reinterpret_cast<GLubyte*>(raw_data);
 		}
 
 		void unmap()
 		{
 			ensure(m_memory_type == memory_type::host_visible);
-			glUnmapBuffer(static_cast<GLenum>(current_target()));
+			DSA_CALL2(UnmapNamedBuffer, id());
 		}
 
 		void bind_range(u32 index, u32 offset, u32 size) const
@@ -783,6 +822,11 @@ namespace gl
 
 	public:
 
+		virtual void bind()
+		{
+			buffer::bind();
+		}
+
 		virtual void recreate(GLsizeiptr size, const void* data = nullptr)
 		{
 			if (m_id)
@@ -792,17 +836,18 @@ namespace gl
 			}
 
 			buffer::create();
+			save_binding_state save(current_target(), *this);
 
 			GLbitfield buffer_storage_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 			if (gl::get_driver_caps().vendor_MESA) buffer_storage_flags |= GL_CLIENT_STORAGE_BIT;
 
-			glBindBuffer(static_cast<GLenum>(m_target), m_id);
-			glBufferStorage(static_cast<GLenum>(m_target), size, data, buffer_storage_flags);
-			m_memory_mapping = glMapBufferRange(static_cast<GLenum>(m_target), 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
+			DSA_CALL2(NamedBufferStorage, m_id, size, data, buffer_storage_flags);
+			m_memory_mapping = DSA_CALL2_RET(MapNamedBufferRange, m_id, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
 			ensure(m_memory_mapping != nullptr);
 			m_data_loc = 0;
 			m_size = ::narrow<u32>(size);
+			m_memory_type = memory_type::host_visible;
 		}
 
 		void create(target target_, GLsizeiptr size, const void* data_ = nullptr)
@@ -841,8 +886,7 @@ namespace gl
 		{
 			if (m_memory_mapping)
 			{
-				glBindBuffer(static_cast<GLenum>(m_target), m_id);
-				glUnmapBuffer(static_cast<GLenum>(m_target));
+				buffer::unmap();
 
 				m_memory_mapping = nullptr;
 				m_data_loc = 0;
@@ -860,6 +904,8 @@ namespace gl
 		virtual void reserve_storage_on_heap(u32 /*alloc_size*/) {}
 
 		virtual void unmap() {}
+
+		virtual void flush() {}
 
 		//Notification of a draw command
 		virtual void notify()
@@ -913,8 +959,7 @@ namespace gl
 				m_data_loc = 0;
 			}
 
-			glBindBuffer(static_cast<GLenum>(m_target), m_id);
-			m_memory_mapping = glMapBufferRange(static_cast<GLenum>(m_target), m_data_loc, block_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+			m_memory_mapping = DSA_CALL2_RET(MapNamedBufferRange, m_id, m_data_loc, block_size, GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
 			m_mapped_bytes = block_size;
 			m_mapping_offset = m_data_loc;
 			m_alignment_offset = 0;
@@ -973,7 +1018,6 @@ namespace gl
 
 		void unmap() override
 		{
-			buffer::bind();
 			buffer::unmap();
 
 			m_memory_mapping = nullptr;
@@ -982,6 +1026,68 @@ namespace gl
 		}
 
 		void notify() override {}
+	};
+
+	// A non-persistent ring buffer
+	// Internally maps and unmaps data. Uses persistent storage just like the regular persistent variant
+	// Works around drivers that have issues using mapped data for specific sources (e.g AMD proprietary driver with index buffers)
+	class transient_ring_buffer : public ring_buffer
+	{
+		bool dirty = false;
+
+		void* map_internal(u32 offset, u32 length)
+		{
+			flush();
+
+			dirty = true;
+			return DSA_CALL2_RET(MapNamedBufferRange, m_id, offset, length, GL_MAP_WRITE_BIT | GL_MAP_UNSYNCHRONIZED_BIT);
+		}
+
+	public:
+
+		void bind() override
+		{
+			flush();
+			buffer::bind();
+		}
+
+		void recreate(GLsizeiptr size, const void* data = nullptr) override
+		{
+			if (m_id)
+			{
+				m_fence.wait_for_signal();
+				remove();
+			}
+
+			buffer::create();
+			save_binding_state save(current_target(), *this);
+			DSA_CALL2(NamedBufferStorage, m_id, size, data, GL_MAP_WRITE_BIT);
+
+			m_data_loc = 0;
+			m_size = ::narrow<u32>(size);
+			m_memory_type = memory_type::host_visible;
+		}
+
+		std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment) override
+		{
+			ensure(m_memory_mapping == nullptr);
+			const auto allocation = ring_buffer::alloc_from_heap(alloc_size, alignment);
+			return { map_internal(allocation.second, alloc_size), allocation.second };
+		}
+
+		void flush() override
+		{
+			if (dirty)
+			{
+				buffer::unmap();
+				dirty = false;
+			}
+		}
+
+		void unmap() override
+		{
+			flush();
+		}
 	};
 
 	class buffer_view
@@ -1364,7 +1470,7 @@ namespace gl
 
 		rsx::format_class m_format_class = RSX_FORMAT_CLASS_UNDEFINED;
 
-	private:
+	public:
 		class save_binding_state
 		{
 			GLenum target = GL_NONE;
@@ -1402,7 +1508,7 @@ namespace gl
 				glBindTexture(target, old_binding);
 			}
 		};
-	public:
+
 		texture(const texture&) = delete;
 		texture(texture&& texture_) = delete;
 
@@ -1774,6 +1880,7 @@ namespace gl
 				component_swizzle[2] = argb_swizzle[3];
 				component_swizzle[3] = argb_swizzle[0];
 
+				texture::save_binding_state save(m_target);
 				glBindTexture(m_target, m_id);
 				glTexParameteriv(m_target, GL_TEXTURE_SWIZZLE_RGBA, reinterpret_cast<GLint*>(component_swizzle));
 			}
@@ -1790,6 +1897,7 @@ namespace gl
 				constexpr u32 depth_stencil_mask = (image_aspect::depth | image_aspect::stencil);
 				ensure((aspect_flags & depth_stencil_mask) != depth_stencil_mask); // "Invalid aspect mask combination"
 
+				texture::save_binding_state save(m_target);
 				glBindTexture(m_target, m_id);
 				glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
 			}
@@ -1851,9 +1959,9 @@ namespace gl
 				argb_swizzle[3] == component_swizzle[2]);
 		}
 
-		void bind() const
+		void bind(gl::command_context& cmd, GLuint layer) const
 		{
-			glBindTexture(m_target, m_id);
+			cmd->bind_texture(layer, m_target, m_id);
 		}
 
 		texture* image() const
@@ -2082,6 +2190,10 @@ public:
 			GLuint m_id = GL_NONE;
 			fbo &m_parent;
 
+			attachment(fbo& parent)
+				: m_parent(parent)
+			{}
+
 		public:
 			attachment(fbo& parent, type type)
 				: m_id(static_cast<int>(type))
@@ -2112,25 +2224,21 @@ public:
 
 			void operator = (const rbo& rhs)
 			{
-				save_binding_state save(m_parent);
 				m_parent.m_resource_bindings[m_id] = rhs.id();
-				glFramebufferRenderbuffer(GL_FRAMEBUFFER, m_id, GL_RENDERBUFFER, rhs.id());
+				DSA_CALL2(NamedFramebufferRenderbuffer, m_parent.id(), m_id, GL_RENDERBUFFER, rhs.id());
 			}
 
 			void operator = (const texture& rhs)
 			{
-				save_binding_state save(m_parent);
-
 				ensure(rhs.get_target() == texture::target::texture2D);
 				m_parent.m_resource_bindings[m_id] = rhs.id();
-				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), 0);
+				DSA_CALL2(NamedFramebufferTexture, m_parent.id(), m_id, rhs.id(), 0);
 			}
 
 			void operator = (const GLuint rhs)
 			{
-				save_binding_state save(m_parent);
 				m_parent.m_resource_bindings[m_id] = rhs;
-				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs, 0);
+				DSA_CALL2(NamedFramebufferTexture, m_parent.id(), m_id, rhs, 0);
 			}
 		};
 
@@ -2159,10 +2267,18 @@ public:
 			using attachment::operator =;
 		};
 
+		struct null_attachment : public attachment
+		{
+			null_attachment(fbo& parent)
+				: attachment(parent)
+			{}
+		};
+
 		indexed_attachment color{ *this, attachment::type::color };
 		attachment depth{ *this, attachment::type::depth };
 		attachment stencil{ *this, attachment::type::stencil };
 		attachment depth_stencil{ *this, attachment::type::depth_stencil };
+		null_attachment no_color{ *this };
 
 		enum class target
 		{
@@ -2524,15 +2640,6 @@ public:
 					return result;
 				}
 
-				int texture(GLint location, int active_texture, const gl::texture_view& texture)
-				{
-					glActiveTexture(GL_TEXTURE0 + active_texture);
-					texture.bind();
-					(*this)[location] = active_texture;
-
-					return active_texture;
-				}
-
 				uniform_t operator[](GLint location)
 				{
 					return{ m_program, location };
@@ -2579,11 +2686,6 @@ public:
 				GLint id;
 				glGetIntegerv(GL_CURRENT_PROGRAM, &id);
 				return{ static_cast<GLuint>(id) };
-			}
-
-			void use()
-			{
-				glUseProgram(m_id);
 			}
 
 			void link(std::function<void(program*)> init_func = {})

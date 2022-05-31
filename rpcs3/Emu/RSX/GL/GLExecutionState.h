@@ -21,6 +21,7 @@ namespace gl
 		bool ARB_shader_draw_parameters_supported = false;
 		bool ARB_depth_buffer_float_supported = false;
 		bool ARB_texture_barrier_supported = false;
+		bool ARB_shader_stencil_export_supported = false;
 		bool NV_texture_barrier_supported = false;
 		bool NV_gpu_shader5_supported = false;
 		bool AMD_gpu_shader_half_float_supported = false;
@@ -45,7 +46,7 @@ namespace gl
 
 		void initialize()
 		{
-			int find_count = 14;
+			int find_count = 15;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -162,6 +163,13 @@ namespace gl
 					find_count--;
 					continue;
 				}
+
+				if (check(ext_name, "GL_ARB_shader_stencil_export"))
+				{
+					ARB_shader_stencil_export_supported = true;
+					find_count--;
+					continue;
+				}
 			}
 
 			// Check GL_VERSION and GL_RENDERER for the presence of Mesa
@@ -196,7 +204,7 @@ namespace gl
 					ARB_texture_buffer_supported = true;
 
 				// Check for expected library entry-points for some required functions
-				if (!ARB_buffer_storage_supported && glBufferStorage && glMapBufferRange)
+				if (!ARB_buffer_storage_supported && glNamedBufferStorage && glMapNamedBufferRange)
 					ARB_buffer_storage_supported = true;
 
 				if (!ARB_dsa_supported && glGetTextureImage && glTextureBufferRange)
@@ -231,6 +239,9 @@ namespace gl
 
 		std::unordered_map<GLenum, u32> properties = {};
 		std::unordered_map<GLenum, std::array<u32, 4>> indexed_properties = {};
+
+		GLuint current_program = GL_NONE;
+		std::array<std::unordered_map<GLenum, GLuint>, 48> bound_textures{ {} };
 
 		bool enable(u32 test, GLenum cap)
 		{
@@ -272,6 +283,26 @@ namespace gl
 				glDisablei(cap, index);
 
 			return !!test;
+		}
+
+		bool enable(GLenum cap)
+		{
+			return enable(GL_TRUE, cap);
+		}
+
+		bool enablei(GLenum cap, u32 index)
+		{
+			return enablei(GL_TRUE, cap, index);
+		}
+
+		bool disable(GLenum cap)
+		{
+			return enable(GL_FALSE, cap);
+		}
+
+		bool disablei(GLenum cap, u32 index)
+		{
+			return enablei(GL_FALSE, cap, index);
 		}
 
 		inline bool test_property(GLenum property, u32 test) const
@@ -467,12 +498,38 @@ namespace gl
 				properties[GL_POLYGON_OFFSET_FACTOR] = _factor;
 			}
 		}
+
+		void use_program(GLuint program)
+		{
+			if (current_program == program)
+			{
+				return;
+			}
+
+			current_program = program;
+			glUseProgram(program);
+		}
+
+		void bind_texture(GLuint layer, GLenum target, GLuint name)
+		{
+			ensure(layer < 48);
+
+			auto& bound = bound_textures[layer][target];
+			if (bound != name)
+			{
+				glActiveTexture(GL_TEXTURE0 + layer);
+				glBindTexture(target, name);
+
+				bound = name;
+			}
+		}
 	};
 
-	struct command_context
+	class command_context
 	{
 		driver_state* drv;
 
+	public:
 		command_context()
 			: drv(nullptr)
 		{}
@@ -480,5 +537,9 @@ namespace gl
 		command_context(driver_state& drv_)
 			: drv(&drv_)
 		{}
+
+		driver_state* operator -> () {
+			return drv;
+		}
 	};
 }
