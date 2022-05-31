@@ -1740,7 +1740,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
+			static void impl(thread*, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
@@ -1749,7 +1749,7 @@ namespace rsx
 		template<u32 index>
 		struct queue_flip
 		{
-			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
+			static void impl(thread*, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
