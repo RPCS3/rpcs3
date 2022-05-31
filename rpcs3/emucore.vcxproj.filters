@@ -2145,5 +2145,11 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\CopyBufferToD24x8.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\GenericVSPassthrough.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
   </ItemGroup>
 </Project>
