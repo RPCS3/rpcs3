@@ -201,7 +201,7 @@ struct cell_audio_config
 		s64 time_stretching_threshold = 0;
 		bool convert_to_s16 = false;
 		bool dump_to_file = false;
-		audio_format format = audio_format::manual;
+		audio_format format = audio_format::stereo;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
 	};
