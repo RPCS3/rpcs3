@@ -162,6 +162,16 @@ audio_out_configuration::audio_out_configuration()
 	secondary_output.channels = secondary_modes.front().channel;
 	secondary_output.encoder  = secondary_modes.front().type;
 
+	for (const CellAudioOutSoundMode& mode : primary_modes)
+	{
+		cellSysutil.notice("cellAudioOut: added primary mode: type=%d, channel=%d, fs=%d, layout=%d", mode.type, mode.channel, mode.fs, mode.layout);
+	}
+
+	for (const CellAudioOutSoundMode& mode : secondary_modes)
+	{
+		cellSysutil.notice("cellAudioOut: added secondary mode: type=%d, channel=%d, fs=%d, layout=%d", mode.type, mode.channel, mode.fs, mode.layout);
+	}
+
 	cellSysutil.notice("cellAudioOut: initial primary output configuration: channels=%d, encoder=%d, downmixer=%d", primary_output.channels, primary_output.encoder, primary_output.downmixer);
 	cellSysutil.notice("cellAudioOut: initial secondary output configuration: channels=%d, encoder=%d, downmixer=%d", secondary_output.channels, secondary_output.encoder, secondary_output.downmixer);
 }
