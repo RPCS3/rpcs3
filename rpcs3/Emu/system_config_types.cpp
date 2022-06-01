@@ -542,8 +542,8 @@ void fmt_class_string<audio_format>::format(std::string& out, u64 arg)
 		case audio_format::lpcm_2_48khz: return "Linear PCM 2 Ch. 48 kHz";
 		case audio_format::lpcm_5_1_48khz: return "Linear PCM 5.1 Ch. 48 kHz";
 		case audio_format::lpcm_7_1_48khz: return "Linear PCM 7.1 Ch. 48 kHz";
-		case audio_format::dts: return "DTS 5.1 Ch.";
 		case audio_format::ac3: return "Dolby Digital 5.1 Ch.";
+		case audio_format::dts: return "DTS 5.1 Ch.";
 		}
 
 		return unknown;

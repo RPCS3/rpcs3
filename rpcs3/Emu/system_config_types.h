@@ -81,8 +81,8 @@ enum class audio_format
 	lpcm_2_48khz,
 	lpcm_5_1_48khz,
 	lpcm_7_1_48khz,
-	dts,
 	ac3,
+	dts,
 	automatic,
 };
 
