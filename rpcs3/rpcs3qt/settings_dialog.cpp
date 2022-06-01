@@ -28,6 +28,8 @@
 #include "Emu/system_config.h"
 #include "Emu/title.h"
 
+#include "Loader/PSF.h"
+
 #include <set>
 #include <unordered_set>
 #include <thread>
@@ -963,11 +965,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		const std::map<u32, std::vector<audio_format>> formats
 		{
-			{ 1 << 0, { audio_format::lpcm_2_48khz } },
-			{ 1 << 2, { audio_format::lpcm_5_1_48khz } },
-			{ 1 << 4, { audio_format::lpcm_7_1_48khz } },
-			{ 1 << 8, { audio_format::ac3 } },
-			{ 1 << 9, { audio_format::dts } },
+			{ psf::sound_format_flag::lpcm_2,   { audio_format::lpcm_2_48khz } },
+			{ psf::sound_format_flag::lpcm_5_1, { audio_format::lpcm_5_1_48khz } },
+			{ psf::sound_format_flag::lpcm_7_1, { audio_format::lpcm_7_1_48khz } },
+			{ psf::sound_format_flag::ac3,      { audio_format::ac3 } },
+			{ psf::sound_format_flag::dts,      { audio_format::dts } },
 		};
 
 		const int saved_index = ui->combo_audio_format->currentIndex();

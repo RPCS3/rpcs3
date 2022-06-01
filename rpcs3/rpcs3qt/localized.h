@@ -124,14 +124,7 @@ public:
 
 	const struct sound
 	{
-		const std::map<u32, QString> format
-		{
-			{ 1 << 0, tr("LPCM 2.0") },
-			//{ 1 << 1, tr("LPCM ???") },
-			{ 1 << 2, tr("LPCM 5.1") },
-			{ 1 << 4, tr("LPCM 7.1") },
-			{ 1 << 8, tr("Dolby Digital 5.1") },
-			{ 1 << 9, tr("DTS 5.1") },
-		};
+		sound();
+		const std::map<u32, QString> format;
 	} sound;
 };

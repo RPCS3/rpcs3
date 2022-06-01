@@ -44,11 +44,11 @@ audio_out_configuration::audio_out_configuration()
 	const psf::registry psf = psf::load_object(fs::file(Emu.GetSfoDir() + "/PARAM.SFO"));
 	if (psf.contains("SOUND_FORMAT")) sound_format = psf.at("SOUND_FORMAT").as_integer();
 
-	const bool supports_lpcm_2   = (sound_format & (1 << 0)); // Linear PCM 2 Ch.
-	const bool supports_lpcm_5_1 = (sound_format & (1 << 2)); // Linear PCM 5.1 Ch.
-	const bool supports_lpcm_7_1 = (sound_format & (1 << 4)); // Linear PCM 7.1 Ch.
-	const bool supports_ac3      = (sound_format & (1 << 8)); // Dolby Digital 5.1 Ch.
-	const bool supports_dts      = (sound_format & (1 << 9)); // DTS 5.1 Ch.
+	const bool supports_lpcm_2   = (sound_format & psf::sound_format_flag::lpcm_2);   // Linear PCM 2 Ch.
+	const bool supports_lpcm_5_1 = (sound_format & psf::sound_format_flag::lpcm_5_1); // Linear PCM 5.1 Ch.
+	const bool supports_lpcm_7_1 = (sound_format & psf::sound_format_flag::lpcm_7_1); // Linear PCM 7.1 Ch.
+	const bool supports_ac3      = (sound_format & psf::sound_format_flag::ac3);      // Dolby Digital 5.1 Ch.
+	const bool supports_dts      = (sound_format & psf::sound_format_flag::dts);      // DTS 5.1 Ch.
 
 	if (supports_lpcm_2)   cellSysutil.notice("cellAudioOut: found support for Linear PCM 2 Ch.");
 	if (supports_lpcm_5_1) cellSysutil.notice("cellAudioOut: found support for Linear PCM 5.1 Ch.");
