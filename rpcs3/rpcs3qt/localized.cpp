@@ -1,4 +1,5 @@
 #include "localized.h"
+#include "Loader/PSF.h"
 
 QString Localized::GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days) const
 {
@@ -44,4 +45,15 @@ QString Localized::GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days) const
 	}
 
 	return str_seconds;
+}
+
+Localized::sound::sound()
+	: format({
+		{ psf::sound_format_flag::lpcm_2,   tr("LPCM 2.0") },
+		{ psf::sound_format_flag::lpcm_5_1, tr("LPCM 5.1") },
+		{ psf::sound_format_flag::lpcm_7_1, tr("LPCM 7.1") },
+		{ psf::sound_format_flag::ac3,      tr("Dolby Digital 5.1") },
+		{ psf::sound_format_flag::dts,      tr("DTS 5.1") },
+	})
+{
 }
