@@ -505,7 +505,7 @@ namespace gl
 			if (!(*dst) || max_mem > static_cast<u64>(dst->size()))
 			{
 				if (*dst) dst->remove();
-				dst->create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+				dst->create(buffer::target::ssbo, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
 			}
 
 			if (auto as_vi = dynamic_cast<const gl::viewable_image*>(src);
