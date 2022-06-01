@@ -73,7 +73,6 @@ audio_out_configuration::audio_out_configuration()
 	// Always add Linear PCM 2 Ch.
 	add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_2, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH);
 
-	// TODO: audio_format should be a bitmap, but we'll keep it simple for now (Linear PCM 2 Ch. 48 kHz should always exist)
 	// TODO: more formats:
 	// - Each LPCM with other sample frequencies (we currently only support 48 kHz)
 	// - AAC
@@ -84,6 +83,28 @@ audio_out_configuration::audio_out_configuration()
 	// - ...
 	switch (g_cfg.audio.format)
 	{
+	case audio_format::stereo:
+	{
+		break; // Already added by default
+	}
+	case audio_format::surround_7_1:
+	{
+		// Linear PCM 7.1 Ch. 48 kHz
+		add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_8, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy);
+		[[fallthrough]]; // Also add all available 5.1 formats in case the game doesn't like 7.1
+	}
+	case audio_format::surround_5_1:
+	{
+		// Linear PCM 5.1 Ch. 48 kHz
+		add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
+		
+		// Dolby Digital 5.1 Ch.
+		add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_AC3, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
+
+		// DTS 5.1 Ch.
+		add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_DTS, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
+		break;
+	}
 	case audio_format::automatic: // Automatic based on supported formats
 	{
 		if (supports_lpcm_5_1) // Linear PCM 5.1 Ch.

@@ -538,8 +538,11 @@ void fmt_class_string<audio_format>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case audio_format::manual: return "Manual";
+		case audio_format::stereo: return "Stereo";
+		case audio_format::surround_5_1: return "Surround 5.1";
+		case audio_format::surround_7_1: return "Surround 7.1";
 		case audio_format::automatic: return "Automatic";
+		case audio_format::manual: return "Manual";
 		}
 
 		return unknown;

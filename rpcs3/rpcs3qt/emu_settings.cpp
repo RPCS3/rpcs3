@@ -1143,6 +1143,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::AudioFormat:
 		switch (static_cast<audio_format>(index))
 		{
+		case audio_format::stereo: return tr("Stereo", "Audio format");
+		case audio_format::surround_5_1: return tr("Surround 5.1", "Audio format");
+		case audio_format::surround_7_1: return tr("Surround 7.1", "Audio format");
 		case audio_format::manual: return tr("Manual", "Audio format");
 		case audio_format::automatic: return tr("Automatic", "Audio format");
 		}

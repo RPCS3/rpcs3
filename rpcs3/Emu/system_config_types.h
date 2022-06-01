@@ -78,8 +78,11 @@ enum class audio_avport
 
 enum class audio_format
 {
-	manual,
+	stereo,
+	surround_5_1,
+	surround_7_1,
 	automatic,
+	manual,
 };
 
 enum class audio_format_flag : unsigned
