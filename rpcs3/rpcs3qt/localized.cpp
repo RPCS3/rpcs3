@@ -47,6 +47,18 @@ QString Localized::GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days) const
 	return str_seconds;
 }
 
+Localized::resolution::resolution()
+	: mode({
+		{ psf::resolution_flag::_480p,      tr("480p") },
+		{ psf::resolution_flag::_576p,      tr("576p") },
+		{ psf::resolution_flag::_720p,      tr("720p") },
+		{ psf::resolution_flag::_1080p,     tr("1080p") },
+		{ psf::resolution_flag::_480p_16_9, tr("480p 16:9") },
+		{ psf::resolution_flag::_576p_16_9, tr("576p 16:9") },
+	})
+{
+}
+
 Localized::sound::sound()
 	: format({
 		{ psf::sound_format_flag::lpcm_2,   tr("LPCM 2.0") },

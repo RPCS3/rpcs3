@@ -451,12 +451,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		const std::map<u32, std::string> resolutions
 		{
-			{ 1 << 0, fmt::format("%s", video_resolution::_480) },
-			{ 1 << 1, fmt::format("%s", video_resolution::_576) },
-			{ 1 << 2, fmt::format("%s", video_resolution::_720) },
-			{ 1 << 3, fmt::format("%s", video_resolution::_1080) },
-			// { 1 << 4, fmt::format("%s", video_resolution::_480p_16:9) },
-			// { 1 << 5, fmt::format("%s", video_resolution::_576p_16:9) },
+			{ psf::resolution_flag::_480p,      fmt::format("%s", video_resolution::_480) },
+			{ psf::resolution_flag::_576p,      fmt::format("%s", video_resolution::_576) },
+			{ psf::resolution_flag::_720p,      fmt::format("%s", video_resolution::_720) },
+			{ psf::resolution_flag::_1080p,     fmt::format("%s", video_resolution::_1080) },
+			// { psf::resolution_flag::_480p_16_9, fmt::format("%s", video_resolution::_480p_16:9) },
+			// { psf::resolution_flag::_576p_16_9, fmt::format("%s", video_resolution::_576p_16:9) },
 		};
 
 		const int saved_index = ui->resBox->currentIndex();
