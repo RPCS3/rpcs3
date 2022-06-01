@@ -608,10 +608,10 @@ namespace gl
 		const u32 src_offset, const coordu& dst_region,
 		const pixel_unpack_settings& settings)
 	{
-		const int row_length = settings.get_row_length();
-		program_handle.uniforms["src_pitch"] = row_length ? row_length : static_cast<int>(dst_region.width);
-		program_handle.uniforms["swap_bytes"] = settings.get_swap_bytes() ? 1 : 0;
-		src->bind_range(GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * dst_region.height);
+		const u32 row_length = settings.get_row_length() ? settings.get_row_length() : static_cast<u32>(dst_region.width);
+		program_handle.uniforms["src_pitch"] = row_length;
+		program_handle.uniforms["swap_bytes"] = settings.get_swap_bytes();
+		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * 4 * dst_region.height);
 
 		cmd->stencil_mask(0xFF);
 

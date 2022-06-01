@@ -340,6 +340,25 @@ namespace gl
 		}
 	};
 
+	struct pixel_buffer_layout;
+
+	struct cs_image_to_ssbo : compute_task
+	{
+		virtual void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) = 0;
+	};
+
+	struct cs_d24x8_to_ssbo : cs_image_to_ssbo
+	{
+		cs_d24x8_to_ssbo();
+		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) override;
+	};
+
+	struct cs_rgba8_to_ssbo : cs_image_to_ssbo
+	{
+		cs_rgba8_to_ssbo();
+		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) override;
+	};
+
 	// TODO: Replace with a proper manager
 	extern std::unordered_map<u32, std::unique_ptr<gl::compute_task>> g_compute_tasks;
 

@@ -336,6 +336,15 @@ namespace gl
 			m_alignment = value;
 			return *this;
 		}
+
+		bool get_swap_bytes() const
+		{
+			return m_swap_bytes;
+		}
+		int get_row_length() const
+		{
+			return m_row_length;
+		}
 	};
 
 	class pixel_unpack_settings
@@ -2558,6 +2567,7 @@ public:
 				void operator = (int rhs) const { glProgramUniform1i(m_program.id(), location(), rhs); }
 				void operator = (unsigned rhs) const { glProgramUniform1ui(m_program.id(), location(), rhs); }
 				void operator = (float rhs) const { glProgramUniform1f(m_program.id(), location(), rhs); }
+				void operator = (bool rhs) const { glProgramUniform1ui(m_program.id(), location(), rhs ? 1 : 0); }
 				void operator = (const color1i& rhs) const { glProgramUniform1i(m_program.id(), location(), rhs.r); }
 				void operator = (const color1f& rhs) const { glProgramUniform1f(m_program.id(), location(), rhs.r); }
 				void operator = (const color2i& rhs) const { glProgramUniform2i(m_program.id(), location(), rhs.r, rhs.g); }

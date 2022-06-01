@@ -508,6 +508,30 @@ namespace gl
 				dst->create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
 			}
 
+			if (auto as_vi = dynamic_cast<const gl::viewable_image*>(src);
+				gl::get_driver_caps().vendor_AMD &&
+				src->get_target() == gl::texture::target::texture2D &&
+				as_vi)
+			{
+				switch (src->get_internal_format())
+				{
+				case gl::texture::internal_format::depth24_stencil8:
+					gl::get_compute_task<gl::cs_d24x8_to_ssbo>()->run(cmd,
+						const_cast<gl::viewable_image*>(as_vi), dst, 0,
+						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
+						pack_info, {});
+					return;
+				case gl::texture::internal_format::rgba8:
+					gl::get_compute_task<gl::cs_rgba8_to_ssbo>()->run(cmd,
+						const_cast<gl::viewable_image*>(as_vi), dst, 0,
+						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
+						pack_info, {});
+					return;
+				default:
+					break;
+				}
+			}
+
 			dst->bind(buffer::target::pixel_pack);
 			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, {});
 		};

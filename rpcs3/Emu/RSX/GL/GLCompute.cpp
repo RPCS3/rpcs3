@@ -1,4 +1,5 @@
 #include "GLCompute.h"
+#include "GLTexture.h"
 #include "Utilities/StrUtil.h"
 
 namespace gl
@@ -271,5 +272,83 @@ namespace gl
 		m_program.uniforms["in_ptr"] = src_offset - data_offset;
 		m_program.uniforms["out_ptr"] = dst_offset - data_offset;
 		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
+	}
+
+	cs_d24x8_to_ssbo::cs_d24x8_to_ssbo()
+	{
+		initialize();
+
+		const auto raw_data =
+		#include "../Program/GLSLSnippets/CopyD24x8ToBuffer.glsl"
+		;
+
+		const std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%set, ", "" },
+			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+			{ "%ws", std::to_string(optimal_group_size) },
+			{ "%wks", std::to_string(optimal_kernel_size) }
+		};
+
+		m_src = fmt::replace_all(raw_data, repl_list);
+	}
+
+	void cs_d24x8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& /*layout*/, const gl::pixel_pack_settings& settings)
+	{
+		const auto row_pitch = settings.get_row_length() ? settings.get_row_length() : region.width;
+
+		m_program.uniforms["swap_bytes"] = settings.get_swap_bytes();
+		m_program.uniforms["output_pitch"] = row_pitch;
+		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
+		m_program.uniforms["region_size"] = color2i(region.width, region.height);
+
+		auto depth_view = src->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::depth);
+		auto stencil_view = src->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::stencil);
+
+		depth_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
+		stencil_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(1));
+		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(2), out_offset, row_pitch * 4 * region.height);
+
+		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size);
+		compute_task::run(cmd, num_invocations);
+	}
+
+	cs_rgba8_to_ssbo::cs_rgba8_to_ssbo()
+	{
+		initialize();
+
+		const auto raw_data =
+		#include "../Program/GLSLSnippets/CopyRGBA8ToBuffer.glsl"
+		;
+
+		const std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%set, ", "" },
+			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+			{ "%ws", std::to_string(optimal_group_size) },
+			{ "%wks", std::to_string(optimal_kernel_size) }
+		};
+
+		m_src = fmt::replace_all(raw_data, repl_list);
+	}
+
+	void cs_rgba8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings)
+	{
+		const auto row_pitch = settings.get_row_length() ? settings.get_row_length() : region.width;
+
+		m_program.uniforms["swap_bytes"] = settings.get_swap_bytes();
+		m_program.uniforms["output_pitch"] = row_pitch;
+		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
+		m_program.uniforms["region_size"] = color2i(region.width, region.height);
+		m_program.uniforms["is_bgra"] = (layout.format == static_cast<GLenum>(gl::texture::format::bgra));
+		m_program.uniforms["block_width"] = static_cast<u32>(layout.size);
+
+		auto data_view = src->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::color);
+
+		data_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
+		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), out_offset, row_pitch * 4 * region.height);
+
+		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size);
+		compute_task::run(cmd, num_invocations);
 	}
 }
