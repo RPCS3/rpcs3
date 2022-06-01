@@ -1039,6 +1039,19 @@
                <item>
                 <widget class="QComboBox" name="combo_audio_format"/>
                </item>
+               <item>
+                <widget class="QListWidget" name="list_audio_formats">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::ExtendedSelection</enum>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </widget>
             </item>
@@ -1077,18 +1090,6 @@
                   </size>
                  </property>
                 </spacer>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="gb_music_handler">
-              <property name="title">
-               <string>Music Handler</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_music_handler_layout">
-               <item>
-                <widget class="QComboBox" name="musicHandlerBox"/>
                </item>
               </layout>
              </widget>
@@ -1133,6 +1134,18 @@
               <layout class="QVBoxLayout" name="gb_audio_avport_layout">
                <item>
                 <widget class="QComboBox" name="audioAvportBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_music_handler">
+              <property name="title">
+               <string>Music Handler</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_music_handler_layout">
+               <item>
+                <widget class="QComboBox" name="musicHandlerBox"/>
                </item>
               </layout>
              </widget>
@@ -2308,9 +2321,6 @@
                  <property name="selectionMode">
                   <enum>QAbstractItemView::ExtendedSelection</enum>
                  </property>
-                 <property name="viewMode">
-                  <enum>QListView::ListMode</enum>
-                 </property>
                 </widget>
                </item>
                <item>
@@ -2323,9 +2333,6 @@
                  </property>
                  <property name="selectionMode">
                   <enum>QAbstractItemView::ExtendedSelection</enum>
-                 </property>
-                 <property name="viewMode">
-                  <enum>QListView::ListMode</enum>
                  </property>
                 </widget>
                </item>

@@ -1143,12 +1143,18 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::AudioFormat:
 		switch (static_cast<audio_format>(index))
 		{
+		case audio_format::manual: return tr("Manual", "Audio format");
 		case audio_format::automatic: return tr("Automatic", "Audio format");
-		case audio_format::lpcm_2_48khz: return tr("Linear PCM 2 Ch. 48 kHz", "Audio format");
-		case audio_format::lpcm_5_1_48khz: return tr("Linear PCM 5.1 Ch. 48 kHz", "Audio format");
-		case audio_format::lpcm_7_1_48khz: return tr("Linear PCM 7.1 Ch. 48 kHz", "Audio format");
-		case audio_format::ac3: return tr("Dolby Digital 5.1 Ch.", "Audio format");
-		case audio_format::dts: return tr("DTS 5.1 Ch.", "Audio format");
+		}
+		break;
+	case emu_settings_type::AudioFormats:
+		switch (static_cast<audio_format_flag>(index))
+		{
+		case audio_format_flag::lpcm_2_48khz: return tr("Linear PCM 2 Ch. 48 kHz", "Audio format flag");
+		case audio_format_flag::lpcm_5_1_48khz: return tr("Linear PCM 5.1 Ch. 48 kHz", "Audio format flag");
+		case audio_format_flag::lpcm_7_1_48khz: return tr("Linear PCM 7.1 Ch. 48 kHz", "Audio format flag");
+		case audio_format_flag::ac3: return tr("Dolby Digital 5.1 Ch.", "Audio format flag");
+		case audio_format_flag::dts: return tr("DTS 5.1 Ch.", "Audio format flag");
 		}
 		break;
 	case emu_settings_type::LicenseArea:
