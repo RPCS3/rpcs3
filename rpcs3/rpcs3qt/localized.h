@@ -111,15 +111,8 @@ public:
 	const struct resolution
 	{
 		// there might be different values for other categories
-		const std::map<u32, QString> mode
-		{
-			{ 1 << 0, tr("480p") },
-			{ 1 << 1, tr("576p") },
-			{ 1 << 2, tr("720p") },
-			{ 1 << 3, tr("1080p") },
-			{ 1 << 4, tr("480p 16:9") },
-			{ 1 << 5, tr("576p 16:9") },
-		};
+		resolution();
+		const std::map<u32, QString> mode;
 	} resolution;
 
 	const struct sound
