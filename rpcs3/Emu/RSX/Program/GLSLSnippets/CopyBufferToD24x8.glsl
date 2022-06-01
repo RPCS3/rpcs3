@@ -14,11 +14,11 @@ layout(%push_block) uniform UnpackConfiguration
 	uint src_pitch;
 };
 #else
-	uniform int swap_bytes;
-	uniform int src_pitch;
+	uniform uint swap_bytes;
+	uniform uint src_pitch;
 #endif
 
-int getDataOffset()
+uint getDataOffset()
 {
 	const ivec2 coords = ivec2(gl_FragCoord.xy);
 	return coords.y * src_pitch + coords.x;
@@ -26,7 +26,7 @@ int getDataOffset()
 
 void main()
 {
-	const int virtual_address = getDataOffset();
+	const uint virtual_address = getDataOffset();
 	uint real_data = data[virtual_address];
 
 	const uint stencil_byte = bitfieldExtract(real_data, 0, 8);
