@@ -108,31 +108,21 @@ audio_out_configuration::audio_out_configuration()
 
 		break;
 	}
-	case audio_format::lpcm_2_48khz: // Linear PCM 2 Ch. 48 kHz
+	case audio_format::manual: // Manual based on selected formats
 	{
-		// Already added by default
-		break;
-	}
-	case audio_format::lpcm_5_1_48khz: // Linear PCM 5.1 Ch. 48 kHz
-	{
-		add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
-		break;
-	}
-	case audio_format::lpcm_7_1_48khz: // Linear PCM 7.1 Ch. 48 kHz
-	{
-		// Also add 5.1 in case 7.1 is not supported
-		add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
-		add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_8, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy);
-		break;
-	}
-	case audio_format::ac3: // Dolby Digital 5.1 Ch.
-	{
-		add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_AC3, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
-		break;
-	}
-	case audio_format::dts: // DTS 5.1 Ch.
-	{
-		add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_DTS, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
+		const u32 selected_formats = g_cfg.audio.formats;
+
+		if (selected_formats & static_cast<u32>(audio_format_flag::lpcm_5_1_48khz)) // Linear PCM 5.1 Ch. 48 kHz
+			add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
+
+		if (selected_formats & static_cast<u32>(audio_format_flag::lpcm_7_1_48khz)) // Linear PCM 7.1 Ch. 48 kHz
+			add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_8, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_8CH_LREClrxy);
+
+		if (selected_formats & static_cast<u32>(audio_format_flag::ac3)) // Dolby Digital 5.1 Ch.
+			add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_AC3, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
+
+		if (selected_formats & static_cast<u32>(audio_format_flag::dts)) // DTS 5.1 Ch.
+			add_sound_mode_to_both_outputs(CELL_AUDIO_OUT_CODING_TYPE_DTS, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr);
 		break;
 	}
 	}

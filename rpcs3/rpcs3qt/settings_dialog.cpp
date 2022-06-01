@@ -111,6 +111,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto apply_configs = [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state, game](bool do_exit)
 	{
+		u32 selected_audio_formats = 0;
+		for (int i = 0; i < ui->list_audio_formats->count(); ++i)
+		{
+			const auto& item = ui->list_audio_formats->item(i);
+			if (item->checkState() != Qt::CheckState::Unchecked)
+			{
+				selected_audio_formats |= item->data(Qt::UserRole).toUInt();
+			}
+		}
+		m_emu_settings->SetSetting(emu_settings_type::AudioFormats, std::to_string(selected_audio_formats));
+
 		std::set<std::string> selected;
 		for (int i = 0; i < ui->lleList->count(); ++i)
 		{
@@ -956,65 +967,65 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #else
 	SubscribeTooltip(ui->gb_audio_out, tooltips.settings.audio_out_linux);
 #endif
-	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), enable_buffering);
+	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, enable_buffering);
 
+	connect(ui->combo_audio_format, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		const QVariantList var_list = ui->combo_audio_format->itemData(index).toList();
+		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
+		ui->list_audio_formats->setEnabled(static_cast<audio_format>(var_list[1].toInt()) == audio_format::manual);
+	});
 	m_emu_settings->EnhanceComboBox(ui->combo_audio_format, emu_settings_type::AudioFormat);
 	SubscribeTooltip(ui->gb_audio_format, tooltips.settings.audio_format);
-	bool saved_audio_format_index_removed = false;
-	if (game && game->sound_format > 0)
+
+	// Manual audio format selection
+	const std::string audio_formats_str = m_emu_settings->GetSetting(emu_settings_type::AudioFormats);
+	u64 selected_audio_formats = 0;
+	if (!try_to_uint64(&selected_audio_formats, audio_formats_str, 0, 0xFFFFFFFF))
 	{
-		const std::map<u32, std::vector<audio_format>> formats
+		cfg_log.error("Can not interpret AudioFormats value '%s' as number", audio_formats_str);
+	}
+	const std::array<audio_format_flag, 5> audio_formats = {
+		audio_format_flag::lpcm_2_48khz,
+		audio_format_flag::lpcm_5_1_48khz,
+		audio_format_flag::lpcm_7_1_48khz,
+		audio_format_flag::ac3,
+		audio_format_flag::dts,
+	};
+	for (const audio_format_flag& audio_fmt : audio_formats)
+	{
+		const QString audio_format_name = m_emu_settings->GetLocalizedSetting("", emu_settings_type::AudioFormats, static_cast<int>(audio_fmt));
+		QListWidgetItem* item = new QListWidgetItem(audio_format_name, ui->list_audio_formats);
+		item->setData(Qt::UserRole, static_cast<u32>(audio_fmt));
+		if (audio_fmt == audio_format_flag::lpcm_2_48khz)
 		{
-			{ psf::sound_format_flag::lpcm_2,   { audio_format::lpcm_2_48khz } },
-			{ psf::sound_format_flag::lpcm_5_1, { audio_format::lpcm_5_1_48khz } },
-			{ psf::sound_format_flag::lpcm_7_1, { audio_format::lpcm_7_1_48khz } },
-			{ psf::sound_format_flag::ac3,      { audio_format::ac3 } },
-			{ psf::sound_format_flag::dts,      { audio_format::dts } },
-		};
-
-		const int saved_index = ui->combo_audio_format->currentIndex();
-
-		for (int i = ui->combo_audio_format->count() - 1; i >= 0; i--)
+			item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+			item->setCheckState(Qt::Checked);
+		}
+		else
 		{
-			const QVariantList var_list = ui->combo_audio_format->itemData(i).toList();
-			ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
-
-			const audio_format format = static_cast<audio_format>(var_list[1].toInt());
-
-			bool has_format = false;
-			for (const auto& entry : formats)
+			item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+			item->setCheckState(!!(selected_audio_formats & static_cast<u32>(audio_fmt)) ? Qt::Checked : Qt::Unchecked);
+		}
+		ui->list_audio_formats->addItem(item);
+	}
+	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [this]()
+	{
+		const u32 default_audio_formats = std::stoi(m_emu_settings->GetSettingDefault(emu_settings_type::AudioFormats));
+		for (int i = 0; i < ui->list_audio_formats->count(); ++i)
+		{
+			const auto& item = ui->list_audio_formats->item(i);
+			const u32 audio_fmt = item->data(Qt::UserRole).toUInt();
+			if (audio_fmt == static_cast<u32>(audio_format_flag::lpcm_2_48khz))
 			{
-				if ((game->sound_format & entry.first) && std::find(entry.second.cbegin(), entry.second.cend(), format) != entry.second.cend())
-				{
-					has_format = true;
-					break;
-				}
+				item->setCheckState(Qt::Checked);
 			}
-			if (!has_format)
+			else
 			{
-				ui->combo_audio_format->removeItem(i);
-				if (i == saved_index)
-				{
-					saved_audio_format_index_removed = true;
-				}
+				item->setCheckState(!!(default_audio_formats & audio_fmt) ? Qt::Checked : Qt::Unchecked);
 			}
 		}
-	}
-	// Set the current selection to the default if the original setting wasn't valid
-	if (saved_audio_format_index_removed)
-	{
-		for (int i = 0; i < ui->combo_audio_format->count(); i++)
-		{
-			const QVariantList var_list = ui->combo_audio_format->itemData(i).toList();
-			ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
-
-			if (var_list[1].toInt() == static_cast<int>(g_cfg.audio.format.def))
-			{
-				ui->combo_audio_format->setCurrentIndex(i);
-				break;
-			}
-		}
-	}
+	});
 
 	m_emu_settings->EnhanceComboBox(ui->audioProviderBox, emu_settings_type::AudioProvider);
 	SubscribeTooltip(ui->gb_audio_provider, tooltips.settings.audio_provider);
