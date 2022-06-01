@@ -1926,6 +1926,7 @@ void PPUTranslator::BC(ppu_opcode_t op)
 	}
 
 	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
+
 	CallFunction(target);
 }
 
@@ -1971,6 +1972,7 @@ void PPUTranslator::B(ppu_opcode_t op)
 	{
 		RegStore(GetAddr(+4), m_lr);
 	}
+
 	FlushRegisters();
 	CallFunction(target);
 }
@@ -1994,6 +1996,7 @@ void PPUTranslator::BCLR(ppu_opcode_t op)
 	}
 
 	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
+
 	CallFunction(0, target);
 }
 
@@ -2056,6 +2059,7 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 	}
 
 	UseCondition(CheckBranchProbability(op.bo | 0x4), CheckBranchCondition(op.bo | 0x4, op.bi));
+
 	CallFunction(0, target);
 }
 
@@ -2506,6 +2510,7 @@ void PPUTranslator::LWARX(ppu_opcode_t op)
 		m_ir->CreateRetVoid();
 		return;
 	}
+
 	SetGpr(op.rd, Call(GetType<u32>(), "__lwarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 
@@ -2647,6 +2652,7 @@ void PPUTranslator::LDARX(ppu_opcode_t op)
 		m_ir->CreateRetVoid();
 		return;
 	}
+
 	SetGpr(op.rd, Call(GetType<u64>(), "__ldarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 

@@ -883,13 +883,7 @@ namespace vm
 		}
 		else if (!shm)
 		{
-#if defined(__APPLE__) && defined(ARCH_ARM64)
-			// Hack: we don't have 16K page support yet, so unmapping pages can break
-			// Just map as rw for now and hope not many games break.
-			utils::memory_protect(g_base_addr + addr, size, utils::protection::rw);
-#else
 			utils::memory_protect(g_base_addr + addr, size, utils::protection::no);
-#endif
 			std::memset(g_sudo_addr + addr, 0, size);
 		}
 		else

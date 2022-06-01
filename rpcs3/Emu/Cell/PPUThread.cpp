@@ -431,6 +431,7 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 			// We found a recompiler function at cia, return
 			break;
 		}
+
 		// Run one instruction in interpreter (TODO)
 		const u32 op = vm::read32(ppu.cia);
 		table.decode(op)(ppu, {op}, vm::_ptr<u32>(ppu.cia), &ppu_ret);
@@ -2676,7 +2677,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
 	{
 #ifdef __APPLE__
-			pthread_jit_write_protect_np(false);
+		pthread_jit_write_protect_np(false);
 #endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
@@ -3569,6 +3570,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 		std::string result;
 		raw_string_ostream out(result);
+
 		if (g_cfg.core.llvm_logs)
 		{
 			out << *_module; // print IR

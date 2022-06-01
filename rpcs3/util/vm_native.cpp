@@ -154,7 +154,7 @@ namespace utils
 		}
 
 #ifdef __APPLE__
-        auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
 #else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
 #endif
@@ -231,11 +231,11 @@ namespace utils
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
 #if defined(__APPLE__) && defined(ARCH_ARM64)
-        // Hack: on macOS, Apple explicitly fails mmap if you combine MAP_FIXED and MAP_JIT.
-        // So we unmap the space and just hope it maps to the same address we got before instead.
-        // The Xcode manpage says the pointer is a hint and the OS will try to map at the hint location
-        // so this isn't completely undefined behavior.
-        ensure(::munmap(pointer, size) != -1);
+		// Hack: on macOS, Apple explicitly fails mmap if you combine MAP_FIXED and MAP_JIT.
+		// So we unmap the space and just hope it maps to the same address we got before instead.
+		// The Xcode manpage says the pointer is a hint and the OS will try to map at the hint location
+		// so this isn't completely undefined behavior.
+		ensure(::munmap(pointer, size) != -1);
 		ensure(::mmap(pointer, size, PROT_NONE,  MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
 #else
 		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
@@ -260,7 +260,7 @@ namespace utils
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
 #if defined(__APPLE__) && defined(ARCH_ARM64)
-        ensure(::munmap(pointer, size) != -1);
+		ensure(::munmap(pointer, size) != -1);
 		ensure(::mmap(pointer, size, +prot,  MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
 #else
 		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(uptr{umax}));

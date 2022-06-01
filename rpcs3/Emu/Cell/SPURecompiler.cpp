@@ -453,7 +453,7 @@ void spu_cache::initialize()
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 	{
 #ifdef __APPLE__
-			pthread_jit_write_protect_np(false);
+		pthread_jit_write_protect_np(false);
 #endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);

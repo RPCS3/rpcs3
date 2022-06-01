@@ -3609,7 +3609,7 @@ public:
 	template <typename T, typename U>
 	static auto pshufb(T&& a, U&& b)
 	{
-		return llvm_calli<u8[16], T, U>{"pshufb", {std::forward<T>(a), std::forward<U>(b)}}.if_const([](llvm::Value* args[], llvm::IRBuilder<>* ir) -> llvm::Value*
+		return llvm_calli<u8[16], T, U>{"x86_pshufb", {std::forward<T>(a), std::forward<U>(b)}}.if_const([](llvm::Value* args[], llvm::IRBuilder<>* ir) -> llvm::Value*
 		{
 			const auto zeros = llvm::ConstantAggregateZero::get(llvm_value_t<u8[16]>::get_type(ir->getContext()));
 
