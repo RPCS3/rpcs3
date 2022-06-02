@@ -813,7 +813,7 @@ namespace gl
 					compute_scratch_mem = { nullptr, g_compute_decode_buffer.alloc(static_cast<u32>(image_linear_size), 256) };
 					compute_scratch_mem.first = reinterpret_cast<void*>(static_cast<uintptr_t>(compute_scratch_mem.second));
 
-					g_upload_transfer_buffer.reserve_storage_on_heap(image_linear_size);
+					g_upload_transfer_buffer.reserve_storage_on_heap(static_cast<u32>(image_linear_size));
 					upload_scratch_mem = g_upload_transfer_buffer.alloc_from_heap(static_cast<u32>(image_linear_size), 256);
 					dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem.first), image_linear_size };
 				}
