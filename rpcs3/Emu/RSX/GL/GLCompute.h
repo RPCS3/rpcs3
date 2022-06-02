@@ -307,7 +307,7 @@ namespace gl
 		void bind_resources() override
 		{
 			src_buffer->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), in_offset, block_length);
-			dst_buffer->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), in_offset, block_length);
+			dst_buffer->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), out_offset, block_length);
 			param_buffer.bind_range(gl::buffer::target::uniform, GL_COMPUTE_BUFFER_SLOT(2), 0, sizeof(params));
 		}
 
