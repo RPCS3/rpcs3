@@ -151,6 +151,19 @@
     <property name="title">
      <string>File</string>
     </property>
+    <widget class="QMenu" name="bootElfMenu">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="title">
+      <string>Boot (S)Elf</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
+     </property>
+     <addaction name="bootElfAct"/>
+     <addaction name="bootTestAct"/>
+    </widget>
     <widget class="QMenu" name="bootRecentMenu">
      <property name="enabled">
       <bool>true</bool>
@@ -186,9 +199,9 @@
      <addaction name="createFirmwareCacheAct"/>
      <addaction name="removeFirmwareCacheAct"/>
     </widget>
-    <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
     <addaction name="bootVSHAct"/>
+    <addaction name="bootElfMenu"/>
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
     <addaction name="addGamesAct"/>
@@ -398,6 +411,11 @@
   <action name="bootElfAct">
    <property name="text">
     <string>Boot SELF/ELF</string>
+   </property>
+  </action>
+  <action name="bootTestAct">
+   <property name="text">
+    <string>Boot Test</string>
    </property>
   </action>
   <action name="bootGameAct">
