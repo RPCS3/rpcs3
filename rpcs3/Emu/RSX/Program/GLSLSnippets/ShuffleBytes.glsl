@@ -12,8 +12,13 @@ layout(%set, binding=%loc, std430) buffer ssbo{ uint data[]; };
 #define bswap_u16_u32(bits) (bits & 0xFFFF) << 16 | (bits & 0xFFFF0000) >> 16
 
 // Depth format conversions
-#define d24f_to_f32(bits) (bits << 7)
-#define f32_to_d24f(bits) (bits >> 7)
+#define d24_to_f32(bits)             floatBitsToUint(float(bits) / 16777215.f)
+#define f32_to_d24(bits)             uint(uintBitsToFloat(bits) * 16777215.f)
+#define d24f_to_f32(bits)            (bits << 7)
+#define f32_to_d24f(bits)            (bits >> 7)
+#define d24x8_to_f32(bits)           d24_to_f32(bits >> 8)
+#define d24x8_to_d24x8_swapped(bits) (bits & 0xFF00) | (bits & 0xFF0000) >> 16 | (bits & 0xFF) << 16
+#define f32_to_d24x8_swapped(bits)   d24x8_to_d24x8_swapped(f32_to_d24(bits))
 
 uint linear_invocation_id()
 {
