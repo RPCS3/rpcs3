@@ -738,6 +738,7 @@ namespace gl
 			{
 				glDeleteBuffers(1, &m_id);
 				m_id = GL_NONE;
+				m_size = 0;
 			}
 		}
 
