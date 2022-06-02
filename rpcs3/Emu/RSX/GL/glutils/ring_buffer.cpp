@@ -69,12 +69,7 @@ namespace gl
 			m_size = 0;
 		}
 
-
-		if (m_id != GL_NONE)
-		{
-			glDeleteBuffers(1, &m_id);
-			m_id = GL_NONE;
-		}
+		buffer::remove();
 	}
 
 	void ring_buffer::notify()
