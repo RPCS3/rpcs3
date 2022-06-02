@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "AudioBackend.h"
 #include "Emu/system_config.h"
+#include "Emu/IdManager.h"
+#include "Emu//Cell/Modules/cellAudioOut.h"
 
 AudioBackend::AudioBackend() {}
 
@@ -95,5 +97,51 @@ void AudioBackend::normalize(u32 sample_cnt, const f32* src, f32* dst)
 	for (u32 i = 0; i < sample_cnt; i++)
 	{
 		dst[i] = std::clamp<f32>(src[i], -1.0f, 1.0f);
+	}
+}
+
+AudioChannelCnt AudioBackend::get_channel_count(u32 device_index)
+{
+	audio_out_configuration& audio_out_cfg = g_fxo->get<audio_out_configuration>();
+	std::lock_guard lock(audio_out_cfg.mtx);
+	ensure(device_index < audio_out_cfg.out.size());
+	const audio_out_configuration::audio_out& out = audio_out_cfg.out.at(device_index);
+
+	switch (out.downmixer)
+	{
+	case CELL_AUDIO_OUT_DOWNMIXER_NONE:
+	{
+		switch (out.channels)
+		{
+		case 2: return AudioChannelCnt::STEREO;
+		case 6: return AudioChannelCnt::SURROUND_5_1;
+		case 8: return AudioChannelCnt::SURROUND_7_1;
+		default:
+			fmt::throw_exception("Unsupported channel count in cellAudioOut config: %d", out.channels);
+		}
+	}
+	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_A:
+	{
+		switch (out.channels)
+		{
+		case 2:
+			return AudioChannelCnt::STEREO;
+		default:
+			fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_A in cellAudioOut config: %d", out.channels);
+		}
+	}
+	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_B:
+	{
+		switch (out.channels)
+		{
+		case 6:
+		case 8:
+			return AudioChannelCnt::SURROUND_5_1;
+		default:
+			fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_B in cellAudioOut config: %d", out.channels);
+		}
+	}
+	default:
+		fmt::throw_exception("Unknown downmixer in cellAudioOut config: %d", out.downmixer);
 	}
 }

@@ -1138,6 +1138,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 		lv2_obj::sleep(ppu);
 		busy_wait(3000);
 		ppu.check_state();
+		ppu.state += cpu_flag::wait;
 	};
 
 	if (auto state = +group->run_state;

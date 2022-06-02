@@ -12,6 +12,25 @@ namespace fs
 
 namespace psf
 {
+	enum sound_format_flag : s32
+	{
+		lpcm_2   = 1 << 0, // Linear PCM 2 Ch.
+		lpcm_5_1 = 1 << 2, // Linear PCM 5.1 Ch.
+		lpcm_7_1 = 1 << 4, // Linear PCM 7.1 Ch.
+		ac3      = 1 << 8, // Dolby Digital 5.1 Ch.
+		dts      = 1 << 9, // DTS 5.1 Ch.
+	};
+
+	enum resolution_flag : s32
+	{
+		_480p      = 1 << 0,
+		_576p      = 1 << 1,
+		_720p      = 1 << 2,
+		_1080p     = 1 << 3,
+		_480p_16_9 = 1 << 4,
+		_576p_16_9 = 1 << 5,
+	};
+
 	enum class format : u16
 	{
 		array   = 0x0004, // claimed to be a non-NTS string (char array)

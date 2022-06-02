@@ -131,6 +131,16 @@ public:
 	static void apply_volume_static(f32 vol, u32 sample_cnt, const f32* src, f32* dst);
 
 	/*
+	 * Normalize float samples in range from -1.0 to 1.0.
+	 */
+	static void normalize(u32 sample_cnt, const f32* src, f32* dst);
+
+	/*
+	 * Returns the channel count based on the downmix mode.
+	 */
+	static AudioChannelCnt get_channel_count(u32 device_index);
+
+	/*
 	 * Downmix audio stream.
 	 */
 	template<AudioChannelCnt from, AudioChannelCnt to>
@@ -187,11 +197,6 @@ public:
 			}
 		}
 	}
-
-	/*
-	 * Normalize float samples in range from -1.0 to 1.0.
-	 */
-	static void normalize(u32 sample_cnt, const f32* src, f32* dst);
 
 protected:
 	AudioSampleSize m_sample_size = AudioSampleSize::FLOAT;

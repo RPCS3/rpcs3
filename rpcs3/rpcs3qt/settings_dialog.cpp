@@ -28,6 +28,8 @@
 #include "Emu/system_config.h"
 #include "Emu/title.h"
 
+#include "Loader/PSF.h"
+
 #include <set>
 #include <unordered_set>
 #include <thread>
@@ -109,6 +111,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto apply_configs = [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state, game](bool do_exit)
 	{
+		u32 selected_audio_formats = 0;
+		for (int i = 0; i < ui->list_audio_formats->count(); ++i)
+		{
+			const auto& item = ui->list_audio_formats->item(i);
+			if (item->checkState() != Qt::CheckState::Unchecked)
+			{
+				selected_audio_formats |= item->data(Qt::UserRole).toUInt();
+			}
+		}
+		m_emu_settings->SetSetting(emu_settings_type::AudioFormats, std::to_string(selected_audio_formats));
+
 		std::set<std::string> selected;
 		for (int i = 0; i < ui->lleList->count(); ++i)
 		{
@@ -444,19 +457,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->resBox, emu_settings_type::Resolution);
 	SubscribeTooltip(ui->gb_default_resolution, tooltips.settings.resolution);
 	// remove unsupported resolutions from the dropdown
-	const int saved_index = ui->resBox->currentIndex();
 	bool saved_index_removed = false;
 	if (game && game->resolution > 0)
 	{
 		const std::map<u32, std::string> resolutions
 		{
-			{ 1 << 0, fmt::format("%s", video_resolution::_480) },
-			{ 1 << 1, fmt::format("%s", video_resolution::_576) },
-			{ 1 << 2, fmt::format("%s", video_resolution::_720) },
-			{ 1 << 3, fmt::format("%s", video_resolution::_1080) },
-			// { 1 << 4, fmt::format("%s", video_resolution::_480p_16:9) },
-			// { 1 << 5, fmt::format("%s", video_resolution::_576p_16:9) },
+			{ psf::resolution_flag::_480p,      fmt::format("%s", video_resolution::_480) },
+			{ psf::resolution_flag::_576p,      fmt::format("%s", video_resolution::_576) },
+			{ psf::resolution_flag::_720p,      fmt::format("%s", video_resolution::_720) },
+			{ psf::resolution_flag::_1080p,     fmt::format("%s", video_resolution::_1080) },
+			// { psf::resolution_flag::_480p_16_9, fmt::format("%s", video_resolution::_480p_16:9) },
+			// { psf::resolution_flag::_576p_16_9, fmt::format("%s", video_resolution::_576p_16:9) },
 		};
+
+		const int saved_index = ui->resBox->currentIndex();
 
 		for (int i = ui->resBox->count() - 1; i >= 0; i--)
 		{
@@ -833,7 +847,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, set_adapter);
 	connect(ui->renderBox, &QComboBox::currentTextChanged, set_renderer);
 
-	const auto apply_renderer_specific_options = [=, this](const QString& text)
+	const auto apply_renderer_specific_options = [r_creator, this](const QString& text)
 	{
 		// Vulkan-only
 		const bool is_vulkan = (text == r_creator->Vulkan.name);
@@ -953,12 +967,65 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #else
 	SubscribeTooltip(ui->gb_audio_out, tooltips.settings.audio_out_linux);
 #endif
-	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), enable_buffering);
+	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, enable_buffering);
 
-	m_emu_settings->EnhanceComboBox(ui->combo_audio_downmix, emu_settings_type::AudioChannels);
-	SubscribeTooltip(ui->gb_audio_downmix, tooltips.settings.downmix);
-	// TODO: enable this setting once cellAudioOutConfigure can change downmix on the fly
-	ui->combo_audio_downmix->removeItem(static_cast<int>(audio_downmix::use_application_settings));
+	connect(ui->combo_audio_format, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		const QVariantList var_list = ui->combo_audio_format->itemData(index).toList();
+		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
+		ui->list_audio_formats->setEnabled(static_cast<audio_format>(var_list[1].toInt()) == audio_format::manual);
+	});
+	m_emu_settings->EnhanceComboBox(ui->combo_audio_format, emu_settings_type::AudioFormat);
+	SubscribeTooltip(ui->gb_audio_format, tooltips.settings.audio_format);
+
+	// Manual audio format selection
+	const std::string audio_formats_str = m_emu_settings->GetSetting(emu_settings_type::AudioFormats);
+	u64 selected_audio_formats = 0;
+	if (!try_to_uint64(&selected_audio_formats, audio_formats_str, 0, 0xFFFFFFFF))
+	{
+		cfg_log.error("Can not interpret AudioFormats value '%s' as number", audio_formats_str);
+	}
+	const std::array<audio_format_flag, 5> audio_formats = {
+		audio_format_flag::lpcm_2_48khz,
+		audio_format_flag::lpcm_5_1_48khz,
+		audio_format_flag::lpcm_7_1_48khz,
+		audio_format_flag::ac3,
+		audio_format_flag::dts,
+	};
+	for (const audio_format_flag& audio_fmt : audio_formats)
+	{
+		const QString audio_format_name = m_emu_settings->GetLocalizedSetting("", emu_settings_type::AudioFormats, static_cast<int>(audio_fmt));
+		QListWidgetItem* item = new QListWidgetItem(audio_format_name, ui->list_audio_formats);
+		item->setData(Qt::UserRole, static_cast<u32>(audio_fmt));
+		if (audio_fmt == audio_format_flag::lpcm_2_48khz)
+		{
+			item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+			item->setCheckState(Qt::Checked);
+		}
+		else
+		{
+			item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+			item->setCheckState(!!(selected_audio_formats & static_cast<u32>(audio_fmt)) ? Qt::Checked : Qt::Unchecked);
+		}
+		ui->list_audio_formats->addItem(item);
+	}
+	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [this]()
+	{
+		const u32 default_audio_formats = std::stoi(m_emu_settings->GetSettingDefault(emu_settings_type::AudioFormats));
+		for (int i = 0; i < ui->list_audio_formats->count(); ++i)
+		{
+			const auto& item = ui->list_audio_formats->item(i);
+			const u32 audio_fmt = item->data(Qt::UserRole).toUInt();
+			if (audio_fmt == static_cast<u32>(audio_format_flag::lpcm_2_48khz))
+			{
+				item->setCheckState(Qt::Checked);
+			}
+			else
+			{
+				item->setCheckState(!!(default_audio_formats & audio_fmt) ? Qt::Checked : Qt::Unchecked);
+			}
+		}
+	});
 
 	m_emu_settings->EnhanceComboBox(ui->audioProviderBox, emu_settings_type::AudioProvider);
 	SubscribeTooltip(ui->gb_audio_provider, tooltips.settings.audio_provider);
@@ -1244,6 +1311,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	
 	m_emu_settings->EnhanceCheckBox(ui->forceDisableExclusiveFullscreenMode, emu_settings_type::ForceDisableExclusiveFullscreenMode);
 	SubscribeTooltip(ui->forceDisableExclusiveFullscreenMode, tooltips.settings.force_disable_exclusive_fullscreen_mode);
+	
+	m_emu_settings->EnhanceCheckBox(ui->vblankNTSCFixup, emu_settings_type::VBlankNTSCFixup);
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
 	SubscribeTooltip(ui->mfcDelayCommand, tooltips.settings.mfc_delay_command);
@@ -1307,18 +1376,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	if (!game) // Prevent users from doing dumb things
 	{
-		ui->vblank->setDisabled(true);
-		ui->vblankReset->setDisabled(true);
+		ui->gb_vblank->setDisabled(true);
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.disabled_from_global);
-		ui->clockScale->setDisabled(true);
-		ui->clockScaleReset->setDisabled(true);
+		ui->gb_clockScale->setDisabled(true);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.disabled_from_global);
-		ui->wakeupDelay->setDisabled(true);
-		ui->wakeupReset->setDisabled(true);
+		ui->gb_wakeupDelay->setDisabled(true);
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.disabled_from_global);
 	}
 	else
 	{
+		SubscribeTooltip(ui->vblankNTSCFixup, tooltips.settings.vblank_ntsc_fixup);
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.vblank_rate);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.clocks_scale);
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);
@@ -1932,15 +1999,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			}
 		};
 
-		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=, this]()
+		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [color_dialog, this]()
 		{
 			color_dialog(gui::gl_iconColor, tr("Choose gamelist icon color", "Settings: color dialog"), ui->pb_gl_icon_color);
 		});
-		connect(ui->pb_sd_icon_color, &QAbstractButton::clicked, [=, this]()
+		connect(ui->pb_sd_icon_color, &QAbstractButton::clicked, [color_dialog, this]()
 		{
 			color_dialog(gui::sd_icon_color, tr("Choose save manager icon color", "Settings: color dialog"), ui->pb_sd_icon_color);
 		});
-		connect(ui->pb_tr_icon_color, &QAbstractButton::clicked, [=, this]()
+		connect(ui->pb_tr_icon_color, &QAbstractButton::clicked, [color_dialog, this]()
 		{
 			color_dialog(gui::tr_icon_color, tr("Choose trophy manager icon color", "Settings: color dialog"), ui->pb_tr_icon_color);
 		});

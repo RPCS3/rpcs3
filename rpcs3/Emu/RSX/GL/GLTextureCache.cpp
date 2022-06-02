@@ -11,8 +11,7 @@ namespace gl
 	void cached_texture_section::finish_flush()
 	{
 		// Free resources
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+		pbo.unmap();
 
 		const auto valid_range = get_confirmed_range_delta();
 		const u32 valid_offset = valid_range.first;
@@ -166,7 +165,7 @@ namespace gl
 			{
 				const auto src_bpp = slice.src->pitch() / slice.src->width();
 				const u16 convert_w = u16(slice.src->width() * src_bpp) / dst_bpp;
-				tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, static_cast<GLenum>(dst_image->get_internal_format()));
+				tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, static_cast<GLenum>(dst_image->get_internal_format()), dst_image->format_class());
 
 				src_image = tmp.get();
 
@@ -180,14 +179,14 @@ namespace gl
 					// Combine the two transfers into one
 					const coord3u src_region = { { src_x, src_y, 0 }, { src_w, src_h, 1 } };
 					const coord3u dst_region = { { slice.dst_x, slice.dst_y, slice.dst_z }, { slice.dst_w, slice.dst_h, 1 } };
-					gl::copy_typeless(dst_image, slice.src, dst_region, src_region);
+					gl::copy_typeless(cmd, dst_image, slice.src, dst_region, src_region);
 
 					continue;
 				}
 
 				const coord3u src_region = { { src_x, src_y, 0 }, { src_w, src_h, 1 } };
 				const coord3u dst_region = { { src_x2, src_y, 0 }, { src_w2, src_h, 1 } };
-				gl::copy_typeless(src_image, slice.src, dst_region, src_region);
+				gl::copy_typeless(cmd, src_image, slice.src, dst_region, src_region);
 
 				src_x = src_x2;
 				src_w = src_w2;

@@ -224,40 +224,14 @@ namespace vk
 		kernel_size = _kernel_size? _kernel_size : optimal_kernel_size;
 
 		m_src =
-			"#version 430\n"
-			"layout(local_size_x=%ws, local_size_y=1, local_size_z=1) in;\n"
-			"layout(std430, set=0, binding=0) buffer ssbo{ uint data[]; };\n"
-			"%ub"
-			"\n"
-			"#define KERNEL_SIZE %ks\n"
-			"\n"
-			"// Generic swap routines\n"
-			"#define bswap_u16(bits)     (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
-			"#define bswap_u32(bits)     (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n"
-			"#define bswap_u16_u32(bits) (bits & 0xFFFF) << 16 | (bits & 0xFFFF0000) >> 16\n"
-			"\n"
-			"// Depth format conversions\n"
-			"#define d24_to_f32(bits)             floatBitsToUint(float(bits) / 16777215.f)\n"
-			"#define f32_to_d24(bits)             uint(uintBitsToFloat(bits) * 16777215.f)\n"
-			"#define d24f_to_f32(bits)            (bits << 7)\n"
-			"#define f32_to_d24f(bits)            (bits >> 7)\n"
-			"#define d24x8_to_f32(bits)           d24_to_f32(bits >> 8)\n"
-			"#define d24x8_to_d24x8_swapped(bits) (bits & 0xFF00) | (bits & 0xFF0000) >> 16 | (bits & 0xFF) << 16\n"
-			"#define f32_to_d24x8_swapped(bits)   d24x8_to_d24x8_swapped(f32_to_d24(bits))\n"
-			"\n"
-			"%md"
-			"void main()\n"
-			"{\n"
-			"	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);"
-			"	uint invocation_id = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
-			"	uint index = invocation_id * KERNEL_SIZE;\n"
-			"	uint value;\n"
-			"%vars"
-			"\n";
+		#include "../Program/GLSLSnippets/ShuffleBytes.glsl"
+		;
 
 		const auto parameters_size = utils::align(push_constants_size, 16) / 16;
 		const std::pair<std::string_view, std::string> syntax_replace[] =
 		{
+			{ "%loc", "0" },
+			{ "%set", "set = 0"},
 			{ "%ws", std::to_string(optimal_group_size) },
 			{ "%ks", std::to_string(kernel_size) },
 			{ "%vars", variables },

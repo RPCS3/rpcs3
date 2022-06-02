@@ -2251,7 +2251,7 @@ void main_window::CreateConnects()
 	connect(ui->updateAct, &QAction::triggered, this, [this]()
 	{
 #if !defined(_WIN32) && !defined(__linux__)
-		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater currently isn't available for your os."));
+		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater isn't available for your OS currently."));
 		return;
 #endif
 		m_updater.check_for_updates(false, false, false, this);

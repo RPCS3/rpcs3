@@ -11,6 +11,12 @@ namespace utils
 	using native_handle = int;
 #endif
 
+	// Obtain system page size
+	long get_page_size();
+
+	// System page size
+	inline const long c_page_size = get_page_size();
+
 	// Memory protection type
 	enum class protection
 	{

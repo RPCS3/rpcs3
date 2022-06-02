@@ -435,7 +435,7 @@ int main(int argc, char** argv)
 		{
 			if (fs::exists(lock_name))
 			{
-				report_fatal_error("Another instance of RPCS3 is running. Close it or kill its process, if necessary.");
+				report_fatal_error("Another instance of RPCS3 is running.\nClose it or kill its process, if necessary.");
 			}
 
 			report_fatal_error("Cannot create RPCS3.log (access denied)."

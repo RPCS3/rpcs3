@@ -1322,20 +1322,7 @@ void rsxaudio_backend_thread::update_emu_cfg()
 
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
-	const AudioChannelCnt out_ch_cnt = [&]()
-	{
-		switch (g_cfg.audio.audio_channel_downmix)
-		{
-		case audio_downmix::use_application_settings:
-		case audio_downmix::downmix_to_stereo: return AudioChannelCnt::STEREO;
-		case audio_downmix::downmix_to_5_1: return AudioChannelCnt::SURROUND_5_1;
-		case audio_downmix::no_downmix: return AudioChannelCnt::SURROUND_7_1;
-		default:
-		{
-			fmt::throw_exception("Unsupported downmix level: %u", static_cast<u64>(g_cfg.audio.audio_channel_downmix.get()));
-		}
-		}
-	}();
+	const AudioChannelCnt out_ch_cnt = AudioBackend::get_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
 
 	emu_audio_cfg cfg =
 	{
@@ -2093,7 +2080,7 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		{
 			wait_status = epoll_wait(epoll_fd, event, obj_wait_cnt, -1);
 		}
-		while (wait_status == -EINTR);
+		while (wait_status == -1 && errno == EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{
@@ -2121,7 +2108,7 @@ rsxaudio_periodic_tmr::wait_result rsxaudio_periodic_tmr::wait(const std::functi
 		{
 			wait_status = kevent(kq, nullptr, 0, event, obj_wait_cnt, nullptr);
 		}
-		while (wait_status == -EINTR);
+		while (wait_status == -1 && errno == EINTR);
 
 		if (wait_status < 0 || wait_status > obj_wait_cnt)
 		{

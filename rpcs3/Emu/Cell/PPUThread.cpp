@@ -932,7 +932,15 @@ std::string ppu_thread::dump_regs() const
 
 	for (uint i = 0; i < 32; ++i)
 	{
-		fmt::append(ret, "f%d%s: %.6G\n", i, i <= 9 ? " " : "", fpr[i]);
+		const f64 r = fpr[i];
+
+		if (!std::bit_cast<u64>(r))
+		{
+			fmt::append(ret, "f%d%s: %-12.6G [%-18s] (f32=0x%x)\n", i, i <= 9 ? " " : "", r, "", std::bit_cast<u32>(f32(r)));
+			continue;
+		}
+
+		fmt::append(ret, "f%d%s: %-12.6G [0x%016x] (f32=0x%x)\n", i, i <= 9 ? " " : "", r, std::bit_cast<u64>(r), std::bit_cast<u32>(f32(r)));
 	}
 
 	for (uint i = 0; i < 32; ++i, ret += '\n')

@@ -814,8 +814,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl" />
-    <None Include="Emu\RSX\Common\Interpreter\VertexInterpreter.glsl" />
+    <None Include="Emu\RSX\Program\GLSLInterpreter\FragmentInterpreter.glsl" />
+    <None Include="Emu\RSX\Program\GLSLInterpreter\VertexInterpreter.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\CopyBufferToD24x8.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\GenericVSPassthrough.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl" />
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
