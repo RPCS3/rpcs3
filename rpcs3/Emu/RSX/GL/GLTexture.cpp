@@ -503,13 +503,13 @@ namespace gl
 				{
 				case gl::texture::internal_format::depth24_stencil8:
 					gl::get_compute_task<gl::cs_d24x8_to_ssbo>()->run(cmd,
-						const_cast<gl::viewable_image*>(as_vi), dst, 0,
+						const_cast<gl::viewable_image*>(as_vi), dst, dst_offset,
 						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
 						pack_info, {});
 					return;
 				case gl::texture::internal_format::rgba8:
 					gl::get_compute_task<gl::cs_rgba8_to_ssbo>()->run(cmd,
-						const_cast<gl::viewable_image*>(as_vi), dst, 0,
+						const_cast<gl::viewable_image*>(as_vi), dst, dst_offset,
 						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
 						pack_info, {});
 					return;
