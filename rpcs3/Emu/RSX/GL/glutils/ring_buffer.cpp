@@ -273,14 +273,14 @@ namespace gl
 		u64 start = utils::align(m_alloc_pointer, alignment);
 		m_alloc_pointer = (start + size);
 
-		if (m_alloc_pointer > m_storage.size())
+		if (static_cast<GLsizeiptr>(m_alloc_pointer) > m_storage.size())
 		{
 			start = 0;
 			m_alloc_pointer = size;
 		}
 
-		pop_barrier(start, size);
-		return start;
+		pop_barrier(static_cast<u32>(start), size);
+		return static_cast<u32>(start);
 	}
 
 	void scratch_ring_buffer::pop_barrier(u32 start, u32 length)
@@ -291,7 +291,10 @@ namespace gl
 			if (barrier_.range.overlaps(range))
 			{
 				barrier_.signal.wait_for_signal();
+				return true;
 			}
+
+			return false;
 		}), m_barriers.end());
 	}
 
