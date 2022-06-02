@@ -109,6 +109,7 @@ private Q_SLOTS:
 	void OnPlayOrPause();
 	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	void BootElf();
+	void BootTest();
 	void BootGame();
 	void BootVSH();
 	void BootRsxCapture(std::string path = "");

@@ -210,4 +210,6 @@ if(UNIX AND NOT APPLE)
         DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
     install(DIRECTORY ../bin/git
         DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
+    install(DIRECTORY ../bin/test
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/rpcs3)
 endif()
