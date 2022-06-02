@@ -17,6 +17,12 @@
     <ClCompile Include="Emu\RSX\GL\GLTextureCache.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLOverlays.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCompute.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\buffer_object.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\ring_buffer.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
@@ -36,5 +42,22 @@
     <ClInclude Include="Emu\RSX\GL\GLExecutionState.h" />
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
     <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\buffer_object.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\ring_buffer.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\common.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\capabilities.hpp">
+      <Filter>glutils</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="glutils">
+      <UniqueIdentifier>{ed9ef6b7-efbb-4a8e-88a4-583b6655c141}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

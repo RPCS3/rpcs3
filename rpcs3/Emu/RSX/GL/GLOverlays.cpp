@@ -575,10 +575,10 @@ namespace gl
 		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
 
 		saved_sampler_state saved(31, m_sampler);
-		glBindTexture(GL_TEXTURE_2D, source[0]);
+		cmd->bind_texture(31, GL_TEXTURE_2D, source[0]);
 
 		saved_sampler_state saved2(30, m_sampler);
-		glBindTexture(GL_TEXTURE_2D, source[1]);
+		cmd->bind_texture(30, GL_TEXTURE_2D, source[1]);
 
 		overlay_pass::run(cmd, viewport, GL_NONE, false, false);
 	}
