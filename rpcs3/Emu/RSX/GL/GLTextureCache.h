@@ -193,7 +193,7 @@ namespace gl
 							mem_info.image_size_in_bytes *= 2;
 						}
 
-						void* out_offset = copy_image_to_buffer(cmd, pack_info, src, &scratch_mem, 0, { {}, src->size3D() }, &mem_info);
+						void* out_offset = copy_image_to_buffer(cmd, pack_info, src, &scratch_mem, 0, 0, { {}, src->size3D() }, &mem_info);
 
 						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
 						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);

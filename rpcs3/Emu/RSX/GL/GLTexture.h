@@ -45,7 +45,7 @@ namespace gl
 	void copy_typeless(gl::command_context& cmd, texture* dst, const texture* src);
 
 	void* copy_image_to_buffer(gl::command_context& cmd, const pixel_buffer_layout& pack_info, const gl::texture* src, gl::buffer* dst,
-		const int src_level, const coord3u& src_region, image_memory_requirements* mem_info);
+		u32 dst_offset, const int src_level, const coord3u& src_region, image_memory_requirements* mem_info);
 
 	void copy_buffer_to_image(gl::command_context& cmd, const pixel_buffer_layout& unpack_info, gl::buffer* src, gl::texture* dst,
 		const void* src_offset, const int dst_level, const coord3u& dst_region, image_memory_requirements* mem_info);
