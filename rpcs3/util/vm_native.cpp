@@ -89,6 +89,24 @@ namespace utils
 	DYNAMIC_IMPORT("KernelBase.dll", MapViewOfFile3, PVOID(HANDLE Handle, HANDLE Process, PVOID Base, ULONG64 Off, SIZE_T ViewSize, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
 #endif
 
+	long get_page_size()
+	{
+		static const long r = []() -> long
+		{
+#ifdef _WIN32
+			SYSTEM_INFO info;
+			::GetSystemInfo(&info);
+			return info.dwPageSize;
+#else
+			return ::sysconf(_SC_PAGESIZE);
+#endif
+		}();
+
+		ensure(r > 0 && r <= 0x10000);
+
+		return r;
+	}
+
 	// Convert memory protection (internal)
 	static auto operator +(protection prot)
 	{
@@ -189,15 +207,15 @@ namespace utils
 		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
+		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), +prot) != -1);
 
 		if constexpr (c_madv_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_dump) != -1);
 		}
 		else
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), MADV_WILLNEED) != -1);
 		}
 #endif
 	}
@@ -212,11 +230,11 @@ namespace utils
 
 		if constexpr (c_madv_no_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_no_dump) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_no_dump) != -1);
 		}
 		else
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_free) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_free) != -1);
 		}
 #endif
 	}
@@ -234,17 +252,17 @@ namespace utils
 		{
 			if (size % 0x200000 == 0)
 			{
-				::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_hugepage);
+				::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_hugepage);
 			}
 		}
 
 		if constexpr (c_madv_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), c_madv_dump) != -1);
 		}
 		else
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), MADV_WILLNEED) != -1);
 		}
 #endif
 	}
@@ -283,7 +301,7 @@ namespace utils
 		}
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
+		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -c_page_size), size + (ptr64 & (c_page_size - 1)), +prot) != -1);
 #endif
 	}
 
