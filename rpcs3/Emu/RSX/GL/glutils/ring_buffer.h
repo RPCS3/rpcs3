@@ -1,6 +1,7 @@
 #pragma once
 
 #include "buffer_object.h"
+#include "Utilities/address_range.h"
 
 namespace gl
 {
@@ -77,5 +78,33 @@ namespace gl
 		void flush() override;
 
 		void unmap() override;
+	};
+
+	// Simple GPU-side ring buffer with no map/unmap semantics
+	class scratch_ring_buffer
+	{
+		struct barrier
+		{
+			fence signal;
+			utils::address_range range;
+		};
+
+		buffer m_storage;
+		std::vector<barrier> m_barriers;
+		u64 m_alloc_pointer = 0;
+
+		void pop_barrier(u32 start, u32 length);
+
+	public:
+
+		scratch_ring_buffer() = default;
+		scratch_ring_buffer(const scratch_ring_buffer&) = delete;
+		~scratch_ring_buffer();
+
+		void create(buffer::target _target, u64 size);
+		void remove();
+
+		u32 alloc(u32 size, u32 alignment);
+		void push_barrier(u32 start, u32 length);
 	};
 }
