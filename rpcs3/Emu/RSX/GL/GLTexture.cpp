@@ -32,7 +32,7 @@ namespace gl
 		if (g_compute_decode_buffer.size() < static_cast<GLsizeiptr>(staging_data_length) * 3)
 		{
 			g_compute_decode_buffer.remove();
-			g_compute_decode_buffer.create(gl::buffer::target::pixel_pack, std::max<GLsizeiptr>(512, staging_data_length * 3), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
+			g_compute_decode_buffer.create(gl::buffer::target::ssbo, std::max<GLsizeiptr>(512, staging_data_length * 3), nullptr, buffer::memory_type::local, GL_STATIC_COPY);
 		}
 
 		return { &g_upload_transfer_buffer, &g_compute_decode_buffer };
