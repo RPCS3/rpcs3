@@ -486,7 +486,7 @@ namespace gl
 			}
 			case rsx::overlays::image_resource_id::raw_image:
 			{
-				glBindTexture(GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info*>(cmd.config.external_data_ref), ui.uid)->id());
+				cmd_->bind_texture(31, GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info*>(cmd.config.external_data_ref), ui.uid)->id());
 				break;
 			}
 			case rsx::overlays::image_resource_id::font_file:
@@ -497,7 +497,7 @@ namespace gl
 			}
 			default:
 			{
-				cmd_->bind_texture(30, GL_TEXTURE_2D, view_cache[cmd.config.texture_ref - 1]->id());
+				cmd_->bind_texture(31, GL_TEXTURE_2D, view_cache[cmd.config.texture_ref - 1]->id());
 				break;
 			}
 			}
