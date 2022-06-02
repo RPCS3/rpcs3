@@ -238,4 +238,73 @@ namespace gl
 	{
 		flush();
 	}
+
+	scratch_ring_buffer::~scratch_ring_buffer()
+	{
+		if (m_storage)
+		{
+			remove();
+		}
+	}
+
+	void scratch_ring_buffer::create(buffer::target target_, u64 size)
+	{
+		if (m_storage)
+		{
+			remove();
+		}
+
+		m_storage.create(target_, size, nullptr, gl::buffer::memory_type::local, GL_STATIC_COPY);
+	}
+
+	void scratch_ring_buffer::remove()
+	{
+		if (m_storage)
+		{
+			m_storage.remove();
+		}
+
+		m_barriers.clear();
+		m_alloc_pointer = 0;
+	}
+
+	u32 scratch_ring_buffer::alloc(u32 size, u32 alignment)
+	{
+		u64 start = utils::align(m_alloc_pointer, alignment);
+		m_alloc_pointer = (start + size);
+
+		if (m_alloc_pointer > m_storage.size())
+		{
+			start = 0;
+			m_alloc_pointer = size;
+		}
+
+		pop_barrier(start, size);
+		return start;
+	}
+
+	void scratch_ring_buffer::pop_barrier(u32 start, u32 length)
+	{
+		const auto range = utils::address_range::start_length(start, length);
+		m_barriers.erase(std::remove_if(m_barriers.begin(), m_barriers.end(), [&range](auto& barrier_)
+		{
+			if (barrier_.range.overlaps(range))
+			{
+				barrier_.signal.wait_for_signal();
+			}
+		}), m_barriers.end());
+	}
+
+	void scratch_ring_buffer::push_barrier(u32 start, u32 length)
+	{
+		if (!length)
+		{
+			return;
+		}
+
+		barrier barrier_;
+		barrier_.range = utils::address_range::start_length(start, length);
+		barrier_.signal.create();
+		m_barriers.emplace_back(barrier_);
+	}
 }
