@@ -159,12 +159,7 @@ namespace gl
 		texture(texture&& texture_) = delete;
 
 		texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLenum sized_format, rsx::format_class format_class = rsx::RSX_FORMAT_CLASS_UNDEFINED);
-
-		virtual ~texture()
-		{
-			glDeleteTextures(1, &m_id);
-			m_id = GL_NONE;
-		}
+		virtual ~texture();
 
 		// Getters/setters
 		void set_native_component_layout(const std::array<GLenum, 4>& layout)
@@ -324,11 +319,7 @@ namespace gl
 			create(data, target, sized_format, aspect_flags, argb_swizzle);
 		}
 
-		virtual ~texture_view()
-		{
-			glDeleteTextures(1, &m_id);
-			m_id = GL_NONE;
-		}
+		virtual ~texture_view();
 
 		GLuint id() const
 		{
