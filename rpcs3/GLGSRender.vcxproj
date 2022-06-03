@@ -52,7 +52,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
-    <ClInclude Include="Emu\RSX\GL\GLExecutionState.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLTextOut.h" />
@@ -64,7 +63,10 @@
     <ClInclude Include="Emu\RSX\GL\glutils\buffer_object.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\capabilities.hpp" />
     <ClInclude Include="Emu\RSX\GL\glutils\common.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\pixel_settings.hpp" />
     <ClInclude Include="Emu\RSX\GL\glutils\ring_buffer.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\state_tracker.hpp" />
+    <ClInclude Include="Emu\RSX\GL\glutils\image.h" />
     <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
     <ClInclude Include="Emu\RSX\GL\GLHelpers.h" />
     <ClInclude Include="Emu\RSX\GL\GLRenderTargets.h" />
@@ -82,7 +84,9 @@
     <ClCompile Include="Emu\RSX\GL\GLOverlays.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\buffer_object.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\common.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\ring_buffer.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\image.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLHelpers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPresent.cpp" />

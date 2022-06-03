@@ -2,6 +2,26 @@
 
 #include "capabilities.hpp"
 
+#define GL_FRAGMENT_TEXTURES_START 0
+#define GL_VERTEX_TEXTURES_START   (GL_FRAGMENT_TEXTURES_START + 16)
+#define GL_STENCIL_MIRRORS_START   (GL_VERTEX_TEXTURES_START + 4)
+#define GL_STREAM_BUFFER_START     (GL_STENCIL_MIRRORS_START + 16)
+#define GL_TEMP_IMAGE_SLOT         31
+
+#define UBO_SLOT(x)  (x)
+#define SSBO_SLOT(x) (x)
+
+#define GL_VERTEX_PARAMS_BIND_SLOT             UBO_SLOT(0)
+#define GL_VERTEX_LAYOUT_BIND_SLOT             UBO_SLOT(1)
+#define GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT   UBO_SLOT(2)
+#define GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT UBO_SLOT(3)
+#define GL_FRAGMENT_STATE_BIND_SLOT            UBO_SLOT(4)
+#define GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT   UBO_SLOT(5)
+#define GL_RASTERIZER_STATE_BIND_SLOT          UBO_SLOT(6)
+#define GL_INTERPRETER_VERTEX_BLOCK            SSBO_SLOT(0)
+#define GL_INTERPRETER_FRAGMENT_BLOCK          SSBO_SLOT(1)
+#define GL_COMPUTE_BUFFER_SLOT(index)          SSBO_SLOT(2 + index)
+
 //Function call wrapped in ARB_DSA vs EXT_DSA compat check
 #define DSA_CALL(func, object_name, target, ...)\
 	if (::gl::get_driver_caps().ARB_dsa_supported)\

@@ -23,6 +23,12 @@
     <ClCompile Include="Emu\RSX\GL\glutils\ring_buffer.cpp">
       <Filter>glutils</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\image.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\common.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
@@ -39,7 +45,6 @@
     <ClInclude Include="Emu\RSX\GL\GLShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\GL\GLTextOut.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
-    <ClInclude Include="Emu\RSX\GL\GLExecutionState.h" />
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
     <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\buffer_object.h">
@@ -52,6 +57,15 @@
       <Filter>glutils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\glutils\capabilities.hpp">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\image.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\state_tracker.hpp">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\pixel_settings.hpp">
       <Filter>glutils</Filter>
     </ClInclude>
   </ItemGroup>
