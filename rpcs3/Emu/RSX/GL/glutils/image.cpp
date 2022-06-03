@@ -123,6 +123,13 @@ namespace gl
 		m_format_class = format_class;
 	}
 
+	texture::~texture()
+	{
+		gl::get_command_context()->unbind_texture(static_cast<GLenum>(m_target), m_id);
+		glDeleteTextures(1, &m_id);
+		m_id = GL_NONE;
+	}
+
 	void texture::copy_from(const void* src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings)
 	{
 		pixel_settings.apply();
@@ -258,6 +265,13 @@ namespace gl
 			gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, m_target, m_id);
 			glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
 		}
+	}
+
+	texture_view::~texture_view()
+	{
+		gl::get_command_context()->unbind_texture(static_cast<GLenum>(m_target), m_id);
+		glDeleteTextures(1, &m_id);
+		m_id = GL_NONE;
 	}
 
 	void texture_view::bind(gl::command_context& cmd, GLuint layer) const

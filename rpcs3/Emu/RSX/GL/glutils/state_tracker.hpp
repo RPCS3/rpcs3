@@ -300,6 +300,28 @@ namespace gl
 				bound = name;
 			}
 		}
+
+		void unbind_texture(GLenum target, GLuint name)
+		{
+			// To be called with glDeleteTextures.
+			// OpenGL internally unbinds the texture on delete, but then reuses the same ID when GenTextures is called again!
+			// This can also be avoided using unique internal names, such as 64-bit handles, but that involves changing a lot of code for little benefit
+			for (auto& layer : bound_textures)
+			{
+				if (layer.empty())
+				{
+					continue;
+				}
+
+				if (auto found = layer.find(target);
+					found != layer.end() && found->second == name)
+				{
+					// Actually still bound!
+					found->second = GL_NONE;
+					return;
+				}
+			}
+		}
 	};
 
 	class command_context

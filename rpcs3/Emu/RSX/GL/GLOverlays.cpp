@@ -336,6 +336,7 @@ namespace gl
 		temp_image_cache.clear();
 		resources.clear();
 		font_cache.clear();
+		view_cache.clear();
 		overlay_pass::destroy();
 	}
 
