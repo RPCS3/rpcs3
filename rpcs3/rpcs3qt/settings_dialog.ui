@@ -2183,13 +2183,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="accurateFIFOAccess">
-                 <property name="text">
-                  <string>Accurate RSX FIFO access</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="ppuNJFixup">
                  <property name="text">
                   <string>PPU Non-Java Mode Fixup</string>
