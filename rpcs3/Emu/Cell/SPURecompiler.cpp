@@ -9011,10 +9011,15 @@ public:
 		set_vr(op.rt, make_load_ls(addr));
 	}
 
+	llvm::Value* get_pc_as_u64(u32 addr)
+	{
+		return m_ir->CreateAdd(m_ir->CreateZExt(m_base_pc, get_type<u64>()), m_ir->getInt64(addr - m_base));
+	}
+
 	void STQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr;
-		addr.value = m_ir->CreateZExt(m_interp_magn ? m_interp_pc : get_pc(m_pos), get_type<u64>());
+		addr.value = m_interp_magn ? m_ir->CreateZExt(m_interp_pc, get_type<u64>()) : get_pc_as_u64(m_pos);
 		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & (m_interp_magn ? 0x3fff0 : ~0xf));
 		make_store_ls(addr, get_vr<u8[16]>(op.rt));
 	}
@@ -9022,7 +9027,7 @@ public:
 	void LQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr;
-		addr.value = m_ir->CreateZExt(m_interp_magn ? m_interp_pc : get_pc(m_pos), get_type<u64>());
+		addr.value = m_interp_magn ? m_ir->CreateZExt(m_interp_pc, get_type<u64>()) : get_pc_as_u64(m_pos);
 		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & (m_interp_magn ? 0x3fff0 : ~0xf));
 		set_vr(op.rt, make_load_ls(addr));
 	}
