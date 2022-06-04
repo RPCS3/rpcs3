@@ -258,6 +258,7 @@ namespace rsx
 				m_command_reg += m_command_inc * count;
 				m_remaining_commands -= count;
 				m_internal_get += 4 * count;
+				m_args_ptr += 4 * count;
 				return true;
 			}
 
