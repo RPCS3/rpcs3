@@ -331,15 +331,12 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 
 		audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
-		if (out.sound_modes.cend() == std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&config](const CellAudioOutSoundMode& mode)
-			{
-				return mode.channel == config->channel && mode.type == config->encoder && config->downMixer <= CELL_AUDIO_OUT_DOWNMIXER_TYPE_B;
-			}))
+		const bool found_mode = (out.sound_modes.cend() != std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&config](const CellAudioOutSoundMode& mode)
 		{
-			return CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION; // TODO: confirm
-		}
+			return mode.channel == config->channel && mode.type == config->encoder && config->downMixer <= CELL_AUDIO_OUT_DOWNMIXER_TYPE_B;
+		}));
 
-		if (out.channels != config->channel || out.encoder != config->encoder || out.downmixer != config->downMixer)
+		if (found_mode && (out.channels != config->channel || out.encoder != config->encoder || out.downmixer != config->downMixer))
 		{
 			out.channels = config->channel;
 			out.encoder = config->encoder;
