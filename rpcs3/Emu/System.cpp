@@ -83,7 +83,7 @@ std::mutex g_tty_mutex;
 
 namespace atomic_wait
 {
-	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 stats));
+	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 max_coll));
 }
 
 template<>
