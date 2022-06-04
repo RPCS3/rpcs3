@@ -2153,7 +2153,7 @@ namespace rsx
 			//Check that the depth stage is not disabled
 			if (!rsx::method_registers.depth_test_enabled())
 			{
-				rsx_log.error("FS exports depth component but depth test is disabled (INVALID_OPERATION)");
+				rsx_log.trace("FS exports depth component but depth test is disabled (INVALID_OPERATION)");
 			}
 		}
 	}
