@@ -66,8 +66,10 @@ enum CellAudioOutCodingType
 	CELL_AUDIO_OUT_CODING_TYPE_AAC                = 5,
 	CELL_AUDIO_OUT_CODING_TYPE_DTS                = 6,
 	CELL_AUDIO_OUT_CODING_TYPE_ATRAC              = 7,
-	// ...
+	CELL_AUDIO_OUT_CODING_TYPE_DOLBY_TRUE_HD      = 8, // Speculative name
 	CELL_AUDIO_OUT_CODING_TYPE_DOLBY_DIGITAL_PLUS = 9,
+	CELL_AUDIO_OUT_CODING_TYPE_DTS_HD_HIGHRES     = 10, // Speculative name
+	CELL_AUDIO_OUT_CODING_TYPE_DTS_HD_MASTER      = 11, // Speculative name
 	CELL_AUDIO_OUT_CODING_TYPE_BITSTREAM          = 0xff,
 };
 
