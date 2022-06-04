@@ -2222,4 +2222,19 @@ const std::string& Emulator::GetFakeCat() const
 	return m_cat;
 };
 
+const std::string Emulator::GetSfoDir(bool prefer_disc_sfo) const
+{
+	if (prefer_disc_sfo)
+	{
+		const std::string sfo_dir = vfs::get("/dev_bdvd/PS3_GAME");
+
+		if (!sfo_dir.empty())
+		{
+			return sfo_dir;
+		}
+	}
+
+	return m_sfo_dir;
+}
+
 Emulator Emu;
