@@ -9,7 +9,7 @@
 #define GL_TEMP_IMAGE_SLOT         31
 
 #define UBO_SLOT(x)  (x)
-#define SSBO_SLOT(x) (x)
+#define SSBO_SLOT(x) (x + 8)
 
 #define GL_VERTEX_PARAMS_BIND_SLOT             UBO_SLOT(0)
 #define GL_VERTEX_LAYOUT_BIND_SLOT             UBO_SLOT(1)
