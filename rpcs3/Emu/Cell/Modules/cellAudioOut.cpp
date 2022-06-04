@@ -78,6 +78,15 @@ audio_out_configuration::audio_out_configuration()
 			primary_output.encoder    = primary_modes.front().type;
 			secondary_output.channels = secondary_modes.front().channel;
 			secondary_output.encoder  = secondary_modes.front().type;
+
+			// Set the initially selected configuration
+			primary_output.config.channel     = primary_output.channels;
+			primary_output.config.encoder     = primary_output.encoder;
+			primary_output.config.downMixer   = CELL_AUDIO_OUT_DOWNMIXER_NONE;
+			secondary_output.config.channel   = secondary_output.channels;
+			secondary_output.config.encoder   = secondary_output.encoder;
+			secondary_output.config.downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
+
 			initial_mode_selected     = true;
 		}
 	};
@@ -344,6 +353,9 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 
 			needs_reset = true;
 		}
+
+		// Apparently the set config is not necessarily equal to the active config, so we need to store it seperately.
+		out.config = *config;
 	}
 
 	if (needs_reset)
@@ -402,14 +414,11 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
 
-	CellAudioOutConfiguration _config{};
-
 	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
-	_config.channel = out.channels;
-	_config.encoder = out.encoder;
-	_config.downMixer = out.downmixer;
 
-	*config = _config;
+	// Return the set config, which might not necessarily be the active config.
+	*config = out.config;
+
 	return CELL_OK;
 }
 
