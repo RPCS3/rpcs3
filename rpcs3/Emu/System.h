@@ -225,10 +225,7 @@ public:
 		return m_dir;
 	}
 
-	const std::string& GetSfoDir() const
-	{
-		return m_sfo_dir;
-	}
+	const std::string GetSfoDir(bool prefer_disc_sfo) const;
 
 	// String for GUI dialogs.
 	const std::string& GetUsr() const
