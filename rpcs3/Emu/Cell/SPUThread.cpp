@@ -1875,6 +1875,8 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		src = zero_buf;
 	}
 
+	rsx::reservation_lock<false, 1> rsx_lock(eal, args.size, !is_get && g_cfg.core.rsx_fifo_accuracy && !g_cfg.core.spu_accurate_dma);
+
 	if ((!g_use_rtm && !is_get) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
 	{
 		perf_meter<"ADMA_GET"_u64> perf_get = perf_;

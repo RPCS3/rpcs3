@@ -77,6 +77,12 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
+	rsx_iomap_table::rsx_iomap_table() noexcept
+		: ea(fill_array(-1))
+		, io(fill_array(-1))
+	{
+	}
+
 	u32 get_address(u32 offset, u32 location, u32 size_to_check, u32 line, u32 col, const char* file, const char* func)
 	{
 		const auto render = get_current_renderer();
@@ -2649,6 +2655,7 @@ namespace rsx
 	{
 		// Make sure GET value is exposed before sync points
 		fifo_ctrl->sync_get();
+		fifo_ctrl->invalidate_cache();
 	}
 
 	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(u32 count, u32 get) const
@@ -2710,6 +2717,8 @@ namespace rsx
 
 	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
 	{
+		bool kill_itself = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::as_ps3;
+
 		const u64 current_time = rsx::uclock();
 
 		if (recovered_fifo_cmds_history.size() == 20u)
@@ -2721,11 +2730,16 @@ namespace rsx
 			if (current_time - cmd_info.timestamp < 2'000'000u - std::min<u32>(g_cfg.video.driver_wakeup_delay * 700, 1'400'000))
 			{
 				// Probably hopeless
-				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings. Called from %s", src_loc{line, col, file, func});
+				kill_itself = true;
 			}
 
 			// Erase the last command from history, keep the size of the queue the same
 			recovered_fifo_cmds_history.pop();
+		}
+
+		if (kill_itself)
+		{
+			fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings. Called from %s", src_loc{line, col, file, func});
 		}
 
 		// Error. Should reset the queue
