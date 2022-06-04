@@ -656,7 +656,10 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		//a6 high = status0 = (zcullDir << 1) | (zcullFormat << 2) | ((sFunc & 0xF) << 12) | (sRef << 16) | (sMask << 24);
 		//a6 low = status1 = (0x2000 << 0) | (0x20 << 16);
 
-		ensure(a3 < std::size(render->zculls));
+		if (a3 >= std::size(render->zculls))
+		{
+			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
+		}
 
 		if (!render->is_fifo_idle())
 		{
