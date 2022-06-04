@@ -478,7 +478,7 @@ error_code cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<Cell
 	_info.portType = CELL_AUDIO_OUT_PORT_HDMI;
 	_info.availableModeCount = ::narrow<u8>(out.sound_modes.size());
 	_info.state = CELL_AUDIO_OUT_DEVICE_STATE_AVAILABLE;
-	_info.latency = 1000;
+	_info.latency = 13;
 
 	for (usz i = 0; i < out.sound_modes.size(); i++)
 	{
