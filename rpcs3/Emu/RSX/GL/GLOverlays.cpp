@@ -334,8 +334,10 @@ namespace gl
 	void ui_overlay_renderer::destroy()
 	{
 		temp_image_cache.clear();
+		temp_view_cache.clear();
 		resources.clear();
 		font_cache.clear();
+		view_cache.clear();
 		overlay_pass::destroy();
 	}
 

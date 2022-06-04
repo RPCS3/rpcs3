@@ -96,6 +96,7 @@ void GLGSRender::on_init_thread()
 	m_occlusion_type = g_cfg.video.precise_zpass_count ? GL_SAMPLES_PASSED : GL_ANY_SAMPLES_PASSED;
 
 	gl::init();
+	gl::set_command_context(gl_state);
 
 	//Enable adaptive vsync if vsync is requested
 	gl::set_swapinterval(g_cfg.video.vsync ? -1 : 0);
