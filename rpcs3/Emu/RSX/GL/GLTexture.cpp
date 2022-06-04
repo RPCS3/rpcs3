@@ -77,7 +77,7 @@ namespace gl
 		case CELL_GCM_TEXTURE_A1R5G5B5: return GL_RGB5_A1;
 		case CELL_GCM_TEXTURE_A4R4G4B4: return GL_RGBA4;
 		case CELL_GCM_TEXTURE_R5G6B5: return GL_RGB565;
-		case CELL_GCM_TEXTURE_A8R8G8B8: return GL_RGBA8;
+		case CELL_GCM_TEXTURE_A8R8G8B8: return GL_BGRA8;
 		case CELL_GCM_TEXTURE_G8B8: return GL_RG8;
 		case CELL_GCM_TEXTURE_R6G5B5: return GL_RGB565;
 		case CELL_GCM_TEXTURE_DEPTH24_D8: return GL_DEPTH24_STENCIL8;
@@ -91,7 +91,7 @@ namespace gl
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return GL_RGBA32F;
 		case CELL_GCM_TEXTURE_X32_FLOAT: return GL_R32F;
 		case CELL_GCM_TEXTURE_D1R5G5B5: return GL_RGB5_A1;
-		case CELL_GCM_TEXTURE_D8R8G8B8: return GL_RGBA8;
+		case CELL_GCM_TEXTURE_D8R8G8B8: return GL_BGRA8;
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return GL_RG16F;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
@@ -166,6 +166,8 @@ namespace gl
 		case texture::internal_format::rgba4:
 			return { GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, false };
 		case texture::internal_format::rgba8:
+			return { GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 4, false };
+		case texture::internal_format::bgra8:
 			return { GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 4, false };
 		case texture::internal_format::rgba16f:
 			return { GL_RGBA, GL_HALF_FLOAT, 2, true };
@@ -185,25 +187,7 @@ namespace gl
 
 	pixel_buffer_layout get_format_type(const gl::texture* tex)
 	{
-		const auto ifmt = tex->get_internal_format();
-		if (ifmt == gl::texture::internal_format::rgba8)
-		{
-			// Multiple RTT layouts can map to this format. Override ABGR formats
-			if (auto rtt = dynamic_cast<const gl::render_target*>(tex))
-			{
-				switch (rtt->format_info.gcm_color_format)
-				{
-				case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
-				case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
-				case rsx::surface_color_format::a8b8g8r8:
-					return { GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 4, false };
-				default:
-					break;
-				}
-			}
-		}
-
-		auto ret = get_format_type(ifmt);
+		auto ret = get_format_type(tex->get_internal_format());
 		if (tex->format_class() == RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32)
 		{
 			ret.type = GL_FLOAT_32_UNSIGNED_INT_24_8_REV;
@@ -508,6 +492,7 @@ namespace gl
 						pack_info, {});
 					return;
 				case gl::texture::internal_format::rgba8:
+				case gl::texture::internal_format::bgra8:
 					gl::get_compute_task<gl::cs_rgba8_to_ssbo>()->run(cmd,
 						const_cast<gl::viewable_image*>(as_vi), dst, dst_offset,
 						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
@@ -990,6 +975,7 @@ namespace gl
 		case GL_RG16:
 		case GL_RG16F:
 		case GL_RGBA8:
+		case GL_BGRA8:
 		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
 		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
 		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:

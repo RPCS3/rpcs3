@@ -6,6 +6,11 @@
 
 namespace gl
 {
+	static GLenum sizedfmt_to_ifmt(GLenum sized)
+	{
+		return sized == GL_BGRA8 ? GL_RGBA8 : sized;
+	}
+
 	texture::texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLenum sized_format, rsx::format_class format_class)
 	{
 		glGenTextures(1, &m_id);
@@ -13,22 +18,23 @@ namespace gl
 		// Must bind to initialize the new texture
 		gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, target, m_id);
 
+		const GLenum storage_fmt = sizedfmt_to_ifmt(sized_format);
 		switch (target)
 		{
 		default:
 			fmt::throw_exception("Invalid image target 0x%X", target);
 		case GL_TEXTURE_1D:
-			glTexStorage1D(target, mipmaps, sized_format, width);
+			glTexStorage1D(target, mipmaps, storage_fmt, width);
 			height = depth = 1;
 			break;
 		case GL_TEXTURE_2D:
 		case GL_TEXTURE_CUBE_MAP:
-			glTexStorage2D(target, mipmaps, sized_format, width, height);
+			glTexStorage2D(target, mipmaps, storage_fmt, width, height);
 			depth = 1;
 			break;
 		case GL_TEXTURE_3D:
 		case GL_TEXTURE_2D_ARRAY:
-			glTexStorage3D(target, mipmaps, sized_format, width, height, depth);
+			glTexStorage3D(target, mipmaps, storage_fmt, width, height, depth);
 			break;
 		case GL_TEXTURE_BUFFER:
 			break;
@@ -221,7 +227,7 @@ namespace gl
 	void texture_view::create(texture* data, GLenum target, GLenum sized_format, GLenum aspect_flags, const GLenum* argb_swizzle)
 	{
 		m_target = target;
-		m_format = sized_format;
+		m_format = sizedfmt_to_ifmt(sized_format);
 		m_image_data = data;
 		m_aspect_flags = aspect_flags;
 
@@ -237,7 +243,7 @@ namespace gl
 		}
 
 		glGenTextures(1, &m_id);
-		glTextureView(m_id, target, data->id(), sized_format, 0, data->levels(), 0, num_layers);
+		glTextureView(m_id, target, data->id(), m_format, 0, data->levels(), 0, num_layers);
 
 		if (argb_swizzle)
 		{
