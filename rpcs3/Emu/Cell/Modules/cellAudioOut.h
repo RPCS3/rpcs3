@@ -202,6 +202,7 @@ struct audio_out_configuration
 		u32 downmixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
 		u32 copy_control = CELL_AUDIO_OUT_COPY_CONTROL_COPY_FREE;
 		std::vector<CellAudioOutSoundMode> sound_modes;
+		CellAudioOutConfiguration config{}; // Selected by the game. Does not necessarily mean the active config.
 	};
 
 	std::array<audio_out, 2> out;
