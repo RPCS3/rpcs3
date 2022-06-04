@@ -10,6 +10,8 @@ using namespace ::rsx::format_class_;
 
 namespace gl
 {
+#define GL_BGRA8 0x80E1 // Enumerant of GL_BGRA8_EXT from the GL_EXT_texture_format_BGRA8888
+
 	class buffer;
 	class buffer_view;
 	class command_context;
@@ -99,6 +101,7 @@ namespace gl
 
 			//Sized internal formats, see opengl spec document on glTexImage2D, table 3
 			rgba8 = GL_RGBA8,
+			bgra8 = GL_BGRA8,
 			rgb565 = GL_RGB565,
 			rgb5a1 = GL_RGB5_A1,
 			rgba4 = GL_RGBA4,
