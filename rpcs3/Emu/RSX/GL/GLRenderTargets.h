@@ -3,6 +3,8 @@
 #include "GLHelpers.h"
 #include "../rsx_utils.h"
 
+#include "glutils/fbo.h"
+
 struct color_swizzle
 {
 	gl::texture::channel a = gl::texture::channel::a;

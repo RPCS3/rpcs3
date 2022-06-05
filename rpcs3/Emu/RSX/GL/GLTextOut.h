@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "GLHelpers.h"
+#include "glutils/vao.hpp"
 #include "../Common/TextGlyphs.h"
 #include <string>
 #include <vector>

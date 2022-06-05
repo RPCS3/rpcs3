@@ -224,7 +224,7 @@ namespace gl
 		}
 	}
 
-	void texture_view::create(texture* data, GLenum target, GLenum sized_format, GLenum aspect_flags, const GLenum* argb_swizzle)
+	void texture_view::create(texture* data, GLenum target, GLuint min_level, GLuint num_levels, GLenum sized_format, GLenum aspect_flags, const GLenum* argb_swizzle)
 	{
 		m_target = target;
 		m_format = sizedfmt_to_ifmt(sized_format);
@@ -243,7 +243,7 @@ namespace gl
 		}
 
 		glGenTextures(1, &m_id);
-		glTextureView(m_id, target, data->id(), m_format, 0, data->levels(), 0, num_layers);
+		glTextureView(m_id, target, data->id(), m_format, min_level, num_levels, 0, num_layers);
 
 		if (argb_swizzle)
 		{

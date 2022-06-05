@@ -1,8 +1,9 @@
 #pragma once
 
-#include "util/types.hpp"
-
 #include "GLRenderTargets.h"
+#include "glutils/blitter.h"
+#include "glutils/sync.hpp"
+
 #include "../Common/texture_cache.h"
 
 #include <memory>

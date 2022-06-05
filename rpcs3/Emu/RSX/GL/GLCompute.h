@@ -2,6 +2,7 @@
 
 #include "Emu/IdManager.h"
 #include "GLHelpers.h"
+#include "glutils/program.h"
 #include "../rsx_utils.h"
 
 #include <unordered_map>

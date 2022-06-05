@@ -4,6 +4,11 @@
 #include "../Common/simple_array.hpp"
 #include "../Overlays/overlays.h"
 #include "GLTexture.h"
+
+#include "glutils/fbo.h"
+#include "glutils/program.h"
+#include "glutils/vao.hpp"
+
 #include <string>
 #include <unordered_map>
 
@@ -113,6 +118,16 @@ namespace gl
 	{
 		rp_ssbo_to_d24x8_texture();
 		void run(gl::command_context& cmd, const buffer* src, const texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_unpack_settings& settings);
+	};
+
+	struct rp_copy_rgba_to_bgra : public overlay_pass
+	{
+		void run(gl::command_context& cmd, const texture* src, const texture* dst, const coordu& src_region, const coordu& dst_region);
+	};
+
+	struct rp_copy_bgra_to_rgba : public overlay_pass
+	{
+		void run(gl::command_context& cmd, const texture* src, const texture* dst, const coordu& src_region, const coordu& dst_region);
 	};
 
 	// TODO: Replace with a proper manager
