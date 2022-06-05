@@ -39,7 +39,7 @@ struct ds3_output_report
 	ds3_led led_5;         // reserved for another LED
 };
 
-constexpr u8 battery_capacity[] = {0, 1, 25, 50, 75, 100};
+constexpr std::array<u8, 6> battery_capacity = {0, 1, 25, 50, 75, 100};
 
 constexpr id_pair SONY_DS3_ID_0 = {0x054C, 0x0268};
 
@@ -275,15 +275,16 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	// Uses libusb for windows as hidapi will never work with UsbHid driver for the ds3 and it won't work with WinUsb either(windows hid api needs the UsbHid in the driver stack as far as I can tell)
 	// For other os use hidapi and hope for the best!
 #ifdef _WIN32
-	u8 buf[0xFF];
+	std::array<u8, 0xFF> buf{};
 	buf[0] = 0xF2;
 
-	int res = hid_get_feature_report(hidDevice, buf, 0xFF);
+	int res = hid_get_feature_report(hidDevice, buf.data(), 0xFF);
 	if (res < 0)
 	{
 		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, error=%s)", res, hid_error(hidDevice));
+		buf    = {};
 		buf[0] = 0;
-		res    = hid_get_feature_report(hidDevice, buf, 0xFF);
+		res    = hid_get_feature_report(hidDevice, buf.data(), 0xFF);
 	}
 	if (res < 0)
 	{
@@ -354,7 +355,7 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 			}
 			else
 			{
-				ds3dev->battery_level = battery_capacity[std::min<u8>(battery_status, 5)];
+				ds3dev->battery_level = battery_capacity.at(std::min<usz>(battery_status, battery_capacity.size() - 1));
 				ds3dev->cable_state   = 0;
 			}
 
