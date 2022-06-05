@@ -104,7 +104,7 @@ main_window::~main_window()
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
  * Simplifies logic a bit.
  */
-bool main_window::Init(bool with_cli_boot)
+bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 {
 	setAcceptDrops(true);
 
