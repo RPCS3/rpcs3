@@ -71,7 +71,6 @@ pad_led_settings_dialog::pad_led_settings_dialog(QDialog* parent, int colorR, in
 
 pad_led_settings_dialog::~pad_led_settings_dialog()
 {
-	delete ui;
 }
 
 void pad_led_settings_dialog::redraw_color_sample() const

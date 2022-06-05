@@ -108,7 +108,7 @@ private Q_SLOTS:
 	void ApplyCurrentPlayerConfig(int new_player_id);
 
 private:
-	Ui::pad_settings_dialog *ui;
+	std::unique_ptr<Ui::pad_settings_dialog> ui;
 	std::string m_title_id;
 	std::shared_ptr<gui_settings> m_gui_settings;
 

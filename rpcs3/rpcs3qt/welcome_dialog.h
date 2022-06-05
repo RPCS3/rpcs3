@@ -18,6 +18,6 @@ public:
 	~welcome_dialog();
 
 private:
-	Ui::welcome_dialog *ui;
+	std::unique_ptr<Ui::welcome_dialog> ui;
 	std::shared_ptr<gui_settings> m_gui_settings;
 };

@@ -377,14 +377,16 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 		return false;
 	}
 
-	std::array<u8, 64> buf;
+	std::array<u8, 64> buf{};
+
 	if (ds4Dev->bt_controller)
 	{
 		for (int tries = 0; tries < 3; ++tries)
 		{
+			buf = {};
 			buf[0] = 0x05;
 
-			if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x05_SIZE); res <= 0)
+			if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x05_SIZE); res != DS4_FEATURE_REPORT_0x05_SIZE || buf[0] != 0x05)
 			{
 				ds4_log.error("GetCalibrationData: hid_get_feature_report 0x05 for bluetooth controller failed! result=%d, error=%s", res, hid_error(ds4Dev->hidDevice));
 				return false;
@@ -410,7 +412,7 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 	else
 	{
 		buf[0] = 0x02;
-		if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x02_SIZE); res <= 0)
+		if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x02_SIZE); res != DS4_FEATURE_REPORT_0x02_SIZE || buf[0] != 0x02)
 		{
 			ds4_log.error("GetCalibrationData: hid_get_feature_report 0x02 for wired controller failed! result=%d, error=%s", res, hid_error(ds4Dev->hidDevice));
 			return false;
@@ -535,17 +537,17 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	int res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE);
 	if (res > 0)
 	{
-		if (res != DS4_FEATURE_REPORT_0x81_SIZE)
+		if (res != DS4_FEATURE_REPORT_0x81_SIZE || buf[0] != 0x81)
 		{
 			// Controller may not be genuine. These controllers do not have feature 0x81 implemented and calibration data is in bluetooth format even in USB mode!
-			ds4_log.warning("check_add_device: DS4 controller may not be genuine. Workaround enabled.");
+			ds4_log.warning("check_add_device: DS4 controller may not be genuine. Workaround enabled. (result=%d, buf[0]=0x%x)", res, buf[0]);
 
 			// Read feature report 0x12 instead which is what the console uses.
+			buf = {};
 			buf[0] = 0x12;
-			buf[1] = 0;
-			if (res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE); res < 0)
+			if (res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE); res != DS4_FEATURE_REPORT_0x12_SIZE || buf[0] != 0x12)
 			{
-				ds4_log.error("check_add_device: hid_get_feature_report 0x12 failed! result=%d, error=%s", res, hid_error(hidDevice));
+				ds4_log.error("check_add_device: hid_get_feature_report 0x12 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
 			}
 		}
 
@@ -553,7 +555,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	}
 	else
 	{
-		ds4_log.warning("check_add_device: DS4 Bluetooth controller detected. (hid_get_feature_report 0x81 failed, result=%d, error=%s)", res, hid_error(hidDevice));
+		ds4_log.warning("check_add_device: DS4 Bluetooth controller detected. (hid_get_feature_report 0x81 failed, result=%d, buf[0]=0x%x, error=%s)", res, buf[0], hid_error(hidDevice));
 		device->bt_controller = true;
 		for (wchar_t ch : wide_serial)
 			serial += static_cast<uchar>(ch);
@@ -572,12 +574,13 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	u32 hw_version{};
 	u32 fw_version{};
 
+	buf = {};
 	buf[0] = 0xA3;
 
 	res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0xA3_SIZE);
-	if (res <= 0)
+	if (res != DS4_FEATURE_REPORT_0xA3_SIZE || buf[0] != 0xA3)
 	{
-		ds4_log.error("check_add_device: hid_get_feature_report 0xA3 failed! Could not retrieve firmware version! result=%d, error=%s", res, hid_error(hidDevice));
+		ds4_log.error("check_add_device: hid_get_feature_report 0xA3 failed! Could not retrieve firmware version! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
 	}
 	else
 	{
@@ -679,7 +682,7 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 
 	std::array<u8, 78> buf{};
 
-	const int res = hid_read(device->hidDevice, buf.data(), device->bt_controller ? 78 : 64);
+	const int res = hid_read(device->hidDevice, buf.data(), device->bt_controller ? DS4_INPUT_REPORT_0x11_SIZE : 64);
 	if (res == -1)
 	{
 		// looks like controller disconnected or read error
@@ -696,16 +699,16 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 		// tells controller to send 0x11 reports
 		std::array<u8, 64> buf_error{};
 		buf_error[0] = 0x2;
-		if (int res = hid_get_feature_report(device->hidDevice, buf_error.data(), buf_error.size()); res < 0)
+		if (int res = hid_get_feature_report(device->hidDevice, buf_error.data(), buf_error.size()); res != static_cast<int>(buf_error.size()) || buf_error[0] != 0x2)
 		{
-			ds4_log.error("GetRawData: hid_get_feature_report 0x2 failed! result=%d, error=%s", res, hid_error(device->hidDevice));
+			ds4_log.error("GetRawData: hid_get_feature_report 0x2 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(device->hidDevice));
 		}
 		return DataStatus::NoNewData;
 	}
 
 	int offset;
 	// check report and set offset
-	if (device->bt_controller && buf[0] == 0x11 && res == 78)
+	if (device->bt_controller && buf[0] == 0x11 && res == DS4_INPUT_REPORT_0x11_SIZE)
 	{
 		offset = 2;
 

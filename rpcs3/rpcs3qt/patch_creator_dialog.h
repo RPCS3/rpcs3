@@ -20,7 +20,7 @@ public:
 	~patch_creator_dialog();
 
 private:
-	Ui::patch_creator_dialog* ui;
+	std::unique_ptr<Ui::patch_creator_dialog> ui;
 	QFont mMonoFont;
 	QColor mValidColor;
 	QColor mInvalidColor;

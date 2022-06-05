@@ -217,12 +217,9 @@ std::shared_ptr<Device> hid_pad_handler<Device>::get_hid_device(const std::strin
 		return nullptr;
 
 	// Controllers 1-n in GUI
-	for (auto& cur_control : m_controllers)
+	if (auto it = m_controllers.find(padId); it != m_controllers.end())
 	{
-		if (padId == cur_control.first)
-		{
-			return cur_control.second;
-		}
+		return it->second;
 	}
 
 	return nullptr;

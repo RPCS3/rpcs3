@@ -47,7 +47,7 @@ private:
 	std::array<QComboBox*, 4> m_mics_combo;
 
 	int m_tab_index;
-	Ui::settings_dialog *ui;
+	std::unique_ptr<Ui::settings_dialog> ui;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<emu_settings> m_emu_settings;
 
