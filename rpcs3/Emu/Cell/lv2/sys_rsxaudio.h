@@ -2,7 +2,6 @@
 
 #include "sys_sync.h"
 #include "sys_event.h"
-#include "Utilities/Timer.h"
 #include "Utilities/simple_ringbuf.h"
 #include "Utilities/transactional_storage.h"
 #include "Utilities/cond.h"

@@ -2126,8 +2126,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 settings_dialog::~settings_dialog()
 {
 	m_gui_settings->SetValue(gui::cfg_geometry, saveGeometry());
-
-	delete ui;
 }
 
 void settings_dialog::EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text) const

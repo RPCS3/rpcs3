@@ -16,5 +16,5 @@ public:
 	~about_dialog();
 
 private:
-	Ui::about_dialog *ui;
+	std::unique_ptr<Ui::about_dialog> ui;
 };

@@ -208,8 +208,6 @@ pad_settings_dialog::~pad_settings_dialog()
 {
 	m_gui_settings->SetValue(gui::pads_geometry, saveGeometry());
 
-	delete ui;
-
 	if (!Emu.IsStopped())
 	{
 		pad::reset(Emu.GetTitleID());

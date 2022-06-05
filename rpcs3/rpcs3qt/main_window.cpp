@@ -99,7 +99,6 @@ main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared
 main_window::~main_window()
 {
 	SaveWindowState();
-	delete ui;
 }
 
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
