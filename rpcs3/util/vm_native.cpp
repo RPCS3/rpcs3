@@ -5,7 +5,9 @@
 #ifdef _WIN32
 #include "Utilities/File.h"
 #include "util/dyn_lib.hpp"
+#include "Utilities/lockless.h"
 #include <Windows.h>
+#include <span>
 #else
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -87,6 +89,100 @@ namespace utils
 #ifdef _WIN32
 	DYNAMIC_IMPORT("KernelBase.dll", VirtualAlloc2, PVOID(HANDLE Process, PVOID Base, SIZE_T Size, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
 	DYNAMIC_IMPORT("KernelBase.dll", MapViewOfFile3, PVOID(HANDLE Handle, HANDLE Process, PVOID Base, ULONG64 Off, SIZE_T ViewSize, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
+	DYNAMIC_IMPORT("KernelBase.dll", UnmapViewOfFile2, BOOL(HANDLE Process, PVOID BaseAddress, ULONG UnmapFlags));
+
+	const bool has_win10_memory_mapping_api()
+	{
+		return VirtualAlloc2 && MapViewOfFile3 && UnmapViewOfFile2;
+	}
+
+	struct map_info_t
+	{
+		u64 addr = 0;
+		u64 size = 0;
+		atomic_t<u8> state{};
+	};
+
+	lf_array<map_info_t, 32> s_is_mapping{};
+
+	bool is_memory_mappping_memory(u64 addr)
+	{
+		if (!addr)
+		{
+			return false;
+		}
+
+		const u64 map_size = s_is_mapping.size();
+
+		for (u64 i = map_size - 1; i != umax; i--)
+		{
+			const auto& info = s_is_mapping[i];
+
+			if (info.state == 1)
+			{
+				if (addr >= info.addr && addr < info.addr + info.size)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	u64 unmap_mappping_memory(u64 addr, u64 size)
+	{
+		if (!addr || !size)
+		{
+			return false;
+		}
+
+		const u64 map_size = s_is_mapping.size();
+
+		for (u64 i = map_size; i != umax; i--)
+		{
+			auto& info = s_is_mapping[i];
+
+			if (info.state == 1)
+			{
+				if (addr == info.addr && size == info.size)
+				{
+					if (info.state.compare_and_swap_test(1, 0))
+					{
+						return info.size;
+					}
+				}
+			}
+		}
+
+		return false;
+	}
+
+	bool map_mappping_memory(u64 addr, u64 size)
+	{
+		if (!addr || !size)
+		{
+			return false;
+		}
+
+		for (u64 i = 0;; i++)
+		{
+			auto& info = s_is_mapping[i];
+
+			if (!info.addr && info.state.compare_and_swap_test(0, 2))
+			{
+				info.addr = addr;
+				info.size = size;
+				info.state = 1;
+				return true;
+			}
+		}
+	}
+
+	bool is_memory_mappping_memory(const void* addr)
+	{
+		return is_memory_mappping_memory(reinterpret_cast<u64>(addr));
+	}
 #endif
 
 	long get_page_size()
@@ -135,9 +231,20 @@ namespace utils
 		return _prot;
 	}
 
-	void* memory_reserve(usz size, void* use_addr)
+	void* memory_reserve(usz size, void* use_addr, bool is_memory_mapping)
 	{
 #ifdef _WIN32
+		if (is_memory_mapping && has_win10_memory_mapping_api())
+		{
+			if (auto ptr = VirtualAlloc2(nullptr, use_addr, size, MEM_RESERVE | MEM_RESERVE_PLACEHOLDER, PAGE_NOACCESS, nullptr, 0))
+			{
+				map_mappping_memory(reinterpret_cast<u64>(ptr), size);
+				return ptr;
+			}
+
+			return nullptr;
+		}
+
 		return ::VirtualAlloc(use_addr, size, MEM_RESERVE, PAGE_NOACCESS);
 #else
 		if (use_addr && reinterpret_cast<uptr>(use_addr) % 0x10000)
@@ -271,6 +378,7 @@ namespace utils
 	{
 #ifdef _WIN32
 		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
+		unmap_mappping_memory(reinterpret_cast<u64>(pointer), size);
 #else
 		ensure(::munmap(pointer, size) != -1);
 #endif
@@ -671,32 +779,72 @@ namespace utils
 #endif
 	}
 
-	u8* shm::map_critical(void* ptr, protection prot, bool cow)
+	std::pair<u8*, std::string> shm::map_critical(void* ptr, protection prot, bool cow)
 	{
 		const auto target = reinterpret_cast<u8*>(reinterpret_cast<u64>(ptr) & -0x10000);
 
 #ifdef _WIN32
-		::MEMORY_BASIC_INFORMATION mem;
-		if (!::VirtualQuery(target, &mem, sizeof(mem)) || mem.State != MEM_RESERVE || !::VirtualFree(mem.AllocationBase, 0, MEM_RELEASE))
+		::MEMORY_BASIC_INFORMATION mem{};
+		if (!::VirtualQuery(target, &mem, sizeof(mem)) || mem.State != MEM_RESERVE)
 		{
-			return nullptr;
+			return {nullptr, fmt::format("VirtualQuery() Unexpceted memory info: state=0x%x, %s", mem.State, std::as_bytes(std::span(&mem, 1)))};
 		}
 
 		const auto base = (u8*)mem.AllocationBase;
 		const auto size = mem.RegionSize + (target - base);
 
+		if (is_memory_mappping_memory(ptr))
+		{
+			if (base < target && !::VirtualFree(base, target - base, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER))
+			{
+				return {nullptr, "Failed to split allocation base"};
+			}
+
+			if (target + m_size < base + size && !::VirtualFree(target, m_size, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER))
+			{
+				return {nullptr, "Failed to split allocation end"};
+			}
+
+			if (cow)
+			{
+				// TODO
+			}
+	
+			if (MapViewOfFile3(m_handle, GetCurrentProcess(), target, 0, m_size, MEM_REPLACE_PLACEHOLDER, PAGE_EXECUTE_READWRITE, nullptr, 0))
+			{
+				if (prot != protection::rw && prot != protection::wx)
+				{
+					DWORD old;
+					if (!::VirtualProtect(target, m_size, +prot, &old))
+					{
+						UnmapViewOfFile2(nullptr, target, MEM_PRESERVE_PLACEHOLDER);
+						return {nullptr, "Failed to protect"};
+					}
+				}
+
+				return {target, {}};
+			}
+
+			return {nullptr, "Failed to map3"};
+		}
+
+		if (!::VirtualFree(mem.AllocationBase, 0, MEM_RELEASE))
+		{
+			return {nullptr, "VirtualFree() failed on allocation base"};
+		}
+
 		if (base < target && !::VirtualAlloc(base, target - base, MEM_RESERVE, PAGE_NOACCESS))
 		{
-			return nullptr;
+			return {nullptr, "VirtualAlloc() failed to reserve allocation base"};
 		}
 
 		if (target + m_size < base + size && !::VirtualAlloc(target + m_size, base + size - target - m_size, MEM_RESERVE, PAGE_NOACCESS))
 		{
-			return nullptr;
+			return {nullptr, "VirtualAlloc() failed to reserve allocation end"};
 		}
 #endif
 
-		return this->map(target, prot, cow);
+		return {this->map(target, prot, cow), "Failed to map"};
 	}
 
 	u8* shm::map_self(protection prot)
@@ -736,6 +884,25 @@ namespace utils
 		const auto target = reinterpret_cast<u8*>(reinterpret_cast<u64>(ptr) & -0x10000);
 
 #ifdef _WIN32
+		if (is_memory_mappping_memory(ptr))
+		{
+			ensure(UnmapViewOfFile2(GetCurrentProcess(), target, MEM_PRESERVE_PLACEHOLDER));
+
+			::MEMORY_BASIC_INFORMATION mem{}, mem2{};
+			ensure(::VirtualQuery(target - 1, &mem, sizeof(mem)) && ::VirtualQuery(target + m_size, &mem2, sizeof(mem2)));
+
+			const auto size1 = mem.State == MEM_RESERVE ? target - (u8*)mem.AllocationBase : 0;
+			const auto size2 =  mem2.State == MEM_RESERVE ? mem2.RegionSize : 0;
+
+			if (!size1 && !size2)
+			{
+				return;
+			}
+
+			ensure(::VirtualFree(size1 ? mem.AllocationBase : target, m_size + size1 + size2, MEM_RELEASE | MEM_COALESCE_PLACEHOLDERS));
+			return;
+		}
+
 		this->unmap(target);
 
 		::MEMORY_BASIC_INFORMATION mem, mem2;
