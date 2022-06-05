@@ -127,8 +127,6 @@ patch_manager_dialog::~patch_manager_dialog()
 	// Save gui settings
 	m_gui_settings->SetValue(gui::pm_geometry, saveGeometry());
 	m_gui_settings->SetValue(gui::pm_splitter_state, ui->splitter->saveState());
-
-	delete ui;
 }
 
 int patch_manager_dialog::exec()

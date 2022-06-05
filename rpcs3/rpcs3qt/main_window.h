@@ -42,7 +42,7 @@ class main_window : public QMainWindow
 {
 	Q_OBJECT
 
-	Ui::main_window *ui;
+	std::unique_ptr<Ui::main_window> ui;
 
 	bool m_sys_menu_opened = false;
 	bool m_is_list_mode = true;

@@ -73,7 +73,7 @@ private:
 	bool m_download_automatic = false;
 	bool m_download_auto_accept = false;
 
-	Ui::patch_manager_dialog *ui;
+	std::unique_ptr<Ui::patch_manager_dialog> ui;
 
 protected:
 	void dropEvent(QDropEvent* event) override;

@@ -27,7 +27,7 @@ private Q_SLOTS:
 private:
 	void redraw_color_sample() const;
 	void read_form_values();
-	Ui::pad_led_settings_dialog *ui;
+	std::unique_ptr<Ui::pad_led_settings_dialog> ui;
 	struct led_settings
 	{
 		int cR = 255;
