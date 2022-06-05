@@ -278,20 +278,21 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	std::array<u8, 0xFF> buf{};
 	buf[0] = 0xF2;
 
-	int res = hid_get_feature_report(hidDevice, buf.data(), 0xFF);
-	if (res < 0)
+	int res = hid_get_feature_report(hidDevice, buf.data(), buf.size());
+	if (res != static_cast<int>(buf.size()) || buf[0] != 0xF2)
 	{
-		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, error=%s)", res, hid_error(hidDevice));
+		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, buf[0]=0x%x, error=%s)", res, buf[0], hid_error(hidDevice));
 		buf    = {};
-		buf[0] = 0;
-		res    = hid_get_feature_report(hidDevice, buf.data(), 0xFF);
+		buf[0] = 0x0;
+		res    = hid_get_feature_report(hidDevice, buf.data(), buf.size());
+		if (res != static_cast<int>(buf.size()) || buf[0] != 0x0)
+		{
+			ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
+			hid_close(hidDevice);
+			return;
+		}
 	}
-	if (res < 0)
-	{
-		ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, error=%s", res, hid_error(hidDevice));
-		hid_close(hidDevice);
-		return;
-	}
+
 	device->report_id = buf[0];
 #elif defined (__APPLE__)
 	int res = hid_init_sixaxis_usb(hidDevice);
@@ -332,12 +333,12 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 
 #ifdef _WIN32
 	ds3dev->padData[0] = ds3dev->report_id;
-	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), 64);
+	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
 #else
-	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), 64);
+	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
 #endif
 
-	if (result > 0)
+	if (result == static_cast<int>(ds3dev->padData.size()))
 	{
 #ifdef _WIN32
 		if (ds3dev->padData[0] == ds3dev->report_id)
@@ -363,7 +364,7 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 		}
 		else
 		{
-			ds3_log.warning("Unknown packet received:0x%02x", ds3dev->padData[0]);
+			ds3_log.warning("Unknown packet received: 0x%02x", ds3dev->padData[0]);
 			return DataStatus::NoNewData;
 		}
 	}
