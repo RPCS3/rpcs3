@@ -172,7 +172,7 @@ namespace vm
 		struct gvar final : ptr<T>
 		{
 			static constexpr u32 alloc_size{sizeof(T) * Count};
-			static constexpr u32 alloc_align{alignof(T)};
+			static constexpr u32 alloc_align{std::max<u32>(alignof(T), 16)};
 		};
 	} // namespace ps3_
 } // namespace vm

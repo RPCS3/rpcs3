@@ -22,6 +22,11 @@
 
 LOG_CHANNEL(cellGame);
 
+vm::gvar<CellHddGameStatGet> g_stat_get;
+vm::gvar<CellHddGameStatSet> g_stat_set;
+vm::gvar<CellHddGameSystemFileParam> g_file_param;
+vm::gvar<CellHddGameCBResult> g_cb_result;
+
 template<>
 void fmt_class_string<CellGameError>::format(std::string& out, u64 arg)
 {
@@ -224,9 +229,15 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	const std::string usrdir = dir + "/USRDIR";
 
-	vm::var<CellHddGameCBResult> result;
-	vm::var<CellHddGameStatGet> get;
-	vm::var<CellHddGameStatSet> set;
+	auto& get = g_stat_get;
+	auto& set = g_stat_set;
+	auto& result = g_cb_result;
+
+	std::memset(get.get_ptr(), 0, sizeof(*get));
+	std::memset(set.get_ptr(), 0, sizeof(*set));
+	std::memset(result.get_ptr(), 0, sizeof(*result));
+
+	const std::string local_dir = vfs::get(dir);
 
 	// 40 GB - 1 kilobyte. The reasoning is that many games take this number and multiply it by 1024, to get the amount of bytes. With 40GB exactly,
 	// this will result in an overflow, and the size would be 0, preventing the game from running. By reducing 1 kilobyte, we make sure that even
@@ -234,17 +245,15 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	get->hddFreeSizeKB = 40 * 1024 * 1024 - 1;
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
 	get->sysSizeKB = 0; // TODO
-	get->atime = 0; // TODO
-	get->ctime = 0; // TODO
-	get->mtime = 0; // TODO
+	get->st_atime_ = 0; // TODO
+	get->st_ctime_ = 0; // TODO
+	get->st_mtime_ = 0; // TODO
 	get->sizeKB = CELL_HDDGAME_SIZEKB_NOTCALC;
 	strcpy_trunc(get->contentInfoPath, dir);
-	strcpy_trunc(get->hddGamePath, usrdir);
+	strcpy_trunc(get->gameDataPath, usrdir);
 
-	vm::var<CellHddGameSystemFileParam> setParam;
-	set->setParam = setParam;
-
-	const std::string& local_dir = vfs::get(dir);
+	std::memset(g_file_param.get_ptr(), 0, sizeof(*g_file_param));
+	set->setParam = g_file_param;
 
 	if (!fs::is_dir(local_dir))
 	{
@@ -758,9 +767,13 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	const std::string usrdir = dir + "/USRDIR";
 
-	vm::var<CellGameDataCBResult> cbResult;
-	vm::var<CellGameDataStatGet> cbGet;
-	vm::var<CellGameDataStatSet> cbSet;
+	auto& cbResult = g_cb_result;
+	auto& cbGet = g_stat_get;
+	auto& cbSet = g_stat_set;
+
+	std::memset(cbGet.get_ptr(), 0, sizeof(*cbGet));
+	std::memset(cbSet.get_ptr(), 0, sizeof(*cbSet));
+	std::memset(cbResult.get_ptr(), 0, sizeof(*cbResult));
 
 	cbGet->isNewData = new_data;
 
@@ -788,6 +801,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	{
 		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
 	}
+
+	std::memset(g_file_param.get_ptr(), 0, sizeof(*g_file_param));
+	cbSet->setParam = g_file_param;
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
@@ -1495,4 +1511,9 @@ DECLARE(ppu_module_manager::cellGame)("cellGame", []()
 
 	REG_FUNC(cellGame, cellGameThemeInstall);
 	REG_FUNC(cellGame, cellGameThemeInstallFromBuffer);
+
+	REG_VAR(cellGame, g_stat_get).flag(MFF_HIDDEN);
+	REG_VAR(cellGame, g_stat_set).flag(MFF_HIDDEN);
+	REG_VAR(cellGame, g_file_param).flag(MFF_HIDDEN);
+	REG_VAR(cellGame, g_cb_result).flag(MFF_HIDDEN);
 });
