@@ -424,6 +424,7 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	{
 		for (int tries = 0; tries < 3; ++tries)
 		{
+			buf = {};
 			buf[0] = 0x05;
 
 			if (int res = hid_get_feature_report(dualsense_device->hidDevice, buf.data(), DUALSENSE_CALIBRATION_REPORT_SIZE); res <= 0)

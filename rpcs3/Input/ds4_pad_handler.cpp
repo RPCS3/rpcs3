@@ -377,11 +377,13 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev) const
 		return false;
 	}
 
-	std::array<u8, 64> buf;
+	std::array<u8, 64> buf{};
+
 	if (ds4Dev->bt_controller)
 	{
 		for (int tries = 0; tries < 3; ++tries)
 		{
+			buf = {};
 			buf[0] = 0x05;
 
 			if (int res = hid_get_feature_report(ds4Dev->hidDevice, buf.data(), DS4_FEATURE_REPORT_0x05_SIZE); res <= 0)
@@ -541,8 +543,8 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 			ds4_log.warning("check_add_device: DS4 controller may not be genuine. Workaround enabled.");
 
 			// Read feature report 0x12 instead which is what the console uses.
+			buf = {};
 			buf[0] = 0x12;
-			buf[1] = 0;
 			if (res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE); res < 0)
 			{
 				ds4_log.error("check_add_device: hid_get_feature_report 0x12 failed! result=%d, error=%s", res, hid_error(hidDevice));
@@ -572,6 +574,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	u32 hw_version{};
 	u32 fw_version{};
 
+	buf = {};
 	buf[0] = 0xA3;
 
 	res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0xA3_SIZE);
