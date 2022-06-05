@@ -321,7 +321,7 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 	case CELL_AUDIO_OUT_PRIMARY:
 		break;
 	case CELL_AUDIO_OUT_SECONDARY:
-		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT; // TODO: enable if we ever actually support peripheral output
+		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT; // The secondary output only supports one format and can't be reconfigured
 	default:
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
@@ -400,7 +400,7 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 	case CELL_AUDIO_OUT_PRIMARY:
 		break;
 	case CELL_AUDIO_OUT_SECONDARY:
-		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT; // TODO: enable if we ever actually support peripheral output
+		return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_AUDIO_OUT; // The secondary output only supports one format and can't be reconfigured
 	default:
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
