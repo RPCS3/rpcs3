@@ -218,10 +218,11 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	u32 hw_version{};
 	u32 fw_version{};
 
+	buf = {};
 	buf[0] = 0x20;
 
 	res = hid_get_feature_report(hidDevice, buf.data(), DUALSENSE_VERSION_REPORT_SIZE);
-	if (res == 65)
+	if (res > 0) // Old versions return 65, newer versions return 64
 	{
 		hw_version = read_u32(&buf[24]);
 		fw_version = read_u32(&buf[28]);
@@ -417,7 +418,8 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 		return false;
 	}
 
-	std::array<u8, 64> buf;
+	std::array<u8, 64> buf{};
+
 	if (dualsense_device->bt_controller)
 	{
 		for (int tries = 0; tries < 3; ++tries)
