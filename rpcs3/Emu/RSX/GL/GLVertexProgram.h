@@ -1,6 +1,7 @@
 #pragma once
 #include "../Program/VertexProgramDecompiler.h"
 #include "GLHelpers.h"
+#include "glutils/program.h"
 
 #include <unordered_map>
 

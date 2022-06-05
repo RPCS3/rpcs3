@@ -1,6 +1,7 @@
 #pragma once
 
 #include "buffer_object.h"
+#include "sync.hpp"
 #include "Utilities/address_range.h"
 
 namespace gl

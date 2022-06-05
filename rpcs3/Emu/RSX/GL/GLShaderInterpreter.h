@@ -1,5 +1,6 @@
 #pragma once
 #include "GLHelpers.h"
+#include "glutils/program.h"
 #include "../Program/ProgramStateCache.h"
 #include "../Common/TextureUtils.h"
 

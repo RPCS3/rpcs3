@@ -348,4 +348,7 @@ namespace gl
 
 	void set_primary_context_thread(bool = true);
 	bool is_primary_context_thread();
+
+	class fence;
+	void flush_command_queue(fence& fence_obj);
 }

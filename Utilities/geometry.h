@@ -700,6 +700,12 @@ template<typename T>
 struct size3_base
 {
 	T width, height, depth;
+
+	template<typename NT>
+	explicit constexpr operator size3_base<NT>() const
+	{
+		return{ static_cast<NT>(width), static_cast<NT>(height), static_cast<NT>(depth) };
+	}
 };
 
 template<typename T>

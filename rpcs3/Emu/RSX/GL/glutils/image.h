@@ -25,6 +25,22 @@ namespace gl
 		stencil = 4
 	};
 
+	enum class filter
+	{
+		nearest = GL_NEAREST,
+		linear = GL_LINEAR
+	};
+
+	enum class min_filter
+	{
+		nearest = GL_NEAREST,
+		linear = GL_LINEAR,
+		nearest_mipmap_nearest = GL_NEAREST_MIPMAP_NEAREST,
+		nearest_mipmap_linear = GL_NEAREST_MIPMAP_LINEAR,
+		linear_mipmap_nearest = GL_LINEAR_MIPMAP_NEAREST,
+		linear_mipmap_linear = GL_LINEAR_MIPMAP_LINEAR
+	};
+
 	class texture
 	{
 		friend class texture_view;
@@ -301,7 +317,7 @@ namespace gl
 
 		GLenum component_swizzle[4];
 
-		void create(texture* data, GLenum target, GLenum sized_format, GLenum aspect_flags, const GLenum* argb_swizzle = nullptr);
+		void create(texture* data, GLenum target, GLenum sized_format, GLuint min_level, GLuint num_levels, GLenum aspect_flags, const GLenum* argb_swizzle = nullptr);
 
 	public:
 		texture_view(const texture_view&) = delete;
@@ -311,7 +327,7 @@ namespace gl
 			const GLenum* argb_swizzle = nullptr,
 			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
-			create(data, target, sized_format, aspect_flags, argb_swizzle);
+			create(data, target, sized_format, 0, data->levels(), aspect_flags, argb_swizzle);
 		}
 
 		texture_view(texture* data, const GLenum* argb_swizzle = nullptr,
@@ -319,7 +335,16 @@ namespace gl
 		{
 			GLenum target = static_cast<GLenum>(data->get_target());
 			GLenum sized_format = static_cast<GLenum>(data->get_internal_format());
-			create(data, target, sized_format, aspect_flags, argb_swizzle);
+			create(data, target, sized_format, 0, data->levels(), aspect_flags, argb_swizzle);
+		}
+
+		texture_view(texture* data, GLuint mip_level,
+			const GLenum* argb_swizzle = nullptr,
+			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
+		{
+			GLenum target = static_cast<GLenum>(data->get_target());
+			GLenum sized_format = static_cast<GLenum>(data->get_internal_format());
+			create(data, target, sized_format, mip_level, 1, aspect_flags, argb_swizzle);
 		}
 
 		virtual ~texture_view();
