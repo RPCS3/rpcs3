@@ -7695,7 +7695,7 @@ public:
 			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
 				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-				if (false)
+				if (m_use_avx512_icl)
 				{
 					if (perm_only)
 					{
@@ -7703,7 +7703,7 @@ public:
 						return;
 					}
 
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40), 0x7f);
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 					const auto ab = vperm2b256to128(as, bs, c);
 					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
@@ -7757,7 +7757,7 @@ public:
 			}
 		}
 
-		if (false)
+		if (m_use_avx512_icl)
 		{
 			if (perm_only)
 			{
@@ -7765,7 +7765,7 @@ public:
 				return;
 			}
 
-			const auto m = gf2p8affineqb(c, build<u8[16]>(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40), 0x7f);
+			const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 			const auto cr = eval(~c);
 			const auto ab = vperm2b256to128(b, a, cr);
