@@ -7081,7 +7081,7 @@ public:
 			const auto [a, b] = get_vrs<u8[16]>(op.ra, op.rb);
 			const auto zeroes = splat<u8[16]>(0);
 
-			if (op.ra == op.rb && !m_interp_magn)
+			if ((op.ra == op.rb || a.value == b.value) && !m_interp_magn)
 			{
 				set_vr(op.rt, vdbpsadbw(a, zeroes, 0));
 				return;
@@ -7887,6 +7887,35 @@ public:
 			return true;
 		}
 
+		if (auto [ok, v0] = match_expr(a, fabs(match<f32[4]>())); ok)
+		{
+			return true;
+		}
+
+		if (auto [ok, v0] = match_expr(a, spu_rsqrte(match<f32[4]>())); ok)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	bool is_input_float_result(value_t<f32[4]> v)
+	{		
+		static const auto MT = match<f32[4]>();
+
+		if (std::get<0>(match_expr(v, fm(MT, MT))) ||
+			std::get<0>(match_expr(v, fma(MT, MT, MT))) ||
+			std::get<0>(match_expr(v, fms(MT, MT, MT))) ||
+			std::get<0>(match_expr(v, fnms(MT, MT, MT))) ||
+			//std::get<0>(match_expr(v, fa(MT, MT))) ||
+			//std::get<0>(match_expr(v, fs(MT, MT))) ||
+			std::get<0>(match_expr(v, spu_re(MT))) ||
+			std::get<0>(match_expr(v, spu_rsqrte(MT))))
+		{
+			return true;
+		}
+
 		return false;
 	}
 
@@ -7906,8 +7935,21 @@ public:
 		return eval(bitcast<f32[4]>(min(bitcast<u32[4]>(v),splat<u32[4]>(0xff7fffff))));
 	}
 
-	value_t<f32[4]> clamp_smax(value_t<f32[4]> v)
+	value_t<f32[4]> clamp_smax(value_t<f32[4]> v, bool force = false)
 	{
+		if (!g_cfg.core.spu_approx_xfloat && !force)
+		{
+			return v;
+		}
+
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			if (is_input_float_result(v))
+			{
+				return v;
+			} 
+		}
+
 		return eval(clamp_positive_smax(clamp_negative_smax(v)));
 	}
 
@@ -7959,7 +8001,13 @@ public:
 		register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
 		{
 			const auto a = value<f32[4]>(ci->getOperand(0));
-			return fre(a);
+
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				return eval(fre(a));
+			}
+
+			return eval(fre(a));
 		});
 
 		set_vr(op.rt, frest(get_vr<f32[4]>(op.ra)));
@@ -7983,7 +8031,13 @@ public:
 		register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
 		{
 			const auto a = value<f32[4]>(ci->getOperand(0));
-			return frsqe(fabs(a));
+
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				return eval(frsqe(fabs(a)));
+			}
+
+			return eval(frsqe(fabs(a)));
 		});
 
 		set_vr(op.rt, frsqest(get_vr<f32[4]>(op.ra)));
@@ -8042,6 +8096,16 @@ public:
 			if (safe_int_compare.any())
 			{
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
+			}
+
+			if (is_input_positive(a) && is_input_positive(b))
+			{
+				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
+			}
+
+			if (g_cfg.core.spu_approx_xfloat && is_input_float_result(a) && is_input_float_result(b))
+			{
+				return eval(sext<s32[4]>(fcmp_ord(a > b)));
 			}
 
 			if (g_cfg.core.spu_approx_xfloat || g_cfg.core.spu_relaxed_xfloat)
@@ -8121,7 +8185,7 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
-			return a + b;
+			return eval(a + b);
 		});
 
 		set_vr(op.rt, fa(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
@@ -8148,8 +8212,7 @@ public:
 
 			if (g_cfg.core.spu_approx_xfloat)
 			{
-				const auto bc = clamp_smax(b); // for #4478
-				return eval(a - bc);
+				return eval(a - b);
 			}
 			else
 			{
@@ -8176,19 +8239,17 @@ public:
 
 		register_intrinsic("spu_fm", [&](llvm::CallInst* ci)
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			const auto b = value<f32[4]>(ci->getOperand(1));
+			const auto a = clamp_smax(value<f32[4]>(ci->getOperand(0)));
+			const auto b = clamp_smax(value<f32[4]>(ci->getOperand(1)));
 
 			if (g_cfg.core.spu_approx_xfloat)
 			{
-				if (op.ra == op.rb && !m_interp_magn)
+				if ((op.ra == op.rb || a.value == b.value) && !m_interp_magn)
 				{
-					return eval(a * b);
+					return clamp_positive_smax(eval(a * b));
 				}
 
-				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
-				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
-				return eval(bitcast<f32[4]>(bitcast<s32[4]>(a * b) & ma & mb));
+				return clamp_smax(eval(a * b));
 			}
 			else
 			{
@@ -8308,6 +8369,11 @@ public:
 							safe_int_compare.reset(i);
 						}
 					}
+				}
+
+				if (g_cfg.core.spu_approx_xfloat && is_input_float_result(ab[i]))
+				{
+					safe_float_compare.set(i);
 				}
 			}
 
@@ -8500,13 +8566,13 @@ public:
 
 		register_intrinsic("spu_fnms", [&](llvm::CallInst* ci)
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			const auto b = value<f32[4]>(ci->getOperand(1));
+			const auto a = clamp_smax(value<f32[4]>(ci->getOperand(0)));
+			const auto b = clamp_smax(value<f32[4]>(ci->getOperand(1)));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
 			if (g_cfg.core.spu_approx_xfloat || g_cfg.core.spu_relaxed_xfloat)
 			{
-				return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
+				return clamp_smax(fma32x4(eval(-a), b, c), true);
 			}
 			else
 			{
@@ -8535,17 +8601,13 @@ public:
 
 		register_intrinsic("spu_fma", [&](llvm::CallInst* ci)
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			const auto b = value<f32[4]>(ci->getOperand(1));
+			const auto a = clamp_smax(value<f32[4]>(ci->getOperand(0)));
+			const auto b = clamp_smax(value<f32[4]>(ci->getOperand(1)));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
 			if (g_cfg.core.spu_approx_xfloat)
 			{
-				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
-				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
-				const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
-				const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
-				return fma32x4(eval(ca), eval(cb), c);
+				return clamp_smax(fma32x4(eval(a), eval(b), c));
 			}
 			else
 			{
@@ -8609,13 +8671,13 @@ public:
 
 		register_intrinsic("spu_fms", [&](llvm::CallInst* ci)
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			const auto b = value<f32[4]>(ci->getOperand(1));
+			const auto a = clamp_smax(value<f32[4]>(ci->getOperand(0)));
+			const auto b = clamp_smax(value<f32[4]>(ci->getOperand(1)));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
 			if (g_cfg.core.spu_approx_xfloat)
 			{
-				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-c));
+				return clamp_smax(fma32x4(a, b, eval(-c)));
 			}
 			else
 			{
@@ -8678,13 +8740,13 @@ public:
 		register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 		{
 			const auto a = value<f32[4]>(ci->getOperand(0));
-			return fre(a);
+			return clamp_smax(eval(fre(a)));
 		});
 
 		register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
 		{
 			const auto a = value<f32[4]>(ci->getOperand(0));
-			return frsqe(fabs(a));
+			return clamp_smax(eval(frsqe(fabs(a))));
 		});
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
@@ -8692,14 +8754,14 @@ public:
 		if (const auto [ok, mb] = match_expr(b, frest(match<f32[4]>())); ok && mb.eq(a))
 		{
 			erase_stores(b);
-			set_vr(op.rt, spu_re(a));
+			set_vr(op.rt, eval(spu_re(a)));
 			return;
 		}
 
 		if (const auto [ok, mb] = match_expr(b, frsqest(match<f32[4]>())); ok && mb.eq(a))
 		{
 			erase_stores(b);
-			set_vr(op.rt, spu_rsqrte(a));
+			set_vr(op.rt, eval(spu_rsqrte(a)));
 			return;
 		}
 
