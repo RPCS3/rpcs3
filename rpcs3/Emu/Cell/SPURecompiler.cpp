@@ -7908,6 +7908,22 @@ public:
 
 	value_t<f32[4]> clamp_smax(value_t<f32[4]> v)
 	{
+		if (m_use_avx512)
+		{
+			if (is_input_positive(v))
+			{
+				return eval(clamp_positive_smax(v));
+			}
+			
+			if (auto [ok, data] = get_const_vector(v.value, m_pos); ok)
+			{
+				// Avoid pessimation when input is constant
+				return eval(clamp_positive_smax(clamp_negative_smax(v)));
+			}
+
+			return eval(vrangeps(v, fsplat<f32[4]>(0x7f7fffff), 0x2, 0Xff));
+		}
+
 		return eval(clamp_positive_smax(clamp_negative_smax(v)));
 	}
 
