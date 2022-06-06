@@ -484,7 +484,8 @@ error_code cellMsgDialogAbort()
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
 			g_fxo->get<msg_dlg_thread>().wait_until = 0;
-			dlg->close(false, true);
+			dlg->close(false, true); // this doesn't call on_close
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 			return CELL_OK;
 		}
 	}
