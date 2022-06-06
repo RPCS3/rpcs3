@@ -74,11 +74,6 @@ audio_out_configuration::audio_out_configuration()
 			output.channels = channel;
 			output.encoder  = type;
 
-			// Set the initially selected configuration
-			output.config.channel   = channel;
-			output.config.encoder   = type;
-			output.config.downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
-
 			selected = true;
 		}
 	};
@@ -249,7 +244,6 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-
 	const auto num = cellAudioOutGetNumberOfDevice(audioOut);
 
 	if (num < 0)
@@ -280,15 +274,30 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 	case CELL_AUDIO_OUT_PRIMARY:
 	case CELL_AUDIO_OUT_SECONDARY:
 	{
-		const AudioChannelCnt channels = AudioBackend::get_channel_count(audioOut);
+		const auto [channels, downmixer] = AudioBackend::get_channel_count_and_downmixer(audioOut);
 
 		audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 		std::lock_guard lock(cfg.mtx);
 		const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
-		const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&channels, &out](const CellAudioOutSoundMode& mode)
+		const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [channels = channels, &out](const CellAudioOutSoundMode& mode)
 		{
-			return mode.type == out.encoder && mode.channel == static_cast<u8>(channels);
+			if (mode.type != out.encoder)
+			{
+				return false;
+			}
+
+			if (out.downmixer == CELL_AUDIO_OUT_DOWNMIXER_TYPE_A)
+			{
+				return mode.channel == CELL_AUDIO_OUT_CHNUM_2;
+			}
+
+			if (out.downmixer == CELL_AUDIO_OUT_DOWNMIXER_TYPE_B)
+			{
+				return mode.channel == CELL_AUDIO_OUT_CHNUM_6;
+			}
+
+			return mode.channel == static_cast<u8>(channels);
 		});
 
 		ensure(it != out.sound_modes.cend());
@@ -334,12 +343,10 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 
 		audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
-		const bool found_mode = (out.sound_modes.cend() != std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&config](const CellAudioOutSoundMode& mode)
-		{
-			return mode.channel == config->channel && mode.type == config->encoder && config->downMixer <= CELL_AUDIO_OUT_DOWNMIXER_TYPE_B;
-		}));
+		// Apparently the set config does not necessarily have to exist in the list of sound modes.
+		// For example 8 channels are used if the downMixer is set even if the PS3 only supports 2 channel output.
 
-		if (found_mode && (out.channels != config->channel || out.encoder != config->encoder || out.downmixer != config->downMixer))
+		if (out.channels != config->channel || out.encoder != config->encoder || out.downmixer != config->downMixer)
 		{
 			out.channels = config->channel;
 			out.encoder = config->encoder;
@@ -347,9 +354,6 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 
 			needs_reset = true;
 		}
-
-		// Apparently the set config is not necessarily equal to the active config, so we need to store it seperately.
-		out.config = *config;
 	}
 
 	if (needs_reset)
@@ -410,8 +414,13 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 
 	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
-	// Return the set config, which might not necessarily be the active config.
-	*config = out.config;
+	// Return the active config.
+	CellAudioOutConfiguration _config{};
+	_config.channel   = out.channels;
+	_config.encoder   = out.encoder;
+	_config.downMixer = out.downmixer;
+
+	*config = _config;
 
 	return CELL_OK;
 }
