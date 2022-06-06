@@ -315,7 +315,7 @@ using CellHddGameSystemFileParam = CellGameDataSystemFileParam;
 using CellHddGameCBResult = CellGameDataCBResult;
 
 typedef void(CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
-typedef void(CellGameThemeInstallCallback)(u32 fileOffset, u32 readSize, vm::ptr<void> buf);
+typedef s32(CellGameThemeInstallCallback)(u32 fileOffset, u32 readSize, vm::ptr<void> buf);
 typedef void(CellGameDiscEjectCallback)();
 typedef void(CellGameDiscInsertCallback)(u32 discType, vm::ptr<char> titleId);
 typedef void(CellDiscGameDiscEjectCallback)();

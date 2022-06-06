@@ -7,6 +7,7 @@
 #include "Utilities/File.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
+#include "Crypto/utils.h"
 #include "util/logs.hpp"
 
 #include <QApplication>
@@ -372,7 +373,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		return false;
 	}
 
-	if (const std::string res_hash_string = downloader::get_hash(data.data(), data.size(), false);
+	if (const std::string res_hash_string = sha256_get_hash(data.data(), data.size(), false);
 		m_expected_hash != res_hash_string)
 	{
 		update_log.error("Hash mismatch: %s expected: %s", res_hash_string, m_expected_hash);
