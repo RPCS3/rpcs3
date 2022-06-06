@@ -1270,7 +1270,7 @@ namespace audio
 {
 	void configure_rsxaudio()
 	{
-		if (g_cfg.audio.provider == audio_provider::rsxaudio)
+		if (g_cfg.audio.provider == audio_provider::rsxaudio && g_fxo->is_init<rsx_audio_backend>())
 		{
 			g_fxo->get<rsx_audio_backend>().update_emu_cfg();
 		}
