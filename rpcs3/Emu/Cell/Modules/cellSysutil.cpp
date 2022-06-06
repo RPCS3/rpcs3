@@ -49,6 +49,7 @@ struct sysutil_cb_manager
 	lf_queue<std::function<s32(ppu_thread&)>> registered;
 
 	atomic_t<bool> draw_cb_started{};
+	atomic_t<u64> read_counter{0};
 };
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
@@ -98,6 +99,16 @@ extern s32 sysutil_send_system_cmd(u64 status, u64 param)
 	}
 
 	return count;
+}
+
+extern u64 get_sysutil_cb_manager_read_count()
+{
+	if (auto cbm = g_fxo->try_get<sysutil_cb_manager>())
+	{
+		return cbm->read_counter;
+	}
+
+	return 0;
 }
 
 template <>
@@ -428,8 +439,12 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
+	bool read = false;
+
 	for (auto&& func : cbm.registered.pop_all())
 	{
+		read = true;
+
 		if (s32 res = func(ppu))
 		{
 			// Currently impossible
@@ -440,6 +455,11 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 		{
 			return {};
 		}
+	}
+
+	if (read)
+	{
+		cbm.read_counter++;
 	}
 
 	return CELL_OK;
