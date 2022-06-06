@@ -802,9 +802,6 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
 	}
 
-	std::memset(g_file_param.get_ptr(), 0, sizeof(*g_file_param));
-	cbSet->setParam = g_file_param;
-
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
 	std::string error_msg;
