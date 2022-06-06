@@ -66,9 +66,10 @@ void cell_audio_config::reset(bool backend_changed)
 
 	const AudioFreq freq = AudioFreq::FREQ_48K;
 	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
-	const AudioChannelCnt ch_cnt = AudioBackend::get_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
+	const auto [ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
 	const f64 cb_frame_len = backend->Open(freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
 
+	audio_downmix = downmix;
 	audio_channels = static_cast<u32>(ch_cnt);
 	audio_sampling_rate = static_cast<u32>(freq);
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1'000'000 / audio_sampling_rate;
@@ -843,21 +844,19 @@ void cell_audio_thread::operator()()
 		}
 
 		// Mix
-		float *buf = ringbuffer->get_current_buffer();
+		float* buf = ringbuffer->get_current_buffer();
 
-		switch (cfg.audio_channels)
+		switch (cfg.audio_downmix)
 		{
-		case 2:
+		case AudioChannelCnt::STEREO:
 			mix<AudioChannelCnt::STEREO>(buf);
 			break;
-		case 6:
+		case AudioChannelCnt::SURROUND_5_1:
 			mix<AudioChannelCnt::SURROUND_5_1>(buf);
 			break;
-		case 8:
+		case AudioChannelCnt::SURROUND_7_1:
 			mix<AudioChannelCnt::SURROUND_7_1>(buf);
 			break;
-		default:
-			fmt::throw_exception("Unsupported number of audio channels: %u", cfg.audio_channels);
 		}
 
 		// Enqueue
@@ -885,7 +884,7 @@ audio_port* cell_audio_thread::open_port()
 }
 
 template <AudioChannelCnt downmix>
-void cell_audio_thread::mix(float *out_buffer, s32 offset)
+void cell_audio_thread::mix(float* out_buffer, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 

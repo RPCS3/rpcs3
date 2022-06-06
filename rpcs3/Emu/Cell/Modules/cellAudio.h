@@ -211,6 +211,7 @@ struct cell_audio_config
 
 	std::shared_ptr<AudioBackend> backend = nullptr;
 
+	AudioChannelCnt audio_downmix = AudioChannelCnt::SURROUND_7_1;
 	u32 audio_channels = 0;
 	u32 audio_sampling_rate = 0;
 	u32 audio_block_period = 0;
@@ -349,7 +350,7 @@ private:
 	void advance(u64 timestamp);
 	std::tuple<u32, u32, u32, u32> count_port_buffer_tags();
 	template <AudioChannelCnt downmix>
-	void mix(float *out_buffer, s32 offset = 0);
+	void mix(float* out_buffer, s32 offset = 0);
 	void finish_port_volume_stepping();
 
 	constexpr static u64 get_thread_wait_delay(u64 time_left)
