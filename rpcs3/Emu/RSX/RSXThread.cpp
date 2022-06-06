@@ -703,15 +703,16 @@ namespace rsx
 	
 						if (isHLE)
 						{
-							if (vblank_handler)
+							if (auto ptr = vblank_handler)
 							{
 								intr_thread->cmd_list
 								({
 									{ ppu_cmd::set_args, 1 }, u64{1},
-									{ ppu_cmd::lle_call, vblank_handler },
+									{ ppu_cmd::lle_call, ptr },
 									{ ppu_cmd::sleep, 0 }
 								});
 
+								intr_thread->cmd_notify++;
 								intr_thread->cmd_notify.notify_one();
 							}
 						}
@@ -2183,6 +2184,9 @@ namespace rsx
 	void thread::reset()
 	{
 		rsx::method_registers.reset();
+		m_graphics_state = pipeline_state::all_dirty;
+		m_rtts_dirty = true;
+		m_framebuffer_state_contested = false;
 	}
 
 	void thread::init(u32 ctrlAddress)
@@ -3278,12 +3282,12 @@ namespace rsx
 			return;
 		}
 
-		if (flip_handler)
+		if (auto ptr = flip_handler)
 		{
 			intr_thread->cmd_list
 			({
 				{ ppu_cmd::set_args, 1 }, u64{ 1 },
-				{ ppu_cmd::lle_call, flip_handler },
+				{ ppu_cmd::lle_call, ptr },
 				{ ppu_cmd::sleep, 0 }
 			});
 

@@ -641,6 +641,7 @@ namespace rsx
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
+		vm::ptr<void(u32)> queue_handler = vm::null;
 		atomic_t<u64> vblank_count{0};
 		bool capture_current_frame = false;
 
