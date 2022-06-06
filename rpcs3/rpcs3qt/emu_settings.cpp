@@ -1101,6 +1101,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		switch (static_cast<rsx_fifo_mode>(index))
 		{
 		case rsx_fifo_mode::fast: return tr("Fast", "RSX FIFO Accuracy");
+		case rsx_fifo_mode::put_aware: return tr("PUT Aware", "RSX FIFO Accuracy");
 		case rsx_fifo_mode::atomic: return tr("Atomic", "RSX FIFO Accuracy");
 		case rsx_fifo_mode::atomic_ordered: return tr("Ordered & Atomic", "RSX FIFO Accuracy");
 		case rsx_fifo_mode::as_ps3: return tr("PS3", "RSX FIFO Accuracy");

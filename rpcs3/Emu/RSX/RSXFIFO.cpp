@@ -122,6 +122,8 @@ namespace rsx
 
 				const auto src = vm::_ptr<spu_rdata_t>(addr1);
 
+				const u64 lock_bits_test = g_cfg.core.rsx_fifo_accuracy >= rsx_fifo_mode::atomic ? 127 : 0;
+
 				// Find the next set bit after every iteration
 				u64 start_time = 0;
 				for (int i = 0;; i = (std::countr_zero<u32>(utils::rol8(to_fetch, 0 - i - 1)) + i + 1) % 8)
@@ -130,11 +132,11 @@ namespace rsx
 					const auto& res = vm::reservation_acquire(addr1 + i * 128);
 					const u64 time0 = res;
 
-					if (!(time0 & 127))
+					if (!(time0 & lock_bits_test))
 					{
 						mov_rdata(m_cache[i], src[i]);
 
-						if (time0 == res && cmp_rdata(m_cache[i], src[i]))
+						if ((!lock_bits_test || time0 == res) && cmp_rdata(m_cache[i], src[i]))
 						{
 							// The fetch of the cache line content has been successful, unset its bit
 							to_fetch &= ~(1u << i);

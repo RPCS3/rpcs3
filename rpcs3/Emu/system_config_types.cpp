@@ -195,6 +195,7 @@ void fmt_class_string<rsx_fifo_mode>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case rsx_fifo_mode::fast: return "Fast";
+		case rsx_fifo_mode::put_aware: return "PUT Aware";
 		case rsx_fifo_mode::atomic: return "Atomic";
 		case rsx_fifo_mode::atomic_ordered: return "Ordered & Atomic";
 		case rsx_fifo_mode::as_ps3: return "PS3";

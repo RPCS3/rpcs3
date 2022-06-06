@@ -221,6 +221,7 @@ enum class screen_quadrant
 enum class rsx_fifo_mode : unsigned
 {
 	fast,
+	put_aware,
 	atomic,
 	atomic_ordered,
 	as_ps3,
