@@ -144,3 +144,29 @@ std::pair<AudioChannelCnt, AudioChannelCnt> AudioBackend::get_channel_count_and_
 		fmt::throw_exception("Unknown downmixer in cellAudioOut config: %d", out.downmixer);
 	}
 }
+
+AudioChannelCnt AudioBackend::get_max_channel_count(u32 device_index)
+{
+	audio_out_configuration& audio_out_cfg = g_fxo->get<audio_out_configuration>();
+	std::lock_guard lock(audio_out_cfg.mtx);
+	ensure(device_index < audio_out_cfg.out.size());
+	const audio_out_configuration::audio_out& out = audio_out_cfg.out.at(device_index);
+
+	AudioChannelCnt count = AudioChannelCnt::STEREO;
+
+	for (const CellAudioOutSoundMode& mode : out.sound_modes)
+	{
+		switch (mode.channel)
+		{
+		case 6:
+			count = AudioChannelCnt::SURROUND_5_1;
+			break;
+		case 8:
+			return AudioChannelCnt::SURROUND_7_1; // Max possible count. So let's return immediately.
+		default:
+			break;
+		}
+	}
+
+	return count;
+}
