@@ -42,6 +42,7 @@ enum class ppu_exec_bit : u64
 	set_fpcc,
 	use_dfma,
 	set_cr_stats,
+	set_call_history,
 
 	__bitset_enum_max
 };
@@ -471,9 +472,13 @@ auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 }
 
 // Push called address to custom call history for debugging
-inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool indirect = false)
+template <ppu_exec_bit... Flags>
+u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool indirect = false)
 {
-	return new_cia;
+	if constexpr (!((Flags == set_call_history) || ...))
+	{
+		return new_cia;
+	}
 
 	if (auto& history = ppu.call_history; !history.data.empty())
 	{
@@ -501,6 +506,8 @@ inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool i
 		history.last_r1 = ppu.gpr[1];
 		history.last_r2 = ppu.gpr[2];
 	}
+
+	return new_cia;
 }
 
 template<typename T>
@@ -3149,7 +3156,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto BC()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<set_call_history>();
 
 	if constexpr (Build == 0) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn)
 	{
@@ -3172,7 +3179,7 @@ auto BC()
 		ppu.cia = vm::get_addr(this_op);
 		// Provide additional information by using the origin of the call
 		// Because this is a fixed target branch there's no abiguity about it
-		ppu_record_call(ppu, ppu.cia, op);
+		ppu_record_call<Flags...>(ppu, ppu.cia, op);
 
 		ppu.cia = (op.aa ? 0 : ppu.cia) + op.bt14;
 	}
@@ -3216,7 +3223,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto B()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<set_call_history>();
 
 	if constexpr (Build == 0) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func*)
 	{
@@ -3224,7 +3231,7 @@ auto B()
 	const u32 link = (ppu.cia = vm::get_addr(this_op)) + 4;
 	// Provide additional information by using the origin of the call
 	// Because this is a fixed target branch there's no abiguity about it
-	ppu_record_call(ppu, ppu.cia, op);
+	ppu_record_call<Flags...>(ppu, ppu.cia, op);
 
 	ppu.cia = (op.aa ? 0 : ppu.cia) + op.bt24;
 	if (op.lk) ppu.lr = link;
@@ -3249,7 +3256,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto BCLR()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<set_call_history>();
 
 	if constexpr (Build == 0) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn)
 	{
@@ -3271,7 +3278,7 @@ auto BCLR()
 
 	if (ctr_ok && cond_ok)
 	{
-		ppu_record_call(ppu, target, op, true);
+		ppu_record_call<Flags...>(ppu, target, op, true);
 		ppu.cia = target;
 	}
 	else if (!ppu.state) [[likely]]
@@ -3399,7 +3406,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto BCCTR()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<>();
+		return ppu_exec_select<Flags...>::template select<set_call_history>();
 
 	if constexpr (Build == 0) return +[](ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, ppu_intrp_func* next_fn)
 	{
@@ -3410,7 +3417,7 @@ auto BCCTR()
 	if (op.bo & 0x10 || ppu.cr[op.bi] == ((op.bo & 0x8) != 0))
 	{
 		const u32 target = static_cast<u32>(ppu.ctr) & ~3;
-		ppu_record_call(ppu, target, op, true);
+		ppu_record_call<Flags...>(ppu, target, op, true);
 		ppu.cia = target;
 	}
 	else if (!ppu.state) [[likely]]
@@ -7315,6 +7322,8 @@ ppu_interpreter_rt_base::ppu_interpreter_rt_base() noexcept
 		selected += use_dfma;
 	if (g_cfg.core.ppu_debug)
 		selected += set_cr_stats; // TODO
+	if (g_cfg.core.ppu_call_history)
+		selected += set_call_history;
 
 	if (selected & use_nj)
 		ppu_log.success("Enabled: Accurate Non-Java Mode");
