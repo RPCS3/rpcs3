@@ -1322,7 +1322,8 @@ void rsxaudio_backend_thread::update_emu_cfg()
 
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
-	const auto [out_ch_cnt, out_downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
+	// Get max supported channel count
+	AudioChannelCnt out_ch_cnt = AudioBackend::get_max_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
 
 	emu_audio_cfg cfg =
 	{
@@ -1333,7 +1334,6 @@ rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 		.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
 		.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
 		.channels = out_ch_cnt,
-		.downmix = out_downmix,
 		.renderer = g_cfg.audio.renderer,
 		.provider = g_cfg.audio.provider,
 		.avport = convert_avport(g_cfg.audio.rsxaudio_port)
@@ -1671,8 +1671,6 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 		backend->SetWriteCallback(std::bind(&rsxaudio_backend_thread::write_data_callback, this, std::placeholders::_1, std::placeholders::_2));
 		backend->SetErrorCallback(std::bind(&rsxaudio_backend_thread::error_callback, this));
 	}
-
-	// TODO: properly handle dowmnix
 
 	const port_config& port_cfg = ra_state.port[static_cast<u8>(emu_cfg.avport)];
 	const AudioSampleSize sample_size = emu_cfg.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;

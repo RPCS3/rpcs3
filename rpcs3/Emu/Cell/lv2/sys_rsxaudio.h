@@ -475,7 +475,6 @@ private:
 		bool enable_time_stretching = false;
 		bool dump_to_file = false;
 		AudioChannelCnt channels = AudioChannelCnt::STEREO;
-		AudioChannelCnt downmix = AudioChannelCnt::SURROUND_7_1;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
 		RsxaudioAvportIdx avport = RsxaudioAvportIdx::HDMI_0;
