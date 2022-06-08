@@ -124,7 +124,7 @@ namespace vk
 	class viewable_image : public image
 	{
 	protected:
-		std::unordered_map<u32, std::unique_ptr<vk::image_view>> views;
+		std::unordered_map<u64, std::unique_ptr<vk::image_view>> views;
 		viewable_image* clone();
 
 	public:
