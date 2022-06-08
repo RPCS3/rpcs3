@@ -7,7 +7,7 @@
 
 namespace gl
 {
-	static blitter* g_hw_blitter = nullptr;
+	blitter* g_hw_blitter = nullptr;
 
 	void process_bgra_transfer_source(const gl::texture* src, const gl::texture* dst, const coord3i& region)
 	{
@@ -80,7 +80,7 @@ namespace gl
 				}
 				else
 				{
-					copy_image(cmd, src, dst, 0, 1, { src_rect.x1, src_rect.y1, 0u }, { dst_rect.x1, dst_rect.y1, 0 }, { src_rect.width(), src_rect.height(), 1 });
+					copy_image(cmd, src, dst, 0, 1, position3i{ src_rect.x1, src_rect.y1, 0u }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 });
 				}
 
 				return;
@@ -148,7 +148,7 @@ namespace gl
 		if (src_rect.width() == dst_rect.width() && src_rect.height() == dst_rect.height() &&
 			!src_rect.is_flipped() && !dst_rect.is_flipped())
 		{
-			copy_image(cmd, real_src, real_dst, 0, 1, { src_rect.x1, src_rect.y1, 0 }, { dst_rect.x1, dst_rect.y1, 0 }, { src_rect.width(), src_rect.height(), 1 });
+			copy_image(cmd, real_src, real_dst, 0, 1, position3i{ src_rect.x1, src_rect.y1, 0 }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 });
 			handle_bgra8_dest = false; // Handled in copy_image
 		}
 		else
