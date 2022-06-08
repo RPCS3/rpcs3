@@ -203,7 +203,7 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 	{
 		if (llvm::isa<llvm::ConstantAggregateZero>(c))
 		{
-			return {};
+			return {true, result};
 		}
 
 		std::string result;
