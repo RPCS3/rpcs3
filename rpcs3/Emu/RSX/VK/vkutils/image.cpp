@@ -4,6 +4,7 @@
 #include "image.h"
 #include "image_helpers.h"
 
+#include "../VKResourceManager.h"
 #include <memory>
 
 namespace vk
@@ -391,11 +392,11 @@ namespace vk
 			}
 		}
 
-		const auto storage_key = remap_encoding | (mask << 16);
+		const u64 storage_key = remap_encoding | (static_cast<u64>(mask) << 32);
 		auto found = views.find(storage_key);
-		if (found != views.end() &&
-			found->second->info.subresourceRange.aspectMask & mask)
+		if (found != views.end())
 		{
+			ensure(found->second->info.subresourceRange.aspectMask & mask);
 			return found->second.get();
 		}
 
@@ -434,6 +435,13 @@ namespace vk
 			new_layout.a != native_component_map.a)
 		{
 			native_component_map = new_layout;
+
+			// Safely discard existing views
+			auto gc = vk::get_resource_manager();
+			for (auto& p : views)
+			{
+				gc->dispose(p.second);
+			}
 			views.clear();
 		}
 	}
