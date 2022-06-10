@@ -121,6 +121,8 @@ namespace rsx
 			}
 
 			u64 start = rsx::uclock();
+			u64 last_check_val = start;
+
 			while (sema != arg)
 			{
 				if (rsx->test_stopped())
@@ -130,26 +132,23 @@ namespace rsx
 
 				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
 				{
-					if (rsx->is_paused())
+					const u64 current = rsx::uclock();
+
+					if (current - last_check_val > 20'000)
 					{
-						const u64 start0 = rsx::uclock();
-
-						while (rsx->is_paused())
-						{
-							rsx->check_state();
-						}
-
-						// Reset
-						start += rsx::uclock() - start0;
+						// Suspicious amnount of time has passed
+						// External pause such as debuggers' pause or operating system sleep may have taken place
+						// Ignore it
+						start += current - last_check_val;
 					}
-					else
+
+					last_check_val = current;
+
+					if ((last_check_val - start) > tdr)
 					{
-						if ((rsx::uclock() - start) > tdr)
-						{
-							// If longer than driver timeout force exit
-							rsx_log.error("nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
-							break;
-						}
+						// If longer than driver timeout force exit
+						rsx_log.error("nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
+						break;
 					}
 				}
 

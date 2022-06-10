@@ -667,11 +667,21 @@ namespace rsx
 
 			u64 local_vblank_count = 0;
 
+			u64 last_system_time = start_time;
+
 			// TODO: exit condition
 			while (!is_stopped())
 			{
 				// Get current time
 				const u64 current = get_system_time();
+
+				if (current - last_system_time >= 20'000u)
+				{
+					// Suspicious amount of time has passed
+					// External pause such as debuggers' pause or operating system sleep may have taken place
+					// Ignore it
+					start_time += current - last_system_time;
+				}
 
 				// Calculate the time at which we need to send a new VBLANK signal
 				const u64 post_event_time = start_time + (local_vblank_count + 1) * vblank_period / vblank_rate;
@@ -731,18 +741,11 @@ namespace rsx
 					std::this_thread::yield();
 				}
 
-				if (Emu.IsPaused())
+				last_system_time = current + wait_sleep;
+
+				while (!is_stopped() && Emu.IsPaused())
 				{
-					// Save the difference before pause
-					start_time = rsx::uclock() - start_time;
-
-					while (Emu.IsPaused() && !is_stopped())
-					{
-						thread_ctrl::wait_for(5'000);
-					}
-
-					// Restore difference
-					start_time = rsx::uclock() - start_time;
+					thread_ctrl::wait_for(5'000);
 				}
 			}
 		});
