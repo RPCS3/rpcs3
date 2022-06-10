@@ -334,11 +334,21 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 #ifdef _WIN32
 	ds3dev->padData[0] = ds3dev->report_id;
 	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
+	if (result < 0)
+	{
+		ds3_log.error("get_data: hid_get_feature_report 0x%02x failed! result=%d, buf[0]=0x%x, error=%s", ds3dev->report_id, result, ds3dev->padData[0], hid_error(ds3dev->hidDevice));
+		return DataStatus::ReadError;
+	}
 #else
 	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
+	if (result < 0)
+	{
+		ds3_log.error("get_data: hid_read failed! result=%d, error=%s", result, hid_error(ds3dev->hidDevice));
+		return DataStatus::ReadError;
+	}
 #endif
 
-	if (result == static_cast<int>(ds3dev->padData.size()))
+	if (result > 0)
 	{
 #ifdef _WIN32
 		if (ds3dev->padData[0] == ds3dev->report_id)
@@ -362,19 +372,11 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 
 			return DataStatus::NewData;
 		}
-		else
-		{
-			ds3_log.warning("Unknown packet received: 0x%02x", ds3dev->padData[0]);
-			return DataStatus::NoNewData;
-		}
-	}
-	else
-	{
-		if (result == 0)
-			return DataStatus::NoNewData;
+
+		ds3_log.warning("get_data: Unknown packet received: 0x%02x", ds3dev->padData[0]);
 	}
 
-	return DataStatus::ReadError;
+	return DataStatus::NoNewData;
 }
 
 std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
