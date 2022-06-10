@@ -39,7 +39,6 @@ struct gcmInfo
 	u32 config_addr;
 	u32 context_addr;
 	u32 control_addr;
-	u32 label_addr;
 	u32 command_size = 0x400;
 	u32 segment_size = 0x100;
 };

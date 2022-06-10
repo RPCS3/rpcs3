@@ -1768,7 +1768,9 @@ void Emulator::Resume()
 	}
 }
 
-u32 sysutil_send_system_cmd(u64 status, u64 param);
+s32 sysutil_send_system_cmd(u64 status, u64 param);
+u64 get_sysutil_cb_manager_read_count();
+
 void process_qt_events();
 
 void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
@@ -1785,6 +1787,8 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 		Resume();
 	}
 
+	const u64 read_counter = get_sysutil_cb_manager_read_count();
+
 	if (old_state == system_state::frozen || !sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0))
 	{
 		// The callback has been rudely ignored, we have no other option but to force termination
@@ -1792,13 +1796,21 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 		return;
 	}
 
-	auto perform_kill = [allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
+	auto perform_kill = [read_counter, allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
 	{
-		for (u32 i = 0; i < 100; i++)
+		bool read_sysutil_signal = false;
+
+		for (u32 i = 100; i < 140; i++)
 		{
 			std::this_thread::sleep_for(50ms);
 			Resume(); // TODO: Prevent pausing by other threads while in this loop
 			process_qt_events(); // Is nullified when performed on non-main thread
+
+			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count())
+			{
+				i -= 100; // Grant 5 seconds (if signal is not read force kill after two second)
+				read_sysutil_signal = true;
+			}
 
 			if (static_cast<u64>(info) != m_stop_ctr)
 			{
@@ -1806,7 +1818,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 			}
 		}
 
-		// An inevitable attempt to terminate the *current* emulation course will be issued after 5s
+		// An inevitable attempt to terminate the *current* emulation course will be issued after 7s
 		CallFromMainThread([allow_autoexit, this]()
 		{
 			Kill(allow_autoexit);

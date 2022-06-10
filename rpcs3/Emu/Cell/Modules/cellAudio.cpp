@@ -66,9 +66,10 @@ void cell_audio_config::reset(bool backend_changed)
 
 	const AudioFreq freq = AudioFreq::FREQ_48K;
 	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
-	const AudioChannelCnt ch_cnt = AudioBackend::get_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
+	const auto [ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
 	const f64 cb_frame_len = backend->Open(freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
 
+	audio_downmix = downmix;
 	audio_channels = static_cast<u32>(ch_cnt);
 	audio_sampling_rate = static_cast<u32>(freq);
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1'000'000 / audio_sampling_rate;
@@ -843,21 +844,19 @@ void cell_audio_thread::operator()()
 		}
 
 		// Mix
-		float *buf = ringbuffer->get_current_buffer();
+		float* buf = ringbuffer->get_current_buffer();
 
-		switch (cfg.audio_channels)
+		switch (cfg.audio_downmix)
 		{
-		case 2:
+		case AudioChannelCnt::STEREO:
 			mix<AudioChannelCnt::STEREO>(buf);
 			break;
-		case 6:
+		case AudioChannelCnt::SURROUND_5_1:
 			mix<AudioChannelCnt::SURROUND_5_1>(buf);
 			break;
-		case 8:
+		case AudioChannelCnt::SURROUND_7_1:
 			mix<AudioChannelCnt::SURROUND_7_1>(buf);
 			break;
-		default:
-			fmt::throw_exception("Unsupported number of audio channels: %u", cfg.audio_channels);
 		}
 
 		// Enqueue
@@ -885,16 +884,17 @@ audio_port* cell_audio_thread::open_port()
 }
 
 template <AudioChannelCnt downmix>
-void cell_audio_thread::mix(float *out_buffer, s32 offset)
+void cell_audio_thread::mix(float* out_buffer, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 
 	constexpr u32 channels = static_cast<u32>(downmix);
 	constexpr u32 out_buffer_sz = channels * AUDIO_BUFFER_SAMPLES;
 
-	bool first_mix = true;
-
 	const float master_volume = g_cfg.audio.volume / 100.0f;
+
+	// Reset out_buffer
+	std::memset(out_buffer, 0, out_buffer_sz * sizeof(float));
 
 	// mixing
 	for (auto& port : ports)
@@ -929,138 +929,58 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 		if (port.num_channels == 2)
 		{
-			if (first_mix)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 2)
 			{
-				for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 2)
-				{
-					step_volume(port);
+				step_volume(port);
 
-					const float left  = buf[in + 0] * m;
-					const float right = buf[in + 1] * m;
+				const float left  = buf[in + 0] * m;
+				const float right = buf[in + 1] * m;
 
-					out_buffer[out + 0] = left;
-					out_buffer[out + 1] = right;
-
-					if constexpr (downmix != AudioChannelCnt::STEREO)
-					{
-						out_buffer[out + 2] = 0.0f;
-						out_buffer[out + 3] = 0.0f;
-						out_buffer[out + 4] = 0.0f;
-						out_buffer[out + 5] = 0.0f;
-
-						if constexpr (downmix != AudioChannelCnt::SURROUND_5_1)
-						{
-							out_buffer[out + 6] = 0.0f;
-							out_buffer[out + 7] = 0.0f;
-						}
-					}
-				}
-				first_mix = false;
-			}
-			else
-			{
-				for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 2)
-				{
-					step_volume(port);
-
-					const float left  = buf[in + 0] * m;
-					const float right = buf[in + 1] * m;
-
-					out_buffer[out + 0] += left;
-					out_buffer[out + 1] += right;
-				}
+				out_buffer[out + 0] += left;
+				out_buffer[out + 1] += right;
 			}
 		}
 		else if (port.num_channels == 8)
 		{
-			if (first_mix)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 8)
 			{
-				for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 8)
+				step_volume(port);
+
+				const float left       = buf[in + 0] * m;
+				const float right      = buf[in + 1] * m;
+				const float center     = buf[in + 2] * m;
+				const float low_freq   = buf[in + 3] * m;
+				const float side_left  = buf[in + 4] * m;
+				const float side_right = buf[in + 5] * m;
+				const float rear_left  = buf[in + 6] * m;
+				const float rear_right = buf[in + 7] * m;
+
+				if constexpr (downmix == AudioChannelCnt::STEREO)
 				{
-					step_volume(port);
-
-					const float left       = buf[in + 0] * m;
-					const float right      = buf[in + 1] * m;
-					const float center     = buf[in + 2] * m;
-					[[maybe_unused]]
-					const float low_freq   = buf[in + 3] * m;
-					const float side_left  = buf[in + 4] * m;
-					const float side_right = buf[in + 5] * m;
-					const float rear_left  = buf[in + 6] * m;
-					const float rear_right = buf[in + 7] * m;
-
-					if constexpr (downmix == AudioChannelCnt::STEREO)
-					{
-						// Don't mix in the lfe as per dolby specification and based on documentation
-						const float mid = center * 0.5f;
-						out_buffer[out + 0] = left * minus_3db + mid + side_left * 0.5f + rear_left * 0.5f;
-						out_buffer[out + 1] = right * minus_3db + mid + side_right * 0.5f + rear_right * 0.5f;
-					}
-					else if constexpr (downmix == AudioChannelCnt::SURROUND_5_1)
-					{
-						out_buffer[out + 0] = left;
-						out_buffer[out + 1] = right;
-						out_buffer[out + 2] = center;
-						out_buffer[out + 3] = low_freq;
-						out_buffer[out + 4] = side_left + rear_left;
-						out_buffer[out + 5] = side_right + rear_right;
-					}
-					else
-					{
-						out_buffer[out + 0] = left;
-						out_buffer[out + 1] = right;
-						out_buffer[out + 2] = center;
-						out_buffer[out + 3] = low_freq;
-						out_buffer[out + 4] = rear_left;
-						out_buffer[out + 5] = rear_right;
-						out_buffer[out + 6] = side_left;
-						out_buffer[out + 7] = side_right;
-					}
+					// Don't mix in the lfe as per dolby specification and based on documentation
+					const float mid = center * 0.5f;
+					out_buffer[out + 0] += left * minus_3db + mid + side_left * 0.5f + rear_left * 0.5f;
+					out_buffer[out + 1] += right * minus_3db + mid + side_right * 0.5f + rear_right * 0.5f;
 				}
-				first_mix = false;
-			}
-			else
-			{
-				for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 8)
+				else if constexpr (downmix == AudioChannelCnt::SURROUND_5_1)
 				{
-					step_volume(port);
-
-					const float left       = buf[in + 0] * m;
-					const float right      = buf[in + 1] * m;
-					const float center     = buf[in + 2] * m;
-					const float low_freq   = buf[in + 3] * m;
-					const float side_left  = buf[in + 4] * m;
-					const float side_right = buf[in + 5] * m;
-					const float rear_left  = buf[in + 6] * m;
-					const float rear_right = buf[in + 7] * m;
-
-					if constexpr (downmix == AudioChannelCnt::STEREO)
-					{
-						// Don't mix in the lfe as per dolby specification and based on documentation
-						const float mid = center * 0.5f;
-						out_buffer[out + 0] += left * minus_3db + mid + side_left * 0.5f + rear_left * 0.5f;
-						out_buffer[out + 1] += right * minus_3db + mid + side_right * 0.5f + rear_right * 0.5f;
-					}
-					else if constexpr (downmix == AudioChannelCnt::SURROUND_5_1)
-					{
-						out_buffer[out + 0] += left;
-						out_buffer[out + 1] += right;
-						out_buffer[out + 2] += center;
-						out_buffer[out + 3] += low_freq;
-						out_buffer[out + 4] += side_left + rear_left;
-						out_buffer[out + 5] += side_right + rear_right;
-					}
-					else
-					{
-						out_buffer[out + 0] += left;
-						out_buffer[out + 1] += right;
-						out_buffer[out + 2] += center;
-						out_buffer[out + 3] += low_freq;
-						out_buffer[out + 4] += rear_left;
-						out_buffer[out + 5] += rear_right;
-						out_buffer[out + 6] += side_left;
-						out_buffer[out + 7] += side_right;
-					}
+					out_buffer[out + 0] += left;
+					out_buffer[out + 1] += right;
+					out_buffer[out + 2] += center;
+					out_buffer[out + 3] += low_freq;
+					out_buffer[out + 4] += side_left + rear_left;
+					out_buffer[out + 5] += side_right + rear_right;
+				}
+				else
+				{
+					out_buffer[out + 0] += left;
+					out_buffer[out + 1] += right;
+					out_buffer[out + 2] += center;
+					out_buffer[out + 3] += low_freq;
+					out_buffer[out + 4] += rear_left;
+					out_buffer[out + 5] += rear_right;
+					out_buffer[out + 6] += side_left;
+					out_buffer[out + 7] += side_right;
 				}
 			}
 		}
@@ -1068,12 +988,6 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 		{
 			fmt::throw_exception("Unknown channel count (port=%u, channel=%d)", port.number, port.num_channels);
 		}
-	}
-
-	// Nothing was mixed, memset out_buffer to 0
-	if (first_mix)
-	{
-		std::memset(out_buffer, 0, out_buffer_sz * sizeof(float));
 	}
 }
 

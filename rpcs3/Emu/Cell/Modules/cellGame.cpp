@@ -17,6 +17,7 @@
 #include "Utilities/StrUtil.h"
 #include "util/init_mutex.hpp"
 #include "util/asm.hpp"
+#include "Crypto/utils.h"
 
 #include <span>
 
@@ -802,9 +803,6 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
 	}
 
-	std::memset(g_file_param.get_ptr(), 0, sizeof(*g_file_param));
-	cbSet->setParam = g_file_param;
-
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
 	std::string error_msg;
@@ -1397,16 +1395,142 @@ error_code cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileNa
 		return CELL_GAME_ERROR_PARAM;
 	}
 
+	const std::string src_path = vfs::get(fmt::format("%s/%s", usrdirPath, fileName));
+
+	// Use hash to get a hopefully unique filename
+	std::string hash;
+
+	if (fs::file theme = fs::file(src_path))
+	{
+		u32 magic{};
+
+		if (src_path.ends_with(".p3t") || !theme.read(magic) || magic != "P3TF"_u32)
+		{
+			return CELL_GAME_ERROR_INVALID_THEME_FILE;
+		}
+
+		hash = sha256_get_hash(theme.to_string().c_str(), theme.size(), true);
+	}
+	else
+	{
+		return CELL_GAME_ERROR_NOTFOUND;
+	}
+
+	const std::string dst_path = vfs::get(fmt::format("/dev_hdd0/theme/%s_%s.p3t", Emu.GetTitleID(), hash)); // TODO: this is renamed with some other scheme
+
+	if (fs::is_file(dst_path))
+	{
+		cellGame.notice("cellGameThemeInstall: theme already installed: '%s'", dst_path);
+	}
+	else
+	{
+		cellGame.notice("cellGameThemeInstall: copying theme from '%s' to '%s'", src_path, dst_path);
+
+		if (!fs::copy_file(src_path, dst_path, false)) // TODO: new file is write protected
+		{
+			cellGame.error("cellGameThemeInstall: failed to copy theme from '%s' to '%s' (error=%s)", src_path, dst_path, fs::g_tls_error);
+			return CELL_GAME_ERROR_ACCESS_ERROR;
+		}
+	}
+
+	if (false && !fs::remove_file(src_path)) // TODO: disabled for now
+	{
+		cellGame.error("cellGameThemeInstall: failed to remove source theme from '%s' (error=%s)", src_path, fs::g_tls_error);
+	}
+
+	if (option == CELL_GAME_THEME_OPTION_APPLY)
+	{
+		// TODO: apply new theme
+	}
+
 	return CELL_OK;
 }
 
-error_code cellGameThemeInstallFromBuffer(u32 fileSize, u32 bufSize, vm::ptr<void> buf, vm::ptr<CellGameThemeInstallCallback> func, u32 option)
+error_code cellGameThemeInstallFromBuffer(ppu_thread& ppu, u32 fileSize, u32 bufSize, vm::ptr<void> buf, vm::ptr<CellGameThemeInstallCallback> func, u32 option)
 {
 	cellGame.todo("cellGameThemeInstallFromBuffer(fileSize=%d, bufSize=%d, buf=*0x%x, func=*0x%x, option=0x%x)", fileSize, bufSize, buf, func, option);
 
-	if (!buf || !fileSize || (fileSize > bufSize && !func) || bufSize <= 4095 || option > CELL_GAME_THEME_OPTION_APPLY)
+	if (!buf || !fileSize || (fileSize > bufSize && !func) || bufSize < CELL_GAME_THEMEINSTALL_BUFSIZE_MIN || option > CELL_GAME_THEME_OPTION_APPLY)
 	{
 		return CELL_GAME_ERROR_PARAM;
+	}
+
+	const std::string hash = sha256_get_hash(reinterpret_cast<char*>(buf.get_ptr()), fileSize, true);
+	const std::string dst_path = vfs::get(fmt::format("/dev_hdd0/theme/%s_%s.p3t", Emu.GetTitleID(), hash)); // TODO: this is renamed with some scheme
+
+	if (fs::file theme = fs::file(dst_path, fs::write_new + fs::isfile)) // TODO: new file is write protected
+	{
+		const u32 magic = *reinterpret_cast<u32*>(buf.get_ptr());
+
+		if (magic != "P3TF"_u32)
+		{
+			return CELL_GAME_ERROR_INVALID_THEME_FILE;
+		}
+
+		if (func && bufSize < fileSize)
+		{
+			cellGame.notice("cellGameThemeInstallFromBuffer: writing theme with func callback to '%s'", dst_path);
+
+			for (u32 file_offset = 0; file_offset < fileSize;)
+			{
+				const u32 read_size = std::min(bufSize, fileSize - file_offset);
+				cellGame.notice("cellGameThemeInstallFromBuffer: writing %d bytes at pos %d", read_size, file_offset);
+
+				if (theme.write(reinterpret_cast<u8*>(buf.get_ptr()) + file_offset, read_size) != read_size)
+				{
+					cellGame.error("cellGameThemeInstallFromBuffer: failed to write to destination file '%s' (error=%s)", dst_path, fs::g_tls_error);
+
+					if (fs::g_tls_error == fs::error::nospace)
+					{
+						return CELL_GAME_ERROR_NOSPACE;
+					}
+
+					return CELL_GAME_ERROR_ACCESS_ERROR;
+				}
+
+				file_offset += read_size;
+
+				// Report status with callback
+				cellGame.notice("cellGameThemeInstallFromBuffer: func(fileOffset=%d, readSize=%d, buf=0x%x)", file_offset, read_size, buf);
+				const s32 result = func(ppu, file_offset, read_size, buf);
+
+				if (result == CELL_GAME_RET_CANCEL) // same as CELL_GAME_CBRESULT_CANCEL
+				{
+					cellGame.notice("cellGameThemeInstallFromBuffer: theme installation was cancelled");
+					return not_an_error(CELL_GAME_RET_CANCEL);
+				}
+			}
+		}
+		else
+		{
+			cellGame.notice("cellGameThemeInstallFromBuffer: writing theme to '%s'", dst_path);
+
+			if (theme.write(buf.get_ptr(), fileSize) != fileSize)
+			{
+				cellGame.error("cellGameThemeInstallFromBuffer: failed to write to destination file '%s' (error=%s)", dst_path, fs::g_tls_error);
+
+				if (fs::g_tls_error == fs::error::nospace)
+				{
+					return CELL_GAME_ERROR_NOSPACE;
+				}
+
+				return CELL_GAME_ERROR_ACCESS_ERROR;
+			}
+		}
+	}
+	else if (fs::g_tls_error == fs::error::exist) // Do not overwrite files, but continue.
+	{
+		cellGame.notice("cellGameThemeInstallFromBuffer: theme already installed: '%s'", dst_path);
+	}
+	else
+	{
+		cellGame.error("cellGameThemeInstallFromBuffer: failed to open destination file '%s' (error=%s)", dst_path, fs::g_tls_error);
+		return CELL_GAME_ERROR_ACCESS_ERROR;
+	}
+
+	if (option == CELL_GAME_THEME_OPTION_APPLY)
+	{
+		// TODO: apply new theme
 	}
 
 	return CELL_OK;

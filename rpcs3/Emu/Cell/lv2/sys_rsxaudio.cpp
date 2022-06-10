@@ -1270,7 +1270,7 @@ namespace audio
 {
 	void configure_rsxaudio()
 	{
-		if (g_cfg.audio.provider == audio_provider::rsxaudio)
+		if (g_cfg.audio.provider == audio_provider::rsxaudio && g_fxo->is_init<rsx_audio_backend>())
 		{
 			g_fxo->get<rsx_audio_backend>().update_emu_cfg();
 		}
@@ -1322,7 +1322,8 @@ void rsxaudio_backend_thread::update_emu_cfg()
 
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
-	const AudioChannelCnt out_ch_cnt = AudioBackend::get_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
+	// Get max supported channel count
+	AudioChannelCnt out_ch_cnt = AudioBackend::get_max_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
 
 	emu_audio_cfg cfg =
 	{
@@ -1332,7 +1333,7 @@ rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 		.convert_to_s16 = static_cast<bool>(g_cfg.audio.convert_to_s16),
 		.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
 		.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
-		.downmix = out_ch_cnt,
+		.channels = out_ch_cnt,
 		.renderer = g_cfg.audio.renderer,
 		.provider = g_cfg.audio.provider,
 		.avport = convert_avport(g_cfg.audio.rsxaudio_port)
@@ -1673,7 +1674,7 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 
 	const port_config& port_cfg = ra_state.port[static_cast<u8>(emu_cfg.avport)];
 	const AudioSampleSize sample_size = emu_cfg.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
-	const AudioChannelCnt ch_cnt = static_cast<AudioChannelCnt>(std::min<u32>(static_cast<u32>(port_cfg.ch_cnt), static_cast<u32>(emu_cfg.downmix)));
+	const AudioChannelCnt ch_cnt = static_cast<AudioChannelCnt>(std::min<u32>(static_cast<u32>(port_cfg.ch_cnt), static_cast<u32>(emu_cfg.channels)));
 
 	static constexpr f64 _10ms = 512.0 / 48000.0;
 	const f64 cb_frame_len  = backend->Open(port_cfg.freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;

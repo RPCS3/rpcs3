@@ -1315,7 +1315,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 }
 
 // This is ugly, but PS3 headers shall not be included there.
-extern u32 sysutil_send_system_cmd(u64 status, u64 param);
+extern s32 sysutil_send_system_cmd(u64 status, u64 param);
 
 void main_window::DecryptSPRXLibraries()
 {

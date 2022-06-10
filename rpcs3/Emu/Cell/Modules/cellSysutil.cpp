@@ -47,6 +47,9 @@ struct sysutil_cb_manager
 	atomic_t<registered_cb> callbacks[4]{};
 
 	lf_queue<std::function<s32(ppu_thread&)>> registered;
+
+	atomic_t<bool> draw_cb_started{};
+	atomic_t<u64> read_counter{0};
 };
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
@@ -56,12 +59,29 @@ extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 	cbm.registered.push(std::move(cb));
 }
 
-extern u32 sysutil_send_system_cmd(u64 status, u64 param)
+extern s32 sysutil_send_system_cmd(u64 status, u64 param)
 {
-	u32 count = 0;
+	s32 count = 0;
 
 	if (auto cbm = g_fxo->try_get<sysutil_cb_manager>())
 	{
+		if (status == CELL_SYSUTIL_DRAWING_BEGIN)
+		{
+			if (cbm->draw_cb_started.exchange(true))
+			{
+				cellSysutil.error("Tried to enqueue a second or more DRAWING_BEGIN callback!");
+				return CELL_SYSUTIL_ERROR_BUSY;
+			}
+		}
+		else if (status == CELL_SYSUTIL_DRAWING_END)
+		{
+			if (!cbm->draw_cb_started.exchange(false))
+			{
+				cellSysutil.error("Tried to enqueue a DRAWING_END callback without a BEGIN callback!");
+				return -1;
+			}
+		}
+
 		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
 			if (cb.first)
@@ -79,6 +99,16 @@ extern u32 sysutil_send_system_cmd(u64 status, u64 param)
 	}
 
 	return count;
+}
+
+extern u64 get_sysutil_cb_manager_read_count()
+{
+	if (auto cbm = g_fxo->try_get<sysutil_cb_manager>())
+	{
+		return cbm->read_counter;
+	}
+
+	return 0;
 }
 
 template <>
@@ -409,8 +439,12 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
+	bool read = false;
+
 	for (auto&& func : cbm.registered.pop_all())
 	{
+		read = true;
+
 		if (s32 res = func(ppu))
 		{
 			// Currently impossible
@@ -421,6 +455,11 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 		{
 			return {};
 		}
+	}
+
+	if (read)
+	{
+		cbm.read_counter++;
 	}
 
 	return CELL_OK;

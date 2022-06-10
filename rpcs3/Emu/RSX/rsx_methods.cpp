@@ -1768,8 +1768,26 @@ namespace rsx
 	void flip_command(thread* rsx, u32, u32 arg)
 	{
 		ensure(rsx->isHLE);
+
+		if (auto ptr = rsx->queue_handler)
+		{
+			rsx->intr_thread->cmd_list
+			({
+				{ ppu_cmd::set_args, 1 }, u64{1},
+				{ ppu_cmd::lle_call, ptr },
+				{ ppu_cmd::sleep, 0 }
+			});
+
+			rsx->intr_thread->cmd_notify++;
+			rsx->intr_thread->cmd_notify.notify_one();
+		}
+
 		rsx->reset();
+		nv4097::set_zcull_render_enable(rsx, 0, 0x3);
+		nv4097::set_render_mode(rsx, 0, 0x0100'0000);
+		rsx->on_frame_end(arg);
 		rsx->request_emu_flip(arg);
+		vm::_ref<atomic_t<u128>>(rsx->label_addr + 0x10).store(u128{});
 	}
 
 	void user_command(thread* rsx, u32, u32 arg)
@@ -1780,12 +1798,12 @@ namespace rsx
 			return;
 		}
 
-		if (rsx->user_handler)
+		if (auto ptr = rsx->user_handler)
 		{
 			rsx->intr_thread->cmd_list
 			({
 				{ ppu_cmd::set_args, 1 }, u64{arg},
-				{ ppu_cmd::lle_call, rsx->user_handler },
+				{ ppu_cmd::lle_call, ptr },
 				{ ppu_cmd::sleep, 0 }
 			});
 

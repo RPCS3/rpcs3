@@ -100,7 +100,7 @@ void AudioBackend::normalize(u32 sample_cnt, const f32* src, f32* dst)
 	}
 }
 
-AudioChannelCnt AudioBackend::get_channel_count(u32 device_index)
+std::pair<AudioChannelCnt, AudioChannelCnt> AudioBackend::get_channel_count_and_downmixer(u32 device_index)
 {
 	audio_out_configuration& audio_out_cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(audio_out_cfg.mtx);
@@ -113,9 +113,9 @@ AudioChannelCnt AudioBackend::get_channel_count(u32 device_index)
 	{
 		switch (out.channels)
 		{
-		case 2: return AudioChannelCnt::STEREO;
-		case 6: return AudioChannelCnt::SURROUND_5_1;
-		case 8: return AudioChannelCnt::SURROUND_7_1;
+		case 2: return { AudioChannelCnt::STEREO, AudioChannelCnt::STEREO };
+		case 6: return { AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_5_1 };
+		case 8: return { AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_7_1 };
 		default:
 			fmt::throw_exception("Unsupported channel count in cellAudioOut config: %d", out.channels);
 		}
@@ -125,7 +125,7 @@ AudioChannelCnt AudioBackend::get_channel_count(u32 device_index)
 		switch (out.channels)
 		{
 		case 2:
-			return AudioChannelCnt::STEREO;
+			return { AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO };
 		default:
 			fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_A in cellAudioOut config: %d", out.channels);
 		}
@@ -135,8 +135,7 @@ AudioChannelCnt AudioBackend::get_channel_count(u32 device_index)
 		switch (out.channels)
 		{
 		case 6:
-		case 8:
-			return AudioChannelCnt::SURROUND_5_1;
+			return { AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1 };
 		default:
 			fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_B in cellAudioOut config: %d", out.channels);
 		}
@@ -144,4 +143,30 @@ AudioChannelCnt AudioBackend::get_channel_count(u32 device_index)
 	default:
 		fmt::throw_exception("Unknown downmixer in cellAudioOut config: %d", out.downmixer);
 	}
+}
+
+AudioChannelCnt AudioBackend::get_max_channel_count(u32 device_index)
+{
+	audio_out_configuration& audio_out_cfg = g_fxo->get<audio_out_configuration>();
+	std::lock_guard lock(audio_out_cfg.mtx);
+	ensure(device_index < audio_out_cfg.out.size());
+	const audio_out_configuration::audio_out& out = audio_out_cfg.out.at(device_index);
+
+	AudioChannelCnt count = AudioChannelCnt::STEREO;
+
+	for (const CellAudioOutSoundMode& mode : out.sound_modes)
+	{
+		switch (mode.channel)
+		{
+		case 6:
+			count = AudioChannelCnt::SURROUND_5_1;
+			break;
+		case 8:
+			return AudioChannelCnt::SURROUND_7_1; // Max possible count. So let's return immediately.
+		default:
+			break;
+		}
+	}
+
+	return count;
 }
