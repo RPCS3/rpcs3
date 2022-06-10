@@ -279,13 +279,13 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	buf[0] = 0xF2;
 
 	int res = hid_get_feature_report(hidDevice, buf.data(), buf.size());
-	if (res != static_cast<int>(buf.size()) || buf[0] != 0xF2)
+	if (res <= 0 || buf[0] != 0xF2)
 	{
 		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, buf[0]=0x%x, error=%s)", res, buf[0], hid_error(hidDevice));
 		buf    = {};
 		buf[0] = 0x0;
 		res    = hid_get_feature_report(hidDevice, buf.data(), buf.size());
-		if (res != static_cast<int>(buf.size()) || buf[0] != 0x0)
+		if (res <= 0 || buf[0] != 0x0)
 		{
 			ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
 			hid_close(hidDevice);
