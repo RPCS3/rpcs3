@@ -144,7 +144,7 @@ namespace rsx
 
 					last_check_val = current;
 
-					if ((last_check_val - start) > tdr)
+					if ((current - start) > tdr)
 					{
 						// If longer than driver timeout force exit
 						rsx_log.error("nv406e::semaphore_acquire has timed out. semaphore_address=0x%X", addr);
