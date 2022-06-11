@@ -218,7 +218,7 @@ enum class screen_quadrant
 	bottom_right
 };
 
-enum class rsx_fifo_mode
+enum class rsx_fifo_mode : unsigned
 {
 	fast,
 	atomic,
