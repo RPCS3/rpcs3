@@ -45,7 +45,7 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 
 	if (auto& dct = g_fxo->get<lv2_memory_container>(); !Emu.IsStopped())
 	{
-		dct.used -= ppu.stack_size;
+		dct.free(ppu.stack_size);
 	}
 
 	if (ppu.call_history.index)
@@ -418,7 +418,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 	if (!stack_base)
 	{
-		dct.used -= stack_size;
+		dct.free(stack_size);
 		return CELL_ENOMEM;
 	}
 
@@ -447,7 +447,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 	if (!tid)
 	{
 		vm::dealloc(stack_base);
-		dct.used -= stack_size;
+		dct.free(stack_size);
 		return CELL_EAGAIN;
 	}
 
