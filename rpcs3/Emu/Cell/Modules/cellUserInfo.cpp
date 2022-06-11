@@ -157,6 +157,11 @@ error_code cellUserInfoSelectUser_ListType(vm::ptr<CellUserInfoTypeSet> listType
 			return CELL_USERINFO_ERROR_BUSY;
 		}
 
+		if (s32 ret = sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0); ret < 0)
+		{
+			return CELL_USERINFO_ERROR_BUSY;
+		}
+
 		const std::string title = listType->title.get_ptr();
 		const u32 focused = listType->focus;
 
@@ -178,6 +183,10 @@ error_code cellUserInfoSelectUser_ListType(vm::ptr<CellUserInfoTypeSet> listType
 
 			cellUserInfo.warning("cellUserInfoSelectUser_ListType: callback_result=%s, selected_user_id=%d, selected_username='%s'", callback_result, selected_user_id, selected_username);
 
+			g_fxo->get<user_info_manager>().dialog_opened = false;
+
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+
 			sysutil_register_cb([=](ppu_thread& ppu) -> s32
 			{
 				vm::var<CellUserInfoUserStat> selectUser;
@@ -189,8 +198,6 @@ error_code cellUserInfoSelectUser_ListType(vm::ptr<CellUserInfoTypeSet> listType
 				funcSelect(ppu, callback_result, selectUser, userdata);
 				return CELL_OK;
 			});
-
-			g_fxo->get<user_info_manager>().dialog_opened = false;
 		});
 
 		return result;
@@ -258,6 +265,11 @@ error_code cellUserInfoSelectUser_SetList(vm::ptr<CellUserInfoListSet> setList, 
 			return CELL_USERINFO_ERROR_BUSY;
 		}
 
+		if (s32 ret = sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0); ret < 0)
+		{
+			return CELL_USERINFO_ERROR_BUSY;
+		}
+
 		const std::string title = setList->title.get_ptr();
 		const u32 focused = setList->focus;
 
@@ -279,6 +291,10 @@ error_code cellUserInfoSelectUser_SetList(vm::ptr<CellUserInfoListSet> setList, 
 
 			cellUserInfo.warning("cellUserInfoSelectUser_SetList: callback_result=%s, selected_user_id=%d, selected_username='%s'", callback_result, selected_user_id, selected_username);
 
+			g_fxo->get<user_info_manager>().dialog_opened = false;
+
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+
 			sysutil_register_cb([=](ppu_thread& ppu) -> s32
 			{
 				vm::var<CellUserInfoUserStat> selectUser;
@@ -290,8 +306,6 @@ error_code cellUserInfoSelectUser_SetList(vm::ptr<CellUserInfoListSet> setList, 
 				funcSelect(ppu, callback_result, selectUser, userdata);
 				return CELL_OK;
 			});
-
-			g_fxo->get<user_info_manager>().dialog_opened = false;
 		});
 
 		return result;

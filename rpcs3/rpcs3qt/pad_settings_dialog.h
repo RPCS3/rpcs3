@@ -5,8 +5,11 @@
 #include <QLabel>
 #include <QTimer>
 
+#include <mutex>
+
 #include "Emu/Io/pad_config.h"
 #include "Emu/GameInfo.h"
+#include "Utilities/Thread.h"
 
 class gui_settings;
 class PadHandlerBase;
@@ -108,7 +111,7 @@ private Q_SLOTS:
 	void ApplyCurrentPlayerConfig(int new_player_id);
 
 private:
-	Ui::pad_settings_dialog *ui;
+	std::unique_ptr<Ui::pad_settings_dialog> ui;
 	std::string m_title_id;
 	std::shared_ptr<gui_settings> m_gui_settings;
 
@@ -145,6 +148,7 @@ private:
 
 	// Pad Handlers
 	std::shared_ptr<PadHandlerBase> m_handler;
+	std::mutex m_handler_mutex;
 	std::string m_device_name;
 	std::string m_profile;
 	QTimer m_timer_pad_refresh;
@@ -158,8 +162,27 @@ private:
 	// Mouse Move
 	QPoint m_last_pos;
 
-	// Input timer. Its Callback handles the input
+	// Input timer. Updates the GUI with input values
 	QTimer m_timer_input;
+	std::mutex m_input_mutex;
+	struct input_callback_data
+	{
+		bool success = false;
+		bool has_new_data = false;
+		u16 val = 0;
+		std::string name;
+		std::string pad_name;
+		u32 battery_level = 0;
+		std::array<int, 6> preview_values{};
+	} m_input_callback_data;
+
+	// Input thread. Its Callback handles the input
+	std::unique_ptr<named_thread<std::function<void()>>> m_input_thread;
+	enum class input_thread_state { paused, pausing, active };
+	atomic_t<input_thread_state> m_input_thread_state{input_thread_state::paused};
+
+	void start_input_thread();
+	void pause_input_thread();
 
 	void SaveExit();
 	void CancelExit();

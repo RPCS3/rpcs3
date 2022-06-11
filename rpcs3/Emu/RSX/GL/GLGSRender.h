@@ -12,6 +12,8 @@
 #include <optional>
 #include <unordered_map>
 
+#include "glutils/ring_buffer.h"
+
 #ifdef _WIN32
 #pragma comment(lib, "opengl32.lib")
 #endif

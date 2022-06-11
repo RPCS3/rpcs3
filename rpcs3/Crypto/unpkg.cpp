@@ -286,7 +286,7 @@ bool package_reader::read_metadata()
 
 			if (packet.size == m_metadata.title_id.size())
 			{
-				archive_read(&m_metadata.title_id, m_metadata.title_id.size());
+				archive_read(&m_metadata.title_id.front(), m_metadata.title_id.size());
 				m_metadata.title_id = fmt::trim(m_metadata.title_id);
 				pkg_log.notice("Metadata: Title ID = %s", m_metadata.title_id);
 				continue;

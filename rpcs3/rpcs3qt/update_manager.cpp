@@ -7,6 +7,7 @@
 #include "Utilities/File.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
+#include "Crypto/utils.h"
 #include "util/logs.hpp"
 
 #include <QApplication>
@@ -372,7 +373,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		return false;
 	}
 
-	if (const std::string res_hash_string = downloader::get_hash(data.data(), data.size(), false);
+	if (const std::string res_hash_string = sha256_get_hash(data.data(), data.size(), false);
 		m_expected_hash != res_hash_string)
 	{
 		update_log.error("Hash mismatch: %s expected: %s", res_hash_string, m_expected_hash);
@@ -648,9 +649,11 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	Emu.CleanUp();
 
 #ifdef _WIN32
-	const int ret = _wexecl(wchar_orig_path.data(), L"--updating", nullptr);
+	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--updating", nullptr);
 #else
-	const int ret = execl(replace_path.c_str(), "--updating", nullptr);
+	// execv is used for compatibility with checkrt
+	const char * const params[3] = { replace_path.c_str(), "--updating", nullptr };
+	const int ret = execv(replace_path.c_str(), const_cast<char * const *>(&params[0]));
 #endif
 	if (ret == -1)
 	{

@@ -74,19 +74,12 @@ namespace vk
 	event::event(const render_device& dev, sync_domain domain)
 		: m_device(dev)
 	{
-		if (domain == sync_domain::gpu || dev.gpu().get_driver_vendor() != driver_vendor::AMD)
+		const auto vendor = dev.gpu().get_driver_vendor();
+		if (domain != sync_domain::gpu &&
+			(vendor == vk::driver_vendor::AMD || vendor == vk::driver_vendor::INTEL))
 		{
-			VkEventCreateInfo info
-			{
-				.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0
-			};
-			vkCreateEvent(dev, &info, nullptr, &m_vk_event);
-		}
-		else
-		{
-			// Work around AMD's broken event signals
+			// Work around AMD and INTEL broken event signal synchronization scope
+			// Will be dropped after transitioning to VK1.3
 			m_buffer = std::make_unique<buffer>
 			(
 				dev,
@@ -100,6 +93,16 @@ namespace vk
 
 			m_value = reinterpret_cast<u32*>(m_buffer->map(0, 4));
 			*m_value = 0xCAFEBABE;
+		}
+		else
+		{
+			VkEventCreateInfo info
+			{
+				.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0
+			};
+			vkCreateEvent(dev, &info, nullptr, &m_vk_event);
 		}
 	}
 

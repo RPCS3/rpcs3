@@ -83,7 +83,7 @@ std::mutex g_tty_mutex;
 
 namespace atomic_wait
 {
-	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 stats));
+	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 max_coll));
 }
 
 template<>
@@ -204,6 +204,8 @@ void Emulator::Init(bool add_only)
 		sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
 	}
 
+	const bool is_exitspawn = m_config_mode == cfg_mode::continuous;
+
 	// Load config file
 	if (m_config_mode == cfg_mode::config_override)
 	{
@@ -274,8 +276,6 @@ void Emulator::Init(bool add_only)
 		make_path_verbose(dev_flsh3);
 		make_path_verbose(dev_usb);
 		make_path_verbose(dev_hdd0 + "game/");
-		make_path_verbose(dev_hdd0 + "game/TEST12345/");
-		make_path_verbose(dev_hdd0 + "game/TEST12345/USRDIR/");
 		make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"game/＄locks/"));
 		make_path_verbose(dev_hdd0 + "home/");
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/");
@@ -345,6 +345,12 @@ void Emulator::Init(bool add_only)
 		}
 	}
 
+	if (is_exitspawn)
+	{
+		// Actions not taken during exitspawn
+		return;
+	}
+
 	// Fixup savedata
 	for (const auto& entry : fs::dir(save_path))
 	{
@@ -379,7 +385,29 @@ void Emulator::Init(bool add_only)
 
 	// Limit cache size
 	if (g_cfg.vfs.limit_cache_size)
+	{
 		rpcs3::cache::limit_cache_size();
+	}
+
+	// Wipe clean VSH's temporary directory of choice
+	if (g_cfg.vfs.empty_hdd0_tmp && !fs::remove_all(dev_hdd0 + "tmp/", false, true))
+	{
+		sys_log.error("Could not clean /dev_hdd0/tmp/ (%s)", fs::g_tls_error);
+	}
+
+	// Remove temporary game data that would have been removed when cellGame has been properly shut
+	for (const auto& entry : fs::dir(dev_hdd0 + "game/"))
+	{
+		if (entry.name.starts_with("_GDATA_") && fs::is_dir(dev_hdd0 + "game/" + entry.name + "/USRDIR/"))
+		{
+			const std::string target = dev_hdd0 + "game/" + entry.name;
+
+			if (!fs::remove_all(target, true, true))
+			{
+				sys_log.error("Could not clean \"%s\" (%s)", target, fs::g_tls_error);
+			}
+		}
+	}
 }
 
 void Emulator::SetUsr(const std::string& user)
@@ -1740,7 +1768,9 @@ void Emulator::Resume()
 	}
 }
 
-u32 sysutil_send_system_cmd(u64 status, u64 param);
+s32 sysutil_send_system_cmd(u64 status, u64 param);
+u64 get_sysutil_cb_manager_read_count();
+
 void process_qt_events();
 
 void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
@@ -1757,6 +1787,8 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 		Resume();
 	}
 
+	const u64 read_counter = get_sysutil_cb_manager_read_count();
+
 	if (old_state == system_state::frozen || !sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0))
 	{
 		// The callback has been rudely ignored, we have no other option but to force termination
@@ -1764,13 +1796,21 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 		return;
 	}
 
-	auto perform_kill = [allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
+	auto perform_kill = [read_counter, allow_autoexit, this, info = ProcureCurrentEmulationCourseInformation()]()
 	{
-		for (u32 i = 0; i < 100; i++)
+		bool read_sysutil_signal = false;
+
+		for (u32 i = 100; i < 140; i++)
 		{
 			std::this_thread::sleep_for(50ms);
 			Resume(); // TODO: Prevent pausing by other threads while in this loop
 			process_qt_events(); // Is nullified when performed on non-main thread
+
+			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count())
+			{
+				i -= 100; // Grant 5 seconds (if signal is not read force kill after two second)
+				read_sysutil_signal = true;
+			}
 
 			if (static_cast<u64>(info) != m_stop_ctr)
 			{
@@ -1778,7 +1818,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op)
 			}
 		}
 
-		// An inevitable attempt to terminate the *current* emulation course will be issued after 5s
+		// An inevitable attempt to terminate the *current* emulation course will be issued after 7s
 		CallFromMainThread([allow_autoexit, this]()
 		{
 			Kill(allow_autoexit);
@@ -2193,5 +2233,20 @@ const std::string& Emulator::GetFakeCat() const
 
 	return m_cat;
 };
+
+const std::string Emulator::GetSfoDir(bool prefer_disc_sfo) const
+{
+	if (prefer_disc_sfo)
+	{
+		const std::string sfo_dir = vfs::get("/dev_bdvd/PS3_GAME");
+
+		if (!sfo_dir.empty())
+		{
+			return sfo_dir;
+		}
+	}
+
+	return m_sfo_dir;
+}
 
 Emulator Emu;

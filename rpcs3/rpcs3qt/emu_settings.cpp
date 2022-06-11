@@ -955,6 +955,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case frame_limit_type::_60: return tr("60", "Frame limit");
 		case frame_limit_type::_30: return tr("30", "Frame limit");
 		case frame_limit_type::_auto: return tr("Auto", "Frame limit");
+		case frame_limit_type::_ps3: return tr("PS3 Native", "Frame limit");
 		}
 		break;
 	case emu_settings_type::MSAA:
@@ -1096,6 +1097,15 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case sleep_timers_accuracy_level::_all_timers: return tr("All Timers", "Sleep timers accuracy");
 		}
 		break;
+	case emu_settings_type::FIFOAccuracy:
+		switch (static_cast<rsx_fifo_mode>(index))
+		{
+		case rsx_fifo_mode::fast: return tr("Fast", "RSX FIFO Accuracy");
+		case rsx_fifo_mode::atomic: return tr("Atomic", "RSX FIFO Accuracy");
+		case rsx_fifo_mode::atomic_ordered: return tr("Ordered & Atomic", "RSX FIFO Accuracy");
+		case rsx_fifo_mode::as_ps3: return tr("PS3", "RSX FIFO Accuracy");
+		}
+		break;
 	case emu_settings_type::PerfOverlayDetailLevel:
 		switch (static_cast<detail_level>(index))
 		{
@@ -1139,13 +1149,24 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case enter_button_assign::cross: return tr("Enter with cross", "Enter button assignment");
 		}
 		break;
-	case emu_settings_type::AudioChannels:
-		switch (static_cast<audio_downmix>(index))
+	case emu_settings_type::AudioFormat:
+		switch (static_cast<audio_format>(index))
 		{
-		case audio_downmix::no_downmix: return tr("Surround 7.1", "Audio downmix");
-		case audio_downmix::downmix_to_stereo: return tr("Downmix to Stereo", "Audio downmix");
-		case audio_downmix::downmix_to_5_1: return tr("Downmix to 5.1", "Audio downmix");
-		case audio_downmix::use_application_settings: return tr("Use application settings", "Audio downmix");
+		case audio_format::stereo: return tr("Stereo", "Audio format");
+		case audio_format::surround_5_1: return tr("Surround 5.1", "Audio format");
+		case audio_format::surround_7_1: return tr("Surround 7.1", "Audio format");
+		case audio_format::manual: return tr("Manual", "Audio format");
+		case audio_format::automatic: return tr("Automatic", "Audio format");
+		}
+		break;
+	case emu_settings_type::AudioFormats:
+		switch (static_cast<audio_format_flag>(index))
+		{
+		case audio_format_flag::lpcm_2_48khz: return tr("Linear PCM 2 Ch. 48 kHz", "Audio format flag");
+		case audio_format_flag::lpcm_5_1_48khz: return tr("Linear PCM 5.1 Ch. 48 kHz", "Audio format flag");
+		case audio_format_flag::lpcm_7_1_48khz: return tr("Linear PCM 7.1 Ch. 48 kHz", "Audio format flag");
+		case audio_format_flag::ac3: return tr("Dolby Digital 5.1 Ch.", "Audio format flag");
+		case audio_format_flag::dts: return tr("DTS 5.1 Ch.", "Audio format flag");
 		}
 		break;
 	case emu_settings_type::LicenseArea:

@@ -29,7 +29,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 #### Arch Linux
 
-    sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base qt5-declarative qt5-multimedia sdl2 sndio jack2
+    sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base qt5-declarative qt5-multimedia sdl2 sndio jack2 base-devel
 
 #### Debian & Ubuntu
 

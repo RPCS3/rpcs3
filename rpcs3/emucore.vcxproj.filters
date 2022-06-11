@@ -64,14 +64,17 @@
     <Filter Include="Emu\NP">
       <UniqueIdentifier>{652ce43e-72db-42cd-831a-0e194f67e731}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Emu\GPU\RSX\Common\Interpreter">
-      <UniqueIdentifier>{bc97b324-1eea-445a-8fa9-6fc49e3df47c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Emu\Audio\FAudio">
       <UniqueIdentifier>{7555ff6f-67a9-4d02-b744-0bf896751edb}</UniqueIdentifier>
     </Filter>
     <Filter Include="Emu\GPU\RSX\Program">
       <UniqueIdentifier>{d055ca32-157a-4d8c-895e-29509858fcb0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX\Program\Snippets">
+      <UniqueIdentifier>{21667779-4136-4de4-8695-9ea13e5c9bce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX\Program\Interpreter">
+      <UniqueIdentifier>{bc97b324-1eea-445a-8fa9-6fc49e3df47c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -831,6 +834,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_save_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_message.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_message_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
@@ -1062,6 +1068,9 @@
     </ClCompile>
     <ClCompile Include="Crypto\decrypt_binaries.cpp">
       <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXZCULL.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1860,6 +1869,9 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_save_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_message.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_message_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
@@ -2116,13 +2128,34 @@
     <ClInclude Include="Crypto\decrypt_binaries.h">
       <Filter>Crypto</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXZCULL.h">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">
-      <Filter>Emu\GPU\RSX\Common\Interpreter</Filter>
+    <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
-    <None Include="Emu\RSX\Common\Interpreter\VertexInterpreter.glsl">
-      <Filter>Emu\GPU\RSX\Common\Interpreter</Filter>
+    <None Include="Emu\RSX\Program\GLSLInterpreter\FragmentInterpreter.glsl">
+      <Filter>Emu\GPU\RSX\Program\Interpreter</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLInterpreter\VertexInterpreter.glsl">
+      <Filter>Emu\GPU\RSX\Program\Interpreter</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\CopyBufferToD24x8.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\GenericVSPassthrough.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\CopyD24x8ToBuffer.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\CopyRGBA8ToBuffer.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
   </ItemGroup>
 </Project>

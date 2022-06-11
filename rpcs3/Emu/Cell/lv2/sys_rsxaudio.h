@@ -2,7 +2,6 @@
 
 #include "sys_sync.h"
 #include "sys_event.h"
-#include "Utilities/Timer.h"
 #include "Utilities/simple_ringbuf.h"
 #include "Utilities/transactional_storage.h"
 #include "Utilities/cond.h"
@@ -162,7 +161,9 @@ struct lv2_rsxaudio final : lv2_obj
 	vm::addr_t shmem{};
 
 	std::array<std::weak_ptr<lv2_event_queue>, SYS_RSXAUDIO_PORT_CNT> event_queue{};
-	std::array<u32, SYS_RSXAUDIO_PORT_CNT> event_port{};
+
+	// lv2 uses port memory addresses for their names
+	static constexpr std::array<u64, SYS_RSXAUDIO_PORT_CNT> event_port_name{ 0x8000000000400100, 0x8000000000400200, 0x8000000000400300 };
 
 	lv2_rsxaudio()
 	{
@@ -316,14 +317,14 @@ struct rsxaudio_hw_param_t
 
 		static constexpr u8 MAP_SILENT_CH = umax;
 
-		bool        		init = false;
-		hdmi_ch_cfg_t 		ch_cfg{};
-		std::array<u8, 5> 	info_frame{}; // TODO: check chstat and info_frame for info on audio layout, add default values
-		std::array<u8, 5> 	chstat{};
+		bool                init = false;
+		hdmi_ch_cfg_t       ch_cfg{};
+		std::array<u8, 5>   info_frame{}; // TODO: check chstat and info_frame for info on audio layout, add default values
+		std::array<u8, 5>   chstat{};
 
-		bool        		muted = true;
-		bool        		force_mute = true;
-		bool        		use_spdif_1 = false; // TODO: unused for now
+		bool                muted = true;
+		bool                force_mute = true;
+		bool                use_spdif_1 = false; // TODO: unused for now
 	};
 
 	u32 serial_freq_base = SYS_RSXAUDIO_FREQ_BASE_384K;
@@ -473,7 +474,7 @@ private:
 		bool convert_to_s16 = false;
 		bool enable_time_stretching = false;
 		bool dump_to_file = false;
-		AudioChannelCnt downmix = AudioChannelCnt::STEREO;
+		AudioChannelCnt channels = AudioChannelCnt::STEREO;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
 		RsxaudioAvportIdx avport = RsxaudioAvportIdx::HDMI_0;

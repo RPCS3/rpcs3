@@ -336,7 +336,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 
 	io >>= 20, ea >>= 20, size >>= 20;
 
-	render->pause();
+	rsx::eng_lock fifo_lock(render);
 	std::scoped_lock lock(render->sys_rsx_mtx);
 
 	for (u32 i = 0; i < size; i++)
@@ -350,7 +350,6 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 		table.io[ea + i].release((io + i) << 20);
 	}
 
-	render->unpause();
 	return CELL_OK;
 }
 
@@ -429,13 +428,13 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	{
 	case 0x001: // FIFO
 	{
-		render->pause();
+		rsx::eng_lock rlock(render);
 		const u64 get = static_cast<u32>(a3);
 		const u64 put = static_cast<u32>(a4);
 		vm::_ref<atomic_be_t<u64>>(render->dma_address + ::offset32(&RsxDmaControl::put)).release(put << 32 | get);
+		render->fifo_ctrl->set_get(static_cast<u32>(get));
 		render->last_known_code_start = get;
 		render->sync_point_request.release(true);
-		render->unpause();
 		break;
 	}
 
@@ -500,9 +499,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[a3].lastQueuedBufferId = static_cast<u32>(a4);
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
-		render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0);
-
 		render->on_frame_end(static_cast<u32>(a4));
+		render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0);
 	}
 	break;
 
@@ -658,7 +656,10 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		//a6 high = status0 = (zcullDir << 1) | (zcullFormat << 2) | ((sFunc & 0xF) << 12) | (sRef << 16) | (sMask << 24);
 		//a6 low = status1 = (0x2000 << 0) | (0x20 << 16);
 
-		ensure(a3 < std::size(render->zculls));
+		if (a3 >= std::size(render->zculls))
+		{
+			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
+		}
 
 		if (!render->is_fifo_idle())
 		{
@@ -734,7 +735,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[1].flipBufferId = static_cast<u32>(a3);
 
 		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
-		vm::_ref<u32>(render->label_addr + 0x10) = 0;
+		// NOTE: Realhw resets 16 bytes of this semaphore for some reason
+		vm::_ref<atomic_t<u128>>(render->label_addr + 0x10).store(u128{});
 
 		render->send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
 		break;
@@ -753,8 +755,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
 		vm::_ref<u32>(render->device_addr + 0x30) = 1;
 
-		// Time point is supplied in argument 4
-		const u64 current_time = a4;
+		// Time point is supplied in argument 4 (todo: convert it to MFTB rate and use it)
+		const u64 current_time = rsxTimeStamp();
 
 		driverInfo.head[a3].lastSecondVTime = current_time;
 

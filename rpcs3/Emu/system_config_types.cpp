@@ -188,6 +188,23 @@ void fmt_class_string<tsx_usage>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<rsx_fifo_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](rsx_fifo_mode value)
+	{
+		switch (value)
+		{
+		case rsx_fifo_mode::fast: return "Fast";
+		case rsx_fifo_mode::atomic: return "Atomic";
+		case rsx_fifo_mode::atomic_ordered: return "Ordered & Atomic";
+		case rsx_fifo_mode::as_ps3: return "PS3";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<sleep_timers_accuracy_level>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](sleep_timers_accuracy_level value)
@@ -295,6 +312,7 @@ void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 		case frame_limit_type::_60: return "60";
 		case frame_limit_type::_30: return "30";
 		case frame_limit_type::_auto: return "Auto";
+		case frame_limit_type::_ps3: return "PS3 Native";
 		}
 
 		return unknown;
@@ -531,16 +549,17 @@ void fmt_class_string<audio_avport>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<audio_downmix>::format(std::string& out, u64 arg)
+void fmt_class_string<audio_format>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](audio_downmix value)
+	format_enum(out, arg, [](audio_format value)
 	{
 		switch (value)
 		{
-		case audio_downmix::no_downmix: return "No downmix";
-		case audio_downmix::downmix_to_stereo: return "Downmix to Stereo";
-		case audio_downmix::downmix_to_5_1: return "Downmix to 5.1";
-		case audio_downmix::use_application_settings: return "Use application settings";
+		case audio_format::stereo: return "Stereo";
+		case audio_format::surround_5_1: return "Surround 5.1";
+		case audio_format::surround_7_1: return "Surround 7.1";
+		case audio_format::automatic: return "Automatic";
+		case audio_format::manual: return "Manual";
 		}
 
 		return unknown;

@@ -39,7 +39,7 @@ struct ds3_output_report
 	ds3_led led_5;         // reserved for another LED
 };
 
-constexpr u8 battery_capacity[] = {0, 1, 25, 50, 75, 100};
+constexpr std::array<u8, 6> battery_capacity = {0, 1, 25, 50, 75, 100};
 
 constexpr id_pair SONY_DS3_ID_0 = {0x054C, 0x0268};
 
@@ -275,22 +275,24 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	// Uses libusb for windows as hidapi will never work with UsbHid driver for the ds3 and it won't work with WinUsb either(windows hid api needs the UsbHid in the driver stack as far as I can tell)
 	// For other os use hidapi and hope for the best!
 #ifdef _WIN32
-	u8 buf[0xFF];
+	std::array<u8, 0xFF> buf{};
 	buf[0] = 0xF2;
 
-	int res = hid_get_feature_report(hidDevice, buf, 0xFF);
-	if (res < 0)
+	int res = hid_get_feature_report(hidDevice, buf.data(), buf.size());
+	if (res <= 0 || buf[0] != 0xF2)
 	{
-		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, error=%s)", res, hid_error(hidDevice));
-		buf[0] = 0;
-		res    = hid_get_feature_report(hidDevice, buf, 0xFF);
+		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, buf[0]=0x%x, error=%s)", res, buf[0], hid_error(hidDevice));
+		buf    = {};
+		buf[0] = 0x0;
+		res    = hid_get_feature_report(hidDevice, buf.data(), buf.size());
+		if (res <= 0 || buf[0] != 0x0)
+		{
+			ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, buf[0]=0x%x, error=%s", res, buf[0], hid_error(hidDevice));
+			hid_close(hidDevice);
+			return;
+		}
 	}
-	if (res < 0)
-	{
-		ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, error=%s", res, hid_error(hidDevice));
-		hid_close(hidDevice);
-		return;
-	}
+
 	device->report_id = buf[0];
 #elif defined (__APPLE__)
 	int res = hid_init_sixaxis_usb(hidDevice);
@@ -331,9 +333,19 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 
 #ifdef _WIN32
 	ds3dev->padData[0] = ds3dev->report_id;
-	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), 64);
+	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
+	if (result < 0)
+	{
+		ds3_log.error("get_data: hid_get_feature_report 0x%02x failed! result=%d, buf[0]=0x%x, error=%s", ds3dev->report_id, result, ds3dev->padData[0], hid_error(ds3dev->hidDevice));
+		return DataStatus::ReadError;
+	}
 #else
-	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), 64);
+	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), ds3dev->padData.size());
+	if (result < 0)
+	{
+		ds3_log.error("get_data: hid_read failed! result=%d, error=%s", result, hid_error(ds3dev->hidDevice));
+		return DataStatus::ReadError;
+	}
 #endif
 
 	if (result > 0)
@@ -354,25 +366,17 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 			}
 			else
 			{
-				ds3dev->battery_level = battery_capacity[std::min<u8>(battery_status, 5)];
+				ds3dev->battery_level = battery_capacity.at(std::min<usz>(battery_status, battery_capacity.size() - 1));
 				ds3dev->cable_state   = 0;
 			}
 
 			return DataStatus::NewData;
 		}
-		else
-		{
-			ds3_log.warning("Unknown packet received:0x%02x", ds3dev->padData[0]);
-			return DataStatus::NoNewData;
-		}
-	}
-	else
-	{
-		if (result == 0)
-			return DataStatus::NoNewData;
+
+		ds3_log.warning("get_data: Unknown packet received: 0x%02x", ds3dev->padData[0]);
 	}
 
-	return DataStatus::ReadError;
+	return DataStatus::NoNewData;
 }
 
 std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)

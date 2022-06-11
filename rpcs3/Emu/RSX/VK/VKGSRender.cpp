@@ -548,8 +548,8 @@ VKGSRender::VKGSRender() : GSRender()
 	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
 	backend_config.supports_hw_renormalization = (vk::get_driver_vendor() == vk::driver_vendor::NVIDIA);
 
-	// Relaxed query synchronization
-	backend_config.supports_hw_conditional_render = !!g_cfg.video.relaxed_zcull_sync;
+	// Conditional rendering support
+	backend_config.supports_hw_conditional_render = true;
 
 	// Passthrough DMA
 	backend_config.supports_passthrough_dma = m_device->get_external_memory_host_support();
@@ -789,7 +789,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 	{
-		return false;
+		return zcull_ctrl->on_access_violation(address);
 	}
 
 	if (result.num_flushable > 0)
@@ -804,6 +804,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			g_fxo->get<rsx::dma_manager>().set_mem_fault_flag();
 			m_queue_status |= flush_queue_state::deadlock;
+			m_eng_interrupt_mask |= rsx::backend_interrupt;
 
 			// Wait for deadlock to clear
 			while (m_queue_status & flush_queue_state::deadlock)
@@ -824,6 +825,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			std::lock_guard lock(m_flush_queue_mutex);
 
 			m_flush_requests.post(false);
+			m_eng_interrupt_mask |= rsx::backend_interrupt;
 			has_queue_ref = true;
 		}
 		else
@@ -1572,23 +1574,15 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 	return true;
 }
 
-void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
+void VKGSRender::sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_t payload)
 {
-	ensure(args);
-	rsx::thread::sync_hint(hint, args);
+	rsx::thread::sync_hint(hint, payload);
 
-	// Occlusion queries not enabled, do nothing
 	if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
+	{
+		// Occlusion queries not enabled, do nothing
 		return;
-
-	// Check if the required report is synced to this CB
-	auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
-	auto& data = m_occlusion_map[occlusion_info->driver_handle];
-
-	// NOTE: Currently, a special condition exists where the indices can be empty even with active draw count.
-	// This is caused by async compiler and should be removed when ubershaders are added in
-	if (!data.is_current(m_current_command_buffer) || data.indices.empty())
-		return;
+	}
 
 	// Occlusion test result evaluation is coming up, avoid a hard sync
 	switch (hint)
@@ -1597,15 +1591,44 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 	{
 		// If a flush request is already enqueued, do nothing
 		if (m_flush_requests.pending())
+		{
 			return;
+		}
 
-		// Schedule a sync on the next loop iteration
-		m_flush_requests.post(false);
-		m_flush_requests.remove_one();
+		// If the result is not going to be read by CELL, do nothing
+		const auto ref_addr = static_cast<u32>(payload.address);
+		if (!zcull_ctrl->is_query_result_urgent(ref_addr))
+		{
+			// No effect on CELL behaviour, it will be faster to handle this in RSX code
+			return;
+		}
+
+		// OK, cell will be accessing the results, probably.
+		// Try to avoid flush spam, it is more costly to flush the CB than it is to just upload the vertex data
+		// This is supposed to be an optimization afterall.
+		const auto now = rsx::uclock();
+		if ((now - m_last_cond_render_eval_hint) > 50)
+		{
+			// Schedule a sync on the next loop iteration
+			m_flush_requests.post(false);
+			m_flush_requests.remove_one();
+		}
+
+		m_last_cond_render_eval_hint = now;
 		break;
 	}
 	case rsx::FIFO_hint::hint_zcull_sync:
 	{
+		// Check if the required report is synced to this CB
+		auto& data = m_occlusion_map[payload.query->driver_handle];
+
+		// NOTE: Currently, a special condition exists where the indices can be empty even with active draw count.
+		// This is caused by async compiler and should be removed when ubershaders are added in
+		if (!data.is_current(m_current_command_buffer) || data.indices.empty())
+		{
+			return;
+		}
+
 		// Unavoidable hard sync coming up, flush immediately
 		// This heavyweight hint should be used with caution
 		std::lock_guard lock(m_flush_queue_mutex);
@@ -2705,6 +2728,18 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 
 	VkPipelineStageFlags dst_stage;
 	VkAccessFlags dst_access;
+	u32 dst_offset = 0;
+	u32 num_hw_queries = 0;
+	usz first = 0;
+	usz last = (!partial_eval) ? sources.size() : 1;
+
+	// Count number of queries available. This is an "opening" evaluation, if there is only one source, read it as-is.
+	// The idea is to avoid scheduling a compute task unless we have to.
+	for (usz i = first; i < last; ++i)
+	{
+		auto& query_info = m_occlusion_map[sources[i]->driver_handle];
+		num_hw_queries += ::size32(query_info.indices);
+	}
 
 	if (m_device->get_conditional_render_support())
 	{
@@ -2717,56 +2752,51 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		dst_access = VK_ACCESS_SHADER_READ_BIT;
 	}
 
-	if (sources.size() == 1)
+	if (num_hw_queries == 1 && !partial_eval) [[ likely ]]
 	{
-		const auto query = sources.front();
-		const auto& query_info = m_occlusion_map[query->driver_handle];
-
-		if (query_info.indices.size() == 1)
+		// Accept the first available query handle as the source of truth. No aggregation is required.
+		for (usz i = first; i < last; ++i)
 		{
-			const auto& index = query_info.indices.front();
-			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
+			auto& query_info = m_occlusion_map[sources[i]->driver_handle];
+			if (!query_info.indices.empty())
+			{
+				const auto& index = query_info.indices.front();
+				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
 
-			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
-				VK_ACCESS_TRANSFER_WRITE_BIT, dst_access);
+				vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
+					VK_ACCESS_TRANSFER_WRITE_BIT, dst_access);
 
-			rsx::thread::begin_conditional_rendering(sources);
-			return;
+				rsx::thread::begin_conditional_rendering(sources);
+				return;
+			}
 		}
-	}
 
-	auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, OCCLUSION_MAX_POOL_SIZE * 4);
-	u32 dst_offset = 0;
-	usz first = 0;
-	usz last;
-
-	if (!partial_eval) [[likely]]
-	{
-		last = sources.size();
+		// This is unreachable unless something went horribly wrong
+		fmt::throw_exception("Unreachable");
 	}
-	else
+	else if (num_hw_queries > 0)
 	{
-		last = 1;
-	}
-
-	for (usz i = first; i < last; ++i)
-	{
-		auto& query_info = m_occlusion_map[sources[i]->driver_handle];
-		for (const auto& index : query_info.indices)
+		// We'll need to do some result aggregation using a compute shader.
+		auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4);
+		for (usz i = first; i < last; ++i)
 		{
-			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
-			dst_offset += 4;
+			auto& query_info = m_occlusion_map[sources[i]->driver_handle];
+			for (const auto& index : query_info.indices)
+			{
+				m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
+				dst_offset += 4;
+			}
 		}
-	}
 
-	if (dst_offset)
-	{
-		// Fast path should have been caught above
-		ensure(dst_offset > 4);
+		// Sanity check
+		ensure(dst_offset <= scratch->size());
 
 		if (!partial_eval)
 		{
+			// Fast path should have been caught above
+			ensure(dst_offset > 4);
+
 			// Clear result to zero
 			vkCmdFillBuffer(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4, 0);
 

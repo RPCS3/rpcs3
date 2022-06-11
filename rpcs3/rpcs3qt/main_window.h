@@ -42,7 +42,7 @@ class main_window : public QMainWindow
 {
 	Q_OBJECT
 
-	Ui::main_window *ui;
+	std::unique_ptr<Ui::main_window> ui;
 
 	bool m_sys_menu_opened = false;
 	bool m_is_list_mode = true;
@@ -109,6 +109,7 @@ private Q_SLOTS:
 	void OnPlayOrPause();
 	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	void BootElf();
+	void BootTest();
 	void BootGame();
 	void BootVSH();
 	void BootRsxCapture(std::string path = "");

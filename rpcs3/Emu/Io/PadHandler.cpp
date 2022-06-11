@@ -327,8 +327,11 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 			fail_callback(pad_id);
 		return;
 	}
-	else if (status == connection::no_data)
+
+	if (status == connection::no_data)
+	{
 		return;
+	}
 
 	// Get the current button values
 	auto data = get_button_values(device);
@@ -337,10 +340,9 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
 	// Use a pair to get all the legally pressed buttons and use the one with highest value (prioritize first)
 	std::pair<u16, std::string> pressed_button = { 0, "" };
-	for (const auto& button : button_list)
+	for (const auto& [keycode, name] : button_list)
 	{
-		const u32 keycode = button.first;
-		const u16 value = data[keycode];
+		const u16& value = data[keycode];
 
 		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
 			continue;
@@ -354,10 +356,10 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 			if (get_blacklist)
 			{
 				blacklist.emplace_back(keycode);
-				input_log.error("%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, button.second, value);
+				input_log.error("%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, name, value);
 			}
 			else if (value > pressed_button.first)
-				pressed_button = { value, button.second };
+				pressed_button = { value, name };
 		}
 	}
 
@@ -638,8 +640,8 @@ void PadHandlerBase::ThreadProc()
 {
 	for (usz i = 0; i < bindings.size(); ++i)
 	{
-		auto device = bindings[i].first;
-		auto pad    = bindings[i].second;
+		auto& device = bindings[i].first;
+		auto& pad    = bindings[i].second;
 
 		if (!device || !pad)
 			continue;

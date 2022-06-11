@@ -22,6 +22,8 @@
 #include "Input/product_info.h"
 #include "Input/keyboard_pad_handler.h"
 
+#include <thread>
+
 LOG_CHANNEL(cfg_log, "CFG");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -206,9 +208,15 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 pad_settings_dialog::~pad_settings_dialog()
 {
-	m_gui_settings->SetValue(gui::pads_geometry, saveGeometry());
+	if (m_input_thread)
+	{
+		m_input_thread_state = input_thread_state::pausing;
+		auto& thread = *m_input_thread;
+		thread = thread_state::aborting;
+		thread();
+	}
 
-	delete ui;
+	m_gui_settings->SetValue(gui::pads_geometry, saveGeometry());
 
 	if (!Emu.IsStopped())
 	{
@@ -442,17 +450,27 @@ void pad_settings_dialog::InitButtons()
 		}
 	};
 
-	// Use timer to get button input
+	// Use timer to display button input
 	connect(&m_timer_input, &QTimer::timeout, this, [this, callback, fail_callback]()
 	{
-		const std::vector<std::string> buttons =
+		input_callback_data data;
 		{
-			m_cfg_entries[button_ids::id_pad_l2].key, m_cfg_entries[button_ids::id_pad_r2].key, m_cfg_entries[button_ids::id_pad_lstick_left].key,
-			m_cfg_entries[button_ids::id_pad_lstick_right].key, m_cfg_entries[button_ids::id_pad_lstick_down].key, m_cfg_entries[button_ids::id_pad_lstick_up].key,
-			m_cfg_entries[button_ids::id_pad_rstick_left].key, m_cfg_entries[button_ids::id_pad_rstick_right].key, m_cfg_entries[button_ids::id_pad_rstick_down].key,
-			m_cfg_entries[button_ids::id_pad_rstick_up].key
-		};
-		m_handler->get_next_button_press(m_device_name, callback, fail_callback, false, buttons);
+			std::lock_guard lock(m_input_mutex);
+			data = m_input_callback_data;
+			m_input_callback_data.has_new_data = false;
+		}
+
+		if (data.has_new_data)
+		{
+			if (data.success)
+			{
+				callback(data.val, std::move(data.name), std::move(data.pad_name), data.battery_level, std::move(data.preview_values));
+			}
+			else
+			{
+				fail_callback(data.pad_name);
+			}
+		}
 	});
 
 	// Use timer to refresh pad connection status
@@ -465,10 +483,63 @@ void pad_settings_dialog::InitButtons()
 				cfg_log.fatal("Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
 				continue;
 			}
+
 			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
+
+			std::lock_guard lock(m_handler_mutex);
+
 			m_handler->get_next_button_press(info.name,
 				[this](u16, std::string, std::string pad_name, u32, pad_preview_values) { SwitchPadInfo(pad_name, true); },
 				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+		}
+	});
+
+	// Use thread to get button input
+	m_input_thread = std::make_unique<named_thread<std::function<void()>>>("Pad Settings Thread", [this]()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			thread_ctrl::wait_for(1000);
+
+			if (m_input_thread_state != input_thread_state::active)
+			{
+				if (m_input_thread_state == input_thread_state::pausing)
+				{
+					m_input_thread_state = input_thread_state::paused;
+				}
+
+				continue;
+			}
+
+			std::lock_guard lock(m_handler_mutex);
+
+			const std::vector<std::string> buttons =
+			{
+				m_cfg_entries[button_ids::id_pad_l2].key, m_cfg_entries[button_ids::id_pad_r2].key, m_cfg_entries[button_ids::id_pad_lstick_left].key,
+				m_cfg_entries[button_ids::id_pad_lstick_right].key, m_cfg_entries[button_ids::id_pad_lstick_down].key, m_cfg_entries[button_ids::id_pad_lstick_up].key,
+				m_cfg_entries[button_ids::id_pad_rstick_left].key, m_cfg_entries[button_ids::id_pad_rstick_right].key, m_cfg_entries[button_ids::id_pad_rstick_down].key,
+				m_cfg_entries[button_ids::id_pad_rstick_up].key
+			};
+			m_handler->get_next_button_press(m_device_name,
+				[this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
+				{
+					std::lock_guard lock(m_input_mutex);
+					m_input_callback_data.val = val;
+					m_input_callback_data.name = std::move(name);
+					m_input_callback_data.pad_name = std::move(pad_name);
+					m_input_callback_data.battery_level = battery_level;
+					m_input_callback_data.preview_values = std::move(preview_values);
+					m_input_callback_data.has_new_data = true;
+					m_input_callback_data.success = true;
+				},
+				[this](std::string pad_name)
+				{
+					std::lock_guard lock(m_input_mutex);
+					m_input_callback_data.pad_name = std::move(pad_name);
+					m_input_callback_data.has_new_data = true;
+					m_input_callback_data.success = false;
+				},
+				false, buttons);
 		}
 	});
 }
@@ -477,6 +548,8 @@ void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor, bool led_
 {
 	ensure(m_handler);
 	const auto& cfg = GetPlayerConfig();
+
+	std::lock_guard lock(m_handler_mutex);
 	m_handler->SetPadData(m_device_name, GetPlayerIndex(), large_motor, small_motor, cfg.colorR, cfg.colorG, cfg.colorB, led_battery_indicator, cfg.led_battery_indicator_brightness);
 }
 
@@ -1084,8 +1157,11 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		UpdateLabels(true);
 		return;
 	case button_ids::id_blacklist:
+	{
+		std::lock_guard lock(m_handler_mutex);
 		m_handler->get_next_button_press(m_device_name, nullptr, nullptr, true);
 		return;
+	}
 	default:
 		break;
 	}
@@ -1133,6 +1209,9 @@ void pad_settings_dialog::OnTabChanged(int index)
 
 void pad_settings_dialog::ChangeHandler()
 {
+	// Pause input thread. This means we don't have to lock the handler mutex here.
+	pause_input_thread();
+
 	bool force_enable = false; // enable configs even with disconnected devices
 	const u32 player = GetPlayerIndex();
 	const bool is_ldd_pad = GetIsLddPad(player);
@@ -1353,6 +1432,7 @@ void pad_settings_dialog::ChangeHandler()
 	// Re-enable input timer
 	if (ui->chooseDevice->isEnabled() && ui->chooseDevice->currentIndex() >= 0)
 	{
+		start_input_thread();
 		m_timer_input.start(1);
 		m_timer_pad_refresh.start(1000);
 	}
@@ -1770,4 +1850,22 @@ void pad_settings_dialog::SubscribeTooltips()
 	SubscribeTooltip(ui->gb_mouse_accel, tooltips.gamepad_settings.mouse_acceleration);
 	SubscribeTooltip(ui->gb_mouse_dz, tooltips.gamepad_settings.mouse_deadzones);
 	SubscribeTooltip(ui->gb_mouse_movement, tooltips.gamepad_settings.mouse_movement);
+}
+
+void pad_settings_dialog::start_input_thread()
+{
+	m_input_thread_state = input_thread_state::active;
+}
+
+void pad_settings_dialog::pause_input_thread()
+{
+	if (m_input_thread)
+	{
+		m_input_thread_state = input_thread_state::pausing;
+
+		while (m_input_thread_state != input_thread_state::paused)
+		{
+			std::this_thread::sleep_for(1ms);
+		}
+	}
 }

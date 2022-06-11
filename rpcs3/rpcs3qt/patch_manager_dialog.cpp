@@ -19,6 +19,7 @@
 #include "qt_utils.h"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
+#include "Crypto/utils.h"
 
 LOG_CHANNEL(patch_log, "PAT");
 
@@ -127,8 +128,6 @@ patch_manager_dialog::~patch_manager_dialog()
 	// Save gui settings
 	m_gui_settings->SetValue(gui::pm_geometry, saveGeometry());
 	m_gui_settings->SetValue(gui::pm_splitter_state, ui->splitter->saveState());
-
-	delete ui;
 }
 
 int patch_manager_dialog::exec()
@@ -906,7 +905,7 @@ void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 	{
 		if (const fs::file patch_file{path})
 		{
-			const std::string hash = downloader::get_hash(patch_file.to_string().c_str(), patch_file.size(), true);
+			const std::string hash = sha256_get_hash(patch_file.to_string().c_str(), patch_file.size(), true);
 			url += "&sha256=" + hash;
 		}
 		else
@@ -1008,7 +1007,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 
 	const std::string content = patch.toString().toStdString();
 
-	if (hash_obj.toString().toStdString() != downloader::get_hash(content.c_str(), content.size(), true))
+	if (hash_obj.toString().toStdString() != sha256_get_hash(content.c_str(), content.size(), true))
 	{
 		patch_log.error("JSON content does not match the provided checksum");
 		return false;

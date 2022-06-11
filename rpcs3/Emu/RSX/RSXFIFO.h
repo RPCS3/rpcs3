@@ -3,6 +3,8 @@
 #include "util/types.hpp"
 #include "Emu/RSX/gcm_enums.h"
 
+#include <span>
+
 struct RsxDmaControl;
 
 namespace rsx
@@ -124,18 +126,24 @@ namespace rsx
 			u32 m_args_ptr = 0;
 			u32 m_cmd = ~0u;
 
+			u32 m_cache_addr = 0;
+			u32 m_cache_size = 0;
+			alignas(64) std::byte m_cache[8][128];
 		public:
 			FIFO_control(rsx::thread* pctrl);
 			~FIFO_control() = default;
 
+			std::pair<bool, u32> fetch_u32(u32 addr);
+			void invalidate_cache() { m_cache_size = 0; }
+
 			u32 get_pos() const { return m_internal_get; }
 			u32 last_cmd() const { return m_cmd; }
 			void sync_get() const;
-			u32 get_current_arg_ptr() const { return m_args_ptr; }
+			std::span<const u32> get_current_arg_ptr() const;
 			u32 get_remaining_args_count() const { return m_remaining_commands; }
 			void inc_get(bool wait);
 
-			void set_get(u32 get, bool check_spin = false);
+			void set_get(u32 get, u32 spin_cmd = 0);
 			void abort();
 
 			template <bool = true>

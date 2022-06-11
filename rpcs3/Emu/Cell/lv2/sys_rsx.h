@@ -108,7 +108,7 @@ struct alignas(16) RsxReport
 
 struct RsxReports
 {
-	RsxSemaphore semaphore[0x400];
+	RsxSemaphore semaphore[1024];
 	RsxNotify notify[64];
 	RsxReport report[2048];
 };

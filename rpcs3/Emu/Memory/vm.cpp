@@ -23,11 +23,11 @@ void ppu_remove_hle_instructions(u32 addr, u32 size);
 
 namespace vm
 {
-	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000)
+	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000, bool is_memory_mapping = false)
 	{
 		for (u64 addr = reinterpret_cast<u64>(_addr) + 0x100000000; addr < 0x8000'0000'0000; addr += 0x100000000)
 		{
-			if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))
+			if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr), is_memory_mapping))
 			{
 				return static_cast<u8*>(ptr);
 			}
@@ -37,7 +37,7 @@ namespace vm
 	}
 
 	// Emulated virtual memory
-	u8* const g_base_addr = memory_reserve_4GiB(reinterpret_cast<void*>(0x2'0000'0000), 0x2'0000'0000);
+	u8* const g_base_addr = memory_reserve_4GiB(reinterpret_cast<void*>(0x2'0000'0000), 0x2'0000'0000, true);
 
 	// Unprotected virtual memory mirror
 	u8* const g_sudo_addr = g_base_addr + 0x1'0000'0000;
@@ -609,7 +609,7 @@ namespace vm
 		thread_ctrl::emergency_exit("vm::reservation_escape");
 	}
 
-	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm, std::pair<const u32, std::pair<u32, std::shared_ptr<utils::shm>>>* (*search_shm)(vm::block_t* block, utils::shm* shm))
+	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm, u64 bflags, std::pair<const u32, std::pair<u32, std::shared_ptr<utils::shm>>>* (*search_shm)(vm::block_t* block, utils::shm* shm))
 	{
 		perf_meter<"PAGE_MAP"_u64> perf0;
 
@@ -625,6 +625,9 @@ namespace vm
 				fmt::throw_exception("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
 		}
+
+		// If native page size exceeds 4096, don't map native pages (expected to be always mapped in this case)
+		const bool is_noop = bflags & page_size_4k && utils::c_page_size > 4096;
 
 		// Lock range being mapped
 		_lock_main_range_lock(range_allocation, addr, size);
@@ -694,16 +697,34 @@ namespace vm
 		if (~flags & page_readable)
 			prot = utils::protection::no;
 
-		if (!shm)
+		std::string map_error;
+
+		auto map_critical = [&](u8* ptr, utils::protection prot)
+		{
+			auto [res, error] = shm->map_critical(ptr, prot);
+
+			if (res != ptr)
+			{
+				map_error = std::move(error);
+				return false;
+			}
+
+			return true;
+		};
+
+		if (is_noop)
+		{
+		}
+		else if (!shm)
 		{
 			utils::memory_protect(g_base_addr + addr, size, prot);
 		}
-		else if (shm->map_critical(g_base_addr + addr, prot) != g_base_addr + addr || shm->map_critical(g_sudo_addr + addr) != g_sudo_addr + addr || !shm->map_self())
+		else if (!map_critical(g_base_addr + addr, prot) || !map_critical(g_sudo_addr + addr, utils::protection::rw) || (map_error = "map_self()", !shm->map_self()))
 		{
-			fmt::throw_exception("Memory mapping failed - blame Windows (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
+			fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
 		}
 
-		if (flags & page_executable)
+		if (flags & page_executable && !is_noop)
 		{
 			// TODO (dead code)
 			utils::memory_commit(g_exec_addr + addr * 2, size * 2);
@@ -800,7 +821,7 @@ namespace vm
 		return true;
 	}
 
-	static u32 _page_unmap(u32 addr, u32 max_size, utils::shm* shm)
+	static u32 _page_unmap(u32 addr, u32 max_size, u64 bflags, utils::shm* shm)
 	{
 		perf_meter<"PAGE_UNm"_u64> perf0;
 
@@ -808,6 +829,9 @@ namespace vm
 		{
 			fmt::throw_exception("Invalid arguments (addr=0x%x, max_size=0x%x)", addr, max_size);
 		}
+
+		// If native page size exceeds 4096, don't unmap native pages (always mapped)
+		const bool is_noop = bflags & page_size_4k && utils::c_page_size > 4096;
 
 		// Determine deallocation size
 		u32 size = 0;
@@ -868,7 +892,11 @@ namespace vm
 		ppu_remove_hle_instructions(addr, size);
 
 		// Actually unmap memory
-		if (!shm)
+		if (is_noop)
+		{
+			std::memset(g_sudo_addr + addr, 0, size);
+		}
+		else if (!shm)
 		{
 			utils::memory_protect(g_base_addr + addr, size, utils::protection::no);
 			std::memset(g_sudo_addr + addr, 0, size);
@@ -881,7 +909,7 @@ namespace vm
 #endif
 		}
 
-		if (is_exec)
+		if (is_exec && !is_noop)
 		{
 			utils::memory_decommit(g_exec_addr + addr * 2, size * 2);
 
@@ -1045,7 +1073,7 @@ namespace vm
 		}
 
 		// Map "real" memory pages; provide a function to search for mirrors with private member access
-		_page_map(page_addr, flags, page_size, shm.get(), [](vm::block_t* _this, utils::shm* shm)
+		_page_map(page_addr, flags, page_size, shm.get(), this->flags, [](vm::block_t* _this, utils::shm* shm)
 		{
 			auto& map = (_this->m.*block_map)();
 
@@ -1125,10 +1153,28 @@ namespace vm
 	{
 		if (this->flags & preallocated)
 		{
+			std::string map_error;
+
+			auto map_critical = [&](u8* ptr, utils::protection prot)
+			{
+				auto [res, error] = m_common->map_critical(ptr, prot);
+	
+				if (res != ptr)
+				{
+					map_error = std::move(error);
+					return false;
+				}
+	
+				return true;
+			};
+
 			// Special path for whole-allocated areas allowing 4k granularity
 			m_common = std::make_shared<utils::shm>(size);
-			m_common->map_critical(vm::base(addr), utils::protection::no);
-			m_common->map_critical(vm::get_super_ptr(addr));
+
+			if (!map_critical(vm::_ptr<u8>(addr), this->flags & page_size_4k && utils::c_page_size > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
+			{
+				fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
+			}
 		}
 	}
 
@@ -1143,7 +1189,7 @@ namespace vm
 			{
 				const auto next = std::next(it);
 				const auto size = it->second.first;
-				_page_unmap(it->first, size, it->second.second.get());
+				_page_unmap(it->first, size, this->flags, it->second.second.get());
 				it = next;
 			}
 
@@ -1328,7 +1374,7 @@ namespace vm
 			}
 
 			// Unmap "real" memory pages
-			ensure(size == _page_unmap(addr, size, found->second.second.get()));
+			ensure(size == _page_unmap(addr, size, this->flags, found->second.second.get()));
 
 			// Clear stack guards
 			if (flags & stack_guarded)
@@ -1724,7 +1770,6 @@ namespace vm
 			g_locations.clear();
 		}
 
-		utils::memory_decommit(g_base_addr, 0x200000000);
 		utils::memory_decommit(g_exec_addr, 0x200000000);
 		utils::memory_decommit(g_stat_addr, 0x100000000);
 

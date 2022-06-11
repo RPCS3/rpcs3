@@ -4,6 +4,7 @@
 #include "image.h"
 #include "image_helpers.h"
 
+#include "../VKResourceManager.h"
 #include <memory>
 
 namespace vk
@@ -391,13 +392,12 @@ namespace vk
 			}
 		}
 
-		auto found = views.equal_range(remap_encoding);
-		for (auto It = found.first; It != found.second; ++It)
+		const u64 storage_key = remap_encoding | (static_cast<u64>(mask) << 32);
+		auto found = views.find(storage_key);
+		if (found != views.end())
 		{
-			if (It->second->info.subresourceRange.aspectMask & mask)
-			{
-				return It->second.get();
-			}
+			ensure(found->second->info.subresourceRange.aspectMask & mask);
+			return found->second.get();
 		}
 
 		VkComponentMapping real_mapping;
@@ -423,7 +423,7 @@ namespace vk
 
 		auto view = std::make_unique<vk::image_view>(*g_render_device, this, VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
 		auto result = view.get();
-		views.emplace(remap_encoding, std::move(view));
+		views.emplace(storage_key, std::move(view));
 		return result;
 	}
 
@@ -435,6 +435,13 @@ namespace vk
 			new_layout.a != native_component_map.a)
 		{
 			native_component_map = new_layout;
+
+			// Safely discard existing views
+			auto gc = vk::get_resource_manager();
+			for (auto& p : views)
+			{
+				gc->dispose(p.second);
+			}
 			views.clear();
 		}
 	}

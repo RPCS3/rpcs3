@@ -1031,13 +1031,26 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_audio_downmix">
+             <widget class="QGroupBox" name="gb_audio_format">
               <property name="title">
-               <string>Audio Channels</string>
+               <string>Audio Format</string>
               </property>
-              <layout class="QVBoxLayout" name="gb_audio_channels_layout">
+              <layout class="QVBoxLayout" name="gb_audio_format_layout">
                <item>
-                <widget class="QComboBox" name="combo_audio_downmix"/>
+                <widget class="QComboBox" name="combo_audio_format"/>
+               </item>
+               <item>
+                <widget class="QListWidget" name="list_audio_formats">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="selectionMode">
+                  <enum>QAbstractItemView::ExtendedSelection</enum>
+                 </property>
+                </widget>
                </item>
               </layout>
              </widget>
@@ -1082,18 +1095,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_music_handler">
-              <property name="title">
-               <string>Music Handler</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_music_handler_layout">
-               <item>
-                <widget class="QComboBox" name="musicHandlerBox"/>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <spacer name="verticalSpacerAudioLeft">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -1133,6 +1134,18 @@
               <layout class="QVBoxLayout" name="gb_audio_avport_layout">
                <item>
                 <widget class="QComboBox" name="audioAvportBox"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_music_handler">
+              <property name="title">
+               <string>Music Handler</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_music_handler_layout">
+               <item>
+                <widget class="QComboBox" name="musicHandlerBox"/>
                </item>
               </layout>
              </widget>
@@ -2272,6 +2285,49 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_clockScale">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Clocks Scale</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_clockScale_layout">
+               <item>
+                <widget class="QSlider" name="clockScale">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="clockScaleLayout" stretch="1,0">
+                 <item>
+                  <widget class="QLabel" name="clockScaleText">
+                   <property name="text">
+                    <string>100%</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="clockScaleReset">
+                   <property name="text">
+                    <string>Reset</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <spacer name="advancedTabSpacerLeft">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -2308,9 +2364,6 @@
                  <property name="selectionMode">
                   <enum>QAbstractItemView::ExtendedSelection</enum>
                  </property>
-                 <property name="viewMode">
-                  <enum>QListView::ListMode</enum>
-                 </property>
                 </widget>
                </item>
                <item>
@@ -2323,9 +2376,6 @@
                  </property>
                  <property name="selectionMode">
                   <enum>QAbstractItemView::ExtendedSelection</enum>
-                 </property>
-                 <property name="viewMode">
-                  <enum>QListView::ListMode</enum>
                  </property>
                 </widget>
                </item>
@@ -2453,6 +2503,24 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_rsx_fifo_accuracy">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>RSX FIFO Accuracy</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_rsx_fifo_accuracy_layout">
+               <item>
+                <widget class="QComboBox" name="FIFOAccuracy"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <widget class="QGroupBox" name="gb_wakeupDelay">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -2535,48 +2603,12 @@
                  </item>
                 </layout>
                </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="gb_clockScale">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="title">
-               <string>Clocks Scale</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_clockScale_layout">
                <item>
-                <widget class="QSlider" name="clockScale">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                <widget class="QCheckBox" name="vblankNTSCFixup">
+                 <property name="text">
+                  <string>VBlank NTSC Fixup</string>
                  </property>
                 </widget>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="clockScaleLayout" stretch="1,0">
-                 <item>
-                  <widget class="QLabel" name="clockScaleText">
-                   <property name="text">
-                    <string>100%</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="clockScaleReset">
-                   <property name="text">
-                    <string>Reset</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
                </item>
               </layout>
              </widget>

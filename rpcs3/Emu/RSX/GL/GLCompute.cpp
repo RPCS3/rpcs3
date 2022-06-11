@@ -1,4 +1,5 @@
 #include "GLCompute.h"
+#include "GLTexture.h"
 #include "Utilities/StrUtil.h"
 
 namespace gl
@@ -21,11 +22,20 @@ namespace gl
 			optimal_group_size = 128;
 		}
 
+		optimal_kernel_size = 256 / optimal_group_size;
+
 		glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, reinterpret_cast<GLint*>(&max_invocations_x));
+
+		initialized = true;
 	}
 
 	void compute_task::create()
 	{
+		if (!initialized)
+		{
+			initialize();
+		}
+
 		if (!compiled)
 		{
 			m_shader.create(::glsl::program_domain::glsl_compute_program, m_src);
@@ -50,19 +60,15 @@ namespace gl
 		}
 	}
 
-	void compute_task::run(u32 invocations_x, u32 invocations_y)
+	void compute_task::run(gl::command_context& cmd, u32 invocations_x, u32 invocations_y)
 	{
-		GLint old_program;
-		glGetIntegerv(GL_CURRENT_PROGRAM, &old_program);
-
 		bind_resources();
-		m_program.use();
-		glDispatchCompute(invocations_x, invocations_y, 1);
 
-		glUseProgram(old_program);
+		cmd->use_program(m_program.id());
+		glDispatchCompute(invocations_x, invocations_y, 1);
 	}
 
-	void compute_task::run(u32 num_invocations)
+	void compute_task::run(gl::command_context& cmd, u32 num_invocations)
 	{
 		u32 invocations_x, invocations_y;
 		if (num_invocations <= max_invocations_x) [[likely]]
@@ -80,7 +86,7 @@ namespace gl
 			if (num_invocations % invocations_x) invocations_y++;
 		}
 
-		run(invocations_x, invocations_y);
+		run(cmd, invocations_x, invocations_y);
 	}
 
 	cs_shuffle_base::cs_shuffle_base()
@@ -104,46 +110,19 @@ namespace gl
 		kernel_size = _kernel_size? _kernel_size : optimal_kernel_size;
 
 		m_src =
-			"#version 430\n"
-			"layout(local_size_x=%ws, local_size_y=1, local_size_z=1) in;\n"
-			"layout(binding=%loc, std430) buffer ssbo{ uint data[]; };\n"
-			"%ub"
-			"\n"
-			"#define KERNEL_SIZE %ks\n"
-			"\n"
-			"// Generic swap routines\n"
-			"#define bswap_u16(bits)     (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
-			"#define bswap_u32(bits)     (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n"
-			"#define bswap_u16_u32(bits) (bits & 0xFFFF) << 16 | (bits & 0xFFFF0000) >> 16\n"
-			"\n"
-			"// Depth format conversions\n"
-			"#define d24f_to_f32(bits) (bits << 7)\n"
-			"#define f32_to_d24f(bits) (bits >> 7)\n"
-			"\n"
-			"uint linear_invocation_id()\n"
-			"{\n"
-			"	uint size_in_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);\n"
-			"	return (gl_GlobalInvocationID.y * size_in_x) + gl_GlobalInvocationID.x;\n"
-			"}\n"
-			"\n"
-			"%md"
-			"void main()\n"
-			"{\n"
-			"	uint invocation_id = linear_invocation_id();\n"
-			"	uint index = invocation_id * KERNEL_SIZE;\n"
-			"	uint value;\n"
-			"	%vars"
-			"\n";
+		#include "../Program/GLSLSnippets/ShuffleBytes.glsl"
+		;
 
 		const std::pair<std::string_view, std::string> syntax_replace[] =
 		{
+			{ "%set, ", ""},
 			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 			{ "%ws", std::to_string(optimal_group_size) },
 			{ "%ks", std::to_string(kernel_size) },
 			{ "%vars", variables },
 			{ "%f", function_name },
 			{ "%ub", uniforms },
-			{ "%md", method_declarations }
+			{ "%md", method_declarations },
 		};
 
 		m_src = fmt::replace_all(m_src, syntax_replace);
@@ -188,7 +167,7 @@ namespace gl
 		m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_data_length);
 	}
 
-	void cs_shuffle_base::run(const gl::buffer* data, u32 data_length, u32 data_offset)
+	void cs_shuffle_base::run(gl::command_context& cmd, const gl::buffer* data, u32 data_length, u32 data_offset)
 	{
 		m_data = data;
 		m_data_offset = data_offset;
@@ -205,7 +184,7 @@ namespace gl
 				"Required=%d bytes, Available=%d bytes", num_bytes_to_process, data->size());
 		}
 
-		compute_task::run(num_invocations);
+		compute_task::run(cmd, num_invocations);
 	}
 
 	cs_shuffle_d32fx8_to_x8d24f::cs_shuffle_d32fx8_to_x8d24f()
@@ -232,7 +211,7 @@ namespace gl
 		m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_ssbo_length);
 	}
 
-	void cs_shuffle_d32fx8_to_x8d24f::run(const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
+	void cs_shuffle_d32fx8_to_x8d24f::run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
 	{
 		u32 data_offset;
 		if (src_offset > dst_offset)
@@ -248,7 +227,7 @@ namespace gl
 
 		m_program.uniforms["in_ptr"] = src_offset - data_offset;
 		m_program.uniforms["out_ptr"] = dst_offset - data_offset;
-		cs_shuffle_base::run(data, num_texels * 4, data_offset);
+		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
 	}
 
 	cs_shuffle_x8d24f_to_d32fx8::cs_shuffle_x8d24f_to_d32fx8()
@@ -276,7 +255,7 @@ namespace gl
 		m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_ssbo_length);
 	}
 
-	void cs_shuffle_x8d24f_to_d32fx8::run(const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
+	void cs_shuffle_x8d24f_to_d32fx8::run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
 	{
 		u32 data_offset;
 		if (src_offset > dst_offset)
@@ -292,6 +271,84 @@ namespace gl
 
 		m_program.uniforms["in_ptr"] = src_offset - data_offset;
 		m_program.uniforms["out_ptr"] = dst_offset - data_offset;
-		cs_shuffle_base::run(data, num_texels * 4, data_offset);
+		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
+	}
+
+	cs_d24x8_to_ssbo::cs_d24x8_to_ssbo()
+	{
+		initialize();
+
+		const auto raw_data =
+		#include "../Program/GLSLSnippets/CopyD24x8ToBuffer.glsl"
+		;
+
+		const std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%set, ", "" },
+			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+			{ "%ws", std::to_string(optimal_group_size) },
+			{ "%wks", std::to_string(optimal_kernel_size) }
+		};
+
+		m_src = fmt::replace_all(raw_data, repl_list);
+	}
+
+	void cs_d24x8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& /*layout*/, const gl::pixel_pack_settings& settings)
+	{
+		const auto row_pitch = settings.get_row_length() ? settings.get_row_length() : region.width;
+
+		m_program.uniforms["swap_bytes"] = settings.get_swap_bytes();
+		m_program.uniforms["output_pitch"] = row_pitch;
+		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
+		m_program.uniforms["region_size"] = color2i(region.width, region.height);
+
+		auto depth_view = src->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::depth);
+		auto stencil_view = src->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::stencil);
+
+		depth_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
+		stencil_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(1));
+		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(2), out_offset, row_pitch * 4 * region.height);
+
+		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size);
+		compute_task::run(cmd, num_invocations);
+	}
+
+	cs_rgba8_to_ssbo::cs_rgba8_to_ssbo()
+	{
+		initialize();
+
+		const auto raw_data =
+		#include "../Program/GLSLSnippets/CopyRGBA8ToBuffer.glsl"
+		;
+
+		const std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%set, ", "" },
+			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+			{ "%ws", std::to_string(optimal_group_size) },
+			{ "%wks", std::to_string(optimal_kernel_size) }
+		};
+
+		m_src = fmt::replace_all(raw_data, repl_list);
+	}
+
+	void cs_rgba8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings)
+	{
+		const auto row_pitch = settings.get_row_length() ? settings.get_row_length() : region.width;
+
+		m_program.uniforms["swap_bytes"] = settings.get_swap_bytes();
+		m_program.uniforms["output_pitch"] = row_pitch;
+		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
+		m_program.uniforms["region_size"] = color2i(region.width, region.height);
+		m_program.uniforms["is_bgra"] = (layout.format == static_cast<GLenum>(gl::texture::format::bgra));
+		m_program.uniforms["block_width"] = static_cast<u32>(layout.size);
+
+		auto data_view = src->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::color);
+
+		data_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
+		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), out_offset, row_pitch * 4 * region.height);
+
+		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size);
+		compute_task::run(cmd, num_invocations);
 	}
 }

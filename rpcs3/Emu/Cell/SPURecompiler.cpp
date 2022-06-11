@@ -5579,7 +5579,7 @@ public:
 
 	static u32 exec_read_dec(spu_thread* _spu)
 	{
-		const u32 res = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
+		const u32 res = _spu->read_dec().first;
 
 		if (res > 1500 && g_cfg.core.spu_loop_detection)
 		{
@@ -6024,7 +6024,7 @@ public:
 					break;
 				}
 
-				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); !g_use_rtm)
+				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); g_cfg.core.rsx_fifo_accuracy || !g_use_rtm)
 				{
 					// TODO: don't require TSX (current implementation is TSX-only)
 					if (cmdh == MFC_PUT_CMD || cmdh == MFC_SNDSIG_CMD)
@@ -6174,19 +6174,42 @@ public:
 					}
 					}
 
+					// Check if the LS address is constant and 256 bit aligned
+					u64 clsa = umax;
+
+					if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(lsa.value))
+					{
+						clsa = ci->getZExtValue();
+					}
+
+					u32 stride = 16;
+
+					if (m_use_avx && csize >= 32 && !(clsa % 32))
+					{
+						vtype = get_type<u8(*)[32]>();
+						stride = 32;
+					}
+
 					if (csize > 0 && csize <= 16)
 					{
 						// Generate single copy operation
 						m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(src, vtype), true), m_ir->CreateBitCast(dst, vtype), true);
 					}
-					else if (csize <= 256)
+					else if (csize <= stride * 16 && !(csize % 32))
 					{
 						// Generate fixed sequence of copy operations
-						for (u32 i = 0; i < csize; i += 16)
+						for (u32 i = 0; i < csize; i += stride)
 						{
 							const auto _src = m_ir->CreateGEP(src, m_ir->getInt32(i));
 							const auto _dst = m_ir->CreateGEP(dst, m_ir->getInt32(i));
-							m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(_src, vtype), true), m_ir->CreateBitCast(_dst, vtype), true);
+							if (csize - i < stride)
+							{
+								m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(_src, get_type<u8(*)[16]>()), true), m_ir->CreateBitCast(_dst, get_type<u8(*)[16]>()), true);
+							}
+							else
+							{
+								m_ir->CreateAlignedStore(m_ir->CreateAlignedLoad(m_ir->CreateBitCast(_src, vtype), llvm::MaybeAlign{16}), m_ir->CreateBitCast(_dst, vtype), llvm::MaybeAlign{16});
+							}
 						}
 					}
 					else if (csize)
@@ -6331,6 +6354,7 @@ public:
 			call("spu_get_events", &exec_get_events, m_thread, m_ir->getInt32(SPU_EVENT_TM));
 			m_ir->CreateStore(call("get_timebased_time", &get_timebased_time), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
 			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_dec_value));
+			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::is_dec_frozen));
 			return;
 		}
 		case SPU_Set_Bkmk_Tag:
@@ -7671,7 +7695,7 @@ public:
 			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
 				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-				if (false)
+				if (m_use_avx512_icl && (op.ra != op.rb))
 				{
 					if (perm_only)
 					{
@@ -7679,7 +7703,7 @@ public:
 						return;
 					}
 
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40), 0x7f);
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 					const auto ab = vperm2b256to128(as, bs, c);
 					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
@@ -7733,19 +7757,19 @@ public:
 			}
 		}
 
-		if (false)
+		if (m_use_avx512_icl && (op.ra != op.rb))
 		{
 			if (perm_only)
 			{
-				set_vr(op.rt4, vperm2b256to128(b, a, eval(~c)));
+				set_vr(op.rt4, vperm2b256to128(a, b, eval(c ^ 0xf)));
 				return;
 			}
 
-			const auto m = gf2p8affineqb(c, build<u8[16]>(0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40), 0x7f);
+			const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-			const auto cr = eval(~c);
-			const auto ab = vperm2b256to128(b, a, cr);
-			set_vr(op.rt4, select(noncast<s8[16]>(cr) >= 0, mm, ab));
+			const auto cr = eval(c ^ 0xf);
+			const auto ab = vperm2b256to128(a, b, cr);
+			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 			return;
 		}
 
@@ -8987,10 +9011,15 @@ public:
 		set_vr(op.rt, make_load_ls(addr));
 	}
 
+	llvm::Value* get_pc_as_u64(u32 addr)
+	{
+		return m_ir->CreateAdd(m_ir->CreateZExt(m_base_pc, get_type<u64>()), m_ir->getInt64(addr - m_base));
+	}
+
 	void STQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr;
-		addr.value = m_ir->CreateZExt(m_interp_magn ? m_interp_pc : get_pc(m_pos), get_type<u64>());
+		addr.value = m_interp_magn ? m_ir->CreateZExt(m_interp_pc, get_type<u64>()) : get_pc_as_u64(m_pos);
 		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & (m_interp_magn ? 0x3fff0 : ~0xf));
 		make_store_ls(addr, get_vr<u8[16]>(op.rt));
 	}
@@ -8998,7 +9027,7 @@ public:
 	void LQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr;
-		addr.value = m_ir->CreateZExt(m_interp_magn ? m_interp_pc : get_pc(m_pos), get_type<u64>());
+		addr.value = m_interp_magn ? m_ir->CreateZExt(m_interp_pc, get_type<u64>()) : get_pc_as_u64(m_pos);
 		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & (m_interp_magn ? 0x3fff0 : ~0xf));
 		set_vr(op.rt, make_load_ls(addr));
 	}

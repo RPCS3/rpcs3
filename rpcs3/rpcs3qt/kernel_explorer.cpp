@@ -29,6 +29,7 @@
 #include "Emu/Cell/lv2/sys_net/lv2_socket.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_interrupt.h"
+#include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/Cell/Modules/cellSpurs.h"
 
 #include "Emu/RSX/RSXThread.h"
@@ -242,6 +243,7 @@ void kernel_explorer::update()
 		{ SYS_FS_FD_OBJECT               , tr("File Descriptors")},
 		{ SYS_LWCOND_OBJECT              , tr("Light Weight Condition Variables")},
 		{ SYS_EVENT_FLAG_OBJECT          , tr("Event Flags")},
+		{ SYS_RSXAUDIO_OBJECT            , tr("RSXAudio Objects")},
 
 		{ memory_containers              , tr("Memory Containers")},
 		{ ppu_threads                    , tr("PPU Threads")},
@@ -530,6 +532,25 @@ void kernel_explorer::update()
 			auto& ef = static_cast<lv2_event_flag&>(obj);
 			add_leaf(node, qstr(fmt::format(u8"Event Flag 0x%08x: “%s”, %s, Type: 0x%x, Key: %#llx, Pattern: 0x%llx, Wq: %zu", id, lv2_obj::name64(ef.name), ef.protocol,
 				ef.type, ef.key, ef.pattern.load(), +ef.waiters)));
+			break;
+		}
+		case SYS_RSXAUDIO_OBJECT:
+		{
+			auto& rao = static_cast<lv2_rsxaudio&>(obj);
+			std::lock_guard lock(rao.mutex);
+			if (!rao.init)
+			{
+				break;
+			}
+
+			QTreeWidgetItem* rao_obj = add_leaf(node, qstr(fmt::format(u8"RSXAudio 0x%08x: Shmem: 0x%08x", id, u32{rao.shmem})));
+			for (u64 q_idx = 0; q_idx < rao.event_queue.size(); q_idx++)
+			{
+				if (const auto eq = rao.event_queue[q_idx].lock())
+				{
+					add_leaf(rao_obj, qstr(fmt::format(u8"Event Queue %u: ID: 0x%08x", q_idx, eq->id)));
+				}
+			}
 			break;
 		}
 		default:
