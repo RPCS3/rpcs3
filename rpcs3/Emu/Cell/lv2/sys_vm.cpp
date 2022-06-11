@@ -85,7 +85,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 		return CELL_OK;
 	}
 
-	ct->used -= psize;
+	ct->free(psize);
 	g_fxo->get<sys_vm_global_t>().total_vsize -= vsize;
 	return CELL_ENOMEM;
 }
@@ -119,7 +119,7 @@ error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 		ensure(vm::unmap(addr).second);
 
 		// Return memory
-		vmo.ct->used -= vmo.psize;
+		vmo.ct->free(vmo.psize);
 		g_fxo->get<sys_vm_global_t>().total_vsize -= vmo.size;
 	});
 
@@ -205,7 +205,7 @@ error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u32 size)
 			return CELL_EBUSY;
 		}
 
-		vmo.ct->used -= size;
+		vmo.ct->free(size);
 		return {};
 	});
 

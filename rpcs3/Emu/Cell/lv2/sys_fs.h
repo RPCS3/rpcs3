@@ -67,6 +67,12 @@ enum : u8
 	CELL_FS_TYPE_SYMLINK   = 3,
 };
 
+enum : u32
+{
+	CELL_FS_IO_BUFFER_PAGE_SIZE_64KB = 0x0002,
+	CELL_FS_IO_BUFFER_PAGE_SIZE_1MB  = 0x0004,
+};
+
 struct CellFsDirent
 {
 	u8 d_type;
@@ -202,6 +208,9 @@ struct lv2_file final : lv2_fs_object
 	const s32 flags;
 	std::string real_path;
 	const lv2_file_type type;
+
+	// IO Container
+	u32 ct_id{}, ct_used{};
 
 	// Stream lock
 	atomic_t<u32> lock{0};
@@ -435,7 +444,7 @@ struct lv2_file_c0000006 : lv2_file_op
 
 CHECK_SIZE(lv2_file_c0000006, 0x20);
 
-struct lv2_file_c000007 : lv2_file_op
+struct lv2_file_c0000007 : lv2_file_op
 {
 	be_t<u32> out_code;
 	vm::bcptr<char> name;
@@ -446,7 +455,24 @@ struct lv2_file_c000007 : lv2_file_op
 	be_t<u32> unk2_size; //0x21
 };
 
-CHECK_SIZE(lv2_file_c000007, 0x1c);
+CHECK_SIZE(lv2_file_c0000007, 0x1c);
+
+struct lv2_file_c0000008 : lv2_file_op
+{
+	u8 _x0[4];
+	be_t<u32> op; // 0xC0000008
+	u8 _x8[8];
+	be_t<u64> container_id;
+	be_t<u32> size;
+	be_t<u32> page_type;  // 0x4000 for cellFsSetDefaultContainer
+	                      // 0x4000 | page_type given by user, valid values seem to be:
+	                      // CELL_FS_IO_BUFFER_PAGE_SIZE_64KB 0x0002
+	                      // CELL_FS_IO_BUFFER_PAGE_SIZE_1MB  0x0004
+	be_t<u32> out_code;
+	u8 _x24[4];
+};
+
+CHECK_SIZE(lv2_file_c0000008, 0x28);
 
 struct lv2_file_c0000015 : lv2_file_op
 {
@@ -462,6 +488,19 @@ struct lv2_file_c0000015 : lv2_file_op
 };
 
 CHECK_SIZE(lv2_file_c0000015, 0x20);
+
+struct lv2_file_c000001a : lv2_file_op
+{
+	be_t<u32> disc_retry_type; // CELL_FS_DISC_READ_RETRY_NONE results in a 0 here
+	                           // CELL_FS_DISC_READ_RETRY_DEFAULT results in a 0x63 here
+	be_t<u32> _x4;             // 0
+	be_t<u32> _x8;             // 0x000186A0
+	be_t<u32> _xC;             // 0
+	be_t<u32> _x10;            // 0
+	be_t<u32> _x14;            // 0
+};
+
+CHECK_SIZE(lv2_file_c000001a, 0x18);
 
 struct lv2_file_c000001c : lv2_file_op
 {
@@ -506,6 +545,18 @@ struct CellFsMountInfo
 };
 
 CHECK_SIZE(CellFsMountInfo, 0x94);
+
+// Default IO container
+struct default_sys_fs_container
+{
+	default_sys_fs_container(const default_sys_fs_container&) = delete;
+	default_sys_fs_container& operator=(const default_sys_fs_container&) = delete;
+
+	shared_mutex mutex;
+	u32 id   = 0;
+	u32 cap  = 0;
+	u32 used = 0;
+};
 
 // Syscalls
 

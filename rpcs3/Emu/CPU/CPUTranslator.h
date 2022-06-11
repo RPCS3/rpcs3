@@ -3666,6 +3666,12 @@ public:
 	{
 		return llvm_calli<u16[8], T, U, llvm_const_int<u32>>{"llvm.x86.avx512.dbpsadbw.128", {std::forward<T>(a), std::forward<U>(b), llvm_const_int<u32>{c}}};
 	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
+	static auto vrangeps(T&& a, U&& b, u8 c, u8 d)
+	{
+		return llvm_calli<f32[4], T, U, llvm_const_int<u32>, T, llvm_const_int<u8>>{"llvm.x86.avx512.mask.range.ps.128", {std::forward<T>(a), std::forward<U>(b), llvm_const_int<u32>{c}, std::forward<T>(a), llvm_const_int<u8>{d}}};
+	}
 };
 
 // Format llvm::SizeType

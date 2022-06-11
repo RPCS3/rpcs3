@@ -89,6 +89,25 @@ struct lv2_memory_container
 
 		return result;
 	}
+
+	u32 free(u64 amount)
+	{
+		auto [_, result] = used.fetch_op([&](u32& value) -> u32
+		{
+			if (value >= amount)
+			{
+				value -= static_cast<u32>(amount);
+				return static_cast<u32>(amount);
+			}
+
+			return 0;
+		});
+
+		// Sanity check
+		ensure(result == amount);
+
+		return result;
+	}
 };
 
 struct sys_memory_user_memory_stat_t
