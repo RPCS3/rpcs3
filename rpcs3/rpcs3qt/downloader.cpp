@@ -81,6 +81,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	{
 		if (m_curl_abort)
 		{
+			network_log.notice("Download aborted");
 			return;
 		}
 
@@ -92,6 +93,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 
 		if (m_curl_success)
 		{
+			network_log.notice("Download finished");
 			Q_EMIT signal_download_finished(m_curl_buf);
 		}
 	});
