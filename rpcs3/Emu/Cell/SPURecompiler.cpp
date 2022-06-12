@@ -7914,14 +7914,14 @@ public:
 			{
 				return eval(clamp_positive_smax(v));
 			}
-			
+
 			if (auto [ok, data] = get_const_vector(v.value, m_pos); ok)
 			{
 				// Avoid pessimation when input is constant
 				return eval(clamp_positive_smax(clamp_negative_smax(v)));
 			}
 
-			return eval(vrangeps(v, fsplat<f32[4]>(0x7f7fffff), 0x2, 0Xff));
+			return eval(vrangeps(v, fsplat<f32[4]>(std::bit_cast<f32, u32>(0x7f7fffff)), 0x2, 0xff));
 		}
 
 		return eval(clamp_positive_smax(clamp_negative_smax(v)));
