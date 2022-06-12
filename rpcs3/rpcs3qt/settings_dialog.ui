@@ -3856,6 +3856,13 @@
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="disableVideoOutput">
+               <property name="text">
+                <string>Disable Video Output</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QCheckBox" name="forceCpuBlitEmulation">
                <property name="text">
                 <string>Force CPU blit emulation</string>

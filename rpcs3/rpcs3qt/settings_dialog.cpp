@@ -2049,6 +2049,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings_type::DisableOcclusionQueries);
 	SubscribeTooltip(ui->disableHwOcclusionQueries, tooltips.settings.disable_occlusion_queries);
 
+	m_emu_settings->EnhanceCheckBox(ui->disableVideoOutput, emu_settings_type::DisableVideoOutput);
+	SubscribeTooltip(ui->disableVideoOutput, tooltips.settings.disable_video_output);
+
 	m_emu_settings->EnhanceCheckBox(ui->forceCpuBlitEmulation, emu_settings_type::ForceCPUBlitEmulation);
 	SubscribeTooltip(ui->forceCpuBlitEmulation, tooltips.settings.force_cpu_blit_emulation);
 

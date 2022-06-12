@@ -640,6 +640,14 @@ namespace rsx
 				}
 
 				rsx::method_registers.current_draw_clause.compile();
+
+				if (g_cfg.video.disable_video_output)
+				{
+					rsxthr->execute_nop_draw();
+					rsxthr->rsx::thread::end();
+					return;
+				}
+
 				rsxthr->end();
 			}
 			else
