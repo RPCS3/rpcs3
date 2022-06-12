@@ -223,7 +223,6 @@
     <addaction name="sysRebootAct"/>
     <addaction name="separator"/>
     <addaction name="sysSendOpenMenuAct"/>
-    <addaction name="sysSendExitAct"/>
    </widget>
    <widget class="QMenu" name="menuConfiguration">
     <property name="title">
@@ -475,14 +474,6 @@
    </property>
    <property name="text">
     <string>Send Open System Menu CMD</string>
-   </property>
-  </action>
-  <action name="sysSendExitAct">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Send Exit CMD</string>
    </property>
   </action>
   <action name="confCPUAct">

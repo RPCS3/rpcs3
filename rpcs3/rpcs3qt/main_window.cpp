@@ -1665,7 +1665,6 @@ void main_window::EnableMenus(bool enabled) const
 
 	// PS3 Commands
 	ui->sysSendOpenMenuAct->setEnabled(enabled);
-	ui->sysSendExitAct->setEnabled(enabled);
 
 	// Tools
 	ui->toolskernel_explorerAct->setEnabled(enabled);
@@ -2044,14 +2043,6 @@ void main_window::CreateConnects()
 		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
 		m_sys_menu_opened ^= true;
 		ui->sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
-	});
-
-	connect(ui->sysSendExitAct, &QAction::triggered, this, []()
-	{
-		if (Emu.IsStopped()) return;
-
-		gui_log.notice("User triggered \"Send exit command\" action in menu bar");
-		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 	});
 
 	const auto open_settings = [this](int tabIndex)
