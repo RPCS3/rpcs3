@@ -222,12 +222,6 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	update_log.notice("Update found: %s", m_request_url);
 
-	if (check_only)
-	{
-		m_downloader->close_progress_dialog();
-		return true;
-	}
-
 	if (!auto_accept)
 	{
 		const auto& changelog = json_data["changelog"];
@@ -276,6 +270,12 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		{
 			update_log.notice("JSON does not contain a changelog section.");
 		}
+	}
+
+	if (check_only)
+	{
+		m_downloader->close_progress_dialog();
+		return true;
 	}
 
 	update(auto_accept);

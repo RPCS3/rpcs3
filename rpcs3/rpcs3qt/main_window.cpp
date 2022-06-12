@@ -218,7 +218,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	QMenu* download_menu = new QMenu(tr("Update Available!"));
 
-	QAction *download_action = new QAction(tr("Download Update"), download_menu);
+	QAction* download_action = new QAction(tr("Download Update"), download_menu);
 	connect(download_action, &QAction::triggered, this, [this]
 	{
 		m_updater.update(false);
