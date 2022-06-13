@@ -69,13 +69,9 @@ struct spu_itype
 		STQR, // memory_tag last
 
 		CBD, // constant_tag first
-		CBX,
 		CHD,
-		CHX,
 		CWD,
-		CWX,
 		CDD,
-		CDX,
 		ILH,
 		ILHU,
 		IL,
@@ -106,6 +102,10 @@ struct spu_itype
 		MPYHHA,
 		MPYHHU,
 		MPYHHAU,
+		CBX,
+		CHX,
+		CWX,
+		CDX,
 		CLZ,
 		CNTB,
 		FSMB,
