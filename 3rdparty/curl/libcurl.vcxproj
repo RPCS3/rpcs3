@@ -106,6 +106,7 @@
     <ClCompile Include="curl\lib\gopher.c" />
     <ClCompile Include="curl\lib\h2h3.c" />
     <ClCompile Include="curl\lib\hash.c" />
+    <ClCompile Include="curl\lib\headers.c" />
     <ClCompile Include="curl\lib\hmac.c" />
     <ClCompile Include="curl\lib\hostasyn.c" />
     <ClCompile Include="curl\lib\hostip.c" />
@@ -169,6 +170,7 @@
     <ClCompile Include="curl\lib\system_win32.c" />
     <ClCompile Include="curl\lib\telnet.c" />
     <ClCompile Include="curl\lib\tftp.c" />
+    <ClCompile Include="curl\lib\timediff.c" />
     <ClCompile Include="curl\lib\timeval.c" />
     <ClCompile Include="curl\lib\transfer.c" />
     <ClCompile Include="curl\lib\url.c" />
@@ -235,9 +237,6 @@
     <ClInclude Include="curl\lib\config-os400.h" />
     <ClInclude Include="curl\lib\config-plan9.h" />
     <ClInclude Include="curl\lib\config-riscos.h" />
-    <ClInclude Include="curl\lib\config-symbian.h" />
-    <ClInclude Include="curl\lib\config-tpf.h" />
-    <ClInclude Include="curl\lib\config-vxworks.h" />
     <ClInclude Include="curl\lib\config-win32.h" />
     <ClInclude Include="curl\lib\config-win32ce.h" />
     <ClInclude Include="curl\lib\conncache.h" />
@@ -269,7 +268,6 @@
     <ClInclude Include="curl\lib\curl_range.h" />
     <ClInclude Include="curl\lib\curl_rtmp.h" />
     <ClInclude Include="curl\lib\curl_sasl.h" />
-    <ClInclude Include="curl\lib\curl_sec.h" />
     <ClInclude Include="curl\lib\curl_setup.h" />
     <ClInclude Include="curl\lib\curl_setup_once.h" />
     <ClInclude Include="curl\lib\curl_sha256.h" />
@@ -291,6 +289,7 @@
     <ClInclude Include="curl\lib\gopher.h" />
     <ClInclude Include="curl\lib\h2h3.h" />
     <ClInclude Include="curl\lib\hash.h" />
+    <ClInclude Include="curl\lib\headers.h" />
     <ClInclude Include="curl\lib\hostip.h" />
     <ClInclude Include="curl\lib\hsts.h" />
     <ClInclude Include="curl\lib\http.h" />
@@ -346,6 +345,7 @@
     <ClInclude Include="curl\lib\system_win32.h" />
     <ClInclude Include="curl\lib\telnet.h" />
     <ClInclude Include="curl\lib\tftp.h" />
+    <ClInclude Include="curl\lib\timediff.h" />
     <ClInclude Include="curl\lib\timeval.h" />
     <ClInclude Include="curl\lib\transfer.h" />
     <ClInclude Include="curl\lib\url.h" />

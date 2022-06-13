@@ -474,6 +474,12 @@
     <ClCompile Include="curl\lib\vtls\x509asn1.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="curl\lib\headers.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\timediff.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="curl\include\curl\curl.h">
@@ -534,15 +540,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\config-riscos.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\config-symbian.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\config-tpf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\config-vxworks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\config-win32.h">
@@ -633,9 +630,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\curl_sasl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\curl_sec.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\curl_setup.h">
@@ -963,6 +957,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vtls\x509asn1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\headers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\timediff.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
