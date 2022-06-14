@@ -4,6 +4,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/Modules/cellGame.h"
 
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSysutil.h"
@@ -612,28 +613,34 @@ error_code cellSysutilGameDataAssignVmc()
 	return CELL_OK;
 }
 
-error_code cellSysutilGameDataExit()
+error_code cellSysutilGameDataExit(u32 unk)
 {
-	cellSysutil.todo("cellSysutilGameDataExit()");
+	cellSysutil.todo("cellSysutilGameDataExit(unk=%d)", unk);
+
+	if (unk > 4)
+	{
+		return CELL_GAMEDATA_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellSysutilGameExit_I()
 {
-	cellSysutil.todo("cellSysutilGameExit_I()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilGameExit_I()");
+	return cellSysutilGameDataExit(0);
 }
 
 error_code cellSysutilGamePowerOff_I()
 {
-	cellSysutil.todo("cellSysutilGamePowerOff_I()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilGamePowerOff_I()");
+	return cellSysutilGameDataExit(1);
 }
 
 error_code cellSysutilGameReboot_I()
 {
-	cellSysutil.todo("cellSysutilGameReboot_I()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilGameReboot_I()");
+	return cellSysutilGameDataExit(4);
 }
 
 error_code cellSysutilSharedMemoryAlloc()
