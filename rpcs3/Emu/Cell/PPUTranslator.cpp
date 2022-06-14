@@ -197,7 +197,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 		// Create tail call to the check function
 		m_ir->SetInsertPoint(vcheck);
-		Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
+		Call(GetType<void>(), "__check", m_thread, GetAddr());
 		m_ir->CreateRetVoid();
 	}
 	else
@@ -1948,13 +1948,13 @@ void PPUTranslator::SC(ppu_opcode_t op)
 
 		if (index < 1024)
 		{
-			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
+			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread);
 			m_ir->CreateRetVoid();
 			return;
 		}
 	}
 
-	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num)->setTailCallKind(llvm::CallInst::TCK_Tail);
+	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num);
 	m_ir->CreateRetVoid();
 }
 
@@ -2506,7 +2506,7 @@ void PPUTranslator::LWARX(ppu_opcode_t op)
 	{
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
-		Call(GetType<void>(), "__resinterp", m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
+		Call(GetType<void>(), "__resinterp", m_thread);
 		m_ir->CreateRetVoid();
 		return;
 	}
@@ -2648,7 +2648,7 @@ void PPUTranslator::LDARX(ppu_opcode_t op)
 	{
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
-		Call(GetType<void>(), "__resinterp", m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
+		Call(GetType<void>(), "__resinterp", m_thread);
 		m_ir->CreateRetVoid();
 		return;
 	}
@@ -4246,7 +4246,11 @@ void PPUTranslator::FCTIW(ppu_opcode_t op)
 	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(31.))), GetType<s32>());
 
 	// fix result saturation (0x80000000 -> 0x7fffffff)
+#if defined(ARCH_X64)
 	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s32>(), "llvm.x86.sse2.cvtsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
+#elif defined(ARCH_ARM64)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s32>(), "llvm.aarch64.neon.fcvtns.i32.f64", b)));
+#endif
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fr", b));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fi", b));
@@ -4262,7 +4266,11 @@ void PPUTranslator::FCTIWZ(ppu_opcode_t op)
 	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(31.))), GetType<s32>());
 
 	// fix result saturation (0x80000000 -> 0x7fffffff)
+#if defined(ARCH_X64)
 	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s32>(), "llvm.x86.sse2.cvttsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
+#elif defined(ARCH_ARM64)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s32>(), "llvm.aarch64.neon.fcvtzs.i32.f64", b)));
+#endif
 }
 
 void PPUTranslator::FDIV(ppu_opcode_t op)
@@ -4538,7 +4546,12 @@ void PPUTranslator::FCTID(ppu_opcode_t op)
 	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(63.))), GetType<s64>());
 
 	// fix result saturation (0x8000000000000000 -> 0x7fffffffffffffff)
+#if defined(ARCH_X64)
 	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s64>(), "llvm.x86.sse2.cvtsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
+#elif defined(ARCH_ARM64)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s64>(), "llvm.aarch64.neon.fcvtns.i64.f64", b)));
+#endif
+
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fr", b));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fi", b));
@@ -4554,7 +4567,11 @@ void PPUTranslator::FCTIDZ(ppu_opcode_t op)
 	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(63.))), GetType<s64>());
 
 	// fix result saturation (0x8000000000000000 -> 0x7fffffffffffffff)
+#if defined(ARCH_X64)
 	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s64>(), "llvm.x86.sse2.cvttsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
+#elif defined(ARCH_ARM64)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s64>(), "llvm.aarch64.neon.fcvtzs.i64.f64", b)));
+#endif
 }
 
 void PPUTranslator::FCFID(ppu_opcode_t op)
@@ -4571,7 +4588,7 @@ void PPUTranslator::FCFID(ppu_opcode_t op)
 void PPUTranslator::UNK(ppu_opcode_t op)
 {
 	FlushRegisters();
-	Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(op.opcode))->setTailCallKind(llvm::CallInst::TCK_Tail);
+	Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(op.opcode));
 	m_ir->CreateRetVoid();
 }
 
@@ -4832,7 +4849,7 @@ Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)
 
 void PPUTranslator::Trap()
 {
-	Call(GetType<void>(), "__trap", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
+	Call(GetType<void>(), "__trap", m_thread, GetAddr());
 	m_ir->CreateRetVoid();
 }
 

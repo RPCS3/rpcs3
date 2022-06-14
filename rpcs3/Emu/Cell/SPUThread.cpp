@@ -1414,6 +1414,9 @@ extern thread_local std::string(*g_tls_log_prefix)();
 
 void spu_thread::cpu_task()
 {
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(true);
+#endif
 	// Get next PC and SPU Interrupt status
 	pc = status_npc.load().npc;
 

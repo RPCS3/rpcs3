@@ -196,7 +196,11 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code) noexcept
 	ensure(!code->relocateToBase(uptr(p)));
 
 	{
+		// We manage rw <-> rx transitions manually on Apple
+		// because it's easier to keep track of when and where we need to toggle W^X
+#if !(defined(ARCH_ARM64) && defined(__APPLE__))
 		asmjit::VirtMem::ProtectJitReadWriteScope rwScope(p, codeSize);
+#endif
 
 		for (asmjit::Section* section : code->_sections)
 		{
@@ -248,6 +252,9 @@ void jit_runtime::initialize()
 
 void jit_runtime::finalize() noexcept
 {
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(false);
+#endif
 	// Reset JIT memory
 #ifdef CAN_OVERCOMMIT
 	utils::memory_reset(get_jit_memory(), 0x80000000);
@@ -262,6 +269,15 @@ void jit_runtime::finalize() noexcept
 	// Restore code/data snapshot
 	std::memcpy(alloc(s_code_init.size(), 1, true), s_code_init.data(), s_code_init.size());
 	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
+
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(true);
+#endif
+#ifdef ARCH_ARM64
+	// Flush all cache lines after potentially writing executable code
+	asm("ISB");
+	asm("DSB ISH");
+#endif
 }
 
 jit_runtime_base& asmjit::get_global_runtime()
@@ -431,6 +447,21 @@ static u64 make_null_function(const std::string& name)
 			for (char ch : name)
 				c.db(ch);
 			c.db(0);
+			c.align(AlignMode::kData, 16);
+#else
+			// AArch64 implementation
+			Label jmp_address = c.newLabel();
+			Label data = c.newLabel();
+			// Force absolute jump to prevent out of bounds PC-rel jmp
+			c.ldr(args[0], arm::ptr(jmp_address));
+			c.br(args[0]);
+			c.align(AlignMode::kCode, 16);
+
+			c.bind(data);
+			c.embed(name.c_str(), name.size());
+			c.embedUInt8(0U);
+			c.bind(jmp_address);
+			c.embedUInt64(reinterpret_cast<u64>(&null));
 			c.align(AlignMode::kData, 16);
 #endif
 		});
@@ -852,7 +883,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		else
 		{
 			mem = std::make_unique<MemoryManager2>();
-			null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
+			null_mod->setTargetTriple(llvm::Triple::normalize(utils::c_llvm_default_triple));
 		}
 
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)

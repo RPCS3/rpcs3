@@ -269,6 +269,9 @@ namespace asmjit
 template <typename FT, typename Asm = native_asm, typename F>
 inline FT build_function_asm(std::string_view name, F&& builder)
 {
+#ifdef __APPLE__
+	pthread_jit_write_protect_np(false);
+#endif
 	using namespace asmjit;
 
 	auto& rt = get_global_runtime();
