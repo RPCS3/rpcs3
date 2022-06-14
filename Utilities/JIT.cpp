@@ -871,7 +871,6 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	std::string result;
 
 	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
-	null_mod->setTargetTriple(utils::c_llvm_default_triple);
 
 	if (_link.empty())
 	{
@@ -884,7 +883,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		else
 		{
 			mem = std::make_unique<MemoryManager2>();
-			null_mod->setTargetTriple(utils::c_llvm_default_triple);
+			null_mod->setTargetTriple(llvm::Triple::normalize(utils::c_llvm_default_triple));
 		}
 
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)

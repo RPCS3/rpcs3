@@ -3480,7 +3480,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	// Initialize target
 #if defined(__APPLE__) && defined(ARCH_ARM64)
 	// Force target linux on macOS arm64 to bypass some 64-bit address space linking issues
-	_module->setTargetTriple(utils::c_llvm_default_triple);
+	_module->setTargetTriple(Triple::normalize(utils::c_llvm_default_triple));
 #else
 	_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
 #endif
