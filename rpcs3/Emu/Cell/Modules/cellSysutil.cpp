@@ -59,10 +59,17 @@ void fmt_class_string<CellBgmplaybackError>::format(std::string& out, u64 arg)
 
 struct sysutil_cb_manager
 {
+	struct alignas(8) registered_dispatcher
+	{
+		u32 event_code = 0;
+		u32 func_addr = 0;
+	};
+	std::array<atomic_t<registered_dispatcher>, 32> dispatchers{};
+
 	struct alignas(8) registered_cb
 	{
-		vm::ptr<CellSysutilCallback> first;
-		vm::ptr<void> second;
+		vm::ptr<CellSysutilCallback> callback;
+		vm::ptr<void> user_data;
 	};
 
 	atomic_t<registered_cb> callbacks[4]{};
@@ -105,12 +112,12 @@ extern s32 sysutil_send_system_cmd(u64 status, u64 param)
 
 		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
-			if (cb.first)
+			if (cb.callback)
 			{
 				cbm->registered.push([=](ppu_thread& ppu) -> s32
 				{
 					// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
-					cb.first(ppu, status, param, cb.second);
+					cb.callback(ppu, status, param, cb.user_data);
 					return CELL_OK;
 				});
 
@@ -663,16 +670,56 @@ error_code cellSysutilSetBgmPlaybackExtraParam(vm::ptr<CellSysutilBgmPlaybackExt
 	return CELL_OK;
 }
 
-error_code cellSysutilRegisterCallbackDispatcher()
+error_code cellSysutilRegisterCallbackDispatcher(u32 event_code, u32 func_addr)
 {
-	cellSysutil.todo("cellSysutilRegisterCallbackDispatcher()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilRegisterCallbackDispatcher(event_code=0x%x, func_addr=0x%x)", event_code, func_addr);
+
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
+
+	for (u32 i = 0; i < cbm.dispatchers.size(); i++)
+	{
+		if (cbm.dispatchers[i].atomic_op([&](sysutil_cb_manager::registered_dispatcher& dispatcher)
+		{
+			if (dispatcher.event_code == 0)
+			{
+				dispatcher.event_code = event_code;
+				dispatcher.func_addr = func_addr;
+				return true;
+			}
+			return false;
+		}))
+		{
+			return CELL_OK;
+		}
+	}
+
+	return 0x8002b004;
 }
 
-error_code cellSysutilUnregisterCallbackDispatcher()
+error_code cellSysutilUnregisterCallbackDispatcher(u32 event_code)
 {
-	cellSysutil.todo("cellSysutilUnregisterCallbackDispatcher()");
-	return CELL_OK;
+	cellSysutil.warning("cellSysutilUnregisterCallbackDispatcher(event_code=0x%x)", event_code);
+
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
+
+	for (u32 i = 0; i < cbm.dispatchers.size(); i++)
+	{
+		if (cbm.dispatchers[i].atomic_op([&](sysutil_cb_manager::registered_dispatcher& dispatcher)
+		{
+			if (dispatcher.event_code == event_code)
+			{
+				dispatcher.event_code = 0;
+				dispatcher.func_addr = 0;
+				return true;
+			}
+			return false;
+		}))
+		{
+			return CELL_OK;
+		}
+	}
+
+	return 0x8002b005;
 }
 
 error_code cellSysutilPacketRead()
