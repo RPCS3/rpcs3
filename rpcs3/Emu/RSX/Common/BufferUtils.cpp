@@ -270,9 +270,13 @@ namespace
 #endif
 }
 
+#if !defined(__APPLE__) || defined(ARCH_X64)
 DECLARE(copy_data_swap_u32) = build_function_asm<void(*)(u32*, const u32*, u32)>("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
-
 DECLARE(copy_data_swap_u32_cmp) = build_function_asm<bool(*)(u32*, const u32*, u32)>("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
+#else
+DECLARE(copy_data_swap_u32) = copy_data_swap_u32_naive<false>;
+DECLARE(copy_data_swap_u32_cmp) = copy_data_swap_u32_naive<true>;
+#endif
 
 namespace
 {
