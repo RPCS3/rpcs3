@@ -465,7 +465,7 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-error_code cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm::ptr<void> userdata)
+error_code cellSysutilRegisterCallback(u32 slot, vm::ptr<CellSysutilCallback> func, vm::ptr<void> userdata)
 {
 	cellSysutil.warning("cellSysutilRegisterCallback(slot=%d, func=*0x%x, userdata=*0x%x)", slot, func, userdata);
 
