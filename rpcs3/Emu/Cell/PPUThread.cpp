@@ -1373,11 +1373,11 @@ void ppu_thread::cpu_task()
 
 #ifdef __APPLE__
 			pthread_jit_write_protect_np(true);
-			// Flush all cache lines after toggling write protections
+#endif
 #ifdef ARCH_ARM64
+			// Flush all cache lines after potentially writing executable code
 			asm("ISB");
 			asm("DSB ISH");
-#endif
 #endif
 
 			break;
@@ -1512,11 +1512,11 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(true);
-	// Flush all cache lines after toggling write protections
+#endif
 #ifdef ARCH_ARM64
+	// Flush all cache lines after potentially writing executable code
 	asm("ISB");
 	asm("DSB ISH");
-#endif
 #endif
 }
 
@@ -3480,7 +3480,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	// Initialize target
 #if defined(__APPLE__) && defined(ARCH_ARM64)
 	// Force target linux on macOS arm64 to bypass some 64-bit address space linking issues
-	_module->setTargetTriple(llvm::Triple::normalize("arm64-unknown-linux-gnu"));
+	_module->setTargetTriple(utils::c_llvm_default_triple);
 #else
 	_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
 #endif

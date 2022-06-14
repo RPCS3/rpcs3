@@ -4428,11 +4428,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
-#if defined(ARCH_ARM64)
-		_module->setTargetTriple(Triple::normalize("arm64-unknown-linux-gnu"));
-#else
-		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
-#endif
+		_module->setTargetTriple(utils::c_llvm_default_triple);
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -5094,11 +5090,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
-#ifdef ARCH_X64
-		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
-#else
-		_module->setTargetTriple(Triple::normalize("arm64-unknown-linux-gnu"));
-#endif
+		_module->setTargetTriple(utils::c_llvm_default_triple);
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -5143,9 +5135,9 @@ public:
 
 		// Save host thread's stack pointer
 		const auto native_sp = spu_ptr<u64>(&spu_thread::saved_native_sp);
-#ifdef ARCH_X64
+#if defined(ARCH_X64)
 		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "rsp")}));
-#else
+#elif defined(ARCH_ARM64)
 		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "sp")}));
 #endif
 		m_ir->CreateStore(m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::read_register), {rsp_name}), native_sp);

@@ -3646,9 +3646,9 @@ public:
 	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
 	static auto fre(T&& a)
 	{
-#ifdef ARCH_X64
+#if defined(ARCH_X64)
 		return llvm_calli<f32[4], T>{"llvm.x86.sse.rcp.ps", {std::forward<T>(a)}};
-#else
+#elif defined(ARCH_ARM64)
 		return llvm_calli<f32[4], T>{"llvm.aarch64.neon.frecpe.v4f32", {std::forward<T>(a)}};
 #endif
 	}
@@ -3656,9 +3656,9 @@ public:
 	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
 	static auto frsqe(T&& a)
 	{
-#ifdef ARCH_X64
+#if defined(ARCH_X64)
 		return llvm_calli<f32[4], T>{"llvm.x86.sse.rsqrt.ps", {std::forward<T>(a)}};
-#else
+#elif defined(ARCH_ARM64)
 		return llvm_calli<f32[4], T>{"llvm.aarch64.neon.frsqrte.v4f32", {std::forward<T>(a)}};
 #endif
 	}
@@ -3666,9 +3666,9 @@ public:
 	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
 	static auto fmax(T&& a, U&& b)
 	{
-#ifdef ARCH_X64
+#if defined(ARCH_X64)
 		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.max.ps", {std::forward<T>(a), std::forward<U>(b)}};
-#else
+#elif defined(ARCH_ARM64)
 		return llvm_calli<f32[4], T, U>{"llvm.aarch64.neon.fmax.v4f32", {std::forward<T>(a), std::forward<U>(b)}};
 #endif
 	}
@@ -3676,9 +3676,9 @@ public:
 	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
 	static auto fmin(T&& a, U&& b)
 	{
-#ifdef ARCH_X64
+#if defined(ARCH_X64)
 		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.min.ps", {std::forward<T>(a), std::forward<U>(b)}};
-#else
+#elif defined(ARCH_ARM64)
 		return llvm_calli<f32[4], T, U>{"llvm.aarch64.neon.fmin.v4f32", {std::forward<T>(a), std::forward<U>(b)}};
 #endif
 	}
