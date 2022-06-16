@@ -203,3 +203,5 @@ struct ssl_manager
 {
 	atomic_t<bool> is_init{ false };
 };
+
+b8 _cellSslIsInitd();
