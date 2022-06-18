@@ -1330,6 +1330,9 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::lle_call:
 		{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(true);
+#endif
 			const vm::ptr<u32> opd(arg < 32 ? vm::cast(gpr[arg]) : vm::cast(arg));
 			cmd_pop(), fast_call(opd[0], opd[1]);
 			break;
@@ -1341,6 +1344,9 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::opd_call:
 		{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(true);
+#endif
 			const ppu_func_opd_t opd = cmd_get(1).as<ppu_func_opd_t>();
 			cmd_pop(1), fast_call(opd.addr, opd.rtoc);
 			break;
