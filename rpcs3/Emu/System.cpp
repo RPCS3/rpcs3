@@ -8,6 +8,7 @@
 #include "Emu/perf_meter.hpp"
 #include "Emu/perf_monitor.hpp"
 #include "Emu/vfs_config.h"
+#include "Emu/IPC_config.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -42,6 +43,8 @@
 #include "Utilities/JIT.h"
 
 #include "display_sleep_control.h"
+
+#include "Emu/IPC_socket.h"
 
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
@@ -408,6 +411,11 @@ void Emulator::Init(bool add_only)
 			}
 		}
 	}
+
+	// Load IPC config
+	g_cfg_ipc.load();
+	sys_log.notice("Using IPC config:\n%s", g_cfg_ipc.to_string());
+	g_fxo->get<IPC_socket::IPC_server_manager>().set_server_enabled(g_cfg_ipc.get_server_enabled());
 }
 
 void Emulator::SetUsr(const std::string& user)

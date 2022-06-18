@@ -241,6 +241,7 @@
     <addaction name="confGuiAct"/>
     <addaction name="separator"/>
     <addaction name="confRPCNAct"/>
+    <addaction name="confIPCAct"/>
     <addaction name="confAutopauseManagerAct"/>
    </widget>
    <widget class="QMenu" name="menuManage">
@@ -1146,6 +1147,14 @@
    </property>
    <property name="toolTip">
     <string>Configure RPCN</string>
+   </property>
+  </action>
+  <action name="confIPCAct">
+   <property name="text">
+    <string>IPC</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure IPC</string>
    </property>
   </action>
   <action name="actionLog_Viewer">

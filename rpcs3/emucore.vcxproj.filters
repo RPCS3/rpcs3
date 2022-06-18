@@ -1072,6 +1072,12 @@
     <ClCompile Include="Emu\RSX\RSXZCULL.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\IPC_socket.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\IPC_config.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2130,6 +2136,12 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXZCULL.h">
       <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\IPC_socket.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\IPC_config.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
