@@ -415,7 +415,7 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 				cfg.out.at(audioOut).state = CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED;
 			}
 
-			audio::configure_audio();
+			audio::configure_audio(true);
 			audio::configure_rsxaudio();
 
 			{

@@ -527,13 +527,12 @@ namespace audio
 			.time_stretching_threshold = g_cfg.audio.time_stretching_threshold,
 			.convert_to_s16 = static_cast<bool>(g_cfg.audio.convert_to_s16),
 			.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
-			.format = g_cfg.audio.format,
 			.renderer = g_cfg.audio.renderer,
 			.provider = g_cfg.audio.provider
 		};
 	}
 
-	void configure_audio()
+	void configure_audio(bool force_reset)
 	{
 		if (g_cfg.audio.provider != audio_provider::cell_audio)
 		{
@@ -546,12 +545,12 @@ namespace audio
 			const auto new_raw = get_raw_config();
 
 			if (const auto raw = g_audio.cfg.raw;
+				force_reset ||
 				raw.desired_buffer_duration != new_raw.desired_buffer_duration ||
 				raw.buffering_enabled != new_raw.buffering_enabled ||
 				raw.time_stretching_threshold != new_raw.time_stretching_threshold ||
 				raw.enable_time_stretching != new_raw.enable_time_stretching ||
 				raw.convert_to_s16 != new_raw.convert_to_s16 ||
-				raw.format != new_raw.format ||
 				raw.renderer != new_raw.renderer ||
 				raw.dump_to_file != new_raw.dump_to_file)
 			{
