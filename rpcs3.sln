@@ -85,6 +85,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcubeb", "3rdparty\cubeb\
 EndProject
 Project("{508c291a-3d18-49f5-b25d-f7c8db92cb21}") = "soundtouch", "3rdparty\SoundTouch\soundtouch.vcxproj", "{508c291a-3d18-49f5-b25d-f7c8db92cb21}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "pine", "pine", "{A55DA1B5-CC17-4525-BE7F-1659CE17BB56}"
+	ProjectSection(SolutionItems) = preProject
+		3rdparty\pine\pine_server.h = 3rdparty\pine\pine_server.h
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -202,6 +207,7 @@ Global
 		{9610627D-20FE-4B07-8CE3-9FF68A5F1EC2} = {10FBF193-D532-4CCF-B875-4C7091A7F6C2}
 		{FDA7B080-03B0-48C8-B24F-88118981422A} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 		{508c291a-3d18-49f5-b25d-f7c8db92cb21} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
+		{A55DA1B5-CC17-4525-BE7F-1659CE17BB56} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {06CC7920-E085-4B81-9582-8DE8AAD42510}

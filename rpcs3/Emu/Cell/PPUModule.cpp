@@ -1455,6 +1455,8 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		hash[5 + i * 2] = pal[_main.sha1[i] & 15];
 	}
 
+	Emu.SetExecutableHash(hash);
+
 	// Apply the patch
 	auto applied = g_fxo->get<patch_engine>().apply(hash, vm::g_base_addr);
 

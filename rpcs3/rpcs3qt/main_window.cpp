@@ -29,6 +29,7 @@
 #include "gui_settings.h"
 #include "input_dialog.h"
 #include "camera_settings_dialog.h"
+#include "ipc_settings_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -2081,6 +2082,12 @@ void main_window::CreateConnects()
 	connect(ui->confRPCNAct, &QAction::triggered, this, [this]()
 	{
 		rpcn_settings_dialog dlg(this);
+		dlg.exec();
+	});
+
+	connect(ui->confIPCAct, &QAction::triggered, this, [this]()
+	{
+		ipc_settings_dialog dlg(this);
 		dlg.exec();
 	});
 

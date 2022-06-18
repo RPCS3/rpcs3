@@ -105,6 +105,7 @@ class Emulator final
 	std::string m_title_id;
 	std::string m_title;
 	std::string m_app_version;
+	std::string m_hash;
 	std::string m_cat;
 	std::string m_dir;
 	std::string m_sfo_dir;
@@ -212,6 +213,13 @@ public:
 	{
 		return m_app_version;
 	}
+
+	const std::string& GetExecutableHash() const
+	{
+		return m_hash;
+	}
+
+	void SetExecutableHash(std::string hash) { m_hash = std::move(hash); }
 
 	const std::string& GetCat() const
 	{
