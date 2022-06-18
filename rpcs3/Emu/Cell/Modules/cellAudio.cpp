@@ -66,7 +66,8 @@ void cell_audio_config::reset(bool backend_changed)
 
 	const AudioFreq freq = AudioFreq::FREQ_48K;
 	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
-	const auto [ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
+	const AudioChannelCnt ch_cnt = AudioBackend::get_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
+	const u32 downmix = AudioBackend::get_downmix_mode(0); // CELL_AUDIO_OUT_PRIMARY
 	const f64 cb_frame_len = backend->Open(freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
 
 	audio_downmix = downmix;
@@ -846,16 +847,51 @@ void cell_audio_thread::operator()()
 		// Mix
 		float* buf = ringbuffer->get_current_buffer();
 
-		switch (cfg.audio_downmix)
+		switch (cfg.audio_channels)
 		{
-		case AudioChannelCnt::STEREO:
-			mix<AudioChannelCnt::STEREO>(buf);
+		case 2:
+			switch (cfg.audio_downmix)
+			{
+			case 0:
+				mix<2, 0>(buf);
+				break;
+			case 1:
+				mix<2, 1>(buf);
+				break;
+			case 2:
+				mix<2, 2>(buf);
+				break;
+			}
 			break;
-		case AudioChannelCnt::SURROUND_5_1:
-			mix<AudioChannelCnt::SURROUND_5_1>(buf);
+
+		case 6:
+			switch (cfg.audio_downmix)
+			{
+			case 0:
+				mix<6, 0>(buf);
+				break;
+			case 1:
+				mix<6, 1>(buf);
+				break;
+			case 2:
+				mix<6, 2>(buf);
+				break;
+			}
 			break;
-		case AudioChannelCnt::SURROUND_7_1:
-			mix<AudioChannelCnt::SURROUND_7_1>(buf);
+
+		case 8:
+			switch (cfg.audio_downmix)
+			{
+			case 0:
+				mix<8, 0>(buf);
+				break;
+			case 1:
+				mix<8, 1>(buf);
+				break;
+			case 2:
+				mix<8, 2>(buf);
+				break;
+			}
 			break;
 		}
 
@@ -883,12 +919,11 @@ audio_port* cell_audio_thread::open_port()
 	return nullptr;
 }
 
-template <AudioChannelCnt downmix>
+template <u32 channels, u32 downmix>
 void cell_audio_thread::mix(float* out_buffer, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 
-	constexpr u32 channels = static_cast<u32>(downmix);
 	constexpr u32 out_buffer_sz = channels * AUDIO_BUFFER_SAMPLES;
 
 	const float master_volume = g_cfg.audio.volume / 100.0f;
@@ -955,32 +990,57 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 				const float rear_left  = buf[in + 6] * m;
 				const float rear_right = buf[in + 7] * m;
 
-				if constexpr (downmix == AudioChannelCnt::STEREO)
+				if constexpr (downmix == 1) // Downmix to stereo
 				{
 					// Don't mix in the lfe as per dolby specification and based on documentation
 					const float mid = center * 0.5f;
 					out_buffer[out + 0] += left * minus_3db + mid + side_left * 0.5f + rear_left * 0.5f;
 					out_buffer[out + 1] += right * minus_3db + mid + side_right * 0.5f + rear_right * 0.5f;
 				}
-				else if constexpr (downmix == AudioChannelCnt::SURROUND_5_1)
+				else if constexpr (downmix == 2) // Downmix to 5.1
 				{
-					out_buffer[out + 0] += left;
-					out_buffer[out + 1] += right;
-					out_buffer[out + 2] += center;
-					out_buffer[out + 3] += low_freq;
-					out_buffer[out + 4] += side_left + rear_left;
-					out_buffer[out + 5] += side_right + rear_right;
+					if constexpr (channels == 2) // Don't downmix any of the surround channels into the output if stereo is configured
+					{
+						out_buffer[out + 0] += left;
+						out_buffer[out + 1] += right;
+					}
+					else
+					{
+						out_buffer[out + 0] += left;
+						out_buffer[out + 1] += right;
+						out_buffer[out + 2] += center;
+						out_buffer[out + 3] += low_freq;
+						out_buffer[out + 4] += side_left + rear_left;
+						out_buffer[out + 5] += side_right + rear_right;
+					}
 				}
-				else
+				else // No downmixing
 				{
-					out_buffer[out + 0] += left;
-					out_buffer[out + 1] += right;
-					out_buffer[out + 2] += center;
-					out_buffer[out + 3] += low_freq;
-					out_buffer[out + 4] += rear_left;
-					out_buffer[out + 5] += rear_right;
-					out_buffer[out + 6] += side_left;
-					out_buffer[out + 7] += side_right;
+					if constexpr (channels == 2) // Don't downmix any of the surround channels into the output if stereo is configured
+					{
+						out_buffer[out + 0] += left;
+						out_buffer[out + 1] += right;
+					}
+					else if constexpr (channels == 6) // Don't downmix the rear channels into the output if 5.1 is configured
+					{
+						out_buffer[out + 0] += left;
+						out_buffer[out + 1] += right;
+						out_buffer[out + 2] += center;
+						out_buffer[out + 3] += low_freq;
+						out_buffer[out + 4] += side_left;
+						out_buffer[out + 5] += side_right;
+					}
+					else
+					{
+						out_buffer[out + 0] += left;
+						out_buffer[out + 1] += right;
+						out_buffer[out + 2] += center;
+						out_buffer[out + 3] += low_freq;
+						out_buffer[out + 4] += rear_left;
+						out_buffer[out + 5] += rear_right;
+						out_buffer[out + 6] += side_left;
+						out_buffer[out + 7] += side_right;
+					}
 				}
 			}
 		}
