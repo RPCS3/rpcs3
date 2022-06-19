@@ -849,54 +849,13 @@ void cell_audio_thread::operator()()
 		switch (cfg.audio_channels)
 		{
 		case 2:
-			switch (cfg.audio_downmix)
-			{
-			case AudioChannelCnt::SURROUND_7_1:
-				mix<AudioChannelCnt::STEREO, AudioChannelCnt::SURROUND_7_1>(buf);
-				break;
-			case AudioChannelCnt::STEREO:
-				mix<AudioChannelCnt::STEREO, AudioChannelCnt::STEREO>(buf);
-				break;
-			case AudioChannelCnt::SURROUND_5_1:
-				mix<AudioChannelCnt::STEREO, AudioChannelCnt::SURROUND_5_1>(buf);
-				break;
-			default:
-				fmt::throw_exception("Unsupported downmix mode in cell_audio_config: %d", static_cast<u32>(cfg.audio_downmix));
-			}
+			mix<AudioChannelCnt::STEREO>(buf, cfg.audio_downmix);
 			break;
-
 		case 6:
-			switch (cfg.audio_downmix)
-			{
-			case AudioChannelCnt::SURROUND_7_1:
-				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_7_1>(buf);
-				break;
-			case AudioChannelCnt::STEREO:
-				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(buf);
-				break;
-			case AudioChannelCnt::SURROUND_5_1:
-				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_5_1>(buf);
-				break;
-			default:
-				fmt::throw_exception("Unsupported downmix mode in cell_audio_config: %d", static_cast<u32>(cfg.audio_downmix));
-			}
+			mix<AudioChannelCnt::SURROUND_5_1>(buf, cfg.audio_downmix);
 			break;
-
 		case 8:
-			switch (cfg.audio_downmix)
-			{
-			case AudioChannelCnt::SURROUND_7_1:
-				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_7_1>(buf);
-				break;
-			case AudioChannelCnt::STEREO:
-				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(buf);
-				break;
-			case AudioChannelCnt::SURROUND_5_1:
-				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(buf);
-				break;
-			default:
-				fmt::throw_exception("Unsupported downmix mode in cell_audio_config: %d", static_cast<u32>(cfg.audio_downmix));
-			}
+			mix<AudioChannelCnt::SURROUND_7_1>(buf, cfg.audio_downmix);
 			break;
 		default:
 			fmt::throw_exception("Unsupported channel count in cell_audio_config: %d", static_cast<u32>(cfg.audio_channels));
@@ -926,8 +885,8 @@ audio_port* cell_audio_thread::open_port()
 	return nullptr;
 }
 
-template <AudioChannelCnt channels, AudioChannelCnt downmix>
-void cell_audio_thread::mix(float* out_buffer, s32 offset)
+template <AudioChannelCnt channels>
+void cell_audio_thread::mix(float* out_buffer, AudioChannelCnt downmix, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 
@@ -998,14 +957,14 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 				const float rear_left  = buf[in + 6] * m;
 				const float rear_right = buf[in + 7] * m;
 
-				if constexpr (downmix == AudioChannelCnt::STEREO)
+				if (downmix == AudioChannelCnt::STEREO)
 				{
 					// Don't mix in the lfe as per dolby specification and based on documentation
 					const float mid = center * 0.5f;
 					out_buffer[out + 0] += left * minus_3db + mid + side_left * 0.5f + rear_left * 0.5f;
 					out_buffer[out + 1] += right * minus_3db + mid + side_right * 0.5f + rear_right * 0.5f;
 				}
-				else if constexpr (downmix == AudioChannelCnt::SURROUND_5_1)
+				else if (downmix == AudioChannelCnt::SURROUND_5_1)
 				{
 					out_buffer[out + 0] += left;
 					out_buffer[out + 1] += right;

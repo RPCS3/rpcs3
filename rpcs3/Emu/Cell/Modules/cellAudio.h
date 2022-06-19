@@ -349,8 +349,8 @@ private:
 	void reset_ports(s32 offset = 0);
 	void advance(u64 timestamp);
 	std::tuple<u32, u32, u32, u32> count_port_buffer_tags();
-	template <AudioChannelCnt channels, AudioChannelCnt downmix>
-	void mix(float* out_buffer, s32 offset = 0);
+	template <AudioChannelCnt channels>
+	void mix(float* out_buffer, AudioChannelCnt downmix, s32 offset = 0);
 	void finish_port_volume_stepping();
 
 	constexpr static u64 get_thread_wait_delay(u64 time_left)

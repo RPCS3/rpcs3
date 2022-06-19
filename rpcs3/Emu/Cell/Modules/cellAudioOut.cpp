@@ -182,7 +182,7 @@ audio_out_configuration::audio_out_configuration()
 	cellSysutil.notice("cellAudioOut: initial secondary output configuration: channels=%d, encoder=%d, downmixer=%d", secondary_output.channels, secondary_output.encoder, secondary_output.downmixer);
 }
 
-std::pair <AudioChannelCnt, AudioChannelCnt> audio_out_configuration::audio_out::get_channel_count_and_downmixer() const
+std::pair<AudioChannelCnt, AudioChannelCnt> audio_out_configuration::audio_out::get_channel_count_and_downmixer() const
 {
 	std::pair <AudioChannelCnt, AudioChannelCnt> ret;
 
@@ -326,6 +326,7 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 	default:
 		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
+
 	*state = _state;
 	return CELL_OK;
 }
@@ -404,7 +405,7 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 		}
 	}
 
-	cellSysutil.notice("Selected audio configuration: channels=%d, encoder=%d, downMixer=%d", config->channel, config->encoder, config->downMixer);
+	cellSysutil.notice("cellAudioOutConfigure: channels=%d, encoder=%d, downMixer=%d", config->channel, config->encoder, config->downMixer);
 
 	return CELL_OK;
 }
