@@ -860,6 +860,8 @@ void cell_audio_thread::operator()()
 			case AudioChannelCnt::SURROUND_5_1:
 				mix<AudioChannelCnt::STEREO, AudioChannelCnt::SURROUND_5_1>(buf);
 				break;
+			default:
+				fmt::throw_exception("Unsupported downmix mode in cell_audio_config: %d", static_cast<u32>(cfg.audio_downmix));
 			}
 			break;
 
@@ -875,6 +877,8 @@ void cell_audio_thread::operator()()
 			case AudioChannelCnt::SURROUND_5_1:
 				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_5_1>(buf);
 				break;
+			default:
+				fmt::throw_exception("Unsupported downmix mode in cell_audio_config: %d", static_cast<u32>(cfg.audio_downmix));
 			}
 			break;
 
@@ -890,8 +894,12 @@ void cell_audio_thread::operator()()
 			case AudioChannelCnt::SURROUND_5_1:
 				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(buf);
 				break;
+			default:
+				fmt::throw_exception("Unsupported downmix mode in cell_audio_config: %d", static_cast<u32>(cfg.audio_downmix));
 			}
 			break;
+		default:
+			fmt::throw_exception("Unsupported channel count in cell_audio_config: %d", static_cast<u32>(cfg.audio_channels));
 		}
 
 		// Enqueue
@@ -923,8 +931,8 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 
-	constexpr u32 _channels = static_cast<u32>(channels);
-	constexpr u32 out_buffer_sz = _channels * AUDIO_BUFFER_SAMPLES;
+	constexpr u32 out_channels = static_cast<u32>(channels);
+	constexpr u32 out_buffer_sz = out_channels * AUDIO_BUFFER_SAMPLES;
 
 	const float master_volume = g_cfg.audio.volume / 100.0f;
 
@@ -964,7 +972,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 
 		if (port.num_channels == 2)
 		{
-			for (u32 out = 0, in = 0; out < out_buffer_sz; out += _channels, in += 2)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += out_channels, in += 2)
 			{
 				step_volume(port);
 
@@ -977,7 +985,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 		}
 		else if (port.num_channels == 8)
 		{
-			for (u32 out = 0, in = 0; out < out_buffer_sz; out += _channels, in += 8)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += out_channels, in += 8)
 			{
 				step_volume(port);
 
@@ -1002,17 +1010,17 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 					out_buffer[out + 0] += left;
 					out_buffer[out + 1] += right;
 
-					if constexpr (_channels >= 6) // Only mix the surround channels into the output if surround output is configured
+					if constexpr (out_channels >= 6) // Only mix the surround channels into the output if surround output is configured
 					{
 						out_buffer[out + 2] += center;
 						out_buffer[out + 3] += low_freq;
 
-						if constexpr (_channels == 6)
+						if constexpr (out_channels == 6)
 						{
 							out_buffer[out + 4] += side_left + rear_left;
 							out_buffer[out + 5] += side_right + rear_right;
 						}
-						else // When using 7.1 ouput, surround channels need to be mixed into the last two channels
+						else // When using 7.1 ouput, out_buffer[out + 4] and out_buffer[out + 5] are the rear channels, so the side channels need to be mixed into [out + 6] and [out + 7]
 						{
 							out_buffer[out + 6] += side_left + rear_left;
 							out_buffer[out + 7] += side_right + rear_right;
@@ -1024,12 +1032,12 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 					out_buffer[out + 0] += left;
 					out_buffer[out + 1] += right;
 
-					if constexpr (_channels >= 6) // Only mix the surround channels into the output if surround output is configured
+					if constexpr (out_channels >= 6) // Only mix the surround channels into the output if surround output is configured
 					{
 						out_buffer[out + 2] += center;
 						out_buffer[out + 3] += low_freq;
 
-						if constexpr (_channels == 6)
+						if constexpr (out_channels == 6)
 						{
 							out_buffer[out + 4] += side_left;
 							out_buffer[out + 5] += side_right;

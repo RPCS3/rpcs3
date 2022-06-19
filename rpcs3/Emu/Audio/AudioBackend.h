@@ -138,7 +138,7 @@ public:
 	/*
 	 * Returns the output channel count and downmix mode.
 	 */
-	static std::pair <AudioChannelCnt, AudioChannelCnt> get_channel_count_and_downmixer(u32 device_index);
+	static std::pair<AudioChannelCnt, AudioChannelCnt> get_channel_count_and_downmixer(u32 device_index);
 
 	/*
 	 * Returns the max supported channel count.
