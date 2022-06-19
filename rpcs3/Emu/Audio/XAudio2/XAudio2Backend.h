@@ -46,7 +46,7 @@ private:
 	Microsoft::WRL::ComPtr<IMMDeviceEnumerator> m_device_enumerator{};
 
 	shared_mutex m_dev_sw_mutex{};
-	std::string m_current_device = "";
+	std::string m_current_device{};
 	bool m_default_dev_changed = false;
 
 	std::vector<u8> m_data_buf{};

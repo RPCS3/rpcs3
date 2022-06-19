@@ -15,7 +15,7 @@ public:
 
 private:
 
-	cubeb* ctx;
+	cubeb* ctx{};
 #ifdef _WIN32
 	bool com_init_success = false;
 #endif

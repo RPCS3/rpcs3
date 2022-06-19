@@ -196,7 +196,7 @@ void CubebBackend::CloseUnlocked()
 	m_last_sample.fill(0);
 
 	m_default_dev_changed = false;
-	m_current_device = "";
+	m_current_device.clear();
 }
 
 void CubebBackend::Close()
@@ -255,7 +255,7 @@ f64 CubebBackend::GetCallbackFrameLen()
 
 std::tuple<cubeb_devid, std::string, u32> CubebBackend::GetDevice(std::string_view dev_id)
 {
-	const bool default_dev = dev_id == "";
+	const bool default_dev = dev_id.empty();
 
 	cubeb_device_collection dev_collection{};
 	if (int err = cubeb_enumerate_devices(m_ctx, CUBEB_DEVICE_TYPE_OUTPUT, &dev_collection))
@@ -421,7 +421,7 @@ void CubebBackend::device_collection_changed_cb(cubeb* /* context */, void* user
 	std::lock_guard lock{cubeb->m_dev_sw_mutex};
 
 	// Non default device is used (or default device cannot be detected)
-	if (cubeb->m_current_device == "")
+	if (cubeb->m_current_device.empty())
 	{
 		return;
 	}

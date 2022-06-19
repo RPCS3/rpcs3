@@ -335,7 +335,7 @@ public:
 		return backend->Operational();
 	}
 
-	bool is_device_changed() const
+	bool device_changed() const
 	{
 		return backend->DefaultDeviceChanged();
 	}

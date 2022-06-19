@@ -70,7 +70,12 @@ std::vector<audio_device_enumerator::audio_device> cubeb_enumerator::get_output_
 	for (u64 dev_idx = 0; dev_idx < dev_collection.count; dev_idx++)
 	{
 		const cubeb_device_info& dev_info = dev_collection.device[dev_idx];
-		audio_device dev{std::string{dev_info.device_id}, std::string{dev_info.friendly_name}, dev_info.max_channels};
+		audio_device dev =
+		{
+			.id = std::string{dev_info.device_id},
+			.name = std::string{dev_info.friendly_name},
+			.max_ch = dev_info.max_channels
+		};
 
 		if (dev.id.empty())
 		{

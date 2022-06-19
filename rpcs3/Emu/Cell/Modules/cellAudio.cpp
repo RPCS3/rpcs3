@@ -663,7 +663,7 @@ void cell_audio_thread::operator()()
 			continue;
 		}
 
-		if (ringbuffer->is_device_changed())
+		if (ringbuffer->device_changed())
 		{
 			cellAudio.warning("Default device changed, attempting to switch...");
 			update_config(false);

@@ -45,7 +45,7 @@ private:
 	atomic_t<bool> m_reset_req = false;
 
 	shared_mutex m_dev_sw_mutex{};
-	std::string m_current_device = "";
+	std::string m_current_device{};
 	bool m_default_dev_changed = false;
 
 	bool m_dev_collection_cb_enabled = false;

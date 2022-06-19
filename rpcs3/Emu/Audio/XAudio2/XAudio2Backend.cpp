@@ -166,7 +166,7 @@ void XAudio2Backend::CloseUnlocked()
 	m_last_sample.fill(0);
 
 	m_default_dev_changed = false;
-	m_current_device = "";
+	m_current_device.clear();
 }
 
 void XAudio2Backend::Close()
@@ -238,7 +238,7 @@ bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSi
 		}
 	}
 
-	if (HRESULT hr = m_xaudio2_instance->CreateMasteringVoice(&m_master_voice, 0, 0, 0, use_default_device ? utf8_to_wchar(selected_dev_id).c_str() : utf8_to_wchar(dev_id).c_str()); FAILED(hr))
+	if (HRESULT hr = m_xaudio2_instance->CreateMasteringVoice(&m_master_voice, 0, 0, 0, utf8_to_wchar(use_default_device ? selected_dev_id : dev_id).c_str()); FAILED(hr))
 	{
 		XAudio.error("CreateMasteringVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		m_master_voice = nullptr;
@@ -250,7 +250,7 @@ bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSi
 
 	if (vd.InputChannels == 0)
 	{
-		XAudio.error("Channel count of 0 is invalid");
+		XAudio.error("Channel count 0 is invalid");
 		CloseUnlocked();
 		return false;
 	}
@@ -379,8 +379,7 @@ HRESULT XAudio2Backend::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWS
 		return S_OK;
 	}
 
-	// Listen only for one device role, otherwise we're going to receive more than one
-	// notification for flow type
+	// Listen only for one device role, otherwise we're going to receive more than one notification for flow type
 	if (role != eConsole)
 	{
 		XAudio.notice("OnDefaultDeviceChanged(): we don't care about this device");
@@ -390,7 +389,7 @@ HRESULT XAudio2Backend::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWS
 	std::lock_guard lock{m_dev_sw_mutex};
 
 	// Non default device is used
-	if (m_current_device == "")
+	if (m_current_device.empty())
 	{
 		return S_OK;
 	}
