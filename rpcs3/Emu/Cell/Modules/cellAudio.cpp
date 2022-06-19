@@ -527,13 +527,12 @@ namespace audio
 			.time_stretching_threshold = g_cfg.audio.time_stretching_threshold,
 			.convert_to_s16 = static_cast<bool>(g_cfg.audio.convert_to_s16),
 			.dump_to_file = static_cast<bool>(g_cfg.audio.dump_to_file),
-			.format = g_cfg.audio.format,
 			.renderer = g_cfg.audio.renderer,
 			.provider = g_cfg.audio.provider
 		};
 	}
 
-	void configure_audio()
+	void configure_audio(bool force_reset)
 	{
 		if (g_cfg.audio.provider != audio_provider::cell_audio)
 		{
@@ -546,12 +545,12 @@ namespace audio
 			const auto new_raw = get_raw_config();
 
 			if (const auto raw = g_audio.cfg.raw;
+				force_reset ||
 				raw.desired_buffer_duration != new_raw.desired_buffer_duration ||
 				raw.buffering_enabled != new_raw.buffering_enabled ||
 				raw.time_stretching_threshold != new_raw.time_stretching_threshold ||
 				raw.enable_time_stretching != new_raw.enable_time_stretching ||
 				raw.convert_to_s16 != new_raw.convert_to_s16 ||
-				raw.format != new_raw.format ||
 				raw.renderer != new_raw.renderer ||
 				raw.dump_to_file != new_raw.dump_to_file)
 			{
@@ -846,17 +845,55 @@ void cell_audio_thread::operator()()
 		// Mix
 		float* buf = ringbuffer->get_current_buffer();
 
-		switch (cfg.audio_downmix)
+		switch (cfg.audio_channels)
 		{
-		case AudioChannelCnt::STEREO:
-			mix<AudioChannelCnt::STEREO>(buf);
+		case 2:
+			switch (cfg.audio_downmix)
+			{
+			case AudioChannelCnt::SURROUND_7_1:
+				mix<AudioChannelCnt::STEREO, AudioChannelCnt::SURROUND_7_1>(buf);
+				break;
+			case AudioChannelCnt::STEREO:
+				mix<AudioChannelCnt::STEREO, AudioChannelCnt::STEREO>(buf);
+				break;
+			case AudioChannelCnt::SURROUND_5_1:
+				mix<AudioChannelCnt::STEREO, AudioChannelCnt::SURROUND_5_1>(buf);
+				break;
+			}
 			break;
-		case AudioChannelCnt::SURROUND_5_1:
-			mix<AudioChannelCnt::SURROUND_5_1>(buf);
+
+		case 6:
+			switch (cfg.audio_downmix)
+			{
+			case AudioChannelCnt::SURROUND_7_1:
+				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_7_1>(buf);
+				break;
+			case AudioChannelCnt::STEREO:
+				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(buf);
+				break;
+			case AudioChannelCnt::SURROUND_5_1:
+				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_5_1>(buf);
+				break;
+			}
 			break;
-		case AudioChannelCnt::SURROUND_7_1:
-			mix<AudioChannelCnt::SURROUND_7_1>(buf);
+
+		case 8:
+			switch (cfg.audio_downmix)
+			{
+			case AudioChannelCnt::SURROUND_7_1:
+				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_7_1>(buf);
+				break;
+			case AudioChannelCnt::STEREO:
+				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(buf);
+				break;
+			case AudioChannelCnt::SURROUND_5_1:
+				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(buf);
+				break;
+			}
 			break;
+
+		default:
+			fmt::throw_exception("Unsupported channel count in cell_audio_config: %d", static_cast<u32>(cfg.audio_channels));
 		}
 
 		// Enqueue
@@ -883,13 +920,13 @@ audio_port* cell_audio_thread::open_port()
 	return nullptr;
 }
 
-template <AudioChannelCnt downmix>
+template <AudioChannelCnt channels, AudioChannelCnt downmix>
 void cell_audio_thread::mix(float* out_buffer, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 
-	constexpr u32 channels = static_cast<u32>(downmix);
-	constexpr u32 out_buffer_sz = channels * AUDIO_BUFFER_SAMPLES;
+	constexpr u32 out_channels = static_cast<u32>(channels);
+	constexpr u32 out_buffer_sz = out_channels * AUDIO_BUFFER_SAMPLES;
 
 	const float master_volume = g_cfg.audio.volume / 100.0f;
 
@@ -929,7 +966,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 
 		if (port.num_channels == 2)
 		{
-			for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 2)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += out_channels, in += 2)
 			{
 				step_volume(port);
 
@@ -942,7 +979,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 		}
 		else if (port.num_channels == 8)
 		{
-			for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 8)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += out_channels, in += 8)
 			{
 				step_volume(port);
 
@@ -966,21 +1003,47 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 				{
 					out_buffer[out + 0] += left;
 					out_buffer[out + 1] += right;
-					out_buffer[out + 2] += center;
-					out_buffer[out + 3] += low_freq;
-					out_buffer[out + 4] += side_left + rear_left;
-					out_buffer[out + 5] += side_right + rear_right;
+
+					if constexpr (out_channels >= 6) // Only mix the surround channels into the output if surround output is configured
+					{
+						out_buffer[out + 2] += center;
+						out_buffer[out + 3] += low_freq;
+
+						if constexpr (out_channels == 6)
+						{
+							out_buffer[out + 4] += side_left + rear_left;
+							out_buffer[out + 5] += side_right + rear_right;
+						}
+						else // When using 7.1 ouput, out_buffer[out + 4] and out_buffer[out + 5] are the rear channels, so the side channels need to be mixed into [out + 6] and [out + 7]
+						{
+							out_buffer[out + 6] += side_left + rear_left;
+							out_buffer[out + 7] += side_right + rear_right;
+						}
+					}
 				}
 				else
 				{
 					out_buffer[out + 0] += left;
 					out_buffer[out + 1] += right;
-					out_buffer[out + 2] += center;
-					out_buffer[out + 3] += low_freq;
-					out_buffer[out + 4] += rear_left;
-					out_buffer[out + 5] += rear_right;
-					out_buffer[out + 6] += side_left;
-					out_buffer[out + 7] += side_right;
+
+					if constexpr (out_channels >= 6) // Only mix the surround channels into the output if surround output is configured
+					{
+						out_buffer[out + 2] += center;
+						out_buffer[out + 3] += low_freq;
+
+						if constexpr (out_channels == 6)
+						{
+							out_buffer[out + 4] += side_left;
+							out_buffer[out + 5] += side_right;
+						}
+						else
+						{
+							out_buffer[out + 4] += rear_left;
+							out_buffer[out + 5] += rear_right;
+							out_buffer[out + 6] += side_left;
+							out_buffer[out + 7] += side_right;
+						}
+					}
 				}
 			}
 		}
