@@ -82,7 +82,7 @@ namespace gl
 		glBindVertexArray(old_vao);
 	}
 
-	void overlay_pass::run(gl::command_context& cmd, const areau& region, GLuint target_texture, bool depth_target, bool use_blending)
+	void overlay_pass::run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool use_blending)
 	{
 		if (!compiled)
 		{
@@ -97,15 +97,22 @@ namespace gl
 		{
 			save_fbo = std::make_unique<fbo::save_binding_state>(fbo);
 
-			if (depth_target)
+			switch (image_aspect_bits)
 			{
-				fbo.draw_buffer(fbo.no_color);
-				fbo.depth_stencil = target_texture;
-			}
-			else
-			{
+			case gl::image_aspect::color:
 				fbo.color[0] = target_texture;
 				fbo.draw_buffer(fbo.color[0]);
+				break;
+			case gl::image_aspect::depth:
+				fbo.draw_buffer(fbo.no_color);
+				fbo.depth = target_texture;
+				break;
+			case gl::image_aspect::depth | gl::image_aspect::stencil:
+				fbo.draw_buffer(fbo.no_color);
+				fbo.depth_stencil = target_texture;
+				break;
+			default:
+				fmt::throw_exception("Unsupported image aspect combination 0x%x", image_aspect_bits);
 			}
 		}
 
@@ -117,7 +124,7 @@ namespace gl
 			// Set initial state
 			glViewport(region.x1, region.y1, region.width(), region.height());
 			cmd->color_maski(0, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			cmd->depth_mask(depth_target ? GL_TRUE : GL_FALSE);
+			cmd->depth_mask(image_aspect_bits == gl::image_aspect::color ? GL_FALSE : GL_TRUE);
 
 			// Disabling depth test will also disable depth writes which is not desired
 			cmd->depth_func(GL_ALWAYS);
@@ -149,6 +156,7 @@ namespace gl
 			if (target_texture)
 			{
 				fbo.color[0] = GL_NONE;
+				fbo.depth = GL_NONE;
 				fbo.depth_stencil = GL_NONE;
 			}
 		}
@@ -511,7 +519,7 @@ namespace gl
 			program_handle.uniforms["blur_strength"] = static_cast<s32>(cmd.config.blur_strength);
 			program_handle.uniforms["clip_region"] = static_cast<s32>(cmd.config.clip_region);
 			program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
-			overlay_pass::run(cmd_, viewport, target, false, true);
+			overlay_pass::run(cmd_, viewport, target, gl::image_aspect::color, true);
 		}
 
 		ui.update();
@@ -582,41 +590,45 @@ namespace gl
 		saved_sampler_state saved2(30, m_sampler);
 		cmd->bind_texture(30, GL_TEXTURE_2D, source[1]);
 
-		overlay_pass::run(cmd, viewport, GL_NONE, false, false);
+		overlay_pass::run(cmd, viewport, GL_NONE, gl::image_aspect::color, false);
 	}
 
-	rp_ssbo_to_d24x8_texture::rp_ssbo_to_d24x8_texture()
+	rp_ssbo_to_texture::rp_ssbo_to_texture()
 	{
 		vs_src =
 		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
 		;
 
 		fs_src =
-		#include "../Program/GLSLSnippets/CopyBufferToD24x8.glsl"
+		#include "../Program/GLSLSnippets/CopyBufferToImage.glsl"
 		;
 
 		std::pair<std::string_view, std::string> repl_list[] =
 		{
 			{ "%set, ", "" },
 			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
-			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) }
+			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) },
+			{ "%stencil_export_supported", gl::get_driver_caps().ARB_shader_stencil_export_supported ? "1" : "0" }
 		};
 
 		fs_src = fmt::replace_all(fs_src, repl_list);
 	}
 
-	void rp_ssbo_to_d24x8_texture::run(gl::command_context& cmd,
+	void rp_ssbo_to_texture::run(gl::command_context& cmd,
 		const buffer* src, const texture* dst,
 		const u32 src_offset, const coordu& dst_region,
-		const pixel_unpack_settings& settings)
+		const pixel_buffer_layout& layout)
 	{
-		const u32 row_length = settings.get_row_length() ? settings.get_row_length() : static_cast<u32>(dst_region.width);
+		const u32 row_length = static_cast<u32>(dst_region.width);
+		const u32 bpp = dst->pitch() / dst->width();
+
 		program_handle.uniforms["src_pitch"] = row_length;
-		program_handle.uniforms["swap_bytes"] = settings.get_swap_bytes();
-		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * 4 * dst_region.height);
+		program_handle.uniforms["swap_bytes"] = layout.swap_bytes;
+		program_handle.uniforms["format"] = static_cast<GLenum>(dst->get_internal_format());
+		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * bpp * dst_region.height);
 
 		cmd->stencil_mask(0xFF);
 
-		overlay_pass::run(cmd, dst_region, dst->id(), true);
+		overlay_pass::run(cmd, dst_region, dst->id(), dst->aspect());
 	}
 }

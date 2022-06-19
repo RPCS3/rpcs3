@@ -8,7 +8,15 @@ namespace gl
 {
 	static GLenum sizedfmt_to_ifmt(GLenum sized)
 	{
-		return sized == GL_BGRA8 ? GL_RGBA8 : sized;
+		switch (sized)
+		{
+		case GL_BGRA8:
+			return GL_RGBA8;
+		case GL_BGR5_A1:
+			return GL_RGB5_A1;
+		default:
+			return sized;
+		}
 	}
 
 	texture::texture(GLenum target, GLuint width, GLuint height, GLuint depth, GLuint mipmaps, GLenum sized_format, rsx::format_class format_class)
