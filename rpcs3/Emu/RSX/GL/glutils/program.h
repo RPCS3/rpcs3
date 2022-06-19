@@ -35,16 +35,16 @@ namespace gl
 
 			~shader()
 			{
-				if (created())
-				{
-					remove();
-				}
+				remove();
 			}
 
 			void remove()
 			{
-				glDeleteShader(m_id);
-				m_id = GL_NONE;
+				if (m_id)
+				{
+					glDeleteShader(m_id);
+					m_id = GL_NONE;
+				}
 			}
 
 			void create(::glsl::program_domain type_, const std::string& src);
