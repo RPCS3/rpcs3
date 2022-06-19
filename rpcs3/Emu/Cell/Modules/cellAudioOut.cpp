@@ -352,7 +352,12 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 			out.channels = config->channel;
 			out.encoder = config->encoder;
 
-			if (config->downMixer <= CELL_AUDIO_OUT_DOWNMIXER_TYPE_B) // Only change downmixer if it's valid
+			if (config->downMixer > CELL_AUDIO_OUT_DOWNMIXER_TYPE_B) // PS3 ignores invalid downMixer values and keeps the previous valid one instead
+			{
+				cellSysutil.warning("cellAudioOutConfigure: Invalid downmixing mode configured: %d. Keeping old mode: downMixer=%d",
+					config->downMixer, out.downmixer);
+			}
+			else
 			{
 				out.downmixer = config->downMixer;
 			}
