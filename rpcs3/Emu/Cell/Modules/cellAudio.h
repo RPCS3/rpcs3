@@ -201,7 +201,6 @@ struct cell_audio_config
 		s64 time_stretching_threshold = 0;
 		bool convert_to_s16 = false;
 		bool dump_to_file = false;
-		audio_format format = audio_format::stereo;
 		audio_renderer renderer = audio_renderer::null;
 		audio_provider provider = audio_provider::none;
 	};
@@ -405,5 +404,5 @@ using cell_audio = named_thread<cell_audio_thread>;
 namespace audio
 {
 	cell_audio_config::raw_config get_raw_config();
-	void configure_audio();
+	void configure_audio(bool force_reset = false);
 }
