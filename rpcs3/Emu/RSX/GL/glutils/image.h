@@ -10,7 +10,8 @@ using namespace ::rsx::format_class_;
 
 namespace gl
 {
-#define GL_BGRA8 0x80E1 // Enumerant of GL_BGRA8_EXT from the GL_EXT_texture_format_BGRA8888
+#define GL_BGRA8        0x80E1 // Enumerant of GL_BGRA8_EXT from the GL_EXT_texture_format_BGRA8888
+#define GL_BGR5_A1      0x99F0 // Unused enum 0x96xx is the last official GL enumerant
 
 	class buffer;
 	class buffer_view;
@@ -120,6 +121,7 @@ namespace gl
 			bgra8 = GL_BGRA8,
 			rgb565 = GL_RGB565,
 			rgb5a1 = GL_RGB5_A1,
+			bgr5a1 = GL_BGR5_A1,
 			rgba4 = GL_RGBA4,
 			r8 = GL_R8,
 			r16 = GL_R16,
@@ -128,7 +130,9 @@ namespace gl
 			rg16 = GL_RG16,
 			rg16f = GL_RG16F,
 			rgba16f = GL_RGBA16F,
-			rgba32f = GL_RGBA32F
+			rgba32f = GL_RGBA32F,
+
+			rg8_snorm = GL_RG8_SNORM
 		};
 
 		enum class wrap

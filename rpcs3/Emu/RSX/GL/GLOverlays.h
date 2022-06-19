@@ -74,7 +74,7 @@ namespace gl
 
 		virtual void emit_geometry();
 
-		void run(gl::command_context& cmd, const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false);
+		void run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool use_blending = false);
 	};
 
 	struct ui_overlay_renderer : public overlay_pass
@@ -114,20 +114,10 @@ namespace gl
 		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d);
 	};
 
-	struct rp_ssbo_to_d24x8_texture : public overlay_pass
+	struct rp_ssbo_to_texture : public overlay_pass
 	{
-		rp_ssbo_to_d24x8_texture();
-		void run(gl::command_context& cmd, const buffer* src, const texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_unpack_settings& settings);
-	};
-
-	struct rp_copy_rgba_to_bgra : public overlay_pass
-	{
-		void run(gl::command_context& cmd, const texture* src, const texture* dst, const coordu& src_region, const coordu& dst_region);
-	};
-
-	struct rp_copy_bgra_to_rgba : public overlay_pass
-	{
-		void run(gl::command_context& cmd, const texture* src, const texture* dst, const coordu& src_region, const coordu& dst_region);
+		rp_ssbo_to_texture();
+		void run(gl::command_context& cmd, const buffer* src, const texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
 	};
 
 	// TODO: Replace with a proper manager

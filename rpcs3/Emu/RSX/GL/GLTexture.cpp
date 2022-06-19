@@ -74,7 +74,7 @@ namespace gl
 		switch (texture_format)
 		{
 		case CELL_GCM_TEXTURE_B8: return GL_R8;
-		case CELL_GCM_TEXTURE_A1R5G5B5: return GL_RGB5_A1;
+		case CELL_GCM_TEXTURE_A1R5G5B5: return GL_BGR5_A1;
 		case CELL_GCM_TEXTURE_A4R4G4B4: return GL_RGBA4;
 		case CELL_GCM_TEXTURE_R5G6B5: return GL_RGB565;
 		case CELL_GCM_TEXTURE_A8R8G8B8: return GL_BGRA8;
@@ -90,16 +90,16 @@ namespace gl
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return GL_RGBA16F;
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return GL_RGBA32F;
 		case CELL_GCM_TEXTURE_X32_FLOAT: return GL_R32F;
-		case CELL_GCM_TEXTURE_D1R5G5B5: return GL_RGB5_A1;
+		case CELL_GCM_TEXTURE_D1R5G5B5: return GL_BGR5_A1;
 		case CELL_GCM_TEXTURE_D8R8G8B8: return GL_BGRA8;
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return GL_RG16F;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return GL_RG8;
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return GL_RG8;
-		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return GL_RGBA8;
-		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return GL_RGBA8;
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return GL_RG8_SNORM;
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return GL_BGRA8;
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return GL_BGRA8;
 		}
 		fmt::throw_exception("Unknown texture format 0x%x", texture_format);
 	}
@@ -163,6 +163,8 @@ namespace gl
 			return { GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2, true };
 		case texture::internal_format::rgb5a1:
 			return { GL_RGB, GL_UNSIGNED_SHORT_5_5_5_1, 2, true };
+		case texture::internal_format::bgr5a1:
+			return { GL_RGB, GL_UNSIGNED_SHORT_1_5_5_5_REV, 2, true };
 		case texture::internal_format::rgba4:
 			return { GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, false };
 		case texture::internal_format::rgba8:
@@ -396,6 +398,7 @@ namespace gl
 		case CELL_GCM_TEXTURE_R5G5B5A1:
 		case CELL_GCM_TEXTURE_R6G5B5:
 		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_A8R8G8B8:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
@@ -409,9 +412,6 @@ namespace gl
 		case CELL_GCM_TEXTURE_DEPTH16:
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 			return{ GL_RED, GL_RED, GL_RED, GL_RED };
-
-		case CELL_GCM_TEXTURE_A4R4G4B4:
-			return{ GL_BLUE, GL_GREEN, GL_RED, GL_ALPHA };
 
 		case CELL_GCM_TEXTURE_B8:
 			return{ GL_ONE, GL_RED, GL_RED, GL_RED };
@@ -580,63 +580,39 @@ namespace gl
 			transfer_buf = &scratch_mem;
 		};
 
-		if (dst->aspect() == image_aspect::color ||
-			unpack_info.type == GL_UNSIGNED_SHORT ||
-			unpack_info.type == GL_UNSIGNED_INT_24_8)
-		{
-			if (auto job = get_trivial_transform_job(unpack_info))
-			{
-				job->run(cmd, src, static_cast<u32>(mem_info->image_size_in_bytes), in_offset);
-			}
-			else
-			{
-				skip_barrier = true;
-			}
-		}
-		else if (unpack_info.type == GL_FLOAT)
-		{
-			mem_info->memory_required = (mem_info->image_size_in_texels * 4);
-			initialize_scratch_mem();
-
-			if (unpack_info.swap_bytes)
-			{
-				get_compute_task<cs_fconvert_task<f16, f32, true, false>>()->run(cmd, transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
-			}
-			else
-			{
-				get_compute_task<cs_fconvert_task<f16, f32, false, false>>()->run(cmd, transfer_buf, in_offset, static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
-			}
-		}
-		else if (unpack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
-		{
-			mem_info->memory_required = (mem_info->image_size_in_texels * 8);
-			initialize_scratch_mem();
-			get_compute_task<cs_shuffle_x8d24f_to_d32fx8>()->run(cmd, transfer_buf, in_offset, out_offset, static_cast<u32>(mem_info->image_size_in_texels));
-		}
-		else
-		{
-			fmt::throw_exception("Invalid depth/stencil type 0x%x", unpack_info.type);
-		}
-
 		const auto caps = gl::get_driver_caps();
-		if (dst->get_internal_format() == gl::texture::internal_format::depth24_stencil8 &&
-			dst->get_target() == gl::texture::target::texture2D && // Only 2D output supported for the moment.
-			!caps.vendor_NVIDIA &&                    // NVIDIA has native support for D24X8 data as they introduced this extension.
-			caps.ARB_shader_stencil_export_supported) // The driver needs to support stencil export at the very least
+		if (!(dst->aspect() & image_aspect::stencil) || caps.ARB_shader_stencil_export_supported)
 		{
-			// This optimized path handles the data load on the GPU without context switching to compute.
-			// The upside is that it is very fast if you have headroom.
-			// The downside is that it is linear. Not that it matters that much as most drivers seem to be downloading the entire data source and doing really slow things with it.
-			if (!skip_barrier)
-			{
-				glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-			}
-
-			auto pass = gl::get_overlay_pass<gl::rp_ssbo_to_d24x8_texture>();
-			pass->run(cmd, transfer_buf, dst, out_offset, {{dst_region.x, dst_region.y}, {dst_region.width, dst_region.height}}, {});
+			// We do not need to use the driver's builtin transport mechanism
+			glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+			gl::get_overlay_pass<gl::rp_ssbo_to_texture>()->run(cmd, transfer_buf, dst, out_offset, { {dst_region.x, dst_region.y}, {dst_region.width, dst_region.height} }, unpack_info);
 		}
 		else
 		{
+			// Stencil format on NV. Use driver upload path
+
+			if (unpack_info.type == GL_UNSIGNED_INT_24_8)
+			{
+				if (auto job = get_trivial_transform_job(unpack_info))
+				{
+					job->run(cmd, src, static_cast<u32>(mem_info->image_size_in_bytes), in_offset);
+				}
+				else
+				{
+					skip_barrier = true;
+				}
+			}
+			else if (unpack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
+			{
+				mem_info->memory_required = (mem_info->image_size_in_texels * 8);
+				initialize_scratch_mem();
+				get_compute_task<cs_shuffle_x8d24f_to_d32fx8>()->run(cmd, transfer_buf, in_offset, out_offset, static_cast<u32>(mem_info->image_size_in_texels));
+			}
+			else
+			{
+				fmt::throw_exception("Invalid depth/stencil type 0x%x", unpack_info.type);
+			}
+
 			if (!skip_barrier)
 			{
 				glMemoryBarrier(GL_PIXEL_BUFFER_BARRIER_BIT);
@@ -648,8 +624,6 @@ namespace gl
 			dst->copy_from(reinterpret_cast<void*>(u64(out_offset)), static_cast<texture::format>(unpack_info.format),
 				static_cast<texture::type>(unpack_info.type), dst_level, dst_region, {});
 		}
-
-		if (scratch_mem) scratch_mem.remove();
 	}
 
 	gl::viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
@@ -739,8 +713,6 @@ namespace gl
 		}
 		else
 		{
-			bool apply_settings = true;
-			bool use_compute_transform = is_swizzled;
 			std::pair<void*, u32> upload_scratch_mem = {}, compute_scratch_mem = {};
 			image_memory_requirements mem_info;
 			pixel_buffer_layout mem_layout;
@@ -750,28 +722,9 @@ namespace gl
 			u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
 			u64 image_linear_size = staging_buffer.size();
 
-			switch (gl_type)
-			{
-			case GL_BYTE:
-			case GL_UNSIGNED_BYTE:
-				// Multi-channel format uploaded one byte at a time. This is due to poor driver support for formats like GL_UNSIGNED SHORT_8_8
-				// Do byteswapping in software for now until compute acceleration is available
-				apply_settings = (gl_format == GL_RED);
-				caps.supports_byteswap = apply_settings;
-				break;
-			case GL_FLOAT:
-			case GL_UNSIGNED_INT_24_8:
-			case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
-				mem_layout.swap_bytes = true;
-				mem_layout.size = 4;
-				use_compute_transform = true;
-				apply_settings = false;
-				break;
-			}
-
 			const auto min_required_buffer_size = std::max<u64>(utils::align(image_linear_size * 4, 0x100000), 16 * 0x100000);
 
-			if (use_compute_transform)
+			if (driver_caps.ARB_compute_shader_supported)
 			{
 				if (g_upload_transfer_buffer.size() < static_cast<GLsizeiptr>(min_required_buffer_size))
 				{
@@ -790,9 +743,15 @@ namespace gl
 
 			for (const rsx::subresource_layout& layout : input_layouts)
 			{
-				if (use_compute_transform)
+				if (driver_caps.ARB_compute_shader_supported)
 				{
-					const u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
+					u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
+					if (!rsx::is_compressed_host_format(format))
+					{
+						// Handle emulated compressed formats with host unpack (R8G8 compressed)
+						row_pitch = std::max<u64>(row_pitch, dst->pitch());
+					}
+
 					image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 
 					compute_scratch_mem = { nullptr, g_compute_decode_buffer.alloc(static_cast<u32>(image_linear_size), 256) };
@@ -803,7 +762,7 @@ namespace gl
 					dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem.first), image_linear_size };
 				}
 
-				caps.supports_hw_deswizzle = (is_swizzled && use_compute_transform && image_linear_size > 4096);
+				caps.supports_hw_deswizzle = (is_swizzled && driver_caps.ARB_compute_shader_supported && image_linear_size > 4096);
 				auto op = upload_texture_subresource(dst_buffer, layout, format, is_swizzled, caps);
 
 				// Define upload region
@@ -815,7 +774,7 @@ namespace gl
 				region.height = layout.height_in_texel;
 				region.depth = layout.depth;
 
-				if (use_compute_transform)
+				if (driver_caps.ARB_compute_shader_supported)
 				{
 					// 0. Preconf
 					mem_layout.swap_bytes = op.require_swap;
@@ -895,12 +854,7 @@ namespace gl
 				}
 				else
 				{
-					if (apply_settings)
-					{
-						unpack_settings.swap_bytes(op.require_swap);
-						apply_settings = false;
-					}
-
+					unpack_settings.swap_bytes(op.require_swap);
 					dst->copy_from(out_pointer, static_cast<texture::format>(gl_format), static_cast<texture::type>(gl_type), layout.level, region, unpack_settings);
 				}
 			}
@@ -1016,6 +970,11 @@ namespace gl
 		// 1. Texel sizes must match
 		// 2. Both formats require no transforms (basic memcpy) or...
 		// 3. Both formats have the same transform (e.g RG16_UNORM to RG16_SFLOAT, both are down and uploaded with a 2-byte byteswap)
+
+		if (format1 == GL_BGRA8 || format2 == GL_BGRA8)
+		{
+			return false;
+		}
 
 		if (get_format_texel_width(format1) != get_format_texel_width(format2))
 		{

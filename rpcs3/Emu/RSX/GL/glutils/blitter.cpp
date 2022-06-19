@@ -9,17 +9,6 @@ namespace gl
 {
 	blitter* g_hw_blitter = nullptr;
 
-	void process_bgra_transfer_source(const gl::texture* src, const gl::texture* dst, const coord3i& region)
-	{
-		ensure(src->get_internal_format() == texture::internal_format::bgra8);
-		ensure(dst->get_internal_format() == texture::internal_format::rgba8);
-	}
-
-	void process_bgra_transfer_dest(const gl::texture* tex, const coord3i& region)
-	{
-		ensure(tex->get_internal_format() == texture::internal_format::bgra8);
-	}
-
 	void blitter::copy_image(gl::command_context& cmd, const texture* src, const texture* dst, int src_level, int dst_level, const position3i& src_offset, const position3i& dst_offset, const size3i& size) const
 	{
 		ensure(src_level == 0);
@@ -27,29 +16,11 @@ namespace gl
 		// Typeless bypass for BGRA8
 		std::unique_ptr<gl::texture> temp_image;
 		const texture* real_src = src;
-		bool handle_bgra8_dest = false;
-
-		if (src->get_internal_format() != dst->get_internal_format())
-		{
-			if (false && src->get_internal_format() == texture::internal_format::bgra8)
-			{
-				temp_image = std::make_unique<texture>(static_cast<GLenum>(src->get_target()), src->width(), src->height(), src->depth(), src->levels(), GL_RGBA8, rsx::format_class::RSX_FORMAT_CLASS_COLOR);
-				process_bgra_transfer_source(src, temp_image.get(), { src_offset, size });
-				real_src = temp_image.get();
-			}
-
-			handle_bgra8_dest = (dst->get_internal_format() == texture::internal_format::bgra8);
-		}
 
 		glCopyImageSubData(real_src->id(), static_cast<GLenum>(real_src->get_target()), src_level,
 			src_offset.x, src_offset.y, src_offset.z,
 			dst->id(), static_cast<GLenum>(dst->get_target()), dst_level,
 			dst_offset.x, dst_offset.y, dst_offset.z, size.width, size.height, size.depth);
-
-		if (handle_bgra8_dest)
-		{
-			process_bgra_transfer_dest(dst, { dst_offset, size });
-		}
 	}
 
 	void blitter::scale_image(gl::command_context& cmd, const texture* src, texture* dst, areai src_rect, areai dst_rect,
@@ -80,7 +51,7 @@ namespace gl
 				}
 				else
 				{
-					copy_image(cmd, src, dst, 0, 1, position3i{ src_rect.x1, src_rect.y1, 0u }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 });
+					copy_image(cmd, src, dst, 0, 0, position3i{ src_rect.x1, src_rect.y1, 0u }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 });
 				}
 
 				return;
@@ -123,33 +94,12 @@ namespace gl
 			}
 		}
 
-		if (src->get_internal_format() == texture::internal_format::bgra8 &&
-			real_src == src &&
-			dst->get_internal_format() != src->get_internal_format())
-		{
-			// Not typeless, plus src is bgra8. Needs conversion
-			typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, src->width(), src->height(), 1, 1, GL_RGBA8);
-			process_bgra_transfer_source(src, typeless_src.get(), {{src_rect.x1, src_rect.y1, 0}, {src_rect.width(), src_rect.height(), 1}});
-			real_src = typeless_src.get();
-		}
-
-		bool handle_bgra8_dest = false;
-		if (dst->get_internal_format() == texture::internal_format::bgra8 &&
-			real_dst == dst &&
-			dst->get_internal_format() != src->get_internal_format())
-		{
-			// Not typeless but dst is bgra8.
-			// Handle the conversion in post
-			handle_bgra8_dest = true;
-		}
-
 		ensure(real_src->aspect() == real_dst->aspect());
 
 		if (src_rect.width() == dst_rect.width() && src_rect.height() == dst_rect.height() &&
 			!src_rect.is_flipped() && !dst_rect.is_flipped())
 		{
-			copy_image(cmd, real_src, real_dst, 0, 1, position3i{ src_rect.x1, src_rect.y1, 0 }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 });
-			handle_bgra8_dest = false; // Handled in copy_image
+			copy_image(cmd, real_src, real_dst, 0, 0, position3i{ src_rect.x1, src_rect.y1, 0 }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 });
 		}
 		else
 		{
@@ -208,11 +158,6 @@ namespace gl
 		{
 			// Transfer contents from typeless dst back to original dst
 			copy_typeless(cmd, dst, typeless_dst.get());
-		}
-		else if (handle_bgra8_dest)
-		{
-			// Blit transfer to BGRA8 target
-			process_bgra_transfer_dest(dst, { {dst_rect.x1, dst_rect.y1, 0}, {dst_rect.width(), dst_rect.height(), 1} });
 		}
 	}
 
