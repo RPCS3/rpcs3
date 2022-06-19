@@ -79,7 +79,6 @@ struct gui_listener : logs::listener
 			}
 
 			_new->msg += text;
-			_new->msg += '\n';
 
 			queue.push(std::move(p));
 		}
@@ -587,9 +586,79 @@ void log_frame::UpdateUI()
 	const QString font_start_tag_stack = "<font color = \"" % m_color_stack.name() % "\">";
 	const QString font_end_tag = QStringLiteral("</font>");
 
-	static constexpr auto escaped = [](QString& text)
+	static constexpr auto escaped = [](const QString& text)
 	{
 		return text.toHtmlEscaped().replace(QStringLiteral("\n"), QStringLiteral("<br/>"));
+	};
+
+	// Preserve capacity
+	m_log_text.resize(0);
+
+	// Handle a special case in which we may need to override the previous repetition count 
+	bool is_first_rep = true;
+
+	// Batch output of multiple lines if possible (optimization)
+	auto flush = [&]()
+	{
+		if (m_log_text.isEmpty() && !is_first_rep)
+		{
+			return;
+		}
+
+		// save old log state
+		QScrollBar* sb = m_log->verticalScrollBar();
+		const bool isMax = sb->value() == sb->maximum();
+		const int sb_pos = sb->value();
+
+		QTextCursor text_cursor = m_log->textCursor();
+		const int sel_pos = text_cursor.position();
+		int sel_start = text_cursor.selectionStart();
+		int sel_end = text_cursor.selectionEnd();
+
+		// clear selection or else it will get colorized as well
+		text_cursor.clearSelection();
+
+		m_log->setTextCursor(text_cursor);
+
+		if (is_first_rep)
+		{
+			// Override repetition count of previous UpdateUI() (special case)
+			text_cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
+			text_cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor, (m_log_counter != 2 ? 1 + QString::number(m_log_counter - 1).size() : 0));
+			text_cursor.insertHtml(font_start_tag_stack % QStringLiteral(" x") % QString::number(m_log_counter) % font_end_tag);
+		}
+		else if (m_log_counter > 1)
+		{
+			// Insert both messages and repetition prefix (append is more optimized than concatenation)
+			m_log_text += font_end_tag;
+			m_log_text += font_start_tag_stack;
+			m_log_text += QStringLiteral(" x");
+			m_log_text += QString::number(m_log_counter);
+			m_log_text += font_end_tag;
+
+			m_log->appendHtml(m_log_text);
+			m_log_counter = 0;
+		}
+		else
+		{
+			m_log_text += font_end_tag;
+			m_log->appendHtml(m_log_text);
+		}
+
+		// if we mark text from right to left we need to swap sides (start is always smaller than end)
+		if (sel_pos < sel_end)
+		{
+			std::swap(sel_start, sel_end);
+		}
+
+		// reset old text cursor and selection
+		text_cursor.setPosition(sel_start);
+		text_cursor.setPosition(sel_end, QTextCursor::KeepAnchor);
+		m_log->setTextCursor(text_cursor);
+
+		// set scrollbar to max means auto-scroll
+		sb->setValue(isMax ? sb->maximum() : sb_pos);
+		m_log_text.clear();
 	};
 
 	// Check main logs
@@ -598,76 +667,72 @@ void log_frame::UpdateUI()
 		// Confirm log level
 		if (packet->sev <= s_gui_listener.enabled)
 		{
-			QString text;
-			switch (packet->sev)
+			if (m_stack_log && m_old_log_level == packet->sev && packet->msg == m_old_log_text)
 			{
-			case logs::level::always: text = QStringLiteral("- "); break;
-			case logs::level::fatal: text = QStringLiteral("F "); break;
-			case logs::level::error: text = QStringLiteral("E "); break;
-			case logs::level::todo: text = QStringLiteral("U "); break;
-			case logs::level::success: text = QStringLiteral("S "); break;
-			case logs::level::warning: text = QStringLiteral("W "); break;
-			case logs::level::notice: text = QStringLiteral("! "); break;
-			case logs::level::trace: text = QStringLiteral("T "); break;
+				m_log_counter++;
+
+				if (is_first_rep)
+				{
+					flush();
+				}
+
+				s_gui_listener.pop();
+				continue;
 			}
 
-			// Print UTF-8 text.
-			text += qstr(packet->msg);
+			is_first_rep = false;
 
-			// save old log state
-			QScrollBar* sb = m_log->verticalScrollBar();
-			const bool isMax = sb->value() == sb->maximum();
-			const int sb_pos = sb->value();
-
-			QTextCursor text_cursor = m_log->textCursor();
-			const int sel_pos = text_cursor.position();
-			int sel_start = text_cursor.selectionStart();
-			int sel_end = text_cursor.selectionEnd();
-
-			// clear selection or else it will get colorized as well
-			text_cursor.clearSelection();
-
-			// remove the new line because Qt's append adds a new line already.
-			text.chop(1);
-
-			// create counter suffix and remove recurring line if needed
-			if (m_stack_log)
+			if (m_log_counter > 1)
 			{
-				// add counter suffix if needed
-				if (text == m_old_log_text)
+				// Add counter suffix if needed
+				flush();
+			}
+
+			if (m_log_text.size() > 0x1000)
+			{
+				// Try not to hold too much data at a time so the frame content will be updated frequently
+				flush();
+			}
+
+			if (!m_log_text.isEmpty())
+			{
+				if (packet->sev != m_old_log_level)
 				{
-					text_cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
-					text_cursor.movePosition(QTextCursor::StartOfBlock, QTextCursor::KeepAnchor);
-					text_cursor.insertHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % escaped(text) % font_start_tag_stack % QStringLiteral(" x") % QString::number(++m_log_counter) % font_end_tag % font_end_tag);
+					flush();
+					m_old_log_level = packet->sev;
+					m_log_text += font_start_tag(m_color[static_cast<int>(m_old_log_level)]);
 				}
 				else
 				{
-					m_log_counter = 1;
-					m_old_log_text = text;
-
-					m_log->setTextCursor(text_cursor);
-					m_log->appendHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % escaped(text) % font_end_tag);
+					m_log_text += QStringLiteral("<br/>");
 				}
 			}
 			else
 			{
-				m_log->setTextCursor(text_cursor);
-				m_log->appendHtml(font_start_tag(m_color[static_cast<int>(packet->sev)]) % escaped(text) % font_end_tag);
+				m_old_log_level = packet->sev;
+				m_log_text += font_start_tag(m_color[static_cast<int>(m_old_log_level)]);
 			}
 
-			// if we mark text from right to left we need to swap sides (start is always smaller than end)
-			if (sel_pos < sel_end)
+			switch (packet->sev)
 			{
-				std::swap(sel_start, sel_end);
+			case logs::level::always: m_log_text += QStringLiteral("- "); break;
+			case logs::level::fatal: m_log_text += QStringLiteral("F "); break;
+			case logs::level::error: m_log_text += QStringLiteral("E "); break;
+			case logs::level::todo: m_log_text += QStringLiteral("U "); break;
+			case logs::level::success: m_log_text += QStringLiteral("S "); break;
+			case logs::level::warning: m_log_text += QStringLiteral("W "); break;
+			case logs::level::notice: m_log_text += QStringLiteral("! "); break;
+			case logs::level::trace: m_log_text += QStringLiteral("T "); break;
 			}
 
-			// reset old text cursor and selection
-			text_cursor.setPosition(sel_start);
-			text_cursor.setPosition(sel_end, QTextCursor::KeepAnchor);
-			m_log->setTextCursor(text_cursor);
+			// Print UTF-8 text.
+			m_log_text += escaped(qstr(packet->msg));
 
-			// set scrollbar to max means auto-scroll
-			sb->setValue(isMax ? sb->maximum() : sb_pos);
+			if (m_stack_log)
+			{
+				m_log_counter = 1;
+				m_old_log_text = std::move(packet->msg);
+			}
 		}
 
 		// Drop packet
@@ -676,6 +741,9 @@ void log_frame::UpdateUI()
 		// Limit processing time
 		if (steady_clock::now() >= start + 7ms) break;
 	}
+
+	is_first_rep = false;
+	flush();
 }
 
 void log_frame::closeEvent(QCloseEvent *event)
