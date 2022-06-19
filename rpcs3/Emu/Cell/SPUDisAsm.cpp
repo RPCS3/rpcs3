@@ -337,6 +337,25 @@ void SPUDisAsm::WRCH(spu_opcode_t op)
 			fmt::append(last_opcode, " #%s", upd == "empty" ? "IMMEDIATE" : upd);
 			return;
 		}
+		case SPU_WrOutIntrMbox:
+		{
+			const u32 code = value._u32[3] >> 24;
+
+			if (code == 128u)
+			{
+				last_opcode += " #sys_event_flag_set_bit";
+			}
+			else if (code == 192u)
+			{
+				last_opcode += " #sys_event_flag_set_bit_impatient";
+			}
+			else
+			{
+				fmt::append(last_opcode, " #%s", SignedHex(value._u32[3]));
+			}
+
+			return;
+		}
 		default:
 		{
 			fmt::append(last_opcode, " #%s", SignedHex(value._u32[3]));
