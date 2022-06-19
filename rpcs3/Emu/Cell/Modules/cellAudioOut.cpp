@@ -73,11 +73,7 @@ audio_out_configuration::audio_out_configuration()
 			// Pre-select the first available sound mode
 			output.channels = channel;
 			output.encoder  = type;
-
-			// Set the initially selected configuration
-			output.config.channel = channel;
-			output.config.encoder = type;
-			output.config.downMixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
+			output.sound_mode = output.sound_modes.back();
 
 			selected = true;
 		}
@@ -184,15 +180,15 @@ audio_out_configuration::audio_out_configuration()
 
 std::pair<AudioChannelCnt, AudioChannelCnt> audio_out_configuration::audio_out::get_channel_count_and_downmixer() const
 {
-	std::pair <AudioChannelCnt, AudioChannelCnt> ret;
+	std::pair<AudioChannelCnt, AudioChannelCnt> ret;
 
-	switch (channels)
+	switch (sound_mode.channel)
 	{
 	case 2: ret.first = AudioChannelCnt::STEREO; break;
 	case 6: ret.first = AudioChannelCnt::SURROUND_5_1; break;
 	case 8: ret.first = AudioChannelCnt::SURROUND_7_1; break;
 	default:
-		fmt::throw_exception("Unsupported channel count in cellAudioOut config: %d", channels);
+		fmt::throw_exception("Unsupported channel count in cellAudioOut sound_mode: %d", sound_mode.channel);
 	}
 
 	switch (downmixer)
@@ -304,23 +300,14 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 	case CELL_AUDIO_OUT_PRIMARY:
 	case CELL_AUDIO_OUT_SECONDARY:
 	{
-		const auto [channels, downmix] = AudioBackend::get_channel_count_and_downmixer(audioOut);
-
 		audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 		std::lock_guard lock(cfg.mtx);
 		const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
-		const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [channels = channels, &out](const CellAudioOutSoundMode& mode)
-			{
-				return mode.type == out.encoder && mode.channel == static_cast<u8>(channels);
-			});
-
-		ensure(it != out.sound_modes.cend());
-
 		_state.state = out.state;
 		_state.encoder = out.encoder;
 		_state.downMixer = out.downmixer;
-		_state.soundMode = *it;
+		_state.soundMode = out.sound_mode;
 		break;
 	}
 	default:
@@ -358,22 +345,36 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 
 		audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
-		const bool found_mode = (out.sound_modes.cend() != std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&config](const CellAudioOutSoundMode& mode)
-			{
-				return mode.channel == config->channel && mode.type == config->encoder && config->downMixer <= CELL_AUDIO_OUT_DOWNMIXER_TYPE_B;
-			}));
+		// Apparently the set config does not necessarily have to exist in the list of sound modes.
 
-		if (found_mode && (out.channels != config->channel || out.encoder != config->encoder || out.downmixer != config->downMixer))
+		if (out.channels != config->channel || out.encoder != config->encoder || out.downmixer != config->downMixer)
 		{
 			out.channels = config->channel;
 			out.encoder = config->encoder;
-			out.downmixer = config->downMixer;
+
+			if (config->downMixer <= CELL_AUDIO_OUT_DOWNMIXER_TYPE_B) // Only change downmixer if it's valid
+			{
+				out.downmixer = config->downMixer;
+			}
+
+			// Try to find the best sound mode for this configuration
+			const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&out](const CellAudioOutSoundMode& mode)
+				{
+					return mode.type == out.encoder && mode.channel == out.channels;
+				});
+
+			if (it != out.sound_modes.cend())
+			{
+				out.sound_mode = *it;
+			}
+			else
+			{
+				cellSysutil.warning("cellAudioOutConfigure: Could not find an ideal sound mode for %d channel output. Keeping old mode: channels=%d, encoder=%d, fs=%d",
+					config->channel, out.sound_mode.channel, out.sound_mode.type, out.sound_mode.fs);
+			}
 
 			needs_reset = true;
 		}
-
-		// Apparently the set config is not necessarily equal to the active config, so we need to store it seperately.
-		out.config = *config;
 	}
 
 	if (needs_reset)
@@ -434,8 +435,13 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 
 	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
-	// Return the set config, which might not necessarily be the active config.
-	*config = out.config;
+	// Return the active config.
+	CellAudioOutConfiguration _config{};
+	_config.channel   = out.channels;
+	_config.encoder   = out.encoder;
+	_config.downMixer = out.downmixer;
+
+	*config = _config;
 
 	return CELL_OK;
 }
