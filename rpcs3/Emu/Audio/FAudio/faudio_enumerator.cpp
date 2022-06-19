@@ -4,8 +4,8 @@
 
 #include "Emu/Audio/FAudio/faudio_enumerator.h"
 #include <locale>
-#include <codecvt>
 #include <array>
+#include "Utilities/StrUtil.h"
 #include "util/logs.hpp"
 
 LOG_CHANNEL(faudio_dev_enum);
@@ -68,23 +68,22 @@ std::vector<audio_device_enumerator::audio_device> faudio_enumerator::get_output
 		const std::string dev_name = [&]() -> std::string
 		{
 			constexpr usz dev_name_size = sizeof(dev_info.DisplayName) / sizeof(dev_info.DisplayName[0]);
-			std::array<char16_t, dev_name_size + 1> temp_buf;
+			std::array<wchar_t, dev_name_size + 1> temp_buf;
 			memcpy(temp_buf.data(), dev_info.DisplayName, dev_name_size);
 			temp_buf[dev_name_size] = 0;
-			if (std::char_traits<char16_t>::length(temp_buf.data()) == 0)
+			if (std::char_traits<wchar_t>::length(temp_buf.data()) == 0)
 			{
 				return {};
 			}
 
-			std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cnv{};
-			return cnv.to_bytes(temp_buf.data());
+			return wchar_to_utf8(temp_buf.data());
 		}();
 
 		audio_device dev =
 		{
 			.id = std::to_string(dev_idx),
 			.name = dev_name,
-			.max_ch = dev_info.OutputFormat.Format.nChannel
+			.max_ch = dev_info.OutputFormat.Format.nChannels
 		};
 
 		if (dev.name.empty())
