@@ -845,17 +845,55 @@ void cell_audio_thread::operator()()
 		// Mix
 		float* buf = ringbuffer->get_current_buffer();
 
-		switch (cfg.audio_downmix)
+		switch (cfg.audio_channels)
 		{
-		case AudioChannelCnt::STEREO:
-			mix<AudioChannelCnt::STEREO>(buf);
+		case 2:
+			switch (cfg.audio_downmix)
+			{
+			case AudioChannelCnt::SURROUND_7_1:
+				mix<AudioChannelCnt::STEREO, AudioChannelCnt::SURROUND_7_1>(buf);
+				break;
+			case AudioChannelCnt::STEREO:
+				mix<AudioChannelCnt::STEREO, AudioChannelCnt::STEREO>(buf);
+				break;
+			case AudioChannelCnt::SURROUND_5_1:
+				mix<AudioChannelCnt::STEREO, AudioChannelCnt::SURROUND_5_1>(buf);
+				break;
+			}
 			break;
-		case AudioChannelCnt::SURROUND_5_1:
-			mix<AudioChannelCnt::SURROUND_5_1>(buf);
+
+		case 6:
+			switch (cfg.audio_downmix)
+			{
+			case AudioChannelCnt::SURROUND_7_1:
+				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_7_1>(buf);
+				break;
+			case AudioChannelCnt::STEREO:
+				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(buf);
+				break;
+			case AudioChannelCnt::SURROUND_5_1:
+				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_5_1>(buf);
+				break;
+			}
 			break;
-		case AudioChannelCnt::SURROUND_7_1:
-			mix<AudioChannelCnt::SURROUND_7_1>(buf);
+
+		case 8:
+			switch (cfg.audio_downmix)
+			{
+			case AudioChannelCnt::SURROUND_7_1:
+				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_7_1>(buf);
+				break;
+			case AudioChannelCnt::STEREO:
+				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(buf);
+				break;
+			case AudioChannelCnt::SURROUND_5_1:
+				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(buf);
+				break;
+			}
 			break;
+
+		default:
+			fmt::throw_exception("Unsupported channel count in cell_audio_config: %d", static_cast<u32>(cfg.audio_channels));
 		}
 
 		// Enqueue
@@ -882,13 +920,13 @@ audio_port* cell_audio_thread::open_port()
 	return nullptr;
 }
 
-template <AudioChannelCnt downmix>
+template <AudioChannelCnt channels, AudioChannelCnt downmix>
 void cell_audio_thread::mix(float* out_buffer, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 
-	constexpr u32 channels = static_cast<u32>(downmix);
-	constexpr u32 out_buffer_sz = channels * AUDIO_BUFFER_SAMPLES;
+	constexpr u32 out_channels = static_cast<u32>(channels);
+	constexpr u32 out_buffer_sz = out_channels * AUDIO_BUFFER_SAMPLES;
 
 	const float master_volume = g_cfg.audio.volume / 100.0f;
 
@@ -928,7 +966,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 
 		if (port.num_channels == 2)
 		{
-			for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 2)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += out_channels, in += 2)
 			{
 				step_volume(port);
 
@@ -941,7 +979,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 		}
 		else if (port.num_channels == 8)
 		{
-			for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 8)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += out_channels, in += 8)
 			{
 				step_volume(port);
 
@@ -965,21 +1003,47 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 				{
 					out_buffer[out + 0] += left;
 					out_buffer[out + 1] += right;
-					out_buffer[out + 2] += center;
-					out_buffer[out + 3] += low_freq;
-					out_buffer[out + 4] += side_left + rear_left;
-					out_buffer[out + 5] += side_right + rear_right;
+
+					if constexpr (out_channels >= 6) // Only mix the surround channels into the output if surround output is configured
+					{
+						out_buffer[out + 2] += center;
+						out_buffer[out + 3] += low_freq;
+
+						if constexpr (out_channels == 6)
+						{
+							out_buffer[out + 4] += side_left + rear_left;
+							out_buffer[out + 5] += side_right + rear_right;
+						}
+						else // When using 7.1 ouput, out_buffer[out + 4] and out_buffer[out + 5] are the rear channels, so the side channels need to be mixed into [out + 6] and [out + 7]
+						{
+							out_buffer[out + 6] += side_left + rear_left;
+							out_buffer[out + 7] += side_right + rear_right;
+						}
+					}
 				}
 				else
 				{
 					out_buffer[out + 0] += left;
 					out_buffer[out + 1] += right;
-					out_buffer[out + 2] += center;
-					out_buffer[out + 3] += low_freq;
-					out_buffer[out + 4] += rear_left;
-					out_buffer[out + 5] += rear_right;
-					out_buffer[out + 6] += side_left;
-					out_buffer[out + 7] += side_right;
+
+					if constexpr (out_channels >= 6) // Only mix the surround channels into the output if surround output is configured
+					{
+						out_buffer[out + 2] += center;
+						out_buffer[out + 3] += low_freq;
+
+						if constexpr (out_channels == 6)
+						{
+							out_buffer[out + 4] += side_left;
+							out_buffer[out + 5] += side_right;
+						}
+						else
+						{
+							out_buffer[out + 4] += rear_left;
+							out_buffer[out + 5] += rear_right;
+							out_buffer[out + 6] += side_left;
+							out_buffer[out + 7] += side_right;
+						}
+					}
 				}
 			}
 		}
