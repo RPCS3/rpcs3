@@ -3,7 +3,6 @@
 #endif
 
 #include "Emu/Audio/FAudio/faudio_enumerator.h"
-#include <locale>
 #include <array>
 #include "Utilities/StrUtil.h"
 #include "util/logs.hpp"
@@ -65,24 +64,10 @@ std::vector<audio_device_enumerator::audio_device> faudio_enumerator::get_output
 			continue;
 		}
 
-		const std::string dev_name = [&]() -> std::string
-		{
-			constexpr usz dev_name_size = sizeof(dev_info.DisplayName) / sizeof(dev_info.DisplayName[0]);
-			std::array<wchar_t, dev_name_size + 1> temp_buf;
-			memcpy(temp_buf.data(), dev_info.DisplayName, dev_name_size);
-			temp_buf[dev_name_size] = 0;
-			if (std::char_traits<wchar_t>::length(temp_buf.data()) == 0)
-			{
-				return {};
-			}
-
-			return wchar_to_utf8(temp_buf.data());
-		}();
-
 		audio_device dev =
 		{
 			.id = std::to_string(dev_idx),
-			.name = dev_name,
+			.name = wchar_to_utf8(std::bit_cast<wchar_t*>(&dev_info.DisplayName[0])),
 			.max_ch = dev_info.OutputFormat.Format.nChannels
 		};
 
