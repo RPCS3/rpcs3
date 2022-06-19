@@ -208,7 +208,7 @@ struct audio_out_configuration
 		std::vector<CellAudioOutSoundMode> sound_modes;
 		CellAudioOutConfiguration config{}; // Selected by the game. Does not necessarily mean the active config.
 
-		AudioChannelCnt get_channel_count() const;
+		std::pair <AudioChannelCnt, AudioChannelCnt> get_channel_count_and_downmixer() const;
 	};
 
 	std::array<audio_out, 2> out;

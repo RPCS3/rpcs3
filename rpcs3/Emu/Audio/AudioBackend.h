@@ -136,14 +136,9 @@ public:
 	static void normalize(u32 sample_cnt, const f32* src, f32* dst);
 
 	/*
-	 * Returns the channel count.
+	 * Returns the output channel count and downmix mode.
 	 */
-	static AudioChannelCnt get_channel_count(u32 device_index);
-
-	/*
-	 * Returns the downmix mode.
-	 */
-	static u32 get_downmix_mode(u32 device_index);
+	static std::pair <AudioChannelCnt, AudioChannelCnt> get_channel_count_and_downmixer(u32 device_index);
 
 	/*
 	 * Returns the max supported channel count.

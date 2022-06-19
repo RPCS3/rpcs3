@@ -100,22 +100,13 @@ void AudioBackend::normalize(u32 sample_cnt, const f32* src, f32* dst)
 	}
 }
 
-AudioChannelCnt AudioBackend::get_channel_count(u32 device_index)
+std::pair <AudioChannelCnt, AudioChannelCnt> AudioBackend::get_channel_count_and_downmixer(u32 device_index)
 {
 	audio_out_configuration& audio_out_cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(audio_out_cfg.mtx);
 	ensure(device_index < audio_out_cfg.out.size());
 	const audio_out_configuration::audio_out& out = audio_out_cfg.out.at(device_index);
-	return out.get_channel_count();
-}
-
-u32 AudioBackend::get_downmix_mode(u32 device_index)
-{
-	audio_out_configuration& audio_out_cfg = g_fxo->get<audio_out_configuration>();
-	std::lock_guard lock(audio_out_cfg.mtx);
-	ensure(device_index < audio_out_cfg.out.size());
-	const audio_out_configuration::audio_out& out = audio_out_cfg.out.at(device_index);
-	return out.downmixer;
+	return out.get_channel_count_and_downmixer();
 }
 
 AudioChannelCnt AudioBackend::get_max_channel_count(u32 device_index)

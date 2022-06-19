@@ -182,16 +182,29 @@ audio_out_configuration::audio_out_configuration()
 	cellSysutil.notice("cellAudioOut: initial secondary output configuration: channels=%d, encoder=%d, downmixer=%d", secondary_output.channels, secondary_output.encoder, secondary_output.downmixer);
 }
 
-AudioChannelCnt audio_out_configuration::audio_out::get_channel_count() const
+std::pair <AudioChannelCnt, AudioChannelCnt> audio_out_configuration::audio_out::get_channel_count_and_downmixer() const
 {
+	std::pair <AudioChannelCnt, AudioChannelCnt> ret;
+
 	switch (channels)
 	{
-	case 2: return AudioChannelCnt::STEREO;
-	case 6: return AudioChannelCnt::SURROUND_5_1;
-	case 8: return AudioChannelCnt::SURROUND_7_1;
+	case 2: ret.first = AudioChannelCnt::STEREO; break;
+	case 6: ret.first = AudioChannelCnt::SURROUND_5_1; break;
+	case 8: ret.first = AudioChannelCnt::SURROUND_7_1; break;
 	default:
 		fmt::throw_exception("Unsupported channel count in cellAudioOut config: %d", channels);
 	}
+
+	switch (downmixer)
+	{
+	case CELL_AUDIO_OUT_DOWNMIXER_NONE: ret.second = AudioChannelCnt::SURROUND_7_1; break;
+	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_A: ret.second = AudioChannelCnt::STEREO; break;
+	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_B: ret.second = AudioChannelCnt::SURROUND_5_1; break;
+	default:
+		fmt::throw_exception("Unsupported downmixer in cellAudioOut config: %d", downmixer);
+	}
+
+	return ret;
 }
 
 error_code cellAudioOutGetNumberOfDevice(u32 audioOut);
@@ -291,18 +304,19 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 	case CELL_AUDIO_OUT_PRIMARY:
 	case CELL_AUDIO_OUT_SECONDARY:
 	{
-		const AudioChannelCnt channels = AudioBackend::get_channel_count(audioOut);
+		const auto [channels, downmix] = AudioBackend::get_channel_count_and_downmixer(audioOut);
 
 		audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 		std::lock_guard lock(cfg.mtx);
 		const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
-		const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&channels, &out](const CellAudioOutSoundMode& mode)
+		const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [channels = channels, &out](const CellAudioOutSoundMode& mode)
 			{
 				return mode.type == out.encoder && mode.channel == static_cast<u8>(channels);
 			});
 
 		ensure(it != out.sound_modes.cend());
+
 		_state.state = out.state;
 		_state.encoder = out.encoder;
 		_state.downMixer = out.downmixer;
