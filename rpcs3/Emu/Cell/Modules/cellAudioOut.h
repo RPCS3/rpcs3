@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Audio/AudioBackend.h"
+
 // Error codes
 enum CellAudioOutError : u32
 {
@@ -194,7 +196,7 @@ struct CellAudioOutDeviceConfiguration
 
 struct audio_out_configuration
 {
-	std::mutex mtx;
+	shared_mutex mtx;
 
 	struct audio_out
 	{
@@ -204,6 +206,9 @@ struct audio_out_configuration
 		u32 downmixer = CELL_AUDIO_OUT_DOWNMIXER_NONE;
 		u32 copy_control = CELL_AUDIO_OUT_COPY_CONTROL_COPY_FREE;
 		std::vector<CellAudioOutSoundMode> sound_modes;
+		CellAudioOutSoundMode sound_mode{};
+
+		std::pair<AudioChannelCnt, AudioChannelCnt> get_channel_count_and_downmixer() const;
 	};
 
 	std::array<audio_out, 2> out;
