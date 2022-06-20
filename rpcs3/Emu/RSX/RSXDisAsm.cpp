@@ -73,7 +73,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 	{
 		u32 i = 1;
 
-		for (pc += 4; m_mode != cpu_disasm_mode::list && pc && i < 4096; i++, pc += 4)
+		for (pc += 4; m_mode != cpu_disasm_mode::list && pc % (4096 * 4); i++, pc += 4)
 		{
 			if (!try_read_op(pc))
 			{
