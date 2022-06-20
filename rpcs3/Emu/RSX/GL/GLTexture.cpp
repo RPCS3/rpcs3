@@ -4,6 +4,7 @@
 #include "GLRenderTargets.h"
 #include "GLOverlays.h"
 
+#include "glutils/blitter.h"
 #include "glutils/ring_buffer.h"
 
 #include "../GCM.h"
@@ -581,11 +582,67 @@ namespace gl
 		};
 
 		const auto caps = gl::get_driver_caps();
-		if (!(dst->aspect() & image_aspect::stencil) || caps.ARB_shader_stencil_export_supported)
+		if (dst->get_target() != gl::texture::target::texture1D &&
+			(!(dst->aspect() & image_aspect::stencil) || caps.ARB_shader_stencil_export_supported))
 		{
 			// We do not need to use the driver's builtin transport mechanism
 			glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-			gl::get_overlay_pass<gl::rp_ssbo_to_texture>()->run(cmd, transfer_buf, dst, out_offset, { {dst_region.x, dst_region.y}, {dst_region.width, dst_region.height} }, unpack_info);
+
+			std::unique_ptr<gl::texture> scratch;
+			std::unique_ptr<gl::texture_view> scratch_view;
+
+			coordu image_region = { {dst_region.x, dst_region.y}, {dst_region.width, dst_region.height} };
+
+			switch (dst->get_target())
+			{
+			case texture::target::texture3D:
+			{
+				// Upload to splatted image and do the final copy GPU-side
+				image_region.height *= dst_region.depth;
+				scratch = std::make_unique<gl::texture>(
+					GL_TEXTURE_2D,
+					image_region.x + image_region.width, image_region.y + image_region.height, 1, 1,
+					static_cast<GLenum>(dst->get_internal_format()), dst->format_class());
+
+				scratch_view = std::make_unique<gl::nil_texture_view>(scratch.get());
+				break;
+			}
+			case texture::target::textureCUBE:
+			{
+				const subresource_range range = { image_aspect::depth | image_aspect::color, dst_level, 1, dst_region.z , 1 };
+				scratch_view = std::make_unique<gl::texture_view>(dst, GL_TEXTURE_2D, range);
+				break;
+			}
+			default:
+			{
+				ensure(dst->layers() == 1);
+
+				if (dst->levels() > 1) [[ likely ]]
+				{
+					const subresource_range range = { image_aspect::depth | image_aspect::color, dst_level, 1, 0 , 1 };
+					scratch_view = std::make_unique<gl::texture_view>(dst, GL_TEXTURE_2D, range);
+				}
+				else
+				{
+					scratch_view = std::make_unique<gl::nil_texture_view>(dst);
+				}
+
+				break;
+			}
+			}
+
+			gl::get_overlay_pass<gl::rp_ssbo_to_texture>()->run(cmd, transfer_buf, scratch_view.get(), out_offset, image_region, unpack_info);
+
+			if (dst->get_target() == texture::target::texture3D)
+			{
+				// Memcpy
+				for (u32 layer = dst_region.z, i = 0; i < dst_region.depth; ++i, ++layer)
+				{
+					const position3u src_offset = { dst_region.position.x, dst_region.position.y, 0 };
+					const position3u dst_offset = { dst_region.position.x, dst_region.position.y, layer };
+					g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, src_offset, dst_offset, {dst_region.width, dst_region.height, 1});
+				}
+			}
 		}
 		else
 		{

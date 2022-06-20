@@ -55,4 +55,6 @@ namespace gl
 			copy_image(cmd, src, dst, src_level, dst_level, static_cast<position3i>(src_offset), static_cast<position3i>(dst_offset), static_cast<size3i>(size));
 		}
 	};
+
+	extern blitter* g_hw_blitter;
 }

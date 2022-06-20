@@ -232,26 +232,17 @@ namespace gl
 		}
 	}
 
-	void texture_view::create(texture* data, GLenum target, GLenum sized_format, GLuint min_level, GLuint num_levels, GLenum aspect_flags, const GLenum* argb_swizzle)
+	void texture_view::create(texture* data, GLenum target, GLenum sized_format, const subresource_range& range, const GLenum* argb_swizzle)
 	{
 		m_target = target;
 		m_format = sizedfmt_to_ifmt(sized_format);
 		m_image_data = data;
-		m_aspect_flags = aspect_flags;
+		m_aspect_flags = range.aspect_mask & data->aspect();
 
-		u32 num_layers;
-		switch (target)
-		{
-		default:
-			num_layers = 1; break;
-		case GL_TEXTURE_CUBE_MAP:
-			num_layers = 6; break;
-		case GL_TEXTURE_2D_ARRAY:
-			num_layers = data->depth(); break;
-		}
+		ensure(m_aspect_flags);
 
 		glGenTextures(1, &m_id);
-		glTextureView(m_id, target, data->id(), m_format, min_level, num_levels, 0, num_layers);
+		glTextureView(m_id, target, data->id(), m_format, range.min_level, range.num_levels, range.min_layer, range.num_layers);
 
 		if (argb_swizzle)
 		{
@@ -271,10 +262,10 @@ namespace gl
 			component_swizzle[3] = GL_ALPHA;
 		}
 
-		if (aspect_flags & image_aspect::stencil)
+		if (range.aspect_mask & image_aspect::stencil)
 		{
 			constexpr u32 depth_stencil_mask = (image_aspect::depth | image_aspect::stencil);
-			ensure((aspect_flags & depth_stencil_mask) != depth_stencil_mask); // "Invalid aspect mask combination"
+			ensure((range.aspect_mask & depth_stencil_mask) != depth_stencil_mask); // "Invalid aspect mask combination"
 
 			gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, m_target, m_id);
 			glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
@@ -283,9 +274,12 @@ namespace gl
 
 	texture_view::~texture_view()
 	{
-		gl::get_command_context()->unbind_texture(static_cast<GLenum>(m_target), m_id);
-		glDeleteTextures(1, &m_id);
-		m_id = GL_NONE;
+		if (m_id)
+		{
+			gl::get_command_context()->unbind_texture(static_cast<GLenum>(m_target), m_id);
+			glDeleteTextures(1, &m_id);
+			m_id = GL_NONE;
+		}
 	}
 
 	void texture_view::bind(gl::command_context& cmd, GLuint layer) const
@@ -295,20 +289,29 @@ namespace gl
 
 	texture_view* viewable_image::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, GLenum aspect_flags)
 	{
-		auto found = views.equal_range(remap_encoding);
-		for (auto It = found.first; It != found.second; ++It)
+		const u64 view_aspect = static_cast<u64>(aspect_flags) & aspect();
+		ensure(view_aspect);
+
+		const u64 key = static_cast<u64>(remap_encoding) | (view_aspect << 32);
+		if (auto found = views.find(key);
+			found != views.end())
 		{
-			if (It->second->aspect() & aspect_flags)
-			{
-				return It->second.get();
-			}
+			ensure(found->second.get() != nullptr);
+			return found->second.get();
 		}
 
-		ensure(aspect() & aspect_flags);
-		auto mapping = apply_swizzle_remap(get_native_component_layout(), remap);
-		auto view = std::make_unique<texture_view>(this, mapping.data(), aspect_flags);
+		std::array<GLenum, 4> mapping;
+		GLenum* swizzle = nullptr;
+
+		if (remap_encoding != GL_REMAP_IDENTITY)
+		{
+			mapping = apply_swizzle_remap(get_native_component_layout(), remap);
+			swizzle = mapping.data();
+		}
+
+		auto view = std::make_unique<texture_view>(this, swizzle, aspect_flags);
 		auto result = view.get();
-		views.emplace(remap_encoding, std::move(view));
+		views.emplace(key, std::move(view));
 		return result;
 	}
 

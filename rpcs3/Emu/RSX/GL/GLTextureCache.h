@@ -13,10 +13,6 @@ class GLGSRender;
 
 namespace gl
 {
-	class blitter;
-
-	extern blitter* g_hw_blitter;
-
 	class cached_texture_section;
 	class texture_cache;
 

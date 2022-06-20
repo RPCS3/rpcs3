@@ -1,5 +1,7 @@
 #include "GLOverlays.h"
 
+#include "../rsx_utils.h"
+
 namespace gl
 {
 	// Lame
@@ -615,20 +617,29 @@ namespace gl
 	}
 
 	void rp_ssbo_to_texture::run(gl::command_context& cmd,
-		const buffer* src, const texture* dst,
+		const buffer* src, const texture_view* dst,
 		const u32 src_offset, const coordu& dst_region,
 		const pixel_buffer_layout& layout)
 	{
 		const u32 row_length = static_cast<u32>(dst_region.width);
-		const u32 bpp = dst->pitch() / dst->width();
+		const u32 bpp = dst->image()->pitch() / dst->image()->width();
 
 		program_handle.uniforms["src_pitch"] = row_length;
 		program_handle.uniforms["swap_bytes"] = layout.swap_bytes;
-		program_handle.uniforms["format"] = static_cast<GLenum>(dst->get_internal_format());
+		program_handle.uniforms["format"] = static_cast<GLenum>(dst->image()->get_internal_format());
 		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * bpp * dst_region.height);
 
 		cmd->stencil_mask(0xFF);
 
 		overlay_pass::run(cmd, dst_region, dst->id(), dst->aspect());
+	}
+
+	void rp_ssbo_to_texture::run(gl::command_context& cmd,
+		const buffer* src, texture* dst,
+		const u32 src_offset, const coordu& dst_region,
+		const pixel_buffer_layout& layout)
+	{
+		gl::nil_texture_view view(dst);
+		run(cmd, src, &view, src_offset, dst_region, layout);
 	}
 }

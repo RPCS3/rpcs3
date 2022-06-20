@@ -117,7 +117,8 @@ namespace gl
 	struct rp_ssbo_to_texture : public overlay_pass
 	{
 		rp_ssbo_to_texture();
-		void run(gl::command_context& cmd, const buffer* src, const texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
+		void run(gl::command_context& cmd, const buffer* src, texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
+		void run(gl::command_context& cmd, const buffer* src, const texture_view* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
 	};
 
 	// TODO: Replace with a proper manager
