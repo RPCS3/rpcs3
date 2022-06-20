@@ -1421,11 +1421,27 @@ void main_window::RepaintThumbnailIcons()
 
 void main_window::RepaintToolBarIcons()
 {
-	const QColor new_color = gui::utils::get_label_color("toolbar_icon_color");
+	std::map<QIcon::Mode, QColor> new_colors{};
+	new_colors[QIcon::Normal] = gui::utils::get_label_color("toolbar_icon_color");
 
-	const auto icon = [&new_color](const QString& path)
+	const QString sheet = static_cast<QApplication *>(QCoreApplication::instance())->styleSheet();
+
+	if (sheet.contains("toolbar_icon_color_disabled"))
 	{
-		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, new_color);
+		new_colors[QIcon::Disabled] = gui::utils::get_label_color("toolbar_icon_color_disabled");
+	}
+	if (sheet.contains("toolbar_icon_color_active"))
+	{
+		new_colors[QIcon::Active] = gui::utils::get_label_color("toolbar_icon_color_active");
+	}
+	if (sheet.contains("toolbar_icon_color_selected"))
+	{
+		new_colors[QIcon::Selected] = gui::utils::get_label_color("toolbar_icon_color_selected");
+	}
+
+	const auto icon = [&new_colors](const QString& path)
+	{
+		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, new_colors);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
@@ -1465,6 +1481,7 @@ void main_window::RepaintToolBarIcons()
 		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
 	}
 
+	const QColor& new_color = new_colors[QIcon::Normal];
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
 		.arg(new_color.red()).arg(new_color.green()).arg(new_color.blue()).arg(new_color.alpha()));
 
