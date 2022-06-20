@@ -42,6 +42,20 @@ namespace gl
 		linear_mipmap_linear = GL_LINEAR_MIPMAP_LINEAR
 	};
 
+	enum remap_constants : u32
+	{
+		GL_REMAP_IDENTITY = 0xCAFEBABE
+	};
+
+	struct subresource_range
+	{
+		GLenum aspect_mask;
+		GLuint min_level;
+		GLuint num_levels;
+		GLuint min_layer;
+		GLuint num_layers;
+	};
+
 	class texture
 	{
 		friend class texture_view;
@@ -158,7 +172,8 @@ namespace gl
 			texture2D = GL_TEXTURE_2D,
 			texture3D = GL_TEXTURE_3D,
 			textureCUBE = GL_TEXTURE_CUBE_MAP,
-			textureBuffer = GL_TEXTURE_BUFFER
+			textureBuffer = GL_TEXTURE_BUFFER,
+			texture2DArray = GL_TEXTURE_2D_ARRAY
 		};
 
 	protected:
@@ -242,6 +257,19 @@ namespace gl
 			return m_mipmaps;
 		}
 
+		GLuint layers() const
+		{
+			switch (m_target)
+			{
+			case target::textureCUBE:
+				return 6;
+			case target::texture2DArray:
+				return m_depth;
+			default:
+				return 1;
+			}
+		}
+
 		GLuint pitch() const
 		{
 			return m_pitch;
@@ -313,6 +341,7 @@ namespace gl
 
 	class texture_view
 	{
+	protected:
 		GLuint m_id = GL_NONE;
 		GLenum m_target = 0;
 		GLenum m_format = 0;
@@ -321,7 +350,9 @@ namespace gl
 
 		GLenum component_swizzle[4];
 
-		void create(texture* data, GLenum target, GLenum sized_format, GLuint min_level, GLuint num_levels, GLenum aspect_flags, const GLenum* argb_swizzle = nullptr);
+		texture_view() = default;
+
+		void create(texture* data, GLenum target, GLenum sized_format, const subresource_range& range, const GLenum* argb_swizzle = nullptr);
 
 	public:
 		texture_view(const texture_view&) = delete;
@@ -331,7 +362,7 @@ namespace gl
 			const GLenum* argb_swizzle = nullptr,
 			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
-			create(data, target, sized_format, 0, data->levels(), aspect_flags, argb_swizzle);
+			create(data, target, sized_format, { aspect_flags, 0, data->levels(), 0, data->layers() }, argb_swizzle);
 		}
 
 		texture_view(texture* data, const GLenum* argb_swizzle = nullptr,
@@ -339,16 +370,22 @@ namespace gl
 		{
 			GLenum target = static_cast<GLenum>(data->get_target());
 			GLenum sized_format = static_cast<GLenum>(data->get_internal_format());
-			create(data, target, sized_format, 0, data->levels(), aspect_flags, argb_swizzle);
+			create(data, target, sized_format, { aspect_flags, 0, data->levels(), 0, data->layers() }, argb_swizzle);
 		}
 
-		texture_view(texture* data, GLuint mip_level,
-			const GLenum* argb_swizzle = nullptr,
-			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
+		texture_view(texture* data, const subresource_range& range,
+			const GLenum* argb_swizzle = nullptr)
 		{
 			GLenum target = static_cast<GLenum>(data->get_target());
 			GLenum sized_format = static_cast<GLenum>(data->get_internal_format());
-			create(data, target, sized_format, mip_level, 1, aspect_flags, argb_swizzle);
+			create(data, target, sized_format, range, argb_swizzle);
+		}
+
+		texture_view(texture* data, GLenum target, const subresource_range& range,
+			const GLenum* argb_swizzle = nullptr)
+		{
+			GLenum sized_format = static_cast<GLenum>(data->get_internal_format());
+			create(data, target, sized_format, range, argb_swizzle);
 		}
 
 		virtual ~texture_view();
@@ -400,9 +437,34 @@ namespace gl
 		void bind(gl::command_context& cmd, GLuint layer) const;
 	};
 
+	// Passthrough texture view that simply wraps the original texture in a texture_view interface
+	class nil_texture_view : public texture_view
+	{
+	public:
+		nil_texture_view(texture* data)
+			: texture_view()
+		{
+			m_id = data->id();
+			m_target = static_cast<GLenum>(data->get_target());
+			m_format = static_cast<GLenum>(data->get_internal_format());
+			m_aspect_flags = data->aspect();
+			m_image_data = data;
+
+			component_swizzle[0] = GL_RED;
+			component_swizzle[1] = GL_GREEN;
+			component_swizzle[2] = GL_BLUE;
+			component_swizzle[3] = GL_ALPHA;
+		}
+
+		~nil_texture_view()
+		{
+			m_id = GL_NONE;
+		}
+	};
+
 	class viewable_image : public texture
 	{
-		std::unordered_multimap<u32, std::unique_ptr<texture_view>> views;
+		std::unordered_map<u64, std::unique_ptr<texture_view>> views;
 
 	public:
 		using texture::texture;
