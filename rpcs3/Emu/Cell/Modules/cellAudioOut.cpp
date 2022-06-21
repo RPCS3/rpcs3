@@ -545,15 +545,15 @@ error_code cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 	return CELL_OK;
 }
 
-error_code cellAudioOutRegisterCallback()
+error_code cellAudioOutRegisterCallback(u32 slot, vm::ptr<CellAudioOutCallback> function, vm::ptr<void> userData)
 {
-	cellSysutil.todo("cellAudioOutRegisterCallback()");
+	cellSysutil.todo("cellAudioOutRegisterCallback(slot=%d, function=*0x%x, userData=*0x%x)", slot, function, userData);
 	return CELL_OK;
 }
 
-error_code cellAudioOutUnregisterCallback()
+error_code cellAudioOutUnregisterCallback(u32 slot)
 {
-	cellSysutil.todo("cellAudioOutUnregisterCallback()");
+	cellSysutil.todo("cellAudioOutUnregisterCallback(slot=%d)", slot);
 	return CELL_OK;
 }
 

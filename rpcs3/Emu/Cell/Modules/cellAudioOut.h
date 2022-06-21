@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Audio/AudioBackend.h"
+#include "Emu/Memory/vm_ptr.h"
 
 // Error codes
 enum CellAudioOutError : u32
@@ -178,18 +179,21 @@ struct CellAudioOutDeviceInfo2
 
 struct CellAudioOutOption
 {
-	//(Omitted)
+	be_t<u32> reserved;
 };
 
 struct CellAudioOutRegistrationOption
 {
-	//(Omitted)
+	be_t<u32> reserved;
 };
 
 struct CellAudioOutDeviceConfiguration
 {
-	//(Omitted)
+	u8 volume;
+	u8 reserved[31];
 };
+
+typedef s32(CellAudioOutCallback)(u32 slot, u32 audioOut, u32 deviceIndex, u32 event, vm::ptr<CellAudioOutDeviceInfo> info, vm::ptr<void> userData);
 
 
 // FXO Object
