@@ -176,7 +176,7 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 #ifdef _WIN32
 			connecting = true;
 #endif
-			this->poll_queue(u32{0}, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
+			this->poll_queue(nullptr, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
 				{
 					if (events & lv2_socket::poll_t::write)
 					{
@@ -854,6 +854,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_nat
 #endif
 
 	const auto result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+
 	if (result)
 	{
 		return {{-result, {}, {}}};

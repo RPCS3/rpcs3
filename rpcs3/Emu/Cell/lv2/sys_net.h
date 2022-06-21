@@ -181,6 +181,11 @@ enum
 	SYS_NET_POLLWRBAND     = 0x0100,
 };
 
+enum lv2_socket_abort_flags : s32
+{
+	SYS_NET_ABORT_STRICT_CHECK = 1,
+};
+
 // in_addr_t type prefixed with sys_net_
 using sys_net_in_addr_t    = u32;
 

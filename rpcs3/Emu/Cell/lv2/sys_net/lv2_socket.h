@@ -63,8 +63,8 @@ public:
 	void set_lv2_id(u32 id);
 	bs_t<poll_t> get_events() const;
 	void set_poll_event(bs_t<poll_t> event);
-	void poll_queue(u32 ppu_id, bs_t<poll_t> event, std::function<bool(bs_t<poll_t>)> poll_cb);
-	void clear_queue(u32 ppu_id);
+	void poll_queue(std::shared_ptr<ppu_thread> ppu, bs_t<poll_t> event, std::function<bool(bs_t<poll_t>)> poll_cb);
+	s32 clear_queue(ppu_thread*);
 	void handle_events(const pollfd& native_fd, bool unset_connecting = false);
 
 	lv2_socket_family get_family() const;
@@ -101,6 +101,8 @@ public:
 	virtual s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)                           = 0;
 	virtual std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) = 0;
 
+	error_code abort_socket(s32 flags);
+
 public:
 	// IDM data
 	static const u32 id_base  = 24;
@@ -121,8 +123,9 @@ protected:
 
 	// Events selected for polling
 	atomic_bs_t<poll_t> events{};
+
 	// Event processing workload (pair of thread id and the processing function)
-	std::vector<std::pair<u32, std::function<bool(bs_t<poll_t>)>>> queue;
+	std::vector<std::pair<std::shared_ptr<ppu_thread>, std::function<bool(bs_t<poll_t>)>>> queue;
 
 	// Socket options value keepers
 	// Non-blocking IO option
