@@ -29,14 +29,7 @@ void call_stack_list::HandleUpdate(const std::vector<std::pair<u32, u32>>& call_
 		addItem(call_stack_item);
 	}
 
-	if (call_stack.empty())
-	{
-		hide();
-	}
-	else
-	{
-		show();
-	}
+	setVisible(!call_stack.empty());
 }
 
 void call_stack_list::OnCallStackListDoubleClicked()
