@@ -151,12 +151,16 @@ sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_ad
 	return native_addr;
 }
 
-void network_clear_queue(ppu_thread& ppu)
+s32 network_clear_queue(ppu_thread& ppu)
 {
+	s32 cleared = 0;
+
 	idm::select<lv2_socket>([&](u32, lv2_socket& sock)
-		{
-			sock.clear_queue(ppu.id);
-		});
+	{
+		cleared += sock.clear_queue(&ppu);
+	});
+
+	return cleared;
 }
 
 #ifdef _WIN32
