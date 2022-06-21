@@ -860,6 +860,7 @@ void debugger_frame::UpdateUnitList()
 	if (emu_state == system_state::stopped)
 	{
 		ClearBreakpoints();
+		ClearCallStack();
 	}
 
 	OnSelectUnit();
