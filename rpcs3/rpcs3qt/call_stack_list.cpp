@@ -12,6 +12,9 @@ call_stack_list::call_stack_list(QWidget* parent) : QListWidget(parent)
 
 	// connects
 	connect(this, &QListWidget::itemDoubleClicked, this, &call_stack_list::OnCallStackListDoubleClicked);
+
+	// Hide until used in order to allow as much space for registers panel as possible
+	hide();
 }
 
 void call_stack_list::HandleUpdate(const std::vector<std::pair<u32, u32>>& call_stack)
@@ -24,6 +27,15 @@ void call_stack_list::HandleUpdate(const std::vector<std::pair<u32, u32>>& call_
 		QListWidgetItem* call_stack_item = new QListWidgetItem(text);
 		call_stack_item->setData(Qt::UserRole, { addr.first });
 		addItem(call_stack_item);
+	}
+
+	if (call_stack.empty())
+	{
+		hide();
+	}
+	else
+	{
+		show();
 	}
 }
 
