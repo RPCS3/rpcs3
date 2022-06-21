@@ -374,25 +374,33 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 
 error_code cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
 {
-	cellSysutil.todo("cellVideoOutGetConvertCursorColorInfo()");
+	cellSysutil.todo("cellVideoOutGetConvertCursorColorInfo(rgbOutputRange=*0x%x)", rgbOutputRange);
+
+	if (!rgbOutputRange)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER; // TODO: Speculative
+	}
+
+	*rgbOutputRange = CELL_VIDEO_OUT_RGB_OUTPUT_RANGE_FULL; // Or CELL_VIDEO_OUT_RGB_OUTPUT_RANGE_LIMITED
+
 	return CELL_OK;
 }
 
 error_code cellVideoOutDebugSetMonitorType(u32 videoOut, u32 monitorType)
 {
-	cellSysutil.todo("cellVideoOutDebugSetMonitorType()");
+	cellSysutil.todo("cellVideoOutDebugSetMonitorType(videoOut=%d, monitorType=%d)", videoOut, monitorType);
 	return CELL_OK;
 }
 
 error_code cellVideoOutRegisterCallback(u32 slot, vm::ptr<CellVideoOutCallback> function, vm::ptr<void> userData)
 {
-	cellSysutil.todo("cellVideoOutRegisterCallback()");
+	cellSysutil.todo("cellVideoOutRegisterCallback(slot=%d, function=*0x%x, userData=*0x%x)", slot, function, userData);
 	return CELL_OK;
 }
 
 error_code cellVideoOutUnregisterCallback(u32 slot)
 {
-	cellSysutil.todo("cellVideoOutUnregisterCallback()");
+	cellSysutil.todo("cellVideoOutUnregisterCallback(slot=%d)", slot);
 	return CELL_OK;
 }
 
