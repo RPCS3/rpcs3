@@ -138,6 +138,9 @@ void headless_application::InitializeCallbacks()
 	callbacks.on_stop   = []() {};
 	callbacks.on_ready  = []() {};
 
+	callbacks.enable_disc_eject  = [](bool) {};
+	callbacks.enable_disc_insert = [](bool) {};
+
 	callbacks.on_missing_fw = []() { return false; };
 
 	callbacks.handle_taskbar_progress = [](s32, s32) {};

@@ -11,6 +11,9 @@ namespace vfs
 	// Mount VFS device
 	bool mount(std::string_view vpath, std::string_view path);
 
+	// Unmount VFS device
+	bool unmount(std::string_view vpath);
+
 	// Convert VFS path to fs path, optionally listing directories mounted in it
 	std::string get(std::string_view vpath, std::vector<std::string>* out_dir = nullptr, std::string* out_path = nullptr);
 

@@ -105,6 +105,7 @@ target_sources(rpcs3_emu PRIVATE
 
 # Loader
 target_sources(rpcs3_emu PRIVATE
+    ../Loader/disc.cpp
     ../Loader/ELF.cpp
     ../Loader/mself.cpp
     ../Loader/PSF.cpp

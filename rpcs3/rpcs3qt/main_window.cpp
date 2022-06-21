@@ -1692,6 +1692,16 @@ void main_window::EnableMenus(bool enabled) const
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
 }
 
+void main_window::OnEnableDiscEject(bool enabled) const
+{
+	ui->ejectDiscAct->setEnabled(enabled);
+}
+
+void main_window::OnEnableDiscInsert(bool enabled) const
+{
+	ui->insertDiscAct->setEnabled(enabled);
+}
+
 void main_window::BootRecentAction(const QAction* act)
 {
 	if (Emu.IsRunning())
@@ -2051,6 +2061,34 @@ void main_window::CreateConnects()
 	{
 		gui_log.notice("User triggered restart action in menu bar");
 		Emu.Restart();
+	});
+
+	connect(ui->ejectDiscAct, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered eject disc action in menu bar");
+		Emu.EjectDisc();
+	});
+	connect(ui->insertDiscAct, &QAction::triggered, this, [this]()
+	{
+		gui_log.notice("User triggered insert disc action in menu bar");
+
+		const QString path_last_game = m_gui_settings->GetValue(gui::fd_insert_disc).toString();
+		const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select Disc Game Folder"), path_last_game, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+		if (dir_path.isEmpty())
+		{
+			return;
+		}
+
+		const game_boot_result result = Emu.InsertDisc(dir_path.toStdString());
+
+		if (result != game_boot_result::no_errors)
+		{
+			QMessageBox::warning(this, tr("Failed to insert disc"), tr("Make sure that the emulation is running and that the selected path belongs to a valid disc game."));
+			return;
+		}
+
+		m_gui_settings->SetValue(gui::fd_insert_disc, QFileInfo(dir_path).path());
 	});
 
 	connect(ui->sysSendOpenMenuAct, &QAction::triggered, this, [this]()

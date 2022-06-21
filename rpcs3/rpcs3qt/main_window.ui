@@ -222,6 +222,9 @@
     <addaction name="sysStopAct"/>
     <addaction name="sysRebootAct"/>
     <addaction name="separator"/>
+    <addaction name="insertDiscAct"/>
+    <addaction name="ejectDiscAct"/>
+    <addaction name="separator"/>
     <addaction name="sysSendOpenMenuAct"/>
    </widget>
    <widget class="QMenu" name="menuConfiguration">
@@ -1197,6 +1200,22 @@
   <action name="confCamerasAct">
    <property name="text">
     <string>Cameras</string>
+   </property>
+  </action>
+  <action name="ejectDiscAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Eject Disc</string>
+   </property>
+  </action>
+  <action name="insertDiscAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Insert Disc</string>
    </property>
   </action>
  </widget>
