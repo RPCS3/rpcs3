@@ -100,7 +100,7 @@ void qt_camera_handler::open_camera()
 	if (const std::string camera_id = g_cfg.io.camera_id.to_string();
 		m_camera_id != camera_id)
 	{
-		camera_log.notice("Switching camera from %s to %s", camera_id, m_camera_id);
+		camera_log.notice("Switching camera from %s to %s", m_camera_id, camera_id);
 		camera_log.notice("Unloading old camera...");
 		if (m_camera) m_camera->unload();
 		m_camera_id = camera_id;

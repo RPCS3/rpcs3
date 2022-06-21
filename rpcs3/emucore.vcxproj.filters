@@ -1078,6 +1078,9 @@
     <ClCompile Include="Emu\IPC_config.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\disc.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2142,6 +2145,9 @@
     </ClInclude>
     <ClInclude Include="Emu\IPC_config.h">
       <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\disc.h">
+      <Filter>Loader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -92,6 +92,8 @@ Q_SIGNALS:
 	void OnEmulatorResume(bool start_playtime);
 	void OnEmulatorStop();
 	void OnEmulatorReady();
+	void OnEnableDiscEject(bool enabled);
+	void OnEnableDiscInsert(bool enabled);
 
 	void RequestCallFromMainThread(const std::function<void()>& func);
 

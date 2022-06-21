@@ -246,6 +246,8 @@ void gui_application::InitializeConnects()
 		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
 		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
 		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
+		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
+		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
 	}
 
 #ifdef WITH_DISCORD_RPC
@@ -413,6 +415,21 @@ void gui_application::InitializeCallbacks()
 	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
 	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
 	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
+
+	callbacks.enable_disc_eject  = [this](bool enabled)
+	{
+		Emu.CallFromMainThread([this, enabled]()
+		{
+			OnEnableDiscEject(enabled);
+		});
+	};
+	callbacks.enable_disc_insert = [this](bool enabled)
+	{
+		Emu.CallFromMainThread([this, enabled]()
+		{
+			OnEnableDiscInsert(enabled);
+		});
+	};
 
 	callbacks.on_missing_fw = [this]()
 	{
