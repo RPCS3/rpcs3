@@ -1221,7 +1221,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 
 std::string spu_thread::dump_misc() const
 {
-	std::string ret;
+	std::string ret = cpu_thread::dump_misc();
 
 	fmt::append(ret, "Block Weight: %u (Retreats: %u)", block_counter, block_failure);
 
