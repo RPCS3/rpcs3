@@ -151,10 +151,10 @@ public:
 	std::string get_name() const;
 
 	// Get CPU state dump (everything)
-	virtual std::string dump_all() const;
+	virtual void dump_all(std::string&) const;
 
 	// Get CPU register dump
-	virtual std::string dump_regs() const;
+	virtual void dump_regs(std::string&) const;
 
 	// Get CPU call stack dump
 	virtual std::string dump_callstack() const;

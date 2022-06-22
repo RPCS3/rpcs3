@@ -119,7 +119,7 @@ std::string dump_useful_thread_info()
 
 	if (auto cpu = get_current_cpu_thread())
 	{
-		result = cpu->dump_all();
+		cpu->dump_all(result);
 	}
 
 	guard = false;

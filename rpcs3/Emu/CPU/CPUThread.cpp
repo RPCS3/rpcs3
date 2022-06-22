@@ -947,11 +947,11 @@ u32* cpu_thread::get_pc2()
 
 std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu);
 
-std::string cpu_thread::dump_all() const
+void cpu_thread::dump_all(std::string& ret) const
 {
-	std::string ret = dump_misc();
+	ret += dump_misc();
 	ret += '\n';
-	ret += dump_regs();
+	dump_regs(ret);
 	ret += '\n';
 	ret += dump_callstack();
 	ret += '\n';
@@ -972,13 +972,10 @@ std::string cpu_thread::dump_all() const
 			ret += '\n';
 		}
 	}
-
-	return ret;
 }
 
-std::string cpu_thread::dump_regs() const
+void cpu_thread::dump_regs(std::string&) const
 {
-	return {};
 }
 
 std::string cpu_thread::dump_callstack() const
