@@ -26,6 +26,9 @@ breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) :
 	m_delete_action->setShortcutContext(Qt::WidgetShortcut);
 	connect(m_delete_action, &QAction::triggered, this, &breakpoint_list::OnBreakpointListDelete);
 	addAction(m_delete_action);
+
+	// Hide until used in order to allow as much space for registers panel as possible
+	hide();
 }
 
 /**
@@ -46,6 +49,8 @@ void breakpoint_list::ClearBreakpoints()
 		m_ppu_breakpoint_handler->RemoveBreakpoint(loc);
 		delete currentItem;
 	}
+
+	hide();
 }
 
 void breakpoint_list::RemoveBreakpoint(u32 addr)
@@ -64,6 +69,11 @@ void breakpoint_list::RemoveBreakpoint(u32 addr)
 	}
 
 	Q_EMIT RequestShowAddress(addr);
+
+	if (!count())
+	{
+		hide();
+	}
 }
 
 bool breakpoint_list::AddBreakpoint(u32 pc)
@@ -85,6 +95,8 @@ bool breakpoint_list::AddBreakpoint(u32 pc)
 	addItem(breakpoint_item);
 
 	Q_EMIT RequestShowAddress(pc);
+
+	show();
 
 	return true;
 }

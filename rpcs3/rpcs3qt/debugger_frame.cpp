@@ -860,6 +860,7 @@ void debugger_frame::UpdateUnitList()
 	if (emu_state == system_state::stopped)
 	{
 		ClearBreakpoints();
+		ClearCallStack();
 	}
 
 	OnSelectUnit();
@@ -982,14 +983,18 @@ void debugger_frame::WritePanels()
 	}
 
 	int loc = m_misc_state->verticalScrollBar()->value();
+	int hloc = m_misc_state->horizontalScrollBar()->value();
 	m_misc_state->clear();
 	m_misc_state->setText(qstr(cpu->dump_misc()));
 	m_misc_state->verticalScrollBar()->setValue(loc);
+	m_misc_state->horizontalScrollBar()->setValue(hloc);
 
 	loc = m_regs->verticalScrollBar()->value();
+	hloc = m_regs->horizontalScrollBar()->value();
 	m_regs->clear();
 	m_regs->setText(qstr(cpu->dump_regs()));
 	m_regs->verticalScrollBar()->setValue(loc);
+	m_regs->horizontalScrollBar()->setValue(hloc);
 
 	Q_EMIT CallStackUpdateRequested(cpu->dump_callstack_list());
 }
