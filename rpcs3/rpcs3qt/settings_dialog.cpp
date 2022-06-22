@@ -949,11 +949,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		for (auto& dev : dev_array)
 		{
-			const QString cur_item = qstr(dev.name);
-			ui->audioDeviceBox->addItem(cur_item, qstr(dev.id));
+			const QString cur_item = qstr(dev.id);
+			ui->audioDeviceBox->addItem(qstr(dev.name), cur_item);
 			if (g_cfg.audio.audio_device.to_string() == dev.id)
 			{
-				device_index = ui->audioDeviceBox->findText(cur_item);
+				device_index = ui->audioDeviceBox->findData(cur_item);
 			}
 		}
 
@@ -968,7 +968,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			return;
 		}
 
-		auto item_data = ui->audioDeviceBox->itemData(index);
+		const QVariant item_data = ui->audioDeviceBox->itemData(index);
 		m_emu_settings->SetSetting(emu_settings_type::AudioDevice, sstr(item_data.toString()));
 		ui->audioDeviceBox->setCurrentIndex(index);
 	};
@@ -1054,7 +1054,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	SubscribeTooltip(ui->gb_audio_device, tooltips.settings.audio_device);
 	connect(ui->audioDeviceBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, change_audio_output_device);
-	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [change_audio_output_device]() { change_audio_output_device(0); /* Set device to 'Default' */ });
+	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [change_audio_output_device]() { change_audio_output_device(0); }); // Set device to 'Default'
 	get_audio_output_devices();
 
 	// Microphone Comboboxes
