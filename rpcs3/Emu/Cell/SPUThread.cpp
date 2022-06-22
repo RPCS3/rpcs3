@@ -1030,10 +1030,8 @@ spu_imm_table_t::spu_imm_table_t()
 	}
 }
 
-std::string spu_thread::dump_regs() const
+void spu_thread::dump_regs(std::string& ret) const
 {
-	std::string ret;
-
 	const bool floats_only = debugger_float_mode.load();
 
 	SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
@@ -1148,8 +1146,6 @@ std::string spu_thread::dump_regs() const
 		fmt::append(ret, "[0x%02x] %08x %08x %08x %08x\n", i * sizeof(data[0])
 			, data[i + 0], data[i + 1], data[i + 2], data[i + 3]);
 	}
-
-	return ret;
 }
 
 std::string spu_thread::dump_callstack() const

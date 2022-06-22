@@ -521,7 +521,7 @@ namespace rsx
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;
 
-		std::string dump_regs() const override;
+		void dump_regs(std::string&) const override;
 		void cpu_wait(bs_t<cpu_flag> old) override;
 
 		static constexpr u32 id_base = 0x5555'5555; // See get_current_cpu_thread()

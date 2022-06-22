@@ -2837,10 +2837,8 @@ namespace rsx
 
 	void invalid_method(thread*, u32, u32);
 
-	std::string thread::dump_regs() const
+	void thread::dump_regs(std::string& result) const
 	{
-		std::string result;
-
 		if (ctrl)
 		{
 			fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +ctrl->get, +ctrl->put, +ctrl->ref);
@@ -2865,21 +2863,19 @@ namespace rsx
 			case NV4097_ZCULL_SYNC:
 				continue;
 
+			case NV308A_COLOR:
+			{
+				i = NV3089_SET_OBJECT;
+				continue;
+			}
 			default:
 			{
-				if (i >= NV308A_COLOR && i < NV3089_SET_OBJECT)
-				{
-					continue;
-				}
-
 				break;
 			}
 			}
 
 			fmt::append(result, "[%04x] %s\n", i, ensure(rsx::get_pretty_printing_function(i))(i, method_registers.registers[i]));
 		}
-
-		return result;
 	}
 
 	flags32_t thread::read_barrier(u32 memory_address, u32 memory_range, bool unconditional)

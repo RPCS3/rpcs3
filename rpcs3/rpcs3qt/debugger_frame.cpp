@@ -1022,7 +1022,9 @@ void debugger_frame::WritePanels()
 	loc = m_regs->verticalScrollBar()->value();
 	hloc = m_regs->horizontalScrollBar()->value();
 	m_regs->clear();
-	m_regs->setText(qstr(cpu->dump_regs()));
+	m_last_reg_state.clear();
+	cpu->dump_regs(m_last_reg_state);
+	m_regs->setText(qstr(m_last_reg_state));
 	m_regs->verticalScrollBar()->setValue(loc);
 	m_regs->horizontalScrollBar()->setValue(hloc);
 
