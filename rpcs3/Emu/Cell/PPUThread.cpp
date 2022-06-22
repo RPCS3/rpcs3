@@ -1211,7 +1211,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 std::string ppu_thread::dump_misc() const
 {
-	std::string ret;
+	std::string ret = cpu_thread::dump_misc();
 
 	fmt::append(ret, "Priority: %d\n", +prio);
 	fmt::append(ret, "Stack: 0x%x..0x%x\n", stack_addr, stack_addr + stack_size - 1);

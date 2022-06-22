@@ -176,7 +176,7 @@ struct cpu_prof
 			{
 				return;
 			}
-	
+
 			const std::string results = format(chart, samples, idle, true);
 			profiler.notice("All Threads: %u samples (%.4f%% idle):%s", samples, 100. * idle / samples, results);
 		}
@@ -949,9 +949,7 @@ std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu);
 
 std::string cpu_thread::dump_all() const
 {
-	std::string ret = cpu_thread::dump_misc();
-	ret += '\n';
-	ret += dump_misc();
+	std::string ret = dump_misc();
 	ret += '\n';
 	ret += dump_regs();
 	ret += '\n';
@@ -1004,7 +1002,7 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 
 std::string cpu_thread::dump_misc() const
 {
-	return fmt::format("Type: %s\n" "State: %s\n", id_type() == 1 ? "PPU" : id_type() == 2 ? "SPU" : "CPU", state.load());
+	return fmt::format("Type: %s; State: %s\n", id_type() == 1 ? "PPU" : id_type() == 2 ? "SPU" : "RSX", state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
