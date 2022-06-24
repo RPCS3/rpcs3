@@ -196,7 +196,10 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 				m_debugger_list->EnableThreadFollowing();
 			}
 		}
-		UpdateUI();
+
+		// Tighten up, put the debugger on a wary watch over any thread info changes if there aren't any
+		// This allows responsive debugger interaction
+		m_ui_fast_update_permission_deadline = m_ui_update_ctr + 5;
 	});
 
 	connect(m_choice_units->lineEdit(), &QLineEdit::editingFinished, [&]
@@ -743,8 +746,17 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
 
 void debugger_frame::UpdateUI()
 {
-	UpdateUnitList();
-	ShowPC();
+	if (m_ui_update_ctr % 5 == 0)
+	{
+		// If no change to instruction position happened, update instruction list at 20hz
+		ShowPC();
+
+		if (m_ui_update_ctr % 20 == 0)
+		{
+			// Update threads list at 5hz (low priority)
+			UpdateUnitList();
+		}
+	}
 
 	const auto cpu = get_cpu();
 
@@ -752,12 +764,14 @@ void debugger_frame::UpdateUI()
 	{
 		if (m_last_pc != umax || !m_last_query_state.empty())
 		{
+			UpdateUnitList();
+			ShowPC();
 			m_last_query_state.clear();
 			m_last_pc = -1;
 			DoUpdate();
 		}
 	}
-	else
+	else if (m_ui_update_ctr % 5 == 0 || m_ui_update_ctr < m_ui_fast_update_permission_deadline)
 	{
 		const auto cia = cpu->get_pc();
 		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) :
@@ -783,6 +797,12 @@ void debugger_frame::UpdateUI()
 				m_btn_run->setText(PauseString);
 			}
 
+			if (m_ui_update_ctr % 5)
+			{
+				// Call if it hasn't been called before
+				ShowPC();
+			}
+
 			if (is_using_interpreter(cpu->id_type()))
 			{
 				m_btn_step->setEnabled(paused);
@@ -790,6 +810,8 @@ void debugger_frame::UpdateUI()
 			}
 		}
 	}
+
+	m_ui_update_ctr++;
 }
 
 using data_type = std::pair<cpu_thread*, u32>;
@@ -979,6 +1001,7 @@ void debugger_frame::WritePanels()
 	{
 		m_misc_state->clear();
 		m_regs->clear();
+		ClearCallStack();
 		return;
 	}
 
@@ -992,7 +1015,9 @@ void debugger_frame::WritePanels()
 	loc = m_regs->verticalScrollBar()->value();
 	hloc = m_regs->horizontalScrollBar()->value();
 	m_regs->clear();
-	m_regs->setText(qstr(cpu->dump_regs()));
+	m_last_reg_state.clear();
+	cpu->dump_regs(m_last_reg_state);
+	m_regs->setText(qstr(m_last_reg_state));
 	m_regs->verticalScrollBar()->setValue(loc);
 	m_regs->horizontalScrollBar()->setValue(hloc);
 
@@ -1151,12 +1176,14 @@ void debugger_frame::DoStep(bool step_over)
 		}
 	}
 
-	UpdateUI();
+	// Tighten up, put the debugger on a wary watch over any thread info changes if there aren't any
+	// This allows responsive debugger interaction
+	m_ui_fast_update_permission_deadline = m_ui_update_ctr + 5;
 }
 
 void debugger_frame::EnableUpdateTimer(bool enable) const
 {
-	enable ? m_update->start(50) : m_update->stop();
+	enable ? m_update->start(10) : m_update->stop();
 }
 
 void debugger_frame::EnableButtons(bool enable)
