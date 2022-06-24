@@ -2287,9 +2287,9 @@ void Emulator::EjectDisc()
 		return;
 	}
 
-	if (vfs::get("/dev_bdvd").empty())
+	if (vfs::get("/dev_bdvd").empty() && vfs::get("/dev_ps2disc").empty())
 	{
-		sys_log.error("Can not eject disc if dev_bdvd is not mounted!");
+		sys_log.error("Can not eject disc if both dev_bdvd and dev_ps2disc are not mounted!");
 		return;
 	}
 
