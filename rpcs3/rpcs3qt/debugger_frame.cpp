@@ -196,7 +196,10 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 				m_debugger_list->EnableThreadFollowing();
 			}
 		}
-		UpdateUI();
+
+		// Tighten up, put the debugger on a wary watch over any thread info changes if there aren't any
+		// This allows responsive debugger interaction
+		m_ui_fast_update_permission_deadline = m_ui_update_ctr + 5;
 	});
 
 	connect(m_choice_units->lineEdit(), &QLineEdit::editingFinished, [&]
@@ -805,16 +808,6 @@ void debugger_frame::UpdateUI()
 				m_btn_step->setEnabled(paused);
 				m_btn_step_over->setEnabled(paused);
 			}
-
-			// Relax, an update has occured. There's little sense in keeping this stressful watch for thread info changes
-			// This allows slow updating to thread state if its running so we can observe changes in thread info more carefully while also not hurting performance
-			m_ui_fast_update_permission_deadline = 0;
-		}
-		else if (m_ui_update_ctr >= m_ui_fast_update_permission_deadline && is_using_interpreter(cpu->id_type()))
-		{
-			// Tighten up, put the debugger on a wary watch over any thread info changes if there aren't any
-			// This allows responsive debugger insteraction
-			m_ui_fast_update_permission_deadline = (m_ui_update_ctr / 5 + 1) * 5;
 		}
 	}
 
@@ -1183,7 +1176,9 @@ void debugger_frame::DoStep(bool step_over)
 		}
 	}
 
-	UpdateUI();
+	// Tighten up, put the debugger on a wary watch over any thread info changes if there aren't any
+	// This allows responsive debugger interaction
+	m_ui_fast_update_permission_deadline = m_ui_update_ctr + 5;
 }
 
 void debugger_frame::EnableUpdateTimer(bool enable) const
