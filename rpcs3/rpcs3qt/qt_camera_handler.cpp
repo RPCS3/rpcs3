@@ -23,23 +23,13 @@ qt_camera_handler::qt_camera_handler() : camera_handler_base()
 
 qt_camera_handler::~qt_camera_handler()
 {
-	atomic_t<bool> wake_up = false;
-
-	Emu.CallFromMainThread([&]()
+	Emu.BlockingCallFromMainThread([&]()
 	{
 		close_camera();
 		m_surface.reset();
 		m_camera.reset();
 		m_error_handler.reset();
-
-		wake_up = true;
-		wake_up.notify_one();
 	});
-
-	while (!wake_up)
-	{
-		thread_ctrl::wait_on(wake_up, false);
-	}
 }
 
 void qt_camera_handler::set_camera(const QCameraInfo& camera_info)

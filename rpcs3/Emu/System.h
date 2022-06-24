@@ -56,7 +56,7 @@ enum class cfg_mode
 
 struct EmuCallbacks
 {
-	std::function<void(std::function<void()>)> call_from_main_thread;
+	std::function<void(std::function<void()>, atomic_t<bool>*)> call_from_main_thread;
 	std::function<void(bool)> on_run; // (start_playtime) continuing or going ingame, so start the clock
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;
@@ -136,23 +136,10 @@ public:
 	}
 
 	// Call from the GUI thread
-	void CallFromMainThread(std::function<void()>&& func, bool track_emu_state = true, u64 stop_ctr = umax) const
-	{
-		if (!track_emu_state)
-		{
-			return m_cb.call_from_main_thread(std::move(func));
-		}
+	void CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* wake_up = nullptr, bool track_emu_state = true, u64 stop_ctr = umax) const;
 
-		std::function<void()> final_func = [this, before = IsStopped(), count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
-		{
-			if (count == m_stop_ctr && before == IsStopped())
-			{
-				func();
-			}
-		};
-
-		return m_cb.call_from_main_thread(std::move(final_func));
-	}
+	// Blocking call from the GUI thread
+	void BlockingCallFromMainThread(std::function<void()>&& func) const;
 
 	enum class stop_counter_t : u64{};
 
@@ -163,7 +150,7 @@ public:
 
 	void CallFromMainThread(std::function<void()>&& func, stop_counter_t counter) const
 	{
-		CallFromMainThread(std::move(func), true, static_cast<u64>(counter));
+		CallFromMainThread(std::move(func), nullptr, true, static_cast<u64>(counter));
 	}
 
 	/** Set emulator mode to running unconditionnaly.

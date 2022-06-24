@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 
 #include "main_application.h"
+#include "util/atomic.hpp"
 
 #include <functional>
 
@@ -29,8 +30,8 @@ private:
 	}
 
 Q_SIGNALS:
-	void RequestCallFromMainThread(std::function<void()> func);
+	void RequestCallFromMainThread(std::function<void()> func, atomic_t<bool>* wake_up);
 
 private Q_SLOTS:
-	static void CallFromMainThread(const std::function<void()>& func);
+	static void CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up);
 };

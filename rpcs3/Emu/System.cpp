@@ -130,6 +130,37 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 	});
 }
 
+void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* wake_up, bool track_emu_state, u64 stop_ctr) const
+{
+	if (!track_emu_state)
+	{
+		m_cb.call_from_main_thread(std::move(func), wake_up);
+		return;
+	}
+
+	std::function<void()> final_func = [this, before = IsStopped(), count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
+	{
+		if (count == m_stop_ctr && before == IsStopped())
+		{
+			func();
+		}
+	};
+
+	m_cb.call_from_main_thread(std::move(final_func), wake_up);
+}
+
+void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
+{
+	atomic_t<bool> wake_up = false;
+
+	CallFromMainThread(std::move(func), &wake_up);
+
+	while (!wake_up && !IsStopped())
+	{
+		thread_ctrl::wait_on(wake_up, false);
+	}
+}
+
 void Emulator::Init(bool add_only)
 {
 	jit_runtime::initialize();

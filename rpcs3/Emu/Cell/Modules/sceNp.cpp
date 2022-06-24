@@ -983,23 +983,15 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 		msg_data.data.assign(msg->data.get_ptr(), msg->data.get_ptr() + msg->size);
 	}
 
-	atomic_t<bool> wake_up = false;
-	bool result            = false;
+	bool result = false;
 
 	input::SetIntercepted(true);
 
-	Emu.CallFromMainThread([=, &wake_up, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
-		{
-			auto send_dlg = Emu.GetCallbacks().get_sendmessage_dialog();
-			result  = send_dlg->Exec(msg_data, npids);
-			wake_up = true;
-			wake_up.notify_one();
-		});
-
-	while (!wake_up && !Emu.IsStopped())
+	Emu.BlockingCallFromMainThread([=, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
 	{
-		thread_ctrl::wait_on(wake_up, false);
-	}
+		auto send_dlg = Emu.GetCallbacks().get_sendmessage_dialog();
+		result = send_dlg->Exec(msg_data, npids);
+	});
 
 	input::SetIntercepted(false);
 
@@ -1154,26 +1146,18 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	atomic_t<bool> wake_up = false;
-	bool result            = false;
+	bool result = false;
 
 	input::SetIntercepted(true);
 
-	SceNpBasicMessageRecvAction recv_result;
-	u64 chosen_msg_id;
+	SceNpBasicMessageRecvAction recv_result{};
+	u64 chosen_msg_id{};
 
-	Emu.CallFromMainThread([=, &wake_up, &result, &recv_result, &chosen_msg_id]()
-		{
-			auto recv_dlg          = Emu.GetCallbacks().get_recvmessage_dialog();
-			result  = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
-			wake_up = true;
-			wake_up.notify_one();
-		});
-
-	while (!wake_up && !Emu.IsStopped())
+	Emu.BlockingCallFromMainThread([=, &result, &recv_result, &chosen_msg_id]()
 	{
-		thread_ctrl::wait_on(wake_up, false);
-	}
+		auto recv_dlg = Emu.GetCallbacks().get_recvmessage_dialog();
+		result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
+	});
 
 	input::SetIntercepted(false);
 

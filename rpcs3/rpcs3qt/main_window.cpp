@@ -1056,7 +1056,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		Emu.CallFromMainThread([this, str = std::move(str)]()
 		{
 			QMessageBox::critical(this, tr("Firmware Installation Failed"), str);
-		}, false);
+		}, nullptr, false);
 	};
 
 	if (file_path.isEmpty())
