@@ -28,6 +28,8 @@ qt_music_handler::~qt_music_handler()
 		m_media_player->stop();
 		m_media_player.reset();
 		m_error_handler.reset();
+		wake_up = true;
+		wake_up.notify_one();
 	});
 
 	while (!wake_up && !Emu.IsStopped())
