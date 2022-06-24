@@ -198,7 +198,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 		}
 
 		// Tighten up, put the debugger on a wary watch over any thread info changes if there aren't any
-		// This allows responsive debugger insteraction
+		// This allows responsive debugger interaction
 		m_ui_fast_update_permission_deadline = m_ui_update_ctr + 5;
 	});
 
@@ -1177,7 +1177,7 @@ void debugger_frame::DoStep(bool step_over)
 	}
 
 	// Tighten up, put the debugger on a wary watch over any thread info changes if there aren't any
-	// This allows responsive debugger insteraction
+	// This allows responsive debugger interaction
 	m_ui_fast_update_permission_deadline = m_ui_update_ctr + 5;
 }
 
