@@ -646,6 +646,7 @@ namespace rsx
 		bool capture_current_frame = false;
 
 		u64 vblank_at_flip = umax;
+		u64 flip_notification_count = 0;
 		void post_vblank_event(u64 post_event_time);
 
 	public:

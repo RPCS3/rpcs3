@@ -3254,6 +3254,8 @@ namespace rsx
 					performance_counters.idle_time += delay_us;
 				}
 			}
+
+			flip_notification_count = 1;
 		}
 		else if (frame_limit == frame_limit_type::_ps3)
 		{
@@ -3262,6 +3264,7 @@ namespace rsx
 			if (vblank_at_flip == umax)
 			{
 				vblank_at_flip = +vblank_count;
+				flip_notification_count = 1;
 				exit = true;
 			}
 
@@ -3276,7 +3279,7 @@ namespace rsx
 			vblank_at_flip = umax;
 		}
 
-		int_flip_index++;
+		int_flip_index += flip_notification_count;
 
 		current_display_buffer = buffer;
 		m_queued_flip.emu_flip = true;
@@ -3289,23 +3292,26 @@ namespace rsx
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
 
-		if (!isHLE)
+		while (flip_notification_count--)
 		{
-			sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
-			return;
-		}
+			if (!isHLE)
+			{
+				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
+				continue;
+			}
 
-		if (auto ptr = flip_handler)
-		{
-			intr_thread->cmd_list
-			({
-				{ ppu_cmd::set_args, 1 }, u64{ 1 },
-				{ ppu_cmd::lle_call, ptr },
-				{ ppu_cmd::sleep, 0 }
-			});
+			if (auto ptr = flip_handler)
+			{
+				intr_thread->cmd_list
+				({
+					{ ppu_cmd::set_args, 1 }, u64{ 1 },
+					{ ppu_cmd::lle_call, ptr },
+					{ ppu_cmd::sleep, 0 }
+				});
 
-			intr_thread->cmd_notify++;
-			intr_thread->cmd_notify.notify_one();
+				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.notify_one();
+			}
 		}
 	}
 }

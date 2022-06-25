@@ -1770,6 +1770,11 @@ namespace rsx
 	{
 		ensure(rsx->isHLE);
 
+		if (rsx->vblank_at_flip != umax)
+		{
+			rsx->flip_notification_count++;
+		}
+
 		if (auto ptr = rsx->queue_handler)
 		{
 			rsx->intr_thread->cmd_list
@@ -1818,7 +1823,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread*, u32 /*reg*/, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
@@ -1827,8 +1832,13 @@ namespace rsx
 		template<u32 index>
 		struct queue_flip
 		{
-			static void impl(thread*, u32 /*reg*/, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
+				if (rsx->vblank_at_flip != umax)
+				{
+					rsx->flip_notification_count++;
+				}
+
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
 		};
