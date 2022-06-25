@@ -302,8 +302,8 @@ namespace gl
 		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
 		m_program.uniforms["region_size"] = color2i(region.width, region.height);
 
-		auto depth_view = src->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::depth);
-		auto stencil_view = src->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::stencil);
+		auto depth_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::depth);
+		auto stencil_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::stencil);
 
 		depth_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
 		stencil_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(1));
@@ -343,7 +343,7 @@ namespace gl
 		m_program.uniforms["is_bgra"] = (layout.format == static_cast<GLenum>(gl::texture::format::bgra));
 		m_program.uniforms["block_width"] = static_cast<u32>(layout.size);
 
-		auto data_view = src->get_view(0xAAE4, rsx::default_remap_vector, gl::image_aspect::color);
+		auto data_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::color);
 
 		data_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), out_offset, row_pitch * 4 * region.height);

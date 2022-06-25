@@ -242,26 +242,7 @@ namespace rsx
 			break;
 		}
 
-		//Remapping tables; format is A-R-G-B
-		//Remap input table. Contains channel index to read color from
-		const std::array<u8, 4> remap_inputs =
-		{
-			static_cast<u8>(remap_ctl & 0x3),
-			static_cast<u8>((remap_ctl >> 2) & 0x3),
-			static_cast<u8>((remap_ctl >> 4) & 0x3),
-			static_cast<u8>((remap_ctl >> 6) & 0x3),
-		};
-
-		//Remap control table. Controls whether the remap value is used, or force either 0 or 1
-		const std::array<u8, 4> remap_lookup =
-		{
-			static_cast<u8>((remap_ctl >> 8) & 0x3),
-			static_cast<u8>((remap_ctl >> 10) & 0x3),
-			static_cast<u8>((remap_ctl >> 12) & 0x3),
-			static_cast<u8>((remap_ctl >> 14) & 0x3),
-		};
-
-		return std::make_pair(remap_inputs, remap_lookup);
+		return decode_remap_encoding(remap_ctl);
 	}
 
 	f32 fragment_texture::bias() const

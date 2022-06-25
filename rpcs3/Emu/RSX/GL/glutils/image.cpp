@@ -24,7 +24,7 @@ namespace gl
 		glGenTextures(1, &m_id);
 
 		// Must bind to initialize the new texture
-		gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, target, m_id);
+		gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, target, m_id, GL_TRUE);
 
 		const GLenum storage_fmt = sizedfmt_to_ifmt(sized_format);
 		switch (target)
@@ -251,7 +251,7 @@ namespace gl
 			component_swizzle[2] = argb_swizzle[3];
 			component_swizzle[3] = argb_swizzle[0];
 
-			gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, m_target, m_id);
+			gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, m_target, m_id, GL_TRUE);
 			glTexParameteriv(m_target, GL_TEXTURE_SWIZZLE_RGBA, reinterpret_cast<GLint*>(component_swizzle));
 		}
 		else
@@ -267,7 +267,7 @@ namespace gl
 			constexpr u32 depth_stencil_mask = (image_aspect::depth | image_aspect::stencil);
 			ensure((range.aspect_mask & depth_stencil_mask) != depth_stencil_mask); // "Invalid aspect mask combination"
 
-			gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, m_target, m_id);
+			gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, m_target, m_id, GL_TRUE);
 			glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
 		}
 	}
@@ -287,8 +287,9 @@ namespace gl
 		cmd->bind_texture(layer, m_target, m_id);
 	}
 
-	texture_view* viewable_image::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, GLenum aspect_flags)
+	texture_view* viewable_image::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_, GLenum aspect_flags)
 	{
+		auto remap = remap_;
 		const u64 view_aspect = static_cast<u64>(aspect_flags) & aspect();
 		ensure(view_aspect);
 
