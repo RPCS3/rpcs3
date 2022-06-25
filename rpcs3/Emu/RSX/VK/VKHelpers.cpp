@@ -71,6 +71,11 @@ namespace vk
 
 		vk::get_upload_heap()->destroy();
 
+		for (const auto& p : g_compute_tasks)
+		{
+			p.second->destroy();
+		}
+
 		g_compute_tasks.clear();
 
 		for (const auto& p : g_overlay_passes)
