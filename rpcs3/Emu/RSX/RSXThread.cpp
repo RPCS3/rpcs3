@@ -3278,6 +3278,10 @@ namespace rsx
 
 			vblank_at_flip = umax;
 		}
+		else
+		{
+			flip_notification_count = 1;
+		}
 
 		int_flip_index += flip_notification_count;
 
