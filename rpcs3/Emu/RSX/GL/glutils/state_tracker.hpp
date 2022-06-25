@@ -287,12 +287,12 @@ namespace gl
 			glUseProgram(program);
 		}
 
-		void bind_texture(GLuint layer, GLenum target, GLuint name)
+		void bind_texture(GLuint layer, GLenum target, GLuint name, GLboolean force = GL_FALSE)
 		{
 			ensure(layer < 48);
 
 			auto& bound = bound_textures[layer][target];
-			if (bound != name)
+			if (bound != name || force)
 			{
 				glActiveTexture(GL_TEXTURE0 + layer);
 				glBindTexture(target, name);

@@ -217,6 +217,30 @@ namespace rsx
 		{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
 	};
 
+	static inline std::pair<std::array<u8, 4>, std::array<u8, 4>> decode_remap_encoding(u32 remap_ctl)
+	{
+		// Remapping tables; format is A-R-G-B
+		// Remap input table. Contains channel index to read color from
+		const std::array<u8, 4> remap_inputs =
+		{
+			static_cast<u8>(remap_ctl & 0x3),
+			static_cast<u8>((remap_ctl >> 2) & 0x3),
+			static_cast<u8>((remap_ctl >> 4) & 0x3),
+			static_cast<u8>((remap_ctl >> 6) & 0x3),
+		};
+
+		// Remap control table. Controls whether the remap value is used, or force either 0 or 1
+		const std::array<u8, 4> remap_lookup =
+		{
+			static_cast<u8>((remap_ctl >> 8) & 0x3),
+			static_cast<u8>((remap_ctl >> 10) & 0x3),
+			static_cast<u8>((remap_ctl >> 12) & 0x3),
+			static_cast<u8>((remap_ctl >> 14) & 0x3),
+		};
+
+		return std::make_pair(remap_inputs, remap_lookup);
+	}
+
 	template <typename T>
 	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 /*output_height*/)
 	{

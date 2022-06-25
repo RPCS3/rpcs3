@@ -169,9 +169,9 @@ namespace gl
 		case texture::internal_format::rgba4:
 			return { GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, false };
 		case texture::internal_format::rgba8:
-			return { GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, 4, false };
+			return { GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true };
 		case texture::internal_format::bgra8:
-			return { GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 4, false };
+			return { GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true };
 		case texture::internal_format::rgba16f:
 			return { GL_RGBA, GL_HALF_FLOAT, 2, true };
 		case texture::internal_format::rgba32f:

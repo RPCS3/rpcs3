@@ -77,17 +77,7 @@ void main()
 		}
 
 		uvec4 bytes = uvec4(color * 255);
-		uint result;
-		
-		if (block_width > 1)
-		{
-			// Simulate BE packing as in UINT_8_8_8_8
-			result = bytes.w | (bytes.z << 8u) | (bytes.y << 16u) | (bytes.x << 24u);
-		}
-		else
-		{
-			result = bytes.x | (bytes.y << 8u) | (bytes.z << 16u) | (bytes.w << 24u);
-		}
+		uint result = bytes.x | (bytes.y << 8u) | (bytes.z << 16u) | (bytes.w << 24u); // UINT_8_8_8_8_REV
 
 		uint output_id = input_coord_to_output_id(coord);
 		data[output_id] = result;
