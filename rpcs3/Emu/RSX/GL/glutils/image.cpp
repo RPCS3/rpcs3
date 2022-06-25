@@ -64,7 +64,7 @@ namespace gl
 			m_mipmaps = mipmaps;
 			m_aspect_flags = image_aspect::color;
 
-			switch (sized_format)
+			switch (storage_fmt)
 			{
 			case GL_DEPTH_COMPONENT16:
 			{
