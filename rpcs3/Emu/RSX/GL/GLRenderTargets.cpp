@@ -13,7 +13,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		return{ ::gl::texture::type::ushort_5_6_5, ::gl::texture::format::rgb, ::gl::texture::internal_format::rgb565, true };
 
 	case rsx::surface_color_format::a8r8g8b8:
-		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, ::gl::texture::internal_format::rgba8, false };
+		return{ ::gl::texture::type::uint_8_8_8_8, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, false };
 
 	//These formats discard their alpha component, forced to 0 or 1
 	//All XBGR formats will have remapping before they can be read back in shaders as DRGB8
