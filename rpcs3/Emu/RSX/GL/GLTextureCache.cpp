@@ -68,6 +68,7 @@ namespace gl
 
 			switch (type)
 			{
+			case gl::texture::type::uint_8_8_8_8_rev:
 			case gl::texture::type::uint_8_8_8_8:
 			case gl::texture::type::uint_24_8:
 				rsx::convert_linear_swizzle<u32, false>(tmp_data.data(), dst, width, height, rsx_pitch);

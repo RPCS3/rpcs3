@@ -1103,7 +1103,7 @@ namespace gl
 
 			u32 scratch_offset = 0;
 			const u64 min_storage_requirement = src_mem.image_size_in_bytes + dst_mem.image_size_in_bytes;
-			const u64 min_required_buffer_size = std::max<u64>(utils::align(min_storage_requirement, 0x100000) * 4, 16 * 0x100000);
+			const u64 min_required_buffer_size = utils::align(min_storage_requirement, 256);
 
 			if (g_typeless_transfer_buffer.size() >= min_required_buffer_size) [[ likely ]]
 			{
@@ -1111,7 +1111,8 @@ namespace gl
 			}
 			else
 			{
-				g_typeless_transfer_buffer.create(gl::buffer::target::ssbo, min_required_buffer_size);
+				const auto new_size = std::max(min_required_buffer_size, g_typeless_transfer_buffer.size() + (64 * 0x100000));
+				g_typeless_transfer_buffer.create(gl::buffer::target::ssbo, new_size);
 			}
 
 			void* data_ptr = copy_image_to_buffer(cmd, pack_info, src, &g_typeless_transfer_buffer.get(), scratch_offset, 0, src_region, &src_mem);
