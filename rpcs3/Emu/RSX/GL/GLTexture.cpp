@@ -609,7 +609,7 @@ namespace gl
 			}
 			case texture::target::textureCUBE:
 			{
-				const subresource_range range = { image_aspect::depth | image_aspect::color, dst_level, 1, dst_region.z , 1 };
+				const subresource_range range = { image_aspect::depth | image_aspect::color, static_cast<GLuint>(dst_level), 1, dst_region.z , 1 };
 				scratch_view = std::make_unique<gl::texture_view>(dst, GL_TEXTURE_2D, range);
 				break;
 			}
@@ -619,7 +619,7 @@ namespace gl
 
 				if (dst->levels() > 1) [[ likely ]]
 				{
-					const subresource_range range = { image_aspect::depth | image_aspect::color, dst_level, 1, 0 , 1 };
+					const subresource_range range = { image_aspect::depth | image_aspect::color, static_cast<GLuint>(dst_level), 1, 0 , 1 };
 					scratch_view = std::make_unique<gl::texture_view>(dst, GL_TEXTURE_2D, range);
 				}
 				else
