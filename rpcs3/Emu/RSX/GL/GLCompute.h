@@ -360,6 +360,13 @@ namespace gl
 		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) override;
 	};
 
+	struct cs_ssbo_to_color_image : compute_task
+	{
+		cs_ssbo_to_color_image();
+		void run(gl::command_context& cmd, const buffer* src, const texture_view* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
+		void run(gl::command_context& cmd, const buffer* src, texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
+	};
+
 	// TODO: Replace with a proper manager
 	extern std::unordered_map<u32, std::unique_ptr<gl::compute_task>> g_compute_tasks;
 

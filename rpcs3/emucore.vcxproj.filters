@@ -2178,9 +2178,6 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
-    <None Include="Emu\RSX\Program\GLSLSnippets\CopyBufferToImage.glsl">
-      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
-    </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\GenericVSPassthrough.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
@@ -2188,6 +2185,12 @@
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\CopyRGBA8ToBuffer.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\CopyBufferToColorImage.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\CopyBufferToGenericImage.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
   </ItemGroup>

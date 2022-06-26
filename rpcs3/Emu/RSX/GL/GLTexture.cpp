@@ -631,7 +631,29 @@ namespace gl
 			}
 			}
 
-			gl::get_overlay_pass<gl::rp_ssbo_to_texture>()->run(cmd, transfer_buf, scratch_view.get(), out_offset, image_region, unpack_info);
+			// If possible, decode using a compute transform to potentially have asynchronous scheduling
+			bool use_compute_transform = (dst->aspect() == gl::image_aspect::color);
+			switch (dst->get_internal_format())
+			{
+			case texture::internal_format::bgr5a1:
+			case texture::internal_format::rgb5a1:
+			case texture::internal_format::rgb565:
+			case texture::internal_format::rgba4:
+				// Packed formats are a problem with image_load_store
+				use_compute_transform = false;
+				break;
+			default:
+				break;
+			}
+
+			if (use_compute_transform)
+			{
+				gl::get_compute_task<gl::cs_ssbo_to_color_image>()->run(cmd, transfer_buf, scratch_view.get(), out_offset, image_region, unpack_info);
+			}
+			else
+			{
+				gl::get_overlay_pass<gl::rp_ssbo_to_generic_texture>()->run(cmd, transfer_buf, scratch_view.get(), out_offset, image_region, unpack_info);
+			}
 
 			if (dst->get_target() == texture::target::texture3D)
 			{

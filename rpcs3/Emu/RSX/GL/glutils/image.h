@@ -346,6 +346,7 @@ namespace gl
 		GLuint m_id = GL_NONE;
 		GLenum m_target = 0;
 		GLenum m_format = 0;
+		GLenum m_view_format = 0;
 		GLenum m_aspect_flags = 0;
 		texture* m_image_data = nullptr;
 
@@ -406,6 +407,11 @@ namespace gl
 			return m_format;
 		}
 
+		GLenum view_format() const
+		{
+			return m_view_format;
+		}
+
 		GLenum aspect() const
 		{
 			return m_aspect_flags;
@@ -442,25 +448,8 @@ namespace gl
 	class nil_texture_view : public texture_view
 	{
 	public:
-		nil_texture_view(texture* data)
-			: texture_view()
-		{
-			m_id = data->id();
-			m_target = static_cast<GLenum>(data->get_target());
-			m_format = static_cast<GLenum>(data->get_internal_format());
-			m_aspect_flags = data->aspect();
-			m_image_data = data;
-
-			component_swizzle[0] = GL_RED;
-			component_swizzle[1] = GL_GREEN;
-			component_swizzle[2] = GL_BLUE;
-			component_swizzle[3] = GL_ALPHA;
-		}
-
-		~nil_texture_view()
-		{
-			m_id = GL_NONE;
-		}
+		nil_texture_view(texture* data);
+		~nil_texture_view();
 	};
 
 	class viewable_image : public texture

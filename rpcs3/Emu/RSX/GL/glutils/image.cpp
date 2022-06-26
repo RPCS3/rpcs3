@@ -235,14 +235,15 @@ namespace gl
 	void texture_view::create(texture* data, GLenum target, GLenum sized_format, const subresource_range& range, const GLenum* argb_swizzle)
 	{
 		m_target = target;
-		m_format = sizedfmt_to_ifmt(sized_format);
+		m_format = sized_format;
+		m_view_format = sizedfmt_to_ifmt(sized_format);
 		m_image_data = data;
 		m_aspect_flags = range.aspect_mask & data->aspect();
 
 		ensure(m_aspect_flags);
 
 		glGenTextures(1, &m_id);
-		glTextureView(m_id, target, data->id(), m_format, range.min_level, range.num_levels, range.min_layer, range.num_layers);
+		glTextureView(m_id, target, data->id(), m_view_format, range.min_level, range.num_levels, range.min_layer, range.num_layers);
 
 		if (argb_swizzle)
 		{
@@ -285,6 +286,26 @@ namespace gl
 	void texture_view::bind(gl::command_context& cmd, GLuint layer) const
 	{
 		cmd->bind_texture(layer, m_target, m_id);
+	}
+
+	nil_texture_view::nil_texture_view(texture* data)
+	{
+		m_id = data->id();
+		m_target = static_cast<GLenum>(data->get_target());
+		m_format = static_cast<GLenum>(data->get_internal_format());
+		m_view_format = sizedfmt_to_ifmt(m_format);
+		m_aspect_flags = data->aspect();
+		m_image_data = data;
+
+		component_swizzle[0] = GL_RED;
+		component_swizzle[1] = GL_GREEN;
+		component_swizzle[2] = GL_BLUE;
+		component_swizzle[3] = GL_ALPHA;
+	}
+
+	nil_texture_view::~nil_texture_view()
+	{
+		m_id = GL_NONE;
 	}
 
 	texture_view* viewable_image::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_, GLenum aspect_flags)

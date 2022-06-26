@@ -1,20 +1,14 @@
 R"(
-#version 430
-#extension GL_ARB_shader_stencil_export : enable
+#version 450
+layout(local_size_x = %ws, local_size_y = 1, local_size_z = 1) in;
 
-#define ENABLE_DEPTH_STENCIL_LOAD %stencil_export_supported
+#define SSBO_LOCATION(x)  (x + %loc)
+#define IMAGE_LOCATION(x) (x)
 
-#define FMT_GL_DEPTH_COMPONENT16      0x81A5
-#define FMT_GL_DEPTH_COMPONENT32F     0x8CAC
-#define FMT_GL_DEPTH24_STENCIL8       0x88F0
-#define FMT_GL_DEPTH32F_STENCIL8      0x8CAD
+layout(%set, binding=IMAGE_LOCATION(0)) uniform writeonly restrict image2D output2D;
 
 #define FMT_GL_RGBA8                  0x8058
 #define FMT_GL_BGRA8                  0x80E1
-#define FMT_GL_RGB565                 0x8D62
-#define FMT_GL_RGB5_A1                0x8057
-#define FMT_GL_BGR5_A1                0x99F0
-#define FMT_GL_RGBA4                  0x8056
 #define FMT_GL_R8                     0x8229
 #define FMT_GL_R16                    0x822A
 #define FMT_GL_R32F                   0x822E
@@ -28,9 +22,7 @@ R"(
 #define bswap_u16(bits) (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8
 #define bswap_u32(bits) (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24
 
-layout(location=0) out vec4 fragColor;
-
-layout(%set, binding=%loc, std430) readonly restrict buffer RawDataBlock
+layout(%set, binding=SSBO_LOCATION(0), std430) readonly restrict buffer RawDataBlock
 {
 	uint data[];
 };
@@ -41,17 +33,27 @@ layout(%push_block) uniform UnpackConfiguration
 	uint swap_bytes;
 	uint src_pitch;
 	uint format;
+	uint reserved;
+	ivec2 region_offset;
+	ivec2 region_size;
 };
 #else
 	uniform uint swap_bytes;
 	uniform uint src_pitch;
 	uniform uint format;
+	uniform ivec2 region_offset;
+	uniform ivec2 region_size;
 #endif
 
-uint getTexelOffset()
+uint linear_invocation_id()
 {
-	const ivec2 coords = ivec2(gl_FragCoord.xy);
-	return coords.y * src_pitch + coords.x;
+	uint size_in_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);
+	return (gl_GlobalInvocationID.y * size_in_x) + gl_GlobalInvocationID.x;
+}
+
+ivec2 linear_id_to_output_coord(uint index)
+{
+	return ivec2(int(index % src_pitch), int(index / src_pitch));
 }
 
 // Decoders. Beware of multi-wide swapped types (e.g swap(16x2) != swap(32x1))
@@ -80,23 +82,6 @@ uint readUint32(const in uint address)
 {
 	const uint value = data[address];
 	return (swap_bytes != 0) ? bswap_u32(value) : value;
-}
-
-uvec2 readUint24_8(const in uint address)
-{
-	const uint raw_value = data[address];
-	const uint stencil = bitfieldExtract(raw_value, 0, 8);
-
-	if (swap_bytes != 0)
-	{
-		const uint depth = min(bswap_u32(raw_value), 0xffffff);
-		return uvec2(depth, stencil);
-	}
-
-	return uvec2(
-		bitfieldExtract(raw_value, 8, 24),
-		stencil
-	);
 }
 
 uvec2 readUint8x2(const in uint address)
@@ -137,97 +122,67 @@ vec4 readFixed8x4(const in uint address)
 #define readFloat32(address) uintBitsToFloat(readUint32(address))
 #define readFloat32x4(address) uintBitsToFloat(uvec4(readUint32(address * 4 + 0), readUint32(address * 4 + 1), readUint32(address * 4 + 2), readUint32(address * 4 + 3)))
 
-void main()
+#define KERNEL_SIZE %wks
+
+void write_output(const in uint invocation_id)
 {
-	const uint texel_address = getTexelOffset();
+	vec4 outColor;
 	uint utmp;
-	uvec2 utmp2;
 
 	switch (format)
 	{
-	// Depth formats
-	case FMT_GL_DEPTH_COMPONENT16:
-		gl_FragDepth = readFixed16(texel_address);
-		break;
-	case FMT_GL_DEPTH_COMPONENT32F:
-		gl_FragDepth = readFloat16(texel_address);
-		break;
-
-#if ENABLE_DEPTH_STENCIL_LOAD
-
-	// Depth-stencil formats. Unsupported on NVIDIA due to missing extensions.
-	case FMT_GL_DEPTH24_STENCIL8:
-	case FMT_GL_DEPTH32F_STENCIL8:
-		utmp2 = readUint24_8(texel_address);
-		gl_FragDepth = float(utmp2.x) / 0xffffff;
-		gl_FragStencilRefARB = int(utmp2.y);
-		break;
-
-#endif
-
 	// Simple color
 	case FMT_GL_RGBA8:
-		fragColor = readFixed8x4(texel_address);
+		outColor = readFixed8x4(invocation_id);
 		break;
 	case FMT_GL_BGRA8:
-		fragColor = readFixed8x4(texel_address).bgra;
+		outColor = readFixed8x4(invocation_id).bgra;
 		break;
 	case FMT_GL_R8:
-		fragColor.r = readFixed8(texel_address);
+		outColor.r = readFixed8(invocation_id);
 		break;
 	case FMT_GL_R16:
-		fragColor.r = readFixed16(texel_address);
+		outColor.r = readFixed16(invocation_id);
 		break;
 	case FMT_GL_R32F:
-		fragColor.r = readFloat32(texel_address);
+		outColor.r = readFloat32(invocation_id);
 		break;
 	case FMT_GL_RG8:
-		fragColor.rg = readFixed8x2(texel_address);
+		outColor.rg = readFixed8x2(invocation_id);
 		break;
 	case FMT_GL_RG8_SNORM:
-		fragColor.rg = readFixed8x2Snorm(texel_address);
+		outColor.rg = readFixed8x2Snorm(invocation_id);
 		break;
 	case FMT_GL_RG16:
-		fragColor.rg = readFixed16x2(texel_address);
+		outColor.rg = readFixed16x2(invocation_id);
 		break;
 	case FMT_GL_RG16F:
-		fragColor.rg = readFloat16x2(texel_address);
+		outColor.rg = readFloat16x2(invocation_id);
 		break;
 	case FMT_GL_RGBA16F:
-		fragColor = readFloat16x4(texel_address);
+		outColor = readFloat16x4(invocation_id);
 		break;
 	case FMT_GL_RGBA32F:
-		fragColor = readFloat32x4(texel_address);
+		outColor = readFloat32x4(invocation_id);
 		break;
+	}
 
-	// Packed color
-	case FMT_GL_RGB565:
-		utmp = readUint16(texel_address);
-		fragColor.b = bitfieldExtract(utmp, 0, 5) / 31.f;
-		fragColor.g = bitfieldExtract(utmp, 5, 6) / 63.f;
-		fragColor.r = bitfieldExtract(utmp, 11, 5) / 31.f;
-		break;
-	case FMT_GL_BGR5_A1:
-		utmp = readUint16(texel_address);
-		fragColor.b = bitfieldExtract(utmp, 0, 5) / 31.f;
-		fragColor.g = bitfieldExtract(utmp, 5, 5) / 31.f;
-		fragColor.r = bitfieldExtract(utmp, 10, 5) / 31.f;
-		fragColor.a = bitfieldExtract(utmp, 15, 1) * 1.f;
-		break;
-	case FMT_GL_RGB5_A1:
-		utmp = readUint16(texel_address);
-		fragColor.a = bitfieldExtract(utmp, 0, 1) * 1.f;
-		fragColor.b = bitfieldExtract(utmp, 1, 5) / 31.f;
-		fragColor.g = bitfieldExtract(utmp, 6, 5) / 31.f;
-		fragColor.r = bitfieldExtract(utmp, 11, 5) / 31.f;
-		break;
-	case FMT_GL_RGBA4:
-		utmp = readUint16(texel_address);
-		fragColor.b = bitfieldExtract(utmp, 0, 4) / 15.f;
-		fragColor.g = bitfieldExtract(utmp, 4, 4) / 15.f;
-		fragColor.r = bitfieldExtract(utmp, 8, 4) / 15.f;
-		fragColor.a = bitfieldExtract(utmp, 12, 4) / 15.f;
-		break;
+	const ivec2 coord = linear_id_to_output_coord(invocation_id);
+	if (any(greaterThan(coord, region_size)))
+	{
+		return;
+	}
+
+	imageStore(output2D, coord + region_offset, outColor);
+}
+
+void main()
+{
+	uint index = linear_invocation_id() * KERNEL_SIZE;
+
+	for (int loop = 0; loop < KERNEL_SIZE; ++loop, ++index)
+	{
+		write_output(index);
 	}
 }
 )"
