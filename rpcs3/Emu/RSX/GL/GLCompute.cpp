@@ -351,4 +351,47 @@ namespace gl
 		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size);
 		compute_task::run(cmd, num_invocations);
 	}
+
+	cs_ssbo_to_color_image::cs_ssbo_to_color_image()
+	{
+		initialize();
+
+		const auto raw_data =
+		#include "../Program/GLSLSnippets/CopyBufferToColorImage.glsl"
+		;
+
+		const std::pair<std::string_view, std::string> repl_list[] =
+		{
+			{ "%set, ", "" },
+			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+			{ "%ws", std::to_string(optimal_group_size) },
+			{ "%wks", std::to_string(optimal_kernel_size) }
+		};
+
+		m_src = fmt::replace_all(raw_data, repl_list);
+	}
+
+	void cs_ssbo_to_color_image::run(gl::command_context& cmd, const buffer* src, const texture_view* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout)
+	{
+		const auto row_pitch = static_cast<u32>(dst_region.width);
+		const u32 bpp = dst->image()->pitch() / dst->image()->width();
+
+		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
+		m_program.uniforms["src_pitch"] = row_pitch;
+		m_program.uniforms["format"] = static_cast<GLenum>(dst->image()->get_internal_format());
+		m_program.uniforms["region_offset"] = color2i(dst_region.x, dst_region.y);
+		m_program.uniforms["region_size"] = color2i(dst_region.width, dst_region.height);
+
+		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_pitch * bpp * dst_region.height);
+		glBindImageTexture(GL_COMPUTE_IMAGE_SLOT(0), dst->id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, dst->view_format());
+
+		const int num_invocations = utils::aligned_div(dst_region.width * dst_region.height, optimal_kernel_size);
+		compute_task::run(cmd, num_invocations);
+	}
+
+	void cs_ssbo_to_color_image::run(gl::command_context& cmd, const buffer* src, texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout)
+	{
+		gl::nil_texture_view view(dst);
+		run(cmd, src, &view, src_offset, dst_region, layout);
+	}
 }

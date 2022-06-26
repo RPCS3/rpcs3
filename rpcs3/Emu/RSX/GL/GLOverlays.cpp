@@ -595,14 +595,14 @@ namespace gl
 		overlay_pass::run(cmd, viewport, GL_NONE, gl::image_aspect::color, false);
 	}
 
-	rp_ssbo_to_texture::rp_ssbo_to_texture()
+	rp_ssbo_to_generic_texture::rp_ssbo_to_generic_texture()
 	{
 		vs_src =
 		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
 		;
 
 		fs_src =
-		#include "../Program/GLSLSnippets/CopyBufferToImage.glsl"
+		#include "../Program/GLSLSnippets/CopyBufferToGenericImage.glsl"
 		;
 
 		std::pair<std::string_view, std::string> repl_list[] =
@@ -616,7 +616,7 @@ namespace gl
 		fs_src = fmt::replace_all(fs_src, repl_list);
 	}
 
-	void rp_ssbo_to_texture::run(gl::command_context& cmd,
+	void rp_ssbo_to_generic_texture::run(gl::command_context& cmd,
 		const buffer* src, const texture_view* dst,
 		const u32 src_offset, const coordu& dst_region,
 		const pixel_buffer_layout& layout)
@@ -634,7 +634,7 @@ namespace gl
 		overlay_pass::run(cmd, dst_region, dst->id(), dst->aspect());
 	}
 
-	void rp_ssbo_to_texture::run(gl::command_context& cmd,
+	void rp_ssbo_to_generic_texture::run(gl::command_context& cmd,
 		const buffer* src, texture* dst,
 		const u32 src_offset, const coordu& dst_region,
 		const pixel_buffer_layout& layout)
