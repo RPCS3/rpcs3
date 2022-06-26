@@ -463,9 +463,12 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/VertexProgramDecompiler.cpp
     RSX/Capture/rsx_capture.cpp
     RSX/Capture/rsx_replay.cpp
+    RSX/GL/glutils/blitter.cpp
     RSX/GL/glutils/buffer_object.cpp
     RSX/GL/glutils/common.cpp
+    RSX/GL/glutils/fbo.cpp
     RSX/GL/glutils/image.cpp
+    RSX/GL/glutils/program.cpp
     RSX/GL/glutils/ring_buffer.cpp
     RSX/GL/GLCommonDecompiler.cpp
     RSX/GL/GLCompute.cpp
