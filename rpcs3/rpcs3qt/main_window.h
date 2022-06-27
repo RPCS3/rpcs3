@@ -52,7 +52,6 @@ class main_window : public QMainWindow
 	QIcon m_app_icon;
 	QIcon m_icon_play;
 	QIcon m_icon_pause;
-	QIcon m_icon_stop;
 	QIcon m_icon_restart;
 	QIcon m_icon_fullscreen_on;
 	QIcon m_icon_fullscreen_off;

@@ -1446,7 +1446,6 @@ void main_window::RepaintToolBarIcons()
 
 	m_icon_play           = icon(":/Icons/play.png");
 	m_icon_pause          = icon(":/Icons/pause.png");
-	m_icon_stop           = icon(":/Icons/stop.png");
 	m_icon_restart        = icon(":/Icons/restart.png");
 	m_icon_fullscreen_on  = icon(":/Icons/fullscreen.png");
 	m_icon_fullscreen_off = icon(":/Icons/exit_fullscreen.png");
@@ -1459,17 +1458,23 @@ void main_window::RepaintToolBarIcons()
 	ui->toolbar_refresh ->setIcon(icon(":/Icons/refresh.png"));
 	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
 
+	ui->sysStopAct->setIcon(icon(":/Icons/stop.png"));
+	ui->sysRebootAct->setIcon(m_icon_restart);
+
 	if (Emu.IsRunning())
 	{
 		ui->toolbar_start->setIcon(m_icon_pause);
+		ui->sysPauseAct->setIcon(m_icon_pause);
 	}
 	else if (Emu.IsStopped() && !Emu.GetBoot().empty())
 	{
 		ui->toolbar_start->setIcon(m_icon_restart);
+		ui->sysPauseAct->setIcon(m_icon_restart);
 	}
 	else
 	{
 		ui->toolbar_start->setIcon(m_icon_play);
+		ui->sysPauseAct->setIcon(m_icon_play);
 	}
 
 	if (isFullScreen())
