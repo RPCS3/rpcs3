@@ -6,9 +6,9 @@
 #include <algorithm>
 
 #if defined(ARCH_X64)
-#define HOST_PAGE_SIZE() 4096u
+#define HOST_PAGE_SIZE 4096u
 #else
-#define HOST_PAGE_SIZE get_page_size
+#define HOST_PAGE_SIZE get_page_size()
 #endif
 
 namespace utils
@@ -22,12 +22,12 @@ namespace utils
 	 */
 	static inline u32 page_start(u32 addr)
 	{
-		return addr & ~(HOST_PAGE_SIZE() - 1);
+		return addr & ~(HOST_PAGE_SIZE - 1);
 	}
 
 	static inline u32 next_page(u32 addr)
 	{
-		return page_start(addr) + HOST_PAGE_SIZE();
+		return page_start(addr) + HOST_PAGE_SIZE;
 	}
 
 	static inline u32 page_end(u32 addr)
@@ -37,7 +37,7 @@ namespace utils
 
 	static inline u32 is_page_aligned(u32 val)
 	{
-		return (val & (HOST_PAGE_SIZE() - 1)) == 0;
+		return (val & (HOST_PAGE_SIZE - 1)) == 0;
 	}
 
 
