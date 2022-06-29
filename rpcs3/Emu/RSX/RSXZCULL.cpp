@@ -23,7 +23,7 @@ namespace rsx
 				{
 					if (p.second.prot != utils::protection::rw)
 					{
-						utils::memory_protect(vm::base(p.first), 4096, utils::protection::rw);
+						utils::memory_protect(vm::base(p.first), utils::get_page_size(), utils::protection::rw);
 					}
 				}
 
@@ -790,13 +790,13 @@ namespace rsx
 
 			if (!m_pages_accessed[location]) [[ likely ]]
 			{
-				const auto page_address = static_cast<u32>(address) & ~0xfff;
+				const auto page_address = utils::page_start(static_cast<u32>(address));
 				auto& page = m_locked_pages[location][page_address];
 				page.add_ref();
 
 				if (page.prot == utils::protection::rw)
 				{
-					utils::memory_protect(vm::base(page_address), 4096, utils::protection::no);
+					utils::memory_protect(vm::base(page_address), utils::get_page_size(), utils::protection::no);
 					page.prot = utils::protection::no;
 				}
 			}
@@ -811,7 +811,7 @@ namespace rsx
 			const auto location = rsx::classify_location(address);
 			if (!m_pages_accessed[location])
 			{
-				const auto page_address = static_cast<u32>(address) & ~0xfff;
+				const auto page_address = utils::page_start(static_cast<u32>(address));
 				std::scoped_lock lock(m_pages_mutex);
 
 				if (auto found = m_locked_pages[location].find(page_address);
@@ -844,7 +844,7 @@ namespace rsx
 
 				if (page.prot != utils::protection::rw)
 				{
-					utils::memory_protect(vm::base(this_address), 4096, utils::protection::rw);
+					utils::memory_protect(vm::base(this_address), utils::get_page_size(), utils::protection::rw);
 					page.prot = utils::protection::rw;
 				}
 
@@ -860,7 +860,7 @@ namespace rsx
 
 		bool ZCULL_control::on_access_violation(u32 address)
 		{
-			const auto page_address = address & ~0xfff;
+			const auto page_address = utils::page_start(address);
 			const auto location = rsx::classify_location(address);
 
 			if (m_pages_accessed[location])
@@ -890,7 +890,7 @@ namespace rsx
 						else
 						{
 							// R/W to stale block, unload it and move on
-							utils::memory_protect(vm::base(page_address), 4096, utils::protection::rw);
+							utils::memory_protect(vm::base(page_address), utils::get_page_size(), utils::protection::rw);
 							m_locked_pages[location].erase(page_address);
 
 							return true;

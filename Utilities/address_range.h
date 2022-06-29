@@ -5,33 +5,39 @@
 #include <vector>
 #include <algorithm>
 
+#if defined(ARCH_X64)
+#define HOST_PAGE_SIZE() 4096u
+#else
+#define HOST_PAGE_SIZE get_page_size
+#endif
 
 namespace utils
 {
 	class address_range_vector;
 
+	long get_page_size();
 
 	/**
-	 * Constexprs
+	 * Helpers
 	 */
-	constexpr inline u32 page_start(u32 addr)
+	static inline u32 page_start(u32 addr)
 	{
-		return addr & ~4095u;
+		return addr & ~(HOST_PAGE_SIZE() - 1);
 	}
 
-	constexpr inline u32 next_page(u32 addr)
+	static inline u32 next_page(u32 addr)
 	{
-		return page_start(addr + 4096u);
+		return page_start(addr) + HOST_PAGE_SIZE();
 	}
 
-	constexpr inline u32 page_end(u32 addr)
+	static inline u32 page_end(u32 addr)
 	{
 		return next_page(addr) - 1;
 	}
 
-	constexpr inline u32 is_page_aligned(u32 addr)
+	static inline u32 is_page_aligned(u32 val)
 	{
-		return page_start(addr) == addr;
+		return (val & (HOST_PAGE_SIZE() - 1)) == 0;
 	}
 
 
@@ -186,7 +192,7 @@ namespace utils
 
 		bool is_page_range() const
 		{
-			return (valid() && start % 4096u == 0 && length() % 4096u == 0);
+			return (valid() && is_page_aligned(start) && is_page_aligned(length()));
 		}
 
 		address_range to_page_range() const
