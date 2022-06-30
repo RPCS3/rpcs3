@@ -68,6 +68,7 @@ namespace std
 
 #if defined(__INTELLISENSE__)
 #define consteval constexpr
+#define constinit
 #endif
 
 using schar  = signed char;
