@@ -55,6 +55,48 @@ using namespace std::literals;
 #define AUDIT(...) (static_cast<void>(0))
 #endif
 
+namespace utils
+{
+	template <typename F>
+	struct fn_helper
+	{
+		F f;
+
+		fn_helper(F&& f)
+			: f(std::forward<F>(f))
+		{
+		}
+
+		template <typename... Args>
+		auto operator()(Args&&... args) const
+		{
+			if constexpr (sizeof...(Args) == 0)
+				return f(0, 0, 0, 0);
+			else if constexpr (sizeof...(Args) == 1)
+				return f(std::forward<Args>(args)..., 0, 0, 0);
+			else if constexpr (sizeof...(Args) == 2)
+				return f(std::forward<Args>(args)..., 0, 0);
+			else if constexpr (sizeof...(Args) == 3)
+				return f(std::forward<Args>(args)..., 0);
+			else if constexpr (sizeof...(Args) == 4)
+				return f(std::forward<Args>(args)...);
+			else
+				static_assert(sizeof...(Args) <= 4);
+		}
+	};
+
+	template <typename F>
+	fn_helper(F&& f) -> fn_helper<F>;
+}
+
+// Shorter lambda.
+#define FN(...) \
+	::utils::fn_helper([&]( \
+		[[maybe_unused]] auto&& x, \
+		[[maybe_unused]] auto&& y, \
+		[[maybe_unused]] auto&& z, \
+		[[maybe_unused]] auto&& w){ return (__VA_ARGS__); })
+
 #if __cpp_lib_bit_cast < 201806L
 namespace std
 {
@@ -878,6 +920,21 @@ constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(),
 	const char* func = __builtin_FUNCTION()) noexcept
 {
 	if (std::forward<T>(arg)) [[likely]]
+	{
+		return std::forward<T>(arg);
+	}
+
+	fmt::raw_verify_error({line, col, file, func}, msg);
+}
+
+template <typename T, typename F> requires (std::is_invocable_v<F, T&&>)
+constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(),
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION()) noexcept
+{
+	if (std::forward<F>(pred)(std::forward<T>(arg))) [[likely]]
 	{
 		return std::forward<T>(arg);
 	}

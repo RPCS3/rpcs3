@@ -265,10 +265,7 @@ namespace rsx
 					sort_list.push_back({ local[index]->last_write_tag, 1, index });
 				}
 
-				std::sort(sort_list.begin(), sort_list.end(), [](const auto& a, const auto& b)
-				{
-					return (a.tag < b.tag);
-				});
+				std::sort(sort_list.begin(), sort_list.end(), FN(x.tag < y.tag));
 			}
 
 			auto add_rtt_resource = [&](auto& section, u16 slice)

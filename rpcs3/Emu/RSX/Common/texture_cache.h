@@ -183,7 +183,7 @@ namespace rsx
 				scale_y = scale.height;
 				scale_z = scale.depth;
 				image_type = type;
-				samples = msaa_samples;	
+				samples = msaa_samples;
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
@@ -495,10 +495,7 @@ namespace rsx
 			{
 				// Sort with oldest data first
 				// Ensures that new data tramples older data
-				std::sort(data.sections_to_flush.begin(), data.sections_to_flush.end(), [](const auto& a, const auto& b)
-				{
-					return (a->last_write_tag < b->last_write_tag);
-				});
+				std::sort(data.sections_to_flush.begin(), data.sections_to_flush.end(), FN(x->last_write_tag < y->last_write_tag));
 			}
 
 			rsx::simple_array<section_storage_type*> sections_to_transfer;
