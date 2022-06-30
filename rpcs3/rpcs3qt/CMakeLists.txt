@@ -81,6 +81,7 @@ set(SRC_FILES
     update_manager.cpp
     user_account.cpp
     user_manager_dialog.cpp
+    uuid.cpp
     vfs_dialog.cpp
     vfs_dialog_path_widget.cpp
     vfs_dialog_tab.cpp
