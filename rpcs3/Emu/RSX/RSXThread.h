@@ -24,7 +24,6 @@
 #include "Capture/rsx_trace.h"
 #include "Capture/rsx_replay.h"
 
-#include "Emu/system_config.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/IdManager.h"
 #include "Emu/system_config.h"
@@ -519,7 +518,7 @@ namespace rsx
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION());
 
-		static void fifo_wake_delay(u32 div = 1);
+		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;
 
 		void dump_regs(std::string&) const override;
