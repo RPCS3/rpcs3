@@ -182,13 +182,7 @@ namespace logs
 	void set_init(std::initializer_list<stored_message>);
 }
 
-#if __cpp_constinit >= 201907
-#define LOG_CONSTINIT constinit
-#else
-#define LOG_CONSTINIT
-#endif
-
-#define LOG_CHANNEL(ch, ...) LOG_CONSTINIT inline ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__)); \
+#define LOG_CHANNEL(ch, ...) inline constinit ::logs::channel ch(::logs::make_channel_name(#ch, ##__VA_ARGS__)); \
 	namespace logs { inline ::logs::registerer reg_##ch{ch}; }
 
 LOG_CHANNEL(rsx_log, "RSX");
