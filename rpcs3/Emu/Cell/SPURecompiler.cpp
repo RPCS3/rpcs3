@@ -791,12 +791,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		}
 	}
 
-	std::sort(m_flat_list.begin(), m_flat_list.end(), [&](const auto& a, const auto& b)
-	{
-		std::basic_string_view<u32> lhs = a.first;
-		std::basic_string_view<u32> rhs = b.first;
-		return lhs < rhs;
-	});
+	std::sort(m_flat_list.begin(), m_flat_list.end(), FN(x.first < y.first));
 
 	struct work
 	{

@@ -1150,18 +1150,10 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 	}
 
 	// Sort files, keeping . and ..
-	std::stable_sort(data.begin() + 2, data.end(), [](const fs::dir_entry& a, const fs::dir_entry& b)
-	{
-		return a.name < b.name;
-	});
+	std::stable_sort(data.begin() + 2, data.end(), FN(x.name < y.name));
 
 	// Remove duplicates
-	const auto last = std::unique(data.begin(), data.end(), [](const fs::dir_entry& a, const fs::dir_entry& b)
-	{
-		return a.name == b.name;
-	});
-
-	data.erase(last, data.end());
+	data.erase(std::unique(data.begin(), data.end(), FN(x.name == y.name)), data.end());
 
 	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(processed_path, std::move(data)))
 	{
