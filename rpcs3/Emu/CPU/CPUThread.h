@@ -22,6 +22,7 @@ enum class cpu_flag : u32
 	signal, // Thread received a signal (HLE)
 	memory, // Thread must unlock memory mutex
 	pending, // Thread has postponed work
+	pending_recheck, // Thread needs to recheck if there is pending work before ::pending removal
 
 	dbg_global_pause, // Emulation paused
 	dbg_pause, // Thread paused
@@ -150,10 +151,10 @@ public:
 	std::string get_name() const;
 
 	// Get CPU state dump (everything)
-	virtual std::string dump_all() const;
+	virtual void dump_all(std::string&) const;
 
 	// Get CPU register dump
-	virtual std::string dump_regs() const;
+	virtual void dump_regs(std::string&) const;
 
 	// Get CPU call stack dump
 	virtual std::string dump_callstack() const;

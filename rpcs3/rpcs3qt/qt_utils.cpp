@@ -150,6 +150,17 @@ namespace gui
 			return QIcon(get_colorized_pixmap(old_icon.pixmap(old_icon.availableSizes().at(0)), old_color, new_color, use_special_masks, colorize_all));
 		}
 
+		QIcon get_colorized_icon(const QIcon& old_icon, const QColor& old_color, const std::map<QIcon::Mode, QColor>& new_colors, bool use_special_masks, bool colorize_all)
+		{
+			QIcon icon{};
+			const QPixmap old_pixmap = old_icon.pixmap(old_icon.availableSizes().at(0));
+			for (const auto& [mode, color] : new_colors)
+			{
+				icon.addPixmap(get_colorized_pixmap(old_pixmap, old_color, color, use_special_masks, colorize_all), mode);
+			}
+			return icon;
+		}
+
 		QStringList get_dir_entries(const QDir& dir, const QStringList& name_filters)
 		{
 			QFileInfoList entries = dir.entryInfoList(name_filters, QDir::Files);

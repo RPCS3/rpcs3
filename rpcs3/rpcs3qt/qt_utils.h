@@ -13,6 +13,7 @@
 #include <QPainter>
 
 #include <string>
+#include <map>
 
 namespace gui
 {
@@ -57,6 +58,7 @@ namespace gui
 		// use colorize_all to repaint every opaque pixel with the chosen color
 		// use_special_masks is only used for icons with multiple predefined colors
 		QIcon get_colorized_icon(const QIcon& old_icon, const QColor& old_color, const QColor& new_color, bool use_special_masks = false, bool colorize_all = false);
+		QIcon get_colorized_icon(const QIcon& old_icon, const QColor& old_color, const std::map<QIcon::Mode, QColor>& new_colors, bool use_special_masks = false, bool colorize_all = false);
 
 		// Returns a list of all base names of files in dir whose complete file names contain one of the given name_filters
 		QStringList get_dir_entries(const QDir& dir, const QStringList& name_filters);

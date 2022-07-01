@@ -52,6 +52,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::signal: return "sig";
 		case cpu_flag::memory: return "mem";
 		case cpu_flag::pending: return "pend";
+		case cpu_flag::pending_recheck: return "pend-re";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
@@ -175,7 +176,7 @@ struct cpu_prof
 			{
 				return;
 			}
-	
+
 			const std::string results = format(chart, samples, idle, true);
 			profiler.notice("All Threads: %u samples (%.4f%% idle):%s", samples, 100. * idle / samples, results);
 		}
@@ -624,6 +625,11 @@ cpu_thread::cpu_thread(u32 id)
 	}
 
 	g_threads_created++;
+
+	if (u32* pc2 = get_pc2())
+	{
+		*pc2 = umax;
+	}
 }
 
 void cpu_thread::cpu_wait(bs_t<cpu_flag> old)
@@ -762,10 +768,18 @@ bool cpu_thread::check_state() noexcept
 				cpu_counter::add(this);
 			}
 
-			if ((state0 & (cpu_flag::pending + cpu_flag::temp)) == cpu_flag::pending)
+			constexpr auto pending_and_temp = (cpu_flag::pending + cpu_flag::temp);
+
+			if ((state0 & pending_and_temp) == cpu_flag::pending)
 			{
 				// Execute pending work
 				cpu_work();
+
+				if ((state1 ^ state) - pending_and_temp)
+				{
+					// Work could have changed flags
+					continue;
+				}
 			}
 
 			if (retval)
@@ -933,13 +947,11 @@ u32* cpu_thread::get_pc2()
 
 std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu);
 
-std::string cpu_thread::dump_all() const
+void cpu_thread::dump_all(std::string& ret) const
 {
-	std::string ret = cpu_thread::dump_misc();
-	ret += '\n';
 	ret += dump_misc();
 	ret += '\n';
-	ret += dump_regs();
+	dump_regs(ret);
 	ret += '\n';
 	ret += dump_callstack();
 	ret += '\n';
@@ -960,13 +972,10 @@ std::string cpu_thread::dump_all() const
 			ret += '\n';
 		}
 	}
-
-	return ret;
 }
 
-std::string cpu_thread::dump_regs() const
+void cpu_thread::dump_regs(std::string&) const
 {
-	return {};
 }
 
 std::string cpu_thread::dump_callstack() const
@@ -990,7 +999,7 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 
 std::string cpu_thread::dump_misc() const
 {
-	return fmt::format("Type: %s\n" "State: %s\n", id_type() == 1 ? "PPU" : id_type() == 2 ? "SPU" : "CPU", state.load());
+	return fmt::format("Type: %s; State: %s\n", id_type() == 1 ? "PPU" : id_type() == 2 ? "SPU" : "RSX", state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept

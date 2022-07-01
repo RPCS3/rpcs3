@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/atomic.hpp"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -92,9 +93,11 @@ Q_SIGNALS:
 	void OnEmulatorResume(bool start_playtime);
 	void OnEmulatorStop();
 	void OnEmulatorReady();
+	void OnEnableDiscEject(bool enabled);
+	void OnEnableDiscInsert(bool enabled);
 
-	void RequestCallFromMainThread(const std::function<void()>& func);
+	void RequestCallFromMainThread(std::function<void()> func, atomic_t<bool>* wake_up);
 
 private Q_SLOTS:
-	static void CallFromMainThread(const std::function<void()>& func);
+	static void CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up);
 };

@@ -23,6 +23,7 @@ lv2_fs_mount_point g_mp_sys_dev_hdd0{"/dev_hdd0"};
 lv2_fs_mount_point g_mp_sys_dev_hdd1{"/dev_hdd1", 512, 32768, lv2_mp_flag::no_uid_gid + lv2_mp_flag::cache};
 lv2_fs_mount_point g_mp_sys_dev_usb{"", 512, 4096, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_bdvd{"", 2048, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_dvd{"", 2048, 32768, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_host_root{"", 512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_flash{"", 512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_flash2{ "", 512, 8192, lv2_mp_flag::no_uid_gid }; // TODO confirm
@@ -66,7 +67,7 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 		default:
 		case 30: fmt::append(size_str, "%gGB", size / (1024. * 1024 * 1024)); break;
 		}
-	
+
 		return size_str;
 	};
 
@@ -177,6 +178,8 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 			return &g_mp_sys_dev_usb;
 		if (mp_name == "dev_bdvd"sv)
 			return &g_mp_sys_dev_bdvd;
+		if (mp_name == "dev_ps2disc"sv)
+			return &g_mp_sys_dev_dvd;
 		if (mp_name == "app_home"sv && filename.data() != Emu.argv[0].data())
 			return lv2_fs_object::get_mp(Emu.argv[0]);
 		if (mp_name == "host_root"sv)

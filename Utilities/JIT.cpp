@@ -871,6 +871,10 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	std::string result;
 
 	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
+#if defined(__APPLE__) && defined(ARCH_ARM64)
+	// Force override triple on Apple arm64 or we'll get linking errors.
+	null_mod->setTargetTriple(llvm::Triple::normalize(utils::c_llvm_default_triple));
+#endif
 
 	if (_link.empty())
 	{

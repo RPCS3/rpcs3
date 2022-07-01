@@ -1056,7 +1056,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		Emu.CallFromMainThread([this, str = std::move(str)]()
 		{
 			QMessageBox::critical(this, tr("Firmware Installation Failed"), str);
-		}, false);
+		}, nullptr, false);
 	};
 
 	if (file_path.isEmpty())
@@ -1421,16 +1421,31 @@ void main_window::RepaintThumbnailIcons()
 
 void main_window::RepaintToolBarIcons()
 {
-	const QColor new_color = gui::utils::get_label_color("toolbar_icon_color");
+	std::map<QIcon::Mode, QColor> new_colors{};
+	new_colors[QIcon::Normal] = gui::utils::get_label_color("toolbar_icon_color");
 
-	const auto icon = [&new_color](const QString& path)
+	const QString sheet = static_cast<QApplication *>(QCoreApplication::instance())->styleSheet();
+
+	if (sheet.contains("toolbar_icon_color_disabled"))
 	{
-		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, new_color);
+		new_colors[QIcon::Disabled] = gui::utils::get_label_color("toolbar_icon_color_disabled");
+	}
+	if (sheet.contains("toolbar_icon_color_active"))
+	{
+		new_colors[QIcon::Active] = gui::utils::get_label_color("toolbar_icon_color_active");
+	}
+	if (sheet.contains("toolbar_icon_color_selected"))
+	{
+		new_colors[QIcon::Selected] = gui::utils::get_label_color("toolbar_icon_color_selected");
+	}
+
+	const auto icon = [&new_colors](const QString& path)
+	{
+		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, new_colors);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
 	m_icon_pause          = icon(":/Icons/pause.png");
-	m_icon_stop           = icon(":/Icons/stop.png");
 	m_icon_restart        = icon(":/Icons/restart.png");
 	m_icon_fullscreen_on  = icon(":/Icons/fullscreen.png");
 	m_icon_fullscreen_off = icon(":/Icons/exit_fullscreen.png");
@@ -1443,17 +1458,23 @@ void main_window::RepaintToolBarIcons()
 	ui->toolbar_refresh ->setIcon(icon(":/Icons/refresh.png"));
 	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
 
+	ui->sysStopAct->setIcon(icon(":/Icons/stop.png"));
+	ui->sysRebootAct->setIcon(m_icon_restart);
+
 	if (Emu.IsRunning())
 	{
 		ui->toolbar_start->setIcon(m_icon_pause);
+		ui->sysPauseAct->setIcon(m_icon_pause);
 	}
 	else if (Emu.IsStopped() && !Emu.GetBoot().empty())
 	{
 		ui->toolbar_start->setIcon(m_icon_restart);
+		ui->sysPauseAct->setIcon(m_icon_restart);
 	}
 	else
 	{
 		ui->toolbar_start->setIcon(m_icon_play);
+		ui->sysPauseAct->setIcon(m_icon_play);
 	}
 
 	if (isFullScreen())
@@ -1465,6 +1486,7 @@ void main_window::RepaintToolBarIcons()
 		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
 	}
 
+	const QColor& new_color = new_colors[QIcon::Normal];
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
 		.arg(new_color.red()).arg(new_color.green()).arg(new_color.blue()).arg(new_color.alpha()));
 
@@ -1673,6 +1695,16 @@ void main_window::EnableMenus(bool enabled) const
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
 	ui->toolsStringSearchAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
+}
+
+void main_window::OnEnableDiscEject(bool enabled) const
+{
+	ui->ejectDiscAct->setEnabled(enabled);
+}
+
+void main_window::OnEnableDiscInsert(bool enabled) const
+{
+	ui->insertDiscAct->setEnabled(enabled);
 }
 
 void main_window::BootRecentAction(const QAction* act)
@@ -2034,6 +2066,34 @@ void main_window::CreateConnects()
 	{
 		gui_log.notice("User triggered restart action in menu bar");
 		Emu.Restart();
+	});
+
+	connect(ui->ejectDiscAct, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered eject disc action in menu bar");
+		Emu.EjectDisc();
+	});
+	connect(ui->insertDiscAct, &QAction::triggered, this, [this]()
+	{
+		gui_log.notice("User triggered insert disc action in menu bar");
+
+		const QString path_last_game = m_gui_settings->GetValue(gui::fd_insert_disc).toString();
+		const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select Disc Game Folder"), path_last_game, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+		if (dir_path.isEmpty())
+		{
+			return;
+		}
+
+		const game_boot_result result = Emu.InsertDisc(dir_path.toStdString());
+
+		if (result != game_boot_result::no_errors)
+		{
+			QMessageBox::warning(this, tr("Failed to insert disc"), tr("Make sure that the emulation is running and that the selected path belongs to a valid disc game."));
+			return;
+		}
+
+		m_gui_settings->SetValue(gui::fd_insert_disc, QFileInfo(dir_path).path());
 	});
 
 	connect(ui->sysSendOpenMenuAct, &QAction::triggered, this, [this]()

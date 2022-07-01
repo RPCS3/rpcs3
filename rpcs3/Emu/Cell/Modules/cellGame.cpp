@@ -199,6 +199,162 @@ void fmt_class_string<content_permission::check_mode>::format(std::string& out, 
 	});
 }
 
+template<>
+void fmt_class_string<disc_change_manager::eject_state>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(disc_change_manager::eject_state::inserted);
+			STR_CASE(disc_change_manager::eject_state::ejected);
+			STR_CASE(disc_change_manager::eject_state::busy);
+		}
+
+		return unknown;
+	});
+}
+
+
+disc_change_manager::disc_change_manager()
+{
+	Emu.GetCallbacks().enable_disc_eject(false);
+	Emu.GetCallbacks().enable_disc_insert(false);
+}
+
+disc_change_manager::~disc_change_manager()
+{
+	Emu.GetCallbacks().enable_disc_eject(false);
+	Emu.GetCallbacks().enable_disc_insert(false);
+}
+
+error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCallback> func_eject, vm::ptr<CellGameDiscInsertCallback> func_insert)
+{
+	if (!func_eject || !func_insert)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
+	std::lock_guard lock(mtx);
+
+	eject_callback = func_eject;
+	insert_callback = func_insert;
+
+	Emu.GetCallbacks().enable_disc_eject(true);
+	Emu.GetCallbacks().enable_disc_insert(false);
+
+	return CELL_OK;
+}
+
+error_code disc_change_manager::unregister_callbacks()
+{
+	const auto unregister = [this]() -> void
+	{
+		eject_callback = vm::null;
+		insert_callback = vm::null;
+
+		Emu.GetCallbacks().enable_disc_eject(false);
+		Emu.GetCallbacks().enable_disc_insert(false);
+	};
+
+	if (is_inserting)
+	{
+		// NOTE: The insert_callback is known to call cellGameUnregisterDiscChangeCallback.
+		// So we keep it out of the mutex lock until it proves to be an issue.
+		unregister();
+	}
+	else
+	{
+		std::lock_guard lock(mtx);
+		unregister();
+	}
+
+	return CELL_OK;
+}
+
+void disc_change_manager::eject_disc()
+{
+	cellGame.notice("Ejecting disc...");
+
+	std::lock_guard lock(mtx);
+
+	if (state != eject_state::inserted)
+	{
+		cellGame.fatal("Can not eject disc in the current state. (state=%s)", state.load());
+		return;
+	}
+
+	state = eject_state::busy;
+	Emu.GetCallbacks().enable_disc_eject(false);
+
+	ensure(eject_callback);
+
+	sysutil_register_cb([](ppu_thread& cb_ppu) -> s32
+	{
+		auto& dcm = g_fxo->get<disc_change_manager>();
+		std::lock_guard lock(dcm.mtx);
+
+		cellGame.notice("Executing eject_callback...");
+		dcm.eject_callback(cb_ppu);
+
+		ensure(vfs::unmount("/dev_bdvd"));
+		ensure(vfs::unmount("/dev_ps2disc"));
+		dcm.state = eject_state::ejected;
+
+		Emu.GetCallbacks().enable_disc_insert(true);
+
+		return CELL_OK;
+	});
+}
+
+void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
+{
+	cellGame.notice("Inserting disc...");
+
+	std::lock_guard lock(mtx);
+
+	if (state != eject_state::ejected)
+	{
+		cellGame.fatal("Can not insert disc in the current state. (state=%s)", state.load());
+		return;
+	}
+
+	state = eject_state::busy;
+	Emu.GetCallbacks().enable_disc_insert(false);
+
+	ensure(insert_callback);
+
+	is_inserting = true;
+
+	sysutil_register_cb([disc_type, title_id = std::move(title_id)](ppu_thread& cb_ppu) -> s32
+	{
+		auto& dcm = g_fxo->get<disc_change_manager>();
+		std::lock_guard lock(dcm.mtx);
+
+		if (disc_type == CELL_GAME_DISCTYPE_PS3)
+		{
+			vm::var<char[]> _title_id = vm::make_str(title_id);
+			cellGame.notice("Executing insert_callback for title '%s' with disc_type %d...", _title_id.get_ptr(), disc_type);
+			dcm.insert_callback(cb_ppu, disc_type, _title_id);
+		}
+		else
+		{
+			cellGame.notice("Executing insert_callback with disc_type %d...", disc_type);
+			dcm.insert_callback(cb_ppu, disc_type, vm::null);
+		}
+
+		dcm.state = eject_state::inserted;
+
+		// Re-enable disc ejection only if the callback is still registered
+		Emu.GetCallbacks().enable_disc_eject(!!dcm.eject_callback);
+
+		dcm.is_inserting = false;
+
+		return CELL_OK;
+	});
+}
+
+
 error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
 	cellGame.warning("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
@@ -1566,30 +1722,30 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 
 error_code cellDiscGameRegisterDiscChangeCallback(vm::ptr<CellDiscGameDiscEjectCallback> funcEject, vm::ptr<CellDiscGameDiscInsertCallback> funcInsert)
 {
-	cellGame.todo("cellDiscGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
+	cellGame.warning("cellDiscGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
 
-	return CELL_OK;
+	return g_fxo->get<disc_change_manager>().register_callbacks(funcEject, funcInsert);
 }
 
 error_code cellDiscGameUnregisterDiscChangeCallback()
 {
-	cellGame.todo("cellDiscGameUnregisterDiscChangeCallback()");
+	cellGame.warning("cellDiscGameUnregisterDiscChangeCallback()");
 
-	return CELL_OK;
+	return g_fxo->get<disc_change_manager>().unregister_callbacks();
 }
 
 error_code cellGameRegisterDiscChangeCallback(vm::ptr<CellGameDiscEjectCallback> funcEject, vm::ptr<CellGameDiscInsertCallback> funcInsert)
 {
-	cellGame.todo("cellGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
+	cellGame.warning("cellGameRegisterDiscChangeCallback(funcEject=*0x%x, funcInsert=*0x%x)", funcEject, funcInsert);
 
-	return CELL_OK;
+	return g_fxo->get<disc_change_manager>().register_callbacks(funcEject, funcInsert);
 }
 
 error_code cellGameUnregisterDiscChangeCallback()
 {
-	cellGame.todo("cellGameUnregisterDiscChangeCallback()");
+	cellGame.warning("cellGameUnregisterDiscChangeCallback()");
 
-	return CELL_OK;
+	return g_fxo->get<disc_change_manager>().unregister_callbacks();
 }
 
 void cellSysutil_GameData_init()

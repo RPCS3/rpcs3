@@ -595,6 +595,31 @@ namespace rsx
 		}
 	}
 
+	void thread::post_vblank_event(u64 post_event_time)
+	{
+		vblank_count++;
+
+		if (isHLE)
+		{
+			if (auto ptr = vblank_handler)
+			{
+				intr_thread->cmd_list
+				({
+					{ ppu_cmd::set_args, 1 }, u64{1},
+					{ ppu_cmd::lle_call, ptr },
+					{ ppu_cmd::sleep, 0 }
+				});
+
+				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.notify_one();
+			}
+		}
+		else
+		{
+			sys_rsx_context_attribute(0x55555555, 0xFED, 1, get_guest_system_time(post_event_time), 0, 0);
+		}
+	}
+
 	void thread::on_task()
 	{
 		g_tls_log_prefix = []
@@ -686,7 +711,6 @@ namespace rsx
 				{
 					{
 						local_vblank_count++;
-						vblank_count++;
 
 						if (local_vblank_count == vblank_rate)
 						{
@@ -701,25 +725,7 @@ namespace rsx
 							vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
 						}
 	
-						if (isHLE)
-						{
-							if (auto ptr = vblank_handler)
-							{
-								intr_thread->cmd_list
-								({
-									{ ppu_cmd::set_args, 1 }, u64{1},
-									{ ppu_cmd::lle_call, ptr },
-									{ ppu_cmd::sleep, 0 }
-								});
-
-								intr_thread->cmd_notify++;
-								intr_thread->cmd_notify.notify_one();
-							}
-						}
-						else
-						{
-							sys_rsx_context_attribute(0x55555555, 0xFED, 1, get_guest_system_time(post_event_time), 0, 0);
-						}
+						post_vblank_event(post_event_time);
 					}
 				}
 				else if (wait_sleep)
@@ -2837,10 +2843,8 @@ namespace rsx
 
 	void invalid_method(thread*, u32, u32);
 
-	std::string thread::dump_regs() const
+	void thread::dump_regs(std::string& result) const
 	{
-		std::string result;
-
 		if (ctrl)
 		{
 			fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +ctrl->get, +ctrl->put, +ctrl->ref);
@@ -2865,21 +2869,19 @@ namespace rsx
 			case NV4097_ZCULL_SYNC:
 				continue;
 
+			case NV308A_COLOR:
+			{
+				i = NV3089_SET_OBJECT;
+				continue;
+			}
 			default:
 			{
-				if (i >= NV308A_COLOR && i < NV3089_SET_OBJECT)
-				{
-					continue;
-				}
-
 				break;
 			}
 			}
 
 			fmt::append(result, "[%04x] %s\n", i, ensure(rsx::get_pretty_printing_function(i))(i, method_registers.registers[i]));
 		}
-
-		return result;
 	}
 
 	flags32_t thread::read_barrier(u32 memory_address, u32 memory_range, bool unconditional)
@@ -3207,15 +3209,17 @@ namespace rsx
 		}
 
 		double limit = 0.;
-		switch (g_disable_frame_limit ? frame_limit_type::none : g_cfg.video.frame_limit)
+		const auto frame_limit = g_disable_frame_limit ? frame_limit_type::none : g_cfg.video.frame_limit;
+
+		switch (frame_limit)
 		{
 		case frame_limit_type::none: limit = 0.; break;
-		case frame_limit_type::_59_94: limit = 59.94; break;
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
 		case frame_limit_type::_auto: limit = static_cast<double>(g_cfg.video.vblank_rate); break;
 		case frame_limit_type::_ps3: limit = 0.; break;
+		case frame_limit_type::infinite: limit = 0.; break;
 		default:
 			break;
 		}
@@ -3250,11 +3254,21 @@ namespace rsx
 					performance_counters.idle_time += delay_us;
 				}
 			}
+
+			flip_notification_count = 1;
 		}
-		else if (wait_for_flip_sema)
+		else if (frame_limit == frame_limit_type::_ps3)
 		{
-			const auto& value = vm::_ref<RsxSemaphore>(device_addr + 0x30).val;
-			if (value != flip_sema_wait_val)
+			bool exit = false;
+
+			if (vblank_at_flip == umax)
+			{
+				vblank_at_flip = +vblank_count;
+				flip_notification_count = 1;
+				exit = true;
+			}
+
+			if (requested_vsync && (exit || vblank_at_flip == vblank_count))
 			{
 				// Not yet signaled, handle it later
 				async_flip_requested |= flip_request::emu_requested;
@@ -3262,10 +3276,14 @@ namespace rsx
 				return;
 			}
 
-			wait_for_flip_sema = false;
+			vblank_at_flip = umax;
+		}
+		else
+		{
+			flip_notification_count = 1;
 		}
 
-		int_flip_index++;
+		int_flip_index += flip_notification_count;
 
 		current_display_buffer = buffer;
 		m_queued_flip.emu_flip = true;
@@ -3278,23 +3296,26 @@ namespace rsx
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
 
-		if (!isHLE)
+		while (flip_notification_count--)
 		{
-			sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
-			return;
-		}
+			if (!isHLE)
+			{
+				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
+				continue;
+			}
 
-		if (auto ptr = flip_handler)
-		{
-			intr_thread->cmd_list
-			({
-				{ ppu_cmd::set_args, 1 }, u64{ 1 },
-				{ ppu_cmd::lle_call, ptr },
-				{ ppu_cmd::sleep, 0 }
-			});
+			if (auto ptr = flip_handler)
+			{
+				intr_thread->cmd_list
+				({
+					{ ppu_cmd::set_args, 1 }, u64{ 1 },
+					{ ppu_cmd::lle_call, ptr },
+					{ ppu_cmd::sleep, 0 }
+				});
 
-			intr_thread->cmd_notify++;
-			intr_thread->cmd_notify.notify_one();
+				intr_thread->cmd_notify++;
+				intr_thread->cmd_notify.notify_one();
+			}
 		}
 	}
 }

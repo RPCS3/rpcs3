@@ -936,10 +936,8 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 	return res;
 }
 
-std::string ppu_thread::dump_regs() const
+void ppu_thread::dump_regs(std::string& ret) const
 {
-	std::string ret;
-
 	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 
 	for (uint i = 0; i < 32; ++i)
@@ -1107,8 +1105,6 @@ std::string ppu_thread::dump_regs() const
 			*(&ret.back() - (4 - (addr % 16 / 4)) * 9 - (8 - (addr % 128 / 16)) * std::size("[0x00]"sv)) = '*';
 		}
 	}
-
-	return ret;
 }
 
 std::string ppu_thread::dump_callstack() const
@@ -1211,7 +1207,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 std::string ppu_thread::dump_misc() const
 {
-	std::string ret;
+	std::string ret = cpu_thread::dump_misc();
 
 	fmt::append(ret, "Priority: %d\n", +prio);
 	fmt::append(ret, "Stack: 0x%x..0x%x\n", stack_addr, stack_addr + stack_size - 1);
@@ -1259,9 +1255,9 @@ std::string ppu_thread::dump_misc() const
 	return ret;
 }
 
-std::string ppu_thread::dump_all() const
+void ppu_thread::dump_all(std::string& ret) const
 {
-	std::string ret = cpu_thread::dump_all();
+	cpu_thread::dump_all(ret);
 
 	if (!call_history.data.empty())
 	{
@@ -1271,8 +1267,6 @@ std::string ppu_thread::dump_all() const
 
 		fmt::append(ret, "%s", call_history);
 	}
-
-	return ret;
 }
 
 extern thread_local std::string(*g_tls_log_prefix)();
@@ -1330,6 +1324,9 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::lle_call:
 		{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(true);
+#endif
 			const vm::ptr<u32> opd(arg < 32 ? vm::cast(gpr[arg]) : vm::cast(arg));
 			cmd_pop(), fast_call(opd[0], opd[1]);
 			break;
@@ -1341,6 +1338,9 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::opd_call:
 		{
+#ifdef __APPLE__
+			pthread_jit_write_protect_np(true);
+#endif
 			const ppu_func_opd_t opd = cmd_get(1).as<ppu_func_opd_t>();
 			cmd_pop(1), fast_call(opd.addr, opd.rtoc);
 			break;

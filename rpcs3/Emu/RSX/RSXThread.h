@@ -521,7 +521,7 @@ namespace rsx
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;
 
-		std::string dump_regs() const override;
+		void dump_regs(std::string&) const override;
 		void cpu_wait(bs_t<cpu_flag> old) override;
 
 		static constexpr u32 id_base = 0x5555'5555; // See get_current_cpu_thread()
@@ -564,7 +564,7 @@ namespace rsx
 		u32 flip_status;
 		int debug_level;
 
-		atomic_t<bool> requested_vsync{false};
+		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};
 
 		RsxDisplayInfo display_buffers[8];
@@ -645,8 +645,9 @@ namespace rsx
 		atomic_t<u64> vblank_count{0};
 		bool capture_current_frame = false;
 
-		bool wait_for_flip_sema = false;
-		u32 flip_sema_wait_val = 0;
+		u64 vblank_at_flip = umax;
+		u64 flip_notification_count = 0;
+		void post_vblank_event(u64 post_event_time);
 
 	public:
 		atomic_t<bool> sync_point_request = false;

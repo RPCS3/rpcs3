@@ -24,6 +24,7 @@
 #include "rpcs3qt/fatal_error_dialog.h"
 #include "rpcs3qt/curl_handle.h"
 #include "rpcs3qt/main_window.h"
+#include "rpcs3qt/uuid.h"
 
 #include "headless_application.h"
 #include "Utilities/sema.h"
@@ -868,6 +869,9 @@ int main(int argc, char** argv)
 
 		return 0;
 	}
+
+	// Log unique ID
+	gui::utils::log_uuid();
 
 	std::string active_user;
 
