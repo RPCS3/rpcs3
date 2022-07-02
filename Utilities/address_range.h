@@ -1,33 +1,26 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/vm.hpp"
 #include "StrFmt.h"
 #include <vector>
 #include <algorithm>
 
-#if defined(ARCH_X64)
-#define HOST_PAGE_SIZE 4096u
-#else
-#define HOST_PAGE_SIZE get_page_size()
-#endif
-
 namespace utils
 {
 	class address_range_vector;
-
-	long get_page_size();
 
 	/**
 	 * Helpers
 	 */
 	static inline u32 page_start(u32 addr)
 	{
-		return addr & ~(HOST_PAGE_SIZE - 1);
+		return addr & ~(c_page_size - 1);
 	}
 
 	static inline u32 next_page(u32 addr)
 	{
-		return page_start(addr) + HOST_PAGE_SIZE;
+		return page_start(addr) + c_page_size;
 	}
 
 	static inline u32 page_end(u32 addr)
@@ -37,7 +30,7 @@ namespace utils
 
 	static inline u32 is_page_aligned(u32 val)
 	{
-		return (val & (HOST_PAGE_SIZE - 1)) == 0;
+		return (val & (c_page_size - 1)) == 0;
 	}
 
 
