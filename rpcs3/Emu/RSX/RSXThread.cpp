@@ -1176,7 +1176,7 @@ namespace rsx
 		{
 			std::lock_guard lock(m_mtx_task);
 
-			m_invalidated_memory_range = utils::address_range::start_end(0x2 << 28, 0xdu << 28);
+			m_invalidated_memory_range = utils::address_range::start_end(0x2 << 28, constants::local_mem_base + local_mem_size - 1);
 			handle_invalidated_memory_range();
 		}
 	}

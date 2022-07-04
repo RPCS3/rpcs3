@@ -2461,7 +2461,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 				{
 					if (count > 20000 && g_cfg.core.perf_report) [[unlikely]]
 					{
-						perf_log.warning(u8"STCX: took too long: %.3fÂµs (%u c)", count / (utils::get_tsc_freq() / 1000'000.), count);
+						perf_log.warning(u8"STCX: took too long: %.3fµs (%u c)", count / (utils::get_tsc_freq() / 1000'000.), count);
 					}
 
 					break;
