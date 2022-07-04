@@ -343,26 +343,26 @@ void gui_application::InitializeCallbacks()
 		RequestCallFromMainThread(std::move(func), wake_up);
 	};
 
-	callbacks.init_gs_render = []()
+	callbacks.init_gs_render = [](utils::serial* ar)
 	{
 		switch (g_cfg.video.renderer.get())
 		{
 		case video_renderer::null:
 		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
 			break;
 		}
 		case video_renderer::opengl:
 		{
 #if not defined(__APPLE__)
-			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<GLGSRender>>(ar);
 #endif
 			break;
 		}
 		case video_renderer::vulkan:
 		{
 #if defined(HAVE_VULKAN)
-			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<VKGSRender>>(ar);
 #endif
 			break;
 		}

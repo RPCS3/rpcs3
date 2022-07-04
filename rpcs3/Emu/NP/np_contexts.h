@@ -13,6 +13,7 @@ struct score_ctx
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
+	SAVESTATE_INIT_POS(25);
 
 	SceNpCommunicationId communicationId{};
 	SceNpCommunicationPassphrase passphrase{};
@@ -27,6 +28,7 @@ struct score_transaction_ctx
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
+	SAVESTATE_INIT_POS(26);
 
 	s32 score_context_id      = 0;
 };
@@ -41,6 +43,7 @@ struct match2_ctx
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 255;
+	SAVESTATE_INIT_POS(27);
 
 	SceNpCommunicationId communicationId{};
 	SceNpCommunicationPassphrase passphrase{};
@@ -62,6 +65,7 @@ struct lookup_title_ctx
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
+	SAVESTATE_INIT_POS(28);
 
 	SceNpCommunicationId communicationId{};
 	SceNpCommunicationPassphrase passphrase{};
@@ -76,6 +80,7 @@ struct lookup_transaction_ctx
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
+	SAVESTATE_INIT_POS(29);
 
 	s32 lt_ctx = 0;
 };
@@ -89,6 +94,7 @@ struct commerce2_ctx
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
+	SAVESTATE_INIT_POS(30);
 
 	u32 version{};
 	SceNpId npid{};
@@ -106,6 +112,7 @@ struct signaling_ctx
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 32;
+	SAVESTATE_INIT_POS(31);
 
 	SceNpId npid{};
 	vm::ptr<SceNpSignalingHandler> handler{};

@@ -395,8 +395,8 @@ namespace utils
 	void memory_release(void* pointer, usz size)
 	{
 #ifdef _WIN32
-		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 		unmap_mappping_memory(reinterpret_cast<u64>(pointer), size);
+		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 #else
 		ensure(::munmap(pointer, size) != -1);
 #endif
@@ -457,7 +457,7 @@ namespace utils
 #endif
 	}
 
-	shm::shm(u32 size, u32 flags)
+	shm::shm(u64 size, u32 flags)
 		: m_flags(flags)
 		, m_size(utils::align(size, 0x10000))
 	{

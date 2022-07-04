@@ -45,7 +45,7 @@ extern thread_local std::string(*g_tls_log_prefix)();
 template <>
 bool serialize<rsx::rsx_state>(utils::serial& ar, rsx::rsx_state& o)
 {
-	return ar(o.transform_program, /*o.transform_constants,*/ o.registers);
+	return ar(o.transform_program, o.transform_constants, o.registers);
 }
 
 template <>
@@ -71,6 +71,29 @@ template <>
 bool serialize<rsx::frame_capture_data::replay_command>(utils::serial& ar, rsx::frame_capture_data::replay_command& o)
 {
 	return ar(o.rsx_command, o.memory_state, o.tile_state, o.display_buffer_state);
+}
+
+template <>
+bool serialize<rsx::rsx_iomap_table>(utils::serial& ar, rsx::rsx_iomap_table& o)
+{
+	// We do not need more than that
+	ar(std::span(o.ea.data(), 512));
+
+	if (!ar.is_writing())
+	{
+		// Populate o.io
+		for (const atomic_t<u32>& ea_addr : o.ea)
+		{
+			const u32& addr = ea_addr.raw();
+
+			if (addr != umax)
+			{
+				o.io[addr >> 20].raw() = static_cast<u32>(&ea_addr - o.ea.data()) << 20;
+			}
+		}
+	}
+
+	return true;
 }
 
 namespace rsx
@@ -413,7 +436,26 @@ namespace rsx
 		g_access_violation_handler = nullptr;
 	}
 
-	thread::thread()
+	void thread::save(utils::serial& ar)
+	{
+		USING_SERIALIZATION_VERSION_COND(ar.is_writing(), rsx);
+ 
+		ar(rsx::method_registers);
+	
+		for (auto& v : vertex_push_buffers)
+		{
+			ar(v.attr, v.size, v.type, v.vertex_count, v.dword_count, v.data);
+		}
+
+		ar(element_push_buffer, fifo_ret_addr, saved_fifo_ret, zcull_surface_active, m_surface_info, m_depth_surface_info, m_framebuffer_layout);
+		ar(dma_address, iomap_table, restore_point, tiles, zculls, display_buffers, display_buffers_count, current_display_buffer);
+		ar(enable_second_vhandler, requested_vsync);
+		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
+		ar(in_begin_end, zcull_stats_enabled, zcull_rendering_enabled, zcull_pixel_cnt_enabled);
+		ar(display_buffers, display_buffers_count, current_display_buffer);
+	}
+
+	thread::thread(utils::serial* _ar)
 		: cpu_thread(0x5555'5555)
 	{
 		g_access_violation_handler = [this](u32 address, bool is_writing)
@@ -435,6 +477,35 @@ namespace rsx
 		}
 
 		state -= cpu_flag::stop + cpu_flag::wait; // TODO: Remove workaround
+
+		if (!_ar)
+		{
+			return;
+		}
+
+		serialized = true;
+		save(*_ar);
+
+		if (dma_address)
+		{
+			ctrl = vm::_ptr<RsxDmaControl>(dma_address);
+			m_rsx_thread_exiting = false;
+		}
+
+		if (g_cfg.savestate.start_paused)
+		{
+			m_pause_on_first_flip = true;
+		}
+	}
+
+	avconf::avconf(utils::serial& ar)
+	{
+		ar(*this);
+	}
+
+	void avconf::save(utils::serial& ar)
+	{
+		ar(*this);
 	}
 
 	void thread::capture_frame(const std::string &name)
@@ -628,7 +699,7 @@ namespace rsx
 			return fmt::format("RSX [0x%07x]", rsx->ctrl ? +rsx->ctrl->get : 0);
 		};
 
-		method_registers.init();
+		if (!serialized) method_registers.init();
 
 		rsx::overlays::reset_performance_overlay();
 
@@ -646,8 +717,10 @@ namespace rsx
 
 		performance_counters.state = FIFO_state::empty;
 
+		Emu.CallFromMainThread([]{ Emu.RunPPU(); });
+
 		// Wait for startup (TODO)
-		while (m_rsx_thread_exiting)
+		while (m_rsx_thread_exiting || Emu.IsPaused())
 		{
 			// Wait for external pause events
 			if (external_interrupt_lock)
@@ -669,9 +742,15 @@ namespace rsx
 			thread_ctrl::wait_for(1000);
 		}
 
+		if (is_stopped())
+		{
+			return;
+		}
+
 		performance_counters.state = FIFO_state::running;
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
+		fifo_ctrl->set_get(ctrl->get);
 
 		last_guest_flip_timestamp = rsx::uclock() - 1000000;
 
@@ -796,6 +875,11 @@ namespace rsx
 
 	void thread::on_exit()
 	{
+		if (zcull_ctrl)
+		{
+			zcull_ctrl->sync(this);
+		}
+
 		// Deregister violation handler
 		g_access_violation_handler = nullptr;
 
@@ -803,7 +887,6 @@ namespace rsx
 		std::this_thread::sleep_for(10ms);
 		do_local_task(rsx::FIFO_state::lock_wait);
 
-		m_rsx_thread_exiting = true;
 		g_fxo->get<rsx::dma_manager>().join();
 		state += cpu_flag::exit;
 	}
@@ -1087,6 +1170,14 @@ namespace rsx
 		if (m_eng_interrupt_mask & rsx::pipe_flush_interrupt)
 		{
 			sync();
+		}
+
+		if (is_stopped())
+		{
+			std::lock_guard lock(m_mtx_task);
+
+			m_invalidated_memory_range = utils::address_range::start_end(0x2 << 28, constants::local_mem_base + local_mem_size - 1);
+			handle_invalidated_memory_range();
 		}
 	}
 
@@ -2519,6 +2610,12 @@ namespace rsx
 		if (info.emu_flip)
 		{
 			performance_counters.sampled_frames++;
+
+			if (m_pause_on_first_flip)
+			{
+				Emu.Pause();
+				m_pause_on_first_flip = false;
+			}
 		}
 
 		last_host_flip_timestamp = rsx::uclock();
@@ -3007,6 +3104,12 @@ namespace rsx
 		if (!m_invalidated_memory_range.valid())
 			return;
 
+		if (is_stopped())
+		{
+			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::read);
+			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::write);
+		}
+
 		on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);
 		m_invalidated_memory_range.invalidate();
 	}
@@ -3172,7 +3275,7 @@ namespace rsx
 		m_profiler.enabled = !!g_cfg.video.overlay;
 	}
 
-	void thread::request_emu_flip(u32 buffer)
+	bool thread::request_emu_flip(u32 buffer)
 	{
 		if (is_current_thread()) // requested through command buffer
 		{
@@ -3184,13 +3287,22 @@ namespace rsx
 			if (async_flip_requested & flip_request::emu_requested)
 			{
 				// ignore multiple requests until previous happens
-				return;
+				return true;
 			}
 
 			async_flip_buffer = buffer;
 			async_flip_requested |= flip_request::emu_requested;
+
 			m_eng_interrupt_mask |= rsx::display_interrupt;
+	
+			if (state & cpu_flag::exit)
+			{
+				// Resubmit possibly-ignored flip on savestate load
+				return false;
+			}
 		}
+
+		return true;
 	}
 
 	void thread::handle_emu_flip(u32 buffer)
@@ -3245,12 +3357,6 @@ namespace rsx
 				{
 					const auto delay_us = target_rsx_flip_time - time;
 					lv2_obj::wait_timeout<false, false>(delay_us);
-
-					if (thread_ctrl::state() == thread_state::aborting)
-					{
-						return;
-					}
-
 					performance_counters.idle_time += delay_us;
 				}
 			}

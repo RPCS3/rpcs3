@@ -71,6 +71,10 @@ namespace fs
 		s64 atime;
 		s64 mtime;
 		s64 ctime;
+
+		using enable_bitcopy = std::true_type;
+
+		constexpr bool operator==(const stat_t&) const = default; 
 	};
 
 	// Helper, layout is equal to iovec struct
@@ -105,6 +109,8 @@ namespace fs
 			: stat_t{}
 		{
 		}
+
+		using enable_bitcopy = std::false_type;
 	};
 
 	// Directory handle base
@@ -681,9 +687,10 @@ namespace fs
 		T obj;
 		u64 pos;
 
-		container_stream(T&& obj)
+		container_stream(T&& obj, const stat_t& init_stat = {})
 			: obj(std::forward<T>(obj))
 			, pos(0)
+			, m_stat(init_stat)
 		{
 		}
 
@@ -694,6 +701,7 @@ namespace fs
 		bool trunc(u64 length) override
 		{
 			obj.resize(length);
+			update_time(true);
 			return true;
 		}
 
@@ -708,6 +716,7 @@ namespace fs
 				{
 					std::copy(obj.cbegin() + pos, obj.cbegin() + pos + max, static_cast<value_type*>(buffer));
 					pos = pos + max;
+					update_time();
 					return max;
 				}
 			}
@@ -743,6 +752,7 @@ namespace fs
 			obj.insert(obj.end(), src + overlap, src + size);
 			pos += size;
 
+			if (size) update_time(true);
 			return size;
 		}
 
@@ -767,13 +777,33 @@ namespace fs
 		{
 			return obj.size();
 		}
+
+		stat_t stat() override
+		{
+			return m_stat;
+		}
+
+	private:
+		stat_t m_stat{};
+
+		void update_time(bool write = false)
+		{
+			// TODO: Accurate timestamps
+			m_stat.atime++;
+
+			if (write)
+			{
+				m_stat.mtime = std::max(m_stat.atime, ++m_stat.mtime);
+				m_stat.ctime = m_stat.mtime;
+			}
+		}
 	};
 
 	template <typename T>
-	file make_stream(T&& container = T{})
+	file make_stream(T&& container = T{}, const stat_t& stat = stat_t{})
 	{
 		file result;
-		result.reset(std::make_unique<container_stream<T>>(std::forward<T>(container)));
+		result.reset(std::make_unique<container_stream<T>>(std::forward<T>(container), stat));
 		return result;
 	}
 

@@ -46,6 +46,12 @@ void voice_manager::reset()
 	queue_keys.clear();
 }
 
+void voice_manager::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION_COND(ar.is_writing(), cellVoice);
+	ar(id_ctr, port_source, ports, queue_keys, voice_service_started);
+}
+
 error_code cellVoiceConnectIPortToOPort(u32 ips, u32 ops)
 {
 	cellVoice.todo("cellVoiceConnectIPortToOPort(ips=%d, ops=%d)", ips, ops);

@@ -1,8 +1,10 @@
 #include "stdafx.h"
 #include "PPUFunction.h"
 #include "Utilities/JIT.h"
+#include "util/serialization.hpp"
 
 #include "PPUModule.h"
+#include "PPUInterpreter.h"
 
 // Get function name by FNID
 extern std::string ppu_get_function_name(const std::string& _module, u32 fnid)
@@ -1942,6 +1944,16 @@ auto gen_ghc_cpp_trampoline(ppu_intrp_func_t fn_target)
 #else
 #error "Not implemented!"
 #endif
+
+ppu_function_manager::ppu_function_manager(utils::serial& ar)
+	: addr(ar)
+{
+}
+
+void ppu_function_manager::save(utils::serial& ar)
+{
+	ar(addr);
+}
 
 std::vector<ppu_intrp_func_t>& ppu_function_manager::access(bool ghc)
 {

@@ -86,6 +86,7 @@ struct memory_viewer_handle
 	static constexpr u32 id_base = 1;
 	static constexpr u32 id_step = 1;
 	static constexpr u32 id_count = 2048;
+	SAVESTATE_INIT_POS(33); // Of course not really used
 
 	template <typename... Args> requires (std::is_constructible_v<memory_viewer_panel, Args&&...>)
 	memory_viewer_handle(Args&&... args)

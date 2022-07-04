@@ -238,6 +238,18 @@ lv2_socket_p2ps::lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op
 	status             = p2ps_stream_status::stream_connected;
 }
 
+lv2_socket_p2ps::lv2_socket_p2ps(utils::serial& ar, lv2_socket_type type)
+	: lv2_socket_p2p(ar, type)
+{
+	ar(status, max_backlog, backlog, op_port, op_vport, op_addr, data_beg_seq, received_data, cur_seq);
+}
+
+void lv2_socket_p2ps::save(utils::serial& ar)
+{
+	static_cast<lv2_socket_p2p*>(this)->save(ar);
+	ar(status, max_backlog, backlog, op_port, op_vport, op_addr, data_beg_seq, received_data, cur_seq);
+}
+
 bool lv2_socket_p2ps::handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr)
 {
 	std::lock_guard lock(mutex);
@@ -414,7 +426,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 			send_u2s_packet(std::move(packet), reinterpret_cast<::sockaddr_in*>(op_addr), send_hdr.seq, true);
 		}
 
-		backlog.push(new_sock_id);
+		backlog.push_back(new_sock_id);
 		if (events.test_and_reset(lv2_socket::poll_t::read))
 		{
 			bs_t<lv2_socket::poll_t> read_event = lv2_socket::poll_t::read;
@@ -501,7 +513,7 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 	}
 
 	auto p2ps_client = backlog.front();
-	backlog.pop();
+	backlog.pop_front();
 
 	sys_net_sockaddr ps3_addr{};
 	auto* paddr = reinterpret_cast<sys_net_sockaddr_in_p2p*>(&ps3_addr);
@@ -519,7 +531,7 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 	return {true, p2ps_client, {}, ps3_addr};
 }
 
-s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr, s32 ps3_id)
+s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr)
 {
 	const auto* psa_in_p2p = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&addr);
 
@@ -563,7 +575,7 @@ s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 				{
 					p2p_vport++;
 				}
-				pport.bound_p2p_streams.emplace((static_cast<u64>(p2p_vport) << 32), ps3_id);
+				pport.bound_p2p_streams.emplace((static_cast<u64>(p2p_vport) << 32), lv2_id);
 			}
 			else
 			{
@@ -572,12 +584,13 @@ s32 lv2_socket_p2ps::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 				{
 					return -SYS_NET_EADDRINUSE;
 				}
-				pport.bound_p2p_streams.emplace(key, ps3_id);
+				pport.bound_p2p_streams.emplace(key, lv2_id);
 			}
 
 			port   = p2p_port;
 			vport  = p2p_vport;
 			socket = real_socket;
+			last_bound_addr = addr;
 		}
 	}
 
