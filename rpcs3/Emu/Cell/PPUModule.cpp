@@ -364,6 +364,11 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 			{
 				const auto _module = pair.second;
 
+				if (_module->variables.empty())
+				{
+					continue;
+				}
+
 				ar(_module->name);
 
 				ar(_module->variables.size());
