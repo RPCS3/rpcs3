@@ -192,9 +192,11 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	if (thread->joiner != ppu_join_status::exited)
 	{
 		// Thread aborted, log it later
-		ppu.state += cpu_flag::exit;
+		ppu.state += cpu_flag::again;
 		return {};
 	}
+
+	static_cast<void>(ppu.test_stopped());
 
 	// Get the exit status from the register
 	const u64 vret = thread->gpr[3];

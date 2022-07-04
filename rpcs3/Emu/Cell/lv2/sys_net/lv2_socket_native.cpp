@@ -13,6 +13,32 @@ lv2_socket_native::lv2_socket_native(lv2_socket_family family, lv2_socket_type t
 {
 }
 
+lv2_socket_native::lv2_socket_native(utils::serial& ar, lv2_socket_type type)
+	: lv2_socket(ar, type)
+{
+#ifdef _WIN32
+	ar(so_reuseaddr, so_reuseport);
+#else
+	std::array<char, 8> dummy{};
+	ar(dummy);
+
+	if (dummy != std::array<char, 8>{})
+	{
+		sys_net.error("[Native] Savestate tried to load Win32 specific data, compatibility may be affected");
+	}
+#endif
+}
+
+void lv2_socket_native::save(utils::serial& ar)
+{
+	static_cast<lv2_socket*>(this)->save(ar, true);
+#ifdef _WIN32
+	ar(so_reuseaddr, so_reuseport);
+#else
+	ar(std::array<char, 8>{});
+#endif
+}
+
 lv2_socket_native::~lv2_socket_native()
 {
 	std::lock_guard lock(mutex);
@@ -94,7 +120,7 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 	return {false, {}, {}, {}};
 }
 
-s32 lv2_socket_native::bind(const sys_net_sockaddr& addr, [[maybe_unused]] s32 ps3_id)
+s32 lv2_socket_native::bind(const sys_net_sockaddr& addr)
 {
 	std::lock_guard lock(mutex);
 
@@ -110,6 +136,7 @@ s32 lv2_socket_native::bind(const sys_net_sockaddr& addr, [[maybe_unused]] s32 p
 
 	if (::bind(socket, reinterpret_cast<struct sockaddr*>(&native_addr), native_addr_len) == 0)
 	{
+		last_bound_addr = addr;
 		return CELL_OK;
 	}
 	return -get_last_error(false);

@@ -171,6 +171,8 @@ struct CellGemAttribute
 	be_t<u32> memory_ptr;
 	be_t<u32> spurs_addr;
 	u8 spu_priorities[8];
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct CellGemCameraState
@@ -180,6 +182,8 @@ struct CellGemCameraState
 	be_t<f32> gain;
 	be_t<f32> pitch_angle;
 	be_t<f32> pitch_angle_estimate;
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct CellGemExtPortData
@@ -270,4 +274,6 @@ struct CellGemVideoConvertAttribute
 	vm::bptr<u8> buffer_memory;
 	vm::bptr<u8> video_data_out;
 	u8 alpha;
+
+	ENABLE_BITWISE_SERIALIZATION;
 };

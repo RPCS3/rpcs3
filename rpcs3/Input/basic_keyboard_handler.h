@@ -8,10 +8,10 @@
 
 class basic_keyboard_handler final : public KeyboardHandlerBase, public QObject
 {
+	using KeyboardHandlerBase::KeyboardHandlerBase;
+
 public:
 	void Init(const u32 max_connect) override;
-
-	explicit basic_keyboard_handler();
 
 	void SetTargetWindow(QWindow* target);
 	bool eventFilter(QObject* watched, QEvent* event) override;

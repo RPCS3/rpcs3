@@ -11,6 +11,36 @@ lv2_socket_p2p::lv2_socket_p2p(lv2_socket_family family, lv2_socket_type type, l
 {
 }
 
+lv2_socket_p2p::lv2_socket_p2p(utils::serial& ar, lv2_socket_type type)
+	: lv2_socket(ar, type)
+{
+	ar(port, vport);
+
+	std::deque<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data_dequeue{ar};
+
+	for (; !data_dequeue.empty(); data_dequeue.pop_front())
+	{
+		data.push(data_dequeue.front());
+	}
+
+	ar(data_dequeue);
+}
+
+void lv2_socket_p2p::save(utils::serial& ar)
+{
+	static_cast<lv2_socket*>(this)->save(ar, true);
+	ar(port, vport);
+
+	std::deque<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data_dequeue;
+
+	for (; !data.empty(); data.pop())
+	{
+		data_dequeue.push_back(data.front());
+	}
+
+	ar(data_dequeue);
+}
+
 void lv2_socket_p2p::handle_new_data(sys_net_sockaddr_in_p2p p2p_addr, std::vector<u8> p2p_data)
 {
 	std::lock_guard lock(mutex);
@@ -69,7 +99,7 @@ s32 lv2_socket_p2p::listen([[maybe_unused]] s32 backlog)
 	return {};
 }
 
-s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr, s32 ps3_id)
+s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr)
 {
 	const auto* psa_in_p2p = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&addr);
 	u16 p2p_port           = psa_in_p2p->sin_port;
@@ -118,7 +148,7 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 				}
 			}
 
-			pport.bound_p2p_vports.insert(std::make_pair(p2p_vport, ps3_id));
+			pport.bound_p2p_vports.insert(std::make_pair(p2p_vport, lv2_id));
 		}
 	}
 
@@ -127,6 +157,7 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr, s32 ps3_id)
 		port   = p2p_port;
 		vport  = p2p_vport;
 		socket = real_socket;
+		last_bound_addr = addr;
 	}
 
 	return CELL_OK;

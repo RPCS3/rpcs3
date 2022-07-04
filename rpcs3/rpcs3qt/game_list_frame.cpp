@@ -971,6 +971,18 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 	}
 
+	if (const std::string sstate = fs::get_cache_dir() + "/savestates/" + current_game.serial + ".SAVESTAT"; fs::is_file(sstate))
+	{
+		QAction* boot_state = menu.addAction(is_current_running_game
+			? tr("&Reboot with savestate")
+			: tr("&Boot with savestate"));
+		connect(boot_state, &QAction::triggered, [this, gameinfo, sstate]
+		{
+			sys_log.notice("Booting savestate from gamelist per context menu...");
+			Q_EMIT RequestBoot(gameinfo, cfg_mode::custom, "", sstate);
+		});
+	}
+
 	menu.addSeparator();
 
 	QAction* configure = menu.addAction(gameinfo->hasCustomConfig

@@ -42,6 +42,7 @@ pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view titl
 {
 	pad::g_title_id = title_id;
 	pad::g_current = this;
+	pad::g_reset = true;
 }
 
 pad_thread::~pad_thread()
@@ -212,7 +213,8 @@ void pad_thread::SetIntercepted(bool intercepted)
 
 void pad_thread::operator()()
 {
-	pad::g_reset = true;
+	Init();
+	pad::g_reset = false;
 
 	atomic_t<pad_handler_mode> pad_mode{g_cfg.io.pad_mode.get()};
 	std::vector<std::unique_ptr<named_thread<std::function<void()>>>> threads;
