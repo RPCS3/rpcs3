@@ -1821,8 +1821,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 		mem_size += 0xC000000;
 	}
 
-	if (!ar) g_fxo->init<lv2_memory_container>(mem_size);
-
 	// Initialize process
 	std::vector<std::shared_ptr<lv2_prx>> loaded_modules;
 
@@ -1873,6 +1871,17 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 
 	// Set ppc fixed allocations segment permission
 	g_ps3_process_info.ppc_seg = ppc_seg;
+
+	if (Emu.init_mem_containers)
+	{
+		// Refer to sys_process_exit2 for explanation
+		Emu.init_mem_containers(mem_size);
+	}
+	else if (!ar)
+	{
+		g_fxo->init<id_manager::id_map<lv2_memory_container>>();
+		g_fxo->init<lv2_memory_container>(mem_size);
+	}
 
 	void init_fxo_for_exec(utils::serial* ar, bool full);
 	init_fxo_for_exec(ar, false);
@@ -1993,16 +2002,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 	{
 		std::memcpy(vm::base(ppu->stack_addr + ppu->stack_size - ::size32(Emu.data)), Emu.data.data(), Emu.data.size());
 		ppu->gpr[1] -= Emu.data.size();
-	}
-
-	if (Emu.init_mem_containers)
-	{
-		// Refer to sys_process_exit2 for explanation
-		Emu.init_mem_containers(mem_size);
-	}
-	else
-	{
-		g_fxo->init<lv2_memory_container>(mem_size);
 	}
 
 	ensure(g_fxo->get<lv2_memory_container>().take(primary_stacksize));
