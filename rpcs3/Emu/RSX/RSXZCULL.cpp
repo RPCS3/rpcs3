@@ -691,7 +691,7 @@ namespace rsx
 				}
 
 				// There can be multiple queries all writing to the same address, loop to flush all of them
-				while (query->pending && !Emu.IsStopped())
+				while (query->pending)
 				{
 					update(ptimer, sync_address);
 				}
@@ -704,7 +704,7 @@ namespace rsx
 		flags32_t ZCULL_control::read_barrier(class ::rsx::thread* ptimer, u32 memory_address, occlusion_query_info* query)
 		{
 			// Called by cond render control. Internal RSX usage, do not disable optimizations
-			while (query->pending && !Emu.IsStopped())
+			while (query->pending)
 			{
 				update(ptimer, memory_address);
 			}
