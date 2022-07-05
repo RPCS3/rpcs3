@@ -430,11 +430,14 @@ extern bool is_input_allowed();
  * \param analog_t Analog value of Move's Trigger. Currently mapped to R2.
  * \return true on success, false if port_no controller is invalid
  */
-static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
+static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
+	digital_buttons = 0;
+	analog_t = 0;
+
 	if (!is_input_allowed())
 	{
-		return false;
+		return;
 	}
 
 	std::lock_guard lock(pad::g_pad_mutex);
@@ -443,72 +446,60 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 	const auto& pad = handler->GetPads().at(port_no);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return false;
+	{
+		return;
+	}
 
 	for (const Button& button : pad->m_buttons)
 	{
-		// here we check btns, and set pad accordingly
-		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+		if (!button.m_pressed)
 		{
-			if (button.m_pressed) pad->m_digital_2 |= button.m_outKeyCode;
-			else pad->m_digital_2 &= ~button.m_outKeyCode;
+			continue;
+		}
 
+		// here we check btns, and set pad accordingly
+		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
+		{
+			switch (button.m_outKeyCode)
+			{
+			case CELL_PAD_CTRL_START:
+				digital_buttons |= CELL_GEM_CTRL_START;
+				break;
+			case CELL_PAD_CTRL_SELECT:
+				digital_buttons |= CELL_GEM_CTRL_SELECT;
+				break;
+			default:
+				break;
+			}
+		}
+		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+		{
 			switch (button.m_outKeyCode)
 			{
 			case CELL_PAD_CTRL_SQUARE:
-				pad->m_press_square = button.m_value;
+				digital_buttons |= CELL_GEM_CTRL_SQUARE;
 				break;
 			case CELL_PAD_CTRL_CROSS:
-				pad->m_press_cross = button.m_value;
+				digital_buttons |= CELL_GEM_CTRL_CROSS;
 				break;
 			case CELL_PAD_CTRL_CIRCLE:
-				pad->m_press_circle = button.m_value;
+				digital_buttons |= CELL_GEM_CTRL_CIRCLE;
 				break;
 			case CELL_PAD_CTRL_TRIANGLE:
-				pad->m_press_triangle = button.m_value;
+				digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
 				break;
 			case CELL_PAD_CTRL_R1:
-				pad->m_press_R1 = button.m_value;
-				break;
-			case CELL_PAD_CTRL_L1:
-				pad->m_press_L1 = button.m_value;
+				digital_buttons |= CELL_GEM_CTRL_MOVE;
 				break;
 			case CELL_PAD_CTRL_R2:
-				pad->m_press_R2 = button.m_value;
+				digital_buttons |= CELL_GEM_CTRL_T;
+				analog_t = std::max<u16>(analog_t, button.m_value);
 				break;
-			case CELL_PAD_CTRL_L2:
-				pad->m_press_L2 = button.m_value;
+			default:
 				break;
-			default: break;
 			}
 		}
 	}
-
-	digital_buttons = 0;
-
-	// map the Move key to R1 and the Trigger to R2
-
-	if (pad->m_press_R1)
-		digital_buttons |= CELL_GEM_CTRL_MOVE;
-	if (pad->m_press_R2)
-		digital_buttons |= CELL_GEM_CTRL_T;
-
-	if (pad->m_press_cross)
-		digital_buttons |= CELL_GEM_CTRL_CROSS;
-	if (pad->m_press_circle)
-		digital_buttons |= CELL_GEM_CTRL_CIRCLE;
-	if (pad->m_press_square)
-		digital_buttons |= CELL_GEM_CTRL_SQUARE;
-	if (pad->m_press_triangle)
-		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
-	if (pad->m_digital_1)
-		digital_buttons |= CELL_GEM_CTRL_SELECT;
-	if (pad->m_digital_2)
-		digital_buttons |= CELL_GEM_CTRL_START;
-
-	analog_t = pad->m_press_R2;
-
-	return true;
 }
 
 /**
@@ -519,11 +510,13 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
  * \param ext External data to modify
  * \return true on success, false if port_no controller is invalid
  */
-static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller& controller, CellGemExtPortData& ext)
+static void ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller& controller, CellGemExtPortData& ext)
 {
+	ext = {};
+
 	if (!is_input_allowed())
 	{
-		return false;
+		return;
 	}
 
 	std::lock_guard lock(pad::g_pad_mutex);
@@ -532,7 +525,9 @@ static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller
 	const auto& pad = handler->GetPads().at(port_no);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return false;
+	{
+		return;
+	}
 
 	ext.status = 0; // CELL_GEM_EXT_CONNECTED | CELL_GEM_EXT_EXT0 | CELL_GEM_EXT_EXT1
 	ext.analog_left_x = pad->m_analog_left_x; // HACK: these pad members are actually only set in cellPad
@@ -551,8 +546,6 @@ static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller
 		// xxxxx010: Firing mode selector is in position 2.
 		// xxxxx100: Firing mode selector is in position 3.
 	}
-
-	return true;
 }
 
 /**
@@ -566,6 +559,9 @@ static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller
  */
 static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
+	digital_buttons = 0;
+	analog_t = 0;
+
 	if (!is_input_allowed())
 	{
 		return false;
@@ -662,20 +658,20 @@ static void mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::g
 	gem_image_state->projectiony = camera_y / controller.distance;
 }
 
-static bool mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state)
+static void mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state)
 {
-	if (!is_input_allowed())
+	if (!gem_state || !is_input_allowed())
 	{
-		return false;
+		return;
 	}
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
 	std::scoped_lock lock(handler.mutex);
 
-	if (!gem_state || mouse_no >= handler.GetMice().size())
+	if (mouse_no >= handler.GetMice().size())
 	{
-		return false;
+		return;
 	}
 
 	const auto& mouse = handler.GetMice().at(mouse_no);
@@ -716,8 +712,6 @@ static bool mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 	gem_state->handle_pos[1] = camera_y;
 	gem_state->handle_pos[2] = static_cast<f32>(controller.distance + 10);
 	gem_state->handle_pos[3] = 0.f;
-
-	return true;
 }
 
 // *********************
@@ -1153,7 +1147,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		return CELL_GEM_TIME_OUT_OF_RANGE;
 	}
 
-	inertial_state = {};
+	*inertial_state = {};
 
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
@@ -1315,6 +1309,8 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		return CELL_GEM_TIME_OUT_OF_RANGE;
 	}
 
+	*gem_state = {};
+
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		ds3_input_to_ext(gem_num, gem.controllers[gem_num], gem_state->ext);
@@ -1324,7 +1320,6 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		if (gem.controllers[gem_num].enabled_tracking)
 			tracking_flags |= CELL_GEM_TRACKING_FLAG_POSITION_TRACKED;
 
-		*gem_state = {};
 		gem_state->tracking_flags = tracking_flags;
 		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
 		gem_state->camera_pitch_angle = 0.f;
