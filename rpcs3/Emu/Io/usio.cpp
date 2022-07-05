@@ -87,6 +87,8 @@ void usb_device_usio::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 	}
 }
 
+extern bool is_input_allowed();
+
 void usb_device_usio::translate_input()
 {
 	std::lock_guard lock(pad::g_pad_mutex);
@@ -98,6 +100,11 @@ void usb_device_usio::translate_input()
 
 	auto translate_from_pad = [&](u8 pad_number, u8 player)
 	{
+		if (!is_input_allowed())
+		{
+			return;
+		}
+
 		const auto& pad = handler->GetPads()[pad_number];
 		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		{

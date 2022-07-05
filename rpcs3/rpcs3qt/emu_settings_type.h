@@ -137,6 +137,7 @@ enum class emu_settings_type
 	MusicHandler,
 
 	// Input / Output
+	BackgroundInput,
 	PadHandlerMode,
 	KeyboardHandler,
 	MouseHandler,
@@ -310,6 +311,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MusicHandler,            { "Audio", "Music Handler"}},
 
 	// Input / Output
+	{ emu_settings_type::BackgroundInput, { "Input/Output", "Background input enabled"}},
 	{ emu_settings_type::PadHandlerMode,  { "Input/Output", "Pad handler mode"}},
 	{ emu_settings_type::KeyboardHandler, { "Input/Output", "Keyboard"}},
 	{ emu_settings_type::MouseHandler,    { "Input/Output", "Mouse"}},

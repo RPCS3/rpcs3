@@ -9,6 +9,8 @@
 
 LOG_CHANNEL(overlays);
 
+extern bool is_input_allowed();
+
 namespace rsx
 {
 	namespace overlays
@@ -120,13 +122,24 @@ namespace rsx
 
 			while (!exit)
 			{
-				std::this_thread::sleep_for(1ms);
-
 				if (Emu.IsStopped())
+				{
 					return selection_code::canceled;
+				}
 
 				if (Emu.IsPaused())
+				{
+					thread_ctrl::wait_for(10000);
 					continue;
+				}
+
+				thread_ctrl::wait_for(1000);
+
+				if (!is_input_allowed())
+				{
+					refresh();
+					continue;
+				}
 
 				// Get keyboard input if supported by the overlay and activated by the game.
 				// Ignored if a keyboard pad handler is active in order to prevent double input.

@@ -26,7 +26,7 @@ enum class mouse_movement_mode : s32
 
 struct PadInfo
 {
-	u32 now_connect;
-	u32 system_info;
-	bool ignore_input;
+	u32 now_connect = 0;
+	u32 system_info = 0;
+	bool ignore_input = false;
 };

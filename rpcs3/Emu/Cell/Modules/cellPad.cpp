@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
-
 #include "Emu/Io/pad_types.h"
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
@@ -10,6 +10,8 @@
 
 extern void libio_sys_config_init();
 extern void libio_sys_config_end();
+
+extern bool is_input_allowed();
 
 LOG_CHANNEL(sys_io);
 
@@ -197,7 +199,7 @@ void pad_get_data(u32 port_no, CellPadData* data)
 	const auto setting = config.port_setting[port_no];
 	bool btnChanged = false;
 
-	if (rinfo.ignore_input)
+	if (rinfo.ignore_input || !is_input_allowed())
 	{
 		// Needed for Hotline Miami and Ninja Gaiden Sigma after dialogs were closed and buttons are still pressed.
 		// Gran Turismo 6 would keep registering the Start button during OSK Dialogs if this wasn't cleared and if we'd return with len as CELL_PAD_LEN_NO_CHANGE.

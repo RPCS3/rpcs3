@@ -21,6 +21,8 @@
 
 LOG_CHANNEL(input_log, "Input");
 
+extern bool is_input_allowed();
+
 namespace pad
 {
 	atomic_t<pad_thread*> g_current = nullptr;
@@ -251,7 +253,7 @@ void pad_thread::operator()()
 			{
 				while (thread_ctrl::state() != thread_state::aborting)
 				{
-					if (!pad::g_enabled || Emu.IsPaused())
+					if (!pad::g_enabled || Emu.IsPaused() || !is_input_allowed())
 					{
 						thread_ctrl::wait_for(10'000);
 						continue;
@@ -267,7 +269,7 @@ void pad_thread::operator()()
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (!pad::g_enabled || Emu.IsPaused())
+		if (!pad::g_enabled || Emu.IsPaused() || !is_input_allowed())
 		{
 			thread_ctrl::wait_for(10000);
 			continue;
