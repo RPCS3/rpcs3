@@ -396,9 +396,9 @@ public:
 	// Destructor
 	~lv2_config_service_event()
 	{
-		if (auto& global = g_fxo->get<lv2_config>(); !Emu.IsStopped())
+		if (auto global = g_fxo->try_get<lv2_config>())
 		{
-			global.remove_service_event(id);
+			global->remove_service_event(id);
 		}
 	}
 
