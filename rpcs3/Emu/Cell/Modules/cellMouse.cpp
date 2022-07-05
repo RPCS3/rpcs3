@@ -10,6 +10,8 @@
 extern void libio_sys_config_init();
 extern void libio_sys_config_end();
 
+extern bool is_input_allowed();
+
 LOG_CHANNEL(sys_io);
 
 template<>
@@ -236,7 +238,7 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 	MouseDataList& data_list = handler.GetDataList(port_no);
 
-	if (data_list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED))
+	if (data_list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		data_list.clear();
 		return CELL_OK;
@@ -284,9 +286,9 @@ error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
 
-	auto& list = handler.GetDataList(port_no);
+	MouseDataList& list = handler.GetDataList(port_no);
 
-	if (list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED))
+	if (list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		list.clear();
 		return CELL_OK;
@@ -374,9 +376,9 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 	// TODO: decr tests show that CELL_MOUSE_ERROR_DATA_READ_FAILED is returned when a mouse is connected
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_TABLET_MODE) has any impact
 
-	auto& list = handler.GetTabletDataList(port_no);
+	MouseTabletDataList& list = handler.GetTabletDataList(port_no);
 
-	if (list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED))
+	if (list.empty() || current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		list.clear();
 		return CELL_OK;
@@ -432,7 +434,7 @@ error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 
 	MouseRawData& current_data = handler.GetRawData(port_no);
 
-	if (current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED))
+	if (current_info.is_null_handler || (current_info.info & CELL_MOUSE_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		current_data = {};
 		return CELL_OK;

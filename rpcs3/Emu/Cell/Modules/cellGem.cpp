@@ -420,6 +420,8 @@ static bool check_gem_num(const u32 gem_num)
 	return gem_num < CELL_GEM_MAX_NUM;
 }
 
+extern bool is_input_allowed();
+
 /**
  * \brief Maps Move controller data (digital buttons, and analog Trigger data) to DS3 pad input.
  *        Unavoidably buttons conflict with DS3 mappings, which is problematic for some games.
@@ -430,15 +432,20 @@ static bool check_gem_num(const u32 gem_num)
  */
 static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
+	if (!is_input_allowed())
+	{
+		return false;
+	}
+
 	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
-	auto& pad = handler->GetPads()[port_no];
+	const auto& pad = handler->GetPads().at(port_no);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return false;
 
-	for (Button& button : pad->m_buttons)
+	for (const Button& button : pad->m_buttons)
 	{
 		// here we check btns, and set pad accordingly
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
@@ -514,10 +521,15 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
  */
 static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller& controller, CellGemExtPortData& ext)
 {
+	if (!is_input_allowed())
+	{
+		return false;
+	}
+
 	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
-	auto& pad = handler->GetPads()[port_no];
+	const auto& pad = handler->GetPads().at(port_no);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return false;
@@ -554,6 +566,11 @@ static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller
  */
 static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
+	if (!is_input_allowed())
+	{
+		return false;
+	}
+
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
 	std::scoped_lock lock(handler.mutex);
@@ -563,7 +580,7 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 		return false;
 	}
 
-	const auto& mouse_data = handler.GetMice().at(0);
+	const auto& mouse_data = handler.GetMice().at(mouse_no);
 	const auto is_pressed = [&mouse_data](MouseButtonCodes button) -> bool { return !!(mouse_data.buttons & button); };
 
 	digital_buttons = 0;
@@ -597,18 +614,23 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 	return true;
 }
 
-static bool mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state)
+static void mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state)
 {
+	if (!gem_image_state || !is_input_allowed())
+	{
+		return;
+	}
+
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
 	std::scoped_lock lock(handler.mutex);
 
-	if (!gem_image_state || mouse_no >= handler.GetMice().size())
+	if (mouse_no >= handler.GetMice().size())
 	{
-		return false;
+		return;
 	}
 
-	const auto& mouse = handler.GetMice().at(0);
+	const auto& mouse = handler.GetMice().at(mouse_no);
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
 	s32 mouse_width = mouse.x_max;
@@ -638,12 +660,15 @@ static bool mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::g
 	// Projected camera coordinates in mm
 	gem_image_state->projectionx = camera_x / controller.distance;
 	gem_image_state->projectiony = camera_y / controller.distance;
-
-	return true;
 }
 
 static bool mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state)
 {
+	if (!is_input_allowed())
+	{
+		return false;
+	}
+
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
 	std::scoped_lock lock(handler.mutex);
@@ -653,7 +678,7 @@ static bool mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 		return false;
 	}
 
-	const auto& mouse = handler.GetMice().at(0);
+	const auto& mouse = handler.GetMice().at(mouse_no);
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 	
 	s32 mouse_width = mouse.x_max;
@@ -1077,6 +1102,8 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
+	*gem_image_state = {};
+
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		auto& shared_data = g_fxo->get<gem_camera_shared>();
@@ -1125,6 +1152,8 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 	{
 		return CELL_GEM_TIME_OUT_OF_RANGE;
 	}
+
+	inertial_state = {};
 
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{

@@ -46,6 +46,8 @@ void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVal
 	}
 }
 
+extern bool is_input_allowed();
+
 void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
 	transfer->fake            = true;
@@ -98,12 +100,19 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	// buf[7] through buf[18] are always 0x00
 	// buf[21]/[23]/[25] are also always 0x00
 
+	if (!is_input_allowed())
+	{
+		return;
+	}
+
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 	const auto& pad    = handler->GetPads()[m_controller_index];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	{
 		return;
+	}
 
 	for (Button& button : pad->m_buttons)
 	{

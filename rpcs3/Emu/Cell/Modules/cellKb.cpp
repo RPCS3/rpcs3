@@ -9,6 +9,8 @@
 extern void libio_sys_config_init();
 extern void libio_sys_config_end();
 
+extern bool is_input_allowed();
+
 LOG_CHANNEL(sys_io);
 
 template<>
@@ -333,7 +335,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 
 	KbData& current_data = handler.GetData(port_no);
 
-	if (current_info.is_null_handler || (current_info.info & CELL_KB_INFO_INTERCEPTED))
+	if (current_info.is_null_handler || (current_info.info & CELL_KB_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		data->led = 0;
 		data->mkey = 0;

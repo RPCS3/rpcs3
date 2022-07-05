@@ -43,6 +43,8 @@ void usb_device_buzz::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 	}
 }
 
+extern bool is_input_allowed();
+
 void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
 	transfer->fake            = true;
@@ -59,6 +61,11 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	buf[2] = 0x00;
 	buf[3] = 0x00;
 	buf[4] = 0xf0;
+
+	if (!is_input_allowed())
+	{
+		return;
+	}
 
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
