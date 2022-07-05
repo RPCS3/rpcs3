@@ -1722,6 +1722,11 @@ void spu_thread::serialize_common(utils::serial& ar)
 	, exit_status.data
 	, status_npc.raw().status);
 
+	if (GET_SERIALIZATION_VERSION(spu) != 1u)
+	{
+		ar(ch_dec_start_timestamp, ch_dec_value, is_dec_frozen);
+	}
+
 	std::for_each_n(mfc_queue, mfc_size, [&](spu_mfc_cmd& cmd) { ar(cmd); });
 }
 
