@@ -73,9 +73,9 @@ struct serial_ver_t
 
 static std::array<serial_ver_t, 18> s_serial_versions;
 
-#define SERIALIZATION_VER(name, identifier, ver) \
+#define SERIALIZATION_VER(name, identifier, ...) \
 \
-	const bool s_##name##_serialization_fill = []() { ::s_serial_versions[identifier].compatible_versions = ver; return true; }();\
+	const bool s_##name##_serialization_fill = []() { ::s_serial_versions[identifier].compatible_versions = {__VA_ARGS__}; return true; }();\
 \
 	extern void using_##name##_serialization()\
 	{\
@@ -88,40 +88,40 @@ static std::array<serial_ver_t, 18> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0, {10}) // For stuff not listed here
-SERIALIZATION_VER(ppu, 1, {1})
-SERIALIZATION_VER(spu, 2, {1})
-SERIALIZATION_VER(lv2_sync, 3, {1})
-SERIALIZATION_VER(lv2_vm, 4, {1})
-SERIALIZATION_VER(lv2_net, 5, {1})
-SERIALIZATION_VER(lv2_fs, 6, {1})
-SERIALIZATION_VER(lv2_prx_overlay, 7, {1})
-SERIALIZATION_VER(lv2_memory, 8, {1})
-SERIALIZATION_VER(lv2_config, 9, {1})
+SERIALIZATION_VER(global_version, 0,                            10) // For stuff not listed here
+SERIALIZATION_VER(ppu, 1,                                       1)
+SERIALIZATION_VER(spu, 2,                                       1, 2)
+SERIALIZATION_VER(lv2_sync,                                     3, 1)
+SERIALIZATION_VER(lv2_vm, 4,                                    1)
+SERIALIZATION_VER(lv2_net, 5,                                   1)
+SERIALIZATION_VER(lv2_fs, 6,                                    1)
+SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
+SERIALIZATION_VER(lv2_memory, 8,                                1)
+SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10, {1})
+	SERIALIZATION_VER(rsx, 10,                                  1)
 }
 
 namespace np
 {
-	SERIALIZATION_VER(sceNp, 11, {1})
+	SERIALIZATION_VER(sceNp, 11,                                1)
 }
 
 #ifdef _MSC_VER
 // Compiler bug, lambda function body does seem to inherit used namespace atleast for function decleration 
-SERIALIZATION_VER(rsx, 10, {1})
-SERIALIZATION_VER(sceNp, 11, {1})
+SERIALIZATION_VER(rsx, 10,                                      1)
+SERIALIZATION_VER(sceNp, 11,                                    1)
 #endif
 
-SERIALIZATION_VER(cellVdec, 12, {1})
-SERIALIZATION_VER(cellAudio, 13, {1})
-SERIALIZATION_VER(cellCamera, 14, {1})
-SERIALIZATION_VER(cellGem, 15, {1})
-SERIALIZATION_VER(sceNpTrophy, 16, {1})
-SERIALIZATION_VER(cellMusic, 17, {1})
-SERIALIZATION_VER(cellVoice, 15, {1})
+SERIALIZATION_VER(cellVdec, 12,                                 1)
+SERIALIZATION_VER(cellAudio, 13,                                1)
+SERIALIZATION_VER(cellCamera, 14,                               1)
+SERIALIZATION_VER(cellGem, 15,                                  1)
+SERIALIZATION_VER(sceNpTrophy, 16,                              1)
+SERIALIZATION_VER(cellMusic, 17,                                1)
+SERIALIZATION_VER(cellVoice, 15,                                1)
 
 #undef SERIALIZATION_VER
 
@@ -2217,12 +2217,14 @@ extern bool try_lock_vdec_context_creation();
 
 void Emulator::Kill(bool allow_autoexit, bool savestate)
 {
-	if (!try_lock_vdec_context_creation())
+	if (savestate && !try_lock_vdec_context_creation())
 	{
 		sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
 			"\nLLE libvdec.sprx by selecting it in Adavcned tab -> Firmware Libraries."
 			"\nYou need to close the game for to take effect."
 			"\nIf you cannot close the game due to losing important progress your best chance is to skip the current cutscenes if any are played and retry.");
+
+		return;
 	}
 
 	g_tls_log_prefix = []()
