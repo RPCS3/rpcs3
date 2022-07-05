@@ -43,9 +43,9 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 	// Deallocate Stack Area
 	ensure(vm::dealloc(ppu.stack_addr, vm::stack) == ppu.stack_size);
 
-	if (auto& dct = g_fxo->get<lv2_memory_container>(); !Emu.IsStopped())
+	if (auto dct = g_fxo->try_get<lv2_memory_container>())
 	{
-		dct.free(ppu.stack_size);
+		dct->free(ppu.stack_size);
 	}
 
 	if (ppu.call_history.index)
@@ -110,8 +110,15 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 		ppu.state -= cpu_flag::suspend;
 	}
 
-	while (ppu.joiner == ppu_join_status::zombie && !ppu.is_stopped())
+	while (ppu.joiner == ppu_join_status::zombie)
 	{
+		if (ppu.is_stopped() && ppu.joiner.compare_and_swap_test(ppu_join_status::zombie, ppu_join_status::joinable))
+		{
+			// Abort
+			ppu.state += cpu_flag::again;
+			return;
+		}
+
 		// Wait for termination
 		thread_ctrl::wait_on(ppu.joiner, ppu_join_status::zombie);
 	}

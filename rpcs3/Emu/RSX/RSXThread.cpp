@@ -3121,7 +3121,7 @@ namespace rsx
 
 		while (!external_interrupt_ack)
 		{
-			if (Emu.IsStopped())
+			if (is_stopped())
 				break;
 
 			utils::pause();

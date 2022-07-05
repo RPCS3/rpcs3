@@ -243,8 +243,8 @@ namespace id_manager
 			vec.reserve(T::id_count);
 		}
 
-		// Order it directly afterward the source type's position
-		static constexpr double savestate_init_pos = std::bit_cast<double>(std::bit_cast<u64>(T::savestate_init_pos) + 1);
+		// Order it directly before the source type's position
+		static constexpr double savestate_init_pos = std::bit_cast<double>(std::bit_cast<u64>(T::savestate_init_pos) - 1);
 
 		id_map(utils::serial& ar)
 		{
