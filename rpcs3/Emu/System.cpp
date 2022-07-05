@@ -71,7 +71,7 @@ struct serial_ver_t
 	std::set<u32> compatible_versions;
 };
 
-static std::array<serial_ver_t, 22> s_serial_versions;
+static std::array<serial_ver_t, 23> s_serial_versions;
 
 #define SERIALIZATION_VER(name, identifier, ...) \
 \
@@ -125,6 +125,7 @@ SERIALIZATION_VER(cellVoice, 18,                                1)
 SERIALIZATION_VER(cellGcm, 19,                                  1)
 SERIALIZATION_VER(sysPrxForUser, 20,                            1)
 SERIALIZATION_VER(cellSaveData, 21,                             1)
+SERIALIZATION_VER(cellAudioOut, 22,                             1)
 
 #undef SERIALIZATION_VER
 
