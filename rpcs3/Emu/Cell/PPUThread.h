@@ -318,9 +318,9 @@ public:
 	} thread_name{ this };
 
 	// For savestates
-	bool stop_flag_removal_protection = false; // If set, Emulator::Run won't remove stop flag 
+	bool stop_flag_removal_protection = false; // If set, Emulator::Run won't remove stop flag
 	bool loaded_from_savestate = false; // Indicates the thread had just started straight from savestate load
-	u64 optional_syscall_state{};
+	std::shared_ptr<utils::serial> optional_savestate_state;
 	bool interrupt_thread_executing = false;
 
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));

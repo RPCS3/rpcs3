@@ -71,7 +71,7 @@ struct serial_ver_t
 	std::set<u32> compatible_versions;
 };
 
-static std::array<serial_ver_t, 18> s_serial_versions;
+static std::array<serial_ver_t, 22> s_serial_versions;
 
 #define SERIALIZATION_VER(name, identifier, ...) \
 \
@@ -88,10 +88,10 @@ static std::array<serial_ver_t, 18> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            10) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            11) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1)
 SERIALIZATION_VER(spu, 2,                                       1, 2)
-SERIALIZATION_VER(lv2_sync,                                     3, 1)
+SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
 SERIALIZATION_VER(lv2_net, 5,                                   1)
 SERIALIZATION_VER(lv2_fs, 6,                                    1)
@@ -121,7 +121,10 @@ SERIALIZATION_VER(cellCamera, 14,                               1)
 SERIALIZATION_VER(cellGem, 15,                                  1)
 SERIALIZATION_VER(sceNpTrophy, 16,                              1)
 SERIALIZATION_VER(cellMusic, 17,                                1)
-SERIALIZATION_VER(cellVoice, 15,                                1)
+SERIALIZATION_VER(cellVoice, 18,                                1)
+SERIALIZATION_VER(cellGcm, 19,                                  1)
+SERIALIZATION_VER(sysPrxForUser, 20,                            1)
+SERIALIZATION_VER(cellSaveData, 21,                             1)
 
 #undef SERIALIZATION_VER
 
@@ -857,12 +860,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				nse_t<u64, 1> offset;
 			};
 	
-			if (m_ar->data.size() <= sizeof(file_header))
-			{
-				return game_boot_result::savestate_corrupted;
-			}
-	
-			const file_header header = m_ar->operator file_header();
+			const auto header = m_ar->try_read<file_header>().second;
 	
 			if (header.magic != "RPCS3SAV"_u64)
 			{
@@ -2376,6 +2374,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 				ar(usz{}); // Reserve memory to be patched later with correct size
 				const usz old_size = ar.data.size();
 				ar.data = tar_object::save_directory(path, std::move(ar.data));
+				ar.seek_end();
 				const usz tar_size = ar.data.size() - old_size;
 				std::memcpy(ar.data.data() + old_size - sizeof(usz), &tar_size, sizeof(usz));
 				sys_log.success("Saved the contents of directory '%s' (size=0x%x)", path, tar_size);
@@ -2511,7 +2510,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		}
 
 		auto& ar = *m_ar;
-		const usz pos = ar.data.size();
+		const usz pos = ar.seek_end();
 		std::memcpy(&ar.data[10], &pos, 8);// Set offset
 		ar(used_serial);
 

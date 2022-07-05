@@ -9,6 +9,19 @@ namespace id_manager
 	thread_local u32 g_id = 0;
 }
 
+template <>
+bool serialize<std::shared_ptr<utils::serial>>(utils::serial& ar, std::shared_ptr<utils::serial>& o)
+{
+	if (!o || !ar.is_writing())
+	{
+		o.reset();
+		o = std::make_shared<utils::serial>();
+	}
+
+	ar(o->data);
+	return true;
+}
+
 std::vector<std::pair<u128, id_manager::typeinfo>>& id_manager::get_typeinfo_map()
 {
 	// Magic static
