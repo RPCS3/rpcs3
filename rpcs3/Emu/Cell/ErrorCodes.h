@@ -39,6 +39,8 @@ public:
 	{
 		return value;
 	}
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 enum CellNotAnError : s32

@@ -1569,7 +1569,7 @@ namespace vm
 				if (!(ar.data.back() & page_writable) && is_memory_read_only_of_executable(addr))
 				{
 					// Revert changes
-					ar.data.resize(ar.data.size() - (sizeof(u32) * 2 + sizeof(memory_page)));
+					ar.data.resize(ar.seek_end(sizeof(u32) * 2 + sizeof(memory_page)));
 					vm_log.success("Removed read-only memory block of the executable from savestate. (addr=0x%x, size=0x%x)", addr, shm.first);
 					continue;
 				}

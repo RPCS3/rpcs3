@@ -321,6 +321,8 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	std::shared_ptr<lv2_lwmutex> mutex;
 
+	auto& sstate = *ppu.optional_savestate_state;
+
 	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond)
 	{
 		mutex = idm::get_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
@@ -335,7 +337,10 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		std::lock_guard lock(cond.mutex);
 
-		if (ppu.loaded_from_savestate && ppu.optional_syscall_state)
+		const bool mutex_sleep = sstate.try_read<bool>().second;
+		sstate.clear();
+
+		if (mutex_sleep)
 		{
 			// Special: loading state from the point of waiting on lwmutex sleep queue
 			std::lock_guard lock2(mutex->mutex);
@@ -403,7 +408,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				break;
 			}
 
-			ppu.optional_syscall_state = +mutex_sleep;
+			sstate(mutex_sleep);
 			ppu.state += cpu_flag::again;
 			break;
 		}
