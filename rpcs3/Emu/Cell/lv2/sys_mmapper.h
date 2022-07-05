@@ -71,6 +71,8 @@ struct page_fault_notification_entries
 	std::vector<page_fault_notification_entry> entries;
 	shared_mutex mutex;
 
+	SAVESTATE_INIT_POS(44);
+
 	page_fault_notification_entries() = default;
 	page_fault_notification_entries(utils::serial& ar);
 	void save(utils::serial& ar);
