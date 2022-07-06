@@ -1,5 +1,6 @@
 #include "Emu/Audio/Cubeb/cubeb_enumerator.h"
 #include "util/logs.hpp"
+#include <algorithm>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -70,6 +71,12 @@ std::vector<audio_device_enumerator::audio_device> cubeb_enumerator::get_output_
 	for (u64 dev_idx = 0; dev_idx < dev_collection.count; dev_idx++)
 	{
 		const cubeb_device_info& dev_info = dev_collection.device[dev_idx];
+
+		if (dev_info.state == CUBEB_DEVICE_STATE_UNPLUGGED)
+		{
+			continue;
+		}
+
 		audio_device dev =
 		{
 			.id = std::string{dev_info.device_id},
@@ -88,6 +95,7 @@ std::vector<audio_device_enumerator::audio_device> cubeb_enumerator::get_output_
 			dev.name = dev.id;
 		}
 
+		cubeb_dev_enum.notice("Found device: id=%s, name=%s, max_ch=%d", dev.id, dev.name, dev.max_ch);
 		device_list.emplace_back(dev);
 	}
 
@@ -95,6 +103,11 @@ std::vector<audio_device_enumerator::audio_device> cubeb_enumerator::get_output_
 	{
 		cubeb_dev_enum.error("cubeb_device_collection_destroy() failed: %i", err);
 	}
+
+	std::sort(device_list.begin(), device_list.end(), [](audio_device_enumerator::audio_device a, audio_device_enumerator::audio_device b)
+	{
+		return a.name < b.name;
+	});
 
 	return device_list;
 }

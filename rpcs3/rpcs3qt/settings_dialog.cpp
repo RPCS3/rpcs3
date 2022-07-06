@@ -938,7 +938,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto get_audio_output_devices = [this]()
 	{
-		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator();
+		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator(static_cast<audio_renderer>(ui->audioOutBox->currentIndex()));
 		std::vector<audio_device_enumerator::audio_device> dev_array = dev_enum->get_output_devices();
 
 		ui->audioDeviceBox->clear();

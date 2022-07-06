@@ -5,6 +5,7 @@
 #include "Emu/Audio/XAudio2/xaudio2_enumerator.h"
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
+#include <algorithm>
 
 #include <wrl/client.h>
 #include <Windows.h>
@@ -32,7 +33,7 @@ std::vector<audio_device_enumerator::audio_device> xaudio2_enumerator::get_outpu
 	}
 
 	Microsoft::WRL::ComPtr<IMMDeviceCollection> devices{};
-	if (HRESULT hr = devEnum->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE | DEVICE_STATE_DISABLED | DEVICE_STATE_UNPLUGGED, &devices); FAILED(hr))
+	if (HRESULT hr = devEnum->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE | DEVICE_STATE_DISABLED, &devices); FAILED(hr))
 	{
 		xaudio_dev_enum.error("EnumAudioEndpoints() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return {};
@@ -138,8 +139,15 @@ std::vector<audio_device_enumerator::audio_device> xaudio2_enumerator::get_outpu
 		}
 
 		PropVariantClear(&var);
+
+		xaudio_dev_enum.notice("Found device: id=%s, name=%s, max_ch=%d", dev.id, dev.name, dev.max_ch);
 		device_list.emplace_back(dev);
 	}
+
+	std::sort(device_list.begin(), device_list.end(), [](audio_device_enumerator::audio_device a, audio_device_enumerator::audio_device b)
+	{
+		return a.name < b.name;
+	});
 
 	return device_list;
 }

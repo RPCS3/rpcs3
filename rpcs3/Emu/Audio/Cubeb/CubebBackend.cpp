@@ -47,7 +47,7 @@ CubebBackend::~CubebBackend()
 
 	if (m_dev_collection_cb_enabled)
 	{
-		if (int err = cubeb_register_device_collection_changed(m_ctx, CUBEB_DEVICE_TYPE_OUTPUT, nullptr, this))
+		if (int err = cubeb_register_device_collection_changed(m_ctx, CUBEB_DEVICE_TYPE_OUTPUT, nullptr, nullptr))
 		{
 			Cubeb.error("cubeb_register_device_collection_changed() failed: %i", err);
 		}
@@ -132,7 +132,7 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 	stream_param.channels = get_channels();
 	stream_param.layout = [&]()
 	{
-		switch (ch_cnt)
+		switch (m_channels)
 		{
 		case AudioChannelCnt::STEREO:       return CUBEB_LAYOUT_STEREO;
 		case AudioChannelCnt::SURROUND_5_1: return CUBEB_LAYOUT_3F2_LFE;

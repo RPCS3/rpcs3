@@ -127,10 +127,10 @@ EmuCallbacks main_application::CreateCallbacks()
 		return result;
 	};
 
-	callbacks.get_audio_enumerator = []() -> std::shared_ptr<audio_device_enumerator>
+	callbacks.get_audio_enumerator = [](audio_renderer renderer) -> std::shared_ptr<audio_device_enumerator>
 	{
 		std::shared_ptr<audio_device_enumerator> result;
-		switch (g_cfg.audio.renderer.get())
+		switch (renderer)
 		{
 		case audio_renderer::null: result = std::make_shared<null_enumerator>(); break;
 #ifdef _WIN32

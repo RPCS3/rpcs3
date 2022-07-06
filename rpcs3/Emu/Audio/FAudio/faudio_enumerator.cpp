@@ -4,6 +4,7 @@
 
 #include "Emu/Audio/FAudio/faudio_enumerator.h"
 #include <array>
+#include <algorithm>
 #include "Utilities/StrUtil.h"
 #include "util/logs.hpp"
 
@@ -76,8 +77,14 @@ std::vector<audio_device_enumerator::audio_device> faudio_enumerator::get_output
 			dev.name = "Device " + dev.id;
 		}
 
+		faudio_dev_enum.notice("Found device: id=%s, name=%s, max_ch=%d", dev.id, dev.name, dev.max_ch);
 		device_list.emplace_back(dev);
 	}
+
+	std::sort(device_list.begin(), device_list.end(), [](audio_device_enumerator::audio_device a, audio_device_enumerator::audio_device b)
+	{
+		return a.name < b.name;
+	});
 
 	return device_list;
 }
