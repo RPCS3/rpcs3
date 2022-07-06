@@ -1699,28 +1699,10 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 
 void spu_thread::serialize_common(utils::serial& ar)
 {
-	for (v128& reg : gpr)
-		ar(reg._bytes);
-	
-	ar(pc, ch_mfc_cmd, mfc_size, mfc_barrier, mfc_fence, mfc_prxy_cmd, mfc_prxy_mask, mfc_prxy_write_state.all
-	, srr0
-	, ch_tag_upd
-	, ch_tag_mask
-	, ch_tag_stat.data
-	, ch_stall_mask
-	, ch_stall_stat.data
-	, ch_atomic_stat.data
-	, ch_out_mbox.data
-	, ch_out_intr_mbox.data
-	, snr_config
-
-	, ch_snr1.data
-	, ch_snr2.data
-	, ch_events.raw().all
-	, interrupts_enabled
-	, run_ctrl
-	, exit_status.data
-	, status_npc.raw().status);
+	ar(gpr, pc, ch_mfc_cmd, mfc_size, mfc_barrier, mfc_fence, mfc_prxy_cmd, mfc_prxy_mask, mfc_prxy_write_state.all
+		, srr0, ch_tag_upd, ch_tag_mask, ch_tag_stat.data, ch_stall_mask, ch_stall_stat.data, ch_atomic_stat.data
+		, ch_out_mbox.data, ch_out_intr_mbox.data, snr_config, ch_snr1.data, ch_snr2.data, ch_events.raw().all, interrupts_enabled
+		, run_ctrl, exit_status.data, status_npc.raw().status);
 
 	if (GET_SERIALIZATION_VERSION(spu) != 1u)
 	{
