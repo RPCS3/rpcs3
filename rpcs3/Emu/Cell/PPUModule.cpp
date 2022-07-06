@@ -2164,7 +2164,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 			if (prog.bin.size() > size || prog.bin.size() != prog.p_filesz)
 				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
 
-			const bool already_loaded = true; // Unimplemented optimization for savestates
+			const bool already_loaded = !!ar; // Unimplemented optimization for savestates
 
 			if (already_loaded)
 			{
