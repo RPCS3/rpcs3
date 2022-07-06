@@ -1256,7 +1256,7 @@ void spu_recompiler::UNK(spu_opcode_t op)
 
 void spu_stop(spu_thread* _spu, u32 code)
 {
-	if (!_spu->stop_and_signal(code))
+	if (!_spu->stop_and_signal(code) || _spu->state & cpu_flag::again)
 	{
 		spu_runtime::g_escape(_spu);
 	}
@@ -1328,8 +1328,9 @@ static u32 spu_rdch(spu_thread* _spu, u32 ch)
 {
 	const s64 result = _spu->get_ch_value(ch);
 
-	if (result < 0)
+	if (result < 0 || _spu->state & cpu_flag::again)
 	{
+		_spu->state += cpu_flag::again;
 		spu_runtime::g_escape(_spu);
 	}
 
@@ -2252,7 +2253,7 @@ void spu_recompiler::MTSPR(spu_opcode_t)
 
 static void spu_wrch(spu_thread* _spu, u32 ch, u32 value)
 {
-	if (!_spu->set_ch_value(ch, value))
+	if (!_spu->set_ch_value(ch, value) || _spu->state & cpu_flag::again)
 	{
 		spu_runtime::g_escape(_spu);
 	}
@@ -2266,8 +2267,9 @@ static void spu_wrch(spu_thread* _spu, u32 ch, u32 value)
 
 static void spu_wrch_mfc(spu_thread* _spu)
 {
-	if (!_spu->process_mfc_cmd())
+	if (!_spu->process_mfc_cmd() || _spu->state & cpu_flag::again)
 	{
+		_spu->state += cpu_flag::again;
 		spu_runtime::g_escape(_spu);
 	}
 
