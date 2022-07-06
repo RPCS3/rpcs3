@@ -68,7 +68,7 @@ std::vector<audio_device_enumerator::audio_device> faudio_enumerator::get_output
 		audio_device dev =
 		{
 			.id = std::to_string(dev_idx),
-			.name = wchar_to_utf8(std::bit_cast<wchar_t*>(&dev_info.DisplayName[0])),
+			.name = utf16_to_utf8(std::bit_cast<char16_t*>(&dev_info.DisplayName[0])),
 			.max_ch = dev_info.OutputFormat.Format.nChannels
 		};
 

@@ -939,7 +939,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto get_audio_output_devices = [this]()
 	{
-		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator(static_cast<audio_renderer>(ui->audioOutBox->currentIndex()));
+		const QVariantList var_list = ui->audioOutBox->currentData().toList();
+		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
+		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator(var_list[1].toInt());
 		std::vector<audio_device_enumerator::audio_device> dev_array = dev_enum->get_output_devices();
 
 		ui->audioDeviceBox->clear();

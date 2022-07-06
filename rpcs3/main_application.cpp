@@ -129,22 +129,20 @@ EmuCallbacks main_application::CreateCallbacks()
 		return result;
 	};
 
-	callbacks.get_audio_enumerator = [](audio_renderer renderer) -> std::shared_ptr<audio_device_enumerator>
+	callbacks.get_audio_enumerator = [](u64 renderer) -> std::shared_ptr<audio_device_enumerator>
 	{
-		std::shared_ptr<audio_device_enumerator> result;
-		switch (renderer)
+		switch (static_cast<audio_renderer>(renderer))
 		{
-		case audio_renderer::null: result = std::make_shared<null_enumerator>(); break;
+		case audio_renderer::null: return std::make_shared<null_enumerator>();
 #ifdef _WIN32
-		case audio_renderer::xaudio: result = std::make_shared<xaudio2_enumerator>(); break;
+		case audio_renderer::xaudio: return std::make_shared<xaudio2_enumerator>();
 #endif
-		case audio_renderer::cubeb: result = std::make_shared<cubeb_enumerator>(); break;
+		case audio_renderer::cubeb: return std::make_shared<cubeb_enumerator>();
 #ifdef HAVE_FAUDIO
-		case audio_renderer::faudio: result = std::make_shared<faudio_enumerator>(); break;
+		case audio_renderer::faudio: return std::make_shared<faudio_enumerator>();
 #endif
+		default: fmt::throw_exception("Invalid renderer index %u", renderer);
 		}
-
-		return result;
 	};
 
 	callbacks.resolve_path = [](std::string_view sv)
