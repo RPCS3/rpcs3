@@ -1577,10 +1577,7 @@ bool ppu_thread::savable() const
 
 void ppu_thread::serialize_common(utils::serial& ar)
 {
-	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio, optional_savestate_state);
-
-	for (v128& reg : vr)
-		ar(reg._bytes);
+	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio, optional_savestate_state, vr);
 
 	if (optional_savestate_state->data.empty())
 	{
