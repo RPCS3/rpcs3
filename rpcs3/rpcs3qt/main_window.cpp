@@ -500,7 +500,8 @@ void main_window::BootTest()
 	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), path_tests, tr(
 		"(S)ELF files (*.elf *.self);;"
 		"ELF files (*.elf);;"
-		"SELF files (*.self);;"),
+		"SELF files (*.self);;"
+		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
 	if (file_path.isEmpty())
