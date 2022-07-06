@@ -420,6 +420,78 @@ static bool check_gem_num(const u32 gem_num)
 	return gem_num < CELL_GEM_MAX_NUM;
 }
 
+static inline void pos_to_gem_image_state(const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+{
+	const auto& shared_data = g_fxo->get<gem_camera_shared>();
+
+	if (x_max <= 0) x_max = shared_data.width;
+	if (y_max <= 0) y_max = shared_data.height;
+
+	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
+	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
+	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
+
+	// Image coordinates in pixels
+	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
+	const f32 image_y = static_cast<f32>(y_pos) / scaling_height;
+
+	// Centered image coordinates in pixels
+	const f32 centered_x = image_x - (shared_data.width / 2.f);
+	const f32 centered_y = (shared_data.height / 2.f) - image_y; // Image coordinates increase downwards, so we have to invert this
+
+	// Camera coordinates in mm (centered, so it's the same as world coordinates)
+	const f32 camera_x = centered_x * mmPerPixel;
+	const f32 camera_y = centered_y * mmPerPixel;
+
+	// Image coordinates in pixels
+	gem_image_state->u = image_x;
+	gem_image_state->v = image_y;
+
+	// Projected camera coordinates in mm
+	gem_image_state->projectionx = camera_x / controller.distance;
+	gem_image_state->projectiony = camera_y / controller.distance;
+}
+
+static inline void pos_to_gem_state(const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+{
+	const auto& shared_data = g_fxo->get<gem_camera_shared>();
+
+	if (x_max <= 0) x_max = shared_data.width;
+	if (y_max <= 0) y_max = shared_data.height;
+
+	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
+	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
+	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
+
+	// Image coordinates in pixels
+	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
+	const f32 image_y = static_cast<f32>(y_pos) / scaling_height;
+
+	// Centered image coordinates in pixels
+	const f32 centered_x = image_x - (shared_data.width / 2.f);
+	const f32 centered_y = (shared_data.height / 2.f) - image_y; // Image coordinates increase downwards, so we have to invert this
+
+	// Camera coordinates in mm (centered, so it's the same as world coordinates)
+	const f32 camera_x = centered_x * mmPerPixel;
+	const f32 camera_y = centered_y * mmPerPixel;
+
+	// World coordinates in mm
+	gem_state->pos[0] = camera_x;
+	gem_state->pos[1] = camera_y;
+	gem_state->pos[2] = static_cast<f32>(controller.distance);
+	gem_state->pos[3] = 0.f;
+
+	gem_state->quat[0] = 320.f - image_x;
+	gem_state->quat[1] = (y_pos / scaling_width) - 180.f;
+	gem_state->quat[2] = 1200.f;
+
+	// TODO: calculate handle position based on our world coordinate and the angles
+	gem_state->handle_pos[0] = camera_x;
+	gem_state->handle_pos[1] = camera_y;
+	gem_state->handle_pos[2] = static_cast<f32>(controller.distance + 10);
+	gem_state->handle_pos[3] = 0.f;
+}
+
 extern bool is_input_allowed();
 
 /**
@@ -500,6 +572,76 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 			}
 		}
 	}
+}
+
+constexpr u16 ds3_max_x = 255;
+constexpr u16 ds3_max_y = 255;
+
+static inline void ds3_get_stick_values(const std::shared_ptr<Pad>& pad, s32& x_pos, s32& y_pos)
+{
+	x_pos = 0;
+	y_pos = 0;
+
+	for (const AnalogStick& stick : pad->m_sticks)
+	{
+		switch (stick.m_offset)
+		{
+		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
+			x_pos = stick.m_value - 128;
+			break;
+		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
+			y_pos = stick.m_value - 128;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+static void ds3_pos_to_gem_image_state(const u32 port_no, const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state)
+{
+	if (!is_input_allowed())
+	{
+		return;
+	}
+
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	const auto handler = pad::get_current_handler();
+	const auto& pad = handler->GetPads().at(port_no);
+
+	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	{
+		return;
+	}
+
+	s32 ds3_pos_x, ds3_pos_y;
+	ds3_get_stick_values(pad, ds3_pos_x, ds3_pos_y);
+
+	pos_to_gem_image_state(controller, gem_image_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
+}
+
+static void ds3_pos_to_gem_state(const u32 port_no, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state)
+{
+	if (!is_input_allowed())
+	{
+		return;
+	}
+
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	const auto handler = pad::get_current_handler();
+	const auto& pad = handler->GetPads().at(port_no);
+
+	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+	{
+		return;
+	}
+
+	s32 ds3_pos_x, ds3_pos_y;
+	ds3_get_stick_values(pad, ds3_pos_x, ds3_pos_y);
+
+	pos_to_gem_state(controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
 }
 
 /**
@@ -633,35 +775,8 @@ static void mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::g
 	}
 
 	const auto& mouse = handler.GetMice().at(mouse_no);
-	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-	s32 mouse_width = mouse.x_max;
-	if (mouse_width <= 0) mouse_width = shared_data.width;
-	s32 mouse_height = mouse.y_max;
-	if (mouse_height <= 0) mouse_height = shared_data.height;
-	const f32 scaling_width = mouse_width / static_cast<f32>(shared_data.width);
-	const f32 scaling_height = mouse_height / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
-
-	// Image coordinates in pixels
-	const f32 image_x = static_cast<f32>(mouse.x_pos) / scaling_width;
-	const f32 image_y = static_cast<f32>(mouse.y_pos) / scaling_height;
-
-	// Centered image coordinates in pixels
-	const f32 centered_x = image_x - (shared_data.width / 2.f);
-	const f32 centered_y = (shared_data.height / 2.f) - image_y; // Image coordinates increase downwards, so we have to invert this
-
-	// Camera coordinates in mm (centered, so it's the same as world coordinates)
-	const f32 camera_x = centered_x * mmPerPixel;
-	const f32 camera_y = centered_y * mmPerPixel;
-
-	// Image coordinates in pixels
-	gem_image_state->u = image_x;
-	gem_image_state->v = image_y;
-
-	// Projected camera coordinates in mm
-	gem_image_state->projectionx = camera_x / controller.distance;
-	gem_image_state->projectiony = camera_y / controller.distance;
+	pos_to_gem_image_state(controller, gem_image_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
 }
 
 static void mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state)
@@ -684,43 +799,8 @@ static void mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 	}
 
 	const auto& mouse = handler.GetMice().at(mouse_no);
-	const auto& shared_data = g_fxo->get<gem_camera_shared>();
-	
-	s32 mouse_width = mouse.x_max;
-	if (mouse_width <= 0) mouse_width = shared_data.width;
-	s32 mouse_height = mouse.y_max;
-	if (mouse_height <= 0) mouse_height = shared_data.height;
-	const f32 scaling_width = mouse_width / static_cast<f32>(shared_data.width);
-	const f32 scaling_height = mouse_height / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
 
-	// Image coordinates in pixels
-	const f32 image_x = static_cast<f32>(mouse.x_pos) / scaling_width;
-	const f32 image_y = static_cast<f32>(mouse.y_pos) / scaling_height;
-
-	// Centered image coordinates in pixels
-	const f32 centered_x = image_x - (shared_data.width / 2.f);
-	const f32 centered_y = (shared_data.height / 2.f) - image_y; // Image coordinates increase downwards, so we have to invert this
-
-	// Camera coordinates in mm (centered, so it's the same as world coordinates)
-	const f32 camera_x = centered_x * mmPerPixel;
-	const f32 camera_y = centered_y * mmPerPixel;
-
-	// World coordinates in mm
-	gem_state->pos[0] = camera_x;
-	gem_state->pos[1] = camera_y;
-	gem_state->pos[2] = static_cast<f32>(controller.distance);
-	gem_state->pos[3] = 0.f;
-
-	gem_state->quat[0] = 320.f - image_x;
-	gem_state->quat[1] = (mouse.y_pos / scaling_width) - 180.f;
-	gem_state->quat[2] = 1200.f;
-
-	// TODO: calculate handle position based on our world coordinate and the angles
-	gem_state->handle_pos[0] = camera_x;
-	gem_state->handle_pos[1] = camera_y;
-	gem_state->handle_pos[2] = static_cast<f32>(controller.distance + 10);
-	gem_state->handle_pos[3] = 0.f;
+	pos_to_gem_state(controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
 }
 
 // *********************
@@ -1116,10 +1196,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 
 		if (g_cfg.io.move == move_handler::fake)
 		{
-			gem_image_state->u = 0;
-			gem_image_state->v = 0;
-			gem_image_state->projectionx = 1;
-			gem_image_state->projectiony = 1;
+			ds3_pos_to_gem_image_state(gem_num, gem.controllers[gem_num], gem_image_state);
 		}
 		else if (g_cfg.io.move == move_handler::mouse)
 		{
@@ -1334,6 +1411,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		if (g_cfg.io.move == move_handler::fake)
 		{
 			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+			ds3_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
 		}
 		else if (g_cfg.io.move == move_handler::mouse)
 		{
