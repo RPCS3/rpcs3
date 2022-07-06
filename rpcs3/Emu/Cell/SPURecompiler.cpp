@@ -5539,12 +5539,16 @@ public:
 
 	static void exec_stop(spu_thread* _spu, u32 code)
 	{
-		if (!_spu->stop_and_signal(code))
+		if (!_spu->stop_and_signal(code) || _spu->state & cpu_flag::again)
 		{
 			spu_runtime::g_escape(_spu);
 		}
 
-		static_cast<void>(_spu->test_stopped());
+		if (_spu->test_stopped())
+		{
+			_spu->pc += 4;
+			spu_runtime::g_escape(_spu);
+		}
 	}
 
 	void STOP(spu_opcode_t op) //
@@ -5582,8 +5586,9 @@ public:
 	{
 		const s64 result = _spu->get_ch_value(ch);
 
-		if (result < 0)
+		if (result < 0 || _spu->state & cpu_flag::again)
 		{
+			_spu->state += cpu_flag::again;
 			spu_runtime::g_escape(_spu);
 		}
 
@@ -5617,6 +5622,11 @@ public:
 		return exec_rdch(_spu, SPU_RdEventStat);
 	}
 
+	void ensure_gpr_stores()
+	{
+		m_block->store.fill(nullptr);
+	}
+
 	llvm::Value* get_rdch(spu_opcode_t op, u32 off, bool atomic)
 	{
 		const auto ptr = _ptr<u64>(m_thread, off);
@@ -5642,7 +5652,6 @@ public:
 		m_ir->CreateCondBr(cond, done, wait);
 		m_ir->SetInsertPoint(wait);
 		update_pc();
-		m_block->store.fill(nullptr);
 		const auto val1 = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(op.ra));
 		m_ir->CreateBr(done);
 		m_ir->SetInsertPoint(done);
@@ -5673,7 +5682,7 @@ public:
 		case SPU_RdInMbox:
 		{
 			update_pc();
-			m_block->store.fill(nullptr);
+			ensure_gpr_stores();
 			res.value = call("spu_read_in_mbox", &exec_read_in_mbox, m_thread);
 			break;
 		}
@@ -5689,11 +5698,13 @@ public:
 		}
 		case SPU_RdSigNotify1:
 		{
+			ensure_gpr_stores();
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr1), true);
 			break;
 		}
 		case SPU_RdSigNotify2:
 		{
+			ensure_gpr_stores();
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr2), true);
 			break;
 		}
@@ -5720,7 +5731,6 @@ public:
 		case SPU_RdEventStat:
 		{
 			update_pc();
-			m_block->store.fill(nullptr);
 			res.value = call("spu_read_events", &exec_read_events, m_thread);
 			break;
 		}
@@ -5734,7 +5744,7 @@ public:
 		default:
 		{
 			update_pc();
-			m_block->store.fill(nullptr);
+			ensure_gpr_stores();
 			res.value = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(op.ra));
 			break;
 		}
@@ -5870,16 +5880,13 @@ public:
 
 	static void exec_wrch(spu_thread* _spu, u32 ch, u32 value)
 	{
-		if (!_spu->set_ch_value(ch, value))
+		if (!_spu->set_ch_value(ch, value) || _spu->state & cpu_flag::again)
 		{
+			_spu->state += cpu_flag::again;
 			spu_runtime::g_escape(_spu);
 		}
 
-		if (_spu->test_stopped())
-		{
-			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
-		}
+		static_cast<void>(_spu->test_stopped());
 	}
 
 	static void exec_list_unstall(spu_thread* _spu, u32 tag)
@@ -5897,16 +5904,13 @@ public:
 
 	static void exec_mfc_cmd(spu_thread* _spu)
 	{
-		if (!_spu->process_mfc_cmd())
+		if (!_spu->process_mfc_cmd() || _spu->state & cpu_flag::again)
 		{
+			_spu->state += cpu_flag::again;
 			spu_runtime::g_escape(_spu);
 		}
 
-		if (_spu->test_stopped())
-		{
-			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
-		}
+		static_cast<void>(_spu->test_stopped());
 	}
 
 	void WRCH(spu_opcode_t op) //
@@ -5945,7 +5949,6 @@ public:
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_upd)), m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE)), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
 			update_pc();
-			m_block->store.fill(nullptr);
 			call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 			m_ir->CreateBr(next);
 			m_ir->SetInsertPoint(next);
@@ -6074,10 +6077,6 @@ public:
 				{
 					return;
 				}
-				case MFC_GETLLAR_CMD:
-				case MFC_PUTLLC_CMD:
-				case MFC_PUTLLUC_CMD:
-				case MFC_PUTQLLUC_CMD:
 				case MFC_PUTL_CMD:
 				case MFC_PUTLB_CMD:
 				case MFC_PUTLF_CMD:
@@ -6087,7 +6086,15 @@ public:
 				case MFC_GETL_CMD:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
+				{
+					ensure_gpr_stores();
+					[[fallthrough]];
+				}
 				case MFC_SDCRZ_CMD:
+				case MFC_GETLLAR_CMD:
+				case MFC_PUTLLC_CMD:
+				case MFC_PUTLLUC_CMD:
+				case MFC_PUTQLLUC_CMD:
 				{
 					// TODO
 					m_ir->CreateBr(next);
@@ -6098,7 +6105,6 @@ public:
 					m_ir->SetInsertPoint(next);
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
 					update_pc();
-					m_block->store.fill(nullptr);
 					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
 					return;
 				}
@@ -6366,7 +6372,7 @@ public:
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(_old, _new), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
 			update_pc();
-			m_block->store.fill(nullptr);
+			ensure_gpr_stores();
 			call("spu_list_unstall", &exec_list_unstall, m_thread, eval(val & 0x1f).value);
 			m_ir->CreateBr(next);
 			m_ir->SetInsertPoint(next);
@@ -6390,7 +6396,7 @@ public:
 		}
 
 		update_pc();
-		m_block->store.fill(nullptr);
+		ensure_gpr_stores();
 		call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 	}
 
@@ -6411,7 +6417,7 @@ public:
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
 			update_pc(m_pos + 4);
-			m_block->store.fill(nullptr);
+			ensure_gpr_stores();
 			tail_chunk(m_dispatch);
 		}
 	}
