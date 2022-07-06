@@ -869,23 +869,60 @@ void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 ex
 }
 
 // For savestates
-extern bool is_memory_read_only_of_executable(u32 addr)
+extern bool is_memory_compatible_for_copy_from_executable_optimization(u32 addr, u32 size)
 {
 	if (g_cfg.savestate.state_inspection_mode)
 	{
 		return false;
 	}
 
-	const auto _main = g_fxo->try_get<ppu_module>();
-	ensure(_main);
+	static ppu_exec_object s_ppu_exec;
+	static std::vector<char> zeroes;
 
-	for (const auto& seg : _main->segs)
+	if (!addr)
 	{
-		if (!seg.addr || (seg.flags & 0x2) /* W */)
-			continue;
+		// A call for cleanup
+		s_ppu_exec.clear();
+		zeroes = {};
+		return false;
+	}
 
-		if (addr >= seg.addr && addr < (seg.addr + seg.size))
-			return true;
+	if (s_ppu_exec != elf_error::ok)
+	{
+		if (s_ppu_exec != elf_error::stream)
+		{
+			// Failed before
+			return false;
+		}
+
+		s_ppu_exec.open(decrypt_self(fs::file(Emu.GetBoot())));
+
+		if (s_ppu_exec != elf_error::ok)
+		{
+			return false;
+		}
+	}
+
+	for (const auto& prog : s_ppu_exec.progs)
+	{
+		const u32 vaddr = static_cast<u32>(prog.p_vaddr);
+		const u32 seg_size = static_cast<u32>(prog.p_filesz);
+		const u32 aligned_vaddr = vaddr & -0x10000;
+		const u32 vaddr_offs = vaddr & 0xffff;
+
+		// Check if the address is a start of segment within the executable
+		if (prog.p_type == 0x1u /* LOAD */ && seg_size && aligned_vaddr == addr && prog.p_vaddr == prog.p_paddr && vaddr_offs + seg_size <= size)
+		{
+			zeroes.resize(std::max<usz>({zeroes.size(), usz{addr + size - (vaddr + seg_size)}, usz{vaddr_offs}}));
+
+			// Check if gaps between segment and allocation bounds are still zeroes-only
+			if (!std::memcmp(vm::_ptr<char>(aligned_vaddr), zeroes.data(), vaddr_offs) &&
+				!std::memcmp(vm::_ptr<char>(vaddr + seg_size), zeroes.data(), (addr + size - (vaddr + seg_size))))
+			{
+				// Test memory equality
+				return !std::memcmp(prog.bin.data(), vm::base(vaddr), seg_size);
+			}
+		}
 	}
 
 	return false;
@@ -1516,15 +1553,10 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 				return false;
 			}
 
-			const bool already_loaded = ar && (_seg.flags & 0x2);
+			const bool already_loaded = ar && vm::check_addr(addr, vm::page_readable, size);
 
 			if (already_loaded)
 			{
-				if (!vm::check_addr(addr, vm::page_readable, size))
-				{
-					ppu_loader.fatal("ppu_load_exec(): Archived PPU executable memory has not been found! (addr=0x%x, memsz=0x%x)", addr, size);
-					return false;
-				}
 			}
 			else if (!vm::falloc(addr, size, vm::main))
 			{
@@ -1605,9 +1637,9 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 	Emu.SetExecutableHash(hash);
 
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>().apply(hash, vm::g_base_addr);
+	auto applied = g_fxo->get<patch_engine>().apply(!ar ? hash : std::string{}, vm::g_base_addr);
 
-	if (!Emu.GetTitleID().empty())
+	if (!ar && !Emu.GetTitleID().empty())
 	{
 		// Alternative patch
 		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
@@ -2132,7 +2164,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 			if (prog.bin.size() > size || prog.bin.size() != prog.p_filesz)
 				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
 
-			const bool already_loaded = ar /*&& !!(_seg.flags & 0x2)*/;
+			const bool already_loaded = true; // Unimplemented optimization for savestates
 
 			if (already_loaded)
 			{
