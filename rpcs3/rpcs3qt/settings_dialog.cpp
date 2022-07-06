@@ -15,6 +15,7 @@
 #include "gui_settings.h"
 #include "display_sleep_control.h"
 #include "qt_utils.h"
+#include "uuid.h"
 #include "settings_dialog.h"
 #include "ui_settings_dialog.h"
 #include "tooltips.h"
@@ -1872,6 +1873,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_show_obsolete_cfg_dialog, tooltips.settings.show_obsolete_cfg);
 		SubscribeTooltip(ui->cb_show_same_buttons_dialog, tooltips.settings.show_same_buttons);
 		SubscribeTooltip(ui->gb_updates, tooltips.settings.check_update_start);
+		SubscribeTooltip(ui->gb_uuid, tooltips.settings.uuid);
 
 		// Discord:
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
@@ -1892,6 +1894,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			m_discord_state = ui->discordState->text();
 		});
+
+		connect(ui->pb_uuid, &QAbstractButton::clicked, [this]()
+		{
+			std::string uuid;
+			if (!gui::utils::create_new_uuid(uuid))
+			{
+				QMessageBox::critical(this, tr("Error"), tr("Failed to create new installation ID!"), QMessageBox::Ok);
+				return;
+			}
+
+			ui->label_uuid->setText(QString::fromStdString(uuid));
+			gui::utils::log_uuid();
+		});
+		ui->label_uuid->setText(QString::fromStdString(gui::utils::load_uuid()));
 
 		// Log and TTY:
 		SubscribeTooltip(ui->log_limit, tooltips.settings.log_limit);

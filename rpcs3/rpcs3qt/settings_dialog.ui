@@ -54,7 +54,7 @@
        </sizepolicy>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="coreTab">
        <attribute name="title">
@@ -3747,6 +3747,32 @@
                  </property>
                  <property name="maxLength">
                   <number>128</number>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_uuid">
+              <property name="title">
+               <string>Installation ID</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_uuid_layout">
+               <item>
+                <widget class="QLabel" name="label_uuid">
+                 <property name="text">
+                  <string>UUID-placeholder</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignCenter</set>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pb_uuid">
+                 <property name="text">
+                  <string>Create new ID</string>
                  </property>
                 </widget>
                </item>

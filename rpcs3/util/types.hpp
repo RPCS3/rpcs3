@@ -1039,7 +1039,7 @@ concept PtrCastable = requires(const volatile X* x, const volatile Y* y)
 };
 
 template <typename X, typename Y> requires PtrCastable<X, Y>
-constexpr bool is_same_ptr()
+consteval bool is_same_ptr()
 {
 	if constexpr (std::is_void_v<X> || std::is_void_v<Y> || std::is_same_v<std::remove_cv_t<X>, std::remove_cv_t<Y>>)
 	{
@@ -1051,33 +1051,24 @@ constexpr bool is_same_ptr()
 	}
 	else
 	{
-		if (std::is_constant_evaluated())
+		bool result = false;
+
+		if constexpr (sizeof(X) < sizeof(Y))
 		{
-			bool result = false;
-
-			if constexpr (sizeof(X) < sizeof(Y))
-			{
-				std::allocator<Y> a{};
-				Y* ptr = a.allocate(1);
-				result = static_cast<X*>(ptr) == static_cast<void*>(ptr);
-				a.deallocate(ptr, 1);
-			}
-			else
-			{
-				std::allocator<X> a{};
-				X* ptr = a.allocate(1);
-				result = static_cast<Y*>(ptr) == static_cast<void*>(ptr);
-				a.deallocate(ptr, 1);
-			}
-
-			return result;
+			std::allocator<Y> a{};
+			Y* ptr = a.allocate(1);
+			result = static_cast<X*>(ptr) == static_cast<void*>(ptr);
+			a.deallocate(ptr, 1);
 		}
 		else
 		{
-			std::aligned_union_t<0, X, Y> s;
-			Y* ptr = reinterpret_cast<Y*>(&s);
-			return static_cast<X*>(ptr) == static_cast<void*>(ptr);
+			std::allocator<X> a{};
+			X* ptr = a.allocate(1);
+			result = static_cast<Y*>(ptr) == static_cast<void*>(ptr);
+			a.deallocate(ptr, 1);
 		}
+
+		return result;
 	}
 }
 
@@ -1090,6 +1081,21 @@ constexpr bool is_same_ptr(const volatile Y* ptr)
 template <typename X, typename Y>
 concept PtrSame = (is_same_ptr<X, Y>());
 
+namespace stx
+{
+	template <typename T>
+	struct exact_t
+	{
+		T obj;
+
+		exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
+
+		// TODO: More conversions
+		template <typename U> requires (std::is_same_v<U&, T>)
+		operator U&() const { return obj; };
+	};
+}
+
 namespace utils
 {
 	struct serial;
@@ -1097,3 +1103,24 @@ namespace utils
 
 template <typename T>
 extern bool serialize(utils::serial& ar, T& obj);
+
+#define USING_SERIALIZATION_VERSION(name) []()\
+{\
+	extern void using_##name##_serialization();\
+	using_##name##_serialization();\
+}()
+
+#define USING_SERIALIZATION_VERSION_COND(cond, name) [&]()\
+{\
+	extern void using_##name##_serialization();\
+	if (static_cast<bool>(cond)) using_##name##_serialization();\
+}()
+
+#define GET_SERIALIZATION_VERSION(name) []()\
+{\
+	extern u32 get_##name##_serialization_version();\
+	return get_##name##_serialization_version();\
+}()
+
+#define ENABLE_BITWISE_SERIALIZATION using enable_bitcopy = std::true_type;
+#define SAVESTATE_INIT_POS(x) static constexpr double savestate_init_pos = (x)

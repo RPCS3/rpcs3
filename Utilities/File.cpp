@@ -384,7 +384,7 @@ shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, shar
 	return get_device_manager().set_device(name, std::move(device));
 }
 
-std::string fs::get_parent_dir(const std::string& path, u32 levels)
+std::string fs::get_parent_dir(std::string_view path, u32 levels)
 {
 	std::string_view result = path;
 
@@ -1981,11 +1981,11 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 	return result;
 }
 
-fs::pending_file::pending_file(const std::string& path)
+fs::pending_file::pending_file(std::string_view path)
 {
 	do
 	{
-		m_path = fmt::format(u8"%s/＄%s.%s.tmp", get_parent_dir(path), std::string_view(path).substr(path.find_last_of(fs::delim) + 1), fmt::base57(utils::get_unique_tsc()));
+		m_path = fmt::format(u8"%s/＄%s.%s.tmp", get_parent_dir(path), path.substr(path.find_last_of(fs::delim) + 1), fmt::base57(utils::get_unique_tsc()));
 
 		if (file.open(m_path, fs::create + fs::write + fs::read + fs::excl))
 		{

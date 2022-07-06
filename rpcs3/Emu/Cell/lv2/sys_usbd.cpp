@@ -63,6 +63,18 @@ public:
 	usb_handler_thread();
 	~usb_handler_thread();
 
+	SAVESTATE_INIT_POS(14);
+
+	usb_handler_thread(utils::serial& ar) : usb_handler_thread()
+	{
+		is_init = !!ar.operator u8();
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(u8{is_init.load()});
+	}
+
 	// Thread loop
 	void operator()();
 
@@ -850,16 +862,24 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (is_stopped(state))
-		{
-			sys_usbd.trace("sys_usbd_receive_event: aborting");
-			return {};
-		}
-
 		if (state & cpu_flag::signal)
 		{
 			sys_usbd.trace("Received event(queued): arg1=0x%x arg2=0x%x arg3=0x%x", ppu.gpr[4], ppu.gpr[5], ppu.gpr[6]);
 			break;
+		}
+
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(usbh.mutex);
+
+			if (std::find(usbh.sq.begin(), usbh.sq.end(), &ppu) == usbh.sq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::again;
+			sys_usbd.trace("sys_usbd_receive_event: aborting");
+			return {};
 		}
 
 		thread_ctrl::wait_on(ppu.state, state);

@@ -810,6 +810,9 @@ namespace rsx
 		}
 		while (fifo_ctrl->read_unsafe(command));
 
-		fifo_ctrl->sync_get();
+		if (cpu_flag::again - state)
+		{
+			fifo_ctrl->sync_get();
+		}
 	}
 }

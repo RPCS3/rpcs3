@@ -318,5 +318,30 @@ typedef void(CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm:
 typedef s32(CellGameThemeInstallCallback)(u32 fileOffset, u32 readSize, vm::ptr<void> buf);
 typedef void(CellGameDiscEjectCallback)();
 typedef void(CellGameDiscInsertCallback)(u32 discType, vm::ptr<char> titleId);
-typedef void(CellDiscGameDiscEjectCallback)();
-typedef void(CellDiscGameDiscInsertCallback)(u32 discType, vm::ptr<char> titleId);
+using CellDiscGameDiscEjectCallback = CellGameDiscEjectCallback;
+using CellDiscGameDiscInsertCallback = CellGameDiscInsertCallback;
+
+struct disc_change_manager
+{
+	disc_change_manager();
+	virtual ~disc_change_manager();
+
+	std::mutex mtx;
+	atomic_t<bool> is_inserting = false;
+	vm::ptr<CellGameDiscEjectCallback> eject_callback = vm::null;
+	vm::ptr<CellGameDiscInsertCallback> insert_callback = vm::null;
+
+	enum class eject_state
+	{
+		inserted,
+		ejected,
+		busy
+	};
+	atomic_t<eject_state> state = eject_state::inserted;
+
+	error_code register_callbacks(vm::ptr<CellGameDiscEjectCallback> func_eject, vm::ptr<CellGameDiscInsertCallback> func_insert);
+	error_code unregister_callbacks();
+
+	void eject_disc();
+	void insert_disc(u32 disc_type, std::string title_id);
+};

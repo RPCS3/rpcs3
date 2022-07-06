@@ -81,6 +81,8 @@ struct search_content_t
 		CellSearchVideoListInfo video_list;
 		CellSearchVideoSceneInfo scene;
 	} data;
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 using content_id_type = std::pair<u64, std::shared_ptr<search_content_t>>;
@@ -90,6 +92,8 @@ struct content_id_map
 	std::unordered_map<u64, std::shared_ptr<search_content_t>> map;
 
 	shared_mutex mutex;
+
+	SAVESTATE_INIT_POS(36);
 };
 
 struct search_object_t
@@ -98,6 +102,7 @@ struct search_object_t
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 1024; // TODO
+	SAVESTATE_INIT_POS(36.1);
 
 	std::vector<content_id_type> content_ids;
 };

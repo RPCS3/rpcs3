@@ -269,6 +269,8 @@ struct sys_net_pollfd
 // sockaddr prefixed with sys_net_
 struct sys_net_sockaddr
 {
+	ENABLE_BITWISE_SERIALIZATION;
+
 	u8 sa_len;
 	u8 sa_family;
 	char sa_data[14];
@@ -277,6 +279,8 @@ struct sys_net_sockaddr
 // sockaddr_dl prefixed with sys_net_
 struct sys_net_sockaddr_dl
 {
+	ENABLE_BITWISE_SERIALIZATION;
+
 	u8 sdl_len;
 	u8 sdl_family;
 	be_t<u16> sdl_index;
@@ -290,6 +294,8 @@ struct sys_net_sockaddr_dl
 // sockaddr_in prefixed with sys_net_
 struct sys_net_sockaddr_in
 {
+	ENABLE_BITWISE_SERIALIZATION;
+
 	u8 sin_len;
 	u8 sin_family;
 	be_t<u16> sin_port;
@@ -300,6 +306,8 @@ struct sys_net_sockaddr_in
 // sockaddr_in_p2p prefixed with sys_net_
 struct sys_net_sockaddr_in_p2p
 {
+	ENABLE_BITWISE_SERIALIZATION;
+
 	u8 sin_len;
 	u8 sin_family;
 	be_t<u16> sin_port;

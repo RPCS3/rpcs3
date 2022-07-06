@@ -46,6 +46,10 @@ struct lv2_mutex final : lv2_obj
 	{
 	}
 
+	lv2_mutex(utils::serial& ar);
+	static std::shared_ptr<void> load(utils::serial& ar); 
+	void save(utils::serial& ar);
+
 	CellError try_lock(u32 id)
 	{
 		const u32 value = owner;

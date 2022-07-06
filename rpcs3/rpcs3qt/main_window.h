@@ -52,7 +52,6 @@ class main_window : public QMainWindow
 	QIcon m_app_icon;
 	QIcon m_icon_play;
 	QIcon m_icon_pause;
-	QIcon m_icon_stop;
 	QIcon m_icon_restart;
 	QIcon m_icon_fullscreen_on;
 	QIcon m_icon_fullscreen_off;
@@ -101,6 +100,8 @@ public Q_SLOTS:
 	void OnEmuResume() const;
 	void OnEmuPause() const;
 	void OnEmuReady() const;
+	void OnEnableDiscEject(bool enabled) const;
+	void OnEnableDiscInsert(bool enabled) const;
 
 	void RepaintGui();
 	void RetranslateUI(const QStringList& language_codes, const QString& language);
@@ -112,6 +113,7 @@ private Q_SLOTS:
 	void BootTest();
 	void BootGame();
 	void BootVSH();
+	void BootSavestate();
 	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
 	static void show_boot_error(game_boot_result status);

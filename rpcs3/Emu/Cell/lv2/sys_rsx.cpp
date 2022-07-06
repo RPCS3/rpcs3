@@ -76,10 +76,35 @@ void rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3) const
 		error = sys_event_port_send(rsx_event_port, data1, event_flags, data3);
 	}
 
-	if (error && error + 0u != CELL_ENOTCONN)
+	if (!Emu.IsPaused() && error && error + 0u != CELL_ENOTCONN)
 	{
 		fmt::throw_exception("rsx::thread::send_event() Failed to send event! (error=%x)", +error);
 	}
+}
+
+// Returns true on success of receiving the event
+void signal_gcm_intr_thread_offline(lv2_event_queue& q)
+{
+	const auto render = rsx::get_current_renderer();
+	const auto cpu = cpu_thread::get_current();
+
+	static shared_mutex s_dummy;
+
+	std::scoped_lock lock_rsx(render ? render->sys_rsx_mtx : s_dummy, q.mutex);
+
+	if (std::find(q.sq.begin(), q.sq.end(), cpu) == q.sq.end())
+	{
+		return;
+	}
+
+	cpu->state += cpu_flag::again;
+
+	if (!vm::check_addr(render->driver_info) || vm::_ref<RsxDriverInfo>(render->driver_info).handler_queue != q.id)
+	{
+		return;
+	}
+
+	render->gcm_intr_thread_offline = true;
 }
 
 error_code sys_rsx_device_open(cpu_thread& cpu)
@@ -116,10 +141,10 @@ error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm:
 
 	sys_rsx.warning("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
 
-	if (u32 addr = vm::falloc(rsx::constants::local_mem_base, size, vm::video))
+	if (vm::falloc(rsx::constants::local_mem_base, size, vm::video))
 	{
 		rsx::get_current_renderer()->local_mem_size = size;
-		*mem_addr = addr;
+		*mem_addr = rsx::constants::local_mem_base;
 		*mem_handle = 0x5a5a5a5b;
 		return CELL_OK;
 	}
@@ -487,7 +512,16 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			}
 		}
 
-		render->request_emu_flip(flip_idx);
+		if (!render->request_emu_flip(flip_idx))
+		{
+			if (auto cpu = get_current_cpu_thread())
+			{
+				cpu->state += cpu_flag::exit;
+				cpu->state += cpu_flag::again;
+			}
+
+			return {};
+		}
 	}
 	break;
 
@@ -501,6 +535,11 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		render->on_frame_end(static_cast<u32>(a4));
 		render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0);
+
+		if (g_cfg.video.frame_limit == frame_limit_type::infinite)
+		{
+			render->post_vblank_event(get_system_time());
+		}
 	}
 	break;
 
@@ -536,12 +575,24 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	case 0x106: // ? (Used by cellGcmInitPerfMon)
 		break;
 
-	case 0x108: // cellGcmSetSecondVFrequency
+	case 0x108: // cellGcmSetVBlankFrequency, cellGcmSetSecondVFrequency
 		// a4 == 3, CELL_GCM_DISPLAY_FREQUENCY_59_94HZ
 		// a4 == 2, CELL_GCM_DISPLAY_FREQUENCY_SCANOUT
 		// a4 == 4, CELL_GCM_DISPLAY_FREQUENCY_DISABLE
-		// Note: Scanout/59_94 is ignored currently as we report refresh rate of 59_94hz as it is, so the difference doesnt matter
-		render->enable_second_vhandler.store(a4 != 4);
+
+		if (a5 == 1u)
+		{
+			// This function resets vsync state to enabled
+			render->requested_vsync = true;
+
+			// TODO: Set vblank frequency
+		}
+		else if (ensure(a5 == 2u))
+		{
+			// TODO: Implement its frequency as well
+			render->enable_second_vhandler.store(a4 != 4);
+		}
+
 		break;
 
 	case 0x10a: // ? Involved in managing flip status through cellGcmResetFlipStatus
@@ -728,6 +779,19 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		break;
 
 	case 0xFEC: // hack: flip event notification
+	{
+		reader_lock lock(render->sys_rsx_mtx);
+
+		if (render->gcm_intr_thread_offline)
+		{
+			if (auto cpu = get_current_cpu_thread())
+			{
+				cpu->state += cpu_flag::exit;
+				cpu->state += cpu_flag::again;
+			}
+
+			break;
+		}
 
 		// we only ever use head 1 for now
 		driverInfo.head[1].flipFlags |= 0x80000000;
@@ -740,25 +804,36 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		render->send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
 		break;
+	}
 
 	case 0xFED: // hack: vblank command
 	{
-		if (get_current_cpu_thread())
+		if (cpu_thread::get_current<ppu_thread>())
 		{
-			// VBLANK thread only
+			// VBLANK/RSX thread only
 			return CELL_EINVAL;
 		}
 
 		// NOTE: There currently seem to only be 2 active heads on PS3
 		ensure(a3 < 2);
 
+		reader_lock lock(render->sys_rsx_mtx);
+
+		if (render->gcm_intr_thread_offline)
+		{
+			break;
+		}
+
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
-		vm::_ref<u32>(render->device_addr + 0x30) = 1;
+		driverInfo.head[a3].lastSecondVTime.atomic_op([&](be_t<u64>& time)
+		{
+			a4 = std::max<u64>(a4, time + 1);
+			time = a4;
+		});
 
 		// Time point is supplied in argument 4 (todo: convert it to MFTB rate and use it)
 		const u64 current_time = rsxTimeStamp();
 
-		driverInfo.head[a3].lastSecondVTime = current_time;
 
 		// Note: not atomic
 		driverInfo.head[a3].lastVTimeLow = static_cast<u32>(current_time);
@@ -776,12 +851,27 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	}
 
 	case 0xFEF: // hack: user command
+	{
+		reader_lock lock(render->sys_rsx_mtx);
+
+		if (render->gcm_intr_thread_offline)
+		{
+			if (auto cpu = get_current_cpu_thread())
+			{
+				cpu->state += cpu_flag::exit;
+				cpu->state += cpu_flag::again;
+			}
+
+			break;
+		}
+
 		// 'custom' invalid package id for now
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
 		driverInfo.userCmdParam = static_cast<u32>(a4);
 		render->send_event(0, SYS_RSX_EVENT_USER_CMD, 0);
 		break;
+	}
 
 	default:
 		return CELL_EINVAL;

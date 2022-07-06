@@ -94,7 +94,7 @@ public:
 
 	static constexpr auto thread_name = "Gem Thread"sv;
 
-	atomic_t<u32> state = 0;
+	atomic_t<u8> state = 0;
 
 	struct gem_color
 	{
@@ -131,6 +131,8 @@ public:
 		u64 calibration_start_us{0};                       // The start timestamp of the calibration in microseconds
 
 		static constexpr u64 calibration_time_us = 500000; // The calibration supposedly takes 0.5 seconds (500000 microseconds)
+
+		ENABLE_BITWISE_SERIALIZATION;
 	};
 
 	CellGemAttribute attribute = {};
@@ -201,6 +203,30 @@ public:
 			controllers[gem_num].status = CELL_GEM_STATUS_READY;
 			controllers[gem_num].port = 7u - gem_num;
 		}
+	}
+
+	gem_config_data() = default;
+
+	SAVESTATE_INIT_POS(15);
+
+	void save(utils::serial& ar)
+	{
+		ar(state);
+
+		if (!state)
+		{
+			return;
+		}
+
+		USING_SERIALIZATION_VERSION_COND(ar.is_writing(), cellGem);
+
+		ar(attribute, vc_attribute, status_flags, enable_pitch_correction, inertial_counter, controllers
+			, connected_controllers, update_started, camera_frame, memory_ptr, start_timestamp);
+	}
+
+	gem_config_data(utils::serial& ar)
+	{
+		save(ar);
 	}
 };
 
@@ -854,7 +880,7 @@ error_code cellGemEnd(ppu_thread& ppu)
 
 	if (gem.state.compare_and_swap_test(1, 0))
 	{
-		if (u32 addr = gem.memory_ptr)
+		if (u32 addr = std::exchange(gem.memory_ptr, 0))
 		{
 			sys_memory_free(ppu, addr);
 		}

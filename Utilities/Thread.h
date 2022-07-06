@@ -201,9 +201,6 @@ class thread_ctrl final
 	// Target cpu core layout
 	static atomic_t<native_core_arrangement> g_native_core_layout;
 
-	// Internal waiting function, may throw. Infinite value is -1.
-	static void _wait_for(u64 usec, bool alert);
-
 	friend class thread_base;
 
 	// Optimized get_name() for logging
@@ -263,16 +260,16 @@ public:
 	// Read current state, possibly executing some tasks
 	static thread_state state();
 
-	// Wait once with timeout. May spuriously return false.
-	static inline void wait_for(u64 usec, bool alert = true)
-	{
-		_wait_for(usec, alert);
-	}
+	// Wait once with timeout. Infinite value is -1.
+	static void wait_for(u64 usec, bool alert = true);
+
+	// Waiting with accurate timeout
+	static void wait_for_accurate(u64 usec);
 
 	// Wait.
 	static inline void wait()
 	{
-		_wait_for(-1, true);
+		wait_for(-1, true);
 	}
 
 	// Wait for both thread sync var and provided atomic var

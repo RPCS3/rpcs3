@@ -119,7 +119,7 @@ std::string dump_useful_thread_info()
 
 	if (auto cpu = get_current_cpu_thread())
 	{
-		result = cpu->dump_all();
+		cpu->dump_all(result);
 	}
 
 	guard = false;
@@ -1423,6 +1423,11 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 	{
 		g_tls_access_violation_recovered = true;
 
+		if (vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable))
+		{
+			return true;
+		}
+
 		const auto area = vm::reserve_map(vm::any, addr & -0x10000, 0x10000);
 
 		if (!area)
@@ -1430,15 +1435,14 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			return false;
 		}
 
-		if (vm::writer_lock mlock; vm::check_addr(addr, 0))
+		if (vm::writer_lock mlock; area->flags & vm::preallocated || vm::check_addr(addr, 0))
 		{
 			// For allocated memory with protection lower than required (such as protection::no or read-only while writing to it)
 			utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
 			return true;
 		}
 
-		area->falloc(addr & -0x10000, 0x10000);
-		return vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
+		return area->falloc(addr & -0x10000, 0x10000) || vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
 	};
 
 	if (cpu && (cpu->id_type() == 1 || cpu->id_type() == 2))
@@ -2318,14 +2322,14 @@ thread_state thread_ctrl::state()
 	return static_cast<thread_state>(_this->m_sync & 3);
 }
 
-void thread_ctrl::_wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
+void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 {
 	auto _this = g_tls_this_thread;
 
 #ifdef __linux__
 	static thread_local struct linux_timer_handle_t
 	{
-		// Allocate timer only if needed (i.e. someone calls _wait_for with alert and short period)
+		// Allocate timer only if needed (i.e. someone calls wait_for with alert and short period)
 		const int m_timer = timerfd_create(CLOCK_MONOTONIC, 0);
 
 		linux_timer_handle_t() noexcept
@@ -2377,6 +2381,58 @@ void thread_ctrl::_wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 	list.set<0>(_this->m_sync, 0, 4 + 1);
 	list.set<1>(_this->m_taskq, nullptr);
 	list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
+}
+
+void thread_ctrl::wait_for_accurate(u64 usec)
+{
+	if (!usec)
+	{
+		return;
+	}
+
+	using namespace std::chrono_literals;
+
+	const auto until = std::chrono::steady_clock::now() + 1us * usec;
+
+	while (true)
+	{
+#ifdef __linux__
+		// NOTE: Assumption that timer initialization has succeeded
+		u64 host_min_quantum = usec <= 1000 ? 10 : 50;
+#else
+		// Host scheduler quantum for windows (worst case)
+		// NOTE: On ps3 this function has very high accuracy
+		constexpr u64 host_min_quantum = 500;
+#endif
+		if (usec >= host_min_quantum)
+		{
+#ifdef __linux__
+			// Do not wait for the last quantum to avoid loss of accuracy
+			wait_for(usec - ((usec % host_min_quantum) + host_min_quantum), false);
+#else
+			// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
+			wait_for(usec - (usec % host_min_quantum), false);
+#endif
+		}
+		// TODO: Determine best value for yield delay
+		else if (usec >= host_min_quantum / 2)
+		{
+			std::this_thread::yield();
+		}
+		else
+		{
+			busy_wait(100);
+		}
+
+		const auto current = std::chrono::steady_clock::now();
+
+		if (current >= until)
+		{
+			break;
+		}
+
+		usec = (until - current).count();
+	}
 }
 
 std::string thread_ctrl::get_name_cached()

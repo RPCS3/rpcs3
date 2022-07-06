@@ -1,37 +1,36 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/vm.hpp"
 #include "StrFmt.h"
 #include <vector>
 #include <algorithm>
-
 
 namespace utils
 {
 	class address_range_vector;
 
-
 	/**
-	 * Constexprs
+	 * Helpers
 	 */
-	constexpr inline u32 page_start(u32 addr)
+	static inline u32 page_start(u32 addr)
 	{
-		return addr & ~4095u;
+		return addr & ~(c_page_size - 1);
 	}
 
-	constexpr inline u32 next_page(u32 addr)
+	static inline u32 next_page(u32 addr)
 	{
-		return page_start(addr + 4096u);
+		return page_start(addr) + c_page_size;
 	}
 
-	constexpr inline u32 page_end(u32 addr)
+	static inline u32 page_end(u32 addr)
 	{
 		return next_page(addr) - 1;
 	}
 
-	constexpr inline u32 is_page_aligned(u32 addr)
+	static inline u32 is_page_aligned(u32 val)
 	{
-		return page_start(addr) == addr;
+		return (val & (c_page_size - 1)) == 0;
 	}
 
 
@@ -186,7 +185,7 @@ namespace utils
 
 		bool is_page_range() const
 		{
-			return (valid() && start % 4096u == 0 && length() % 4096u == 0);
+			return (valid() && is_page_aligned(start) && is_page_aligned(length()));
 		}
 
 		address_range to_page_range() const

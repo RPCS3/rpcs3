@@ -73,7 +73,7 @@ namespace utils
 		atomic_t<void*> m_ptr{nullptr};
 
 	public:
-		explicit shm(u32 size, u32 flags = 0);
+		explicit shm(u64 size, u32 flags = 0);
 
 		// Construct with specified path as sparse file storage
 		shm(u64 size, const std::string& storage);

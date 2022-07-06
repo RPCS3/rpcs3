@@ -131,6 +131,25 @@ static const char* get_camera_attr_name(s32 value)
 	return nullptr;
 }
 
+camera_context::camera_context(utils::serial& ar)
+{
+	save(ar);
+}
+
+void camera_context::save(utils::serial& ar)
+{
+	ar(init);
+
+	if (!init)
+	{
+		return;
+	}
+
+	USING_SERIALIZATION_VERSION_COND(ar.is_writing(), cellCamera);
+
+	ar(notify_data_map, start_timestamp, read_mode, is_streaming, is_attached, is_open, info, attr, frame_num);
+}
+
 static bool check_dev_num(s32 dev_num)
 {
 	return dev_num == 0;
@@ -1627,19 +1646,11 @@ void camera_context::operator()()
 			else
 			{
 				std::lock_guard lock(mutex);
-				atomic_t<bool> wake_up = false;
 
-				Emu.CallFromMainThread([&]()
+				Emu.BlockingCallFromMainThread([&]()
 				{
 					send_frame_update_event = handler ? on_handler_state(handler->get_state()) : true;
-					wake_up = true;
-					wake_up.notify_one();
 				});
-
-				while (!wake_up && !Emu.IsStopped())
-				{
-					thread_ctrl::wait_on(wake_up, false);
-				}
 			}
 		}
 
@@ -1704,9 +1715,8 @@ void camera_context::operator()()
 bool camera_context::open_camera()
 {
 	bool result = true;
-	atomic_t<bool> wake_up = false;
 
-	Emu.CallFromMainThread([&wake_up, &result, this]()
+	Emu.BlockingCallFromMainThread([&result, this]()
 	{
 		handler.reset();
 		handler = Emu.GetCallbacks().get_camera_handler();
@@ -1715,14 +1725,7 @@ bool camera_context::open_camera()
 			handler->open_camera();
 			result = on_handler_state(handler->get_state());
 		}
-		wake_up = true;
-		wake_up.notify_one();
 	});
-
-	while (!wake_up && !Emu.IsStopped())
-	{
-		thread_ctrl::wait_on(wake_up, false);
-	}
 
 	return result;
 }
@@ -1738,20 +1741,11 @@ bool camera_context::start_camera()
 		handler->set_resolution(info.width, info.height);
 		handler->set_format(info.format, info.bytesize);
 
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallFromMainThread([&wake_up, &result, this]()
+		Emu.BlockingCallFromMainThread([&result, this]()
 		{
 			handler->start_camera();
 			result = on_handler_state(handler->get_state());
-			wake_up = true;
-			wake_up.notify_one();
 		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
 	}
 
 	return result;
@@ -1763,19 +1757,10 @@ bool camera_context::get_camera_frame(u8* dst, u32& width, u32& height, u64& fra
 
 	if (handler)
 	{
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallFromMainThread([&]()
+		Emu.BlockingCallFromMainThread([&]()
 		{
 			result = on_handler_state(handler->get_image(dst, info.bytesize, width, height, frame_number, bytes_read));
-			wake_up = true;
-			wake_up.notify_one();
 		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
 	}
 
 	return result;
@@ -1785,19 +1770,10 @@ void camera_context::stop_camera()
 {
 	if (handler)
 	{
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallFromMainThread([&wake_up, this]()
+		Emu.BlockingCallFromMainThread([this]()
 		{
 			handler->stop_camera();
-			wake_up = true;
-			wake_up.notify_one();
 		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
 	}
 }
 
@@ -1805,19 +1781,10 @@ void camera_context::close_camera()
 {
 	if (handler)
 	{
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallFromMainThread([&wake_up, this]()
+		Emu.BlockingCallFromMainThread([this]()
 		{
 			handler->close_camera();
-			wake_up = true;
-			wake_up.notify_one();
 		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
 	}
 }
 

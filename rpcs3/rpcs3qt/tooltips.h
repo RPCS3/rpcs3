@@ -159,7 +159,7 @@ public:
 		const QString resolution                 = tr("This setting will be ignored if the Resolution Scale is set to anything other than 100%!\nLeave this on 1280x720. Every PS3 game is compatible with this resolution.\nOnly use 1920x1080 if the game supports it.\nRarely due to emulation bugs some games will only render at low resolutions like 480p.");
 		const QString graphics_adapter           = tr("On multi GPU systems select which GPU to use in RPCS3 when using Vulkan.\nThis is not needed when using OpenGL.");
 		const QString aspect_ratio               = tr("Leave this on 16:9 unless you have a 4:3 monitor.");
-		const QString frame_limit                = tr("Off is the best option as it performs faster.\nUsing the frame limiter will add extra overhead and slow down the game.\nHowever, some games will crash if the frame rate is too high.\nPS3 native should only be used if Auto is not working correctly as it can introduce frame-pacing issues.");
+		const QString frame_limit                = tr("Off is the fastest option.\nUsing the frame limiter will add extra overhead and slow down the game. However, some games will crash if the frame rate is too high.\nPS3 native should only be used if Auto is not working correctly as it can introduce frame-pacing issues.\nInfinite adds a positive feedback loop which adds another vblank signal per frame allowing more games to be fps limitless.");
 		const QString anti_aliasing              = tr("Emulate PS3 multisampling layout.\nCan fix some otherwise difficult to solve graphics glitches.\nLow to moderate performance hit depending on your GPU hardware.");
 		const QString anisotropic_filter         = tr("Higher values increase sharpness of textures on sloped surfaces at the cost of GPU resources.\nModern GPUs can handle this setting just fine, even at 16x.\nKeep this on Automatic if you want to use the original setting used by a real PS3.");
 		const QString resolution_scale           = tr("Scales the game's resolution by the given percentage.\nThe base resolution is always 1280x720.\nSet this value to 100% if you want to use the normal Resolution options.\nValues below 100% will usually not improve performance.");
@@ -199,6 +199,7 @@ public:
 		const QString use_rich_presence  = tr("Enables use of Discord Rich Presence to show what game you are playing on Discord.\nRequires a restart of RPCS3 to completely close the connection.");
 		const QString discord_state      = tr("Tell your friends what you are doing.");
 		const QString custom_colors      = tr("Prioritize custom user interface colors over properties set in stylesheet.");
+		const QString uuid               = tr("This is the ID used for hardware statistics.\nIt should only be reset if you change your hardware configuration or if you copied RPCS3 to another PC.");
 
 		// input
 

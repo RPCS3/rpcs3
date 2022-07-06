@@ -180,42 +180,27 @@ audio_out_configuration::audio_out_configuration()
 
 std::pair<AudioChannelCnt, AudioChannelCnt> audio_out_configuration::audio_out::get_channel_count_and_downmixer() const
 {
+	std::pair<AudioChannelCnt, AudioChannelCnt> ret;
+
+	switch (sound_mode.channel)
+	{
+	case 2: ret.first = AudioChannelCnt::STEREO; break;
+	case 6: ret.first = AudioChannelCnt::SURROUND_5_1; break;
+	case 8: ret.first = AudioChannelCnt::SURROUND_7_1; break;
+	default:
+		fmt::throw_exception("Unsupported channel count in cellAudioOut sound_mode: %d", sound_mode.channel);
+	}
+
 	switch (downmixer)
 	{
-	case CELL_AUDIO_OUT_DOWNMIXER_NONE:
-	{
-		switch (channels)
-		{
-		case 2: return { AudioChannelCnt::STEREO, AudioChannelCnt::STEREO };
-		case 6: return { AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_5_1 };
-		case 8: return { AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_7_1 };
-		default:
-			fmt::throw_exception("Unsupported channel count in cellAudioOut config: %d", channels);
-		}
-	}
-	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_A:
-	{
-		switch (channels)
-		{
-		case 2:
-			return { AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO };
-		default:
-			fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_A in cellAudioOut config: %d", channels);
-		}
-	}
-	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_B:
-	{
-		switch (channels)
-		{
-		case 6:
-			return { AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1 };
-		default:
-			fmt::throw_exception("Unsupported channel count for CELL_AUDIO_OUT_DOWNMIXER_TYPE_B in cellAudioOut config: %d", channels);
-		}
-	}
+	case CELL_AUDIO_OUT_DOWNMIXER_NONE: ret.second = AudioChannelCnt::SURROUND_7_1; break;
+	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_A: ret.second = AudioChannelCnt::STEREO; break;
+	case CELL_AUDIO_OUT_DOWNMIXER_TYPE_B: ret.second = AudioChannelCnt::SURROUND_5_1; break;
 	default:
-		fmt::throw_exception("Unknown downmixer in cellAudioOut config: %d", downmixer);
+		fmt::throw_exception("Unsupported downmixer in cellAudioOut config: %d", downmixer);
 	}
+
+	return ret;
 }
 
 error_code cellAudioOutGetNumberOfDevice(u32 audioOut);
@@ -361,35 +346,27 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 		audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
 
 		// Apparently the set config does not necessarily have to exist in the list of sound modes.
-		// For example 8 channels are used if the downMixer is set even if the PS3 only supports 2 channel output.
 
 		if (out.channels != config->channel || out.encoder != config->encoder || out.downmixer != config->downMixer)
 		{
 			out.channels = config->channel;
 			out.encoder = config->encoder;
-			out.downmixer = config->downMixer;
+
+			if (config->downMixer > CELL_AUDIO_OUT_DOWNMIXER_TYPE_B) // PS3 ignores invalid downMixer values and keeps the previous valid one instead
+			{
+				cellSysutil.warning("cellAudioOutConfigure: Invalid downmixing mode configured: %d. Keeping old mode: downMixer=%d",
+					config->downMixer, out.downmixer);
+			}
+			else
+			{
+				out.downmixer = config->downMixer;
+			}
 
 			// Try to find the best sound mode for this configuration
-			const auto [channels, downmixer] = out.get_channel_count_and_downmixer();
-			const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [channels = channels, &out](const CellAudioOutSoundMode& mode)
-			{
-				if (mode.type != out.encoder)
+			const auto it = std::find_if(out.sound_modes.cbegin(), out.sound_modes.cend(), [&out](const CellAudioOutSoundMode& mode)
 				{
-					return false;
-				}
-
-				if (out.downmixer == CELL_AUDIO_OUT_DOWNMIXER_TYPE_A)
-				{
-					return mode.channel == CELL_AUDIO_OUT_CHNUM_2;
-				}
-
-				if (out.downmixer == CELL_AUDIO_OUT_DOWNMIXER_TYPE_B)
-				{
-					return mode.channel == CELL_AUDIO_OUT_CHNUM_6;
-				}
-
-				return mode.channel == static_cast<u8>(channels);
-			});
+					return mode.type == out.encoder && mode.channel == out.channels;
+				});
 
 			if (it != out.sound_modes.cend())
 			{
@@ -398,7 +375,7 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 			else
 			{
 				cellSysutil.warning("cellAudioOutConfigure: Could not find an ideal sound mode for %d channel output. Keeping old mode: channels=%d, encoder=%d, fs=%d",
-					static_cast<u32>(channels), out.sound_mode.channel, out.sound_mode.type, out.sound_mode.fs);
+					config->channel, out.sound_mode.channel, out.sound_mode.type, out.sound_mode.fs);
 			}
 
 			needs_reset = true;
@@ -568,15 +545,15 @@ error_code cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 	return CELL_OK;
 }
 
-error_code cellAudioOutRegisterCallback()
+error_code cellAudioOutRegisterCallback(u32 slot, vm::ptr<CellAudioOutCallback> function, vm::ptr<void> userData)
 {
-	cellSysutil.todo("cellAudioOutRegisterCallback()");
+	cellSysutil.todo("cellAudioOutRegisterCallback(slot=%d, function=*0x%x, userData=*0x%x)", slot, function, userData);
 	return CELL_OK;
 }
 
-error_code cellAudioOutUnregisterCallback()
+error_code cellAudioOutUnregisterCallback(u32 slot)
 {
-	cellSysutil.todo("cellAudioOutUnregisterCallback()");
+	cellSysutil.todo("cellAudioOutUnregisterCallback(slot=%d)", slot);
 	return CELL_OK;
 }
 

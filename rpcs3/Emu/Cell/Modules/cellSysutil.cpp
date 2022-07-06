@@ -68,6 +68,8 @@ struct sysutil_cb_manager
 
 	struct alignas(8) registered_cb
 	{
+		ENABLE_BITWISE_SERIALIZATION;
+
 		vm::ptr<CellSysutilCallback> callback;
 		vm::ptr<void> user_data;
 	};
@@ -78,6 +80,21 @@ struct sysutil_cb_manager
 
 	atomic_t<bool> draw_cb_started{};
 	atomic_t<u64> read_counter{0};
+
+	SAVESTATE_INIT_POS(13);
+
+	sysutil_cb_manager() = default;
+
+	sysutil_cb_manager(utils::serial& ar)
+	{
+		ar(callbacks);
+	}
+
+	void save(utils::serial& ar)
+	{
+		ensure(!registered);
+		ar(callbacks);
+	}
 };
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)

@@ -11,6 +11,8 @@
 #include "Emu/Cell/timers.hpp"
 #include "Emu/system_config_types.h"
 
+void init_fxo_for_exec(utils::serial*, bool);
+
 struct progress_dialog_workaround
 {
 	// WORKAROUND:
@@ -29,6 +31,7 @@ enum class system_state : u32
 	paused,
 	frozen, // paused but cannot resume
 	ready,
+	starting,
 };
 
 enum class game_boot_result : u32
@@ -42,8 +45,15 @@ enum class game_boot_result : u32
 	decryption_error,
 	file_creation_error,
 	firmware_missing,
-	unsupported_disc_type
+	unsupported_disc_type,
+	savestate_corrupted,
+	savestate_version_unsupported,
 };
+
+constexpr bool is_error(game_boot_result res)
+{
+	return res != game_boot_result::no_errors;
+}
 
 enum class cfg_mode
 {
@@ -57,22 +67,24 @@ enum class cfg_mode
 
 struct EmuCallbacks
 {
-	std::function<void(std::function<void()>)> call_from_main_thread;
+	std::function<void(std::function<void()>, atomic_t<bool>*)> call_from_main_thread;
 	std::function<void(bool)> on_run; // (start_playtime) continuing or going ingame, so start the clock
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
 	std::function<bool()> on_missing_fw;
+	std::function<void(bool enabled)> enable_disc_eject;
+	std::function<void(bool enabled)> enable_disc_insert;
 	std::function<bool(bool, std::function<void()>)> try_to_quit; // (force_quit, on_exit) Try to close RPCS3
 	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit, 3 for set_value
 	std::function<void()> init_kb_handler;
 	std::function<void()> init_mouse_handler;
 	std::function<void(std::string_view title_id)> init_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
-	std::function<void()> init_gs_render;
 	std::function<std::shared_ptr<class camera_handler_base>()> get_camera_handler;
 	std::function<std::shared_ptr<class music_handler_base>()> get_music_handler;
+	std::function<void(utils::serial*)> init_gs_render;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class audio_device_enumerator>(audio_renderer)> get_audio_enumerator;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
@@ -84,7 +96,12 @@ struct EmuCallbacks
 	std::function<std::string(localized_string_id, const char*)> get_localized_string;
 	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
 	std::function<void(const std::string&)> play_sound;
-	std::string(*resolve_path)(std::string_view) = nullptr; // Resolve path using Qt
+	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
+};
+
+namespace utils
+{
+	struct serial;
 };
 
 class Emulator final
@@ -107,12 +124,14 @@ class Emulator final
 	std::string m_title_id;
 	std::string m_title;
 	std::string m_app_version;
+	std::string m_hash;
 	std::string m_cat;
 	std::string m_dir;
 	std::string m_sfo_dir;
 	std::string m_game_dir{"PS3_GAME"};
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
+	std::shared_ptr<utils::serial> m_ar;
 
 	// This flag should be adjusted before each Kill() or each BootGame() and similar because:
 	// 1. It forces an application to boot immediately by calling Run() in Load().
@@ -120,6 +139,18 @@ class Emulator final
 	bool m_force_boot = false;
 
 	bool m_has_gui = true;
+
+	bool m_state_inspection_savestate = false;
+
+	std::vector<std::function<void()>> deferred_deserialization;
+
+	void ExecDeserializationRemnants()
+	{
+		for (auto&& func : ::as_rvalue(std::move(deferred_deserialization)))
+		{
+			func();
+		}
+	}
 
 public:
 	Emulator() = default;
@@ -135,23 +166,10 @@ public:
 	}
 
 	// Call from the GUI thread
-	void CallFromMainThread(std::function<void()>&& func, bool track_emu_state = true, u64 stop_ctr = umax) const
-	{
-		if (!track_emu_state)
-		{
-			return m_cb.call_from_main_thread(std::move(func));
-		}
+	void CallFromMainThread(std::function<void()>&& func, atomic_t<bool>* wake_up = nullptr, bool track_emu_state = true, u64 stop_ctr = umax) const;
 
-		std::function<void()> final_func = [this, before = IsStopped(), count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
-		{
-			if (count == m_stop_ctr && before == IsStopped())
-			{
-				func();
-			}
-		};
-
-		return m_cb.call_from_main_thread(std::move(final_func));
-	}
+	// Blocking call from the GUI thread
+	void BlockingCallFromMainThread(std::function<void()>&& func) const;
 
 	enum class stop_counter_t : u64{};
 
@@ -162,7 +180,12 @@ public:
 
 	void CallFromMainThread(std::function<void()>&& func, stop_counter_t counter) const
 	{
-		CallFromMainThread(std::move(func), true, static_cast<u64>(counter));
+		CallFromMainThread(std::move(func), nullptr, true, static_cast<u64>(counter));
+	}
+
+	void DeferDeserialization(std::function<void()>&& func)
+	{
+		deferred_deserialization.emplace_back(std::move(func));
 	}
 
 	/** Set emulator mode to running unconditionnaly.
@@ -215,6 +238,13 @@ public:
 		return m_app_version;
 	}
 
+	const std::string& GetExecutableHash() const
+	{
+		return m_hash;
+	}
+
+	void SetExecutableHash(std::string hash) { m_hash = std::move(hash); }
+
 	const std::string& GetCat() const
 	{
 		return m_cat;
@@ -234,6 +264,9 @@ public:
 	{
 		return m_usr;
 	}
+
+	// Get deserialization manager
+	utils::serial* DeserialManager() const;
 
 	// u32 for cell.
 	u32 GetUsrId() const
@@ -262,18 +295,23 @@ public:
 
 	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool is_disc_patch = false);
 	void Run(bool start_playtime);
+	void RunPPU();
+	void FixGuestTime();
+	void FinalizeRunRequest();
+
 	bool Pause(bool freeze_emulation = false);
 	void Resume();
-	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false);
-	void Kill(bool allow_autoexit = true);
-	game_boot_result Restart();
+	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
+	void Kill(bool allow_autoexit = true, bool savestate = false);
+	game_boot_result Restart(bool savestate = false);
 	bool Quit(bool force_quit);
 	static void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
-	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
+	bool IsPaused()  const { return m_state >= system_state::paused; } // ready/starting are also considered paused by this function
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
+	bool IsStarting() const { return m_state == system_state::starting; }
 	auto GetStatus() const { system_state state = m_state; return state == system_state::frozen ? system_state::paused : state; }
 
 	bool HasGui() const { return m_has_gui; }
@@ -290,6 +328,13 @@ public:
 
 	// Check if path is inside the specified directory
 	bool IsPathInsideDir(std::string_view path, std::string_view dir) const;
+
+	void EjectDisc();
+	game_boot_result InsertDisc(const std::string& path);
+
+	static game_boot_result GetElfPathFromDir(std::string& elf_path, const std::string& path);
+	static void GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::string& game_dir, const std::string& elf_dir);
+	friend void init_fxo_for_exec(utils::serial*, bool);
 };
 
 extern Emulator Emu;

@@ -13,6 +13,8 @@ add_library(rpcs3_emu
     title.cpp
     perf_meter.cpp
     perf_monitor.cpp
+    IPC_config.cpp
+    IPC_socket.cpp
 )
 
 # prevent WolfSSL from warning about not having harden options
@@ -103,6 +105,7 @@ target_sources(rpcs3_emu PRIVATE
 
 # Loader
 target_sources(rpcs3_emu PRIVATE
+    ../Loader/disc.cpp
     ../Loader/ELF.cpp
     ../Loader/mself.cpp
     ../Loader/PSF.cpp

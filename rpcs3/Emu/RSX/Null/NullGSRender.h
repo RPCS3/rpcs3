@@ -5,7 +5,9 @@ class NullGSRender : public GSRender
 {
 public:
 	u64 get_cycles() final;
-	NullGSRender();
+
+	NullGSRender(utils::serial* ar) noexcept;
+	NullGSRender() noexcept : NullGSRender(nullptr) {}
 
 private:
 	void end() override;

@@ -3,21 +3,6 @@
 #include "util/types.hpp"
 #include <vector>
 
-namespace stx
-{
-	template <typename T>
-	struct exact_t
-	{
-		T obj;
-
-		exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
-
-		// TODO: More conversions
-		template <typename U> requires (std::is_same_v<U&, T>)
-		operator U&() const { return obj; };
-	};
-}
-
 namespace utils
 {
 	template <typename T>
@@ -51,6 +36,10 @@ namespace utils
 	{
 		std::vector<u8> data;
 		usz pos = umax;
+
+		serial() = default;
+		serial(const serial&) = delete;
+		~serial() = default;
 
 		// Checks if this instance is currently used for serialization
 		bool is_writing() const
@@ -299,7 +288,7 @@ namespace utils
 		}
 
 		// Convert serialization manager to deserializion manager (can't go the other way)
-		// If no arg provided reuse saved buffer
+		// If no arg is provided reuse saved buffer
 		void set_reading_state(std::vector<u8>&& _data = std::vector<u8>{})
 		{
 			if (!_data.empty())

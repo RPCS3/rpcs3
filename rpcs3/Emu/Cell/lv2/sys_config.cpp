@@ -167,7 +167,7 @@ void lv2_config_service_listener::notify_all()
 		{
 			services.push_back(service.get_shared_ptr());
 		}
-	}, 0);
+	});
 
 	// Sort services by timestamp
 	sort(services.begin(), services.end(), [](const std::shared_ptr<lv2_config_service>& s1, const std::shared_ptr<lv2_config_service>& s2)

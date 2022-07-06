@@ -420,14 +420,16 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 	{
 		u32 final_addr = 0;
 
-		if (size > 0x2000'0000 || rsx::constants::local_mem_base + 0x1000'0000 - size < addr)
+		constexpr u32 local_mem = rsx::constants::local_mem_base;
+
+		if (size > 0x2000'0000 || local_mem + 0x1000'0000 - size < addr)
 		{
 			break;
 		}
 
 		for (u32 i = addr; i >> 20 <= (addr + size - 1) >> 20; i += 0x100000)
 		{
-			const u32 temp = rsx::get_address(i, i < rsx::constants::local_mem_base ? CELL_GCM_LOCATION_MAIN : CELL_GCM_LOCATION_LOCAL, true);
+			const u32 temp = rsx::get_address(i - (i >= local_mem ? local_mem : 0), i < local_mem ? CELL_GCM_LOCATION_MAIN : CELL_GCM_LOCATION_LOCAL, true);
 
 			if (!temp)
 			{

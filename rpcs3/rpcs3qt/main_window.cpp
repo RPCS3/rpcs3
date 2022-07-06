@@ -29,6 +29,7 @@
 #include "gui_settings.h"
 #include "input_dialog.h"
 #include "camera_settings_dialog.h"
+#include "ipc_settings_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -356,6 +357,7 @@ void main_window::OnPlayOrPause()
 
 		return;
 	}
+	case system_state::starting: break;
 	default: fmt::throw_exception("Unreachable");
 	}
 }
@@ -385,6 +387,12 @@ void main_window::show_boot_error(game_boot_result status)
 		break;
 	case game_boot_result::unsupported_disc_type:
 		message = tr("This disc type is not supported yet.");
+		break;
+	case game_boot_result::savestate_corrupted:
+		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
+		break;
+	case game_boot_result::savestate_version_unsupported:
+		message = tr("Savestate versioning data differes from your RPCS3 build.");
 		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::no_errors:
@@ -492,8 +500,7 @@ void main_window::BootTest()
 	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), path_tests, tr(
 		"(S)ELF files (*.elf *.self);;"
 		"ELF files (*.elf);;"
-		"SELF files (*.self);;"
-		"All files (*.*)"),
+		"SELF files (*.self);;"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
 
 	if (file_path.isEmpty())
@@ -508,6 +515,36 @@ void main_window::BootTest()
 	const std::string path = sstr(QFileInfo(file_path).absoluteFilePath());
 
 	gui_log.notice("Booting from BootTest...");
+	Boot(path, "", true);
+}
+
+void main_window::BootSavestate()
+{
+	bool stopped = false;
+
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "/savestates/"), tr(
+		"Savestate files (*.SAVESTAT);;"
+		"All files (*.*)"),
+		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
+
+	if (file_path.isEmpty())
+	{
+		if (stopped)
+		{
+			Emu.Resume();
+		}
+		return;
+	}
+
+	const std::string path = sstr(QFileInfo(file_path).absoluteFilePath());
+
+	gui_log.notice("Booting from BootSavestate...");
 	Boot(path, "", true);
 }
 
@@ -1055,7 +1092,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		Emu.CallFromMainThread([this, str = std::move(str)]()
 		{
 			QMessageBox::critical(this, tr("Firmware Installation Failed"), str);
-		}, false);
+		}, nullptr, false);
 	};
 
 	if (file_path.isEmpty())
@@ -1152,7 +1189,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 			return;
 		}
 
-		if (!update_files.extract("/pup_extract"))
+		if (!update_files.extract("/pup_extract", true))
 		{
 			gui_log.error("Error while installing firmware: TAR contents are invalid.");
 			critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
@@ -1412,7 +1449,7 @@ void main_window::RepaintThumbnailIcons()
 	m_icon_thumb_stop = icon(":/Icons/stop.png");
 	m_icon_thumb_restart = icon(":/Icons/restart.png");
 
-	m_thumb_playPause->setIcon(Emu.IsRunning() ? m_icon_thumb_pause : m_icon_thumb_play);
+	m_thumb_playPause->setIcon(Emu.IsRunning() || Emu.IsStarting() ? m_icon_thumb_pause : m_icon_thumb_play);
 	m_thumb_stop->setIcon(m_icon_thumb_stop);
 	m_thumb_restart->setIcon(m_icon_thumb_restart);
 #endif
@@ -1420,16 +1457,31 @@ void main_window::RepaintThumbnailIcons()
 
 void main_window::RepaintToolBarIcons()
 {
-	const QColor new_color = gui::utils::get_label_color("toolbar_icon_color");
+	std::map<QIcon::Mode, QColor> new_colors{};
+	new_colors[QIcon::Normal] = gui::utils::get_label_color("toolbar_icon_color");
 
-	const auto icon = [&new_color](const QString& path)
+	const QString sheet = static_cast<QApplication *>(QCoreApplication::instance())->styleSheet();
+
+	if (sheet.contains("toolbar_icon_color_disabled"))
 	{
-		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, new_color);
+		new_colors[QIcon::Disabled] = gui::utils::get_label_color("toolbar_icon_color_disabled");
+	}
+	if (sheet.contains("toolbar_icon_color_active"))
+	{
+		new_colors[QIcon::Active] = gui::utils::get_label_color("toolbar_icon_color_active");
+	}
+	if (sheet.contains("toolbar_icon_color_selected"))
+	{
+		new_colors[QIcon::Selected] = gui::utils::get_label_color("toolbar_icon_color_selected");
+	}
+
+	const auto icon = [&new_colors](const QString& path)
+	{
+		return gui::utils::get_colorized_icon(QIcon(path), Qt::black, new_colors);
 	};
 
 	m_icon_play           = icon(":/Icons/play.png");
 	m_icon_pause          = icon(":/Icons/pause.png");
-	m_icon_stop           = icon(":/Icons/stop.png");
 	m_icon_restart        = icon(":/Icons/restart.png");
 	m_icon_fullscreen_on  = icon(":/Icons/fullscreen.png");
 	m_icon_fullscreen_off = icon(":/Icons/exit_fullscreen.png");
@@ -1442,17 +1494,23 @@ void main_window::RepaintToolBarIcons()
 	ui->toolbar_refresh ->setIcon(icon(":/Icons/refresh.png"));
 	ui->toolbar_stop    ->setIcon(icon(":/Icons/stop.png"));
 
+	ui->sysStopAct->setIcon(icon(":/Icons/stop.png"));
+	ui->sysRebootAct->setIcon(m_icon_restart);
+
 	if (Emu.IsRunning())
 	{
 		ui->toolbar_start->setIcon(m_icon_pause);
+		ui->sysPauseAct->setIcon(m_icon_pause);
 	}
 	else if (Emu.IsStopped() && !Emu.GetBoot().empty())
 	{
 		ui->toolbar_start->setIcon(m_icon_restart);
+		ui->sysPauseAct->setIcon(m_icon_restart);
 	}
 	else
 	{
 		ui->toolbar_start->setIcon(m_icon_play);
+		ui->sysPauseAct->setIcon(m_icon_play);
 	}
 
 	if (isFullScreen())
@@ -1464,6 +1522,7 @@ void main_window::RepaintToolBarIcons()
 		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
 	}
 
+	const QColor& new_color = new_colors[QIcon::Normal];
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
 		.arg(new_color.red()).arg(new_color.green()).arg(new_color.blue()).arg(new_color.alpha()));
 
@@ -1672,6 +1731,16 @@ void main_window::EnableMenus(bool enabled) const
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
 	ui->toolsStringSearchAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
+}
+
+void main_window::OnEnableDiscEject(bool enabled) const
+{
+	ui->ejectDiscAct->setEnabled(enabled);
+}
+
+void main_window::OnEnableDiscInsert(bool enabled) const
+{
+	ui->insertDiscAct->setEnabled(enabled);
 }
 
 void main_window::BootRecentAction(const QAction* act)
@@ -1950,6 +2019,8 @@ void main_window::CreateConnects()
 		g_user_asked_for_frame_capture = true;
 	});
 
+	connect(ui->bootSavestateAct, &QAction::triggered, this, &main_window::BootSavestate);
+
 	connect(ui->addGamesAct, &QAction::triggered, this, [this]()
 	{
 		if (!m_gui_settings->GetBootConfirmation(this))
@@ -2035,6 +2106,34 @@ void main_window::CreateConnects()
 		Emu.Restart();
 	});
 
+	connect(ui->ejectDiscAct, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered eject disc action in menu bar");
+		Emu.EjectDisc();
+	});
+	connect(ui->insertDiscAct, &QAction::triggered, this, [this]()
+	{
+		gui_log.notice("User triggered insert disc action in menu bar");
+
+		const QString path_last_game = m_gui_settings->GetValue(gui::fd_insert_disc).toString();
+		const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select Disc Game Folder"), path_last_game, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+		if (dir_path.isEmpty())
+		{
+			return;
+		}
+
+		const game_boot_result result = Emu.InsertDisc(dir_path.toStdString());
+
+		if (result != game_boot_result::no_errors)
+		{
+			QMessageBox::warning(this, tr("Failed to insert disc"), tr("Make sure that the emulation is running and that the selected path belongs to a valid disc game."));
+			return;
+		}
+
+		m_gui_settings->SetValue(gui::fd_insert_disc, QFileInfo(dir_path).path());
+	});
+
 	connect(ui->sysSendOpenMenuAct, &QAction::triggered, this, [this]()
 	{
 		if (Emu.IsStopped()) return;
@@ -2081,6 +2180,12 @@ void main_window::CreateConnects()
 	connect(ui->confRPCNAct, &QAction::triggered, this, [this]()
 	{
 		rpcn_settings_dialog dlg(this);
+		dlg.exec();
+	});
+
+	connect(ui->confIPCAct, &QAction::triggered, this, [this]()
+	{
+		ipc_settings_dialog dlg(this);
 		dlg.exec();
 	});
 
@@ -2510,9 +2615,9 @@ void main_window::CreateDockWindows()
 		m_selected_game = game;
 	});
 
-	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path)
+	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path, const std::string& savestate)
 	{
-		Boot(game->info.path, game->info.serial, false, false, config_mode, config_path);
+		Boot(savestate.empty() ? game->info.path : savestate, game->info.serial, false, false, config_mode, config_path);
 	});
 
 	connect(m_game_list_frame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);

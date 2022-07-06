@@ -31,6 +31,7 @@
 #endif
 
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
+#include <thread>
 
 LOG_CHANNEL(sys_log, "SYS");
 
@@ -58,12 +59,12 @@ EmuCallbacks main_application::CreateCallbacks()
 		{
 		case keyboard_handler::null:
 		{
-			g_fxo->init<KeyboardHandlerBase, NullKeyboardHandler>();
+			g_fxo->init<KeyboardHandlerBase, NullKeyboardHandler>(Emu.DeserialManager());
 			break;
 		}
 		case keyboard_handler::basic:
 		{
-			basic_keyboard_handler* ret = g_fxo->init<KeyboardHandlerBase, basic_keyboard_handler>();
+			basic_keyboard_handler* ret = g_fxo->init<KeyboardHandlerBase, basic_keyboard_handler>(Emu.DeserialManager());
 			ret->moveToThread(get_thread());
 			ret->SetTargetWindow(m_game_window);
 			break;
@@ -79,18 +80,18 @@ EmuCallbacks main_application::CreateCallbacks()
 		{
 			if (g_cfg.io.move == move_handler::mouse)
 			{
-				basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>();
+				basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>(Emu.DeserialManager());
 				ret->moveToThread(get_thread());
 				ret->SetTargetWindow(m_game_window);
 			}
 			else
-				g_fxo->init<MouseHandlerBase, NullMouseHandler>();
+				g_fxo->init<MouseHandlerBase, NullMouseHandler>(Emu.DeserialManager());
 
 			break;
 		}
 		case mouse_handler::basic:
 		{
-			basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>();
+			basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>(Emu.DeserialManager());
 			ret->moveToThread(get_thread());
 			ret->SetTargetWindow(m_game_window);
 			break;
@@ -100,7 +101,8 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.init_pad_handler = [this](std::string_view title_id)
 	{
-		g_fxo->init<named_thread<pad_thread>>(get_thread(), m_game_window, title_id);
+		ensure(g_fxo->init<named_thread<pad_thread>>(get_thread(), m_game_window, title_id));
+		while (pad::g_reset) std::this_thread::yield();
 	};
 
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
