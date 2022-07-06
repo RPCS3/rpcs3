@@ -571,6 +571,9 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 
 	std::scoped_lock lock(handler.mutex);
 
+	// Make sure that the mouse handler is initialized
+	handler.Init(std::min<u32>(g_fxo->get<gem_config>().attribute.max_connect, CELL_GEM_MAX_NUM));
+
 	if (mouse_no >= handler.GetMice().size())
 	{
 		return false;
@@ -621,6 +624,9 @@ static void mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::g
 
 	std::scoped_lock lock(handler.mutex);
 
+	// Make sure that the mouse handler is initialized
+	handler.Init(std::min<u32>(g_fxo->get<gem_config>().attribute.max_connect, CELL_GEM_MAX_NUM));
+
 	if (mouse_no >= handler.GetMice().size())
 	{
 		return;
@@ -668,6 +674,9 @@ static void mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
 	std::scoped_lock lock(handler.mutex);
+
+	// Make sure that the mouse handler is initialized
+	handler.Init(std::min<u32>(g_fxo->get<gem_config>().attribute.max_connect, CELL_GEM_MAX_NUM));
 
 	if (mouse_no >= handler.GetMice().size())
 	{
@@ -741,11 +750,8 @@ error_code cellGemCalibrate(u32 gem_num)
 		return CELL_EBUSY;
 	}
 
-	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
-	{
-		gem.controllers[gem_num].is_calibrating = true;
-		gem.controllers[gem_num].calibration_start_us = get_guest_system_time();
-	}
+	gem.controllers[gem_num].is_calibrating = true;
+	gem.controllers[gem_num].calibration_start_us = get_guest_system_time();
 
 	return CELL_OK;
 }
@@ -1507,14 +1513,6 @@ error_code cellGemInit(ppu_thread& ppu, vm::cptr<CellGemAttribute> attribute)
 	gem.status_flags = 0;
 	gem.attribute = *attribute;
 
-	if (g_cfg.io.move == move_handler::mouse)
-	{
-		// init mouse handler
-		auto& handler = g_fxo->get<MouseHandlerBase>();
-
-		handler.Init(std::min<u32>(attribute->max_connect, CELL_GEM_MAX_NUM));
-	}
-
 	for (int gem_num = 0; gem_num < CELL_GEM_MAX_NUM; gem_num++)
 	{
 		gem.reset_controller(gem_num);
@@ -1544,16 +1542,13 @@ error_code cellGemInvalidateCalibration(s32 gem_num)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
-	{
-		gem.controllers[gem_num].calibrated_magnetometer = false;
+	gem.controllers[gem_num].calibrated_magnetometer = false;
 
-		// TODO: does this really stop an ongoing calibration ?
-		gem.controllers[gem_num].is_calibrating = false;
-		gem.controllers[gem_num].calibration_start_us = 0;
+	// TODO: does this really stop an ongoing calibration ?
+	gem.controllers[gem_num].is_calibrating = false;
+	gem.controllers[gem_num].calibration_start_us = 0;
 
-		// TODO: gem.status_flags (probably not changed)
-	}
+	// TODO: gem.status_flags (probably not changed)
 
 	return CELL_OK;
 }

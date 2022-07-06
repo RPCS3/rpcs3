@@ -81,7 +81,9 @@ EmuCallbacks main_application::CreateCallbacks()
 				ret->SetTargetWindow(m_game_window);
 			}
 			else
+			{
 				g_fxo->init<MouseHandlerBase, NullMouseHandler>(Emu.DeserialManager());
+			}
 
 			break;
 		}
