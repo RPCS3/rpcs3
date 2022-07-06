@@ -23,7 +23,7 @@
 LOG_CHANNEL(vm_log, "VM");
 
 void ppu_remove_hle_instructions(u32 addr, u32 size);
-extern bool is_memory_read_only_of_executable(u32 addr);
+extern bool is_memory_compatible_for_copy_from_executable_optimization(u32 addr, u32 size);
 
 namespace vm
 {
@@ -1564,13 +1564,12 @@ namespace vm
 
 			if (flags & preallocated)
 			{
-				// Do not save read-only memory which comes from the executable
-				// Because it couldn't have changed
-				if (!(ar.data.back() & page_writable) && is_memory_read_only_of_executable(addr))
+				// Do not save memory which matches the memory found in the executable (we can use it instead)
+				if (is_memory_compatible_for_copy_from_executable_optimization(addr, shm.first))
 				{
 					// Revert changes
 					ar.data.resize(ar.seek_end(sizeof(u32) * 2 + sizeof(memory_page)));
-					vm_log.success("Removed read-only memory block of the executable from savestate. (addr=0x%x, size=0x%x)", addr, shm.first);
+					vm_log.success("Removed memory block matching the memory of the executable from savestate. (addr=0x%x, size=0x%x)", addr, shm.first);
 					continue;
 				}
 
@@ -2044,6 +2043,8 @@ namespace vm
 				loc->save(ar, shared_map);
 			}
 		}
+
+		is_memory_compatible_for_copy_from_executable_optimization(0, 0); // Cleanup internal data
 	}
 
 	void load(utils::serial& ar)
