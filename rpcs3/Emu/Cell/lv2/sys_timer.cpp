@@ -21,6 +21,8 @@ struct lv2_timer_thread
 
 	void operator()();
 
+	SAVESTATE_INIT_POS(46); // Dependency ion LV2 objects (lv2_timer)
+
 	static constexpr auto thread_name = "Timer Thread"sv;
 };
 
