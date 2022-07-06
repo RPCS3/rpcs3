@@ -9,6 +9,7 @@
 #include "Emu/system_config.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/RSX/Overlays/overlay_cursor.h"
 #include "Input/pad_thread.h"
 
 #include <cmath> // for fmod
@@ -107,6 +108,23 @@ public:
 			g = std::clamp(g_, 0.0f, 1.0f);
 			b = std::clamp(b_, 0.0f, 1.0f);
 		}
+
+		static inline const gem_color& get_default_color(u32 gem_num)
+		{
+			static const gem_color gold = gem_color(1.0f, 0.85f, 0.0f);
+			static const gem_color green = gem_color(0.0f, 1.0f, 0.0f);
+			static const gem_color red = gem_color(1.0f, 0.0f, 0.0f);
+			static const gem_color pink = gem_color(0.9f, 0.0f, 0.5f);
+
+			switch (gem_num)
+			{
+			case 0: return green;
+			case 1: return gold;
+			case 2: return red;
+			case 3: return pink;
+			default: fmt::throw_exception("unexpected gem_num %d", gem_num);
+			}
+		}
 	};
 
 	struct gem_controller
@@ -183,6 +201,11 @@ public:
 
 	void reset_controller(u32 gem_num)
 	{
+		if (gem_num >= CELL_GEM_MAX_NUM)
+		{
+			return;
+		}
+
 		switch (g_cfg.io.move)
 		{
 		case move_handler::fake:
@@ -196,12 +219,15 @@ public:
 			break;
 		}
 
+		gem_controller& controller = controllers.at(gem_num);
+		controller = {};
+		controller.sphere_rgb = gem_color::get_default_color(gem_num);
+
 		// Assign status and port number
 		if (gem_num < connected_controllers)
 		{
-			controllers[gem_num] = {};
-			controllers[gem_num].status = CELL_GEM_STATUS_READY;
-			controllers[gem_num].port = 7u - gem_num;
+			controller.status = CELL_GEM_STATUS_READY;
+			controller.port = CELL_PAD_MAX_PORT_NUM - gem_num;
 		}
 	}
 
@@ -420,7 +446,19 @@ static bool check_gem_num(const u32 gem_num)
 	return gem_num < CELL_GEM_MAX_NUM;
 }
 
-static inline void pos_to_gem_image_state(const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_controller& controller, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+{
+	const u16 x = static_cast<u16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
+	const u16 y = static_cast<u16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
+
+	// Note: We shouldn't use sphere_rgb here. The game will set it to black in many cases.
+	const gem_config_data::gem_color& rgb = gem_config_data::gem_color::get_default_color(gem_num);
+	const color4f color = { rgb.r, rgb.g, rgb.b, 0.85f };
+
+	rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + gem_num, x, y, color, 2'000'000, false);
+}
+
+static inline void pos_to_gem_image_state(u32 gem_num, const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
@@ -450,9 +488,14 @@ static inline void pos_to_gem_image_state(const gem_config::gem_controller& cont
 	// Projected camera coordinates in mm
 	gem_image_state->projectionx = camera_x / controller.distance;
 	gem_image_state->projectiony = camera_y / controller.distance;
+
+	if (g_cfg.io.show_move_cursor)
+	{
+		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
+	}
 }
 
-static inline void pos_to_gem_state(const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void pos_to_gem_state(u32 gem_num, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
@@ -490,6 +533,11 @@ static inline void pos_to_gem_state(const gem_config::gem_controller& controller
 	gem_state->handle_pos[1] = camera_y;
 	gem_state->handle_pos[2] = static_cast<f32>(controller.distance + 10);
 	gem_state->handle_pos[3] = 0.f;
+
+	if (g_cfg.io.show_move_cursor)
+	{
+		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
+	}
 }
 
 extern bool is_input_allowed();
@@ -587,10 +635,10 @@ static inline void ds3_get_stick_values(const std::shared_ptr<Pad>& pad, s32& x_
 		switch (stick.m_offset)
 		{
 		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-			x_pos = stick.m_value - 128;
+			x_pos = stick.m_value;
 			break;
 		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-			y_pos = stick.m_value - 128;
+			y_pos = stick.m_value;
 			break;
 		default:
 			break;
@@ -618,7 +666,7 @@ static void ds3_pos_to_gem_image_state(const u32 port_no, const gem_config::gem_
 	s32 ds3_pos_x, ds3_pos_y;
 	ds3_get_stick_values(pad, ds3_pos_x, ds3_pos_y);
 
-	pos_to_gem_image_state(controller, gem_image_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
+	pos_to_gem_image_state(port_no, controller, gem_image_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
 }
 
 static void ds3_pos_to_gem_state(const u32 port_no, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state)
@@ -641,7 +689,7 @@ static void ds3_pos_to_gem_state(const u32 port_no, const gem_config::gem_contro
 	s32 ds3_pos_x, ds3_pos_y;
 	ds3_get_stick_values(pad, ds3_pos_x, ds3_pos_y);
 
-	pos_to_gem_state(controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
+	pos_to_gem_state(port_no, controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
 }
 
 /**
@@ -776,7 +824,7 @@ static void mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::g
 
 	const auto& mouse = handler.GetMice().at(mouse_no);
 
-	pos_to_gem_image_state(controller, gem_image_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
+	pos_to_gem_image_state(mouse_no, controller, gem_image_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
 }
 
 static void mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state)
@@ -800,7 +848,7 @@ static void mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 
 	const auto& mouse = handler.GetMice().at(mouse_no);
 
-	pos_to_gem_state(controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
+	pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
 }
 
 // *********************
@@ -1319,7 +1367,7 @@ error_code cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::pt
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	auto& sphere_color = gem.controllers[gem_num].sphere_rgb;
+	const gem_config_data::gem_color& sphere_color = gem.controllers[gem_num].sphere_rgb;
 	*r = sphere_color.r;
 	*g = sphere_color.g;
 	*b = sphere_color.b;

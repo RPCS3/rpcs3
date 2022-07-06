@@ -26,7 +26,7 @@ namespace rsx
 			usz m_cur_pos         = umax;
 		};
 
-		class message final : public user_interface
+		class message final : public overlay
 		{
 		public:
 			void update() override;
