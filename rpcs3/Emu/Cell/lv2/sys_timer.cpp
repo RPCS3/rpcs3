@@ -225,7 +225,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_timer.trace("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
+	(period ? sys_timer.warning : sys_timer.trace)("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
 
 	const u64 start_time = get_guest_system_time();
 
