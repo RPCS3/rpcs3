@@ -457,6 +457,7 @@ namespace rsx
 		if (ar.is_writing() || GET_SERIALIZATION_VERSION(rsx) != 1u)
 		{
 			ar(unsent_gcm_events);
+			ar(rsx::method_registers.current_draw_clause);
 		}
 	}
 
