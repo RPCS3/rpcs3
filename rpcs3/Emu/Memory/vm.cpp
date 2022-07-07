@@ -1638,11 +1638,11 @@ namespace vm
 
 			if ((flags & page_size_64k) == page_size_64k)
 			{
-				pflags |= page_64k_size;
+				pflags |= page_size_64k;
 			}
 			else if (!(flags & (page_size_mask & ~page_size_1m)))
 			{
-				pflags |= page_1m_size;
+				pflags |= page_size_1m;
 			}
 
 			// Map the memory through the same method as alloc() and falloc() 
