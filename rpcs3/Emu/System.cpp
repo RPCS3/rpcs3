@@ -2271,7 +2271,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		for (uint i = 0; thread_ctrl::state() != thread_state::aborting;)
 		{
 			// We don't need accurate timekeeping, using clocks may interfere with debugging
-			if (i >= 1000)
+			if (i >= (savestate ? 2000 : 1000))
 			{
 				// Total amount of waiting: about 5s
 				report_fatal_error("Stopping emulator took too long."
