@@ -258,6 +258,13 @@ namespace utils
 			return true;
 		}
 
+		template <typename T> requires requires (T& obj) { (obj.*(&T::operator()))(std::declval<stx::exact_t<utils::serial&>>()); }
+		bool serialize(T& obj)
+		{
+			obj(*this);
+			return is_valid();
+		}
+
 		template <usz i = 0, typename T>
 		bool serialize_tuple(T& obj)
 		{

@@ -2837,6 +2837,11 @@ namespace rsx
 		return registers[reg] == value;
 	}
 
+	void draw_clause::operator()(utils::serial& ar)
+	{
+		ar(draw_command_ranges, draw_command_barriers, current_range_index, primitive, command, is_immediate_draw, is_disjoint_primitive, primitive_barrier_enable, inline_vertex_array);
+	}
+
 	void draw_clause::insert_command_barrier(command_barrier_type type, u32 arg, u32 index)
 	{
 		ensure(!draw_command_ranges.empty());
