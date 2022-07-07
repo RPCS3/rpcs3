@@ -453,6 +453,11 @@ namespace rsx
 		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
 		ar(in_begin_end, zcull_stats_enabled, zcull_rendering_enabled, zcull_pixel_cnt_enabled);
 		ar(display_buffers, display_buffers_count, current_display_buffer);
+
+		if (ar.is_writing() || GET_SERIALIZATION_VERSION(rsx) != 1u)
+		{
+			ar(unsent_gcm_events);
+		}
 	}
 
 	thread::thread(utils::serial* _ar)
@@ -756,6 +761,14 @@ namespace rsx
 
 		vblank_count = 0;
 
+		if (u64 event_flags = unsent_gcm_events.exchange(0))
+		{
+			if (!send_event(0, event_flags, 0))
+			{
+				return;
+			}
+		}
+
 		g_fxo->init<named_thread>("VBlank Thread", [this]()
 		{
 			// See sys_timer_usleep for details
@@ -772,7 +785,7 @@ namespace rsx
 			u64 local_vblank_count = 0;
 
 			// TODO: exit condition
-			while (!is_stopped())
+			while (!is_stopped() && !unsent_gcm_events)
 			{
 				// Get current time
 				const u64 current = get_system_time();
@@ -3407,6 +3420,13 @@ namespace rsx
 			if (!isHLE)
 			{
 				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
+
+				if (unsent_gcm_events)
+				{
+					// TODO: A proper fix
+					return;
+				}
+
 				continue;
 			}
 

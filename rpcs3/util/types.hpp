@@ -1118,7 +1118,7 @@ extern bool serialize(utils::serial& ar, T& obj);
 
 #define GET_SERIALIZATION_VERSION(name) []()\
 {\
-	extern u32 get_##name##_serialization_version();\
+	extern s32 get_##name##_serialization_version();\
 	return get_##name##_serialization_version();\
 }()
 

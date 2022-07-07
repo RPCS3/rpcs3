@@ -584,9 +584,10 @@ namespace rsx
 		u32 local_mem_size{0};
 		u32 rsx_event_port{0};
 		u32 driver_info{0};
-		bool gcm_intr_thread_offline = false; // Hack for savestates
 
-		void send_event(u64, u64, u64) const;
+		atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
+
+		bool send_event(u64, u64, u64);
 
 		bool m_rtts_dirty = true;
 		std::array<bool, 16> m_textures_dirty;
