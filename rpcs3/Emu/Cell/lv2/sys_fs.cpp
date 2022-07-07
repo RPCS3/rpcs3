@@ -288,10 +288,14 @@ lv2_file::lv2_file(utils::serial& ar)
 
 	if (!file)
 	{
-		sys_fs.error("Failed to load %s for savestates", name.data());
+		sys_fs.error("Failed to load \'%s\' file for savestates (res=%s, vpath=\'%s\', real-path=\'%s\', type=%s, flags=0x%x)", name.data(), res.error, retrieve_real, real_path, type, flags);
 		ar.pos += sizeof(u64);
 		ensure(!!g_cfg.savestate.state_inspection_mode);
 		return;
+	}
+	else
+	{
+		sys_fs.success("Loaded file descriptor \'%s\' file for savestates (vpath=\'%s\', type=%s, flags=0x%x, id=%d)", name.data(), retrieve_real, type, flags, idm::last_id());
 	}
 
 	file.seek(ar);
