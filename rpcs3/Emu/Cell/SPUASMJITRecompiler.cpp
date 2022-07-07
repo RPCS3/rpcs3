@@ -1330,7 +1330,6 @@ static u32 spu_rdch(spu_thread* _spu, u32 ch)
 
 	if (result < 0 || _spu->state & cpu_flag::again)
 	{
-		_spu->state += cpu_flag::again;
 		spu_runtime::g_escape(_spu);
 	}
 
@@ -2269,7 +2268,6 @@ static void spu_wrch_mfc(spu_thread* _spu)
 {
 	if (!_spu->process_mfc_cmd() || _spu->state & cpu_flag::again)
 	{
-		_spu->state += cpu_flag::again;
 		spu_runtime::g_escape(_spu);
 	}
 
