@@ -1475,7 +1475,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			// Don't need /dev_bdvd
 		}
-		else if (m_cat == "DG" && from_hdd0_game)
+		else if (m_cat == "DG" && from_hdd0_game && disc.empty())
 		{
 			// Disc game located in dev_hdd0/game
 			vfs::mount("/dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
