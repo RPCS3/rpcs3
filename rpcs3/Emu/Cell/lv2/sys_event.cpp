@@ -239,7 +239,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 	const auto queue = idm::withdraw<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
 	{
-		qlock.lock(queue.mutex);
+		qlock = std::unique_lock{queue.mutex};
 
 		if (!mode && !queue.sq.empty())
 		{
@@ -456,8 +456,14 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 		if (is_stopped(state))
 		{
-			extern void signal_gcm_intr_thread_offline(lv2_event_queue&);
-			signal_gcm_intr_thread_offline(*queue);
+			std::lock_guard lock_rsx(queue->mutex);
+
+			if (std::find(queue->sq.begin(), queue->sq.end(), &ppu) == queue->sq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::again;
 			return {};
 		}
 
@@ -686,7 +692,8 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 	{
 		if (port.ret == CELL_EAGAIN)
 		{
-			return CELL_OK;
+			// Not really an error code exposed to games (thread has raised cpu_flag::again)
+			return not_an_error(CELL_EAGAIN);
 		}
 
 		if (port.ret == CELL_EBUSY)

@@ -67,8 +67,8 @@ u64 g_rtm_tx_limit2 = 0;
 struct serial_ver_t
 {
 	bool used = false;
-	u32 current_version = 0;
-	std::set<u32> compatible_versions;
+	s32 current_version = 0;
+	std::set<s32> compatible_versions;
 };
 
 static std::array<serial_ver_t, 23> s_serial_versions;
@@ -83,7 +83,7 @@ static std::array<serial_ver_t, 23> s_serial_versions;
 		::s_serial_versions[identifier].used = true;\
 	}\
 \
-	extern u32 get_##name##_serialization_version()\
+	extern s32 get_##name##_serialization_version()\
 	{\
 		return ::s_serial_versions[identifier].current_version;\
 	}
@@ -101,7 +101,7 @@ SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1)
+	SERIALIZATION_VER(rsx, 10,                                  1, 2)
 }
 
 namespace np
@@ -111,7 +111,7 @@ namespace np
 
 #ifdef _MSC_VER
 // Compiler bug, lambda function body does seem to inherit used namespace atleast for function decleration 
-SERIALIZATION_VER(rsx, 10,                                      1)
+SERIALIZATION_VER(rsx, 10,                                      1, 2)
 SERIALIZATION_VER(sceNp, 11,                                    1)
 #endif
 

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/JIT.h"
 #include "Utilities/date_time.h"
 #include "Emu/Memory/vm.h"
@@ -1704,7 +1704,7 @@ void spu_thread::serialize_common(utils::serial& ar)
 		, ch_out_mbox.data, ch_out_intr_mbox.data, snr_config, ch_snr1.data, ch_snr2.data, ch_events.raw().all, interrupts_enabled
 		, run_ctrl, exit_status.data, status_npc.raw().status);
 
-	if (GET_SERIALIZATION_VERSION(spu) != 1u)
+	if (GET_SERIALIZATION_VERSION(spu) != 1)
 	{
 		ar(ch_dec_start_timestamp, ch_dec_value, is_dec_frozen);
 	}
