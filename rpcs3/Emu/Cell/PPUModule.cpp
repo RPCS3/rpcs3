@@ -895,7 +895,7 @@ extern bool is_memory_compatible_for_copy_from_executable_optimization(u32 addr,
 			return false;
 		}
 
-		s_ppu_exec.open(decrypt_self(fs::file(Emu.GetBoot())));
+		s_ppu_exec.open(decrypt_self(fs::file(Emu.GetBoot()), Emu.klic.empty() ? nullptr : reinterpret_cast<u8*>(&Emu.klic[0])));
 
 		if (s_ppu_exec != elf_error::ok)
 		{
