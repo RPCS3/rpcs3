@@ -19,6 +19,7 @@ struct lv2_timer_thread
 	shared_mutex mutex;
 	std::deque<std::shared_ptr<lv2_timer>> timers;
 
+	lv2_timer_thread();
 	void operator()();
 
 	SAVESTATE_INIT_POS(46); // Dependency ion LV2 objects (lv2_timer)
@@ -93,20 +94,16 @@ u64 lv2_timer::check()
 	return umax;
 }
 
+lv2_timer_thread::lv2_timer_thread()
+{
+	idm::select<lv2_obj, lv2_timer>([&](u32 id, lv2_timer&)
+	{
+		timers.emplace_back(idm::get_unlocked<lv2_obj, lv2_timer>(id));
+	});
+}
+
 void lv2_timer_thread::operator()()
 {
-	{
-		decltype(timers) vec;
-
-		idm::select<lv2_obj, lv2_timer>([&vec](u32 id, lv2_timer&)
-		{
-			vec.emplace_back(idm::get_unlocked<lv2_obj, lv2_timer>(id));
-		});
-
-		std::lock_guard lock(mutex);
-		timers = std::move(vec);
-	}
-
 	u64 sleep_time = 0;
 
 	while (thread_ctrl::state() != thread_state::aborting)
