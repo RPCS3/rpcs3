@@ -10,6 +10,8 @@
 #include "Utilities/StrUtil.h"
 #include "util/media_utils.h"
 
+#include <random>
+
 LOG_CHANNEL(cellSearch);
 
 template<>
@@ -386,14 +388,14 @@ error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<Cell
 {
 	cellSearch.warning("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", +mode, container, func, userData);
 
-	if (!func)
-	{
-		return CELL_SEARCH_ERROR_PARAM;
-	}
-
 	if (mode != CELL_SEARCH_MODE_NORMAL)
 	{
 		return CELL_SEARCH_ERROR_UNKNOWN_MODE;
+	}
+
+	if (!func)
+	{
+		return CELL_SEARCH_ERROR_PARAM;
 	}
 
 	auto& search = g_fxo->get<search_info>();
@@ -450,6 +452,9 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	// Reset values first
+	*outSearchId = 0;
+
 	const char* media_dir;
 
 	switch (type)
@@ -477,6 +482,11 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 	if (sortOrder != CELL_SEARCH_SORTORDER_ASCENDING && sortOrder != CELL_SEARCH_SORTORDER_DESCENDING)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
+	}
+
+	if (sortOrder != CELL_SEARCH_SORTORDER_ASCENDING)
+	{
+		return CELL_SEARCH_ERROR_NOT_SUPPORTED_SEARCH;
 	}
 
 	auto& search = g_fxo->get<search_info>();
@@ -675,6 +685,12 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 {
 	cellSearch.todo("cellSearchStartContentSearchInList(listId=*0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", listId, +sortKey, +sortOrder, outSearchId);
 
+	// Reset values first
+	if (outSearchId)
+	{
+		*outSearchId = 0;
+	}
+
 	if (!listId || !outSearchId)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
@@ -693,6 +709,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 	case CELL_SEARCH_SORTKEY_USERDEFINED:
 	case CELL_SEARCH_SORTKEY_MODIFIEDDATE:
 		break;
+	case CELL_SEARCH_SORTKEY_NONE:
 	default:
 		return CELL_SEARCH_ERROR_PARAM;
 	}
@@ -895,6 +912,12 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 {
 	cellSearch.todo("cellSearchStartContentSearch(type=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", +type, +sortKey, +sortOrder, outSearchId);
 
+	// Reset values first
+	if (outSearchId)
+	{
+		*outSearchId = 0;
+	}
+
 	if (!outSearchId)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
@@ -939,6 +962,59 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 	if (error_code error = check_search_state(search.state.compare_and_swap(search_state::idle, search_state::in_progress), search_state::in_progress))
 	{
 		return error;
+	}
+
+	if (sortKey == CELL_SEARCH_SORTKEY_DEFAULT)
+	{
+		switch (type)
+		{
+		case CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL: sortKey = CELL_SEARCH_SORTKEY_ARTISTNAME; break;
+		case CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL: sortKey = CELL_SEARCH_SORTKEY_TAKENDATE; break;
+		case CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL: sortKey = CELL_SEARCH_SORTKEY_TITLE; break;
+		default: break;
+		}
+	}
+
+	if (sortKey != CELL_SEARCH_SORTKEY_IMPORTEDDATE && sortKey != CELL_SEARCH_SORTKEY_MODIFIEDDATE)
+	{
+		switch (type)
+		{
+		case CELL_SEARCH_CONTENTSEARCHTYPE_MUSIC_ALL:
+		{
+			if (sortOrder != CELL_SEARCH_SORTORDER_ASCENDING)
+			{
+				return CELL_SEARCH_ERROR_NOT_SUPPORTED_SEARCH;
+			}
+			if (sortKey != CELL_SEARCH_SORTKEY_ARTISTNAME &&
+				sortKey != CELL_SEARCH_SORTKEY_ALBUMTITLE &&
+				sortKey != CELL_SEARCH_SORTKEY_GENRENAME &&
+				sortKey != CELL_SEARCH_SORTKEY_TITLE)
+			{
+				return CELL_SEARCH_ERROR_NOT_SUPPORTED_SEARCH;
+			}
+			break;
+		}
+		case CELL_SEARCH_CONTENTSEARCHTYPE_PHOTO_ALL:
+		{
+			if (sortKey != CELL_SEARCH_SORTKEY_TAKENDATE)
+			{
+				if (sortOrder != CELL_SEARCH_SORTORDER_ASCENDING || sortKey != CELL_SEARCH_SORTKEY_TITLE)
+				{
+					return CELL_SEARCH_ERROR_NOT_SUPPORTED_SEARCH;
+				}
+			}
+			break;
+		}
+		case CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL:
+		{
+			if (sortOrder != CELL_SEARCH_SORTORDER_ASCENDING || sortKey != CELL_SEARCH_SORTKEY_TITLE)
+			{
+				return CELL_SEARCH_ERROR_NOT_SUPPORTED_SEARCH;
+			}
+			break;
+		}
+		default: break;
+		}
 	}
 
 	const u32 id = *outSearchId = idm::make<search_object_t>();
@@ -1077,6 +1153,12 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 {
 	cellSearch.todo("cellSearchStartSceneSearchInVideo(videoId=*0x%x, searchType=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", videoId, +searchType, +sortOrder, outSearchId);
 
+	// Reset values first
+	if (outSearchId)
+	{
+		*outSearchId = 0;
+	}
+
 	if (!videoId || !outSearchId)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
@@ -1084,13 +1166,13 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 
 	switch (searchType)
 	{
-	case CELL_SEARCH_SCENESEARCHTYPE_NONE:
 	case CELL_SEARCH_SCENESEARCHTYPE_CHAPTER:
 	case CELL_SEARCH_SCENESEARCHTYPE_CLIP_HIGHLIGHT:
 	case CELL_SEARCH_SCENESEARCHTYPE_CLIP_USER:
 	case CELL_SEARCH_SCENESEARCHTYPE_CLIP:
 	case CELL_SEARCH_SCENESEARCHTYPE_ALL:
 		break;
+	case CELL_SEARCH_SCENESEARCHTYPE_NONE:
 	default:
 		return CELL_SEARCH_ERROR_PARAM;
 	}
@@ -1141,6 +1223,12 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 {
 	cellSearch.todo("cellSearchStartSceneSearch(searchType=0x%x, gameTitle=%s, tags=**0x%x, tagNum=0x%x, sortKey=0x%x, sortOrder=0x%x, outSearchId=*0x%x)", +searchType, gameTitle, tags, tagNum, +sortKey, +sortOrder, outSearchId);
 
+	// Reset values first
+	if (outSearchId)
+	{
+		*outSearchId = 0;
+	}
+
 	if (!gameTitle || !outSearchId)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
@@ -1148,13 +1236,31 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 
 	switch (searchType)
 	{
-	case CELL_SEARCH_SCENESEARCHTYPE_NONE:
 	case CELL_SEARCH_SCENESEARCHTYPE_CHAPTER:
 	case CELL_SEARCH_SCENESEARCHTYPE_CLIP_HIGHLIGHT:
 	case CELL_SEARCH_SCENESEARCHTYPE_CLIP_USER:
 	case CELL_SEARCH_SCENESEARCHTYPE_CLIP:
 	case CELL_SEARCH_SCENESEARCHTYPE_ALL:
 		break;
+	case CELL_SEARCH_SCENESEARCHTYPE_NONE:
+	default:
+		return CELL_SEARCH_ERROR_PARAM;
+	}
+
+	switch (sortKey)
+	{
+	case CELL_SEARCH_SORTKEY_DEFAULT:
+	case CELL_SEARCH_SORTKEY_TITLE:
+	case CELL_SEARCH_SORTKEY_ALBUMTITLE:
+	case CELL_SEARCH_SORTKEY_GENRENAME:
+	case CELL_SEARCH_SORTKEY_ARTISTNAME:
+	case CELL_SEARCH_SORTKEY_IMPORTEDDATE:
+	case CELL_SEARCH_SORTKEY_TRACKNUMBER:
+	case CELL_SEARCH_SORTKEY_TAKENDATE:
+	case CELL_SEARCH_SORTKEY_USERDEFINED:
+	case CELL_SEARCH_SORTKEY_MODIFIEDDATE:
+		break;
+	case CELL_SEARCH_SORTKEY_NONE:
 	default:
 		return CELL_SEARCH_ERROR_PARAM;
 	}
@@ -1173,6 +1279,14 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 				return CELL_SEARCH_ERROR_TAG;
 			}
 		}
+	}
+
+	if (sortKey != CELL_SEARCH_SORTKEY_DEFAULT &&
+		sortKey != CELL_SEARCH_SORTKEY_IMPORTEDDATE &&
+		sortKey != CELL_SEARCH_SORTKEY_MODIFIEDDATE &&
+		(sortKey != CELL_SEARCH_SORTKEY_TITLE || sortOrder != CELL_SEARCH_SORTORDER_ASCENDING))
+	{
+		return CELL_SEARCH_ERROR_NOT_SUPPORTED_SEARCH;
 	}
 
 	auto& search = g_fxo->get<search_info>();
@@ -1202,9 +1316,21 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 {
 	cellSearch.warning("cellSearchGetContentInfoByOffset(searchId=0x%x, offset=0x%x, infoBuffer=*0x%x, outContentType=*0x%x, outContentId=*0x%x)", searchId, offset, infoBuffer, outContentType, outContentId);
 
-	if (!outContentType)
+	// Reset values first
+	if (outContentType)
 	{
-		return CELL_SEARCH_ERROR_PARAM;
+		*outContentType = CELL_SEARCH_CONTENTTYPE_NONE;
+	}
+
+	if (infoBuffer)
+	{
+		std::memset(infoBuffer.get_ptr(), 0, CELL_SEARCH_CONTENT_BUFFER_SIZE_MAX);
+	}
+
+	if (outContentId)
+	{
+		std::memset(outContentId->data, 0, 4);
+		std::memset(outContentId->data + 4, -1, CELL_SEARCH_CONTENT_ID_SIZE - 4);
 	}
 
 	const auto searchObject = idm::get<search_object_t>(searchId);
@@ -1212,6 +1338,11 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 	if (!searchObject)
 	{
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
+	}
+
+	if (!outContentType || (!outContentId && !infoBuffer))
+	{
+		return CELL_SEARCH_ERROR_PARAM;
 	}
 
 	if (error_code error = check_search_state(g_fxo->get<search_info>().state.load(), search_state::in_progress))
@@ -1253,7 +1384,11 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 
 		const u128 content_id_128 = content_id.first;
 		*outContentType = content_info->type;
-		std::memcpy(outContentId->data, &content_id_128, CELL_SEARCH_CONTENT_ID_SIZE);
+
+		if (outContentId)
+		{
+			std::memcpy(outContentId->data, &content_id_128, CELL_SEARCH_CONTENT_ID_SIZE);
+		}
 	}
 	else // content ID not found, perform a search first
 	{
@@ -1267,7 +1402,18 @@ error_code cellSearchGetContentInfoByContentId(vm::cptr<CellSearchContentId> con
 {
 	cellSearch.warning("cellSearchGetContentInfoByContentId(contentId=*0x%x, infoBuffer=*0x%x, outContentType=*0x%x)", contentId, infoBuffer, outContentType);
 
-	if (!outContentType)
+	// Reset values first
+	if (outContentType)
+	{
+		*outContentType = CELL_SEARCH_CONTENTTYPE_NONE;
+	}
+
+	if (infoBuffer)
+	{
+		std::memset(infoBuffer.get_ptr(), 0, CELL_SEARCH_CONTENT_BUFFER_SIZE_MAX);
+	}
+
+	if (!outContentType || !contentId)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
 	}
@@ -1323,9 +1469,9 @@ error_code cellSearchGetOffsetByContentId(CellSearchId searchId, vm::cptr<CellSe
 {
 	cellSearch.warning("cellSearchGetOffsetByContentId(searchId=0x%x, contentId=*0x%x, outOffset=*0x%x)", searchId, contentId, outOffset);
 
-	if (!outOffset)
+	if (outOffset)
 	{
-		return CELL_SEARCH_ERROR_PARAM;
+		*outOffset = -1;
 	}
 
 	if (error_code error = check_search_state(g_fxo->get<search_info>().state.load(), search_state::in_progress))
@@ -1338,6 +1484,11 @@ error_code cellSearchGetOffsetByContentId(CellSearchId searchId, vm::cptr<CellSe
 	if (!searchObject)
 	{
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
+	}
+
+	if (!outOffset || !contentId)
+	{
+		return CELL_SEARCH_ERROR_PARAM;
 	}
 
 	s32 i = 0;
@@ -1359,9 +1510,23 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 {
 	cellSearch.todo("cellSearchGetContentIdByOffset(searchId=0x%x, offset=0x%x, outContentType=*0x%x, outContentId=*0x%x, outTimeInfo=*0x%x)", searchId, offset, outContentType, outContentId, outTimeInfo);
 
-	if (!outContentType || !outContentId)
+	// Reset values first
+	if (outTimeInfo)
 	{
-		return CELL_SEARCH_ERROR_PARAM;
+		outTimeInfo->modifiedDate = -1;
+		outTimeInfo->takenDate = -1;
+		outTimeInfo->importedDate = -1;
+	}
+
+	if (outContentType)
+	{
+		*outContentType = CELL_SEARCH_CONTENTTYPE_NONE;
+	}
+
+	if (outContentId)
+	{
+		std::memset(outContentId->data, 0, 4);
+		std::memset(outContentId->data + 4, -1, CELL_SEARCH_CONTENT_ID_SIZE - 4);
 	}
 
 	const auto searchObject = idm::get<search_object_t>(searchId);
@@ -1369,6 +1534,11 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 	if (!searchObject)
 	{
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
+	}
+
+	if (!outContentType || !outContentId)
+	{
+		return CELL_SEARCH_ERROR_PARAM;
 	}
 
 	if (error_code error = check_search_state(g_fxo->get<search_info>().state.load(), search_state::in_progress))
@@ -1400,6 +1570,12 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 error_code cellSearchGetContentInfoGameComment(vm::cptr<CellSearchContentId> contentId, vm::ptr<char> gameComment)
 {
 	cellSearch.todo("cellSearchGetContentInfoGameComment(contentId=*0x%x, gameComment=*0x%x)", contentId, gameComment);
+
+	// Reset values first
+	if (gameComment)
+	{
+		gameComment[0] = 0;
+	}
 
 	if (!contentId || !gameComment)
 	{
@@ -1445,6 +1621,9 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	// Reset values first
+	std::memset(outContext->data, 0, 4);
+
 	const auto searchObject = idm::get<search_object_t>(searchId);
 
 	if (!searchObject)
@@ -1471,6 +1650,20 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 	const auto& first_content_id = searchObject->content_ids[0];
 	const auto& first_content = first_content_id.second;
 	ensure(first_content);
+
+	const auto get_random_content = [&searchObject, &first_content]() -> std::shared_ptr<search_content_t>
+	{
+		if (searchObject->content_ids.size() == 1)
+		{
+			return first_content;
+		}
+		std::vector<content_id_type> result;
+		std::sample(searchObject->content_ids.begin(), searchObject->content_ids.end(), std::back_inserter(result), 1, std::mt19937{std::random_device{}()});
+		ensure(result.size() == 1);
+		std::shared_ptr<search_content_t> content = result[0].second;
+		ensure(!!content);
+		return content;
+	};
 
 	if (contentId)
 	{
@@ -1500,6 +1693,13 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 			// Abort if we can't find the playlist.
 			return { CELL_SEARCH_ERROR_CONTENT_NOT_FOUND, "Type: CELL_SEARCH_CONTENTTYPE_MUSICLIST" };
 		}
+		else if (option == CELL_SEARCH_CONTEXTOPTION_SHUFFLE)
+		{
+			// Select random track
+			std::shared_ptr<search_content_t> content = get_random_content();
+			context.content_path = content->infoPath.contentPath;
+			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning random track: Type=0x%x, Path=%s", content_hash, +content->type, context.content_path);
+		}
 		else
 		{
 			// Select the first track by default
@@ -1511,6 +1711,13 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 	{
 		// Abort if we don't have the necessary info to select a playlist.
 		return { CELL_SEARCH_ERROR_NOT_SUPPORTED_CONTEXT, "Type: CELL_SEARCH_CONTENTTYPE_MUSICLIST" };
+	}
+	else if (option == CELL_SEARCH_CONTEXTOPTION_SHUFFLE)
+	{
+		// Select random track
+		std::shared_ptr<search_content_t> content = get_random_content();
+		context.content_path = content->infoPath.contentPath;
+		cellSearch.notice("cellSearchGetMusicSelectionContext(): Assigning random track: Type=0x%x, Path=%s", +content->type, context.content_path);
 	}
 	else
 	{
@@ -1539,6 +1746,12 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 error_code cellSearchGetMusicSelectionContextOfSingleTrack(vm::cptr<CellSearchContentId> contentId, vm::ptr<CellMusicSelectionContext> outContext)
 {
 	cellSearch.todo("cellSearchGetMusicSelectionContextOfSingleTrack(contentId=*0x%x, outContext=*0x%x)", contentId, outContext);
+
+	// Reset values first
+	if (outContext)
+	{
+		std::memset(outContext->data, 0, 4);
+	}
 
 	if (!contentId || !outContext)
 	{
@@ -1587,7 +1800,13 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 {
 	cellSearch.todo("cellSearchGetContentInfoPath(contentId=*0x%x, infoPath=*0x%x)", contentId, infoPath);
 
-	if (!infoPath)
+	// Reset values first
+	if (infoPath)
+	{
+		*infoPath = {};
+	}
+
+	if (!contentId || !infoPath)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
 	}
@@ -1618,6 +1837,12 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 error_code cellSearchGetContentInfoPathMovieThumb(vm::cptr<CellSearchContentId> contentId, vm::ptr<CellSearchContentInfoPathMovieThumb> infoMt)
 {
 	cellSearch.todo("cellSearchGetContentInfoPathMovieThumb(contentId=*0x%x, infoMt=*0x%x)", contentId, infoMt);
+
+	// Reset values first
+	if (infoMt)
+	{
+		*infoMt = {};
+	}
 
 	if (!contentId || !infoMt)
 	{
@@ -1680,6 +1905,12 @@ error_code cellSearchGetContentInfoDeveloperData(vm::cptr<CellSearchContentId> c
 {
 	cellSearch.todo("cellSearchGetContentInfoDeveloperData(contentId=*0x%x, developerData=*0x%x)", contentId, developerData);
 
+	// Reset values first
+	if (developerData)
+	{
+		developerData[0] = 0;
+	}
+
 	if (!contentId || !developerData)
 	{
 		return CELL_SEARCH_ERROR_PARAM;
@@ -1717,6 +1948,12 @@ error_code cellSearchGetContentInfoDeveloperData(vm::cptr<CellSearchContentId> c
 error_code cellSearchGetContentInfoSharable(vm::cptr<CellSearchContentId> contentId, vm::ptr<CellSearchSharableType> sharable)
 {
 	cellSearch.todo("cellSearchGetContentInfoSharable(contentId=*0x%x, sharable=*0x%x)", contentId, sharable);
+
+	// Reset values first
+	if (sharable)
+	{
+		*sharable = CELL_SEARCH_SHARABLETYPE_PROHIBITED;
+	}
 
 	if (!contentId || !sharable)
 	{
@@ -1773,6 +2010,11 @@ error_code cellSearchCancel(CellSearchId searchId)
 error_code cellSearchEnd(CellSearchId searchId)
 {
 	cellSearch.todo("cellSearchEnd(searchId=0x%x)", searchId);
+
+	if (!searchId) // This check has to come first
+	{
+		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
+	}
 
 	if (error_code error = check_search_state(g_fxo->get<search_info>().state.load(), search_state::finalizing))
 	{
