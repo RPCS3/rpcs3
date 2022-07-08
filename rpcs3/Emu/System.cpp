@@ -67,15 +67,15 @@ u64 g_rtm_tx_limit2 = 0;
 struct serial_ver_t
 {
 	bool used = false;
-	u32 current_version = 0;
-	std::set<u32> compatible_versions;
+	s32 current_version = 0;
+	std::set<s32> compatible_versions;
 };
 
-static std::array<serial_ver_t, 18> s_serial_versions;
+static std::array<serial_ver_t, 23> s_serial_versions;
 
-#define SERIALIZATION_VER(name, identifier, ver) \
+#define SERIALIZATION_VER(name, identifier, ...) \
 \
-	const bool s_##name##_serialization_fill = []() { ::s_serial_versions[identifier].compatible_versions = ver; return true; }();\
+	const bool s_##name##_serialization_fill = []() { ::s_serial_versions[identifier].compatible_versions = {__VA_ARGS__}; return true; }();\
 \
 	extern void using_##name##_serialization()\
 	{\
@@ -83,45 +83,49 @@ static std::array<serial_ver_t, 18> s_serial_versions;
 		::s_serial_versions[identifier].used = true;\
 	}\
 \
-	extern u32 get_##name##_serialization_version()\
+	extern s32 get_##name##_serialization_version()\
 	{\
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0, {10}) // For stuff not listed here
-SERIALIZATION_VER(ppu, 1, {1})
-SERIALIZATION_VER(spu, 2, {1})
-SERIALIZATION_VER(lv2_sync, 3, {1})
-SERIALIZATION_VER(lv2_vm, 4, {1})
-SERIALIZATION_VER(lv2_net, 5, {1})
-SERIALIZATION_VER(lv2_fs, 6, {1})
-SERIALIZATION_VER(lv2_prx_overlay, 7, {1})
-SERIALIZATION_VER(lv2_memory, 8, {1})
-SERIALIZATION_VER(lv2_config, 9, {1})
+SERIALIZATION_VER(global_version, 0,                            11) // For stuff not listed here
+SERIALIZATION_VER(ppu, 1,                                       1)
+SERIALIZATION_VER(spu, 2,                                       1, 2)
+SERIALIZATION_VER(lv2_sync, 3,                                  1)
+SERIALIZATION_VER(lv2_vm, 4,                                    1)
+SERIALIZATION_VER(lv2_net, 5,                                   1)
+SERIALIZATION_VER(lv2_fs, 6,                                    1)
+SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
+SERIALIZATION_VER(lv2_memory, 8,                                1)
+SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10, {1})
+	SERIALIZATION_VER(rsx, 10,                                  1, 2)
 }
 
 namespace np
 {
-	SERIALIZATION_VER(sceNp, 11, {1})
+	SERIALIZATION_VER(sceNp, 11,                                1)
 }
 
 #ifdef _MSC_VER
 // Compiler bug, lambda function body does seem to inherit used namespace atleast for function decleration 
-SERIALIZATION_VER(rsx, 10, {1})
-SERIALIZATION_VER(sceNp, 11, {1})
+SERIALIZATION_VER(rsx, 10,                                      1, 2)
+SERIALIZATION_VER(sceNp, 11,                                    1)
 #endif
 
-SERIALIZATION_VER(cellVdec, 12, {1})
-SERIALIZATION_VER(cellAudio, 13, {1})
-SERIALIZATION_VER(cellCamera, 14, {1})
-SERIALIZATION_VER(cellGem, 15, {1})
-SERIALIZATION_VER(sceNpTrophy, 16, {1})
-SERIALIZATION_VER(cellMusic, 17, {1})
-SERIALIZATION_VER(cellVoice, 15, {1})
+SERIALIZATION_VER(cellVdec, 12,                                 1)
+SERIALIZATION_VER(cellAudio, 13,                                1)
+SERIALIZATION_VER(cellCamera, 14,                               1)
+SERIALIZATION_VER(cellGem, 15,                                  1)
+SERIALIZATION_VER(sceNpTrophy, 16,                              1)
+SERIALIZATION_VER(cellMusic, 17,                                1)
+SERIALIZATION_VER(cellVoice, 18,                                1)
+SERIALIZATION_VER(cellGcm, 19,                                  1)
+SERIALIZATION_VER(sysPrxForUser, 20,                            1)
+SERIALIZATION_VER(cellSaveData, 21,                             1)
+SERIALIZATION_VER(cellAudioOut, 22,                             1)
 
 #undef SERIALIZATION_VER
 
@@ -857,12 +861,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				nse_t<u64, 1> offset;
 			};
 	
-			if (m_ar->data.size() <= sizeof(file_header))
-			{
-				return game_boot_result::savestate_corrupted;
-			}
-	
-			const file_header header = m_ar->operator file_header();
+			const auto header = m_ar->try_read<file_header>().second;
 	
 			if (header.magic != "RPCS3SAV"_u64)
 			{
@@ -1001,8 +1000,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				sys_log.error("Unknown source for savestates: %s", argv[0]);
 			}
-
-			argv.clear();
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
@@ -1476,7 +1473,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			// Don't need /dev_bdvd
 		}
-		else if (m_cat == "DG" && from_hdd0_game)
+		else if (m_cat == "DG" && from_hdd0_game && disc.empty())
 		{
 			// Disc game located in dev_hdd0/game
 			vfs::mount("/dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
@@ -2217,12 +2214,14 @@ extern bool try_lock_vdec_context_creation();
 
 void Emulator::Kill(bool allow_autoexit, bool savestate)
 {
-	if (!try_lock_vdec_context_creation())
+	if (savestate && !try_lock_vdec_context_creation())
 	{
 		sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
 			"\nLLE libvdec.sprx by selecting it in Adavcned tab -> Firmware Libraries."
 			"\nYou need to close the game for to take effect."
 			"\nIf you cannot close the game due to losing important progress your best chance is to skip the current cutscenes if any are played and retry.");
+
+		return;
 	}
 
 	g_tls_log_prefix = []()
@@ -2270,7 +2269,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		for (uint i = 0; thread_ctrl::state() != thread_state::aborting;)
 		{
 			// We don't need accurate timekeeping, using clocks may interfere with debugging
-			if (i >= 1000)
+			if (i >= (savestate ? 2000 : 1000))
 			{
 				// Total amount of waiting: about 5s
 				report_fatal_error("Stopping emulator took too long."
@@ -2374,6 +2373,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 				ar(usz{}); // Reserve memory to be patched later with correct size
 				const usz old_size = ar.data.size();
 				ar.data = tar_object::save_directory(path, std::move(ar.data));
+				ar.seek_end();
 				const usz tar_size = ar.data.size() - old_size;
 				std::memcpy(ar.data.data() + old_size - sizeof(usz), &tar_size, sizeof(usz));
 				sys_log.success("Saved the contents of directory '%s' (size=0x%x)", path, tar_size);
@@ -2509,7 +2509,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		}
 
 		auto& ar = *m_ar;
-		const usz pos = ar.data.size();
+		const usz pos = ar.seek_end();
 		std::memcpy(&ar.data[10], &pos, 8);// Set offset
 		ar(used_serial);
 

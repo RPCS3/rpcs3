@@ -1552,6 +1552,42 @@
        <layout class="QVBoxLayout" name="inputTab_layout">
         <item>
          <layout class="QGridLayout" name="ioGridLayout">
+          <item row="0" column="2">
+           <widget class="QGroupBox" name="gb_buzz_emulated">
+            <property name="title">
+             <string>Buzz! emulated controller</string>
+            </property>
+            <layout class="QVBoxLayout" name="gb_buzz_emulated_layout">
+             <item>
+              <widget class="QComboBox" name="buzzBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QGroupBox" name="gb_ghltar_emulated">
+            <property name="title">
+             <string>Guitar Hero Live emulated guitar</string>
+            </property>
+            <layout class="QVBoxLayout" name="gb_ghltar_emulated_layout">
+             <item>
+              <widget class="QComboBox" name="ghltarBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QGroupBox" name="gb_camera_flip">
+            <property name="title">
+             <string>Camera Flip</string>
+            </property>
+            <layout class="QVBoxLayout" name="gb_camera_flip_layout">
+             <item>
+              <widget class="QComboBox" name="cameraFlipBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
           <item row="1" column="2">
            <widget class="QGroupBox" name="gb_turntable_emulated">
             <property name="title">
@@ -1564,6 +1600,30 @@
             </layout>
            </widget>
           </item>
+          <item row="0" column="0">
+           <widget class="QGroupBox" name="gb_keyboard_handler">
+            <property name="title">
+             <string>Keyboard Handler</string>
+            </property>
+            <layout class="QVBoxLayout" name="gb_keyboard_handler_layout">
+             <item>
+              <widget class="QComboBox" name="keyboardHandlerBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QGroupBox" name="gb_pad_mode">
+            <property name="title">
+             <string>Pad Handler Mode</string>
+            </property>
+            <layout class="QVBoxLayout" name="gb_pad_mode_layout">
+             <item>
+              <widget class="QComboBox" name="padModeBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
           <item row="1" column="0">
            <widget class="QGroupBox" name="gb_mouse_handler">
             <property name="title">
@@ -1572,6 +1632,18 @@
             <layout class="QVBoxLayout" name="gb_mouse_handler_layout">
              <item>
               <widget class="QComboBox" name="mouseHandlerBox"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QGroupBox" name="gb_camera_id">
+            <property name="title">
+             <string>Camera</string>
+            </property>
+            <layout class="QVBoxLayout" name="camera_id_layout">
+             <item>
+              <widget class="QComboBox" name="cameraIdBox"/>
              </item>
             </layout>
            </widget>
@@ -1600,42 +1672,6 @@
             </layout>
            </widget>
           </item>
-          <item row="0" column="0">
-           <widget class="QGroupBox" name="gb_keyboard_handler">
-            <property name="title">
-             <string>Keyboard Handler</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_keyboard_handler_layout">
-             <item>
-              <widget class="QComboBox" name="keyboardHandlerBox"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QGroupBox" name="gb_buzz_emulated">
-            <property name="title">
-             <string>Buzz! emulated controller</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_buzz_emulated_layout">
-             <item>
-              <widget class="QComboBox" name="buzzBox"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QGroupBox" name="gb_camera_flip">
-            <property name="title">
-             <string>Camera Flip</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_camera_flip_layout">
-             <item>
-              <widget class="QComboBox" name="cameraFlipBox"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
           <item row="1" column="1">
            <widget class="QGroupBox" name="gb_camera_setting">
             <property name="title">
@@ -1648,38 +1684,25 @@
             </layout>
            </widget>
           </item>
-          <item row="2" column="2">
-           <widget class="QGroupBox" name="gb_ghltar_emulated">
+          <item row="4" column="0">
+           <widget class="QGroupBox" name="gb_additional_io_settings">
             <property name="title">
-             <string>Guitar Hero Live emulated guitar</string>
+             <string>Additional Settings</string>
             </property>
-            <layout class="QVBoxLayout" name="gb_ghltar_emulated_layout">
+            <layout class="QVBoxLayout" name="layout_gb_additional_io_settings">
              <item>
-              <widget class="QComboBox" name="ghltarBox"/>
+              <widget class="QCheckBox" name="backgroundInputBox">
+               <property name="text">
+                <string>Enable Background Input</string>
+               </property>
+              </widget>
              </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QGroupBox" name="gb_camera_id">
-            <property name="title">
-             <string>Camera</string>
-            </property>
-            <layout class="QVBoxLayout" name="camera_id_layout">
              <item>
-              <widget class="QComboBox" name="cameraIdBox"/>
-             </item>
-            </layout>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QGroupBox" name="gb_pad_mode">
-            <property name="title">
-             <string>Pad Handler Mode</string>
-            </property>
-            <layout class="QVBoxLayout" name="gb_pad_mode_layout">
-             <item>
-              <widget class="QComboBox" name="padModeBox"/>
+              <widget class="QCheckBox" name="showMoveCursorBox">
+               <property name="text">
+                <string>Show PS Move Cursor</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>

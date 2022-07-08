@@ -1536,14 +1536,14 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			// If we fail due to being busy, wait a bit and try again.
 			while (static_cast<u32>(sending_error) == CELL_EBUSY)
 			{
+				thread_ctrl::wait_for(1000);
+				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+
 				if (cpu->is_stopped())
 				{
 					sending_error = {};
 					break;
 				}
-
-				thread_ctrl::wait_for(1000);
-				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
 			}
 
 			if (sending_error)

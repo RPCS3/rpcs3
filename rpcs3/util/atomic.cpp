@@ -571,11 +571,8 @@ static u32 cond_alloc(uptr iptr, u128 mask, u32 tls_slot = -1)
 			return pos / 7;
 		});
 
-		const u64 bits = s_cond_bits[level3].fetch_op([](u64& bits)
-		{
-			// Set lowest clear bit
-			bits |= bits + 1;
-		});
+		// Set lowest clear bit
+		const u64 bits = s_cond_bits[level3].fetch_op(FN(x |= x + 1, void()));
 
 		// Find lowest clear bit (before it was set in fetch_op)
 		const u32 id = level3 * 64 + std::countr_one(bits);
@@ -647,20 +644,9 @@ static void cond_free(u32 cond_id, u32 tls_slot = -1)
 	// Release the semaphore tree in the reverse order
 	s_cond_bits[cond_id / 64] &= ~(1ull << (cond_id % 64));
 
-	s_cond_sem3[level2].atomic_op([&](u128& val)
-	{
-		val -= u128{1} << (level3 * 7);
-	});
-
-	s_cond_sem2[level1].atomic_op([&](u128& val)
-	{
-		val -= u128{1} << (level2 * 11);
-	});
-
-	s_cond_sem1.atomic_op([&](u128& val)
-	{
-		val -= u128{1} << (level1 * 14);
-	});
+	s_cond_sem3[level2].atomic_op(FN(x -= u128{1} << (level3 * 7)));
+	s_cond_sem2[level1].atomic_op(FN(x -= u128{1} << (level2 * 11)));
+	s_cond_sem1.atomic_op(FN(x -= u128{1} << (level1 * 14)));
 }
 
 static cond_handle* cond_id_lock(u32 cond_id, u128 mask, uptr iptr = 0)

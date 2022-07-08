@@ -235,19 +235,15 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 	std::vector<lv2_event> events;
 
+	std::unique_lock<shared_mutex> qlock;
+
 	const auto queue = idm::withdraw<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
 	{
-		std::lock_guard lock(queue.mutex);
+		qlock = std::unique_lock{queue.mutex};
 
 		if (!mode && !queue.sq.empty())
 		{
 			return CELL_EBUSY;
-		}
-
-		if (queue.sq.empty())
-		{
-			// Optimization
-			mode = 0;
 		}
 
 		if (!queue.events.empty())
@@ -257,12 +253,34 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		}
 
 		lv2_obj::on_id_destroy(queue, queue.key);
+
+		if (queue.sq.empty())
+		{
+			qlock.unlock();
+		}
+		else
+		{
+			for (auto cpu : queue.sq)
+			{
+				if (cpu->state & cpu_flag::again)
+				{
+					ppu.state += cpu_flag::again;
+					return CELL_EAGAIN;
+				}
+			}
+		}
+
 		return {};
 	});
 
 	if (!queue)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (ppu.state & cpu_flag::again)
+	{
+		return {};
 	}
 
 	if (queue.ret)
@@ -272,11 +290,9 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 	std::string lost_data;
 
-	if (mode == SYS_EVENT_QUEUE_DESTROY_FORCE)
+	if (qlock.owns_lock())
 	{
 		std::deque<cpu_thread*> sq;
-
-		std::lock_guard lock(queue->mutex);
 
 		sq = std::move(queue->sq);
 
@@ -309,6 +325,8 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 				resume_spu_thread_group_from_waiting(static_cast<spu_thread&>(*cpu));
 			}
 		}
+
+		qlock.unlock();
 	}
 
 	if (sys_event.warning)
@@ -438,8 +456,14 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 		if (is_stopped(state))
 		{
-			extern void signal_gcm_intr_thread_offline(lv2_event_queue&);
-			signal_gcm_intr_thread_offline(*queue);
+			std::lock_guard lock_rsx(queue->mutex);
+
+			if (std::find(queue->sq.begin(), queue->sq.end(), &ppu) == queue->sq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::again;
 			return {};
 		}
 
@@ -668,7 +692,8 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 	{
 		if (port.ret == CELL_EAGAIN)
 		{
-			return CELL_OK;
+			// Not really an error code exposed to games (thread has raised cpu_flag::again)
+			return not_an_error(CELL_EAGAIN);
 		}
 
 		if (port.ret == CELL_EBUSY)

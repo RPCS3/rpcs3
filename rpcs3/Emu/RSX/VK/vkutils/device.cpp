@@ -951,10 +951,7 @@ namespace vk
 		// Sort upload heap entries based on size.
 		if (host_coherent_types.size() > 1)
 		{
-			std::sort(host_coherent_types.begin(), host_coherent_types.end(), [](const auto& a, const auto& b)
-			{
-				return a.size > b.size;
-			});
+			std::sort(host_coherent_types.begin(), host_coherent_types.end(), FN(x.size > y.size));
 		}
 
 		for (auto& type : host_coherent_types)

@@ -1396,7 +1396,7 @@ void ppu_thread::cpu_task()
 			thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
 			g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog = true;
 
-			// Sadly we can't postpone initializing guest time because we need ti run PPU threads
+			// Sadly we can't postpone initializing guest time because we need to run PPU threads
 			// (the farther it's postponed, the less accuracy of guest time has been lost)
 			Emu.FixGuestTime();
 
@@ -1527,6 +1527,8 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 		gpr[4] = param.arg1;
 	}
 
+	optional_savestate_state = std::make_shared<utils::serial>();
+
 	// Trigger the scheduler
 	state += cpu_flag::suspend;
 
@@ -1575,10 +1577,12 @@ bool ppu_thread::savable() const
 
 void ppu_thread::serialize_common(utils::serial& ar)
 {
-	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio, optional_syscall_state);
+	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio, optional_savestate_state, vr);
 
-	for (v128& reg : vr)
-		ar(reg._bytes);
+	if (optional_savestate_state->data.empty())
+	{
+		optional_savestate_state->clear();
+	}
 }
 
 ppu_thread::ppu_thread(utils::serial& ar)
@@ -1669,8 +1673,12 @@ ppu_thread::ppu_thread(utils::serial& ar)
 
 				+[](ppu_thread& ppu) -> bool
 				{
+					const u32 op = vm::read32(ppu.cia);
+					const auto& table = g_fxo->get<ppu_interpreter_rt>();
 					ppu.loaded_from_savestate = true;
-					ppu_execute_syscall(ppu, ppu.gpr[11]);
+					table.decode(op)(ppu, {op}, vm::_ptr<u32>(ppu.cia), &ppu_ret);
+
+					ppu.optional_savestate_state->clear(); // Reset to writing state
 					ppu.loaded_from_savestate = false;
 					return true;
 				}
@@ -1708,6 +1716,8 @@ ppu_thread::ppu_thread(utils::serial& ar)
 
 void ppu_thread::save(utils::serial& ar)
 {
+	USING_SERIALIZATION_VERSION(ppu);
+
 	const u64 entry = std::bit_cast<u64>(entry_func);
 
 	ppu_join_status _joiner = joiner;
@@ -1870,7 +1880,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc)
 		}
 		else if (old_cia)
 		{
-			if (state & cpu_flag::exit)
+			if (state & cpu_flag::again)
 			{
 				ppu_log.error("HLE callstack savestate is not implemented!");
 			}

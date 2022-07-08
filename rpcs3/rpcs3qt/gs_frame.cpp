@@ -55,6 +55,13 @@ LOG_CHANNEL(gui_log, "GUI");
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
 
+atomic_t<bool> g_game_window_focused = false;
+
+bool is_input_allowed()
+{
+	return g_game_window_focused || g_cfg.io.background_input_enabled;
+}
+
 constexpr auto qstr = QString::fromStdString;
 
 gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings)
@@ -115,6 +122,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	// Change cursor when this window gets or loses focus.
 	connect(this, &QWindow::activeChanged, this, [this]()
 	{
+		g_game_window_focused = isActive();
 		handle_cursor(visibility(), false, true);
 	});
 

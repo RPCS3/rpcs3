@@ -19,7 +19,10 @@ struct lv2_timer_thread
 	shared_mutex mutex;
 	std::deque<std::shared_ptr<lv2_timer>> timers;
 
+	lv2_timer_thread();
 	void operator()();
+
+	SAVESTATE_INIT_POS(46); // Dependency ion LV2 objects (lv2_timer)
 
 	static constexpr auto thread_name = "Timer Thread"sv;
 };
@@ -91,20 +94,16 @@ u64 lv2_timer::check()
 	return umax;
 }
 
+lv2_timer_thread::lv2_timer_thread()
+{
+	idm::select<lv2_obj, lv2_timer>([&](u32 id, lv2_timer&)
+	{
+		timers.emplace_back(idm::get_unlocked<lv2_obj, lv2_timer>(id));
+	});
+}
+
 void lv2_timer_thread::operator()()
 {
-	{
-		decltype(timers) vec;
-
-		idm::select<lv2_obj, lv2_timer>([&vec](u32 id, lv2_timer&)
-		{
-			vec.emplace_back(idm::get_unlocked<lv2_obj, lv2_timer>(id));
-		});
-
-		std::lock_guard lock(mutex);
-		timers = std::move(vec);
-	}
-
 	u64 sleep_time = 0;
 
 	while (thread_ctrl::state() != thread_state::aborting)
@@ -223,7 +222,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_timer.trace("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
+	(period ? sys_timer.warning : sys_timer.trace)("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
 
 	const u64 start_time = get_guest_system_time();
 

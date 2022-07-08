@@ -434,6 +434,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Null/NullGSRender.cpp
     RSX/Overlays/overlay_animation.cpp
     RSX/Overlays/overlay_controls.cpp
+    RSX/Overlays/overlay_cursor.cpp
     RSX/Overlays/overlay_edit_text.cpp
     RSX/Overlays/overlay_fonts.cpp
     RSX/Overlays/overlay_list_view.cpp

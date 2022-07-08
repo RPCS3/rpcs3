@@ -285,6 +285,8 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	// Further function result
 	ppu.gpr[3] = CELL_OK;
 
+	auto& sstate = *ppu.optional_savestate_state;
+
 	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> s64
 	{
 		if (!ppu.loaded_from_savestate && cond.mutex->owner >> 1 != ppu.id)
@@ -294,7 +296,10 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 		std::lock_guard lock(cond.mutex->mutex);
 
-		if (ppu.loaded_from_savestate && ppu.optional_syscall_state & 1)
+		const u64 syscall_state = sstate.try_read<u64>().second;
+		sstate.clear();
+
+		if (syscall_state & 1)
 		{
 			// Mutex sleep
 			ensure(!cond.mutex->try_own(ppu, ppu.id));
@@ -309,7 +314,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		if (ppu.loaded_from_savestate)
 		{
 			cond.sleep(ppu, timeout);
-			return static_cast<u32>(ppu.optional_syscall_state >> 32);
+			return static_cast<u32>(syscall_state >> 32);
 		}
 
 		// Unlock the mutex
@@ -356,7 +361,9 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 				break;
 			}
 
-			ppu.optional_syscall_state = u32{mutex_sleep} | (u64{static_cast<u32>(cond.ret)} << 32);
+			const u64 optional_syscall_state = u32{mutex_sleep} | (u64{static_cast<u32>(cond.ret)} << 32);
+			sstate(optional_syscall_state);
+
 			ppu.state += cpu_flag::again;
 			return {};
 		}
