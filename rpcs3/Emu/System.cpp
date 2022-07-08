@@ -1000,8 +1000,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				sys_log.error("Unknown source for savestates: %s", argv[0]);
 			}
-
-			argv.clear();
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
