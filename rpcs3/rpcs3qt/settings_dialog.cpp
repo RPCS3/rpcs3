@@ -29,6 +29,8 @@
 #include "Emu/system_config.h"
 #include "Emu/title.h"
 
+#include "Emu/Audio/audio_device_enumerator.h"
+
 #include "Loader/PSF.h"
 
 #include <set>
@@ -871,31 +873,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	//    / ____ \ |_| | (_| | | (_) |    | | (_| | |_) |
 	//   /_/    \_\__,_|\__,_|_|\___/     |_|\__,_|_.__/
 
-	const auto enable_time_stretching_options = [this](bool enabled)
-	{
-		ui->timeStretchingThresholdLabel->setEnabled(enabled);
-		ui->timeStretchingThreshold->setEnabled(enabled);
-	};
-
-	const auto enable_buffering_options = [this, enable_time_stretching_options](bool enabled)
-	{
-		ui->audioBufferDuration->setEnabled(enabled);
-		ui->audioBufferDurationLabel->setEnabled(enabled);
-		ui->enableTimeStretching->setEnabled(enabled);
-		enable_time_stretching_options(enabled && ui->enableTimeStretching->isChecked());
-	};
-
-	const auto enable_buffering = [this, enable_buffering_options](int index)
-	{
-		if (index < 0) return;
-		const QVariantList var_list = ui->audioOutBox->itemData(index).toList();
-		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
-		const QString text = var_list[0].toString();
-		const bool enabled = text == "Cubeb" || text == "XAudio2" || text == "FAudio";
-		ui->enableBuffering->setEnabled(enabled);
-		enable_buffering_options(enabled && ui->enableBuffering->isChecked());
-	};
-
 	const QString mic_none = m_emu_settings->m_microphone_creator.get_none();
 
 	const auto change_microphone_type = [mic_none, this](int index)
@@ -960,6 +937,45 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		propagate_used_devices();
 	};
 
+	const auto get_audio_output_devices = [this]()
+	{
+		const QVariantList var_list = ui->audioOutBox->currentData().toList();
+		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
+		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator(var_list[1].toInt());
+		std::vector<audio_device_enumerator::audio_device> dev_array = dev_enum->get_output_devices();
+
+		ui->audioDeviceBox->clear();
+		ui->audioDeviceBox->blockSignals(true);
+		ui->audioDeviceBox->addItem(tr("Default"), qsv(audio_device_enumerator::DEFAULT_DEV_ID));
+
+		int device_index = 0;
+
+		for (auto& dev : dev_array)
+		{
+			const QString cur_item = qstr(dev.id);
+			ui->audioDeviceBox->addItem(qstr(dev.name), cur_item);
+			if (g_cfg.audio.audio_device.to_string() == dev.id)
+			{
+				device_index = ui->audioDeviceBox->findData(cur_item);
+			}
+		}
+
+		ui->audioDeviceBox->blockSignals(false);
+		ui->audioDeviceBox->setCurrentIndex(std::max(device_index, 0));
+	};
+
+	const auto change_audio_output_device = [this](int index)
+	{
+		if (index < 0)
+		{
+			return;
+		}
+
+		const QVariant item_data = ui->audioDeviceBox->itemData(index);
+		m_emu_settings->SetSetting(emu_settings_type::AudioDevice, sstr(item_data.toString()));
+		ui->audioDeviceBox->setCurrentIndex(index);
+	};
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->audioOutBox, emu_settings_type::AudioRenderer);
@@ -968,7 +984,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #else
 	SubscribeTooltip(ui->gb_audio_out, tooltips.settings.audio_out_linux);
 #endif
-	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, enable_buffering);
+	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [change_audio_output_device, get_audio_output_devices](int)
+	{
+		get_audio_output_devices();
+		change_audio_output_device(0); // Set device to 'Default'
+	});
 
 	connect(ui->combo_audio_format, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
@@ -1035,6 +1055,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->audioAvportBox, emu_settings_type::AudioAvport);
 	SubscribeTooltip(ui->gb_audio_avport, tooltips.settings.audio_avport);
 
+	SubscribeTooltip(ui->gb_audio_device, tooltips.settings.audio_device);
+	connect(ui->audioDeviceBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, change_audio_output_device);
+	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [change_audio_output_device]() { change_audio_output_device(0); }); // Set device to 'Default'
+	get_audio_output_devices();
+
 	// Microphone Comboboxes
 	m_mics_combo[0] = ui->microphone1Box;
 	m_mics_combo[1] = ui->microphone2Box;
@@ -1084,13 +1109,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->enableBuffering, emu_settings_type::EnableBuffering);
 	SubscribeTooltip(ui->enableBuffering, tooltips.settings.enable_buffering);
-	connect(ui->enableBuffering, &QCheckBox::toggled, enable_buffering_options);
 
 	m_emu_settings->EnhanceCheckBox(ui->enableTimeStretching, emu_settings_type::EnableTimeStretching);
 	SubscribeTooltip(ui->enableTimeStretching, tooltips.settings.enable_time_stretching);
-	connect(ui->enableTimeStretching, &QCheckBox::toggled, enable_time_stretching_options);
-
-	enable_buffering(ui->audioOutBox->currentIndex());
 
 	// Sliders
 
@@ -1315,10 +1336,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
-	
+
 	m_emu_settings->EnhanceCheckBox(ui->forceDisableExclusiveFullscreenMode, emu_settings_type::ForceDisableExclusiveFullscreenMode);
 	SubscribeTooltip(ui->forceDisableExclusiveFullscreenMode, tooltips.settings.force_disable_exclusive_fullscreen_mode);
-	
+
 	m_emu_settings->EnhanceCheckBox(ui->vblankNTSCFixup, emu_settings_type::VBlankNTSCFixup);
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");

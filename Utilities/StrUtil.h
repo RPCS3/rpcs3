@@ -10,6 +10,7 @@
 
 std::wstring utf8_to_wchar(std::string_view src);
 std::string wchar_to_utf8(std::wstring_view src);
+std::string utf16_to_utf8(std::u16string_view src);
 
 // Copy null-terminated string from a std::string or a char array to a char array with truncation
 template <typename D, typename T>

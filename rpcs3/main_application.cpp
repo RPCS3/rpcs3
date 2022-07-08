@@ -18,12 +18,16 @@
 
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/Null/NullAudioBackend.h"
+#include "Emu/Audio/Null/null_enumerator.h"
 #include "Emu/Audio/Cubeb/CubebBackend.h"
+#include "Emu/Audio/Cubeb/cubeb_enumerator.h"
 #ifdef _WIN32
 #include "Emu/Audio/XAudio2/XAudio2Backend.h"
+#include "Emu/Audio/XAudio2/xaudio2_enumerator.h"
 #endif
 #ifdef HAVE_FAUDIO
 #include "Emu/Audio/FAudio/FAudioBackend.h"
+#include "Emu/Audio/FAudio/faudio_enumerator.h"
 #endif
 
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
@@ -125,6 +129,22 @@ EmuCallbacks main_application::CreateCallbacks()
 			result = std::make_shared<NullAudioBackend>();
 		}
 		return result;
+	};
+
+	callbacks.get_audio_enumerator = [](u64 renderer) -> std::shared_ptr<audio_device_enumerator>
+	{
+		switch (static_cast<audio_renderer>(renderer))
+		{
+		case audio_renderer::null: return std::make_shared<null_enumerator>();
+#ifdef _WIN32
+		case audio_renderer::xaudio: return std::make_shared<xaudio2_enumerator>();
+#endif
+		case audio_renderer::cubeb: return std::make_shared<cubeb_enumerator>();
+#ifdef HAVE_FAUDIO
+		case audio_renderer::faudio: return std::make_shared<faudio_enumerator>();
+#endif
+		default: fmt::throw_exception("Invalid renderer index %u", renderer);
+		}
 	};
 
 	callbacks.resolve_path = [](std::string_view sv)

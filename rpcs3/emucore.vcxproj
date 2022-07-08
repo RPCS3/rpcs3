@@ -53,9 +53,11 @@
   <ItemGroup>
     <ClCompile Include="..\Utilities\cheat_info.cpp" />
     <ClCompile Include="Crypto\decrypt_binaries.cpp" />
-    <ClCompile Include="Emu\Audio\audio_device_listener.cpp" />
     <ClCompile Include="Emu\Audio\audio_resampler.cpp" />
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Emu\Audio\FAudio\faudio_enumerator.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Emu\cache_utils.cpp" />
@@ -456,9 +458,12 @@
     <ClInclude Include="..\Utilities\simple_ringbuf.h" />
     <ClInclude Include="..\Utilities\transactional_storage.h" />
     <ClInclude Include="Crypto\decrypt_binaries.h" />
-    <ClInclude Include="Emu\Audio\audio_device_listener.h" />
     <ClInclude Include="Emu\Audio\audio_resampler.h" />
+    <ClInclude Include="Emu\Audio\audio_device_enumerator.h" />
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\FAudio\faudio_enumerator.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Emu\cache_utils.hpp" />
@@ -618,6 +623,7 @@
     <ClInclude Include="Emu\Audio\AudioDumper.h" />
     <ClInclude Include="Emu\Audio\AudioBackend.h" />
     <ClInclude Include="Emu\Audio\Null\NullAudioBackend.h" />
+    <ClInclude Include="Emu\Audio\Null\null_enumerator.h" />
     <ClInclude Include="Emu\Cell\Common.h" />
     <ClInclude Include="Emu\Cell\ErrorCodes.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_cond.h" />

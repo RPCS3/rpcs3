@@ -24,10 +24,9 @@ public:
 	bool Initialized() override;
 	bool Operational() override;
 
-	bool Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
+	bool Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) override;
 	void Close() override;
 
-	void SetWriteCallback(std::function<u32(u32, void *)> cb) override;
 	f64 GetCallbackFrameLen() override;
 
 	void Play() override;
@@ -40,12 +39,10 @@ private:
 	FAudioMasteringVoice* m_master_voice{};
 	FAudioSourceVoice* m_source_voice{};
 
-	shared_mutex m_cb_mutex{};
-	std::function<u32(u32, void *)> m_write_callback{};
 	std::vector<u8> m_data_buf{};
 	std::array<u8, sizeof(float) * static_cast<u32>(AudioChannelCnt::SURROUND_7_1)> m_last_sample{};
 
-	bool m_reset_req = false;
+	atomic_t<bool> m_reset_req = false;
 
 	// FAudio voice callbacks
 	static void OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj, u32 BytesRequired);

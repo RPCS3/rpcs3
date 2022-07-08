@@ -66,11 +66,23 @@ void cell_audio_config::reset(bool backend_changed)
 
 	const AudioFreq freq = AudioFreq::FREQ_48K;
 	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
-	const auto [ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
-	const f64 cb_frame_len = backend->Open(freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
+
+	const auto [req_ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
+	f64 cb_frame_len = 0.0;
+	u32 ch_cnt = 2;
+
+	if (backend->Open(raw.audio_device, freq, sample_size, req_ch_cnt))
+	{
+		cb_frame_len = backend->GetCallbackFrameLen();
+		ch_cnt = backend->get_channels();
+	}
+	else
+	{
+		cellAudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
+	}
 
 	audio_downmix = downmix;
-	audio_channels = static_cast<u32>(ch_cnt);
+	audio_channels = ch_cnt;
 	audio_sampling_rate = static_cast<u32>(freq);
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1'000'000 / audio_sampling_rate;
 	audio_sample_size = static_cast<u32>(sample_size);
@@ -567,6 +579,7 @@ namespace audio
 	{
 		return
 		{
+			.audio_device = g_cfg.audio.audio_device,
 			.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
 			.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
 			.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
@@ -592,6 +605,7 @@ namespace audio
 
 			if (const auto raw = g_audio.cfg.raw;
 				force_reset ||
+				raw.audio_device != new_raw.audio_device ||
 				raw.desired_buffer_duration != new_raw.desired_buffer_duration ||
 				raw.buffering_enabled != new_raw.buffering_enabled ||
 				raw.time_stretching_threshold != new_raw.time_stretching_threshold ||
@@ -696,6 +710,13 @@ void cell_audio_thread::operator()()
 
 			update_config(true);
 			m_backend_failed = true;
+			continue;
+		}
+
+		if (ringbuffer->device_changed())
+		{
+			cellAudio.warning("Default device changed, attempting to switch...");
+			update_config(false);
 			continue;
 		}
 

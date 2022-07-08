@@ -205,6 +205,7 @@ struct cell_audio_config
 {
 	struct raw_config
 	{
+		std::string audio_device{};
 		bool buffering_enabled = false;
 		s64 desired_buffer_duration = 0;
 		bool enable_time_stretching = false;
@@ -341,6 +342,11 @@ public:
 	bool get_operational_status() const
 	{
 		return backend->Operational();
+	}
+
+	bool device_changed() const
+	{
+		return backend->DefaultDeviceChanged();
 	}
 
 	std::string_view get_backend_name() const
