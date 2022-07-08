@@ -2,6 +2,9 @@
 #include "media_utils.h"
 #include "logs.hpp"
 #include "Utilities/StrUtil.h"
+#include "Emu/Cell/Modules/cellSearch.h"
+
+#include <random>
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -196,14 +199,25 @@ namespace utils
 		stop();
 	}
 
-	void audio_decoder::set_path(const std::string& path)
+	void audio_decoder::set_context(music_selection_context context)
 	{
-		m_path = path;
+		m_context = std::move(context);
 	}
 
 	void audio_decoder::set_swap_endianness(bool swapped)
 	{
 		m_swap_endianness = swapped;
+	}
+
+	void audio_decoder::clear()
+	{
+		track_fully_decoded = false;
+		track_fully_consumed = false;
+		has_error = false;
+		m_size = 0;
+		duration_ms = 0;
+		timestamps_ms.clear();
+		data.clear();
 	}
 
 	void audio_decoder::stop()
@@ -212,21 +226,24 @@ namespace utils
 		{
 			auto& thread = *m_thread;
 			thread = thread_state::aborting;
+			track_fully_consumed = true;
+			track_fully_consumed.notify_one();
 			thread();
+			m_thread.reset();
 		}
 
-		has_error = false;
-		m_size = 0;
-		timestamps_ms.clear();
-		data.clear();
+		clear();
 	}
 
 	void audio_decoder::decode()
 	{
 		stop();
 
-		m_thread = std::make_unique<named_thread<std::function<void()>>>("Music Decode Thread", [this, path = m_path]()
+		media_log.notice("audio_decoder: %d entries in playlist. Start decoding...", m_context.playlist.size());
+
+		const auto decode_track = [this](const std::string& path)
 		{
+			media_log.notice("audio_decoder: decoding %s", path);
 			scoped_av av;
 
 			// Get format from audio file
@@ -411,9 +428,61 @@ namespace utils
 					if (buffer)
 						av_free(buffer);
 
-					media_log.trace("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.frame->best_effort_timestamp);
+					media_log.notice("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.frame->best_effort_timestamp);
 				}
 			}
+		};
+
+		m_thread = std::make_unique<named_thread<std::function<void()>>>("Music Decode Thread", [this, decode_track]()
+		{
+			for (const std::string& track : m_context.playlist)
+			{
+				media_log.notice("audio_decoder: playlist entry: %s", track);
+			}
+
+			if (m_context.playlist.empty())
+			{
+				media_log.error("audio_decoder: Can not play empty playlist");
+				has_error = true;
+				return;
+			}
+
+			m_context.current_track = m_context.first_track;
+
+			if (m_context.context_option == CELL_SEARCH_CONTEXTOPTION_SHUFFLE && m_context.playlist.size() > 1)
+			{
+				// Shuffle once if necessary
+				media_log.notice("audio_decoder: shuffling initial playlist...");
+				auto engine = std::default_random_engine{};
+				std::shuffle(std::begin(m_context.playlist), std::end(m_context.playlist), engine);
+			}
+
+			while (thread_ctrl::state() != thread_state::aborting)
+			{
+				ensure(m_context.current_track < m_context.playlist.size());
+				media_log.notice("audio_decoder: about to decode: %s (index=%d)", m_context.playlist.at(m_context.current_track), m_context.current_track);
+
+				decode_track(m_context.playlist.at(m_context.current_track));
+				track_fully_decoded = true;
+
+				if (has_error)
+				{
+					media_log.notice("audio_decoder: stopping with error...");
+					break;
+				}
+
+				// Let's only decode one track at a time. Wait for the consumer to finish reading the track.
+				media_log.notice("audio_decoder: waiting until track is consumed...");
+				thread_ctrl::wait_on(track_fully_consumed, false);
+				track_fully_consumed = false;
+			}
+
+			media_log.notice("audio_decoder: finished playlist");
 		});
+	}
+
+	u32 audio_decoder::set_next_index(bool next)
+	{
+		return m_context.step_track(next);
 	}
 }

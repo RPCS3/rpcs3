@@ -142,56 +142,30 @@ struct CellMusicSelectionContext
 struct music_selection_context
 {
 	char magic[4] = "SUS";
-	u32 content_type{0};
-	u32 repeat_mode{0};
-	u32 context_option{0};
-	std::string content_path;
+	std::string hash;
+	CellSearchContentType content_type = CELL_SEARCH_CONTENTTYPE_MUSIC;
+	CellSearchRepeatMode repeat_mode = CELL_SEARCH_REPEATMODE_NONE;
+	CellSearchContextOption context_option = CELL_SEARCH_CONTEXTOPTION_NONE;
+	u32 first_track{0};
+	u32 current_track{0};
+	std::vector<std::string> playlist;
 
 	static constexpr u32 max_depth = 2; // root + 1 folder + file
+	static constexpr const char* target_file_type = "Music Playlist";
+	static constexpr const char* target_version = "1.0";
+	static std::string get_next_hash();
+	static std::string context_to_hex(const CellMusicSelectionContext& context);
 
-	bool set(const CellMusicSelectionContext& in)
-	{
-		if (memcmp(in.data, magic, sizeof(magic)) != 0)
-		{
-			return false;
-		}
+	bool set(const CellMusicSelectionContext& in);
+	CellMusicSelectionContext get() const;
 
-		u32 pos = sizeof(magic);
-		memcpy(&content_type, &in.data[pos], sizeof(content_type));
-		pos += sizeof(content_type);
-		repeat_mode = in.data[pos++];
-		context_option = in.data[pos++];
-		content_path = &in.data[pos];
+	std::string to_string() const;
+	std::string get_yaml_path() const;
 
-		return true;
-	}
-
-	CellMusicSelectionContext get() const
-	{
-		if (content_path.size() + 2 + sizeof(content_type) + sizeof(magic) > CELL_MUSIC_SELECTION_CONTEXT_SIZE)
-		{
-			fmt::throw_exception("Contents of music_selection_context are too large");
-		}
-
-		CellMusicSelectionContext out{};
-		u32 pos = 0;
-
-		std::memset(out.data, 0, CELL_MUSIC_SELECTION_CONTEXT_SIZE);
-		std::memcpy(out.data, magic, sizeof(magic));
-		pos += sizeof(magic);
-		std::memcpy(&out.data[pos], &content_type, sizeof(content_type));
-		pos += sizeof(content_type);
-		out.data[pos++] = repeat_mode;
-		out.data[pos++] = context_option;
-		std::memcpy(&out.data[pos], content_path.c_str(), content_path.size());
-
-		return out;
-	}
-
-	std::string to_string() const
-	{
-		return fmt::format("{ .magic='%s', .content_type=%d, .repeat_mode=%d, .context_option=%d, .path='%s' }", magic, content_type, repeat_mode, context_option, content_path);
-	}
+	void set_playlist(const std::string& path);
+	void create_playlist(const std::string& new_hash);
+	bool load_playlist();
+	u32 step_track(bool next);
 
 	// Helper
 	error_code find_content_id(vm::ptr<CellSearchContentId> contents_id);

@@ -72,7 +72,7 @@ struct music_state
 	vm::ptr<void> userData{};
 	std::mutex mtx;
 	std::shared_ptr<music_handler_base> handler;
-	music_selection_context current_selection_context;
+	music_selection_context current_selection_context{};
 
 	SAVESTATE_INIT_POS(16);
 
@@ -118,17 +118,17 @@ error_code cell_music_select_contents()
 		{
 			sysutil_register_cb([&music, dir_path, vfs_dir_path, info, status](ppu_thread& ppu) -> s32
 			{
+				std::lock_guard lock(music.mtx);
 				const u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_MUSIC_CANCELED};
 				if (result == CELL_OK)
 				{
-					music_selection_context context;
-					context.content_path = info.path;
-					context.content_path = dir_path + info.path.substr(vfs_dir_path.length()); // We need the non-vfs path here
-					context.content_type = fs::is_dir(info.path) ? CELL_SEARCH_CONTENTTYPE_MUSICLIST : CELL_SEARCH_CONTENTTYPE_MUSIC;
+					music_selection_context context{};
+					context.set_playlist(info.path);
 					// TODO: context.repeat_mode = CELL_SEARCH_REPEATMODE_NONE;
 					// TODO: context.context_option = CELL_SEARCH_CONTEXTOPTION_NONE;
 					music.current_selection_context = context;
-					cellMusic.success("Media list dialog: selected entry '%s'", context.content_path);
+					music.current_selection_context.create_playlist(music_selection_context::get_next_hash());
+					cellMusic.success("Media list dialog: selected entry '%s'", context.playlist.front());
 				}
 				else
 				{
@@ -178,21 +178,8 @@ error_code cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 		}
 		const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC2_ERROR_INVALID_CONTEXT};
 
-		if (result)
-		{
-			cellMusic.success("cellMusicSetSelectionContext2: new selection context = %s", music.current_selection_context.to_string());
-		}
-		else
-		{
-			std::string dahex;
-
-			for (usz i = 0; i < CELL_MUSIC_SELECTION_CONTEXT_SIZE; i++)
-			{
-				fmt::append(dahex, " %.2x", context.data[i]);
-			}
-
-			cellMusic.todo("cellMusicSetSelectionContext2: failed. context = %s", dahex);
-		}
+		if (result) cellMusic.success("cellMusicSetSelectionContext2: new selection context = %s", music.current_selection_context.to_string());
+		else cellMusic.todo("cellMusicSetSelectionContext2: failed. context = %s", music_selection_context::context_to_hex(context));
 
 		music.func(ppu, CELL_MUSIC2_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), music.userData);
 		return CELL_OK;
@@ -248,17 +235,17 @@ error_code cellMusicSetSelectionContext(vm::ptr<CellMusicSelectionContext> conte
 	if (!music.func)
 		return CELL_MUSIC_ERROR_GENERIC;
 
-	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
+	sysutil_register_cb([context = *context, &music](ppu_thread& ppu) -> s32
 	{
 		bool result = false;
 		{
 			std::lock_guard lock(music.mtx);
-			result = music.current_selection_context.set(*context);
+			result = music.current_selection_context.set(context);
 		}
 		const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC_ERROR_INVALID_CONTEXT};
 
 		if (result) cellMusic.success("cellMusicSetSelectionContext: new selection context = %s)", music.current_selection_context.to_string());
-		else cellMusic.todo("cellMusicSetSelectionContext: failed. context = %s)", context->data);
+		else cellMusic.todo("cellMusicSetSelectionContext: failed. context = %s)", music_selection_context::context_to_hex(context));
 
 		music.func(ppu, CELL_MUSIC_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), music.userData);
 		return CELL_OK;
@@ -404,6 +391,7 @@ error_code cellMusicGetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 
 	auto& music = g_fxo->get<music_state>();
 	std::lock_guard lock(music.mtx);
+
 	*context = music.current_selection_context.get();
 	cellMusic.success("cellMusicGetSelectionContext2: selection context = %s", music.current_selection_context.to_string());
 
@@ -450,31 +438,53 @@ error_code cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		// TODO: play proper song when the context is a playlist
-		std::string path;
-		{
-			std::lock_guard lock(music.mtx);
-			path = vfs::get(music.current_selection_context.content_path);
-			cellMusic.notice("cellMusicSetPlaybackCommand2: current vfs path: '%s' (unresolved='%s')", path, music.current_selection_context.content_path);
-		}
-
 		switch (command)
 		{
 		case CELL_MUSIC2_PB_CMD_STOP:
 			music.handler->stop();
 			break;
-		case CELL_MUSIC2_PB_CMD_PLAY:
-			music.handler->play(path);
-			break;
 		case CELL_MUSIC2_PB_CMD_PAUSE:
 			music.handler->pause();
 			break;
+		case CELL_MUSIC2_PB_CMD_PLAY:
 		case CELL_MUSIC2_PB_CMD_NEXT:
-			music.handler->play(path);
-			break;
 		case CELL_MUSIC2_PB_CMD_PREV:
+		{
+			std::string path;
+			bool playback_finished = false;
+			{
+				std::lock_guard lock(music.mtx);
+				const std::vector<std::string>& playlist = music.current_selection_context.playlist;
+				u32 next_track = music.current_selection_context.current_track;
+
+				if (command != CELL_MUSIC2_PB_CMD_PLAY)
+				{
+					next_track = music.current_selection_context.step_track(command == CELL_MUSIC2_PB_CMD_NEXT);
+				}
+
+				if (next_track < playlist.size())
+				{
+					path = vfs::get(playlist.at(next_track));
+					cellMusic.notice("cellMusicSetPlaybackCommand2: current vfs path: '%s' (unresolved='%s')", path, playlist.at(next_track));
+				}
+				else
+				{
+					playback_finished = true;
+				}
+			}
+
+			if (playback_finished)
+			{
+				// TODO: is CELL_MUSIC2_PLAYBACK_FINISHED correct here ?
+				cellMusic.notice("cellMusicSetPlaybackCommand2: no more tracks to play");
+				music.handler->stop();
+				music.func(ppu, CELL_MUSIC2_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_MUSIC2_PLAYBACK_FINISHED), music.userData);
+				return CELL_OK;
+			}
+
 			music.handler->play(path);
 			break;
+		}
 		case CELL_MUSIC2_PB_CMD_FASTFORWARD:
 			music.handler->fast_forward();
 			break;
@@ -506,31 +516,53 @@ error_code cellMusicSetPlaybackCommand(s32 command, vm::ptr<void> param)
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		// TODO: play proper song when the context is a playlist
-		std::string path;
-		{
-			std::lock_guard lock(music.mtx);
-			path = vfs::get(music.current_selection_context.content_path);
-			cellMusic.notice("cellMusicSetPlaybackCommand: current vfs path: '%s' (unresolved='%s')", path, music.current_selection_context.content_path);
-		}
-
 		switch (command)
 		{
 		case CELL_MUSIC_PB_CMD_STOP:
 			music.handler->stop();
 			break;
-		case CELL_MUSIC_PB_CMD_PLAY:
-			music.handler->play(path);
-			break;
 		case CELL_MUSIC_PB_CMD_PAUSE:
 			music.handler->pause();
 			break;
+		case CELL_MUSIC_PB_CMD_PLAY:
 		case CELL_MUSIC_PB_CMD_NEXT:
-			music.handler->play(path);
-			break;
 		case CELL_MUSIC_PB_CMD_PREV:
+		{
+			std::string path;
+			bool playback_finished = false;
+			{
+				std::lock_guard lock(music.mtx);
+				const std::vector<std::string>& playlist = music.current_selection_context.playlist;
+				u32 next_track = music.current_selection_context.current_track;
+
+				if (command != CELL_MUSIC_PB_CMD_PLAY)
+				{
+					next_track = music.current_selection_context.step_track(command == CELL_MUSIC_PB_CMD_NEXT);
+				}
+
+				if (next_track < playlist.size())
+				{
+					path = vfs::get(playlist.at(next_track));
+					cellMusic.notice("cellMusicSetPlaybackCommand: current vfs path: '%s' (unresolved='%s')", path, playlist.at(next_track));
+				}
+				else
+				{
+					playback_finished = true;
+				}
+			}
+
+			if (playback_finished)
+			{
+				// TODO: is CELL_MUSIC_PLAYBACK_FINISHED correct here ?
+				cellMusic.notice("cellMusicSetPlaybackCommand: no more tracks to play");
+				music.handler->stop();
+				music.func(ppu, CELL_MUSIC_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_MUSIC_PLAYBACK_FINISHED), music.userData);
+				return CELL_OK;
+			}
+
 			music.handler->play(path);
 			break;
+		}
 		case CELL_MUSIC_PB_CMD_FASTFORWARD:
 			music.handler->fast_forward();
 			break;

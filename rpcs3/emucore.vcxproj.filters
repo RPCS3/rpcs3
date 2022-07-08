@@ -1087,6 +1087,9 @@
     <ClCompile Include="Emu\savestate_utils.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellMusicSelectionContext.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2163,6 +2166,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_cursor.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellMusicDecode.h">
+      <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
