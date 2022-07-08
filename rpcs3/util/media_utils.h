@@ -7,6 +7,7 @@
 #include <thread>
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
+#include "Emu/Cell/Modules/cellMusic.h"
 
 namespace utils
 {
@@ -49,22 +50,26 @@ namespace utils
 		audio_decoder();
 		~audio_decoder();
 
-		void set_path(const std::string& path);
+		void set_context(music_selection_context context);
 		void set_swap_endianness(bool swapped);
+		void clear();
 		void stop();
 		void decode();
+		u32 set_next_index(bool next);
 
-		std::mutex m_mtx;
+		shared_mutex m_mtx;
 		const s32 sample_rate = 48000;
 		std::vector<u8> data;
 		atomic_t<u64> m_size = 0;
 		atomic_t<u64> duration_ms = 0;
+		atomic_t<bool> track_fully_decoded{false};
+		atomic_t<bool> track_fully_consumed{false};
 		atomic_t<bool> has_error{false};
 		std::deque<std::pair<u64, u64>> timestamps_ms;
 
 	private:
 		bool m_swap_endianness = false;
-		std::string m_path;
+		music_selection_context m_context{};
 		std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 	};
 }

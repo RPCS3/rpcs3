@@ -264,6 +264,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/cellMsgDialog.cpp
     Cell/Modules/cellMusic.cpp
     Cell/Modules/cellMusicDecode.cpp
+    Cell/Modules/cellMusicSelectionContext.cpp
     Cell/Modules/cellMusicExport.cpp
     Cell/Modules/cellNetAoi.cpp
     Cell/Modules/cellNetCtl.cpp
