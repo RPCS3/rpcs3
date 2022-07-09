@@ -831,7 +831,7 @@ namespace utils
 					DWORD old;
 					if (!::VirtualProtect(target, m_size, +prot, &old))
 					{
-						UnmapViewOfFile2(nullptr, target, MEM_PRESERVE_PLACEHOLDER);
+						UnmapViewOfFile2(GetCurrentProcess(), target, MEM_PRESERVE_PLACEHOLDER);
 						return {nullptr, "Failed to protect"};
 					}
 				}
