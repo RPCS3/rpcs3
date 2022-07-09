@@ -88,9 +88,9 @@ static std::array<serial_ver_t, 23> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            11) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            12) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1)
-SERIALIZATION_VER(spu, 2,                                       1, 2)
+SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
 SERIALIZATION_VER(lv2_net, 5,                                   1)
@@ -101,7 +101,7 @@ SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1, 2, 3)
+	SERIALIZATION_VER(rsx, 10,                                  1)
 }
 
 namespace np
@@ -255,7 +255,12 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 	Emu.GetCallbacks().init_pad_handler(Emu.GetTitleID());
 	Emu.GetCallbacks().init_kb_handler();
 	Emu.GetCallbacks().init_mouse_handler();
-	if (ar) Emu.ExecDeserializationRemnants();
+
+	if (ar)
+	{
+		Emu.ExecDeserializationRemnants();
+		ar->pos += 32; // Reserved area
+	}
 }
 
 void Emulator::Init(bool add_only)
@@ -859,6 +864,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				bool LE_format;
 				bool state_inspection_support;
 				nse_t<u64, 1> offset;
+				std::array<u8, 32> reserved;
 			};
 	
 			const auto header = m_ar->try_read<file_header>().second;
@@ -911,15 +917,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 	
 			argv.clear();
-	
-			std::string bdvd_by_title_id;
-			(*m_ar)(argv.emplace_back(), bdvd_by_title_id);
-	
 			klic.clear();
 	
-			if (u128 key = m_ar->operator u128())
+			std::string bdvd_by_title_id;
+			(*m_ar)(argv.emplace_back(), bdvd_by_title_id, klic.emplace_back(), m_game_dir, hdd1);
+
+			if (!klic[0])
 			{
-				klic.emplace_back(key);
+				klic.clear();
 			}
 	
 			if (!bdvd_by_title_id.empty())
@@ -937,9 +942,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					return game_boot_result::invalid_file_or_folder;
 				}
 			}
-	
-			hdd1 = m_ar->operator std::string();
-	
+
 			auto load_tar = [&](const std::string& path)
 			{
 				const usz size = *m_ar;
@@ -957,10 +960,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				hdd1 = rpcs3::utils::get_hdd1_dir() + "caches/" + hdd1 + "/";
 				load_tar(hdd1);
 			}
-	
+
 			for (const std::string hdd0_game = rpcs3::utils::get_hdd0_dir() + "game/";;)
 			{
-				const std::string game_data = m_ar->operator std::string();
+				const std::string game_data = *m_ar;
 
 				if (game_data.empty())
 				{
@@ -969,6 +972,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				load_tar(hdd0_game + game_data);
 			}
+
+			m_ar->pos += 32; // Reserved area
 
 			if (argv[0].starts_with("/dev_hdd0"sv))
 			{
@@ -1000,6 +1005,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				sys_log.error("Unknown source for savestates: %s", argv[0]);
 			}
+
+			sys_log.notice("Restored executable path: \'%s\'", m_path);
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
@@ -1362,7 +1369,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 		}
 
-		if (bdvd_dir.empty() && !is_disc_patch)
+		if (bdvd_dir.empty() && disc.empty() && !is_disc_patch)
 		{
 			// Reset original disc game dir if this is neither disc nor disc patch
 			m_game_dir = "PS3_GAME";
@@ -1489,7 +1496,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// Disc game
 			bdvd_dir = disc;
 			vfs::mount("/dev_bdvd", bdvd_dir);
-			sys_log.notice("Disk: %s", vfs::get("/dev_bdvd"));
+			vfs::mount("/dev_bdvd/PS3_GAME", bdvd_dir + m_game_dir);
+			sys_log.notice("Disk: %s, Dir: %s", vfs::get("/dev_bdvd"), m_game_dir);
 		}
 
 		if (add_only)
@@ -2426,14 +2434,18 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 			ar("RPCS3SAV"_u64);
 			ar(std::endian::native == std::endian::little);
 			ar(g_cfg.savestate.state_inspection_mode.get());
+			ar(std::array<u8, 32>{}); // Reserved for future use
 			ar(usz{0}); // Offset of versioning data, to be overwritten at the end of saving
 			ar(argv[0]);
 			ar(!m_title_id.empty() && !vfs::get("/dev_bdvd").empty() ? m_title_id : std::string());
 			ar(klic.empty() ? std::array<u8, 16>{} : std::bit_cast<std::array<u8, 16>>(klic[0]));
+			ar(m_game_dir);
 			save_hdd1();
 			save_hdd0();
+			ar(std::array<u8, 32>{}); // Reserved for future use
 			vm::save(ar);
 			g_fxo->save(ar);
+			ar(std::array<u8, 32>{}); // Reserved for future use
 			ar(timestamp);
 		});
 
