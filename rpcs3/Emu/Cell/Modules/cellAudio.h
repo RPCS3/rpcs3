@@ -222,6 +222,7 @@ struct cell_audio_config
 	std::shared_ptr<AudioBackend> backend = nullptr;
 
 	AudioChannelCnt audio_downmix = AudioChannelCnt::SURROUND_7_1;
+	AudioChannelCnt backend_ch_cnt = AudioChannelCnt::SURROUND_7_1;
 	u32 audio_channels = 0;
 	u32 audio_sampling_rate = 0;
 	u32 audio_block_period = 0;
