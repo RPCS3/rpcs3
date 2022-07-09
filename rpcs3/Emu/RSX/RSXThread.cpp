@@ -452,20 +452,8 @@ namespace rsx
 		ar(enable_second_vhandler, requested_vsync);
 		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
 		ar(in_begin_end);
-
-		if (!ar.is_writing() && GET_SERIALIZATION_VERSION(rsx) <= 2)
-		{
-			// Used to be ZCULL information we can obtain by reading method registers
-			ar.pos += 3;
-		}
-
 		ar(display_buffers, display_buffers_count, current_display_buffer);
-
-		if (ar.is_writing() || GET_SERIALIZATION_VERSION(rsx) != 1)
-		{
-			ar(unsent_gcm_events);
-			ar(rsx::method_registers.current_draw_clause);
-		}
+		ar(unsent_gcm_events, rsx::method_registers.current_draw_clause);
 	}
 
 	thread::thread(utils::serial* _ar)
