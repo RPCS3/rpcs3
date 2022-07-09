@@ -745,19 +745,16 @@ namespace rsx
 
 		void set_zcull_render_enable(thread* rsx, u32, u32 arg)
 		{
-			rsx->zcull_rendering_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
 		void set_zcull_stats_enable(thread* rsx, u32, u32 arg)
 		{
-			rsx->zcull_stats_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
 		void set_zcull_pixel_count_enable(thread* rsx, u32, u32 arg)
 		{
-			rsx->zcull_pixel_cnt_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
@@ -1789,8 +1786,6 @@ namespace rsx
 		}
 
 		rsx->reset();
-		nv4097::set_zcull_render_enable(rsx, 0, 0x3);
-		nv4097::set_render_mode(rsx, 0, 0x0100'0000);
 		rsx->on_frame_end(arg);
 		rsx->request_emu_flip(arg);
 		vm::_ref<atomic_t<u128>>(rsx->label_addr + 0x10).store(u128{});
