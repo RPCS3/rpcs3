@@ -290,6 +290,7 @@ struct lv2_spu_group
 	atomic_t<u32> join_state; // flags used to detect exit cause and signal
 	atomic_t<u32> running = 0; // Number of running threads
 	atomic_t<u64> stop_count = 0;
+	u32 waiter_spu_index = -1; // Index of SPU executing a waiting syscall
 	class ppu_thread* waiter = nullptr;
 	bool set_terminate = false;
 
