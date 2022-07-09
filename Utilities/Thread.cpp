@@ -8,7 +8,6 @@
 #include "Thread.h"
 #include "Utilities/JIT.h"
 #include <thread>
-#include <sstream>
 #include <cfenv>
 
 #ifdef _WIN32
@@ -17,6 +16,7 @@
 #include <process.h>
 #include <sysinfoapi.h>
 #else
+#define _GNU_SOURCE
 #ifdef __APPLE__
 #define _XOPEN_SOURCE
 #define __USE_GNU
@@ -95,14 +95,6 @@ extern thread_local std::string(*g_tls_log_prefix)();
 
 // Report error and call std::abort(), defined in main.cpp
 [[noreturn]] void report_fatal_error(std::string_view);
-
-template <>
-void fmt_class_string<std::thread::id>::format(std::string& out, u64 arg)
-{
-	std::ostringstream ss;
-	ss << get_object(arg);
-	out += ss.str();
-}
 
 std::string dump_useful_thread_info()
 {
@@ -1644,7 +1636,7 @@ static void append_thread_name(std::string& msg)
 	}
 	else
 	{
-		fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
+		fmt::append(msg, "Thread id = %u.\n", thread_ctrl::get_tid());
 	}
 }
 
@@ -3139,6 +3131,8 @@ u64 thread_ctrl::get_tid()
 {
 #ifdef _WIN32
 	return GetCurrentThreadId();
+#elif defined(__linux__)
+	return syscall(SYS_gettid);
 #else
 	return reinterpret_cast<u64>(pthread_self());
 #endif

@@ -652,12 +652,8 @@ u32 utils::get_cpu_model()
 
 namespace utils
 {
-	extern const u64 main_tid = []() -> u64
+	u64 _get_main_tid()
 	{
-#ifdef _WIN32
-		return GetCurrentThreadId();
-#else
-		return reinterpret_cast<u64>(pthread_self());
-#endif
-	}();
+		return thread_ctrl::get_tid();
+	}
 }

@@ -101,7 +101,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		buf = std::string(_text);
 
 		// Always print thread id
-		fmt::append(buf, "\n\nThread id = %s.", std::this_thread::get_id());
+		fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
 	}
 
 	if (!g_tls_serialize_name.empty())
