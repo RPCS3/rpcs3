@@ -81,7 +81,7 @@ void cell_audio_config::reset(bool backend_changed)
 		cellAudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
 	}
 
-	audio_downmix = downmix;
+	audio_downmix = std::min<AudioChannelCnt>(downmix, static_cast<AudioChannelCnt>(ch_cnt));
 	audio_channels = ch_cnt;
 	audio_sampling_rate = static_cast<u32>(freq);
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1'000'000 / audio_sampling_rate;
