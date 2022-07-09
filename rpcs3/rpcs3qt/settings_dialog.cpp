@@ -948,13 +948,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->audioDeviceBox->blockSignals(true);
 		ui->audioDeviceBox->addItem(tr("Default"), qsv(audio_device_enumerator::DEFAULT_DEV_ID));
 
+		const std::string selected_device = m_emu_settings->GetSetting(emu_settings_type::AudioDevice);
 		int device_index = 0;
 
 		for (auto& dev : dev_array)
 		{
 			const QString cur_item = qstr(dev.id);
 			ui->audioDeviceBox->addItem(qstr(dev.name), cur_item);
-			if (g_cfg.audio.audio_device.to_string() == dev.id)
+			if (selected_device == dev.id)
 			{
 				device_index = ui->audioDeviceBox->findData(cur_item);
 			}
