@@ -228,19 +228,35 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 		*ep = idm::get_unlocked<lv2_obj, lv2_event_queue>(ar.operator u32());
 	}
 
+	u32 waiter_spu_index = -1;
+
 	switch (run_state)
 	{
 	// Commented stuff are handled by different means currently
 	//case SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED:
 	//case SPU_THREAD_GROUP_STATUS_INITIALIZED:
 	//case SPU_THREAD_GROUP_STATUS_READY:
-	//case SPU_THREAD_GROUP_STATUS_WAITING:
+	case SPU_THREAD_GROUP_STATUS_WAITING:
+	{
+		run_state = SPU_THREAD_GROUP_STATUS_RUNNING;
+		ar(waiter_spu_index);
+		[[fallthrough]];
+	}
+	case SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED:
+	{
+		if (run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+		{
+			run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
+		}
+
+		[[fallthrough]];
+	}
 	case SPU_THREAD_GROUP_STATUS_SUSPENDED:
 	{
-		// Suspend all SPU threads
+		// Suspend all SPU threads except a thread that waits on sys_spu_thread_receive_event  
 		for (const auto& thread : threads)
 		{
-			if (thread)
+			if (thread && thread->index != waiter_spu_index)
 			{
 				thread->state += cpu_flag::suspend;
 			}
@@ -263,28 +279,7 @@ void lv2_spu_group::save(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(spu);
 
-	spu_group_status _run_state = run_state;
-
-	switch (_run_state)
-	{
-	// Commented stuff are handled by different means currently
-	//case SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED:
-	//case SPU_THREAD_GROUP_STATUS_INITIALIZED:
-	//case SPU_THREAD_GROUP_STATUS_READY:
-
-	// Waiting SPU should recover this
-	case SPU_THREAD_GROUP_STATUS_WAITING: _run_state = SPU_THREAD_GROUP_STATUS_RUNNING; break;
-	case SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED: _run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED; break;
-	//case SPU_THREAD_GROUP_STATUS_RUNNING:
-	//case SPU_THREAD_GROUP_STATUS_STOPPED:
-	//case SPU_THREAD_GROUP_STATUS_UNKNOWN:
-	default:
-	{
-		break;
-	}
-	}
-
-	ar(name, max_num, mem_size, type, ct->id, has_scheduler_context, max_run, init, prio, _run_state, exit_status);
+	ar(name, max_num, mem_size, type, ct->id, has_scheduler_context, max_run, init, prio, run_state, exit_status);
 
 	for (const auto& thread : threads)
 	{
@@ -304,6 +299,11 @@ void lv2_spu_group::save(utils::serial& ar)
 	for (auto ep : {&ep_run, &ep_exception, &ep_sysmodule})
 	{
 		ar(lv2_obj::check(*ep) ? (*ep)->id : 0);
+	}
+
+	if (run_state == SPU_THREAD_GROUP_STATUS_WAITING)
+	{
+		ar(waiter_spu_index);
 	}
 }
 
