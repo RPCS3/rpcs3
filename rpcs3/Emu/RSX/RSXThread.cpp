@@ -451,10 +451,17 @@ namespace rsx
 		ar(dma_address, iomap_table, restore_point, tiles, zculls, display_buffers, display_buffers_count, current_display_buffer);
 		ar(enable_second_vhandler, requested_vsync);
 		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
-		ar(in_begin_end, zcull_stats_enabled, zcull_rendering_enabled, zcull_pixel_cnt_enabled);
+		ar(in_begin_end);
+
+		if (!ar.is_writing() && GET_SERIALIZATION_VERSION(rsx) <= 2)
+		{
+			// Used to be ZCULL information we can obtain by reading method registers
+			ar.pos += 3;
+		}
+
 		ar(display_buffers, display_buffers_count, current_display_buffer);
 
-		if (ar.is_writing() || GET_SERIALIZATION_VERSION(rsx) != 1u)
+		if (ar.is_writing() || GET_SERIALIZATION_VERSION(rsx) != 1)
 		{
 			ar(unsent_gcm_events);
 			ar(rsx::method_registers.current_draw_clause);
@@ -697,6 +704,11 @@ namespace rsx
 		}
 	}
 
+	namespace nv4097
+	{
+		void set_render_mode(thread* rsx, u32, u32 arg);
+	}
+
 	void thread::on_task()
 	{
 		g_tls_log_prefix = []
@@ -720,6 +732,9 @@ namespace rsx
 			//Backend did not provide an implementation, provide NULL object
 			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
 		}
+
+		check_zcull_status(false);
+		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
 
 		performance_counters.state = FIFO_state::empty;
 
@@ -2295,6 +2310,8 @@ namespace rsx
 	void thread::reset()
 	{
 		rsx::method_registers.reset();
+		check_zcull_status(false);
+		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
 		m_graphics_state = pipeline_state::all_dirty;
 		m_rtts_dirty = true;
 		m_framebuffer_state_contested = false;
@@ -2637,6 +2654,10 @@ namespace rsx
 
 	void thread::check_zcull_status(bool framebuffer_swap)
 	{
+		const bool zcull_rendering_enabled = !!method_registers.registers[NV4097_SET_ZCULL_EN];
+		const bool zcull_stats_enabled = !!method_registers.registers[NV4097_SET_ZCULL_STATS_ENABLE];
+		const bool zcull_pixel_cnt_enabled = !!method_registers.registers[NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE];
+
 		if (framebuffer_swap)
 		{
 			zcull_surface_active = false;

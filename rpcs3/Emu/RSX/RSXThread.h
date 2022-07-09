@@ -671,10 +671,6 @@ namespace rsx
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
-		bool zcull_stats_enabled = false;
-		bool zcull_rendering_enabled = false;
-		bool zcull_pixel_cnt_enabled = false;
-
 		reports::conditional_render_eval cond_render_ctrl;
 
 		virtual u64 get_cycles() = 0;

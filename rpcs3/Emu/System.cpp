@@ -75,7 +75,7 @@ static std::array<serial_ver_t, 23> s_serial_versions;
 
 #define SERIALIZATION_VER(name, identifier, ...) \
 \
-	const bool s_##name##_serialization_fill = []() { ::s_serial_versions[identifier].compatible_versions = {__VA_ARGS__}; return true; }();\
+	const bool s_##name##_serialization_fill = []() { if (::s_serial_versions[identifier].compatible_versions.empty()) ::s_serial_versions[identifier].compatible_versions = {__VA_ARGS__}; return true; }();\
 \
 	extern void using_##name##_serialization()\
 	{\
@@ -101,7 +101,7 @@ SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1, 2)
+	SERIALIZATION_VER(rsx, 10,                                  1, 2, 3)
 }
 
 namespace np
@@ -111,8 +111,8 @@ namespace np
 
 #ifdef _MSC_VER
 // Compiler bug, lambda function body does seem to inherit used namespace atleast for function decleration 
-SERIALIZATION_VER(rsx, 10,                                      1, 2)
-SERIALIZATION_VER(sceNp, 11,                                    1)
+SERIALIZATION_VER(rsx, 10)
+SERIALIZATION_VER(sceNp, 11)
 #endif
 
 SERIALIZATION_VER(cellVdec, 12,                                 1)
