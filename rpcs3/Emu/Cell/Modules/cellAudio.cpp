@@ -81,8 +81,9 @@ void cell_audio_config::reset(bool backend_changed)
 		cellAudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
 	}
 
-	audio_downmix = std::min<AudioChannelCnt>(downmix, static_cast<AudioChannelCnt>(ch_cnt));
-	audio_channels = ch_cnt;
+	audio_downmix = downmix;
+	backend_downmix = AudioChannelCnt{ch_cnt};
+	audio_channels = static_cast<u32>(req_ch_cnt);
 	audio_sampling_rate = static_cast<u32>(freq);
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1'000'000 / audio_sampling_rate;
 	audio_sample_size = static_cast<u32>(sample_size);
@@ -155,7 +156,7 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 		return cfg.audio_min_buffer_duration;
 	}();
 
-	cb_ringbuf.set_buf_size(static_cast<u32>(cfg.audio_channels * cfg.audio_sampling_rate * cfg.audio_sample_size * buffer_dur_mult));
+	cb_ringbuf.set_buf_size(static_cast<u32>(static_cast<u32>(cfg.backend_downmix) * cfg.audio_sampling_rate * cfg.audio_sample_size * buffer_dur_mult));
 	backend->SetWriteCallback(std::bind(&audio_ringbuffer::backend_write_callback, this, std::placeholders::_1, std::placeholders::_2));
 }
 
@@ -203,7 +204,7 @@ float* audio_ringbuffer::get_current_buffer() const
 u64 audio_ringbuffer::get_enqueued_samples() const
 {
 	AUDIT(cfg.buffering_enabled);
-	const u64 ringbuf_samples = cb_ringbuf.get_used_size() / (cfg.audio_sample_size * cfg.audio_channels);
+	const u64 ringbuf_samples = cb_ringbuf.get_used_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_downmix));
 
 	if (cfg.time_stretching_enabled)
 	{
@@ -264,7 +265,7 @@ void audio_ringbuffer::process_resampled_data()
 {
 	if (!cfg.time_stretching_enabled) return;
 
-	const auto samples = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * cfg.audio_channels)));
+	const auto samples = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_downmix))));
 	commit_data(samples.first, samples.second);
 }
 
@@ -275,12 +276,48 @@ void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
 	// Dump audio if enabled
 	m_dump.WriteData(buf, sample_cnt * static_cast<u32>(AudioSampleSize::FLOAT));
 
-	if (cfg.backend->get_convert_to_s16())
+	if (cfg.backend_downmix < cfg.audio_downmix)
 	{
-		AudioBackend::convert_to_s16(sample_cnt, buf, buf);
+		if (cfg.audio_downmix == AudioChannelCnt::SURROUND_7_1)
+		{
+			if (cfg.backend_downmix == AudioChannelCnt::SURROUND_5_1)
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, buf, buf);
+			}
+			else if (cfg.backend_downmix == AudioChannelCnt::STEREO)
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt, buf, buf);
+			}
+			else
+			{
+				fmt::throw_exception("Invalid downmix combination: %u -> %u", static_cast<u32>(cfg.audio_downmix), static_cast<u32>(cfg.backend_downmix));
+			}
+		}
+		else if (cfg.audio_downmix == AudioChannelCnt::SURROUND_5_1)
+		{
+			if (cfg.backend_downmix == AudioChannelCnt::STEREO)
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt, buf, buf);
+			}
+			else
+			{
+				fmt::throw_exception("Invalid downmix combination: %u -> %u", static_cast<u32>(cfg.audio_downmix), static_cast<u32>(cfg.backend_downmix));
+			}
+		}
+		else
+		{
+			fmt::throw_exception("Invalid downmix combination: %u -> %u", static_cast<u32>(cfg.audio_downmix), static_cast<u32>(cfg.backend_downmix));
+		}
 	}
 
-	cb_ringbuf.push(buf, sample_cnt * cfg.audio_sample_size);
+	const u32 sample_cnt_out = sample_cnt / static_cast<u32>(cfg.audio_downmix) * static_cast<u32>(cfg.backend_downmix);
+
+	if (cfg.backend->get_convert_to_s16())
+	{
+		AudioBackend::convert_to_s16(sample_cnt_out, buf, buf);
+	}
+
+	cb_ringbuf.push(buf, sample_cnt_out * cfg.audio_sample_size);
 }
 
 void audio_ringbuffer::play()
