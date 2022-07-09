@@ -1974,10 +1974,11 @@ void Emulator::FixGuestTime()
 		initialize_timebased_time(m_ar->operator u64());
 
 		g_cfg.savestate.state_inspection_mode.set(m_state_inspection_savestate);
-		m_ar.reset();
 
 		CallFromMainThread([this]
 		{
+			m_ar.reset();
+
 			g_tls_log_prefix = []()
 			{
 				return std::string();
@@ -2265,13 +2266,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		}
 	}
 
-	m_ar.reset();
-
-	if (savestate)
-	{
-		m_ar = std::make_unique<utils::serial>();
-	}
-
 	named_thread stop_watchdog("Stop Watchdog", [&]()
 	{
 		for (uint i = 0; thread_ctrl::state() != thread_state::aborting;)
@@ -2357,6 +2351,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 
 	if (savestate)
 	{
+		m_ar = std::make_unique<utils::serial>();
+
 		// Savestate thread
 		named_thread emu_state_cap_thread("Emu State Capture Thread", [&]()
 		{
