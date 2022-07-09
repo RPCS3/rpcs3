@@ -4287,6 +4287,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				if (res == CELL_EAGAIN)
 				{
+					ch_out_mbox.set_value(data);
 					return false;
 				}
 
