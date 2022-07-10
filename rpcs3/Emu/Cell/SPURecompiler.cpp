@@ -36,17 +36,9 @@ const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 // Move 4 args for calling native function from a GHC calling convention function
+#if defined(ARCH_X64)
 static u8* move_args_ghc_to_native(u8* raw)
 {
-#ifdef ARCH_ARM64
-	// Note: this is a placeholder to get rpcs3 working for now
-	// mov x0, x22
-	// mov x1, x23
-	// mov x2, x24
-	// mov x3, x25
-	std::memcpy(raw, "\xE0\x03\x16\xAA\xE1\x03\x17\xAA\xE2\x03\x18\xAA\xE3\x03\x19\xAA", 16);
-	return raw + 16;
-#else
 #ifdef _WIN32
 	// mov  rcx, r13
 	// mov  rdx, rbp
@@ -62,14 +54,34 @@ static u8* move_args_ghc_to_native(u8* raw)
 #endif
 
 	return raw + 12;
-#endif
 }
+#elif defined(ARCH_ARM64)
+static void ghc_cpp_trampoline(u64 fn_target, native_asm& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label target = c.newLabel();
+	c.mov(args[0], a64::x19);
+	c.mov(args[1], a64::x20);
+	c.mov(args[2], a64::x21);
+	c.mov(args[3], a64::x22);
+
+	c.ldr(a64::x15, arm::Mem(target));
+	c.br(a64::x15);
+
+	c.brk(Imm(0x42)); // Unreachable
+
+	c.bind(target);
+	c.embedUInt64(fn_target);
+}
+#endif
 
 DECLARE(spu_runtime::tr_dispatch) = []
 {
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(false);
 #endif
+#if defined(ARCH_X64)
 	// Generate a special trampoline to spu_recompiler_base::dispatch with pause instruction
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = move_args_ghc_to_native(trptr);
@@ -81,10 +93,24 @@ DECLARE(spu_runtime::tr_dispatch) = []
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::dispatch);
 	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
+#elif defined(ARCH_ARM64)
+	auto trptr = build_function_asm<spu_function_t>("tr_dispatch",
+		[](native_asm& c, auto& args)
+		{
+			c.yield();
+			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::dispatch), c, args);
+
+			c.embed("tr_dispatch", 11);
+		});
+	return trptr;
+#else
+#error "Unimplemented"
+#endif
 }();
 
 DECLARE(spu_runtime::tr_branch) = []
 {
+#if defined(ARCH_X64)
 	// Generate a trampoline to spu_recompiler_base::branch
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = move_args_ghc_to_native(trptr);
@@ -94,10 +120,24 @@ DECLARE(spu_runtime::tr_branch) = []
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::branch);
 	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
+
+#elif defined(ARCH_ARM64)
+	auto trptr = build_function_asm<spu_function_t>("tr_branch",
+		[](native_asm& c, auto& args)
+		{
+			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::branch), c, args);
+
+			c.embed("tr_branch", 9);
+		});
+	return trptr;
+#else
+#error "Unimplemented"
+#endif
 }();
 
 DECLARE(spu_runtime::tr_interpreter) = []
 {
+#if defined(ARCH_X64)
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = move_args_ghc_to_native(trptr);
 	*raw++ = 0xff; // jmp [rip]
@@ -106,6 +146,16 @@ DECLARE(spu_runtime::tr_interpreter) = []
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::old_interpreter);
 	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
+#elif defined(ARCH_ARM64)
+	auto trptr = build_function_asm<spu_function_t>("tr_interpreter",
+		[](native_asm& c, auto& args)
+		{
+			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::old_interpreter), c, args);
+
+			c.embed("tr_interpreter", 14);
+		});
+	return trptr;
+#endif
 }();
 
 DECLARE(spu_runtime::g_dispatcher) = []
@@ -123,6 +173,7 @@ DECLARE(spu_runtime::g_dispatcher) = []
 
 DECLARE(spu_runtime::tr_all) = []
 {
+#if defined(ARCH_X64)
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = trptr;
 
@@ -172,6 +223,53 @@ DECLARE(spu_runtime::tr_all) = []
 	*raw++ = 0xc2;
 
 	return reinterpret_cast<spu_function_t>(trptr);
+
+#elif defined(ARCH_ARM64)
+	auto trptr = build_function_asm<spu_function_t>("tr_all",
+		[](native_asm& c, auto& args)
+		{
+			using namespace asmjit;
+
+			// w1: PC (eax in x86 SPU)
+			// x7: lsa (rcx in x86 SPU)
+
+			// Load PC
+			Label pc_offset = c.newLabel();
+			c.ldr(a64::x0, arm::Mem(pc_offset));
+			c.ldr(a64::w1, arm::Mem(a64::x19, a64::x0)); // REG_Base + offset(spu_thread::pc)
+			// Compute LS address = REG_Sp + PC, store into x7 (use later)
+			c.add(a64::x7, a64::x20, a64::x1);
+			// Load 32b from LS address
+			c.ldr(a64::w3, arm::Mem(a64::x7));
+			// shr (32 - 20)
+			c.lsr(a64::w3, a64::w3, Imm(32 - 20));
+			// Load g_dispatcher
+			Label g_dispatcher_offset = c.newLabel();
+			c.ldr(a64::x4, arm::Mem(g_dispatcher_offset));
+			// Update block hash
+			Label block_hash_offset = c.newLabel();
+			c.mov(a64::x5, Imm(0));
+			c.ldr(a64::x6, arm::Mem(block_hash_offset));
+			c.str(a64::x5, arm::Mem(a64::x19, a64::x6)); // REG_Base + offset(spu_thread::block_hash)
+			// Jump to [g_dispatcher + idx * 8]
+			c.mov(a64::x6, Imm(8));
+			c.mul(a64::x6, a64::x3, a64::x6);
+			c.add(a64::x4, a64::x4, a64::x6);
+			c.ldr(a64::x4, arm::Mem(a64::x4));
+			c.br(a64::x4);
+
+			c.bind(pc_offset);
+			c.embedUInt64(::offset32(&spu_thread::pc));
+			c.bind(g_dispatcher_offset);
+			c.embedUInt64(reinterpret_cast<u64>(g_dispatcher));
+			c.bind(block_hash_offset);
+			c.embedUInt64(::offset32(&spu_thread::block_hash));
+			c.embed("tr_all", 6);
+		});
+	return trptr;
+#else
+#error "Unimplemented"
+#endif
 }();
 
 DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gateway", [](native_asm& c, auto& args)
@@ -262,8 +360,69 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gatewa
 #endif
 
 	c.ret();
-#else
+#elif defined(ARCH_ARM64)
+	// Push callee saved registers to the stack
+	// We need to save x18-x30 = 13 x 8B each + 8 bytes for 16B alignment = 112B
+	c.sub(a64::sp, a64::sp, Imm(112));
+	c.stp(a64::x18, a64::x19, arm::Mem(a64::sp));
+	c.stp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
+	c.stp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
+	c.stp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
+	c.stp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
+	c.stp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
+	c.str(a64::x30, arm::Mem(a64::sp, 96));
+
+	// Save native stack pointer for longjmp emulation
+	Label sp_offset = c.newLabel();
+	c.ldr(a64::x26, arm::Mem(sp_offset));
+	// sp not allowed to be used in load/stores directly
+	c.mov(a64::x15, a64::sp);
+	c.str(a64::x15, arm::Mem(args[0], a64::x26));
+
+	// Move 4 args (despite spu_function_t def)
+	c.mov(a64::x19, args[0]);
+	c.mov(a64::x20, args[1]);
+	c.mov(a64::x21, args[2]);
+	c.mov(a64::x22, args[3]);
+
+	// Save ret address to stack
+	// since non-tail calls to cpp fns may corrupt lr and
+	// g_tail_escape may jump out of a fn before the epilogue can restore lr
+	Label ret_addr = c.newLabel();
+	c.adr(a64::x0, ret_addr);
+	c.str(a64::x0, arm::Mem(a64::sp, 104));
+
+	Label call_target = c.newLabel();
+	c.ldr(a64::x0, arm::Mem(call_target));
+	c.blr(a64::x0);
+
+	c.bind(ret_addr);
+
+	// Restore stack ptr
+	c.ldr(a64::x26, arm::Mem(sp_offset));
+	c.ldr(a64::x15, arm::Mem(a64::x19, a64::x26));
+	c.mov(a64::sp, a64::x15);
+
+	// Restore registers from the stack
+	c.ldp(a64::x18, a64::x19, arm::Mem(a64::sp));
+	c.ldp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
+	c.ldp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
+	c.ldp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
+	c.ldp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
+	c.ldp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
+	c.ldr(a64::x30, arm::Mem(a64::sp, 96));
+	// Restore stack ptr
+	c.add(a64::sp, a64::sp, Imm(112));
+	// Return
 	c.ret(a64::x30);
+
+	c.bind(sp_offset);
+	c.embedUInt64(::offset32(&spu_thread::saved_native_sp));
+	c.bind(call_target);
+	c.embedUInt64(reinterpret_cast<u64>(spu_runtime::tr_all));
+	c.embed("spu_gateway", 11);
+#else
+#error "Unimplemented"
 #endif
 });
 
@@ -278,6 +437,22 @@ DECLARE(spu_runtime::g_escape) = build_function_asm<void(*)(spu_thread*)>("spu_e
 	// Return to the return location
 	c.sub(x86::rsp, 8);
 	c.ret();
+#elif defined(ARCH_ARM64)
+	// Restore native stack pointer (longjmp emulation)
+	Label sp_offset = c.newLabel();
+	c.ldr(a64::x15, arm::Mem(sp_offset));
+	c.ldr(a64::x15, arm::Mem(args[0], a64::x15));
+	c.mov(a64::sp, a64::x15);
+
+	c.ldr(a64::x30, arm::Mem(a64::sp, 104));
+	c.ret(a64::x30);
+
+	c.bind(sp_offset);
+	c.embedUInt64(::offset32(&spu_thread::saved_native_sp));
+
+	c.embed("spu_escape", 10);
+#else
+#error "Unimplemented"
 #endif
 });
 
@@ -299,6 +474,35 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, sp
 	c.xor_(x86::ebx, x86::ebx);
 	c.mov(x86::qword_ptr(x86::rsp), args[1]);
 	c.ret();
+#elif defined(ARCH_ARM64)
+	// Restore native stack pointer (longjmp emulation)
+	Label sp_offset = c.newLabel();
+	c.ldr(a64::x15, arm::Mem(sp_offset));
+	c.ldr(a64::x15, arm::Mem(args[0], a64::x15));
+	c.mov(a64::sp, a64::x15);
+
+	// Reload lr, since it might've been clobbered by a cpp fn
+	// and g_tail_escape runs before epilogue
+	c.ldr(a64::x30, arm::Mem(a64::sp, 104));
+
+	// Tail call, GHC CC
+	c.mov(a64::x19, args[0]); // REG_Base
+	Label ls_offset = c.newLabel();
+	c.ldr(a64::x20, arm::Mem(ls_offset));
+	c.ldr(a64::x20, arm::Mem(args[0], a64::x20)); // REG_Sp
+	c.mov(a64::x21, args[2]); // REG_Hp
+	c.eor(a64::w22, a64::w22, a64::w22); // REG_R1
+
+	c.br(args[1]);
+
+	c.bind(ls_offset);
+	c.embedUInt64(::offset32(&spu_thread::ls));
+	c.bind(sp_offset);
+	c.embedUInt64(::offset32(&spu_thread::saved_native_sp));
+
+	c.embed("spu_tail_escape", 15);
+#else
+#error "Unimplemented"
 #endif
 });
 
@@ -1157,6 +1361,7 @@ spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 
 spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 {
+#if defined(ARCH_X64)
 	u8* const raw = jit_runtime::alloc(16, 16);
 
 	if (!raw)
@@ -1185,6 +1390,33 @@ spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 	raw[15] = data & 0xff;
 
 	return reinterpret_cast<spu_function_t>(raw);
+#elif defined(ARCH_ARM64)
+	spu_function_t func = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
+		{
+			using namespace asmjit;
+
+			// Save the jmp addr to GHC CC 3rd arg -> REG_Hp
+			Label replace_addr = c.newLabel();
+			c.adr(a64::x21, replace_addr);
+			Label branch_target = c.newLabel();
+
+			c.bind(replace_addr);
+			c.ldr(a64::x9, arm::Mem(branch_target));
+			c.br(a64::x9);
+
+			c.bind(branch_target);
+			c.embedUInt64(reinterpret_cast<u64>(tr_branch));
+
+			c.embedUInt8(data >> 8);
+			c.embedUInt8(data & 0xff);
+
+			c.embed("branch_patchpoint", 17);
+		});
+
+	return func;
+#else
+#error "Unimplemented"
+#endif
 }
 
 spu_recompiler_base::spu_recompiler_base()
@@ -1200,6 +1432,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	// If code verification failed from a patched patchpoint, clear it with a dispatcher jump
 	if (rip)
 	{
+#if defined(ARCH_X64)
 		const s64 rel = reinterpret_cast<u64>(spu_runtime::tr_all) - reinterpret_cast<u64>(rip - 8) - 5;
 
 		union
@@ -1215,6 +1448,34 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 		bytes[7] = 0x90;
 
 		atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip - 8), result);
+#elif defined(ARCH_ARM64)
+		auto jump_instrs = build_function_asm<spu_function_t>("", [](native_asm& c, auto& args)
+			{
+				using namespace asmjit;
+
+				Label branch_target = c.newLabel();
+				c.ldr(a64::x9, arm::Mem(branch_target)); // PC rel load
+				c.br(a64::x9);
+
+				c.bind(branch_target);
+				c.embedUInt64(reinterpret_cast<u64>(spu_runtime::tr_all));
+			});
+		// 128 bit load/store is atomic on Armv8.4+
+		u128 result = *reinterpret_cast<u128*>(jump_instrs);
+#if defined(__APPLE__)
+		pthread_jit_write_protect_np(false);
+#endif
+		atomic_storage<u128>::release(*reinterpret_cast<u128*>(rip), result);
+#if defined(__APPLE__)
+		pthread_jit_write_protect_np(true);
+#endif
+
+		// Flush all cache lines after potentially writing executable code
+		asm("ISB");
+		asm("DSB ISH");
+#else
+#error "Unimplemented"
+#endif
 	}
 
 	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
@@ -1251,13 +1512,27 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 			spu_log.trace("Called from 0x%x", _info._u32[2] - 4);
 		}
 	}
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(true);
+#endif
 
+#if defined(ARCH_ARM64)
+	// Flush all cache lines after potentially writing executable code
+	asm("ISB");
+	asm("DSB ISH");
+#endif
 	spu_runtime::g_tail_escape(&spu, func, nullptr);
 }
 
 void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 {
+#if defined(ARCH_X64)
 	if (const u32 ls_off = ((rip[6] << 8) | rip[7]) * 4)
+#elif defined(ARCH_ARM64)
+	if (const u32 ls_off = ((rip[16] << 8) | rip[17]) * 4) // See branch_patchpoint `data`
+#else
+#error "Unimplemented"
+#endif
 	{
 		spu_log.todo("Special branch patchpoint hit.\nPlease report to the developer (0x%05x).", ls_off);
 	}
@@ -1270,6 +1545,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 		return;
 	}
 
+#if defined(ARCH_X64)
 	// Overwrite jump to this function with jump to the compiled function
 	const s64 rel = reinterpret_cast<u64>(func) - reinterpret_cast<u64>(rip) - 5;
 
@@ -1305,6 +1581,34 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	}
 
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
+#elif defined(ARCH_ARM64)
+	auto jmp_instrs = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
+		{
+			using namespace asmjit;
+
+			Label branch_target = c.newLabel();
+			c.ldr(a64::x9, arm::Mem(branch_target)); // PC rel load
+			c.br(a64::x9);
+
+			c.bind(branch_target);
+			c.embedUInt64(reinterpret_cast<u64>(func));
+		});
+	// 128 bit load/store is atomic on Armv8.4+
+	u128 result = *reinterpret_cast<u128*>(jmp_instrs);
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(false);
+#endif
+	atomic_storage<u128>::release(*reinterpret_cast<u128*>(rip), result);
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(true);
+#endif
+
+	// Flush all cache lines after potentially writing executable code
+	asm("ISB");
+	asm("DSB ISH");
+#else
+#error "Unimplemented"
+#endif
 
 	spu_runtime::g_tail_escape(&spu, func, rip);
 }
@@ -4689,7 +4993,7 @@ public:
 		m_test_state->setLinkage(GlobalValue::InternalLinkage);
 #ifdef ARCH_ARM64
 		// LLVM doesn't support PreserveAll on arm64.
-		m_test_state->setCallingConv(CallingConv::GHC);
+		m_test_state->setCallingConv(CallingConv::PreserveMost);
 #else
 		m_test_state->setCallingConv(CallingConv::PreserveAll);
 #endif
@@ -5009,6 +5313,10 @@ public:
 			fmt::throw_exception("Compilation failed");
 		}
 
+#if defined(__APPLE__)
+		pthread_jit_write_protect_np(false);
+#endif
+
 		if (g_cfg.core.spu_debug)
 		{
 			// Testing only
@@ -5040,6 +5348,15 @@ public:
 			out.flush();
 			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 		}
+
+#if defined(__APPLE__)
+		pthread_jit_write_protect_np(true);
+#endif
+#if defined(ARCH_ARM64)
+		// Flush all cache lines after potentially writing executable code
+		asm("ISB");
+		asm("DSB ISH");
+#endif
 
 		if (g_fxo->get<spu_cache>().operator bool())
 		{
