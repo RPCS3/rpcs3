@@ -286,7 +286,9 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	// Save sp for native longjmp emulation
 	Label native_sp_offset = c.newLabel();
 	c.ldr(a64::x10, arm::Mem(native_sp_offset));
-	c.str(a64::sp, arm::Mem(args[0], a64::x10));
+	// sp not allowed to be used in load/stores directly
+	c.mov(a64::x15, a64::sp);
+	c.str(a64::x15, arm::Mem(args[0], a64::x10));
 
 	// Load REG_Base - use absolute jump target to bypass rel jmp range limits
 	Label exec_addr = c.newLabel();
@@ -341,7 +343,8 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 
 	// Restore stack ptr
 	c.ldr(a64::x10, arm::Mem(native_sp_offset));
-	c.ldr(a64::sp, arm::Mem(args[0], a64::x10));
+	c.ldr(a64::x15, arm::Mem(a64::x20, a64::x10));
+	c.mov(a64::sp, a64::x15);
 	// Restore registers from the stack
 	c.ldp(a64::x18, a64::x19, arm::Mem(a64::sp));
 	c.ldp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
