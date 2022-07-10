@@ -1023,6 +1023,59 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 	if (size0 != 1)
 	{
+#if defined(ARCH_ARM64)
+		// Allocate some writable executable memory
+		u8* const wxptr = jit_runtime::alloc(size0 * 128 + 16, 16);
+
+		if (!wxptr)
+		{
+			return nullptr;
+		}
+
+		// Raw assembly pointer
+		u8* raw = wxptr;
+
+		auto make_jump = [&](asmjit::arm::CondCode op, auto target)
+		{
+			// Fallback to dispatch if no target
+			const u64 taddr = target ? reinterpret_cast<u64>(target) : reinterpret_cast<u64>(tr_dispatch);
+
+			// Build with asmjit to make things more readable
+			// Might cost some RAM, but meh whatever
+			auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
+				{
+					using namespace asmjit;
+
+					c.movk(a64::x9, Imm(static_cast<u16>(taddr >> 48)), Imm(48));
+					c.movk(a64::x9, Imm(static_cast<u16>(taddr >> 32)), Imm(32));
+					c.movk(a64::x9, Imm(static_cast<u16>(taddr >> 16)), Imm(16));
+					c.movk(a64::x9, Imm(static_cast<u16>(taddr)), Imm(0));
+
+					if (op == arm::CondCode::kAlways)
+					{
+						c.br(a64::x9);
+						// Constant length per jmp for easier stub patching
+						c.nop();
+						c.nop();
+					} else
+					{
+						Label do_branch = c.newLabel();
+						Label cont = c.newLabel();
+
+						c.b(op, do_branch);
+						c.b(cont);
+
+						c.bind(do_branch);
+						c.br(a64::x9);
+
+						c.bind(cont);
+					}
+				});
+			u8 mem_used = 7 * 4;
+			memcpy(raw, reinterpret_cast<u8*>(temp), mem_used);
+			raw += mem_used;
+		};
+#elif defined(ARCH_X64)
 		// Allocate some writable executable memory
 		u8* const wxptr = jit_runtime::alloc(size0 * 22 + 14, 16);
 
@@ -1061,6 +1114,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			std::memcpy(raw, &r32, 4);
 			raw += 4;
 		};
+#endif
 
 		workload.clear();
 		workload.reserve(size0);
@@ -1140,16 +1194,43 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 			if (w.rel32)
 			{
+#if defined(ARCH_X64)
 				// Patch rel32 linking it to the current location if necessary
 				const s32 r32 = ::narrow<s32>(raw - w.rel32);
 				std::memcpy(w.rel32 - 4, &r32, 4);
+#elif defined(ARCH_ARM64)
+				//	Rewrite jump address
+				{
+					u64 raw64 = reinterpret_cast<u64>(raw);
+					auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
+						{
+							using namespace asmjit;
+
+							c.movk(a64::x9, Imm(static_cast<u16>(raw64 >> 48)), Imm(48));
+							c.movk(a64::x9, Imm(static_cast<u16>(raw64 >> 32)), Imm(32));
+							c.movk(a64::x9, Imm(static_cast<u16>(raw64 >> 16)), Imm(16));
+							c.movk(a64::x9, Imm(static_cast<u16>(raw64)), Imm(0));
+						});
+
+					memcpy(w.rel32 - (4 * 7), reinterpret_cast<u8*>(temp), 4 * 4);
+				}
+#else
+#error "Unimplemented"
+#endif
 			}
 
 			if (w.level >= w.beg->first.size() || w.level >= it->first.size())
 			{
 				// If functions cannot be compared, assume smallest function
 				spu_log.error("Trampoline simplified at ??? (level=%u)", w.level);
+#if defined(ARCH_X64)
 				make_jump(0xe9, w.beg->second); // jmp rel32
+#elif defined(ARCH_ARM64)
+				u64 branch_target = reinterpret_cast<u64>(w.beg->second);
+				make_jump(asmjit::arm::CondCode::kAlways, branch_target);
+#else
+#error "Unimplemented"
+#endif
 				continue;
 			}
 
@@ -1181,18 +1262,31 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			if (it == m_flat_list.end())
 			{
 				spu_log.error("Trampoline simplified (II) at ??? (level=%u)", w.level);
+#if defined(ARCH_X64)
 				make_jump(0xe9, w.beg->second); // jmp rel32
+#elif defined(ARCH_ARM64)
+				u64 branch_target = reinterpret_cast<u64>(w.beg->second);
+				make_jump(asmjit::arm::CondCode::kAlways, branch_target);
+#else
+#error "Unimplemented"
+#endif
 				continue;
 			}
 
 			// Emit 32-bit comparison
+#if defined(ARCH_X64)
 			ensure(raw + 12 <= wxptr + size0 * 22 + 16); // "Asm overflow"
+#elif defined(ARCH_ARM64)
+			ensure(raw + (4 * 4) <= wxptr + size0 * 128 + 16);
+#else
+#error "Unimplemented"
+#endif
 
 			if (w.from != w.level)
 			{
 				// If necessary (level has advanced), emit load: mov eax, [rcx + addr]
 				const u32 cmp_lsa = w.level * 4u;
-
+#if defined(ARCH_X64)
 				if (cmp_lsa < 0x80)
 				{
 					*raw++ = 0x8b;
@@ -1206,21 +1300,69 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					std::memcpy(raw, &cmp_lsa, 4);
 					raw += 4;
 				}
+#elif defined(ARCH_ARM64)
+				{
+					auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
+						{
+							using namespace asmjit;
+
+							c.movz(a64::w9, Imm(static_cast<u16>(cmp_lsa >> 16)), Imm(16));
+							c.movk(a64::w9, Imm(static_cast<u16>(cmp_lsa)), Imm(0));
+							c.ldr(a64::w1, arm::Mem(a64::x7, a64::x9));
+						});
+
+					memcpy(raw, reinterpret_cast<u8*>(temp), 3 * 4);
+					raw += 3 * 4;
+				}
+#else
+#error "Unimplemented"
+#endif
 			}
 
 			// Emit comparison: cmp eax, imm32
+#if defined(ARCH_X64)
 			*raw++ = 0x3d;
 			std::memcpy(raw, &x, 4);
 			raw += 4;
+#elif defined(ARCH_ARM64)
+			{
+				auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
+					{
+						using namespace asmjit;
+
+						c.movz(a64::w9, Imm(static_cast<u16>(x >> 16)), Imm(16));
+						c.movk(a64::w9, Imm(static_cast<u16>(x)), Imm(0));
+						c.cmp(a64::w1, a64::w9);
+					});
+
+				memcpy(raw, reinterpret_cast<u8*>(temp), 3 * 4);
+				raw += 3 * 4;
+			}
+#else
+#error "Unimplemented"
+#endif
 
 			// Low subrange target
 			if (size1 == 1)
 			{
+#if defined(ARCH_X64)
 				make_jump(0x82, w.beg->second); // jb rel32
+#elif defined(ARCH_ARM64)
+				u64 branch_target = reinterpret_cast<u64>(w.beg->second);
+				make_jump(asmjit::arm::CondCode::kUnsignedLT, branch_target);
+#else
+#error "Unimplemented"
+#endif
 			}
 			else
 			{
+#if defined(ARCH_X64)
 				make_jump(0x82, raw); // jb rel32 (stub)
+#elif defined(ARCH_ARM64)
+				make_jump(asmjit::arm::CondCode::kUnsignedLT, raw);
+#else
+#error "Unimplemented"
+#endif
 				auto& to = workload.emplace_back(w);
 				to.end   = it;
 				to.size  = size1;
@@ -1231,7 +1373,14 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			// Second subrange target
 			if (size2 == 1)
 			{
+#if defined(ARCH_X64)
 				make_jump(0xe9, it->second); // jmp rel32
+#elif defined(ARCH_ARM64)
+				u64 branch_target = reinterpret_cast<u64>(it->second);
+				make_jump(asmjit::arm::CondCode::kAlways, branch_target);
+#else
+#error "Unimplemented"
+#endif
 			}
 			else
 			{
@@ -1249,11 +1398,24 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					// High subrange target
 					if (size2 == 1)
 					{
+#if defined(ARCH_X64)
 						make_jump(0x87, it2->second); // ja rel32
+#elif defined(ARCH_ARM64)
+						u64 branch_target = reinterpret_cast<u64>(it2->second);
+						make_jump(asmjit::arm::CondCode::kUnsignedGT, branch_target);
+#else
+#throw "Unimplemented"
+#endif
 					}
 					else
 					{
+#if defined(ARCH_X64)
 						make_jump(0x87, raw); // ja rel32 (stub)
+#elif defined(ARCH_ARM64)
+						make_jump(asmjit::arm::CondCode::kUnsignedGT, raw);
+#else
+#error "Unimplemented"
+#endif
 						auto& to = workload.emplace_back(w);
 						to.beg   = it2;
 						to.size  = size2;
@@ -1265,11 +1427,24 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 					if (size3 == 1)
 					{
+#if defined(ARCH_X64)
 						make_jump(0xe9, it->second); // jmp rel32
+#elif defined(ARCH_ARM64)
+						u64 branch_target = reinterpret_cast<u64>(it->second);
+						make_jump(asmjit::arm::CondCode::kAlways, branch_target);
+#else
+#error "Unimplemented"
+#endif
 					}
 					else
 					{
+#if defined(ARCH_X64)
 						make_jump(0xe9, raw); // jmp rel32 (stub)
+#elif defined(ARCH_ARM64)
+						make_jump(asmjit::arm::CondCode::kAlways, raw);
+#else
+#error "Unimplemented"
+#endif
 						auto& to = workload.emplace_back(w);
 						to.beg   = it;
 						to.end   = it2;
@@ -1280,7 +1455,13 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				}
 				else
 				{
+#if defined(ARCH_X64)
 					make_jump(0xe9, raw); // jmp rel32 (stub)
+#elif defined(ARCH_ARM64)
+					make_jump(asmjit::arm::CondCode::kAlways, raw);
+#else
+#error "Unimplemented"
+#endif
 					auto& to = workload.emplace_back(w);
 					to.beg   = it;
 					to.size  = w.size - size1;
