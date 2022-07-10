@@ -699,6 +699,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 #endif
 	c.ret();
 #else
+	c.brk(Imm(0x42));
 	c.ret(a64::x30);
 #endif
 });
@@ -829,6 +830,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 #endif
 	c.ret();
 #else
+	c.brk(Imm(0x42));
 	c.ret(a64::x30);
 #endif
 });
@@ -968,6 +970,7 @@ const auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, cp
 #endif
 	c.ret();
 #else
+	c.brk(Imm(0x42));
 	c.ret(a64::x30);
 #endif
 });
@@ -1659,7 +1662,13 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	}
 	else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
+#if defined(ARCH_X64)
 		jit = spu_recompiler_base::make_fast_llvm_recompiler();
+#elif defined(ARCH_ARM64)
+		jit = spu_recompiler_base::make_llvm_recompiler();
+#else
+#error "Unimplemented"
+#endif
 	}
 
 	if (g_cfg.core.mfc_debug)
@@ -1726,7 +1735,13 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 	}
 	else if (g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
+#if defined(ARCH_X64)
 		jit = spu_recompiler_base::make_fast_llvm_recompiler();
+#elif defined(ARCH_ARM64)
+		jit = spu_recompiler_base::make_llvm_recompiler();
+#else
+#error "Unimplemented"
+#endif
 	}
 
 	if (g_cfg.core.mfc_debug)
