@@ -2979,6 +2979,7 @@ public:
 		m_engine->updateGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<uptr>(_func));
 
 		const auto inst = m_ir->CreateCall(func, {args...});
+		inst->setTailCallKind(llvm::CallInst::TCK_NoTail);
 #ifdef _WIN32
 		inst->setCallingConv(llvm::CallingConv::Win64);
 #endif
