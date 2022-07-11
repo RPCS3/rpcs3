@@ -228,7 +228,7 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 		*ep = idm::get_unlocked<lv2_obj, lv2_event_queue>(ar.operator u32());
 	}
 
-	u32 waiter_spu_index = -1;
+	waiter_spu_index = -1;
 
 	switch (run_state)
 	{
@@ -256,15 +256,20 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 		// Suspend all SPU threads except a thread that waits on sys_spu_thread_receive_event  
 		for (const auto& thread : threads)
 		{
-			if (thread && thread->index != waiter_spu_index)
+			if (thread)
 			{
+				if (thread->index == waiter_spu_index)
+				{
+					lv2_obj::set_future_sleep(thread.get());
+					continue;
+				}
+
 				thread->state += cpu_flag::suspend;
 			}
 		}
 
 		break;
 	}
-	//case SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED:
 	//case SPU_THREAD_GROUP_STATUS_RUNNING:
 	//case SPU_THREAD_GROUP_STATUS_STOPPED:
 	//case SPU_THREAD_GROUP_STATUS_UNKNOWN:
