@@ -1084,6 +1084,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_cursor.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\savestate_utils.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

@@ -1176,7 +1176,6 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-
 	// run event loop (maybe only needed for the gui application)
 	return app->exec();
 }

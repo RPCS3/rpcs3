@@ -247,20 +247,6 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		}
 		break;
 	case Qt::Key_P:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && Emu.IsRunning())
-		{
-			Emu.Pause();
-			return;
-		}
-		break;
-	case Qt::Key_S:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
-		{
-			Emu.Restart(true);
-			return;
-		}
-		break;
-	case Qt::Key_R:
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
 			switch (Emu.GetStatus())
@@ -275,8 +261,26 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 				Emu.Resume();
 				return;
 			}
-			default: break;
+			default:
+			{
+				Emu.Pause();
+				return;
 			}
+			}
+		}
+		break;
+	case Qt::Key_S:
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+		{
+			Emu.Restart(true);
+			return;
+		}
+		break;
+	case Qt::Key_R:
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+		{
+			extern bool boot_last_savestate();
+			boot_last_savestate();
 		}
 		break;
 	case Qt::Key_C:

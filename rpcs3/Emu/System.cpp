@@ -65,71 +65,6 @@ bool g_use_rtm = false;
 u64 g_rtm_tx_limit1 = 0;
 u64 g_rtm_tx_limit2 = 0;
 
-struct serial_ver_t
-{
-	bool used = false;
-	s32 current_version = 0;
-	std::set<s32> compatible_versions;
-};
-
-static std::array<serial_ver_t, 23> s_serial_versions;
-
-#define SERIALIZATION_VER(name, identifier, ...) \
-\
-	const bool s_##name##_serialization_fill = []() { if (::s_serial_versions[identifier].compatible_versions.empty()) ::s_serial_versions[identifier].compatible_versions = {__VA_ARGS__}; return true; }();\
-\
-	extern void using_##name##_serialization()\
-	{\
-		ensure(Emu.IsStopped());\
-		::s_serial_versions[identifier].used = true;\
-	}\
-\
-	extern s32 get_##name##_serialization_version()\
-	{\
-		return ::s_serial_versions[identifier].current_version;\
-	}
-
-SERIALIZATION_VER(global_version, 0,                            12) // For stuff not listed here
-SERIALIZATION_VER(ppu, 1,                                       1)
-SERIALIZATION_VER(spu, 2,                                       1)
-SERIALIZATION_VER(lv2_sync, 3,                                  1)
-SERIALIZATION_VER(lv2_vm, 4,                                    1)
-SERIALIZATION_VER(lv2_net, 5,                                   1)
-SERIALIZATION_VER(lv2_fs, 6,                                    1)
-SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
-SERIALIZATION_VER(lv2_memory, 8,                                1)
-SERIALIZATION_VER(lv2_config, 9,                                1)
-
-namespace rsx
-{
-	SERIALIZATION_VER(rsx, 10,                                  1, 2)
-}
-
-namespace np
-{
-	SERIALIZATION_VER(sceNp, 11,                                1)
-}
-
-#ifdef _MSC_VER
-// Compiler bug, lambda function body does seem to inherit used namespace atleast for function decleration 
-SERIALIZATION_VER(rsx, 10)
-SERIALIZATION_VER(sceNp, 11)
-#endif
-
-SERIALIZATION_VER(cellVdec, 12,                                 1)
-SERIALIZATION_VER(cellAudio, 13,                                1)
-SERIALIZATION_VER(cellCamera, 14,                               1)
-SERIALIZATION_VER(cellGem, 15,                                  1)
-SERIALIZATION_VER(sceNpTrophy, 16,                              1)
-SERIALIZATION_VER(cellMusic, 17,                                1)
-SERIALIZATION_VER(cellVoice, 18,                                1)
-SERIALIZATION_VER(cellGcm, 19,                                  1)
-SERIALIZATION_VER(sysPrxForUser, 20,                            1)
-SERIALIZATION_VER(cellSaveData, 21,                             1)
-SERIALIZATION_VER(cellAudioOut, 22,                             1)
-
-#undef SERIALIZATION_VER
-
 std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
@@ -144,6 +79,8 @@ extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 = 0, utils::serial* = nullptr);
 extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 = 0, utils::serial* = nullptr);
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
+extern bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& data, bool log);
+extern std::vector<std::pair<u16, u16>> read_used_savestate_versions();
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -875,7 +812,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				return game_boot_result::savestate_corrupted;
 			}
 	
-			if (header.LE_format != (std::endian::native == std::endian::little))
+			if (header.LE_format != (std::endian::native == std::endian::little) || header.offset >= m_ar->data.size())
 			{
 				return game_boot_result::savestate_corrupted;
 			}
@@ -884,38 +821,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 	
 			// Emulate seek operation (please avoid using in other places)
 			m_ar->pos = header.offset;
-			const std::vector<std::pair<u16, u16>> versions_data = *m_ar;
-			m_ar->pos = sizeof(file_header); // Restore position
-	
-			if (versions_data.empty())
-			{
-				return game_boot_result::savestate_corrupted;
-			}
-	
-			bool ok = true;
-	
-			for (auto [identifier, version] : versions_data)
-			{
-				if (identifier >= s_serial_versions.size())
-				{
-					sys_log.error("Savestate version identider is unknown! (category=%u, version=%u)", identifier, version);
-					ok = false; // Log all mismatches
-				}
-				else if (!s_serial_versions[identifier].compatible_versions.count(version))
-				{
-					sys_log.error("Savestate version is not supported. (category=%u, version=%u)", identifier, version);
-					ok = false;
-				}
-				else
-				{
-					s_serial_versions[identifier].current_version = version;
-				}
-			}
-	
-			if (!ok)
+
+			if (!is_savestate_version_compatible(m_ar->operator std::vector<std::pair<u16, u16>>(), true))
 			{
 				return game_boot_result::savestate_version_unsupported;
 			}
+
+			m_ar->pos = sizeof(file_header); // Restore position
 	
 			argv.clear();
 			klic.clear();
@@ -2393,13 +2305,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 
 			auto& ar = *m_ar;
 
-			for (serial_ver_t& ver : s_serial_versions)
-			{
-				ver.used = false;
-			}
-
-			using_global_version_serialization();
-			using_ppu_serialization();
+			read_used_savestate_versions(); // Reset version data
+			USING_SERIALIZATION_VERSION(global_version);
 
 			// Avoid duplicating TAR object memory because it can be very large
 			auto save_tar = [&](const std::string& path)
@@ -2535,16 +2442,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		fs::pending_file file(path);
 
 		// Identifer -> version
-		std::vector<std::pair<u16, u16>> used_serial;
-		used_serial.reserve(s_serial_versions.size());
-
-		for (const serial_ver_t& ver : s_serial_versions)
-		{
-			if (ver.used)
-			{
-				used_serial.emplace_back(&ver - s_serial_versions.data(), *ver.compatible_versions.rbegin());
-			}
-		}
+		std::vector<std::pair<u16, u16>> used_serial = read_used_savestate_versions();
 
 		auto& ar = *m_ar;
 		const usz pos = ar.seek_end();
