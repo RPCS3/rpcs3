@@ -2270,6 +2270,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
 		// Ensure clean state
+		m_ar.reset();
 		argv.clear();
 		envp.clear();
 		data.clear();
@@ -2563,7 +2564,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)
-	m_ar.reset();
 	argv.clear();
 	envp.clear();
 	data.clear();
@@ -2608,6 +2608,7 @@ game_boot_result Emulator::Restart(bool savestate)
 
 		if (g_cfg.savestate.suspend_emu)
 		{
+			m_ar.reset();
 			return game_boot_result::no_errors;
 		}
 	}
