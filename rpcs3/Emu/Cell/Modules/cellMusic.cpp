@@ -96,7 +96,7 @@ struct music_state
 			return;
 		}
 
-		USING_SERIALIZATION_VERSION_COND(ar.is_writing(), cellMusic);
+		GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellMusic);
 
 		ar(userData);
 	}

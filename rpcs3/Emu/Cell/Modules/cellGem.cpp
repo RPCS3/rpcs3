@@ -244,7 +244,7 @@ public:
 			return;
 		}
 
-		USING_SERIALIZATION_VERSION_COND(ar.is_writing(), cellGem);
+		GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellGem);
 
 		ar(attribute, vc_attribute, status_flags, enable_pitch_correction, inertial_counter, controllers
 			, connected_controllers, update_started, camera_frame, memory_ptr, start_timestamp);

@@ -478,6 +478,8 @@ namespace rsx
 		FIFO::flattening_helper m_flattener;
 		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
+		u32 restore_fifo_cmd = 0;
+		u32 restore_fifo_count = 0;
 
 		// Occlusion query
 		bool zcull_surface_active = false;

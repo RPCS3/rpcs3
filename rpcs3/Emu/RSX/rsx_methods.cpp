@@ -115,6 +115,7 @@ namespace rsx
 			{
 				if (rsx->test_stopped())
 				{
+					rsx->state += cpu_flag::again;
 					return;
 				}
 

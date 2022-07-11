@@ -48,7 +48,7 @@ void voice_manager::reset()
 
 void voice_manager::save(utils::serial& ar)
 {
-	USING_SERIALIZATION_VERSION_COND(ar.is_writing(), cellVoice);
+	GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellVoice);
 	ar(id_ctr, port_source, ports, queue_keys, voice_service_started);
 }
 
