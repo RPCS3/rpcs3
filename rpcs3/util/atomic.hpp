@@ -331,7 +331,7 @@ public:
 template <uint Max, typename... T>
 void atomic_wait::list<Max, T...>::wait(atomic_wait_timeout timeout)
 {
-	static_assert(Max, "Cannot initiate atomic wait with empty list.");
+	static_assert(!!Max, "Cannot initiate atomic wait with empty list.");
 
 	atomic_wait_engine::wait(m_info[0].data, m_info[0].size, m_info[0].old, static_cast<u64>(timeout), m_info[0].mask, m_info + 1);
 }
