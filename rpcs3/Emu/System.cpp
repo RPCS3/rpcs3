@@ -20,6 +20,7 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
+#include "Emu/Cell/lv2/sys_spu.h"
 #include "Emu/Cell/Modules/cellGame.h"
 
 #include "Emu/title.h"
@@ -1955,9 +1956,28 @@ void Emulator::RunPPU()
 	// Run main thread
 	idm::select<named_thread<ppu_thread>>([](u32, named_thread<ppu_thread>& cpu)
 	{
-		if (cpu.stop_flag_removal_protection) return;
+		if (std::exchange(cpu.stop_flag_removal_protection, false))
+		{
+			return;
+		}
+
 		ensure(cpu.state.test_and_reset(cpu_flag::stop));
 		cpu.state.notify_one(cpu_flag::stop);
+	});
+
+	// Run SPUs waiting on a syscall (savestates related)
+	idm::select<named_thread<spu_thread>>([](u32, named_thread<spu_thread>& spu)
+	{
+		if (spu.group && spu.index == spu.group->waiter_spu_index)
+		{
+			if (std::exchange(spu.stop_flag_removal_protection, false))
+			{
+				return;
+			}
+
+			ensure(spu.state.test_and_reset(cpu_flag::stop));
+			spu.state.notify_one(cpu_flag::stop);
+		}
 	});
 
 	if (auto thr = g_fxo->try_get<named_thread<rsx::rsx_replay_thread>>())
@@ -1992,11 +2012,20 @@ void Emulator::FixGuestTime()
 }
 void Emulator::FinalizeRunRequest()
 {
-	auto on_select = [] (u32, spu_thread& cpu)
+	auto on_select = [](u32, spu_thread& spu)
 	{
-		if (cpu.stop_flag_removal_protection) return;
-		ensure(cpu.state.test_and_reset(cpu_flag::stop));
-		cpu.state.notify_one(cpu_flag::stop);
+		if (spu.group && spu.index == spu.group->waiter_spu_index)
+		{
+			return;
+		}
+
+		if (std::exchange(spu.stop_flag_removal_protection, false))
+		{
+			return;
+		}
+
+		ensure(spu.state.test_and_reset(cpu_flag::stop));
+		spu.state.notify_one(cpu_flag::stop);
 	};
 
 	idm::select<named_thread<spu_thread>>(on_select);

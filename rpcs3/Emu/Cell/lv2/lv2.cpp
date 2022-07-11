@@ -1233,6 +1233,30 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 {
 	const u64 start_time = get_guest_system_time();
 
+	auto on_to_sleep_update = [&]()
+	{
+		std::string out = fmt::format("Threads (%d):", g_to_sleep.size());
+		for (auto thread : g_to_sleep)
+		{
+			fmt::append(out, " 0x%x,", thread->id);
+		}
+
+		ppu_log.warning("%s", out);
+
+		if (g_to_sleep.empty())
+		{
+			// All threads are ready, wake threads
+			Emu.CallFromMainThread([]
+			{
+				if (Emu.IsStarting())
+				{
+					// It uses lv2_obj::g_mutex, run it on main thread
+					Emu.FinalizeRunRequest();
+				}
+			});
+		}
+	};
+
 	if (auto ppu = thread.try_get<ppu_thread>())
 	{
 		ppu_log.trace("sleep() - waiting (%zu)", g_pending.size());
@@ -1260,27 +1284,7 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 			if (unqueue(g_to_sleep, ppu))
 			{
 				ppu->start_time = start_time;
-
-				std::string out = fmt::format("Threads (%d):", g_to_sleep.size());
-				for (auto thread : g_to_sleep)
-				{
-					fmt::append(out, " 0x%x,", thread->id);
-				}
-
-				ppu_log.warning("%s", out);
-
-				if (g_to_sleep.empty())
-				{
-					// All threads are ready, wake threads
-					Emu.CallFromMainThread([]
-					{
-						if (Emu.IsStarting())
-						{
-							// It uses lv2_obj::g_mutex, run it on main thread
-							Emu.FinalizeRunRequest();
-						}
-					});
-				}
+				on_to_sleep_update();
 			}
 
 			// Already sleeping
@@ -1292,6 +1296,13 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 
 		ppu->raddr = 0; // Clear reservation
 		ppu->start_time = start_time;
+	}
+	else if (auto spu = thread.try_get<spu_thread>())
+	{
+		if (unqueue(g_to_sleep, spu))
+		{
+			on_to_sleep_update();
+		}
 	}
 
 	if (timeout)
@@ -1551,9 +1562,9 @@ ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_l
 	return PPU_THREAD_STATUS_ONPROC;
 }
 
-void lv2_obj::set_future_sleep(ppu_thread* ppu)
+void lv2_obj::set_future_sleep(cpu_thread* cpu)
 {
-	g_to_sleep.emplace_back(ppu);
+	g_to_sleep.emplace_back(cpu);
 }
 
 bool lv2_obj::is_scheduler_ready()

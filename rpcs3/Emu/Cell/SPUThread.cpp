@@ -4790,6 +4790,12 @@ bool spu_thread::stop_and_signal(u32 code)
 				return false;
 			}
 
+			if (Emu.IsStarting())
+			{
+				// Deregister lv2_obj::g_to_sleep entry (savestates related) 
+				lv2_obj::sleep(*this);
+			}
+
 			if (group->run_state >= SPU_THREAD_GROUP_STATUS_WAITING && group->run_state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
 			{
 				// Try again

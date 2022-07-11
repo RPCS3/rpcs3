@@ -200,7 +200,7 @@ public:
 	}
 
 	// Serialization related
-	static void set_future_sleep(ppu_thread* ppu);
+	static void set_future_sleep(cpu_thread* cpu);
 	static bool is_scheduler_ready();
 
 	static void cleanup();
@@ -450,7 +450,7 @@ private:
 	static std::deque<std::pair<u64, class cpu_thread*>> g_waiting;
 
 	// Threads which must call lv2_obj::sleep before the scheduler starts
-	static std::deque<class ppu_thread*> g_to_sleep;
+	static std::deque<class cpu_thread*> g_to_sleep;
 
 	static void schedule_all();
 };
