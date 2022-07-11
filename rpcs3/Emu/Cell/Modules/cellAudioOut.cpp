@@ -187,7 +187,7 @@ audio_out_configuration::audio_out_configuration(utils::serial& ar)
 
 void audio_out_configuration::save(utils::serial& ar)
 {
-	USING_SERIALIZATION_VERSION_COND(ar.is_writing(), cellAudioOut);
+	GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellAudioOut);
 
 	for (auto& state : out)
 	{

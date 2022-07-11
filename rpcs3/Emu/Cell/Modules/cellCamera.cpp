@@ -145,7 +145,7 @@ void camera_context::save(utils::serial& ar)
 		return;
 	}
 
-	USING_SERIALIZATION_VERSION_COND(ar.is_writing(), cellCamera);
+	GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellCamera);
 
 	ar(notify_data_map, start_timestamp, read_mode, is_streaming, is_attached, is_open, info, attr, frame_num);
 }

@@ -438,7 +438,7 @@ namespace rsx
 
 	void thread::save(utils::serial& ar)
 	{
-		USING_SERIALIZATION_VERSION_COND(ar.is_writing(), rsx);
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
  
 		ar(rsx::method_registers);
 	
@@ -454,6 +454,27 @@ namespace rsx
 		ar(in_begin_end);
 		ar(display_buffers, display_buffers_count, current_display_buffer);
 		ar(unsent_gcm_events, rsx::method_registers.current_draw_clause);
+
+		if (ar.is_writing())
+		{
+			if (fifo_ctrl && state & cpu_flag::again)
+			{
+				ar(fifo_ctrl->get_remaining_args_count() + 1);
+				ar(fifo_ctrl->last_cmd());
+			}
+			else
+			{
+				ar(u32{0});
+			}
+		}
+		else if (version > 1)
+		{
+			if (u32 count = ar)
+			{
+				restore_fifo_count = count;
+				ar(restore_fifo_cmd);
+			}
+		}
 	}
 
 	thread::thread(utils::serial* _ar)
@@ -726,6 +747,8 @@ namespace rsx
 
 		performance_counters.state = FIFO_state::empty;
 
+		const u64 event_flags = unsent_gcm_events.exchange(0);
+
 		Emu.CallFromMainThread([]{ Emu.RunPPU(); });
 
 		// Wait for startup (TODO)
@@ -751,11 +774,6 @@ namespace rsx
 			thread_ctrl::wait_for(1000);
 		}
 
-		if (is_stopped())
-		{
-			return;
-		}
-
 		performance_counters.state = FIFO_state::running;
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
@@ -765,12 +783,14 @@ namespace rsx
 
 		vblank_count = 0;
 
-		if (u64 event_flags = unsent_gcm_events.exchange(0))
+		if (restore_fifo_count)
 		{
-			if (!send_event(0, event_flags, 0))
-			{
-				return;
-			}
+			fifo_ctrl->restore_state(restore_fifo_cmd, restore_fifo_count);
+		}
+
+		if (!send_event(0, event_flags, 0))
+		{
+			return;
 		}
 
 		g_fxo->init<named_thread>("VBlank Thread", [this]()

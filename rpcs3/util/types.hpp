@@ -1168,10 +1168,11 @@ extern bool serialize(utils::serial& ar, T& obj);
 	using_##name##_serialization();\
 }()
 
-#define USING_SERIALIZATION_VERSION_COND(cond, name) [&]()\
+#define GET_OR_USE_SERIALIZATION_VERSION(cond, name) [&]()\
 {\
 	extern void using_##name##_serialization();\
-	if (static_cast<bool>(cond)) using_##name##_serialization();\
+	extern s32 get_##name##_serialization_version();\
+	return (static_cast<bool>(cond) ? (using_##name##_serialization(), 0) : get_##name##_serialization_version());\
 }()
 
 #define GET_SERIALIZATION_VERSION(name) []()\
