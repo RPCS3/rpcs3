@@ -2,6 +2,7 @@ add_library(rpcs3_emu
     cache_utils.cpp
     IdManager.cpp
     localized_string.cpp
+    savestate_utils.cpp
     System.cpp
     system_config.cpp
     system_config_types.cpp

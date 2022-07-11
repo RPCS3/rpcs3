@@ -971,7 +971,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 	}
 
-	if (const std::string sstate = fs::get_cache_dir() + "/savestates/" + current_game.serial + ".SAVESTAT"; fs::is_file(sstate))
+	extern bool is_savestate_compatible(const fs::file& file);
+
+	if (const std::string sstate = fs::get_cache_dir() + "/savestates/" + current_game.serial + ".SAVESTAT"; is_savestate_compatible(fs::file(sstate)))
 	{
 		QAction* boot_state = menu.addAction(is_current_running_game
 			? tr("&Reboot with savestate")
