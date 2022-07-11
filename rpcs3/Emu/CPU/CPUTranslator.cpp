@@ -140,6 +140,14 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		m_use_avx512_icl = true;
 		m_use_vnni = true;
 	}
+
+	// Aarch64 CPUs
+	if (cpu == "cyclone" || cpu.contains("cortex"))
+	{
+		m_use_fma = true;
+		// AVX does not use intrinsics so far
+		m_use_avx = true;
+	}
 }
 
 llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
