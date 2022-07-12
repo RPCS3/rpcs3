@@ -21,6 +21,7 @@ namespace gl
 		GLenum type;
 		u8     size;
 		bool   swap_bytes;
+		u8     alignment;
 	};
 
 	struct image_memory_requirements
