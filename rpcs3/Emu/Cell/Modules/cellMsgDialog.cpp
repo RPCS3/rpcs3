@@ -144,7 +144,7 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 // wrapper to call for other hle dialogs
 error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
-	cellSysutil.warning("open_msg_dialog(is_blocking=%d, type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", is_blocking, type, msgString, callback, userData, extParam);
+	cellSysutil.notice("open_msg_dialog(is_blocking=%d, type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", is_blocking, type, msgString, callback, userData, extParam);
 
 	const MsgDialogType _type{ type };
 
@@ -263,6 +263,31 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 	return CELL_OK;
 }
 
+void close_msg_dialog()
+{
+	cellSysutil.notice("close_msg_dialog()");
+
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
+		{
+			g_fxo->get<msg_dlg_thread>().wait_until = 0;
+			dlg->close(false, true); // this doesn't call on_close
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+			return;
+		}
+	}
+
+	if (const auto dlg = g_fxo->get<msg_info>().get())
+	{
+		dlg->state = MsgDialogState::Close;
+		g_fxo->get<msg_dlg_thread>().wait_until = 0;
+		g_fxo->get<msg_info>().remove(); // this shouldn't call on_close
+		input::SetIntercepted(false);    // so we need to reenable the pads here
+		sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+	}
+}
+
 void exit_game(s32/* buttonType*/, vm::ptr<void>/* userData*/)
 {
 	sysutil_send_system_cmd(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
@@ -270,7 +295,7 @@ void exit_game(s32/* buttonType*/, vm::ptr<void>/* userData*/)
 
 error_code open_exit_dialog(const std::string& message, bool is_exit_requested)
 {
-	cellSysutil.warning("open_exit_dialog(message=%s, is_exit_requested=%d)", message, is_exit_requested);
+	cellSysutil.notice("open_exit_dialog(message=%s, is_exit_requested=%d)", message, is_exit_requested);
 
 	vm::bptr<CellMsgDialogCallback> callback = vm::null;
 
@@ -340,11 +365,6 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 		break;
 	}
 	default: return CELL_MSGDIALOG_ERROR_PARAM;
-	}
-
-	if (_type.se_mute_on)
-	{
-		// TODO
 	}
 
 	if (_type.se_normal)
