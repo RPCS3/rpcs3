@@ -2,6 +2,7 @@ add_library(rpcs3_emu
     cache_utils.cpp
     IdManager.cpp
     localized_string.cpp
+    savestate_utils.cpp
     System.cpp
     system_config.cpp
     system_config_types.cpp
@@ -13,6 +14,8 @@ add_library(rpcs3_emu
     title.cpp
     perf_meter.cpp
     perf_monitor.cpp
+    IPC_config.cpp
+    IPC_socket.cpp
 )
 
 # prevent WolfSSL from warning about not having harden options
@@ -103,6 +106,7 @@ target_sources(rpcs3_emu PRIVATE
 
 # Loader
 target_sources(rpcs3_emu PRIVATE
+    ../Loader/disc.cpp
     ../Loader/ELF.cpp
     ../Loader/mself.cpp
     ../Loader/PSF.cpp
@@ -115,17 +119,20 @@ target_sources(rpcs3_emu PRIVATE
 
 # Audio
 target_sources(rpcs3_emu PRIVATE
-    Audio/audio_device_listener.cpp
     Audio/audio_resampler.cpp
     Audio/AudioDumper.cpp
     Audio/AudioBackend.cpp
     Audio/Cubeb/CubebBackend.cpp
+    Audio/Cubeb/cubeb_enumerator.cpp
 )
 
 if(USE_FAUDIO)
     find_package(SDL2)
     if(SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.0.9)
-        target_sources(rpcs3_emu PRIVATE Audio/FAudio/FAudioBackend.cpp)
+        target_sources(rpcs3_emu PRIVATE
+            Audio/FAudio/FAudioBackend.cpp
+            Audio/FAudio/faudio_enumerator.cpp
+        )
         target_link_libraries(rpcs3_emu PUBLIC 3rdparty::faudio)
     endif()
 endif()
@@ -136,6 +143,7 @@ if(WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DELAYLOAD:xaudio2_9redist.dll")
     target_sources(rpcs3_emu PRIVATE
         Audio/XAudio2/XAudio2Backend.cpp
+        Audio/XAudio2/xaudio2_enumerator.cpp
     )
 endif()
 
@@ -427,6 +435,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Null/NullGSRender.cpp
     RSX/Overlays/overlay_animation.cpp
     RSX/Overlays/overlay_controls.cpp
+    RSX/Overlays/overlay_cursor.cpp
     RSX/Overlays/overlay_edit_text.cpp
     RSX/Overlays/overlay_fonts.cpp
     RSX/Overlays/overlay_list_view.cpp

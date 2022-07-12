@@ -214,8 +214,6 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		}
 	}
 
-	atomic_t<bool> result = false;
-
 	osk->on_osk_close = [wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
 		cellOskDialog.notice("on_osk_close(status=%d)", status);
@@ -531,25 +529,18 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	input::SetIntercepted(osk->pad_input_enabled, osk->keyboard_input_enabled, osk->mouse_input_enabled);
 
-	Emu.CallFromMainThread([=, &result, &info]()
+	Emu.BlockingCallFromMainThread([=, &info]()
 	{
 		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel, info.base_color.load(), info.dimmer_enabled.load(), false);
-		result = true;
-		result.notify_one();
-
-		if (g_fxo->get<osk_info>().osk_continuous_mode.load() == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
-		{
-			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED, CELL_OSKDIALOG_DISPLAY_STATUS_SHOW);
-		}
 	});
+
+	if (info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
+	{
+		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED, CELL_OSKDIALOG_DISPLAY_STATUS_SHOW);
+	}
 
 	g_fxo->get<osk_info>().last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
 	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
-
-	while (!result && !Emu.IsStopped())
-	{
-		thread_ctrl::wait_on(result, false);
-	}
 
 	return CELL_OK;
 }

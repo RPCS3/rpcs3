@@ -194,6 +194,136 @@ void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs)
 	spu_log.notice("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);
 }
 
+lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
+	: name(ar.operator std::string())
+	, id(idm::last_id())
+	, max_num(ar)
+	, mem_size(ar)
+	, type(ar) // SPU Thread Group Type
+	, ct(lv2_memory_container::search(ar))
+	, has_scheduler_context(ar.operator u8())
+	, max_run(ar)
+	, init(ar)
+	, prio(ar)
+	, run_state(ar.operator spu_group_status())
+	, exit_status(ar)
+{
+	for (auto& thread : threads)
+	{
+		if (ar.operator u8())
+		{
+			ar(id_manager::g_id);
+			thread = std::make_shared<named_thread<spu_thread>>(ar, this);
+			idm::import_existing<named_thread<spu_thread>>(thread, idm::last_id());
+			running += !thread->stop_flag_removal_protection;
+		}
+	}
+
+	ar(threads_map);
+	ar(imgs);
+	ar(args);
+
+	for (auto ep : {&ep_run, &ep_exception, &ep_sysmodule})
+	{
+		*ep = idm::get_unlocked<lv2_obj, lv2_event_queue>(ar.operator u32());
+	}
+
+	waiter_spu_index = -1;
+
+	switch (run_state)
+	{
+	// Commented stuff are handled by different means currently
+	//case SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED:
+	//case SPU_THREAD_GROUP_STATUS_INITIALIZED:
+	//case SPU_THREAD_GROUP_STATUS_READY:
+	case SPU_THREAD_GROUP_STATUS_WAITING:
+	{
+		run_state = SPU_THREAD_GROUP_STATUS_RUNNING;
+		ar(waiter_spu_index);
+		[[fallthrough]];
+	}
+	case SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED:
+	{
+		if (run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+		{
+			run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
+		}
+
+		[[fallthrough]];
+	}
+	case SPU_THREAD_GROUP_STATUS_SUSPENDED:
+	{
+		// Suspend all SPU threads except a thread that waits on sys_spu_thread_receive_event  
+		for (const auto& thread : threads)
+		{
+			if (thread)
+			{
+				if (thread->index == waiter_spu_index)
+				{
+					lv2_obj::set_future_sleep(thread.get());
+					continue;
+				}
+
+				thread->state += cpu_flag::suspend;
+			}
+		}
+
+		break;
+	}
+	//case SPU_THREAD_GROUP_STATUS_RUNNING:
+	//case SPU_THREAD_GROUP_STATUS_STOPPED:
+	//case SPU_THREAD_GROUP_STATUS_UNKNOWN:
+	default:
+	{
+		break;
+	}
+	}
+}
+
+void lv2_spu_group::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(spu);
+
+	ar(name, max_num, mem_size, type, ct->id, has_scheduler_context, max_run, init, prio, run_state, exit_status);
+
+	for (const auto& thread : threads)
+	{
+		ar(u8{thread.operator bool()});
+
+		if (thread)
+		{
+			ar(thread->id);
+			thread->save(ar);
+		}
+	}
+
+	ar(threads_map);
+	ar(imgs);
+	ar(args);
+
+	for (auto ep : {&ep_run, &ep_exception, &ep_sysmodule})
+	{
+		ar(lv2_obj::check(*ep) ? (*ep)->id : 0);
+	}
+
+	if (run_state == SPU_THREAD_GROUP_STATUS_WAITING)
+	{
+		ar(waiter_spu_index);
+	}
+}
+
+lv2_spu_image::lv2_spu_image(utils::serial& ar)
+	: e_entry(ar)
+	, segs(ar.operator decltype(segs)())
+	, nsegs(ar)
+{
+}
+
+void lv2_spu_image::save(utils::serial& ar)
+{
+	ar(e_entry, segs, nsegs);
+}
+
 // Get spu thread ptr, returns group ptr as well for refcounting
 std::pair<named_thread<spu_thread>*, std::shared_ptr<lv2_spu_group>> lv2_spu_group::get_thread(u32 id)
 {
@@ -1270,8 +1400,21 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		{
 			const auto state = ppu.state.fetch_sub(cpu_flag::signal);
 
-			if (is_stopped(state) || state & cpu_flag::signal)
+			if (state & cpu_flag::signal)
 			{
+				break;
+			}
+
+			if (is_stopped(state))
+			{
+				std::lock_guard lock(group->mutex);
+
+				if (!group->waiter)
+				{
+					break;
+				}
+
+				ppu.state += cpu_flag::again;
 				break;
 			}
 

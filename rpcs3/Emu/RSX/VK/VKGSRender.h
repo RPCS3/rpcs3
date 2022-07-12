@@ -197,8 +197,10 @@ private:
 
 public:
 	u64 get_cycles() final;
-	VKGSRender();
 	~VKGSRender() override;
+
+	VKGSRender(utils::serial* ar) noexcept;
+	VKGSRender() noexcept : VKGSRender(nullptr) {}
 
 private:
 	void prepare_rtts(rsx::framebuffer_creation_context context);

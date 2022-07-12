@@ -375,6 +375,8 @@ struct CellCameraInfoEx
 	be_t<u32> container;
 	be_t<s32> read_mode;
 	vm::bptr<u8> pbuf[2];
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct CellCameraReadEx
@@ -392,6 +394,8 @@ class camera_context
 	{
 		u64 source;
 		u64 flag;
+
+		ENABLE_BITWISE_SERIALIZATION;
 	};
 
 public:
@@ -433,14 +437,23 @@ public:
 	struct attr_t
 	{
 		u32 v1, v2;
+
+		ENABLE_BITWISE_SERIALIZATION;
 	};
+
 	attr_t attr[500]{};
 	atomic_t<bool> has_new_frame = false;
 	atomic_t<u32> frame_num = 0;
 	atomic_t<u32> frame_timestamp = 0;
 	atomic_t<u32> bytes_read = 0;
 
-	atomic_t<u32> init = 0;
+	atomic_t<u8> init = 0;
+
+	SAVESTATE_INIT_POS(16);
+
+	camera_context() = default;
+	camera_context(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	static constexpr auto thread_name = "Camera Thread"sv;
 

@@ -187,12 +187,12 @@ enum class video_aspect
 enum class frame_limit_type
 {
 	none,
-	_59_94,
 	_50,
 	_60,
 	_30,
 	_auto,
 	_ps3,
+	infinite,
 };
 
 enum class msaa_level

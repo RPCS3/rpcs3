@@ -73,7 +73,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 	{
 		u32 i = 1;
 
-		for (pc += 4; m_mode != cpu_disasm_mode::list && pc && i < 4096; i++, pc += 4)
+		for (pc += 4; m_mode != cpu_disasm_mode::list && pc % (4096 * 4); i++, pc += 4)
 		{
 			if (!try_read_op(pc))
 			{
@@ -161,8 +161,16 @@ void RSXDisAsm::Write(std::string_view str, s32 count, bool is_non_inc, u32 id)
 	{
 	case cpu_disasm_mode::interpreter:
 	{
-		last_opcode = count >= 0 ? fmt::format("[%08x] (%s%u)", dump_pc, is_non_inc ? "+" : "", count) : 
-			fmt::format("[%08x] (x)", dump_pc);
+		last_opcode.clear();
+	
+		if (count >= 0)
+		{
+			fmt::append(last_opcode, "[%08x] (%s%u)", dump_pc, is_non_inc ? "+" : "", count);
+		}
+		else
+		{
+			fmt::append(last_opcode, "[%08x] (x)", dump_pc);
+		}
 
 		auto& res = last_opcode;
 

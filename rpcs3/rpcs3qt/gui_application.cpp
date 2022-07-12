@@ -246,6 +246,8 @@ void gui_application::InitializeConnects()
 		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
 		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
 		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
+		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
+		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
 	}
 
 #ifdef WITH_DISCORD_RPC
@@ -336,31 +338,31 @@ void gui_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_from_main_thread = [this](std::function<void()> func)
+	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<bool>* wake_up)
 	{
-		RequestCallFromMainThread(std::move(func));
+		RequestCallFromMainThread(std::move(func), wake_up);
 	};
 
-	callbacks.init_gs_render = []()
+	callbacks.init_gs_render = [](utils::serial* ar)
 	{
 		switch (g_cfg.video.renderer.get())
 		{
 		case video_renderer::null:
 		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
 			break;
 		}
 		case video_renderer::opengl:
 		{
 #if not defined(__APPLE__)
-			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<GLGSRender>>(ar);
 #endif
 			break;
 		}
 		case video_renderer::vulkan:
 		{
 #if defined(HAVE_VULKAN)
-			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<VKGSRender>>(ar);
 #endif
 			break;
 		}
@@ -413,6 +415,21 @@ void gui_application::InitializeCallbacks()
 	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
 	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
 	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
+
+	callbacks.enable_disc_eject  = [this](bool enabled)
+	{
+		Emu.CallFromMainThread([this, enabled]()
+		{
+			OnEnableDiscEject(enabled);
+		});
+	};
+	callbacks.enable_disc_insert = [this](bool enabled)
+	{
+		Emu.CallFromMainThread([this, enabled]()
+		{
+			OnEnableDiscInsert(enabled);
+		});
+	};
 
 	callbacks.on_missing_fw = [this]()
 	{
@@ -652,7 +669,13 @@ void gui_application::OnEmuSettingsChange()
 /**
  * Using connects avoids timers being unable to be used in a non-qt thread. So, even if this looks stupid to just call func, it's succinct.
  */
-void gui_application::CallFromMainThread(const std::function<void()>& func)
+void gui_application::CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up)
 {
 	func();
+
+	if (wake_up)
+	{
+		*wake_up = true;
+		wake_up->notify_one();
+	}
 }

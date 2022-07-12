@@ -240,6 +240,89 @@ void fmt_class_string<struct in_addr>::format(std::string& out, u64 arg)
 	fmt::append(out, "%u.%u.%u.%u", data[0], data[1], data[2], data[3]);
 }
 
+lv2_socket::lv2_socket(utils::serial& ar, lv2_socket_type _type)
+	: family(ar)
+	, type(_type)
+	, protocol(ar)
+	, so_nbio(ar)
+	, so_error(ar)
+	, so_tcp_maxseg(ar)
+#ifdef _WIN32
+	, so_reuseaddr(ar)
+	, so_reuseport(ar)
+{
+#else
+{
+	// Try to match structure between different platforms
+	ar.pos += 8;
+#endif
+	lv2_id = idm::last_id();
+
+	ar(last_bound_addr);
+}
+
+std::shared_ptr<lv2_socket> lv2_socket::load(utils::serial& ar)
+{
+	const lv2_socket_type type{ar};
+
+	std::shared_ptr<lv2_socket> sock_lv2;
+
+	switch (type)
+	{
+	case SYS_NET_SOCK_STREAM:
+	case SYS_NET_SOCK_DGRAM:
+	{
+		auto lv2_native = std::make_shared<lv2_socket_native>(ar, type);
+		ensure(lv2_native->create_socket() >= 0);
+		sock_lv2 = std::move(lv2_native);
+		break;
+	}
+	case SYS_NET_SOCK_RAW: sock_lv2 = std::make_shared<lv2_socket_raw>(ar, type); break;
+	case SYS_NET_SOCK_DGRAM_P2P: sock_lv2 = std::make_shared<lv2_socket_p2p>(ar, type); break;
+	case SYS_NET_SOCK_STREAM_P2P: sock_lv2 = std::make_shared<lv2_socket_p2ps>(ar, type); break;
+	}
+
+	if (std::memcmp(&sock_lv2->last_bound_addr, std::array<u8, 16>{}.data(), 16)) 
+	{
+		// NOTE: It is allowed fail
+		sock_lv2->bind(sock_lv2->last_bound_addr);
+	}
+
+	return sock_lv2;
+}
+
+void lv2_socket::save(utils::serial& ar, bool save_only_this_class)
+{
+	USING_SERIALIZATION_VERSION(lv2_net);
+
+	if (save_only_this_class)
+	{
+		ar(family, protocol, so_nbio, so_error, so_tcp_maxseg);
+#ifdef _WIN32
+		ar(so_reuseaddr, so_reuseport);
+#else
+		ar(std::array<char, 8>{});
+#endif
+		ar(last_bound_addr);
+		return;
+	}
+
+	ar(type);
+
+	switch (type)
+	{
+	case SYS_NET_SOCK_STREAM:
+	case SYS_NET_SOCK_DGRAM:
+	{
+		static_cast<lv2_socket_native*>(this)->save(ar);
+		break;
+	}
+	case SYS_NET_SOCK_RAW: static_cast<lv2_socket_raw*>(this)->save(ar); break;
+	case SYS_NET_SOCK_DGRAM_P2P: static_cast<lv2_socket_p2p*>(this)->save(ar); break;
+	case SYS_NET_SOCK_STREAM_P2P: static_cast<lv2_socket_p2ps*>(this)->save(ar); break;
+	}
+}
+
 void sys_net_dump_data(std::string_view desc, const u8* data, s32 len)
 {
 	if (sys_net_dump.enabled == logs::level::trace)
@@ -360,10 +443,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 		}
 	}
 
-	if (ppu.is_stopped())
-	{
-		return {};
-	}
+	static_cast<void>(ppu.test_stopped());
 
 	if (addr)
 	{
@@ -402,7 +482,7 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 		{
-			return sock.bind(sn_addr, s);
+			return sock.bind(sn_addr);
 		});
 
 	if (!sock)
@@ -779,10 +859,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		}
 	}
 
-	if (ppu.is_stopped())
-	{
-		return {};
-	}
+	static_cast<void>(ppu.test_stopped());
 
 	if (result == -SYS_NET_EWOULDBLOCK)
 	{

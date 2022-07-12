@@ -74,9 +74,31 @@ struct music_state
 	std::shared_ptr<music_handler_base> handler;
 	music_selection_context current_selection_context;
 
+	SAVESTATE_INIT_POS(16);
+
 	music_state()
 	{
 		handler = Emu.GetCallbacks().get_music_handler();
+	}
+
+	music_state(utils::serial& ar)
+		: music_state()
+	{
+		save(ar);
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(func);
+
+		if (!func)
+		{
+			return;
+		}
+
+		GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellMusic);
+
+		ar(userData);
 	}
 };
 

@@ -33,7 +33,7 @@ static std::string default_string()
 		return {};
 	}
 
-	return fmt::format("TID: %s", std::this_thread::get_id());
+	return fmt::format("TID: %u", thread_ctrl::get_tid());
 }
 
 // Thread-specific log prefix provider

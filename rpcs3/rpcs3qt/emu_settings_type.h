@@ -127,6 +127,7 @@ enum class emu_settings_type
 	AudioFormats,
 	AudioProvider,
 	AudioAvport,
+	AudioDevice,
 	MasterVolume,
 	EnableBuffering,
 	AudioBufferDuration,
@@ -137,6 +138,8 @@ enum class emu_settings_type
 	MusicHandler,
 
 	// Input / Output
+	BackgroundInput,
+	ShowMoveCursor,
 	PadHandlerMode,
 	KeyboardHandler,
 	MouseHandler,
@@ -300,6 +303,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AudioFormats,            { "Audio", "Audio Formats"}},
 	{ emu_settings_type::AudioProvider,           { "Audio", "Audio Provider"}},
 	{ emu_settings_type::AudioAvport,             { "Audio", "RSXAudio Avport"}},
+	{ emu_settings_type::AudioDevice,             { "Audio", "Audio Device"}},
 	{ emu_settings_type::MasterVolume,            { "Audio", "Master Volume"}},
 	{ emu_settings_type::EnableBuffering,         { "Audio", "Enable Buffering"}},
 	{ emu_settings_type::AudioBufferDuration,     { "Audio", "Desired Audio Buffer Duration"}},
@@ -310,6 +314,8 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MusicHandler,            { "Audio", "Music Handler"}},
 
 	// Input / Output
+	{ emu_settings_type::BackgroundInput, { "Input/Output", "Background input enabled"}},
+	{ emu_settings_type::ShowMoveCursor,  { "Input/Output", "Show move cursor"}},
 	{ emu_settings_type::PadHandlerMode,  { "Input/Output", "Pad handler mode"}},
 	{ emu_settings_type::KeyboardHandler, { "Input/Output", "Keyboard"}},
 	{ emu_settings_type::MouseHandler,    { "Input/Output", "Mouse"}},

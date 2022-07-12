@@ -58,18 +58,18 @@ void headless_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_from_main_thread = [this](std::function<void()> func)
+	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<bool>* wake_up)
 	{
-		RequestCallFromMainThread(std::move(func));
+		RequestCallFromMainThread(std::move(func), wake_up);
 	};
 
-	callbacks.init_gs_render = []()
+	callbacks.init_gs_render = [](utils::serial* ar)
 	{
 		switch (const video_renderer type = g_cfg.video.renderer)
 		{
 		case video_renderer::null:
 		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
 			break;
 		}
 		case video_renderer::opengl:
@@ -138,6 +138,9 @@ void headless_application::InitializeCallbacks()
 	callbacks.on_stop   = []() {};
 	callbacks.on_ready  = []() {};
 
+	callbacks.enable_disc_eject  = [](bool) {};
+	callbacks.enable_disc_insert = [](bool) {};
+
 	callbacks.on_missing_fw = []() { return false; };
 
 	callbacks.handle_taskbar_progress = [](s32, s32) {};
@@ -153,7 +156,13 @@ void headless_application::InitializeCallbacks()
 /**
  * Using connects avoids timers being unable to be used in a non-qt thread. So, even if this looks stupid to just call func, it's succinct.
  */
-void headless_application::CallFromMainThread(const std::function<void()>& func)
+void headless_application::CallFromMainThread(const std::function<void()>& func, atomic_t<bool>* wake_up)
 {
 	func();
+
+	if (wake_up)
+	{
+		*wake_up = true;
+		wake_up->notify_one();
+	}
 }

@@ -87,6 +87,8 @@ struct cfg_root : cfg::node
 		cfg::uint64 tx_limit2_ns{this, "TSX Transaction Second Limit", 2000}; // In nanoseconds
 
 		cfg::_int<10, 3000> clocks_scale{ this, "Clocks scale", 100 }; // Changing this from 100 (percentage) may affect game speed in unexpected ways
+		cfg::uint<0, 3000> spu_wakeup_delay{ this, "SPU Wake-Up Delay", 0, true };
+		cfg::uint<0, (1 << 6) - 1> spu_wakeup_delay_mask{ this, "SPU Wake-Up Delay Thread Mask", (1 << 6) - 1, true };
 #if defined (__linux__) || defined (__APPLE__)
 		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{ this, "Sleep Timers Accuracy", sleep_timers_accuracy_level::_as_host, true };
 #else
@@ -168,7 +170,7 @@ struct cfg_root : cfg::node
 		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };
 		cfg::_int<0, 16> shader_compiler_threads_count{ this, "Shader Compiler Threads", 0 };
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
-		cfg::_int<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
+		cfg::uint<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
 		cfg::_int<1, 1800> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
 		cfg::_bool vblank_ntsc{ this, "Vblank NTSC Fixup", false, true };
 		cfg::_bool decr_memory_layout{ this, "DECR memory layout", false}; // Force enable increased allowed main memory range as DECR console
@@ -251,6 +253,7 @@ struct cfg_root : cfg::node
 		cfg::_bool convert_to_s16{ this, "Convert to 16 bit", false, true };
 		cfg::_enum<audio_format> format{ this, "Audio Format", audio_format::stereo, false };
 		cfg::uint<0, umax> formats{ this, "Audio Formats", static_cast<u32>(audio_format_flag::lpcm_2_48khz), false };
+		cfg::string audio_device{ this, "Audio Device", "@@@default@@@", true };
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
 		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
 		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100, true };
@@ -271,12 +274,14 @@ struct cfg_root : cfg::node
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
 		cfg::_enum<camera_flip> camera_flip_option{ this, "Camera flip", camera_flip::none, true };
 		cfg::string camera_id{ this, "Camera ID", "Default", true };
-		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
+		cfg::_enum<move_handler> move{ this, "Move", move_handler::null, true };
 		cfg::_enum<buzz_handler> buzz{ this, "Buzz emulated controller", buzz_handler::null };
 		cfg::_enum<turntable_handler> turntable{this, "Turntable emulated controller", turntable_handler::null};
 		cfg::_enum<ghltar_handler> ghltar{this, "GHLtar emulated controller", ghltar_handler::null};
 		cfg::_enum<pad_handler_mode> pad_mode{this, "Pad handler mode", pad_handler_mode::single_threaded, true};
 		cfg::uint<0, 100'000> pad_sleep{this, "Pad handler sleep (microseconds)", 1'000, true};
+		cfg::_bool background_input_enabled{this, "Background input enabled", true, true};
+		cfg::_bool show_move_cursor{this, "Show move cursor", false, true};
 	} io{ this };
 
 	struct node_sys : cfg::node
@@ -302,6 +307,16 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 	} net{this};
+
+	struct node_savestate : cfg::node
+	{
+		node_savestate(cfg::node* _this) : cfg::node(_this, "Savestate") {}
+
+		cfg::_bool start_paused{ this, "Start Paused" }; // Pause on first frame
+		cfg::_bool suspend_emu{ this, "Suspend Emulation Savestate Mode", true }; // Close emulation when saving, delete save after loading
+		cfg::_bool state_inspection_mode{ this, "Inspection Mode Savestates" }; // Save memory stored in executable files, thus allowing to view state without any files (for debugging)
+		cfg::_bool save_disc_game_data{ this, "Save Disc Game Data", false };
+	} savestate{this};
 
 	struct node_misc : cfg::node
 	{

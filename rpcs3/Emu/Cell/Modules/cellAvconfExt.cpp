@@ -156,18 +156,36 @@ error_code cellAudioOutUnregisterDevice(u32 deviceNumber)
 error_code cellAudioOutGetDeviceInfo2(u32 deviceNumber, u32 deviceIndex, vm::ptr<CellAudioOutDeviceInfo2> info)
 {
 	cellAvconfExt.todo("cellAudioOutGetDeviceInfo2(deviceNumber=0x%x, deviceIndex=0x%x, info=*0x%x)", deviceNumber, deviceIndex, info);
+
+	if (deviceIndex != 0 || !info)
+	{
+		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellVideoOutSetXVColor()
+error_code cellVideoOutSetXVColor(u32 unk1, u32 unk2, u32 unk3)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt);
+	cellAvconfExt.todo("cellVideoOutSetXVColor(unk1=0x%x, unk2=0x%x, unk3=0x%x)", unk1, unk2, unk3);
+
+	if (unk1 != 0)
+	{
+		return CELL_VIDEO_OUT_ERROR_NOT_IMPLEMENTED;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellVideoOutSetupDisplay()
+error_code cellVideoOutSetupDisplay(u32 videoOut)
 {
-	UNIMPLEMENTED_FUNC(cellAvconfExt);
+	cellAvconfExt.todo("cellVideoOutSetupDisplay(videoOut=%d)", videoOut);
+
+	if (videoOut != CELL_VIDEO_OUT_SECONDARY)
+	{
+		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+	}
+
 	return CELL_OK;
 }
 
@@ -194,6 +212,33 @@ error_code cellVideoOutConvertCursorColor(u32 videoOut, s32 displaybuffer_format
 {
 	cellAvconfExt.todo("cellVideoOutConvertCursorColor(videoOut=%d, displaybuffer_format=0x%x, gamma=0x%x, source_buffer_format=0x%x, src_addr=*0x%x, dest_addr=*0x%x, num=0x%x)", videoOut,
 			displaybuffer_format, gamma, source_buffer_format, src_addr, dest_addr, num);
+
+	if (!dest_addr || num == 0)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	if (displaybuffer_format > CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT || src_addr)
+	{
+		return CELL_VIDEO_OUT_ERROR_PARAMETER_OUT_OF_RANGE;
+	}
+
+	if (displaybuffer_format < CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT)
+	{
+		if (gamma < 0.8f || gamma > 1.2f)
+		{
+			return CELL_VIDEO_OUT_ERROR_PARAMETER_OUT_OF_RANGE;
+		}
+	}
+
+	error_code cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange); // Forward declaration
+
+	vm::var<u8> rgbOutputRange;
+	if (error_code error = cellVideoOutGetConvertCursorColorInfo(rgbOutputRange))
+	{
+		return error;
+	}
+
 	return CELL_OK;
 }
 
@@ -220,7 +265,7 @@ error_code cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 
 error_code cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDeviceInfo> device_info)
 {
-	cellAvconfExt.todo("cellAudioInGetAvailableDeviceInfo(count=0x%x, info=*0x%x)", count, device_info);
+	cellAvconfExt.todo("cellAudioInGetAvailableDeviceInfo(count=%d, info=*0x%x)", count, device_info);
 
 	if (count > 16 || !device_info)
 	{
@@ -242,6 +287,12 @@ error_code cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDevic
 error_code cellAudioOutGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioOutDeviceInfo2> info)
 {
 	cellAvconfExt.todo("cellAudioOutGetAvailableDeviceInfo(count=0x%x, info=*0x%x)", count, info);
+
+	if (count > 16 || !info)
+	{
+		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	return not_an_error(0); // number of available devices
 }
 
@@ -249,9 +300,9 @@ error_code cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 {
 	cellAvconfExt.warning("cellVideoOutSetGamma(videoOut=%d, gamma=%f)", videoOut, gamma);
 
-	if (!(gamma >= 0.8f && gamma <= 1.2f))
+	if (gamma < 0.8f || gamma > 1.2f)
 	{
-		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+		return CELL_VIDEO_OUT_ERROR_PARAMETER_OUT_OF_RANGE;
 	}
 
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
@@ -268,18 +319,42 @@ error_code cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 error_code cellAudioOutRegisterDevice(u64 deviceType, vm::cptr<char> name, vm::ptr<CellAudioOutRegistrationOption> option, vm::ptr<CellAudioOutDeviceConfiguration> config)
 {
 	cellAvconfExt.todo("cellAudioOutRegisterDevice(deviceType=0x%llx, name=%s, option=*0x%x, config=*0x%x)", deviceType, name, option, config);
+
+	if (option || !name)
+	{
+		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER; // Strange choice for an error
+	}
+
 	return not_an_error(0); // device number
 }
 
 error_code cellAudioOutSetDeviceMode(u32 deviceMode)
 {
 	cellAvconfExt.todo("cellAudioOutSetDeviceMode(deviceMode=0x%x)", deviceMode);
+
+	if (deviceMode > CELL_AUDIO_OUT_MULTI_DEVICE_MODE_2)
+	{
+		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellAudioInSetDeviceMode(u32 deviceMode)
 {
 	cellAvconfExt.todo("cellAudioInSetDeviceMode(deviceMode=0x%x)", deviceMode);
+
+	switch (deviceMode)
+	{
+	case CELL_AUDIO_IN_SINGLE_DEVICE_MODE:
+	case CELL_AUDIO_IN_MULTI_DEVICE_MODE:
+	case CELL_AUDIO_IN_MULTI_DEVICE_MODE_2:
+	case CELL_AUDIO_IN_MULTI_DEVICE_MODE_10:
+		break;
+	default:
+		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
@@ -339,24 +414,53 @@ error_code cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 error_code cellVideoOutSetCopyControl(u32 videoOut, u32 control)
 {
 	cellAvconfExt.todo("cellVideoOutSetCopyControl(videoOut=%d, control=0x%x)", videoOut, control);
+
+	if (control > CELL_VIDEO_OUT_COPY_CONTROL_COPY_NEVER)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellVideoOutConfigure2()
 {
 	cellAvconfExt.todo("cellVideoOutConfigure2()");
+
+	if (false) // TODO
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_VIDEO_OUT_ERROR_PARAMETER_OUT_OF_RANGE;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellAudioOutGetConfiguration2()
 {
 	cellAvconfExt.todo("cellAudioOutGetConfiguration2()");
+
+	if (false) // TODO
+	{
+		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellAudioOutConfigure2()
 {
 	cellAvconfExt.todo("cellAudioOutConfigure2()");
+
+	if (false) // TODO
+	{
+		return CELL_AUDIO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 

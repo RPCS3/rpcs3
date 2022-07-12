@@ -37,7 +37,7 @@ namespace rsx
 	template<bool FlushDMA, bool FlushPipe>
 	void write_gcm_label(thread* rsx, u32 address, u32 data)
 	{
-		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->label_addr + 0x30));
+		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->device_addr + 0x30));
 		if (!is_flip_sema)
 		{
 			// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
@@ -108,18 +108,6 @@ namespace rsx
 				rsx->flush_fifo();
 			}
 
-			if (addr == rsx->device_addr + 0x30)
-			{
-				if (g_cfg.video.frame_limit == frame_limit_type::_ps3 && rsx->requested_vsync)
-				{
-					// Enables PS3-compliant vblank behavior
-					rsx->flip_sema_wait_val = arg;
-					rsx->wait_for_flip_sema = (sema != arg);
-				}
-
-				return;
-			}
-
 			u64 start = rsx::uclock();
 			u64 last_check_val = start;
 
@@ -127,6 +115,7 @@ namespace rsx
 			{
 				if (rsx->test_stopped())
 				{
+					rsx->state += cpu_flag::again;
 					return;
 				}
 
@@ -187,6 +176,12 @@ namespace rsx
 				rsx_log.error("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 				rsx->recover_fifo();
 				return;
+			}
+
+			if (addr == rsx->device_addr + 0x30 && !arg)
+			{
+				// HW flip synchronization related, 1 is not written without display queue command (TODO: make it behave as real hw)
+				arg = 1;
 			}
 
 			write_gcm_label<false, true>(rsx, addr, arg);
@@ -751,19 +746,16 @@ namespace rsx
 
 		void set_zcull_render_enable(thread* rsx, u32, u32 arg)
 		{
-			rsx->zcull_rendering_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
 		void set_zcull_stats_enable(thread* rsx, u32, u32 arg)
 		{
-			rsx->zcull_stats_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
 		void set_zcull_pixel_count_enable(thread* rsx, u32, u32 arg)
 		{
-			rsx->zcull_pixel_cnt_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
@@ -1776,6 +1768,11 @@ namespace rsx
 	{
 		ensure(rsx->isHLE);
 
+		if (rsx->vblank_at_flip != umax)
+		{
+			rsx->flip_notification_count++;
+		}
+
 		if (auto ptr = rsx->queue_handler)
 		{
 			rsx->intr_thread->cmd_list
@@ -1790,8 +1787,6 @@ namespace rsx
 		}
 
 		rsx->reset();
-		nv4097::set_zcull_render_enable(rsx, 0, 0x3);
-		nv4097::set_render_mode(rsx, 0, 0x0100'0000);
 		rsx->on_frame_end(arg);
 		rsx->request_emu_flip(arg);
 		vm::_ref<atomic_t<u128>>(rsx->label_addr + 0x10).store(u128{});
@@ -1824,7 +1819,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread*, u32 /*reg*/, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
@@ -1833,8 +1828,13 @@ namespace rsx
 		template<u32 index>
 		struct queue_flip
 		{
-			static void impl(thread*, u32 /*reg*/, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
+				if (rsx->vblank_at_flip != umax)
+				{
+					rsx->flip_notification_count++;
+				}
+
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
 		};
@@ -2831,6 +2831,11 @@ namespace rsx
 	bool rsx_state::test(u32 reg, u32 value) const
 	{
 		return registers[reg] == value;
+	}
+
+	void draw_clause::operator()(utils::serial& ar)
+	{
+		ar(draw_command_ranges, draw_command_barriers, current_range_index, primitive, command, is_immediate_draw, is_disjoint_primitive, primitive_barrier_enable, inline_vertex_array);
 	}
 
 	void draw_clause::insert_command_barrier(command_barrier_type type, u32 arg, u32 index)

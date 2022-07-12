@@ -55,6 +55,13 @@ LOG_CHANNEL(gui_log, "GUI");
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
 
+atomic_t<bool> g_game_window_focused = false;
+
+bool is_input_allowed()
+{
+	return g_game_window_focused || g_cfg.io.background_input_enabled;
+}
+
 constexpr auto qstr = QString::fromStdString;
 
 gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings)
@@ -115,6 +122,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	// Change cursor when this window gets or loses focus.
 	connect(this, &QWindow::activeChanged, this, [this]()
 	{
+		g_game_window_focused = isActive();
 		handle_cursor(visibility(), false, true);
 	});
 
@@ -239,13 +247,6 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		}
 		break;
 	case Qt::Key_P:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && Emu.IsRunning())
-		{
-			Emu.Pause();
-			return;
-		}
-		break;
-	case Qt::Key_R:
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
 			switch (Emu.GetStatus())
@@ -260,8 +261,26 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 				Emu.Resume();
 				return;
 			}
-			default: break;
+			default:
+			{
+				Emu.Pause();
+				return;
 			}
+			}
+		}
+		break;
+	case Qt::Key_S:
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+		{
+			Emu.Restart(true);
+			return;
+		}
+		break;
+	case Qt::Key_R:
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+		{
+			extern bool boot_last_savestate();
+			boot_last_savestate();
 		}
 		break;
 	case Qt::Key_C:

@@ -160,24 +160,25 @@ extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
 
 struct lv2_fs_object
 {
-	using id_type = lv2_fs_object;
-
 	static const u32 id_base = 3;
 	static const u32 id_step = 1;
 	static const u32 id_count = 255 - id_base;
-
-	// Mount Point
-	const std::add_pointer_t<lv2_fs_mount_point> mp;
+	SAVESTATE_INIT_POS(40);
 
 	// File Name (max 1055)
 	const std::array<char, 0x420> name;
 
+	// Mount Point
+	const std::add_pointer_t<lv2_fs_mount_point> mp;
+
 protected:
 	lv2_fs_object(lv2_fs_mount_point* mp, std::string_view filename)
-		: mp(mp)
-		, name(get_name(filename))
+		: name(get_name(filename))
+		, mp(mp)
 	{
 	}
+
+	lv2_fs_object(utils::serial& ar, bool dummy);
 
 public:
 	lv2_fs_object(const lv2_fs_object&) = delete;
@@ -199,10 +200,14 @@ public:
 		name[filename.size()] = 0;
 		return name;
 	}
+
+	void save(utils::serial&) {}
 };
 
 struct lv2_file final : lv2_fs_object
 {
+	static constexpr u32 id_type = 1;
+ 
 	fs::file file;
 	const s32 mode;
 	const s32 flags;
@@ -242,6 +247,9 @@ struct lv2_file final : lv2_fs_object
 		, type(type)
 	{
 	}
+
+	lv2_file(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	struct open_raw_result_t
 	{
@@ -287,6 +295,8 @@ struct lv2_file final : lv2_fs_object
 
 struct lv2_dir final : lv2_fs_object
 {
+	static constexpr u32 id_type = 2;
+ 
 	const std::vector<fs::dir_entry> entries;
 
 	// Current reading position
@@ -297,6 +307,9 @@ struct lv2_dir final : lv2_fs_object
 		, entries(std::move(entries))
 	{
 	}
+
+	lv2_dir(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	// Read next
 	const fs::dir_entry* dir_read()

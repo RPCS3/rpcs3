@@ -66,11 +66,24 @@ void cell_audio_config::reset(bool backend_changed)
 
 	const AudioFreq freq = AudioFreq::FREQ_48K;
 	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
-	const auto [ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
-	const f64 cb_frame_len = backend->Open(freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
+
+	const auto [req_ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
+	f64 cb_frame_len = 0.0;
+	u32 ch_cnt = 2;
+
+	if (backend->Open(raw.audio_device, freq, sample_size, req_ch_cnt))
+	{
+		cb_frame_len = backend->GetCallbackFrameLen();
+		ch_cnt = backend->get_channels();
+	}
+	else
+	{
+		cellAudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
+	}
 
 	audio_downmix = downmix;
-	audio_channels = static_cast<u32>(ch_cnt);
+	backend_ch_cnt = AudioChannelCnt{ch_cnt};
+	audio_channels = static_cast<u32>(req_ch_cnt);
 	audio_sampling_rate = static_cast<u32>(freq);
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1'000'000 / audio_sampling_rate;
 	audio_sample_size = static_cast<u32>(sample_size);
@@ -143,7 +156,7 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 		return cfg.audio_min_buffer_duration;
 	}();
 
-	cb_ringbuf.set_buf_size(static_cast<u32>(cfg.audio_channels * cfg.audio_sampling_rate * cfg.audio_sample_size * buffer_dur_mult));
+	cb_ringbuf.set_buf_size(static_cast<u32>(static_cast<u32>(cfg.backend_ch_cnt) * cfg.audio_sampling_rate * cfg.audio_sample_size * buffer_dur_mult));
 	backend->SetWriteCallback(std::bind(&audio_ringbuffer::backend_write_callback, this, std::placeholders::_1, std::placeholders::_2));
 }
 
@@ -191,7 +204,7 @@ float* audio_ringbuffer::get_current_buffer() const
 u64 audio_ringbuffer::get_enqueued_samples() const
 {
 	AUDIT(cfg.buffering_enabled);
-	const u64 ringbuf_samples = cb_ringbuf.get_used_size() / (cfg.audio_sample_size * cfg.audio_channels);
+	const u64 ringbuf_samples = cb_ringbuf.get_used_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt));
 
 	if (cfg.time_stretching_enabled)
 	{
@@ -252,7 +265,7 @@ void audio_ringbuffer::process_resampled_data()
 {
 	if (!cfg.time_stretching_enabled) return;
 
-	const auto samples = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * cfg.audio_channels)));
+	const auto samples = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt))));
 	commit_data(samples.first, samples.second);
 }
 
@@ -263,12 +276,48 @@ void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
 	// Dump audio if enabled
 	m_dump.WriteData(buf, sample_cnt * static_cast<u32>(AudioSampleSize::FLOAT));
 
-	if (cfg.backend->get_convert_to_s16())
+	if (cfg.backend_ch_cnt < AudioChannelCnt{cfg.audio_channels})
 	{
-		AudioBackend::convert_to_s16(sample_cnt, buf, buf);
+		if (AudioChannelCnt{cfg.audio_channels} == AudioChannelCnt::SURROUND_7_1)
+		{
+			if (cfg.backend_ch_cnt == AudioChannelCnt::SURROUND_5_1)
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, buf, buf);
+			}
+			else if (cfg.backend_ch_cnt == AudioChannelCnt::STEREO)
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt, buf, buf);
+			}
+			else
+			{
+				fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
+			}
+		}
+		else if (AudioChannelCnt{cfg.audio_channels} == AudioChannelCnt::SURROUND_5_1)
+		{
+			if (cfg.backend_ch_cnt == AudioChannelCnt::STEREO)
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt, buf, buf);
+			}
+			else
+			{
+				fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
+			}
+		}
+		else
+		{
+			fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
+		}
 	}
 
-	cb_ringbuf.push(buf, sample_cnt * cfg.audio_sample_size);
+	const u32 sample_cnt_out = sample_cnt / cfg.audio_channels * static_cast<u32>(cfg.backend_ch_cnt);
+
+	if (cfg.backend->get_convert_to_s16())
+	{
+		AudioBackend::convert_to_s16(sample_cnt_out, buf, buf);
+	}
+
+	cb_ringbuf.push(buf, sample_cnt_out * cfg.audio_sample_size);
 }
 
 void audio_ringbuffer::play()
@@ -340,6 +389,52 @@ void audio_port::tag(s32 offset)
 	}
 
 	prev_touched_tag_nr = -1;
+}
+
+cell_audio_thread::cell_audio_thread(utils::serial& ar)
+	: cell_audio_thread()
+{
+	ar(init);
+
+	if (!init)
+	{
+		return;
+	}
+
+	ar(key_count, event_period);
+
+	keys.resize(ar);
+
+	for (key_info& k : keys)
+	{
+		ar(k.start_period, k.flags, k.source);
+		k.port = lv2_event_queue::load_ptr(ar, k.port);
+	}
+
+	ar(ports);
+}
+
+void cell_audio_thread::save(utils::serial& ar)
+{
+	ar(init);
+
+	if (!init)
+	{
+		return;
+	}
+
+	USING_SERIALIZATION_VERSION(cellAudio);
+
+	ar(key_count, event_period);
+	ar(keys.size());
+
+	for (const key_info& k : keys)
+	{
+		ar(k.start_period, k.flags, k.source);
+		lv2_event_queue::save_ptr(ar, k.port.get());
+	}
+
+	ar(ports);
 }
 
 std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
@@ -521,6 +616,7 @@ namespace audio
 	{
 		return
 		{
+			.audio_device = g_cfg.audio.audio_device,
 			.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
 			.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
 			.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
@@ -546,6 +642,7 @@ namespace audio
 
 			if (const auto raw = g_audio.cfg.raw;
 				force_reset ||
+				raw.audio_device != new_raw.audio_device ||
 				raw.desired_buffer_duration != new_raw.desired_buffer_duration ||
 				raw.buffering_enabled != new_raw.buffering_enabled ||
 				raw.time_stretching_threshold != new_raw.time_stretching_threshold ||
@@ -615,6 +712,11 @@ void cell_audio_thread::operator()()
 
 	thread_ctrl::scoped_priority high_prio(+1);
 
+	while (Emu.IsPaused())
+	{
+		thread_ctrl::wait_for(5000);
+	}
+
 	u32 untouched_expected = 0;
 
 	// Main cellAudio loop
@@ -645,6 +747,13 @@ void cell_audio_thread::operator()()
 
 			update_config(true);
 			m_backend_failed = true;
+			continue;
+		}
+
+		if (ringbuffer->device_changed())
+		{
+			cellAudio.warning("Default device changed, attempting to switch...");
+			update_config(false);
 			continue;
 		}
 
@@ -845,17 +954,55 @@ void cell_audio_thread::operator()()
 		// Mix
 		float* buf = ringbuffer->get_current_buffer();
 
-		switch (cfg.audio_downmix)
+		switch (cfg.audio_channels)
 		{
-		case AudioChannelCnt::STEREO:
-			mix<AudioChannelCnt::STEREO>(buf);
+		case 2:
+			switch (cfg.audio_downmix)
+			{
+			case AudioChannelCnt::SURROUND_7_1:
+				mix<AudioChannelCnt::STEREO, AudioChannelCnt::SURROUND_7_1>(buf);
+				break;
+			case AudioChannelCnt::STEREO:
+				mix<AudioChannelCnt::STEREO, AudioChannelCnt::STEREO>(buf);
+				break;
+			case AudioChannelCnt::SURROUND_5_1:
+				mix<AudioChannelCnt::STEREO, AudioChannelCnt::SURROUND_5_1>(buf);
+				break;
+			}
 			break;
-		case AudioChannelCnt::SURROUND_5_1:
-			mix<AudioChannelCnt::SURROUND_5_1>(buf);
+
+		case 6:
+			switch (cfg.audio_downmix)
+			{
+			case AudioChannelCnt::SURROUND_7_1:
+				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_7_1>(buf);
+				break;
+			case AudioChannelCnt::STEREO:
+				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(buf);
+				break;
+			case AudioChannelCnt::SURROUND_5_1:
+				mix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::SURROUND_5_1>(buf);
+				break;
+			}
 			break;
-		case AudioChannelCnt::SURROUND_7_1:
-			mix<AudioChannelCnt::SURROUND_7_1>(buf);
+
+		case 8:
+			switch (cfg.audio_downmix)
+			{
+			case AudioChannelCnt::SURROUND_7_1:
+				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_7_1>(buf);
+				break;
+			case AudioChannelCnt::STEREO:
+				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(buf);
+				break;
+			case AudioChannelCnt::SURROUND_5_1:
+				mix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(buf);
+				break;
+			}
 			break;
+
+		default:
+			fmt::throw_exception("Unsupported channel count in cell_audio_config: %d", static_cast<u32>(cfg.audio_channels));
 		}
 
 		// Enqueue
@@ -882,13 +1029,13 @@ audio_port* cell_audio_thread::open_port()
 	return nullptr;
 }
 
-template <AudioChannelCnt downmix>
+template <AudioChannelCnt channels, AudioChannelCnt downmix>
 void cell_audio_thread::mix(float* out_buffer, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 
-	constexpr u32 channels = static_cast<u32>(downmix);
-	constexpr u32 out_buffer_sz = channels * AUDIO_BUFFER_SAMPLES;
+	constexpr u32 out_channels = static_cast<u32>(channels);
+	constexpr u32 out_buffer_sz = out_channels * AUDIO_BUFFER_SAMPLES;
 
 	const float master_volume = g_cfg.audio.volume / 100.0f;
 
@@ -928,7 +1075,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 
 		if (port.num_channels == 2)
 		{
-			for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 2)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += out_channels, in += 2)
 			{
 				step_volume(port);
 
@@ -941,7 +1088,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 		}
 		else if (port.num_channels == 8)
 		{
-			for (u32 out = 0, in = 0; out < out_buffer_sz; out += channels, in += 8)
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += out_channels, in += 8)
 			{
 				step_volume(port);
 
@@ -965,21 +1112,47 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 				{
 					out_buffer[out + 0] += left;
 					out_buffer[out + 1] += right;
-					out_buffer[out + 2] += center;
-					out_buffer[out + 3] += low_freq;
-					out_buffer[out + 4] += side_left + rear_left;
-					out_buffer[out + 5] += side_right + rear_right;
+
+					if constexpr (out_channels >= 6) // Only mix the surround channels into the output if surround output is configured
+					{
+						out_buffer[out + 2] += center;
+						out_buffer[out + 3] += low_freq;
+
+						if constexpr (out_channels == 6)
+						{
+							out_buffer[out + 4] += side_left + rear_left;
+							out_buffer[out + 5] += side_right + rear_right;
+						}
+						else // When using 7.1 ouput, out_buffer[out + 4] and out_buffer[out + 5] are the rear channels, so the side channels need to be mixed into [out + 6] and [out + 7]
+						{
+							out_buffer[out + 6] += side_left + rear_left;
+							out_buffer[out + 7] += side_right + rear_right;
+						}
+					}
 				}
 				else
 				{
 					out_buffer[out + 0] += left;
 					out_buffer[out + 1] += right;
-					out_buffer[out + 2] += center;
-					out_buffer[out + 3] += low_freq;
-					out_buffer[out + 4] += rear_left;
-					out_buffer[out + 5] += rear_right;
-					out_buffer[out + 6] += side_left;
-					out_buffer[out + 7] += side_right;
+
+					if constexpr (out_channels >= 6) // Only mix the surround channels into the output if surround output is configured
+					{
+						out_buffer[out + 2] += center;
+						out_buffer[out + 3] += low_freq;
+
+						if constexpr (out_channels == 6)
+						{
+							out_buffer[out + 4] += side_left;
+							out_buffer[out + 5] += side_right;
+						}
+						else
+						{
+							out_buffer[out + 4] += rear_left;
+							out_buffer[out + 5] += rear_right;
+							out_buffer[out + 6] += side_left;
+							out_buffer[out + 7] += side_right;
+						}
+					}
 				}
 			}
 		}

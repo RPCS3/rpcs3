@@ -15,8 +15,11 @@ namespace np
 	{
 	public:
 		memory_allocator() = default;
+		memory_allocator(utils::serial& ar) noexcept { save(ar); }
 		memory_allocator(const memory_allocator&) = delete;
 		memory_allocator& operator=(const memory_allocator&) = delete;
+
+		void save(utils::serial& ar);
 
 		void setup(vm::ptr<void> ptr_pool, u32 size)
 		{

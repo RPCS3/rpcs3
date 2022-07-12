@@ -12,8 +12,15 @@ LOG_CHANNEL(input_log, "Input");
 
 void basic_mouse_handler::Init(const u32 max_connect)
 {
+	if (m_info.max_connect > 0)
+	{
+		// Already initialized
+		return;
+	}
+
+	m_mice.clear();
 	m_mice.emplace_back(Mouse());
-	memset(&m_info, 0, sizeof(MouseInfo));
+	m_info = {};
 	m_info.max_connect = max_connect;
 	m_info.now_connect = std::min(::size32(m_mice), max_connect);
 	m_info.info = input::g_mice_intercepted ? CELL_MOUSE_INFO_INTERCEPTED : 0; // Ownership of mouse data: 0=Application, 1=System
@@ -27,9 +34,6 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	m_info.vendor_id[0] = 0x1234;
 	m_info.product_id[0] = 0x1234;
 }
-
-basic_mouse_handler::basic_mouse_handler() : QObject()
-{}
 
 /* Sets the target window for the event handler, and also installs an event filter on the target. */
 void basic_mouse_handler::SetTargetWindow(QWindow* target)

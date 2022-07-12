@@ -128,6 +128,8 @@ namespace rsx
 
 		gcm_framebuffer_info() = default;
 
+		ENABLE_BITWISE_SERIALIZATION;
+
 		void calculate_memory_range(u32 aa_factor_u, u32 aa_factor_v)
 		{
 			// Account for the last line of the block not reaching the end
@@ -161,8 +163,13 @@ namespace rsx
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
+		ENABLE_BITWISE_SERIALIZATION;
+		SAVESTATE_INIT_POS(12);
+
 		avconf() noexcept;
 		~avconf() = default;
+		avconf(utils::serial& ar);
+		void save(utils::serial& ar);
 
 		u32 get_compatible_gcm_format() const;
 		u8 get_bpp() const;

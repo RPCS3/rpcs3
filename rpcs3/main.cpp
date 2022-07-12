@@ -24,6 +24,7 @@
 #include "rpcs3qt/fatal_error_dialog.h"
 #include "rpcs3qt/curl_handle.h"
 #include "rpcs3qt/main_window.h"
+#include "rpcs3qt/uuid.h"
 
 #include "headless_application.h"
 #include "Utilities/sema.h"
@@ -80,6 +81,7 @@ static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
 extern thread_local std::string(*g_tls_log_prefix)();
+extern thread_local std::string_view g_tls_serialize_name;
 
 #ifndef _WIN32
 extern char **environ;
@@ -99,7 +101,18 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		buf = std::string(_text);
 
 		// Always print thread id
-		fmt::append(buf, "\n\nThread id = %s.", std::this_thread::get_id());
+		fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
+	}
+
+	if (!g_tls_serialize_name.empty())
+	{
+		// Copy only when needed
+		if (!buf.empty())
+		{
+			buf = std::string(_text);
+		}
+
+		fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
 	}
 
 	std::string_view text = buf.empty() ? _text : buf;
@@ -262,6 +275,7 @@ constexpr auto arg_updating     = "updating";
 constexpr auto arg_user_id      = "user-id";
 constexpr auto arg_installfw    = "installfw";
 constexpr auto arg_installpkg   = "installpkg";
+constexpr auto arg_savestate    = "savestate";
 constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
@@ -385,7 +399,6 @@ void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::
 	ss << std::put_time(&tm, "%Y-%m-%eT%H:%M:%S");
  	out += ss.str();
 }
-
 
 
 int main(int argc, char** argv)
@@ -601,6 +614,8 @@ int main(int argc, char** argv)
 	parser.addOption(decrypt_option);
 	const QCommandLineOption user_id_option(arg_user_id, "Start RPCS3 as this user.", "user id", "");
 	parser.addOption(user_id_option);
+	const QCommandLineOption savestate_option(arg_savestate, "Path for directly loading a savestate.", "path", "");
+	parser.addOption(savestate_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
@@ -869,6 +884,9 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+	// Log unique ID
+	gui::utils::log_uuid();
+
 	std::string active_user;
 
 	if (parser.isSet(arg_user_id))
@@ -1064,7 +1082,32 @@ int main(int argc, char** argv)
 		sys_log.notice("Option passed via command line: %s %s", opt.toStdString(), parser.value(opt).toStdString());
 	}
 
-	if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
+	if (parser.isSet(arg_savestate))
+	{
+		const std::string savestate_path = parser.value(savestate_option).toStdString();
+		sys_log.notice("Booting savestate from command line: %s", savestate_path);
+
+		if (!fs::is_file(savestate_path))
+		{
+			report_fatal_error(fmt::format("No savestate file found: %s", savestate_path));
+		}
+
+		Emu.CallFromMainThread([path = savestate_path]()
+		{
+			Emu.SetForceBoot(true);
+
+			if (const game_boot_result error = Emu.BootGame(path); error != game_boot_result::no_errors)
+			{
+				sys_log.error("Booting savestate '%s' failed: reason: %s", path, error);
+
+				if (s_headless || s_no_gui)
+				{
+					report_fatal_error(fmt::format("Booting savestate '%s' failed!\n\nReason: %s", path, error));
+				}
+			}
+		});
+	}
+	else if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
 		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
 

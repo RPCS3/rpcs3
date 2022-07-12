@@ -269,10 +269,7 @@ namespace vk
 		process_list_function(m_render_targets_storage, m_render_targets_memory_range);
 		process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
 
-		std::sort(sorted_list.begin(), sorted_list.end(), [](const auto& a, const auto& b)
-		{
-			return a->last_rw_access_tag < b->last_rw_access_tag;
-		});
+		std::sort(sorted_list.begin(), sorted_list.end(), FN(x->last_rw_access_tag < y->last_rw_access_tag));
 
 		// Remove upto target_memory bytes from VRAM
 		u64 bytes_spilled = 0;

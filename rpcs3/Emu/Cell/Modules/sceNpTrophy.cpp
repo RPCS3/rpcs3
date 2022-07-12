@@ -33,10 +33,51 @@ struct trophy_context_t
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
 	static const u32 id_count = 4;
+	SAVESTATE_INIT_POS(42);
 
 	std::string trp_name;
 	std::unique_ptr<TROPUSRLoader> tropusr;
 	bool read_only = false;
+
+	trophy_context_t() = default;
+
+	trophy_context_t(utils::serial& ar)
+		: trp_name(ar.operator std::string())
+	{
+		std::string trophy_path = vfs::get(Emu.GetDir() + "TROPDIR/" + trp_name + "/TROPHY.TRP");
+		fs::file trp_stream(trophy_path);
+
+		if (!trp_stream)
+		{
+			// Fallback
+			trophy_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + trp_name + "/TROPHY.TRP");
+			trp_stream.open(trophy_path);
+		}
+
+		if (!ar.operator bool())
+		{
+			ar(read_only);
+			return;
+		}
+
+		ar(read_only);
+
+		if (!trp_stream && g_cfg.savestate.state_inspection_mode)
+		{
+			return;
+		}
+
+		const std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + trp_name;
+		tropusr = std::make_unique<TROPUSRLoader>();
+		const std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
+		const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
+		ensure(tropusr->Load(trophyUsrPath, trophyConfPath).success);
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(trp_name, tropusr.operator bool(), read_only);
+	}
 };
 
 struct trophy_handle_t
@@ -44,8 +85,21 @@ struct trophy_handle_t
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
 	static const u32 id_count = 4;
+	SAVESTATE_INIT_POS(43);
 
 	bool is_aborted = false;
+
+	trophy_handle_t() = default;
+
+	trophy_handle_t(utils::serial& ar)
+		: is_aborted(ar)
+	{
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(is_aborted);
+	}
 };
 
 struct sce_np_trophy_manager
@@ -102,6 +156,25 @@ struct sce_np_trophy_manager
 		}
 
 		return res;
+	}
+
+	SAVESTATE_INIT_POS(12);
+
+	sce_np_trophy_manager() = default;
+
+	sce_np_trophy_manager(utils::serial& ar)
+		: is_initialized(ar)
+	{
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(is_initialized);
+
+		if (is_initialized)
+		{
+			USING_SERIALIZATION_VERSION(sceNpTrophy);
+		}
 	}
 };
 

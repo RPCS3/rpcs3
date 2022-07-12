@@ -80,10 +80,10 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
 	hbox_b_main->setContentsMargins(0, 0, 0, 0);
 
-	m_breakpoint_handler = new breakpoint_handler();
-	m_breakpoint_list = new breakpoint_list(this, m_breakpoint_handler);
+	m_ppu_breakpoint_handler = new breakpoint_handler();
+	m_breakpoint_list = new breakpoint_list(this, m_ppu_breakpoint_handler);
 
-	m_debugger_list = new debugger_list(this, m_gui_settings, m_breakpoint_handler);
+	m_debugger_list = new debugger_list(this, m_gui_settings, m_ppu_breakpoint_handler);
 	m_debugger_list->installEventFilter(this);
 
 	m_call_stack_list = new call_stack_list(this);
@@ -196,7 +196,10 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 				m_debugger_list->EnableThreadFollowing();
 			}
 		}
-		UpdateUI();
+
+		// Tighten up, put the debugger on a wary watch over any thread info changes if there aren't any
+		// This allows responsive debugger interaction
+		m_ui_fast_update_permission_deadline = m_ui_update_ctr + 5;
 	});
 
 	connect(m_choice_units->lineEdit(), &QLineEdit::editingFinished, [&]
@@ -743,8 +746,17 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
 
 void debugger_frame::UpdateUI()
 {
-	UpdateUnitList();
-	ShowPC();
+	if (m_ui_update_ctr % 5 == 0)
+	{
+		// If no change to instruction position happened, update instruction list at 20hz
+		ShowPC();
+
+		if (m_ui_update_ctr % 20 == 0)
+		{
+			// Update threads list at 5hz (low priority)
+			UpdateUnitList();
+		}
+	}
 
 	const auto cpu = get_cpu();
 
@@ -752,12 +764,14 @@ void debugger_frame::UpdateUI()
 	{
 		if (m_last_pc != umax || !m_last_query_state.empty())
 		{
+			UpdateUnitList();
+			ShowPC();
 			m_last_query_state.clear();
 			m_last_pc = -1;
 			DoUpdate();
 		}
 	}
-	else
+	else if (m_ui_update_ctr % 5 == 0 || m_ui_update_ctr < m_ui_fast_update_permission_deadline)
 	{
 		const auto cia = cpu->get_pc();
 		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) :
@@ -783,6 +797,12 @@ void debugger_frame::UpdateUI()
 				m_btn_run->setText(PauseString);
 			}
 
+			if (m_ui_update_ctr % 5)
+			{
+				// Call if it hasn't been called before
+				ShowPC();
+			}
+
 			if (is_using_interpreter(cpu->id_type()))
 			{
 				m_btn_step->setEnabled(paused);
@@ -790,6 +810,8 @@ void debugger_frame::UpdateUI()
 			}
 		}
 	}
+
+	m_ui_update_ctr++;
 }
 
 using data_type = std::pair<cpu_thread*, u32>;
@@ -823,7 +845,7 @@ void debugger_frame::UpdateUnitList()
 	{
 		if (emu_state == system_state::stopped) return;
 
-		const QVariant var_cpu = QVariant::fromValue<std::pair<cpu_thread*, u32>>(std::make_pair(&cpu, id));
+		const QVariant var_cpu = QVariant::fromValue<data_type>(std::make_pair(&cpu, id));
 
 		// Space at the end is to pad a gap on the right
 		m_choice_units->addItem(qstr((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), var_cpu);
@@ -860,6 +882,7 @@ void debugger_frame::UpdateUnitList()
 	if (emu_state == system_state::stopped)
 	{
 		ClearBreakpoints();
+		ClearCallStack();
 	}
 
 	OnSelectUnit();
@@ -869,7 +892,7 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
-	auto [selected, cpu_id] = m_choice_units->currentData().value<std::pair<cpu_thread*, u32>>();
+	auto [selected, cpu_id] = m_choice_units->currentData().value<data_type>();
 
 	if (m_emu_state != system_state::stopped)
 	{
@@ -963,7 +986,7 @@ void debugger_frame::DoUpdate()
 	// Check if we need to disable a step over bp
 	if (const auto cpu0 = get_cpu(); cpu0 && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
 	{
-		m_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
+		m_ppu_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
 		m_last_step_over_breakpoint = -1;
 	}
 
@@ -978,18 +1001,25 @@ void debugger_frame::WritePanels()
 	{
 		m_misc_state->clear();
 		m_regs->clear();
+		ClearCallStack();
 		return;
 	}
 
 	int loc = m_misc_state->verticalScrollBar()->value();
+	int hloc = m_misc_state->horizontalScrollBar()->value();
 	m_misc_state->clear();
 	m_misc_state->setText(qstr(cpu->dump_misc()));
 	m_misc_state->verticalScrollBar()->setValue(loc);
+	m_misc_state->horizontalScrollBar()->setValue(hloc);
 
 	loc = m_regs->verticalScrollBar()->value();
+	hloc = m_regs->horizontalScrollBar()->value();
 	m_regs->clear();
-	m_regs->setText(qstr(cpu->dump_regs()));
+	m_last_reg_state.clear();
+	cpu->dump_regs(m_last_reg_state);
+	m_regs->setText(qstr(m_last_reg_state));
 	m_regs->verticalScrollBar()->setValue(loc);
+	m_regs->horizontalScrollBar()->setValue(hloc);
 
 	Q_EMIT CallStackUpdateRequested(cpu->dump_callstack_list());
 }
@@ -1116,13 +1146,13 @@ void debugger_frame::DoStep(bool step_over)
 
 				// Set breakpoint on next instruction
 				const u32 next_instruction_pc = current_instruction_pc + 4;
-				m_breakpoint_handler->AddBreakpoint(next_instruction_pc);
+				m_ppu_breakpoint_handler->AddBreakpoint(next_instruction_pc);
 
 				// Undefine previous step over breakpoint if it hasnt been already
 				// This can happen when the user steps over a branch that doesn't return to itself
 				if (m_last_step_over_breakpoint != umax)
 				{
-					m_breakpoint_handler->RemoveBreakpoint(next_instruction_pc);
+					m_ppu_breakpoint_handler->RemoveBreakpoint(next_instruction_pc);
 				}
 
 				m_last_step_over_breakpoint = next_instruction_pc;
@@ -1146,12 +1176,14 @@ void debugger_frame::DoStep(bool step_over)
 		}
 	}
 
-	UpdateUI();
+	// Tighten up, put the debugger on a wary watch over any thread info changes if there aren't any
+	// This allows responsive debugger interaction
+	m_ui_fast_update_permission_deadline = m_ui_update_ctr + 5;
 }
 
 void debugger_frame::EnableUpdateTimer(bool enable) const
 {
-	enable ? m_update->start(50) : m_update->stop();
+	enable ? m_update->start(10) : m_update->stop();
 }
 
 void debugger_frame::EnableButtons(bool enable)

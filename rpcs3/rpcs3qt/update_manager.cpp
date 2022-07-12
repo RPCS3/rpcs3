@@ -383,7 +383,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 #ifdef _WIN32
 
 	// Get executable path
-	const std::string orig_path = rpcs3::utils::get_exe_dir() + "rpcs3.exe";
+	const std::string exe_dir = rpcs3::utils::get_exe_dir();
+	const std::string orig_path = exe_dir + "rpcs3.exe";
 
 	std::wstring wchar_orig_path;
 	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, nullptr, 0);
@@ -489,7 +490,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	usz outBufferSize = 0;
 
 	// Creates temp folder for moving active files
-	const std::string tmp_folder = rpcs3::utils::get_emu_dir() + "rpcs3_old/";
+	const std::string tmp_folder = exe_dir + "rpcs3_old/";
 	fs::create_dir(tmp_folder);
 
 	for (UInt32 i = 0; i < db.NumFiles; i++)
@@ -522,7 +523,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 			temp_u8[index] = static_cast<u8>(temp_u16[index]);
 		}
 		temp_u8[len] = 0;
-		const std::string name = rpcs3::utils::get_emu_dir() + std::string(reinterpret_cast<char*>(temp_u8));
+		const std::string name = exe_dir + std::string(reinterpret_cast<char*>(temp_u8));
 
 		if (!isDir)
 		{
@@ -531,7 +532,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 				break;
 		}
 
-		if (const usz pos = name.find_last_of('/'); pos != umax)
+		if (const usz pos = name.find_last_of(fs::delim); pos != umax)
 		{
 			update_log.trace("Creating path: %s", name.substr(0, pos));
 			fs::create_path(name.substr(0, pos));
@@ -548,7 +549,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		if (!outfile)
 		{
 			// File failed to open, probably because in use, rename existing file and try again
-			const auto pos = name.find_last_of('/');
+			const auto pos = name.find_last_of(fs::delim);
 			std::string filename;
 			if (pos == umax)
 				filename = name;

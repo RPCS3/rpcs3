@@ -24,7 +24,8 @@ error_code sys_spinlock_lock(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> lock)
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			ppu.state += cpu_flag::again;
+			return {};
 		}
 	}
 
