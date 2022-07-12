@@ -856,6 +856,7 @@ namespace gl
 				if (driver_caps.ARB_compute_shader_supported)
 				{
 					// 0. Preconf
+					mem_layout.alignment = caps.alignment;
 					mem_layout.swap_bytes = op.require_swap;
 					mem_layout.format = gl_format;
 					mem_layout.type = gl_type;
