@@ -660,7 +660,7 @@ namespace gl
 				// Memcpy
 				for (u32 layer = dst_region.z, i = 0; i < dst_region.depth; ++i, ++layer)
 				{
-					const position3u src_offset = { dst_region.position.x, dst_region.position.y, 0 };
+					const position3u src_offset = { dst_region.position.x, dst_region.position.y + (i * dst_region.height), 0 };
 					const position3u dst_offset = { dst_region.position.x, dst_region.position.y, layer };
 					g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, src_offset, dst_offset, {dst_region.width, dst_region.height, 1});
 				}
