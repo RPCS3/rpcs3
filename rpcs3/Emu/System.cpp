@@ -609,11 +609,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	GetCallbacks().init_pad_handler("");
 
 	GetCallbacks().on_run(false);
-	m_state = system_state::running;
+	m_state = system_state::starting;
 
-	auto replay_thr = g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay", std::move(frame));
-	replay_thr->state -= cpu_flag::stop;
-	replay_thr->state.notify_one(cpu_flag::stop);
+	ensure(g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay", std::move(frame)));
 
 	return true;
 }
@@ -1865,8 +1863,10 @@ void Emulator::RunPPU()
 {
 	ensure(IsStarting());
 
+	bool signalled_thread = false;
+
 	// Run main thread
-	idm::select<named_thread<ppu_thread>>([](u32, named_thread<ppu_thread>& cpu)
+	idm::select<named_thread<ppu_thread>>([&](u32, named_thread<ppu_thread>& cpu)
 	{
 		if (std::exchange(cpu.stop_flag_removal_protection, false))
 		{
@@ -1875,10 +1875,11 @@ void Emulator::RunPPU()
 
 		ensure(cpu.state.test_and_reset(cpu_flag::stop));
 		cpu.state.notify_one(cpu_flag::stop);
+		signalled_thread = true;
 	});
 
 	// Run SPUs waiting on a syscall (savestates related)
-	idm::select<named_thread<spu_thread>>([](u32, named_thread<spu_thread>& spu)
+	idm::select<named_thread<spu_thread>>([&](u32, named_thread<spu_thread>& spu)
 	{
 		if (spu.group && spu.index == spu.group->waiter_spu_index)
 		{
@@ -1889,8 +1890,15 @@ void Emulator::RunPPU()
 
 			ensure(spu.state.test_and_reset(cpu_flag::stop));
 			spu.state.notify_one(cpu_flag::stop);
+			signalled_thread = true;
 		}
 	});
+
+	if (!signalled_thread)
+	{
+		FixGuestTime();
+		FinalizeRunRequest();
+	}
 
 	if (auto thr = g_fxo->try_get<named_thread<rsx::rsx_replay_thread>>())
 	{
@@ -2192,6 +2200,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		init_mem_containers = nullptr;
 		m_config_path.clear();
 		m_config_mode = cfg_mode::custom;
+		read_used_savestate_versions();
 		return;
 	}
 
@@ -2458,7 +2467,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 			sys_log.success("Saved savestate! path='%s'", path);
 		}
 
-		ar.pos = 0;
+		ar.set_reading_state();
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)
@@ -2471,6 +2480,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 	init_mem_containers = nullptr;
 	m_config_path.clear();
 	m_config_mode = cfg_mode::custom;
+	read_used_savestate_versions();
 
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();

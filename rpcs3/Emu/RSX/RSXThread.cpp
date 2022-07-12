@@ -45,7 +45,14 @@ extern thread_local std::string(*g_tls_log_prefix)();
 template <>
 bool serialize<rsx::rsx_state>(utils::serial& ar, rsx::rsx_state& o)
 {
-	return ar(o.transform_program, o.transform_constants, o.registers);
+	ar(o.transform_program);
+
+	if (GET_SERIALIZATION_VERSION(global_version))
+	{
+		ar(o.transform_constants);
+	}
+
+	return ar(o.registers);
 }
 
 template <>
@@ -754,12 +761,6 @@ namespace rsx
 		// Wait for startup (TODO)
 		while (m_rsx_thread_exiting || Emu.IsPaused())
 		{
-			// Wait for external pause events
-			if (external_interrupt_lock)
-			{
-				wait_pause();
-			}
-
 			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);
 

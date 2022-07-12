@@ -154,6 +154,8 @@ std::vector<std::pair<u16, u16>> read_used_savestate_versions()
 		{
 			used_serial.emplace_back(&ver - s_serial_versions.data(), *ver.compatible_versions.rbegin());
 		}
+
+		ver.current_version = 0;
 	}
 
 	return used_serial;
