@@ -198,9 +198,7 @@ namespace utils
 #endif
 		}();
 
-		ensure(r > 0 && r <= 0x10000);
-
-		return r;
+		return ensure(r, FN(((x & (x - 1)) == 0 && x > 0 && x <= 0x10000)));
 	}
 
 	// Convert memory protection (internal)
@@ -395,8 +393,8 @@ namespace utils
 	void memory_release(void* pointer, usz size)
 	{
 #ifdef _WIN32
-		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 		unmap_mappping_memory(reinterpret_cast<u64>(pointer), size);
+		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 #else
 		ensure(::munmap(pointer, size) != -1);
 #endif
@@ -457,7 +455,7 @@ namespace utils
 #endif
 	}
 
-	shm::shm(u32 size, u32 flags)
+	shm::shm(u64 size, u32 flags)
 		: m_flags(flags)
 		, m_size(utils::align(size, 0x10000))
 	{
@@ -607,8 +605,7 @@ namespace utils
 		if (const char c = fs::file("/proc/sys/vm/overcommit_memory").read<char>(); c == '0' || c == '1')
 		{
 			// Simply use memfd for overcommit memory
-			m_file = ::memfd_create_("", 0);
-			ensure(m_file >= 0);
+			m_file = ensure(::memfd_create_("", 0), FN(x >= 0));
 			ensure(::ftruncate(m_file, m_size) >= 0);
 			return;
 		}
@@ -634,8 +631,7 @@ namespace utils
 		if ((vm_overcommit & 3) == 0)
 		{
 #if defined(__FreeBSD__)
-			m_file = ::memfd_create_("", 0);
-			ensure(m_file >= 0);
+			m_file = ensure(::memfd_create_("", 0), FN(x >= 0));
 #else
 			const std::string name = "/rpcs3-mem2-" + std::to_string(reinterpret_cast<u64>(this));
 
@@ -827,7 +823,7 @@ namespace utils
 			{
 				// TODO: Implement it
 			}
-	
+
 			if (MapViewOfFile3(m_handle, GetCurrentProcess(), target, 0, m_size, MEM_REPLACE_PLACEHOLDER, PAGE_EXECUTE_READWRITE, nullptr, 0))
 			{
 				if (prot != protection::rw && prot != protection::wx)
@@ -835,7 +831,7 @@ namespace utils
 					DWORD old;
 					if (!::VirtualProtect(target, m_size, +prot, &old))
 					{
-						UnmapViewOfFile2(nullptr, target, MEM_PRESERVE_PLACEHOLDER);
+						UnmapViewOfFile2(GetCurrentProcess(), target, MEM_PRESERVE_PLACEHOLDER);
 						return {nullptr, "Failed to protect"};
 					}
 				}

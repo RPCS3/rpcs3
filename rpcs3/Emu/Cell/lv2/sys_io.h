@@ -4,10 +4,10 @@
 
 struct lv2_io_buf
 {
-	using id_type = lv2_io_buf;
 	static const u32 id_base = 0x44000000;
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
+	SAVESTATE_INIT_POS(41);
 
 	const u32 block_count;
 	const u32 block_size;

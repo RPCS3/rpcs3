@@ -37,7 +37,7 @@ u64 rsxTimeStamp()
 	return get_timebased_time();
 }
 
-void rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3) const
+bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 {
 	// Filter event bits, send them only if they are masked by gcm
 	// Except the upper 32-bits, they are reserved for unmapped io events and execute unconditionally
@@ -46,7 +46,7 @@ void rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3) const
 	if (!event_flags)
 	{
 		// Nothing to do
-		return;
+		return true;
 	}
 
 	auto error = sys_event_port_send(rsx_event_port, data1, event_flags, data3);
@@ -76,10 +76,19 @@ void rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3) const
 		error = sys_event_port_send(rsx_event_port, data1, event_flags, data3);
 	}
 
+	if (error + 0u == CELL_EAGAIN)
+	{
+		// Thread has aborted when sending event (VBLANK duplicates are allowed)
+		ensure((unsent_gcm_events.fetch_or(event_flags) & event_flags & ~(SYS_RSX_EVENT_VBLANK | SYS_RSX_EVENT_SECOND_VBLANK_BASE | SYS_RSX_EVENT_SECOND_VBLANK_BASE * 2)) == 0);
+		return false;
+	}
+
 	if (error && error + 0u != CELL_ENOTCONN)
 	{
 		fmt::throw_exception("rsx::thread::send_event() Failed to send event! (error=%x)", +error);
 	}
+
+	return true;
 }
 
 error_code sys_rsx_device_open(cpu_thread& cpu)
@@ -487,7 +496,16 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			}
 		}
 
-		render->request_emu_flip(flip_idx);
+		if (!render->request_emu_flip(flip_idx))
+		{
+			if (auto cpu = get_current_cpu_thread())
+			{
+				cpu->state += cpu_flag::exit;
+				cpu->state += cpu_flag::again;
+			}
+
+			return {};
+		}
 	}
 	break;
 
@@ -500,7 +518,10 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
 		render->on_frame_end(static_cast<u32>(a4));
-		render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0);
+		if (!render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0))
+		{
+			break;
+		}
 
 		if (g_cfg.video.frame_limit == frame_limit_type::infinite)
 		{
@@ -745,7 +766,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		break;
 
 	case 0xFEC: // hack: flip event notification
-
+	{
 		// we only ever use head 1 for now
 		driverInfo.head[1].flipFlags |= 0x80000000;
 		driverInfo.head[1].lastFlipTime = rsxTimeStamp(); // should rsxthread set this?
@@ -757,6 +778,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		render->send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
 		break;
+	}
 
 	case 0xFED: // hack: vblank command
 	{
@@ -796,12 +818,14 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	}
 
 	case 0xFEF: // hack: user command
+	{
 		// 'custom' invalid package id for now
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
 		driverInfo.userCmdParam = static_cast<u32>(a4);
 		render->send_event(0, SYS_RSX_EVENT_USER_CMD, 0);
 		break;
+	}
 
 	default:
 		return CELL_EINVAL;

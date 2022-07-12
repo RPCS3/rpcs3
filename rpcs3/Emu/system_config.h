@@ -253,6 +253,7 @@ struct cfg_root : cfg::node
 		cfg::_bool convert_to_s16{ this, "Convert to 16 bit", false, true };
 		cfg::_enum<audio_format> format{ this, "Audio Format", audio_format::stereo, false };
 		cfg::uint<0, umax> formats{ this, "Audio Formats", static_cast<u32>(audio_format_flag::lpcm_2_48khz), false };
+		cfg::string audio_device{ this, "Audio Device", "@@@default@@@", true };
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
 		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
 		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100, true };
@@ -273,12 +274,14 @@ struct cfg_root : cfg::node
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
 		cfg::_enum<camera_flip> camera_flip_option{ this, "Camera flip", camera_flip::none, true };
 		cfg::string camera_id{ this, "Camera ID", "Default", true };
-		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
+		cfg::_enum<move_handler> move{ this, "Move", move_handler::null, true };
 		cfg::_enum<buzz_handler> buzz{ this, "Buzz emulated controller", buzz_handler::null };
 		cfg::_enum<turntable_handler> turntable{this, "Turntable emulated controller", turntable_handler::null};
 		cfg::_enum<ghltar_handler> ghltar{this, "GHLtar emulated controller", ghltar_handler::null};
 		cfg::_enum<pad_handler_mode> pad_mode{this, "Pad handler mode", pad_handler_mode::single_threaded, true};
 		cfg::uint<0, 100'000> pad_sleep{this, "Pad handler sleep (microseconds)", 1'000, true};
+		cfg::_bool background_input_enabled{this, "Background input enabled", true, true};
+		cfg::_bool show_move_cursor{this, "Show move cursor", false, true};
 	} io{ this };
 
 	struct node_sys : cfg::node
@@ -304,6 +307,16 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 	} net{this};
+
+	struct node_savestate : cfg::node
+	{
+		node_savestate(cfg::node* _this) : cfg::node(_this, "Savestate") {}
+
+		cfg::_bool start_paused{ this, "Start Paused" }; // Pause on first frame
+		cfg::_bool suspend_emu{ this, "Suspend Emulation Savestate Mode", true }; // Close emulation when saving, delete save after loading
+		cfg::_bool state_inspection_mode{ this, "Inspection Mode Savestates" }; // Save memory stored in executable files, thus allowing to view state without any files (for debugging)
+		cfg::_bool save_disc_game_data{ this, "Save Disc Game Data", false };
+	} savestate{this};
 
 	struct node_misc : cfg::node
 	{

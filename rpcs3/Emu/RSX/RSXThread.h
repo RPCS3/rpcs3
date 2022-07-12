@@ -361,6 +361,8 @@ namespace rsx
 
 	struct framebuffer_layout
 	{
+		ENABLE_BITWISE_SERIALIZATION;
+
 		u16 width;
 		u16 height;
 		std::array<u32, 4> color_addresses;
@@ -476,6 +478,8 @@ namespace rsx
 		FIFO::flattening_helper m_flattener;
 		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
+		u32 restore_fifo_cmd = 0;
+		u32 restore_fifo_count = 0;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -496,6 +500,9 @@ namespace rsx
 		// Profiler
 		rsx::profiling_timer m_profiler;
 		frame_statistics_t m_frame_stats;
+
+		// Savestates vrelated
+		bool m_pause_on_first_flip = false;
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
@@ -560,6 +567,7 @@ namespace rsx
 
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };
+		bool serialized = false;
 
 		u32 flip_status;
 		int debug_level;
@@ -579,7 +587,9 @@ namespace rsx
 		u32 rsx_event_port{0};
 		u32 driver_info{0};
 
-		void send_event(u64, u64, u64) const;
+		atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
+
+		bool send_event(u64, u64, u64);
 
 		bool m_rtts_dirty = true;
 		std::array<bool, 16> m_textures_dirty;
@@ -663,10 +673,6 @@ namespace rsx
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
-		bool zcull_stats_enabled = false;
-		bool zcull_rendering_enabled = false;
-		bool zcull_pixel_cnt_enabled = false;
-
 		reports::conditional_render_eval cond_render_ctrl;
 
 		virtual u64 get_cycles() = 0;
@@ -675,7 +681,10 @@ namespace rsx
 		static constexpr auto thread_name = "rsx::thread"sv;
 
 	protected:
-		thread();
+		thread(utils::serial* ar);
+
+		thread() : thread(static_cast<utils::serial*>(nullptr)) {}
+
 		virtual void on_task();
 		virtual void on_exit();
 
@@ -691,6 +700,7 @@ namespace rsx
 	public:
 		thread(const thread&) = delete;
 		thread& operator=(const thread&) = delete;
+		void save(utils::serial& ar);
 
 		virtual void clear_surface(u32 /*arg*/) {}
 		virtual void begin();
@@ -819,7 +829,7 @@ namespace rsx
 		void init(u32 ctrlAddress);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
-		void request_emu_flip(u32 buffer);
+		bool request_emu_flip(u32 buffer);
 
 		void pause();
 		void unpause();

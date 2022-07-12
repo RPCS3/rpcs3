@@ -10,9 +10,15 @@
     <ClCompile Include="Emu\Audio\Cubeb\CubebBackend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Audio\Cubeb\cubeb_enumerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\Audio\Cubeb\CubebBackend.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\Cubeb\cubeb_enumerator.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

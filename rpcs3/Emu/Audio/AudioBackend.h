@@ -37,6 +37,12 @@ enum class AudioChannelCnt : u32
 	SURROUND_7_1 = 8,
 };
 
+enum class AudioStateEvent : u32
+{
+	UNSPECIFIED_ERROR,
+	DEFAULT_DEVICE_CHANGED,
+};
+
 class AudioBackend
 {
 public:
@@ -60,19 +66,21 @@ public:
 	virtual std::string_view GetName() const = 0;
 
 	// (Re)create output stream with new parameters. Blocks until data callback returns.
+	// If dev_id is empty, then default device will be selected.
+	// May override channel count if device has smaller number of channels.
 	// Should return 'true' on success.
-	virtual bool Open(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) = 0;
+	virtual bool Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt) = 0;
 
 	// Reset backend state. Blocks until data callback returns.
 	virtual void Close() = 0;
 
 	// Sets write callback. It's called when backend requests new data to be sent.
 	// Callback should return number of submitted bytes. Calling other backend functions from callback is unsafe.
-	virtual void SetWriteCallback(std::function<u32(u32 /* byte_cnt */, void* /* buffer */)> cb) = 0;
+	virtual void SetWriteCallback(std::function<u32(u32 /* byte_cnt */, void* /* buffer */)> cb);
 
-	// Sets error callback. It's called when backend detects uncorrectable error condition in audio chain.
+	// Sets error callback. It's called when backend detects event in audio chain that needs immediate attention.
 	// Calling other backend functions from callback is unsafe.
-	virtual void SetErrorCallback(std::function<void()> cb);
+	virtual void SetStateCallback(std::function<void(AudioStateEvent)> cb);
 
 	/*
 	 * All functions below require that Open() was called prior.
@@ -100,6 +108,11 @@ public:
 	 * This virtual method should be reimplemented if backend can fail during normal operation
 	 */
 	virtual bool Operational() { return true; }
+
+	/*
+	 * This virtual method should be reimplemented if backend can report device changes
+	 */
+	virtual bool DefaultDeviceChanged() { return false; }
 
 	/*
 	 * Helper methods
@@ -144,6 +157,11 @@ public:
 	 * Returns the max supported channel count.
 	 */
 	static AudioChannelCnt get_max_channel_count(u32 device_index);
+
+	/*
+	 * Converts raw channel count to value usable by backends
+	 */
+	static AudioChannelCnt convert_channel_count(u64 raw);
 
 	/*
 	 * Downmix audio stream.
@@ -208,8 +226,11 @@ protected:
 	AudioFreq       m_sampling_rate = AudioFreq::FREQ_48K;
 	AudioChannelCnt m_channels = AudioChannelCnt::STEREO;
 
-	shared_mutex m_error_cb_mutex{};
-	std::function<void()> m_error_callback{};
+	shared_mutex m_cb_mutex{};
+	std::function<u32(u32, void *)> m_write_callback{};
+
+	shared_mutex m_state_cb_mutex{};
+	std::function<void(AudioStateEvent)> m_state_callback{};
 
 	bool m_playing = false;
 

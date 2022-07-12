@@ -178,6 +178,23 @@ audio_out_configuration::audio_out_configuration()
 	cellSysutil.notice("cellAudioOut: initial secondary output configuration: channels=%d, encoder=%d, downmixer=%d", secondary_output.channels, secondary_output.encoder, secondary_output.downmixer);
 }
 
+audio_out_configuration::audio_out_configuration(utils::serial& ar)
+	: audio_out_configuration()
+{
+	// Load configuartion (ar is reading)
+	save(ar);
+}
+
+void audio_out_configuration::save(utils::serial& ar)
+{
+	GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellAudioOut);
+
+	for (auto& state : out)
+	{
+		ar(state.state, state.channels, state.encoder, state.downmixer, state.copy_control, state.sound_modes, state.sound_mode);
+	}
+}
+
 std::pair<AudioChannelCnt, AudioChannelCnt> audio_out_configuration::audio_out::get_channel_count_and_downmixer() const
 {
 	std::pair<AudioChannelCnt, AudioChannelCnt> ret;

@@ -31,17 +31,19 @@ void usb_device_buzz::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 	// Control transfers are nearly instant
 	switch (bmRequestType)
 	{
-		case 0x01:
-		case 0x21:
-		case 0x80:
-			buzz_log.error("Unhandled Query Len: 0x%02X", buf_size);
-			buzz_log.error("Unhandled Query Type: 0x%02X", (buf_size > 0) ? buf[0] : -1);
-			break;
-		default:
-			usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
-			break;
+	case 0x01:
+	case 0x21:
+	case 0x80:
+		buzz_log.error("Unhandled Query Len: 0x%02X", buf_size);
+		buzz_log.error("Unhandled Query Type: 0x%02X", (buf_size > 0) ? buf[0] : -1);
+		break;
+	default:
+		usb_device_emulated::control_transfer(bmRequestType, bRequest, wValue, wIndex, wLength, buf_size, buf, transfer);
+		break;
 	}
 }
+
+extern bool is_input_allowed();
 
 void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
@@ -60,6 +62,11 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	buf[3] = 0x00;
 	buf[4] = 0xf0;
 
+	if (!is_input_allowed())
+	{
+		return;
+	}
+
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 	const auto& pads   = handler->GetPads();
@@ -69,36 +76,38 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 		const auto& pad = pads[first_controller + index];
 
 		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+		{
 			continue;
+		}
 
 		for (Button& button : pad->m_buttons)
 		{
+			if (!button.m_pressed)
+			{
+				continue;
+			}
+
 			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
 			{
 				switch (button.m_outKeyCode)
 				{
-					case CELL_PAD_CTRL_R1:
-						if (button.m_pressed)
-							buf[2 + (0 + 5 * index) / 8] |= 1 << ((0 + 5 * index) % 8); // Red
-						break;
-					case CELL_PAD_CTRL_TRIANGLE:
-						if (button.m_pressed)
-							buf[2 + (4 + 5 * index) / 8] |= 1 << ((4 + 5 * index) % 8); // Blue
-						break;
-					case CELL_PAD_CTRL_SQUARE:
-						if (button.m_pressed)
-							buf[2 + (3 + 5 * index) / 8] |= 1 << ((3 + 5 * index) % 8); // Orange
-						break;
-					case CELL_PAD_CTRL_CIRCLE:
-						if (button.m_pressed)
-							buf[2 + (2 + 5 * index) / 8] |= 1 << ((2 + 5 * index) % 8); // Green
-						break;
-					case CELL_PAD_CTRL_CROSS:
-						if (button.m_pressed)
-							buf[2 + (1 + 5 * index) / 8] |= 1 << ((1 + 5 * index) % 8); // Yellow
-						break;
-					default:
-						break;
+				case CELL_PAD_CTRL_R1:
+					buf[2 + (0 + 5 * index) / 8] |= 1 << ((0 + 5 * index) % 8); // Red
+					break;
+				case CELL_PAD_CTRL_TRIANGLE:
+					buf[2 + (4 + 5 * index) / 8] |= 1 << ((4 + 5 * index) % 8); // Blue
+					break;
+				case CELL_PAD_CTRL_SQUARE:
+					buf[2 + (3 + 5 * index) / 8] |= 1 << ((3 + 5 * index) % 8); // Orange
+					break;
+				case CELL_PAD_CTRL_CIRCLE:
+					buf[2 + (2 + 5 * index) / 8] |= 1 << ((2 + 5 * index) % 8); // Green
+					break;
+				case CELL_PAD_CTRL_CROSS:
+					buf[2 + (1 + 5 * index) / 8] |= 1 << ((1 + 5 * index) % 8); // Yellow
+					break;
+				default:
+					break;
 				}
 			}
 		}

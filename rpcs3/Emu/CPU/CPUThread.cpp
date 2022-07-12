@@ -49,6 +49,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::pause: return "p";
 		case cpu_flag::suspend: return "s";
 		case cpu_flag::ret: return "ret";
+		case cpu_flag::again: return "a";
 		case cpu_flag::signal: return "sig";
 		case cpu_flag::memory: return "mem";
 		case cpu_flag::pending: return "pend";
@@ -720,7 +721,7 @@ bool cpu_thread::check_state() noexcept
 			}
 
 			// Atomically clean wait flag and escape
-			if (!(flags & (cpu_flag::exit + cpu_flag::ret + cpu_flag::stop)))
+			if (!is_stopped(flags) && flags.none_of(cpu_flag::ret))
 			{
 				// Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
 				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend)))

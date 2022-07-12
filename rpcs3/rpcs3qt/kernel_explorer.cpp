@@ -768,7 +768,7 @@ void kernel_explorer::update()
 		decltype(rsx->display_buffers) dbs;
 		decltype(rsx->zculls) zcs;
 		{
-			std::lock_guard lock(rsx->sys_rsx_mtx);
+			reader_lock lock(rsx->sys_rsx_mtx);
 			std::memcpy(&table, &rsx->iomap_table, sizeof(table));
 			std::memcpy(&dbs, rsx->display_buffers, sizeof(dbs));
 			std::memcpy(&zcs, &rsx->zculls, sizeof(zcs));

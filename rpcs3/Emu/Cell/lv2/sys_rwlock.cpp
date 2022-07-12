@@ -9,6 +9,26 @@
 
 LOG_CHANNEL(sys_rwlock);
 
+lv2_rwlock::lv2_rwlock(utils::serial& ar)
+	: protocol(ar)
+	, key(ar)
+	, name(ar)
+{
+	ar(owner);
+}
+
+std::shared_ptr<void> lv2_rwlock::load(utils::serial& ar)
+{
+	auto rwlock = std::make_shared<lv2_rwlock>(ar);
+	return lv2_obj::load(rwlock->key, rwlock);
+}
+
+void lv2_rwlock::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_sync);
+	ar(protocol, key, name, owner);
+}
+
 error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
 	ppu.state += cpu_flag::wait;
@@ -130,9 +150,22 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
+		if (state & cpu_flag::signal)
+		{
+			break;
+		}
+
 		if (is_stopped(state))
 		{
-			return {};
+			std::lock_guard lock(rwlock->mutex);
+
+			if (std::find(rwlock->rq.begin(), rwlock->rq.end(), &ppu) == rwlock->rq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::again;
+			break;
 		}
 
 		if (state & cpu_flag::signal)
@@ -147,7 +180,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return {};
+					continue;
 				}
 
 				std::lock_guard lock(rwlock->mutex);
@@ -257,6 +290,12 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 		{
 			if (const auto cpu = rwlock->schedule<ppu_thread>(rwlock->wq, rwlock->protocol))
 			{
+				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
+
 				rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
 
 				rwlock->awake(cpu);
@@ -337,13 +376,21 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (is_stopped(state))
-		{
-			return {};
-		}
-
 		if (state & cpu_flag::signal)
 		{
+			break;
+		}
+
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(rwlock->mutex);
+
+			if (std::find(rwlock->wq.begin(), rwlock->wq.end(), &ppu) == rwlock->wq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::again;
 			break;
 		}
 
@@ -354,7 +401,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return {};
+					continue;
 				}
 
 				std::lock_guard lock(rwlock->mutex);
@@ -461,6 +508,12 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 
 		if (auto cpu = rwlock->schedule<ppu_thread>(rwlock->wq, rwlock->protocol))
 		{
+			if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+			{
+				ppu.state += cpu_flag::again;
+				return {};
+			}
+
 			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
 
 			rwlock->awake(cpu);

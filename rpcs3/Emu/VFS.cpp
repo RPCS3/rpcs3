@@ -68,8 +68,9 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		if (pos == umax)
 		{
 			// Mounting completed
-			list.back()->path = path;
-			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, path);
+			list.back()->path = Emu.GetCallbacks().resolve_path(path);
+			list.back()->path += '/';
+			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, list.back()->path);
 			return true;
 		}
 
@@ -356,6 +357,100 @@ using char2 = char8_t;
 #else
 using char2 = char;
 #endif
+
+std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std::vector<std::string_view>* mount_path)
+{
+	auto& table = g_fxo->get<vfs_manager>();
+
+	if (!node)
+	{
+		if (path.starts_with("."))
+		{
+			return {};
+		}
+
+		const std::string rpath = Emu.GetCallbacks().resolve_path(path);
+
+		if (rpath.empty())
+		{
+			return {};
+		}
+
+		reader_lock lock(table.mutex);
+
+		std::vector<std::string_view> mount_path_empty;
+
+		return vfs::retrieve(rpath, &table.root, &mount_path_empty);
+	}
+	
+	mount_path->emplace_back();
+
+	// Try to extract host root mount point name (if exists)
+	std::string_view host_root_name;
+
+	for (const auto& [name, dir] : node->dirs)
+	{
+		mount_path->back() = name;
+
+		if (std::string res = vfs::retrieve(path, &dir, mount_path); !res.empty())
+		{
+			return res;
+		}
+
+		if (dir.path == "/"sv)
+		{
+			host_root_name = name;
+		}
+	}
+
+	mount_path->pop_back();
+
+	if (node->path.size() > 1 && path.starts_with(node->path))
+	{
+		auto unescape_path = [](std::string_view path)
+		{
+			// Unescape from host FS
+			std::vector<std::string> escaped = fmt::split(path, {std::string_view{&fs::delim[0], 1}, std::string_view{&fs::delim[1], 1}});
+			std::vector<std::string> result;
+			for (auto& sv : escaped)
+				result.emplace_back(vfs::unescape(sv));
+
+			return fmt::merge(result, "/");
+		};
+
+		std::string result{"/"};
+
+		for (const auto& name : *mount_path)
+		{
+			result += name;
+			result += '/';
+		}
+
+		result += unescape_path(path.substr(node->path.size()));
+		return result;
+	}
+
+	if (!host_root_name.empty())
+	{
+		// If failed to find mount point for path and /host_root is mounted
+		// Prepend "/host_root" to path and return the constructed string
+		std::string result{"/"};
+
+		for (const auto& name : *mount_path)
+		{
+			result += name;
+			result += '/';
+		}
+
+		result += host_root_name;
+		result += '/';
+
+		result += path;
+		return result;
+	}
+
+	return {};
+}
 
 std::string vfs::escape(std::string_view name, bool escape_slash)
 {

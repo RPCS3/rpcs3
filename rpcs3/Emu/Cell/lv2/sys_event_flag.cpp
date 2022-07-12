@@ -11,6 +11,26 @@
 
 LOG_CHANNEL(sys_event_flag);
 
+lv2_event_flag::lv2_event_flag(utils::serial& ar)
+	: protocol(ar)
+	, key(ar)
+	, type(ar)
+	, name(ar)
+{
+	ar(pattern);
+}
+
+std::shared_ptr<void> lv2_event_flag::load(utils::serial& ar)
+{
+	auto eflag = std::make_shared<lv2_event_flag>(ar);
+	return lv2_obj::load(eflag->key, eflag);
+}
+
+void lv2_event_flag::save(utils::serial& ar)
+{
+	ar(protocol, key, type, name, pattern);
+}
+
 error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
 {
 	ppu.state += cpu_flag::wait;
@@ -171,14 +191,22 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (is_stopped(state))
-		{
-			return {};
-		}
-
 		if (state & cpu_flag::signal)
 		{
 			break;
+		}
+
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(flag->mutex);
+
+			if (std::find(flag->sq.begin(), flag->sq.end(), &ppu) == flag->sq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::again;
+			return {};
 		}
 
 		if (timeout)
@@ -188,7 +216,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return {};
+					continue;
 				}
 
 				std::lock_guard lock(flag->mutex);
@@ -274,6 +302,17 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 	if (true)
 	{
 		std::lock_guard lock(flag->mutex);
+
+		for (auto ppu : flag->sq)
+		{
+			if (ppu->state & cpu_flag::again)
+			{
+				cpu.state += cpu_flag::again;
+
+				// Fake error for abort
+				return not_an_error(CELL_EAGAIN);
+			}
+		}
 
 		// Sort sleep queue in required order
 		if (flag->protocol != SYS_SYNC_FIFO)
@@ -379,6 +418,15 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 	{
 		std::lock_guard lock(flag->mutex);
 
+		for (auto cpu : flag->sq)
+		{
+			if (cpu->state & cpu_flag::again)
+			{
+				ppu.state += cpu_flag::again;
+				return {};
+			}
+		}
+
 		// Get current pattern
 		const u64 pattern = flag->pattern;
 
@@ -403,10 +451,7 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 		}
 	}
 
-	if (ppu.test_stopped())
-	{
-		return 0;
-	}
+	static_cast<void>(ppu.test_stopped());
 
 	if (num) *num = value;
 	return CELL_OK;

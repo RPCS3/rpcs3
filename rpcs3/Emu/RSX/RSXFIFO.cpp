@@ -30,6 +30,16 @@ namespace rsx
 			m_ctrl->get.release(m_internal_get);
 		}
 
+		void FIFO_control::restore_state(u32 cmd, u32 count)
+		{
+			m_cmd = cmd;
+			m_command_inc = ((m_cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
+			m_remaining_commands = count - 1;
+			m_internal_get = m_ctrl->get;
+			m_args_ptr = m_iotable->get_addr(m_internal_get);	
+			m_command_reg = (m_cmd & 0xffff) + m_command_inc * (((m_cmd >> 18) - count) & 0x7ff);
+		}
+
 		void FIFO_control::inc_get(bool wait)
 		{
 			m_internal_get += 4;
@@ -806,6 +816,12 @@ namespace rsx
 			if (auto method = methods[reg])
 			{
 				method(this, reg, value);
+
+				if (state & cpu_flag::again)
+				{
+					method_registers.decode(reg, method_registers.register_previous_value);
+					break;
+				}
 			}
 		}
 		while (fifo_ctrl->read_unsafe(command));

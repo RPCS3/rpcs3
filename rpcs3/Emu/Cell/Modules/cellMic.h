@@ -356,7 +356,7 @@ public:
 	std::unordered_map<s32, microphone_device> mic_list;
 
 	shared_mutex mutex;
-	atomic_t<u32> init = 0;
+	atomic_t<u8> init = 0;
 
 	static constexpr auto thread_name = "Microphone Thread"sv;
 

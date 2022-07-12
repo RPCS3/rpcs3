@@ -357,6 +357,7 @@ void main_window::OnPlayOrPause()
 
 		return;
 	}
+	case system_state::starting: break;
 	default: fmt::throw_exception("Unreachable");
 	}
 }
@@ -386,6 +387,12 @@ void main_window::show_boot_error(game_boot_result status)
 		break;
 	case game_boot_result::unsupported_disc_type:
 		message = tr("This disc type is not supported yet.");
+		break;
+	case game_boot_result::savestate_corrupted:
+		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
+		break;
+	case game_boot_result::savestate_version_unsupported:
+		message = tr("Savestate versioning data differes from your RPCS3 build.");
 		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::no_errors:
@@ -509,6 +516,36 @@ void main_window::BootTest()
 	const std::string path = sstr(QFileInfo(file_path).absoluteFilePath());
 
 	gui_log.notice("Booting from BootTest...");
+	Boot(path, "", true);
+}
+
+void main_window::BootSavestate()
+{
+	bool stopped = false;
+
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "/savestates/"), tr(
+		"Savestate files (*.SAVESTAT);;"
+		"All files (*.*)"),
+		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
+
+	if (file_path.isEmpty())
+	{
+		if (stopped)
+		{
+			Emu.Resume();
+		}
+		return;
+	}
+
+	const std::string path = sstr(QFileInfo(file_path).absoluteFilePath());
+
+	gui_log.notice("Booting from BootSavestate...");
 	Boot(path, "", true);
 }
 
@@ -1153,7 +1190,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 			return;
 		}
 
-		if (!update_files.extract("/pup_extract"))
+		if (!update_files.extract("/pup_extract", true))
 		{
 			gui_log.error("Error while installing firmware: TAR contents are invalid.");
 			critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
@@ -1413,7 +1450,7 @@ void main_window::RepaintThumbnailIcons()
 	m_icon_thumb_stop = icon(":/Icons/stop.png");
 	m_icon_thumb_restart = icon(":/Icons/restart.png");
 
-	m_thumb_playPause->setIcon(Emu.IsRunning() ? m_icon_thumb_pause : m_icon_thumb_play);
+	m_thumb_playPause->setIcon(Emu.IsRunning() || Emu.IsStarting() ? m_icon_thumb_pause : m_icon_thumb_play);
 	m_thumb_stop->setIcon(m_icon_thumb_stop);
 	m_thumb_restart->setIcon(m_icon_thumb_restart);
 #endif
@@ -1982,6 +2019,8 @@ void main_window::CreateConnects()
 	{
 		g_user_asked_for_frame_capture = true;
 	});
+
+	connect(ui->bootSavestateAct, &QAction::triggered, this, &main_window::BootSavestate);
 
 	connect(ui->addGamesAct, &QAction::triggered, this, [this]()
 	{
@@ -2577,9 +2616,9 @@ void main_window::CreateDockWindows()
 		m_selected_game = game;
 	});
 
-	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path)
+	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path, const std::string& savestate)
 	{
-		Boot(game->info.path, game->info.serial, false, false, config_mode, config_path);
+		Boot(savestate.empty() ? game->info.path : savestate, game->info.serial, false, false, config_mode, config_path);
 	});
 
 	connect(m_game_list_frame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);

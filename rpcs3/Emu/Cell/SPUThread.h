@@ -699,6 +699,13 @@ public:
 
 	using cpu_thread::operator=;
 
+	SAVESTATE_INIT_POS(5);
+
+	spu_thread(utils::serial& ar, lv2_spu_group* group = nullptr);
+	void serialize_common(utils::serial& ar);
+	void save(utils::serial& ar);
+	bool savable() const { return get_type() != spu_type::threaded; } // Threaded SPUs are saved as part of the SPU group
+
 	u32 pc = 0;
 	u32 dbg_step_pc = 0;
 
@@ -802,9 +809,9 @@ public:
 	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
 	lv2_spu_group* const group; // SPU Thread Group (access by the spu threads in the group only! From other threads obtain a shared pointer to group using group ID)
 	const u32 index; // SPU index
+	const spu_type thread_type;
 	std::shared_ptr<utils::shm> shm; // SPU memory
 	const std::add_pointer_t<u8> ls; // SPU LS pointer
-	const spu_type thread_type;
 	const u32 option; // sys_spu_thread_initialize option
 	const u32 lv2_id; // The actual id that is used by syscalls
 
@@ -847,6 +854,7 @@ public:
 	std::array<atomic_t<bool>, SPU_LS_SIZE / 4> local_breakpoints{};
 	atomic_t<bool> has_active_local_bps = false;
 	u32 current_bp_pc = umax;
+	bool stop_flag_removal_protection = false;
 
 	void push_snr(u32 number, u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);
@@ -897,6 +905,8 @@ public:
 	{
 		return group ? SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (id & 0xffffff) : RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index;
 	}
+
+	static u8* map_ls(utils::shm& shm);
 
 	// Returns true if reservation existed but was just discovered to be lost
 	// It is safe to use on any address, even if not directly accessed by SPU (so it's slower)

@@ -66,7 +66,9 @@ namespace utils
 	// A threshold of 0xFFFFFFFF means that the rep movsb is expected to be slow on this platform
 	u32 get_rep_movsb_threshold();
 
-	extern const u64 main_tid;
+	u64 _get_main_tid();
+
+	inline const u64 main_tid = _get_main_tid();
 
 #ifdef LLVM_AVAILABLE
 

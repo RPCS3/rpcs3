@@ -71,6 +71,9 @@ struct lv2_lwmutex final : lv2_obj
 	{
 	}
 
+	lv2_lwmutex(utils::serial& ar);
+	void save(utils::serial& ar);
+
 	// Add a waiter
 	void add_waiter(cpu_thread* cpu)
 	{

@@ -21,6 +21,8 @@
 
 LOG_CHANNEL(input_log, "Input");
 
+extern bool is_input_allowed();
+
 namespace pad
 {
 	atomic_t<pad_thread*> g_current = nullptr;
@@ -42,6 +44,7 @@ pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view titl
 {
 	pad::g_title_id = title_id;
 	pad::g_current = this;
+	pad::g_reset = true;
 }
 
 pad_thread::~pad_thread()
@@ -212,7 +215,8 @@ void pad_thread::SetIntercepted(bool intercepted)
 
 void pad_thread::operator()()
 {
-	pad::g_reset = true;
+	Init();
+	pad::g_reset = false;
 
 	atomic_t<pad_handler_mode> pad_mode{g_cfg.io.pad_mode.get()};
 	std::vector<std::unique_ptr<named_thread<std::function<void()>>>> threads;
@@ -249,7 +253,7 @@ void pad_thread::operator()()
 			{
 				while (thread_ctrl::state() != thread_state::aborting)
 				{
-					if (!pad::g_enabled || Emu.IsPaused())
+					if (!pad::g_enabled || Emu.IsPaused() || !is_input_allowed())
 					{
 						thread_ctrl::wait_for(10'000);
 						continue;
@@ -265,7 +269,7 @@ void pad_thread::operator()()
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (!pad::g_enabled || Emu.IsPaused())
+		if (!pad::g_enabled || Emu.IsPaused() || !is_input_allowed())
 		{
 			thread_ctrl::wait_for(10000);
 			continue;

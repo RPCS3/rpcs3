@@ -49,7 +49,13 @@ public:
 	};
 
 public:
+	SAVESTATE_INIT_POS(7); // Dependency on RPCN
+
 	lv2_socket(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
+	lv2_socket(utils::serial&){}
+	lv2_socket(utils::serial&, lv2_socket_type type);
+	static std::shared_ptr<lv2_socket> load(utils::serial& ar);
+	void save(utils::serial&, bool save_only_this_class = false);
 	virtual ~lv2_socket() = default;
 
 	std::unique_lock<shared_mutex> lock();
@@ -73,7 +79,7 @@ public:
 
 public:
 	virtual std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> accept(bool is_lock = true) = 0;
-	virtual s32 bind(const sys_net_sockaddr& addr, s32 ps3_id)                  = 0;
+	virtual s32 bind(const sys_net_sockaddr& addr) = 0;
 
 	virtual std::optional<s32> connect(const sys_net_sockaddr& addr) = 0;
 	virtual s32 connect_followup()                                   = 0;
@@ -102,6 +108,8 @@ public:
 	static const u32 id_count = 1000;
 
 protected:
+	lv2_socket(utils::serial&, bool);
+
 	shared_mutex mutex;
 	u32 lv2_id = 0;
 
@@ -130,4 +138,6 @@ protected:
 	// Tracks connect for WSAPoll workaround
 	bool connecting = false;
 #endif
+
+	sys_net_sockaddr last_bound_addr{};
 };

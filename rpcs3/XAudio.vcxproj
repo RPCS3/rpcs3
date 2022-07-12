@@ -53,9 +53,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\Audio\XAudio2\XAudio2Backend.h" />
+    <ClInclude Include="Emu\Audio\XAudio2\xaudio2_enumerator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\Audio\XAudio2\XAudio2Backend.cpp" />
+    <ClCompile Include="Emu\Audio\XAudio2\xaudio2_enumerator.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

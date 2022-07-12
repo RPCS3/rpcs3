@@ -55,6 +55,48 @@ using namespace std::literals;
 #define AUDIT(...) (static_cast<void>(0))
 #endif
 
+namespace utils
+{
+	template <typename F>
+	struct fn_helper
+	{
+		F f;
+
+		fn_helper(F&& f)
+			: f(std::forward<F>(f))
+		{
+		}
+
+		template <typename... Args>
+		auto operator()(Args&&... args) const
+		{
+			if constexpr (sizeof...(Args) == 0)
+				return f(0, 0, 0, 0);
+			else if constexpr (sizeof...(Args) == 1)
+				return f(std::forward<Args>(args)..., 0, 0, 0);
+			else if constexpr (sizeof...(Args) == 2)
+				return f(std::forward<Args>(args)..., 0, 0);
+			else if constexpr (sizeof...(Args) == 3)
+				return f(std::forward<Args>(args)..., 0);
+			else if constexpr (sizeof...(Args) == 4)
+				return f(std::forward<Args>(args)...);
+			else
+				static_assert(sizeof...(Args) <= 4);
+		}
+	};
+
+	template <typename F>
+	fn_helper(F&& f) -> fn_helper<F>;
+}
+
+// Shorter lambda.
+#define FN(...) \
+	::utils::fn_helper([&]( \
+		[[maybe_unused]] auto&& x, \
+		[[maybe_unused]] auto&& y, \
+		[[maybe_unused]] auto&& z, \
+		[[maybe_unused]] auto&& w){ return (__VA_ARGS__); })
+
 #if __cpp_lib_bit_cast < 201806L
 namespace std
 {
@@ -68,6 +110,7 @@ namespace std
 
 #if defined(__INTELLISENSE__)
 #define consteval constexpr
+#define constinit
 #endif
 
 using schar  = signed char;
@@ -884,6 +927,21 @@ constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(),
 	fmt::raw_verify_error({line, col, file, func}, msg);
 }
 
+template <typename T, typename F> requires (std::is_invocable_v<F, T&&>)
+constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(),
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION()) noexcept
+{
+	if (std::forward<F>(pred)(std::forward<T>(arg))) [[likely]]
+	{
+		return std::forward<T>(arg);
+	}
+
+	fmt::raw_verify_error({line, col, file, func}, msg);
+}
+
 // narrow() function details
 template <typename From, typename To = void, typename = void>
 struct narrow_impl
@@ -1081,6 +1139,21 @@ constexpr bool is_same_ptr(const volatile Y* ptr)
 template <typename X, typename Y>
 concept PtrSame = (is_same_ptr<X, Y>());
 
+namespace stx
+{
+	template <typename T>
+	struct exact_t
+	{
+		T obj;
+
+		exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
+
+		// TODO: More conversions
+		template <typename U> requires (std::is_same_v<U&, T>)
+		operator U&() const { return obj; };
+	};
+}
+
 namespace utils
 {
 	struct serial;
@@ -1088,3 +1161,25 @@ namespace utils
 
 template <typename T>
 extern bool serialize(utils::serial& ar, T& obj);
+
+#define USING_SERIALIZATION_VERSION(name) []()\
+{\
+	extern void using_##name##_serialization();\
+	using_##name##_serialization();\
+}()
+
+#define GET_OR_USE_SERIALIZATION_VERSION(cond, name) [&]()\
+{\
+	extern void using_##name##_serialization();\
+	extern s32 get_##name##_serialization_version();\
+	return (static_cast<bool>(cond) ? (using_##name##_serialization(), 0) : get_##name##_serialization_version());\
+}()
+
+#define GET_SERIALIZATION_VERSION(name) []()\
+{\
+	extern s32 get_##name##_serialization_version();\
+	return get_##name##_serialization_version();\
+}()
+
+#define ENABLE_BITWISE_SERIALIZATION using enable_bitcopy = std::true_type;
+#define SAVESTATE_INIT_POS(x) static constexpr double savestate_init_pos = (x)

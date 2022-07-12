@@ -18,15 +18,20 @@
 
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/Null/NullAudioBackend.h"
+#include "Emu/Audio/Null/null_enumerator.h"
 #include "Emu/Audio/Cubeb/CubebBackend.h"
+#include "Emu/Audio/Cubeb/cubeb_enumerator.h"
 #ifdef _WIN32
 #include "Emu/Audio/XAudio2/XAudio2Backend.h"
+#include "Emu/Audio/XAudio2/xaudio2_enumerator.h"
 #endif
 #ifdef HAVE_FAUDIO
 #include "Emu/Audio/FAudio/FAudioBackend.h"
+#include "Emu/Audio/FAudio/faudio_enumerator.h"
 #endif
 
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
+#include <thread>
 
 LOG_CHANNEL(sys_log, "SYS");
 
@@ -54,12 +59,12 @@ EmuCallbacks main_application::CreateCallbacks()
 		{
 		case keyboard_handler::null:
 		{
-			g_fxo->init<KeyboardHandlerBase, NullKeyboardHandler>();
+			g_fxo->init<KeyboardHandlerBase, NullKeyboardHandler>(Emu.DeserialManager());
 			break;
 		}
 		case keyboard_handler::basic:
 		{
-			basic_keyboard_handler* ret = g_fxo->init<KeyboardHandlerBase, basic_keyboard_handler>();
+			basic_keyboard_handler* ret = g_fxo->init<KeyboardHandlerBase, basic_keyboard_handler>(Emu.DeserialManager());
 			ret->moveToThread(get_thread());
 			ret->SetTargetWindow(m_game_window);
 			break;
@@ -75,18 +80,20 @@ EmuCallbacks main_application::CreateCallbacks()
 		{
 			if (g_cfg.io.move == move_handler::mouse)
 			{
-				basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>();
+				basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>(Emu.DeserialManager());
 				ret->moveToThread(get_thread());
 				ret->SetTargetWindow(m_game_window);
 			}
 			else
-				g_fxo->init<MouseHandlerBase, NullMouseHandler>();
+			{
+				g_fxo->init<MouseHandlerBase, NullMouseHandler>(Emu.DeserialManager());
+			}
 
 			break;
 		}
 		case mouse_handler::basic:
 		{
-			basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>();
+			basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>(Emu.DeserialManager());
 			ret->moveToThread(get_thread());
 			ret->SetTargetWindow(m_game_window);
 			break;
@@ -96,7 +103,8 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.init_pad_handler = [this](std::string_view title_id)
 	{
-		g_fxo->init<named_thread<pad_thread>>(get_thread(), m_game_window, title_id);
+		ensure(g_fxo->init<named_thread<pad_thread>>(get_thread(), m_game_window, title_id));
+		while (pad::g_reset) std::this_thread::yield();
 	};
 
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
@@ -121,6 +129,22 @@ EmuCallbacks main_application::CreateCallbacks()
 			result = std::make_shared<NullAudioBackend>();
 		}
 		return result;
+	};
+
+	callbacks.get_audio_enumerator = [](u64 renderer) -> std::shared_ptr<audio_device_enumerator>
+	{
+		switch (static_cast<audio_renderer>(renderer))
+		{
+		case audio_renderer::null: return std::make_shared<null_enumerator>();
+#ifdef _WIN32
+		case audio_renderer::xaudio: return std::make_shared<xaudio2_enumerator>();
+#endif
+		case audio_renderer::cubeb: return std::make_shared<cubeb_enumerator>();
+#ifdef HAVE_FAUDIO
+		case audio_renderer::faudio: return std::make_shared<faudio_enumerator>();
+#endif
+		default: fmt::throw_exception("Invalid renderer index %u", renderer);
+		}
 	};
 
 	callbacks.resolve_path = [](std::string_view sv)

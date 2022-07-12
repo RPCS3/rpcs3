@@ -115,6 +115,7 @@ namespace rsx
 			{
 				if (rsx->test_stopped())
 				{
+					rsx->state += cpu_flag::again;
 					return;
 				}
 
@@ -745,19 +746,16 @@ namespace rsx
 
 		void set_zcull_render_enable(thread* rsx, u32, u32 arg)
 		{
-			rsx->zcull_rendering_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
 		void set_zcull_stats_enable(thread* rsx, u32, u32 arg)
 		{
-			rsx->zcull_stats_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
 		void set_zcull_pixel_count_enable(thread* rsx, u32, u32 arg)
 		{
-			rsx->zcull_pixel_cnt_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
@@ -1789,8 +1787,6 @@ namespace rsx
 		}
 
 		rsx->reset();
-		nv4097::set_zcull_render_enable(rsx, 0, 0x3);
-		nv4097::set_render_mode(rsx, 0, 0x0100'0000);
 		rsx->on_frame_end(arg);
 		rsx->request_emu_flip(arg);
 		vm::_ref<atomic_t<u128>>(rsx->label_addr + 0x10).store(u128{});
@@ -2835,6 +2831,11 @@ namespace rsx
 	bool rsx_state::test(u32 reg, u32 value) const
 	{
 		return registers[reg] == value;
+	}
+
+	void draw_clause::operator()(utils::serial& ar)
+	{
+		ar(draw_command_ranges, draw_command_barriers, current_range_index, primitive, command, is_immediate_draw, is_disjoint_primitive, primitive_barrier_enable, inline_vertex_array);
 	}
 
 	void draw_clause::insert_command_barrier(command_barrier_type type, u32 arg, u32 index)
