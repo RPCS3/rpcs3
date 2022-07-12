@@ -1303,6 +1303,8 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 		{
 			on_to_sleep_update();
 		}
+
+		return;
 	}
 
 	if (timeout)
