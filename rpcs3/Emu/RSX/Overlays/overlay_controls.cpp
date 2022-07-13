@@ -355,17 +355,17 @@ namespace rsx
 			return font_ref ? font_ref : fontmgr::get("Arial", 12);
 		}
 
-		std::vector<vertex> overlay_element::render_text(const char32_t *string, f32 x, f32 y)
+		std::vector<vertex> overlay_element::render_text(const char32_t* string, f32 x, f32 y)
 		{
 			auto renderer = get_font();
 
 			f32 text_extents_w = 0.f;
-			u16 clip_width = clip_text ? w : umax;
+			const u16 clip_width = clip_text ? w : umax;
 			std::vector<vertex> result = renderer->render_text(string, clip_width, wrap_text);
 
 			if (!result.empty())
 			{
-				for (auto &v : result)
+				for (vertex& v : result)
 				{
 					// Check for real text region extent
 					// TODO: Ellipsis
@@ -397,30 +397,63 @@ namespace rsx
 							continue;
 						default:
 							ctr += 4;
+							break;
 						}
 					}
 
 					lines.emplace_back(line_begin, ctr);
-					const auto max_region_w = std::max<f32>(text_extents_w, w);
+					const f32 max_region_w = std::max<f32>(text_extents_w, w);
 					const f32 offset_extent = (alignment == text_align::center ? 0.5f : 1.0f);
+					const f32 size_px = renderer->get_size_px() * 0.5f;
 
-					for (auto p : lines)
+					// Moves all glyphs of a line by the correct amount to get a nice alignment.
+					const auto move_line = [&result, &max_region_w, &offset_extent](u32 begin, u32 end)
 					{
-						if (p.first >= p.second)
-							continue;
-
-						const f32 line_length = result[p.second - 1].values[0] - result[p.first].values[0];
-						const bool wrapped = std::fabs(result[p.second - 1].values[1] - result[p.first + 3].values[1]) >= (renderer->get_size_px() * 0.5f);
-
-						if (wrapped)
-							continue;
+						const f32 line_length = result[end - 1].x() - result[begin].x();
 
 						if (line_length < max_region_w)
 						{
 							const f32 offset = (max_region_w - line_length) * offset_extent;
-							for (auto n = p.first; n < p.second; ++n)
+							for (auto n = begin; n < end; ++n)
 							{
-								result[n].values[0] += offset;
+								result[n].x() += offset;
+							}
+						}
+					};
+
+					for (const auto& [begin, end] : lines)
+					{
+						if (begin >= end)
+							continue;
+
+						// Check if there's any wrapped text
+						if (std::fabs(result[end - 1].y() - result[begin + 3].y()) < size_px)
+						{
+							// No wrapping involved. We can just move the entire line.
+							move_line(begin, end);
+							continue;
+						}
+
+						// Wrapping involved. We have to search for the line breaks and move each line seperately.
+						for (u32 i_begin = begin, i_next = begin + 4;; i_next += 4)
+						{
+							// Check if this is the last glyph in the line of text.
+							const bool is_last_glyph = i_next >= end;
+
+							// The line may be wrapped, so we need to check if the next glyph's position is below the current position.
+							if (is_last_glyph || (std::fabs(result[i_next - 1].y() - result[i_begin + 3].y()) >= size_px))
+							{
+								// Whenever we reached the end of a visual line we need to move its glyphs accordingly.
+								const u32 i_end = i_next - (is_last_glyph ? 0 : 4);
+
+								move_line(i_begin, i_end);
+
+								i_begin = i_end;
+
+								if (is_last_glyph)
+								{
+									break;
+								}
 							}
 						}
 					}

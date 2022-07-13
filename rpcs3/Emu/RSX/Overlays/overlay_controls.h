@@ -189,7 +189,7 @@ namespace rsx
 			virtual void align_text(text_align align);
 			virtual void set_wrap_text(bool state);
 			virtual font* get_font() const;
-			virtual std::vector<vertex> render_text(const char32_t *string, f32 x, f32 y);
+			virtual std::vector<vertex> render_text(const char32_t* string, f32 x, f32 y);
 			virtual compiled_resource& get_compiled();
 			void measure_text(u16& width, u16& height, bool ignore_word_wrap = false) const;
 		};
