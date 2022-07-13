@@ -1578,7 +1578,12 @@ spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 
 			// Save the jmp addr to GHC CC 3rd arg -> REG_Hp
 			Label replace_addr = c.newLabel();
+
 			c.adr(a64::x21, replace_addr);
+			// 16 byte alignment for the jump replacement
+			c.nop();
+			c.nop();
+			c.nop();
 			Label branch_target = c.newLabel();
 
 			c.bind(replace_addr);
@@ -1641,7 +1646,6 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 				c.bind(branch_target);
 				c.embedUInt64(reinterpret_cast<u64>(spu_runtime::tr_all));
 			});
-		// 128 bit load/store is atomic on Armv8.4+
 		u128 result = *reinterpret_cast<u128*>(jump_instrs);
 #if defined(__APPLE__)
 		pthread_jit_write_protect_np(false);
@@ -1774,7 +1778,6 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 			c.bind(branch_target);
 			c.embedUInt64(reinterpret_cast<u64>(func));
 		});
-	// 128 bit load/store is atomic on Armv8.4+
 	u128 result = *reinterpret_cast<u128*>(jmp_instrs);
 #if defined(__APPLE__)
 	pthread_jit_write_protect_np(false);
