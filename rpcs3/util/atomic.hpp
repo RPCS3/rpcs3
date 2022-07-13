@@ -1096,8 +1096,21 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 #endif
 	}
 #elif defined(ARCH_ARM64)
+
 	static inline T load(const T& dest)
 	{
+#if defined(ARM_FEATURE_LSE2)
+		u64 data[2];
+		__asm__ volatile("1:\n"
+			"ldp %x[data0], %x[data1], %[dest]\n"
+			"dmb ish\n"
+			: [data0] "=r"(data[0]), [data1] "=r"(data[1])
+			: [dest] "Q"(dest)
+			: "memory");
+		T result;
+		std::memcpy(&result, data, 16);
+		return result;
+#else
 		u32 tmp;
 		u64 data[2];
 		__asm__ volatile("1:\n"
@@ -1111,6 +1124,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 		T result;
 		std::memcpy(&result, data, 16);
 		return result;
+#endif
 	}
 
 	static inline T observe(const T& dest)
@@ -1172,13 +1186,38 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline void store(T& dest, T value)
 	{
 		// TODO
+#if defined(ARM_FEATURE_LSE2)
+		u64 src[2];
+		std::memcpy(src, &value, 16);
+		__asm__ volatile("1:\n"
+			"dmb ish\n"
+			"stp %x[data0], %x[data1], %[dest]\n"
+			"dmb ish\n"
+			: [dest] "=Q" (dest)
+			: [data0] "r" (src[0]), [data1] "r" (src[1])
+			: "memory"
+		);
+#else
 		exchange(dest, value);
+#endif
 	}
 
 	static inline void release(T& dest, T value)
 	{
+#if defined(ARM_FEATURE_LSE2)
+		u64 src[2];
+		std::memcpy(src, &value, 16);
+		__asm__ volatile("1:\n"
+			 "dmb ish\n"
+			 "stp %x[data0], %x[data1], %[dest]\n"
+			 : [dest] "=Q" (dest)
+			 : [data0] "r" (src[0]), [data1] "r" (src[1])
+			 : "memory"
+		);
+#else
 		// TODO
 		exchange(dest, value);
+#endif
 	}
 #endif
 
