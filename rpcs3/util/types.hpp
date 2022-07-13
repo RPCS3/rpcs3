@@ -16,6 +16,13 @@
 #define ARCH_X64 1
 #elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
 #define ARCH_ARM64 1
+// v8.4a+ gives us atomic 16 byte ld/st
+// See Arm C Language Extensions Documentation
+// Currently there is no feature macro for LSE2 specifically so we define it ourself
+// Unfortunately the __ARM_ARCH integer macro isn't universally defined so we use this hack instead
+#if defined(__ARM_ARCH_8_4__) || defined(__ARM_ARCH_8_5__) || defined(__ARM_ARCH_8_6__) || defined(__ARM_ARCH_9__)
+#define ARM_FEATURE_LSE2 1
+#endif
 #endif
 
 using std::chrono::steady_clock;
