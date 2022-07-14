@@ -1878,22 +1878,6 @@ void Emulator::RunPPU()
 		signalled_thread = true;
 	});
 
-	// Run SPUs waiting on a syscall (savestates related)
-	idm::select<named_thread<spu_thread>>([&](u32, named_thread<spu_thread>& spu)
-	{
-		if (spu.group && spu.index == spu.group->waiter_spu_index)
-		{
-			if (std::exchange(spu.stop_flag_removal_protection, false))
-			{
-				return;
-			}
-
-			ensure(spu.state.test_and_reset(cpu_flag::stop));
-			spu.state.notify_one(cpu_flag::stop);
-			signalled_thread = true;
-		}
-	});
-
 	if (!signalled_thread)
 	{
 		FixGuestTime();
@@ -2169,9 +2153,15 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 }
 
 extern bool try_lock_vdec_context_creation();
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates();
 
 void Emulator::Kill(bool allow_autoexit, bool savestate)
 {
+	if (savestate && !try_lock_spu_threads_in_a_state_compatible_with_savestates())
+	{
+		sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
+	}
+
 	if (savestate && !try_lock_vdec_context_creation())
 	{
 		sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."

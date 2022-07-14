@@ -47,7 +47,8 @@ bool serialize<rsx::rsx_state>(utils::serial& ar, rsx::rsx_state& o)
 {
 	ar(o.transform_program);
 
-	if (GET_SERIALIZATION_VERSION(global_version))
+	// Hack for compatiblity with previous RSX captures
+	if (rsx::get_current_renderer()->state & cpu_flag::exit || GET_SERIALIZATION_VERSION(global_version))
 	{
 		ar(o.transform_constants);
 	}

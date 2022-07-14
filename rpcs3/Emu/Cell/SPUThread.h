@@ -847,6 +847,7 @@ public:
 
 	const char* current_func{}; // Current STOP or RDCH blocking function
 	u64 start_time{}; // Starting time of STOP or RDCH bloking function
+	bool unsavable = false; // Flag indicating whether saving the spu thread state is currently unsafe
 
 	atomic_t<u8> debugger_float_mode = 0;
 

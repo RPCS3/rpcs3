@@ -1196,3 +1196,72 @@ u32 CPUDisAsm::DisAsmBranchTarget(s32 /*imm*/)
 	// Unused
 	return 0;
 }
+
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates()
+{
+	const u64 start = get_system_time();
+
+	// Attempt to lock for half a second, if somehow takes longer abort it
+	do
+	{
+		if (cpu_thread::suspend_all(nullptr, {}, []()
+		{
+			return idm::select<named_thread<spu_thread>>([](u32, spu_thread& spu)
+			{
+				if (!spu.unsavable)
+				{
+					if (Emu.IsPaused())
+					{
+						// If emulation is paused, we can only hope it's already in a state compatible with savestates
+						return !!(spu.state & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
+					}
+					else
+					{
+						ensure(!spu.state.test_and_set(cpu_flag::dbg_global_pause));
+					}
+
+					return false;
+				}
+
+				return true;
+			}).ret;
+		}))
+		{
+			if (Emu.IsPaused())
+			{
+				return false;
+			}
+
+			// It's faster to lock once
+			reader_lock lock(id_manager::g_mutex);
+
+			idm::select<named_thread<spu_thread>>([](u32, spu_thread& spu)
+			{
+				spu.state -= cpu_flag::dbg_global_pause;
+			}, idm::unlocked);
+
+			// For faster signalling, first remove state flags then batch notifications
+			idm::select<named_thread<spu_thread>>([](u32, spu_thread& spu)
+			{
+				if (spu.state & cpu_flag::wait)
+				{
+					spu.state.notify_one();
+				}
+			}, idm::unlocked);
+
+			continue;
+		}
+
+		return true;
+	} while (std::this_thread::yield(), get_system_time() - start <= 500'000);
+
+	idm::select<named_thread<spu_thread>>([&](u32, named_thread<spu_thread>& spu)
+	{
+		if (spu.state.test_and_reset(cpu_flag::dbg_global_pause))
+		{
+			spu.state.notify_one();
+		}
+	});
+
+	return false;
+}

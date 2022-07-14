@@ -1468,6 +1468,8 @@ void spu_thread::cpu_task()
 			spu_runtime::g_gateway(*this, _ptr<u8>(0), nullptr);
 		}
 
+		unsavable = false;
+
 		// Print some stats
 		spu_log.notice("Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
 	}
