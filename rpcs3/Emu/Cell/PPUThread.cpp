@@ -24,6 +24,7 @@
 #include "lv2/sys_prx.h"
 #include "lv2/sys_overlay.h"
 #include "lv2/sys_process.h"
+#include "lv2/sys_spu.h"
 
 #ifdef LLVM_AVAILABLE
 #ifdef _MSC_VER
@@ -1399,6 +1400,21 @@ void ppu_thread::cpu_task()
 			// Sadly we can't postpone initializing guest time because we need to run PPU threads
 			// (the farther it's postponed, the less accuracy of guest time has been lost)
 			Emu.FixGuestTime();
+
+			// Run SPUs waiting on a syscall (savestates related)
+			idm::select<named_thread<spu_thread>>([&](u32, named_thread<spu_thread>& spu)
+			{
+				if (spu.group && spu.index == spu.group->waiter_spu_index)
+				{
+					if (std::exchange(spu.stop_flag_removal_protection, false))
+					{
+						return;
+					}
+
+					ensure(spu.state.test_and_reset(cpu_flag::stop));
+					spu.state.notify_one(cpu_flag::stop);
+				}
+			});
 
 			// Check if this is the only PPU left to initialize (savestates related)
 			if (lv2_obj::is_scheduler_ready())

@@ -4310,7 +4310,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
-	void check_state(u32 addr)
+	void check_state(u32 addr, bool may_be_unsafe_for_savestate = true)
 	{
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
@@ -4318,7 +4318,24 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
 		m_ir->SetInsertPoint(check);
 		update_pc(addr);
+
+		if (may_be_unsafe_for_savestate && std::none_of(std::begin(m_block->phi), std::end(m_block->phi), FN(!!x)))
+		{
+			may_be_unsafe_for_savestate = false;
+		}
+
+		if (may_be_unsafe_for_savestate)
+		{
+			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable), true);
+		}
+
 		m_ir->CreateStore(m_ir->getFalse(), m_fake_global1, true);
+
+		if (may_be_unsafe_for_savestate)
+		{
+			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable), true);
+		}
+
 		m_ir->CreateBr(_body);
 		m_ir->SetInsertPoint(_body);
 	}
