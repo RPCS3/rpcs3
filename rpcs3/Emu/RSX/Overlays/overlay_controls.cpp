@@ -359,55 +359,94 @@ namespace rsx
 		{
 			auto renderer = get_font();
 
-			f32 text_extents_w = 0.f;
 			const u16 clip_width = clip_text ? w : umax;
 			std::vector<vertex> result = renderer->render_text(string, clip_width, wrap_text);
 
 			if (!result.empty())
 			{
-				for (vertex& v : result)
+				const auto apply_transform = [&]()
 				{
-					// Check for real text region extent
-					// TODO: Ellipsis
-					text_extents_w = std::max(v.values[0], text_extents_w);
+					const f32 size_px = renderer->get_size_px();
 
-					// Apply transform.
-					// (0, 0) has text sitting one line off the top left corner (text is outside the rect) hence the offset by text height
-					v.values[0] += x + padding_left;
-					v.values[1] += y + padding_top + static_cast<f32>(renderer->get_size_px());
+					for (vertex& v : result)
+					{
+						// Apply transform.
+						// (0, 0) has text sitting one line off the top left corner (text is outside the rect) hence the offset by text height
+						v.x() += x + padding_left;
+						v.y() += y + padding_top + size_px;
+					}
+				};
+
+				if (alignment == text_align::left)
+				{
+					apply_transform();
 				}
-
-				if (alignment != text_align::left)
+				else
 				{
 					// Scan for lines and measure them
 					// Reposition them to the center or right depending on the alignment
-					std::vector<std::pair<u32, u32>> lines;
+					std::vector<std::tuple<u32, u32, f32>> lines;
 					u32 line_begin = 0;
+					u32 line_end = 0;
+					u32 word_end = 0;
 					u32 ctr = 0;
+					f32 text_extents_w = w;
 
-					for (auto c : text)
+					for (const auto& c : text)
 					{
 						switch (c)
 						{
 						case '\r':
+						{
+							word_end = line_end = line_begin = ctr;
 							continue;
+						}
 						case '\n':
-							lines.emplace_back(line_begin, ctr);
-							line_begin = ctr;
+						{
+							lines.emplace_back(line_begin, std::min(word_end, line_end), text_extents_w);
+							word_end = line_end = line_begin = ctr;
+							text_extents_w = w;
 							continue;
+						}
 						default:
+						{
 							ctr += 4;
-							break;
+
+							if (c == ' ')
+							{
+								if (line_end == line_begin)
+								{
+									// Ignore leading whitespace
+									word_end = line_end = line_begin = ctr;
+								}
+								else
+								{
+									line_end = ctr;
+								}
+							}
+							else
+							{
+								word_end = line_end = ctr;
+
+								// Check for real text region extent
+								text_extents_w = std::max(result[ctr - 1].x(), text_extents_w);
+							}
+							continue;
+						}
 						}
 					}
 
-					lines.emplace_back(line_begin, ctr);
-					const f32 max_region_w = std::max<f32>(text_extents_w, w);
+					// Add final line
+					lines.emplace_back(line_begin, std::min(word_end, line_end), std::max<f32>(text_extents_w, w));
+
 					const f32 offset_extent = (alignment == text_align::center ? 0.5f : 1.0f);
 					const f32 size_px = renderer->get_size_px() * 0.5f;
 
+					// Apply padding
+					apply_transform();
+
 					// Moves all glyphs of a line by the correct amount to get a nice alignment.
-					const auto move_line = [&result, &max_region_w, &offset_extent](u32 begin, u32 end)
+					const auto move_line = [&result, &offset_extent](u32 begin, u32 end, f32 max_region_w)
 					{
 						const f32 line_length = result[end - 1].x() - result[begin].x();
 
@@ -421,7 +460,8 @@ namespace rsx
 						}
 					};
 
-					for (const auto& [begin, end] : lines)
+					// Properly place all lines individually
+					for (const auto& [begin, end, max_region_w] : lines)
 					{
 						if (begin >= end)
 							continue;
@@ -430,7 +470,7 @@ namespace rsx
 						if (std::fabs(result[end - 1].y() - result[begin + 3].y()) < size_px)
 						{
 							// No wrapping involved. We can just move the entire line.
-							move_line(begin, end);
+							move_line(begin, end, max_region_w);
 							continue;
 						}
 
@@ -446,7 +486,7 @@ namespace rsx
 								// Whenever we reached the end of a visual line we need to move its glyphs accordingly.
 								const u32 i_end = i_next - (is_last_glyph ? 0 : 4);
 
-								move_line(i_begin, i_end);
+								move_line(i_begin, i_end, max_region_w);
 
 								i_begin = i_end;
 
