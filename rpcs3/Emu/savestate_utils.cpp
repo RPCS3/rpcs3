@@ -37,7 +37,7 @@ static std::array<serial_ver_t, 23> s_serial_versions;
 
 SERIALIZATION_VER(global_version, 0,                            12) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1)
-SERIALIZATION_VER(spu, 2,                                       1)
+SERIALIZATION_VER(spu, 2,                                       1, 2 /*spu_limits_t ctor*/)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
 SERIALIZATION_VER(lv2_net, 5,                                   1)
