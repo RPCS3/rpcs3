@@ -347,9 +347,6 @@ std::pair<named_thread<spu_thread>*, std::shared_ptr<lv2_spu_group>> lv2_spu_gro
 	return res;
 }
 
-namespace
-{
-
 struct limits_data
 {
 	u32 physical = 0;
@@ -364,6 +361,23 @@ struct spu_limits_t
 	u32 max_raw = 0;
 	u32 max_spu = 6;
 	shared_mutex mutex;
+
+	spu_limits_t() = default;
+
+	spu_limits_t(utils::serial& ar) noexcept
+	{
+		if (GET_SERIALIZATION_VERSION(spu) >= 2)
+		{
+			ar(max_raw, max_spu);
+		}
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(max_raw, max_spu);
+	}
+
+	SAVESTATE_INIT_POS(47);
 
 	bool check(const limits_data& init) const
 	{
@@ -395,8 +409,6 @@ struct spu_limits_t
 		return true;
 	}
 };
-
-} // annonymous namespace
 
 error_code sys_spu_initialize(ppu_thread& ppu, u32 max_usable_spu, u32 max_raw_spu)
 {
