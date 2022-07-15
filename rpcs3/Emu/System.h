@@ -301,8 +301,8 @@ public:
 	bool Pause(bool freeze_emulation = false);
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
-	void Kill(bool allow_autoexit = true, bool savestate = false);
-	game_boot_result Restart(bool savestate = false);
+	std::shared_ptr<utils::serial> Kill(bool allow_autoexit = true, bool savestate = false);
+	game_boot_result Restart();
 	bool Quit(bool force_quit);
 	static void CleanUp();
 

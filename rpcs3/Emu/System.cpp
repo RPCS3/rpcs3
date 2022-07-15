@@ -2155,8 +2155,10 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 extern bool try_lock_vdec_context_creation();
 extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates();
 
-void Emulator::Kill(bool allow_autoexit, bool savestate)
+std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestate)
 {
+	std::shared_ptr<utils::serial> to_ar;
+
 	if (savestate && !try_lock_spu_threads_in_a_state_compatible_with_savestates())
 	{
 		sys_log.error("Failed to savestate: failed to lock SPU threads execution.");
@@ -2169,7 +2171,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 			"\nYou need to close the game for to take effect."
 			"\nIf you cannot close the game due to losing important progress your best chance is to skip the current cutscenes if any are played and retry.");
 
-		return;
+		return to_ar;
 	}
 
 	g_tls_log_prefix = []()
@@ -2191,7 +2193,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		m_config_path.clear();
 		m_config_mode = cfg_mode::custom;
 		read_used_savestate_versions();
-		return;
+		return to_ar;
 	}
 
 	sys_log.notice("Stopping emulator...");
@@ -2292,7 +2294,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 
 	if (savestate)
 	{
-		m_ar = std::make_unique<utils::serial>();
+		to_ar = std::make_unique<utils::serial>();
 
 		// Savestate thread
 		named_thread emu_state_cap_thread("Emu State Capture Thread", [&]()
@@ -2302,7 +2304,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 				return fmt::format("Emu State Capture Thread: '%s'", g_tls_serialize_name);
 			};
 
-			auto& ar = *m_ar;
+			auto& ar = *to_ar;
 
 			read_used_savestate_versions(); // Reset version data
 			USING_SERIALIZATION_VERSION(global_version);
@@ -2387,7 +2389,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		if (emu_state_cap_thread == thread_state::errored)
 		{
 			sys_log.error("Saving savestate failed due to fatal error!");
-			m_ar.reset();
+			to_ar.reset();
 			savestate = false;
 		}
 	}
@@ -2443,7 +2445,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 		// Identifer -> version
 		std::vector<std::pair<u16, u16>> used_serial = read_used_savestate_versions();
 
-		auto& ar = *m_ar;
+		auto& ar = *to_ar;
 		const usz pos = ar.seek_end();
 		std::memcpy(&ar.data[10], &pos, 8);// Set offset
 		ar(used_serial);
@@ -2470,6 +2472,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 	init_mem_containers = nullptr;
 	m_config_path.clear();
 	m_config_mode = cfg_mode::custom;
+	m_ar.reset();
 	read_used_savestate_versions();
 
 	// Always Enable display sleep, not only if it was prevented.
@@ -2477,14 +2480,13 @@ void Emulator::Kill(bool allow_autoexit, bool savestate)
 
 	if (allow_autoexit)
 	{
-		if (Quit(g_cfg.misc.autoexit.get()))
-		{
-			return;
-		}
+		Quit(g_cfg.misc.autoexit.get());
 	}
+
+	return to_ar;
 }
 
-game_boot_result Emulator::Restart(bool savestate)
+game_boot_result Emulator::Restart()
 {
 	if (m_state == system_state::stopped)
 	{
@@ -2493,33 +2495,15 @@ game_boot_result Emulator::Restart(bool savestate)
 
 	auto save_args = std::make_tuple(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode);
 
-	GracefulShutdown(false, false, savestate);
+	GracefulShutdown(false, false);
 
 	std::tie(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode) = std::move(save_args);
-
-	if (savestate)
-	{
-		if (!m_ar)
-		{
-			return game_boot_result::generic_error;
-		}
-
-		if (g_cfg.savestate.suspend_emu)
-		{
-			m_ar.reset();
-			return game_boot_result::no_errors;
-		}
-	}
 
 	// Reload with prior configs.
 	if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
 	{
 		sys_log.error("Restart failed: %s", error);
 		return error;
-	}
-	else
-	{
-		m_ar.reset();
 	}
 
 	return game_boot_result::no_errors;
