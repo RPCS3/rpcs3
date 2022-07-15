@@ -108,7 +108,7 @@ std::vector<std::pair<u16, u16>> get_savestate_versioning_data(const fs::file& f
 	return ar;
 }
 
-bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& data, bool log)
+bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& data, bool is_boot_check)
 {
 	if (data.empty())
 	{
@@ -121,17 +121,25 @@ bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& dat
 	{
 		if (identifier >= s_serial_versions.size())
 		{
-			(log ? sys_log.error : sys_log.trace)("Savestate version identider is unknown! (category=%u, version=%u)", identifier, version);
+			(is_boot_check ? sys_log.error : sys_log.trace)("Savestate version identider is unknown! (category=%u, version=%u)", identifier, version);
 			ok = false; // Log all mismatches
 		}
 		else if (!s_serial_versions[identifier].compatible_versions.count(version))
 		{
-			(log ? sys_log.error : sys_log.trace)("Savestate version is not supported. (category=%u, version=%u)", identifier, version);
+			(is_boot_check ? sys_log.error : sys_log.trace)("Savestate version is not supported. (category=%u, version=%u)", identifier, version);
 			ok = false;
 		}
-		else
+		else if (is_boot_check)
 		{
 			s_serial_versions[identifier].current_version = version;
+		}
+	}
+
+	if (!ok && is_boot_check)
+	{
+		for (auto [identifier, _] : data)
+		{
+			s_serial_versions[identifier].current_version = 0;
 		}
 	}
 
@@ -170,7 +178,7 @@ bool boot_last_savestate()
 		const std::string save_dir = fs::get_cache_dir() + "/savestates/";
 
 		std::string savestate_path;
-		u64 mtime = umax;
+		s64 mtime = smin;
 
 		for (auto&& entry : fs::dir(save_dir))
 		{
@@ -180,7 +188,7 @@ bool boot_last_savestate()
 			}
 
 			// Find the latest savestate file compatible with the game (TODO: Check app version and anything more)
-			if (entry.name.find(Emu.GetTitleID()) != umax && mtime < entry.mtime)
+			if (entry.name.find(Emu.GetTitleID()) != umax && mtime <= entry.mtime)
 			{
 				if (std::string path = save_dir + entry.name; is_savestate_compatible(fs::file(path)))
 				{
