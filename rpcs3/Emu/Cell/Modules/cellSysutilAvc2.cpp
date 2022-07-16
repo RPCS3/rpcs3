@@ -355,9 +355,6 @@ error_code cellSysutilAvc2SetStreamingTarget(vm::cptr<CellSysutilAvc2StreamingTa
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2SetStreamingTarget(target=*0x%x)", target);
 
-	// target should never be null
-	ensure(!!target);
-
 	return CELL_OK;
 }
 
