@@ -470,7 +470,7 @@ namespace gl
 	void* copy_image_to_buffer(gl::command_context& cmd, const pixel_buffer_layout& pack_info, const gl::texture* src, gl::buffer* dst,
 		u32 dst_offset, const int src_level, const coord3u& src_region,  image_memory_requirements* mem_info)
 	{
-		auto initialize_scratch_mem = [&]()
+		auto initialize_scratch_mem = [&]() -> bool // skip_transform
 		{
 			const u64 max_mem = (mem_info->memory_required) ? mem_info->memory_required : mem_info->image_size_in_bytes;
 			if (!(*dst) || max_mem > static_cast<u64>(dst->size()))
@@ -490,15 +490,15 @@ namespace gl
 					gl::get_compute_task<gl::cs_d24x8_to_ssbo>()->run(cmd,
 						const_cast<gl::viewable_image*>(as_vi), dst, dst_offset,
 						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
-						pack_info, {});
-					return;
+						pack_info);
+					return true;
 				case gl::texture::internal_format::rgba8:
 				case gl::texture::internal_format::bgra8:
 					gl::get_compute_task<gl::cs_rgba8_to_ssbo>()->run(cmd,
 						const_cast<gl::viewable_image*>(as_vi), dst, dst_offset,
 						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
-						pack_info, {});
-					return;
+						pack_info);
+					return true;
 				default:
 					break;
 				}
@@ -506,6 +506,7 @@ namespace gl
 
 			dst->bind(buffer::target::pixel_pack);
 			src->copy_to(reinterpret_cast<void*>(static_cast<uintptr_t>(dst_offset)), static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, {});
+			return false;
 		};
 
 		void* result = reinterpret_cast<void*>(static_cast<uintptr_t>(dst_offset));
@@ -513,17 +514,19 @@ namespace gl
 			pack_info.type == GL_UNSIGNED_SHORT ||
 			pack_info.type == GL_UNSIGNED_INT_24_8)
 		{
-			initialize_scratch_mem();
-			if (auto job = get_trivial_transform_job(pack_info))
+			if (!initialize_scratch_mem())
 			{
-				job->run(cmd, dst, static_cast<u32>(mem_info->image_size_in_bytes), dst_offset);
+				if (auto job = get_trivial_transform_job(pack_info))
+				{
+					job->run(cmd, dst, static_cast<u32>(mem_info->image_size_in_bytes), dst_offset);
+				}
 			}
 		}
 		else if (pack_info.type == GL_FLOAT)
 		{
 			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 4));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 6);
-			initialize_scratch_mem();
+			ensure(!initialize_scratch_mem());
 
 			get_compute_task<cs_fconvert_task<f32, f16, false, true>>()->run(cmd, dst, dst_offset,
 				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
@@ -533,7 +536,7 @@ namespace gl
 		{
 			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 8));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 12);
-			initialize_scratch_mem();
+			ensure(!initialize_scratch_mem());
 
 			get_compute_task<cs_shuffle_d32fx8_to_x8d24f>()->run(cmd, dst, dst_offset,
 				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_texels));
