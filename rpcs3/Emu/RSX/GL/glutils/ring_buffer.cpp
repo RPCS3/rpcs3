@@ -286,6 +286,7 @@ namespace gl
 			if (barrier_.range.overlaps(range))
 			{
 				barrier_.signal.server_wait_sync();
+				barrier_.signal.destroy();
 				return true;
 			}
 
