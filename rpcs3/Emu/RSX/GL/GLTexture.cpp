@@ -740,7 +740,7 @@ namespace gl
 
 	void fill_texture(gl::command_context& cmd, texture* dst, int format,
 			const std::vector<rsx::subresource_layout> &input_layouts,
-			bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
+			bool is_swizzled, GLenum gl_format, GLenum gl_type, rsx::simple_array<std::byte>& staging_buffer)
 	{
 		const auto driver_caps = gl::get_driver_caps();
 		rsx::texture_uploader_capabilities caps
@@ -1000,7 +1000,7 @@ namespace gl
 	void upload_texture(gl::command_context& cmd, texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout)
 	{
 		// Calculate staging buffer size
-		std::vector<std::byte> data_upload_buf;
+		rsx::simple_array<std::byte> data_upload_buf;
 
 		if (rsx::is_compressed_host_format(gcm_format))
 		{
