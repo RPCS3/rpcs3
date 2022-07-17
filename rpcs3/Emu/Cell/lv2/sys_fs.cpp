@@ -304,7 +304,7 @@ lv2_file::lv2_file(utils::serial& ar)
 void lv2_file::save(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(lv2_fs);
-	ar(name, mode, flags, type, lock, vfs::retrieve(real_path));
+	ar(name, mode, flags, type, lock, ensure(vfs::retrieve(real_path), FN(!x.empty())));
 
 	if (!(mp->flags & lv2_mp_flag::read_only) && flags & CELL_FS_O_ACCMODE)
 	{
