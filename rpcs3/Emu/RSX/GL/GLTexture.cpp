@@ -582,8 +582,7 @@ namespace gl
 		};
 
 		const auto caps = gl::get_driver_caps();
-		if (dst->get_target() != gl::texture::target::texture1D &&
-			(!(dst->aspect() & image_aspect::stencil) || caps.ARB_shader_stencil_export_supported))
+		if ((dst->aspect() & image_aspect::stencil) == 0 || caps.ARB_shader_stencil_export_supported)
 		{
 			// We do not need to use the driver's builtin transport mechanism
 			glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -611,6 +610,16 @@ namespace gl
 			{
 				const subresource_range range = { image_aspect::depth | image_aspect::color, static_cast<GLuint>(dst_level), 1, dst_region.z , 1 };
 				scratch_view = std::make_unique<gl::texture_view>(dst, GL_TEXTURE_2D, range);
+				break;
+			}
+			case texture::target::texture1D:
+			{
+				scratch = std::make_unique<gl::texture>(
+					GL_TEXTURE_2D,
+					image_region.x + image_region.width, 1, 1, 1,
+					static_cast<GLenum>(dst->get_internal_format()), dst->format_class());
+
+				scratch_view = std::make_unique<gl::nil_texture_view>(scratch.get());
 				break;
 			}
 			default:
@@ -655,15 +664,26 @@ namespace gl
 				gl::get_overlay_pass<gl::rp_ssbo_to_generic_texture>()->run(cmd, transfer_buf, scratch_view.get(), out_offset, image_region, unpack_info);
 			}
 
-			if (dst->get_target() == texture::target::texture3D)
+			switch (dst->get_target())
+			{
+			case texture::target::texture1D:
+			{
+				const position3u transfer_offset = { dst_region.position.x, 0, 0 };
+				g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, transfer_offset, transfer_offset, { dst_region.width, 1, 1 });
+				break;
+			}
+			case texture::target::texture3D:
 			{
 				// Memcpy
 				for (u32 layer = dst_region.z, i = 0; i < dst_region.depth; ++i, ++layer)
 				{
 					const position3u src_offset = { dst_region.position.x, dst_region.position.y + (i * dst_region.height), 0 };
 					const position3u dst_offset = { dst_region.position.x, dst_region.position.y, layer };
-					g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, src_offset, dst_offset, {dst_region.width, dst_region.height, 1});
+					g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, src_offset, dst_offset, { dst_region.width, dst_region.height, 1 });
 				}
+				break;
+			}
+			default: break;
 			}
 		}
 		else
