@@ -91,7 +91,38 @@ namespace gl
 			sized_internal_fmt = gl::get_sized_internal_format(gcm_format);
 		}
 
-		std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, depth, mipmaps, sized_internal_fmt, rsx::classify_format(gcm_format));
+		temporary_image_t* dst = nullptr;
+		const u64 match_key =
+			(static_cast<u64>(width) << 0) |
+			(static_cast<u64>(height) << 16) |
+			(static_cast<u64>(depth) << 32) |
+			(static_cast<u64>(mipmaps) << 40) |
+			(static_cast<u64>(sized_internal_fmt) << 48);
+
+		// Search image cache
+		for (auto& e : m_temporary_surfaces)
+		{
+			if (e->has_refs())
+			{
+				continue;
+			}
+
+			if (e->properties_encoding == match_key)
+			{
+				dst = e.get();
+				break;
+			}
+		}
+
+		if (!dst)
+		{
+			std::unique_ptr<temporary_image_t> data = std::make_unique<temporary_image_t>(dst_type, width, height, depth, mipmaps, sized_internal_fmt, rsx::classify_format(gcm_format));
+			dst = data.get();
+			dst->properties_encoding = match_key;
+			m_temporary_surfaces.emplace_back(std::move(data));
+		}
+
+		dst->add_ref();
 
 		if (copy)
 		{
@@ -104,29 +135,18 @@ namespace gl
 				width, height, width, height
 			}};
 
-			copy_transfer_regions_impl(cmd, dst.get(), region);
+			copy_transfer_regions_impl(cmd, dst, region);
 		}
 
-		std::array<GLenum, 4> swizzle;
 		if (!src || static_cast<GLenum>(src->get_internal_format()) != sized_internal_fmt)
 		{
 			// Apply base component map onto the new texture if a data cast has been done
-			swizzle = get_component_mapping(gcm_format, rsx::component_order::default_);
-		}
-		else
-		{
-			swizzle = src->get_native_component_layout();
+			auto components = get_component_mapping(gcm_format, rsx::component_order::default_);
+			dst->set_native_component_layout(components);
 		}
 
-		if (memcmp(remap.first.data(), rsx::default_remap_vector.first.data(), 4) ||
-			memcmp(remap.second.data(), rsx::default_remap_vector.second.data(), 4))
-			swizzle = apply_swizzle_remap(swizzle, remap);
-
-		auto view = std::make_unique<gl::texture_view>(dst.get(), dst_type, sized_internal_fmt, swizzle.data());
-		auto result = view.get();
-
-		m_temporary_surfaces.emplace_back(dst, view);
-		return result;
+		const auto encoding = rsx::get_remap_encoding(remap);
+		return dst->get_view(encoding, remap);
 	}
 
 	void texture_cache::copy_transfer_regions_impl(gl::command_context& cmd, gl::texture* dst_image, const std::vector<copy_region_descriptor>& sources) const

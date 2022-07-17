@@ -441,36 +441,19 @@ namespace gl
 		using baseclass = rsx::texture_cache<gl::texture_cache, gl::texture_cache_traits>;
 		friend baseclass;
 
-	private:
-		struct discardable_storage
+		struct temporary_image_t : public gl::viewable_image, public rsx::ref_counted
 		{
-			std::unique_ptr<gl::texture> image;
-			std::unique_ptr<gl::texture_view> view;
+			u64 properties_encoding = 0;
 
-			discardable_storage() = default;
-
-			discardable_storage(std::unique_ptr<gl::texture>& tex)
-			{
-				image = std::move(tex);
-			}
-
-			discardable_storage(std::unique_ptr<gl::texture_view>& _view)
-			{
-				view = std::move(_view);
-			}
-
-			discardable_storage(std::unique_ptr<gl::texture>& tex, std::unique_ptr<gl::texture_view>& _view)
-			{
-				image = std::move(tex);
-				view = std::move(_view);
-			}
+			using gl::viewable_image::viewable_image;
 		};
 
-	private:
-
 		blitter m_hw_blitter;
-		std::vector<discardable_storage> m_temporary_surfaces;
+		std::vector<std::unique_ptr<temporary_image_t>> m_temporary_surfaces;
 
+		const u32 max_cached_image_pool_size = 256;
+
+	private:
 		void clear()
 		{
 			baseclass::clear();
@@ -615,10 +598,9 @@ namespace gl
 		{
 			for (auto& e : m_temporary_surfaces)
 			{
-				if (e.image.get() == view->image())
+				if (e.get() == view->image())
 				{
-					e.view.reset();
-					e.image.reset();
+					e->release();
 					return;
 				}
 			}
@@ -889,7 +871,10 @@ namespace gl
 				purge_unreleased_sections();
 			}
 
-			clear_temporary_subresources();
+			if (m_temporary_surfaces.size() > max_cached_image_pool_size)
+			{
+				m_temporary_surfaces.resize(max_cached_image_pool_size / 2);
+			}
 
 			baseclass::on_frame_end();
 		}
