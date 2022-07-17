@@ -309,7 +309,7 @@ namespace gl
 		stencil_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(1));
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(2), out_offset, row_pitch * 4 * region.height);
 
-		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size);
+		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size * optimal_group_size);
 		compute_task::run(cmd, num_invocations);
 	}
 
@@ -348,7 +348,7 @@ namespace gl
 		data_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), out_offset, row_pitch * 4 * region.height);
 
-		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size);
+		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size * optimal_group_size);
 		compute_task::run(cmd, num_invocations);
 	}
 
@@ -385,7 +385,7 @@ namespace gl
 		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * bpp * dst_region.height);
 		glBindImageTexture(GL_COMPUTE_IMAGE_SLOT(0), dst->id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, dst->view_format());
 
-		const int num_invocations = utils::aligned_div(dst_region.width * dst_region.height, optimal_kernel_size);
+		const int num_invocations = utils::aligned_div(dst_region.width * dst_region.height, optimal_kernel_size * optimal_group_size);
 		compute_task::run(cmd, num_invocations);
 	}
 
