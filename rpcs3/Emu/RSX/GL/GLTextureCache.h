@@ -420,7 +420,7 @@ namespace gl
 
 		gl::texture_view* get_raw_view()
 		{
-			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);
+			return vram_texture->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector);
 		}
 
 		bool is_depth_texture() const

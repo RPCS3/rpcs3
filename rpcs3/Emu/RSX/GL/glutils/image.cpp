@@ -252,8 +252,7 @@ namespace gl
 			component_swizzle[2] = argb_swizzle[3];
 			component_swizzle[3] = argb_swizzle[0];
 
-			gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, m_target, m_id, GL_TRUE);
-			glTexParameteriv(m_target, GL_TEXTURE_SWIZZLE_RGBA, reinterpret_cast<GLint*>(component_swizzle));
+			DSA_CALL(TextureParameteriv, m_id, m_target, GL_TEXTURE_SWIZZLE_RGBA, reinterpret_cast<GLint*>(component_swizzle));
 		}
 		else
 		{
@@ -268,8 +267,7 @@ namespace gl
 			constexpr u32 depth_stencil_mask = (image_aspect::depth | image_aspect::stencil);
 			ensure((range.aspect_mask & depth_stencil_mask) != depth_stencil_mask); // "Invalid aspect mask combination"
 
-			gl::get_command_context()->bind_texture(GL_TEMP_IMAGE_SLOT, m_target, m_id, GL_TRUE);
-			glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
+			DSA_CALL(TextureParameteri, m_id, m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
 		}
 	}
 
