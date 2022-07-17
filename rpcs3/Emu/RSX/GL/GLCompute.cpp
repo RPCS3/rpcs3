@@ -293,11 +293,11 @@ namespace gl
 		m_src = fmt::replace_all(raw_data, repl_list);
 	}
 
-	void cs_d24x8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& /*layout*/, const gl::pixel_pack_settings& settings)
+	void cs_d24x8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
-		const auto row_pitch = settings.get_row_length() ? settings.get_row_length() : region.width;
+		const auto row_pitch = region.width;
 
-		m_program.uniforms["swap_bytes"] = settings.get_swap_bytes();
+		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
 		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
 		m_program.uniforms["region_size"] = color2i(region.width, region.height);
@@ -332,11 +332,11 @@ namespace gl
 		m_src = fmt::replace_all(raw_data, repl_list);
 	}
 
-	void cs_rgba8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings)
+	void cs_rgba8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
-		const auto row_pitch = settings.get_row_length() ? settings.get_row_length() : region.width;
+		const auto row_pitch = region.width;
 
-		m_program.uniforms["swap_bytes"] = settings.get_swap_bytes();
+		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
 		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
 		m_program.uniforms["region_size"] = color2i(region.width, region.height);
