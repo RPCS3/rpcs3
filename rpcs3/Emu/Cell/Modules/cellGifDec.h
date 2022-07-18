@@ -52,6 +52,23 @@ enum CellGifDecDecodeStatus : s32
 	CELL_GIFDEC_DEC_STATUS_STOP   = 1, // Decoding was stopped
 };
 
+enum CellGifDecBufferMode : s32
+{
+	CELL_GIFDEC_LINE_MODE = 1
+};
+
+enum CellGifDecSpuMode : s32
+{
+    CELL_GIFDEC_RECEIVE_EVENT    = 0,
+    CELL_GIFDEC_TRYRECEIVE_EVENT = 1
+};
+
+enum CellGifDecInterlaceMode : s32
+{
+    CELL_GIFDEC_NO_INTERLACE = 0,
+    CELL_GIFDEC_INTERLACE    = 1
+};
+
 // Callbacks for memory management
 using CellGifDecCbControlMalloc = vm::ptr<void>(u32 size, vm::ptr<void> cbCtrlMallocArg);
 using CellGifDecCbControlFree = s32(vm::ptr<void> ptr, vm::ptr<void> cbCtrlFreeArg);
@@ -151,6 +168,71 @@ struct CellGifDecDataCtrlParam
 	be_t<u64> outputBytesPerLine;
 };
 
+struct CellGifDecExtInfo
+{
+	vm::bptr<u64> reserved;
+};
+
+struct CellGifDecStrmInfo
+{
+	be_t<u32> decodedStrmSize;
+};
+
+struct CellGifDecStrmParam
+{
+	vm::bptr<void> strmPtr;
+	be_t<u32> strmSize;
+};
+
+using CellGifDecCbControlStream = s32(vm::ptr<CellGifDecStrmInfo> strmInfo, vm::ptr<CellGifDecStrmParam> strmParam, vm::ptr<void> cbCtrlStrmArg);
+
+struct CellGifDecCbCtrlStrm
+{
+	vm::bptr<CellGifDecCbControlStream> cbCtrlStrmFunc;
+	vm::bptr<void> cbCtrlStrmArg;
+};
+
+struct CellGifDecExtInParam
+{
+	be_t<s32> bufferMode; // CellGifDecBufferMode
+	be_t<u32> outputCounts;
+	be_t<s32> spuMode; // CellGifDecSpuMode
+};
+
+struct CellGifDecExtOutParam
+{
+	be_t<u64> outputWidthByte;
+	be_t<u32> outputHeight;
+};
+
+struct CellGifDecDispParam
+{
+	vm::bptr<void> nextOutputImage;
+};
+
+struct CellGifDecDispInfo
+{
+    be_t<u64> outputFrameWidthByte;
+    be_t<u32> outputFrameHeight;
+    be_t<u64> outputStartXByte;
+    be_t<u32> outputStartY;
+    be_t<u64> outputWidthByte;
+    be_t<u32> outputHeight;
+    be_t<u32> outputBitDepth;
+    be_t<u32> outputComponents;
+    be_t<u32> scanPassCount;
+    vm::bptr<void> outputImage;
+    be_t<s32> interlaceFlag; // CellGifDecInterlaceMode
+};
+
+using CellGifDecCbControlDisp = s32(vm::ptr<CellGifDecDispInfo> dispInfo, vm::ptr<CellGifDecDispParam> dispParam, vm::ptr<void> cbCtrlDispArg);
+
+struct CellGifDecCbCtrlDisp
+{
+	vm::bptr<CellGifDecCbControlDisp> cbCtrlDispFunc;
+	vm::bptr<void> cbCtrlDispArg;
+};
+
 // Custom structs
 struct GifDecoder
 {
@@ -158,9 +240,9 @@ struct GifDecoder
 
 struct GifStream
 {
-	u32 fd;
-	u64 fileSize;
-	CellGifDecInfo info;
-	CellGifDecOutParam outParam;
-	CellGifDecSrc src;
+	u32 fd{};
+	u64 fileSize{};
+	CellGifDecInfo info{};
+	CellGifDecOutParam outParam{};
+	CellGifDecSrc src{};
 };
