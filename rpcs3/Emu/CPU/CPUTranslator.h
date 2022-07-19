@@ -2896,12 +2896,8 @@ protected:
 	bool m_is_be;
 
 	// Allow PSHUFB intrinsic
-#ifdef ARCH_X64
 	bool m_use_ssse3 = true;
-#else
-	// TODO: fix the pshufb arm64 native impl using TBL instruction
-	bool m_use_ssse3 = false;
-#endif
+
 	// Allow FMA
 	bool m_use_fma = false;
 
