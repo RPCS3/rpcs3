@@ -461,7 +461,6 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		if (res != game_boot_result::no_errors)
 		{
 			sys_process.fatal("Failed to boot from exitspawn! (path=\"%s\", error=%s)", path, res);
-			Emu.Kill();
 		}
 	});
 
