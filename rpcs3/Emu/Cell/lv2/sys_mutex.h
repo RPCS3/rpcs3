@@ -134,6 +134,11 @@ struct lv2_mutex final : lv2_obj
 	{
 		if (auto cpu = schedule<T>(sq, protocol))
 		{
+			if (cpu->state & cpu_flag::again)
+			{
+				return static_cast<T*>(cpu);
+			}
+
 			owner = cpu->id << 1 | !sq.empty();
 			return static_cast<T*>(cpu);
 		}
