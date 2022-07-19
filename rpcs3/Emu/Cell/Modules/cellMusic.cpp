@@ -169,17 +169,30 @@ error_code cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 	if (!music.func)
 		return CELL_MUSIC2_ERROR_GENERIC;
 
-	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
+	sysutil_register_cb([context = *context, &music](ppu_thread& ppu) -> s32
 	{
 		bool result = false;
 		{
 			std::lock_guard lock(music.mtx);
-			result = music.current_selection_context.set(*context);
+			result = music.current_selection_context.set(context);
 		}
 		const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC2_ERROR_INVALID_CONTEXT};
 
-		if (result) cellMusic.success("cellMusicSetSelectionContext2: new selection context = %s)", music.current_selection_context.to_string());
-		else cellMusic.todo("cellMusicSetSelectionContext2: failed. context = %s)", context->data);
+		if (result)
+		{
+			cellMusic.success("cellMusicSetSelectionContext2: new selection context = %s", music.current_selection_context.to_string());
+		}
+		else
+		{
+			std::string dahex;
+
+			for (usz i = 0; i < CELL_MUSIC_SELECTION_CONTEXT_SIZE; i++)
+			{
+				fmt::append(dahex, " %.2x", context.data[i]);
+			}
+
+			cellMusic.todo("cellMusicSetSelectionContext2: failed. context = %s", dahex);
+		}
 
 		music.func(ppu, CELL_MUSIC2_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), music.userData);
 		return CELL_OK;
@@ -258,12 +271,8 @@ error_code cellMusicInitialize2SystemWorkload(s32 mode, vm::ptr<CellMusic2Callba
 {
 	cellMusic.todo("cellMusicInitialize2SystemWorkload(mode=0x%x, func=*0x%x, userData=*0x%x, spurs=*0x%x, priority=*0x%x, attr=*0x%x)", mode, func, userData, spurs, priority, attr);
 
-	if (!func)
-		return CELL_MUSIC2_ERROR_PARAM;
-
-	if (mode != CELL_MUSIC2_PLAYER_MODE_NORMAL)
+	if (mode != CELL_MUSIC2_PLAYER_MODE_NORMAL || !func || !spurs || !priority)
 	{
-		cellMusic.todo("Unknown player mode: 0x%x", mode);
 		return CELL_MUSIC2_ERROR_PARAM;
 	}
 
@@ -328,13 +337,9 @@ error_code cellMusicInitializeSystemWorkload(s32 mode, u32 container, vm::ptr<Ce
 {
 	cellMusic.todo("cellMusicInitializeSystemWorkload(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x, spurs=*0x%x, priority=*0x%x, attr=*0x%x)", mode, container, func, userData, spurs, priority, attr);
 
-	if (!func)
-		return CELL_MUSIC_ERROR_PARAM;
-
-	if (mode != CELL_MUSIC_PLAYER_MODE_NORMAL)
+	if (mode != CELL_MUSIC2_PLAYER_MODE_NORMAL || !func || !spurs || !priority)
 	{
-		cellMusic.todo("Unknown player mode: 0x%x", mode);
-		return CELL_MUSIC_ERROR_PARAM;
+		return CELL_MUSIC2_ERROR_PARAM;
 	}
 
 	auto& music = g_fxo->get<music_state>();
@@ -354,12 +359,8 @@ error_code cellMusicInitialize(s32 mode, u32 container, s32 spuPriority, vm::ptr
 {
 	cellMusic.todo("cellMusicInitialize(mode=0x%x, container=0x%x, spuPriority=0x%x, func=*0x%x, userData=*0x%x)", mode, container, spuPriority, func, userData);
 
-	if (!func)
-		return CELL_MUSIC_ERROR_PARAM;
-
-	if (mode != CELL_MUSIC_PLAYER_MODE_NORMAL)
+	if (mode != CELL_MUSIC_PLAYER_MODE_NORMAL || !func || spuPriority < 16 || spuPriority > 255)
 	{
-		cellMusic.todo("Unknown player mode: 0x%x", mode);
 		return CELL_MUSIC_ERROR_PARAM;
 	}
 
@@ -565,12 +566,8 @@ error_code cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Cal
 {
 	cellMusic.todo("cellMusicInitialize2(mode=%d, spuPriority=%d, func=*0x%x, userData=*0x%x)", mode, spuPriority, func, userData);
 
-	if (!func)
-		return CELL_MUSIC2_ERROR_PARAM;
-
-	if (mode != CELL_MUSIC2_PLAYER_MODE_NORMAL)
+	if (mode != CELL_MUSIC_PLAYER_MODE_NORMAL || !func || spuPriority < 16 || spuPriority > 255)
 	{
-		cellMusic.todo("Unknown player mode: 0x%x", mode);
 		return CELL_MUSIC2_ERROR_PARAM;
 	}
 
