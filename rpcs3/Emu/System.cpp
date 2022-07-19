@@ -2566,13 +2566,6 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 		if (!fmt)
 		{
 			// Report and clean error state
-
-			if (g_log_all_errors) [[unlikely]]
-			{
-				g_tls_error_stats.clear();
-				return 0;
-			}
-
 			for (auto&& pair : g_tls_error_stats)
 			{
 				if (pair.second > 3)
@@ -2613,6 +2606,12 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 
 	if (g_log_all_errors) [[unlikely]]
 	{
+		if (!g_tls_error_stats.empty())
+		{
+			// Report and clean error state
+			error_report(0, nullptr, nullptr, nullptr);
+		}
+
 		channel->error("%s", g_tls_error_str);
 	}
 	else
