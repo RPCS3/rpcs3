@@ -637,7 +637,6 @@ void log_frame::UpdateUI()
 			m_log_text += font_end_tag;
 
 			m_log->appendHtml(m_log_text);
-			m_log_counter = 0;
 		}
 		else
 		{
