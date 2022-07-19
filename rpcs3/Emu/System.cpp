@@ -672,11 +672,6 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 		auto error = Load(title_id, add_only);
 
-		if (is_error(error))
-		{
-			m_ar.reset();
-		}
-
 		if (g_cfg.savestate.suspend_emu && m_ar)
 		{
 			fs::remove_file(path);
@@ -764,6 +759,20 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 	sys_log.notice("Selected config: mode=%s, path=\"%s\"", m_config_mode, m_config_path);
 	sys_log.notice("Path: %s", m_path);
+
+	struct cleanup_t
+	{
+		Emulator* _this;
+		bool cleanup = true;
+
+		~cleanup_t()
+		{
+			if (cleanup && _this->IsStopped())
+			{
+				_this->Kill(false);
+			}
+		}
+	} cleanup{this};
 
 	{
 		Init(add_only);
