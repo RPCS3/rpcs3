@@ -1005,13 +1005,13 @@ namespace gl
 		if (rsx::is_compressed_host_format(gcm_format))
 		{
 			const auto& desc = subresources_layout[0];
-			const usz texture_data_sz = desc.width_in_block * desc.height_in_block * desc.depth * rsx::get_format_block_size_in_bytes(gcm_format);
+			const u32 texture_data_sz = desc.width_in_block * desc.height_in_block * desc.depth * rsx::get_format_block_size_in_bytes(gcm_format);
 			data_upload_buf.resize(texture_data_sz);
 		}
 		else
 		{
 			const auto aligned_pitch = utils::align<u32>(dst->pitch(), 4);
-			const usz texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
+			const u32 texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
 			data_upload_buf.resize(texture_data_sz);
 		}
 
