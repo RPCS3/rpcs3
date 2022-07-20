@@ -27,6 +27,7 @@ namespace rsx
 				std::string name;
 				std::string path;
 				utils::media_info info;
+				u32 index = 0;
 
 				media_entry* parent = nullptr;
 				std::vector<media_entry> children;
