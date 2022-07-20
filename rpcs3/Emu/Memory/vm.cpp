@@ -887,9 +887,9 @@ namespace vm
 		// Notify rsx to invalidate range
 		// Note: This must be done *before* memory gets unmapped while holding the vm lock, otherwise
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
-		if (auto& rsxthr = g_fxo->get<rsx::thread>(); !Emu.IsPaused() && g_fxo->is_init<rsx::thread>())
+		if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 		{
-			rsxthr.on_notify_memory_unmapped(addr, size);
+			rsxthr->on_notify_memory_unmapped(addr, size);
 		}
 
 		// Deregister PPU related data
