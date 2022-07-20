@@ -183,7 +183,7 @@ error_code cell_music_decode_select_contents()
 
 	const std::string dir_path = "/dev_hdd0/music";
 	const std::string vfs_dir_path = vfs::get("/dev_hdd0/music");
-	const std::string title = get_localized_string(localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_EMPTY);
+	const std::string title = get_localized_string(localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_TITLE);
 
 	error_code error = rsx::overlays::show_media_list_dialog(rsx::overlays::media_list_dialog::media_type::audio, vfs_dir_path, title,
 		[&dec, dir_path, vfs_dir_path](s32 status, utils::media_info info)
