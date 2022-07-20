@@ -149,6 +149,8 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 					return 0;
 				}
 
+				cond.waiters--;
+
 				if (mode == 2)
 				{
 					static_cast<ppu_thread*>(result)->gpr[3] = CELL_EBUSY;
@@ -177,8 +179,6 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 						result = nullptr;
 					}
 				}
-
-				cond.waiters--;
 
 				if (result)
 				{
@@ -262,10 +262,10 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				}
 			}
 
+			cond.waiters = 0;
+
 			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.protocol))
 			{
-				cond.waiters--;
-
 				if (mode == 2)
 				{
 					static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
