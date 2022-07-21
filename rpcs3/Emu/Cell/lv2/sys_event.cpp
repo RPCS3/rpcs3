@@ -10,6 +10,8 @@
 #include "Emu/Cell/SPUThread.h"
 #include "sys_process.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_event);
 
 lv2_event_queue::lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept
@@ -469,6 +471,16 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 			ppu.state += cpu_flag::again;
 			return {};
+		}
+
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
+		{
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)
