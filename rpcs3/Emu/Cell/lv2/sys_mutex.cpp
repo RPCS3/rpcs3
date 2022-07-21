@@ -7,6 +7,8 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_mutex);
 
 lv2_mutex::lv2_mutex(utils::serial& ar)
@@ -193,6 +195,16 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 			ppu.state += cpu_flag::again;
 			return {};
+		}
+
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
+		{
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)

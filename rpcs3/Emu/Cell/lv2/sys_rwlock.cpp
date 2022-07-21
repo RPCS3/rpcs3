@@ -7,6 +7,8 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_rwlock);
 
 lv2_rwlock::lv2_rwlock(utils::serial& ar)
@@ -170,9 +172,14 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 			break;
 		}
 
-		if (state & cpu_flag::signal)
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
 		{
-			break;
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)
@@ -396,6 +403,16 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 			ppu.state += cpu_flag::again;
 			break;
+		}
+
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
+		{
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)

@@ -7,6 +7,8 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_semaphore);
 
 lv2_sema::lv2_sema(utils::serial& ar)
@@ -165,6 +167,16 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 			ppu.state += cpu_flag::again;
 			return {};
+		}
+
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
+		{
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)
