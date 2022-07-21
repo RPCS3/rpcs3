@@ -5031,9 +5031,6 @@ bool spu_thread::stop_and_signal(u32 code)
 						flags += cpu_flag::stop + cpu_flag::ret;
 						return true;
 					});
-
-					if (thread.get() != this)
-						thread_ctrl::notify(*thread);
 				}
 			}
 
@@ -5043,6 +5040,18 @@ bool spu_thread::stop_and_signal(u32 code)
 			break;
 		}
 
+		for (auto& thread : group->threads)
+		{
+			if (thread)
+			{
+				// Notify threads, guess which threads need a notification by checking cpu_flag::ret (redundant notification can only occur if thread has called an exit syscall itself as well)
+				if (thread.get() != this && thread->state & cpu_flag::ret)
+				{
+					thread_ctrl::notify(*thread);
+				}
+			}
+		}
+	
 		check_state();
 		return true;
 	}
