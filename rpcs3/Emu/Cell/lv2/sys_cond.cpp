@@ -143,6 +143,8 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 	{
 		if (cond.waiters)
 		{
+			lv2_obj::notify_all_t notify;
+
 			std::lock_guard lock(cond.mutex->mutex);
 
 			if (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
@@ -158,7 +160,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 				if (cond.mutex->try_own(*cpu, cpu->id))
 				{
-					cond.awake(cpu);
+					cond.awake(cpu, true);
 				}
 			}
 		}
@@ -234,6 +236,8 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 		if (cond.waiters)
 		{
+			lv2_obj::notify_all_t notify;
+
 			std::lock_guard lock(cond.mutex->mutex);
 
 			for (auto cpu : cond.sq)
@@ -252,7 +256,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 					if (cond.mutex->try_own(*cpu, cpu->id))
 					{
-						cond.awake(cpu);
+						cond.awake(cpu, true);
 					}
 
 					return 1;
@@ -294,6 +298,8 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 			return -1;
 		}
 
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(cond.mutex->mutex);
 
 		const u64 syscall_state = sstate.try_read<u64>().second;
@@ -313,7 +319,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 		if (ppu.loaded_from_savestate)
 		{
-			cond.sleep(ppu, timeout);
+			cond.sleep(ppu, timeout, true);
 			return static_cast<u32>(syscall_state >> 32);
 		}
 
@@ -326,7 +332,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		}
 
 		// Sleep current thread and schedule mutex waiter
-		cond.sleep(ppu, timeout);
+		cond.sleep(ppu, timeout, true);
 
 		// Save the recursive value
 		return count;

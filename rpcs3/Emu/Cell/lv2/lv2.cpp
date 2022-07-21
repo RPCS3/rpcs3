@@ -1192,6 +1192,7 @@ DECLARE(lv2_obj::g_pending);
 DECLARE(lv2_obj::g_waiting);
 DECLARE(lv2_obj::g_to_sleep);
 
+thread_local DECLARE(lv2_obj::g_to_notify){};
 thread_local DECLARE(lv2_obj::g_to_awake);
 
 namespace cpu_counter
@@ -1199,22 +1200,22 @@ namespace cpu_counter
 	void remove(cpu_thread*) noexcept;
 }
 
-void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
+void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout, bool notify_later)
 {
 	vm::temporary_unlock(cpu);
 	cpu_counter::remove(&cpu);
 	{
 		std::lock_guard lock{g_mutex};
-		sleep_unlocked(cpu, timeout);
+		sleep_unlocked(cpu, timeout, notify_later);
 	}
 	g_to_awake.clear();
 }
 
-bool lv2_obj::awake(cpu_thread* const thread, s32 prio)
+bool lv2_obj::awake(cpu_thread* const thread, bool notify_later, s32 prio)
 {
 	vm::temporary_unlock();
 	std::lock_guard lock(g_mutex);
-	return awake_unlocked(thread, prio);
+	return awake_unlocked(thread, notify_later, prio);
 }
 
 bool lv2_obj::yield(cpu_thread& thread)
@@ -1226,10 +1227,10 @@ bool lv2_obj::yield(cpu_thread& thread)
 		ppu->raddr = 0; // Clear reservation
 	}
 
-	return awake(&thread, yield_cmd);
+	return awake(&thread, false, yield_cmd);
 }
 
-void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
+void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, bool notify_later)
 {
 	const u64 start_time = get_guest_system_time();
 
@@ -1325,15 +1326,15 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 	if (!g_to_awake.empty())
 	{
 		// Schedule pending entries
-		awake_unlocked({});
+		awake_unlocked({}, notify_later);
 	}
 	else
 	{
-		schedule_all();
+		schedule_all(notify_later);
 	}
 }
 
-bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
+bool lv2_obj::awake_unlocked(cpu_thread* cpu, bool notify_later, s32 prio)
 {
 	// Check thread type
 	AUDIT(!cpu || cpu->id_type() == 1);
@@ -1469,7 +1470,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 		}
 	}
 
-	schedule_all();
+	schedule_all(notify_later);
 	return changed_queue;
 }
 
@@ -1481,10 +1482,12 @@ void lv2_obj::cleanup()
 	g_to_sleep.clear();
 }
 
-void lv2_obj::schedule_all()
+void lv2_obj::schedule_all(bool notify_later)
 {
 	if (g_pending.empty() && g_to_sleep.empty())
 	{
+		usz notify_later_idx = notify_later ? 0 : std::size(g_to_notify) - 1;
+
 		// Wake up threads
 		for (usz i = 0, x = std::min<usz>(g_cfg.core.ppu_threads, g_ppu.size()); i < x; i++)
 		{
@@ -1495,9 +1498,19 @@ void lv2_obj::schedule_all()
 				ppu_log.trace("schedule(): %s", target->id);
 				target->state ^= (cpu_flag::signal + cpu_flag::suspend);
 				target->start_time = 0;
-				target->state.notify_one(cpu_flag::signal + cpu_flag::suspend);
+
+				if (notify_later_idx >= std::size(g_to_notify) - 1)
+				{
+					target->state.notify_one(cpu_flag::signal + cpu_flag::suspend);
+				}
+				else
+				{
+					g_to_notify[notify_later_idx++] = target;
+				}
 			}
 		}
+
+		g_to_notify[notify_later_idx] = nullptr;
 	}
 
 	// Check registered timeouts

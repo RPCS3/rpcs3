@@ -127,6 +127,8 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 		if (cond.waiters)
 		{
+			lv2_obj::notify_all_t notify;
+
 			std::lock_guard lock(cond.mutex);
 
 			if (cpu)
@@ -188,7 +190,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 				if (result)
 				{
-					cond.awake(result);
+					cond.awake(result, true);
 				}
 
 				return 1;
@@ -255,6 +257,8 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		if (cond.waiters)
 		{
+			lv2_obj::notify_all_t notify;
+
 			std::lock_guard lock(cond.mutex);
 
 			u32 result = 0;
@@ -294,7 +298,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 			if (need_awake)
 			{
-				lv2_obj::awake_all();
+				lv2_obj::awake_all(true);
 			}
 
 			return result;
@@ -341,6 +345,8 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		// Increment lwmutex's lwcond's waiters count
 		mutex->lwcond_waiters++;
 
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(cond.mutex);
 
 		const bool mutex_sleep = sstate.try_read<bool>().second;
@@ -381,7 +387,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		}
 
 		// Sleep current thread and schedule lwmutex waiter
-		cond.sleep(ppu, timeout);
+		cond.sleep(ppu, timeout, true);
 	});
 
 	if (!cond || !mutex)

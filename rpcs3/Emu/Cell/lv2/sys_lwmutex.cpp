@@ -144,6 +144,8 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 			return true;
 		}
 
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(mutex.mutex);
 
 		auto [old, _] = mutex.signaled.fetch_op([](s32& value)
@@ -168,7 +170,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 
 		mutex.add_waiter(&ppu);
-		mutex.sleep(ppu, timeout);
+		mutex.sleep(ppu, timeout, true);
 		return false;
 	});
 
@@ -275,6 +277,8 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 
 	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(mutex.mutex);
 
 		if (const auto cpu = mutex.schedule<ppu_thread>(mutex.sq, mutex.protocol))
@@ -285,7 +289,7 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 				return;
 			}
 
-			mutex.awake(cpu);
+			mutex.awake(cpu, true);
 			return;
 		}
 
@@ -308,6 +312,8 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 
 	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(mutex.mutex);
 
 		if (const auto cpu = mutex.schedule<ppu_thread>(mutex.sq, mutex.protocol))
@@ -319,7 +325,7 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 			}
 
 			static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
-			mutex.awake(cpu);
+			mutex.awake(cpu, true);
 			return;
 		}
 

@@ -150,6 +150,8 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 			return {};
 		}
 
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(flag.mutex);
 
 		if (flag.pattern.fetch_op([&](u64& pat)
@@ -167,7 +169,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 		flag.waiters++;
 		flag.sq.emplace_back(&ppu);
-		flag.sleep(ppu, timeout);
+		flag.sleep(ppu, timeout, true);
 		return CELL_EBUSY;
 	});
 

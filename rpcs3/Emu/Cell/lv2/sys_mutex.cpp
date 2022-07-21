@@ -139,6 +139,8 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 		if (result == CELL_EBUSY)
 		{
+			lv2_obj::notify_all_t notify;
+
 			std::lock_guard lock(mutex.mutex);
 
 			if (mutex.try_own(ppu, ppu.id))
@@ -147,7 +149,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 			}
 			else
 			{
-				mutex.sleep(ppu, timeout);
+				mutex.sleep(ppu, timeout, true);
 			}
 		}
 
@@ -258,9 +260,31 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 
 	sys_mutex.trace("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
 
-	const auto mutex = idm::check<lv2_obj, lv2_mutex>(mutex_id, [&](lv2_mutex& mutex)
+	const auto mutex = idm::check<lv2_obj, lv2_mutex>(mutex_id, [&](lv2_mutex& mutex) -> CellError
 	{
-		return mutex.try_unlock(ppu.id);
+		CellError result = mutex.try_unlock(ppu.id);
+
+		if (result == CELL_EBUSY)
+		{
+			lv2_obj::notify_all_t notify;
+
+			std::lock_guard lock(mutex.mutex);
+
+			if (auto cpu = mutex.reown<ppu_thread>())
+			{
+				if (cpu->state & cpu_flag::again)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
+
+				mutex.awake(cpu, true);
+			}
+
+			result = {};
+		}
+
+		return result;
 	});
 
 	if (!mutex)
@@ -268,22 +292,7 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 		return CELL_ESRCH;
 	}
 
-	if (mutex.ret == CELL_EBUSY)
-	{
-		std::lock_guard lock(mutex->mutex);
-
-		if (auto cpu = mutex->reown<ppu_thread>())
-		{
-			if (cpu->state & cpu_flag::again)
-			{
-				ppu.state += cpu_flag::again;
-				return {};
-			}
-
-			mutex->awake(cpu);
-		}
-	}
-	else if (mutex.ret)
+	if (mutex.ret)
 	{
 		return mutex.ret;
 	}
