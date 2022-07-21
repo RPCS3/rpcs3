@@ -81,7 +81,7 @@ namespace gl
 					break;
 				}
 
-				const auto macro_name = std::string_view(source.data() + name_start, source.data() + name_end + 1);
+				const auto macro_name = std::string_view(source.data() + name_start, (name_end - name_start) + 1);
 				if (is_exempt(macro_name))
 				{
 					continue;
