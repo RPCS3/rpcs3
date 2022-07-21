@@ -121,12 +121,14 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 			}
 		}
 
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(sema.mutex);
 
 		if (sema.val-- <= 0)
 		{
 			sema.sq.emplace_back(&ppu);
-			sema.sleep(ppu, timeout);
+			sema.sleep(ppu, timeout, true);
 			return false;
 		}
 

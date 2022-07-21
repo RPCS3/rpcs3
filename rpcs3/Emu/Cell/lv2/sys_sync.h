@@ -165,17 +165,17 @@ public:
 
 private:
 	// Remove the current thread from the scheduling queue, register timeout
-	static void sleep_unlocked(cpu_thread&, u64 timeout);
+	static void sleep_unlocked(cpu_thread&, u64 timeout, bool notify_later);
 
 	// Schedule the thread
-	static bool awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
+	static bool awake_unlocked(cpu_thread*, bool notify_later = false, s32 prio = enqueue_cmd);
 
 public:
 	static constexpr u64 max_timeout = u64{umax} / 1000;
 
-	static void sleep(cpu_thread& cpu, const u64 timeout = 0);
+	static void sleep(cpu_thread& cpu, const u64 timeout = 0, bool notify_later = false);
 
-	static bool awake(cpu_thread* const thread, s32 prio = enqueue_cmd);
+	static bool awake(cpu_thread* const thread, bool notify_later = false, s32 prio = enqueue_cmd);
 
 	// Returns true on successful context switch, false otherwise
 	static bool yield(cpu_thread& thread);
@@ -183,12 +183,12 @@ public:
 	static void set_priority(cpu_thread& thread, s32 prio)
 	{
 		ensure(prio + 512u < 3712);
-		awake(&thread, prio);
+		awake(&thread, false, prio);
 	}
 
-	static inline void awake_all()
+	static inline void awake_all(bool notify_later = false)
 	{
-		awake({});
+		awake({}, notify_later);
 		g_to_awake.clear();
 	}
 
@@ -433,6 +433,28 @@ public:
 		return true;
 	}
 
+	static inline void notify_all()
+	{
+		for (auto cpu : g_to_notify)
+		{
+			if (!cpu)
+			{
+				g_to_notify[0] = nullptr;
+				return;
+			}
+
+			cpu->state.notify_one(cpu_flag::suspend + cpu_flag::signal);
+		}
+	}
+
+	struct notify_all_t
+	{
+		~notify_all_t() noexcept
+		{
+			lv2_obj::notify_all();
+		}
+	};
+
 	// Scheduler mutex
 	static shared_mutex g_mutex;
 
@@ -452,5 +474,8 @@ private:
 	// Threads which must call lv2_obj::sleep before the scheduler starts
 	static std::deque<class cpu_thread*> g_to_sleep;
 
-	static void schedule_all();
+	// Pending list of threads to notify
+	static thread_local std::add_pointer_t<class cpu_thread> g_to_notify[4];
+
+	static void schedule_all(bool notify_later);
 };

@@ -112,6 +112,8 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 			}
 		}
 
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(rwlock.mutex);
 
 		const s64 _old = rwlock.owner.fetch_op([&](s64& val)
@@ -129,7 +131,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		if (_old > 0 || _old & 1)
 		{
 			rwlock.rq.emplace_back(&ppu);
-			rwlock.sleep(ppu, timeout);
+			rwlock.sleep(ppu, timeout, true);
 			return false;
 		}
 
@@ -334,6 +336,8 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 			return val;
 		}
 
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(rwlock.mutex);
 
 		const s64 _old = rwlock.owner.fetch_op([&](s64& val)
@@ -351,7 +355,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		if (_old != 0)
 		{
 			rwlock.wq.emplace_back(&ppu);
-			rwlock.sleep(ppu, timeout);
+			rwlock.sleep(ppu, timeout, true);
 		}
 
 		return _old;

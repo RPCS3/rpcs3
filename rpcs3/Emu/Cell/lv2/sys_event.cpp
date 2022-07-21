@@ -107,8 +107,10 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 
 extern void resume_spu_thread_group_from_waiting(spu_thread& spu);
 
-CellError lv2_event_queue::send(lv2_event event)
+CellError lv2_event_queue::send(lv2_event event, bool notify_later)
 {
+	lv2_obj::notify_all_t notify;
+
 	std::lock_guard lock(mutex);
 
 	if (!exists)
@@ -149,7 +151,7 @@ CellError lv2_event_queue::send(lv2_event event)
 
 		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = event;
 
-		awake(&ppu);
+		awake(&ppu, notify_later);
 	}
 	else
 	{
@@ -407,6 +409,8 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 			return CELL_EINVAL;
 		}
 
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(queue.mutex);
 
 		// "/dev_flash/vsh/module/msmw2.sprx" seems to rely on some cryptic shared memory behaviour that we don't emulate correctly
@@ -420,7 +424,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		if (queue.events.empty())
 		{
 			queue.sq.emplace_back(&ppu);
-			queue.sleep(ppu, timeout);
+			queue.sleep(ppu, timeout, true);
 			return CELL_EBUSY;
 		}
 
@@ -671,13 +675,13 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
-	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
+	const auto port = idm::check<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
 	{
 		if (lv2_obj::check(port.queue))
 		{
 			const u64 source = port.name ? port.name : (s64{process_getpid()} << 32) | u64{eport_id};
 
-			return port.queue->send(source, data1, data2, data3);
+			return port.queue->send(source, data1, data2, data3, true);
 		}
 
 		return CELL_ENOTCONN;
