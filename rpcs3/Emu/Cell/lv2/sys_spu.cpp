@@ -1009,6 +1009,20 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		return CELL_ESRCH;
 	}
 
+	struct notify_on_exit
+	{
+		usz index = umax;
+		std::array<spu_thread*, 8> threads; // Raw pointer suffices, as long as group is referenced its SPUs exist
+
+		~notify_on_exit() noexcept
+		{
+			for (; index != umax; index--)
+			{
+				threads[index]->state.notify_one(cpu_flag::stop);
+			}
+		}
+	} notify_threads;
+
 	std::lock_guard lock(group->mutex);
 
 	// SPU_THREAD_GROUP_STATUS_READY state is not used
@@ -1061,7 +1075,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		if (thread && ran_threads--)
 		{
 			thread->state -= cpu_flag::stop;
-			thread->state.notify_one(cpu_flag::stop);
+			notify_threads.threads[++notify_threads.index] = thread.get();
 		}
 	}
 
@@ -1169,6 +1183,20 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		return CELL_EINVAL;
 	}
 
+	struct notify_on_exit
+	{
+		usz index = umax;
+		std::array<spu_thread*, 8> threads; // Raw pointer suffices, as long as group is referenced its SPUs exist
+
+		~notify_on_exit() noexcept
+		{
+			for (; index != umax; index--)
+			{
+				threads[index]->state.notify_one(cpu_flag::suspend);
+			}
+		}
+	} notify_threads;
+
 	std::lock_guard lock(group->mutex);
 
 	CellError error;
@@ -1218,7 +1246,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_flag::suspend;
-			thread->state.notify_one(cpu_flag::suspend);
+			notify_threads.threads[++notify_threads.index] = thread.get();
 		}
 	}
 
