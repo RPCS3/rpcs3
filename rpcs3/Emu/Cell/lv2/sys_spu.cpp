@@ -1408,11 +1408,9 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		lv2_obj::sleep(ppu);
 		lock.unlock();
 
-		while (true)
+		while (auto state = +ppu.state)
 		{
-			const auto state = ppu.state.fetch_sub(cpu_flag::signal);
-
-			if (state & cpu_flag::signal)
+			if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 			{
 				break;
 			}

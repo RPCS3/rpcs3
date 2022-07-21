@@ -4860,9 +4860,9 @@ bool spu_thread::stop_and_signal(u32 code)
 			}
 		}
 
-		while (auto old = state.fetch_sub(cpu_flag::signal))
+		while (auto old = +state)
 		{
-			if (old & cpu_flag::signal)
+			if (old & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
 			{
 				break;
 			}
