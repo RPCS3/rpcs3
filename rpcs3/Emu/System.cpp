@@ -2327,7 +2327,6 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 	{
 		to_ar = std::make_unique<utils::serial>();
 
-
 		// Savestate thread
 		named_thread emu_state_cap_thread("Emu State Capture Thread", [&]()
 		{
