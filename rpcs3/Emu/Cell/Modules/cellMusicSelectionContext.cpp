@@ -42,8 +42,15 @@ CellMusicSelectionContext music_selection_context::get() const
 
 std::string music_selection_context::to_string() const
 {
-	return fmt::format("{ .magic='%s', .content_type=%d, .repeat_mode=%d, .context_option=%d, .first_track=%d, .tracks=%d, .hash='%s' }",
+	std::string str = fmt::format(".magic='%s', .content_type=%d, .repeat_mode=%d, .context_option=%d, .first_track=%d, .tracks=%d, .hash='%s', .playlist:",
 		magic, static_cast<u32>(content_type), static_cast<u32>(repeat_mode), static_cast<u32>(context_option), first_track, playlist.size(), hash);
+
+	for (usz i = 0; i < playlist.size(); i++)
+	{
+		fmt::append(str, "\ - Track %d: %s", i, playlist.at(i));
+	}
+
+	return str;
 }
 
 std::string music_selection_context::get_next_hash()

@@ -134,14 +134,13 @@ error_code cell_music_decode_select_contents()
 	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	const std::string dir_path = "/dev_hdd0/music";
 	const std::string vfs_dir_path = vfs::get("/dev_hdd0/music");
 	const std::string title = get_localized_string(localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_TITLE);
 
 	error_code error = rsx::overlays::show_media_list_dialog(rsx::overlays::media_list_dialog::media_type::audio, vfs_dir_path, title,
-		[&dec, dir_path, vfs_dir_path](s32 status, utils::media_info info)
+		[&dec](s32 status, utils::media_info info)
 		{
-			sysutil_register_cb([&dec, dir_path, vfs_dir_path, info, status](ppu_thread& ppu) -> s32
+			sysutil_register_cb([&dec, info, status](ppu_thread& ppu) -> s32
 			{
 				std::lock_guard lock(dec.mutex);
 				const u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_CANCELED};
