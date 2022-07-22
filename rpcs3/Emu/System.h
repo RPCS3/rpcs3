@@ -40,6 +40,7 @@ enum class game_boot_result : u32
 	nothing_to_boot,
 	wrong_disc_location,
 	invalid_file_or_folder,
+	invalid_bdvd_folder,
 	install_failed,
 	decryption_error,
 	file_creation_error,

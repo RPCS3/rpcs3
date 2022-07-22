@@ -376,6 +376,9 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::invalid_file_or_folder:
 		message = tr("The selected file or folder is invalid or corrupted.");
 		break;
+	case game_boot_result::invalid_bdvd_folder:
+		message = tr("The virtual dev_bdvd folder does not exist or is not empty.");
+		break;
 	case game_boot_result::install_failed:
 		message = tr("Additional content could not be installed.");
 		break;
