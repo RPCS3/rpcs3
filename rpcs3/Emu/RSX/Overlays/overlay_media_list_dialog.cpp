@@ -282,6 +282,7 @@ namespace rsx
 				{
 					rsx_log.notice("parse_media_recursive: Found %d matches in directory '%s'", current_entry.children.size(), media_path);
 					current_entry.type = media_list_dialog::media_type::directory;
+					current_entry.info.path = media_path;
 				}
 			}
 			else if (type == media_list_dialog::media_type::photo)
@@ -352,32 +353,32 @@ namespace rsx
 							ensure(static_cast<size_t>(result) < media->children.size());
 							media = &media->children[result];
 							rsx_log.notice("Left media list dialog with entry: '%s' ('%s')", media->name, media->path);
+							continue;
 						}
-						else if (result == user_interface::selection_code::canceled)
+
+						if (result == user_interface::selection_code::canceled)
 						{
 							if (media == &root_media_entry)
 							{
 								rsx_log.notice("Media list dialog canceled");
+								break;
 							}
-							else
-							{
-								focused = media->index;
-								media = media->parent;
-								result = 0;
-								rsx_log.notice("Media list dialog moving to parent directory (focused=%d)", focused);
-							}
+
+							focused = media->index;
+							media = media->parent;
+							result = 0;
+							rsx_log.notice("Media list dialog moving to parent directory (focused=%d)", focused);
+							continue;
 						}
-						else
-						{
-							rsx_log.error("Left media list dialog with error: '%d'", result);
-						}
+
+						rsx_log.error("Left media list dialog with error: '%d'", result);
+						break;
 					}
-					else
-					{
-						media = nullptr;
-						result = user_interface::selection_code::canceled;
-						rsx_log.error("Media selection is only possible when the native user interface is enabled in the settings. The action will be canceled.");
-					}
+
+					media = nullptr;
+					result = user_interface::selection_code::canceled;
+					rsx_log.error("Media selection is only possible when the native user interface is enabled in the settings. The action will be canceled.");
+					break;
 				}
 
 				if (result >= 0 && media && media->type == type)
