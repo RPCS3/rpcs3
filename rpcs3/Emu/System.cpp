@@ -2401,8 +2401,21 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 			ar(g_cfg.savestate.state_inspection_mode.get());
 			ar(std::array<u8, 32>{}); // Reserved for future use
 			ar(usz{0}); // Offset of versioning data, to be overwritten at the end of saving
-			ar(argv[0]);
-			ar(!m_title_id.empty() && !vfs::get("/dev_bdvd").empty() ? m_title_id : std::string());
+
+			if (auto dir = vfs::get("/dev_bdvd/PS3_GAME"); fs::is_dir(dir) && !fs::is_file(fs::get_parent_dir(dir) + "/PS3_DISC.SFB"))
+			{
+				// Fake /dev_bdvd/PS3_GAME detected, use HDD0 for m_path restoration
+				ensure(vfs::unmount("/dev_bdvd/PS3_GAME"));
+				ar(vfs::retrieve(m_path));
+				ensure(vfs::mount("/dev_bdvd/PS3_GAME", dir));
+				ar(std::string());
+			}
+			else
+			{
+				ar(vfs::retrieve(m_path));
+				ar(!m_title_id.empty() && !vfs::get("/dev_bdvd").empty() ? m_title_id : std::string());
+			}
+
 			ar(klic.empty() ? std::array<u8, 16>{} : std::bit_cast<std::array<u8, 16>>(klic[0]));
 			ar(m_game_dir);
 			save_hdd1();
