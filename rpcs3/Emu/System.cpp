@@ -43,6 +43,7 @@
 #include <memory>
 #include <regex>
 #include <optional>
+#include <filesystem>
 
 #include "Utilities/JIT.h"
 
@@ -112,6 +113,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::nothing_to_boot: return "Nothing to boot";
 		case game_boot_result::wrong_disc_location: return "Wrong disc location";
 		case game_boot_result::invalid_file_or_folder: return "Invalid file or folder";
+		case game_boot_result::invalid_bdvd_folder: return "Invalid dev_bdvd folder";
 		case game_boot_result::install_failed: return "Game install failed";
 		case game_boot_result::decryption_error: return "Failed to decrypt content";
 		case game_boot_result::file_creation_error: return "Could not create important files";
@@ -239,6 +241,7 @@ void Emulator::Init(bool add_only)
 	// Mount all devices
 	const std::string emu_dir = rpcs3::utils::get_emu_dir();
 	const std::string elf_dir = fs::get_parent_dir(m_path);
+	const std::string dev_bdvd = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, emu_dir); // Only used for make_path
 	const std::string dev_hdd0 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir);
 	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
 	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
@@ -344,6 +347,7 @@ void Emulator::Init(bool add_only)
 
 	if (g_cfg.vfs.init_dirs)
 	{
+		make_path_verbose(dev_bdvd);
 		make_path_verbose(dev_hdd0);
 		make_path_verbose(dev_hdd1);
 		make_path_verbose(dev_flsh);
@@ -933,7 +937,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		const std::string elf_dir = fs::get_parent_dir(m_path);
 
-		// Mount /app_home
+		// Mount /app_home again since m_path might have changed due to savestates.
 		vfs::mount("/app_home", g_cfg_vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg_vfs.get(g_cfg_vfs.app_home, rpcs3::utils::get_emu_dir()));
 
 		// Load PARAM.SFO (TODO)
@@ -1103,18 +1107,27 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if (!add_only)
 		{
-			bdvd_dir = g_cfg_vfs.dev_bdvd;
+			bdvd_dir = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
 
-			if (!bdvd_dir.empty() && bdvd_dir.back() != fs::delim[0] && bdvd_dir.back() != fs::delim[1])
+			if (!bdvd_dir.empty())
 			{
-				bdvd_dir.push_back('/');
-			}
+				if (bdvd_dir.back() != fs::delim[0] && bdvd_dir.back() != fs::delim[1])
+				{
+					bdvd_dir.push_back('/');
+				}
 
-			if (!bdvd_dir.empty() && !fs::is_file(bdvd_dir + "PS3_DISC.SFB"))
-			{
-				// Unuse if invalid
-				sys_log.error("Failed to use custom BDVD directory: '%s'", bdvd_dir);
-				bdvd_dir.clear();
+				if (fs::is_dir(bdvd_dir) && std::filesystem::is_empty(bdvd_dir))
+				{
+					// Ignore empty dir. We will need it later for disc games in dev_hdd0.
+					bdvd_dir.clear();
+					sys_log.notice("Ignoring empty vfs BDVD directory: '%s'", bdvd_dir);
+				}
+				else if (!fs::is_file(bdvd_dir + "PS3_DISC.SFB"))
+				{
+					// Unuse if invalid
+					sys_log.error("Failed to use custom BDVD directory: '%s'", bdvd_dir);
+					bdvd_dir.clear();
+				}
 			}
 		}
 
@@ -1403,6 +1416,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		else if (m_cat == "DG" && from_hdd0_game && disc.empty())
 		{
 			// Disc game located in dev_hdd0/game
+			bdvd_dir = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
+
+			if (!fs::is_dir(bdvd_dir) || !std::filesystem::is_empty(bdvd_dir))
+			{
+				sys_log.error("Failed to load disc game from dev_hdd0. The virtual bdvd_dir path does not exist or the directory is not empty: '%s'", bdvd_dir);
+				return game_boot_result::invalid_bdvd_folder;
+			}
+
+			vfs::mount("/dev_bdvd", bdvd_dir);
 			vfs::mount("/dev_bdvd/PS3_GAME", hdd0_game + m_path.substr(hdd0_game.size(), 10));
 			sys_log.notice("Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
 		}
