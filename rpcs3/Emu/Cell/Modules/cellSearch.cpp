@@ -368,19 +368,49 @@ void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi,
 		info.videoBitrate, info.audioBitrate, info.playCount, info.drmEncrypted, info.videoCodec, info.audioCodec, info.status);
 }
 
-void populate_photo_info(CellSearchPhotoInfo& info, const utils::media_info& /*mi*/, const fs::dir_entry& item)
+void populate_photo_info(CellSearchPhotoInfo& info, const utils::media_info& mi, const fs::dir_entry& item)
 {
 	// TODO - Some kinda file photo analysis and assign the values as such
 	info.size = item.size;
 	info.importedDate = -1;
 	info.takenDate = -1;
-	info.width = 0;
-	info.height = 0;
-	info.orientation = CELL_SEARCH_ORIENTATION_UNKNOWN;
-	info.codec = CELL_SEARCH_CODEC_UNKNOWN;
+	info.width = mi.width;
+	info.height = mi.height;
+	info.orientation = mi.orientation;
 	info.status = CELL_SEARCH_CONTENTSTATUS_AVAILABLE;
 	strcpy_trunc(info.title, item.name.substr(0, item.name.find_last_of('.')));
 	strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+
+	const std::string sub_type = fmt::to_lower(mi.sub_type);
+
+	if (sub_type == "jpg" || sub_type == "jpeg")
+	{
+		info.codec = CELL_SEARCH_CODEC_JPEG;
+	}
+	else if (sub_type == "png")
+	{
+		info.codec = CELL_SEARCH_CODEC_PNG;
+	}
+	else if (sub_type == "tif" || sub_type == "tiff")
+	{
+		info.codec = CELL_SEARCH_CODEC_TIFF;
+	}
+	else if (sub_type == "bmp")
+	{
+		info.codec = CELL_SEARCH_CODEC_BMP;
+	}
+	else if (sub_type == "gif")
+	{
+		info.codec = CELL_SEARCH_CODEC_GIF;
+	}
+	else if (sub_type == "mpo")
+	{
+		info.codec = CELL_SEARCH_CODEC_MPO;
+	}
+	else
+	{
+		info.codec = CELL_SEARCH_CODEC_UNKNOWN;
+	}
 
 	cellSearch.notice("CellSearchPhotoInfo: title='%s', albumTitle='%s', size=%d, width=%d, height=%d, orientation=%d, codec=%d, status=%d, importedDate=%d, takenDate=%d",
 		info.title, info.albumTitle, info.size, info.width, info.height, info.orientation, info.codec, info.status, info.importedDate, info.takenDate);
