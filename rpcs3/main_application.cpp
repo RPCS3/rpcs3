@@ -31,6 +31,7 @@
 #endif
 
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
+#include <QImageReader> // This shouldn't be outside rpcs3qt...
 #include <thread>
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -145,6 +146,50 @@ EmuCallbacks main_application::CreateCallbacks()
 #endif
 		default: fmt::throw_exception("Invalid renderer index %u", renderer);
 		}
+	};
+
+	callbacks.get_image_info = [](const std::string& filename, std::string& sub_type, s32& width, s32& height, s32& orientation) -> bool
+	{
+		sub_type.clear();
+		width = 0;
+		height = 0;
+		orientation = 0; // CELL_SEARCH_ORIENTATION_UNKNOWN
+
+		bool success = false;
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			const QImageReader reader(QString::fromStdString(filename));
+			if (reader.canRead())
+			{
+				const QSize size = reader.size();
+				width = size.width();
+				height = size.height();
+				sub_type = reader.subType().toStdString();
+
+				switch (reader.transformation())
+				{
+				case QImageIOHandler::Transformation::TransformationNone:
+					orientation = 1; // CELL_SEARCH_ORIENTATION_TOP_LEFT = 0°
+					break;
+				case QImageIOHandler::Transformation::TransformationRotate90:
+					orientation = 2; // CELL_SEARCH_ORIENTATION_TOP_RIGHT = 90°
+					break;
+				case QImageIOHandler::Transformation::TransformationRotate180:
+					orientation = 3; // CELL_SEARCH_ORIENTATION_BOTTOM_RIGHT = 180°
+					break;
+				case QImageIOHandler::Transformation::TransformationRotate270:
+					orientation = 4; // CELL_SEARCH_ORIENTATION_BOTTOM_LEFT = 270°
+					break;
+				default:
+					// Ignore other transformations for now
+					break;
+				}
+
+				success = true;
+				sys_log.notice("get_image_info found image: filename='%s', sub_type='%s', width=%d, height=%d, orientation=%d", filename, sub_type, width, height, orientation);
+			}
+		});
+		return success;
 	};
 
 	callbacks.resolve_path = [](std::string_view sv)

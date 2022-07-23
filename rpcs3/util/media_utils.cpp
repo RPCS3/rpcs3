@@ -3,6 +3,7 @@
 #include "logs.hpp"
 #include "Utilities/StrUtil.h"
 #include "Emu/Cell/Modules/cellSearch.h"
+#include "Emu/System.h"
 
 #include <random>
 
@@ -67,8 +68,15 @@ namespace utils
 
 	std::pair<bool, media_info> get_media_info(const std::string& path, s32 av_media_type)
 	{
-		media_info info;
+		media_info info{};
 		info.path = path;
+
+		if (av_media_type == AVMEDIA_TYPE_UNKNOWN) // Let's use this for image info
+		{
+			const bool success = Emu.GetCallbacks().get_image_info(path, info.sub_type, info.width, info.height, info.orientation);
+			if (!success) media_log.error("get_image_info: failed to get image info for '%s'", path);
+			return { success, std::move(info) };
+		}
 
 		// Only print FFMPEG errors, fatals and panics
 		av_log_set_level(AV_LOG_ERROR);
