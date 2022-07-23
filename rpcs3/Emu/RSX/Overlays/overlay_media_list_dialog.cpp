@@ -34,6 +34,27 @@ namespace rsx
 			{
 				if (fs::exists(entry.info.path))
 				{
+					// Fit the new image into the available space
+					if (entry.info.width > 0 && entry.info.height > 0)
+					{
+						const u16 target_width = image->w - (image->padding_left + image->padding_right);
+						const u16 target_height = image->h - (image->padding_top + image->padding_bottom);
+						const f32 target_ratio = target_width / static_cast<f32>(target_height);
+						const f32 image_ratio = entry.info.width / static_cast<f32>(entry.info.height);
+						const f32 convert_ratio = image_ratio / target_ratio;
+
+						if (convert_ratio > 1.0f)
+						{
+							const u16 new_padding = (target_height - target_height / convert_ratio) / 2;
+							image->set_padding(image->padding_left, image->padding_right, new_padding + image->padding_top, new_padding + image->padding_bottom);
+						}
+						else if (convert_ratio < 1.0f)
+						{
+							const u16 new_padding = (target_width - target_width * convert_ratio) / 2;
+							image->set_padding(image->padding_left + new_padding, image->padding_right + new_padding, image->padding_top, image->padding_bottom);
+						}
+					}
+
 					icon_data = std::make_unique<image_info>(entry.info.path.c_str());
 					static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
 				}
@@ -263,7 +284,7 @@ namespace rsx
 						continue;
 					}
 
-					media_list_dialog::media_entry new_entry;
+					media_list_dialog::media_entry new_entry{};
 					parse_media_recursive(depth, media_path + "/" + dir_entry.name, dir_entry.name, type, new_entry);
 					if (new_entry.type != media_list_dialog::media_type::invalid)
 					{
@@ -285,19 +306,12 @@ namespace rsx
 					current_entry.info.path = media_path;
 				}
 			}
-			else if (type == media_list_dialog::media_type::photo)
-			{
-				// Let's restrict this to png and jpg for now
-				if (name.ends_with(".png") || name.ends_with(".jpg"))
-				{
-					current_entry.type = type;
-					rsx_log.notice("parse_media_recursive: Found photo '%s'", media_path);
-				}
-			}
 			else
 			{
-				// Try to peek into the audio or video file
-				const s32 av_media_type = type == media_list_dialog::media_type::video ? 0 /*AVMEDIA_TYPE_VIDEO*/ : 1 /*AVMEDIA_TYPE_AUDIO*/;
+				// Try to peek into the file
+				const s32 av_media_type = type == media_list_dialog::media_type::photo ? -1
+				                        : type == media_list_dialog::media_type::video ? 0 /*AVMEDIA_TYPE_VIDEO*/
+				                        : 1 /*AVMEDIA_TYPE_AUDIO*/;
 				auto [success, info] = utils::get_media_info(media_path, av_media_type);
 				if (success)
 				{
