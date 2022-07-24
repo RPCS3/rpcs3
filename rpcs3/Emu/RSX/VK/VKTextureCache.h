@@ -390,7 +390,8 @@ namespace vk
 		enum texture_create_flags : u32
 		{
 			initialize_image_contents = 1,
-			do_not_reuse = 2
+			do_not_reuse = 2,
+			shareable = 4
 		};
 
 		void on_section_destroyed(cached_texture_section& tex) override;
@@ -421,7 +422,7 @@ namespace vk
 
 		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const;
 
-		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkImageUsageFlags usage);
+		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkImageUsageFlags usage, VkSharingMode sharing);
 
 	protected:
 		vk::image_view* create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
