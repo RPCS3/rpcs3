@@ -2252,11 +2252,8 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	m_current_command_buffer->end();
 	m_current_command_buffer->tag();
 
-	// Flush any asynchronously scheduled jobs
-	// So this is a bit trippy, but, in this case, the primary CB contains the 'release' operations, not the acquire ones.
-	// The CB that comes in after this submit will acquire the yielded resources automatically.
-	// This means the primary CB is the precursor to the async CB not the other way around.
-	// Async CB should wait for the primary CB to signal.
+	// Supporting concurrent access vastly simplifies this logic.
+	// Instead of doing CB slice injection, we can just chain these together logically with the async stream going first
 	vk::queue_submit_t primary_submit_info{ m_device->get_graphics_queue(), pFence };
 	vk::queue_submit_t secondary_submit_info{};
 
@@ -2265,28 +2262,20 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 		primary_submit_info.wait_on(wait_semaphore, pipeline_stage_flags);
 	}
 
-	if (const auto wait_sema = std::exchange(m_dangling_semaphore_signal, nullptr))
-	{
-		// TODO: Sync on VS stage
-		primary_submit_info.wait_on(wait_sema, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-	}
-
 	auto& async_scheduler = g_fxo->get<vk::AsyncTaskScheduler>();
-	const bool require_secondary_flush = async_scheduler.is_recording();
-
 	if (async_scheduler.is_recording())
 	{
 		if (async_scheduler.is_host_mode())
 		{
-			// Inject dependency chain using semaphores.
-			// HEAD = externally synchronized.
-			// TAIL = insert dangling wait, from the async CB to the next CB down.
-			m_dangling_semaphore_signal = *async_scheduler.get_sema();
-			secondary_submit_info.queue_signal(m_dangling_semaphore_signal);
+			const VkSemaphore async_sema = *async_scheduler.get_sema();
+			secondary_submit_info.queue_signal(async_sema);
+			primary_submit_info.wait_on(async_sema, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 			// Delay object destruction by one cycle
 			vk::get_resource_manager()->push_down_current_scope();
 		}
+
+		async_scheduler.flush(secondary_submit_info, force_flush);
 	}
 
 	if (signal_semaphore)
@@ -2295,11 +2284,6 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	}
 
 	m_current_command_buffer->submit(primary_submit_info, force_flush);
-
-	if (require_secondary_flush)
-	{
-		async_scheduler.flush(secondary_submit_info, force_flush);
-	}
 
 	m_queue_status.clear(flush_queue_state::flushing);
 }

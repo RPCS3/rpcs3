@@ -386,20 +386,13 @@ void VKGSRender::load_texture_env()
 		// We have to do this here, because we have to assume the CB will be dumped
 		auto& async_task_scheduler = g_fxo->get<vk::AsyncTaskScheduler>();
 
-		if (async_task_scheduler.is_recording())
+		if (async_task_scheduler.is_recording() &&
+			!async_task_scheduler.is_host_mode())
 		{
-			if (async_task_scheduler.is_host_mode())
+			// Sync any async scheduler tasks
+			if (auto ev = async_task_scheduler.get_primary_sync_label())
 			{
-				flush_command_queue();
-				ensure(!async_task_scheduler.is_recording());
-			}
-			else
-			{
-				// Sync any async scheduler tasks
-				if (auto ev = async_task_scheduler.get_primary_sync_label())
-				{
-					ev->gpu_wait(*m_current_command_buffer);
-				}
+				ev->gpu_wait(*m_current_command_buffer);
 			}
 		}
 	}
