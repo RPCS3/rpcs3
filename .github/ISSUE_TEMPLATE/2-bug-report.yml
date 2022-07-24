@@ -28,6 +28,9 @@ body:
     attributes:
       value: |
         # Log files
+        
+        Provide a log file that includes the bug you're reporting.
+        
         Obtaining the log file:
         * Run the game until you find the regression.
         * Completely close RPCS3 and locate the log file.
@@ -42,6 +45,8 @@ body:
       label: Attach a log file
       description: |
         Drag & drop the files into this input field, or upload them to another service (f.ex. Dropbox, Mega) and provide a link.
+    validations:
+      required: true
   - type: markdown
     attributes:
       value: |
