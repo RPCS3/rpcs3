@@ -1155,7 +1155,7 @@ namespace vk
 			{
 				vk::queue_submit_t submit_info2{};
 				submit_info2.queue_signal(*async_sema);
-				async_scheduler->flush(submit_info2, VK_FALSE);
+				async_scheduler->flush(submit_info2, VK_TRUE);
 
 				submit_info.wait_on(*async_sema, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 			}
