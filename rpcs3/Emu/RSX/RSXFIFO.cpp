@@ -34,10 +34,10 @@ namespace rsx
 		{
 			m_cmd = cmd;
 			m_command_inc = ((m_cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
-			m_remaining_commands = count - 1;
-			m_internal_get = m_ctrl->get;
+			m_remaining_commands = count;
+			m_internal_get = m_ctrl->get - 4;
 			m_args_ptr = m_iotable->get_addr(m_internal_get);	
-			m_command_reg = (m_cmd & 0xffff) + m_command_inc * (((m_cmd >> 18) - count) & 0x7ff);
+			m_command_reg = (m_cmd & 0xffff) + m_command_inc * (((m_cmd >> 18) - count) & 0x7ff) - m_command_inc;
 		}
 
 		void FIFO_control::inc_get(bool wait)
