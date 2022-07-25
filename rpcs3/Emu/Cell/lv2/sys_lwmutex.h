@@ -61,7 +61,7 @@ struct lv2_lwmutex final : lv2_obj
 
 	shared_mutex mutex;
 	atomic_t<s32> signaled{0};
-	std::deque<cpu_thread*> sq;
+	atomic_t<ppu_thread*> sq{};
 	atomic_t<s32> lwcond_waiters{0};
 
 	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name) noexcept
@@ -75,7 +75,8 @@ struct lv2_lwmutex final : lv2_obj
 	void save(utils::serial& ar);
 
 	// Add a waiter
-	void add_waiter(cpu_thread* cpu)
+	template <typename T>
+	void add_waiter(T* cpu)
 	{
 		const bool notify = lwcond_waiters.fetch_op([](s32& val)
 		{
@@ -91,7 +92,7 @@ struct lv2_lwmutex final : lv2_obj
 			return true;
 		}).second;
 
-		sq.emplace_back(cpu);
+		lv2_obj::emplace(sq, cpu);
 
 		if (notify)
 		{

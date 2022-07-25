@@ -11,6 +11,7 @@
 #include "sys_process.h"
 
 #include <thread>
+#include <deque>
 
 LOG_CHANNEL(sys_timer);
 
@@ -152,8 +153,12 @@ error_code sys_timer_create(ppu_thread& ppu, vm::ptr<u32> timer_id)
 		auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
 		{
 			std::lock_guard lock(thread.mutex);
-			lv2_obj::unqueue(thread.timers, ptr);
-			thread.timers.emplace_back(std::move(ptr));
+
+			// Theoretically could have been destroyed by sys_timer_destroy by now
+			if (auto it = std::find(thread.timers.begin(), thread.timers.end(), ptr); it == thread.timers.end())
+			{
+				thread.timers.emplace_back(std::move(ptr));
+			}
 		}
 
 		*timer_id = idm::last_id();
@@ -192,7 +197,12 @@ error_code sys_timer_destroy(ppu_thread& ppu, u32 timer_id)
 
 	auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
 	std::lock_guard lock(thread.mutex);
-	lv2_obj::unqueue(thread.timers, std::move(timer.ptr));
+
+	if (auto it = std::find(thread.timers.begin(), thread.timers.end(), timer.ptr); it != thread.timers.end())
+	{
+		thread.timers.erase(it);
+	}
+
 	return CELL_OK;
 }
 

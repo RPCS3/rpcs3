@@ -29,8 +29,8 @@ struct lv2_rwlock final : lv2_obj
 
 	shared_mutex mutex;
 	atomic_t<s64> owner{0};
-	std::deque<cpu_thread*> rq;
-	std::deque<cpu_thread*> wq;
+	atomic_t<ppu_thread*> rq{};
+	atomic_t<ppu_thread*> wq{};
 
 	lv2_rwlock(u32 protocol, u64 key, u64 name) noexcept
 		: protocol{static_cast<u8>(protocol)}

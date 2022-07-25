@@ -323,6 +323,10 @@ public:
 	std::shared_ptr<utils::serial> optional_savestate_state;
 	bool interrupt_thread_executing = false;
 
+	atomic_t<ppu_thread*> next_cpu{}; // LV2 sleep queues' node link
+	atomic_t<ppu_thread*> next_ppu{}; // LV2 PPU running queue's node link
+	bool ack_suspend = false;
+
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
 	void fast_call(u32 addr, u64 rtoc);
