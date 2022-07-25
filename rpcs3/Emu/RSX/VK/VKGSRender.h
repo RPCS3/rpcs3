@@ -115,7 +115,6 @@ private:
 	vk::command_pool m_command_buffer_pool;
 	vk::command_buffer_chain<VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
 	vk::command_buffer_chunk* m_current_command_buffer = nullptr;
-	VkSemaphore m_dangling_semaphore_signal = VK_NULL_HANDLE;
 
 	volatile vk::host_data_t* m_host_data_ptr = nullptr;
 	std::unique_ptr<vk::buffer> m_host_object_data;
