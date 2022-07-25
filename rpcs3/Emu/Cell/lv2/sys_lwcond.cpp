@@ -65,7 +65,7 @@ error_code _sys_lwcond_destroy(ppu_thread& ppu, u32 lwcond_id)
 
 	const auto cond = idm::withdraw<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> CellError
 	{
-		if (cond.waiters)
+		if (cond.sq)
 		{
 			return CELL_EBUSY;
 		}
@@ -127,7 +127,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 			}
 		}
 
-		if (cond.waiters)
+		if (cond.sq)
 		{
 			lv2_obj::notify_all_t notify;
 
@@ -153,8 +153,6 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 					return 0;
 				}
 
-				cond.waiters--;
-
 				if (mode == 2)
 				{
 					static_cast<ppu_thread*>(result)->gpr[3] = CELL_EBUSY;
@@ -165,11 +163,11 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 					ensure(!mutex->signaled);
 					std::lock_guard lock(mutex->mutex);
 
-					if (mode == 3 && !mutex->sq.empty()) [[unlikely]]
+					if (mode == 3 && mutex->sq) [[unlikely]]
 					{
 						// Respect ordering of the sleep queue
-						mutex->sq.emplace_back(result);
-						auto result2 = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol);
+						lv2_obj::emplace(mutex->sq, result);
+						result = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol);
 
 						if (static_cast<ppu_thread*>(result2)->state & cpu_flag::again)
 						{
@@ -241,8 +239,6 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		fmt::throw_exception("Unknown mode (%d)", mode);
 	}
 
-	bool need_awake = false;
-
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> s32
 	{
 		lv2_lwmutex* mutex{};
@@ -257,7 +253,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			}
 		}
 
-		if (cond.waiters)
+		if (cond.sq)
 		{
 			lv2_obj::notify_all_t notify;
 
@@ -265,18 +261,19 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 			u32 result = 0;
 
-			for (auto cpu : cond.sq)
+			for (auto cpu = +cond.sq; cpu; cpu = cpu->next_cpu)
 			{
-				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+				if (cpu->state & cpu_flag::again)
 				{
 					ppu.state += cpu_flag::again;
 					return 0;
 				}
 			}
 
-			cond.waiters = 0;
-
-			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.protocol))
+			decltype(cond.sq) sq{+cond.sq};
+			cond.sq.release(nullptr);
+	
+			while (const auto cpu = cond.schedule<ppu_thread>(sq, cond.protocol))
 			{
 				if (mode == 2)
 				{
@@ -292,13 +289,12 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				else
 				{
 					lv2_obj::append(cpu);
-					need_awake = true;
 				}
 
 				result++;
 			}
 
-			if (need_awake)
+			if (result && mode == 2)
 			{
 				lv2_obj::awake_all(true);
 			}
@@ -358,13 +354,12 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		{
 			// Special: loading state from the point of waiting on lwmutex sleep queue
 			std::lock_guard lock2(mutex->mutex);
-			mutex->sq.emplace_back(&ppu);
+			lv2_obj::emplace(mutex->sq, &ppu);
 		}
 		else
 		{
 			// Add a waiter
-			cond.waiters++;
-			cond.sq.emplace_back(&ppu);
+			lv2_obj::emplace(cond.sq, &ppu);
 		}
 
 		if (!ppu.loaded_from_savestate)
@@ -414,8 +409,26 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			reader_lock lock(cond->mutex);
 			reader_lock lock2(mutex->mutex);
 
-			const bool cond_sleep = std::find(cond->sq.begin(), cond->sq.end(), &ppu) != cond->sq.end();
-			const bool mutex_sleep = std::find(mutex->sq.begin(), mutex->sq.end(), &ppu) != mutex->sq.end();
+			bool mutex_sleep = false;
+			bool cond_sleep = false;
+
+			for (auto cpu = +mutex->sq; cpu; cpu = cpu->next_cpu)
+			{
+				if (cpu == &ppu)
+				{
+					mutex_sleep = true;
+					break;
+				}
+			}
+
+			for (auto cpu = +mutex->sq; cpu; cpu = cpu->next_cpu)
+			{
+				if (cpu == &ppu)
+				{
+					cond_sleep = true;
+					break;
+				}
+			}
 
 			if (!cond_sleep && !mutex_sleep)
 			{
@@ -451,14 +464,24 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 				if (cond->unqueue(cond->sq, &ppu))
 				{
-					cond->waiters--;
 					ppu.gpr[3] = CELL_ETIMEDOUT;
 					break;
 				}
 
 				reader_lock lock2(mutex->mutex);
 
-				if (std::find(mutex->sq.cbegin(), mutex->sq.cend(), &ppu) == mutex->sq.cend())
+				bool mutex_sleep = false;
+
+				for (auto cpu = +mutex->sq; cpu; cpu = cpu->next_cpu)
+				{
+					if (cpu == &ppu)
+					{
+						mutex_sleep = true;
+						break;
+					}
+				}
+
+				if (!mutex_sleep)
 				{
 					break;
 				}

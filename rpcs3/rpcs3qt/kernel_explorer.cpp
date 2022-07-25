@@ -337,6 +337,14 @@ void kernel_explorer::update()
 			return;
 		}
 
+		auto show_waiters = [&](QTreeWidgetItem* tree, cpu_thread* cpu)
+		{
+			for (; cpu; cpu = cpu->get_next_cpu())
+			{
+				add_leaf(tree, qstr(fmt::format("Waiter: ID: 0x%x", cpu->id_type() == 2 ? static_cast<spu_thread*>(cpu)->lv2_id : cpu->id)));
+			}
+		};
+
 		switch (id >> 24)
 		{
 		case SYS_MEM_OBJECT:
@@ -356,22 +364,33 @@ void kernel_explorer::update()
 		case SYS_MUTEX_OBJECT:
 		{
 			auto& mutex = static_cast<lv2_mutex&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"Mutex 0x%08x: “%s”, %s,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u, Wq: %zu", id, lv2_obj::name64(mutex.name), mutex.protocol,
-				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", mutex.owner >> 1, +mutex.lock_count, mutex.key, mutex.cond_count, mutex.sq.size())));
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Mutex 0x%08x: “%s”, %s,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u", id, lv2_obj::name64(mutex.name), mutex.protocol,
+				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", mutex.owner >> 1, +mutex.lock_count, mutex.key, mutex.cond_count))), mutex.sq);
 			break;
 		}
 		case SYS_COND_OBJECT:
 		{
 			auto& cond = static_cast<lv2_cond&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"Cond 0x%08x: “%s”, %s, Mutex: 0x%08x, Key: %#llx, Wq: %u", id, lv2_obj::name64(cond.name), cond.mutex->protocol, cond.mtx_id, cond.key, +cond.waiters)));
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Cond 0x%08x: “%s”, %s, Mutex: 0x%08x, Key: %#llx", id, lv2_obj::name64(cond.name), cond.mutex->protocol, cond.mtx_id, cond.key))), cond.sq);
 			break;
 		}
 		case SYS_RWLOCK_OBJECT:
 		{
 			auto& rw = static_cast<lv2_rwlock&>(obj);
 			const s64 val = rw.owner;
-			add_leaf(node, qstr(fmt::format(u8"RW Lock 0x%08x: “%s”, %s, Owner: %#x(%d), Key: %#llx, Rq: %zu, Wq: %zu", id, lv2_obj::name64(rw.name), rw.protocol,
-				std::max<s64>(0, val >> 1), -std::min<s64>(0, val >> 1), rw.key, rw.rq.size(), rw.wq.size())));
+			auto tree = add_solid_node(node, qstr(fmt::format(u8"RW Lock 0x%08x: “%s”, %s, Owner: %#x(%d), Key: %#llx", id, lv2_obj::name64(rw.name), rw.protocol,
+				std::max<s64>(0, val >> 1), -std::min<s64>(0, val >> 1), rw.key)));
+
+			if (auto rq = +rw.rq)
+			{
+				show_waiters(add_solid_node(tree, "Reader Waiters"), rq);
+			}
+
+			if (auto wq = +rw.wq)
+			{
+				show_waiters(add_solid_node(tree, "Writer Waiters"), wq);
+			}
+
 			break;
 		}
 		case SYS_INTR_TAG_OBJECT:
@@ -397,8 +416,8 @@ void kernel_explorer::update()
 		case SYS_EVENT_QUEUE_OBJECT:
 		{
 			auto& eq = static_cast<lv2_event_queue&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"Event Queue 0x%08x: “%s”, %s, %s, Key: %#llx, Events: %zu/%d, Wq: %zu", id, lv2_obj::name64(eq.name), eq.protocol,
-				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size, eq.sq.size())));
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Event Queue 0x%08x: “%s”, %s, %s, Key: %#llx, Events: %zu/%d", id, lv2_obj::name64(eq.name), eq.protocol,
+				eq.type == SYS_SPU_QUEUE ? "SPU" : "PPU", eq.key, eq.events.size(), eq.size))), eq.type == SYS_SPU_QUEUE ? static_cast<cpu_thread*>(+eq.sq) : +eq.pq);
 			break;
 		}
 		case SYS_EVENT_PORT_OBJECT:
@@ -494,12 +513,12 @@ void kernel_explorer::update()
 			}
 			else
 			{
-				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x, Wq: %zu (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.sq.size(), lwm.control)));
+				show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.control))), lwm.sq);
 				break;
 			}
 
-			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Control: *0x%x, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
-					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lwm.signaled, lwm.control, lwm.sq.size())));
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Control: *0x%x", id, lv2_obj::name64(lwm.name), lwm.protocol,
+					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lwm.signaled, lwm.control))), lwm.sq);
 			break;
 		}
 		case SYS_TIMER_OBJECT:
@@ -517,21 +536,21 @@ void kernel_explorer::update()
 		{
 			auto& sema = static_cast<lv2_sema&>(obj);
 			const auto val = +sema.val;
-			add_leaf(node, qstr(fmt::format(u8"Sema 0x%08x: “%s”, %s, Count: %d/%d, Key: %#llx, Wq: %zu", id, lv2_obj::name64(sema.name), sema.protocol,
-				std::max<s32>(val, 0), sema.max, sema.key, -std::min<s32>(val, 0))));
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Sema 0x%08x: “%s”, %s, Count: %d/%d, Key: %#llx", id, lv2_obj::name64(sema.name), sema.protocol,
+				std::max<s32>(val, 0), sema.max, sema.key, -std::min<s32>(val, 0)))), sema.sq);
 			break;
 		}
 		case SYS_LWCOND_OBJECT:
 		{
 			auto& lwc = static_cast<lv2_lwcond&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Control: *0x%x, Wq: %zu", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, lwc.control, +lwc.waiters)));
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Control: *0x%x", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, lwc.control))), lwc.sq);
 			break;
 		}
 		case SYS_EVENT_FLAG_OBJECT:
 		{
 			auto& ef = static_cast<lv2_event_flag&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"Event Flag 0x%08x: “%s”, %s, Type: 0x%x, Key: %#llx, Pattern: 0x%llx, Wq: %zu", id, lv2_obj::name64(ef.name), ef.protocol,
-				ef.type, ef.key, ef.pattern.load(), +ef.waiters)));
+			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Event Flag 0x%08x: “%s”, %s, Type: 0x%x, Key: %#llx, Pattern: 0x%llx", id, lv2_obj::name64(ef.name), ef.protocol,
+				ef.type, ef.key, ef.pattern.load()))), ef.sq);
 			break;
 		}
 		case SYS_RSXAUDIO_OBJECT:
@@ -543,7 +562,7 @@ void kernel_explorer::update()
 				break;
 			}
 
-			QTreeWidgetItem* rao_obj = add_leaf(node, qstr(fmt::format(u8"RSXAudio 0x%08x: Shmem: 0x%08x", id, u32{rao.shmem})));
+			QTreeWidgetItem* rao_obj = add_solid_node(node, qstr(fmt::format(u8"RSXAudio 0x%08x: Shmem: 0x%08x", id, u32{rao.shmem})));
 			for (u64 q_idx = 0; q_idx < rao.event_queue.size(); q_idx++)
 			{
 				if (const auto eq = rao.event_queue[q_idx].lock())

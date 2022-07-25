@@ -129,8 +129,8 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 		if (sema.val-- <= 0)
 		{
-			sema.sq.emplace_back(&ppu);
 			sema.sleep(ppu, timeout, true);
+			lv2_obj::emplace(sema.sq, &ppu);
 			return false;
 		}
 
@@ -160,13 +160,16 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		{
 			std::lock_guard lock(sem->mutex);
 
-			if (std::find(sem->sq.begin(), sem->sq.end(), &ppu) == sem->sq.end())
+			for (auto cpu = +sem->sq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
-			return {};
+			break;
 		}
 
 		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
@@ -280,7 +283,7 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 	{
 		std::lock_guard lock(sem->mutex);
 
-		for (auto cpu : sem->sq)
+		for (auto cpu = +sem->sq; cpu; cpu = cpu->next_cpu)
 		{
 			if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
 			{

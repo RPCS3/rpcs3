@@ -4832,7 +4832,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 			if (queue->events.empty())
 			{
-				queue->sq.emplace_back(this);
+				lv2_obj::emplace(queue->sq, this);
 				group->run_state = SPU_THREAD_GROUP_STATUS_WAITING;
 				group->waiter_spu_index = index;
 

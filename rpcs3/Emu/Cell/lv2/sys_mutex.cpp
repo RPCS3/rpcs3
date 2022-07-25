@@ -188,13 +188,16 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 		{
 			std::lock_guard lock(mutex->mutex);
 
-			if (std::find(mutex->sq.begin(), mutex->sq.end(), &ppu) == mutex->sq.end())
+			for (auto cpu = +mutex->sq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
-			return {};
+			break;
 		}
 
 		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)

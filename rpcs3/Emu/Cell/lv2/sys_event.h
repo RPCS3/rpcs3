@@ -4,7 +4,10 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
+#include <deque>
+
 class cpu_thread;
+class spu_thrread;
 
 // Event Queue Type
 enum : u32
@@ -89,7 +92,8 @@ struct lv2_event_queue final : public lv2_obj
 
 	shared_mutex mutex;
 	std::deque<lv2_event> events;
-	std::deque<cpu_thread*> sq;
+	atomic_t<spu_thread*> sq{};
+	atomic_t<ppu_thread*> pq{};
 
 	lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept;
 

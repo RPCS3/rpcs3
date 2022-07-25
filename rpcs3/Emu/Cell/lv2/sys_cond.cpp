@@ -112,7 +112,7 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 	{
 		std::lock_guard lock(cond.mutex->mutex);
 
-		if (cond.waiters)
+		if (cond.sq)
 		{
 			return CELL_EBUSY;
 		}
@@ -143,7 +143,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
 	{
-		if (cond.waiters)
+		if (cond.sq)
 		{
 			lv2_obj::notify_all_t notify;
 
@@ -158,7 +158,6 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 				}
 
 				// TODO: Is EBUSY returned after reqeueing, on sys_cond_destroy?
-				cond.waiters--;
 
 				if (cond.mutex->try_own(*cpu, cpu->id))
 				{
@@ -184,13 +183,15 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
 	{
-		if (cond.waiters)
+		if (cond.sq)
 		{
+			lv2_obj::notify_all_t notify;
+
 			std::lock_guard lock(cond.mutex->mutex);
 
-			for (auto cpu : cond.sq)
+			for (auto cpu = +cond.sq; cpu; cpu = cpu->next_cpu)
 			{
-				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+				if (cpu->state & cpu_flag::again)
 				{
 					ppu.state += cpu_flag::again;
 					return;
@@ -198,9 +199,10 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 			}
 
 			cpu_thread* result = nullptr;
-			cond.waiters -= ::size32(cond.sq);
+			decltype(cond.sq) sq{+cond.sq};
+			cond.sq.release(nullptr);
 
-			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, SYS_SYNC_PRIORITY))
+			while (const auto cpu = cond.schedule<ppu_thread>(sq, SYS_SYNC_PRIORITY))
 			{
 				if (cond.mutex->try_own(*cpu, cpu->id))
 				{
@@ -210,7 +212,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 			if (result)
 			{
-				lv2_obj::awake(result);
+				cond.awake(result, true);
 			}
 		}
 	});
@@ -236,13 +238,13 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 			return -1;
 		}
 
-		if (cond.waiters)
+		if (cond.sq)
 		{
 			lv2_obj::notify_all_t notify;
 
 			std::lock_guard lock(cond.mutex->mutex);
 
-			for (auto cpu : cond.sq)
+			for (auto cpu = +cond.sq; cpu; cpu = cpu->next_cpu)
 			{
 				if (cpu->id == thread_id)
 				{
@@ -253,8 +255,6 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 					}
 
 					ensure(cond.unqueue(cond.sq, cpu));
-
-					cond.waiters--;
 
 					if (cond.mutex->try_own(*cpu, cpu->id))
 					{
@@ -315,9 +315,8 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		else
 		{
 			// Register waiter
-			cond.sq.emplace_back(&ppu);
-			cond.waiters++;
-		}	
+			lv2_obj::emplace(cond.sq, &ppu);
+		}
 
 		if (ppu.loaded_from_savestate)
 		{
@@ -361,8 +360,26 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		{
 			std::lock_guard lock(cond->mutex->mutex);
 
-			const bool cond_sleep = std::find(cond->sq.begin(), cond->sq.end(), &ppu) != cond->sq.end();
-			const bool mutex_sleep = std::find(cond->mutex->sq.begin(), cond->mutex->sq.end(), &ppu) != cond->mutex->sq.end();
+			bool mutex_sleep = false;
+			bool cond_sleep = false;
+
+			for (auto cpu = +cond->sq; cpu; cpu = cpu->next_cpu)
+			{
+				if (cpu == &ppu)
+				{
+					cond_sleep = true;
+					break;
+				}
+			}
+
+			for (auto cpu = +cond->mutex->sq; cpu; cpu = cpu->next_cpu)
+			{
+				if (cpu == &ppu)
+				{
+					mutex_sleep = true;
+					break;
+				}
+			}
 
 			if (!cond_sleep && !mutex_sleep)
 			{
@@ -402,8 +419,6 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 				if (cond->unqueue(cond->sq, &ppu))
 				{
 					// TODO: Is EBUSY returned after reqeueing, on sys_cond_destroy?
-					cond->waiters--;
-
 					ppu.gpr[3] = CELL_ETIMEDOUT;
 
 					// Own or requeue

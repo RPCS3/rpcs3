@@ -35,7 +35,7 @@ struct lv2_mutex final : lv2_obj
 	shared_mutex mutex;
 	atomic_t<u32> owner{0};
 	atomic_t<u32> lock_count{0}; // Recursive Locks
-	std::deque<cpu_thread*> sq;
+	atomic_t<ppu_thread*> sq{};
 
 	lv2_mutex(u32 protocol, u32 recursive,u32 adaptive, u64 key, u64 name) noexcept
 		: protocol{static_cast<u8>(protocol)}
@@ -82,7 +82,8 @@ struct lv2_mutex final : lv2_obj
 		return CELL_EBUSY;
 	}
 
-	bool try_own(cpu_thread& cpu, u32 id)
+	template <typename T>
+	bool try_own(T& cpu, u32 id)
 	{
 		if (owner.fetch_op([&](u32& val)
 		{
@@ -96,7 +97,7 @@ struct lv2_mutex final : lv2_obj
 			}
 		}))
 		{
-			sq.emplace_back(&cpu);
+			lv2_obj::emplace(sq, &cpu);
 			return false;
 		}
 
@@ -139,7 +140,7 @@ struct lv2_mutex final : lv2_obj
 				return static_cast<T*>(cpu);
 			}
 
-			owner = cpu->id << 1 | !sq.empty();
+			owner = cpu->id << 1 | !!sq;
 			return static_cast<T*>(cpu);
 		}
 		else

@@ -72,7 +72,7 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 
 			std::lock_guard lock(mutex.mutex);
 
-			if (!mutex.sq.empty())
+			if (mutex.sq)
 			{
 				return CELL_EBUSY;
 			}
@@ -171,8 +171,8 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 			return true;
 		}
 
-		mutex.add_waiter(&ppu);
 		mutex.sleep(ppu, timeout, true);
+		mutex.add_waiter(&ppu);
 		return false;
 	});
 
@@ -197,13 +197,16 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		{
 			std::lock_guard lock(mutex->mutex);
 
-			if (std::find(mutex->sq.begin(), mutex->sq.end(), &ppu) == mutex->sq.end())
+			for (auto cpu = +mutex->sq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
-			return {};
+			break;
 		}
 
 		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)

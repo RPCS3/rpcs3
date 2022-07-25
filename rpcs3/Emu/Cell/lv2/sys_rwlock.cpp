@@ -132,8 +132,8 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (_old > 0 || _old & 1)
 		{
-			rwlock.rq.emplace_back(&ppu);
 			rwlock.sleep(ppu, timeout, true);
+			lv2_obj::emplace(rwlock.rq, &ppu);
 			return false;
 		}
 
@@ -163,12 +163,15 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			std::lock_guard lock(rwlock->mutex);
 
-			if (std::find(rwlock->rq.begin(), rwlock->rq.end(), &ppu) == rwlock->rq.end())
+			for (auto cpu = +rwlock->rq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
 			break;
 		}
 
@@ -305,7 +308,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 					return {};
 				}
 
-				rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
+				rwlock->owner = cpu->id << 1 | !!rwlock->wq | !!rwlock->rq;
 
 				rwlock->awake(cpu);
 			}
@@ -313,7 +316,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 			{
 				rwlock->owner = 0;
 
-				ensure(rwlock->rq.empty());
+				ensure(!rwlock->rq);
 			}
 		}
 	}
@@ -361,8 +364,8 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (_old != 0)
 		{
-			rwlock.wq.emplace_back(&ppu);
 			rwlock.sleep(ppu, timeout, true);
+			lv2_obj::emplace(rwlock.wq, &ppu);
 		}
 
 		return _old;
@@ -396,12 +399,15 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			std::lock_guard lock(rwlock->mutex);
 
-			if (std::find(rwlock->wq.begin(), rwlock->wq.end(), &ppu) == rwlock->wq.end())
+			for (auto cpu = +rwlock->wq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
 			break;
 		}
 
@@ -433,23 +439,28 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				}
 
 				// If the last waiter quit the writer sleep queue, wake blocked readers
-				if (!rwlock->rq.empty() && rwlock->wq.empty() && rwlock->owner < 0)
+				if (rwlock->rq && !rwlock->wq && rwlock->owner < 0)
 				{
-					rwlock->owner.atomic_op([&](s64& owner)
-					{
-						owner -= 2 * static_cast<s64>(rwlock->rq.size()); // Add readers to value
-						owner &= -2; // Clear wait bit
-					});
+					s64 size = 0;
 
 					// Protocol doesn't matter here since they are all enqueued anyways
-					for (auto cpu : ::as_rvalue(std::move(rwlock->rq)))
+					for (auto cpu = +rwlock->rq; cpu; cpu = cpu->next_cpu)
 					{
+						size++;
 						rwlock->append(cpu);
 					}
 
+					rwlock->rq.release(nullptr);
+
+					rwlock->owner.atomic_op([&](s64& owner)
+					{
+						owner -= 2 * size; // Add readers to value
+						owner &= -2; // Clear wait bit
+					});
+
 					lv2_obj::awake_all();
 				}
-				else if (rwlock->rq.empty() && rwlock->wq.empty())
+				else if (!rwlock->rq && !rwlock->wq)
 				{
 					rwlock->owner &= -2;
 				}
@@ -535,27 +546,32 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 				return {};
 			}
 
-			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
+			rwlock->owner = cpu->id << 1 | !!rwlock->wq | !!rwlock->rq;
 
 			rwlock->awake(cpu);
 		}
-		else if (auto readers = rwlock->rq.size())
+		else if (rwlock->rq)
 		{
-			for (auto cpu : rwlock->rq)
+			for (auto cpu = +rwlock->rq; cpu; cpu = cpu->next_cpu)
 			{
-				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+				if (cpu->state & cpu_flag::again)
 				{
 					ppu.state += cpu_flag::again;
 					return {};
 				}
 			}
-	
-			for (auto cpu : ::as_rvalue(std::move(rwlock->rq)))
+
+			s64 size = 0;
+
+			// Protocol doesn't matter here since they are all enqueued anyways
+			for (auto cpu = +rwlock->rq; cpu; cpu = cpu->next_cpu)
 			{
+				size++;
 				rwlock->append(cpu);
 			}
 
-			rwlock->owner.release(-2 * static_cast<s64>(readers));
+			rwlock->rq.release(nullptr);
+			rwlock->owner.release(-2 * static_cast<s64>(size));
 			lv2_obj::awake_all();
 		}
 		else

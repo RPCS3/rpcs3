@@ -10,7 +10,6 @@
 #include "Emu/IPC.h"
 #include "Emu/system_config.h"
 
-#include <deque>
 #include <thread>
 
 // attr_protocol (waiting scheduling policy)
@@ -107,60 +106,106 @@ public:
 		return str;
 	}
 
-	// Find and remove the object from the deque container
-	template <typename T, typename E>
-	static T unqueue(std::deque<T>& queue, E object)
+	// Find and remove the object from the linked list
+	template <typename T>
+	static T* unqueue(atomic_t<T*>& first, T* object, atomic_t<T*> T::* mem_ptr = &T::next_cpu)
 	{
-		for (auto found = queue.cbegin(), end = queue.cend(); found != end; found++)
+		auto it = +first;
+	
+		if (it == object)
 		{
-			if (*found == object)
+			first.release(+it->*mem_ptr);
+			(it->*mem_ptr).release(nullptr);
+			return it;
+		}
+
+		for (; it;)
+		{
+			const auto next = it->*mem_ptr + 0;
+
+			if (next == object)
 			{
-				queue.erase(found);
-				return static_cast<T>(object);
+				(it->*mem_ptr).release(+next->*mem_ptr);
+				(next->*mem_ptr).release(nullptr);
+				return next;
 			}
+
+			it = next;
 		}
 
 		return {};
 	}
 
 	template <typename E, typename T>
-	static T* schedule(std::deque<T*>& queue, u32 protocol)
+	static E* schedule(atomic_t<T>& first, u32 protocol)
 	{
-		if (queue.empty())
+		auto it = static_cast<E*>(first);
+
+		if (!it)
 		{
-			return nullptr;
+			return it;
 		}
 
 		if (protocol == SYS_SYNC_FIFO)
 		{
-			const auto res = queue.front();
+			if (it && cpu_flag::again - it->state)
+			{
+				first.release(+it->next_cpu);
+				it->next_cpu.release(nullptr);
+			}
 
-			if (res->state.none_of(cpu_flag::again))
-				queue.pop_front();
-
-			return res;
+			return it;
 		}
 
-		s32 prio = 3071;
-		auto it = queue.cbegin();
+		s32 prio = it->prio;
+		auto found = it;
+		auto parent_found = &first;
 
-		for (auto found = it, end = queue.cend(); found != end; found++)
+		while (true)
 		{
-			const s32 _prio = static_cast<E*>(*found)->prio;
+			auto& node = it->next_cpu;
+			const auto next = static_cast<E*>(node);
+
+			if (!next)
+			{
+				break;
+			}
+
+			const s32 _prio = static_cast<E*>(next)->prio;
 
 			if (_prio < prio)
 			{
-				it = found;
+				found = next;
+				parent_found = &node;
 				prio = _prio;
 			}
+
+			it = next;
 		}
 
-		const auto res = *it;
+		if (cpu_flag::again - found->state)
+		{
+			parent_found->release(+found->next_cpu);
+			found->next_cpu.release(nullptr);
+		}
 
-		if (res->state.none_of(cpu_flag::again))
-			queue.erase(it);
+		return found;
+	}
 
-		return res;
+	template <typename T>
+	static auto emplace(atomic_t<T>& first, T object)
+	{
+		auto it = &first;
+
+		while (auto ptr = static_cast<T>(+*it))
+		{
+			it = &ptr->next_cpu;
+		}
+
+		it->release(object);
+
+		// Return parent
+		return it;
 	}
 
 private:
@@ -443,7 +488,10 @@ public:
 				return;
 			}
 
-			cpu->state.notify_one(cpu_flag::suspend + cpu_flag::signal);
+			if (cpu->state & cpu_flag::signal)
+			{
+				cpu->state.notify_one(cpu_flag::suspend + cpu_flag::signal);
+			}
 		}
 	}
 
@@ -463,16 +511,10 @@ private:
 	static thread_local std::vector<class cpu_thread*> g_to_awake;
 
 	// Scheduler queue for active PPU threads
-	static std::deque<class ppu_thread*> g_ppu;
+	static atomic_t<class ppu_thread*> g_ppu;
 
 	// Waiting for the response from
-	static std::deque<class cpu_thread*> g_pending;
-
-	// Scheduler queue for timeouts (wait until -> thread)
-	static std::deque<std::pair<u64, class cpu_thread*>> g_waiting;
-
-	// Threads which must call lv2_obj::sleep before the scheduler starts
-	static std::deque<class cpu_thread*> g_to_sleep;
+	static u32 g_pending;
 
 	// Pending list of threads to notify
 	static thread_local std::add_pointer_t<class cpu_thread> g_to_notify[4];
