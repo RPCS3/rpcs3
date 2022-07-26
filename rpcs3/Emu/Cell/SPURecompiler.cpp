@@ -8641,12 +8641,44 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
+			const value_t<f32[4]> ab[2]{a, b};
+
+			std::bitset<2> safe_int_compare(0);
+
+			for (u32 i = 0; i < 2; i++)
+			{
+				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
+				{
+					safe_int_compare.set(i);
+
+					for (u32 j = 0; j < 4; j++)
+					{
+						const u32 value = data._u32[j];
+						const u8 exponent = static_cast<u8>(value >> 23);
+
+						if ((value & 0x7fffffffu) >= 0x7f7fffffu || !exponent)
+						{
+							// See above
+							safe_int_compare.reset(i);
+						}
+					}
+				}
+			}
+
 			const auto ma = eval(fabs(a));
 			const auto mb = eval(fabs(b));
 
+			const auto mai = eval(bitcast<s32[4]>(ma));
+			const auto mbi = eval(bitcast<s32[4]>(mb));
+
+			if (safe_int_compare.any())
+			{
+				return eval(sext<s32[4]>(mai > mbi));
+			}
+
 			if (g_cfg.core.spu_approx_xfloat)
 			{
-				return eval(sext<s32[4]>(fcmp_uno(ma > mb) & (bitcast<s32[4]>(ma) > bitcast<s32[4]>(mb))));
+				return eval(sext<s32[4]>(fcmp_uno(ma > mb) & (mai > mbi)));
 			}
 			else
 			{
