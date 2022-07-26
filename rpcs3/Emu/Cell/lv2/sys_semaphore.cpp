@@ -123,7 +123,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 			}
 		}
 
-		lv2_obj::notify_all_t notify;
+		lv2_obj::notify_all_t notify(ppu);
 
 		std::lock_guard lock(sema.mutex);
 
