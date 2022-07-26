@@ -1207,8 +1207,12 @@ namespace cpu_counter
 
 void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout, bool notify_later)
 {
-	vm::temporary_unlock(cpu);
-	cpu_counter::remove(&cpu);
+	// Should already be performed when using this flag
+	if (!notify_later)
+	{
+		vm::temporary_unlock(cpu);
+		cpu_counter::remove(&cpu);
+	}
 	{
 		std::lock_guard lock{g_mutex};
 		sleep_unlocked(cpu, timeout, notify_later);
@@ -1218,7 +1222,12 @@ void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout, bool notify_later)
 
 bool lv2_obj::awake(cpu_thread* const thread, bool notify_later, s32 prio)
 {
-	vm::temporary_unlock();
+	// Too risky to postpone it in case the notified thread may wait for this thread to free its passive lock
+	if (!notify_later)
+	{
+		vm::temporary_unlock();
+	}
+
 	std::lock_guard lock(g_mutex);
 	return awake_unlocked(thread, notify_later, prio);
 }

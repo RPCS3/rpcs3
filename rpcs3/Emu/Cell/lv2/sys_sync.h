@@ -61,6 +61,16 @@ enum
 
 enum ppu_thread_status : u32;
 
+namespace vm
+{
+	void temporary_unlock(cpu_thread& cpu) noexcept;
+}
+
+namespace cpu_counter
+{
+	void remove(cpu_thread*) noexcept;
+}
+
 // Base class for some kernel objects (shared set of 8192 objects).
 struct lv2_obj
 {
@@ -495,10 +505,27 @@ public:
 		}
 	}
 
+	template <typename T = int>
 	struct notify_all_t
 	{
+		notify_all_t() noexcept = default;
+
+		notify_all_t(T& cpu) noexcept
+		{
+			vm::temporary_unlock(cpu);
+			cpu_counter::remove(&cpu);
+		}
+
 		~notify_all_t() noexcept
 		{
+			if constexpr (!std::is_base_of_v<cpu_thread, T>)
+			{
+				if (auto cpu = cpu_thread::get_current(); cpu && cpu->is_paused())
+				{
+					vm::temporary_unlock(*cpu);
+				}
+			}
+
 			lv2_obj::notify_all();
 		}
 	};

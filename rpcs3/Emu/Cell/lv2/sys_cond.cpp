@@ -300,7 +300,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 			return -1;
 		}
 
-		lv2_obj::notify_all_t notify;
+		lv2_obj::notify_all_t notify(ppu);
 
 		std::lock_guard lock(cond.mutex->mutex);
 

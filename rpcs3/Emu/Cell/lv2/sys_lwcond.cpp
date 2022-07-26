@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_lwcond.h"
 
 #include "Emu/IdManager.h"
@@ -343,7 +343,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		// Increment lwmutex's lwcond's waiters count
 		mutex->lwcond_waiters++;
 
-		lv2_obj::notify_all_t notify;
+		lv2_obj::notify_all_t notify(ppu);
 
 		std::lock_guard lock(cond.mutex);
 

@@ -152,7 +152,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 			return {};
 		}
 
-		lv2_obj::notify_all_t notify;
+		lv2_obj::notify_all_t notify(ppu);
 
 		std::lock_guard lock(flag.mutex);
 

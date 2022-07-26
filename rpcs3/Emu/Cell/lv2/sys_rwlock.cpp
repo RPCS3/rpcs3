@@ -114,7 +114,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 			}
 		}
 
-		lv2_obj::notify_all_t notify;
+		lv2_obj::notify_all_t notify(ppu);
 
 		std::lock_guard lock(rwlock.mutex);
 
@@ -346,7 +346,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 			return val;
 		}
 
-		lv2_obj::notify_all_t notify;
+		lv2_obj::notify_all_t notify(ppu);
 
 		std::lock_guard lock(rwlock.mutex);
 
