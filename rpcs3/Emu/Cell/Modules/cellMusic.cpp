@@ -70,7 +70,7 @@ struct music_state
 
 	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func{};
 	vm::ptr<void> userData{};
-	std::mutex mtx;
+	shared_mutex mtx;
 	std::shared_ptr<music_handler_base> handler;
 	music_selection_context current_selection_context{};
 
@@ -79,6 +79,34 @@ struct music_state
 	music_state()
 	{
 		handler = Emu.GetCallbacks().get_music_handler();
+		handler->set_status_callback([this](music_handler_base::player_status status)
+		{
+			// TODO: disabled until I find a game that uses CELL_MUSIC_EVENT_STATUS_NOTIFICATION
+			return;
+
+			if (!func)
+			{
+				return;
+			}
+
+			s32 result = CELL_OK;
+
+			switch (status)
+			{
+			case music_handler_base::player_status::end_of_media:
+				result = CELL_MUSIC_PLAYBACK_FINISHED;
+				break;
+			default:
+				return;
+			}
+
+			sysutil_register_cb([this, &result](ppu_thread& ppu) -> s32
+			{
+				cellMusic.notice("Sending status notification %d", result);
+				func(ppu, CELL_MUSIC_EVENT_STATUS_NOTIFICATION, vm::addr_t(result), userData);
+				return CELL_OK;
+			});
+		});
 	}
 
 	music_state(utils::serial& ar)
@@ -99,6 +127,76 @@ struct music_state
 		GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellMusic);
 
 		ar(userData);
+	}
+
+	// NOTE: This function only uses CELL_MUSIC enums. CELL_MUSIC2 enums are identical.
+	error_code set_playback_command(s32 command)
+	{
+		switch (command)
+		{
+		case CELL_MUSIC_PB_CMD_STOP:
+			handler->stop();
+			break;
+		case CELL_MUSIC_PB_CMD_PAUSE:
+			handler->pause();
+			break;
+		case CELL_MUSIC_PB_CMD_PLAY:
+		case CELL_MUSIC_PB_CMD_FASTFORWARD:
+		case CELL_MUSIC_PB_CMD_FASTREVERSE:
+		case CELL_MUSIC_PB_CMD_NEXT:
+		case CELL_MUSIC_PB_CMD_PREV:
+		{
+			std::string path;
+			bool no_more_tracks = false;
+			{
+				std::lock_guard lock(mtx);
+				const std::vector<std::string>& playlist = current_selection_context.playlist;
+				const u32 current_track = current_selection_context.current_track;
+				u32 next_track = current_track;
+
+				if (command == CELL_MUSIC_PB_CMD_NEXT || command == CELL_MUSIC_PB_CMD_PREV)
+				{
+					next_track = current_selection_context.step_track(command == CELL_MUSIC_PB_CMD_NEXT);
+				}
+
+				if (next_track < playlist.size())
+				{
+					path = vfs::get(playlist.at(next_track));
+					cellMusic.notice("set_playback_command: current vfs path: '%s' (unresolved='%s')", path, playlist.at(next_track));
+				}
+				else
+				{
+					current_selection_context.current_track = current_track;
+					no_more_tracks = true;
+				}
+			}
+
+			if (no_more_tracks)
+			{
+				cellMusic.notice("set_playback_command: no more tracks to play");
+				return CELL_MUSIC_ERROR_NO_MORE_CONTENT;
+			}
+
+			switch (command)
+			{
+			case CELL_MUSIC_PB_CMD_FASTFORWARD:
+				handler->fast_forward(path);
+				break;
+			case CELL_MUSIC_PB_CMD_FASTREVERSE:
+				handler->fast_reverse(path);
+				break;
+			default:
+				handler->play(path);
+				break;
+			}
+
+			break;
+		}
+		default:
+			break;
+		}
+
+		return CELL_OK;
 	}
 };
 
@@ -437,64 +535,8 @@ error_code cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		switch (command)
-		{
-		case CELL_MUSIC2_PB_CMD_STOP:
-			music.handler->stop();
-			break;
-		case CELL_MUSIC2_PB_CMD_PAUSE:
-			music.handler->pause();
-			break;
-		case CELL_MUSIC2_PB_CMD_PLAY:
-		case CELL_MUSIC2_PB_CMD_NEXT:
-		case CELL_MUSIC2_PB_CMD_PREV:
-		{
-			std::string path;
-			bool playback_finished = false;
-			{
-				std::lock_guard lock(music.mtx);
-				const std::vector<std::string>& playlist = music.current_selection_context.playlist;
-				u32 next_track = music.current_selection_context.current_track;
-
-				if (command != CELL_MUSIC2_PB_CMD_PLAY)
-				{
-					next_track = music.current_selection_context.step_track(command == CELL_MUSIC2_PB_CMD_NEXT);
-				}
-
-				if (next_track < playlist.size())
-				{
-					path = vfs::get(playlist.at(next_track));
-					cellMusic.notice("cellMusicSetPlaybackCommand2: current vfs path: '%s' (unresolved='%s')", path, playlist.at(next_track));
-				}
-				else
-				{
-					playback_finished = true;
-				}
-			}
-
-			if (playback_finished)
-			{
-				// TODO: is CELL_MUSIC2_PLAYBACK_FINISHED correct here ?
-				cellMusic.notice("cellMusicSetPlaybackCommand2: no more tracks to play");
-				music.handler->stop();
-				music.func(ppu, CELL_MUSIC2_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_MUSIC2_PLAYBACK_FINISHED), music.userData);
-				return CELL_OK;
-			}
-
-			music.handler->play(path);
-			break;
-		}
-		case CELL_MUSIC2_PB_CMD_FASTFORWARD:
-			music.handler->fast_forward();
-			break;
-		case CELL_MUSIC2_PB_CMD_FASTREVERSE:
-			music.handler->fast_reverse();
-			break;
-		default:
-			break;
-		}
-
-		music.func(ppu, CELL_MUSIC2_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_OK), music.userData);
+		const error_code result = music.set_playback_command(command);
+		music.func(ppu, CELL_MUSIC2_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(+result), music.userData);
 		return CELL_OK;
 	});
 
@@ -515,64 +557,8 @@ error_code cellMusicSetPlaybackCommand(s32 command, vm::ptr<void> param)
 
 	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		switch (command)
-		{
-		case CELL_MUSIC_PB_CMD_STOP:
-			music.handler->stop();
-			break;
-		case CELL_MUSIC_PB_CMD_PAUSE:
-			music.handler->pause();
-			break;
-		case CELL_MUSIC_PB_CMD_PLAY:
-		case CELL_MUSIC_PB_CMD_NEXT:
-		case CELL_MUSIC_PB_CMD_PREV:
-		{
-			std::string path;
-			bool playback_finished = false;
-			{
-				std::lock_guard lock(music.mtx);
-				const std::vector<std::string>& playlist = music.current_selection_context.playlist;
-				u32 next_track = music.current_selection_context.current_track;
-
-				if (command != CELL_MUSIC_PB_CMD_PLAY)
-				{
-					next_track = music.current_selection_context.step_track(command == CELL_MUSIC_PB_CMD_NEXT);
-				}
-
-				if (next_track < playlist.size())
-				{
-					path = vfs::get(playlist.at(next_track));
-					cellMusic.notice("cellMusicSetPlaybackCommand: current vfs path: '%s' (unresolved='%s')", path, playlist.at(next_track));
-				}
-				else
-				{
-					playback_finished = true;
-				}
-			}
-
-			if (playback_finished)
-			{
-				// TODO: is CELL_MUSIC_PLAYBACK_FINISHED correct here ?
-				cellMusic.notice("cellMusicSetPlaybackCommand: no more tracks to play");
-				music.handler->stop();
-				music.func(ppu, CELL_MUSIC_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_MUSIC_PLAYBACK_FINISHED), music.userData);
-				return CELL_OK;
-			}
-
-			music.handler->play(path);
-			break;
-		}
-		case CELL_MUSIC_PB_CMD_FASTFORWARD:
-			music.handler->fast_forward();
-			break;
-		case CELL_MUSIC_PB_CMD_FASTREVERSE:
-			music.handler->fast_reverse();
-			break;
-		default:
-			break;
-		}
-
-		music.func(ppu, CELL_MUSIC_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_OK), music.userData);
+		const error_code result = music.set_playback_command(command);
+		music.func(ppu, CELL_MUSIC_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(+result), music.userData);
 		return CELL_OK;
 	});
 
