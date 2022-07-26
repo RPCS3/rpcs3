@@ -98,6 +98,7 @@
     <ClCompile Include="curl\lib\escape.c" />
     <ClCompile Include="curl\lib\file.c" />
     <ClCompile Include="curl\lib\fileinfo.c" />
+    <ClCompile Include="curl\lib\fopen.c" />
     <ClCompile Include="curl\lib\formdata.c" />
     <ClCompile Include="curl\lib\ftp.c" />
     <ClCompile Include="curl\lib\ftplistparser.c" />
@@ -279,9 +280,11 @@
     <ClInclude Include="curl\lib\dynbuf.h" />
     <ClInclude Include="curl\lib\easyif.h" />
     <ClInclude Include="curl\lib\easyoptions.h" />
+    <ClInclude Include="curl\lib\easy_lock.h" />
     <ClInclude Include="curl\lib\escape.h" />
     <ClInclude Include="curl\lib\file.h" />
     <ClInclude Include="curl\lib\fileinfo.h" />
+    <ClInclude Include="curl\lib\fopen.h" />
     <ClInclude Include="curl\lib\formdata.h" />
     <ClInclude Include="curl\lib\ftp.h" />
     <ClInclude Include="curl\lib\ftplistparser.h" />
