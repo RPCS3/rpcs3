@@ -327,15 +327,28 @@ namespace rsx
 					if (is_whitespace)
 					{
 						// Skip whitespace if we are at the start of a line.
-						if (x_advance > 0.f)
+						if (x_advance <= 0.f)
 						{
+							// Set the glyph to the current position.
+							// This is necessary for downstream linewidth calculations.
+							quad.x0 = quad.x1 = x_advance;
+							quad.y0 = quad.y1 = y_advance;
+						}
+						else
+						{
+							const f32 x_advance_old = x_advance;
+							const f32 y_advance_old = y_advance;
+
 							// Get the glyph size.
 							quad = get_char(c, x_advance, y_advance);
 
 							// Reset the result if the glyph would protrude out of the given space anyway.
 							if (x_advance > max_width)
 							{
-								quad = {};
+								// Set the glyph to the previous position.
+								// This is necessary for downstream linewidth calculations.
+								quad.x0 = quad.x1 = x_advance_old;
+								quad.y0 = quad.y1 = y_advance_old;
 							}
 						}
 					}

@@ -398,7 +398,6 @@ namespace rsx
 						{
 						case '\r':
 						{
-							word_end = line_end = line_begin = ctr;
 							continue;
 						}
 						case '\n':
@@ -481,7 +480,7 @@ namespace rsx
 							const bool is_last_glyph = i_next >= end;
 
 							// The line may be wrapped, so we need to check if the next glyph's position is below the current position.
-							if (is_last_glyph || (std::fabs(result[i_next - 1].y() - result[i_begin + 3].y()) >= size_px))
+							if (is_last_glyph || (result[i_next - 1].y() - result[i_begin + 3].y() >= size_px))
 							{
 								// Whenever we reached the end of a visual line we need to move its glyphs accordingly.
 								const u32 i_end = i_next - (is_last_glyph ? 0 : 4);
