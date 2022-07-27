@@ -47,7 +47,7 @@ std::string music_selection_context::to_string() const
 
 	for (usz i = 0; i < playlist.size(); i++)
 	{
-		fmt::append(str, "\ - Track %d: %s", i, playlist.at(i));
+		fmt::append(str, "\n - Track %d: %s", i, playlist.at(i));
 	}
 
 	return str;
