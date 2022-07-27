@@ -5,6 +5,7 @@
 #include "util/sysinfo.hpp"
 
 #include "Utilities/Thread.h"
+#include "Utilities/File.h"
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -187,6 +188,52 @@ EmuCallbacks main_application::CreateCallbacks()
 
 				success = true;
 				sys_log.notice("get_image_info found image: filename='%s', sub_type='%s', width=%d, height=%d, orientation=%d", filename, sub_type, width, height, orientation);
+			}
+		});
+		return success;
+	};
+
+	callbacks.get_scaled_image = [](const std::string& path, s32 target_width, s32 target_height, s32& width, s32& height, u8* dst) -> bool
+	{
+		width = 0;
+		height = 0;
+
+		if (target_width <= 0 || target_height <= 0 || !dst || !fs::is_file(path))
+		{
+			return false;
+		}
+
+		bool success = false;
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			QImage image{};
+			success = image.load(QString::fromStdString(path)) && !image.isNull();
+
+			if (success)
+			{
+				width = image.width();
+				height = image.height();
+
+				if (width <= 0 || height <= 0)
+				{
+					success = false;
+					return;
+				}
+
+				if (width > target_width || height > target_height)
+				{
+					const QSize size(target_width, target_height);
+					image = image.scaled(QSize(target_width, target_height), Qt::AspectRatioMode::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
+					width = image.width();
+					height = image.height();
+				}
+
+				if (image.format() != QImage::Format::Format_RGBA8888)
+				{
+					image = image.convertToFormat(QImage::Format::Format_RGBA8888);
+				}
+
+				std::memcpy(dst, image.constBits(), std::min(4 * target_width * target_height, image.height() * image.bytesPerLine()));
 			}
 		});
 		return success;
