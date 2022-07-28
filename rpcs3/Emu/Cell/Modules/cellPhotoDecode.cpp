@@ -162,7 +162,7 @@ error_code cellPhotoDecodeFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 	s32 width{};
 	s32 height{};
 
-	if (!Emu.GetCallbacks().get_scaled_image(path, set_param->width, set_param->height, width, height, static_cast<u8*>(set_param->dstBuffer.get_ptr())))
+	if (!Emu.GetCallbacks().get_scaled_image(path, set_param->width, set_param->height, width, height, static_cast<u8*>(set_param->dstBuffer.get_ptr()), false))
 	{
 		cellPhotoDecode.error("Failed to decode '%s'", path);
 		return CELL_PHOTO_DECODE_ERROR_DECODE;

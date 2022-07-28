@@ -157,7 +157,7 @@ error_code select_photo(std::string dst_dir)
 
 					if (!fs::stat(info.path, f_info) || f_info.is_directory)
 					{
-						cellPhotoImportUtil.error("Path is not a directory: '%s'", info.path);
+						cellPhotoImportUtil.error("Path does not belong to a valid file: '%s'", info.path);
 						result = CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR; // TODO: is this correct ?
 						pi_manager.is_busy = false;
 						pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
