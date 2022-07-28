@@ -14,13 +14,13 @@ lv2_lwmutex::lv2_lwmutex(utils::serial& ar)
 	: protocol(ar)
 	, control(ar.operator decltype(control)())
 	, name(ar.operator be_t<u64>())
-	, signaled(ar)
 {
+	ar(lv2_control.raw().signaled);
 }
 
 void lv2_lwmutex::save(utils::serial& ar)
 {
-	ar(protocol, control, name, signaled);
+	ar(protocol, control, name, lv2_control.raw().signaled);
 }
 
 error_code _sys_lwmutex_create(ppu_thread& ppu, vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, s32 has_name, u64 name)
@@ -72,7 +72,7 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 
 			std::lock_guard lock(mutex.mutex);
 
-			if (mutex.sq)
+			if (mutex.load_sq())
 			{
 				return CELL_EBUSY;
 			}
@@ -141,29 +141,30 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
-		if (mutex.signaled.try_dec(0))
+		if (s32 signal = mutex.lv2_control.fetch_op([](auto& data)
 		{
+			if (data.signaled == 1)
+			{
+				data.signaled = 0;
+				return true;
+			}
+
+			return false;
+		}).first.signaled)
+		{
+			if (signal == smin)
+			{
+				ppu.gpr[3] = CELL_EBUSY;
+			}
+
 			return true;
 		}
 
 		lv2_obj::notify_all_t notify(ppu);
 
-		std::lock_guard lock(mutex.mutex);
-
-		auto [old, _] = mutex.signaled.fetch_op([](s32& value)
+		if (s32 signal = mutex.try_own(&ppu))
 		{
-			if (value)
-			{
-				value = 0;
-				return true;
-			}
-
-			return false;
-		});
-
-		if (old)
-		{
-			if (old == smin)
+			if (signal == smin)
 			{
 				ppu.gpr[3] = CELL_EBUSY;
 			}
@@ -172,7 +173,6 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 
 		mutex.sleep(ppu, timeout, true);
-		mutex.add_waiter(&ppu);
 		return false;
 	});
 
@@ -197,7 +197,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		{
 			std::lock_guard lock(mutex->mutex);
 
-			for (auto cpu = +mutex->sq; cpu; cpu = cpu->next_cpu)
+			for (auto cpu = mutex->load_sq(); cpu; cpu = cpu->next_cpu)
 			{
 				if (cpu == &ppu)
 				{
@@ -231,7 +231,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 				std::lock_guard lock(mutex->mutex);
 
-				if (!mutex->unqueue(mutex->sq, &ppu))
+				if (!mutex->unqueue(mutex->lv2_control.raw().sq, &ppu))
 				{
 					break;
 				}
@@ -257,11 +257,11 @@ error_code _sys_lwmutex_trylock(ppu_thread& ppu, u32 lwmutex_id)
 
 	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
-		auto [_, ok] = mutex.signaled.fetch_op([](s32& value)
+		auto [_, ok] = mutex.lv2_control.fetch_op([](auto& data)
 		{
-			if (value & 1)
+			if (data.signaled & 1)
 			{
-				value = 0;
+				data.signaled = 0;
 				return true;
 			}
 
@@ -292,11 +292,16 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 
 	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
+		if (mutex.try_unlock(false))
+		{
+			return;
+		}
+
 		lv2_obj::notify_all_t notify;
 
 		std::lock_guard lock(mutex.mutex);
 
-		if (const auto cpu = mutex.schedule<ppu_thread>(mutex.sq, mutex.protocol))
+		if (const auto cpu = mutex.reown<ppu_thread>())
 		{
 			if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
 			{
@@ -307,8 +312,6 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 			mutex.awake(cpu, true);
 			return;
 		}
-
-		mutex.signaled |= 1;
 	});
 
 	if (!mutex)
@@ -327,11 +330,16 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 
 	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
+		if (mutex.try_unlock(true))
+		{
+			return;
+		}
+
 		lv2_obj::notify_all_t notify;
 
 		std::lock_guard lock(mutex.mutex);
 
-		if (const auto cpu = mutex.schedule<ppu_thread>(mutex.sq, mutex.protocol))
+		if (const auto cpu = mutex.reown<ppu_thread>(true))
 		{
 			if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
 			{
@@ -343,8 +351,6 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 			mutex.awake(cpu, true);
 			return;
 		}
-
-		mutex.signaled |= smin;
 	});
 
 	if (!mutex)

@@ -1276,7 +1276,7 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, bool notify_later)
 	{
 		ppu_log.trace("sleep() - waiting (%zu)", g_pending);
 
-		const auto [_, ok] = ppu->state.fetch_op([&](bs_t<cpu_flag>& val)
+		const auto [_ ,ok] = ppu->state.fetch_op([&](bs_t<cpu_flag>& val)
 		{
 			if (!(val & cpu_flag::signal))
 			{
@@ -1289,7 +1289,7 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, bool notify_later)
 
 		if (!ok)
 		{
-			ppu_log.fatal("sleep() failed (signaled) (%s)", ppu->current_function);
+			ppu_log.trace("sleep() failed (signaled) (%s)", ppu->current_function);
 			return;
 		}
 
@@ -1414,21 +1414,21 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, bool notify_later, s32 prio)
 				auto ppu2 = +*ppu2_next;
 
 				// Rotate current thread to the last position of the 'same prio' threads list
-				ppu_next->release(ppu2);
+				*ppu_next = ppu2;
 
 				// Exchange forward pointers
 				if (ppu->next_ppu != ppu2)
 				{
 					auto ppu2_val = +ppu2->next_ppu;
-					ppu2->next_ppu.release(+ppu->next_ppu);
-					ppu->next_ppu.release(ppu2_val);
-					ppu2_next->release(ppu);
+					ppu2->next_ppu = +ppu->next_ppu;
+					ppu->next_ppu = ppu2_val;
+					*ppu2_next = ppu;
 				}
 				else
 				{
 					auto ppu2_val = +ppu2->next_ppu;
-					ppu2->next_ppu.release(ppu);
-					ppu->next_ppu.release(ppu2_val);
+					ppu2->next_ppu = ppu;
+					ppu->next_ppu = ppu2_val;
 				}
 
 				if (i <= g_cfg.core.ppu_threads + 0u)
@@ -1468,8 +1468,8 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, bool notify_later, s32 prio)
 			// Use priority, also preserve FIFO order
 			if (!next || next->prio > static_cast<ppu_thread*>(cpu)->prio)
 			{
-				it->release(static_cast<ppu_thread*>(cpu));
-				static_cast<ppu_thread*>(cpu)->next_ppu.release(next);
+				atomic_storage<ppu_thread*>::release(static_cast<ppu_thread*>(cpu)->next_ppu, next);
+				atomic_storage<ppu_thread*>::release(*it, static_cast<ppu_thread*>(cpu));
 				break;
 			}
 
@@ -1496,12 +1496,34 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, bool notify_later, s32 prio)
 	if (cpu)
 	{
 		// Emplace current thread
-		changed_queue = emplace_thread(cpu);
+		if (!emplace_thread(cpu))
+		{
+			if (notify_later)
+			{
+				// notify_later includes common optimizations regarding syscalls
+				// one of which is to allow a lock-free version of syscalls with awake behave as semaphore post: always notifies the thread, even if it hasn't slept yet
+				cpu->state += cpu_flag::signal;
+			}
+		}
+		else
+		{
+			changed_queue = true;
+		}
 	}
 	else for (const auto _cpu : g_to_awake)
 	{
 		// Emplace threads from list
-		changed_queue |= emplace_thread(_cpu);
+		if (!emplace_thread(_cpu))
+		{
+			if (notify_later)
+			{
+				_cpu->state += cpu_flag::signal;
+			}
+		}
+		else
+		{
+			changed_queue = true;
+		}
 	}
 
 	// Remove pending if necessary
@@ -1661,4 +1683,19 @@ bool lv2_obj::is_scheduler_ready()
 {
 	reader_lock lock(g_mutex);
 	return g_to_sleep.empty();
+}
+
+bool lv2_obj::has_ppus_in_running_state()
+{
+	auto target = atomic_storage<ppu_thread*>::load(g_ppu);
+
+	for (usz i = 0, thread_count = g_cfg.core.ppu_threads; target; target = atomic_storage<ppu_thread*>::load(target->next_ppu), i++)
+	{
+		if (i >= thread_count)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

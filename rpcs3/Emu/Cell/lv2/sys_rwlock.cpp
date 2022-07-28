@@ -444,13 +444,11 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 					s64 size = 0;
 
 					// Protocol doesn't matter here since they are all enqueued anyways
-					for (auto cpu = +rwlock->rq; cpu; cpu = cpu->next_cpu)
+					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
 					{
 						size++;
 						rwlock->append(cpu);
 					}
-
-					rwlock->rq.release(nullptr);
 
 					rwlock->owner.atomic_op([&](s64& owner)
 					{
@@ -564,13 +562,12 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 			s64 size = 0;
 
 			// Protocol doesn't matter here since they are all enqueued anyways
-			for (auto cpu = +rwlock->rq; cpu; cpu = cpu->next_cpu)
+			while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
 			{
 				size++;
 				rwlock->append(cpu);
 			}
 
-			rwlock->rq.release(nullptr);
 			rwlock->owner.release(-2 * static_cast<s64>(size));
 			lv2_obj::awake_all();
 		}
