@@ -349,17 +349,12 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 
 			auto get_next = [&]() -> ppu_thread*
 			{
-				if (flag->protocol != SYS_SYNC_PRIORITY)
-				{
-					return std::exchange(first, first ? +first->next_cpu : nullptr);
-				}
-
 				s32 prio = smax;
 				ppu_thread* it{};
 	
 				for (auto ppu = first; ppu; ppu = ppu->next_cpu)
 				{
-					if (!ppu->gpr[7] && ppu->prio < prio)
+					if (!ppu->gpr[7] && (flag->protocol != SYS_SYNC_PRIORITY || ppu->prio <= prio))
 					{
 						it = ppu;
 						prio = ppu->prio;
@@ -404,12 +399,12 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 		// Remove waiters
 		for (auto next_cpu = &flag->sq; *next_cpu;)
 		{
-			auto& ppu = *+*next_cpu;
+			auto& ppu = **next_cpu;
 
 			if (ppu.gpr[3] == CELL_OK)
 			{
-				next_cpu->release(+ppu.next_cpu);
-				ppu.next_cpu.release(nullptr);
+				atomic_storage<ppu_thread*>::release(*next_cpu, ppu.next_cpu);
+				ppu.next_cpu = nullptr;
 				flag->append(&ppu);
 				continue;
 			}
@@ -474,7 +469,7 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 		const u64 pattern = flag->pattern;
 
 		// Signal all threads to return CELL_ECANCELED (protocol does not matter)
-		for (auto ppu = +flag->sq; ppu; ppu = ppu->next_cpu)
+		while (auto ppu = flag->schedule<ppu_thread>(flag->sq, SYS_SYNC_FIFO))
 		{
 			ppu->gpr[3] = CELL_ECANCELED;
 			ppu->gpr[6] = pattern;
@@ -482,8 +477,6 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 			value++;
 			flag->append(ppu);
 		}
-
-		flag->sq.release(nullptr);
 
 		if (value)
 		{

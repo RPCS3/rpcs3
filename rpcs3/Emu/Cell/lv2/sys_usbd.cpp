@@ -109,7 +109,7 @@ public:
 
 	// sys_usbd_receive_event PPU Threads
 	shared_mutex mutex_sq;
-	atomic_t<ppu_thread*> sq{};
+	ppu_thread* sq{};
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
@@ -642,7 +642,7 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	usbh.is_init = false;
 
 	// Forcefully awake all waiters
-	for (auto cpu = +usbh.sq; cpu; cpu = cpu->next_cpu)
+	while (auto cpu = lv2_obj::schedule<ppu_thread>(usbh.sq, SYS_SYNC_FIFO))
 	{
 		// Special ternimation signal value
 		cpu->gpr[4] = 4;
@@ -650,8 +650,6 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 		cpu->gpr[6] = 0;
 		lv2_obj::awake(cpu);
 	}
-
-	usbh.sq.release(nullptr);
 
 	// TODO
 	return CELL_OK;

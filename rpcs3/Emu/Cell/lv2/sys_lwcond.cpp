@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_lwcond.h"
 
 #include "Emu/IdManager.h"
@@ -65,7 +65,7 @@ error_code _sys_lwcond_destroy(ppu_thread& ppu, u32 lwcond_id)
 
 	const auto cond = idm::withdraw<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> CellError
 	{
-		if (cond.sq)
+		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
 			return CELL_EBUSY;
 		}
@@ -127,7 +127,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 			}
 		}
 
-		if (cond.sq)
+		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
 			lv2_obj::notify_all_t notify;
 
@@ -160,16 +160,15 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 				if (mode != 2)
 				{
-					ensure(!mutex->signaled);
-					std::lock_guard lock(mutex->mutex);
-
-					if (mode == 3 && mutex->sq) [[unlikely]]
+					if (mode == 3 && mutex->load_sq()) [[unlikely]]
 					{
-						// Respect ordering of the sleep queue
-						lv2_obj::emplace(mutex->sq, result);
-						result = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol);
+						std::lock_guard lock(mutex->mutex);
 
-						if (static_cast<ppu_thread*>(result2)->state & cpu_flag::again)
+						// Respect ordering of the sleep queue
+						mutex->try_own(result, true);
+						auto result2 = mutex->reown<ppu_thread>();
+
+						if (result2->state & cpu_flag::again)
 						{
 							ppu.state += cpu_flag::again;
 							return 0;
@@ -183,7 +182,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 					}
 					else if (mode == 1)
 					{
-						mutex->add_waiter(result);
+						mutex->try_own(result, true);
 						result = nullptr;
 					}
 				}
@@ -253,7 +252,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			}
 		}
 
-		if (cond.sq)
+		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
 			lv2_obj::notify_all_t notify;
 
@@ -270,8 +269,8 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				}
 			}
 
-			decltype(cond.sq) sq{+cond.sq};
-			cond.sq.release(nullptr);
+			auto sq = cond.sq;
+			atomic_storage<ppu_thread*>::release(cond.sq, nullptr);
 	
 			while (const auto cpu = cond.schedule<ppu_thread>(sq, cond.protocol))
 			{
@@ -282,9 +281,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 				if (mode == 1)
 				{
-					ensure(!mutex->signaled);
-					std::lock_guard lock(mutex->mutex);
-					mutex->add_waiter(cpu);
+					mutex->try_own(cpu, true);
 				}
 				else
 				{
@@ -353,8 +350,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		if (mutex_sleep)
 		{
 			// Special: loading state from the point of waiting on lwmutex sleep queue
-			std::lock_guard lock2(mutex->mutex);
-			lv2_obj::emplace(mutex->sq, &ppu);
+			mutex->try_own(&ppu, true);
 		}
 		else
 		{
@@ -362,24 +358,21 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			lv2_obj::emplace(cond.sq, &ppu);
 		}
 
-		if (!ppu.loaded_from_savestate)
+		if (!ppu.loaded_from_savestate && !mutex->try_unlock(false))
 		{
 			std::lock_guard lock2(mutex->mutex);
 
 			// Process lwmutex sleep queue
-			if (const auto cpu = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol))
+			if (const auto cpu = mutex->reown<ppu_thread>())
 			{
 				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
 				{
+					ensure(cond.unqueue(cond.sq, &ppu));
 					ppu.state += cpu_flag::again;
 					return;
 				}
 
 				cond.append(cpu);
-			}
-			else
-			{
-				mutex->signaled |= 1;
 			}
 		}
 
@@ -412,7 +405,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			bool mutex_sleep = false;
 			bool cond_sleep = false;
 
-			for (auto cpu = +mutex->sq; cpu; cpu = cpu->next_cpu)
+			for (auto cpu = mutex->load_sq(); cpu; cpu = cpu->next_cpu)
 			{
 				if (cpu == &ppu)
 				{
@@ -421,7 +414,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				}
 			}
 
-			for (auto cpu = +mutex->sq; cpu; cpu = cpu->next_cpu)
+			for (auto cpu = atomic_storage<ppu_thread*>::load(cond->sq); cpu; cpu = cpu->next_cpu)
 			{
 				if (cpu == &ppu)
 				{
@@ -472,7 +465,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 				bool mutex_sleep = false;
 
-				for (auto cpu = +mutex->sq; cpu; cpu = cpu->next_cpu)
+				for (auto cpu = mutex->load_sq(); cpu; cpu = cpu->next_cpu)
 				{
 					if (cpu == &ppu)
 					{

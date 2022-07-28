@@ -92,8 +92,8 @@ struct lv2_event_queue final : public lv2_obj
 
 	shared_mutex mutex;
 	std::deque<lv2_event> events;
-	atomic_t<spu_thread*> sq{};
-	atomic_t<ppu_thread*> pq{};
+	spu_thread* sq{};
+	ppu_thread* pq{};
 
 	lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept;
 

@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "sys_cond.h"
 
 #include "util/serialization.hpp"
 #include "Emu/IdManager.h"
@@ -8,6 +7,8 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+
+#include "sys_cond.h"
 
 #include "util/asm.hpp"
 
@@ -112,7 +113,7 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 	{
 		std::lock_guard lock(cond.mutex->mutex);
 
-		if (cond.sq)
+		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
 			return CELL_EBUSY;
 		}
@@ -143,7 +144,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
 	{
-		if (cond.sq)
+		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
 			lv2_obj::notify_all_t notify;
 
@@ -159,7 +160,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 				// TODO: Is EBUSY returned after reqeueing, on sys_cond_destroy?
 
-				if (cond.mutex->try_own(*cpu, cpu->id))
+				if (cond.mutex->try_own(*cpu))
 				{
 					cond.awake(cpu, true);
 				}
@@ -183,7 +184,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
 	{
-		if (cond.sq)
+		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
 			lv2_obj::notify_all_t notify;
 
@@ -199,12 +200,12 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 			}
 
 			cpu_thread* result = nullptr;
-			decltype(cond.sq) sq{+cond.sq};
-			cond.sq.release(nullptr);
+			auto sq = cond.sq;
+			atomic_storage<ppu_thread*>::release(cond.sq, nullptr);
 
 			while (const auto cpu = cond.schedule<ppu_thread>(sq, SYS_SYNC_PRIORITY))
 			{
-				if (cond.mutex->try_own(*cpu, cpu->id))
+				if (cond.mutex->try_own(*cpu))
 				{
 					ensure(!std::exchange(result, cpu));
 				}
@@ -238,7 +239,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 			return -1;
 		}
 
-		if (cond.sq)
+		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
 			lv2_obj::notify_all_t notify;
 
@@ -256,7 +257,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 					ensure(cond.unqueue(cond.sq, cpu));
 
-					if (cond.mutex->try_own(*cpu, cpu->id))
+					if (cond.mutex->try_own(*cpu))
 					{
 						cond.awake(cpu, true);
 					}
@@ -295,7 +296,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> s64
 	{
-		if (!ppu.loaded_from_savestate && cond.mutex->owner >> 1 != ppu.id)
+		if (!ppu.loaded_from_savestate && atomic_storage<u32>::load(cond.mutex->control.raw().owner) != ppu.id)
 		{
 			return -1;
 		}
@@ -307,19 +308,18 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		const u64 syscall_state = sstate.try_read<u64>().second;
 		sstate.clear();
 
-		if (syscall_state & 1)
-		{
-			// Mutex sleep
-			ensure(!cond.mutex->try_own(ppu, ppu.id));
-		}
-		else
-		{
-			// Register waiter
-			lv2_obj::emplace(cond.sq, &ppu);
-		}
-
 		if (ppu.loaded_from_savestate)
 		{
+			if (syscall_state & 1)
+			{
+				// Mutex sleep
+				ensure(!cond.mutex->try_own(ppu));
+			}
+			else
+			{
+				lv2_obj::emplace(cond.sq, &ppu);
+			}
+
 			cond.sleep(ppu, timeout, true);
 			return static_cast<u32>(syscall_state >> 32);
 		}
@@ -329,8 +329,17 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 		if (const auto cpu = cond.mutex->reown<ppu_thread>())
 		{
+			if (cpu->state & cpu_flag::again)
+			{
+				ppu.state += cpu_flag::again;
+				return 0;
+			}
+
 			cond.mutex->append(cpu);
 		}
+
+		// Register waiter
+		lv2_obj::emplace(cond.sq, &ppu);
 
 		// Sleep current thread and schedule mutex waiter
 		cond.sleep(ppu, timeout, true);
@@ -342,6 +351,11 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	if (!cond)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (ppu.state & cpu_flag::again)
+	{
+		return {};
 	}
 
 	if (cond.ret < 0)
@@ -363,7 +377,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 			bool mutex_sleep = false;
 			bool cond_sleep = false;
 
-			for (auto cpu = +cond->sq; cpu; cpu = cpu->next_cpu)
+			for (auto cpu = atomic_storage<ppu_thread*>::load(cond->sq); cpu; cpu = cpu->next_cpu)
 			{
 				if (cpu == &ppu)
 				{
@@ -372,7 +386,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 				}
 			}
 
-			for (auto cpu = +cond->mutex->sq; cpu; cpu = cpu->next_cpu)
+			for (auto cpu = atomic_storage<ppu_thread*>::load(cond->mutex->control.raw().sq); cpu; cpu = cpu->next_cpu)
 			{
 				if (cpu == &ppu)
 				{
@@ -422,12 +436,12 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 					ppu.gpr[3] = CELL_ETIMEDOUT;
 
 					// Own or requeue
-					if (cond->mutex->try_own(ppu, ppu.id))
+					if (cond->mutex->try_own(ppu))
 					{
 						break;
 					}
 				}
-				else if (cond->mutex->owner >> 1 == ppu.id)
+				else if (atomic_storage<u32>::load(cond->mutex->control.raw().owner) == ppu.id)
 				{
 					break;
 				}
@@ -444,7 +458,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	}
 
 	// Verify ownership
-	ensure(cond->mutex->owner >> 1 == ppu.id);
+	ensure(atomic_storage<u32>::load(cond->mutex->control.raw().owner) == ppu.id);
 
 	// Restore the recursive value
 	cond->mutex->lock_count.release(static_cast<u32>(cond.ret));

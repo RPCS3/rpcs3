@@ -118,14 +118,14 @@ public:
 
 	// Find and remove the object from the linked list
 	template <typename T>
-	static T* unqueue(atomic_t<T*>& first, T* object, atomic_t<T*> T::* mem_ptr = &T::next_cpu)
+	static T* unqueue(T*& first, T* object, T* T::* mem_ptr = &T::next_cpu)
 	{
 		auto it = +first;
 	
 		if (it == object)
 		{
-			first.release(+it->*mem_ptr);
-			(it->*mem_ptr).release(nullptr);
+			atomic_storage<T*>::release(first, it->*mem_ptr);
+			atomic_storage<T*>::release(it->*mem_ptr, nullptr);
 			return it;
 		}
 
@@ -135,8 +135,8 @@ public:
 
 			if (next == object)
 			{
-				(it->*mem_ptr).release(+next->*mem_ptr);
-				(next->*mem_ptr).release(nullptr);
+				atomic_storage<T*>::release(it->*mem_ptr, next->*mem_ptr);
+				atomic_storage<T*>::release(next->*mem_ptr, nullptr);
 				return next;
 			}
 
@@ -146,8 +146,9 @@ public:
 		return {};
 	}
 
+	// Remove an object from the linked set according to the protocol
 	template <typename E, typename T>
-	static E* schedule(atomic_t<T>& first, u32 protocol)
+	static E* schedule(T& first, u32 protocol)
 	{
 		auto it = static_cast<E*>(first);
 
@@ -156,20 +157,32 @@ public:
 			return it;
 		}
 
+		auto parent_found = &first;
+
 		if (protocol == SYS_SYNC_FIFO)
 		{
-			if (it && cpu_flag::again - it->state)
+			while (true)
 			{
-				first.release(+it->next_cpu);
-				it->next_cpu.release(nullptr);
-			}
+				const auto next = +it->next_cpu;
 
-			return it;
+				if (next)
+				{
+					parent_found = &it->next_cpu;
+					it = next;
+					continue;
+				}
+
+				if (it && cpu_flag::again - it->state)
+				{
+					atomic_storage<T>::release(*parent_found, nullptr);
+				}
+
+				return it;
+			}
 		}
 
 		s32 prio = it->prio;
 		auto found = it;
-		auto parent_found = &first;
 
 		while (true)
 		{
@@ -183,7 +196,8 @@ public:
 
 			const s32 _prio = static_cast<E*>(next)->prio;
 
-			if (_prio < prio)
+			// This condition tests for equality as well so the eraliest element to be pushed is popped
+			if (_prio <= prio)
 			{
 				found = next;
 				parent_found = &node;
@@ -195,27 +209,18 @@ public:
 
 		if (cpu_flag::again - found->state)
 		{
-			parent_found->release(+found->next_cpu);
-			found->next_cpu.release(nullptr);
+			atomic_storage<T>::release(*parent_found, found->next_cpu);
+			atomic_storage<T>::release(found->next_cpu, nullptr);
 		}
 
 		return found;
 	}
 
 	template <typename T>
-	static auto emplace(atomic_t<T>& first, T object)
+	static void emplace(T& first, T object)
 	{
-		auto it = &first;
-
-		while (auto ptr = static_cast<T>(+*it))
-		{
-			it = &ptr->next_cpu;
-		}
-
-		it->release(object);
-
-		// Return parent
-		return it;
+		atomic_storage<T>::release(object->next_cpu, first);
+		atomic_storage<T>::release(first, object);
 	}
 
 private:
@@ -257,6 +262,9 @@ public:
 	// Serialization related
 	static void set_future_sleep(cpu_thread* cpu);
 	static bool is_scheduler_ready();
+
+	// Must be called under IDM lock
+	static bool has_ppus_in_running_state();
 
 	static void cleanup();
 
@@ -538,7 +546,7 @@ private:
 	static thread_local std::vector<class cpu_thread*> g_to_awake;
 
 	// Scheduler queue for active PPU threads
-	static atomic_t<class ppu_thread*> g_ppu;
+	static class ppu_thread* g_ppu;
 
 	// Waiting for the response from
 	static u32 g_pending;

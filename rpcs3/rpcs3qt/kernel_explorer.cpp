@@ -364,8 +364,9 @@ void kernel_explorer::update()
 		case SYS_MUTEX_OBJECT:
 		{
 			auto& mutex = static_cast<lv2_mutex&>(obj);
+			const auto control = mutex.control.load(); 
 			show_waiters(add_solid_node(node, qstr(fmt::format(u8"Mutex 0x%08x: “%s”, %s,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u", id, lv2_obj::name64(mutex.name), mutex.protocol,
-				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", mutex.owner >> 1, +mutex.lock_count, mutex.key, mutex.cond_count))), mutex.sq);
+				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", control.owner, +mutex.lock_count, mutex.key, mutex.cond_count))), control.sq);
 			break;
 		}
 		case SYS_COND_OBJECT:
@@ -488,6 +489,7 @@ void kernel_explorer::update()
 			auto& lwm = static_cast<lv2_lwmutex&>(obj);
 			std::string owner_str = "unknown"; // Either invalid state or the lwmutex control data was moved from
 			sys_lwmutex_t lwm_data{};
+			auto lv2_control = lwm.lv2_control.load();
 
 			if (lwm.control.try_read(lwm_data) && lwm_data.sleep_queue == id)
 			{
@@ -513,12 +515,12 @@ void kernel_explorer::update()
 			}
 			else
 			{
-				show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.control))), lwm.sq);
+				show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lv2_control.signaled, lwm.control))), lv2_control.sq);
 				break;
 			}
 
 			show_waiters(add_solid_node(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Control: *0x%x", id, lv2_obj::name64(lwm.name), lwm.protocol,
-					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lwm.signaled, lwm.control))), lwm.sq);
+					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lv2_control.signaled, lwm.control))), lv2_control.sq);
 			break;
 		}
 		case SYS_TIMER_OBJECT:

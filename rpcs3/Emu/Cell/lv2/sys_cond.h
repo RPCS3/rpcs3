@@ -27,7 +27,7 @@ struct lv2_cond final : lv2_obj
 	const u32 mtx_id;
 
 	std::shared_ptr<lv2_mutex> mutex; // Associated Mutex
-	atomic_t<ppu_thread*> sq{};
+	ppu_thread* sq{};
 
 	lv2_cond(u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
 		: key(key)
