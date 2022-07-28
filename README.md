@@ -1,4 +1,4 @@
-RPCS3
+RPCS3 👀
 =====
 
 [![Azure Build Status](https://dev.azure.com/nekotekina/nekotekina/_apis/build/status/RPCS3.rpcs3?branchName=master)](https://dev.azure.com/nekotekina/nekotekina/_build?definitionId=4&branchName=master)
