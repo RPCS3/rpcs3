@@ -189,11 +189,15 @@ EmuCallbacks main_application::CreateCallbacks()
 				success = true;
 				sys_log.notice("get_image_info found image: filename='%s', sub_type='%s', width=%d, height=%d, orientation=%d", filename, sub_type, width, height, orientation);
 			}
+			else
+			{
+				sys_log.warning("get_image_info failed to read '%s'. Error='%s'", filename, reader.errorString().toStdString());
+			}
 		});
 		return success;
 	};
 
-	callbacks.get_scaled_image = [](const std::string& path, s32 target_width, s32 target_height, s32& width, s32& height, u8* dst) -> bool
+	callbacks.get_scaled_image = [](const std::string& path, s32 target_width, s32 target_height, s32& width, s32& height, u8* dst, bool force_fit) -> bool
 	{
 		width = 0;
 		height = 0;
@@ -206,27 +210,45 @@ EmuCallbacks main_application::CreateCallbacks()
 		bool success = false;
 		Emu.BlockingCallFromMainThread([&]()
 		{
-			QImage image{};
-			success = image.load(QString::fromStdString(path)) && !image.isNull();
+			// We use QImageReader instead of QImage. This way we can load and scale image in one step.
+			QImageReader reader(QString::fromStdString(path));
 
-			if (success)
+			if (reader.canRead())
 			{
-				width = image.width();
-				height = image.height();
+				QSize size = reader.size();
+				width = size.width();
+				height = size.height();
 
 				if (width <= 0 || height <= 0)
 				{
-					success = false;
 					return;
 				}
 
-				if (width > target_width || height > target_height)
+				if (force_fit || width > target_width || height > target_height)
 				{
-					const QSize size(target_width, target_height);
-					image = image.scaled(QSize(target_width, target_height), Qt::AspectRatioMode::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
-					width = image.width();
-					height = image.height();
+					const f32 target_ratio = target_width / static_cast<f32>(target_height);
+					const f32 image_ratio = width / static_cast<f32>(height);
+					const f32 convert_ratio = image_ratio / target_ratio;
+
+					if (convert_ratio > 1.0f)
+					{
+						size = QSize(target_width, target_height / convert_ratio);
+					}
+					else if (convert_ratio < 1.0f)
+					{
+						size = QSize(target_width * convert_ratio, target_height);
+					}
+					else
+					{
+						size = QSize(target_width, target_height);
+					}
+
+					reader.setScaledSize(size);
+					width = size.width();
+					height = size.height();
 				}
+
+				QImage image = reader.read();
 
 				if (image.format() != QImage::Format::Format_RGBA8888)
 				{
@@ -234,6 +256,12 @@ EmuCallbacks main_application::CreateCallbacks()
 				}
 
 				std::memcpy(dst, image.constBits(), std::min(4 * target_width * target_height, image.height() * image.bytesPerLine()));
+				success = true;
+				sys_log.notice("get_scaled_image scaled image: path='%s', width=%d, height=%d", path, width, height);
+			}
+			else
+			{
+				sys_log.error("get_scaled_image failed to read '%s'. Error='%s'", path, reader.errorString().toStdString());
 			}
 		});
 		return success;
