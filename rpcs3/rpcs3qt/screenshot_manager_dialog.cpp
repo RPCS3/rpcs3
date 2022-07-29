@@ -152,8 +152,7 @@ void screenshot_manager_dialog::update_icons(int value)
 
 	const std::function<thumbnail(thumbnail)> load = [icon_size = m_icon_size](thumbnail tn) -> thumbnail
 	{
-		const QPixmap pixmap(tn.path);
-		tn.icon = QIcon(pixmap.scaled(icon_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+		tn.icon = QIcon(gui::utils::get_centered_pixmap(tn.path, icon_size, 0, 0, 1.0));
 		return tn;
 	};
 
