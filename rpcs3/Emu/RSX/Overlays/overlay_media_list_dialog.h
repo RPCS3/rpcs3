@@ -39,9 +39,11 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			s32 show(const media_entry& dir_entry, const std::string& title, u32 focused, bool enable_overlay);
+			s32 show(media_entry* root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay);
 
 		private:
+			void reload(const std::string& title, u32 focused);
+
 			struct media_list_entry : horizontal_layout
 			{
 			public:
@@ -50,6 +52,8 @@ namespace rsx
 			private:
 				std::unique_ptr<image_info> icon_data;
 			};
+
+			media_entry* m_media = nullptr;
 
 			std::unique_ptr<overlay_element> m_dim_background;
 			std::unique_ptr<list_view> m_list;

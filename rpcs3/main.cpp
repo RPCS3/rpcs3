@@ -92,7 +92,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 
 [[noreturn]] extern void report_fatal_error(std::string_view _text)
 {
+#ifdef __linux__
 	extern void jit_announce(uptr, usz, std::string_view);
+#endif
 
 	std::string buf;
 

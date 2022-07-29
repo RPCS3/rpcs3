@@ -433,10 +433,8 @@ namespace gl
 		{
 			return cached->second.get();
 		}
-		else
-		{
-			return load_simple_image(desc, true, owner_uid);
-		}
+
+		return load_simple_image(desc, true, owner_uid);
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)
