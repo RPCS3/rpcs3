@@ -120,7 +120,7 @@ namespace rsx
 				last_button_state[pad_index][button_id] = pressed;
 			};
 
-			while (!exit)
+			while (!m_stop_input_loop)
 			{
 				if (Emu.IsStopped())
 				{
@@ -196,7 +196,7 @@ namespace rsx
 				int pad_index = -1;
 				for (const auto& pad : handler->GetPads())
 				{
-					if (exit)
+					if (m_stop_input_loop)
 						break;
 
 					if (++pad_index >= CELL_PAD_MAX_PORT_NUM)
@@ -294,7 +294,7 @@ namespace rsx
 
 						handle_button_press(button_id, button.m_pressed, pad_index);
 
-						if (exit)
+						if (m_stop_input_loop)
 							break;
 					}
 
@@ -334,7 +334,7 @@ namespace rsx
 						// Handle currently pressed stick direction
 						handle_button_press(button_id, pressed, pad_index);
 
-						if (exit)
+						if (m_stop_input_loop)
 							break;
 					}
 				}
@@ -360,7 +360,7 @@ namespace rsx
 		{
 			// Force unload
 			m_stop_pad_interception.release(stop_pad_interception);
-			exit.release(true);
+			m_stop_input_loop.release(true);
 
 			while (u64 b = thread_bits)
 			{
