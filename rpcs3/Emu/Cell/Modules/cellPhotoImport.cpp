@@ -108,17 +108,32 @@ struct photo_import
 	vm::ptr<void> userdata{};
 };
 
+vm::gvar<CellPhotoImportFileDataSub> g_filedata_sub;
+vm::gvar<CellPhotoImportFileData> g_filedata;
+
 error_code select_photo(std::string dst_dir)
 {
 	auto& pi_manager = g_fxo->get<photo_import>();
 
 	if (!pi_manager.func_finish)
+	{
+		cellPhotoImportUtil.error("func_finish is null");
 		return CELL_PHOTO_IMPORT_ERROR_PARAM;
+	}
+
+	if (!dst_dir.starts_with("/dev_hdd0"))
+	{
+		cellPhotoImportUtil.error("Destination '%s' is not inside dev_hdd0", dst_dir);
+		return CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR; // TODO: is this correct?
+	}
+
+	dst_dir = vfs::get(dst_dir);
 
 	if (!fs::is_dir(dst_dir))
 	{
 		// TODO: check if the dir is user accessible and can be written to
-		return CELL_PHOTO_IMPORT_ERROR_PARAM; // TODO: is this correct?
+		cellPhotoImportUtil.error("Destination '%s' is not a directory", dst_dir);
+		return CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR; // TODO: is this correct?
 	}
 
 	pi_manager.is_busy = true;
@@ -131,8 +146,8 @@ error_code select_photo(std::string dst_dir)
 		{
 			sysutil_register_cb([&pi_manager, dst_dir, info, status](ppu_thread& ppu) -> s32
 			{
-				vm::var<CellPhotoImportFileData> filedata = vm::make_var(CellPhotoImportFileData{});
-				vm::var<CellPhotoImportFileDataSub> sub = vm::make_var(CellPhotoImportFileDataSub{});
+				*g_filedata_sub = {};
+				*g_filedata = {};
 
 				u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_CANCEL};
 
@@ -142,15 +157,19 @@ error_code select_photo(std::string dst_dir)
 
 					if (!fs::stat(info.path, f_info) || f_info.is_directory)
 					{
+						cellPhotoImportUtil.error("Path does not belong to a valid file: '%s'", info.path);
 						result = CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR; // TODO: is this correct ?
-						pi_manager.func_finish(ppu, result, filedata, pi_manager.userdata);
+						pi_manager.is_busy = false;
+						pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
 						return CELL_OK;
 					}
 
 					if (f_info.size > pi_manager.param.fileSizeMax)
 					{
+						cellPhotoImportUtil.error("File size is too large: %d (fileSizeMax=%d)", f_info.size, pi_manager.param.fileSizeMax);
 						result = CELL_PHOTO_IMPORT_ERROR_COPY; // TODO: is this correct ?
-						pi_manager.func_finish(ppu, result, filedata, pi_manager.userdata);
+						pi_manager.is_busy = false;
+						pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
 						return CELL_OK;
 					}
 
@@ -159,42 +178,42 @@ error_code select_photo(std::string dst_dir)
 					const std::string sub_type = fmt::to_lower(info.sub_type);
 					const std::string dst_path = dst_dir + "/" + filename;
 
-					strcpy_trunc(filedata->dstFileName, filename);
-					strcpy_trunc(filedata->photo_title, title);
-					strcpy_trunc(filedata->game_title, Emu.GetTitle());
-					// strcpy_trunc(filedata->game_comment, ...); // TODO
+					strcpy_trunc(g_filedata->dstFileName, filename);
+					strcpy_trunc(g_filedata->photo_title, title);
+					strcpy_trunc(g_filedata->game_title, Emu.GetTitle());
+					strcpy_trunc(g_filedata->game_comment, ""); // TODO
 
-					filedata->data_sub = sub;
-					filedata->data_sub->width = info.width;
-					filedata->data_sub->height = info.height;
+					g_filedata->data_sub = g_filedata_sub;
+					g_filedata->data_sub->width = info.width;
+					g_filedata->data_sub->height = info.height;
 
 					if (sub_type == "jpg" || sub_type == "jpeg")
 					{
-						filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_JPEG;
+						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_JPEG;
 					}
 					else if (sub_type == "png")
 					{
-						filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_PNG;
+						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_PNG;
 					}
 					else if (sub_type == "tif" || sub_type == "tiff")
 					{
-						filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_TIFF;
+						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_TIFF;
 					}
 					else if (sub_type == "bmp")
 					{
-						filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_BMP;
+						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_BMP;
 					}
 					else if (sub_type == "gif")
 					{
-						filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_GIF;
+						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_GIF;
 					}
 					else if (sub_type == "mpo")
 					{
-						filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_MPO;
+						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_MPO;
 					}
 					else
 					{
-						filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_UNKNOWN;
+						g_filedata->data_sub->format = CELL_PHOTO_IMPORT_FT_UNKNOWN;
 					}
 
 					switch (info.orientation)
@@ -202,25 +221,32 @@ error_code select_photo(std::string dst_dir)
 					default:
 					case CELL_SEARCH_ORIENTATION_UNKNOWN:
 					case CELL_SEARCH_ORIENTATION_TOP_LEFT:
-						filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_0;
+						g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_0;
 						break;
 					case CELL_SEARCH_ORIENTATION_TOP_RIGHT:
-						filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_90;
+						g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_90;
 						break;
 					case CELL_SEARCH_ORIENTATION_BOTTOM_RIGHT:
-						filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_180;
+						g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_180;
 						break;
 					case CELL_SEARCH_ORIENTATION_BOTTOM_LEFT:
-						filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_270;
+						g_filedata->data_sub->rotate = CELL_PHOTO_IMPORT_TEX_ROT_270;
 						break;
 					}
 
-					cellPhotoImportUtil.success("Media list dialog: selected entry '%s'. Copying to '%s'...", info.path, dst_path);
+					cellPhotoImportUtil.notice("Media list dialog: selected entry '%s'. Copying to '%s'...", info.path, dst_path);
+
 					if (!fs::copy_file(info.path, dst_path, false))
 					{
 						cellPhotoImportUtil.error("Failed to copy '%s' to '%s'. Error = '%s'", info.path, dst_path, fs::g_tls_error);
 						result = CELL_PHOTO_IMPORT_ERROR_COPY;
 					}
+
+					cellPhotoImportUtil.notice("Raw image data: filename='%s', title='%s', game='%s', sub_type='%s', width=%d, height=%d, orientation=%d ",
+						filename, title, Emu.GetTitle(), sub_type, info.width, info.height, info.orientation);
+
+					cellPhotoImportUtil.notice("Cell image data: dstFileName='%s', photo_title='%s', game_title='%s', format=%d, width=%d, height=%d, rotate=%d ",
+						g_filedata->dstFileName, g_filedata->photo_title, g_filedata->game_title, static_cast<s32>(g_filedata->data_sub->format), g_filedata->data_sub->width, g_filedata->data_sub->height, static_cast<s32>(g_filedata->data_sub->rotate));
 				}
 				else
 				{
@@ -228,7 +254,7 @@ error_code select_photo(std::string dst_dir)
 				}
 
 				pi_manager.is_busy = false;
-				pi_manager.func_finish(ppu, result, filedata, pi_manager.userdata);
+				pi_manager.func_finish(ppu, result, g_filedata, pi_manager.userdata);
 				return CELL_OK;
 			});
 		});
@@ -298,4 +324,7 @@ DECLARE(ppu_module_manager::cellPhotoImportUtil)("cellPhotoImportUtil", []()
 {
 	REG_FUNC(cellPhotoImportUtil, cellPhotoImport);
 	REG_FUNC(cellPhotoImportUtil, cellPhotoImport2);
+
+	REG_VAR(cellPhotoImportUtil, g_filedata_sub).flag(MFF_HIDDEN);
+	REG_VAR(cellPhotoImportUtil, g_filedata).flag(MFF_HIDDEN);
 });
