@@ -40,10 +40,10 @@ void keyboard_pad_handler::init_config(cfg_pad* cfg)
 	cfg->ls_down.def  = GetKeyName(Qt::Key_S);
 	cfg->ls_right.def = GetKeyName(Qt::Key_D);
 	cfg->ls_up.def    = GetKeyName(Qt::Key_W);
-	cfg->rs_left.def  = GetKeyName(Qt::Key_Home);
-	cfg->rs_down.def  = GetKeyName(Qt::Key_PageDown);
-	cfg->rs_right.def = GetKeyName(Qt::Key_End);
-	cfg->rs_up.def    = GetKeyName(Qt::Key_PageUp);
+	cfg->rs_left.def  = GetKeyName(Qt::Key_Delete);
+	cfg->rs_down.def  = GetKeyName(Qt::Key_End);
+	cfg->rs_right.def = GetKeyName(Qt::Key_PageDown);
+	cfg->rs_up.def    = GetKeyName(Qt::Key_Home);
 	cfg->start.def    = GetKeyName(Qt::Key_Return);
 	cfg->select.def   = GetKeyName(Qt::Key_Space);
 	cfg->ps.def       = GetKeyName(Qt::Key_Backspace);
