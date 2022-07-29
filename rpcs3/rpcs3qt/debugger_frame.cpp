@@ -360,7 +360,8 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	}
 
 	const u32 address_limits = (cpu->id_type() == 2 ? 0x3fffc : ~3);
-	const u32 pc = (row >= 0 ? m_debugger_list->m_pc + row * 4 : cpu->get_pc()) & address_limits;
+	const u32 pc = (m_debugger_list->m_pc & address_limits);
+	const u32 selected = (m_debugger_list->m_showing_selected_instruction ? m_debugger_list->m_selected_instruction : cpu->get_pc()) & address_limits;
 
 	const auto modifiers = QApplication::keyboardModifiers();
 
@@ -568,7 +569,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			{
 				if (!m_inst_editor)
 				{
-					m_inst_editor = new instruction_editor_dialog(this, pc, m_disasm.get(), make_check_cpu(cpu));
+					m_inst_editor = new instruction_editor_dialog(this, selected, m_disasm.get(), make_check_cpu(cpu));
 					connect(m_inst_editor, &QDialog::finished, this, [this]() { m_inst_editor = nullptr; });
 					m_inst_editor->show();
 				}
@@ -625,19 +626,21 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			// Indirect branches (unknown targets, such as function return) do not proceed to any instruction
 			std::array<u32, 2> res{umax, umax};
 
+			const u32 selected = (m_debugger_list->m_showing_selected_instruction ? m_debugger_list->m_selected_instruction : cpu->get_pc()) & address_limits;
+
 			switch (cpu->id_type())
 			{
 			case 2:
 			{
-				res = op_branch_targets(pc, spu_opcode_t{static_cast<spu_thread*>(cpu)->_ref<u32>(pc)});
+				res = op_branch_targets(selected, spu_opcode_t{static_cast<spu_thread*>(cpu)->_ref<u32>(selected)});
 				break;
 			}
 			case 1:
 			{
 				be_t<ppu_opcode_t> op{};
 
-				if (vm::check_addr(pc, vm::page_executable) && vm::try_access(pc, &op, 4, false))
-					res = op_branch_targets(pc, op);
+				if (vm::check_addr(selected, vm::page_executable) && vm::try_access(selected, &op, 4, false))
+					res = op_branch_targets(selected, op);
 
 				break;
 			}
@@ -645,7 +648,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			}
 
 			if (const usz pos = std::basic_string_view<u32>(res.data(), 2).find_last_not_of(umax); pos != umax)
-				m_debugger_list->ShowAddress(res[pos] - std::max(row, 0) * 4, true, true);
+				m_debugger_list->ShowAddress(res[pos] - std::max(row, 0) * 4, true);
 
 			return;
 		}
