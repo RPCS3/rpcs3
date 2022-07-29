@@ -92,7 +92,7 @@ namespace rsx
 				pad_button::ls_left,
 				pad_button::ls_right
 			};
-			atomic_t<bool> exit = false;
+			atomic_t<bool> m_stop_input_loop = false;
 			atomic_t<bool> m_interactive = false;
 			bool m_start_pad_interception = true;
 			atomic_t<bool> m_stop_pad_interception = false;

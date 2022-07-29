@@ -268,7 +268,7 @@ namespace rsx
 				}
 				else
 				{
-					while (!exit)
+					while (!m_stop_input_loop)
 					{
 						refresh();
 
@@ -279,7 +279,7 @@ namespace rsx
 			}
 			else
 			{
-				if (!exit)
+				if (!m_stop_input_loop)
 				{
 					auto& dlg_thread = g_fxo->get<named_thread<msg_dialog_thread>>();
 
@@ -307,7 +307,7 @@ namespace rsx
 						}
 						else
 						{
-							while (!exit && thread_ctrl::state() != thread_state::aborting)
+							while (!m_stop_input_loop && thread_ctrl::state() != thread_state::aborting)
 							{
 								refresh();
 

@@ -300,7 +300,7 @@ namespace rsx
 
 			m_update = true;
 			visible = true;
-			exit = false;
+			m_stop_input_loop = false;
 
 			fade_animation.current = color4f(0.f);
 			fade_animation.end = color4f(1.f);
