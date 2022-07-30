@@ -43,6 +43,8 @@
 #define HAVE_ECC
 #define ECC_SHAMIR
 #define ECC_TIMING_RESISTANT
+#define USE_FAST_MATH
+#define FP_MAX_BITS 8192
 
 /* UTF-8 aware filesystem functions for Windows */
 #define WOLFSSL_USER_FILESYSTEM
