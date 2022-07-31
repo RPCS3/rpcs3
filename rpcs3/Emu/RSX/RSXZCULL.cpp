@@ -75,7 +75,7 @@ namespace rsx
 		{
 			// NOTE: Only enable host queries if pixel count is active to save on resources
 			// Can optionally be enabled for either stats enabled or zpass enabled for accuracy
-			const bool data_stream_available = write_enabled && (zpass_count_enabled /*|| stats_enabled*/);
+			const bool data_stream_available = zpass_count_enabled; // write_enabled && (zpass_count_enabled || stats_enabled);
 			if (host_queries_active && !data_stream_available)
 			{
 				// Stop
@@ -312,14 +312,14 @@ namespace rsx
 				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
-				value = value ? 0 : u16{ umax };
+				value = (value || !write_enabled || !stats_enabled) ? 0 : u16{ umax };
 				break;
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS:
 			default:
 				//Not implemented
-				value = -1;
+				value = (write_enabled && stats_enabled) ? -1 : 0;
 				break;
 			}
 
