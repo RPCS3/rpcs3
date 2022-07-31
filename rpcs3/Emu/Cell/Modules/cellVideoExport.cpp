@@ -77,7 +77,7 @@ struct video_export
 };
 
 
-bool check_file_path(const std::string& file_path)
+bool check_movie_path(const std::string& file_path)
 {
 	if (file_path.size() >= CELL_VIDEO_EXPORT_UTIL_HDD_PATH_MAX)
 	{
@@ -109,6 +109,32 @@ bool check_file_path(const std::string& file_path)
 	}
 
 	return true;
+}
+
+std::string get_available_movie_path(const std::string& filename)
+{
+	const std::string movie_dir = "/dev_hdd0/movie/";
+	std::string dst_path = vfs::get(movie_dir + filename);
+
+	// Do not overwrite existing files. Add a suffix instead.
+	for (u32 i = 0; fs::exists(dst_path); i++)
+	{
+		const std::string suffix = std::to_string(i);
+		std::string new_filename = filename;
+
+		if (const usz pos = new_filename.find_last_of('.'); pos != std::string::npos)
+		{
+			new_filename.insert(pos, suffix);
+		}
+		else
+		{
+			new_filename.append(suffix);
+		}
+
+		dst_path = vfs::get(movie_dir + new_filename);
+	}
+
+	return dst_path;
 }
 
 
@@ -178,7 +204,11 @@ error_code cellVideoExportProgress(vm::ptr<CellVideoExportUtilFinishCallback> fu
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		funcFinish(ppu, 0xFFFF, userdata); // 0-0xFFFF where 0xFFFF = 100%
+		// Set the status as 0x0-0xFFFF (0-100%) depending on the copy status.
+		// Only the copy or move of the movie and metadata files is considered for the progress.
+		const auto& vexp = g_fxo->get<video_export>();
+
+		funcFinish(ppu, vexp.progress, userdata);
 		return CELL_OK;
 	});
 
@@ -196,7 +226,7 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 	
 	const std::string file_path = fmt::format("%s/%s", srcHddDir, srcHddFile);
 
-	if (!check_file_path(file_path))
+	if (!check_movie_path(file_path))
 	{
 		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
@@ -213,11 +243,11 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 
 		const std::string filename = file_path.substr(file_path.find_last_of('/') + 1);
 		const std::string src_path = vfs::get(file_path);
-		const std::string dst_path = vfs::get("/dev_hdd0/video/" + filename);
+		const std::string dst_path = get_available_movie_path(filename);
 
 		cellVideoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
 
-		if (!fs::copy_file(src_path, dst_path, true))
+		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
 		{
 			// TODO: find out which error is used
 			cellVideoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
@@ -250,7 +280,7 @@ error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 	
 	const std::string file_path = fmt::format("%s/%s", srcHddDir, srcHddFile);
 
-	if (!check_file_path(file_path))
+	if (!check_movie_path(file_path))
 	{
 		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
@@ -267,11 +297,11 @@ error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 
 		const std::string filename = file_path.substr(file_path.find_last_of('/') + 1);
 		const std::string src_path = vfs::get(file_path);
-		const std::string dst_path = vfs::get("/dev_hdd0/movie/" + filename);
+		const std::string dst_path = get_available_movie_path(filename);
 
 		cellVideoExport.notice("Copying file from '%s' to '%s'", file_path, dst_path);
 
-		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, true))
+		if (!fs::create_path(fs::get_parent_dir(dst_path)) || !fs::copy_file(src_path, dst_path, false))
 		{
 			// TODO: find out which error is used
 			cellVideoExport.error("Failed to copy file from '%s' to '%s' (%s)", src_path, dst_path, fs::g_tls_error);
@@ -315,11 +345,7 @@ error_code cellVideoExportFinalize(vm::ptr<CellVideoExportUtilFinishCallback> fu
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		// Set the status as 0x0-0xFFFF (0-100%) depending on the copy status.
-		// Only the copy or move of the movie and metadata files is considered for the progress.
-		const auto& vexp = g_fxo->get<video_export>();
-
-		funcFinish(ppu, vexp.progress, userdata);
+		funcFinish(ppu, CELL_OK, userdata);
 		return CELL_OK;
 	});
 
