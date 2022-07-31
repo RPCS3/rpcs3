@@ -96,8 +96,6 @@ void music_selection_context::set_playlist(const std::string& path)
 
 		for (auto&& dir_entry : fs::dir{path})
 		{
-			dir_entry.name = vfs::unescape(dir_entry.name);
-
 			if (dir_entry.name == "." || dir_entry.name == "..")
 			{
 				continue;

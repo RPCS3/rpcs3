@@ -191,7 +191,7 @@ EmuCallbacks main_application::CreateCallbacks()
 			}
 			else
 			{
-				sys_log.warning("get_image_info failed to read '%s'. Error='%s'", filename, reader.errorString().toStdString());
+				sys_log.error("get_image_info failed to read '%s'. Error='%s'", filename, reader.errorString().toStdString());
 			}
 		});
 		return success;
