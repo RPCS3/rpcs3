@@ -35,28 +35,6 @@ namespace gl
 		GLenum primitives = GL_TRIANGLE_STRIP;
 		GLenum input_filter = GL_NEAREST;
 
-		struct saved_sampler_state
-		{
-			GLuint saved = GL_NONE;
-			GLuint unit = 0;
-
-			saved_sampler_state(GLuint _unit, const gl::sampler_state& sampler)
-			{
-				glActiveTexture(GL_TEXTURE0 + _unit);
-				glGetIntegerv(GL_SAMPLER_BINDING, reinterpret_cast<GLint*>(&saved));
-
-				unit = _unit;
-				sampler.bind(_unit);
-			}
-
-			saved_sampler_state(const saved_sampler_state&) = delete;
-
-			~saved_sampler_state()
-			{
-				glBindSampler(unit, saved);
-			}
-		};
-
 		void create();
 		void destroy();
 

@@ -47,7 +47,7 @@ namespace rsx
 			if (m_cur_pos != index)
 			{
 				m_cur_pos = index;
-				m_text.set_pos(10, index * 18);
+				m_text.set_pos(10, static_cast<u16>(index * 18));
 			}
 
 			if ((m_expiration_time - time) < 2'000'000)

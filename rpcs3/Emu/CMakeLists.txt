@@ -471,6 +471,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/GL/glutils/image.cpp
     RSX/GL/glutils/program.cpp
     RSX/GL/glutils/ring_buffer.cpp
+    RSX/GL/glutils/sampler.cpp
     RSX/GL/GLCommonDecompiler.cpp
     RSX/GL/GLCompute.cpp
     RSX/GL/GLDraw.cpp

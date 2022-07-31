@@ -25,7 +25,7 @@ namespace gl
 
 		void initialize();
 		void create();
-		void destroy();
+		virtual void destroy();
 
 		virtual void bind_resources() {}
 
@@ -343,8 +343,13 @@ namespace gl
 
 	struct pixel_buffer_layout;
 
-	struct cs_image_to_ssbo : compute_task
+	class cs_image_to_ssbo : public compute_task
 	{
+	protected:
+		gl::sampler_state m_sampler;
+
+	public:
+		void destroy() override { m_sampler.remove(); compute_task::destroy(); }
 		virtual void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) = 0;
 	};
 
