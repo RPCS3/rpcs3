@@ -277,15 +277,15 @@ namespace rsx
 			{
 				for (auto&& dir_entry : fs::dir{media_path})
 				{
-					dir_entry.name = vfs::unescape(dir_entry.name);
-
 					if (dir_entry.name == "." || dir_entry.name == "..")
 					{
 						continue;
 					}
 
+					const std::string unescaped_name = vfs::unescape(dir_entry.name);
+
 					media_list_dialog::media_entry new_entry{};
-					parse_media_recursive(depth, media_path + "/" + dir_entry.name, dir_entry.name, type, new_entry);
+					parse_media_recursive(depth, media_path + "/" + dir_entry.name, unescaped_name, type, new_entry);
 					if (new_entry.type != media_list_dialog::media_type::invalid)
 					{
 						new_entry.parent = &current_entry;
