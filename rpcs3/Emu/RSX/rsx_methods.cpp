@@ -83,14 +83,10 @@ namespace rsx
 	{
 		void set_reference(thread* rsx, u32 /*reg*/, u32 arg)
 		{
+			rsx->sync();
+
 			// Write ref+get (get will be written again with the same value at command end)
 			auto& dma = vm::_ref<RsxDmaControl>(rsx->dma_address);
-
-			if (arg != dma.ref)
-			{
-				rsx->sync();
-			}
-
 			dma.get.release(rsx->fifo_ctrl->get_pos());
 			dma.ref.store(arg);
 		}
