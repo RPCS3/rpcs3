@@ -121,9 +121,9 @@ error_code select_photo(std::string dst_dir)
 		return CELL_PHOTO_IMPORT_ERROR_PARAM;
 	}
 
-	if (!dst_dir.starts_with("/dev_hdd0"))
+	if (!dst_dir.starts_with("/dev_hdd0"sv) && !dst_dir.starts_with("/dev_hdd1"sv))
 	{
-		cellPhotoImportUtil.error("Destination '%s' is not inside dev_hdd0", dst_dir);
+		cellPhotoImportUtil.error("Destination '%s' is not inside dev_hdd0 or dev_hdd1", dst_dir);
 		return CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR; // TODO: is this correct?
 	}
 
