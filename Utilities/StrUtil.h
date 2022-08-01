@@ -27,6 +27,9 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max);
 // Convert string to unsigned integer
 bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
 
+// Get the file extension of a file path ("png", "jpg", etc.)
+std::string get_file_extension(const std::string& file_path);
+
 namespace fmt
 {
 	std::string replace_all(std::string_view src, std::string_view from, std::string_view to, usz count = -1);
