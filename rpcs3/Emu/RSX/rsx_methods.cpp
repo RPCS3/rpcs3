@@ -43,6 +43,12 @@ namespace rsx
 			// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
 			const bool handled = rsx->get_backend_config().supports_host_gpu_labels && rsx->release_GCM_label(address, data);
 
+			if (vm::_ref<RsxSemaphore>(address).val == data)
+			{
+				// It's a no-op to write the same value (although there is a delay in real-hw so it's more accurate to allow GPU label in this case)
+				return;
+			}
+
 			if constexpr (FlushDMA)
 			{
 				// If the backend handled the request, this call will basically be a NOP
@@ -77,10 +83,14 @@ namespace rsx
 	{
 		void set_reference(thread* rsx, u32 /*reg*/, u32 arg)
 		{
-			rsx->sync();
-
 			// Write ref+get (get will be written again with the same value at command end)
 			auto& dma = vm::_ref<RsxDmaControl>(rsx->dma_address);
+
+			if (arg != dma.ref)
+			{
+				rsx->sync();
+			}
+
 			dma.get.release(rsx->fifo_ctrl->get_pos());
 			dma.ref.store(arg);
 		}
