@@ -122,12 +122,13 @@ namespace vm
 	{
 		auto_typemap<block_t> m;
 
-		// Common mapped region for special cases
-		std::shared_ptr<utils::shm> m_common;
+		// Common mapped regions for special cases (32MB each, 16 max)
+		static constexpr u32 common_size = 0x200'0000;
+		std::array<std::shared_ptr<utils::shm>, 0x2000'0000 / common_size> m_common;
 
 		atomic_t<u64> m_id = 0;
 
-		bool try_alloc(u32 addr, u64 bflags, u32 size, std::shared_ptr<utils::shm>&&) const;
+		bool try_alloc(u32 addr, u64 bflags, u32 size, std::shared_ptr<utils::shm>&&);
 
 		// Unmap block
 		bool unmap();

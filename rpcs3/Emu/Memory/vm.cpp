@@ -1032,7 +1032,7 @@ namespace vm
 	// Mapped regions: addr -> shm handle
 	constexpr auto block_map = &auto_typemap<block_t>::get<std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>>>;
 
-	bool block_t::try_alloc(u32 addr, u64 bflags, u32 size, std::shared_ptr<utils::shm>&& shm) const
+	bool block_t::try_alloc(u32 addr, u64 bflags, u32 size, std::shared_ptr<utils::shm>&& shm)
 	{
 		// Check if memory area is already mapped
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
@@ -1079,6 +1079,49 @@ namespace vm
 			// Mark overflow/underflow guard pages as allocated
 			ensure(!g_pages[addr / 4096].exchange(page_allocated));
 			ensure(!g_pages[addr / 4096 + size / 4096 - 1].exchange(page_allocated));
+		}
+
+		if (this->flags & preallocated)
+		{
+			// Allocate common regions as needed
+			const u32 fixed_this_addr = (this->addr == 0x10000 ? 0 : this->addr); // special handling for vm::main
+			const usz begin_it = (addr - fixed_this_addr) / common_size;
+
+			for (auto& common : std::span(m_common.data() + begin_it, ((addr + size) - 1 - fixed_this_addr) / common_size - begin_it + 1))
+			{
+				if (common)
+				{
+					continue;
+				}
+
+				std::string map_error;
+
+				auto map_critical = [&](u8* ptr, utils::protection prot)
+				{
+					auto [res, error] = common->map_critical(ptr, prot);
+
+					if (res != ptr)
+					{
+						map_error = std::move(error);
+						return false;
+					}
+
+					return true;
+				};
+
+				const usz pos = &common - m_common.data();
+				const u32 alloc_addr = pos * common_size + this->addr - (this->addr == 0x10000 && pos != 0 ? 0x10000 : 0);
+
+				// Special path for whole-allocated areas allowing 4k granularity
+				common = std::make_shared<utils::shm>(common_size - (alloc_addr == 0x10000 ? 0x10000 : 0));
+
+				if (!map_critical(vm::_ptr<u8>(alloc_addr), this->flags & page_size_4k && utils::c_page_size > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(alloc_addr), utils::protection::rw))
+				{
+					fmt::throw_exception("Memory mapping failed (addr=0x%x, flags=0x%x): %s", alloc_addr, this->flags, map_error);
+				}
+
+				lock_sudo(alloc_addr, common->size());
+			}
 		}
 
 		// Map "real" memory pages; provide a function to search for mirrors with private member access
@@ -1168,28 +1211,8 @@ namespace vm
 	{
 		if (this->flags & preallocated)
 		{
-			std::string map_error;
-
-			auto map_critical = [&](u8* ptr, utils::protection prot)
-			{
-				auto [res, error] = m_common->map_critical(ptr, prot);
-	
-				if (res != ptr)
-				{
-					map_error = std::move(error);
-					return false;
-				}
-	
-				return true;
-			};
-
-			// Special path for whole-allocated areas allowing 4k granularity
-			m_common = std::make_shared<utils::shm>(size);
-
-			if (!map_critical(vm::_ptr<u8>(addr), this->flags & page_size_4k && utils::c_page_size > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
-			{
-				fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
-			}
+			// Must be 64MB aligned (with a special case for vm::main)
+			ensure((addr | size) % common_size == 0 || addr == 0x10000);
 		}
 	}
 
@@ -1208,12 +1231,21 @@ namespace vm
 				it = next;
 			}
 
-			if (m_common)
+			for (auto& common : m_common)
 			{
-				m_common->unmap_critical(vm::base(addr));
+				if (!common)
+				{
+					continue;
+				}
+
+				const usz pos = &common - m_common.data();
+				const u32 free_addr = pos * common_size + this->addr - (this->addr == 0x10000 && pos != 0 ? 0x10000 : 0);
+
+				common->unmap_critical(vm::base(free_addr));
 #ifdef _WIN32
-				m_common->unmap_critical(vm::get_super_ptr(addr));
+				common->unmap_critical(vm::get_super_ptr(free_addr));
 #endif
+				common.reset();
 			}
 
 			return true;
@@ -1256,7 +1288,7 @@ namespace vm
 		// Create or import shared memory object
 		std::shared_ptr<utils::shm> shm;
 
-		if (m_common)
+		if (this->flags & vm::preallocated)
 			ensure(!src);
 		else if (src)
 			shm = *src;
@@ -1335,7 +1367,7 @@ namespace vm
 		// Create or import shared memory object
 		std::shared_ptr<utils::shm> shm;
 
-		if (m_common)
+		if (this->flags & vm::preallocated)
 			ensure(!src);
 		else if (src)
 			shm = *src;
@@ -1432,7 +1464,7 @@ namespace vm
 		}
 
 		// Special case
-		if (m_common)
+		if (this->flags & vm::preallocated)
 		{
 			return {addr, nullptr};
 		}
@@ -1599,14 +1631,6 @@ namespace vm
 		, size(ar)
 		, flags(ar)
 	{
-		if (flags & preallocated)
-		{
-			m_common = std::make_shared<utils::shm>(size);
-			m_common->map_critical(vm::base(addr), utils::protection::no);
-			m_common->map_critical(vm::get_super_ptr(addr));
-			lock_sudo(addr, size);
-		}
-
 		auto& m_map = (m.*block_map)();
 
 		std::shared_ptr<utils::shm> null_shm;
