@@ -2,7 +2,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
-
+#include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 
 LOG_CHANNEL(cellVideoExport);
@@ -119,7 +119,7 @@ std::string get_available_movie_path(const std::string& filename)
 	// Do not overwrite existing files. Add a suffix instead.
 	for (u32 i = 0; fs::exists(dst_path); i++)
 	{
-		const std::string suffix = std::to_string(i);
+		const std::string suffix = fmt::format("_%d", i);
 		std::string new_filename = filename;
 
 		if (const usz pos = new_filename.find_last_of('.'); pos != std::string::npos)
@@ -219,11 +219,15 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 {
 	cellVideoExport.todo("cellVideoExportFromFileWithCopy(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
 
-	if (!param || !srcHddDir || !srcHddDir[0] || !srcHddFile || !srcHddFile[0])
+	if (!param || !funcFinish || !srcHddDir || !srcHddDir[0] || !srcHddFile || !srcHddFile[0])
 	{
 		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
 	}
-	
+
+	// TODO: check param members ?
+
+	cellVideoExport.notice("cellVideoExportFromFileWithCopy: param: title=%s, game_title=%s, game_comment=%s, editable=%d", param->title, param->game_title, param->game_comment, param->editable);
+
 	const std::string file_path = fmt::format("%s/%s", srcHddDir, srcHddFile);
 
 	if (!check_movie_path(file_path))
@@ -231,9 +235,16 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
 
-	if (!funcFinish)
+	std::string filename = param->title.get_ptr();
+
+	if (filename.empty())
 	{
-		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
+		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
@@ -241,7 +252,6 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 		auto& vexp = g_fxo->get<video_export>();
 		vexp.progress = 0; // 0%
 
-		const std::string filename = file_path.substr(file_path.find_last_of('/') + 1);
 		const std::string src_path = vfs::get(file_path);
 		const std::string dst_path = get_available_movie_path(filename);
 
@@ -273,11 +283,15 @@ error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 {
 	cellVideoExport.todo("cellVideoExportFromFile(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
 	
-	if (!param || !srcHddDir || !srcHddDir[0] || !srcHddFile || !srcHddFile[0])
+	if (!param || !funcFinish || !srcHddDir || !srcHddDir[0] || !srcHddFile || !srcHddFile[0])
 	{
 		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
 	}
-	
+
+	// TODO: check param members ?
+
+	cellVideoExport.notice("cellVideoExportFromFile: param: title=%s, game_title=%s, game_comment=%s, editable=%d", param->title, param->game_title, param->game_comment, param->editable);
+
 	const std::string file_path = fmt::format("%s/%s", srcHddDir, srcHddFile);
 
 	if (!check_movie_path(file_path))
@@ -285,9 +299,16 @@ error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
 
-	if (!funcFinish)
+	std::string filename = param->title.get_ptr();
+
+	if (filename.empty())
 	{
-		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
+		return { CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
 	}
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
@@ -295,7 +316,6 @@ error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 		auto& vexp = g_fxo->get<video_export>();
 		vexp.progress = 0; // 0%
 
-		const std::string filename = file_path.substr(file_path.find_last_of('/') + 1);
 		const std::string src_path = vfs::get(file_path);
 		const std::string dst_path = get_available_movie_path(filename);
 

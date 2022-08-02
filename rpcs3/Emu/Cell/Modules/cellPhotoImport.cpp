@@ -121,9 +121,9 @@ error_code select_photo(std::string dst_dir)
 		return CELL_PHOTO_IMPORT_ERROR_PARAM;
 	}
 
-	if (!dst_dir.starts_with("/dev_hdd0"))
+	if (!dst_dir.starts_with("/dev_hdd0"sv) && !dst_dir.starts_with("/dev_hdd1"sv))
 	{
-		cellPhotoImportUtil.error("Destination '%s' is not inside dev_hdd0", dst_dir);
+		cellPhotoImportUtil.error("Destination '%s' is not inside dev_hdd0 or dev_hdd1", dst_dir);
 		return CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR; // TODO: is this correct?
 	}
 
@@ -175,8 +175,8 @@ error_code select_photo(std::string dst_dir)
 
 					const std::string filename = info.path.substr(info.path.find_last_of(fs::delim) + 1);
 					const std::string title = info.get_metadata("title", filename);
-					const std::string sub_type = fmt::to_lower(info.sub_type);
 					const std::string dst_path = dst_dir + "/" + filename;
+					std::string sub_type = info.sub_type;
 
 					strcpy_trunc(g_filedata->dstFileName, filename);
 					strcpy_trunc(g_filedata->photo_title, title);
@@ -186,6 +186,20 @@ error_code select_photo(std::string dst_dir)
 					g_filedata->data_sub = g_filedata_sub;
 					g_filedata->data_sub->width = info.width;
 					g_filedata->data_sub->height = info.height;
+
+					cellPhotoImportUtil.notice("Raw image data: filename='%s', title='%s', game='%s', sub_type='%s', width=%d, height=%d, orientation=%d ",
+						filename, title, Emu.GetTitle(), sub_type, info.width, info.height, info.orientation);
+
+					// Fallback to extension if necessary
+					if (sub_type.empty())
+					{
+						sub_type = get_file_extension(filename);
+					}
+
+					if (!sub_type.empty())
+					{
+						sub_type = fmt::to_lower(sub_type);
+					}
 
 					if (sub_type == "jpg" || sub_type == "jpeg")
 					{
@@ -234,16 +248,13 @@ error_code select_photo(std::string dst_dir)
 						break;
 					}
 
-					cellPhotoImportUtil.notice("Media list dialog: selected entry '%s'. Copying to '%s'...", info.path, dst_path);
+					cellPhotoImportUtil.notice("Media list dialog: Copying '%s' to '%s'...", info.path, dst_path);
 
 					if (!fs::copy_file(info.path, dst_path, false))
 					{
 						cellPhotoImportUtil.error("Failed to copy '%s' to '%s'. Error = '%s'", info.path, dst_path, fs::g_tls_error);
 						result = CELL_PHOTO_IMPORT_ERROR_COPY;
 					}
-
-					cellPhotoImportUtil.notice("Raw image data: filename='%s', title='%s', game='%s', sub_type='%s', width=%d, height=%d, orientation=%d ",
-						filename, title, Emu.GetTitle(), sub_type, info.width, info.height, info.orientation);
 
 					cellPhotoImportUtil.notice("Cell image data: dstFileName='%s', photo_title='%s', game_title='%s', format=%d, width=%d, height=%d, rotate=%d ",
 						g_filedata->dstFileName, g_filedata->photo_title, g_filedata->game_title, static_cast<s32>(g_filedata->data_sub->format), g_filedata->data_sub->width, g_filedata->data_sub->height, static_cast<s32>(g_filedata->data_sub->rotate));

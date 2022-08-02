@@ -2,6 +2,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
+#include "Utilities/StrUtil.h"
 #include "cellSysutil.h"
 
 LOG_CHANNEL(cellPhotoExport);
@@ -115,7 +116,7 @@ std::string get_available_photo_path(const std::string& filename)
 	// Do not overwrite existing files. Add a suffix instead.
 	for (u32 i = 0; fs::exists(dst_path); i++)
 	{
-		const std::string suffix = std::to_string(i);
+		const std::string suffix = fmt::format("_%d", i);
 		std::string new_filename = filename;
 
 		if (const usz pos = new_filename.find_last_of('.'); pos != std::string::npos)
@@ -196,12 +197,23 @@ error_code cellPhotoRegistFromFile(vm::cptr<char> path, vm::cptr<char> photo_tit
 		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
 
+	std::string filename = photo_title.get_ptr();
+
+	if (filename.empty())
+	{
+		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
+	}
+
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		auto& pexp = g_fxo->get<photo_export>();
 		pexp.progress = 0; // 0%
 
-		const std::string filename = file_path.substr(file_path.find_last_of('/') + 1);
 		const std::string src_path = vfs::get(file_path);
 		const std::string dst_path = get_available_photo_path(filename);
 
@@ -312,6 +324,10 @@ error_code cellPhotoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
 	}
 
+	// TODO: check param members ?
+
+	cellPhotoExport.notice("cellPhotoExportFromFile: param: photo_title=%s, game_title=%s, game_comment=%s", param->photo_title, param->game_title, param->game_comment);
+
 	const std::string file_path = fmt::format("%s/%s", srcHddDir.get_ptr(), srcHddFile.get_ptr());
 
 	if (!check_photo_path(file_path))
@@ -319,12 +335,23 @@ error_code cellPhotoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
 
+	std::string filename = param->photo_title.get_ptr();
+
+	if (filename.empty())
+	{
+		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
+	}
+
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		auto& pexp = g_fxo->get<photo_export>();
 		pexp.progress = 0; // 0%
 
-		const std::string filename = file_path.substr(file_path.find_last_of('/') + 1);
 		const std::string src_path = vfs::get(file_path);
 		const std::string dst_path = get_available_photo_path(filename);
 
@@ -371,6 +398,10 @@ error_code cellPhotoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
 	}
 
+	// TODO: check param members ?
+
+	cellPhotoExport.notice("cellPhotoExportFromFileWithCopy: param: photo_title=%s, game_title=%s, game_comment=%s", param->photo_title, param->game_title, param->game_comment);
+
 	const std::string file_path = fmt::format("%s/%s", srcHddDir.get_ptr(), srcHddFile.get_ptr());
 
 	if (!check_photo_path(file_path))
@@ -378,12 +409,23 @@ error_code cellPhotoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, file_path };
 	}
 
+	std::string filename = param->photo_title.get_ptr();
+
+	if (filename.empty())
+	{
+		return { CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM, "title empty" };
+	}
+
+	if (const std::string extension = get_file_extension(file_path); !extension.empty())
+	{
+		fmt::append(filename, ".%s", extension);
+	}
+
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		auto& pexp = g_fxo->get<photo_export>();
 		pexp.progress = 0; // 0%
 
-		const std::string filename = file_path.substr(file_path.find_last_of('/') + 1);
 		const std::string src_path = vfs::get(file_path);
 		const std::string dst_path = get_available_photo_path(filename);
 
