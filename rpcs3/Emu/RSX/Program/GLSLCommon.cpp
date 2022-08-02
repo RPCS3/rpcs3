@@ -267,7 +267,7 @@ namespace glsl
 		"vec4 fetch_attribute(const in attribute_desc desc, const in int vertex_id, usamplerBuffer input_stream)\n"
 		"{\n"
 		"	const int elem_size_table[] = { 2, 4, 2, 1, 2, 4, 1 };\n"
-		"	const float scaling_table[] = { 32768., 1., 1., 255., 1., 32767., 1. };\n"
+		"	const float scaling_table[] = { 65535., 1., 1., 255., 1., 32767., 1. };\n"
 		"	const int elem_size = elem_size_table[desc.type];\n"
 		"	const vec4 scale = scaling_table[desc.type].xxxx;\n\n"
 
@@ -298,6 +298,11 @@ namespace glsl
 		"	if (desc.type == VTX_FMT_SNORM16 || desc.type == VTX_FMT_SINT16)\n"
 		"	{\n"
 		"		ret = sext(ivec4(result));\n"
+
+		"		if (desc.type == VTX_FMT_SNORM16)\n"
+		"		{\n"
+		"			ret = ret * 2. + 1.;\n"
+		"		}\n"
 		"	}\n"
 		"	else if (desc.type == VTX_FMT_FLOAT32)\n"
 		"	{\n"
