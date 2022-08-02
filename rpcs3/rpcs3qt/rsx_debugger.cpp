@@ -39,6 +39,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 {
 	setWindowTitle(tr("RSX Debugger"));
 	setObjectName("rsx_debugger");
+	setAttribute(Qt::WA_DeleteOnClose);
 	setWindowFlags(Qt::Window);
 
 	// Fonts and Colors
