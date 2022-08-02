@@ -34,16 +34,16 @@ namespace rsx
 		rsx_log.trace("RSX method 0x%x (arg=0x%x)", reg << 2, arg);
 	}
 
-	template<bool FlushDMA, bool FlushPipe, bool IsImmediate = false>
+	template <bool FlushDMA, bool FlushPipe, bool ForceUpdate = false>
 	void write_gcm_label(thread* rsx, u32 address, u32 data)
 	{
 		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->device_addr + 0x30));
 		if (!is_flip_sema)
 		{
 			// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
-			const bool handled = !IsImmediate && rsx->get_backend_config().supports_host_gpu_labels && rsx->release_GCM_label(address, data);
+			const bool handled = !ForceUpdate && rsx->get_backend_config().supports_host_gpu_labels && rsx->release_GCM_label(address, data);
 
-			if (!IsImmediate && vm::_ref<RsxSemaphore>(address).val == data)
+			if (!ForceUpdate && vm::_ref<RsxSemaphore>(address).val == data)
 			{
 				// It's a no-op to write the same value (although there is a delay in real-hw so it's more accurate to allow GPU label in this case)
 				return;
