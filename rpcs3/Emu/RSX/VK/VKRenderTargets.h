@@ -336,6 +336,7 @@ namespace vk
 		{
 			// TODO
 			src->rsx_pitch = static_cast<u32>(out_pitch);
+			src->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			return {};
 		}
 

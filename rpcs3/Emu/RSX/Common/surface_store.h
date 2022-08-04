@@ -403,6 +403,9 @@ namespace rsx
 			bool do_intersection_test = true;
 			bool store = true;
 
+			// Workaround. Preserve new surface tag value because pitch convert is unimplemented
+			u64 new_content_tag = 0;
+
 			address_range *storage_bounds;
 			surface_ranged_map *primary_storage, *secondary_storage;
 			if constexpr (depth)
@@ -425,16 +428,27 @@ namespace rsx
 				surface_storage_type &surface = It->second;
 				const bool pitch_compatible = Traits::surface_is_pitch_compatible(surface, pitch);
 
+				if (!pitch_compatible)
+				{
+					// This object should be pitch-converted and re-intersected with
+					if (old_surface_storage = Traits::convert_pitch(command_list, surface, pitch))
+					{
+						old_surface = Traits::get(old_surface_storage);
+					}
+					else
+					{
+						// Preserve content age. This is hacky, but matches previous behavior
+						// TODO: Remove when pitch convert is implemented
+						new_content_tag = Traits::get(surface)->last_use_tag;
+					}
+				}
+
 				if (Traits::surface_matches_properties(surface, format, width, height, antialias))
 				{
-					if (!pitch_compatible)
+					if (old_surface)
 					{
-						// This object should be pitch-converted and re-intersected with
-						if (old_surface_storage = Traits::convert_pitch(command_list, surface, pitch))
-						{
-							old_surface = Traits::get(old_surface_storage);
-							Traits::invalidate_surface_contents(command_list, Traits::get(surface), address, pitch);
-						}
+						ensure(!pitch_compatible);
+						Traits::invalidate_surface_contents(command_list, Traits::get(surface), address, pitch);
 					}
 
 					Traits::notify_surface_persist(surface);
@@ -556,6 +570,11 @@ namespace rsx
 
 			if (do_intersection_test)
 			{
+				if (new_content_tag)
+				{
+					new_surface->last_use_tag = new_content_tag;
+				}
+
 				intersect_surface_region<depth>(command_list, address, new_surface, old_surface);
 			}
 
