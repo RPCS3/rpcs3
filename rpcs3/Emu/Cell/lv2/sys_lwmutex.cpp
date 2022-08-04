@@ -173,6 +173,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 
 		mutex.sleep(ppu, timeout);
+		notify.cleanup();
 		return false;
 	});
 
@@ -308,7 +309,7 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 			}
 
 			mutex.awake(cpu);
-			return;
+			notify.cleanup(); // lv2_lwmutex::mutex is not really active 99% of the time, can be ignored
 		}
 	});
 
@@ -345,7 +346,7 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 
 			static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
 			mutex.awake(cpu);
-			return;
+			notify.cleanup(); // lv2_lwmutex::mutex is not really active 99% of the time, can be ignored
 		}
 	});
 

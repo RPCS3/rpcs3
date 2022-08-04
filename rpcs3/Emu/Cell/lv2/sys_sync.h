@@ -507,9 +507,12 @@ public:
 				return;
 			}
 
-			// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
-			// TODO: Pass a narrower mask
-			atomic_wait_engine::notify_one(cpu, 4, atomic_wait::default_mask<atomic_bs_t<cpu_flag>>);
+			if (cpu != &g_to_notify)
+			{
+				// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
+				// TODO: Pass a narrower mask
+				atomic_wait_engine::notify_one(cpu, 4, atomic_wait::default_mask<atomic_bs_t<cpu_flag>>);
+			}
 		}
 	}
 
@@ -525,6 +528,26 @@ public:
 		notify_all_t() noexcept
 		{
 			g_postpone_notify_barrier = true;
+		}
+
+		notify_all_t(const notify_all_t&) = delete;
+	
+		static void cleanup()
+		{
+			for (auto& cpu : g_to_notify)
+			{
+				if (!cpu)
+				{
+					return;
+				}
+
+				// While IDM mutex is still locked (this function assumes so) check if the notification is still needed
+				if (cpu != &g_to_notify && !static_cast<const decltype(cpu_thread::state)*>(cpu)->all_of(cpu_flag::signal + cpu_flag::wait))
+				{
+					// Omit it (this is a void pointer, it can hold anything)
+					cpu = &g_to_notify;
+				}
+			}
 		}
 
 		~notify_all_t() noexcept
