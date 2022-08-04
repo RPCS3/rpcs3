@@ -101,7 +101,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 		fmt::throw_exception("Unknown mode (%d)", mode);
 	}
 
-	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> int
+	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwcond& cond) -> int
 	{
 		ppu_thread* cpu = nullptr;
 
@@ -129,8 +129,6 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
-			lv2_obj::notify_all_t notify;
-
 			std::lock_guard lock(cond.mutex);
 
 			if (cpu)
@@ -189,7 +187,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 				if (result)
 				{
-					cond.awake(result, true);
+					cond.awake(result);
 				}
 
 				return 1;
@@ -238,7 +236,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		fmt::throw_exception("Unknown mode (%d)", mode);
 	}
 
-	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> s32
+	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwcond& cond) -> s32
 	{
 		lv2_lwmutex* mutex{};
 
@@ -254,8 +252,6 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		if (atomic_storage<ppu_thread*>::load(cond.sq))
 		{
-			lv2_obj::notify_all_t notify;
-
 			std::lock_guard lock(cond.mutex);
 
 			u32 result = 0;
@@ -293,7 +289,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 			if (result && mode == 2)
 			{
-				lv2_obj::awake_all(true);
+				lv2_obj::awake_all();
 			}
 
 			return result;
@@ -328,7 +324,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	auto& sstate = *ppu.optional_savestate_state;
 
-	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond)
+	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwcond& cond)
 	{
 		mutex = idm::get_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
@@ -340,7 +336,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		// Increment lwmutex's lwcond's waiters count
 		mutex->lwcond_waiters++;
 
-		lv2_obj::notify_all_t notify(ppu);
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(cond.mutex);
 
@@ -377,7 +373,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		}
 
 		// Sleep current thread and schedule lwmutex waiter
-		cond.sleep(ppu, timeout, true);
+		cond.sleep(ppu, timeout);
 	});
 
 	if (!cond || !mutex)

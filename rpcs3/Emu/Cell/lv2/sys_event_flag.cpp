@@ -141,7 +141,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		return CELL_EINVAL;
 	}
 
-	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag) -> CellError
+	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id, [&, notify = lv2_obj::notify_all_t()](lv2_event_flag& flag) -> CellError
 	{
 		if (flag.pattern.fetch_op([&](u64& pat)
 		{
@@ -152,7 +152,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 			return {};
 		}
 
-		lv2_obj::notify_all_t notify(ppu);
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(flag.mutex);
 
@@ -169,7 +169,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 			return CELL_EPERM;
 		}
 
-		flag.sleep(ppu, timeout, true);
+		flag.sleep(ppu, timeout);
 		lv2_obj::emplace(flag.sq, &ppu);
 		return CELL_EBUSY;
 	});
@@ -314,7 +314,7 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 		return CELL_OK;
 	}
 
-	if (true)
+	if (lv2_obj::notify_all_t notify; true)
 	{
 		std::lock_guard lock(flag->mutex);
 
@@ -454,6 +454,8 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 
 	u32 value = 0;
 	{
+		lv2_obj::notify_all_t notify;
+
 		std::lock_guard lock(flag->mutex);
 
 		for (auto cpu = +flag->sq; cpu; cpu = cpu->next_cpu)

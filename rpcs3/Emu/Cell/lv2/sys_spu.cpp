@@ -1399,6 +1399,8 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 	do
 	{
+		lv2_obj::prepare_for_sleep(ppu);
+
 		std::unique_lock lock(group->mutex);
 
 		const auto state = +group->run_state;
@@ -1433,8 +1435,11 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			group->waiter = &ppu;
 		}
 
-		lv2_obj::sleep(ppu);
-		lock.unlock();
+		{
+			lv2_obj::notify_all_t notify;
+			lv2_obj::sleep(ppu);
+			lock.unlock();
+		}
 
 		while (auto state = +ppu.state)
 		{

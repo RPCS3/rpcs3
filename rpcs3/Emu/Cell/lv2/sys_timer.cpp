@@ -60,6 +60,8 @@ u64 lv2_timer::check()
 			// If aborting, perform the last accurate check for event
 			if (_now >= next)
 			{
+				lv2_obj::notify_all_t notify;
+
 				std::lock_guard lock(mutex);
 
 				if (next = expire; _now < next)

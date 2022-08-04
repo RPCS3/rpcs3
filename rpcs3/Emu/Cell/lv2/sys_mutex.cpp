@@ -139,7 +139,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 	sys_mutex.trace("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx)", mutex_id, timeout);
 
-	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id, [&](lv2_mutex& mutex)
+	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id, [&, notify = lv2_obj::notify_all_t()](lv2_mutex& mutex)
 	{
 		CellError result = mutex.try_lock(ppu);
 
@@ -160,7 +160,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 		if (result == CELL_EBUSY)
 		{
-			lv2_obj::notify_all_t notify(ppu);
+			lv2_obj::prepare_for_sleep(ppu);
 
 			if (mutex.try_own(ppu))
 			{
@@ -168,7 +168,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 			}
 			else
 			{
-				mutex.sleep(ppu, timeout, true);
+				mutex.sleep(ppu, timeout);
 			}
 		}
 
@@ -292,14 +292,12 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 
 	sys_mutex.trace("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
 
-	const auto mutex = idm::check<lv2_obj, lv2_mutex>(mutex_id, [&](lv2_mutex& mutex) -> CellError
+	const auto mutex = idm::check<lv2_obj, lv2_mutex>(mutex_id, [&, notify = lv2_obj::notify_all_t()](lv2_mutex& mutex) -> CellError
 	{
 		auto result = mutex.try_unlock(ppu);
 
 		if (result == CELL_EBUSY)
 		{
-			lv2_obj::notify_all_t notify;
-
 			std::lock_guard lock(mutex.mutex);
 
 			if (auto cpu = mutex.reown<ppu_thread>())
@@ -310,7 +308,7 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 					return {};
 				}
 
-				mutex.awake(cpu, true);
+				mutex.awake(cpu);
 			}
 
 			result = {};

@@ -109,10 +109,8 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 
 extern void resume_spu_thread_group_from_waiting(spu_thread& spu);
 
-CellError lv2_event_queue::send(lv2_event event, bool notify_later)
+CellError lv2_event_queue::send(lv2_event event)
 {
-	lv2_obj::notify_all_t notify;
-
 	std::lock_guard lock(mutex);
 
 	if (!exists)
@@ -153,7 +151,7 @@ CellError lv2_event_queue::send(lv2_event event, bool notify_later)
 
 		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = event;
 
-		awake(&ppu, notify_later);
+		awake(&ppu);
 	}
 	else
 	{
@@ -414,14 +412,14 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 	ppu.gpr[3] = CELL_OK;
 
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&, notify = lv2_obj::notify_all_t()](lv2_event_queue& queue) -> CellError
 	{
 		if (queue.type != SYS_PPU_QUEUE)
 		{
 			return CELL_EINVAL;
 		}
 
-		lv2_obj::notify_all_t notify(ppu);
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(queue.mutex);
 
@@ -435,7 +433,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 		if (queue.events.empty())
 		{
-			queue.sleep(ppu, timeout, true);
+			queue.sleep(ppu, timeout);
 			lv2_obj::emplace(queue.pq, &ppu);
 			return CELL_EBUSY;
 		}
@@ -700,13 +698,13 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
-	const auto port = idm::check<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
+	const auto port = idm::check<lv2_obj, lv2_event_port>(eport_id, [&, notify = lv2_obj::notify_all_t()](lv2_event_port& port) -> CellError
 	{
 		if (lv2_obj::check(port.queue))
 		{
 			const u64 source = port.name ? port.name : (s64{process_getpid()} << 32) | u64{eport_id};
 
-			return port.queue->send(source, data1, data2, data3, true);
+			return port.queue->send(source, data1, data2, data3);
 		}
 
 		return CELL_ENOTCONN;
