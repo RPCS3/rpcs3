@@ -427,11 +427,17 @@ namespace rsx
 
 				if (Traits::surface_matches_properties(surface, format, width, height, antialias))
 				{
-					if (pitch_compatible)
-						Traits::notify_surface_persist(surface);
-					else
-						Traits::invalidate_surface_contents(command_list, Traits::get(surface), address, pitch);
+					if (!pitch_compatible)
+					{
+						// This object should be pitch-converted and re-intersected with
+						if (old_surface_storage = Traits::convert_pitch(command_list, surface, pitch))
+						{
+							old_surface = Traits::get(old_surface_storage);
+							Traits::invalidate_surface_contents(command_list, Traits::get(surface), address, pitch);
+						}
+					}
 
+					Traits::notify_surface_persist(surface);
 					Traits::prepare_surface_for_drawing(command_list, Traits::get(surface));
 					new_surface = Traits::get(surface);
 					store = false;
