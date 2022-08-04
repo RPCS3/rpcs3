@@ -111,7 +111,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
-	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
+	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&, notify = lv2_obj::notify_all_t()](lv2_sema& sema)
 	{
 		const s32 val = sema.val;
 
@@ -123,13 +123,13 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 			}
 		}
 
-		lv2_obj::notify_all_t notify(ppu);
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(sema.mutex);
 
 		if (sema.val-- <= 0)
 		{
-			sema.sleep(ppu, timeout, true);
+			sema.sleep(ppu, timeout);
 			lv2_obj::emplace(sema.sq, &ppu);
 			return false;
 		}
@@ -274,6 +274,8 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 	{
 		return CELL_EINVAL;
 	}
+
+	lv2_obj::notify_all_t notify;
 
 	if (sem.ret)
 	{

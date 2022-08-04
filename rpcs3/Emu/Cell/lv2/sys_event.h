@@ -103,11 +103,11 @@ struct lv2_event_queue final : public lv2_obj
 	static void save_ptr(utils::serial&, lv2_event_queue*);
 	static std::shared_ptr<lv2_event_queue> load_ptr(utils::serial& ar, std::shared_ptr<lv2_event_queue>& queue);
 
-	CellError send(lv2_event event, bool notify_later = false);
+	CellError send(lv2_event event);
 
-	CellError send(u64 source, u64 d1, u64 d2, u64 d3, bool notify_later = false)
+	CellError send(u64 source, u64 d1, u64 d2, u64 d3)
 	{
-		return send(std::make_tuple(source, d1, d2, d3), notify_later);
+		return send(std::make_tuple(source, d1, d2, d3));
 	}
 
 	// Get event queue by its global key

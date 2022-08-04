@@ -139,7 +139,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
+	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwmutex& mutex)
 	{
 		if (s32 signal = mutex.lv2_control.fetch_op([](auto& data)
 		{
@@ -160,7 +160,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 			return true;
 		}
 
-		lv2_obj::notify_all_t notify(ppu);
+		lv2_obj::prepare_for_sleep(ppu);
 
 		if (s32 signal = mutex.try_own(&ppu))
 		{
@@ -172,7 +172,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 			return true;
 		}
 
-		mutex.sleep(ppu, timeout, true);
+		mutex.sleep(ppu, timeout);
 		return false;
 	});
 
@@ -290,14 +290,12 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 
 	sys_lwmutex.trace("_sys_lwmutex_unlock(lwmutex_id=0x%x)", lwmutex_id);
 
-	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
+	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwmutex& mutex)
 	{
 		if (mutex.try_unlock(false))
 		{
 			return;
 		}
-
-		lv2_obj::notify_all_t notify;
 
 		std::lock_guard lock(mutex.mutex);
 
@@ -309,7 +307,7 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 				return;
 			}
 
-			mutex.awake(cpu, true);
+			mutex.awake(cpu);
 			return;
 		}
 	});
@@ -328,14 +326,12 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 
 	sys_lwmutex.warning("_sys_lwmutex_unlock2(lwmutex_id=0x%x)", lwmutex_id);
 
-	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
+	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&, notify = lv2_obj::notify_all_t()](lv2_lwmutex& mutex)
 	{
 		if (mutex.try_unlock(true))
 		{
 			return;
 		}
-
-		lv2_obj::notify_all_t notify;
 
 		std::lock_guard lock(mutex.mutex);
 
@@ -348,7 +344,7 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 			}
 
 			static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
-			mutex.awake(cpu, true);
+			mutex.awake(cpu);
 			return;
 		}
 	});

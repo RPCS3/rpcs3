@@ -1362,6 +1362,7 @@ void spu_thread::cpu_return()
 		if (ensure(group->running)-- == 1)
 		{
 			{
+				lv2_obj::notify_all_t notify;
 				std::lock_guard lock(group->mutex);
 				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 
@@ -4268,6 +4269,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 		}
 
 		state += cpu_flag::wait;
+
+		lv2_obj::notify_all_t notify;
 
 		const u32 code = value >> 24;
 		{

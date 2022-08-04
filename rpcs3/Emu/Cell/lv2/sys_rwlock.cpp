@@ -102,7 +102,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&, notify = lv2_obj::notify_all_t()](lv2_rwlock& rwlock)
 	{
 		const s64 val = rwlock.owner;
 
@@ -114,7 +114,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 			}
 		}
 
-		lv2_obj::notify_all_t notify(ppu);
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(rwlock.mutex);
 
@@ -132,7 +132,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (_old > 0 || _old & 1)
 		{
-			rwlock.sleep(ppu, timeout, true);
+			rwlock.sleep(ppu, timeout);
 			lv2_obj::emplace(rwlock.rq, &ppu);
 			return false;
 		}
@@ -276,6 +276,8 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 		return CELL_ESRCH;
 	}
 
+	lv2_obj::notify_all_t notify;
+
 	if (rwlock.ret)
 	{
 		return CELL_OK;
@@ -330,7 +332,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock) -> s64
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&, notify = lv2_obj::notify_all_t()](lv2_rwlock& rwlock) -> s64
 	{
 		const s64 val = rwlock.owner;
 
@@ -346,7 +348,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 			return val;
 		}
 
-		lv2_obj::notify_all_t notify(ppu);
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(rwlock.mutex);
 
@@ -364,7 +366,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (_old != 0)
 		{
-			rwlock.sleep(ppu, timeout, true);
+			rwlock.sleep(ppu, timeout);
 			lv2_obj::emplace(rwlock.wq, &ppu);
 		}
 
@@ -532,7 +534,7 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 		return CELL_EPERM;
 	}
 
-	if (rwlock.ret & 1)
+	if (lv2_obj::notify_all_t notify; rwlock.ret & 1)
 	{
 		std::lock_guard lock(rwlock->mutex);
 

@@ -225,17 +225,17 @@ public:
 
 private:
 	// Remove the current thread from the scheduling queue, register timeout
-	static void sleep_unlocked(cpu_thread&, u64 timeout, bool notify_later);
+	static void sleep_unlocked(cpu_thread&, u64 timeout);
 
 	// Schedule the thread
-	static bool awake_unlocked(cpu_thread*, bool notify_later = false, s32 prio = enqueue_cmd);
+	static bool awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
 
 public:
 	static constexpr u64 max_timeout = u64{umax} / 1000;
 
-	static void sleep(cpu_thread& cpu, const u64 timeout = 0, bool notify_later = false);
+	static void sleep(cpu_thread& cpu, const u64 timeout = 0);
 
-	static bool awake(cpu_thread* const thread, bool notify_later = false, s32 prio = enqueue_cmd);
+	static bool awake(cpu_thread* thread, s32 prio = enqueue_cmd);
 
 	// Returns true on successful context switch, false otherwise
 	static bool yield(cpu_thread& thread);
@@ -243,12 +243,12 @@ public:
 	static void set_priority(cpu_thread& thread, s32 prio)
 	{
 		ensure(prio + 512u < 3712);
-		awake(&thread, false, prio);
+		awake(&thread, prio);
 	}
 
-	static inline void awake_all(bool notify_later = false)
+	static inline void awake_all()
 	{
-		awake({}, notify_later);
+		awake({});
 		g_to_awake.clear();
 	}
 
@@ -503,37 +503,32 @@ public:
 			if (!cpu)
 			{
 				g_to_notify[0] = nullptr;
+				g_postpone_notify_barrier = false;
 				return;
 			}
 
-			if (cpu->state & cpu_flag::signal)
-			{
-				cpu->state.notify_one(cpu_flag::suspend + cpu_flag::signal);
-			}
+			// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
+			// TODO: Pass a narrower mask
+			atomic_wait_engine::notify_one(cpu, 4, atomic_wait::default_mask<atomic_bs_t<cpu_flag>>);
 		}
 	}
 
-	template <typename T = int>
+	// Can be called before the actual sleep call in order to move it out of mutex scope
+	static inline void prepare_for_sleep(cpu_thread& cpu)
+	{
+		vm::temporary_unlock(cpu);
+		cpu_counter::remove(&cpu);
+	}
+
 	struct notify_all_t
 	{
-		notify_all_t() noexcept = default;
-
-		notify_all_t(T& cpu) noexcept
+		notify_all_t() noexcept
 		{
-			vm::temporary_unlock(cpu);
-			cpu_counter::remove(&cpu);
+			g_postpone_notify_barrier = true;
 		}
 
 		~notify_all_t() noexcept
 		{
-			if constexpr (!std::is_base_of_v<cpu_thread, T>)
-			{
-				if (auto cpu = cpu_thread::get_current(); cpu && cpu->is_paused())
-				{
-					vm::temporary_unlock(*cpu);
-				}
-			}
-
 			lv2_obj::notify_all();
 		}
 	};
@@ -551,8 +546,11 @@ private:
 	// Waiting for the response from
 	static u32 g_pending;
 
-	// Pending list of threads to notify
-	static thread_local std::add_pointer_t<class cpu_thread> g_to_notify[4];
+	// Pending list of threads to notify (cpu_thread::state ptr)
+	static thread_local std::add_pointer_t<const void> g_to_notify[4];
 
-	static void schedule_all(bool notify_later);
+	// If a notify_all_t object exists locally, postpone notifications to the destructor of it (not recursive, notifies on the first destructor for safety)
+	static thread_local bool g_postpone_notify_barrier;
+
+	static void schedule_all();
 };

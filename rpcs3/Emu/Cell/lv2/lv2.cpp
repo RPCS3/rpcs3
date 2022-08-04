@@ -1192,6 +1192,7 @@ DECLARE(lv2_obj::g_ppu){};
 DECLARE(lv2_obj::g_pending){};
 
 thread_local DECLARE(lv2_obj::g_to_notify){};
+thread_local DECLARE(lv2_obj::g_postpone_notify_barrier){};
 thread_local DECLARE(lv2_obj::g_to_awake);
 
 // Scheduler queue for timeouts (wait until -> thread)
@@ -1205,31 +1206,57 @@ namespace cpu_counter
 	void remove(cpu_thread*) noexcept;
 }
 
-void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout, bool notify_later)
+void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 {
 	// Should already be performed when using this flag
-	if (!notify_later)
+	if (!g_postpone_notify_barrier)
 	{
-		vm::temporary_unlock(cpu);
-		cpu_counter::remove(&cpu);
+		prepare_for_sleep(cpu);
 	}
 	{
 		std::lock_guard lock{g_mutex};
-		sleep_unlocked(cpu, timeout, notify_later);
+		sleep_unlocked(cpu, timeout);
+		
+		if (!g_to_awake.empty())
+		{
+			// Schedule pending entries
+			awake_unlocked({});
+		}
+
+		schedule_all();
 	}
+
+	if (!g_postpone_notify_barrier)
+	{
+		notify_all();
+	}
+
 	g_to_awake.clear();
 }
 
-bool lv2_obj::awake(cpu_thread* const thread, bool notify_later, s32 prio)
+bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 {
-	// Too risky to postpone it in case the notified thread may wait for this thread to free its passive lock
-	if (!notify_later)
+	bool result = false;
 	{
-		vm::temporary_unlock();
+		std::lock_guard lock(g_mutex);
+		result = awake_unlocked(thread, prio);
+		schedule_all();
 	}
 
-	std::lock_guard lock(g_mutex);
-	return awake_unlocked(thread, notify_later, prio);
+	if (result)
+	{
+		if (auto cpu = cpu_thread::get_current(); cpu && cpu->is_paused())
+		{
+			vm::temporary_unlock();
+		}
+	}
+
+	if (!g_postpone_notify_barrier)
+	{
+		notify_all();
+	}
+
+	return result;
 }
 
 bool lv2_obj::yield(cpu_thread& thread)
@@ -1241,10 +1268,10 @@ bool lv2_obj::yield(cpu_thread& thread)
 		ppu->raddr = 0; // Clear reservation
 	}
 
-	return awake(&thread, false, yield_cmd);
+	return awake(&thread, yield_cmd);
 }
 
-void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, bool notify_later)
+void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 {
 	const u64 start_time = get_guest_system_time();
 
@@ -1341,19 +1368,9 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, bool notify_later)
 			}
 		}
 	}
-
-	if (!g_to_awake.empty())
-	{
-		// Schedule pending entries
-		awake_unlocked({}, notify_later);
-	}
-	else
-	{
-		schedule_all(notify_later);
-	}
 }
 
-bool lv2_obj::awake_unlocked(cpu_thread* cpu, bool notify_later, s32 prio)
+bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 {
 	// Check thread type
 	AUDIT(!cpu || cpu->id_type() == 1);
@@ -1498,9 +1515,9 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, bool notify_later, s32 prio)
 		// Emplace current thread
 		if (!emplace_thread(cpu))
 		{
-			if (notify_later)
+			if (g_postpone_notify_barrier)
 			{
-				// notify_later includes common optimizations regarding syscalls
+				// This flag includes common optimizations regarding syscalls
 				// one of which is to allow a lock-free version of syscalls with awake behave as semaphore post: always notifies the thread, even if it hasn't slept yet
 				cpu->state += cpu_flag::signal;
 			}
@@ -1515,7 +1532,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, bool notify_later, s32 prio)
 		// Emplace threads from list
 		if (!emplace_thread(_cpu))
 		{
-			if (notify_later)
+			if (g_postpone_notify_barrier)
 			{
 				_cpu->state += cpu_flag::signal;
 			}
@@ -1557,7 +1574,6 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, bool notify_later, s32 prio)
 		}
 	}
 
-	schedule_all(notify_later);
 	return changed_queue;
 }
 
@@ -1569,11 +1585,11 @@ void lv2_obj::cleanup()
 	g_pending = 0;
 }
 
-void lv2_obj::schedule_all(bool notify_later)
+void lv2_obj::schedule_all()
 {
 	if (!g_pending && g_to_sleep.empty())
 	{
-		usz notify_later_idx = notify_later ? 0 : std::size(g_to_notify) - 1;
+		usz notify_later_idx = 0;
 
 		auto target = +g_ppu;
 
@@ -1592,7 +1608,7 @@ void lv2_obj::schedule_all(bool notify_later)
 				}
 				else
 				{
-					g_to_notify[notify_later_idx++] = target;
+					g_to_notify[notify_later_idx++] = &target->state;
 				}
 			}
 		}
