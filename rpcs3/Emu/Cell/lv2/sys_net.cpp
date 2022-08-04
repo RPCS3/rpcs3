@@ -370,6 +370,8 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 				return true;
 			}
 
+			auto lock = sock.lock();
+
 			sock.poll_queue(idm::get_unlocked<named_thread<ppu_thread>>(ppu.id), lv2_socket::poll_t::read, [&](bs_t<lv2_socket::poll_t> events) -> bool
 				{
 					if (events & lv2_socket::poll_t::read)
@@ -526,6 +528,8 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 				result = *success;
 				return true;
 			}
+
+			auto lock = sock.lock();
 
 			sock.poll_queue(idm::get_unlocked<named_thread<ppu_thread>>(ppu.id), lv2_socket::poll_t::write, [&](bs_t<lv2_socket::poll_t> events) -> bool
 				{
@@ -802,6 +806,8 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 				return true;
 			}
 
+			auto lock = sock.lock();
+
 			sock.poll_queue(idm::get_unlocked<named_thread<ppu_thread>>(ppu.id), lv2_socket::poll_t::read, [&](bs_t<lv2_socket::poll_t> events) -> bool
 				{
 					if (events & lv2_socket::poll_t::read)
@@ -932,6 +938,8 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 				result = *success;
 				return true;
 			}
+
+			auto lock = sock.lock();
 
 			// Enable write event
 			sock.poll_queue(idm::get_unlocked<named_thread<ppu_thread>>(ppu.id), lv2_socket::poll_t::write, [&](bs_t<lv2_socket::poll_t> events) -> bool
