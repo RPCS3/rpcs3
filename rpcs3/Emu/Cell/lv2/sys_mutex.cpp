@@ -169,6 +169,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 			else
 			{
 				mutex.sleep(ppu, timeout);
+				notify.cleanup();
 			}
 		}
 
@@ -314,6 +315,7 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 			result = {};
 		}
 
+		notify.cleanup();
 		return result;
 	});
 

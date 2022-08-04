@@ -371,12 +371,12 @@ public:
 	bool bit_test_reset(uint bit) = delete;
 	bool bit_test_invert(uint bit) = delete;
 
-	bool all_of(bs_t arg)
+	bool all_of(bs_t arg) const
 	{
 		return base::load().all_of(arg);
 	}
 
-	bool none_of(bs_t arg)
+	bool none_of(bs_t arg) const
 	{
 		return base::load().none_of(arg);
 	}
