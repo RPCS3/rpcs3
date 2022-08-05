@@ -17,7 +17,7 @@ class PadHandlerBase;
 class pad_thread
 {
 public:
-	pad_thread(void* _curthread, void* _curwindow, std::string_view title_id); // void * instead of QThread * and QWindow * because of include in emucore
+	pad_thread(void* curthread, void* curwindow, std::string_view title_id); // void * instead of QThread * and QWindow * because of include in emucore
 	pad_thread(const pad_thread&) = delete;
 	pad_thread& operator=(const pad_thread&) = delete;
 	~pad_thread();
@@ -45,8 +45,8 @@ protected:
 	std::map<pad_handler, std::shared_ptr<PadHandlerBase>> handlers;
 
 	// Used for pad_handler::keyboard
-	void *curthread;
-	void *curwindow;
+	void* m_curthread = nullptr;
+	void* m_curwindow = nullptr;
 
 	PadInfo m_info{ 0, 0, false };
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
@@ -61,6 +61,7 @@ namespace pad
 	extern std::string g_title_id;
 	extern atomic_t<bool> g_enabled;
 	extern atomic_t<bool> g_reset;
+	extern atomic_t<bool> g_started;
 
 	static inline class pad_thread* get_current_handler(bool relaxed = false)
 	{
