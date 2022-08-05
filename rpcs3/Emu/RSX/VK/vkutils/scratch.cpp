@@ -146,6 +146,7 @@ namespace vk
 			}
 
 			ptr.reset(create_texture());
+			ptr->set_debug_name(fmt::format("Scratch: Format=0x%x", static_cast<u32>(format)));
 		}
 
 		return ptr.get();
