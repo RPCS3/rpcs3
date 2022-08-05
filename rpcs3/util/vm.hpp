@@ -71,6 +71,7 @@ namespace utils
 		u32 m_flags{};
 		u64 m_size{};
 		atomic_t<void*> m_ptr{nullptr};
+		std::string m_storage;
 
 	public:
 		explicit shm(u64 size, u32 flags = 0);
