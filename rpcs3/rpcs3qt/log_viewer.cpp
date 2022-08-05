@@ -205,6 +205,8 @@ void log_viewer::show_log()
 		gui_log.error("log_viewer: Failed to open %s", sstr(m_path_last));
 		m_log_text->setPlainText(tr("Failed to open '%0'").arg(m_path_last));
 	}
+
+	filter_log();
 }
 
 void log_viewer::set_text_and_keep_position(const QString& text)
