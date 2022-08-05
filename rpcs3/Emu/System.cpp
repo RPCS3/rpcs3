@@ -815,9 +815,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				nse_t<u64, 1> offset;
 				std::array<u8, 32> reserved;
 			};
-	
+
 			const auto header = m_ar->try_read<file_header>().second;
-	
+
 			if (header.magic != "RPCS3SAV"_u64)
 			{
 				return game_boot_result::savestate_corrupted;
@@ -827,7 +827,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				return game_boot_result::savestate_corrupted;
 			}
-	
+
 			g_cfg.savestate.state_inspection_mode.set(header.state_inspection_support);
 	
 			// Emulate seek operation (please avoid using in other places)
@@ -839,28 +839,29 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 
 			m_ar->pos = sizeof(file_header); // Restore position
-	
+
 			argv.clear();
 			klic.clear();
 	
-			std::string bdvd_by_title_id;
-			(*m_ar)(argv.emplace_back(), bdvd_by_title_id, klic.emplace_back(), m_game_dir, hdd1);
+			std::string disc_info;
+			(*m_ar)(argv.emplace_back(), disc_info, klic.emplace_back(), m_game_dir, hdd1);
 
 			if (!klic[0])
 			{
 				klic.clear();
 			}
-	
-			if (!bdvd_by_title_id.empty())
+
+			if (!disc_info.empty() && disc_info[0] != '/')
 			{
-				m_title_id = bdvd_by_title_id;
+				// Restore disc path for disc games (must exist in games.yml i.e. your game library)
+				m_title_id = disc_info;
 	
 				// Load /dev_bdvd/ from game list if available
 				if (auto node = games[m_title_id])
 				{
 					disc = node.Scalar();
 				}
-				else
+				else if (!g_cfg.savestate.state_inspection_mode)
 				{
 					sys_log.fatal("Disc directory not found. Savestate cannot be loaded. ('%s')", m_title_id);
 					return game_boot_result::invalid_file_or_folder;
@@ -898,6 +899,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 
 			m_ar->pos += 32; // Reserved area
+
+			if (disc_info.starts_with("/"sv))
+			{
+				// Restore SFO directory for PSN games
+
+				if (disc_info.starts_with("/dev_hdd0"sv))
+				{
+					disc = rpcs3::utils::get_hdd0_dir();
+					disc += std::string_view(disc_info).substr(9);
+				}
+				else if (disc_info.starts_with("/host_root"sv))
+				{
+					sys_log.error("Host root has been used in savestates!");
+					disc = disc_info.substr(9);
+				}
+				else
+				{
+					sys_log.error("Unknown source for game SFO directory: %s", disc_info);
+				}
+
+				m_cat.clear();
+			}
 
 			if (argv[0].starts_with("/dev_hdd0"sv))
 			{
@@ -2407,13 +2430,13 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 				// Fake /dev_bdvd/PS3_GAME detected, use HDD0 for m_path restoration
 				ensure(vfs::unmount("/dev_bdvd/PS3_GAME"));
 				ar(vfs::retrieve(m_path));
+				ar(vfs::retrieve(disc));
 				ensure(vfs::mount("/dev_bdvd/PS3_GAME", dir));
-				ar(std::string());
 			}
 			else
 			{
 				ar(vfs::retrieve(m_path));
-				ar(!m_title_id.empty() && !vfs::get("/dev_bdvd").empty() ? m_title_id : std::string());
+				ar(!m_title_id.empty() && !vfs::get("/dev_bdvd").empty() ? m_title_id : vfs::retrieve(disc));
 			}
 
 			ar(klic.empty() ? std::array<u8, 16>{} : std::bit_cast<std::array<u8, 16>>(klic[0]));
