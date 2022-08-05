@@ -727,6 +727,10 @@ namespace vm
 		else if (!shm)
 		{
 			utils::memory_protect(g_base_addr + addr, size, prot);
+
+			perf_meter<"PAGE_LCK"_u64> perf;
+			utils::memory_lock(g_base_addr + addr, size);
+			utils::memory_lock(g_sudo_addr + addr, size);
 		}
 		else if (!map_critical(g_base_addr + addr, prot) || !map_critical(g_sudo_addr + addr, utils::protection::rw) || (map_error = "map_self()", !shm->map_self()))
 		{
@@ -1173,18 +1177,18 @@ namespace vm
 			auto map_critical = [&](u8* ptr, utils::protection prot)
 			{
 				auto [res, error] = m_common->map_critical(ptr, prot);
-	
+
 				if (res != ptr)
 				{
 					map_error = std::move(error);
 					return false;
 				}
-	
+
 				return true;
 			};
 
 			// Special path for whole-allocated areas allowing 4k granularity
-			m_common = std::make_shared<utils::shm>(size);
+			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
 
 			if (!map_critical(vm::_ptr<u8>(addr), this->flags & page_size_4k && utils::c_page_size > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
 			{
@@ -1507,7 +1511,7 @@ namespace vm
 		const v128 _4 = p[6] | p[7];
 		const v128 _5 = _1 | _2;
 		const v128 _6 = _3 | _4;
-		const v128 _7 = _5 | _6; 
+		const v128 _7 = _5 | _6;
 		return _7 == v128{};
 	}
 
@@ -1601,10 +1605,9 @@ namespace vm
 	{
 		if (flags & preallocated)
 		{
-			m_common = std::make_shared<utils::shm>(size);
-			m_common->map_critical(vm::base(addr), utils::protection::no);
+			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
+			m_common->map_critical(vm::base(addr), this->flags & page_size_4k && utils::c_page_size > 4096 ? utils::protection::rw : utils::protection::no);
 			m_common->map_critical(vm::get_super_ptr(addr));
-			lock_sudo(addr, size);
 		}
 
 		auto& m_map = (m.*block_map)();
@@ -1650,7 +1653,7 @@ namespace vm
 				pflags |= page_size_1m;
 			}
 
-			// Map the memory through the same method as alloc() and falloc() 
+			// Map the memory through the same method as alloc() and falloc()
 			// Copy the shared handle unconditionally
 			ensure(try_alloc(addr0, pflags, size0, ::as_rvalue(flags & preallocated ? null_shm : shared[ar.operator usz()])));
 
@@ -2005,7 +2008,7 @@ namespace vm
 	void save(utils::serial& ar)
 	{
 		// Shared memory lookup, sample address is saved for easy memory copy
-		// Just need one address for this optimization 
+		// Just need one address for this optimization
 		std::vector<std::pair<utils::shm*, u32>> shared;
 
 		for (auto& loc : g_locations)

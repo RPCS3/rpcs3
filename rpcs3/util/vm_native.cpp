@@ -567,30 +567,43 @@ namespace utils
 			return false;
 		};
 
-		const std::string storage2 = fs::get_temp_dir() + "rpcs3_vm_sparse.tmp";
-		const std::string storage3 = fs::get_cache_dir() + "rpcs3_vm_sparse.tmp";
+		std::string storage1 = fs::get_cache_dir();
+		std::string storage2 = fs::get_temp_dir();
 
-		if (!storage.empty())
+		if (storage.empty())
 		{
-			// Explicitly specified storage
-			ensure(f.open(storage, fs::read + fs::write + fs::create));
-		}
-		else if (!f.open(storage2, fs::read + fs::write + fs::create) || !set_sparse(f.get_handle(), m_size))
-		{
-			// Fallback storage
-			ensure(f.open(storage3, fs::read + fs::write + fs::create));
+			storage1 += "rpcs3_vm_sparse.tmp";
+			storage2 += "rpcs3_vm_sparse.tmp";
 		}
 		else
 		{
-			goto check;
+			storage1 += storage;
+			storage2 += storage;
 		}
 
-		if (!set_sparse(f.get_handle(), m_size))
+		if (!f.open(storage1, fs::read + fs::write + fs::create) || !set_sparse(f.get_handle(), m_size))
 		{
-			MessageBoxW(0, L"Failed to initialize sparse file.\nCan't find a filesystem with sparse file support (NTFS).", L"RPCS3", MB_ICONERROR);
+			// Fallback storage
+			ensure(f.open(storage2, fs::read + fs::write + fs::create));
+
+			if (!set_sparse(f.get_handle(), m_size))
+			{
+				MessageBoxW(0, L"Failed to initialize sparse file.\nCan't find a filesystem with sparse file support (NTFS).", L"RPCS3", MB_ICONERROR);
+			}
+
+			m_storage = std::move(storage2);
+		}
+		else
+		{
+			m_storage = std::move(storage1);
 		}
 
-	check:
+		// It seems impossible to automatically delete file on exit when file mapping is used
+		if (version_major <= 7) [[unlikely]]
+		{
+			m_storage.clear();
+		}
+
 		if (f.size() != m_size)
 		{
 			// Resize the file gradually (bug workaround)
@@ -659,10 +672,13 @@ namespace utils
 		if (!storage.empty())
 		{
 			m_file = ::open(storage.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			::unlink(storage.c_str());
 		}
 		else
 		{
-			m_file = ::open((fs::get_cache_dir() + "rpcs3_vm_sparse.tmp").c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			std::string storage = fs::get_cache_dir() + "rpcs3_vm_sparse.tmp";
+			m_file = ::open(storage.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			::unlink(storage.c_str());
 		}
 
 		ensure(m_file >= 0);
@@ -707,6 +723,9 @@ namespace utils
 #else
 		::close(m_file);
 #endif
+
+		if (!m_storage.empty())
+			fs::remove_file(m_storage);
 	}
 
 	u8* shm::map(void* ptr, protection prot, bool cow) const
@@ -823,12 +842,22 @@ namespace utils
 				return {nullptr, "Failed to split allocation end"};
 			}
 
-			if (cow)
+			DWORD access = 0;
+
+			switch (prot)
 			{
-				// TODO: Implement it
+			case protection::rw:
+			case protection::ro:
+			case protection::no:
+				access = cow ? PAGE_WRITECOPY : PAGE_READWRITE;
+				break;
+			case protection::wx:
+			case protection::rx:
+				access = cow ? PAGE_EXECUTE_WRITECOPY : PAGE_EXECUTE_READWRITE;
+				break;
 			}
 
-			if (MapViewOfFile3(m_handle, GetCurrentProcess(), target, 0, m_size, MEM_REPLACE_PLACEHOLDER, PAGE_EXECUTE_READWRITE, nullptr, 0))
+			if (MapViewOfFile3(m_handle, GetCurrentProcess(), target, 0, m_size, MEM_REPLACE_PLACEHOLDER, access, nullptr, 0))
 			{
 				if (prot != protection::rw && prot != protection::wx)
 				{
