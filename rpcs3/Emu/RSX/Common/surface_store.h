@@ -469,6 +469,12 @@ namespace rsx
 					free_rsx_memory(Traits::get(surface));
 					Traits::notify_surface_invalidated(surface);
 
+					if (old_surface_storage)
+					{
+						// Pitch-converted data. Send to invalidated pool immediately.
+						invalidated_resources.push_back(std::move(old_surface_storage));
+					}
+
 					old_surface_storage = std::move(surface);
 					primary_storage->erase(It);
 				}

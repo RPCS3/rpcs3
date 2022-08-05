@@ -574,6 +574,7 @@ namespace vk
 			view_swizzle = source->native_component_map;
 		}
 
+		image->set_debug_name("Temp view");
 		image->set_native_component_layout(view_swizzle);
 		auto view = image->get_view(rsx::get_remap_encoding(remap_vector), remap_vector);
 
