@@ -5,6 +5,7 @@
 #include "util/sysinfo.hpp"
 
 #include "Utilities/Thread.h"
+#include "Utilities/File.h"
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -31,6 +32,7 @@
 #endif
 
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
+#include <QImageReader> // This shouldn't be outside rpcs3qt...
 #include <thread>
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -104,7 +106,7 @@ EmuCallbacks main_application::CreateCallbacks()
 	callbacks.init_pad_handler = [this](std::string_view title_id)
 	{
 		ensure(g_fxo->init<named_thread<pad_thread>>(get_thread(), m_game_window, title_id));
-		while (pad::g_reset) std::this_thread::yield();
+		while (!pad::g_started) std::this_thread::yield();
 	};
 
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
@@ -145,6 +147,124 @@ EmuCallbacks main_application::CreateCallbacks()
 #endif
 		default: fmt::throw_exception("Invalid renderer index %u", renderer);
 		}
+	};
+
+	callbacks.get_image_info = [](const std::string& filename, std::string& sub_type, s32& width, s32& height, s32& orientation) -> bool
+	{
+		sub_type.clear();
+		width = 0;
+		height = 0;
+		orientation = 0; // CELL_SEARCH_ORIENTATION_UNKNOWN
+
+		bool success = false;
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			const QImageReader reader(QString::fromStdString(filename));
+			if (reader.canRead())
+			{
+				const QSize size = reader.size();
+				width = size.width();
+				height = size.height();
+				sub_type = reader.subType().toStdString();
+
+				switch (reader.transformation())
+				{
+				case QImageIOHandler::Transformation::TransformationNone:
+					orientation = 1; // CELL_SEARCH_ORIENTATION_TOP_LEFT = 0°
+					break;
+				case QImageIOHandler::Transformation::TransformationRotate90:
+					orientation = 2; // CELL_SEARCH_ORIENTATION_TOP_RIGHT = 90°
+					break;
+				case QImageIOHandler::Transformation::TransformationRotate180:
+					orientation = 3; // CELL_SEARCH_ORIENTATION_BOTTOM_RIGHT = 180°
+					break;
+				case QImageIOHandler::Transformation::TransformationRotate270:
+					orientation = 4; // CELL_SEARCH_ORIENTATION_BOTTOM_LEFT = 270°
+					break;
+				default:
+					// Ignore other transformations for now
+					break;
+				}
+
+				success = true;
+				sys_log.notice("get_image_info found image: filename='%s', sub_type='%s', width=%d, height=%d, orientation=%d", filename, sub_type, width, height, orientation);
+			}
+			else
+			{
+				sys_log.error("get_image_info failed to read '%s'. Error='%s'", filename, reader.errorString().toStdString());
+			}
+		});
+		return success;
+	};
+
+	callbacks.get_scaled_image = [](const std::string& path, s32 target_width, s32 target_height, s32& width, s32& height, u8* dst, bool force_fit) -> bool
+	{
+		width = 0;
+		height = 0;
+
+		if (target_width <= 0 || target_height <= 0 || !dst || !fs::is_file(path))
+		{
+			return false;
+		}
+
+		bool success = false;
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			// We use QImageReader instead of QImage. This way we can load and scale image in one step.
+			QImageReader reader(QString::fromStdString(path));
+
+			if (reader.canRead())
+			{
+				QSize size = reader.size();
+				width = size.width();
+				height = size.height();
+
+				if (width <= 0 || height <= 0)
+				{
+					return;
+				}
+
+				if (force_fit || width > target_width || height > target_height)
+				{
+					const f32 target_ratio = target_width / static_cast<f32>(target_height);
+					const f32 image_ratio = width / static_cast<f32>(height);
+					const f32 convert_ratio = image_ratio / target_ratio;
+
+					if (convert_ratio > 1.0f)
+					{
+						size = QSize(target_width, target_height / convert_ratio);
+					}
+					else if (convert_ratio < 1.0f)
+					{
+						size = QSize(target_width * convert_ratio, target_height);
+					}
+					else
+					{
+						size = QSize(target_width, target_height);
+					}
+
+					reader.setScaledSize(size);
+					width = size.width();
+					height = size.height();
+				}
+
+				QImage image = reader.read();
+
+				if (image.format() != QImage::Format::Format_RGBA8888)
+				{
+					image = image.convertToFormat(QImage::Format::Format_RGBA8888);
+				}
+
+				std::memcpy(dst, image.constBits(), std::min(4 * target_width * target_height, image.height() * image.bytesPerLine()));
+				success = true;
+				sys_log.notice("get_scaled_image scaled image: path='%s', width=%d, height=%d", path, width, height);
+			}
+			else
+			{
+				sys_log.error("get_scaled_image failed to read '%s'. Error='%s'", path, reader.errorString().toStdString());
+			}
+		});
+		return success;
 	};
 
 	callbacks.resolve_path = [](std::string_view sv)

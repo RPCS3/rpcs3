@@ -520,6 +520,15 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 		}
 		else if (auto readers = rwlock->rq.size())
 		{
+			for (auto cpu : rwlock->rq)
+			{
+				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
+			}
+	
 			for (auto cpu : ::as_rvalue(std::move(rwlock->rq)))
 			{
 				rwlock->append(cpu);

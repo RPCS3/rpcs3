@@ -65,7 +65,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 		QPushButton *saveNewEntry = new QPushButton(tr("Save New Entry"), this);
 		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]()
 		{
-			m_entry = selection_code::new_save;
+			m_entry = rsx::overlays::user_interface::selection_code::new_save;
 			accept();
 		});
 		hbox_action->addWidget(saveNewEntry);
@@ -135,15 +135,15 @@ s32 save_data_list_dialog::GetSelection() const
 {
 	if (result() == QDialog::Accepted)
 	{
-		if (m_entry == selection_code::new_save)
+		if (m_entry == rsx::overlays::user_interface::selection_code::new_save)
 		{ // Save new entry
-			return selection_code::new_save;
+			return rsx::overlays::user_interface::selection_code::new_save;
 		}
 		return m_list->item(m_entry, 0)->data(Qt::UserRole).toInt();
 	}
 
 	// Cancel is pressed. May figure out proper cellsavedata code to use later.
-	return selection_code::canceled;
+	return rsx::overlays::user_interface::selection_code::canceled;
 }
 
 void save_data_list_dialog::OnSort(int logicalIndex)

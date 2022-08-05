@@ -25,7 +25,7 @@ namespace gl
 
 		void initialize();
 		void create();
-		void destroy();
+		virtual void destroy();
 
 		virtual void bind_resources() {}
 
@@ -343,21 +343,26 @@ namespace gl
 
 	struct pixel_buffer_layout;
 
-	struct cs_image_to_ssbo : compute_task
+	class cs_image_to_ssbo : public compute_task
 	{
-		virtual void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) = 0;
+	protected:
+		gl::sampler_state m_sampler;
+
+	public:
+		void destroy() override { m_sampler.remove(); compute_task::destroy(); }
+		virtual void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) = 0;
 	};
 
 	struct cs_d24x8_to_ssbo : cs_image_to_ssbo
 	{
 		cs_d24x8_to_ssbo();
-		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) override;
+		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) override;
 	};
 
 	struct cs_rgba8_to_ssbo : cs_image_to_ssbo
 	{
 		cs_rgba8_to_ssbo();
-		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) override;
+		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) override;
 	};
 
 	struct cs_ssbo_to_color_image : compute_task

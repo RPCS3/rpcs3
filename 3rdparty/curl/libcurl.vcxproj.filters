@@ -480,6 +480,9 @@
     <ClCompile Include="curl\lib\timediff.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="curl\lib\fopen.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="curl\include\curl\curl.h">
@@ -963,6 +966,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\timediff.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\easy_lock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\fopen.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

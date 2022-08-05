@@ -92,8 +92,14 @@ void mic_context::operator()()
 		m_counter++;
 
 		// Process signals
+		const auto process_signals = [this]() -> bool
 		{
 			std::lock_guard lock(mutex);
+
+			if (mic_list.empty())
+			{
+				return false;
+			}
 
 			for (auto& mic_entry : mic_list)
 			{
@@ -103,16 +109,25 @@ void mic_context::operator()()
 
 			auto mic_queue = lv2_event_queue::find(event_queue_key);
 			if (!mic_queue)
-				continue;
-
-			for (auto& mic_entry : mic_list)
 			{
-				auto& mic = mic_entry.second;
+				return true;
+			}
+
+			for (const auto& [dev_num, mic] : mic_list)
+			{
 				if (mic.has_data())
 				{
-					mic_queue->send(0, CELLMIC_DATA, mic_entry.first, 0);
+					mic_queue->send(0, CELLMIC_DATA, dev_num, 0);
 				}
 			}
+
+			return true;
+		};
+
+		// Get mic input and sleep if mics are idle
+		if (!process_signals())
+		{
+			thread_ctrl::wait_for(100000);
 		}
 	}
 

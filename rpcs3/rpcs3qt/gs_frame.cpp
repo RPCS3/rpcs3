@@ -272,7 +272,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	case Qt::Key_S:
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
-			Emu.Restart(true);
+			Emu.Kill(false, true);
 			return;
 		}
 		break;

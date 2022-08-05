@@ -293,11 +293,11 @@ namespace gl
 		m_src = fmt::replace_all(raw_data, repl_list);
 	}
 
-	void cs_d24x8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& /*layout*/, const gl::pixel_pack_settings& settings)
+	void cs_d24x8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
-		const auto row_pitch = settings.get_row_length() ? settings.get_row_length() : region.width;
+		const auto row_pitch = region.width;
 
-		m_program.uniforms["swap_bytes"] = settings.get_swap_bytes();
+		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
 		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
 		m_program.uniforms["region_size"] = color2i(region.width, region.height);
@@ -305,11 +305,20 @@ namespace gl
 		auto depth_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::depth);
 		auto stencil_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::stencil);
 
+		if (!m_sampler)
+		{
+			m_sampler.create();
+			m_sampler.apply_defaults();
+		}
+
+		gl::saved_sampler_state save_0(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
+		gl::saved_sampler_state save_1(GL_COMPUTE_BUFFER_SLOT(1), m_sampler);
+
 		depth_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
 		stencil_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(1));
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(2), out_offset, row_pitch * 4 * region.height);
 
-		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size);
+		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size * optimal_group_size);
 		compute_task::run(cmd, num_invocations);
 	}
 
@@ -332,11 +341,11 @@ namespace gl
 		m_src = fmt::replace_all(raw_data, repl_list);
 	}
 
-	void cs_rgba8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings)
+	void cs_rgba8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
-		const auto row_pitch = settings.get_row_length() ? settings.get_row_length() : region.width;
+		const auto row_pitch = region.width;
 
-		m_program.uniforms["swap_bytes"] = settings.get_swap_bytes();
+		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
 		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
 		m_program.uniforms["region_size"] = color2i(region.width, region.height);
@@ -345,10 +354,18 @@ namespace gl
 
 		auto data_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::color);
 
+		if (!m_sampler)
+		{
+			m_sampler.create();
+			m_sampler.apply_defaults();
+		}
+
+		gl::saved_sampler_state save(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
+
 		data_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), out_offset, row_pitch * 4 * region.height);
 
-		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size);
+		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size * optimal_group_size);
 		compute_task::run(cmd, num_invocations);
 	}
 
@@ -385,7 +402,7 @@ namespace gl
 		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * bpp * dst_region.height);
 		glBindImageTexture(GL_COMPUTE_IMAGE_SLOT(0), dst->id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, dst->view_format());
 
-		const int num_invocations = utils::aligned_div(dst_region.width * dst_region.height, optimal_kernel_size);
+		const int num_invocations = utils::aligned_div(dst_region.width * dst_region.height, optimal_kernel_size * optimal_group_size);
 		compute_task::run(cmd, num_invocations);
 	}
 

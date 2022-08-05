@@ -199,197 +199,6 @@ namespace gl
 		return ret;
 	}
 
-	GLenum get_srgb_format(GLenum in_format)
-	{
-		switch (in_format)
-		{
-		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
-		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
-			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
-		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
-		case GL_RGBA8:
-			return GL_SRGB8_ALPHA8;
-		default:
-			//rsx_log.error("No gamma conversion for format 0x%X", in_format);
-			return in_format;
-		}
-	}
-
-	GLenum wrap_mode(rsx::texture_wrap_mode wrap)
-	{
-		switch (wrap)
-		{
-		case rsx::texture_wrap_mode::wrap: return GL_REPEAT;
-		case rsx::texture_wrap_mode::mirror: return GL_MIRRORED_REPEAT;
-		case rsx::texture_wrap_mode::clamp_to_edge: return GL_CLAMP_TO_EDGE;
-		case rsx::texture_wrap_mode::border: return GL_CLAMP_TO_BORDER;
-		case rsx::texture_wrap_mode::clamp: return GL_CLAMP_TO_EDGE;
-		case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return GL_MIRROR_CLAMP_TO_EDGE_EXT;
-		case rsx::texture_wrap_mode::mirror_once_border: return GL_MIRROR_CLAMP_TO_BORDER_EXT;
-		case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
-		}
-
-		rsx_log.error("Texture wrap error: bad wrap (%d)", static_cast<u32>(wrap));
-		return GL_REPEAT;
-	}
-
-	float max_aniso(rsx::texture_max_anisotropy aniso)
-	{
-		switch (aniso)
-		{
-		case rsx::texture_max_anisotropy::x1: return 1.0f;
-		case rsx::texture_max_anisotropy::x2: return 2.0f;
-		case rsx::texture_max_anisotropy::x4: return 4.0f;
-		case rsx::texture_max_anisotropy::x6: return 6.0f;
-		case rsx::texture_max_anisotropy::x8: return 8.0f;
-		case rsx::texture_max_anisotropy::x10: return 10.0f;
-		case rsx::texture_max_anisotropy::x12: return 12.0f;
-		case rsx::texture_max_anisotropy::x16: return 16.0f;
-		}
-
-		rsx_log.error("Texture anisotropy error: bad max aniso (%d)", static_cast<u32>(aniso));
-		return 1.0f;
-	}
-
-	int tex_min_filter(rsx::texture_minify_filter min_filter)
-	{
-		switch (min_filter)
-		{
-		case rsx::texture_minify_filter::nearest: return GL_NEAREST;
-		case rsx::texture_minify_filter::linear: return GL_LINEAR;
-		case rsx::texture_minify_filter::nearest_nearest: return GL_NEAREST_MIPMAP_NEAREST;
-		case rsx::texture_minify_filter::linear_nearest: return GL_LINEAR_MIPMAP_NEAREST;
-		case rsx::texture_minify_filter::nearest_linear: return GL_NEAREST_MIPMAP_LINEAR;
-		case rsx::texture_minify_filter::linear_linear: return GL_LINEAR_MIPMAP_LINEAR;
-		case rsx::texture_minify_filter::convolution_min: return GL_LINEAR_MIPMAP_LINEAR;
-		}
-		fmt::throw_exception("Unknown min filter");
-	}
-
-	int tex_mag_filter(rsx::texture_magnify_filter mag_filter)
-	{
-		switch (mag_filter)
-		{
-		case rsx::texture_magnify_filter::nearest: return GL_NEAREST;
-		case rsx::texture_magnify_filter::linear: return GL_LINEAR;
-		case rsx::texture_magnify_filter::convolution_mag: return GL_LINEAR;
-		}
-		fmt::throw_exception("Unknown mag filter");
-	}
-
-	// Apply sampler state settings
-	void sampler_state::apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image)
-	{
-		set_parameteri(GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
-		set_parameteri(GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
-		set_parameteri(GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
-
-		if (const auto color = tex.border_color();
-			get_parameteri(GL_TEXTURE_BORDER_COLOR) != color)
-		{
-			m_propertiesi[GL_TEXTURE_BORDER_COLOR] = color;
-
-			const color4f border_color = rsx::decode_border_color(color);
-			glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
-		}
-
-		if (sampled_image->upload_context != rsx::texture_upload_context::shader_read ||
-			tex.get_exact_mipmap_count() == 1)
-		{
-			GLint min_filter = tex_min_filter(tex.min_filter());
-
-			if (min_filter != GL_LINEAR && min_filter != GL_NEAREST)
-			{
-				switch (min_filter)
-				{
-				case GL_NEAREST_MIPMAP_NEAREST:
-				case GL_NEAREST_MIPMAP_LINEAR:
-					min_filter = GL_NEAREST; break;
-				case GL_LINEAR_MIPMAP_NEAREST:
-				case GL_LINEAR_MIPMAP_LINEAR:
-					min_filter = GL_LINEAR; break;
-				default:
-					rsx_log.error("No mipmap fallback defined for rsx_min_filter = 0x%X", static_cast<u32>(tex.min_filter()));
-					min_filter = GL_NEAREST;
-				}
-			}
-
-			set_parameteri(GL_TEXTURE_MIN_FILTER, min_filter);
-			set_parameterf(GL_TEXTURE_LOD_BIAS, 0.f);
-			set_parameterf(GL_TEXTURE_MIN_LOD, -1000.f);
-			set_parameterf(GL_TEXTURE_MAX_LOD, 1000.f);
-		}
-		else
-		{
-			set_parameteri(GL_TEXTURE_MIN_FILTER, tex_min_filter(tex.min_filter()));
-			set_parameterf(GL_TEXTURE_LOD_BIAS, tex.bias());
-			set_parameterf(GL_TEXTURE_MIN_LOD, tex.min_lod());
-			set_parameterf(GL_TEXTURE_MAX_LOD, tex.max_lod());
-		}
-
-		const f32 af_level = max_aniso(tex.max_aniso());
-		set_parameterf(GL_TEXTURE_MAX_ANISOTROPY_EXT, af_level);
-		set_parameteri(GL_TEXTURE_MAG_FILTER, tex_mag_filter(tex.mag_filter()));
-
-		const u32 texture_format = tex.format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
-		if (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8 ||
-			texture_format == CELL_GCM_TEXTURE_DEPTH16_FLOAT || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT)
-		{
-			//NOTE: The stored texture function is reversed wrt the textureProj compare function
-			GLenum compare_mode = static_cast<GLenum>(tex.zfunc()) | GL_NEVER;
-
-			switch (compare_mode)
-			{
-			case GL_GREATER: compare_mode = GL_LESS; break;
-			case GL_GEQUAL: compare_mode = GL_LEQUAL; break;
-			case GL_LESS: compare_mode = GL_GREATER; break;
-			case GL_LEQUAL: compare_mode = GL_GEQUAL; break;
-			}
-
-			set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-			set_parameteri(GL_TEXTURE_COMPARE_FUNC, compare_mode);
-		}
-		else
-			set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	}
-
-	void sampler_state::apply(const rsx::vertex_texture& tex, const rsx::sampled_image_descriptor_base* /*sampled_image*/)
-	{
-		if (const auto color = tex.border_color();
-			get_parameteri(GL_TEXTURE_BORDER_COLOR) != color)
-		{
-			m_propertiesi[GL_TEXTURE_BORDER_COLOR] = color;
-
-			const color4f border_color = rsx::decode_border_color(color);
-			glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
-		}
-
-		set_parameteri(GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
-		set_parameteri(GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
-		set_parameteri(GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
-		set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		set_parameterf(GL_TEXTURE_LOD_BIAS, tex.bias());
-		set_parameterf(GL_TEXTURE_MIN_LOD, tex.min_lod());
-		set_parameterf(GL_TEXTURE_MAX_LOD, tex.max_lod());
-		set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	}
-
-	void sampler_state::apply_defaults(GLenum default_filter)
-	{
-		set_parameteri(GL_TEXTURE_WRAP_S, GL_REPEAT);
-		set_parameteri(GL_TEXTURE_WRAP_T, GL_REPEAT);
-		set_parameteri(GL_TEXTURE_WRAP_R, GL_REPEAT);
-		set_parameteri(GL_TEXTURE_MIN_FILTER, default_filter);
-		set_parameteri(GL_TEXTURE_MAG_FILTER, default_filter);
-		set_parameterf(GL_TEXTURE_LOD_BIAS, 0.f);
-		set_parameteri(GL_TEXTURE_MIN_LOD, 0);
-		set_parameteri(GL_TEXTURE_MAX_LOD, 0);
-		set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
-	}
-
 	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format)
 	{
 		// NOTE: This must be in ARGB order in all forms below.
@@ -470,7 +279,7 @@ namespace gl
 	void* copy_image_to_buffer(gl::command_context& cmd, const pixel_buffer_layout& pack_info, const gl::texture* src, gl::buffer* dst,
 		u32 dst_offset, const int src_level, const coord3u& src_region,  image_memory_requirements* mem_info)
 	{
-		auto initialize_scratch_mem = [&]()
+		auto initialize_scratch_mem = [&]() -> bool // skip_transform
 		{
 			const u64 max_mem = (mem_info->memory_required) ? mem_info->memory_required : mem_info->image_size_in_bytes;
 			if (!(*dst) || max_mem > static_cast<u64>(dst->size()))
@@ -490,15 +299,15 @@ namespace gl
 					gl::get_compute_task<gl::cs_d24x8_to_ssbo>()->run(cmd,
 						const_cast<gl::viewable_image*>(as_vi), dst, dst_offset,
 						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
-						pack_info, {});
-					return;
+						pack_info);
+					return true;
 				case gl::texture::internal_format::rgba8:
 				case gl::texture::internal_format::bgra8:
 					gl::get_compute_task<gl::cs_rgba8_to_ssbo>()->run(cmd,
 						const_cast<gl::viewable_image*>(as_vi), dst, dst_offset,
 						{ {src_region.x, src_region.y}, {src_region.width, src_region.height} },
-						pack_info, {});
-					return;
+						pack_info);
+					return true;
 				default:
 					break;
 				}
@@ -506,6 +315,7 @@ namespace gl
 
 			dst->bind(buffer::target::pixel_pack);
 			src->copy_to(reinterpret_cast<void*>(static_cast<uintptr_t>(dst_offset)), static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, {});
+			return false;
 		};
 
 		void* result = reinterpret_cast<void*>(static_cast<uintptr_t>(dst_offset));
@@ -513,17 +323,19 @@ namespace gl
 			pack_info.type == GL_UNSIGNED_SHORT ||
 			pack_info.type == GL_UNSIGNED_INT_24_8)
 		{
-			initialize_scratch_mem();
-			if (auto job = get_trivial_transform_job(pack_info))
+			if (!initialize_scratch_mem())
 			{
-				job->run(cmd, dst, static_cast<u32>(mem_info->image_size_in_bytes), dst_offset);
+				if (auto job = get_trivial_transform_job(pack_info))
+				{
+					job->run(cmd, dst, static_cast<u32>(mem_info->image_size_in_bytes), dst_offset);
+				}
 			}
 		}
 		else if (pack_info.type == GL_FLOAT)
 		{
 			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 4));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 6);
-			initialize_scratch_mem();
+			ensure(!initialize_scratch_mem());
 
 			get_compute_task<cs_fconvert_task<f32, f16, false, true>>()->run(cmd, dst, dst_offset,
 				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
@@ -533,7 +345,7 @@ namespace gl
 		{
 			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 8));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 12);
-			initialize_scratch_mem();
+			ensure(!initialize_scratch_mem());
 
 			get_compute_task<cs_shuffle_d32fx8_to_x8d24f>()->run(cmd, dst, dst_offset,
 				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_texels));
@@ -582,8 +394,7 @@ namespace gl
 		};
 
 		const auto caps = gl::get_driver_caps();
-		if (dst->get_target() != gl::texture::target::texture1D &&
-			(!(dst->aspect() & image_aspect::stencil) || caps.ARB_shader_stencil_export_supported))
+		if ((dst->aspect() & image_aspect::stencil) == 0 || caps.ARB_shader_stencil_export_supported)
 		{
 			// We do not need to use the driver's builtin transport mechanism
 			glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -611,6 +422,16 @@ namespace gl
 			{
 				const subresource_range range = { image_aspect::depth | image_aspect::color, static_cast<GLuint>(dst_level), 1, dst_region.z , 1 };
 				scratch_view = std::make_unique<gl::texture_view>(dst, GL_TEXTURE_2D, range);
+				break;
+			}
+			case texture::target::texture1D:
+			{
+				scratch = std::make_unique<gl::texture>(
+					GL_TEXTURE_2D,
+					image_region.x + image_region.width, 1, 1, 1,
+					static_cast<GLenum>(dst->get_internal_format()), dst->format_class());
+
+				scratch_view = std::make_unique<gl::nil_texture_view>(scratch.get());
 				break;
 			}
 			default:
@@ -655,15 +476,26 @@ namespace gl
 				gl::get_overlay_pass<gl::rp_ssbo_to_generic_texture>()->run(cmd, transfer_buf, scratch_view.get(), out_offset, image_region, unpack_info);
 			}
 
-			if (dst->get_target() == texture::target::texture3D)
+			switch (dst->get_target())
+			{
+			case texture::target::texture1D:
+			{
+				const position3u transfer_offset = { dst_region.position.x, 0, 0 };
+				g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, transfer_offset, transfer_offset, { dst_region.width, 1, 1 });
+				break;
+			}
+			case texture::target::texture3D:
 			{
 				// Memcpy
 				for (u32 layer = dst_region.z, i = 0; i < dst_region.depth; ++i, ++layer)
 				{
 					const position3u src_offset = { dst_region.position.x, dst_region.position.y + (i * dst_region.height), 0 };
 					const position3u dst_offset = { dst_region.position.x, dst_region.position.y, layer };
-					g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, src_offset, dst_offset, {dst_region.width, dst_region.height, 1});
+					g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, src_offset, dst_offset, { dst_region.width, dst_region.height, 1 });
 				}
+				break;
+			}
+			default: break;
 			}
 		}
 		else
@@ -717,7 +549,7 @@ namespace gl
 
 	void fill_texture(gl::command_context& cmd, texture* dst, int format,
 			const std::vector<rsx::subresource_layout> &input_layouts,
-			bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
+			bool is_swizzled, GLenum gl_format, GLenum gl_type, rsx::simple_array<std::byte>& staging_buffer)
 	{
 		const auto driver_caps = gl::get_driver_caps();
 		rsx::texture_uploader_capabilities caps
@@ -856,7 +688,7 @@ namespace gl
 				if (driver_caps.ARB_compute_shader_supported)
 				{
 					// 0. Preconf
-					mem_layout.alignment = caps.alignment;
+					mem_layout.alignment = static_cast<u8>(caps.alignment);
 					mem_layout.swap_bytes = op.require_swap;
 					mem_layout.format = gl_format;
 					mem_layout.type = gl_type;
@@ -977,18 +809,18 @@ namespace gl
 	void upload_texture(gl::command_context& cmd, texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout)
 	{
 		// Calculate staging buffer size
-		std::vector<std::byte> data_upload_buf;
+		rsx::simple_array<std::byte> data_upload_buf;
 
 		if (rsx::is_compressed_host_format(gcm_format))
 		{
 			const auto& desc = subresources_layout[0];
-			const usz texture_data_sz = desc.width_in_block * desc.height_in_block * desc.depth * rsx::get_format_block_size_in_bytes(gcm_format);
+			const u32 texture_data_sz = desc.width_in_block * desc.height_in_block * desc.depth * rsx::get_format_block_size_in_bytes(gcm_format);
 			data_upload_buf.resize(texture_data_sz);
 		}
 		else
 		{
 			const auto aligned_pitch = utils::align<u32>(dst->pitch(), 4);
-			const usz texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
+			const u32 texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
 			data_upload_buf.resize(texture_data_sz);
 		}
 

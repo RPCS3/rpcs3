@@ -40,6 +40,7 @@ enum class game_boot_result : u32
 	nothing_to_boot,
 	wrong_disc_location,
 	invalid_file_or_folder,
+	invalid_bdvd_folder,
 	install_failed,
 	decryption_error,
 	file_creation_error,
@@ -95,6 +96,8 @@ struct EmuCallbacks
 	std::function<std::string(localized_string_id, const char*)> get_localized_string;
 	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
 	std::function<void(const std::string&)> play_sound;
+	std::function<bool(const std::string&, std::string&, s32&, s32&, s32&)> get_image_info; // (filename, sub_type, width, height, CellSearchOrientation)
+	std::function<bool(const std::string&, s32, s32, s32&, s32&, u8*, bool)> get_scaled_image; // (filename, target_width, target_height, width, height, dst, force_fit)
 	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
 };
 
@@ -301,8 +304,8 @@ public:
 	bool Pause(bool freeze_emulation = false);
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
-	void Kill(bool allow_autoexit = true, bool savestate = false);
-	game_boot_result Restart(bool savestate = false);
+	std::shared_ptr<utils::serial> Kill(bool allow_autoexit = true, bool savestate = false);
+	game_boot_result Restart();
 	bool Quit(bool force_quit);
 	static void CleanUp();
 

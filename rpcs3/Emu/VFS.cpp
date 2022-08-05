@@ -364,14 +364,7 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 
 	if (!node)
 	{
-		if (path.starts_with("."))
-		{
-			return {};
-		}
-
-		const std::string rpath = Emu.GetCallbacks().resolve_path(path);
-
-		if (rpath.empty())
+		if (path.starts_with(".") || path.empty())
 		{
 			return {};
 		}
@@ -379,6 +372,20 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 		reader_lock lock(table.mutex);
 
 		std::vector<std::string_view> mount_path_empty;
+
+		if (std::string res = vfs::retrieve(path, &table.root, &mount_path_empty); !res.empty())
+		{
+			return res;
+		}
+
+		mount_path_empty.clear();
+
+		const std::string rpath = Emu.GetCallbacks().resolve_path(path);
+
+		if (rpath.empty())
+		{
+			return {};
+		}
 
 		return vfs::retrieve(rpath, &table.root, &mount_path_empty);
 	}
@@ -388,19 +395,34 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 	// Try to extract host root mount point name (if exists)
 	std::string_view host_root_name;
 
+	std::string result;
+	std::string result_dir;
+
 	for (const auto& [name, dir] : node->dirs)
 	{
 		mount_path->back() = name;
 
 		if (std::string res = vfs::retrieve(path, &dir, mount_path); !res.empty())
 		{
-			return res;
+			// Avoid app_home
+			// Prefer dev_bdvd over dev_hdd0
+			if (result.empty() || (name == "app_home") < (result_dir == "app_home") ||
+				(name == "dev_bdvd") > (result_dir == "dev_bdvd"))
+			{
+				result = std::move(res);
+				result_dir = name;
+			}
 		}
 
 		if (dir.path == "/"sv)
 		{
 			host_root_name = name;
 		}
+	}
+
+	if (!result.empty())
+	{
+		return result;
 	}
 
 	mount_path->pop_back();
@@ -434,7 +456,7 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 	{
 		// If failed to find mount point for path and /host_root is mounted
 		// Prepend "/host_root" to path and return the constructed string
-		std::string result{"/"};
+		result = "/";
 
 		for (const auto& name : *mount_path)
 		{
@@ -449,7 +471,7 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 		return result;
 	}
 
-	return {};
+	return result;
 }
 
 std::string vfs::escape(std::string_view name, bool escape_slash)

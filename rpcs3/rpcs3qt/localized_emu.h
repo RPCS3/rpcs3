@@ -55,6 +55,7 @@ private:
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_TEXT: return tr("[Enter Text]", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_PASSWORD: return tr("[Enter Password]", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_TITLE: return tr("Select media", "Media dialog");
+		case localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_TITLE_PHOTO_IMPORT: return tr("Select photo to import", "Media dialog");
 		case localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_EMPTY: return tr("No media found.", "Media dialog");
 		case localized_string_id::RSX_OVERLAYS_LIST_SELECT: return tr("Enter", "Enter Dialog List");
 		case localized_string_id::RSX_OVERLAYS_LIST_CANCEL: return tr("Back", "Cancel Dialog List");

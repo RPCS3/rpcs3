@@ -46,21 +46,21 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <NMakeBuildCommandLine>$(CmakeReleaseCLI)
-      msbuild.exe build\ALL_BUILD.vcxproj /t:build /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(PropsAbsPath) /m</NMakeBuildCommandLine>
+      msbuild.exe build\ALL_BUILD.vcxproj /t:build /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>$(CmakeReleaseCLI)
-      msbuild.exe build\ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(PropsAbsPath) /m</NMakeReBuildCommandLine>
+      msbuild.exe build\ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>$(CmakeReleaseCLI)
-      msbuild.exe build\ALL_BUILD.vcxproj /t:clean /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(PropsAbsPath) /m</NMakeCleanCommandLine>
+      msbuild.exe build\ALL_BUILD.vcxproj /t:clean /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m</NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakeBuildCommandLine>$(CmakeDebugCLI)
-      msbuild.exe build\ALL_BUILD.vcxproj /t:build /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(PropsAbsPath) /m
+      msbuild.exe build\ALL_BUILD.vcxproj /t:build /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
     </NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>$(CmakeDebugCLI)
-      msbuild.exe build\ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(PropsAbsPath) /m
+      msbuild.exe build\ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
     </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>$(CmakeDebugCLI)
-      msbuild.exe build\ALL_BUILD.vcxproj /t:clean /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(PropsAbsPath) /m
+      msbuild.exe build\ALL_BUILD.vcxproj /t:clean /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
     </NMakeCleanCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup>

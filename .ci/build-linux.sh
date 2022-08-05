@@ -1,9 +1,9 @@
 #!/bin/sh -ex
 
 # Setup Qt variables
-export QT_BASE_DIR=/opt/qt${QTVERMIN}
-export PATH=$QT_BASE_DIR/bin:$PATH
-export LD_LIBRARY_PATH=$QT_BASE_DIR/lib/x86_64-linux-gnu:$QT_BASE_DIR/lib
+export QT_BASE_DIR=/opt/qt"${QTVERMIN}"
+export PATH="$QT_BASE_DIR"/bin:"$PATH"
+export LD_LIBRARY_PATH="$QT_BASE_DIR"/lib/x86_64-linux-gnu:"$QT_BASE_DIR"/lib
 
 if [ -z "$CIRRUS_CI" ]; then
    cd rpcs3 || exit 1
@@ -23,19 +23,19 @@ mkdir build && cd build || exit 1
 
 if [ "$COMPILER" = "gcc" ]; then
     # These are set in the dockerfile
-    export CC=${GCC_BINARY}
-    export CXX=${GXX_BINARY}
+    export CC="${GCC_BINARY}"
+    export CXX="${GXX_BINARY}"
     export LINKER=gold
     # We need to set the following variables for LTO to link properly
-    export AR=/usr/bin/gcc-ar-$GCCVER
-    export RANLIB=/usr/bin/gcc-ranlib-$GCCVER
+    export AR=/usr/bin/gcc-ar-"$GCCVER"
+    export RANLIB=/usr/bin/gcc-ranlib-"$GCCVER"
     export CFLAGS="-fuse-linker-plugin"
 else
-    export CC=${CLANG_BINARY}
-    export CXX=${CLANGXX_BINARY}
+    export CC="${CLANG_BINARY}"
+    export CXX="${CLANGXX_BINARY}"
     export LINKER=lld
-    export AR=/usr/bin/llvm-ar-$LLVMVER
-    export RANLIB=/usr/bin/llvm-ranlib-$LLVMVER
+    export AR=/usr/bin/llvm-ar-"$LLVMVER"
+    export RANLIB=/usr/bin/llvm-ranlib-"$LLVMVER"
 fi
 
 export CFLAGS="$CFLAGS -fuse-ld=${LINKER}"

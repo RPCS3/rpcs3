@@ -615,3 +615,13 @@ bool fmt::match(const std::string& source, const std::string& mask)
 
 	return true;
 }
+
+std::string get_file_extension(const std::string& file_path)
+{
+	if (usz dotpos = file_path.find_last_of('.'); dotpos != std::string::npos && dotpos + 1 < file_path.size())
+	{
+		return file_path.substr(dotpos + 1);
+	}
+
+	return {};
+}

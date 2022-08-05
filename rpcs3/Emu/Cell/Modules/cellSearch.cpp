@@ -71,7 +71,9 @@ struct search_info
 struct search_content_t
 {
 	CellSearchContentType type = CELL_SEARCH_CONTENTTYPE_NONE;
-	CellSearchTimeInfo timeInfo;
+	CellSearchRepeatMode repeat_mode = CELL_SEARCH_REPEATMODE_NONE;
+	CellSearchContextOption context_option = CELL_SEARCH_CONTEXTOPTION_NONE;
+	CellSearchTimeInfo time_info;
 	CellSearchContentInfoPath infoPath;
 	union
 	{
@@ -366,19 +368,49 @@ void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi,
 		info.videoBitrate, info.audioBitrate, info.playCount, info.drmEncrypted, info.videoCodec, info.audioCodec, info.status);
 }
 
-void populate_photo_info(CellSearchPhotoInfo& info, const utils::media_info& /*mi*/, const fs::dir_entry& item)
+void populate_photo_info(CellSearchPhotoInfo& info, const utils::media_info& mi, const fs::dir_entry& item)
 {
 	// TODO - Some kinda file photo analysis and assign the values as such
 	info.size = item.size;
 	info.importedDate = -1;
 	info.takenDate = -1;
-	info.width = 0;
-	info.height = 0;
-	info.orientation = CELL_SEARCH_ORIENTATION_UNKNOWN;
-	info.codec = CELL_SEARCH_CODEC_UNKNOWN;
+	info.width = mi.width;
+	info.height = mi.height;
+	info.orientation = mi.orientation;
 	info.status = CELL_SEARCH_CONTENTSTATUS_AVAILABLE;
 	strcpy_trunc(info.title, item.name.substr(0, item.name.find_last_of('.')));
 	strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+
+	const std::string sub_type = fmt::to_lower(mi.sub_type);
+
+	if (sub_type == "jpg" || sub_type == "jpeg")
+	{
+		info.codec = CELL_SEARCH_CODEC_JPEG;
+	}
+	else if (sub_type == "png")
+	{
+		info.codec = CELL_SEARCH_CODEC_PNG;
+	}
+	else if (sub_type == "tif" || sub_type == "tiff")
+	{
+		info.codec = CELL_SEARCH_CODEC_TIFF;
+	}
+	else if (sub_type == "bmp")
+	{
+		info.codec = CELL_SEARCH_CODEC_BMP;
+	}
+	else if (sub_type == "gif")
+	{
+		info.codec = CELL_SEARCH_CODEC_GIF;
+	}
+	else if (sub_type == "mpo")
+	{
+		info.codec = CELL_SEARCH_CODEC_MPO;
+	}
+	else
+	{
+		info.codec = CELL_SEARCH_CODEC_UNKNOWN;
+	}
 
 	cellSearch.notice("CellSearchPhotoInfo: title='%s', albumTitle='%s', size=%d, width=%d, height=%d, orientation=%d, codec=%d, status=%d, importedDate=%d, takenDate=%d",
 		info.title, info.albumTitle, info.size, info.width, info.height, info.orientation, info.codec, info.status, info.importedDate, info.takenDate);
@@ -1555,7 +1587,7 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 
 		if (outTimeInfo)
 		{
-			std::memcpy(outTimeInfo.get_ptr(), &content_id.second->timeInfo, sizeof(content_id.second->timeInfo));
+			std::memcpy(outTimeInfo.get_ptr(), &content_id.second->time_info, sizeof(content_id.second->time_info));
 		}
 
 	}
@@ -1644,7 +1676,7 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 		return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
 	}
 
-	music_selection_context context;
+	music_selection_context context{};
 
 	// Use the first track in order to get info about this search
 	const auto& first_content_id = searchObject->content_ids[0];
@@ -1685,8 +1717,8 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 			}
 
 			// Use the found content
-			context.content_path = content->second->infoPath.contentPath;
-			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning found track: Type=0x%x, Path=%s", content_hash, +content->second->type, context.content_path);
+			context.playlist.push_back(content->second->infoPath.contentPath);
+			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning found track: Type=0x%x, Path=%s", content_hash, +content->second->type, context.playlist.back());
 		}
 		else if (first_content->type == CELL_SEARCH_CONTENTTYPE_MUSICLIST)
 		{
@@ -1696,15 +1728,17 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 		else if (option == CELL_SEARCH_CONTEXTOPTION_SHUFFLE)
 		{
 			// Select random track
+			// TODO: whole playlist
 			std::shared_ptr<search_content_t> content = get_random_content();
-			context.content_path = content->infoPath.contentPath;
-			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning random track: Type=0x%x, Path=%s", content_hash, +content->type, context.content_path);
+			context.playlist.push_back(content->infoPath.contentPath);
+			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning random track: Type=0x%x, Path=%s", content_hash, +content->type, context.playlist.back());
 		}
 		else
 		{
 			// Select the first track by default
-			context.content_path = first_content->infoPath.contentPath;
-			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning first track: Type=0x%x, Path=%s", content_hash, +first_content->type, context.content_path);
+			// TODO: whole playlist
+			context.playlist.push_back(first_content->infoPath.contentPath);
+			cellSearch.notice("cellSearchGetMusicSelectionContext(): Hash=%08X, Assigning first track: Type=0x%x, Path=%s", content_hash, +first_content->type, context.playlist.back());
 		}
 	}
 	else if (first_content->type == CELL_SEARCH_CONTENTTYPE_MUSICLIST)
@@ -1715,27 +1749,34 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 	else if (option == CELL_SEARCH_CONTEXTOPTION_SHUFFLE)
 	{
 		// Select random track
+		// TODO: whole playlist
 		std::shared_ptr<search_content_t> content = get_random_content();
-		context.content_path = content->infoPath.contentPath;
-		cellSearch.notice("cellSearchGetMusicSelectionContext(): Assigning random track: Type=0x%x, Path=%s", +content->type, context.content_path);
+		context.playlist.push_back(content->infoPath.contentPath);
+		cellSearch.notice("cellSearchGetMusicSelectionContext(): Assigning random track: Type=0x%x, Path=%s", +content->type, context.playlist.back());
 	}
 	else
 	{
 		// Select the first track by default
-		context.content_path = first_content->infoPath.contentPath;
-		cellSearch.notice("cellSearchGetMusicSelectionContext(): Assigning first track: Type=0x%x, Path=%s", +first_content->type, context.content_path);
+		// TODO: whole playlist
+		context.playlist.push_back(first_content->infoPath.contentPath);
+		cellSearch.notice("cellSearchGetMusicSelectionContext(): Assigning first track: Type=0x%x, Path=%s", +first_content->type, context.playlist.back());
 	}
 
 	context.content_type = first_content->type;
 	context.repeat_mode = repeatMode;
 	context.context_option = option;
+	// TODO: context.first_track = ?;
 
 	// Resolve hashed paths
-	if (auto found = search.content_links.find(context.content_path); found != search.content_links.end())
+	for (std::string& track : context.playlist)
 	{
-		context.content_path = found->second;
+		if (auto found = search.content_links.find(track); found != search.content_links.end())
+		{
+			track = found->second;
+		}
 	}
 
+	context.create_playlist(music_selection_context::get_next_hash());
 	*outContext = context.get();
 
 	cellSearch.success("cellSearchGetMusicSelectionContext: found selection context: %d", context.to_string());
@@ -1780,15 +1821,21 @@ error_code cellSearchGetMusicSelectionContextOfSingleTrack(vm::cptr<CellSearchCo
 		return CELL_SEARCH_ERROR_INVALID_CONTENTTYPE;
 	}
 
-	music_selection_context context;
-	context.content_path = content_info->infoPath.contentPath;
+	music_selection_context context{};
+	context.playlist.push_back(content_info->infoPath.contentPath);
+	context.repeat_mode = content_info->repeat_mode;
+	context.context_option = content_info->context_option;
 
 	// Resolve hashed paths
-	if (auto found = search.content_links.find(context.content_path); found != search.content_links.end())
+	for (std::string& track : context.playlist)
 	{
-		context.content_path = found->second;
+		if (auto found = search.content_links.find(track); found != search.content_links.end())
+		{
+			track = found->second;
+		}
 	}
 
+	context.create_playlist(music_selection_context::get_next_hash());
 	*outContext = context.get();
 
 	cellSearch.success("cellSearchGetMusicSelectionContextOfSingleTrack: found selection context: %s", context.to_string());
@@ -2066,14 +2113,33 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 
 	// Search for the content that matches our current selection
 	auto& content_map = g_fxo->get<content_id_map>();
-	const u64 hash = std::hash<std::string>()(content_path);
-	auto found = content_map.map.find(hash);
-	if (found != content_map.map.end())
+	std::shared_ptr<search_content_t> found_content;
+	u64 hash = 0;
+
+	for (const std::string& track : playlist)
+	{
+		if (content_type == CELL_SEARCH_CONTENTTYPE_MUSICLIST)
+		{
+			hash = std::hash<std::string>()(fs::get_parent_dir(track));
+		}
+		else
+		{
+			hash = std::hash<std::string>()(track);
+		}
+
+		if (auto found = content_map.map.find(hash); found != content_map.map.end())
+		{
+			found_content = found->second;
+			break;
+		}
+	}
+
+	if (found_content)
 	{
 		// TODO: check if the content type is correct
-		const u128 content_id_128 = found->first;
+		const u128 content_id_128 = hash;
 		std::memcpy(contents_id->data, &content_id_128, CELL_SEARCH_CONTENT_ID_SIZE);
-		cellSearch.warning("find_content_id: found existing content for %s (path control: '%s')", to_string(), found->second->infoPath.contentPath);
+		cellSearch.warning("find_content_id: found existing content for %s (path control: '%s')", to_string(), found_content->infoPath.contentPath);
 		return CELL_OK;
 	}
 
@@ -2116,6 +2182,8 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 				// TODO: check for actual content inside the directory
 				std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
 				curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSICLIST;
+				curr_find->repeat_mode = repeat_mode;
+				curr_find->context_option = context_option;
 
 				if (dir_path.length() > CELL_SEARCH_PATH_LEN_MAX)
 				{
@@ -2170,6 +2238,8 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 
 				std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
 				curr_find->type = CELL_SEARCH_CONTENTTYPE_MUSIC;
+				curr_find->repeat_mode = repeat_mode;
+				curr_find->context_option = context_option;
 
 				if (file_path.length() > CELL_SEARCH_PATH_LEN_MAX)
 				{

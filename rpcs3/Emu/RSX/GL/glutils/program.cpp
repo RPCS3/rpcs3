@@ -8,8 +8,109 @@ namespace gl
 {
 	namespace glsl
 	{
+		void patch_macros_INTEL(std::string& source)
+		{
+			auto read_token = [&source](size_t start) -> std::tuple<size_t, size_t>
+			{
+				size_t string_begin = std::string::npos, i = start;
+				for (size_t count = 0; i < source.length(); ++i)
+				{
+					const auto& c = source[i];
+					const auto is_space = std::isspace(c);
+
+					if (string_begin == std::string::npos)
+					{
+						if (c == '\n') break;
+						if (is_space) continue;
+
+						string_begin = i;
+					}
+
+					if (is_space)
+					{
+						if (!count) break;
+					}
+					else if (c == '(')
+					{
+						count++;
+					}
+					else if (c == ')')
+					{
+						count--;
+					}
+				}
+
+				return std::make_tuple(string_begin, i - 1);
+			};
+
+			auto is_exempt = [&source](const std::string_view& token) -> bool
+			{
+				const char* handled_keywords[] =
+				{
+					"SSBO_LOCATION(x)",
+					"UBO_LOCATION(x)",
+					"IMAGE_LOCATION(x)"
+				};
+
+				for (const auto& keyword : handled_keywords)
+				{
+					if (token.starts_with(keyword))
+					{
+						return false;
+					}
+				}
+
+				return true;
+			};
+
+			size_t prev_loc = 0;
+			while (true)
+			{
+				// Find macro define blocks and remove the outer-most brackets around the expression part
+				const auto next_loc = source.find("#define", prev_loc);
+				if (next_loc == std::string::npos)
+				{
+					break;
+				}
+
+				prev_loc = next_loc + 1;
+
+				const auto [name_start, name_end] = read_token(next_loc + ("#define"sv).length());
+				if (name_start == std::string::npos)
+				{
+					break;
+				}
+
+				const auto macro_name = std::string_view(source.data() + name_start, (name_end - name_start) + 1);
+				if (is_exempt(macro_name))
+				{
+					continue;
+				}
+
+				const auto [expr_start, expr_end] = read_token(name_end + 1);
+				if (expr_start == std::string::npos)
+				{
+					continue;
+				}
+
+				if (source[expr_start] == '(' && source[expr_end] == ')')
+				{
+					rsx_log.notice("[Compiler warning] We'll remove brackets around the expression named '%s'. Add it to exclusion list if this is not desired.", macro_name);
+
+					source[expr_start] = ' ';
+					source[expr_end] = ' ';
+				}
+			}
+		}
+
 		void shader::precompile()
 		{
+			if (gl::get_driver_caps().vendor_INTEL)
+			{
+				// Workaround for broken macro expansion.
+				patch_macros_INTEL(source);
+			}
+
 			const char* str = source.c_str();
 			const GLint length = ::narrow<GLint>(source.length());
 

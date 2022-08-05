@@ -887,9 +887,9 @@ namespace vm
 		// Notify rsx to invalidate range
 		// Note: This must be done *before* memory gets unmapped while holding the vm lock, otherwise
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
-		if (auto& rsxthr = g_fxo->get<rsx::thread>(); !Emu.IsPaused() && g_fxo->is_init<rsx::thread>())
+		if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 		{
-			rsxthr.on_notify_memory_unmapped(addr, size);
+			rsxthr->on_notify_memory_unmapped(addr, size);
 		}
 
 		// Deregister PPU related data
@@ -2008,9 +2008,26 @@ namespace vm
 			if (loc) loc->get_shared_memory(shared);
 		}
 
-		shared.erase(std::unique(shared.begin(), shared.end(), [](auto& a, auto& b) { return a.first == b.first; }), shared.end());
-
 		std::map<utils::shm*, usz> shared_map;
+
+#ifndef _MSC_VER
+		shared.erase(std::unique(shared.begin(), shared.end(), [](auto& a, auto& b) { return a.first == b.first; }), shared.end());
+#else
+		// Workaround for bugged std::unique
+		for (auto it = shared.begin(); it != shared.end();)
+		{
+			if (shared_map.count(it->first))
+			{
+				it = shared.erase(it);
+				continue;
+			}
+
+			shared_map.emplace(it->first, 0);
+			it++;
+		}
+
+		shared_map.clear();
+#endif
 
 		for (auto& p : shared)
 		{

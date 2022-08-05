@@ -22,6 +22,7 @@
 // TODO: Include on use
 #include "glutils/buffer_object.h"
 #include "glutils/image.h"
+#include "glutils/sampler.h"
 #include "glutils/pixel_settings.hpp"
 #include "glutils/state_tracker.hpp"
 

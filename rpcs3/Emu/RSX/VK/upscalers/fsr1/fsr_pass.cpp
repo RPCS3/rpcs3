@@ -210,7 +210,7 @@ namespace vk
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage,
-				VK_IMAGE_CREATE_ALLOW_NULL,                          // Allow creation to fail if there is no memory
+				VK_IMAGE_CREATE_ALLOW_NULL_RPCS3,                          // Allow creation to fail if there is no memory
 				VMM_ALLOCATION_POOL_SWAPCHAIN,
 				RSX_FORMAT_CLASS_COLOR);
 		};
