@@ -273,6 +273,13 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	// and https://developer.arm.com/documentation/den0024/a/The-ABI-for-ARM-64-bit-Architecture/Register-use-in-the-AArch64-Procedure-Call-Standard/Parameters-in-general-purpose-registers
 	// for AArch64 calling convention
 
+	// Save sp for native longjmp emulation
+	Label native_sp_offset = c.newLabel();
+	c.ldr(a64::x10, arm::Mem(native_sp_offset));
+	// sp not allowed to be used in load/stores directly
+	c.mov(a64::x15, a64::sp);
+	c.str(a64::x15, arm::Mem(args[0], a64::x10));
+
 	// Push callee saved registers to the stack
 	// We need to save x18-x30 = 13 x 8B each + 8 bytes for 16B alignment = 112B
 	c.sub(a64::sp, a64::sp, Imm(112));
@@ -284,13 +291,6 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.stp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
 	c.str(a64::x30, arm::Mem(a64::sp, 96));
 
-	// Save sp for native longjmp emulation
-	Label native_sp_offset = c.newLabel();
-	c.ldr(a64::x10, arm::Mem(native_sp_offset));
-	// sp not allowed to be used in load/stores directly
-	c.mov(a64::x15, a64::sp);
-	c.str(a64::x15, arm::Mem(args[0], a64::x10));
-
 	// Load REG_Base - use absolute jump target to bypass rel jmp range limits
 	Label exec_addr = c.newLabel();
 	c.ldr(a64::x19, arm::Mem(exec_addr));
@@ -299,28 +299,26 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	const arm::GpX ppu_t_base = a64::x20;
 	c.mov(ppu_t_base, args[0]);
 	// Load PC
-	const arm::GpX pc = a64::x26;
+	const arm::GpX pc = a64::x15;
 	Label cia_offset = c.newLabel();
 	const arm::GpX cia_addr_reg = a64::x11;
 	// Load offset value
 	c.ldr(cia_addr_reg, arm::Mem(cia_offset));
 	// Load cia
-	c.ldr(pc, arm::Mem(ppu_t_base, cia_addr_reg));
-	// Zero top 32 bits
-	c.mov(a64::w26, a64::w26);
+	c.ldr(a64::w15, arm::Mem(ppu_t_base, cia_addr_reg));
 	// Multiply by 2 to index into ptr table
-	const arm::GpX index_shift = a64::x27;
+	const arm::GpX index_shift = a64::x12;
 	c.mov(index_shift, Imm(2));
 	c.mul(pc, pc, index_shift);
 
 	// Load call target
-	const arm::GpX call_target = a64::x28;
+	const arm::GpX call_target = a64::x13;
 	c.ldr(call_target, arm::Mem(a64::x19, pc));
 	// Compute REG_Hp
 	const arm::GpX reg_hp = a64::x21;
 	c.mov(reg_hp, call_target);
 	c.lsr(reg_hp, reg_hp, 48);
-	c.lsl(reg_hp, reg_hp, 13);
+	c.lsl(a64::w21, a64::w21, 13);
 
 	// Zero top 16 bits of call target
 	c.lsl(call_target, call_target, Imm(16));
@@ -342,10 +340,6 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	// Execute LLE call
 	c.blr(call_target);
 
-	// Restore stack ptr
-	c.ldr(a64::x10, arm::Mem(native_sp_offset));
-	c.ldr(a64::x15, arm::Mem(a64::x20, a64::x10));
-	c.mov(a64::sp, a64::x15);
 	// Restore registers from the stack
 	c.ldp(a64::x18, a64::x19, arm::Mem(a64::sp));
 	c.ldp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
