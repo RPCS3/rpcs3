@@ -43,7 +43,6 @@
 #include <memory>
 #include <regex>
 #include <optional>
-#include <filesystem>
 
 #include "Utilities/JIT.h"
 
@@ -1139,7 +1138,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					bdvd_dir.push_back('/');
 				}
 
-				if (fs::is_dir(bdvd_dir) && std::filesystem::is_empty(bdvd_dir))
+				if (fs::get_dir_size(bdvd_dir) == 0)
 				{
 					// Ignore empty dir. We will need it later for disc games in dev_hdd0.
 					bdvd_dir.clear();
@@ -1441,7 +1440,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// Disc game located in dev_hdd0/game
 			bdvd_dir = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
 
-			if (!fs::is_dir(bdvd_dir) || !std::filesystem::is_empty(bdvd_dir))
+			if (fs::get_dir_size(bdvd_dir))
 			{
 				sys_log.error("Failed to load disc game from dev_hdd0. The virtual bdvd_dir path does not exist or the directory is not empty: '%s'", bdvd_dir);
 				return game_boot_result::invalid_bdvd_folder;
