@@ -65,6 +65,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	QMenu menu;
 	QAction* clear  = new QAction(tr("&Clear"));
 	QAction* open   = new QAction(tr("&Open log file"));
+	QAction* save   = new QAction(tr("&Save filtered log"));
 	QAction* filter = new QAction(tr("&Filter log"));
 
 	QAction* timestamps = new QAction(tr("&Show Timestamps"));
@@ -112,6 +113,8 @@ void log_viewer::show_context_menu(const QPoint& pos)
 
 	menu.addAction(open);
 	menu.addSeparator();
+	menu.addAction(save);
+	menu.addSeparator();
 	menu.addAction(filter);
 	menu.addSeparator();
 	menu.addAction(timestamps);
@@ -132,11 +135,29 @@ void log_viewer::show_context_menu(const QPoint& pos)
 
 	connect(open, &QAction::triggered, this, [this]()
 	{
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select log file"), m_path_last, tr("Log files (*.log);;"));
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select log file"), m_path_last, tr("Log files (*.log);;All files (*.*)"));
 		if (file_path.isEmpty())
 			return;
 		m_path_last = file_path;
 		show_log();
+	});
+
+	connect(save, &QAction::triggered, this, [this]()
+	{
+		const QString file_path = QFileDialog::getSaveFileName(this, tr("Save to file"), m_path_last, tr("Log files (*.log);;All files (*.*)"));
+		if (file_path.isEmpty())
+			return;
+
+		if (QFile log_file(file_path); log_file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+		{
+			log_file.write(m_log_text->toPlainText().toUtf8());
+			log_file.close();
+			gui_log.success("Exported filtered log to file '%s'", sstr(file_path));
+		}
+		else
+		{
+			gui_log.error("Failed to export filtered log to file '%s'", sstr(file_path));
+		}
 	});
 
 	connect(filter, &QAction::triggered, this, [this]()
@@ -205,6 +226,8 @@ void log_viewer::show_log()
 		gui_log.error("log_viewer: Failed to open %s", sstr(m_path_last));
 		m_log_text->setPlainText(tr("Failed to open '%0'").arg(m_path_last));
 	}
+
+	filter_log();
 }
 
 void log_viewer::set_text_and_keep_position(const QString& text)

@@ -1362,6 +1362,7 @@ void spu_thread::cpu_return()
 		if (ensure(group->running)-- == 1)
 		{
 			{
+				lv2_obj::notify_all_t notify;
 				std::lock_guard lock(group->mutex);
 				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 
@@ -4269,6 +4270,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 		state += cpu_flag::wait;
 
+		lv2_obj::notify_all_t notify;
+
 		const u32 code = value >> 24;
 		{
 			if (code < 64)
@@ -4832,7 +4835,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 			if (queue->events.empty())
 			{
-				queue->sq.emplace_back(this);
+				lv2_obj::emplace(queue->sq, this);
 				group->run_state = SPU_THREAD_GROUP_STATUS_WAITING;
 				group->waiter_spu_index = index;
 
@@ -4860,9 +4863,9 @@ bool spu_thread::stop_and_signal(u32 code)
 			}
 		}
 
-		while (auto old = state.fetch_sub(cpu_flag::signal))
+		while (auto old = +state)
 		{
-			if (old & cpu_flag::signal)
+			if (old & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
 			{
 				break;
 			}
@@ -5031,9 +5034,6 @@ bool spu_thread::stop_and_signal(u32 code)
 						flags += cpu_flag::stop + cpu_flag::ret;
 						return true;
 					});
-
-					if (thread.get() != this)
-						thread_ctrl::notify(*thread);
 				}
 			}
 
@@ -5043,6 +5043,18 @@ bool spu_thread::stop_and_signal(u32 code)
 			break;
 		}
 
+		for (auto& thread : group->threads)
+		{
+			if (thread)
+			{
+				// Notify threads, guess which threads need a notification by checking cpu_flag::ret (redundant notification can only occur if thread has called an exit syscall itself as well)
+				if (thread.get() != this && thread->state & cpu_flag::ret)
+				{
+					thread_ctrl::notify(*thread);
+				}
+			}
+		}
+	
 		check_state();
 		return true;
 	}

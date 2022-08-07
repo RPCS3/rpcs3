@@ -946,6 +946,24 @@ u32* cpu_thread::get_pc2()
 	return nullptr;
 }
 
+cpu_thread* cpu_thread::get_next_cpu()
+{
+	switch (id_type())
+	{
+	case 1:
+	{
+		return static_cast<ppu_thread*>(this)->next_cpu;
+	}
+	case 2:
+	{
+		return static_cast<spu_thread*>(this)->next_cpu;
+	}
+	default: break;
+	}
+
+	return nullptr;
+}
+
 std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu);
 
 void cpu_thread::dump_all(std::string& ret) const

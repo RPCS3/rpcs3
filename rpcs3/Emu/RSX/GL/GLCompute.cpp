@@ -305,6 +305,15 @@ namespace gl
 		auto depth_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::depth);
 		auto stencil_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::stencil);
 
+		if (!m_sampler)
+		{
+			m_sampler.create();
+			m_sampler.apply_defaults();
+		}
+
+		gl::saved_sampler_state save_0(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
+		gl::saved_sampler_state save_1(GL_COMPUTE_BUFFER_SLOT(1), m_sampler);
+
 		depth_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
 		stencil_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(1));
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(2), out_offset, row_pitch * 4 * region.height);
@@ -344,6 +353,14 @@ namespace gl
 		m_program.uniforms["block_width"] = static_cast<u32>(layout.size);
 
 		auto data_view = src->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector, gl::image_aspect::color);
+
+		if (!m_sampler)
+		{
+			m_sampler.create();
+			m_sampler.apply_defaults();
+		}
+
+		gl::saved_sampler_state save(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
 
 		data_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), out_offset, row_pitch * 4 * region.height);

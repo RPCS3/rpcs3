@@ -109,7 +109,7 @@ public:
 
 	// sys_usbd_receive_event PPU Threads
 	shared_mutex mutex_sq;
-	std::deque<ppu_thread*> sq;
+	ppu_thread* sq{};
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
@@ -642,7 +642,7 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	usbh.is_init = false;
 
 	// Forcefully awake all waiters
-	for (auto& cpu : ::as_rvalue(std::move(usbh.sq)))
+	while (auto cpu = lv2_obj::schedule<ppu_thread>(usbh.sq, SYS_SYNC_FIFO))
 	{
 		// Special ternimation signal value
 		cpu->gpr[4] = 4;
@@ -857,12 +857,12 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 		}
 
 		lv2_obj::sleep(ppu);
-		usbh.sq.emplace_back(&ppu);
+		lv2_obj::emplace(usbh.sq, &ppu);
 	}
 
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal)
+		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			sys_usbd.trace("Received event(queued): arg1=0x%x arg2=0x%x arg3=0x%x", ppu.gpr[4], ppu.gpr[5], ppu.gpr[6]);
 			break;
@@ -872,14 +872,17 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 		{
 			std::lock_guard lock(usbh.mutex);
 
-			if (std::find(usbh.sq.begin(), usbh.sq.end(), &ppu) == usbh.sq.end())
+			for (auto cpu = +usbh.sq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					sys_usbd.trace("sys_usbd_receive_event: aborting");
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
-			sys_usbd.trace("sys_usbd_receive_event: aborting");
-			return {};
+			break;
 		}
 
 		thread_ctrl::wait_on(ppu.state, state);

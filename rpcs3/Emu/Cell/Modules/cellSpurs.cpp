@@ -2413,8 +2413,8 @@ s32 _spurs::add_workload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32>
 
 	vm::atomic_op(spurs->wklMaxContention[index], [&](u8& v)
 	{
-		v &= (wnum <= 15 ? ~0xf : ~0xf0);
-		v |= (maxContention > 8 ? 8 : maxContention) << 4;
+		v &= (wnum <= 15 ? 0xf0 : 0x0f);
+		v |= (maxContention > 8 ? 8 : maxContention) << (wnum < CELL_SPURS_MAX_WORKLOAD ? 0 : 4);
 	});
 
 	vm::atomic_op<true>((wnum <= 15 ? spurs->wklSignal1 : spurs->wklSignal2), [&](be_t<u16>& data)

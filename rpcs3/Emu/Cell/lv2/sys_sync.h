@@ -10,7 +10,6 @@
 #include "Emu/IPC.h"
 #include "Emu/system_config.h"
 
-#include <deque>
 #include <thread>
 
 // attr_protocol (waiting scheduling policy)
@@ -62,6 +61,16 @@ enum
 
 enum ppu_thread_status : u32;
 
+namespace vm
+{
+	void temporary_unlock(cpu_thread& cpu) noexcept;
+}
+
+namespace cpu_counter
+{
+	void remove(cpu_thread*) noexcept;
+}
+
 // Base class for some kernel objects (shared set of 8192 objects).
 struct lv2_obj
 {
@@ -107,60 +116,111 @@ public:
 		return str;
 	}
 
-	// Find and remove the object from the deque container
-	template <typename T, typename E>
-	static T unqueue(std::deque<T>& queue, E object)
+	// Find and remove the object from the linked list
+	template <typename T>
+	static T* unqueue(T*& first, T* object, T* T::* mem_ptr = &T::next_cpu)
 	{
-		for (auto found = queue.cbegin(), end = queue.cend(); found != end; found++)
+		auto it = +first;
+	
+		if (it == object)
 		{
-			if (*found == object)
+			atomic_storage<T*>::release(first, it->*mem_ptr);
+			atomic_storage<T*>::release(it->*mem_ptr, nullptr);
+			return it;
+		}
+
+		for (; it;)
+		{
+			const auto next = it->*mem_ptr + 0;
+
+			if (next == object)
 			{
-				queue.erase(found);
-				return static_cast<T>(object);
+				atomic_storage<T*>::release(it->*mem_ptr, next->*mem_ptr);
+				atomic_storage<T*>::release(next->*mem_ptr, nullptr);
+				return next;
 			}
+
+			it = next;
 		}
 
 		return {};
 	}
 
+	// Remove an object from the linked set according to the protocol
 	template <typename E, typename T>
-	static T* schedule(std::deque<T*>& queue, u32 protocol)
+	static E* schedule(T& first, u32 protocol)
 	{
-		if (queue.empty())
+		auto it = static_cast<E*>(first);
+
+		if (!it)
 		{
-			return nullptr;
+			return it;
 		}
+
+		auto parent_found = &first;
 
 		if (protocol == SYS_SYNC_FIFO)
 		{
-			const auto res = queue.front();
-
-			if (res->state.none_of(cpu_flag::again))
-				queue.pop_front();
-
-			return res;
-		}
-
-		s32 prio = 3071;
-		auto it = queue.cbegin();
-
-		for (auto found = it, end = queue.cend(); found != end; found++)
-		{
-			const s32 _prio = static_cast<E*>(*found)->prio;
-
-			if (_prio < prio)
+			while (true)
 			{
-				it = found;
-				prio = _prio;
+				const auto next = +it->next_cpu;
+
+				if (next)
+				{
+					parent_found = &it->next_cpu;
+					it = next;
+					continue;
+				}
+
+				if (it && cpu_flag::again - it->state)
+				{
+					atomic_storage<T>::release(*parent_found, nullptr);
+				}
+
+				return it;
 			}
 		}
 
-		const auto res = *it;
+		s32 prio = it->prio;
+		auto found = it;
 
-		if (res->state.none_of(cpu_flag::again))
-			queue.erase(it);
+		while (true)
+		{
+			auto& node = it->next_cpu;
+			const auto next = static_cast<E*>(node);
 
-		return res;
+			if (!next)
+			{
+				break;
+			}
+
+			const s32 _prio = static_cast<E*>(next)->prio;
+
+			// This condition tests for equality as well so the eraliest element to be pushed is popped
+			if (_prio <= prio)
+			{
+				found = next;
+				parent_found = &node;
+				prio = _prio;
+			}
+
+			it = next;
+		}
+
+		if (cpu_flag::again - found->state)
+		{
+			atomic_storage<T>::release(*parent_found, found->next_cpu);
+			atomic_storage<T>::release(found->next_cpu, nullptr);
+		}
+
+		return found;
+	}
+
+	template <typename T>
+	static void emplace(T& first, T object)
+	{
+		atomic_storage<T>::release(object->next_cpu, first);
+		atomic_storage<T>::release(first, object);
 	}
 
 private:
@@ -175,7 +235,7 @@ public:
 
 	static void sleep(cpu_thread& cpu, const u64 timeout = 0);
 
-	static bool awake(cpu_thread* const thread, s32 prio = enqueue_cmd);
+	static bool awake(cpu_thread* thread, s32 prio = enqueue_cmd);
 
 	// Returns true on successful context switch, false otherwise
 	static bool yield(cpu_thread& thread);
@@ -202,6 +262,9 @@ public:
 	// Serialization related
 	static void set_future_sleep(cpu_thread* cpu);
 	static bool is_scheduler_ready();
+
+	// Must be called under IDM lock
+	static bool has_ppus_in_running_state();
 
 	static void cleanup();
 
@@ -433,6 +496,66 @@ public:
 		return true;
 	}
 
+	static inline void notify_all()
+	{
+		for (auto cpu : g_to_notify)
+		{
+			if (!cpu)
+			{
+				g_to_notify[0] = nullptr;
+				g_postpone_notify_barrier = false;
+				return;
+			}
+
+			if (cpu != &g_to_notify)
+			{
+				// Note: by the time of notification the thread could have been deallocated which is why the direct function is used
+				// TODO: Pass a narrower mask
+				atomic_wait_engine::notify_one(cpu, 4, atomic_wait::default_mask<atomic_bs_t<cpu_flag>>);
+			}
+		}
+	}
+
+	// Can be called before the actual sleep call in order to move it out of mutex scope
+	static inline void prepare_for_sleep(cpu_thread& cpu)
+	{
+		vm::temporary_unlock(cpu);
+		cpu_counter::remove(&cpu);
+	}
+
+	struct notify_all_t
+	{
+		notify_all_t() noexcept
+		{
+			g_postpone_notify_barrier = true;
+		}
+
+		notify_all_t(const notify_all_t&) = delete;
+	
+		static void cleanup()
+		{
+			for (auto& cpu : g_to_notify)
+			{
+				if (!cpu)
+				{
+					return;
+				}
+
+				// While IDM mutex is still locked (this function assumes so) check if the notification is still needed
+				if (cpu != &g_to_notify && !static_cast<const decltype(cpu_thread::state)*>(cpu)->all_of(cpu_flag::signal + cpu_flag::wait))
+				{
+					// Omit it (this is a void pointer, it can hold anything)
+					cpu = &g_to_notify;
+				}
+			}
+		}
+
+		~notify_all_t() noexcept
+		{
+			lv2_obj::notify_all();
+		}
+	};
+
 	// Scheduler mutex
 	static shared_mutex g_mutex;
 
@@ -441,16 +564,16 @@ private:
 	static thread_local std::vector<class cpu_thread*> g_to_awake;
 
 	// Scheduler queue for active PPU threads
-	static std::deque<class ppu_thread*> g_ppu;
+	static class ppu_thread* g_ppu;
 
 	// Waiting for the response from
-	static std::deque<class cpu_thread*> g_pending;
+	static u32 g_pending;
 
-	// Scheduler queue for timeouts (wait until -> thread)
-	static std::deque<std::pair<u64, class cpu_thread*>> g_waiting;
+	// Pending list of threads to notify (cpu_thread::state ptr)
+	static thread_local std::add_pointer_t<const void> g_to_notify[4];
 
-	// Threads which must call lv2_obj::sleep before the scheduler starts
-	static std::deque<class cpu_thread*> g_to_sleep;
+	// If a notify_all_t object exists locally, postpone notifications to the destructor of it (not recursive, notifies on the first destructor for safety)
+	static thread_local bool g_postpone_notify_barrier;
 
 	static void schedule_all();
 };

@@ -47,8 +47,11 @@ bool serialize<rsx::rsx_state>(utils::serial& ar, rsx::rsx_state& o)
 {
 	ar(o.transform_program);
 
-	// Hack for compatiblity with previous RSX captures
-	if (rsx::get_current_renderer()->state & cpu_flag::exit || GET_SERIALIZATION_VERSION(global_version))
+	// Work around for old RSX captures.
+	// RSX capture and savestates both call this method.
+	// We do not want to grab transform constants if it is not savestate capture.
+	const bool is_savestate_capture = thread_ctrl::get_current() && thread_ctrl::get_name() == "Emu State Capture Thread";
+	if (GET_SERIALIZATION_VERSION(global_version) || is_savestate_capture)
 	{
 		ar(o.transform_constants);
 	}

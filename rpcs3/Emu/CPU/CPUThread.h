@@ -140,6 +140,7 @@ public:
 
 	u32 get_pc() const;
 	u32* get_pc2(); // Last PC before stepping for the debugger (may be null)
+	cpu_thread* get_next_cpu(); // Access next_cpu member if the is one
 
 	void notify();
 	cpu_thread& operator=(thread_state);

@@ -28,6 +28,7 @@ namespace pad
 	atomic_t<pad_thread*> g_current = nullptr;
 	shared_mutex g_pad_mutex;
 	std::string g_title_id;
+	atomic_t<bool> g_started{false};
 	atomic_t<bool> g_reset{false};
 	atomic_t<bool> g_enabled{true};
 }
@@ -40,11 +41,11 @@ struct pad_setting
 	s32 ldd_handle = -1;
 };
 
-pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view title_id) : curthread(_curthread), curwindow(_curwindow)
+pad_thread::pad_thread(void* curthread, void* curwindow, std::string_view title_id) : m_curthread(curthread), m_curwindow(curwindow)
 {
 	pad::g_title_id = title_id;
 	pad::g_current = this;
-	pad::g_reset = true;
+	pad::g_started = false;
 }
 
 pad_thread::~pad_thread()
@@ -138,8 +139,8 @@ void pad_thread::Init()
 			{
 			case pad_handler::keyboard:
 				keyptr = std::make_shared<keyboard_pad_handler>();
-				keyptr->moveToThread(static_cast<QThread*>(curthread));
-				keyptr->SetTargetWindow(static_cast<QWindow*>(curwindow));
+				keyptr->moveToThread(static_cast<QThread*>(m_curthread));
+				keyptr->SetTargetWindow(static_cast<QWindow*>(m_curwindow));
 				cur_pad_handler = keyptr;
 				break;
 			case pad_handler::ds3:
@@ -216,13 +217,19 @@ void pad_thread::SetIntercepted(bool intercepted)
 void pad_thread::operator()()
 {
 	Init();
+
 	pad::g_reset = false;
+	pad::g_started = true;
+
+	bool mode_changed = true;
 
 	atomic_t<pad_handler_mode> pad_mode{g_cfg.io.pad_mode.get()};
 	std::vector<std::unique_ptr<named_thread<std::function<void()>>>> threads;
 
 	const auto stop_threads = [&threads]()
 	{
+		input_log.notice("Stopping pad threads...");
+
 		for (auto& thread : threads)
 		{
 			if (thread)
@@ -233,6 +240,8 @@ void pad_thread::operator()()
 			}
 		}
 		threads.clear();
+
+		input_log.notice("Pad threads stopped");
 	};
 
 	const auto start_threads = [this, &threads, &pad_mode]()
@@ -242,13 +251,15 @@ void pad_thread::operator()()
 			return;
 		}
 
+		input_log.notice("Starting pad threads...");
+
 		for (const auto& handler : handlers)
 		{
 			if (handler.first == pad_handler::null)
 			{
 				continue;
 			}
-			
+
 			threads.push_back(std::make_unique<named_thread<std::function<void()>>>(fmt::format("%s Thread", handler.second->m_type), [&handler = handler.second, &pad_mode]()
 			{
 				while (thread_ctrl::state() != thread_state::aborting)
@@ -265,6 +276,8 @@ void pad_thread::operator()()
 				}
 			}));
 		}
+
+		input_log.notice("Pad threads started");
 	};
 
 	while (thread_ctrl::state() != thread_state::aborting)
@@ -277,11 +290,13 @@ void pad_thread::operator()()
 
 		// Update variables
 		const bool needs_reset = pad::g_reset && pad::g_reset.exchange(false);
-		const bool mode_changed = pad_mode != pad_mode.exchange(g_cfg.io.pad_mode.get());
+		mode_changed |= pad_mode != pad_mode.exchange(g_cfg.io.pad_mode.get());
 
 		// Reset pad handlers if necessary
 		if (needs_reset || mode_changed)
 		{
+			mode_changed = false;
+
 			stop_threads();
 
 			if (needs_reset)

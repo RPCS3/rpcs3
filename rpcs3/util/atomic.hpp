@@ -315,10 +315,11 @@ private:
 	friend class atomic_wait::list;
 
 	static void wait(const void* data, u32 size, u128 old_value, u64 timeout, u128 mask, atomic_wait::info* ext = nullptr);
+
+public:
 	static void notify_one(const void* data, u32 size, u128 mask128);
 	static void notify_all(const void* data, u32 size, u128 mask128);
 
-public:
 	static void set_wait_callback(bool(*cb)(const void* data, u64 attempts, u64 stamp0));
 	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
 

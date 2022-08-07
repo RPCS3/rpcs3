@@ -10,6 +10,8 @@
 #include "Emu/Cell/SPUThread.h"
 #include "sys_process.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_event);
 
 lv2_event_queue::lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept
@@ -116,7 +118,7 @@ CellError lv2_event_queue::send(lv2_event event)
 		return CELL_ENOTCONN;
 	}
 
-	if (sq.empty())
+	if (!pq && !sq)
 	{
 		if (events.size() < this->size + 0u)
 		{
@@ -131,7 +133,7 @@ CellError lv2_event_queue::send(lv2_event event)
 	if (type == SYS_PPU_QUEUE)
 	{
 		// Store event in registers
-		auto& ppu = static_cast<ppu_thread&>(*schedule<ppu_thread>(sq, protocol));
+		auto& ppu = static_cast<ppu_thread&>(*schedule<ppu_thread>(pq, protocol));
 
 		if (ppu.state & cpu_flag::again)
 		{
@@ -237,11 +239,15 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 	std::unique_lock<shared_mutex> qlock;
 
+	cpu_thread* head{};
+
 	const auto queue = idm::withdraw<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
 	{
 		qlock = std::unique_lock{queue.mutex};
 
-		if (!mode && !queue.sq.empty())
+		head = queue.type == SYS_PPU_QUEUE ? static_cast<cpu_thread*>(+queue.pq) : +queue.sq;
+
+		if (!mode && head)
 		{
 			return CELL_EBUSY;
 		}
@@ -254,13 +260,13 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 		lv2_obj::on_id_destroy(queue, queue.key);
 
-		if (queue.sq.empty())
+		if (!head)
 		{
 			qlock.unlock();
 		}
 		else
 		{
-			for (auto cpu : queue.sq)
+			for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
 			{
 				if (cpu->state & cpu_flag::again)
 				{
@@ -292,15 +298,18 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 	if (qlock.owns_lock())
 	{
-		std::deque<cpu_thread*> sq;
-
-		sq = std::move(queue->sq);
-
 		if (sys_event.warning)
 		{
-			fmt::append(lost_data, "Forcefully awaken waiters (%u):\n", sq.size());
+			u32 size = 0;
 
-			for (auto cpu : sq)
+			for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
+			{
+				size++;
+			}
+
+			fmt::append(lost_data, "Forcefully awaken waiters (%u):\n", size);
+
+			for (auto cpu = head; cpu; cpu = cpu->get_next_cpu())
 			{
 				lost_data += cpu->get_name();
 				lost_data += '\n';
@@ -309,21 +318,24 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 		if (queue->type == SYS_PPU_QUEUE)
 		{
-			for (auto cpu : sq)
+			for (auto cpu = +queue->pq; cpu; cpu = cpu->next_cpu)
 			{
-				static_cast<ppu_thread&>(*cpu).gpr[3] = CELL_ECANCELED;
+				cpu->gpr[3] = CELL_ECANCELED;
 				queue->append(cpu);
 			}
 
+			atomic_storage<ppu_thread*>::release(queue->pq, nullptr); 
 			lv2_obj::awake_all();
 		}
 		else
 		{
-			for (auto cpu : sq)
+			for (auto cpu = +queue->sq; cpu; cpu = cpu->next_cpu)
 			{
-				static_cast<spu_thread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
-				resume_spu_thread_group_from_waiting(static_cast<spu_thread&>(*cpu));
+				cpu->ch_in_mbox.set_values(1, CELL_ECANCELED);
+				resume_spu_thread_group_from_waiting(*cpu);
 			}
+
+			atomic_storage<spu_thread*>::release(queue->sq, nullptr); 
 		}
 
 		qlock.unlock();
@@ -378,7 +390,7 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 
 	s32 count = 0;
 
-	while (queue->sq.empty() && count < size && !queue->events.empty())
+	while (count < size && !queue->events.empty())
 	{
 		auto& dest = event_array[count++];
 		const auto event = queue->events.front();
@@ -400,12 +412,14 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 	ppu.gpr[3] = CELL_OK;
 
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&](lv2_event_queue& queue) -> CellError
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id, [&, notify = lv2_obj::notify_all_t()](lv2_event_queue& queue) -> CellError
 	{
 		if (queue.type != SYS_PPU_QUEUE)
 		{
 			return CELL_EINVAL;
 		}
+
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(queue.mutex);
 
@@ -419,8 +433,8 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 		if (queue.events.empty())
 		{
-			queue.sq.emplace_back(&ppu);
 			queue.sleep(ppu, timeout);
+			lv2_obj::emplace(queue.pq, &ppu);
 			return CELL_EBUSY;
 		}
 
@@ -447,9 +461,9 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 	}
 
 	// If cancelled, gpr[3] will be non-zero. Other registers must contain event data.
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal)
+		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			break;
 		}
@@ -458,13 +472,26 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		{
 			std::lock_guard lock_rsx(queue->mutex);
 
-			if (std::find(queue->sq.begin(), queue->sq.end(), &ppu) == queue->sq.end())
+			for (auto cpu = +queue->pq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
-			return {};
+			break;
+		}
+
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
+		{
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)
@@ -479,7 +506,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 				std::lock_guard lock(queue->mutex);
 
-				if (!queue->unqueue(queue->sq, &ppu))
+				if (!queue->unqueue(queue->pq, &ppu))
 				{
 					break;
 				}
@@ -671,7 +698,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
-	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
+	const auto port = idm::check<lv2_obj, lv2_event_port>(eport_id, [&, notify = lv2_obj::notify_all_t()](lv2_event_port& port) -> CellError
 	{
 		if (lv2_obj::check(port.queue))
 		{

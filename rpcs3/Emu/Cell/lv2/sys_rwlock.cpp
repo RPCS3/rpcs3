@@ -7,6 +7,8 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_rwlock);
 
 lv2_rwlock::lv2_rwlock(utils::serial& ar)
@@ -100,7 +102,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&, notify = lv2_obj::notify_all_t()](lv2_rwlock& rwlock)
 	{
 		const s64 val = rwlock.owner;
 
@@ -111,6 +113,8 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				return true;
 			}
 		}
+
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(rwlock.mutex);
 
@@ -128,8 +132,8 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (_old > 0 || _old & 1)
 		{
-			rwlock.rq.emplace_back(&ppu);
 			rwlock.sleep(ppu, timeout);
+			lv2_obj::emplace(rwlock.rq, &ppu);
 			return false;
 		}
 
@@ -148,9 +152,9 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal)
+		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			break;
 		}
@@ -159,18 +163,26 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			std::lock_guard lock(rwlock->mutex);
 
-			if (std::find(rwlock->rq.begin(), rwlock->rq.end(), &ppu) == rwlock->rq.end())
+			for (auto cpu = +rwlock->rq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
 			break;
 		}
 
-		if (state & cpu_flag::signal)
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
 		{
-			break;
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)
@@ -264,6 +276,8 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 		return CELL_ESRCH;
 	}
 
+	lv2_obj::notify_all_t notify;
+
 	if (rwlock.ret)
 	{
 		return CELL_OK;
@@ -296,7 +310,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 					return {};
 				}
 
-				rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
+				rwlock->owner = cpu->id << 1 | !!rwlock->wq | !!rwlock->rq;
 
 				rwlock->awake(cpu);
 			}
@@ -304,7 +318,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 			{
 				rwlock->owner = 0;
 
-				ensure(rwlock->rq.empty());
+				ensure(!rwlock->rq);
 			}
 		}
 	}
@@ -318,7 +332,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
-	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock) -> s64
+	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&, notify = lv2_obj::notify_all_t()](lv2_rwlock& rwlock) -> s64
 	{
 		const s64 val = rwlock.owner;
 
@@ -333,6 +347,8 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			return val;
 		}
+
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(rwlock.mutex);
 
@@ -350,8 +366,8 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (_old != 0)
 		{
-			rwlock.wq.emplace_back(&ppu);
 			rwlock.sleep(ppu, timeout);
+			lv2_obj::emplace(rwlock.wq, &ppu);
 		}
 
 		return _old;
@@ -374,9 +390,9 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal)
+		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			break;
 		}
@@ -385,13 +401,26 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			std::lock_guard lock(rwlock->mutex);
 
-			if (std::find(rwlock->wq.begin(), rwlock->wq.end(), &ppu) == rwlock->wq.end())
+			for (auto cpu = +rwlock->wq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
 			break;
+		}
+
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
+		{
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)
@@ -412,23 +441,26 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				}
 
 				// If the last waiter quit the writer sleep queue, wake blocked readers
-				if (!rwlock->rq.empty() && rwlock->wq.empty() && rwlock->owner < 0)
+				if (rwlock->rq && !rwlock->wq && rwlock->owner < 0)
 				{
-					rwlock->owner.atomic_op([&](s64& owner)
-					{
-						owner -= 2 * static_cast<s64>(rwlock->rq.size()); // Add readers to value
-						owner &= -2; // Clear wait bit
-					});
+					s64 size = 0;
 
 					// Protocol doesn't matter here since they are all enqueued anyways
-					for (auto cpu : ::as_rvalue(std::move(rwlock->rq)))
+					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
 					{
+						size++;
 						rwlock->append(cpu);
 					}
 
+					rwlock->owner.atomic_op([&](s64& owner)
+					{
+						owner -= 2 * size; // Add readers to value
+						owner &= -2; // Clear wait bit
+					});
+
 					lv2_obj::awake_all();
 				}
-				else if (rwlock->rq.empty() && rwlock->wq.empty())
+				else if (!rwlock->rq && !rwlock->wq)
 				{
 					rwlock->owner &= -2;
 				}
@@ -502,7 +534,7 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 		return CELL_EPERM;
 	}
 
-	if (rwlock.ret & 1)
+	if (lv2_obj::notify_all_t notify; rwlock.ret & 1)
 	{
 		std::lock_guard lock(rwlock->mutex);
 
@@ -514,27 +546,31 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 				return {};
 			}
 
-			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
+			rwlock->owner = cpu->id << 1 | !!rwlock->wq | !!rwlock->rq;
 
 			rwlock->awake(cpu);
 		}
-		else if (auto readers = rwlock->rq.size())
+		else if (rwlock->rq)
 		{
-			for (auto cpu : rwlock->rq)
+			for (auto cpu = +rwlock->rq; cpu; cpu = cpu->next_cpu)
 			{
-				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+				if (cpu->state & cpu_flag::again)
 				{
 					ppu.state += cpu_flag::again;
 					return {};
 				}
 			}
-	
-			for (auto cpu : ::as_rvalue(std::move(rwlock->rq)))
+
+			s64 size = 0;
+
+			// Protocol doesn't matter here since they are all enqueued anyways
+			while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
 			{
+				size++;
 				rwlock->append(cpu);
 			}
 
-			rwlock->owner.release(-2 * static_cast<s64>(readers));
+			rwlock->owner.release(-2 * static_cast<s64>(size));
 			lv2_obj::awake_all();
 		}
 		else
