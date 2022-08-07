@@ -1140,18 +1140,18 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				if (!fs::is_file(bdvd_dir + "PS3_DISC.SFB"))
 				{
-					if (fs::get_dir_size(bdvd_dir) + 1 <= 1)
+					if (fs::get_dir_size(bdvd_dir) == 0)
 					{
 						// Ignore empty dir. We will need it later for disc games in dev_hdd0.
-						bdvd_dir.clear();
 						sys_log.notice("Ignoring empty vfs BDVD directory: '%s'", bdvd_dir);
 					}
 					else
 					{
 						// Unuse if invalid
 						sys_log.error("Failed to use custom BDVD directory: '%s'", bdvd_dir);
-						bdvd_dir.clear();
 					}
+
+					bdvd_dir.clear();
 				}
 			}
 		}
