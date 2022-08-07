@@ -7,6 +7,8 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_semaphore);
 
 lv2_sema::lv2_sema(utils::serial& ar)
@@ -109,7 +111,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
-	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
+	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&, notify = lv2_obj::notify_all_t()](lv2_sema& sema)
 	{
 		const s32 val = sema.val;
 
@@ -121,12 +123,14 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 			}
 		}
 
+		lv2_obj::prepare_for_sleep(ppu);
+
 		std::lock_guard lock(sema.mutex);
 
 		if (sema.val-- <= 0)
 		{
-			sema.sq.emplace_back(&ppu);
 			sema.sleep(ppu, timeout);
+			lv2_obj::emplace(sema.sq, &ppu);
 			return false;
 		}
 
@@ -145,9 +149,9 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal)
+		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			break;
 		}
@@ -156,13 +160,26 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		{
 			std::lock_guard lock(sem->mutex);
 
-			if (std::find(sem->sq.begin(), sem->sq.end(), &ppu) == sem->sq.end())
+			for (auto cpu = +sem->sq; cpu; cpu = cpu->next_cpu)
 			{
-				break;
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
 			}
 
-			ppu.state += cpu_flag::again;
-			return {};
+			break;
+		}
+
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
+		{
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)
@@ -258,6 +275,8 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 		return CELL_EINVAL;
 	}
 
+	lv2_obj::notify_all_t notify;
+
 	if (sem.ret)
 	{
 		return CELL_OK;
@@ -266,7 +285,7 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 	{
 		std::lock_guard lock(sem->mutex);
 
-		for (auto cpu : sem->sq)
+		for (auto cpu = +sem->sq; cpu; cpu = cpu->next_cpu)
 		{
 			if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
 			{

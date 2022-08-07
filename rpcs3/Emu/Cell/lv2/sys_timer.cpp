@@ -11,6 +11,7 @@
 #include "sys_process.h"
 
 #include <thread>
+#include <deque>
 
 LOG_CHANNEL(sys_timer);
 
@@ -59,6 +60,8 @@ u64 lv2_timer::check()
 			// If aborting, perform the last accurate check for event
 			if (_now >= next)
 			{
+				lv2_obj::notify_all_t notify;
+
 				std::lock_guard lock(mutex);
 
 				if (next = expire; _now < next)
@@ -152,8 +155,12 @@ error_code sys_timer_create(ppu_thread& ppu, vm::ptr<u32> timer_id)
 		auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
 		{
 			std::lock_guard lock(thread.mutex);
-			lv2_obj::unqueue(thread.timers, ptr);
-			thread.timers.emplace_back(std::move(ptr));
+
+			// Theoretically could have been destroyed by sys_timer_destroy by now
+			if (auto it = std::find(thread.timers.begin(), thread.timers.end(), ptr); it == thread.timers.end())
+			{
+				thread.timers.emplace_back(std::move(ptr));
+			}
 		}
 
 		*timer_id = idm::last_id();
@@ -192,7 +199,12 @@ error_code sys_timer_destroy(ppu_thread& ppu, u32 timer_id)
 
 	auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
 	std::lock_guard lock(thread.mutex);
-	lv2_obj::unqueue(thread.timers, std::move(timer.ptr));
+
+	if (auto it = std::find(thread.timers.begin(), thread.timers.end(), timer.ptr); it != thread.timers.end())
+	{
+		thread.timers.erase(it);
+	}
+
 	return CELL_OK;
 }
 
@@ -395,7 +407,7 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 
 	if (sleep_time)
 	{
-		lv2_obj::sleep(ppu, sleep_time);
+		lv2_obj::sleep(ppu, g_cfg.core.sleep_timers_accuracy < sleep_timers_accuracy_level::_usleep ? sleep_time : 0);
 
 		if (!lv2_obj::wait_timeout<true>(sleep_time))
 		{

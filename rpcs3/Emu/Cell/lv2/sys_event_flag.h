@@ -41,9 +41,8 @@ struct lv2_event_flag final : lv2_obj
 	const u64 name;
 
 	shared_mutex mutex;
-	atomic_t<u32> waiters{0};
 	atomic_t<u64> pattern;
-	std::deque<cpu_thread*> sq;
+	ppu_thread* sq{};
 
 	lv2_event_flag(u32 protocol, u64 key, s32 type, u64 name, u64 pattern) noexcept
 		: protocol{static_cast<u8>(protocol)}

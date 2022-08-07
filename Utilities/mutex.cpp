@@ -6,14 +6,27 @@ void shared_mutex::imp_lock_shared(u32 val)
 {
 	ensure(val < c_err); // "shared_mutex underflow"
 
+	// Try to steal the notification bit
+	if (val & c_sig && m_value.compare_exchange(val, val - c_sig + 1))
+	{
+		return;
+	}
+
 	for (int i = 0; i < 10; i++)
 	{
-		busy_wait();
-
 		if (try_lock_shared())
 		{
 			return;
 		}
+
+		const u32 old = m_value;
+
+		if (old & c_sig && m_value.compare_and_swap_test(old, old - c_sig + 1))
+		{
+			return;
+		}
+
+		busy_wait();
 	}
 
 	// Acquire writer lock and downgrade
@@ -75,11 +88,24 @@ void shared_mutex::imp_lock(u32 val)
 {
 	ensure(val < c_err); // "shared_mutex underflow"
 
+	// Try to steal the notification bit
+	if (val & c_sig && m_value.compare_exchange(val, val - c_sig + c_one))
+	{
+		return;
+	}
+
 	for (int i = 0; i < 10; i++)
 	{
 		busy_wait();
 
-		if (!m_value && try_lock())
+		const u32 old = m_value;
+
+		if (!old && try_lock())
+		{
+			return;
+		}
+
+		if (old & c_sig && m_value.compare_and_swap_test(old, old - c_sig + c_one))
 		{
 			return;
 		}

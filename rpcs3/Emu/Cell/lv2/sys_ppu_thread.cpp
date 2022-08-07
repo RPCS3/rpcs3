@@ -76,6 +76,9 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 		// Avoid cases where cleaning causes the destructor to be called inside IDM lock scope (for performance)
 		std::shared_ptr<void> old_ppu;
 
+		lv2_obj::notify_all_t notify;
+		lv2_obj::prepare_for_sleep(ppu);
+
 		std::lock_guard lock(id_manager::g_mutex);
 
 		// Get joiner ID
@@ -105,6 +108,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 		// Unqueue
 		lv2_obj::sleep(ppu);
+		notify.cleanup();
 
 		// Remove suspend state (TODO)
 		ppu.state -= cpu_flag::suspend;
@@ -138,11 +142,11 @@ s32 sys_ppu_thread_yield(ppu_thread& ppu)
 
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 {
-	ppu.state += cpu_flag::wait;
+	lv2_obj::prepare_for_sleep(ppu);
 
 	sys_ppu_thread.trace("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
 
-	auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
+	auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread) -> CellError
 	{
 		if (&ppu == &thread)
 		{
@@ -173,6 +177,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 		if (!result)
 		{
+			lv2_obj::prepare_for_sleep(ppu);
 			lv2_obj::sleep(ppu);
 		}
 		else if (result == CELL_EAGAIN)
@@ -180,6 +185,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 			thread.joiner.notify_one();
 		}
 
+		notify.cleanup();
 		return result;
 	});
 
@@ -471,7 +477,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	sys_ppu_thread.trace("sys_ppu_thread_start(thread_id=0x%x)", thread_id);
 
-	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
+	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread) -> CellError
 	{
 		if (!thread.state.test_and_reset(cpu_flag::stop))
 		{
@@ -479,7 +485,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 			return CELL_EBUSY;
 		}
 
-		lv2_obj::awake(&thread);
+		ensure(lv2_obj::awake(&thread));
 
 		thread.cmd_list
 		({

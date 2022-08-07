@@ -49,6 +49,7 @@
 #include "sys_crypto_engine.h"
 
 #include <optional>
+#include <deque>
 
 extern std::string ppu_get_syscall_name(u64 code);
 
@@ -1187,12 +1188,18 @@ std::string ppu_get_syscall_name(u64 code)
 }
 
 DECLARE(lv2_obj::g_mutex);
-DECLARE(lv2_obj::g_ppu);
-DECLARE(lv2_obj::g_pending);
-DECLARE(lv2_obj::g_waiting);
-DECLARE(lv2_obj::g_to_sleep);
+DECLARE(lv2_obj::g_ppu){};
+DECLARE(lv2_obj::g_pending){};
 
+thread_local DECLARE(lv2_obj::g_to_notify){};
+thread_local DECLARE(lv2_obj::g_postpone_notify_barrier){};
 thread_local DECLARE(lv2_obj::g_to_awake);
+
+// Scheduler queue for timeouts (wait until -> thread)
+static std::deque<std::pair<u64, class cpu_thread*>> g_waiting;
+
+// Threads which must call lv2_obj::sleep before the scheduler starts
+static std::deque<class cpu_thread*> g_to_sleep;
 
 namespace cpu_counter
 {
@@ -1201,20 +1208,55 @@ namespace cpu_counter
 
 void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 {
-	vm::temporary_unlock(cpu);
-	cpu_counter::remove(&cpu);
+	// Should already be performed when using this flag
+	if (!g_postpone_notify_barrier)
+	{
+		prepare_for_sleep(cpu);
+	}
 	{
 		std::lock_guard lock{g_mutex};
 		sleep_unlocked(cpu, timeout);
+		
+		if (!g_to_awake.empty())
+		{
+			// Schedule pending entries
+			awake_unlocked({});
+		}
+
+		schedule_all();
 	}
+
+	if (!g_postpone_notify_barrier)
+	{
+		notify_all();
+	}
+
 	g_to_awake.clear();
 }
 
-bool lv2_obj::awake(cpu_thread* const thread, s32 prio)
+bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 {
-	vm::temporary_unlock();
-	std::lock_guard lock(g_mutex);
-	return awake_unlocked(thread, prio);
+	bool result = false;
+	{
+		std::lock_guard lock(g_mutex);
+		result = awake_unlocked(thread, prio);
+		schedule_all();
+	}
+
+	if (result)
+	{
+		if (auto cpu = cpu_thread::get_current(); cpu && cpu->is_paused())
+		{
+			vm::temporary_unlock();
+		}
+	}
+
+	if (!g_postpone_notify_barrier)
+	{
+		notify_all();
+	}
+
+	return result;
 }
 
 bool lv2_obj::yield(cpu_thread& thread)
@@ -1259,9 +1301,9 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 
 	if (auto ppu = thread.try_get<ppu_thread>())
 	{
-		ppu_log.trace("sleep() - waiting (%zu)", g_pending.size());
+		ppu_log.trace("sleep() - waiting (%zu)", g_pending);
 
-		const auto [_, ok] = ppu->state.fetch_op([&](bs_t<cpu_flag>& val)
+		const auto [_ ,ok] = ppu->state.fetch_op([&](bs_t<cpu_flag>& val)
 		{
 			if (!(val & cpu_flag::signal))
 			{
@@ -1274,15 +1316,16 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 
 		if (!ok)
 		{
-			ppu_log.fatal("sleep() failed (signaled) (%s)", ppu->current_function);
+			ppu_log.trace("sleep() failed (signaled) (%s)", ppu->current_function);
 			return;
 		}
 
 		// Find and remove the thread
-		if (!unqueue(g_ppu, ppu))
+		if (!unqueue(g_ppu, ppu, &ppu_thread::next_ppu))
 		{
-			if (unqueue(g_to_sleep, ppu))
+			if (auto it = std::find(g_to_sleep.begin(), g_to_sleep.end(), ppu); it != g_to_sleep.end())
 			{
+				g_to_sleep.erase(it);
 				ppu->start_time = start_time;
 				on_to_sleep_update();
 			}
@@ -1292,15 +1335,19 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 			return;
 		}
 
-		unqueue(g_pending, ppu);
+		if (std::exchange(ppu->ack_suspend, false))
+		{
+			g_pending--;
+		}
 
 		ppu->raddr = 0; // Clear reservation
 		ppu->start_time = start_time;
 	}
 	else if (auto spu = thread.try_get<spu_thread>())
 	{
-		if (unqueue(g_to_sleep, spu))
+		if (auto it = std::find(g_to_sleep.begin(), g_to_sleep.end(), spu); it != g_to_sleep.end())
 		{
+			g_to_sleep.erase(it);
 			on_to_sleep_update();
 		}
 
@@ -1321,16 +1368,6 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 			}
 		}
 	}
-
-	if (!g_to_awake.empty())
-	{
-		// Schedule pending entries
-		awake_unlocked({});
-	}
-	else
-	{
-		schedule_all();
-	}
 }
 
 bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
@@ -1343,7 +1380,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	default:
 	{
 		// Priority set
-		if (static_cast<ppu_thread*>(cpu)->prio.exchange(prio) == prio || !unqueue(g_ppu, cpu))
+		if (static_cast<ppu_thread*>(cpu)->prio.exchange(prio) == prio || !unqueue(g_ppu, static_cast<ppu_thread*>(cpu), &ppu_thread::next_ppu))
 		{
 			return true;
 		}
@@ -1352,36 +1389,66 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	}
 	case yield_cmd:
 	{
+		usz i = 0;
+
 		// Yield command
-		for (usz i = 0;; i++)
+		for (auto ppu_next = &g_ppu;; i++)
 		{
-			if (i + 1 >= g_ppu.size())
+			const auto ppu = +*ppu_next;
+
+			if (!ppu)
 			{
 				return false;
 			}
 
-			if (const auto ppu = g_ppu[i]; ppu == cpu)
+			if (ppu == cpu)
 			{
-				usz j = i + 1;
+				auto ppu2_next = &ppu->next_ppu;
 
-				for (; j < g_ppu.size(); j++)
+				if (auto next = +*ppu2_next; !next || next->prio != ppu->prio)
 				{
-					if (g_ppu[j]->prio != ppu->prio)
+					return false;
+				}
+
+				for (;; i++)
+				{
+					const auto next = +*ppu2_next;
+
+					if (auto next2 = +next->next_ppu; !next2 || next2->prio != ppu->prio)
 					{
 						break;
 					}
+
+					ppu2_next = &next->next_ppu;
 				}
 
-				if (j == i + 1)
+				if (ppu2_next == &ppu->next_ppu)
 				{
 					// Empty 'same prio' threads list
 					return false;
 				}
 
-				// Rotate current thread to the last position of the 'same prio' threads list
-				std::rotate(g_ppu.begin() + i, g_ppu.begin() + i + 1, g_ppu.begin() + j);
+				auto ppu2 = +*ppu2_next;
 
-				if (j <= g_cfg.core.ppu_threads + 0u)
+				// Rotate current thread to the last position of the 'same prio' threads list
+				*ppu_next = ppu2;
+
+				// Exchange forward pointers
+				if (ppu->next_ppu != ppu2)
+				{
+					auto ppu2_val = +ppu2->next_ppu;
+					ppu2->next_ppu = +ppu->next_ppu;
+					ppu->next_ppu = ppu2_val;
+					*ppu2_next = ppu;
+				}
+				else
+				{
+					auto ppu2_val = +ppu2->next_ppu;
+					ppu2->next_ppu = ppu;
+					ppu->next_ppu = ppu2_val;
+				}
+
+				if (i <= g_cfg.core.ppu_threads + 0u)
 				{
 					// Threads were rotated, but no context switch was made
 					return false;
@@ -1391,7 +1458,10 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 				cpu = nullptr; // Disable current thread enqueing, also enable threads list enqueing
 				break;
 			}
+
+			ppu_next = &ppu->next_ppu;
 		}
+
 		break;
 	}
 	case enqueue_cmd:
@@ -1402,20 +1472,25 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 
 	const auto emplace_thread = [](cpu_thread* const cpu)
 	{
-		for (auto it = g_ppu.cbegin(), end = g_ppu.cend();; it++)
+		for (auto it = &g_ppu;;)
 		{
-			if (it != end && *it == cpu)
+			const auto next = +*it;
+
+			if (next == cpu)
 			{
-				ppu_log.trace("sleep() - suspended (p=%zu)", g_pending.size());
+				ppu_log.trace("sleep() - suspended (p=%zu)", g_pending);
 				return false;
 			}
 
 			// Use priority, also preserve FIFO order
-			if (it == end || (*it)->prio > static_cast<ppu_thread*>(cpu)->prio)
+			if (!next || next->prio > static_cast<ppu_thread*>(cpu)->prio)
 			{
-				g_ppu.insert(it, static_cast<ppu_thread*>(cpu));
+				atomic_storage<ppu_thread*>::release(static_cast<ppu_thread*>(cpu)->next_ppu, next);
+				atomic_storage<ppu_thread*>::release(*it, static_cast<ppu_thread*>(cpu));
 				break;
 			}
+
+			it = &next->next_ppu;
 		}
 
 		// Unregister timeout if necessary
@@ -1438,29 +1513,59 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	if (cpu)
 	{
 		// Emplace current thread
-		changed_queue = emplace_thread(cpu);
+		if (!emplace_thread(cpu))
+		{
+			if (g_postpone_notify_barrier)
+			{
+				// This flag includes common optimizations regarding syscalls
+				// one of which is to allow a lock-free version of syscalls with awake behave as semaphore post: always notifies the thread, even if it hasn't slept yet
+				cpu->state += cpu_flag::signal;
+			}
+		}
+		else
+		{
+			changed_queue = true;
+		}
 	}
 	else for (const auto _cpu : g_to_awake)
 	{
 		// Emplace threads from list
-		changed_queue |= emplace_thread(_cpu);
+		if (!emplace_thread(_cpu))
+		{
+			if (g_postpone_notify_barrier)
+			{
+				_cpu->state += cpu_flag::signal;
+			}
+		}
+		else
+		{
+			changed_queue = true;
+		}
 	}
 
 	// Remove pending if necessary
-	if (!g_pending.empty() && ((cpu && cpu == get_current_cpu_thread()) || prio == yield_cmd))
+	if (g_pending && ((cpu && cpu == get_current_cpu_thread()) || prio == yield_cmd))
 	{
-		unqueue(g_pending, get_current_cpu_thread());
+		if (auto cur = cpu_thread::get_current<ppu_thread>())
+		{
+			if (std::exchange(cur->ack_suspend, false))
+			{
+				g_pending--;
+			}
+		}
 	}
 
-	// Suspend threads if necessary
-	for (usz i = g_cfg.core.ppu_threads; changed_queue && i < g_ppu.size(); i++)
-	{
-		const auto target = g_ppu[i];
+	auto target = +g_ppu;
 
-		if (!target->state.test_and_set(cpu_flag::suspend))
+	// Suspend threads if necessary
+	for (usz i = 0, thread_count = g_cfg.core.ppu_threads; changed_queue && target; target = target->next_ppu, i++)
+	{
+		if (i >= thread_count && cpu_flag::suspend - target->state)
 		{
 			ppu_log.trace("suspend(): %s", target->id);
-			g_pending.emplace_back(target);
+			target->ack_suspend = true;
+			g_pending++;
+			ensure(!target->state.test_and_set(cpu_flag::suspend));
 
 			if (is_paused(target->state - cpu_flag::suspend))
 			{
@@ -1469,35 +1574,46 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 		}
 	}
 
-	schedule_all();
 	return changed_queue;
 }
 
 void lv2_obj::cleanup()
 {
-	g_ppu.clear();
-	g_pending.clear();
-	g_waiting.clear();
+	g_ppu = nullptr;
 	g_to_sleep.clear();
+	g_waiting.clear();
+	g_pending = 0;
 }
 
 void lv2_obj::schedule_all()
 {
-	if (g_pending.empty() && g_to_sleep.empty())
+	if (!g_pending && g_to_sleep.empty())
 	{
-		// Wake up threads
-		for (usz i = 0, x = std::min<usz>(g_cfg.core.ppu_threads, g_ppu.size()); i < x; i++)
-		{
-			const auto target = g_ppu[i];
+		usz notify_later_idx = 0;
 
+		auto target = +g_ppu;
+
+		// Wake up threads
+		for (usz x = g_cfg.core.ppu_threads; target && x; target = target->next_ppu, x--)
+		{
 			if (target->state & cpu_flag::suspend)
 			{
 				ppu_log.trace("schedule(): %s", target->id);
 				target->state ^= (cpu_flag::signal + cpu_flag::suspend);
 				target->start_time = 0;
-				target->state.notify_one(cpu_flag::signal + cpu_flag::suspend);
+
+				if (notify_later_idx >= std::size(g_to_notify) - 1)
+				{
+					target->state.notify_one(cpu_flag::signal + cpu_flag::suspend);
+				}
+				else
+				{
+					g_to_notify[notify_later_idx++] = &target->state;
+				}
 			}
 		}
+
+		g_to_notify[notify_later_idx] = nullptr;
 	}
 
 	// Check registered timeouts
@@ -1544,9 +1660,19 @@ ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_l
 		opt_lock[1].emplace(lv2_obj::g_mutex);
 	}
 
-	const auto it = std::find(g_ppu.begin(), g_ppu.end(), ppu);
+	usz pos = umax;
+	usz i = 0;
 
-	if (it == g_ppu.end())
+	for (auto target = +g_ppu; target; target = target->next_ppu, i++)
+	{
+		if (target == ppu)
+		{
+			pos = i;
+			break;
+		}
+	}
+
+	if (pos == umax)
 	{
 		if (!ppu->interrupt_thread_executing)
 		{
@@ -1556,7 +1682,7 @@ ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_l
 		return PPU_THREAD_STATUS_SLEEP;
 	}
 
-	if (it - g_ppu.begin() >= g_cfg.core.ppu_threads)
+	if (pos >= g_cfg.core.ppu_threads + 0u)
 	{
 		return PPU_THREAD_STATUS_RUNNABLE;
 	}
@@ -1573,4 +1699,19 @@ bool lv2_obj::is_scheduler_ready()
 {
 	reader_lock lock(g_mutex);
 	return g_to_sleep.empty();
+}
+
+bool lv2_obj::has_ppus_in_running_state()
+{
+	auto target = atomic_storage<ppu_thread*>::load(g_ppu);
+
+	for (usz i = 0, thread_count = g_cfg.core.ppu_threads; target; target = atomic_storage<ppu_thread*>::load(target->next_ppu), i++)
+	{
+		if (i >= thread_count)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

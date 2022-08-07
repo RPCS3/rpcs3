@@ -428,18 +428,11 @@ class idm
 	// Prepare new ID (returns nullptr if out of resources)
 	static map_data* allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range);
 
-	// Find ID (additionally check type if types are not equal)
+	// Get object by internal index if exists (additionally check type if types are not equal)
 	template <typename T, typename Type>
-	static map_data* find_id(u32 id)
+	static map_data* find_index(u32 index, u32 id)
 	{
 		static_assert(PtrSame<T, Type>, "Invalid ID type combination");
-
-		const u32 index = get_index<Type>(id);
-
-		if (index >= id_manager::id_traits<Type>::count)
-		{
-			return nullptr;
-		}
 
 		auto& vec = g_fxo->get<id_manager::id_map<T>>().vec;
 
@@ -462,6 +455,17 @@ class idm
 		}
 
 		return nullptr;
+	}
+
+	// Find ID
+	template <typename T, typename Type>
+	static map_data* find_id(u32 id)
+	{
+		static_assert(PtrSame<T, Type>, "Invalid ID type combination");
+
+		const u32 index = get_index<Type>(id);
+
+		return find_index<T, Type>(index, id);
 	}
 
 	// Allocate new ID (or use fixed ID) and assign the object from the provider()
@@ -591,12 +595,21 @@ public:
 
 	// Check the ID, access object under shared lock
 	template <typename T, typename Get = T, typename F, typename FRT = std::invoke_result_t<F, Get&>>
-	static inline auto check(u32 id, F&& func)
+	static inline std::conditional_t<std::is_void_v<FRT>, Get*, return_pair<Get*, FRT>> check(u32 id, F&& func)
 	{
+		const u32 index = get_index<Get>(id);
+
+		if (index >= id_manager::id_traits<Get>::count)
+		{
+			return {};
+		}
+
 		reader_lock lock(id_manager::g_mutex);
 
-		if (const auto ptr = check_unlocked<T, Get>(id))
+		if (const auto found = find_index<T, Get>(index, id))
 		{
+			const auto ptr = static_cast<Get*>(found->second.get());
+
 			if constexpr (!std::is_void_v<FRT>)
 			{
 				return return_pair<Get*, FRT>{ptr, func(*ptr)};
@@ -608,14 +621,7 @@ public:
 			}
 		}
 
-		if constexpr (!std::is_void_v<FRT>)
-		{
-			return return_pair<Get*, FRT>{nullptr};
-		}
-		else
-		{
-			return static_cast<Get*>(nullptr);
-		}
+		return {};
 	}
 
 	// Get the object without locking (can be called from other method)
@@ -645,9 +651,16 @@ public:
 	template <typename T, typename Get = T, typename F, typename FRT = std::invoke_result_t<F, Get&>>
 	static inline std::conditional_t<std::is_void_v<FRT>, std::shared_ptr<Get>, return_pair<Get, FRT>> get(u32 id, F&& func)
 	{
+		const u32 index = get_index<Get>(id);
+
+		if (index >= id_manager::id_traits<Get>::count)
+		{
+			return {nullptr};
+		}
+
 		reader_lock lock(id_manager::g_mutex);
 
-		const auto found = find_id<T, Get>(id);
+		const auto found = find_index<T, Get>(index, id);
 
 		if (found == nullptr) [[unlikely]]
 		{
@@ -773,9 +786,16 @@ public:
 	template <typename T, typename Get = T, typename F, typename FRT = std::invoke_result_t<F, Get&>>
 	static inline std::conditional_t<std::is_void_v<FRT>, std::shared_ptr<Get>, return_pair<Get, FRT>> withdraw(u32 id, F&& func)
 	{
+		const u32 index = get_index<Get>(id);
+
+		if (index >= id_manager::id_traits<Get>::count)
+		{
+			return {nullptr};
+		}
+
 		std::unique_lock lock(id_manager::g_mutex);
 
-		if (const auto found = find_id<T, Get>(id))
+		if (const auto found = find_index<T, Get>(index, id))
 		{
 			const auto _ptr = static_cast<Get*>(found->second.get());
 

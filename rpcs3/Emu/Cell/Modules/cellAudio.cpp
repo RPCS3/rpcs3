@@ -606,6 +606,7 @@ void cell_audio_thread::advance(u64 timestamp)
 
 	for (u32 i = 0; i < queue_count; i++)
 	{
+		lv2_obj::notify_all_t notify;
 		queues[i]->send(event_sources[i], 0, 0, 0);
 	}
 }
