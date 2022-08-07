@@ -329,6 +329,17 @@ namespace vk
 			sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 		}
 
+		static std::unique_ptr<vk::render_target> convert_pitch(
+			vk::command_buffer& /*cmd*/,
+			std::unique_ptr<vk::render_target>& src,
+			usz out_pitch)
+		{
+			// TODO
+			src->rsx_pitch = static_cast<u32>(out_pitch);
+			src->state_flags = rsx::surface_state_flags::erase_bkgnd;
+			return {};
+		}
+
 		static bool is_compatible_surface(const vk::render_target* surface, const vk::render_target* ref, u16 width, u16 height, u8 sample_count)
 		{
 			return (surface->format() == ref->format() &&

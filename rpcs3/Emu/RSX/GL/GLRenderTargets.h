@@ -235,6 +235,18 @@ struct gl_render_target_traits
 	}
 
 	static
+	std::unique_ptr<gl::render_target> convert_pitch(
+		gl::command_context& /*cmd*/,
+		std::unique_ptr<gl::render_target>& src,
+		usz out_pitch)
+	{
+		// TODO
+		src->set_rsx_pitch(static_cast<u32>(out_pitch));
+		src->state_flags = rsx::surface_state_flags::erase_bkgnd;
+		return {};
+	}
+
+	static
 	bool is_compatible_surface(const gl::render_target* surface, const gl::render_target* ref, u16 width, u16 height, u8 sample_count)
 	{
 		return (surface->get_internal_format() == ref->get_internal_format() &&
