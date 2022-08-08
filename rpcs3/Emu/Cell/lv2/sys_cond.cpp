@@ -318,6 +318,9 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 			return static_cast<u32>(syscall_state >> 32);
 		}
 
+		// Register waiter
+		lv2_obj::emplace(cond.sq, &ppu);
+
 		// Unlock the mutex
 		const u32 count = cond.mutex->lock_count.exchange(0);
 
@@ -325,15 +328,13 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		{
 			if (cpu->state & cpu_flag::again)
 			{
+				ensure(cond.unqueue(cond.sq, &ppu));
 				ppu.state += cpu_flag::again;
 				return 0;
 			}
 
 			cond.mutex->append(cpu);
 		}
-
-		// Register waiter
-		lv2_obj::emplace(cond.sq, &ppu);
 
 		// Sleep current thread and schedule mutex waiter
 		cond.sleep(ppu, timeout);
