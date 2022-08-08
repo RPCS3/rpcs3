@@ -700,6 +700,12 @@ bool cpu_thread::check_state() noexcept
 				store = true;
 			}
 
+			if (flags & cpu_flag::notify)
+			{
+				flags -= cpu_flag::notify;
+				store = true;
+			}
+
 			// Can't process dbg_step if we only paused temporarily
 			if (cpu_can_stop && flags & cpu_flag::dbg_step)
 			{
@@ -779,6 +785,8 @@ bool cpu_thread::check_state() noexcept
 				if ((state1 ^ state) - pending_and_temp)
 				{
 					// Work could have changed flags
+					// Reset internal flags as if check_state() has just been called
+					cpu_sleep_called = false;
 					continue;
 				}
 			}

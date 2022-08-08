@@ -1206,24 +1206,27 @@ namespace cpu_counter
 	void remove(cpu_thread*) noexcept;
 }
 
-void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
+bool lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 {
 	// Should already be performed when using this flag
 	if (!g_postpone_notify_barrier)
 	{
 		prepare_for_sleep(cpu);
 	}
+
+	bool result = false;
+	const u64 current_time = get_guest_system_time();
 	{
 		std::lock_guard lock{g_mutex};
-		sleep_unlocked(cpu, timeout);
-		
+		result = sleep_unlocked(cpu, timeout, current_time);
+
 		if (!g_to_awake.empty())
 		{
 			// Schedule pending entries
 			awake_unlocked({});
 		}
 
-		schedule_all();
+		schedule_all(current_time);
 	}
 
 	if (!g_postpone_notify_barrier)
@@ -1232,6 +1235,7 @@ void lv2_obj::sleep(cpu_thread& cpu, const u64 timeout)
 	}
 
 	g_to_awake.clear();
+	return result;
 }
 
 bool lv2_obj::awake(cpu_thread* thread, s32 prio)
@@ -1261,19 +1265,23 @@ bool lv2_obj::awake(cpu_thread* thread, s32 prio)
 
 bool lv2_obj::yield(cpu_thread& thread)
 {
-	vm::temporary_unlock(thread);
-
 	if (auto ppu = thread.try_get<ppu_thread>())
 	{
 		ppu->raddr = 0; // Clear reservation
+
+		if (!atomic_storage<ppu_thread*>::load(ppu->next_ppu))
+		{
+			// Nothing to do
+			return false;
+		}
 	}
 
 	return awake(&thread, yield_cmd);
 }
 
-void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
+bool lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, u64 current_time)
 {
-	const u64 start_time = get_guest_system_time();
+	const u64 start_time = current_time;
 
 	auto on_to_sleep_update = [&]()
 	{
@@ -1299,15 +1307,32 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 		}
 	};
 
+	bool return_val = true;
+
 	if (auto ppu = thread.try_get<ppu_thread>())
 	{
 		ppu_log.trace("sleep() - waiting (%zu)", g_pending);
 
-		const auto [_ ,ok] = ppu->state.fetch_op([&](bs_t<cpu_flag>& val)
+		if (ppu->ack_suspend)
+		{
+			ppu->ack_suspend = false;
+			g_pending--;
+		}
+
+		if (std::exchange(ppu->cancel_sleep, 0) == 2)
+		{
+			// Signal that the underlying LV2 operation has been cancelled and replaced with a short yield
+			return_val = false;
+		}
+
+		const auto [_, ok] = ppu->state.fetch_op([&](bs_t<cpu_flag>& val)
 		{
 			if (!(val & cpu_flag::signal))
 			{
 				val += cpu_flag::suspend;
+
+				// Flag used for forced timeout notification
+				ensure(!timeout || !(val & cpu_flag::notify)); 
 				return true;
 			}
 
@@ -1316,8 +1341,8 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 
 		if (!ok)
 		{
-			ppu_log.trace("sleep() failed (signaled) (%s)", ppu->current_function);
-			return;
+			ppu_log.fatal("sleep() failed (signaled) (%s)", ppu->current_function);
+			return false;
 		}
 
 		// Find and remove the thread
@@ -1328,20 +1353,17 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 				g_to_sleep.erase(it);
 				ppu->start_time = start_time;
 				on_to_sleep_update();
+				return true;
 			}
 
 			// Already sleeping
 			ppu_log.trace("sleep(): called on already sleeping thread.");
-			return;
-		}
-
-		if (std::exchange(ppu->ack_suspend, false))
-		{
-			g_pending--;
+			return false;
 		}
 
 		ppu->raddr = 0; // Clear reservation
 		ppu->start_time = start_time;
+		ppu->end_time = timeout ? start_time + std::min<u64>(timeout, ~start_time) : u64{umax};
 	}
 	else if (auto spu = thread.try_get<spu_thread>())
 	{
@@ -1349,14 +1371,15 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 		{
 			g_to_sleep.erase(it);
 			on_to_sleep_update();
+			return true;
 		}
 
-		return;
+		return false;
 	}
 
 	if (timeout)
 	{
-		const u64 wait_until = start_time + timeout;
+		const u64 wait_until = start_time + std::min<u64>(timeout, ~start_time);
 
 		// Register timeout if necessary
 		for (auto it = g_waiting.cbegin(), end = g_waiting.cend();; it++)
@@ -1368,6 +1391,8 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 			}
 		}
 	}
+
+	return return_val;
 }
 
 bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
@@ -1403,59 +1428,37 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 
 			if (ppu == cpu)
 			{
-				auto ppu2_next = &ppu->next_ppu;
+				auto ppu2 = ppu->next_ppu;
 
-				if (auto next = +*ppu2_next; !next || next->prio != ppu->prio)
-				{
-					return false;
-				}
-
-				for (;; i++)
-				{
-					const auto next = +*ppu2_next;
-
-					if (auto next2 = +next->next_ppu; !next2 || next2->prio != ppu->prio)
-					{
-						break;
-					}
-
-					ppu2_next = &next->next_ppu;
-				}
-
-				if (ppu2_next == &ppu->next_ppu)
+				if (!ppu2 || ppu2->prio != ppu->prio)
 				{
 					// Empty 'same prio' threads list
 					return false;
 				}
 
-				auto ppu2 = +*ppu2_next;
+				for (i++;; i++)
+				{
+					const auto next = ppu2->next_ppu;
+
+					if (!next || next->prio != ppu->prio)
+					{
+						break;
+					}
+
+					ppu2 = next;
+				}
 
 				// Rotate current thread to the last position of the 'same prio' threads list
-				*ppu_next = ppu2;
-
 				// Exchange forward pointers
-				if (ppu->next_ppu != ppu2)
-				{
-					auto ppu2_val = +ppu2->next_ppu;
-					ppu2->next_ppu = +ppu->next_ppu;
-					ppu->next_ppu = ppu2_val;
-					*ppu2_next = ppu;
-				}
-				else
-				{
-					auto ppu2_val = +ppu2->next_ppu;
-					ppu2->next_ppu = ppu;
-					ppu->next_ppu = ppu2_val;
-				}
+				*ppu_next = std::exchange(ppu->next_ppu, std::exchange(ppu2->next_ppu, ppu));
 
-				if (i <= g_cfg.core.ppu_threads + 0u)
+				if (i < g_cfg.core.ppu_threads + 0u)
 				{
 					// Threads were rotated, but no context switch was made
 					return false;
 				}
 
 				ppu->start_time = get_guest_system_time();
-				cpu = nullptr; // Disable current thread enqueing, also enable threads list enqueing
 				break;
 			}
 
@@ -1479,6 +1482,13 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 			if (next == cpu)
 			{
 				ppu_log.trace("sleep() - suspended (p=%zu)", g_pending);
+
+				if (static_cast<ppu_thread*>(cpu)->cancel_sleep == 1)
+				{
+					// The next sleep call of the thread is cancelled
+					static_cast<ppu_thread*>(cpu)->cancel_sleep = 2;
+				}
+
 				return false;
 			}
 
@@ -1510,19 +1520,10 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	// Yield changed the queue before
 	bool changed_queue = prio == yield_cmd;
 
-	if (cpu)
+	if (cpu && prio != yield_cmd)
 	{
 		// Emplace current thread
-		if (!emplace_thread(cpu))
-		{
-			if (g_postpone_notify_barrier)
-			{
-				// This flag includes common optimizations regarding syscalls
-				// one of which is to allow a lock-free version of syscalls with awake behave as semaphore post: always notifies the thread, even if it hasn't slept yet
-				cpu->state += cpu_flag::signal;
-			}
-		}
-		else
+		if (emplace_thread(cpu))
 		{
 			changed_queue = true;
 		}
@@ -1530,35 +1531,16 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	else for (const auto _cpu : g_to_awake)
 	{
 		// Emplace threads from list
-		if (!emplace_thread(_cpu))
-		{
-			if (g_postpone_notify_barrier)
-			{
-				_cpu->state += cpu_flag::signal;
-			}
-		}
-		else
+		if (emplace_thread(_cpu))
 		{
 			changed_queue = true;
-		}
-	}
-
-	// Remove pending if necessary
-	if (g_pending && ((cpu && cpu == get_current_cpu_thread()) || prio == yield_cmd))
-	{
-		if (auto cur = cpu_thread::get_current<ppu_thread>())
-		{
-			if (std::exchange(cur->ack_suspend, false))
-			{
-				g_pending--;
-			}
 		}
 	}
 
 	auto target = +g_ppu;
 
 	// Suspend threads if necessary
-	for (usz i = 0, thread_count = g_cfg.core.ppu_threads; changed_queue && target; target = target->next_ppu, i++)
+	for (usz i = 0, thread_count = g_cfg.core.ppu_threads; target; target = target->next_ppu, i++)
 	{
 		if (i >= thread_count && cpu_flag::suspend - target->state)
 		{
@@ -1574,6 +1556,17 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 		}
 	}
 
+	const auto current_ppu = cpu_thread::get_current<ppu_thread>();
+
+	// Remove pending if necessary
+	if (current_ppu)
+	{
+		if (std::exchange(current_ppu->ack_suspend, false))
+		{
+			ensure(g_pending)--;
+		}
+	}
+
 	return changed_queue;
 }
 
@@ -1585,12 +1578,12 @@ void lv2_obj::cleanup()
 	g_pending = 0;
 }
 
-void lv2_obj::schedule_all()
+void lv2_obj::schedule_all(u64 current_time)
 {
+	usz notify_later_idx = 0;
+
 	if (!g_pending && g_to_sleep.empty())
 	{
-		usz notify_later_idx = 0;
-
 		auto target = +g_ppu;
 
 		// Wake up threads
@@ -1602,8 +1595,9 @@ void lv2_obj::schedule_all()
 				target->state ^= (cpu_flag::signal + cpu_flag::suspend);
 				target->start_time = 0;
 
-				if (notify_later_idx >= std::size(g_to_notify) - 1)
+				if (notify_later_idx == std::size(g_to_notify))
 				{
+					// Out of notification slots, notify locally (resizable container is not worth it)
 					target->state.notify_one(cpu_flag::signal + cpu_flag::suspend);
 				}
 				else
@@ -1612,25 +1606,51 @@ void lv2_obj::schedule_all()
 				}
 			}
 		}
-
-		g_to_notify[notify_later_idx] = nullptr;
 	}
 
 	// Check registered timeouts
 	while (!g_waiting.empty())
 	{
-		auto& pair = g_waiting.front();
+		const auto pair = &g_waiting.front();
 
-		if (pair.first <= get_guest_system_time())
+		if (!current_time)
 		{
-			pair.second->notify();
+			current_time = get_guest_system_time();
+		}
+
+		if (pair->first <= current_time)
+		{
+			const auto target = pair->second;
 			g_waiting.pop_front();
+
+			if (target != cpu_thread::get_current())
+			{
+				// Change cpu_thread::state for the lightweight notification to work
+				ensure(!target->state.test_and_set(cpu_flag::notify));
+
+				// Otherwise notify it to wake itself
+				if (notify_later_idx == std::size(g_to_notify))
+				{
+					// Out of notification slots, notify locally (resizable container is not worth it)
+					target->state.notify_one(cpu_flag::notify);
+				}
+				else
+				{
+					g_to_notify[notify_later_idx++] = &target->state;
+				}
+			}
 		}
 		else
 		{
 			// The list is sorted so assume no more timeouts
 			break;
 		}
+	}
+
+	if (notify_later_idx - 1 < std::size(g_to_notify) - 1) 
+	{
+		// Null-terminate the list if it ends before last slot
+		g_to_notify[notify_later_idx] = nullptr;
 	}
 }
 
@@ -1714,4 +1734,110 @@ bool lv2_obj::has_ppus_in_running_state()
 	}
 
 	return false;
+}
+
+bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep)
+{
+	static_assert(u64{umax} / max_timeout >= 100, "max timeout is not valid for scaling");
+
+	const u64 start_time = get_system_time();
+
+	if (cpu)
+	{
+		if (u64 end_time = cpu->end_time; end_time != umax)
+		{
+			const u64 guest_start = get_guest_system_time(start_time);
+
+			if (end_time <= guest_start)
+			{
+				return true;
+			}
+
+			usec = end_time - guest_start;
+			scale = true;
+		}
+	}
+
+	if (scale)
+	{
+		// Scale time
+		usec = std::min<u64>(usec, u64{umax} / 100) * 100 / g_cfg.core.clocks_scale;
+	}
+
+	// Clamp
+	usec = std::min<u64>(usec, max_timeout);
+
+	u64 passed = 0;
+
+	atomic_bs_t<cpu_flag> dummy{};
+	const auto& state = cpu ? cpu->state : dummy;
+	auto old_state = +state;
+
+	auto wait_for = [&](u64 timeout)
+	{
+		thread_ctrl::wait_on(state, old_state, timeout);
+	};
+
+	for (;; old_state = state)
+	{
+		if (old_state & cpu_flag::notify)
+		{
+			// Timeout notification has been forced
+			break;
+		}
+
+		if (old_state & cpu_flag::signal)
+		{
+			return false;
+		}
+
+		if (::is_stopped(old_state) || thread_ctrl::state() == thread_state::aborting)
+		{
+			return passed >= usec;
+		}
+
+		if (passed >= usec)
+		{
+			break;
+		}
+
+		u64 remaining = usec - passed;
+#ifdef __linux__
+		// NOTE: Assumption that timer initialization has succeeded
+		u64 host_min_quantum = is_usleep && remaining <= 1000 ? 10 : 50;
+#else
+		// Host scheduler quantum for windows (worst case)
+		// NOTE: On ps3 this function has very high accuracy
+		constexpr u64 host_min_quantum = 500;
+#endif
+		// TODO: Tune for other non windows operating sytems
+
+		if (g_cfg.core.sleep_timers_accuracy < (is_usleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
+		{
+			wait_for(remaining);
+		}
+		else
+		{
+			if (remaining > host_min_quantum)
+			{
+#ifdef __linux__
+				// Do not wait for the last quantum to avoid loss of accuracy
+				wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
+#else
+				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
+				wait_for(remaining - (remaining % host_min_quantum));
+#endif
+			}
+			// TODO: Determine best value for yield delay
+			else
+			{
+				// Try yielding. May cause long wake latency but helps weaker CPUs a lot by alleviating resource pressure
+				std::this_thread::yield();
+			}
+		}
+
+		passed = get_system_time() - start_time;
+	}
+
+	return true;
 }

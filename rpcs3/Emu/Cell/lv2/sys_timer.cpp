@@ -409,7 +409,7 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 	{
 		lv2_obj::sleep(ppu, g_cfg.core.sleep_timers_accuracy < sleep_timers_accuracy_level::_usleep ? sleep_time : 0);
 
-		if (!lv2_obj::wait_timeout<true>(sleep_time))
+		if (!lv2_obj::wait_timeout(sleep_time, &ppu, true, true))
 		{
 			ppu.state += cpu_flag::again;
 		}

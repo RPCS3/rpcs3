@@ -162,15 +162,19 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 		{
 			lv2_obj::prepare_for_sleep(ppu);
 
-			if (mutex.try_own(ppu))
+			ppu.cancel_sleep = 1;
+
+			if (mutex.try_own(ppu) || !mutex.sleep(ppu, timeout))
 			{
 				result = {};
 			}
-			else
+
+			if (ppu.cancel_sleep != 1)
 			{
-				mutex.sleep(ppu, timeout);
 				notify.cleanup();
 			}
+
+			ppu.cancel_sleep = 0;
 		}
 
 		return result;

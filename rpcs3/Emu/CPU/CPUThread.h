@@ -24,6 +24,7 @@ enum class cpu_flag : u32
 	memory, // Thread must unlock memory mutex
 	pending, // Thread has postponed work
 	pending_recheck, // Thread needs to recheck if there is pending work before ::pending removal
+	notify, // Flag meant solely to allow atomic notification on state without changing other flags
 
 	dbg_global_pause, // Emulation paused
 	dbg_pause, // Thread paused
@@ -174,7 +175,7 @@ public:
 	virtual void cpu_sleep() {}
 
 	// Callback for cpu_flag::pending
-	virtual void cpu_work() {}
+	virtual void cpu_work() { state -= cpu_flag::pending + cpu_flag::pending_recheck; }
 
 	// Callback for cpu_flag::ret
 	virtual void cpu_return() {}

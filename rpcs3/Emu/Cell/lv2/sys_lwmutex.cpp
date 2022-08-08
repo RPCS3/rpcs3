@@ -162,6 +162,8 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 		lv2_obj::prepare_for_sleep(ppu);
 
+		ppu.cancel_sleep = 1;
+
 		if (s32 signal = mutex.try_own(&ppu))
 		{
 			if (signal == smin)
@@ -169,12 +171,13 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 				ppu.gpr[3] = CELL_EBUSY;
 			}
 
+			ppu.cancel_sleep = 0;
 			return true;
 		}
 
-		mutex.sleep(ppu, timeout);
+		const bool finished = !mutex.sleep(ppu, timeout);
 		notify.cleanup();
-		return false;
+		return finished;
 	});
 
 	if (!mutex)

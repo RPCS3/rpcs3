@@ -225,7 +225,7 @@ public:
 
 private:
 	// Remove the current thread from the scheduling queue, register timeout
-	static void sleep_unlocked(cpu_thread&, u64 timeout);
+	static bool sleep_unlocked(cpu_thread&, u64 timeout, u64 current_time);
 
 	// Schedule the thread
 	static bool awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
@@ -233,7 +233,7 @@ private:
 public:
 	static constexpr u64 max_timeout = u64{umax} / 1000;
 
-	static void sleep(cpu_thread& cpu, const u64 timeout = 0);
+	static bool sleep(cpu_thread& cpu, const u64 timeout = 0);
 
 	static bool awake(cpu_thread* thread, s32 prio = enqueue_cmd);
 
@@ -406,95 +406,7 @@ public:
 		return make;
 	}
 
-	template <bool IsUsleep = false, bool Scale = true>
-	static bool wait_timeout(u64 usec, cpu_thread* const cpu = {})
-	{
-		static_assert(u64{umax} / max_timeout >= 100, "max timeout is not valid for scaling");
-
-		if constexpr (Scale)
-		{
-			// Scale time
-			usec = std::min<u64>(usec, u64{umax} / 100) * 100 / g_cfg.core.clocks_scale;
-		}
-
-		// Clamp
-		usec = std::min<u64>(usec, max_timeout);
-
-		u64 passed = 0;
-
-		const u64 start_time = get_system_time();
-
-		auto wait_for = [cpu](u64 timeout)
-		{
-			atomic_bs_t<cpu_flag> dummy{};
-			auto& state = cpu ? cpu->state : dummy;
-			const auto old = +state;
-
-			if (old & cpu_flag::signal)
-			{
-				return true;
-			}
-
-			thread_ctrl::wait_on(state, old, timeout);
-			return false;
-		};
-
-		while (usec >= passed)
-		{
-			u64 remaining = usec - passed;
-#ifdef __linux__
-			// NOTE: Assumption that timer initialization has succeeded
-			u64 host_min_quantum = IsUsleep && remaining <= 1000 ? 10 : 50;
-#else
-			// Host scheduler quantum for windows (worst case)
-			// NOTE: On ps3 this function has very high accuracy
-			constexpr u64 host_min_quantum = 500;
-#endif
-			// TODO: Tune for other non windows operating sytems
-			bool escape = false;
-			if (g_cfg.core.sleep_timers_accuracy < (IsUsleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
-			{
-				escape = wait_for(remaining);
-			}
-			else
-			{
-				if (remaining > host_min_quantum)
-				{
-#ifdef __linux__
-					// Do not wait for the last quantum to avoid loss of accuracy
-					escape = wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
-#else
-					// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
-					escape = wait_for(remaining - (remaining % host_min_quantum));
-#endif
-				}
-				else
-				{
-					// Try yielding. May cause long wake latency but helps weaker CPUs a lot by alleviating resource pressure
-					std::this_thread::yield();
-				}
-			}
-
-			if (auto cpu0 = get_current_cpu_thread(); cpu0 && cpu0->is_stopped())
-			{
-				return false;
-			}
-
-			if (thread_ctrl::state() == thread_state::aborting)
-			{
-				return false;
-			}
-
-			if (escape)
-			{
-				return false;
-			}
-
-			passed = get_system_time() - start_time;
-		}
-
-		return true;
-	}
+	static bool wait_timeout(u64 usec, ppu_thread* cpu = {}, bool scale = true, bool is_usleep = false);
 
 	static inline void notify_all()
 	{
@@ -502,9 +414,7 @@ public:
 		{
 			if (!cpu)
 			{
-				g_to_notify[0] = nullptr;
-				g_postpone_notify_barrier = false;
-				return;
+				break;
 			}
 
 			if (cpu != &g_to_notify)
@@ -514,6 +424,9 @@ public:
 				atomic_wait_engine::notify_one(cpu, 4, atomic_wait::default_mask<atomic_bs_t<cpu_flag>>);
 			}
 		}
+
+		g_to_notify[0] = nullptr;
+		g_postpone_notify_barrier = false;
 	}
 
 	// Can be called before the actual sleep call in order to move it out of mutex scope
@@ -542,7 +455,8 @@ public:
 				}
 
 				// While IDM mutex is still locked (this function assumes so) check if the notification is still needed
-				if (cpu != &g_to_notify && !static_cast<const decltype(cpu_thread::state)*>(cpu)->all_of(cpu_flag::signal + cpu_flag::wait))
+				// Pending flag is meant for forced notification (if the CPU really has pending work it can restore the flag in theory)
+				if (cpu != &g_to_notify && static_cast<const decltype(cpu_thread::state)*>(cpu)->none_of(cpu_flag::signal + cpu_flag::pending))
 				{
 					// Omit it (this is a void pointer, it can hold anything)
 					cpu = &g_to_notify;
@@ -575,5 +489,5 @@ private:
 	// If a notify_all_t object exists locally, postpone notifications to the destructor of it (not recursive, notifies on the first destructor for safety)
 	static thread_local bool g_postpone_notify_barrier;
 
-	static void schedule_all();
+	static void schedule_all(u64 current_time = 0);
 };
