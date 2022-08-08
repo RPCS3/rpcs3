@@ -2140,6 +2140,9 @@
     <ClInclude Include="Emu\RSX\Common\ranged_map.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\surface_cache_storage.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\CPU\sse2neon.h">
       <Filter>Emu\CPU</Filter>
     </ClInclude>

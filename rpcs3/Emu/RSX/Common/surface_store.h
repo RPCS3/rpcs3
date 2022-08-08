@@ -2,7 +2,7 @@
 
 #include "surface_utils.h"
 #include "simple_array.hpp"
-#include "ranged_map.hpp"
+#include "surface_cache_storage.hpp"
 #include "../gcm_enums.h"
 #include "../rsx_utils.h"
 #include <list>
@@ -20,7 +20,7 @@ namespace rsx
 		usz get_packed_pitch(surface_color_format format, u32 width);
 	}
 
-	template<typename Traits>
+	template <typename Traits>
 	struct surface_store
 	{
 		static constexpr u32 get_aa_factor_u(surface_antialiasing aa_mode)
@@ -45,7 +45,7 @@ namespace rsx
 		using surface_type = typename Traits::surface_type;
 		using command_list_type = typename Traits::command_list_type;
 		using surface_overlap_info = surface_overlap_info_t<surface_type>;
-		using surface_ranged_map = typename rsx::ranged_map<surface_storage_type, 0x400000>;
+		using surface_ranged_map = surface_cache_data_map<Traits, 0x400000>;
 
 	protected:
 		surface_ranged_map m_render_targets_storage = {};
