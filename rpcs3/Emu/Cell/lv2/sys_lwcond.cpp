@@ -395,8 +395,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		if (is_stopped(state))
 		{
-			reader_lock lock(cond->mutex);
-			reader_lock lock2(mutex->mutex);
+			std::scoped_lock lock(cond->mutex, mutex->mutex);
 
 			bool mutex_sleep = false;
 			bool cond_sleep = false;
