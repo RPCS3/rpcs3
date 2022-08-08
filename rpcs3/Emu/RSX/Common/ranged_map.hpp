@@ -10,6 +10,7 @@ namespace rsx
 	template<typename T, int BlockSize>
 	class ranged_map
 	{
+	protected:
 		struct block_metadata_t
 		{
 			u32 id = umax;             // ID of the matadata blob
@@ -28,6 +29,11 @@ namespace rsx
 		static inline u32 block_for(u32 address)
 		{
 			return address / BlockSize;
+		}
+
+		static inline u32 block_address(u32 block_id)
+		{
+			return block_id * BlockSize;
 		}
 
 		void broadcast_insert(const utils::address_range& range)

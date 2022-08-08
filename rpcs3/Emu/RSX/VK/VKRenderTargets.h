@@ -85,6 +85,8 @@ namespace vk
 	{
 		using surface_storage_type = std::unique_ptr<vk::render_target>;
 		using surface_type = vk::render_target*;
+		using buffer_object_storage_type = std::unique_ptr<vk::buffer>;
+		using buffer_object_type = vk::buffer*;
 		using command_list_type = vk::command_buffer&;
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
@@ -451,9 +453,26 @@ namespace vk
 			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
 		}
 
-		static vk::render_target* get(const std::unique_ptr<vk::render_target>& tex)
+		static void spill_buffer(std::unique_ptr<vk::buffer>& bo)
 		{
-			return tex.get();
+			// TODO
+		}
+
+		static void unspill_buffer(std::unique_ptr<vk::buffer>& bo)
+		{
+			// TODO
+		}
+
+		static vk::buffer* merge_bo_list(const std::vector<vk::buffer*>& list)
+		{
+			// TODO
+			return nullptr;
+		}
+
+		template <typename T>
+		static T* get(const std::unique_ptr<T>& obj)
+		{
+			return obj.get();
 		}
 	};
 

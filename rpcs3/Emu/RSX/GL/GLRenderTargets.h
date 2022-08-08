@@ -124,6 +124,8 @@ struct gl_render_target_traits
 {
 	using surface_storage_type = std::unique_ptr<gl::render_target>;
 	using surface_type = gl::render_target*;
+	using buffer_object_storage_type = std::unique_ptr<gl::buffer>;
+	using buffer_object_type = gl::buffer*;
 	using command_list_type = gl::command_context&;
 	using download_buffer_object = std::vector<u8>;
 	using barrier_descriptor_t = rsx::deferred_clipped_region<gl::render_target*>;
@@ -346,7 +348,27 @@ struct gl_render_target_traits
 	}
 
 	static
-	gl::render_target* get(const std::unique_ptr<gl::render_target> &in)
+	void spill_buffer(std::unique_ptr<gl::buffer>& bo)
+	{
+		// TODO
+	}
+
+	static
+	void unspill_buffer(std::unique_ptr<gl::buffer>& bo)
+	{
+		// TODO
+	}
+
+	static
+	gl::buffer* merge_bo_list(const std::vector<gl::buffer*>& list)
+	{
+		// TODO
+		return nullptr;
+	}
+
+	template <typename T>
+	static
+	T* get(const std::unique_ptr<T> &in)
 	{
 		return in.get();
 	}
