@@ -123,6 +123,11 @@ struct lv2_lwmutex final : lv2_obj
 			lwcond_waiters.notify_all();
 		}
 	
+		if (signal)
+		{
+			cpu->next_cpu = nullptr;
+		}
+
 		return signal;
 	}
 
@@ -158,8 +163,9 @@ struct lv2_lwmutex final : lv2_obj
 				res = nullptr;
 			}
 
-			if (auto sq = data.sq)
+			if (auto sq = static_cast<T*>(data.sq))
 			{
+				restore_next = sq->next_cpu;
 				res = schedule<T>(data.sq, protocol);
 
 				if (sq == data.sq)
@@ -167,7 +173,6 @@ struct lv2_lwmutex final : lv2_obj
 					return false;
 				}
 
-				restore_next = res->next_cpu;
 				return true;
 			}
 			else

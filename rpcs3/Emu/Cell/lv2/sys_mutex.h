@@ -101,7 +101,7 @@ struct lv2_mutex final : lv2_obj
 	template <typename T>
 	bool try_own(T& cpu)
 	{
-		return control.atomic_op([&](control_data_t& data)
+		if (control.atomic_op([&](control_data_t& data)
 		{
 			if (data.owner)
 			{
@@ -114,7 +114,13 @@ struct lv2_mutex final : lv2_obj
 				data.owner = cpu.id;
 				return true;
 			}
-		});
+		}))
+		{
+			cpu.next_cpu = nullptr;
+			return true;
+		}
+
+		return false;
 	}
 
 	template <typename T>
@@ -161,8 +167,9 @@ struct lv2_mutex final : lv2_obj
 				res = nullptr;
 			}
 
-			if (auto sq = data.sq)
+			if (auto sq = static_cast<T*>(data.sq))
 			{
+				restore_next = sq->next_cpu;
 				res = schedule<T>(data.sq, protocol);
 
 				if (sq == data.sq)
@@ -171,7 +178,6 @@ struct lv2_mutex final : lv2_obj
 					return false;
 				}
 
-				restore_next = res->next_cpu;
 				data.owner = res->id;
 				return true;
 			}
