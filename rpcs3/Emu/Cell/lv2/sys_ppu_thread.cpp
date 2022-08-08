@@ -146,13 +146,13 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 	sys_ppu_thread.trace("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
 
+	if (thread_id == ppu.id)
+	{
+		return CELL_EDEADLK;
+	}
+
 	auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread) -> CellError
 	{
-		if (&ppu == &thread)
-		{
-			return CELL_EDEADLK;
-		}
-
 		CellError result = thread.joiner.atomic_op([&](ppu_join_status& value) -> CellError
 		{
 			if (value == ppu_join_status::zombie)
@@ -307,7 +307,18 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 		return CELL_EINVAL;
 	}
 
-	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
+	if (thread_id == ppu.id)
+	{
+		// Fast path for self
+		if (ppu.prio != prio)
+		{
+			lv2_obj::set_priority(ppu, prio);
+		}
+
+		return CELL_OK;
+	}
+
+	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread)
 	{
 		if (thread.prio != prio)
 		{
@@ -329,7 +340,15 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 
 	sys_ppu_thread.trace("sys_ppu_thread_get_priority(thread_id=0x%x, priop=*0x%x)", thread_id, priop);
 
-	u32 prio;
+	if (thread_id == ppu.id)
+	{
+		// Fast path for self
+		ppu.check_state();
+		*priop = ppu.prio;
+		return CELL_OK;
+	}
+
+	u32 prio{};
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
@@ -341,6 +360,7 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 		return CELL_ESRCH;
 	}
 
+	ppu.check_state();
 	*priop = prio;
 	return CELL_OK;
 }
