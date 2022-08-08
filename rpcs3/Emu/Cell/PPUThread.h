@@ -270,6 +270,8 @@ public:
 
 	alignas(64) const ppu_func_opd_t entry_func;
 	u64 start_time{0}; // Sleep start timepoint
+	u64 end_time{umax}; // Sleep end timepoint
+	s32 cancel_sleep{0}; // Flag to cancel the next lv2_obj::sleep call (when equals 2)
 	u64 syscall_args[8]{0}; // Last syscall arguments stored
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return

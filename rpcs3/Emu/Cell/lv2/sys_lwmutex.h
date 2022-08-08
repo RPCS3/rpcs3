@@ -135,7 +135,7 @@ struct lv2_lwmutex final : lv2_obj
 			control_data_t store = old;
 			store.signaled |= (unlock2 ? s32{smin} : 1);
 
-			if (lv2_control.compare_and_swap_test(old, store))
+			if (lv2_control.compare_exchange(old, store))
 			{
 				return true;
 			}
