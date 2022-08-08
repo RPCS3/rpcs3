@@ -416,6 +416,8 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
+				const u64 start_time = ppu.start_time;
+
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
@@ -442,6 +444,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 				}
 
 				cond->mutex->sleep(ppu);
+				ppu.start_time = start_time; // Restore start time because awake has been called
 				timeout = 0;
 				continue;
 			}
