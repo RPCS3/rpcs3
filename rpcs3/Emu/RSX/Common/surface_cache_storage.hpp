@@ -6,7 +6,11 @@ namespace rsx
 	template <typename Traits, int BlockSize>
 	class surface_cache_data_map : public ranged_map<typename Traits::surface_storage_type, BlockSize>
 	{
+#ifdef _MSC_VER
+		using super = ranged_map<typename Traits::surface_storage_type, BlockSize>;
+#else
 		using super = class ranged_map<typename Traits::surface_storage_type, BlockSize>;
+#endif
 		using metadata_t = typename super::block_metadata_t;
 
 		const metadata_t& find_head_block(u32 address)
