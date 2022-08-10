@@ -775,14 +775,12 @@ bool cpu_thread::check_state() noexcept
 				cpu_counter::add(this);
 			}
 
-			constexpr auto pending_and_temp = (cpu_flag::pending + cpu_flag::temp);
-
-			if ((state0 & pending_and_temp) == cpu_flag::pending)
+			if (cpu_can_stop && state0 & cpu_flag::pending)
 			{
 				// Execute pending work
 				cpu_work();
 
-				if ((state1 ^ state) - pending_and_temp)
+				if ((state1 ^ state) - cpu_flag::pending)
 				{
 					// Work could have changed flags
 					// Reset internal flags as if check_state() has just been called
