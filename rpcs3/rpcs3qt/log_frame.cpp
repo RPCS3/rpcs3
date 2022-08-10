@@ -676,6 +676,13 @@ void log_frame::UpdateUI()
 				}
 
 				s_gui_listener.pop();
+
+				if (steady_clock::now() >= start + 7ms)
+				{
+					// Must break eventually
+					break;
+				}
+
 				continue;
 			}
 
