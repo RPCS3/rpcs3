@@ -368,11 +368,13 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 					return;
 				}
 
+				// Put the current thread to sleep and schedule lwmutex waiter atomically
 				cond.append(cpu);
+				cond.sleep(ppu, timeout);
+				return;
 			}
 		}
 
-		// Sleep current thread and schedule lwmutex waiter
 		cond.sleep(ppu, timeout);
 	});
 
