@@ -4778,12 +4778,10 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		while (true)
 		{
-			// Check group status, wait if necessary
-			for (auto _state = +group->run_state;
-				_state >= SPU_THREAD_GROUP_STATUS_WAITING && _state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED;
-				_state = group->run_state)
+			// Check group status (by actually checking thread status), wait if necessary
+			while (true)
 			{
-				const auto old = state.load();
+				const auto old = +state;
 
 				if (is_stopped(old))
 				{
@@ -4791,7 +4789,13 @@ bool spu_thread::stop_and_signal(u32 code)
 					return false;
 				}
 
-				thread_ctrl::wait_on(state, old);;
+				if (!is_paused(old))
+				{
+					// The group is not suspended (anymore)
+					break;
+				}
+
+				thread_ctrl::wait_on(state, old);
 			}
 
 			reader_lock{group->mutex}, queue = get_queue(spuq);
@@ -4819,6 +4823,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			if (group->run_state >= SPU_THREAD_GROUP_STATUS_WAITING && group->run_state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
 			{
 				// Try again
+				ensure(state & cpu_flag::suspend);
 				continue;
 			}
 
@@ -4989,19 +4994,25 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		while (true)
 		{
-			for (auto _state = +group->run_state;
-				_state >= SPU_THREAD_GROUP_STATUS_WAITING && _state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED;
-				_state = group->run_state)
+			// Check group status (by actually checking thread status), wait if necessary
+			while (true)
 			{
 				const auto old = +state;
 
 				if (is_stopped(old))
 				{
 					ch_out_mbox.set_value(value);
+					state += cpu_flag::again;
 					return false;
 				}
 
-				thread_ctrl::wait_on(state, old);;
+				if (!is_paused(old))
+				{
+					// The group is not suspended (anymore)
+					break;
+				}
+
+				thread_ctrl::wait_on(state, old);
 			}
 
 			std::lock_guard lock(group->mutex);
