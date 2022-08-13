@@ -467,6 +467,10 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	}
 
 	// Initialize optional allocation information with placeholders
+	m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, 0, 32 };
+	m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, 0, 32 };
+	m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, 0, 32 };
+	m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, 0, 32 };
 	m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, 0, 128 };
 
 	const auto limits = m_device->gpu().get_limits();
