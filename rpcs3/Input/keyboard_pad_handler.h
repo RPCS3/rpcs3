@@ -83,9 +83,9 @@ public:
 	bool eventFilter(QObject* target, QEvent* ev) override;
 
 	void init_config(cfg_pad* cfg) override;
-	std::vector<std::string> ListDevices() override;
+	std::vector<pad_list_entry> list_devices() override;
 	void get_next_button_press(const std::string& /*padId*/, const pad_callback& /*callback*/, const pad_fail_callback& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) override {}
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id) override;
+	bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id) override;
 	void ThreadProc() override;
 
 	std::string GetMouseName(const QMouseEvent* event) const;
@@ -110,7 +110,6 @@ private:
 	bool get_mouse_lock_state() const;
 	void release_all_keys();
 
-	std::vector<std::shared_ptr<Pad>> m_bindings;
 	std::vector<Pad> m_pads_internal; // Accumulates input until the next poll. Only used for user input!
 
 	// Button Movements

@@ -119,6 +119,7 @@ ds4_pad_handler::ds4_pad_handler()
 	// set capabilities
 	b_has_config = true;
 	b_has_rumble = true;
+	b_has_motion = true;
 	b_has_deadzones = true;
 	b_has_led = true;
 	b_has_rgb = true;
@@ -831,8 +832,11 @@ PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_
 	return connection::connected;
 }
 
-void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void ds4_pad_handler::get_extended_info(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	DS4Device* ds4_device = static_cast<DS4Device*>(device.get());
 	if (!ds4_device || !pad)
 		return;
@@ -869,8 +873,11 @@ void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	pad->m_sensors[3].m_value = Clamp0To1023(gyroX);
 }
 
-void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void ds4_pad_handler::apply_pad_data(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	DS4Device* ds4_dev = static_cast<DS4Device*>(device.get());
 	if (!ds4_dev || !ds4_dev->hidDevice || !ds4_dev->config || !pad)
 		return;

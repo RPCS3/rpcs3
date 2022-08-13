@@ -106,16 +106,16 @@ void hid_pad_handler<Device>::ThreadProc()
 }
 
 template <class Device>
-std::vector<std::string> hid_pad_handler<Device>::ListDevices()
+std::vector<pad_list_entry> hid_pad_handler<Device>::list_devices()
 {
-	std::vector<std::string> pads_list;
+	std::vector<pad_list_entry> pads_list;
 
 	if (!Init())
 		return pads_list;
 
 	for (const auto& controller : m_controllers) // Controllers 1-n in GUI
 	{
-		pads_list.emplace_back(controller.first);
+		pads_list.emplace_back(controller.first, false);
 	}
 
 	return pads_list;

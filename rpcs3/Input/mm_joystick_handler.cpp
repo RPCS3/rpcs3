@@ -101,16 +101,16 @@ bool mm_joystick_handler::Init()
 	return true;
 }
 
-std::vector<std::string> mm_joystick_handler::ListDevices()
+std::vector<pad_list_entry> mm_joystick_handler::list_devices()
 {
-	std::vector<std::string> devices;
+	std::vector<pad_list_entry> devices;
 
 	if (!Init())
 		return devices;
 
 	for (const auto& dev : m_devices)
 	{
-		devices.emplace_back(dev.second.device_name);
+		devices.emplace_back(dev.second.device_name, false);
 	}
 
 	return devices;
@@ -226,8 +226,12 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 
 		// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 		// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
-		// Use a pair to get all the legally pressed buttons and use the one with highest value (prioritize first)
-		std::pair<u16, std::string> pressed_button = { 0, "" };
+		// Get all the legally pressed buttons and use the one with highest value (prioritize first)
+		struct
+		{
+			u16 value = 0;
+			std::string name;
+		} pressed_button{};
 
 		for (const auto& button : axis_list)
 		{
@@ -244,8 +248,10 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 					m_blacklist.emplace_back(keycode);
 					input_log.error("MMJOY Calibration: Added axis [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 				}
-				else if (value > pressed_button.first)
-					pressed_button = { value, button.second };
+				else if (value > pressed_button.value)
+				{
+					pressed_button = { .value = value, .name = button.second };
+				}
 			}
 		}
 
@@ -264,8 +270,10 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 					m_blacklist.emplace_back(keycode);
 					input_log.error("MMJOY Calibration: Added pov [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 				}
-				else if (value > pressed_button.first)
-					pressed_button = { value, button.second };
+				else if (value > pressed_button.value)
+				{
+					pressed_button = { .value = value, .name = button.second };
+				}
 			}
 		}
 
@@ -288,8 +296,10 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 					m_blacklist.emplace_back(keycode);
 					input_log.error("MMJOY Calibration: Added button [ %d = %s ] to blacklist. Value = %d", keycode, button.second, value);
 				}
-				else if (value > pressed_button.first)
-					pressed_button = { value, button.second };
+				else if (value > pressed_button.value)
+				{
+					pressed_button = { .value = value, .name = button.second };
+				}
 			}
 		}
 
@@ -313,8 +323,8 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 
 		if (callback)
 		{
-			if (pressed_button.first > 0)
-				return callback(pressed_button.first, pressed_button.second, padId, 0, preview_values);
+			if (pressed_button.value > 0)
+				return callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
 			else
 				return callback(0, "", padId, 0, preview_values);
 		}

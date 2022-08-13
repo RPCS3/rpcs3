@@ -4,12 +4,14 @@
 #include <QDialog>
 #include <QLabel>
 #include <QTimer>
+#include <QComboBox>
 
 #include <mutex>
 
 #include "Emu/Io/pad_config.h"
 #include "Emu/GameInfo.h"
 #include "Utilities/Thread.h"
+#include "pad_device_info.h"
 
 class gui_settings;
 class PadHandlerBase;
@@ -18,14 +20,6 @@ namespace Ui
 {
 	class pad_settings_dialog;
 }
-
-struct pad_device_info
-{
-	std::string name;
-	bool is_connected{false};
-};
-
-Q_DECLARE_METATYPE(pad_device_info)
 
 class pad_settings_dialog : public QDialog
 {
@@ -109,6 +103,7 @@ private Q_SLOTS:
 	void AddProfile();
 	/** Update the current player config with the GUI values. */
 	void ApplyCurrentPlayerConfig(int new_player_id);
+	void RefreshPads();
 
 private:
 	std::unique_ptr<Ui::pad_settings_dialog> ui;
@@ -125,6 +120,7 @@ private:
 	bool m_enable_deadzones{ false };
 	bool m_enable_led{ false };
 	bool m_enable_battery{ false };
+	bool m_enable_motion{ false };
 	bool m_enable_pressure_intensity_button{ true };
 
 	// Button Mapping
@@ -150,6 +146,7 @@ private:
 	std::shared_ptr<PadHandlerBase> m_handler;
 	std::mutex m_handler_mutex;
 	std::string m_device_name;
+	std::string m_buddy_device_name;
 	std::string m_profile;
 	QTimer m_timer_pad_refresh;
 	int m_last_player_id = 0;
@@ -192,6 +189,9 @@ private:
 
 	/** Update all the Button Labels with current button mapping */
 	void UpdateLabels(bool is_reset = false);
+
+	pad_device_info get_pad_info(QComboBox* combo, int index);
+	void switch_pad_info(int index, pad_device_info info, bool is_connected);
 	void SwitchPadInfo(const std::string& name, bool is_connected);
 
 	/** Enable/Disable Buttons while trying to remap an other */

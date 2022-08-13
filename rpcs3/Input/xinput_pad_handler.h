@@ -109,7 +109,7 @@ public:
 
 	bool Init() override;
 
-	std::vector<std::string> ListDevices() override;
+	std::vector<pad_list_entry> list_devices() override;
 	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
 	u32 get_battery_level(const std::string& padId) override;
 	void init_config(cfg_pad* cfg) override;
@@ -140,8 +140,8 @@ private:
 	bool get_is_left_stick(u64 keyCode) override;
 	bool get_is_right_stick(u64 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
-	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
-	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
+	void get_extended_info(const pad_ensemble& binding) override;
+	void apply_pad_data(const pad_ensemble& binding) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 };
