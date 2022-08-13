@@ -116,7 +116,7 @@ public:
 
 	bool Init() override;
 
-	std::vector<std::string> ListDevices() override;
+	std::vector<pad_list_entry> list_devices() override;
 	void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
 	void init_config(cfg_pad* cfg) override;
 

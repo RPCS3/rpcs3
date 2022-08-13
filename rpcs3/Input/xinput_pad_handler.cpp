@@ -379,9 +379,9 @@ bool xinput_pad_handler::Init()
 	return true;
 }
 
-std::vector<std::string> xinput_pad_handler::ListDevices()
+std::vector<pad_list_entry> xinput_pad_handler::list_devices()
 {
-	std::vector<std::string> xinput_pads_list;
+	std::vector<pad_list_entry> xinput_pads_list;
 
 	if (!Init())
 		return xinput_pads_list;
@@ -404,7 +404,7 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 		}
 
 		if (result == ERROR_SUCCESS)
-			xinput_pads_list.push_back(m_name_string + std::to_string(i + 1)); // Controllers 1-n in GUI
+			xinput_pads_list.emplace_back(m_name_string + std::to_string(i + 1), false); // Controllers 1-n in GUI
 	}
 	return xinput_pads_list;
 }
@@ -485,8 +485,11 @@ PadHandlerBase::connection xinput_pad_handler::update_connection(const std::shar
 	return connection::disconnected;
 }
 
-void xinput_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void xinput_pad_handler::get_extended_info(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	XInputDevice* dev = static_cast<XInputDevice*>(device.get());
 	if (!dev || !pad)
 		return;
@@ -512,8 +515,11 @@ void xinput_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& dev
 	}
 }
 
-void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void xinput_pad_handler::apply_pad_data(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	XInputDevice* dev = static_cast<XInputDevice*>(device.get());
 	if (!dev || !pad)
 		return;

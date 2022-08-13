@@ -11,6 +11,15 @@ namespace pad
 	constexpr static std::string_view keyboard_device_name = "Keyboard";
 }
 
+struct cfg_sensor final : cfg::node
+{
+	cfg_sensor(node* owner, const std::string& name) : cfg::node(owner, name) {}
+
+	cfg::string axis{ this, "Axis", "" };
+	cfg::_bool mirrored{ this, "Mirrored", false };
+	cfg::_int<-1023, 1023> shift{ this, "Shift", 0 };
+};
+
 struct cfg_pad final : cfg::node
 {
 	cfg_pad() {};
@@ -41,6 +50,11 @@ struct cfg_pad final : cfg::node
 	cfg::string l1{ this, "L1", "" };
 	cfg::string l2{ this, "L2", "" };
 	cfg::string l3{ this, "L3", "" };
+
+	cfg_sensor motion_sensor_x{ this, "Motion Sensor X" };
+	cfg_sensor motion_sensor_y{ this, "Motion Sensor Y" };
+	cfg_sensor motion_sensor_z{ this, "Motion Sensor Z" };
+	cfg_sensor motion_sensor_g{ this, "Motion Sensor G" };
 
 	cfg::string pressure_intensity_button{ this, "Pressure Intensity Button", "" };
 	cfg::uint<0, 100> pressure_intensity{ this, "Pressure Intensity Percent", 50 };
@@ -88,8 +102,11 @@ struct cfg_player final : cfg::node
 	cfg_player(node* owner, const std::string& name, pad_handler type) : cfg::node(owner, name), def_handler(type) {}
 
 	cfg::_enum<pad_handler> handler{ this, "Handler", def_handler };
+
 	cfg::string device{ this, "Device", handler.to_string() };
 	cfg_pad config{ this, "Config" };
+
+	cfg::string buddy_device{ this, "Buddy Device", handler.to_string() };
 };
 
 struct cfg_input final : cfg::node

@@ -81,6 +81,7 @@ ds3_pad_handler::ds3_pad_handler()
 	// set capabilities
 	b_has_config = true;
 	b_has_rumble = true;
+	b_has_motion = true;
 	b_has_deadzones = true;
 	b_has_battery = true;
 	b_has_led = true;
@@ -445,8 +446,11 @@ pad_preview_values ds3_pad_handler::get_preview_values(const std::unordered_map<
 	};
 }
 
-void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	ds3_device* ds3dev = static_cast<ds3_device*>(device.get());
 	if (!ds3dev || !pad)
 		return;
@@ -561,8 +565,11 @@ PadHandlerBase::connection ds3_pad_handler::update_connection(const std::shared_
 	return connection::connected;
 }
 
-void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	ds3_device* dev = static_cast<ds3_device*>(device.get());
 	if (!dev || !dev->hidDevice || !dev->config || !pad)
 		return;

@@ -178,11 +178,11 @@ void pad_thread::Init()
 		{
 			InitLddPad(pad_settings[i].ldd_handle);
 		}
-		else if (!cur_pad_handler->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string(), i))
+		else if (!cur_pad_handler->bindPadToDevice(m_pads[i], i))
 		{
 			// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
 			input_log.error("Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type);
-			nullpad->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string(), i);
+			nullpad->bindPadToDevice(m_pads[i], i);
 		}
 
 		input_log.notice("Pad %d: %s", i, g_cfg_input.player[i]->device.to_string());

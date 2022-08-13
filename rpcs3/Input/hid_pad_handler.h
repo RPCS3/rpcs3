@@ -60,7 +60,7 @@ public:
 
 	bool Init() override;
 	void ThreadProc() override;
-	std::vector<std::string> ListDevices() override;
+	std::vector<pad_list_entry> list_devices() override;
 
 protected:
 	enum class DataStatus

@@ -18,7 +18,7 @@ public:
 	~pad_led_settings_dialog();
 
 Q_SIGNALS:
-	void pass_led_settings(int m_cR, int m_cG, int m_cB, bool m_low_battery_blink, bool m_battery_indicator, int m_battery_indicator_brightness);
+	void pass_led_settings(int cR, int cG, int cB, bool low_battery_blink, bool battery_indicator, int battery_indicator_brightness);
 
 private Q_SLOTS:
 	void update_slider_label(int val) const;

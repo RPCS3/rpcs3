@@ -52,14 +52,14 @@ public:
 		cfg->from_default();
 	}
 
-	std::vector<std::string> ListDevices() override
+	std::vector<pad_list_entry> list_devices() override
 	{
-		std::vector<std::string> nulllist;
-		nulllist.emplace_back("Default Null Device");
+		std::vector<pad_list_entry> nulllist;
+		nulllist.emplace_back("Default Null Device", false);
 		return nulllist;
 	}
 
-	bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/, const std::string& /*device*/, u8 /*player_id*/) override
+	bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/, u8 /*player_id*/) override
 	{
 		return true;
 	}

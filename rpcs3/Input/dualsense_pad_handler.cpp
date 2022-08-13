@@ -137,6 +137,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	// Set capabilities
 	b_has_config = true;
 	b_has_rumble = true;
+	b_has_motion = true;
 	b_has_deadzones = true;
 	b_has_led = true;
 	b_has_rgb = true;
@@ -625,8 +626,11 @@ PadHandlerBase::connection dualsense_pad_handler::update_connection(const std::s
 	return connection::connected;
 }
 
-void dualsense_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	DualSenseDevice* dualsense_device = static_cast<DualSenseDevice*>(device.get());
 	if (!dualsense_device || !pad)
 		return;
@@ -1013,8 +1017,11 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 	}
 }
 
-void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 {
+	const auto& device = binding.device;
+	const auto& pad = binding.pad;
+
 	DualSenseDevice* dualsense_dev = static_cast<DualSenseDevice*>(device.get());
 	if (!dualsense_dev || !dualsense_dev->hidDevice || !dualsense_dev->config || !pad)
 		return;
