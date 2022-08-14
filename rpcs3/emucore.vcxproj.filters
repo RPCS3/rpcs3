@@ -1090,6 +1090,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellMusicSelectionContext.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\stack_trace.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2172,6 +2175,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellMusicDecode.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\stack_trace.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
