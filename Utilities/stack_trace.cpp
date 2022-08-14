@@ -30,7 +30,7 @@ namespace utils
 		return out.data();
 	}
 
-	std::vector<void*> backtrace(int max_depth)
+	std::vector<void*> get_backtrace(int max_depth)
 	{
 		std::vector<void*> result = {};
 
@@ -70,7 +70,7 @@ namespace utils
 		return result;
 	}
 
-	std::vector<std::string> backtrace_symbols(const std::vector<void*>& stack)
+	std::vector<std::string> get_backtrace_symbols(const std::vector<void*>& stack)
 	{
 		std::vector<std::string> result = {};
 		std::vector<u8> symbol_buf(sizeof(SYMBOL_INFO) + sizeof(TCHAR) * 256);
@@ -117,7 +117,7 @@ namespace utils
 		return result;
 	}
 #else
-	std::vector<void*> backtrace(int max_depth)
+	std::vector<void*> get_backtrace(int max_depth)
 	{
 		std::vector<void*> result(max_depth);
 		int depth = backtrace(result.data(), max_depth);
@@ -126,7 +126,7 @@ namespace utils
 		return result;
 	}
 
-	std::vector<std::string> backtrace_symbols(const std::vector<void*>& stack)
+	std::vector<std::string> get_backtrace_symbols(const std::vector<void*>& stack)
 	{
 		std::vector<std::string> result;
 		result.reserve(stack.size());

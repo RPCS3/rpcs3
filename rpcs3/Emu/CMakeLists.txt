@@ -59,6 +59,7 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/rXml.cpp
     ../../Utilities/sema.cpp
     ../../Utilities/simple_ringbuf.cpp
+    ../../Utilities/stack_trace.cpp
     ../../Utilities/StrFmt.cpp
     ../../Utilities/Thread.cpp
     ../../Utilities/version.cpp
