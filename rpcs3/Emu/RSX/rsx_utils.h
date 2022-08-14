@@ -570,8 +570,8 @@ namespace rsx
 			const auto src_y = 0u;
 			const auto dst_y = (offset / pitch);
 			const auto dst_x = (offset % pitch) / child_bpp;
-			const auto w = std::min<u32>(parent_w, child_w - dst_x);
-			const auto h = std::min<u32>(parent_h, child_h - dst_y);
+			const auto w = std::min<u32>(parent_w, std::max<u32>(child_w, dst_x) - dst_x); // Clamp negatives to 0!
+			const auto h = std::min<u32>(parent_h, std::max<u32>(child_h, dst_y) - dst_y);
 
 			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
 		}
@@ -582,8 +582,8 @@ namespace rsx
 			const auto src_x = (offset % pitch) / parent_bpp;
 			const auto dst_x = 0u;
 			const auto dst_y = 0u;
-			const auto w = std::min<u32>(child_w, parent_w - src_x);
-			const auto h = std::min<u32>(child_h, parent_h - src_y);
+			const auto w = std::min<u32>(child_w, std::max<u32>(parent_w, src_x) - src_x);
+			const auto h = std::min<u32>(child_h, std::max<u32>(parent_h, src_y) - src_y);
 
 			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
 		}
