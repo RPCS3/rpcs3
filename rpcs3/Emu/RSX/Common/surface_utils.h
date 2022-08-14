@@ -546,20 +546,15 @@ namespace rsx
 			const auto parent_w = surface->template get_surface_width<rsx::surface_metrics::bytes>();
 			const auto parent_h = surface->template get_surface_height<rsx::surface_metrics::bytes>();
 
-			const auto rect = rsx::intersect_region(surface->base_addr, parent_w, parent_h, 1, base_addr, child_w, child_h, 1, get_rsx_pitch());
-			const auto src_offset = std::get<0>(rect);
-			const auto dst_offset = std::get<1>(rect);
-			const auto size = std::get<2>(rect);
+			const auto [src_offset, dst_offset, size] = rsx::intersect_region(surface->base_addr, parent_w, parent_h, 1, base_addr, child_w, child_h, 1, get_rsx_pitch());
 
-			if (src_offset.x >= parent_w || src_offset.y >= parent_h)
+			if (!size.width || !size.height)
 			{
 				return surface_inheritance_result::none;
 			}
 
-			if (dst_offset.x >= child_w || dst_offset.y >= child_h)
-			{
-				return surface_inheritance_result::none;
-			}
+			ensure(src_offset.x < parent_w && src_offset.y < parent_h);
+			ensure(dst_offset.x < child_w && dst_offset.y < child_h);
 
 			// TODO: Eventually need to stack all the overlapping regions, but for now just do the latest rect in the space
 			deferred_clipped_region<T*> region;
