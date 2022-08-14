@@ -508,10 +508,7 @@ namespace utils
 #ifdef _WIN32
 		fs::file f;
 
-		// Get system version
-		[[maybe_unused]] static const DWORD version_major = *reinterpret_cast<const DWORD*>(__readgsqword(0x60) + 0x118);
-
-		auto set_sparse = [](HANDLE h, usz m_size) -> bool
+		std::function<bool(const std::string&, HANDLE, usz)> set_sparse = [&](const std::string& storagex, HANDLE h, usz m_size) -> bool
 		{
 			FILE_SET_SPARSE_BUFFER arg{.SetSparse = true};
 			FILE_BASIC_INFO info0{};
@@ -524,16 +521,14 @@ namespace utils
 				ensure(SetFileInformationByHandle(h, FileBasicInfo, &info0, sizeof(info0)));
 			}
 
-			if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
-			{
-				MessageBoxW(0, L"RPCS3 needs to be restarted to create sparse file rpcs3_vm.", L"RPCS3", MB_ICONEXCLAMATION);
-			}
-
 			if (DWORD bytesReturned{}; (info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) || DeviceIoControl(h, FSCTL_SET_SPARSE, &arg, sizeof(arg), nullptr, 0, &bytesReturned, nullptr))
 			{
-				if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
+				if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && !storagex.empty())
 				{
-					std::abort();
+					// Retry once (bug workaround)
+					f.close();
+					f.open(storagex, fs::read + fs::write + fs::create);
+					return set_sparse("", f.get_handle(), m_size);
 				}
 
 				FILE_STANDARD_INFO info;
@@ -581,12 +576,12 @@ namespace utils
 			storage2 += storage;
 		}
 
-		if (!f.open(storage1, fs::read + fs::write + fs::create) || !set_sparse(f.get_handle(), m_size))
+		if (!f.open(storage1, fs::read + fs::write + fs::create) || !set_sparse(storage1, f.get_handle(), m_size))
 		{
 			// Fallback storage
 			ensure(f.open(storage2, fs::read + fs::write + fs::create));
 
-			if (!set_sparse(f.get_handle(), m_size))
+			if (!set_sparse(storage2, f.get_handle(), m_size))
 			{
 				MessageBoxW(0, L"Failed to initialize sparse file.\nCan't find a filesystem with sparse file support (NTFS).", L"RPCS3", MB_ICONERROR);
 			}
@@ -599,11 +594,6 @@ namespace utils
 		}
 
 		// It seems impossible to automatically delete file on exit when file mapping is used
-		if (version_major <= 7) [[unlikely]]
-		{
-			m_storage.clear();
-		}
-
 		if (f.size() != m_size)
 		{
 			// Resize the file gradually (bug workaround)
