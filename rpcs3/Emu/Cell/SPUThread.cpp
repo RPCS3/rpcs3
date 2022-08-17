@@ -3388,30 +3388,85 @@ bool spu_thread::process_mfc_cmd()
 			last_faddr = 0;
 		}
 
-		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_getllar_polling_detection && rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
-		{
-			// Spinning, might as well yield cpu resources
-			std::this_thread::yield();
-
-			// Reset perf
-			perf0.restart();
-		}
-
-		alignas(64) spu_rdata_t temp;
-		u64 ntime;
-		rsx::reservation_lock rsx_lock(addr, 128);
-
-		if (ch_events.load().events & SPU_EVENT_LR)
-		{
-			// There is no longer a need to concern about LR event if it has already been raised.
-			raddr = 0;
-		}
-
 		if (raddr)
 		{
-			// Save rdata from previous reservation
-			mov_rdata(temp, rdata);
+			if (raddr != addr)
+			{
+				// Last check for event before we replace the reservation with a new one
+				if (reservation_check(raddr, rdata))
+				{
+					set_events(SPU_EVENT_LR);
+				}
+			}
+			else
+			{
+				// Check if we can reuse our existing reservation
+				if (rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data) && rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
+				{
+					mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
+					ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
+
+					// Need to check twice for it to be accurate, the code is before and not not after this check for:
+					// 1. Reduce time between reservation accesses so TSX panelty would be lowered
+					// 2. Increase the chance of change detection: if GETLLAR has been called again new data is probably wanted
+					if (rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
+					{
+						// Validation that it is indeed GETLLAR busy-waiting (large time window is intentional)
+						if ((g_cfg.core.spu_reservation_busy_waiting && !g_use_rtm) || last_getllar != pc || perf0.get() - last_gtsc >= 50'000)
+						{
+							if (g_cfg.core.mfc_debug)
+							{
+								auto& dump = mfc_history[mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
+								dump.cmd = ch_mfc_cmd;
+								dump.cmd.eah = pc;
+								std::memcpy(dump.data, rdata, 128);
+							}
+
+							last_getllar = pc;
+							last_gtsc = perf0.get();
+
+							if (g_cfg.core.spu_reservation_busy_waiting)
+							{
+								busy_wait();
+							}
+
+							return true;
+						}
+
+						// Spinning, might as well yield cpu resources
+						state += cpu_flag::wait;
+						vm::reservation_notifier(addr).wait(rtime, -128, atomic_wait_timeout{100'000});
+
+						// Reset perf
+						perf0.restart();
+
+						// Quick check if there were reservation changes
+						if (rtime == vm::reservation_acquire(addr))
+						{
+							// None at least in rtime
+
+							if (g_cfg.core.mfc_debug)
+							{
+								auto& dump = mfc_history[mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
+								dump.cmd = ch_mfc_cmd;
+								dump.cmd.eah = pc;
+								std::memcpy(dump.data, rdata, 128);
+							}
+
+							last_gtsc = perf0.get();
+							return true;
+						}
+					}
+				}
+
+				// We can't, LR needs to be set now
+				set_events(SPU_EVENT_LR);
+				static_cast<void>(test_stopped());
+			}
 		}
+
+		u64 ntime;
+		rsx::reservation_lock rsx_lock(addr, 128);
 
 		for (u64 i = 0; i != umax; [&]()
 		{
@@ -3492,26 +3547,11 @@ bool spu_thread::process_mfc_cmd()
 			break;
 		}
 
-		if (raddr && raddr != addr)
-		{
-			// Last check for event before we replace the reservation with a new one
-			if (reservation_check(raddr, temp))
-			{
-				set_events(SPU_EVENT_LR);
-			}
-		}
-		else if (raddr == addr)
-		{
-			// Lost previous reservation on polling
-			if (ntime != rtime || !cmp_rdata(rdata, temp))
-			{
-				set_events(SPU_EVENT_LR);
-			}
-		}
-
 		raddr = addr;
 		rtime = ntime;
 		mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
+		last_getllar = pc;
+		last_gtsc = perf0.get();
 
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 
@@ -4205,11 +4245,15 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			if (raddr)
 			{
-				thread_ctrl::wait_on_custom<2>([&](atomic_wait::list<4>& list)
+				// Don't busy-wait with TSX - memory is sensitive
+				if (g_use_rtm || !g_cfg.core.spu_reservation_busy_waiting)
 				{
-					list.set<0>(state, old);
-					list.set<1>(vm::reservation_notifier(raddr), rtime, -128);
-				}, 100);
+					vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{100'000});
+				}
+				else
+				{
+					busy_wait();
+				}
 
 				continue;
 			}
