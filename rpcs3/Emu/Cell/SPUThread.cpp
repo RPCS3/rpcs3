@@ -114,9 +114,10 @@ static FORCE_INLINE void __movsb(unsigned char * Dst, const unsigned char * Src,
 static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 {
 #if defined(_MSC_VER) || defined(__AVX__)
+	// Interleave 2 cache line accesses (optimization)
 	const __m256 x0 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 0)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 0)));
-	const __m256 x1 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 1)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 1)));
 	const __m256 x2 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 2)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 2)));
+	const __m256 x1 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 1)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 1)));
 	const __m256 x3 = _mm256_xor_ps(_mm256_castsi256_ps(_mm256_loadu_si256(lhs + 3)), _mm256_castsi256_ps(_mm256_loadu_si256(rhs + 3)));
 	const __m256 c0 = _mm256_or_ps(x0, x1);
 	const __m256 c1 = _mm256_or_ps(x2, x3);
@@ -126,12 +127,12 @@ static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 	bool result = 0;
 	__asm__(
 		"vmovups 0*32(%[lhs]), %%ymm0;" // load
-		"vmovups 1*32(%[lhs]), %%ymm1;"
 		"vmovups 2*32(%[lhs]), %%ymm2;"
+		"vmovups 1*32(%[lhs]), %%ymm1;"
 		"vmovups 3*32(%[lhs]), %%ymm3;"
 		"vxorps 0*32(%[rhs]), %%ymm0, %%ymm0;" // compare
-		"vxorps 1*32(%[rhs]), %%ymm1, %%ymm1;"
 		"vxorps 2*32(%[rhs]), %%ymm2, %%ymm2;"
+		"vxorps 1*32(%[rhs]), %%ymm1, %%ymm1;"
 		"vxorps 3*32(%[rhs]), %%ymm3, %%ymm3;"
 		"vorps %%ymm0, %%ymm1, %%ymm0;" // merge
 		"vorps %%ymm2, %%ymm3, %%ymm2;"
@@ -169,8 +170,8 @@ extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs)
 	const auto lhs = reinterpret_cast<const v128*>(_lhs);
 	const auto rhs = reinterpret_cast<const v128*>(_rhs);
 	const v128 a = (lhs[0] ^ rhs[0]) | (lhs[1] ^ rhs[1]);
-	const v128 b = (lhs[2] ^ rhs[2]) | (lhs[3] ^ rhs[3]);
 	const v128 c = (lhs[4] ^ rhs[4]) | (lhs[5] ^ rhs[5]);
+	const v128 b = (lhs[2] ^ rhs[2]) | (lhs[3] ^ rhs[3]);
 	const v128 d = (lhs[6] ^ rhs[6]) | (lhs[7] ^ rhs[7]);
 	const v128 r = (a | b) | (c | d);
 	return gv_testz(r);
@@ -181,17 +182,17 @@ static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 {
 #ifdef _MSC_VER
 	_mm256_storeu_si256(dst + 0, _mm256_loadu_si256(src + 0));
-	_mm256_storeu_si256(dst + 1, _mm256_loadu_si256(src + 1));
 	_mm256_storeu_si256(dst + 2, _mm256_loadu_si256(src + 2));
+	_mm256_storeu_si256(dst + 1, _mm256_loadu_si256(src + 1));
 	_mm256_storeu_si256(dst + 3, _mm256_loadu_si256(src + 3));
 #else
 	__asm__(
 		"vmovdqu 0*32(%[src]), %%ymm0;" // load
 		"vmovdqu %%ymm0, 0*32(%[dst]);" // store
-		"vmovdqu 1*32(%[src]), %%ymm0;"
-		"vmovdqu %%ymm0, 1*32(%[dst]);"
 		"vmovdqu 2*32(%[src]), %%ymm0;"
 		"vmovdqu %%ymm0, 2*32(%[dst]);"
+		"vmovdqu 1*32(%[src]), %%ymm0;"
+		"vmovdqu %%ymm0, 1*32(%[dst]);"
 		"vmovdqu 3*32(%[src]), %%ymm0;"
 		"vmovdqu %%ymm0, 3*32(%[dst]);"
 #ifndef __AVX__
@@ -253,17 +254,17 @@ static FORCE_INLINE void mov_rdata_nt_avx(__m256i* dst, const __m256i* src)
 {
 #ifdef _MSC_VER
 	_mm256_stream_si256(dst + 0, _mm256_load_si256(src + 0));
-	_mm256_stream_si256(dst + 1, _mm256_load_si256(src + 1));
 	_mm256_stream_si256(dst + 2, _mm256_load_si256(src + 2));
+	_mm256_stream_si256(dst + 1, _mm256_load_si256(src + 1));
 	_mm256_stream_si256(dst + 3, _mm256_load_si256(src + 3));
 #else
 	__asm__(
 		"vmovdqa 0*32(%[src]), %%ymm0;" // load
 		"vmovntdq %%ymm0, 0*32(%[dst]);" // store
-		"vmovdqa 1*32(%[src]), %%ymm0;"
-		"vmovntdq %%ymm0, 1*32(%[dst]);"
 		"vmovdqa 2*32(%[src]), %%ymm0;"
 		"vmovntdq %%ymm0, 2*32(%[dst]);"
+		"vmovdqa 1*32(%[src]), %%ymm0;"
+		"vmovntdq %%ymm0, 1*32(%[dst]);"
 		"vmovdqa 3*32(%[src]), %%ymm0;"
 		"vmovntdq %%ymm0, 3*32(%[dst]);"
 #ifndef __AVX__
