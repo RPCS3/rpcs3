@@ -3783,6 +3783,12 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 		return true;
 	}
 
+	if ((addr >> 28) < 2 || (addr >> 28) == 0xd)
+	{
+		// Always-allocated memory does not need strict checking (vm::main or vm::stack)
+		return !cmp_rdata(data, *vm::get_super_ptr<decltype(rdata)>(addr));
+	}
+
 	// Ensure data is allocated (HACK: would raise LR event if not)
 	// Set range_lock first optimistically
 	range_lock->store(u64{128} << 32 | addr);
@@ -3928,7 +3934,7 @@ void spu_thread::set_events(u32 bits)
 		if (events.mask & bits)
 		{
 			events.count = true;
-			return !!events.waiting;
+			return !!events.waiting && (bits & (SPU_EVENT_S1 | SPU_EVENT_S2));
 		}
 
 		return false;
