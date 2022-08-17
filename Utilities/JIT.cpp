@@ -996,6 +996,11 @@ bool jit_compiler::check(const std::string& path)
 	return false;
 }
 
+void jit_compiler::update_global_mapping(const std::string& name, u64 addr)
+{
+	m_engine->updateGlobalMapping(name, addr);
+}
+
 void jit_compiler::fin()
 {
 	m_engine->finalizeObject();

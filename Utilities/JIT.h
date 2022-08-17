@@ -267,14 +267,14 @@ namespace asmjit
 
 // Build runtime function with asmjit::X86Assembler
 template <typename FT, typename Asm = native_asm, typename F>
-inline FT build_function_asm(std::string_view name, F&& builder)
+inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* custom_runtime = nullptr)
 {
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(false);
 #endif
 	using namespace asmjit;
 
-	auto& rt = get_global_runtime();
+	auto& rt = custom_runtime ? *custom_runtime : get_global_runtime();
 
 	CodeHolder code;
 	code.init(rt.environment());
@@ -361,6 +361,9 @@ public:
 
 	// Add object (path to obj file)
 	void add(const std::string& path);
+
+	// Update global mapping for a single value
+	void update_global_mapping(const std::string& name, u64 addr);
 
 	// Check object file
 	static bool check(const std::string& path);
