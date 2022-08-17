@@ -236,14 +236,6 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 				m_rel = nullptr;
 			}
 
-			if (ppu_get_far_jump(m_addr + base))
-			{
-				// Branch into an HLEd instruction using the jump table
-				FlushRegisters();
-				CallFunction(0, m_reloc ? m_ir->CreateAdd(m_ir->getInt64(m_addr), m_seg0) : m_ir->getInt64(m_addr));
-				continue;
-			}
-
 			const u32 op = vm::read32(vm::cast(m_addr + base));
 
 			(this->*(s_ppu_decoder.decode(op)))({op});

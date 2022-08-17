@@ -519,12 +519,14 @@ s32 _spurs::create_lv2_eq(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32
 {
 	if (s32 rc = sys_event_queue_create(ppu, queueId, vm::make_var(attr), SYS_EVENT_QUEUE_LOCAL, size))
 	{
+		static_cast<void>(ppu.test_stopped());
 		return rc;
 	}
 
 	if (_spurs::attach_lv2_eq(ppu, spurs, *queueId, port, 1, true))
 	{
 		sys_event_queue_destroy(ppu, *queueId, SYS_EVENT_QUEUE_DESTROY_FORCE);
+		static_cast<void>(ppu.test_stopped());
 	}
 
 	return CELL_OK;
@@ -623,6 +625,7 @@ s32 _spurs::detach_lv2_eq(vm::ptr<CellSpurs> spurs, u8 spuPort, bool spursCreate
 void _spurs::handler_wait_ready(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 {
 	ensure(ppu_execute<&sys_lwmutex_lock>(ppu, spurs.ptr(&CellSpurs::mutex), 0) == 0);
+	static_cast<void>(ppu.test_stopped());
 
 	while (true)
 	{
@@ -686,6 +689,7 @@ void _spurs::handler_wait_ready(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 		if (spurs->handlerDirty == 0)
 		{
 			ensure(ppu_execute<&sys_lwcond_wait>(ppu, spurs.ptr(&CellSpurs::cond), 0) == 0);
+			static_cast<void>(ppu.test_stopped());
 		}
 
 		spurs->handlerWaiting = 0;
@@ -693,6 +697,7 @@ void _spurs::handler_wait_ready(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 	// If we reach here then a runnable workload was found
 	ensure(ppu_execute<&sys_lwmutex_unlock>(ppu, spurs.ptr(&CellSpurs::mutex)) == 0);
+	static_cast<void>(ppu.test_stopped());
 }
 
 void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
@@ -711,7 +716,10 @@ void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 		ensure(sys_spu_thread_group_start(ppu, spurs->spuTG) == 0);
 
-		if (s32 rc = sys_spu_thread_group_join(ppu, spurs->spuTG, vm::null, vm::null); rc + 0u != CELL_EFAULT)
+		const s32 rc = sys_spu_thread_group_join(ppu, spurs->spuTG, vm::null, vm::null);
+		static_cast<void>(ppu.test_stopped());
+
+		if (rc + 0u != CELL_EFAULT)
 		{
 			if (rc + 0u == CELL_ESTAT)
 			{
@@ -810,6 +818,7 @@ s32 _spurs::wakeup_shutdown_completion_waiter(ppu_thread& ppu, vm::ptr<CellSpurs
 	{
 		ensure((wklF->x28 == 2u));
 		rc = sys_semaphore_post(ppu, static_cast<u32>(wklF->sem), 1);
+		static_cast<void>(ppu.test_stopped());
 	}
 
 	return rc;
@@ -823,6 +832,7 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 	while (true)
 	{
 		ensure(sys_event_queue_receive(ppu, spurs->eventQueue, vm::null, 0) == 0);
+		static_cast<void>(ppu.test_stopped());
 
 		const u64 event_src   = ppu.gpr[4];
 		const u64 event_data1 = ppu.gpr[5];
@@ -854,6 +864,8 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 					sys_semaphore_post(ppu, static_cast<u32>(spurs->wklF2[i].sem), 1);
 				}
 			}
+
+			static_cast<void>(ppu.test_stopped());
 		}
 		else
 		{
@@ -883,6 +895,7 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 			else if (data0 == 2)
 			{
 				ensure(sys_semaphore_post(ppu, static_cast<u32>(spurs->semPrv), 1) == 0);
+				static_cast<void>(ppu.test_stopped());
 			}
 			else if (data0 == 3)
 			{
@@ -2015,7 +2028,7 @@ void _spurs::trace_status_update(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 {
 	u8 init;
 
-	spurs->sysSrvTrace.atomic_op([spurs, &init](CellSpurs::SrvTraceSyncVar& data)
+	vm::atomic_op(spurs->sysSrvTrace, [spurs, &init](CellSpurs::SrvTraceSyncVar& data)
 	{
 		if ((init = data.sysSrvTraceInitialised))
 		{
@@ -2026,8 +2039,9 @@ void _spurs::trace_status_update(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 	if (init)
 	{
-		spurs->sysSrvMessage = 0xff;
+		vm::light_op<true>(spurs->sysSrvMessage, [&](atomic_t<u8>& v){ v.release(0xff); });
 		ensure(sys_semaphore_wait(ppu, static_cast<u32>(spurs->semPrv), 0) == 0);
+		static_cast<void>(ppu.test_stopped());
 	}
 }
 
@@ -2457,7 +2471,7 @@ s32 _spurs::add_workload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<u32>
 
 	ensure((res_wkl <= 31));
 	vm::light_op(spurs->sysSrvMsgUpdateWorkload, [](atomic_t<u8>& v){ v.release(0xff); });
-	vm::light_op(spurs->sysSrvMessage, [](atomic_t<u8>& v){ v.release(0xff); });
+	vm::light_op<true>(spurs->sysSrvMessage, [](atomic_t<u8>& v){ v.release(0xff); });
 	return CELL_OK;
 }
 
@@ -2551,7 +2565,7 @@ s32 cellSpursShutdownWorkload(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid
 
 	if (old_state == SPURS_WKL_STATE_SHUTTING_DOWN)
 	{
-		vm::light_op(spurs->sysSrvMessage, [&](atomic_t<u8>& v){ v.release(0xff); });
+		vm::light_op<true>(spurs->sysSrvMessage, [&](atomic_t<u8>& v){ v.release(0xff); });
 		return CELL_OK;
 	}
 
@@ -2807,7 +2821,7 @@ s32 cellSpursReadyCountStore(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 wid,
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	vm::light_op(spurs->readyCount(wid), [&](atomic_t<u8>& v)
+	vm::light_op<true>(spurs->readyCount(wid), [&](atomic_t<u8>& v)
 	{
 		v.release(static_cast<u8>(value));
 	});
@@ -3256,6 +3270,7 @@ s32 cellSpursEventFlagSet(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 		eventFlag->pendingRecvTaskEvents[ppuWaitSlot] = ppuEvents;
 
 		ensure(sys_event_port_send(eventFlag->eventPortId, 0, 0, 0) == 0);
+		static_cast<void>(ppu.test_stopped());
 	}
 
 	if (pendingRecv)
@@ -3325,7 +3340,7 @@ s32 _spurs::event_flag_wait(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFl
 	bool recv;
 	s32  rc;
 	u16  receivedEvents;
-	eventFlag->ctrl.atomic_op([eventFlag, mask, mode, block, &recv, &rc, &receivedEvents](CellSpursEventFlag::ControlSyncVar& ctrl)
+	vm::atomic_op(eventFlag->ctrl, [eventFlag, mask, mode, block, &recv, &rc, &receivedEvents](CellSpursEventFlag::ControlSyncVar& ctrl)
 	{
 		u16 relevantEvents = ctrl.events & *mask;
 		if (eventFlag->direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
@@ -3429,6 +3444,7 @@ s32 _spurs::event_flag_wait(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFl
 	{
 		// Block till something happens
 		ensure(sys_event_queue_receive(ppu, eventFlag->eventQueueId, vm::null, 0) == 0);
+		static_cast<void>(ppu.test_stopped());
 
 		s32 i = 0;
 		if (eventFlag->direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
@@ -3437,7 +3453,7 @@ s32 _spurs::event_flag_wait(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFl
 		}
 
 		*mask = eventFlag->pendingRecvTaskEvents[i];
-		eventFlag->ctrl.atomic_op([](auto& ctrl) { ctrl.ppuPendingRecv = 0; });
+		vm::atomic_op(eventFlag->ctrl, [](CellSpursEventFlag::ControlSyncVar& ctrl) { ctrl.ppuPendingRecv = 0; });
 	}
 
 	*mask = receivedEvents;
