@@ -1135,6 +1135,12 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				// Initialize executable code if necessary
 				if (prog.p_flags & 0x1)
 				{
+					if (ar)
+					{
+						// Disable analysis optimization for savestates (it's not compatible with savestate with patches applied)
+						end = std::max(end, utils::align<u32>(addr + mem_size, 0x10000));
+					}
+
 					ppu_register_range(addr, mem_size);
 				}
 
@@ -1589,6 +1595,12 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 			// Initialize executable code if necessary
 			if (prog.p_flags & 0x1)
 			{
+				if (already_loaded && ar)
+				{
+					// Disable analysis optimization for savestates (it's not compatible with savestate with patches applied)
+					end = std::max(end, utils::align<u32>(addr + size, 0x10000));
+				}
+
 				ppu_register_range(addr, size);
 			}
 
@@ -2197,6 +2209,12 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 			// Initialize executable code if necessary
 			if (prog.p_flags & 0x1)
 			{
+				if (ar)
+				{
+					// Disable analysis optimization for savestates (it's not compatible with savestate with patches applied)
+					end = std::max(end, utils::align<u32>(addr + size, 0x10000));
+				}
+
 				ppu_register_range(addr, size);
 			}
 
