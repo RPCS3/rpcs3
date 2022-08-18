@@ -3456,7 +3456,7 @@ bool spu_thread::process_mfc_cmd()
 
 						// Spinning, might as well yield cpu resources
 						state += cpu_flag::wait;
-						vm::reservation_notifier(addr).wait(rtime, -128, atomic_wait_timeout{100'000});
+						vm::reservation_notifier(addr).wait(rtime, -128, atomic_wait_timeout{50'000});
 
 						// Reset perf
 						perf0.restart();
@@ -4208,7 +4208,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		using resrv_ptr = std::add_pointer_t<const decltype(rdata)>;
 
-		resrv_ptr resrv_mem = vm::get_super_ptr<decltype(rdata)>(raddr);
+		resrv_mem = vm::get_super_ptr<decltype(rdata)>(raddr);
 		std::shared_ptr<utils::shm> rdata_shm;
 
 		// Does not need to safe-access reservation if LR is the only event masked
@@ -4275,7 +4275,34 @@ s64 spu_thread::get_ch_value(u32 ch)
 				// Don't busy-wait with TSX - memory is sensitive
 				if (g_use_rtm || !g_cfg.core.spu_reservation_busy_waiting)
 				{
-					vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{100'000});
+					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64) -> bool
+					{
+						const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
+						AUDIT(_this->id_type() == 1);
+
+						const auto old = +_this->state;
+
+						if (is_stopped(old))
+						{
+							return false;
+						}
+
+						if (is_paused(old))
+						{
+							return true;
+						}
+
+						if (!vm::check_addr(_this->raddr) || !cmp_rdata(_this->rdata, *_this->resrv_mem))
+						{
+							_this->set_events(SPU_EVENT_LR);
+							_this->raddr = 0;
+							return false;
+						}
+
+						return true;
+					});
+
+					vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{80'000});
 				}
 				else
 				{
