@@ -102,9 +102,10 @@ git submodule update --init
 
 #### Configuring the Qt plugin (if used)
 
-1) Go to the Qt5 menu and edit Qt5 options.
-2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.15.2\msvc2019_64`.
-3) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added.
+1) Go to `Extensions->Qt VS Tools->Qt Versions`.
+2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.15.2\msvc2019_64`, version will fill in automatically.
+3) Go to `Extensions->Qt VS Tools->Options->Legacy Project Format`.
+4) Set `Build: Run pre-build setup` to `true`.
 
 #### Building the projects
 
