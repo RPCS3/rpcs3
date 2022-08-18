@@ -2821,6 +2821,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		if (cmp_rdata(to_write, rdata))
 		{
 			// Writeback of unchanged data. Only check memory change
+			raddr = 0; // Disable notification
 			return cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);
 		}
 
@@ -2952,8 +2953,12 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		return success;
 	}())
 	{
-		vm::reservation_notifier(addr).notify_all(-128);
-		raddr = 0;
+		if (raddr)
+		{
+			vm::reservation_notifier(addr).notify_all(-128);
+			raddr = 0;
+		}
+
 		perf0.reset();
 		return true;
 	}
@@ -3422,15 +3427,15 @@ bool spu_thread::process_mfc_cmd()
 			else
 			{
 				// Check if we can reuse our existing reservation
-				if (rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data) && rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
+				if (rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
 				{
 					mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
 					ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 
-					// Need to check twice for it to be accurate, the code is before and not not after this check for:
+					// Need to check twice for it to be accurate, the code is before and not after this check for:
 					// 1. Reduce time between reservation accesses so TSX panelty would be lowered
 					// 2. Increase the chance of change detection: if GETLLAR has been called again new data is probably wanted
-					if (rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
+					if (!g_cfg.core.spu_accurate_getllar || (rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data)))
 					{
 						// Validation that it is indeed GETLLAR busy-waiting (large time window is intentional)
 						if ((g_cfg.core.spu_reservation_busy_waiting && !g_use_rtm) || last_getllar != pc || perf0.get() - last_gtsc >= 50'000)
