@@ -49,6 +49,9 @@ static bool s_null_wait_cb(const void*, u64, u64){ return true; };
 // Callback for wait() function, returns false if wait should return
 static thread_local bool(*s_tls_wait_cb)(const void* data, u64 attempts, u64 stamp0) = s_null_wait_cb;
 
+// Callback for wait() function for a second custon condition, commonly passed with timeout
+static thread_local bool(*s_tls_one_time_wait_cb)(u64 attempts) = nullptr; 
+
 // Callback for notification functions for optimizations
 static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = nullptr;
 
@@ -1183,15 +1186,25 @@ SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old
 			}
 		}
 #endif
+		if (!s_tls_wait_cb(data, ++attempts, stamp0))
+		{
+			break;
+		}
+
+		if (s_tls_one_time_wait_cb)
+		{
+			if (!s_tls_one_time_wait_cb(attempts))
+			{
+				break;
+			}
+
+			// The condition of the callback overrides timeout escape because it makes little sense to do so when a custom condition is passed
+			continue;
+		}
 
 		if (timeout + 1)
 		{
 			// TODO: reduce timeout instead
-			break;
-		}
-
-		if (!s_tls_wait_cb(data, ++attempts, stamp0))
-		{
 			break;
 		}
 	}
@@ -1243,6 +1256,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old
 	root_info::slot_free(iptr, slot, 0);
 
 	s_tls_wait_cb(data, -1, stamp0);
+	s_tls_one_time_wait_cb = nullptr;
 }
 
 template <bool NoAlert = false>
@@ -1307,6 +1321,11 @@ void atomic_wait_engine::set_wait_callback(bool(*cb)(const void*, u64, u64))
 	{
 		s_tls_wait_cb = s_null_wait_cb;
 	}
+}
+
+void atomic_wait_engine::set_one_time_use_wait_callback(bool(*cb)(u64 progress))
+{
+	s_tls_one_time_wait_cb = cb;
 }
 
 void atomic_wait_engine::set_notify_callback(void(*cb)(const void*, u64))

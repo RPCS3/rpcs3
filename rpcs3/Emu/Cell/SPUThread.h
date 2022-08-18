@@ -751,6 +751,7 @@ public:
 	u64 rtime = 0;
 	alignas(64) std::byte rdata[128]{};
 	u32 raddr = 0;
+	const decltype(rdata)* resrv_mem{};
 
 	// Range Lock pointer
 	atomic_t<u64, 64>* range_lock{};
