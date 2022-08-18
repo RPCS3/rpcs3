@@ -2640,7 +2640,15 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}())
 	{
-		res.notify_all(-128);
+		// Test a common pattern in lwmutex
+		constexpr u64 mutex_free = u64{static_cast<u32>(0 - 1)} << 32;
+		const bool may_be_lwmutex_related = sizeof(T) == 8 ?
+			(new_data == mutex_free && old_data == u64{ppu.id} << 32) : (old_data == mutex_free && new_data == u64{ppu.id} << 32);
+
+		if (!may_be_lwmutex_related)
+		{
+			res.notify_all(-128);
+		}
 
 		if (addr == ppu.last_faddr)
 		{
