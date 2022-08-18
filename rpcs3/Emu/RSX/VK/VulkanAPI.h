@@ -21,3 +21,18 @@
 #endif
 
 #include <util/types.hpp>
+
+#if VK_HEADER_VERSION < 224
+
+#define VK_EXT_attachment_feedback_loop_layout 1
+#define VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME "VK_EXT_attachment_feedback_loop_layout"
+#define VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT static_cast<VkImageLayout>(1000339000)
+#define VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT static_cast<VkStructureType>(1000339000)
+
+typedef struct VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT {
+	VkStructureType    sType;
+	void* pNext;
+	VkBool32           attachmentFeedbackLoopLayout;
+} VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT;
+
+#endif
