@@ -1453,6 +1453,20 @@ void spu_thread::cpu_task()
 		return fmt::format("%sSPU[0x%07x] Thread (%s) [0x%05x]", type >= spu_type::raw ? type == spu_type::isolated ? "Iso" : "Raw" : "", cpu->lv2_id, *name_cache.get(), cpu->pc);
 	};
 
+	if (!spurs_addr)
+	{
+		// Evaluate it
+		if (!group)
+		{
+			spurs_addr = -0x80; // Some invalid non-0 address
+		}
+		else
+		{
+			const u32 arg = static_cast<u32>(group->args[index][1]);
+			spurs_addr = group->name.ends_with("CellSpursKernelGroup"sv) && vm::check_addr(arg) ? arg : 0u - 0x80;
+		}
+	}
+
 	if (jit)
 	{
 		while (true)
@@ -2825,6 +2839,13 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		{
 			// Already locked or updated: give up
 			return false;
+		}
+
+		if (!g_cfg.core.spu_accurate_reservations && addr - spurs_addr <= 0x80)
+		{
+			mov_rdata(vm::_ref<spu_rdata_t>(addr), to_write);
+			res += 64;
+			return true;
 		}
 
 		if (g_use_rtm) [[likely]]
