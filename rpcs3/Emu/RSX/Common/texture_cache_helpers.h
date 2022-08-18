@@ -329,8 +329,8 @@ namespace rsx
 			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling = true)
 			{
 				// Intersect this resource with the original one
-				const auto section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
-				const auto normalized_width = (section->get_width() * section_bpp) / attr.bpp;
+				const u32 section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
+				const u32 normalized_width = (section->get_width() * section_bpp) / attr.bpp;
 
 				const auto [src_offset, dst_offset, dst_size] = rsx::intersect_region(
 					section->get_section_base(), normalized_width, section->get_height(), section_bpp, /* parent region (extractee) */
