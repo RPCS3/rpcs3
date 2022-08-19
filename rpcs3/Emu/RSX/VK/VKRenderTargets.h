@@ -335,10 +335,9 @@ namespace vk
 		static std::unique_ptr<vk::render_target> convert_pitch(
 			vk::command_buffer& /*cmd*/,
 			std::unique_ptr<vk::render_target>& src,
-			usz out_pitch)
+			usz /*out_pitch*/)
 		{
 			// TODO
-			src->rsx_pitch = static_cast<u32>(out_pitch);
 			src->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			return {};
 		}
@@ -454,17 +453,17 @@ namespace vk
 			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
 		}
 
-		static void spill_buffer(std::unique_ptr<vk::buffer>& bo)
+		static void spill_buffer(std::unique_ptr<vk::buffer>& /*bo*/)
 		{
 			// TODO
 		}
 
-		static void unspill_buffer(std::unique_ptr<vk::buffer>& bo)
+		static void unspill_buffer(std::unique_ptr<vk::buffer>& /*bo*/)
 		{
 			// TODO
 		}
 
-		static vk::buffer* merge_bo_list(const std::vector<vk::buffer*>& list)
+		static vk::buffer* merge_bo_list(const std::vector<vk::buffer*>& /*list*/)
 		{
 			// TODO
 			return nullptr;
