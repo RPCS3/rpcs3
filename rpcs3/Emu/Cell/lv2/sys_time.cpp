@@ -6,6 +6,7 @@
 #include "Emu/Cell/timers.hpp"
 
 #include "util/asm.hpp"
+#include "util/sysinfo.hpp"
 
 static u64 timebase_offset;
 static u64 systemtime_offset;
@@ -145,6 +146,13 @@ u64 convert_to_timebased_time(u64 time)
 
 u64 get_timebased_time()
 {
+	static const u64 s_tsc_scaled_freq = (utils::get_tsc_freq() / g_timebase_freq);
+
+	if (s_tsc_scaled_freq)
+	{
+		return utils::get_tsc() / s_tsc_scaled_freq - timebase_offset;
+	}
+
 	while (true)
 	{
 #ifdef _WIN32
@@ -189,6 +197,13 @@ void initialize_timebased_time(u64 timebased_init, bool reset)
 // Returns some relative time in microseconds, don't change this fact
 u64 get_system_time()
 {
+	static const u64 s_tsc_scaled_freq = (utils::get_tsc_freq() / 1000000);
+
+	if (s_tsc_scaled_freq)
+	{
+		return utils::get_tsc() / s_tsc_scaled_freq;
+	}
+
 	while (true)
 	{
 #ifdef _WIN32
