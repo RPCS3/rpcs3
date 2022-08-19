@@ -31,7 +31,7 @@
 
 typedef struct VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT {
 	VkStructureType    sType;
-	void* pNext;
+	void*              pNext;
 	VkBool32           attachmentFeedbackLoopLayout;
 } VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT;
 
