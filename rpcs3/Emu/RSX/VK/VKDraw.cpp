@@ -41,7 +41,11 @@ namespace vk
 		}
 	}
 
-	void validate_image_layout_for_read_access(vk::command_buffer& cmd, vk::image_view* view, const rsx::sampled_image_descriptor_base* sampler_state)
+	void validate_image_layout_for_read_access(
+		vk::command_buffer& cmd,
+		vk::image_view* view,
+		VkPipelineStageFlags dst_stage,
+		const rsx::sampled_image_descriptor_base* sampler_state)
 	{
 		switch (auto raw = view->image(); raw->current_layout)
 		{
@@ -80,7 +84,7 @@ namespace vk
 					cmd,
 					raw->value,
 					raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+					src_stage, dst_stage,
 					src_access, VK_ACCESS_SHADER_READ_BIT,
 					{ raw->aspect(), 0, 1, 0, 1 });
 
@@ -477,7 +481,7 @@ bool VKGSRender::bind_texture_env()
 			}
 			else
 			{
-				validate_image_layout_for_read_access(*m_current_command_buffer, view, sampler_state);
+				validate_image_layout_for_read_access(*m_current_command_buffer, view, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, sampler_state);
 			}
 		}
 
@@ -571,7 +575,7 @@ bool VKGSRender::bind_texture_env()
 			continue;
 		}
 
-		validate_image_layout_for_read_access(*m_current_command_buffer, image_ptr, sampler_state);
+		validate_image_layout_for_read_access(*m_current_command_buffer, image_ptr, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, sampler_state);
 
 		m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout },
 			i,
@@ -639,7 +643,7 @@ bool VKGSRender::bind_interpreter_texture_env()
 			}
 			else
 			{
-				validate_image_layout_for_read_access(*m_current_command_buffer, view, sampler_state);
+				validate_image_layout_for_read_access(*m_current_command_buffer, view, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, sampler_state);
 			}
 		}
 
