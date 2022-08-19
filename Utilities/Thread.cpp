@@ -1242,14 +1242,16 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 
 	if (rsx::g_access_violation_handler)
 	{
+		bool state_changed = false;
+
 		if (cpu)
 		{
-			vm::temporary_unlock(*cpu);
+			state_changed = vm::temporary_unlock(*cpu);
 		}
 
 		bool handled = rsx::g_access_violation_handler(addr, is_writing);
 
-		if (cpu && (cpu->state += cpu_flag::temp, cpu->test_stopped()))
+		if (state_changed && (cpu->state += cpu_flag::temp, cpu->test_stopped()))
 		{
 			//
 		}
