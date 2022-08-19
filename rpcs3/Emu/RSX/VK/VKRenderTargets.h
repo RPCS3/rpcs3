@@ -112,7 +112,8 @@ namespace vk
 				break;
 			case driver_vendor::AMD:
 			case driver_vendor::RADV:
-				if (vk::get_chip_family() >= chip_class::AMD_navi1x)
+				if ((vk::get_chip_family() >= chip_class::AMD_navi1x) &&
+					!vk::get_current_renderer()->get_framebuffer_loops_support())
 				{
 					// Only needed for GFX10+
 					return { 0, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };

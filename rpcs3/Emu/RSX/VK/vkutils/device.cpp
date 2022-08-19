@@ -34,7 +34,8 @@ namespace vk
 			features2.pNext = nullptr;
 
 			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
-			VkPhysicalDeviceDescriptorIndexingFeatures  descriptor_indexing_info{};
+			VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_info{};
+			VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loops_info{};
 
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
@@ -57,6 +58,13 @@ namespace vk
 				descriptor_indexing_support    = true;
 			}
 
+			if (device_extensions.is_supported(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME))
+			{
+				fbo_loops_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT;
+				fbo_loops_info.pNext = features2.pNext;
+				features2.pNext      = &fbo_loops_info;
+			}
+
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
@@ -64,6 +72,7 @@ namespace vk
 			shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
+			framebuffer_loops_support          = !!fbo_loops_info.attachmentFeedbackLoopLayout;
 			features                           = features2.features;
 
 			if (descriptor_indexing_support)
@@ -669,36 +678,6 @@ namespace vk
 		}
 	}
 
-	VkQueue render_device::get_present_queue() const
-	{
-		return m_present_queue;
-	}
-
-	VkQueue render_device::get_graphics_queue() const
-	{
-		return m_graphics_queue;
-	}
-
-	VkQueue render_device::get_transfer_queue() const
-	{
-		return m_transfer_queue;
-	}
-
-	u32 render_device::get_graphics_queue_family() const
-	{
-		return m_graphics_queue_family;
-	}
-
-	u32 render_device::get_present_queue_family() const
-	{
-		return m_graphics_queue_family;
-	}
-
-	u32 render_device::get_transfer_queue_family() const
-	{
-		return m_transfer_queue_family;
-	}
-
 	const VkFormatProperties render_device::get_format_properties(VkFormat format) const
 	{
 		auto found = pgpu->format_properties.find(format);
@@ -735,106 +714,6 @@ namespace vk
 		}
 
 		return false;
-	}
-
-	const physical_device& render_device::gpu() const
-	{
-		return *pgpu;
-	}
-
-	const memory_type_mapping& render_device::get_memory_mapping() const
-	{
-		return memory_map;
-	}
-
-	const gpu_formats_support& render_device::get_formats_support() const
-	{
-		return m_formats_support;
-	}
-
-	const pipeline_binding_table& render_device::get_pipeline_binding_table() const
-	{
-		return m_pipeline_binding_table;
-	}
-
-	const gpu_shader_types_support& render_device::get_shader_types_support() const
-	{
-		return pgpu->shader_types_support;
-	}
-
-	bool render_device::get_shader_stencil_export_support() const
-	{
-		return pgpu->stencil_export_support;
-	}
-
-	bool render_device::get_depth_bounds_support() const
-	{
-		return pgpu->features.depthBounds != VK_FALSE;
-	}
-
-	bool render_device::get_alpha_to_one_support() const
-	{
-		return pgpu->features.alphaToOne != VK_FALSE;
-	}
-
-	bool render_device::get_anisotropic_filtering_support() const
-	{
-		return pgpu->features.samplerAnisotropy != VK_FALSE;
-	}
-
-	bool render_device::get_wide_lines_support() const
-	{
-		return pgpu->features.wideLines != VK_FALSE;
-	}
-
-	bool render_device::get_conditional_render_support() const
-	{
-		return pgpu->conditional_render_support;
-	}
-
-	bool render_device::get_unrestricted_depth_range_support() const
-	{
-		return pgpu->unrestricted_depth_range_support;
-	}
-
-	bool render_device::get_external_memory_host_support() const
-	{
-		return pgpu->external_memory_host_support;
-	}
-
-	bool render_device::get_surface_capabilities_2_support() const
-	{
-		return pgpu->surface_capabilities_2_support;
-	}
-
-	bool render_device::get_debug_utils_support() const
-	{
-		return g_cfg.video.renderdoc_compatiblity && pgpu->debug_utils_support;
-	}
-
-	bool render_device::get_descriptor_indexing_support() const
-	{
-		return pgpu->descriptor_indexing_support;
-	}
-
-	u64 render_device::get_descriptor_update_after_bind_support() const
-	{
-		return pgpu->descriptor_update_after_bind_mask;
-	}
-
-	u32 render_device::get_descriptor_max_draw_calls() const
-	{
-		return pgpu->descriptor_max_draw_calls;
-	}
-
-	mem_allocator_base* render_device::get_allocator() const
-	{
-		return m_allocator.get();
-	}
-
-	render_device::operator VkDevice() const
-	{
-		return dev;
 	}
 
 	void render_device::rebalance_memory_type_usage()
