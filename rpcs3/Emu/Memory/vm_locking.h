@@ -105,7 +105,7 @@ namespace vm
 	void passive_unlock(cpu_thread& cpu);
 
 	// Optimization (set cpu_flag::memory)
-	void temporary_unlock(cpu_thread& cpu) noexcept;
+	bool temporary_unlock(cpu_thread& cpu) noexcept;
 	void temporary_unlock() noexcept;
 
 	struct writer_lock final

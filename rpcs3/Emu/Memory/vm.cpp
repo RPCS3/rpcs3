@@ -380,7 +380,7 @@ namespace vm
 		}
 	}
 
-	void temporary_unlock(cpu_thread& cpu) noexcept
+	bool temporary_unlock(cpu_thread& cpu) noexcept
 	{
 		bs_t<cpu_flag> add_state = cpu_flag::wait;
 
@@ -392,7 +392,10 @@ namespace vm
 		if (add_state - cpu.state)
 		{
 			cpu.state += add_state;
+			return true;
 		}
+
+		return false;
 	}
 
 	void temporary_unlock() noexcept
