@@ -240,10 +240,9 @@ struct gl_render_target_traits
 	std::unique_ptr<gl::render_target> convert_pitch(
 		gl::command_context& /*cmd*/,
 		std::unique_ptr<gl::render_target>& src,
-		usz out_pitch)
+		usz /*out_pitch*/)
 	{
 		// TODO
-		src->set_rsx_pitch(static_cast<u32>(out_pitch));
 		src->state_flags = rsx::surface_state_flags::erase_bkgnd;
 		return {};
 	}
@@ -348,19 +347,19 @@ struct gl_render_target_traits
 	}
 
 	static
-	void spill_buffer(std::unique_ptr<gl::buffer>& bo)
+	void spill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
 	{
 		// TODO
 	}
 
 	static
-	void unspill_buffer(std::unique_ptr<gl::buffer>& bo)
+	void unspill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
 	{
 		// TODO
 	}
 
 	static
-	gl::buffer* merge_bo_list(const std::vector<gl::buffer*>& list)
+	gl::buffer* merge_bo_list(const std::vector<gl::buffer*>& /*list*/)
 	{
 		// TODO
 		return nullptr;
