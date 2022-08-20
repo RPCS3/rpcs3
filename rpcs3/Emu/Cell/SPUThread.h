@@ -839,7 +839,8 @@ public:
 	u64 last_fail = 0;
 	u64 last_succ = 0;
 	u64 last_gtsc = 0;
-	u32 last_getllar = umax; // LS address of last GETLLAR (if matches current GETLLAR we can let the thread rest) 
+	u32 last_getllar = umax; // LS address of last GETLLAR (if matches current GETLLAR we can let the thread rest)
+	u32 getllar_busy_waiting_switch = umax; // umax means the test needs evaluation, otherwise it's a boolean
 
 	std::vector<mfc_cmd_dump> mfc_history;
 	u64 mfc_dump_idx = 0;
