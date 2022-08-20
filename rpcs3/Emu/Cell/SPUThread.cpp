@@ -3437,8 +3437,24 @@ bool spu_thread::process_mfc_cmd()
 					// 2. Increase the chance of change detection: if GETLLAR has been called again new data is probably wanted
 					if (!g_cfg.core.spu_accurate_getllar || (rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data)))
 					{
-						// Validation that it is indeed GETLLAR busy-waiting (large time window is intentional)
-						if ((g_cfg.core.spu_reservation_busy_waiting && !g_use_rtm) || last_getllar != pc || perf0.get() - last_gtsc >= 50'000)
+						if ([&]() -> bool
+						{
+							// Validation that it is indeed GETLLAR spinning (large time window is intentional)
+							if (last_getllar != pc || perf0.get() - last_gtsc >= 50'000)
+							{
+								// Seemingly not
+								getllar_busy_waiting_switch = umax;
+								return true;
+							}
+
+							if (getllar_busy_waiting_switch == umax)
+							{
+								// Evalute its value (shift-right to ensure its randomness with different CPUs)
+								getllar_busy_waiting_switch = !g_use_rtm && ((perf0.get() >> 8) % 100 < g_cfg.core.spu_reservation_busy_waiting_percentage);
+							}
+
+							return !!getllar_busy_waiting_switch;
+						}())
 						{
 							if (g_cfg.core.mfc_debug)
 							{
@@ -3451,7 +3467,7 @@ bool spu_thread::process_mfc_cmd()
 							last_getllar = pc;
 							last_gtsc = perf0.get();
 
-							if (g_cfg.core.spu_reservation_busy_waiting)
+							if (getllar_busy_waiting_switch == true)
 							{
 								busy_wait();
 							}
@@ -3578,6 +3594,7 @@ bool spu_thread::process_mfc_cmd()
 		mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
 		last_getllar = pc;
 		last_gtsc = perf0.get();
+		getllar_busy_waiting_switch = umax;
 
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 
@@ -4250,6 +4267,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 			}
 		}
 
+		const bool reservation_busy_waiting = !g_use_rtm && ((utils::get_tsc() >> 8) % 100) < g_cfg.core.spu_reservation_busy_waiting_percentage;
+	
 		for (; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true))
 		{
 			const auto old = +state;
@@ -4275,10 +4294,10 @@ s64 spu_thread::get_ch_value(u32 ch)
 				continue;
 			}
 
-			if (raddr)
+			if (raddr && (mask1 & ~SPU_EVENT_TM) == SPU_EVENT_LR)
 			{
 				// Don't busy-wait with TSX - memory is sensitive
-				if (g_use_rtm || !g_cfg.core.spu_reservation_busy_waiting)
+				if (!reservation_busy_waiting)
 				{
 					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64) -> bool
 					{
