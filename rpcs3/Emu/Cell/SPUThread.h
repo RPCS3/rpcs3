@@ -721,6 +721,7 @@ public:
 
 	// MFC command data
 	spu_mfc_cmd ch_mfc_cmd;
+	u32 mfc_cmd_id = 0;
 
 	// MFC command queue
 	spu_mfc_cmd mfc_queue[16]{};
@@ -840,6 +841,8 @@ public:
 	u64 last_succ = 0;
 	u64 last_gtsc = 0;
 	u32 last_getllar = umax; // LS address of last GETLLAR (if matches current GETLLAR we can let the thread rest)
+	u32 last_getllar_id = umax;
+	u32 getllar_spin_count = 0;
 	u32 getllar_busy_waiting_switch = umax; // umax means the test needs evaluation, otherwise it's a boolean
 
 	std::vector<mfc_cmd_dump> mfc_history;

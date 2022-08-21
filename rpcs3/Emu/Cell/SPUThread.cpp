@@ -3348,6 +3348,8 @@ u32 spu_thread::get_mfc_completed() const
 
 bool spu_thread::process_mfc_cmd()
 {
+	mfc_cmd_id++;
+
 	// Stall infinitely if MFC queue is full
 	while (mfc_size >= 16) [[unlikely]]
 	{
@@ -3440,20 +3442,22 @@ bool spu_thread::process_mfc_cmd()
 						if ([&]() -> bool
 						{
 							// Validation that it is indeed GETLLAR spinning (large time window is intentional)
-							if (last_getllar != pc || perf0.get() - last_gtsc >= 50'000)
+							if (last_getllar != pc || mfc_cmd_id - 1 != last_getllar_id || perf0.get() - last_gtsc >= 10'000)
 							{
 								// Seemingly not
 								getllar_busy_waiting_switch = umax;
 								return true;
 							}
 
+							getllar_spin_count++;
+
 							if (getllar_busy_waiting_switch == umax)
 							{
 								// Evalute its value (shift-right to ensure its randomness with different CPUs)
-								getllar_busy_waiting_switch = !g_use_rtm && ((perf0.get() >> 8) % 100 < g_cfg.core.spu_reservation_busy_waiting_percentage);
+								getllar_busy_waiting_switch = ((perf0.get() >> 8) % 100 < g_cfg.core.spu_getllar_busy_waiting_percentage);
 							}
 
-							return !!getllar_busy_waiting_switch;
+							return !!getllar_busy_waiting_switch || getllar_spin_count < 3;
 						}())
 						{
 							if (g_cfg.core.mfc_debug)
@@ -3465,11 +3469,12 @@ bool spu_thread::process_mfc_cmd()
 							}
 
 							last_getllar = pc;
+							last_getllar_id = mfc_cmd_id;
 							last_gtsc = perf0.get();
 
 							if (getllar_busy_waiting_switch == true)
 							{
-								busy_wait();
+								busy_wait(300);
 							}
 
 							return true;
@@ -3477,16 +3482,14 @@ bool spu_thread::process_mfc_cmd()
 
 						// Spinning, might as well yield cpu resources
 						state += cpu_flag::wait;
-						vm::reservation_notifier(addr).wait(rtime, -128, atomic_wait_timeout{50'000});
+						vm::reservation_notifier(addr).wait(rtime, atomic_wait_timeout{50'000});
 
 						// Reset perf
 						perf0.restart();
 
 						// Quick check if there were reservation changes
-						if (rtime == vm::reservation_acquire(addr))
+						if (rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
 						{
-							// None at least in rtime
-
 							if (g_cfg.core.mfc_debug)
 							{
 								auto& dump = mfc_history[mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
@@ -3495,6 +3498,9 @@ bool spu_thread::process_mfc_cmd()
 								std::memcpy(dump.data, rdata, 128);
 							}
 
+							// Let the game recheck its state, maybe after a long period of time something else changed which satisfies its waiting condition
+							getllar_spin_count = 1;
+							last_getllar_id = mfc_cmd_id;
 							last_gtsc = perf0.get();
 							return true;
 						}
@@ -3506,6 +3512,12 @@ bool spu_thread::process_mfc_cmd()
 				static_cast<void>(test_stopped());
 			}
 		}
+
+		last_getllar_id = mfc_cmd_id;
+		last_getllar = pc;
+		last_gtsc = perf0.get();
+		getllar_spin_count = 0;
+		getllar_busy_waiting_switch = umax;
 
 		u64 ntime;
 		rsx::reservation_lock rsx_lock(addr, 128);
@@ -3592,10 +3604,7 @@ bool spu_thread::process_mfc_cmd()
 		raddr = addr;
 		rtime = ntime;
 		mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
-		last_getllar = pc;
-		last_gtsc = perf0.get();
-		getllar_busy_waiting_switch = umax;
-
+	
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 
 		if (g_cfg.core.mfc_debug)
@@ -4217,6 +4226,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 	case SPU_RdEventStat:
 	{
 		const u32 mask1 = ch_events.load().mask;
+
 		auto events = get_events(mask1, false, true);
 
 		if (events.count)
@@ -4267,7 +4277,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			}
 		}
 
-		const bool reservation_busy_waiting = !g_use_rtm && ((utils::get_tsc() >> 8) % 100) < g_cfg.core.spu_reservation_busy_waiting_percentage;
+		const bool reservation_busy_waiting = ((utils::get_tsc() >> 8) % 100 + ((raddr == spurs_addr) ? 50 : 0)) < g_cfg.core.spu_reservation_busy_waiting_percentage;
 	
 		for (; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true))
 		{
