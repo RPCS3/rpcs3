@@ -445,9 +445,8 @@ namespace rsx
 
 				if (Traits::surface_matches_properties(surface, format, width, height, antialias))
 				{
-					if (old_surface)
+					if (!pitch_compatible)
 					{
-						ensure(!pitch_compatible);
 						Traits::invalidate_surface_contents(command_list, Traits::get(surface), address, pitch);
 					}
 

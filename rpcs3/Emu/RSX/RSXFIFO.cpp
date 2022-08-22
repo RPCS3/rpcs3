@@ -123,7 +123,8 @@ namespace rsx
 				const auto src = vm::_ptr<spu_rdata_t>(addr1);
 
 				// Find the next set bit after every iteration
-				for (u32 i = 0, start_time = 0;; i = (std::countr_zero<u32>(utils::rol8(to_fetch, 0 - i - 1)) + i + 1) % 8)
+				u64 start_time = 0;
+				for (int i = 0;; i = (std::countr_zero<u32>(utils::rol8(to_fetch, 0 - i - 1)) + i + 1) % 8)
 				{
 					// If a reservation is being updated, try to load another
 					const auto& res = vm::reservation_acquire(addr1 + i * 128);

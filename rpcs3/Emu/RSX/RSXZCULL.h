@@ -102,8 +102,8 @@ namespace rsx
 			const u32 min_zcull_tick_us = 100;
 
 			// Number of occlusion query slots available. Real hardware actually has far fewer units before choking
-			const u32 occlusion_query_count = 1024;
-			const u32 max_safe_queue_depth = 892;
+			const u32 occlusion_query_count = 2048;
+			const u32 max_safe_queue_depth = 1792;
 
 			bool unit_enabled = false;           // The ZCULL unit is on
 			bool write_enabled = false;          // A surface in the ZCULL-monitored tile region has been loaded for rasterization
@@ -111,7 +111,7 @@ namespace rsx
 			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
 			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
 
-			std::array<occlusion_query_info, 1024> m_occlusion_query_data = {};
+			std::array<occlusion_query_info, 2048> m_occlusion_query_data = {};
 			std::stack<occlusion_query_info*> m_free_occlusion_pool{};
 
 			occlusion_query_info* m_current_task = nullptr;

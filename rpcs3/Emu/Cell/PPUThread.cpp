@@ -616,9 +616,13 @@ struct ppu_far_jumps_t
 		bool link;
 		bool with_toc;
 		std::string module_name;
+		ppu_intrp_func_t func;
 	};
 
+	ppu_far_jumps_t(int) noexcept {}
+
 	std::unordered_map<u32, all_info_t> vals;
+	::jit_runtime rt;
 
 	mutable shared_mutex mutex;
 
@@ -679,17 +683,64 @@ struct ppu_far_jumps_t
 
 		return {};
 	}
+
+	template <bool Locked = true>
+	ppu_intrp_func_t gen_jump(u32 pc)
+	{
+		[[maybe_unused]] std::conditional_t<Locked, std::lock_guard<shared_mutex>, const shared_mutex&> lock(mutex);
+
+		auto it = vals.find(pc);
+
+		if (it == vals.end())
+		{
+			return nullptr;
+		}
+
+		if (!it->second.func)
+		{
+			it->second.func = build_function_asm<ppu_intrp_func_t>("", [&](native_asm& c, auto& args)
+			{
+				using namespace asmjit;
+
+#ifdef ARCH_X64
+				c.mov(args[0], x86::rbp);
+				c.mov(x86::dword_ptr(args[0], ::offset32(&ppu_thread::cia)), pc);
+				c.jmp(ppu_far_jump);
+#else
+				Label jmp_address = c.newLabel();
+				Label imm_address = c.newLabel();
+
+				c.ldr(args[1].r32(), arm::ptr(imm_address));
+				c.str(args[1].r32(), arm::Mem(args[0], ::offset32(&ppu_thread::cia)));
+				c.ldr(args[1], arm::ptr(jmp_address));
+				c.br(args[1]);
+
+				c.align(AlignMode::kCode, 16);
+				c.bind(jmp_address);
+				c.embedUInt64(reinterpret_cast<u64>(ppu_far_jump));
+				c.bind(imm_address);
+				c.embedUInt32(pc);
+#endif
+			}, &rt); 
+		}
+
+		return it->second.func;
+	}
 };
 
 u32 ppu_get_far_jump(u32 pc)
 {
-	g_fxo->init<ppu_far_jumps_t>();
+	if (!g_fxo->is_init<ppu_far_jumps_t>())
+	{
+		return 0;
+	}
+
 	return g_fxo->get<ppu_far_jumps_t>().get_target(pc);
 }
 
-static void ppu_far_jump(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_intrp_func*)
+static void ppu_far_jump(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, ppu_intrp_func*)
 {
-	const u32 cia = g_fxo->get<ppu_far_jumps_t>().get_target(vm::get_addr(this_op), &ppu);
+	const u32 cia = g_fxo->get<ppu_far_jumps_t>().get_target(ppu.cia, &ppu);
 
 	if (!vm::check_addr(cia, vm::page_executable))
 	{
@@ -740,7 +791,7 @@ bool ppu_form_branch_to_code(u32 entry, u32 target, bool link, bool with_toc, st
 		return false;
 	}
 
-	g_fxo->init<ppu_far_jumps_t>();
+	g_fxo->init<ppu_far_jumps_t>(0);
 
 	if (!module_name.empty())
 	{
@@ -759,7 +810,7 @@ bool ppu_form_branch_to_code(u32 entry, u32 target, bool link, bool with_toc, st
 
 	std::lock_guard lock(jumps.mutex);
 	jumps.vals.insert_or_assign(entry, ppu_far_jumps_t::all_info_t{target, link, with_toc, std::move(module_name)});
-	ppu_register_function_at(entry, 4, &ppu_far_jump);
+	ppu_register_function_at(entry, 4, g_cfg.core.ppu_decoder == ppu_decoder_type::_static ? &ppu_far_jump : ensure(g_fxo->get<ppu_far_jumps_t>().gen_jump<false>(entry)));
 
 	return true;
 }
@@ -781,7 +832,10 @@ bool ppu_form_branch_to_code(u32 entry, u32 target)
 
 void ppu_remove_hle_instructions(u32 addr, u32 size)
 {
-	g_fxo->init<ppu_far_jumps_t>();
+	if (Emu.IsStopped() || !g_fxo->is_init<ppu_far_jumps_t>())
+	{
+		return;
+	}
 
 	auto& jumps = g_fxo->get<ppu_far_jumps_t>();
 
@@ -2586,7 +2640,15 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}())
 	{
-		res.notify_all(-128);
+		// Test a common pattern in lwmutex
+		constexpr u64 mutex_free = u64{static_cast<u32>(0 - 1)} << 32;
+		const bool may_be_lwmutex_related = sizeof(T) == 8 ?
+			(new_data == mutex_free && old_data == u64{ppu.id} << 32) : (old_data == mutex_free && new_data == u64{ppu.id} << 32);
+
+		if (!may_be_lwmutex_related)
+		{
+			res.notify_all(-128);
+		}
 
 		if (addr == ppu.last_faddr)
 		{
@@ -3392,6 +3454,19 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				}
 			}
 
+			if (jit)
+			{
+				const auto far_jump = ppu_get_far_jump(func.addr) ? g_fxo->get<ppu_far_jumps_t>().gen_jump(func.addr) : nullptr;
+
+				if (far_jump)
+				{
+					// Replace the function with ppu_far_jump
+					jit->update_global_mapping(fmt::format("__0x%x", func.addr - reloc), reinterpret_cast<u64>(far_jump));
+					fpos++;
+					continue;
+				}
+			}
+
 			// Copy block or function entry
 			ppu_function& entry = part.funcs.emplace_back(func);
 
@@ -3713,8 +3788,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			const auto addr = ensure(reinterpret_cast<ppu_intrp_func_t>(jit->get(name)));
 			jit_mod.funcs.emplace_back(addr);
 
-			if (ppu_ref(func.addr) != ppu_far_jump)
-				ppu_register_function_at(func.addr, 4, addr);
+			ppu_register_function_at(func.addr, 4, addr);
 
 			if (g_cfg.core.ppu_debug)
 				ppu_log.notice("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
@@ -3733,8 +3807,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			const u64 addr = reinterpret_cast<uptr>(ensure(jit_mod.funcs[index++]));
 
-			if (ppu_ref(func.addr) != ppu_far_jump)
-				ppu_register_function_at(func.addr, 4, addr);
+			ppu_register_function_at(func.addr, 4, addr);
 
 			if (g_cfg.core.ppu_debug)
 				ppu_log.notice("Reinstalling function at 0x%x: %p (reloc=0x%x)", func.addr, ppu_ref(func.addr), reloc);

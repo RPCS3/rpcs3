@@ -747,12 +747,12 @@ AF1 sharpness){
   // Immediate constants for peak range.
   AF2 peakC=AF2(1.0,-1.0*4.0);
   // Limiters, these need to be high precision RCPs.
-  AF1 hitMinR=mn4R*ARcpF1(AF1_(4.0)*mx4R);
-  AF1 hitMinG=mn4G*ARcpF1(AF1_(4.0)*mx4G);
-  AF1 hitMinB=mn4B*ARcpF1(AF1_(4.0)*mx4B);
-  AF1 hitMaxR=(peakC.x-mx4R)*ARcpF1(AF1_(4.0)*mn4R+peakC.y);
-  AF1 hitMaxG=(peakC.x-mx4G)*ARcpF1(AF1_(4.0)*mn4G+peakC.y);
-  AF1 hitMaxB=(peakC.x-mx4B)*ARcpF1(AF1_(4.0)*mn4B+peakC.y);
+  AF1 hitMinR=min(mn4R,eR)*ARcpF1(AF1_(4.0)*mx4R);
+  AF1 hitMinG=min(mn4G,eG)*ARcpF1(AF1_(4.0)*mx4G);
+  AF1 hitMinB=min(mn4B,eB)*ARcpF1(AF1_(4.0)*mx4B);
+  AF1 hitMaxR=(peakC.x-max(mx4R,eR))*ARcpF1(AF1_(4.0)*mn4R+peakC.y);
+  AF1 hitMaxG=(peakC.x-max(mx4G,eG))*ARcpF1(AF1_(4.0)*mn4G+peakC.y);
+  AF1 hitMaxB=(peakC.x-max(mx4B,eB))*ARcpF1(AF1_(4.0)*mn4B+peakC.y);
   AF1 lobeR=max(-hitMinR,hitMaxR);
   AF1 lobeG=max(-hitMinG,hitMaxG);
   AF1 lobeB=max(-hitMinB,hitMaxB);
@@ -845,12 +845,12 @@ AF1 sharpness){
   // Immediate constants for peak range.
   AH2 peakC=AH2(1.0,-1.0*4.0);
   // Limiters, these need to be high precision RCPs.
-  AH1 hitMinR=mn4R*ARcpH1(AH1_(4.0)*mx4R);
-  AH1 hitMinG=mn4G*ARcpH1(AH1_(4.0)*mx4G);
-  AH1 hitMinB=mn4B*ARcpH1(AH1_(4.0)*mx4B);
-  AH1 hitMaxR=(peakC.x-mx4R)*ARcpH1(AH1_(4.0)*mn4R+peakC.y);
-  AH1 hitMaxG=(peakC.x-mx4G)*ARcpH1(AH1_(4.0)*mn4G+peakC.y);
-  AH1 hitMaxB=(peakC.x-mx4B)*ARcpH1(AH1_(4.0)*mn4B+peakC.y);
+  AH1 hitMinR=min(mn4R,eR)*ARcpH1(AH1_(4.0)*mx4R);
+  AH1 hitMinG=min(mn4G,eG)*ARcpH1(AH1_(4.0)*mx4G);
+  AH1 hitMinB=min(mn4B,eB)*ARcpH1(AH1_(4.0)*mx4B);
+  AH1 hitMaxR=(peakC.x-max(mx4R,eR))*ARcpH1(AH1_(4.0)*mn4R+peakC.y);
+  AH1 hitMaxG=(peakC.x-max(mx4G,eG))*ARcpH1(AH1_(4.0)*mn4G+peakC.y);
+  AH1 hitMaxB=(peakC.x-max(mx4B,eB))*ARcpH1(AH1_(4.0)*mn4B+peakC.y);
   AH1 lobeR=max(-hitMinR,hitMaxR);
   AH1 lobeG=max(-hitMinG,hitMaxG);
   AH1 lobeB=max(-hitMinB,hitMaxB);
@@ -963,12 +963,12 @@ AF1 sharpness){
   // Immediate constants for peak range.
   AH2 peakC=AH2(1.0,-1.0*4.0);
   // Limiters, these need to be high precision RCPs.
-  AH2 hitMinR=mn4R*ARcpH2(AH2_(4.0)*mx4R);
-  AH2 hitMinG=mn4G*ARcpH2(AH2_(4.0)*mx4G);
-  AH2 hitMinB=mn4B*ARcpH2(AH2_(4.0)*mx4B);
-  AH2 hitMaxR=(peakC.x-mx4R)*ARcpH2(AH2_(4.0)*mn4R+peakC.y);
-  AH2 hitMaxG=(peakC.x-mx4G)*ARcpH2(AH2_(4.0)*mn4G+peakC.y);
-  AH2 hitMaxB=(peakC.x-mx4B)*ARcpH2(AH2_(4.0)*mn4B+peakC.y);
+  AH2 hitMinR=min(mn4R,eR)*ARcpH2(AH2_(4.0)*mx4R);
+  AH2 hitMinG=min(mn4G,eG)*ARcpH2(AH2_(4.0)*mx4G);
+  AH2 hitMinB=min(mn4B,eB)*ARcpH2(AH2_(4.0)*mx4B);
+  AH2 hitMaxR=(peakC.x-max(mx4R,eR))*ARcpH2(AH2_(4.0)*mn4R+peakC.y);
+  AH2 hitMaxG=(peakC.x-max(mx4G,eG))*ARcpH2(AH2_(4.0)*mn4G+peakC.y);
+  AH2 hitMaxB=(peakC.x-max(mx4B,eB))*ARcpH2(AH2_(4.0)*mn4B+peakC.y);
   AH2 lobeR=max(-hitMinR,hitMaxR);
   AH2 lobeG=max(-hitMinG,hitMaxG);
   AH2 lobeB=max(-hitMinB,hitMaxB);

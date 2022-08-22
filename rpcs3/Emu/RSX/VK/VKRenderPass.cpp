@@ -37,6 +37,8 @@ namespace vk
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 				return static_cast<u64>(layout);
+			case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
+				return 4ull;
 			default:
 				fmt::throw_exception("Unsupported layout 0x%llx here", static_cast<usz>(layout));
 			}
@@ -50,6 +52,8 @@ namespace vk
 			case 2:
 			case 3:
 				return static_cast<VkImageLayout>(encoded);
+			case 4:
+				return VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT;
 			default:
 				fmt::throw_exception("Unsupported layout encoding 0x%llx here", encoded);
 			}
@@ -75,6 +79,7 @@ namespace vk
 		{
 			switch (layout)
 			{
+			case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
 			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 			case VK_IMAGE_LAYOUT_GENERAL:
