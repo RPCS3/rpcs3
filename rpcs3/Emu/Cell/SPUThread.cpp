@@ -4248,6 +4248,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 		resrv_mem = vm::get_super_ptr<decltype(rdata)>(raddr);
 		std::shared_ptr<utils::shm> rdata_shm;
 
+		const u32 old_raddr = raddr;
+
 		// Does not need to safe-access reservation if LR is the only event masked
 		// Because it's either an access violation or a livelock if an invalid memory is passed
 		if (raddr && mask1 > SPU_EVENT_LR)
@@ -4293,14 +4295,6 @@ s64 spu_thread::get_ch_value(u32 ch)
 				return -1;
 			}
 
-			if (is_paused(old))
-			{
-				// Ensure spu_thread::rdata's stagnancy while the thread is paused for debugging purposes
-				check_state();
-				state += cpu_flag::wait;
-				continue;
-			}
-
 			// Optimized check
 			if (raddr && (!vm::check_addr(raddr) || rtime != vm::reservation_acquire(raddr) || !cmp_rdata(rdata, *resrv_mem)))
 			{
@@ -4324,11 +4318,6 @@ s64 spu_thread::get_ch_value(u32 ch)
 						if (is_stopped(old))
 						{
 							return false;
-						}
-
-						if (is_paused(old))
-						{
-							return true;
 						}
 
 						if (!vm::check_addr(_this->raddr) || !cmp_rdata(_this->rdata, *_this->resrv_mem))
@@ -4355,6 +4344,18 @@ s64 spu_thread::get_ch_value(u32 ch)
 		}
 
 		wakeup_delay();
+
+		if (is_paused(state - cpu_flag::suspend))
+		{
+			if (!raddr && old_raddr)
+			{
+				// Restore reservation address temporarily for debugging use
+				raddr = old_raddr;
+				check_state();
+				raddr = 0;
+			}
+		}
+
 		check_state();
 		return events.events & mask1;
 	}
