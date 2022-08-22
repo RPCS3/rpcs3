@@ -27,7 +27,7 @@ namespace vm
 		range_bits = 3,
 	};
 
-	extern atomic_t<u64> g_range_lock;
+	extern atomic_t<u64, 64> g_range_lock_bits[2];
 
 	extern atomic_t<u64> g_shmem[];
 
@@ -61,7 +61,7 @@ namespace vm
 		__asm__(""); // Tiny barrier
 		#endif
 
-		if (!g_range_lock)
+		if (!g_range_lock_bits[1]) [[likely]]
 		{
 			return;
 		}
@@ -82,10 +82,12 @@ namespace vm
 
 	struct writer_lock final
 	{
+		atomic_t<u64, 64>* range_lock;
+
 		writer_lock(const writer_lock&) = delete;
 		writer_lock& operator=(const writer_lock&) = delete;
-		writer_lock();
-		writer_lock(u32 addr, u32 size = 0, u64 flags = range_locked);
-		~writer_lock();
+		writer_lock() noexcept;
+		writer_lock(u32 addr, atomic_t<u64, 64>* range_lock = nullptr, u32 size = 128, u64 flags = range_locked) noexcept;
+		~writer_lock() noexcept;
 	};
 } // namespace vm
