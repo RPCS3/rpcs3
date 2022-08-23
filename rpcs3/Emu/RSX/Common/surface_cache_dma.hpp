@@ -21,6 +21,7 @@ namespace rsx
 
 		using buffer_object_storage_type = typename Traits::buffer_object_storage_type;
 		using buffer_object_type = typename Traits::buffer_object_type;
+		using command_list_type = typename Traits::command_list_type;
 
 		struct memory_buffer_entry_t
 		{
@@ -48,7 +49,7 @@ namespace rsx
 			}
 		}
 
-		surface_cache_dma& with_range(Traits::command_list_type cmd, const utils::address_range& range)
+		surface_cache_dma& with_range(command_list_type cmd, const utils::address_range& range)
 		{
 			// Prepare underlying memory so that the range specified is provisioned and contiguous
 			// 1. Check if we have a pre-existing bo layer
