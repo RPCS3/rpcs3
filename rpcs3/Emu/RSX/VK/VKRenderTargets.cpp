@@ -3,6 +3,15 @@
 
 namespace vk
 {
+	namespace surface_cache_utils
+	{
+		void dispose(vk::buffer* buf)
+		{
+			auto obj = vk::disposable_t::make(buf);
+			vk::get_resource_manager()->dispose(obj);
+		}
+	}
+
 	void surface_cache::destroy()
 	{
 		invalidate_all();
