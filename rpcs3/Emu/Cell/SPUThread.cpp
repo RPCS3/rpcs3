@@ -3447,7 +3447,7 @@ bool spu_thread::process_mfc_cmd()
 						if ([&]() -> bool
 						{
 							// Validation that it is indeed GETLLAR spinning (large time window is intentional)
-							if (last_getllar != pc || mfc_cmd_id - 1 != last_getllar_id || perf0.get() - last_gtsc >= 10'000)
+							if (last_getllar != pc || mfc_cmd_id - 1 != last_getllar_id || perf0.get() - last_gtsc >= 50'000)
 							{
 								// Seemingly not
 								getllar_busy_waiting_switch = umax;
@@ -3487,7 +3487,7 @@ bool spu_thread::process_mfc_cmd()
 
 						// Spinning, might as well yield cpu resources
 						state += cpu_flag::wait;
-						vm::reservation_notifier(addr).wait(rtime, atomic_wait_timeout{50'000});
+						vm::reservation_notifier(addr).wait(rtime, -128, atomic_wait_timeout{50'000});
 
 						// Reset perf
 						perf0.restart();
