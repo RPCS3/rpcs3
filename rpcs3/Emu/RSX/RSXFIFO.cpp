@@ -27,6 +27,10 @@ namespace rsx
 
 		void FIFO_control::sync_get() const
 		{
+			if (m_ctrl->get == m_ctrl->put && m_ctrl->get > m_internal_get)
+			{
+				return;
+			}
 			m_ctrl->get.release(m_internal_get);
 		}
 
@@ -175,6 +179,11 @@ namespace rsx
 					{
 						i = (i - 1) % 8;
 					}
+				}
+
+				if (addr < put && put == m_cache_addr + m_cache_size)
+				{
+					m_ctrl->get = put;
 				}
 			}
 
