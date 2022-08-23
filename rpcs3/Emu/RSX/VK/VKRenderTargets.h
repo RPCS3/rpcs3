@@ -481,8 +481,8 @@ namespace vk
 			const bool is_scaled = surface->width() != surface->surface_width;
 			if (is_scaled)
 			{
-				const areai src_rect = { 0, 0, source->width(), source->height() };
-				const areai dst_rect = { 0, 0, surface->get_surface_width<rsx::surface_metrics::samples>(), surface->get_surface_height<rsx::surface_metrics::samples>() };
+				const areai src_rect = { 0, 0, static_cast<int>(source->width()), static_cast<int>(source->height()) };
+				const areai dst_rect = { 0, 0, surface->get_surface_width<rsx::surface_metrics::samples, int>(), surface->get_surface_height<rsx::surface_metrics::samples, int>() };
 
 				auto scratch = vk::get_typeless_helper(source->format(), source->format_class(), dst_rect.x2, dst_rect.y2);
 				vk::copy_scaled_image(cmd, source, scratch, src_rect, dst_rect, 1, true, VK_FILTER_NEAREST);
@@ -540,10 +540,10 @@ namespace vk
 			}
 
 			// Create dst
-			auto pdev = cmd.get_command_pool().owner;
-			auto dst = new vk::buffer(*pdev,
+			auto& dev = cmd.get_command_pool().get_owner();
+			auto dst = new vk::buffer(dev,
 				required_bo_size,
-				pdev->get_memory_mapping().device_local, 0,
+				dev.get_memory_mapping().device_local, 0,
 				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				0, VMM_ALLOCATION_POOL_SURFACE_CACHE);
 

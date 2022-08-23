@@ -180,20 +180,20 @@ namespace rsx
 		virtual bool is_depth_surface() const = 0;
 		virtual void release_ref(image_storage_type) const = 0;
 
-		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
-		u32 get_surface_width() const
+		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels, typename T = u32>
+		T get_surface_width() const
 		{
 			if constexpr (Metrics == rsx::surface_metrics::samples)
 			{
-				return surface_width * samples_x;
+				return static_cast<T>(surface_width * samples_x);
 			}
 			else if constexpr (Metrics == rsx::surface_metrics::pixels)
 			{
-				return surface_width;
+				return static_cast<T>(surface_width);
 			}
 			else if constexpr (Metrics == rsx::surface_metrics::bytes)
 			{
-				return native_pitch;
+				return static_cast<T>(native_pitch);
 			}
 			else
 			{
@@ -201,20 +201,20 @@ namespace rsx
 			}
 		}
 
-		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels>
-		u32 get_surface_height() const
+		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels, typename T = u32>
+		T get_surface_height() const
 		{
 			if constexpr (Metrics == rsx::surface_metrics::samples)
 			{
-				return surface_height * samples_y;
+				return static_cast<T>(surface_height * samples_y);
 			}
 			else if constexpr (Metrics == rsx::surface_metrics::pixels)
 			{
-				return surface_height;
+				return static_cast<T>(surface_height);
 			}
 			else if constexpr (Metrics == rsx::surface_metrics::bytes)
 			{
-				return surface_height * samples_y;
+				return static_cast<T>(surface_height * samples_y);
 			}
 			else
 			{
