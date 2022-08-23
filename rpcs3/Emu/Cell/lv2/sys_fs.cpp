@@ -1948,7 +1948,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, vpath);
 
-		if (device.path.empty())
+		if (device.path.empty() || device.vid.empty() || device.pid.empty())
 		{
 			arg->out_code = CELL_ENOTSUP;
 			break;
@@ -2023,7 +2023,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, vpath);
 
-		if (device.path.empty())
+		if (device.path.empty() || device.vid.empty() || device.pid.empty())
 		{
 			arg->out_code = CELL_ENOTSUP;
 			break;
