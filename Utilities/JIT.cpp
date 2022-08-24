@@ -7,6 +7,7 @@
 #include "mutex.h"
 #include "util/vm.hpp"
 #include "util/asm.hpp"
+#include "util/v128.hpp"
 #include <charconv>
 #include <zlib.h>
 
@@ -350,6 +351,424 @@ asmjit::inline_runtime::~inline_runtime()
 {
 	utils::memory_protect(m_data, m_size, utils::protection::rx);
 }
+
+#if defined(ARCH_X64)
+asmjit::simd_builder::simd_builder(CodeHolder* ch) noexcept
+	: native_asm(ch)
+{
+	_init(true);
+}
+
+void asmjit::simd_builder::_init(bool full)
+{
+	if (full && utils::has_avx512_icl())
+	{
+		v0 = x86::zmm0;
+		v1 = x86::zmm1;
+		v2 = x86::zmm2;
+		v3 = x86::zmm3;
+		v4 = x86::zmm4;
+		v5 = x86::zmm5;
+		vsize = 64;
+	}
+	else if (full && utils::has_avx2())
+	{
+		v0 = x86::ymm0;
+		v1 = x86::ymm1;
+		v2 = x86::ymm2;
+		v3 = x86::ymm3;
+		v4 = x86::ymm4;
+		v5 = x86::ymm5;
+		vsize = 32;
+	}
+	else
+	{
+		v0 = x86::xmm0;
+		v1 = x86::xmm1;
+		v2 = x86::xmm2;
+		v3 = x86::xmm3;
+		v4 = x86::xmm4;
+		v5 = x86::xmm5;
+		vsize = 16;
+	}
+
+	if (full && utils::has_avx512())
+	{
+		vmask = -1;
+	}
+	else
+	{
+		vmask = 0;
+	}
+}
+
+void asmjit::simd_builder::vec_cleanup_ret()
+{
+	if (utils::has_avx() && vsize > 16)
+		this->vzeroupper();
+	this->ret();
+}
+
+void asmjit::simd_builder::vec_set_all_zeros(const Operand& v)
+{
+	x86::Xmm reg(v.id());
+	if (utils::has_avx())
+		this->vpxor(reg, reg, reg);
+	else
+		this->xorps(reg, reg);
+}
+
+void asmjit::simd_builder::vec_set_all_ones(const Operand& v)
+{
+	x86::Xmm reg(v.id());
+	if (x86::Zmm zr(v.id()); zr == v)
+		this->vpternlogd(zr, zr, zr, 0xff);
+	else if (x86::Ymm yr(v.id()); yr == v)
+		this->vpcmpeqd(yr, yr, yr);
+	else if (utils::has_avx())
+		this->vpcmpeqd(reg, reg, reg);
+	else
+		this->pcmpeqd(reg, reg);
+}
+
+void asmjit::simd_builder::vec_set_const(const Operand& v, const v128& val)
+{
+	if (!val._u)
+		return vec_set_all_zeros(v);
+	if (!~val._u)
+		return vec_set_all_ones(v);
+
+	if (uptr(&val) < 0x8000'0000)
+	{
+		// Assume the constant comes from a code or data segment (unsafe)
+		if (x86::Zmm zr(v.id()); zr == v)
+			this->vbroadcasti32x4(zr, x86::oword_ptr(uptr(&val)));
+		else if (x86::Ymm yr(v.id()); yr == v)
+			this->vbroadcasti128(yr, x86::oword_ptr(uptr(&val)));
+		else if (utils::has_avx())
+			this->vmovaps(x86::Xmm(v.id()), x86::oword_ptr(uptr(&val)));
+		else
+			this->movaps(x86::Xmm(v.id()), x86::oword_ptr(uptr(&val)));
+	}
+	else
+	{
+		// TODO
+		fmt::throw_exception("Unexpected constant location");
+	}
+}
+
+void asmjit::simd_builder::vec_clobbering_test(u32 esize, const Operand& v, const Operand& rhs)
+{
+	if (esize == 64)
+	{
+		this->emit(x86::Inst::kIdVptestmd, x86::k0, v, rhs);
+		this->ktestw(x86::k0, x86::k0);
+	}
+	else if (esize == 32)
+	{
+		this->emit(x86::Inst::kIdVptest, v, rhs);
+	}
+	else if (esize == 16 && utils::has_sse41())
+	{
+		this->emit(x86::Inst::kIdPtest, v, rhs);
+	}
+	else
+	{
+		if (v != rhs)
+			this->emit(x86::Inst::kIdPand, v, rhs);
+		if (esize == 16)
+			this->emit(x86::Inst::kIdPacksswb, v, v);
+		this->emit(x86::Inst::kIdMovq, x86::rax, v);
+		if (esize == 16 || esize == 8)
+			this->test(x86::rax, x86::rax);
+		else if (esize == 4)
+			this->test(x86::eax, x86::eax);
+		else if (esize == 2)
+			this->test(x86::ax, x86::ax);
+		else if (esize == 1)
+			this->test(x86::al, x86::al);
+		else
+			fmt::throw_exception("Unimplemented");
+	}
+}
+
+asmjit::x86::Mem asmjit::simd_builder::ptr_scale_for_vec(u32 esize, const x86::Gp& base, const x86::Gp& index)
+{
+	switch (ensure(esize))
+	{
+	case 1: return x86::ptr(base, index, 0, 0);
+	case 2: return x86::ptr(base, index, 1, 0);
+	case 4: return x86::ptr(base, index, 2, 0);
+	case 8: return x86::ptr(base, index, 3, 0);
+	default: fmt::throw_exception("Bad esize");
+	}
+}
+
+void asmjit::simd_builder::vec_load_unaligned(u32 esize, const Operand& v, const x86::Mem& src)
+{
+	ensure(std::has_single_bit(esize));
+	ensure(std::has_single_bit(vsize));
+
+	if (esize == 2)
+	{
+		ensure(vsize >= 2);
+		if (vsize == 2)
+			vec_set_all_zeros(v);
+		if (vsize == 2 && utils::has_avx())
+			this->emit(x86::Inst::kIdVpinsrw, x86::Xmm(v.id()), x86::Xmm(v.id()), src, Imm(0));
+		else if (vsize == 2)
+			this->emit(x86::Inst::kIdPinsrw, v, src, Imm(0));
+		else if (vmask && vmask < 8)
+			this->emit(x86::Inst::kIdVmovdqu16, v, src);
+		else
+			return vec_load_unaligned(vsize, v, src);
+	}
+	else if (esize == 4)
+	{
+		ensure(vsize >= 4);
+		if (vsize == 4 && utils::has_avx())
+			this->emit(x86::Inst::kIdVmovd, x86::Xmm(v.id()), src);
+		else if (vsize == 4)
+			this->emit(x86::Inst::kIdMovd, v, src);
+		else if (vmask && vmask < 8)
+			this->emit(x86::Inst::kIdVmovdqu32, v, src);
+		else
+			return vec_load_unaligned(vsize, v, src);
+	}
+	else if (esize == 8)
+	{
+		ensure(vsize >= 8);
+		if (vsize == 8 && utils::has_avx())
+			this->emit(x86::Inst::kIdVmovq, x86::Xmm(v.id()), src);
+		else if (vsize == 8)
+			this->emit(x86::Inst::kIdMovq, v, src);
+		else if (vmask && vmask < 8)
+			this->emit(x86::Inst::kIdVmovdqu64, v, src);
+		else
+			return vec_load_unaligned(vsize, v, src);
+	}
+	else if (esize >= 16)
+	{
+		ensure(vsize >= 16);
+		if (utils::has_avx())
+			this->emit(x86::Inst::kIdVmovdqu, v, src);
+		else
+			this->emit(x86::Inst::kIdMovups, v, src);
+	}
+	else
+	{
+		fmt::throw_exception("Unimplemented");
+	}
+}
+
+void asmjit::simd_builder::vec_store_unaligned(u32 esize, const Operand& v, const x86::Mem& dst)
+{
+	ensure(std::has_single_bit(esize));
+	ensure(std::has_single_bit(vsize));
+
+	if (esize == 2)
+	{
+		ensure(vsize >= 2);
+		if (vsize == 2 && utils::has_avx())
+			this->emit(x86::Inst::kIdVpextrw, dst, x86::Xmm(v.id()), Imm(0));
+		else if (vsize == 2 && utils::has_sse41())
+			this->emit(x86::Inst::kIdPextrw, dst, v, Imm(0));
+		else if (vsize == 2)
+			this->push(x86::rax), this->pextrw(x86::eax, x86::Xmm(v.id()), 0), this->mov(dst, x86::ax), this->pop(x86::rax);
+		else if ((vmask && vmask < 8) || vsize >= 64)
+			this->emit(x86::Inst::kIdVmovdqu16, dst, v);
+		else
+			return vec_store_unaligned(vsize, v, dst);
+	}
+	else if (esize == 4)
+	{
+		ensure(vsize >= 4);
+		if (vsize == 4 && utils::has_avx())
+			this->emit(x86::Inst::kIdVmovd, dst, x86::Xmm(v.id()));
+		else if (vsize == 4)
+			this->emit(x86::Inst::kIdMovd, dst, v);
+		else if ((vmask && vmask < 8) || vsize >= 64)
+			this->emit(x86::Inst::kIdVmovdqu32, dst, v);
+		else
+			return vec_store_unaligned(vsize, v, dst);
+	}
+	else if (esize == 8)
+	{
+		ensure(vsize >= 8);
+		if (vsize == 8 && utils::has_avx())
+			this->emit(x86::Inst::kIdVmovq, dst, x86::Xmm(v.id()));
+		else if (vsize == 8)
+			this->emit(x86::Inst::kIdMovq, dst, v);
+		else if ((vmask && vmask < 8) || vsize >= 64)
+			this->emit(x86::Inst::kIdVmovdqu64, dst, v);
+		else
+			return vec_store_unaligned(vsize, v, dst);
+	}
+	else if (esize >= 16)
+	{
+		ensure(vsize >= 16);
+		if ((vmask && vmask < 8) || vsize >= 64)
+			this->emit(x86::Inst::kIdVmovdqu64, dst, v); // Not really needed
+		else if (utils::has_avx())
+			this->emit(x86::Inst::kIdVmovdqu, dst, v);
+		else
+			this->emit(x86::Inst::kIdMovups, dst, v);
+	}
+	else
+	{
+		fmt::throw_exception("Unimplemented");
+	}
+}
+
+void asmjit::simd_builder::_vec_binary_op(x86::Inst::Id sse_op, x86::Inst::Id vex_op, x86::Inst::Id evex_op, const Operand& dst, const Operand& lhs, const Operand& rhs)
+{
+	if (utils::has_avx())
+	{
+		if (vex_op == x86::Inst::kIdNone || this->_extraReg.isReg())
+		{
+			this->evex().emit(evex_op, dst, lhs, rhs);
+		}
+		else
+		{
+			this->emit(vex_op, dst, lhs, rhs);
+		}
+	}
+	else if (dst == lhs)
+	{
+		this->emit(sse_op, dst, rhs);
+	}
+	else if (dst == rhs)
+	{
+		fmt::throw_exception("Unimplemented");
+	}
+	else
+	{
+		this->emit(x86::Inst::kIdMovaps, dst, lhs);
+		this->emit(sse_op, dst, rhs);
+	}
+}
+
+void asmjit::simd_builder::vec_umin(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs)
+{
+	using enum x86::Inst::Id;
+	if (esize == 2)
+	{
+		if (utils::has_sse41())
+			return _vec_binary_op(kIdPminuw, kIdVpminuw, kIdVpminuw, dst, lhs, rhs);
+	}
+	else if (esize == 4)
+	{
+		if (utils::has_sse41())
+			return _vec_binary_op(kIdPminud, kIdVpminud, kIdVpminud, dst, lhs, rhs);
+	}
+
+	fmt::throw_exception("Unimplemented");
+}
+
+void asmjit::simd_builder::vec_umax(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs)
+{
+	using enum x86::Inst::Id;
+	if (esize == 2)
+	{
+		if (utils::has_sse41())
+			return _vec_binary_op(kIdPmaxuw, kIdVpmaxuw, kIdVpmaxuw, dst, lhs, rhs);
+	}
+	else if (esize == 4)
+	{
+		if (utils::has_sse41())
+			return _vec_binary_op(kIdPmaxud, kIdVpmaxud, kIdVpmaxud, dst, lhs, rhs);
+	}
+
+	fmt::throw_exception("Unimplemented");
+}
+
+void asmjit::simd_builder::vec_umin_horizontal_i128(u32 esize, const x86::Gp& dst, const Operand& src, const Operand& tmp)
+{
+	using enum x86::Inst::Id;
+	if (!utils::has_sse41())
+	{
+		fmt::throw_exception("Unimplemented");
+	}
+
+	ensure(src != tmp);
+
+	if (esize == 2)
+	{
+		this->emit(utils::has_avx() ? kIdVphminposuw : kIdPhminposuw, x86::Xmm(tmp.id()), x86::Xmm(src.id()));
+		this->emit(utils::has_avx() ? kIdVpextrw : kIdPextrw, dst, x86::Xmm(tmp.id()), Imm(0));
+	}
+	else if (esize == 4)
+	{
+		if (utils::has_avx())
+		{
+			this->vpsrldq(x86::Xmm(tmp.id()), x86::Xmm(src.id()), 8);
+			this->vpminud(x86::Xmm(tmp.id()), x86::Xmm(tmp.id()), x86::Xmm(src.id()));
+			this->vpsrldq(x86::Xmm(src.id()), x86::Xmm(tmp.id()), 4);
+			this->vpminud(x86::Xmm(src.id()), x86::Xmm(src.id()), x86::Xmm(tmp.id()));
+			this->vmovd(dst.r32(), x86::Xmm(src.id()));
+		}
+		else
+		{
+			this->movdqa(x86::Xmm(tmp.id()), x86::Xmm(src.id()));
+			this->psrldq(x86::Xmm(tmp.id()), 8);
+			this->pminud(x86::Xmm(tmp.id()), x86::Xmm(src.id()));
+			this->movdqa(x86::Xmm(src.id()), x86::Xmm(tmp.id()));
+			this->psrldq(x86::Xmm(src.id()), 4);
+			this->pminud(x86::Xmm(src.id()), x86::Xmm(tmp.id()));
+			this->movd(dst.r32(), x86::Xmm(src.id()));
+		}
+	}
+	else
+	{
+		fmt::throw_exception("Unimplemented");
+	}
+}
+
+void asmjit::simd_builder::vec_umax_horizontal_i128(u32 esize, const x86::Gp& dst, const Operand& src, const Operand& tmp)
+{
+	using enum x86::Inst::Id;
+	if (!utils::has_sse41())
+	{
+		fmt::throw_exception("Unimplemented");
+	}
+
+	ensure(src != tmp);
+
+	if (esize == 2)
+	{
+		vec_set_all_ones(x86::Xmm(tmp.id()));
+		vec_xor(esize, x86::Xmm(tmp.id()), x86::Xmm(tmp.id()), x86::Xmm(src.id()));
+		this->emit(utils::has_avx() ? kIdVphminposuw : kIdPhminposuw, x86::Xmm(tmp.id()), x86::Xmm(tmp.id()));
+		this->emit(utils::has_avx() ? kIdVpextrw : kIdPextrw, dst, x86::Xmm(tmp.id()), Imm(0));
+		this->not_(dst.r16());
+	}
+	else if (esize == 4)
+	{
+		if (utils::has_avx())
+		{
+			this->vpsrldq(x86::Xmm(tmp.id()), x86::Xmm(src.id()), 8);
+			this->vpmaxud(x86::Xmm(tmp.id()), x86::Xmm(tmp.id()), x86::Xmm(src.id()));
+			this->vpsrldq(x86::Xmm(src.id()), x86::Xmm(tmp.id()), 4);
+			this->vpmaxud(x86::Xmm(src.id()), x86::Xmm(src.id()), x86::Xmm(tmp.id()));
+			this->vmovd(dst.r32(), x86::Xmm(src.id()));
+		}
+		else
+		{
+			this->movdqa(x86::Xmm(tmp.id()), x86::Xmm(src.id()));
+			this->psrldq(x86::Xmm(tmp.id()), 8);
+			this->pmaxud(x86::Xmm(tmp.id()), x86::Xmm(src.id()));
+			this->movdqa(x86::Xmm(src.id()), x86::Xmm(tmp.id()));
+			this->psrldq(x86::Xmm(src.id()), 4);
+			this->pmaxud(x86::Xmm(src.id()), x86::Xmm(tmp.id()));
+			this->movd(dst.r32(), x86::Xmm(src.id()));
+		}
+	}
+	else
+	{
+		fmt::throw_exception("Unimplemented");
+	}
+}
+#endif /* X86 */
 
 #ifdef LLVM_AVAILABLE
 
