@@ -881,8 +881,19 @@ void cpu_thread::notify()
 
 cpu_thread& cpu_thread::operator=(thread_state)
 {
-	state += cpu_flag::exit;
-	state.notify_one(cpu_flag::exit);
+	if (state & cpu_flag::exit)
+	{
+		// Must be notified elsewhere or self-raised
+		return *this;
+	}
+
+	const auto old = state.fetch_add(cpu_flag::exit);
+
+	if (old & cpu_flag::wait && old.none_of(cpu_flag::again + cpu_flag::exit))
+	{
+		state.notify_one(cpu_flag::exit);
+	}
+
 	return *this;
 }
 
