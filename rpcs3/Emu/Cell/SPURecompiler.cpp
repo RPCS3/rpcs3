@@ -12,6 +12,7 @@
 #include "Utilities/StrUtil.h"
 #include "Utilities/JIT.h"
 #include "util/init_mutex.hpp"
+#include "util/shared_ptr.hpp"
 
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
@@ -10647,6 +10648,7 @@ struct spu_llvm
 {
 	// Workload
 	lf_queue<std::pair<const u64, spu_item*>> registered;
+	atomic_ptr<named_thread_group<spu_llvm_worker>> m_workers;
 
 	spu_llvm()
 	{
@@ -10716,7 +10718,9 @@ struct spu_llvm
 
 		u32 worker_index = 0;
 
-		named_thread_group<spu_llvm_worker> workers("SPUW.", worker_count);
+		m_workers = make_single<named_thread_group<spu_llvm_worker>>("SPUW.", worker_count);
+		auto workers_ptr = m_workers.load();
+		auto& workers = *workers_ptr;
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
@@ -10769,10 +10773,25 @@ struct spu_llvm
 
 		static_cast<void>(prof_mutex.init_always([&]{ samples.clear(); }));
 
+		m_workers.reset();
+
 		for (u32 i = 0; i < worker_count; i++)
 		{
-			(workers.begin() + i)->registered.push(0, nullptr);
+			(workers.begin() + i)->operator=(thread_state::aborting);
 		}
+	}
+
+	spu_llvm& operator=(thread_state)
+	{
+		if (const auto workers = m_workers.load())
+		{
+			for (u32 i = 0; i < workers->size(); i++)
+			{
+				(workers->begin() + i)->operator=(thread_state::aborting);
+			}
+		}
+
+		return *this;
 	}
 
 	static constexpr auto thread_name = "SPU LLVM"sv;

@@ -635,14 +635,14 @@ public:
 	// Join thread by thread_state::finished
 	named_thread& operator=(thread_state s)
 	{
-		if constexpr (std::is_assignable_v<Context&, thread_state>)
-		{
-			static_cast<Context&>(*this) = s;
-		}
-
 		if (s >= thread_state::aborting && thread::m_sync.fetch_op([](u64& v){ return !(v & 3) && (v |= 1); }).second)
 		{
 			thread::m_sync.notify_one(1);
+		}
+
+		if constexpr (std::is_assignable_v<Context&, thread_state>)
+		{
+			static_cast<Context&>(*this) = s;
 		}
 
 		if (s == thread_state::finished)
