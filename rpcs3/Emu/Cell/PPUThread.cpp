@@ -1527,6 +1527,14 @@ void ppu_thread::cpu_on_stop()
 
 		current_function = {};
 	}
+
+	// TODO: More conditions
+	if (Emu.IsStopped() && g_cfg.core.spu_debug)
+	{
+		std::string ret;
+		dump_all(ret);
+		ppu_log.notice("thread context: %s", ret);
+	}
 }
 
 void ppu_thread::exec_task()

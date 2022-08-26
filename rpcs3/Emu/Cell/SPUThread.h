@@ -682,6 +682,7 @@ public:
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 	virtual std::string dump_misc() const override;
 	virtual void cpu_task() override final;
+	virtual void cpu_on_stop() override;
 	virtual void cpu_return() override;
 	virtual void cpu_work() override;
 	virtual ~spu_thread() override;
@@ -965,6 +966,9 @@ public:
 
 	~spu_function_logger()
 	{
-		spu.start_time = 0;
+		if (!spu.is_stopped())
+		{
+			spu.start_time = 0;
+		}
 	}
 };
