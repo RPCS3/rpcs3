@@ -594,7 +594,7 @@ void log_frame::UpdateUI()
 	// Preserve capacity
 	m_log_text.resize(0);
 
-	// Handle a special case in which we may need to override the previous repetition count
+	// Handle a common case in which we may need to override the previous repetition count
 	bool is_first_rep = true;
 
 	// Batch output of multiple lines if possible (optimization)
@@ -622,10 +622,12 @@ void log_frame::UpdateUI()
 
 		if (is_first_rep)
 		{
-			// Override repetition count of previous UpdateUI() (special case)
+			// Overwrite existing repetition counter in our text document.
+			ensure(m_log_counter > 2); // Anything else is a bug
+			constexpr int size_of_x = 2; // " x"
 			text_cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
-			text_cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor, (m_log_counter != 2 ? 1 + QString::number(m_log_counter - 1).size() : 0));
-			text_cursor.insertHtml(font_start_tag_stack % QStringLiteral(" x") % QString::number(m_log_counter) % font_end_tag);
+			text_cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor, size_of_x + QString::number(m_log_counter - 1).size());
+			text_cursor.insertHtml(font_start_tag_stack % QStringLiteral("&nbsp;x") % QString::number(m_log_counter) % font_end_tag);
 		}
 		else if (m_log_counter > 1)
 		{
@@ -666,6 +668,7 @@ void log_frame::UpdateUI()
 		// Confirm log level
 		if (packet->sev <= s_gui_listener.enabled)
 		{
+			// Check if we can stack this log message.
 			if (m_stack_log && m_old_log_level == packet->sev && packet->msg == m_old_log_text)
 			{
 				m_log_counter++;
