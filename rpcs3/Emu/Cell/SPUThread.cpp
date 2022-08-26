@@ -1263,6 +1263,31 @@ std::string spu_thread::dump_misc() const
 	return ret;
 }
 
+void spu_thread::cpu_on_stop()
+{
+	if (current_func)
+	{
+		if (start_time)
+		{
+			ppu_log.warning("'%s' aborted (%fs)", current_func, (get_guest_system_time() - start_time) / 1000000.);
+		}
+		else
+		{
+			ppu_log.warning("'%s' aborted", current_func);
+		}
+
+		current_func = {};
+	}
+
+	// TODO: More conditions
+	if (Emu.IsStopped() && g_cfg.core.spu_debug)
+	{
+		std::string ret;
+		dump_all(ret);
+		spu_log.notice("thread context: %s", ret);
+	}
+}
+
 void spu_thread::cpu_init()
 {
 	std::memset(gpr.data(), 0, gpr.size() * sizeof(gpr[0]));
