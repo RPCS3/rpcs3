@@ -2067,7 +2067,7 @@ void Emulator::Resume()
 	}
 
 	// Print and reset debug data collected
-	if (g_cfg.core.ppu_debug)
+	if (g_cfg.core.ppu_decoder == ppu_decoder_type::_static && g_cfg.core.ppu_debug)
 	{
 		PPUDisAsm dis_asm(cpu_disasm_mode::dump, vm::g_sudo_addr);
 
@@ -2092,7 +2092,10 @@ void Emulator::Resume()
 			}
 		}
 
-		ppu_log.notice("[RESUME] Dumping instruction stats:%s", dump);
+		if (!dump.empty())
+		{
+			ppu_log.notice("[RESUME] Dumping instruction stats:%s", dump);
+		}
 	}
 
 	// Try to resume
