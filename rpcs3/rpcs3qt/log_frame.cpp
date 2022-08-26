@@ -594,7 +594,7 @@ void log_frame::UpdateUI()
 	// Preserve capacity
 	m_log_text.resize(0);
 
-	// Handle a special case in which we may need to override the previous repetition count 
+	// Handle a special case in which we may need to override the previous repetition count
 	bool is_first_rep = true;
 
 	// Batch output of multiple lines if possible (optimization)
@@ -688,19 +688,18 @@ void log_frame::UpdateUI()
 
 			is_first_rep = false;
 
-			if (m_log_counter > 1)
+			// Add counter suffix if needed. Try not to hold too much data at a time so the frame content will be updated frequently.
+			if (m_log_counter > 1 || m_log_text.size() > 0x1000)
 			{
-				// Add counter suffix if needed
 				flush();
 			}
 
-			if (m_log_text.size() > 0x1000)
+			if (m_log_text.isEmpty())
 			{
-				// Try not to hold too much data at a time so the frame content will be updated frequently
-				flush();
+				m_old_log_level = packet->sev;
+				m_log_text += font_start_tag(m_color[static_cast<int>(m_old_log_level)]);
 			}
-
-			if (!m_log_text.isEmpty())
+			else
 			{
 				if (packet->sev != m_old_log_level)
 				{
@@ -712,11 +711,6 @@ void log_frame::UpdateUI()
 				{
 					m_log_text += QStringLiteral("<br/>");
 				}
-			}
-			else
-			{
-				m_old_log_level = packet->sev;
-				m_log_text += font_start_tag(m_color[static_cast<int>(m_old_log_level)]);
 			}
 
 			switch (packet->sev)
