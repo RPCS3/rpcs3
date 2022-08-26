@@ -230,14 +230,14 @@ void log_frame::CreateAndConnectActions()
 	m_clear_act = new QAction(tr("Clear"), this);
 	connect(m_clear_act, &QAction::triggered, [this]()
 	{
-		m_old_log_text = "";
+		m_old_log_text.clear();
 		m_log->clear();
 	});
 
 	m_clear_tty_act = new QAction(tr("Clear"), this);
 	connect(m_clear_tty_act, &QAction::triggered, [this]()
 	{
-		m_old_tty_text = "";
+		m_old_tty_text.clear();
 		m_tty->clear();
 	});
 
@@ -500,7 +500,9 @@ void log_frame::RepaintTextColors()
 
 void log_frame::UpdateUI()
 {
-	const auto start = steady_clock::now();
+	const std::chrono::time_point start = steady_clock::now();
+	const std::chrono::time_point tty_timeout = start + 4ms;
+	const std::chrono::time_point log_timeout = start + 7ms;
 
 	// Check TTY logs
 	while (const u64 size = std::max<s64>(0, g_tty_size.load() - (m_tty_file ? m_tty_file.pos() : 0)))
@@ -579,7 +581,7 @@ void log_frame::UpdateUI()
 		}
 
 		// Limit processing time
-		if (steady_clock::now() >= start + 4ms || buf.empty()) break;
+		if (steady_clock::now() >= tty_timeout || buf.empty()) break;
 	}
 
 	const auto font_start_tag = [](const QColor& color) -> const QString { return QStringLiteral("<font color = \"") % color.name() % QStringLiteral("\">"); };
@@ -595,7 +597,8 @@ void log_frame::UpdateUI()
 	m_log_text.resize(0);
 
 	// Handle a common case in which we may need to override the previous repetition count
-	bool is_first_rep = true;
+	bool is_first_rep = m_stack_log;
+	usz first_rep_counter = m_log_counter;
 
 	// Batch output of multiple lines if possible (optimization)
 	auto flush = [&]()
@@ -623,26 +626,33 @@ void log_frame::UpdateUI()
 		if (is_first_rep)
 		{
 			// Overwrite existing repetition counter in our text document.
-			ensure(m_log_counter > 2); // Anything else is a bug
-			constexpr int size_of_x = 2; // " x"
-			text_cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
-			text_cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor, size_of_x + QString::number(m_log_counter - 1).size());
-			text_cursor.insertHtml(font_start_tag_stack % QStringLiteral("&nbsp;x") % QString::number(m_log_counter) % font_end_tag);
-		}
-		else if (m_log_counter > 1)
-		{
-			// Insert both messages and repetition prefix (append is more optimized than concatenation)
-			m_log_text += font_end_tag;
-			m_log_text += font_start_tag_stack;
-			m_log_text += QStringLiteral(" x");
-			m_log_text += QString::number(m_log_counter);
-			m_log_text += font_end_tag;
+			ensure(first_rep_counter > m_log_counter); // Anything else is a bug
 
-			m_log->appendHtml(m_log_text);
+			text_cursor.movePosition(QTextCursor::End, QTextCursor::MoveAnchor);
+
+			if (m_log_counter > 1)
+			{
+				constexpr int size_of_x = 2; // " x"
+				const int size_of_number = static_cast<int>(QString::number(m_log_counter).size());
+
+				text_cursor.movePosition(QTextCursor::PreviousCharacter, QTextCursor::KeepAnchor, size_of_x + size_of_number);
+			}
+
+			text_cursor.insertHtml(font_start_tag_stack % QStringLiteral("&nbsp;x") % QString::number(first_rep_counter) % font_end_tag);
 		}
 		else
 		{
+			// Insert both messages and repetition prefix (append is more optimized than concatenation)
 			m_log_text += font_end_tag;
+
+			if (m_log_counter > 1)
+			{
+				m_log_text += font_start_tag_stack;
+				m_log_text += QStringLiteral(" x");
+				m_log_text += QString::number(m_log_counter);
+				m_log_text += font_end_tag;
+			}
+
 			m_log->appendHtml(m_log_text);
 		}
 
@@ -662,6 +672,27 @@ void log_frame::UpdateUI()
 		m_log_text.clear();
 	};
 
+	const auto patch_first_stacked_message = [&]() -> bool
+	{
+		if (is_first_rep)
+		{
+			const bool needs_update = first_rep_counter > m_log_counter;
+
+			if (needs_update)
+			{
+				// Update the existing stack suffix.
+				flush();
+			}
+
+			is_first_rep = false;
+			m_log_counter = first_rep_counter;
+
+			return needs_update;
+		}
+
+		return false;
+	};
+
 	// Check main logs
 	while (auto* packet = s_gui_listener.get())
 	{
@@ -671,16 +702,19 @@ void log_frame::UpdateUI()
 			// Check if we can stack this log message.
 			if (m_stack_log && m_old_log_level == packet->sev && packet->msg == m_old_log_text)
 			{
-				m_log_counter++;
-
 				if (is_first_rep)
 				{
-					flush();
+					// Keep tracking the old stack suffix count as long as the last known message keeps repeating.
+					first_rep_counter++;
+				}
+				else
+				{
+					m_log_counter++;
 				}
 
 				s_gui_listener.pop();
 
-				if (steady_clock::now() >= start + 7ms)
+				if (steady_clock::now() >= log_timeout)
 				{
 					// Must break eventually
 					break;
@@ -689,10 +723,8 @@ void log_frame::UpdateUI()
 				continue;
 			}
 
-			is_first_rep = false;
-
-			// Add counter suffix if needed. Try not to hold too much data at a time so the frame content will be updated frequently.
-			if (m_log_counter > 1 || m_log_text.size() > 0x1000)
+			// Add/update counter suffix if needed. Try not to hold too much data at a time so the frame content will be updated frequently.
+			if (!patch_first_stacked_message() && (m_log_counter > 1 || m_log_text.size() > 0x1000))
 			{
 				flush();
 			}
@@ -742,11 +774,13 @@ void log_frame::UpdateUI()
 		s_gui_listener.pop();
 
 		// Limit processing time
-		if (steady_clock::now() >= start + 7ms) break;
+		if (steady_clock::now() >= log_timeout) break;
 	}
 
-	is_first_rep = false;
-	flush();
+	if (!patch_first_stacked_message())
+	{
+		flush();
+	}
 }
 
 void log_frame::closeEvent(QCloseEvent *event)

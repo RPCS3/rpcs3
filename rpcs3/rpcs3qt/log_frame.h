@@ -52,8 +52,8 @@ private:
 	std::string m_old_log_text;
 	QString m_old_tty_text;
 	QString m_log_text;
-	ullong m_log_counter{};
-	ullong m_tty_counter{};
+	usz m_log_counter{};
+	usz m_tty_counter{};
 	bool m_stack_log{};
 	bool m_stack_tty{};
 	logs::level m_old_log_level{};
