@@ -40,11 +40,11 @@ struct png_encoder
 bool check_config(vm::cptr<CellPngEncConfig> config)
 {
 	if (!config ||
-		config->maxWidth == 0 || config->maxWidth > 1000000 ||
-		config->maxHeight == 0 || config->maxHeight > 1000000 ||
-		config->maxBitDepth != 8 && config->maxBitDepth != 16 ||
+		config->maxWidth == 0u || config->maxWidth > 1000000u ||
+		config->maxHeight == 0u || config->maxHeight > 1000000u ||
+		config->maxBitDepth != 8u && config->maxBitDepth != 16u ||
 		static_cast<s32>(config->addMemSize) < 0 ||
-		config->exParamNum != 0)
+		config->exParamNum != 0u)
 	{
 		return false;
 	}
