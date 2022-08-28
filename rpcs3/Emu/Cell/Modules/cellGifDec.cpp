@@ -86,7 +86,7 @@ error_code cellGifDecExtCreate(vm::ptr<GifDecoder> mainHandle, vm::cptr<CellGifD
 		return CELL_GIFDEC_ERROR_ARG;
 	}
 
-	if (extThreadInParam->maxContention == 0 || extThreadInParam->maxContention >= 8)
+	if (extThreadInParam->maxContention == 0u || extThreadInParam->maxContention >= 8u)
 	{
 		return CELL_GIFDEC_ERROR_ARG;
 	}

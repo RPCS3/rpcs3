@@ -381,7 +381,7 @@ public:
 
 	void init_config(cfg_pad* cfg) override;
 	bool Init() override;
-	std::vector<pad_list_entry> list_devices();
+	std::vector<pad_list_entry> list_devices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id) override;
 	void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
 	void get_motion_sensors(const std::string& padId, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors) override;
