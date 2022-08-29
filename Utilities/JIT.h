@@ -42,6 +42,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <util/v128.hpp>
 
 #if defined(ARCH_X64)
 using native_asm = asmjit::x86::Assembler;
@@ -50,8 +51,6 @@ using native_args = std::array<asmjit::x86::Gp, 4>;
 using native_asm = asmjit::a64::Assembler;
 using native_args = std::array<asmjit::a64::Gp, 4>;
 #endif
-
-union v128;
 
 void jit_announce(uptr func, usz size, std::string_view name);
 
@@ -215,12 +214,17 @@ namespace asmjit
 #if defined(ARCH_X64)
 	struct simd_builder : native_asm
 	{
+		std::unordered_map<v128, Label> consts;
+
 		Operand v0, v1, v2, v3, v4, v5;
 
 		uint vsize = 16;
 		uint vmask = 0;
 
 		simd_builder(CodeHolder* ch) noexcept;
+		~simd_builder();
+
+		void operator()() noexcept;
 
 		void _init(bool full);
 		void vec_cleanup_ret();
@@ -312,8 +316,7 @@ namespace asmjit
 			if (vmask)
 			{
 				// Build single last iteration (masked)
-				static constexpr u64 all_ones = -1;
-				this->bzhi(reg_cnt, x86::Mem(uptr(&all_ones)), reg_cnt);
+				this->bzhi(reg_cnt, x86::Mem(consts[~u128()], 0), reg_cnt);
 				this->kmovq(x86::k7, reg_cnt);
 				vmask = 7;
 				build();
@@ -425,6 +428,12 @@ inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* 
 	else
 	{
 		builder(compiler, args);
+	}
+
+	if constexpr (std::is_invocable_r_v<void, Asm>)
+	{
+		// Finalization
+		compiler();
 	}
 
 	const auto result = rt._add(&code);
