@@ -690,14 +690,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 		c.vzeroupper();
 	}
 
-#ifdef __linux__
-	// Hack for perf profiling (TODO)
-	Label ret2 = c.newLabel();
-	c.lea(x86::rdx, x86::qword_ptr(ret2));
-	c.push(x86::rdx);
-	c.push(x86::rdx);
-	c.bind(ret2);
-#endif
+	maybe_flush_lbr(c);
 	c.ret();
 #else
 	c.brk(Imm(0x42));
@@ -821,14 +814,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 		c.vzeroupper();
 	}
 
-#ifdef __linux__
-	// Hack for perf profiling (TODO)
-	Label ret2 = c.newLabel();
-	c.lea(x86::rdx, x86::qword_ptr(ret2));
-	c.push(x86::rdx);
-	c.push(x86::rdx);
-	c.bind(ret2);
-#endif
+	maybe_flush_lbr(c);
 	c.ret();
 #else
 	c.brk(Imm(0x42));
@@ -961,14 +947,7 @@ const auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, cp
 	c.pop(x86::rbx);
 	c.pop(x86::rbp);
 
-#ifdef __linux__
-	// Hack for perf profiling (TODO)
-	Label ret2 = c.newLabel();
-	c.lea(x86::rdx, x86::qword_ptr(ret2));
-	c.push(x86::rdx);
-	c.push(x86::rdx);
-	c.bind(ret2);
-#endif
+	maybe_flush_lbr(c);
 	c.ret();
 #else
 	c.brk(Imm(0x42));

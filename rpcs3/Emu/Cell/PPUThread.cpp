@@ -2402,14 +2402,7 @@ const auto ppu_stcx_accurate_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime
 	c.pop(x86::r14);
 	c.pop(x86::rbp);
 
-#ifdef __linux__
-	// Hack for perf profiling (TODO)
-	Label ret2 = c.newLabel();
-	c.lea(x86::rdx, x86::qword_ptr(ret2));
-	c.push(x86::rdx);
-	c.push(x86::rdx);
-	c.bind(ret2);
-#endif
+	maybe_flush_lbr(c);
 	c.ret();
 #else
 	// Unimplemented should fail.

@@ -42,6 +42,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <util/v128.hpp>
 
 #if defined(ARCH_X64)
 using native_asm = asmjit::x86::Assembler;
@@ -211,40 +212,136 @@ namespace asmjit
 	}
 
 #if defined(ARCH_X64)
-	template <uint Size>
-	struct native_vec;
-
-	template <>
-	struct native_vec<16> { using type = x86::Xmm; };
-
-	template <>
-	struct native_vec<32> { using type = x86::Ymm; };
-
-	template <>
-	struct native_vec<64> { using type = x86::Zmm; };
-
-	template <uint Size>
-	using native_vec_t = typename native_vec<Size>::type;
-
-	// if (count > step) { for (; ctr < (count - step); ctr += step) {...} count -= ctr; }
-	inline void build_incomplete_loop(native_asm& c, auto ctr, auto count, u32 step, auto&& build)
+	struct simd_builder : native_asm
 	{
-		asmjit::Label body = c.newLabel();
-		asmjit::Label exit = c.newLabel();
+		std::unordered_map<v128, Label> consts;
 
-		ensure((step & (step - 1)) == 0);
-		c.cmp(count, step);
-		c.jbe(exit);
-		c.sub(count, step);
-		c.align(asmjit::AlignMode::kCode, 16);
-		c.bind(body);
-		build();
-		c.add(ctr, step);
-		c.sub(count, step);
-		c.ja(body);
-		c.add(count, step);
-		c.bind(exit);
-	}
+		Operand v0, v1, v2, v3, v4, v5;
+
+		uint vsize = 16;
+		uint vmask = 0;
+
+		simd_builder(CodeHolder* ch) noexcept;
+		~simd_builder();
+
+		void operator()() noexcept;
+
+		void _init(bool full);
+		void vec_cleanup_ret();
+		void vec_set_all_zeros(const Operand& v);
+		void vec_set_all_ones(const Operand& v);
+		void vec_set_const(const Operand& v, const v128& value);
+		void vec_clobbering_test(u32 esize, const Operand& v, const Operand& rhs);
+
+		// return x86::ptr(base, ctr, X, 0) where X is set for esize accordingly
+		x86::Mem ptr_scale_for_vec(u32 esize, const x86::Gp& base, const x86::Gp& index);
+
+		void vec_load_unaligned(u32 esize, const Operand& v, const x86::Mem& src);
+		void vec_store_unaligned(u32 esize, const Operand& v, const x86::Mem& dst);
+		void vec_partial_move(u32 esize, const Operand& dst, const Operand& src);
+
+		void _vec_binary_op(x86::Inst::Id sse_op, x86::Inst::Id vex_op, x86::Inst::Id evex_op, const Operand& dst, const Operand& lhs, const Operand& rhs);
+
+		void vec_shuffle_xi8(const Operand& dst, const Operand& lhs, const Operand& rhs)
+		{
+			using enum x86::Inst::Id;
+			_vec_binary_op(kIdPshufb, kIdVpshufb, kIdVpshufb, dst, lhs, rhs);
+		}
+
+		void vec_xor(u32, const Operand& dst, const Operand& lhs, const Operand& rhs)
+		{
+			using enum x86::Inst::Id;
+			_vec_binary_op(kIdPxor, kIdVpxor, kIdVpxord, dst, lhs, rhs);
+		}
+
+		void vec_or(u32, const Operand& dst, const Operand& lhs, const Operand& rhs)
+		{
+			using enum x86::Inst::Id;
+			_vec_binary_op(kIdPor, kIdVpor, kIdVpord, dst, lhs, rhs);
+		}
+
+		void vec_umin(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
+		void vec_umax(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
+
+		void vec_umin_horizontal_i128(u32 esize, const x86::Gp& dst, const Operand& src, const Operand& tmp);
+		void vec_umax_horizontal_i128(u32 esize, const x86::Gp& dst, const Operand& src, const Operand& tmp);
+
+		simd_builder& keep_if_not_masked()
+		{
+			if (vmask && vmask < 8)
+			{
+				this->k(x86::KReg(vmask));
+			}
+
+			return *this;
+		}
+
+		simd_builder& zero_if_not_masked()
+		{
+			if (vmask && vmask < 8)
+			{
+				this->k(x86::KReg(vmask));
+				this->z();
+			}
+
+			return *this;
+		}
+
+		void build_loop(u32 esize, auto reg_ctr, auto reg_cnt, auto&& build, auto&& reduce)
+		{
+			ensure((esize & (esize - 1)) == 0);
+			ensure(esize <= vsize);
+
+			Label body = this->newLabel();
+			Label next = this->newLabel();
+			Label exit = this->newLabel();
+
+			const u32 step = vsize / esize;
+
+			this->xor_(reg_ctr.r32(), reg_ctr.r32()); // Reset counter reg
+			this->sub(reg_cnt, step);
+			this->jb(next); // If count < step, skip main loop body
+			this->align(AlignMode::kCode, 16);
+			this->bind(body);
+			build();
+			this->add(reg_ctr, step);
+			this->sub(reg_cnt, step);
+			this->ja(body);
+			this->bind(next);
+			if (!vmask)
+				reduce();
+			this->add(reg_cnt, step);
+			this->jz(exit);
+
+			if (vmask)
+			{
+				// Build single last iteration (masked)
+				this->bzhi(reg_cnt, x86::Mem(consts[~u128()], 0), reg_cnt);
+				this->kmovq(x86::k7, reg_cnt);
+				vmask = 7;
+				build();
+				vmask = -1;
+				reduce();
+			}
+			else
+			{
+				// Build tail loop (reduced vector width)
+				Label body = this->newLabel();
+				this->align(AlignMode::kCode, 16);
+				this->bind(body);
+				const uint vsz = vsize / step;
+				this->_init(false);
+				vsize = vsz;
+				build();
+				this->_init(true);
+				this->inc(reg_ctr);
+				this->sub(reg_cnt, 1);
+				this->ja(body);
+			}
+
+			this->bind(exit);
+		}
+	};
 
 	// for (; count > 0; ctr++, count--)
 	inline void build_loop(native_asm& c, auto ctr, auto count, auto&& build)
@@ -261,6 +358,27 @@ namespace asmjit
 		c.sub(count, 1);
 		c.ja(body);
 		c.bind(exit);
+	}
+
+	inline void maybe_flush_lbr(native_asm& c, uint count = 2)
+	{
+		// Workaround for bad LBR callstacks which happen in some situations (mainly TSX) - execute additional RETs
+		Label next = c.newLabel();
+		c.lea(x86::rcx, x86::qword_ptr(next));
+
+		for (u32 i = 0; i < count; i++)
+		{
+			c.push(x86::rcx);
+			c.sub(x86::rcx, 16);
+		}
+
+		for (u32 i = 0; i < count; i++)
+		{
+			c.ret();
+			c.align(asmjit::AlignMode::kCode, 16);
+		}
+
+		c.bind(next);
 	}
 #endif
 }
@@ -310,6 +428,12 @@ inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* 
 	else
 	{
 		builder(compiler, args);
+	}
+
+	if constexpr (std::is_invocable_r_v<void, Asm>)
+	{
+		// Finalization
+		compiler();
 	}
 
 	const auto result = rt._add(&code);
