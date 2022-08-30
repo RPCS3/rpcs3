@@ -1696,7 +1696,7 @@ error_code sys_spu_thread_write_spu_mb(ppu_thread& ppu, u32 id, u32 value)
 
 	std::lock_guard lock(group->mutex);
 
-	thread->ch_in_mbox.push(*thread, value);
+	thread->ch_in_mbox.push(value);
 
 	return CELL_OK;
 }

@@ -244,7 +244,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 	case SPU_In_MBox_offs:
 	{
-		ch_in_mbox.push(*this, value);
+		ch_in_mbox.push(value);
 		return true;
 	}
 

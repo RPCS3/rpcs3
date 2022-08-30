@@ -4124,9 +4124,9 @@ s64 spu_thread::get_ch_value(u32 ch)
 				busy_wait();
 			}
 
-			u32 out = 0;
+			const auto [old_count, out] = ch_in_mbox.pop_wait(*this);
 
-			if (const uint old_count = ch_in_mbox.try_pop(out))
+			if (old_count)
 			{
 				if (old_count == 4 /* SPU_IN_MBOX_THRESHOLD */) // TODO: check this
 				{
