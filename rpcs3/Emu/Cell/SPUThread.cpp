@@ -4431,19 +4431,27 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				std::lock_guard lock(group->mutex);
+				std::shared_ptr<lv2_event_queue> queue;
+				{
+					std::lock_guard lock(group->mutex);
 
-				const auto queue = this->spup[spup].get();
+					if (ch_in_mbox.get_count())
+					{
+						// TODO: Check this
+						spu_log.error("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): In_MBox is not empty (%d)", spup, (value & 0x00ffffff), data, ch_in_mbox.get_count());
+						ch_in_mbox.set_values(1, CELL_EBUSY);
+						return true;
+					}
 
-				const auto res = ch_in_mbox.get_count() ? CELL_EBUSY :
-					!queue ? CELL_ENOTCONN :
+					// Reserve a place in the inbound mailbox
+					ch_in_mbox.set_values(1, CELL_OK);
+					queue = this->spup[spup];
+				}
+
+				const auto res = !queue ? CELL_ENOTCONN :
 					queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data);
 
-				if (ch_in_mbox.get_count())
-				{
-					spu_log.warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): In_MBox is not empty (%d)", spup, (value & 0x00ffffff), data, ch_in_mbox.get_count());
-				}
-				else if (res == CELL_ENOTCONN)
+				if (res == CELL_ENOTCONN)
 				{
 					spu_log.warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): error (%s)", spup, (value & 0x00ffffff), data, res);
 				}
@@ -4454,7 +4462,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 					return false;
 				}
 
-				ch_in_mbox.set_values(1, res);
+				atomic_storage<u32>::release(ch_in_mbox.values.raw().value0, res);
 				return true;
 			}
 			else if (code < 128)
@@ -4501,10 +4509,23 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				std::lock_guard lock(group->mutex);
+				{
+					std::lock_guard lock(group->mutex);
+
+					if (ch_in_mbox.get_count())
+					{
+						// TODO: Check this
+						spu_log.error("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)", value, flag, ch_in_mbox.get_count());
+						ch_in_mbox.set_values(1, CELL_EBUSY);
+						return true;
+					}
+
+					// Reserve a place in the inbound mailbox
+					ch_in_mbox.set_values(1, CELL_OK);
+				}
 
 				// Use the syscall to set flag
-				const auto res = ch_in_mbox.get_count() ? CELL_EBUSY : 0u + sys_event_flag_set(*this, data, 1ull << flag);
+				const auto res = 0u + sys_event_flag_set(*this, data, 1ull << flag);
 
 				if (res == CELL_EAGAIN)
 				{
@@ -4512,12 +4533,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 					return false;
 				}
 
-				if (res == CELL_EBUSY)
-				{
-					spu_log.warning("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)", value, flag, ch_in_mbox.get_count());
-				}
-
-				ch_in_mbox.set_values(1, res);
+				atomic_storage<u32>::release(ch_in_mbox.values.raw().value0, res);
 				return true;
 			}
 			else if (code == 192)
