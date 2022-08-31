@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "vm_locking.h"
 #include "vm_ptr.h"
 #include "vm_ref.h"
@@ -200,18 +200,18 @@ namespace vm
 					break;
 				}
 
-				u32 test = 0;
+				u32 test = umax;
 
 				for (u32 i = begin / 4096, max = (begin + size - 1) / 4096; i <= max; i++)
 				{
 					if (!(g_pages[i] & (vm::page_readable)))
 					{
-						test = i * 4096;
+						test = (i == begin / 4096 ? begin : i * 4096);
 						break;
 					}
 				}
 
-				if (test)
+				if (test != umax)
 				{
 					range_lock->release(0);
 
