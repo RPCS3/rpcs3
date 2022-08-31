@@ -206,7 +206,7 @@ namespace vm
 				{
 					if (!(g_pages[i] & (vm::page_readable)))
 					{
-						test = (i == begin / 4096 ? begin : i * 4096);
+						test = i * 4096;
 						break;
 					}
 				}
@@ -217,7 +217,7 @@ namespace vm
 
 					// Try triggering a page fault (write)
 					// TODO: Read memory if needed
-					vm::_ref<atomic_t<u8>>(test) += 0;
+					vm::_ref<atomic_t<u8>>(test / 4096 == begin / 4096 ? begin : test) += 0;
 					continue;
 				}
 			}
