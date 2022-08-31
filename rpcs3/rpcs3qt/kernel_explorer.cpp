@@ -601,20 +601,34 @@ void kernel_explorer::update()
 
 	std::optional<std::scoped_lock<shared_mutex, shared_mutex>> lock_idm_lv2(std::in_place, id_manager::g_mutex, lv2_obj::g_mutex);
 
+	// Postponed as much as possible for time accuracy
+	const u64 current_time = get_guest_system_time();
+
+	auto get_wait_time_str = [&](u64 start_time) -> std::string
+	{
+		if (!start_time)
+		{
+			return {};
+		}
+
+		const f64 wait_time = (current_time - start_time) / 1000000.;
+		return fmt::format(" (%.1fs)", wait_time);
+	};
+
 	idm::select<named_thread<ppu_thread>>([&](u32 id, ppu_thread& ppu)
 	{
 		const auto func = ppu.last_function;
 		const ppu_thread_status status = lv2_obj::ppu_state(&ppu, false, false);
 
-		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”", id, *ppu.ppu_tname.load(), +ppu.prio, ppu.joiner.load(), status, ppu.state.load()
-			, ppu.ack_suspend ? "After" : (ppu.current_function ? "In" : "Last"), func ? func : "")));
+		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”%s", id, *ppu.ppu_tname.load(), +ppu.prio, ppu.joiner.load(), status, ppu.state.load()
+			, ppu.ack_suspend ? "After" : (ppu.current_function ? "In" : "Last"), func ? func : "", get_wait_time_str(ppu.start_time))));
 	}, idm::unlocked);
 
 	lock_idm_lv2.reset();
 
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
-		QTreeWidgetItem* spu_thread_tree = add_solid_node(find_node(root, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type())));
+		QTreeWidgetItem* spu_thread_tree = add_solid_node(find_node(root, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s%s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type(), get_wait_time_str(spu.start_time))));
 
 		if (spu.get_type() == spu_type::threaded)
 		{

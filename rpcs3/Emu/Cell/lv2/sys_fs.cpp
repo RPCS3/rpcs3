@@ -313,7 +313,7 @@ void lv2_file::save(utils::serial& ar)
 	}
 
 	// UNIX allows deletion of files while descriptors are still opened
-	// descriptpors shall keep the data in memory in this case
+	// descriptors shall keep the data in memory in this case
 	const bool in_mem = [&]()
 	{
 		if (mp->flags & lv2_mp_flag::read_only)
@@ -323,10 +323,30 @@ void lv2_file::save(utils::serial& ar)
 
 		fs::file test{real_path};
 
-		if (!test) return true;
+		if (!test)
+		{
+			if (fs::is_file(real_path + ".66600"))
+			{
+				// May be a split-files descriptor, don't even bother
+				return false;
+			}
 
-		return test.stat() != file.stat();
+			return true;
+		}
+
+		fs::stat_t test_s = test.stat();
+		fs::stat_t file_s = file.stat();
+
+		// They don't matter for comparison and only create problems with encrypted files
+		test_s.is_writable = file_s.is_writable;
+		test_s.size = file_s.size;
+		return test_s != file_s;
 	}();
+
+	if (in_mem)
+	{
+		sys_fs.error("Saving \'%s\' LV2 file descriptor in memory! (exists=%s, type=%s, flags=0x%x)", name.data(), fs::is_file(real_path), type, flags);
+	}
 
 	ar(in_mem);
 
@@ -1928,7 +1948,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, vpath);
 
-		if (device.path.empty())
+		if (device.path.empty() || device.vid.empty() || device.pid.empty())
 		{
 			arg->out_code = CELL_ENOTSUP;
 			break;
@@ -2003,7 +2023,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, vpath);
 
-		if (device.path.empty())
+		if (device.path.empty() || device.vid.empty() || device.pid.empty())
 		{
 			arg->out_code = CELL_ENOTSUP;
 			break;

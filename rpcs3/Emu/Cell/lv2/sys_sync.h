@@ -63,7 +63,7 @@ enum ppu_thread_status : u32;
 
 namespace vm
 {
-	void temporary_unlock(cpu_thread& cpu) noexcept;
+	bool temporary_unlock(cpu_thread& cpu) noexcept;
 }
 
 namespace cpu_counter

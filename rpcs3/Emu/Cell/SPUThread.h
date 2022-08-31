@@ -682,6 +682,7 @@ public:
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 	virtual std::string dump_misc() const override;
 	virtual void cpu_task() override final;
+	virtual void cpu_on_stop() override;
 	virtual void cpu_return() override;
 	virtual void cpu_work() override;
 	virtual ~spu_thread() override;
@@ -721,6 +722,7 @@ public:
 
 	// MFC command data
 	spu_mfc_cmd ch_mfc_cmd;
+	u32 mfc_cmd_id = 0;
 
 	// MFC command queue
 	spu_mfc_cmd mfc_queue[16]{};
@@ -751,6 +753,7 @@ public:
 	u64 rtime = 0;
 	alignas(64) std::byte rdata[128]{};
 	u32 raddr = 0;
+	const decltype(rdata)* resrv_mem{};
 
 	// Range Lock pointer
 	atomic_t<u64, 64>* range_lock{};
@@ -814,6 +817,7 @@ public:
 	const std::add_pointer_t<u8> ls; // SPU LS pointer
 	const u32 option; // sys_spu_thread_initialize option
 	const u32 lv2_id; // The actual id that is used by syscalls
+	u32 spurs_addr = 0;
 
 	spu_thread* next_cpu{}; // LV2 thread queues' node link
 
@@ -836,6 +840,11 @@ public:
 	u32 last_faddr = 0;
 	u64 last_fail = 0;
 	u64 last_succ = 0;
+	u64 last_gtsc = 0;
+	u32 last_getllar = umax; // LS address of last GETLLAR (if matches current GETLLAR we can let the thread rest)
+	u32 last_getllar_id = umax;
+	u32 getllar_spin_count = 0;
+	u32 getllar_busy_waiting_switch = umax; // umax means the test needs evaluation, otherwise it's a boolean
 
 	std::vector<mfc_cmd_dump> mfc_history;
 	u64 mfc_dump_idx = 0;
@@ -957,6 +966,9 @@ public:
 
 	~spu_function_logger()
 	{
-		spu.start_time = 0;
+		if (!spu.is_stopped())
+		{
+			spu.start_time = 0;
+		}
 	}
 };

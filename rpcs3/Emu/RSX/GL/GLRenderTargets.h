@@ -359,7 +359,18 @@ struct gl_render_target_traits
 	}
 
 	static
-	gl::buffer* merge_bo_list(const std::vector<gl::buffer*>& /*list*/)
+	void write_render_target_to_memory(
+		gl::command_context&,
+		gl::buffer*,
+		gl::render_target*,
+		u64, u64, u64)
+	{
+		// TODO
+	}
+
+	template <int BlockSize>
+	static
+	gl::buffer* merge_bo_list(gl::command_context&, const std::vector<gl::buffer*>& /*list*/)
 	{
 		// TODO
 		return nullptr;
