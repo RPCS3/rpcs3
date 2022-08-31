@@ -1240,7 +1240,7 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 
 	const auto cpu = get_current_cpu_thread();
 
-	if (rsx::g_access_violation_handler)
+	if (addr < RAW_SPU_BASE_ADDR && rsx::g_access_violation_handler)
 	{
 		bool state_changed = false;
 
