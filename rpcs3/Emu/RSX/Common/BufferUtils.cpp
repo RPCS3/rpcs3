@@ -315,7 +315,7 @@ namespace
 				{
 					// In remaining loop: protect min values
 					c.vec_or(sizeof(T), c.v5, c.v0, c.v4);
-					c.vec_umin(sizeof(T), c.v2, c.v5, c.v4);
+					c.vec_umin(sizeof(T), c.v2, c.v2, c.v5);
 				}
 				else
 				{
