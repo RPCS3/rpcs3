@@ -297,102 +297,10 @@ public:
 	}
 
 	// Waiting for channel pop state availability, actually popping if specified
-	s64 pop_wait(cpu_thread& spu, bool pop = true)
-	{
-		u64 old = data.fetch_op([&](u64& data)
-		{
-			if (data & bit_count) [[likely]]
-			{
-				if (pop)
-				{
-					data = 0;
-					return true;
-				}
-
-				return false;
-			}
-
-			data = bit_wait;
-			jostling_value.release(bit_wait);
-			return true;
-		}).first;
-
-		if (old & bit_count)
-		{
-			return static_cast<u32>(old);
-		}
-
-		while (true)
-		{
-			thread_ctrl::wait_on(data, bit_wait);
-			old = data;
-
-			if (!(old & bit_wait))
-			{
-				return static_cast<u32>(jostling_value);
-			}
-
-			if (spu.is_stopped())
-			{
-				// Abort waiting and test if a value has been received
-				if (u64 v = jostling_value.exchange(0); !(v & bit_wait))
-				{
-					return static_cast<u32>(v);
-				}
-
-				ensure(data.bit_test_reset(off_wait));
-				return -1;
-			}
-		}
-	}
+	s64 pop_wait(cpu_thread& spu, bool pop = true);
 
 	// Waiting for channel push state availability, actually pushing if specified
-	bool push_wait(cpu_thread& spu, u32 value, bool push = true)
-	{
-		u64 state;
-		data.fetch_op([&](u64& data)
-		{
-			if (data & bit_count) [[unlikely]]
-			{
-				jostling_value.release(push ? value : static_cast<u32>(data));
-				data |= bit_wait;
-			}
-			else if (push)
-			{
-				data = bit_count | value;
-			}
-			else
-			{
-				state = data;
-				return false;
-			}
-
-			state = data;
-			return true;
-		});
-
-		while (true)
-		{
-			if (!(state & bit_wait))
-			{
-				if (!push)
-				{
-					data &= ~bit_count;
-				}
-
-				return true;
-			}
-
-			if (spu.is_stopped())
-			{
-				data &= ~bit_wait;
-				return false;
-			}
-
-			thread_ctrl::wait_on(data, state);
-			state = data;
-		}
-	}
+	bool push_wait(cpu_thread& spu, u32 value, bool push = true);
 
 	void set_value(u32 value, bool count = true)
 	{
@@ -504,59 +412,7 @@ struct spu_channel_4_t
 	}
 
 	// Returns [previous count, value] (if aborted 0 count is returned)
-	std::pair<u32, u32> pop_wait(cpu_thread& spu)
-	{
-		u32 out_value = 0;
-		auto old = values.fetch_op([&](sync_var_t& data)
-		{
-			if (data.count != 0)
-			{
-				data.waiting = 0;
-				data.count--;
-				out_value = data.value0;
-
-				data.value0 = data.value1;
-				data.value1 = data.value2;
-				data.value2 = this->value3;
-			}
-			else
-			{
-				data.waiting = 1;
-				jostling_value.release(bit_wait);
-			}
-		});
-
-		if (old.count)
-		{
-			return {old.count, out_value};
-		}
-
-		old.waiting = 1;
-
-		while (true)
-		{
-			thread_ctrl::wait_on(values, old);
-			old = values;
-
-			if (!old.waiting)
-			{
-				// Count of 1 because a value has been inserted and popped in the same step.
-				return {1, static_cast<u32>(jostling_value)};
-			}
-
-			if (spu.is_stopped())
-			{
-				// Abort waiting and test if a value has been received
-				if (u64 v = jostling_value.exchange(0); !(v & bit_wait))
-				{
-					return {1, static_cast<u32>(v)};
-				}
-
-				ensure(atomic_storage<u8>::exchange(values.raw().waiting, 0));
-				return {};
-			}
-		}
-	}
+	std::pair<u32, u32> pop_wait(cpu_thread& spu);
 
 	// returns current queue size without modification
 	uint try_read(u32 (&out)[4]) const
