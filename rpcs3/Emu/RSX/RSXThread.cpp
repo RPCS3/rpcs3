@@ -814,7 +814,7 @@ namespace rsx
 			u64 local_vblank_count = 0;
 
 			// TODO: exit condition
-			while (!is_stopped() && !unsent_gcm_events)
+			while (!is_stopped() && !unsent_gcm_events && thread_ctrl::state() != thread_state::aborting)
 			{
 				// Get current time
 				const u64 current = get_system_time();
