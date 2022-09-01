@@ -4458,7 +4458,9 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				if (res == CELL_EAGAIN)
 				{
+					// Restore mailboxes state
 					ch_out_mbox.set_value(data);
+					ch_in_mbox.try_pop(data);
 					return false;
 				}
 
@@ -4529,7 +4531,9 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				if (res == CELL_EAGAIN)
 				{
+					// Restore mailboxes state
 					ch_out_mbox.set_value(data);
+					ch_in_mbox.try_pop(data);
 					return false;
 				}
 
