@@ -5237,7 +5237,7 @@ error_code sceNpUtilCanonicalizeNpIdForPsp()
 
 error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 {
-	sceNp.warning("sceNpUtilCmpNpId(id1=*0x%x(%s), id2=*0x%x(%s))", id1, id1 ? id1->handle.data : "", id2, id2 ? id2->handle.data : "");
+	sceNp.trace("sceNpUtilCmpNpId(id1=*0x%x(%s), id2=*0x%x(%s))", id1, id1 ? id1->handle.data : "", id2, id2 ? id2->handle.data : "");
 
 	if (!id1 || !id2)
 	{
@@ -5269,7 +5269,7 @@ error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 
 error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2, vm::ptr<s32> order)
 {
-	sceNp.warning("sceNpUtilCmpNpIdInOrder(id1=*0x%x, id2=*0x%x, order=*0x%x)", id1, id2, order);
+	sceNp.trace("sceNpUtilCmpNpIdInOrder(id1=*0x%x, id2=*0x%x, order=*0x%x)", id1, id2, order);
 
 	if (!id1 || !id2)
 	{
