@@ -8,6 +8,7 @@
 #include "util/vm.hpp"
 #include "util/asm.hpp"
 #include "util/v128.hpp"
+#include "util/simd.hpp"
 #include <charconv>
 #include <zlib.h>
 
@@ -357,6 +358,11 @@ asmjit::simd_builder::simd_builder(CodeHolder* ch) noexcept
 	: native_asm(ch)
 {
 	_init(true);
+	consts[~v128()] = this->newLabel();
+}
+
+asmjit::simd_builder::~simd_builder()
+{
 }
 
 void asmjit::simd_builder::_init(bool full)
@@ -402,6 +408,16 @@ void asmjit::simd_builder::_init(bool full)
 	}
 }
 
+void asmjit::simd_builder::operator()() noexcept
+{
+	for (auto&& [x, y] : consts)
+	{
+		this->align(AlignMode::kData, 16);
+		this->bind(y);
+		this->embed(&x, 16);
+	}
+}
+
 void asmjit::simd_builder::vec_cleanup_ret()
 {
 	if (utils::has_avx() && vsize > 16)
@@ -437,23 +453,19 @@ void asmjit::simd_builder::vec_set_const(const Operand& v, const v128& val)
 		return vec_set_all_zeros(v);
 	if (!~val._u)
 		return vec_set_all_ones(v);
-
-	if (uptr(&val) < 0x8000'0000)
-	{
-		// Assume the constant comes from a code or data segment (unsafe)
-		if (x86::Zmm zr(v.id()); zr == v)
-			this->vbroadcasti32x4(zr, x86::oword_ptr(uptr(&val)));
-		else if (x86::Ymm yr(v.id()); yr == v)
-			this->vbroadcasti128(yr, x86::oword_ptr(uptr(&val)));
-		else if (utils::has_avx())
-			this->vmovaps(x86::Xmm(v.id()), x86::oword_ptr(uptr(&val)));
-		else
-			this->movaps(x86::Xmm(v.id()), x86::oword_ptr(uptr(&val)));
-	}
 	else
 	{
-		// TODO
-		fmt::throw_exception("Unexpected constant location");
+		Label co = consts[val];
+		if (!co.isValid())
+			co = consts[val] = this->newLabel();
+		if (x86::Zmm zr(v.id()); zr == v)
+			this->vbroadcasti32x4(zr, x86::oword_ptr(co));
+		else if (x86::Ymm yr(v.id()); yr == v)
+			this->vbroadcasti128(yr, x86::oword_ptr(co));
+		else if (utils::has_avx())
+			this->vmovaps(x86::Xmm(v.id()), x86::oword_ptr(co));
+		else
+			this->movaps(x86::Xmm(v.id()), x86::oword_ptr(co));
 	}
 }
 

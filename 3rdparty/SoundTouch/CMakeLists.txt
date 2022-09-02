@@ -27,7 +27,7 @@ target_compile_definitions(soundtouch PUBLIC
 	SOUNDTOUCH_FLOAT_SAMPLES;
 )
 
-target_compile_options(soundtouch PUBLIC "-w")
+target_compile_options(soundtouch PRIVATE "-w")
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86|X86|amd64|AMD64|em64t|EM64T)")
 	target_compile_definitions(soundtouch PUBLIC

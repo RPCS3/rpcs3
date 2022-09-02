@@ -159,6 +159,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 	{
 		const bool is_spu = m_cpu->id_type() == 2;
 		const u32 address_limits = (is_spu ? 0x3fffc : ~3);
+		const u32 current_pc = m_cpu->get_pc();
 		m_start_addr &= address_limits;
 		u32 pc = m_start_addr;
 
@@ -166,7 +167,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 		{
 			QListWidgetItem* list_item = item(i);
 
-			if (pc == m_cpu->get_pc())
+			if (pc == current_pc)
 			{
 				list_item->setForeground(m_text_color_pc);
 				list_item->setBackground(m_color_pc);
