@@ -193,7 +193,7 @@ namespace
 		{
 			if constexpr (Compare)
 			{
-				if (c.vsize == 32 && c.vmask == 0)
+				if (c.vsize == 16 && c.vmask == 0)
 				{
 					// Fix for AVX2 path
 					c.vextracti128(x86::xmm0, x86::ymm2, 1);
@@ -280,12 +280,9 @@ namespace
 				return;
 			}
 
-			static const v128 all_ones_except_low_element = gv_shuffle_left<sizeof(T)>(v128::from32p(-1));
-
 			c.vec_set_const(c.v1, sizeof(T) == 2 ? s_bswap_u16_mask : s_bswap_u32_mask);
 			c.vec_set_all_ones(c.v2); // vec min
 			c.vec_set_all_zeros(c.v3); // vec max
-			c.vec_set_const(c.v4, all_ones_except_low_element);
 
 			c.build_loop(sizeof(T), x86::eax, args[2].r32(), [&]
 			{
@@ -310,40 +307,19 @@ namespace
 				}
 
 				c.keep_if_not_masked().vec_umax(sizeof(T), c.v3, c.v3, c.v0);
-
-				if (c.vsize < 16)
-				{
-					// In remaining loop: protect min values
-					c.vec_or(sizeof(T), c.v5, c.v0, c.v4);
-					c.vec_umin(sizeof(T), c.v2, c.v2, c.v5);
-				}
-				else
-				{
-					c.keep_if_not_masked().vec_umin(sizeof(T), c.v2, c.v2, c.v0);
-				}
-
+				c.keep_if_not_masked().vec_umin(sizeof(T), c.v2, c.v2, c.v0);
 				c.keep_if_not_masked().vec_store_unaligned(sizeof(T), c.v0, c.ptr_scale_for_vec(sizeof(T), args[1], x86::rax));
 			}, [&]
 			{
-				// Compress to xmm, protect high values
-				if (c.vsize >= 64)
-				{
-					c.vextracti32x8(x86::ymm0, x86::zmm3, 1);
-					c.emit(sizeof(T) == 4 ? x86::Inst::kIdVpmaxud : x86::Inst::kIdVpmaxuw, x86::ymm3, x86::ymm3, x86::ymm0);
-					c.vextracti32x8(x86::ymm0, x86::zmm2, 1);
-					c.emit(sizeof(T) == 4 ? x86::Inst::kIdVpminud : x86::Inst::kIdVpminuw, x86::ymm2, x86::ymm2, x86::ymm0);
-				}
-				if (c.vsize >= 32)
-				{
-					c.vextracti128(x86::xmm0, x86::ymm3, 1);
-					c.emit(sizeof(T) == 4 ? x86::Inst::kIdVpmaxud : x86::Inst::kIdVpmaxuw, x86::xmm3, x86::xmm3, x86::xmm0);
-					c.vextracti128(x86::xmm0, x86::ymm2, 1);
-					c.emit(sizeof(T) == 4 ? x86::Inst::kIdVpminud : x86::Inst::kIdVpminuw, x86::xmm2, x86::xmm2, x86::xmm0);
-				}
+				// Compress horizontally, protect high values
+				c.vec_extract_high(sizeof(T), c.v0, c.v3);
+				c.vec_umax(sizeof(T), c.v3, c.v3, c.v0);
+				c.vec_extract_high(sizeof(T), c.v0, c.v2);
+				c.vec_umin(sizeof(T), c.v2, c.v2, c.v0);
 			});
 
-			c.vec_umax_horizontal_i128(sizeof(T), x86::rdx, c.v3, c.v0);
-			c.vec_umin_horizontal_i128(sizeof(T), x86::rax, c.v2, c.v0);
+			c.vec_extract_gpr(sizeof(T), x86::edx, c.v3);
+			c.vec_extract_gpr(sizeof(T), x86::eax, c.v2);
 			c.shl(x86::rdx, 32);
 			c.or_(x86::rax, x86::rdx);
 			c.vec_cleanup_ret();
