@@ -9,18 +9,18 @@ export CC=clang
 
 if [[ $(uname -m) == 'arm64' ]]; then
   export BREW_PATH=/opt/homebrew/opt
+  export BREW_BIN=/opt/local/bin
+  export BREW_SBIN=/opt/local/sbin
 else
   export BREW_PATH=/usr/local/opt
+  export BREW_BIN=/usr/local/bin
+  export BREW_SBIN=/usr/local/sbin
 fi
 
 export Qt5_DIR="$BREW_PATH/qt@5/lib/cmake/Qt5"
-export PATH="$BREW_PATH/llvm@13/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
+export PATH="$BREW_PATH/llvm@13/bin:$BREW_BIN:$BREW_SBIN:BREW_BIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
 export LDFLAGS="-L$BREW_PATH/llvm@13/lib -Wl,-rpath,$BREW_PATH/llvm@13/lib"
 export CPPFLAGS="-I$BREW_PATH/llvm@13/include -msse -msse2 -mcx16 -no-pie"
-
-if [[ $(uname -m) == 'arm64' ]]; then
-  echo M1
-fi
 
 git submodule update --init --recursive --depth 1
 
