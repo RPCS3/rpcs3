@@ -6,10 +6,21 @@ brew install llvm@13 sdl2 nasm qt@5 ninja cmake glew git p7zip create-dmg ccache
 export MACOSX_DEPLOYMENT_TARGET=11.6
 export CXX=clang++
 export CC=clang
-export Qt5_DIR="/usr/local/opt/qt@5/lib/cmake/Qt5"
-export PATH="/usr/local/opt/llvm@13/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
-export LDFLAGS="-L/usr/local/opt/llvm@13/lib -Wl,-rpath,/usr/local/opt/llvm@13/lib"
-export CPPFLAGS="-I/usr/local/opt/llvm@13/include -msse -msse2 -mcx16 -no-pie"
+
+if [[ $(uname -m) == 'arm64' ]]; then
+  export BREW_PATH=/opt/homebrew/opt
+else
+  export BREW_PATH=/usr/local/opt
+fi
+
+export Qt5_DIR="$BREW_PATH/qt@5/lib/cmake/Qt5"
+export PATH="$BREW_PATH/llvm@13/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
+export LDFLAGS="-L$BREW_PATH/llvm@13/lib -Wl,-rpath,$BREW_PATH/llvm@13/lib"
+export CPPFLAGS="-I$BREW_PATH/llvm@13/include -msse -msse2 -mcx16 -no-pie"
+
+if [[ $(uname -m) == 'arm64' ]]; then
+  echo M1
+fi
 
 git submodule update --init --recursive --depth 1
 
