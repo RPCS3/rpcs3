@@ -124,9 +124,15 @@ macos_task:
   ccache_cache:
     folder: /tmp/ccache_dir
   matrix:
-    - name: Cirrus macOS
+    - name: Cirrus macOS x64
       osx_instance:
         image: monterey-xcode-13.3
+      mac_script:
+        - mkdir artifacts
+        - ".ci/build-mac.sh"
+    - name: Cirrus macOS arm64
+      macos_instance:
+        image: macos-monterey-xcode
       mac_script:
         - mkdir artifacts
         - ".ci/build-mac.sh"
