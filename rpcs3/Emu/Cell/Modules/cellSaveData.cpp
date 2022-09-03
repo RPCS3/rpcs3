@@ -1380,6 +1380,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	bool recreated = false;
 
 	lv2_sleep(ppu, 250);
+	ppu.state += cpu_flag::wait;
 
 	// Check if RPCS3_BLIST section exist in PARAM.SFO
 	// This section contains the list of files in the save ordered as they would be in BSD filesystem
@@ -1523,6 +1524,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
+		ppu.state += cpu_flag::wait;
 
 		if (const s32 res = result->result; res != CELL_SAVEDATA_CBRESULT_OK_NEXT)
 		{
@@ -1689,6 +1691,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
 
 		funcFile(ppu, result, fileGet, fileSet);
+		ppu.state += cpu_flag::wait;
 
 		if (const s32 res = result->result; res != CELL_SAVEDATA_CBRESULT_OK_NEXT)
 		{
@@ -2406,8 +2409,10 @@ error_code cellSaveDataFixedExport(ppu_thread& ppu, vm::cptr<char> dirName, u32 
 	return CELL_OK;
 }
 
-error_code cellSaveDataGetListItem(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB)
+error_code cellSaveDataGetListItem(ppu_thread& ppu, vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellSaveData.warning("cellSaveDataGetListItem(dirName=%s, dir=*0x%x, sysFileParam=*0x%x, bind=*0x%x, sizeKB=*0x%x)", dirName, dir, sysFileParam, bind, sizeKB);
 
 	return savedata_get_list_item(dirName, dir, sysFileParam, bind, sizeKB, 0);
