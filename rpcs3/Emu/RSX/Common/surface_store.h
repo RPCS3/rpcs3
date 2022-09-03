@@ -1045,7 +1045,7 @@ namespace rsx
 		{
 			if (address_is_bound(addr))
 			{
-				rsx_log.error("Cannot invalidate a currently bound render target!");
+				// rsx_log.error("Cannot invalidate a currently bound render target!");
 				return;
 			}
 
