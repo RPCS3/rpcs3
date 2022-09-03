@@ -226,7 +226,7 @@ namespace asmjit
 
 		void operator()() noexcept;
 
-		void _init(bool full);
+		void _init(uint new_vsize = 0);
 		void vec_cleanup_ret();
 		void vec_set_all_zeros(const Operand& v);
 		void vec_set_all_ones(const Operand& v);
@@ -263,8 +263,8 @@ namespace asmjit
 		void vec_umin(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
 		void vec_umax(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
 
-		void vec_umin_horizontal_i128(u32 esize, const x86::Gp& dst, const Operand& src, const Operand& tmp);
-		void vec_umax_horizontal_i128(u32 esize, const x86::Gp& dst, const Operand& src, const Operand& tmp);
+		void vec_extract_high(u32 esize, const Operand& dst, const Operand& src);
+		void vec_extract_gpr(u32 esize, const x86::Gp& dst, const Operand& src);
 
 		simd_builder& keep_if_not_masked()
 		{
@@ -287,7 +287,7 @@ namespace asmjit
 			return *this;
 		}
 
-		void build_loop(u32 esize, auto reg_ctr, auto reg_cnt, auto&& build, auto&& reduce)
+		void build_loop(u32 esize, const x86::Gp& reg_ctr, const x86::Gp& reg_cnt, auto&& build, auto&& reduce)
 		{
 			ensure((esize & (esize - 1)) == 0);
 			ensure(esize <= vsize);
@@ -299,47 +299,76 @@ namespace asmjit
 			const u32 step = vsize / esize;
 
 			this->xor_(reg_ctr.r32(), reg_ctr.r32()); // Reset counter reg
-			this->sub(reg_cnt, step);
+			this->cmp(reg_cnt, step);
 			this->jb(next); // If count < step, skip main loop body
 			this->align(AlignMode::kCode, 16);
 			this->bind(body);
+			this->sub(reg_cnt, step);
 			build();
 			this->add(reg_ctr, step);
-			this->sub(reg_cnt, step);
-			this->ja(body);
+			this->cmp(reg_cnt, step);
+			this->jae(body);
 			this->bind(next);
-			if (!vmask)
-				reduce();
-			this->add(reg_cnt, step);
-			this->jz(exit);
 
 			if (vmask)
 			{
 				// Build single last iteration (masked)
+				this->test(reg_cnt, reg_cnt);
+				this->jz(exit);
 				this->bzhi(reg_cnt, x86::Mem(consts[~u128()], 0), reg_cnt);
 				this->kmovq(x86::k7, reg_cnt);
 				vmask = 7;
 				build();
 				vmask = -1;
-				reduce();
+
+				// Rollout reduction step
+				this->bind(exit);
+				while (true)
+				{
+					vsize /= 2;
+					if (vsize < esize)
+						break;
+					this->_init(vsize);
+					reduce();
+				}
 			}
 			else
 			{
-				// Build tail loop (reduced vector width)
-				Label body = this->newLabel();
-				this->align(AlignMode::kCode, 16);
-				this->bind(body);
-				const uint vsz = vsize / step;
-				this->_init(false);
-				vsize = vsz;
-				build();
-				this->_init(true);
-				this->inc(reg_ctr);
-				this->sub(reg_cnt, 1);
-				this->ja(body);
+				// Build unrolled loop tail (reduced vector width)
+				while (true)
+				{
+					vsize /= 2;
+					if (vsize < esize)
+						break;
+
+					// Shall not clobber flags
+					this->_init(vsize);
+					reduce();
+
+					if (vsize == esize)
+					{
+						// Last "iteration"
+						this->test(reg_cnt, reg_cnt);
+						this->jz(exit);
+						build();
+					}
+					else
+					{
+						const u32 step = vsize / esize;
+						Label next = this->newLabel();
+						this->cmp(reg_cnt, step);
+						this->jb(next);
+						build();
+						this->add(reg_ctr, step);
+						this->sub(reg_cnt, step);
+						this->bind(next);
+					}
+				}
+
+				this->bind(exit);
 			}
 
-			this->bind(exit);
+			this->_init(0);
 		}
 	};
 
