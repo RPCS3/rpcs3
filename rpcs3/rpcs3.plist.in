@@ -28,5 +28,9 @@
 	<true/>
 	<key>LSMinimumSystemVersion</key>
 	<string>11.6</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera will be used for PSEye emulation</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone will be used for Chat/Singstar emulation</string>
 </dict>
 </plist>
