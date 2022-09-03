@@ -13,6 +13,7 @@
 #include "sys_cond.h"
 #include "sys_event.h"
 #include "sys_event_flag.h"
+#include "sys_game.h"
 #include "sys_interrupt.h"
 #include "sys_memory.h"
 #include "sys_mmapper.h"
@@ -451,7 +452,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	null_func,//BIND_SYSC(sys_...),                         //407 (0x197)  PM
 	NULL_FUNC(sys_sm_get_tzpb),                             //408 (0x198)  PM
 	NULL_FUNC(sys_sm_get_fan_policy),                       //409 (0x199)  PM
-	NULL_FUNC(sys_game_board_storage_read),                 //410 (0x19A)
+	BIND_SYSC(_sys_game_board_storage_read),                //410 (0x19A)
 	NULL_FUNC(sys_game_board_storage_write),                //411 (0x19B)
 	NULL_FUNC(sys_game_get_rtc_status),                     //412 (0x19C)
 	null_func,//BIND_SYSC(sys_...),                         //413 (0x19D)  ROOT

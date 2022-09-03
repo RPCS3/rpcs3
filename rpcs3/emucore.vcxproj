@@ -62,6 +62,7 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Emu\cache_utils.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_game.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMusicSelectionContext.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp" />
@@ -341,7 +342,7 @@
     <ClCompile Include="Emu\Cell\Modules\sceNpUtil.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sceNpPlus.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sysPrxForUser.cpp" />
-    <ClCompile Include="Emu\Cell\Modules\sys_game.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_game_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_heap.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_io_.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_libc.cpp" />
@@ -472,6 +473,7 @@
     </ClInclude>
     <ClInclude Include="Emu\cache_utils.hpp" />
     <ClInclude Include="Emu\Cell\lv2\sys_crypto_engine.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_game.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCrossController.h" />
     <ClInclude Include="Emu\Cell\Modules\cellMusicDecode.h" />
     <ClInclude Include="Emu\Cell\Modules\cellRec.h" />
