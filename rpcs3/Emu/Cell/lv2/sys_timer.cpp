@@ -447,6 +447,18 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 
 	if (sleep_time)
 	{
+		const s64 add_time = g_cfg.core.usleep_addend;
+
+		// Over/underflow checks
+		if (add_time >= 0)
+		{
+			sleep_time = utils::add_saturate<u64>(sleep_time, add_time);
+		}
+		else
+		{
+			sleep_time = std::max<u64>(1, utils::sub_saturate<u64>(sleep_time, -add_time));
+		}
+
 		lv2_obj::sleep(ppu, g_cfg.core.sleep_timers_accuracy < sleep_timers_accuracy_level::_usleep ? sleep_time : 0);
 
 		if (!lv2_obj::wait_timeout(sleep_time, &ppu, true, true))
