@@ -11,7 +11,7 @@ if [[ $(uname -m) == 'arm64' ]]; then
   export BREW_PATH=/opt/homebrew/opt
   export BREW_BIN=/opt/homebrew/bin
   export BREW_SBIN=/opt/homebrew/sbin
-  export CMAKE_EXTRA_OPTS='-DPNG_ARM_NEON=on -DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM" -DCMAKE_OSX_ARCHITECTURES="arm64"'
+  export CMAKE_EXTRA_OPTS='-DPNG_ARM_NEON=on -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD="X86" -DLLVM_TARGETS_TO_BUILD="AArch64;ARM" -DCMAKE_OSX_ARCHITECTURES="arm64"'
 else
   export BREW_PATH=/usr/local/opt
   export BREW_BIN=/usr/local/bin
