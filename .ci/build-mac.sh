@@ -11,10 +11,12 @@ if [[ $(uname -m) == 'arm64' ]]; then
   export BREW_PATH=/opt/homebrew/opt
   export BREW_BIN=/opt/homebrew/bin
   export BREW_SBIN=/opt/homebrew/sbin
+  export CMAKE_EXTRA_OPTS='-DPNG_ARM_NEON=on -DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM" -DCMAKE_OSX_ARCHITECTURES="arm64"'
 else
   export BREW_PATH=/usr/local/opt
   export BREW_BIN=/usr/local/bin
   export BREW_SBIN=/usr/local/sbin
+  export CMAKE_EXTRA_OPTS='-DLLVM_TARGETS_TO_BUILD="X86"'
 fi
 
 export Qt5_DIR="$BREW_PATH/qt@5/lib/cmake/Qt5"
@@ -31,11 +33,12 @@ mkdir build && cd build || exit 1
 
 cmake .. \
     -DUSE_DISCORD_RPC=OFF -DUSE_VULKAN=ON -DUSE_ALSA=OFF -DUSE_PULSE=OFF -DUSE_AUDIOUNIT=ON \
-    -DLLVM_CCACHE_BUILD=OFF -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF \
+    -DLLVM_CCACHE_BUILD=OFF -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF \
     -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF \
     -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_PERF=OFF -DLLVM_ENABLE_Z3_SOLVER=OFF \
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
     -DUSE_SYSTEM_MVK=OFF \
+    $CMAKE_EXTRA_OPTS \
     -G Ninja
 
 ninja; build_status=$?;
