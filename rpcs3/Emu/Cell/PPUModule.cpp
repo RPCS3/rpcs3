@@ -38,6 +38,8 @@ extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 // HLE function name cache
 std::vector<std::string> g_ppu_function_names;
 
+extern atomic_t<u32> liblv2_begin = 0, liblv2_end = 0;
+
 extern u32 ppu_generate_id(std::string_view name)
 {
 	// Symbol name suffix
@@ -1367,6 +1369,12 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	// Format patch name
 	std::string hash = fmt::format("PRX-%s", fmt::base57(prx->sha1));
 
+	if (prx->path.ends_with("sys/external/liblv2.sprx"sv))
+	{
+		liblv2_begin = prx->segs[0].addr;
+		liblv2_end = prx->segs[0].addr + prx->segs[0].size;
+	}
+
 	std::basic_string<u32> applied;
 
 	for (usz i = 0; i < prx->segs.size(); i++)
@@ -1440,6 +1448,12 @@ void ppu_unload_prx(const lv2_prx& prx)
 	//		pinfo->export_addr = 0;
 	//	}
 	//}
+
+	if (prx.path.ends_with("sys/external/liblv2.sprx"sv))
+	{
+		liblv2_begin = 0;
+		liblv2_end = 0;
+	}
 
 	// Format patch name
 	std::string hash = fmt::format("PRX-%s", fmt::base57(prx.sha1));
@@ -1934,6 +1948,9 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 
 	void init_fxo_for_exec(utils::serial* ar, bool full);
 	init_fxo_for_exec(ar, false);
+
+	liblv2_begin = 0;
+	liblv2_end = 0;
 
 	if (!load_libs.empty())
 	{
