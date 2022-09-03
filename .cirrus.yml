@@ -153,3 +153,4 @@ macos_task:
       source './.ci/export-cirrus-vars.sh'
       .ci/github-upload.sh
     fi;
+
