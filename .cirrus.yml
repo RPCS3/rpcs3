@@ -132,7 +132,7 @@ macos_task:
         - ".ci/build-mac.sh"
     - name: Cirrus macOS arm64
       macos_instance:
-        image: macos-monterey-xcode
+        image: ghcr.io/cirruslabs/macos-monterey-xcode:latest
       mac_script:
         - mkdir artifacts
         - ".ci/build-mac.sh"
