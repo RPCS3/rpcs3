@@ -9,8 +9,8 @@ export CC=clang
 
 if [[ $(uname -m) == 'arm64' ]]; then
   export BREW_PATH=/opt/homebrew/opt
-  export BREW_BIN=/opt/local/bin
-  export BREW_SBIN=/opt/local/sbin
+  export BREW_BIN=/opt/homebrew/bin
+  export BREW_SBIN=/opt/homebrew/sbin
 else
   export BREW_PATH=/usr/local/opt
   export BREW_BIN=/usr/local/bin
