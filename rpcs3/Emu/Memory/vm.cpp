@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "vm_locking.h"
 #include "vm_ptr.h"
 #include "vm_ref.h"
@@ -200,7 +200,7 @@ namespace vm
 					break;
 				}
 
-				u32 test = 0;
+				u32 test = umax;
 
 				for (u32 i = begin / 4096, max = (begin + size - 1) / 4096; i <= max; i++)
 				{
@@ -211,13 +211,13 @@ namespace vm
 					}
 				}
 
-				if (test)
+				if (test != umax)
 				{
 					range_lock->release(0);
 
 					// Try triggering a page fault (write)
 					// TODO: Read memory if needed
-					vm::_ref<atomic_t<u8>>(test) += 0;
+					vm::_ref<atomic_t<u8>>(test / 4096 == begin / 4096 ? begin : test) += 0;
 					continue;
 				}
 			}

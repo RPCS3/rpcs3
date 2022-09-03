@@ -60,7 +60,7 @@
 #include <objbase.h>           // Windows COM declarations
 #include <sal.h>               // Markers for documenting API semantics
 #include <mmreg.h>             // Basic data types and constants for audio work
-#include <audiosessiontypes.h> // For AUDIO_STREAM_CATEGORY
+#include <AudioSessionTypes.h> // For AUDIO_STREAM_CATEGORY
 
 // The Windows 7 version of audiosessiontypes.h does not define AUDIO_STREAM_CATEGORY, so if we are targeting
 // Windows 7 we might have to define it here, depending on which SDK is used.
@@ -1273,3 +1273,4 @@ XAUDIO2_STDAPI XAudio2Create(_Outptr_ IXAudio2** ppXAudio2, UINT32 Flags X2DEFAU
 #endif // #ifndef GUID_DEFS_ONLY
 
 #endif // #ifndef __XAUDIO2_INCLUDED__
+

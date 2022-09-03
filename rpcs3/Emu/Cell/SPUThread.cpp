@@ -690,14 +690,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 		c.vzeroupper();
 	}
 
-#ifdef __linux__
-	// Hack for perf profiling (TODO)
-	Label ret2 = c.newLabel();
-	c.lea(x86::rdx, x86::qword_ptr(ret2));
-	c.push(x86::rdx);
-	c.push(x86::rdx);
-	c.bind(ret2);
-#endif
+	maybe_flush_lbr(c);
 	c.ret();
 #else
 	c.brk(Imm(0x42));
@@ -821,14 +814,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 		c.vzeroupper();
 	}
 
-#ifdef __linux__
-	// Hack for perf profiling (TODO)
-	Label ret2 = c.newLabel();
-	c.lea(x86::rdx, x86::qword_ptr(ret2));
-	c.push(x86::rdx);
-	c.push(x86::rdx);
-	c.bind(ret2);
-#endif
+	maybe_flush_lbr(c);
 	c.ret();
 #else
 	c.brk(Imm(0x42));
@@ -961,14 +947,7 @@ const auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, cp
 	c.pop(x86::rbx);
 	c.pop(x86::rbp);
 
-#ifdef __linux__
-	// Hack for perf profiling (TODO)
-	Label ret2 = c.newLabel();
-	c.lea(x86::rdx, x86::qword_ptr(ret2));
-	c.push(x86::rdx);
-	c.push(x86::rdx);
-	c.bind(ret2);
-#endif
+	maybe_flush_lbr(c);
 	c.ret();
 #else
 	c.brk(Imm(0x42));
@@ -1282,6 +1261,31 @@ std::string spu_thread::dump_misc() const
 	}
 
 	return ret;
+}
+
+void spu_thread::cpu_on_stop()
+{
+	if (current_func)
+	{
+		if (start_time)
+		{
+			ppu_log.warning("'%s' aborted (%fs)", current_func, (get_guest_system_time() - start_time) / 1000000.);
+		}
+		else
+		{
+			ppu_log.warning("'%s' aborted", current_func);
+		}
+
+		current_func = {};
+	}
+
+	// TODO: More conditions
+	if (Emu.IsStopped() && g_cfg.core.spu_debug)
+	{
+		std::string ret;
+		dump_all(ret);
+		spu_log.notice("thread context: %s", ret);
+	}
 }
 
 void spu_thread::cpu_init()
@@ -2059,7 +2063,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		src = zero_buf;
 	}
 
-	rsx::reservation_lock<false, 1> rsx_lock(eal, args.size, !is_get && g_cfg.core.rsx_fifo_accuracy && !g_cfg.core.spu_accurate_dma);
+	rsx::reservation_lock<false, 1> rsx_lock(eal, args.size, !is_get && (g_cfg.video.strict_rendering_mode || (g_cfg.core.rsx_fifo_accuracy && !g_cfg.core.spu_accurate_dma && eal < rsx::constants::local_mem_base)));
 
 	if ((!g_use_rtm && !is_get) || g_cfg.core.spu_accurate_dma)  [[unlikely]]
 	{
@@ -2821,8 +2825,13 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		if (cmp_rdata(to_write, rdata))
 		{
 			// Writeback of unchanged data. Only check memory change
-			raddr = 0; // Disable notification
-			return cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);
+			if (cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128))
+			{
+				raddr = 0; // Disable notification
+				return true;
+			}
+
+			return false;
 		}
 
 		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
@@ -4243,6 +4252,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 		resrv_mem = vm::get_super_ptr<decltype(rdata)>(raddr);
 		std::shared_ptr<utils::shm> rdata_shm;
 
+		const u32 old_raddr = raddr;
+
 		// Does not need to safe-access reservation if LR is the only event masked
 		// Because it's either an access violation or a livelock if an invalid memory is passed
 		if (raddr && mask1 > SPU_EVENT_LR)
@@ -4288,14 +4299,6 @@ s64 spu_thread::get_ch_value(u32 ch)
 				return -1;
 			}
 
-			if (is_paused(old))
-			{
-				// Ensure spu_thread::rdata's stagnancy while the thread is paused for debugging purposes
-				check_state();
-				state += cpu_flag::wait;
-				continue;
-			}
-
 			// Optimized check
 			if (raddr && (!vm::check_addr(raddr) || rtime != vm::reservation_acquire(raddr) || !cmp_rdata(rdata, *resrv_mem)))
 			{
@@ -4319,11 +4322,6 @@ s64 spu_thread::get_ch_value(u32 ch)
 						if (is_stopped(old))
 						{
 							return false;
-						}
-
-						if (is_paused(old))
-						{
-							return true;
 						}
 
 						if (!vm::check_addr(_this->raddr) || !cmp_rdata(_this->rdata, *_this->resrv_mem))
@@ -4350,6 +4348,18 @@ s64 spu_thread::get_ch_value(u32 ch)
 		}
 
 		wakeup_delay();
+
+		if (is_paused(state - cpu_flag::suspend))
+		{
+			if (!raddr && old_raddr)
+			{
+				// Restore reservation address temporarily for debugging use
+				raddr = old_raddr;
+				check_state();
+				raddr = 0;
+			}
+		}
+
 		check_state();
 		return events.events & mask1;
 	}
@@ -4421,30 +4431,40 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				std::lock_guard lock(group->mutex);
+				std::shared_ptr<lv2_event_queue> queue;
+				{
+					std::lock_guard lock(group->mutex);
 
-				const auto queue = this->spup[spup].get();
+					if (ch_in_mbox.get_count())
+					{
+						// TODO: Check this
+						spu_log.error("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): In_MBox is not empty (%d)", spup, (value & 0x00ffffff), data, ch_in_mbox.get_count());
+						ch_in_mbox.set_values(1, CELL_EBUSY);
+						return true;
+					}
 
-				const auto res = ch_in_mbox.get_count() ? CELL_EBUSY :
-					!queue ? CELL_ENOTCONN :
+					// Reserve a place in the inbound mailbox
+					ch_in_mbox.set_values(1, CELL_OK);
+					queue = this->spup[spup];
+				}
+
+				const auto res = !queue ? CELL_ENOTCONN :
 					queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data);
 
-				if (ch_in_mbox.get_count())
-				{
-					spu_log.warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): In_MBox is not empty (%d)", spup, (value & 0x00ffffff), data, ch_in_mbox.get_count());
-				}
-				else if (res == CELL_ENOTCONN)
+				if (res == CELL_ENOTCONN)
 				{
 					spu_log.warning("sys_spu_thread_send_event(spup=%d, data0=0x%x, data1=0x%x): error (%s)", spup, (value & 0x00ffffff), data, res);
 				}
 
 				if (res == CELL_EAGAIN)
 				{
+					// Restore mailboxes state
 					ch_out_mbox.set_value(data);
+					ch_in_mbox.try_pop(data);
 					return false;
 				}
 
-				ch_in_mbox.set_values(1, res);
+				atomic_storage<u32>::release(ch_in_mbox.values.raw().value0, res);
 				return true;
 			}
 			else if (code < 128)
@@ -4491,23 +4511,33 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_event_flag_set_bit(id=%d, value=0x%x (flag=%d))", data, value, flag);
 
-				std::lock_guard lock(group->mutex);
+				{
+					std::lock_guard lock(group->mutex);
+
+					if (ch_in_mbox.get_count())
+					{
+						// TODO: Check this
+						spu_log.error("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)", value, flag, ch_in_mbox.get_count());
+						ch_in_mbox.set_values(1, CELL_EBUSY);
+						return true;
+					}
+
+					// Reserve a place in the inbound mailbox
+					ch_in_mbox.set_values(1, CELL_OK);
+				}
 
 				// Use the syscall to set flag
-				const auto res = ch_in_mbox.get_count() ? CELL_EBUSY : 0u + sys_event_flag_set(*this, data, 1ull << flag);
+				const auto res = 0u + sys_event_flag_set(*this, data, 1ull << flag);
 
 				if (res == CELL_EAGAIN)
 				{
+					// Restore mailboxes state
 					ch_out_mbox.set_value(data);
+					ch_in_mbox.try_pop(data);
 					return false;
 				}
 
-				if (res == CELL_EBUSY)
-				{
-					spu_log.warning("sys_event_flag_set_bit(value=0x%x (flag=%d)): In_MBox is not empty (%d)", value, flag, ch_in_mbox.get_count());
-				}
-
-				ch_in_mbox.set_values(1, res);
+				atomic_storage<u32>::release(ch_in_mbox.values.raw().value0, res);
 				return true;
 			}
 			else if (code == 192)

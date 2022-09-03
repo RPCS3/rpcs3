@@ -7,6 +7,8 @@
 #include "util/sysinfo.hpp"
 #include "Utilities/JIT.h"
 #include "util/asm.hpp"
+#include "util/v128.hpp"
+#include "util/simd.hpp"
 
 #if defined(ARCH_X64)
 #include "emmintrin.h"
@@ -87,13 +89,13 @@ constexpr bool s_use_avx2 = false;
 constexpr bool s_use_avx3 = false;
 #endif
 
-const __m128i s_bswap_u32_mask = _mm_set_epi8(
+const v128 s_bswap_u32_mask = _mm_set_epi8(
 	0xC, 0xD, 0xE, 0xF,
 	0x8, 0x9, 0xA, 0xB,
 	0x4, 0x5, 0x6, 0x7,
 	0x0, 0x1, 0x2, 0x3);
 
-const __m128i s_bswap_u16_mask = _mm_set_epi8(
+const v128 s_bswap_u16_mask = _mm_set_epi8(
 	0xE, 0xF, 0xC, 0xD,
 	0xA, 0xB, 0x8, 0x9,
 	0x6, 0x7, 0x4, 0x5,
@@ -137,129 +139,79 @@ namespace
 	}
 
 #if defined(ARCH_X64)
-	template <bool Compare, uint Size, bool Avx = true>
-	void build_copy_data_swap_u32_avx3(native_asm& c, native_args& args)
+	template <bool Compare>
+	void build_copy_data_swap_u32(asmjit::simd_builder& c, native_args& args)
 	{
 		using namespace asmjit;
 
-		native_vec_t<Size> vdata{0};
-		native_vec_t<Size> vmask{1};
-		native_vec_t<Size> vcmp{2};
-
 		// Load and broadcast shuffle mask
-		if constexpr (!Avx)
-			c.movaps(vmask, x86::oword_ptr(uptr(&s_bswap_u32_mask)));
-		if constexpr (Size == 16 && Avx)
-			c.vmovaps(vmask, x86::oword_ptr(uptr(&s_bswap_u32_mask)));
-		if constexpr (Size >= 32)
-			c.vbroadcasti32x4(vmask, x86::oword_ptr(uptr(&s_bswap_u32_mask)));
-
-		// Clear vcmp (bitwise inequality accumulator)
-		if constexpr (Compare && Avx)
-			c.vxorps(x86::xmm2, x86::xmm2, x86::xmm2);
-		if constexpr (Compare && !Avx)
-			c.xorps(x86::xmm2, x86::xmm2);
-		c.mov(args[3].r32(), -1);
-		c.xor_(x86::eax, x86::eax);
-
-		build_incomplete_loop(c, x86::eax, args[2].r32(), Size / 4, [&]
+		if (utils::has_ssse3())
 		{
-			if constexpr (Avx)
+			c.vec_set_const(c.v1, s_bswap_u32_mask);
+		}
+
+		// Clear v2 (bitwise inequality accumulator)
+		if constexpr (Compare)
+		{
+			c.vec_set_all_zeros(c.v2);
+		}
+
+		c.build_loop(sizeof(u32), x86::eax, args[2].r32(), [&]
+		{
+			c.zero_if_not_masked().vec_load_unaligned(sizeof(u32), c.v0, c.ptr_scale_for_vec(sizeof(u32), args[1], x86::rax));
+
+			if (utils::has_ssse3())
 			{
-				c.vmovdqu32(vdata, x86::ptr(args[1], x86::rax, 2, 0, Size));
-				c.vpshufb(vdata, vdata, vmask);
-				if constexpr (Compare)
-					c.vpternlogd(vcmp, vdata, x86::ptr(args[0], x86::rax, 2, 0, Size), 0xf6); // orAxorBC
-				c.vmovdqu32(x86::ptr(args[0], x86::rax, 2, 0, Size), vdata);
+				c.vec_shuffle_xi8(c.v0, c.v0, c.v1);
 			}
 			else
 			{
-				c.movdqu(vdata, x86::oword_ptr(args[1], x86::rax, 2, 0));
-				c.pshufb(vdata, vmask);
-				if constexpr (Compare)
+				c.emit(x86::Inst::kIdMovdqa, c.v1, c.v0);
+				c.emit(x86::Inst::kIdPsrlw, c.v0, 8);
+				c.emit(x86::Inst::kIdPsllw, c.v1, 8);
+				c.emit(x86::Inst::kIdPor, c.v0, c.v1);
+				c.emit(x86::Inst::kIdPshuflw, c.v0, c.v0, 0b01001110);
+				c.emit(x86::Inst::kIdPshufhw, c.v0, c.v0, 0b01001110);
+			}
+
+			if constexpr (Compare)
+			{
+				if (utils::has_avx512())
 				{
-					c.movups(x86::xmm3, x86::oword_ptr(args[0], x86::rax, 2, 0));
-					c.xorps(x86::xmm3, vdata);
-					c.orps(vcmp, x86::xmm3);
+					c.keep_if_not_masked().emit(x86::Inst::kIdVpternlogd, c.v2, c.v0, c.ptr_scale_for_vec(sizeof(u32), args[0], x86::rax), 0xf6); // orAxorBC
 				}
-				c.movups(x86::oword_ptr(args[0], x86::rax, 2, 0), vdata);
+				else
+				{
+					c.zero_if_not_masked().vec_load_unaligned(sizeof(u32), c.v3, c.ptr_scale_for_vec(sizeof(u32), args[0], x86::rax));
+					c.vec_xor(sizeof(u32), c.v3, c.v3, c.v0);
+					c.vec_or(sizeof(u32), c.v2, c.v2, c.v3);
+				}
+			}
+
+			c.keep_if_not_masked().vec_store_unaligned(sizeof(u32), c.v0, c.ptr_scale_for_vec(sizeof(u32), args[0], x86::rax));
+		}, [&]
+		{
+			if constexpr (Compare)
+			{
+				if (c.vsize == 32 && c.vmask == 0)
+				{
+					// Fix for AVX2 path
+					c.vextracti128(x86::xmm0, x86::ymm2, 1);
+					c.vpor(x86::xmm2, x86::xmm2, x86::xmm0);
+				}
 			}
 		});
 
-		if constexpr (Avx)
+		if constexpr (Compare)
 		{
-			c.bzhi(args[3].r32(), args[3].r32(), args[2].r32());
-			c.kmovw(x86::k1, args[3].r32());
-			c.k(x86::k1).z().vmovdqu32(vdata, x86::ptr(args[1], x86::rax, 2, 0, Size));
-			c.vpshufb(vdata, vdata, vmask);
-			if constexpr (Compare)
-				c.k(x86::k1).vpternlogd(vcmp, vdata, x86::ptr(args[0], x86::rax, 2, 0, Size), 0xf6);
-			c.k(x86::k1).vmovdqu32(x86::ptr(args[0], x86::rax, 2, 0, Size), vdata);
-		}
-		else
-		{
-			build_loop(c, x86::eax, args[2].r32(), [&]
-			{
-				c.movd(vdata, x86::dword_ptr(args[1], x86::rax, 2, 0));
-				c.pshufb(vdata, vmask);
-				if constexpr (Compare)
-				{
-					c.movd(x86::xmm3, x86::dword_ptr(args[0], x86::rax, 2, 0));
-					c.pxor(x86::xmm3, vdata);
-					c.por(vcmp, x86::xmm3);
-				}
-				c.movd(x86::dword_ptr(args[0], x86::rax, 2, 0), vdata);
-			});
-		}
-
-		if (Compare)
-		{
-			if constexpr (!Avx)
-			{
-				c.ptest(vcmp, vcmp);
-			}
-			else if constexpr (Size != 64)
-			{
-				c.vptest(vcmp, vcmp);
-			}
+			if (c.vsize == 32 && c.vmask == 0)
+				c.vec_clobbering_test(16, x86::xmm2, x86::xmm2);
 			else
-			{
-				c.vptestmd(x86::k1, vcmp, vcmp);
-				c.ktestw(x86::k1, x86::k1);
-			}
-
+				c.vec_clobbering_test(c.vsize, c.v2, c.v2);
 			c.setnz(x86::al);
 		}
 
-		if constexpr (Avx)
-			c.vzeroupper();
-		c.ret();
-	}
-
-	template <bool Compare>
-	void build_copy_data_swap_u32(native_asm& c, native_args& args)
-	{
-		using namespace asmjit;
-
-		if (utils::has_avx512())
-		{
-			if (utils::has_avx512_icl())
-			{
-				build_copy_data_swap_u32_avx3<Compare, 64>(c, args);
-				return;
-			}
-
-			build_copy_data_swap_u32_avx3<Compare, 32>(c, args);
-			return;
-		}
-
-		if (utils::has_sse41())
-		{
-			build_copy_data_swap_u32_avx3<Compare, 16, false>(c, args);
-			return;
-		}
-
-		c.jmp(&copy_data_swap_u32_naive<Compare>);
+		c.vec_cleanup_ret();
 	}
 #elif defined(ARCH_ARM64)
 	template <bool Compare>
@@ -271,8 +223,8 @@ namespace
 }
 
 #if !defined(__APPLE__) || defined(ARCH_X64)
-DECLARE(copy_data_swap_u32) = build_function_asm<void(*)(u32*, const u32*, u32)>("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
-DECLARE(copy_data_swap_u32_cmp) = build_function_asm<bool(*)(u32*, const u32*, u32)>("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
+DECLARE(copy_data_swap_u32) = build_function_asm<void(*)(u32*, const u32*, u32), asmjit::simd_builder>("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
+DECLARE(copy_data_swap_u32_cmp) = build_function_asm<bool(*)(u32*, const u32*, u32), asmjit::simd_builder>("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
 #else
 DECLARE(copy_data_swap_u32) = copy_data_swap_u32_naive<false>;
 DECLARE(copy_data_swap_u32_cmp) = copy_data_swap_u32_naive<true>;
@@ -300,228 +252,123 @@ namespace
 
 	struct untouched_impl
 	{
-#if defined(ARCH_X64)
-		AVX3_FUNC
-		static
-		std::tuple<u16, u16, u32> upload_u16_swapped_avx3(const void *src, void *dst, u32 count)
+		template <typename T>
+		static u64 upload_untouched_naive(const be_t<T>* src, T* dst, u32 count)
 		{
-			const __m512i s_bswap_u16_mask512 = _mm512_broadcast_i64x2(s_bswap_u16_mask);
+			u32 written = 0;
+			T max_index = 0;
+			T min_index = -1;
 
-			const __m512i s_remainder_mask = _mm512_set_epi16(
-			0x20, 0x1F, 0x1E, 0x1D,
-			0x1C, 0x1B, 0x1A, 0x19,
-			0x18, 0x17, 0x16, 0x15,
-			0x14, 0x13, 0x12, 0x11,
-			0x10, 0xF, 0xE, 0xD,
-			0xC, 0xB, 0xA, 0x9,
-			0x8, 0x7, 0x6, 0x5,
-			0x4, 0x3, 0x2, 0x1);
-
-			auto src_stream = static_cast<const __m512*>(src);
-			auto dst_stream = static_cast<__m512*>(dst);
-
-			__m512i min = _mm512_set1_epi16(-1);
-			__m512i max = _mm512_set1_epi16(0);
-
-			const auto iterations = count / 32;
-			for (unsigned n = 0; n < iterations; ++n)
-			{
-				const __m512i raw = _mm512_loadu_si512(src_stream++);
-				const __m512i value = _mm512_shuffle_epi8(raw, s_bswap_u16_mask512);
-				max = _mm512_max_epu16(max, value);
-				min = _mm512_min_epu16(min, value);
-				_mm512_store_si512(dst_stream++, value);
-			}
-
-			if ((iterations * 32) < count )
-			{
-				const u16 remainder = (count - (iterations * 32));
-				const __m512i remBroadcast = _mm512_set1_epi16(remainder);
-				const __mmask32 mask = _mm512_cmpge_epi16_mask(remBroadcast, s_remainder_mask);
-				const __m512i raw = _mm512_maskz_loadu_epi16(mask, src_stream++);
-				const __m512i value = _mm512_shuffle_epi8(raw, s_bswap_u16_mask512);
-				max = _mm512_mask_max_epu16(max, mask, max, value);
-				min = _mm512_mask_min_epu16(min, mask, min, value);
-				_mm512_mask_storeu_epi16(dst_stream++, mask, value);
-			}
-
-			__m256i tmp256 = _mm512_extracti64x4_epi64(min, 1);
-			__m256i min2 = _mm512_castsi512_si256(min);
-			min2 = _mm256_min_epu16(min2, tmp256);
-			__m128i tmp = _mm256_extracti128_si256(min2, 1);
-			__m128i min3 = _mm256_castsi256_si128(min2);
-			min3 = _mm_min_epu16(min3, tmp);
-
-			tmp256 = _mm512_extracti64x4_epi64(max, 1);
-			__m256i max2 = _mm512_castsi512_si256(max);
-			max2 = _mm256_max_epu16(max2, tmp256);
-			tmp = _mm256_extracti128_si256(max2, 1);
-			__m128i max3 = _mm256_castsi256_si128(max2);
-			max3 = _mm_max_epu16(max3, tmp);
-
-			const u16 min_index = sse41_hmin_epu16(min3);
-			const u16 max_index = sse41_hmax_epu16(max3);
-
-			return std::make_tuple(min_index, max_index, count);
-		}
-
-		AVX2_FUNC
-		static
-		std::tuple<u16, u16, u32> upload_u16_swapped_avx2(const void *src, void *dst, u32 count)
-		{
-			const __m256i shuffle_mask = _mm256_set_m128i(s_bswap_u16_mask, s_bswap_u16_mask);
-
-			auto src_stream = static_cast<const __m256i*>(src);
-			auto dst_stream = static_cast<__m256i*>(dst);
-
-			__m256i min = _mm256_set1_epi16(-1);
-			__m256i max = _mm256_set1_epi16(0);
-
-			const auto iterations = count / 16;
-			for (unsigned n = 0; n < iterations; ++n)
-			{
-				const __m256i raw = _mm256_loadu_si256(src_stream++);
-				const __m256i value = _mm256_shuffle_epi8(raw, shuffle_mask);
-				max = _mm256_max_epu16(max, value);
-				min = _mm256_min_epu16(min, value);
-				_mm256_store_si256(dst_stream++, value);
-			}
-
-			__m128i tmp = _mm256_extracti128_si256(min, 1);
-			__m128i min2 = _mm256_castsi256_si128(min);
-			min2 = _mm_min_epu16(min2, tmp);
-
-			tmp = _mm256_extracti128_si256(max, 1);
-			__m128i max2 = _mm256_castsi256_si128(max);
-			max2 = _mm_max_epu16(max2, tmp);
-
-			const u16 min_index = sse41_hmin_epu16(min2);
-			const u16 max_index = sse41_hmax_epu16(max2);
-
-			return std::make_tuple(min_index, max_index, count);
-		}
-#endif
-
-		SSE4_1_FUNC
-		static
-		std::tuple<u16, u16, u32> upload_u16_swapped_sse4_1(const void *src, void *dst, u32 count)
-		{
-			auto src_stream = static_cast<const __m128i*>(src);
-			auto dst_stream = static_cast<__m128i*>(dst);
-
-			__m128i min = _mm_set1_epi16(-1);
-			__m128i max = _mm_set1_epi16(0);
-
-			const auto iterations = count / 8;
-			for (unsigned n = 0; n < iterations; ++n)
-			{
-				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = _mm_shuffle_epi8(raw, s_bswap_u16_mask);
-				max = _mm_max_epu16(max, value);
-				min = _mm_min_epu16(min, value);
-				_mm_store_si128(dst_stream++, value);
-			}
-
-			const u16 min_index = sse41_hmin_epu16(min);
-			const u16 max_index = sse41_hmax_epu16(max);
-
-			return std::make_tuple(min_index, max_index, count);
-		}
-
-		SSE4_1_FUNC
-		static
-		std::tuple<u32, u32, u32> upload_u32_swapped_sse4_1(const void *src, void *dst, u32 count)
-		{
-			auto src_stream = static_cast<const __m128i*>(src);
-			auto dst_stream = static_cast<__m128i*>(dst);
-
-			__m128i min = _mm_set1_epi32(~0u);
-			__m128i max = _mm_set1_epi32(0);
-
-			const auto iterations = count / 4;
-			for (unsigned n = 0; n < iterations; ++n)
-			{
-				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = _mm_shuffle_epi8(raw, s_bswap_u32_mask);
-				max = _mm_max_epu32(max, value);
-				min = _mm_min_epu32(min, value);
-				_mm_store_si128(dst_stream++, value);
-			}
-
-			__m128i tmp = _mm_srli_si128(min, 8);
-			min = _mm_min_epu32(min, tmp);
-			tmp = _mm_srli_si128(min, 4);
-			min = _mm_min_epu32(min, tmp);
-
-			tmp = _mm_srli_si128(max, 8);
-			max = _mm_max_epu32(max, tmp);
-			tmp = _mm_srli_si128(max, 4);
-			max = _mm_max_epu32(max, tmp);
-
-			const u32 min_index = _mm_cvtsi128_si32(min);
-			const u32 max_index = _mm_cvtsi128_si32(max);
-
-			return std::make_tuple(min_index, max_index, count);
-		}
-
-		template<typename T>
-		static
-		std::tuple<T, T, u32> upload_untouched(std::span<to_be_t<const T>> src, std::span<T> dst)
-		{
-			T min_index, max_index;
-			u32 written;
-			u32 remaining = ::size32(src);
-
-			if (s_use_sse4_1 && remaining >= 32)
-			{
-				if constexpr (std::is_same<T, u32>::value)
-				{
-					const auto count = (remaining & ~0x3);
-					std::tie(min_index, max_index, written) = upload_u32_swapped_sse4_1(src.data(), dst.data(), count);
-				}
-				else if constexpr (std::is_same<T, u16>::value)
-				{
-					if (s_use_avx3)
-					{
-#if defined(ARCH_X64)
-
-						// Handle remainder in function
-						std::tie(min_index, max_index, written) = upload_u16_swapped_avx3(src.data(), dst.data(), remaining);
-						return std::make_tuple(min_index, max_index, written);
-					}
-					else if (s_use_avx2)
-					{
-						const auto count = (remaining & ~0xf);
-						std::tie(min_index, max_index, written) = upload_u16_swapped_avx2(src.data(), dst.data(), count);
-#endif
-					}
-					else
-					{
-						const auto count = (remaining & ~0x7);
-						std::tie(min_index, max_index, written) = upload_u16_swapped_sse4_1(src.data(), dst.data(), count);
-					}
-				}
-				else
-				{
-					fmt::throw_exception("Unreachable");
-				}
-
-				remaining -= written;
-			}
-			else
-			{
-				min_index = index_limit<T>();
-				max_index = 0;
-				written = 0;
-			}
-
-			while (remaining--)
+			while (count--)
 			{
 				T index = src[written];
 				dst[written++] = min_max(min_index, max_index, index);
 			}
 
-			return std::make_tuple(min_index, max_index, written);
+			return (u64{max_index} << 32) | u64{min_index};
+		}
+
+#if defined(ARCH_X64)
+		template <typename T>
+		static void build_upload_untouched(asmjit::simd_builder& c, native_args& args)
+		{
+			using namespace asmjit;
+
+			if (!utils::has_sse41())
+			{
+				c.jmp(&upload_untouched_naive<T>);
+				return;
+			}
+
+			static const v128 all_ones_except_low_element = gv_shuffle_left<sizeof(T)>(v128::from32p(-1));
+
+			c.vec_set_const(c.v1, sizeof(T) == 2 ? s_bswap_u16_mask : s_bswap_u32_mask);
+			c.vec_set_all_ones(c.v2); // vec min
+			c.vec_set_all_zeros(c.v3); // vec max
+			c.vec_set_const(c.v4, all_ones_except_low_element);
+
+			c.build_loop(sizeof(T), x86::eax, args[2].r32(), [&]
+			{
+				c.zero_if_not_masked().vec_load_unaligned(sizeof(T), c.v0, c.ptr_scale_for_vec(sizeof(T), args[0], x86::rax));
+
+				if (utils::has_ssse3())
+				{
+					c.vec_shuffle_xi8(c.v0, c.v0, c.v1);
+				}
+				else
+				{
+					c.emit(x86::Inst::kIdMovdqa, c.v1, c.v0);
+					c.emit(x86::Inst::kIdPsrlw, c.v0, 8);
+					c.emit(x86::Inst::kIdPsllw, c.v1, 8);
+					c.emit(x86::Inst::kIdPor, c.v0, c.v1);
+
+					if constexpr (sizeof(T) == 4)
+					{
+						c.emit(x86::Inst::kIdPshuflw, c.v0, c.v0, 0b01001110);
+						c.emit(x86::Inst::kIdPshufhw, c.v0, c.v0, 0b01001110);
+					}
+				}
+
+				c.keep_if_not_masked().vec_umax(sizeof(T), c.v3, c.v3, c.v0);
+
+				if (c.vsize < 16)
+				{
+					// In remaining loop: protect min values
+					c.vec_or(sizeof(T), c.v5, c.v0, c.v4);
+					c.vec_umin(sizeof(T), c.v2, c.v2, c.v5);
+				}
+				else
+				{
+					c.keep_if_not_masked().vec_umin(sizeof(T), c.v2, c.v2, c.v0);
+				}
+
+				c.keep_if_not_masked().vec_store_unaligned(sizeof(T), c.v0, c.ptr_scale_for_vec(sizeof(T), args[1], x86::rax));
+			}, [&]
+			{
+				// Compress to xmm, protect high values
+				if (c.vsize >= 64)
+				{
+					c.vextracti32x8(x86::ymm0, x86::zmm3, 1);
+					c.emit(sizeof(T) == 4 ? x86::Inst::kIdVpmaxud : x86::Inst::kIdVpmaxuw, x86::ymm3, x86::ymm3, x86::ymm0);
+					c.vextracti32x8(x86::ymm0, x86::zmm2, 1);
+					c.emit(sizeof(T) == 4 ? x86::Inst::kIdVpminud : x86::Inst::kIdVpminuw, x86::ymm2, x86::ymm2, x86::ymm0);
+				}
+				if (c.vsize >= 32)
+				{
+					c.vextracti128(x86::xmm0, x86::ymm3, 1);
+					c.emit(sizeof(T) == 4 ? x86::Inst::kIdVpmaxud : x86::Inst::kIdVpmaxuw, x86::xmm3, x86::xmm3, x86::xmm0);
+					c.vextracti128(x86::xmm0, x86::ymm2, 1);
+					c.emit(sizeof(T) == 4 ? x86::Inst::kIdVpminud : x86::Inst::kIdVpminuw, x86::xmm2, x86::xmm2, x86::xmm0);
+				}
+			});
+
+			c.vec_umax_horizontal_i128(sizeof(T), x86::rdx, c.v3, c.v0);
+			c.vec_umin_horizontal_i128(sizeof(T), x86::rax, c.v2, c.v0);
+			c.shl(x86::rdx, 32);
+			c.or_(x86::rax, x86::rdx);
+			c.vec_cleanup_ret();
+		}
+
+		static inline auto upload_xi16 = build_function_asm<u64(*)(const be_t<u16>*, u16*, u32), asmjit::simd_builder>("untouched_upload_xi16", &build_upload_untouched<u16>);
+		static inline auto upload_xi32 = build_function_asm<u64(*)(const be_t<u32>*, u32*, u32), asmjit::simd_builder>("untouched_upload_xi32", &build_upload_untouched<u32>);
+#endif
+
+		template <typename T>
+		static std::tuple<T, T, u32> upload_untouched(std::span<to_be_t<const T>> src, std::span<T> dst)
+		{
+			T min_index, max_index;
+			u32 count = ::size32(src);
+			u64 r;
+
+			if constexpr (sizeof(T) == 2)
+				r = upload_xi16(src.data(), dst.data(), count);
+			else
+				r = upload_xi32(src.data(), dst.data(), count);
+
+			min_index = r;
+			max_index = r >> 32;
+
+			return std::make_tuple(min_index, max_index, count);
 		}
 	};
 

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include "Emu/Memory/vm.h"
 #include "Common/BufferUtils.h"
 #include "RSXOffload.h"
 #include "RSXThread.h"
@@ -44,6 +45,8 @@ namespace rsx
 					{
 					case raw_copy:
 					{
+						const u32 vm_addr = vm::try_get_addr(job.src).first;
+						rsx::reservation_lock<true, 1> rsx_lock(vm_addr, job.length, g_cfg.video.strict_rendering_mode && vm_addr);
 						std::memcpy(job.dst, job.src, job.length);
 						break;
 					}
@@ -108,6 +111,8 @@ namespace rsx
 	{
 		if (length <= max_immediate_transfer_size || !g_cfg.video.multithreaded_rsx)
 		{
+			const u32 vm_addr = vm::try_get_addr(src).first;
+			rsx::reservation_lock<true, 1> rsx_lock(vm_addr, length, g_cfg.video.strict_rendering_mode && vm_addr);
 			std::memcpy(dst, src, length);
 		}
 		else
