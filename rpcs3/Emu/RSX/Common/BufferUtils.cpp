@@ -10,52 +10,20 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 
-#if defined(ARCH_X64)
-#include "emmintrin.h"
-#include "immintrin.h"
-#endif
-
 #if !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 
-#ifdef ARCH_ARM64
-#if !defined(_MSC_VER)
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
-#undef FORCE_INLINE
-#include "Emu/CPU/sse2neon.h"
-#endif
-
 #if defined(_MSC_VER) || !defined(__SSE2__)
-#define PLAIN_FUNC
 #define SSE4_1_FUNC
 #define AVX2_FUNC
 #define AVX3_FUNC
 #else
-#ifndef __clang__
-#define PLAIN_FUNC __attribute__((optimize("no-tree-vectorize")))
-#else
-#define PLAIN_FUNC
-#endif
 #define SSE4_1_FUNC __attribute__((__target__("sse4.1")))
 #define AVX2_FUNC __attribute__((__target__("avx2")))
 #define AVX3_FUNC __attribute__((__target__("avx512f,avx512bw,avx512dq,avx512cd,avx512vl")))
-#ifndef __AVX2__
-using __m256i = long long __attribute__((vector_size(32)));
-#endif
 #endif // _MSC_VER
-
-SSE4_1_FUNC static inline u16 sse41_hmin_epu16(__m128i x)
-{
-	return _mm_cvtsi128_si32(_mm_minpos_epu16(x));
-}
-
-SSE4_1_FUNC static inline u16 sse41_hmax_epu16(__m128i x)
-{
-	return ~_mm_cvtsi128_si32(_mm_minpos_epu16(_mm_xor_si128(x, _mm_set1_epi32(-1))));
-}
 
 #if defined(__AVX512F__) && defined(__AVX512VL__) && defined(__AVX512DQ__) && defined(__AVX512CD__) && defined(__AVX512BW__)
 [[maybe_unused]] constexpr bool s_use_ssse3 = true;
@@ -89,17 +57,8 @@ constexpr bool s_use_avx2 = false;
 constexpr bool s_use_avx3 = false;
 #endif
 
-const v128 s_bswap_u32_mask = _mm_set_epi8(
-	0xC, 0xD, 0xE, 0xF,
-	0x8, 0x9, 0xA, 0xB,
-	0x4, 0x5, 0x6, 0x7,
-	0x0, 0x1, 0x2, 0x3);
-
-const v128 s_bswap_u16_mask = _mm_set_epi8(
-	0xE, 0xF, 0xC, 0xD,
-	0xA, 0xB, 0x8, 0x9,
-	0x6, 0x7, 0x4, 0x5,
-	0x2, 0x3, 0x0, 0x1);
+const v128 s_bswap_u32_mask = v128::from32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f);
+const v128 s_bswap_u16_mask = v128::from32(0x02030001, 0x06070405, 0x0a0b0809, 0x0e0f0c0d);
 
 namespace utils
 {
@@ -113,13 +72,10 @@ namespace utils
 namespace
 {
 	template <bool Compare>
-	PLAIN_FUNC auto copy_data_swap_u32_naive(u32* dst, const u32* src, u32 count)
+	auto copy_data_swap_u32_naive(u32* dst, const u32* src, u32 count)
 	{
 		u32 result = 0;
 
-#ifdef __clang__
-		#pragma clang loop vectorize(disable) interleave(disable) unroll(disable)
-#endif
 		for (u32 i = 0; i < count; i++)
 		{
 			const u32 data = stx::se_storage<u32>::swap(src[i]);
@@ -213,16 +169,10 @@ namespace
 
 		c.vec_cleanup_ret();
 	}
-#elif defined(ARCH_ARM64)
-	template <bool Compare>
-	void build_copy_data_swap_u32(native_asm& c, native_args& args)
-	{
-		c.b(&copy_data_swap_u32_naive<Compare>);
-	}
 #endif
 }
 
-#if !defined(__APPLE__) || defined(ARCH_X64)
+#if defined(ARCH_X64)
 DECLARE(copy_data_swap_u32) = build_function_asm<void(*)(u32*, const u32*, u32), asmjit::simd_builder>("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
 DECLARE(copy_data_swap_u32_cmp) = build_function_asm<bool(*)(u32*, const u32*, u32), asmjit::simd_builder>("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
 #else
