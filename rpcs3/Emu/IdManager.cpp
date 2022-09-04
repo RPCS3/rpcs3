@@ -29,7 +29,7 @@ std::vector<std::pair<u128, id_manager::typeinfo>>& id_manager::get_typeinfo_map
 	return s_map; 
 }
 
-idm::map_data* idm::allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range)
+idm::map_data* idm::allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range)
 {
 	if (const u32 index = id_manager::get_index(dst_id, base, step, count, invl_range); index < count)
 	{
@@ -46,7 +46,12 @@ idm::map_data* idm::allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst
 		return &vec[index];
 	}
 
-	if (vec.size() < count)
+	if (uses_lowest_id)
+	{
+		// Disable the optimization below (hurts accuracy for known cases)
+		vec.resize(count);
+	}
+	else if (vec.size() < count)
 	{
 		// Try to emplace back
 		const u32 _next = base + step * ::size32(vec);
