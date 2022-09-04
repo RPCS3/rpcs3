@@ -12,7 +12,7 @@ if [ "${ARCH_NAME}" = "arm64" ]; then
   export BREW_PATH=/opt/homebrew/opt
   export BREW_BIN=/opt/homebrew/bin
   export BREW_SBIN=/opt/homebrew/sbin
-  export CMAKE_EXTRA_OPTS='-DPNG_ARM_NEON=on -DLLVM_TARGETS_TO_BUILD=X86;AArch64;ARM -DCMAKE_OSX_ARCHITECTURES=arm64'
+  export CMAKE_EXTRA_OPTS='-DPNG_ARM_NEON=on -DLLVM_TARGETS_TO_BUILD=X86;AArch64;ARM -DCMAKE_OSX_ARCHITECTURES=arm64 -DUSE_SYSTEM_FFMPEG=ON'
 else
   export BREW_PATH=/usr/local/opt
   export BREW_BIN=/usr/local/bin
@@ -26,22 +26,6 @@ export LDFLAGS="-L$BREW_PATH/llvm@13/lib -Wl,-rpath,$BREW_PATH/llvm@13/lib"
 export CPPFLAGS="-I$BREW_PATH/llvm@13/include -msse -msse2 -mcx16 -no-pie"
 
 git submodule update --init --recursive --depth 1
-if [ "${ARCH_NAME}" = "arm64" ]; then
-  # Nuke ffmpeg prebuilts until someone adds arm to it
-  # Prefix is x86_64 as cba to update the cmake in ffmpeg.
-  rm -rf 3rdparty/ffmpeg/macos/x86_64/*
-  cd 3rdparty/ffmpeg
-  . shared_options.sh
-  ./configure \
-    --prefix=./macosx/x86_64 \
-    --extra-cflags="-D__STDC_CONSTANT_MACROS -D_DARWIN_FEATURE_CLOCK_GETTIME=0 -O3 -mmacosx-version-min=10.7" \
-    ${CONFIGURE_OPTS} \
-    --arch=${ARCH_NAME} \
-    --cc=clang
-  make clean
-  make -j8 install
-  cd ../..
-fi
 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
