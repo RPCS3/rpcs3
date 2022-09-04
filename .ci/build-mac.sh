@@ -39,6 +39,7 @@ if [ "${ARCH_NAME}" = "arm64" ]; then
     --cc=clang
   make clean
   make -j8 install
+  cd ../..
 fi
 
 # 3rdparty fixes
