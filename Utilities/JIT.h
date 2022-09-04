@@ -232,6 +232,7 @@ namespace asmjit
 		void vec_set_all_ones(const Operand& v);
 		void vec_set_const(const Operand& v, const v128& value);
 		void vec_clobbering_test(u32 esize, const Operand& v, const Operand& rhs);
+		void vec_broadcast_gpr(u32 esize, const Operand& v, const x86::Gp& r);
 
 		// return x86::ptr(base, ctr, X, 0) where X is set for esize accordingly
 		x86::Mem ptr_scale_for_vec(u32 esize, const x86::Gp& base, const x86::Gp& index);
@@ -260,8 +261,15 @@ namespace asmjit
 			_vec_binary_op(kIdPor, kIdVpor, kIdVpord, dst, lhs, rhs);
 		}
 
+		void vec_andn(u32, const Operand& dst, const Operand& lhs, const Operand& rhs)
+		{
+			using enum x86::Inst::Id;
+			_vec_binary_op(kIdPandn, kIdVpandn, kIdVpandnd, dst, lhs, rhs);
+		}
+
 		void vec_umin(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
 		void vec_umax(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
+		void vec_cmp_eq(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs);
 
 		void vec_extract_high(u32 esize, const Operand& dst, const Operand& src);
 		void vec_extract_gpr(u32 esize, const x86::Gp& dst, const Operand& src);
