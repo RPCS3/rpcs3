@@ -29,6 +29,17 @@ git submodule update --init --recursive --depth 1
 if [ "${ARCH_NAME}" = "arm64" ]; then
   # Nuke ffmpeg prebuilts until someone adds arm to it
   rm -rf 3rdparty/ffmpeg/macos/x86_64/*
+  cd 3rdparty/ffmpeg
+  rm config.h
+  . shared_options.sh
+  ./configure \
+    --prefix=./macosx/${ARCH_NAME} \
+    --extra-cflags="-D__STDC_CONSTANT_MACROS -D_DARWIN_FEATURE_CLOCK_GETTIME=0 -O3 -mmacosx-version-min=10.7" \
+    ${CONFIGURE_OPTS} \
+    --arch=${ARCH_NAME} \
+    --cc=clang
+  make clean
+  make -j8 install
 fi
 
 # 3rdparty fixes
