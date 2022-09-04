@@ -36,6 +36,18 @@ namespace id_manager
 	}
 
 	template <typename T>
+	consteval bool get_force_lowest_id()
+	{
+		return false;
+	}
+
+	template <typename T> requires requires () { bool{T::id_lowest}; }
+	consteval bool get_force_lowest_id()
+	{
+		return T::id_lowest;
+	}
+
+	template <typename T>
 	concept IdmCompatible = requires () { T::id_base, T::id_step, T::id_count; };
 
 	// Last allocated ID for constructors
@@ -56,6 +68,7 @@ namespace id_manager
 		};
 
 		static constexpr std::pair<u32, u32> invl_range = get_invl_range<T>();
+		static constexpr bool uses_lowest_id = get_force_lowest_id<T>();
 
 		static_assert(count && step && u64{step} * (count - 1) + base < u32{umax} + u64{base != 0 ? 1 : 0}, "ID traits: invalid object range");
 
@@ -130,6 +143,7 @@ namespace id_manager
 		u32 base;
 		u32 step;
 		u32 count;
+		bool uses_lowest_id;
 		std::pair<u32, u32> invl_range;
 
 		// Get type index
@@ -168,7 +182,7 @@ namespace id_manager
 					+id_traits_load_func<C>::load,
 					+[](utils::serial& ar, void* obj) { static_cast<C*>(obj)->save(ar); },
 					+id_traits_savable_func<C>::savable,
-					id_traits<C>::base, id_traits<C>::step, id_traits<C>::count, id_traits<C>::invl_range,
+					id_traits<C>::base, id_traits<C>::step, id_traits<C>::count, id_traits<C>::uses_lowest_id, id_traits<C>::invl_range,
 				};
 
 				const u128 key = u128{get_type<C>()} << 64 | std::bit_cast<u64>(C::savestate_init_pos);
@@ -192,7 +206,7 @@ namespace id_manager
 					nullptr,
 					nullptr,
 					nullptr,
-					id_traits<Type>::base, id_traits<Type>::step, id_traits<Type>::count, id_traits<Type>::invl_range,
+					id_traits<Type>::base, id_traits<Type>::step, id_traits<Type>::count, id_traits<Type>::uses_lowest_id, id_traits<Type>::invl_range,
 				};
 			}
 
@@ -426,7 +440,7 @@ class idm
 	using map_data = std::pair<id_manager::id_key, std::shared_ptr<void>>;
 
 	// Prepare new ID (returns nullptr if out of resources)
-	static map_data* allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range);
+	static map_data* allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range);
 
 	// Get object by internal index if exists (additionally check type if types are not equal)
 	template <typename T, typename Type>
@@ -485,7 +499,7 @@ class idm
 
 		auto& map = g_fxo->get<id_manager::id_map<T>>();
 
-		if (auto* place = allocate_id(map.vec, get_type<Type>(), id, traits::base, traits::step, traits::count, traits::invl_range))
+		if (auto* place = allocate_id(map.vec, get_type<Type>(), id, traits::base, traits::step, traits::count, traits::uses_lowest_id, traits::invl_range))
 		{
 			// Get object, store it
 			place->second = provider();

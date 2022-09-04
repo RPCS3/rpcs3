@@ -160,9 +160,10 @@ extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
 
 struct lv2_fs_object
 {
-	static const u32 id_base = 3;
-	static const u32 id_step = 1;
-	static const u32 id_count = 255 - id_base;
+	static constexpr u32 id_base = 3;
+	static constexpr u32 id_step = 1;
+	static constexpr u32 id_count = 255 - id_base;
+	static constexpr bool id_lowest = true;
 	SAVESTATE_INIT_POS(40);
 
 	// File Name (max 1055)
