@@ -107,9 +107,6 @@ endif()
 if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
     include_directories(/opt/homebrew/include)
     link_directories(/opt/homebrew/lib)
-elseif(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
-    include_directories(/usr/local/include)
-    link_directories(/usr/local/lib)
 endif()
 
 # Warnings are silenced for 3rdparty code
