@@ -26,6 +26,10 @@ export LDFLAGS="-L$BREW_PATH/llvm@13/lib -Wl,-rpath,$BREW_PATH/llvm@13/lib"
 export CPPFLAGS="-I$BREW_PATH/llvm@13/include -msse -msse2 -mcx16 -no-pie"
 
 git submodule update --init --recursive --depth 1
+if [ "${ARCH_NAME}" = "arm64" ]; then
+  # Nuke ffmpeg prebuilts until someone adds arm to it
+  rm -rf 3rdparty/ffmpeg/macos/x86_64/*
+fi
 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
