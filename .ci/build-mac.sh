@@ -30,7 +30,6 @@ if [ "${ARCH_NAME}" = "arm64" ]; then
   # Nuke ffmpeg prebuilts until someone adds arm to it
   rm -rf 3rdparty/ffmpeg/macos/x86_64/*
   cd 3rdparty/ffmpeg
-  rm config.h
   . shared_options.sh
   ./configure \
     --prefix=./macosx/${ARCH_NAME} \
