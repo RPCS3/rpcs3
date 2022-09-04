@@ -28,10 +28,6 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
-#if defined(ARCH_ARM64)
-#include "Emu/CPU/sse2neon.h"
-#endif
-
 const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
@@ -7457,12 +7453,13 @@ public:
 		set_vr(op.rt, fshl(a, zshuffle(a, 4, 0, 1, 2), b));
 	}
 
-#if defined(ARCH_X64) || defined(ARCH_ARM64)
+#if defined(ARCH_X64)
 	static __m128i exec_rotqby(__m128i a, u8 b)
 	{
 		alignas(32) const __m128i buf[2]{a, a};
 		return _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (16 - (b & 0xf))));
 	}
+#elif defined(ARCH_ARM64)
 #else
 #error "Unimplemented"
 #endif
@@ -7472,6 +7469,7 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 
+#if defined(ARCH_X64)
 		if (!m_use_ssse3)
 		{
 			value_t<u8[16]> r;
@@ -7479,6 +7477,7 @@ public:
 			set_vr(op.rt, r);
 			return;
 		}
+#endif
 
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
