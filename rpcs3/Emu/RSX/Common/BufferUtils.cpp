@@ -360,10 +360,14 @@ namespace
 			u32 count = ::size32(src);
 			u64 r;
 
+#if defined(ARCH_X64)
 			if constexpr (sizeof(T) == 2)
 				r = upload_xi16(src.data(), dst.data(), count);
 			else
 				r = upload_xi32(src.data(), dst.data(), count);
+#else
+			r = upload_untouched_naive(src.data(), dst.data(), count);
+#endif
 
 			min_index = r;
 			max_index = r >> 32;
