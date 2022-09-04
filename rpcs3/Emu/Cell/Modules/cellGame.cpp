@@ -230,18 +230,13 @@ disc_change_manager::~disc_change_manager()
 
 error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCallback> func_eject, vm::ptr<CellGameDiscInsertCallback> func_insert)
 {
-	if (!func_eject || !func_insert)
-	{
-		return CELL_GAME_ERROR_PARAM;
-	}
-
 	std::lock_guard lock(mtx);
 
 	eject_callback = func_eject;
 	insert_callback = func_insert;
 
-	Emu.GetCallbacks().enable_disc_eject(true);
-	Emu.GetCallbacks().enable_disc_insert(false);
+	Emu.GetCallbacks().enable_disc_eject(!!func_eject);
+	Emu.GetCallbacks().enable_disc_insert(!!func_insert);
 
 	return CELL_OK;
 }
