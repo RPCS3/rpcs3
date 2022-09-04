@@ -7,7 +7,8 @@ export MACOSX_DEPLOYMENT_TARGET=11.6
 export CXX=clang++
 export CC=clang
 
-if [[ $(uname -m) == 'arm64' ]]; then
+ARCH_NAME="$(uname -m)"
+if [ "${ARCH_NAME}" = "arm64" ]; then
   export BREW_PATH=/opt/homebrew/opt
   export BREW_BIN=/opt/homebrew/bin
   export BREW_SBIN=/opt/homebrew/sbin
