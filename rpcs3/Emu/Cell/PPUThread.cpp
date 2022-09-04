@@ -710,8 +710,8 @@ struct ppu_far_jumps_t
 				Label jmp_address = c.newLabel();
 				Label imm_address = c.newLabel();
 
-				c.ldr(args[1].r32(), arm::ptr(imm_address));
-				c.str(args[1].r32(), arm::Mem(args[0], ::offset32(&ppu_thread::cia)));
+				c.ldr(args[1].w(), arm::ptr(imm_address));
+				c.str(args[1].w(), arm::Mem(args[0], ::offset32(&ppu_thread::cia)));
 				c.ldr(args[1], arm::ptr(jmp_address));
 				c.br(args[1]);
 
