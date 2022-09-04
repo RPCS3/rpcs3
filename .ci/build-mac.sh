@@ -1,7 +1,7 @@
 #!/bin/sh -ex
 
 brew update
-brew install llvm@13 sdl2 nasm qt@5 ninja cmake glew git p7zip create-dmg ccache
+brew install llvm@13 sdl2 nasm qt@5 ninja cmake glew git p7zip create-dmg ccache ffmpeg
 
 export MACOSX_DEPLOYMENT_TARGET=11.6
 export CXX=clang++
