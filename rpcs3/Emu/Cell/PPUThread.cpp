@@ -710,8 +710,8 @@ struct ppu_far_jumps_t
 				Label jmp_address = c.newLabel();
 				Label imm_address = c.newLabel();
 
-				c.ldr(args[1].r32(), arm::ptr(imm_address));
-				c.str(args[1].r32(), arm::Mem(args[0], ::offset32(&ppu_thread::cia)));
+				c.ldr(args[1].w(), arm::ptr(imm_address));
+				c.str(args[1].w(), arm::Mem(args[0], ::offset32(&ppu_thread::cia)));
 				c.ldr(args[1], arm::ptr(jmp_address));
 				c.br(args[1]);
 
@@ -3280,6 +3280,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	{
 		std::unordered_map<std::string, u64> link_table
 		{
+			{ "sys_game_board_storage_read", reinterpret_cast<u64>(ppu_execute_syscall) },
 			{ "__trap", reinterpret_cast<u64>(&ppu_trap) },
 			{ "__error", reinterpret_cast<u64>(&ppu_error) },
 			{ "__check", reinterpret_cast<u64>(&ppu_check) },
