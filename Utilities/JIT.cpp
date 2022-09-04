@@ -508,6 +508,54 @@ void asmjit::simd_builder::vec_clobbering_test(u32 esize, const Operand& v, cons
 	}
 }
 
+void asmjit::simd_builder::vec_broadcast_gpr(u32 esize, const Operand& v, const x86::Gp& r)
+{
+	if (esize == 2)
+	{
+		if (utils::has_avx512())
+			this->emit(x86::Inst::kIdVpbroadcastw, v, r.r32());
+		else if (utils::has_avx())
+		{
+			this->emit(x86::Inst::kIdVmovd, v, r.r32());
+			if (utils::has_avx2())
+				this->emit(x86::Inst::kIdVpbroadcastw, v, v);
+			else
+			{
+				this->emit(x86::Inst::kIdVpunpcklwd, v, v);
+				this->emit(x86::Inst::kIdVpshufd, v, v, Imm(0));
+			}
+		}
+		else
+		{
+			this->emit(x86::Inst::kIdMovd, v, r.r32());
+			this->emit(x86::Inst::kIdPunpcklwd, v, v);
+			this->emit(x86::Inst::kIdPshufd, v, v, Imm(0));
+		}
+	}
+	else if (esize == 4)
+	{
+		if (utils::has_avx512())
+			this->emit(x86::Inst::kIdVpbroadcastd, v, r.r32());
+		else if (utils::has_avx())
+		{
+			this->emit(x86::Inst::kIdVmovd, v, r.r32());
+			if (utils::has_avx2())
+				this->emit(x86::Inst::kIdVpbroadcastd, v, v);
+			else
+				this->emit(x86::Inst::kIdVpshufd, v, v, Imm(0));
+		}
+		else
+		{
+			this->emit(x86::Inst::kIdMovd, v, r.r32());
+			this->emit(x86::Inst::kIdPshufd, v, v, Imm(0));
+		}
+	}
+	else
+	{
+		fmt::throw_exception("Unimplemented");
+	}
+}
+
 asmjit::x86::Mem asmjit::simd_builder::ptr_scale_for_vec(u32 esize, const x86::Gp& base, const x86::Gp& index)
 {
 	switch (ensure(esize))
@@ -696,6 +744,39 @@ void asmjit::simd_builder::vec_umax(u32 esize, const Operand& dst, const Operand
 	}
 
 	fmt::throw_exception("Unimplemented");
+}
+
+void asmjit::simd_builder::vec_cmp_eq(u32 esize, const Operand& dst, const Operand& lhs, const Operand& rhs)
+{
+	using enum x86::Inst::Id;
+	if (esize == 2)
+	{
+		if (vsize == 64)
+		{
+			this->evex().emit(kIdVpcmpeqw, x86::k0, lhs, rhs);
+			this->evex().emit(kIdVpmovm2w, dst, x86::k0);
+		}
+		else
+		{
+			_vec_binary_op(kIdPcmpeqw, kIdVpcmpeqw, kIdNone, dst, lhs, rhs);
+		}
+	}
+	else if (esize == 4)
+	{
+		if (vsize == 64)
+		{
+			this->evex().emit(kIdVpcmpeqd, x86::k0, lhs, rhs);
+			this->evex().emit(kIdVpmovm2d, dst, x86::k0);
+		}
+		else
+		{
+			_vec_binary_op(kIdPcmpeqw, kIdVpcmpeqw, kIdNone, dst, lhs, rhs);
+		}
+	}
+	else
+	{
+		fmt::throw_exception("Unimplemented");
+	}
 }
 
 void asmjit::simd_builder::vec_extract_high(u32, const Operand& dst, const Operand& src)
