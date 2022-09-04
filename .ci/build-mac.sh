@@ -28,11 +28,12 @@ export CPPFLAGS="-I$BREW_PATH/llvm@13/include -msse -msse2 -mcx16 -no-pie"
 git submodule update --init --recursive --depth 1
 if [ "${ARCH_NAME}" = "arm64" ]; then
   # Nuke ffmpeg prebuilts until someone adds arm to it
+  # Prefix is x86_64 as cba to update the cmake in ffmpeg.
   rm -rf 3rdparty/ffmpeg/macos/x86_64/*
   cd 3rdparty/ffmpeg
   . shared_options.sh
   ./configure \
-    --prefix=./macosx/${ARCH_NAME} \
+    --prefix=./macosx/x86_64 \
     --extra-cflags="-D__STDC_CONSTANT_MACROS -D_DARWIN_FEATURE_CLOCK_GETTIME=0 -O3 -mmacosx-version-min=10.7" \
     ${CONFIGURE_OPTS} \
     --arch=${ARCH_NAME} \
