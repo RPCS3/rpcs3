@@ -229,7 +229,9 @@ void usb_device_usio::usio_write(u8 channel, u16 reg, const std::vector<u8>& dat
 	}
 	else
 	{
-		usio_log.fatal("Unexpected write channel: 0x%02X!", channel);
+		// Channel 1 is the endpoint for firmware update.
+		// We are not using any firmware since this is emulation.
+		usio_log.warning("Unsupported write operation(channel: 0x%02X, addr: 0x%04X)", channel, reg);
 	}
 }
 
@@ -356,7 +358,9 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 	}
 	else
 	{
-		usio_log.fatal("Unexpected read channel: 0x%02X!", channel);
+		// Channel 1 is the endpoint for firmware update.
+		// We are not using any firmware since this is emulation.
+		usio_log.warning("Unsupported read operation(channel: 0x%02X, addr: 0x%04X)", channel, reg);
 	}
 }
 
@@ -419,11 +423,11 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 			return;
 		}
 
-		// Unknown, happens only once, boot command?
+		// Init and reset commands
 		if ((buf[0] & 0xA0) == 0xA0)
 		{
-			const std::array<u8, 6> boot_command = {0xA0, 0xF0, 0x28, 0x00, 0x00, 0x80};
-			ensure(memcmp(buf, boot_command.data(), 6) == 0);
+			const std::array<u8, 2> init_command = {0xA0, 0xF0}; // This kind of command starts with 0xA0, 0xF0 commonly. For example, {0xA0, 0xF0, 0x28, 0x00, 0x00, 0x80}
+			ensure(memcmp(buf, init_command.data(), 2) == 0);
 			return;
 		}
 
