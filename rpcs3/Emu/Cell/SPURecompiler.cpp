@@ -1038,43 +1038,73 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 		auto make_jump = [&](asmjit::arm::CondCode op, auto target)
 		{
+			// 36 bytes
 			// Fallback to dispatch if no target
 			const u64 taddr = target ? reinterpret_cast<u64>(target) : reinterpret_cast<u64>(tr_dispatch);
 
-			// Build with asmjit to make things more readable
-			// Might cost some RAM, but meh whatever
-			auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
+			// ldr x9, #16 -> ldr x9, taddr
+			*raw++ = 0x89;
+			*raw++ = 0x00;
+			*raw++ = 0x00;
+			*raw++ = 0x58;
+
+			if (op == asmjit::arm::CondCode::kAlways)
+			{
+				// br x9
+				*raw++ = 0x20;
+				*raw++ = 0x01;
+				*raw++ = 0x1F;
+				*raw++ = 0xD6;
+
+				// nop
+				*raw++ = 0x1F;
+				*raw++ = 0x20;
+				*raw++ = 0x03;
+				*raw++ = 0xD5;
+
+				// nop
+				*raw++ = 0x1F;
+				*raw++ = 0x20;
+				*raw++ = 0x03;
+				*raw++ = 0xD5;
+			}
+			else
+			{
+				// b.COND #8 -> b.COND do_branch
+				switch (op)
 				{
-					using namespace asmjit;
+				case asmjit::arm::CondCode::kUnsignedLT:
+					*raw++ = 0x43;
+					break;
+				case asmjit::arm::CondCode::kUnsignedGT:
+					*raw++ = 0x48;
+					break;
+				default:
+					asm("brk 0x42");
+				}
 
-					c.movk(a64::x9, Imm(static_cast<u16>(taddr >> 48)), Imm(48));
-					c.movk(a64::x9, Imm(static_cast<u16>(taddr >> 32)), Imm(32));
-					c.movk(a64::x9, Imm(static_cast<u16>(taddr >> 16)), Imm(16));
-					c.movk(a64::x9, Imm(static_cast<u16>(taddr)), Imm(0));
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x54;
 
-					if (op == arm::CondCode::kAlways)
-					{
-						c.br(a64::x9);
-						// Constant length per jmp for easier stub patching
-						c.nop();
-						c.nop();
-					} else
-					{
-						Label do_branch = c.newLabel();
-						Label cont = c.newLabel();
+				// b #16 -> b cont
+				*raw++ = 0x04;
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x14;
 
-						c.b(op, do_branch);
-						c.b(cont);
+				// do_branch: br x9
+				*raw++ = 0x20;
+				*raw++ = 0x01;
+				*raw++ = 0x1f;
+				*raw++ = 0xD6;
+			}
 
-						c.bind(do_branch);
-						c.br(a64::x9);
+			// taddr
+			std::memcpy(raw, &taddr, 8);
+			raw += 8;
 
-						c.bind(cont);
-					}
-				});
-			u8 mem_used = 7 * 4;
-			memcpy(raw, reinterpret_cast<u8*>(temp), mem_used);
-			raw += mem_used;
+			// cont: next instruction
 		};
 #elif defined(ARCH_X64)
 		// Allocate some writable executable memory
@@ -1203,17 +1233,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				//	Rewrite jump address
 				{
 					u64 raw64 = reinterpret_cast<u64>(raw);
-					auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-						{
-							using namespace asmjit;
-
-							c.movk(a64::x9, Imm(static_cast<u16>(raw64 >> 48)), Imm(48));
-							c.movk(a64::x9, Imm(static_cast<u16>(raw64 >> 32)), Imm(32));
-							c.movk(a64::x9, Imm(static_cast<u16>(raw64 >> 16)), Imm(16));
-							c.movk(a64::x9, Imm(static_cast<u16>(raw64)), Imm(0));
-						});
-
-					memcpy(w.rel32 - (4 * 7), reinterpret_cast<u8*>(temp), 4 * 4);
+					memcpy(w.rel32 - 8, &raw64, 8);
 				}
 #else
 #error "Unimplemented"
@@ -1302,19 +1322,27 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					raw += 4;
 				}
 #elif defined(ARCH_ARM64)
-				{
-					auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-						{
-							using namespace asmjit;
+				// ldr w9, #8
+				*raw++ = 0x49;
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x18;
 
-							c.movz(a64::w9, Imm(static_cast<u16>(cmp_lsa >> 16)), Imm(16));
-							c.movk(a64::w9, Imm(static_cast<u16>(cmp_lsa)), Imm(0));
-							c.ldr(a64::w1, arm::Mem(a64::x7, a64::x9));
-						});
+				// b #8
+				*raw++ = 0x02;
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x14;
 
-					memcpy(raw, reinterpret_cast<u8*>(temp), 3 * 4);
-					raw += 3 * 4;
-				}
+				// cmp_lsa
+				std::memcpy(raw, &cmp_lsa, 4);
+				raw += 4;
+
+				// ldr w1, [x7, x9]
+				*raw++ = 0xE1;
+				*raw++ = 0x68;
+				*raw++ = 0x69;
+				*raw++ = 0xB8;
 #else
 #error "Unimplemented"
 #endif
@@ -1326,19 +1354,27 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			std::memcpy(raw, &x, 4);
 			raw += 4;
 #elif defined(ARCH_ARM64)
-			{
-				auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-					{
-						using namespace asmjit;
+			// ldr w9, #8
+			*raw++ = 0x49;
+			*raw++ = 0x00;
+			*raw++ = 0x00;
+			*raw++ = 0x18;
 
-						c.movz(a64::w9, Imm(static_cast<u16>(x >> 16)), Imm(16));
-						c.movk(a64::w9, Imm(static_cast<u16>(x)), Imm(0));
-						c.cmp(a64::w1, a64::w9);
-					});
+			// b #8
+			*raw++ = 0x02;
+			*raw++ = 0x00;
+			*raw++ = 0x00;
+			*raw++ = 0x14;
 
-				memcpy(raw, reinterpret_cast<u8*>(temp), 3 * 4);
-				raw += 3 * 4;
-			}
+			// x
+			std::memcpy(raw, &x, 4);
+			raw += 4;
+
+			// cmp w1, w9
+			*raw++ = 0x3f;
+			*raw++ = 0x00;
+			*raw++ = 0x09;
+			*raw++ = 0x6B;
 #else
 #error "Unimplemented"
 #endif
@@ -1573,34 +1609,56 @@ spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 
 	return reinterpret_cast<spu_function_t>(raw);
 #elif defined(ARCH_ARM64)
-	spu_function_t func = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-		{
-			using namespace asmjit;
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(false);
+#endif
 
-			// Save the jmp addr to GHC CC 3rd arg -> REG_Hp
-			Label replace_addr = c.newLabel();
+	u8* const patch_fn = ensure(jit_runtime::alloc(36, 16));
+	u8* raw = patch_fn;
 
-			c.adr(a64::x21, replace_addr);
-			// 16 byte alignment for the jump replacement
-			c.nop();
-			c.nop();
-			c.nop();
-			Label branch_target = c.newLabel();
+	// adr x21, #16
+	*raw++ = 0x95;
+	*raw++ = 0x00;
+	*raw++ = 0x00;
+	*raw++ = 0x10;
 
-			c.bind(replace_addr);
-			c.ldr(a64::x9, arm::Mem(branch_target));
-			c.br(a64::x9);
+	// nop x3
+	for (int i = 0; i < 3; i++)
+	{
+		*raw++ = 0x1F;
+		*raw++ = 0x20;
+		*raw++ = 0x03;
+		*raw++ = 0xD5;
+	}
 
-			c.bind(branch_target);
-			c.embedUInt64(reinterpret_cast<u64>(tr_branch));
+	// ldr x9, #8
+	*raw++ = 0x49;
+	*raw++ = 0x00;
+	*raw++ = 0x00;
+	*raw++ = 0x58;
 
-			c.embedUInt8(data >> 8);
-			c.embedUInt8(data & 0xff);
+	// br x9
+	*raw++ = 0x20;
+	*raw++ = 0x01;
+	*raw++ = 0x1F;
+	*raw++ = 0xD6;
 
-			c.embed("branch_patchpoint", 17);
-		});
+	u64 branch_target = reinterpret_cast<u64>(tr_branch);
+	std::memcpy(raw, &branch_target, 8);
+	raw += 8;
 
-	return func;
+	*raw++ = static_cast<u8>(data >> 8);
+	*raw++ = static_cast<u8>(data & 0xff);
+
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(true);
+#endif
+
+	// Flush all cache lines after potentially writing executable code
+	asm("ISB");
+	asm("DSB ISH");
+
+	return reinterpret_cast<spu_function_t>(patch_fn);
 #else
 #error "Unimplemented"
 #endif
@@ -1636,18 +1694,26 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 		atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip - 8), result);
 #elif defined(ARCH_ARM64)
-		auto jump_instrs = build_function_asm<spu_function_t>("", [](native_asm& c, auto& args)
-			{
-				using namespace asmjit;
+		union
+		{
+			u8 bytes[16];
+			u128 result;
+		};
 
-				Label branch_target = c.newLabel();
-				c.ldr(a64::x9, arm::Mem(branch_target)); // PC rel load
-				c.br(a64::x9);
+		// ldr x9, #8
+		bytes[0] = 0x49;
+		bytes[1] = 0x00;
+		bytes[2] = 0x00;
+		bytes[3] = 0x58;
 
-				c.bind(branch_target);
-				c.embedUInt64(reinterpret_cast<u64>(spu_runtime::tr_all));
-			});
-		u128 result = *reinterpret_cast<u128*>(jump_instrs);
+		// br x9
+		bytes[4] = 0x20;
+		bytes[5] = 0x01;
+		bytes[6] = 0x1F;
+		bytes[7] = 0xD6;
+
+		const u64 target = reinterpret_cast<u64>(spu_runtime::tr_all);
+		std::memcpy(bytes + 8, &target, 8);
 #if defined(__APPLE__)
 		pthread_jit_write_protect_np(false);
 #endif
@@ -1768,18 +1834,26 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
 #elif defined(ARCH_ARM64)
-	auto jmp_instrs = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-		{
-			using namespace asmjit;
+	union
+	{
+		u8 bytes[16];
+		u128 result;
+	};
 
-			Label branch_target = c.newLabel();
-			c.ldr(a64::x9, arm::Mem(branch_target)); // PC rel load
-			c.br(a64::x9);
+	// ldr x9, #8
+	bytes[0] = 0x49;
+	bytes[1] = 0x00;
+	bytes[2] = 0x00;
+	bytes[3] = 0x58;
 
-			c.bind(branch_target);
-			c.embedUInt64(reinterpret_cast<u64>(func));
-		});
-	u128 result = *reinterpret_cast<u128*>(jmp_instrs);
+	// br x9
+	bytes[4] = 0x20;
+	bytes[5] = 0x01;
+	bytes[6] = 0x1F;
+	bytes[7] = 0xD6;
+
+	const u64 target = reinterpret_cast<u64>(func);
+	std::memcpy(bytes + 8, &target, 8);
 #if defined(__APPLE__)
 	pthread_jit_write_protect_np(false);
 #endif
