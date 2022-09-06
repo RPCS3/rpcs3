@@ -918,7 +918,7 @@ public:
 		return group ? SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (id & 0xffffff) : RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index;
 	}
 
-	static u8* map_ls(utils::shm& shm);
+	static u8* map_ls(utils::shm& shm, void* ptr = nullptr);
 
 	// Returns true if reservation existed but was just discovered to be lost
 	// It is safe to use on any address, even if not directly accessed by SPU (so it's slower)
