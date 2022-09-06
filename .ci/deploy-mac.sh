@@ -45,7 +45,7 @@ create-dmg --volname RPCS3 \
 "$DMG_FILEPATH" \
 RPCS3.app
 
-7z a -mx9 rpcs3-v"${COMM_TAG}"-"${COMM_COUNT}"-"${COMM_HASH}"_macos.7z RPCS3.app
+7z a -mx9 -mtm- rpcs3-v"${COMM_TAG}"-"${COMM_COUNT}"-"${COMM_HASH}"_macos.7z RPCS3.app
 
 FILESIZE=$(stat -f %z "$DMG_FILEPATH")
 SHA256SUM=$(shasum -a 256 "$DMG_FILEPATH" | awk '{ print $1 }')

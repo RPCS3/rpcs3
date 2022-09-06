@@ -12,7 +12,7 @@ curl -sL 'https://rpcs3.net/compatibility?api=v1&export' | iconv -t UTF-8 > ./bi
 curl -sL 'https://curl.haxx.se/ca/cacert.pem' > ./bin/cacert.pem
 
 # Package artifacts
-7z a -m0=LZMA2 -mx9 "$BUILD" ./bin/*
+7z a -m0=LZMA2 -mx9 -mtm- "$BUILD" ./bin/*
 
 # Generate sha256 hashes
 # Write to file for GitHub releases
