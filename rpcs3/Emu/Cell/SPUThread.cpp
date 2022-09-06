@@ -1656,11 +1656,11 @@ spu_thread::~spu_thread()
 	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);
 }
 
-u8* spu_thread::map_ls(utils::shm& shm)
+u8* spu_thread::map_ls(utils::shm& shm, void* ptr)
 {
 	vm::writer_lock mlock;
 
-	const auto ls = static_cast<u8*>(ensure(utils::memory_reserve(SPU_LS_SIZE * 5, nullptr, true))) + SPU_LS_SIZE * 2;
+	const auto ls = ptr ? static_cast<u8*>(ptr) : static_cast<u8*>(ensure(utils::memory_reserve(SPU_LS_SIZE * 5, nullptr, true))) + SPU_LS_SIZE * 2;
 	ensure(shm.map_critical(ls - SPU_LS_SIZE).first && shm.map_critical(ls).first && shm.map_critical(ls + SPU_LS_SIZE).first);
 	return ls;
 }
@@ -1671,7 +1671,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	, index(index)
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
 	, shm(std::make_shared<utils::shm>(SPU_LS_SIZE))
-	, ls(map_ls(*this->shm))
+	, ls(static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 5, nullptr, true)) + SPU_LS_SIZE * 2)
 	, option(option)
 	, lv2_id(lv2_id)
 	, spu_tname(make_single<std::string>(name))
@@ -1694,16 +1694,6 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	if (g_cfg.core.mfc_debug)
 	{
 		utils::memory_commit(vm::g_stat_addr + vm_offset(), SPU_LS_SIZE);
-	}
-
-	if (!group)
-	{
-		ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, vm::page_size_64k));
-	}
-	else
-	{
-		// alloc_hidden indicates falloc to allocate page with no access rights in base memory
-		ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, static_cast<u64>(vm::page_size_64k) | static_cast<u64>(vm::alloc_hidden)));
 	}
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)

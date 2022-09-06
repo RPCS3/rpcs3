@@ -707,6 +707,11 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return spu;
 	}));
 
+	// alloc_hidden indicates falloc to allocate page with no access rights in base memory
+	auto& spu = group->threads[inited];
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, static_cast<u64>(vm::page_size_64k) | static_cast<u64>(vm::alloc_hidden)));
+	spu->map_ls(*spu->shm, spu->ls);
+
 	*thread = tid;
 
 	group->args[inited] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
@@ -2206,9 +2211,11 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 			index = 0;
 	}
 
-	const u32 tid = idm::make<named_thread<spu_thread>>(nullptr, index, "", index);
+	const auto spu = idm::make_ptr<named_thread<spu_thread>>(nullptr, index, "", index);
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::page_size_64k));
+	spu->map_ls(*spu->shm, spu->ls);
 
-	spu_thread::g_raw_spu_id[index] = (ensure(tid));
+	spu_thread::g_raw_spu_id[index] = idm::last_id();
 
 	*id = index;
 
