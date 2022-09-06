@@ -266,6 +266,8 @@ public:
 	// Must be called under IDM lock
 	static bool has_ppus_in_running_state();
 
+	static void set_yield_frequency(u64 freq, u64 max_allowed_tsx);
+
 	static void cleanup();
 
 	template <typename T>

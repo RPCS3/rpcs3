@@ -55,6 +55,8 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::memory: return "mem";
 		case cpu_flag::pending: return "pend";
 		case cpu_flag::pending_recheck: return "pend-re";
+		case cpu_flag::yield: return "y";
+		case cpu_flag::preempt: return "PREEMPT";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
@@ -575,6 +577,7 @@ void cpu_thread::operator()()
 		if (!(state0 & cpu_flag::stop))
 		{
 			cpu_task();
+			state += cpu_flag::wait;
 
 			if (state & cpu_flag::ret && state.test_and_reset(cpu_flag::ret))
 			{
@@ -731,11 +734,17 @@ bool cpu_thread::check_state() noexcept
 			if (!is_stopped(flags) && flags.none_of(cpu_flag::ret))
 			{
 				// Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
-				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend)))
+				if (flags & (cpu_flag::pause + cpu_flag::memory + cpu_flag::yield + cpu_flag::preempt) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend)))
 				{
 					if (!(flags & cpu_flag::wait))
 					{
 						flags += cpu_flag::wait;
+						store = true;
+					}
+
+					if (flags & (cpu_flag::yield + cpu_flag::preempt))
+					{
+						flags -= (cpu_flag::yield + cpu_flag::preempt);
 						store = true;
 					}
 
@@ -767,6 +776,30 @@ bool cpu_thread::check_state() noexcept
 			state1 = flags;
 			return store;
 		}).first;
+
+		if (state0 & cpu_flag::preempt)
+		{
+			if (cpu_flag::wait - state0)
+			{
+				// Yield itself
+				state.wait(state1, atomic_wait_timeout{20'000});
+			}
+
+			if (const u128 bits = s_cpu_bits)
+			{
+				reader_lock lock(s_cpu_lock);
+
+				cpu_counter::for_all_cpu(bits & s_cpu_bits, [](cpu_thread* cpu)
+				{
+					if (cpu->state.none_of(cpu_flag::wait + cpu_flag::yield))
+					{
+						cpu->state += cpu_flag::yield;
+					}
+
+					return true;
+				});
+			}
+		}
 
 		if (escape)
 		{
@@ -856,6 +889,14 @@ bool cpu_thread::check_state() noexcept
 						break;
 					}
 				}
+
+				continue;
+			}
+
+			if (state0 & cpu_flag::yield && cpu_flag::wait - state0)
+			{
+				// Short sleep when yield flag is present alone (makes no sense when other methods which can stop thread execution have been done)
+				state.wait(state1, atomic_wait_timeout{20'000});
 			}
 		}
 	}
