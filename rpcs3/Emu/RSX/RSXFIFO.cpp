@@ -691,7 +691,7 @@ namespace rsx
 			}
 
 			// If we reached here, this is likely an error
-			fmt::throw_exception("Unexpected command 0x%x", cmd);
+			fmt::throw_exception("Unexpected command 0x%x (last cmd: 0x%x)", cmd, fifo_ctrl->last_cmd());
 		}
 
 		if (const auto state = performance_counters.state;
