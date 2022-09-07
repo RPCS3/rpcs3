@@ -236,7 +236,7 @@ error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCall
 	insert_callback = func_insert;
 
 	Emu.GetCallbacks().enable_disc_eject(!!func_eject);
-	Emu.GetCallbacks().enable_disc_insert(!!func_insert);
+	Emu.GetCallbacks().enable_disc_insert(false);
 
 	return CELL_OK;
 }
