@@ -308,7 +308,7 @@ void GLGSRender::on_init_thread()
 	}
 
 	//Occlusion query
-	for (u32 i = 0; i < occlusion_query_count; ++i)
+	for (u32 i = 0; i < rsx::reports::occlusion_query_count; ++i)
 	{
 		GLuint handle = 0;
 		auto &query = m_occlusion_query_data[i];
@@ -484,7 +484,7 @@ void GLGSRender::on_exit()
 
 	m_shader_interpreter.destroy();
 
-	for (u32 i = 0; i < occlusion_query_count; ++i)
+	for (u32 i = 0; i < rsx::reports::occlusion_query_count; ++i)
 	{
 		auto &query = m_occlusion_query_data[i];
 		query.active = false;

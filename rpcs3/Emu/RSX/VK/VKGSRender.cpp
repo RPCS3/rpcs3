@@ -420,9 +420,9 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	//Occlusion
 	m_occlusion_query_manager = std::make_unique<vk::query_pool_manager>(*m_device, VK_QUERY_TYPE_OCCLUSION, OCCLUSION_MAX_POOL_SIZE);
-	m_occlusion_map.resize(occlusion_query_count);
+	m_occlusion_map.resize(rsx::reports::occlusion_query_count);
 
-	for (u32 n = 0; n < occlusion_query_count; ++n)
+	for (u32 n = 0; n < rsx::reports::occlusion_query_count; ++n)
 		m_occlusion_query_data[n].driver_handle = n;
 
 	if (g_cfg.video.precise_zpass_count)
