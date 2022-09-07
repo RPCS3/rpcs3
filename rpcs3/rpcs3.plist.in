@@ -31,6 +31,6 @@
 	<key>NSCameraUsageDescription</key>
 	<string>The camera will be used for PlayStation Eye emulation</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>The microphone will be used for Chat/Singstar emulation</string>
+	<string>The microphone will be used for Chat/SingStar emulation</string>
 </dict>
 </plist>
