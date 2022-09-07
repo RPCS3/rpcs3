@@ -150,7 +150,7 @@ u64 get_timebased_time()
 
 	if (s_tsc_scaled_freq)
 	{
-		return utils::get_tsc() / s_tsc_scaled_freq - timebase_offset;
+		return utils::get_tsc() / s_tsc_scaled_freq * g_cfg.core.clocks_scale / 100 - timebase_offset;
 	}
 
 	while (true)
