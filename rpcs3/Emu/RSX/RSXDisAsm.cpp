@@ -64,7 +64,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 		}
 		else
 		{
-			Write("?? ??", -1);
+			Write(fmt::format("?? ?? (0x%x)", m_op), -1);
 		}
 
 		return 4;
@@ -103,7 +103,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 		{
 			// Hack: 0 method with large count is unlikely to be a command
 			// But is very common in floating point args, messing up debugger's code-flow
-			Write("?? ??", -1);
+			Write(fmt::format("?? ?? (0x%x)", m_op), -1);
 			return 4;
 		}
 
@@ -114,7 +114,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 			if (!try_read_op(pc))
 			{
 				last_opcode.clear();
-				Write("?? ??", -1);
+				Write(fmt::format("?? ?? (0x%08x:unmapped)", m_op), -1);
 				return 4;
 			}
 
@@ -123,7 +123,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 			if (rsx::methods[id] == &rsx::invalid_method)
 			{
 				last_opcode.clear();
-				Write("?? ??", -1);
+				Write(fmt::format("?? ?? (0x%08x:method)", m_op), -1);
 				return 4;
 			}
 
