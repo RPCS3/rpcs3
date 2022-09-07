@@ -1933,9 +1933,8 @@ namespace rsx
 
 		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
-			interleaved_range_info info = {};
+			interleaved_range_info& info = *result.alloc_interleaved_block();
 			info.interleaved = true;
-			info.locations.reserve(8);
 
 			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
@@ -1963,7 +1962,7 @@ namespace rsx
 			if (info.attribute_stride)
 			{
 				// At least one array feed must be enabled for vertex input
-				result.interleaved_blocks.emplace_back(std::move(info));
+				result.interleaved_blocks.push_back(&info);
 			}
 
 			return;
@@ -2030,21 +2029,21 @@ namespace rsx
 
 				for (auto &block : result.interleaved_blocks)
 				{
-					if (block.single_vertex)
+					if (block->single_vertex)
 					{
 						//Single vertex definition, continue
 						continue;
 					}
 
-					if (block.attribute_stride != info.stride())
+					if (block->attribute_stride != info.stride())
 					{
 						//Stride does not match, continue
 						continue;
 					}
 
-					if (base_address > block.base_offset)
+					if (base_address > block->base_offset)
 					{
-						const u32 diff = base_address - block.base_offset;
+						const u32 diff = base_address - block->base_offset;
 						if (diff > info.stride())
 						{
 							//Not interleaved, continue
@@ -2053,7 +2052,7 @@ namespace rsx
 					}
 					else
 					{
-						const u32 diff = block.base_offset - base_address;
+						const u32 diff = block->base_offset - base_address;
 						if (diff > info.stride())
 						{
 							//Not interleaved, continue
@@ -2061,18 +2060,18 @@ namespace rsx
 						}
 
 						//Matches, and this address is lower than existing
-						block.base_offset = base_address;
+						block->base_offset = base_address;
 					}
 
 					alloc_new_block = false;
-					block.locations.push_back({ index, modulo, info.frequency() });
-					block.interleaved = true;
+					block->locations.push_back({ index, modulo, info.frequency() });
+					block->interleaved = true;
 					break;
 				}
 
 				if (alloc_new_block)
 				{
-					interleaved_range_info block = {};
+					interleaved_range_info& block = *result.alloc_interleaved_block();
 					block.base_offset = base_address;
 					block.attribute_stride = info.stride();
 					block.memory_location = info.offset() >> 31;
@@ -2085,7 +2084,7 @@ namespace rsx
 						block.attribute_stride = rsx::get_vertex_type_size_on_host(info.type(), info.size());
 					}
 
-					result.interleaved_blocks.emplace_back(std::move(block));
+					result.interleaved_blocks.push_back(&block);
 				}
 			}
 		}
@@ -2093,7 +2092,7 @@ namespace rsx
 		for (auto &info : result.interleaved_blocks)
 		{
 			//Calculate real data address to be used during upload
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location);
+			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info->base_offset), info->memory_location);
 		}
 	}
 
@@ -2353,7 +2352,7 @@ namespace rsx
 		{
 			for (const auto &block : layout.interleaved_blocks)
 			{
-				volatile_memory_size += block.attribute_stride * vertex_count;
+				volatile_memory_size += block->attribute_stride * vertex_count;
 			}
 		}
 		else
@@ -2400,7 +2399,7 @@ namespace rsx
 		{
 			const auto &block = layout.interleaved_blocks[0];
 			u32 inline_data_offset = volatile_offset;
-			for (const auto& attrib : block.locations)
+			for (const auto& attrib : block->locations)
 			{
 				auto &info = rsx::method_registers.vertex_arrays_info[attrib.index];
 
@@ -2412,14 +2411,14 @@ namespace rsx
 		{
 			for (const auto &block : layout.interleaved_blocks)
 			{
-				for (const auto& attrib : block.locations)
+				for (const auto& attrib : block->locations)
 				{
 					const u32 local_address = (rsx::method_registers.vertex_arrays_info[attrib.index].offset() & 0x7fffffff);
-					offset_in_block[attrib.index] = persistent_offset + (local_address - block.base_offset);
+					offset_in_block[attrib.index] = persistent_offset + (local_address - block->base_offset);
 				}
 
-				const auto range = block.calculate_required_range(first_vertex, vertex_count);
-				persistent_offset += block.attribute_stride * range.second;
+				const auto range = block->calculate_required_range(first_vertex, vertex_count);
+				persistent_offset += block->attribute_stride * range.second;
 			}
 		}
 
@@ -2484,7 +2483,7 @@ namespace rsx
 						type = info.type();
 						size = info.size();
 
-						attrib0 = layout.interleaved_blocks[0].attribute_stride | default_frequency_mask;
+						attrib0 = layout.interleaved_blocks[0]->attribute_stride | default_frequency_mask;
 					}
 				}
 				else
@@ -2624,12 +2623,12 @@ namespace rsx
 		{
 			for (const auto &block : layout.interleaved_blocks)
 			{
-				auto range = block.calculate_required_range(first_vertex, vertex_count);
+				auto range = block->calculate_required_range(first_vertex, vertex_count);
 
-				const u32 data_size = range.second * block.attribute_stride;
-				const u32 vertex_base = range.first * block.attribute_stride;
+				const u32 data_size = range.second * block->attribute_stride;
+				const u32 vertex_base = range.first * block->attribute_stride;
 
-				g_fxo->get<rsx::dma_manager>().copy(persistent, vm::_ptr<char>(block.real_offset_address) + vertex_base, data_size);
+				g_fxo->get<rsx::dma_manager>().copy(persistent, vm::_ptr<char>(block->real_offset_address) + vertex_base, data_size);
 				persistent += data_size;
 			}
 		}
