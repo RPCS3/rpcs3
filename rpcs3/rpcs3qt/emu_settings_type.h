@@ -96,7 +96,7 @@ enum class emu_settings_type
 	VulkanAsyncSchedulerDriver,
 	AllowHostGPULabels,
 	DisableMSLFastMath,
-	SoftwareVkSemaphore,
+	SingleQueueVkSemaphore,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -265,7 +265,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
 	{ emu_settings_type::AllowHostGPULabels,         { "Video", "Allow Host GPU Labels"}},
 	{ emu_settings_type::DisableMSLFastMath,         { "Video", "Disable MSL Fast Math"}},
-	{ emu_settings_type::SoftwareVkSemaphore,        { "Video", "Software VkSemaphore"}},
+	{ emu_settings_type::SingleQueueVkSemaphore,     { "Video", "Single Queue"}},
 
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},

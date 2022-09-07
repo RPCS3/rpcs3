@@ -2510,9 +2510,9 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="softwareVkSemaphore">
+                <widget class="QCheckBox" name="singleQueueVkSemaphore">
                  <property name="text">
-                  <string>Software VkSemaphore</string>
+                  <string>Single Queue</string>
                  </property>
                 </widget>
                </item>
