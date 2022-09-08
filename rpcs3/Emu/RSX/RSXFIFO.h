@@ -113,6 +113,7 @@ namespace rsx
 		class FIFO_control
 		{
 		private:
+			mutable rsx::thread* m_thread;
 			RsxDmaControl* m_ctrl = nullptr;
 			const rsx::rsx_iomap_table* m_iotable;
 			u32 m_internal_get = 0;
@@ -129,6 +130,7 @@ namespace rsx
 			u32 m_cache_addr = 0;
 			u32 m_cache_size = 0;
 			alignas(64) std::byte m_cache[8][128];
+
 		public:
 			FIFO_control(rsx::thread* pctrl);
 			~FIFO_control() = default;

@@ -21,6 +21,7 @@ namespace rsx
 	{
 		FIFO_control::FIFO_control(::rsx::thread* pctrl)
 		{
+			m_thread = pctrl;
 			m_ctrl = pctrl->ctrl;
 			m_iotable = &pctrl->iomap_table;
 		}
@@ -53,7 +54,7 @@ namespace rsx
 
 				while (read_put() == m_internal_get && !Emu.IsStopped())
 				{
-					get_current_renderer()->cpu_wait({});
+					m_thread->cpu_wait({});
 				}
 			}
 		}
@@ -124,6 +125,8 @@ namespace rsx
 
 				// Find the next set bit after every iteration
 				u64 start_time = 0;
+				u32 bytes_read = 0;
+
 				for (int i = 0;; i = (std::countr_zero<u32>(utils::rol8(to_fetch, 0 - i - 1)) + i + 1) % 8)
 				{
 					// If a reservation is being updated, try to load another
@@ -144,32 +147,41 @@ namespace rsx
 								break;
 							}
 
+							bytes_read += 128;
 							continue;
 						}
 					}
 
 					if (!start_time)
 					{
+						if ((bytes_read << 1) >= m_cache_size)
+						{
+							// Cut our losses, we have enough to work with.
+							m_cache_size = bytes_read;
+							break;
+						}
+
 						start_time = rsx::uclock();
 					}
 
-					if (rsx::uclock() - start_time >= 50u)
+					auto now = rsx::uclock();
+					if (now - start_time >= 50u)
 					{
-						const auto rsx = get_current_renderer();
-
-						if (rsx->is_stopped())
+						if (m_thread->is_stopped())
 						{
 							return {};
 						}
 
-						rsx->cpu_wait({});
+						m_thread->cpu_wait({});
 
-						// Add idle time in reverse: after exchnage start_time becomes uclock(), use substruction because of the reversed order of parameters
-						const u64 _start = std::exchange(start_time, rsx::uclock());
-						rsx->performance_counters.idle_time -= _start - start_time;
+						const auto then = std::exchange(now, rsx::uclock());
+						start_time = now;
+						m_thread->performance_counters.idle_time += now - then;
 					}
-
-					busy_wait(200);
+					else
+					{
+						busy_wait(200);
+					}
 
 					if (g_cfg.core.rsx_fifo_accuracy >= rsx_fifo_mode::atomic_ordered)
 					{
@@ -178,8 +190,7 @@ namespace rsx
 				}
 			}
 
-			be_t<u32> ret;
-			std::memcpy(&ret, reinterpret_cast<const u8*>(&m_cache) + (addr - m_cache_addr), sizeof(u32));
+			const auto ret = utils::bless<const be_t<u32>>(&m_cache)[(addr - m_cache_addr) >> 2];
 			return {true, ret};
 		}
 
@@ -221,7 +232,7 @@ namespace rsx
 				bool ok{};
 				u32 arg = 0;
 
-				if (g_cfg.core.rsx_fifo_accuracy)
+				if (g_cfg.core.rsx_fifo_accuracy) [[ unlikely ]]
 				{
 					std::tie(ok, arg) = fetch_u32(m_internal_get + 4);
 
@@ -229,7 +240,7 @@ namespace rsx
 					{
 						if (arg == FIFO_ERROR)
 						{
-							get_current_renderer()->recover_fifo();
+							m_thread->recover_fifo();
 						}
 
 						return false;
@@ -311,7 +322,7 @@ namespace rsx
 				m_memwatch_cmp = 0;
 			}
 
-			if (!g_cfg.core.rsx_fifo_accuracy)
+			if (!g_cfg.core.rsx_fifo_accuracy) [[ likely ]]
 			{
 				const u32 put = read_put();
 
