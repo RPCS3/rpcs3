@@ -420,9 +420,10 @@ void asmjit::simd_builder::_init(uint new_vsize)
 		vsize = new_vsize ? new_vsize : 16;
 	}
 
-	if (!new_vsize && utils::has_avx512())
+	if (utils::has_avx512())
 	{
-		vmask = -1;
+		if (!new_vsize)
+			vmask = -1;
 	}
 	else
 	{
@@ -604,7 +605,7 @@ void asmjit::simd_builder::vec_load_unaligned(u32 esize, const Operand& v, const
 			this->emit(x86::Inst::kIdVpinsrw, x86::Xmm(v.id()), x86::Xmm(v.id()), src, Imm(0));
 		else if (vsize == 2)
 			this->emit(x86::Inst::kIdPinsrw, v, src, Imm(0));
-		else if (vmask && vmask < 8)
+		else if ((vmask && vmask < 8) || vsize >= 64)
 			this->emit(x86::Inst::kIdVmovdqu16, v, src);
 		else
 			return vec_load_unaligned(vsize, v, src);
@@ -616,7 +617,7 @@ void asmjit::simd_builder::vec_load_unaligned(u32 esize, const Operand& v, const
 			this->emit(x86::Inst::kIdVmovd, x86::Xmm(v.id()), src);
 		else if (vsize == 4)
 			this->emit(x86::Inst::kIdMovd, v, src);
-		else if (vmask && vmask < 8)
+		else if ((vmask && vmask < 8) || vsize >= 64)
 			this->emit(x86::Inst::kIdVmovdqu32, v, src);
 		else
 			return vec_load_unaligned(vsize, v, src);
@@ -628,7 +629,7 @@ void asmjit::simd_builder::vec_load_unaligned(u32 esize, const Operand& v, const
 			this->emit(x86::Inst::kIdVmovq, x86::Xmm(v.id()), src);
 		else if (vsize == 8)
 			this->emit(x86::Inst::kIdMovq, v, src);
-		else if (vmask && vmask < 8)
+		else if ((vmask && vmask < 8) || vsize >= 64)
 			this->emit(x86::Inst::kIdVmovdqu64, v, src);
 		else
 			return vec_load_unaligned(vsize, v, src);
@@ -636,7 +637,9 @@ void asmjit::simd_builder::vec_load_unaligned(u32 esize, const Operand& v, const
 	else if (esize >= 16)
 	{
 		ensure(vsize >= 16);
-		if (utils::has_avx())
+		if ((vmask && vmask < 8) || vsize >= 64)
+			this->emit(x86::Inst::kIdVmovdqu64, v, src); // Not really needed
+		else if (utils::has_avx())
 			this->emit(x86::Inst::kIdVmovdqu, v, src);
 		else
 			this->emit(x86::Inst::kIdMovups, v, src);
