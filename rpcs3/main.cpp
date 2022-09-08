@@ -92,6 +92,8 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 
 [[noreturn]] extern void report_fatal_error(std::string_view _text)
 {
+	extern void jit_announce(uptr, usz, std::string_view);
+
 	std::string buf;
 
 	// Check if thread id is in string
@@ -124,6 +126,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
 #endif
 		std::cerr << fmt::format("RPCS3: %s\n", text);
+#ifdef __linux__
+		jit_announce(0, 0, "");
+#endif
 		std::abort();
 	}
 
@@ -207,6 +212,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 #endif
 	}
 
+#ifdef __linux__
+	jit_announce(0, 0, "");
+#endif
 	std::abort();
 }
 
