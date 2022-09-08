@@ -20,6 +20,34 @@ LOG_CHANNEL(jit_log, "JIT");
 
 void jit_announce(uptr func, usz size, std::string_view name)
 {
+#ifdef __linux__
+	static const struct tmp_perf_map
+	{
+		std::string name{fmt::format("/tmp/perf-%d.map", getpid())};
+		fs::file data{name, fs::rewrite + fs::append};
+
+		tmp_perf_map() = default;
+		tmp_perf_map(const tmp_perf_map&) = delete;
+		tmp_perf_map& operator=(const tmp_perf_map&) = delete;
+
+		~tmp_perf_map()
+		{
+			fs::remove_file(name);
+		}
+	} s_map;
+
+	if (size && name.size())
+	{
+		s_map.data.write(fmt::format("%x %x %s\n", func, size, name));
+	}
+
+	if (!func && !size && !name.size())
+	{
+		fs::remove_file(s_map.name);
+		return;
+	}
+#endif
+
 	if (!size)
 	{
 		jit_log.error("Empty function announced: %s (%p)", name, func);
@@ -83,12 +111,6 @@ void jit_announce(uptr func, usz size, std::string_view name)
 			dump.write(reinterpret_cast<uchar*>(func), size);
 		}
 	}
-
-#ifdef __linux__
-	static const fs::file s_map(fmt::format("/tmp/perf-%d.map", getpid()), fs::rewrite + fs::append);
-
-	s_map.write(fmt::format("%x %x %s\n", func, size, name));
-#endif
 }
 
 static u8* get_jit_memory()
