@@ -2809,11 +2809,23 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 		if (rtime != res)
 		{
+			if (!g_cfg.core.spu_accurate_reservations && cmp_rdata(to_write, rdata))
+			{
+				raddr = 0;
+				return true;
+			}
+
 			return false;
 		}
 
 		if (cmp_rdata(to_write, rdata))
 		{
+			if (!g_cfg.core.spu_accurate_reservations)
+			{
+				raddr = 0;
+				return true;
+			}
+
 			// Writeback of unchanged data. Only check memory change
 			if (cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128))
 			{
@@ -2841,11 +2853,18 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			return false;
 		}
 
-		if (!g_cfg.core.spu_accurate_reservations && addr - spurs_addr <= 0x80)
+		if (!g_cfg.core.spu_accurate_reservations)
 		{
-			mov_rdata(vm::_ref<spu_rdata_t>(addr), to_write);
-			res += 64;
-			return true;
+			if (addr - spurs_addr <= 0x80)
+			{
+				mov_rdata(vm::_ref<spu_rdata_t>(addr), to_write);
+				res += 64;
+				return true;
+			}
+		}
+		else if (!g_use_rtm)
+		{
+			vm::_ref<atomic_t<u32>>(addr) += 0;
 		}
 
 		if (g_use_rtm) [[likely]]
@@ -2928,8 +2947,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			last_faddr = 0;
 			return true;
 		}
-
-		vm::_ref<atomic_t<u32>>(addr) += 0;
 
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 		const bool success = [&]()
@@ -3068,7 +3085,12 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 		u64 result = 1;
 
-		if (cpu->state & cpu_flag::pause)
+		if (!g_cfg.core.spu_accurate_reservations)
+		{
+			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
+			vm::reservation_acquire(addr) += 32;
+		}
+		else if (cpu->state & cpu_flag::pause)
 		{
 			result = 0;
 		}
@@ -3119,7 +3141,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 
 	const u32 addr = args.eal & -128;
 
-	if (raddr && addr == raddr)
+	if (raddr && addr == raddr && g_cfg.core.spu_accurate_reservations)
 	{
 		// Try to process PUTLLUC using PUTLLC when a reservation is active:
 		// If it fails the reservation is cleared, LR event is set and we fallback to the main implementation
