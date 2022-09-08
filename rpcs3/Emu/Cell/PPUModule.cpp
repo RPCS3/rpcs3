@@ -680,7 +680,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 		{
 			const u32 fnid = fnids[i];
 			const u32 faddr = faddrs[i];
-			ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr);
+			ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x [at:0x%x]", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr, vm::read32(faddr));
 
 			// Function linkage info
 			auto& flink = mlink.functions[fnid];
