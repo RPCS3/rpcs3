@@ -141,6 +141,7 @@ struct CellMusicSelectionContext
 
 struct music_selection_context
 {
+	bool valid = false;
 	char magic[4] = "SUS";
 	std::string hash;
 	CellSearchContentType content_type = CELL_SEARCH_CONTENTTYPE_MUSIC;
@@ -166,6 +167,11 @@ struct music_selection_context
 	void create_playlist(const std::string& new_hash);
 	bool load_playlist();
 	u32 step_track(bool next);
+
+	operator bool() const
+	{
+		return atomic_storage<bool>::load(valid);
+	}
 
 	// Helper
 	error_code find_content_id(vm::ptr<CellSearchContentId> contents_id);
