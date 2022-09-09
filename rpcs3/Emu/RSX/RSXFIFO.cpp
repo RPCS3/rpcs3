@@ -119,14 +119,17 @@ namespace rsx
 					m_cache_size = put - m_cache_addr;
 				}
 
-				rsx::reservation_lock<true, 1> rsx_lock(addr1, m_cache_size, true);
+				// Atomic FIFO debug options
+				const bool force_cache_fill = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::atomic_ordered;
+				const bool strict_fetch_ordering = g_cfg.core.rsx_fifo_accuracy >= rsx_fifo_mode::atomic_ordered;
 
+				rsx::reservation_lock<true, 1> rsx_lock(addr1, m_cache_size, true);
 				const auto src = vm::_ptr<spu_rdata_t>(addr1);
 
-				// Find the next set bit after every iteration
 				u64 start_time = 0;
 				u32 bytes_read = 0;
 
+				// Find the next set bit after every iteration
 				for (int i = 0;; i = (std::countr_zero<u32>(utils::rol8(to_fetch, 0 - i - 1)) + i + 1) % 8)
 				{
 					// If a reservation is being updated, try to load another
@@ -154,9 +157,10 @@ namespace rsx
 
 					if (!start_time)
 					{
-						if ((bytes_read << 1) >= m_cache_size)
+						if (bytes_read >= 256 && !force_cache_fill)
 						{
-							// Cut our losses, we have enough to work with.
+							// Cut our losses if we have something to work with.
+							// This is the first time falling out of the reservation loop above, so we have clean data with no holes.
 							m_cache_size = bytes_read;
 							break;
 						}
@@ -183,7 +187,7 @@ namespace rsx
 						busy_wait(200);
 					}
 
-					if (g_cfg.core.rsx_fifo_accuracy >= rsx_fifo_mode::atomic_ordered)
+					if (strict_fetch_ordering)
 					{
 						i = (i - 1) % 8;
 					}
