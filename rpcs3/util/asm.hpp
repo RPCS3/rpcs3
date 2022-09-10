@@ -358,9 +358,9 @@ namespace utils
 	// Synchronization helper (cache-friendly busy waiting)
 	inline void busy_wait(usz cycles = 3000)
 	{
-		const u64 start = get_tsc();
+		const u64 stop = get_tsc() + cycles;
 		do pause();
-		while (get_tsc() - start < cycles);
+		while (get_tsc() < stop);
 	}
 
 	// Align to power of 2
