@@ -2,7 +2,6 @@
 #include "sys_ss.h"
 
 #include "sys_process.h"
-#include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
@@ -137,20 +136,11 @@ s32 sys_ss_get_console_id(vm::ptr<u8> buf)
 
 s32 sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 {
-        u64 phigh, plow;
 	sys_ss.warning("sys_ss_get_open_psid(psid=*0x%x)", psid);
 
-        if (try_to_uint64(&phigh, g_cfg.sys.console_psid_high.to_string(), 0, umax) &&
-            try_to_uint64(&plow, g_cfg.sys.console_psid_low.to_string(), 0, umax))
-        {
-            psid->high = phigh;
-            psid->low = plow;
-        }
-        else
-        {
-            psid->high = 0;
-            psid->low = 0;
-        }
+	psid->high = g_cfg.sys.console_psid_high;
+	psid->low = g_cfg.sys.console_psid_low;
+
 	return CELL_OK;
 }
 

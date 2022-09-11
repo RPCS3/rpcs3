@@ -295,8 +295,9 @@ struct cfg_root : cfg::node
 		cfg::_enum<CellKbMappingType> keyboard_type{ this, "Keyboard Type", CellKbMappingType{0} }; // CELL_KB_MAPPING_101 = US
 		cfg::_enum<enter_button_assign> enter_button_assignment{ this, "Enter button assignment", enter_button_assign::cross };
 		cfg::_int<-60*60*24*365*100LL, 60*60*24*365*100LL> console_time_offset{ this, "Console time offset (s)", 0 }; // console time offset, limited to +/-100years
-                cfg::string console_psid_high{ this, "PSID high", "0x0"};
-                cfg::string console_psid_low{ this, "PSID low", "0x0"};
+		cfg::uint<0,umax> console_psid_high{ this, "PSID high"};
+		cfg::uint<0,umax> console_psid_low{ this, "PSID low"};
+
 	} sys{ this };
 
 	struct node_net : cfg::node
