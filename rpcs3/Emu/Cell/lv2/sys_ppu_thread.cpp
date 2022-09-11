@@ -56,6 +56,8 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 	}
 }
 
+constexpr u32 c_max_ppu_name_size = 28;
+
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
 	ppu.state += cpu_flag::wait;
@@ -461,7 +463,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 	if (threadname)
 	{
-		constexpr u32 max_size = 27; // max size including null terminator
+		constexpr u32 max_size = c_max_ppu_name_size; // max size including null terminator
 		const auto pname = threadname.get_ptr();
 		ppu_name.assign(pname, std::find(pname, pname + max_size, '\0'));
 	}
@@ -576,7 +578,7 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 		return CELL_EFAULT;
 	}
 
-	constexpr u32 max_size = 27; // max size including null terminator
+	constexpr u32 max_size = c_max_ppu_name_size; // max size including null terminator
 	const auto pname = name.get_ptr();
 
 	// Make valid name
