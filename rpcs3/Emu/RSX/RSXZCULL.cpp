@@ -287,18 +287,19 @@ namespace rsx
 
 			if (m_statistics_map[m_statistics_tag_id].flags)
 			{
+				// Move to the next slot if this one is still in use.
 				m_statistics_tag_id = (m_statistics_tag_id + 1) % max_stat_registers;
-				auto data = m_statistics_map.data() + m_statistics_tag_id;
-
-				if (data->flags != 0)
-				{
-					// This shouldn't happen
-					rsx_log.error("Allocating a new ZCULL statistics slot %u overwrites previous data.", m_statistics_tag_id);
-				}
-
-				// Clear value before use
-				data->result = 0;
 			}
+
+			auto& current_stats = m_statistics_map[m_statistics_tag_id];
+			if (current_stats.flags != 0)
+			{
+				// This shouldn't happen
+				rsx_log.error("Allocating a new ZCULL statistics slot %u overwrites previous data.", m_statistics_tag_id);
+			}
+
+			// Clear value before use
+			current_stats.result = 0;
 		}
 
 		void ZCULL_control::on_draw()
