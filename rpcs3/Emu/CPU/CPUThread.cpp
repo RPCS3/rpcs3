@@ -5,6 +5,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Memory/vm_locking.h"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/IdManager.h"
 #include "Emu/GDB.h"
 #include "Emu/Cell/PPUThread.h"
@@ -892,6 +893,14 @@ cpu_thread& cpu_thread::operator=(thread_state)
 	if (old & cpu_flag::wait && old.none_of(cpu_flag::again + cpu_flag::exit))
 	{
 		state.notify_one(cpu_flag::exit);
+
+		if (auto thread = try_get<spu_thread>())
+		{
+			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
+			{
+				vm::reservation_notifier(resv).notify_one();
+			}
+		}
 	}
 
 	return *this;

@@ -4336,6 +4336,14 @@ s64 spu_thread::get_ch_value(u32 ch)
 						return true;
 					});
 
+					if (raddr - spurs_addr <= 0x80 && !g_cfg.core.spu_accurate_reservations && mask1 == SPU_EVENT_LR)
+					{
+						// Wait without timeout, in this situation we have notifications for all writes making it possible
+						// Abort notifications are handled specially for performance reasons
+						vm::reservation_notifier(raddr).wait(rtime, -128);
+						continue;	
+					}
+
 					vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{80'000});
 				}
 				else
@@ -5219,6 +5227,8 @@ bool spu_thread::stop_and_signal(u32 code)
 			break;
 		}
 
+		u32 prev_resv = 0;
+
 		for (auto& thread : group->threads)
 		{
 			if (thread)
@@ -5227,10 +5237,26 @@ bool spu_thread::stop_and_signal(u32 code)
 				if (thread.get() != this && thread->state & cpu_flag::ret)
 				{
 					thread_ctrl::notify(*thread);
+
+					if (u32 resv = atomic_storage<u32>::load(thread->raddr))
+					{
+						if (prev_resv && prev_resv != resv)
+						{
+							// Batch reservation notifications if possible
+							vm::reservation_notifier(prev_resv).notify_all();
+						}
+
+						prev_resv = resv;
+					}
 				}
 			}
 		}
-	
+
+		if (prev_resv)
+		{
+			vm::reservation_notifier(prev_resv).notify_all();
+		}
+
 		check_state();
 		return true;
 	}
