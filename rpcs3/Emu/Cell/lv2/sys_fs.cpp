@@ -817,9 +817,9 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 	if (error)
 	{
-		if (error == CELL_EEXIST)
+		if (error == CELL_EEXIST || error == CELL_ENOENT)
 		{
-			return not_an_error(CELL_EEXIST);
+			return not_an_error(error);
 		}
 
 		return {error, path};
@@ -1307,7 +1307,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 				break;
 			}
 
-			return {CELL_ENOENT, path};
+			return not_an_error(CELL_ENOENT);
 		}
 		default:
 		{
