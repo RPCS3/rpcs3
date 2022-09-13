@@ -42,6 +42,7 @@ rsx::frame_capture_data frame_capture;
 
 extern CellGcmOffsetTable offsetTable;
 extern thread_local std::string(*g_tls_log_prefix)();
+extern atomic_t<u32> g_lv2_preempts_taken;
 
 LOG_CHANNEL(perf_log, "PERF");
 
@@ -3645,7 +3646,7 @@ namespace rsx
 				lower_preemption_count();
 			}
 
-			perf_log.trace("CPU preemption control: reeval=%d, preempt_count=%d, fails=%d, hard=%d, avg_frame_time=%d, highered=%d, lowered=%d", can_reevaluate, preempt_count, fails, hard_fails, avg_frame_time, highered_delay, lowered_delay);
+			perf_log.trace("CPU preemption control: reeval=%d, preempt_count=%d, fails=%d, hard=%d, avg_frame_time=%d, highered=%d, lowered=%d, taken=%u", can_reevaluate, preempt_count, fails, hard_fails, avg_frame_time, highered_delay, lowered_delay, ::g_lv2_preempts_taken.load());
 
 			if (hard_measures_taken)
 			{
