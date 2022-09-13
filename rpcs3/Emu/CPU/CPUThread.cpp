@@ -642,6 +642,8 @@ void cpu_thread::cpu_wait(bs_t<cpu_flag> old)
 	thread_ctrl::wait_on(state, old);
 }
 
+static atomic_t<u32> s_dummy_atomic = 0;
+
 bool cpu_thread::check_state() noexcept
 {
 	bool cpu_sleep_called = false;
@@ -782,7 +784,7 @@ bool cpu_thread::check_state() noexcept
 			if (cpu_flag::wait - state0)
 			{
 				// Yield itself
-				state.wait(state1, atomic_wait_timeout{20'000});
+				s_dummy_atomic.wait(0, 1u << 30, atomic_wait_timeout{80'000});
 			}
 
 			if (const u128 bits = s_cpu_bits)
@@ -896,7 +898,8 @@ bool cpu_thread::check_state() noexcept
 			if (state0 & cpu_flag::yield && cpu_flag::wait - state0)
 			{
 				// Short sleep when yield flag is present alone (makes no sense when other methods which can stop thread execution have been done)
-				state.wait(state1, atomic_wait_timeout{20'000});
+				// Pass a mask of a single bit which is often unused to avoid notifications
+				s_dummy_atomic.wait(0, 1u << 30, atomic_wait_timeout{80'000});
 			}
 		}
 	}
