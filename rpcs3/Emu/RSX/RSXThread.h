@@ -689,6 +689,17 @@ namespace rsx
 
 		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;
 
+		struct frame_time_t
+		{
+			u64 preempt_count;
+			u64 timestamp;
+			u64 tsc;
+		};
+
+		std::deque<frame_time_t> frame_times;
+		u32 prevent_preempt_increase_tickets = 0;
+		u32 preempt_fail_old_preempt_count = 0;
+
 		atomic_t<s32> async_tasks_pending{ 0 };
 
 		reports::conditional_render_eval cond_render_ctrl;
@@ -793,6 +804,7 @@ namespace rsx
 		shared_mutex m_mtx_task;
 
 		void handle_emu_flip(u32 buffer);
+		void evaluate_cpu_usage_reduction_limits();
 		void handle_invalidated_memory_range();
 
 	public:

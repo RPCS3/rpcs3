@@ -25,6 +25,8 @@ enum class cpu_flag : u32
 	pending, // Thread has postponed work
 	pending_recheck, // Thread needs to recheck if there is pending work before ::pending removal
 	notify, // Flag meant solely to allow atomic notification on state without changing other flags
+	yield, // Thread is being requested to yield its execution time if it's running
+	preempt, // Thread is being requested to preempt the execution of all CPU threads
 
 	dbg_global_pause, // Emulation paused
 	dbg_pause, // Thread paused
