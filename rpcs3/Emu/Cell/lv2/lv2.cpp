@@ -1211,6 +1211,7 @@ static std::deque<class cpu_thread*> g_to_sleep;
 static atomic_t<u64> s_yield_frequency = 0;
 static atomic_t<u64> s_max_allowed_yield_tsc = 0;
 static u64 s_last_yield_tsc = 0;
+atomic_t<u32> g_lv2_preempts_taken = 0;
 
 namespace cpu_counter
 {
@@ -1676,6 +1677,7 @@ void lv2_obj::schedule_all(u64 current_time)
 			{
 				cpu->state += cpu_flag::preempt;
 				s_last_yield_tsc = tsc;
+				g_lv2_preempts_taken.release(g_lv2_preempts_taken.load() + 1); // Has a minor race but performance is more important
 				rsx::set_rsx_yield_flag();
 			}
 		}
@@ -1768,6 +1770,7 @@ void lv2_obj::set_yield_frequency(u64 freq, u64 max_allowed_tsc)
 {
 	s_yield_frequency.release(freq);
 	s_max_allowed_yield_tsc.release(max_allowed_tsc);
+	g_lv2_preempts_taken.release(0);
 }
 
 bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep)
