@@ -4314,7 +4314,23 @@ s64 spu_thread::get_ch_value(u32 ch)
 				// Don't busy-wait with TSX - memory is sensitive
 				if (!reservation_busy_waiting)
 				{
-					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64) -> bool
+					if (raddr - spurs_addr <= 0x80 && !g_cfg.core.spu_accurate_reservations && mask1 == SPU_EVENT_LR)
+					{
+						atomic_wait_engine::set_one_time_use_wait_callback(+[](u64) -> bool
+						{
+							const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
+							AUDIT(_this->id_type() == 1);
+
+							return !_this->is_stopped();
+						});
+
+						// Wait without timeout, in this situation we have notifications for all writes making it possible
+						// Abort notifications are handled specially for performance reasons
+						vm::reservation_notifier(raddr).wait(rtime, -128);
+						continue;	
+					}
+
+					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
 					{
 						const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
 						AUDIT(_this->id_type() == 1);
@@ -4326,6 +4342,12 @@ s64 spu_thread::get_ch_value(u32 ch)
 							return false;
 						}
 
+						if (!attempts)
+						{
+							// Skip checks which have been done already
+							return true;
+						}
+
 						if (!vm::check_addr(_this->raddr) || !cmp_rdata(_this->rdata, *_this->resrv_mem))
 						{
 							_this->set_events(SPU_EVENT_LR);
@@ -4335,14 +4357,6 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 						return true;
 					});
-
-					if (raddr - spurs_addr <= 0x80 && !g_cfg.core.spu_accurate_reservations && mask1 == SPU_EVENT_LR)
-					{
-						// Wait without timeout, in this situation we have notifications for all writes making it possible
-						// Abort notifications are handled specially for performance reasons
-						vm::reservation_notifier(raddr).wait(rtime, -128);
-						continue;	
-					}
 
 					vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{80'000});
 				}
