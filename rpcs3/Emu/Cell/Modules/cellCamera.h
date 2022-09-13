@@ -477,5 +477,3 @@ struct gem_camera_shared
 	atomic_t<s32> size{0};
 	atomic_t<CellCameraFormat> format{CELL_CAMERA_RAW8};
 };
-
-static inline s32 get_video_buffer_size(s32 width, s32 height);

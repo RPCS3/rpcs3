@@ -43,10 +43,9 @@ bool ime_jp_manager::addChar(u16 c)
 	if (!c || cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1) || cursor > input_string.length())
 		return false;
 
-	std::u16string tmp;
-	tmp += c;
-	input_string.insert(cursor++, tmp);
-	cursor_end = cursor;
+	input_string += c; // resize
+	std::memmove(input_string.data() + cursor + 1, input_string.data() + cursor, sizeof(u16) * (input_string.size() - 1 - cursor));
+	cursor_end = ++cursor;
 	input_state = CELL_IMEJP_BEFORE_CONVERT;
 	return true;
 }

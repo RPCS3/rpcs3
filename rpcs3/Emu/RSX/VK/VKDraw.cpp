@@ -47,7 +47,7 @@ namespace vk
 		VkPipelineStageFlags dst_stage,
 		const rsx::sampled_image_descriptor_base* sampler_state)
 	{
-		switch (auto raw = view->image(); raw->current_layout)
+		switch (auto raw = view->image(); +raw->current_layout)
 		{
 		default:
 			//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:

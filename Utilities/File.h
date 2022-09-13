@@ -74,7 +74,7 @@ namespace fs
 
 		using enable_bitcopy = std::true_type;
 
-		constexpr bool operator==(const stat_t&) const = default; 
+		constexpr bool operator==(const stat_t&) const = default;
 	};
 
 	// Helper, layout is equal to iovec struct
@@ -793,7 +793,8 @@ namespace fs
 
 			if (write)
 			{
-				m_stat.mtime = std::max(m_stat.atime, ++m_stat.mtime);
+				m_stat.mtime++;
+				m_stat.mtime = std::max(m_stat.atime, m_stat.mtime);
 				m_stat.ctime = m_stat.mtime;
 			}
 		}

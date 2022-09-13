@@ -1344,7 +1344,7 @@ bool lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, u64 current_time)
 				val += cpu_flag::suspend;
 
 				// Flag used for forced timeout notification
-				ensure(!timeout || !(val & cpu_flag::notify)); 
+				ensure(!timeout || !(val & cpu_flag::notify));
 				return true;
 			}
 
@@ -1660,7 +1660,7 @@ void lv2_obj::schedule_all(u64 current_time)
 		}
 	}
 
-	if (notify_later_idx - 1 < std::size(g_to_notify) - 1) 
+	if (notify_later_idx - 1 < std::size(g_to_notify) - 1)
 	{
 		// Null-terminate the list if it ends before last slot
 		g_to_notify[notify_later_idx] = nullptr;
@@ -1905,4 +1905,10 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 	}
 
 	return true;
+}
+
+void lv2_obj::prepare_for_sleep(cpu_thread& cpu)
+{
+	vm::temporary_unlock(cpu);
+	cpu_counter::remove(&cpu);
 }

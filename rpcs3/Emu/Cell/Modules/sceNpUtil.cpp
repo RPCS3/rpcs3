@@ -69,7 +69,7 @@ struct sce_np_util_manager
 	}
 };
 
-error_code sceNpUtilBandwidthTestInitStart(ppu_thread& ppu, u32 prio, u32 stack)
+error_code sceNpUtilBandwidthTestInitStart([[maybe_unused]] ppu_thread& ppu, u32 prio, u32 stack)
 {
 	sceNpUtil.todo("sceNpUtilBandwidthTestInitStart(prio=%d, stack=%d)", prio, stack);
 
@@ -101,7 +101,7 @@ error_code sceNpUtilBandwidthTestGetStatus()
 	return not_an_error(util_manager.bandwidth_test_thread->status);
 }
 
-error_code sceNpUtilBandwidthTestShutdown(ppu_thread& ppu, vm::ptr<SceNpUtilBandwidthTestResult> result)
+error_code sceNpUtilBandwidthTestShutdown([[maybe_unused]] ppu_thread& ppu, vm::ptr<SceNpUtilBandwidthTestResult> result)
 {
 	sceNpUtil.warning("sceNpUtilBandwidthTestShutdown(result=*0x%x)", result);
 

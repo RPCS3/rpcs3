@@ -343,7 +343,7 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 	}
 
 	prx->state = state;
-	return std::move(prx);
+	return prx;
 }
 
 void lv2_prx::save(utils::serial& ar)

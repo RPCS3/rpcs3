@@ -721,7 +721,7 @@ struct ppu_far_jumps_t
 				c.bind(imm_address);
 				c.embedUInt32(pc);
 #endif
-			}, &rt); 
+			}, &rt);
 		}
 
 		return it->second.func;
@@ -1712,7 +1712,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		{
 			cmd_list
 			({
-				{ppu_cmd::ptr_call, 0}, +[](ppu_thread& ppu) -> bool
+				{ppu_cmd::ptr_call, 0}, +[](ppu_thread&) -> bool
 				{
 					while (!Emu.IsStopped() && !g_fxo->get<init_pushed>().inited)
 					{
@@ -1799,7 +1799,7 @@ void ppu_thread::save(utils::serial& ar)
 	if (_joiner >= ppu_join_status::max)
 	{
 		// Joining thread should recover this member properly
-		_joiner = ppu_join_status::joinable; 
+		_joiner = ppu_join_status::joinable;
 	}
 
 	if (state & cpu_flag::again)
@@ -2888,7 +2888,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			std::string upper = fmt::to_upper(entry.name);
 
 			// Skip already loaded modules or HLEd ones
-			auto is_ignored = [&](s64 offset) -> bool
+			auto is_ignored = [&](s64 /*offset*/) -> bool
 			{
 				if (dir_queue[i] != firmware_sprx_path)
 				{

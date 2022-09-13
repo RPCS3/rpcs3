@@ -78,7 +78,7 @@ namespace vk
 		VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-		switch (new_layout)
+		switch (+new_layout)
 		{
 		case VK_IMAGE_LAYOUT_GENERAL:
 			// Avoid this layout as it is unoptimized
@@ -127,7 +127,7 @@ namespace vk
 			fmt::throw_exception("Attempted to transition to an invalid layout");
 		}
 
-		switch (current_layout)
+		switch (+current_layout)
 		{
 		case VK_IMAGE_LAYOUT_GENERAL:
 			// Avoid this layout as it is unoptimized

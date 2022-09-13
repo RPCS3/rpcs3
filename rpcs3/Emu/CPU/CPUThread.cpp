@@ -55,6 +55,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::memory: return "mem";
 		case cpu_flag::pending: return "pend";
 		case cpu_flag::pending_recheck: return "pend-re";
+		case cpu_flag::notify: return "ntf";
 		case cpu_flag::yield: return "y";
 		case cpu_flag::preempt: return "PREEMPT";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
@@ -648,7 +649,7 @@ bool cpu_thread::check_state() noexcept
 {
 	bool cpu_sleep_called = false;
 	bool cpu_can_stop = true;
-	bool escape, retval;
+	bool escape{}, retval{};
 
 	while (true)
 	{
