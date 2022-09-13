@@ -206,8 +206,9 @@ std::vector<u8> generate_u2s_packet(const p2ps_encapsulated_tcp& header, const u
 	ensure(packet_size < 65535); // packet size shouldn't be bigger than possible UDP payload
 	std::vector<u8> packet(packet_size);
 	u8* packet_data = packet.data();
+	le_t<u16> dst_port_le = +header.dst_port;
 
-	*reinterpret_cast<le_t<u16>*>(packet_data) = header.dst_port;
+	memcpy(packet_data, &dst_port_le, sizeof(u16));
 	memcpy(packet_data + sizeof(u16), &header, sizeof(p2ps_encapsulated_tcp));
 	if (datasize)
 		memcpy(packet_data + sizeof(u16) + sizeof(p2ps_encapsulated_tcp), data, datasize);

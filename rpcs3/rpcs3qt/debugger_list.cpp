@@ -97,7 +97,7 @@ u32 debugger_list::GetStartAddress(u32 address)
 
 void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 {
-	const decltype(spu_thread::local_breakpoints)* spu_bps_list;
+	const decltype(spu_thread::local_breakpoints)* spu_bps_list{};
 
 	if (m_cpu && m_cpu->id_type() == 2)
 	{
@@ -116,7 +116,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 
 	if (select_addr || direct)
 	{
-		// The user wants to survey a specific memory location, do not interfere from this point forth 
+		// The user wants to survey a specific memory location, do not interfere from this point forth
 		m_follow_thread = false;
 	}
 
@@ -161,7 +161,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 		const u32 address_limits = (is_spu ? 0x3fffc : ~3);
 		const u32 current_pc = m_cpu->get_pc();
 		m_start_addr &= address_limits;
-		u32 pc = m_start_addr;
+		pc = m_start_addr;
 
 		for (uint i = 0, count = 4; i < m_item_count; ++i, pc = (pc + count) & address_limits)
 		{
@@ -250,7 +250,7 @@ void debugger_list::scroll(s32 steps)
 
 	if (m_cpu && m_cpu->id_type() == 0x55 && steps < 0)
 	{
-		// If scrolling backwards (upwards), try to obtain the start of commands tail 
+		// If scrolling backwards (upwards), try to obtain the start of commands tail
 		if (auto [count, res] = static_cast<rsx::thread*>(m_cpu)->try_get_pc_of_x_cmds_backwards(-steps, m_start_addr); count == 0u - steps)
 		{
 			steps = 0;
@@ -388,7 +388,7 @@ void debugger_list::resizeEvent(QResizeEvent* event)
 
 	const u32 old_size = m_item_count;
 
-	// It is fine if the QWidgetList is a tad bit larger than the frame 
+	// It is fine if the QWidgetList is a tad bit larger than the frame
 	m_item_count = utils::aligned_div<u32>(rect().height() - frameWidth() * 2, visualItemRect(item(0)).height());
 
 	if (old_size <= m_item_count)

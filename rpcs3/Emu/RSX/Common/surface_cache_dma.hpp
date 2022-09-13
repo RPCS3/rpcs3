@@ -63,7 +63,7 @@ namespace rsx
 				{
 					// All is well
 					return *this;
-				} 
+				}
 			}
 
 			// Data does not exist or is not contiguous. Merge the layer
@@ -87,7 +87,7 @@ namespace rsx
 				address += BlockSize;
 			}
 
-			auto unified = Traits::merge_bo_list<BlockSize>(cmd, bo_list);
+			auto unified = Traits::template merge_bo_list<BlockSize>(cmd, bo_list);
 			ensure(unified);
 
 			m_buffer_list[block_for(start_address)].acquire(unified);

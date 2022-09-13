@@ -537,7 +537,7 @@ int main(int argc, char** argv)
 	std::string argument_str;
 	for (int i = 0; i < argc; i++)
 	{
-		argument_str += "'" + std::string(argv[i]) + "'";
+		argument_str += '\'' + std::string(argv[i]) + '\'';
 		if (i != argc - 1) argument_str += " ";
 	}
 	sys_log.notice("argc: %d, argv: %s", argc, argument_str);

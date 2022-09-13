@@ -1531,7 +1531,8 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 			return CELL_GAME_ERROR_PARAM;
 		}
 
-		error_msg += "\n" + get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
+		error_msg += '\n';
+		error_msg += get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
 	}
 
 	return open_exit_dialog(error_msg, type > CELL_GAME_ERRDIALOG_NOSPACE);

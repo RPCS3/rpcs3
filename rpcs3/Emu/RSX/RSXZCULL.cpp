@@ -848,7 +848,7 @@ namespace rsx
 			}
 		}
 
-		void ZCULL_control::disable_optimizations(::rsx::thread* ptimer, u32 location)
+		void ZCULL_control::disable_optimizations(::rsx::thread*, u32 location)
 		{
 			// Externally synchronized
 			rsx_log.warning("Reports area at location %s was accessed. ZCULL optimizations will be disabled.", location_tostring(location));

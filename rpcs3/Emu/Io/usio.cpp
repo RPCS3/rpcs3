@@ -108,8 +108,8 @@ void usb_device_usio::translate_input()
 	const auto handler = pad::get_current_handler();
 
 	std::vector<u8> input_buf = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	constexpr u16 SMALL_HIT   = 0x4A0;
-	constexpr u16 BIG_HIT     = 0xA40;
+	constexpr le_t<u16> c_small_hit = 0x4A0;
+	constexpr le_t<u16> c_big_hit = 0xA40;
 
 	auto translate_from_pad = [&](u8 pad_number, u8 player)
 	{
@@ -136,35 +136,35 @@ void usb_device_usio::translate_input()
 					{
 					case CELL_PAD_CTRL_SQUARE:
 						// Strong hit side left
-						*reinterpret_cast<le_t<u16>*>(&input_buf[32 + offset]) = BIG_HIT;
+						std::memcpy(input_buf.data() + 32 + offset, &c_big_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_CROSS:
 						// Strong hit center right
-						*reinterpret_cast<le_t<u16>*>(&input_buf[36 + offset]) = BIG_HIT;
+						std::memcpy(input_buf.data() + 36 + offset, &c_big_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_CIRCLE:
 						// Strong hit side right
-						*reinterpret_cast<le_t<u16>*>(&input_buf[38 + offset]) = BIG_HIT;
+						std::memcpy(input_buf.data() + 38 + offset, &c_big_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_TRIANGLE:
 						// Strong hit center left
-						*reinterpret_cast<le_t<u16>*>(&input_buf[34 + offset]) = BIG_HIT;
+						std::memcpy(input_buf.data() + 34 + offset, &c_big_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_L1:
 						// Small hit center left
-						*reinterpret_cast<le_t<u16>*>(&input_buf[34 + offset]) = SMALL_HIT;
+						std::memcpy(input_buf.data() + 34 + offset, &c_small_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_R1:
 						// Small hit center right
-						*reinterpret_cast<le_t<u16>*>(&input_buf[36 + offset]) = SMALL_HIT;
+						std::memcpy(input_buf.data() + 36 + offset, &c_small_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_L2:
 						// Small hit side left
-						*reinterpret_cast<le_t<u16>*>(&input_buf[32 + offset]) = SMALL_HIT;
+						std::memcpy(input_buf.data() + 32 + offset, &c_small_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_R2:
 						// Small hit side right
-						*reinterpret_cast<le_t<u16>*>(&input_buf[38 + offset]) = SMALL_HIT;
+						std::memcpy(input_buf.data() + 38 + offset, &c_small_hit, sizeof(u16));
 						break;
 					default:
 						break;

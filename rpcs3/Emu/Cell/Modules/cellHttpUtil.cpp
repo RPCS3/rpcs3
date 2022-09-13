@@ -230,7 +230,7 @@ error_code cellHttpUtilBuildRequestLine(vm::cptr<CellHttpRequestLine> req, vm::p
 	std::string path = fmt::format("%s", req->path);
 	if (path.empty())
 	{
-		path = "/";
+		path += '/';
 	}
 
 	// TODO: are the numbers properly formatted ?
@@ -805,7 +805,7 @@ error_code cellHttpUtilBase64Encoder(vm::ptr<char> out, vm::cptr<void> input, u3
 
 error_code cellHttpUtilBase64Decoder(vm::ptr<char> output, vm::cptr<void> in, u32 len)
 {
-	cellHttpUtil.todo("cellHttpUtilBase64Decoder(output=*0x%x, in=*0x%x, len=%d)", output, in, len); 
+	cellHttpUtil.todo("cellHttpUtilBase64Decoder(output=*0x%x, in=*0x%x, len=%d)", output, in, len);
 
 	if (!in)
 	{

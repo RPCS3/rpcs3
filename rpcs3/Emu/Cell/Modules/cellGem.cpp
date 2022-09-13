@@ -446,7 +446,7 @@ static bool check_gem_num(const u32 gem_num)
 	return gem_num < CELL_GEM_MAX_NUM;
 }
 
-static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_controller& controller, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_controller&, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
 	const u16 x = static_cast<u16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
 	const u16 y = static_cast<u16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));

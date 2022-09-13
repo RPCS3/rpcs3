@@ -322,7 +322,7 @@ error_code cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cul
 	{
 		return err;
 	}
-		
+
 	vm::_ptr<CellGcmZcullInfo>(gcm_cfg.zculls_addr)[index] = gcm_zcull;
 	return CELL_OK;
 }
@@ -1313,8 +1313,6 @@ error_code _cellGcmSetFlipCommand2()
 void _cellGcmSetFlipCommandWithWaitLabel(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
 {
 	cellGcmSys.warning("cellGcmSetFlipCommandWithWaitLabel(ctx=*0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)", ctx, id, label_index, label_value);
-
-	auto& gcm_cfg = g_fxo->get<gcm_config>();
 
 	rsx::make_command(ctx->current, NV406E_SEMAPHORE_OFFSET, { label_index * 0x10, label_value });
 

@@ -124,7 +124,8 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 	switch (src[n].reg_type)
 	{
 	case 1: //temp
-		ret += "R" + std::to_string(src[n].tmp_src);
+		ret += 'R';
+		ret += std::to_string(src[n].tmp_src);
 		break;
 	case 2: //input
 		if (d1.input_src < reg_table.size())

@@ -256,7 +256,8 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 	sys_net.trace("[P2P] Sending a packet to %s:%d:%d", ip_str, p2p_port, p2p_vport);
 
 	std::vector<u8> p2p_data(buf.size() + sizeof(u16));
-	reinterpret_cast<le_t<u16>&>(p2p_data[0]) = p2p_vport;
+	const le_t<u16> p2p_vport_le = p2p_vport;
+	memcpy(p2p_data.data(), &p2p_vport_le, sizeof(u16));
 	memcpy(p2p_data.data() + sizeof(u16), buf.data(), buf.size());
 
 	int native_flags = 0;

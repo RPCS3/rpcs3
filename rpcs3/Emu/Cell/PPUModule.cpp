@@ -38,7 +38,7 @@ extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 // HLE function name cache
 std::vector<std::string> g_ppu_function_names;
 
-extern atomic_t<u32> liblv2_begin = 0, liblv2_end = 0;
+atomic_t<u32> liblv2_begin = 0, liblv2_end = 0;
 
 extern u32 ppu_generate_id(std::string_view name)
 {
@@ -340,7 +340,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 			while (true)
 			{
 				const std::string name = ar.operator std::string();
-	
+
 				if (name.empty())
 				{
 					// Null termination
@@ -350,7 +350,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 				const auto _module = manager.at(name);
 
 				auto& variable = _module->variables;
-	
+
 				for (u32 i = 0, end = ar.operator usz(); i < end; i++)
 				{
 					auto* ptr = &variable.at(ar.operator u32());
@@ -2466,7 +2466,7 @@ bool ppu_load_rel_exec(const ppu_rel_object& elf)
 		const auto& s = *ptr;
 
 		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", std::bit_cast<u32>(s.sh_type), s.sh_addr, s.sh_size, s._sh_flags);
-	
+
 		if (s.sh_type == sec_type::sht_progbits && s.sh_size && s.sh_flags().all_of(sh_flag::shf_alloc))
 		{
 			ppu_segment _sec;

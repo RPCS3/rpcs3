@@ -7,8 +7,6 @@
 
 #include "util/init_mutex.hpp"
 
-extern u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode); // (TODO: Can it be problematic to place SysCalls in middle of nowhere?)
-
 enum QtKeys
 {
 	Key_Shift      = 0x01000020,
@@ -36,7 +34,7 @@ struct KbButton
 	u32 m_keyCode = 0;
 	u32 m_outKeyCode = 0;
 	bool m_pressed = false;
-	
+
 	KbButton() = default;
 	KbButton(u32 keyCode, u32 outKeyCode, bool pressed = false)
 		: m_keyCode(keyCode)

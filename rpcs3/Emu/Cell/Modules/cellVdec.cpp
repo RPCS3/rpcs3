@@ -636,14 +636,12 @@ struct vdec_creation_lock
 
 	vdec_creation_lock()
 	{
-		locked.init();
+		auto lk = locked.init();
 	}
 };
 
 extern bool try_lock_vdec_context_creation()
 {
-	bool exist = false;
-
 	auto& lock = g_fxo->get<vdec_creation_lock>();
 	auto reset = lock.locked.reset();
 

@@ -3411,7 +3411,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 			case spu_itype::OR:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] & bb.reg_const[op.rb];
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] | bb.reg_val32[op.rb];
 				break;
 			}
@@ -3423,7 +3423,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 			case spu_itype::A:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] & bb.reg_const[op.rb];
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] + bb.reg_val32[op.rb];
 				break;
 			}
@@ -3435,7 +3435,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 			case spu_itype::SF:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] & bb.reg_const[op.rb];
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
 				bb.reg_val32[op.rt] = bb.reg_val32[op.rb] - bb.reg_val32[op.ra];
 				break;
 			}

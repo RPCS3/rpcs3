@@ -61,16 +61,6 @@ enum
 
 enum ppu_thread_status : u32;
 
-namespace vm
-{
-	bool temporary_unlock(cpu_thread& cpu) noexcept;
-}
-
-namespace cpu_counter
-{
-	void remove(cpu_thread*) noexcept;
-}
-
 // Base class for some kernel objects (shared set of 8192 objects).
 struct lv2_obj
 {
@@ -121,7 +111,7 @@ public:
 	static T* unqueue(T*& first, T* object, T* T::* mem_ptr = &T::next_cpu)
 	{
 		auto it = +first;
-	
+
 		if (it == object)
 		{
 			atomic_storage<T*>::release(first, it->*mem_ptr);
@@ -432,11 +422,7 @@ public:
 	}
 
 	// Can be called before the actual sleep call in order to move it out of mutex scope
-	static inline void prepare_for_sleep(cpu_thread& cpu)
-	{
-		vm::temporary_unlock(cpu);
-		cpu_counter::remove(&cpu);
-	}
+	static void prepare_for_sleep(cpu_thread& cpu);
 
 	struct notify_all_t
 	{
@@ -446,7 +432,7 @@ public:
 		}
 
 		notify_all_t(const notify_all_t&) = delete;
-	
+
 		static void cleanup()
 		{
 			for (auto& cpu : g_to_notify)

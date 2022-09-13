@@ -180,7 +180,7 @@ void initialize_timebased_time(u64 timebased_init, bool reset)
 	}
 
 	const u64 current = get_timebased_time();
-	timebased_init = get_timebased_time() - timebased_init;
+	timebased_init = current - timebased_init;
 
 	timebase_offset = timebased_init;
 	systemtime_offset = timebased_init / (g_timebase_freq / 1000000);

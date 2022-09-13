@@ -23,6 +23,7 @@
 #if !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #endif
 
 extern bool is_debugger_present();

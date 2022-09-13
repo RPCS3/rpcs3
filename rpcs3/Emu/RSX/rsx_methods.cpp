@@ -750,17 +750,17 @@ namespace rsx
 			rsx->enable_conditional_rendering(address_ptr);
 		}
 
-		void set_zcull_render_enable(thread* rsx, u32, u32 arg)
+		void set_zcull_render_enable(thread* rsx, u32, u32)
 		{
 			rsx->notify_zcull_info_changed();
 		}
 
-		void set_zcull_stats_enable(thread* rsx, u32, u32 arg)
+		void set_zcull_stats_enable(thread* rsx, u32, u32)
 		{
 			rsx->notify_zcull_info_changed();
 		}
 
-		void set_zcull_pixel_count_enable(thread* rsx, u32, u32 arg)
+		void set_zcull_pixel_count_enable(thread* rsx, u32, u32)
 		{
 			rsx->notify_zcull_info_changed();
 		}
@@ -1006,7 +1006,7 @@ namespace rsx
 				}
 
 				// Get position of the current command arg
-				const u32 src_offset = rsx->fifo_ctrl->get_pos();
+				[[maybe_unused]] const u32 src_offset = rsx->fifo_ctrl->get_pos();
 
 				// FIFO args count including this one
 				const u32 fifo_args_cnt = rsx->fifo_ctrl->get_remaining_args_count() + 1;
@@ -1088,7 +1088,7 @@ namespace rsx
 
 					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, data_length);
 					const auto dst = vm::_ptr<u16>(dst_address);
-					const auto src = reinterpret_cast<const be_t<u32>*>(fifo_span.data());
+					const auto src = utils::bless<const be_t<u32>>(fifo_span.data());
 
 					if (!dst_address)
 					{
@@ -1825,7 +1825,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
+			static void impl(thread*, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
