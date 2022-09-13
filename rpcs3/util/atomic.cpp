@@ -1107,6 +1107,14 @@ SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old
 
 	while (ptr_cmp(data, size, old_value, mask, ext))
 	{
+		if (s_tls_one_time_wait_cb)
+		{
+			if (!s_tls_one_time_wait_cb(attempts))
+			{
+				break;
+			}
+		}
+
 #ifdef USE_FUTEX
 		struct timespec ts;
 		ts.tv_sec  = timeout / 1'000'000'000;
@@ -1191,19 +1199,14 @@ SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old
 			break;
 		}
 
-		if (s_tls_one_time_wait_cb)
-		{
-			if (!s_tls_one_time_wait_cb(attempts))
-			{
-				break;
-			}
-
-			// The condition of the callback overrides timeout escape because it makes little sense to do so when a custom condition is passed
-			continue;
-		}
-
 		if (timeout + 1)
 		{
+			if (s_tls_one_time_wait_cb)
+			{
+				// The condition of the callback overrides timeout escape because it makes little sense to do so when a custom condition is passed
+				continue;
+			}
+
 			// TODO: reduce timeout instead
 			break;
 		}
