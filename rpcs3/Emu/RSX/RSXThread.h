@@ -800,11 +800,12 @@ namespace rsx
 		 */
 		void write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data);
 
+		void evaluate_cpu_usage_reduction_limits();
+
 	private:
 		shared_mutex m_mtx_task;
 
 		void handle_emu_flip(u32 buffer);
-		void evaluate_cpu_usage_reduction_limits();
 		void handle_invalidated_memory_range();
 
 	public:
