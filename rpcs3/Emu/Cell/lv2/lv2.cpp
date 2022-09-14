@@ -1668,14 +1668,42 @@ void lv2_obj::schedule_all(u64 current_time)
 
 	if (const u64 freq = s_yield_frequency)
 	{
-		if (auto cpu = cpu_thread::get_current())
-		{
-			const u64 tsc = utils::get_tsc();
-			const u64 last_tsc = s_last_yield_tsc;
+		const u64 tsc = utils::get_tsc();
+		const u64 last_tsc = s_last_yield_tsc;
 
-			if (tsc >= last_tsc && tsc <= s_max_allowed_yield_tsc && tsc - last_tsc >= freq)
+		if (tsc >= last_tsc && tsc <= s_max_allowed_yield_tsc && tsc - last_tsc >= freq)
+		{
+			auto target = +g_ppu;
+			cpu_thread* cpu = nullptr;
+
+			for (usz x = g_cfg.core.ppu_threads;; target = target->next_ppu, x--)
 			{
-				cpu->state += cpu_flag::preempt;
+				if (!target || !x)
+				{
+					if (g_ppu && cpu_flag::preempt - g_ppu->state)
+					{
+						// Don't be picky, pick up any running PPU thread even it has a wait flag 
+						cpu = g_ppu;
+					}
+					// TODO: If this case is common enough it may be valuable to iterate over all CPU threads to find a perfect candidate (one without a wait or suspend flag)
+					else if (auto current = cpu_thread::get_current(); current && cpu_flag::suspend - current->state)
+					{
+						// May be an SPU or RSX thread, use them as a last resort
+						cpu = current;
+					}
+
+					break;
+				}
+
+				if (target->state.none_of(cpu_flag::preempt + cpu_flag::wait))
+				{
+					cpu = target;
+					break;
+				}
+			}
+
+			if (cpu && cpu_flag::preempt - cpu->state && !cpu->state.test_and_set(cpu_flag::preempt))
+			{
 				s_last_yield_tsc = tsc;
 				g_lv2_preempts_taken.release(g_lv2_preempts_taken.load() + 1); // Has a minor race but performance is more important
 				rsx::set_rsx_yield_flag();
