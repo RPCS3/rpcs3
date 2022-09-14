@@ -783,9 +783,12 @@ bool cpu_thread::check_state() noexcept
 		{
 			if (cpu_flag::wait - state0)
 			{
-				// Yield itself
-				escape = false;
-				state0 += cpu_flag::yield;
+				if (!escape || !retval)
+				{
+					// Yield itself
+					state0 += cpu_flag::yield;
+					escape = false;
+				}
 			}
 
 			if (const u128 bits = s_cpu_bits)
