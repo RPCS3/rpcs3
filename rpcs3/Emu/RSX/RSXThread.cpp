@@ -3558,7 +3558,7 @@ namespace rsx
 				prev_preempt_count = frame_times[i].preempt_count;
 			}
 
-			preempt_count = frame_times.back().preempt_count;
+			preempt_count = std::min<u32>(frame_times.back().preempt_count, max_preempt_count);
 
 			u32 fails = 0;
 			u32 hard_fails = 0;
@@ -3630,9 +3630,9 @@ namespace rsx
 					{
 						prevent_preempt_increase_tickets--;
 					}
-					else if (preempt_count < max_preempt_count)
+					else
 					{
-						preempt_count += 4;
+						preempt_count = std::min<u32>(preempt_count + 4, max_preempt_count);
 					}
 				}
 				else
@@ -3650,7 +3650,7 @@ namespace rsx
 
 			if (hard_measures_taken)
 			{
-				preempt_fail_old_preempt_count = std::max<u32>(preempt_fail_old_preempt_count, frame_times.back().preempt_count);
+				preempt_fail_old_preempt_count = std::max<u32>(preempt_fail_old_preempt_count, std::min<u32>(frame_times.back().preempt_count, max_preempt_count));
 			}
 			else if (preempt_fail_old_preempt_count)
 			{

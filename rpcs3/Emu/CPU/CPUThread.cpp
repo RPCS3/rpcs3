@@ -654,7 +654,7 @@ bool cpu_thread::check_state() noexcept
 	{
 		// Process all flags in a single atomic op
 		bs_t<cpu_flag> state1;
-		const auto state0 = state.fetch_op([&](bs_t<cpu_flag>& flags)
+		auto state0 = state.fetch_op([&](bs_t<cpu_flag>& flags)
 		{
 			bool store = false;
 
@@ -784,7 +784,8 @@ bool cpu_thread::check_state() noexcept
 			if (cpu_flag::wait - state0)
 			{
 				// Yield itself
-				s_dummy_atomic.wait(0, 1u << 30, atomic_wait_timeout{80'000});
+				escape = false;
+				state0 += cpu_flag::yield;
 			}
 
 			if (const u128 bits = s_cpu_bits)
