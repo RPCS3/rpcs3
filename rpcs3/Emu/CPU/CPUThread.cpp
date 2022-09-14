@@ -898,6 +898,23 @@ bool cpu_thread::check_state() noexcept
 
 			if (state0 & cpu_flag::yield && cpu_flag::wait - state0)
 			{
+				if (auto spu = try_get<spu_thread>())
+				{
+					if (spu->raddr && spu->rtime == vm::reservation_acquire(spu->raddr) && spu->getllar_spin_count < 10)
+					{
+						// Reservation operation is a critical section (but this may result in false positives)
+						continue;
+					}
+				}
+				else if (auto ppu = try_get<ppu_thread>())
+				{
+					if (ppu->raddr && ppu->rtime == vm::reservation_acquire(ppu->raddr))
+					{
+						// Same
+						continue;
+					}
+				}
+
 				// Short sleep when yield flag is present alone (makes no sense when other methods which can stop thread execution have been done)
 				// Pass a mask of a single bit which is often unused to avoid notifications
 				s_dummy_atomic.wait(0, 1u << 30, atomic_wait_timeout{80'000});
