@@ -3493,8 +3493,6 @@ namespace rsx
 				intr_thread->cmd_notify.notify_one();
 			}
 		}
-
-		evaluate_cpu_usage_reduction_limits();
 	}
 
 	void thread::evaluate_cpu_usage_reduction_limits()
@@ -3574,9 +3572,9 @@ namespace rsx
 				const u64 cur_diff = (i == frame_times.size() ? current_time : frame_times[i].timestamp) - frame_times[i - 1].timestamp;
 
 				if (const u64 diff_of_diff = abs_dst(cur_diff, avg_frame_time);
-					diff_of_diff >= avg_frame_time / 4)
+					diff_of_diff >= avg_frame_time / 7)
 				{
-					if (diff_of_diff >= avg_frame_time / 2)
+					if (diff_of_diff >= avg_frame_time / 3)
 					{
 						highered_delay++;
 						hard_fails++;
@@ -3608,7 +3606,7 @@ namespace rsx
 					preempt_count = 0;
 				}
 
-				if (hard_fails > 2 && is_last_frame_a_fail)
+				if ((hard_fails > 2 || fails > 20) && is_last_frame_a_fail)
 				{
 					hard_measures_taken = preempt_count > 1;
 					preempt_count = preempt_count * 7 / 8;
@@ -3641,7 +3639,7 @@ namespace rsx
 				}
 			}
 			// Sudden FPS drop detection
-			else if ((fails > 10 || hard_fails > 2 || !(abs_dst(fps_10, 300) < 20 || abs_dst(fps_10, 600) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10) < 20 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10 / 2) < 30)) && lowered_delay < highered_delay && is_last_frame_a_fail)
+			else if ((fails > 13 || hard_fails > 2 || !(abs_dst(fps_10, 300) < 20 || abs_dst(fps_10, 600) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10) < 20 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10 / 2) < 30)) && lowered_delay < highered_delay && is_last_frame_a_fail)
 			{
 				lower_preemption_count();
 			}
