@@ -2667,6 +2667,40 @@ namespace rsx
 
 		if (info.emu_flip)
 		{
+			last_guest_flip_timestamp = rsx::uclock() - 1000000;
+			flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+
+			while (flip_notification_count--)
+			{
+				if (!isHLE)
+				{
+					sys_rsx_context_attribute(0x55555555, 0xFEC, current_display_buffer, 0, 0, 0);
+
+					if (unsent_gcm_events)
+					{
+						// TODO: A proper fix
+						return;
+					}
+
+					continue;
+				}
+
+				if (auto ptr = flip_handler)
+				{
+					intr_thread->cmd_list
+					({
+						{ ppu_cmd::set_args, 1 }, u64{ 1 },
+						{ ppu_cmd::lle_call, ptr },
+						{ ppu_cmd::sleep, 0 }
+					});
+
+					intr_thread->cmd_notify++;
+					intr_thread->cmd_notify.notify_one();
+				}
+			}
+
+			evaluate_cpu_usage_reduction_limits();
+
 			performance_counters.sampled_frames++;
 
 			if (m_pause_on_first_flip)
@@ -3459,41 +3493,7 @@ namespace rsx
 		m_queued_flip.skip_frame |= g_cfg.video.disable_video_output && !g_cfg.video.perf_overlay.perf_overlay_enabled;
 
 		flip(m_queued_flip);
-
-		last_guest_flip_timestamp = rsx::uclock() - 1000000;
-		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.in_progress = false;
-
-		while (flip_notification_count--)
-		{
-			if (!isHLE)
-			{
-				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
-
-				if (unsent_gcm_events)
-				{
-					// TODO: A proper fix
-					return;
-				}
-
-				continue;
-			}
-
-			if (auto ptr = flip_handler)
-			{
-				intr_thread->cmd_list
-				({
-					{ ppu_cmd::set_args, 1 }, u64{ 1 },
-					{ ppu_cmd::lle_call, ptr },
-					{ ppu_cmd::sleep, 0 }
-				});
-
-				intr_thread->cmd_notify++;
-				intr_thread->cmd_notify.notify_one();
-			}
-		}
-
-		evaluate_cpu_usage_reduction_limits();
 	}
 
 	void thread::evaluate_cpu_usage_reduction_limits()

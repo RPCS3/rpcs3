@@ -507,6 +507,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	ensure(m_current_frame->present_image == umax);
 	ensure(m_current_frame->swap_command_buffer == nullptr);
 
+	rsx::thread::flip(info);
+
 	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->acquire_signal_semaphore, timeout, &m_current_frame->present_image))
 	{
@@ -798,5 +800,4 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	m_frame_stats.flip_time = m_profiler.duration();
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(info);
 }

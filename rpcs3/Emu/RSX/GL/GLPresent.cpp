@@ -201,6 +201,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		buffer_height = present_info.height;
 	}
 
+	rsx::thread::flip(info);
+
 	// Get window state
 	const int width = m_frame->client_width();
 	const int height = m_frame->client_height();
@@ -370,7 +372,6 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(info);
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
