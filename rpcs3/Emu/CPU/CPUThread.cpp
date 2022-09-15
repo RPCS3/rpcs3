@@ -736,7 +736,7 @@ bool cpu_thread::check_state() noexcept
 			if (!is_stopped(flags) && flags.none_of(cpu_flag::ret))
 			{
 				// Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
-				if (flags & (cpu_flag::pause + cpu_flag::memory + cpu_flag::yield + cpu_flag::preempt) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend)))
+				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend + cpu_flag::yield + cpu_flag::preempt)))
 				{
 					if (!(flags & cpu_flag::wait))
 					{
@@ -744,7 +744,7 @@ bool cpu_thread::check_state() noexcept
 						store = true;
 					}
 
-					if (flags & (cpu_flag::yield + cpu_flag::preempt))
+					if (flags & (cpu_flag::yield + cpu_flag::preempt) && cpu_can_stop)
 					{
 						flags -= (cpu_flag::yield + cpu_flag::preempt);
 						store = true;
@@ -779,7 +779,7 @@ bool cpu_thread::check_state() noexcept
 			return store;
 		}).first;
 
-		if (state0 & cpu_flag::preempt)
+		if (state0 & cpu_flag::preempt && cpu_can_stop)
 		{
 			if (cpu_flag::wait - state0)
 			{
@@ -899,7 +899,7 @@ bool cpu_thread::check_state() noexcept
 				continue;
 			}
 
-			if (state0 & cpu_flag::yield && cpu_flag::wait - state0)
+			if (state0 & cpu_flag::yield && cpu_flag::wait - state0 && cpu_can_stop)
 			{
 				if (auto spu = try_get<spu_thread>())
 				{
