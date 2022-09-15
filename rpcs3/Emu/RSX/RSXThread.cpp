@@ -3618,9 +3618,11 @@ namespace rsx
 				}
 			};
 
+			const u64 vblank_rate_10 = g_cfg.video.vblank_rate * 10;
+
 			if (can_reevaluate)
 			{
-				const bool is_avg_fps_ok = (abs_dst(fps_10, 300) < 3 || abs_dst(fps_10, 600) < 4 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10) < 4 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10 / 2) < 3);
+				const bool is_avg_fps_ok = (abs_dst(fps_10, 300) < 3 || abs_dst(fps_10, 600) < 4 || abs_dst(fps_10, vblank_rate_10) < 4 || abs_dst(fps_10, vblank_rate_10 / 2) < 3);
 
 				if (!hard_fails && fails < 6 && is_avg_fps_ok)
 				{
@@ -3639,7 +3641,7 @@ namespace rsx
 				}
 			}
 			// Sudden FPS drop detection
-			else if ((fails > 13 || hard_fails > 2 || !(abs_dst(fps_10, 300) < 20 || abs_dst(fps_10, 600) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10) < 20 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10 / 2) < 30)) && lowered_delay < highered_delay && is_last_frame_a_fail)
+			else if ((fails > 13 || hard_fails > 2 || !(abs_dst(fps_10, 300) < 20 || abs_dst(fps_10, 600) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10 / 2) < 20)) && lowered_delay < highered_delay && is_last_frame_a_fail)
 			{
 				lower_preemption_count();
 			}
@@ -3652,15 +3654,43 @@ namespace rsx
 			}
 			else if (preempt_fail_old_preempt_count)
 			{
-				perf_log.error("Lowering current preemption count significantly due to a performance drop, if this issue persists frequantly consider lowering max preemptions count to 'new-count' or lower. (old-count=%d, new-count=%d)", preempt_fail_old_preempt_count, preempt_count);
+				perf_log.error("Lowering current preemption count significantly due to a performance drop, if this issue persists frequently consider lowering max preemptions count to 'new-count' or lower. (old-count=%d, new-count=%d)", preempt_fail_old_preempt_count, preempt_count);
 				preempt_fail_old_preempt_count = 0;
 			}
 
 			const u64 tsc_diff = (current_tsc - frame_times.back().tsc);
+			const u64 time_diff = (current_time - frame_times.back().timestamp);
+			const u64 preempt_diff = tsc_diff * (1'000'000 / 30) / (time_diff * std::max<u32>(preempt_count, 1));
 
-			// Set an upper limit so a backoff technique would be taken if there is a sudden performance drop
-			// Allow 6% of no yield to reduce significantly the risk of stutter
-			lv2_obj::set_yield_frequency(preempt_count ? tsc_diff / preempt_count : 0, current_tsc + (tsc_diff * 94 / 100));
+			if (!preempt_count)
+			{
+				lv2_obj::set_yield_frequency(0, 0);
+			}
+			else if (abs_dst(fps_10, 300) < 30)
+			{
+				// Set an upper limit so a backoff technique would be taken if there is a sudden performance drop
+				// Allow 4% of no yield to reduce significantly the risk of stutter
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 96 / (30 * 100)) / time_diff));
+			}
+			else if (abs_dst(fps_10, 600) < 40)
+			{
+				// 5% for 60fps
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 94 / (60 * 100)) / time_diff));
+			}
+			else if (abs_dst(fps_10, vblank_rate_10) < 40)
+			{
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 94 / (vblank_rate_10 * 10)) / time_diff));
+			}
+			else if (abs_dst(fps_10, vblank_rate_10 / 2) < 30)
+			{
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 96 / ((vblank_rate_10 / 2) * 10)) / time_diff));
+			}
+			else
+			{
+				// Undetected case, last 12% is with no yield
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * 88 / 100));
+			}
+
 			frame_times.pop_front();
 		}
 		else
