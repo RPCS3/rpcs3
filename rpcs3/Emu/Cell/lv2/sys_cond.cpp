@@ -72,7 +72,7 @@ void lv2_cond::save(utils::serial& ar)
 
 error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_cond.warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
 
@@ -105,7 +105,7 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 
 error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_cond.warning("sys_cond_destroy(cond_id=0x%x)", cond_id);
 
@@ -138,7 +138,7 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 
 error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_cond.trace("sys_cond_signal(cond_id=0x%x)", cond_id);
 
@@ -176,7 +176,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_cond.trace("sys_cond_signal_all(cond_id=0x%x)", cond_id);
 
@@ -224,7 +224,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_cond.trace("sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x)", cond_id, thread_id);
 
@@ -279,7 +279,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_cond.trace("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
 
@@ -360,7 +360,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
+		if (state & cpu_flag::signal)
 		{
 			break;
 		}

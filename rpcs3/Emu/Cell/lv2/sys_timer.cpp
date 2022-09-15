@@ -146,7 +146,7 @@ void lv2_timer_thread::operator()()
 
 error_code sys_timer_create(ppu_thread& ppu, vm::ptr<u32> timer_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_timer.warning("sys_timer_create(timer_id=*0x%x)", timer_id);
 
@@ -172,7 +172,7 @@ error_code sys_timer_create(ppu_thread& ppu, vm::ptr<u32> timer_id)
 
 error_code sys_timer_destroy(ppu_thread& ppu, u32 timer_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_timer.warning("sys_timer_destroy(timer_id=0x%x)", timer_id);
 
@@ -210,7 +210,7 @@ error_code sys_timer_destroy(ppu_thread& ppu, u32 timer_id)
 
 error_code sys_timer_get_information(ppu_thread& ppu, u32 timer_id, vm::ptr<sys_timer_information_t> info)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_timer.trace("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
 
@@ -232,7 +232,7 @@ error_code sys_timer_get_information(ppu_thread& ppu, u32 timer_id, vm::ptr<sys_
 
 error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 period)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	(period ? sys_timer.warning : sys_timer.trace)("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
 
@@ -294,7 +294,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 
 error_code sys_timer_stop(ppu_thread& ppu, u32 timer_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_timer.trace("sys_timer_stop()");
 
@@ -315,7 +315,7 @@ error_code sys_timer_stop(ppu_thread& ppu, u32 timer_id)
 
 error_code sys_timer_connect_event_queue(ppu_thread& ppu, u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_timer.warning("sys_timer_connect_event_queue(timer_id=0x%x, queue_id=0x%x, name=0x%llx, data1=0x%llx, data2=0x%llx)", timer_id, queue_id, name, data1, data2);
 
@@ -358,7 +358,7 @@ error_code sys_timer_connect_event_queue(ppu_thread& ppu, u32 timer_id, u32 queu
 
 error_code sys_timer_disconnect_event_queue(ppu_thread& ppu, u32 timer_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_timer.warning("sys_timer_disconnect_event_queue(timer_id=0x%x)", timer_id);
 
@@ -392,7 +392,7 @@ error_code sys_timer_disconnect_event_queue(ppu_thread& ppu, u32 timer_id)
 
 error_code sys_timer_sleep(ppu_thread& ppu, u32 sleep_time)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_timer.warning("sys_timer_sleep(sleep_time=%d)", sleep_time);
 
@@ -401,7 +401,7 @@ error_code sys_timer_sleep(ppu_thread& ppu, u32 sleep_time)
 
 error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_timer.trace("sys_timer_usleep(sleep_time=0x%llx)", sleep_time);
 

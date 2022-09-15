@@ -363,7 +363,7 @@ void lv2_prx::save(utils::serial& ar)
 
 error_code sys_prx_get_ppu_guid(ppu_thread& ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("sys_prx_get_ppu_guid()");
 	return CELL_OK;
@@ -371,7 +371,7 @@ error_code sys_prx_get_ppu_guid(ppu_thread& ppu)
 
 error_code _sys_prx_load_module_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_load_module_by_fd(fd=%d, offset=0x%x, flags=0x%x, pOpt=*0x%x)", fd, offset, flags, pOpt);
 
@@ -394,7 +394,7 @@ error_code _sys_prx_load_module_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u64 f
 
 error_code _sys_prx_load_module_on_memcontainer_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_load_module_on_memcontainer_by_fd(fd=%d, offset=0x%x, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x)", fd, offset, mem_ct, flags, pOpt);
 
@@ -443,7 +443,7 @@ static error_code prx_load_module_list(ppu_thread& ppu, s32 count, vm::cpptr<cha
 
 error_code _sys_prx_load_module_list(ppu_thread& ppu, s32 count, vm::cpptr<char, u32, u64> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_load_module_list(count=%d, path_list=**0x%x, flags=0x%x, pOpt=*0x%x, id_list=*0x%x)", count, path_list, flags, pOpt, id_list);
 
@@ -451,7 +451,7 @@ error_code _sys_prx_load_module_list(ppu_thread& ppu, s32 count, vm::cpptr<char,
 }
 error_code _sys_prx_load_module_list_on_memcontainer(ppu_thread& ppu, s32 count, vm::cpptr<char, u32, u64> path_list, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_load_module_list_on_memcontainer(count=%d, path_list=**0x%x, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x, id_list=*0x%x)", count, path_list, mem_ct, flags, pOpt, id_list);
 
@@ -460,7 +460,7 @@ error_code _sys_prx_load_module_list_on_memcontainer(ppu_thread& ppu, s32 count,
 
 error_code _sys_prx_load_module_on_memcontainer(ppu_thread& ppu, vm::cptr<char> path, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_load_module_on_memcontainer(path=%s, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x)", path, mem_ct, flags, pOpt);
 
@@ -469,7 +469,7 @@ error_code _sys_prx_load_module_on_memcontainer(ppu_thread& ppu, vm::cptr<char> 
 
 error_code _sys_prx_load_module(ppu_thread& ppu, vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_load_module(path=%s, flags=0x%x, pOpt=*0x%x)", path, flags, pOpt);
 
@@ -478,7 +478,7 @@ error_code _sys_prx_load_module(ppu_thread& ppu, vm::cptr<char> path, u64 flags,
 
 error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_start_stop_module_option_t> pOpt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_start_module(id=0x%x, flags=0x%x, pOpt=*0x%x)", id, flags, pOpt);
 
@@ -555,7 +555,7 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 
 error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_start_stop_module_option_t> pOpt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_stop_module(id=0x%x, flags=0x%x, pOpt=*0x%x)", id, flags, pOpt);
 
@@ -652,7 +652,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 
 error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	// Get the PRX, free the used memory and delete the object and its ID
 	const auto prx = idm::withdraw<lv2_obj, lv2_prx>(id, [](lv2_prx& prx) -> CellPrxError
@@ -693,7 +693,7 @@ void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 ex
 
 error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::ptr<void> opt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("_sys_prx_register_module(name=%s, opt=*0x%x)", name, opt);
 
@@ -752,7 +752,7 @@ error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::pt
 
 error_code _sys_prx_query_module(ppu_thread& ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("_sys_prx_query_module()");
 	return CELL_OK;
@@ -760,7 +760,7 @@ error_code _sys_prx_query_module(ppu_thread& ppu)
 
 error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("_sys_prx_register_library(library=*0x%x)", library);
 	return CELL_OK;
@@ -768,7 +768,7 @@ error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 
 error_code _sys_prx_unregister_library(ppu_thread& ppu, vm::ptr<void> library)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("_sys_prx_unregister_library(library=*0x%x)", library);
 	return CELL_OK;
@@ -776,7 +776,7 @@ error_code _sys_prx_unregister_library(ppu_thread& ppu, vm::ptr<void> library)
 
 error_code _sys_prx_link_library(ppu_thread& ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("_sys_prx_link_library()");
 	return CELL_OK;
@@ -784,7 +784,7 @@ error_code _sys_prx_link_library(ppu_thread& ppu)
 
 error_code _sys_prx_unlink_library(ppu_thread& ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("_sys_prx_unlink_library()");
 	return CELL_OK;
@@ -792,7 +792,7 @@ error_code _sys_prx_unlink_library(ppu_thread& ppu)
 
 error_code _sys_prx_query_library(ppu_thread& ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("_sys_prx_query_library()");
 	return CELL_OK;
@@ -800,7 +800,7 @@ error_code _sys_prx_query_library(ppu_thread& ppu)
 
 error_code _sys_prx_get_module_list(ppu_thread& ppu, u64 flags, vm::ptr<sys_prx_get_module_list_option_t> pInfo)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	if (flags & 0x1)
 	{
@@ -860,7 +860,7 @@ error_code _sys_prx_get_module_list(ppu_thread& ppu, u64 flags, vm::ptr<sys_prx_
 
 error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_module_info_option_t> pOpt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_get_module_info(id=0x%x, flags=%d, pOpt=*0x%x)", id, flags, pOpt);
 
@@ -924,7 +924,7 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 
 error_code _sys_prx_get_module_id_by_name(ppu_thread& ppu, vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("_sys_prx_get_module_id_by_name(name=%s, flags=%d, pOpt=*0x%x)", name, flags, pOpt);
 
@@ -935,7 +935,7 @@ error_code _sys_prx_get_module_id_by_name(ppu_thread& ppu, vm::cptr<char> name, 
 
 error_code _sys_prx_get_module_id_by_address(ppu_thread& ppu, u32 addr)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.warning("_sys_prx_get_module_id_by_address(addr=0x%x)", addr);
 
@@ -968,7 +968,7 @@ error_code _sys_prx_get_module_id_by_address(ppu_thread& ppu, u32 addr)
 
 error_code _sys_prx_start(ppu_thread& ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("sys_prx_start()");
 	return CELL_OK;
@@ -976,7 +976,7 @@ error_code _sys_prx_start(ppu_thread& ppu)
 
 error_code _sys_prx_stop(ppu_thread& ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_prx.todo("sys_prx_stop()");
 	return CELL_OK;

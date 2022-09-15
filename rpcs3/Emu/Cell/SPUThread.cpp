@@ -4248,6 +4248,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 		spu_function_logger logger(*this, "MFC Events read");
 
 		lv2_obj::prepare_for_sleep(*this);
+		state += cpu_flag::wait;
 
 		using resrv_ptr = std::add_pointer_t<const decltype(rdata)>;
 
@@ -4958,6 +4959,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		}
 
 		lv2_obj::prepare_for_sleep(*this);
+		state += cpu_flag::wait;
 
 		spu_function_logger logger(*this, "sys_spu_thread_receive_event");
 
@@ -5057,7 +5059,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		while (auto old = +state)
 		{
-			if (old & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
+			if (old & cpu_flag::signal)
 			{
 				break;
 			}

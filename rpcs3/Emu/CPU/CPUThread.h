@@ -15,6 +15,7 @@ enum class cpu_flag : u32
 	stop, // Thread not running (HLE, initial state)
 	exit, // Irreversible exit
 	wait, // Indicates waiting state, set by the thread itself
+	unmem, // Thread has unlocked memory mutex
 	temp, // Indicates that the thread cannot properly return after next check_state()
 	pause, // Thread suspended by suspend_all technique
 	suspend, // Thread suspended

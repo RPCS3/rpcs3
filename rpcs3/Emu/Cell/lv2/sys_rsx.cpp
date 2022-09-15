@@ -93,7 +93,7 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 
 error_code sys_rsx_device_open(cpu_thread& cpu)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.todo("sys_rsx_device_open()");
 
@@ -102,7 +102,7 @@ error_code sys_rsx_device_open(cpu_thread& cpu)
 
 error_code sys_rsx_device_close(cpu_thread& cpu)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.todo("sys_rsx_device_close()");
 
@@ -121,7 +121,7 @@ error_code sys_rsx_device_close(cpu_thread& cpu)
  */
 error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm::ptr<u64> mem_addr, u32 size, u64 flags, u64 a5, u64 a6, u64 a7)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.warning("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
 
@@ -142,7 +142,7 @@ error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm:
  */
 error_code sys_rsx_memory_free(cpu_thread& cpu, u32 mem_handle)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.warning("sys_rsx_memory_free(mem_handle=0x%x)", mem_handle);
 
@@ -175,7 +175,7 @@ error_code sys_rsx_memory_free(cpu_thread& cpu, u32 mem_handle)
  */
 error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_control, vm::ptr<u64> lpar_driver_info, vm::ptr<u64> lpar_reports, u64 mem_ctx, u64 system_mode)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.warning("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
 		context_id, lpar_dma_control, lpar_driver_info, lpar_reports, mem_ctx, system_mode);
@@ -281,7 +281,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
  */
 error_code sys_rsx_context_free(cpu_thread& cpu, u32 context_id)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.todo("sys_rsx_context_free(context_id=0x%x)", context_id);
 
@@ -307,7 +307,7 @@ error_code sys_rsx_context_free(cpu_thread& cpu, u32 context_id)
  */
 error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.warning("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
 
@@ -370,7 +370,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
  */
 error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u32 io, u32 size)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.warning("sys_rsx_context_iounmap(context_id=0x%x, io=0x%x, size=0x%x)", context_id, io, size);
 
@@ -416,7 +416,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 {
 	if (auto cpu = get_current_cpu_thread())
 	{
-		cpu->state += cpu_flag::wait;
+		cpu->state += cpu_flag::unmem;
 	}
 
 	// Flip/queue/reset flip/flip event/user command/vblank as trace to help with log spam
@@ -842,7 +842,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
  */
 error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.warning("sys_rsx_device_map(dev_addr=*0x%x, a2=*0x%x, dev_id=0x%x)", dev_addr, a2, dev_id);
 
@@ -880,7 +880,7 @@ error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u6
  */
 error_code sys_rsx_device_unmap(cpu_thread& cpu, u32 dev_id)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.todo("sys_rsx_device_unmap(dev_id=0x%x)", dev_id);
 
@@ -892,7 +892,7 @@ error_code sys_rsx_device_unmap(cpu_thread& cpu, u32 dev_id)
  */
 error_code sys_rsx_attribute(cpu_thread& cpu, u32 packageId, u32 a2, u32 a3, u32 a4, u32 a5)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_rsx.warning("sys_rsx_attribute(packageId=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x)", packageId, a2, a3, a4, a5);
 

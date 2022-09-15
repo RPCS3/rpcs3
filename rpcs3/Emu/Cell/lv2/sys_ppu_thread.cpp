@@ -38,7 +38,7 @@ struct ppu_thread_cleaner
 
 void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*)
 {
-	ppu.state += cpu_flag::exit + cpu_flag::wait;
+	ppu.state += cpu_flag::exit + cpu_flag::unmem;
 
 	// Deallocate Stack Area
 	ensure(vm::dealloc(ppu.stack_addr, vm::stack) == ppu.stack_size);
@@ -60,7 +60,7 @@ constexpr u32 c_max_ppu_name_size = 28;
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	// Need to wait until the current writer finish
 	if (ppu.state & cpu_flag::memory)
@@ -134,7 +134,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 s32 sys_ppu_thread_yield(ppu_thread& ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.trace("sys_ppu_thread_yield()");
 
@@ -233,7 +233,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.trace("sys_ppu_thread_detach(thread_id=0x%x)", thread_id);
 
@@ -300,7 +300,7 @@ error_code sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinabl
 
 error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.trace("sys_ppu_thread_set_priority(thread_id=0x%x, prio=%d)", thread_id, prio);
 
@@ -338,7 +338,7 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 
 error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s32> priop)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.trace("sys_ppu_thread_get_priority(thread_id=0x%x, priop=*0x%x)", thread_id, priop);
 
@@ -379,7 +379,7 @@ error_code sys_ppu_thread_get_stack_information(ppu_thread& ppu, vm::ptr<sys_ppu
 
 error_code sys_ppu_thread_stop(ppu_thread& ppu, u32 thread_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.todo("sys_ppu_thread_stop(thread_id=0x%x)", thread_id);
 
@@ -400,7 +400,7 @@ error_code sys_ppu_thread_stop(ppu_thread& ppu, u32 thread_id)
 
 error_code sys_ppu_thread_restart(ppu_thread& ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.todo("sys_ppu_thread_restart()");
 
@@ -414,7 +414,7 @@ error_code sys_ppu_thread_restart(ppu_thread& ppu)
 
 error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u32 _stacksz, u64 flags, vm::cptr<char> threadname)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)",
 		thread_id, param, arg, unk, prio, _stacksz, flags, threadname);
@@ -495,7 +495,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.trace("sys_ppu_thread_start(thread_id=0x%x)", thread_id);
 
@@ -562,7 +562,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> name)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.warning("sys_ppu_thread_rename(thread_id=0x%x, name=*0x%x)", thread_id, name);
 
@@ -594,7 +594,7 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 
 error_code sys_ppu_thread_recover_page_fault(ppu_thread& ppu, u32 thread_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.warning("sys_ppu_thread_recover_page_fault(thread_id=0x%x)", thread_id);
 
@@ -610,7 +610,7 @@ error_code sys_ppu_thread_recover_page_fault(ppu_thread& ppu, u32 thread_id)
 
 error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id, vm::ptr<sys_ppu_thread_icontext_t> ctxt)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_ppu_thread.todo("sys_ppu_thread_get_page_fault_context(thread_id=0x%x, ctxt=*0x%x)", thread_id, ctxt);
 

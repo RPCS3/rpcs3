@@ -1446,7 +1446,7 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 
 			if (out > 1500)
 			{
-				_spu->state += cpu_flag::wait;
+				_spu->state += cpu_flag::unmem;
 				std::this_thread::yield();
 
 				if (_spu->test_stopped())

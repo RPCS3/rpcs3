@@ -46,6 +46,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::stop: return "STOP";
 		case cpu_flag::exit: return "EXIT";
 		case cpu_flag::wait: return "w";
+		case cpu_flag::unmem: return "un";
 		case cpu_flag::temp: return "t";
 		case cpu_flag::pause: return "p";
 		case cpu_flag::suspend: return "s";
@@ -498,10 +499,10 @@ void cpu_thread::operator()()
 		cpu_thread* _cpu = get_current_cpu_thread();
 
 		// Wait flag isn't set asynchronously so this should be thread-safe
-		if (progress == 0 && _cpu->state.none_of(cpu_flag::wait + cpu_flag::temp))
+		if (progress == 0 && _cpu->state.none_of(cpu_flag::unmem + cpu_flag::temp + cpu_flag::wait))
 		{
 			// Operation just started and syscall is imminent
-			_cpu->state += cpu_flag::wait + cpu_flag::temp;
+			_cpu->state += cpu_flag::unmem + cpu_flag::temp;
 			wait_set = true;
 			return;
 		}
@@ -661,12 +662,12 @@ bool cpu_thread::check_state() noexcept
 
 			if (flags & cpu_flag::pause && s_tls_thread_slot != umax)
 			{
-				// Save value before state is saved and cpu_flag::wait is observed
+				// Save value before state is saved and cpu_flag::unmem is observed
 				if (s_tls_sctr == umax)
 				{
 					u64 ctr = g_suspend_counter;
 
-					if (flags & cpu_flag::wait)
+					if (flags & (cpu_flag::unmem + cpu_flag::wait))
 					{
 						if ((ctr & 3) == 2)
 						{
@@ -695,7 +696,6 @@ bool cpu_thread::check_state() noexcept
 			{
 				// Sticky flag, indicates check_state() is not allowed to return true
 				flags -= cpu_flag::temp;
-				flags -= cpu_flag::wait;
 				cpu_can_stop = false;
 				store = true;
 			}
@@ -756,9 +756,9 @@ bool cpu_thread::check_state() noexcept
 					return store;
 				}
 
-				if (flags & cpu_flag::wait)
+				if (flags & (cpu_flag::wait + cpu_flag::unmem))
 				{
-					flags -= cpu_flag::wait;
+					flags -= (cpu_flag::wait + cpu_flag::unmem);
 					store = true;
 				}
 
@@ -766,9 +766,29 @@ bool cpu_thread::check_state() noexcept
 			}
 			else
 			{
-				if (cpu_can_stop && !(flags & cpu_flag::wait))
+				if (cpu_can_stop)
 				{
-					flags += cpu_flag::wait;
+					if (flags & (cpu_flag::yield + cpu_flag::preempt))
+					{
+						flags -= (cpu_flag::yield + cpu_flag::preempt);
+						store = true;
+					}
+
+					if (::is_stopped(flags) == !(flags & cpu_flag::wait))
+					{
+						flags ^= cpu_flag::wait;
+						store = true;
+					}
+
+					if (!(flags & cpu_flag::unmem))
+					{
+						flags += cpu_flag::unmem;
+						store = true;
+					}
+				}
+				else if (flags & (cpu_flag::wait + cpu_flag::unmem))
+				{
+					flags -= (cpu_flag::wait + cpu_flag::unmem);
 					store = true;
 				}
 
@@ -780,7 +800,7 @@ bool cpu_thread::check_state() noexcept
 			return store;
 		}).first;
 
-		if (state0 & cpu_flag::preempt && cpu_can_stop)
+		if ((state0 - state1) & cpu_flag::preempt)
 		{
 			if (cpu_flag::wait - state0)
 			{
@@ -1116,7 +1136,7 @@ std::string cpu_thread::dump_misc() const
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 {
 	// Can't allow pre-set wait bit (it'd be a problem)
-	ensure(!_this || !(_this->state & cpu_flag::wait));
+	ensure(!_this || !(_this->state & (cpu_flag::unmem + cpu_flag::wait)));
 
 	do
 	{
@@ -1168,7 +1188,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 
 		copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 /*index*/)
 		{
-			if (cpu->state.fetch_add(cpu_flag::pause) & cpu_flag::wait)
+			if (cpu->state.fetch_add(cpu_flag::pause) & (cpu_flag::unmem + cpu_flag::wait))
 			{
 				// Clear bits as long as wait flag is set
 				return false;
@@ -1182,7 +1202,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 			// Check only CPUs which haven't acknowledged their waiting state yet
 			copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 /*index*/)
 			{
-				if (cpu->state & cpu_flag::wait)
+				if (cpu->state & (cpu_flag::unmem + cpu_flag::wait))
 				{
 					return false;
 				}

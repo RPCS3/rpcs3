@@ -33,7 +33,7 @@ void lv2_rwlock::save(utils::serial& ar)
 
 error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_rwlock.warning("sys_rwlock_create(rw_lock_id=*0x%x, attr=*0x%x)", rw_lock_id, attr);
 
@@ -68,7 +68,7 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 
 error_code sys_rwlock_destroy(ppu_thread& ppu, u32 rw_lock_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_rwlock.warning("sys_rwlock_destroy(rw_lock_id=0x%x)", rw_lock_id);
 
@@ -98,7 +98,7 @@ error_code sys_rwlock_destroy(ppu_thread& ppu, u32 rw_lock_id)
 
 error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
@@ -154,7 +154,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
+		if (state & cpu_flag::signal)
 		{
 			break;
 		}
@@ -217,7 +217,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 error_code sys_rwlock_tryrlock(ppu_thread& ppu, u32 rw_lock_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_rwlock.trace("sys_rwlock_tryrlock(rw_lock_id=0x%x)", rw_lock_id);
 
@@ -252,7 +252,7 @@ error_code sys_rwlock_tryrlock(ppu_thread& ppu, u32 rw_lock_id)
 
 error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_rwlock.trace("sys_rwlock_runlock(rw_lock_id=0x%x)", rw_lock_id);
 
@@ -328,7 +328,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 
 error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
@@ -392,7 +392,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
+		if (state & cpu_flag::signal)
 		{
 			break;
 		}
@@ -480,7 +480,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_rwlock.trace("sys_rwlock_trywlock(rw_lock_id=0x%x)", rw_lock_id);
 
@@ -512,7 +512,7 @@ error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id)
 
 error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_rwlock.trace("sys_rwlock_wunlock(rw_lock_id=0x%x)", rw_lock_id);
 

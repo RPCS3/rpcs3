@@ -71,7 +71,7 @@ namespace rsx
 				{
 					if (self)
 					{
-						added_wait |= !self->state.test_and_set(cpu_flag::wait);
+						added_wait |= !self->state.test_and_set(cpu_flag::unmem);
 					}
 					
 					if (!self || self->id_type() != 0x55u)

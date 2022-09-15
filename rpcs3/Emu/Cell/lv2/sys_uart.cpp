@@ -1660,7 +1660,7 @@ struct generic_reply_cmd : public ps3av_cmd
 
 error_code sys_uart_initialize(ppu_thread &ppu)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_uart.trace("sys_uart_initialize()");
 
