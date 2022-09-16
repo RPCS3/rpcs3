@@ -6,8 +6,18 @@
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 
 LOG_CHANNEL(usio_log);
+
+struct last_game_status
+{
+	std::vector<u8> memory;
+
+	last_game_status(const last_game_status&) = delete;
+	last_game_status& operator=(const last_game_status&) = delete;
+};
+constexpr u8 default_last_game_status[0x28] = {0x4C, 0x41, 0x53, 0x54, 0x47, 0x41, 0x4D, 0x45, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x20, 0x76, 0x65, 0x72, 0x2E, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // "LASTGAMESTATUS ver.3"
 
 usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
@@ -67,6 +77,9 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 			.bmAttributes     = 0x03,
 			.wMaxPacketSize   = 0x0008,
 			.bInterval        = 16}));
+
+	g_fxo->get<last_game_status>().memory.resize(0x28);
+	memcpy(g_fxo->get<last_game_status>().memory.data(), default_last_game_status, 0x28);
 }
 
 usb_device_usio::~usb_device_usio()
@@ -226,6 +239,19 @@ void usb_device_usio::usio_write(u8 channel, u16 reg, const std::vector<u8>& dat
 	else if (channel >= 2)
 	{
 		usio_log.trace("Usio write of sram(chip: %d, addr: 0x%04X)", channel - 2, reg);
+		if (channel == 2)
+		{
+			switch (reg)
+			{
+			case 0x0180:
+			{
+				ensure(data.size() == 0x28);
+				g_fxo->get<last_game_status>().memory.resize(0x28);
+				memcpy(g_fxo->get<last_game_status>().memory.data(), data.data(), 0x28);
+				break;
+			}
+			}
+		}
 	}
 	else
 	{
@@ -323,8 +349,7 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 			case 0x0180:
 			{
 				ensure(size == 0x28);
-				// "LASTGAMESTATUS ver.3"
-				q_replies.push({0x4C, 0x41, 0x53, 0x54, 0x47, 0x41, 0x4D, 0x45, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x20, 0x76, 0x65, 0x72, 0x2E, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+				q_replies.push(g_fxo->get<last_game_status>().memory);
 				break;
 			}
 			case 0x0200:
