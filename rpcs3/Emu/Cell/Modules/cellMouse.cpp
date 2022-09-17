@@ -49,7 +49,7 @@ MouseHandlerBase::MouseHandlerBase(utils::serial* ar)
 		Emu.DeferDeserialization([this]()
 		{
 			Init(m_info.max_connect);
-			init.init();
+			auto lk = init.init();
 		});
 	}
 }

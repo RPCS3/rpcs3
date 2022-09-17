@@ -229,7 +229,7 @@ namespace utils
 		return _prot;
 	}
 
-	void* memory_reserve(usz size, void* use_addr, bool is_memory_mapping)
+	void* memory_reserve(usz size, void* use_addr, [[maybe_unused]] bool is_memory_mapping)
 	{
 #ifdef _WIN32
 		if (is_memory_mapping && has_win10_memory_mapping_api())

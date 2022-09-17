@@ -1156,7 +1156,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 	}
 	else
 	{
-		data.emplace_back().name = ".";
+		data.emplace_back().name += '.';
 		data.back().is_directory = true;
 		data.emplace_back().name = "..";
 		data.back().is_directory = true;

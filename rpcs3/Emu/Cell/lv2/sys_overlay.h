@@ -10,7 +10,7 @@ struct lv2_overlay final : lv2_obj, ppu_module
 	u32 entry;
 
 	lv2_overlay() = default;
-	lv2_overlay(utils::serial& ar){}
+	lv2_overlay(utils::serial&){}
 	static std::shared_ptr<void> load(utils::serial& ar);
 	void save(utils::serial& ar);
 };

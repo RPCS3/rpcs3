@@ -323,11 +323,20 @@ namespace asmjit
 				// Build single last iteration (masked)
 				this->test(reg_cnt, reg_cnt);
 				this->jz(exit);
-				this->bzhi(reg_cnt, x86::Mem(consts[~u128()], 0), reg_cnt);
-				this->kmovq(x86::k7, reg_cnt);
+
+				if (esize == 1 && vsize == 64)
+				{
+					this->bzhi(reg_cnt.r64(), x86::Mem(consts[~u128()], 0), reg_cnt.r64());
+					this->kmovq(x86::k7, reg_cnt.r64());
+				}
+				else
+				{
+					this->bzhi(reg_cnt.r32(), x86::Mem(consts[~u128()], 0), reg_cnt.r32());
+					this->kmovd(x86::k7, reg_cnt.r32());
+				}
+
 				vmask = 7;
 				build();
-				vmask = -1;
 
 				// Rollout reduction step
 				this->bind(exit);

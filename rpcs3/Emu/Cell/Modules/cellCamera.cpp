@@ -175,7 +175,7 @@ static error_code check_camera_info(const VariantOfCellCameraInfo& info)
 		return CELL_CAMERA_ERROR_BAD_FRAMERATE;
 	}
 
-	auto check_fps = [fps = info.framerate](const std::vector<s32>& range)
+	auto check_fps = [fps = info.framerate](std::initializer_list<s32> range)
 	{
 		return std::find(range.begin(), range.end(), fps) != range.end();
 	};

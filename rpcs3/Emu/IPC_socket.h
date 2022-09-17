@@ -33,13 +33,13 @@ namespace IPC_socket
 			IPC.error(fmt, std::forward<Args>(args)...);
 		}
 
-		static const int get_port();
+		static int get_port();
 		static pine::EmuStatus get_status();
 		static const std::string& get_title();
 		static const std::string& get_title_ID();
 		static const std::string& get_executable_hash();
 		static const std::string& get_app_version();
-		static const std::string get_version_and_branch();
+		static std::string get_version_and_branch();
 
 	public:
 		static auto constexpr thread_name = "IPC Server"sv;

@@ -437,17 +437,13 @@ public:
 		auto operator<=>(const port_config&) const = default;
 	};
 
-	union avport_bit
+	struct avport_bit
 	{
-		struct
-		{
-			bool hdmi_0  : 1;
-			bool hdmi_1  : 1;
-			bool avmulti : 1;
-			bool spdif_0 : 1;
-			bool spdif_1 : 1;
-		};
-		u8 raw : 5 = 0;
+		bool hdmi_0  : 1;
+		bool hdmi_1  : 1;
+		bool avmulti : 1;
+		bool spdif_0 : 1;
+		bool spdif_1 : 1;
 	};
 
 	rsxaudio_backend_thread();

@@ -1,4 +1,3 @@
-#pragma once
 #include "state_tracker.hpp"
 #include "vao.hpp"
 

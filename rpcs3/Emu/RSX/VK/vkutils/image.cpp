@@ -71,16 +71,16 @@ namespace vk
 		info.initialLayout = initial_layout;
 		info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+		std::array<u32, 2> concurrency_queue_families = {
+			dev.get_graphics_queue_family(),
+			dev.get_transfer_queue_family()
+		};
+
 		if (image_flags & VK_IMAGE_CREATE_SHAREABLE_RPCS3)
 		{
-			u32 queue_families[] = {
-				dev.get_graphics_queue_family(),
-				dev.get_transfer_queue_family()
-			};
-
 			info.sharingMode = VK_SHARING_MODE_CONCURRENT;
-			info.queueFamilyIndexCount = 2;
-			info.pQueueFamilyIndices = queue_families;
+			info.queueFamilyIndexCount = ::size32(concurrency_queue_families);
+			info.pQueueFamilyIndices = concurrency_queue_families.data();
 		}
 
 		create_impl(dev, access_flags, memory_type, allocation_pool);

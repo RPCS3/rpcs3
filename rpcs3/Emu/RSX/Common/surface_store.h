@@ -435,7 +435,7 @@ namespace rsx
 				if (!pitch_compatible)
 				{
 					// This object should be pitch-converted and re-intersected with
-					if (old_surface_storage = Traits::convert_pitch(command_list, surface, pitch))
+					if (old_surface_storage = Traits::convert_pitch(command_list, surface, pitch); old_surface_storage)
 					{
 						old_surface = Traits::get(old_surface_storage);
 					}

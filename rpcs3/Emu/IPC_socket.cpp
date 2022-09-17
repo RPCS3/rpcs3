@@ -47,7 +47,7 @@ namespace IPC_socket
 		vm::write64(addr, value);
 	}
 
-	const int IPC_impl::get_port()
+	int IPC_impl::get_port()
 	{
 		return g_cfg_ipc.get_port();
 	}
@@ -85,7 +85,7 @@ namespace IPC_socket
 		return Emu.GetAppVersion();
 	}
 
-	const std::string IPC_impl::get_version_and_branch()
+	std::string IPC_impl::get_version_and_branch()
 	{
 		return rpcs3::get_version_and_branch();
 	}

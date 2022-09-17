@@ -16,7 +16,9 @@
 #include <process.h>
 #include <sysinfoapi.h>
 #else
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #ifdef __APPLE__
 #define _XOPEN_SOURCE
 #define __USE_GNU
