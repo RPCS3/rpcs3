@@ -276,6 +276,9 @@ usb_handler_thread::usb_handler_thread()
 		{
 			found_usio = true;
 		}
+		
+		// Densha de GO! controller
+		check_device(0x0AE4, 0x0004, 0x0004, "Densha de GO! Type 2 Controller");
 	}
 
 	libusb_free_device_list(list, 1);
