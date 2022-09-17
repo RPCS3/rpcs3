@@ -2,8 +2,8 @@ R"(
 #version 450
 layout(local_size_x = %ws, local_size_y = 1, local_size_z = 1) in;
 
-#define SSBO_LOCATION(x)  (x + %loc)
-#define IMAGE_LOCATION(x) (x)
+#define IMAGE_LOCATION(x) (x + %image_slot)
+#define SSBO_LOCATION(x)  (x + %ssbo_slot)
 
 layout(%set, binding=IMAGE_LOCATION(0)) uniform writeonly restrict image2D output2D;
 

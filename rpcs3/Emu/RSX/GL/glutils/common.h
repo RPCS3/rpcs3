@@ -8,7 +8,7 @@
 #define GL_STREAM_BUFFER_START     (GL_STENCIL_MIRRORS_START + 16)
 #define GL_TEMP_IMAGE_SLOT         31
 
-#define UBO_SLOT(x)  (x)
+#define UBO_SLOT(x)  (x + 8)
 #define SSBO_SLOT(x) (x)
 
 #define GL_VERTEX_PARAMS_BIND_SLOT             UBO_SLOT(0)

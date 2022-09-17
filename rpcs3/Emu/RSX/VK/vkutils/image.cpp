@@ -250,7 +250,7 @@ namespace vk
 			VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
 			const u32 src_queue_family = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? current_queue_family : VK_QUEUE_FAMILY_IGNORED;
 			const u32 dst_queue_family2 = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? dst_queue_family : VK_QUEUE_FAMILY_IGNORED;
-			change_image_layout(src_queue_cmd, value, current_layout, new_layout, range, current_queue_family, dst_queue_family2, ~0u, 0u);
+			change_image_layout(src_queue_cmd, value, current_layout, new_layout, range, src_queue_family, dst_queue_family2, ~0u, 0u);
 		}
 
 		current_layout = new_layout;

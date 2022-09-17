@@ -287,6 +287,12 @@ namespace gl
 			glUseProgram(program);
 		}
 
+		GLuint get_bound_texture(GLuint layer, GLenum target)
+		{
+			ensure(layer < 48);
+			return bound_textures[layer][target];
+		}
+
 		void bind_texture(GLuint layer, GLenum target, GLuint name, GLboolean force = GL_FALSE)
 		{
 			ensure(layer < 48);
