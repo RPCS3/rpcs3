@@ -31,7 +31,7 @@ std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
 	OS << "#version 430\n";
-	OS << "layout(std140, binding = 0) uniform VertexContextBuffer\n";
+	OS << "layout(std140, binding = " << GL_VERTEX_PARAMS_BIND_SLOT << ") uniform VertexContextBuffer\n";
 	OS << "{\n";
 	OS << "	mat4 scale_offset_mat;\n";
 	OS << "	ivec4 user_clip_enabled[2];\n";
@@ -42,7 +42,7 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "	float z_far;\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, binding = 1) uniform VertexLayoutBuffer\n";
+	OS << "layout(std140, binding = " << GL_VERTEX_LAYOUT_BIND_SLOT << ") uniform VertexLayoutBuffer\n";
 	OS << "{\n";
 	OS << "	uint  vertex_base_index;\n";
 	OS << "	uint  vertex_index_offset;\n";
@@ -66,7 +66,7 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream& OS, const std:
 		{
 			if (PI.name.starts_with("vc["))
 			{
-				OS << "layout(std140, binding = 2) uniform VertexConstantsBuffer\n";
+				OS << "layout(std140, binding = " << GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT << ") uniform VertexConstantsBuffer\n";
 				OS << "{\n";
 				OS << "	vec4 " << PI.name << ";\n";
 				OS << "};\n\n";
