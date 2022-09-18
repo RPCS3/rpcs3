@@ -42,6 +42,7 @@ error_code _sys_lwmutex_create(ppu_thread& ppu, vm::ptr<u32> lwmutex_id, u32 pro
 
 	if (const u32 id = idm::make<lv2_obj, lv2_lwmutex>(protocol, control, name))
 	{
+		ppu.check_state();
 		*lwmutex_id = id;
 		return CELL_OK;
 	}

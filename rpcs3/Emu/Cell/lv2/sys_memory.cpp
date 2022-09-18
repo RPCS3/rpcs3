@@ -132,6 +132,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 			if (alloc_addr)
 			{
 				vm::lock_sudo(addr, size);
+				cpu.check_state();
 				*alloc_addr = addr;
 				return CELL_OK;
 			}
@@ -203,6 +204,7 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid
 			if (alloc_addr)
 			{
 				vm::lock_sudo(addr, size);
+				cpu.check_state();
 				*alloc_addr = addr;
 				return CELL_OK;
 			}
@@ -282,17 +284,22 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 	// Get "default" memory container
 	auto& dct = g_fxo->get<lv2_memory_container>();
 
-	::reader_lock lock(s_memstats_mtx);
-
-	mem_info->total_user_memory = dct.size;
-	mem_info->available_user_memory = dct.size - dct.used;
-
-	// Scan other memory containers
-	idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ct)
+	sys_memory_info_t out{};
 	{
-		mem_info->total_user_memory -= ct.size;
-	});
+		::reader_lock lock(s_memstats_mtx);
 
+		out.total_user_memory = dct.size;
+		out.available_user_memory = dct.size - dct.used;
+
+		// Scan other memory containers
+		idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ct)
+		{
+			out.total_user_memory -= ct.size;
+		});
+	}
+
+	cpu.check_state();
+	*mem_info = out;
 	return CELL_OK;
 }
 
@@ -332,6 +339,7 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 si
 	// Create the memory container
 	if (const u32 id = idm::make<lv2_memory_container>(size, true))
 	{
+		cpu.check_state();
 		*cid = id;
 		return CELL_OK;
 	}
@@ -388,6 +396,7 @@ error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_inf
 		return CELL_ESRCH;
 	}
 
+	cpu.check_state();
 	mem_info->total_user_memory = ct->size; // Total container memory
 	mem_info->available_user_memory = ct->size - ct->used; // Available container memory
 

@@ -619,11 +619,14 @@ error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
-	std::lock_guard lock(usbh.mutex);
+	{
+		std::lock_guard lock(usbh.mutex);
 
-	// Must not occur (lv2 allows multiple handles, cellUsbd does not)
-	ensure(!usbh.is_init.exchange(true));
+		// Must not occur (lv2 allows multiple handles, cellUsbd does not)
+		ensure(!usbh.is_init.exchange(true));
+	}
 
+	ppu.check_state();
 	*handle = 0x115B;
 
 	// TODO
@@ -888,6 +891,7 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 		thread_ctrl::wait_on(ppu.state, state);
 	}
 
+	ppu.check_state();
 	*arg1 = ppu.gpr[4];
 	*arg2 = ppu.gpr[5];
 	*arg3 = ppu.gpr[6];

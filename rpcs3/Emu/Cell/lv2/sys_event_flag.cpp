@@ -77,6 +77,7 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 		return error;
 	}
 
+	ppu.check_state();
 	*id = idm::last_id();
 	return CELL_OK;
 }
@@ -253,6 +254,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		}
 	}
 
+	ppu.check_state();
 	store.val = ppu.gpr[6];
 	return not_an_error(ppu.gpr[3]);
 }
@@ -290,6 +292,8 @@ error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode,
 	{
 		return not_an_error(CELL_EBUSY);
 	}
+
+	ppu.check_state();
 
 	if (result) *result = pattern;
 	return CELL_OK;
@@ -502,6 +506,8 @@ error_code sys_event_flag_get(ppu_thread& ppu, u32 id, vm::ptr<u64> flags)
 	{
 		return +flag.pattern;
 	});
+
+	ppu.check_state();
 
 	if (!flag)
 	{
