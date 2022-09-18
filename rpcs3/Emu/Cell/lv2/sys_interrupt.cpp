@@ -190,6 +190,7 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 
 	if (id)
 	{
+		ppu.check_state();
 		*ih = id;
 		return CELL_OK;
 	}

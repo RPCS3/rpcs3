@@ -62,6 +62,7 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 		return error;
 	}
 
+	ppu.check_state();
 	*rw_lock_id = idm::last_id();
 	return CELL_OK;
 }

@@ -488,8 +488,10 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		return CELL_EAGAIN;
 	}
 
-	*thread_id = tid;
 	sys_ppu_thread.warning(u8"_sys_ppu_thread_create(): Thread “%s” created (id=0x%x, func=*0x%x, rtoc=0x%x, user-tls=0x%x)", ppu_name, tid, entry.addr, entry.rtoc, tls);
+
+	ppu.check_state();
+	*thread_id = tid;
 	return CELL_OK;
 }
 

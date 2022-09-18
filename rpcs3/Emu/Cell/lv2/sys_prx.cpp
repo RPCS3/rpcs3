@@ -542,6 +542,7 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 		return CELL_PRX_ERROR_ERROR;
 	}
 
+	ppu.check_state();
 	pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
 
 	// This check is probably for older fw
@@ -594,6 +595,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 			fmt::throw_exception("Invalid prx state (%d)", old);
 		}
 
+		ppu.check_state();
 		pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
 		set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 		return CELL_OK;
@@ -633,6 +635,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 
 		if (pOpt->cmd == 4u)
 		{
+			ppu.check_state();
 			pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
 			set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 		}

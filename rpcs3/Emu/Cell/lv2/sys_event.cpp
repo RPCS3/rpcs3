@@ -220,6 +220,7 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 		return error;
 	}
 
+	cpu.check_state();
 	*equeue_id = idm::last_id();
 	return CELL_OK;
 }
@@ -381,7 +382,9 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 		return CELL_EINVAL;
 	}
 
-	std::lock_guard lock(queue->mutex);
+	std::array<sys_event_t, 127> events;
+
+	std::unique_lock lock(queue->mutex);
 
 	if (!queue->exists)
 	{
@@ -392,13 +395,17 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 
 	while (count < size && !queue->events.empty())
 	{
-		auto& dest = event_array[count++];
+		auto& dest = events[count++];
 		const auto event = queue->events.front();
 		queue->events.pop_front();
 
 		std::tie(dest.source, dest.data1, dest.data2, dest.data3) = event;
 	}
 
+	lock.unlock();
+	ppu.check_state();
+
+	std::copy_n(event_array.get_ptr(), count, events.begin());
 	*number = count;
 
 	return CELL_OK;
@@ -559,6 +566,7 @@ error_code sys_event_port_create(cpu_thread& cpu, vm::ptr<u32> eport_id, s32 por
 
 	if (const u32 id = idm::make<lv2_obj, lv2_event_port>(port_type, name))
 	{
+		cpu.check_state();
 		*eport_id = id;
 		return CELL_OK;
 	}

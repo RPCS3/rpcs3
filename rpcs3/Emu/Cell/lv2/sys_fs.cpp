@@ -839,6 +839,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 		return result;
 	}))
 	{
+		ppu.check_state();
 		*fd = id;
 		return CELL_OK;
 	}
@@ -962,7 +963,7 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 		return CELL_EROFS;
 	}
 
-	std::lock_guard lock(file->mp->mutex);
+	std::unique_lock lock(file->mp->mutex);
 
 	if (!file->file)
 	{
@@ -986,8 +987,11 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 		file->file.seek(0, fs::seek_end);
 	}
 
-	*nwrite = file->op_write(buf, nbytes);
+	const u64 written = file->op_write(buf, nbytes);
+	lock.unlock();
+	ppu.check_state();
 
+	*nwrite = written;
 	return CELL_OK;
 }
 
@@ -1102,7 +1106,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		return {CELL_ENOTDIR, path};
 	}
 
-	std::lock_guard lock(mp->mutex);
+	std::unique_lock lock(mp->mutex);
 
 	const fs::dir dir(local_path);
 
@@ -1177,6 +1181,9 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 
 	if (const u32 id = idm::make<lv2_fs_object, lv2_dir>(processed_path, std::move(data)))
 	{
+		lock.unlock();
+		ppu.check_state();
+
 		*fd = id;
 		return CELL_OK;
 	}
@@ -1198,6 +1205,8 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 	{
 		return CELL_EBADF;
 	}
+
+	ppu.check_state();
 
 	if (auto* info = directory->dir_read())
 	{
@@ -1265,7 +1274,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	std::lock_guard lock(mp->mutex);
+	std::unique_lock lock(mp->mutex);
 
 	fs::stat_t info{};
 
@@ -1308,6 +1317,9 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		}
 	}
 
+	lock.unlock();
+	ppu.check_state();
+
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 	sb->uid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 	sb->gid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
@@ -1340,7 +1352,7 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 		return CELL_EBADF;
 	}
 
-	std::lock_guard lock(file->mp->mutex);
+	std::unique_lock lock(file->mp->mutex);
 
 	if (!file->file)
 	{
@@ -1352,7 +1364,9 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 		return CELL_EIO;
 	}
 
-	const fs::stat_t& info = file->file.stat();
+	const fs::stat_t info = file->file.stat();
+	lock.unlock();
+	ppu.check_state();
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 	sb->uid = file->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
@@ -2342,7 +2356,7 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 		return CELL_EBADF;
 	}
 
-	std::lock_guard lock(file->mp->mutex);
+	std::unique_lock lock(file->mp->mutex);
 
 	if (!file->file)
 	{
@@ -2366,6 +2380,9 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 
 		return CELL_EIO; // ???
 	}
+
+	lock.unlock();
+	ppu.check_state();
 
 	*pos = result;
 	return CELL_OK;
@@ -2661,6 +2678,8 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		// TODO:
 		return {CELL_ENOTSUP, path};
 	}
+
+	ppu.check_state();
 
 	if (mp->flags & lv2_mp_flag::read_only)
 	{

@@ -695,7 +695,6 @@ bool cpu_thread::check_state() noexcept
 			{
 				// Sticky flag, indicates check_state() is not allowed to return true
 				flags -= cpu_flag::temp;
-				flags -= cpu_flag::wait;
 				cpu_can_stop = false;
 				store = true;
 			}
@@ -766,9 +765,9 @@ bool cpu_thread::check_state() noexcept
 			}
 			else
 			{
-				if (cpu_can_stop && !(flags & cpu_flag::wait))
+				if (flags & cpu_flag::wait)
 				{
-					flags += cpu_flag::wait;
+					flags -= cpu_flag::wait;
 					store = true;
 				}
 
