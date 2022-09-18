@@ -557,7 +557,7 @@ namespace rsx
 			ensure(dst_offset.x < child_w && dst_offset.y < child_h);
 
 			// TODO: Eventually need to stack all the overlapping regions, but for now just do the latest rect in the space
-			deferred_clipped_region<T*> region;
+			deferred_clipped_region<T*> region{};
 			region.src_x = src_offset.x;
 			region.src_y = src_offset.y;
 			region.dst_x = dst_offset.x;
