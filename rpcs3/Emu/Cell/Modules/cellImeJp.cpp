@@ -43,9 +43,17 @@ bool ime_jp_manager::addChar(u16 c)
 	if (!c || cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1) || cursor > input_string.length())
 		return false;
 
-	input_string += c; // resize
-	std::memmove(input_string.data() + cursor + 1, input_string.data() + cursor, sizeof(u16) * (input_string.size() - 1 - cursor));
-	cursor_end = ++cursor;
+	std::u16string tmp;
+	tmp += c;
+#if defined(__GNUG__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
+#endif
+	input_string.insert(cursor++, tmp);
+#if defined(__GNUG__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+	cursor_end = cursor;
 	input_state = CELL_IMEJP_BEFORE_CONVERT;
 	return true;
 }
