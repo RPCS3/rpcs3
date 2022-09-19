@@ -201,6 +201,11 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		buffer_height = present_info.height;
 	}
 
+	if (info.emu_flip)
+	{
+		evaluate_cpu_usage_reduction_limits();
+	}
+
 	// Get window state
 	const int width = m_frame->client_width();
 	const int height = m_frame->client_height();

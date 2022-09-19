@@ -84,7 +84,7 @@ std::shared_ptr<void> lv2_overlay::load(utils::serial& ar)
 		ensure(g_cfg.savestate.state_inspection_mode.get());
 	}
 
-	return std::move(ovlm);
+	return ovlm;
 }
 
 void lv2_overlay::save(utils::serial& ar)

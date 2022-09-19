@@ -291,7 +291,7 @@ struct spu_itype
 	// Test for constant loading instruction
 	friend constexpr bool operator &(type value, constant_tag)
 	{
-		return value >= CBD && value <= FSMBI;
+		return value >= ILH && value <= FSMBI;
 	}
 };
 

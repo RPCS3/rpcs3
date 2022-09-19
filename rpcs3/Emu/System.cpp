@@ -1263,6 +1263,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 			}
 
+			if (auto& _main = g_fxo->get<ppu_module>(); _main.path.empty())
+			{
+				init_fxo_for_exec(nullptr, false);
+			}
+
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
 				if (auto& _main = g_fxo->get<ppu_module>(); !_main.path.empty())

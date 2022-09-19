@@ -38,6 +38,8 @@ extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 // HLE function name cache
 std::vector<std::string> g_ppu_function_names;
 
+atomic_t<u32> liblv2_begin = 0, liblv2_end = 0;
+
 extern u32 ppu_generate_id(std::string_view name)
 {
 	// Symbol name suffix
@@ -338,7 +340,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 			while (true)
 			{
 				const std::string name = ar.operator std::string();
-	
+
 				if (name.empty())
 				{
 					// Null termination
@@ -348,7 +350,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 				const auto _module = manager.at(name);
 
 				auto& variable = _module->variables;
-	
+
 				for (u32 i = 0, end = ar.operator usz(); i < end; i++)
 				{
 					auto* ptr = &variable.at(ar.operator u32());
@@ -680,7 +682,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 		{
 			const u32 fnid = fnids[i];
 			const u32 faddr = faddrs[i];
-			ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr);
+			ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x [at:0x%x]", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr, vm::read32(faddr));
 
 			// Function linkage info
 			auto& flink = mlink.functions[fnid];
@@ -1367,6 +1369,12 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	// Format patch name
 	std::string hash = fmt::format("PRX-%s", fmt::base57(prx->sha1));
 
+	if (prx->path.ends_with("sys/external/liblv2.sprx"sv))
+	{
+		liblv2_begin = prx->segs[0].addr;
+		liblv2_end = prx->segs[0].addr + prx->segs[0].size;
+	}
+
 	std::basic_string<u32> applied;
 
 	for (usz i = 0; i < prx->segs.size(); i++)
@@ -1440,6 +1448,12 @@ void ppu_unload_prx(const lv2_prx& prx)
 	//		pinfo->export_addr = 0;
 	//	}
 	//}
+
+	if (prx.path.ends_with("sys/external/liblv2.sprx"sv))
+	{
+		liblv2_begin = 0;
+		liblv2_end = 0;
+	}
 
 	// Format patch name
 	std::string hash = fmt::format("PRX-%s", fmt::base57(prx.sha1));
@@ -1934,6 +1948,9 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 
 	void init_fxo_for_exec(utils::serial* ar, bool full);
 	init_fxo_for_exec(ar, false);
+
+	liblv2_begin = 0;
+	liblv2_end = 0;
 
 	if (!load_libs.empty())
 	{
@@ -2449,7 +2466,7 @@ bool ppu_load_rel_exec(const ppu_rel_object& elf)
 		const auto& s = *ptr;
 
 		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", std::bit_cast<u32>(s.sh_type), s.sh_addr, s.sh_size, s._sh_flags);
-	
+
 		if (s.sh_type == sec_type::sht_progbits && s.sh_size && s.sh_flags().all_of(sh_flag::shf_alloc))
 		{
 			ppu_segment _sec;

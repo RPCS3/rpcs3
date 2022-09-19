@@ -5,6 +5,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Memory/vm_locking.h"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/IdManager.h"
 #include "Emu/GDB.h"
 #include "Emu/Cell/PPUThread.h"
@@ -54,6 +55,9 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::memory: return "mem";
 		case cpu_flag::pending: return "pend";
 		case cpu_flag::pending_recheck: return "pend-re";
+		case cpu_flag::notify: return "ntf";
+		case cpu_flag::yield: return "y";
+		case cpu_flag::preempt: return "PREEMPT";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
@@ -574,6 +578,7 @@ void cpu_thread::operator()()
 		if (!(state0 & cpu_flag::stop))
 		{
 			cpu_task();
+			state += cpu_flag::wait;
 
 			if (state & cpu_flag::ret && state.test_and_reset(cpu_flag::ret))
 			{
@@ -638,17 +643,19 @@ void cpu_thread::cpu_wait(bs_t<cpu_flag> old)
 	thread_ctrl::wait_on(state, old);
 }
 
+static atomic_t<u32> s_dummy_atomic = 0;
+
 bool cpu_thread::check_state() noexcept
 {
 	bool cpu_sleep_called = false;
 	bool cpu_can_stop = true;
-	bool escape, retval;
+	bool escape{}, retval{};
 
 	while (true)
 	{
 		// Process all flags in a single atomic op
 		bs_t<cpu_flag> state1;
-		const auto state0 = state.fetch_op([&](bs_t<cpu_flag>& flags)
+		auto state0 = state.fetch_op([&](bs_t<cpu_flag>& flags)
 		{
 			bool store = false;
 
@@ -730,11 +737,17 @@ bool cpu_thread::check_state() noexcept
 			if (!is_stopped(flags) && flags.none_of(cpu_flag::ret))
 			{
 				// Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
-				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend)))
+				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend + cpu_flag::yield + cpu_flag::preempt)))
 				{
 					if (!(flags & cpu_flag::wait))
 					{
 						flags += cpu_flag::wait;
+						store = true;
+					}
+
+					if (flags & (cpu_flag::yield + cpu_flag::preempt) && cpu_can_stop)
+					{
+						flags -= (cpu_flag::yield + cpu_flag::preempt);
 						store = true;
 					}
 
@@ -766,6 +779,34 @@ bool cpu_thread::check_state() noexcept
 			state1 = flags;
 			return store;
 		}).first;
+
+		if (state0 & cpu_flag::preempt && cpu_can_stop)
+		{
+			if (cpu_flag::wait - state0)
+			{
+				if (!escape || !retval)
+				{
+					// Yield itself
+					state0 += cpu_flag::yield;
+					escape = false;
+				}
+			}
+
+			if (const u128 bits = s_cpu_bits)
+			{
+				reader_lock lock(s_cpu_lock);
+
+				cpu_counter::for_all_cpu(bits & s_cpu_bits, [](cpu_thread* cpu)
+				{
+					if (cpu->state.none_of(cpu_flag::wait + cpu_flag::yield))
+					{
+						cpu->state += cpu_flag::yield;
+					}
+
+					return true;
+				});
+			}
+		}
 
 		if (escape)
 		{
@@ -855,6 +896,32 @@ bool cpu_thread::check_state() noexcept
 						break;
 					}
 				}
+
+				continue;
+			}
+
+			if (state0 & cpu_flag::yield && cpu_flag::wait - state0 && cpu_can_stop)
+			{
+				if (auto spu = try_get<spu_thread>())
+				{
+					if (spu->raddr && spu->rtime == vm::reservation_acquire(spu->raddr) && spu->getllar_spin_count < 10)
+					{
+						// Reservation operation is a critical section (but this may result in false positives)
+						continue;
+					}
+				}
+				else if (auto ppu = try_get<ppu_thread>())
+				{
+					if (ppu->raddr && ppu->rtime == vm::reservation_acquire(ppu->raddr))
+					{
+						// Same
+						continue;
+					}
+				}
+
+				// Short sleep when yield flag is present alone (makes no sense when other methods which can stop thread execution have been done)
+				// Pass a mask of a single bit which is often unused to avoid notifications
+				s_dummy_atomic.wait(0, 1u << 30, atomic_wait_timeout{80'000});
 			}
 		}
 	}
@@ -892,6 +959,14 @@ cpu_thread& cpu_thread::operator=(thread_state)
 	if (old & cpu_flag::wait && old.none_of(cpu_flag::again + cpu_flag::exit))
 	{
 		state.notify_one(cpu_flag::exit);
+
+		if (auto thread = try_get<spu_thread>())
+		{
+			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
+			{
+				vm::reservation_notifier(resv).notify_one();
+			}
+		}
 	}
 
 	return *this;

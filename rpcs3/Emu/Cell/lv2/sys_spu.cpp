@@ -14,6 +14,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Memory/vm_reservation.h"
 #include "sys_interrupt.h"
 #include "sys_process.h"
 #include "sys_memory.h"
@@ -1365,12 +1366,30 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 		}
 	}
 
+	u32 prev_resv = 0;
+
 	for (auto& thread : group->threads)
 	{
 		while (thread && group->running && thread->state & cpu_flag::wait)
 		{
 			thread_ctrl::notify(*thread);
+
+			if (u32 resv = atomic_storage<u32>::load(thread->raddr))
+			{
+				if (prev_resv && prev_resv != resv)
+				{
+					// Batch reservation notifications if possible
+					vm::reservation_notifier(prev_resv).notify_all();
+				}
+
+				prev_resv = resv;
+			}
 		}
+	}
+
+	if (prev_resv)
+	{
+		vm::reservation_notifier(prev_resv).notify_all();
 	}
 
 	group->exit_status = value;

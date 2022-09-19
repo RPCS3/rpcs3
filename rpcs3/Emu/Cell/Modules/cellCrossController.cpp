@@ -52,7 +52,7 @@ struct cross_controller
 
 		close_msg_dialog();
 
-		sysutil_register_cb([=](ppu_thread& ppu) -> s32
+		sysutil_register_cb([this, status](ppu_thread& ppu) -> s32
 		{
 			callback(ppu, CELL_CROSS_CONTROLLER_STATUS_FINALIZED, status, vm::null, userdata);
 			return CELL_OK;
@@ -74,9 +74,9 @@ struct cross_controller
 		// TODO: Show icons from comboplay_plugin.rco in dialog. Maybe use a new dialog or add an optional icon to this one.
 		error_code res = open_msg_dialog(false, CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_OFF, vm::make_str(msg), msg_dialog_callback, userdata);
 
-		sysutil_register_cb([=](ppu_thread& ppu) -> s32
+		sysutil_register_cb([this, res](ppu_thread& ppu) -> s32
 		{
-			callback(ppu, CELL_CROSS_CONTROLLER_STATUS_INITIALIZED, res == CELL_OK ? CELL_OK : CELL_CROSS_CONTROLLER_ERROR_INTERNAL, vm::null, userdata);
+			callback(ppu, CELL_CROSS_CONTROLLER_STATUS_INITIALIZED, res == CELL_OK ? +CELL_OK : +CELL_CROSS_CONTROLLER_ERROR_INTERNAL, vm::null, userdata);
 			return CELL_OK;
 		});
 

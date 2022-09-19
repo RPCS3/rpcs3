@@ -5,6 +5,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/system_config.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -137,8 +138,8 @@ s32 sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 {
 	sys_ss.warning("sys_ss_get_open_psid(psid=*0x%x)", psid);
 
-	psid->high = 0;
-	psid->low = 0;
+	psid->high = g_cfg.sys.console_psid_high;
+	psid->low = g_cfg.sys.console_psid_low;
 
 	return CELL_OK;
 }

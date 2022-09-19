@@ -51,8 +51,14 @@
 
 #include <optional>
 #include <deque>
+#include "util/tsc.hpp"
 
 extern std::string ppu_get_syscall_name(u64 code);
+
+namespace rsx
+{
+	void set_rsx_yield_flag() noexcept;
+}
 
 template <>
 void fmt_class_string<ppu_syscall_code>::format(std::string& out, u64 arg)
@@ -1202,6 +1208,11 @@ static std::deque<std::pair<u64, class cpu_thread*>> g_waiting;
 // Threads which must call lv2_obj::sleep before the scheduler starts
 static std::deque<class cpu_thread*> g_to_sleep;
 
+static atomic_t<u64> s_yield_frequency = 0;
+static atomic_t<u64> s_max_allowed_yield_tsc = 0;
+static u64 s_last_yield_tsc = 0;
+atomic_t<u32> g_lv2_preempts_taken = 0;
+
 namespace cpu_counter
 {
 	void remove(cpu_thread*) noexcept;
@@ -1333,7 +1344,7 @@ bool lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, u64 current_time)
 				val += cpu_flag::suspend;
 
 				// Flag used for forced timeout notification
-				ensure(!timeout || !(val & cpu_flag::notify)); 
+				ensure(!timeout || !(val & cpu_flag::notify));
 				return true;
 			}
 
@@ -1577,6 +1588,7 @@ void lv2_obj::cleanup()
 	g_to_sleep.clear();
 	g_waiting.clear();
 	g_pending = 0;
+	s_yield_frequency = 0;
 }
 
 void lv2_obj::schedule_all(u64 current_time)
@@ -1648,10 +1660,55 @@ void lv2_obj::schedule_all(u64 current_time)
 		}
 	}
 
-	if (notify_later_idx - 1 < std::size(g_to_notify) - 1) 
+	if (notify_later_idx - 1 < std::size(g_to_notify) - 1)
 	{
 		// Null-terminate the list if it ends before last slot
 		g_to_notify[notify_later_idx] = nullptr;
+	}
+
+	if (const u64 freq = s_yield_frequency)
+	{
+		const u64 tsc = utils::get_tsc();
+		const u64 last_tsc = s_last_yield_tsc;
+
+		if (tsc >= last_tsc && tsc <= s_max_allowed_yield_tsc && tsc - last_tsc >= freq)
+		{
+			auto target = +g_ppu;
+			cpu_thread* cpu = nullptr;
+
+			for (usz x = g_cfg.core.ppu_threads;; target = target->next_ppu, x--)
+			{
+				if (!target || !x)
+				{
+					if (g_ppu && cpu_flag::preempt - g_ppu->state)
+					{
+						// Don't be picky, pick up any running PPU thread even it has a wait flag 
+						cpu = g_ppu;
+					}
+					// TODO: If this case is common enough it may be valuable to iterate over all CPU threads to find a perfect candidate (one without a wait or suspend flag)
+					else if (auto current = cpu_thread::get_current(); current && cpu_flag::suspend - current->state)
+					{
+						// May be an SPU or RSX thread, use them as a last resort
+						cpu = current;
+					}
+
+					break;
+				}
+
+				if (target->state.none_of(cpu_flag::preempt + cpu_flag::wait))
+				{
+					cpu = target;
+					break;
+				}
+			}
+
+			if (cpu && cpu_flag::preempt - cpu->state && !cpu->state.test_and_set(cpu_flag::preempt))
+			{
+				s_last_yield_tsc = tsc;
+				g_lv2_preempts_taken.release(g_lv2_preempts_taken.load() + 1); // Has a minor race but performance is more important
+				rsx::set_rsx_yield_flag();
+			}
+		}
 	}
 }
 
@@ -1735,6 +1792,13 @@ bool lv2_obj::has_ppus_in_running_state()
 	}
 
 	return false;
+}
+
+void lv2_obj::set_yield_frequency(u64 freq, u64 max_allowed_tsc)
+{
+	s_yield_frequency.release(freq);
+	s_max_allowed_yield_tsc.release(max_allowed_tsc);
+	g_lv2_preempts_taken.release(0);
 }
 
 bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep)
@@ -1841,4 +1905,10 @@ bool lv2_obj::wait_timeout(u64 usec, ppu_thread* cpu, bool scale, bool is_usleep
 	}
 
 	return true;
+}
+
+void lv2_obj::prepare_for_sleep(cpu_thread& cpu)
+{
+	vm::temporary_unlock(cpu);
+	cpu_counter::remove(&cpu);
 }

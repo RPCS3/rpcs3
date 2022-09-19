@@ -181,7 +181,7 @@ namespace utils
 		AVCodecContext* context = nullptr;
 		AVFrame* frame = nullptr;
 		SwrContext* swr = nullptr;
-	
+
 		~scoped_av()
 		{
 			// Clean up
@@ -358,14 +358,14 @@ namespace utils
 			}
 
 			duration_ms = stream->duration / 1000;
-			
-			AVPacket packet{};
-			av_init_packet(&packet);
+
+			AVPacket* packet = av_packet_alloc();
+			std::unique_ptr<AVPacket, decltype([](AVPacket* p){av_packet_unref(p);})> packet_(packet);
 
 			// Iterate through frames
-			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format, &packet) >= 0)
+			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format, packet) >= 0)
 			{
-				if (int err = avcodec_send_packet(av.context, &packet); err < 0)
+				if (int err = avcodec_send_packet(av.context, packet); err < 0)
 				{
 					media_log.error("audio_decoder: Queuing error: %d='%s'", err, av_error_to_string(err));
 					has_error = true;

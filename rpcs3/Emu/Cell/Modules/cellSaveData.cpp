@@ -148,7 +148,7 @@ int check_filename(std::string_view file_path, bool disallow_system_files, bool 
 		return 70;
 	}
 
-	char name[CELL_SAVEDATA_FILENAME_SIZE - 3];
+	char name[CELL_SAVEDATA_FILENAME_SIZE + 3];
 
 	if (dotpos)
 	{

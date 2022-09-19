@@ -4,6 +4,26 @@
 
 namespace gl
 {
+	struct bind_image_view_safe
+	{
+		GLuint m_layer;
+		GLenum m_target;
+		GLuint m_value;
+		gl::command_context& m_commands;
+
+		bind_image_view_safe(gl::command_context& cmd, GLuint layer, gl::texture_view* value)
+			: m_layer(layer), m_target(value->target()), m_commands(cmd)
+		{
+			m_value = cmd->get_bound_texture(layer, m_target);
+			value->bind(cmd, layer);
+		}
+
+		~bind_image_view_safe()
+		{
+			m_commands->bind_texture(m_layer, m_target, m_value);
+		}
+	};
+
 	void compute_task::initialize()
 	{
 		// Set up optimal kernel size
@@ -311,11 +331,13 @@ namespace gl
 			m_sampler.apply_defaults();
 		}
 
+		// This method is callable in sensitive code and must restore the GL state on exit
 		gl::saved_sampler_state save_0(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
 		gl::saved_sampler_state save_1(GL_COMPUTE_BUFFER_SLOT(1), m_sampler);
 
-		depth_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
-		stencil_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(1));
+		gl::bind_image_view_safe(cmd, GL_COMPUTE_BUFFER_SLOT(0), depth_view);
+		gl::bind_image_view_safe(cmd, GL_COMPUTE_BUFFER_SLOT(1), stencil_view);
+
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(2), out_offset, row_pitch * 4 * region.height);
 
 		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size * optimal_group_size);
@@ -360,9 +382,10 @@ namespace gl
 			m_sampler.apply_defaults();
 		}
 
+		// This method is callable in sensitive code and must restore the GL state on exit
 		gl::saved_sampler_state save(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
+		gl::bind_image_view_safe(cmd, GL_COMPUTE_BUFFER_SLOT(0), data_view);
 
-		data_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), out_offset, row_pitch * 4 * region.height);
 
 		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size * optimal_group_size);
@@ -380,7 +403,8 @@ namespace gl
 		const std::pair<std::string_view, std::string> repl_list[] =
 		{
 			{ "%set, ", "" },
-			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+			{ "%image_slot", std::to_string(GL_COMPUTE_IMAGE_SLOT(0)) },
+			{ "%ssbo_slot", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 			{ "%ws", std::to_string(optimal_group_size) },
 			{ "%wks", std::to_string(optimal_kernel_size) }
 		};

@@ -242,6 +242,7 @@ bool music_selection_context::load_playlist()
 		playlist.push_back(track_node[i].Scalar());
 	}
 
+	valid = true;
 	return true;
 }
 

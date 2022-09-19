@@ -454,30 +454,8 @@ public:
 					if (adecIsAtracX(type)) last_pts -= 0x10000; // hack
 				}
 
-				struct AVPacketHolder : AVPacket
-				{
-					AVPacketHolder(u32 data_size)
-					{
-						av_init_packet(this);
-
-						if (data_size)
-						{
-							this->data = static_cast<u8*>(av_calloc(1, data_size + AV_INPUT_BUFFER_PADDING_SIZE));
-							this->size = data_size + AV_INPUT_BUFFER_PADDING_SIZE;
-						}
-						else
-						{
-							this->data = nullptr;
-							this->size = 0;
-						}
-					}
-
-					~AVPacketHolder()
-					{
-						av_free(data);
-					}
-
-				} au(0);
+				AVPacket* packet = av_packet_alloc();
+				std::unique_ptr<AVPacket, decltype([](AVPacket* p){av_packet_unref(p);})> packet_(packet);
 
 				if (just_started && just_finished)
 				{
@@ -544,8 +522,6 @@ public:
 					just_started = false;
 				}
 
-				bool last_frame = false;
-
 				while (true)
 				{
 					if (Emu.IsStopped() || is_closed)
@@ -554,14 +530,7 @@ public:
 						break;
 					}
 
-					last_frame = av_read_frame(fmt, &au) < 0;
-					if (last_frame)
-					{
-						//break;
-						av_free(au.data);
-						au.data = NULL;
-						au.size = 0;
-					}
+					av_read_frame(fmt, packet);
 
 					struct AdecFrameHolder : AdecFrame
 					{

@@ -47,6 +47,7 @@ enum class emu_settings_type
 	FixupPPUVNAN,
 	AccuratePPUVNAN,
 	AccuratePPUFPCC,
+	MaxPreemptCount,
 
 	// Graphics
 	Renderer,
@@ -221,6 +222,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::FixupPPUVNAN,             { "Core", "PPU Fixup Vector NaN Values"}},
 	{ emu_settings_type::AccuratePPUVNAN,          { "Core", "PPU Accurate Vector NaN Values"}},
 	{ emu_settings_type::AccuratePPUFPCC,          { "Core", "PPU Set FPCC Bits"}},
+	{ emu_settings_type::MaxPreemptCount,          { "Core", "Max CPU Preempt Count"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},

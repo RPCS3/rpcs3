@@ -59,13 +59,10 @@ namespace id_manager
 	{
 		static_assert(IdmCompatible<T>, "ID object must specify: id_base, id_step, id_count");
 
-		enum : u32
-		{
-			base = T::id_base, // First ID (N = 0)
-			step = T::id_step, // Any ID: N * id_setp + id_base
-			count = T::id_count, // Limit: N < id_count
-			invalid = -+!base, // Invalid ID sample
-		};
+		static constexpr u32 base = T::id_base; // First ID (N = 0)
+		static constexpr u32 step = T::id_step; // Any ID: N * id_setp + id_base
+		static constexpr u32 count = T::id_count; // Limit: N < id_count
+		static constexpr u32 invalid = -+!base; // Invalid ID sample
 
 		static constexpr std::pair<u32, u32> invl_range = get_invl_range<T>();
 		static constexpr bool uses_lowest_id = get_force_lowest_id<T>();
@@ -284,7 +281,7 @@ namespace id_manager
 						info = std::addressof(typeinfo.second);
 					}
 				}
-	
+
 				ensure(info);
 
 				// Construct each object from information collected
@@ -292,7 +289,7 @@ namespace id_manager
 				// Simulate construction semantics (idm::last_id() value)
 				g_id = id;
 
-				auto& obj = vec[get_index(id, info->base, info->step, info->count, info->invl_range)]; 
+				auto& obj = vec[get_index(id, info->base, info->step, info->count, info->invl_range)];
 				ensure(!obj.second);
 
 				obj.first = id_key(id, static_cast<u32>(static_cast<u64>(type_init_pos >> 64)));
@@ -492,7 +489,7 @@ class idm
 		using traits = id_manager::id_traits<Type>;
 
 		// Ensure make_typeinfo() is used for this type
-		stx::typedata<id_manager::typeinfo, Type>();
+		[[maybe_unused]] auto& td = stx::typedata<id_manager::typeinfo, Type>();
 
 		// Allocate new id
 		std::lock_guard lock(id_manager::g_mutex);
@@ -703,7 +700,7 @@ public:
 	{
 		static_assert((PtrSame<T, Get> && ...), "Invalid ID type combination");
 
-		std::conditional_t<static_cast<bool>(Lock()), reader_lock, const shared_mutex&> lock(id_manager::g_mutex);
+		[[maybe_unused]] std::conditional_t<!!Lock(), reader_lock, const shared_mutex&> lock(id_manager::g_mutex);
 
 		using func_traits = function_traits<decltype(&decltype(std::function(std::declval<F>()))::operator())>;
 		using object_type = typename func_traits::object_type;

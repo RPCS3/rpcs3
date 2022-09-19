@@ -62,7 +62,7 @@ std::string CgBinaryDisasm::GetMask() const
 
 std::string CgBinaryDisasm::AddRegDisAsm(u32 index, int fp16) const
 {
-	return std::string(fp16 ? "H" : "R") + std::to_string(index);
+	return (fp16 ? 'H' : 'R') + std::to_string(index);
 }
 
 std::string CgBinaryDisasm::AddConstDisAsm()

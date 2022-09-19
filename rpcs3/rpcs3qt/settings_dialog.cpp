@@ -1409,6 +1409,24 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->clockScale->setValue(clocks_scale_def);
 	});
 
+	EnhanceSlider(emu_settings_type::MaxPreemptCount, ui->maxPreemptCount, ui->preemptText, tr(reinterpret_cast<const char*>(u8"%0"), "Max CPU preempt count"));
+	SubscribeTooltip(ui->gb_max_preempt_count, tooltips.settings.max_cpu_preempt);
+
+#ifdef _WIN32
+	// Windows' thread execution slice is much larger than on other platforms
+	SnapSlider(ui->maxPreemptCount, 5);
+	ui->maxPreemptCount->setPageStep(20);
+#else
+	SnapSlider(ui->maxPreemptCount, 10);
+	ui->maxPreemptCount->setPageStep(50);
+#endif
+
+	const int preempt_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::MaxPreemptCount));
+	connect(ui->preemptReset, &QAbstractButton::clicked, [preempt_def, this]()
+	{
+		ui->maxPreemptCount->setValue(preempt_def);
+	});
+
 	if (!game) // Prevent users from doing dumb things
 	{
 		ui->gb_vblank->setDisabled(true);
