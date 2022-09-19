@@ -110,7 +110,7 @@ namespace vk
 		tex->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		VkClearColorValue clear_color = {};
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, tex->mipmaps(), 0, tex->layers() };
 		vkCmdClearColorImage(cmd, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 
 		// Prep for shader access
