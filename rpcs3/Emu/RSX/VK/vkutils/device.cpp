@@ -151,7 +151,7 @@ namespace vk
 			CHECK_RESULT_EX(_vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not get MoltenVK configuration."));
 
 			mvk_config.resumeLostDevice = true;
-			mvk_config.semaphoreSupportStyle = g_cfg.video.mvk_singlequeue.get() ? MVKVkSemaphoreSupportStyle::MVK_CONFIG_VK_SEMAPHORE_SUPPORT_STYLE_SINGLE_QUEUE : MVKVkSemaphoreSupportStyle::MVK_CONFIG_VK_SEMAPHORE_SUPPORT_STYLE_METAL_EVENTS;
+			mvk_config.semaphoreSupportStyle = MVKVkSemaphoreSupportStyle::MVK_CONFIG_VK_SEMAPHORE_SUPPORT_STYLE_SINGLE_QUEUE;
 			mvk_config.fastMathEnabled = !(g_cfg.video.disable_msl_fast_math.get());
 
 			CHECK_RESULT_EX(_vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not set MoltenVK configuration."));

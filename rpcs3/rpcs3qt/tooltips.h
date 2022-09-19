@@ -42,7 +42,6 @@ public:
 		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Safe' mode for more spec compliant behavior at the cost of some CPU overhead. This setting works with all devices.\nUse 'Fast' to use a faster but hacky version. This option is internally disabled for NVIDIA GPUs due to causing GPU hangs.");
 		const QString allow_host_labels            = tr("Allows the host GPU to synchronize with CELL directly. This incurs a performance penalty, but exposes the true state of GPU objects to the guest CPU. Can help eliminate visual noise and glitching at the cost of performance. Use with caution.");
 		const QString disable_msl_fast_math        = tr("Disables Fast Math for MSL shaders, which may violate the IEEE 754 standard.\nDisabling it may fix some artefacts especially on Apple GPUs, at the cost of performance.");
-		const QString mvk_singlequeue              = tr("Limits Vulkan to a single queue, with no explicit semaphore synchronization, and uses Metal's implicit guarantees that all operations submitted to a queue will give the same result as if they had been run in submission order.\nEnabling this can help fix certain issues, especially under Rosetta, at the cost of performance.");
 
 		// audio
 
