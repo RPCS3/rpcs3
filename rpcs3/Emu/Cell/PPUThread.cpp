@@ -1411,7 +1411,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::hle_call:
 		{
-			cmd_pop(), ppu_function_manager::get().at(arg)(*this, {arg}, vm::_ptr<u32>(cia - 4), &ppu_ret);
+			cmd_pop(), ::at32(ppu_function_manager::get(), arg)(*this, {arg}, vm::_ptr<u32>(cia - 4), &ppu_ret);
 			break;
 		}
 		case ppu_cmd::opd_call:
@@ -2930,7 +2930,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				extern const std::map<std::string_view, int> g_prx_list;
 
 				// Use list
-				return g_prx_list.count(entry.name) && g_prx_list.at(entry.name) != 0;
+				return g_prx_list.count(entry.name) && ::at32(g_prx_list, entry.name) != 0;
 			};
 
 			// Check .sprx filename
@@ -3378,7 +3378,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	usz fpos = 0;
 
 	// Difference between function name and current location
-	const u32 reloc = info.relocs.empty() ? 0 : info.segs.at(0).addr;
+	const u32 reloc = info.relocs.empty() ? 0 : ::at32(info.segs, 0).addr;
 
 	// Info sent to threads
 	std::vector<std::pair<std::string, ppu_module>> workload;

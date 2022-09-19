@@ -97,7 +97,7 @@ bool gui_application::Init()
 		const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
 		const auto index    = codes.indexOf(language);
 
-		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : codes.at(index));
+		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : ::at32(codes, index));
 	}
 
 	// Create callbacks from the emulator, which reference the handlers.
@@ -277,7 +277,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 {
 	extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
 
-	auto [w, h] = g_video_out_resolution_map.at(g_cfg.video.resolution);
+	auto [w, h] = ::at32(g_video_out_resolution_map, g_cfg.video.resolution);
 
 	if (m_gui_settings->GetValue(gui::gs_resize).toBool())
 	{

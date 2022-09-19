@@ -147,13 +147,13 @@ namespace gui
 
 		QIcon get_colorized_icon(const QIcon& old_icon, const QColor& old_color, const QColor& new_color, bool use_special_masks, bool colorize_all)
 		{
-			return QIcon(get_colorized_pixmap(old_icon.pixmap(old_icon.availableSizes().at(0)), old_color, new_color, use_special_masks, colorize_all));
+			return QIcon(get_colorized_pixmap(old_icon.pixmap(::at32(old_icon.availableSizes(), 0)), old_color, new_color, use_special_masks, colorize_all));
 		}
 
 		QIcon get_colorized_icon(const QIcon& old_icon, const QColor& old_color, const std::map<QIcon::Mode, QColor>& new_colors, bool use_special_masks, bool colorize_all)
 		{
 			QIcon icon{};
-			const QPixmap old_pixmap = old_icon.pixmap(old_icon.availableSizes().at(0));
+			const QPixmap old_pixmap = old_icon.pixmap(::at32(old_icon.availableSizes(), 0));
 			for (const auto& [mode, color] : new_colors)
 			{
 				icon.addPixmap(get_colorized_pixmap(old_pixmap, old_color, color, use_special_masks, colorize_all), mode);

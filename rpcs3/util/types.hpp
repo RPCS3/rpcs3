@@ -1038,22 +1038,45 @@ template <typename To = void, typename From, typename = decltype(static_cast<To>
 }
 
 // Returns u32 size() for container
-template <typename CT, typename = decltype(static_cast<u32>(std::declval<CT>().size()))>
+template <typename CT> requires requires (const CT& x) { std::size(x); }
 [[nodiscard]] constexpr u32 size32(const CT& container,
 	u32 line = __builtin_LINE(),
 	u32 col = __builtin_COLUMN(),
 	const char* file = __builtin_FILE(),
 	const char* func = __builtin_FUNCTION())
 {
-	return narrow<u32>(container.size(), line, col, file, func);
+	return narrow<u32>(std::size(container), line, col, file, func);
 }
 
-// Returns u32 size for an array
-template <typename T, usz Size>
-[[nodiscard]] constexpr u32 size32(const T (&)[Size])
+template <typename CT, typename T> requires requires (CT&& x) { std::size(x); std::data(x); } || requires (CT&& x) { std::size(x); x.front(); }
+[[nodiscard]] constexpr auto& at32(CT&& container, T&& index,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION())
 {
-	static_assert(Size < u32{umax}, "Array is too big for 32-bit");
-	return static_cast<u32>(Size);
+	// Make sure the index is within u32 range (TODO: downcast index properly with common_type)
+	const u32 idx = ::narrow<u32>(+index, line, 10001, file, func);
+	const u32 csz = ::size32(container, line, 10002, file, func);
+	if (csz <= idx) [[unlikely]]
+		fmt::raw_verify_error({line, col, file, func}, u8"Out of range");
+	auto it = std::begin(std::forward<CT>(container));
+	std::advance(it, idx);
+	return *it;
+}
+
+template <typename CT, typename T> requires requires (CT&& x, T&& y) { x.count(y); x.find(y); }
+[[nodiscard]] constexpr auto& at32(CT&& container, T&& index,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION())
+{
+	// Associative container
+	const auto found = container.find(std::forward<T>(index));
+	if (found == container.end()) [[unlikely]]
+		fmt::raw_verify_error({line, col, file, func}, u8"Out of range");
+	return found->second;
 }
 
 // Simplified hash algorithm. May be used in std::unordered_(map|set).

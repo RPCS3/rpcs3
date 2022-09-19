@@ -161,8 +161,8 @@ struct music_state
 
 				if (next_track < playlist.size())
 				{
-					path = vfs::get(playlist.at(next_track));
-					cellMusic.notice("set_playback_command: current vfs path: '%s' (unresolved='%s')", path, playlist.at(next_track));
+					path = vfs::get(::at32(playlist, next_track));
+					cellMusic.notice("set_playback_command: current vfs path: '%s' (unresolved='%s')", path, ::at32(playlist, next_track));
 				}
 				else
 				{
@@ -244,7 +244,7 @@ error_code cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> conte
 
 	if (!context)
 		return CELL_MUSIC_ERROR_PARAM;
-	
+
 	auto& music = g_fxo->get<music_state>();
 	std::lock_guard lock(music.mtx);
 

@@ -939,7 +939,7 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 	}
 
 	std::basic_string<u32> applied_total;
-	const auto& container = m_map.at(name);
+	const auto& container = ::at32(m_map, name);
 	const auto& serial = Emu.GetTitleID();
 	const auto& app_version = Emu.GetAppVersion();
 
@@ -975,7 +975,7 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 				continue;
 			}
 
-			const auto& app_versions = serials.at(found_serial);
+			const auto& app_versions = ::at32(serials, found_serial);
 			std::string found_app_version;
 
 			if (app_versions.find(app_version) != app_versions.end())
@@ -988,7 +988,7 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 				is_all_versions = true;
 			}
 
-			if (!found_app_version.empty() && app_versions.at(found_app_version))
+			if (!found_app_version.empty() && ::at32(app_versions, found_app_version))
 			{
 				// This patch is enabled
 				if (is_all_serials)
@@ -1073,7 +1073,7 @@ void patch_engine::unload(const std::string& name)
 		return;
 	}
 
-	const auto& container = m_map.at(name);
+	const auto& container = ::at32(m_map, name);
 
 	for (const auto& [description, patch] : container.patch_info_map)
 	{

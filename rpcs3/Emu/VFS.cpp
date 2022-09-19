@@ -152,7 +152,7 @@ bool vfs::unmount(std::string_view vpath)
 		}
 
 		// Get the current name based on the depth
-		const std::string& name = entry_list.at(depth);
+		const std::string& name = ::at32(entry_list, depth);
 
 		// Go through all children of this node
 		for (auto it = dir.dirs.begin(); it != dir.dirs.end();)

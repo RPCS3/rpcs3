@@ -117,7 +117,7 @@ class ppu_decoder
 					for (u32 j = 0; j < 1u << sh; j++)
 					{
 						const u32 k = (((i << (count - v.magn)) | v.value) << sh) | j;
-						m_table.at((k << 6) | main_op) = k & 1 ? v.ptr_rc : v.ptr0;
+						::at32(m_table, (k << 6) | main_op) = k & 1 ? v.ptr_rc : v.ptr0;
 					}
 				}
 			}
@@ -129,7 +129,7 @@ class ppu_decoder
 			{
 				for (u32 i = 0; i < 1u << 11; i++)
 				{
-					m_table.at(i << 6 | v.value) = i & 1 ? v.ptr_rc : v.ptr0;
+					::at32(m_table, i << 6 | v.value) = i & 1 ? v.ptr_rc : v.ptr0;
 				}
 			}
 		}

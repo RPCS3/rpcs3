@@ -71,14 +71,14 @@ namespace np
 	bool dnshook::is_dns_queue(u32 sock)
 	{
 		std::lock_guard lock(mutex);
-		return !m_dns_spylist.at(sock).empty();
+		return !::at32(m_dns_spylist, sock).empty();
 	}
 
 	std::vector<u8> dnshook::get_dns_packet(u32 sock)
 	{
 		std::lock_guard lock(mutex);
-		auto ret_vec = std::move(m_dns_spylist.at(sock).front());
-		m_dns_spylist.at(sock).pop();
+		auto ret_vec = std::move(::at32(m_dns_spylist, sock).front());
+		::at32(m_dns_spylist, sock).pop();
 
 		return ret_vec;
 	}

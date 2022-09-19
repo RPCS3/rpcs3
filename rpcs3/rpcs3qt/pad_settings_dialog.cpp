@@ -1549,7 +1549,7 @@ void pad_settings_dialog::ChangeDevice(int index)
 {
 	if (index < 0)
 		return;
-	
+
 	const QVariant user_data = ui->chooseDevice->itemData(index);
 
 	if (!user_data.canConvert<pad_device_info>())
@@ -1860,7 +1860,7 @@ bool pad_settings_dialog::GetIsLddPad(u32 index) const
 		{
 			ensure(index < handler->GetPads().size());
 
-			if (const std::shared_ptr<Pad> pad = handler->GetPads().at(index))
+			if (const std::shared_ptr<Pad> pad = ::at32(handler->GetPads(), index))
 			{
 				return pad->ldd;
 			}

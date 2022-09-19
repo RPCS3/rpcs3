@@ -33,8 +33,8 @@ void fmt_class_string<CellAudioOutError>::format(std::string& out, u64 arg)
 
 audio_out_configuration::audio_out_configuration()
 {
-	audio_out& primary_output = out.at(CELL_AUDIO_OUT_PRIMARY);
-	audio_out& secondary_output = out.at(CELL_AUDIO_OUT_SECONDARY);
+	audio_out& primary_output = ::at32(out, CELL_AUDIO_OUT_PRIMARY);
+	audio_out& secondary_output = ::at32(out, CELL_AUDIO_OUT_SECONDARY);
 
 	std::vector<CellAudioOutSoundMode>& primary_modes = primary_output.sound_modes;
 	std::vector<CellAudioOutSoundMode>& secondary_modes = secondary_output.sound_modes;
@@ -58,8 +58,8 @@ audio_out_configuration::audio_out_configuration()
 
 	const auto add_sound_mode = [&](u32 index, u8 type, u8 channel, u8 fs, u32 layout, bool supported)
 	{
-		audio_out& output = out.at(index);
-		bool& selected = initial_mode_selected.at(index);
+		audio_out& output = ::at32(out, index);
+		bool& selected = ::at32(initial_mode_selected, index);
 
 		CellAudioOutSoundMode mode{};
 		mode.type = type;
@@ -103,7 +103,7 @@ audio_out_configuration::audio_out_configuration()
 	{
 		// Linear PCM 5.1 Ch. 48 kHz
 		add_sound_mode(CELL_AUDIO_OUT_PRIMARY, CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr, supports_lpcm_5_1);
-		
+
 		// Dolby Digital 5.1 Ch.
 		add_sound_mode(CELL_AUDIO_OUT_PRIMARY, CELL_AUDIO_OUT_CODING_TYPE_AC3, CELL_AUDIO_OUT_CHNUM_6, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_6CH_LREClr, supports_ac3);
 
@@ -161,8 +161,8 @@ audio_out_configuration::audio_out_configuration()
 	// The secondary output only supports Linear PCM 2 Ch.
 	add_sound_mode(CELL_AUDIO_OUT_SECONDARY, CELL_AUDIO_OUT_CODING_TYPE_LPCM, CELL_AUDIO_OUT_CHNUM_2, CELL_AUDIO_OUT_FS_48KHZ, CELL_AUDIO_OUT_SPEAKER_LAYOUT_2CH, true);
 
-	ensure(!primary_modes.empty() && initial_mode_selected.at(CELL_AUDIO_OUT_PRIMARY));
-	ensure(!secondary_modes.empty() && initial_mode_selected.at(CELL_AUDIO_OUT_SECONDARY));
+	ensure(!primary_modes.empty() && ::at32(initial_mode_selected, CELL_AUDIO_OUT_PRIMARY));
+	ensure(!secondary_modes.empty() && ::at32(initial_mode_selected, CELL_AUDIO_OUT_SECONDARY));
 
 	for (const CellAudioOutSoundMode& mode : primary_modes)
 	{
@@ -238,7 +238,7 @@ error_code cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 
 	// Check if the requested audio parameters are available and find the max supported channel count
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
-	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+	const audio_out_configuration::audio_out& out = ::at32(cfg.out, audioOut);
 
 	for (const CellAudioOutSoundMode& mode : out.sound_modes)
 	{
@@ -265,7 +265,7 @@ error_code cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32
 	// Check if the requested audio parameters are available
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
-	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+	const audio_out_configuration::audio_out& out = ::at32(cfg.out, audioOut);
 
 	for (const CellAudioOutSoundMode& mode : out.sound_modes)
 	{
@@ -319,7 +319,7 @@ error_code cellAudioOutGetState(u32 audioOut, u32 deviceIndex, vm::ptr<CellAudio
 	{
 		audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 		std::lock_guard lock(cfg.mtx);
-		const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+		const audio_out_configuration::audio_out& out = ::at32(cfg.out, audioOut);
 
 		_state.state = out.state;
 		_state.encoder = out.encoder;
@@ -360,7 +360,7 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 	{
 		std::lock_guard lock(cfg.mtx);
 
-		audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+		audio_out_configuration::audio_out& out = ::at32(cfg.out, audioOut);
 
 		// Apparently the set config does not necessarily have to exist in the list of sound modes.
 
@@ -406,7 +406,7 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 			audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 			{
 				std::lock_guard lock(cfg.mtx);
-				cfg.out.at(audioOut).state = CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED;
+				::at32(cfg.out, audioOut).state = CELL_AUDIO_OUT_OUTPUT_STATE_DISABLED;
 			}
 
 			audio::configure_audio(true);
@@ -414,7 +414,7 @@ error_code cellAudioOutConfigure(u32 audioOut, vm::ptr<CellAudioOutConfiguration
 
 			{
 				std::lock_guard lock(cfg.mtx);
-				cfg.out.at(audioOut).state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
+				::at32(cfg.out, audioOut).state = CELL_AUDIO_OUT_OUTPUT_STATE_ENABLED;
 			}
 		};
 
@@ -455,7 +455,7 @@ error_code cellAudioOutGetConfiguration(u32 audioOut, vm::ptr<CellAudioOutConfig
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
 
-	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+	const audio_out_configuration::audio_out& out = ::at32(cfg.out, audioOut);
 
 	// Return the active config.
 	CellAudioOutConfiguration _config{};
@@ -516,7 +516,7 @@ error_code cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<Cell
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
 	ensure(audioOut < cfg.out.size());
-	const audio_out_configuration::audio_out& out = cfg.out.at(audioOut);
+	const audio_out_configuration::audio_out& out = ::at32(cfg.out, audioOut);
 	ensure(out.sound_modes.size() <= 16);
 
 	CellAudioOutDeviceInfo _info{};
@@ -528,7 +528,7 @@ error_code cellAudioOutGetDeviceInfo(u32 audioOut, u32 deviceIndex, vm::ptr<Cell
 
 	for (usz i = 0; i < out.sound_modes.size(); i++)
 	{
-		_info.availableModes[i] = out.sound_modes.at(i);
+		_info.availableModes[i] = ::at32(out.sound_modes, i);
 	}
 
 	*info = _info;
@@ -557,7 +557,7 @@ error_code cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 	audio_out_configuration& cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(cfg.mtx);
 
-	cfg.out.at(audioOut).copy_control = control;
+	::at32(cfg.out, audioOut).copy_control = control;
 
 	return CELL_OK;
 }

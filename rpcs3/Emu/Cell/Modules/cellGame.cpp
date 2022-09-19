@@ -418,13 +418,13 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		const psf::registry psf = psf::load_object(fs::file(local_dir +"/PARAM.SFO"));
 
 		// Some following fields may be zero in old FW 1.00 version PARAM.SFO
-		if (psf.contains("PARENTAL_LEVEL")) get->getParam.parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
-		if (psf.contains("ATTRIBUTE")) get->getParam.attribute = psf.at("ATTRIBUTE").as_integer();
-		if (psf.contains("RESOLUTION")) get->getParam.resolution = psf.at("RESOLUTION").as_integer();
-		if (psf.contains("SOUND_FORMAT")) get->getParam.soundFormat = psf.at("SOUND_FORMAT").as_integer();
-		if (psf.contains("TITLE")) strcpy_trunc(get->getParam.title, psf.at("TITLE").as_string());
-		if (psf.contains("APP_VER")) strcpy_trunc(get->getParam.dataVersion, psf.at("APP_VER").as_string());
-		if (psf.contains("TITLE_ID")) strcpy_trunc(get->getParam.titleId, psf.at("TITLE_ID").as_string());
+		if (psf.contains("PARENTAL_LEVEL")) get->getParam.parentalLevel = ::at32(psf, "PARENTAL_LEVEL").as_integer();
+		if (psf.contains("ATTRIBUTE")) get->getParam.attribute = ::at32(psf, "ATTRIBUTE").as_integer();
+		if (psf.contains("RESOLUTION")) get->getParam.resolution = ::at32(psf, "RESOLUTION").as_integer();
+		if (psf.contains("SOUND_FORMAT")) get->getParam.soundFormat = ::at32(psf, "SOUND_FORMAT").as_integer();
+		if (psf.contains("TITLE")) strcpy_trunc(get->getParam.title, ::at32(psf, "TITLE").as_string());
+		if (psf.contains("APP_VER")) strcpy_trunc(get->getParam.dataVersion, ::at32(psf, "APP_VER").as_string());
+		if (psf.contains("TITLE_ID")) strcpy_trunc(get->getParam.titleId, ::at32(psf, "TITLE_ID").as_string());
 
 		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 		{
@@ -1710,8 +1710,8 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 
 	const psf::registry psf = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
-	if (psf.contains("PARENTAL_LEVEL")) getParam->parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
-	if (psf.contains("TITLE_ID")) strcpy_trunc(getParam->titleId, psf.at("TITLE_ID").as_string());
+	if (psf.contains("PARENTAL_LEVEL")) getParam->parentalLevel = ::at32(psf, "PARENTAL_LEVEL").as_integer();
+	if (psf.contains("TITLE_ID")) strcpy_trunc(getParam->titleId, ::at32(psf, "TITLE_ID").as_string());
 
 	return CELL_OK;
 }

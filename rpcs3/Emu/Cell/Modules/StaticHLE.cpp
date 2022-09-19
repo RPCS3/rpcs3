@@ -162,7 +162,7 @@ bool statichle_handler::check_against_patterns(vm::cptr<u8>& data, u32 size, u32
 			return false;
 		}
 
-		const auto sfunc   = &smodule->functions.at(pat.fnid);
+		const auto sfunc   = &::at32(smodule->functions, pat.fnid);
 		const u32 target   = g_fxo->get<ppu_function_manager>().func_addr(sfunc->index) + 4;
 
 		// write stub
