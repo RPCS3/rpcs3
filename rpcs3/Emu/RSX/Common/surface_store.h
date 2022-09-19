@@ -374,7 +374,7 @@ namespace rsx
 				{
 					// This has been 'swallowed' by the new surface and can be safely freed
 					auto &storage = surface->is_depth_surface() ? m_depth_stencil_storage : m_render_targets_storage;
-					auto &object = storage.at(e.first);
+					auto &object = ::at32(storage, e.first);
 
 					ensure(object);
 

@@ -221,14 +221,14 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		else
 		{
 			// Use list
-			ignore = g_prx_list.at(name) != 0;
+			ignore = ::at32(g_prx_list, name) != 0;
 		}
 	}
 	else if (vpath0.starts_with("/"))
 	{
 		// Special case : HLE for files outside of "/dev_flash/sys/external/"
 		// Have to specify full path for them
-		ignore = g_prx_list.count(vpath0) && g_prx_list.at(vpath0);
+		ignore = g_prx_list.count(vpath0) && ::at32(g_prx_list, vpath0);
 	}
 
 	auto hle_load = [&]()

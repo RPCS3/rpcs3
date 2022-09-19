@@ -216,7 +216,7 @@ void breakpoint_list::OnBreakpointListDelete()
 {
 	for (int i = selectedItems().count() - 1; i >= 0; i--)
 	{
-		RemoveBreakpoint(selectedItems().at(i)->data(Qt::UserRole).value<u32>());
+		RemoveBreakpoint(::at32(selectedItems(), i)->data(Qt::UserRole).value<u32>());
 	}
 
 	if (m_context_menu)

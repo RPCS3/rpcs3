@@ -1117,7 +1117,7 @@ int main(int argc, char** argv)
 	}
 	else if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
-		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
+		sys_log.notice("Booting application from command line: %s", ::at32(args, 0).toStdString());
 
 		// Propagate command line arguments
 		std::vector<std::string> rpcs3_argv;
@@ -1147,7 +1147,7 @@ int main(int argc, char** argv)
 		}
 
 		// Postpone startup to main event loop
-		Emu.CallFromMainThread([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
+		Emu.CallFromMainThread([path = sstr(QFileInfo(::at32(args, 0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
 		{
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);

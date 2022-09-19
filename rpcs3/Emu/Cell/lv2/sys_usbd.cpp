@@ -484,7 +484,7 @@ bool usb_handler_thread::is_pipe(u32 pipe_id) const
 
 const UsbPipe& usb_handler_thread::get_pipe(u32 pipe_id) const
 {
-	return open_pipes.at(pipe_id);
+	return ::at32(open_pipes, pipe_id);
 }
 
 void usb_handler_thread::check_devices_vs_ldds()

@@ -637,7 +637,7 @@ namespace np
 		u32 conn_id;
 		{
 			std::lock_guard lock(mutex_pending_sign_infos_requests);
-			conn_id = pending_sign_infos_requests.at(req_id);
+			conn_id = ::at32(pending_sign_infos_requests, req_id);
 			pending_sign_infos_requests.erase(req_id);
 		}
 

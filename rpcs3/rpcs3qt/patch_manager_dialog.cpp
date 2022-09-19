@@ -392,7 +392,7 @@ void patch_manager_dialog::filter_patches(const QString& term)
 				const std::string app_version = item->data(0, app_version_role).toString().toStdString();
 
 				if (serial != patch_key::all &&
-					(m_owned_games.find(serial) == m_owned_games.end() || (app_version != patch_key::all && !m_owned_games.at(serial).contains(app_version))))
+					(m_owned_games.find(serial) == m_owned_games.end() || (app_version != patch_key::all && !::at32(m_owned_games, serial).contains(app_version))))
 				{
 					item->setHidden(true);
 					return 0;
@@ -518,11 +518,11 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 		// Find the patch for this item and get its metadata
 		if (m_map.find(hash) != m_map.end())
 		{
-			const auto& container = m_map.at(hash);
+			const auto& container = ::at32(m_map, hash);
 
 			if (container.patch_info_map.find(description) != container.patch_info_map.end())
 			{
-				const auto& found_info = container.patch_info_map.at(description);
+				const auto& found_info = ::at32(container.patch_info_map, description);
 				info.author = QString::fromStdString(found_info.author);
 				info.notes = QString::fromStdString(found_info.notes);
 				info.description = QString::fromStdString(found_info.description);
@@ -624,11 +624,11 @@ void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &po
 
 		if (m_map.find(hash) != m_map.end())
 		{
-			const auto& container = m_map.at(hash);
+			const auto& container = ::at32(m_map, hash);
 
 			if (container.patch_info_map.find(description) != container.patch_info_map.end())
 			{
-				const auto& info = container.patch_info_map.at(description);
+				const auto& info = ::at32(container.patch_info_map, description);
 
 				QAction* open_filepath = new QAction(tr("Show Patch File"));
 				menu->addAction(open_filepath);

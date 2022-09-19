@@ -53,38 +53,38 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 	if (!cfg) return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = rev_axis_list.at(ABS_X);
-	cfg->ls_down.def  = axis_list.at(ABS_Y);
-	cfg->ls_right.def = axis_list.at(ABS_X);
-	cfg->ls_up.def    = rev_axis_list.at(ABS_Y);
-	cfg->rs_left.def  = rev_axis_list.at(ABS_RX);
-	cfg->rs_down.def  = axis_list.at(ABS_RY);
-	cfg->rs_right.def = axis_list.at(ABS_RX);
-	cfg->rs_up.def    = rev_axis_list.at(ABS_RY);
-	cfg->start.def    = button_list.at(BTN_START);
-	cfg->select.def   = button_list.at(BTN_SELECT);
-	cfg->ps.def       = button_list.at(BTN_MODE);
-	cfg->square.def   = button_list.at(BTN_X);
-	cfg->cross.def    = button_list.at(BTN_A);
-	cfg->circle.def   = button_list.at(BTN_B);
-	cfg->triangle.def = button_list.at(BTN_Y);
-	cfg->left.def     = rev_axis_list.at(ABS_HAT0X);
-	cfg->down.def     = axis_list.at(ABS_HAT0Y);
-	cfg->right.def    = axis_list.at(ABS_HAT0X);
-	cfg->up.def       = rev_axis_list.at(ABS_HAT0Y);
-	cfg->r1.def       = button_list.at(BTN_TR);
-	cfg->r2.def       = axis_list.at(ABS_RZ);
-	cfg->r3.def       = button_list.at(BTN_THUMBR);
-	cfg->l1.def       = button_list.at(BTN_TL);
-	cfg->l2.def       = axis_list.at(ABS_Z);
-	cfg->l3.def       = button_list.at(BTN_THUMBL);
+	cfg->ls_left.def  = ::at32(rev_axis_list, ABS_X);
+	cfg->ls_down.def  = ::at32(axis_list, ABS_Y);
+	cfg->ls_right.def = ::at32(axis_list, ABS_X);
+	cfg->ls_up.def    = ::at32(rev_axis_list, ABS_Y);
+	cfg->rs_left.def  = ::at32(rev_axis_list, ABS_RX);
+	cfg->rs_down.def  = ::at32(axis_list, ABS_RY);
+	cfg->rs_right.def = ::at32(axis_list, ABS_RX);
+	cfg->rs_up.def    = ::at32(rev_axis_list, ABS_RY);
+	cfg->start.def    = ::at32(button_list, BTN_START);
+	cfg->select.def   = ::at32(button_list, BTN_SELECT);
+	cfg->ps.def       = ::at32(button_list, BTN_MODE);
+	cfg->square.def   = ::at32(button_list, BTN_X);
+	cfg->cross.def    = ::at32(button_list, BTN_A);
+	cfg->circle.def   = ::at32(button_list, BTN_B);
+	cfg->triangle.def = ::at32(button_list, BTN_Y);
+	cfg->left.def     = ::at32(rev_axis_list, ABS_HAT0X);
+	cfg->down.def     = ::at32(axis_list, ABS_HAT0Y);
+	cfg->right.def    = ::at32(axis_list, ABS_HAT0X);
+	cfg->up.def       = ::at32(rev_axis_list, ABS_HAT0Y);
+	cfg->r1.def       = ::at32(button_list, BTN_TR);
+	cfg->r2.def       = ::at32(axis_list, ABS_RZ);
+	cfg->r3.def       = ::at32(button_list, BTN_THUMBR);
+	cfg->l1.def       = ::at32(button_list, BTN_TL);
+	cfg->l2.def       = ::at32(axis_list, ABS_Z);
+	cfg->l3.def       = ::at32(button_list, BTN_THUMBL);
 
-	cfg->motion_sensor_x.axis.def = motion_axis_list.at(ABS_X);
-	cfg->motion_sensor_y.axis.def = motion_axis_list.at(ABS_Y);
-	cfg->motion_sensor_z.axis.def = motion_axis_list.at(ABS_Z);
-	cfg->motion_sensor_g.axis.def = motion_axis_list.at(ABS_RX);
+	cfg->motion_sensor_x.axis.def = ::at32(motion_axis_list, ABS_X);
+	cfg->motion_sensor_y.axis.def = ::at32(motion_axis_list, ABS_Y);
+	cfg->motion_sensor_z.axis.def = ::at32(motion_axis_list, ABS_Z);
+	cfg->motion_sensor_g.axis.def = ::at32(motion_axis_list, ABS_RX);
 
-	cfg->pressure_intensity_button.def = button_list.at(NO_BUTTON);
+	cfg->pressure_intensity_button.def = ::at32(button_list, NO_BUTTON);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 30; // between 0 and 255
@@ -727,7 +727,7 @@ std::vector<pad_list_entry> evdev_joystick_handler::list_devices()
 std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add_device(const std::string& device, bool in_settings)
 {
 	if (in_settings && m_settings_added.count(device))
-		return m_settings_added.at(device);
+		return ::at32(m_settings_added, device);
 
 	// Now we need to find the device with the same name, and make sure not to grab any duplicates.
 	std::unordered_map<std::string, u32> unique_names;
@@ -804,7 +804,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::add
 		return nullptr;
 
 	if (in_settings && m_motion_settings_added.count(device))
-		return m_motion_settings_added.at(device);
+		return ::at32(m_motion_settings_added, device);
 
 	// Now we need to find the device with the same name, and make sure not to grab any duplicates.
 	std::unordered_map<std::string, u32> unique_names;

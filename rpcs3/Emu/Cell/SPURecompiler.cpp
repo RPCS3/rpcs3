@@ -970,8 +970,8 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 	static thread_local std::vector<std::pair<std::basic_string_view<u32>, spu_function_t>> m_flat_list;
 
 	// Remember top position
-	auto stuff_it = m_stuff.at(id_inst >> 12).begin();
-	auto stuff_end = m_stuff.at(id_inst >> 12).end();
+	auto stuff_it = ::at32(m_stuff, id_inst >> 12).begin();
+	auto stuff_end = ::at32(m_stuff, id_inst >> 12).end();
 	{
 		if (stuff_it->trampoline)
 		{
@@ -1178,7 +1178,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					break;
 				}
 
-				const u32 x1 = w.beg->first.at(w.level);
+				const u32 x1 = ::at32(w.beg->first, w.level);
 
 				if (!x1)
 				{
@@ -1201,7 +1201,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				}
 
 				// Adjust ranges (forward)
-				while (it != w.end && x1 == it->first.at(w.level))
+				while (it != w.end && x1 == ::at32(it->first, w.level))
 				{
 					it++;
 					size1++;
@@ -1252,7 +1252,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			}
 
 			// Value for comparison
-			const u32 x = it->first.at(w.level);
+			const u32 x = ::at32(it->first, w.level);
 
 			// Adjust ranges (backward)
 			while (it != m_flat_list.begin())
@@ -1265,7 +1265,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					break;
 				}
 
-				if (it->first.at(w.level) != x)
+				if (::at32(it->first, w.level) != x)
 				{
 					it++;
 					break;
@@ -1420,7 +1420,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				it2 = it;
 
 				// Select additional midrange for equality comparison
-				while (it2 != w.end && it2->first.at(w.level) == x)
+				while (it2 != w.end && ::at32(it2->first, w.level) == x)
 				{
 					size2--;
 					it2++;
@@ -1518,7 +1518,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 	}
 
 	// Install ubertrampoline
-	auto& insert_to = spu_runtime::g_dispatcher->at(id_inst >> 12);
+	auto& insert_to = ::at32(*spu_runtime::g_dispatcher, id_inst >> 12);
 
 	auto _old = insert_to.load();
 
@@ -1551,7 +1551,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 {
-	for (auto& item : m_stuff.at(ls[addr / 4] >> 12))
+	for (auto& item : ::at32(m_stuff, ls[addr / 4] >> 12))
 	{
 		if (const auto ptr = item.compiled.load())
 		{
@@ -1727,7 +1727,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	}
 
 	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
-	if (spu.block_counter != spu.block_recover && &dispatch != spu_runtime::g_dispatcher->at(spu._ref<nse_t<u32>>(spu.pc) >> 12))
+	if (spu.block_counter != spu.block_recover && &dispatch != ::at32(*spu_runtime::g_dispatcher, spu._ref<nse_t<u32>>(spu.pc) >> 12))
 	{
 		spu.block_recover = spu.block_counter;
 		return;
@@ -2699,7 +2699,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 					// Check for possible fallthrough predecessor
 					if (!had_fallthrough)
 					{
-						if (result.data.at((j - lsa) / 4 - 1) == 0 || m_targets.count(j - 4))
+						if (::at32(result.data, (j - lsa) / 4 - 1) == 0 || m_targets.count(j - 4))
 						{
 							break;
 						}
@@ -3084,13 +3084,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	{
 		workload.clear();
 		workload.push_back(entry_point);
+		ensure(m_bbs.count(entry_point));
 
 		std::basic_string<u32> new_entries;
 
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			auto& block    = m_bbs.at(addr);
+			auto& block = ::at32(m_bbs, addr);
 			const u32 _new = block.chunk;
 
 			if (!m_entry_info[addr / 4])
@@ -3098,7 +3099,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				// Check block predecessors
 				for (u32 pred : block.preds)
 				{
-					const u32 _old = m_bbs.at(pred).chunk;
+					const u32 _old = ::at32(m_bbs, pred).chunk;
 
 					if (_old < 0x40000 && _old != _new)
 					{
@@ -3167,9 +3168,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	// Fill workload adding targets
 	for (u32 wi = 0; wi < workload.size(); wi++)
 	{
-		const u32 addr  = workload[wi];
-		auto& block     = m_bbs.at(addr);
-		block.analysed  = true;
+		const u32 addr = workload[wi];
+		auto& block = ::at32(m_bbs, addr);
+		block.analysed = true;
 
 		for (u32 target : block.targets)
 		{
@@ -3211,7 +3212,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			auto& block    = m_bbs.at(addr);
+			auto& block = ::at32(m_bbs, addr);
 
 			// Initialize entry point with default value: unknown origin (requires load)
 			if (m_entry_info[addr / 4])
@@ -3301,7 +3302,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			auto& block    = m_bbs.at(addr);
+			auto& block = ::at32(m_bbs, addr);
 
 			// Reset values for the next attempt (keep negative values)
 			for (u32 i = 0; i < s_reg_max; i++)
@@ -3323,8 +3324,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		}
 
 		const u32 addr = workload[wi];
-		auto& bb       = m_bbs.at(addr);
-		auto& func     = m_funcs.at(bb.func);
+		auto& bb = ::at32(m_bbs, addr);
+		auto& func = ::at32(m_funcs, bb.func);
 
 		// Update function size
 		func.size = std::max<u16>(func.size, bb.size + (addr - bb.func) / 4);
@@ -3336,7 +3337,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 			if (orig < 0x40000)
 			{
-				auto& src = m_bbs.at(orig);
+				auto& src = ::at32(m_bbs, orig);
 				bb.reg_const[i] = src.reg_const[i];
 				bb.reg_val32[i] = src.reg_val32[i];
 			}
@@ -3350,7 +3351,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 		if (u32 orig = bb.reg_origin_abs[s_reg_sp]; orig < 0x40000)
 		{
-			auto& prologue = m_bbs.at(orig);
+			auto& prologue = ::at32(m_bbs, orig);
 
 			// Copy stack offset (from the assumed prologue)
 			bb.stack_sub = prologue.stack_sub;
@@ -3361,7 +3362,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			bb.stack_sub = 0x80000000;
 		}
 
-		spu_opcode_t op;
+		spu_opcode_t op{};
 
 		auto last_inst = spu_itype::UNK;
 
@@ -3662,8 +3663,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 		for (auto it = m_bbs.lower_bound(f.first); it != m_bbs.end() && it->second.func == f.first; ++it)
 		{
-			auto& bb       = it->second;
-			auto& func     = m_funcs.at(bb.func);
+			auto& bb = it->second;
+			auto& func = ::at32(m_funcs, bb.func);
 			const u32 addr = it->first;
 			const u32 flim = bb.func + func.size * 4;
 
@@ -3679,7 +3680,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				// Check $LR (alternative return registers are currently not supported)
 				if (u32 lr_orig = bb.reg_mod[s_reg_lr] ? addr : bb.reg_origin_abs[s_reg_lr]; lr_orig < 0x40000)
 				{
-					auto& src = m_bbs.at(lr_orig);
+					auto& src = ::at32(m_bbs, lr_orig);
 
 					if (src.reg_load_mod[s_reg_lr] != func.reg_save_off[s_reg_lr])
 					{
@@ -3703,7 +3704,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				{
 					if (u32 orig = bb.reg_mod[i] ? addr : bb.reg_origin_abs[i]; orig < 0x40000)
 					{
-						auto& src = m_bbs.at(orig);
+						auto& src = ::at32(m_bbs, orig);
 
 						if (src.reg_load_mod[i] != func.reg_save_off[i])
 						{
@@ -4432,7 +4433,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			return m_ir->CreateBitCast(_ptr<u8>(m_thread, get_reg_offset(index)), get_reg_type(index)->getPointerTo());
 		}
 
-		auto& ptr = m_reg_addr.at(index);
+		auto& ptr = ::at32(m_reg_addr, index);
 
 		if (!ptr)
 		{
@@ -4542,7 +4543,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		llvm::Value* dummy{};
 
-		auto& reg = *(m_block ? &m_block->reg.at(index) : &dummy);
+		auto& reg = *(m_block ? &::at32(m_block->reg, index) : &dummy);
 
 		if (!reg)
 		{
@@ -4626,7 +4627,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (m_block)
 		{
-			auto v = m_block->reg.at(index);
+			auto v = ::at32(m_block->reg, index);
 
 			if (v && v->getType() == get_type<T>())
 			{
@@ -4737,7 +4738,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				value->setName(fmt::format("result_0x%05x", m_pos));
 #endif
 
-			m_block->reg.at(index) = saved_value;
+			::at32(m_block->reg, index) = saved_value;
 		}
 
 		// Get register location
@@ -5303,7 +5304,7 @@ public:
 				const u32 baddr = m_block_queue[bi];
 				m_block = &m_blocks[baddr];
 				m_ir->SetInsertPoint(m_block->block);
-				auto& bb = m_bbs.at(baddr);
+				auto& bb = ::at32(m_bbs, baddr);
 				bool need_check = false;
 				m_block->bb = &bb;
 
@@ -10822,7 +10823,7 @@ struct spu_llvm
 
 			for (auto it = enqueued.begin(), end = enqueued.end(); it != end; ++it)
 			{
-				const u64 cur = std::as_const(samples).at(it->first);
+				const u64 cur = ::at32(std::as_const(samples), it->first);
 
 				if (cur > sample_max)
 				{

@@ -80,7 +80,7 @@ bool emu_settings::Init()
 	// Make Vulkan default setting if it is supported
 	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
 	{
-		const std::string adapter = sstr(m_render_creator->Vulkan.adapters.at(0));
+		const std::string adapter = sstr(::at32(m_render_creator->Vulkan.adapters, 0));
 		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s'", adapter);
 		Emu.SetDefaultRenderer(video_renderer::vulkan);
 		Emu.SetDefaultGraphicsAdapter(adapter);

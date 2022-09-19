@@ -165,7 +165,7 @@ bool nt_p2p_port::recv_data()
 			std::vector<u8> p2p_data(recv_res - sizeof(u16));
 			memcpy(p2p_data.data(), p2p_recv_data.data() + sizeof(u16), recv_res - sizeof(u16));
 
-			const auto sock = idm::check<lv2_socket>(bound_p2p_vports.at(dst_vport), [&](lv2_socket& sock)
+			const auto sock = idm::check<lv2_socket>(::at32(bound_p2p_vports, dst_vport), [&](lv2_socket& sock)
 				{
 					ensure(sock.get_type() == SYS_NET_SOCK_DGRAM_P2P);
 					auto& sock_p2p = reinterpret_cast<lv2_socket_p2p&>(sock);
@@ -231,7 +231,7 @@ bool nt_p2p_port::recv_data()
 		std::lock_guard lock(bound_p2p_vports_mutex);
 		if (bound_p2p_streams.contains(key_connected))
 		{
-			const auto sock_id = bound_p2p_streams.at(key_connected);
+			const auto sock_id = ::at32(bound_p2p_streams, key_connected);
 			sys_net.trace("Received packet for connected STREAM-P2P socket(s=%d)", sock_id);
 			handle_connected(sock_id, tcp_header, sp_data + sizeof(p2ps_encapsulated_tcp), &native_addr);
 			return true;
@@ -239,7 +239,7 @@ bool nt_p2p_port::recv_data()
 
 		if (bound_p2p_streams.contains(key_listening))
 		{
-			const auto sock_id = bound_p2p_streams.at(key_listening);
+			const auto sock_id = ::at32(bound_p2p_streams, key_listening);
 			sys_net.trace("Received packet for listening STREAM-P2P socket(s=%d)", sock_id);
 			handle_listening(sock_id, tcp_header, sp_data + sizeof(p2ps_encapsulated_tcp), &native_addr);
 			return true;

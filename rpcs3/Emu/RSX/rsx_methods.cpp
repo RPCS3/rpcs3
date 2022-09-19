@@ -2981,7 +2981,7 @@ namespace rsx
 
 		auto bind = [](u32 id, rsx_method_t func)
 		{
-			methods.at(id) = func;
+			::at32(methods, id) = func;
 		};
 
 		auto bind_array = [](u32 id, u32 step, u32 count, rsx_method_t func)

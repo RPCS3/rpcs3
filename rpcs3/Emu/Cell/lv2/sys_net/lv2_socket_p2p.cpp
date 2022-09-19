@@ -126,7 +126,7 @@ s32 lv2_socket_p2p::bind(const sys_net_sockaddr& addr)
 			nc.list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(p2p_port), std::forward_as_tuple(p2p_port));
 		}
 
-		auto& pport = nc.list_p2p_ports.at(p2p_port);
+		auto& pport = ::at32(nc.list_p2p_ports, p2p_port);
 		real_socket = pport.p2p_socket;
 		{
 			std::lock_guard lock(pport.bound_p2p_vports_mutex);
@@ -301,7 +301,7 @@ void lv2_socket_p2p::close()
 	{
 		std::lock_guard lock(nc.list_p2p_ports_mutex);
 		ensure(nc.list_p2p_ports.contains(port));
-		auto& p2p_port = nc.list_p2p_ports.at(port);
+		auto& p2p_port = ::at32(nc.list_p2p_ports, port);
 		{
 			std::lock_guard lock(p2p_port.bound_p2p_vports_mutex);
 			p2p_port.bound_p2p_vports.erase(vport);

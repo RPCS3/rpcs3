@@ -58,7 +58,7 @@ sce_np_tus_title_context* sce_np_tus_manager::get_title_context(s32 titleCtxId)
 {
 	if (title_contexts.find(titleCtxId) != title_contexts.end())
 	{
-		return &title_contexts.at(titleCtxId);
+		return &::at32(title_contexts, titleCtxId);
 	}
 
 	return nullptr;
@@ -81,7 +81,7 @@ s32 sce_np_tus_manager::add_transaction_context(s32 titleCtxId)
 			sce_np_tus_transaction_context new_transaction;
 			new_transaction.id = next_transaction_context_id;
 
-			if (title_contexts.at(titleCtxId).transaction_contexts.emplace(next_transaction_context_id, new_transaction).second)
+			if (::at32(title_contexts, titleCtxId).transaction_contexts.emplace(next_transaction_context_id, new_transaction).second)
 			{
 				return next_transaction_context_id++;
 			}
@@ -122,7 +122,7 @@ sce_np_tus_transaction_context* sce_np_tus_manager::get_transaction_context(s32 
 
 		if (transactions.find(transId) != transactions.end())
 		{
-			return &transactions.at(transId);
+			return &::at32(transactions, transId);
 		}
 	}
 

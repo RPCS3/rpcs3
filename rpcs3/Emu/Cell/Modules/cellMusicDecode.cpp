@@ -235,7 +235,7 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 	{
 		start_time_ms = dec.decoder.timestamps_ms.front().second;
 
-		while (dec.decoder.timestamps_ms.size() > 1 && dec.read_pos >= dec.decoder.timestamps_ms.at(1).first)
+		while (dec.decoder.timestamps_ms.size() > 1 && dec.read_pos >= ::at32(dec.decoder.timestamps_ms, 1).first)
 		{
 			dec.decoder.timestamps_ms.pop_front();
 		}
@@ -274,7 +274,7 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 error_code cellMusicDecodeInitialize(s32 mode, u32 container, s32 spuPriority, vm::ptr<CellMusicDecodeCallback> func, vm::ptr<void> userData)
 {
 	cellMusicDecode.warning("cellMusicDecodeInitialize(mode=0x%x, container=0x%x, spuPriority=0x%x, func=*0x%x, userData=*0x%x)", mode, container, spuPriority, func, userData);
-	
+
 	if (mode != CELL_MUSIC_DECODE2_MODE_NORMAL || (spuPriority - 0x10U > 0xef) || !func)
 	{
 		return CELL_MUSIC_DECODE_ERROR_PARAM;

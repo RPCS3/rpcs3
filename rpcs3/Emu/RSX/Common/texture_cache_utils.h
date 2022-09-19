@@ -280,8 +280,6 @@ namespace rsx
 		constexpr const_iterator begin() const noexcept { return sections.begin(); }
 		inline iterator end() noexcept { return sections.end(); }
 		inline const_iterator end() const noexcept { return sections.end(); }
-		inline iterator at(size_type pos) { return sections.data(pos); }
-		inline const_iterator at(size_type pos) const { return sections.data(pos); }
 		inline bool empty() const { return sections.empty(); }
 		inline size_type size() const { return sections.size(); }
 		inline u32 get_exists_count() const { return exists_count; }

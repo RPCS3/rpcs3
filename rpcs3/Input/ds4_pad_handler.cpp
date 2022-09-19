@@ -137,33 +137,33 @@ void ds4_pad_handler::init_config(cfg_pad* cfg)
 	if (!cfg) return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = button_list.at(DS4KeyCodes::LSXNeg);
-	cfg->ls_down.def  = button_list.at(DS4KeyCodes::LSYNeg);
-	cfg->ls_right.def = button_list.at(DS4KeyCodes::LSXPos);
-	cfg->ls_up.def    = button_list.at(DS4KeyCodes::LSYPos);
-	cfg->rs_left.def  = button_list.at(DS4KeyCodes::RSXNeg);
-	cfg->rs_down.def  = button_list.at(DS4KeyCodes::RSYNeg);
-	cfg->rs_right.def = button_list.at(DS4KeyCodes::RSXPos);
-	cfg->rs_up.def    = button_list.at(DS4KeyCodes::RSYPos);
-	cfg->start.def    = button_list.at(DS4KeyCodes::Options);
-	cfg->select.def   = button_list.at(DS4KeyCodes::Share);
-	cfg->ps.def       = button_list.at(DS4KeyCodes::PSButton);
-	cfg->square.def   = button_list.at(DS4KeyCodes::Square);
-	cfg->cross.def    = button_list.at(DS4KeyCodes::Cross);
-	cfg->circle.def   = button_list.at(DS4KeyCodes::Circle);
-	cfg->triangle.def = button_list.at(DS4KeyCodes::Triangle);
-	cfg->left.def     = button_list.at(DS4KeyCodes::Left);
-	cfg->down.def     = button_list.at(DS4KeyCodes::Down);
-	cfg->right.def    = button_list.at(DS4KeyCodes::Right);
-	cfg->up.def       = button_list.at(DS4KeyCodes::Up);
-	cfg->r1.def       = button_list.at(DS4KeyCodes::R1);
-	cfg->r2.def       = button_list.at(DS4KeyCodes::R2);
-	cfg->r3.def       = button_list.at(DS4KeyCodes::R3);
-	cfg->l1.def       = button_list.at(DS4KeyCodes::L1);
-	cfg->l2.def       = button_list.at(DS4KeyCodes::L2);
-	cfg->l3.def       = button_list.at(DS4KeyCodes::L3);
+	cfg->ls_left.def  = ::at32(button_list, DS4KeyCodes::LSXNeg);
+	cfg->ls_down.def  = ::at32(button_list, DS4KeyCodes::LSYNeg);
+	cfg->ls_right.def = ::at32(button_list, DS4KeyCodes::LSXPos);
+	cfg->ls_up.def    = ::at32(button_list, DS4KeyCodes::LSYPos);
+	cfg->rs_left.def  = ::at32(button_list, DS4KeyCodes::RSXNeg);
+	cfg->rs_down.def  = ::at32(button_list, DS4KeyCodes::RSYNeg);
+	cfg->rs_right.def = ::at32(button_list, DS4KeyCodes::RSXPos);
+	cfg->rs_up.def    = ::at32(button_list, DS4KeyCodes::RSYPos);
+	cfg->start.def    = ::at32(button_list, DS4KeyCodes::Options);
+	cfg->select.def   = ::at32(button_list, DS4KeyCodes::Share);
+	cfg->ps.def       = ::at32(button_list, DS4KeyCodes::PSButton);
+	cfg->square.def   = ::at32(button_list, DS4KeyCodes::Square);
+	cfg->cross.def    = ::at32(button_list, DS4KeyCodes::Cross);
+	cfg->circle.def   = ::at32(button_list, DS4KeyCodes::Circle);
+	cfg->triangle.def = ::at32(button_list, DS4KeyCodes::Triangle);
+	cfg->left.def     = ::at32(button_list, DS4KeyCodes::Left);
+	cfg->down.def     = ::at32(button_list, DS4KeyCodes::Down);
+	cfg->right.def    = ::at32(button_list, DS4KeyCodes::Right);
+	cfg->up.def       = ::at32(button_list, DS4KeyCodes::Up);
+	cfg->r1.def       = ::at32(button_list, DS4KeyCodes::R1);
+	cfg->r2.def       = ::at32(button_list, DS4KeyCodes::R2);
+	cfg->r3.def       = ::at32(button_list, DS4KeyCodes::R3);
+	cfg->l1.def       = ::at32(button_list, DS4KeyCodes::L1);
+	cfg->l2.def       = ::at32(button_list, DS4KeyCodes::L2);
+	cfg->l3.def       = ::at32(button_list, DS4KeyCodes::L3);
 
-	cfg->pressure_intensity_button.def = button_list.at(DS4KeyCodes::None);
+	cfg->pressure_intensity_button.def = ::at32(button_list, DS4KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
@@ -361,12 +361,12 @@ std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::share
 pad_preview_values ds4_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
 {
 	return {
-		data.at(L2),
-		data.at(R2),
-		data.at(LSXPos) - data.at(LSXNeg),
-		data.at(LSYPos) - data.at(LSYNeg),
-		data.at(RSXPos) - data.at(RSXNeg),
-		data.at(RSYPos) - data.at(RSYNeg)
+		::at32(data, L2),
+		::at32(data, R2),
+		::at32(data, LSXPos) - ::at32(data, LSXNeg),
+		::at32(data, LSYPos) - ::at32(data, LSYNeg),
+		::at32(data, RSXPos) - ::at32(data, RSXNeg),
+		::at32(data, RSYPos) - ::at32(data, RSYNeg)
 	};
 }
 

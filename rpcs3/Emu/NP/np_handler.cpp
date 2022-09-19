@@ -689,7 +689,7 @@ namespace np
 		if (!match2_req_results.contains(event_key))
 			return 0;
 
-		auto& data = match2_req_results.at(event_key);
+		auto& data = ::at32(match2_req_results, event_key);
 		data.apply_relocations(dest_addr);
 
 		vm::ptr<void> dest = vm::cast(dest_addr);
@@ -921,7 +921,7 @@ namespace np
 	{
 		std::lock_guard lock(mutex_pending_requests);
 
-		const auto cb_info = std::move(pending_requests.at(req_id));
+		const auto cb_info = std::move(::at32(pending_requests, req_id));
 		pending_requests.erase(req_id);
 
 		return cb_info;
@@ -931,7 +931,7 @@ namespace np
 	{
 		std::lock_guard lock(mutex_match2_req_results);
 		match2_req_results.emplace(std::piecewise_construct, std::forward_as_tuple(event_key), std::forward_as_tuple(np_memory.allocate(max_size), initial_size, max_size));
-		return match2_req_results.at(event_key);
+		return ::at32(match2_req_results, event_key);
 	}
 
 	u32 np_handler::add_players_to_history(vm::cptr<SceNpId> /*npids*/, u32 /*count*/)

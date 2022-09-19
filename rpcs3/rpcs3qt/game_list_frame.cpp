@@ -1150,7 +1150,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			hover_gif,
 			shader_load
 		};
-		
+
 		const auto handle_icon = [this, serial](const QString& game_icon_path, const QString& suffix, icon_action action, icon_type type)
 		{
 			QString icon_path;
@@ -2621,7 +2621,7 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 	{
 		if (map.find(key) != map.end())
 		{
-			string << map.at(key);
+			string << ::at32(map, key);
 		}
 	}
 
