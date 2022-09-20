@@ -931,6 +931,50 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 	return std::nullopt;
 }
 
+std::optional<s32> lv2_socket_native::sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock)
+{
+	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
+
+	if (is_lock)
+	{
+		lock.lock();
+	}
+
+	int native_flags                       = 0;
+	int native_result                      = -1;
+
+	sys_net_error result{};
+
+	if (flags & SYS_NET_MSG_WAITALL)
+	{
+		native_flags |= MSG_WAITALL;
+	}
+
+
+	for (int i = 0; i < msg.msg_iovlen; i++)
+	{
+		auto iov_base = msg.msg_iov[i].iov_base;
+		const u32 len = msg.msg_iov[i].iov_len;
+		const std::vector<u8> buf_copy(vm::_ptr<const char>(iov_base.addr()), vm::_ptr<const char>(iov_base.addr()) + len);
+
+		native_result = ::send(socket, reinterpret_cast<const char*>(buf_copy.data()), buf_copy.size(), native_flags);
+
+		if (native_result >= 0)
+		{
+			return {native_result};
+		}
+	}
+
+	result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+
+	if (result)
+	{
+		return {-result};
+	}
+
+	return std::nullopt;
+}
+
 void lv2_socket_native::close()
 {
 	std::lock_guard lock(mutex);
