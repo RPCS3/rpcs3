@@ -1605,8 +1605,12 @@ void lv2_obj::schedule_all(u64 current_time)
 			if (target->state & cpu_flag::suspend)
 			{
 				ppu_log.trace("schedule(): %s", target->id);
-				target->state.atomic_op(FN(x += cpu_flag::signal, x -= cpu_flag::suspend));
 				target->start_time = 0;
+
+				if ((target->state.fetch_op(FN(x += cpu_flag::signal, x -= cpu_flag::suspend, void())) & (cpu_flag::wait + cpu_flag::signal)) != cpu_flag::wait)
+				{
+					continue;
+				}
 
 				if (notify_later_idx == std::size(g_to_notify))
 				{

@@ -588,7 +588,7 @@ void cpu_thread::operator()()
 			continue;
 		}
 
-		thread_ctrl::wait_on(state, state0);
+		state.wait(state0);
 
 		if (state & cpu_flag::ret && state.test_and_reset(cpu_flag::ret))
 		{
@@ -640,7 +640,7 @@ cpu_thread::cpu_thread(u32 id)
 
 void cpu_thread::cpu_wait(bs_t<cpu_flag> old)
 {
-	thread_ctrl::wait_on(state, old);
+	state.wait(old);
 }
 
 static atomic_t<u32> s_dummy_atomic = 0;

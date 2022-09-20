@@ -888,7 +888,7 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 			break;
 		}
 
-		thread_ctrl::wait_on(ppu.state, state);
+		ppu.state.wait(state);
 	}
 
 	*arg1 = ppu.gpr[4];
