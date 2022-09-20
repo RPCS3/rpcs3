@@ -1352,13 +1352,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 
 	m_emu_settings->EnhanceCheckBox(ui->disableMslFastMath, emu_settings_type::DisableMSLFastMath);
-	m_emu_settings->EnhanceCheckBox(ui->softwareVkSemaphore, emu_settings_type::SoftwareVkSemaphore);
 #ifdef __APPLE__
 	SubscribeTooltip(ui->disableMslFastMath, tooltips.settings.disable_msl_fast_math);
-	SubscribeTooltip(ui->softwareVkSemaphore, tooltips.settings.mvk_software_vksemaphore);
 #else
 	ui->disableMslFastMath->setVisible(false);
-	ui->softwareVkSemaphore->setVisible(false);
 #endif
 
 	// Comboboxes
