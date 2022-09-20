@@ -763,19 +763,20 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
 
 void debugger_frame::UpdateUI()
 {
-	if (m_ui_update_ctr % 5 == 0)
+	const auto cpu = get_cpu();
+
+	// Refresh at a high rate during initialization (looks weird otherwise)
+	if (m_ui_update_ctr % (cpu || m_ui_update_ctr < 200 || m_debugger_list->m_dirty_flag ? 5 : 50) == 0)
 	{
 		// If no change to instruction position happened, update instruction list at 20hz
 		ShowPC();
-
-		if (m_ui_update_ctr % 20 == 0)
-		{
-			// Update threads list at 5hz (low priority)
-			UpdateUnitList();
-		}
 	}
 
-	const auto cpu = get_cpu();
+	if (m_ui_update_ctr % 20 == 0)
+	{
+		// Update threads list at 5hz (low priority)
+		UpdateUnitList();
+	}
 
 	if (!cpu)
 	{
