@@ -415,7 +415,7 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 				break;
 			}
 
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 
 		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
@@ -579,7 +579,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 				break;
 			}
 
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 
 		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
@@ -859,7 +859,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 				break;
 			}
 
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 
 		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
@@ -1053,7 +1053,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			{
 				break;
 			}
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 
 		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
@@ -1408,7 +1408,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 		}
 		else
 		{
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 	}
 
@@ -1648,7 +1648,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		}
 		else
 		{
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 	}
 

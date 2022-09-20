@@ -1641,7 +1641,10 @@ void spu_thread::cleanup()
 	vm::free_range_lock(range_lock);
 
 	// Signal the debugger about the termination
-	state += cpu_flag::exit;
+	if (!state.test_and_set(cpu_flag::exit))
+	{
+		state.notify_one();
+	}
 }
 
 spu_thread::~spu_thread()

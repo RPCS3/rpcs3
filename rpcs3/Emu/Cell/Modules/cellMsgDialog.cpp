@@ -245,7 +245,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 			break;
 		}
 
-		thread_ctrl::wait_on(ppu.state, state);
+		ppu.state.wait(state);
 	}
 
 	if (is_blocking)

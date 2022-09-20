@@ -250,7 +250,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		}
 		else
 		{
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 	}
 

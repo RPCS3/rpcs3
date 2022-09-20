@@ -452,7 +452,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		}
 		else
 		{
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 	}
 

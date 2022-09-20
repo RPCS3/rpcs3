@@ -247,7 +247,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 		else
 		{
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 	}
 

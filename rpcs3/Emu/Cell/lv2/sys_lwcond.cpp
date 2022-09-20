@@ -487,7 +487,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		}
 		else
 		{
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 	}
 
