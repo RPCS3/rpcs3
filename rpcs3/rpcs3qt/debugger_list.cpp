@@ -120,6 +120,8 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 		m_follow_thread = false;
 	}
 
+	m_dirty_flag = false;
+
 	u32 pc = m_start_addr;
 
 	if (!direct && (m_follow_thread || select_addr))
@@ -396,6 +398,7 @@ void debugger_list::resizeEvent(QResizeEvent* event)
 		for (u32 i = old_size; i < m_item_count; ++i)
 		{
 			insertItem(i, new QListWidgetItem(""));
+			m_dirty_flag = true;
 		}
 	}
 	else

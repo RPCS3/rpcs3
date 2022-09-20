@@ -23,6 +23,7 @@ public:
 	u32 m_selected_instruction = -1;
 	bool m_follow_thread = true; // If true, follow the selected thread to wherever it goes in code
 	bool m_showing_selected_instruction = false;
+	bool m_dirty_flag = false;
 	QColor m_color_bp;
 	QColor m_color_pc;
 	QColor m_text_color_bp;
