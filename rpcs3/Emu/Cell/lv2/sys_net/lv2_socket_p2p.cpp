@@ -284,6 +284,12 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 	return std::nullopt;
 }
 
+std::optional<s32> lv2_socket_p2p::sendmsg([[maybe_unused]] s32 flags, [[maybe_unused]] const sys_net_msghdr& msg, [[maybe_unused]] bool is_lock)
+{
+	sys_net.todo("lv2_socket_p2p::sendmsg");
+	return {};
+}
+
 void lv2_socket_p2p::close()
 {
 	if (!port || !vport)

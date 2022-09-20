@@ -900,8 +900,79 @@ error_code sys_net_bnet_sendmsg(ppu_thread& ppu, s32 s, vm::cptr<sys_net_msghdr>
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_net.todo("sys_net_bnet_sendmsg(s=%d, msg=*0x%x, flags=0x%x)", s, msg, flags);
-	return CELL_OK;
+	sys_net.warning("sys_net_bnet_sendmsg(s=%d, msg=*0x%x, flags=0x%x)", s, msg, flags);
+
+	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
+	{
+		fmt::throw_exception("sys_net_bnet_sendmsg(s=%d): unknown flags (0x%x)", flags);
+	}
+
+	s32 result{};
+
+	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
+		{
+			auto netmsg = msg.get_ptr();
+			const auto success = sock.sendmsg(flags, *netmsg);
+
+			if (success)
+			{
+				result = *success;
+
+				return true;
+			}
+
+			sock.poll_queue(idm::get_unlocked<named_thread<ppu_thread>>(ppu.id), lv2_socket::poll_t::write, [&](bs_t<lv2_socket::poll_t> events) -> bool
+				{
+					if (events & lv2_socket::poll_t::write)
+					{
+						const auto success = sock.sendmsg(flags, *netmsg, false);
+
+						if (success)
+						{
+							result = *success;
+							lv2_obj::awake(&ppu);
+							return true;
+						}
+					}
+
+					sock.set_poll_event(lv2_socket::poll_t::write);
+					return false;
+				});
+
+			lv2_obj::sleep(ppu);
+			return false;
+		});
+
+	if (!sock)
+	{
+		return -SYS_NET_EBADF;
+	}
+
+	if (!sock.ret)
+	{
+		while (true)
+		{
+			const auto state = ppu.state.fetch_sub(cpu_flag::signal);
+			if (is_stopped(state) || state & cpu_flag::signal)
+			{
+				break;
+			}
+			thread_ctrl::wait_on(ppu.state, state);
+		}
+
+		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
+		{
+			return -SYS_NET_EINTR;
+		}
+	}
+
+	if (result >= 0 || result == -SYS_NET_EWOULDBLOCK)
+	{
+		return not_an_error(result);
+	}
+
+
+	return sys_net_error{result};
 }
 
 error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 len, s32 flags, vm::cptr<sys_net_sockaddr> addr, u32 addrlen)

@@ -48,6 +48,7 @@ public:
 	s32 setsockopt(s32 level, s32 optname, const std::vector<u8>& optval) override;
 	std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> recvfrom(s32 flags, u32 len, bool is_lock = true) override;
 	std::optional<s32> sendto(s32 flags, const std::vector<u8>& buf, std::optional<sys_net_sockaddr> opt_sn_addr, bool is_lock = true) override;
+	std::optional<s32> sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock = true) override;
 
 	s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
 	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;

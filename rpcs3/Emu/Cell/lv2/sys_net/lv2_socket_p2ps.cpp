@@ -795,6 +795,12 @@ std::optional<s32> lv2_socket_p2ps::sendto([[maybe_unused]] s32 flags, const std
 	return {buf.size()};
 }
 
+std::optional<s32> lv2_socket_p2ps::sendmsg([[maybe_unused]] s32 flags, [[maybe_unused]] const sys_net_msghdr& msg, [[maybe_unused]] bool is_lock)
+{
+	sys_net.todo("lv2_socket_p2ps::sendmsg");
+	return {};
+}
+
 void lv2_socket_p2ps::close()
 {
 	if (!port || !vport)
