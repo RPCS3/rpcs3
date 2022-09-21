@@ -10,14 +10,14 @@
 
 LOG_CHANNEL(usio_log);
 
-struct last_game_status
+struct usio_memory
 {
-	std::vector<u8> memory;
+	std::vector<u8> backup_memory;
+	std::vector<u8> last_game_status = {0x4C, 0x41, 0x53, 0x54, 0x47, 0x41, 0x4D, 0x45, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x20, 0x76, 0x65, 0x72, 0x2E, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // "LASTGAMESTATUS ver.3"
 
-	last_game_status(const last_game_status&) = delete;
-	last_game_status& operator=(const last_game_status&) = delete;
+	usio_memory(const usio_memory&) = delete;
+	usio_memory& operator=(const usio_memory&) = delete;
 };
-constexpr u8 default_last_game_status[0x28] = {0x4C, 0x41, 0x53, 0x54, 0x47, 0x41, 0x4D, 0x45, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x20, 0x76, 0x65, 0x72, 0x2E, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // "LASTGAMESTATUS ver.3"
 
 usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
@@ -78,8 +78,8 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 			.wMaxPacketSize   = 0x0008,
 			.bInterval        = 16}));
 
-	g_fxo->get<last_game_status>().memory.resize(0x28);
-	memcpy(g_fxo->get<last_game_status>().memory.data(), default_last_game_status, 0x28);
+	g_fxo->get<usio_memory>().backup_memory.resize(0xB8);
+	g_fxo->get<usio_memory>().last_game_status.resize(0x28);
 }
 
 usb_device_usio::~usb_device_usio()
@@ -183,6 +183,12 @@ void usb_device_usio::translate_input()
 
 void usb_device_usio::usio_write(u8 channel, u16 reg, const std::vector<u8>& data)
 {
+	auto write_memory = [&](std::vector<u8>& memory)
+	{
+		ensure(data.size() == memory.size());
+		memcpy(memory.data(), data.data(), memory.size());
+	};
+
 	const auto get_u16 = [&](std::string_view usio_func) -> u16
 	{
 		if (data.size() != 2)
@@ -243,11 +249,14 @@ void usb_device_usio::usio_write(u8 channel, u16 reg, const std::vector<u8>& dat
 		{
 			switch (reg)
 			{
+			case 0x0000:
+			{
+				write_memory(g_fxo->get<usio_memory>().backup_memory);
+				break;
+			}
 			case 0x0180:
 			{
-				ensure(data.size() == 0x28);
-				g_fxo->get<last_game_status>().memory.resize(0x28);
-				memcpy(g_fxo->get<last_game_status>().memory.data(), data.data(), 0x28);
+				write_memory(g_fxo->get<usio_memory>().last_game_status);
 				break;
 			}
 			}
@@ -343,13 +352,19 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 			case 0x0000:
 			{
 				ensure(size == 0xB8);
-				// No data returned
+				std::vector<u8> buffer[3];
+				for (int i = 0; i < 3; i++)
+				{
+					buffer[i].resize(i < 2 ? 64 : 56);
+					memcpy(buffer[i].data(), g_fxo->get<usio_memory>().backup_memory.data() + i * 64, buffer[i].size());
+					q_replies.push(buffer[i]);
+				}
 				break;
 			}
 			case 0x0180:
 			{
 				ensure(size == 0x28);
-				q_replies.push(g_fxo->get<last_game_status>().memory);
+				q_replies.push(g_fxo->get<usio_memory>().last_game_status);
 				break;
 			}
 			case 0x0200:
