@@ -405,7 +405,7 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 	lock.unlock();
 	ppu.check_state();
 
-	std::copy_n(event_array.get_ptr(), count, events.begin());
+	std::copy_n(events.begin(), event_array.get_ptr());
 	*number = count;
 
 	return CELL_OK;
