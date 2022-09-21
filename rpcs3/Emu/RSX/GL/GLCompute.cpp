@@ -258,8 +258,8 @@ namespace gl
 		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
 	}
 
-	template cs_shuffle_d32fx8_to_x8d24f<true>;
-	template cs_shuffle_d32fx8_to_x8d24f<false>;
+	template class cs_shuffle_d32fx8_to_x8d24f<true>;
+	template class cs_shuffle_d32fx8_to_x8d24f<false>;
 
 	template <bool SwapBytes>
 	cs_shuffle_x8d24f_to_d32fx8<SwapBytes>::cs_shuffle_x8d24f_to_d32fx8()
@@ -313,8 +313,8 @@ namespace gl
 		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
 	}
 
-	template cs_shuffle_x8d24f_to_d32fx8<true>;
-	template cs_shuffle_x8d24f_to_d32fx8<false>;
+	template class cs_shuffle_x8d24f_to_d32fx8<true>;
+	template class cs_shuffle_x8d24f_to_d32fx8<false>;
 
 	cs_d24x8_to_ssbo::cs_d24x8_to_ssbo()
 	{
