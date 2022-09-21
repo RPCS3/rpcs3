@@ -89,7 +89,7 @@ struct sys_memory_address_table
 
 error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_memory.warning("sys_memory_allocate(size=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, flags, alloc_addr);
 
@@ -148,7 +148,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 
 error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_memory.warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
 
@@ -219,7 +219,7 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid
 
 error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
@@ -237,7 +237,7 @@ error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 
 error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_memory.trace("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
 
@@ -275,7 +275,7 @@ error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_
 
 error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
 
@@ -298,7 +298,7 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 
 error_code sys_memory_get_user_memory_stat(cpu_thread& cpu, vm::ptr<sys_memory_user_memory_stat_t> mem_stat)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_memory.todo("sys_memory_get_user_memory_stat(mem_stat=*0x%x)", mem_stat);
 
@@ -307,7 +307,7 @@ error_code sys_memory_get_user_memory_stat(cpu_thread& cpu, vm::ptr<sys_memory_u
 
 error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 size)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_memory.warning("sys_memory_container_create(cid=*0x%x, size=0x%x)", cid, size);
 
@@ -342,7 +342,7 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 si
 
 error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_memory.warning("sys_memory_container_destroy(cid=0x%x)", cid);
 
@@ -377,7 +377,7 @@ error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 
 error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_memory.warning("sys_memory_container_get_size(mem_info=*0x%x, cid=0x%x)", mem_info, cid);
 

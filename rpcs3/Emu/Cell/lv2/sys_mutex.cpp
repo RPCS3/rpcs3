@@ -38,7 +38,7 @@ void lv2_mutex::save(utils::serial& ar)
 
 error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_mutex.warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x)", mutex_id, attr);
 
@@ -98,7 +98,7 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 
 error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_mutex.warning("sys_mutex_destroy(mutex_id=0x%x)", mutex_id);
 
@@ -135,7 +135,7 @@ error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 
 error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_mutex.trace("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx)", mutex_id, timeout);
 
@@ -201,7 +201,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
+		if (state & cpu_flag::signal)
 		{
 			break;
 		}
@@ -264,7 +264,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 error_code sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_mutex.trace("sys_mutex_trylock(mutex_id=0x%x)", mutex_id);
 
@@ -293,7 +293,7 @@ error_code sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id)
 
 error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_mutex.trace("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
 

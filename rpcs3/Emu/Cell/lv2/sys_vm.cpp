@@ -49,7 +49,7 @@ sys_vm_t::sys_vm_t(utils::serial& ar)
 
 error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_memory_map(vsize=0x%x, psize=0x%x, cid=0x%x, flags=0x%x, policy=0x%x, addr=*0x%x)", vsize, psize, cid, flag, policy, addr);
 
@@ -109,7 +109,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 
 error_code sys_vm_memory_map_different(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_memory_map_different(vsize=0x%x, psize=0x%x, cid=0x%x, flags=0x%llx, policy=0x%llx, addr=*0x%x)", vsize, psize, cid, flag, policy, addr);
 	// TODO: if needed implement different way to map memory, unconfirmed.
@@ -119,7 +119,7 @@ error_code sys_vm_memory_map_different(ppu_thread& ppu, u32 vsize, u32 psize, u3
 
 error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_unmap(addr=0x%x)", addr);
 
@@ -150,7 +150,7 @@ error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 
 error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u32 size)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_append_memory(addr=0x%x, size=0x%x)", addr, size);
 
@@ -190,7 +190,7 @@ error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u32 size)
 
 error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u32 size)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_return_memory(addr=0x%x, size=0x%x)", addr, size);
 
@@ -241,7 +241,7 @@ error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u32 size)
 
 error_code sys_vm_lock(ppu_thread& ppu, u32 addr, u32 size)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_lock(addr=0x%x, size=0x%x)", addr, size);
 
@@ -262,7 +262,7 @@ error_code sys_vm_lock(ppu_thread& ppu, u32 addr, u32 size)
 
 error_code sys_vm_unlock(ppu_thread& ppu, u32 addr, u32 size)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_unlock(addr=0x%x, size=0x%x)", addr, size);
 
@@ -283,7 +283,7 @@ error_code sys_vm_unlock(ppu_thread& ppu, u32 addr, u32 size)
 
 error_code sys_vm_touch(ppu_thread& ppu, u32 addr, u32 size)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_touch(addr=0x%x, size=0x%x)", addr, size);
 
@@ -304,7 +304,7 @@ error_code sys_vm_touch(ppu_thread& ppu, u32 addr, u32 size)
 
 error_code sys_vm_flush(ppu_thread& ppu, u32 addr, u32 size)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_flush(addr=0x%x, size=0x%x)", addr, size);
 
@@ -325,7 +325,7 @@ error_code sys_vm_flush(ppu_thread& ppu, u32 addr, u32 size)
 
 error_code sys_vm_invalidate(ppu_thread& ppu, u32 addr, u32 size)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_invalidate(addr=0x%x, size=0x%x)", addr, size);
 
@@ -346,7 +346,7 @@ error_code sys_vm_invalidate(ppu_thread& ppu, u32 addr, u32 size)
 
 error_code sys_vm_store(ppu_thread& ppu, u32 addr, u32 size)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_store(addr=0x%x, size=0x%x)", addr, size);
 
@@ -367,7 +367,7 @@ error_code sys_vm_store(ppu_thread& ppu, u32 addr, u32 size)
 
 error_code sys_vm_sync(ppu_thread& ppu, u32 addr, u32 size)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_sync(addr=0x%x, size=0x%x)", addr, size);
 
@@ -388,7 +388,7 @@ error_code sys_vm_sync(ppu_thread& ppu, u32 addr, u32 size)
 
 error_code sys_vm_test(ppu_thread& ppu, u32 addr, u32 size, vm::ptr<u64> result)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_test(addr=0x%x, size=0x%x, result=*0x%x)", addr, size, result);
 
@@ -406,7 +406,7 @@ error_code sys_vm_test(ppu_thread& ppu, u32 addr, u32 size, vm::ptr<u64> result)
 
 error_code sys_vm_get_statistics(ppu_thread& ppu, u32 addr, vm::ptr<sys_vm_statistics_t> stat)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_vm.warning("sys_vm_get_statistics(addr=0x%x, stat=*0x%x)", addr, stat);
 

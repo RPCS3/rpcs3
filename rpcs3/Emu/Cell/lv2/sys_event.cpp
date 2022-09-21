@@ -183,7 +183,7 @@ CellError lv2_event_queue::send(lv2_event event)
 
 error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 ipc_key, s32 size)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_event.warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, ipc_key=0x%llx, size=%d)", equeue_id, attr, ipc_key, size);
 
@@ -226,7 +226,7 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 
 error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_event.warning("sys_event_queue_destroy(equeue_id=0x%x, mode=%d)", equeue_id, mode);
 
@@ -365,7 +365,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_event.trace("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
 
@@ -406,7 +406,7 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 
 error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_event.trace("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
@@ -463,7 +463,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 	// If cancelled, gpr[3] will be non-zero. Other registers must contain event data.
 	while (auto state = +ppu.state)
 	{
-		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
+		if (state & cpu_flag::signal)
 		{
 			break;
 		}
@@ -526,7 +526,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 error_code sys_event_queue_drain(ppu_thread& ppu, u32 equeue_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_event.trace("sys_event_queue_drain(equeue_id=0x%x)", equeue_id);
 
@@ -547,7 +547,7 @@ error_code sys_event_queue_drain(ppu_thread& ppu, u32 equeue_id)
 
 error_code sys_event_port_create(cpu_thread& cpu, vm::ptr<u32> eport_id, s32 port_type, u64 name)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_event.warning("sys_event_port_create(eport_id=*0x%x, port_type=%d, name=0x%llx)", eport_id, port_type, name);
 
@@ -568,7 +568,7 @@ error_code sys_event_port_create(cpu_thread& cpu, vm::ptr<u32> eport_id, s32 por
 
 error_code sys_event_port_destroy(ppu_thread& ppu, u32 eport_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_event.warning("sys_event_port_destroy(eport_id=0x%x)", eport_id);
 
@@ -597,7 +597,7 @@ error_code sys_event_port_destroy(ppu_thread& ppu, u32 eport_id)
 
 error_code sys_event_port_connect_local(cpu_thread& cpu, u32 eport_id, u32 equeue_id)
 {
-	cpu.state += cpu_flag::wait;
+	cpu.state += cpu_flag::unmem;
 
 	sys_event.warning("sys_event_port_connect_local(eport_id=0x%x, equeue_id=0x%x)", eport_id, equeue_id);
 
@@ -627,7 +627,7 @@ error_code sys_event_port_connect_local(cpu_thread& cpu, u32 eport_id, u32 equeu
 
 error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_event.warning("sys_event_port_connect_ipc(eport_id=0x%x, ipc_key=0x%x)", eport_id, ipc_key);
 
@@ -664,7 +664,7 @@ error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key
 
 error_code sys_event_port_disconnect(ppu_thread& ppu, u32 eport_id)
 {
-	ppu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::unmem;
 
 	sys_event.warning("sys_event_port_disconnect(eport_id=0x%x)", eport_id);
 
@@ -693,7 +693,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
 	if (auto cpu = get_current_cpu_thread())
 	{
-		cpu->state += cpu_flag::wait;
+		cpu->state += cpu_flag::unmem;
 	}
 
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);

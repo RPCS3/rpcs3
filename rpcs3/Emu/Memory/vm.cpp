@@ -165,7 +165,7 @@ namespace vm
 
 		if (_cpu)
 		{
-			_cpu->state += cpu_flag::wait + cpu_flag::temp;
+			_cpu->state += cpu_flag::unmem + cpu_flag::temp;
 		}
 
 		for (u64 i = 0;; i++)
@@ -382,7 +382,7 @@ namespace vm
 
 	bool temporary_unlock(cpu_thread& cpu) noexcept
 	{
-		bs_t<cpu_flag> add_state = cpu_flag::wait;
+		bs_t<cpu_flag> add_state = cpu_flag::unmem;
 
 		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
 		{
@@ -417,13 +417,13 @@ namespace vm
 
 		if (cpu)
 		{
-			if (!g_tls_locked || *g_tls_locked != cpu || cpu->state & cpu_flag::wait)
+			if (!g_tls_locked || *g_tls_locked != cpu || cpu->state & (cpu_flag::unmem + cpu_flag::wait))
 			{
 				cpu = nullptr;
 			}
 			else
 			{
-				cpu->state += cpu_flag::wait;
+				cpu->state += cpu_flag::unmem;
 			}
 		}
 
@@ -500,7 +500,7 @@ namespace vm
 			{
 				if (auto ptr = +*lock)
 				{
-					while (!(ptr->state & cpu_flag::wait))
+					while (!(ptr->state & (cpu_flag::unmem + cpu_flag::wait)))
 					{
 						utils::pause();
 					}
@@ -510,7 +510,7 @@ namespace vm
 
 		if (cpu)
 		{
-			cpu->state -= cpu_flag::memory + cpu_flag::wait;
+			cpu->state -= cpu_flag::memory + cpu_flag::unmem;
 		}
 	}
 

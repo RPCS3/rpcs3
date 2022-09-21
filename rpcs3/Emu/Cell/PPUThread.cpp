@@ -1501,8 +1501,8 @@ void ppu_thread::cpu_sleep()
 	// Clear reservation
 	raddr = 0;
 
-	// Setup wait flag and memory flags to relock itself
-	state += g_use_rtm ? cpu_flag::wait : cpu_flag::wait + cpu_flag::memory;
+	// Setup unmem flag and memory flags to relock itself
+	state += g_use_rtm ? cpu_flag::unmem : cpu_flag::unmem + cpu_flag::memory;
 
 	if (auto ptr = vm::g_tls_locked)
 	{

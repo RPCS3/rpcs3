@@ -1341,7 +1341,7 @@ bool lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout, u64 current_time)
 		{
 			if (!(val & cpu_flag::signal))
 			{
-				val += cpu_flag::suspend;
+				val += cpu_flag::suspend + cpu_flag::wait;
 
 				// Flag used for forced timeout notification
 				ensure(!timeout || !(val & cpu_flag::notify));
@@ -1471,6 +1471,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 				}
 
 				ppu->start_time = get_guest_system_time();
+				ppu->state += cpu_flag::suspend + cpu_flag::wait;
 				break;
 			}
 
@@ -1554,12 +1555,16 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	// Suspend threads if necessary
 	for (usz i = 0, thread_count = g_cfg.core.ppu_threads; target; target = target->next_ppu, i++)
 	{
-		if (i >= thread_count && cpu_flag::suspend - target->state)
+		if (i >= thread_count && cpu_flag::suspend - target->state && target->state.atomic_op([](bs_t<cpu_flag>& state)
+		{
+			ensure(cpu_flag::suspend - state);
+			state += cpu_flag::suspend;
+			return state.none_of(cpu_flag::wait + cpu_flag::signal);
+		}))
 		{
 			ppu_log.trace("suspend(): %s", target->id);
 			target->ack_suspend = true;
 			g_pending++;
-			ensure(!target->state.test_and_set(cpu_flag::suspend));
 
 			if (is_paused(target->state - cpu_flag::suspend))
 			{
@@ -1605,8 +1610,12 @@ void lv2_obj::schedule_all(u64 current_time)
 			if (target->state & cpu_flag::suspend)
 			{
 				ppu_log.trace("schedule(): %s", target->id);
-				target->state.atomic_op(FN(x += cpu_flag::signal, x -= cpu_flag::suspend));
 				target->start_time = 0;
+
+				if ((cpu_flag::signal + cpu_flag::wait) - target->state.fetch_op(FN(x += cpu_flag::signal, x -= cpu_flag::suspend, void())) != cpu_flag::signal)
+				{
+					continue;
+				}
 
 				if (notify_later_idx == std::size(g_to_notify))
 				{

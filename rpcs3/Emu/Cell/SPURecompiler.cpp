@@ -6195,7 +6195,7 @@ public:
 
 		if (res > 1500 && g_cfg.core.spu_loop_detection)
 		{
-			_spu->state += cpu_flag::wait;
+			_spu->state += cpu_flag::unmem;
 			std::this_thread::yield();
 			static_cast<void>(_spu->test_stopped());
 		}
