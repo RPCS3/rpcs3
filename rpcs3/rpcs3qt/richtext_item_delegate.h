@@ -37,7 +37,14 @@ public:
 
 		// Adjust our painter parameters with some magic that looks good.
 		// This is necessary so that we don't draw on top of the optional widget.
-		const int margin = (option.rect.height() - opt.fontMetrics.height() - 4);
+		// If you're not happy with this code don't hesitate to contact Megamouse
+#ifdef __linux__
+		static constexpr int margin_adjustement = 12;
+#else
+		static constexpr int margin_adjustement = 4;
+#endif
+
+		const int margin = (option.rect.height() - opt.fontMetrics.height() - margin_adjustement);
 		QRect text_rect  = style->subElementRect(QStyle::SE_ItemViewItemText, &opt, nullptr);
 
 		if (index.column() != 0)
@@ -48,7 +55,10 @@ public:
 		text_rect.setTop(text_rect.top() + margin);
 
 		painter->translate(text_rect.topLeft());
+
+#ifndef __linux__
 		painter->setClipRect(text_rect.translated(-text_rect.topLeft()));
+#endif
 
 		// Create a context for our painter
 		QAbstractTextDocumentLayout::PaintContext context;
