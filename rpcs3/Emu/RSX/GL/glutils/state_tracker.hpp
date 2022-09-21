@@ -9,23 +9,21 @@ namespace gl
 {
 	class driver_state
 	{
-		const u32 DEPTH_BOUNDS_MIN   = 0xFFFF0001;
-		const u32 DEPTH_BOUNDS_MAX   = 0xFFFF0002;
-		const u32 DEPTH_RANGE_MIN    = 0xFFFF0003;
-		const u32 DEPTH_RANGE_MAX    = 0xFFFF0004;
+		const u32 DEPTH_BOUNDS       = 0xFFFF0001;
+		const u32 DEPTH_RANGE        = 0xFFFF0004;
 		const u32 STENCIL_FRONT_FUNC = 0xFFFF0005;
 		const u32 STENCIL_BACK_FUNC  = 0xFFFF0006;
 		const u32 STENCIL_FRONT_OP   = 0xFFFF0007;
 		const u32 STENCIL_BACK_OP    = 0xFFFF0008;
 		const u32 STENCIL_BACK_MASK  = 0xFFFF0009;
 
-		std::unordered_map<GLenum, u32> properties = {};
-		std::unordered_map<GLenum, std::array<u32, 4>> indexed_properties = {};
+		std::unordered_map<GLenum, u64> properties = {};
+		std::unordered_map<GLenum, std::array<u64, 4>> indexed_properties = {};
 
 		GLuint current_program = GL_NONE;
 		std::array<std::unordered_map<GLenum, GLuint>, 48> bound_textures{ {} };
 
-		bool test_and_set_property(GLenum property, u32 test)
+		bool test_and_set_property(GLenum property, u64 test)
 		{
 			auto found = properties.find(property);
 			if (found != properties.end() && found->second == test)
@@ -35,7 +33,7 @@ namespace gl
 			return false;
 		}
 
-		bool test_and_set_property(GLenum property, u32 test, GLint index)
+		bool test_and_set_property(GLenum property, u64 test, GLint index)
 		{
 			auto found = indexed_properties.find(property);
 			if (found != indexed_properties.end())
@@ -135,7 +133,7 @@ namespace gl
 
 		void clear_depth(GLfloat depth)
 		{
-			u32 value = std::bit_cast<u32>(depth);
+			const u32 value = std::bit_cast<u32>(depth);
 			if (!test_and_set_property(GL_DEPTH_CLEAR_VALUE, value))
 			{
 				glClearDepth(depth);
@@ -187,7 +185,7 @@ namespace gl
 
 		void stencil_op(GLenum fail, GLenum zfail, GLenum zpass)
 		{
-			const u32 value = (fail & 0xFF) << 16 | (zfail & 0xFF) << 8 | (zpass & 0xFF);
+			const u64 value = static_cast<u64>(fail) << 32 | static_cast<u64>(zfail) << 16 | static_cast<u64>(zpass);
 			if (!test_and_set_property(STENCIL_FRONT_OP, value))
 			{
 				glStencilOp(fail, zfail, zpass);
@@ -196,7 +194,7 @@ namespace gl
 
 		void stencil_back_op(GLenum fail, GLenum zfail, GLenum zpass)
 		{
-			const u32 value = (fail & 0xFF) << 16 | (zfail & 0xFF) << 8 | (zpass & 0xFF);
+			const u64 value = static_cast<u64>(fail) << 32 | static_cast<u64>(zfail) << 16 | static_cast<u64>(zpass);
 			if (!test_and_set_property(STENCIL_FRONT_OP, value))
 			{
 				glStencilOpSeparate(GL_BACK, fail, zfail, zpass);
@@ -224,7 +222,7 @@ namespace gl
 
 		void clear_color(u8 r, u8 g, u8 b, u8 a)
 		{
-			u32 value = u32{ r } | u32{ g } << 8 | u32{ b } << 16 | u32{ a } << 24;
+			const u32 value = u32{ r } | u32{ g } << 8 | u32{ b } << 16 | u32{ a } << 24;
 			if (!test_and_set_property(GL_COLOR_CLEAR_VALUE, value))
 			{
 				glClearColor(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
@@ -238,10 +236,8 @@ namespace gl
 
 		void depth_bounds(float min, float max)
 		{
-			u32 depth_min = std::bit_cast<u32>(min);
-			u32 depth_max = std::bit_cast<u32>(max);
-
-			if (!test_and_set_property(DEPTH_BOUNDS_MIN, depth_min) || !test_and_set_property(DEPTH_BOUNDS_MAX, depth_max))
+			const u64 value = (static_cast<u64>(std::bit_cast<u32>(max)) << 32) | std::bit_cast<u32>(min);
+			if (!test_and_set_property(DEPTH_BOUNDS, value))
 			{
 				if (get_driver_caps().NV_depth_buffer_float_supported)
 				{
@@ -256,10 +252,8 @@ namespace gl
 
 		void depth_range(float min, float max)
 		{
-			u32 depth_min = std::bit_cast<u32>(min);
-			u32 depth_max = std::bit_cast<u32>(max);
-
-			if (!test_and_set_property(DEPTH_RANGE_MIN, depth_min) || !test_and_set_property(DEPTH_RANGE_MAX, depth_max))
+			const u64 value = (static_cast<u64>(std::bit_cast<u32>(max)) << 32) | std::bit_cast<u32>(min);
+			if (!test_and_set_property(DEPTH_RANGE, value))
 			{
 				if (get_driver_caps().NV_depth_buffer_float_supported)
 				{
@@ -283,7 +277,6 @@ namespace gl
 		void line_width(GLfloat width)
 		{
 			u32 value = std::bit_cast<u32>(width);
-
 			if (!test_and_set_property(GL_LINE_WIDTH, value))
 			{
 				glLineWidth(width);
@@ -308,10 +301,8 @@ namespace gl
 
 		void polygon_offset(float factor, float units)
 		{
-			u32 _units = std::bit_cast<u32>(units);
-			u32 _factor = std::bit_cast<u32>(factor);
-
-			if (!test_and_set_property(GL_POLYGON_OFFSET_UNITS, _units) || !test_and_set_property(GL_POLYGON_OFFSET_FACTOR, _factor))
+			const u64 value = (static_cast<u64>(std::bit_cast<u32>(units)) << 32) | std::bit_cast<u32>(factor);
+			if (!test_and_set_property(GL_POLYGON_OFFSET_FILL, value))
 			{
 				glPolygonOffset(factor, units);
 			}
