@@ -1038,7 +1038,7 @@ namespace rsx
 				result.element_size = word_size;
 				result.block_length = words_per_block;
 
-				bool require_cpu_swizzle = !caps.supports_hw_deswizzle;
+				bool require_cpu_swizzle = !caps.supports_hw_deswizzle && is_swizzled;
 				bool require_cpu_byteswap = !caps.supports_byteswap;
 
 				if (is_swizzled && caps.supports_hw_deswizzle)
