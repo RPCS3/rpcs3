@@ -289,10 +289,10 @@ namespace gl
 			}
 
 			if (auto as_vi = dynamic_cast<const gl::viewable_image*>(src);
-				gl::get_driver_caps().vendor_AMD &&
 				src->get_target() == gl::texture::target::texture2D &&
 				as_vi)
 			{
+				// RGBA8 <-> D24X8 bitcasts are some very common conversions due to some PS3 coding hacks & workarounds.
 				switch (src->get_internal_format())
 				{
 				case gl::texture::internal_format::depth24_stencil8:
@@ -337,8 +337,16 @@ namespace gl
 			mem_info->memory_required = (mem_info->image_size_in_texels * 6);
 			ensure(!initialize_scratch_mem());
 
-			get_compute_task<cs_fconvert_task<f32, f16, false, true>>()->run(cmd, dst, dst_offset,
-				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
+			if (pack_info.swap_bytes) [[ likely ]]
+			{
+				get_compute_task<cs_fconvert_task<f32, f16, false, true>>()->run(cmd, dst, dst_offset,
+					static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
+			}
+			else
+			{
+				get_compute_task<cs_fconvert_task<f32, f16, false, false>>()->run(cmd, dst, dst_offset,
+					static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
+			}
 			result = reinterpret_cast<void*>(mem_info->image_size_in_bytes + dst_offset);
 		}
 		else if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
@@ -347,8 +355,16 @@ namespace gl
 			mem_info->memory_required = (mem_info->image_size_in_texels * 12);
 			ensure(!initialize_scratch_mem());
 
-			get_compute_task<cs_shuffle_d32fx8_to_x8d24f>()->run(cmd, dst, dst_offset,
-				static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_texels));
+			if (pack_info.swap_bytes)
+			{
+				get_compute_task<cs_shuffle_d32fx8_to_x8d24f<true>>()->run(cmd, dst, dst_offset,
+					static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_texels));
+			}
+			else
+			{
+				get_compute_task<cs_shuffle_d32fx8_to_x8d24f<false>>()->run(cmd, dst, dst_offset,
+					static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_texels));
+			}
 			result = reinterpret_cast<void*>(mem_info->image_size_in_bytes + dst_offset);
 		}
 		else
@@ -501,7 +517,6 @@ namespace gl
 		else
 		{
 			// Stencil format on NV. Use driver upload path
-
 			if (unpack_info.type == GL_UNSIGNED_INT_24_8)
 			{
 				if (auto job = get_trivial_transform_job(unpack_info))
@@ -517,7 +532,15 @@ namespace gl
 			{
 				mem_info->memory_required = (mem_info->image_size_in_texels * 8);
 				initialize_scratch_mem();
-				get_compute_task<cs_shuffle_x8d24f_to_d32fx8>()->run(cmd, transfer_buf, in_offset, out_offset, static_cast<u32>(mem_info->image_size_in_texels));
+
+				if (unpack_info.swap_bytes)
+				{
+					get_compute_task<cs_shuffle_x8d24f_to_d32fx8<true>>()->run(cmd, transfer_buf, in_offset, out_offset, static_cast<u32>(mem_info->image_size_in_texels));
+				}
+				else
+				{
+					get_compute_task<cs_shuffle_x8d24f_to_d32fx8<false>>()->run(cmd, transfer_buf, in_offset, out_offset, static_cast<u32>(mem_info->image_size_in_texels));
+				}
 			}
 			else
 			{

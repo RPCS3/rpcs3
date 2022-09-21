@@ -14,8 +14,8 @@ R"(
 #define FMT_GL_BGR5_A1                0x99F0
 #define FMT_GL_RGBA4                  0x8056
 
-#define bswap_u16(bits) (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8
-#define bswap_u32(bits) (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24
+#define bswap_u16(bits) (bits & 0xFFu) << 8u | (bits & 0xFF00u) >> 8u | (bits & 0xFF0000u) << 8u | (bits & 0xFF000000u) >> 8u
+#define bswap_u32(bits) (bits & 0xFFu) << 24u | (bits & 0xFF00u) << 8u | (bits & 0xFF0000u) >> 8u | (bits & 0xFF000000u) >> 24u
 
 layout(location=0) out vec4 outColor;
 
@@ -73,18 +73,10 @@ uint readUint32(const in uint address)
 
 uvec2 readUint24_8(const in uint address)
 {
-	const uint raw_value = data[address];
-	const uint stencil = bitfieldExtract(raw_value, 0, 8);
-
-	if (swap_bytes != 0)
-	{
-		const uint depth = min(bswap_u32(raw_value), 0xffffff);
-		return uvec2(depth, stencil);
-	}
-
+	const uint raw_value = readUint32(address);
 	return uvec2(
 		bitfieldExtract(raw_value, 8, 24),
-		stencil
+		bitfieldExtract(raw_value, 0, 8)
 	);
 }
 
