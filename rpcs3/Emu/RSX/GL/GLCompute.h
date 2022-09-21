@@ -78,6 +78,7 @@ namespace gl
 		}
 	};
 
+	template <bool SwapBytes>
 	struct cs_shuffle_d32fx8_to_x8d24f : cs_shuffle_base
 	{
 		u32 m_ssbo_length = 0;
@@ -89,6 +90,7 @@ namespace gl
 		void run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels);
 	};
 
+	template <bool SwapBytes>
 	struct cs_shuffle_x8d24f_to_d32fx8 : cs_shuffle_base
 	{
 		u32 m_ssbo_length = 0;
