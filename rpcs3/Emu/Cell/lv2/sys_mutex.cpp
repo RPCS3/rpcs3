@@ -92,6 +92,7 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 		return error;
 	}
 
+	ppu.check_state();
 	*mutex_id = idm::last_id();
 	return CELL_OK;
 }

@@ -50,6 +50,7 @@ error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmut
 
 	if (const u32 id = idm::make<lv2_obj, lv2_lwcond>(name, lwmutex_id, protocol, control))
 	{
+		ppu.check_state();
 		*lwcond_id = id;
 		return CELL_OK;
 	}

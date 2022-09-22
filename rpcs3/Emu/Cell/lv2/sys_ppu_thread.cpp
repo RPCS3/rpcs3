@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_ppu_thread.h"
 
 #include "Emu/System.h"
@@ -488,8 +488,10 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		return CELL_EAGAIN;
 	}
 
-	*thread_id = tid;
 	sys_ppu_thread.warning(u8"_sys_ppu_thread_create(): Thread “%s” created (id=0x%x, func=*0x%x, rtoc=0x%x, user-tls=0x%x)", ppu_name, tid, entry.addr, entry.rtoc, tls);
+
+	ppu.check_state();
+	*thread_id = tid;
 	return CELL_OK;
 }
 
@@ -534,6 +536,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 		// Dirty hack for sound: confirm the creation of _mxr000 event queue
 		if (*thread->ppu_tname.load() == "_cellsurMixerMain"sv)
 		{
+			ppu.check_state();
 			lv2_obj::sleep(ppu);
 
 			while (!idm::select<lv2_obj, lv2_event_queue>([](u32, lv2_event_queue& eq)

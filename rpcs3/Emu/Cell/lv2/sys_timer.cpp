@@ -163,6 +163,7 @@ error_code sys_timer_create(ppu_thread& ppu, vm::ptr<u32> timer_id)
 			}
 		}
 
+		ppu.check_state();
 		*timer_id = idm::last_id();
 		return CELL_OK;
 	}
@@ -226,6 +227,7 @@ error_code sys_timer_get_information(ppu_thread& ppu, u32 timer_id, vm::ptr<sys_
 		return CELL_ESRCH;
 	}
 
+	ppu.check_state();
 	std::memcpy(info.get_ptr(), &_info, info.size());
 	return CELL_OK;
 }

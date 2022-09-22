@@ -99,6 +99,7 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 		return error;
 	}
 
+	ppu.check_state();
 	*cond_id = idm::last_id();
 	return CELL_OK;
 }

@@ -174,6 +174,7 @@ error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u6
 	{
 		if (const auto area = vm::find_map(static_cast<u32>(size), static_cast<u32>(alignment), flags & SYS_MEMORY_PAGE_SIZE_MASK))
 		{
+			ppu.check_state();
 			*alloc_addr = area->addr;
 			return CELL_OK;
 		}
@@ -246,6 +247,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 
 		return error;
 	}
 
+	ppu.check_state();
 	*mem_id = idm::last_id();
 	return CELL_OK;
 }
@@ -301,6 +303,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 		return error;
 	}
 
+	ppu.check_state();
 	*mem_id = idm::last_id();
 	return CELL_OK;
 }
@@ -399,6 +402,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 		return error;
 	}
 
+	ppu.check_state();
 	*mem_id = idm::last_id();
 	return CELL_OK;
 }
@@ -496,6 +500,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 		return error;
 	}
 
+	ppu.check_state();
 	*mem_id = idm::last_id();
 	return CELL_OK;
 }
@@ -718,6 +723,8 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 	}
 
 	vm::lock_sudo(addr, mem->size);
+
+	ppu.check_state();
 	*alloc_addr = addr;
 	return CELL_OK;
 }
@@ -763,6 +770,7 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 	}
 
 	// Write out the ID
+	ppu.check_state();
 	*mem_id = mem.ret;
 
 	// Acknowledge
