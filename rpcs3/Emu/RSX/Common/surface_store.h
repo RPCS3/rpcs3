@@ -718,7 +718,8 @@ namespace rsx
 				while (length >= 8)
 				{
 					auto& value = *utils::bless<u64>(dst_ptr);
-					mask |= (~value);                          // If the value is not all 1s, set valid to true
+					const u64 block_mask = ~value;              // If the value is not all 1s, set valid to true
+					mask |= block_mask;
 					value = umax;
 
 					dst_ptr += 8;
@@ -728,7 +729,8 @@ namespace rsx
 				if (length >= 4)
 				{
 					auto& value = *utils::bless<u32>(dst_ptr);
-					mask |= (~value);
+					const u32 block_mask = ~value;
+					mask |= block_mask;
 					value = umax;
 
 					dst_ptr += 4;
@@ -738,7 +740,8 @@ namespace rsx
 				if (length >= 2)
 				{
 					auto& value = *utils::bless<u16>(dst_ptr);
-					mask |= (~value);
+					const u16 block_mask = ~value;
+					mask |= block_mask;
 					value = umax;
 
 					dst_ptr += 2;
@@ -748,7 +751,8 @@ namespace rsx
 				if (length)
 				{
 					auto& value = *dst_ptr;
-					mask |= (~value);
+					const u8 block_mask = ~value;
+					mask |= block_mask;
 					value = umax;
 				}
 
