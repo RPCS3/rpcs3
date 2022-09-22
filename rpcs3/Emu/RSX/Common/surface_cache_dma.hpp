@@ -43,7 +43,7 @@ namespace rsx
 	public:
 		surface_cache_dma()
 		{
-			for (usz i = 0; i < m_buffer_list.size(); ++i)
+			for (u32 i = 0; i < ::size32(m_buffer_list); ++i)
 			{
 				m_buffer_list[i].id = i;
 			}
