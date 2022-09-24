@@ -1722,6 +1722,20 @@ void spu_thread::serialize_common(utils::serial& ar)
 		, run_ctrl, exit_status.data, status_npc.raw().status, ch_dec_start_timestamp, ch_dec_value, is_dec_frozen);
 
 	ar(std::span(mfc_queue, mfc_size));
+
+	u32 vals[4]{};
+
+	if (ar.is_writing())
+	{
+		const u8 count = ch_in_mbox.try_read(vals);
+		ar(count, std::span(vals, count));
+	}
+	else
+	{
+		const u8 count = ar;
+		ar(std::span(vals, count));
+		ch_in_mbox.set_values(count, vals[0], vals[1], vals[2], vals[3]);
+	}
 }
 
 spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
@@ -1768,13 +1782,6 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 	range_lock = vm::alloc_range_lock();
 
 	serialize_common(ar);
-
-	{
-		u32 vals[4]{};
-		const u8 count = ar;
-		ar(std::span(vals, count));
-		ch_in_mbox.set_values(count, vals[0], vals[1], vals[2], vals[3]);
-	}
 
 	status_npc.raw().npc = pc | u8{interrupts_enabled};
 
@@ -1826,12 +1833,6 @@ void spu_thread::save(utils::serial& ar)
 	ar(option, lv2_id, *spu_tname.load());
 
 	serialize_common(ar);
-
-	{
-		u32 vals[4]{};
-		const u8 count = ch_in_mbox.try_read(vals);
-		ar(count, std::span(vals, count));
-	}
 
 	if (get_type() == spu_type::threaded)
 	{
@@ -5339,8 +5340,10 @@ void spu_thread::fast_call(u32 ls_addr)
 	gpr[1]._u32[3] = old_stack;
 }
 
-bool spu_thread::capture_local_storage() const
+bool spu_thread::capture_state()
 {
+	ensure(state & cpu_flag::wait);
+
 	spu_exec_object spu_exec;
 
 	// Save data as an executable segment, even the SPU stack
@@ -5424,6 +5427,50 @@ bool spu_thread::capture_local_storage() const
 	}
 
 	spu_log.success("SPU Local Storage image saved to '%s'", elf_path);
+
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+	{
+		return true;
+	}
+
+	auto& rewind = rewind_captures[current_rewind_capture_idx++ % rewind_captures.size()];
+
+	if (rewind)
+	{
+		spu_log.error("Due to resource limits the 16th SPU rewind capture is being overwritten with a new one. (free the most recent by loading it)");
+		rewind.reset();
+	}
+
+	rewind = std::make_shared<utils::serial>();
+	(*rewind)(std::span(prog.bin.data(), prog.bin.size())); // span serialization doesn't remember size which is what we need
+	serialize_common(*rewind);
+
+	// TODO: Save and restore decrementer state properly
+
+	spu_log.success("SPU rewind image has been saved in memory. (%d free slots left)", std::count_if(rewind_captures.begin(), rewind_captures.end(), FN(!x.operator bool())));
+	return true;
+}
+
+bool spu_thread::try_load_debug_capture()
+{
+	if (cpu_flag::wait - state)
+	{
+		return false;
+	}
+
+	auto rewind = std::move(rewind_captures[(current_rewind_capture_idx - 1) % rewind_captures.size()]);
+
+	if (!rewind)
+	{
+		return false;
+	}
+
+	rewind->set_reading_state();
+	(*rewind)(std::span(ls, SPU_LS_SIZE)); // span serialization doesn't remember size which is what we need
+	serialize_common(*rewind);
+	current_rewind_capture_idx--;
+
+	spu_log.success("Last SPU rewind image has been loaded.");
 	return true;
 }
 
