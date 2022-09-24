@@ -678,7 +678,13 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 		if (g_cfg.savestate.suspend_emu && m_ar)
 		{
-			fs::remove_file(path);
+			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
+			old_path.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
+
+			if (fs::rename(path, old_path, true))
+			{
+				sys_log.notice("Savestate has been moved to path='%s'", old_path);
+			}
 		}
 
 		return error;
@@ -2532,6 +2538,14 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		}
 		else
 		{
+			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
+			old_path.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
+
+			if (fs::remove_file(old_path))
+			{
+				sys_log.success("Old savestate has been removed: path='%s'", old_path);	
+			}
+
 			sys_log.success("Saved savestate! path='%s'", path);
 		}
 
