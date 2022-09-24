@@ -813,7 +813,11 @@ public:
 
 	void fast_call(u32 ls_addr);
 
-	bool capture_local_storage() const;
+	std::array<std::shared_ptr<utils::serial>, 32> rewind_captures; // shared_ptr to avoid header inclusion
+	u8 current_rewind_capture_idx = 0;
+
+	bool capture_state();
+	bool try_load_debug_capture();
 	void wakeup_delay(u32 div = 1) const;
 
 	// Convert specified SPU LS address to a pointer of specified (possibly converted to BE) type
