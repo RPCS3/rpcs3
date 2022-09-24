@@ -544,7 +544,7 @@ void asmjit::simd_builder::vec_broadcast_gpr(u32 esize, const Operand& v, const 
 				this->emit(x86::Inst::kIdVpbroadcastw, v, v);
 			else
 			{
-				this->emit(x86::Inst::kIdVpunpcklwd, v, v);
+				this->emit(x86::Inst::kIdVpunpcklwd, v, v, v);
 				this->emit(x86::Inst::kIdVpshufd, v, v, Imm(0));
 			}
 		}
