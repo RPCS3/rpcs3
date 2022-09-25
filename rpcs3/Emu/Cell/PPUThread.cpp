@@ -1277,6 +1277,16 @@ std::string ppu_thread::dump_misc() const
 {
 	std::string ret = cpu_thread::dump_misc();
 
+	if (ack_suspend)
+	{
+		if (ret.ends_with("\n"))
+		{
+			ret.pop_back();
+		}
+
+		fmt::append(ret, " (LV2 suspended)\n");
+	}
+
 	fmt::append(ret, "Priority: %d\n", +prio);
 	fmt::append(ret, "Stack: 0x%x..0x%x\n", stack_addr, stack_addr + stack_size - 1);
 	fmt::append(ret, "Joiner: %s\n", joiner.load());
@@ -1296,7 +1306,7 @@ std::string ppu_thread::dump_misc() const
 			if (u64 v = gpr[i]; v != syscall_args[i - 3])
 				fmt::append(ret, " ** r%d: 0x%llx\n", i, v);
 	}
-	else if (is_paused())
+	else if (is_paused() || is_stopped())
 	{
 		if (const auto last_func = last_function)
 		{
