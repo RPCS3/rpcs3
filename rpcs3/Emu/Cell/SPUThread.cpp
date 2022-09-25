@@ -1694,6 +1694,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	if (g_cfg.core.mfc_debug)
 	{
 		utils::memory_commit(vm::g_stat_addr + vm_offset(), SPU_LS_SIZE);
+		mfc_history.resize(max_mfc_dump_idx);
 	}
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
@@ -1708,11 +1709,6 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	if (get_type() >= spu_type::raw)
 	{
 		cpu_init();
-	}
-
-	if (g_cfg.core.mfc_debug)
-	{
-		mfc_history.resize(max_mfc_dump_idx);
 	}
 
 	range_lock = vm::alloc_range_lock();
@@ -1757,6 +1753,7 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 	if (g_cfg.core.mfc_debug)
 	{
 		utils::memory_commit(vm::g_stat_addr + vm_offset(), SPU_LS_SIZE);
+		mfc_history.resize(max_mfc_dump_idx);
 	}
 
 	if (g_cfg.core.spu_decoder != spu_decoder_type::_static && g_cfg.core.spu_decoder != spu_decoder_type::dynamic)
@@ -1766,11 +1763,6 @@ spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
 			// Initialize stack mirror
 			std::memset(stack_mirror.data(), 0xff, sizeof(stack_mirror));
 		}
-	}
-
-	if (get_type() >= spu_type::raw)
-	{
-		cpu_init();
 	}
 
 	range_lock = vm::alloc_range_lock();
