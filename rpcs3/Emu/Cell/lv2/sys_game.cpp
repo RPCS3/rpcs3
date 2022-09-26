@@ -17,11 +17,11 @@ error_code _sys_game_board_storage_read(vm::ptr<u8> buffer, u8 code)
 	}
 
 	be_t<u64> psid[2] = { +g_cfg.sys.console_psid_high, +g_cfg.sys.console_psid_low };
-	u8 psid_bytes[16];
-	memcpy(psid_bytes, psid, 16);
+	u8* psid_bytes = reinterpret_cast<u8*>(psid);
 
 	switch (code)
 	{
+	case 0xC0:
 	case 0xF0:
 	{
 		u8 response[16] = { 0x01, 0xFC, 0x43, 0x50, 0xA7, 0x9B, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
