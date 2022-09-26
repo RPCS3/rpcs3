@@ -30,6 +30,7 @@
 #include <QVBoxLayout>
 #include <QTimer>
 #include <QCheckBox>
+#include <QMessageBox>
 #include <charconv>
 
 #include "util/asm.hpp"
@@ -324,6 +325,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			"\nKeys Ctrl+B: Open breakpoints settings."
 			"\nKeys Ctrl+S: Search memory string utility."
 			"\nKeys Alt+S: Capture SPU images of selected SPU."
+			"\nKeys Alt+R: Load last saved SPU state capture."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
 			"\nKey D: Also PPU calling history logger, interpreter and non-zero call history size must be used."
 			"\nKey E: Instruction Editor: click on the instruction you want to modify, then press E."
@@ -594,6 +596,12 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 			if (cpu->id_type() == 1 || cpu->id_type() == 2)
 			{
+				if (cpu->id_type() == 2 && modifiers & Qt::AltModifier)
+				{
+					static_cast<spu_thread*>(cpu)->try_load_debug_capture();
+					return;
+				}
+
 				if (!m_reg_editor)
 				{
 					m_reg_editor = new register_editor_dialog(this, m_disasm.get(), make_check_cpu(cpu));
@@ -615,7 +623,13 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					return;
 				}
 
-				static_cast<spu_thread*>(cpu)->capture_local_storage();
+				if (!cpu->state.all_of(cpu_flag::wait + cpu_flag::dbg_pause))
+				{
+					QMessageBox::warning(this, QObject::tr("Pause the SPU Thread!"), QObject::tr("Cannot perform SPU capture due to the thread need manual pausing!"));
+					return;
+				}
+
+				static_cast<spu_thread*>(cpu)->capture_state();
 			}
 			return;
 		}

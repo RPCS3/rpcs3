@@ -618,7 +618,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 
 	ReadjustTrophyTable();
 
-	const std::function<QPixmap(const int&)> get_scaled = [this, data = m_trophies_db.at(db_pos).get(), dpr, new_height](const int& trophy_id) -> QPixmap
+	const std::function<QPixmap(const int&)> get_scaled = [this, data = ::at32(m_trophies_db, db_pos).get(), dpr, new_height](const int& trophy_id) -> QPixmap
 	{
 		QPixmap icon;
 

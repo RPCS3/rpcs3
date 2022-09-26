@@ -38,7 +38,7 @@ namespace utils
 	{
 		if (metadata.contains(key))
 		{
-			return metadata.at(key);
+			return ::at32(metadata, key);
 		}
 
 		return def;
@@ -50,7 +50,7 @@ namespace utils
 		if (metadata.contains(key))
 		{
 			s64 result{};
-			if (try_to_int64(&result, metadata.at(key), smin, smax))
+			if (try_to_int64(&result, ::at32(metadata, key), smin, smax))
 			{
 				return result;
 			}
@@ -181,7 +181,7 @@ namespace utils
 		AVCodecContext* context = nullptr;
 		AVFrame* frame = nullptr;
 		SwrContext* swr = nullptr;
-	
+
 		~scoped_av()
 		{
 			// Clean up
@@ -358,14 +358,14 @@ namespace utils
 			}
 
 			duration_ms = stream->duration / 1000;
-			
-			AVPacket packet{};
-			av_init_packet(&packet);
+
+			AVPacket* packet = av_packet_alloc();
+			std::unique_ptr<AVPacket, decltype([](AVPacket* p){av_packet_unref(p);})> packet_(packet);
 
 			// Iterate through frames
-			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format, &packet) >= 0)
+			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format, packet) >= 0)
 			{
-				if (int err = avcodec_send_packet(av.context, &packet); err < 0)
+				if (int err = avcodec_send_packet(av.context, packet); err < 0)
 				{
 					media_log.error("audio_decoder: Queuing error: %d='%s'", err, av_error_to_string(err));
 					has_error = true;
@@ -468,9 +468,9 @@ namespace utils
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
 				ensure(m_context.current_track < m_context.playlist.size());
-				media_log.notice("audio_decoder: about to decode: %s (index=%d)", m_context.playlist.at(m_context.current_track), m_context.current_track);
+				media_log.notice("audio_decoder: about to decode: %s (index=%d)", ::at32(m_context.playlist, m_context.current_track), m_context.current_track);
 
-				decode_track(m_context.playlist.at(m_context.current_track));
+				decode_track(::at32(m_context.playlist, m_context.current_track));
 				track_fully_decoded = true;
 
 				if (has_error)

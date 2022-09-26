@@ -1613,8 +1613,6 @@ namespace vm
 			m_common->map_critical(vm::get_super_ptr(addr));
 		}
 
-		auto& m_map = (m.*block_map)();
-
 		std::shared_ptr<utils::shm> null_shm;
 
 		while (true)

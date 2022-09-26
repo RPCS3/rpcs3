@@ -642,7 +642,7 @@
     <ClCompile Include="Emu\Cell\Modules\sceNpPlus.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\Modules\sys_game.cpp">
+    <ClCompile Include="Emu\Cell\Modules\sys_game_.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\sys_heap.cpp">
@@ -1092,6 +1092,9 @@
     </ClCompile>
     <ClCompile Include="..\Utilities\stack_trace.cpp">
       <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_game.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2178,6 +2181,9 @@
     </ClInclude>
     <ClInclude Include="..\Utilities\stack_trace.h">
       <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_game.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

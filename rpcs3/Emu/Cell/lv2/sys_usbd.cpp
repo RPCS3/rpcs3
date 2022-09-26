@@ -276,6 +276,9 @@ usb_handler_thread::usb_handler_thread()
 		{
 			found_usio = true;
 		}
+		
+		// Densha de GO! controller
+		check_device(0x0AE4, 0x0004, 0x0004, "Densha de GO! Type 2 Controller");
 	}
 
 	libusb_free_device_list(list, 1);
@@ -481,7 +484,7 @@ bool usb_handler_thread::is_pipe(u32 pipe_id) const
 
 const UsbPipe& usb_handler_thread::get_pipe(u32 pipe_id) const
 {
-	return open_pipes.at(pipe_id);
+	return ::at32(open_pipes, pipe_id);
 }
 
 void usb_handler_thread::check_devices_vs_ldds()
@@ -619,11 +622,14 @@ error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
-	std::lock_guard lock(usbh.mutex);
+	{
+		std::lock_guard lock(usbh.mutex);
 
-	// Must not occur (lv2 allows multiple handles, cellUsbd does not)
-	ensure(!usbh.is_init.exchange(true));
+		// Must not occur (lv2 allows multiple handles, cellUsbd does not)
+		ensure(!usbh.is_init.exchange(true));
+	}
 
+	ppu.check_state();
 	*handle = 0x115B;
 
 	// TODO
@@ -888,6 +894,7 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 		thread_ctrl::wait_on(ppu.state, state);
 	}
 
+	ppu.check_state();
 	*arg1 = ppu.gpr[4];
 	*arg2 = ppu.gpr[5];
 	*arg3 = ppu.gpr[6];

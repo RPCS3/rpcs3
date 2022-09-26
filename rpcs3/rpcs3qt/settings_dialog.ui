@@ -194,6 +194,55 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_max_preempt_count">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Max Power Saving CPU-preemptions</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_max_preempt_layout">
+               <item>
+                <widget class="QSlider" name="maxPreemptCount">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="maxPreemptLayout" stretch="0,0">
+                 <item>
+                  <widget class="QLabel" name="preemptText">
+                   <property name="text">
+                    <string>0</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="preemptReset">
+                   <property name="text">
+                    <string>Reset</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <spacer name="coreTabMiddleLayoutSpacer">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -2506,13 +2555,6 @@
                 <widget class="QCheckBox" name="disableMslFastMath">
                  <property name="text">
                   <string>Disable MSL Fast Math</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="softwareVkSemaphore">
-                 <property name="text">
-                  <string>Software VkSemaphore</string>
                  </property>
                 </widget>
                </item>

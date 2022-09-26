@@ -88,33 +88,33 @@ void xinput_pad_handler::init_config(cfg_pad* cfg)
 	if (!cfg) return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = button_list.at(XInputKeyCodes::LSXNeg);
-	cfg->ls_down.def  = button_list.at(XInputKeyCodes::LSYNeg);
-	cfg->ls_right.def = button_list.at(XInputKeyCodes::LSXPos);
-	cfg->ls_up.def    = button_list.at(XInputKeyCodes::LSYPos);
-	cfg->rs_left.def  = button_list.at(XInputKeyCodes::RSXNeg);
-	cfg->rs_down.def  = button_list.at(XInputKeyCodes::RSYNeg);
-	cfg->rs_right.def = button_list.at(XInputKeyCodes::RSXPos);
-	cfg->rs_up.def    = button_list.at(XInputKeyCodes::RSYPos);
-	cfg->start.def    = button_list.at(XInputKeyCodes::Start);
-	cfg->select.def   = button_list.at(XInputKeyCodes::Back);
-	cfg->ps.def       = button_list.at(XInputKeyCodes::Guide);
-	cfg->square.def   = button_list.at(XInputKeyCodes::X);
-	cfg->cross.def    = button_list.at(XInputKeyCodes::A);
-	cfg->circle.def   = button_list.at(XInputKeyCodes::B);
-	cfg->triangle.def = button_list.at(XInputKeyCodes::Y);
-	cfg->left.def     = button_list.at(XInputKeyCodes::Left);
-	cfg->down.def     = button_list.at(XInputKeyCodes::Down);
-	cfg->right.def    = button_list.at(XInputKeyCodes::Right);
-	cfg->up.def       = button_list.at(XInputKeyCodes::Up);
-	cfg->r1.def       = button_list.at(XInputKeyCodes::RB);
-	cfg->r2.def       = button_list.at(XInputKeyCodes::RT);
-	cfg->r3.def       = button_list.at(XInputKeyCodes::RS);
-	cfg->l1.def       = button_list.at(XInputKeyCodes::LB);
-	cfg->l2.def       = button_list.at(XInputKeyCodes::LT);
-	cfg->l3.def       = button_list.at(XInputKeyCodes::LS);
+	cfg->ls_left.def  = ::at32(button_list, XInputKeyCodes::LSXNeg);
+	cfg->ls_down.def  = ::at32(button_list, XInputKeyCodes::LSYNeg);
+	cfg->ls_right.def = ::at32(button_list, XInputKeyCodes::LSXPos);
+	cfg->ls_up.def    = ::at32(button_list, XInputKeyCodes::LSYPos);
+	cfg->rs_left.def  = ::at32(button_list, XInputKeyCodes::RSXNeg);
+	cfg->rs_down.def  = ::at32(button_list, XInputKeyCodes::RSYNeg);
+	cfg->rs_right.def = ::at32(button_list, XInputKeyCodes::RSXPos);
+	cfg->rs_up.def    = ::at32(button_list, XInputKeyCodes::RSYPos);
+	cfg->start.def    = ::at32(button_list, XInputKeyCodes::Start);
+	cfg->select.def   = ::at32(button_list, XInputKeyCodes::Back);
+	cfg->ps.def       = ::at32(button_list, XInputKeyCodes::Guide);
+	cfg->square.def   = ::at32(button_list, XInputKeyCodes::X);
+	cfg->cross.def    = ::at32(button_list, XInputKeyCodes::A);
+	cfg->circle.def   = ::at32(button_list, XInputKeyCodes::B);
+	cfg->triangle.def = ::at32(button_list, XInputKeyCodes::Y);
+	cfg->left.def     = ::at32(button_list, XInputKeyCodes::Left);
+	cfg->down.def     = ::at32(button_list, XInputKeyCodes::Down);
+	cfg->right.def    = ::at32(button_list, XInputKeyCodes::Right);
+	cfg->up.def       = ::at32(button_list, XInputKeyCodes::Up);
+	cfg->r1.def       = ::at32(button_list, XInputKeyCodes::RB);
+	cfg->r2.def       = ::at32(button_list, XInputKeyCodes::RT);
+	cfg->r3.def       = ::at32(button_list, XInputKeyCodes::RS);
+	cfg->l1.def       = ::at32(button_list, XInputKeyCodes::LB);
+	cfg->l2.def       = ::at32(button_list, XInputKeyCodes::LT);
+	cfg->l3.def       = ::at32(button_list, XInputKeyCodes::LS);
 
-	cfg->pressure_intensity_button.def = button_list.at(XInputKeyCodes::None);
+	cfg->pressure_intensity_button.def = ::at32(button_list, XInputKeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;  // between 0 and 32767
@@ -329,12 +329,12 @@ xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_scp(co
 pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
 {
 	return {
-		data.at(LT),
-		data.at(RT),
-		data.at(LSXPos) - data.at(LSXNeg),
-		data.at(LSYPos) - data.at(LSYNeg),
-		data.at(RSXPos) - data.at(RSXNeg),
-		data.at(RSYPos) - data.at(RSYNeg)
+		::at32(data, LT),
+		::at32(data, RT),
+		::at32(data, LSXPos) - ::at32(data, LSXNeg),
+		::at32(data, LSYPos) - ::at32(data, LSYNeg),
+		::at32(data, RSXPos) - ::at32(data, RSXNeg),
+		::at32(data, RSYPos) - ::at32(data, RSYNeg)
 	};
 }
 

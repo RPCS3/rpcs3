@@ -9,7 +9,7 @@ namespace gl
 {
 	blitter* g_hw_blitter = nullptr;
 
-	void blitter::copy_image(gl::command_context& cmd, const texture* src, const texture* dst, int src_level, int dst_level, const position3i& src_offset, const position3i& dst_offset, const size3i& size) const
+	void blitter::copy_image(gl::command_context&, const texture* src, const texture* dst, int src_level, int dst_level, const position3i& src_offset, const position3i& dst_offset, const size3i& size) const
 	{
 		ensure(src_level == 0);
 

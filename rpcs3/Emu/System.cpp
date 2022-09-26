@@ -170,6 +170,7 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
 
 	while (!wake_up && !IsStopped())
 	{
+		ensure(thread_ctrl::get_current());
 		thread_ctrl::wait_on(wake_up, false);
 	}
 }
@@ -677,7 +678,13 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 		if (g_cfg.savestate.suspend_emu && m_ar)
 		{
-			fs::remove_file(path);
+			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
+			old_path.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
+
+			if (fs::rename(path, old_path, true))
+			{
+				sys_log.notice("Savestate has been moved to path='%s'", old_path);
+			}
 		}
 
 		return error;
@@ -1161,9 +1168,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
+			g_fxo->init<ppu_module>();
 			vm::init();
-			g_fxo->init(false);
-			Run(false);
 			m_force_boot = false;
 
 			// Force LLVM recompiler
@@ -1189,12 +1195,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			argv[0] = "/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN";
 			m_dir = "/dev_bdvd/PS3_GAME";
 
-			g_fxo->init<named_thread>("SPRX Loader"sv, [this]
-			{
-				std::string path;
-				std::vector<std::string> dir_queue;
-				dir_queue.emplace_back(m_path + '/');
+			Run(false);
 
+			std::string path;
+			std::vector<std::string> dir_queue;
+			dir_queue.emplace_back(m_path + '/');
+
+			{
 				if (m_title_id.empty())
 				{
 					// Check if we are trying to scan vsh/module
@@ -1239,17 +1246,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 					const ppu_exec_object obj = src;
 
-					if (obj == elf_error::ok)
+					if (obj == elf_error::ok && ppu_load_exec(obj))
 					{
-						auto& _main = g_fxo->get<ppu_module>();
-
-						ppu_load_exec(obj);
-
-						_main.path = path;
-
-						ConfigurePPUCache();
-
-						ppu_initialize(_main);
+						g_fxo->get<ppu_module>().path = path;
 					}
 					else
 					{
@@ -1266,19 +1265,30 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				{
 					m_path = m_path_old; // Reset m_path to fix boot from gui
 					GetCallbacks().on_stop(); // Call on_stop to refresh gui
-					return;
+					return game_boot_result::no_errors;
+				}
+			}
+
+			if (auto& _main = g_fxo->get<ppu_module>(); _main.path.empty())
+			{
+				init_fxo_for_exec(nullptr, false);
+			}
+
+			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
+			{
+				if (auto& _main = g_fxo->get<ppu_module>(); !_main.path.empty())
+				{
+					ppu_initialize(_main);
 				}
 
 				ppu_precompile(dir_queue, nullptr);
 
 				// Exit "process"
-				CallFromMainThread([]
+				CallFromMainThread([this]
 				{
 					Emu.Kill(false);
+					m_path = m_path_old; // Reset m_path to fix boot from gui
 				});
-
-				m_path = m_path_old; // Reset m_path to fix boot from gui
-				GetCallbacks().on_stop(); // Call on_stop to refresh gui
 			});
 
 			return game_boot_result::no_errors;
@@ -2528,6 +2538,14 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		}
 		else
 		{
+			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
+			old_path.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
+
+			if (fs::remove_file(old_path))
+			{
+				sys_log.success("Old savestate has been removed: path='%s'", old_path);	
+			}
+
 			sys_log.success("Saved savestate! path='%s'", path);
 		}
 

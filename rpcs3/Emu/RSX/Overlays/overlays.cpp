@@ -176,7 +176,7 @@ namespace rsx
 						// Enable key repeat
 						std::vector<Keyboard>& keyboards = handler.GetKeyboards();
 						ensure(!keyboards.empty());
-						keyboards.at(0).m_key_repeat = true;
+						::at32(keyboards, 0).m_key_repeat = true;
 					}
 				}
 

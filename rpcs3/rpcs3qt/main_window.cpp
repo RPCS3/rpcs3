@@ -851,7 +851,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	{
 		progress = 0.;
 
-		const compat::package_info& package = packages.at(i);
+		const compat::package_info& package = ::at32(packages, i);
 		QString app_info = package.title; // This should always be non-empty
 
 		if (!package.title_id.isEmpty() || !package.version.isEmpty())
@@ -1762,11 +1762,11 @@ void main_window::BootRecentAction(const QAction* act)
 	int idx = -1;
 	for (int i = 0; i < m_rg_entries.count(); i++)
 	{
-		if (m_rg_entries.at(i).first == pth)
+		if (::at32(m_rg_entries, i).first == pth)
 		{
 			idx = i;
 			contains_path = true;
-			name = m_rg_entries.at(idx).second;
+			name = ::at32(m_rg_entries, idx).second;
 			break;
 		}
 	}
@@ -1794,7 +1794,7 @@ void main_window::BootRecentAction(const QAction* act)
 			for (int i = 0; i < m_recent_game_acts.count(); i++)
 			{
 				m_recent_game_acts[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
-				m_recent_game_acts[i]->setToolTip(m_rg_entries.at(i).second);
+				m_recent_game_acts[i]->setToolTip(::at32(m_rg_entries, i).second);
 				ui->bootRecentMenu->addAction(m_recent_game_acts[i]);
 			}
 
@@ -1905,7 +1905,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	for (int i = 0; i < m_recent_game_acts.count(); i++)
 	{
 		m_recent_game_acts[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
-		m_recent_game_acts[i]->setToolTip(m_rg_entries.at(i).second);
+		m_recent_game_acts[i]->setToolTip(::at32(m_rg_entries, i).second);
 		ui->bootRecentMenu->addAction(m_recent_game_acts[i]);
 	}
 

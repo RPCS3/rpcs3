@@ -1120,7 +1120,7 @@ error_code cellHttpAuthCacheExport(vm::ptr<u32> buf, u32 len, vm::ptr<u32> outsi
 		// TODO
 	}
 
-	u32 size = 0;
+	[[maybe_unused]] u32 size = 0;
 
 	// TODO
 
@@ -2786,7 +2786,7 @@ error_code cellHttpClientAddHeader(CellHttpClientId clientId, vm::cptr<CellHttpH
 error_code cellHttpClientDeleteHeader(CellHttpClientId clientId, vm::cptr<char> name)
 {
 	cellHttp.todo("cellHttpClientDeleteHeader(clientId=0x%x, name=%s)", clientId, name);
-	
+
 	auto& man = g_fxo->get<http_manager>();
 	std::lock_guard lock(man.mtx);
 
@@ -2806,7 +2806,7 @@ error_code cellHttpClientDeleteHeader(CellHttpClientId clientId, vm::cptr<char> 
 error_code cellHttpClientSetSslCallback(CellHttpClientId clientId, vm::ptr<CellHttpsSslCallback> cbfunc, vm::ptr<void> userArg)
 {
 	cellHttp.todo("cellHttpClientSetSslCallback(clientId=0x%x, cbfunc=*0x%x, userArg=*0x%x)", clientId, cbfunc, userArg);
-	
+
 	auto& man = g_fxo->get<http_manager>();
 	std::lock_guard lock(man.mtx);
 

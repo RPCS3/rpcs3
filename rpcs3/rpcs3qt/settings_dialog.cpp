@@ -1352,13 +1352,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 
 	m_emu_settings->EnhanceCheckBox(ui->disableMslFastMath, emu_settings_type::DisableMSLFastMath);
-	m_emu_settings->EnhanceCheckBox(ui->softwareVkSemaphore, emu_settings_type::SoftwareVkSemaphore);
 #ifdef __APPLE__
 	SubscribeTooltip(ui->disableMslFastMath, tooltips.settings.disable_msl_fast_math);
-	SubscribeTooltip(ui->softwareVkSemaphore, tooltips.settings.mvk_software_vksemaphore);
 #else
 	ui->disableMslFastMath->setVisible(false);
-	ui->softwareVkSemaphore->setVisible(false);
 #endif
 
 	// Comboboxes
@@ -1407,6 +1404,24 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->clockScaleReset, &QAbstractButton::clicked, [clocks_scale_def, this]()
 	{
 		ui->clockScale->setValue(clocks_scale_def);
+	});
+
+	EnhanceSlider(emu_settings_type::MaxPreemptCount, ui->maxPreemptCount, ui->preemptText, tr(reinterpret_cast<const char*>(u8"%0"), "Max CPU preempt count"));
+	SubscribeTooltip(ui->gb_max_preempt_count, tooltips.settings.max_cpu_preempt);
+
+#ifdef _WIN32
+	// Windows' thread execution slice is much larger than on other platforms
+	SnapSlider(ui->maxPreemptCount, 5);
+	ui->maxPreemptCount->setPageStep(20);
+#else
+	SnapSlider(ui->maxPreemptCount, 10);
+	ui->maxPreemptCount->setPageStep(50);
+#endif
+
+	const int preempt_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::MaxPreemptCount));
+	connect(ui->preemptReset, &QAbstractButton::clicked, [preempt_def, this]()
+	{
+		ui->maxPreemptCount->setValue(preempt_def);
 	});
 
 	if (!game) // Prevent users from doing dumb things

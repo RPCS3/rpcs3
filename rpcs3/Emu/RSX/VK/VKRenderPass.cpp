@@ -31,7 +31,7 @@ namespace vk
 		// Internal utils
 		static u64 encode_layout(VkImageLayout layout)
 		{
-			switch (layout)
+			switch (+layout)
 			{
 			case VK_IMAGE_LAYOUT_GENERAL:
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
@@ -77,7 +77,7 @@ namespace vk
 		// Encoders
 		inline void set_layout(u32 index, VkImageLayout layout)
 		{
-			switch (layout)
+			switch (+layout)
 			{
 			case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
 			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:

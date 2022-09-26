@@ -92,6 +92,8 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 
 [[noreturn]] extern void report_fatal_error(std::string_view _text)
 {
+	extern void jit_announce(uptr, usz, std::string_view);
+
 	std::string buf;
 
 	// Check if thread id is in string
@@ -124,6 +126,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
 #endif
 		std::cerr << fmt::format("RPCS3: %s\n", text);
+#ifdef __linux__
+		jit_announce(0, 0, "");
+#endif
 		std::abort();
 	}
 
@@ -207,6 +212,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 #endif
 	}
 
+#ifdef __linux__
+	jit_announce(0, 0, "");
+#endif
 	std::abort();
 }
 
@@ -529,7 +537,7 @@ int main(int argc, char** argv)
 	std::string argument_str;
 	for (int i = 0; i < argc; i++)
 	{
-		argument_str += "'" + std::string(argv[i]) + "'";
+		argument_str += '\'' + std::string(argv[i]) + '\'';
 		if (i != argc - 1) argument_str += " ";
 	}
 	sys_log.notice("argc: %d, argv: %s", argc, argument_str);
@@ -1109,7 +1117,7 @@ int main(int argc, char** argv)
 	}
 	else if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
-		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
+		sys_log.notice("Booting application from command line: %s", ::at32(args, 0).toStdString());
 
 		// Propagate command line arguments
 		std::vector<std::string> rpcs3_argv;
@@ -1139,7 +1147,7 @@ int main(int argc, char** argv)
 		}
 
 		// Postpone startup to main event loop
-		Emu.CallFromMainThread([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
+		Emu.CallFromMainThread([path = sstr(QFileInfo(::at32(args, 0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
 		{
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);

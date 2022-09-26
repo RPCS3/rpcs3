@@ -165,21 +165,21 @@ void GLGSRender::update_draw_state()
 
 		if (gl_state.enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
 		{
-			glStencilFunc(gl::comparison_op(rsx::method_registers.stencil_func()),
+			gl_state.stencil_func(gl::comparison_op(rsx::method_registers.stencil_func()),
 				rsx::method_registers.stencil_func_ref(),
 				rsx::method_registers.stencil_func_mask());
 
-			glStencilOp(gl::stencil_op(rsx::method_registers.stencil_op_fail()), gl::stencil_op(rsx::method_registers.stencil_op_zfail()),
+			gl_state.stencil_op(gl::stencil_op(rsx::method_registers.stencil_op_fail()), gl::stencil_op(rsx::method_registers.stencil_op_zfail()),
 				gl::stencil_op(rsx::method_registers.stencil_op_zpass()));
 
 			if (rsx::method_registers.two_sided_stencil_test_enabled())
 			{
-				glStencilMaskSeparate(GL_BACK, rsx::method_registers.back_stencil_mask());
+				gl_state.stencil_back_mask(rsx::method_registers.back_stencil_mask());
 
-				glStencilFuncSeparate(GL_BACK, gl::comparison_op(rsx::method_registers.back_stencil_func()),
+				gl_state.stencil_back_func(gl::comparison_op(rsx::method_registers.back_stencil_func()),
 					rsx::method_registers.back_stencil_func_ref(), rsx::method_registers.back_stencil_func_mask());
 
-				glStencilOpSeparate(GL_BACK, gl::stencil_op(rsx::method_registers.back_stencil_op_fail()),
+				gl_state.stencil_back_op(gl::stencil_op(rsx::method_registers.back_stencil_op_fail()),
 					gl::stencil_op(rsx::method_registers.back_stencil_op_zfail()), gl::stencil_op(rsx::method_registers.back_stencil_op_zpass()));
 			}
 		}
@@ -467,7 +467,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		for (auto& info : m_vertex_layout.interleaved_blocks)
 		{
 			const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
+			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info->base_offset), info->memory_location);
 		}
 	}
 

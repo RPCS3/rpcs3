@@ -219,7 +219,7 @@ public:
 			break;
 		}
 
-		gem_controller& controller = controllers.at(gem_num);
+		gem_controller& controller = ::at32(controllers, gem_num);
 		controller = {};
 		controller.sphere_rgb = gem_color::get_default_color(gem_num);
 
@@ -446,7 +446,7 @@ static bool check_gem_num(const u32 gem_num)
 	return gem_num < CELL_GEM_MAX_NUM;
 }
 
-static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_controller& controller, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_controller&, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
 {
 	const u16 x = static_cast<u16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
 	const u16 y = static_cast<u16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
@@ -563,7 +563,7 @@ static void ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
-	const auto& pad = handler->GetPads().at(port_no);
+	const auto& pad = ::at32(handler->GetPads(), port_no);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 	{
@@ -656,7 +656,7 @@ static void ds3_pos_to_gem_image_state(const u32 port_no, const gem_config::gem_
 	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
-	const auto& pad = handler->GetPads().at(port_no);
+	const auto& pad = ::at32(handler->GetPads(), port_no);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 	{
@@ -679,7 +679,7 @@ static void ds3_pos_to_gem_state(const u32 port_no, const gem_config::gem_contro
 	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
-	const auto& pad = handler->GetPads().at(port_no);
+	const auto& pad = ::at32(handler->GetPads(), port_no);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 	{
@@ -712,7 +712,7 @@ static void ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller
 	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
-	const auto& pad = handler->GetPads().at(port_no);
+	const auto& pad = ::at32(handler->GetPads(), port_no);
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 	{
@@ -769,7 +769,7 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 		return false;
 	}
 
-	const auto& mouse_data = handler.GetMice().at(mouse_no);
+	const auto& mouse_data = ::at32(handler.GetMice(), mouse_no);
 	const auto is_pressed = [&mouse_data](MouseButtonCodes button) -> bool { return !!(mouse_data.buttons & button); };
 
 	digital_buttons = 0;
@@ -822,7 +822,7 @@ static void mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::g
 		return;
 	}
 
-	const auto& mouse = handler.GetMice().at(mouse_no);
+	const auto& mouse = ::at32(handler.GetMice(), mouse_no);
 
 	pos_to_gem_image_state(mouse_no, controller, gem_image_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
 }
@@ -846,7 +846,7 @@ static void mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 		return;
 	}
 
-	const auto& mouse = handler.GetMice().at(mouse_no);
+	const auto& mouse = ::at32(handler.GetMice(), mouse_no);
 
 	pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
 }

@@ -221,14 +221,14 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		else
 		{
 			// Use list
-			ignore = g_prx_list.at(name) != 0;
+			ignore = ::at32(g_prx_list, name) != 0;
 		}
 	}
 	else if (vpath0.starts_with("/"))
 	{
 		// Special case : HLE for files outside of "/dev_flash/sys/external/"
 		// Have to specify full path for them
-		ignore = g_prx_list.count(vpath0) && g_prx_list.at(vpath0);
+		ignore = g_prx_list.count(vpath0) && ::at32(g_prx_list, vpath0);
 	}
 
 	auto hle_load = [&]()
@@ -343,7 +343,7 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 	}
 
 	prx->state = state;
-	return std::move(prx);
+	return prx;
 }
 
 void lv2_prx::save(utils::serial& ar)
@@ -542,6 +542,7 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 		return CELL_PRX_ERROR_ERROR;
 	}
 
+	ppu.check_state();
 	pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
 
 	// This check is probably for older fw
@@ -594,6 +595,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 			fmt::throw_exception("Invalid prx state (%d)", old);
 		}
 
+		ppu.check_state();
 		pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
 		set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 		return CELL_OK;
@@ -633,6 +635,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 
 		if (pOpt->cmd == 4u)
 		{
+			ppu.check_state();
 			pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
 			set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 		}

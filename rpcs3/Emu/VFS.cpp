@@ -152,7 +152,7 @@ bool vfs::unmount(std::string_view vpath)
 		}
 
 		// Get the current name based on the depth
-		const std::string& name = entry_list.at(depth);
+		const std::string& name = ::at32(entry_list, depth);
 
 		// Go through all children of this node
 		for (auto it = dir.dirs.begin(); it != dir.dirs.end();)
@@ -317,7 +317,8 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 					// Handle /host_root (not escaped, not processed)
 					if (out_path)
 					{
-						*out_path =  "/";
+						out_path->clear();
+						*out_path += '/';
 						*out_path += fmt::merge(name_list, "/");
 						*out_path += vpath;
 					}
@@ -339,7 +340,8 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 	// Merge path fragments
 	if (out_path)
 	{
-		*out_path =  "/";
+		out_path->clear();
+		*out_path += '/';
 		*out_path += fmt::merge(name_list, "/");
 	}
 
@@ -389,7 +391,7 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 
 		return vfs::retrieve(rpath, &table.root, &mount_path_empty);
 	}
-	
+
 	mount_path->emplace_back();
 
 	// Try to extract host root mount point name (if exists)
@@ -456,7 +458,8 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 	{
 		// If failed to find mount point for path and /host_root is mounted
 		// Prepend "/host_root" to path and return the constructed string
-		result = "/";
+		result.clear();
+		result += '/';
 
 		for (const auto& name : *mount_path)
 		{

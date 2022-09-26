@@ -8,7 +8,7 @@
 #define GL_STREAM_BUFFER_START     (GL_STENCIL_MIRRORS_START + 16)
 #define GL_TEMP_IMAGE_SLOT         31
 
-#define UBO_SLOT(x)  (x)
+#define UBO_SLOT(x)  (x + 8)
 #define SSBO_SLOT(x) (x)
 
 #define GL_VERTEX_PARAMS_BIND_SLOT             UBO_SLOT(0)
@@ -21,7 +21,7 @@
 #define GL_INTERPRETER_VERTEX_BLOCK            SSBO_SLOT(0)
 #define GL_INTERPRETER_FRAGMENT_BLOCK          SSBO_SLOT(1)
 #define GL_COMPUTE_BUFFER_SLOT(index)          SSBO_SLOT(2 + index)
-#define GL_COMPUTE_IMAGE_SLOT(index)           UBO_SLOT(index)
+#define GL_COMPUTE_IMAGE_SLOT(index)           SSBO_SLOT(index)
 
 //Function call wrapped in ARB_DSA vs EXT_DSA compat check
 #define DSA_CALL(func, object_name, target, ...)\

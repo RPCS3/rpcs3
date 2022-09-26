@@ -47,6 +47,7 @@ enum class emu_settings_type
 	FixupPPUVNAN,
 	AccuratePPUVNAN,
 	AccuratePPUFPCC,
+	MaxPreemptCount,
 
 	// Graphics
 	Renderer,
@@ -96,7 +97,6 @@ enum class emu_settings_type
 	VulkanAsyncSchedulerDriver,
 	AllowHostGPULabels,
 	DisableMSLFastMath,
-	SoftwareVkSemaphore,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -221,6 +221,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::FixupPPUVNAN,             { "Core", "PPU Fixup Vector NaN Values"}},
 	{ emu_settings_type::AccuratePPUVNAN,          { "Core", "PPU Accurate Vector NaN Values"}},
 	{ emu_settings_type::AccuratePPUFPCC,          { "Core", "PPU Set FPCC Bits"}},
+	{ emu_settings_type::MaxPreemptCount,          { "Core", "Max CPU Preempt Count"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},
@@ -265,7 +266,6 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
 	{ emu_settings_type::AllowHostGPULabels,         { "Video", "Allow Host GPU Labels"}},
 	{ emu_settings_type::DisableMSLFastMath,         { "Video", "Disable MSL Fast Math"}},
-	{ emu_settings_type::SoftwareVkSemaphore,        { "Video", "Software VkSemaphore"}},
 
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},

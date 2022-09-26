@@ -84,7 +84,7 @@ namespace gl
 		glBindVertexArray(old_vao);
 	}
 
-	void overlay_pass::run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool use_blending)
+	void overlay_pass::run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool enable_blending)
 	{
 		if (!compiled)
 		{
@@ -116,6 +116,9 @@ namespace gl
 			default:
 				fmt::throw_exception("Unsupported image aspect combination 0x%x", image_aspect_bits);
 			}
+
+			enable_depth_writes = (image_aspect_bits & m_write_aspect_mask) & gl::image_aspect::depth;
+			enable_stencil_writes = (image_aspect_bits & m_write_aspect_mask) & gl::image_aspect::stencil;
 		}
 
 		if (!target_texture || fbo.check())
@@ -128,15 +131,34 @@ namespace gl
 			cmd->color_maski(0, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			cmd->depth_mask(image_aspect_bits == gl::image_aspect::color ? GL_FALSE : GL_TRUE);
 
-			// Disabling depth test will also disable depth writes which is not desired
-			cmd->depth_func(GL_ALWAYS);
-			cmd->enable(GL_DEPTH_TEST);
-
-			cmd->disable(GL_SCISSOR_TEST);
 			cmd->disable(GL_CULL_FACE);
-			cmd->disable(GL_STENCIL_TEST);
+			cmd->disable(GL_SCISSOR_TEST);
 
-			if (use_blending)
+			if (enable_depth_writes)
+			{
+				// Disabling depth test will also disable depth writes which is not desired
+				cmd->depth_func(GL_ALWAYS);
+				cmd->enable(GL_DEPTH_TEST);
+			}
+			else
+			{
+				cmd->disable(GL_DEPTH_TEST);
+			}
+
+			if (enable_stencil_writes)
+			{
+				// Disabling stencil test also disables stencil writes.
+				cmd->enable(GL_STENCIL_TEST);
+				cmd->stencil_mask(0xFF);
+				cmd->stencil_func(GL_ALWAYS, 0xFF, 0xFF);
+				cmd->stencil_op(GL_KEEP, GL_KEEP, GL_REPLACE);
+			}
+			else
+			{
+				cmd->disable(GL_STENCIL_TEST);
+			}
+
+			if (enable_blending)
 			{
 				cmd->enablei(GL_BLEND, 0);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -605,15 +627,21 @@ namespace gl
 		#include "../Program/GLSLSnippets/CopyBufferToGenericImage.glsl"
 		;
 
+		const bool stencil_export_supported = gl::get_driver_caps().ARB_shader_stencil_export_supported;
 		std::pair<std::string_view, std::string> repl_list[] =
 		{
 			{ "%set, ", "" },
 			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) },
-			{ "%stencil_export_supported", gl::get_driver_caps().ARB_shader_stencil_export_supported ? "1" : "0" }
+			{ "%stencil_export_supported", stencil_export_supported ? "1" : "0" }
 		};
 
 		fs_src = fmt::replace_all(fs_src, repl_list);
+
+		if (stencil_export_supported)
+		{
+			m_write_aspect_mask |= gl::image_aspect::stencil;
+		}
 	}
 
 	void rp_ssbo_to_generic_texture::run(gl::command_context& cmd,

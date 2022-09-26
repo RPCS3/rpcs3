@@ -287,18 +287,36 @@ namespace rsx
 		transient = 2
 	};
 
-	struct vertex_input_layout
+	class vertex_input_layout
 	{
-		std::vector<interleaved_range_info> interleaved_blocks{};  // Interleaved blocks to be uploaded as-is
-		std::vector<std::pair<u8, u32>> volatile_blocks{};         // Volatile data blocks (immediate draw vertex data for example)
-		rsx::simple_array<u8> referenced_registers{};              // Volatile register data
+		int m_num_used_blocks = 0;
+		std::array<interleaved_range_info, 16> m_blocks_data{};
+
+	public:
+		rsx::simple_array<interleaved_range_info*> interleaved_blocks{};  // Interleaved blocks to be uploaded as-is
+		std::vector<std::pair<u8, u32>> volatile_blocks{};                // Volatile data blocks (immediate draw vertex data for example)
+		rsx::simple_array<u8> referenced_registers{};                     // Volatile register data
 
 		std::array<attribute_buffer_placement, 16> attribute_placement = fill_array(attribute_buffer_placement::none);
 
 		vertex_input_layout() = default;
 
+		interleaved_range_info* alloc_interleaved_block()
+		{
+			auto result = &m_blocks_data[m_num_used_blocks++];
+			result->attribute_stride = 0;
+			result->base_offset = 0;
+			result->memory_location = 0;
+			result->real_offset_address = 0;
+			result->single_vertex = false;
+			result->locations.clear();
+			result->interleaved = true;
+			return result;
+		}
+
 		void clear()
 		{
+			m_num_used_blocks = 0;
 			interleaved_blocks.clear();
 			volatile_blocks.clear();
 			referenced_registers.clear();
@@ -309,7 +327,7 @@ namespace rsx
 			// Criteria: At least one array stream has to be defined to feed vertex positions
 			// This stream cannot be a const register as the vertices cannot create a zero-area primitive
 
-			if (!interleaved_blocks.empty() && interleaved_blocks.front().attribute_stride != 0)
+			if (!interleaved_blocks.empty() && interleaved_blocks[0]->attribute_stride != 0)
 				return true;
 
 			if (!volatile_blocks.empty())
@@ -351,8 +369,8 @@ namespace rsx
 			u32 mem = 0;
 			for (auto &block : interleaved_blocks)
 			{
-				const auto range = block.calculate_required_range(first_vertex, vertex_count);
-				mem += range.second * block.attribute_stride;
+				const auto range = block->calculate_required_range(first_vertex, vertex_count);
+				mem += range.second * block->attribute_stride;
 			}
 
 			return mem;
@@ -671,6 +689,17 @@ namespace rsx
 
 		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;
 
+		struct frame_time_t
+		{
+			u64 preempt_count;
+			u64 timestamp;
+			u64 tsc;
+		};
+
+		std::deque<frame_time_t> frame_times;
+		u32 prevent_preempt_increase_tickets = 0;
+		u32 preempt_fail_old_preempt_count = 0;
+
 		atomic_t<s32> async_tasks_pending{ 0 };
 
 		reports::conditional_render_eval cond_render_ctrl;
@@ -770,6 +799,8 @@ namespace rsx
 		 * Copies from local memory to the write-only output buffers provided in a sequential manner
 		 */
 		void write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data);
+
+		void evaluate_cpu_usage_reduction_limits();
 
 	private:
 		shared_mutex m_mtx_task;

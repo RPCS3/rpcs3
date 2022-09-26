@@ -228,7 +228,7 @@ void signaling_handler::process_incoming_messages()
 		{
 			// Connection can be remotely established and not mutual
 			const u32 conn_id = create_sig_infos(&sp->V1.npid);
-			si = sig1_peers.at(conn_id);
+			si = ::at32(sig1_peers, conn_id);
 			// Activate the connection without triggering the main CB
 			si->connStatus = SCE_NP_SIGNALING_CONN_STATUS_ACTIVE;
 			si->addr = op_addr;
@@ -537,23 +537,23 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 		if (!npid_to_conn_id.count(npid))
 			return nullptr;
 
-		const u32 conn_id = npid_to_conn_id.at(npid);
+		const u32 conn_id = ::at32(npid_to_conn_id, npid);
 		if (!sig1_peers.contains(conn_id))
 		{
 			sign_log.error("Discrepancy in signaling 1 data");
 			return nullptr;
 		}
 
-		return sig1_peers.at(conn_id);
+		return ::at32(sig1_peers, conn_id);
 	}
 
 	// V2
 	auto room_id   = sp->V2.room_id;
 	auto member_id = sp->V2.member_id;
-	if (!sig2_peers.contains(room_id) || !sig2_peers.at(room_id).contains(member_id))
+	if (!sig2_peers.contains(room_id) || !::at32(sig2_peers, room_id).contains(member_id))
 		return nullptr;
 
-	return sig2_peers.at(room_id).at(member_id);
+	return ::at32(::at32(sig2_peers, room_id), member_id);
 }
 
 void signaling_handler::start_sig(u32 conn_id, u32 addr, u16 port)
@@ -568,7 +568,7 @@ void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
 	sent_packet.command = signal_connect;
 
 	ensure(sig1_peers.contains(conn_id));
-	std::shared_ptr<signaling_info> si = sig1_peers.at(conn_id);
+	std::shared_ptr<signaling_info> si = ::at32(sig1_peers, conn_id);
 
 	si->addr = addr;
 	si->port = port;
@@ -586,10 +586,10 @@ void signaling_handler::start_sig2(u64 room_id, u16 member_id)
 	sent_packet.command = signal_connect;
 
 	ensure(sig2_peers.contains(room_id));
-	const auto& sp = sig2_peers.at(room_id);
+	const auto& sp = ::at32(sig2_peers, room_id);
 
 	ensure(sp.contains(member_id));
-	std::shared_ptr<signaling_info> si = sp.at(member_id);
+	std::shared_ptr<signaling_info> si = ::at32(sp, member_id);
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
 	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
@@ -607,7 +607,7 @@ void signaling_handler::disconnect_sig2_users(u64 room_id)
 
 	sent_packet.command = signal_finished;
 
-	for (const auto& member : sig2_peers.at(room_id))
+	for (const auto& member : ::at32(sig2_peers, room_id))
 	{
 		auto& si = member.second;
 		if (si->connStatus != SCE_NP_SIGNALING_CONN_STATUS_INACTIVE && !si->self)
@@ -625,14 +625,14 @@ u32 signaling_handler::create_sig_infos(const SceNpId* npid)
 
 	if (npid_to_conn_id.contains(npid_str))
 	{
-		return npid_to_conn_id.at(npid_str);
+		return ::at32(npid_to_conn_id, npid_str);
 	}
 
 	const u32 conn_id = cur_conn_id++;
 	npid_to_conn_id.emplace(npid_str, conn_id);
 	sig1_peers.emplace(conn_id, std::make_shared<signaling_info>());
-	sig1_peers.at(conn_id)->version = 1;
-	sig1_peers.at(conn_id)->conn_id = conn_id;
+	::at32(sig1_peers, conn_id)->version = 1;
+	::at32(sig1_peers, conn_id)->conn_id = conn_id;
 
 	return conn_id;
 }

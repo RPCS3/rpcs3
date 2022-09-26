@@ -188,6 +188,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/lv2/sys_event.cpp
     Cell/lv2/sys_event_flag.cpp
     Cell/lv2/sys_fs.cpp
+    Cell/lv2/sys_game.cpp
     Cell/lv2/sys_gamepad.cpp
     Cell/lv2/sys_gpio.cpp
     Cell/lv2/sys_hid.cpp
@@ -339,7 +340,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/sceNpUtil.cpp
     Cell/Modules/StaticHLE.cpp
     Cell/Modules/sys_crashdump.cpp
-    Cell/Modules/sys_game.cpp
+    Cell/Modules/sys_game_.cpp
     Cell/Modules/sys_heap.cpp
     Cell/Modules/sys_io_.cpp
     Cell/Modules/sys_libc_.cpp

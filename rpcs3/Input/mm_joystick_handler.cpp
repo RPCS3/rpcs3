@@ -31,33 +31,33 @@ void mm_joystick_handler::init_config(cfg_pad* cfg)
 	if (!cfg) return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = axis_list.at(mmjoy_axis::joy_x_neg);
-	cfg->ls_down.def  = axis_list.at(mmjoy_axis::joy_y_neg);
-	cfg->ls_right.def = axis_list.at(mmjoy_axis::joy_x_pos);
-	cfg->ls_up.def    = axis_list.at(mmjoy_axis::joy_y_pos);
-	cfg->rs_left.def  = axis_list.at(mmjoy_axis::joy_z_neg);
-	cfg->rs_down.def  = axis_list.at(mmjoy_axis::joy_r_neg);
-	cfg->rs_right.def = axis_list.at(mmjoy_axis::joy_z_pos);
-	cfg->rs_up.def    = axis_list.at(mmjoy_axis::joy_r_pos);
-	cfg->start.def    = button_list.at(JOY_BUTTON9);
-	cfg->select.def   = button_list.at(JOY_BUTTON10);
-	cfg->ps.def       = button_list.at(JOY_BUTTON17);
-	cfg->square.def   = button_list.at(JOY_BUTTON4);
-	cfg->cross.def    = button_list.at(JOY_BUTTON3);
-	cfg->circle.def   = button_list.at(JOY_BUTTON2);
-	cfg->triangle.def = button_list.at(JOY_BUTTON1);
-	cfg->left.def     = pov_list.at(JOY_POVLEFT);
-	cfg->down.def     = pov_list.at(JOY_POVBACKWARD);
-	cfg->right.def    = pov_list.at(JOY_POVRIGHT);
-	cfg->up.def       = pov_list.at(JOY_POVFORWARD);
-	cfg->r1.def       = button_list.at(JOY_BUTTON8);
-	cfg->r2.def       = button_list.at(JOY_BUTTON6);
-	cfg->r3.def       = button_list.at(JOY_BUTTON12);
-	cfg->l1.def       = button_list.at(JOY_BUTTON7);
-	cfg->l2.def       = button_list.at(JOY_BUTTON5);
-	cfg->l3.def       = button_list.at(JOY_BUTTON11);
+	cfg->ls_left.def  = ::at32(axis_list, mmjoy_axis::joy_x_neg);
+	cfg->ls_down.def  = ::at32(axis_list, mmjoy_axis::joy_y_neg);
+	cfg->ls_right.def = ::at32(axis_list, mmjoy_axis::joy_x_pos);
+	cfg->ls_up.def    = ::at32(axis_list, mmjoy_axis::joy_y_pos);
+	cfg->rs_left.def  = ::at32(axis_list, mmjoy_axis::joy_z_neg);
+	cfg->rs_down.def  = ::at32(axis_list, mmjoy_axis::joy_r_neg);
+	cfg->rs_right.def = ::at32(axis_list, mmjoy_axis::joy_z_pos);
+	cfg->rs_up.def    = ::at32(axis_list, mmjoy_axis::joy_r_pos);
+	cfg->start.def    = ::at32(button_list, JOY_BUTTON9);
+	cfg->select.def   = ::at32(button_list, JOY_BUTTON10);
+	cfg->ps.def       = ::at32(button_list, JOY_BUTTON17);
+	cfg->square.def   = ::at32(button_list, JOY_BUTTON4);
+	cfg->cross.def    = ::at32(button_list, JOY_BUTTON3);
+	cfg->circle.def   = ::at32(button_list, JOY_BUTTON2);
+	cfg->triangle.def = ::at32(button_list, JOY_BUTTON1);
+	cfg->left.def     = ::at32(pov_list, JOY_POVLEFT);
+	cfg->down.def     = ::at32(pov_list, JOY_POVBACKWARD);
+	cfg->right.def    = ::at32(pov_list, JOY_POVRIGHT);
+	cfg->up.def       = ::at32(pov_list, JOY_POVFORWARD);
+	cfg->r1.def       = ::at32(button_list, JOY_BUTTON8);
+	cfg->r2.def       = ::at32(button_list, JOY_BUTTON6);
+	cfg->r3.def       = ::at32(button_list, JOY_BUTTON12);
+	cfg->l1.def       = ::at32(button_list, JOY_BUTTON7);
+	cfg->l2.def       = ::at32(button_list, JOY_BUTTON5);
+	cfg->l3.def       = ::at32(button_list, JOY_BUTTON11);
 
-	cfg->pressure_intensity_button.def = button_list.at(NO_BUTTON);
+	cfg->pressure_intensity_button.def = ::at32(button_list, NO_BUTTON);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 0; // between 0 and 255
@@ -486,7 +486,7 @@ std::shared_ptr<PadDevice> mm_joystick_handler::get_device(const std::string& de
 	if (id < 0)
 		return nullptr;
 
-	std::shared_ptr<MMJOYDevice> joy_device = std::make_shared<MMJOYDevice>(m_devices.at(id));
+	std::shared_ptr<MMJOYDevice> joy_device = std::make_shared<MMJOYDevice>(::at32(m_devices, id));
 	return joy_device;
 }
 

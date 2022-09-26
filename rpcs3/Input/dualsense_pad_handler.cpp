@@ -46,7 +46,7 @@ namespace
 		LIGHTBAR_SETUP_LIGHT_ON                      = 0x01,
 		LIGHTBAR_SETUP_LIGHT_OUT                     = 0x02,
 	};
-	
+
 	struct output_report_common
 	{
 		u8 valid_flag_0;
@@ -258,33 +258,33 @@ void dualsense_pad_handler::init_config(cfg_pad* cfg)
 	if (!cfg) return;
 
 	// Set default button mapping
-	cfg->ls_left.def  = button_list.at(DualSenseKeyCodes::LSXNeg);
-	cfg->ls_down.def  = button_list.at(DualSenseKeyCodes::LSYNeg);
-	cfg->ls_right.def = button_list.at(DualSenseKeyCodes::LSXPos);
-	cfg->ls_up.def    = button_list.at(DualSenseKeyCodes::LSYPos);
-	cfg->rs_left.def  = button_list.at(DualSenseKeyCodes::RSXNeg);
-	cfg->rs_down.def  = button_list.at(DualSenseKeyCodes::RSYNeg);
-	cfg->rs_right.def = button_list.at(DualSenseKeyCodes::RSXPos);
-	cfg->rs_up.def    = button_list.at(DualSenseKeyCodes::RSYPos);
-	cfg->start.def    = button_list.at(DualSenseKeyCodes::Options);
-	cfg->select.def   = button_list.at(DualSenseKeyCodes::Share);
-	cfg->ps.def       = button_list.at(DualSenseKeyCodes::PSButton);
-	cfg->square.def   = button_list.at(DualSenseKeyCodes::Square);
-	cfg->cross.def    = button_list.at(DualSenseKeyCodes::Cross);
-	cfg->circle.def   = button_list.at(DualSenseKeyCodes::Circle);
-	cfg->triangle.def = button_list.at(DualSenseKeyCodes::Triangle);
-	cfg->left.def     = button_list.at(DualSenseKeyCodes::Left);
-	cfg->down.def     = button_list.at(DualSenseKeyCodes::Down);
-	cfg->right.def    = button_list.at(DualSenseKeyCodes::Right);
-	cfg->up.def       = button_list.at(DualSenseKeyCodes::Up);
-	cfg->r1.def       = button_list.at(DualSenseKeyCodes::R1);
-	cfg->r2.def       = button_list.at(DualSenseKeyCodes::R2);
-	cfg->r3.def       = button_list.at(DualSenseKeyCodes::R3);
-	cfg->l1.def       = button_list.at(DualSenseKeyCodes::L1);
-	cfg->l2.def       = button_list.at(DualSenseKeyCodes::L2);
-	cfg->l3.def       = button_list.at(DualSenseKeyCodes::L3);
+	cfg->ls_left.def  = ::at32(button_list, DualSenseKeyCodes::LSXNeg);
+	cfg->ls_down.def  = ::at32(button_list, DualSenseKeyCodes::LSYNeg);
+	cfg->ls_right.def = ::at32(button_list, DualSenseKeyCodes::LSXPos);
+	cfg->ls_up.def    = ::at32(button_list, DualSenseKeyCodes::LSYPos);
+	cfg->rs_left.def  = ::at32(button_list, DualSenseKeyCodes::RSXNeg);
+	cfg->rs_down.def  = ::at32(button_list, DualSenseKeyCodes::RSYNeg);
+	cfg->rs_right.def = ::at32(button_list, DualSenseKeyCodes::RSXPos);
+	cfg->rs_up.def    = ::at32(button_list, DualSenseKeyCodes::RSYPos);
+	cfg->start.def    = ::at32(button_list, DualSenseKeyCodes::Options);
+	cfg->select.def   = ::at32(button_list, DualSenseKeyCodes::Share);
+	cfg->ps.def       = ::at32(button_list, DualSenseKeyCodes::PSButton);
+	cfg->square.def   = ::at32(button_list, DualSenseKeyCodes::Square);
+	cfg->cross.def    = ::at32(button_list, DualSenseKeyCodes::Cross);
+	cfg->circle.def   = ::at32(button_list, DualSenseKeyCodes::Circle);
+	cfg->triangle.def = ::at32(button_list, DualSenseKeyCodes::Triangle);
+	cfg->left.def     = ::at32(button_list, DualSenseKeyCodes::Left);
+	cfg->down.def     = ::at32(button_list, DualSenseKeyCodes::Down);
+	cfg->right.def    = ::at32(button_list, DualSenseKeyCodes::Right);
+	cfg->up.def       = ::at32(button_list, DualSenseKeyCodes::Up);
+	cfg->r1.def       = ::at32(button_list, DualSenseKeyCodes::R1);
+	cfg->r2.def       = ::at32(button_list, DualSenseKeyCodes::R2);
+	cfg->r3.def       = ::at32(button_list, DualSenseKeyCodes::R3);
+	cfg->l1.def       = ::at32(button_list, DualSenseKeyCodes::L1);
+	cfg->l2.def       = ::at32(button_list, DualSenseKeyCodes::L2);
+	cfg->l3.def       = ::at32(button_list, DualSenseKeyCodes::L3);
 
-	cfg->pressure_intensity_button.def = button_list.at(DualSenseKeyCodes::None);
+	cfg->pressure_intensity_button.def = ::at32(button_list, DualSenseKeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
@@ -889,12 +889,12 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 pad_preview_values dualsense_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
 {
 	return {
-		data.at(L2),
-		data.at(R2),
-		data.at(LSXPos) - data.at(LSXNeg),
-		data.at(LSYPos) - data.at(LSYNeg),
-		data.at(RSXPos) - data.at(RSXNeg),
-		data.at(RSYPos) - data.at(RSYNeg)
+		::at32(data, L2),
+		::at32(data, R2),
+		::at32(data, LSXPos) - ::at32(data, LSXNeg),
+		::at32(data, LSYPos) - ::at32(data, LSYNeg),
+		::at32(data, RSXPos) - ::at32(data, RSXNeg),
+		::at32(data, RSYPos) - ::at32(data, RSYNeg)
 	};
 }
 
@@ -1038,7 +1038,7 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const bool wireless    = dualsense_dev->cable_state == 0;
 	const bool low_battery = dualsense_dev->battery_level <= 1;
 	const bool is_blinking = dualsense_dev->led_delay_on > 0 || dualsense_dev->led_delay_off > 0;
-	
+
 	// Blink LED when battery is low
 	if (config->led_low_battery_blink)
 	{

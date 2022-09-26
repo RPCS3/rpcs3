@@ -45,7 +45,14 @@ bool ime_jp_manager::addChar(u16 c)
 
 	std::u16string tmp;
 	tmp += c;
+#if defined(__GNUG__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
+#endif
 	input_string.insert(cursor++, tmp);
+#if defined(__GNUG__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 	cursor_end = cursor;
 	input_state = CELL_IMEJP_BEFORE_CONVERT;
 	return true;

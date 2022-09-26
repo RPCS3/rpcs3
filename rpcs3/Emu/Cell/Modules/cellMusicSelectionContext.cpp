@@ -47,7 +47,7 @@ std::string music_selection_context::to_string() const
 
 	for (usz i = 0; i < playlist.size(); i++)
 	{
-		fmt::append(str, "\n - Track %d: %s", i, playlist.at(i));
+		fmt::append(str, "\n - Track %d: %s", i, ::at32(playlist, i));
 	}
 
 	return str;
@@ -242,6 +242,7 @@ bool music_selection_context::load_playlist()
 		playlist.push_back(track_node[i].Scalar());
 	}
 
+	valid = true;
 	return true;
 }
 

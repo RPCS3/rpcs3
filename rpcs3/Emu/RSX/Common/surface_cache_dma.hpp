@@ -43,7 +43,7 @@ namespace rsx
 	public:
 		surface_cache_dma()
 		{
-			for (usz i = 0; i < m_buffer_list.size(); ++i)
+			for (u32 i = 0; i < ::size32(m_buffer_list); ++i)
 			{
 				m_buffer_list[i].id = i;
 			}
@@ -63,7 +63,7 @@ namespace rsx
 				{
 					// All is well
 					return *this;
-				} 
+				}
 			}
 
 			// Data does not exist or is not contiguous. Merge the layer
@@ -87,7 +87,7 @@ namespace rsx
 				address += BlockSize;
 			}
 
-			auto unified = Traits::merge_bo_list<BlockSize>(cmd, bo_list);
+			auto unified = Traits::template merge_bo_list<BlockSize>(cmd, bo_list);
 			ensure(unified);
 
 			m_buffer_list[block_for(start_address)].acquire(unified);

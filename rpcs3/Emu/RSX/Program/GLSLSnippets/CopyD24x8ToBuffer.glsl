@@ -5,6 +5,8 @@ layout(local_size_x = %ws, local_size_y = 1, local_size_z = 1) in;
 #define IMAGE_LOCATION(x) (x + %loc)
 #define SSBO_LOCATION IMAGE_LOCATION(2)
 
+#define bswap_u32(bits) (bits & 0xFFu) << 24u | (bits & 0xFF00u) << 8u | (bits & 0xFF0000u) >> 8u | (bits & 0xFF000000u) >> 24u
+
 layout(%set, binding=IMAGE_LOCATION(0)) uniform sampler2D depthData;
 layout(%set, binding=IMAGE_LOCATION(1)) uniform usampler2D stencilData;
 
@@ -62,13 +64,15 @@ void main()
 		float depth = texelFetch(depthData, coord, 0).x;
 		uint stencil = texelFetch(stencilData, coord, 0).x;
 		uint depth_bytes = uint(depth * 0xffffff);
+		uint value = (depth_bytes << 8) | stencil;
 
 		if (swap_bytes != 0)
 		{
-			depth_bytes = (bitfieldExtract(depth_bytes, 0, 8) << 16u) | (bitfieldExtract(depth_bytes, 16, 8) << 0u) | depth_bytes & 0xFF00u;
+			// PS3-style byteswap (full word). PC byteswap is slightly different.
+			value = bswap_u32(value);
 		}
 
-		data[input_coord_to_output_id(coord)] = (depth_bytes << 8) | stencil;
+		data[input_coord_to_output_id(coord)] = value;
 	}
 }
 )"

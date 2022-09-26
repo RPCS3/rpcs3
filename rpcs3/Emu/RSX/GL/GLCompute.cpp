@@ -4,6 +4,26 @@
 
 namespace gl
 {
+	struct bind_image_view_safe
+	{
+		GLuint m_layer;
+		GLenum m_target;
+		GLuint m_value;
+		gl::command_context& m_commands;
+
+		bind_image_view_safe(gl::command_context& cmd, GLuint layer, gl::texture_view* value)
+			: m_layer(layer), m_target(value->target()), m_commands(cmd)
+		{
+			m_value = cmd->get_bound_texture(layer, m_target);
+			value->bind(cmd, layer);
+		}
+
+		~bind_image_view_safe()
+		{
+			m_commands->bind_texture(m_layer, m_target, m_value);
+		}
+	};
+
 	void compute_task::initialize()
 	{
 		// Set up optimal kernel size
@@ -187,7 +207,8 @@ namespace gl
 		compute_task::run(cmd, num_invocations);
 	}
 
-	cs_shuffle_d32fx8_to_x8d24f::cs_shuffle_d32fx8_to_x8d24f()
+	template <bool SwapBytes>
+	cs_shuffle_d32fx8_to_x8d24f<SwapBytes>::cs_shuffle_d32fx8_to_x8d24f()
 	{
 		uniforms = "uniform uint in_ptr, out_ptr;\n";
 
@@ -203,15 +224,22 @@ namespace gl
 			"		value |= stencil;\n"
 			"		data[index + out_ptr] = bswap_u32(value);\n";
 
+		if constexpr (!SwapBytes)
+		{
+			work_kernel = fmt::replace_all(work_kernel, "bswap_u32(value)", "value", 1);
+		}
+
 		cs_shuffle_base::build("");
 	}
 
-	void cs_shuffle_d32fx8_to_x8d24f::bind_resources()
+	template <bool SwapBytes>
+	void cs_shuffle_d32fx8_to_x8d24f<SwapBytes>::bind_resources()
 	{
 		m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_ssbo_length);
 	}
 
-	void cs_shuffle_d32fx8_to_x8d24f::run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
+	template <bool SwapBytes>
+	void cs_shuffle_d32fx8_to_x8d24f<SwapBytes>::run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
 	{
 		u32 data_offset;
 		if (src_offset > dst_offset)
@@ -230,7 +258,11 @@ namespace gl
 		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
 	}
 
-	cs_shuffle_x8d24f_to_d32fx8::cs_shuffle_x8d24f_to_d32fx8()
+	template struct cs_shuffle_d32fx8_to_x8d24f<true>;
+	template struct cs_shuffle_d32fx8_to_x8d24f<false>;
+
+	template <bool SwapBytes>
+	cs_shuffle_x8d24f_to_d32fx8<SwapBytes>::cs_shuffle_x8d24f_to_d32fx8()
 	{
 		uniforms = "uniform uint texel_count, in_ptr, out_ptr;\n";
 
@@ -247,15 +279,22 @@ namespace gl
 			"		data[index * 2 + out_offset] = d24f_to_f32(depth);\n"
 			"		data[index * 2 + (out_offset + 1)] = stencil;\n";
 
+		if constexpr (!SwapBytes)
+		{
+			work_kernel = fmt::replace_all(work_kernel, "value = bswap_u32(value)", "// value = bswap_u32(value)", 1);
+		}
+
 		cs_shuffle_base::build("");
 	}
 
-	void cs_shuffle_x8d24f_to_d32fx8::bind_resources()
+	template <bool SwapBytes>
+	void cs_shuffle_x8d24f_to_d32fx8<SwapBytes>::bind_resources()
 	{
 		m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_ssbo_length);
 	}
 
-	void cs_shuffle_x8d24f_to_d32fx8::run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
+	template <bool SwapBytes>
+	void cs_shuffle_x8d24f_to_d32fx8<SwapBytes>::run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels)
 	{
 		u32 data_offset;
 		if (src_offset > dst_offset)
@@ -273,6 +312,9 @@ namespace gl
 		m_program.uniforms["out_ptr"] = dst_offset - data_offset;
 		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
 	}
+
+	template struct cs_shuffle_x8d24f_to_d32fx8<true>;
+	template struct cs_shuffle_x8d24f_to_d32fx8<false>;
 
 	cs_d24x8_to_ssbo::cs_d24x8_to_ssbo()
 	{
@@ -311,11 +353,13 @@ namespace gl
 			m_sampler.apply_defaults();
 		}
 
-		gl::saved_sampler_state save_0(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
-		gl::saved_sampler_state save_1(GL_COMPUTE_BUFFER_SLOT(1), m_sampler);
+		// This method is callable in sensitive code and must restore the GL state on exit
+		gl::saved_sampler_state save_sampler0(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
+		gl::saved_sampler_state save_sampler1(GL_COMPUTE_BUFFER_SLOT(1), m_sampler);
 
-		depth_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
-		stencil_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(1));
+		gl::bind_image_view_safe save_image1(cmd, GL_COMPUTE_BUFFER_SLOT(0), depth_view);
+		gl::bind_image_view_safe save_image2(cmd, GL_COMPUTE_BUFFER_SLOT(1), stencil_view);
+
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(2), out_offset, row_pitch * 4 * region.height);
 
 		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size * optimal_group_size);
@@ -360,9 +404,10 @@ namespace gl
 			m_sampler.apply_defaults();
 		}
 
-		gl::saved_sampler_state save(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
+		// This method is callable in sensitive code and must restore the GL state on exit
+		gl::saved_sampler_state save_sampler(GL_COMPUTE_BUFFER_SLOT(0), m_sampler);
+		gl::bind_image_view_safe save_image(cmd, GL_COMPUTE_BUFFER_SLOT(0), data_view);
 
-		data_view->bind(cmd, GL_COMPUTE_BUFFER_SLOT(0));
 		dst->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(1), out_offset, row_pitch * 4 * region.height);
 
 		const int num_invocations = utils::aligned_div(region.width * region.height, optimal_kernel_size * optimal_group_size);
@@ -380,7 +425,8 @@ namespace gl
 		const std::pair<std::string_view, std::string> repl_list[] =
 		{
 			{ "%set, ", "" },
-			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+			{ "%image_slot", std::to_string(GL_COMPUTE_IMAGE_SLOT(0)) },
+			{ "%ssbo_slot", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 			{ "%ws", std::to_string(optimal_group_size) },
 			{ "%wks", std::to_string(optimal_kernel_size) }
 		};

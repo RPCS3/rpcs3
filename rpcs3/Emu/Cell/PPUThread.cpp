@@ -710,8 +710,8 @@ struct ppu_far_jumps_t
 				Label jmp_address = c.newLabel();
 				Label imm_address = c.newLabel();
 
-				c.ldr(args[1].r32(), arm::ptr(imm_address));
-				c.str(args[1].r32(), arm::Mem(args[0], ::offset32(&ppu_thread::cia)));
+				c.ldr(args[1].w(), arm::ptr(imm_address));
+				c.str(args[1].w(), arm::Mem(args[0], ::offset32(&ppu_thread::cia)));
 				c.ldr(args[1], arm::ptr(jmp_address));
 				c.br(args[1]);
 
@@ -721,7 +721,7 @@ struct ppu_far_jumps_t
 				c.bind(imm_address);
 				c.embedUInt32(pc);
 #endif
-			}, &rt); 
+			}, &rt);
 		}
 
 		return it->second.func;
@@ -1277,6 +1277,16 @@ std::string ppu_thread::dump_misc() const
 {
 	std::string ret = cpu_thread::dump_misc();
 
+	if (ack_suspend)
+	{
+		if (ret.ends_with("\n"))
+		{
+			ret.pop_back();
+		}
+
+		fmt::append(ret, " (LV2 suspended)\n");
+	}
+
 	fmt::append(ret, "Priority: %d\n", +prio);
 	fmt::append(ret, "Stack: 0x%x..0x%x\n", stack_addr, stack_addr + stack_size - 1);
 	fmt::append(ret, "Joiner: %s\n", joiner.load());
@@ -1296,7 +1306,7 @@ std::string ppu_thread::dump_misc() const
 			if (u64 v = gpr[i]; v != syscall_args[i - 3])
 				fmt::append(ret, " ** r%d: 0x%llx\n", i, v);
 	}
-	else if (is_paused())
+	else if (is_paused() || is_stopped())
 	{
 		if (const auto last_func = last_function)
 		{
@@ -1401,7 +1411,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::hle_call:
 		{
-			cmd_pop(), ppu_function_manager::get().at(arg)(*this, {arg}, vm::_ptr<u32>(cia - 4), &ppu_ret);
+			cmd_pop(), ::at32(ppu_function_manager::get(), arg)(*this, {arg}, vm::_ptr<u32>(cia - 4), &ppu_ret);
 			break;
 		}
 		case ppu_cmd::opd_call:
@@ -1712,7 +1722,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 		{
 			cmd_list
 			({
-				{ppu_cmd::ptr_call, 0}, +[](ppu_thread& ppu) -> bool
+				{ppu_cmd::ptr_call, 0}, +[](ppu_thread&) -> bool
 				{
 					while (!Emu.IsStopped() && !g_fxo->get<init_pushed>().inited)
 					{
@@ -1799,7 +1809,7 @@ void ppu_thread::save(utils::serial& ar)
 	if (_joiner >= ppu_join_status::max)
 	{
 		// Joining thread should recover this member properly
-		_joiner = ppu_join_status::joinable; 
+		_joiner = ppu_join_status::joinable;
 	}
 
 	if (state & cpu_flag::again)
@@ -2642,11 +2652,9 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 	}())
 	{
 		// Test a common pattern in lwmutex
-		constexpr u64 mutex_free = u64{static_cast<u32>(0 - 1)} << 32;
-		const bool may_be_lwmutex_related = sizeof(T) == 8 ?
-			(new_data == mutex_free && old_data == u64{ppu.id} << 32) : (old_data == mutex_free && new_data == u64{ppu.id} << 32);
+		extern atomic_t<u32> liblv2_begin, liblv2_end;
 
-		if (!may_be_lwmutex_related)
+		if (ppu.cia < liblv2_begin || ppu.cia >= liblv2_end)
 		{
 			res.notify_all(-128);
 		}
@@ -2890,7 +2898,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			std::string upper = fmt::to_upper(entry.name);
 
 			// Skip already loaded modules or HLEd ones
-			auto is_ignored = [&](s64 offset) -> bool
+			auto is_ignored = [&](s64 /*offset*/) -> bool
 			{
 				if (dir_queue[i] != firmware_sprx_path)
 				{
@@ -2922,7 +2930,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 				extern const std::map<std::string_view, int> g_prx_list;
 
 				// Use list
-				return g_prx_list.count(entry.name) && g_prx_list.at(entry.name) != 0;
+				return g_prx_list.count(entry.name) && ::at32(g_prx_list, entry.name) != 0;
 			};
 
 			// Check .sprx filename
@@ -3280,6 +3288,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	{
 		std::unordered_map<std::string, u64> link_table
 		{
+			{ "sys_game_board_storage_read", reinterpret_cast<u64>(ppu_execute_syscall) },
 			{ "__trap", reinterpret_cast<u64>(&ppu_trap) },
 			{ "__error", reinterpret_cast<u64>(&ppu_error) },
 			{ "__check", reinterpret_cast<u64>(&ppu_check) },
@@ -3369,7 +3378,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	usz fpos = 0;
 
 	// Difference between function name and current location
-	const u32 reloc = info.relocs.empty() ? 0 : info.segs.at(0).addr;
+	const u32 reloc = info.relocs.empty() ? 0 : ::at32(info.segs, 0).addr;
 
 	// Info sent to threads
 	std::vector<std::pair<std::string, ppu_module>> workload;

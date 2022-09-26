@@ -71,16 +71,16 @@ namespace vk
 		info.initialLayout = initial_layout;
 		info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+		std::array<u32, 2> concurrency_queue_families = {
+			dev.get_graphics_queue_family(),
+			dev.get_transfer_queue_family()
+		};
+
 		if (image_flags & VK_IMAGE_CREATE_SHAREABLE_RPCS3)
 		{
-			u32 queue_families[] = {
-				dev.get_graphics_queue_family(),
-				dev.get_transfer_queue_family()
-			};
-
 			info.sharingMode = VK_SHARING_MODE_CONCURRENT;
-			info.queueFamilyIndexCount = 2;
-			info.pQueueFamilyIndices = queue_families;
+			info.queueFamilyIndexCount = ::size32(concurrency_queue_families);
+			info.pQueueFamilyIndices = concurrency_queue_families.data();
 		}
 
 		create_impl(dev, access_flags, memory_type, allocation_pool);
@@ -250,7 +250,7 @@ namespace vk
 			VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
 			const u32 src_queue_family = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? current_queue_family : VK_QUEUE_FAMILY_IGNORED;
 			const u32 dst_queue_family2 = info.sharingMode == VK_SHARING_MODE_EXCLUSIVE ? dst_queue_family : VK_QUEUE_FAMILY_IGNORED;
-			change_image_layout(src_queue_cmd, value, current_layout, new_layout, range, current_queue_family, dst_queue_family2, ~0u, 0u);
+			change_image_layout(src_queue_cmd, value, current_layout, new_layout, range, src_queue_family, dst_queue_family2, ~0u, 0u);
 		}
 
 		current_layout = new_layout;

@@ -218,8 +218,8 @@ namespace np
 			return SCE_NP_MATCHING2_ERROR_ROOM_MEMBER_NOT_FOUND;
 		}
 
-		const auto& room = rooms.at(room_id);
-		const auto& member = room.members.at(member_id);
+		const auto& room = ::at32(rooms, room_id);
+		const auto& member = ::at32(room.members, member_id);
 
 		if (ptr_member)
 		{
@@ -263,7 +263,7 @@ namespace np
 		if (member.group_id)
 		{
 			ptr_member->roomGroup.set(mem.allocate(sizeof(SceNpMatching2RoomGroup)));
-			memcpy(ptr_member->roomGroup.get_ptr(), &room.groups.at(member.group_id), sizeof(SceNpMatching2RoomGroup));
+			memcpy(ptr_member->roomGroup.get_ptr(), &::at32(room.groups, member.group_id), sizeof(SceNpMatching2RoomGroup));
 		}
 
 		u32 num_binattrs = 0;
@@ -286,7 +286,7 @@ namespace np
 			{
 				if (member.bins.contains(binattrs_list[i]))
 				{
-					const auto& bin = member.bins.at(binattrs_list[i]);
+					const auto& bin = ::at32(member.bins, binattrs_list[i]);
 					bin_ptr[actual_cnt].updateDate.tick = bin.updateDate.tick;
 					bin_ptr[actual_cnt].data.id = bin.id;
 					bin_ptr[actual_cnt].data.size = bin.data.size();

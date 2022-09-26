@@ -28,10 +28,6 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 
-#if defined(ARCH_ARM64)
-#include "Emu/CPU/sse2neon.h"
-#endif
-
 const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
@@ -974,8 +970,8 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 	static thread_local std::vector<std::pair<std::basic_string_view<u32>, spu_function_t>> m_flat_list;
 
 	// Remember top position
-	auto stuff_it = m_stuff.at(id_inst >> 12).begin();
-	auto stuff_end = m_stuff.at(id_inst >> 12).end();
+	auto stuff_it = ::at32(m_stuff, id_inst >> 12).begin();
+	auto stuff_end = ::at32(m_stuff, id_inst >> 12).end();
 	{
 		if (stuff_it->trampoline)
 		{
@@ -1038,43 +1034,73 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 		auto make_jump = [&](asmjit::arm::CondCode op, auto target)
 		{
+			// 36 bytes
 			// Fallback to dispatch if no target
 			const u64 taddr = target ? reinterpret_cast<u64>(target) : reinterpret_cast<u64>(tr_dispatch);
 
-			// Build with asmjit to make things more readable
-			// Might cost some RAM, but meh whatever
-			auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
+			// ldr x9, #16 -> ldr x9, taddr
+			*raw++ = 0x89;
+			*raw++ = 0x00;
+			*raw++ = 0x00;
+			*raw++ = 0x58;
+
+			if (op == asmjit::arm::CondCode::kAlways)
+			{
+				// br x9
+				*raw++ = 0x20;
+				*raw++ = 0x01;
+				*raw++ = 0x1F;
+				*raw++ = 0xD6;
+
+				// nop
+				*raw++ = 0x1F;
+				*raw++ = 0x20;
+				*raw++ = 0x03;
+				*raw++ = 0xD5;
+
+				// nop
+				*raw++ = 0x1F;
+				*raw++ = 0x20;
+				*raw++ = 0x03;
+				*raw++ = 0xD5;
+			}
+			else
+			{
+				// b.COND #8 -> b.COND do_branch
+				switch (op)
 				{
-					using namespace asmjit;
+				case asmjit::arm::CondCode::kUnsignedLT:
+					*raw++ = 0x43;
+					break;
+				case asmjit::arm::CondCode::kUnsignedGT:
+					*raw++ = 0x48;
+					break;
+				default:
+					asm("brk 0x42");
+				}
 
-					c.movk(a64::x9, Imm(static_cast<u16>(taddr >> 48)), Imm(48));
-					c.movk(a64::x9, Imm(static_cast<u16>(taddr >> 32)), Imm(32));
-					c.movk(a64::x9, Imm(static_cast<u16>(taddr >> 16)), Imm(16));
-					c.movk(a64::x9, Imm(static_cast<u16>(taddr)), Imm(0));
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x54;
 
-					if (op == arm::CondCode::kAlways)
-					{
-						c.br(a64::x9);
-						// Constant length per jmp for easier stub patching
-						c.nop();
-						c.nop();
-					} else
-					{
-						Label do_branch = c.newLabel();
-						Label cont = c.newLabel();
+				// b #16 -> b cont
+				*raw++ = 0x04;
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x14;
 
-						c.b(op, do_branch);
-						c.b(cont);
+				// do_branch: br x9
+				*raw++ = 0x20;
+				*raw++ = 0x01;
+				*raw++ = 0x1f;
+				*raw++ = 0xD6;
+			}
 
-						c.bind(do_branch);
-						c.br(a64::x9);
+			// taddr
+			std::memcpy(raw, &taddr, 8);
+			raw += 8;
 
-						c.bind(cont);
-					}
-				});
-			u8 mem_used = 7 * 4;
-			memcpy(raw, reinterpret_cast<u8*>(temp), mem_used);
-			raw += mem_used;
+			// cont: next instruction
 		};
 #elif defined(ARCH_X64)
 		// Allocate some writable executable memory
@@ -1152,7 +1178,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					break;
 				}
 
-				const u32 x1 = w.beg->first.at(w.level);
+				const u32 x1 = ::at32(w.beg->first, w.level);
 
 				if (!x1)
 				{
@@ -1175,7 +1201,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				}
 
 				// Adjust ranges (forward)
-				while (it != w.end && x1 == it->first.at(w.level))
+				while (it != w.end && x1 == ::at32(it->first, w.level))
 				{
 					it++;
 					size1++;
@@ -1203,17 +1229,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				//	Rewrite jump address
 				{
 					u64 raw64 = reinterpret_cast<u64>(raw);
-					auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-						{
-							using namespace asmjit;
-
-							c.movk(a64::x9, Imm(static_cast<u16>(raw64 >> 48)), Imm(48));
-							c.movk(a64::x9, Imm(static_cast<u16>(raw64 >> 32)), Imm(32));
-							c.movk(a64::x9, Imm(static_cast<u16>(raw64 >> 16)), Imm(16));
-							c.movk(a64::x9, Imm(static_cast<u16>(raw64)), Imm(0));
-						});
-
-					memcpy(w.rel32 - (4 * 7), reinterpret_cast<u8*>(temp), 4 * 4);
+					memcpy(w.rel32 - 8, &raw64, 8);
 				}
 #else
 #error "Unimplemented"
@@ -1236,7 +1252,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			}
 
 			// Value for comparison
-			const u32 x = it->first.at(w.level);
+			const u32 x = ::at32(it->first, w.level);
 
 			// Adjust ranges (backward)
 			while (it != m_flat_list.begin())
@@ -1249,7 +1265,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					break;
 				}
 
-				if (it->first.at(w.level) != x)
+				if (::at32(it->first, w.level) != x)
 				{
 					it++;
 					break;
@@ -1302,19 +1318,27 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					raw += 4;
 				}
 #elif defined(ARCH_ARM64)
-				{
-					auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-						{
-							using namespace asmjit;
+				// ldr w9, #8
+				*raw++ = 0x49;
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x18;
 
-							c.movz(a64::w9, Imm(static_cast<u16>(cmp_lsa >> 16)), Imm(16));
-							c.movk(a64::w9, Imm(static_cast<u16>(cmp_lsa)), Imm(0));
-							c.ldr(a64::w1, arm::Mem(a64::x7, a64::x9));
-						});
+				// b #8
+				*raw++ = 0x02;
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x14;
 
-					memcpy(raw, reinterpret_cast<u8*>(temp), 3 * 4);
-					raw += 3 * 4;
-				}
+				// cmp_lsa
+				std::memcpy(raw, &cmp_lsa, 4);
+				raw += 4;
+
+				// ldr w1, [x7, x9]
+				*raw++ = 0xE1;
+				*raw++ = 0x68;
+				*raw++ = 0x69;
+				*raw++ = 0xB8;
 #else
 #error "Unimplemented"
 #endif
@@ -1326,19 +1350,27 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			std::memcpy(raw, &x, 4);
 			raw += 4;
 #elif defined(ARCH_ARM64)
-			{
-				auto temp = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-					{
-						using namespace asmjit;
+			// ldr w9, #8
+			*raw++ = 0x49;
+			*raw++ = 0x00;
+			*raw++ = 0x00;
+			*raw++ = 0x18;
 
-						c.movz(a64::w9, Imm(static_cast<u16>(x >> 16)), Imm(16));
-						c.movk(a64::w9, Imm(static_cast<u16>(x)), Imm(0));
-						c.cmp(a64::w1, a64::w9);
-					});
+			// b #8
+			*raw++ = 0x02;
+			*raw++ = 0x00;
+			*raw++ = 0x00;
+			*raw++ = 0x14;
 
-				memcpy(raw, reinterpret_cast<u8*>(temp), 3 * 4);
-				raw += 3 * 4;
-			}
+			// x
+			std::memcpy(raw, &x, 4);
+			raw += 4;
+
+			// cmp w1, w9
+			*raw++ = 0x3f;
+			*raw++ = 0x00;
+			*raw++ = 0x09;
+			*raw++ = 0x6B;
 #else
 #error "Unimplemented"
 #endif
@@ -1388,7 +1420,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				it2 = it;
 
 				// Select additional midrange for equality comparison
-				while (it2 != w.end && it2->first.at(w.level) == x)
+				while (it2 != w.end && ::at32(it2->first, w.level) == x)
 				{
 					size2--;
 					it2++;
@@ -1486,7 +1518,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 	}
 
 	// Install ubertrampoline
-	auto& insert_to = spu_runtime::g_dispatcher->at(id_inst >> 12);
+	auto& insert_to = ::at32(*spu_runtime::g_dispatcher, id_inst >> 12);
 
 	auto _old = insert_to.load();
 
@@ -1519,7 +1551,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 {
-	for (auto& item : m_stuff.at(ls[addr / 4] >> 12))
+	for (auto& item : ::at32(m_stuff, ls[addr / 4] >> 12))
 	{
 		if (const auto ptr = item.compiled.load())
 		{
@@ -1573,34 +1605,56 @@ spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 
 	return reinterpret_cast<spu_function_t>(raw);
 #elif defined(ARCH_ARM64)
-	spu_function_t func = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-		{
-			using namespace asmjit;
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(false);
+#endif
 
-			// Save the jmp addr to GHC CC 3rd arg -> REG_Hp
-			Label replace_addr = c.newLabel();
+	u8* const patch_fn = ensure(jit_runtime::alloc(36, 16));
+	u8* raw = patch_fn;
 
-			c.adr(a64::x21, replace_addr);
-			// 16 byte alignment for the jump replacement
-			c.nop();
-			c.nop();
-			c.nop();
-			Label branch_target = c.newLabel();
+	// adr x21, #16
+	*raw++ = 0x95;
+	*raw++ = 0x00;
+	*raw++ = 0x00;
+	*raw++ = 0x10;
 
-			c.bind(replace_addr);
-			c.ldr(a64::x9, arm::Mem(branch_target));
-			c.br(a64::x9);
+	// nop x3
+	for (int i = 0; i < 3; i++)
+	{
+		*raw++ = 0x1F;
+		*raw++ = 0x20;
+		*raw++ = 0x03;
+		*raw++ = 0xD5;
+	}
 
-			c.bind(branch_target);
-			c.embedUInt64(reinterpret_cast<u64>(tr_branch));
+	// ldr x9, #8
+	*raw++ = 0x49;
+	*raw++ = 0x00;
+	*raw++ = 0x00;
+	*raw++ = 0x58;
 
-			c.embedUInt8(data >> 8);
-			c.embedUInt8(data & 0xff);
+	// br x9
+	*raw++ = 0x20;
+	*raw++ = 0x01;
+	*raw++ = 0x1F;
+	*raw++ = 0xD6;
 
-			c.embed("branch_patchpoint", 17);
-		});
+	u64 branch_target = reinterpret_cast<u64>(tr_branch);
+	std::memcpy(raw, &branch_target, 8);
+	raw += 8;
 
-	return func;
+	*raw++ = static_cast<u8>(data >> 8);
+	*raw++ = static_cast<u8>(data & 0xff);
+
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(true);
+#endif
+
+	// Flush all cache lines after potentially writing executable code
+	asm("ISB");
+	asm("DSB ISH");
+
+	return reinterpret_cast<spu_function_t>(patch_fn);
 #else
 #error "Unimplemented"
 #endif
@@ -1636,18 +1690,26 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 		atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip - 8), result);
 #elif defined(ARCH_ARM64)
-		auto jump_instrs = build_function_asm<spu_function_t>("", [](native_asm& c, auto& args)
-			{
-				using namespace asmjit;
+		union
+		{
+			u8 bytes[16];
+			u128 result;
+		};
 
-				Label branch_target = c.newLabel();
-				c.ldr(a64::x9, arm::Mem(branch_target)); // PC rel load
-				c.br(a64::x9);
+		// ldr x9, #8
+		bytes[0] = 0x49;
+		bytes[1] = 0x00;
+		bytes[2] = 0x00;
+		bytes[3] = 0x58;
 
-				c.bind(branch_target);
-				c.embedUInt64(reinterpret_cast<u64>(spu_runtime::tr_all));
-			});
-		u128 result = *reinterpret_cast<u128*>(jump_instrs);
+		// br x9
+		bytes[4] = 0x20;
+		bytes[5] = 0x01;
+		bytes[6] = 0x1F;
+		bytes[7] = 0xD6;
+
+		const u64 target = reinterpret_cast<u64>(spu_runtime::tr_all);
+		std::memcpy(bytes + 8, &target, 8);
 #if defined(__APPLE__)
 		pthread_jit_write_protect_np(false);
 #endif
@@ -1665,7 +1727,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	}
 
 	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
-	if (spu.block_counter != spu.block_recover && &dispatch != spu_runtime::g_dispatcher->at(spu._ref<nse_t<u32>>(spu.pc) >> 12))
+	if (spu.block_counter != spu.block_recover && &dispatch != ::at32(*spu_runtime::g_dispatcher, spu._ref<nse_t<u32>>(spu.pc) >> 12))
 	{
 		spu.block_recover = spu.block_counter;
 		return;
@@ -1768,18 +1830,26 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
 #elif defined(ARCH_ARM64)
-	auto jmp_instrs = build_function_asm<spu_function_t>("", [&](native_asm& c, auto& args)
-		{
-			using namespace asmjit;
+	union
+	{
+		u8 bytes[16];
+		u128 result;
+	};
 
-			Label branch_target = c.newLabel();
-			c.ldr(a64::x9, arm::Mem(branch_target)); // PC rel load
-			c.br(a64::x9);
+	// ldr x9, #8
+	bytes[0] = 0x49;
+	bytes[1] = 0x00;
+	bytes[2] = 0x00;
+	bytes[3] = 0x58;
 
-			c.bind(branch_target);
-			c.embedUInt64(reinterpret_cast<u64>(func));
-		});
-	u128 result = *reinterpret_cast<u128*>(jmp_instrs);
+	// br x9
+	bytes[4] = 0x20;
+	bytes[5] = 0x01;
+	bytes[6] = 0x1F;
+	bytes[7] = 0xD6;
+
+	const u64 target = reinterpret_cast<u64>(func);
+	std::memcpy(bytes + 8, &target, 8);
 #if defined(__APPLE__)
 	pthread_jit_write_protect_np(false);
 #endif
@@ -2629,7 +2699,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 					// Check for possible fallthrough predecessor
 					if (!had_fallthrough)
 					{
-						if (result.data.at((j - lsa) / 4 - 1) == 0 || m_targets.count(j - 4))
+						if (::at32(result.data, (j - lsa) / 4 - 1) == 0 || m_targets.count(j - 4))
 						{
 							break;
 						}
@@ -3014,13 +3084,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	{
 		workload.clear();
 		workload.push_back(entry_point);
+		ensure(m_bbs.count(entry_point));
 
 		std::basic_string<u32> new_entries;
 
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			auto& block    = m_bbs.at(addr);
+			auto& block = ::at32(m_bbs, addr);
 			const u32 _new = block.chunk;
 
 			if (!m_entry_info[addr / 4])
@@ -3028,7 +3099,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				// Check block predecessors
 				for (u32 pred : block.preds)
 				{
-					const u32 _old = m_bbs.at(pred).chunk;
+					const u32 _old = ::at32(m_bbs, pred).chunk;
 
 					if (_old < 0x40000 && _old != _new)
 					{
@@ -3097,9 +3168,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	// Fill workload adding targets
 	for (u32 wi = 0; wi < workload.size(); wi++)
 	{
-		const u32 addr  = workload[wi];
-		auto& block     = m_bbs.at(addr);
-		block.analysed  = true;
+		const u32 addr = workload[wi];
+		auto& block = ::at32(m_bbs, addr);
+		block.analysed = true;
 
 		for (u32 target : block.targets)
 		{
@@ -3141,7 +3212,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			auto& block    = m_bbs.at(addr);
+			auto& block = ::at32(m_bbs, addr);
 
 			// Initialize entry point with default value: unknown origin (requires load)
 			if (m_entry_info[addr / 4])
@@ -3231,7 +3302,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			auto& block    = m_bbs.at(addr);
+			auto& block = ::at32(m_bbs, addr);
 
 			// Reset values for the next attempt (keep negative values)
 			for (u32 i = 0; i < s_reg_max; i++)
@@ -3253,8 +3324,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		}
 
 		const u32 addr = workload[wi];
-		auto& bb       = m_bbs.at(addr);
-		auto& func     = m_funcs.at(bb.func);
+		auto& bb = ::at32(m_bbs, addr);
+		auto& func = ::at32(m_funcs, bb.func);
 
 		// Update function size
 		func.size = std::max<u16>(func.size, bb.size + (addr - bb.func) / 4);
@@ -3266,7 +3337,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 			if (orig < 0x40000)
 			{
-				auto& src = m_bbs.at(orig);
+				auto& src = ::at32(m_bbs, orig);
 				bb.reg_const[i] = src.reg_const[i];
 				bb.reg_val32[i] = src.reg_val32[i];
 			}
@@ -3280,7 +3351,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 		if (u32 orig = bb.reg_origin_abs[s_reg_sp]; orig < 0x40000)
 		{
-			auto& prologue = m_bbs.at(orig);
+			auto& prologue = ::at32(m_bbs, orig);
 
 			// Copy stack offset (from the assumed prologue)
 			bb.stack_sub = prologue.stack_sub;
@@ -3291,7 +3362,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			bb.stack_sub = 0x80000000;
 		}
 
-		spu_opcode_t op;
+		spu_opcode_t op{};
 
 		auto last_inst = spu_itype::UNK;
 
@@ -3341,7 +3412,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 			case spu_itype::OR:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] & bb.reg_const[op.rb];
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] | bb.reg_val32[op.rb];
 				break;
 			}
@@ -3353,7 +3424,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 			case spu_itype::A:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] & bb.reg_const[op.rb];
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] + bb.reg_val32[op.rb];
 				break;
 			}
@@ -3365,7 +3436,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 			case spu_itype::SF:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] & bb.reg_const[op.rb];
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
 				bb.reg_val32[op.rt] = bb.reg_val32[op.rb] - bb.reg_val32[op.ra];
 				break;
 			}
@@ -3592,8 +3663,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 		for (auto it = m_bbs.lower_bound(f.first); it != m_bbs.end() && it->second.func == f.first; ++it)
 		{
-			auto& bb       = it->second;
-			auto& func     = m_funcs.at(bb.func);
+			auto& bb = it->second;
+			auto& func = ::at32(m_funcs, bb.func);
 			const u32 addr = it->first;
 			const u32 flim = bb.func + func.size * 4;
 
@@ -3609,7 +3680,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				// Check $LR (alternative return registers are currently not supported)
 				if (u32 lr_orig = bb.reg_mod[s_reg_lr] ? addr : bb.reg_origin_abs[s_reg_lr]; lr_orig < 0x40000)
 				{
-					auto& src = m_bbs.at(lr_orig);
+					auto& src = ::at32(m_bbs, lr_orig);
 
 					if (src.reg_load_mod[s_reg_lr] != func.reg_save_off[s_reg_lr])
 					{
@@ -3633,7 +3704,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				{
 					if (u32 orig = bb.reg_mod[i] ? addr : bb.reg_origin_abs[i]; orig < 0x40000)
 					{
-						auto& src = m_bbs.at(orig);
+						auto& src = ::at32(m_bbs, orig);
 
 						if (src.reg_load_mod[i] != func.reg_save_off[i])
 						{
@@ -4362,7 +4433,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			return m_ir->CreateBitCast(_ptr<u8>(m_thread, get_reg_offset(index)), get_reg_type(index)->getPointerTo());
 		}
 
-		auto& ptr = m_reg_addr.at(index);
+		auto& ptr = ::at32(m_reg_addr, index);
 
 		if (!ptr)
 		{
@@ -4472,7 +4543,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		llvm::Value* dummy{};
 
-		auto& reg = *(m_block ? &m_block->reg.at(index) : &dummy);
+		auto& reg = *(m_block ? &::at32(m_block->reg, index) : &dummy);
 
 		if (!reg)
 		{
@@ -4556,7 +4627,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (m_block)
 		{
-			auto v = m_block->reg.at(index);
+			auto v = ::at32(m_block->reg, index);
 
 			if (v && v->getType() == get_type<T>())
 			{
@@ -4667,7 +4738,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				value->setName(fmt::format("result_0x%05x", m_pos));
 #endif
 
-			m_block->reg.at(index) = saved_value;
+			::at32(m_block->reg, index) = saved_value;
 		}
 
 		// Get register location
@@ -5233,7 +5304,7 @@ public:
 				const u32 baddr = m_block_queue[bi];
 				m_block = &m_blocks[baddr];
 				m_ir->SetInsertPoint(m_block->block);
-				auto& bb = m_bbs.at(baddr);
+				auto& bb = ::at32(m_bbs, baddr);
 				bool need_check = false;
 				m_block->bb = &bb;
 
@@ -7383,12 +7454,13 @@ public:
 		set_vr(op.rt, fshl(a, zshuffle(a, 4, 0, 1, 2), b));
 	}
 
-#if defined(ARCH_X64) || defined(ARCH_ARM64)
+#if defined(ARCH_X64)
 	static __m128i exec_rotqby(__m128i a, u8 b)
 	{
 		alignas(32) const __m128i buf[2]{a, a};
 		return _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (16 - (b & 0xf))));
 	}
+#elif defined(ARCH_ARM64)
 #else
 #error "Unimplemented"
 #endif
@@ -7398,6 +7470,7 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 
+#if defined(ARCH_X64)
 		if (!m_use_ssse3)
 		{
 			value_t<u8[16]> r;
@@ -7405,6 +7478,7 @@ public:
 			set_vr(op.rt, r);
 			return;
 		}
+#endif
 
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
@@ -10749,7 +10823,7 @@ struct spu_llvm
 
 			for (auto it = enqueued.begin(), end = enqueued.end(); it != end; ++it)
 			{
-				const u64 cur = std::as_const(samples).at(it->first);
+				const u64 cur = ::at32(std::as_const(samples), it->first);
 
 				if (cur > sample_max)
 				{

@@ -503,6 +503,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		buffer_height = present_info.height;
 	}
 
+	if (info.emu_flip)
+	{
+		evaluate_cpu_usage_reduction_limits();
+	}
+
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
 	ensure(m_current_frame->present_image == umax);
 	ensure(m_current_frame->swap_command_buffer == nullptr);

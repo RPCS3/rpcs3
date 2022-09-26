@@ -1297,7 +1297,7 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	if (tagNum) // TODO: find out if this is the correct location for these checks 
+	if (tagNum) // TODO: find out if this is the correct location for these checks
 	{
 		if (tagNum > CELL_SEARCH_TAG_NUM_MAX || !tags)
 		{
@@ -1580,7 +1580,7 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 
 	if (offset >= 0 && offset + 0u < searchObject->content_ids.size())
 	{
-		auto& content_id = searchObject->content_ids.at(offset);
+		auto& content_id = ::at32(searchObject->content_ids, offset);
 		const u128 content_id_128 = content_id.first;
 		*outContentType = content_id.second->type;
 		std::memcpy(outContentId->data, &content_id_128, CELL_SEARCH_CONTENT_ID_SIZE);

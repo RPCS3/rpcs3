@@ -6,8 +6,18 @@
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 
 LOG_CHANNEL(usio_log);
+
+struct usio_memory
+{
+	std::vector<u8> backup_memory;
+	std::vector<u8> last_game_status = {0x4C, 0x41, 0x53, 0x54, 0x47, 0x41, 0x4D, 0x45, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x20, 0x76, 0x65, 0x72, 0x2E, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // "LASTGAMESTATUS ver.3"
+
+	usio_memory(const usio_memory&) = delete;
+	usio_memory& operator=(const usio_memory&) = delete;
+};
 
 usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
@@ -67,6 +77,9 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 			.bmAttributes     = 0x03,
 			.wMaxPacketSize   = 0x0008,
 			.bInterval        = 16}));
+
+	g_fxo->get<usio_memory>().backup_memory.resize(0xB8);
+	g_fxo->get<usio_memory>().last_game_status.resize(0x28);
 }
 
 usb_device_usio::~usb_device_usio()
@@ -95,8 +108,8 @@ void usb_device_usio::translate_input()
 	const auto handler = pad::get_current_handler();
 
 	std::vector<u8> input_buf = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	constexpr u16 SMALL_HIT   = 0x4A0;
-	constexpr u16 BIG_HIT     = 0xA40;
+	constexpr le_t<u16> c_small_hit = 0x4A0;
+	constexpr le_t<u16> c_big_hit = 0xA40;
 
 	auto translate_from_pad = [&](u8 pad_number, u8 player)
 	{
@@ -123,35 +136,35 @@ void usb_device_usio::translate_input()
 					{
 					case CELL_PAD_CTRL_SQUARE:
 						// Strong hit side left
-						*reinterpret_cast<le_t<u16>*>(&input_buf[32 + offset]) = BIG_HIT;
+						std::memcpy(input_buf.data() + 32 + offset, &c_big_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_CROSS:
 						// Strong hit center right
-						*reinterpret_cast<le_t<u16>*>(&input_buf[36 + offset]) = BIG_HIT;
+						std::memcpy(input_buf.data() + 36 + offset, &c_big_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_CIRCLE:
 						// Strong hit side right
-						*reinterpret_cast<le_t<u16>*>(&input_buf[38 + offset]) = BIG_HIT;
+						std::memcpy(input_buf.data() + 38 + offset, &c_big_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_TRIANGLE:
 						// Strong hit center left
-						*reinterpret_cast<le_t<u16>*>(&input_buf[34 + offset]) = BIG_HIT;
+						std::memcpy(input_buf.data() + 34 + offset, &c_big_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_L1:
 						// Small hit center left
-						*reinterpret_cast<le_t<u16>*>(&input_buf[34 + offset]) = SMALL_HIT;
+						std::memcpy(input_buf.data() + 34 + offset, &c_small_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_R1:
 						// Small hit center right
-						*reinterpret_cast<le_t<u16>*>(&input_buf[36 + offset]) = SMALL_HIT;
+						std::memcpy(input_buf.data() + 36 + offset, &c_small_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_L2:
 						// Small hit side left
-						*reinterpret_cast<le_t<u16>*>(&input_buf[32 + offset]) = SMALL_HIT;
+						std::memcpy(input_buf.data() + 32 + offset, &c_small_hit, sizeof(u16));
 						break;
 					case CELL_PAD_CTRL_R2:
 						// Small hit side right
-						*reinterpret_cast<le_t<u16>*>(&input_buf[38 + offset]) = SMALL_HIT;
+						std::memcpy(input_buf.data() + 38 + offset, &c_small_hit, sizeof(u16));
 						break;
 					default:
 						break;
@@ -170,6 +183,12 @@ void usb_device_usio::translate_input()
 
 void usb_device_usio::usio_write(u8 channel, u16 reg, const std::vector<u8>& data)
 {
+	auto write_memory = [&](std::vector<u8>& memory)
+	{
+		ensure(data.size() == memory.size());
+		memcpy(memory.data(), data.data(), memory.size());
+	};
+
 	const auto get_u16 = [&](std::string_view usio_func) -> u16
 	{
 		if (data.size() != 2)
@@ -226,10 +245,28 @@ void usb_device_usio::usio_write(u8 channel, u16 reg, const std::vector<u8>& dat
 	else if (channel >= 2)
 	{
 		usio_log.trace("Usio write of sram(chip: %d, addr: 0x%04X)", channel - 2, reg);
+		if (channel == 2)
+		{
+			switch (reg)
+			{
+			case 0x0000:
+			{
+				write_memory(g_fxo->get<usio_memory>().backup_memory);
+				break;
+			}
+			case 0x0180:
+			{
+				write_memory(g_fxo->get<usio_memory>().last_game_status);
+				break;
+			}
+			}
+		}
 	}
 	else
 	{
-		usio_log.fatal("Unexpected write channel: 0x%02X!", channel);
+		// Channel 1 is the endpoint for firmware update.
+		// We are not using any firmware since this is emulation.
+		usio_log.warning("Unsupported write operation(channel: 0x%02X, addr: 0x%04X)", channel, reg);
 	}
 }
 
@@ -315,14 +352,19 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 			case 0x0000:
 			{
 				ensure(size == 0xB8);
-				// No data returned
+				std::vector<u8> buffer[3];
+				for (int i = 0; i < 3; i++)
+				{
+					buffer[i].resize(i < 2 ? 64 : 56);
+					memcpy(buffer[i].data(), g_fxo->get<usio_memory>().backup_memory.data() + i * 64, buffer[i].size());
+					q_replies.push(buffer[i]);
+				}
 				break;
 			}
 			case 0x0180:
 			{
 				ensure(size == 0x28);
-				// "LASTGAMESTATUS ver.3"
-				q_replies.push({0x4C, 0x41, 0x53, 0x54, 0x47, 0x41, 0x4D, 0x45, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x20, 0x76, 0x65, 0x72, 0x2E, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+				q_replies.push(g_fxo->get<usio_memory>().last_game_status);
 				break;
 			}
 			case 0x0200:
@@ -356,7 +398,9 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 	}
 	else
 	{
-		usio_log.fatal("Unexpected read channel: 0x%02X!", channel);
+		// Channel 1 is the endpoint for firmware update.
+		// We are not using any firmware since this is emulation.
+		usio_log.warning("Unsupported read operation(channel: 0x%02X, addr: 0x%04X)", channel, reg);
 	}
 }
 
@@ -419,11 +463,11 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 			return;
 		}
 
-		// Unknown, happens only once, boot command?
+		// Init and reset commands
 		if ((buf[0] & 0xA0) == 0xA0)
 		{
-			const std::array<u8, 6> boot_command = {0xA0, 0xF0, 0x28, 0x00, 0x00, 0x80};
-			ensure(memcmp(buf, boot_command.data(), 6) == 0);
+			const std::array<u8, 2> init_command = {0xA0, 0xF0}; // This kind of command starts with 0xA0, 0xF0 commonly. For example, {0xA0, 0xF0, 0x28, 0x00, 0x00, 0x80}
+			ensure(memcmp(buf, init_command.data(), 2) == 0);
 			return;
 		}
 

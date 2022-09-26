@@ -47,7 +47,7 @@ namespace vk
 		VkPipelineStageFlags dst_stage,
 		const rsx::sampled_image_descriptor_base* sampler_state)
 	{
-		switch (auto raw = view->image(); raw->current_layout)
+		switch (auto raw = view->image(); +raw->current_layout)
 		{
 		default:
 			//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
@@ -677,7 +677,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		for (auto& info : m_vertex_layout.interleaved_blocks)
 		{
 			const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
+			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info->base_offset), info->memory_location);
 		}
 	}
 

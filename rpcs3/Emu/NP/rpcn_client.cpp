@@ -1939,7 +1939,7 @@ namespace rpcn
 	{
 		{
 			std::lock_guard lock(mutex_messages);
-			return messages.at(id);
+			return ::at32(messages, id);
 		}
 	}
 
@@ -1950,7 +1950,7 @@ namespace rpcn
 			std::lock_guard lock(mutex_messages);
 			for (auto id : active_messages)
 			{
-				const auto& entry = messages.at(id);
+				const auto& entry = ::at32(messages, id);
 				const auto& msg   = entry->second;
 				if (msg.mainType == type_filter && (include_bootable || !(msg.msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_BOOTABLE)))
 				{
