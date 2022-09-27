@@ -715,6 +715,7 @@ namespace gl
 					mem_layout.swap_bytes = op.require_swap;
 					mem_layout.format = gl_format;
 					mem_layout.type = gl_type;
+					mem_layout.size = block_size_in_bytes;
 
 					// 2. Upload memory to GPU
 					if (!op.require_deswizzle)
