@@ -507,7 +507,7 @@ namespace rsx
 
 				if (fifo_span.size() < rcount)
 				{
-					rcount = fifo_span.size();
+					rcount = ::size32(fifo_span);
 				}
 
 				if (rsx->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
@@ -560,7 +560,7 @@ namespace rsx
 
 				if (fifo_span.size() < rcount)
 				{
-					rcount = fifo_span.size();
+					rcount = ::size32(fifo_span);
 				}
 
 				copy_data_swap_u32(&rsx::method_registers.transform_program[load_pos * 4 + index % 4], fifo_span.data(), rcount);
@@ -1030,7 +1030,7 @@ namespace rsx
 
 				if (fifo_span.size() < count)
 				{
-					count = fifo_span.size();
+					count = ::size32(fifo_span);
 				}
 
 				// Skip "handled methods"

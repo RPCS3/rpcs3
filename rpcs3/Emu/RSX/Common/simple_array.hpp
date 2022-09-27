@@ -109,10 +109,12 @@ namespace rsx
 			_capacity = size;
 		}
 
-		void resize(u32 size)
+		template <typename T> requires UnsignedInt<T>
+		void resize(T size)
 		{
-			reserve(size);
-			_size = size;
+			const auto new_size = static_cast<u32>(size);
+			reserve(new_size);
+			_size = new_size;
 		}
 
 		void push_back(const Ty& val)

@@ -3523,7 +3523,7 @@ namespace rsx
 			const usz avg_frame_time = diffs / 59;
 
 			u32 lowered_delay = 0;
-			u32 highered_delay = 0;
+			u32 raised_delay = 0;
 			bool can_reevaluate = true;
 			u64 prev_preempt_count = umax;
 
@@ -3543,7 +3543,7 @@ namespace rsx
 					}
 					else if (prev_preempt_count < frame_times[i].preempt_count)
 					{
-						highered_delay++;
+						raised_delay++;
 					}
 
 					if (i > frame_times.size() - 30)
@@ -3556,7 +3556,7 @@ namespace rsx
 				prev_preempt_count = frame_times[i].preempt_count;
 			}
 
-			preempt_count = std::min<u32>(frame_times.back().preempt_count, max_preempt_count);
+			preempt_count = std::min<u64>(frame_times.back().preempt_count, max_preempt_count);
 
 			u32 fails = 0;
 			u32 hard_fails = 0;
@@ -3576,7 +3576,7 @@ namespace rsx
 				{
 					if (diff_of_diff >= avg_frame_time / 3)
 					{
-						highered_delay++;
+						raised_delay++;
 						hard_fails++;
 
 						if (i == frame_times.size())
@@ -3632,7 +3632,7 @@ namespace rsx
 					}
 					else
 					{
-						preempt_count = std::min<u32>(preempt_count + 4, max_preempt_count);
+						preempt_count = std::min<u64>(preempt_count + 4, max_preempt_count);
 					}
 				}
 				else
@@ -3641,26 +3641,26 @@ namespace rsx
 				}
 			}
 			// Sudden FPS drop detection
-			else if ((fails > 13 || hard_fails > 2 || !(abs_dst(fps_10, 300) < 20 || abs_dst(fps_10, 600) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10 / 2) < 20)) && lowered_delay < highered_delay && is_last_frame_a_fail)
+			else if ((fails > 13 || hard_fails > 2 || !(abs_dst(fps_10, 300) < 20 || abs_dst(fps_10, 600) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10 / 2) < 20)) && lowered_delay < raised_delay && is_last_frame_a_fail)
 			{
 				lower_preemption_count();
 			}
 
-			perf_log.trace("CPU preemption control: reeval=%d, preempt_count=%d, fails=%d, hard=%d, avg_frame_time=%d, highered=%d, lowered=%d, taken=%u", can_reevaluate, preempt_count, fails, hard_fails, avg_frame_time, highered_delay, lowered_delay, ::g_lv2_preempts_taken.load());
+			perf_log.trace("CPU preemption control: reeval=%d, preempt_count=%llu, fails=%u, hard=%u, avg_frame_time=%llu, highered=%u, lowered=%u, taken=%u", can_reevaluate, preempt_count, fails, hard_fails, avg_frame_time, raised_delay, lowered_delay, ::g_lv2_preempts_taken.load());
 
 			if (hard_measures_taken)
 			{
-				preempt_fail_old_preempt_count = std::max<u32>(preempt_fail_old_preempt_count, std::min<u32>(frame_times.back().preempt_count, max_preempt_count));
+				preempt_fail_old_preempt_count = std::max<u64>(preempt_fail_old_preempt_count, std::min<u64>(frame_times.back().preempt_count, max_preempt_count));
 			}
 			else if (preempt_fail_old_preempt_count)
 			{
-				perf_log.error("Lowering current preemption count significantly due to a performance drop, if this issue persists frequently consider lowering max preemptions count to 'new-count' or lower. (old-count=%d, new-count=%d)", preempt_fail_old_preempt_count, preempt_count);
+				perf_log.error("Lowering current preemption count significantly due to a performance drop, if this issue persists frequently consider lowering max preemptions count to 'new-count' or lower. (old-count=%llu, new-count=%llu)", preempt_fail_old_preempt_count, preempt_count);
 				preempt_fail_old_preempt_count = 0;
 			}
 
 			const u64 tsc_diff = (current_tsc - frame_times.back().tsc);
 			const u64 time_diff = (current_time - frame_times.back().timestamp);
-			const u64 preempt_diff = tsc_diff * (1'000'000 / 30) / (time_diff * std::max<u32>(preempt_count, 1));
+			const u64 preempt_diff = tsc_diff * (1'000'000 / 30) / (time_diff * std::max<u64>(preempt_count, 1ull));
 
 			if (!preempt_count)
 			{
