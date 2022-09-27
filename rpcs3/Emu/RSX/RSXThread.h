@@ -467,6 +467,19 @@ namespace rsx
 
 	struct sampled_image_descriptor_base;
 
+	struct desync_fifo_cmd_info
+	{
+		u32 cmd;
+		u64 timestamp;
+	};
+
+	struct frame_time_t
+	{
+		u64 preempt_count;
+		u64 timestamp;
+		u64 tsc;
+	};
+
 	class thread : public cpu_thread
 	{
 		u64 timestamp_ctrl = 0;
@@ -681,24 +694,10 @@ namespace rsx
 		atomic_t<bool> sync_point_request = false;
 		bool in_begin_end = false;
 
-		struct desync_fifo_cmd_info
-		{
-			u32 cmd;
-			u64 timestamp;
-		};
-
 		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;
-
-		struct frame_time_t
-		{
-			u64 preempt_count;
-			u64 timestamp;
-			u64 tsc;
-		};
-
 		std::deque<frame_time_t> frame_times;
 		u32 prevent_preempt_increase_tickets = 0;
-		u32 preempt_fail_old_preempt_count = 0;
+		u64 preempt_fail_old_preempt_count = 0;
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
