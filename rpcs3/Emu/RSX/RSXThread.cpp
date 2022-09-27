@@ -1605,6 +1605,12 @@ namespace rsx
 
 	void thread::on_framebuffer_options_changed(u32 opt)
 	{
+		if (m_rtts_dirty)
+		{
+			// Nothing to do
+			return;
+		}
+
 		auto evaluate_depth_buffer_state = [&]()
 		{
 			m_framebuffer_layout.zeta_write_enabled =
@@ -1677,12 +1683,6 @@ namespace rsx
 
 			return false;
 		};
-
-		if (m_rtts_dirty)
-		{
-			// Nothing to do
-			return;
-		}
 
 		switch (opt)
 		{
