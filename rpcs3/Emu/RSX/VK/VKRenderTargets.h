@@ -103,6 +103,12 @@ namespace vk
 				return {};
 			}
 
+			// If we have driver support for FBO loops, set the usage flag for it.
+			if (vk::get_current_renderer()->get_framebuffer_loops_support())
+			{
+				return { VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT, 0 };
+			}
+
 			// Workarounds to force transition to GENERAL to decompress.
 			// Fixes corruption in FBO loops for ANV and RADV.
 			switch (vk::get_driver_vendor())
@@ -117,8 +123,7 @@ namespace vk
 				break;
 			case driver_vendor::AMD:
 			case driver_vendor::RADV:
-				if ((vk::get_chip_family() >= chip_class::AMD_navi1x) &&
-					!vk::get_current_renderer()->get_framebuffer_loops_support())
+				if (vk::get_chip_family() >= chip_class::AMD_navi1x)
 				{
 					// Only needed for GFX10+
 					return { 0, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
