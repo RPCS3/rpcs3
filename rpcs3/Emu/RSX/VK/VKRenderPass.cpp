@@ -153,9 +153,9 @@ namespace vk
 
 			for (u32 i = 0, layout_offset = 0; i < 5; ++i, layout_offset += 3)
 			{
-				if (const auto layout = VkImageLayout((layout_blob >> layout_offset) & 0x7))
+				if (const auto layout_encoding = (layout_blob >> layout_offset) & 0x7)
 				{
-					result.push_back(layout);
+					result.push_back(decode_layout(layout_encoding));
 				}
 				else
 				{

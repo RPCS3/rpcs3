@@ -451,6 +451,11 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 		}
 
+		if (pgpu->framebuffer_loops_support)
+		{
+			requested_extensions.push_back(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME);
+		}
+
 		enabled_features.robustBufferAccess = VK_TRUE;
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
 		enabled_features.independentBlend = VK_TRUE;
@@ -614,6 +619,15 @@ namespace vk
 			indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
 			indexing_features.pNext = const_cast<void*>(device.pNext);
 			device.pNext = &indexing_features;
+		}
+
+		VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loop_features{};
+		if (pgpu->framebuffer_loops_support)
+		{
+			fbo_loop_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT;
+			fbo_loop_features.attachmentFeedbackLoopLayout = VK_TRUE;
+			fbo_loop_features.pNext = const_cast<void*>(device.pNext);
+			device.pNext = &fbo_loop_features;
 		}
 
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
