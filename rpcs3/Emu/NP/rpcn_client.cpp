@@ -1824,11 +1824,11 @@ namespace rpcn
 		return forge_send(CommandType::GetScoreNpid, req_id, data);
 	}
 
-	bool rpcn_client::get_score_friend(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, bool with_comment, bool with_gameinfo)
+	bool rpcn_client::get_score_friend(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, bool include_self, bool with_comment, bool with_gameinfo, u32 max_entries)
 	{
 		std::vector<u8> data;
 		flatbuffers::FlatBufferBuilder builder(1024);
-		auto req_finished = CreateGetScoreFriendsRequest(builder, board_id, with_comment, with_gameinfo);
+		auto req_finished = CreateGetScoreFriendsRequest(builder, board_id, include_self, max_entries, with_comment, with_gameinfo);
 		builder.Finish(req_finished);
 
 		u8* buf     = builder.GetBufferPointer();
