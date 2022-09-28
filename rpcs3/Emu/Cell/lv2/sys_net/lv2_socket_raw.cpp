@@ -67,15 +67,30 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_raw::getsockopt([[mayb
 	return {};
 }
 
-s32 lv2_socket_raw::setsockopt([[maybe_unused]] s32 level, [[maybe_unused]] s32 optname, [[maybe_unused]] const std::vector<u8>& optval)
+s32 lv2_socket_raw::setsockopt(s32 level, s32 optname, const std::vector<u8>& optval)
 {
 	sys_net.todo("lv2_socket_raw::setsockopt");
+
+	// TODO
+	int native_int = *reinterpret_cast<const be_t<s32>*>(optval.data());
+
+	if (level == SYS_NET_SOL_SOCKET && optname == SYS_NET_SO_NBIO)
+	{
+		so_nbio = native_int;
+	}
+
 	return {};
 }
 
-std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_raw::recvfrom([[maybe_unused]] s32 flags, [[maybe_unused]] u32 len, [[maybe_unused]] bool is_lock)
+std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_raw::recvfrom(s32 flags, [[maybe_unused]] u32 len, [[maybe_unused]] bool is_lock)
 {
 	sys_net.todo("lv2_socket_raw::recvfrom");
+
+	if (so_nbio || (flags & SYS_NET_MSG_DONTWAIT))
+	{
+		return {{-SYS_NET_EWOULDBLOCK, {}, {}}};
+	}
+
 	return {};
 }
 
