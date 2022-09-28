@@ -14,10 +14,13 @@ public:
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 
 private:
+	void load_backup(const std::string& path);
+	void save_backup();
 	void translate_input();
 	void usio_write(u8 channel, u16 reg, const std::vector<u8>& data);
 	void usio_read(u8 channel, u16 reg, u16 size);
 
 private:
+	fs::file usio_backup_file;
 	std::queue<std::vector<u8>> q_replies;
 };
