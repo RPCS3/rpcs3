@@ -4146,7 +4146,7 @@ error_code sceNpScoreRecordScoreAsync(s32 transId, SceNpScoreBoardId boardId, Sc
 	return scenp_score_record_score(transId, boardId, score, scoreComment, gameInfo, tmpRank, option, true);
 }
 
-error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId boardId, SceNpScoreValue score, u64 totalSize, u64 sendSize, vm::cptr<void> data, vm::ptr<void> option, bool async)
+error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId /* boardId */, SceNpScoreValue /* score */, u64 /* totalSize */, u64 /* sendSize */, vm::cptr<void> data, vm::ptr<void> option, bool /* async */)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4194,7 +4194,7 @@ error_code sceNpScoreRecordGameDataAsync(s32 transId, SceNpScoreBoardId boardId,
 	return scenp_score_record_game_data(transId, boardId, score, totalSize, sendSize, data, option, true);
 }
 
-error_code scenp_score_get_game_data(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npId, vm::ptr<u64> totalSize, u64 recvSize, vm::ptr<void> data, vm::ptr<void> option, bool async)
+error_code scenp_score_get_game_data(s32 /* transId */, SceNpScoreBoardId /* boardId */, vm::cptr<SceNpId> npId, vm::ptr<u64> totalSize, u64 /* recvSize */, vm::ptr<void> data, vm::ptr<void> option, bool /* async */)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4239,7 +4239,7 @@ error_code sceNpScoreGetGameDataAsync(s32 transId, SceNpScoreBoardId boardId, vm
 template <typename T>
 error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardId, T npIdArray, u64 npIdArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u64 rankArraySize,
 	vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
-	vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option, bool async)
+	vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> /* option */, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4504,7 +4504,7 @@ error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	nph.get_score_friend(trans_ctx, boardId, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async);
+	nph.get_score_friend(trans_ctx, boardId, includeSelf, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, async);
 
 	if (async)
 	{
