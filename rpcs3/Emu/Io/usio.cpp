@@ -7,13 +7,14 @@
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_utils.hpp"
 
 LOG_CHANNEL(usio_log);
 
 struct usio_memory
 {
 	std::vector<u8> backup_memory;
-	std::vector<u8> last_game_status = {0x4C, 0x41, 0x53, 0x54, 0x47, 0x41, 0x4D, 0x45, 0x53, 0x54, 0x41, 0x54, 0x55, 0x53, 0x20, 0x76, 0x65, 0x72, 0x2E, 0x33, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // "LASTGAMESTATUS ver.3"
+	std::vector<u8> last_game_status;
 
 	usio_memory(const usio_memory&) = delete;
 	usio_memory& operator=(const usio_memory&) = delete;
@@ -80,10 +81,12 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 
 	g_fxo->get<usio_memory>().backup_memory.resize(0xB8);
 	g_fxo->get<usio_memory>().last_game_status.resize(0x28);
+	load_backup(rpcs3::utils::get_hdd1_dir() + "/caches/usiobackup.bin");
 }
 
 usb_device_usio::~usb_device_usio()
 {
+	save_backup();
 }
 
 void usb_device_usio::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
@@ -101,6 +104,41 @@ void usb_device_usio::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 }
 
 extern bool is_input_allowed();
+
+void usb_device_usio::load_backup(const std::string& path)
+{
+	usio_backup_file.open(path, fs::create + fs::read + fs::write + fs::lock);
+
+	if (!usio_backup_file)
+	{
+		usio_log.error("Failed to load the USIO Backup file: %s", path);
+		return;
+	}
+
+	const u64 file_size = g_fxo->get<usio_memory>().backup_memory.size() + g_fxo->get<usio_memory>().last_game_status.size();
+
+	if (usio_backup_file.size() != file_size)
+	{
+		usio_log.notice("Invalid USIO Backup file detected. Treating it as an empty file: %s", path);
+		usio_backup_file.trunc(file_size);
+		return;
+	}
+
+	usio_backup_file.read(g_fxo->get<usio_memory>().backup_memory.data(), g_fxo->get<usio_memory>().backup_memory.size());
+	usio_backup_file.read(g_fxo->get<usio_memory>().last_game_status.data(), g_fxo->get<usio_memory>().last_game_status.size());
+}
+
+void usb_device_usio::save_backup()
+{
+	if (!usio_backup_file)
+	{
+		return;
+	}
+
+	usio_backup_file.seek(0, fs::seek_set);
+	usio_backup_file.write(g_fxo->get<usio_memory>().backup_memory.data(), g_fxo->get<usio_memory>().backup_memory.size());
+	usio_backup_file.write(g_fxo->get<usio_memory>().last_game_status.data(), g_fxo->get<usio_memory>().last_game_status.size());
+}
 
 void usb_device_usio::translate_input()
 {
