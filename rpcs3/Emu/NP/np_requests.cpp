@@ -999,7 +999,11 @@ namespace np
 		lastSortDate->tick = resp->lastSortDate();
 		*totalRecord       = resp->totalRecord();
 
-		trans_ctx->result = not_an_error(fb_rankarray->size());
+		if (fb_rankarray->size())
+			trans_ctx->result = not_an_error(fb_rankarray->size());
+		else
+			trans_ctx->result = SCE_NP_COMMUNITY_SERVER_ERROR_GAME_RANKING_NOT_FOUND;
+
 		trans_ctx->wake_cond.notify_one();
 		return true;
 	}
