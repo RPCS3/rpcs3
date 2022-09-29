@@ -81,7 +81,7 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 
 	g_fxo->get<usio_memory>().backup_memory.resize(0xB8);
 	g_fxo->get<usio_memory>().last_game_status.resize(0x28);
-	load_backup(rpcs3::utils::get_hdd1_dir() + "/caches/usiobackup.bin");
+	load_backup();
 }
 
 usb_device_usio::~usb_device_usio()
@@ -105,13 +105,13 @@ void usb_device_usio::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 
 extern bool is_input_allowed();
 
-void usb_device_usio::load_backup(const std::string& path)
+void usb_device_usio::load_backup()
 {
-	usio_backup_file.open(path, fs::create + fs::read + fs::write + fs::lock);
+	usio_backup_path = rpcs3::utils::get_hdd1_dir() + "/caches/usiobackup.bin";
 
-	if (!usio_backup_file)
+	if (!usio_backup_file.open(usio_backup_path, fs::read + fs::write + fs::lock))
 	{
-		usio_log.error("Failed to load the USIO Backup file: %s", path);
+		usio_log.trace("Failed to load the USIO Backup file: %s", usio_backup_path);
 		return;
 	}
 
@@ -119,7 +119,7 @@ void usb_device_usio::load_backup(const std::string& path)
 
 	if (usio_backup_file.size() != file_size)
 	{
-		usio_log.notice("Invalid USIO Backup file detected. Treating it as an empty file: %s", path);
+		usio_log.trace("Invalid USIO Backup file detected. Treating it as an empty file: %s", usio_backup_path);
 		usio_backup_file.trunc(file_size);
 		return;
 	}
@@ -457,6 +457,11 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 	transfer->expected_result = HC_CC_NOERR;
 	// The latency varies per operation but it doesn't seem to matter for this device so let's go fast!
 	transfer->expected_time = get_timestamp();
+
+	if (!usio_backup_path.empty() && !usio_backup_file && !usio_backup_file.open(usio_backup_path, fs::create + fs::read + fs::write + fs::lock))
+	{
+		usio_log.error("Failed to create a new USIO Backup file: %s", usio_backup_path);
+	}
 
 	switch (endpoint)
 	{
