@@ -244,7 +244,7 @@ namespace stx
 			});
 
 			for (pos = 0; pos < stx::typelist<typeinfo>().count(); pos++)
-			{	
+			{
 				const auto& type = *order[pos].second;
 
 				const u32 id = type.index();

@@ -557,27 +557,26 @@ namespace glsl
 
 			if (props.require_texture_ops)
 			{
-				OS <<
 				// Declare special texture control flags
-				"#define GAMMA_R_MASK  (1 << " << rsx::texture_control_bits::GAMMA_R << ")\n"
-				"#define GAMMA_G_MASK  (1 << " << rsx::texture_control_bits::GAMMA_G << ")\n"
-				"#define GAMMA_B_MASK  (1 << " << rsx::texture_control_bits::GAMMA_B << ")\n"
-				"#define GAMMA_A_MASK  (1 << " << rsx::texture_control_bits::GAMMA_A << ")\n"
-				"#define EXPAND_R_MASK (1 << " << rsx::texture_control_bits::EXPAND_R << ")\n"
-				"#define EXPAND_G_MASK (1 << " << rsx::texture_control_bits::EXPAND_G << ")\n"
-				"#define EXPAND_B_MASK (1 << " << rsx::texture_control_bits::EXPAND_B << ")\n"
-				"#define EXPAND_A_MASK (1 << " << rsx::texture_control_bits::EXPAND_A << ")\n\n"
+				OS << "#define GAMMA_R_MASK  (1 << " << rsx::texture_control_bits::GAMMA_R << ")\n";
+				OS << "#define GAMMA_G_MASK  (1 << " << rsx::texture_control_bits::GAMMA_G << ")\n";
+				OS << "#define GAMMA_B_MASK  (1 << " << rsx::texture_control_bits::GAMMA_B << ")\n";
+				OS << "#define GAMMA_A_MASK  (1 << " << rsx::texture_control_bits::GAMMA_A << ")\n";
+				OS << "#define EXPAND_R_MASK (1 << " << rsx::texture_control_bits::EXPAND_R << ")\n";
+				OS << "#define EXPAND_G_MASK (1 << " << rsx::texture_control_bits::EXPAND_G << ")\n";
+				OS << "#define EXPAND_B_MASK (1 << " << rsx::texture_control_bits::EXPAND_B << ")\n";
+				OS << "#define EXPAND_A_MASK (1 << " << rsx::texture_control_bits::EXPAND_A << ")\n\n";
 
-				"#define ALPHAKILL    " << rsx::texture_control_bits::ALPHAKILL << "\n"
-				"#define RENORMALIZE  " << rsx::texture_control_bits::RENORMALIZE << "\n"
-				"#define DEPTH_FLOAT   " << rsx::texture_control_bits::DEPTH_FLOAT << "\n"
-				"#define DEPTH_COMPARE " << rsx::texture_control_bits::DEPTH_COMPARE_OP << "\n"
-				"#define FILTERED_MAG_BIT  " << rsx::texture_control_bits::FILTERED_MAG << "\n"
-				"#define FILTERED_MIN_BIT  " << rsx::texture_control_bits::FILTERED_MIN << "\n"
-				"#define INT_COORDS_BIT " << rsx::texture_control_bits::UNNORMALIZED_COORDS << "\n"
-				"#define GAMMA_CTRL_MASK  (GAMMA_R_MASK|GAMMA_G_MASK|GAMMA_B_MASK|GAMMA_A_MASK)\n"
-				"#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n"
-				"#define FILTERED_MASK    (FILTERED_MAG_BIT|FILTERED_MIN_BIT)\n\n";
+				OS << "#define ALPHAKILL    " << rsx::texture_control_bits::ALPHAKILL << "\n";
+				OS << "#define RENORMALIZE  " << rsx::texture_control_bits::RENORMALIZE << "\n";
+				OS << "#define DEPTH_FLOAT   " << rsx::texture_control_bits::DEPTH_FLOAT << "\n";
+				OS << "#define DEPTH_COMPARE " << rsx::texture_control_bits::DEPTH_COMPARE_OP << "\n";
+				OS << "#define FILTERED_MAG_BIT  " << rsx::texture_control_bits::FILTERED_MAG << "\n";
+				OS << "#define FILTERED_MIN_BIT  " << rsx::texture_control_bits::FILTERED_MIN << "\n";
+				OS << "#define INT_COORDS_BIT " << rsx::texture_control_bits::UNNORMALIZED_COORDS << "\n";
+				OS << "#define GAMMA_CTRL_MASK  (GAMMA_R_MASK|GAMMA_G_MASK|GAMMA_B_MASK|GAMMA_A_MASK)\n";
+				OS << "#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n";
+				OS << "#define FILTERED_MASK    (FILTERED_MAG_BIT|FILTERED_MIN_BIT)\n\n";
 			}
 		}
 

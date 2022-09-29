@@ -829,7 +829,7 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 	if (size == 8)
 	{
 		// see lv2_file::open_raw
-		switch (*static_cast<const be_t<u64>*>(arg))
+		switch (*static_cast<const be_t<u64, 1>*>(arg))
 		{
 		case 0x18000000010: type = lv2_file_type::sdata; break;
 		case 0x2: type = lv2_file_type::edata; break;

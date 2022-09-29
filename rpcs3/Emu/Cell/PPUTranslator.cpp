@@ -534,7 +534,7 @@ Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u
 		// Transform indices (works for vectors with size 2^N)
 		for (usz i = 0; i < indices.size(); i++)
 		{
-			data.push_back(indices.end()[~i] ^ mask);
+			data.push_back(*(indices.begin() + indices.size() - 1 - i) ^ mask);
 		}
 
 		return m_ir->CreateShuffleVector(left, right, ConstantDataVector::get(m_context, data));

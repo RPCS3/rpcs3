@@ -1038,7 +1038,7 @@ void ppu_thread::dump_regs(std::string& ret) const
 				return addr % 4 == 0 && vm::check_addr(addr, vm::page_executable) && g_ppu_itype.decode(*vm::get_super_ptr<u32>(addr)) != ppu_itype::UNK;
 			};
 
-			if (const u32 reg_ptr = *vm::get_super_ptr<u32>(static_cast<u32>(reg));
+			if (const u32 reg_ptr = *vm::get_super_ptr<be_t<u32, 1>>(static_cast<u32>(reg));
 				vm::check_addr<8>(reg_ptr) && !vm::check_addr(toc, vm::page_executable))
 			{
 				// Check executability and alignment
