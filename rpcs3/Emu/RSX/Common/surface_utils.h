@@ -413,7 +413,7 @@ namespace rsx
 		{
 			for (auto &e : memory_tag_samples)
 			{
-				e.second = *reinterpret_cast<u64*>(vm::g_sudo_addr + e.first);
+				e.second = *reinterpret_cast<nse_t<u64, 1>*>(vm::g_sudo_addr + e.first);
 			}
 		}
 
@@ -426,7 +426,7 @@ namespace rsx
 		{
 			for (auto &e : memory_tag_samples)
 			{
-				if (e.second != *reinterpret_cast<u64*>(vm::g_sudo_addr + e.first))
+				if (e.second != *reinterpret_cast<nse_t<u64, 1>*>(vm::g_sudo_addr + e.first))
 					return false;
 			}
 

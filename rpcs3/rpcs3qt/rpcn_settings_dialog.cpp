@@ -661,7 +661,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 			rpcn_ask_password_dialog ask_pass(this, tr("Please enter your password:"));
 			ask_pass.exec();
 
-			auto password = ask_pass.get_password();
+			auto& password = ask_pass.get_password();
 			if (!password)
 				return;
 
