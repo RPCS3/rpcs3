@@ -37,6 +37,8 @@ namespace utils
 
 	bool has_fma4();
 
+	bool has_fast_vperm2b();
+
 	bool has_erms();
 
 	bool has_fsrm();

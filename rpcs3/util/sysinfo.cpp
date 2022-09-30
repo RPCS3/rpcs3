@@ -227,6 +227,19 @@ bool utils::has_fma4()
 #endif
 }
 
+// The Zen4 based CPUs support VPERMI2B/VPERMT2B in a single uop.
+// Current Intel cpus (as of 2022) need 3 uops to execute these instructions.
+// Check for SSE4A (which intel doesn't doesn't support) as well as VBMI.
+bool utils::has_fast_vperm2b()
+{
+#if defined(ARCH_X64)
+	static const bool g_value = has_avx512() && (get_cpuid(7, 0)[2] & 0x2) == 0x2 && get_cpuid(0, 0)[0] >= 0x7 && (get_cpuid(0x80000001, 0)[2] & 0x20) == 0x20;
+	return g_value;
+#else
+	return false;
+#endif
+}
+
 bool utils::has_erms()
 {
 #if defined(ARCH_X64)
