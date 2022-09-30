@@ -490,7 +490,8 @@ namespace rsx
 
 			// Delete all statistics caches but leave the current one
 			const u32 current_index = m_statistics_tag_id;
-			for (u32 index = current_index - 1; index != current_index;)
+			const u32 previous_index = (current_index + max_stat_registers - 1) % max_stat_registers;
+			for (u32 index = previous_index; index != current_index;)
 			{
 				if (m_statistics_map[index].flags == 0)
 				{
