@@ -30,6 +30,7 @@
 #endif
 
 #include "util/types.hpp"
+#include "util/sysinfo.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/BitField.h"
 #include "Utilities/JIT.h"
@@ -3442,6 +3443,11 @@ public:
 	template <typename T1, typename T2, typename T3>
 	value_t<u8[16]> vperm2b(T1 a, T2 b, T3 c)
 	{
+		if (!utils::has_fast_vperm2b())
+		{
+			return vperm2b256to128(a, b, c);
+		}
+
 		value_t<u8[16]> result;
 
 		const auto data0 = a.eval(m_ir);
