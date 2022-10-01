@@ -37,7 +37,6 @@ target_include_directories(rpcs3_emu
     PUBLIC
         ${RPCS3_SRC_DIR})
 
-
 # Utilities
 target_sources(rpcs3_emu PRIVATE
     ../util/atomic.cpp
@@ -116,7 +115,6 @@ target_sources(rpcs3_emu PRIVATE
     ../Loader/TROPUSR.cpp
     ../Loader/TRP.cpp
 )
-
 
 # Audio
 target_sources(rpcs3_emu PRIVATE
@@ -416,7 +414,6 @@ target_sources(rpcs3_emu PRIVATE
     Memory/vm.cpp
 )
 
-
 # RSX
 target_sources(rpcs3_emu PRIVATE
     RSX/gcm_enums.cpp
@@ -551,7 +548,7 @@ target_link_libraries(rpcs3_emu
 if(APPLE)
     check_function_exists(clock_gettime HAVE_CLOCK_GETTIME)
     if (${HAVE_CLOCK_GETTIME})
-	    target_compile_definitions(rpcs3_emu PUBLIC -DHAVE_CLOCK_GETTIME)
+        target_compile_definitions(rpcs3_emu PUBLIC -DHAVE_CLOCK_GETTIME)
     endif()
 endif()
 
