@@ -4326,7 +4326,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
 					{
 						const auto _this = static_cast<spu_thread*>(cpu_thread::get_current());
-						AUDIT(_this->id_type() == 1);
+						AUDIT(_this->id_type() == 2);
 
 						const auto old = +_this->state;
 

@@ -1544,7 +1544,7 @@ namespace vm
 
 	static void load_memory_bytes(utils::serial& ar, u8* ptr, usz size)
 	{
-		AUDIT(ar.is_writing() && !(size % 128));
+		AUDIT(!ar.is_writing() && !(size % 128));
 
 		for (; size; ptr += 128 * 8, size -= 128 * 8)
 		{
