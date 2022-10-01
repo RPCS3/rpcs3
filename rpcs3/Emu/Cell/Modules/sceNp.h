@@ -1157,9 +1157,9 @@ struct SceNpScoreRankData
 	be_t<u32> serialRank;
 	be_t<u32> rank;
 	be_t<u32> highestRank;
-	be_t<s64> scoreValue;
 	be_t<s32> hasGameData;
 	u8 pad0[4];
+	be_t<s64> scoreValue;
 	CellRtcTick recordDate;
 };
 

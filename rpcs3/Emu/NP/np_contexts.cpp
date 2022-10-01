@@ -80,6 +80,13 @@ void score_transaction_ctx::wait_for_completion()
 	completion_cond.wait(lock);
 }
 
+bool score_transaction_ctx::set_result_and_wake(error_code err)
+{
+	result = err;
+	wake_cond.notify_one();
+	return true;
+}
+
 match2_ctx::match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
 {
 	ensure(!communicationId->data[9] && strlen(communicationId->data) == 9);

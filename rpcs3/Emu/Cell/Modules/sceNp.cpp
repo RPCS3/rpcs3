@@ -1299,7 +1299,7 @@ error_code sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 
 error_code sceNpBasicGetFriendListEntry(u32 index, vm::ptr<SceNpId> npid)
 {
-	sceNp.todo("sceNpBasicGetFriendListEntry(index=%d, npid=*0x%x)", index, npid);
+	sceNp.warning("sceNpBasicGetFriendListEntry(index=%d, npid=*0x%x)", index, npid);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4146,7 +4146,7 @@ error_code sceNpScoreRecordScoreAsync(s32 transId, SceNpScoreBoardId boardId, Sc
 	return scenp_score_record_score(transId, boardId, score, scoreComment, gameInfo, tmpRank, option, true);
 }
 
-error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId /* boardId */, SceNpScoreValue /* score */, u64 /* totalSize */, u64 /* sendSize */, vm::cptr<void> data, vm::ptr<void> option, bool /* async */)
+error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId boardId, SceNpScoreValue score, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::ptr<void> /* option */, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4155,19 +4155,14 @@ error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId /* boardI
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
 	if (!data)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (option) // option check at least until fw 4.71
+	if (!transId)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
 	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
@@ -4177,24 +4172,41 @@ error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId /* boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
-	return CELL_OK;
+	if (!nph.is_NP_init)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
+	}
+
+	nph.record_score_data(trans_ctx, boardId, score, totalSize, sendSize, static_cast<const u8*>(data.get_ptr()), async);
+
+	if (async)
+	{
+		return CELL_OK;
+	}
+
+	return *trans_ctx->result;
 }
 
-error_code sceNpScoreRecordGameData(s32 transId, SceNpScoreBoardId boardId, SceNpScoreValue score, u64 totalSize, u64 sendSize, vm::cptr<void> data, vm::ptr<void> option)
+error_code sceNpScoreRecordGameData(s32 transId, SceNpScoreBoardId boardId, SceNpScoreValue score, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreRecordGameData(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, score, totalSize, sendSize, data, option);
 
 	return scenp_score_record_game_data(transId, boardId, score, totalSize, sendSize, data, option, false);
 }
 
-error_code sceNpScoreRecordGameDataAsync(s32 transId, SceNpScoreBoardId boardId, SceNpScoreValue score, u64 totalSize, u64 sendSize, vm::cptr<void> data, s32 prio, vm::ptr<void> option)
+error_code sceNpScoreRecordGameDataAsync(s32 transId, SceNpScoreBoardId boardId, SceNpScoreValue score, u32 totalSize, u32 sendSize, vm::cptr<void> data, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreRecordGameDataAsync(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, score, totalSize, sendSize, data, prio, option);
 
 	return scenp_score_record_game_data(transId, boardId, score, totalSize, sendSize, data, option, true);
 }
 
-error_code scenp_score_get_game_data(s32 /* transId */, SceNpScoreBoardId /* boardId */, vm::cptr<SceNpId> npId, vm::ptr<u64> totalSize, u64 /* recvSize */, vm::ptr<void> data, vm::ptr<void> option, bool /* async */)
+error_code scenp_score_get_game_data(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> data, vm::ptr<void> /* option */, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4203,14 +4215,16 @@ error_code scenp_score_get_game_data(s32 /* transId */, SceNpScoreBoardId /* boa
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npId || !totalSize || !data)
+	if (!npId || !data)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (option) // option check at least until fw 4.71
+	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
+
+	if (!trans_ctx)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -4218,17 +4232,24 @@ error_code scenp_score_get_game_data(s32 /* transId */, SceNpScoreBoardId /* boa
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	return CELL_OK;
+	nph.get_score_data(trans_ctx, boardId, *npId, totalSize, recvSize, data, async);
+
+	if (async)
+	{
+		return CELL_OK;
+	}
+
+	return *trans_ctx->result;
 }
 
-error_code sceNpScoreGetGameData(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npId, vm::ptr<u64> totalSize, u64 recvSize, vm::ptr<void> data, vm::ptr<void> option)
+error_code sceNpScoreGetGameData(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> data, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetGameDataAsync(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, npId, totalSize, recvSize, data, option);
 
 	return scenp_score_get_game_data(transId, boardId, npId, totalSize, recvSize, data, option, false);
 }
 
-error_code sceNpScoreGetGameDataAsync(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npId, vm::ptr<u64> totalSize, u64 recvSize, vm::ptr<void> data, s32 prio, vm::ptr<void> option)
+error_code sceNpScoreGetGameDataAsync(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> data, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetGameDataAsync(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, npId, totalSize, recvSize, data, prio,
 	    option);
@@ -4237,8 +4258,8 @@ error_code sceNpScoreGetGameDataAsync(s32 transId, SceNpScoreBoardId boardId, vm
 }
 
 template <typename T>
-error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardId, T npIdArray, u64 npIdArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u64 rankArraySize,
-	vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardId, T npIdArray, u32 npIdArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize,
+	vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
 	vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> /* option */, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
@@ -4284,7 +4305,8 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if (rankArraySize != (arrayNum * sizeof(SceNpScorePlayerRankData)))
+	// Function can actually accept SceNpScoreRankData though it is undocumented
+	if (rankArraySize != (arrayNum * sizeof(SceNpScorePlayerRankData)) && rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
@@ -4302,7 +4324,7 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 			return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 		}
 
-		for (u64 index = 0; index < arrayNum; index++)
+		for (u32 index = 0; index < arrayNum; index++)
 		{
 			npid_vec.push_back(std::make_pair(npIdArray[index], 0));
 		}
@@ -4314,7 +4336,7 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 			return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 		}
 
-		for (u64 index = 0; index < arrayNum; index++)
+		for (u32 index = 0; index < arrayNum; index++)
 		{
 			npid_vec.push_back(std::make_pair(npIdArray[index].npId, npIdArray[index].pcId));
 		}
@@ -4330,8 +4352,8 @@ error_code scenp_score_get_ranking_by_npid(s32 transId, SceNpScoreBoardId boardI
 	return *trans_ctx->result;
 }
 
-error_code sceNpScoreGetRankingByNpId(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npIdArray, u64 npIdArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u64 rankArraySize,
-    vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetRankingByNpId(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npIdArray, u32 npIdArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize,
+    vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
 {
 	sceNp.warning("sceNpScoreGetRankingByNpId(transId=%d, boardId=%d, npIdArray=*0x%x, npIdArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, "
@@ -4342,8 +4364,8 @@ error_code sceNpScoreGetRankingByNpId(s32 transId, SceNpScoreBoardId boardId, vm
 		infoArraySize, arrayNum, lastSortDate, totalRecord, option, false);
 }
 
-error_code sceNpScoreGetRankingByNpIdAsync(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npIdArray, u64 npIdArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u64 rankArraySize,
-    vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetRankingByNpIdAsync(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npIdArray, u32 npIdArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize,
+    vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio, vm::ptr<void> option)
 {
 	sceNp.warning("sceNpScoreGetRankingByNpIdAsync(transId=%d, boardId=%d, npIdArray=*0x%x, npIdArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, "
@@ -4354,8 +4376,8 @@ error_code sceNpScoreGetRankingByNpIdAsync(s32 transId, SceNpScoreBoardId boardI
 		infoArraySize, arrayNum, lastSortDate, totalRecord, option, true);
 }
 
-error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u64 rankArraySize,
-    vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize,
+    vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option, bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
@@ -4433,8 +4455,8 @@ error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId board
 	return *trans_ctx->result;
 }
 
-error_code sceNpScoreGetRankingByRange(s32 transId, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u64 rankArraySize,
-    vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetRankingByRange(s32 transId, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize,
+    vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
 {
 	sceNp.warning("sceNpScoreGetRankingByRange(transId=%d, boardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, "
@@ -4445,8 +4467,8 @@ error_code sceNpScoreGetRankingByRange(s32 transId, SceNpScoreBoardId boardId, S
 		arrayNum, lastSortDate, totalRecord, option, false);
 }
 
-error_code sceNpScoreGetRankingByRangeAsync(s32 transId, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u64 rankArraySize,
-    vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetRankingByRangeAsync(s32 transId, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize,
+    vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio, vm::ptr<void> option)
 {
 	sceNp.warning("sceNpScoreGetRankingByRangeAsync(transId=%d, boardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, "
@@ -4457,8 +4479,8 @@ error_code sceNpScoreGetRankingByRangeAsync(s32 transId, SceNpScoreBoardId board
 		arrayNum, lastSortDate, totalRecord, option, true);
 }
 
-error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardId, s32 includeSelf, vm::ptr<SceNpScoreRankData> rankArray, u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray,
-    u64 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option,
+error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardId, s32 includeSelf, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray,
+    u32 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option,
 	bool async)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
@@ -4514,8 +4536,8 @@ error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardI
 	return *trans_ctx->result;
 }
 
-error_code sceNpScoreGetFriendsRanking(s32 transId, SceNpScoreBoardId boardId, s32 includeSelf, vm::ptr<SceNpScoreRankData> rankArray, u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray,
-    u64 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
+error_code sceNpScoreGetFriendsRanking(s32 transId, SceNpScoreBoardId boardId, s32 includeSelf, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray,
+    u32 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
 {
 	sceNp.warning("sceNpScoreGetFriendsRanking(transId=%d, boardId=%d, includeSelf=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, "
 	           "arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
@@ -4525,8 +4547,8 @@ error_code sceNpScoreGetFriendsRanking(s32 transId, SceNpScoreBoardId boardId, s
 		arrayNum, lastSortDate, totalRecord, option, false);
 }
 
-error_code sceNpScoreGetFriendsRankingAsync(s32 transId, SceNpScoreBoardId boardId, s32 includeSelf, vm::ptr<SceNpScoreRankData> rankArray, u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray,
-    u64 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio,
+error_code sceNpScoreGetFriendsRankingAsync(s32 transId, SceNpScoreBoardId boardId, s32 includeSelf, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray,
+    u32 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio,
     vm::ptr<void> option)
 {
 	sceNp.warning("sceNpScoreGetFriendsRankingAsync(transId=%d, boardId=%d, includeSelf=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, "
@@ -4537,10 +4559,8 @@ error_code sceNpScoreGetFriendsRankingAsync(s32 transId, SceNpScoreBoardId board
 		arrayNum, lastSortDate, totalRecord, option, true);
 }
 
-error_code sceNpScoreCensorComment(s32 transId, vm::cptr<char> comment, vm::ptr<void> option)
+error_code scenp_score_censor_comment(s32 transId, vm::cptr<char> comment, vm::ptr<void> option, bool async)
 {
-	sceNp.todo("sceNpScoreCensorComment(transId=%d, comment=%s, option=*0x%x)", transId, comment, option);
-
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Score_init)
@@ -4564,32 +4584,36 @@ error_code sceNpScoreCensorComment(s32 transId, vm::cptr<char> comment, vm::ptr<
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
 	}
 
-	return CELL_OK;
+	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
+
+	if (!trans_ctx)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
+	}
+
+	// TODO: actual implementation of this
+	trans_ctx->result = CELL_OK;
+
+	if (async)
+	{
+		return CELL_OK;
+	}
+
+	return *trans_ctx->result;
+}
+
+error_code sceNpScoreCensorComment(s32 transId, vm::cptr<char> comment, vm::ptr<void> option)
+{
+	sceNp.todo("sceNpScoreCensorComment(transId=%d, comment=%s, option=*0x%x)", transId, comment, option);
+
+	return scenp_score_censor_comment(transId, comment, option, false);
 }
 
 error_code sceNpScoreCensorCommentAsync(s32 transId, vm::cptr<char> comment, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreCensorCommentAsync(transId=%d, comment=%s, prio=%d, option=*0x%x)", transId, comment, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_Score_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (!comment)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
-	}
-
-	if (strlen(comment.get_ptr()) > SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN || option) // option check at least until fw 4.71
-	{
-		// TODO: is SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN + 1 allowed ?
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	return CELL_OK;
+	return scenp_score_censor_comment(transId, comment, option, true);
 }
 
 error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
@@ -4651,8 +4675,8 @@ error_code sceNpScoreSanitizeCommentAsync(s32 transId, vm::cptr<char> comment, v
 	return CELL_OK;
 }
 
-error_code sceNpScoreGetRankingByNpIdPcId(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpScoreNpIdPcId> idArray, u64 idArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u64 rankArraySize,
-    vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetRankingByNpIdPcId(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpScoreNpIdPcId> idArray, u32 idArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize,
+    vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
 {
 	sceNp.warning("sceNpScoreGetRankingByNpIdPcId(transId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, "
@@ -4663,8 +4687,8 @@ error_code sceNpScoreGetRankingByNpIdPcId(s32 transId, SceNpScoreBoardId boardId
 		infoArraySize, arrayNum, lastSortDate, totalRecord, option, false);
 }
 
-error_code sceNpScoreGetRankingByNpIdPcIdAsync(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpScoreNpIdPcId> idArray, u64 idArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray,
-    u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<void> infoArray, u64 infoArraySize, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetRankingByNpIdPcIdAsync(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpScoreNpIdPcId> idArray, u32 idArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray,
+    u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio, vm::ptr<void> option)
 {
 	sceNp.warning("sceNpScoreGetRankingByNpIdPcIdAsync(transId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, "
@@ -4697,9 +4721,9 @@ error_code sceNpScoreAbortTransaction(s32 transId)
 	return CELL_OK;
 }
 
-error_code sceNpScoreGetClansMembersRankingByNpId(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> idArray, u64 idArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray,
-    u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u64 infoArraySize, vm::ptr<SceNpScoreClansMemberDescription> descriptArray,
-    u64 descriptArraySize, u64 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
+error_code sceNpScoreGetClansMembersRankingByNpId(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> idArray, u32 idArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray,
+    u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u32 infoArraySize, vm::ptr<SceNpScoreClansMemberDescription> descriptArray,
+    u32 descriptArraySize, u32 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClansMembersRankingByNpId(transId=%d, clanId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, "
 	           "infoArray=*0x%x, infoArraySize=%d, descriptArray=*0x%x, descriptArraySize=%d, arrayNum=%d, clanInfo=*0x%x, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
@@ -4736,9 +4760,9 @@ error_code sceNpScoreGetClansMembersRankingByNpId(s32 transId, SceNpClanId clanI
 	return CELL_OK;
 }
 
-error_code sceNpScoreGetClansMembersRankingByNpIdAsync(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> idArray, u64 idArraySize,
-    vm::ptr<SceNpScorePlayerRankData> rankArray, u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u64 infoArraySize,
-    vm::ptr<SceNpScoreClansMemberDescription> descriptArray, u64 descriptArraySize, u64 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetClansMembersRankingByNpIdAsync(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> idArray, u32 idArraySize,
+    vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u32 infoArraySize,
+    vm::ptr<SceNpScoreClansMemberDescription> descriptArray, u32 descriptArraySize, u32 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClansMembersRankingByNpIdAsync(transId=%d, clanId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, "
@@ -4766,9 +4790,9 @@ error_code sceNpScoreGetClansMembersRankingByNpIdAsync(s32 transId, SceNpClanId 
 	return CELL_OK;
 }
 
-error_code sceNpScoreGetClansMembersRankingByNpIdPcId(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> idArray, u64 idArraySize,
-    vm::ptr<SceNpScorePlayerRankData> rankArray, u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u64 infoArraySize,
-    vm::ptr<SceNpScoreClansMemberDescription> descriptArray, u64 descriptArraySize, u64 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetClansMembersRankingByNpIdPcId(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> idArray, u32 idArraySize,
+    vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u32 infoArraySize,
+    vm::ptr<SceNpScoreClansMemberDescription> descriptArray, u32 descriptArraySize, u32 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClansMembersRankingByNpIdPcId(transId=%d, clanId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, "
@@ -4806,9 +4830,9 @@ error_code sceNpScoreGetClansMembersRankingByNpIdPcId(s32 transId, SceNpClanId c
 	return CELL_OK;
 }
 
-error_code sceNpScoreGetClansMembersRankingByNpIdPcIdAsync(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> idArray, u64 idArraySize,
-    vm::ptr<SceNpScorePlayerRankData> rankArray, u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u64 infoArraySize,
-    vm::ptr<SceNpScoreClansMemberDescription> descriptArray, u64 descriptArraySize, u64 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetClansMembersRankingByNpIdPcIdAsync(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> idArray, u32 idArraySize,
+    vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u32 infoArraySize,
+    vm::ptr<SceNpScoreClansMemberDescription> descriptArray, u32 descriptArraySize, u32 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo(
@@ -4837,8 +4861,8 @@ error_code sceNpScoreGetClansMembersRankingByNpIdPcIdAsync(s32 transId, SceNpCla
 	return CELL_OK;
 }
 
-error_code sceNpScoreGetClansRankingByRange(s32 transId, SceNpScoreClansBoardId clanBoardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreClanIdRankData> rankArray, u64 rankArraySize,
-    vm::ptr<void> reserved1, u64 reservedSize1, vm::ptr<void> reserved2, u64 reservedSize2, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord,
+error_code sceNpScoreGetClansRankingByRange(s32 transId, SceNpScoreClansBoardId clanBoardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreClanIdRankData> rankArray, u32 rankArraySize,
+    vm::ptr<void> reserved1, u32 reservedSize1, vm::ptr<void> reserved2, u32 reservedSize2, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord,
     vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClansRankingByRange(transId=%d, clanBoardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, reserved1=*0x%x, reservedSize1=%d, reserved2=*0x%x, reservedSize2=%d, "
@@ -4875,8 +4899,8 @@ error_code sceNpScoreGetClansRankingByRange(s32 transId, SceNpScoreClansBoardId 
 	return CELL_OK;
 }
 
-error_code sceNpScoreGetClansRankingByRangeAsync(s32 transId, SceNpScoreClansBoardId clanBoardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreClanIdRankData> rankArray, u64 rankArraySize,
-    vm::ptr<void> reserved1, u64 reservedSize1, vm::ptr<void> reserved2, u64 reservedSize2, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio,
+error_code sceNpScoreGetClansRankingByRangeAsync(s32 transId, SceNpScoreClansBoardId clanBoardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreClanIdRankData> rankArray, u32 rankArraySize,
+    vm::ptr<void> reserved1, u32 reservedSize1, vm::ptr<void> reserved2, u32 reservedSize2, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio,
     vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClansRankingByRangeAsync(transId=%d, clanBoardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, reserved1=*0x%x, reservedSize1=%d, reserved2=*0x%x, "
@@ -4904,7 +4928,7 @@ error_code sceNpScoreGetClansRankingByRangeAsync(s32 transId, SceNpScoreClansBoa
 }
 
 error_code sceNpScoreGetClanMemberGameData(
-    s32 transId, SceNpScoreBoardId boardId, SceNpClanId clanId, vm::cptr<SceNpId> npId, vm::ptr<u64> totalSize, u64 recvSize, vm::ptr<void> data, vm::ptr<void> option)
+    s32 transId, SceNpScoreBoardId boardId, SceNpClanId clanId, vm::cptr<SceNpId> npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> data, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClanMemberGameData(transId=%d, boardId=%d, clanId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, clanId, npId, totalSize,
 	    recvSize, data, option);
@@ -4935,7 +4959,7 @@ error_code sceNpScoreGetClanMemberGameData(
 }
 
 error_code sceNpScoreGetClanMemberGameDataAsync(
-    s32 transId, SceNpScoreBoardId boardId, SceNpClanId clanId, vm::cptr<SceNpId> npId, vm::ptr<u64> totalSize, u64 recvSize, vm::ptr<void> data, s32 prio, vm::ptr<void> option)
+    s32 transId, SceNpScoreBoardId boardId, SceNpClanId clanId, vm::cptr<SceNpId> npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> data, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClanMemberGameDataAsync(transId=%d, boardId=%d, clanId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, clanId, npId,
 	    totalSize, recvSize, data, prio, option);
@@ -4955,8 +4979,8 @@ error_code sceNpScoreGetClanMemberGameDataAsync(
 	return CELL_OK;
 }
 
-error_code sceNpScoreGetClansRankingByClanId(s32 transId, SceNpScoreClansBoardId clanBoardId, vm::cptr<SceNpClanId> clanIdArray, u64 clanIdArraySize, vm::ptr<SceNpScoreClanIdRankData> rankArray,
-    u64 rankArraySize, vm::ptr<void> reserved1, u64 reservedSize1, vm::ptr<void> reserved2, u64 reservedSize2, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetClansRankingByClanId(s32 transId, SceNpScoreClansBoardId clanBoardId, vm::cptr<SceNpClanId> clanIdArray, u32 clanIdArraySize, vm::ptr<SceNpScoreClanIdRankData> rankArray,
+    u32 rankArraySize, vm::ptr<void> reserved1, u32 reservedSize1, vm::ptr<void> reserved2, u32 reservedSize2, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClansRankingByClanId(transId=%d, clanBoardId=%d, clanIdArray=*0x%x, clanIdArraySize=%d, rankArray=*0x%x, rankArraySize=%d, reserved1=*0x%x, reservedSize1=%d, "
@@ -4993,8 +5017,8 @@ error_code sceNpScoreGetClansRankingByClanId(s32 transId, SceNpScoreClansBoardId
 	return CELL_OK;
 }
 
-error_code sceNpScoreGetClansRankingByClanIdAsync(s32 transId, SceNpScoreClansBoardId clanBoardId, vm::cptr<SceNpClanId> clanIdArray, u64 clanIdArraySize, vm::ptr<SceNpScoreClanIdRankData> rankArray,
-    u64 rankArraySize, vm::ptr<void> reserved1, u64 reservedSize1, vm::ptr<void> reserved2, u64 reservedSize2, u64 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
+error_code sceNpScoreGetClansRankingByClanIdAsync(s32 transId, SceNpScoreClansBoardId clanBoardId, vm::cptr<SceNpClanId> clanIdArray, u32 clanIdArraySize, vm::ptr<SceNpScoreClanIdRankData> rankArray,
+    u32 rankArraySize, vm::ptr<void> reserved1, u32 reservedSize1, vm::ptr<void> reserved2, u32 reservedSize2, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate,
     vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClansRankingByRangeAsync(transId=%d, clanBoardId=%d, clanIdArray=*0x%x, clanIdArraySize=%d, rankArray=*0x%x, rankArraySize=%d, reserved1=*0x%x, reservedSize1=%d, "
@@ -5022,8 +5046,8 @@ error_code sceNpScoreGetClansRankingByClanIdAsync(s32 transId, SceNpScoreClansBo
 }
 
 error_code sceNpScoreGetClansMembersRankingByRange(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreClanIdRankData> rankArray,
-    u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u64 infoArraySize, vm::ptr<SceNpScoreClansMemberDescription> descriptArray,
-    u64 descriptArraySize, u64 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
+    u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u32 infoArraySize, vm::ptr<SceNpScoreClansMemberDescription> descriptArray,
+    u32 descriptArraySize, u32 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClansMembersRankingByRange(transId=%d, clanId=%d, boardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, "
 	           "infoArray=*0x%x, infoArraySize=%d, descriptArray=*0x%x, descriptArraySize=%d, arrayNum=%d, clanInfo=*0x%x, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
@@ -5061,8 +5085,8 @@ error_code sceNpScoreGetClansMembersRankingByRange(s32 transId, SceNpClanId clan
 }
 
 error_code sceNpScoreGetClansMembersRankingByRangeAsync(s32 transId, SceNpClanId clanId, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreClanIdRankData> rankArray,
-    u64 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u64 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u64 infoArraySize, vm::ptr<SceNpScoreClansMemberDescription> descriptArray,
-    u64 descriptArraySize, u64 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio, vm::ptr<void> option)
+    u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<SceNpScoreGameInfo> infoArray, u32 infoArraySize, vm::ptr<SceNpScoreClansMemberDescription> descriptArray,
+    u32 descriptArraySize, u32 arrayNum, vm::ptr<SceNpScoreClanBasicInfo> clanInfo, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpScoreGetClansMembersRankingByRangeAsync(transId=%d, clanId=%d, boardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, "
 	           "infoArray=*0x%x, infoArraySize=%d, descriptArray=*0x%x, descriptArraySize=%d, arrayNum=%d, clanInfo=*0x%x, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
