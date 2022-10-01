@@ -3,6 +3,7 @@
 #include <optional>
 #include <condition_variable>
 #include <thread>
+#include <variant>
 
 #include "Utilities/mutex.h"
 
@@ -32,6 +33,47 @@ struct score_ctx
 s32 create_score_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
 bool destroy_score_context(s32 ctx_id);
 
+struct tdata_invalid
+{
+};
+
+struct tdata_get_board_infos
+{
+	vm::ptr<SceNpScoreBoardInfo> boardInfo;
+};
+
+struct tdata_record_score
+{
+	vm::ptr<SceNpScoreRankNumber> tmpRank;
+};
+
+struct tdata_record_score_data
+{
+	u32 game_data_size = 0;
+	std::vector<u8> game_data;
+};
+
+struct tdata_get_score_data
+{
+	vm::ptr<u32> totalSize;
+	u32 recvSize = 0;
+	vm::ptr<void> score_data;
+	u32 game_data_size = 0;
+	std::vector<u8> game_data;
+};
+
+struct tdata_get_score_generic
+{
+	vm::ptr<void> rankArray;
+	u32 rankArraySize = 0;
+	vm::ptr<SceNpScoreComment> commentArray;
+	vm::ptr<void> infoArray;
+	u32 infoArraySize = 0;
+	u32 arrayNum = 0;
+	vm::ptr<CellRtcTick> lastSortDate;
+	vm::ptr<SceNpScoreRankNumber> totalRecord;
+};
+
 struct score_transaction_ctx
 {
 	score_transaction_ctx(const std::shared_ptr<score_ctx>& score);
@@ -39,6 +81,7 @@ struct score_transaction_ctx
 	std::optional<s32> get_score_transaction_status();
 	void abort_score_transaction();
 	void wait_for_completion();
+	bool set_result_and_wake(error_code err);
 
 	static const u32 id_base  = 0x1001;
 	static const u32 id_step  = 1;
@@ -49,8 +92,7 @@ struct score_transaction_ctx
 	std::condition_variable_any wake_cond, completion_cond;
 
 	std::optional<error_code> result;
-	std::vector<u32> data;
-	std::vector<u8> game_data;
+	std::variant<tdata_invalid, tdata_get_board_infos, tdata_record_score, tdata_record_score_data, tdata_get_score_data, tdata_get_score_generic> tdata;
 
 	u64 timeout = 60'000'000; // 60 seconds;
 

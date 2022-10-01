@@ -336,3 +336,15 @@ table GetScoreResponse {
 	lastSortDate:uint64;
 	totalRecord:uint32;
 }
+
+table RecordScoreGameDataRequest {
+	boardId:uint32;
+	pcId:int32;
+	score:int64;
+}
+
+table GetScoreGameDataRequest {
+	boardId:uint32;
+	npId:string;
+	pcId:int32;
+}
