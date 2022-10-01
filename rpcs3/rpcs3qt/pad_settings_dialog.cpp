@@ -512,6 +512,8 @@ void pad_settings_dialog::InitButtons()
 			{
 				if (m_input_thread_state == input_thread_state::pausing)
 				{
+					std::lock_guard lock(m_input_mutex);
+					m_input_callback_data = {};
 					m_input_thread_state = input_thread_state::paused;
 				}
 
