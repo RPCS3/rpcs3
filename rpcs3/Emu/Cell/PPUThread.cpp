@@ -1953,6 +1953,13 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc)
 			return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);
 		}
 
+		extern const char* get_prx_name_by_cia(u32 addr);
+
+		if (auto name = get_prx_name_by_cia(cia))
+		{
+			return fmt::format("PPU[0x%x] Thread (%s) [%s: 0x%08x]", _this->id, *name_cache.get(), name, cia);	
+		}
+
 		return fmt::format("PPU[0x%x] Thread (%s) [0x%08x]", _this->id, *name_cache.get(), cia);
 	};
 

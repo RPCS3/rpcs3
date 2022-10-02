@@ -1071,6 +1071,77 @@ void try_spawn_ppu_if_exclusive_program(const ppu_module& m)
 	}
 }
 
+struct prx_names_table
+{
+	shared_mutex mutex;
+	std::set<std::string, std::less<>> registered;
+	atomic_t<const char*> lut[0x1000'0000 / 0x1'0000]{};
+
+	SAVESTATE_INIT_POS(4.1); // Dependency on lv2_obj
+
+	prx_names_table() noexcept
+	{
+		idm::select<lv2_obj, lv2_prx>([this](u32, lv2_prx& prx)
+		{
+			install(prx.name, prx);
+		});
+	}
+
+	void install(std::string_view name, lv2_prx& prx)
+	{
+		if (name.empty())
+		{
+			return;
+		}
+
+		if (name.ends_with(".sprx"sv) && name.size() > (".sprx"sv).size())
+		{
+			name = name.substr(0, name.size() - (".sprx"sv).size());
+		}
+
+		std::lock_guard lock(mutex);
+
+		const auto ptr = registered.emplace(name).first->c_str();
+
+		for (auto& seg : prx.segs)
+		{
+			if (!seg.size)
+			{
+				continue;
+			}
+
+			// Doesn't support addresses above 256MB because it wastes memory and is very unlikely (if somehow does occur increase it)
+			const u32 max0 = (seg.addr + seg.size - 1) >> 16;
+			const u32 max = std::min<u32>(std::size(lut), max0);
+
+			if (max0 > max)
+			{
+				ppu_loader.error("Skipping PRX name registeration: %s, max=0x%x", name, max0 << 16);
+			}
+
+			for (u32 i = seg.addr >> 16; i <= max; i++)
+			{
+				lut[i].release(ptr);
+			}
+		}
+	}
+};
+
+const char* get_prx_name_by_cia(u32 addr)
+{
+	if (auto t = g_fxo->try_get<prx_names_table>())
+	{
+		addr >>= 16;
+
+		if (addr < std::size(t->lut))
+		{
+			return t->lut[addr];
+		}
+	}
+
+	return nullptr;
+}
+
 std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::string& path, s64 file_offset, utils::serial* ar)
 {
 	if (elf != elf_error::ok)
@@ -1363,6 +1434,9 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	prx->name = path.substr(path.find_last_of('/') + 1);
 	prx->path = path;
 	prx->offset = file_offset;
+
+	g_fxo->need<prx_names_table>();
+	g_fxo->get<prx_names_table>().install(prx->name, *prx);
 
 	sha1_finish(&sha, prx->sha1);
 
