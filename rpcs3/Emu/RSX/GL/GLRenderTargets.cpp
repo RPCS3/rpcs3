@@ -310,6 +310,47 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_rtts.superseded_surfaces.clear();
 	}
 
+	if (!m_rtts.orphaned_surfaces.empty())
+	{
+		gl::texture::format format;
+		gl::texture::type type;
+		bool swap_bytes;
+
+		for (auto& [base_addr, surface] : m_rtts.orphaned_surfaces)
+		{
+			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
+				!!g_cfg.video.write_color_buffers;
+
+			if (!lock) [[likely]]
+			{
+				m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
+				continue;
+			}
+
+			if (surface->is_depth_surface())
+			{
+				const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(surface->get_surface_depth_format());
+				format = depth_format_gl.format;
+				type = depth_format_gl.type;
+				swap_bytes = (type != gl::texture::type::uint_24_8);
+			}
+			else
+			{
+				const auto color_format_gl = rsx::internals::surface_color_format_to_gl(surface->get_surface_color_format());
+				format = color_format_gl.format;
+				type = color_format_gl.type;
+				swap_bytes = color_format_gl.swap_bytes;
+			}
+
+			m_gl_texture_cache.lock_memory_region(
+				cmd, surface, surface->get_memory_range(), false,
+				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
+				format, type, swap_bytes);
+		}
+
+		m_rtts.orphaned_surfaces.clear();
+	}
+
 	const auto color_format = rsx::internals::surface_color_format_to_gl(m_framebuffer_layout.color_format);
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
@@ -345,47 +386,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		{
 			m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
 		}
-	}
-
-	if (!m_rtts.orphaned_surfaces.empty())
-	{
-		gl::texture::format format;
-		gl::texture::type type;
-		bool swap_bytes;
-
-		for (auto& surface : m_rtts.orphaned_surfaces)
-		{
-			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
-				!!g_cfg.video.write_color_buffers;
-
-			if (!lock) [[likely]]
-			{
-				m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
-				continue;
-			}
-
-			if (surface->is_depth_surface())
-			{
-				const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(surface->get_surface_depth_format());
-				format = depth_format_gl.format;
-				type = depth_format_gl.type;
-				swap_bytes = (type != gl::texture::type::uint_24_8);
-			}
-			else
-			{
-				const auto color_format_gl = rsx::internals::surface_color_format_to_gl(surface->get_surface_color_format());
-				format = color_format_gl.format;
-				type = color_format_gl.type;
-				swap_bytes = color_format_gl.swap_bytes;
-			}
-
-			m_gl_texture_cache.lock_memory_region(
-				cmd, surface, surface->get_memory_range(), false,
-				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
-				format, type, swap_bytes);
-		}
-
-		m_rtts.orphaned_surfaces.clear();
 	}
 
 	if (m_gl_texture_cache.get_ro_tex_invalidate_intr())

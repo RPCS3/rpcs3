@@ -68,7 +68,7 @@ namespace rsx
 		std::pair<u32, surface_type> m_bound_depth_stencil = {};
 
 		// List of sections derived from a section that has been split and invalidated
-		std::vector<surface_type> orphaned_surfaces;
+		std::vector<std::pair<u32, surface_type>> orphaned_surfaces;
 
 		// List of sections that have been wholly inherited and invalidated
 		std::vector<surface_type> superseded_surfaces;
@@ -156,7 +156,7 @@ namespace rsx
 				}
 
 				ensure(region.target == Traits::get(sink));
-				orphaned_surfaces.push_back(region.target);
+				orphaned_surfaces.push_back({ address, region.target });
 				data.emplace(region.target->get_memory_range(), std::move(sink));
 			};
 
