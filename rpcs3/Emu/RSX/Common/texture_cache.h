@@ -3237,7 +3237,7 @@ namespace rsx
 			return m_predictor;
 		}
 
-		bool is_protected(u32 section_base_address)
+		bool is_protected(u32 section_base_address, const address_range& test_range, rsx::texture_upload_context context)
 		{
 			reader_lock lock(m_cache_mutex);
 
@@ -3246,7 +3246,9 @@ namespace rsx
 			{
 				if (tex.get_section_base() == section_base_address)
 				{
-					return tex.is_locked();
+					return tex.get_context() == context &&
+						tex.is_locked() &&
+						test_range.inside(tex.get_section_range());
 				}
 			}
 
