@@ -3237,6 +3237,22 @@ namespace rsx
 			return m_predictor;
 		}
 
+		bool is_protected(u32 section_base_address)
+		{
+			reader_lock lock(m_cache_mutex);
+
+			const auto& block = m_storage.block_for(section_base_address);
+			for (const auto& tex : block)
+			{
+				if (tex.get_section_base() == section_base_address)
+				{
+					return tex.is_locked();
+				}
+			}
+
+			return false;
+		}
+
 
 		/**
 		 * The read only texture invalidate flag is set if a read only texture is trampled by framebuffer memory

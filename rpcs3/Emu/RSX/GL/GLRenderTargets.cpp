@@ -318,8 +318,13 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 		for (auto& [base_addr, surface] : m_rtts.orphaned_surfaces)
 		{
-			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
+			bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
 				!!g_cfg.video.write_color_buffers;
+
+			if (lock && !m_gl_texture_cache.is_protected(base_addr))
+			{
+				lock = false;
+			}
 
 			if (!lock) [[likely]]
 			{
