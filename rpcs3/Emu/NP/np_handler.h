@@ -111,6 +111,8 @@ namespace np
 		vm::ptr<SceNpManagerCallback> manager_cb{}; // Connection status and tickets
 		vm::ptr<void> manager_cb_arg{};
 
+		u32 np2_match2_thread_id = 0;
+
 		// Basic event handler;
 		struct
 		{

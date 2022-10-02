@@ -7,6 +7,9 @@
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_helpers.h"
+#include "Emu/Cell/Modules/sysPrxForUser.h"
+#include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "cellSysutil.h"
 
 LOG_CHANNEL(sceNp2);
@@ -175,9 +178,9 @@ void fmt_class_string<SceNpOauthError>::format(std::string& out, u64 arg)
 	});
 }
 
-error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param);
+error_code sceNpMatching2Init2(ppu_thread& ppu, u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param);
 error_code sceNpMatching2Term(ppu_thread& ppu);
-error_code sceNpMatching2Term2();
+error_code sceNpMatching2Term2(ppu_thread& ppu);
 
 error_code generic_match2_error_check(const named_thread<np::np_handler>& nph, SceNpMatching2ContextId ctxId, vm::cptr<void> reqParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
@@ -230,13 +233,53 @@ error_code sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 	return CELL_OK;
 }
 
-error_code sceNpMatching2Init(u32 stackSize, s32 priority)
+error_code sceNpMatching2Init(ppu_thread& ppu, u32 stackSize, s32 priority)
 {
 	sceNp2.todo("sceNpMatching2Init(stackSize=0x%x, priority=%d)", stackSize, priority);
-	return sceNpMatching2Init2(stackSize, priority, vm::null); // > SDK 2.4.0
+	return sceNpMatching2Init2(ppu, stackSize, priority, vm::null); // > SDK 2.4.0
 }
 
-error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
+static void s_matching2_thread_func(ppu_thread& ppu)
+{
+	lv2_obj::sleep(ppu);
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	while (thread_ctrl::state() != thread_state::aborting)
+	{
+		const auto state = +ppu.state;
+
+		if (!nph.is_NP2_Match2_init)
+		{
+			// Guard against pending awake call
+			nph.mutex_status.lock_unlock();
+			ppu_execute<&sys_ppu_thread_exit>(ppu, 0);
+			return;
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			if (ppu.state.test_and_reset(cpu_flag::signal))
+			{
+				ppu_execute<&sys_ppu_thread_exit>(ppu, 0);
+				return;
+			}
+
+			continue;
+		}
+
+		if (::is_stopped(state))
+		{
+			break;
+		}
+
+		thread_ctrl::wait_on(ppu.state, state);
+	}
+
+	ppu.state += cpu_flag::again;
+}
+
+error_code sceNpMatching2Init2(ppu_thread& ppu, u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
 {
 	sceNp2.warning("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
 
@@ -253,9 +296,18 @@ error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatchin
 	}
 
 	// TODO:
-	// 1. Create an internal thread
-	// 2. Create heap area to be used by the NP matching 2 utility
-	// 3. Set maximum lengths for the event data queues in the system
+	// 1. Create heap area to be used by the NP matching 2 utility
+	// 2. Set maximum lengths for the event data queues in the system
+
+	vm::var<u64> _tid;
+	vm::var<char[]> _name = vm::make_str("SceNpMatching2ScCb");
+
+	const u32 stack_size = stackSize ? stackSize : 0x4000;
+
+	// TODO: error checking
+	ensure(ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(s_matching2_thread_func)), 0, priority, stack_size, SYS_PPU_THREAD_CREATE_JOINABLE, +_name) == CELL_OK);
+
+	nph.np2_match2_thread_id = static_cast<u32>(*_tid);
 
 	nph.is_NP2_Match2_init = true;
 
@@ -286,18 +338,19 @@ error_code sceNp2Term(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-error_code sceNpMatching2Term(ppu_thread&)
+error_code sceNpMatching2Term(ppu_thread& ppu)
 {
 	sceNp2.warning("sceNpMatching2Term()");
-	return sceNpMatching2Term2(); // > SDK 2.4.0
+	return sceNpMatching2Term2(ppu); // > SDK 2.4.0
 }
 
-error_code sceNpMatching2Term2()
+error_code sceNpMatching2Term2(ppu_thread& ppu)
 {
 	sceNp2.warning("sceNpMatching2Term2()");
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
+	u32 ppu_id = 0;
 	{
 		std::lock_guard lock(nph.mutex_status);
 		if (!nph.is_NP2_init)
@@ -311,7 +364,14 @@ error_code sceNpMatching2Term2()
 		}
 
 		nph.is_NP2_Match2_init = false;
+
+		ppu_id = ensure(std::exchange(nph.np2_match2_thread_id, 0));
+
+		const auto ptr = ensure(idm::get<named_thread<ppu_thread>>(ppu_id));
+		lv2_obj::awake(ptr.get());
 	}
+
+	ensure(sys_ppu_thread_join(ppu, ppu_id, +vm::var<u64>{}) == CELL_OK);
 
 	// TODO: for all contexts: sceNpMatching2DestroyContext
 
@@ -1789,8 +1849,8 @@ error_code sceNpAuthGetAuthorizationCode2()
 	return CELL_OK;
 }
 
-DECLARE(ppu_module_manager::sceNp2)
-("sceNp2", []() {
+DECLARE(ppu_module_manager::sceNp2)("sceNp2", []()
+{
 	REG_FUNC(sceNp2, sceNpMatching2DestroyContext);
 	REG_FUNC(sceNp2, sceNpMatching2LeaveLobby);
 	REG_FUNC(sceNp2, sceNpMatching2RegisterLobbyMessageCallback);
@@ -1872,4 +1932,6 @@ DECLARE(ppu_module_manager::sceNp2)
 	REG_FUNC(sceNp2, sceNpAuthAbortOAuthRequest);
 	REG_FUNC(sceNp2, sceNpAuthGetAuthorizationCode);
 	REG_FUNC(sceNp2, sceNpAuthGetAuthorizationCode2);
+
+	REG_HIDDEN_FUNC(s_matching2_thread_func);
 });

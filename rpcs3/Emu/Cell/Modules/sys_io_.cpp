@@ -2,6 +2,10 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/Modules/sysPrxForUser.h"
+
 
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
@@ -19,6 +23,7 @@ struct libio_sys_config
 	s32 init_ctr = 0;
 	u32 ppu_id = 0;
 	u32 queue_id = 0;
+	u32 malloc_addr = 0;
 
 	~libio_sys_config() noexcept
 	{
@@ -38,6 +43,7 @@ void config_event_entry(ppu_thread& ppu)
 	{
 		if (ppu.is_stopped())
 		{
+			ppu.state += cpu_flag::again;
 			return;
 		}
 
@@ -45,7 +51,11 @@ void config_event_entry(ppu_thread& ppu)
 		thread_ctrl::wait_for(10000);
 
 		// Wakeup
-		ppu.check_state();
+		if (ppu.check_state())
+		{
+			ppu.state += cpu_flag::again;
+			return;
+		}
 
 		const u64 arg1 = ppu.gpr[5];
 		const u64 arg2 = ppu.gpr[6];
@@ -97,6 +107,7 @@ error_code sys_config_start(ppu_thread& ppu)
 		attr->type = SYS_PPU_QUEUE;
 		attr->name_u64 = 0;
 
+		ensure(!!(cfg.malloc_addr = ppu_execute<&_sys_malloc>(ppu, 0x7720 + + 0x28 + 0xe90 + 0x14)));
 		ensure(CELL_OK == sys_event_queue_create(ppu, queue_id, attr, 0, 0x20));
 		ensure(CELL_OK == ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(config_event_entry)), 0, 512, 0x2000, SYS_PPU_THREAD_CREATE_JOINABLE, +_name));
 
@@ -119,6 +130,7 @@ error_code sys_config_stop(ppu_thread& ppu)
 	{
 		ensure(CELL_OK == sys_event_queue_destroy(ppu, cfg.queue_id, SYS_EVENT_QUEUE_DESTROY_FORCE));
 		ensure(CELL_OK == sys_ppu_thread_join(ppu, cfg.ppu_id, +vm::var<u64>{}));
+		ensure(CELL_OK == ppu_execute<&_sys_free>(ppu, cfg.malloc_addr));
 	}
 	else
 	{

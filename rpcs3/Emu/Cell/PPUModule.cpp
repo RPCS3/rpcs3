@@ -1260,7 +1260,7 @@ const char* get_prx_name_by_cia(u32 addr)
 	return nullptr;
 }
 
-std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* ar)
+std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, const std::string& path, s64 file_offset, bool is_hle, utils::serial* ar)
 {
 	if (elf != elf_error::ok)
 	{
@@ -1578,12 +1578,18 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 
 		ppu_linkage_info dummy{};
 
-		prx->specials = ppu_load_exports(*prx, virtual_load ? &dummy : &link, prx->exports_start, prx->exports_end, true);
-		prx->imports = ppu_load_imports(*prx, prx->relocs, virtual_load ? &dummy : &link, lib_info->imports_start, lib_info->imports_end);
+		prx->specials = ppu_load_exports(*prx, virtual_load || is_hle ? &dummy : &link, prx->exports_start, prx->exports_end, true);
+		prx->imports = ppu_load_imports(*prx, prx->relocs, is_hle ? &dummy : &link, lib_info->imports_start, lib_info->imports_end);
 
-		if (virtual_load)
+		if (virtual_load || is_hle)
 		{
+			prx->specials.clear();
 			prx->imports.clear();
+		}
+
+		if (is_hle)
+		{
+			prx->exports_end = prx->exports_start;
 		}
 
 		std::stable_sort(prx->relocs.begin(), prx->relocs.end());
@@ -1602,6 +1608,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_lo
 	prx->name = path.substr(path.find_last_of('/') + 1);
 	prx->path = path;
 	prx->offset = file_offset;
+	prx->is_hle = is_hle;
 
 	g_fxo->need<prx_names_table>();
 	g_fxo->get<prx_names_table>().install(prx->name, *prx);
@@ -1720,10 +1727,13 @@ void ppu_unload_prx(const lv2_prx& prx)
 	// Format patch name
 	std::string hash = fmt::format("PRX-%s", fmt::base57(prx.sha1));
 
+	u32 segs_size = 0;
+
 	for (auto& seg : prx.segs)
 	{
 		if (!seg.size) continue;
 
+		segs_size += utils::align<u32>(seg.size, 0x10000);
 		vm::dealloc(seg.addr, vm::main);
 
 		const std::string hash_seg = fmt::format("%s-%u", hash, &seg - prx.segs.data());
@@ -1736,6 +1746,11 @@ void ppu_unload_prx(const lv2_prx& prx)
 			// Alternative patch
 			g_fxo->get<patch_engine>().unload(Emu.GetTitleID() + '-' + hash_seg);
 		}
+	}
+
+	if (prx.mem_ct)
+	{
+		ensure(prx.mem_ct->free(segs_size));
 	}
 }
 
@@ -1817,6 +1832,8 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	}
 
 	const auto old_process_info = g_ps3_process_info;
+
+	u32 segs_size = 0;
 
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
@@ -1903,6 +1920,8 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 				ppu_register_range(addr, size);
 			}
+
+			segs_size += utils::align<u32>(size + (addr % 0x10000), 0x10000);
 		}
 	}
 
@@ -2141,7 +2160,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	}
 	else if (sdk_version > 0x0021FFFF)
 	{
-		mem_size = 0xD500000;
+		mem_size = 0xD900000;
 	}
 	else if (sdk_version > 0x00192FFF)
 	{
@@ -2256,7 +2275,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			{
 				ppu_loader.warning("Loading library: %s", name);
 
-				auto prx = ppu_load_prx(obj, false, lle_dir + name, 0, nullptr);
+				auto prx = ppu_load_prx(obj, false, lle_dir + name, 0, false, nullptr);
 				prx->state = PRX_STATE_STARTED;
 				prx->load_exports();
 
@@ -2395,7 +2414,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 	ppu->gpr[1] -= stack_alloc_size;
 
-	ensure(g_fxo->get<lv2_memory_container>().take(primary_stacksize));
+	ensure(g_fxo->get<lv2_memory_container>().take(primary_stacksize + segs_size));
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 

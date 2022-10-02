@@ -4,6 +4,8 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_memory.h"
+#include "util/asm.hpp"
 #include "cellAudio.h"
 
 #include <cmath>
@@ -1203,12 +1205,19 @@ error_code cellAudioInit()
 	cellAudio.warning("cellAudioInit()");
 
 	auto& g_audio = g_fxo->get<cell_audio>();
+	auto& dct = g_fxo->get<lv2_memory_container>();
 
 	std::lock_guard lock(g_audio.mutex);
 
 	if (g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_ALREADY_INIT;
+	}
+
+	// TODO: This is the minimum amount, it can allocate more if specified by VSH (needs investigation)
+	if (!dct.take(0x10000))
+	{
+		return CELL_AUDIO_ERROR_SHAREDMEMORY;
 	}
 
 	std::memset(g_audio_buffer.get_ptr(), 0, g_audio_buffer.alloc_size);
@@ -1232,6 +1241,7 @@ error_code cellAudioQuit()
 	cellAudio.warning("cellAudioQuit()");
 
 	auto& g_audio = g_fxo->get<cell_audio>();
+	auto& dct = g_fxo->get<lv2_memory_container>();
 
 	std::lock_guard lock(g_audio.mutex);
 
@@ -1239,6 +1249,19 @@ error_code cellAudioQuit()
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
+
+	// See cellAudioInit
+	u32 to_free = 0x10000;
+
+	for (auto& port : g_audio.ports)
+	{
+		if (port.state.exchange(audio_port_state::closed) != audio_port_state::closed)
+		{
+			to_free += utils::align<u32>(port.size, 0x10000);
+		}
+	}
+
+	dct.free(to_free);
 
 	// NOTE: Do not clear event queues here. They are handled independently.
 	g_audio.init = 0;
@@ -1251,6 +1274,8 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	cellAudio.warning("cellAudioPortOpen(audioParam=*0x%x, portNum=*0x%x)", audioParam, portNum);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
+
+	auto& dct = g_fxo->get<lv2_memory_container>();
 
 	std::lock_guard lock(g_audio.mutex);
 
@@ -1319,6 +1344,9 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 		cellAudio.todo("cellAudioPortOpen(): unknown attributes (0x%llx)", attr);
 	}
 
+	const u32 mem_size = ::narrow<u32>(num_channels * num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(f32));
+	const u32 mem_page_size = utils::align<u32>(mem_size, 0x10000);
+
 	// Open audio port
 	audio_port* port = g_audio.open_port();
 
@@ -1327,13 +1355,20 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 		return CELL_AUDIO_ERROR_PORT_FULL;
 	}
 
+	// Fake memory allocation required for the port creation (64k flags)
+	if (!dct.take(mem_page_size))
+	{
+		ensure(port->state.compare_and_swap_test(audio_port_state::opened, audio_port_state::closed));
+		return CELL_AUDIO_ERROR_SHAREDMEMORY;
+	}
+
 	// TODO: is this necessary in any way? (Based on libaudio.prx)
 	//const u64 num_channels_non_0 = std::max<u64>(1, num_channels);
 
 	port->num_channels   = ::narrow<u32>(num_channels);
 	port->num_blocks     = ::narrow<u32>(num_blocks);
 	port->attr           = attr;
-	port->size           = ::narrow<u32>(num_channels * num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(f32));
+	port->size           = mem_size;
 	port->cur_pos        = 0;
 	port->global_counter = g_audio.m_counter;
 	port->active_counter = 0;
@@ -1452,10 +1487,14 @@ error_code cellAudioPortClose(u32 portNum)
 	switch (audio_port_state state = g_audio.ports[portNum].state.exchange(audio_port_state::closed))
 	{
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
-	case audio_port_state::started: return CELL_OK;
-	case audio_port_state::opened: return CELL_OK;
+	case audio_port_state::started: break;
+	case audio_port_state::opened: break;
 	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
 	}
+
+	const u32 mem_page_size = utils::align<u32>(g_audio.ports[portNum].size, 0x10000) + 0x10000;
+	g_fxo->get<lv2_memory_container>().free(mem_page_size);
+	return CELL_OK;
 }
 
 error_code cellAudioPortStop(u32 portNum)
