@@ -321,7 +321,11 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 			bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
 				!!g_cfg.video.write_color_buffers;
 
-			if (lock && !m_gl_texture_cache.is_protected(base_addr))
+			if (lock &&
+				!m_gl_texture_cache.is_protected(
+					base_addr,
+					surface->get_memory_range(),
+					rsx::texture_upload_context::framebuffer_storage))
 			{
 				lock = false;
 			}
