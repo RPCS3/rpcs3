@@ -3741,6 +3741,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				// Allocate "core"
 				std::lock_guard jlock(g_fxo->get<jit_core_allocator>().sem);
 
+				if (Emu.IsStopped())
+				{
+					continue;
+				}
+
 				ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
 
 				// Use another JIT instance
