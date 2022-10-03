@@ -2222,7 +2222,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 }
 
 extern bool try_lock_vdec_context_creation();
-extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates();
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock = false);
 
 std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestate)
 {
@@ -2235,6 +2235,8 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 
 	if (savestate && !try_lock_vdec_context_creation())
 	{
+		try_lock_spu_threads_in_a_state_compatible_with_savestates(true);
+
 		sys_log.error("Failed to savestate: HLE VDEC (video decoder) context(s) exist."
 			"\nLLE libvdec.sprx by selecting it in Adavcned tab -> Firmware Libraries."
 			"\nYou need to close the game for to take effect."
