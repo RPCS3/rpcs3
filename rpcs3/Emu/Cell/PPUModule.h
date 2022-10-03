@@ -294,7 +294,7 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 	return func(ppu, args...);
 }
 
-#define BIND_FUNC_WITH_BLR(func) BIND_FUNC(func, ppu.cia = static_cast<u32>(ppu.lr) & ~3)
+#define BIND_FUNC_WITH_BLR(func) BIND_FUNC(func, if (cpu_flag::again - ppu.state) ppu.cia = static_cast<u32>(ppu.lr) & ~3)
 
 #define REG_FNID(_module, nid, func) ppu_module_manager::register_static_function<&func>(#_module, ppu_select_name(#func, nid), BIND_FUNC_WITH_BLR(func), ppu_generate_id(nid))
 
