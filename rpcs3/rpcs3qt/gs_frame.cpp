@@ -279,6 +279,12 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	case Qt::Key_R:
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
+			if (Emu.IsStopped())
+			{
+				Emu.Restart();
+				return;
+			}
+
 			extern bool boot_last_savestate();
 			boot_last_savestate();
 		}

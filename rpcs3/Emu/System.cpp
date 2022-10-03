@@ -2536,6 +2536,12 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 			}
 
 			sys_log.success("Saved savestate! path='%s'", path);
+
+			if (!g_cfg.savestate.suspend_emu)
+			{
+				// Allow to reboot from GUI
+				m_path = path;
+			}
 		}
 
 		ar.set_reading_state();
@@ -2567,16 +2573,14 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 
 game_boot_result Emulator::Restart()
 {
-	if (m_state == system_state::stopped)
+	if (!IsStopped())
 	{
-		return game_boot_result::generic_error;
+		auto save_args = std::make_tuple(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode);
+
+		GracefulShutdown(false, false);
+
+		std::tie(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode) = std::move(save_args);
 	}
-
-	auto save_args = std::make_tuple(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode);
-
-	GracefulShutdown(false, false);
-
-	std::tie(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode) = std::move(save_args);
 
 	// Reload with prior configs.
 	if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
