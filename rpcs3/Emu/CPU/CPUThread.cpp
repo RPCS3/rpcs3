@@ -1306,13 +1306,19 @@ u32 CPUDisAsm::DisAsmBranchTarget(s32 /*imm*/)
 	return 0;
 }
 
-extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates()
+extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool revert_lock)
 {
 	const u64 start = get_system_time();
 
 	// Attempt to lock for half a second, if somehow takes longer abort it
 	do
 	{
+		if (revert_lock)
+		{
+			// Revert the operation of this function
+			break;
+		}
+
 		if (cpu_thread::suspend_all(nullptr, {}, []()
 		{
 			return idm::select<named_thread<spu_thread>>([](u32, spu_thread& spu)
