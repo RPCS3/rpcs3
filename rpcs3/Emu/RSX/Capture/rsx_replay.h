@@ -150,6 +150,7 @@ namespace rsx
 		{
 		}
 
+		using cpu_thread::operator=;
 		void cpu_task() override;
 	private:
 		be_t<u32> allocate_context();
