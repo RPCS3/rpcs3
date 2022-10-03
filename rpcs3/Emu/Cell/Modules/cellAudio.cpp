@@ -683,7 +683,6 @@ void cell_audio_thread::reset_counters()
 	m_start_time = ringbuffer->get_timestamp();
 	m_last_period_end = m_start_time;
 	m_dynamic_period = 0;
-	m_backend_failed = false;
 	m_audio_should_restart = true;
 }
 
@@ -720,9 +719,13 @@ void cell_audio_thread::operator()()
 
 	u32 untouched_expected = 0;
 
+	u32 loop_count = 0;
+
 	// Main cellAudio loop
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
+		loop_count++;
+
 		const auto update_req = m_update_configuration.observe();
 		if (update_req != audio_backend_update::NONE)
 		{
@@ -735,37 +738,8 @@ void cell_audio_thread::operator()()
 			update_config(update_req == audio_backend_update::ALL);
 		}
 
-		if (!ringbuffer->get_operational_status())
-		{
-			if (m_backend_failed)
-			{
-				thread_ctrl::wait_for(500 * 1000);
-			}
-			else
-			{
-				cellAudio.warning("Backend stopped unexpectedly (likely device change). Attempting to recover...");
-			}
-
-			update_config(true);
-			m_backend_failed = true;
-			continue;
-		}
-
-		if (ringbuffer->device_changed())
-		{
-			cellAudio.warning("Default device changed, attempting to switch...");
-			update_config(false);
-			continue;
-		}
-
-		if (m_backend_failed)
-		{
-			cellAudio.warning("Backend recovered");
-			m_backend_failed = false;
-		}
-
 		const bool emu_paused = Emu.IsPaused();
-		const u64 timestamp = ringbuffer->update(emu_paused);
+		const u64 timestamp = ringbuffer->update(emu_paused || m_backend_failed);
 
 		if (emu_paused)
 		{
@@ -803,6 +777,36 @@ void cell_audio_thread::operator()()
 			continue;
 		}
 
+		bool operational = ringbuffer->get_operational_status();
+
+		if (!operational && loop_count % 128 == 0)
+		{
+			update_config(true);
+			operational = ringbuffer->get_operational_status();
+		}
+
+		if (ringbuffer->device_changed())
+		{
+			cellAudio.warning("Default device changed, attempting to switch...");
+			update_config(false);
+
+			if (operational != ringbuffer->get_operational_status())
+			{
+				continue;
+			}
+		}
+
+		if (!m_backend_failed && !operational)
+		{
+			cellAudio.error("Backend stopped unexpectedly (likely device change). Attempting to recover...");
+			m_backend_failed = true;
+		}
+		else if (m_backend_failed && operational)
+		{
+			cellAudio.success("Backend recovered");
+			m_backend_failed = false;
+		}
+	
 		if (!cfg.buffering_enabled)
 		{
 			const u64 period_end = (m_counter * cfg.audio_block_period) + m_start_time;
@@ -904,9 +908,10 @@ void cell_audio_thread::operator()()
 			{
 				// Games may sometimes "skip" audio periods entirely if they're falling behind (a sort of "frameskip" for audio)
 				// As such, if the game doesn't touch buffers for too long we advance time hoping the game recovers
+				// TODO: It's a hack and it needs a setting to disable this (force true)
 				if (
 					(untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout) ||
-					(time_since_last_period > cfg.partially_untouched_timeout)
+					(time_since_last_period > cfg.partially_untouched_timeout) || !keys.empty()
 				   )
 				{
 					// There's no audio in the buffers, simply advance time and hope the game recovers
