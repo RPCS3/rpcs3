@@ -159,19 +159,17 @@ namespace vm
 
 	void range_lock_internal(atomic_t<u64, 64>* range_lock, u32 begin, u32 size)
 	{
-		perf_meter<"RHW_LOCK"_u64> perf0;
+		perf_meter<"RHW_LOCK"_u64> perf0(0);
 
-		auto _cpu = get_current_cpu_thread();
+		cpu_thread* _cpu = nullptr;
 
-		if (_cpu)
+		if (u64 to_store = begin | (u64{size} << 32); *range_lock != to_store)
 		{
-			_cpu->state += cpu_flag::wait + cpu_flag::temp;
+			range_lock->store(to_store);
 		}
 
 		for (u64 i = 0;; i++)
 		{
-			range_lock->store(begin | (u64{size} << 32));
-
 			const u64 lock_val = g_range_lock.load();
 			const u64 is_share = g_shmem[begin >> 16].load();
 
@@ -215,6 +213,11 @@ namespace vm
 				{
 					range_lock->release(0);
 
+					if (!perf0)
+					{
+						perf0.restart();
+					}
+
 					// Try triggering a page fault (write)
 					// TODO: Read memory if needed
 					vm::_ref<atomic_t<u8>>(test / 4096 == begin / 4096 ? begin : test) += 0;
@@ -223,8 +226,26 @@ namespace vm
 			}
 
 			// Wait a bit before accessing global lock
-			range_lock->store(0);
+			range_lock->release(0);
+
+			if (!perf0)
+			{
+				perf0.restart();
+			}
+
 			busy_wait(200);
+
+			if (i >= 2 && !_cpu)
+			{
+				_cpu = cpu_thread::get_current();
+
+				if (_cpu)
+				{
+					_cpu->state += cpu_flag::wait + cpu_flag::temp;
+				}
+			}
+
+			range_lock->store(begin | (u64{size} << 32));
 		}
 
 		if (_cpu)

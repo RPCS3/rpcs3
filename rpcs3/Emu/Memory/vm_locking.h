@@ -57,42 +57,14 @@ namespace vm
 			return;
 		}
 
-		const u64 lock_val = g_range_lock.load();
-		const u64 is_share = g_shmem[begin >> 16].load();
-
 		#ifndef _MSC_VER
 		__asm__(""); // Tiny barrier
 		#endif
 
-		u64 lock_addr = static_cast<u32>(lock_val); // -> u64
-		u32 lock_size = static_cast<u32>(lock_val << range_bits >> (32 + range_bits));
-
-		u64 addr = begin;
-
-		// Optimization: if range_locked is not used, the addr check will always pass
-		// Otherwise, g_shmem is unchanged and its value is reliable to read
-		if ((lock_val >> range_pos) == (range_locked >> range_pos))
+		if (!g_range_lock)
 		{
-			lock_size = 128;
-
-			if (is_share) [[unlikely]]
-			{
-				addr = static_cast<u16>(begin) | is_share;
-				lock_addr = lock_val;
-			}
+			return;
 		}
-
-		if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
-		{
-			const u64 new_lock_val = g_range_lock.load();
-
-			if (!new_lock_val || new_lock_val == lock_val) [[likely]]
-			{
-				return;
-			}
-		}
-
-		range_lock->release(0);
 
 		// Fallback to slow path
 		range_lock_internal(range_lock, begin, size);

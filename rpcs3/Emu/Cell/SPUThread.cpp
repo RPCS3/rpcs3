@@ -2688,31 +2688,45 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 
 bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 {
+	perf_meter<"MFC_LIST"_u64> perf0;
+
 	// Amount of elements to fetch in one go
 	constexpr u32 fetch_size = 6;
 
 	struct alignas(8) list_element
 	{
-		be_t<u16> sb; // Stall-and-Notify bit (0x8000)
+		u8 sb; // Stall-and-Notify bit (0x80)
+		u8 pad;
 		be_t<u16> ts; // List Transfer Size
 		be_t<u32> ea; // External Address Low
 	};
 
-	union
-	{
-		list_element items[fetch_size];
-		alignas(v128) char bufitems[sizeof(items)];
-	};
+	alignas(16) list_element items[fetch_size];
+	static_assert(sizeof(v128) % sizeof(list_element) == 0);
 
 	spu_mfc_cmd transfer;
 	transfer.eah  = 0;
 	transfer.tag  = args.tag;
-	transfer.cmd  = MFC(args.cmd & ~MFC_LIST_MASK);
-
-	args.lsa &= 0x3fff0;
-	args.eal &= 0x3fff8;
+	transfer.cmd  = MFC{static_cast<u8>(args.cmd & ~0xf)};
 
 	u32 index = fetch_size;
+
+	auto item_ptr = _ptr<const list_element>(args.eal & 0x3fff8);
+	u32 arg_lsa = args.lsa & 0x3fff0;
+	u32 arg_size = args.size;
+
+	u8 optimization_compatible = transfer.cmd & (MFC_GET_CMD | MFC_PUT_CMD);
+
+	if (spu_log.trace || g_cfg.core.spu_accurate_dma || g_cfg.core.mfc_debug)
+	{
+		optimization_compatible = 0;
+	}
+	else if (optimization_compatible == MFC_PUT_CMD && (g_cfg.video.strict_rendering_mode || g_cfg.core.rsx_fifo_accuracy))
+	{
+		optimization_compatible &= ~MFC_PUT_CMD;
+	}
+
+	constexpr u32 ts_mask = 0x7fff;
 
 	// Assume called with size greater than 0
 	while (true)
@@ -2720,47 +2734,494 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 		// Check if fetching is needed
 		if (index == fetch_size)
 		{
+			const v128 data0 = v128::loadu(item_ptr, 0);
+			const v128 data1 = v128::loadu(item_ptr, 1);
+			const v128 data2 = v128::loadu(item_ptr, 2);
+
+			// In a perfect world this would not be needed until after the if but relying on the compiler to keep the elements in SSE registers through it all is unrealistic
+			std::memcpy(&items[sizeof(v128) / sizeof(list_element) * 0], &data0, sizeof(v128));
+			std::memcpy(&items[sizeof(v128) / sizeof(list_element) * 1], &data1, sizeof(v128));
+			std::memcpy(&items[sizeof(v128) / sizeof(list_element) * 2], &data2, sizeof(v128));
+
+			u32 s_size = data0._u32[0];
+
+			// We need to verify matching between odd and even elements (vector test is position independant)
+			// 0-5 is the most unlikely couple match for many reasons so it skips the entire check very efficiently in most cases
+			// Assumes padding bits should match
+			if (optimization_compatible == MFC_GET_CMD && s_size == data0._u32[2] && arg_size >= fetch_size * 8)
+			{
+				const v128 ored = (data0 | data1 | data2) & v128::from64p(std::bit_cast<be_t<u64>>(1ull << 63 | (u64{ts_mask} << 32) | 0xe000'0000));
+				const v128 anded = (data0 & data1 & data2) & v128::from64p(std::bit_cast<be_t<u64>>(0xe000'0000 | (u64{ts_mask} << 32)));
+
+				// Tests:
+				// 1. Unset stall-and-notify bit on all 6 elements
+				// 2. Equality of transfer size across all 6 elements
+				// 3. Be in the same 512mb region, this is because this case is not expected to be broken usually and we need to ensure MMIO is not involved in any of the transfers (assumes MMIO to be so rare that this is the last check)
+				if (ored == anded && items[0].ea < RAW_SPU_BASE_ADDR && items[1].ea < RAW_SPU_BASE_ADDR)
+				{
+					// Execute the postponed byteswapping and masking
+					s_size = std::bit_cast<be_t<u32>>(s_size) & ts_mask;
+
+					u8* src = vm::_ptr<u8>(0);
+					u8* dst = this->ls + arg_lsa;
+
+					// Assume success, prepare the next elements
+					arg_lsa += fetch_size * utils::align<u32>(s_size, 16);
+					item_ptr += fetch_size;
+					arg_size -= fetch_size * 8;
+
+					// Type which is friendly for fused address calculations
+					constexpr usz _128 = 128;
+
+					// This whole function relies on many constraints to be met (crashes real MFC), we can a have minor optimization assuming EA alignment to be +16 with +16 byte transfers
+#define MOV_T(type, index, _ea) { const usz ea = _ea; *reinterpret_cast<type*>(dst + index * utils::align<u32>(sizeof(type), 16) + ea % (sizeof(type) < 16 ? 16 : 1)) = *reinterpret_cast<const type*>(src + ea); } void()
+#define MOV_128(index, ea) mov_rdata(*reinterpret_cast<decltype(rdata)*>(dst + index * _128), *reinterpret_cast<const decltype(rdata)*>(src + (ea)))
+
+					switch (s_size)
+					{
+					case 0:
+					{
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 1:
+					{
+						MOV_T(u8, 0, items[0].ea);
+						MOV_T(u8, 1, items[1].ea);
+						MOV_T(u8, 2, items[2].ea);
+						MOV_T(u8, 3, items[3].ea);
+						MOV_T(u8, 4, items[4].ea);
+						MOV_T(u8, 5, items[5].ea);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 2:
+					{
+						MOV_T(u16, 0, items[0].ea);
+						MOV_T(u16, 1, items[1].ea);
+						MOV_T(u16, 2, items[2].ea);
+						MOV_T(u16, 3, items[3].ea);
+						MOV_T(u16, 4, items[4].ea);
+						MOV_T(u16, 5, items[5].ea);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 4:
+					{
+						MOV_T(u32, 0, items[0].ea);
+						MOV_T(u32, 1, items[1].ea);
+						MOV_T(u32, 2, items[2].ea);
+						MOV_T(u32, 3, items[3].ea);
+						MOV_T(u32, 4, items[4].ea);
+						MOV_T(u32, 5, items[5].ea);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 8:
+					{
+						MOV_T(u64, 0, items[0].ea);
+						MOV_T(u64, 1, items[1].ea);
+						MOV_T(u64, 2, items[2].ea);
+						MOV_T(u64, 3, items[3].ea);
+						MOV_T(u64, 4, items[4].ea);
+						MOV_T(u64, 5, items[5].ea);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 16:
+					{
+						MOV_T(v128, 0, items[0].ea);
+						MOV_T(v128, 1, items[1].ea);
+						MOV_T(v128, 2, items[2].ea);
+						MOV_T(v128, 3, items[3].ea);
+						MOV_T(v128, 4, items[4].ea);
+						MOV_T(v128, 5, items[5].ea);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 32:
+					{
+						struct mem
+						{
+							v128 a[2];
+						};
+
+						MOV_T(mem, 0, items[0].ea);
+						MOV_T(mem, 1, items[1].ea);
+						MOV_T(mem, 2, items[2].ea);
+						MOV_T(mem, 3, items[3].ea);
+						MOV_T(mem, 4, items[4].ea);
+						MOV_T(mem, 5, items[5].ea);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 48:
+					{
+						struct mem
+						{
+							v128 a[3];
+						};
+
+						MOV_T(mem, 0, items[0].ea);
+						MOV_T(mem, 1, items[1].ea);
+						MOV_T(mem, 2, items[2].ea);
+						MOV_T(mem, 3, items[3].ea);
+						MOV_T(mem, 4, items[4].ea);
+						MOV_T(mem, 5, items[5].ea);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 64:
+					{
+						struct mem
+						{
+							v128 a[4];
+						};
+
+						// TODO: Optimize (4 16-bytes movings is bad)
+						MOV_T(mem, 0, items[0].ea);
+						MOV_T(mem, 1, items[1].ea);
+						MOV_T(mem, 2, items[2].ea);
+						MOV_T(mem, 3, items[3].ea);
+						MOV_T(mem, 4, items[4].ea);
+						MOV_T(mem, 5, items[5].ea);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 128:
+					{
+						MOV_128(0, items[0].ea);
+						MOV_128(1, items[1].ea);
+						MOV_128(2, items[2].ea);
+						MOV_128(3, items[3].ea);
+						MOV_128(4, items[4].ea);
+						MOV_128(5, items[5].ea);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 256:
+					{
+						const usz ea0 = items[0].ea;
+						MOV_128(0, ea0 + 0);
+						MOV_128(1, ea0 + _128);
+						const usz ea1 = items[1].ea;
+						MOV_128(2, ea1 + 0);
+						MOV_128(3, ea1 + _128);
+						const usz ea2 = items[2].ea;
+						MOV_128(4, ea2 + 0);
+						MOV_128(5, ea2 + _128);
+						const usz ea3 = items[3].ea;
+						MOV_128(6, ea3 + 0);
+						MOV_128(7, ea3 + _128);
+						const usz ea4 = items[4].ea;
+						MOV_128(8, ea4 + 0);
+						MOV_128(9, ea4 + _128);
+						const usz ea5 = items[5].ea;
+						MOV_128(10, ea5 + 0);
+						MOV_128(11, ea5 + _128);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					case 512:
+					{
+						const usz ea0 = items[0].ea;
+						MOV_128(0 , ea0 + _128 * 0);
+						MOV_128(1 , ea0 + _128 * 1);
+						MOV_128(2 , ea0 + _128 * 2);
+						MOV_128(3 , ea0 + _128 * 3);
+						const usz ea1 = items[1].ea;
+						MOV_128(4 , ea1 + _128 * 0);
+						MOV_128(5 , ea1 + _128 * 1);
+						MOV_128(6 , ea1 + _128 * 2);
+						MOV_128(7 , ea1 + _128 * 3);
+						const usz ea2 = items[2].ea;
+						MOV_128(8 , ea2 + _128 * 0);
+						MOV_128(9 , ea2 + _128 * 1);
+						MOV_128(10, ea2 + _128 * 2);
+						MOV_128(11, ea2 + _128 * 3);
+						const usz ea3 = items[3].ea;
+						MOV_128(12, ea3 + _128 * 0);
+						MOV_128(13, ea3 + _128 * 1);
+						MOV_128(14, ea3 + _128 * 2);
+						MOV_128(15, ea3 + _128 * 3);
+						const usz ea4 = items[4].ea;
+						MOV_128(16, ea4 + _128 * 0);
+						MOV_128(17, ea4 + _128 * 1);
+						MOV_128(18, ea4 + _128 * 2);
+						MOV_128(19, ea4 + _128 * 3);
+						const usz ea5 = items[5].ea;
+						MOV_128(20, ea5 + _128 * 0);
+						MOV_128(21, ea5 + _128 * 1);
+						MOV_128(22, ea5 + _128 * 2);
+						MOV_128(23, ea5 + _128 * 3);
+
+						if (!arg_size)
+						{
+							return true;
+						}
+
+						continue;
+					}
+					default:
+					{
+						// TODO: Are more cases common enough? (in the range of less than 512 bytes because for more than that the optimization is doubtful)
+						break;
+					}
+					}
+#undef MOV_T
+#undef MOV_128
+					// Optimization miss, revert changes
+					arg_lsa -= fetch_size * utils::align<u32>(s_size, 16);
+					item_ptr -= fetch_size;
+					arg_size += fetch_size * 8;
+				}
+			}
+
 			// Reset to elements array head
 			index = 0;
-
-			const auto src = _ptr<const void>(args.eal);
-			const v128 data0 = v128::loadu(src, 0);
-			const v128 data1 = v128::loadu(src, 1);
-			const v128 data2 = v128::loadu(src, 2);
-
-			reinterpret_cast<v128*>(bufitems)[0] = data0;
-			reinterpret_cast<v128*>(bufitems)[1] = data1;
-			reinterpret_cast<v128*>(bufitems)[2] = data2;
 		}
 
-		const u32 size = items[index].ts & 0x7fff;
+		const u32 size = items[index].ts & ts_mask;
 		const u32 addr = items[index].ea;
 
-		spu_log.trace("LIST: item=0x%016x, lsa=0x%05x", std::bit_cast<be_t<u64>>(items[index]), args.lsa | (addr & 0xf));
-
-		if (size)
+		auto check_carry_16 = [](u16 addr, u16 size)
 		{
+#ifdef _MSC_VER
+			u16 out;
+			return _addcarry_u16(0, addr, size - 1, &out);
+#else
+			return ((addr + size - 1) >> 16) != 0;
+#endif
+		};
+
+		// Try to inline the transfer
+		if (addr < RAW_SPU_BASE_ADDR && size && optimization_compatible == MFC_GET_CMD)
+		{
+			const u8* src = vm::_ptr<u8>(addr);
+			u8* dst = this->ls + arg_lsa + (addr & 0xf);
+
+			switch (u32 _size = size)
+			{
+			case 1:
+			{
+				*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
+				break;
+			}
+			case 2:
+			{
+				*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
+				break;
+			}
+			case 4:
+			{
+				*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
+				break;
+			}
+			case 8:
+			{
+				*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
+				break;
+			}
+			default:
+			{
+				if (_size > s_rep_movsb_threshold)
+				{
+					__movsb(dst, src, _size);
+				}
+				else
+				{
+					// Avoid unaligned stores in mov_rdata_avx
+					if (reinterpret_cast<u64>(dst) & 0x10)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+						dst += 16;
+						src += 16;
+						_size -= 16;
+					}
+
+					while (_size >= 128)
+					{
+						mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+
+						dst += 128;
+						src += 128;
+						_size -= 128;
+					}
+
+					while (_size)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+						dst += 16;
+						src += 16;
+						_size -= 16;
+					}
+				}
+
+				break;
+			}
+			}
+
+			arg_lsa += utils::align<u32>(size, 16);
+		}
+		// Avoid inlining huge transfers because it intentionally drops range lock unlock
+		else if (addr < RAW_SPU_BASE_ADDR && size - 1 <= 0x400 - 1 && optimization_compatible == MFC_PUT_CMD && !check_carry_16(static_cast<u16>(addr), static_cast<u16>(size)))
+		{
+			if (!g_use_rtm)
+			{
+				vm::range_lock(range_lock, addr & -128, utils::align<u32>(addr + size, 128) - (addr & -128));
+			}
+
+			u8* dst = vm::_ptr<u8>(addr);
+			const u8* src = this->ls + arg_lsa + (addr & 0xf);
+
+			switch (u32 _size = size)
+			{
+			case 1:
+			{
+				*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
+				break;
+			}
+			case 2:
+			{
+				*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
+				break;
+			}
+			case 4:
+			{
+				*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
+				break;
+			}
+			case 8:
+			{
+				*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
+				break;
+			}
+			default:
+			{
+				if (_size > s_rep_movsb_threshold)
+				{
+					__movsb(dst, src, _size);
+				}
+				else
+				{
+					// Avoid unaligned stores in mov_rdata_avx
+					if (reinterpret_cast<u64>(dst) & 0x10)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+						dst += 16;
+						src += 16;
+						_size -= 16;
+					}
+
+					while (_size >= 128)
+					{
+						mov_rdata(*reinterpret_cast<spu_rdata_t*>(dst), *reinterpret_cast<const spu_rdata_t*>(src));
+
+						dst += 128;
+						src += 128;
+						_size -= 128;
+					}
+
+					while (_size)
+					{
+						*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
+
+						dst += 16;
+						src += 16;
+						_size -= 16;
+					}
+				}
+
+				break;
+			}
+			}
+
+			arg_lsa += utils::align<u32>(size, 16);
+		}
+		else if (size)
+		{
+			range_lock->release(0);
+			spu_log.trace("LIST: item=0x%016x, lsa=0x%05x", std::bit_cast<be_t<u64>>(items[index]), arg_lsa | (addr & 0xf));
+
 			transfer.eal  = addr;
-			transfer.lsa  = args.lsa | (addr & 0xf);
+			transfer.lsa  = arg_lsa | (addr & 0xf);
 			transfer.size = size;
 
+			arg_lsa += utils::align<u32>(size, 16);
 			do_dma_transfer(this, transfer, ls);
-			const u32 add_size = std::max<u32>(size, 16);
-			args.lsa += add_size;
 		}
 
-		args.size -= 8;
+		arg_size -= 8;
 
-		if (!args.size)
+		if (!arg_size)
 		{
 			// No more elements
 			break;
 		}
 
-		args.eal += 8;
+		item_ptr++;
 
-		if (items[index].sb & 0x8000) [[unlikely]]
+		if (items[index].sb & 0x80) [[unlikely]]
 		{
+			range_lock->release(0);
+
 			ch_stall_mask |= utils::rol32(1, args.tag);
 
 			if (!ch_stall_stat.get_count())
@@ -2771,12 +3232,16 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 			ch_stall_stat.set_value(utils::rol32(1, args.tag) | ch_stall_stat.get_value());
 
 			args.tag |= 0x80; // Set stalled status
+			args.eal = reinterpret_cast<const u8*>(item_ptr) - this->ls;
+			args.lsa = arg_lsa;
+			args.size = arg_size;
 			return false;
 		}
 
 		index++;
 	}
 
+	range_lock->release(0);
 	return true;
 }
 
