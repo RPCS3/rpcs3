@@ -598,56 +598,65 @@ namespace glsl
 			"}\n\n";
 		}
 
-		if (props.domain == glsl::program_domain::glsl_vertex_program && props.emulate_zclip_transform)
+		if (props.domain == glsl::program_domain::glsl_vertex_program)
 		{
-			if (props.emulate_depth_clip_only)
+			if (props.require_explicit_invariance)
 			{
-				// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
-				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
-				OS <<
-				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
-				"{\n"
-				"	if (pos.w != 0.0)\n"
-				"	{\n"
-				"		const float real_n = min(far_plane, near_plane);\n"
-				"		const float real_f = max(far_plane, near_plane);\n"
-				"		const double depth_range = double(real_f - real_n);\n"
-				"		const double inv_range = (depth_range > 0.000001) ? (1.0 / (depth_range * pos.w)) : 0.0;\n"
-				"		const double actual_d = (double(pos.z) - double(real_n * pos.w)) * inv_range;\n"
-				"		const double nearest_d = floor(actual_d + 0.5);\n"
-				"		const double epsilon = (inv_range * pos.w) / 16777215.;\n"     // Epsilon value is the minimum discernable change in Z that should affect the stored Z
-				"		const double d = _select(actual_d, nearest_d, abs(actual_d - nearest_d) < epsilon);\n"
-				"		return vec4(pos.xy, float(d * pos.w), pos.w);\n"
-				"	}\n"
-				"	else\n"
-				"	{\n"
-				"		return pos;\n" // Only values where Z=0 can ever pass this clip
-				"	}\n"
-				"}\n\n";
+				// PS3 has shader invariance, but we don't really care about most attributes outside ATTR0
+				OS << "invariant gl_Position;\n\n";
 			}
-			else
+
+			if (props.emulate_zclip_transform)
 			{
-				OS <<
-				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
-				"{\n"
-				"	float d = float(pos.z / pos.w);\n"
-				"	if (d < 0.f && d >= near_plane)\n"
-				"	{\n"
-				"		// Clamp\n"
-				"		d = 0.f;\n"
-				"	}\n"
-				"	else if (d > 1.f && d <= far_plane)\n"
-				"	{\n"
-				"		// Compress Z and store towards highest end of the range\n"
-				"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
-				"	}\n"
-				"	else\n" // This catch-call also handles w=0 since d=inf
-				"	{\n"
-				"		return pos;\n"
-				"	}\n"
-				"\n"
-				"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
-				"}\n\n";
+				if (props.emulate_depth_clip_only)
+				{
+					// Technically the depth value here is the 'final' depth that should be stored in the Z buffer.
+					// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
+					OS <<
+					"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+					"{\n"
+					"	if (pos.w != 0.0)\n"
+					"	{\n"
+					"		const float real_n = min(far_plane, near_plane);\n"
+					"		const float real_f = max(far_plane, near_plane);\n"
+					"		const double depth_range = double(real_f - real_n);\n"
+					"		const double inv_range = (depth_range > 0.000001) ? (1.0 / (depth_range * pos.w)) : 0.0;\n"
+					"		const double actual_d = (double(pos.z) - double(real_n * pos.w)) * inv_range;\n"
+					"		const double nearest_d = floor(actual_d + 0.5);\n"
+					"		const double epsilon = (inv_range * pos.w) / 16777215.;\n"     // Epsilon value is the minimum discernable change in Z that should affect the stored Z
+					"		const double d = _select(actual_d, nearest_d, abs(actual_d - nearest_d) < epsilon);\n"
+					"		return vec4(pos.xy, float(d * pos.w), pos.w);\n"
+					"	}\n"
+					"	else\n"
+					"	{\n"
+					"		return pos;\n" // Only values where Z=0 can ever pass this clip
+					"	}\n"
+					"}\n\n";
+				}
+				else
+				{
+					OS <<
+					"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
+					"{\n"
+					"	float d = float(pos.z / pos.w);\n"
+					"	if (d < 0.f && d >= near_plane)\n"
+					"	{\n"
+					"		// Clamp\n"
+					"		d = 0.f;\n"
+					"	}\n"
+					"	else if (d > 1.f && d <= far_plane)\n"
+					"	{\n"
+					"		// Compress Z and store towards highest end of the range\n"
+					"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
+					"	}\n"
+					"	else\n" // This catch-call also handles w=0 since d=inf
+					"	{\n"
+					"		return pos;\n"
+					"	}\n"
+					"\n"
+					"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
+					"}\n\n";
+				}
 			}
 
 			return;
