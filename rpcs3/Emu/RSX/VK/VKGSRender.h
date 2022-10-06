@@ -63,6 +63,7 @@ private:
 	const VKFragmentProgram *m_fragment_prog = nullptr;
 	const VKVertexProgram *m_vertex_prog = nullptr;
 	vk::glsl::program *m_program = nullptr;
+	vk::glsl::program *m_prev_program = nullptr;
 	vk::pipeline_props m_pipeline_properties;
 
 	vk::texture_cache m_texture_cache;
