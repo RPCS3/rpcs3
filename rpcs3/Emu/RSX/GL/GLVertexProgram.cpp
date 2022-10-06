@@ -58,8 +58,6 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 
 void GLVertexDecompilerThread::insertConstants(std::stringstream& OS, const std::vector<ParamType>& constants)
 {
-
-
 	for (const ParamType &PT: constants)
 	{
 		for (const ParamItem &PI : PT.items)
@@ -131,6 +129,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.emulate_zclip_transform = true;
 	properties2.emulate_depth_clip_only = dev_caps.NV_depth_buffer_float_supported;
 	properties2.low_precision_tests = dev_caps.vendor_NVIDIA;
+	properties2.require_explicit_invariance = dev_caps.vendor_MESA;
 
 	insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);
