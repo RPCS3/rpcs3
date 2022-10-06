@@ -128,26 +128,18 @@ void VKGSRender::update_draw_state()
 {
 	m_profiler.start();
 
-	const float actual_line_width =
-	    m_device->get_wide_lines_support() ? rsx::method_registers.line_width() * rsx::get_resolution_scale() : 1.f;
-	vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
-
-	if (rsx::method_registers.poly_offset_fill_enabled())
+	// Update conditional dynamic state
+	if (rsx::method_registers.current_draw_clause.primitive >= rsx::primitive_type::lines &&
+		rsx::method_registers.current_draw_clause.primitive <= rsx::primitive_type::line_strip)
 	{
-		//offset_bias is the constant factor, multiplied by the implementation factor R
-		//offst_scale is the slope factor, multiplied by the triangle slope factor M
-		vkCmdSetDepthBias(*m_current_command_buffer, rsx::method_registers.poly_offset_bias(), 0.f, rsx::method_registers.poly_offset_scale());
-	}
-	else
-	{
-		//Zero bias value - disables depth bias
-		vkCmdSetDepthBias(*m_current_command_buffer, 0.f, 0.f, 0.f);
+		const float actual_line_width =
+			m_device->get_wide_lines_support() ? rsx::method_registers.line_width() * rsx::get_resolution_scale() : 1.f;
+		vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 	}
 
-	//Update dynamic state
 	if (rsx::method_registers.blend_enabled())
 	{
-		//Update blend constants
+		// Update blend constants
 		auto blend_colors = rsx::get_constant_blend_colors();
 		vkCmdSetBlendConstants(*m_current_command_buffer, blend_colors.data());
 	}
@@ -167,6 +159,26 @@ void VKGSRender::update_draw_state()
 			vkCmdSetStencilCompareMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_mask());
 			vkCmdSetStencilReference(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_ref());
 		}
+	}
+
+	// The remaining dynamic state should only be set once and we have signals to enable/disable mid-renderpass
+	if (!(m_current_command_buffer->flags & vk::command_buffer::cb_reload_dynamic_state))
+	{
+		// Dynamic state already set
+		m_frame_stats.setup_time += m_profiler.duration();
+		return;
+	}
+
+	if (rsx::method_registers.poly_offset_fill_enabled())
+	{
+		// offset_bias is the constant factor, multiplied by the implementation factor R
+		// offst_scale is the slope factor, multiplied by the triangle slope factor M
+		vkCmdSetDepthBias(*m_current_command_buffer, rsx::method_registers.poly_offset_bias(), 0.f, rsx::method_registers.poly_offset_scale());
+	}
+	else
+	{
+		// Zero bias value - disables depth bias
+		vkCmdSetDepthBias(*m_current_command_buffer, 0.f, 0.f, 0.f);
 	}
 
 	if (m_device->get_depth_bounds_support())
@@ -198,6 +210,7 @@ void VKGSRender::update_draw_state()
 
 	//TODO: Set up other render-state parameters into the program pipeline
 
+	m_current_command_buffer->flags &= ~vk::command_buffer::cb_reload_dynamic_state;
 	m_frame_stats.setup_time += m_profiler.duration();
 }
 
@@ -817,6 +830,9 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			vk::end_renderpass(cmd);
 		}
 
+		// Starting a new renderpass should clobber dynamic state
+		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
+
 		reload_state = true;
 	});
 
@@ -1024,6 +1040,12 @@ void VKGSRender::end()
 
 	u32 sub_index = 0;               // RSX subdraw ID
 	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value
+
+	if (m_graphics_state & rsx::pipeline_state::invalidate_vk_dynamic_state)
+	{
+		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
+		m_graphics_state &= ~rsx::pipeline_state::invalidate_vk_dynamic_state;
+	}
 
 	rsx::method_registers.current_draw_clause.begin();
 	do
