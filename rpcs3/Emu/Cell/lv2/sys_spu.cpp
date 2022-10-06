@@ -2346,7 +2346,6 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 		}
 
 		// Stop thread
-		thread.state += cpu_flag::exit;
 		thread = thread_state::aborting;
 		return true;
 	});
