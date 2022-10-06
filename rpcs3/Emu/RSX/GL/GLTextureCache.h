@@ -558,7 +558,7 @@ namespace gl
 		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			auto _template = get_template_from_collection_impl(sources);
-			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_3D, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_CUBE_MAP, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
 
 			copy_transfer_regions_impl(cmd, result->image(), sources);
 			return result;
