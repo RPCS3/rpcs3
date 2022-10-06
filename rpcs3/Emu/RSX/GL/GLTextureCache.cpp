@@ -8,6 +8,44 @@
 
 namespace gl
 {
+	static u64 encode_properties(GLenum sized_internal_fmt, GLenum target, u16 width, u16 height, u16 depth, u8 mipmaps)
+	{
+		// Generate cache key
+		// 00..13 = width
+		// 14..27 = height
+		// 28..35 = depth
+		// 36..39 = mipmaps
+		// 40..41 = type
+		// 42..57 = format
+		ensure(((width | height) & ~0x3fff) == 0, "Image dimensions are too large - lower your resolution scale.");
+		ensure(mipmaps <= 13);
+
+		GLuint target_encoding = 0;
+		switch (target)
+		{
+		case GL_TEXTURE_1D:
+			target_encoding = 0; break;
+		case GL_TEXTURE_2D:
+			target_encoding = 1; break;
+		case GL_TEXTURE_3D:
+			target_encoding = 2; break;
+		case GL_TEXTURE_CUBE_MAP:
+			target_encoding = 3; break;
+		default:
+			fmt::throw_exception("Unsupported destination target 0x%x", target);
+		}
+
+		const u64 key =
+			(static_cast<u64>(width) << 0) |
+			(static_cast<u64>(height) << 14) |
+			(static_cast<u64>(depth) << 28) |
+			(static_cast<u64>(mipmaps) << 36) |
+			(static_cast<u64>(target_encoding) << 40) |
+			(static_cast<u64>(sized_internal_fmt) << 42);
+
+		return key;
+	}
+
 	void cached_texture_section::finish_flush()
 	{
 		// Free resources
@@ -83,7 +121,7 @@ namespace gl
 		}
 	}
 
-	gl::texture_view* texture_cache::create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type,
+	gl::texture_view* texture_cache::create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_target,
 		u32 gcm_format, u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy)
 	{
 		if (sized_internal_fmt == GL_NONE)
@@ -92,12 +130,7 @@ namespace gl
 		}
 
 		temporary_image_t* dst = nullptr;
-		const u64 match_key =
-			(static_cast<u64>(width) << 0) |
-			(static_cast<u64>(height) << 16) |
-			(static_cast<u64>(depth) << 32) |
-			(static_cast<u64>(mipmaps) << 40) |
-			(static_cast<u64>(sized_internal_fmt) << 48);
+		const auto match_key = encode_properties(sized_internal_fmt, dst_target, width, height, depth, mipmaps);
 
 		// Search image cache
 		for (auto& e : m_temporary_surfaces)
@@ -116,7 +149,7 @@ namespace gl
 
 		if (!dst)
 		{
-			std::unique_ptr<temporary_image_t> data = std::make_unique<temporary_image_t>(dst_type, width, height, depth, mipmaps, sized_internal_fmt, rsx::classify_format(gcm_format));
+			std::unique_ptr<temporary_image_t> data = std::make_unique<temporary_image_t>(dst_target, width, height, depth, mipmaps, sized_internal_fmt, rsx::classify_format(gcm_format));
 			dst = data.get();
 			dst->properties_encoding = match_key;
 			m_temporary_surfaces.emplace_back(std::move(data));
