@@ -3473,6 +3473,9 @@ namespace rsx
 		bind(NV4097_SET_BLEND_FUNC_DFACTOR, nv4097::set_blend_factor);
 		bind(NV4097_SET_POLYGON_STIPPLE, nv4097::notify_state_changed<fragment_state_dirty>);
 		bind_array(NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>);
+		bind(NV4097_SET_POLY_OFFSET_FILL_ENABLE, nv4097::notify_state_changed<polygon_offset_state_dirty>);
+		bind(NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR, nv4097::notify_state_changed<polygon_offset_state_dirty>);
+		bind(NV4097_SET_POLYGON_OFFSET_BIAS, nv4097::notify_state_changed<polygon_offset_state_dirty>);
 
 		//NV308A (0xa400..0xbffc!)
 		bind_array(NV308A_COLOR, 1, 256 * 7, nv308a::color::impl);

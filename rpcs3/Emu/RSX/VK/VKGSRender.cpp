@@ -1169,6 +1169,7 @@ void VKGSRender::set_viewport()
 		m_viewport.maxDepth = 1.f;
 	}
 
+	m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 	m_graphics_state &= ~(rsx::pipeline_state::zclip_config_state_dirty);
 }
 
@@ -1181,6 +1182,8 @@ void VKGSRender::set_scissor(bool clip_viewport)
 		m_scissor.extent.width = scissor.width();
 		m_scissor.offset.x = scissor.x1;
 		m_scissor.offset.y = scissor.y1;
+
+		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 	}
 }
 
