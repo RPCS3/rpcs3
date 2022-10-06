@@ -1731,7 +1731,6 @@ bool VKGSRender::load_program()
 
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
-	auto old_program = m_program;
 
 	vk::pipeline_props properties{};
 
@@ -1929,7 +1928,7 @@ bool VKGSRender::load_program()
 
 	if (!m_program && (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only))
 	{
-		if (!m_shader_interpreter.is_interpreter(old_program))
+		if (!m_shader_interpreter.is_interpreter(m_prev_program))
 		{
 			m_interpreter_state = rsx::invalidate_pipeline_bits;
 		}

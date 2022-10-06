@@ -622,9 +622,17 @@ void GLGSRender::begin()
 	rsx::thread::begin();
 
 	if (skip_current_frame || cond_render_ctrl.disable_rendering())
+	{
 		return;
+	}
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
+
+	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	{
+		// Shaders need to be reloaded.
+		m_program = nullptr;
+	}
 }
 
 void GLGSRender::end()
