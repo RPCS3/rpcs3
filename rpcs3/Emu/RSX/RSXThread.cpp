@@ -3401,21 +3401,11 @@ namespace rsx
 
 		if (limit)
 		{
-			const u64 time = rsx::uclock() - Emu.GetPauseTime();
 			const u64 needed_us = static_cast<u64>(1000000 / limit);
+			const u64 time = std::max<u64>(get_system_time(), target_rsx_flip_time > needed_us ? target_rsx_flip_time - needed_us : 0);
 
-			if (int_flip_index == 0)
+			if (int_flip_index)
 			{
-				target_rsx_flip_time = time;
-			}
-			else
-			{
-				do
-				{
-					target_rsx_flip_time += needed_us;
-				}
-				while (time >= target_rsx_flip_time + needed_us);
-
 				if (target_rsx_flip_time > time + 1000)
 				{
 					const auto delay_us = target_rsx_flip_time - time;
@@ -3424,6 +3414,7 @@ namespace rsx
 				}
 			}
 
+			target_rsx_flip_time = std::max(time, target_rsx_flip_time) + needed_us;
 			flip_notification_count = 1;
 		}
 		else if (frame_limit == frame_limit_type::_ps3)
