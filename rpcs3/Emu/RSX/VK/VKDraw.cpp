@@ -208,10 +208,8 @@ void VKGSRender::update_draw_state()
 
 	bind_viewport();
 
-	//TODO: Set up other render-state parameters into the program pipeline
-
 	m_current_command_buffer->flags &= ~vk::command_buffer::cb_reload_dynamic_state;
-	m_graphics_state &= ~rsx::pipeline_state::polygon_offset_state_dirty;
+	m_graphics_state &= ~(rsx::pipeline_state::polygon_offset_state_dirty | rsx::pipeline_state::depth_bounds_state_dirty);
 	m_frame_stats.setup_time += m_profiler.duration();
 }
 
