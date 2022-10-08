@@ -325,6 +325,9 @@ namespace vk
 
 	void overlay_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* fbo, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
 	{
+		// This call clobbers dynamic state
+		cmd.flags |= vk::command_buffer::cb_reload_dynamic_state;
+
 		load_program(cmd, render_pass, src);
 		set_up_viewport(cmd, viewport.x1, viewport.y1, viewport.width(), viewport.height());
 

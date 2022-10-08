@@ -149,6 +149,7 @@ namespace rsx
 		push_buffer_arrays_dirty = 0x20000,   // Push buffers have data written to them (immediate mode vertex buffers)
 
 		polygon_offset_state_dirty = 0x40000, // Polygon offset config was changed
+		depth_bounds_state_dirty   = 0x80000, // Depth bounds configuration changed
 
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
@@ -157,7 +158,7 @@ namespace rsx
 		memory_barrier_bits = framebuffer_reads_dirty,
 
 		// Vulkan-specific signals
-		invalidate_vk_dynamic_state = zclip_config_state_dirty | scissor_config_state_dirty | polygon_offset_state_dirty,
+		invalidate_vk_dynamic_state = zclip_config_state_dirty | scissor_config_state_dirty | polygon_offset_state_dirty | depth_bounds_state_dirty,
 
 		all_dirty = ~0u
 	};
