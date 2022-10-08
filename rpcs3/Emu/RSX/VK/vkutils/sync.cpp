@@ -199,7 +199,13 @@ namespace vk
 	VkResult wait_for_event(event* pEvent, u64 timeout)
 	{
 		// Convert timeout to TSC cycles. Timeout accuracy isn't super-important, only fast response when event is signaled (within 10us if possible)
-		timeout *= (utils::get_tsc_freq() / 1'000'000);
+		const u64 freq = utils::get_tsc_freq();
+
+		if (freq)
+		{
+			timeout *= (freq / 1'000'000);
+		}
+
 		u64 start = 0;
 
 		while (true)
@@ -217,14 +223,15 @@ namespace vk
 
 			if (timeout)
 			{
+				const auto now = freq ? utils::get_tsc() : get_system_time();
+
 				if (!start)
 				{
-					start = utils::get_tsc();
+					start = now;
 					continue;
 				}
 
-				if (const auto now = utils::get_tsc();
-					(now > start) &&
+				if ((now > start) &&
 					(now - start) > timeout)
 				{
 					rsx_log.error("[vulkan] vk::wait_for_event has timed out!");
