@@ -221,10 +221,10 @@ void usb_device_usio::translate_input()
 
 void usb_device_usio::usio_write(u8 channel, u16 reg, const std::vector<u8>& data)
 {
-	auto write_memory = [&](std::vector<u8>& memory)
+	auto write_memory = [&](std::vector<u8>& memory, bool exact_size = true)
 	{
-		ensure(data.size() == memory.size());
-		memcpy(memory.data(), data.data(), memory.size());
+		ensure(data.size() == memory.size() || (data.size() <= memory.size() && !exact_size));
+		memcpy(memory.data(), data.data(), data.size());
 	};
 
 	const auto get_u16 = [&](std::string_view usio_func) -> u16
@@ -289,7 +289,7 @@ void usb_device_usio::usio_write(u8 channel, u16 reg, const std::vector<u8>& dat
 			{
 			case 0x0000:
 			{
-				write_memory(g_fxo->get<usio_memory>().backup_memory);
+				write_memory(g_fxo->get<usio_memory>().backup_memory, false);
 				break;
 			}
 			case 0x0180:
@@ -320,6 +320,20 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 			u16 to_push = std::min(left, static_cast<u16>(64));
 			zeroes.resize(to_push);
 			q_replies.push(zeroes);
+			left -= to_push;
+		}
+	};
+
+	auto push_vector = [&](std::vector<u8>& memory)
+	{
+		std::vector<u8> buffer;
+		u16 left = size;
+		while (left > 0)
+		{
+			u16 to_push = std::min(left, static_cast<u16>(64));
+			buffer.resize(to_push);
+			memcpy(buffer.data(), memory.data() + (size - left), buffer.size());
+			q_replies.push(buffer);
 			left -= to_push;
 		}
 	};
@@ -389,20 +403,14 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 			{
 			case 0x0000:
 			{
-				ensure(size == 0xB8);
-				std::vector<u8> buffer[3];
-				for (int i = 0; i < 3; i++)
-				{
-					buffer[i].resize(i < 2 ? 64 : 56);
-					memcpy(buffer[i].data(), g_fxo->get<usio_memory>().backup_memory.data() + i * 64, buffer[i].size());
-					q_replies.push(buffer[i]);
-				}
+				ensure(size <= 0xB8);
+				push_vector(g_fxo->get<usio_memory>().backup_memory);
 				break;
 			}
 			case 0x0180:
 			{
 				ensure(size == 0x28);
-				q_replies.push(g_fxo->get<usio_memory>().last_game_status);
+				push_vector(g_fxo->get<usio_memory>().last_game_status);
 				break;
 			}
 			case 0x0200:
