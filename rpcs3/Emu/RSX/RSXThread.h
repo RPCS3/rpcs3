@@ -42,7 +42,7 @@ namespace rsx
 
 	struct rsx_iomap_table
 	{
-		static constexpr u32 c_lock_stride = 8096;
+		static constexpr u32 c_lock_stride = 8192;
 
 		std::array<atomic_t<u32>, 4096> ea;
 		std::array<atomic_t<u32>, 4096> io;
@@ -65,7 +65,7 @@ namespace rsx
 
 			bool added_wait = false;
 
-			for (u32 block = addr / 8192; block <= (end / 8192); block += Stride)
+			for (u32 block = addr / c_lock_stride; block <= (end / c_lock_stride); block += Stride)
 			{
 				auto& mutex_ = rs[block];
 
