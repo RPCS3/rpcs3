@@ -680,7 +680,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 		{
 			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
 			const usz insert_pos = old_path.find_last_of(fs::delim) + 1;
-			const auto prefix = "disused_"sv;
+			const auto prefix = "used_"sv;
 
 			if (old_path.compare(insert_pos, prefix.size(), prefix) != 0)
 			{
@@ -2534,7 +2534,7 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 			std::string old_path2 = old_path;
 
 			old_path2.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
-			old_path.insert(old_path.find_last_of(fs::delim) + 1, "disused_"sv);
+			old_path.insert(old_path.find_last_of(fs::delim) + 1, "used_"sv);
 
 			if (fs::remove_file(old_path))
 			{
