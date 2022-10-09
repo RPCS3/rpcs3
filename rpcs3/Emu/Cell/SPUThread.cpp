@@ -2721,10 +2721,8 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 	{
 		optimization_compatible = 0;
 	}
-	else if (optimization_compatible == MFC_PUT_CMD && (g_cfg.video.strict_rendering_mode || g_cfg.core.rsx_fifo_accuracy))
-	{
-		optimization_compatible &= ~MFC_PUT_CMD;
-	}
+
+	rsx::reservation_lock<false, 1> rsx_lock(0, 128, optimization_compatible == MFC_PUT_CMD && (g_cfg.video.strict_rendering_mode || (g_cfg.core.rsx_fifo_accuracy && !g_cfg.core.spu_accurate_dma)));
 
 	constexpr u32 ts_mask = 0x7fff;
 
@@ -3038,16 +3036,6 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 		const u32 size = items[index].ts & ts_mask;
 		const u32 addr = items[index].ea;
 
-		auto check_carry_16 = [](u16 addr, u16 size)
-		{
-#ifdef _MSC_VER
-			u16 out;
-			return _addcarry_u16(0, addr, size - 1, &out);
-#else
-			return ((addr + size - 1) >> 16) != 0;
-#endif
-		};
-
 		// Try to inline the transfer
 		if (addr < RAW_SPU_BASE_ADDR && size && optimization_compatible == MFC_GET_CMD)
 		{
@@ -3120,8 +3108,10 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 			arg_lsa += utils::align<u32>(size, 16);
 		}
 		// Avoid inlining huge transfers because it intentionally drops range lock unlock
-		else if (addr < RAW_SPU_BASE_ADDR && size - 1 <= 0x400 - 1 && optimization_compatible == MFC_PUT_CMD && !check_carry_16(static_cast<u16>(addr), static_cast<u16>(size)))
+		else if (addr < RAW_SPU_BASE_ADDR && size - 1 <= 0x400 - 1 && optimization_compatible == MFC_PUT_CMD && (addr % 0x10000 + (size - 1)) < 0x10000)
 		{
+			rsx_lock.update_if_enabled(addr, size, range_lock);
+
 			if (!g_use_rtm)
 			{
 				vm::range_lock(range_lock, addr & -128, utils::align<u32>(addr + size, 128) - (addr & -128));
@@ -3198,6 +3188,8 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 		else if (size)
 		{
 			range_lock->release(0);
+			rsx_lock.unlock();
+
 			spu_log.trace("LIST: item=0x%016x, lsa=0x%05x", std::bit_cast<be_t<u64>>(items[index]), arg_lsa | (addr & 0xf));
 
 			transfer.eal  = addr;
