@@ -958,7 +958,7 @@ namespace rsx
 		void update_if_enabled(u32 addr, u32 _length, const std::add_pointer_t<T>& lock_release = std::add_pointer_t<void>{})
 		{
 			// This check is not perfect but it covers the important cases fast (this check is only an optimization - forcing true disables it)
-			if (length && (this->addr / rsx_iomap_table::c_lock_stride != addr / rsx_iomap_table::c_lock_stride || (addr % rsx_iomap_table::c_lock_stride + _length) > rsx_iomap_table::c_lock_stride))
+			if (length && (this->addr / rsx_iomap_table::c_lock_stride != addr / rsx_iomap_table::c_lock_stride || (addr % rsx_iomap_table::c_lock_stride + _length) > rsx_iomap_table::c_lock_stride) && _length > 1)
 			{
 				if constexpr (!std::is_void_v<T>)
 				{
