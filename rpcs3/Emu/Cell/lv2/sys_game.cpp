@@ -7,11 +7,11 @@
 
 LOG_CHANNEL(sys_game);
 
-error_code _sys_game_board_storage_read(vm::ptr<u8> buffer, u8 code)
+error_code _sys_game_board_storage_read(vm::ptr<u8> buffer1, vm::ptr<u8> buffer2)
 {
-	sys_game.trace("sys_game_board_storage_read(buffer=*0x%x, code=0x%02x)", buffer, code);
+	sys_game.trace("sys_game_board_storage_read(buffer1=*0x%x, buffer2=*0x%x)", buffer1, buffer2);
 
-	if (!buffer)
+	if (!buffer1)
 	{
 		return CELL_EFAULT;
 	}
@@ -23,7 +23,14 @@ error_code _sys_game_board_storage_read(vm::ptr<u8> buffer, u8 code)
 	{
 		response[i] ^= psid_bytes[i];
 	}
-	memcpy(buffer.get_ptr(), response, 16);
+	memcpy(buffer1.get_ptr(), response, 16);
+
+	if (!buffer2)
+	{
+		return CELL_EFAULT;
+	}
+
+	*buffer2 = 0x00;
 
 	return CELL_OK;
 }
