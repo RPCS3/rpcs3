@@ -419,7 +419,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	VKFragmentDecompilerThread decompiler(source, parr, prog, size, *this);
 
 	const auto pdev = vk::get_current_renderer();
-	if (!g_cfg.video.disable_native_float16)
+	if (g_cfg.video.shader_precision == gpu_preset_level::low)
 	{
 		decompiler.device_props.has_native_half_support = pdev->get_shader_types_support().allow_float16;
 	}

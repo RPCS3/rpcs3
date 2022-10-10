@@ -288,3 +288,10 @@ enum class zcull_precision_level
 	relaxed,
 	undefined
 };
+
+enum class gpu_preset_level
+{
+	high,
+	low,
+	_auto
+};

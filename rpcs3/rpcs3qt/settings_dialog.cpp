@@ -546,6 +546,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	}
 
+	m_emu_settings->EnhanceComboBox(ui->shaderPrecision, emu_settings_type::ShaderPrecisionQuality);
+	SubscribeTooltip(ui->gb_antiAliasing, tooltips.settings.shader_precision);
+
 	// Comboboxes
 	m_emu_settings->EnhanceComboBox(ui->shaderCompilerThreads, emu_settings_type::ShaderCompilerNumThreads, true);
 	SubscribeTooltip(ui->gb_shader_compiler_threads, tooltips.settings.shader_compiler_threads);
@@ -2122,9 +2125,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->strictTextureFlushing, emu_settings_type::StrictTextureFlushing);
 	SubscribeTooltip(ui->strictTextureFlushing, tooltips.settings.strict_texture_flushing);
-
-	m_emu_settings->EnhanceCheckBox(ui->disableNativefp16, emu_settings_type::DisableNativefloat16);
-	SubscribeTooltip(ui->disableNativefp16, tooltips.settings.disable_native_fp16);
 
 	m_emu_settings->EnhanceCheckBox(ui->Enable3D, emu_settings_type::Enable3D);
 	SubscribeTooltip(ui->Enable3D, tooltips.settings.enable_3d);

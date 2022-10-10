@@ -596,3 +596,18 @@ void fmt_class_string<thread_scheduler_mode>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<gpu_preset_level>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](gpu_preset_level value)
+	{
+		switch (value)
+		{
+		case gpu_preset_level::high: return "High";
+		case gpu_preset_level::low: return "Low";
+		}
+
+		return unknown;
+	});
+}
