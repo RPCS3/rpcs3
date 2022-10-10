@@ -547,7 +547,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	}
 
 	m_emu_settings->EnhanceComboBox(ui->shaderPrecision, emu_settings_type::ShaderPrecisionQuality);
-	SubscribeTooltip(ui->shaderPrecision, tooltips.settings.shader_precision);
+	SubscribeTooltip(ui->gbShaderPrecision, tooltips.settings.shader_precision);
 
 	// Comboboxes
 	m_emu_settings->EnhanceComboBox(ui->shaderCompilerThreads, emu_settings_type::ShaderCompilerNumThreads, true);
