@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "util/sysinfo.hpp"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/system_config.h"
@@ -33,4 +34,9 @@ error_code _sys_game_board_storage_read(vm::ptr<u8> buffer1, vm::ptr<u8> buffer2
 	*buffer2 = 0x00;
 
 	return CELL_OK;
+}
+
+u64 _sys_game_get_system_sw_version()
+{
+	return stof(utils::get_firmware_version()) * 10000;
 }
