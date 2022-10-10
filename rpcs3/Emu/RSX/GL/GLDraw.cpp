@@ -256,9 +256,29 @@ void GLGSRender::update_draw_state()
 		gl_state.enable(rsx::method_registers.poly_offset_line_enabled(), GL_POLYGON_OFFSET_LINE);
 		gl_state.enable(rsx::method_registers.poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
 
-		//offset_bias is the constant factor, multiplied by the implementation factor R
-		//offset_scale is the slope factor, multiplied by the triangle slope factor M
-		gl_state.polygon_offset(rsx::method_registers.poly_offset_scale(), rsx::method_registers.poly_offset_bias());
+		// offset_bias is the constant factor, multiplied by the implementation factor R
+		// offset_scale is the slope factor, multiplied by the triangle slope factor M
+		const auto poly_offset_scale = rsx::method_registers.poly_offset_scale();
+		auto poly_offset_bias = rsx::method_registers.poly_offset_bias();
+
+		if (auto ds = m_rtts.m_bound_depth_stencil.second;
+			ds && ds->get_internal_format() == gl::texture::internal_format::depth24_stencil8)
+		{
+			// Check details in VKDraw.cpp about behaviour of RSX vs desktop D24X8 implementations
+			// TLDR, RSX expects R = 16,777,215 (2^24 - 1)
+			const auto& caps = gl::get_driver_caps();
+			if (caps.vendor_NVIDIA)
+			{
+				// R derived to be 8388607 (2^23 - 1)
+				poly_offset_bias *= 0.5f;
+			}
+			else if (caps.vendor_AMD)
+			{
+				// R derived to be 4194303 (2^22 - 1)
+				poly_offset_bias *= 0.25f;
+			}
+		}
+		gl_state.polygon_offset(poly_offset_scale, poly_offset_bias);
 
 		if (gl_state.enable(rsx::method_registers.cull_face_enabled(), GL_CULL_FACE))
 		{
