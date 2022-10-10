@@ -46,6 +46,8 @@ private:
 
 	std::unique_ptr<find_dialog> m_find_dialog;
 
+	QTimer* m_timer = nullptr;
+
 	QList<QColor> m_color;
 	QColor m_color_stack;
 	QPlainTextEdit* m_log = nullptr;
