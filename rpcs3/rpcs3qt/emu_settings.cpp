@@ -965,6 +965,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case msaa_level::_auto: return tr("Auto", "MSAA");
 		}
 		break;
+	case emu_settings_type::ShaderPrecisionQuality:
+		switch (static_cast<gpu_preset_level>(index))
+		{
+		case gpu_preset_level::_auto: return tr("Auto", "Shader Precision");
+		case gpu_preset_level::high: return tr("High", "Shader Precision");
+		case gpu_preset_level::low: return tr("Low", "Shader Precision");
+		}
+		break;
 	case emu_settings_type::AudioRenderer:
 		switch (static_cast<audio_renderer>(index))
 		{
