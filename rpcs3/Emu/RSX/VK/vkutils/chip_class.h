@@ -50,4 +50,6 @@ namespace vk
 
 	chip_class get_chip_family();
 	chip_class get_chip_family(u32 vendor_id, u32 device_id);
+
+	static inline bool is_NVIDIA(chip_class chip) { return chip >= chip_class::NV_generic && chip <= chip_class::NV_ampere; }
 }

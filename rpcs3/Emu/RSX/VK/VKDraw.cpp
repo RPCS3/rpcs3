@@ -5,6 +5,7 @@
 #include "VKAsyncScheduler.h"
 #include "VKGSRender.h"
 #include "vkutils/buffer_object.h"
+#include "vkutils/chip_class.h"
 
 namespace vk
 {
@@ -173,7 +174,22 @@ void VKGSRender::update_draw_state()
 	{
 		// offset_bias is the constant factor, multiplied by the implementation factor R
 		// offst_scale is the slope factor, multiplied by the triangle slope factor M
-		vkCmdSetDepthBias(*m_current_command_buffer, rsx::method_registers.poly_offset_bias(), 0.f, rsx::method_registers.poly_offset_scale());
+		// R is implementation dependent and has to be derived empirically for supported implementations.
+		// Lucky for us, only NVIDIA currently supports fixed-point 24-bit depth buffers.
+
+		const auto polygon_offset_scale = rsx::method_registers.poly_offset_scale();
+		auto polygon_offset_bias = rsx::method_registers.poly_offset_bias();
+
+		if (m_draw_fbo->depth_format() == VK_FORMAT_D24_UNORM_S8_UINT && is_NVIDIA(vk::get_chip_family()))
+		{
+			// Empirically derived to be 0.5 * (2^24 - 1) for fixed type on Pascal. The same seems to apply for other NVIDIA GPUs.
+			// RSX seems to be using 2^24 - 1 instead making the biases twice as large when using fixed type Z-buffer on NVIDIA.
+			// Note, that the formula for floating point is complicated, but actually works out for us.
+			// Since the exponent range for a polygon is around 0, and we have 23 (+1) mantissa bits, R just works out to the same range by chance \o/.
+			polygon_offset_bias *= 0.5f;
+		}
+
+		vkCmdSetDepthBias(*m_current_command_buffer, polygon_offset_bias, 0.f, polygon_offset_scale);
 	}
 	else
 	{
