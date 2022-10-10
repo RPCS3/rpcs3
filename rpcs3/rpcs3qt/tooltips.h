@@ -110,7 +110,6 @@ public:
 		const QString disable_fifo_reordering      = tr("Disables RSX FIFO optimizations completely. Draws are processed as they are received by the DMA puller.");
 		const QString gpu_texture_scaling          = tr("Force all texture transfer, scaling and conversion operations on the GPU.\nMay cause texture corruption in some cases.");
 		const QString strict_texture_flushing      = tr("Forces texture flushing even in situations where it is not necessary/correct. Known to cause visual artifacts, but useful for debugging certain texture cache issues.");
-		const QString disable_native_fp16          = tr("Disables hardware half-float support which is known to cause problems in some rare cases on some GPUs.");
 		const QString enable_3d                    = tr("Enables 3D stereo rendering.\nNote that only anaglyph viewing is supported at the moment.");
 		const QString accurate_ppu_128_loop        = tr("When enabled, PPU atomic operations will operate on entire cache line data, as opposed to a single 64bit block of memory when disabled.\nNumerical values control whether or not to enable the accurate version based on the atomic operation's length.");
 		const QString enable_performance_report    = tr("Measure certain events and print a chart after the emulator is stopped. Don't enable if not asked to.");
@@ -176,6 +175,7 @@ public:
 		const QString async_with_shader_interpreter   = tr("Hybrid rendering mode.\nIf a shader is not found in the cache, the interpreter will be used to render approximated graphics for this shader until it has compiled.");
 		const QString shader_interpreter_only         = tr("All rendering is handled by the interpreter with no attempt to compile native shaders.\nThis mode is very slow and experimental.");
 		const QString shader_compiler_threads         = tr("Number of threads to use for the shader compiler backend.\nOnly has an impact when shader mode is set to one of the asynchronous modes.");
+		const QString shader_precision                = tr("Controls the precision level of generated shaders. Low precision leverages native fp16 support of your host GPU but can produce incorrect results in some cases.");
 
 		const QString async_texture_streaming                  = tr("Stream textures to GPU in parallel with 3D rendering using asynchronous compute.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer and greatly benefits from having MTRSX enabled if you have a capable CPU.");
 		const QString force_disable_exclusive_fullscreen_mode  = tr("Forces borderless windowed mode for all fullscreen windows. Disables exclusive fullscreen graphics driver optimizations.\nUse when you wish to stream using Vulkan or if your screen goes dim using HDR.\nNote: RPCS3 does not use HDR at all.");
