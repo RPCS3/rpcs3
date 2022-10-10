@@ -175,7 +175,7 @@ public:
 		const QString async_with_shader_interpreter   = tr("Hybrid rendering mode.\nIf a shader is not found in the cache, the interpreter will be used to render approximated graphics for this shader until it has compiled.");
 		const QString shader_interpreter_only         = tr("All rendering is handled by the interpreter with no attempt to compile native shaders.\nThis mode is very slow and experimental.");
 		const QString shader_compiler_threads         = tr("Number of threads to use for the shader compiler backend.\nOnly has an impact when shader mode is set to one of the asynchronous modes.");
-		const QString shader_precision                = tr("Controls the precision level of generated shaders. Low precision leverages native fp16 support of your host GPU but can produce incorrect results in some cases.");
+		const QString shader_precision                = tr("Controls the precision level of generated shaders. Low precision generates much faster code depending on the hardware, but can sometimes generate minor visual glitches or flicker.");
 
 		const QString async_texture_streaming                  = tr("Stream textures to GPU in parallel with 3D rendering using asynchronous compute.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer and greatly benefits from having MTRSX enabled if you have a capable CPU.");
 		const QString force_disable_exclusive_fullscreen_mode  = tr("Forces borderless windowed mode for all fullscreen windows. Disables exclusive fullscreen graphics driver optimizations.\nUse when you wish to stream using Vulkan or if your screen goes dim using HDR.\nNote: RPCS3 does not use HDR at all.");
