@@ -30,6 +30,8 @@ namespace gl
 		bool vendor_AMD = false;    // has broken ARB_multidraw
 		bool vendor_NVIDIA = false; // has NaN poisoning issues
 		bool vendor_MESA = false;   // requires CLIENT_STORAGE bit set for streaming buffers
+		bool subvendor_RADEONSI = false;
+		bool subvendor_NOUVEAU = false;
 
 		bool check(const std::string& ext_name, const char* test)
 		{
@@ -174,6 +176,15 @@ namespace gl
 			if (version_string.find("Mesa") != umax || renderer_string.find("Mesa") != umax)
 			{
 				vendor_MESA = true;
+
+				if (vendor_string.find("nouveau") != umax)
+				{
+					subvendor_NOUVEAU = true;
+				}
+				else if (vendor_string.find("AMD") != umax)
+				{
+					subvendor_RADEONSI = true;
+				}
 			}
 
 			// Workaround for intel drivers which have terrible capability reporting

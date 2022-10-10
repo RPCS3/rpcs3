@@ -267,7 +267,7 @@ void GLGSRender::update_draw_state()
 			// Check details in VKDraw.cpp about behaviour of RSX vs desktop D24X8 implementations
 			// TLDR, RSX expects R = 16,777,215 (2^24 - 1)
 			const auto& caps = gl::get_driver_caps();
-			if (caps.vendor_NVIDIA)
+			if (caps.vendor_NVIDIA || caps.vendor_MESA)
 			{
 				// R derived to be 8388607 (2^23 - 1)
 				poly_offset_bias *= 0.5f;
