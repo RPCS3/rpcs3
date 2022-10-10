@@ -1184,8 +1184,8 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::VulkanAsyncSchedulerDriver:
 		switch (static_cast<vk_gpu_scheduler_mode>(index))
 		{
-		case vk_gpu_scheduler_mode::safe: return tr("Safe");
-		case vk_gpu_scheduler_mode::fast: return tr("Fast");
+		case vk_gpu_scheduler_mode::safe: return tr("Safe", "Asynchronous Queue Scheduler");
+		case vk_gpu_scheduler_mode::fast: return tr("Fast", "Asynchronous Queue Scheduler");
 		}
 		break;
 	default:
