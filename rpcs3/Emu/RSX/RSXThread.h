@@ -42,7 +42,7 @@ namespace rsx
 
 	struct rsx_iomap_table
 	{
-		static constexpr u32 c_lock_stride = 8096;
+		static constexpr u32 c_lock_stride = 8192;
 
 		std::array<atomic_t<u32>, 4096> ea;
 		std::array<atomic_t<u32>, 4096> io;
@@ -65,7 +65,7 @@ namespace rsx
 
 			bool added_wait = false;
 
-			for (u32 block = addr / 8192; block <= (end / 8192); block += Stride)
+			for (u32 block = addr / c_lock_stride; block <= (end / c_lock_stride); block += Stride)
 			{
 				auto& mutex_ = rs[block];
 
@@ -958,7 +958,7 @@ namespace rsx
 		void update_if_enabled(u32 addr, u32 _length, const std::add_pointer_t<T>& lock_release = std::add_pointer_t<void>{})
 		{
 			// This check is not perfect but it covers the important cases fast (this check is only an optimization - forcing true disables it)
-			if (length && (this->addr / rsx_iomap_table::c_lock_stride != addr / rsx_iomap_table::c_lock_stride || (addr % rsx_iomap_table::c_lock_stride + _length) > rsx_iomap_table::c_lock_stride))
+			if (length && (this->addr / rsx_iomap_table::c_lock_stride != addr / rsx_iomap_table::c_lock_stride || (addr % rsx_iomap_table::c_lock_stride + _length) > rsx_iomap_table::c_lock_stride) && _length > 1)
 			{
 				if constexpr (!std::is_void_v<T>)
 				{
