@@ -440,7 +440,7 @@ namespace rsx
 		{
 			enabled = _enabled;
 			num_collapsed = 0;
-			begin_end_ctr = 0;
+			in_begin_end = false;
 		}
 
 		void flattening_helper::force_disable()
@@ -506,7 +506,7 @@ namespace rsx
 				{
 					// If its set to unoptimizable, we already tried and it did not work
 					// If it resets to load low (usually after some kind of loading screen) we can try again
-					ensure(begin_end_ctr == 0); // "Incorrect initial state"
+					ensure(in_begin_end == false); // "Incorrect initial state"
 					ensure(num_collapsed == 0);
 					enabled = true;
 				}
@@ -520,7 +520,7 @@ namespace rsx
 			{
 			case NV4097_SET_BEGIN_END:
 			{
-				begin_end_ctr ^= 1;
+				in_begin_end = !!command.value;
 
 				if (command.value)
 				{
@@ -550,7 +550,7 @@ namespace rsx
 				else
 				{
 					rsx_log.error("Fifo flattener misalignment, disable FIFO reordering and report to developers");
-					begin_end_ctr = 0;
+					in_begin_end = false;
 					flush_cmd = 0u;
 				}
 
@@ -574,7 +574,7 @@ namespace rsx
 					else
 					{
 						// Flush
-						flush_cmd = (begin_end_ctr) ? deferred_primitive : 0u;
+						flush_cmd = (in_begin_end) ? deferred_primitive : 0u;
 					}
 				}
 				else
@@ -593,7 +593,7 @@ namespace rsx
 				draw_count = 0;
 				deferred_primitive = flush_cmd;
 
-				return (begin_end_ctr == 1)? EMIT_BARRIER : EMIT_END;
+				return in_begin_end ? EMIT_BARRIER : EMIT_END;
 			}
 
 			return NOTHING;

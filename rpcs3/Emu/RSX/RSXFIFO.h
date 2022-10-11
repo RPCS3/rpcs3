@@ -90,7 +90,7 @@ namespace rsx
 
 			u32 deferred_primitive = 0;
 			u32 draw_count = 0;
-			u32 begin_end_ctr = 0;
+			bool in_begin_end = false;
 
 			bool enabled = false;
 			u32  num_collapsed = 0;
