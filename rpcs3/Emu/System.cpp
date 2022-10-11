@@ -679,11 +679,17 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 		if (g_cfg.savestate.suspend_emu && m_ar)
 		{
 			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
-			old_path.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
+			const usz insert_pos = old_path.find_last_of(fs::delim) + 1;
+			const auto prefix = "used_"sv;
 
-			if (fs::rename(path, old_path, true))
+			if (old_path.compare(insert_pos, prefix.size(), prefix) != 0)
 			{
-				sys_log.notice("Savestate has been moved to path='%s'", old_path);
+				old_path.insert(insert_pos, prefix);
+
+				if (fs::rename(path, old_path, true))
+				{
+					sys_log.notice("Savestate has been moved to path='%s'", old_path);
+				}
 			}
 		}
 
@@ -2340,11 +2346,6 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		}
 	}
 
-	if (auto rsx = g_fxo->try_get<rsx::thread>())
-	{
-		*static_cast<cpu_thread*>(rsx) = thread_state::finished;
-	}
-
 	// Save it first for maximum timing accuracy
 	const u64 timestamp = get_timebased_time();
 
@@ -2530,11 +2531,20 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		else
 		{
 			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
-			old_path.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
+			std::string old_path2 = old_path;
+
+			old_path2.insert(old_path.find_last_of(fs::delim) + 1, "old-"sv);
+			old_path.insert(old_path.find_last_of(fs::delim) + 1, "used_"sv);
 
 			if (fs::remove_file(old_path))
 			{
 				sys_log.success("Old savestate has been removed: path='%s'", old_path);	
+			}
+
+			// For backwards compatibility - avoid having loose files
+			if (fs::remove_file(old_path2))
+			{
+				sys_log.success("Old savestate has been removed: path='%s'", old_path2);	
 			}
 
 			sys_log.success("Saved savestate! path='%s'", path);
