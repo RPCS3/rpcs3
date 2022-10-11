@@ -228,6 +228,7 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 		default: sys_usbd.fatal("Unhandled control transfer(0): 0x%x", bRequest); break;
 		}
 		break;
+	case 0x80: sys_usbd.todo("Unimplemented control transfer: 0x%x", bmRequestType); break;
 	default: sys_usbd.fatal("Unhandled control transfer: 0x%x", bmRequestType); break;
 	}
 }
