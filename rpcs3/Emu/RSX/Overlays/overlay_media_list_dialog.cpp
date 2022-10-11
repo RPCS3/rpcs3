@@ -264,6 +264,11 @@ namespace rsx
 
 			rsx_log.notice("Media dialog: showing entry '%s' ('%s')", m_media->name, m_media->path);
 
+			if (m_list)
+			{
+				status_flags |= status_bits::invalidate_image_cache;
+			}
+
 			m_list = std::make_unique<list_view>(1240, 540);
 			m_list->set_pos(20, 85);
 

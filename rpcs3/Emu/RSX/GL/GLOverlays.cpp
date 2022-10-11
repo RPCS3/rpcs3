@@ -498,6 +498,12 @@ namespace gl
 		saved_sampler_state save_30(30, m_sampler);
 		saved_sampler_state save_31(31, m_sampler);
 
+		if (ui.status_flags & rsx::overlays::status_bits::invalidate_image_cache)
+		{
+			remove_temp_resources(ui.uid);
+			ui.status_flags.clear(rsx::overlays::status_bits::invalidate_image_cache);
+		}
+
 		for (auto& cmd : ui.get_compiled().draw_commands)
 		{
 			set_primitive_type(cmd.config.primitives);
