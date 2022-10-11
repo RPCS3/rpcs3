@@ -627,7 +627,9 @@ namespace rsx
 				}
 			}
 			else
+			{
 				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
+			}
 
 			if (!rsx::method_registers.current_draw_clause.empty())
 			{
