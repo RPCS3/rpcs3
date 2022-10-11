@@ -740,6 +740,12 @@ namespace vk
 			vk::null_image_view(cmd, VK_IMAGE_VIEW_TYPE_2D_ARRAY)
 		};
 
+		if (ui.status_flags & rsx::overlays::status_bits::invalidate_image_cache)
+		{
+			remove_temp_resources(ui.uid);
+			ui.status_flags.clear(rsx::overlays::status_bits::invalidate_image_cache);
+		}
+
 		for (auto& command : ui.get_compiled().draw_commands)
 		{
 			num_drawable_elements = static_cast<u32>(command.verts.size());
