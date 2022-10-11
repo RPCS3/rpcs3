@@ -45,7 +45,7 @@ private:
 	atomic_t<bool> m_reset_req = false;
 
 	shared_mutex m_dev_sw_mutex{};
-	std::string m_current_device{};
+	std::string m_default_device{};
 	bool m_default_dev_changed = false;
 
 	bool m_dev_collection_cb_enabled = false;
@@ -57,6 +57,13 @@ private:
 
 	void CloseUnlocked();
 
-	std::tuple<cubeb_devid, std::string /* dev_ident */, u32 /* ch_cnt */> GetDevice(std::string_view dev_id = "");
-	std::tuple<cubeb_devid, std::string /* dev_ident */, u32 /* ch_cnt */> GetDefaultDeviceAlt(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt);
+	struct device_handle
+	{
+		cubeb_devid handle{};
+		std::string id;
+		u32 ch_cnt{};
+	};
+
+	device_handle GetDevice(std::string_view dev_id = "");
+	device_handle GetDefaultDeviceAlt(AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt);
 };

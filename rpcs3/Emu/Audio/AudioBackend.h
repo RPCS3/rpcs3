@@ -229,7 +229,7 @@ protected:
 	shared_mutex m_cb_mutex{};
 	std::function<u32(u32, void *)> m_write_callback{};
 
-	shared_mutex m_state_cb_mutex{};
+	std::recursive_mutex m_state_cb_mutex{};
 	std::function<void(AudioStateEvent)> m_state_callback{};
 
 	bool m_playing = false;

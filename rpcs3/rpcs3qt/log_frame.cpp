@@ -155,11 +155,10 @@ log_frame::log_frame(std::shared_ptr<gui_settings> _gui_settings, QWidget* paren
 	m_tty_file.open(fs::get_cache_dir() + "TTY.log", fs::read + fs::create);
 
 	CreateAndConnectActions();
+	LoadSettings();
 
-	// Check for updates every ~10 ms
-	QTimer *timer = new QTimer(this);
-	connect(timer, &QTimer::timeout, this, &log_frame::UpdateUI);
-	timer->start(10);
+	m_timer = new QTimer(this);
+	connect(m_timer, &QTimer::timeout, this, &log_frame::UpdateUI);
 }
 
 void log_frame::SetLogLevel(logs::level lev) const
@@ -394,8 +393,6 @@ void log_frame::CreateAndConnectActions()
 
 		m_tty_input->clear();
 	});
-
-	LoadSettings();
 }
 
 void log_frame::LoadSettings()
@@ -419,6 +416,14 @@ void log_frame::LoadSettings()
 	if (m_tty)
 	{
 		m_tty->document()->setMaximumBlockCount(m_gui_settings->GetValue(gui::l_limit_tty).toInt());
+	}
+
+	// Note: There's an issue where the scrollbar value won't be set to max if we start the log frame too early,
+	//       so let's delay the timer until we load the settings from the main window for the first time.
+	if (m_timer && !m_timer->isActive())
+	{
+		// Check for updates every ~10 ms
+		m_timer->start(10);
 	}
 }
 
@@ -610,7 +615,7 @@ void log_frame::UpdateUI()
 
 		// save old log state
 		QScrollBar* sb = m_log->verticalScrollBar();
-		const bool isMax = sb->value() == sb->maximum();
+		const bool is_max = sb->value() == sb->maximum();
 		const int sb_pos = sb->value();
 
 		QTextCursor text_cursor = m_log->textCursor();
@@ -668,7 +673,7 @@ void log_frame::UpdateUI()
 		m_log->setTextCursor(text_cursor);
 
 		// set scrollbar to max means auto-scroll
-		sb->setValue(isMax ? sb->maximum() : sb_pos);
+		sb->setValue(is_max ? sb->maximum() : sb_pos);
 		m_log_text.clear();
 	};
 

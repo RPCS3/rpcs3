@@ -10,6 +10,7 @@
 #include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/cellSysutil.h"
+#include "Emu/Io/Keyboard.h"
 
 #include "util/yaml.hpp"
 #include "Utilities/File.h"
@@ -300,7 +301,7 @@ void emu_settings::SaveSettings()
 	}
 }
 
-void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged, bool use_max, int max, bool sorted)
+void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged, bool use_max, int max, bool sorted, bool strict)
 {
 	if (!combobox)
 	{
@@ -330,7 +331,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 		for (int i = 0; i < settings.count(); i++)
 		{
-			const QString localized_setting = GetLocalizedSetting(settings[i], type, combobox->count());
+			const QString localized_setting = GetLocalizedSetting(settings[i], type, combobox->count(), strict);
 			combobox->addItem(localized_setting, QVariant({settings[i], i}));
 		}
 
@@ -788,7 +789,7 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 	for (int i = 0; i < options.count(); i++)
 	{
 		const QString& option = options[i];
-		const QString localized_setting = GetLocalizedSetting(option, type, i);
+		const QString localized_setting = GetLocalizedSetting(option, type, i, true);
 
 		QAbstractButton* button = button_group->button(i);
 		button->setText(localized_setting);
@@ -901,7 +902,7 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 	}
 }
 
-QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const
+QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_type type, int index, bool strict) const
 {
 	switch (type)
 	{
@@ -1177,6 +1178,24 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case audio_format_flag::dts: return tr("DTS 5.1 Ch.", "Audio format flag");
 		}
 		break;
+	case emu_settings_type::AudioProvider:
+		switch (static_cast<audio_provider>(index))
+		{
+		case audio_provider::none: return tr("None", "Audio Provider");
+		case audio_provider::cell_audio: return tr("CellAudio", "Audio Provider");
+		case audio_provider::rsxaudio: return tr("RSXAudio", "Audio Provider");
+		}
+		break;
+	case emu_settings_type::AudioAvport:
+		switch (static_cast<audio_avport>(index))
+		{
+		case audio_avport::hdmi_0: return tr("HDMI 0", "Audio Avport");
+		case audio_avport::hdmi_1: return tr("HDMI 1", "Audio Avport");
+		case audio_avport::avmulti: return tr("AV multiout", "Audio Avport");
+		case audio_avport::spdif_0: return tr("SPDIF 0", "Audio Avport");
+		case audio_avport::spdif_1: return tr("SPDIF 1", "Audio Avport");
+		}
+		break;
 	case emu_settings_type::LicenseArea:
 		switch (static_cast<CellSysutilLicenseArea>(index))
 		{
@@ -1192,12 +1211,81 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::VulkanAsyncSchedulerDriver:
 		switch (static_cast<vk_gpu_scheduler_mode>(index))
 		{
-		case vk_gpu_scheduler_mode::safe: return tr("Safe");
-		case vk_gpu_scheduler_mode::fast: return tr("Fast");
+		case vk_gpu_scheduler_mode::safe: return tr("Safe", "Asynchronous Queue Scheduler");
+		case vk_gpu_scheduler_mode::fast: return tr("Fast", "Asynchronous Queue Scheduler");
 		}
 		break;
+	case emu_settings_type::Language:
+		switch (static_cast<CellSysutilLang>(index))
+		{
+		case CELL_SYSUTIL_LANG_JAPANESE: return tr("Japanese", "System Language");
+		case CELL_SYSUTIL_LANG_ENGLISH_US: return tr("English (US)", "System Language");
+		case CELL_SYSUTIL_LANG_FRENCH: return tr("French", "System Language");
+		case CELL_SYSUTIL_LANG_SPANISH: return tr("Spanish", "System Language");
+		case CELL_SYSUTIL_LANG_GERMAN: return tr("German", "System Language");
+		case CELL_SYSUTIL_LANG_ITALIAN: return tr("Italian", "System Language");
+		case CELL_SYSUTIL_LANG_DUTCH: return tr("Dutch", "System Language");
+		case CELL_SYSUTIL_LANG_PORTUGUESE_PT: return tr("Portuguese (Portugal)", "System Language");
+		case CELL_SYSUTIL_LANG_RUSSIAN: return tr("Russian", "System Language");
+		case CELL_SYSUTIL_LANG_KOREAN: return tr("Korean", "System Language");
+		case CELL_SYSUTIL_LANG_CHINESE_T: return tr("Chinese (Traditional)", "System Language");
+		case CELL_SYSUTIL_LANG_CHINESE_S: return tr("Chinese (Simplified)", "System Language");
+		case CELL_SYSUTIL_LANG_FINNISH: return tr("Finnish", "System Language");
+		case CELL_SYSUTIL_LANG_SWEDISH: return tr("Swedish", "System Language");
+		case CELL_SYSUTIL_LANG_DANISH: return tr("Danish", "System Language");
+		case CELL_SYSUTIL_LANG_NORWEGIAN: return tr("Norwegian", "System Language");
+		case CELL_SYSUTIL_LANG_POLISH: return tr("Polish", "System Language");
+		case CELL_SYSUTIL_LANG_ENGLISH_GB: return tr("English (UK)", "System Language");
+		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return tr("Portuguese (Brazil)", "System Language");
+		case CELL_SYSUTIL_LANG_TURKISH: return tr("Turkish", "System Language");
+		default:
+			break;
+		}
+	case emu_settings_type::KeyboardType:
+		switch (static_cast<CellKbMappingType>(index))
+		{
+		case CELL_KB_MAPPING_101: return tr("English keyboard (US standard)", "Keyboard Type");
+		case CELL_KB_MAPPING_106: return tr("Japanese keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_106_KANA: return tr("Japanese keyboard (Kana state)", "Keyboard Type");
+		case CELL_KB_MAPPING_GERMAN_GERMANY: return tr("German keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_SPANISH_SPAIN: return tr("Spanish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_FRENCH_FRANCE: return tr("French keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_ITALIAN_ITALY: return tr("Italian keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_DUTCH_NETHERLANDS: return tr("Dutch keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_PORTUGUESE_PORTUGAL: return tr("Portuguese keyboard (Portugal)", "Keyboard Type");
+		case CELL_KB_MAPPING_RUSSIAN_RUSSIA: return tr("Russian keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_ENGLISH_UK: return tr("English keyboard (UK standard)", "Keyboard Type");
+		case CELL_KB_MAPPING_KOREAN_KOREA: return tr("Korean keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_NORWEGIAN_NORWAY: return tr("Norwegian keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_FINNISH_FINLAND: return tr("Finnish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_DANISH_DENMARK: return tr("Danish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_SWEDISH_SWEDEN: return tr("Swedish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_CHINESE_TRADITIONAL: return tr("Chinese keyboard (Traditional)", "Keyboard Type");
+		case CELL_KB_MAPPING_CHINESE_SIMPLIFIED: return tr("Chinese keyboard (Simplified)", "Keyboard Type");
+		case CELL_KB_MAPPING_SWISS_FRENCH_SWITZERLAND: return tr("French keyboard (Switzerland)", "Keyboard Type");
+		case CELL_KB_MAPPING_SWISS_GERMAN_SWITZERLAND: return tr("German keyboard (Switzerland)", "Keyboard Type");
+		case CELL_KB_MAPPING_CANADIAN_FRENCH_CANADA: return tr("French keyboard (Canada)", "Keyboard Type");
+		case CELL_KB_MAPPING_BELGIAN_BELGIUM: return tr("French keyboard (Belgium)", "Keyboard Type");
+		case CELL_KB_MAPPING_POLISH_POLAND: return tr("Polish keyboard", "Keyboard Type");
+		case CELL_KB_MAPPING_PORTUGUESE_BRAZIL: return tr("Portuguese keyboard (Brazil)", "Keyboard Type");
+		case CELL_KB_MAPPING_TURKISH_TURKEY: return tr("Turkish keyboard", "Keyboard Type");
+		}
 	default:
 		break;
+	}
+
+	if (strict)
+	{
+		std::string type_string;
+		if (settings_location.contains(type))
+		{
+			for (const char* loc : settings_location.value(type))
+			{
+				if (!type_string.empty()) type_string += ": ";
+				type_string += loc;
+			}
+		}
+		fmt::throw_exception("Missing translation for emu setting (original=%s, type='%s'=%d, index=%d)", original.toStdString(), type_string.empty() ? "?" : type_string, static_cast<int>(type), index);
 	}
 
 	return original;
