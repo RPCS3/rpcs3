@@ -38,7 +38,7 @@ struct pad_setting
 	u32 port_status = 0;
 	u32 device_capability = 0;
 	u32 device_type = 0;
-	s32 ldd_handle = -1;
+	bool is_ldd_pad = false;
 };
 
 pad_thread::pad_thread(void* curthread, void* curwindow, std::string_view title_id) : m_curthread(curthread), m_curwindow(curwindow)
@@ -68,7 +68,7 @@ void pad_thread::Init()
 				m_pads[i]->m_port_status,
 				m_pads[i]->m_device_capability,
 				m_pads[i]->m_device_type,
-				m_pads[i]->ldd ? static_cast<s32>(i) : -1
+				m_pads[i]->ldd
 			};
 		}
 		else
@@ -78,7 +78,7 @@ void pad_thread::Init()
 				CELL_PAD_STATUS_DISCONNECTED,
 				CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR,
 				CELL_PAD_DEV_TYPE_STANDARD,
-				-1
+				false
 			};
 		}
 	}
@@ -131,8 +131,7 @@ void pad_thread::Init()
 		cfg_player* cfg = g_cfg_input.player[i];
 		std::shared_ptr<PadHandlerBase> cur_pad_handler;
 
-		const bool is_ldd_pad = pad_settings[i].ldd_handle == static_cast<s32>(i);
-		const auto handler_type = is_ldd_pad ? pad_handler::null : cfg->handler.get();
+		const pad_handler handler_type = pad_settings[i].is_ldd_pad ? pad_handler::null : cfg->handler.get();
 
 		if (handlers.contains(handler_type))
 		{
@@ -179,9 +178,9 @@ void pad_thread::Init()
 
 		m_pads[i] = std::make_shared<Pad>(handler_type, CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
 
-		if (is_ldd_pad)
+		if (pad_settings[i].is_ldd_pad)
 		{
-			InitLddPad(pad_settings[i].ldd_handle);
+			InitLddPad(i);
 		}
 		else
 		{
