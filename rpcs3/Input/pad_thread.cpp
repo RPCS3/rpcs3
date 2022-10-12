@@ -180,7 +180,7 @@ void pad_thread::Init()
 
 		if (pad_settings[i].is_ldd_pad)
 		{
-			InitLddPad(i);
+			InitLddPad(i, &pad_settings[i].port_status);
 		}
 		else
 		{
@@ -381,19 +381,19 @@ void pad_thread::operator()()
 	stop_threads();
 }
 
-void pad_thread::InitLddPad(u32 handle)
+void pad_thread::InitLddPad(u32 handle, const u32* port_status)
 {
 	if (handle >= m_pads.size())
 	{
 		return;
 	}
 
-	static const auto product = input::get_product_info(input::product_type::playstation_3_controller);
+	static const input::product_info product = input::get_product_info(input::product_type::playstation_3_controller);
 
 	m_pads[handle]->ldd = true;
 	m_pads[handle]->Init
 	(
-		CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
+		port_status ? *port_status : CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY,
 		CELL_PAD_DEV_TYPE_LDD,
 		0, // CELL_PAD_PCLASS_TYPE_STANDARD
@@ -416,7 +416,7 @@ s32 pad_thread::AddLddPad()
 	{
 		if (g_cfg_input.player[i]->handler == pad_handler::null && !m_pads[i]->ldd)
 		{
-			InitLddPad(i);
+			InitLddPad(i, nullptr);
 			return i;
 		}
 	}
