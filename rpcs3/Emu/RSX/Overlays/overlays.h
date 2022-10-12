@@ -7,6 +7,8 @@
 #include "Utilities/mutex.h"
 #include "Utilities/Timer.h"
 
+#include "../Common/bitfield.hpp"
+
 #include <mutex>
 #include <set>
 
@@ -16,6 +18,12 @@ namespace rsx
 {
 	namespace overlays
 	{
+		// Bitfield of UI signals to overlay manager
+		enum status_bits : u32
+		{
+			invalidate_image_cache = 0x0001, // Flush the address-based image cache
+		};
+
 		// Non-interactable UI element
 		struct overlay
 		{
@@ -27,6 +35,7 @@ namespace rsx
 
 			u32 min_refresh_duration_us = 16600;
 			atomic_t<bool> visible = false;
+			atomic_bitmask_t<status_bits> status_flags = {};
 
 			virtual ~overlay() = default;
 
@@ -92,7 +101,8 @@ namespace rsx
 				pad_button::ls_left,
 				pad_button::ls_right
 			};
-			atomic_t<bool> exit = false;
+
+			atomic_t<bool> m_stop_input_loop = false;
 			atomic_t<bool> m_interactive = false;
 			bool m_start_pad_interception = true;
 			atomic_t<bool> m_stop_pad_interception = false;

@@ -40,6 +40,8 @@ namespace rsx
 			image_info(const char* filename);
 			image_info(const std::vector<u8>& bytes);
 			~image_info();
+
+			void load_data(const std::vector<u8>& bytes);
 		};
 
 		struct resource_config
@@ -87,8 +89,8 @@ namespace rsx
 				bool clip_region = false;
 
 				u8 texture_ref = image_resource_id::none;
-				font *font_ref = nullptr;
-				void *external_data_ref = nullptr;
+				font* font_ref = nullptr;
+				void* external_data_ref = nullptr;
 
 				u8 blur_strength = 0;
 
@@ -243,7 +245,7 @@ namespace rsx
 		{
 		private:
 			u8 image_resource_ref = image_resource_id::none;
-			void *external_ref = nullptr;
+			void* external_ref = nullptr;
 
 			// Strength of blur effect
 			u8 blur_strength = 0;

@@ -131,17 +131,12 @@ namespace rsx
 			m_dim_background->set_size(1280, 720);
 			m_dim_background->back_color.a = 0.5f;
 
-			m_list = std::make_unique<list_view>(1240, 540);
-			m_list->set_pos(20, 85);
-
 			m_description = std::make_unique<label>();
 			m_description->set_font("Arial", 20);
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select media"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
 			m_description->back_color.a	= 0.f;
-
-			return_code = selection_code::canceled;
 		}
 
 		void media_list_dialog::on_button_pressed(pad_button button_press)
@@ -152,11 +147,11 @@ namespace rsx
 				if (m_no_media_text)
 					break;
 				return_code = m_list->get_selected_index();
-				close(false, true);
+				m_stop_input_loop = true;
 				break;
 			case pad_button::circle:
 				return_code = selection_code::canceled;
-				close(false, true);
+				m_stop_input_loop = true;
 				break;
 			case pad_button::dpad_up:
 				m_list->select_previous();
@@ -194,11 +189,12 @@ namespace rsx
 			return result;
 		}
 
-		s32 media_list_dialog::show(const media_entry& dir_entry, const std::string& title, u32 focused, bool enable_overlay)
+		s32 media_list_dialog::show(media_entry* root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay)
 		{
-			rsx_log.warning("Media dialog: showing entry '%s' ('%s')", dir_entry.name, dir_entry.path);
+			auto ref = g_fxo->get<display_manager>().get(uid);
 
-			visible = false;
+			m_media = root;
+			result = {};
 
 			if (enable_overlay)
 			{
@@ -209,7 +205,74 @@ namespace rsx
 				m_dim_background->back_color.a = 0.5f;
 			}
 
-			for (const media_entry& child : dir_entry.children)
+			while (thread_ctrl::state() != thread_state::aborting && return_code >= 0 && m_media && m_media->type == media_list_dialog::media_type::directory)
+			{
+				reload(title, focused);
+				m_stop_input_loop = false;
+
+				if (const auto error = run_input_loop())
+				{
+					if (error != selection_code::canceled)
+					{
+						rsx_log.error("Media list dialog input loop exited with error code=%d", error);
+					}
+					return error;
+				}
+
+				if (return_code >= 0)
+				{
+					focused = 0;
+					ensure(static_cast<size_t>(return_code) < m_media->children.size());
+					m_media = &m_media->children[return_code];
+					rsx_log.notice("Media dialog: selected entry: %d ('%s')", return_code, m_media->path);
+					continue;
+				}
+
+				if (return_code == user_interface::selection_code::canceled)
+				{
+					if (m_media == root)
+					{
+						rsx_log.notice("Media list dialog canceled");
+						break;
+					}
+
+					focused = m_media->index;
+					m_media = m_media->parent;
+					return_code = 0;
+					rsx_log.notice("Media list dialog moving to parent directory (focused=%d)", focused);
+					continue;
+				}
+
+				rsx_log.error("Left media list dialog with error: %d", return_code);
+				break;
+			}
+
+			close(false, true);
+
+			if (return_code >= 0 && m_media && m_media->type != media_list_dialog::media_type::directory)
+			{
+				result = *m_media;
+				rsx_log.error("Left media list dialog: return_code=%d, type=%d, path=%d", return_code, static_cast<s32>(result.type), result.info.path);
+			}
+
+			return return_code;
+		}
+
+		void media_list_dialog::reload(const std::string& title, u32 focused)
+		{
+			ensure(m_media);
+
+			rsx_log.notice("Media dialog: showing entry '%s' ('%s')", m_media->name, m_media->path);
+
+			if (m_list)
+			{
+				status_flags |= status_bits::invalidate_image_cache;
+			}
+
+			m_list = std::make_unique<list_view>(1240, 540);
+			m_list->set_pos(20, 85);
+
+			for (const media_entry& child : m_media->children)
 			{
 				std::unique_ptr<overlay_element> entry = std::make_unique<media_list_entry>(child);
 				m_list->add_entry(entry);
@@ -236,29 +299,6 @@ namespace rsx
 			m_description->auto_resize();
 
 			visible = true;
-
-			auto ref = g_fxo->get<display_manager>().get(uid);
-
-			if (const auto error = run_input_loop())
-			{
-				if (error != selection_code::canceled)
-				{
-					rsx_log.error("Media list dialog input loop exited with error code=%d", error);
-				}
-				return error;
-			}
-
-			if (return_code < 0)
-			{
-				rsx_log.notice("Media dialog canceled");
-			}
-			else
-			{
-				ensure(static_cast<size_t>(return_code) < dir_entry.children.size());
-				rsx_log.success("Media dialog: selected entry: %d ('%s')", return_code, dir_entry.children[return_code].path);
-			}
-
-			return return_code;
 		}
 
 		struct media_list_dialog_thread
@@ -326,7 +366,7 @@ namespace rsx
 				current_entry.path = media_path;
 				current_entry.name = name;
 			}
-		};
+		}
 
 		error_code show_media_list_dialog(media_list_dialog::media_type type, const std::string& path, const std::string& title, std::function<void(s32 status, utils::media_info info)> on_finished)
 		{
@@ -351,53 +391,23 @@ namespace rsx
 					rsx_log.error("Media list: Failed to open path: '%s'", path);
 				}
 
-				media_list_dialog::media_entry* media = &root_media_entry;
+				media_list_dialog::media_entry media{};
 				s32 result = 0;
 				u32 focused = 0;
 
-				while (thread_ctrl::state() != thread_state::aborting && result >= 0 && media && media->type == media_list_dialog::media_type::directory)
+				if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 				{
-					if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
-					{
-						rsx_log.notice("Creating media list dialog with entry: '%s' (name='%s', path='%s')", title,  media->name, media->path);
-						result = manager->create<rsx::overlays::media_list_dialog>()->show(*media, title, focused, true);
-						if (result >= 0)
-						{
-							focused = 0;
-							ensure(static_cast<size_t>(result) < media->children.size());
-							media = &media->children[result];
-							rsx_log.notice("Left media list dialog with entry: '%s' ('%s')", media->name, media->path);
-							continue;
-						}
-
-						if (result == user_interface::selection_code::canceled)
-						{
-							if (media == &root_media_entry)
-							{
-								rsx_log.notice("Media list dialog canceled");
-								break;
-							}
-
-							focused = media->index;
-							media = media->parent;
-							result = 0;
-							rsx_log.notice("Media list dialog moving to parent directory (focused=%d)", focused);
-							continue;
-						}
-
-						rsx_log.error("Left media list dialog with error: '%d'", result);
-						break;
-					}
-
-					media = nullptr;
+					result = manager->create<rsx::overlays::media_list_dialog>()->show(&root_media_entry, media, title, focused, true);
+				}
+				else
+				{
 					result = user_interface::selection_code::canceled;
 					rsx_log.error("Media selection is only possible when the native user interface is enabled in the settings. The action will be canceled.");
-					break;
 				}
 
-				if (result >= 0 && media && media->type == type)
+				if (result >= 0 && media.type == type)
 				{
-					on_finished(CELL_OK, media->info);
+					on_finished(CELL_OK, media.info);
 				}
 				else
 				{

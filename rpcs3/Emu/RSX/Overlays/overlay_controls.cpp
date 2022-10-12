@@ -35,18 +35,23 @@ namespace rsx
 				return;
 			}
 
-			auto bytes = f.to_vector<u8>();
-			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(f.size()), &w, &h, &bpp, STBI_rgb_alpha);
+			const std::vector<u8> bytes = f.to_vector<u8>();
+			load_data(bytes);
 		}
 
 		image_info::image_info(const std::vector<u8>& bytes)
 		{
-			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, STBI_rgb_alpha);
+			load_data(bytes);
 		}
 
 		image_info::~image_info()
 		{
 			if (data) stbi_image_free(data);
+		}
+
+		void image_info::load_data(const std::vector<u8>& bytes)
+		{
+			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, STBI_rgb_alpha);
 		}
 
 		resource_config::resource_config()
@@ -650,12 +655,10 @@ namespace rsx
 				m_items.push_back(std::move(item));
 				return m_items.back().get();
 			}
-			else
-			{
-				auto result = item.get();
-				m_items.insert(m_items.begin() + offset, std::move(item));
-				return result;
-			}
+
+			auto result = item.get();
+			m_items.insert(m_items.begin() + offset, std::move(item));
+			return result;
 		}
 
 		compiled_resource& vertical_layout::get_compiled()
@@ -670,6 +673,12 @@ namespace rsx
 
 				for (auto &item : m_items)
 				{
+					if (!item)
+					{
+						rsx_log.error("Found null item in overlay_controls");
+						continue;
+					}
+
 					const s32 item_y_limit = s32{item->y} + item->h - scroll_offset_value - y;
 					const s32 item_y_base = s32{item->y} - scroll_offset_value - y;
 
@@ -678,7 +687,8 @@ namespace rsx
 						// Out of bounds
 						continue;
 					}
-					else if (item_y_limit > h || item_y_base < 0)
+
+					if (item_y_limit > h || item_y_base < 0)
 					{
 						// Partial render
 						areaf clip_rect = static_cast<areaf>(areai{x, y, (x + w), (y + h)});
@@ -721,12 +731,10 @@ namespace rsx
 				m_items.push_back(std::move(item));
 				return m_items.back().get();
 			}
-			else
-			{
-				auto result = item.get();
-				m_items.insert(m_items.begin() + offset, std::move(item));
-				return result;
-			}
+
+			auto result = item.get();
+			m_items.insert(m_items.begin() + offset, std::move(item));
+			return result;
 		}
 
 		compiled_resource& horizontal_layout::get_compiled()
@@ -783,7 +791,6 @@ namespace rsx
 				cmd_img.config.set_image_resource(image_resource_ref);
 				cmd_img.config.color = fore_color;
 				cmd_img.config.external_data_ref = external_ref;
-
 				cmd_img.config.blur_strength = blur_strength;
 
 				// Make padding work for images (treat them as the content instead of the 'background')
