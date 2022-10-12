@@ -189,6 +189,7 @@ usb_handler_thread::usb_handler_thread()
 
 	bool found_skylander = false;
 	bool found_usio      = false;
+	bool found_h050      = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -276,9 +277,15 @@ usb_handler_thread::usb_handler_thread()
 		{
 			found_usio = true;
 		}
-		
+
 		// Densha de GO! controller
 		check_device(0x0AE4, 0x0004, 0x0004, "Densha de GO! Type 2 Controller");
+
+		// H050 USJ
+		if (check_device(0x0B9A, 0x0900, 0x0900, "H050 USJ(C) PCB rev00"))
+		{
+			found_h050 = true;
+		}
 	}
 
 	libusb_free_device_list(list, 1);
@@ -289,7 +296,7 @@ usb_handler_thread::usb_handler_thread()
 		usb_devices.push_back(std::make_shared<usb_device_skylander>(get_new_location()));
 	}
 
-	if (!found_usio)
+	if (!found_usio && !found_h050) // Only one of these two IO boards should be present at the same time; otherwise, an exception will be thrown by the game.
 	{
 		sys_usbd.notice("Adding emulated v406 usio");
 		usb_devices.push_back(std::make_shared<usb_device_usio>(get_new_location()));
@@ -758,9 +765,10 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_pr
 	}
 	else if (s_product.get_ptr() == "PS3A-USJ"sv)
 	{
-		// Arcade v406 USIO board
+		// Arcade IO boards
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
 		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0910, 0x0910); // usio
+		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0900, 0x0900); // H050 USJ
 	}
 	else
 	{
