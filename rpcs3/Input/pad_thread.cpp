@@ -97,6 +97,8 @@ void pad_thread::Init()
 		active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
 	}
 
+	input_log.notice("Using pad profile: '%s'", active_profile);
+
 	// Load in order to get the pad handlers
 	if (!g_cfg_input.load(pad::g_title_id, active_profile))
 	{
@@ -116,6 +118,8 @@ void pad_thread::Init()
 		input_log.notice("Reloaded empty pad config");
 	}
 
+	input_log.trace("Using pad config:\n%s", g_cfg_input.to_string());
+
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
 	// Always have a Null Pad Handler
@@ -124,10 +128,11 @@ void pad_thread::Init()
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++) // max 7 pads
 	{
+		cfg_player* cfg = g_cfg_input.player[i];
 		std::shared_ptr<PadHandlerBase> cur_pad_handler;
 
 		const bool is_ldd_pad = pad_settings[i].ldd_handle == static_cast<s32>(i);
-		const auto handler_type = is_ldd_pad ? pad_handler::null : g_cfg_input.player[i]->handler.get();
+		const auto handler_type = is_ldd_pad ? pad_handler::null : cfg->handler.get();
 
 		if (handlers.contains(handler_type))
 		{
@@ -178,14 +183,18 @@ void pad_thread::Init()
 		{
 			InitLddPad(pad_settings[i].ldd_handle);
 		}
-		else if (!cur_pad_handler->bindPadToDevice(m_pads[i], i))
+		else
 		{
-			// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
-			input_log.error("Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type);
-			nullpad->bindPadToDevice(m_pads[i], i);
-		}
+			if (!cur_pad_handler->bindPadToDevice(m_pads[i], i))
+			{
+				// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
+				input_log.error("Failed to bind device '%s' to handler %s. Falling back to NullPadHandler.", cfg->device.to_string(), handler_type);
+				nullpad->bindPadToDevice(m_pads[i], i);
+			}
 
-		input_log.notice("Pad %d: %s", i, g_cfg_input.player[i]->device.to_string());
+			input_log.notice("Pad %d: device='%s', handler=%s, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
+				i, cfg->device.to_string(), m_pads[i]->m_pad_handler, m_pads[i]->m_vendor_id, m_pads[i]->m_product_id, m_pads[i]->m_class_type, m_pads[i]->m_class_profile);
+		}
 	}
 }
 
@@ -380,8 +389,6 @@ void pad_thread::InitLddPad(u32 handle)
 		return;
 	}
 
-	input_log.notice("Pad %d: LDD", handle);
-
 	static const auto product = input::get_product_info(input::product_type::playstation_3_controller);
 
 	m_pads[handle]->ldd = true;
@@ -396,6 +403,9 @@ void pad_thread::InitLddPad(u32 handle)
 		product.product_id,
 		50
 	);
+
+	input_log.notice("Pad %d: LDD, VID=0x%x, PID=0x%x, class_type=0x%x, class_profile=0x%x",
+		handle, m_pads[handle]->m_vendor_id, m_pads[handle]->m_product_id, m_pads[handle]->m_class_type, m_pads[handle]->m_class_profile);
 
 	num_ldd_pad++;
 }
