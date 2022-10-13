@@ -158,6 +158,7 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 
 	cb_ringbuf.set_buf_size(static_cast<u32>(static_cast<u32>(cfg.backend_ch_cnt) * cfg.audio_sampling_rate * cfg.audio_sample_size * buffer_dur_mult));
 	backend->SetWriteCallback(std::bind(&audio_ringbuffer::backend_write_callback, this, std::placeholders::_1, std::placeholders::_2));
+	backend->SetStateCallback(std::bind(&audio_ringbuffer::backend_state_callback, this, std::placeholders::_1));
 }
 
 audio_ringbuffer::~audio_ringbuffer()
@@ -189,6 +190,14 @@ u32 audio_ringbuffer::backend_write_callback(u32 size, void *buf)
 	if (!backend_active.observe()) backend_active = true;
 
 	return static_cast<u32>(cb_ringbuf.pop(buf, size, true));
+}
+
+void audio_ringbuffer::backend_state_callback(AudioStateEvent event)
+{
+	if (event == AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED)
+	{
+		backend_device_changed = true;
+	}
 }
 
 u64 audio_ringbuffer::get_timestamp()
@@ -806,7 +815,7 @@ void cell_audio_thread::operator()()
 			cellAudio.success("Backend recovered");
 			m_backend_failed = false;
 		}
-	
+
 		if (!cfg.buffering_enabled)
 		{
 			const u64 period_end = (m_counter * cfg.audio_block_period) + m_start_time;

@@ -292,6 +292,7 @@ private:
 	audio_resampler resampler{};
 
 	atomic_t<bool> backend_active = false;
+	atomic_t<bool> backend_device_changed = false;
 	bool playing = false;
 
 	u64 update_timestamp = 0;
@@ -310,6 +311,7 @@ private:
 
 	void commit_data(f32* buf, u32 sample_cnt);
 	u32 backend_write_callback(u32 size, void *buf);
+	void backend_state_callback(AudioStateEvent event);
 
 public:
 	audio_ringbuffer(cell_audio_config &cfg);
@@ -345,9 +347,9 @@ public:
 		return backend->Operational();
 	}
 
-	bool device_changed() const
+	bool device_changed()
 	{
-		return backend->DefaultDeviceChanged();
+		return backend_device_changed.test_and_reset() && backend->DefaultDeviceChanged();
 	}
 
 	std::string_view get_backend_name() const
