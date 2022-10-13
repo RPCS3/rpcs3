@@ -1361,6 +1361,7 @@ void rsxaudio_backend_thread::operator()()
 	{
 		bool should_update_backend = false;
 		bool reset_backend = false;
+		bool checkDefaultDevice = false;
 		bool should_service_stream = false;
 
 		{
@@ -1376,16 +1377,24 @@ void rsxaudio_backend_thread::operator()()
 					return;
 				}
 
+				if (backend_device_changed)
+				{
+					should_update_backend = true;
+					checkDefaultDevice = true;
+					backend_device_changed = false;
+				}
+
 				// Emulated state changed
 				if (ra_state_changed)
 				{
 					const callback_config cb_cfg = callback_cfg.observe();
-					should_update_backend |= cb_cfg.cfg_changed;
 					ra_state_changed = false;
 					ra_state = new_ra_state;
 
 					if (cb_cfg.cfg_changed)
 					{
+						should_update_backend = true;
+						checkDefaultDevice = false;
 						callback_cfg.atomic_op([&](callback_config& val)
 						{
 							val.cfg_changed = false; // Acknowledge cfg update
@@ -1400,6 +1409,7 @@ void rsxaudio_backend_thread::operator()()
 					emu_cfg_changed = false;
 					emu_cfg = new_emu_cfg;
 					should_update_backend = true;
+					checkDefaultDevice = false;
 				}
 
 				// Handle backend error notification
@@ -1407,14 +1417,8 @@ void rsxaudio_backend_thread::operator()()
 				{
 					reset_backend = true;
 					should_update_backend = true;
+					checkDefaultDevice = false;
 					backend_error_occured = false;
-					backend_device_changed = false;
-				}
-
-				if (backend_device_changed)
-				{
-					should_update_backend = true;
-					backend_device_changed = false;
 				}
 
 				if (should_update_backend)
@@ -1449,7 +1453,7 @@ void rsxaudio_backend_thread::operator()()
 			}
 		}
 
-		if (should_update_backend)
+		if (should_update_backend && (!checkDefaultDevice || backend->DefaultDeviceChanged()))
 		{
 			backend_init(ra_state, emu_cfg, reset_backend);
 
@@ -1893,7 +1897,7 @@ void rsxaudio_backend_thread::state_changed_callback(AudioStateEvent event)
 			backend_error_occured = true;
 			break;
 		}
-		case AudioStateEvent::DEFAULT_DEVICE_CHANGED:
+		case AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED:
 		{
 			backend_device_changed = true;
 			break;

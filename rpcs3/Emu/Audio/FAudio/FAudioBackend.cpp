@@ -234,7 +234,7 @@ void FAudioBackend::OnVoiceProcessingPassStart_func(FAudioVoiceCallback *cb_obj,
 	FAudioBackend *faudio = static_cast<FAudioBackend *>(cb_obj);
 
 	std::unique_lock lock(faudio->m_cb_mutex, std::defer_lock);
-	if (BytesRequired && !faudio->m_reset_req.observe() && lock.try_lock() && faudio->m_write_callback && faudio->m_playing)
+	if (BytesRequired && !faudio->m_reset_req.observe() && lock.try_lock_for(std::chrono::microseconds{50}) && faudio->m_write_callback && faudio->m_playing)
 	{
 		ensure(BytesRequired <= faudio->m_data_buf.size(), "FAudio internal buffer is too small. Report to developers!");
 

@@ -22,16 +22,14 @@ CubebBackend::CubebBackend()
 	}
 #endif
 
-	std::lock_guard lock(m_dev_sw_mutex);
-
-	if (int err = cubeb_init(&m_ctx, "RPCS3", nullptr))
+	cubeb *ctx{};
+	if (int err = cubeb_init(&ctx, "RPCS3", nullptr))
 	{
 		Cubeb.error("cubeb_init() failed: %i", err);
-		m_ctx = nullptr;
 		return;
 	}
 
-	if (int err = cubeb_register_device_collection_changed(m_ctx, CUBEB_DEVICE_TYPE_OUTPUT, device_collection_changed_cb, this))
+	if (int err = cubeb_register_device_collection_changed(ctx, CUBEB_DEVICE_TYPE_OUTPUT, device_collection_changed_cb, this))
 	{
 		Cubeb.error("cubeb_register_device_collection_changed() failed: %i", err);
 	}
@@ -40,7 +38,10 @@ CubebBackend::CubebBackend()
 		m_dev_collection_cb_enabled = true;
 	}
 
-	Cubeb.notice("Using backend %s", cubeb_get_backend_id(m_ctx));
+	Cubeb.notice("Using backend %s", cubeb_get_backend_id(ctx));
+
+	std::lock_guard cb_lock{m_state_cb_mutex};
+	m_ctx = ctx;
 }
 
 CubebBackend::~CubebBackend()
@@ -80,8 +81,19 @@ bool CubebBackend::Operational()
 
 bool CubebBackend::DefaultDeviceChanged()
 {
-	std::lock_guard lock{m_dev_sw_mutex};
-	return !m_reset_req.observe() && m_default_dev_changed;
+	if (m_default_device.empty() || m_reset_req.observe())
+	{
+		return false;
+	}
+
+	device_handle device = GetDevice();
+	if (!device.handle)
+	{
+		Cubeb.error("Selected device not found. Trying alternative approach...");
+		device = GetDefaultDeviceAlt(m_sampling_rate, m_sample_size, m_channels);
+	}
+
+	return !device.handle || device.id != m_default_device;
 }
 
 bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt)
@@ -92,10 +104,8 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 		return false;
 	}
 
-	std::lock_guard lock(m_cb_mutex);
-	std::lock_guard dev_sw_lock{m_dev_sw_mutex};
-	std::lock_guard state_cb_lock{m_state_cb_mutex};
-	CloseUnlocked();
+	Close();
+	std::lock_guard lock{m_cb_mutex};
 
 	const bool use_default_device = dev_id.empty() || dev_id == audio_device_enumerator::DEFAULT_DEV_ID;
 
@@ -126,6 +136,12 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 	{
 		Cubeb.error("Device reported invalid channel count, using stereo instead");
 		device.ch_cnt = 2;
+	}
+
+	if (use_default_device)
+	{
+		std::lock_guard lock{m_state_cb_mutex};
+		m_default_device = device.id;
 	}
 
 	m_sampling_rate = freq;
@@ -169,7 +185,7 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 	if (int err = cubeb_stream_start(m_stream))
 	{
 		Cubeb.error("cubeb_stream_start() failed: %i", err);
-		CloseUnlocked();
+		Close();
 		return false;
 	}
 
@@ -178,15 +194,10 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 		Cubeb.error("cubeb_stream_set_volume() failed: %i", err);
 	}
 
-	if (use_default_device)
-	{
-		m_default_device = device.id;
-	}
-
 	return true;
 }
 
-void CubebBackend::CloseUnlocked()
+void CubebBackend::Close()
 {
 	if (m_stream != nullptr)
 	{
@@ -196,22 +207,17 @@ void CubebBackend::CloseUnlocked()
 		}
 
 		cubeb_stream_destroy(m_stream);
-		m_stream = nullptr;
 	}
 
-	m_playing = false;
-	m_last_sample.fill(0);
+	{
+		std::lock_guard lock{m_cb_mutex};
+		m_stream = nullptr;
+		m_playing = false;
+		m_last_sample.fill(0);
+	}
 
-	m_default_dev_changed = false;
+	std::lock_guard lock{m_state_cb_mutex};
 	m_default_device.clear();
-}
-
-void CubebBackend::Close()
-{
-	std::lock_guard lock(m_cb_mutex);
-	std::lock_guard dev_sw_lock{m_dev_sw_mutex};
-	std::lock_guard state_cb_lock(m_state_cb_mutex);
-	CloseUnlocked();
 }
 
 void CubebBackend::Play()
@@ -427,14 +433,14 @@ long CubebBackend::data_cb(cubeb_stream* stream, void* user_ptr, void const* /* 
 
 	std::unique_lock lock(cubeb->m_cb_mutex, std::defer_lock);
 
-	if (stream != cubeb->m_stream)
+	if (!cubeb->m_reset_req.observe() && lock.try_lock_for(std::chrono::microseconds{50}) && cubeb->m_write_callback && cubeb->m_playing)
 	{
-		Cubeb.error("data_cb called with unknown stream");
-		return CUBEB_ERROR;
-	}
+		if (stream != cubeb->m_stream)
+		{
+			// Cubeb.error("data_cb called with unknown stream");
+			return CUBEB_ERROR;
+		}
 
-	if (!cubeb->m_reset_req.observe() && lock.try_lock() && cubeb->m_write_callback && cubeb->m_playing)
-	{
 		const u32 sample_size = cubeb->full_sample_size.observe();
 		const u32 bytes_req = nframes * sample_size;
 		u32 written = std::min(cubeb->m_write_callback(bytes_req, output_buffer), bytes_req);
@@ -454,7 +460,7 @@ long CubebBackend::data_cb(cubeb_stream* stream, void* user_ptr, void const* /* 
 	{
 		// Stream parameters are modified only after stream_destroy. stream_destroy will return
 		// only after this callback returns, so it's safe to access full_sample_size here.
-		memset(output_buffer, 0, nframes * cubeb->full_sample_size.observe());
+		memset(output_buffer, 0, nframes * cubeb->full_sample_size);
 	}
 
 	return nframes;
@@ -528,7 +534,12 @@ void CubebBackend::device_collection_changed_cb(cubeb* context, void* user_ptr)
 	CubebBackend* const cubeb = static_cast<CubebBackend*>(user_ptr);
 	ensure(cubeb);
 
-	std::lock_guard lock{cubeb->m_dev_sw_mutex};
+	if (cubeb->m_reset_req.observe())
+	{
+		return;
+	}
+
+	std::lock_guard cb_lock{cubeb->m_state_cb_mutex};
 
 	if (context != cubeb->m_ctx)
 	{
@@ -539,34 +550,12 @@ void CubebBackend::device_collection_changed_cb(cubeb* context, void* user_ptr)
 	// Non default device is used (or default device cannot be detected)
 	if (cubeb->m_default_device.empty())
 	{
-		Cubeb.notice("Skipping default device enumeration.");
+		Cubeb.notice("Skipping default device notification");
 		return;
 	}
 
-	device_handle device = cubeb->GetDevice();
-	if (!device.handle)
+	if (cubeb->m_state_callback)
 	{
-		Cubeb.notice("Selected device not found. Trying alternative approach...");
-		device = cubeb->GetDefaultDeviceAlt(cubeb->m_sampling_rate, cubeb->m_sample_size, cubeb->m_channels);
-	}
-
-	std::lock_guard cb_lock{cubeb->m_state_cb_mutex};
-
-	if (!device.handle)
-	{
-		// No devices available
-		if (!cubeb->m_reset_req.test_and_set() && cubeb->m_state_callback)
-		{
-			cubeb->m_state_callback(AudioStateEvent::UNSPECIFIED_ERROR);
-		}
-	}
-	else if (!cubeb->m_reset_req.observe() && device.id != cubeb->m_default_device)
-	{
-		cubeb->m_default_dev_changed = true;
-
-		if (cubeb->m_state_callback)
-		{
-			cubeb->m_state_callback(AudioStateEvent::DEFAULT_DEVICE_CHANGED);
-		}
+		cubeb->m_state_callback(AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED);
 	}
 }
