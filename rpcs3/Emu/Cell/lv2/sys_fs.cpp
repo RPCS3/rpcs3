@@ -1320,7 +1320,15 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	lock.unlock();
 	ppu.check_state();
 
-	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+	s32 mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+
+	if (mp->flags & lv2_mp_flag::read_only)
+	{
+		// Remove write permissions
+		mode &= ~0222;
+	}
+
+	sb->mode = mode;
 	sb->uid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 	sb->gid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 	sb->atime = info.atime;
@@ -1328,12 +1336,6 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	sb->ctime = info.ctime;
 	sb->size = info.is_directory ? mp->block_size : info.size;
 	sb->blksize = mp->block_size;
-
-	if (mp->flags & lv2_mp_flag::read_only)
-	{
-		// Remove write permissions
-		sb->mode &= ~0222;
-	}
 
 	return CELL_OK;
 }
@@ -1368,7 +1370,15 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 	lock.unlock();
 	ppu.check_state();
 
-	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+	s32 mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+
+	if (file->mp->flags & lv2_mp_flag::read_only)
+	{
+		// Remove write permissions
+		mode &= ~0222;
+	}
+
+	sb->mode = mode;
 	sb->uid = file->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 	sb->gid = file->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 	sb->atime = info.atime;
@@ -1376,13 +1386,6 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 	sb->ctime = info.ctime; // ctime may be incorrect
 	sb->size = info.size;
 	sb->blksize = file->mp->block_size;
-
-	if (file->mp->flags & lv2_mp_flag::read_only)
-	{
-		// Remove write permissions
-		sb->mode &= ~0222;
-	}
-
 	return CELL_OK;
 }
 
@@ -2679,29 +2682,34 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		return {CELL_ENOTSUP, path};
 	}
 
-	ppu.check_state();
-
 	if (mp->flags & lv2_mp_flag::read_only)
 	{
 		// TODO: check /dev_bdvd
+		ppu.check_state();
 		*total_free = 0;
 		*avail_free = 0;
 		return CELL_OK;
 	}
 
+	u64 available = 0;
+
 	// avail_free is the only value used by cellFsGetFreeSize
 	if (mp == &g_mp_sys_dev_hdd1)
 	{
-		*avail_free = (1u << 31) - mp->sector_size; // 2GB (TODO: Should be the total size)
+		available = (1u << 31) - mp->sector_size; // 2GB (TODO: Should be the total size)
 	}
 	else //if (mp == &g_mp_sys_dev_hdd0)
 	{
-		*avail_free = (40ull * 1024 * 1024 * 1024 - mp->sector_size); // Read explanation in cellHddGameCheck
+		available = (40ull * 1024 * 1024 * 1024 - mp->sector_size); // Read explanation in cellHddGameCheck
 	}
 
 	// HACK: Hopefully nothing uses this value or once at max because its hacked here:
 	// The total size can change based on the size of the directory
-	*total_free = *avail_free + fs::get_dir_size(local_path, mp->sector_size);
+	const u64 total = available + fs::get_dir_size(local_path, mp->sector_size);
+
+	ppu.check_state();
+	*total_free = total;
+	*avail_free = available;
 
 	return CELL_OK;
 }
