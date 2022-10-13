@@ -883,11 +883,12 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 			return CELL_EBUSY;
 		}
 
+		ppu.check_state();
 		*nread = 0;
 		return CELL_OK;
 	}
 
-	std::lock_guard lock(file->mp->mutex);
+	std::unique_lock lock(file->mp->mutex);
 
 	if (!file->file)
 	{
@@ -901,10 +902,13 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 	}
 
 	const u64 read_bytes = file->op_read(buf, nbytes);
+	const bool failure = !read_bytes && file->file.pos() < file->file.size();
+	lock.unlock();
+	ppu.check_state();
 
 	*nread = read_bytes;
 
-	if (!read_bytes && file->file.pos() < file->file.size())
+	if (failure)
 	{
 		// EDATA corruption perhaps
 		return CELL_EFSSPECIFIC;
@@ -948,6 +952,7 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 			return CELL_EBUSY;
 		}
 
+		ppu.check_state();
 		*nwrite = 0;
 		return CELL_OK;
 	}
@@ -2197,18 +2202,28 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EBADF;
 		}
 
-		arg->_size = 0; // This write is not really useful for cellFs but do it anyways
+		ppu.check_state();
+
+		u32 read_count = 0;
 
 		// NOTE: This function is actually capable of reading only one entry at a time
-		if (arg->max)
+		if (const u32 max = arg->max)
 		{
-			std::memset(arg->ptr.get_ptr(), 0, arg->max * arg->ptr.size());
+			const auto arg_ptr = +arg->ptr;
 
 			if (auto* info = directory->dir_read())
 			{
-				auto& entry = arg->ptr[arg->_size++];
+				auto& entry = arg_ptr[read_count++];
 
-				entry.attribute.mode = info->is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+				s32 mode = info->is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
+
+				if (directory->mp->flags & lv2_mp_flag::read_only)
+				{
+					// Remove write permissions
+					mode &= ~0222;
+				}
+
+				entry.attribute.mode = mode;
 				entry.attribute.uid = directory->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 				entry.attribute.gid = directory->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 				entry.attribute.atime = info->atime;
@@ -2217,18 +2232,16 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 				entry.attribute.size = info->size;
 				entry.attribute.blksize = directory->mp->block_size;
 
-				if (directory->mp->flags & lv2_mp_flag::read_only)
-				{
-					// Remove write permissions
-					entry.attribute.mode &= ~0222;
-				}
-
 				entry.entry_name.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
 				entry.entry_name.d_namlen = u8(std::min<usz>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
 				strcpy_trunc(entry.entry_name.d_name, info->name);
 			}
+
+			// Apparently all this function does to additional buffer elements is to zeroize them 
+			std::memset(arg_ptr.get_ptr() + read_count, 0, (max - read_count) * arg->ptr.size());
 		}
 
+		arg->_size = read_count;
 		arg->_code = CELL_OK;
 		return CELL_OK;
 	}
