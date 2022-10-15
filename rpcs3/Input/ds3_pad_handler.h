@@ -89,10 +89,10 @@ private:
 	int send_output_report(ds3_device* ds3dev) override;
 	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial) override;
 
-	bool get_is_left_trigger(u64 keyCode) override;
-	bool get_is_right_trigger(u64 keyCode) override;
-	bool get_is_left_stick(u64 keyCode) override;
-	bool get_is_right_stick(u64 keyCode) override;
+	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	void get_extended_info(const pad_ensemble& binding) override;
 	void apply_pad_data(const pad_ensemble& binding) override;

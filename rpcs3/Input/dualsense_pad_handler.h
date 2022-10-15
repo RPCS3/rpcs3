@@ -80,10 +80,10 @@ private:
 	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial) override;
 	int send_output_report(DualSenseDevice* device) override;
 
-	bool get_is_left_trigger(u64 keyCode) override;
-	bool get_is_right_trigger(u64 keyCode) override;
-	bool get_is_left_stick(u64 keyCode) override;
-	bool get_is_right_stick(u64 keyCode) override;
+	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;

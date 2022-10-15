@@ -549,17 +549,17 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	return true;
 }
 
-bool dualsense_pad_handler::get_is_left_trigger(u64 keyCode)
+bool dualsense_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return keyCode == DualSenseKeyCodes::L2;
 }
 
-bool dualsense_pad_handler::get_is_right_trigger(u64 keyCode)
+bool dualsense_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	return keyCode == DualSenseKeyCodes::R2;
 }
 
-bool dualsense_pad_handler::get_is_left_stick(u64 keyCode)
+bool dualsense_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	switch (keyCode)
 	{
@@ -573,7 +573,7 @@ bool dualsense_pad_handler::get_is_left_stick(u64 keyCode)
 	}
 }
 
-bool dualsense_pad_handler::get_is_right_stick(u64 keyCode)
+bool dualsense_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
 {
 	switch (keyCode)
 	{
