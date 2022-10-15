@@ -7,9 +7,6 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_ss.h"
 
-//#include <iomanip>
-//#include <sstream>
-
 LOG_CHANNEL(cellRtc);
 
 // clang-format off
@@ -43,16 +40,16 @@ void fmt_class_string<CellRtcError>::format(std::string& out, u64 arg)
 
 // Grabbed from JPCSP
 // This is the # of microseconds between January 1, 0001 and January 1, 1970.
-const u64 RTC_MAGIC_OFFSET = 62135596800000000ULL;
+constexpr u64 RTC_MAGIC_OFFSET = 62135596800000000ULL;
 // This is the # of microseconds between January 1, 0001 and January 1, 1601 (for Win32 FILETIME.)
-const u64 RTC_FILETIME_OFFSET = 50491123200000000ULL;
+constexpr u64 RTC_FILETIME_OFFSET = 50491123200000000ULL;
 
-const u64 EPOCH_AS_FILETIME = 116444736000000000ULL;
+constexpr u64 EPOCH_AS_FILETIME = 116444736000000000ULL;
 
 // Also stores leap year
-const u8 DAYS_IN_MONTH[24] = {0x1F, 0x1C, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1D, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F};
-const char WEEKDAY_NAMES[7][4]  = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};                                    // 4 as terminator
-const char MONTH_NAMES[12][4]   = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}; // 4 as terminator
+constexpr u8 DAYS_IN_MONTH[24] = {0x1F, 0x1C, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1D, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F, 0x1F, 0x1E, 0x1F, 0x1E, 0x1F};
+constexpr char WEEKDAY_NAMES[7][4]  = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};                                    // 4 as terminator
+constexpr char MONTH_NAMES[12][4]   = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}; // 4 as terminator
 
 s64 convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, s32 years)
 {
@@ -122,7 +119,7 @@ error_code cellRtcGetCurrentTick(vm::ptr<CellRtcTick> pTick)
 
 error_code cellRtcGetCurrentClock(vm::ptr<CellRtcDateTime> pClock, s32 iTimeZone)
 {
-	cellRtc.todo("cellRtcGetCurrentClock(pClock=*0x%x, time_zone=%d)", pClock, iTimeZone);
+	cellRtc.todo("cellRtcGetCurrentClock(pClock=*0x%x, iTimeZone=%d)", pClock, iTimeZone);
 
 	if (!vm::check_addr(pClock.addr()))
 	{
@@ -1131,6 +1128,13 @@ error_code cellRtcGetCurrentSecureTick(vm::ptr<CellRtcTick> tick)
 {
 	cellRtc.todo("cellRtcGetCurrentSecureTick(*0x%x)", tick);
 
+	if (!vm::check_addr(tick.addr()))
+	{
+		return CELL_RTC_ERROR_INVALID_POINTER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -1445,7 +1449,7 @@ error_code cellRtcIsLeapYear(s32 year)
 {
 	cellRtc.todo("cellRtcIsLeapYear(year=%d)", year);
 
-	if (year < 0)
+	if (year < 1)
 	{
 		return CELL_RTC_ERROR_INVALID_ARG;
 	}
@@ -1457,7 +1461,7 @@ error_code cellRtcGetDaysInMonth(s32 year, s32 month)
 {
 	cellRtc.todo("cellRtcGetDaysInMonth(year=%d, month=%d)", year, month);
 
-	if ((year < 0) || (month <= 0) || (month > 12))
+	if ((year <= 0) || (month <= 0) || (month > 12))
 	{
 		return CELL_RTC_ERROR_INVALID_ARG;
 	}
@@ -1474,10 +1478,10 @@ error_code cellRtcGetDayOfWeek(s32 year, s32 month, s32 day)
 {
 	cellRtc.trace("cellRtcGetDayOfWeek(year=%d, month=%d, day=%d)", year, month, day);
 
-	if (month - 1 < 2)
+	if (month == 1 || month == 2)
 	{
-		year -= 1;
-		month += 0xc;
+		year--;
+		month += 12;
 	}
 
 	return not_an_error(((month * 0xd + 8) / 5 + ((year + (year >> 2) + (year < 0 && (year & 3U) != 0)) - year / 100) + year / 400 + day) % 7);
