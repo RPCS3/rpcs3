@@ -469,35 +469,6 @@ void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<P
 		handler = GetHandler(type);
 	}
 
-	switch (handler->m_type)
-	{
-	case pad_handler::null:
-		static_cast<NullPadHandler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::keyboard:
-		static_cast<keyboard_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::ds3:
-		static_cast<ds3_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::ds4:
-		static_cast<ds4_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::dualsense:
-		static_cast<dualsense_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-#ifdef _WIN32
-	case pad_handler::xinput:
-		static_cast<xinput_pad_handler*>(handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::mm:
-		static_cast<mm_joystick_handler*>(handler.get())->init_config(&cfg);
-		break;
-#endif
-#ifdef HAVE_LIBEVDEV
-	case pad_handler::evdev:
-		static_cast<evdev_joystick_handler*>(handler.get())->init_config(&cfg);
-		break;
-#endif
-	}
+	ensure(!!handler);
+	handler->init_config(&cfg);
 }

@@ -101,14 +101,14 @@ class mm_joystick_handler final : public PadHandlerBase
 	struct MMJOYDevice : public PadDevice
 	{
 		u32 device_id{ 0 };
-		std::string device_name{ "" };
+		std::string device_name;
 		JOYINFOEX device_info{};
 		JOYCAPS device_caps{};
 		MMRESULT device_status = JOYERR_UNPLUGGED;
 		u64 trigger_left = 0;
 		u64 trigger_right = 0;
-		std::vector<u64> axis_left  = { 0,0,0,0 };
-		std::vector<u64> axis_right = { 0,0,0,0 };
+		std::vector<u64> axis_left{};
+		std::vector<u64> axis_right{};
 	};
 
 public:

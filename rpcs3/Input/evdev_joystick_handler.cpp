@@ -342,7 +342,7 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 		return it != data.end() && dir == it->second.second ? it->second.first : 0;
 	};
 
-	pad_preview_values preview_values = { 0, 0, 0, 0, 0, 0 };
+	pad_preview_values preview_values{};
 
 	if (buttons.size() == 10)
 	{
