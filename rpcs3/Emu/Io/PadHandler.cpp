@@ -233,7 +233,7 @@ u16 PadHandlerBase::Clamp0To1023(f32 input)
 // input has to be [-1,1]. result will be [0,255]
 u16 PadHandlerBase::ConvertAxis(f32 value)
 {
-	return static_cast<u16>((value + 1.0)*(255.0 / 2.0));
+	return static_cast<u16>((value + 1.0) * (255.0 / 2.0));
 }
 
 // The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle

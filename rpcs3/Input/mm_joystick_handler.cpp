@@ -310,7 +310,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 			return;
 		}
 
-		pad_preview_values preview_values = { 0, 0, 0, 0, 0, 0 };
+		pad_preview_values preview_values{};
 		if (buttons.size() == 10)
 		{
 			preview_values[0] = data[find_key(buttons[0])];

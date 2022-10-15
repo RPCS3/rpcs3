@@ -33,7 +33,7 @@ class HidDevice : public PadDevice
 {
 public:
 	hid_device* hidDevice{nullptr};
-	std::string path{""};
+	std::string path;
 	std::array<u8, 64> padData{};
 	bool new_output_data{true};
 	u8 large_motor{0};
