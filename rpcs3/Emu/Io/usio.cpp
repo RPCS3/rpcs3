@@ -80,6 +80,7 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 			.bInterval        = 16}));
 
 	g_fxo->get<usio_memory>().backup_memory.resize(0xB8);
+	g_fxo->get<usio_memory>().last_game_status.clear();
 	g_fxo->get<usio_memory>().last_game_status.resize(0x28);
 	load_backup();
 }
@@ -115,7 +116,7 @@ void usb_device_usio::load_backup()
 		return;
 	}
 
-	const u64 file_size = g_fxo->get<usio_memory>().backup_memory.size() + g_fxo->get<usio_memory>().last_game_status.size();
+	const u64 file_size = g_fxo->get<usio_memory>().backup_memory.size();
 
 	if (usio_backup_file.size() != file_size)
 	{
@@ -125,7 +126,6 @@ void usb_device_usio::load_backup()
 	}
 
 	usio_backup_file.read(g_fxo->get<usio_memory>().backup_memory.data(), g_fxo->get<usio_memory>().backup_memory.size());
-	usio_backup_file.read(g_fxo->get<usio_memory>().last_game_status.data(), g_fxo->get<usio_memory>().last_game_status.size());
 }
 
 void usb_device_usio::save_backup()
@@ -137,7 +137,6 @@ void usb_device_usio::save_backup()
 
 	usio_backup_file.seek(0, fs::seek_set);
 	usio_backup_file.write(g_fxo->get<usio_memory>().backup_memory.data(), g_fxo->get<usio_memory>().backup_memory.size());
-	usio_backup_file.write(g_fxo->get<usio_memory>().last_game_status.data(), g_fxo->get<usio_memory>().last_game_status.size());
 }
 
 void usb_device_usio::translate_input()
