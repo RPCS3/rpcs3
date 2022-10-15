@@ -18,6 +18,10 @@ public:
 	virtual ~PadDevice() = default;
 	cfg_pad* config{ nullptr };
 	u8 player_id{0};
+	u64 trigger_code_left = 0;
+	u64 trigger_code_right = 0;
+	std::array<u64, 4> axis_code_left{};
+	std::array<u64, 4> axis_code_right{};
 };
 
 struct pad_ensemble
@@ -206,10 +210,10 @@ public:
 
 private:
 	virtual std::shared_ptr<PadDevice> get_device(const std::string& /*device*/) { return nullptr; }
-	virtual bool get_is_left_trigger(u64 /*keyCode*/) { return false; }
-	virtual bool get_is_right_trigger(u64 /*keyCode*/) { return false; }
-	virtual bool get_is_left_stick(u64 /*keyCode*/) { return false; }
-	virtual bool get_is_right_stick(u64 /*keyCode*/) { return false; }
+	virtual bool get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
+	virtual bool get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 /*keyCode*/) { return false; }
 	virtual PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& /*device*/) { return connection::disconnected; }
 	virtual void get_extended_info(const pad_ensemble& /*binding*/) {}
 	virtual void apply_pad_data(const pad_ensemble& /*binding*/) {}
