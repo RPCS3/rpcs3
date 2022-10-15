@@ -165,10 +165,10 @@ if(USE_VULKAN)
 			message("-- RPCS3: MoltenVK submodule")
 
 			execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
-    				WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
+				WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
 			)
 			execute_process(COMMAND "${CMAKE_COMMAND}" --build .
-   	 			WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
+				WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/MoltenVK"
 			)
 
 			add_library(moltenvk_lib SHARED IMPORTED)
@@ -329,6 +329,28 @@ add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 # CURL
 add_subdirectory(curl EXCLUDE_FROM_ALL)
 
+# SDL2
+set(SDL2_TARGET 3rdparty_dummy_lib)
+if(USE_SDL)
+	if(USE_SYSTEM_SDL)
+		find_package(SDL2)
+		if(SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.24.0)
+			message(STATUS "Using system SDL2")
+			add_library(3rdparty_sdl2 INTERFACE)
+			target_compile_definitions(3rdparty_sdl2 INTERFACE -DHAVE_SDL2=1)
+			set(SDL2_TARGET 3rdparty_sdl2)
+		else()
+			message(FATAL_ERROR "SDL2 is not available on this system")
+		endif()
+	else()
+		message(STATUS "Using static SDL2 from 3rdparty")
+		add_library(3rdparty_sdl2 INTERFACE)
+		target_compile_definitions(3rdparty_sdl2 INTERFACE -DHAVE_SDL2=1)
+		add_subdirectory(libsdl-org EXCLUDE_FROM_ALL)
+		set(SDL2_TARGET 3rdparty_sdl2)
+	endif()
+endif()
+
 # add nice ALIAS targets for ease of use
 if(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
@@ -355,3 +377,4 @@ add_library(3rdparty::glew ALIAS 3rdparty_glew)
 add_library(3rdparty::wolfssl ALIAS wolfssl)
 add_library(3rdparty::libcurl ALIAS libcurl)
 add_library(3rdparty::soundtouch ALIAS soundtouch)
+add_library(3rdparty::sdl2 ALIAS ${SDL2_TARGET})

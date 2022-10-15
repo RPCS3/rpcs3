@@ -76,3 +76,7 @@
 	path = 3rdparty/SoundTouch/soundtouch
 	url = ../../RPCS3/soundtouch.git
 	ignore = dirty
+[submodule "3rdparty/libsdl-org/SDL"]
+	path = 3rdparty/libsdl-org/SDL
+	url = https://github.com/libsdl-org/SDL.git
+	ignore = dirty

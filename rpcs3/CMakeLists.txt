@@ -71,6 +71,7 @@ set(RPCS3_SRC
     Input/keyboard_pad_handler.cpp
     Input/mm_joystick_handler.cpp
     Input/pad_thread.cpp
+    Input/sdl_pad_handler.cpp
     Input/xinput_pad_handler.cpp
 )
 

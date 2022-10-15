@@ -142,6 +142,9 @@
     <Filter Include="Gui\ipc">
       <UniqueIdentifier>{91389c5b-9ebd-43fe-a288-1bbad775e528}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\SDL">
+      <UniqueIdentifier>{00fa44cd-ccae-48d9-8541-5f3b2b26a845}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -876,6 +879,9 @@
     <ClCompile Include="Input\evdev_gun_handler.cpp">
       <Filter>Io\evdev</Filter>
     </ClCompile>
+    <ClCompile Include="Input\sdl_pad_handler.cpp">
+      <Filter>Io\SDL</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1039,6 +1045,9 @@
     </ClInclude>
     <ClInclude Include="module_verifier.hpp">
       <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\sdl_pad_handler.h">
+      <Filter>Io\SDL</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

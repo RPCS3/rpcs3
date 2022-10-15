@@ -1329,37 +1329,27 @@ void pad_settings_dialog::ChangeHandler()
 		else
 			m_description = tooltips.gamepad_settings.null;
 		break;
-	case pad_handler::keyboard:
-		m_description = tooltips.gamepad_settings.keyboard; break;
+	case pad_handler::keyboard: m_description = tooltips.gamepad_settings.keyboard; break;
 #ifdef _WIN32
-	case pad_handler::xinput:
-		m_description = tooltips.gamepad_settings.xinput; break;
-	case pad_handler::mm:
-		m_description = tooltips.gamepad_settings.mmjoy; break;
-	case pad_handler::ds3:
-		m_description = tooltips.gamepad_settings.ds3_windows; break;
-	case pad_handler::ds4:
-		m_description = tooltips.gamepad_settings.ds4_windows; break;
-	case pad_handler::dualsense:
-		m_description = tooltips.gamepad_settings.dualsense_windows; break;
+	case pad_handler::xinput: m_description = tooltips.gamepad_settings.xinput; break;
+	case pad_handler::mm: m_description = tooltips.gamepad_settings.mmjoy; break;
+	case pad_handler::ds3: m_description = tooltips.gamepad_settings.ds3_windows; break;
+	case pad_handler::ds4: m_description = tooltips.gamepad_settings.ds4_windows; break;
+	case pad_handler::dualsense: m_description = tooltips.gamepad_settings.dualsense_windows; break;
 #elif __linux__
-	case pad_handler::ds3:
-		m_description = tooltips.gamepad_settings.ds3_linux; break;
-	case pad_handler::ds4:
-		m_description = tooltips.gamepad_settings.ds4_linux; break;
-	case pad_handler::dualsense:
-		m_description = tooltips.gamepad_settings.dualsense_linux; break;
+	case pad_handler::ds3: m_description = tooltips.gamepad_settings.ds3_linux; break;
+	case pad_handler::ds4: m_description = tooltips.gamepad_settings.ds4_linux; break;
+	case pad_handler::dualsense: m_description = tooltips.gamepad_settings.dualsense_linux; break;
 #else
-	case pad_handler::ds3:
-		m_description = tooltips.gamepad_settings.ds3_other; break;
-	case pad_handler::ds4:
-		m_description = tooltips.gamepad_settings.ds4_other; break;
-	case pad_handler::dualsense:
-		m_description = tooltips.gamepad_settings.dualsense_other; break;
+	case pad_handler::ds3: m_description = tooltips.gamepad_settings.ds3_other; break;
+	case pad_handler::ds4: m_description = tooltips.gamepad_settings.ds4_other; break;
+	case pad_handler::dualsense: m_description = tooltips.gamepad_settings.dualsense_other; break;
+#endif
+#ifdef HAVE_SDL2
+	case pad_handler::sdl: m_description = tooltips.gamepad_settings.sdl; break;
 #endif
 #ifdef HAVE_LIBEVDEV
-	case pad_handler::evdev:
-		m_description = tooltips.gamepad_settings.evdev; break;
+	case pad_handler::evdev: m_description = tooltips.gamepad_settings.evdev; break;
 #endif
 	}
 	ui->l_description->setText(m_description);
@@ -1847,6 +1837,9 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 #ifdef _WIN32
 		case pad_handler::xinput: return tr("XInput");
 		case pad_handler::mm: return tr("MMJoystick");
+#endif
+#ifdef HAVE_SDL2
+		case pad_handler::sdl: return tr("SDL");
 #endif
 #ifdef HAVE_LIBEVDEV
 		case pad_handler::evdev: return tr("Evdev");
