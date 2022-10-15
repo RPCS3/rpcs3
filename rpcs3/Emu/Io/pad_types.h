@@ -27,7 +27,7 @@ enum PortSettings
 	CELL_PAD_SETTING_SENSOR_OFF = 0x00000000,
 };
 
-enum Digital1Flags
+enum Digital1Flags : u32
 {
 	CELL_PAD_CTRL_SELECT = 0x00000001,
 	CELL_PAD_CTRL_L3     = 0x00000002,
@@ -39,7 +39,7 @@ enum Digital1Flags
 	CELL_PAD_CTRL_LEFT   = 0x00000080,
 };
 
-enum Digital2Flags
+enum Digital2Flags : u32
 {
 	CELL_PAD_CTRL_L2       = 0x00000001,
 	CELL_PAD_CTRL_R2       = 0x00000002,
