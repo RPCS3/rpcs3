@@ -1,4 +1,8 @@
 trigger:
+- task: AzureWebApp@1
+  inputs:
+    appName: 
+    package: '$(System.DefaultWorkingDirectory)/**/*.zip'
   branches:
     include:
       - master
