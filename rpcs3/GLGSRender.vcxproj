@@ -62,7 +62,7 @@
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\blitter.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\buffer_object.h" />
-    <ClInclude Include="Emu\RSX\GL\glutils\capabilities.hpp" />
+    <ClInclude Include="Emu\RSX\GL\glutils\capabilities.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\common.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\fbo.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\pixel_settings.hpp" />
@@ -91,6 +91,7 @@
     <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\blitter.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\buffer_object.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\capabilities.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\common.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\fbo.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\program.cpp" />
