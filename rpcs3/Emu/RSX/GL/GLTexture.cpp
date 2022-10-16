@@ -384,6 +384,7 @@ namespace gl
 		bool skip_barrier = false;
 		u32 in_offset = static_cast<u32>(reinterpret_cast<u64>(src_offset));
 		u32 out_offset = in_offset;
+		const auto& caps = gl::get_driver_caps();
 
 		auto initialize_scratch_mem = [&]()
 		{
@@ -409,7 +410,6 @@ namespace gl
 			transfer_buf = &scratch_mem;
 		};
 
-		const auto caps = gl::get_driver_caps();
 		if ((dst->aspect() & image_aspect::stencil) == 0 || caps.ARB_shader_stencil_export_supported)
 		{
 			// We do not need to use the driver's builtin transport mechanism
@@ -469,18 +469,24 @@ namespace gl
 			}
 
 			// If possible, decode using a compute transform to potentially have asynchronous scheduling
-			bool use_compute_transform = (dst->aspect() == gl::image_aspect::color);
-			switch (dst->get_internal_format())
+			bool use_compute_transform = (
+				dst->aspect() == gl::image_aspect::color &&  // Cannot use image_load_store with depth images
+				caps.subvendor_ATI == false);                // The old AMD/ATI driver does not support image writeonly without format specifier
+
+			if (use_compute_transform)
 			{
-			case texture::internal_format::bgr5a1:
-			case texture::internal_format::rgb5a1:
-			case texture::internal_format::rgb565:
-			case texture::internal_format::rgba4:
-				// Packed formats are a problem with image_load_store
-				use_compute_transform = false;
-				break;
-			default:
-				break;
+				switch (dst->get_internal_format())
+				{
+				case texture::internal_format::bgr5a1:
+				case texture::internal_format::rgb5a1:
+				case texture::internal_format::rgb565:
+				case texture::internal_format::rgba4:
+					// Packed formats are a problem with image_load_store
+					use_compute_transform = false;
+					break;
+				default:
+					break;
+				}
 			}
 
 			if (use_compute_transform)

@@ -631,13 +631,17 @@ namespace gl
 		#include "../Program/GLSLSnippets/CopyBufferToGenericImage.glsl"
 		;
 
-		const bool stencil_export_supported = gl::get_driver_caps().ARB_shader_stencil_export_supported;
+		const auto& caps = gl::get_driver_caps();
+		const bool stencil_export_supported = caps.ARB_shader_stencil_export_supported;
+		const bool legacy_format_support = caps.subvendor_ATI;
+
 		std::pair<std::string_view, std::string> repl_list[] =
 		{
 			{ "%set, ", "" },
 			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) },
-			{ "%stencil_export_supported", stencil_export_supported ? "1" : "0" }
+			{ "%stencil_export_supported", stencil_export_supported ? "1" : "0" },
+			{ "%legacy_format_support", legacy_format_support ? "1" : "0" }
 		};
 
 		fs_src = fmt::replace_all(fs_src, repl_list);
