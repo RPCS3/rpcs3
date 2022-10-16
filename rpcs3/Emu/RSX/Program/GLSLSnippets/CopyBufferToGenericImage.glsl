@@ -165,37 +165,37 @@ void main()
 
 	// Simple color. Provided for compatibility with old drivers.
 	case FMT_GL_RGBA8:
-		outColor = readFixed8x4(invocation_id);
+		outColor = readFixed8x4(texel_address);
 		break;
 	case FMT_GL_BGRA8:
-		outColor = readFixed8x4(invocation_id).bgra;
+		outColor = readFixed8x4(texel_address).bgra;
 		break;
 	case FMT_GL_R8:
-		outColor.r = readFixed8(invocation_id);
+		outColor.r = readFixed8(texel_address);
 		break;
 	case FMT_GL_R16:
-		outColor.r = readFixed16(invocation_id);
+		outColor.r = readFixed16(texel_address);
 		break;
 	case FMT_GL_R32F:
-		outColor.r = readFloat32(invocation_id);
+		outColor.r = readFloat32(texel_address);
 		break;
 	case FMT_GL_RG8:
-		outColor.rg = readFixed8x2(invocation_id);
+		outColor.rg = readFixed8x2(texel_address);
 		break;
 	case FMT_GL_RG8_SNORM:
-		outColor.rg = readFixed8x2Snorm(invocation_id);
+		outColor.rg = readFixed8x2Snorm(texel_address);
 		break;
 	case FMT_GL_RG16:
-		outColor.rg = readFixed16x2(invocation_id);
+		outColor.rg = readFixed16x2(texel_address);
 		break;
 	case FMT_GL_RG16F:
-		outColor.rg = readFloat16x2(invocation_id);
+		outColor.rg = readFloat16x2(texel_address);
 		break;
 	case FMT_GL_RGBA16F:
-		outColor = readFloat16x4(invocation_id);
+		outColor = readFloat16x4(texel_address);
 		break;
 	case FMT_GL_RGBA32F:
-		outColor = readFloat32x4(invocation_id);
+		outColor = readFloat32x4(texel_address);
 		break;
 
 #endif
