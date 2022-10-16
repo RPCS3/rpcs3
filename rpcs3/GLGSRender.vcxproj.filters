@@ -41,6 +41,9 @@
     <ClCompile Include="Emu\RSX\GL\glutils\sampler.cpp">
       <Filter>glutils</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\capabilities.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
@@ -68,7 +71,7 @@
     <ClInclude Include="Emu\RSX\GL\glutils\common.h">
       <Filter>glutils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\GL\glutils\capabilities.hpp">
+    <ClInclude Include="Emu\RSX\GL\glutils\capabilities.h">
       <Filter>glutils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\glutils\image.h">

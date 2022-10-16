@@ -1,6 +1,6 @@
 #pragma once
 
-#include "capabilities.hpp"
+#include "capabilities.h"
 
 #include "Utilities/geometry.h"
 #include <unordered_map>
