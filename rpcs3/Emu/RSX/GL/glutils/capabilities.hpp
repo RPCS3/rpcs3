@@ -32,6 +32,7 @@ namespace gl
 		bool vendor_MESA = false;   // requires CLIENT_STORAGE bit set for streaming buffers
 		bool subvendor_RADEONSI = false;
 		bool subvendor_NOUVEAU = false;
+		bool subvendor_ATI = false;
 
 		bool check(const std::string& ext_name, const char* test)
 		{
@@ -230,6 +231,7 @@ namespace gl
 			else if (vendor_string.find("amd") != umax || vendor_string.find("ati") != umax)
 			{
 				vendor_AMD = true;
+				subvendor_ATI = vendor_string.find("ati") != umax;
 			}
 #endif
 
