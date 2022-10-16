@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "capabilities.h"
 
+#include "Utilities/StrUtil.h"
+
 namespace gl
 {
 	version_info::version_info(const char* version_string, int major_scale)

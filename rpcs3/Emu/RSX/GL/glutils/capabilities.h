@@ -5,8 +5,6 @@
 #include <util/asm.hpp>
 #include <util/logs.hpp>
 
-#include "Utilities/StrUtil.h"
-
 namespace gl
 {
 	struct version_info
