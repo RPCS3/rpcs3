@@ -82,7 +82,7 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 	cfg->motion_sensor_x.axis.def = ::at32(motion_axis_list, ABS_X);
 	cfg->motion_sensor_y.axis.def = ::at32(motion_axis_list, ABS_Y);
 	cfg->motion_sensor_z.axis.def = ::at32(motion_axis_list, ABS_Z);
-	cfg->motion_sensor_g.axis.def = ::at32(motion_axis_list, ABS_RX);
+	cfg->motion_sensor_g.axis.def = ::at32(motion_axis_list, ABS_RY); // DS3 uses the yaw axis for gyros
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, NO_BUTTON);
 
