@@ -908,10 +908,9 @@ void cell_audio_thread::operator()()
 			{
 				// Games may sometimes "skip" audio periods entirely if they're falling behind (a sort of "frameskip" for audio)
 				// As such, if the game doesn't touch buffers for too long we advance time hoping the game recovers
-				// TODO: It's a hack and it needs a setting to disable this (force true)
 				if (
 					(untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout) ||
-					(time_since_last_period > cfg.partially_untouched_timeout) || !keys.empty()
+					(time_since_last_period > cfg.partially_untouched_timeout) || g_cfg.audio.disable_sampling_skip
 				   )
 				{
 					// There's no audio in the buffers, simply advance time and hope the game recovers
