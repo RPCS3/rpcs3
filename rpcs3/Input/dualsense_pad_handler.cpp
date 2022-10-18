@@ -22,7 +22,7 @@ void fmt_class_string<DualSenseDevice::DualSenseDataMode>::format(std::string& o
 namespace
 {
 	constexpr u32 DUALSENSE_ACC_RES_PER_G = 8192;
-	constexpr u32 DUALSENSE_GYRO_RES_PER_DEG_S = 1024;
+	constexpr u32 DUALSENSE_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
 	constexpr u32 DUALSENSE_CALIBRATION_REPORT_SIZE = 41;
 	constexpr u32 DUALSENSE_VERSION_REPORT_SIZE = 64;
 	constexpr u32 DUALSENSE_BLUETOOTH_REPORT_SIZE = 78;
@@ -642,10 +642,10 @@ void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
-	// gyroX is yaw, which is all that we need
-	f32 gyroX = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1;
-	//const int gyroY = ((u16)(buf[18] << 8) | buf[17]) / 256;
-	//const int gyroZ = ((u16)(buf[20] << 8) | buf[19]) / 256;
+	// gyroY is yaw, which is all that we need
+	//f32 gyroX = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1.f;
+	f32 gyroY = static_cast<s16>((buf[18] << 8) | buf[17]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1.f;
+	//f32 gyroZ = static_cast<s16>((buf[20] << 8) | buf[19]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1.f;
 
 	// accel
 	f32 accelX = static_cast<s16>((buf[22] << 8) | buf[21]) / static_cast<f32>(DUALSENSE_ACC_RES_PER_G) * -1;
@@ -657,13 +657,13 @@ void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 	accelY = accelY * 113 + 512;
 	accelZ = accelZ * 113 + 512;
 
-	// convert to ds3
-	gyroX  = gyroX * (123.f / 90.f) + 512;
+	// Convert to ds3. The ds3 resolution is 123/90°/sec.
+	gyroY = gyroY * (123.f / 90.f) + 512;
 
 	pad->m_sensors[0].m_value = Clamp0To1023(accelX);
 	pad->m_sensors[1].m_value = Clamp0To1023(accelY);
 	pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
-	pad->m_sensors[3].m_value = Clamp0To1023(gyroX);
+	pad->m_sensors[3].m_value = Clamp0To1023(gyroY);
 }
 
 std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)

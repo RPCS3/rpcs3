@@ -13,7 +13,7 @@ constexpr id_pair ZEROPLUS_ID_0 = {0x0C12, 0x0E20};
 namespace
 {
 	constexpr u32 DS4_ACC_RES_PER_G = 8192;
-	constexpr u32 DS4_GYRO_RES_PER_DEG_S = 16; // technically this could be 1024, but keeping it at 16 keeps us within 16 bits of precision
+	constexpr u32 DS4_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
 	constexpr u32 DS4_FEATURE_REPORT_0x02_SIZE = 37;
 	constexpr u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
 	constexpr u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
@@ -862,15 +862,15 @@ void ds4_pad_handler::get_extended_info(const pad_ensemble& binding)
 	pad->m_sensors[1].m_value = Clamp0To1023(accelY);
 	pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
 
-	// gyroX is yaw, which is all that we need
-	f32 gyroX = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
-	//const int gyroY = ((u16)(buf[14] << 8) | buf[13]) / 256;
-	//const int gyroZ = ((u16)(buf[18] << 8) | buf[17]) / 256;
+	// gyroY is yaw, which is all that we need
+	//f32 gyroX = static_cast<s16>((u16)(buf[14] << 8) | buf[13]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
+	f32 gyroY = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
+	//f32 gyroZ = static_cast<s16>((u16)(buf[18] << 8) | buf[17]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
 
-	// convert to ds3
-	gyroX = gyroX * (123.f / 90.f) + 512;
+	// Convert to ds3. The ds3 resolution is 123/90°/sec.
+	gyroY = gyroY * (123.f / 90.f) + 512;
 
-	pad->m_sensors[3].m_value = Clamp0To1023(gyroX);
+	pad->m_sensors[3].m_value = Clamp0To1023(gyroY);
 }
 
 void ds4_pad_handler::apply_pad_data(const pad_ensemble& binding)
