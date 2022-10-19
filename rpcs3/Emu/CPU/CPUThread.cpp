@@ -88,15 +88,18 @@ struct cpu_prof
 		// Total number of samples
 		u64 samples = 0, idle = 0;
 
-		// Avoid printing replicas
-		bool printed = false;
+		// Avoid printing replicas or when not much changed
+		u64 new_samples = 0;
+
+		static constexpr u64 min_print_samples = 500;
+		static constexpr u64 min_print_all_samples = min_print_samples * 20;
 
 		void reset()
 		{
 			freq.clear();
 			samples = 0;
 			idle = 0;
-			printed = false;
+			new_samples = 0;
 		}
 
 		static std::string format(const std::multimap<u64, u64, std::greater<u64>>& chart, u64 samples, u64 idle, bool extended_print = false)
@@ -132,8 +135,13 @@ struct cpu_prof
 		// Print info
 		void print(const std::shared_ptr<cpu_thread>& ptr)
 		{
-			if (printed || samples == idle)
+			if (new_samples < min_print_samples || samples == idle)
 			{
+				if (cpu_flag::exit - ptr->state)
+				{
+					profiler.notice("Thread \"%s\" [0x%08x]: %u samples, %u new (%.4f%% idle): Not enough new samples have been collected since the last print.", ptr->get_name(), ptr->id, samples, new_samples, 100. * idle / samples);
+				}
+
 				return;
 			}
 
@@ -147,13 +155,22 @@ struct cpu_prof
 
 			// Print results
 			const std::string results = format(chart, samples, idle);
-			profiler.notice("Thread \"%s\" [0x%08x]: %u samples (%.4f%% idle):%s", ptr->get_name(), ptr->id, samples, 100. * idle / samples, results);
+			profiler.notice("Thread \"%s\" [0x%08x]: %u samples, %u new (%.4f%% idle):%s", ptr->get_name(), ptr->id, samples, new_samples, 100. * idle / samples, results);
 
-			printed = true;
+			new_samples = 0;
 		}
 
-		static void print_all(const std::unordered_map<std::shared_ptr<cpu_thread>, sample_info>& threads)
+		static void print_all(std::unordered_map<std::shared_ptr<cpu_thread>, sample_info>& threads)
 		{
+			u64 new_samples = 0;
+
+			// Print all results and cleanup
+			for (auto& [ptr, info] : threads)
+			{
+				new_samples += info.new_samples;
+				info.print(ptr);
+			}
+
 			std::multimap<u64, u64, std::greater<u64>> chart;
 
 			std::unordered_map<u64, u64, value_hash<u64>> freq;
@@ -162,7 +179,7 @@ struct cpu_prof
 
 			for (auto& [_, info] : threads)
 			{
-				// This function collects thread information regardless of 'printed' member state
+				// This function collects thread information regardless of 'new_samples' member state
 				for (auto& [name, count] : info.freq)
 				{
 					freq[name] += count;
@@ -172,18 +189,24 @@ struct cpu_prof
 				idle += info.idle;
 			}
 
-			for (auto& [name, count] : freq)
-			{
-				chart.emplace(count, name);
-			}
-
 			if (samples == idle)
 			{
 				return;
 			}
 
+			if (new_samples < min_print_all_samples && thread_ctrl::state() != thread_state::aborting)
+			{
+				profiler.notice("All Threads: %u samples, %u new (%.4f%% idle): Not enough new samples have been collected since the last print.", samples, new_samples, 100. * idle / samples);
+				return;
+			}
+
+			for (auto& [name, count] : freq)
+			{
+				chart.emplace(count, name);
+			}
+
 			const std::string results = format(chart, samples, idle, true);
-			profiler.notice("All Threads: %u samples (%.4f%% idle):%s", samples, 100. * idle / samples, results);
+			profiler.notice("All Threads: %u samples, %u new (%.4f%% idle):%s", samples, new_samples, 100. * idle / samples, results);
 		}
 	};
 
@@ -255,6 +278,7 @@ struct cpu_prof
 					if (auto state = +ptr->state; !::is_paused(state) && !::is_stopped(state) && cpu_flag::wait - state)
 					{
 						info.freq[name]++;
+						info.new_samples++;
 
 						// Append verification time to fixed common name 0000000...chunk-0x3fffc
 						if (name >> 16 && (name & 0xffff) == 0)
@@ -275,11 +299,7 @@ struct cpu_prof
 			{
 				profiler.success("Flushing profiling results...");
 
-				// Print all results and cleanup
-				for (auto& [ptr, info] : threads)
-				{
-					info.print(ptr);
-				}
+				sample_info::print_all(threads);
 			}
 
 			// Wait, roughly for 20µs
@@ -287,11 +307,6 @@ struct cpu_prof
 		}
 
 		// Print all remaining results
-		for (auto& [ptr, info] : threads)
-		{
-			info.print(ptr);
-		}
-
 		sample_info::print_all(threads);
 	}
 
