@@ -267,7 +267,7 @@ struct cpu_prof
 			// Sample active threads
 			for (auto& [ptr, info] : threads)
 			{
-				if (cpu_flag::exit - ptr->state)
+				if (auto state = +ptr->state; cpu_flag::exit - state)
 				{
 					// Get short function hash
 					const u64 name = atomic_storage<u64>::load(ptr->block_hash);
@@ -275,7 +275,7 @@ struct cpu_prof
 					// Append occurrence
 					info.samples++;
 
-					if (auto state = +ptr->state; !::is_paused(state) && !::is_stopped(state) && cpu_flag::wait - state)
+					if (cpu_flag::wait - state)
 					{
 						info.freq[name]++;
 						info.new_samples++;
@@ -286,6 +286,12 @@ struct cpu_prof
 					}
 					else
 					{
+						if (state & (cpu_flag::dbg_pause + cpu_flag::dbg_global_pause))
+						{
+							// Idle state caused by emulation pause is not accounted for
+							continue;
+						}
+
 						info.idle++;
 					}
 				}
@@ -300,6 +306,12 @@ struct cpu_prof
 				profiler.success("Flushing profiling results...");
 
 				sample_info::print_all(threads);
+			}
+
+			if (Emu.IsPaused())
+			{
+				thread_ctrl::wait_for(5000);
+				continue;
 			}
 
 			// Wait, roughly for 20µs
