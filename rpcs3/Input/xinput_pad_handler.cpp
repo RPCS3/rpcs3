@@ -128,7 +128,7 @@ void xinput_pad_handler::init_config(cfg_pad* cfg)
 	cfg->from_default();
 }
 
-void xinput_pad_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32/* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void xinput_pad_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32/* b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	const int device_number = GetDeviceNumber(padId);
 	if (device_number < 0)

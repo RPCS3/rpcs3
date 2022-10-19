@@ -36,6 +36,7 @@ public:
 	std::string path;
 	std::array<u8, 64> padData{};
 	bool new_output_data{true};
+	bool enable_player_leds{false};
 	u8 large_motor{0};
 	u8 small_motor{0};
 	u8 led_delay_on{0};

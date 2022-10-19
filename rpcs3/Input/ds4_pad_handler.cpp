@@ -197,7 +197,7 @@ u32 ds4_pad_handler::get_battery_level(const std::string& padId)
 	return std::min<u32>(device->battery_level * 10, 100);
 }
 
-void ds4_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
+void ds4_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool /*player_led*/, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DS4Device> device = get_hid_device(padId);
 	if (!device || !device->hidDevice || !device->config)

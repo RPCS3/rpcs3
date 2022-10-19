@@ -598,7 +598,7 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 	device->force_small = small;
 }
 
-void evdev_joystick_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u32 largeMotor, u32 smallMotor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void evdev_joystick_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u32 largeMotor, u32 smallMotor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	// Get our evdev device
 	auto dev = get_evdev_device(padId);

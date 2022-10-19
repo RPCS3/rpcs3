@@ -141,6 +141,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	b_has_deadzones = true;
 	b_has_led = true;
 	b_has_rgb = true;
+	b_has_player_led = true;
 	b_has_battery = true;
 
 	m_name_string = "DualSense Pad #";
@@ -917,7 +918,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 	if (!device || !device->hidDevice)
 		return -2;
 
-	const auto config = device->config;
+	const cfg_pad* config = device->config;
 	if (config == nullptr)
 		return -2; // hid_write and hid_write_control return -1 on error
 
@@ -970,17 +971,24 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 			// Use OR with 0x1, 0x2, 0x4, 0x8 and 0x10 to enable the LEDs (from leftmost to rightmost).
 			common.valid_flag_1 |= VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE;
 
-			switch (device->player_id)
+			if (config->player_led_enabled)
 			{
-			case 0: common.player_leds = 0b00100; break;
-			case 1: common.player_leds = 0b01010; break;
-			case 2: common.player_leds = 0b10101; break;
-			case 3: common.player_leds = 0b11011; break;
-			case 4: common.player_leds = 0b11111; break;
-			case 5: common.player_leds = 0b10111; break;
-			case 6: common.player_leds = 0b11101; break;
-			default:
-				fmt::throw_exception("Dualsense is using forbidden player id %d", device->player_id);
+				switch (device->player_id)
+				{
+				case 0: common.player_leds = 0b00100; break;
+				case 1: common.player_leds = 0b01010; break;
+				case 2: common.player_leds = 0b10101; break;
+				case 3: common.player_leds = 0b11011; break;
+				case 4: common.player_leds = 0b11111; break;
+				case 5: common.player_leds = 0b10111; break;
+				case 6: common.player_leds = 0b11101; break;
+				default:
+					fmt::throw_exception("Dualsense is using forbidden player id %d", device->player_id);
+				}
+			}
+			else
+			{
+				common.player_leds = 0;
 			}
 		}
 	}
@@ -1090,7 +1098,13 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		}
 	}
 
-	dualsense_dev->new_output_data |= dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
+	if (dualsense_dev->enable_player_leds != config->player_led_enabled.get())
+	{
+		dualsense_dev->enable_player_leds = config->player_led_enabled.get();
+		dualsense_dev->update_player_leds = true;
+	}
+
+	dualsense_dev->new_output_data |= dualsense_dev->update_player_leds || dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
 
 	dualsense_dev->large_motor = speed_large;
 	dualsense_dev->small_motor = speed_small;
@@ -1104,7 +1118,7 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	}
 }
 
-void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
+void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -1132,6 +1146,8 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u
 
 	ensure(device->config);
 	device->update_lightbar = true;
+	device->update_player_leds = true;
+	device->config->player_led_enabled.set(player_led);
 
 	// Set new LED color (see ds4_pad_handler)
 	if (battery_led)
