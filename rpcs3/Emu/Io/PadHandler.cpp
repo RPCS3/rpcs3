@@ -300,6 +300,11 @@ bool PadHandlerBase::has_rgb() const
 	return b_has_rgb;
 }
 
+bool PadHandlerBase::has_player_led() const
+{
+	return b_has_player_led;
+}
+
 bool PadHandlerBase::has_battery() const
 {
 	return b_has_battery;

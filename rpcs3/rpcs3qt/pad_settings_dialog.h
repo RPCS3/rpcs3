@@ -89,9 +89,6 @@ public:
 	explicit pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent = nullptr, const GameInfo *game = nullptr);
 	~pad_settings_dialog();
 
-public Q_SLOTS:
-	void apply_led_settings(int colorR, int colorG, int colorB, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness);
-
 private Q_SLOTS:
 	void OnPadButtonClicked(int id);
 	void OnTabChanged(int index);
