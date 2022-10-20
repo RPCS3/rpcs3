@@ -24,4 +24,8 @@ private:
 	std::string usio_backup_path;
 	fs::file usio_backup_file;
 	std::queue<std::vector<u8>> q_replies;
+	bool is_test         = false;
+	bool is_test_pressed = false;
+	bool is_coin_pressed = false;
+	u8 coin_counter      = 0x00;
 };

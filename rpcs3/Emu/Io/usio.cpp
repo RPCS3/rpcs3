@@ -104,6 +104,14 @@ void usb_device_usio::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 	}
 }
 
+enum TaikoButtonMapping : u8
+{
+	TAIKO_BTN_ENTER   = 0x02,
+	TAIKO_BTN_DOWN    = 0x10,
+	TAIKO_BTN_UP      = 0x20,
+	TAIKO_BTN_SERVICE = 0x40
+};
+
 extern bool is_input_allowed();
 
 void usb_device_usio::load_backup()
@@ -144,9 +152,12 @@ void usb_device_usio::translate_input()
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 
-	std::vector<u8> input_buf = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	constexpr le_t<u16> c_small_hit = 0x4A0;
-	constexpr le_t<u16> c_big_hit = 0xA40;
+	std::vector<u8> input_buf       = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+	constexpr le_t<u16> c_small_hit = 0x4D0;
+	constexpr le_t<u16> c_big_hit   = 0x1800;
+
+	u8 button_test = 0x80;
+	u8 buttons_p1  = 0x00;
 
 	auto translate_from_pad = [&](u8 pad_number, u8 player)
 	{
@@ -165,6 +176,24 @@ void usb_device_usio::translate_input()
 
 		for (const Button& button : pad->m_buttons)
 		{
+			// Specifically check for the coin slot to avoid inserting multiple coins with one press
+			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && button.m_outKeyCode == CELL_PAD_CTRL_RIGHT)
+			{
+				if (!button.m_pressed)
+				{
+					is_coin_pressed = false;
+				}
+			}
+
+			// Reset test button state so the emulated switch can be flicked on/off properly
+			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && button.m_outKeyCode == CELL_PAD_CTRL_SELECT)
+			{
+				if (!button.m_pressed)
+				{
+					is_test_pressed = false;
+				}
+			}
+
 			if (button.m_pressed)
 			{
 				if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
@@ -203,6 +232,39 @@ void usb_device_usio::translate_input()
 						// Small hit side right
 						std::memcpy(input_buf.data() + 38 + offset, &c_small_hit, sizeof(u16));
 						break;
+					}
+				}
+				else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && player == 0)
+				{
+					switch (button.m_outKeyCode)
+					{
+					case CELL_PAD_CTRL_SELECT:
+						// Test switch
+						if (!is_test_pressed)
+						{
+							is_test         = !is_test;
+							is_test_pressed = true;
+						}
+						break;
+					case CELL_PAD_CTRL_START:
+						buttons_p1 += TAIKO_BTN_ENTER;
+						break;
+					case CELL_PAD_CTRL_UP:
+						buttons_p1 += TAIKO_BTN_UP;
+						break;
+					case CELL_PAD_CTRL_DOWN:
+						buttons_p1 += TAIKO_BTN_DOWN;
+						break;
+					case CELL_PAD_CTRL_LEFT:
+						buttons_p1 += TAIKO_BTN_SERVICE;
+						break;
+					case CELL_PAD_CTRL_RIGHT:
+						if (!is_coin_pressed)
+						{
+							coin_counter += 1;
+							is_coin_pressed = true;
+						}
+						break;
 					default:
 						break;
 					}
@@ -213,6 +275,15 @@ void usb_device_usio::translate_input()
 
 	translate_from_pad(0, 0);
 	translate_from_pad(1, 1);
+
+	// Like some of namcos other arcade games, taikos test switch is a physical switch and not a button
+	if (is_test)
+	{
+		std::memcpy(input_buf.data() + 0, &button_test, sizeof(u8));
+	}
+
+	std::memcpy(input_buf.data() + 1, &buttons_p1, sizeof(u8));
+	std::memcpy(input_buf.data() + 16, &coin_counter, sizeof(u8));
 
 	q_replies.push(input_buf);
 	q_replies.push({0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
