@@ -320,14 +320,6 @@ void GLGSRender::on_init_thread()
 		query.result = 0;
 	}
 
-	//Clip planes are shader controlled; enable all planes driver-side
-	glEnable(GL_CLIP_DISTANCE0 + 0);
-	glEnable(GL_CLIP_DISTANCE0 + 1);
-	glEnable(GL_CLIP_DISTANCE0 + 2);
-	glEnable(GL_CLIP_DISTANCE0 + 3);
-	glEnable(GL_CLIP_DISTANCE0 + 4);
-	glEnable(GL_CLIP_DISTANCE0 + 5);
-
 	m_ui_renderer.create();
 	m_video_output_pass.create();
 

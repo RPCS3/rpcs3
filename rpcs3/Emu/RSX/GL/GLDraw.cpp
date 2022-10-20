@@ -289,6 +289,9 @@ void GLGSRender::update_draw_state()
 		break;
 	}
 
+	// Clip planes
+	gl_state.clip_planes((current_vertex_program.output_mask >> CELL_GCM_ATTRIB_OUTPUT_UC0) & 0x3F);
+
 	// Sample control
 	// TODO: MinSampleShading
 	//gl_state.enable(rsx::method_registers.msaa_enabled(), GL_MULTISAMPLE);
