@@ -133,6 +133,7 @@ namespace gl
 
 			cmd->disable(GL_CULL_FACE);
 			cmd->disable(GL_SCISSOR_TEST);
+			cmd->clip_planes(GL_NONE);
 
 			if (enable_depth_writes)
 			{

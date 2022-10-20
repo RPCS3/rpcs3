@@ -182,6 +182,7 @@ namespace gl
 			glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &old_vao);
 
 			load_program(cmd, scale_x, scale_y, shader_offsets.data(), counts.size(), color);
+			cmd->clip_planes(GL_NONE);
 
 			m_vao.bind();
 
