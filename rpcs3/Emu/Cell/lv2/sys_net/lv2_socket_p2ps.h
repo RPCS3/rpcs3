@@ -51,14 +51,14 @@ enum p2ps_tcp_flags : u8
 };
 
 void initialize_tcp_timeout_monitor();
-u16 u2s_tcp_checksum(const u16* buffer, usz size);
+u16 u2s_tcp_checksum(const le_t<u16>* buffer, usz size);
 std::vector<u8> generate_u2s_packet(const p2ps_encapsulated_tcp& header, const u8* data, const u32 datasize);
 
 class lv2_socket_p2ps final : public lv2_socket_p2p
 {
 public:
 	lv2_socket_p2ps(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
-	lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq);
+	lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio);
 	lv2_socket_p2ps(utils::serial& ar, lv2_socket_type type);
 	void save(utils::serial& ar);
 
@@ -73,6 +73,7 @@ public:
 
 	std::optional<s32> connect(const sys_net_sockaddr& addr) override;
 
+	std::pair<s32, sys_net_sockaddr> getpeername() override;
 	std::pair<s32, sys_net_sockaddr> getsockname() override;
 
 	s32 listen(s32 backlog) override;

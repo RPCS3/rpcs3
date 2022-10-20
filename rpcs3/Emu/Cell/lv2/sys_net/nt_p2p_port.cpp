@@ -13,6 +13,33 @@
 
 LOG_CHANNEL(sys_net);
 
+namespace sys_net_helpers
+{
+	bool all_reusable(const std::set<s32>& sock_ids)
+	{
+		for (const s32 sock_id : sock_ids)
+		{
+			const auto [_, reusable] = idm::check<lv2_socket>(sock_id, [&](lv2_socket& sock) -> bool
+				{
+					auto [res_reuseaddr, optval_reuseaddr, optlen_reuseaddr] = sock.getsockopt(SYS_NET_SOL_SOCKET, SYS_NET_SO_REUSEADDR, sizeof(s32));
+					auto [res_reuseport, optval_reuseport, optlen_reuseport] = sock.getsockopt(SYS_NET_SOL_SOCKET, SYS_NET_SO_REUSEPORT, sizeof(s32));
+
+					const bool reuse_addr = optlen_reuseaddr == 4 && !!optval_reuseaddr._int;
+					const bool reuse_port = optlen_reuseport == 4 && !!optval_reuseport._int;
+
+					return (reuse_addr || reuse_port);
+				});
+
+			if (!reusable)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+} // namespace sys_net_helpers
+
 nt_p2p_port::nt_p2p_port(u16 port)
 	: port(port)
 {
@@ -164,6 +191,16 @@ bool nt_p2p_port::recv_data()
 		}
 	}
 
+	if (recv_res < VPORT_P2P_HEADER_SIZE)
+	{
+		return true;
+	}
+
+	const u16 vport_flags = *reinterpret_cast<le_t<u16>*>(p2p_recv_data.data() + sizeof(u16));
+	std::vector<u8> p2p_data(recv_res - VPORT_P2P_HEADER_SIZE);
+	memcpy(p2p_data.data(), p2p_recv_data.data() + VPORT_P2P_HEADER_SIZE, p2p_data.size());
+
+	if (vport_flags & P2P_FLAG_P2P)
 	{
 		std::lock_guard lock(bound_p2p_vports_mutex);
 		if (bound_p2p_vports.contains(dst_vport))
@@ -176,87 +213,95 @@ bool nt_p2p_port::recv_data()
 			p2p_addr.sin_vport  = dst_vport;
 			p2p_addr.sin_port   = std::bit_cast<be_t<u16>, u16>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
 
-			std::vector<u8> p2p_data(recv_res - sizeof(u16));
-			memcpy(p2p_data.data(), p2p_recv_data.data() + sizeof(u16), recv_res - sizeof(u16));
+			auto& bound_sockets = ::at32(bound_p2p_vports, dst_vport);
 
-			const auto sock = idm::check<lv2_socket>(::at32(bound_p2p_vports, dst_vport), [&](lv2_socket& sock)
+			for (const auto sock_id : bound_sockets)
+			{
+				const auto sock = idm::check<lv2_socket>(sock_id, [&](lv2_socket& sock)
+					{
+						ensure(sock.get_type() == SYS_NET_SOCK_DGRAM_P2P);
+						auto& sock_p2p = reinterpret_cast<lv2_socket_p2p&>(sock);
+
+						sock_p2p.handle_new_data(p2p_addr, p2p_data);
+					});
+
+				if (!sock)
 				{
-					ensure(sock.get_type() == SYS_NET_SOCK_DGRAM_P2P);
-					auto& sock_p2p = reinterpret_cast<lv2_socket_p2p&>(sock);
-
-					sock_p2p.handle_new_data(std::move(p2p_addr), std::move(p2p_data));
-				});
-
-			// Should not happen in theory
-			if (!sock)
-				bound_p2p_vports.erase(dst_vport);
+					sys_net.error("Socket %d found in bound_p2p_vports didn't exist!", sock_id);
+					bound_sockets.erase(sock_id);
+					if (bound_sockets.empty())
+					{
+						bound_p2p_vports.erase(dst_vport);
+					}
+				}
+			}
 
 			return true;
 		}
 	}
-
-	// Not directed at a bound DGRAM_P2P vport so check if the packet is a STREAM-P2P packet
-
-	const auto sp_size = recv_res - sizeof(u16);
-	u8* sp_data        = p2p_recv_data.data() + sizeof(u16);
-
-	if (sp_size < sizeof(p2ps_encapsulated_tcp))
+	else if (vport_flags & P2P_FLAG_P2PS)
 	{
-		sys_net.notice("Received P2P packet targeted at unbound vport(likely) or invalid(vport=%d)", dst_vport);
-		return true;
-	}
-
-	auto* tcp_header = reinterpret_cast<p2ps_encapsulated_tcp*>(sp_data);
-
-	// Validate signature & length
-	if (tcp_header->signature != P2PS_U2S_SIG)
-	{
-		sys_net.notice("Received P2P packet targeted at unbound vport(vport=%d)", dst_vport);
-		return true;
-	}
-
-	if (tcp_header->length != (sp_size - sizeof(p2ps_encapsulated_tcp)))
-	{
-		sys_net.error("Received STREAM-P2P packet tcp length didn't match packet length");
-		return true;
-	}
-
-	// Sanity check
-	if (tcp_header->dst_port != dst_vport)
-	{
-		sys_net.error("Received STREAM-P2P packet with dst_port != vport");
-		return true;
-	}
-
-	// Validate checksum
-	u16 given_checksum   = tcp_header->checksum;
-	tcp_header->checksum = 0;
-	if (given_checksum != u2s_tcp_checksum(reinterpret_cast<const u16*>(sp_data), sp_size))
-	{
-		sys_net.error("Checksum is invalid, dropping packet!");
-		return true;
-	}
-
-	// The packet is valid, check if it's bound
-	const u64 key_connected = (reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr) | (static_cast<u64>(tcp_header->src_port) << 48) | (static_cast<u64>(tcp_header->dst_port) << 32);
-	const u64 key_listening = (static_cast<u64>(tcp_header->dst_port) << 32);
-
-	{
-		std::lock_guard lock(bound_p2p_vports_mutex);
-		if (bound_p2p_streams.contains(key_connected))
+		if (p2p_data.size() < sizeof(p2ps_encapsulated_tcp))
 		{
-			const auto sock_id = ::at32(bound_p2p_streams, key_connected);
-			sys_net.trace("Received packet for connected STREAM-P2P socket(s=%d)", sock_id);
-			handle_connected(sock_id, tcp_header, sp_data + sizeof(p2ps_encapsulated_tcp), &native_addr);
+			sys_net.notice("Received P2P packet targeted at unbound vport(likely) or invalid(vport=%d)", dst_vport);
 			return true;
 		}
 
-		if (bound_p2p_streams.contains(key_listening))
+		auto* tcp_header = reinterpret_cast<p2ps_encapsulated_tcp*>(p2p_data.data());
+
+		// Validate signature & length
+		if (tcp_header->signature != P2PS_U2S_SIG)
 		{
-			const auto sock_id = ::at32(bound_p2p_streams, key_listening);
-			sys_net.trace("Received packet for listening STREAM-P2P socket(s=%d)", sock_id);
-			handle_listening(sock_id, tcp_header, sp_data + sizeof(p2ps_encapsulated_tcp), &native_addr);
+			sys_net.notice("Received P2P packet targeted at unbound vport(vport=%d)", dst_vport);
 			return true;
+		}
+
+		if (tcp_header->length != (p2p_data.size() - sizeof(p2ps_encapsulated_tcp)))
+		{
+			sys_net.error("Received STREAM-P2P packet tcp length didn't match packet length");
+			return true;
+		}
+
+		// Sanity check
+		if (tcp_header->dst_port != dst_vport)
+		{
+			sys_net.error("Received STREAM-P2P packet with dst_port != vport");
+			return true;
+		}
+
+		// Validate checksum
+		u16 given_checksum   = tcp_header->checksum;
+		tcp_header->checksum = 0;
+		if (given_checksum != u2s_tcp_checksum(reinterpret_cast<const le_t<u16>*>(p2p_data.data()), p2p_data.size()))
+		{
+			sys_net.error("Checksum is invalid, dropping packet!");
+			return true;
+		}
+
+		// The packet is valid, check if it's bound
+		const u64 key_connected = (reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr) | (static_cast<u64>(tcp_header->src_port) << 48) | (static_cast<u64>(tcp_header->dst_port) << 32);
+
+		{
+			std::lock_guard lock(bound_p2p_vports_mutex);
+			if (bound_p2p_streams.contains(key_connected))
+			{
+				const auto sock_id = ::at32(bound_p2p_streams, key_connected);
+				sys_net.trace("Received packet for connected STREAM-P2P socket(s=%d)", sock_id);
+				handle_connected(sock_id, tcp_header, p2p_data.data() + sizeof(p2ps_encapsulated_tcp), &native_addr);
+				return true;
+			}
+
+			if (bound_p2ps_vports.contains(tcp_header->dst_port))
+			{
+				const auto& bound_sockets = ::at32(bound_p2ps_vports, tcp_header->dst_port);
+
+				for (const auto sock_id : bound_sockets)
+				{
+					sys_net.trace("Received packet for listening STREAM-P2P socket(s=%d)", sock_id);
+					handle_listening(sock_id, tcp_header, p2p_data.data() + sizeof(p2ps_encapsulated_tcp), &native_addr);
+				}
+				return true;
+			}
 		}
 	}
 

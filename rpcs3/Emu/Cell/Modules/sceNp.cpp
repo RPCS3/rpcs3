@@ -1272,7 +1272,7 @@ error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, s
 
 error_code sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
-	sceNp.warning("sceNpBasicGetFriendListEntryCount(count=*0x%x)", count);
+	sceNp.trace("sceNpBasicGetFriendListEntryCount(count=*0x%x)", count);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1299,7 +1299,7 @@ error_code sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 
 error_code sceNpBasicGetFriendListEntry(u32 index, vm::ptr<SceNpId> npid)
 {
-	sceNp.warning("sceNpBasicGetFriendListEntry(index=%d, npid=*0x%x)", index, npid);
+	sceNp.trace("sceNpBasicGetFriendListEntry(index=%d, npid=*0x%x)", index, npid);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
