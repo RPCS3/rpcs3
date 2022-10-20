@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "lv2_socket_p2ps.h"
 
 #ifdef _WIN32
@@ -18,6 +20,14 @@
 #endif
 #endif
 
+constexpr s32 VPORT_P2P_HEADER_SIZE = sizeof(u16) + sizeof(u16);
+
+enum VPORT_P2P_FLAGS
+{
+	P2P_FLAG_P2P  = 1,
+	P2P_FLAG_P2PS = 1 << 1,
+};
+
 struct signaling_message
 {
 	u32 src_addr = 0;
@@ -26,6 +36,11 @@ struct signaling_message
 	std::vector<u8> data;
 };
 
+namespace sys_net_helpers
+{
+	bool all_reusable(const std::set<s32>& sock_ids);
+}
+
 struct nt_p2p_port
 {
 	// Real socket where P2P packets are received/sent
@@ -33,9 +48,11 @@ struct nt_p2p_port
 	u16 port               = 0;
 
 	shared_mutex bound_p2p_vports_mutex;
-	// For DGRAM_P2P sockets(vport, sock_id)
-	std::map<u16, s32> bound_p2p_vports{};
-	// For STREAM_P2P sockets(key, sock_id)
+	// For DGRAM_P2P sockets (vport, sock_ids)
+	std::map<u16, std::set<s32>> bound_p2p_vports{};
+	// For STREAM_P2P sockets (vport, sock_ids)
+	std::map<u16, std::set<s32>> bound_p2ps_vports{};
+	// List of active(either from a connect or an accept) P2PS sockets (key, sock_id)
 	// key is ( (src_vport) << 48 | (dst_vport) << 32 | addr ) with src_vport and addr being 0 for listening sockets
 	std::map<u64, s32> bound_p2p_streams{};
 
