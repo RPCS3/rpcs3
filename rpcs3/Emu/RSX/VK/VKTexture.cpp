@@ -1012,7 +1012,7 @@ namespace vk
 					{
 						// D-S aspect requires a load section that can fit a separated block => D(4) + S(1)
 						// Due to reverse processing of inputs, only enough space to fit one layer is needed here.
-						scratch_buf_size += dst_image->width() * dst_image->height() * 5;
+						scratch_buf_size += (image_linear_size * 5) / 4;
 					}
 
 					// Must acquire scratch buffer owned by the processing command queue!
