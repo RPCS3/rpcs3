@@ -278,7 +278,7 @@ void pad_thread::operator()()
 						continue;
 					}
 
-					handler->ThreadProc();
+					handler->process();
 
 					thread_ctrl::wait_for(g_cfg.io.pad_sleep);
 				}
@@ -325,7 +325,7 @@ void pad_thread::operator()()
 		{
 			for (auto& handler : handlers)
 			{
-				handler.second->ThreadProc();
+				handler.second->process();
 				connected_devices += handler.second->connected_devices;
 			}
 		}

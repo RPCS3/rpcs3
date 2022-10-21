@@ -203,7 +203,7 @@ public:
 	// Return list of devices for that handler
 	virtual std::vector<pad_list_entry> list_devices() = 0;
 	// Callback called during pad_thread::ThreadFunc
-	virtual void ThreadProc();
+	virtual void process();
 	// Binds a Pad to a device
 	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id);
 	virtual void init_config(cfg_pad* cfg) = 0;

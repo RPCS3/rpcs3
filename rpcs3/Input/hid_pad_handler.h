@@ -58,7 +58,7 @@ public:
 	~hid_pad_handler();
 
 	bool Init() override;
-	void ThreadProc() override;
+	void process() override;
 	std::vector<pad_list_entry> list_devices() override;
 
 protected:

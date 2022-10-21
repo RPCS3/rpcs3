@@ -86,7 +86,7 @@ public:
 	std::vector<pad_list_entry> list_devices() override;
 	void get_next_button_press(const std::string& /*padId*/, const pad_callback& /*callback*/, const pad_fail_callback& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) override {}
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id) override;
-	void ThreadProc() override;
+	void process() override;
 
 	std::string GetMouseName(const QMouseEvent* event) const;
 	std::string GetMouseName(u32 button) const;

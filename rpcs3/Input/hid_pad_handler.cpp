@@ -98,11 +98,11 @@ bool hid_pad_handler<Device>::Init()
 }
 
 template <class Device>
-void hid_pad_handler<Device>::ThreadProc()
+void hid_pad_handler<Device>::process()
 {
 	update_devices();
 
-	PadHandlerBase::ThreadProc();
+	PadHandlerBase::process();
 }
 
 template <class Device>

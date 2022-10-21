@@ -889,7 +889,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_i
 	return true;
 }
 
-void keyboard_pad_handler::ThreadProc()
+void keyboard_pad_handler::process()
 {
 	static const double stick_interval = 10.0;
 	static const double button_interval = 10.0;

@@ -708,7 +708,7 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 	}
 }
 
-void PadHandlerBase::ThreadProc()
+void PadHandlerBase::process()
 {
 	for (usz i = 0; i < m_bindings.size(); ++i)
 	{
