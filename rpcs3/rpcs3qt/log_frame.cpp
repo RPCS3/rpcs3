@@ -524,7 +524,7 @@ void log_frame::UpdateUI()
 
 			while (str_index < m_tty_buf.size())
 			{
-				buf_line = m_tty_buf.substr(str_index, m_tty_buf.find_first_of('\n', str_index) - str_index);
+				buf_line.assign(m_tty_buf.data() + str_index, m_tty_buf.find_first_of('\n', str_index) - str_index);
 				str_index += buf_line.size() + 1;
 
 				// Ignore control characters and greater/equal to 0x80
