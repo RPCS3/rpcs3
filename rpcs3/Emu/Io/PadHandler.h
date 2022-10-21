@@ -177,6 +177,7 @@ public:
 	u32 connected_devices = 0;
 
 	pad_handler m_type;
+	bool m_is_init = false;
 
 	std::string name_string() const;
 	usz max_devices() const;

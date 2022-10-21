@@ -408,7 +408,6 @@ private:
 	std::shared_ptr<EvdevDevice> m_dev;
 	bool m_is_button_or_trigger;
 	bool m_is_negative;
-	bool m_is_init = false;
 
 	bool check_button(const EvdevButton& b, const u32 code);
 	bool check_buttons(const std::array<EvdevButton, 4>& b, const u32 code);

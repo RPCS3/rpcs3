@@ -70,7 +70,7 @@ void mm_joystick_handler::init_config(cfg_pad* cfg)
 
 bool mm_joystick_handler::Init()
 {
-	if (is_init)
+	if (m_is_init)
 		return true;
 
 	m_devices.clear();
@@ -94,7 +94,7 @@ bool mm_joystick_handler::Init()
 		m_devices.emplace(i, dev);
 	}
 
-	is_init = true;
+	m_is_init = true;
 	return true;
 }
 
