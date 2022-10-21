@@ -2773,6 +2773,62 @@ error_code sys_fs_chmod(ppu_thread&, vm::cptr<char> path, s32 mode)
 {
 	sys_fs.todo("sys_fs_chmod(path=%s, mode=%#o)", path, mode);
 
+	const auto [path_error, vpath] = translate_to_sv(path);
+
+	if (path_error)
+	{
+		return {path_error, vpath};
+	}
+
+	const std::string local_path = vfs::get(vpath);
+
+	const auto mp = lv2_fs_object::get_mp(vpath);
+
+	if (local_path.empty())
+	{
+		return {CELL_ENOTMOUNTED, path};
+	}
+
+	if (mp->flags & lv2_mp_flag::read_only)
+	{
+		return {CELL_EROFS, path};
+	}
+
+	std::unique_lock lock(mp->mutex);
+
+	fs::stat_t info{};
+
+	if (!fs::get_stat(local_path, info))
+	{
+		switch (auto error = fs::g_tls_error)
+		{
+		case fs::error::noent:
+		{
+			// Try to locate split files
+
+			for (u32 i = 66601; i <= 66699; i++)
+			{
+				if (!fs::get_stat(fmt::format("%s.%u", local_path, i), info) && !info.is_directory)
+				{
+					break;
+				}
+			}
+
+			if (fs::get_stat(local_path + ".66600", info) && !info.is_directory)
+			{
+				break;
+			}
+
+			return {CELL_ENOENT, path};
+		}
+		default:
+		{
+			sys_fs.error("sys_fs_chmod(): unknown error %s", error);
+			return {CELL_EIO, path};
+		}
+		}
+	}
+
 	return CELL_OK;
 }
 
