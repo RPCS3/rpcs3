@@ -106,7 +106,8 @@ EmuCallbacks main_application::CreateCallbacks()
 	callbacks.init_pad_handler = [this](std::string_view title_id)
 	{
 		ensure(g_fxo->init<named_thread<pad_thread>>(get_thread(), m_game_window, title_id));
-		while (!pad::g_started) std::this_thread::yield();
+		extern void process_qt_events();
+		while (!pad::g_started) process_qt_events();
 	};
 
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
