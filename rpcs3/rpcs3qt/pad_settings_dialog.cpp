@@ -1443,7 +1443,7 @@ void pad_settings_dialog::ChangeHandler()
 	ui->chooseDevice->blockSignals(false);
 
 	// Handle empty device list
-	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
+	const bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
 
 	if (config_enabled)
 	{
@@ -1454,7 +1454,13 @@ void pad_settings_dialog::ChangeHandler()
 			if (pad_device_info info = get_pad_info(ui->chooseDevice, i); info.name == device)
 			{
 				ui->chooseDevice->setCurrentIndex(i);
+				break;
 			}
+		}
+
+		if (ui->chooseDevice->currentIndex() < 0 && ui->chooseDevice->count() > 0)
+		{
+			ui->chooseDevice->setCurrentIndex(0);
 		}
 
 		// Force Refresh
@@ -1466,6 +1472,8 @@ void pad_settings_dialog::ChangeHandler()
 		{
 			ui->chooseDevice->setPlaceholderText(tr("No Device Detected"));
 		}
+
+		m_device_name.clear();
 	}
 
 	// Handle running timers
