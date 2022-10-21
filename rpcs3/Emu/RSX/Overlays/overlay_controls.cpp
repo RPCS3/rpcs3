@@ -239,7 +239,7 @@ namespace rsx
 		{
 			if (sinus_modifier >= 0)
 			{
-				static const f32 PI = 3.14159265f;
+				static constexpr f32 PI = 3.14159265f;
 				const f32 pulse_sinus_x = static_cast<f32>(get_system_time() / 1000) * pulse_speed_modifier;
 				pulse_sinus_offset = fmod(pulse_sinus_x + sinus_modifier * PI, 2.0f * PI);
 			}

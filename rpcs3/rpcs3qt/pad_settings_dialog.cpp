@@ -1367,8 +1367,8 @@ void pad_settings_dialog::ChangeHandler()
 	ui->l_description->setText(m_description);
 
 	// Update parameters
-	m_min_force = m_handler->vibration_min;
-	m_max_force = m_handler->vibration_max;
+	m_min_force = 0;
+	m_max_force = 255;
 
 	// Reset parameters
 	m_lx = 0;

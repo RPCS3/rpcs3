@@ -250,11 +250,11 @@ struct AnalogSensor
 
 struct VibrateMotor
 {
-	bool m_isLargeMotor = false;
-	u16 m_value = 0;
+	bool m_is_large_motor = false;
+	u8 m_value = 0;
 
-	VibrateMotor(bool largeMotor, u16 value)
-		: m_isLargeMotor(largeMotor)
+	VibrateMotor(bool is_large_motor, u8 value)
+		: m_is_large_motor(is_large_motor)
 		, m_value(value)
 	{}
 };
