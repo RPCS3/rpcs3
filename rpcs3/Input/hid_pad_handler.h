@@ -110,7 +110,7 @@ protected:
 		return *static_cast<const u32*>(buf);
 	}
 
-	static u32 get_battery_color(u8 battery_level, int brightness);
+	static u32 get_battery_color(u8 battery_level, u32 brightness);
 
 private:
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
