@@ -349,6 +349,29 @@ void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
 	});
 }
 
+void lv2_sleep(u64 timeout, ppu_thread* ppu = nullptr)
+{
+	if (!ppu)
+	{
+		ppu = ensure(cpu_thread::get_current<ppu_thread>());
+	}
+
+	if (!timeout)
+	{
+		return;
+	}
+
+	const bool had_wait = ppu->state.test_and_set(cpu_flag::wait);
+
+	lv2_obj::sleep(*ppu);
+	lv2_obj::wait_timeout(timeout);
+	ppu->check_state();
+
+	if (had_wait)
+	{
+		ppu->state += cpu_flag::wait;
+	}
+}
 
 error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
@@ -434,6 +457,8 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	// TODO ?
 
+	lv2_sleep(5000, &ppu);
+
 	funcStat(ppu, result, get, set);
 
 	std::string error_msg;
@@ -444,6 +469,8 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	{
 		// Game confirmed that it wants to create directory
 		const auto setParam = set->setParam;
+
+		lv2_sleep(2000, &ppu);
 
 		if (new_data)
 		{
@@ -536,6 +563,10 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 			return CELL_GAMEDATA_ERROR_INTERNAL;
 		}
 	}
+	else
+	{
+		lv2_sleep(2000, &ppu);
+	}
 
 	return CELL_HDDGAME_ERROR_CBRESULT;
 }
@@ -548,13 +579,23 @@ error_code cellHddGameCheck2(ppu_thread& ppu, u32 version, vm::cptr<char> dirNam
 	return cellHddGameCheck(ppu, version, dirName, errDialog, funcStat, container);
 }
 
-error_code cellHddGameGetSizeKB(vm::ptr<u32> size)
+error_code cellHddGameGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGame.warning("cellHddGameGetSizeKB(size=*0x%x)", size);
+
+	lv2_obj::sleep(ppu);
+
+	const u64 start_sleep = ppu.start_time;
 
 	const std::string local_dir = vfs::get(Emu.GetDir());
 
 	const auto dirsz = fs::get_dir_size(local_dir, 1024);
+
+	// This function is very slow by nature
+	// TODO: Check if after first use the result is being cached so the sleep can be reduced in this case
+	lv2_sleep(utils::sub_saturate<u64>(dirsz == umax ? 2000 : 200000, get_guest_system_time() - start_sleep), &ppu);
 
 	if (dirsz == umax)
 	{
@@ -568,7 +609,8 @@ error_code cellHddGameGetSizeKB(vm::ptr<u32> size)
 		return CELL_HDDGAME_ERROR_FAILURE;
 	}
 
-	*size = ::narrow<u32>(dirsz / 1024);
+	ppu.check_state();
+	*size = ::narrow<s32>(dirsz / 1024);
 
 	return CELL_OK;
 }
@@ -591,8 +633,10 @@ error_code cellHddGameExitBroken()
 	return open_exit_dialog(get_localized_string(localized_string_id::CELL_HDD_GAME_EXIT_BROKEN), true);
 }
 
-error_code cellGameDataGetSizeKB(vm::ptr<u32> size)
+error_code cellGameDataGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGame.warning("cellGameDataGetSizeKB(size=*0x%x)", size);
 
 	if (!size)
@@ -600,9 +644,17 @@ error_code cellGameDataGetSizeKB(vm::ptr<u32> size)
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
 
+	lv2_obj::sleep(ppu);
+
+	const u64 start_sleep = ppu.start_time;
+
 	const std::string local_dir = vfs::get(Emu.GetDir());
 
 	const auto dirsz = fs::get_dir_size(local_dir, 1024);
+
+	// This function is very slow by nature
+	// TODO: Check if after first use the result is being cached so the sleep can be reduced in this case
+	lv2_sleep(utils::sub_saturate<u64>(dirsz == umax ? 2000 : 200000, get_guest_system_time() - start_sleep), &ppu);
 
 	if (dirsz == umax)
 	{
@@ -616,7 +668,8 @@ error_code cellGameDataGetSizeKB(vm::ptr<u32> size)
 		return CELL_GAMEDATA_ERROR_FAILURE;
 	}
 
-	*size = ::narrow<u32>(dirsz / 1024);
+	ppu.check_state();
+	*size = ::narrow<s32>(dirsz / 1024);
 
 	return CELL_OK;
 }
@@ -650,6 +703,8 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	auto& perm = g_fxo->get<content_permission>();
 
+	lv2_sleep(5000);
+
 	const auto init = perm.init.init();
 
 	if (!init)
@@ -662,11 +717,13 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	const std::string& cat = Emu.GetFakeCat();
 
+	u32 _type{};
+
 	if (cat == "DG")
 	{
 		perm.mode = content_permission::check_mode::disc_game;
 
-		*type = CELL_GAME_GAMETYPE_DISC;
+		_type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = 0; // TODO
 		// TODO: dirName might be a read only string when BootCheck is called on a disc game. (e.g. Ben 10 Ultimate Alien: Cosmic Destruction)
 
@@ -676,7 +733,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	{
 		perm.mode = content_permission::check_mode::patch;
 
-		*type = CELL_GAME_GAMETYPE_DISC;
+		_type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
 
 		sfo = psf::load_object(vfs::get(Emu.GetDir() + "PARAM.SFO"));
@@ -685,12 +742,14 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	{
 		perm.mode = content_permission::check_mode::hdd_game;
 
-		*type = CELL_GAME_GAMETYPE_HDD;
+		_type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
 
 		sfo = psf::load_object(vfs::get(Emu.GetDir() + "PARAM.SFO"));
 		dir = Emu.GetTitleID();
 	}
+
+	*type = _type;
 
 	if (size)
 	{
@@ -702,7 +761,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		size->sysSizeKB = 4;
 	}
 
-	if (*type == u32{CELL_GAME_GAMETYPE_HDD} && dirName)
+	if (_type == u32{CELL_GAME_GAMETYPE_HDD} && dirName)
 	{
 		strcpy_trunc(*dirName, Emu.GetTitleID());
 	}
@@ -717,6 +776,8 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> reserved)
 {
 	cellGame.warning("cellGamePatchCheck(size=*0x%x, reserved=*0x%x)", size, reserved);
+
+	lv2_sleep(5000);
 
 	if (Emu.GetCat() != "GD")
 	{
@@ -769,6 +830,8 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	}
 
 	const std::string dir = type == CELL_GAME_GAMETYPE_DISC ? "/dev_bdvd/PS3_GAME"s : "/dev_hdd0/game/" + name;
+
+	lv2_sleep(5000);
 
 	// TODO: not sure what should be checked there
 
@@ -826,7 +889,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	return CELL_OK;
 }
 
-error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm::ptr<char[CELL_GAME_PATH_MAX]> usrdirPath)
+error_code cellGameContentPermit(ppu_thread& ppu, vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPath, vm::ptr<char[CELL_GAME_PATH_MAX]> usrdirPath)
 {
 	cellGame.warning("cellGameContentPermit(contentInfoPath=*0x%x, usrdirPath=*0x%x)", contentInfoPath, usrdirPath);
 
@@ -853,6 +916,10 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		strcpy_trunc(*usrdirPath, "");
 		return CELL_OK;
 	}
+
+	lv2_obj::sleep(ppu);
+
+	const u64 start_sleep = ppu.start_time;
 
 	if (!perm.temp.empty())
 	{
@@ -882,6 +949,9 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		ensure(temp.commit());
 	}
 
+	// This function is very slow by nature
+	lv2_sleep(utils::sub_saturate<u64>(!perm.temp.empty() || perm.can_create ? 200000 : 2000, get_guest_system_time() - start_sleep), &ppu);
+
 	// Cleanup
 	perm.reset();
 
@@ -892,7 +962,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 
 error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellGameDataStatCallback> funcStat, u32 container)
 {
-	cellGame.error("cellGameDataCheckCreate2(version=0x%x, dirName=%s, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
+	cellGame.success("cellGameDataCheckCreate2(version=0x%x, dirName=%s, errDialog=0x%x, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
 	//older sdk. it might not care about game type.
 
@@ -954,6 +1024,8 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
 	}
 
+	lv2_sleep(5000, &ppu);
+
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
 	std::string error_msg;
@@ -969,6 +1041,8 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	{
 		// Game confirmed that it wants to create directory
 		const auto setParam = cbSet->setParam;
+
+		lv2_sleep(2000, &ppu);
 
 		if (new_data)
 		{
@@ -1065,6 +1139,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 			return CELL_GAMEDATA_ERROR_INTERNAL;
 		}
 	}
+	else
+	{
+		lv2_sleep(2000, &ppu);
+	}
 
 	return CELL_GAMEDATA_ERROR_CBRESULT;
 }
@@ -1079,7 +1157,7 @@ error_code cellGameDataCheckCreate(ppu_thread& ppu, u32 version, vm::cptr<char> 
 
 error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<char[CELL_GAME_PATH_MAX]> tmp_contentInfoPath, vm::ptr<char[CELL_GAME_PATH_MAX]> tmp_usrdirPath)
 {
-	cellGame.error("cellGameCreateGameData(init=*0x%x, tmp_contentInfoPath=*0x%x, tmp_usrdirPath=*0x%x)", init, tmp_contentInfoPath, tmp_usrdirPath);
+	cellGame.success("cellGameCreateGameData(init=*0x%x, tmp_contentInfoPath=*0x%x, tmp_usrdirPath=*0x%x)", init, tmp_contentInfoPath, tmp_usrdirPath);
 
 	if (!init)
 	{
@@ -1089,6 +1167,8 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	auto& perm = g_fxo->get<content_permission>();
 
 	const auto _init = perm.init.access();
+
+	lv2_sleep(2000);
 
 	if (!_init || perm.dir.empty())
 	{
@@ -1104,6 +1184,9 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	{
 		return CELL_GAME_ERROR_EXIST;
 	}
+
+	// Account for for filesystem operations
+	lv2_sleep(50'000);
 
 	std::string dirname = "_GDATA_" + std::to_string(steady_clock::now().time_since_epoch().count());
 	std::string tmp_contentInfo = "/dev_hdd0/game/" + dirname;
@@ -1230,6 +1313,8 @@ error_code cellGameGetParamInt(s32 id, vm::ptr<s32> value)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
+
+	lv2_sleep(2000);
 
 	auto& perm = g_fxo->get<content_permission>();
 
@@ -1359,6 +1444,8 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 	auto& perm = g_fxo->get<content_permission>();
 
+	lv2_sleep(2000);
+
 	const auto init = perm.init.access();
 
 	if (!init || perm.mode == content_permission::check_mode::not_set)
@@ -1401,6 +1488,8 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 		return CELL_GAME_ERROR_PARAM;
 	}
 
+	lv2_sleep(2000);
+
 	auto& perm = g_fxo->get<content_permission>();
 
 	const auto init = perm.init.access();
@@ -1427,7 +1516,7 @@ error_code cellGameSetParamString(s32 id, vm::cptr<char> buf)
 	return CELL_OK;
 }
 
-error_code cellGameGetSizeKB(vm::ptr<s32> size)
+error_code cellGameGetSizeKB(ppu_thread& ppu, vm::ptr<s32> size)
 {
 	cellGame.warning("cellGameGetSizeKB(size=*0x%x)", size);
 
@@ -1438,6 +1527,7 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 
 	// Always reset to 0 at start
 	*size = 0;
+	ppu.state += cpu_flag::wait;
 
 	auto& perm = g_fxo->get<content_permission>();
 
@@ -1448,9 +1538,17 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 		return CELL_GAME_ERROR_FAILURE;
 	}
 
+	lv2_obj::sleep(ppu);
+
+	const u64 start_sleep = ppu.start_time;
+
 	const std::string local_dir = !perm.temp.empty() ? perm.temp : vfs::get("/dev_hdd0/game/" + perm.dir);
 
 	const auto dirsz = fs::get_dir_size(local_dir, 1024);
+
+	// This function is very slow by nature
+	// TODO: Check if after first use the result is being cached so the sleep can be reduced in this case
+	lv2_sleep(utils::sub_saturate<u64>(dirsz == umax ? 1000 : 200000, get_guest_system_time() - start_sleep), &ppu);
 
 	if (dirsz == umax)
 	{
@@ -1467,7 +1565,8 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 		}
 	}
 
-	*size = ::narrow<u32>(dirsz / 1024);
+	ppu.check_state();
+	*size = ::narrow<s32>(dirsz / 1024);
 
 	return CELL_OK;
 }
@@ -1707,6 +1806,8 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 
 	// Always sets 0 at first dword
 	write_to_ptr<u32>(getParam->titleId, 0);
+
+	lv2_sleep(2000);
 
 	// This is also called by non-disc games, see NPUB90029
 	static const std::string dir = "/dev_bdvd/PS3_GAME"s;
