@@ -65,7 +65,7 @@ struct watchdog_t
 
 			if (old.active && current_time - start_time >= old.timeout)
 			{
-				sys_game.warning("Watchdog timeout! Restarting the game...");
+				sys_game.success("Watchdog timeout! Restarting the game...");
 
 				Emu.CallFromMainThread([]()
 				{
