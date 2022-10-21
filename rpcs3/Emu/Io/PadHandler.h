@@ -18,6 +18,8 @@ public:
 	virtual ~PadDevice() = default;
 	cfg_pad* config{ nullptr };
 	u8 player_id{0};
+	u8 large_motor{0};
+	u8 small_motor{0};
 	u64 trigger_code_left = 0;
 	u64 trigger_code_right = 0;
 	std::array<u64, 4> axis_code_left{};
@@ -172,8 +174,6 @@ public:
 	s32 thumb_max = 255; // NOTE: Better keep this positive
 	s32 trigger_min = 0;
 	s32 trigger_max = 255;
-	s32 vibration_min = 0;
-	s32 vibration_max = 255;
 	u32 connected_devices = 0;
 
 	pad_handler m_type;
@@ -197,7 +197,7 @@ public:
 	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
 	// Sets window to config the controller(optional)
-	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
+	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u8 /*large_motor*/, u8 /*small_motor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
 	virtual u32 get_battery_level(const std::string& /*padId*/) { return 0; }
 	// Return list of devices for that handler
 	virtual std::vector<pad_list_entry> list_devices() = 0;

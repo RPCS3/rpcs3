@@ -12,12 +12,9 @@ mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 	thumb_max = 255;
 	trigger_min = 0;
 	trigger_max = 255;
-	vibration_min = 0;
-	vibration_max = 65535;
 
 	// set capabilities
 	b_has_config = true;
-	b_has_rumble = true;
 	b_has_deadzones = true;
 
 	m_name_string = "Joystick #";
