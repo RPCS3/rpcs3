@@ -913,6 +913,7 @@ dualsense_pad_handler::~dualsense_pad_handler()
 			// Disable vibration
 			controller.second->small_motor = 0;
 			controller.second->large_motor = 0;
+			controller.second->release_leds = true;
 			send_output_report(controller.second.get());
 		}
 	}
@@ -938,6 +939,11 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 		common.valid_flag_2 |= VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE;
 		common.lightbar_setup = LIGHTBAR_SETUP_LIGHT_OUT; // Fade light out.
+	}
+	else if (device->release_leds)
+	{
+		common.valid_flag_1 |= VALID_FLAG_1_RELEASE_LEDS;
+		device->release_leds = false;
 	}
 	else
 	{
@@ -1109,7 +1115,7 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		dualsense_dev->update_player_leds = true;
 	}
 
-	dualsense_dev->new_output_data |= dualsense_dev->update_player_leds || dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
+	dualsense_dev->new_output_data |= dualsense_dev->release_leds || dualsense_dev->update_player_leds || dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
 
 	dualsense_dev->large_motor = speed_large;
 	dualsense_dev->small_motor = speed_small;
