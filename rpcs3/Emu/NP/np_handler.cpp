@@ -800,6 +800,9 @@ namespace np
 					const u32 req_id      = reply.first;
 					std::vector<u8>& data = reply.second.second;
 
+					// Every reply should at least contain a return value/error code
+					ensure(data.size() >= 1);
+
 					switch (command)
 					{
 					case rpcn::CommandType::GetWorldList: reply_get_world_list(req_id, data); break;
@@ -818,7 +821,7 @@ namespace np
 					case rpcn::CommandType::RequestTicket: reply_req_ticket(req_id, data); break;
 					case rpcn::CommandType::GetBoardInfos: reply_get_board_infos(req_id, data); break;
 					case rpcn::CommandType::RecordScore: reply_record_score(req_id, data); break;
-					case rpcn::CommandType::StoreScoreData: reply_store_score_data(req_id, data); break;
+					case rpcn::CommandType::RecordScoreData: reply_record_score_data(req_id, data); break;
 					case rpcn::CommandType::GetScoreData: reply_get_score_data(req_id, data); break;
 					case rpcn::CommandType::GetScoreRange: reply_get_score_range(req_id, data); break;
 					case rpcn::CommandType::GetScoreFriends: reply_get_score_friends(req_id, data); break;

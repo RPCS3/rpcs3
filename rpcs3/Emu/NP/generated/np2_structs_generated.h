@@ -145,6 +145,12 @@ struct ScoreInfoBuilder;
 struct GetScoreResponse;
 struct GetScoreResponseBuilder;
 
+struct RecordScoreGameDataRequest;
+struct RecordScoreGameDataRequestBuilder;
+
+struct GetScoreGameDataRequest;
+struct GetScoreGameDataRequestBuilder;
+
 struct BinAttr FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef BinAttrBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
@@ -4269,6 +4275,142 @@ inline flatbuffers::Offset<GetScoreResponse> CreateGetScoreResponseDirect(
       infoArray__,
       lastSortDate,
       totalRecord);
+}
+
+struct RecordScoreGameDataRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RecordScoreGameDataRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_BOARDID = 4,
+    VT_PCID = 6,
+    VT_SCORE = 8
+  };
+  uint32_t boardId() const {
+    return GetField<uint32_t>(VT_BOARDID, 0);
+  }
+  int32_t pcId() const {
+    return GetField<int32_t>(VT_PCID, 0);
+  }
+  int64_t score() const {
+    return GetField<int64_t>(VT_SCORE, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_BOARDID, 4) &&
+           VerifyField<int32_t>(verifier, VT_PCID, 4) &&
+           VerifyField<int64_t>(verifier, VT_SCORE, 8) &&
+           verifier.EndTable();
+  }
+};
+
+struct RecordScoreGameDataRequestBuilder {
+  typedef RecordScoreGameDataRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_boardId(uint32_t boardId) {
+    fbb_.AddElement<uint32_t>(RecordScoreGameDataRequest::VT_BOARDID, boardId, 0);
+  }
+  void add_pcId(int32_t pcId) {
+    fbb_.AddElement<int32_t>(RecordScoreGameDataRequest::VT_PCID, pcId, 0);
+  }
+  void add_score(int64_t score) {
+    fbb_.AddElement<int64_t>(RecordScoreGameDataRequest::VT_SCORE, score, 0);
+  }
+  explicit RecordScoreGameDataRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<RecordScoreGameDataRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<RecordScoreGameDataRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<RecordScoreGameDataRequest> CreateRecordScoreGameDataRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t boardId = 0,
+    int32_t pcId = 0,
+    int64_t score = 0) {
+  RecordScoreGameDataRequestBuilder builder_(_fbb);
+  builder_.add_score(score);
+  builder_.add_pcId(pcId);
+  builder_.add_boardId(boardId);
+  return builder_.Finish();
+}
+
+struct GetScoreGameDataRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef GetScoreGameDataRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_BOARDID = 4,
+    VT_NPID = 6,
+    VT_PCID = 8
+  };
+  uint32_t boardId() const {
+    return GetField<uint32_t>(VT_BOARDID, 0);
+  }
+  const flatbuffers::String *npId() const {
+    return GetPointer<const flatbuffers::String *>(VT_NPID);
+  }
+  int32_t pcId() const {
+    return GetField<int32_t>(VT_PCID, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_BOARDID, 4) &&
+           VerifyOffset(verifier, VT_NPID) &&
+           verifier.VerifyString(npId()) &&
+           VerifyField<int32_t>(verifier, VT_PCID, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct GetScoreGameDataRequestBuilder {
+  typedef GetScoreGameDataRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_boardId(uint32_t boardId) {
+    fbb_.AddElement<uint32_t>(GetScoreGameDataRequest::VT_BOARDID, boardId, 0);
+  }
+  void add_npId(flatbuffers::Offset<flatbuffers::String> npId) {
+    fbb_.AddOffset(GetScoreGameDataRequest::VT_NPID, npId);
+  }
+  void add_pcId(int32_t pcId) {
+    fbb_.AddElement<int32_t>(GetScoreGameDataRequest::VT_PCID, pcId, 0);
+  }
+  explicit GetScoreGameDataRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<GetScoreGameDataRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<GetScoreGameDataRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<GetScoreGameDataRequest> CreateGetScoreGameDataRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t boardId = 0,
+    flatbuffers::Offset<flatbuffers::String> npId = 0,
+    int32_t pcId = 0) {
+  GetScoreGameDataRequestBuilder builder_(_fbb);
+  builder_.add_pcId(pcId);
+  builder_.add_npId(npId);
+  builder_.add_boardId(boardId);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<GetScoreGameDataRequest> CreateGetScoreGameDataRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t boardId = 0,
+    const char *npId = nullptr,
+    int32_t pcId = 0) {
+  auto npId__ = npId ? _fbb.CreateString(npId) : 0;
+  return CreateGetScoreGameDataRequest(
+      _fbb,
+      boardId,
+      npId__,
+      pcId);
 }
 
 #endif  // FLATBUFFERS_GENERATED_NP2STRUCTS_H_

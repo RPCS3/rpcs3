@@ -1,6 +1,6 @@
 #pragma once
 
-#include "capabilities.hpp"
+#include "capabilities.h"
 
 #include "Utilities/geometry.h"
 #include <unordered_map>
@@ -10,6 +10,7 @@ namespace gl
 	class driver_state
 	{
 		const u32 DEPTH_BOUNDS       = 0xFFFF0001;
+		const u32 CLIP_PLANES        = 0xFFFF0002;
 		const u32 DEPTH_RANGE        = 0xFFFF0004;
 		const u32 STENCIL_FRONT_FUNC = 0xFFFF0005;
 		const u32 STENCIL_BACK_FUNC  = 0xFFFF0006;
@@ -305,6 +306,24 @@ namespace gl
 			if (!test_and_set_property(GL_POLYGON_OFFSET_FILL, value))
 			{
 				glPolygonOffset(factor, units);
+			}
+		}
+
+		void clip_planes(GLuint mask)
+		{
+			if (!test_and_set_property(CLIP_PLANES, mask))
+			{
+				for (u32 i = 0; i < 6; ++i)
+				{
+					if (mask & (1 << i))
+					{
+						glEnable(GL_CLIP_DISTANCE0 + i);
+					}
+					else
+					{
+						glDisable(GL_CLIP_DISTANCE0 + i);
+					}
+				}
 			}
 		}
 

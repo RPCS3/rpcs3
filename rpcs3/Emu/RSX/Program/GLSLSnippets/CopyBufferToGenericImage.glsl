@@ -3,11 +3,26 @@ R"(
 #extension GL_ARB_shader_stencil_export : enable
 
 #define ENABLE_DEPTH_STENCIL_LOAD %stencil_export_supported
+#define LEGACY_FORMAT_SUPPORT %legacy_format_support
 
 #define FMT_GL_DEPTH_COMPONENT16      0x81A5
 #define FMT_GL_DEPTH_COMPONENT32F     0x8CAC
 #define FMT_GL_DEPTH24_STENCIL8       0x88F0
 #define FMT_GL_DEPTH32F_STENCIL8      0x8CAD
+
+#if LEGACY_FORMAT_SUPPORT
+  #define FMT_GL_RGBA8                  0x8058
+  #define FMT_GL_BGRA8                  0x80E1
+  #define FMT_GL_R8                     0x8229
+  #define FMT_GL_R16                    0x822A
+  #define FMT_GL_R32F                   0x822E
+  #define FMT_GL_RG8                    0x822B
+  #define FMT_GL_RG8_SNORM              0x8F95
+  #define FMT_GL_RG16                   0x822C
+  #define FMT_GL_RG16F                  0x822F
+  #define FMT_GL_RGBA16F                0x881A
+  #define FMT_GL_RGBA32F                0x8814
+#endif
 
 #define FMT_GL_RGB565                 0x8D62
 #define FMT_GL_RGB5_A1                0x8057
@@ -142,6 +157,45 @@ void main()
 		utmp2 = readUint24_8(texel_address);
 		gl_FragDepth = float(utmp2.x) / 0xffffff;
 		gl_FragStencilRefARB = int(utmp2.y);
+		break;
+
+#endif
+
+#if LEGACY_FORMAT_SUPPORT
+
+	// Simple color. Provided for compatibility with old drivers.
+	case FMT_GL_RGBA8:
+		outColor = readFixed8x4(texel_address);
+		break;
+	case FMT_GL_BGRA8:
+		outColor = readFixed8x4(texel_address).bgra;
+		break;
+	case FMT_GL_R8:
+		outColor.r = readFixed8(texel_address);
+		break;
+	case FMT_GL_R16:
+		outColor.r = readFixed16(texel_address);
+		break;
+	case FMT_GL_R32F:
+		outColor.r = readFloat32(texel_address);
+		break;
+	case FMT_GL_RG8:
+		outColor.rg = readFixed8x2(texel_address);
+		break;
+	case FMT_GL_RG8_SNORM:
+		outColor.rg = readFixed8x2Snorm(texel_address);
+		break;
+	case FMT_GL_RG16:
+		outColor.rg = readFixed16x2(texel_address);
+		break;
+	case FMT_GL_RG16F:
+		outColor.rg = readFloat16x2(texel_address);
+		break;
+	case FMT_GL_RGBA16F:
+		outColor = readFloat16x4(texel_address);
+		break;
+	case FMT_GL_RGBA32F:
+		outColor = readFloat32x4(texel_address);
 		break;
 
 #endif

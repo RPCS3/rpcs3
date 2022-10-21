@@ -82,7 +82,7 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 	cfg->motion_sensor_x.axis.def = ::at32(motion_axis_list, ABS_X);
 	cfg->motion_sensor_y.axis.def = ::at32(motion_axis_list, ABS_Y);
 	cfg->motion_sensor_z.axis.def = ::at32(motion_axis_list, ABS_Z);
-	cfg->motion_sensor_g.axis.def = ::at32(motion_axis_list, ABS_RX);
+	cfg->motion_sensor_g.axis.def = ::at32(motion_axis_list, ABS_RY); // DS3 uses the yaw axis for gyros
 
 	cfg->pressure_intensity_button.def = ::at32(button_list, NO_BUTTON);
 
@@ -598,7 +598,7 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 	device->force_small = small;
 }
 
-void evdev_joystick_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u32 largeMotor, u32 smallMotor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void evdev_joystick_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u32 largeMotor, u32 smallMotor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	// Get our evdev device
 	auto dev = get_evdev_device(padId);

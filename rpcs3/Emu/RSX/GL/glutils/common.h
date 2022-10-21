@@ -1,6 +1,6 @@
 #pragma once
 
-#include "capabilities.hpp"
+#include "capabilities.h"
 
 #define GL_FRAGMENT_TEXTURES_START 0
 #define GL_VERTEX_TEXTURES_START   (GL_FRAGMENT_TEXTURES_START + 16)

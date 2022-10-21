@@ -465,6 +465,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Capture/rsx_replay.cpp
     RSX/GL/glutils/blitter.cpp
     RSX/GL/glutils/buffer_object.cpp
+    RSX/GL/glutils/capabilities.cpp
     RSX/GL/glutils/common.cpp
     RSX/GL/glutils/fbo.cpp
     RSX/GL/glutils/image.cpp

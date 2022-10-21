@@ -75,6 +75,7 @@ struct cfg_pad final : cfg::node
 	cfg::_bool led_low_battery_blink{ this, "Blink LED when battery is below 20%", true };
 	cfg::_bool led_battery_indicator{ this, "Use LED as a battery indicator", false };
 	cfg::uint<0, 100> led_battery_indicator_brightness{ this, "LED battery indicator brightness", 50 };
+	cfg::_bool player_led_enabled{ this, "Player LED enabled", true };
 
 	cfg::_bool enable_vibration_motor_large{ this, "Enable Large Vibration Motor", true };
 	cfg::_bool enable_vibration_motor_small{ this, "Enable Small Vibration Motor", true };

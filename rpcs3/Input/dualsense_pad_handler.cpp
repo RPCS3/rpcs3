@@ -22,7 +22,7 @@ void fmt_class_string<DualSenseDevice::DualSenseDataMode>::format(std::string& o
 namespace
 {
 	constexpr u32 DUALSENSE_ACC_RES_PER_G = 8192;
-	constexpr u32 DUALSENSE_GYRO_RES_PER_DEG_S = 1024;
+	constexpr u32 DUALSENSE_GYRO_RES_PER_DEG_S = 86; // technically this could be 1024, but keeping it at 86 keeps us within 16 bits of precision
 	constexpr u32 DUALSENSE_CALIBRATION_REPORT_SIZE = 41;
 	constexpr u32 DUALSENSE_VERSION_REPORT_SIZE = 64;
 	constexpr u32 DUALSENSE_BLUETOOTH_REPORT_SIZE = 78;
@@ -141,6 +141,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	b_has_deadzones = true;
 	b_has_led = true;
 	b_has_rgb = true;
+	b_has_player_led = true;
 	b_has_battery = true;
 
 	m_name_string = "DualSense Pad #";
@@ -642,10 +643,10 @@ void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
-	// gyroX is yaw, which is all that we need
-	f32 gyroX = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1;
-	//const int gyroY = ((u16)(buf[18] << 8) | buf[17]) / 256;
-	//const int gyroZ = ((u16)(buf[20] << 8) | buf[19]) / 256;
+	// gyroY is yaw, which is all that we need
+	//f32 gyroX = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1.f;
+	f32 gyroY = static_cast<s16>((buf[18] << 8) | buf[17]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1.f;
+	//f32 gyroZ = static_cast<s16>((buf[20] << 8) | buf[19]) / static_cast<f32>(DUALSENSE_GYRO_RES_PER_DEG_S) * -1.f;
 
 	// accel
 	f32 accelX = static_cast<s16>((buf[22] << 8) | buf[21]) / static_cast<f32>(DUALSENSE_ACC_RES_PER_G) * -1;
@@ -657,13 +658,13 @@ void dualsense_pad_handler::get_extended_info(const pad_ensemble& binding)
 	accelY = accelY * 113 + 512;
 	accelZ = accelZ * 113 + 512;
 
-	// convert to ds3
-	gyroX  = gyroX * (123.f / 90.f) + 512;
+	// Convert to ds3. The ds3 resolution is 123/90°/sec.
+	gyroY = gyroY * (123.f / 90.f) + 512;
 
 	pad->m_sensors[0].m_value = Clamp0To1023(accelX);
 	pad->m_sensors[1].m_value = Clamp0To1023(accelY);
 	pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
-	pad->m_sensors[3].m_value = Clamp0To1023(gyroX);
+	pad->m_sensors[3].m_value = Clamp0To1023(gyroY);
 }
 
 std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
@@ -917,7 +918,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 	if (!device || !device->hidDevice)
 		return -2;
 
-	const auto config = device->config;
+	const cfg_pad* config = device->config;
 	if (config == nullptr)
 		return -2; // hid_write and hid_write_control return -1 on error
 
@@ -970,17 +971,24 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 			// Use OR with 0x1, 0x2, 0x4, 0x8 and 0x10 to enable the LEDs (from leftmost to rightmost).
 			common.valid_flag_1 |= VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE;
 
-			switch (device->player_id)
+			if (config->player_led_enabled)
 			{
-			case 0: common.player_leds = 0b00100; break;
-			case 1: common.player_leds = 0b01010; break;
-			case 2: common.player_leds = 0b10101; break;
-			case 3: common.player_leds = 0b11011; break;
-			case 4: common.player_leds = 0b11111; break;
-			case 5: common.player_leds = 0b10111; break;
-			case 6: common.player_leds = 0b11101; break;
-			default:
-				fmt::throw_exception("Dualsense is using forbidden player id %d", device->player_id);
+				switch (device->player_id)
+				{
+				case 0: common.player_leds = 0b00100; break;
+				case 1: common.player_leds = 0b01010; break;
+				case 2: common.player_leds = 0b10101; break;
+				case 3: common.player_leds = 0b11011; break;
+				case 4: common.player_leds = 0b11111; break;
+				case 5: common.player_leds = 0b10111; break;
+				case 6: common.player_leds = 0b11101; break;
+				default:
+					fmt::throw_exception("Dualsense is using forbidden player id %d", device->player_id);
+				}
+			}
+			else
+			{
+				common.player_leds = 0;
 			}
 		}
 	}
@@ -1090,7 +1098,13 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		}
 	}
 
-	dualsense_dev->new_output_data |= dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
+	if (dualsense_dev->enable_player_leds != config->player_led_enabled.get())
+	{
+		dualsense_dev->enable_player_leds = config->player_led_enabled.get();
+		dualsense_dev->update_player_leds = true;
+	}
+
+	dualsense_dev->new_output_data |= dualsense_dev->update_player_leds || dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
 
 	dualsense_dev->large_motor = speed_large;
 	dualsense_dev->small_motor = speed_small;
@@ -1104,7 +1118,7 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	}
 }
 
-void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
+void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -1132,6 +1146,8 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u
 
 	ensure(device->config);
 	device->update_lightbar = true;
+	device->update_player_leds = true;
+	device->config->player_led_enabled.set(player_led);
 
 	// Set new LED color (see ds4_pad_handler)
 	if (battery_led)

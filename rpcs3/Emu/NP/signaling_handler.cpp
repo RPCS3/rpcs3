@@ -259,14 +259,14 @@ void signaling_handler::process_incoming_messages()
 			}
 
 			sent_packet.command   = signal_ping;
-			sent_packet.timestamp = now.time_since_epoch().count();
+			sent_packet.timestamp_sender = now.time_since_epoch().count();
 			send_signaling_packet(sent_packet, si->addr, si->port);
 			queue_signaling_packet(sent_packet, si, now + REPEAT_PING_DELAY);
 		};
 
-		const auto update_rtt = [&]()
+		const auto update_rtt = [&](u64 rtt_timestamp)
 		{
-			u32 rtt                               = now.time_since_epoch().count() - sp->timestamp;
+			u32 rtt                               = now.time_since_epoch().count() - rtt_timestamp;
 			si->last_rtts[(si->rtt_counters % 6)] = rtt;
 			si->rtt_counters++;
 
@@ -286,10 +286,10 @@ void signaling_handler::process_incoming_messages()
 			reply                 = true;
 			schedule_repeat       = false;
 			sent_packet.command   = signal_pong;
-			sent_packet.timestamp = sp->timestamp;
+			sent_packet.timestamp_sender = sp->timestamp_sender;
 			break;
 		case signal_pong:
-			update_rtt();
+			update_rtt(sp->timestamp_sender);
 			reply           = false;
 			schedule_repeat = false;
 			reschedule_packet(si, signal_ping, now + 10s);
@@ -298,15 +298,17 @@ void signaling_handler::process_incoming_messages()
 			reply                 = true;
 			schedule_repeat       = true;
 			sent_packet.command   = signal_connect_ack;
-			sent_packet.timestamp = sp->timestamp;
+			sent_packet.timestamp_sender = sp->timestamp_sender;
+			sent_packet.timestamp_receiver = now.time_since_epoch().count();
 			// connection is established
 			break;
 		case signal_connect_ack:
-			update_rtt();
+			update_rtt(sp->timestamp_sender);
 			reply           = true;
 			schedule_repeat = false;
 			setup_ping();
 			sent_packet.command = signal_confirm;
+			sent_packet.timestamp_receiver = now.time_since_epoch().count();
 			retire_packet(si, signal_connect);
 			// connection is active
 			update_si_addr(si, op_addr, op_port);
@@ -314,6 +316,7 @@ void signaling_handler::process_incoming_messages()
 			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE);
 			break;
 		case signal_confirm:
+			update_rtt(sp->timestamp_receiver);
 			reply           = false;
 			schedule_repeat = false;
 			setup_ping();
@@ -382,7 +385,10 @@ void signaling_handler::operator()()
 			{
 			case signal_connect:
 			case signal_ping:
-				it->second.packet.timestamp = now.time_since_epoch().count();
+				it->second.packet.timestamp_sender = now.time_since_epoch().count();
+				break;
+			case signal_connect_ack:
+				it->second.packet.timestamp_receiver = now.time_since_epoch().count();
 				break;
 			default:
 				break;
@@ -597,7 +603,7 @@ void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
 {
 	auto& sent_packet   = sig1_packet;
 	sent_packet.command = signal_connect;
-	sent_packet.timestamp = steady_clock::now().time_since_epoch().count();
+	sent_packet.timestamp_sender = steady_clock::now().time_since_epoch().count();
 
 	ensure(sig1_peers.contains(conn_id));
 	std::shared_ptr<signaling_info> si = ::at32(sig1_peers, conn_id);
@@ -632,7 +638,7 @@ void signaling_handler::start_sig2(u64 room_id, u16 member_id)
 
 	auto& sent_packet   = sig2_packet;
 	sent_packet.command = signal_connect;
-	sent_packet.timestamp = steady_clock::now().time_since_epoch().count();
+	sent_packet.timestamp_sender = steady_clock::now().time_since_epoch().count();
 
 	ensure(sig2_peers.contains(room_id));
 	const auto& sp = ::at32(sig2_peers, room_id);

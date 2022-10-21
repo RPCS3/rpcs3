@@ -132,7 +132,11 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 		~store_result() noexcept
 		{
-			if (ptr) *ptr = val;
+			if (ptr)
+			{
+				cpu_thread::get_current()->check_state();
+				*ptr = val;
+			}
 		}
 	} store{result};
 
@@ -254,7 +258,6 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		}
 	}
 
-	ppu.check_state();
 	store.val = ppu.gpr[6];
 	return not_an_error(ppu.gpr[3]);
 }
@@ -265,7 +268,21 @@ error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode,
 
 	sys_event_flag.trace("sys_event_flag_trywait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x)", id, bitptn, mode, result);
 
-	if (result) *result = 0;
+	// Always set result
+	struct store_result
+	{
+		vm::ptr<u64> ptr;
+		u64 val = 0;
+
+		~store_result() noexcept
+		{
+			if (ptr)
+			{
+				cpu_thread::get_current()->check_state();
+				*ptr = val;
+			}
+		}
+	} store{result};
 
 	if (!lv2_event_flag::check_mode(mode))
 	{
@@ -273,7 +290,7 @@ error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode,
 		return CELL_EINVAL;
 	}
 
-	u64 pattern;
+	u64 pattern{};
 
 	const auto flag = idm::check<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag)
 	{
@@ -293,9 +310,7 @@ error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode,
 		return not_an_error(CELL_EBUSY);
 	}
 
-	ppu.check_state();
-
-	if (result) *result = pattern;
+	store.val = pattern;
 	return CELL_OK;
 }
 

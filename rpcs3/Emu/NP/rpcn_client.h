@@ -85,6 +85,33 @@ public:
 
 		return ret;
 	}
+	template <typename T>
+	const T* get_flatbuffer()
+	{
+		auto rawdata_vec = get_rawdata();
+
+		if (error)
+			return nullptr;
+
+		if (vec.empty())
+		{
+			error = true;
+			return nullptr;
+		}
+
+		const T* ret = flatbuffers::GetRoot<T>(rawdata_vec.data());
+		flatbuffers::Verifier verifier(rawdata_vec.data(), rawdata_vec.size());
+
+		if (!ret->Verify(verifier))
+		{
+			error = true;
+			return nullptr;
+		}
+
+		aligned_bufs.push_back(std::move(rawdata_vec));
+
+		return ret;
+	}
 
 	// Setters
 
@@ -106,6 +133,7 @@ public:
 
 protected:
 	std::vector<u8>& vec;
+	std::vector<std::vector<u8>> aligned_bufs;
 	usz i      = 0;
 	bool error = false;
 };
@@ -142,7 +170,7 @@ namespace rpcn
 		SendMessage,
 		GetBoardInfos,
 		RecordScore,
-		StoreScoreData,
+		RecordScoreData,
 		GetScoreData,
 		GetScoreRange,
 		GetScoreFriends,
@@ -203,10 +231,12 @@ namespace rpcn
 		LoginInvalidPassword,        // Invalid password
 		LoginInvalidToken,           // Invalid token
 		CreationError,               // An error happened related to account creation
-		CreationExistingUsername,    // Specific
+		CreationExistingUsername,    // Specific to Account Creation: username exists already
 		CreationBannedEmailProvider, // Specific to Account Creation: the email provider is banned
 		CreationExistingEmail,       // Specific to Account Creation: that email is already registered to an account
-		AlreadyJoined,               // User tried to join a room he's already part of
+		RoomMissing,                 // User tried to join a non existing room
+		RoomAlreadyJoined,           // User tried to join a room he's already part of
+		RoomFull,                    // User tried to join a full room
 		Unauthorized,                // User attempted an unauthorized operation
 		DbFail,                      // Generic failure on db side
 		EmailFail,                   // Generic failure related to email
@@ -214,6 +244,8 @@ namespace rpcn
 		Blocked,                     // The operation can't complete because you've been blocked
 		AlreadyFriend,               // Can't add friend because already friend
 		ScoreNotBest,                // A better score is already registered for that user/character_id
+		ScoreInvalid,                // Score for player was found but wasn't what was expected
+		ScoreHasData,                // Score already has data
 		Unsupported,
 		__error_last
 	};
@@ -368,6 +400,8 @@ namespace rpcn
 		bool get_score_range(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, u32 start_rank, u32 num_rank, bool with_comment, bool with_gameinfo);
 		bool get_score_npid(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, const std::vector<std::pair<SceNpId, s32>>& npids, bool with_comment, bool with_gameinfo);
 		bool get_score_friend(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, bool include_self, bool with_comment, bool with_gameinfo, u32 max_entries);
+		bool record_score_data(u32 req_id, const SceNpCommunicationId& communication_id,  SceNpScorePcId pc_id, SceNpScoreBoardId board_id, s64 score, const std::vector<u8>& score_data);
+		bool get_score_data(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScorePcId pc_id, SceNpScoreBoardId board_id, const SceNpId& npid);
 
 		const std::string& get_online_name() const
 		{

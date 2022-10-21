@@ -100,7 +100,8 @@ private:
 	{
 		be_t<u32> signature = SIGNALING_SIGNATURE;
 		le_t<u32> version;
-		le_t<u64> timestamp;
+		le_t<u64> timestamp_sender;
+		le_t<u64> timestamp_receiver;
 		le_t<SignalingCommand> command;
 		le_t<u32> sent_addr;
 		le_t<u16> sent_port;

@@ -54,6 +54,8 @@ private:
 	std::string m_old_log_text;
 	QString m_old_tty_text;
 	QString m_log_text;
+	std::string m_tty_buf;
+	usz m_tty_limited_read = 0;
 	usz m_log_counter{};
 	usz m_tty_counter{};
 	bool m_stack_log{};
