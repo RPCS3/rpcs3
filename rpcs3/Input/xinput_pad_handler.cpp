@@ -338,7 +338,7 @@ pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_m
 
 bool xinput_pad_handler::Init()
 {
-	if (is_init)
+	if (m_is_init)
 		return true;
 
 	for (auto it : XINPUT_INFO::LIBRARY_FILENAMES)
@@ -357,7 +357,7 @@ bool xinput_pad_handler::Init()
 
 			if (xinputGetState && xinputSetState && xinputGetBatteryInformation)
 			{
-				is_init = true;
+				m_is_init = true;
 				break;
 			}
 
@@ -371,7 +371,7 @@ bool xinput_pad_handler::Init()
 		}
 	}
 
-	if (!is_init)
+	if (!m_is_init)
 		return false;
 
 	return true;

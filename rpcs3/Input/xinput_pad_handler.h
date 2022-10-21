@@ -119,12 +119,10 @@ private:
 	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
 	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
 
-private:
 	int GetDeviceNumber(const std::string& padId);
 	static PadButtonValues get_button_values_base(const XINPUT_STATE& state);
 	static PadButtonValues get_button_values_scp(const SCP_EXTN& state);
 
-	bool is_init{ false };
 	HMODULE library{ nullptr };
 	PFN_XINPUTGETEXTENDED xinputGetExtended{ nullptr };
 	PFN_XINPUTGETCUSTOMDATA xinputGetCustomData{ nullptr };

@@ -121,7 +121,7 @@ private:
 	int GetIDByName(const std::string& name);
 	bool GetMMJOYDevice(int index, MMJOYDevice* dev) const;
 
-	bool is_init = false;
+	bool m_is_init = false;
 
 	std::vector<u64> m_blacklist;
 	std::unordered_map<int, MMJOYDevice> m_devices;

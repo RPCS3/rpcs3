@@ -76,7 +76,6 @@ protected:
 	// pseudo 'controller id' to keep track of unique controllers
 	std::map<std::string, std::shared_ptr<Device>> m_controllers;
 
-	bool m_is_init = false;
 	std::set<std::string> m_last_enumerated_devices;
 	std::set<std::string> m_new_enumerated_devices;
 	std::map<std::string, std::wstring_view> m_enumerated_serials;
