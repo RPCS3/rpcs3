@@ -108,6 +108,7 @@ protected:
 
 	bool b_has_led = false;
 	bool b_has_rgb = false;
+	bool b_has_player_led = false;
 	bool b_has_battery = false;
 	bool b_has_deadzones = false;
 	bool b_has_rumble = false;
@@ -185,6 +186,7 @@ public:
 	bool has_deadzones() const;
 	bool has_led() const;
 	bool has_rgb() const;
+	bool has_player_led() const;
 	bool has_battery() const;
 	bool has_pressure_intensity_button() const;
 
@@ -195,7 +197,7 @@ public:
 	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
 	// Sets window to config the controller(optional)
-	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
+	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
 	virtual u32 get_battery_level(const std::string& /*padId*/) { return 0; }
 	// Return list of devices for that handler
 	virtual std::vector<pad_list_entry> list_devices() = 0;

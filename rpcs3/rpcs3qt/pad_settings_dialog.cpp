@@ -367,8 +367,20 @@ void pad_settings_dialog::InitButtons()
 		ensure(m_handler);
 		const cfg_pad& cfg = GetPlayerConfig();
 		SetPadData(0, 0, cfg.led_battery_indicator.get());
-		pad_led_settings_dialog dialog(this, cfg.colorR, cfg.colorG, cfg.colorB, m_handler->has_rgb(), m_handler->has_battery(), cfg.led_low_battery_blink.get(), cfg.led_battery_indicator.get(), cfg.led_battery_indicator_brightness);
-		connect(&dialog, &pad_led_settings_dialog::pass_led_settings, this, &pad_settings_dialog::apply_led_settings);
+		pad_led_settings_dialog dialog(this, cfg.colorR, cfg.colorG, cfg.colorB, m_handler->has_rgb(), m_handler->has_player_led(), cfg.player_led_enabled.get(), m_handler->has_battery(), cfg.led_low_battery_blink.get(), cfg.led_battery_indicator.get(), cfg.led_battery_indicator_brightness);
+		connect(&dialog, &pad_led_settings_dialog::pass_led_settings, this, [this](const pad_led_settings_dialog::led_settings& settings)
+		{
+			ensure(m_handler);
+			cfg_pad& cfg = GetPlayerConfig();
+			cfg.colorR.set(settings.color_r);
+			cfg.colorG.set(settings.color_g);
+			cfg.colorB.set(settings.color_b);
+			cfg.led_battery_indicator.set(settings.battery_indicator);
+			cfg.led_battery_indicator_brightness.set(settings.battery_indicator_brightness);
+			cfg.led_low_battery_blink.set(settings.low_battery_blink);
+			cfg.player_led_enabled.set(settings.player_led_enabled);
+			SetPadData(0, 0, settings.battery_indicator);
+		});
 		dialog.exec();
 		SetPadData(0, 0);
 	});
@@ -587,21 +599,7 @@ void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor, bool led_
 	const cfg_pad& cfg = GetPlayerConfig();
 
 	std::lock_guard lock(m_handler_mutex);
-	m_handler->SetPadData(m_device_name, GetPlayerIndex(), large_motor, small_motor, cfg.colorR, cfg.colorG, cfg.colorB, led_battery_indicator, cfg.led_battery_indicator_brightness);
-}
-
-// Slot to handle the data from a signal in the led settings dialog
-void pad_settings_dialog::apply_led_settings(int colorR, int colorG, int colorB, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
-{
-	ensure(m_handler);
-	cfg_pad& cfg = GetPlayerConfig();
-	cfg.colorR.set(colorR);
-	cfg.colorG.set(colorG);
-	cfg.colorB.set(colorB);
-	cfg.led_battery_indicator.set(led_battery_indicator);
-	cfg.led_battery_indicator_brightness.set(led_battery_indicator_brightness);
-	cfg.led_low_battery_blink.set(led_low_battery_blink);
-	SetPadData(0, 0, led_battery_indicator);
+	m_handler->SetPadData(m_device_name, GetPlayerIndex(), large_motor, small_motor, cfg.colorR, cfg.colorG, cfg.colorB, cfg.player_led_enabled.get(), led_battery_indicator, cfg.led_battery_indicator_brightness);
 }
 
 pad_device_info pad_settings_dialog::get_pad_info(QComboBox* combo, int index)

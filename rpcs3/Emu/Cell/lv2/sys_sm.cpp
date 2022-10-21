@@ -43,7 +43,7 @@ error_code sys_sm_get_ext_event2(vm::ptr<u64> a1, vm::ptr<u64> a2, vm::ptr<u64> 
 
 error_code sys_sm_shutdown(u16 op, vm::ptr<void> param, u64 size)
 {
-	sys_sm.todo("sys_sm_shutdown(op=0x%x, param=*0x%x, size=0x%x", op, param, size);
+	sys_sm.todo("sys_sm_shutdown(op=0x%x, param=*0x%x, size=0x%x)", op, param, size);
 
 	return CELL_OK;
 }

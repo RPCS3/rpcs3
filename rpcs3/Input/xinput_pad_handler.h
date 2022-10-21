@@ -110,7 +110,7 @@ public:
 	bool Init() override;
 
 	std::vector<pad_list_entry> list_devices() override;
-	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
+	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;
 	u32 get_battery_level(const std::string& padId) override;
 	void init_config(cfg_pad* cfg) override;
 

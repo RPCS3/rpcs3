@@ -145,8 +145,9 @@ void usb_device_usio::translate_input()
 	const auto handler = pad::get_current_handler();
 
 	std::vector<u8> input_buf = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0x60, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-	constexpr le_t<u16> c_small_hit = 0x4A0;
-	constexpr le_t<u16> c_big_hit = 0xA40;
+	constexpr le_t<u16> c_small_hit = 0x4D0;
+	constexpr le_t<u16> c_big_hit = 0x1800;
+	le_t<u16> test_keys = 0x0000;
 
 	auto translate_from_pad = [&](u8 pad_number, u8 player)
 	{
@@ -165,9 +166,50 @@ void usb_device_usio::translate_input()
 
 		for (const Button& button : pad->m_buttons)
 		{
-			if (button.m_pressed)
+			switch (button.m_offset)
 			{
-				if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+			case CELL_PAD_BTN_OFFSET_DIGITAL1:
+				if (player == 0)
+				{
+					switch (button.m_outKeyCode)
+					{
+					case CELL_PAD_CTRL_SELECT:
+						if (button.m_pressed && !test_key_pressed) // Solve the need to hold the Test key
+							test_on = !test_on;
+						test_key_pressed = button.m_pressed;
+						break;
+					case CELL_PAD_CTRL_LEFT:
+						if (button.m_pressed && !coin_key_pressed) // Ensure only one coin is inserted each time the Coin key is pressed
+							coin_counter++;
+						coin_key_pressed = button.m_pressed;
+						break;
+					default:
+						if (button.m_pressed)
+						{
+							switch (button.m_outKeyCode)
+							{
+							case CELL_PAD_CTRL_START:
+								test_keys |= 0x200; // Enter
+								break;
+							case CELL_PAD_CTRL_UP:
+								test_keys |= 0x2000; // Up
+								break;
+							case CELL_PAD_CTRL_DOWN:
+								test_keys |= 0x1000; // Down
+								break;
+							case CELL_PAD_CTRL_RIGHT:
+								test_keys |= 0x4000; // Service
+								break;
+							default:
+								break;
+							}
+						}
+						break;
+					}
+				}
+				break;
+			case CELL_PAD_BTN_OFFSET_DIGITAL2:
+				if (button.m_pressed)
 				{
 					switch (button.m_outKeyCode)
 					{
@@ -207,12 +249,19 @@ void usb_device_usio::translate_input()
 						break;
 					}
 				}
+				break;
+			default:
+				break;
 			}
 		}
 	};
 
 	translate_from_pad(0, 0);
 	translate_from_pad(1, 1);
+
+	test_keys |= test_on ? 0x80 : 0x00;
+	std::memcpy(input_buf.data(), &test_keys, sizeof(u16));
+	std::memcpy(input_buf.data() + 16, &coin_counter, sizeof(u16));
 
 	q_replies.push(input_buf);
 	q_replies.push({0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
