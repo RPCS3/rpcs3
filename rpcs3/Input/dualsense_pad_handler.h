@@ -21,6 +21,7 @@ public:
 	bool init_lightbar{true};
 	bool update_lightbar{true};
 	bool update_player_leds{true};
+	bool release_leds{false};
 
 	// Controls for lightbar pulse. This seems somewhat hacky for now, as I haven't found out a nicer way.
 	bool lightbar_on{false};
