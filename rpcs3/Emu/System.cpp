@@ -2288,7 +2288,7 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 
 	named_thread stop_watchdog("Stop Watchdog", [&]()
 	{
-		for (uint i = 0; thread_ctrl::state() != thread_state::aborting;)
+		for (int i = 0; thread_ctrl::state() != thread_state::aborting;)
 		{
 			// We don't need accurate timekeeping, using clocks may interfere with debugging
 			if (i >= (savestate ? 2000 : 1000))
