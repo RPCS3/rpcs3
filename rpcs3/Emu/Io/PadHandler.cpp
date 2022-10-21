@@ -323,7 +323,7 @@ void PadHandlerBase::init_configs()
 	}
 }
 
-void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
+PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -335,12 +335,12 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 	{
 		if (fail_callback)
 			fail_callback(pad_id);
-		return;
+		return status;
 	}
 
 	if (status == connection::no_data)
 	{
-		return;
+		return status;
 	}
 
 	// Get the current button values
@@ -384,19 +384,21 @@ void PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_
 	{
 		if (blacklist.empty())
 			input_log.success("%s Calibration: Blacklist is clear. No input spam detected", m_type);
-		return;
+		return status;
 	}
-
-	const pad_preview_values preview_values = get_preview_values(data);
-	const u32 battery_level = get_battery_level(pad_id);
 
 	if (callback)
 	{
+		const pad_preview_values preview_values = get_preview_values(data);
+		const u32 battery_level = get_battery_level(pad_id);
+
 		if (pressed_button.value > 0)
-			return callback(pressed_button.value, pressed_button.name, pad_id, battery_level, preview_values);
+			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, preview_values);
 		else
-			return callback(0, "", pad_id, battery_level, preview_values);
+			callback(0, "", pad_id, battery_level, preview_values);
 	}
+
+	return status;
 }
 
 void PadHandlerBase::get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& /*sensors*/)

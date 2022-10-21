@@ -57,6 +57,14 @@ using motion_fail_callback = std::function<void(std::string /*pad_name*/, motion
 
 class PadHandlerBase
 {
+public:
+	enum connection
+	{
+		no_data,
+		connected,
+		disconnected
+	};
+
 protected:
 	enum button
 	{
@@ -90,13 +98,6 @@ protected:
 		pressure_intensity_button,
 
 		button_count
-	};
-
-	enum connection
-	{
-		no_data,
-		connected,
-		disconnected
 	};
 
 	static constexpr u32 MAX_GAMEPADS = 7;
@@ -207,7 +208,7 @@ public:
 	// Binds a Pad to a device
 	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id);
 	virtual void init_config(cfg_pad* cfg) = 0;
-	virtual void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
+	virtual connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
 	virtual void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors);
 	virtual std::unordered_map<u32, std::string> get_motion_axis_list() const { return {}; }
 

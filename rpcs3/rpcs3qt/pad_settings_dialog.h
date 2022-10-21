@@ -8,6 +8,7 @@
 
 #include <mutex>
 
+#include "Emu/Io/PadHandler.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/GameInfo.h"
 #include "Utilities/Thread.h"
@@ -161,7 +162,7 @@ private:
 	std::mutex m_input_mutex;
 	struct input_callback_data
 	{
-		bool success = false;
+		PadHandlerBase::connection status = PadHandlerBase::disconnected;
 		bool has_new_data = false;
 		u16 val = 0;
 		std::string name;
