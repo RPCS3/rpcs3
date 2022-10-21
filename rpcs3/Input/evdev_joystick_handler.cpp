@@ -292,7 +292,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::get
 	return evdev_device;
 }
 
-void evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		m_blacklist.clear();
@@ -303,7 +303,7 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	{
 		if (fail_callback)
 			fail_callback(padId);
-		return;
+		return connection::disconnected;
 	}
 	libevdev* dev = device->device;
 
@@ -357,7 +357,7 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	{
 		if (callback)
 			callback(0, "", padId, 0, preview_values);
-		return;
+		return connection::no_data;
 	}
 
 	struct
@@ -448,16 +448,18 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	{
 		if (m_blacklist.empty())
 			evdev_log.success("Evdev Calibration: Blacklist is clear. No input spam detected");
-		return;
+		return connection::connected;
 	}
 
 	if (callback)
 	{
 		if (pressed_button.value > 0)
-			return callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
+			callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
 		else
-			return callback(0, "", padId, 0, preview_values);
+			callback(0, "", padId, 0, preview_values);
 	}
+
+	return connection::connected;
 }
 
 void evdev_joystick_handler::get_motion_sensors(const std::string& padId, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors)
