@@ -498,6 +498,8 @@ namespace gl
 				gl::get_overlay_pass<gl::rp_ssbo_to_generic_texture>()->run(cmd, transfer_buf, scratch_view.get(), out_offset, image_region, unpack_info);
 			}
 
+			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT);
+
 			switch (dst->get_target())
 			{
 			case texture::target::texture1D:
