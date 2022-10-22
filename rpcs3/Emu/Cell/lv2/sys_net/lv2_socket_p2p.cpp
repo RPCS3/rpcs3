@@ -273,7 +273,7 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 
 	ensure(opt_sn_addr);
 	ensure(socket);                              // ensures it has been bound
-	ensure(buf.size() <= (65535 - sizeof(u16))); // catch games using full payload for future fragmentation implementation if necessary
+	ensure(buf.size() <= (65535 - VPORT_P2P_HEADER_SIZE)); // catch games using full payload for future fragmentation implementation if necessary
 	const u16 p2p_port  = reinterpret_cast<const sys_net_sockaddr_in*>(&*opt_sn_addr)->sin_port;
 	const u16 p2p_vport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&*opt_sn_addr)->sin_vport;
 
@@ -300,7 +300,7 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 
 	if (native_result >= 0)
 	{
-		return {std::max<s32>(native_result - sizeof(u16), 0l)};
+		return {std::max<s32>(native_result - VPORT_P2P_HEADER_SIZE, 0l)};
 	}
 
 	s32 result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);

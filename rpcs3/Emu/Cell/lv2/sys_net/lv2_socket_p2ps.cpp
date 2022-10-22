@@ -793,7 +793,7 @@ std::optional<s32> lv2_socket_p2ps::sendto([[maybe_unused]] s32 flags, const std
 		lock.lock();
 	}
 
-	constexpr u32 max_data_len = (65535 - (sizeof(u16) + sizeof(p2ps_encapsulated_tcp)));
+	constexpr u32 max_data_len = (65535 - (VPORT_P2P_HEADER_SIZE + sizeof(p2ps_encapsulated_tcp)));
 
 	::sockaddr_in name{};
 	if (opt_sn_addr)
