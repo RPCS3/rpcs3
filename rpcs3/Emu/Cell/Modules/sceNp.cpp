@@ -4616,9 +4616,12 @@ error_code sceNpScoreCensorCommentAsync(s32 transId, vm::cptr<char> comment, s32
 	return scenp_score_censor_comment(transId, comment, option, true);
 }
 
-error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
+error_code scenp_score_sanitize_comment(s32 transId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> /* option */, bool async)
 {
-	sceNp.warning("sceNpScoreSanitizeComment(transId=%d, comment=%s, sanitizedComment=*0x%x, option=*0x%x)", transId, comment, sanitizedComment, option);
+	if (!sanitizedComment)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
+	}
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4634,45 +4637,42 @@ error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::pt
 
 	const auto comment_len = strlen(comment.get_ptr());
 
-	if (comment_len > SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN || option) // option check at least until fw 4.71
+	if (comment_len > SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	auto trans_ctx = idm::get<score_transaction_ctx>(transId);
+
+	if (!trans_ctx)
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
-	// TODO: send to server and get sanitized version back
+	// TODO: actual implementation of this
 	memcpy(sanitizedComment.get_ptr(), comment.get_ptr(), comment_len + 1);
+	trans_ctx->result = CELL_OK;
 
-	return CELL_OK;
+	if (async)
+	{
+		return CELL_OK;
+	}
+
+	return *trans_ctx->result;
+}
+
+error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, vm::ptr<void> option)
+{
+	sceNp.warning("sceNpScoreSanitizeComment(transId=%d, comment=%s, sanitizedComment=*0x%x, option=*0x%x)", transId, comment, sanitizedComment, option);
+
+	return scenp_score_sanitize_comment(transId, comment, sanitizedComment, option, false);
 }
 
 error_code sceNpScoreSanitizeCommentAsync(s32 transId, vm::cptr<char> comment, vm::ptr<char> sanitizedComment, s32 prio, vm::ptr<void> option)
 {
-	sceNp.todo("sceNpScoreSanitizeCommentAsync(transId=%d, comment=%s, sanitizedComment=*0x%x, prio=%d, option=*0x%x)", transId, comment, sanitizedComment, prio, option);
+	sceNp.warning("sceNpScoreSanitizeCommentAsync(transId=%d, comment=%s, sanitizedComment=*0x%x, prio=%d, option=*0x%x)", transId, comment, sanitizedComment, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_Score_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (!comment)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
-	}
-
-	if (strlen(comment.get_ptr()) > SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN || option) // option check at least until fw 4.71
-	{
-		// TODO: is SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN + 1 allowed ?
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	return CELL_OK;
+	return scenp_score_sanitize_comment(transId, comment, sanitizedComment, option, true);
 }
 
 error_code sceNpScoreGetRankingByNpIdPcId(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpScoreNpIdPcId> idArray, u32 idArraySize, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize,
