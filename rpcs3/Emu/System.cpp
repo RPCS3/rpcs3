@@ -678,7 +678,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 		if (g_cfg.savestate.suspend_emu && m_ar)
 		{
-			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim));
+			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim) + 1);
 			const usz insert_pos = old_path.find_last_of(fs::delim) + 1;
 			const auto prefix = "used_"sv;
 
