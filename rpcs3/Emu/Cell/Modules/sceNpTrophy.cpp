@@ -604,7 +604,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	if (!stream && Emu.GetCat() == "GD")
 	{
-		sceNpTrophy.warning("sceNpTrophyRegisterContext failed to open trophy file from boot path: '%s'", trp_path);
+		sceNpTrophy.warning("sceNpTrophyRegisterContext failed to open trophy file from boot path: '%s' (%s)", trp_path, fs::g_tls_error);
 		trp_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + ctxt->trp_name + "/TROPHY.TRP");
 		stream.open(trp_path);
 	}
@@ -612,7 +612,8 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// check if exists and opened
 	if (!stream)
 	{
-		return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, trp_path};
+		const std::string msg = fmt::format("Failed to open trophy file: '%s' (%s)", trp_path, fs::g_tls_error);
+		return {SCE_NP_TROPHY_ERROR_CONF_DOES_NOT_EXIST, msg};
 	}
 
 	TRPLoader trp(stream);
