@@ -53,10 +53,15 @@ namespace
 		u8 valid_flag_1;
 		u8 motor_right;
 		u8 motor_left;
-		u8 reserved[4];
+		u8 headphone_volume;
+		u8 speaker_volume;
+		u8 microphone_volume;
+		u8 audio_enable_bits;
 		u8 mute_button_led;
 		u8 power_save_control;
-		u8 reserved_2[28];
+		u8 right_trigger_effect[11];
+		u8 left_trigger_effect[11];
+		u8 reserved[6];
 		u8 valid_flag_2;
 		u8 reserved_3[2];
 		u8 lightbar_setup;
