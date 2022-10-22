@@ -221,7 +221,8 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	}
 
 	u32 hw_version{};
-	u32 fw_version{};
+	u16 fw_version{};
+	u32 fw_version2{};
 
 	buf = {};
 	buf[0] = 0x20;
@@ -234,7 +235,8 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	else
 	{
 		hw_version = read_u32(&buf[24]);
-		fw_version = read_u32(&buf[28]);
+		fw_version2 = read_u32(&buf[28]);
+		fw_version = static_cast<u16>(buf[44]) | (static_cast<u16>(buf[45]) << 8);
 	}
 
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
@@ -254,7 +256,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	// Get bluetooth information
 	get_data(device);
 
-	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, device->data_mode, serial, hw_version, fw_version, device->path);
+	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', hw_version: 0x%x, fw_version: 0x%x (0x%x), path='%s'", device->bt_controller, device->data_mode, serial, hw_version, fw_version, fw_version2, device->path);
 }
 
 void dualsense_pad_handler::init_config(cfg_pad* cfg)
