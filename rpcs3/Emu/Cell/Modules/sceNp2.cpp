@@ -237,7 +237,7 @@ error_code sceNpMatching2Init(u32 stackSize, s32 priority)
 
 error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
 {
-	sceNp2.todo("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
+	sceNp2.warning("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
