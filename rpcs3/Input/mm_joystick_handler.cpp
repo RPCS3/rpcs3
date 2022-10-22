@@ -12,12 +12,9 @@ mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 	thumb_max = 255;
 	trigger_min = 0;
 	trigger_max = 255;
-	vibration_min = 0;
-	vibration_max = 65535;
 
 	// set capabilities
 	b_has_config = true;
-	b_has_rumble = true;
 	b_has_deadzones = true;
 
 	m_name_string = "Joystick #";
@@ -73,7 +70,7 @@ void mm_joystick_handler::init_config(cfg_pad* cfg)
 
 bool mm_joystick_handler::Init()
 {
-	if (is_init)
+	if (m_is_init)
 		return true;
 
 	m_devices.clear();
@@ -97,7 +94,7 @@ bool mm_joystick_handler::Init()
 		m_devices.emplace(i, dev);
 	}
 
-	is_init = true;
+	m_is_init = true;
 	return true;
 }
 
@@ -176,7 +173,7 @@ std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_m
 	return mapping;
 }
 
-void mm_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+PadHandlerBase::connection mm_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		m_blacklist.clear();
@@ -185,7 +182,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 	{
 		if (fail_callback)
 			fail_callback(padId);
-		return;
+		return connection::disconnected;
 	}
 
 	static std::string cur_pad;
@@ -200,7 +197,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 			input_log.error("MMJOY get_next_button_press for device [%s] failed with id = %d", padId, id);
 			if (fail_callback)
 				fail_callback(padId);
-			return;
+			return connection::disconnected;
 		}
 	}
 
@@ -218,7 +215,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 	{
 		if (fail_callback)
 			fail_callback(padId);
-		return;
+		return connection::disconnected;
 	}
 	case JOYERR_NOERROR:
 	{
@@ -307,33 +304,35 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 		{
 			if (m_blacklist.empty())
 				input_log.success("MMJOY Calibration: Blacklist is clear. No input spam detected");
-			return;
-		}
-
-		pad_preview_values preview_values{};
-		if (buttons.size() == 10)
-		{
-			preview_values[0] = data[find_key(buttons[0])];
-			preview_values[1] = data[find_key(buttons[1])];
-			preview_values[2] = data[find_key(buttons[3])] - data[find_key(buttons[2])];
-			preview_values[3] = data[find_key(buttons[5])] - data[find_key(buttons[4])];
-			preview_values[4] = data[find_key(buttons[7])] - data[find_key(buttons[6])];
-			preview_values[5] = data[find_key(buttons[9])] - data[find_key(buttons[8])];
+			return connection::connected;
 		}
 
 		if (callback)
 		{
+			pad_preview_values preview_values{};
+			if (buttons.size() == 10)
+			{
+				preview_values[0] = data[find_key(buttons[0])];
+				preview_values[1] = data[find_key(buttons[1])];
+				preview_values[2] = data[find_key(buttons[3])] - data[find_key(buttons[2])];
+				preview_values[3] = data[find_key(buttons[5])] - data[find_key(buttons[4])];
+				preview_values[4] = data[find_key(buttons[7])] - data[find_key(buttons[6])];
+				preview_values[5] = data[find_key(buttons[9])] - data[find_key(buttons[8])];
+			}
+
 			if (pressed_button.value > 0)
-				return callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
+				callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
 			else
-				return callback(0, "", padId, 0, preview_values);
+				callback(0, "", padId, 0, preview_values);
 		}
 
-		break;
+		return connection::connected;
 	}
 	default:
 		break;
 	}
+
+	return connection::no_data;
 }
 
 std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOEX& js_info, const JOYCAPS& js_caps)

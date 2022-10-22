@@ -42,6 +42,7 @@ namespace
 		VALID_FLAG_1_RELEASE_LEDS                    = 0x08,
 		VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE = 0x10,
 		VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE   = 0x02,
+		VALID_FLAG_2_IMPROVED_RUMBLE_EMULATION       = 0x04,
 		POWER_SAVE_CONTROL_MIC_MUTE                  = 0x10,
 		LIGHTBAR_SETUP_LIGHT_ON                      = 0x01,
 		LIGHTBAR_SETUP_LIGHT_OUT                     = 0x02,
@@ -53,10 +54,15 @@ namespace
 		u8 valid_flag_1;
 		u8 motor_right;
 		u8 motor_left;
-		u8 reserved[4];
+		u8 headphone_volume;
+		u8 speaker_volume;
+		u8 microphone_volume;
+		u8 audio_enable_bits;
 		u8 mute_button_led;
 		u8 power_save_control;
-		u8 reserved_2[28];
+		u8 right_trigger_effect[11];
+		u8 left_trigger_effect[11];
+		u8 reserved[6];
 		u8 valid_flag_2;
 		u8 reserved_3[2];
 		u8 lightbar_setup;
@@ -131,8 +137,6 @@ dualsense_pad_handler::dualsense_pad_handler()
 	thumb_max = 255;
 	trigger_min = 0;
 	trigger_max = 255;
-	vibration_min = 0;
-	vibration_max = 255;
 
 	// Set capabilities
 	b_has_config = true;
@@ -218,7 +222,8 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	}
 
 	u32 hw_version{};
-	u32 fw_version{};
+	u16 fw_version{};
+	u32 fw_version2{};
 
 	buf = {};
 	buf[0] = 0x20;
@@ -231,7 +236,8 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	else
 	{
 		hw_version = read_u32(&buf[24]);
-		fw_version = read_u32(&buf[28]);
+		fw_version2 = read_u32(&buf[28]);
+		fw_version = static_cast<u16>(buf[44]) | (static_cast<u16>(buf[45]) << 8);
 	}
 
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
@@ -251,7 +257,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	// Get bluetooth information
 	get_data(device);
 
-	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, device->data_mode, serial, hw_version, fw_version, device->path);
+	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', hw_version: 0x%x, fw_version: 0x%x (0x%x), path='%s'", device->bt_controller, device->data_mode, serial, hw_version, fw_version, fw_version2, device->path);
 }
 
 void dualsense_pad_handler::init_config(cfg_pad* cfg)
@@ -908,6 +914,7 @@ dualsense_pad_handler::~dualsense_pad_handler()
 			// Disable vibration
 			controller.second->small_motor = 0;
 			controller.second->large_motor = 0;
+			controller.second->release_leds = true;
 			send_output_report(controller.second.get());
 		}
 	}
@@ -934,10 +941,18 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 		common.valid_flag_2 |= VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE;
 		common.lightbar_setup = LIGHTBAR_SETUP_LIGHT_OUT; // Fade light out.
 	}
+	else if (device->release_leds)
+	{
+		common.valid_flag_1 |= VALID_FLAG_1_RELEASE_LEDS;
+		device->release_leds = false;
+	}
 	else
 	{
 		common.valid_flag_0 |= VALID_FLAG_0_COMPATIBLE_VIBRATION;
 		common.valid_flag_0 |= VALID_FLAG_0_HAPTICS_SELECT;
+		common.valid_flag_1 |= VALID_FLAG_1_POWER_SAVE_CONTROL_ENABLE;
+		common.valid_flag_2 |= VALID_FLAG_2_IMPROVED_RUMBLE_EMULATION;
+
 		common.motor_left  = device->large_motor;
 		common.motor_right = device->small_motor;
 
@@ -1040,8 +1055,8 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
 	const int idx_s  = config->switch_vibration_motors ? 0 : 1;
 
-	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
-	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
+	const u8 speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
+	const u8 speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
 
 	const bool wireless    = dualsense_dev->cable_state == 0;
 	const bool low_battery = dualsense_dev->battery_level <= 1;
@@ -1104,7 +1119,7 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		dualsense_dev->update_player_leds = true;
 	}
 
-	dualsense_dev->new_output_data |= dualsense_dev->update_player_leds || dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
+	dualsense_dev->new_output_data |= dualsense_dev->release_leds || dualsense_dev->update_player_leds || dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
 
 	dualsense_dev->large_motor = speed_large;
 	dualsense_dev->small_motor = speed_small;
@@ -1118,15 +1133,15 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	}
 }
 
-void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness)
+void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
 		return;
 
 	// Set the device's motor speeds to our requested values 0-255
-	device->large_motor = largeMotor;
-	device->small_motor = smallMotor;
+	device->large_motor = large_motor;
+	device->small_motor = small_motor;
 	device->player_id = player_id;
 
 	int index = 0;

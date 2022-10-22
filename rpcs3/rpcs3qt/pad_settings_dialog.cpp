@@ -410,7 +410,7 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Enable Button Remapping
-	const auto callback = [this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
+	const auto callback = [this](PadHandlerBase::connection status, u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 	{
 		SwitchPadInfo(pad_name, true);
 
@@ -440,7 +440,7 @@ void pad_settings_dialog::InitButtons()
 
 		ui->pb_battery->setValue(m_enable_battery ? battery_level : 0);
 
-		if (val <= 0)
+		if (val <= 0 || status == PadHandlerBase::connection::no_data)
 		{
 			return;
 		}
@@ -499,13 +499,13 @@ void pad_settings_dialog::InitButtons()
 
 		if (data.has_new_data)
 		{
-			if (data.success)
+			if (data.status == PadHandlerBase::disconnected)
 			{
-				callback(data.val, std::move(data.name), std::move(data.pad_name), data.battery_level, std::move(data.preview_values));
+				fail_callback(data.pad_name);
 			}
 			else
 			{
-				fail_callback(data.pad_name);
+				callback(data.status, data.val, std::move(data.name), std::move(data.pad_name), data.battery_level, std::move(data.preview_values));
 			}
 		}
 	});
@@ -542,7 +542,7 @@ void pad_settings_dialog::InitButtons()
 				m_cfg_entries[button_ids::id_pad_rstick_up].key
 			};
 
-			m_handler->get_next_button_press(m_device_name,
+			const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name,
 				[this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 				{
 					std::lock_guard lock(m_input_mutex);
@@ -552,16 +552,24 @@ void pad_settings_dialog::InitButtons()
 					m_input_callback_data.battery_level = battery_level;
 					m_input_callback_data.preview_values = std::move(preview_values);
 					m_input_callback_data.has_new_data = true;
-					m_input_callback_data.success = true;
+					m_input_callback_data.status = PadHandlerBase::connection::connected;
 				},
 				[this](std::string pad_name)
 				{
 					std::lock_guard lock(m_input_mutex);
 					m_input_callback_data.pad_name = std::move(pad_name);
 					m_input_callback_data.has_new_data = true;
-					m_input_callback_data.success = false;
+					m_input_callback_data.status = PadHandlerBase::connection::disconnected;
 				},
 				false, buttons);
+
+			if (status == PadHandlerBase::connection::no_data)
+			{
+				std::lock_guard lock(m_input_mutex);
+				m_input_callback_data.pad_name = m_device_name;
+				m_input_callback_data.has_new_data = true;
+				m_input_callback_data.status = status;
+			}
 		}
 	});
 }
@@ -578,18 +586,8 @@ void pad_settings_dialog::RefreshPads()
 		}
 
 		std::lock_guard lock(m_handler_mutex);
-
-		m_handler->get_next_button_press(info.name,
-			[&](u16, std::string, std::string pad_name, u32, pad_preview_values)
-			{
-				info.name = std::move(pad_name);
-				switch_pad_info(i, info, true);
-			},
-			[&](std::string pad_name)
-			{
-				info.name = std::move(pad_name);
-				switch_pad_info(i, info, false);
-			}, false);
+		const PadHandlerBase::connection status = m_handler->get_next_button_press(info.name, nullptr, nullptr, false);
+		switch_pad_info(i, info, status != PadHandlerBase::connection::disconnected);
 	}
 }
 
@@ -1220,7 +1218,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	case button_ids::id_blacklist:
 	{
 		std::lock_guard lock(m_handler_mutex);
-		m_handler->get_next_button_press(m_device_name, nullptr, nullptr, true);
+		[[maybe_unused]] const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name, nullptr, nullptr, true);
 		return;
 	}
 	default:
@@ -1367,8 +1365,8 @@ void pad_settings_dialog::ChangeHandler()
 	ui->l_description->setText(m_description);
 
 	// Update parameters
-	m_min_force = m_handler->vibration_min;
-	m_max_force = m_handler->vibration_max;
+	m_min_force = 0;
+	m_max_force = 255;
 
 	// Reset parameters
 	m_lx = 0;
@@ -1445,7 +1443,7 @@ void pad_settings_dialog::ChangeHandler()
 	ui->chooseDevice->blockSignals(false);
 
 	// Handle empty device list
-	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
+	const bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
 
 	if (config_enabled)
 	{
@@ -1456,7 +1454,13 @@ void pad_settings_dialog::ChangeHandler()
 			if (pad_device_info info = get_pad_info(ui->chooseDevice, i); info.name == device)
 			{
 				ui->chooseDevice->setCurrentIndex(i);
+				break;
 			}
+		}
+
+		if (ui->chooseDevice->currentIndex() < 0 && ui->chooseDevice->count() > 0)
+		{
+			ui->chooseDevice->setCurrentIndex(0);
 		}
 
 		// Force Refresh
@@ -1468,6 +1472,8 @@ void pad_settings_dialog::ChangeHandler()
 		{
 			ui->chooseDevice->setPlaceholderText(tr("No Device Detected"));
 		}
+
+		m_device_name.clear();
 	}
 
 	// Handle running timers

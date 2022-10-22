@@ -107,6 +107,9 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 		auto newsock = std::make_shared<lv2_socket_native>(family, type, protocol);
 		newsock->set_socket(native_socket, family, type, protocol);
 
+		// Sockets inherit non blocking behaviour from their parent
+		newsock->so_nbio = so_nbio;
+
 		sys_net_sockaddr ps3_addr = native_addr_to_sys_net_addr(native_addr);
 
 		return {true, 0, std::move(newsock), ps3_addr};

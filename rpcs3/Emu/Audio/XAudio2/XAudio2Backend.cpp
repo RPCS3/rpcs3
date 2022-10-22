@@ -80,12 +80,6 @@ XAudio2Backend::XAudio2Backend()
 		return;
 	}
 
-	if (HRESULT hr = enumerator->RegisterEndpointNotificationCallback(this); FAILED(hr))
-	{
-		XAudio.error("RegisterEndpointNotificationCallback() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		return;
-	}
-
 	// All succeeded, "commit"
 	m_xaudio2_instance = std::move(instance);
 	m_device_enumerator = std::move(enumerator);
@@ -125,7 +119,7 @@ bool XAudio2Backend::Operational()
 
 bool XAudio2Backend::DefaultDeviceChanged()
 {
-	std::lock_guard lock{m_dev_sw_mutex};
+	std::lock_guard lock{m_state_cb_mutex};
 	return !m_reset_req.observe() && m_default_dev_changed;
 }
 
@@ -162,9 +156,12 @@ void XAudio2Backend::CloseUnlocked()
 		m_master_voice = nullptr;
 	}
 
+	m_device_enumerator->UnregisterEndpointNotificationCallback(this);
+
 	m_playing = false;
 	m_last_sample.fill(0);
 
+	std::lock_guard lock(m_state_cb_mutex);
 	m_default_dev_changed = false;
 	m_current_device.clear();
 }
@@ -172,7 +169,6 @@ void XAudio2Backend::CloseUnlocked()
 void XAudio2Backend::Close()
 {
 	std::lock_guard lock(m_cb_mutex);
-	std::lock_guard dev_sw_lock{m_dev_sw_mutex};
 	CloseUnlocked();
 }
 
@@ -207,7 +203,6 @@ bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSi
 	}
 
 	std::lock_guard lock(m_cb_mutex);
-	std::lock_guard dev_sw_lock{m_dev_sw_mutex};
 	CloseUnlocked();
 
 	const bool use_default_device = dev_id.empty() || dev_id == audio_device_enumerator::DEFAULT_DEV_ID;
@@ -282,6 +277,13 @@ bool XAudio2Backend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSi
 		return false;
 	}
 
+	if (HRESULT hr = m_device_enumerator->RegisterEndpointNotificationCallback(this); FAILED(hr))
+	{
+		XAudio.error("RegisterEndpointNotificationCallback() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+		CloseUnlocked();
+		return false;
+	}
+
 	if (HRESULT hr = m_source_voice->SetVolume(1.0f); FAILED(hr))
 	{
 		XAudio.error("SetVolume() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
@@ -331,7 +333,7 @@ f64 XAudio2Backend::GetCallbackFrameLen()
 void XAudio2Backend::OnVoiceProcessingPassStart(UINT32 BytesRequired)
 {
 	std::unique_lock lock(m_cb_mutex, std::defer_lock);
-	if (BytesRequired && !m_reset_req.observe() && lock.try_lock() && m_write_callback && m_playing)
+	if (BytesRequired && !m_reset_req.observe() && lock.try_lock_for(std::chrono::microseconds{50}) && m_write_callback && m_playing)
 	{
 		ensure(BytesRequired <= m_data_buf.size(), "XAudio internal buffer is too small. Report to developers!");
 
@@ -386,7 +388,7 @@ HRESULT XAudio2Backend::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWS
 		return S_OK;
 	}
 
-	std::lock_guard lock{m_dev_sw_mutex};
+	std::lock_guard lock(m_state_cb_mutex);
 
 	// Non default device is used
 	if (m_current_device.empty())
@@ -404,7 +406,7 @@ HRESULT XAudio2Backend::OnDefaultDeviceChanged(EDataFlow flow, ERole role, LPCWS
 
 			if (m_state_callback)
 			{
-				m_state_callback(AudioStateEvent::DEFAULT_DEVICE_CHANGED);
+				m_state_callback(AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED);
 			}
 		}
 	}

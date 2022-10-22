@@ -98,11 +98,11 @@ bool hid_pad_handler<Device>::Init()
 }
 
 template <class Device>
-void hid_pad_handler<Device>::ThreadProc()
+void hid_pad_handler<Device>::process()
 {
 	update_devices();
 
-	PadHandlerBase::ThreadProc();
+	PadHandlerBase::process();
 }
 
 template <class Device>
@@ -240,9 +240,9 @@ std::shared_ptr<PadDevice> hid_pad_handler<Device>::get_device(const std::string
 }
 
 template <class Device>
-u32 hid_pad_handler<Device>::get_battery_color(u8 battery_level, int brightness)
+u32 hid_pad_handler<Device>::get_battery_color(u8 battery_level, u32 brightness)
 {
-	static const std::array<u32, 12> battery_level_clr = {0xff00, 0xff33, 0xff66, 0xff99, 0xffcc, 0xffff, 0xccff, 0x99ff, 0x66ff, 0x33ff, 0x00ff, 0x00ff};
+	static constexpr std::array<u32, 12> battery_level_clr = {0xff00, 0xff33, 0xff66, 0xff99, 0xffcc, 0xffff, 0xccff, 0x99ff, 0x66ff, 0x33ff, 0x00ff, 0x00ff};
 
 	const u32 combined_color = battery_level_clr[battery_level < battery_level_clr.size() ? battery_level : 0];
 

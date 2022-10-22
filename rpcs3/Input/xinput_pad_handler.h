@@ -94,8 +94,6 @@ class xinput_pad_handler final : public PadHandlerBase
 	{
 		u32 deviceNumber{ 0 };
 		bool newVibrateData{ true };
-		u16 largeVibrate{ 0 };
-		u16 smallVibrate{ 0 };
 		steady_clock::time_point last_vibration;
 		bool is_scp_device{ false };
 		DWORD state{ ERROR_NOT_CONNECTED }; // holds internal controller state change
@@ -110,7 +108,7 @@ public:
 	bool Init() override;
 
 	std::vector<pad_list_entry> list_devices() override;
-	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;
+	void SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;
 	u32 get_battery_level(const std::string& padId) override;
 	void init_config(cfg_pad* cfg) override;
 
@@ -121,12 +119,10 @@ private:
 	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
 	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
 
-private:
 	int GetDeviceNumber(const std::string& padId);
 	static PadButtonValues get_button_values_base(const XINPUT_STATE& state);
 	static PadButtonValues get_button_values_scp(const SCP_EXTN& state);
 
-	bool is_init{ false };
 	HMODULE library{ nullptr };
 	PFN_XINPUTGETEXTENDED xinputGetExtended{ nullptr };
 	PFN_XINPUTGETCUSTOMDATA xinputGetCustomData{ nullptr };

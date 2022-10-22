@@ -37,8 +37,6 @@ public:
 	std::array<u8, 64> padData{};
 	bool new_output_data{true};
 	bool enable_player_leds{false};
-	u8 large_motor{0};
-	u8 small_motor{0};
 	u8 led_delay_on{0};
 	u8 led_delay_off{0};
 	u8 battery_level{0};
@@ -60,7 +58,7 @@ public:
 	~hid_pad_handler();
 
 	bool Init() override;
-	void ThreadProc() override;
+	void process() override;
 	std::vector<pad_list_entry> list_devices() override;
 
 protected:
@@ -78,7 +76,6 @@ protected:
 	// pseudo 'controller id' to keep track of unique controllers
 	std::map<std::string, std::shared_ptr<Device>> m_controllers;
 
-	bool m_is_init = false;
 	std::set<std::string> m_last_enumerated_devices;
 	std::set<std::string> m_new_enumerated_devices;
 	std::map<std::string, std::wstring_view> m_enumerated_serials;
@@ -113,7 +110,7 @@ protected:
 		return *static_cast<const u32*>(buf);
 	}
 
-	static u32 get_battery_color(u8 battery_level, int brightness);
+	static u32 get_battery_color(u8 battery_level, u32 brightness);
 
 private:
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;

@@ -53,8 +53,6 @@ xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 	thumb_max = 32767;
 	trigger_min = 0;
 	trigger_max = 255;
-	vibration_min = 0;
-	vibration_max = 65535;
 
 	// set capabilities
 	b_has_config = true;
@@ -128,7 +126,7 @@ void xinput_pad_handler::init_config(cfg_pad* cfg)
 	cfg->from_default();
 }
 
-void xinput_pad_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32/* b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void xinput_pad_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u8 large_motor, u8 small_motor, s32/* r*/, s32/* g*/, s32/* b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	const int device_number = GetDeviceNumber(padId);
 	if (device_number < 0)
@@ -138,8 +136,8 @@ void xinput_pad_handler::SetPadData(const std::string& padId, u8 /*player_id*/, 
 	// The two motors are not the same, and they create different vibration effects.
 	XINPUT_VIBRATION vibrate;
 
-	vibrate.wLeftMotorSpeed = largeMotor;  // between 0 to 65535
-	vibrate.wRightMotorSpeed = smallMotor; // between 0 to 65535
+	vibrate.wLeftMotorSpeed = large_motor * 257;  // between 0 to 65535
+	vibrate.wRightMotorSpeed = small_motor * 257; // between 0 to 65535
 
 	(*xinputSetState)(static_cast<u32>(device_number), &vibrate);
 }
@@ -340,7 +338,7 @@ pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_m
 
 bool xinput_pad_handler::Init()
 {
-	if (is_init)
+	if (m_is_init)
 		return true;
 
 	for (auto it : XINPUT_INFO::LIBRARY_FILENAMES)
@@ -359,7 +357,7 @@ bool xinput_pad_handler::Init()
 
 			if (xinputGetState && xinputSetState && xinputGetBatteryInformation)
 			{
-				is_init = true;
+				m_is_init = true;
 				break;
 			}
 
@@ -373,7 +371,7 @@ bool xinput_pad_handler::Init()
 		}
 	}
 
-	if (!is_init)
+	if (!m_is_init)
 		return false;
 
 	return true;
@@ -532,20 +530,20 @@ void xinput_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const usz idx_l = cfg->switch_vibration_motors ? 1 : 0;
 	const usz idx_s = cfg->switch_vibration_motors ? 0 : 1;
 
-	const u16 speed_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : static_cast<u16>(vibration_min);
-	const u16 speed_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : static_cast<u16>(vibration_min);
+	const u8 speed_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : 0;
+	const u8 speed_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : 0;
 
-	dev->newVibrateData |= dev->largeVibrate != speed_large || dev->smallVibrate != speed_small;
+	dev->newVibrateData |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 
-	dev->largeVibrate = speed_large;
-	dev->smallVibrate = speed_small;
+	dev->large_motor = speed_large;
+	dev->small_motor = speed_small;
 
 	// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
 	if (dev->newVibrateData && steady_clock::now() - dev->last_vibration > 20ms)
 	{
 		XINPUT_VIBRATION vibrate;
-		vibrate.wLeftMotorSpeed = speed_large * 257;
-		vibrate.wRightMotorSpeed = speed_small * 257;
+		vibrate.wLeftMotorSpeed = speed_large * 257;  // between 0 to 65535
+		vibrate.wRightMotorSpeed = speed_small * 257; // between 0 to 65535
 
 		if ((*xinputSetState)(padnum, &vibrate) == ERROR_SUCCESS)
 		{

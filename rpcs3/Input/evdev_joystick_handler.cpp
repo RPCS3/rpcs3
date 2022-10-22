@@ -28,8 +28,6 @@ evdev_joystick_handler::evdev_joystick_handler()
 	thumb_max     = 255;
 	trigger_min   = 0;
 	trigger_max   = 255;
-	vibration_min = 0;
-	vibration_max = 65535;
 
 	// set capabilities
 	b_has_config    = true;
@@ -294,7 +292,7 @@ std::shared_ptr<evdev_joystick_handler::EvdevDevice> evdev_joystick_handler::get
 	return evdev_device;
 }
 
-void evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		m_blacklist.clear();
@@ -305,7 +303,7 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	{
 		if (fail_callback)
 			fail_callback(padId);
-		return;
+		return connection::disconnected;
 	}
 	libevdev* dev = device->device;
 
@@ -359,7 +357,7 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	{
 		if (callback)
 			callback(0, "", padId, 0, preview_values);
-		return;
+		return connection::no_data;
 	}
 
 	struct
@@ -450,16 +448,18 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 	{
 		if (m_blacklist.empty())
 			evdev_log.success("Evdev Calibration: Blacklist is clear. No input spam detected");
-		return;
+		return connection::connected;
 	}
 
 	if (callback)
 	{
 		if (pressed_button.value > 0)
-			return callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
+			callback(pressed_button.value, pressed_button.name, padId, 0, preview_values);
 		else
-			return callback(0, "", padId, 0, preview_values);
+			callback(0, "", padId, 0, preview_values);
 	}
+
+	return connection::connected;
 }
 
 void evdev_joystick_handler::get_motion_sensors(const std::string& padId, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors)
@@ -521,7 +521,7 @@ void evdev_joystick_handler::get_motion_sensors(const std::string& padId, const 
 // https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/ControllerInterface/evdev/evdev.cpp
 // https://github.com/reicast/reicast-emulator/blob/master/core/linux-dist/evdev.cpp
 // http://www.infradead.org/~mchehab/kernel_docs_pdf/linux-input.pdf
-void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small)
+void evdev_joystick_handler::SetRumble(EvdevDevice* device, u8 large, u8 small)
 {
 	if (!device || !device->has_rumble || device->effect_id == -2)
 		return;
@@ -530,7 +530,7 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 	if (fd < 0)
 		return;
 
-	if (large == device->force_large && small == device->force_small)
+	if (large == device->large_motor && small == device->small_motor)
 		return;
 
 	// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse.
@@ -549,8 +549,8 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 
 	if (large == 0 && small == 0)
 	{
-		device->force_large = large;
-		device->force_small = small;
+		device->large_motor = large;
+		device->small_motor = small;
 		return;
 	}
 
@@ -561,8 +561,8 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 		effect.type                      = FF_RUMBLE;
 		effect.id                        = device->effect_id;
 		effect.direction                 = 0;
-		effect.u.rumble.strong_magnitude = large;
-		effect.u.rumble.weak_magnitude   = small;
+		effect.u.rumble.strong_magnitude = large * 257;
+		effect.u.rumble.weak_magnitude   = small * 257;
 		effect.replay.length             = 0;
 		effect.replay.delay              = 0;
 		effect.trigger.button            = 0;
@@ -594,27 +594,27 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 		device->effect_id = -2;
 	}
 
-	device->force_large = large;
-	device->force_small = small;
+	device->large_motor = large;
+	device->small_motor = small;
 }
 
-void evdev_joystick_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u32 largeMotor, u32 smallMotor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void evdev_joystick_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u8 large_motor, u8 small_motor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	// Get our evdev device
 	auto dev = get_evdev_device(padId);
 	if (!dev)
 	{
-		evdev_log.error("evdev TestVibration: Device [%s] not found! [largeMotor = %d] [smallMotor = %d]", padId, largeMotor, smallMotor);
+		evdev_log.error("evdev TestVibration: Device [%s] not found! [large_motor = %d] [small_motor = %d]", padId, large_motor, small_motor);
 		return;
 	}
 
 	if (!dev->has_rumble)
 	{
-		evdev_log.error("evdev TestVibration: Device [%s] does not support rumble features! [largeMotor = %d] [smallMotor = %d]", padId, largeMotor, smallMotor);
+		evdev_log.error("evdev TestVibration: Device [%s] does not support rumble features! [large_motor = %d] [small_motor = %d]", padId, large_motor, small_motor);
 		return;
 	}
 
-	SetRumble(static_cast<EvdevDevice*>(dev.get()), largeMotor, smallMotor);
+	SetRumble(static_cast<EvdevDevice*>(dev.get()), large_motor, small_motor);
 }
 
 u32 evdev_joystick_handler::GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& value)
@@ -1156,8 +1156,8 @@ void evdev_joystick_handler::apply_pad_data(const pad_ensemble& binding)
 	// Handle vibration
 	const int idx_l       = cfg->switch_vibration_motors ? 1 : 0;
 	const int idx_s       = cfg->switch_vibration_motors ? 0 : 1;
-	const u16 force_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : vibration_min;
-	const u16 force_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : vibration_min;
+	const u8 force_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : 0;
+	const u8 force_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : 0;
 	SetRumble(evdev_device, force_large, force_small);
 }
 

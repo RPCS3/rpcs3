@@ -64,7 +64,7 @@ public:
 		return true;
 	}
 
-	void ThreadProc() override
+	void process() override
 	{
 	}
 };

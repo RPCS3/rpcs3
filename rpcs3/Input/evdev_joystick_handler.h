@@ -370,8 +370,6 @@ class evdev_joystick_handler final : public PadHandlerBase
 		int effect_id = -1;
 		bool has_rumble = false;
 		bool has_motion = false;
-		u16 force_large = 0;
-		u16 force_small = 0;
 		clock_t last_vibration = 0;
 	};
 
@@ -383,10 +381,10 @@ public:
 	bool Init() override;
 	std::vector<pad_list_entry> list_devices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id) override;
-	void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
+	connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
 	void get_motion_sensors(const std::string& padId, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors) override;
 	std::unordered_map<u32, std::string> get_motion_axis_list() const override;
-	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;
+	void SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool player_led, bool battery_led, u32 battery_led_brightness) override;
 
 private:
 	void close_devices();
@@ -397,7 +395,7 @@ private:
 	std::shared_ptr<evdev_joystick_handler::EvdevDevice> add_motion_device(const std::string& device, bool in_settings);
 	u32 GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& button_code);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const std::shared_ptr<EvdevDevice>& device);
-	void SetRumble(EvdevDevice* device, u16 large, u16 small);
+	void SetRumble(EvdevDevice* device, u8 large, u8 small);
 
 	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
 	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);
@@ -410,7 +408,6 @@ private:
 	std::shared_ptr<EvdevDevice> m_dev;
 	bool m_is_button_or_trigger;
 	bool m_is_negative;
-	bool m_is_init = false;
 
 	bool check_button(const EvdevButton& b, const u32 code);
 	bool check_buttons(const std::array<EvdevButton, 4>& b, const u32 code);

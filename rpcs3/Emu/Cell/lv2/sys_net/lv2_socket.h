@@ -48,11 +48,17 @@ public:
 		sys_net_linger linger;
 	};
 
+	struct sockopt_cache
+	{
+		sockopt_data data{};
+		s32 len = 0;
+	};
+
 public:
 	SAVESTATE_INIT_POS(7); // Dependency on RPCN
 
 	lv2_socket(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
-	lv2_socket(utils::serial&){}
+	lv2_socket(utils::serial&) {}
 	lv2_socket(utils::serial&, lv2_socket_type type);
 	static std::shared_ptr<lv2_socket> load(utils::serial& ar);
 	void save(utils::serial&, bool save_only_this_class = false);
@@ -94,7 +100,7 @@ public:
 
 	virtual std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> recvfrom(s32 flags, u32 len, bool is_lock = true)                = 0;
 	virtual std::optional<s32> sendto(s32 flags, const std::vector<u8>& buf, std::optional<sys_net_sockaddr> opt_sn_addr, bool is_lock = true) = 0;
-	virtual std::optional<s32> sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock = true) = 0;
+	virtual std::optional<s32> sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock = true)                                              = 0;
 
 	virtual void close()          = 0;
 	virtual s32 shutdown(s32 how) = 0;
@@ -114,7 +120,7 @@ protected:
 	lv2_socket(utils::serial&, bool);
 
 	shared_mutex mutex;
-	u32 lv2_id = 0;
+	s32 lv2_id = 0;
 
 	socket_type socket = 0;
 

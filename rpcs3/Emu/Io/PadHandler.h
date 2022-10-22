@@ -18,6 +18,8 @@ public:
 	virtual ~PadDevice() = default;
 	cfg_pad* config{ nullptr };
 	u8 player_id{0};
+	u8 large_motor{0};
+	u8 small_motor{0};
 	u64 trigger_code_left = 0;
 	u64 trigger_code_right = 0;
 	std::array<u64, 4> axis_code_left{};
@@ -55,6 +57,14 @@ using motion_fail_callback = std::function<void(std::string /*pad_name*/, motion
 
 class PadHandlerBase
 {
+public:
+	enum connection
+	{
+		no_data,
+		connected,
+		disconnected
+	};
+
 protected:
 	enum button
 	{
@@ -88,13 +98,6 @@ protected:
 		pressure_intensity_button,
 
 		button_count
-	};
-
-	enum connection
-	{
-		no_data,
-		connected,
-		disconnected
 	};
 
 	static constexpr u32 MAX_GAMEPADS = 7;
@@ -172,11 +175,10 @@ public:
 	s32 thumb_max = 255; // NOTE: Better keep this positive
 	s32 trigger_min = 0;
 	s32 trigger_max = 255;
-	s32 vibration_min = 0;
-	s32 vibration_max = 255;
 	u32 connected_devices = 0;
 
 	pad_handler m_type;
+	bool m_is_init = false;
 
 	std::string name_string() const;
 	usz max_devices() const;
@@ -197,16 +199,16 @@ public:
 	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
 	// Sets window to config the controller(optional)
-	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
+	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u8 /*large_motor*/, u8 /*small_motor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*player_led*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
 	virtual u32 get_battery_level(const std::string& /*padId*/) { return 0; }
 	// Return list of devices for that handler
 	virtual std::vector<pad_list_entry> list_devices() = 0;
 	// Callback called during pad_thread::ThreadFunc
-	virtual void ThreadProc();
+	virtual void process();
 	// Binds a Pad to a device
 	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, u8 player_id);
 	virtual void init_config(cfg_pad* cfg) = 0;
-	virtual void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
+	virtual connection get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
 	virtual void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors);
 	virtual std::unordered_map<u32, std::string> get_motion_axis_list() const { return {}; }
 

@@ -26,7 +26,7 @@ public:
 
 	PadInfo& GetInfo() { return m_info; }
 	auto& GetPads() { return m_pads; }
-	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
+	void SetRumble(const u32 pad, u8 large_motor, bool small_motor);
 	void SetIntercepted(bool intercepted);
 
 	s32 AddLddPad();
