@@ -42,6 +42,7 @@ namespace
 		VALID_FLAG_1_RELEASE_LEDS                    = 0x08,
 		VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE = 0x10,
 		VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE   = 0x02,
+		VALID_FLAG_2_IMPROVED_RUMBLE_EMULATION       = 0x04,
 		POWER_SAVE_CONTROL_MIC_MUTE                  = 0x10,
 		LIGHTBAR_SETUP_LIGHT_ON                      = 0x01,
 		LIGHTBAR_SETUP_LIGHT_OUT                     = 0x02,
@@ -949,6 +950,9 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 	{
 		common.valid_flag_0 |= VALID_FLAG_0_COMPATIBLE_VIBRATION;
 		common.valid_flag_0 |= VALID_FLAG_0_HAPTICS_SELECT;
+		common.valid_flag_1 |= VALID_FLAG_1_POWER_SAVE_CONTROL_ENABLE;
+		common.valid_flag_2 |= VALID_FLAG_2_IMPROVED_RUMBLE_EMULATION;
+
 		common.motor_left  = device->large_motor;
 		common.motor_right = device->small_motor;
 
