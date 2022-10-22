@@ -34,6 +34,7 @@ enum class emu_settings_type
 	SPUBlockSize,
 	SPUCache,
 	DebugConsoleMode,
+	AllowMetadataInSaves,
 	SilenceAllLogs,
 	MaxSPURSThreads,
 	SleepTimersAccuracy,
@@ -336,6 +337,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::ShowTrophyPopups,          { "Miscellaneous", "Show trophy popups"}},
 	{ emu_settings_type::UseNativeInterface,        { "Miscellaneous", "Use native user interface"}},
 	{ emu_settings_type::ShowShaderCompilationHint, { "Miscellaneous", "Show shader compilation hint"}},
+	{ emu_settings_type::AllowMetadataInSaves,      { "Miscellaneous", "Allow filesystem metadata in save folders" }},
 	{ emu_settings_type::SilenceAllLogs,            { "Miscellaneous", "Silence All Logs" }},
 	{ emu_settings_type::WindowTitleFormat,         { "Miscellaneous", "Window Title Format" }},
 
