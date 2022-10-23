@@ -2550,6 +2550,13 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		}
 
 		ar.set_reading_state();
+
+		if (!g_cfg.savestate.suspend_emu)
+		{
+			to_ar.reset();
+			Restart();
+			return to_ar;
+		}
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)
