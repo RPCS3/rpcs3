@@ -1145,6 +1145,14 @@
     <string>Create RSX Capture</string>
    </property>
   </action>
+  <action name="actionCreate_Savestate">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Create Savestate</string>
+   </property>
+  </action>
   <action name="actionManage_Game_Patches">
    <property name="text">
     <string>Game Patches</string>

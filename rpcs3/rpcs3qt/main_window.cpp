@@ -1735,6 +1735,7 @@ void main_window::EnableMenus(bool enabled) const
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
 	ui->toolsStringSearchAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
+	ui->actionCreate_Savestate->setEnabled(enabled);
 }
 
 void main_window::OnEnableDiscEject(bool enabled) const
@@ -2021,6 +2022,12 @@ void main_window::CreateConnects()
 	connect(ui->actionCreate_RSX_Capture, &QAction::triggered, this, []()
 	{
 		g_user_asked_for_frame_capture = true;
+	});
+
+	connect(ui->actionCreate_Savestate, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered savestate creation from utilities.");
+		Emu.Kill(false, true);
 	});
 
 	connect(ui->bootSavestateAct, &QAction::triggered, this, &main_window::BootSavestate);
