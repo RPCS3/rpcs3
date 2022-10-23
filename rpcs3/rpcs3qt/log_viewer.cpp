@@ -218,7 +218,9 @@ void log_viewer::show_log()
 		m_gui_settings->SetValue(gui::fd_log_viewer, m_path_last);
 
 		QTextStream stream(&file);
-		m_log_text->setPlainText(stream.readAll());
+		QString text = stream.readAll();
+		text.replace('\0', '0');
+		m_log_text->setPlainText(text);
 		file.close();
 	}
 	else

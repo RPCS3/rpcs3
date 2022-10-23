@@ -22,6 +22,7 @@
 #include "Loader/PSF.h"
 #include "util/types.hpp"
 #include "Utilities/File.h"
+#include "Utilities/mutex.h"
 #include "util/yaml.hpp"
 #include "Input/pad_thread.h"
 
@@ -30,6 +31,7 @@
 #include <set>
 #include <regex>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <QtConcurrent>
 #include <QDesktopServices>
@@ -2187,10 +2189,26 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 
 	const std::function func = [this](const game_info& game) -> movie_item*
 	{
+		static std::unordered_set<std::string> warn_once_list;
+		static shared_mutex s_mtx;
+
 		if (game->icon.isNull() && (game->info.icon_path.empty() || !game->icon.load(qstr(game->info.icon_path))))
 		{
-			game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game->info.icon_path)).absolutePath()));
+			if (game_list_log.warning)
+			{
+				bool logged = false;
+				{
+					std::lock_guard lock(s_mtx);
+					logged = !warn_once_list.emplace(game->info.icon_path).second;
+				}
+
+				if (!logged)
+				{
+					game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game->info.icon_path)).absolutePath()));
+				}
+			}
 		}
+
 		const QColor color = getGridCompatibilityColor(game->compat.color);
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 		return game->item;

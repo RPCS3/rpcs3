@@ -81,6 +81,7 @@ extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 extern bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& data, bool is_boot_check);
 extern std::vector<std::pair<u16, u16>> read_used_savestate_versions();
+std::string get_savestate_path(std::string_view title_id, std::string_view boot_path);
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -661,34 +662,33 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	m_config_mode = config_mode;
 	m_config_path = config_path;
 
-	if (fs::file save{path, fs::isfile + fs::read}; save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
-	{
-		m_ar = std::make_shared<utils::serial>();
-		m_ar->set_reading_state();
-		save.seek(0);
-		save.read(m_ar->data, save.size());
-		m_ar->data.shrink_to_fit();
-	}
-
-	if (direct || m_ar || fs::is_file(path))
+	if (direct || fs::is_file(path))
 	{
 		m_path = path;
 
 		auto error = Load(title_id, add_only);
 
-		if (g_cfg.savestate.suspend_emu && m_ar)
+		if (g_cfg.savestate.suspend_emu && error == game_boot_result::no_errors)
 		{
-			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim) + 1);
-			const usz insert_pos = old_path.find_last_of(fs::delim) + 1;
-			const auto prefix = "used_"sv;
-
-			if (old_path.compare(insert_pos, prefix.size(), prefix) != 0)
+			for (std::string old_path : std::initializer_list<std::string>{m_ar ? path : "", m_title_id.empty() ? "" : get_savestate_path(m_title_id, path)})
 			{
-				old_path.insert(insert_pos, prefix);
-
-				if (fs::rename(path, old_path, true))
+				if (old_path.empty())
 				{
-					sys_log.notice("Savestate has been moved to path='%s'", old_path);
+					continue;
+				}
+
+				old_path = old_path.substr(0, old_path.find_last_not_of(fs::delim) + 1);
+				const usz insert_pos = old_path.find_last_of(fs::delim) + 1;
+				const auto prefix = "used_"sv;
+
+				if (old_path.compare(insert_pos, prefix.size(), prefix) != 0)
+				{
+					old_path.insert(insert_pos, prefix);
+
+					if (fs::rename(path, old_path, true))
+					{
+						sys_log.notice("Savestate has been moved to path='%s'", old_path);
+					}
 				}
 			}
 		}
@@ -740,6 +740,8 @@ void Emulator::SetForceBoot(bool force_boot)
 
 game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool is_disc_patch)
 {
+	m_ar.reset();
+
 	if (m_config_mode == cfg_mode::continuous)
 	{
 		// The program is being booted from another running program
@@ -760,6 +762,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 	}
 	else
 	{
+		if (fs::file save{m_path, fs::isfile + fs::read}; save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
+		{
+			m_ar = std::make_shared<utils::serial>();
+			m_ar->set_reading_state();
+			save.seek(0);
+			save.read(m_ar->data, save.size());
+			m_ar->data.shrink_to_fit();
+		}
+
 		m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
 	}
 
@@ -2393,20 +2404,13 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 
 				if (!_path.empty())
 				{
-					if (!g_cfg.savestate.suspend_emu)
-					{
-						save_tar(_path);
-					}
-					else
-					{
-						ar(usz{});
-					}
+					save_tar(_path);
 				}
 			};
 
 			auto save_hdd0 = [&]()
 			{
-				if (!g_cfg.savestate.suspend_emu && g_cfg.savestate.save_disc_game_data)
+				if (g_cfg.savestate.save_disc_game_data)
 				{
 					const std::string path = vfs::get("/dev_hdd0/game/");
 
@@ -2512,7 +2516,7 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 
 	if (savestate)
 	{
-		const std::string path = fs::get_cache_dir() + "/savestates/" + (m_title_id.empty() ? m_path.substr(m_path.find_last_of(fs::delim) + 1) : m_title_id) + ".SAVESTAT";
+		const std::string path = get_savestate_path(m_title_id, m_path);
 
 		fs::pending_file file(path);
 
@@ -2527,6 +2531,7 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		if (!file.file || (file.file.write(ar.data), !file.commit()))
 		{
 			sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);
+			savestate = false;
 		}
 		else
 		{
@@ -2571,6 +2576,13 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 	m_config_mode = cfg_mode::custom;
 	m_ar.reset();
 	read_used_savestate_versions();
+
+	if (savestate && !g_cfg.savestate.suspend_emu)
+	{
+		to_ar.reset();
+		BootGame(m_path);
+		return to_ar;
+	}
 
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
