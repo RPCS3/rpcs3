@@ -20,6 +20,9 @@ namespace cfg
 	// Format min and max unsigned values
 	std::vector<std::string> make_uint_range(u64 min, u64 max);
 
+	// Format min and max float values
+	std::vector<std::string> make_float_range(f64 min, f64 max);
+
 	// Internal hack
 	bool try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, std::string_view);
 
@@ -306,6 +309,72 @@ namespace cfg
 		std::vector<std::string> to_list() const override
 		{
 			return make_int_range(Min, Max);
+		}
+	};
+
+	// Float entry with custom Min/Max range.
+	template <s32 Min, s32 Max>
+	class _float final : public _base
+	{
+		static_assert(Min < Max, "Invalid cfg::_float range");
+
+		using float_type = f64;
+		atomic_t<float_type> m_value;
+
+	public:
+		float_type def;
+
+		// Expose range
+		static constexpr float_type max = Max;
+		static constexpr float_type min = Min;
+
+		_float(node* owner, const std::string& name, float_type def = std::min<float_type>(Max, std::max<float_type>(Min, 0)), bool dynamic = false)
+			: _base(type::_int, owner, name, dynamic)
+			, m_value(def)
+			, def(def)
+		{
+		}
+
+		operator float_type() const
+		{
+			return m_value;
+		}
+
+		float_type get() const
+		{
+			return m_value;
+		}
+
+		void from_default() override
+		{
+			m_value = def;
+		}
+
+		std::string to_string() const override
+		{
+			return std::to_string(m_value);
+		}
+
+		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
+		{
+			f64 result;
+			if (try_to_float(&result, value, Min, Max))
+			{
+				m_value = static_cast<float_type>(result);
+				return true;
+			}
+
+			return false;
+		}
+
+		void set(const f64& value)
+		{
+			m_value = static_cast<float_type>(value);
+		}
+
+		std::vector<std::string> to_list() const override
+		{
+			return make_float_range(Min, Max);
 		}
 	};
 

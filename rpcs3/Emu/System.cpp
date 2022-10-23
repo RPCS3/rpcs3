@@ -668,7 +668,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 		auto error = Load(title_id, add_only);
 
-		if (g_cfg.savestate.suspend_emu)
+		if (g_cfg.savestate.suspend_emu && error == game_boot_result::no_errors)
 		{
 			for (std::string old_path : std::initializer_list<std::string>{m_ar ? path : "", m_title_id.empty() ? "" : get_savestate_path(m_title_id, path)})
 			{
