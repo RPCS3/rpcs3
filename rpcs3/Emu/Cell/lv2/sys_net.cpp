@@ -325,7 +325,7 @@ void lv2_socket::save(utils::serial& ar, bool save_only_this_class)
 
 void sys_net_dump_data(std::string_view desc, const u8* data, s32 len)
 {
-	if (sys_net_dump.enabled == logs::level::trace)
+	if (sys_net_dump.trace)
 	{
 		auto data_dump     = fmt::format("%s:\n", desc);
 		const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};

@@ -102,7 +102,7 @@ namespace np
 	s32 dnshook::analyze_dns_packet(s32 s, const u8* buf, u32 len)
 	{
 		std::lock_guard lock(mutex);
-		if (dnshook_log.enabled == logs::level::trace)
+		if (dnshook_log.trace)
 		{
 			std::string datrace;
 			const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
