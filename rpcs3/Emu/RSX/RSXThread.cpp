@@ -3399,6 +3399,12 @@ namespace rsx
 			break;
 		}
 
+		if (double limit2 = g_cfg.video.second_frame_limit; limit2 >= 0.1 && (limit2 < limit || !limit))
+		{
+			// Apply a second limit
+			limit = limit2;
+		}
+
 		if (limit)
 		{
 			const u64 needed_us = static_cast<u64>(1000000 / limit);
