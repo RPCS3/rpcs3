@@ -2393,20 +2393,13 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 
 				if (!_path.empty())
 				{
-					if (!g_cfg.savestate.suspend_emu)
-					{
-						save_tar(_path);
-					}
-					else
-					{
-						ar(usz{});
-					}
+					save_tar(_path);
 				}
 			};
 
 			auto save_hdd0 = [&]()
 			{
-				if (!g_cfg.savestate.suspend_emu && g_cfg.savestate.save_disc_game_data)
+				if (g_cfg.savestate.save_disc_game_data)
 				{
 					const std::string path = vfs::get("/dev_hdd0/game/");
 
