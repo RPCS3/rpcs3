@@ -284,6 +284,7 @@
     <addaction name="actionopen_rsx_capture"/>
     <addaction name="separator"/>
     <addaction name="actionCreate_RSX_Capture"/>
+    <addaction name="actionCreate_Savestate"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
