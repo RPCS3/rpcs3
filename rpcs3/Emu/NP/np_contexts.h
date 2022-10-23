@@ -80,7 +80,7 @@ struct score_transaction_ctx
 	~score_transaction_ctx();
 	std::optional<s32> get_score_transaction_status();
 	void abort_score_transaction();
-	void wait_for_completion();
+	error_code wait_for_completion();
 	bool set_result_and_wake(error_code err);
 
 	static const u32 id_base  = 0x1001;

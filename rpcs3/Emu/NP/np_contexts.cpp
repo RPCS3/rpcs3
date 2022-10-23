@@ -68,16 +68,18 @@ void score_transaction_ctx::abort_score_transaction()
 	result = SCE_NP_COMMUNITY_ERROR_ABORTED;
 	wake_cond.notify_one();
 }
-void score_transaction_ctx::wait_for_completion()
+error_code score_transaction_ctx::wait_for_completion()
 {
 	std::unique_lock lock(mutex);
 
 	if (result)
 	{
-		return;
+		return *result;
 	}
 
 	completion_cond.wait(lock);
+
+	return *result;
 }
 
 bool score_transaction_ctx::set_result_and_wake(error_code err)
