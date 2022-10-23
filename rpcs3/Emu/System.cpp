@@ -81,6 +81,7 @@ extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 extern bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& data, bool is_boot_check);
 extern std::vector<std::pair<u16, u16>> read_used_savestate_versions();
+std::string get_savestate_path(std::string_view title_id, std::string_view boot_path);
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -676,19 +677,27 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 		auto error = Load(title_id, add_only);
 
-		if (g_cfg.savestate.suspend_emu && m_ar)
+		if (g_cfg.savestate.suspend_emu)
 		{
-			std::string old_path = path.substr(0, path.find_last_not_of(fs::delim) + 1);
-			const usz insert_pos = old_path.find_last_of(fs::delim) + 1;
-			const auto prefix = "used_"sv;
-
-			if (old_path.compare(insert_pos, prefix.size(), prefix) != 0)
+			for (std::string old_path : std::initializer_list<std::string>{m_ar ? path : "", m_title_id.empty() ? "" : get_savestate_path(m_title_id, path)})
 			{
-				old_path.insert(insert_pos, prefix);
-
-				if (fs::rename(path, old_path, true))
+				if (old_path.empty())
 				{
-					sys_log.notice("Savestate has been moved to path='%s'", old_path);
+					continue;
+				}
+
+				old_path = old_path.substr(0, old_path.find_last_not_of(fs::delim) + 1);
+				const usz insert_pos = old_path.find_last_of(fs::delim) + 1;
+				const auto prefix = "used_"sv;
+
+				if (old_path.compare(insert_pos, prefix.size(), prefix) != 0)
+				{
+					old_path.insert(insert_pos, prefix);
+
+					if (fs::rename(path, old_path, true))
+					{
+						sys_log.notice("Savestate has been moved to path='%s'", old_path);
+					}
 				}
 			}
 		}
@@ -2505,7 +2514,7 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 
 	if (savestate)
 	{
-		const std::string path = fs::get_cache_dir() + "/savestates/" + (m_title_id.empty() ? m_path.substr(m_path.find_last_of(fs::delim) + 1) : m_title_id) + ".SAVESTAT";
+		const std::string path = get_savestate_path(m_title_id, m_path);
 
 		fs::pending_file file(path);
 
