@@ -146,6 +146,11 @@ bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& dat
 	return ok;
 }
 
+std::string get_savestate_path(std::string_view title_id, std::string_view boot_path)
+{
+	return fs::get_cache_dir() + "/savestates/" + std::string{title_id.empty() ? boot_path.substr(boot_path.find_last_of(fs::delim) + 1) : title_id} + ".SAVESTAT";
+}
+
 bool is_savestate_compatible(const fs::file& file)
 {
 	return is_savestate_version_compatible(get_savestate_versioning_data(file), false);
