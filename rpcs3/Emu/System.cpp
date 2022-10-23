@@ -662,16 +662,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	m_config_mode = config_mode;
 	m_config_path = config_path;
 
-	if (fs::file save{path, fs::isfile + fs::read}; save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
-	{
-		m_ar = std::make_shared<utils::serial>();
-		m_ar->set_reading_state();
-		save.seek(0);
-		save.read(m_ar->data, save.size());
-		m_ar->data.shrink_to_fit();
-	}
-
-	if (direct || m_ar || fs::is_file(path))
+	if (direct || fs::is_file(path))
 	{
 		m_path = path;
 
@@ -749,6 +740,8 @@ void Emulator::SetForceBoot(bool force_boot)
 
 game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool is_disc_patch)
 {
+	m_ar.reset();
+
 	if (m_config_mode == cfg_mode::continuous)
 	{
 		// The program is being booted from another running program
@@ -769,6 +762,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 	}
 	else
 	{
+		if (fs::file save{m_path, fs::isfile + fs::read}; save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
+		{
+			m_ar = std::make_shared<utils::serial>();
+			m_ar->set_reading_state();
+			save.seek(0);
+			save.read(m_ar->data, save.size());
+			m_ar->data.shrink_to_fit();
+		}
+
 		m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
 	}
 
@@ -2529,6 +2531,7 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		if (!file.file || (file.file.write(ar.data), !file.commit()))
 		{
 			sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);
+			savestate = false;
 		}
 		else
 		{
@@ -2559,13 +2562,6 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		}
 
 		ar.set_reading_state();
-
-		if (!g_cfg.savestate.suspend_emu)
-		{
-			to_ar.reset();
-			Restart();
-			return to_ar;
-		}
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)
@@ -2580,6 +2576,13 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 	m_config_mode = cfg_mode::custom;
 	m_ar.reset();
 	read_used_savestate_versions();
+
+	if (savestate && !g_cfg.savestate.suspend_emu)
+	{
+		to_ar.reset();
+		BootGame(m_path);
+		return to_ar;
+	}
 
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
