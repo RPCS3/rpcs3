@@ -35,6 +35,7 @@ enum class emu_settings_type
 	SPUCache,
 	DebugConsoleMode,
 	SilenceAllLogs,
+	SuspendEmulationSavestateMode,
 	MaxSPURSThreads,
 	SleepTimersAccuracy,
 	ClocksScale,
@@ -354,4 +355,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
 	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
+
+	// Savestates
+	{ emu_settings_type::SuspendEmulationSavestateMode,       { "Savestate", "Suspend Emulation Savestate Mode" }},
 };

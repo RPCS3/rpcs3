@@ -1325,6 +1325,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->accuratePPUFPCC, emu_settings_type::AccuratePPUFPCC);
 	SubscribeTooltip(ui->accuratePPUFPCC, tooltips.settings.accurate_ppufpcc);
 
+	m_emu_settings->EnhanceCheckBox(ui->suspendSavestates, emu_settings_type::SuspendEmulationSavestateMode);
+	SubscribeTooltip(ui->suspendSavestates, tooltips.settings.suspend_savestates);
+
 	m_emu_settings->EnhanceCheckBox(ui->silenceAllLogs, emu_settings_type::SilenceAllLogs);
 	SubscribeTooltip(ui->silenceAllLogs, tooltips.settings.silence_all_logs);
 
