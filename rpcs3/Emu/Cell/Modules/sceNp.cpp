@@ -3962,7 +3962,7 @@ error_code sceNpScoreSetPlayerCharacterId(s32 ctxId, SceNpScorePcId pcId)
 
 error_code sceNpScoreWaitAsync(s32 transId, vm::ptr<s32> result)
 {
-	sceNp.todo("sceNpScoreWaitAsync(transId=%d, result=*0x%x)", transId, result);
+	sceNp.warning("sceNpScoreWaitAsync(transId=%d, result=*0x%x)", transId, result);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -3977,7 +3977,7 @@ error_code sceNpScoreWaitAsync(s32 transId, vm::ptr<s32> result)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
-	trans->wait_for_completion();
+	*result = trans->wait_for_completion();
 
 	return CELL_OK;
 }
@@ -4194,14 +4194,14 @@ error_code scenp_score_record_game_data(s32 transId, SceNpScoreBoardId boardId, 
 
 error_code sceNpScoreRecordGameData(s32 transId, SceNpScoreBoardId boardId, SceNpScoreValue score, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::ptr<void> option)
 {
-	sceNp.todo("sceNpScoreRecordGameData(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, score, totalSize, sendSize, data, option);
+	sceNp.warning("sceNpScoreRecordGameData(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, score, totalSize, sendSize, data, option);
 
 	return scenp_score_record_game_data(transId, boardId, score, totalSize, sendSize, data, option, false);
 }
 
 error_code sceNpScoreRecordGameDataAsync(s32 transId, SceNpScoreBoardId boardId, SceNpScoreValue score, u32 totalSize, u32 sendSize, vm::cptr<void> data, s32 prio, vm::ptr<void> option)
 {
-	sceNp.todo("sceNpScoreRecordGameDataAsync(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, score, totalSize, sendSize, data, prio, option);
+	sceNp.warning("sceNpScoreRecordGameDataAsync(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, score, totalSize, sendSize, data, prio, option);
 
 	return scenp_score_record_game_data(transId, boardId, score, totalSize, sendSize, data, option, true);
 }
@@ -4244,15 +4244,15 @@ error_code scenp_score_get_game_data(s32 transId, SceNpScoreBoardId boardId, vm:
 
 error_code sceNpScoreGetGameData(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> data, vm::ptr<void> option)
 {
-	sceNp.todo("sceNpScoreGetGameDataAsync(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, npId, totalSize, recvSize, data, option);
+	sceNp.warning("sceNpScoreGetGameData(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, option=*0x%x)", transId, boardId, npId, totalSize, recvSize, data, option);
 
 	return scenp_score_get_game_data(transId, boardId, npId, totalSize, recvSize, data, option, false);
 }
 
 error_code sceNpScoreGetGameDataAsync(s32 transId, SceNpScoreBoardId boardId, vm::cptr<SceNpId> npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> data, s32 prio, vm::ptr<void> option)
 {
-	sceNp.todo("sceNpScoreGetGameDataAsync(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, npId, totalSize, recvSize, data, prio,
-	    option);
+	sceNp.warning("sceNpScoreGetGameDataAsync(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, prio=%d, option=*0x%x)", transId, boardId, npId, totalSize, recvSize, data, prio,
+		option);
 
 	return scenp_score_get_game_data(transId, boardId, npId, totalSize, recvSize, data, option, true);
 }

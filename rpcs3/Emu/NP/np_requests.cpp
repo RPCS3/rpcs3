@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Memory/vm_ptr.h"
@@ -774,7 +775,10 @@ namespace np
 			return;
 		}
 
-		return worker_function(std::move(lock));
+		auto& cpu_thread = *get_current_cpu_thread();
+		lv2_obj::sleep(cpu_thread);
+		worker_function(std::move(lock));
+		cpu_thread.check_state();
 	}
 
 	void np_handler::get_board_infos(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, bool async)
@@ -967,8 +971,16 @@ namespace np
 			return;
 		}
 
-		// If here the data has already been acquired and the client is just asking for part of it
+		// Check if the transaction has actually completed, otherwise adjust tdata parameters
+		if (!trans_ctx->result)
+		{
+			tdata->totalSize = totalSize;
+			tdata->recvSize = recvSize;
+			tdata->score_data = score_data;
+			return;
+		}
 
+		// If here the data has already been acquired and the client is just asking for part of it
 		usz to_copy = std::min(tdata->game_data.size(), static_cast<usz>(recvSize));
 		std::memcpy(score_data.get_ptr(), tdata->game_data.data(), to_copy);
 		tdata->game_data.erase(tdata->game_data.begin(), tdata->game_data.begin() + to_copy);
