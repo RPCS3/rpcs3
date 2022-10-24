@@ -677,17 +677,17 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 					continue;
 				}
 
-				old_path = old_path.substr(0, old_path.find_last_not_of(fs::delim) + 1);
-				const usz insert_pos = old_path.find_last_of(fs::delim) + 1;
+				std::string new_path = old_path.substr(0, old_path.find_last_not_of(fs::delim) + 1);
+				const usz insert_pos = new_path.find_last_of(fs::delim) + 1;
 				const auto prefix = "used_"sv;
 
-				if (old_path.compare(insert_pos, prefix.size(), prefix) != 0)
+				if (new_path.compare(insert_pos, prefix.size(), prefix) != 0)
 				{
-					old_path.insert(insert_pos, prefix);
+					new_path.insert(insert_pos, prefix);
 
-					if (fs::rename(path, old_path, true))
+					if (fs::rename(old_path, new_path, true))
 					{
-						sys_log.notice("Savestate has been moved to path='%s'", old_path);
+						sys_log.notice("Savestate has been moved to path='%s'", new_path);
 					}
 				}
 			}
