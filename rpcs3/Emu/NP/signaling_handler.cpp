@@ -192,7 +192,7 @@ void signaling_handler::process_incoming_messages()
 		if (!validate_signaling_packet(sp))
 			continue;
 
-		if (sign_log.enabled == logs::level::trace)
+		if (sign_log.trace)
 		{
 			in_addr addr;
 			addr.s_addr = op_addr;

@@ -60,9 +60,15 @@ std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
 
 bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 {
+	if (value.empty())
+	{
+		if (out) cfg_log.error("cfg::try_to_uint64(): called with an empty string");
+		return false;
+	}
+
 	s64 result;
-	const char* start = &value.front();
-	const char* end = &value.back() + 1;
+	const char* start = value.data();
+	const char* end = start + value.size();
 	int base = 10;
 	int sign = +1;
 
@@ -72,7 +78,7 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 		start += 1;
 	}
 
-	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
+	if (start[0] == '0' && value.size() >= 2 && (start[1] == 'x' || start[1] == 'X'))
 	{
 		// Limited hex support
 		base = 16;
@@ -106,12 +112,18 @@ std::vector<std::string> cfg::make_uint_range(u64 min, u64 max)
 
 bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 {
+	if (value.empty())
+	{
+		if (out) cfg_log.error("cfg::try_to_uint64(): called with an empty string");
+		return false;
+	}
+
 	u64 result;
-	const char* start = &value.front();
-	const char* end = &value.back() + 1;
+	const char* start = value.data();
+	const char* end = start + value.size();
 	int base = 10;
 
-	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
+	if (start[0] == '0' && value.size() >= 2 && (start[1] == 'x' || start[1] == 'X'))
 	{
 		// Limited hex support
 		base = 16;
@@ -129,6 +141,42 @@ bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 	if (result < min || result > max)
 	{
 		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (%u..%u)", value, min, max);
+		return false;
+	}
+
+	if (out) *out = result;
+	return true;
+}
+
+std::vector<std::string> cfg::make_float_range(f64 min, f64 max)
+{
+	return {std::to_string(min), std::to_string(max)};
+}
+
+bool try_to_float(f64* out, std::string_view value, f64 min, f64 max)
+{
+	if (value.empty())
+	{
+		if (out) cfg_log.error("cfg::try_to_float(): called with an empty string");
+		return false;
+	}
+
+	// std::from_chars float is yet to be implemented on Xcode it seems
+	// And strtod doesn't support ranged view so we need to ensure it meets a null terminator
+	const std::string str = std::string{value};
+
+	char* end_check{};
+	const double result = std::strtod(str.data(), &end_check);
+
+	if (end_check != str.data() + str.size())
+	{
+		if (out) cfg_log.error("cfg::try_to_float('%s'): invalid float", value);
+		return false;
+	}
+
+	if (result < min || result > max)
+	{
+		if (out) cfg_log.error("cfg::try_to_float('%s'): out of bounds (%f..%f)", value, min, max);
 		return false;
 	}
 
@@ -162,8 +210,8 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 	}
 
 	u64 result;
-	const char* start = &value.front();
-	const char* end = &value.back() + 1;
+	const char* start = value.data();
+	const char* end = start + value.size();
 	int base = 10;
 
 	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
