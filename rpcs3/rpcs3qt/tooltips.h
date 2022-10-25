@@ -184,6 +184,8 @@ public:
 		const QString fsr_upscaling     = tr("Enable FidelityFX Super Resolution upscaling filter to improve the look of upscaled images.\nIf the game is rendering at an internal resolution lower than your window resolution, FidelityFX will handle the upscale.\nCan cause visual artifacts.\nDoes not work with stereo 3D output for now.");
 		const QString fsr_rcas_strength = tr("Control the sharpening strength applied by FidelityFX Super Resolution. Higher values will give sharper output but may introduce artifacts.");
 
+		const QString texture_lod_bias = tr("-16 to +16 are the maximum effective values.\n This setting has a range of -32 to 32 because if you desire -16 but the game's value is +16 in order to get -16 you need to subtract 32. \nIt is advised to stick within a range of -12 to 12");
+
 		// gui
 
 		const QString log_limit          = tr("Sets the maximum amount of blocks that the log can display.\nThis usually equals the number of lines.\nSet 0 in order to remove the limit.");

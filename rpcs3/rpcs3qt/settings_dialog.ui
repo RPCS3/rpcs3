@@ -850,6 +850,67 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_Level_of_Detail">
+              <property name="title">
+               <string>Level of Detail</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_Level_of_Detail_Layout">
+               <item>
+                <widget class="QWidget" name="textureLodBiasWidget" native="true">
+                 <layout class="QVBoxLayout" name="textureLodBiasWidgetLayout">
+                  <item>
+                   <layout class="QHBoxLayout" name="textureLodBiasLayoutTop">
+                    <item>
+                     <widget class="QLabel" name="textureLodBiasMin">
+                      <property name="text">
+                       <string>-32</string>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QSlider" name="textureLodBias">
+                      <property name="orientation">
+                       <enum>Qt::Horizontal</enum>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="textureLodBiasMax">
+                      <property name="text">
+                       <string>32</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="textureLodBiasLayoutBottom">
+                    <item>
+                     <widget class="QLabel" name="textureLodBiasVal">
+                      <property name="text">
+                       <string>0</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="textureLodBiasReset">
+                      <property name="text">
+                       <string>Reset</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <spacer name="gpu_tab_layout_middle_spacer">
               <property name="orientation">
                <enum>Qt::Vertical</enum>

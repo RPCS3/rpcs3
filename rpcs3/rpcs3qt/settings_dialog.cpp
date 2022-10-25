@@ -730,6 +730,27 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->fsrSharpeningStrength->setValue(fsr_sharpening_strength_def);
 	});
 
+	const int texture_Lod_Bias_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::TextureLodBias));
+	const auto fmt_texture_Lod_Bias = [texture_Lod_Bias_def](int value)
+	{
+		if (value == texture_Lod_Bias_def)
+		{
+			return tr("%1 (Default)").arg(value);
+		}
+		return tr("%1").arg(value);
+	};
+	m_emu_settings->EnhanceSlider(ui->textureLodBias, emu_settings_type::TextureLodBias);
+	SubscribeTooltip(ui->textureLodBiasWidget, tooltips.settings.texture_lod_bias);
+	ui->textureLodBiasVal->setText(fmt_texture_Lod_Bias(ui->textureLodBias->value()));
+	connect(ui->textureLodBias, &QSlider::valueChanged, [fmt_texture_Lod_Bias, this](int value)
+		{
+			ui->textureLodBiasVal->setText(fmt_texture_Lod_Bias(value));
+		});
+	connect(ui->textureLodBiasReset, &QAbstractButton::clicked, [texture_Lod_Bias_def, this]()
+		{
+			ui->textureLodBias->setValue(texture_Lod_Bias_def);
+		});
+
 	// Remove renderers from the renderer Combobox if not supported
 	for (const auto& renderer : r_creator->renderers)
 	{
