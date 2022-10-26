@@ -1966,7 +1966,7 @@ void Emulator::FixGuestTime()
 				{
 					if (old_path.empty())
 					{
-					continue;
+						continue;
 					}
 
 					std::string new_path = old_path.substr(0, old_path.find_last_not_of(fs::delim) + 1);
