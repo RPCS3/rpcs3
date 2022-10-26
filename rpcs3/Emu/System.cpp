@@ -918,7 +918,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				m_cat.clear();
 			}
 
-			m_path_old = m_path:
+			m_path_old = m_path;
 
 			if (argv[0].starts_with("/dev_hdd0"sv))
 			{
@@ -1959,6 +1959,32 @@ void Emulator::FixGuestTime()
 
 		CallFromMainThread([this]
 		{
+			// Mark a known savestate location and the one we try to boot (in case we boot a moved/copied savestate)
+			if (g_cfg.savestate.suspend_emu)
+			{
+				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_path(m_title_id, path)})
+				{
+					if (old_path.empty())
+					{
+					continue;
+					}
+
+					std::string new_path = old_path.substr(0, old_path.find_last_not_of(fs::delim) + 1);
+					const usz insert_pos = new_path.find_last_of(fs::delim) + 1;
+					const auto prefix = "used_"sv;
+
+					if (new_path.compare(insert_pos, prefix.size(), prefix) != 0)
+					{
+						new_path.insert(insert_pos, prefix);
+
+						if (fs::rename(old_path, new_path, true))
+						{
+							sys_log.success("Savestate has been moved (hidden) to path='%s'", new_path);
+						}
+					}
+				}
+			}
+
 			m_ar.reset();
 
 			g_tls_log_prefix = []()
@@ -1975,32 +2001,6 @@ void Emulator::FixGuestTime()
 
 void Emulator::FinalizeRunRequest()
 {
-	// Mark a known savestate location and the one we try to boot (in case we boot a moved/copied savestate)
-	if (g_cfg.savestate.suspend_emu)
-	{
-		for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_path(m_title_id, path)})
-		{
-			if (old_path.empty())
-			{
-				continue;
-			}
-
-			std::string new_path = old_path.substr(0, old_path.find_last_not_of(fs::delim) + 1);
-			const usz insert_pos = new_path.find_last_of(fs::delim) + 1;
-			const auto prefix = "used_"sv;
-
-			if (new_path.compare(insert_pos, prefix.size(), prefix) != 0)
-			{
-				new_path.insert(insert_pos, prefix);
-
-				if (fs::rename(old_path, new_path, true))
-				{
-					sys_log.success("Savestate has been moved (hidden) to path='%s'", new_path);
-				}
-			}
-		}
-	}
-
 	auto on_select = [](u32, spu_thread& spu)
 	{
 		if (spu.group && spu.index == spu.group->waiter_spu_index)
