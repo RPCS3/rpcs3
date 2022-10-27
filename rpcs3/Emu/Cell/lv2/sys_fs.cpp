@@ -10,6 +10,8 @@
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_utils.hpp"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/Overlays/overlay_utils.h" // for ascii8_to_utf16
 #include "Utilities/StrUtil.h"
 
@@ -119,7 +121,7 @@ bool verify_mself(const fs::file& mself_file)
 	return true;
 }
 
-lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
+std::string_view lv2_fs_object::get_device_path(std::string_view filename)
 {
 	std::string_view mp_name, vpath = filename;
 
@@ -131,7 +133,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 		if (pos == 0)
 		{
 			// Relative path (TODO)
-			return &g_mp_sys_no_device;
+			return {};
 		}
 
 		if (pos == umax)
@@ -169,6 +171,13 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 		}
 	}
 
+	return mp_name;
+}
+
+lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
+{
+	const auto mp_name = get_device_path(filename);
+
 	if (!mp_name.empty())
 	{
 		if (mp_name == "dev_hdd0"sv)
@@ -198,6 +207,41 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 
 	// Default fallback
 	return &g_mp_sys_dev_root;
+}
+
+std::string lv2_fs_object::get_vfs(std::string_view filename)
+{
+	const auto mp_name = get_device_path(filename);
+
+	if (!mp_name.empty())
+	{
+		if (mp_name == "dev_hdd0"sv)
+			return g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, rpcs3::utils::get_emu_dir());
+		if (mp_name == "dev_hdd1"sv)
+			return g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, rpcs3::utils::get_emu_dir());
+		if (mp_name.starts_with("dev_usb"sv))
+			return g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/%s", mp_name), rpcs3::utils::get_emu_dir()).path;
+		if (mp_name == "dev_bdvd"sv)
+			return g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
+		if (mp_name == "dev_ps2disc"sv)
+			return {}; // Unsupported in VFS
+		if (mp_name == "app_home"sv && filename.data() != Emu.argv[0].data())
+			return lv2_fs_object::get_vfs(Emu.argv[0]);
+		if (mp_name == "host_root"sv)
+			return {}; // Unsupported in VFS
+		if (mp_name == "dev_flash"sv)
+			return g_cfg_vfs.get_dev_flash();
+		if (mp_name == "dev_flash2"sv)
+			return g_cfg_vfs.get_dev_flash2();
+		if (mp_name == "dev_flash3"sv)
+			return g_cfg_vfs.get_dev_flash3();
+
+		// Default
+		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, rpcs3::utils::get_emu_dir());
+	}
+
+	// Default fallback
+	return {};
 }
 
 lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
@@ -2895,7 +2939,7 @@ error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 		return CELL_EFAULT;
 	}
 
-	*len = 0x8;
+	*len = 0x9;
 
 	return CELL_OK;
 }
@@ -2915,7 +2959,7 @@ error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32
 		sys_fs.todo("sys_fs_get_mount_info special case TODO");
 	}
 
-	const u32 max_len = std::min<u32>(len, 8);
+	const u32 max_len = std::min<u32>(len, 9);
 	*out_len = max_len;
 
 	struct mount_info
@@ -2924,7 +2968,7 @@ error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32
 		be_t<u32> unk1 = 0, unk2 = 0, unk3 = 0, unk4 = 0, unk5 = 0;
 	};
 
-	static constexpr std::array<mount_info, 8> data
+	static constexpr std::array<mount_info, 9> data
 	{
 		mount_info{.path = "/", .filesystem = "CELL_FS_ADMINFS", .dev_name = "CELL_FS_ADMINFS:", .unk5 = 0x10000000},
 		mount_info{.path = "/app_home", .filesystem = "CELL_FS_DUMMY", .dev_name = "CELL_FS_DUMMY:"},
@@ -2933,6 +2977,7 @@ error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32
 		mount_info{.path = "/dev_flash2", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH2:"},
 		mount_info{.path = "/dev_flash3", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH3:"},
 		mount_info{.path = "/dev_hdd0", .filesystem = "CELL_FS_UFS", .dev_name = "CELL_FS_UTILITY:HDD0:"},
+		mount_info{.path = "/dev_hdd1", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_UTILITY:HDD1:"},
 		mount_info{.path = "/dev_bdvd", .filesystem = "CELL_FS_ISO9660", .dev_name = "CELL_FS_IOS:PATA0_BDVD_DRIVE"},
 	};
 
@@ -2949,7 +2994,61 @@ error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32
 
 error_code sys_fs_mount(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk3, vm::cptr<char> str1, u32 str_len)
 {
-	sys_fs.todo("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=0x%x, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
+	sys_fs.warning("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=0x%x, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
+
+	if (!g_ps3_process_info.has_root_perm())
+	{
+		return CELL_ENOSYS;
+	}
+
+	const auto [path_error, vpath] = translate_to_sv(path);
+
+	if (path_error)
+	{
+		return { path_error, vpath };
+	}
+
+	const auto mp = lv2_fs_object::get_mp(vpath);
+	bool success = true;
+
+	if (mp == &g_mp_sys_dev_hdd1)
+	{
+		const std::string_view appname = g_ps3_process_info.get_cellos_appname();
+		success = vfs::mount(vpath, fmt::format("%s/caches/%s", lv2_fs_object::get_vfs(vpath), appname.substr(0, appname.find_last_of('.'))), true);
+	}
+	else
+	{
+		//success = vfs::mount(vpath, lv2_fs_object::get_vfs(vpath)); // We are not supporting mounting devices other than /dev_hdd1 via this syscall currently
+	}
+
+	if (!success)
+		return CELL_EIO;
+
+	return CELL_OK;
+}
+
+error_code sys_fs_unmount(ppu_thread&, vm::cptr<char> path, s32 unk1, s32 unk2)
+{
+	sys_fs.warning("sys_fs_unmount(path=%s, unk1=0x%x, unk2=0x%x)", path, unk1, unk2);
+
+	if (!g_ps3_process_info.has_root_perm())
+	{
+		return CELL_ENOSYS;
+	}
+
+	const auto [path_error, vpath] = translate_to_sv(path);
+
+	if (path_error)
+	{
+		return { path_error, vpath };
+	}
+
+	bool success = true;
+
+	//success = vfs::unmount(vpath); // Not really unmounting it at the moment
+
+	if (!success)
+		return CELL_EIO;
 
 	return CELL_OK;
 }

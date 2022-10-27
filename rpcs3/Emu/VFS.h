@@ -10,7 +10,7 @@ struct vfs_directory;
 namespace vfs
 {
 	// Mount VFS device
-	bool mount(std::string_view vpath, std::string_view path);
+	bool mount(std::string_view vpath, std::string_view path, bool create_dir = false);
 
 	// Unmount VFS device
 	bool unmount(std::string_view vpath);
