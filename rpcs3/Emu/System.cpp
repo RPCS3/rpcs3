@@ -245,14 +245,14 @@ void Emulator::Init(bool add_only)
 	const std::string dev_bdvd = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, emu_dir); // Only used for make_path
 	const std::string dev_hdd0 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir);
 	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
-	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
-	const std::string dev_flsh2 = g_cfg_vfs.get_dev_flash2();
-	const std::string dev_flsh3 = g_cfg_vfs.get_dev_flash3();
+	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
+	const std::string dev_flash2 = g_cfg_vfs.get_dev_flash2();
+	const std::string dev_flash3 = g_cfg_vfs.get_dev_flash3();
 
 	vfs::mount("/dev_hdd0", dev_hdd0);
-	vfs::mount("/dev_flash", dev_flsh);
-	vfs::mount("/dev_flash2", dev_flsh2);
-	vfs::mount("/dev_flash3", dev_flsh3);
+	vfs::mount("/dev_flash", dev_flash);
+	vfs::mount("/dev_flash2", dev_flash2);
+	vfs::mount("/dev_flash3", dev_flash3);
 	vfs::mount("/app_home", g_cfg_vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg_vfs.get(g_cfg_vfs.app_home, emu_dir));
 
 	std::string dev_usb;
@@ -351,9 +351,9 @@ void Emulator::Init(bool add_only)
 		make_path_verbose(dev_bdvd);
 		make_path_verbose(dev_hdd0);
 		make_path_verbose(dev_hdd1);
-		make_path_verbose(dev_flsh);
-		make_path_verbose(dev_flsh2);
-		make_path_verbose(dev_flsh3);
+		make_path_verbose(dev_flash);
+		make_path_verbose(dev_flash2);
+		make_path_verbose(dev_flash3);
 		make_path_verbose(dev_usb);
 		make_path_verbose(dev_hdd0 + "game/");
 		make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"game/＄locks/"));
