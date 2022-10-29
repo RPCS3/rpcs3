@@ -706,6 +706,18 @@ namespace rsx
 				case CELL_KEYC_ESCAPE:
 					Close(CELL_OSKDIALOG_CLOSE_CANCEL);
 					break;
+				case CELL_KEYC_RIGHT_ARROW:
+					on_move_cursor(key, edit_text::direction::right);
+					break;
+				case CELL_KEYC_LEFT_ARROW:
+					on_move_cursor(key, edit_text::direction::left);
+					break;
+				case CELL_KEYC_DOWN_ARROW:
+					on_move_cursor(key, edit_text::direction::down);
+					break;
+				case CELL_KEYC_UP_ARROW:
+					on_move_cursor(key, edit_text::direction::up);
+					break;
 				case CELL_KEYC_ENTER:
 					if ((flags & CELL_OSKDIALOG_NO_RETURN))
 					{
@@ -831,6 +843,12 @@ namespace rsx
 			{
 				// Beep or give some other kind of visual feedback
 			}
+		}
+
+		void osk_dialog::on_move_cursor(const std::u32string&, edit_text::direction dir)
+		{
+			m_preview.move_caret(dir);
+			m_update = true;
 		}
 
 		std::u32string osk_dialog::get_placeholder() const
