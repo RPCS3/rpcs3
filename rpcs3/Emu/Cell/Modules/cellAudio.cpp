@@ -1872,12 +1872,13 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	{
 		for (u32 i = 0; i < CELL_AUDIO_BLOCK_SAMPLES; i++)
 		{
+			// Channel order in src is Front Left, Center, Front Right, Surround Left, Surround Right, LFE
 			dst[i * 8 + 0] += src[i * 6 + 0] * volume; // mix L ch
-			dst[i * 8 + 1] += src[i * 6 + 1] * volume; // mix R ch
-			dst[i * 8 + 2] += src[i * 6 + 2] * volume; // mix center
-			dst[i * 8 + 3] += src[i * 6 + 3] * volume; // mix LFE
-			dst[i * 8 + 4] += src[i * 6 + 4] * volume; // mix rear L
-			dst[i * 8 + 5] += src[i * 6 + 5] * volume; // mix rear R
+			dst[i * 8 + 1] += src[i * 6 + 2] * volume; // mix R ch
+			dst[i * 8 + 2] += src[i * 6 + 1] * volume; // mix center
+			dst[i * 8 + 3] += src[i * 6 + 5] * volume; // mix LFE
+			dst[i * 8 + 4] += src[i * 6 + 3] * volume; // mix rear L
+			dst[i * 8 + 5] += src[i * 6 + 4] * volume; // mix rear R
 			//dst[i * 8 + 6] += 0.0f; // side L
 			//dst[i * 8 + 7] += 0.0f; // side R
 		}
