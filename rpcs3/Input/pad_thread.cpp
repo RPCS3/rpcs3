@@ -429,7 +429,7 @@ void pad_thread::operator()()
 
 			m_mask_start_press_to_unpause &= pressed_mask;
 
-			if (!pressed_mask || timestamp - m_track_start_press_begin_timestamp >= 1'200'000)
+			if (!pressed_mask || timestamp - m_track_start_press_begin_timestamp >= 1'00'000)
 			{
 				m_track_start_press_begin_timestamp = timestamp;
 
@@ -439,7 +439,7 @@ void pad_thread::operator()()
 					m_track_start_press_begin_timestamp = 0;
 
 					sys_log.success("Unpausing emulation using the START button in a few seconds...");
-					rsx::overlays::queue_message("Unpausing...!"s, 2'500'000);
+					rsx::overlays::queue_message(localized_string_id::EMULATION_RESUMING, 2'000'000);
 
 					m_resume_emulation_flag = true;
 

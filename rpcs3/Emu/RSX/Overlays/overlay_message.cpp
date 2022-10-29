@@ -7,9 +7,10 @@ namespace rsx
 	namespace overlays
 	{
 		template <typename T>
-		message_item::message_item(T msg_id, u64 expiration)
+		message_item::message_item(T msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs)
 		{
-			m_expiration_time = get_system_time() + expiration;
+			m_expiration_time = expiration == umax ? expiration : get_system_time() + expiration;
+			m_refs = std::move(refs);
 
 			m_text.set_font("Arial", 16);
 			m_text.set_text(msg_id);
@@ -21,12 +22,13 @@ namespace rsx
 			m_fade_animation.duration = 2.f;
 			m_fade_animation.active = true;
 		}
-		template message_item::message_item(std::string msg_id, u64);
-		template message_item::message_item(localized_string_id msg_id, u64);
+		template message_item::message_item(std::string msg_id, u64, std::shared_ptr<atomic_t<u32>>);
+		template message_item::message_item(localized_string_id msg_id, u64, std::shared_ptr<atomic_t<u32>>);
 
 		u64 message_item::get_expiration() const
 		{
-			return m_expiration_time;
+			// If reference counting is enabled and reached 0 consider it expired 
+			return m_refs && *m_refs == 0 ? 0 : m_expiration_time;
 		}
 
 		compiled_resource message_item::get_compiled()
