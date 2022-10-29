@@ -593,56 +593,12 @@ namespace rsx
 
 			const bool use_key_string_fallback = !key.empty();
 
-			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, use_key_string_fallback=%d)", led, mkey, key_code, out_key_code, pressed, use_key_string_fallback);
+			osk.error("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, use_key_string_fallback=%d)", led, mkey, key_code, out_key_code, pressed, use_key_string_fallback);
 
 			if (!use_key_string_fallback)
 			{
 				// Get keyboard layout
-				u32 kb_mapping = CELL_KB_MAPPING_101;
-				u32 osk_panel_mode = CELL_OSKDIALOG_PANELMODE_DEFAULT;
-				for (usz i = 0; i < m_panels.size(); ++i)
-				{
-					if (m_panel_index == i)
-					{
-						osk_panel_mode = m_panels[i].osk_panel_mode;
-						break;
-					}
-				}
-
-				switch (osk_panel_mode)
-				{
-				case CELL_OSKDIALOG_PANELMODE_DEFAULT: kb_mapping = CELL_KB_MAPPING_101; break;
-				case CELL_OSKDIALOG_PANELMODE_GERMAN: kb_mapping = CELL_KB_MAPPING_GERMAN_GERMANY; break;
-				case CELL_OSKDIALOG_PANELMODE_ENGLISH: kb_mapping = CELL_KB_MAPPING_ENGLISH_UK; break;
-				case CELL_OSKDIALOG_PANELMODE_SPANISH: kb_mapping = CELL_KB_MAPPING_SPANISH_SPAIN; break;
-				case CELL_OSKDIALOG_PANELMODE_FRENCH: kb_mapping = CELL_KB_MAPPING_FRENCH_FRANCE; break;
-				case CELL_OSKDIALOG_PANELMODE_ITALIAN: kb_mapping = CELL_KB_MAPPING_ITALIAN_ITALY; break;
-				case CELL_OSKDIALOG_PANELMODE_DUTCH: kb_mapping = CELL_KB_MAPPING_DUTCH_NETHERLANDS; break;
-				case CELL_OSKDIALOG_PANELMODE_PORTUGUESE: kb_mapping = CELL_KB_MAPPING_PORTUGUESE_PORTUGAL; break;
-				case CELL_OSKDIALOG_PANELMODE_RUSSIAN: kb_mapping = CELL_KB_MAPPING_RUSSIAN_RUSSIA; break;
-				case CELL_OSKDIALOG_PANELMODE_JAPANESE: kb_mapping = CELL_KB_MAPPING_106; break;
-				case CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE: kb_mapping = CELL_KB_MAPPING_106; break;
-				case CELL_OSKDIALOG_PANELMODE_POLISH: kb_mapping = CELL_KB_MAPPING_POLISH_POLAND; break;
-				case CELL_OSKDIALOG_PANELMODE_KOREAN: kb_mapping = CELL_KB_MAPPING_KOREAN_KOREA; break;
-				case CELL_OSKDIALOG_PANELMODE_TURKEY: kb_mapping = CELL_KB_MAPPING_TURKISH_TURKEY; break;
-				case CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE: kb_mapping = CELL_KB_MAPPING_CHINESE_TRADITIONAL; break;
-				case CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE: kb_mapping = CELL_KB_MAPPING_CHINESE_SIMPLIFIED; break;
-				case CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL: kb_mapping = CELL_KB_MAPPING_PORTUGUESE_BRAZIL; break;
-				case CELL_OSKDIALOG_PANELMODE_DANISH: kb_mapping = CELL_KB_MAPPING_DANISH_DENMARK; break;
-				case CELL_OSKDIALOG_PANELMODE_SWEDISH: kb_mapping = CELL_KB_MAPPING_SWEDISH_SWEDEN; break;
-				case CELL_OSKDIALOG_PANELMODE_NORWEGIAN: kb_mapping = CELL_KB_MAPPING_NORWEGIAN_NORWAY; break;
-				case CELL_OSKDIALOG_PANELMODE_FINNISH: kb_mapping = CELL_KB_MAPPING_FINNISH_FINLAND; break;
-				case CELL_OSKDIALOG_PANELMODE_JAPANESE_HIRAGANA: kb_mapping = CELL_KB_MAPPING_106; break;
-				case CELL_OSKDIALOG_PANELMODE_JAPANESE_KATAKANA: kb_mapping = CELL_KB_MAPPING_106_KANA; break;
-				case CELL_OSKDIALOG_PANELMODE_ALPHABET_FULL_WIDTH: kb_mapping = CELL_KB_MAPPING_106; break;
-				case CELL_OSKDIALOG_PANELMODE_ALPHABET: kb_mapping = CELL_KB_MAPPING_101; break;
-				case CELL_OSKDIALOG_PANELMODE_LATIN: kb_mapping = CELL_KB_MAPPING_101; break;
-				case CELL_OSKDIALOG_PANELMODE_NUMERAL_FULL_WIDTH: kb_mapping = CELL_KB_MAPPING_101; break;
-				case CELL_OSKDIALOG_PANELMODE_NUMERAL: kb_mapping = CELL_KB_MAPPING_101; break;
-				case CELL_OSKDIALOG_PANELMODE_URL: kb_mapping = CELL_KB_MAPPING_101; break;
-				case CELL_OSKDIALOG_PANELMODE_PASSWORD: kb_mapping = CELL_KB_MAPPING_101; break;
-				default: kb_mapping = CELL_KB_MAPPING_101; break;
-				}
+				const u32 kb_mapping = static_cast<u32>(g_cfg.sys.keyboard_type.get());
 
 				// Convert key to its u32string presentation
 				const u16 converted_out_key = cellKbCnvRawCode(kb_mapping, mkey, led, out_key_code);
