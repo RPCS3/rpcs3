@@ -151,17 +151,24 @@ namespace rsx
 					if (!handler.GetKeyboards().empty() && handler.GetInfo().status[0] == CELL_KB_STATUS_CONNECTED)
 					{
 						KbData& current_data = handler.GetData(0);
+						KbExtraData& extra_data = handler.GetExtraData(0);
 
-						if (current_data.len > 0)
+						if (current_data.len > 0 || !extra_data.pressed_keys.empty())
 						{
 							for (s32 i = 0; i < current_data.len; i++)
 							{
 								const KbButton& key = current_data.buttons[i];
-								on_key_pressed(current_data.led, current_data.mkey, key.m_keyCode, key.m_outKeyCode, key.m_pressed);
+								on_key_pressed(current_data.led, current_data.mkey, key.m_keyCode, key.m_outKeyCode, key.m_pressed, {});
+							}
+
+							for (const std::u32string& key : extra_data.pressed_keys)
+							{
+								on_key_pressed(0, 0, 0, 0, true, key);
 							}
 
 							// Flush buffer unconditionally. Otherwise we get a flood of key events.
 							current_data.len = 0;
+							extra_data.pressed_keys.clear();
 
 							// Ignore gamepad input if a key was recognized
 							refresh();
