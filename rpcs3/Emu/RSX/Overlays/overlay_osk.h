@@ -104,6 +104,7 @@ namespace rsx
 			void on_layer(const std::u32string&);
 			void on_space(const std::u32string&);
 			void on_backspace(const std::u32string&);
+			void on_delete(const std::u32string&);
 			void on_enter(const std::u32string&);
 
 			std::u32string get_placeholder() const;
