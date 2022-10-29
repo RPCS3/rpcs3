@@ -541,8 +541,8 @@ namespace rsx
 		rsx::profiling_timer m_profiler;
 		frame_statistics_t m_frame_stats;
 
-		// Savestates vrelated
-		bool m_pause_on_first_flip = false;
+		// Savestates related
+		u32 m_pause_after_x_flips = 0;
 
 	public:
 		RsxDmaControl* ctrl = nullptr;

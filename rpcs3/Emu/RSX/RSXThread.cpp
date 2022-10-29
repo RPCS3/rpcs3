@@ -550,7 +550,8 @@ namespace rsx
 
 		if (g_cfg.savestate.start_paused)
 		{
-			m_pause_on_first_flip = true;
+			// Allow to render a whole frame within this emulation session so there won't be missing graphics 
+			m_pause_after_x_flips = 2;
 		}
 	}
 
@@ -2678,10 +2679,9 @@ namespace rsx
 		{
 			performance_counters.sampled_frames++;
 
-			if (m_pause_on_first_flip)
+			if (m_pause_after_x_flips && m_pause_after_x_flips-- == 1)
 			{
 				Emu.Pause();
-				m_pause_on_first_flip = false;
 			}
 		}
 
