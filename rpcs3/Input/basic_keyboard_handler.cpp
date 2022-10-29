@@ -104,7 +104,7 @@ void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 
 	if (key >= 0)
 	{
-		Key(static_cast<u32>(key), true);
+		Key(static_cast<u32>(key), true, keyEvent->text().toStdU32String());
 	}
 }
 
@@ -125,7 +125,7 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 
 	if (key >= 0)
 	{
-		Key(static_cast<u32>(key), false);
+		Key(static_cast<u32>(key), false, keyEvent->text().toStdU32String());
 	}
 }
 

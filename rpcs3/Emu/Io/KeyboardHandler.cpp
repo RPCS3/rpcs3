@@ -40,12 +40,14 @@ void fmt_class_string<CellKbMappingType>::format(std::string& out, u64 arg)
 	});
 }
 
-void KeyboardHandlerBase::Key(u32 code, bool pressed)
+void KeyboardHandlerBase::Key(u32 code, bool pressed, const std::u32string& key)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 
 	for (Keyboard& keyboard : m_keyboards)
 	{
+		bool found_key = false;
+
 		KbData& data = keyboard.m_data;
 		KbConfig& config = keyboard.m_config;
 
@@ -53,6 +55,8 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 		{
 			if (button.m_keyCode != code)
 				continue;
+
+			found_key = true;
 
 			u16 kcode = CELL_KEYC_NO_EVENT;
 			bool is_meta_key = IsMetaKey(code);
@@ -152,6 +156,18 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 				}
 			}
 		}
+
+		if (!found_key && !key.empty())
+		{
+			if (pressed)
+			{
+				keyboard.m_extra_data.pressed_keys.insert(key);
+			}
+			else
+			{
+				keyboard.m_extra_data.pressed_keys.erase(key);
+			}
+		}
 	}
 }
 
@@ -187,11 +203,18 @@ void KeyboardHandlerBase::SetIntercepted(bool intercepted)
 
 void KeyboardHandlerBase::ReleaseAllKeys()
 {
-	for (const Keyboard& keyboard : m_keyboards)
+	for (Keyboard& keyboard : m_keyboards)
 	{
 		for (const KbButton& button : keyboard.m_buttons)
 		{
-			Key(button.m_keyCode, false);
+			Key(button.m_keyCode, false, {});
 		}
+
+		for (const std::u32string& key : keyboard.m_extra_data.pressed_keys)
+		{
+			Key(0, false, key);
+		}
+
+		keyboard.m_extra_data.pressed_keys.clear();
 	}
 }
