@@ -26,6 +26,7 @@
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
 
 #include "Loader/PSF.h"
 #include "Loader/TAR.h"
@@ -99,6 +100,11 @@ void initialize_timebased_time(u64 timebased_init, bool reset = false);
 namespace atomic_wait
 {
 	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 max_coll));
+}
+
+namespace rsx
+{
+	void set_native_ui_flip();
 }
 
 template<>
@@ -2050,7 +2056,52 @@ bool Emulator::Pause(bool freeze_emulation)
 	// Signal profilers to print results (if enabled)
 	cpu_thread::flush_profilers();
 
+	auto on_select = [](u32, cpu_thread& cpu)
+	{
+		cpu.state += cpu_flag::dbg_global_pause;
+	};
+
+	idm::select<named_thread<ppu_thread>>(on_select);
+	idm::select<named_thread<spu_thread>>(on_select);
+
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
+	{
+		rsx->state += cpu_flag::dbg_global_pause;
+	}
+
 	GetCallbacks().on_pause();
+
+	BlockingCallFromMainThread([this]()
+	{
+		if (IsStopped())
+		{
+			return;
+		}
+
+		auto msg_ref = std::make_shared<atomic_t<u32>>(1);
+
+		// No timeout
+		rsx::overlays::queue_message(localized_string_id::EMULATION_PAUSED_RESUME_WITH_START, -1, msg_ref);
+		m_pause_msgs_refs.emplace_back(msg_ref);
+
+		auto refresh_l = [this, msg_ref]()
+		{
+			while (*msg_ref && IsPaused())
+			{
+				// Refresh Native UI
+				rsx::set_native_ui_flip();
+				thread_ctrl::wait_for(33'000);
+			}
+		};
+
+		struct thread_t
+		{
+			std::unique_ptr<named_thread<decltype(refresh_l)>> m_thread;
+		};
+
+		g_fxo->get<thread_t>().m_thread.reset();
+		g_fxo->get<thread_t>().m_thread = std::make_unique<named_thread<decltype(refresh_l)>>("Pause Message Thread"sv, std::move(refresh_l));
+	});
 
 	static atomic_t<u32> pause_mark = 0;
 
@@ -2067,19 +2118,6 @@ bool Emulator::Pause(bool freeze_emulation)
 	if (m_pause_start_time.exchange(start))
 	{
 		sys_log.error("Emulator::Pause() error: concurrent access");
-	}
-
-	auto on_select = [](u32, cpu_thread& cpu)
-	{
-		cpu.state += cpu_flag::dbg_global_pause;
-	};
-
-	idm::select<named_thread<ppu_thread>>(on_select);
-	idm::select<named_thread<spu_thread>>(on_select);
-
-	if (auto rsx = g_fxo->try_get<rsx::thread>())
-	{
-		rsx->state += cpu_flag::dbg_global_pause;
 	}
 
 	// Always Enable display sleep, not only if it was prevented.
@@ -2166,6 +2204,17 @@ void Emulator::Resume()
 	GetCallbacks().on_resume();
 
 	sys_log.success("Emulation has been resumed!");
+
+	BlockingCallFromMainThread([this]()
+	{
+		for (auto& ref : m_pause_msgs_refs)
+		{
+			// Delete the message queued on pause
+			*ref = 0;
+		}
+
+		m_pause_msgs_refs.clear();
+	});
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
