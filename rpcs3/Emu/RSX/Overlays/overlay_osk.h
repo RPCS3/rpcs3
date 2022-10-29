@@ -106,6 +106,7 @@ namespace rsx
 			void on_backspace(const std::u32string&);
 			void on_delete(const std::u32string&);
 			void on_enter(const std::u32string&);
+			void on_move_cursor(const std::u32string&, edit_text::direction dir);
 
 			std::u32string get_placeholder() const;
 
