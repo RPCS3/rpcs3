@@ -700,6 +700,9 @@ namespace rsx
 				case CELL_KEYC_BS:
 					on_backspace(key);
 					break;
+				case CELL_KEYC_DELETE:
+					on_delete(key);
+					break;
 				case CELL_KEYC_ESCAPE:
 					Close(CELL_OSKDIALOG_CLOSE_CANCEL);
 					break;
@@ -809,6 +812,12 @@ namespace rsx
 		void osk_dialog::on_backspace(const std::u32string&)
 		{
 			m_preview.erase();
+			on_text_changed();
+		}
+
+		void osk_dialog::on_delete(const std::u32string&)
+		{
+			m_preview.del();
 			on_text_changed();
 		}
 
