@@ -429,7 +429,7 @@ void pad_thread::operator()()
 
 			m_mask_start_press_to_unpause &= pressed_mask;
 
-			if (!pressed_mask || timestamp - m_track_start_press_begin_timestamp >= 1'00'000)
+			if (!pressed_mask || timestamp - m_track_start_press_begin_timestamp >= 1'000'000)
 			{
 				m_track_start_press_begin_timestamp = timestamp;
 
@@ -443,7 +443,7 @@ void pad_thread::operator()()
 
 					m_resume_emulation_flag = true;
 
-					for (u32 i = 0; i < 50; i++)
+					for (u32 i = 0; i < 40; i++)
 					{
 						if (!Emu.IsPaused())
 						{
