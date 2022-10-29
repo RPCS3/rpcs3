@@ -7,9 +7,9 @@ namespace rsx
 	namespace overlays
 	{
 		template <typename T>
-		message_item::message_item(T msg_id)
+		message_item::message_item(T msg_id, u64 expiration)
 		{
-			m_expiration_time = get_system_time() + 5'000'000;
+			m_expiration_time = get_system_time() + expiration;
 
 			m_text.set_font("Arial", 16);
 			m_text.set_text(msg_id);
@@ -21,8 +21,8 @@ namespace rsx
 			m_fade_animation.duration = 2.f;
 			m_fade_animation.active = true;
 		}
-		template message_item::message_item(std::string msg_id);
-		template message_item::message_item(localized_string_id msg_id);
+		template message_item::message_item(std::string msg_id, u64);
+		template message_item::message_item(localized_string_id msg_id, u64);
 
 		u64 message_item::get_expiration() const
 		{

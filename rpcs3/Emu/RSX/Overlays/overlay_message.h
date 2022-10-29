@@ -11,7 +11,7 @@ namespace rsx
 		{
 		public:
 			template <typename T>
-			message_item(T msg_id);
+			message_item(T msg_id, u64 expiration);
 			void update(usz index, u64 time);
 
 			u64 get_expiration() const;
@@ -33,7 +33,7 @@ namespace rsx
 			compiled_resource get_compiled() override;
 
 			template <typename T>
-			void queue_message(T msg_id)
+			void queue_message(T msg_id, u64 expiration)
 			{
 				std::lock_guard lock(m_mutex_queue);
 
@@ -41,12 +41,12 @@ namespace rsx
 				{
 					for (auto id : msg_id)
 					{
-						m_queue.emplace_back(id);
+						m_queue.emplace_back(id, expiration);
 					}
 				}
 				else
 				{
-					m_queue.emplace_back(msg_id);
+					m_queue.emplace_back(msg_id, expiration);
 				}
 
 				visible = true;
@@ -58,7 +58,7 @@ namespace rsx
 		};
 
 		template <typename T>
-		void queue_message(T msg_id)
+		void queue_message(T msg_id, u64 expiration = 5'000'000)
 		{
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{
@@ -68,7 +68,7 @@ namespace rsx
 					msg_overlay = std::make_shared<rsx::overlays::message>();
 					msg_overlay = manager->add(msg_overlay);
 				}
-				msg_overlay->queue_message(msg_id);
+				msg_overlay->queue_message(msg_id, expiration);
 			}
 		}
 

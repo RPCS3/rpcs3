@@ -181,7 +181,8 @@ namespace rsx
 		empty = 1,    // PUT == GET
 		spinning = 2, // Puller continuously jumps to self addr (synchronization technique)
 		nop = 3,      // Puller is processing a NOP command
-		lock_wait = 4 // Puller is processing a lock acquire
+		lock_wait = 4,// Puller is processing a lock acquire
+		paused = 5,   // Puller is paused externallly
 	};
 
 	enum FIFO_hint : u8

@@ -256,6 +256,14 @@ namespace rsx
 		}
 	}
 
+	extern void set_native_ui_flip()
+	{
+		if (auto rsxthr = rsx::get_current_renderer())
+		{
+			rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
+		}
+	}
+
 	std::pair<u32, u32> interleaved_range_info::calculate_required_range(u32 first, u32 count) const
 	{
 		if (single_vertex)
@@ -701,15 +709,15 @@ namespace rsx
 			wait_pause();
 		}
 
-		on_semaphore_acquire_wait();
-
 		if ((state & (cpu_flag::dbg_global_pause + cpu_flag::exit)) == cpu_flag::dbg_global_pause)
 		{
 			// Wait 16ms during emulation pause. This reduces cpu load while still giving us the chance to render overlays.
+			do_local_task(rsx::FIFO_state::paused);
 			thread_ctrl::wait_on(state, old, 16000);
 		}
 		else
 		{
+			on_semaphore_acquire_wait();
 			std::this_thread::yield();
 		}
 	}

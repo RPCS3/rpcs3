@@ -16,10 +16,12 @@
 #include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
 #include "Utilities/Thread.h"
 #include "util/atomic.hpp"
 
 LOG_CHANNEL(input_log, "Input");
+LOG_CHANNEL(sys_log, "SYS");
 
 extern bool is_input_allowed();
 
@@ -31,6 +33,11 @@ namespace pad
 	atomic_t<bool> g_started{false};
 	atomic_t<bool> g_reset{false};
 	atomic_t<bool> g_enabled{true};
+}
+
+namespace rsx
+{
+	void set_native_ui_flip();
 }
 
 struct pad_setting
@@ -272,15 +279,22 @@ void pad_thread::operator()()
 			{
 				while (thread_ctrl::state() != thread_state::aborting)
 				{
-					if (!pad::g_enabled || Emu.IsPaused() || !is_input_allowed())
+					if (!pad::g_enabled || !is_input_allowed())
 					{
-						thread_ctrl::wait_for(10'000);
+						thread_ctrl::wait_for(30'000);
 						continue;
 					}
 
 					handler->process();
 
-					thread_ctrl::wait_for(g_cfg.io.pad_sleep);
+					u64 pad_sleep = g_cfg.io.pad_sleep;
+
+					if (Emu.IsPaused())
+					{
+						pad_sleep = std::max<u64>(pad_sleep, 30'000);
+					}
+
+					thread_ctrl::wait_for(pad_sleep);
 				}
 			}));
 		}
@@ -290,9 +304,11 @@ void pad_thread::operator()()
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (!pad::g_enabled || Emu.IsPaused() || !is_input_allowed())
+		if (!pad::g_enabled || !is_input_allowed())
 		{
-			thread_ctrl::wait_for(10000);
+			m_resume_emulation_flag = false;
+			m_mask_start_press_to_unpause = 0;
+			thread_ctrl::wait_for(30'000);
 			continue;
 		}
 
@@ -353,7 +369,7 @@ void pad_thread::operator()()
 				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 					continue;
 
-				for (auto& button : pad->m_buttons)
+				for (const auto& button : pad->m_buttons)
 				{
 					if (button.m_pressed && (
 						button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
@@ -375,7 +391,81 @@ void pad_thread::operator()()
 			}
 		}
 
-		thread_ctrl::wait_for(g_cfg.io.pad_sleep);
+		if (m_resume_emulation_flag)
+		{
+			m_resume_emulation_flag = false;
+
+			Emu.BlockingCallFromMainThread([]()
+			{
+				Emu.Resume();
+			});
+		}
+
+		u64 pad_sleep = g_cfg.io.pad_sleep;
+
+		if (Emu.IsPaused())
+		{
+			pad_sleep = std::max<u64>(pad_sleep, 30'000);
+
+			u64 timestamp = get_system_time();
+			u32 pressed_mask = 0;
+
+			for (usz i = 0; i < m_pads.size(); i++)
+			{
+				const auto& pad = m_pads[i];
+
+				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+					continue;
+
+				for (const auto& button : pad->m_buttons)
+				{
+					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && button.m_outKeyCode == CELL_PAD_CTRL_START && button.m_pressed)
+					{
+						pressed_mask |= 1u << i;
+						break;
+					}
+				}
+			}
+
+			m_mask_start_press_to_unpause &= pressed_mask;
+
+			if (!pressed_mask || timestamp - m_track_start_press_begin_timestamp >= 1'200'000)
+			{
+				m_track_start_press_begin_timestamp = timestamp;
+
+				if (std::exchange(m_mask_start_press_to_unpause, u32{umax}))
+				{
+					m_mask_start_press_to_unpause = 0;
+					m_track_start_press_begin_timestamp = 0;
+
+					sys_log.success("Unpausing emulation using the START button in a few seconds...");
+					rsx::overlays::queue_message("Unpausing...!"s, 2'500'000);
+
+					m_resume_emulation_flag = true;
+
+					for (u32 i = 0; i < 50; i++)
+					{
+						if (!Emu.IsPaused())
+						{
+							// Abort if emulation has been resumed by other means
+							m_resume_emulation_flag = false;
+							break;
+						}
+
+						thread_ctrl::wait_for(50'000);
+						rsx::set_native_ui_flip();
+					}
+				}
+			}
+		}
+		else
+		{
+			// Reset unpause control if caught a state of unpaused emulation
+			m_mask_start_press_to_unpause = 0;
+			m_track_start_press_begin_timestamp = 0;
+		}
+
+		thread_ctrl::wait_for(pad_sleep);
 	}
 
 	stop_threads();

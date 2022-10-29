@@ -52,6 +52,11 @@ protected:
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
 
 	u32 num_ldd_pad = 0;
+
+private:
+	u32 m_mask_start_press_to_unpause = 0;
+	u64 m_track_start_press_begin_timestamp = 0;
+	bool m_resume_emulation_flag = false;
 };
 
 namespace pad
