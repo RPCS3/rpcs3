@@ -730,10 +730,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->fsrSharpeningStrength->setValue(fsr_sharpening_strength_def);
 	});
 
-	//DoubleSpinBoxes
+	// DoubleSpinBoxes
 	m_emu_settings->EnhanceDoubleSpinBox(ui->TextureLODBias, emu_settings_type::TextureLodBias);
-	SubscribeTooltip(ui->TextureLODBias, tooltips.settings.texture_lod_bias);
-	ui->TextureLODBias->setRange(-16, 16);
+	SubscribeTooltip(ui->gb_Level_of_Detail, tooltips.settings.texture_lod_bias);
+	ui->TextureLODBias->setRange(-32, 32);
 	connect(ui->TextureLODBiasReset, &QAbstractButton::clicked, [this]()
 	{
 		ui->TextureLODBias->setValue(0);
