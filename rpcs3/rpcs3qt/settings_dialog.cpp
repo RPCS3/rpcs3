@@ -730,6 +730,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->fsrSharpeningStrength->setValue(fsr_sharpening_strength_def);
 	});
 
+	// DoubleSpinBoxes
+	m_emu_settings->EnhanceDoubleSpinBox(ui->TextureLODBias, emu_settings_type::TextureLodBias);
+	SubscribeTooltip(ui->gb_Level_of_Detail, tooltips.settings.texture_lod_bias);
+	connect(ui->TextureLODBiasReset, &QAbstractButton::clicked, [this]()
+	{
+		ui->TextureLODBias->setValue(stod(m_emu_settings->GetSettingDefault(emu_settings_type::TextureLodBias)));
+	});
+
 	// Remove renderers from the renderer Combobox if not supported
 	for (const auto& renderer : r_creator->renderers)
 	{
