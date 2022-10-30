@@ -26,6 +26,7 @@
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
 
 #include "Loader/PSF.h"
 #include "Loader/TAR.h"
@@ -99,6 +100,11 @@ void initialize_timebased_time(u64 timebased_init, bool reset = false);
 namespace atomic_wait
 {
 	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 max_coll));
+}
+
+namespace rsx
+{
+	void set_native_ui_flip();
 }
 
 template<>
@@ -245,14 +251,14 @@ void Emulator::Init(bool add_only)
 	const std::string dev_bdvd = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, emu_dir); // Only used for make_path
 	const std::string dev_hdd0 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir);
 	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
-	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
-	const std::string dev_flsh2 = g_cfg_vfs.get_dev_flash2();
-	const std::string dev_flsh3 = g_cfg_vfs.get_dev_flash3();
+	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
+	const std::string dev_flash2 = g_cfg_vfs.get_dev_flash2();
+	const std::string dev_flash3 = g_cfg_vfs.get_dev_flash3();
 
 	vfs::mount("/dev_hdd0", dev_hdd0);
-	vfs::mount("/dev_flash", dev_flsh);
-	vfs::mount("/dev_flash2", dev_flsh2);
-	vfs::mount("/dev_flash3", dev_flsh3);
+	vfs::mount("/dev_flash", dev_flash);
+	vfs::mount("/dev_flash2", dev_flash2);
+	vfs::mount("/dev_flash3", dev_flash3);
 	vfs::mount("/app_home", g_cfg_vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg_vfs.get(g_cfg_vfs.app_home, emu_dir));
 
 	std::string dev_usb;
@@ -351,9 +357,9 @@ void Emulator::Init(bool add_only)
 		make_path_verbose(dev_bdvd);
 		make_path_verbose(dev_hdd0);
 		make_path_verbose(dev_hdd1);
-		make_path_verbose(dev_flsh);
-		make_path_verbose(dev_flsh2);
-		make_path_verbose(dev_flsh3);
+		make_path_verbose(dev_flash);
+		make_path_verbose(dev_flash2);
+		make_path_verbose(dev_flash3);
 		make_path_verbose(dev_usb);
 		make_path_verbose(dev_hdd0 + "game/");
 		make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"game/＄locks/"));
@@ -666,34 +672,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	{
 		m_path = path;
 
-		auto error = Load(title_id, add_only);
-
-		if (g_cfg.savestate.suspend_emu && error == game_boot_result::no_errors)
-		{
-			for (std::string old_path : std::initializer_list<std::string>{m_ar ? path : "", m_title_id.empty() ? "" : get_savestate_path(m_title_id, path)})
-			{
-				if (old_path.empty())
-				{
-					continue;
-				}
-
-				std::string new_path = old_path.substr(0, old_path.find_last_not_of(fs::delim) + 1);
-				const usz insert_pos = new_path.find_last_of(fs::delim) + 1;
-				const auto prefix = "used_"sv;
-
-				if (new_path.compare(insert_pos, prefix.size(), prefix) != 0)
-				{
-					new_path.insert(insert_pos, prefix);
-
-					if (fs::rename(old_path, new_path, true))
-					{
-						sys_log.notice("Savestate has been moved to path='%s'", new_path);
-					}
-				}
-			}
-		}
-
-		return error;
+		return Load(title_id, add_only);
 	}
 
 	game_boot_result result = game_boot_result::nothing_to_boot;
@@ -944,6 +923,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				m_cat.clear();
 			}
+
+			m_path_old = m_path;
 
 			if (argv[0].starts_with("/dev_hdd0"sv))
 			{
@@ -1984,6 +1965,32 @@ void Emulator::FixGuestTime()
 
 		CallFromMainThread([this]
 		{
+			// Mark a known savestate location and the one we try to boot (in case we boot a moved/copied savestate)
+			if (g_cfg.savestate.suspend_emu)
+			{
+				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_path(m_title_id, m_path_old)})
+				{
+					if (old_path.empty())
+					{
+						continue;
+					}
+
+					std::string new_path = old_path.substr(0, old_path.find_last_not_of(fs::delim) + 1);
+					const usz insert_pos = new_path.find_last_of(fs::delim) + 1;
+					const auto prefix = "used_"sv;
+
+					if (new_path.compare(insert_pos, prefix.size(), prefix) != 0)
+					{
+						new_path.insert(insert_pos, prefix);
+
+						if (fs::rename(old_path, new_path, true))
+						{
+							sys_log.success("Savestate has been moved (hidden) to path='%s'", new_path);
+						}
+					}
+				}
+			}
+
 			m_ar.reset();
 
 			g_tls_log_prefix = []()
@@ -1997,6 +2004,7 @@ void Emulator::FixGuestTime()
 		initialize_timebased_time(0);
 	}
 }
+
 void Emulator::FinalizeRunRequest()
 {
 	auto on_select = [](u32, spu_thread& spu)
@@ -2048,7 +2056,52 @@ bool Emulator::Pause(bool freeze_emulation)
 	// Signal profilers to print results (if enabled)
 	cpu_thread::flush_profilers();
 
+	auto on_select = [](u32, cpu_thread& cpu)
+	{
+		cpu.state += cpu_flag::dbg_global_pause;
+	};
+
+	idm::select<named_thread<ppu_thread>>(on_select);
+	idm::select<named_thread<spu_thread>>(on_select);
+
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
+	{
+		rsx->state += cpu_flag::dbg_global_pause;
+	}
+
 	GetCallbacks().on_pause();
+
+	BlockingCallFromMainThread([this]()
+	{
+		if (IsStopped())
+		{
+			return;
+		}
+
+		auto msg_ref = std::make_shared<atomic_t<u32>>(1);
+
+		// No timeout
+		rsx::overlays::queue_message(localized_string_id::EMULATION_PAUSED_RESUME_WITH_START, -1, msg_ref);
+		m_pause_msgs_refs.emplace_back(msg_ref);
+
+		auto refresh_l = [this, msg_ref]()
+		{
+			while (*msg_ref && IsPaused())
+			{
+				// Refresh Native UI
+				rsx::set_native_ui_flip();
+				thread_ctrl::wait_for(33'000);
+			}
+		};
+
+		struct thread_t
+		{
+			std::unique_ptr<named_thread<decltype(refresh_l)>> m_thread;
+		};
+
+		g_fxo->get<thread_t>().m_thread.reset();
+		g_fxo->get<thread_t>().m_thread = std::make_unique<named_thread<decltype(refresh_l)>>("Pause Message Thread"sv, std::move(refresh_l));
+	});
 
 	static atomic_t<u32> pause_mark = 0;
 
@@ -2065,19 +2118,6 @@ bool Emulator::Pause(bool freeze_emulation)
 	if (m_pause_start_time.exchange(start))
 	{
 		sys_log.error("Emulator::Pause() error: concurrent access");
-	}
-
-	auto on_select = [](u32, cpu_thread& cpu)
-	{
-		cpu.state += cpu_flag::dbg_global_pause;
-	};
-
-	idm::select<named_thread<ppu_thread>>(on_select);
-	idm::select<named_thread<spu_thread>>(on_select);
-
-	if (auto rsx = g_fxo->try_get<rsx::thread>())
-	{
-		rsx->state += cpu_flag::dbg_global_pause;
 	}
 
 	// Always Enable display sleep, not only if it was prevented.
@@ -2164,6 +2204,17 @@ void Emulator::Resume()
 	GetCallbacks().on_resume();
 
 	sys_log.success("Emulation has been resumed!");
+
+	BlockingCallFromMainThread([this]()
+	{
+		for (auto& ref : m_pause_msgs_refs)
+		{
+			// Delete the message queued on pause
+			*ref = 0;
+		}
+
+		m_pause_msgs_refs.clear();
+	});
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{

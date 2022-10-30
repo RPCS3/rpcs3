@@ -4,6 +4,7 @@
 
 #include <mutex>
 #include <vector>
+#include <set>
 
 #include "util/init_mutex.hpp"
 
@@ -52,6 +53,11 @@ struct KbData
 	std::array<KbButton, CELL_KB_MAX_KEYCODES> buttons{};
 };
 
+struct KbExtraData
+{
+	std::set<std::u32string> pressed_keys{};
+};
+
 struct KbConfig
 {
 	u32 arrange = CELL_KB_MAPPING_101;
@@ -63,6 +69,7 @@ struct Keyboard
 {
 	bool m_key_repeat = false;
 	KbData m_data{};
+	KbExtraData m_extra_data{};
 	KbConfig m_config{};
 	std::vector<KbButton> m_buttons;
 };
@@ -81,7 +88,7 @@ public:
 
 	SAVESTATE_INIT_POS(19);
 
-	void Key(u32 code, bool pressed);
+	void Key(u32 code, bool pressed, const std::u32string& key);
 	void SetIntercepted(bool intercepted);
 
 	static bool IsMetaKey(u32 code);
@@ -90,6 +97,7 @@ public:
 	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
 	std::vector<KbButton>& GetButtons(const u32 keyboard) { return m_keyboards[keyboard].m_buttons; }
 	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
+	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
 	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
 
 	stx::init_mutex init;

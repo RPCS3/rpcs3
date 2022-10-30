@@ -586,98 +586,63 @@ namespace rsx
 			}
 		}
 
-		void osk_dialog::on_key_pressed(u32 led, u32 mkey, u32 key_code, u32 out_key_code, bool pressed)
+		void osk_dialog::on_key_pressed(u32 led, u32 mkey, u32 key_code, u32 out_key_code, bool pressed, std::u32string key)
 		{
 			if (!pressed || !keyboard_input_enabled || ignore_input_events)
 				return;
 
-			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d)", led, mkey, key_code, out_key_code, pressed);
+			const bool use_key_string_fallback = !key.empty();
 
-			// Get keyboard layout
-			u32 kb_mapping = CELL_KB_MAPPING_101;
-			u32 osk_panel_mode = CELL_OSKDIALOG_PANELMODE_DEFAULT;
-			for (usz i = 0; i < m_panels.size(); ++i)
+			osk.error("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, use_key_string_fallback=%d)", led, mkey, key_code, out_key_code, pressed, use_key_string_fallback);
+
+			if (!use_key_string_fallback)
 			{
-				if (m_panel_index == i)
-				{
-					osk_panel_mode = m_panels[i].osk_panel_mode;
-					break;
-				}
-			}
+				// Get keyboard layout
+				const u32 kb_mapping = static_cast<u32>(g_cfg.sys.keyboard_type.get());
 
-			switch (osk_panel_mode)
-			{
-			case CELL_OSKDIALOG_PANELMODE_DEFAULT            : kb_mapping = CELL_KB_MAPPING_101; break;
-			case CELL_OSKDIALOG_PANELMODE_GERMAN             : kb_mapping = CELL_KB_MAPPING_GERMAN_GERMANY; break;
-			case CELL_OSKDIALOG_PANELMODE_ENGLISH            : kb_mapping = CELL_KB_MAPPING_ENGLISH_UK; break;
-			case CELL_OSKDIALOG_PANELMODE_SPANISH            : kb_mapping = CELL_KB_MAPPING_SPANISH_SPAIN; break;
-			case CELL_OSKDIALOG_PANELMODE_FRENCH             : kb_mapping = CELL_KB_MAPPING_FRENCH_FRANCE; break;
-			case CELL_OSKDIALOG_PANELMODE_ITALIAN            : kb_mapping = CELL_KB_MAPPING_ITALIAN_ITALY; break;
-			case CELL_OSKDIALOG_PANELMODE_DUTCH              : kb_mapping = CELL_KB_MAPPING_DUTCH_NETHERLANDS; break;
-			case CELL_OSKDIALOG_PANELMODE_PORTUGUESE         : kb_mapping = CELL_KB_MAPPING_PORTUGUESE_PORTUGAL; break;
-			case CELL_OSKDIALOG_PANELMODE_RUSSIAN            : kb_mapping = CELL_KB_MAPPING_RUSSIAN_RUSSIA; break;
-			case CELL_OSKDIALOG_PANELMODE_JAPANESE           : kb_mapping = CELL_KB_MAPPING_106; break;
-			case CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE: kb_mapping = CELL_KB_MAPPING_106; break;
-			case CELL_OSKDIALOG_PANELMODE_POLISH             : kb_mapping = CELL_KB_MAPPING_POLISH_POLAND; break;
-			case CELL_OSKDIALOG_PANELMODE_KOREAN             : kb_mapping = CELL_KB_MAPPING_KOREAN_KOREA; break;
-			case CELL_OSKDIALOG_PANELMODE_TURKEY             : kb_mapping = CELL_KB_MAPPING_TURKISH_TURKEY; break;
-			case CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE: kb_mapping = CELL_KB_MAPPING_CHINESE_TRADITIONAL; break;
-			case CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE : kb_mapping = CELL_KB_MAPPING_CHINESE_SIMPLIFIED; break;
-			case CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL  : kb_mapping = CELL_KB_MAPPING_PORTUGUESE_BRAZIL; break;
-			case CELL_OSKDIALOG_PANELMODE_DANISH             : kb_mapping = CELL_KB_MAPPING_DANISH_DENMARK; break;
-			case CELL_OSKDIALOG_PANELMODE_SWEDISH            : kb_mapping = CELL_KB_MAPPING_SWEDISH_SWEDEN; break;
-			case CELL_OSKDIALOG_PANELMODE_NORWEGIAN          : kb_mapping = CELL_KB_MAPPING_NORWEGIAN_NORWAY; break;
-			case CELL_OSKDIALOG_PANELMODE_FINNISH            : kb_mapping = CELL_KB_MAPPING_FINNISH_FINLAND; break;
-			case CELL_OSKDIALOG_PANELMODE_JAPANESE_HIRAGANA  : kb_mapping = CELL_KB_MAPPING_106; break;
-			case CELL_OSKDIALOG_PANELMODE_JAPANESE_KATAKANA  : kb_mapping = CELL_KB_MAPPING_106_KANA; break;
-			case CELL_OSKDIALOG_PANELMODE_ALPHABET_FULL_WIDTH: kb_mapping = CELL_KB_MAPPING_106; break;
-			case CELL_OSKDIALOG_PANELMODE_ALPHABET           : kb_mapping = CELL_KB_MAPPING_101; break;
-			case CELL_OSKDIALOG_PANELMODE_LATIN              : kb_mapping = CELL_KB_MAPPING_101; break;
-			case CELL_OSKDIALOG_PANELMODE_NUMERAL_FULL_WIDTH : kb_mapping = CELL_KB_MAPPING_101; break;
-			case CELL_OSKDIALOG_PANELMODE_NUMERAL            : kb_mapping = CELL_KB_MAPPING_101; break;
-			case CELL_OSKDIALOG_PANELMODE_URL                : kb_mapping = CELL_KB_MAPPING_101; break;
-			case CELL_OSKDIALOG_PANELMODE_PASSWORD           : kb_mapping = CELL_KB_MAPPING_101; break;
-			default                                          : kb_mapping = CELL_KB_MAPPING_101; break;
+				// Convert key to its u32string presentation
+				const u16 converted_out_key = cellKbCnvRawCode(kb_mapping, mkey, led, out_key_code);
+				std::u16string utf16_string;
+				utf16_string.push_back(converted_out_key);
+				key = utf16_to_u32string(utf16_string);
 			}
-
-			// Convert key to its u32string presentation
-			const u16 converted_out_key = cellKbCnvRawCode(kb_mapping, mkey, led, out_key_code);
-			std::u16string utf16_string;
-			utf16_string.push_back(converted_out_key);
-			const std::u32string u32_string = utf16_to_u32string(utf16_string);
-			const std::string out_key_string = utf16_to_ascii8(utf16_string);
 
 			// Find matching key in the OSK
-			bool found_key = false;
-			for (const cell& current_cell : m_grid)
+			const auto find_key = [&]() -> bool
 			{
-				// TODO: maybe just ignore the current charset and check all outputs
-				if (m_selected_charset < current_cell.outputs.size())
+				for (const cell& current_cell : m_grid)
 				{
-					for (const auto& str : current_cell.outputs[m_selected_charset])
+					for (const auto& output : current_cell.outputs)
 					{
-						if (str == u32_string)
+						for (const auto& str : output)
 						{
-							// Apply key press
-							if (current_cell.callback)
+							if (str == key)
 							{
-								current_cell.callback(str);
-							}
-							else
-							{
-								on_default_callback(str);
-							}
+								// Apply key press
+								if (current_cell.callback)
+								{
+									current_cell.callback(str);
+								}
+								else
+								{
+									on_default_callback(str);
+								}
 
-							found_key = true;
-							break;
+								return true;
+							}
 						}
 					}
-
-					if (found_key)
-					{
-						break;
-					}
 				}
+
+				return false;
+			};
+
+			const bool found_key = find_key();
+
+			if (use_key_string_fallback)
+			{
+				// We don't have a keycode, so there we can't process any of the following code anyway
+				return;
 			}
 
 			// Handle special input
@@ -686,13 +651,28 @@ namespace rsx
 				switch (out_key_code)
 				{
 				case CELL_KEYC_SPACE:
-					on_space(u32_string);
+					on_space(key);
 					break;
 				case CELL_KEYC_BS:
-					on_backspace(u32_string);
+					on_backspace(key);
+					break;
+				case CELL_KEYC_DELETE:
+					on_delete(key);
 					break;
 				case CELL_KEYC_ESCAPE:
 					Close(CELL_OSKDIALOG_CLOSE_CANCEL);
+					break;
+				case CELL_KEYC_RIGHT_ARROW:
+					on_move_cursor(key, edit_text::direction::right);
+					break;
+				case CELL_KEYC_LEFT_ARROW:
+					on_move_cursor(key, edit_text::direction::left);
+					break;
+				case CELL_KEYC_DOWN_ARROW:
+					on_move_cursor(key, edit_text::direction::down);
+					break;
+				case CELL_KEYC_UP_ARROW:
+					on_move_cursor(key, edit_text::direction::up);
 					break;
 				case CELL_KEYC_ENTER:
 					if ((flags & CELL_OSKDIALOG_NO_RETURN))
@@ -701,7 +681,7 @@ namespace rsx
 					}
 					else
 					{
-						on_enter(u32_string);
+						on_enter(key);
 					}
 					break;
 				default:
@@ -803,6 +783,12 @@ namespace rsx
 			on_text_changed();
 		}
 
+		void osk_dialog::on_delete(const std::u32string&)
+		{
+			m_preview.del();
+			on_text_changed();
+		}
+
 		void osk_dialog::on_enter(const std::u32string&)
 		{
 			if (!(flags & CELL_OSKDIALOG_NO_RETURN))
@@ -813,6 +799,12 @@ namespace rsx
 			{
 				// Beep or give some other kind of visual feedback
 			}
+		}
+
+		void osk_dialog::on_move_cursor(const std::u32string&, edit_text::direction dir)
+		{
+			m_preview.move_caret(dir);
+			m_update = true;
 		}
 
 		std::u32string osk_dialog::get_placeholder() const

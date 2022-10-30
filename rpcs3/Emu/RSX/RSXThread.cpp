@@ -18,6 +18,7 @@
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
 #include "Overlays/overlay_perf_metrics.h"
+#include "Overlays/overlay_message.h"
 #include "Program/GLSLCommon.h"
 #include "Utilities/date_time.h"
 #include "Utilities/StrUtil.h"
@@ -253,6 +254,14 @@ namespace rsx
 			{
 				rsx->state += cpu_flag::yield;
 			}
+		}
+	}
+
+	extern void set_native_ui_flip()
+	{
+		if (auto rsxthr = rsx::get_current_renderer())
+		{
+			rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
 		}
 	}
 
@@ -542,7 +551,8 @@ namespace rsx
 
 		if (g_cfg.savestate.start_paused)
 		{
-			m_pause_on_first_flip = true;
+			// Allow to render a whole frame within this emulation session so there won't be missing graphics 
+			m_pause_after_x_flips = 2;
 		}
 	}
 
@@ -701,15 +711,15 @@ namespace rsx
 			wait_pause();
 		}
 
-		on_semaphore_acquire_wait();
-
 		if ((state & (cpu_flag::dbg_global_pause + cpu_flag::exit)) == cpu_flag::dbg_global_pause)
 		{
 			// Wait 16ms during emulation pause. This reduces cpu load while still giving us the chance to render overlays.
+			do_local_task(rsx::FIFO_state::paused);
 			thread_ctrl::wait_on(state, old, 16000);
 		}
 		else
 		{
+			on_semaphore_acquire_wait();
 			std::this_thread::yield();
 		}
 	}
@@ -2670,10 +2680,9 @@ namespace rsx
 		{
 			performance_counters.sampled_frames++;
 
-			if (m_pause_on_first_flip)
+			if (m_pause_after_x_flips && m_pause_after_x_flips-- == 1)
 			{
 				Emu.Pause();
-				m_pause_on_first_flip = false;
 			}
 		}
 

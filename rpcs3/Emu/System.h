@@ -144,6 +144,8 @@ class Emulator final
 
 	bool m_state_inspection_savestate = false;
 
+	std::vector<std::shared_ptr<atomic_t<u32>>> m_pause_msgs_refs;
+
 	std::vector<std::function<void()>> deferred_deserialization;
 
 	void ExecDeserializationRemnants()

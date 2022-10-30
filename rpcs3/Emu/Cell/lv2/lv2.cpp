@@ -790,7 +790,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_fs_chown),                                //835 (0x343)
 	NULL_FUNC(sys_fs_newfs),                                //836 (0x344)
 	BIND_SYSC(sys_fs_mount),                                //837 (0x345)
-	NULL_FUNC(sys_fs_unmount),                              //838 (0x346)
+	BIND_SYSC(sys_fs_unmount),                              //838 (0x346)
 	NULL_FUNC(sys_fs_sync),                                 //839 (0x347)
 	BIND_SYSC(sys_fs_disk_free),                            //840 (0x348)
 	BIND_SYSC(sys_fs_get_mount_info_size),                  //841 (0x349)
