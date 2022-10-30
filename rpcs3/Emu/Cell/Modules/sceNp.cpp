@@ -18,6 +18,7 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
+#include "Emu/system_config.h"
 
 LOG_CHANNEL(sceNp);
 
@@ -3191,6 +3192,10 @@ error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
+
+	myLanguages->language1 = SCE_NP_LANG_ENGLISH_US;
+	myLanguages->language2 = g_cfg.sys.language != CELL_SYSUTIL_LANG_ENGLISH_US ? g_cfg.sys.language : -1;
+	myLanguages->language3 = -1;
 
 	return CELL_OK;
 }
