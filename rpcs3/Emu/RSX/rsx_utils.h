@@ -798,6 +798,38 @@ namespace rsx
 		std::swap(red, blue);
 	}
 
+	template <typename T, typename U>
+		requires std::is_integral_v<T> && std::is_integral_v<U>
+	u8 renormalize_color8(T input, U base)
+	{
+		// Base will be some POT-1 value
+		const int value = static_cast<u8>(input & base);
+		return static_cast<u8>((value * 255) / base);
+	}
+
+	static inline void get_rgb565_clear_color(u8& red, u8& green, u8& blue, u8& /*alpha*/)
+	{
+		// RSX clear color is just a memcpy, so in this case the input is ARGB8 so only BG have the 16-bit input
+		const u16 raw_value = static_cast<u16>(green) << 8 | blue;
+		blue = renormalize_color8(raw_value, 0x1f);
+		green = renormalize_color8(raw_value >> 5, 0x3f);
+		red = renormalize_color8(raw_value >> 11, 0x1f);
+	}
+
+	static inline void get_a1rgb555_clear_color(u8& red, u8& green, u8& blue, u8& alpha, u8 alpha_override)
+	{
+		// RSX clear color is just a memcpy, so in this case the input is ARGB8 so only BG have the 16-bit input
+		const u16 raw_value = static_cast<u16>(green) << 8 | blue;
+		blue = renormalize_color8(raw_value, 0x1f);
+		green = renormalize_color8(raw_value >> 5, 0x1f);
+		red = renormalize_color8(raw_value >> 10, 0x1f);
+
+		// Alpha can technically be encoded into the clear but the format normally just injects constants.
+		// Will require hardware tests when possible to determine which approach makes more sense.
+		// alpha = static_cast<u8>((raw_value & (1 << 15)) ? 255 : 0);
+		alpha = alpha_override;
+	}
+
 	static inline u32 get_b8_clearmask(u32 mask)
 	{
 		u32 result = 0;

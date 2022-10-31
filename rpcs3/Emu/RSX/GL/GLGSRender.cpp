@@ -503,7 +503,7 @@ void GLGSRender::clear_surface(u32 arg)
 	if ((arg & RSX_GCM_CLEAR_ANY_MASK) == 0) return;
 
 	u8 ctx = rsx::framebuffer_creation_context::context_draw;
-	if (arg & RSX_GCM_CLEAR_COLOR_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+	if (arg & RSX_GCM_CLEAR_COLOR_RGBA_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
 	if (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 
 	init_buffers(static_cast<rsx::framebuffer_creation_context>(ctx), true);
@@ -610,6 +610,21 @@ void GLGSRender::clear_surface(u32 arg)
 		{
 			rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
 			colormask = rsx::get_g8b8_r8g8_clearmask(colormask);
+			break;
+		}
+		case rsx::surface_color_format::r5g6b5:
+		{
+			rsx::get_rgb565_clear_color(clear_r, clear_g, clear_b, clear_a);
+			break;
+		}
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		{
+			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 255);
+			break;
+		}
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		{
+			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 0);
 			break;
 		}
 		case rsx::surface_color_format::a8b8g8r8:
