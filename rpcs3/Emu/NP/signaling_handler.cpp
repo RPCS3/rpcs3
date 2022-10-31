@@ -337,6 +337,8 @@ void signaling_handler::process_incoming_messages()
 			reply           = false;
 			schedule_repeat = false;
 			retire_packet(si, signal_finished);
+			// terminate connection if not terminated already
+			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE);
 			break;
 		default: sign_log.error("Invalid signaling command received"); continue;
 		}
@@ -498,6 +500,7 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 	if ((si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_PENDING || si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE) && new_status == SCE_NP_SIGNALING_CONN_STATUS_INACTIVE)
 	{
 		si->connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
+		si->ext_status = ext_sign_none;
 		ensure(si->version == 1u || si->version == 2u);
 		if (si->version == 1u)
 			signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_DEAD);
