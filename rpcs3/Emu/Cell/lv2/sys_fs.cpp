@@ -3018,7 +3018,7 @@ error_code sys_fs_mount(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> fil
 	const auto mp = lv2_fs_object::get_mp(vpath);
 	bool success = true;
 
-	auto vfs_mount = [&](std::string mount_path)
+	auto vfs_mount = [&vpath = vpath, &filesystem = filesystem, &mp = mp](std::string mount_path)
 	{
 		const u64 file_size = filesystem == "CELL_FS_SIMPLEFS" ? mp->sector_size * mp->sector_count : 0;
 		if (!mount_path.ends_with('/'))
@@ -3081,7 +3081,7 @@ error_code sys_fs_unmount(ppu_thread&, vm::cptr<char> path, s32 unk1, s32 unk2)
 	const auto mp = lv2_fs_object::get_mp(vpath);
 	bool success = true;
 
-	auto vfs_unmount = [&]()
+	auto vfs_unmount = [&vpath = vpath]()
 	{
 		const std::string local_path = vfs::get(vpath);
 		if (fs::is_file(local_path))
