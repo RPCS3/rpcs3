@@ -850,29 +850,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_Level_of_Detail">
-              <property name="title">
-               <string>Level of Detail</string>
-              </property>
-              <layout class="QVBoxLayout" name="gb_Level_of_Detail_Layout">
-               <item>
-                <layout class="QHBoxLayout" name="TextureLODBiasLayout">
-                 <item>
-                  <widget class="QDoubleSpinBox" name="TextureLODBias"/>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="TextureLODBiasReset">
-                   <property name="text">
-                    <string>Reset</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
              <spacer name="gpu_tab_layout_middle_spacer">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -4177,6 +4154,29 @@
                <layout class="QVBoxLayout" name="vbl_num_ppu_threads">
                 <item>
                  <widget class="QComboBox" name="combo_num_ppu_threads"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="gb_Level_of_Detail">
+               <property name="title">
+                <string>Level of Detail</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_Level_of_Detail_Layout">
+                <item>
+                 <layout class="QHBoxLayout" name="TextureLODBiasLayout">
+                  <item>
+                   <widget class="QDoubleSpinBox" name="TextureLODBias"/>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="TextureLODBiasReset">
+                    <property name="text">
+                     <string>Reset</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </item>
                </layout>
               </widget>
