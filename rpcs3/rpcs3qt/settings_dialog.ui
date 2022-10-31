@@ -4161,7 +4161,7 @@
              <item>
               <widget class="QGroupBox" name="gb_Level_of_Detail">
                <property name="title">
-                <string>Level of Detail</string>
+                <string>LOD Bias Offset</string>
                </property>
                <layout class="QVBoxLayout" name="gb_Level_of_Detail_Layout">
                 <item>
