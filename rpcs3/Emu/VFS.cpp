@@ -33,18 +33,12 @@ struct vfs_manager
 	vfs_directory root{};
 };
 
-bool vfs::mount(std::string_view vpath, std::string_view path, bool create_dir, bool is_dir)
+bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 {
 	if (vpath.empty())
 	{
 		// Empty relative path, should set relative path base; unsupported
 		vfs_log.error("Cannot mount empty path to \"%s\"", path);
-		return false;
-	}
-
-	if (create_dir && !fs::is_dir(std::string(path)) && !fs::create_dir(std::string(path)))
-	{
-		vfs_log.error("Cannot create directory \"%s\"", path);
 		return false;
 	}
 
