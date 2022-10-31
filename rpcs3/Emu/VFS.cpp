@@ -33,7 +33,7 @@ struct vfs_manager
 	vfs_directory root{};
 };
 
-bool vfs::mount(std::string_view vpath, std::string_view path, bool create_dir)
+bool vfs::mount(std::string_view vpath, std::string_view path, bool create_dir, bool is_dir)
 {
 	if (vpath.empty())
 	{
@@ -73,9 +73,12 @@ bool vfs::mount(std::string_view vpath, std::string_view path, bool create_dir)
 
 		if (pos == umax)
 		{
-			// Mounting completed
+			// Mounting completed; fixup for directories due to resolve_path messing with trailing /
 			list.back()->path = Emu.GetCallbacks().resolve_path(path);
-			list.back()->path += '/';
+			if (is_dir && !list.back()->path.ends_with('/'))
+				list.back()->path += '/';
+			if (!is_dir && list.back()->path.ends_with('/'))
+				vfs_log.error("File mounted with trailing /.");
 			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, list.back()->path);
 			return true;
 		}
@@ -360,11 +363,7 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 	return std::string{result_base} + fmt::merge(escaped, "/");
 }
 
-#if __cpp_char8_t >= 201811
 using char2 = char8_t;
-#else
-using char2 = char;
-#endif
 
 std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std::vector<std::string_view>* mount_path)
 {
