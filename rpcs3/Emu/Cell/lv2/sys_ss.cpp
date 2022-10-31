@@ -164,6 +164,8 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 		// AIM_get_device_id
 		constexpr u8 idps[] = { 0x00, 0x00, 0x00, 0x01, 0x00, 0x89, 0x00, 0x0B, 0x14, 0x00, 0xEF, 0xDD, 0xCA, 0x25, 0x52, 0x66 };
 		std::memcpy(buffer.get_ptr(), idps, 16);
+		if (g_cfg.core.debug_console_mode)
+			buffer[5] = 0x81;
 		break;
 	}
 	case 0x19004:
