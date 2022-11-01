@@ -403,7 +403,7 @@ void pad_thread::operator()()
 
 		u64 pad_sleep = g_cfg.io.pad_sleep;
 
-		if (Emu.IsPaused())
+		if (Emu.GetStatus(false) == system_state::paused)
 		{
 			pad_sleep = std::max<u64>(pad_sleep, 30'000);
 
@@ -438,17 +438,20 @@ void pad_thread::operator()()
 					m_mask_start_press_to_unpause = 0;
 					m_track_start_press_begin_timestamp = 0;
 
-					sys_log.success("Unpausing emulation using the START button in a few seconds...");
-					rsx::overlays::queue_message(localized_string_id::EMULATION_RESUMING, 2'000'000);
+					sys_log.success("Resuming emulation using the START button in a few seconds...");
+
+					auto msg_ref = std::make_shared<atomic_t<u32>>(1);
+					rsx::overlays::queue_message(localized_string_id::EMULATION_RESUMING, 2'000'000, msg_ref);
 
 					m_resume_emulation_flag = true;
 
 					for (u32 i = 0; i < 40; i++)
 					{
-						if (!Emu.IsPaused())
+						if (Emu.GetStatus(false) != system_state::paused)
 						{
 							// Abort if emulation has been resumed by other means
 							m_resume_emulation_flag = false;
+							msg_ref->release(0);
 							break;
 						}
 

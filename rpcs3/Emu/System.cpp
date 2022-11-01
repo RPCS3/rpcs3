@@ -2051,6 +2051,18 @@ bool Emulator::Pause(bool freeze_emulation)
 				return false;
 			}
 		}
+
+		// Perform the side effects of Resume here when transforming paused to frozen state
+		BlockingCallFromMainThread([this]()
+		{
+			for (auto& ref : m_pause_msgs_refs)
+			{
+				// Delete the message queued on pause
+				*ref = 0;
+			}
+
+			m_pause_msgs_refs.clear();
+		});
 	}
 
 	// Signal profilers to print results (if enabled)
@@ -2073,7 +2085,9 @@ bool Emulator::Pause(bool freeze_emulation)
 
 	BlockingCallFromMainThread([this]()
 	{
-		if (IsStopped())
+		const auto status = Emu.GetStatus(false);
+
+		if (status != system_state::paused && status != system_state::frozen)
 		{
 			return;
 		}
@@ -2081,17 +2095,19 @@ bool Emulator::Pause(bool freeze_emulation)
 		auto msg_ref = std::make_shared<atomic_t<u32>>(1);
 
 		// No timeout
-		rsx::overlays::queue_message(localized_string_id::EMULATION_PAUSED_RESUME_WITH_START, -1, msg_ref);
+		rsx::overlays::queue_message(status == system_state::paused ? localized_string_id::EMULATION_PAUSED_RESUME_WITH_START : localized_string_id::EMULATION_FROZEN, -1, msg_ref);
 		m_pause_msgs_refs.emplace_back(msg_ref);
 
-		auto refresh_l = [this, msg_ref]()
+		auto refresh_l = [this, msg_ref, status]()
 		{
-			while (*msg_ref && IsPaused())
+			while (*msg_ref && GetStatus(false) == status)
 			{
 				// Refresh Native UI
 				rsx::set_native_ui_flip();
 				thread_ctrl::wait_for(33'000);
 			}
+
+			msg_ref->release(0);
 		};
 
 		struct thread_t
