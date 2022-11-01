@@ -228,7 +228,7 @@ std::string lv2_fs_object::get_vfs(std::string_view filename)
 		if (mp_name == "app_home"sv && filename.data() != Emu.argv[0].data())
 			return lv2_fs_object::get_vfs(Emu.argv[0]);
 		if (mp_name == "host_root"sv)
-			return {}; // Unsupported in VFS
+			return g_cfg.vfs.host_root ? "/" : std::string();
 		if (mp_name == "dev_flash"sv)
 			return g_cfg_vfs.get_dev_flash();
 		if (mp_name == "dev_flash2"sv)
@@ -2992,6 +2992,18 @@ error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32
 	return CELL_OK;
 }
 
+error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, s32 unk1, vm::cptr<char> str1)
+{
+	sys_fs.todo("sys_fs_newfs(dev_name=%s, file_system=%s, unk1=0x%x, str1=%s)", dev_name, file_system, unk1, str1);
+
+	if (!g_ps3_process_info.has_root_perm())
+	{
+		return CELL_ENOSYS;
+	}
+
+	return CELL_OK;
+}
+
 error_code sys_fs_mount(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk3, vm::cptr<char> str1, u32 str_len)
 {
 	sys_fs.warning("sys_fs_mount(dev_name=%s, file_system=%s, path=%s, unk1=0x%x, prot=0x%x, unk3=0x%x, str1=%s, str_len=%d)", dev_name, file_system, path, unk1, prot, unk3, str1, str_len);
@@ -3020,7 +3032,6 @@ error_code sys_fs_mount(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> fil
 
 	auto vfs_mount = [&vpath = vpath, &filesystem = filesystem, &mp = mp](std::string mount_path)
 	{
-		const u64 file_size = filesystem == "CELL_FS_SIMPLEFS" ? mp->sector_size * mp->sector_count : 0;
 		if (!mount_path.ends_with('/'))
 			mount_path += '/';
 		if (!fs::is_dir(mount_path) && !fs::create_dir(mount_path))
@@ -3028,14 +3039,16 @@ error_code sys_fs_mount(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> fil
 			sys_fs.error("Failed to create directory \"%s\"", mount_path);
 			return false;
 		}
-		if (file_size > 0)
+		const bool is_simplefs = filesystem == "CELL_FS_SIMPLEFS";
+		if (is_simplefs)
 		{
 			mount_path += "loop.tmp";
 			fs::file loop_file;
 			if (loop_file.open(mount_path, fs::create + fs::read + fs::write + fs::trunc + fs::lock))
 			{
+				const u64 file_size = mp->sector_size * mp->sector_count;
 				loop_file.trunc(file_size);
-				sys_fs.notice("Created a loop file of size %d at \"%s\"", file_size, mount_path);
+				sys_fs.notice("Created a loop file of size 0x%x at \"%s\"", file_size, mount_path);
 			}
 			else
 			{
@@ -3043,7 +3056,7 @@ error_code sys_fs_mount(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> fil
 				return false;
 			}
 		}
-		return vfs::mount(vpath, mount_path, file_size == 0);
+		return vfs::mount(vpath, mount_path, !is_simplefs);
 	};
 
 	if (mp == &g_mp_sys_dev_hdd1)
