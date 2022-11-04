@@ -165,9 +165,17 @@ namespace cfg
 
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
-			if (value == "false")
+			if (value.size() != 4 && value.size() != 5)
+			{
+				return false;
+			}
+
+			char copy[5];
+			std::transform(value.begin(), value.end(), std::begin(copy), ::tolower);
+
+			if (value.size() == 5 && std::string_view{copy, 5} == "false")
 				m_value = false;
-			else if (value == "true")
+			else if (value.size() == 4 && std::string_view{copy, 4} == "true")
 				m_value = true;
 			else
 				return false;
