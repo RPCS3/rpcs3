@@ -2644,13 +2644,6 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 	m_ar.reset();
 	read_used_savestate_versions();
 
-	if (savestate && !g_cfg.savestate.suspend_emu)
-	{
-		to_ar.reset();
-		BootGame(m_path);
-		return to_ar;
-	}
-
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
 

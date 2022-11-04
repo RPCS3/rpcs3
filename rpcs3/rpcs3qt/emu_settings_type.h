@@ -36,6 +36,7 @@ enum class emu_settings_type
 	DebugConsoleMode,
 	SilenceAllLogs,
 	SuspendEmulationSavestateMode,
+	StartSavestatePaused,
 	MaxSPURSThreads,
 	SleepTimersAccuracy,
 	ClocksScale,
@@ -360,4 +361,5 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 
 	// Savestates
 	{ emu_settings_type::SuspendEmulationSavestateMode,       { "Savestate", "Suspend Emulation Savestate Mode" }},
+	{ emu_settings_type::StartSavestatePaused,                { "Savestate", "Start Paused" }},
 };

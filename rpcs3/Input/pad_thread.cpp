@@ -429,7 +429,7 @@ void pad_thread::operator()()
 
 			m_mask_start_press_to_unpause &= pressed_mask;
 
-			if (!pressed_mask || timestamp - m_track_start_press_begin_timestamp >= 1'000'000)
+			if (!pressed_mask || timestamp - m_track_start_press_begin_timestamp >= 700'000)
 			{
 				m_track_start_press_begin_timestamp = timestamp;
 
