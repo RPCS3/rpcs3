@@ -3,10 +3,21 @@
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
+#include "Emu/VFS.h"
 #include "cellRec.h"
 #include "cellSysutil.h"
+#include "util/media_utils.h"
+#include "util/video_provider.h"
+
+extern "C"
+{
+#include <libavutil/pixfmt.h>
+}
 
 LOG_CHANNEL(cellRec);
+
+extern atomic_t<recording_mode> g_recording_mode;
 
 template<>
 void fmt_class_string<CellRecError>::format(std::string& out, u64 arg)
@@ -44,17 +55,18 @@ enum : s32
 	VIDEO_QUALITY_0 = 0x000, // small
 	VIDEO_QUALITY_1 = 0x100, // middle
 	VIDEO_QUALITY_2 = 0x200, // large
-	VIDEO_QUALITY_3 = 0x300,
+	VIDEO_QUALITY_3 = 0x300, // youtube
 	VIDEO_QUALITY_4 = 0x400,
 	VIDEO_QUALITY_5 = 0x500,
-	VIDEO_QUALITY_6 = 0x600,
+	VIDEO_QUALITY_6 = 0x600, // HD720
 	VIDEO_QUALITY_7 = 0x700,
 };
 
 enum class rec_state : u32
 {
-	closed = 0x2710,
-	open   = 0x2711,
+	closed  = 0x2710,
+	stopped = 0x2711,
+	started = 0xBEEF, // I don't know the value of this
 };
 
 struct rec_param
@@ -66,7 +78,7 @@ struct rec_param
 	s32 fit_to_youtube = 0;
 	s32 xmb_bgm = CELL_REC_PARAM_XMB_BGM_DISABLE;
 	s32 mpeg4_fast_encode = CELL_REC_PARAM_MPEG4_FAST_ENCODE_DISABLE;
-	u32 ring_sec = 10; // TODO
+	u32 ring_sec = 0;
 	s32 video_input = CELL_REC_PARAM_VIDEO_INPUT_DISABLE;
 	s32 audio_input = CELL_REC_PARAM_AUDIO_INPUT_DISABLE;
 	s32 audio_input_mix_vol = CELL_REC_PARAM_AUDIO_INPUT_MIX_VOL_MIN;
@@ -93,6 +105,60 @@ struct rec_param
 	} scene_metadata{};
 };
 
+constexpr u32 rec_framerate = 30; // Always 30 fps
+
+class rec_image_sink : public utils::image_sink
+{
+public:
+	rec_image_sink() : utils::image_sink()
+	{
+		m_framerate = rec_framerate;
+	}
+
+	void stop(bool flush = true) override
+	{
+		cellRec.notice("Stopping image sink. flush=%d", flush);
+
+		std::lock_guard lock(m_mtx);
+		m_flush = flush;
+		m_frames_to_encode.clear();
+		has_error = false;
+	}
+
+	void add_frame(std::vector<u8>& frame, const u32 width, const u32 height, s32 pixel_format, usz timestamp_ms) override
+	{
+		std::lock_guard lock(m_mtx);
+
+		if (m_flush)
+			return;
+
+		m_frames_to_encode.emplace_back(timestamp_ms, width, height, pixel_format, std::move(frame));
+	}
+
+	encoder_frame get_frame()
+	{
+		std::lock_guard lock(m_mtx);
+
+		if (!m_frames_to_encode.empty())
+		{
+			encoder_frame frame = std::move(m_frames_to_encode.front());
+			m_frames_to_encode.pop_front();
+			return frame;
+		}
+
+		return {};
+	}
+};
+
+struct rec_frame_data
+{
+	s64 pts = -1;
+	u32 width = 0;
+	u32 height = 0;
+	s32 av_pixel_format = 0; // NOTE: Make sure this is a valid AVPixelFormat
+	std::vector<u8> frame;
+};
+
 struct rec_info
 {
 	vm::ptr<CellRecCallback> cb{};
@@ -100,19 +166,504 @@ struct rec_info
 	atomic_t<rec_state> state = rec_state::closed;
 	rec_param param{};
 
-	vm::bptr<u8> video_input_buffer{};
-	vm::bptr<u8> audio_input_buffer{};
+	// These buffers are used by the game to inject one frame into the recording.
+	// This apparently happens right before a frame is rendered to the screen.
+	// It is only possible to inject a frame if the game has the external input mode enabled.
+	vm::bptr<u8> video_input_buffer{}; // Used by the game to inject a frame right before it would render a frame to the screen.
+	vm::bptr<u8> audio_input_buffer{}; // Used by the game to inject audio: 2-channel interleaved (left-right) * 256 samples * sizeof(f32) at 48000 kHz
 
-	u32 pitch = 4 * 1280; // TODO: remember to handle the pitch for CELL_REC_PARAM_VIDEO_INPUT_YUV420PLANAR_16_9
-	u32 width = 1280;
-	u32 height = 720;
+	std::vector<rec_frame_data> video_ringbuffer;
+	std::vector<u8> audio_ringbuffer;
+	usz video_ring_pos = 0;
+	usz video_ring_frame_count = 0;
+	usz audio_ring_step = 0;
 
-	u64 recording_time_start = 0; // TODO: proper time measurements
-	u64 recording_time_end = 0;   // TODO: proper time measurements
-	u64 recording_time_total = 0; // TODO: proper time measurements
+	usz next_video_ring_pos()
+	{
+		const usz pos = video_ring_pos;
+		video_ring_pos = (video_ring_pos + 1) % video_ringbuffer.size();
+		return pos;
+	}
+
+	std::shared_ptr<rec_image_sink> image_sink;
+	std::shared_ptr<utils::video_encoder> encoder;
+	std::unique_ptr<named_thread<std::function<void()>>> image_provider_thread;
+	atomic_t<bool> paused = false;
+	s64 last_pts = -1;
+
+	// Video parameters
+	utils::video_encoder::frame_format output_format{};
+	utils::video_encoder::frame_format input_format{};
+	u32 video_bps = 512000;
+	s32 video_codec_id = 12; // AV_CODEC_ID_MPEG4
+	s32 max_b_frames = 2;
+	const u32 fps = rec_framerate; // Always 30 fps
+
+	// Audio parameters
+	u32 sample_rate = 48000;
+	u32 audio_bps = 64000;
+	s32 audio_codec_id = 86018; // AV_CODEC_ID_AAC
+	const u32 channels = 2; // Always 2 channels
+
+	// Recording duration
+	atomic_t<u64> recording_time_start = 0;
+	atomic_t<u64> pause_time_start = 0;
+	atomic_t<u64> pause_time_total = 0;
+	atomic_t<u64> recording_time_total = 0;
 
 	shared_mutex mutex;
+
+	void set_video_params(s32 video_format);
+	void set_audio_params(s32 audio_format);
+
+	void start_image_provider();
+	void pause_image_provider();
+	void stop_image_provider(bool flush);
 };
+
+void rec_info::set_video_params(s32 video_format)
+{
+	const s32 video_type = video_format & 0xf000;
+	const s32 video_quality = video_format  & 0xf00;
+
+	switch (video_format)
+	{
+	case CELL_REC_PARAM_VIDEO_FMT_MPEG4_SMALL_512K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_MPEG4_MIDDLE_512K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_MPEG4_LARGE_512K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_MP_SMALL_512K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_MP_MIDDLE_512K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_BL_SMALL_512K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_BL_MIDDLE_512K_30FPS:
+		video_bps = 512000;
+		break;
+	case CELL_REC_PARAM_VIDEO_FMT_MPEG4_SMALL_768K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_MPEG4_MIDDLE_768K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_MPEG4_LARGE_768K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_MP_SMALL_768K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_MP_MIDDLE_768K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_BL_SMALL_768K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_BL_MIDDLE_768K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_M4HD_SMALL_768K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_M4HD_MIDDLE_768K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_YOUTUBE:
+		video_bps = 768000;
+		break;
+	case CELL_REC_PARAM_VIDEO_FMT_MPEG4_LARGE_1024K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_MP_MIDDLE_1024K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_BL_MIDDLE_1024K_30FPS:
+		video_bps = 1024000;
+		break;
+	case CELL_REC_PARAM_VIDEO_FMT_MPEG4_LARGE_1536K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_MP_MIDDLE_1536K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_AVC_BL_MIDDLE_1536K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_M4HD_LARGE_1536K_30FPS:
+		video_bps = 1536000;
+		break;
+	case CELL_REC_PARAM_VIDEO_FMT_MPEG4_LARGE_2048K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_M4HD_LARGE_2048K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_M4HD_HD720_2048K_30FPS:
+		video_bps = 2048000;
+		break;
+	case CELL_REC_PARAM_VIDEO_FMT_MJPEG_SMALL_5000K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_MJPEG_MIDDLE_5000K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_M4HD_HD720_5000K_30FPS:
+		video_bps = 5000000;
+		break;
+	case CELL_REC_PARAM_VIDEO_FMT_MJPEG_LARGE_11000K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_MJPEG_HD720_11000K_30FPS:
+	case CELL_REC_PARAM_VIDEO_FMT_M4HD_HD720_11000K_30FPS:
+		video_bps = 11000000;
+		break;
+	case CELL_REC_PARAM_VIDEO_FMT_MJPEG_HD720_20000K_30FPS:
+		video_bps = 20000000;
+		break;
+	case CELL_REC_PARAM_VIDEO_FMT_MJPEG_HD720_25000K_30FPS:
+		video_bps = 25000000;
+		break;
+	case 0x3791:
+	case 0x37a1:
+	case 0x3790:
+	case 0x37a0:
+	default:
+		// TODO: confirm bitrate
+		video_bps = 512000;
+		break;
+	}
+
+	max_b_frames = 2;
+
+	switch (video_type)
+	{
+	default:
+	case VIDEO_TYPE_MPEG4:
+		video_codec_id = 12; // AV_CODEC_ID_MPEG4
+		break;
+	case VIDEO_TYPE_AVC_MP:
+		video_codec_id = 27; // AV_CODEC_ID_H264
+		break;
+	case VIDEO_TYPE_AVC_BL:
+		video_codec_id = 27; // AV_CODEC_ID_H264
+		max_b_frames = 0; // Apparently baseline H264 does not support B-Frames
+		break;
+	case VIDEO_TYPE_MJPEG:
+		video_codec_id = 7; // AV_CODEC_ID_MJPEG
+		break;
+	case VIDEO_TYPE_M4HD:
+		// TODO: no idea if these are H264 or MPEG4
+		video_codec_id = 12; // AV_CODEC_ID_MPEG4
+		break;
+	}
+
+	const bool wide = g_cfg.video.aspect_ratio == video_aspect::_16_9;
+	bool hd = true;
+
+	switch(g_cfg.video.resolution)
+	{
+	case video_resolution::_1080:
+	case video_resolution::_720:
+	case video_resolution::_1600x1080:
+	case video_resolution::_1440x1080:
+	case video_resolution::_1280x1080:
+	case video_resolution::_960x1080:
+		hd = true;
+		break;
+	case video_resolution::_480:
+	case video_resolution::_576:
+		hd = false;
+		break;
+	}
+
+	switch (video_quality)
+	{
+	case VIDEO_QUALITY_0: // small
+		input_format.width = wide ? 368 : 320;
+		input_format.height = wide ? 208 : 240;
+		break;
+	case VIDEO_QUALITY_1: // middle
+		input_format.width = wide ? 480 : 368;
+		input_format.height = 272;
+		break;
+	case VIDEO_QUALITY_2: // large
+		input_format.width = wide ? 640 : 480;
+		input_format.height = 368;
+		break;
+	case VIDEO_QUALITY_3: // youtube
+		input_format.width = 320;
+		input_format.height = 240;
+		break;
+	case VIDEO_QUALITY_4:
+	case VIDEO_QUALITY_5:
+		// TODO:
+		break;
+	case VIDEO_QUALITY_6: // HD720
+		input_format.width = hd ? 1280 : (wide ? 864 : 640);
+		input_format.height = hd ? 720 : 480;
+		break;
+	case VIDEO_QUALITY_7:
+	default:
+		// TODO:
+		input_format.width = 1280;
+		input_format.height = 720;
+		break;
+	}
+
+	output_format.av_pixel_format = AVPixelFormat::AV_PIX_FMT_YUV420P;
+	output_format.width = input_format.width;
+	output_format.height = input_format.height;
+	output_format.pitch = input_format.width * 4; // unused
+
+	switch (param.video_input)
+	{
+	case CELL_REC_PARAM_VIDEO_INPUT_ARGB_4_3:
+	case CELL_REC_PARAM_VIDEO_INPUT_ARGB_16_9:
+		input_format.av_pixel_format = AVPixelFormat::AV_PIX_FMT_ARGB;
+		input_format.pitch = input_format.width * 4;
+		break;
+	case CELL_REC_PARAM_VIDEO_INPUT_RGBA_4_3:
+	case CELL_REC_PARAM_VIDEO_INPUT_RGBA_16_9:
+		input_format.av_pixel_format = AVPixelFormat::AV_PIX_FMT_RGBA;
+		input_format.pitch = input_format.width * 4;
+		break;
+	case CELL_REC_PARAM_VIDEO_INPUT_YUV420PLANAR_16_9:
+		input_format.av_pixel_format = AVPixelFormat::AV_PIX_FMT_YUV420P;
+		input_format.pitch = input_format.width * 4; // TODO
+		break;
+	case CELL_REC_PARAM_VIDEO_INPUT_DISABLE:
+	default:
+		input_format.av_pixel_format = AVPixelFormat::AV_PIX_FMT_RGBA;
+		input_format.width = 1280;
+		input_format.height = 720;
+		input_format.pitch = input_format.width * 4; // unused
+		break;
+	}
+}
+
+void rec_info::set_audio_params(s32 audio_format)
+{
+	// Get the codec
+	switch (audio_format)
+	{
+	case CELL_REC_PARAM_AUDIO_FMT_AAC_96K:
+	case CELL_REC_PARAM_AUDIO_FMT_AAC_128K:
+	case CELL_REC_PARAM_AUDIO_FMT_AAC_64K:
+		audio_codec_id = 86018; // AV_CODEC_ID_AAC
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_ULAW_384K:
+	case CELL_REC_PARAM_AUDIO_FMT_ULAW_768K:
+		// TODO: no idea what this is
+		audio_codec_id = 65542; // AV_CODEC_ID_PCM_MULAW
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_PCM_384K:
+	case CELL_REC_PARAM_AUDIO_FMT_PCM_768K:
+	case CELL_REC_PARAM_AUDIO_FMT_PCM_1536K:
+		audio_codec_id = 65556; // AV_CODEC_ID_PCM_F32BE
+		//audio_codec_id = 65557; // AV_CODEC_ID_PCM_F32LE // TODO: maybe this one?
+	default:
+		audio_codec_id = 86018; // AV_CODEC_ID_AAC
+		break;
+	}
+
+	// Get the sampling rate
+	switch (audio_format)
+	{
+	case CELL_REC_PARAM_AUDIO_FMT_AAC_96K:
+	case CELL_REC_PARAM_AUDIO_FMT_AAC_128K:
+	case CELL_REC_PARAM_AUDIO_FMT_AAC_64K:
+	case CELL_REC_PARAM_AUDIO_FMT_PCM_1536K:
+		sample_rate = 48000;
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_ULAW_384K:
+	case CELL_REC_PARAM_AUDIO_FMT_ULAW_768K:
+		// TODO: no idea what this is
+		sample_rate = 48000;
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_PCM_384K:
+		sample_rate = 12000;
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_PCM_768K:
+		sample_rate = 24000;
+		break;
+	default:
+		sample_rate = 48000;
+		break;
+	}
+
+	// Get the bitrate
+	switch (audio_format)
+	{
+	case CELL_REC_PARAM_AUDIO_FMT_AAC_64K:
+		audio_bps = 64000;
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_AAC_96K:
+		audio_bps = 96000;
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_AAC_128K:
+		audio_bps = 128000;
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_PCM_1536K:
+		audio_bps = 1536000;
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_ULAW_384K:
+	case CELL_REC_PARAM_AUDIO_FMT_PCM_384K:
+		audio_bps = 384000;
+		break;
+	case CELL_REC_PARAM_AUDIO_FMT_ULAW_768K:
+	case CELL_REC_PARAM_AUDIO_FMT_PCM_768K:
+		audio_bps = 768000;
+		break;
+	default:
+		audio_bps = 96000;
+		break;
+	}
+}
+
+void rec_info::start_image_provider()
+{
+	const bool was_paused = paused.exchange(false);
+	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+
+	if (image_provider_thread && was_paused)
+	{
+		// Resume
+		const u64 pause_time_end = get_system_time();
+		ensure(pause_time_end > pause_time_start);
+		pause_time_total += (pause_time_end - pause_time_start);
+		video_provider.set_pause_time(pause_time_total / 1000);
+		cellRec.notice("Resuming image provider.");
+		return;
+	}
+
+	cellRec.notice("Starting image provider.");
+
+	recording_time_start = get_system_time();
+	pause_time_total = 0;
+	video_provider.set_pause_time(0);
+
+	image_provider_thread = std::make_unique<named_thread<std::function<void()>>>("cellRec Image Provider", [this]()
+	{
+		const bool use_internal_audio = param.audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE || param.audio_input_mix_vol < 100;
+		const bool use_external_audio = param.audio_input != CELL_REC_PARAM_AUDIO_INPUT_DISABLE && param.audio_input_mix_vol > 0;
+		const bool use_external_video = param.video_input != CELL_REC_PARAM_VIDEO_INPUT_DISABLE;
+		const bool use_ring_buffer = param.ring_sec > 0;
+		const usz frame_size = input_format.pitch * input_format.height;
+
+		cellRec.notice("image_provider_thread: use_ring_buffer=%d, video_ringbuffer_size=%d, audio_ringbuffer_size=%d, ring_sec=%d, frame_size=%d, use_external_video=%d, use_external_audio=%d, use_internal_audio=%d", use_ring_buffer, video_ringbuffer.size(), audio_ringbuffer.size(), param.ring_sec, frame_size, use_external_video, use_external_audio, use_internal_audio);
+
+		while (thread_ctrl::state() != thread_state::aborting && encoder)
+		{
+			if (encoder->has_error)
+			{
+				cellRec.error("Encoder error. Sending error status.");
+
+				sysutil_register_cb([this](ppu_thread& ppu) -> s32
+				{
+					if (cb)
+					{
+						cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_WRITE, cbUserData);
+					}
+					return CELL_OK;
+				});
+
+				return;
+			}
+
+			if (paused)
+			{
+				thread_ctrl::wait_for(10000);
+				continue;
+			}
+
+			const usz timestamp_ms = (get_system_time() - recording_time_start - pause_time_total) / 1000;
+
+			// We only care for new video frames that can be properly encoded
+			// TODO: wait for flip before adding a frame
+			if (use_external_video)
+			{
+				if (const s64 pts = encoder->get_pts(timestamp_ms); pts > last_pts)
+				{
+					if (video_input_buffer)
+					{
+						if (use_ring_buffer)
+						{
+							rec_frame_data& frame_data = video_ringbuffer[next_video_ring_pos()];
+							frame_data.pts = pts;
+							frame_data.width = input_format.width;
+							frame_data.height = input_format.height;
+							frame_data.av_pixel_format = input_format.av_pixel_format;
+							frame_data.frame.resize(frame_size);
+							std::memcpy(frame_data.frame.data(), video_input_buffer.get_ptr(), frame_data.frame.size());
+							video_ring_frame_count++;
+						}
+						else
+						{
+							std::vector<u8> frame(frame_size);
+							std::memcpy(frame.data(), video_input_buffer.get_ptr(), frame.size());
+							encoder->add_frame(frame, input_format.pitch, input_format.height, input_format.av_pixel_format, timestamp_ms);
+						}
+					}
+
+					last_pts = pts;
+				}
+			}
+			else if (use_ring_buffer && image_sink)
+			{
+				utils::image_sink::encoder_frame frame = std::move(image_sink->get_frame());
+
+				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_pts && frame.data.size() > 0)
+				{
+					rec_frame_data& frame_data = video_ringbuffer[next_video_ring_pos()];
+					ensure(frame.data.size() == frame_size);
+					frame_data.pts = pts;
+					frame_data.width = frame.width;
+					frame_data.height = frame.height;
+					frame_data.av_pixel_format = frame.av_pixel_format;
+					frame_data.frame.resize(frame.data.size());
+					std::memcpy(frame_data.frame.data(), frame.data.data(), frame.data.size());
+					last_pts = pts;
+					video_ring_frame_count++;
+				}
+			}
+
+			if (use_internal_audio)
+			{
+				// TODO: fetch audio
+			}
+
+			if (use_external_audio && audio_input_buffer)
+			{
+				// 2-channel interleaved (left-right), 256 samples, float
+				std::array<f32, 2 * 256> audio_data{};
+				std::memcpy(audio_data.data(), audio_input_buffer.get_ptr(), audio_data.size() * sizeof(f32));
+
+				// TODO: mix audio with param.audio_input_mix_vol
+			}
+
+			if (use_ring_buffer)
+			{
+				// TODO: add audio properly
+				//std::memcpy(&ringbuffer[get_ring_pos(pts) + ring_audio_offset], audio_data.data(), audio_data.size());
+			}
+			else
+			{
+				// TODO: add audio to encoder
+			}
+
+			// Update recording time
+			recording_time_total = encoder->get_timestamp_ms(encoder->last_pts());
+
+			thread_ctrl::wait_for(100);
+		}
+	});
+}
+
+void rec_info::pause_image_provider()
+{
+	cellRec.notice("Pausing image provider.");
+
+	if (image_provider_thread)
+	{
+		paused = true;
+		pause_time_start = get_system_time();
+	}
+}
+
+void rec_info::stop_image_provider(bool flush)
+{
+	cellRec.notice("Stopping image provider.");
+
+	if (image_provider_thread)
+	{
+		auto& thread = *image_provider_thread;
+		thread = thread_state::aborting;
+		thread();
+		image_provider_thread.reset();
+	}
+
+	if (flush && param.ring_sec > 0 && !video_ringbuffer.empty())
+	{
+		cellRec.notice("Flushing video ringbuffer.");
+
+		// Fill encoder with data from ringbuffer
+		// TODO: ideally the encoder should do this on the fly and overwrite old frames in the file.
+		ensure(encoder);
+
+		const usz frame_count = std::min(video_ringbuffer.size(), video_ring_frame_count);
+		const usz start_offset = video_ring_frame_count < video_ringbuffer.size() ? 0 : video_ring_frame_count;
+		const s64 start_pts = video_ringbuffer[start_offset % video_ringbuffer.size()].pts;
+
+		for (usz i = 0; i < frame_count; i++)
+		{
+			const usz pos = (start_offset + i) % video_ringbuffer.size();
+			rec_frame_data& frame_data = video_ringbuffer[pos];
+			encoder->add_frame(frame_data.frame, frame_data.width, frame_data.height, frame_data.av_pixel_format, encoder->get_timestamp_ms(frame_data.pts - start_pts));
+
+			// TODO: add audio data to encoder
+		}
+
+		video_ringbuffer.clear();
+	}
+}
 
 bool create_path(std::string& out, std::string dir_name, std::string file_name)
 {
@@ -337,6 +888,8 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 		}
 		case CELL_REC_OPTION_AUDIO_INPUT:
 		{
+			rec.param.audio_input = opt.value.audio_input;
+
 			if (opt.value.audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE)
 			{
 				rec.param.audio_input_mix_vol = 0;
@@ -460,10 +1013,45 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 
 	rec.cb = cb;
 	rec.cbUserData = cbUserData;
+	rec.last_pts = -1;
+	rec.audio_ringbuffer.clear();
+	rec.video_ringbuffer.clear();
+	rec.video_ring_frame_count = 0;
+	rec.video_ring_pos = 0;
+	rec.paused = false;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	rec.set_video_params(pParam->videoFmt);
+	rec.set_audio_params(pParam->audioFmt);
+
+	if (rec.param.ring_sec > 0)
 	{
-		cb(ppu, CELL_REC_STATUS_OPEN, CELL_OK, cbUserData);
+		const u32 audio_size_per_sample = rec.channels * sizeof(float);
+		const u32 audio_size_per_second = rec.sample_rate * audio_size_per_sample;
+		const usz audio_ring_buffer_size = rec.param.ring_sec * audio_size_per_second;
+		const usz video_ring_buffer_size = rec.param.ring_sec * rec.fps;
+
+		cellRec.notice("Preparing ringbuffer for %d seconds. video_ring_buffer_size=%d, audio_ring_buffer_size=%d, pitch=%d, width=%d, height=%d", rec.param.ring_sec, video_ring_buffer_size, audio_ring_buffer_size, rec.input_format.pitch, rec.input_format.width, rec.input_format.height);
+
+		rec.audio_ringbuffer.resize(audio_ring_buffer_size);
+		rec.audio_ring_step = audio_size_per_sample;
+		rec.video_ringbuffer.resize(video_ring_buffer_size, {});
+		rec.image_sink = std::make_shared<rec_image_sink>();
+	}
+
+	rec.encoder = std::make_shared<utils::video_encoder>();
+	rec.encoder->set_path(vfs::get(rec.param.filename));
+	rec.encoder->set_framerate(rec.fps);
+	rec.encoder->set_video_bitrate(rec.video_bps);
+	rec.encoder->set_video_codec(rec.video_codec_id);
+	rec.encoder->set_sample_rate(rec.sample_rate);
+	rec.encoder->set_audio_bitrate(rec.audio_bps);
+	rec.encoder->set_audio_codec(rec.audio_codec_id);
+	rec.encoder->set_output_format(rec.output_format);
+
+	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
+	{
+		rec.state = rec_state::stopped;
+		rec.cb(ppu, CELL_REC_STATUS_OPEN, CELL_OK, rec.cbUserData);
 		return CELL_OK;
 	});
 
@@ -476,31 +1064,92 @@ error_code cellRecClose(s32 isDiscard)
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::open)
+	if (rec.state == rec_state::closed)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
 
 	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
 	{
+		bool is_valid_range = true;
+
 		if (isDiscard)
 		{
-			// TODO: remove recording
+			// No need to flush
+			rec.stop_image_provider(false);
+			rec.encoder->stop(false);
+
+			if (rec.image_sink)
+			{
+				rec.image_sink->stop(false);
+			}
+
+			if (fs::is_file(rec.param.filename))
+			{
+				cellRec.warning("cellRecClose: removing discarded recording '%s'", rec.param.filename);
+
+				if (!fs::remove_file(rec.param.filename))
+				{
+					cellRec.error("cellRecClose: failed to remove recording '%s'", rec.param.filename);
+				}
+			}
 		}
 		else
 		{
-			// TODO: save recording
+			// Flush to make sure we encode all remaining frames
+			rec.stop_image_provider(true);
+			rec.encoder->stop(true);
+			rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_pts());
+
+			if (rec.image_sink)
+			{
+				rec.image_sink->stop(true);
+			}
+
+			const s64 start_pts = rec.encoder->get_pts(rec.param.scene_metadata.start_time);
+			const s64 end_pts = rec.encoder->get_pts(rec.param.scene_metadata.end_time);
+			const s64 last_pts = rec.encoder->last_pts();
+
+			is_valid_range = start_pts >= 0 && end_pts <= last_pts;
 		}
 
 		vm::dealloc(rec.video_input_buffer.addr(), vm::main);
 		vm::dealloc(rec.audio_input_buffer.addr(), vm::main);
 
+		g_fxo->need<utils::video_provider>();
+		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+
+		// Release the image sink if it was used
+		if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE)
+		{
+			const recording_mode old_mode = g_recording_mode.exchange(recording_mode::stopped);
+
+			if (old_mode == recording_mode::rpcs3)
+			{
+				cellRec.error("cellRecClose: Unexpected recording mode %s found while stopping video capture.", old_mode);
+			}
+
+			if (!video_provider.set_image_sink(nullptr, recording_mode::cell))
+			{
+				cellRec.error("cellRecClose failed to release image sink");
+			}
+		}
+
 		rec.param = {};
+		rec.encoder.reset();
+		rec.image_sink.reset();
+		rec.audio_ringbuffer.clear();
+		rec.video_ringbuffer.clear();
+		rec.state = rec_state::closed;
 
-		// TODO: Sets status CELL_REC_ERROR_FILE_NO_DATA if the start time AND end time are out of scope
-
-		// Sets status CELL_REC_STATUS_ERR on error
-		rec.cb(ppu, CELL_REC_STATUS_CLOSE, CELL_OK, rec.cbUserData);
+		if (is_valid_range)
+		{
+			rec.cb(ppu, CELL_REC_STATUS_CLOSE, CELL_OK, rec.cbUserData);
+		}
+		else
+		{
+			rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_NO_DATA, rec.cbUserData);
+		}
 		return CELL_OK;
 	});
 
@@ -513,18 +1162,33 @@ error_code cellRecStop()
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::open)
+	if (rec.state != rec_state::started)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
 
-	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
+	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
-		// TODO: stop recording
-		rec.recording_time_end = get_system_time();
-		rec.recording_time_total += (rec.recording_time_end - rec.recording_time_start);
+		// Disable image sink if it was used
+		if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE)
+		{
+			const recording_mode old_mode = g_recording_mode.exchange(recording_mode::stopped);
 
-		// Sets status CELL_REC_STATUS_ERR on error
+			if (old_mode != recording_mode::cell && old_mode != recording_mode::stopped)
+			{
+				cellRec.error("cellRecStop: Unexpected recording mode %s found while stopping video capture. (ring_sec=%d)", old_mode, rec.param.ring_sec);
+			}
+		}
+
+		// cellRecStop actually just pauses the recording
+		rec.pause_image_provider();
+
+		ensure(!!rec.encoder);
+		rec.encoder->pause(true);
+
+		rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_pts());
+		rec.state = rec_state::stopped;
+
 		rec.cb(ppu, CELL_REC_STATUS_STOP, CELL_OK, rec.cbUserData);
 		return CELL_OK;
 	});
@@ -538,19 +1202,64 @@ error_code cellRecStart()
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::open)
+	if (rec.state != rec_state::stopped)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
 
-	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
+	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
-		// TODO: start recording
-		rec.recording_time_start = get_system_time();
-		rec.recording_time_end = rec.recording_time_start;
+		// Start/resume the recording
+		ensure(!!rec.encoder);
+		rec.encoder->encode();
 
-		// Sets status CELL_REC_STATUS_ERR on error
-		rec.cb(ppu, CELL_REC_STATUS_START, CELL_OK, rec.cbUserData);
+		g_fxo->need<utils::video_provider>();
+		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+
+		// Setup an image sink if it is needed
+		if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE)
+		{
+			if (rec.param.ring_sec <= 0)
+			{
+				// Regular recording
+				if (!video_provider.set_image_sink(rec.encoder, recording_mode::cell))
+				{
+					cellRec.error("Failed to set image sink");
+					rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
+					return CELL_OK;
+				}
+			}
+			else
+			{
+				// Ringbuffer recording
+				if (!video_provider.set_image_sink(rec.image_sink, recording_mode::cell))
+				{
+					cellRec.error("Failed to set image sink");
+					rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
+					return CELL_OK;
+				}
+			}
+
+			// Force rsx recording
+			g_recording_mode = recording_mode::cell;
+		}
+		else
+		{
+			// Force stop rsx recording
+			g_recording_mode = recording_mode::stopped;
+		}
+
+		rec.start_image_provider();
+
+		if (rec.encoder->has_error)
+		{
+			rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_OPEN, rec.cbUserData);
+		}
+		else
+		{
+			rec.state = rec_state::started;
+			rec.cb(ppu, CELL_REC_STATUS_START, CELL_OK, rec.cbUserData);
+		}
 		return CELL_OK;
 	});
 
@@ -745,17 +1454,17 @@ void cellRecGetInfo(s32 info, vm::ptr<u64> pValue)
 	}
 	case CELL_REC_INFO_VIDEO_INPUT_WIDTH:
 	{
-		*pValue = rec.width;
+		*pValue = rec.input_format.width;
 		break;
 	}
 	case CELL_REC_INFO_VIDEO_INPUT_PITCH:
 	{
-		*pValue = rec.pitch;
+		*pValue = rec.input_format.pitch;
 		break;
 	}
 	case CELL_REC_INFO_VIDEO_INPUT_HEIGHT:
 	{
-		*pValue = rec.height;
+		*pValue = rec.input_format.height;
 		break;
 	}
 	case CELL_REC_INFO_AUDIO_INPUT_ADDR:
@@ -765,7 +1474,7 @@ void cellRecGetInfo(s32 info, vm::ptr<u64> pValue)
 	}
 	case CELL_REC_INFO_MOVIE_TIME_MSEC:
 	{
-		if (rec.state == rec_state::open)
+		if (rec.state == rec_state::stopped)
 		{
 			*pValue = rec.recording_time_total;
 		}
@@ -794,7 +1503,7 @@ error_code cellRecSetInfo(s32 setInfo, u64 value)
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::open)
+	if (rec.state != rec_state::stopped)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
@@ -866,7 +1575,7 @@ error_code cellRecSetInfo(s32 setInfo, u64 value)
 			return CELL_REC_ERROR_INVALID_VALUE;
 		}
 		
-		for (usz i = 0; i < scene_metadata->tagNum; i++)
+		for (u32 i = 0; i < scene_metadata->tagNum; i++)
 		{
 			if (!scene_metadata->tag[i] ||
 				strnlen(scene_metadata->tag[i].get_ptr(), CELL_REC_SCENE_META_TAG_LEN) >= CELL_REC_SCENE_META_TAG_LEN)
@@ -883,7 +1592,7 @@ error_code cellRecSetInfo(s32 setInfo, u64 value)
 		rec.param.scene_metadata.title = std::string{scene_metadata->title.get_ptr()};
 		rec.param.scene_metadata.tags.resize(scene_metadata->tagNum);
 
-		for (usz i = 0; i < scene_metadata->tagNum; i++)
+		for (u32 i = 0; i < scene_metadata->tagNum; i++)
 		{
 			if (scene_metadata->tag[i])
 			{
