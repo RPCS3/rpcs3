@@ -153,6 +153,7 @@ struct ppu_linkage_info
 
 	// Module map
 	std::map<std::string, module_data> modules{};
+	std::map<std::string, std::shared_ptr<atomic_t<bool>>, std::less<>> lib_lock;
 	shared_mutex mutex;
 };
 
@@ -628,8 +629,43 @@ extern u32 ppu_get_exported_func_addr(u32 fnid, const std::string& module_name)
 	return g_fxo->get<ppu_linkage_info>().modules[module_name].functions[fnid].export_addr;
 }
 
+extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib)
+{
+	auto link = g_fxo->try_get<ppu_linkage_info>();
+
+	if (!link || libname.empty())
+	{
+		return false;
+	}
+
+	reader_lock lock(link->mutex);
+
+	if (auto it = std::as_const(link->lib_lock).find(libname); it != link->lib_lock.cend() && it->second)
+	{
+		return lock_lib ? !it->second->test_and_set() : it->second->test_and_reset();
+	}
+
+	if (!lock_lib)
+	{
+		// If lock hasn't been installed it wasn't locked in the first place
+		return false;
+	}
+
+	lock.upgrade();
+
+	auto& lib_lock = link->lib_lock.emplace(std::string{libname}, nullptr).first->second;
+
+	if (!lib_lock)
+	{
+		lib_lock = std::make_shared<atomic_t<bool>>(true);
+		return true;
+	}
+
+	return !lib_lock->test_and_set();
+}
+
 // Load and register exports; return special exports found (nameless module)
-static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end)
+static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end, bool for_observing_callbacks = false)
 {
 	std::unordered_map<u32, u32> result;
 
@@ -659,6 +695,12 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				result.emplace(nid, addr);
 			}
 
+			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
+			continue;
+		}
+
+		if (for_observing_callbacks)
+		{
 			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
 			continue;
 		}
@@ -873,6 +915,12 @@ void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 ex
 	auto& link = g_fxo->get<ppu_linkage_info>();
 
 	ppu_load_exports(&link, exports_start, exports_start + exports_size);
+
+	if (!imports_size)
+	{
+		return;
+	}
+
 	ppu_load_imports(_main.relocs, &link, imports_start, imports_start + imports_size);
 }
 
@@ -1419,10 +1467,13 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		prx->module_info_version[0] = lib_info->version[0];
 		prx->module_info_version[1] = lib_info->version[1];
 		prx->module_info_attributes = lib_info->attributes;
+		
+		prx->exports_start = lib_info->exports_start;
+		prx->exports_end = lib_info->exports_end;
 
 		ppu_loader.warning("Library %s (rtoc=0x%x):", lib_name, lib_info->toc);
 
-		prx->specials = ppu_load_exports(&link, lib_info->exports_start, lib_info->exports_end);
+		prx->specials = ppu_load_exports(&link, prx->exports_start, prx->exports_end, true);
 		prx->imports = ppu_load_imports(prx->relocs, &link, lib_info->imports_start, lib_info->imports_end);
 		std::stable_sort(prx->relocs.begin(), prx->relocs.end());
 		toc = lib_info->toc;
@@ -2055,6 +2106,8 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 				ppu_loader.warning("Loading library: %s", name);
 
 				auto prx = ppu_load_prx(obj, lle_dir + name, 0, nullptr);
+				prx->state = PRX_STATE_STARTED;
+				prx->load_exports();
 
 				if (prx->funcs.empty())
 				{

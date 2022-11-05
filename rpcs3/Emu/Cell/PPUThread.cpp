@@ -3192,6 +3192,13 @@ extern void ppu_initialize()
 			if (ptr->path.starts_with(firmware_sprx_path))
 			{
 				compile_fw |= ppu_initialize(*ptr, true);
+
+				// Fixup for compatibility with old savestates
+				if (Emu.DeserialManager() && ptr->name == "liblv2.sprx")
+				{
+					static_cast<lv2_prx*>(ptr)->state = PRX_STATE_STARTED;
+					static_cast<lv2_prx*>(ptr)->load_exports();
+				}
 			}
 		}
 	}

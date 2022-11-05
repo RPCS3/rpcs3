@@ -42,7 +42,7 @@ SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
 SERIALIZATION_VER(lv2_net, 5,                                   1)
 SERIALIZATION_VER(lv2_fs, 6,                                    1)
-SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
+SERIALIZATION_VER(lv2_prx_overlay, 7,                           1, 2/*PRX dynamic exports*/)
 SERIALIZATION_VER(lv2_memory, 8,                                1)
 SERIALIZATION_VER(lv2_config, 9,                                1)
 
