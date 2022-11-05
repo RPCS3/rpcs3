@@ -228,7 +228,7 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 
 	cellVideoExport.notice("cellVideoExportFromFileWithCopy: param: title=%s, game_title=%s, game_comment=%s, editable=%d", param->title, param->game_title, param->game_comment, param->editable);
 
-	const std::string file_path = fmt::format("%s/%s", srcHddDir, srcHddFile);
+	const std::string file_path = fmt::format("%s/%s", srcHddDir.get_ptr(), srcHddFile.get_ptr());
 
 	if (!check_movie_path(file_path))
 	{
@@ -292,7 +292,7 @@ error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcH
 
 	cellVideoExport.notice("cellVideoExportFromFile: param: title=%s, game_title=%s, game_comment=%s, editable=%d", param->title, param->game_title, param->game_comment, param->editable);
 
-	const std::string file_path = fmt::format("%s/%s", srcHddDir, srcHddFile);
+	const std::string file_path = fmt::format("%s/%s", srcHddDir.get_ptr(), srcHddFile.get_ptr());
 
 	if (!check_movie_path(file_path))
 	{
