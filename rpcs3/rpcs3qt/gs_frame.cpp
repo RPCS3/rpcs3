@@ -5,6 +5,7 @@
 #include "Utilities/Timer.h"
 #include "Utilities/date_time.h"
 #include "Utilities/File.h"
+#include "util/video_provider.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_progress.hpp"
@@ -13,6 +14,7 @@
 #include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/Io/recording_config.h"
 
 #include <QApplication>
 #include <QDateTime>
@@ -54,6 +56,7 @@ LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
+extern atomic_t<recording_mode> g_recording_mode;
 
 atomic_t<bool> g_game_window_focused = false;
 
@@ -77,6 +80,14 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 
 	m_window_title = Emu.GetFormattedTitle(0);
+
+	if (!g_cfg_recording.load())
+	{
+		gui_log.notice("Could not load recording config. Using defaults.");
+	}
+
+	g_fxo->need<utils::video_provider>();
+	m_video_encoder = std::make_shared<utils::video_encoder>();
 
 	if (!appIcon.isNull())
 	{
@@ -320,6 +331,94 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			gui_log.warning("%s boost mode", g_disable_frame_limit.load() ? "Enabled" : "Disabled");
 			return;
 		}
+		break;
+	}
+	case Qt::Key_F11:
+	{
+		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+
+		if (g_recording_mode == recording_mode::cell)
+		{
+			gui_log.warning("A video recorder is already in use by cell. Regular recording can not proceed.");
+			m_video_encoder->stop();
+			break;
+		}
+
+		if (g_recording_mode.exchange(recording_mode::stopped) == recording_mode::rpcs3)
+		{
+			m_video_encoder->stop();
+
+			if (!video_provider.set_image_sink(nullptr, recording_mode::rpcs3))
+			{
+				gui_log.warning("The video provider could not release the image sink. A sink with higher priority must have been set.");
+			}
+
+			rsx::overlays::queue_message(tr("Recording stopped: %0").arg(QString::fromStdString(m_video_encoder->path())).toStdString());
+		}
+		else
+		{
+			m_video_encoder->stop();
+
+			const std::string& id = Emu.GetTitleID();
+			std::string video_path = fs::get_config_dir() + "recordings/";
+			if (!id.empty())
+			{
+				video_path += id + "/";
+			}
+
+			if (!fs::create_path(video_path) && fs::g_tls_error != fs::error::exist)
+			{
+				screenshot_log.error("Failed to create recordings path \"%s\" : %s", video_path, fs::g_tls_error);
+				break;
+			}
+
+			if (!id.empty())
+			{
+				video_path += id + "_";
+			}
+
+			video_path += "recording_" + date_time::current_time_narrow<'_'>() + ".mp4";
+
+			utils::video_encoder::frame_format output_format{};
+			output_format.av_pixel_format = static_cast<AVPixelFormat>(g_cfg_recording.pixel_format.get());
+			output_format.width = g_cfg_recording.width;
+			output_format.height = g_cfg_recording.height;
+			output_format.pitch = g_cfg_recording.width * 4;
+
+			m_video_encoder->set_path(video_path);
+			m_video_encoder->set_framerate(g_cfg_recording.framerate);
+			m_video_encoder->set_video_bitrate(g_cfg_recording.video_bps);
+			m_video_encoder->set_video_codec(g_cfg_recording.video_codec);
+			m_video_encoder->set_max_b_frames(g_cfg_recording.max_b_frames);
+			m_video_encoder->set_gop_size(g_cfg_recording.gop_size);
+			m_video_encoder->set_output_format(output_format);
+			m_video_encoder->set_sample_rate(0);   // TODO
+			m_video_encoder->set_audio_bitrate(0); // TODO
+			m_video_encoder->set_audio_codec(0);   // TODO
+			m_video_encoder->encode();
+
+			if (m_video_encoder->has_error)
+			{
+				rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+				m_video_encoder->stop();
+				break;
+			}
+
+			if (!video_provider.set_image_sink(m_video_encoder, recording_mode::rpcs3))
+			{
+				gui_log.warning("The video provider could not set the image sink. A sink with higher priority must have been set.");
+				rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+				m_video_encoder->stop();
+				break;
+			}
+
+			video_provider.set_pause_time(0);
+
+			g_recording_mode = recording_mode::rpcs3;
+
+			rsx::overlays::queue_message(tr("Recording started").toStdString());
+		}
+
 		break;
 	}
 	case Qt::Key_F12:
@@ -575,6 +674,18 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 		m_frames = 0;
 		fps_t.Start();
 	}
+}
+
+bool gs_frame::can_consume_frame() const
+{
+	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+	return video_provider.can_consume_frame();
+}
+
+void gs_frame::present_frame(std::vector<u8>& data, const u32 width, const u32 height, bool is_bgra) const
+{
+	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+	video_provider.present_frame(data, width, height, is_bgra);
 }
 
 void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, const u32 sshot_height, bool is_bgra)
