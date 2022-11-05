@@ -282,15 +282,10 @@ public:
 
 	struct AudioReader
 	{
-		u32 addr;
-		u32 size;
-		bool init;
-		bool has_ats;
-
-		AudioReader()
-			: init(false)
-		{
-		}
+		u32 addr{};
+		u32 size{};
+		bool init{};
+		bool has_ats{};
 
 	} reader;
 
@@ -304,13 +299,14 @@ public:
 	u32 memBias = 0;
 
 	AdecTask task;
-	u64 last_pts, first_pts;
+	u64 last_pts{};
+	u64 first_pts{};
 
-	u32 ch_out;
-	u32 ch_cfg;
-	u32 frame_size;
-	u32 sample_rate;
-	bool use_ats_headers;
+	u32 ch_out{};
+	u32 ch_cfg{};
+	u32 frame_size{};
+	u32 sample_rate{};
+	bool use_ats_headers{};
 
 	AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
 		: ppu_thread({}, "", 0)
