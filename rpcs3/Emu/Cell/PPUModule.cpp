@@ -24,6 +24,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <shared_mutex>
 #include "util/asm.hpp"
 
 LOG_CHANNEL(ppu_loader);
@@ -143,15 +144,16 @@ struct ppu_linkage_info
 		};
 
 		// FNID -> (export; [imports...])
-		std::unordered_map<u32, info, value_hash<u32>> functions{};
-		std::unordered_map<u32, info, value_hash<u32>> variables{};
+		std::map<u32, info> functions{};
+		std::map<u32, info> variables{};
 
 		// Obsolete
 		bool imported = false;
 	};
 
 	// Module map
-	std::unordered_map<std::string, module_data> modules{};
+	std::map<std::string, module_data> modules{};
+	shared_mutex mutex;
 };
 
 // Initialize static modules.
@@ -631,6 +633,8 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 {
 	std::unordered_map<u32, u32> result;
 
+	std::lock_guard lock(link->mutex);
+
 	for (u32 addr = exports_start; addr < exports_end;)
 	{
 		const auto& lib = vm::_ref<const ppu_prx_module_info>(addr);
@@ -776,6 +780,8 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* link, u32 imports_start, u32 imports_end)
 {
 	std::unordered_map<u32, void*> result;
+
+	reader_lock lock(link->mutex);
 
 	for (u32 addr = imports_start; addr < imports_end;)
 	{
@@ -1498,9 +1504,16 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 void ppu_unload_prx(const lv2_prx& prx)
 {
+	std::unique_lock lock(g_fxo->get<ppu_linkage_info>().mutex, std::defer_lock);
+
 	// Clean linkage info
 	for (auto& imp : prx.imports)
 	{
+		if (!lock)
+		{
+			lock.lock();
+		}
+
 		auto pinfo = static_cast<ppu_linkage_info::module_data::info*>(imp.second);
 		pinfo->frefss.erase(imp.first);
 		pinfo->imports.erase(imp.first);
@@ -1522,6 +1535,11 @@ void ppu_unload_prx(const lv2_prx& prx)
 	//		pinfo->export_addr = 0;
 	//	}
 	//}
+
+	if (lock)
+	{
+		lock.unlock();
+	}
 
 	if (prx.path.ends_with("sys/external/liblv2.sprx"sv))
 	{
