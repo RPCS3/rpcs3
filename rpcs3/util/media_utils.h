@@ -7,6 +7,7 @@
 #include <thread>
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
+#include "util/video_provider.h"
 #include "Emu/Cell/Modules/cellMusic.h"
 
 namespace utils
@@ -75,5 +76,59 @@ namespace utils
 		bool m_swap_endianness = false;
 		music_selection_context m_context{};
 		std::unique_ptr<named_thread<std::function<void()>>> m_thread;
+	};
+
+	class video_encoder : public utils::image_sink
+	{
+	public:
+		video_encoder();
+		~video_encoder();
+
+		struct frame_format
+		{
+			s32 av_pixel_format = 0; // NOTE: Make sure this is a valid AVPixelFormat
+			u32 width = 0;
+			u32 height = 0;
+			u32 pitch = 0;
+		};
+
+		std::string path() const;
+		s64 last_pts() const;
+
+		void set_path(const std::string& path);
+		void set_framerate(u32 framerate);
+		void set_video_bitrate(u32 bitrate);
+		void set_output_format(frame_format format);
+		void set_video_codec(s32 codec_id);
+		void set_max_b_frames(s32 max_b_frames);
+		void set_gop_size(s32 gop_size);
+		void set_sample_rate(u32 sample_rate);
+		void set_audio_bitrate(u32 bitrate);
+		void set_audio_codec(s32 codec_id);
+		void add_frame(std::vector<u8>& frame, const u32 width, const u32 height, s32 pixel_format, usz timestamp_ms) override;
+		void pause(bool flush = true);
+		void stop(bool flush = true) override;
+		void encode();
+
+	private:
+		std::string m_path;
+		s64 m_last_pts = 0;
+
+		// Thread control
+		std::unique_ptr<named_thread<std::function<void()>>> m_thread;
+		atomic_t<bool> m_running = false;
+		atomic_t<bool> m_paused = false;
+
+		// Video parameters
+		u32 m_video_bitrate_bps = 0;
+		s32 m_video_codec_id = 12; // AV_CODEC_ID_MPEG4;
+		s32 m_max_b_frames = 2;
+		s32 m_gop_size = 12;
+		frame_format m_out_format{};
+
+		// Audio parameters
+		u32 m_sample_rate = 48000;
+		u32 m_audio_bitrate_bps = 96000;
+		s32 m_audio_codec_id = 86018; // AV_CODEC_ID_AAC
 	};
 }

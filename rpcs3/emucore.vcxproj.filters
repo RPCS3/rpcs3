@@ -1096,6 +1096,12 @@
     <ClCompile Include="Emu\Cell\lv2\sys_game.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="util\video_provider.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\recording_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2187,6 +2193,15 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_game.h">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="util\video_provider.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\image_sink.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\recording_config.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -41,6 +41,7 @@ target_include_directories(rpcs3_emu
 target_sources(rpcs3_emu PRIVATE
     ../util/atomic.cpp
     ../util/media_utils.cpp
+    ../util/video_provider.cpp
     ../util/logs.cpp
     ../util/yaml.cpp
     ../util/vm_native.cpp
@@ -380,6 +381,7 @@ target_link_libraries(rpcs3_emu
 # Io
 target_sources(rpcs3_emu PRIVATE
     Io/camera_config.cpp
+    Io/recording_config.cpp
     Io/interception.cpp
     Io/KeyboardHandler.cpp
     Io/pad_config.cpp
