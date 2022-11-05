@@ -2,6 +2,8 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "util/media_utils.h"
+#include "util/video_provider.h"
 #include "Emu/RSX/GSFrameBase.h"
 
 #include <QWindow>
@@ -52,6 +54,8 @@ private:
 	u32 m_hide_mouse_idletime = 2000; // ms
 	bool m_flip_showed_frame = false;
 
+	std::shared_ptr<utils::video_encoder> m_video_encoder{};
+
 public:
 	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings);
 	~gs_frame();
@@ -73,6 +77,8 @@ public:
 	*/
 	bool get_mouse_lock_state();
 
+	bool can_consume_frame() const override;
+	void present_frame(std::vector<u8>& data, const u32 width, const u32 height, bool is_bgra) const override;
 	void take_screenshot(std::vector<u8> data, const u32 sshot_width, const u32 sshot_height, bool is_bgra) override;
 
 protected:
