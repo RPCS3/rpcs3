@@ -157,6 +157,8 @@ gs_frame::~gs_frame()
 #elif HAVE_QTDBUS
 	UpdateProgress(0, false);
 #endif
+
+	screenshot_toggle = false;
 }
 
 void gs_frame::paintEvent(QPaintEvent *event)
@@ -220,6 +222,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	switch (keyEvent->key())
 	{
 	case Qt::Key_L:
+	{
 		if (keyEvent->modifiers() == Qt::AltModifier)
 		{
 			static int count = 0;
@@ -232,21 +235,27 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			return;
 		}
 		break;
+	}
 	case Qt::Key_Return:
+	{
 		if (keyEvent->modifiers() == Qt::AltModifier)
 		{
 			toggle_fullscreen();
 			return;
 		}
 		break;
+	}
 	case Qt::Key_Escape:
+	{
 		if (visibility() == FullScreen)
 		{
 			toggle_fullscreen();
 			return;
 		}
 		break;
+	}
 	case Qt::Key_P:
+	{
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
 			switch (Emu.GetStatus())
@@ -269,14 +278,18 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			}
 		}
 		break;
+	}
 	case Qt::Key_S:
+	{
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
 			Emu.Kill(false, true);
 			return;
 		}
 		break;
+	}
 	case Qt::Key_R:
+	{
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
 			if (Emu.IsStopped())
@@ -289,14 +302,18 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			boot_last_savestate();
 		}
 		break;
+	}
 	case Qt::Key_C:
+	{
 		if (keyEvent->modifiers() == Qt::AltModifier && !m_disable_kb_hotkeys)
 		{
 			g_user_asked_for_frame_capture = true;
 			return;
 		}
 		break;
+	}
 	case Qt::Key_F10:
+	{
 		if (keyEvent->modifiers() == Qt::ControlModifier)
 		{
 			g_disable_frame_limit = !g_disable_frame_limit;
@@ -304,9 +321,12 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			return;
 		}
 		break;
+	}
 	case Qt::Key_F12:
+	{
 		screenshot_toggle = true;
 		break;
+	}
 	default:
 		break;
 	}
@@ -569,7 +589,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			if (!id.empty())
 			{
 				screen_path += id + "/";
-			};
+			}
 
 			if (!fs::create_path(screen_path) && fs::g_tls_error != fs::error::exist)
 			{
@@ -581,7 +601,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			if (!id.empty())
 			{
 				filename += id + "_";
-			};
+			}
 
 			filename += "screenshot_" + date_time::current_time_narrow<'_'>() + ".png";
 
