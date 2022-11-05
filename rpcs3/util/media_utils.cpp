@@ -20,6 +20,8 @@ extern "C" {
 #include "libavformat/avformat.h"
 #include "libavutil/dict.h"
 #include "libavutil/opt.h"
+#include "libavutil/imgutils.h"
+#include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
 }
 constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
@@ -180,21 +182,33 @@ namespace utils
 		const AVCodec* codec = nullptr;
 		AVCodecContext* context = nullptr;
 		AVFrame* frame = nullptr;
+		AVStream* stream = nullptr;
 		SwrContext* swr = nullptr;
+		SwsContext* sws = nullptr;
+		std::function<void()> kill_callback = nullptr;
 
 		~scoped_av()
 		{
 			// Clean up
 			if (frame)
+			{
+				av_frame_unref(frame);
 				av_frame_free(&frame);
+			}
 			if (swr)
 				swr_free(&swr);
+			if (sws)
+				sws_freeContext(sws);
 			if (context)
 				avcodec_close(context);
 			// AVCodec is managed by libavformat, no need to free it
 			// see: https://stackoverflow.com/a/18047320
 			if (format)
 				avformat_free_context(format);
+			//if (stream)
+			//	av_free(stream);
+			if (kill_callback)
+				kill_callback();
 		}
 	};
 
@@ -492,5 +506,513 @@ namespace utils
 	u32 audio_decoder::set_next_index(bool next)
 	{
 		return m_context.step_track(next);
+	}
+
+	video_encoder::video_encoder()
+		: utils::image_sink()
+	{
+	}
+
+	video_encoder::~video_encoder()
+	{
+		stop();
+	}
+
+	std::string video_encoder::path() const
+	{
+		return m_path;
+	}
+
+	s64 video_encoder::last_pts() const
+	{
+		return m_last_pts;
+	}
+
+	void video_encoder::set_path(const std::string& path)
+	{
+		m_path = path;
+	}
+
+	void video_encoder::set_framerate(u32 framerate)
+	{
+		m_framerate = framerate;
+	}
+
+	void video_encoder::set_video_bitrate(u32 bitrate)
+	{
+		m_video_bitrate_bps = bitrate;
+	}
+
+	void video_encoder::set_output_format(video_encoder::frame_format format)
+	{
+		m_out_format = std::move(format);
+	}
+
+	void video_encoder::set_video_codec(s32 codec_id)
+	{
+		m_video_codec_id = codec_id;
+	}
+
+	void video_encoder::set_max_b_frames(s32 max_b_frames)
+	{
+		m_max_b_frames = max_b_frames;
+	}
+
+	void video_encoder::set_gop_size(s32 gop_size)
+	{
+		m_gop_size = gop_size;
+	}
+
+	void video_encoder::set_sample_rate(u32 sample_rate)
+	{
+		m_sample_rate = sample_rate;
+	}
+
+	void video_encoder::set_audio_bitrate(u32 bitrate)
+	{
+		m_audio_bitrate_bps = bitrate;
+	}
+
+	void video_encoder::set_audio_codec(s32 codec_id)
+	{
+		m_audio_codec_id = codec_id;
+	}
+
+	void video_encoder::add_frame(std::vector<u8>& frame, const u32 width, const u32 height, s32 pixel_format, usz timestamp_ms)
+	{
+		// Do not allow new frames while flushing
+		if (m_flush)
+			return;
+
+		std::lock_guard lock(m_mtx);
+		m_frames_to_encode.emplace_back(timestamp_ms, width, height, pixel_format, std::move(frame));
+	}
+
+	void video_encoder::pause(bool flush)
+	{
+		if (m_thread)
+		{
+			m_paused = true;
+			m_flush = flush;
+
+			if (flush)
+			{
+				// Let's assume this will finish in a timely manner
+				while (m_flush && m_running)
+				{
+					std::this_thread::sleep_for(1us);
+				}
+			}
+		}
+	}
+
+	void video_encoder::stop(bool flush)
+	{
+		media_log.notice("video_encoder: Stopping video encoder. flush=%d", flush);
+
+		if (m_thread)
+		{
+			m_flush = flush;
+
+			if (flush)
+			{
+				// Let's assume this will finish in a timely manner
+				while (m_flush && m_running)
+				{
+					std::this_thread::sleep_for(1ms);
+				}
+			}
+
+			auto& thread = *m_thread;
+			thread = thread_state::aborting;
+			thread();
+
+			m_thread.reset();
+		}
+
+		std::lock_guard lock(m_mtx);
+		m_frames_to_encode.clear();
+		has_error = false;
+		m_flush = false;
+		m_paused = false;
+		m_running = false;
+	}
+
+	void video_encoder::encode()
+	{
+		if (m_running)
+		{
+			// Resume
+			m_flush = false;
+			m_paused = false;
+			media_log.success("video_encoder: resuming recording of '%s'", m_path);
+			return;
+		}
+
+		m_last_pts = 0;
+
+		stop();
+
+		if (const std::string dir = fs::get_parent_dir(m_path); !fs::is_dir(dir))
+		{
+			media_log.error("video_encoder: Could not find directory: '%s' for file '%s'", dir, m_path);
+			has_error = true;
+			return;
+		}
+
+		media_log.success("video_encoder: Starting recording of '%s'", m_path);
+
+		m_thread = std::make_unique<named_thread<std::function<void()>>>("Video Encode Thread", [this, path = m_path]()
+		{
+			m_running = true;
+
+			// TODO: audio encoding
+
+			// Reset variables at all costs
+			scoped_av av;
+			av.kill_callback = [this]()
+			{
+				m_flush = false;
+				m_running = false;
+			};
+
+			const AVPixelFormat out_format = static_cast<AVPixelFormat>(m_out_format.av_pixel_format);
+			const char* av_output_format = nullptr;
+
+			const auto find_format = [&](const AVCodec* codec) -> const char*
+			{
+				if (!codec)
+					return nullptr;
+
+				void* opaque = nullptr;
+				for (const AVOutputFormat* oformat = av_muxer_iterate(&opaque); !!oformat; oformat = av_muxer_iterate(&opaque))
+				{
+					if (avformat_query_codec(oformat, codec->id, FF_COMPLIANCE_STRICT) == 1)
+					{
+						return oformat->name;
+					}
+				}
+
+				return nullptr;
+			};
+
+			AVCodecID used_codec = static_cast<AVCodecID>(m_video_codec_id);
+
+			// Find specified codec first
+			if (AVCodec* encoder = avcodec_find_encoder(used_codec); !!encoder)
+			{
+				media_log.success("video_encoder: Found requested video_codec %d = %s", static_cast<int>(used_codec), encoder->name);
+				av_output_format = find_format(encoder);
+
+				if (av_output_format)
+				{
+					media_log.success("video_encoder: Found requested output format '%s'", av_output_format);
+				}
+				else
+				{
+					media_log.error("video_encoder: Could not find a format for the requested video_codec %d = %s", static_cast<int>(used_codec), encoder->name);
+				}
+			}
+			else
+			{
+				media_log.error("video_encoder: Could not find requested video_codec %d = %s", static_cast<int>(used_codec), encoder->name);
+			}
+
+			// Fallback to some other codec
+			if (!av_output_format)
+			{
+				void* opaque = nullptr;
+				for (const AVCodec* codec = av_codec_iterate(&opaque); !!codec; codec = av_codec_iterate(&opaque))
+				{
+					if (AVCodec* encoder = avcodec_find_encoder(codec->id); !!encoder)
+					{
+						media_log.notice("video_encoder: Found video_codec %d = %s", static_cast<int>(used_codec), encoder->name);
+						av_output_format = find_format(encoder);
+
+						if (av_output_format)
+						{
+							media_log.success("video_encoder: Found fallback output format '%s'", av_output_format);
+							break;
+						}
+					}
+				}
+			}
+
+			if (!av_output_format)
+			{
+				media_log.error("video_encoder: Could not find any output format");
+				has_error = true;
+				return;
+			}
+
+			if (int err = avformat_alloc_output_context2(&av.format, nullptr, av_output_format, path.c_str()); err < 0)
+			{
+				media_log.error("video_encoder: avformat_alloc_output_context2 failed. Error: %d='%s'", err, av_error_to_string(err));
+				has_error = true;
+				return;
+			}
+
+			if (!av.format)
+			{
+				media_log.error("video_encoder: avformat_alloc_output_context2 failed");
+				has_error = true;
+				return;
+			}
+
+			if (!(av.codec = avcodec_find_encoder(av.format->oformat->video_codec)))
+			{
+				media_log.error("video_encoder: avcodec_find_encoder failed");
+				has_error = true;
+				return;
+			}
+
+			if (!(av.stream = avformat_new_stream(av.format, nullptr)))
+			{
+				media_log.error("video_encoder: avformat_new_stream failed");
+				has_error = true;
+				return;
+			}
+
+			av.stream->id = static_cast<int>(av.format->nb_streams - 1);
+
+			if (!(av.context = avcodec_alloc_context3(av.codec)))
+			{
+				media_log.error("video_encoder: avcodec_alloc_context3 failed");
+				has_error = true;
+				return;
+			}
+
+			media_log.notice("video_encoder: using video_codec = %d", static_cast<int>(av.format->oformat->video_codec));
+			media_log.notice("video_encoder: using video_bitrate = %d", m_video_bitrate_bps);
+			media_log.notice("video_encoder: using out width = %d", m_out_format.width);
+			media_log.notice("video_encoder: using out height = %d", m_out_format.height);
+			media_log.notice("video_encoder: using framerate = %d", m_framerate);
+			media_log.notice("video_encoder: using gop_size = %d", m_gop_size);
+			media_log.notice("video_encoder: using max_b_frames = %d", m_max_b_frames);
+
+			av.context->codec_id = av.format->oformat->video_codec;
+			av.context->bit_rate = m_video_bitrate_bps;
+			av.context->width = static_cast<int>(m_out_format.width);
+			av.context->height = static_cast<int>(m_out_format.height);
+			av.context->time_base = {.num = 1, .den = static_cast<int>(m_framerate)};
+			av.context->framerate = {.num = static_cast<int>(m_framerate), .den = 1};
+			av.context->pix_fmt = out_format;
+			av.context->gop_size = m_gop_size;
+			av.context->max_b_frames = m_max_b_frames;
+
+			if (av.format->oformat->flags & AVFMT_GLOBALHEADER)
+			{
+				av.context->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+			}
+
+			if (int err = avcodec_open2(av.context, av.codec, nullptr); err != 0)
+			{
+				media_log.error("video_encoder: avcodec_open2 failed. Error: %d='%s'", err, av_error_to_string(err));
+				has_error = true;
+				return;
+			}
+
+			if (!(av.frame = av_frame_alloc()))
+			{
+				media_log.error("video_encoder: av_frame_alloc failed");
+				has_error = true;
+				return;
+			}
+
+			av.frame->format = av.context->pix_fmt;
+			av.frame->width = av.context->width;
+			av.frame->height = av.context->height;
+
+			if (int err = av_frame_get_buffer(av.frame, 32); err < 0)
+			{
+				media_log.error("video_encoder: av_frame_get_buffer failed. Error: %d='%s'", err, av_error_to_string(err));
+				has_error = true;
+				return;
+			}
+
+			if (int err = avcodec_parameters_from_context(av.stream->codecpar, av.context); err < 0)
+			{
+				media_log.error("video_encoder: avcodec_parameters_from_context failed. Error: %d='%s'", err, av_error_to_string(err));
+				has_error = true;
+				return;
+			}
+
+			av_dump_format(av.format, 0, path.c_str(), 1);
+
+			if (int err = avio_open(&av.format->pb, path.c_str(), AVIO_FLAG_WRITE); err != 0)
+			{
+				media_log.error("video_encoder: avio_open failed. Error: %d='%s'", err, av_error_to_string(err));
+				has_error = true;
+				return;
+			}
+
+			if (int err = avformat_write_header(av.format, nullptr); err < 0)
+			{
+				media_log.error("video_encoder: avformat_write_header failed. Error: %d='%s'", err, av_error_to_string(err));
+
+				if (int err = avio_close(av.format->pb); err != 0)
+				{
+					media_log.error("video_encoder: avio_close failed. Error: %d='%s'", err, av_error_to_string(err));
+				}
+
+				has_error = true;
+				return;
+			}
+
+			const auto flush = [&]()
+			{
+				while ((thread_ctrl::state() != thread_state::aborting || m_flush) && !has_error)
+				{
+					AVPacket* packet = av_packet_alloc();
+					std::unique_ptr<AVPacket, decltype([](AVPacket* p){ if (p) av_packet_unref(p); })> packet_(packet);
+
+					if (!packet)
+					{
+						media_log.error("video_encoder: av_packet_alloc failed");
+						has_error = true;
+						return;
+					}
+
+					if (int err = avcodec_receive_packet(av.context, packet); err < 0)
+					{
+						if (err == AVERROR(EAGAIN) || err == averror_eof)
+							break;
+
+						media_log.error("video_encoder: avcodec_receive_packet failed. Error: %d='%s'", err, av_error_to_string(err));
+						has_error = true;
+						return;
+					}
+
+					av_packet_rescale_ts(packet, av.context->time_base, av.stream->time_base);
+					packet->stream_index = av.stream->index;
+
+					if (int err = av_interleaved_write_frame(av.format, packet); err < 0)
+					{
+						media_log.error("video_encoder: av_interleaved_write_frame failed. Error: %d='%s'", err, av_error_to_string(err));
+						has_error = true;
+						return;
+					}
+				}
+			};
+
+			s64 last_pts = -1;
+
+			while ((thread_ctrl::state() != thread_state::aborting || m_flush) && !has_error)
+			{
+				encoder_frame frame_data;
+				{
+					m_mtx.lock();
+
+					if (m_frames_to_encode.empty())
+					{
+						m_mtx.unlock();
+
+						if (m_flush)
+						{
+							m_flush = false;
+
+							if (!m_paused)
+							{
+								// We only stop the thread after a flush if we are not paused
+								break;
+							}
+						}
+
+						// We only actually pause after we process all frames
+						const u64 sleeptime = m_paused ? 10000 : 1;
+						thread_ctrl::wait_for(sleeptime);
+						continue;
+					}
+
+					frame_data = std::move(m_frames_to_encode.front());
+					m_frames_to_encode.pop_front();
+
+					m_mtx.unlock();
+
+					media_log.trace("video_encoder: adding new frame. timestamp=%d", frame_data.timestamp_ms);
+				}
+
+				// Calculate presentation timestamp.
+				const s64 pts = get_pts(frame_data.timestamp_ms);
+
+				// We need to skip this frame if it has the same timestamp.
+				if (pts <= last_pts)
+				{
+					media_log.notice("video_encoder: skipping frame. last_pts=%d, pts=%d", last_pts, pts);
+					continue;
+				}
+
+				if (int err = av_frame_make_writable(av.frame); err < 0)
+				{
+					media_log.error("video_encoder: av_frame_make_writable failed. Error: %d='%s'", err, av_error_to_string(err));
+					has_error = true;
+					break;
+				}
+
+				u8* in_data[4]{};
+				int in_line[4]{};
+
+				const AVPixelFormat in_format = static_cast<AVPixelFormat>(frame_data.av_pixel_format);
+
+				if (int ret = av_image_fill_linesizes(in_line, in_format, frame_data.width); ret < 0)
+				{
+					fmt::throw_exception("video_encoder: av_image_fill_linesizes failed (ret=0x%x): %s", ret, utils::av_error_to_string(ret));
+				}
+
+				if (int ret = av_image_fill_pointers(in_data, in_format, frame_data.height, frame_data.data.data(), in_line); ret < 0)
+				{
+					fmt::throw_exception("video_encoder: av_image_fill_pointers failed (ret=0x%x): %s", ret, utils::av_error_to_string(ret));
+				}
+
+				// Update the context in case the frame format has changed
+				av.sws = sws_getCachedContext(av.sws, frame_data.width, frame_data.height, in_format,
+				                              av.context->width, av.context->height, out_format, SWS_BICUBIC, nullptr, nullptr, nullptr);
+				if (!av.sws)
+				{
+					media_log.error("video_encoder: sws_getCachedContext failed");
+					has_error = true;
+					break;
+				}
+
+				if (int err = sws_scale(av.sws, in_data, in_line, 0, frame_data.height, av.frame->data, av.frame->linesize); err < 0)
+				{
+					media_log.error("video_encoder: sws_scale failed. Error: %d='%s'", err, av_error_to_string(err));
+					has_error = true;
+					break;
+				}
+
+				av.frame->pts = pts;
+
+				if (int err = avcodec_send_frame(av.context, av.frame); err < 0)
+				{
+					media_log.error("video_encoder: avcodec_send_frame failed. Error: %d='%s'", err, av_error_to_string(err));
+					has_error = true;
+					break;
+				}
+
+				flush();
+
+				last_pts = av.frame->pts;
+
+				m_last_pts = last_pts;
+			}
+
+			if (int err = avcodec_send_frame(av.context, nullptr); err != 0)
+			{
+				media_log.error("video_encoder: final avcodec_send_frame failed. Error: %d='%s'", err, av_error_to_string(err));
+			}
+
+			flush();
+
+			if (int err = av_write_trailer(av.format); err != 0)
+			{
+				media_log.error("video_encoder: av_write_trailer failed. Error: %d='%s'", err, av_error_to_string(err));
+			}
+
+			if (int err = avio_close(av.format->pb); err != 0)
+			{
+				media_log.error("video_encoder: avio_close failed. Error: %d='%s'", err, av_error_to_string(err));
+			}
+		});
 	}
 }
