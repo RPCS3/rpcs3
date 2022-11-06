@@ -140,32 +140,24 @@ struct rec_param
 
 constexpr u32 rec_framerate = 30; // Always 30 fps
 
-class rec_image_sink : public utils::image_sink
+class rec_video_sink : public utils::video_sink
 {
 public:
-	rec_image_sink() : utils::image_sink()
+	rec_video_sink() : utils::video_sink()
 	{
 		m_framerate = rec_framerate;
+		m_sample_rate = 44100; // TODO
 	}
 
 	void stop(bool flush = true) override
 	{
-		cellRec.notice("Stopping image sink. flush=%d", flush);
+		cellRec.notice("Stopping video sink. flush=%d", flush);
 
 		std::lock_guard lock(m_mtx);
 		m_flush = flush;
 		m_frames_to_encode.clear();
+		m_samples_to_encode.clear();
 		has_error = false;
-	}
-
-	void add_frame(std::vector<u8>& frame, u32 pitch, u32 width, u32 height, s32 pixel_format, usz timestamp_ms) override
-	{
-		std::lock_guard lock(m_mtx);
-
-		if (m_flush)
-			return;
-
-		m_frames_to_encode.emplace_back(timestamp_ms, pitch, width, height, pixel_format, std::move(frame));
 	}
 
 	encoder_frame get_frame()
@@ -196,7 +188,7 @@ struct rec_info
 	vm::bptr<u8> video_input_buffer{}; // Used by the game to inject a frame right before it would render a frame to the screen.
 	vm::bptr<u8> audio_input_buffer{}; // Used by the game to inject audio: 2-channel interleaved (left-right) * 256 samples * sizeof(f32) at 48000 kHz
 
-	std::vector<utils::image_sink::encoder_frame> video_ringbuffer;
+	std::vector<utils::video_sink::encoder_frame> video_ringbuffer;
 	std::vector<u8> audio_ringbuffer;
 	usz video_ring_pos = 0;
 	usz video_ring_frame_count = 0;
@@ -209,9 +201,9 @@ struct rec_info
 		return pos;
 	}
 
-	std::shared_ptr<rec_image_sink> image_sink;
+	std::shared_ptr<rec_video_sink> video_sink;
 	std::shared_ptr<utils::video_encoder> encoder;
-	std::unique_ptr<named_thread<std::function<void()>>> image_provider_thread;
+	std::unique_ptr<named_thread<std::function<void()>>> video_provider_thread;
 	atomic_t<bool> paused = false;
 	s64 last_pts = -1;
 
@@ -240,9 +232,9 @@ struct rec_info
 	void set_video_params(s32 video_format);
 	void set_audio_params(s32 audio_format);
 
-	void start_image_provider();
-	void pause_image_provider();
-	void stop_image_provider(bool flush);
+	void start_video_provider();
+	void pause_video_provider();
+	void stop_video_provider(bool flush);
 };
 
 void rec_info::set_video_params(s32 video_format)
@@ -507,29 +499,29 @@ void rec_info::set_audio_params(s32 audio_format)
 	cellRec.notice("set_audio_params: audio_format=0x%x, audio_codec_id=%d, sample_rate=%d, audio_bps=%d", audio_format, audio_codec_id, sample_rate, audio_bps);
 }
 
-void rec_info::start_image_provider()
+void rec_info::start_video_provider()
 {
 	const bool was_paused = paused.exchange(false);
 	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
-	if (image_provider_thread && was_paused)
+	if (video_provider_thread && was_paused)
 	{
 		// Resume
 		const u64 pause_time_end = get_system_time();
 		ensure(pause_time_end > pause_time_start);
 		pause_time_total += (pause_time_end - pause_time_start);
 		video_provider.set_pause_time(pause_time_total / 1000);
-		cellRec.notice("Resuming image provider.");
+		cellRec.notice("Resuming video provider.");
 		return;
 	}
 
-	cellRec.notice("Starting image provider.");
+	cellRec.notice("Starting video provider.");
 
 	recording_time_start = get_system_time();
 	pause_time_total = 0;
 	video_provider.set_pause_time(0);
 
-	image_provider_thread = std::make_unique<named_thread<std::function<void()>>>("cellRec Image Provider", [this]()
+	video_provider_thread = std::make_unique<named_thread<std::function<void()>>>("cellRec video provider", [this]()
 	{
 		const bool use_internal_audio = param.audio_input == CELL_REC_PARAM_AUDIO_INPUT_DISABLE || param.audio_input_mix_vol < 100;
 		const bool use_external_audio = param.audio_input != CELL_REC_PARAM_AUDIO_INPUT_DISABLE && param.audio_input_mix_vol > 0;
@@ -537,7 +529,7 @@ void rec_info::start_image_provider()
 		const bool use_ring_buffer = param.ring_sec > 0;
 		const usz frame_size = input_format.pitch * input_format.height;
 
-		cellRec.notice("image_provider_thread: use_ring_buffer=%d, video_ringbuffer_size=%d, audio_ringbuffer_size=%d, ring_sec=%d, frame_size=%d, use_external_video=%d, use_external_audio=%d, use_internal_audio=%d", use_ring_buffer, video_ringbuffer.size(), audio_ringbuffer.size(), param.ring_sec, frame_size, use_external_video, use_external_audio, use_internal_audio);
+		cellRec.notice("video_provider_thread: use_ring_buffer=%d, video_ringbuffer_size=%d, audio_ringbuffer_size=%d, ring_sec=%d, frame_size=%d, use_external_video=%d, use_external_audio=%d, use_internal_audio=%d", use_ring_buffer, video_ringbuffer.size(), audio_ringbuffer.size(), param.ring_sec, frame_size, use_external_video, use_external_audio, use_internal_audio);
 
 		while (thread_ctrl::state() != thread_state::aborting && encoder)
 		{
@@ -575,7 +567,7 @@ void rec_info::start_image_provider()
 					{
 						if (use_ring_buffer)
 						{
-							utils::image_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
+							utils::video_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
 							frame_data.pts = pts;
 							frame_data.width = input_format.width;
 							frame_data.height = input_format.height;
@@ -595,14 +587,14 @@ void rec_info::start_image_provider()
 					last_pts = pts;
 				}
 			}
-			else if (use_ring_buffer && image_sink)
+			else if (use_ring_buffer && video_sink)
 			{
-				utils::image_sink::encoder_frame frame = image_sink->get_frame();
+				utils::video_sink::encoder_frame frame = video_sink->get_frame();
 
 				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_pts && frame.data.size() > 0)
 				{
 					ensure(frame.data.size() == frame_size);
-					utils::image_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
+					utils::video_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
 					frame_data = std::move(frame);
 					frame_data.pts = pts;
 					last_pts = pts;
@@ -635,34 +627,34 @@ void rec_info::start_image_provider()
 			}
 
 			// Update recording time
-			recording_time_total = encoder->get_timestamp_ms(encoder->last_pts());
+			recording_time_total = encoder->get_timestamp_ms(encoder->last_video_pts());
 
 			thread_ctrl::wait_for(100);
 		}
 	});
 }
 
-void rec_info::pause_image_provider()
+void rec_info::pause_video_provider()
 {
 	cellRec.notice("Pausing image provider.");
 
-	if (image_provider_thread)
+	if (video_provider_thread)
 	{
 		paused = true;
 		pause_time_start = get_system_time();
 	}
 }
 
-void rec_info::stop_image_provider(bool flush)
+void rec_info::stop_video_provider(bool flush)
 {
-	cellRec.notice("Stopping image provider.");
+	cellRec.notice("Stopping video provider.");
 
-	if (image_provider_thread)
+	if (video_provider_thread)
 	{
-		auto& thread = *image_provider_thread;
+		auto& thread = *video_provider_thread;
 		thread = thread_state::aborting;
 		thread();
-		image_provider_thread.reset();
+		video_provider_thread.reset();
 	}
 
 	if (flush && param.ring_sec > 0 && !video_ringbuffer.empty())
@@ -680,7 +672,7 @@ void rec_info::stop_image_provider(bool flush)
 		for (usz i = 0; i < frame_count; i++)
 		{
 			const usz pos = (start_offset + i) % video_ringbuffer.size();
-			utils::image_sink::encoder_frame& frame_data = video_ringbuffer[pos];
+			utils::video_sink::encoder_frame& frame_data = video_ringbuffer[pos];
 			encoder->add_frame(frame_data.data, frame_data.pitch, frame_data.width, frame_data.height, frame_data.av_pixel_format, encoder->get_timestamp_ms(frame_data.pts - start_pts));
 
 			// TODO: add audio data to encoder
@@ -1073,7 +1065,7 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 		rec.audio_ringbuffer.resize(audio_ring_buffer_size);
 		rec.audio_ring_step = audio_size_per_sample;
 		rec.video_ringbuffer.resize(video_ring_buffer_size, {});
-		rec.image_sink = std::make_shared<rec_image_sink>();
+		rec.video_sink = std::make_shared<rec_video_sink>();
 	}
 
 	rec.encoder = std::make_shared<utils::video_encoder>();
@@ -1082,6 +1074,7 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 	rec.encoder->set_video_bitrate(rec.video_bps);
 	rec.encoder->set_video_codec(rec.video_codec_id);
 	rec.encoder->set_sample_rate(rec.sample_rate);
+	rec.encoder->set_audio_channels(rec.channels);
 	rec.encoder->set_audio_bitrate(rec.audio_bps);
 	rec.encoder->set_audio_codec(rec.audio_codec_id);
 	rec.encoder->set_output_format(rec.output_format);
@@ -1114,12 +1107,12 @@ error_code cellRecClose(s32 isDiscard)
 		if (isDiscard)
 		{
 			// No need to flush
-			rec.stop_image_provider(false);
+			rec.stop_video_provider(false);
 			rec.encoder->stop(false);
 
-			if (rec.image_sink)
+			if (rec.video_sink)
 			{
-				rec.image_sink->stop(false);
+				rec.video_sink->stop(false);
 			}
 
 			if (fs::is_file(rec.param.filename))
@@ -1135,18 +1128,18 @@ error_code cellRecClose(s32 isDiscard)
 		else
 		{
 			// Flush to make sure we encode all remaining frames
-			rec.stop_image_provider(true);
+			rec.stop_video_provider(true);
 			rec.encoder->stop(true);
-			rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_pts());
+			rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_video_pts());
 
-			if (rec.image_sink)
+			if (rec.video_sink)
 			{
-				rec.image_sink->stop(true);
+				rec.video_sink->stop(true);
 			}
 
 			const s64 start_pts = rec.encoder->get_pts(rec.param.scene_metadata.start_time);
 			const s64 end_pts = rec.encoder->get_pts(rec.param.scene_metadata.end_time);
-			const s64 last_pts = rec.encoder->last_pts();
+			const s64 last_pts = rec.encoder->last_video_pts();
 
 			is_valid_range = start_pts >= 0 && end_pts <= last_pts;
 		}
@@ -1157,7 +1150,7 @@ error_code cellRecClose(s32 isDiscard)
 		g_fxo->need<utils::video_provider>();
 		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
-		// Release the image sink if it was used
+		// Release the video sink if it was used
 		if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE)
 		{
 			const recording_mode old_mode = g_recording_mode.exchange(recording_mode::stopped);
@@ -1167,15 +1160,15 @@ error_code cellRecClose(s32 isDiscard)
 				cellRec.error("cellRecClose: Unexpected recording mode %s found while stopping video capture.", old_mode);
 			}
 
-			if (!video_provider.set_image_sink(nullptr, recording_mode::cell))
+			if (!video_provider.set_video_sink(nullptr, recording_mode::cell))
 			{
-				cellRec.error("cellRecClose failed to release image sink");
+				cellRec.error("cellRecClose failed to release video sink");
 			}
 		}
 
 		rec.param = {};
 		rec.encoder.reset();
-		rec.image_sink.reset();
+		rec.video_sink.reset();
 		rec.audio_ringbuffer.clear();
 		rec.video_ringbuffer.clear();
 		rec.state = rec_state::closed;
@@ -1207,7 +1200,7 @@ error_code cellRecStop()
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
-		// Disable image sink if it was used
+		// Disable video sink if it was used
 		if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE)
 		{
 			const recording_mode old_mode = g_recording_mode.exchange(recording_mode::stopped);
@@ -1219,12 +1212,12 @@ error_code cellRecStop()
 		}
 
 		// cellRecStop actually just pauses the recording
-		rec.pause_image_provider();
+		rec.pause_video_provider();
 
 		ensure(!!rec.encoder);
 		rec.encoder->pause(true);
 
-		rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_pts());
+		rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_video_pts());
 		rec.state = rec_state::stopped;
 
 		rec.cb(ppu, CELL_REC_STATUS_STOP, CELL_OK, rec.cbUserData);
@@ -1254,15 +1247,15 @@ error_code cellRecStart()
 		g_fxo->need<utils::video_provider>();
 		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
 
-		// Setup an image sink if it is needed
+		// Setup an video sink if it is needed
 		if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_DISABLE)
 		{
 			if (rec.param.ring_sec <= 0)
 			{
 				// Regular recording
-				if (!video_provider.set_image_sink(rec.encoder, recording_mode::cell))
+				if (!video_provider.set_video_sink(rec.encoder, recording_mode::cell))
 				{
-					cellRec.error("Failed to set image sink");
+					cellRec.error("Failed to set video sink");
 					rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
 					return CELL_OK;
 				}
@@ -1270,9 +1263,9 @@ error_code cellRecStart()
 			else
 			{
 				// Ringbuffer recording
-				if (!video_provider.set_image_sink(rec.image_sink, recording_mode::cell))
+				if (!video_provider.set_video_sink(rec.video_sink, recording_mode::cell))
 				{
-					cellRec.error("Failed to set image sink");
+					cellRec.error("Failed to set video sink");
 					rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
 					return CELL_OK;
 				}
@@ -1287,7 +1280,7 @@ error_code cellRecStart()
 			g_recording_mode = recording_mode::stopped;
 		}
 
-		rec.start_image_provider();
+		rec.start_video_provider();
 
 		if (rec.encoder->has_error)
 		{
