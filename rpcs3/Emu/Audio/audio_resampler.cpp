@@ -33,8 +33,7 @@ void audio_resampler::put_samples(const f32* buf, u32 sample_cnt)
 
 std::pair<f32* /* buffer */, u32 /* samples */> audio_resampler::get_samples(u32 sample_cnt)
 {
-	f32 *const buf = resampler.bufBegin();
-	return std::make_pair(buf, resampler.receiveSamples(sample_cnt));
+	return std::make_pair(resampler.bufBegin(), resampler.receiveSamples(sample_cnt));
 }
 
 u32 audio_resampler::samples_available() const
