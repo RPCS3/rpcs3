@@ -2275,7 +2275,7 @@
     <ClInclude Include="util\video_provider.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="util\image_sink.h">
+    <ClInclude Include="util\video_sink.h">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\recording_config.h">

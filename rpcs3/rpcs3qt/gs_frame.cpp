@@ -12,6 +12,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
+#include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Io/recording_config.h"
@@ -445,9 +446,9 @@ void gs_frame::toggle_recording()
 	{
 		m_video_encoder->stop();
 
-		if (!video_provider.set_image_sink(nullptr, recording_mode::rpcs3))
+		if (!video_provider.set_video_sink(nullptr, recording_mode::rpcs3))
 		{
-			gui_log.warning("The video provider could not release the image sink. A sink with higher priority must have been set.");
+			gui_log.warning("The video provider could not release the video sink. A sink with higher priority must have been set.");
 		}
 
 		// Play a sound
@@ -489,21 +490,23 @@ void gs_frame::toggle_recording()
 		video_path += "recording_" + date_time::current_time_narrow<'_'>() + ".mp4";
 
 		utils::video_encoder::frame_format output_format{};
-		output_format.av_pixel_format = static_cast<AVPixelFormat>(g_cfg_recording.pixel_format.get());
-		output_format.width = g_cfg_recording.width;
-		output_format.height = g_cfg_recording.height;
-		output_format.pitch = g_cfg_recording.width * 4;
+		output_format.av_pixel_format = static_cast<AVPixelFormat>(g_cfg_recording.video.pixel_format.get());
+		output_format.width = g_cfg_recording.video.width;
+		output_format.height = g_cfg_recording.video.height;
+		output_format.pitch = g_cfg_recording.video.width * 4;
 
 		m_video_encoder->set_path(video_path);
-		m_video_encoder->set_framerate(g_cfg_recording.framerate);
-		m_video_encoder->set_video_bitrate(g_cfg_recording.video_bps);
-		m_video_encoder->set_video_codec(g_cfg_recording.video_codec);
-		m_video_encoder->set_max_b_frames(g_cfg_recording.max_b_frames);
-		m_video_encoder->set_gop_size(g_cfg_recording.gop_size);
+		m_video_encoder->set_framerate(g_cfg_recording.video.framerate);
+		m_video_encoder->set_video_bitrate(g_cfg_recording.video.video_bps);
+		m_video_encoder->set_video_codec(g_cfg_recording.video.video_codec);
+		m_video_encoder->set_max_b_frames(g_cfg_recording.video.max_b_frames);
+		m_video_encoder->set_gop_size(g_cfg_recording.video.gop_size);
 		m_video_encoder->set_output_format(output_format);
-		m_video_encoder->set_sample_rate(0);   // TODO
-		m_video_encoder->set_audio_bitrate(0); // TODO
-		m_video_encoder->set_audio_codec(0);   // TODO
+		m_video_encoder->set_sample_rate(g_cfg_recording.audio.sample_rate);
+		//m_video_encoder->set_audio_channels(static_cast<u32>(g_fxo->get<cell_audio>().cfg.backend_ch_cnt));
+		m_video_encoder->set_audio_channels(static_cast<u32>(g_fxo->get<cell_audio>().cfg.audio_channels));
+		m_video_encoder->set_audio_bitrate(g_cfg_recording.audio.audio_bps);
+		m_video_encoder->set_audio_codec(g_cfg_recording.audio.audio_codec);
 		m_video_encoder->encode();
 
 		if (m_video_encoder->has_error)
@@ -513,9 +516,9 @@ void gs_frame::toggle_recording()
 			return;
 		}
 
-		if (!video_provider.set_image_sink(m_video_encoder, recording_mode::rpcs3))
+		if (!video_provider.set_video_sink(m_video_encoder, recording_mode::rpcs3))
 		{
-			gui_log.warning("The video provider could not set the image sink. A sink with higher priority must have been set.");
+			gui_log.warning("The video provider could not set the video sink. A sink with higher priority must have been set.");
 			rsx::overlays::queue_message(tr("Recording not possible").toStdString());
 			m_video_encoder->stop();
 			return;
