@@ -210,6 +210,31 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 	}
 }
 
+// Some settings are not allowed in certain PPU decoders
+void fixup_ppu_settings()
+{
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
+	{
+		if (g_cfg.core.ppu_use_nj_bit)
+		{
+			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_use_nj_bit.get_name(), g_cfg.core.ppu_decoder.get());
+			g_cfg.core.ppu_use_nj_bit.set(false);
+		}
+
+		if (g_cfg.core.ppu_set_vnan)
+		{
+			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_set_vnan.get_name(), g_cfg.core.ppu_decoder.get());
+			g_cfg.core.ppu_set_vnan.set(false);
+		}
+
+		if (g_cfg.core.ppu_set_fpcc)
+		{
+			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_set_fpcc.get_name(), g_cfg.core.ppu_decoder.get());
+			g_cfg.core.ppu_set_fpcc.set(false);
+		}
+	}
+}
+
 void Emulator::Init(bool add_only)
 {
 	jit_runtime::initialize();
@@ -339,6 +364,9 @@ void Emulator::Init(bool add_only)
 			sys_log.fatal("Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
 		}
 	}
+
+	// Disable incompatible settings
+	fixup_ppu_settings();
 
 	// Create directories (can be disabled if necessary)
 	auto make_path_verbose = [](const std::string& path)
@@ -1086,6 +1114,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 			}
 
+			// Disable incompatible settings
+			fixup_ppu_settings();
+
 			// Force audio provider
 			if (m_path.ends_with("vsh.self"sv))
 			{
@@ -1175,6 +1206,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			// Force LLVM recompiler
 			g_cfg.core.ppu_decoder.from_default();
+
+			// Disable incompatible settings
+			fixup_ppu_settings();
 
 			// Force LLE lib loading mode
 			g_cfg.core.libraries_control.set_set([]()
