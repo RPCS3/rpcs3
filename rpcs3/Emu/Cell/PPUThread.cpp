@@ -2807,35 +2807,31 @@ extern fs::file make_file_view(fs::file&& _file, u64 offset)
 
 extern void ppu_finalize(const ppu_module& info)
 {
-	// Get cache path for this executable
-	std::string cache_path;
-
 	if (info.name.empty())
 	{
 		// Don't remove main module from memory
 		return;
 	}
-	else
+
+	const std::string dev_flash = vfs::get("/dev_flash/sys/");
+
+	if (info.path.starts_with(dev_flash) || Emu.GetCat() == "1P")
 	{
-		// Get PPU cache location
-		cache_path = fs::get_cache_dir() + "cache/";
-
-		const std::string dev_flash = vfs::get("/dev_flash/sys/");
-
-		if (info.path.starts_with(dev_flash) || Emu.GetCat() == "1P")
-		{
-			// Don't remove dev_flash prx from memory
-			return;
-		}
-		else if (!Emu.GetTitleID().empty())
-		{
-			cache_path += Emu.GetTitleID();
-			cache_path += '/';
-		}
-
-		// Add PPU hash and filename
-		fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
+		// Don't remove dev_flash prx from memory
+		return;
 	}
+
+	// Get cache path for this executable
+	std::string cache_path = fs::get_cache_dir() + "cache/";
+
+	if (!Emu.GetTitleID().empty())
+	{
+		cache_path += Emu.GetTitleID();
+		cache_path += '/';
+	}
+
+	// Add PPU hash and filename
+	fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
 
 #ifdef LLVM_AVAILABLE
 	g_fxo->get<jit_module_manager>().remove(cache_path + info.name);
