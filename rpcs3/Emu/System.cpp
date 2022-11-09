@@ -721,36 +721,39 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 {
 	m_ar.reset();
 
-	if (m_config_mode == cfg_mode::continuous)
+	if (!add_only)
 	{
-		// The program is being booted from another running program
-		// CELL_GAME_GAMETYPE_GAMEDATA is not used as boot type
+		if (m_config_mode == cfg_mode::continuous)
+		{
+			// The program is being booted from another running program
+			// CELL_GAME_GAMETYPE_GAMEDATA is not used as boot type
 
-		if (m_cat == "DG"sv)
-		{
-			m_boot_source_type = CELL_GAME_GAMETYPE_DISC;
-		}
-		else if (m_cat == "HM"sv)
-		{
-			m_boot_source_type = CELL_GAME_GAMETYPE_HOME;
+			if (m_cat == "DG"sv)
+			{
+				m_boot_source_type = CELL_GAME_GAMETYPE_DISC;
+			}
+			else if (m_cat == "HM"sv)
+			{
+				m_boot_source_type = CELL_GAME_GAMETYPE_HOME;
+			}
+			else
+			{
+				m_boot_source_type = CELL_GAME_GAMETYPE_HDD;
+			}
 		}
 		else
 		{
-			m_boot_source_type = CELL_GAME_GAMETYPE_HDD;
-		}
-	}
-	else
-	{
-		if (fs::file save{m_path, fs::isfile + fs::read}; save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
-		{
-			m_ar = std::make_shared<utils::serial>();
-			m_ar->set_reading_state();
-			save.seek(0);
-			save.read(m_ar->data, save.size());
-			m_ar->data.shrink_to_fit();
-		}
+			if (fs::file save{m_path, fs::isfile + fs::read}; save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
+			{
+				m_ar = std::make_shared<utils::serial>();
+				m_ar->set_reading_state();
+				save.seek(0);
+				save.read(m_ar->data, save.size());
+				m_ar->data.shrink_to_fit();
+			}
 
-		m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
+			m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
+		}
 	}
 
 	if (!IsStopped())
@@ -1423,8 +1426,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			argv[7] = "2";                        // ??? arg7 2 -- full screen on/off 2/1 ?
 			argv[8] = "1";                        // ??? arg8 2 -- smoothing	on/off	= 1/0 ?
 
-			//TODO, this seems like it would normally be done by sysutil etc
-			//Basically make 2 128KB memory cards 0 filled and let the games handle formatting.
+			// TODO, this seems like it would normally be done by sysutil etc
+			// Basically make 2 128KB memory cards 0 filled and let the games handle formatting.
 
 			fs::file card_1_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[1]), fs::write + fs::create);
 			card_1_file.trunc(128 * 1024);
