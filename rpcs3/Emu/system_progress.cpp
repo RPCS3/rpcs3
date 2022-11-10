@@ -5,6 +5,7 @@
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
 #include "Emu/System.h"
 
+
 LOG_CHANNEL(sys_log, "SYS");
 
 // Progress display server synchronization variables
@@ -61,11 +62,14 @@ void progress_dialog_server::operator()()
 		bool skip_this_one = false; // Workaround: do not open a progress dialog if there is already a cell message dialog open.
 		std::shared_ptr<MsgDialogBase> dlg;
 
-		if (const auto renderer = rsx::get_current_renderer();
-		    renderer && renderer->is_initialized)
+		if (const auto renderer = rsx::get_current_renderer())
 		{
+			// Some backends like OpenGL actually initialize a lot of driver objects in the "on_init" method.
+			// Wait for init to complete within reasonable time. Abort just in case we have hardware/driver issues.
+			renderer->is_initialized.wait(false, atomic_wait_timeout(5 * 1000000000ull));
+
 			auto manager  = g_fxo->try_get<rsx::overlays::display_manager>();
-			skip_this_one = g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog || (manager && manager->get<rsx::overlays::message_dialog>());
+			skip_this_one = !renderer->is_initialized || g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog || (manager && manager->get<rsx::overlays::message_dialog>());
 
 			if (manager && !skip_this_one)
 			{
