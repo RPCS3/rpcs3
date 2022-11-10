@@ -5,7 +5,6 @@
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
 #include "Emu/System.h"
 
-
 LOG_CHANNEL(sys_log, "SYS");
 
 // Progress display server synchronization variables
