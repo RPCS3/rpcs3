@@ -62,7 +62,7 @@ void progress_dialog_server::operator()()
 		std::shared_ptr<MsgDialogBase> dlg;
 
 		if (const auto renderer = rsx::get_current_renderer();
-		    renderer && renderer->is_inited)
+		    renderer && renderer->is_initialized)
 		{
 			auto manager  = g_fxo->try_get<rsx::overlays::display_manager>();
 			skip_this_one = g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog || (manager && manager->get<rsx::overlays::message_dialog>());
