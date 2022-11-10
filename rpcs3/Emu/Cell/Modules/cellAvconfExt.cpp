@@ -298,7 +298,7 @@ error_code cellAudioOutGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioOutDev
 
 error_code cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 {
-	cellAvconfExt.warning("cellVideoOutSetGamma(videoOut=%d, gamma=%f)", videoOut, gamma);
+	cellAvconfExt.trace("cellVideoOutSetGamma(videoOut=%d, gamma=%f)", videoOut, gamma);
 
 	if (gamma < 0.8f || gamma > 1.2f)
 	{
