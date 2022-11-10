@@ -529,7 +529,7 @@ void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetFlipHandler(handler=*0x%x)", handler);
 
-	if (const auto rsx = rsx::get_current_renderer(); rsx->is_inited)
+	if (const auto rsx = rsx::get_current_renderer(); rsx->is_initialized)
 	{
 		rsx->flip_handler = handler;
 	}
@@ -681,7 +681,7 @@ void cellGcmSetUserHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetUserHandler(handler=*0x%x)", handler);
 
-	if (const auto rsx = rsx::get_current_renderer(); rsx->is_inited)
+	if (const auto rsx = rsx::get_current_renderer(); rsx->is_initialized)
 	{
 		rsx->user_handler = handler;
 	}
@@ -707,7 +707,7 @@ void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetVBlankHandler(handler=*0x%x)", handler);
 
-	if (const auto rsx = rsx::get_current_renderer(); rsx->is_inited)
+	if (const auto rsx = rsx::get_current_renderer(); rsx->is_initialized)
 	{
 		rsx->vblank_handler = handler;
 	}
@@ -923,7 +923,7 @@ void cellGcmSetQueueHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetQueueHandler(handler=*0x%x)", handler);
 
-	if (const auto rsx = rsx::get_current_renderer(); rsx->is_inited)
+	if (const auto rsx = rsx::get_current_renderer(); rsx->is_initialized)
 	{
 		rsx->queue_handler = handler;
 	}
