@@ -1927,7 +1927,10 @@ const bool s_terminate_handler_set = []() -> bool
 	std::set_terminate([]()
 	{
 		if (IsDebuggerPresent())
+		{
+			logs::listener::sync_all();
 			utils::trap();
+		}
 
 		report_fatal_error("RPCS3 has abnormally terminated.");
 	});
@@ -2650,7 +2653,10 @@ void thread_base::exec()
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
 	if (IsDebuggerPresent())
+	{
+		logs::listener::sync_all();
 		utils::trap();
+	}
 
 	if (const auto _this = g_tls_this_thread)
 	{
