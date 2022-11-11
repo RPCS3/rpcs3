@@ -769,8 +769,8 @@ namespace rsx
 		g_fxo->get<rsx::dma_manager>().init();
 		on_init_thread();
 
-		is_inited = true;
-		is_inited.notify_all();
+		is_initialized = true;
+		is_initialized.notify_all();
 
 		if (!zcull_ctrl)
 		{
