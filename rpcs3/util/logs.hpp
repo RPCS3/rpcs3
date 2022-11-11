@@ -81,11 +81,17 @@ namespace logs
 		// Process log message
 		virtual void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) = 0;
 
+		// Flush contents (file writer)
+		virtual void sync();
+
 		// Add new listener
 		static void add(listener*);
 
 		// Special purpose
 		void broadcast(const stored_message&) const;
+
+		// Flush log to disk
+		static void sync_all();
 	};
 
 	struct alignas(16) channel : private message
