@@ -1354,9 +1354,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
 
-	m_emu_settings->EnhanceCheckBox(ui->forceDisableExclusiveFullscreenMode, emu_settings_type::ForceDisableExclusiveFullscreenMode);
-	SubscribeTooltip(ui->forceDisableExclusiveFullscreenMode, tooltips.settings.force_disable_exclusive_fullscreen_mode);
-
 	m_emu_settings->EnhanceCheckBox(ui->vblankNTSCFixup, emu_settings_type::VBlankNTSCFixup);
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
@@ -1379,6 +1376,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
 	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData(6), tr("Unlimited (Default)", "Max SPURS threads"));
 	SubscribeTooltip(ui->gb_max_spurs_threads, tooltips.settings.max_spurs_threads);
+
+	m_emu_settings->EnhanceComboBox(ui->exclusiveFullscreenMode, emu_settings_type::ExclusiveFullscreenMode);
+	SubscribeTooltip(ui->gb_exclusiveFullscreen, tooltips.settings.exclusive_fullscreen_mode);
 
 	m_emu_settings->EnhanceComboBox(ui->sleepTimersAccuracy, emu_settings_type::SleepTimersAccuracy);
 	SubscribeTooltip(ui->gb_sleep_timers_accuracy, tooltips.settings.sleep_timers_accuracy);
