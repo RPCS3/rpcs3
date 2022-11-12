@@ -1270,6 +1270,15 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case CELL_KB_MAPPING_PORTUGUESE_BRAZIL: return tr("Portuguese keyboard (Brazil)", "Keyboard Type");
 		case CELL_KB_MAPPING_TURKISH_TURKEY: return tr("Turkish keyboard", "Keyboard Type");
 		}
+		break;
+	case emu_settings_type::ExclusiveFullscreenMode:
+		switch (static_cast<vk_exclusive_fs_mode>(index))
+		{
+		case vk_exclusive_fs_mode::unspecified: return tr("Automatic (Default)", "Exclusive Fullscreen Mode");
+		case vk_exclusive_fs_mode::disable: return tr("Prefer borderless fullscreen", "Exclusive Fullscreen Mode");
+		case vk_exclusive_fs_mode::enable: return tr("Prefer exclusive fullscreen", "Exclusive Fullscreen Mode");
+		}
+		break;
 	default:
 		break;
 	}
