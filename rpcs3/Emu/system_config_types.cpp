@@ -412,6 +412,7 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 		case move_handler::null: return "Null";
 		case move_handler::fake: return "Fake";
 		case move_handler::mouse: return "Mouse";
+		case move_handler::gun: return "Gun";
 		}
 
 		return unknown;

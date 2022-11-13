@@ -9,6 +9,7 @@
 #include "Emu/perf_monitor.hpp"
 #include "Emu/vfs_config.h"
 #include "Emu/IPC_config.h"
+#include "Input/evdev_gun_handler.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -2737,6 +2738,9 @@ void Emulator::CleanUp()
 {
 	// Deinitialize object manager to prevent any hanging objects at program exit
 	g_fxo->clear();
+
+	// deinitialize gun
+	evdev_gun_handler::shutdown();
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const
