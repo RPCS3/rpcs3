@@ -73,6 +73,11 @@ bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 				list.back()->path += '/';
 			if (!is_dir && list.back()->path.ends_with('/'))
 				vfs_log.error("File mounted with trailing /.");
+			const auto mp = lv2_fs_object::get_mp(vpath_backup);
+			if (mp == &g_mp_sys_dev_usb)
+				mp->is_mounted |= (1U << vpath_backup.back() - '0');
+			else
+				mp->is_mounted = 1U;
 			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, list.back()->path);
 			return true;
 		}
@@ -179,6 +184,12 @@ bool vfs::unmount(std::string_view vpath)
 		}
 	};
 	unmount_children(table.root, 0);
+
+	const auto mp = lv2_fs_object::get_mp(vpath);
+	if (mp == &g_mp_sys_dev_usb)
+		mp->is_mounted &= ~(1U << vpath.back() - '0');
+	else
+		mp->is_mounted = 0U;
 
 	return true;
 }
