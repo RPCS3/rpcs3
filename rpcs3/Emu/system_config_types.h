@@ -128,6 +128,7 @@ enum class move_handler
 	null,
 	fake,
 	mouse,
+	gun
 };
 
 enum class buzz_handler

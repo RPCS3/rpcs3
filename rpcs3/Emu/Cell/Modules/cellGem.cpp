@@ -11,6 +11,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Overlays/overlay_cursor.h"
 #include "Input/pad_thread.h"
+#include "Input/evdev_gun_handler.h"
 
 #include <cmath> // for fmod
 
@@ -212,6 +213,13 @@ public:
 		case move_handler::mouse:
 		{
 			connected_controllers = 1;
+			break;
+		}
+		case move_handler::gun:
+		{
+#ifdef HAVE_LIBEVDEV
+			connected_controllers = evdev_gun_handler::getInstance()->getNumGuns();
+#endif
 			break;
 		}
 		case move_handler::null:
@@ -851,6 +859,63 @@ static void mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 	pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
 }
 
+static bool gun_input_to_pad(const u32 gem_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
+{
+  digital_buttons = 0;
+  analog_t = 0;
+
+  if (!is_input_allowed()) {
+    return false;
+  }
+
+  evdev_gun_handler *gh = evdev_gun_handler::getInstance();
+  gh->pool();
+
+  digital_buttons = 0;
+
+  if(gh->getButton(gem_no, EVDEV_GUN_BUTTON_LEFT) == 1)
+    digital_buttons |= CELL_GEM_CTRL_T;
+  
+  if(gh->getButton(gem_no, EVDEV_GUN_BUTTON_RIGHT) == 1)
+    digital_buttons |= CELL_GEM_CTRL_MOVE;
+
+  if(gh->getButton(gem_no, EVDEV_GUN_BUTTON_MIDDLE) == 1)
+    digital_buttons |= CELL_GEM_CTRL_SELECT;
+
+  if(gh->getButton(gem_no, EVDEV_GUN_BUTTON_BTN1) == 1)
+    digital_buttons |= CELL_GEM_CTRL_START;
+
+  if(gh->getButton(gem_no, EVDEV_GUN_BUTTON_BTN2) == 1)
+    digital_buttons |= CELL_GEM_CTRL_CROSS;
+
+  if(gh->getButton(gem_no, EVDEV_GUN_BUTTON_BTN3) == 1)
+    digital_buttons |= CELL_GEM_CTRL_CIRCLE;
+
+  if(gh->getButton(gem_no, EVDEV_GUN_BUTTON_BTN4) == 1)
+    digital_buttons |= CELL_GEM_CTRL_SQUARE;
+
+  if(gh->getButton(gem_no, EVDEV_GUN_BUTTON_BTN5) == 1)
+    digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
+
+  //analog_t = (mouse_data.buttons & CELL_MOUSE_BUTTON_1) ? 0xFFFF : 0;
+  return true;
+}
+
+static void gun_pos_to_gem_state(const u32 gem_no, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state)
+{
+  if (!gem_state || !is_input_allowed()) {
+    return;
+  }
+
+  evdev_gun_handler *gh = evdev_gun_handler::getInstance();
+  int x_pos = gh->getAxisX(gem_no);
+  int y_pos = gh->getAxisY(gem_no);
+  int x_max = gh->getAxisXMax(gem_no);
+  int y_max = gh->getAxisYMax(gem_no);
+
+  pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max);
+}
+
 // *********************
 // * cellGem functions *
 // *********************
@@ -1232,7 +1297,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 
 	*gem_image_state = {};
 
-	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
+	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse || g_cfg.io.move == move_handler::gun)
 	{
 		auto& shared_data = g_fxo->get<gem_camera_shared>();
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp.load();
@@ -1249,6 +1314,12 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		else if (g_cfg.io.move == move_handler::mouse)
 		{
 			mouse_pos_to_gem_image_state(gem_num, gem.controllers[gem_num], gem_image_state);
+		}
+		else if (g_cfg.io.move == move_handler::gun)
+		{
+#ifdef HAVE_LIBEVDEV
+			gun_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_image_state);
+#endif
 		}
 	}
 
@@ -1280,7 +1351,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 	*inertial_state = {};
 
-	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
+	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse || g_cfg.io.move == move_handler::gun)
 	{
 		ds3_input_to_ext(gem_num, gem.controllers[gem_num], inertial_state->ext);
 
@@ -1295,6 +1366,12 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		else if (g_cfg.io.move == move_handler::mouse)
 		{
 			mouse_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+		}
+ 		else if (g_cfg.io.move == move_handler::gun)
+		{
+#ifdef HAVE_LIBEVDEV
+			gun_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+#endif
 		}
 	}
 
@@ -1442,7 +1519,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 
 	*gem_state = {};
 
-	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
+	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse || g_cfg.io.move == move_handler::gun)
 	{
 		ds3_input_to_ext(gem_num, gem.controllers[gem_num], gem_state->ext);
 
@@ -1465,6 +1542,13 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		{
 			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 			mouse_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
+		}
+		else if (g_cfg.io.move == move_handler::gun)
+		{
+#ifdef HAVE_LIBEVDEV
+			gun_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+			gun_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
+#endif
 		}
 	}
 
