@@ -71,7 +71,6 @@
     <ClCompile Include="curl\lib\content_encoding.c" />
     <ClCompile Include="curl\lib\cookie.c" />
     <ClCompile Include="curl\lib\curl_addrinfo.c" />
-    <ClCompile Include="curl\lib\curl_ctype.c" />
     <ClCompile Include="curl\lib\curl_des.c" />
     <ClCompile Include="curl\lib\curl_endian.c" />
     <ClCompile Include="curl\lib\curl_fnmatch.c" />
@@ -90,7 +89,6 @@
     <ClCompile Include="curl\lib\curl_threads.c" />
     <ClCompile Include="curl\lib\dict.c" />
     <ClCompile Include="curl\lib\doh.c" />
-    <ClCompile Include="curl\lib\dotdot.c" />
     <ClCompile Include="curl\lib\dynbuf.c" />
     <ClCompile Include="curl\lib\easy.c" />
     <ClCompile Include="curl\lib\easygetopt.c" />
@@ -140,6 +138,7 @@
     <ClCompile Include="curl\lib\multi.c" />
     <ClCompile Include="curl\lib\netrc.c" />
     <ClCompile Include="curl\lib\nonblock.c" />
+    <ClCompile Include="curl\lib\noproxy.c" />
     <ClCompile Include="curl\lib\openldap.c" />
     <ClCompile Include="curl\lib\parsedate.c" />
     <ClCompile Include="curl\lib\pingpong.c" />
@@ -215,6 +214,7 @@
     <ClCompile Include="curl\lib\vtls\sectransp.c" />
     <ClCompile Include="curl\lib\vtls\vtls.c" />
     <ClCompile Include="curl\lib\vtls\wolfssl.c" />
+    <ClCompile Include="curl\lib\ws.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="curl\include\curl\curl.h" />
@@ -288,6 +288,7 @@
     <ClInclude Include="curl\lib\formdata.h" />
     <ClInclude Include="curl\lib\ftp.h" />
     <ClInclude Include="curl\lib\ftplistparser.h" />
+    <ClInclude Include="curl\lib\functypes.h" />
     <ClInclude Include="curl\lib\getinfo.h" />
     <ClInclude Include="curl\lib\gopher.h" />
     <ClInclude Include="curl\lib\h2h3.h" />
@@ -315,6 +316,7 @@
     <ClInclude Include="curl\lib\multiif.h" />
     <ClInclude Include="curl\lib\netrc.h" />
     <ClInclude Include="curl\lib\nonblock.h" />
+    <ClInclude Include="curl\lib\noproxy.h" />
     <ClInclude Include="curl\lib\parsedate.h" />
     <ClInclude Include="curl\lib\pingpong.h" />
     <ClInclude Include="curl\lib\pop3.h" />
@@ -380,6 +382,7 @@
     <ClInclude Include="curl\lib\vtls\sectransp.h" />
     <ClInclude Include="curl\lib\vtls\vtls.h" />
     <ClInclude Include="curl\lib\vtls\wolfssl.h" />
+    <ClInclude Include="curl\lib\ws.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="curl\lib\libcurl.rc" />
