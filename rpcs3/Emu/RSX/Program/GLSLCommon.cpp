@@ -404,7 +404,7 @@ namespace glsl
 	void insert_rop_init(std::ostream& OS)
 	{
 		OS <<
-		"	if (_test_bit(rop_control, 9))\n"
+		"	if (_test_bit(rop_control, POLYGON_STIPPLE_ENABLE_BIT))\n"
 		"	{\n"
 		"		// Convert x,y to linear address\n"
 		"		const uvec2 stipple_coord = uvec2(gl_FragCoord.xy) % uvec2(32, 32);\n"
@@ -435,30 +435,31 @@ namespace glsl
 			"	{\n"
 			"		discard;\n"
 			"	}\n"
-			"	else if (_get_bits(rop_control, 0, 8) != 0)\n";
+			"	else if ((rop_control & ROP_CMD_MASK) != 0)\n";
 		}
 		else
 		{
-			OS << "	if (_get_bits(rop_control, 0, 8) != 0)\n";
+			OS << "	if ((rop_control & ROP_CMD_MASK) != 0)\n";
 		}
 
 		OS <<
 		"	{\n"
-		"		const bool alpha_test = _test_bit(rop_control, 0);\n"
-		"		const uint alpha_func = _get_bits(rop_control, 16, 3);\n";
+		"		const bool alpha_test = _test_bit(rop_control, ALPHA_TEST_ENABLE_BIT);\n"
+		"		const uint alpha_func = _get_bits(rop_control, ALPHA_TEST_FUNC_OFFSET, ALPHA_TEST_FUNC_LENGTH);\n";
 
 		if (!props.fp32_outputs)
 		{
-			OS << "		const bool srgb_convert = _test_bit(rop_control, 1);\n\n";
+			OS << "		const bool srgb_convert = _test_bit(rop_control, SRGB_FRAMEBUFFER_BIT);\n\n";
 		}
 
 		if (props.emulate_coverage_tests)
 		{
-			OS << "		const bool a2c_enabled = _test_bit(rop_control, 4);\n";
+			OS << "		const bool a2c_enabled = _test_bit(rop_control, ALPHA_TO_COVERAGE_ENABLE_BIT);\n";
+			OS << "		const bool msaa_write_enabled = _test_bit(rop_control, MSAA_WRITE_ENABLE_BIT);\n";
 		}
 
 		OS <<
-		"		if (alpha_test && !comparison_passes(" << reg0 << ".a, alpha_ref, alpha_func))\n"
+		"		if (alpha_test && !comparison_passes(ROP_quantize(" << reg0 << ").a, alpha_ref, alpha_func))\n"
 		"		{\n"
 		"			discard;\n"
 		"		}\n";
@@ -466,7 +467,7 @@ namespace glsl
 		if (props.emulate_coverage_tests)
 		{
 			OS <<
-			"		else if (a2c_enabled && !coverage_test_passes(" << reg0 << ", rop_control >> 5))\n"
+			"		else if (a2c_enabled && (!msaa_write_enabled || !coverage_test_passes(" << reg0 << ")))\n"
 			"		{\n"
 			"			discard;\n"
 			"		}\n";
@@ -480,10 +481,10 @@ namespace glsl
 				OS <<
 				"		else if (srgb_convert)\n"
 				"		{\n"
-				"			" << reg0 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
-				"			" << reg1 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
-				"			" << reg2 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
-				"			" << reg3 << " = round_to_8bit(f16vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
+				"			" << reg0 << " = round_srgb8(f16vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
+				"			" << reg1 << " = round_srgb8(f16vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
+				"			" << reg2 << " = round_srgb8(f16vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
+				"			" << reg3 << " = round_srgb8(f16vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
 				"		}\n";
 			}
 			else
@@ -491,10 +492,10 @@ namespace glsl
 				OS <<
 				"		else if (srgb_convert)\n"
 				"		{\n"
-				"			" << reg0 << " = round_to_8bit(vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
-				"			" << reg1 << " = round_to_8bit(vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
-				"			" << reg2 << " = round_to_8bit(vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
-				"			" << reg3 << " = round_to_8bit(vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
+				"			" << reg0 << " = round_srgb8(vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
+				"			" << reg1 << " = round_srgb8(vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
+				"			" << reg2 << " = round_srgb8(vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
+				"			" << reg3 << " = round_srgb8(vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
 				"		}\n";
 			}
 		}
@@ -528,8 +529,37 @@ namespace glsl
 
 		if (props.domain == glsl::program_domain::glsl_fragment_program)
 		{
-			OS << "// Workaround for broken early discard in some drivers\n";
+			OS << "// ROP control\n";
+			OS << "#define ALPHA_TEST_ENABLE_BIT        " << rsx::ROP_control_bits::ALPHA_TEST_ENABLE_BIT << "\n";
+			OS << "#define SRGB_FRAMEBUFFER_BIT         " << rsx::ROP_control_bits::SRGB_FRAMEBUFFER_BIT << "\n";
+			OS << "#define ALPHA_TO_COVERAGE_ENABLE_BIT " << rsx::ROP_control_bits::ALPHA_TO_COVERAGE_ENABLE_BIT << "\n";
+			OS << "#define MSAA_WRITE_ENABLE_BIT        " << rsx::ROP_control_bits::MSAA_WRITE_ENABLE_BIT << "\n";
+			OS << "#define INT_FRAMEBUFFER_BIT          " << rsx::ROP_control_bits::INT_FRAMEBUFFER_BIT << "\n";
+			OS << "#define POLYGON_STIPPLE_ENABLE_BIT   " << rsx::ROP_control_bits::POLYGON_STIPPLE_ENABLE_BIT << "\n";
+			OS << "#define ALPHA_TEST_FUNC_OFFSET       " << rsx::ROP_control_bits::ALPHA_FUNC_OFFSET << "\n";
+			OS << "#define ALPHA_TEST_FUNC_LENGTH       " << rsx::ROP_control_bits::ALPHA_FUNC_NUM_BITS << "\n";
+			OS << "#define MSAA_SAMPLE_CTRL_OFFSET      " << rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET << "\n";
+			OS << "#define MSAA_SAMPLE_CTRL_LENGTH      " << rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_NUM_BITS << "\n";
+			OS << "#define ROP_CMD_MASK                 " << rsx::ROP_control_bits::ROP_CMD_MASK << "\n\n";
 
+			// 8-bit rounding/quantization
+			{
+				const auto _255 = (props.supports_native_fp16) ? "f16vec4(255.)" : "vec4(255.)";
+				const auto _1_over_2 = (props.supports_native_fp16) ? "f16vec4(0.5)" : "vec4(0.5)";
+				OS << "#define round_to_8bit(v4) (floor(fma(v4, " << _255 << ", " << _1_over_2 << ")) / " << _255 << ")\n";
+			}
+
+			if (!props.fp32_outputs && props.srgb_output_rounding)
+			{
+				OS << "#define round_srgb8 round_to_8bit\n\n";
+			}
+			else
+			{
+				// We can get the 8-bit rounding for free on non-NVIDIA hardware
+				OS << "#define round_srgb8(v4) (v4)\n\n";
+			}
+
+			OS << "// Workaround for broken early discard in some drivers\n";
 			if (props.disable_early_discard)
 			{
 				OS << "bool _fragment_discard = false;\n";
@@ -538,21 +568,6 @@ namespace glsl
 			else
 			{
 				OS << "#define _kill() discard\n\n";
-			}
-
-			if (!props.fp32_outputs)
-			{
-				OS << "// Workaround broken output rounding behavior\n";
-				if (props.srgb_output_rounding)
-				{
-					const auto _255 = (props.supports_native_fp16) ? "f16vec4(255.)" : "vec4(255.)";
-					const auto _1_over_2 = (props.supports_native_fp16) ? "f16vec4(0.5)" : "vec4(0.5)";
-					OS << "#define round_to_8bit(v4) (floor(fma(v4, " << _255 << ", " << _1_over_2 << ")) / " << _255 << ")\n\n";
-				}
-				else
-				{
-					OS << "#define round_to_8bit(v4) (v4)\n\n";
-				}
 			}
 
 			if (props.require_texture_ops)
@@ -567,17 +582,32 @@ namespace glsl
 				OS << "#define EXPAND_B_MASK (1 << " << rsx::texture_control_bits::EXPAND_B << ")\n";
 				OS << "#define EXPAND_A_MASK (1 << " << rsx::texture_control_bits::EXPAND_A << ")\n\n";
 
-				OS << "#define ALPHAKILL    " << rsx::texture_control_bits::ALPHAKILL << "\n";
-				OS << "#define RENORMALIZE  " << rsx::texture_control_bits::RENORMALIZE << "\n";
+				OS << "#define ALPHAKILL     " << rsx::texture_control_bits::ALPHAKILL << "\n";
+				OS << "#define RENORMALIZE   " << rsx::texture_control_bits::RENORMALIZE << "\n";
 				OS << "#define DEPTH_FLOAT   " << rsx::texture_control_bits::DEPTH_FLOAT << "\n";
 				OS << "#define DEPTH_COMPARE " << rsx::texture_control_bits::DEPTH_COMPARE_OP << "\n";
 				OS << "#define FILTERED_MAG_BIT  " << rsx::texture_control_bits::FILTERED_MAG << "\n";
 				OS << "#define FILTERED_MIN_BIT  " << rsx::texture_control_bits::FILTERED_MIN << "\n";
-				OS << "#define INT_COORDS_BIT " << rsx::texture_control_bits::UNNORMALIZED_COORDS << "\n";
+				OS << "#define INT_COORDS_BIT    " << rsx::texture_control_bits::UNNORMALIZED_COORDS << "\n";
 				OS << "#define GAMMA_CTRL_MASK  (GAMMA_R_MASK|GAMMA_G_MASK|GAMMA_B_MASK|GAMMA_A_MASK)\n";
 				OS << "#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n";
 				OS << "#define FILTERED_MASK    (FILTERED_MAG_BIT|FILTERED_MIN_BIT)\n\n";
 			}
+
+			OS << fmt::replace_all(
+				"$Ty ROP_quantize(const in $Ty v)\n"
+				"{\n"
+				"	if (!_test_bit(rop_control, INT_FRAMEBUFFER_BIT))\n"
+				"	{\n"
+				"		return v;\n"
+				"	}\n"
+				"\n"
+				"	return round_to_8bit(v);\n"
+				"}\n",
+				{
+					{ "$Ty"sv, (props.fp32_outputs || !props.supports_native_fp16) ? "vec4" : "f16vec4"}
+				}
+			);
 		}
 
 		if (props.require_lit_emulation)
@@ -667,10 +697,8 @@ namespace glsl
 		{
 			// Purely stochastic
 			OS <<
-			"bool coverage_test_passes(const in vec4 _sample, const in uint control)\n"
+			"bool coverage_test_passes(const in vec4 _sample)\n"
 			"{\n"
-			"	if (!_test_bit(control, 0)) return false;\n"
-			"\n"
 			"	float random  = _rand(gl_FragCoord);\n"
 			"	return (_sample.a > random);\n"
 			"}\n\n";

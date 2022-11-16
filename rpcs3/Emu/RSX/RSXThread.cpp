@@ -1050,18 +1050,18 @@ namespace rsx
 
 	void thread::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/)
 	{
-		u32 rop_control = 0u;
+		ROP_control_t rop_control{};
 
 		if (rsx::method_registers.alpha_test_enabled())
 		{
 			const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
-			rop_control |= (alpha_func << 16);
-			rop_control |= ROP_control::alpha_test_enable;
+			rop_control.set_alpha_test_func(alpha_func);
+			rop_control.enable_alpha_test();
 		}
 
 		if (rsx::method_registers.polygon_stipple_enabled())
 		{
-			rop_control |= ROP_control::polygon_stipple_enable;
+			rop_control.enable_polygon_stipple();
 		}
 
 		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !backend_config.supports_hw_a2c)
@@ -1070,8 +1070,11 @@ namespace rsx
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
 			// Simulated using combined alpha blend and alpha test
-			if (rsx::method_registers.msaa_sample_mask()) rop_control |= ROP_control::msaa_mask_enable;
-			rop_control |= ROP_control::csaa_enable;
+			rop_control.enable_alpha_to_coverage();
+			if (rsx::method_registers.msaa_sample_mask())
+			{
+				rop_control.enable_MSAA_writes();
+			}
 
 			// Sample configuration bits
 			switch (rsx::method_registers.surface_antialias())
@@ -1079,10 +1082,10 @@ namespace rsx
 				case rsx::surface_antialiasing::center_1_sample:
 					break;
 				case rsx::surface_antialiasing::diagonal_centered_2_samples:
-					rop_control |= 1u << 6;
+					rop_control.set_msaa_control(1u);
 					break;
 				default:
-					rop_control |= 3u << 6;
+					rop_control.set_msaa_control(3u);
 					break;
 			}
 		}
@@ -1091,19 +1094,24 @@ namespace rsx
 		const f32 fog1 = rsx::method_registers.fog_params_1();
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
 
-		if (rsx::method_registers.framebuffer_srgb_enabled())
+		// Check if framebuffer is actually an XRGB format and not a WZYX format
+		switch (rsx::method_registers.surface_color())
 		{
-			// Check if framebuffer is actually an XRGB format and not a WZYX format
-			switch (rsx::method_registers.surface_color())
+		case rsx::surface_color_format::w16z16y16x16:
+		case rsx::surface_color_format::w32z32y32x32:
+		case rsx::surface_color_format::x32:
+			// These behave very differently from "normal" formats.
+			break;
+		default:
+			// Integer framebuffer formats.
+			rop_control.enable_framebuffer_INT();
+
+			// Check if we want sRGB conversion.
+			if (rsx::method_registers.framebuffer_srgb_enabled())
 			{
-			case rsx::surface_color_format::w16z16y16x16:
-			case rsx::surface_color_format::w32z32y32x32:
-			case rsx::surface_color_format::x32:
-				break;
-			default:
-				rop_control |= ROP_control::framebuffer_srgb_enable;
-				break;
+				rop_control.enable_framebuffer_sRGB();
 			}
+			break;
 		}
 
 		// Generate wpos coefficients
@@ -1120,7 +1128,7 @@ namespace rsx
 		const f32 alpha_ref = rsx::method_registers.alpha_ref();
 
 		u32 *dst = static_cast<u32*>(buffer);
-		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
+		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control.value, std::bit_cast<u32>(alpha_ref));
 		utils::stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
