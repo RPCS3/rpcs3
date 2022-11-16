@@ -534,12 +534,12 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 	const auto& pads = handler->GetPads();
 
 	if (port_no >= config.max_connect)
-		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
+		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// ?
 
