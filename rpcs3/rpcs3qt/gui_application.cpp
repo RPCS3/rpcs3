@@ -281,8 +281,17 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 
 	if (m_gui_settings->GetValue(gui::gs_resize).toBool())
 	{
-		w = m_gui_settings->GetValue(gui::gs_width).toInt();
-		h = m_gui_settings->GetValue(gui::gs_height).toInt();
+		if (m_gui_settings->GetValue(gui::gs_resize_manual).toBool())
+		{
+			w = m_gui_settings->GetValue(gui::gs_width).toInt();
+			h = m_gui_settings->GetValue(gui::gs_height).toInt();
+		}
+		else
+		{
+			const qreal device_pixel_ratio = devicePixelRatio();
+			w /= device_pixel_ratio;
+			h /= device_pixel_ratio;
+		}
 	}
 
 	const auto screen = m_main_window ? m_main_window->screen() : primaryScreen();

@@ -1754,9 +1754,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		});
 
 		const bool enable_buttons = m_gui_settings->GetValue(gui::gs_resize).toBool();
+		const bool use_manual_resize = m_gui_settings->GetValue(gui::gs_resize_manual).toBool();
 		ui->gs_resizeOnBoot->setChecked(enable_buttons);
-		ui->gs_width->setEnabled(enable_buttons);
-		ui->gs_height->setEnabled(enable_buttons);
+		ui->gs_resizeOnBootManual->setChecked(use_manual_resize);
+		ui->gs_resizeOnBootManual->setEnabled(enable_buttons);
+		ui->gs_width->setEnabled(enable_buttons && use_manual_resize);
+		ui->gs_height->setEnabled(enable_buttons && use_manual_resize);
 
 		const QRect screen = QGuiApplication::primaryScreen()->geometry();
 		const int width = m_gui_settings->GetValue(gui::gs_width).toInt();
@@ -1766,9 +1769,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		connect(ui->gs_resizeOnBoot, &QCheckBox::toggled, [this](bool checked)
 		{
+			const bool enabled = checked && ui->gs_resizeOnBootManual->isChecked();
 			m_gui_settings->SetValue(gui::gs_resize, checked);
-			ui->gs_width->setEnabled(checked);
-			ui->gs_height->setEnabled(checked);
+			ui->gs_resizeOnBootManual->setEnabled(checked);
+			ui->gs_width->setEnabled(enabled);
+			ui->gs_height->setEnabled(enabled);
+		});
+		connect(ui->gs_resizeOnBootManual, &QCheckBox::toggled, [this](bool checked)
+		{
+			const bool enabled = checked && ui->gs_resizeOnBoot->isChecked();
+			m_gui_settings->SetValue(gui::gs_resize_manual, checked);
+			ui->gs_width->setEnabled(enabled);
+			ui->gs_height->setEnabled(enabled);
 		});
 		connect(ui->gs_width, &QSpinBox::editingFinished, [this]()
 		{
