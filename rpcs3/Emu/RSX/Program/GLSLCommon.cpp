@@ -427,82 +427,69 @@ namespace glsl
 		const std::string reg2 = props.fp32_outputs ? "r3" : "h6";
 		const std::string reg3 = props.fp32_outputs ? "r4" : "h8";
 
-		//TODO: Implement all ROP options like CSAA and ALPHA_TO_ONE here
 		if (props.disable_early_discard)
 		{
 			OS <<
 			"	if (_fragment_discard)\n"
 			"	{\n"
 			"		discard;\n"
-			"	}\n"
-			"	else if ((rop_control & ROP_CMD_MASK) != 0)\n";
-		}
-		else
-		{
-			OS << "	if ((rop_control & ROP_CMD_MASK) != 0)\n";
+			"	}\n\n";
 		}
 
-		OS <<
-		"	{\n"
-		"		const bool alpha_test = _test_bit(rop_control, ALPHA_TEST_ENABLE_BIT);\n"
-		"		const uint alpha_func = _get_bits(rop_control, ALPHA_TEST_FUNC_OFFSET, ALPHA_TEST_FUNC_LENGTH);\n";
-
-		if (!props.fp32_outputs)
-		{
-			OS << "		const bool srgb_convert = _test_bit(rop_control, SRGB_FRAMEBUFFER_BIT);\n\n";
-		}
-
-		if (props.emulate_coverage_tests)
-		{
-			OS << "		const bool a2c_enabled = _test_bit(rop_control, ALPHA_TO_COVERAGE_ENABLE_BIT);\n";
-			OS << "		const bool msaa_write_enabled = _test_bit(rop_control, MSAA_WRITE_ENABLE_BIT);\n";
-		}
-
-		OS <<
-		"		if (alpha_test && !comparison_passes(ROP_quantize(" << reg0 << ").a, alpha_ref, alpha_func))\n"
-		"		{\n"
-		"			discard;\n"
-		"		}\n";
-
-		if (props.emulate_coverage_tests)
-		{
-			OS <<
-			"		else if (a2c_enabled && (!msaa_write_enabled || !coverage_test_passes(" << reg0 << ")))\n"
-			"		{\n"
-			"			discard;\n"
-			"		}\n";
-		}
-
+		// Pre-output stages
 		if (!props.fp32_outputs)
 		{
 			// Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
-			if (props.supports_native_fp16)
-			{
-				OS <<
-				"		else if (srgb_convert)\n"
-				"		{\n"
-				"			" << reg0 << " = round_srgb8(f16vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
-				"			" << reg1 << " = round_srgb8(f16vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
-				"			" << reg2 << " = round_srgb8(f16vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
-				"			" << reg3 << " = round_srgb8(f16vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
-				"		}\n";
-			}
-			else
-			{
-				OS <<
-				"		else if (srgb_convert)\n"
-				"		{\n"
-				"			" << reg0 << " = round_srgb8(vec4(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a));\n"
-				"			" << reg1 << " = round_srgb8(vec4(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a));\n"
-				"			" << reg2 << " = round_srgb8(vec4(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a));\n"
-				"			" << reg3 << " = round_srgb8(vec4(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a));\n"
-				"		}\n";
-			}
+			const auto vtype = (props.fp32_outputs || !props.supports_native_fp16) ? "vec4" : "f16vec4";
+			OS <<
+			"	if (_test_bit(rop_control, SRGB_FRAMEBUFFER_BIT))\n"
+			"	{\n"
+			"		" << reg0 << " = " << vtype << "(linear_to_srgb(" << reg0 << ").rgb, " << reg0 << ".a);\n"
+			"		" << reg1 << " = " << vtype << "(linear_to_srgb(" << reg1 << ").rgb, " << reg1 << ".a);\n"
+			"		" << reg2 << " = " << vtype << "(linear_to_srgb(" << reg2 << ").rgb, " << reg2 << ".a);\n"
+			"		" << reg3 << " = " << vtype << "(linear_to_srgb(" << reg3 << ").rgb, " << reg3 << ".a);\n"
+			"	}\n\n";
 		}
 
-		OS <<
-		"	}\n\n"
+		// Output conversion
+		if (props.ROP_output_rounding)
+		{
+			OS <<
+			"	if (_test_bit(rop_control, INT_FRAMEBUFFER_BIT))\n"
+			"	{\n"
+			"		" << reg0 << " = round_to_8bit(" << reg0 << ");\n"
+			"		" << reg1 << " = round_to_8bit(" << reg1 << ");\n"
+			"		" << reg2 << " = round_to_8bit(" << reg2 << ");\n"
+			"		" << reg3 << " = round_to_8bit(" << reg3 << ");\n"
+			"	}\n\n";
+		}
 
+		// Post-output stages
+		// TODO: Implement all ROP options like CSAA and ALPHA_TO_ONE here
+		OS <<
+		// Alpha Testing
+		"	if (_test_bit(rop_control, ALPHA_TEST_ENABLE_BIT))\n"
+		"	{\n"
+		"		const uint alpha_func = _get_bits(rop_control, ALPHA_TEST_FUNC_OFFSET, ALPHA_TEST_FUNC_LENGTH);\n"
+		"		if (!comparison_passes(" << reg0 << ".a, alpha_ref, alpha_func)) discard;\n"
+		"	}\n\n";
+
+		// ALPHA_TO_COVERAGE
+		if (props.emulate_coverage_tests)
+		{
+			OS <<
+			"	if (_test_bit(rop_control, ALPHA_TO_COVERAGE_ENABLE_BIT))\n"
+			"	{\n"
+			"		if (!_test_bit(rop_control, MSAA_WRITE_ENABLE_BIT) ||\n"
+			"			!coverage_test_passes(" << reg0 << "))\n"
+			"		{\n"
+			"			discard;\n"
+			"		}\n"
+			"	}\n\n";
+		}
+
+		// Commit
+		OS <<
 		"	ocol0 = " << reg0 << ";\n"
 		"	ocol1 = " << reg1 << ";\n"
 		"	ocol2 = " << reg2 << ";\n"
@@ -546,17 +533,7 @@ namespace glsl
 			{
 				const auto _255 = (props.supports_native_fp16) ? "f16vec4(255.)" : "vec4(255.)";
 				const auto _1_over_2 = (props.supports_native_fp16) ? "f16vec4(0.5)" : "vec4(0.5)";
-				OS << "#define round_to_8bit(v4) (floor(fma(v4, " << _255 << ", " << _1_over_2 << ")) / " << _255 << ")\n";
-			}
-
-			if (!props.fp32_outputs && props.srgb_output_rounding)
-			{
-				OS << "#define round_srgb8 round_to_8bit\n\n";
-			}
-			else
-			{
-				// We can get the 8-bit rounding for free on non-NVIDIA hardware
-				OS << "#define round_srgb8(v4) (v4)\n\n";
+				OS << "#define round_to_8bit(v4) (floor(fma(v4, " << _255 << ", " << _1_over_2 << ")) / " << _255 << ")\n\n";
 			}
 
 			OS << "// Workaround for broken early discard in some drivers\n";
@@ -593,21 +570,6 @@ namespace glsl
 				OS << "#define SIGN_EXPAND_MASK (EXPAND_R_MASK|EXPAND_G_MASK|EXPAND_B_MASK|EXPAND_A_MASK)\n";
 				OS << "#define FILTERED_MASK    (FILTERED_MAG_BIT|FILTERED_MIN_BIT)\n\n";
 			}
-
-			OS << fmt::replace_all(
-				"$Ty ROP_quantize(const in $Ty v)\n"
-				"{\n"
-				"	if (!_test_bit(rop_control, INT_FRAMEBUFFER_BIT))\n"
-				"	{\n"
-				"		return v;\n"
-				"	}\n"
-				"\n"
-				"	return round_to_8bit(v);\n"
-				"}\n",
-				{
-					{ "$Ty"sv, (props.fp32_outputs || !props.supports_native_fp16) ? "vec4" : "f16vec4"}
-				}
-			);
 		}
 
 		if (props.require_lit_emulation)
@@ -1175,7 +1137,6 @@ namespace glsl
 		"	vec4 scale_bias;\n"
 		"	uint remap;\n"
 		"	uint flags;\n"
-		"};\n"
-		"\n";
+		"};\n\n";
 	}
 }
