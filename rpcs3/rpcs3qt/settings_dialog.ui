@@ -2992,6 +2992,13 @@
                    </widget>
                   </item>
                   <item>
+                   <widget class="QCheckBox" name="gs_resizeOnBootManual">
+                    <property name="text">
+                     <string>Resize manually</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <layout class="QHBoxLayout" name="gs_resolution_layout">
                     <item>
                      <widget class="QGroupBox" name="gb_gs_width">
