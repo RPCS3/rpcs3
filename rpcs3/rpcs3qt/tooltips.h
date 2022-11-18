@@ -231,6 +231,7 @@ public:
 		const QString buzz              = tr("Buzz! support.\nSelect 1 or 2 controllers if the game requires Buzz! controllers and you don't have real controllers.\nSelect Null if the game has support for DualShock or if you have real Buzz! controllers.");
 		const QString turntable         = tr("DJ Hero Turntable controller support.\nSelect 1 or 2 controllers if the game requires DJ Hero Turntable controllers and you don't have real turntable controllers.\nSelect Null if the game has support for DualShock or if you have real turntable controllers.\nA real turntable controller can be used at the same time as an emulated turntable controller.");
 		const QString ghltar            = tr("Guitar Hero Live (GHL) Guitar controller support.\nSelect 1 or 2 controllers if the game requires GHL Guitar controllers and you don't have real guitar controllers.\nSelect Null if the game has support for DualShock or if you have real guitar controllers.\nA real guitar controller can be used at the same time as an emulated guitar controller.");
+		const QString gametablet        = tr("GameTablet emulated controller support.\nDisable to use a physical GameTablet device");
 		const QString background_input  = tr("Allows pad and keyboard input while the game window is unfocused.");
 		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
 		const QString midi_devices      = tr("Select up to 3 emulated MIDI devices and their types.");

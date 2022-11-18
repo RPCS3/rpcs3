@@ -167,6 +167,12 @@ enum class ghltar_handler
 	two_controllers,
 };
 
+enum class gametablet_handler
+{
+	disabled,
+	enabled,
+};
+
 enum class microphone_handler
 {
 	null,
