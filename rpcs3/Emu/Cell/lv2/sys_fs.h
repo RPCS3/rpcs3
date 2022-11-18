@@ -154,14 +154,12 @@ struct lv2_fs_mount_point
 	const u64 sector_count = 256;
 	const u32 block_size = 4096;
 	const bs_t<lv2_mp_flag> flags{};
-	u8 is_mounted = 0U;
+	lv2_fs_mount_point* const next = nullptr;
 
 	mutable std::recursive_mutex mutex;
 };
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd0;
-extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
-extern lv2_fs_mount_point g_mp_sys_dev_usb;
 
 struct lv2_fs_object
 {
@@ -194,7 +192,8 @@ public:
 	static std::string_view get_device_path(std::string_view filename);
 	static lv2_fs_mount_point* get_mp(std::string_view filename);
 	static std::string get_vfs(std::string_view filename);
-	static s32 get_mount_count();
+	static u64 get_mount_count();
+	static bool vfs_unmount(std::string_view vpath, bool no_error = false);
 
 	static std::array<char, 0x420> get_name(std::string_view filename)
 	{
@@ -622,8 +621,8 @@ error_code sys_fs_lsn_write(ppu_thread& ppu, u32 fd, vm::cptr<void>, u64);
 error_code sys_fs_mapped_allocate(ppu_thread& ppu, u32 fd, u64, vm::pptr<void> out_ptr);
 error_code sys_fs_mapped_free(ppu_thread& ppu, u32 fd, vm::ptr<void> ptr);
 error_code sys_fs_truncate2(ppu_thread& ppu, u32 fd, u64 size);
-error_code sys_fs_newfs(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> file_system, s32 unk1, vm::cptr<char> str1);
-error_code sys_fs_mount(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk3, vm::cptr<char> str1, u32 str_len);
-error_code sys_fs_unmount(ppu_thread&, vm::cptr<char> path, s32 unk1, s32 unk2);
-error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len);
-error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32 len, vm::ptr<u64> out_len);
+error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, s32 unk1, vm::cptr<char> str1);
+error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk3, vm::cptr<char> str1, u32 str_len);
+error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 unk2);
+error_code sys_fs_get_mount_info_size(ppu_thread& ppu, vm::ptr<u64> len);
+error_code sys_fs_get_mount_info(ppu_thread& ppu, vm::ptr<CellFsMountInfo> info, u64 len, vm::ptr<u64> out_len);
