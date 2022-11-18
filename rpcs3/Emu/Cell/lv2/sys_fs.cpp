@@ -21,30 +21,46 @@
 LOG_CHANNEL(sys_fs);
 
 lv2_fs_mount_point g_mp_sys_no_device;
-lv2_fs_mount_point g_mp_sys_dev_root{"/", "CELL_FS_ADMINFS", "CELL_FS_ADMINFS:"};
-lv2_fs_mount_point g_mp_sys_app_home{"/app_home", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_host_root{"/host_root", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:/", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_flash{"/dev_flash", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH1", 512, 0x63E00, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_flash2{"/dev_flash2", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH2", 512, 0x8000, 8192, lv2_mp_flag::no_uid_gid}; // TODO confirm
-lv2_fs_mount_point g_mp_sys_dev_flash3{"/dev_flash3", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH3", 512, 0x400, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid}; // TODO confirm
-lv2_fs_mount_point g_mp_sys_dev_hdd0{"/dev_hdd0", "CELL_FS_UFS", "CELL_FS_UTILITY:HDD0", 512, 0x24FAEA98};
-lv2_fs_mount_point g_mp_sys_dev_hdd1{"/dev_hdd1", "CELL_FS_FAT", "CELL_FS_UTILITY:HDD1", 512, 0x3FFFF8, 32768, lv2_mp_flag::no_uid_gid + lv2_mp_flag::cache};
-lv2_fs_mount_point g_mp_sys_dev_bdvd{"/dev_bdvd", "CELL_FS_ISO9660", "CELL_FS_IOS:PATA0_BDVD_DRIVE", 2048, 0x4D955, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
-lv2_fs_mount_point g_mp_sys_dev_dvd{"/dev_ps2disc", "CELL_FS_ISO9660", "CELL_FS_IOS:PATA0_BDVD_DRIVE", 2048, 0x100, 32768, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_usb{"/dev_usb", "CELL_FS_FAT", "CELL_FS_IOS:USB_MASS_STORAGE", 512, 0x100, 4096, lv2_mp_flag::no_uid_gid};
-constexpr lv2_fs_mount_point* mp_array[]
+lv2_fs_mount_point g_mp_sys_dev_dvd{"/dev_ps2disc", "CELL_FS_ISO9660", "CELL_FS_IOS:PATA0_BDVD_DRIVE", 2048, 0x100, 32768, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_usb};
+lv2_fs_mount_point g_mp_sys_dev_bdvd{"/dev_bdvd", "CELL_FS_ISO9660", "CELL_FS_IOS:PATA0_BDVD_DRIVE", 2048, 0x4D955, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_dvd};
+lv2_fs_mount_point g_mp_sys_dev_hdd1{"/dev_hdd1", "CELL_FS_FAT", "CELL_FS_UTILITY:HDD1", 512, 0x3FFFF8, 32768, lv2_mp_flag::no_uid_gid + lv2_mp_flag::cache, &g_mp_sys_dev_bdvd};
+lv2_fs_mount_point g_mp_sys_dev_hdd0{"/dev_hdd0", "CELL_FS_UFS", "CELL_FS_UTILITY:HDD0", 512, 0x24FAEA98, 4096, {}, &g_mp_sys_dev_hdd1};
+lv2_fs_mount_point g_mp_sys_dev_flash3{"/dev_flash3", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH3", 512, 0x400, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_hdd0}; // TODO confirm
+lv2_fs_mount_point g_mp_sys_dev_flash2{"/dev_flash2", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH2", 512, 0x8000, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash3}; // TODO confirm
+lv2_fs_mount_point g_mp_sys_dev_flash{"/dev_flash", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH1", 512, 0x63E00, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash2};
+lv2_fs_mount_point g_mp_sys_host_root{"/host_root", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:/", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash};
+lv2_fs_mount_point g_mp_sys_app_home{"/app_home", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_host_root};
+lv2_fs_mount_point g_mp_sys_dev_root{"/", "CELL_FS_ADMINFS", "CELL_FS_ADMINFS:", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_app_home};
+
+struct mount_point_reset
 {
-	&g_mp_sys_dev_root,
-	&g_mp_sys_app_home,
-	&g_mp_sys_host_root,
-	&g_mp_sys_dev_flash,
-	&g_mp_sys_dev_flash2,
-	&g_mp_sys_dev_flash3,
-	&g_mp_sys_dev_hdd0,
-	&g_mp_sys_dev_hdd1,
-	&g_mp_sys_dev_bdvd,
-	&g_mp_sys_dev_dvd,
-	&g_mp_sys_dev_usb,
+	SAVESTATE_INIT_POS(49);
+
+	mount_point_reset() = default;
+
+	mount_point_reset(const mount_point_reset&) = delete;
+
+	mount_point_reset& operator =(const mount_point_reset&) = delete;
+
+	~mount_point_reset()
+	{
+		for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
+		{
+			if (mp == &g_mp_sys_dev_usb)
+			{
+				for (int i = 0; i < 8; i++)
+				{
+					lv2_fs_object::vfs_unmount(fmt::format("%s%03d", mp->root, i), true);
+				}
+			}
+			else
+			{
+				lv2_fs_object::vfs_unmount(mp->root, true);
+			}
+		}
+		g_fxo->get<mount_point_reset>(); // Register destructor
+	}
 };
 
 template<>
@@ -247,9 +263,64 @@ std::string lv2_fs_object::get_vfs(std::string_view filename)
 	return {};
 }
 
-s32 lv2_fs_object::get_mount_count()
+u64 lv2_fs_object::get_mount_count()
 {
-	return std::count_if(std::begin(mp_array), std::end(mp_array), [](lv2_fs_mount_point* mp){return mp != &g_mp_sys_dev_usb && mp->is_mounted == 1U;}) + std::popcount(g_mp_sys_dev_usb.is_mounted);
+	u64 count = 0;
+
+	for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
+	{
+		if (mp == &g_mp_sys_dev_usb)
+		{
+			for (int i = 0; i < 8; i++)
+			{
+				if (!vfs::get(fmt::format("%s%03d", mp->root, i)).empty())
+				{
+					count++;
+				}
+			}
+		}
+		else
+		{
+			if (!vfs::get(mp->root).empty())
+			{
+				count++;
+			}
+		}
+	}
+
+	return count;
+}
+
+bool lv2_fs_object::vfs_unmount(std::string_view vpath, bool no_error)
+{
+	const std::string local_path = vfs::get(vpath);
+
+	if (local_path.empty())
+	{
+		if (no_error)
+		{
+			return true;
+		}
+		else
+		{
+			sys_fs.error("\"%s\" is not mounted!", vpath);
+			return false;
+		}
+	}
+
+	if (fs::is_file(local_path))
+	{
+		if (fs::remove_file(local_path))
+		{
+			sys_fs.notice("Removed loop file \"%s\"", local_path);
+		}
+		else
+		{
+			sys_fs.error("Failed to remove loop file \"%s\"", local_path);
+		}
+	}
+
+	return vfs::unmount(vpath);
 }
 
 lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
@@ -2952,7 +3023,7 @@ error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 	return CELL_OK;
 }
 
-error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32 len, vm::ptr<u64> out_len)
+error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u64 len, vm::ptr<u64> out_len)
 {
 	sys_fs.trace("sys_fs_get_mount_info(info=*0x%x, len=0x%x, out_len=*0x%x)", info, len, out_len);
 
@@ -2961,49 +3032,53 @@ error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32
 		return CELL_EFAULT;
 	}
 
-	const u32 max_len = std::min<u32>(len, lv2_fs_object::get_mount_count());
-	*out_len = max_len;
-
 	struct mount_info
 	{
-		std::string path, filesystem, dev_name;
-		be_t<u32> unk1 = 0, unk2 = 0, unk3 = 0, unk4 = 0, unk5 = 0;
+		const std::string_view path, filesystem, dev_name;
+		const be_t<u32> unk1 = 0, unk2 = 0, unk3 = 0, unk4 = 0, unk5 = 0;
 	};
 
-	std::vector<mount_info> data;
+	u64 count = 0;
 
-	for (auto mp : mp_array)
+	auto push_info = [&](mount_info&& data)
 	{
-		if (mp->is_mounted == 0U)
-			continue;
+		if (count >= len)
+			return;
 
+		strcpy_trunc(info->mount_path, data.path);
+		strcpy_trunc(info->filesystem, data.filesystem);
+		strcpy_trunc(info->dev_name, data.dev_name);
+		std::memcpy(&info->unk1, &data.unk1, sizeof(be_t<u32>) * 5);
+
+		info++, count++;
+	};
+
+	for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
+	{
 		if (mp == &g_mp_sys_dev_usb)
 		{
 			for (int i = 0; i < 8; i++)
 			{
-				if ((mp->is_mounted >> i) & 1U)
+				if (!vfs::get(fmt::format("%s%03d", mp->root, i)).empty())
 				{
-					data.push_back(mount_info{.path = fmt::format("%s%03d", mp->root, i), .filesystem = mp->file_system.data(), .dev_name = fmt::format("%s%03d", mp->device, i)});
+					push_info(mount_info{.path = fmt::format("%s%03d", mp->root, i), .filesystem = mp->file_system, .dev_name = fmt::format("%s%03d", mp->device, i)});
 				}
 			}
 		}
-		else if (mp == &g_mp_sys_dev_root || mp == &g_mp_sys_dev_flash)
+		else if (!vfs::get(mp->root).empty())
 		{
-			data.push_back(mount_info{.path = mp->root.data(), .filesystem = mp->file_system.data(), .dev_name = mp->device.data(), .unk5 = 0x10000000});
-		}
-		else
-		{
-			data.push_back(mount_info{.path = mp->root.data(), .filesystem = mp->file_system.data(), .dev_name = mp->device.data()});
+			if (mp == &g_mp_sys_dev_root || mp == &g_mp_sys_dev_flash)
+			{
+				push_info(mount_info{.path = mp->root, .filesystem = mp->file_system, .dev_name = mp->device, .unk5 = 0x10000000});
+			}
+			else
+			{
+				push_info(mount_info{.path = mp->root, .filesystem = mp->file_system, .dev_name = mp->device});
+			}
 		}
 	}
 
-	for (u32 i = 0; i < max_len; info++, i++)
-	{
-		strcpy_trunc(info->mount_path, data[i].path);
-		strcpy_trunc(info->filesystem, data[i].filesystem);
-		strcpy_trunc(info->dev_name, data[i].dev_name);
-		std::memcpy(&info->unk1, &data[i].unk1, sizeof(be_t<u32>) * 5);
-	}
+	*out_len = count;
 
 	return CELL_OK;
 }
@@ -3116,31 +3191,8 @@ error_code sys_fs_unmount(ppu_thread&, vm::cptr<char> path, s32 unk1, s32 unk2)
 	const auto mp = lv2_fs_object::get_mp(vpath);
 	bool success = true;
 
-	auto vfs_unmount = [&vpath = vpath]()
-	{
-		const std::string local_path = vfs::get(vpath);
-		if (local_path.empty())
-		{
-			sys_fs.error("\"%s\" is not mounted!", vpath);
-			return false;
-		}
-		if (fs::is_file(local_path))
-		{
-			if (fs::remove_file(local_path))
-			{
-				sys_fs.notice("Removed loop file \"%s\"", local_path);
-			}
-			else
-			{
-				sys_fs.error("Failed to remove loop file \"%s\"", local_path);
-				return false;
-			}
-		}
-		return vfs::unmount(vpath);
-	};
-
 	if (mp == &g_mp_sys_dev_hdd1) // We are not supporting unmounting devices other than /dev_hdd1 via this syscall currently
-	    success = vfs_unmount();
+	    success = lv2_fs_object::vfs_unmount(vpath);
 
 	if (!success)
 		return CELL_EIO;
