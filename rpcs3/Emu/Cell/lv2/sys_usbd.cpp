@@ -21,6 +21,7 @@
 #include "Emu/Io/ghltar_config.h"
 #include "Emu/Io/Buzz.h"
 #include "Emu/Io/buzz_config.h"
+#include "Emu/Io/GameTablet.h"
 #include "Emu/Io/Turntable.h"
 #include "Emu/Io/turntable_config.h"
 #include "Emu/Io/RB3MidiKeyboard.h"
@@ -477,6 +478,12 @@ usb_handler_thread::usb_handler_thread()
 		// Since there can only be 7 pads connected on a PS3 the 8th player is currently not supported
 		sys_usbd.notice("Adding emulated Buzz! buzzer (5-7 players)");
 		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6, get_new_location()));
+	}
+
+	if (g_cfg.io.gametablet == gametablet_handler::enabled)
+	{
+		sys_usbd.notice("Adding emulated uDraw GameTablet");
+		usb_devices.push_back(std::make_shared<usb_device_gametablet>(get_new_location()));
 	}
 }
 

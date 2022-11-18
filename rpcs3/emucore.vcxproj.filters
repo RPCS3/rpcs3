@@ -924,6 +924,9 @@
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\GameTablet.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\GHLtar.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -2054,6 +2057,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_compile_notification.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\GameTablet.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\GHLtar.h">
       <Filter>Emu\Io</Filter>
