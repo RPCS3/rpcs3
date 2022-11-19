@@ -667,7 +667,7 @@ struct ppu_far_jumps_t
 					// NOTE: In order to clean up this information all calls must return in order
 					auto& saved_info = calls_info.emplace_back();
 					saved_info.cia = pc;
-					saved_info.saved_lr = std::exchange(ppu->lr, FIND_FUNC(ppu_return_from_far_jump));
+					saved_info.saved_lr = std::exchange(ppu->lr, g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(ppu_return_from_far_jump), true));
 					saved_info.saved_r2 = std::exchange(ppu->gpr[2], opd.rtoc);
 				}
 
@@ -1243,7 +1243,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			}
 
 			// Ignore HLE stop address
-			return addr == g_fxo->get<ppu_function_manager>().func_addr(1) + 4;
+			return addr == g_fxo->get<ppu_function_manager>().func_addr(1, true);
 		};
 
 		if (is_invalid(addr))
@@ -1921,7 +1921,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc)
 	interrupt_thread_executing = true;
 	cia = addr;
 	gpr[2] = rtoc;
-	lr = g_fxo->get<ppu_function_manager>().func_addr(1) + 4; // HLE stop address
+	lr = g_fxo->get<ppu_function_manager>().func_addr(1, true); // HLE stop address
 	current_function = nullptr;
 
 	if (std::exchange(loaded_from_savestate, false))

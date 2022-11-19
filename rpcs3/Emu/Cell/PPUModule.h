@@ -80,9 +80,9 @@ public:
 	std::unordered_map<u32, ppu_static_function, value_hash<u32>> functions{};
 	std::unordered_map<u32, ppu_static_variable, value_hash<u32>> variables{};
 
-public:
 	ppu_static_module(const char* name);
 
+public:
 	ppu_static_module(const char* name, void(*init)())
 		: ppu_static_module(name)
 	{
@@ -278,6 +278,7 @@ public:
 	static const ppu_static_module sys_libc;
 	static const ppu_static_module sys_lv2dbg;
 	static const ppu_static_module static_hle;
+	static const ppu_static_module hle_patches;
 
 private:
 	inline static std::unordered_map<std::string, ppu_static_module*> s_module_map;
