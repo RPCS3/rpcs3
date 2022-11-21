@@ -531,8 +531,9 @@ namespace glsl
 
 			// 8-bit rounding/quantization
 			{
-				const auto _255 = (props.supports_native_fp16) ? "f16vec4(255.)" : "vec4(255.)";
-				const auto _1_over_2 = (props.supports_native_fp16) ? "f16vec4(0.5)" : "vec4(0.5)";
+				const auto _16bit_outputs = (!props.fp32_outputs && props.supports_native_fp16);
+				const auto _255 = _16bit_outputs ? "f16vec4(255.)" : "vec4(255.)";
+				const auto _1_over_2 = _16bit_outputs ? "f16vec4(0.5)" : "vec4(0.5)";
 				OS << "#define round_to_8bit(v4) (floor(fma(v4, " << _255 << ", " << _1_over_2 << ")) / " << _255 << ")\n\n";
 			}
 
