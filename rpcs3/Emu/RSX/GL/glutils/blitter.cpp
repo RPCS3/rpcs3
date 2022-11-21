@@ -96,7 +96,18 @@ namespace gl
 
 		ensure(real_src->aspect() == real_dst->aspect());
 
-		if (src_rect.width() == dst_rect.width() && src_rect.height() == dst_rect.height() &&
+		if (xfer_info.flip_horizontal)
+		{
+			src_rect.flip_horizontal();
+		}
+
+		if (xfer_info.flip_vertical)
+		{
+			src_rect.flip_vertical();
+		}
+
+		if (src_rect.width() == dst_rect.width() &&
+			src_rect.height() == dst_rect.height() &&
 			!src_rect.is_flipped() && !dst_rect.is_flipped())
 		{
 			copy_image(cmd, real_src, real_dst, 0, 0, position3i{ src_rect.x1, src_rect.y1, 0 }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 });
@@ -136,16 +147,6 @@ namespace gl
 
 			gl::fbo::attachment dst_att{ blit_dst, static_cast<fbo::attachment::type>(attachment) };
 			dst_att = *real_dst;
-
-			if (xfer_info.flip_horizontal)
-			{
-				src_rect.flip_horizontal();
-			}
-
-			if (xfer_info.flip_vertical)
-			{
-				src_rect.flip_vertical();
-			}
 
 			blit_src.blit(blit_dst, src_rect, dst_rect, target, interp);
 
