@@ -705,8 +705,7 @@ namespace rsx
 			std::vector<u8> marker(range.length() + sizeof(overrun_cookie_value), 0);
 
 			// Tag end
-			u32* overrun_test_ptr = utils::bless<u32>(marker.data() + range.length());
-			*overrun_test_ptr = overrun_cookie_value;
+			write_to_ptr(marker, range.length(), overrun_cookie_value);
 
 			u32 removed_count = 0;
 
@@ -717,10 +716,10 @@ namespace rsx
 
 				while (length >= 8)
 				{
-					auto& value = *utils::bless<u64>(dst_ptr);
+					const u64 value = read_from_ptr<u64>(dst_ptr);
 					const u64 block_mask = ~value;              // If the value is not all 1s, set valid to true
 					mask |= block_mask;
-					value = umax;
+					write_to_ptr<u64>(dst_ptr, umax);
 
 					dst_ptr += 8;
 					length -= 8;
@@ -728,10 +727,10 @@ namespace rsx
 
 				if (length >= 4)
 				{
-					auto& value = *utils::bless<u32>(dst_ptr);
+					const u32 value = read_from_ptr<u32>(dst_ptr);
 					const u32 block_mask = ~value;
 					mask |= block_mask;
-					value = umax;
+					write_to_ptr<u32>(dst_ptr, umax);
 
 					dst_ptr += 4;
 					length -= 4;
@@ -739,10 +738,10 @@ namespace rsx
 
 				if (length >= 2)
 				{
-					auto& value = *utils::bless<u16>(dst_ptr);
+					const u16 value = read_from_ptr<u16>(dst_ptr);
 					const u16 block_mask = ~value;
 					mask |= block_mask;
-					value = umax;
+					write_to_ptr<u16>(dst_ptr, umax);
 
 					dst_ptr += 2;
 					length -= 2;
@@ -750,10 +749,10 @@ namespace rsx
 
 				if (length)
 				{
-					auto& value = *dst_ptr;
+					const u8 value = *dst_ptr;
 					const u8 block_mask = ~value;
 					mask |= block_mask;
-					value = umax;
+					*dst_ptr = umax;
 				}
 
 				return !!mask;
@@ -824,7 +823,7 @@ namespace rsx
 			rsx_log.notice("rsx::surface_cache::check_for_duplicates_fallback analysed %u overlapping sections and removed %u", ::size32(sections), removed_count);
 
 			// Verify no OOB
-			ensure(*overrun_test_ptr == overrun_cookie_value);
+			ensure(read_from_ptr<u32>(marker, range.length()) == overrun_cookie_value);
 		}
 
 	protected:

@@ -92,10 +92,10 @@ void sky_portal::get_status(u8* reply_buf)
 	}
 
 	std::memset(reply_buf, 0, 0x20);
-	reply_buf[0]                               = 0x53;
-	*utils::bless<le_t<u16>>(reply_buf + 1)    = status;
-	reply_buf[5]                               = interrupt_counter++;
-	reply_buf[6]                               = 0x01;
+	reply_buf[0] = 0x53;
+	write_to_ptr<le_t<u16>>(reply_buf, 1, status);
+	reply_buf[5] = interrupt_counter++;
+	reply_buf[6] = 0x01;
 }
 
 void sky_portal::query_block(u8 sky_num, u8 block, u8* reply_buf)
@@ -159,7 +159,7 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 {
 	std::lock_guard lock(sky_mutex);
 
-	u32 sky_serial = *utils::bless<le_t<u32>>(buf);
+	u32 sky_serial = read_from_ptr<le_t<u32>>(buf);
 	u8 found_slot  = 0xFF;
 
 	// mimics spot retaining on the portal

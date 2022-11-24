@@ -1184,6 +1184,40 @@ namespace stx
 	};
 }
 
+// Read object of type T from raw pointer, array, string, vector, or any contiguous container
+template <typename T, typename U>
+constexpr T read_from_ptr(U&& array, usz pos = 0)
+{
+	// TODO: ensure array element types are trivial
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	std::decay_t<decltype(array[0])> buf[sizeof(T) / sizeof(array[0])];
+	if (!std::is_constant_evaluated())
+		std::memcpy(+buf, &array[pos], sizeof(buf));
+	else
+		for (usz i = 0; i < pos; buf[i] = array[pos + i], i++);
+	return std::bit_cast<T>(buf);
+}
+
+template <typename T, typename U>
+constexpr void write_to_ptr(U&& array, usz pos, const T& value)
+{
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	if (!std::is_constant_evaluated())
+		std::memcpy(&array[pos], &value, sizeof(value));
+	else
+		ensure(!"Unimplemented");
+}
+
+template <typename T, typename U>
+constexpr void write_to_ptr(U&& array, const T& value)
+{
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	if (!std::is_constant_evaluated())
+		std::memcpy(&array[0], &value, sizeof(value));
+	else
+		ensure(!"Unimplemented");
+}
+
 namespace utils
 {
 	struct serial;

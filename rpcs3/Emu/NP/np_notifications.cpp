@@ -206,10 +206,10 @@ namespace np
 			return;
 		}
 
-		const u64 room_id   = reinterpret_cast<le_t<u64>&>(data[0]);
-		const u16 member_id = reinterpret_cast<le_t<u16>&>(data[8]);
-		const u16 port_p2p  = reinterpret_cast<be_t<u16>&>(data[10]);
-		const u32 addr_p2p  = reinterpret_cast<le_t<u32>&>(data[12]);
+		const u64 room_id = read_from_ptr<le_t<u64>>(data);
+		const u16 member_id = read_from_ptr<le_t<u16>>(data, 8);
+		const u16 port_p2p = read_from_ptr<be_t<u16>>(data, 10);
+		const u32 addr_p2p = read_from_ptr<le_t<u32>>(data, 12);
 
 		rpcn_log.notice("Received notification to connect to member(%d) of room(%d): %s:%d", member_id, room_id, ip_to_string(addr_p2p), port_p2p);
 
