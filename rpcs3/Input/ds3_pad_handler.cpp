@@ -468,14 +468,14 @@ void ds3_pad_handler::get_extended_info(const pad_ensemble& binding)
 
 #ifdef _WIN32
 	// Official Sony Windows DS3 driver seems to do the same modification of this value as the ps3
-	pad->m_sensors[0].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[41 + DS3_HID_OFFSET]);
+	pad->m_sensors[0].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 41 + DS3_HID_OFFSET);
 #else
 	// When getting raw values from the device this adjustement is needed
-	pad->m_sensors[0].m_value = 512 - (*utils::bless<le_t<u16, 1>>(&ds3dev->padData[41]) - 512);
+	pad->m_sensors[0].m_value = 512 - (read_from_ptr<le_t<u16>>(ds3dev->padData, 41 + DS3_HID_OFFSET) - 512);
 #endif
-	pad->m_sensors[1].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[45 + DS3_HID_OFFSET]);
-	pad->m_sensors[2].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[43 + DS3_HID_OFFSET]);
-	pad->m_sensors[3].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[47 + DS3_HID_OFFSET]);
+	pad->m_sensors[1].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 45 + DS3_HID_OFFSET);
+	pad->m_sensors[2].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 43 + DS3_HID_OFFSET);
+	pad->m_sensors[3].m_value = read_from_ptr<le_t<u16>>(ds3dev->padData, 47 + DS3_HID_OFFSET);
 
 	// Those are formulas used to adjust sensor values in sys_hid code but I couldn't find all the vars.
 	//auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16

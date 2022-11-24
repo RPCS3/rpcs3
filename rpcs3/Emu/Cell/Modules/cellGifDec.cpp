@@ -296,8 +296,8 @@ error_code cellGifDecReadHeader(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStrea
 	default: break; // TODO
 	}
 
-	if (*utils::bless<be_t<u32>>(buffer + 0) != 0x47494638u ||
-		(*utils::bless<le_t<u16>>(buffer + 4) != 0x6139u && *utils::bless<le_t<u16>>(buffer + 4) != 0x6137u)) // Error: The first 6 bytes are not a valid GIF signature
+	if (read_from_ptr<be_t<u32>>(buffer + 0) != 0x47494638u ||
+		(read_from_ptr<le_t<u16>>(buffer + 4) != 0x6139u && read_from_ptr<le_t<u16>>(buffer + 4) != 0x6137u)) // Error: The first 6 bytes are not a valid GIF signature
 	{
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT; // Surprisingly there is no error code related with headerss
 	}
