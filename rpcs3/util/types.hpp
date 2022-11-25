@@ -1218,6 +1218,113 @@ constexpr void write_to_ptr(U&& array, const T& value)
 		ensure(!"Unimplemented");
 }
 
+constexpr struct aref_tag_t{} aref_tag{};
+
+template <typename T, typename U>
+class aref final
+{
+	U* m_ptr;
+
+	static_assert(sizeof(std::decay_t<T>) % sizeof(U) == 0);
+
+public:
+	aref() = delete;
+
+	constexpr aref(const aref&) = default;
+
+	explicit constexpr aref(aref_tag_t, U* ptr)
+		: m_ptr(ptr)
+	{
+	}
+
+	constexpr T value() const
+	{
+		return read_from_ptr<T>(m_ptr);
+	}
+
+	constexpr operator T() const
+	{
+		return read_from_ptr<T>(m_ptr);
+	}
+
+	aref& operator=(const aref&) = delete;
+
+	constexpr aref& operator=(const T& value) const
+	{
+		write_to_ptr<T>(m_ptr, value);
+		return *this;
+	}
+
+	template <typename MT, typename T2> requires (std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
+	aref<MT, U> ref(MT T2::*const mptr) const
+	{
+		return aref<MT, U>(aref_tag, m_ptr + offset32(mptr) / sizeof(U));
+	}
+
+	template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>> requires (std::is_convertible_v<const volatile T*, const volatile T2*>) && PtrSame<T, T2>
+	aref<ET, U> ref(MT T2::*const mptr, usz index) const
+	{
+		return aref<ET, U>(aref_tag, m_ptr + offset32(mptr) / sizeof(U) + sizeof(ET) / sizeof(U) * index);
+	}
+};
+
+template <typename T, typename U>
+class aref<T[], U>
+{
+	U* m_ptr;
+
+	static_assert(sizeof(std::decay_t<T>) % sizeof(U) == 0);
+
+public:
+	aref() = delete;
+
+	constexpr aref(const aref&) = default;
+
+	explicit constexpr aref(aref_tag_t, U* ptr)
+		: m_ptr(ptr)
+	{
+	}
+
+	aref& operator=(const aref&) = delete;
+
+	constexpr aref<T, U> operator[](usz index) const
+	{
+		return aref<T, U>(aref_tag, m_ptr + index * (sizeof(T) / sizeof(U)));
+	}
+};
+
+template <typename T, typename U, std::size_t N>
+class aref<T[N], U>
+{
+	U* m_ptr;
+
+	static_assert(sizeof(std::decay_t<T>) % sizeof(U) == 0);
+
+public:
+	aref() = delete;
+
+	constexpr aref(const aref&) = default;
+
+	explicit constexpr aref(aref_tag_t, U* ptr)
+		: m_ptr(ptr)
+	{
+	}
+
+	aref& operator=(const aref&) = delete;
+
+	constexpr aref<T, U> operator[](usz index) const
+	{
+		return aref<T, U>(aref_tag, m_ptr + index * (sizeof(T) / sizeof(U)));
+	}
+};
+
+// Reference object of type T, see read_from_ptr
+template <typename T, typename U>
+constexpr auto ref_ptr(U&& array, usz pos = 0) -> aref<T, std::decay_t<decltype(array[0])>>
+{
+	return aref<T, std::decay_t<decltype(array[0])>>(aref_tag, &array[pos]);
+}
+
 namespace utils
 {
 	struct serial;
