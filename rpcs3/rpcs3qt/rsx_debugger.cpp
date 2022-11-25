@@ -498,7 +498,7 @@ void rsx_debugger::OnClickDrawCalls()
 	//m_list_index_buffer->insertColumn(0, "Index", 0, 700);
 	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u16)
 	{
-		u16 *index_buffer = reinterpret_cast<u16*>(frame_debug.draw_calls[draw_id].index.data());
+		auto index_buffer = ref_ptr<u16[]>(frame_debug.draw_calls[draw_id].index);
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
 		{
 			m_list_index_buffer->insertItem(i, qstr(std::to_string(index_buffer[i])));
@@ -506,7 +506,7 @@ void rsx_debugger::OnClickDrawCalls()
 	}
 	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u32)
 	{
-		u32 *index_buffer = reinterpret_cast<u32*>(frame_debug.draw_calls[draw_id].index.data());
+		auto index_buffer = ref_ptr<u32[]>(frame_debug.draw_calls[draw_id].index);
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
 		{
 			m_list_index_buffer->insertItem(i, qstr(std::to_string(index_buffer[i])));
