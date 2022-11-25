@@ -495,15 +495,24 @@ namespace vm
 			{
 				to_clear = for_all_range_locks(to_clear, [&](u64 addr2, u32 size2)
 				{
-					// TODO (currently not possible): handle 2 64K pages (inverse range), or more pages
-					if (u64 is_shared = g_shmem[addr2 >> 16]) [[unlikely]]
+					// Split and check every 64K page separately
+					for (u64 hi = addr2 >> 16, max = (addr2 + size2 - 1) >> 16; hi <= max; hi++)
 					{
-						addr2 = static_cast<u16>(addr2) | is_shared;
-					}
+						u64 addr3 = addr2;
+						u32 size3 = std::min<u64>(addr2 + size2, utils::align(addr2, 0x10000)) - addr2;
 
-					if (point - (addr2 / 128) <= (addr2 + size2 - 1) / 128 - (addr2 / 128)) [[unlikely]]
-					{
-						return 1;
+						if (u64 is_shared = g_shmem[hi]) [[unlikely]]
+						{
+							addr3 = static_cast<u16>(addr2) | is_shared;
+						}
+
+						if (point - (addr3 / 128) <= (addr3 + size3 - 1) / 128 - (addr3 / 128)) [[unlikely]]
+						{
+							return 1;
+						}
+
+						addr2 += size3;
+						size2 -= size3;
 					}
 
 					return 0;
@@ -1919,10 +1928,8 @@ namespace vm
 		return _map(addr, area_size, flags);
 	}
 
-	bool try_access(u32 addr, void* ptr, u32 size, bool is_write)
+	static bool try_access_internal(u32 addr, void* ptr, u32 size, bool is_write)
 	{
-		vm::writer_lock lock;
-
 		if (vm::check_addr(addr, is_write ? page_writable : page_readable, size))
 		{
 			void* src = vm::g_sudo_addr + addr;
@@ -1953,6 +1960,79 @@ namespace vm
 		}
 
 		return false;
+	}
+
+	bool try_access(u32 begin, void* ptr, u32 size, bool is_write)
+	{
+		auto* range_lock = alloc_range_lock(); // Released at the end of function
+
+		range_lock->store(begin | (u64{size} << 32));
+
+		for (u64 i = 0;; i++)
+		{
+			const u64 lock_val = g_range_lock.load();
+			const u64 is_share = g_shmem[begin >> 16].load();
+
+			u64 lock_addr = static_cast<u32>(lock_val); // -> u64
+			u32 lock_size = static_cast<u32>(lock_val << range_bits >> (range_bits + 32));
+
+			u64 addr = begin;
+
+			if ((lock_val & range_full_mask) == range_locked) [[likely]]
+			{
+				lock_size = 128;
+
+				if (is_share)
+				{
+					addr = static_cast<u16>(addr) | is_share;
+					lock_addr = lock_val;
+				}
+			}
+
+			if (addr + size <= lock_addr || addr >= lock_addr + lock_size) [[likely]]
+			{
+				if (vm::check_addr(begin, is_write ? page_writable : page_readable, size)) [[likely]]
+				{
+					const u64 new_lock_val = g_range_lock.load();
+
+					if (!new_lock_val || new_lock_val == lock_val) [[likely]]
+					{
+						break;
+					}
+				}
+				else
+				{
+					free_range_lock(range_lock);
+					return false;
+				}
+			}
+			else if (lock_val & range_readable && lock_val & range_writable)
+			{
+				// Probably a safe case of page protection change
+				break;
+			}
+			else if (!is_write && lock_val & range_readable)
+			{
+				// Same but for read-only access
+				break;
+			}
+			else if ((lock_val & range_full_mask) != range_locked)
+			{
+				free_range_lock(range_lock);
+				return false;
+			}
+
+			// Wait a bit before accessing global lock
+			range_lock->release(0);
+
+			busy_wait(200);
+
+			range_lock->store(begin | (u64{size} << 32));
+		}
+
+		const bool result = try_access_internal(begin, ptr, size, is_write);
+		free_range_lock(range_lock);
+		return result;
 	}
 
 	inline namespace ps3_
