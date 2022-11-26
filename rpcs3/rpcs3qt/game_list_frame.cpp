@@ -449,6 +449,11 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_notes.clear();
 		m_games.pop_all();
 
+		if (Emu.IsStopped())
+		{
+			Emu.AddGamesFromDir(fs::get_config_dir() + "/games");
+		}
+
 		const std::string _hdd =  rpcs3::utils::get_hdd0_dir();
 
 		const auto add_disc_dir = [&](const std::string& path)

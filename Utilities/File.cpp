@@ -437,6 +437,9 @@ std::string fs::get_parent_dir(std::string_view path, u32 levels)
 
 bool fs::stat(const std::string& path, stat_t& info)
 {
+	// Ensure consistent information on failure
+	info = {};
+
 	if (auto device = get_virtual_device(path))
 	{
 		return device->stat(path, info);

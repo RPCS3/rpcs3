@@ -2871,27 +2871,11 @@ Add valid disc games to gamelist (games.yml)
 void main_window::AddGamesFromDir(const QString& path)
 {
 	if (!QFileInfo(path).isDir())
+	{
 		return;
-
-	const std::string s_path = sstr(path);
-
-	// search dropped path first or else the direct parent to an elf is wrongly skipped
-	if (const auto error = Emu.BootGame(s_path, "", false, true); error == game_boot_result::no_errors)
-	{
-		gui_log.notice("Returned from game addition by drag and drop: %s", s_path);
 	}
 
-	// search direct subdirectories, that way we can drop one folder containing all games
-	QDirIterator dir_iter(path, QDir::Dirs | QDir::NoDotAndDotDot);
-	while (dir_iter.hasNext())
-	{
-		const std::string dir_path = sstr(dir_iter.next());
-
-		if (const auto error = Emu.BootGame(dir_path, "", false, true); error == game_boot_result::no_errors)
-		{
-			gui_log.notice("Returned from game addition by drag and drop: %s", dir_path);
-		}
-	}
+	Emu.AddGamesFromDir(sstr(path));
 }
 
 /**

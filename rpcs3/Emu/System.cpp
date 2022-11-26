@@ -374,7 +374,10 @@ void Emulator::Init(bool add_only)
 		if (!fs::create_path(path))
 		{
 			sys_log.fatal("Failed to create path: %s (%s)", path, fs::g_tls_error);
+			return false;
 		}
+
+		return true;
 	};
 
 	const std::string save_path = dev_hdd0 + "home/" + m_usr + "/savedata/";
@@ -418,6 +421,11 @@ void Emulator::Init(bool add_only)
 	make_path_verbose(fs::get_config_dir() + "captures/");
 	make_path_verbose(fs::get_config_dir() + "sounds/");
 	make_path_verbose(patch_engine::get_patches_path());
+
+	if (const std::string games_common = fs::get_config_dir() + "/games"; make_path_verbose(games_common))
+	{
+		fs::write_file(user_path + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
+	}
 
 	if (add_only)
 	{
@@ -1346,7 +1354,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		// Detect boot location
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
-		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 		const bool from_hdd0_game   = IsPathInsideDir(m_path, hdd0_game);
 		const bool from_dev_flash   = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
 
@@ -1372,6 +1379,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				// Booting disc game from wrong location
 				sys_log.error("Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
 
+				const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 				const std::string dst_dir = hdd0_disc + sfb_dir.substr(hdd0_game.size());
 
 				// Move and retry from correct location
@@ -2933,6 +2941,61 @@ std::set<std::string> Emulator::GetGameDirs() const
 	}
 
 	return dirs;
+}
+
+void Emulator::AddGamesFromDir(std::string path)
+{
+	if (!IsStopped())
+		return;
+
+	const std::string games_yml = fs::get_cache_dir() + "/games.yml";
+
+	std::string content_before, content_after;
+
+	if (fs::file fd{games_yml})
+	{
+		content_before = fd.to_string();
+	}
+
+	// search dropped path first or else the direct parent to an elf is wrongly skipped
+	if (const auto error = BootGame(path, "", false, true); error == game_boot_result::no_errors)
+	{
+		if (fs::file fd{games_yml, fs::read + fs::isfile})
+		{
+			content_after = fd.to_string();
+		}
+
+		if (content_before != content_after)
+		{
+			sys_log.notice("Registered game directory: %s", path);
+			content_before = content_after;
+		}
+	}
+
+	// search direct subdirectories, that way we can drop one folder containing all games
+	for (auto&& dir_entry : fs::dir(path))
+	{
+		if (!dir_entry.is_directory || dir_entry.name == "." || dir_entry.name == "..")
+		{
+			continue;
+		}
+
+		const std::string dir_path = path + '/' + dir_entry.name;
+
+		if (const auto error = BootGame(dir_path, "", false, true); error == game_boot_result::no_errors)
+		{
+			if (fs::file fd{games_yml, fs::read + fs::isfile})
+			{
+				content_after = fd.to_string();
+			}
+
+			if (content_before != content_after)
+			{
+				sys_log.notice("Registered game directory: %s", dir_path);
+				content_before = content_after;
+			}
+		}
+	}
 }
 
 bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
