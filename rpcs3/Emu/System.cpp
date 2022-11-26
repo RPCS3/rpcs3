@@ -2751,10 +2751,15 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	return rpcs3::get_formatted_title(title_data);
 }
 
-s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* sup, const u64* args)
+s32 error_code::error_report(s32 result, const logs::message* channel, const char* fmt, const fmt_type_info* sup, const u64* args)
 {
-	static thread_local std::unordered_map<std::string, usz> g_tls_error_stats;
 	static thread_local std::string g_tls_error_str;
+	static thread_local std::unordered_map<std::string, usz> g_tls_error_stats;
+
+	if (!channel)
+	{
+		channel = &sys_log.error;
+	}
 
 	if (!sup && !args)
 	{
@@ -2765,7 +2770,7 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 			{
 				if (pair.second > 3)
 				{
-					sys_log.error("Stat: %s [x%u]", pair.first, pair.second);
+					channel->operator()("Stat: %s [x%u]", pair.first, pair.second);
 				}
 			}
 
@@ -2776,7 +2781,6 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 
 	ensure(fmt);
 
-	logs::channel* channel = &sys_log;
 	const char* func = "Unknown function";
 
 	if (auto ppu = get_current_cpu_thread<ppu_thread>())
@@ -2789,6 +2793,7 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 
 	// Format log message (use preallocated buffer)
 	g_tls_error_str.clear();
+
 	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x", func, result);
 
 	// Add spacer between error and fmt if necessary
@@ -2804,10 +2809,10 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 		if (!g_tls_error_stats.empty())
 		{
 			// Report and clean error state
-			error_report(0, nullptr, nullptr, nullptr);
+			error_report(0, nullptr, nullptr, nullptr, nullptr);
 		}
 
-		channel->error("%s", g_tls_error_str);
+		channel->operator()("%s", g_tls_error_str);
 	}
 	else
 	{
@@ -2815,7 +2820,7 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 
 		if (stat <= 3)
 		{
-			channel->error("%s [%u]", g_tls_error_str, stat);
+			channel->operator()("%s [%u]", g_tls_error_str, stat);
 		}
 	}
 

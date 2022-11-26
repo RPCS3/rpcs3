@@ -945,7 +945,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 			return not_an_error(CELL_EEXIST);
 		}
 
-		return {error, path};
+		return {lv2_fs_object::get_mp(vpath) == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, error, path};
 	}
 
 	if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&ppath = ppath, &file = file, mode, flags, &real = real, &type = type]() -> std::shared_ptr<lv2_file>
@@ -1246,7 +1246,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		{
 			if (ext.empty())
 			{
-				return {CELL_ENOENT, path};
+				return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 			}
 
 			break;
@@ -1435,7 +1435,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 				break;
 			}
 
-			return {CELL_ENOENT, path};
+			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 		}
 		default:
 		{
@@ -1563,8 +1563,14 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
-		case fs::error::noent: return {CELL_ENOENT, path};
-		case fs::error::exist: return {CELL_EEXIST, path};
+		case fs::error::noent:
+		{
+			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
+		}
+		case fs::error::exist:
+		{
+			return {sys_fs.warning, CELL_EEXIST, path};
+		}
 		default: sys_fs.error("sys_fs_mkdir(): unknown error %s", error);
 		}
 
@@ -1737,7 +1743,10 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
-		case fs::error::noent: return {CELL_ENOENT, path};
+		case fs::error::noent:
+		{
+			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
+		}
 		default: sys_fs.error("sys_fs_unlink(): unknown error %s", error);
 		}
 
@@ -2690,7 +2699,10 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
-		case fs::error::noent: return {CELL_ENOENT, path};
+		case fs::error::noent:
+		{
+			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
+		}
 		default: sys_fs.error("sys_fs_truncate(): unknown error %s", error);
 		}
 
@@ -2890,7 +2902,10 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 	{
 		switch (auto error = fs::g_tls_error)
 		{
-		case fs::error::noent: return {CELL_ENOENT, path};
+		case fs::error::noent:
+		{
+			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
+		}
 		default: sys_fs.error("sys_fs_utime(): unknown error %s", error);
 		}
 

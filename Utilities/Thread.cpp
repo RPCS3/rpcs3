@@ -2065,7 +2065,7 @@ void thread_base::set_name(std::string name)
 u64 thread_base::finalize(thread_state result_state) noexcept
 {
 	// Report pending errors
-	error_code::error_report(0, 0, 0, 0);
+	error_code::error_report(0, nullptr, nullptr, nullptr, nullptr);
 
 #ifdef _WIN32
 	static thread_local ULONG64 tls_cycles{};
