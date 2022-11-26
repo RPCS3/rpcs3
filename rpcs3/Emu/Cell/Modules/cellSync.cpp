@@ -38,11 +38,11 @@ void fmt_class_string<CellSyncError>::format(std::string& out, u64 arg)
 	});
 }
 
-error_code cellSyncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
+error_code cellSyncMutexInitialize(vm::ref<CellSyncMutex> mutex)
 {
 	cellSync.trace("cellSyncMutexInitialize(mutex=*0x%x)", mutex);
 
-	if (!mutex) [[unlikely]]
+	if (!mutex.addr()) [[unlikely]]
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -52,16 +52,16 @@ error_code cellSyncMutexInitialize(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	mutex->ctrl.exchange({0, 0});
+	mutex.ref(&CellSyncMutex::ctrl).exchange({0, 0});
 
 	return CELL_OK;
 }
 
-error_code cellSyncMutexLock(ppu_thread& ppu, vm::ptr<CellSyncMutex> mutex)
+error_code cellSyncMutexLock(ppu_thread& ppu, vm::ref<CellSyncMutex> mutex)
 {
 	cellSync.trace("cellSyncMutexLock(mutex=*0x%x)", mutex);
 
-	if (!mutex) [[unlikely]]
+	if (!mutex.addr()) [[unlikely]]
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -71,11 +71,13 @@ error_code cellSyncMutexLock(ppu_thread& ppu, vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
+	const vm::Ref auto ctrl = mutex.ref(&CellSyncMutex::ctrl);
+
 	// Increase acq value and remember its old value
-	const auto order = mutex->ctrl.atomic_op(&CellSyncMutex::Counter::lock_begin);
+	const auto order = ctrl.atomic_op(&CellSyncMutex::Counter::lock_begin);
 
 	// Wait until rel value is equal to old acq value
-	while (mutex->ctrl.load().rel != order)
+	while (ctrl.load().rel != order)
 	{
 		if (ppu.test_stopped())
 		{
@@ -87,11 +89,11 @@ error_code cellSyncMutexLock(ppu_thread& ppu, vm::ptr<CellSyncMutex> mutex)
 	return CELL_OK;
 }
 
-error_code cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
+error_code cellSyncMutexTryLock(vm::ref<CellSyncMutex> mutex)
 {
 	cellSync.trace("cellSyncMutexTryLock(mutex=*0x%x)", mutex);
 
-	if (!mutex) [[unlikely]]
+	if (!mutex.addr()) [[unlikely]]
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -101,7 +103,7 @@ error_code cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	if (!mutex->ctrl.atomic_op(&CellSyncMutex::Counter::try_lock))
+	if (!mutex.ref(&CellSyncMutex::ctrl).atomic_op(&CellSyncMutex::Counter::try_lock))
 	{
 		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
@@ -109,11 +111,11 @@ error_code cellSyncMutexTryLock(vm::ptr<CellSyncMutex> mutex)
 	return CELL_OK;
 }
 
-error_code cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
+error_code cellSyncMutexUnlock(vm::ref<CellSyncMutex> mutex)
 {
 	cellSync.trace("cellSyncMutexUnlock(mutex=*0x%x)", mutex);
 
-	if (!mutex) [[unlikely]]
+	if (!mutex.addr()) [[unlikely]]
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -123,16 +125,16 @@ error_code cellSyncMutexUnlock(vm::ptr<CellSyncMutex> mutex)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	mutex->ctrl.atomic_op(&CellSyncMutex::Counter::unlock);
+	mutex.ref(&CellSyncMutex::ctrl).atomic_op(&CellSyncMutex::Counter::unlock);
 
 	return CELL_OK;
 }
 
-error_code cellSyncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total_count)
+error_code cellSyncBarrierInitialize(vm::ref<CellSyncBarrier> barrier, u16 total_count)
 {
 	cellSync.trace("cellSyncBarrierInitialize(barrier=*0x%x, total_count=%d)", barrier, total_count);
 
-	if (!barrier) [[unlikely]]
+	if (!barrier.addr()) [[unlikely]]
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -148,16 +150,16 @@ error_code cellSyncBarrierInitialize(vm::ptr<CellSyncBarrier> barrier, u16 total
 	}
 
 	// clear current value, write total_count and sync
-	barrier->ctrl.exchange({0, total_count});
+	barrier.ref(&CellSyncBarrier::ctrl).exchange({0, total_count});
 
 	return CELL_OK;
 }
 
-error_code cellSyncBarrierNotify(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier)
+error_code cellSyncBarrierNotify(ppu_thread& ppu, vm::ref<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierNotify(barrier=*0x%x)", barrier);
 
-	if (!barrier) [[unlikely]]
+	if (!barrier.addr()) [[unlikely]]
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -167,7 +169,7 @@ error_code cellSyncBarrierNotify(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barri
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	while (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_notify))
+	while (!barrier.ref(&CellSyncBarrier::ctrl).atomic_op(&CellSyncBarrier::try_notify))
 	{
 		if (ppu.test_stopped())
 		{
@@ -178,11 +180,11 @@ error_code cellSyncBarrierNotify(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barri
 	return CELL_OK;
 }
 
-error_code cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
+error_code cellSyncBarrierTryNotify(vm::ref<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierTryNotify(barrier=*0x%x)", barrier);
 
-	if (!barrier) [[unlikely]]
+	if (!barrier.addr()) [[unlikely]]
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -194,7 +196,7 @@ error_code cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 
 	atomic_fence_acq_rel();
 
-	if (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_notify))
+	if (!barrier.ref(&CellSyncBarrier::ctrl).atomic_op(&CellSyncBarrier::try_notify))
 	{
 		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}
@@ -202,11 +204,11 @@ error_code cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 	return CELL_OK;
 }
 
-error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier)
+error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ref<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierWait(barrier=*0x%x)", barrier);
 
-	if (!barrier) [[unlikely]]
+	if (!barrier.addr()) [[unlikely]]
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -218,7 +220,7 @@ error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier
 
 	atomic_fence_acq_rel();
 
-	while (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_wait))
+	while (!barrier.ref(&CellSyncBarrier::ctrl).atomic_op(&CellSyncBarrier::try_wait))
 	{
 		if (ppu.test_stopped())
 		{
@@ -229,11 +231,11 @@ error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier
 	return CELL_OK;
 }
 
-error_code cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
+error_code cellSyncBarrierTryWait(vm::ref<CellSyncBarrier> barrier)
 {
 	cellSync.trace("cellSyncBarrierTryWait(barrier=*0x%x)", barrier);
 
-	if (!barrier) [[unlikely]]
+	if (!barrier.addr()) [[unlikely]]
 	{
 		return CELL_SYNC_ERROR_NULL_POINTER;
 	}
@@ -245,7 +247,7 @@ error_code cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 
 	atomic_fence_acq_rel();
 
-	if (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_wait))
+	if (!barrier.ref(&CellSyncBarrier::ctrl).atomic_op(&CellSyncBarrier::try_wait))
 	{
 		return not_an_error(CELL_SYNC_ERROR_BUSY);
 	}

@@ -1256,7 +1256,7 @@ s32 UTF8toBIG5()
 
 s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8, vm::ref<s32> utf8_len)
 {
-	cellL10n.error("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len.addr(), utf8, utf8_len.addr());
+	cellL10n.error("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
 
 	const u32 max_len = utf8_len; utf8_len = 0;
 
