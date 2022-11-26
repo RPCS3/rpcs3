@@ -961,6 +961,21 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				m_path = rpcs3::utils::get_hdd0_dir();
 				m_path += std::string_view(argv[0]).substr(9);
+
+				constexpr auto game0_path = "/dev_hdd0/game/"sv;
+
+				if (argv[0].starts_with(game0_path) && !fs::is_file(vfs::get(argv[0])))
+				{
+					std::string title_id = argv[0].substr(game0_path.size());
+					title_id = title_id.substr(0, title_id.find_last_not_of('/'));
+
+					// Try to load game directory from list if available
+					if (auto node = (title_id.empty() ? YAML::Node{} : games[title_id]))
+					{
+						disc = node.Scalar();
+						m_path = disc + argv[0].substr(game0_path.size() + title_id.size());
+					}
+				}
 			}
 			else if (argv[0].starts_with("/dev_flash"sv))
 			{
@@ -1482,6 +1497,23 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
 			// Don't need /dev_bdvd
+
+			if (!m_title_id.empty() && !from_hdd0_game && m_cat == "HG")
+			{
+				// Add HG games not in HDD0 to games.yml
+				games[m_title_id] = m_sfo_dir;
+				YAML::Emitter out;
+				out << games;
+
+				fs::pending_file temp(fs::get_config_dir() + "/games.yml");
+
+				if (!temp.file || temp.file.write(out.c_str(), out.size()), !temp.commit())
+				{
+					sys_log.error("Failed to save HG game location of title '%s' (%s)", m_title_id, fs::g_tls_error);
+				}
+
+				vfs::mount("/dev_hdd0/game/" + m_title_id, m_sfo_dir + '/');
+			}
 		}
 		else if (m_cat == "DG" && from_hdd0_game && disc.empty())
 		{
@@ -1810,6 +1842,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					// Firmware executables
 					argv[0] = "/dev_flash" + resolved_path.substr(GetCallbacks().resolve_path(g_cfg_vfs.get_dev_flash()).size());
 					m_dir = fs::get_parent_dir(argv[0]) + '/';
+				}
+				else if (!m_title_id.empty() && m_cat == "HG")
+				{
+					m_dir = "/dev_hdd0/game/" + m_title_id + '/';
+					argv[0] = m_dir + unescape(resolved_path.substr(GetCallbacks().resolve_path(m_sfo_dir).size()));
+					sys_log.notice("Boot path: %s", m_dir);
 				}
 				else if (g_cfg.vfs.host_root)
 				{
