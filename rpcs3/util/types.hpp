@@ -1186,7 +1186,7 @@ namespace stx
 
 // Read object of type T from raw pointer, array, string, vector, or any contiguous container
 template <typename T, typename U>
-constexpr T read_from_ptr(U&& array, usz pos = 0)
+constexpr SAFE_BUFFERS(T) read_from_ptr(U&& array, usz pos = 0)
 {
 	// TODO: ensure array element types are trivial
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
@@ -1199,7 +1199,7 @@ constexpr T read_from_ptr(U&& array, usz pos = 0)
 }
 
 template <typename T, typename U>
-constexpr void write_to_ptr(U&& array, usz pos, const T& value)
+constexpr SAFE_BUFFERS(void) write_to_ptr(U&& array, usz pos, const T& value)
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
 	if (!std::is_constant_evaluated())
@@ -1209,13 +1209,9 @@ constexpr void write_to_ptr(U&& array, usz pos, const T& value)
 }
 
 template <typename T, typename U>
-constexpr void write_to_ptr(U&& array, const T& value)
+constexpr SAFE_BUFFERS(void) write_to_ptr(U&& array, const T& value)
 {
-	static_assert(sizeof(T) % sizeof(array[0]) == 0);
-	if (!std::is_constant_evaluated())
-		std::memcpy(&array[0], &value, sizeof(value));
-	else
-		ensure(!"Unimplemented");
+	return write_to_ptr<T>(std::forward<U>(array), 0, value);
 }
 
 constexpr struct aref_tag_t{} aref_tag{};
