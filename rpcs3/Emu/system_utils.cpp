@@ -308,7 +308,7 @@ namespace rpcs3::utils
 
 					if (entry.is_directory && fs::is_file(sfo_path))
 					{
-						const auto psf = psf::load_object(fs::file(sfo_path));
+						const auto psf = psf::load_object(sfo_path);
 						const auto serial = psf::get_string(psf, "TITLE_ID");
 						if (serial == title_id)
 						{
@@ -321,7 +321,7 @@ namespace rpcs3::utils
 			return game_path + "/PS3_GAME";
 		}
 
-		const auto psf = psf::load_object(fs::file(game_path + "/PARAM.SFO"));
+		const auto psf = psf::load_object(game_path + "/PARAM.SFO");
 
 		const auto category = psf::get_string(psf, "CATEGORY");
 		const auto content_id = psf::get_string(psf, "CONTENT_ID");

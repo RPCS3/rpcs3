@@ -571,7 +571,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			const Localized thread_localized;
 
 			const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir);
-			const psf::registry psf = psf::load_object(fs::file(sfo_dir + "/PARAM.SFO"));
+			const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
 			const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 			if (title_id.empty())

@@ -1000,10 +1000,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		// Load PARAM.SFO (TODO)
 		psf::registry _psf;
-		if (fs::file sfov{elf_dir + "/sce_sys/param.sfo"})
+		const std::string sfo_path = elf_dir + "/sce_sys/param.sfo";
+		if (fs::file sfov{sfo_path})
 		{
 			m_sfo_dir = elf_dir;
-			_psf = psf::load_object(sfov);
+			_psf = psf::load_object(sfov, sfo_path);
 		}
 		else
 		{
@@ -1033,7 +1034,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				m_sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(elf_dir + "/../", m_title_id);
 			}
 
-			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
+			_psf = psf::load_object(m_sfo_dir + "/PARAM.SFO");
 		}
 
 		m_title = std::string(psf::get_string(_psf, "TITLE", std::string_view(m_path).substr(m_path.find_last_of(fs::delim) + 1)));
@@ -1412,7 +1413,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				return game_boot_result::invalid_file_or_folder;
 			}
 
-			const auto game_psf = psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")});
+			const auto game_psf = psf::load_object(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO"));
 			const auto bdvd_title_id = psf::get_string(game_psf, "TITLE_ID");
 
 			if (m_title_id.empty())
@@ -1528,7 +1529,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Set title to actual disc title if necessary
 		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
 
-		const auto disc_psf_obj = psf::load_object(fs::file{ disc_sfo_dir });
+		const auto disc_psf_obj = psf::load_object(disc_sfo_dir);
 
 		// Install PKGDIR, INSDIR, PS3_EXTRA
 		if (!bdvd_dir.empty())
@@ -2877,13 +2878,14 @@ std::set<std::string> Emulator::GetGameDirs() const
 			if (entry.is_directory && entry.name.starts_with(GetTitleID()))
 			{
 				const std::string sfo_dir = game_dir + entry.name + '/';
-				const fs::file sfo_file(sfo_dir + "PARAM.SFO");
+				const std::string sfo_path = sfo_dir + "PARAM.SFO";
+				const fs::file sfo_file(sfo_path);
 				if (!sfo_file)
 				{
 					continue;
 				}
 
-				const psf::registry psf    = psf::load_object(sfo_file);
+				const psf::registry psf = psf::load_object(sfo_file, sfo_path);
 				const std::string title_id = std::string(psf::get_string(psf, "TITLE_ID", ""));
 
 				if (title_id == GetTitleID())
@@ -3038,7 +3040,7 @@ game_boot_result Emulator::InsertDisc(const std::string& path)
 
 		// Double check PARAM.SFO
 		const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(disc_root);
-		const psf::registry _psf = psf::load_object(fs::file(sfo_dir + "/PARAM.SFO"));
+		const psf::registry _psf = psf::load_object(sfo_dir + "/PARAM.SFO");
 
 		if (_psf.empty())
 		{
