@@ -572,7 +572,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			}
 			else
 			{
-				game_list_log.trace("Invalid disc path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+				game_list_log.trace("Invalid game path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
 			}
 		}
 
