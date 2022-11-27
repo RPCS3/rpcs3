@@ -1,32 +1,20 @@
 #pragma once
 #ifdef HAVE_LIBEVDEV
 
-#include "util/types.hpp"
-#include "util/logs.hpp"
+#include <array>
+#include <map>
 
-#define EVDEV_GUN_MAX_DEVICES 8
-
-enum evdev_gun_buttons
+enum class gun_button
 {
-	EVDEV_GUN_BUTTON_LEFT,
-	EVDEV_GUN_BUTTON_RIGHT,
-	EVDEV_GUN_BUTTON_MIDDLE,
-	EVDEV_GUN_BUTTON_BTN1,
-	EVDEV_GUN_BUTTON_BTN2,
-	EVDEV_GUN_BUTTON_BTN3,
-	EVDEV_GUN_BUTTON_BTN4,
-	EVDEV_GUN_BUTTON_BTN5,
-	EVDEV_GUN_BUTTON_MAX,
+	btn_left,
+	btn_right,
+	btn_middle,
+	btn_1,
+	btn_2,
+	btn_3,
+	btn_4,
+	btn_5
 };
-
-enum evdev_gun_axis_vals
-{
-	EVDEV_GUN_AXIS_VALS_MIN,
-	EVDEV_GUN_AXIS_VALS_CURRENT,
-	EVDEV_GUN_AXIS_VALS_MAX,
-};
-
-#define EVDEV_GUN_BUTTON_LEFT 1
 
 class evdev_gun_handler
 {
@@ -34,27 +22,39 @@ public:
 	evdev_gun_handler();
 	~evdev_gun_handler();
 
-	static evdev_gun_handler* getInstance();
-	static void shutdown();
-
 	bool init();
 
-	int getNumGuns();
-	int getButton(int gunno, int button);
-	int getAxisX(int gunno);
-	int getAxisY(int gunno);
-	int getAxisXMax(int gunno);
-	int getAxisYMax(int gunno);
+	bool is_init() const;
+	u32 get_num_guns() const;
+	int get_button(u32 gunno, gun_button button) const;
+	int get_axis_x(u32 gunno) const;
+	int get_axis_y(u32 gunno) const;
+	int get_axis_x_max(u32 gunno) const;
+	int get_axis_y_max(u32 gunno) const;
 
-	void pool();
+	void poll(u32 index);
+
+	shared_mutex mutex;
 
 private:
-	bool m_is_init;
+	atomic_t<bool> m_is_init{false};
 	struct udev* m_udev = nullptr;
-	int m_devices[EVDEV_GUN_MAX_DEVICES];
-	int m_devices_buttons[EVDEV_GUN_MAX_DEVICES][EVDEV_GUN_BUTTON_MAX];
-	int m_devices_axis[EVDEV_GUN_MAX_DEVICES][2][3];
-	int m_ndevices;
+
+	struct evdev_axis
+	{
+		int value = 0;
+		int min = 0;
+		int max = 0;
+	};
+
+	struct evdev_gun
+	{
+		int fd = -1;
+		std::map<int, int> buttons;
+		std::map<int, evdev_axis> axis;
+	};
+
+	std::vector<evdev_gun> m_devices;
 };
 
 #endif

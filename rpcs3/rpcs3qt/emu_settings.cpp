@@ -1057,7 +1057,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case move_handler::null: return tr("Null", "Move handler");
 		case move_handler::fake: return tr("Fake", "Move handler");
 		case move_handler::mouse: return tr("Mouse", "Move handler");
+#ifdef HAVE_LIBEVDEV
 		case move_handler::gun: return tr("Gun", "Gun handler");
+#endif
 		}
 		break;
 	case emu_settings_type::Buzz:
