@@ -119,7 +119,7 @@ error_code cellKbClearBuf(u32 port_no)
 	const KbInfo& current_info = handler.GetInfo();
 
 	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
-		return CELL_KB_ERROR_NO_DEVICE;
+		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
 	KbData& current_data = handler.GetData(port_no);
 	current_data.len = 0;
@@ -331,7 +331,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	const KbInfo& current_info = handler.GetInfo();
 
 	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
-		return CELL_KB_ERROR_NO_DEVICE;
+		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
 	KbData& current_data = handler.GetData(port_no);
 
@@ -474,7 +474,7 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 	const KbInfo& current_info = handler.GetInfo();
 
 	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
-		return CELL_KB_ERROR_NO_DEVICE;
+		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
 	// tests show that config is checked only after the device's status
 	if (!config)
