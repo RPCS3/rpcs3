@@ -104,7 +104,7 @@ error_code cellMouseClearBuf(u32 port_no)
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	handler.GetDataList(port_no).clear();
@@ -229,7 +229,7 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	std::memset(data.get_ptr(), 0, data.size());
@@ -279,7 +279,7 @@ error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	std::memset(data.get_ptr(), 0, data.size());
@@ -368,7 +368,7 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	std::memset(data.get_ptr(), 0, data.size());
@@ -424,7 +424,7 @@ error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 
 	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
-		return CELL_MOUSE_ERROR_NO_DEVICE;
+		return not_an_error(CELL_MOUSE_ERROR_NO_DEVICE);
 	}
 
 	std::memset(data.get_ptr(), 0, data.size());
