@@ -2943,7 +2943,7 @@ std::set<std::string> Emulator::GetGameDirs() const
 	return dirs;
 }
 
-void Emulator::AddGamesFromDir(std::string path)
+void Emulator::AddGamesFromDir(const std::string& path)
 {
 	if (!IsStopped())
 		return;
