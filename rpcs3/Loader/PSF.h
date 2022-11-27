@@ -88,9 +88,10 @@ namespace psf
 	};
 
 	// Load PSF registry from SFO binary format
-	load_result_t load(const fs::file&);
+	load_result_t load(const fs::file&, std::string_view filename);
 	load_result_t load(const std::string& filename);
-	inline registry load_object(const fs::file& f) { return load(f).sfo; }
+	inline registry load_object(const fs::file& f, std::string_view filename) { return load(f, filename).sfo; }
+	inline registry load_object(const std::string& filename) { return load(filename).sfo; }
 
 	// Convert PSF registry to SFO binary format
 	std::vector<u8> save_object(const registry&, std::vector<u8>&& init = std::vector<u8>{});

@@ -39,7 +39,7 @@ audio_out_configuration::audio_out_configuration()
 	std::vector<CellAudioOutSoundMode>& primary_modes = primary_output.sound_modes;
 	std::vector<CellAudioOutSoundMode>& secondary_modes = secondary_output.sound_modes;
 
-	const psf::registry sfo = psf::load_object(fs::file(Emu.GetSfoDir(true) + "/PARAM.SFO"));
+	const psf::registry sfo = psf::load_object(Emu.GetSfoDir(true) + "/PARAM.SFO");
 	const s32 sound_format = psf::get_integer(sfo, "SOUND_FORMAT", psf::sound_format_flag::lpcm_2); // Default to Linear PCM 2 Ch.
 
 	const bool supports_lpcm_2   = (sound_format & psf::sound_format_flag::lpcm_2);   // Linear PCM 2 Ch.
