@@ -3,74 +3,69 @@
 
 #ifdef HAVE_LIBEVDEV
 
+#include "stdafx.h"
 #include "evdev_gun_handler.h"
+#include "util/logs.hpp"
+
 #include <libudev.h>
 #include <fcntl.h>
 #include <linux/input.h>
+#include <unistd.h>
 
 LOG_CHANNEL(evdev_log, "evdev");
 
-evdev_gun_handler* evdev_gun_handler_instance = nullptr;
+constexpr usz max_devices = 8;
 
-evdev_gun_handler* evdev_gun_handler::getInstance()
+const std::map<gun_button, int> button_map
 {
-	if (evdev_gun_handler_instance != nullptr)
-		return evdev_gun_handler_instance;
-	evdev_gun_handler_instance = new evdev_gun_handler();
-	evdev_gun_handler_instance->init();
-	return evdev_gun_handler_instance;
-}
+	{gun_button::btn_left, BTN_LEFT},
+	{gun_button::btn_right, BTN_RIGHT},
+	{gun_button::btn_middle, BTN_MIDDLE},
+	{gun_button::btn_1, BTN_1},
+	{gun_button::btn_2, BTN_2},
+	{gun_button::btn_3, BTN_3},
+	{gun_button::btn_4, BTN_4},
+	{gun_button::btn_5, BTN_5}
+};
 
 struct event_udev_entry
 {
-	const char* devnode;
-	struct udev_list_entry* item;
+	const char* devnode = nullptr;
+	struct udev_list_entry* item = nullptr;
 };
 
-int event_isNumber(const char* s)
+bool event_is_number(const char* s)
 {
-	size_t n;
+	if (!s)
+		return false;
 
-	if (strlen(s) == 0)
-	{
-		return 0;
-	}
+	const usz len = strlen(s);
+	if (len == 0)
+		return false;
 
-	for (n = 0; n < strlen(s); n++)
+	for (usz n = 0; n < len; n++)
 	{
-		if (!(s[n] == '0' || s[n] == '1' || s[n] == '2' || s[n] == '3' || s[n] == '4' ||
-				s[n] == '5' || s[n] == '6' || s[n] == '7' || s[n] == '8' || s[n] == '9'))
-			return 0;
+		if (s[n] < '0' || s[n] > '9')
+			return false;
 	}
-	return 1;
+	return true;
 }
 
 // compare /dev/input/eventX and /dev/input/eventY where X and Y are numbers
 int event_strcmp_events(const char* x, const char* y)
 {
-
 	// find a common string
-	int n, common, is_number;
-	int a, b;
-
-	n = 0;
-	while (x[n] == y[n] && x[n] != '\0' && y[n] != '\0')
+	int n = 0;
+	while (x && y && x[n] == y[n] && x[n] != '\0' && y[n] != '\0')
 	{
 		n++;
 	}
-	common = n;
 
 	// check if remaining string is a number
-	is_number = 1;
-	if (event_isNumber(x + common) == 0)
-		is_number = 0;
-	if (event_isNumber(y + common) == 0)
-		is_number = 0;
-
-	if (is_number == 1)
+	if (event_is_number(x + n) && event_is_number(y + n))
 	{
-		a = atoi(x + common);
-		b = atoi(y + common);
+		const int a = atoi(x + n);
+		const int b = atoi(y + n);
 
 		if (a == b)
 			return 0;
@@ -78,134 +73,100 @@ int event_strcmp_events(const char* x, const char* y)
 			return -1;
 		return 1;
 	}
-	else
-	{
-		return strcmp(x, y);
-	}
-}
 
-/* Used for sorting devnodes to appear in the correct order */
-static int sort_devnodes(const void* a, const void* b)
-{
-	const struct event_udev_entry* aa = static_cast<const struct event_udev_entry*>(a);
-	const struct event_udev_entry* bb = static_cast<const struct event_udev_entry*>(b);
-	return event_strcmp_events(aa->devnode, bb->devnode);
+	return strcmp(x, y);
 }
 
 evdev_gun_handler::evdev_gun_handler()
 {
-	m_is_init = false;
-	m_ndevices = 0;
 }
 
 evdev_gun_handler::~evdev_gun_handler()
 {
-	for (int i = 0; i < m_ndevices; i++)
+	for (evdev_gun& gun : m_devices)
 	{
-		close(m_devices[i]);
+		close(gun.fd);
 	}
 	if (m_udev != nullptr)
 		udev_unref(m_udev);
-	m_ndevices = 0;
-	m_is_init = false;
 	evdev_log.notice("Lightgun: Shutdown udev initialization");
 }
 
-int evdev_gun_handler::getButton(int gunno, int button)
+int evdev_gun_handler::get_button(u32 gunno, gun_button button) const
 {
-	return m_devices_buttons[gunno][button];
-}
+	const auto& buttons = ::at32(m_devices, gunno).buttons;
 
-int evdev_gun_handler::getAxisX(int gunno)
-{
-	return m_devices_axis[gunno][0][EVDEV_GUN_AXIS_VALS_CURRENT] - m_devices_axis[gunno][0][EVDEV_GUN_AXIS_VALS_MIN];
-}
-
-int evdev_gun_handler::getAxisY(int gunno)
-{
-	return m_devices_axis[gunno][1][EVDEV_GUN_AXIS_VALS_CURRENT] - m_devices_axis[gunno][1][EVDEV_GUN_AXIS_VALS_MIN];
-}
-
-int evdev_gun_handler::getAxisXMax(int gunno)
-{
-	return m_devices_axis[gunno][0][EVDEV_GUN_AXIS_VALS_MAX] - m_devices_axis[gunno][0][EVDEV_GUN_AXIS_VALS_MIN];
-}
-
-int evdev_gun_handler::getAxisYMax(int gunno)
-{
-	return m_devices_axis[gunno][1][EVDEV_GUN_AXIS_VALS_MAX] - m_devices_axis[gunno][1][EVDEV_GUN_AXIS_VALS_MIN];
-}
-
-void evdev_gun_handler::pool()
-{
-	struct input_event input_events[32];
-	int j, len;
-
-	for (int i = 0; i < m_ndevices; i++)
+	if (const auto it = buttons.find(::at32(button_map, button)); it != buttons.end())
 	{
-		while ((len = read(m_devices[i], input_events, sizeof(input_events))) > 0)
+		return it->second;
+	}
+
+	return 0;
+}
+
+int evdev_gun_handler::get_axis_x(u32 gunno) const
+{
+	const evdev_axis& axis = ::at32(::at32(m_devices, gunno).axis, ABS_X);
+	return axis.value - axis.min;
+}
+
+int evdev_gun_handler::get_axis_y(u32 gunno) const
+{
+	const evdev_axis& axis = ::at32(::at32(m_devices, gunno).axis, ABS_Y);
+	return axis.value - axis.min;
+}
+
+int evdev_gun_handler::get_axis_x_max(u32 gunno) const
+{
+	const evdev_axis& axis = ::at32(::at32(m_devices, gunno).axis, ABS_X);
+	return axis.max - axis.min;
+}
+
+int evdev_gun_handler::get_axis_y_max(u32 gunno) const
+{
+	const evdev_axis& axis = ::at32(::at32(m_devices, gunno).axis, ABS_Y);
+	return axis.max - axis.min;
+}
+
+void evdev_gun_handler::poll(u32 index)
+{
+	if (!m_is_init || index >= m_devices.size())
+		return;
+
+	std::array<input_event, 32> input_events;
+	evdev_gun& gun = ::at32(m_devices, index);
+
+	if (usz len = read(gun.fd, input_events.data(), input_events.size() * sizeof(input_event)); len > 0)
+	{
+		len /= sizeof(input_event);
+
+		for (usz i = 0; i < std::min(len, input_events.size()); i++)
 		{
-			len /= sizeof(*input_events);
-			for (j = 0; j < len; j++)
+			const input_event& evt = input_events[i];
+
+			switch (evt.type)
 			{
-				if (input_events[j].type == EV_KEY)
-				{
-					switch (input_events[j].code)
-					{
-					case BTN_LEFT:
-						m_devices_buttons[i][EVDEV_GUN_BUTTON_LEFT] = input_events[j].value;
-						break;
-					case BTN_RIGHT:
-						m_devices_buttons[i][EVDEV_GUN_BUTTON_RIGHT] = input_events[j].value;
-						break;
-					case BTN_MIDDLE:
-						m_devices_buttons[i][EVDEV_GUN_BUTTON_MIDDLE] = input_events[j].value;
-						break;
-					case BTN_1:
-						m_devices_buttons[i][EVDEV_GUN_BUTTON_BTN1] = input_events[j].value;
-						break;
-					case BTN_2:
-						m_devices_buttons[i][EVDEV_GUN_BUTTON_BTN2] = input_events[j].value;
-						break;
-					case BTN_3:
-						m_devices_buttons[i][EVDEV_GUN_BUTTON_BTN3] = input_events[j].value;
-						break;
-					case BTN_4:
-						m_devices_buttons[i][EVDEV_GUN_BUTTON_BTN4] = input_events[j].value;
-						break;
-					case BTN_5:
-						m_devices_buttons[i][EVDEV_GUN_BUTTON_BTN5] = input_events[j].value;
-						break;
-					}
-				}
-				else if (input_events[j].type == EV_ABS)
-				{
-					if (input_events[j].code == ABS_X)
-					{
-						m_devices_axis[i][0][EVDEV_GUN_AXIS_VALS_CURRENT] = input_events[j].value;
-					}
-					else if (input_events[j].code == ABS_Y)
-					{
-						m_devices_axis[i][1][EVDEV_GUN_AXIS_VALS_CURRENT] = input_events[j].value;
-					}
-				}
+			case EV_KEY:
+				gun.buttons[evt.code] = evt.value;
+				break;
+			case EV_ABS:
+				gun.axis[evt.code].value = evt.value;
+				break;
+			default:
+				break;
 			}
 		}
 	}
 }
 
-int evdev_gun_handler::getNumGuns()
+bool evdev_gun_handler::is_init() const
 {
-	return m_ndevices;
+	return m_is_init;
 }
 
-void evdev_gun_handler::shutdown()
+u32 evdev_gun_handler::get_num_guns() const
 {
-	if (evdev_gun_handler_instance != nullptr)
-	{
-		delete evdev_gun_handler_instance;
-		evdev_gun_handler_instance = nullptr;
-	}
+	return ::narrow<u32>(m_devices.size());
 }
 
 bool evdev_gun_handler::init()
@@ -213,39 +174,38 @@ bool evdev_gun_handler::init()
 	if (m_is_init)
 		return true;
 
-	struct udev_enumerate* enumerate;
-	struct udev_list_entry* devs = nullptr;
-	struct udev_list_entry* item = nullptr;
-	unsigned sorted_count = 0;
-	struct event_udev_entry sorted[8]; // max devices
-	unsigned int i;
-
 	evdev_log.notice("Lightgun: Begin udev initialization");
+
+	m_devices.clear();
 
 	m_udev = udev_new();
 	if (m_udev == nullptr)
+	{
+		evdev_log.error("Lightgun: Failed udev initialization");
 		return false;
+	}
 
-	enumerate = udev_enumerate_new(m_udev);
-
-	if (enumerate != nullptr)
+	if (udev_enumerate* enumerate = udev_enumerate_new(m_udev))
 	{
 		udev_enumerate_add_match_property(enumerate, "ID_INPUT_MOUSE", "1");
 		udev_enumerate_add_match_subsystem(enumerate, "input");
 		udev_enumerate_scan_devices(enumerate);
-		devs = udev_enumerate_get_list_entry(enumerate);
+		udev_list_entry* devs = udev_enumerate_get_list_entry(enumerate);
 
-		for (item = devs; item; item = udev_list_entry_get_next(item))
+		std::vector<event_udev_entry> sorted_devices;
+
+		for (udev_list_entry* item = devs; item && sorted_devices.size() < max_devices; item = udev_list_entry_get_next(item))
 		{
 			const char* name = udev_list_entry_get_name(item);
-			struct udev_device* dev = udev_device_new_from_syspath(m_udev, name);
+			udev_device* dev = udev_device_new_from_syspath(m_udev, name);
 			const char* devnode = udev_device_get_devnode(dev);
 
-			if (devnode != nullptr && sorted_count < 8)
+			if (devnode != nullptr)
 			{
-				sorted[sorted_count].devnode = devnode;
-				sorted[sorted_count].item = item;
-				sorted_count++;
+				event_udev_entry new_device{};
+				new_device.devnode = devnode;
+				new_device.item = item;
+				sorted_devices.push_back(std::move(new_device));
 			}
 			else
 			{
@@ -253,57 +213,41 @@ bool evdev_gun_handler::init()
 			}
 		}
 
-		/* Sort the udev entries by devnode name so that they are
-		 * created in the proper order */
-		qsort(sorted, sorted_count,
-			sizeof(struct event_udev_entry), sort_devnodes);
-
-		for (i = 0; i < sorted_count; i++)
+		// Sort the udev entries by devnode name so that they are created in the proper order
+		std::sort(sorted_devices.begin(), sorted_devices.end(), [](const event_udev_entry& a, const event_udev_entry& b)
 		{
-			if (m_ndevices >= EVDEV_GUN_MAX_DEVICES)
-				break;
+			return event_strcmp_events(a.devnode, b.devnode);
+		});
 
-			const char* name = udev_list_entry_get_name(sorted[i].item);
-			/* Get the filename of the /sys entry for the device
-			 * and create a udev_device object (dev) representing it. */
-			struct udev_device* dev = udev_device_new_from_syspath(m_udev, name);
+		for (const event_udev_entry& entry : sorted_devices)
+		{
+			// Get the filename of the /sys entry for the device and create a udev_device object (dev) representing it.
+			const char* name = udev_list_entry_get_name(entry.item);
 			evdev_log.notice("Lightgun: found device %s", name);
+
+			udev_device* dev = udev_device_new_from_syspath(m_udev, name);
 			const char* devnode = udev_device_get_devnode(dev);
 
 			if (devnode)
 			{
-				struct input_absinfo absx, absy;
-				int valid = 0;
-				int fd = open(devnode, O_RDONLY | O_NONBLOCK);
-				if (fd != -1)
+				if (int fd = open(devnode, O_RDONLY | O_NONBLOCK); fd != -1)
 				{
-					for (int b = 0; b < EVDEV_GUN_BUTTON_MAX; b++)
+					input_absinfo absx, absy;
+					if (ioctl(fd, EVIOCGABS(ABS_X), &absx) >= 0 &&
+						ioctl(fd, EVIOCGABS(ABS_Y), &absy) >= 0)
 					{
-						m_devices_buttons[m_ndevices][b] = 0;
-					}
-					for (int a = 0; a < 3; a++)
-					{
-						m_devices_axis[m_ndevices][0][a] = 0;
-						m_devices_axis[m_ndevices][1][a] = 0;
-					}
-					if (ioctl(fd, EVIOCGABS(ABS_X), &absx) >= 0)
-					{
-						if (ioctl(fd, EVIOCGABS(ABS_Y), &absy) >= 0)
-						{
-							evdev_log.notice("Lightgun: device %s, absx(%i, %i), absy(%i, %i)", name, absx.minimum, absx.maximum, absy.minimum, absy.maximum);
+						evdev_log.notice("Lightgun: Adding device %d: %s, absx(%i, %i), absy(%i, %i)", m_devices.size(), name, absx.minimum, absx.maximum, absy.minimum, absy.maximum);
 
-							m_devices_axis[m_ndevices][0][EVDEV_GUN_AXIS_VALS_MIN] = absx.minimum;
-							m_devices_axis[m_ndevices][0][EVDEV_GUN_AXIS_VALS_MAX] = absx.maximum;
-							m_devices_axis[m_ndevices][1][EVDEV_GUN_AXIS_VALS_MIN] = absy.minimum;
-							m_devices_axis[m_ndevices][1][EVDEV_GUN_AXIS_VALS_MAX] = absy.maximum;
-							valid = 1;
-						}
-					}
+						evdev_gun gun{};
+						gun.fd = fd;
+						gun.axis[ABS_X].min = absx.minimum;
+						gun.axis[ABS_X].max = absx.maximum;
+						gun.axis[ABS_Y].min = absy.minimum;
+						gun.axis[ABS_Y].max = absy.maximum;
+						m_devices.push_back(gun);
 
-					if (valid == 1)
-					{
-						evdev_log.notice("Lightgun: device %s set as gun %i", name, m_ndevices);
-						m_devices[m_ndevices++] = fd;
+						if (m_devices.size() >= max_devices)
+							break;
 					}
 					else
 					{
@@ -315,7 +259,10 @@ bool evdev_gun_handler::init()
 			udev_device_unref(dev);
 		}
 		udev_enumerate_unref(enumerate);
-		return true;
+	}
+	else
+	{
+		evdev_log.error("Lightgun: Failed udev enumeration");
 	}
 
 	m_is_init = true;

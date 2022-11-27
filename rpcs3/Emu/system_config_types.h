@@ -128,7 +128,9 @@ enum class move_handler
 	null,
 	fake,
 	mouse,
+#ifdef HAVE_LIBEVDEV
 	gun
+#endif
 };
 
 enum class buzz_handler
