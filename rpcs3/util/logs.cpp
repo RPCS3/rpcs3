@@ -533,7 +533,7 @@ bool logs::file_writer::flush(u64 bufv)
 	const u64 read_pos = m_out;
 	const u64 out_index = read_pos % s_log_size;
 	const u64 pushed = (bufv / s_log_size) % s_log_size;
-	const u64 end = std::min<u64>(out_index > pushed ? read_pos - out_index + pushed : (read_pos + s_log_size) & ~(s_log_size - 1), m_max_size);
+	const u64 end = std::min<u64>(out_index >= pushed ? read_pos - out_index + pushed : (read_pos + s_log_size) & ~(s_log_size - 1), m_max_size);
 
 	if (end > read_pos)
 	{
