@@ -590,7 +590,7 @@ void logs::file_writer::log(const char* text, usz size)
 			const u64 v1 = (v / s_log_size) % s_log_size;
 			const u64 v2 = v % s_log_size;
 
-			if (v1 + v2 + size > (out < v1 ? out + s_log_size : out)) [[unlikely]]
+			if (v1 + v2 + size > (out < v1 ? out + s_log_size - 1 : out)) [[unlikely]]
 			{
 				return nullptr;
 			}
