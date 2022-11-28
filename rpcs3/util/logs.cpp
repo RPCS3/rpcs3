@@ -644,7 +644,7 @@ void logs::file_writer::log(const char* text, usz size)
 
 void logs::file_writer::sync()
 {
-	if (!m_fptr || (!m_fout && !m_fout2))
+	if (!m_fptr)
 	{
 		return;
 	}
