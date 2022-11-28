@@ -650,7 +650,7 @@ void logs::file_writer::sync()
 	}
 
 	// Wait for the writer thread
-	while ((m_out % s_log_size) * s_log_size < m_buf)
+	while ((m_out % s_log_size) * s_log_size != m_buf % (s_log_size * s_log_size))
 	{
 		if (m_out >= m_max_size)
 		{
