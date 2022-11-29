@@ -8,8 +8,8 @@
 #include "util/logs.hpp"
 
 #include <libudev.h>
+#include <libevdev/libevdev.h>
 #include <fcntl.h>
-#include <linux/input.h>
 #include <unistd.h>
 
 LOG_CHANNEL(evdev_log, "evdev");
@@ -85,7 +85,12 @@ evdev_gun_handler::~evdev_gun_handler()
 {
 	for (evdev_gun& gun : m_devices)
 	{
-		close(gun.fd);
+		if (gun.device)
+		{
+			const int fd = libevdev_get_fd(gun.device);
+			libevdev_free(gun.device);
+			close(fd);
+		}
 	}
 	if (m_udev != nullptr)
 		udev_unref(m_udev);
@@ -133,17 +138,28 @@ void evdev_gun_handler::poll(u32 index)
 	if (!m_is_init || index >= m_devices.size())
 		return;
 
-	std::array<input_event, 32> input_events;
 	evdev_gun& gun = ::at32(m_devices, index);
 
-	if (usz len = read(gun.fd, input_events.data(), input_events.size() * sizeof(input_event)); len > 0)
+	if (!gun.device)
+		return;
+
+	// Try to fetch all new events from the joystick.
+	input_event evt;
+	int ret = LIBEVDEV_READ_STATUS_SUCCESS;
+	while (ret >= 0)
 	{
-		len /= sizeof(input_event);
-
-		for (usz i = 0; i < std::min(len, input_events.size()); i++)
+		if (ret == LIBEVDEV_READ_STATUS_SYNC)
 		{
-			const input_event& evt = input_events[i];
+			// Grab any pending sync event.
+			ret = libevdev_next_event(gun.device, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
+		}
+		else
+		{
+			ret = libevdev_next_event(gun.device, LIBEVDEV_READ_FLAG_NORMAL, &evt);
+		}
 
+		if (ret == LIBEVDEV_READ_STATUS_SUCCESS)
+		{
 			switch (evt.type)
 			{
 			case EV_KEY:
@@ -156,6 +172,13 @@ void evdev_gun_handler::poll(u32 index)
 				break;
 			}
 		}
+	}
+
+	if (ret < 0)
+	{
+		// -EAGAIN signifies no available events, not an actual *error*.
+		if (ret != -EAGAIN)
+			evdev_log.error("Failed to read latest event from lightgun device: %s [errno %d]", strerror(-ret), -ret);
 	}
 }
 
@@ -227,36 +250,60 @@ bool evdev_gun_handler::init()
 
 			udev_device* dev = udev_device_new_from_syspath(m_udev, name);
 			const char* devnode = udev_device_get_devnode(dev);
-
-			if (devnode)
+			const int fd = open(devnode, O_RDONLY | O_NONBLOCK);
+			struct libevdev* device = nullptr;
+			const int rc = libevdev_new_from_fd(fd, &device);
+			if (rc < 0)
 			{
-				if (int fd = open(devnode, O_RDONLY | O_NONBLOCK); fd != -1)
+				// If it's just a bad file descriptor, don't bother logging, but otherwise, log it.
+				if (rc != -9)
+					evdev_log.warning("Failed to connect to lightgun device at %s, the error was: %s", devnode, strerror(-rc));
+				libevdev_free(device);
+				close(fd);
+				continue;
+			}
+
+			if (libevdev_has_event_type(device, EV_KEY) &&
+				libevdev_has_event_type(device, EV_ABS))
+			{
+				bool is_valid = true;
+
+				evdev_gun gun{};
+				gun.device = device;
+
+				for (int code : { ABS_X, ABS_Y })
 				{
-					input_absinfo absx, absy;
-					if (ioctl(fd, EVIOCGABS(ABS_X), &absx) >= 0 &&
-						ioctl(fd, EVIOCGABS(ABS_Y), &absy) >= 0)
+					if (const input_absinfo* info = libevdev_get_abs_info(device, code))
 					{
-						evdev_log.notice("Lightgun: Adding device %d: %s, absx(%i, %i), absy(%i, %i)", m_devices.size(), name, absx.minimum, absx.maximum, absy.minimum, absy.maximum);
-
-						evdev_gun gun{};
-						gun.fd = fd;
-						gun.axis[ABS_X].min = absx.minimum;
-						gun.axis[ABS_X].max = absx.maximum;
-						gun.axis[ABS_Y].min = absy.minimum;
-						gun.axis[ABS_Y].max = absy.maximum;
-						m_devices.push_back(gun);
-
-						if (m_devices.size() >= max_devices)
-							break;
+						gun.axis[code].min = info->minimum;
+						gun.axis[code].max = info->maximum;
 					}
 					else
 					{
-						evdev_log.notice("Lightgun: device %s not valid. abs_x and abs_y not found", name);
-						close(fd);
+						evdev_log.notice("Lightgun: device %s not valid. axis %d not found", name, code);
+						is_valid = false;
+						break;
 					}
 				}
+
+				if (is_valid)
+				{
+					evdev_log.notice("Lightgun: Adding device %d: %s, ABS_X(%i, %i), ABS_Y(%i, %i)", m_devices.size(), name, gun.axis[ABS_X].min, gun.axis[ABS_X].max, gun.axis[ABS_Y].min, gun.axis[ABS_Y].max);
+					m_devices.push_back(gun);
+				}
+				else
+				{
+					close(fd);
+				}
+
+				if (m_devices.size() >= max_devices)
+					break;
 			}
-			udev_device_unref(dev);
+			else
+			{
+				evdev_log.notice("Lightgun: device %s not valid. No axis or key events found", name);
+				close(fd);
+			}
 		}
 		udev_enumerate_unref(enumerate);
 	}
