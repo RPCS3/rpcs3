@@ -3,6 +3,7 @@
 
 #include <array>
 #include <map>
+#include "Utilities/mutex.h"
 
 enum class gun_button
 {
@@ -49,7 +50,7 @@ private:
 
 	struct evdev_gun
 	{
-		int fd = -1;
+		struct libevdev* device = nullptr;
 		std::map<int, int> buttons;
 		std::map<int, evdev_axis> axis;
 	};
