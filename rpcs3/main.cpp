@@ -497,7 +497,7 @@ int main(int argc, char** argv)
 		fs::device_stat stats{};
 		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < 128 * 1024 * 1024)
 		{
-			report_fatal_error(fmt::format("Not enough free space (%f KB)", stats.avail_free / 1000000.));
+			std::fprintf(stderr, "Not enough free space for logs (%f KB)", stats.avail_free / 1000000.);
 		}
 
 		// Limit log size to ~25% of free space
