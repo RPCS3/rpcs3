@@ -305,6 +305,7 @@ struct cfg_root : cfg::node
 
 		cfg::_enum<np_internet_status> net_active{this, "Internet enabled", np_internet_status::disabled};
 		cfg::string ip_address{this, "IP address", "0.0.0.0"};
+		cfg::string bind_address{this, "Bind address", "0.0.0.0"};
 		cfg::string dns{this, "DNS address", "8.8.8.8"};
 		cfg::string swap_list{this, "IP swap list", ""};
 

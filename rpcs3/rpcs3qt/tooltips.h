@@ -228,6 +228,7 @@ public:
 		const QString psn_status    = tr("If set to Simulated, RPCS3 will fake PSN connection as best as it can.");
 		const QString dns           = tr("DNS used to resolve hostnames by applications.");
 		const QString dns_swap      = tr("DNS Swap List.");
+		const QString bind          = tr("Interface IP Address to bind to.");
 
 		// system
 

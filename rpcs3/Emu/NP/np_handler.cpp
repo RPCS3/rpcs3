@@ -371,6 +371,18 @@ namespace np
 			{
 				dns_ip = conv.s_addr;
 			}
+
+			// Convert bind address
+			conv = {};
+			if (!inet_pton(AF_INET, g_cfg.net.bind_address.to_string().c_str(), &conv))
+			{
+				// Do not set to disconnected on invalid IP just error and continue using default (0.0.0.0)
+				nph_log.error("Provided IP(%s) address for bind is invalid!", g_cfg.net.bind_address.to_string());
+			}
+			else
+			{
+				bind_ip = conv.s_addr;
+			}
 		}
 	}
 
@@ -583,6 +595,11 @@ namespace np
 	u32 np_handler::get_dns_ip() const
 	{
 		return dns_ip;
+	}
+
+	u32 np_handler::get_bind_ip() const
+	{
+		return bind_ip;
 	}
 
 	s32 np_handler::get_net_status() const
