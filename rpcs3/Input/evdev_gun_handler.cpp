@@ -7,7 +7,10 @@
 #include "evdev_gun_handler.h"
 #include "util/logs.hpp"
 
+#ifdef __linux__ // Too lazy to make this work for BSD
 #include <libudev.h>
+#endif
+
 #include <libevdev/libevdev.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -92,9 +95,11 @@ evdev_gun_handler::~evdev_gun_handler()
 			close(fd);
 		}
 	}
+#ifdef __linux__
 	if (m_udev != nullptr)
 		udev_unref(m_udev);
 	evdev_log.notice("Lightgun: Shutdown udev initialization");
+#endif
 }
 
 int evdev_gun_handler::get_button(u32 gunno, gun_button button) const
@@ -197,9 +202,10 @@ bool evdev_gun_handler::init()
 	if (m_is_init)
 		return true;
 
-	evdev_log.notice("Lightgun: Begin udev initialization");
-
 	m_devices.clear();
+
+#ifdef __linux__
+	evdev_log.notice("Lightgun: Begin udev initialization");
 
 	m_udev = udev_new();
 	if (m_udev == nullptr)
@@ -311,6 +317,7 @@ bool evdev_gun_handler::init()
 	{
 		evdev_log.error("Lightgun: Failed udev enumeration");
 	}
+#endif
 
 	m_is_init = true;
 	return true;
