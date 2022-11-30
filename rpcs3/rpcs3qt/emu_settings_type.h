@@ -170,6 +170,7 @@ enum class emu_settings_type
 	DNSAddress,
 	IpSwapList,
 	PSNStatus,
+	BindAddress,
 
 	// System
 	LicenseArea,
@@ -348,6 +349,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DNSAddress,     { "Net", "DNS address"}},
 	{ emu_settings_type::IpSwapList,     { "Net", "IP swap list"}},
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
+	{ emu_settings_type::BindAddress,    { "Net", "Bind address"}},
 
 	// System
 	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},

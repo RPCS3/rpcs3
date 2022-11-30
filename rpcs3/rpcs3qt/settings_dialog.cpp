@@ -1281,6 +1281,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceLineEdit(ui->edit_dns, emu_settings_type::DNSAddress);
 	SubscribeTooltip(ui->gb_edit_dns, tooltips.settings.dns);
 
+	m_emu_settings->EnhanceLineEdit(ui->edit_bind, emu_settings_type::BindAddress);
+	SubscribeTooltip(ui->gb_edit_bind, tooltips.settings.bind);
+
 	m_emu_settings->EnhanceLineEdit(ui->edit_swaps, emu_settings_type::IpSwapList);
 	SubscribeTooltip(ui->gb_edit_swaps, tooltips.settings.dns_swap);
 

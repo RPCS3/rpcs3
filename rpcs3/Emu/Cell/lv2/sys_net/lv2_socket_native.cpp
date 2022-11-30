@@ -129,10 +129,18 @@ s32 lv2_socket_native::bind(const sys_net_sockaddr& addr)
 
 	const auto* psa_in = reinterpret_cast<const sys_net_sockaddr_in*>(&addr);
 
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	u32 saddr = nph.get_bind_ip();
+	if (saddr == 0)
+	{
+		// If zero use the supplied address
+		saddr = std::bit_cast<u32>(psa_in->sin_addr);
+	}
+
 	::sockaddr_in native_addr{};
 	native_addr.sin_family      = AF_INET;
 	native_addr.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
-	native_addr.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+	native_addr.sin_addr.s_addr = saddr;
 	::socklen_t native_addr_len = sizeof(native_addr);
 
 	sys_net.warning("[Native] Trying to bind %s:%d", native_addr.sin_addr, std::bit_cast<be_t<u16>, u16>(native_addr.sin_port));
