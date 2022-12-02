@@ -694,17 +694,13 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 
 game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, cfg_mode config_mode, const std::string& config_path)
 {
-	if (!fs::exists(path))
-	{
-		return game_boot_result::invalid_file_or_folder;
-	}
-
 	m_path_old = m_path;
 
 	m_config_mode = config_mode;
 	m_config_path = config_path;
 
-	if (direct || fs::is_file(path))
+	// Handle files and special paths inside Load unmodified
+	if (direct || !fs::is_dir(path))
 	{
 		m_path = path;
 
@@ -844,6 +840,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		m_state_inspection_savestate = g_cfg.savestate.state_inspection_mode.get();
 
+		bool resolve_path_as_vfs_path = false;
+
 		if (m_ar)
 		{
 			struct file_header
@@ -964,7 +962,76 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 
 			m_path_old = m_path;
+			resolve_path_as_vfs_path = true;
+		}
+		else if (m_path.starts_with("%RPCS3_VFS%:"))
+		{
+			m_path = m_path.substr(("%RPCS3_VFS%:"sv).size());
 
+			if (!m_path.empty() && m_path[0] != '/')
+			{
+				// Make valid for VFS
+				m_path.insert(0, "/");
+			}
+
+			if (!argv.empty())
+			{
+				argv[0] = m_path;
+			}
+			else
+			{
+				argv.emplace_back(m_path);
+			}
+
+			resolve_path_as_vfs_path =  true;
+		}
+		else if (m_path.starts_with("%RPCS3_GAMEID%:"))
+		{
+			// Try to boot a game through game ID only
+			m_title_id = m_path.substr(("%RPCS3_GAMEID%:"sv).size());
+			m_title_id = m_title_id.substr(0, m_title_id.find_first_of(fs::delim));
+			std::string tail = m_path.substr(("%RPCS3_GAMEID%:"sv).size() + m_title_id.size());
+
+			if (tail.find_first_not_of(fs::delim) == umax)
+			{
+				// Treat slashes-only trail as if game ID only was provided
+				tail.clear();
+			}
+
+			bool ok = false;
+			std::string title_path;
+
+			// const overload does not create new node on failure
+			if (auto node = std::as_const(games)[m_title_id])
+			{
+				std::string title_path = node.Scalar();
+			}
+				
+			for (auto&& test_path :
+			{
+				rpcs3::utils::get_hdd0_dir() + "game/" + m_title_id + "/USRDIR/EBOOT.BIN"
+				, tail.empty() ? "" : title_path + tail + "/USRDIR/EBOOT.BIN"
+				, title_path + "/PS3_GAME/USRDIR/EBOOT.BIN"
+				, title_path + "/USRDIR/EBOOT.BIN"
+			})
+			{
+				if (!test_path.empty() && fs::is_file(test_path))
+				{
+					m_path = std::move(test_path);
+					ok = true;
+					break;
+				}
+			}
+
+			if (!ok)
+			{
+				sys_log.fatal("Game directory not found using GAMEID token. ('%s')", m_title_id + tail);
+				return game_boot_result::invalid_file_or_folder;
+			}
+		}
+
+		if (resolve_path_as_vfs_path)
+		{
 			if (argv[0].starts_with("/dev_hdd0"sv))
 			{
 				m_path = rpcs3::utils::get_hdd0_dir();
@@ -975,7 +1042,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				if (argv[0].starts_with(game0_path) && !fs::is_file(vfs::get(argv[0])))
 				{
 					std::string title_id = argv[0].substr(game0_path.size());
-					title_id = title_id.substr(0, title_id.find_last_not_of('/'));
+					title_id = title_id.substr(0, title_id.find_first_of('/'));
 
 					// Try to load game directory from list if available
 					if (auto node = (title_id.empty() ? YAML::Node{} : games[title_id]))
@@ -997,18 +1064,24 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 			else if (argv[0].starts_with("/host_root"sv))
 			{
-				sys_log.error("Host root has been used in savestates!");
+				sys_log.error("Host root has been used in path redirection!");
 				m_path = argv[0].substr(9);
 			}
 			else if (argv[0].starts_with("/dev_hdd1"sv))
 			{
-				sys_log.error("HDD1 has been used to store executable in savestates!");
+				sys_log.error("HDD1 has been used to store executable in path redirection!");
 				m_path = rpcs3::utils::get_hdd1_dir();
 				m_path += std::string_view(argv[0]).substr(9);
 			}
 			else
 			{
-				sys_log.error("Unknown source for savestates: %s", argv[0]);
+				sys_log.error("Unknown source for path redirection: %s", argv[0]);
+			}
+
+			if (argv.size() == 1)
+			{
+				// Resolve later properly as if booted through host path
+				argv.clear();
 			}
 
 			sys_log.notice("Restored executable path: \'%s\'", m_path);
