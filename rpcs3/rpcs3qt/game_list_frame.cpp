@@ -449,6 +449,11 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_notes.clear();
 		m_games.pop_all();
 
+		if (Emu.IsStopped())
+		{
+			Emu.AddGamesFromDir(fs::get_config_dir() + "/games");
+		}
+
 		const std::string _hdd =  rpcs3::utils::get_hdd0_dir();
 
 		const auto add_disc_dir = [&](const std::string& path)
@@ -531,7 +536,14 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
-			if (fs::is_file(game_dir + "/PS3_DISC.SFB"))
+			if (game_dir.empty())
+			{
+				continue;
+			}
+
+			const bool has_sfo = fs::is_file(game_dir + "/PARAM.SFO");
+
+			if (!has_sfo && fs::is_file(game_dir + "/PS3_DISC.SFB"))
 			{
 				// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
 				if (game_dir.starts_with(_hdd))
@@ -554,9 +566,13 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				add_disc_dir(game_dir);
 			}
+			else if (has_sfo)
+			{
+				m_path_list.emplace_back(game_dir);
+			}
 			else
 			{
-				game_list_log.trace("Invalid disc path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+				game_list_log.trace("Invalid game path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
 			}
 		}
 

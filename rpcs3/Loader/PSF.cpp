@@ -251,6 +251,14 @@ namespace psf
 			PSF_CHECK(false, corrupt);
 		}
 
+		const auto tid = get_string(pair.sfo, "TITLE_ID", "");
+
+		if (std::find_if(tid.begin(), tid.end(), [](char ch){ return !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')); }) != tid.end())
+		{
+			psf_log.error("Invalid title ID ('%s')", tid);
+			PSF_CHECK(false, corrupt);
+		}
+
 #undef PSF_CHECK
 		return pair;
 	}
