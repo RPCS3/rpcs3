@@ -1133,7 +1133,20 @@ int main(int argc, char** argv)
 	}
 	else if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
-		sys_log.notice("Booting application from command line: %s", ::at32(args, 0).toStdString());
+		std::string spath = sstr(::at32(args, 0));
+
+		if (spath.starts_with("%RPCS3_VFS%"))
+		{
+			sys_log.notice("Booting application from command line using VFS path: %s", spath.substr(("%RPCS3_VFS%"sv).size()));
+		}
+		else if (spath.starts_with("%RPCS3_GAMEID%"))
+		{
+			sys_log.notice("Booting application from command line using GAMEID: %s", spath.substr(("%RPCS3_GAMEID%"sv).size()));
+		}
+		else
+		{
+			sys_log.notice("Booting application from command line: %s", spath);
+		}
 
 		// Propagate command line arguments
 		std::vector<std::string> rpcs3_argv;
@@ -1163,7 +1176,7 @@ int main(int argc, char** argv)
 		}
 
 		// Postpone startup to main event loop
-		Emu.CallFromMainThread([path = sstr(QFileInfo(::at32(args, 0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
+		Emu.CallFromMainThread([path = spath.starts_with("%RPCS3_") ? spath : sstr(QFileInfo(::at32(args, 0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
 		{
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);
