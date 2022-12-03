@@ -1018,10 +1018,43 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	const auto on_shortcut = [this, gameinfo](bool is_desktop_shortcut)
 	{
-		const std::string target_cli_args = fmt::format("--no-gui \"%s\"", gameinfo->info.path);
+		std::string gameid_token_value;
+
+		if (gameinfo->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + gameinfo->info.serial + "/USRDIR/EBOOT.BIN"))
+		{
+			const usz ps3_game_dir_pos = fs::get_parent_dir(gameinfo->info.path).size();
+			std::string relative_boot_dir = gameinfo->info.path.substr(ps3_game_dir_pos);
+
+			if (usz char_pos = relative_boot_dir.find_first_not_of(fs::delim); char_pos != umax)
+			{
+				relative_boot_dir = relative_boot_dir.substr(char_pos);
+			}
+			else
+			{
+				relative_boot_dir.clear();
+			}
+
+			if (!relative_boot_dir.empty())
+			{
+				if (relative_boot_dir != "PS3_GAME")
+				{
+					gameid_token_value = gameinfo->info.serial + "/" + relative_boot_dir;
+				}
+				else
+				{
+					gameid_token_value = gameinfo->info.serial;
+				}
+			}
+		}
+		else
+		{
+			gameid_token_value = gameinfo->info.serial;
+		}
+
+		const std::string target_cli_args = fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", gameid_token_value);
 		const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
 
-		if (gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, is_desktop_shortcut ? gui::utils::shortcut_location::desktop : gui::utils::shortcut_location::rpcs3_shortcuts))
+		if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, is_desktop_shortcut ? gui::utils::shortcut_location::desktop : gui::utils::shortcut_location::applications))
 		{
 			game_list_log.success("Created %s shortcut for %s", is_desktop_shortcut ? "desktop" : "application menu", sstr(qstr(gameinfo->info.name).simplified()));
 			QMessageBox::information(this, tr("Success!"), tr("Successfully created a shortcut."));
