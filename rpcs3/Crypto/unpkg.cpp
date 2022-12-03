@@ -858,6 +858,12 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 					else
 					{
 						pkg_log.notice("Created file %s", path);
+
+						if (name == "USRDIR/EBOOT.BIN" && entry.file_size > 4)
+						{
+							// Expose the creation of a bootable file
+							m_bootable_file_path = path;
+						}
 					}
 				}
 				else

@@ -312,6 +312,11 @@ public:
 	bool extract_data(atomic_t<double>& sync);
 	psf::registry get_psf() const { return m_psf; }
 
+	std::string try_get_bootable_file_path_if_created_new() const
+	{
+		return m_bootable_file_path;
+	}
+
 private:
 	bool read_header();
 	bool read_metadata();
@@ -334,4 +339,7 @@ private:
 	PKGHeader m_header{};
 	PKGMetaData m_metadata{};
 	psf::registry m_psf{};
+
+	// Expose bootable file installed (if installed such)
+	std::string m_bootable_file_path;
 };

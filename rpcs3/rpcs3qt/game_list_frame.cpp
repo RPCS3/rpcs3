@@ -1021,7 +1021,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		const std::string target_cli_args = fmt::format("--no-gui \"%s\"", gameinfo->info.path);
 		const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
 
-		if (gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, is_desktop_shortcut))
+		if (gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, is_desktop_shortcut ? gui::utils::shortcut_location::desktop : gui::utils::shortcut_location::rpcs3_shortcuts))
 		{
 			game_list_log.success("Created %s shortcut for %s", is_desktop_shortcut ? "desktop" : "application menu", sstr(qstr(gameinfo->info.name).simplified()));
 			QMessageBox::information(this, tr("Success!"), tr("Successfully created a shortcut."));
