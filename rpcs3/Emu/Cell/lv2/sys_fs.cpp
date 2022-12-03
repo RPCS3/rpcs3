@@ -31,6 +31,7 @@ lv2_fs_mount_point g_mp_sys_dev_flash{"/dev_flash", "CELL_FS_FAT", "CELL_FS_IOS:
 lv2_fs_mount_point g_mp_sys_host_root{"/host_root", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:/", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash};
 lv2_fs_mount_point g_mp_sys_app_home{"/app_home", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_host_root};
 lv2_fs_mount_point g_mp_sys_dev_root{"/", "CELL_FS_ADMINFS", "CELL_FS_ADMINFS:", 512, 0x100, 512, lv2_mp_flag::read_only + lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_app_home};
+lv2_fs_mount_point g_mp_sys_no_device{};
 
 struct mount_point_reset
 {
@@ -206,31 +207,36 @@ std::string_view lv2_fs_object::get_device_path(std::string_view filename)
 
 lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 {
+	if (!filename.starts_with('/'))
+	{
+		return &g_mp_sys_no_device;
+	}
+
 	const auto mp_name = get_device_path(filename);
 
-	if (mp_name == "dev_hdd0"sv)
-		return &g_mp_sys_dev_hdd0;
-	if (mp_name == "dev_hdd1"sv)
-		return &g_mp_sys_dev_hdd1;
-	if (mp_name.starts_with("dev_usb"sv))
-		return &g_mp_sys_dev_usb;
-	if (mp_name == "dev_bdvd"sv)
-		return &g_mp_sys_dev_bdvd;
-	if (mp_name == "dev_ps2disc"sv)
-		return &g_mp_sys_dev_dvd;
-	if (mp_name == "app_home"sv)
-		return &g_mp_sys_app_home;
-	if (mp_name == "host_root"sv)
-		return &g_mp_sys_host_root;
-	if (mp_name == "dev_flash"sv)
-		return &g_mp_sys_dev_flash;
-	if (mp_name == "dev_flash2"sv)
-		return &g_mp_sys_dev_flash2;
-	if (mp_name == "dev_flash3"sv)
-		return &g_mp_sys_dev_flash3;
+	for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
+	{
+		const auto pos = mp->root.find_first_not_of('/');
+		const auto mp_root = pos != umax ? mp->root.substr(pos) : mp->root;
+
+		if (mp == &g_mp_sys_dev_usb)
+		{
+			for (int i = 0; i < 8; i++)
+			{
+				if (fmt::format("%s%03d", mp_root, i) == mp_name)
+				{
+					return mp;
+				}
+			}
+		}
+		else if (mp_root == mp_name)
+		{
+			return mp;
+		}
+	}
 
 	// Default fallback
-	return &g_mp_sys_dev_root;
+	return &g_mp_sys_no_device;
 }
 
 std::string lv2_fs_object::get_vfs(std::string_view filename)
