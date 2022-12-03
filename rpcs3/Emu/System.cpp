@@ -694,6 +694,18 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 
 game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, cfg_mode config_mode, const std::string& config_path)
 {
+	auto save_args = std::make_tuple(m_path, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode);
+
+	auto restore_on_no_boot = [&](game_boot_result result)
+	{
+		if (IsStopped() || result != game_boot_result::no_errors)
+		{
+			std::tie(m_path, argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode) = std::move(save_args);
+		}
+
+		return result;
+	};
+
 	m_path_old = m_path;
 
 	m_config_mode = config_mode;
@@ -704,7 +716,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	{
 		m_path = path;
 
-		return Load(title_id, add_only);
+		return restore_on_no_boot(Load(title_id, add_only));
 	}
 
 	game_boot_result result = game_boot_result::nothing_to_boot;
@@ -741,7 +753,8 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 			}
 		}
 	}
-	return result;
+
+	return restore_on_no_boot(result);
 }
 
 void Emulator::SetForceBoot(bool force_boot)
@@ -1395,7 +1408,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				if (IsStopped())
 				{
-					m_path = m_path_old; // Reset m_path to fix boot from gui
 					GetCallbacks().on_stop(); // Call on_stop to refresh gui
 					return game_boot_result::no_errors;
 				}
@@ -1629,7 +1641,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		if (add_only)
 		{
 			sys_log.notice("Finished to add data to games.yml by boot for: %s", m_path);
-			m_path = m_path_old; // Reset m_path to fix boot from gui
 			return game_boot_result::no_errors;
 		}
 
