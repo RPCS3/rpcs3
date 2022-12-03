@@ -30,6 +30,7 @@
 #include "input_dialog.h"
 #include "camera_settings_dialog.h"
 #include "ipc_settings_dialog.h"
+#include "shortcut_utils.h"
 
 #include <thread>
 #include <charconv>
@@ -40,6 +41,8 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QFontDatabase>
+#include <QBuffer>
+#include <QTemporaryFile>
 
 #include "rpcs3_version.h"
 #include "Emu/IdManager.h"
@@ -846,6 +849,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	package_error error = package_error::no_error;
 
 	bool cancelled = false;
+	std::map<std::string, QString> bootable_paths_installed; // -> title
 
 	for (usz i = 0, count = packages.size(); i < count; i++)
 	{
@@ -882,15 +886,21 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		const std::string path      = sstr(package.path);
 		const std::string file_name = sstr(file_info.fileName());
 
+		std::string bootable_path;
+
 		// Run PKG unpacking asynchronously
-		named_thread worker("PKG Installer", [path, &progress, &error]
+		named_thread worker("PKG Installer", [path, &progress, &error, &bootable_path]
 		{
 			package_reader reader(path);
 			error = reader.check_target_app_version();
 
 			if (error == package_error::no_error)
 			{
-				return reader.extract_data(progress);
+				if (reader.extract_data(progress))
+				{
+					bootable_path = reader.try_get_bootable_file_path_if_created_new();
+					return true;
+				}
 			}
 
 			return false;
@@ -922,7 +932,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		}
 		else
 		{
-			pdlg.setHidden(true);
+			pdlg.hide();
 			pdlg.SignalFailure();
 		}
 
@@ -931,9 +941,132 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			m_game_list_frame->Refresh(true);
 			gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", file_name, sstr(package.title_id), sstr(package.title), sstr(package.version));
 
+			if (!bootable_path.empty())
+			{
+				bootable_paths_installed[bootable_path] = package.title;
+			}
+
 			if (i == (count - 1))
 			{
-				m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+				pdlg.hide();
+
+				bool create_desktop_shortcuts = false;
+				bool create_app_shortcut = false;
+
+				if (bootable_paths_installed.empty())
+				{
+					m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+				}
+				else
+				{
+					auto dlg = new QDialog(this);
+					dlg->setWindowTitle(tr("Success!"));
+
+					QVBoxLayout* vlayout = new QVBoxLayout(dlg);
+
+					QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
+#ifdef _WIN32
+					QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
+#elif defined(__APPLE__)
+					QCheckBox* quick_check = new QCheckBox(tr("Add dock shortcut(s)"));
+#else
+					QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
+#endif
+					QLabel* label = new QLabel(tr("Successfully installed software from package(s)!\nWould you like to install shortcuts to the installed software? (%1 new software detected)\n\n").arg(bootable_paths_installed.size()), dlg);
+	
+					vlayout->addWidget(label);
+					vlayout->addStretch(10);
+					vlayout->addWidget(desk_check);
+					vlayout->addStretch(3);
+					vlayout->addWidget(quick_check);
+					vlayout->addStretch(3);
+
+					QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
+	
+					vlayout->addWidget(btn_box);
+					dlg->setLayout(vlayout);
+
+					connect(btn_box, &QDialogButtonBox::accepted, this, [&]()
+					{
+						create_desktop_shortcuts = desk_check->isChecked();
+						create_app_shortcut = quick_check->isChecked();
+						dlg->accept();
+					});
+
+					dlg->setAttribute(Qt::WA_DeleteOnClose);
+					dlg->exec();
+				}
+
+				for (const auto& [boot_path, title] : bootable_paths_installed)
+				{
+					if (std::string game_dir = fs::get_parent_dir(boot_path, 2); fs::is_dir(game_dir) && fs::is_file(boot_path))
+					{
+						const std::string target_cli_args = fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", game_dir.substr(game_dir.find_last_of(fs::delim) + 1));
+						const std::string std_title_id = sstr(package.title_id);
+						const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), std_title_id);
+
+						// Copy the icon used by rpcs3 to a file
+						QTemporaryFile tmp_file(QDir::tempPath() + "/tempFile");
+						if (!tmp_file.open())
+						{
+							gui_log.error("Failed to create icon for '%s'", sstr(title.simplified()));
+							continue;
+						}
+
+						const QIcon icon = gui::utils::get_app_icon_from_path(rpcs3::utils::get_sfo_dir_from_game_path(boot_path + "/../../"), std_title_id);
+						QPixmap pix = icon.pixmap(icon.actualSize(QSize(1000, 1000)));
+						QByteArray bytes;
+						QBuffer buffer(&bytes);
+						buffer.open(QIODevice::ReadWrite);
+						pix.save(&buffer, "PNG");
+						tmp_file.write(bytes.data(), bytes.size());
+
+						std::string icon_path = sstr(tmp_file.fileName());
+#ifdef _WIN32
+						if (gui::utils::create_shortcut(sstr(title), target_cli_args, sstr(title), icon_path, target_icon_dir, gui::utils::shortcut_location::rpcs3_shortcuts))
+						{
+							gui_log.success("Created a shortcut for '%s' at '%s/games/shortcuts/'", sstr(title.simplified()), fs::get_config_dir());
+						}
+#endif
+
+						struct install_shortcut_info
+						{
+							std::string type;
+							gui::utils::shortcut_location location;
+							bool to_install;
+						};
+
+						std::initializer_list<install_shortcut_info> installing_locations =
+						{
+							{"desktop", gui::utils::shortcut_location::desktop, create_desktop_shortcuts},
+#ifdef _WIN32
+							{"Start menu", gui::utils::shortcut_location::applications, create_app_shortcut},
+#elif defined(__APPLE__)
+							{"dock", gui::utils::shortcut_location::applications, create_app_shortcut},
+#else
+							{"launcher", gui::utils::shortcut_location::applications, create_app_shortcut},
+#endif
+						};
+
+					
+						for (const auto& loc : installing_locations)
+						{
+							if (!loc.to_install)
+							{
+								continue;
+							}
+
+							if (gui::utils::create_shortcut(sstr(title), target_cli_args, sstr(title), icon_path, target_icon_dir, loc.location))
+							{
+								gui_log.success("Created %s shortcut for %s", loc.type, sstr(title.simplified()));
+							}
+							else
+							{
+								gui_log.error("Failed to create %s shortcut for %s", loc.type, sstr(title.simplified()));
+							}
+						}
+					}
+				}
 			}
 		}
 		else
