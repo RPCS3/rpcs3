@@ -422,9 +422,9 @@ void Emulator::Init(bool add_only)
 	make_path_verbose(fs::get_config_dir() + "sounds/");
 	make_path_verbose(patch_engine::get_patches_path());
 
-	if (const std::string games_common = fs::get_config_dir() + "/games"; make_path_verbose(games_common))
+	if (const std::string games_common = fs::get_config_dir() + "/games/"; make_path_verbose(games_common))
 	{
-		fs::write_file(user_path + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
+		fs::write_file(games_common + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
 	}
 
 	if (add_only)
