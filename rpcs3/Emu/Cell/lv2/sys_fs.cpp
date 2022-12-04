@@ -241,27 +241,27 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 
 std::string lv2_fs_object::get_vfs(std::string_view filename)
 {
-	const auto mp_name = get_device_path(filename);
+	const auto mp = get_mp(filename);
 
-	if (mp_name == "dev_hdd0"sv)
+	if (mp == &g_mp_sys_dev_hdd0)
 		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, rpcs3::utils::get_emu_dir());
-	if (mp_name == "dev_hdd1"sv)
+	if (mp == &g_mp_sys_dev_hdd1)
 		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, rpcs3::utils::get_emu_dir());
-	if (mp_name.starts_with("dev_usb"sv))
-		return g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/%s", mp_name), rpcs3::utils::get_emu_dir()).path;
-	if (mp_name == "dev_bdvd"sv)
+	if (mp == &g_mp_sys_dev_usb)
+		return g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/%s", get_device_path(filename)), rpcs3::utils::get_emu_dir()).path;
+	if (mp == &g_mp_sys_dev_bdvd)
 		return g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
-	if (mp_name == "dev_ps2disc"sv)
+	if (mp == &g_mp_sys_dev_dvd)
 		return {}; // Unsupported in VFS
-	if (mp_name == "app_home"sv)
+	if (mp == &g_mp_sys_app_home)
 		return g_cfg_vfs.get(g_cfg_vfs.app_home, rpcs3::utils::get_emu_dir());
-	if (mp_name == "host_root"sv)
+	if (mp == &g_mp_sys_host_root)
 		return g_cfg.vfs.host_root ? "/" : std::string();
-	if (mp_name == "dev_flash"sv)
+	if (mp == &g_mp_sys_dev_flash)
 		return g_cfg_vfs.get_dev_flash();
-	if (mp_name == "dev_flash2"sv)
+	if (mp == &g_mp_sys_dev_flash2)
 		return g_cfg_vfs.get_dev_flash2();
-	if (mp_name == "dev_flash3"sv)
+	if (mp == &g_mp_sys_dev_flash3)
 		return g_cfg_vfs.get_dev_flash3();
 
 	// Default fallback
