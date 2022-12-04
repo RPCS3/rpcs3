@@ -609,9 +609,14 @@ namespace rsx
 
 		if (!backend_config.supports_normalized_barycentrics)
 		{
-			// TODO
-			// Store a global flag to track raster mode between polygon and non-polygon
-			// Check if flag changed. If state is the same, ignore.
+			// Check for mode change between rasterized polys vs lines and points
+			// Luckily this almost never happens in real games
+			const auto current_mode = rsx::method_registers.current_draw_clause.classify_mode();
+			if (current_mode != m_current_draw_mode)
+			{
+				m_graphics_state |= (rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty);
+				m_current_draw_mode = current_mode;
+			}
 		}
 
 		in_begin_end = true;
@@ -1942,6 +1947,7 @@ namespace rsx
 
 		ensure(!(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty));
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
+		current_vertex_program.ctrl = rsx::method_registers.current_draw_clause.classify_mode() == primitive_class::polygon ? RSX_SHADER_CONTROL_POLYGON_RASTER : 0;
 
 		for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
@@ -2149,8 +2155,12 @@ namespace rsx
 		current_fragment_program.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
 		current_fragment_program.two_sided_lighting = rsx::method_registers.two_side_light_en();
 
-		if (method_registers.current_draw_clause.primitive == primitive_type::points &&
-			method_registers.point_sprite_enabled())
+		if (method_registers.current_draw_clause.classify_mode() == primitive_class::polygon)
+		{
+			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_RASTER;
+		}
+		else if (method_registers.point_sprite_enabled() &&
+			method_registers.current_draw_clause.primitive == primitive_type::points)
 		{
 			// Set high word of the control mask to store point sprite control
 			current_fragment_program.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
