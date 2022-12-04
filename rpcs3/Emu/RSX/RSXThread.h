@@ -497,6 +497,8 @@ namespace rsx
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
 
+		primitive_class m_current_draw_mode = primitive_class::polygon;
+
 		backend_configuration backend_config{};
 
 		// FIFO
