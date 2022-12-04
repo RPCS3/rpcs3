@@ -607,6 +607,13 @@ namespace rsx
 			}
 		}
 
+		if (!backend_config.supports_normalized_barycentrics)
+		{
+			// TODO
+			// Store a global flag to track raster mode between polygon and non-polygon
+			// Check if flag changed. If state is the same, ignore.
+		}
+
 		in_begin_end = true;
 	}
 
