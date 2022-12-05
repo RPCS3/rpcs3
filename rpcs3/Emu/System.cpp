@@ -93,7 +93,7 @@ thread_local std::string_view g_tls_serialize_name;
 extern thread_local std::string(*g_tls_log_prefix)();
 
 // Report error and call std::abort(), defined in main.cpp
-[[noreturn]] void report_fatal_error(std::string_view);
+[[noreturn]] void report_fatal_error(std::string_view, bool = false);
 
 void initialize_timebased_time(u64 timebased_init, bool reset = false);
 

@@ -91,7 +91,7 @@ extern char **environ;
 LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(q_debug, "QDEBUG");
 
-[[noreturn]] extern void report_fatal_error(std::string_view _text)
+[[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false)
 {
 #ifdef __linux__
 	extern void jit_announce(uptr, usz, std::string_view);
@@ -151,9 +151,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		std::cerr << fmt::format("RPCS3: %s\n", text);
 	}
 
-	static auto show_report = [](std::string_view text)
+	static auto show_report = [is_html](std::string_view text)
 	{
-		fatal_error_dialog dlg(text);
+		fatal_error_dialog dlg(text, is_html);
 		dlg.exec();
 	};
 
