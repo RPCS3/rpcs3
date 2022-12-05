@@ -884,6 +884,7 @@
     </CustomBuild>
     <ClInclude Include="Input\pad_thread.h" />
     <ClInclude Include="Input\product_info.h" />
+    <ClInclude Include="module_verifier.hpp" />
     <ClInclude Include="QTGeneratedFiles\ui_about_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_main_window.h" />
