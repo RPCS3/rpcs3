@@ -48,48 +48,17 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 {
-	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
-	{
-		for (const ParamItem& PI : PT.items)
+	glsl::insert_fragment_shader_inputs_block(
+		OS,
+		glsl::extension_type::NV,
+		m_prog,
+		m_parr.params[PF_PARAM_IN],
 		{
-			//ssa is defined in the program body and is not a varying type
-			if (PI.name == "ssa") continue;
-
-			const auto reg_location = gl::get_varying_register_location(PI.name);
-			std::string var_name = PI.name;
-
-			if (var_name == "fogc")
-			{
-				var_name = "fog_c";
-			}
-			else if (m_prog.two_sided_lighting)
-			{
-				if (var_name == "diff_color")
-				{
-					var_name = "diff_color0";
-				}
-				else if (var_name == "spec_color")
-				{
-					var_name = "spec_color0";
-				}
-			}
-
-			OS << "layout(location=" << reg_location << ") in vec4 " << var_name << ";\n";
-		}
-	}
-
-	if (m_prog.two_sided_lighting)
-	{
-		if (properties.in_register_mask & in_diff_color)
-		{
-			OS << "layout(location=" << gl::get_varying_register_location("diff_color1") << ") in vec4 diff_color1;\n";
-		}
-
-		if (properties.in_register_mask & in_spec_color)
-		{
-			OS << "layout(location=" << gl::get_varying_register_location("spec_color1") << ") in vec4 spec_color1;\n";
-		}
-	}
+			.two_sided_color = !!(properties.in_register_mask & in_diff_color),
+			.two_sided_specular = !!(properties.in_register_mask & in_spec_color)
+		},
+		gl::get_varying_register_location
+	);
 }
 
 void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
@@ -211,7 +180,7 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;
 	m_shader_props.emulate_coverage_tests = true; // g_cfg.video.antialiasing_level == msaa_level::none;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
-	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
+	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 	m_shader_props.ROP_output_rounding = ::gl::get_driver_caps().vendor_NVIDIA;
