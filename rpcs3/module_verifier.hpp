@@ -11,7 +11,7 @@
 #include <Utilities/StrUtil.h>
 #include <Utilities/StrFmt.h>
 
-[[noreturn]] void report_fatal_error(std::string_view);
+[[noreturn]] void report_fatal_error(std::string_view, bool);
 
 // Validates that system modules are properly installed
 // Only relevant for WIN32
@@ -53,16 +53,18 @@ class WIN32_module_verifier
 				if (s.find(system_root) != 0)
 				{
 					const auto error_message = fmt::format(
-						"The module '%s' was incorrectly installed.\n"
-						"This module is part of the '%s' package.\n"
-						"You can install this package from this URL:\n"
-						"<a href='%s'>%s</a>",
+						"<p>"
+						"The module '%s' was incorrectly installed.<br>"
+						"This module is part of the '%s' package.<br>"
+						"You can install this package from this URL:<br>"
+						"<a href='%s'>%s</a>"
+						"</p>",
 						wchar_to_utf8(module.name),
 						module.package_name,
 						module.dl_link,
 						module.dl_link
 					);
-					report_fatal_error(error_message);
+					report_fatal_error(error_message, true);
 				}
 			}
 		}
