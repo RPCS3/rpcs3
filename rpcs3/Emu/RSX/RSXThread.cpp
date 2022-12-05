@@ -1947,7 +1947,7 @@ namespace rsx
 
 		ensure(!(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty));
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
-		current_vertex_program.ctrl = rsx::method_registers.current_draw_clause.classify_mode() == primitive_class::polygon ? RSX_SHADER_CONTROL_POLYGON_RASTER : 0;
+		current_vertex_program.ctrl = 0; // Reserved
 
 		for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
@@ -2157,7 +2157,7 @@ namespace rsx
 
 		if (method_registers.current_draw_clause.classify_mode() == primitive_class::polygon)
 		{
-			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_RASTER;
+			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
 		}
 		else if (method_registers.point_sprite_enabled() &&
 			method_registers.current_draw_clause.primitive == primitive_type::points)

@@ -63,6 +63,7 @@ namespace vk
 		bool sampler_mirror_clamped_support : 1 = false;
 		bool descriptor_indexing_support : 1 = false;
 		bool framebuffer_loops_support : 1 = false;
+		bool barycoords_support : 1 = false;
 
 		u32 descriptor_max_draw_calls = DESCRIPTOR_MAX_DRAW_CALLS;
 		u64 descriptor_update_after_bind_mask = 0;
@@ -151,6 +152,7 @@ namespace vk
 		bool get_debug_utils_support() const { return g_cfg.video.renderdoc_compatiblity && pgpu->debug_utils_support; }
 		bool get_descriptor_indexing_support() const { return pgpu->descriptor_indexing_support; }
 		bool get_framebuffer_loops_support() const { return pgpu->framebuffer_loops_support; }
+		bool get_barycoords_support() const { return pgpu->barycoords_support; }
 
 		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_update_after_bind_mask; }
 		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }

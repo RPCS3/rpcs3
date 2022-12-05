@@ -781,7 +781,7 @@ enum
 	RSX_SHADER_CONTROL_UNKNOWN1 = 0x8000, // seemingly set when srgb packer is used??
 
 	// Custom
-	RSX_SHADER_CONTROL_POLYGON_RASTER = 0x10000 // Rasterizing triangles and not lines or points
+	RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION = 0x10000 // Rasterizing triangles and not lines or points
 };
 
 // GCM Reports

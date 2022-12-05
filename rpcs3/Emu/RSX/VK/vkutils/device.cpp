@@ -36,6 +36,7 @@ namespace vk
 			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
 			VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing_info{};
 			VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT fbo_loops_info{};
+			VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR shader_barycentric_info{};
 
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
@@ -65,6 +66,13 @@ namespace vk
 				features2.pNext      = &fbo_loops_info;
 			}
 
+			if (device_extensions.is_supported(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME))
+			{
+				shader_barycentric_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
+				shader_barycentric_info.pNext = features2.pNext;
+				features2.pNext               = &shader_barycentric_info;
+			}
+
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
@@ -73,6 +81,7 @@ namespace vk
 			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
 			framebuffer_loops_support          = !!fbo_loops_info.attachmentFeedbackLoopLayout;
+			barycoords_support                 = !!shader_barycentric_info.fragmentShaderBarycentric;
 			features                           = features2.features;
 
 			if (descriptor_indexing_support)

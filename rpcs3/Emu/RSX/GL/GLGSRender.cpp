@@ -145,6 +145,14 @@ void GLGSRender::on_init_thread()
 		}
 	}
 
+	if (gl_caps.NV_fragment_shader_barycentric_supported &&
+		gl_caps.vendor_NVIDIA &&
+		g_cfg.video.shader_precision != gpu_preset_level::low)
+	{
+		// NVIDIA's attribute interpolation requires some workarounds
+		backend_config.supports_normalized_barycentrics = false;
+	}
+
 	// Use industry standard resource alignment values as defaults
 	m_uniform_buffer_offset_align = 256;
 	m_min_texbuffer_alignment = 256;

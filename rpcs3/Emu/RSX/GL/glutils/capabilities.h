@@ -38,6 +38,7 @@ namespace gl
 		bool AMD_gpu_shader_half_float_supported = false;
 		bool ARB_compute_shader_supported = false;
 		bool NV_depth_buffer_float_supported = false;
+		bool NV_fragment_shader_barycentric_supported = false;
 
 		bool vendor_INTEL = false;  // has broken GLSL compiler
 		bool vendor_AMD = false;    // has broken ARB_multidraw
