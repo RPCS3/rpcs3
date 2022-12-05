@@ -30,8 +30,9 @@
 #include "Utilities/sema.h"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
-#include <windows.h>
+#include "module_verifier.hpp"
 #include "util/dyn_lib.hpp"
+
 
 // TODO(cjj19970505@live.cn)
 // When compiling with WIN32_LEAN_AND_MEAN definition
@@ -410,6 +411,13 @@ void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::
  	out += ss.str();
 }
 
+void run_platform_sanity_checks()
+{
+#ifdef _WIN32
+	// Check if we loaded modules correctly
+	WIN32_module_verifier::run();
+#endif
+}
 
 int main(int argc, char** argv)
 {
@@ -438,6 +446,9 @@ int main(int argc, char** argv)
 
 		report_fatal_error(error);
 	}
+
+	// Before we proceed, run some sanity checks
+	run_platform_sanity_checks();
 
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 

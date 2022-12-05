@@ -4,6 +4,17 @@
 #include <QTextDocument>
 #include <QIcon>
 
+static QString process_dialog_text(std::string_view text)
+{
+	auto html = Qt::convertFromPlainText(QString::fromUtf8(text.data(), text.size()));
+
+	// Let's preserve some html elements destroyed by convertFromPlainText
+	const QRegExp link_re{ R"(&lt;a\shref='([a-z0-9?=&#:\/\.\-]+)'&gt;([a-z0-9?=&#:\/\.\-]+)&lt;\/a&gt;)", Qt::CaseSensitive, QRegExp::RegExp2};
+	html = html.replace(link_re, "<a href=\\1>\\2</a>");
+
+	return html;
+}
+
 fatal_error_dialog::fatal_error_dialog(std::string_view text) : QMessageBox()
 {
 #ifndef __APPLE__
@@ -20,7 +31,7 @@ fatal_error_dialog::fatal_error_dialog(std::string_view text) : QMessageBox()
 				%3<br>
 			</p>
 			)")
-		.arg(Qt::convertFromPlainText(QString::fromUtf8(text.data(), text.size())))
+		.arg(process_dialog_text(text))
 		.arg(tr("HOW TO REPORT ERRORS:"))
 		.arg(tr("Please, don't send incorrect reports. Thanks for understanding.")));
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
