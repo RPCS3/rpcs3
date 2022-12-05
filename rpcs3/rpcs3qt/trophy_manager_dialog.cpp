@@ -92,6 +92,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_game_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_game_table->horizontalHeader()->setStretchLastSection(true);
 	m_game_table->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	m_game_table->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_game_table->verticalHeader()->setVisible(false);
 	m_game_table->setAlternatingRowColors(true);
 	m_game_table->installEventFilter(this);
@@ -318,13 +319,15 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		m_gui_settings->SetValue(gui::tr_show_platinum, checked);
 	});
 
-	connect(m_trophy_table, &QTableWidget::customContextMenuRequested, this, &trophy_manager_dialog::ShowContextMenu);
+	connect(m_trophy_table, &QTableWidget::customContextMenuRequested, this, &trophy_manager_dialog::ShowTrophyTableContextMenu);
 
 	connect(m_game_combo, &QComboBox::currentTextChanged, this, [this]
 	{
 		PopulateTrophyTable();
 		ApplyFilter();
 	});
+
+	connect(m_game_table, &QTableWidget::customContextMenuRequested, this, &trophy_manager_dialog::ShowGameTableContextMenu);
 
 	connect(m_game_table, &QTableWidget::itemSelectionChanged, this, [this]
 	{
@@ -714,7 +717,7 @@ void trophy_manager_dialog::ApplyFilter()
 	ReadjustTrophyTable();
 }
 
-void trophy_manager_dialog::ShowContextMenu(const QPoint& pos)
+void trophy_manager_dialog::ShowTrophyTableContextMenu(const QPoint& pos)
 {
 	const int row = m_trophy_table->currentRow();
 
@@ -780,6 +783,44 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& pos)
 	}
 
 	menu->exec(m_trophy_table->viewport()->mapToGlobal(pos));
+}
+
+void trophy_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
+{
+	const int row = m_game_table->currentRow();
+
+	if (!m_game_table->item(row, GameColumns::GameIcon))
+	{
+		return;
+	}
+
+	QMenu* menu = new QMenu();
+	QAction* show_trophy_dir = new QAction(tr("&Open Trophy Directory"), menu);
+
+	const int db_ind = m_game_combo->currentData().toInt();
+
+	connect(show_trophy_dir, &QAction::triggered, this, [this, db_ind]()
+	{
+		const QString path = qstr(m_trophies_db[db_ind]->path);
+		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+	});
+
+	menu->addAction(show_trophy_dir);
+
+	const QTableWidgetItem* name_item = m_game_table->item(row, GameColumns::GameName);
+	const QString name = name_item ? name_item->text() : "";
+
+	if (!name.isEmpty())
+	{
+		QAction* copy_name = new QAction(tr("&Copy Name"), menu);
+		connect(copy_name, &QAction::triggered, this, [this, name]()
+		{
+			QApplication::clipboard()->setText(name);
+		});
+		menu->addAction(copy_name);
+	}
+
+	menu->exec(m_game_table->viewport()->mapToGlobal(pos));
 }
 
 void trophy_manager_dialog::StartTrophyLoadThreads()
