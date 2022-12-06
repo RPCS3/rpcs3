@@ -11,7 +11,7 @@
 #include <Utilities/StrUtil.h>
 #include <Utilities/StrFmt.h>
 
-[[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
+[[noreturn]] void report_fatal_error(std::string_view text, bool is_html, bool include_help_text);
 
 // Validates that system modules are properly installed
 // Only relevant for WIN32
