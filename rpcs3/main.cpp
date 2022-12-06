@@ -30,8 +30,9 @@
 #include "Utilities/sema.h"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
-#include <windows.h>
+#include "module_verifier.hpp"
 #include "util/dyn_lib.hpp"
+
 
 // TODO(cjj19970505@live.cn)
 // When compiling with WIN32_LEAN_AND_MEAN definition
@@ -90,7 +91,7 @@ extern char **environ;
 LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(q_debug, "QDEBUG");
 
-[[noreturn]] extern void report_fatal_error(std::string_view _text)
+[[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true)
 {
 #ifdef __linux__
 	extern void jit_announce(uptr, usz, std::string_view);
@@ -150,9 +151,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		std::cerr << fmt::format("RPCS3: %s\n", text);
 	}
 
-	static auto show_report = [](std::string_view text)
+	static auto show_report = [is_html, include_help_text](std::string_view text)
 	{
-		fatal_error_dialog dlg(text);
+		fatal_error_dialog dlg(text, is_html, include_help_text);
 		dlg.exec();
 	};
 
@@ -410,6 +411,13 @@ void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::
  	out += ss.str();
 }
 
+void run_platform_sanity_checks()
+{
+#ifdef _WIN32
+	// Check if we loaded modules correctly
+	WIN32_module_verifier::run();
+#endif
+}
 
 int main(int argc, char** argv)
 {
@@ -438,6 +446,9 @@ int main(int argc, char** argv)
 
 		report_fatal_error(error);
 	}
+
+	// Before we proceed, run some sanity checks
+	run_platform_sanity_checks();
 
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 

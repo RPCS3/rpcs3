@@ -75,10 +75,11 @@ private Q_SLOTS:
 	void ResizeGameIcons();
 	void ResizeTrophyIcons();
 	void ApplyFilter();
-	void ShowContextMenu(const QPoint& pos);
+	void ShowTrophyTableContextMenu(const QPoint& pos);
+	void ShowGameTableContextMenu(const QPoint& pos);
 
 private:
-	/** Loads a trophy folder. 
+	/** Loads a trophy folder.
 	Returns true if successful.  Does not attempt to install if failure occurs, like sceNpTrophy.
 	*/
 	bool LoadTrophyFolderToDB(const std::string& trop_name);

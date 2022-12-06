@@ -6,7 +6,7 @@
 #include <QDialog>
 #include <QLineEdit>
 
-constexpr auto UI_SKY_NUM = 4;
+constexpr auto UI_SKY_NUM = 8;
 
 class skylander_creator_dialog : public QDialog
 {
