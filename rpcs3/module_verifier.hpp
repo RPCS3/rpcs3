@@ -52,15 +52,19 @@ class WIN32_module_verifier
 				const std::wstring_view s = path;
 				if (s.find(system_root) != 0)
 				{
+					const auto module_name = wchar_to_utf8(module.name);
 					const auto error_message = fmt::format(
 						"<p>"
 						"The module <strong>%s</strong> was incorrectly installed.<br>"
 						"This module is part of the <strong>%s</strong> package.<br>"
+						"Install this package, then delete <strong>%s</strong> from rpcs3's installation directory.<br>"
+						"<br>"
 						"You can install this package from this URL:<br>"
 						"<a href='%s'>%s</a>"
 						"</p>",
-						wchar_to_utf8(module.name),
+						module_name,
 						module.package_name,
+						module_name,
 						module.dl_link,
 						module.dl_link
 					);
