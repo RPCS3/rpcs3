@@ -104,7 +104,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		// Copy only when needed
 		buf = std::string(_text);
 
-		// Always print thread id
+		// Append thread id if it isn't already, except on main thread
 		fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
 	}
 
