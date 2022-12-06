@@ -99,7 +99,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	std::string buf;
 
 	// Check if thread id is in string
-	if (_text.find("\nThread id = "sv) == umax)
+	if (_text.find("\nThread id = "sv) == umax && !thread_ctrl::is_main())
 	{
 		// Copy only when needed
 		buf = std::string(_text);
