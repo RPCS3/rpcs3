@@ -11,7 +11,7 @@
 #include <Utilities/StrUtil.h>
 #include <Utilities/StrFmt.h>
 
-[[noreturn]] void report_fatal_error(std::string_view, bool);
+[[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
 // Validates that system modules are properly installed
 // Only relevant for WIN32
@@ -26,10 +26,10 @@ class WIN32_module_verifier
 
 	const std::vector<module_info_t> special_module_infos = {
 		{ L"vulkan-1.dll", "Vulkan Runtime", "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-runtime.exe" },
-		{ L"msvcp140.dll", "C++ Redistributable for Visual Studio 2015", "https://www.microsoft.com/en-us/download/details.aspx?id=48145" },
-		{ L"vcruntime140.dll", "C++ Redistributable for Visual Studio 2015", "https://www.microsoft.com/en-us/download/details.aspx?id=48145" },
-		{ L"msvcp140_1.dll", "C++ Redistributable for Visual Studio 2015", "https://www.microsoft.com/en-us/download/details.aspx?id=48145" },
-		{ L"vcruntime140_1.dll", "C++ Redistributable for Visual Studio 2015", "https://www.microsoft.com/en-us/download/details.aspx?id=48145" }
+		{ L"msvcp140.dll", "Microsoft Visual C++ 2015-2019 Redistributable", "https://aka.ms/vs/16/release/VC_redist.x64.exe" },
+		{ L"vcruntime140.dll", "Microsoft Visual C++ 2015-2019 Redistributable", "https://aka.ms/vs/16/release/VC_redist.x64.exe" },
+		{ L"msvcp140_1.dll", "Microsoft Visual C++ 2015-2019 Redistributable", "https://aka.ms/vs/16/release/VC_redist.x64.exe" },
+		{ L"vcruntime140_1.dll", "Microsoft Visual C++ 2015-2019 Redistributable", "https://aka.ms/vs/16/release/VC_redist.x64.exe" }
 	};
 
 	// Unless we support ReactOS in future, this is a constant
@@ -54,8 +54,8 @@ class WIN32_module_verifier
 				{
 					const auto error_message = fmt::format(
 						"<p>"
-						"The module '%s' was incorrectly installed.<br>"
-						"This module is part of the '%s' package.<br>"
+						"The module <strong>%s</strong> was incorrectly installed.<br>"
+						"This module is part of the <strong>%s</strong> package.<br>"
 						"You can install this package from this URL:<br>"
 						"<a href='%s'>%s</a>"
 						"</p>",
@@ -64,7 +64,7 @@ class WIN32_module_verifier
 						module.dl_link,
 						module.dl_link
 					);
-					report_fatal_error(error_message, true);
+					report_fatal_error(error_message, true, false);
 				}
 			}
 		}
