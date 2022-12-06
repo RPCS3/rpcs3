@@ -1787,7 +1787,7 @@ void main_window::BootRecentAction(const QAction* act)
 			m_rg_entries.removeAt(idx);
 			m_recent_game_acts.removeAt(idx);
 
-			m_gui_settings->SetValue(gui::rg_entries, m_gui_settings->List2Var(m_rg_entries));
+			m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(m_rg_entries));
 
 			gui_log.error("Recent Game not valid, removed from Boot Recent list: %s", path);
 
@@ -1823,7 +1823,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 			const int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
 
-			m_gui_settings->SetValue(gui::rg_entries, m_gui_settings->List2Var(m_rg_entries));
+			m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(m_rg_entries));
 		}
 		return nullptr;
 	}
@@ -1910,7 +1910,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 		ui->bootRecentMenu->addAction(m_recent_game_acts[i]);
 	}
 
-	m_gui_settings->SetValue(gui::rg_entries, m_gui_settings->List2Var(m_rg_entries));
+	m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(m_rg_entries));
 }
 
 void main_window::UpdateLanguageActions(const QStringList& language_codes, const QString& language_code)
@@ -2081,7 +2081,7 @@ void main_window::CreateConnects()
 			ui->bootRecentMenu->removeAction(act);
 		}
 		m_recent_game_acts.clear();
-		m_gui_settings->SetValue(gui::rg_entries, m_gui_settings->List2Var(q_pair_list()));
+		m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(q_pair_list()));
 	});
 
 	connect(ui->freezeRecentAct, &QAction::triggered, this, [this](bool checked)
