@@ -91,7 +91,7 @@ extern char **environ;
 LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(q_debug, "QDEBUG");
 
-[[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html, bool include_help_text)
+[[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true)
 {
 #ifdef __linux__
 	extern void jit_announce(uptr, usz, std::string_view);
