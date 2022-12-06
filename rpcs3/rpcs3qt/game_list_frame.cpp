@@ -1099,9 +1099,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove all caches?")) != QMessageBox::Yes)
 				return;
 
-			RemoveShadersCache(cache_base_dir);
-			RemovePPUCache(cache_base_dir);
-			RemoveSPUCache(cache_base_dir);
+			if (fs::remove_all(cache_base_dir))
+				game_list_log.success("Removed cache directory: '%s'", cache_base_dir);
+			else
+				game_list_log.error("Could not remove cache directory: '%s' (%s)", cache_base_dir, fs::g_tls_error);
 		});
 	}
 	menu.addSeparator();
