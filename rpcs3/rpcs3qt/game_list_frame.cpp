@@ -1099,9 +1099,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove all caches?")) != QMessageBox::Yes)
 				return;
 
-			RemoveShadersCache(cache_base_dir);
-			RemovePPUCache(cache_base_dir);
-			RemoveSPUCache(cache_base_dir);
+			if (fs::remove_all(cache_base_dir))
+				game_list_log.success("Removed cache directory: '%s'", cache_base_dir);
+			else
+				game_list_log.error("Could not remove cache directory: '%s' (%s)", cache_base_dir, fs::g_tls_error);
 		});
 	}
 	menu.addSeparator();
@@ -1577,8 +1578,9 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	u32 caches_total   = 0;
 
 	const QStringList filter{ QStringLiteral("shaders_cache") };
+	const QString q_base_dir = qstr(base_dir);
 
-	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	while (dir_iter.hasNext())
 	{
@@ -1604,6 +1606,14 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	else
 		game_list_log.fatal("Only %d/%d shaders cache dirs could be removed in %s", caches_removed, caches_total, base_dir);
 
+	if (QDir(q_base_dir).isEmpty())
+	{
+		if (fs::remove_dir(base_dir))
+			game_list_log.notice("Removed empty shader cache directory: %s", base_dir);
+		else
+			game_list_log.error("Could not remove empty shader cache directory: '%s' (%s)", base_dir, fs::g_tls_error);
+	}
+
 	return success;
 }
 
@@ -1619,8 +1629,9 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	u32 files_total = 0;
 
 	const QStringList filter{ QStringLiteral("v*.obj"), QStringLiteral("v*.obj.gz") };
+	const QString q_base_dir = qstr(base_dir);
 
-	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	while (dir_iter.hasNext())
 	{
@@ -1646,6 +1657,14 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	else
 		game_list_log.fatal("Only %d/%d PPU cache files could be removed in %s", files_removed, files_total, base_dir);
 
+	if (QDir(q_base_dir).isEmpty())
+	{
+		if (fs::remove_dir(base_dir))
+			game_list_log.notice("Removed empty PPU cache directory: %s", base_dir);
+		else
+			game_list_log.error("Could not remove empty PPU cache directory: '%s' (%s)", base_dir, fs::g_tls_error);
+	}
+
 	return success;
 }
 
@@ -1661,8 +1680,9 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	u32 files_total = 0;
 
 	const QStringList filter{ QStringLiteral("spu*.dat"), QStringLiteral("spu*.dat.gz"), QStringLiteral("spu*.obj"), QStringLiteral("spu*.obj.gz") };
+	const QString q_base_dir = qstr(base_dir);
 
-	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	while (dir_iter.hasNext())
 	{
@@ -1687,6 +1707,14 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 		game_list_log.success("Removed SPU cache in %s", base_dir);
 	else
 		game_list_log.fatal("Only %d/%d SPU cache files could be removed in %s", files_removed, files_total, base_dir);
+
+	if (QDir(q_base_dir).isEmpty())
+	{
+		if (fs::remove_dir(base_dir))
+			game_list_log.notice("Removed empty SPU cache directory: %s", base_dir);
+		else
+			game_list_log.error("Could not remove empty SPU cache directory: '%s' (%s)", base_dir, fs::g_tls_error);
+	}
 
 	return success;
 }
