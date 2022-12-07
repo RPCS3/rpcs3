@@ -93,7 +93,7 @@ thread_local std::string_view g_tls_serialize_name;
 extern thread_local std::string(*g_tls_log_prefix)();
 
 // Report error and call std::abort(), defined in main.cpp
-[[noreturn]] void report_fatal_error(std::string_view);
+[[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
 void initialize_timebased_time(u64 timebased_init, bool reset = false);
 
@@ -207,6 +207,31 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 	{
 		Emu.ExecDeserializationRemnants();
 		ar->pos += 32; // Reserved area
+	}
+}
+
+// Some settings are not allowed in certain PPU decoders
+void fixup_ppu_settings()
+{
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
+	{
+		if (g_cfg.core.ppu_use_nj_bit)
+		{
+			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_use_nj_bit.get_name(), g_cfg.core.ppu_decoder.get());
+			g_cfg.core.ppu_use_nj_bit.set(false);
+		}
+
+		if (g_cfg.core.ppu_set_vnan)
+		{
+			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_set_vnan.get_name(), g_cfg.core.ppu_decoder.get());
+			g_cfg.core.ppu_set_vnan.set(false);
+		}
+
+		if (g_cfg.core.ppu_set_fpcc)
+		{
+			sys_log.todo("The setting '%s' is currently not supported with PPU decoder type '%s' and will therefore be disabled during emulation.", g_cfg.core.ppu_set_fpcc.get_name(), g_cfg.core.ppu_decoder.get());
+			g_cfg.core.ppu_set_fpcc.set(false);
+		}
 	}
 }
 
@@ -340,13 +365,19 @@ void Emulator::Init(bool add_only)
 		}
 	}
 
+	// Disable incompatible settings
+	fixup_ppu_settings();
+
 	// Create directories (can be disabled if necessary)
 	auto make_path_verbose = [](const std::string& path)
 	{
 		if (!fs::create_path(path))
 		{
 			sys_log.fatal("Failed to create path: %s (%s)", path, fs::g_tls_error);
+			return false;
 		}
+
+		return true;
 	};
 
 	const std::string save_path = dev_hdd0 + "home/" + m_usr + "/savedata/";
@@ -390,6 +421,11 @@ void Emulator::Init(bool add_only)
 	make_path_verbose(fs::get_config_dir() + "captures/");
 	make_path_verbose(fs::get_config_dir() + "sounds/");
 	make_path_verbose(patch_engine::get_patches_path());
+
+	if (const std::string games_common = fs::get_config_dir() + "/games"; make_path_verbose(games_common))
+	{
+		fs::write_file(user_path + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
+	}
 
 	if (add_only)
 	{
@@ -721,36 +757,39 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 {
 	m_ar.reset();
 
-	if (m_config_mode == cfg_mode::continuous)
+	if (!add_only)
 	{
-		// The program is being booted from another running program
-		// CELL_GAME_GAMETYPE_GAMEDATA is not used as boot type
+		if (m_config_mode == cfg_mode::continuous)
+		{
+			// The program is being booted from another running program
+			// CELL_GAME_GAMETYPE_GAMEDATA is not used as boot type
 
-		if (m_cat == "DG"sv)
-		{
-			m_boot_source_type = CELL_GAME_GAMETYPE_DISC;
-		}
-		else if (m_cat == "HM"sv)
-		{
-			m_boot_source_type = CELL_GAME_GAMETYPE_HOME;
+			if (m_cat == "DG"sv)
+			{
+				m_boot_source_type = CELL_GAME_GAMETYPE_DISC;
+			}
+			else if (m_cat == "HM"sv)
+			{
+				m_boot_source_type = CELL_GAME_GAMETYPE_HOME;
+			}
+			else
+			{
+				m_boot_source_type = CELL_GAME_GAMETYPE_HDD;
+			}
 		}
 		else
 		{
-			m_boot_source_type = CELL_GAME_GAMETYPE_HDD;
-		}
-	}
-	else
-	{
-		if (fs::file save{m_path, fs::isfile + fs::read}; save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
-		{
-			m_ar = std::make_shared<utils::serial>();
-			m_ar->set_reading_state();
-			save.seek(0);
-			save.read(m_ar->data, save.size());
-			m_ar->data.shrink_to_fit();
-		}
+			if (fs::file save{m_path, fs::isfile + fs::read}; save && save.size() >= 8 && save.read<u64>() == "RPCS3SAV"_u64)
+			{
+				m_ar = std::make_shared<utils::serial>();
+				m_ar->set_reading_state();
+				save.seek(0);
+				save.read(m_ar->data, save.size());
+				m_ar->data.shrink_to_fit();
+			}
 
-		m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
+			m_boot_source_type = CELL_GAME_GAMETYPE_SYS;
+		}
 	}
 
 	if (!IsStopped())
@@ -930,6 +969,21 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				m_path = rpcs3::utils::get_hdd0_dir();
 				m_path += std::string_view(argv[0]).substr(9);
+
+				constexpr auto game0_path = "/dev_hdd0/game/"sv;
+
+				if (argv[0].starts_with(game0_path) && !fs::is_file(vfs::get(argv[0])))
+				{
+					std::string title_id = argv[0].substr(game0_path.size());
+					title_id = title_id.substr(0, title_id.find_last_not_of('/'));
+
+					// Try to load game directory from list if available
+					if (auto node = (title_id.empty() ? YAML::Node{} : games[title_id]))
+					{
+						disc = node.Scalar();
+						m_path = disc + argv[0].substr(game0_path.size() + title_id.size());
+					}
+				}
 			}
 			else if (argv[0].starts_with("/dev_flash"sv))
 			{
@@ -969,10 +1023,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		// Load PARAM.SFO (TODO)
 		psf::registry _psf;
-		if (fs::file sfov{elf_dir + "/sce_sys/param.sfo"})
+		const std::string sfo_path = elf_dir + "/sce_sys/param.sfo";
+		if (fs::file sfov{sfo_path})
 		{
 			m_sfo_dir = elf_dir;
-			_psf = psf::load_object(sfov);
+			_psf = psf::load_object(sfov, sfo_path);
 		}
 		else
 		{
@@ -1002,7 +1057,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				m_sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(elf_dir + "/../", m_title_id);
 			}
 
-			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
+			_psf = psf::load_object(m_sfo_dir + "/PARAM.SFO");
 		}
 
 		m_title = std::string(psf::get_string(_psf, "TITLE", std::string_view(m_path).substr(m_path.find_last_of(fs::delim) + 1)));
@@ -1082,6 +1137,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					}
 				}
 			}
+
+			// Disable incompatible settings
+			fixup_ppu_settings();
 
 			// Force audio provider
 			if (m_path.ends_with("vsh.self"sv))
@@ -1172,6 +1230,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			// Force LLVM recompiler
 			g_cfg.core.ppu_decoder.from_default();
+
+			// Disable incompatible settings
+			fixup_ppu_settings();
 
 			// Force LLE lib loading mode
 			g_cfg.core.libraries_control.set_set([]()
@@ -1294,7 +1355,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		// Detect boot location
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
-		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 		const bool from_hdd0_game   = IsPathInsideDir(m_path, hdd0_game);
 		const bool from_dev_flash   = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
 
@@ -1320,6 +1380,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				// Booting disc game from wrong location
 				sys_log.error("Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
 
+				const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 				const std::string dst_dir = hdd0_disc + sfb_dir.substr(hdd0_game.size());
 
 				// Move and retry from correct location
@@ -1375,7 +1436,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				return game_boot_result::invalid_file_or_folder;
 			}
 
-			const auto game_psf = psf::load_object(fs::file{vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")});
+			const auto game_psf = psf::load_object(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO"));
 			const auto bdvd_title_id = psf::get_string(game_psf, "TITLE_ID");
 
 			if (m_title_id.empty())
@@ -1423,8 +1484,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			argv[7] = "2";                        // ??? arg7 2 -- full screen on/off 2/1 ?
 			argv[8] = "1";                        // ??? arg8 2 -- smoothing	on/off	= 1/0 ?
 
-			//TODO, this seems like it would normally be done by sysutil etc
-			//Basically make 2 128KB memory cards 0 filled and let the games handle formatting.
+			// TODO, this seems like it would normally be done by sysutil etc
+			// Basically make 2 128KB memory cards 0 filled and let the games handle formatting.
 
 			fs::file card_1_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[1]), fs::write + fs::create);
 			card_1_file.trunc(128 * 1024);
@@ -1445,6 +1506,23 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
 			// Don't need /dev_bdvd
+
+			if (!m_title_id.empty() && !from_hdd0_game && m_cat == "HG")
+			{
+				// Add HG games not in HDD0 to games.yml
+				games[m_title_id] = m_sfo_dir;
+				YAML::Emitter out;
+				out << games;
+
+				fs::pending_file temp(fs::get_config_dir() + "/games.yml");
+
+				if (!temp.file || temp.file.write(out.c_str(), out.size()), !temp.commit())
+				{
+					sys_log.error("Failed to save HG game location of title '%s' (%s)", m_title_id, fs::g_tls_error);
+				}
+
+				vfs::mount("/dev_hdd0/game/" + m_title_id, m_sfo_dir + '/');
+			}
 		}
 		else if (m_cat == "DG" && from_hdd0_game && disc.empty())
 		{
@@ -1491,7 +1569,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Set title to actual disc title if necessary
 		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
 
-		const auto disc_psf_obj = psf::load_object(fs::file{ disc_sfo_dir });
+		const auto disc_psf_obj = psf::load_object(disc_sfo_dir);
 
 		// Install PKGDIR, INSDIR, PS3_EXTRA
 		if (!bdvd_dir.empty())
@@ -1773,6 +1851,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					// Firmware executables
 					argv[0] = "/dev_flash" + resolved_path.substr(GetCallbacks().resolve_path(g_cfg_vfs.get_dev_flash()).size());
 					m_dir = fs::get_parent_dir(argv[0]) + '/';
+				}
+				else if (!m_title_id.empty() && m_cat == "HG")
+				{
+					m_dir = "/dev_hdd0/game/" + m_title_id + '/';
+					argv[0] = m_dir + unescape(resolved_path.substr(GetCallbacks().resolve_path(m_sfo_dir).size()));
+					sys_log.notice("Boot path: %s", m_dir);
 				}
 				else if (g_cfg.vfs.host_root)
 				{
@@ -2714,10 +2798,15 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	return rpcs3::get_formatted_title(title_data);
 }
 
-s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* sup, const u64* args)
+s32 error_code::error_report(s32 result, const logs::message* channel, const char* fmt, const fmt_type_info* sup, const u64* args)
 {
-	static thread_local std::unordered_map<std::string, usz> g_tls_error_stats;
 	static thread_local std::string g_tls_error_str;
+	static thread_local std::unordered_map<std::string, usz> g_tls_error_stats;
+
+	if (!channel)
+	{
+		channel = &sys_log.error;
+	}
 
 	if (!sup && !args)
 	{
@@ -2728,7 +2817,7 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 			{
 				if (pair.second > 3)
 				{
-					sys_log.error("Stat: %s [x%u]", pair.first, pair.second);
+					channel->operator()("Stat: %s [x%u]", pair.first, pair.second);
 				}
 			}
 
@@ -2739,7 +2828,6 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 
 	ensure(fmt);
 
-	logs::channel* channel = &sys_log;
 	const char* func = "Unknown function";
 
 	if (auto ppu = get_current_cpu_thread<ppu_thread>())
@@ -2752,6 +2840,7 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 
 	// Format log message (use preallocated buffer)
 	g_tls_error_str.clear();
+
 	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x", func, result);
 
 	// Add spacer between error and fmt if necessary
@@ -2767,10 +2856,10 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 		if (!g_tls_error_stats.empty())
 		{
 			// Report and clean error state
-			error_report(0, nullptr, nullptr, nullptr);
+			error_report(0, nullptr, nullptr, nullptr, nullptr);
 		}
 
-		channel->error("%s", g_tls_error_str);
+		channel->operator()("%s", g_tls_error_str);
 	}
 	else
 	{
@@ -2778,7 +2867,7 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 
 		if (stat <= 3)
 		{
-			channel->error("%s [%u]", g_tls_error_str, stat);
+			channel->operator()("%s [%u]", g_tls_error_str, stat);
 		}
 	}
 
@@ -2835,13 +2924,14 @@ std::set<std::string> Emulator::GetGameDirs() const
 			if (entry.is_directory && entry.name.starts_with(GetTitleID()))
 			{
 				const std::string sfo_dir = game_dir + entry.name + '/';
-				const fs::file sfo_file(sfo_dir + "PARAM.SFO");
+				const std::string sfo_path = sfo_dir + "PARAM.SFO";
+				const fs::file sfo_file(sfo_path);
 				if (!sfo_file)
 				{
 					continue;
 				}
 
-				const psf::registry psf    = psf::load_object(sfo_file);
+				const psf::registry psf = psf::load_object(sfo_file, sfo_path);
 				const std::string title_id = std::string(psf::get_string(psf, "TITLE_ID", ""));
 
 				if (title_id == GetTitleID())
@@ -2853,6 +2943,61 @@ std::set<std::string> Emulator::GetGameDirs() const
 	}
 
 	return dirs;
+}
+
+void Emulator::AddGamesFromDir(const std::string& path)
+{
+	if (!IsStopped())
+		return;
+
+	const std::string games_yml = fs::get_cache_dir() + "/games.yml";
+
+	std::string content_before, content_after;
+
+	if (fs::file fd{games_yml})
+	{
+		content_before = fd.to_string();
+	}
+
+	// search dropped path first or else the direct parent to an elf is wrongly skipped
+	if (const auto error = BootGame(path, "", false, true); error == game_boot_result::no_errors)
+	{
+		if (fs::file fd{games_yml, fs::read + fs::isfile})
+		{
+			content_after = fd.to_string();
+		}
+
+		if (content_before != content_after)
+		{
+			sys_log.notice("Registered game directory: %s", path);
+			content_before = content_after;
+		}
+	}
+
+	// search direct subdirectories, that way we can drop one folder containing all games
+	for (auto&& dir_entry : fs::dir(path))
+	{
+		if (!dir_entry.is_directory || dir_entry.name == "." || dir_entry.name == "..")
+		{
+			continue;
+		}
+
+		const std::string dir_path = path + '/' + dir_entry.name;
+
+		if (const auto error = BootGame(dir_path, "", false, true); error == game_boot_result::no_errors)
+		{
+			if (fs::file fd{games_yml, fs::read + fs::isfile})
+			{
+				content_after = fd.to_string();
+			}
+
+			if (content_before != content_after)
+			{
+				sys_log.notice("Registered game directory: %s", dir_path);
+				content_before = content_after;
+			}
+		}
+	}
 }
 
 bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
@@ -2996,7 +3141,7 @@ game_boot_result Emulator::InsertDisc(const std::string& path)
 
 		// Double check PARAM.SFO
 		const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(disc_root);
-		const psf::registry _psf = psf::load_object(fs::file(sfo_dir + "/PARAM.SFO"));
+		const psf::registry _psf = psf::load_object(sfo_dir + "/PARAM.SFO");
 
 		if (_psf.empty())
 		{

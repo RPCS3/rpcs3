@@ -192,9 +192,9 @@ namespace np
 		}
 
 		ticket_data tdata{};
-		const auto* ptr      = data() + index;
-		tdata.id             = *reinterpret_cast<const be_t<u16>*>(ptr);
-		tdata.len            = *reinterpret_cast<const be_t<u16>*>(ptr + 2);
+		const auto* ptr = data() + index;
+		tdata.id = read_from_ptr<be_t<u16>>(ptr);
+		tdata.len = read_from_ptr<be_t<u16>>(ptr + 2);
 		const auto* data_ptr = data() + index + 4;
 
 		auto check_size = [&](std::size_t expected) -> bool
@@ -219,7 +219,7 @@ namespace np
 			{
 				return std::nullopt;
 			}
-			tdata.data.data_u32 = *reinterpret_cast<const be_t<u32>*>(data_ptr);
+			tdata.data.data_u32 = read_from_ptr<be_t<u32>>(data_ptr);
 			break;
 		case 2:
 		case 7:
@@ -227,7 +227,7 @@ namespace np
 			{
 				return std::nullopt;
 			}
-			tdata.data.data_u64 = *reinterpret_cast<const be_t<u64>*>(data_ptr);
+			tdata.data.data_u64 = read_from_ptr<be_t<u64>>(data_ptr);
 			break;
 		case 4:
 		case 8:
@@ -277,14 +277,14 @@ namespace np
 			return;
 		}
 
-		version = *reinterpret_cast<const be_t<u32>*>(data());
+		version = read_from_ptr<be_t<u32>>(data());
 		if (version != 0x21010000)
 		{
 			ticket_log.error("Invalid version: 0x%08x", version);
 			return;
 		}
 
-		u32 given_size = *reinterpret_cast<const be_t<u32>*>(data() + 4);
+		u32 given_size = read_from_ptr<be_t<u32>>(data() + 4);
 		if ((given_size + 8) != size())
 		{
 			ticket_log.error("Size mismatch (gs: %d vs s: %d)", given_size, size());
@@ -370,6 +370,18 @@ namespace np
 			else
 			{
 				dns_ip = conv.s_addr;
+			}
+
+			// Convert bind address
+			conv = {};
+			if (!inet_pton(AF_INET, g_cfg.net.bind_address.to_string().c_str(), &conv))
+			{
+				// Do not set to disconnected on invalid IP just error and continue using default (0.0.0.0)
+				nph_log.error("Provided IP(%s) address for bind is invalid!", g_cfg.net.bind_address.to_string());
+			}
+			else
+			{
+				bind_ip = conv.s_addr;
 			}
 		}
 	}
@@ -471,7 +483,7 @@ namespace np
 			return;
 		}
 
-		local_ip_addr = *reinterpret_cast<u32*>(host->h_addr_list[0]);
+		local_ip_addr = read_from_ptr<u32>(host->h_addr_list[0]);
 
 		// Set public address to local discovered address for now, may be updated later from RPCN socket
 		public_ip_addr = local_ip_addr;
@@ -583,6 +595,11 @@ namespace np
 	u32 np_handler::get_dns_ip() const
 	{
 		return dns_ip;
+	}
+
+	u32 np_handler::get_bind_ip() const
+	{
+		return bind_ip;
 	}
 
 	s32 np_handler::get_net_status() const

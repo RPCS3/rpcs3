@@ -84,7 +84,7 @@ enum class emu_settings_type
 	MinimumScalableDimension,
 	FsrUpscalingEnable,
 	FsrSharpeningStrength,
-	ForceDisableExclusiveFullscreenMode,
+	ExclusiveFullscreenMode,
 	ForceCPUBlitEmulation,
 	DisableOnDiskShaderCache,
 	DisableVulkanMemAllocator,
@@ -170,6 +170,7 @@ enum class emu_settings_type
 	DNSAddress,
 	IpSwapList,
 	PSNStatus,
+	BindAddress,
 
 	// System
 	LicenseArea,
@@ -276,7 +277,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::VulkanAsyncSchedulerDriver,          { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
 	{ emu_settings_type::FsrUpscalingEnable,                  { "Video", "Vulkan", "Enable FidelityFX Super Resolution Upscaling"}},
 	{ emu_settings_type::FsrSharpeningStrength,               { "Video", "Vulkan", "FidelityFX CAS Sharpening Intensity"}},
-	{ emu_settings_type::ForceDisableExclusiveFullscreenMode, { "Video", "Vulkan", "Force Disable Exclusive Fullscreen Mode"}},
+	{ emu_settings_type::ExclusiveFullscreenMode,             { "Video", "Vulkan", "Exclusive Fullscreen Mode"}},
 
 	// Performance Overlay
 	{ emu_settings_type::PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },
@@ -348,6 +349,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DNSAddress,     { "Net", "DNS address"}},
 	{ emu_settings_type::IpSwapList,     { "Net", "IP swap list"}},
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
+	{ emu_settings_type::BindAddress,    { "Net", "Bind address"}},
 
 	// System
 	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},

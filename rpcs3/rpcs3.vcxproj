@@ -175,6 +175,7 @@
   <ItemGroup>
     <ClCompile Include="display_sleep_control.cpp" />
     <ClCompile Include="Input\dualsense_pad_handler.cpp" />
+    <ClCompile Include="Input\evdev_gun_handler.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="main_application.cpp" />
@@ -725,6 +726,7 @@
     <ClInclude Include="Input\ds3_pad_handler.h" />
     <ClInclude Include="Input\ds4_pad_handler.h" />
     <ClInclude Include="Input\dualsense_pad_handler.h" />
+    <ClInclude Include="Input\evdev_gun_handler.h" />
     <ClInclude Include="Input\evdev_joystick_handler.h" />
     <ClInclude Include="Input\hid_pad_handler.h" />
     <ClInclude Include="Input\keyboard_pad_handler.h" />
@@ -882,6 +884,7 @@
     </CustomBuild>
     <ClInclude Include="Input\pad_thread.h" />
     <ClInclude Include="Input\product_info.h" />
+    <ClInclude Include="module_verifier.hpp" />
     <ClInclude Include="QTGeneratedFiles\ui_about_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_camera_settings_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_main_window.h" />

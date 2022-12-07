@@ -169,6 +169,7 @@ enum : u32
 	PRX_STATE_STARTED,
 	PRX_STATE_STOPPING, // In-between state between started and stopped (internal)
 	PRX_STATE_STOPPED, // Last state, the module cannot be restarted
+	PRX_STATE_DESTROYED, // Last state, the module cannot be restarted
 };
 
 struct lv2_prx final : lv2_obj, ppu_module
@@ -176,6 +177,7 @@ struct lv2_prx final : lv2_obj, ppu_module
 	static const u32 id_base = 0x23000000;
 
 	atomic_t<u32> state = PRX_STATE_INITIALIZED;
+	shared_mutex mutex;
 
 	std::unordered_map<u32, u32> specials;
 	std::unordered_map<u32, void*> imports;
@@ -189,6 +191,11 @@ struct lv2_prx final : lv2_obj, ppu_module
 	char module_info_name[28];
 	u8 module_info_version[2];
 	be_t<u16> module_info_attributes;
+
+	u32 exports_start = umax;
+	u32 exports_end = 0;
+
+	void load_exports(); // (Re)load exports
 
 	lv2_prx() noexcept = default;
 	lv2_prx(utils::serial&) {}

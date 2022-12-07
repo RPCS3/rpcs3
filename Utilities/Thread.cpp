@@ -96,7 +96,7 @@ thread_local bool g_tls_access_violation_recovered = false;
 extern thread_local std::string(*g_tls_log_prefix)();
 
 // Report error and call std::abort(), defined in main.cpp
-[[noreturn]] void report_fatal_error(std::string_view);
+[[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
 std::string dump_useful_thread_info()
 {
@@ -1927,7 +1927,10 @@ const bool s_terminate_handler_set = []() -> bool
 	std::set_terminate([]()
 	{
 		if (IsDebuggerPresent())
+		{
+			logs::listener::sync_all();
 			utils::trap();
+		}
 
 		report_fatal_error("RPCS3 has abnormally terminated.");
 	});
@@ -2065,7 +2068,7 @@ void thread_base::set_name(std::string name)
 u64 thread_base::finalize(thread_state result_state) noexcept
 {
 	// Report pending errors
-	error_code::error_report(0, 0, 0, 0);
+	error_code::error_report(0, nullptr, nullptr, nullptr, nullptr);
 
 #ifdef _WIN32
 	static thread_local ULONG64 tls_cycles{};
@@ -2650,7 +2653,10 @@ void thread_base::exec()
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
 	if (IsDebuggerPresent())
+	{
+		logs::listener::sync_all();
 		utils::trap();
+	}
 
 	if (const auto _this = g_tls_this_thread)
 	{

@@ -158,6 +158,11 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 	case 0x19002:
 	{
 		// AIM_get_device_type
+		constexpr u8 product_code[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x89 };
+		std::memcpy(buffer.get_ptr(), product_code, 16);
+		if (g_cfg.core.debug_console_mode)
+			buffer[15] = 0xA0;
+		break;
 	}
 	case 0x19003:
 	{
@@ -165,7 +170,7 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 		constexpr u8 idps[] = { 0x00, 0x00, 0x00, 0x01, 0x00, 0x89, 0x00, 0x0B, 0x14, 0x00, 0xEF, 0xDD, 0xCA, 0x25, 0x52, 0x66 };
 		std::memcpy(buffer.get_ptr(), idps, 16);
 		if (g_cfg.core.debug_console_mode)
-			buffer[5] = 0x81;
+			buffer[5] = 0xA0;
 		break;
 	}
 	case 0x19004:
@@ -178,6 +183,10 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 	case 0x19005:
 	{
 		// AIM_get_open_ps_id
+		be_t<u64> psid[2] = { +g_cfg.sys.console_psid_high, +g_cfg.sys.console_psid_low };
+		u8* psid_bytes = reinterpret_cast<u8*>(psid);
+		std::memcpy(buffer.get_ptr(), psid_bytes, 16);
+		break;
 	}
 	case 0x19006:
 	{

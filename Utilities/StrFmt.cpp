@@ -449,7 +449,7 @@ struct fmt::cfmt_src
 	{
 // Hack: use known function pointers to determine type
 #define TYPE(type) \
-	if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
+		if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
 
 		TYPE(int);
 		TYPE(llong);
@@ -457,10 +457,11 @@ struct fmt::cfmt_src
 		TYPE(short);
 		if (std::is_signed<char>::value) TYPE(char);
 		TYPE(long);
-		TYPE(u128);
 		TYPE(s128);
 
 #undef TYPE
+		if (sup[extra].fmt_string == &fmt_class_string<u128>::format)
+			return -1;
 
 		return 0;
 	}

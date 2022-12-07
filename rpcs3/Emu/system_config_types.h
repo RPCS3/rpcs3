@@ -128,6 +128,9 @@ enum class move_handler
 	null,
 	fake,
 	mouse,
+#ifdef HAVE_LIBEVDEV
+	gun
+#endif
 };
 
 enum class buzz_handler
@@ -258,6 +261,13 @@ enum class shader_mode
 	async_recompiler,
 	async_with_interpreter,
 	interpreter_only
+};
+
+enum class vk_exclusive_fs_mode
+{
+	unspecified,
+	disable,
+	enable
 };
 
 enum class vk_gpu_scheduler_mode

@@ -329,6 +329,7 @@ public:
 	void ConfigurePPUCache() const;
 
 	std::set<std::string> GetGameDirs() const;
+	void AddGamesFromDir(const std::string& path);
 
 	// Check if path is inside the specified directory
 	bool IsPathInsideDir(std::string_view path, std::string_view dir) const;

@@ -449,6 +449,11 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_notes.clear();
 		m_games.pop_all();
 
+		if (Emu.IsStopped())
+		{
+			Emu.AddGamesFromDir(fs::get_config_dir() + "/games");
+		}
+
 		const std::string _hdd =  rpcs3::utils::get_hdd0_dir();
 
 		const auto add_disc_dir = [&](const std::string& path)
@@ -531,7 +536,14 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
-			if (fs::is_file(game_dir + "/PS3_DISC.SFB"))
+			if (game_dir.empty())
+			{
+				continue;
+			}
+
+			const bool has_sfo = fs::is_file(game_dir + "/PARAM.SFO");
+
+			if (!has_sfo && fs::is_file(game_dir + "/PS3_DISC.SFB"))
 			{
 				// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
 				if (game_dir.starts_with(_hdd))
@@ -554,9 +566,13 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				add_disc_dir(game_dir);
 			}
+			else if (has_sfo)
+			{
+				m_path_list.emplace_back(game_dir);
+			}
 			else
 			{
-				game_list_log.trace("Invalid disc path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+				game_list_log.trace("Invalid game path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
 			}
 		}
 
@@ -571,7 +587,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			const Localized thread_localized;
 
 			const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir);
-			const psf::registry psf = psf::load_object(fs::file(sfo_dir + "/PARAM.SFO"));
+			const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
 			const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 			if (title_id.empty())
@@ -1083,9 +1099,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove all caches?")) != QMessageBox::Yes)
 				return;
 
-			RemoveShadersCache(cache_base_dir);
-			RemovePPUCache(cache_base_dir);
-			RemoveSPUCache(cache_base_dir);
+			if (fs::remove_all(cache_base_dir))
+				game_list_log.success("Removed cache directory: '%s'", cache_base_dir);
+			else
+				game_list_log.error("Could not remove cache directory: '%s' (%s)", cache_base_dir, fs::g_tls_error);
 		});
 	}
 	menu.addSeparator();
@@ -1561,8 +1578,9 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	u32 caches_total   = 0;
 
 	const QStringList filter{ QStringLiteral("shaders_cache") };
+	const QString q_base_dir = qstr(base_dir);
 
-	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	while (dir_iter.hasNext())
 	{
@@ -1588,6 +1606,14 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	else
 		game_list_log.fatal("Only %d/%d shaders cache dirs could be removed in %s", caches_removed, caches_total, base_dir);
 
+	if (QDir(q_base_dir).isEmpty())
+	{
+		if (fs::remove_dir(base_dir))
+			game_list_log.notice("Removed empty shader cache directory: %s", base_dir);
+		else
+			game_list_log.error("Could not remove empty shader cache directory: '%s' (%s)", base_dir, fs::g_tls_error);
+	}
+
 	return success;
 }
 
@@ -1603,8 +1629,9 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	u32 files_total = 0;
 
 	const QStringList filter{ QStringLiteral("v*.obj"), QStringLiteral("v*.obj.gz") };
+	const QString q_base_dir = qstr(base_dir);
 
-	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	while (dir_iter.hasNext())
 	{
@@ -1630,6 +1657,14 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	else
 		game_list_log.fatal("Only %d/%d PPU cache files could be removed in %s", files_removed, files_total, base_dir);
 
+	if (QDir(q_base_dir).isEmpty())
+	{
+		if (fs::remove_dir(base_dir))
+			game_list_log.notice("Removed empty PPU cache directory: %s", base_dir);
+		else
+			game_list_log.error("Could not remove empty PPU cache directory: '%s' (%s)", base_dir, fs::g_tls_error);
+	}
+
 	return success;
 }
 
@@ -1645,8 +1680,9 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	u32 files_total = 0;
 
 	const QStringList filter{ QStringLiteral("spu*.dat"), QStringLiteral("spu*.dat.gz"), QStringLiteral("spu*.obj"), QStringLiteral("spu*.obj.gz") };
+	const QString q_base_dir = qstr(base_dir);
 
-	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	while (dir_iter.hasNext())
 	{
@@ -1671,6 +1707,14 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 		game_list_log.success("Removed SPU cache in %s", base_dir);
 	else
 		game_list_log.fatal("Only %d/%d SPU cache files could be removed in %s", files_removed, files_total, base_dir);
+
+	if (QDir(q_base_dir).isEmpty())
+	{
+		if (fs::remove_dir(base_dir))
+			game_list_log.notice("Removed empty SPU cache directory: %s", base_dir);
+		else
+			game_list_log.error("Could not remove empty SPU cache directory: '%s' (%s)", base_dir, fs::g_tls_error);
+	}
 
 	return success;
 }

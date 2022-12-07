@@ -30,8 +30,9 @@
 #include "Utilities/sema.h"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
-#include <windows.h>
+#include "module_verifier.hpp"
 #include "util/dyn_lib.hpp"
+
 
 // TODO(cjj19970505@live.cn)
 // When compiling with WIN32_LEAN_AND_MEAN definition
@@ -90,7 +91,7 @@ extern char **environ;
 LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(q_debug, "QDEBUG");
 
-[[noreturn]] extern void report_fatal_error(std::string_view _text)
+[[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true)
 {
 #ifdef __linux__
 	extern void jit_announce(uptr, usz, std::string_view);
@@ -99,12 +100,12 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	std::string buf;
 
 	// Check if thread id is in string
-	if (_text.find("\nThread id = "sv) == umax)
+	if (_text.find("\nThread id = "sv) == umax && !thread_ctrl::is_main())
 	{
 		// Copy only when needed
 		buf = std::string(_text);
 
-		// Always print thread id
+		// Append thread id if it isn't already, except on main thread
 		fmt::append(buf, "\n\nThread id = %u.", thread_ctrl::get_tid());
 	}
 
@@ -150,9 +151,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		std::cerr << fmt::format("RPCS3: %s\n", text);
 	}
 
-	static auto show_report = [](std::string_view text)
+	static auto show_report = [is_html, include_help_text](std::string_view text)
 	{
-		fatal_error_dialog dlg(text);
+		fatal_error_dialog dlg(text, is_html, include_help_text);
 		dlg.exec();
 	};
 
@@ -410,6 +411,13 @@ void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::
  	out += ss.str();
 }
 
+void run_platform_sanity_checks()
+{
+#ifdef _WIN32
+	// Check if we loaded modules correctly
+	WIN32_module_verifier::run();
+#endif
+}
 
 int main(int argc, char** argv)
 {
@@ -438,6 +446,9 @@ int main(int argc, char** argv)
 
 		report_fatal_error(error);
 	}
+
+	// Before we proceed, run some sanity checks
+	run_platform_sanity_checks();
 
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 
@@ -479,8 +490,11 @@ int main(int argc, char** argv)
 		report_fatal_error("Not enough memory for RPCS3 process.");
 	}
 
-	WSADATA wsa_data;
-	WSAStartup(MAKEWORD(2, 2), &wsa_data);
+	WSADATA wsa_data{};
+	if (const int res = WSAStartup(MAKEWORD(2, 2), &wsa_data); res != 0)
+	{
+		report_fatal_error(fmt::format("WSAStartup failed (error=%s)", fmt::win_error_to_string(res, nullptr)));
+	}
 #endif
 
 	ensure(thread_ctrl::is_main(), "Not main thread");
@@ -497,7 +511,7 @@ int main(int argc, char** argv)
 		fs::device_stat stats{};
 		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < 128 * 1024 * 1024)
 		{
-			report_fatal_error(fmt::format("Not enough free space (%f KB)", stats.avail_free / 1000000.));
+			std::fprintf(stderr, "Not enough free space for logs (%f KB)", stats.avail_free / 1000000.);
 		}
 
 		// Limit log size to ~25% of free space

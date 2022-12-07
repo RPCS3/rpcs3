@@ -232,8 +232,15 @@ namespace np
 			ptr_member->flagAttr      = member.flagAttr;
 		}
 
-		const u32 needed_data_size = sizeof(SceNpOnlineName) + sizeof(SceNpAvatarUrl) + sizeof(SceNpMatching2RoomGroup) +
-		                             (binattrs_list.size() * (sizeof(SceNpMatching2RoomMemberBinAttrInternal) + SCE_NP_MATCHING2_ROOMMEMBER_BIN_ATTR_INTERNAL_MAX_SIZE));
+		u32 needed_data_size = sizeof(SceNpOnlineName) + sizeof(SceNpAvatarUrl) + sizeof(SceNpMatching2RoomGroup);
+
+		for (usz i = 0; i < binattrs_list.size(); i++)
+		{
+			if (member.bins.contains(binattrs_list[i]))
+			{
+				needed_data_size += (sizeof(SceNpMatching2RoomMemberBinAttrInternal) + ::at32(member.bins, binattrs_list[i]).data.size());
+			}
+		}
 
 		if (!addr_data || !ptr_member)
 		{

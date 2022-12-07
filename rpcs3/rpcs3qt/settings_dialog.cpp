@@ -1281,6 +1281,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceLineEdit(ui->edit_dns, emu_settings_type::DNSAddress);
 	SubscribeTooltip(ui->gb_edit_dns, tooltips.settings.dns);
 
+	m_emu_settings->EnhanceLineEdit(ui->edit_bind, emu_settings_type::BindAddress);
+	SubscribeTooltip(ui->gb_edit_bind, tooltips.settings.bind);
+
 	m_emu_settings->EnhanceLineEdit(ui->edit_swaps, emu_settings_type::IpSwapList);
 	SubscribeTooltip(ui->gb_edit_swaps, tooltips.settings.dns_swap);
 
@@ -1354,9 +1357,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
 
-	m_emu_settings->EnhanceCheckBox(ui->forceDisableExclusiveFullscreenMode, emu_settings_type::ForceDisableExclusiveFullscreenMode);
-	SubscribeTooltip(ui->forceDisableExclusiveFullscreenMode, tooltips.settings.force_disable_exclusive_fullscreen_mode);
-
 	m_emu_settings->EnhanceCheckBox(ui->vblankNTSCFixup, emu_settings_type::VBlankNTSCFixup);
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
@@ -1379,6 +1379,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
 	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData(6), tr("Unlimited (Default)", "Max SPURS threads"));
 	SubscribeTooltip(ui->gb_max_spurs_threads, tooltips.settings.max_spurs_threads);
+
+	m_emu_settings->EnhanceComboBox(ui->exclusiveFullscreenMode, emu_settings_type::ExclusiveFullscreenMode);
+	SubscribeTooltip(ui->gb_exclusiveFullscreen, tooltips.settings.exclusive_fullscreen_mode);
 
 	m_emu_settings->EnhanceComboBox(ui->sleepTimersAccuracy, emu_settings_type::SleepTimersAccuracy);
 	SubscribeTooltip(ui->gb_sleep_timers_accuracy, tooltips.settings.sleep_timers_accuracy);
@@ -1754,9 +1757,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		});
 
 		const bool enable_buttons = m_gui_settings->GetValue(gui::gs_resize).toBool();
+		const bool use_manual_resize = m_gui_settings->GetValue(gui::gs_resize_manual).toBool();
 		ui->gs_resizeOnBoot->setChecked(enable_buttons);
-		ui->gs_width->setEnabled(enable_buttons);
-		ui->gs_height->setEnabled(enable_buttons);
+		ui->gs_resizeOnBootManual->setChecked(use_manual_resize);
+		ui->gs_resizeOnBootManual->setEnabled(enable_buttons);
+		ui->gs_width->setEnabled(enable_buttons && use_manual_resize);
+		ui->gs_height->setEnabled(enable_buttons && use_manual_resize);
 
 		const QRect screen = QGuiApplication::primaryScreen()->geometry();
 		const int width = m_gui_settings->GetValue(gui::gs_width).toInt();
@@ -1766,9 +1772,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		connect(ui->gs_resizeOnBoot, &QCheckBox::toggled, [this](bool checked)
 		{
+			const bool enabled = checked && ui->gs_resizeOnBootManual->isChecked();
 			m_gui_settings->SetValue(gui::gs_resize, checked);
-			ui->gs_width->setEnabled(checked);
-			ui->gs_height->setEnabled(checked);
+			ui->gs_resizeOnBootManual->setEnabled(checked);
+			ui->gs_width->setEnabled(enabled);
+			ui->gs_height->setEnabled(enabled);
+		});
+		connect(ui->gs_resizeOnBootManual, &QCheckBox::toggled, [this](bool checked)
+		{
+			const bool enabled = checked && ui->gs_resizeOnBoot->isChecked();
+			m_gui_settings->SetValue(gui::gs_resize_manual, checked);
+			ui->gs_width->setEnabled(enabled);
+			ui->gs_height->setEnabled(enabled);
 		});
 		connect(ui->gs_width, &QSpinBox::editingFinished, [this]()
 		{

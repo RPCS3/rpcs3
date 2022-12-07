@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Copyright 2018 RPCS3-->
 <component type="desktop-application">
-    <id>RPCS3</id>
+    <id>net.rpcs3.RPCS3</id>
     <metadata_license>FSFAP</metadata_license>
     <project_license>GPL-2.0-only</project_license>
     <name>RPCS3</name>
@@ -24,6 +24,7 @@
     <url type="homepage">https://rpcs3.net</url>
     <url type="bugtracker">https://github.com/RPCS3/rpcs3/issues</url>
     <url type="help">https://rpcs3.net/quickstart</url>
+    <url type="donation">https://www.patreon.com/Nekotekina</url>
 
     <screenshots>
         <screenshot type="default">
@@ -34,4 +35,32 @@
     <provides>
         <binary>rpcs3</binary>
     </provides>
+
+    <categories>
+        <category>Game</category>
+        <category>Emulator</category>
+    </categories>
+
+    <keywords>
+        <keyword>ps3</keyword>
+        <keyword>playstation</keyword>
+    </keywords>
+
+    <recommends>
+        <control>gamepad</control>
+        <display_length compare="ge">small</display_length>
+    </recommends>
+
+    <content_rating type="oars-1.0">
+        <content_attribute id="language-profanity">none</content_attribute>
+        <content_attribute id="language-humor">none</content_attribute>
+        <content_attribute id="language-discrimination">none</content_attribute>
+        <content_attribute id="social-chat">none</content_attribute>
+        <content_attribute id="social-info">none</content_attribute>
+        <content_attribute id="social-audio">none</content_attribute>
+        <content_attribute id="social-location">none</content_attribute>
+        <content_attribute id="social-contacts">none</content_attribute>
+        <content_attribute id="money-purchasing">none</content_attribute>
+        <content_attribute id="money-gambling">none</content_attribute>
+    </content_rating>
 </component>

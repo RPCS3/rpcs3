@@ -79,6 +79,7 @@ namespace np
 		u32 get_local_ip_addr() const;
 		u32 get_public_ip_addr() const;
 		u32 get_dns_ip() const;
+		u32 get_bind_ip() const;
 
 		s32 get_psn_status() const;
 		s32 get_net_status() const;
@@ -290,6 +291,7 @@ namespace np
 		be_t<u32> local_ip_addr{};
 		be_t<u32> public_ip_addr{};
 		be_t<u32> dns_ip = 0x08080808;
+		be_t<u32> bind_ip = 0x00000000;
 
 		// User infos
 		SceNpId npid{};

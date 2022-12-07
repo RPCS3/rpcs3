@@ -2081,7 +2081,7 @@
             <property name="title">
              <string>Network Configuration</string>
             </property>
-            <layout class="QVBoxLayout" name="gb_network_status_layout" stretch="0,0,0,0">
+            <layout class="QVBoxLayout" name="gb_network_status_layout" stretch="0,0,0,0,0">
              <item>
               <widget class="QGroupBox" name="gb_netStatusBox">
                <property name="title">
@@ -2121,6 +2121,25 @@
                <layout class="QVBoxLayout" name="gb_edit_swaps_layout">
                 <item>
                  <widget class="QLineEdit" name="edit_swaps">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="gb_edit_bind">
+               <property name="title">
+                <string>Bind address</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_edit_bind_layout">
+                <item>
+                 <widget class="QLineEdit" name="edit_bind">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                     <horstretch>0</horstretch>
@@ -2550,13 +2569,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="forceDisableExclusiveFullscreenMode">
-                 <property name="text">
-                  <string>Force Disable Exclusive Fullscreen Mode</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QCheckBox" name="disableOnDiskShaderCache">
                  <property name="text">
                   <string>Disable On-Disk Shader Cache</string>
@@ -2612,6 +2624,24 @@
               <layout class="QVBoxLayout" name="gb_rsx_fifo_accuracy_layout">
                <item>
                 <widget class="QComboBox" name="FIFOAccuracy"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_exclusiveFullscreen">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Exclusive Fullscreen Mode</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_exclusiveFullscreen_layout">
+               <item>
+                <widget class="QComboBox" name="exclusiveFullscreenMode"/>
                </item>
               </layout>
              </widget>
@@ -2977,6 +3007,13 @@
                    <widget class="QCheckBox" name="gs_resizeOnBoot">
                     <property name="text">
                      <string>Resize game window on boot</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="gs_resizeOnBootManual">
+                    <property name="text">
+                     <string>Resize manually</string>
                     </property>
                    </widget>
                   </item>

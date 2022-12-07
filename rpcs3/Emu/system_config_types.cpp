@@ -412,6 +412,9 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 		case move_handler::null: return "Null";
 		case move_handler::fake: return "Fake";
 		case move_handler::mouse: return "Mouse";
+#ifdef HAVE_LIBEVDEV
+		case move_handler::gun: return "Gun";
+#endif
 		}
 
 		return unknown;
@@ -611,4 +614,20 @@ void fmt_class_string<gpu_preset_level>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+template <>
+void fmt_class_string<vk_exclusive_fs_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](vk_exclusive_fs_mode value)
+		{
+			switch (value)
+			{
+			case vk_exclusive_fs_mode::unspecified: return "Automatic";
+			case vk_exclusive_fs_mode::disable: return "Disable";
+			case vk_exclusive_fs_mode::enable: return "Enable";
+			}
+
+			return unknown;
+		});
 }

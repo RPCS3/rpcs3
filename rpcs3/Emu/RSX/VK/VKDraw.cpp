@@ -130,7 +130,7 @@ void VKGSRender::update_draw_state()
 	m_profiler.start();
 
 	// Update conditional dynamic state
-	if (rsx::method_registers.current_draw_clause.primitive >= rsx::primitive_type::lines &&
+	if (rsx::method_registers.current_draw_clause.primitive >= rsx::primitive_type::points &&   // AMD/AMDVLK driver does not like it if you render points without setting line width for some reason
 		rsx::method_registers.current_draw_clause.primitive <= rsx::primitive_type::line_strip)
 	{
 		const float actual_line_width =
