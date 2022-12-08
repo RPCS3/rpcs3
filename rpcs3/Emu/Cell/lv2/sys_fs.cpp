@@ -302,34 +302,6 @@ std::string lv2_fs_object::device_name_to_path(std::string_view device_name)
 	return {};
 }
 
-u64 lv2_fs_object::get_mount_count()
-{
-	u64 count = 0;
-
-	for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
-	{
-		if (mp == &g_mp_sys_dev_usb)
-		{
-			for (int i = 0; i < 8; i++)
-			{
-				if (!vfs::get(fmt::format("%s%03d", mp->root, i)).empty())
-				{
-					count++;
-				}
-			}
-		}
-		else
-		{
-			if (!vfs::get(mp->root).empty())
-			{
-				count++;
-			}
-		}
-	}
-
-	return count;
-}
-
 bool lv2_fs_object::vfs_unmount(std::string_view vpath, bool no_error)
 {
 	const std::string local_path = vfs::get(vpath);
@@ -3072,7 +3044,30 @@ error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 		return CELL_EFAULT;
 	}
 
-	*len = lv2_fs_object::get_mount_count();
+	u64 count = 0;
+
+	for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
+	{
+		if (mp == &g_mp_sys_dev_usb)
+		{
+			for (int i = 0; i < 8; i++)
+			{
+				if (!vfs::get(fmt::format("%s%03d", mp->root, i)).empty())
+				{
+					count++;
+				}
+			}
+		}
+		else
+		{
+			if (!vfs::get(mp->root).empty())
+			{
+				count++;
+			}
+		}
+	}
+
+	*len = count;
 
 	return CELL_OK;
 }
