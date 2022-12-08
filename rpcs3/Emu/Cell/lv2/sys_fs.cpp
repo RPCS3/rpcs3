@@ -205,67 +205,64 @@ std::string_view lv2_fs_object::get_device_path(std::string_view filename)
 	return mp_name;
 }
 
-lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
+lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string* vfs_path)
 {
-	if (!filename.starts_with('/'))
-	{
-		return &g_mp_sys_no_device;
-	}
-
+	auto result = &g_mp_sys_no_device; // Default fallback
 	const auto mp_name = get_device_path(filename);
 
-	for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
+	if (filename.starts_with('/'))
 	{
-		const auto pos = mp->root.find_first_not_of('/');
-		const auto mp_root = pos != umax ? mp->root.substr(pos) : mp->root;
-
-		if (mp == &g_mp_sys_dev_usb)
+		for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
 		{
-			for (int i = 0; i < 8; i++)
+			const auto pos = mp->root.find_first_not_of('/');
+			const auto mp_root = pos != umax ? mp->root.substr(pos) : mp->root;
+
+			if (mp == &g_mp_sys_dev_usb)
 			{
-				if (fmt::format("%s%03d", mp_root, i) == mp_name)
+				for (int i = 0; i < 8; i++)
 				{
-					return mp;
+					if (fmt::format("%s%03d", mp_root, i) == mp_name)
+					{
+						result = mp;
+						break;
+					}
 				}
 			}
-		}
-		else if (mp_root == mp_name)
-		{
-			return mp;
+			else if (mp_root == mp_name)
+			{
+				result = mp;
+				break;
+			}
 		}
 	}
 
-	// Default fallback
-	return &g_mp_sys_no_device;
-}
+	if (vfs_path)
+	{
+		if (result == &g_mp_sys_dev_hdd0)
+			*vfs_path = g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, rpcs3::utils::get_emu_dir());
+		else if (result == &g_mp_sys_dev_hdd1)
+			*vfs_path = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, rpcs3::utils::get_emu_dir());
+		else if (result == &g_mp_sys_dev_usb)
+			*vfs_path = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/%s", mp_name), rpcs3::utils::get_emu_dir()).path;
+		else if (result == &g_mp_sys_dev_bdvd)
+			*vfs_path = g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
+		else if (result == &g_mp_sys_dev_dvd)
+			*vfs_path = {}; // Unsupported in VFS
+		else if (result == &g_mp_sys_app_home)
+			*vfs_path = g_cfg_vfs.get(g_cfg_vfs.app_home, rpcs3::utils::get_emu_dir());
+		else if (result == &g_mp_sys_host_root)
+			*vfs_path = g_cfg.vfs.host_root ? "/" : std::string();
+		else if (result == &g_mp_sys_dev_flash)
+			*vfs_path = g_cfg_vfs.get_dev_flash();
+		else if (result == &g_mp_sys_dev_flash2)
+			*vfs_path = g_cfg_vfs.get_dev_flash2();
+		else if (result == &g_mp_sys_dev_flash3)
+			*vfs_path = g_cfg_vfs.get_dev_flash3();
+		else
+			*vfs_path = {};
+	}
 
-std::string lv2_fs_object::get_vfs(std::string_view filename)
-{
-	const auto mp_name = get_device_path(filename);
-
-	if (mp_name == "dev_hdd0"sv)
-		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, rpcs3::utils::get_emu_dir());
-	if (mp_name == "dev_hdd1"sv)
-		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, rpcs3::utils::get_emu_dir());
-	if (mp_name.starts_with("dev_usb"sv))
-		return g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/%s", mp_name), rpcs3::utils::get_emu_dir()).path;
-	if (mp_name == "dev_bdvd"sv)
-		return g_cfg_vfs.get(g_cfg_vfs.dev_bdvd, rpcs3::utils::get_emu_dir());
-	if (mp_name == "dev_ps2disc"sv)
-		return {}; // Unsupported in VFS
-	if (mp_name == "app_home"sv)
-		return g_cfg_vfs.get(g_cfg_vfs.app_home, rpcs3::utils::get_emu_dir());
-	if (mp_name == "host_root"sv)
-		return g_cfg.vfs.host_root ? "/" : std::string();
-	if (mp_name == "dev_flash"sv)
-		return g_cfg_vfs.get_dev_flash();
-	if (mp_name == "dev_flash2"sv)
-		return g_cfg_vfs.get_dev_flash2();
-	if (mp_name == "dev_flash3"sv)
-		return g_cfg_vfs.get_dev_flash3();
-
-	// Default fallback
-	return {};
+	return result;
 }
 
 std::string lv2_fs_object::device_name_to_path(std::string_view device_name)
@@ -303,34 +300,6 @@ std::string lv2_fs_object::device_name_to_path(std::string_view device_name)
 
 	// Default fallback
 	return {};
-}
-
-u64 lv2_fs_object::get_mount_count()
-{
-	u64 count = 0;
-
-	for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
-	{
-		if (mp == &g_mp_sys_dev_usb)
-		{
-			for (int i = 0; i < 8; i++)
-			{
-				if (!vfs::get(fmt::format("%s%03d", mp->root, i)).empty())
-				{
-					count++;
-				}
-			}
-		}
-		else
-		{
-			if (!vfs::get(mp->root).empty())
-			{
-				count++;
-			}
-		}
-	}
-
-	return count;
 }
 
 bool lv2_fs_object::vfs_unmount(std::string_view vpath, bool no_error)
@@ -3075,7 +3044,30 @@ error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 		return CELL_EFAULT;
 	}
 
-	*len = lv2_fs_object::get_mount_count();
+	u64 count = 0;
+
+	for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
+	{
+		if (mp == &g_mp_sys_dev_usb)
+		{
+			for (int i = 0; i < 8; i++)
+			{
+				if (!vfs::get(fmt::format("%s%03d", mp->root, i)).empty())
+				{
+					count++;
+				}
+			}
+		}
+		else
+		{
+			if (!vfs::get(mp->root).empty())
+			{
+				count++;
+			}
+		}
+	}
+
+	*len = count;
 
 	return CELL_OK;
 }
@@ -3164,8 +3156,8 @@ error_code sys_fs_newfs(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> fil
 		return CELL_EABORT;
 	}
 
-	const auto mp = lv2_fs_object::get_mp(device_path);
-	const auto vfs_path = lv2_fs_object::get_vfs(device_path);
+	std::string vfs_path;
+	const auto mp = lv2_fs_object::get_mp(device_path, &vfs_path);
 	bool success = true;
 
 	auto vfs_newfs = [&](const std::string& path)
@@ -3221,8 +3213,8 @@ error_code sys_fs_mount(ppu_thread&, vm::cptr<char> dev_name, vm::cptr<char> fil
 		return { fs_error, filesystem };
 	}
 
-	const auto mp = lv2_fs_object::get_mp(vpath);
-	const auto vfs_path = lv2_fs_object::get_vfs(vpath);
+	std::string vfs_path;
+	const auto mp = lv2_fs_object::get_mp(vpath, &vfs_path);
 	bool success = true;
 
 	auto vfs_mount = [&vpath = vpath, &filesystem = filesystem, &mp = mp](std::string mount_path)

@@ -7,11 +7,12 @@ git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ { print $3 }' 
 
 # Prefer newer Clang than in base system (see also .ci/install-freebsd.sh)
 # libc++ isn't in llvm* packages, so download manually
-fetch https://github.com/llvm/llvm-project/archive/refs/tags/llvmorg-13.0.1-rc1.tar.gz
-tar xf llvm*.tar.gz
-export CC=clang13 CXX=clang++13
+fetch https://github.com/llvm/llvm-project/releases/download/llvmorg-15.0.6/llvm-project-15.0.6.src.tar.xz
+tar xf llvm*.tar.xz
+export CC=clang15 CXX=clang++15
 cmake -B libcxx_build -G Ninja -S llvm*/libcxx \
       -DLLVM_CCACHE_BUILD=ON \
+      -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
       -DCMAKE_INSTALL_PREFIX:PATH=libcxx_prefix
 cmake --build libcxx_build
 cmake --install libcxx_build
