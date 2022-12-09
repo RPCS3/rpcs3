@@ -699,7 +699,7 @@ namespace utils
 			AVCodecID used_codec = static_cast<AVCodecID>(m_video_codec_id);
 
 			// Find specified codec first
-			if (AVCodec* encoder = avcodec_find_encoder(used_codec); !!encoder)
+			if (const AVCodec* encoder = avcodec_find_encoder(used_codec); !!encoder)
 			{
 				media_log.success("video_encoder: Found requested video_codec %d = %s", static_cast<int>(used_codec), encoder->name);
 				av_output_format = find_format(encoder);
@@ -724,7 +724,7 @@ namespace utils
 				void* opaque = nullptr;
 				for (const AVCodec* codec = av_codec_iterate(&opaque); !!codec; codec = av_codec_iterate(&opaque))
 				{
-					if (AVCodec* encoder = avcodec_find_encoder(codec->id); !!encoder)
+					if (const AVCodec* encoder = avcodec_find_encoder(codec->id); !!encoder)
 					{
 						media_log.notice("video_encoder: Found video_codec %d = %s", static_cast<int>(used_codec), encoder->name);
 						av_output_format = find_format(encoder);
