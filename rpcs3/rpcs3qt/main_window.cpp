@@ -849,7 +849,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	package_error error = package_error::no_error;
 
 	bool cancelled = false;
-	std::map<std::string, QString> bootable_paths_installed; // -> title
+	std::map<std::string, QString> bootable_paths_installed; // -> title id
 
 	for (usz i = 0, count = packages.size(); i < count; i++)
 	{
@@ -943,7 +943,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 			if (!bootable_path.empty())
 			{
-				bootable_paths_installed[bootable_path] = package.title;
+				bootable_paths_installed[bootable_path] = package.title_id;
 			}
 
 			if (i == (count - 1))
@@ -997,73 +997,27 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 					dlg->exec();
 				}
 
-				for (const auto& [boot_path, title] : bootable_paths_installed)
+				std::vector<gui::utils::shortcut_location> locations;
+#ifdef _WIN32
+				locations.push_back(gui::utils::shortcut_location::rpcs3_shortcuts);
+#endif
+				if (create_desktop_shortcuts)
 				{
-					if (std::string game_dir = fs::get_parent_dir(boot_path, 2); fs::is_dir(game_dir) && fs::is_file(boot_path))
+					locations.push_back(gui::utils::shortcut_location::desktop);
+				}
+				if (create_app_shortcut)
+				{
+					locations.push_back(gui::utils::shortcut_location::applications);
+				}
+
+				for (const auto& [boot_path, title_id] : bootable_paths_installed)
+				{
+					for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
 					{
-						const std::string target_cli_args = fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", game_dir.substr(game_dir.find_last_of(fs::delim) + 1));
-						const std::string std_title_id = sstr(package.title_id);
-						const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), std_title_id);
-
-						// Copy the icon used by rpcs3 to a file
-						QTemporaryFile tmp_file(QDir::tempPath() + "/tempFile");
-						if (!tmp_file.open())
+						if (gameinfo && gameinfo->info.bootable && gameinfo->info.serial == sstr(title_id) && boot_path.starts_with(gameinfo->info.path))
 						{
-							gui_log.error("Failed to create icon for '%s'", sstr(title.simplified()));
-							continue;
-						}
-
-						const QIcon icon = gui::utils::get_app_icon_from_path(rpcs3::utils::get_sfo_dir_from_game_path(boot_path + "/../../"), std_title_id);
-						QPixmap pix = icon.pixmap(icon.actualSize(QSize(1000, 1000)));
-						QByteArray bytes;
-						QBuffer buffer(&bytes);
-						buffer.open(QIODevice::ReadWrite);
-						pix.save(&buffer, "PNG");
-						tmp_file.write(bytes.data(), bytes.size());
-
-						std::string icon_path = sstr(tmp_file.fileName());
-#ifdef _WIN32
-						if (gui::utils::create_shortcut(sstr(title), target_cli_args, sstr(title), icon_path, target_icon_dir, gui::utils::shortcut_location::rpcs3_shortcuts))
-						{
-							gui_log.success("Created a shortcut for '%s' at '%s/games/shortcuts/'", sstr(title.simplified()), fs::get_config_dir());
-						}
-#endif
-
-						struct install_shortcut_info
-						{
-							std::string type;
-							gui::utils::shortcut_location location;
-							bool to_install;
-						};
-
-						std::initializer_list<install_shortcut_info> installing_locations =
-						{
-							{"desktop", gui::utils::shortcut_location::desktop, create_desktop_shortcuts},
-#ifdef _WIN32
-							{"Start menu", gui::utils::shortcut_location::applications, create_app_shortcut},
-#elif defined(__APPLE__)
-							{"dock", gui::utils::shortcut_location::applications, create_app_shortcut},
-#else
-							{"launcher", gui::utils::shortcut_location::applications, create_app_shortcut},
-#endif
-						};
-
-					
-						for (const auto& loc : installing_locations)
-						{
-							if (!loc.to_install)
-							{
-								continue;
-							}
-
-							if (gui::utils::create_shortcut(sstr(title), target_cli_args, sstr(title), icon_path, target_icon_dir, loc.location))
-							{
-								gui_log.success("Created %s shortcut for %s", loc.type, sstr(title.simplified()));
-							}
-							else
-							{
-								gui_log.error("Failed to create %s shortcut for %s", loc.type, sstr(title.simplified()));
-							}
+							m_game_list_frame->CreateShortcuts(gameinfo, locations);
+							break;
 						}
 					}
 				}
@@ -2378,7 +2332,7 @@ void main_window::CreateConnects()
 		std::unordered_map<std::string, std::set<std::string>> games;
 		if (m_game_list_frame)
 		{
-			for (const auto& game : m_game_list_frame->GetGameInfo())
+			for (const game_info& game : m_game_list_frame->GetGameInfo())
 			{
 				if (game)
 				{

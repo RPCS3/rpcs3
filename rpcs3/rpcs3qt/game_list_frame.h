@@ -3,6 +3,7 @@
 #include "game_list.h"
 #include "custom_dock_widget.h"
 #include "gui_save.h"
+#include "shortcut_utils.h"
 #include "Utilities/lockless.h"
 #include "Emu/System.h"
 
@@ -56,10 +57,12 @@ public:
 
 	game_compatibility* GetGameCompatibility() const { return m_game_compat; }
 
-	QList<game_info> GetGameInfo() const;
+	const QList<game_info>& GetGameInfo() const;
 
 	// Returns the visible version string in the game list
 	static std::string GetGameVersion(const game_info& game);
+
+	void CreateShortcuts(const game_info& gameinfo, std::vector<gui::utils::shortcut_location> locations);
 
 public Q_SLOTS:
 	void BatchCreatePPUCaches();
