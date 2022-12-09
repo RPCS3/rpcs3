@@ -151,7 +151,15 @@ namespace vk
 			CHECK_RESULT_EX(_vkGetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not get MoltenVK configuration."));
 
 			mvk_config.resumeLostDevice = true;
-			mvk_config.fastMathEnabled = !(g_cfg.video.disable_msl_fast_math.get());
+			if (g_cfg.video.disable_msl_fast_math.get()) 
+			{
+				mvk_config.fastMathEnabled = 0;
+			}
+			else 
+			{
+				mvk_config.fastMathEnabled = 2;
+			}
+		
 
 			CHECK_RESULT_EX(_vkSetMoltenVKConfigurationMVK(VK_NULL_HANDLE, &mvk_config, &mvk_config_size), std::string("Could not set MoltenVK configuration."));
 		}
