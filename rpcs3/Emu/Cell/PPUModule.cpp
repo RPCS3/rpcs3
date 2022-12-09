@@ -153,7 +153,7 @@ struct ppu_linkage_info
 
 	// Module map
 	std::map<std::string, module_data> modules{};
-	std::map<std::string, std::shared_ptr<atomic_t<bool>>, std::less<>> lib_lock;
+	std::map<std::string, atomic_t<bool>, std::less<>> lib_lock;
 	shared_mutex mutex;
 };
 
@@ -278,6 +278,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 		&ppu_module_manager::sys_libc,
 		&ppu_module_manager::sys_lv2dbg,
 		&ppu_module_manager::static_hle,
+		&ppu_module_manager::hle_patches,
 	};
 
 	// Initialize double-purpose fake OPD array for HLE functions
@@ -640,9 +641,9 @@ extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib)
 
 	reader_lock lock(link->mutex);
 
-	if (auto it = std::as_const(link->lib_lock).find(libname); it != link->lib_lock.cend() && it->second)
+	if (auto it = link->lib_lock.find(libname); it != link->lib_lock.cend())
 	{
-		return lock_lib ? !it->second->test_and_set() : it->second->test_and_reset();
+		return lock_lib ? !it->second.test_and_set() : it->second.test_and_reset();
 	}
 
 	if (!lock_lib)
@@ -653,15 +654,9 @@ extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib)
 
 	lock.upgrade();
 
-	auto& lib_lock = link->lib_lock.emplace(std::string{libname}, nullptr).first->second;
+	auto& lib_lock = link->lib_lock.emplace(std::string{libname}, false).first->second;
 
-	if (!lib_lock)
-	{
-		lib_lock = std::make_shared<atomic_t<bool>>(true);
-		return true;
-	}
-
-	return !lib_lock->test_and_set();
+	return !lib_lock.test_and_set();
 }
 
 // Load and register exports; return special exports found (nameless module)
@@ -750,7 +745,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				if (_sf && (_sf->flags & MFF_FORCED_HLE))
 				{
 					// Inject a branch to the HLE implementation
-					const u32 target = g_fxo->get<ppu_function_manager>().func_addr(_sf->index) + 4;
+					const u32 target = g_fxo->get<ppu_function_manager>().func_addr(_sf->index, true);
 
 					// Set exported function
 					flink.export_addr = target - 4;

@@ -353,7 +353,19 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 				gui_log.warning("The video provider could not release the image sink. A sink with higher priority must have been set.");
 			}
 
-			rsx::overlays::queue_message(tr("Recording stopped: %0").arg(QString::fromStdString(m_video_encoder->path())).toStdString());
+			// Play a sound
+			if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_recording.wav"; fs::is_file(sound_path))
+			{
+				QSound::play(qstr(sound_path));
+			}
+			else
+			{
+				QApplication::beep();
+			}
+
+			ensure(m_video_encoder->path().starts_with(fs::get_config_dir()));
+			const std::string shortpath = m_video_encoder->path().substr(fs::get_config_dir().size() - 1); // -1 for /
+			rsx::overlays::queue_message(tr("Recording saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
 		}
 		else
 		{
@@ -927,7 +939,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 				}
 			});
 
-			ensure(filename.find(fs::get_config_dir()) != filename.npos);
+			ensure(filename.starts_with(fs::get_config_dir()));
 			const std::string shortpath = filename.substr(fs::get_config_dir().size() - 1); // -1 for /
 			rsx::overlays::queue_message(tr("Screenshot saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
 

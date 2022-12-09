@@ -617,34 +617,20 @@ struct ppu_far_jumps_t
 		bool with_toc;
 		std::string module_name;
 		ppu_intrp_func_t func;
-	};
-
-	ppu_far_jumps_t(int) noexcept {}
-
-	std::unordered_map<u32, all_info_t> vals;
-	::jit_runtime rt;
-
-	mutable shared_mutex mutex;
-
-	// Get target address, 'ppu' is used in ppu_far_jump in order to modify registers
-	u32 get_target(const u32 pc, ppu_thread* ppu = nullptr)
-	{
-		reader_lock lock(mutex);
-
-		if (auto it = vals.find(pc); it != vals.end())
+	
+		u32 get_target(u32 pc, ppu_thread* ppu = nullptr) const
 		{
-			all_info_t& all_info = it->second;
-			u32 target = all_info.target;
+			u32 direct_target = this->target;
 
-			bool link = all_info.link;
-			bool from_opd = all_info.with_toc;
+			bool to_link = this->link;
+			bool from_opd = this->with_toc;
 
-			if (!all_info.module_name.empty())
+			if (!this->module_name.empty())
 			{
-				target = ppu_get_exported_func_addr(target, all_info.module_name);
+				direct_target = ppu_get_exported_func_addr(direct_target, this->module_name);
 			}
 
-			if (from_opd && !vm::check_addr<sizeof(ppu_func_opd_t)>(target))
+			if (from_opd && !vm::check_addr<sizeof(ppu_func_opd_t)>(direct_target))
 			{
 				// Avoid reading unmapped memory under mutex
 				from_opd = false;
@@ -652,11 +638,11 @@ struct ppu_far_jumps_t
 
 			if (from_opd)
 			{
-				auto& opd = vm::_ref<ppu_func_opd_t>(target);
-				target = opd.addr;
+				auto& opd = vm::_ref<ppu_func_opd_t>(direct_target);
+				direct_target = opd.addr;
 
 				// We modify LR to custom values here
-				link = false;
+				to_link = false;
 
 				if (ppu)
 				{
@@ -667,23 +653,74 @@ struct ppu_far_jumps_t
 					// NOTE: In order to clean up this information all calls must return in order
 					auto& saved_info = calls_info.emplace_back();
 					saved_info.cia = pc;
-					saved_info.saved_lr = std::exchange(ppu->lr, FIND_FUNC(ppu_return_from_far_jump));
+					saved_info.saved_lr = std::exchange(ppu->lr, g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(ppu_return_from_far_jump), true));
 					saved_info.saved_r2 = std::exchange(ppu->gpr[2], opd.rtoc);
 				}
-
 			}
 
-			if (link && ppu)
+			if (to_link && ppu)
 			{
 				ppu->lr = pc + 4;
 			}
 
-			return target;
+			return direct_target;
+		}
+	};
+
+	ppu_far_jumps_t(int) noexcept {}
+
+	std::map<u32, all_info_t> vals;
+	::jit_runtime rt;
+
+	mutable shared_mutex mutex;
+
+	// Get target address, 'ppu' is used in ppu_far_jump in order to modify registers
+	u32 get_target(u32 pc, ppu_thread* ppu = nullptr)
+	{
+		reader_lock lock(mutex);
+
+		if (auto it = vals.find(pc); it != vals.end())
+		{
+			all_info_t& all_info = it->second;
+			return all_info.get_target(pc, ppu);
 		}
 
 		return {};
 	}
 
+	// Get function patches in range (entry -> target)
+	std::vector<std::pair<u32, u32>> get_targets(u32 pc, u32 size)
+	{
+		std::vector<std::pair<u32, u32>> targets;
+
+		reader_lock lock(mutex);
+
+		auto it = vals.lower_bound(pc);
+
+		if (it == vals.end())
+		{
+			return targets;
+		}
+
+		if (it->first >= pc + size)
+		{
+			return targets;
+		}
+		
+		for (auto end = vals.lower_bound(pc + size); it != end; it++)
+		{
+			all_info_t& all_info = it->second;
+
+			if (u32 target = all_info.get_target(it->first))
+			{
+				targets.emplace_back(it->first, target);
+			}
+		}
+
+		return targets;
+	}
+
+	// Generate a mini-function which updates PC (for LLVM) and jumps to ppu_far_jump to handle redirections
 	template <bool Locked = true>
 	ppu_intrp_func_t gen_jump(u32 pc)
 	{
@@ -1019,7 +1056,7 @@ void ppu_thread::dump_regs(std::string& ret) const
 
 		if (const_value != reg)
 		{
-			// Expectation of pretictable code path has not been met (such as a branch directly to the instruction)
+			// Expectation of predictable code path has not been met (such as a branch directly to the instruction)
 			is_const = false;
 		}
 
@@ -1243,7 +1280,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			}
 
 			// Ignore HLE stop address
-			return addr == g_fxo->get<ppu_function_manager>().func_addr(1) + 4;
+			return addr == g_fxo->get<ppu_function_manager>().func_addr(1, true);
 		};
 
 		if (is_invalid(addr))
@@ -1921,7 +1958,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc)
 	interrupt_thread_executing = true;
 	cia = addr;
 	gpr[2] = rtoc;
-	lr = g_fxo->get<ppu_function_manager>().func_addr(1) + 4; // HLE stop address
+	lr = g_fxo->get<ppu_function_manager>().func_addr(1, true); // HLE stop address
 	current_function = nullptr;
 
 	if (std::exchange(loaded_from_savestate, false))
@@ -3478,14 +3515,25 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				}
 			}
 
-			if (jit)
+			if (g_fxo->is_init<ppu_far_jumps_t>())
 			{
-				const auto far_jump = ppu_get_far_jump(func.addr) ? g_fxo->get<ppu_far_jumps_t>().gen_jump(func.addr) : nullptr;
+				auto targets = g_fxo->get<ppu_far_jumps_t>().get_targets(func.addr, func.size);
 
-				if (far_jump)
+				for (auto [source, target] : targets)
+				{
+					auto far_jump = ensure(g_fxo->get<ppu_far_jumps_t>().gen_jump(source));
+
+					if (source == func.addr && jit)
+					{
+						jit->update_global_mapping(fmt::format("__0x%x", func.addr - reloc), reinterpret_cast<u64>(far_jump));
+					}
+
+					ppu_register_function_at(source, 4, far_jump);
+				}
+
+				if (!targets.empty())
 				{
 					// Replace the function with ppu_far_jump
-					jit->update_global_mapping(fmt::format("__0x%x", func.addr - reloc), reinterpret_cast<u64>(far_jump));
 					fpos++;
 					continue;
 				}
