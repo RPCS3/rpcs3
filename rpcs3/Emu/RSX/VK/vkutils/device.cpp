@@ -153,11 +153,11 @@ namespace vk
 			mvk_config.resumeLostDevice = true;
 			if (g_cfg.video.disable_msl_fast_math.get()) 
 			{
-				mvk_config.fastMathEnabled = 0;
+				mvk_config.fastMathEnabled = MVK_CONFIG_FAST_MATH_NEVER;
 			}
 			else 
 			{
-				mvk_config.fastMathEnabled = 2;
+				mvk_config.fastMathEnabled = MVK_CONFIG_FAST_MATH_ON_DEMAND;
 			}
 		
 
