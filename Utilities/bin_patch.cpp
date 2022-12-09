@@ -703,8 +703,6 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 		}
 		case patch_type::code_alloc:
 		{
-			relocate_instructions_at = 0;
-
 			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
 
 			// Allow only if points to a PPU executable instruction
@@ -714,6 +712,13 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 			}
 
 			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value + 1) * 4, 0x10000);
+
+			// Check if should maybe reuse previous code cave allocation (0 size)
+			if (alloc_size - 4 != 0)
+			{
+				// Nope
+				relocate_instructions_at = 0;
+			}
 
 			// Always executable
 			u64 flags = vm::alloc_executable | vm::alloc_unwritable;
@@ -738,7 +743,7 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 
 			// Range allowed for absolute branches to operate at
 			// It takes into account that we need to put a branch for return at the end of memory space
-			const u32 addr = p.alloc_addr = alloc_map->alloc(alloc_size, nullptr, 0x10000, flags);
+			const u32 addr = p.alloc_addr = (relocate_instructions_at ? relocate_instructions_at : alloc_map->alloc(alloc_size, nullptr, 0x10000, flags));
 
 			if (!addr)
 			{
@@ -751,8 +756,12 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 			// NOP filled
 			std::fill_n(vm::get_super_ptr<u32>(addr), p.value.long_value, 0x60000000);
 
-			// Register code
-			ppu_register_range(addr, alloc_size);
+			// Check if already registered by previous code allocation 
+			if (relocate_instructions_at != addr)
+			{
+				// Register code
+				ppu_register_range(addr, alloc_size);
+			}
 
 			resval = out_branch & -4;
 
@@ -772,8 +781,6 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 				continue;
 			}
 
-			// Write address of the allocated memory to the code entry
-			*vm::get_super_ptr<u32>(resval) = addr;
 			relocate_instructions_at = addr;
 			break;
 		}
