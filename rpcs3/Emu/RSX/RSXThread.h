@@ -690,6 +690,7 @@ namespace rsx
 
 	public:
 		atomic_t<bool> sync_point_request = false;
+		atomic_t<bool> pause_on_draw = false;
 		bool in_begin_end = false;
 
 		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;

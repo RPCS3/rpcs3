@@ -400,8 +400,8 @@ void Buffer::ShowContextMenu(const QPoint& pos)
 		}
 	});
 
-	contextMenu.addAction(&action);
-	contextMenu.exec(mapToGlobal(pos));
+	context_menu.addAction(&action);
+	context_menu.exec(mapToGlobal(pos));
 }
 
 namespace

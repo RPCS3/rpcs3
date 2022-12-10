@@ -657,6 +657,13 @@ namespace rsx
 			{
 				rsxthr->in_begin_end = false;
 			}
+
+			if (rsxthr->pause_on_draw && rsxthr->pause_on_draw.exchange(false))
+			{
+				rsxthr->state -= cpu_flag::dbg_step;
+				rsxthr->state += cpu_flag::dbg_pause;
+				rsxthr->check_state();
+			}
 		}
 
 		vm::addr_t get_report_data_impl(u32 offset)
