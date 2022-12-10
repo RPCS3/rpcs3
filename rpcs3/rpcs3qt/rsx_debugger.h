@@ -15,24 +15,30 @@
 #include <memory>
 
 class gui_settings;
+class QPoint;
 
 class Buffer : public QGroupBox
 {
 	Q_OBJECT
 
-	const QSize Panel_Size = QSize(108, 108);
-	const QSize Texture_Size = QSize(108, 108);
+	const QSize Panel_Size = QSize(320, 180);
+	const QSize Texture_Size = QSize(320, 180);
 
 	u32 m_id;
 	bool m_isTex;
 	QImage m_image;
 	QLabel* m_canvas;
 	QSize m_image_size;
+	u32 m_window_counter = 1;
 
 public:
+	std::vector<u8> cache;
+
 	Buffer(bool isTex, u32 id, const QString& name, QWidget* parent = nullptr);
-	void showImage(const QImage& image = QImage());
-	void ShowWindowed() const;
+	void showImage(QImage&& image);
+	void ShowWindowed();
+
+	void ShowContextMenu(const QPoint& pos);
 };
 
 class rsx_debugger : public QDialog
@@ -44,6 +50,8 @@ class rsx_debugger : public QDialog
 	QListWidget* m_list_index_buffer;
 	QTabWidget* m_tw_rsx;
 
+	const QString enabled_textures_text = tr(" Enabled Textures Indices: ");
+
 	Buffer* m_buffer_colorA;
 	Buffer* m_buffer_colorB;
 	Buffer* m_buffer_colorC;
@@ -51,11 +59,13 @@ class rsx_debugger : public QDialog
 	Buffer* m_buffer_depth;
 	Buffer* m_buffer_stencil;
 	Buffer* m_buffer_tex;
+	QLabel* m_enabled_textures_label;
 
 	QLabel* m_text_transform_program;
 	QLabel* m_text_shader_program;
 
-	uint m_cur_texture = 0;
+	u32 m_cur_texture = 0;
+	u32 m_texture_format_override = 0;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
