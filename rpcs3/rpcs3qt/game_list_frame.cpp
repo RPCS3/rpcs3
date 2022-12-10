@@ -935,7 +935,11 @@ void game_list_frame::CreateShortcuts(const game_info& gameinfo, std::vector<gui
 		gameid_token_value = gameinfo->info.serial;
 	}
 
+#ifdef __linux__
+	const std::string target_cli_args = fmt::format("--no-gui \"%%%%RPCS3_GAMEID%%%%:%s\"", gameid_token_value);
+#else
 	const std::string target_cli_args = fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", gameid_token_value);
+#endif
 	const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
 
 	if (!fs::create_path(target_icon_dir))
