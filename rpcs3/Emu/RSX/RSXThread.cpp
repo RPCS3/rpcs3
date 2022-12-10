@@ -2157,7 +2157,10 @@ namespace rsx
 
 		if (method_registers.current_draw_clause.classify_mode() == primitive_class::polygon)
 		{
-			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
+			if (!backend_config.supports_normalized_barycentrics)
+			{
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
+			}
 		}
 		else if (method_registers.point_sprite_enabled() &&
 			method_registers.current_draw_clause.primitive == primitive_type::points)
