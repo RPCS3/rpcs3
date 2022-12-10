@@ -50,7 +50,7 @@ void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 {
 	glsl::insert_fragment_shader_inputs_block(
 		OS,
-		glsl::extension_type::NV,
+		glsl::extension_flavour::NV,
 		m_prog,
 		m_parr.params[PF_PARAM_IN],
 		{
