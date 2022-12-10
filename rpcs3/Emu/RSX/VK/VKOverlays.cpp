@@ -423,7 +423,7 @@ namespace vk
 			"	};\n"
 			"\n"
 			"	vec4 blurred = vec4(0.);\n"
-			"	for (int n = 0; n < 9; ++n)\n"
+			"	for (int n = 0; n < 9; n++)\n"
 			"	{\n"
 			"		blurred += texture(tex, coords[n]) * weights[n];\n"
 			"	}\n"
