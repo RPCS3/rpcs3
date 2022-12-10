@@ -464,6 +464,11 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME);
 		}
 
+		if (pgpu->barycoords_support)
+		{
+			requested_extensions.push_back(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
+		}
+
 		enabled_features.robustBufferAccess = VK_TRUE;
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
 		enabled_features.independentBlend = VK_TRUE;
