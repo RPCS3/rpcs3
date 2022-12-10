@@ -74,6 +74,6 @@ namespace gl
 	// Very useful util when capturing traces with RenderDoc
 	static inline void push_debug_label(const char* label)
 	{
-		glInsertEventMarkerEXT(strlen(label), label);
+		glInsertEventMarkerEXT(static_cast<GLsizei>(strlen(label)), label);
 	}
 }
