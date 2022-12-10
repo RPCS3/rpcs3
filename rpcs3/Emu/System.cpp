@@ -1017,10 +1017,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// const overload does not create new node on failure
 			if (auto node = std::as_const(games)[m_title_id])
 			{
-				std::string title_path = node.Scalar();
+				title_path = node.Scalar();
 			}
-				
-			for (auto&& test_path :
+
+			for (std::string test_path :
 			{
 				rpcs3::utils::get_hdd0_dir() + "game/" + m_title_id + "/USRDIR/EBOOT.BIN"
 				, tail.empty() ? "" : title_path + tail + "/USRDIR/EBOOT.BIN"
