@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Utilities/StrFmt.h"
-#include "../Common/simple_array.hpp"
 
 #include "GLSLCommon.h"
 #include "RSXFragmentProgram.h"
