@@ -633,10 +633,10 @@ namespace rsx
 		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
 		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
 
-	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 
+	protected:
 		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
 		bool get_scissor(areau& region, bool clip_viewport);
 
