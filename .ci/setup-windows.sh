@@ -21,7 +21,7 @@ QT_MM_URL="${QT_HOST}${QT_PREFIX}qtmultimedia${QT_SUFFIX}"
 QT_SVG_URL="${QT_HOST}${QT_PREFIX}qtsvg${QT_SUFFIX}"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z'
 GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
-VULKAN_SDK_URL="https://www.dropbox.com/s/o918fc11pfk8x9c/VulkanSDK-${VULKAN_VER}-Installer.exe"
+VULKAN_SDK_URL="https://www.dropbox.com/s/cs77c3iv5mbo0bt/VulkanSDK-${VULKAN_VER}-Installer.exe"
 
 DEP_URLS="         \
     $QT_BASE_URL   \
