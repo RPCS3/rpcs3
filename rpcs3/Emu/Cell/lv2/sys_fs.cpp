@@ -3058,12 +3058,9 @@ error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 				}
 			}
 		}
-		else
+		else if (mp == &g_mp_sys_dev_root || !vfs::get(mp->root).empty())
 		{
-			if (!vfs::get(mp->root).empty())
-			{
-				count++;
-			}
+			count++;
 		}
 	}
 
@@ -3114,7 +3111,7 @@ error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u64
 				}
 			}
 		}
-		else if (!vfs::get(mp->root).empty())
+		else if (mp == &g_mp_sys_dev_root || !vfs::get(mp->root).empty())
 		{
 			if (mp == &g_mp_sys_dev_root || mp == &g_mp_sys_dev_flash)
 			{
