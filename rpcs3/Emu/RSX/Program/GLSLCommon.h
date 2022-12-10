@@ -4,7 +4,7 @@
 #include "GLSLTypes.h"
 #include "ShaderParam.h"
 
-class RSXFragmentProgram;
+struct RSXFragmentProgram;
 
 namespace rsx
 {
@@ -90,7 +90,7 @@ namespace glsl
 		bool two_sided_specular;
 	};
 
-	struct extension_type
+	struct extension_flavour
 	{
 		static constexpr std::string_view
 			EXT = "EXT",

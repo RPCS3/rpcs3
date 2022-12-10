@@ -541,9 +541,9 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	// NVIDIA has broken attribute interpolation
 	backend_config.supports_normalized_barycentrics = (
-		vk::get_driver_vendor() != vk::driver_vendor::NVIDIA &&
-		m_device->get_barycoords_support() &&
-		g_cfg.video.shader_precision != gpu_preset_level::low);
+		vk::get_driver_vendor() != vk::driver_vendor::NVIDIA ||
+		!m_device->get_barycoords_support() ||
+		g_cfg.video.shader_precision == gpu_preset_level::low);
 
 	// NOTE: We do not actually need multiple sample support for A2C to work
 	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed
