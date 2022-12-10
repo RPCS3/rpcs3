@@ -90,6 +90,11 @@ namespace utils
 			u32 width = 0;
 			u32 height = 0;
 			u32 pitch = 0;
+
+			std::string to_string() const
+			{
+				return fmt::format("{ av_pixel_format=%d, width=%d, height=%d, pitch=%d }", av_pixel_format, width, height, pitch);
+			}
 		};
 
 		std::string path() const;

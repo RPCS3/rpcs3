@@ -93,16 +93,49 @@ struct rec_param
 		std::string movie_title;
 		std::string description;
 		std::string userdata;
+
+		std::string to_string() const
+		{
+			return fmt::format("{ game_title='%s', movie_title='%s', description='%s', userdata='%s' }", game_title, movie_title, description, userdata);
+		}
 	} movie_metadata{};
 	struct
 	{
 		bool is_set = false;
-		u32 type;
-		u64 start_time;
-		u64 end_time;
+		u32 type = 0;
+		u64 start_time = 0;
+		u64 end_time = 0;
 		std::string title;
 		std::vector<std::string> tags;
+
+		std::string to_string() const
+		{
+			std::string scene_metadata_tags;
+			for (usz i = 0; i < tags.size(); i++)
+			{
+				if (i > 0) scene_metadata_tags += ", ";
+				fmt::append(scene_metadata_tags, "'%s'", tags[i]);
+			}
+			return fmt::format("{ is_set=%d, type=%d, start_time=%d, end_time=%d, title='%s', tags=[ %s ] }", is_set, type, start_time, end_time, title, scene_metadata_tags);
+		}
 	} scene_metadata{};
+
+	std::string to_string() const
+	{
+		std::string priority;
+		for (usz i = 0; i < 8; i++)
+		{
+			if (i > 0) priority += ", ";
+			fmt::append(priority, "%d", spurs_param.priority[i]);
+		}
+		return fmt::format("ppu_thread_priority=%d, spu_thread_priority=%d, capture_priority=%d, use_system_spu=%d, fit_to_youtube=%d, "
+			"xmb_bgm=%d, mpeg4_fast_encode=%d, ring_sec=%d, video_input=%d, audio_input=%d, audio_input_mix_vol=%d, reduce_memsize=%d, "
+			"show_xmb=%d, filename='%s', metadata_filename='%s', spurs_param={ pSpurs=*0x%x, spu_usage_rate=%d, priority=[ %s ], "
+			"movie_metadata=%s, scene_metadata=%s",
+			ppu_thread_priority, spu_thread_priority, capture_priority, use_system_spu, fit_to_youtube, xmb_bgm, mpeg4_fast_encode, ring_sec,
+			video_input, audio_input, audio_input_mix_vol, reduce_memsize, show_xmb, filename, metadata_filename, spurs_param.pSpurs, spurs_param.spu_usage_rate,
+			priority, movie_metadata.to_string(), scene_metadata.to_string());
+	}
 };
 
 constexpr u32 rec_framerate = 30; // Always 30 fps
@@ -397,6 +430,8 @@ void rec_info::set_video_params(s32 video_format)
 		input_format.pitch = input_format.width * 4; // unused
 		break;
 	}
+
+	cellRec.notice("set_video_params: video_format=0x%x, video_type=0x%x, video_quality=0x%x, video_bps=%d, video_codec_id=%d, wide=%d, hd=%d, input_format=%s, output_format=%s", video_format, video_type, video_quality, video_bps, video_codec_id, wide, hd, input_format.to_string(), output_format.to_string());
 }
 
 void rec_info::set_audio_params(s32 audio_format)
@@ -476,6 +511,8 @@ void rec_info::set_audio_params(s32 audio_format)
 		audio_bps = 96000;
 		break;
 	}
+
+	cellRec.notice("set_audio_params: audio_format=0x%x, audio_codec_id=%d, sample_rate=%d, audio_bps=%d", audio_format, audio_codec_id, sample_rate, audio_bps);
 }
 
 void rec_info::start_image_provider()
@@ -568,7 +605,7 @@ void rec_info::start_image_provider()
 			}
 			else if (use_ring_buffer && image_sink)
 			{
-				utils::image_sink::encoder_frame frame = std::move(image_sink->get_frame());
+				const utils::image_sink::encoder_frame frame = image_sink->get_frame();
 
 				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_pts && frame.data.size() > 0)
 				{
@@ -703,6 +740,16 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 	{
 		return CELL_REC_ERROR_INVALID_VALUE;
 	}
+
+	std::string options;
+
+	for (s32 i = 0; i < pParam->numOfOpt; i++)
+	{
+		if (i > 0) options += ", ";
+		fmt::append(options, "%d", pParam->pOpt[i].option);
+	}
+
+	cellRec.notice("cellRecOpen: pParam={ videoFmt=0x%x, audioFmt=0x%x, numOfOpt=0x%x, options=[ %s ] }", pParam->videoFmt, pParam->audioFmt, pParam->numOfOpt, options);
 
 	const u32 mem_size = cellRecQueryMemSize(pParam);
 
@@ -959,6 +1006,7 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 		}
 		default:
 		{
+			cellRec.warning("cellRecOpen: unknown option %d", opt.option);
 			break;
 		}
 		}
@@ -1010,6 +1058,8 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 	{
 		return CELL_REC_ERROR_INVALID_VALUE;
 	}
+
+	cellRec.notice("cellRecOpen: Using parameters: %s", rec.param.to_string());
 
 	rec.cb = cb;
 	rec.cbUserData = cbUserData;
@@ -1512,12 +1562,16 @@ error_code cellRecSetInfo(s32 setInfo, u64 value)
 	{
 	case CELL_REC_SETINFO_MOVIE_START_TIME_MSEC:
 	{
+		// TODO: check if this is actually identical to scene metadata
 		rec.param.scene_metadata.start_time = value;
+		cellRec.notice("cellRecSetInfo: changed movie start time to %d", value);
 		break;
 	}
 	case CELL_REC_SETINFO_MOVIE_END_TIME_MSEC:
 	{
+		// TODO: check if this is actually identical to scene metadata
 		rec.param.scene_metadata.end_time = value;
+		cellRec.notice("cellRecSetInfo: changed movie end time to %d", value);
 		break;
 	}
 	case CELL_REC_SETINFO_MOVIE_META:
@@ -1556,9 +1610,10 @@ error_code cellRecSetInfo(s32 setInfo, u64 value)
 			rec.param.movie_metadata.userdata = std::string{movie_metadata->userdata.get_ptr()};
 		}
 
+		cellRec.notice("cellRecSetInfo: changed movie metadata to %s", rec.param.movie_metadata.to_string());
 		break;
 	}
-	case CELL_REC_SETINFO_SCEME_META:
+	case CELL_REC_SETINFO_SCENE_META:
 	{
 		if (!value)
 		{
@@ -1600,6 +1655,7 @@ error_code cellRecSetInfo(s32 setInfo, u64 value)
 			}
 		}
 
+		cellRec.notice("cellRecSetInfo: changed scene metadata to %s", rec.param.scene_metadata.to_string());
 		break;
 	}
 	default:
