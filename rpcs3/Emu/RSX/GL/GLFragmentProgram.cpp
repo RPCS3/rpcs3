@@ -46,6 +46,7 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 	if (m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION)
 	{
+		gl_version = std::max(gl_version, 450);
 		required_extensions.push_back("GL_NV_fragment_shader_barycentric");
 	}
 
