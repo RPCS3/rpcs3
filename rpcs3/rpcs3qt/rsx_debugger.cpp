@@ -739,7 +739,7 @@ void rsx_debugger::GetBuffers() const
 		// PS3 buffer size (for memory validation)
 		const u32 src_mem_size = pitch * (height - 1) + width * bpp;
 
-		if (!src_mem_size || !vm::check_addr(rsx_buffer_addr, vm::page_readable, src_mem_size))
+		if ((height > 1 && pitch < width * bpp) || !src_mem_size || !vm::check_addr(rsx_buffer_addr, vm::page_readable, src_mem_size))
 		{
 			panel->showImage(QImage());
 			continue;
@@ -900,7 +900,7 @@ void rsx_debugger::GetBuffers() const
 		default: panel = m_buffer_stencil; break;
 		}
 
-		if (!height || !src_mem_size || !vm::check_addr(rsx_buffer_addr, vm::page_readable, src_mem_size))
+		if ((height > 1 && pitch < width * bpp) || !height || !src_mem_size || !vm::check_addr(rsx_buffer_addr, vm::page_readable, src_mem_size))
 		{
 			panel->showImage(QImage());
 			continue;
