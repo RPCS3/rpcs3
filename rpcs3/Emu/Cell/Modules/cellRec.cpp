@@ -601,7 +601,9 @@ void rec_info::start_image_provider()
 				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_pts && frame.data.size() > 0)
 				{
 					ensure(frame.data.size() == frame_size);
-					video_ringbuffer[next_video_ring_pos()] = std::move(frame);
+					utils::image_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
+					frame_data = std::move(frame);
+					frame_data.pts = pts;
 					last_pts = pts;
 					video_ring_frame_count++;
 				}
