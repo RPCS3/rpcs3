@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "qt_utils.h"
 #include <QApplication>
 #include <QBitmap>
@@ -11,6 +12,8 @@
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
 #include <cmath>
+
+LOG_CHANNEL(gui_log, "GUI");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
@@ -394,7 +397,6 @@ namespace gui
 
 		void open_dir(const std::string& spath)
 		{
-			fs::create_dir(spath);
 			const QString path = qstr(spath);
 
 			if (fs::is_file(spath))
@@ -402,18 +404,46 @@ namespace gui
 				// open directory and select file
 				// https://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
 #ifdef _WIN32
-				QProcess::startDetached("explorer.exe", { "/select,", QDir::toNativeSeparators(path) });
+				const QString cleaned_path = QDir::toNativeSeparators(path);
+				gui_log.notice("gui::utils::open_dir: About to open file path '%s' (original: '%s')", cleaned_path.toStdString(), spath);
+
+				if (!QProcess::startDetached("explorer.exe", {"/select,", cleaned_path}))
+				{
+					gui_log.error("gui::utils::open_dir: Failed to start explorer process");
+				}
 #elif defined(__APPLE__)
+				gui_log.notice("gui::utils::open_dir: About to open file path '%s'", spath);
+
 				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
 				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
 #else
 				// open parent directory
-				QDesktopServices::openUrl(QUrl::fromLocalFile(qstr(fs::get_parent_dir(spath))));
+				const QUrl url = QUrl::fromLocalFile(qstr(fs::get_parent_dir(spath)));
+				const std::string url_path = url.toString().toStdString();
+				gui_log.notice("gui::utils::open_dir: About to open parent dir url '%s' for path '%s'", url_path, spath);
+
+				if (!QDesktopServices::openUrl(url))
+				{
+					gui_log.error("gui::utils::open_dir: Failed to open parent dir url '%s' for path '%s'", url_path, spath);
+				}
 #endif
 				return;
 			}
 
-			QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+			if (!fs::is_dir && !fs::create_path(spath))
+			{
+				gui_log.error("gui::utils::open_dir: Failed to create path '%s' (%s)", spath, fs::g_tls_error);
+				return;
+			}
+
+			const QUrl url = QUrl::fromLocalFile(path);
+			const std::string url_path = url.toString().toStdString();
+			gui_log.notice("gui::utils::open_dir: About to open dir url '%s' for path '%s'", url_path, spath);
+
+			if (!QDesktopServices::openUrl(url))
+			{
+				gui_log.error("gui::utils::open_dir: Failed to open dir url '%s' for path '%s'", url_path, spath);
+			}
 		}
 
 		void open_dir(const QString& path)
