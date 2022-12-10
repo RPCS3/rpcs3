@@ -183,15 +183,6 @@ public:
 	}
 };
 
-struct rec_frame_data
-{
-	s64 pts = -1;
-	u32 width = 0;
-	u32 height = 0;
-	s32 av_pixel_format = 0; // NOTE: Make sure this is a valid AVPixelFormat
-	std::vector<u8> frame;
-};
-
 struct rec_info
 {
 	vm::ptr<CellRecCallback> cb{};
@@ -205,7 +196,7 @@ struct rec_info
 	vm::bptr<u8> video_input_buffer{}; // Used by the game to inject a frame right before it would render a frame to the screen.
 	vm::bptr<u8> audio_input_buffer{}; // Used by the game to inject audio: 2-channel interleaved (left-right) * 256 samples * sizeof(f32) at 48000 kHz
 
-	std::vector<rec_frame_data> video_ringbuffer;
+	std::vector<utils::image_sink::encoder_frame> video_ringbuffer;
 	std::vector<u8> audio_ringbuffer;
 	usz video_ring_pos = 0;
 	usz video_ring_frame_count = 0;
@@ -583,13 +574,13 @@ void rec_info::start_image_provider()
 					{
 						if (use_ring_buffer)
 						{
-							rec_frame_data& frame_data = video_ringbuffer[next_video_ring_pos()];
+							utils::image_sink::encoder_frame& frame_data = video_ringbuffer[next_video_ring_pos()];
 							frame_data.pts = pts;
 							frame_data.width = input_format.width;
 							frame_data.height = input_format.height;
 							frame_data.av_pixel_format = input_format.av_pixel_format;
-							frame_data.frame.resize(frame_size);
-							std::memcpy(frame_data.frame.data(), video_input_buffer.get_ptr(), frame_data.frame.size());
+							frame_data.data.resize(frame_size);
+							std::memcpy(frame_data.data.data(), video_input_buffer.get_ptr(), frame_data.data.size());
 							video_ring_frame_count++;
 						}
 						else
@@ -605,18 +596,12 @@ void rec_info::start_image_provider()
 			}
 			else if (use_ring_buffer && image_sink)
 			{
-				const utils::image_sink::encoder_frame frame = image_sink->get_frame();
+				utils::image_sink::encoder_frame frame = image_sink->get_frame();
 
 				if (const s64 pts = encoder->get_pts(frame.timestamp_ms); pts > last_pts && frame.data.size() > 0)
 				{
-					rec_frame_data& frame_data = video_ringbuffer[next_video_ring_pos()];
 					ensure(frame.data.size() == frame_size);
-					frame_data.pts = pts;
-					frame_data.width = frame.width;
-					frame_data.height = frame.height;
-					frame_data.av_pixel_format = frame.av_pixel_format;
-					frame_data.frame.resize(frame.data.size());
-					std::memcpy(frame_data.frame.data(), frame.data.data(), frame.data.size());
+					video_ringbuffer[next_video_ring_pos()] = std::move(frame);
 					last_pts = pts;
 					video_ring_frame_count++;
 				}
@@ -692,8 +677,8 @@ void rec_info::stop_image_provider(bool flush)
 		for (usz i = 0; i < frame_count; i++)
 		{
 			const usz pos = (start_offset + i) % video_ringbuffer.size();
-			rec_frame_data& frame_data = video_ringbuffer[pos];
-			encoder->add_frame(frame_data.frame, frame_data.width, frame_data.height, frame_data.av_pixel_format, encoder->get_timestamp_ms(frame_data.pts - start_pts));
+			utils::image_sink::encoder_frame& frame_data = video_ringbuffer[pos];
+			encoder->add_frame(frame_data.data, frame_data.width, frame_data.height, frame_data.av_pixel_format, encoder->get_timestamp_ms(frame_data.pts - start_pts));
 
 			// TODO: add audio data to encoder
 		}

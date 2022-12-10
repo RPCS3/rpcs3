@@ -36,6 +36,7 @@ namespace utils
 				: timestamp_ms(timestamp_ms), width(width), height(height), av_pixel_format(av_pixel_format), data(std::move(data))
 			{}
 
+			s64 pts = -1; // Optional
 			usz timestamp_ms = 0;
 			u32 width = 0;
 			u32 height = 0;
