@@ -115,6 +115,7 @@ private Q_SLOTS:
 	void OnSelectUnit();
 	void ShowPC(bool user_requested = false);
 	void EnableUpdateTimer(bool enable) const;
+	void RunBtnPress();
 };
 
 Q_DECLARE_METATYPE(u32)
