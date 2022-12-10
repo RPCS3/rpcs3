@@ -28,19 +28,31 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	OS << "#version 430\n";
+	int gl_version = 430;
+	std::vector<std::string> required_extensions;
 
 	if (device_props.has_native_half_support)
 	{
 		const auto driver_caps = gl::get_driver_caps();
 		if (driver_caps.NV_gpu_shader5_supported)
 		{
-			OS << "#extension GL_NV_gpu_shader5: require\n";
+			required_extensions.push_back("GL_NV_gpu_shader5");
 		}
 		else if (driver_caps.AMD_gpu_shader_half_float_supported)
 		{
-			OS << "#extension GL_AMD_gpu_shader_half_float: require\n";
+			required_extensions.push_back("GL_AMD_gpu_shader_half_float");
 		}
+	}
+
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION)
+	{
+		required_extensions.push_back("GL_NV_fragment_shader_barycentric");
+	}
+
+	OS << "#version " << gl_version << "\n";
+	for (const auto& ext : required_extensions)
+	{
+		OS << "#extension " << ext << ": require\n";
 	}
 
 	glsl::insert_subheader_block(OS);
