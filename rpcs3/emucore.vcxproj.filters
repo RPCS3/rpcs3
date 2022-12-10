@@ -1101,6 +1101,7 @@
     </ClCompile>
     <ClCompile Include="Emu\Io\recording_config.cpp">
       <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\HLE_PATCHES.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>

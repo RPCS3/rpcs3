@@ -734,7 +734,7 @@ void trophy_manager_dialog::ShowTrophyTableContextMenu(const QPoint& pos)
 	connect(show_trophy_dir, &QAction::triggered, this, [this, db_ind]()
 	{
 		const QString path = qstr(m_trophies_db[db_ind]->path);
-		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+		gui::utils::open_dir(path);
 	});
 
 	menu->addAction(show_trophy_dir);
@@ -802,7 +802,7 @@ void trophy_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
 	connect(show_trophy_dir, &QAction::triggered, this, [this, db_ind]()
 	{
 		const QString path = qstr(m_trophies_db[db_ind]->path);
-		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+		gui::utils::open_dir(path);
 	});
 
 	menu->addAction(show_trophy_dir);
