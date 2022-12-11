@@ -452,15 +452,16 @@ namespace rsx
 
 	struct backend_configuration
 	{
-		bool supports_multidraw;             // Draw call batching
-		bool supports_hw_a2c;                // Alpha to coverage
-		bool supports_hw_renormalization;    // Should be true on NV hardware which matches PS3 texture renormalization behaviour
-		bool supports_hw_msaa;               // MSAA support
-		bool supports_hw_a2one;              // Alpha to one
-		bool supports_hw_conditional_render; // Conditional render
-		bool supports_passthrough_dma;       // DMA passthrough
-		bool supports_asynchronous_compute;  // Async compute
-		bool supports_host_gpu_labels;       // Advanced host synchronization
+		bool supports_multidraw;               // Draw call batching
+		bool supports_hw_a2c;                  // Alpha to coverage
+		bool supports_hw_renormalization;      // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_msaa;                 // MSAA support
+		bool supports_hw_a2one;                // Alpha to one
+		bool supports_hw_conditional_render;   // Conditional render
+		bool supports_passthrough_dma;         // DMA passthrough
+		bool supports_asynchronous_compute;    // Async compute
+		bool supports_host_gpu_labels;         // Advanced host synchronization
+		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
 	};
 
 	struct sampled_image_descriptor_base;
@@ -495,6 +496,8 @@ namespace rsx
 
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
+
+		primitive_class m_current_draw_mode = primitive_class::polygon;
 
 		backend_configuration backend_config{};
 

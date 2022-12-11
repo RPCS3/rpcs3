@@ -35,6 +35,12 @@ namespace rsx
 		vertex_arrays_changed = (1 << 2),
 	};
 
+	enum class primitive_class
+	{
+		polygon,
+		non_polygon
+	};
+
 	struct barrier_t
 	{
 		u32 draw_id;
@@ -259,6 +265,14 @@ namespace rsx
 
 			return count;
 		}
+
+		primitive_class classify_mode() const
+		{
+			return primitive >= rsx::primitive_type::triangles
+				? primitive_class::polygon
+				: primitive_class::non_polygon;
+		}
+
 
 		void reset(rsx::primitive_type type);
 

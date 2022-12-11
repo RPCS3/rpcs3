@@ -313,5 +313,15 @@ namespace rsx
 				}
 			}
 		}
+
+		void sort(std::predicate<const Ty&, const Ty&> auto predicate)
+		{
+			if (_size < 2)
+			{
+				return;
+			}
+
+			std::sort(begin(), end(), predicate);
+		}
 	};
 }

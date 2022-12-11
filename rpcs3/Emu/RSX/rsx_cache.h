@@ -28,8 +28,10 @@ namespace rsx
 			u64 fragment_program_hash;
 			u64 pipeline_storage_hash;
 
-			u32 vp_ctrl;
+			u32 vp_ctrl0;
+			u32 vp_ctrl1;
 			u32 vp_texture_dimensions;
+			u32 vp_reserved_0;
 			u64 vp_instruction_mask[9];
 
 			u32 vp_base_address;
@@ -37,8 +39,8 @@ namespace rsx
 			u16 vp_jump_table[32];
 
 			u16 vp_multisampled_textures;
-			u16 vp_reserved_0;
-			u32 vp_reserved_1;
+			u16 vp_reserved_1;
+			u32 vp_reserved_2;
 
 			u32 fp_ctrl;
 			u32 fp_texture_dimensions;
@@ -305,7 +307,8 @@ namespace rsx
 			}
 
 			u64 state_hash = 0;
-			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl);
+			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl0);
+			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl1);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_ctrl);
 			state_hash ^= rpcs3::hash_base<u32>(data.vp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_texture_dimensions);
@@ -362,7 +365,8 @@ namespace rsx
 			fp = load_fp_raw(data.fragment_program_hash);
 			pipeline = data.pipeline_properties;
 
-			vp.output_mask = data.vp_ctrl;
+			vp.ctrl = data.vp_ctrl0;
+			vp.output_mask = data.vp_ctrl1;
 			vp.texture_state.texture_dimensions = data.vp_texture_dimensions;
 			vp.texture_state.multisampled_textures = data.vp_multisampled_textures;
 			vp.base_address = data.vp_base_address;
@@ -401,7 +405,8 @@ namespace rsx
 			data_block.fragment_program_hash = m_storage.get_hash(fp);
 			data_block.pipeline_storage_hash = m_storage.get_hash(pipeline);
 
-			data_block.vp_ctrl = vp.output_mask;
+			data_block.vp_ctrl0 = vp.ctrl;
+			data_block.vp_ctrl1 = vp.output_mask;
 			data_block.vp_texture_dimensions = vp.texture_state.texture_dimensions;
 			data_block.vp_multisampled_textures = vp.texture_state.multisampled_textures;
 			data_block.vp_base_address = vp.base_address;

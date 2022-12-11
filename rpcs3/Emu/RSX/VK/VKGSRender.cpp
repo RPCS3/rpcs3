@@ -510,7 +510,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.93");
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.94");
 
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
 	{
@@ -538,6 +538,12 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	}
 
 	backend_config.supports_multidraw = true;
+
+	// NVIDIA has broken attribute interpolation
+	backend_config.supports_normalized_barycentrics = (
+		vk::get_driver_vendor() != vk::driver_vendor::NVIDIA ||
+		!m_device->get_barycoords_support() ||
+		g_cfg.video.shader_precision == gpu_preset_level::low);
 
 	// NOTE: We do not actually need multiple sample support for A2C to work
 	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed

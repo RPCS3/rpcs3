@@ -4,6 +4,8 @@
 #include "GLSLTypes.h"
 #include "ShaderParam.h"
 
+struct RSXFragmentProgram;
+
 namespace rsx
 {
 	// TODO: Move this somewhere else once more compilers are supported other than glsl
@@ -82,6 +84,20 @@ namespace program_common
 
 namespace glsl
 {
+	struct two_sided_lighting_config
+	{
+		bool two_sided_color;
+		bool two_sided_specular;
+	};
+
+	struct extension_flavour
+	{
+		static constexpr std::string_view
+			EXT = "EXT",
+			KHR = "KHR",
+			NV = "NV";
+	};
+
 	std::string getFloatTypeNameImpl(usz elementCount);
 	std::string getHalfTypeNameImpl(usz elementCount);
 	std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar = false);
@@ -92,4 +108,12 @@ namespace glsl
 	void insert_fog_declaration(std::ostream& OS);
 	std::string getFunctionImpl(FUNCTION f);
 	void insert_subheader_block(std::ostream& OS);
+
+	void insert_fragment_shader_inputs_block(
+		std::stringstream& OS,
+		const std::string_view bary_coords_extenstion_type,
+		const RSXFragmentProgram& prog,
+		const std::vector<ParamType>& params,
+		const two_sided_lighting_config& _2sided_lighting,
+		std::function<int(std::string_view)> varying_location);
 }

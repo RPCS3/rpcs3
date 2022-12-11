@@ -15,7 +15,7 @@ u64 GLGSRender::get_cycles()
 
 GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
-	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.93");
+	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.94");
 
 	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
 		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();
@@ -25,6 +25,7 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	backend_config.supports_hw_a2c = false;
 	backend_config.supports_hw_a2one = false;
 	backend_config.supports_multidraw = true;
+	backend_config.supports_normalized_barycentrics = true;
 }
 
 extern CellGcmContextData current_context;
@@ -142,6 +143,14 @@ void GLGSRender::on_init_thread()
 		default:
 			break;
 		}
+	}
+
+	if (gl_caps.NV_fragment_shader_barycentric_supported &&
+		gl_caps.vendor_NVIDIA &&
+		g_cfg.video.shader_precision != gpu_preset_level::low)
+	{
+		// NVIDIA's attribute interpolation requires some workarounds
+		backend_config.supports_normalized_barycentrics = false;
 	}
 
 	// Use industry standard resource alignment values as defaults
