@@ -997,17 +997,17 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 					dlg->exec();
 				}
 
-				std::vector<gui::utils::shortcut_location> locations;
+				std::set<gui::utils::shortcut_location> locations;
 #ifdef _WIN32
-				locations.push_back(gui::utils::shortcut_location::rpcs3_shortcuts);
+				locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
 #endif
 				if (create_desktop_shortcuts)
 				{
-					locations.push_back(gui::utils::shortcut_location::desktop);
+					locations.insert(gui::utils::shortcut_location::desktop);
 				}
 				if (create_app_shortcut)
 				{
-					locations.push_back(gui::utils::shortcut_location::applications);
+					locations.insert(gui::utils::shortcut_location::applications);
 				}
 
 				for (const auto& [boot_path, title_id] : bootable_paths_installed)

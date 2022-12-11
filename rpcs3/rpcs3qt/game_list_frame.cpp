@@ -894,7 +894,7 @@ void game_list_frame::ItemSelectionChangedSlot()
 	Q_EMIT NotifyGameSelection(game);
 }
 
-void game_list_frame::CreateShortcuts(const game_info& gameinfo, std::vector<gui::utils::shortcut_location> locations)
+void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<gui::utils::shortcut_location>& locations)
 {
 	if (locations.empty())
 	{
@@ -980,13 +980,18 @@ void game_list_frame::CreateShortcuts(const game_info& gameinfo, std::vector<gui
 		}
 	}
 
-	if (success)
+#ifdef _WIN32
+	if (locations.size() > 1 || !locations.contains(gui::utils::shortcut_location::rpcs3_shortcuts))
+#endif
 	{
-		QMessageBox::information(this, tr("Success!"), tr("Successfully created shortcut(s)."));
-	}
-	else
-	{
-		QMessageBox::warning(this, tr("Warning!"), tr("Failed to create shortcut(s)!"));
+		if (success)
+		{
+			QMessageBox::information(this, tr("Success!"), tr("Successfully created shortcut(s)."));
+		}
+		else
+		{
+			QMessageBox::warning(this, tr("Warning!"), tr("Failed to create shortcut(s)!"));
+		}
 	}
 }
 
