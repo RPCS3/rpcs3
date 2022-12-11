@@ -468,7 +468,7 @@ namespace np
 			return;
 		}
 
-		nph_log.notice("discover_ip_address: Hostname was determined to be %s", hostname.c_str());
+		// nph_log.notice("discover_ip_address: Hostname was determined to be %s", hostname.c_str());
 
 		hostent* host = gethostbyname(hostname.data());
 		if (!host)
@@ -488,7 +488,7 @@ namespace np
 		// Set public address to local discovered address for now, may be updated later from RPCN socket
 		public_ip_addr = local_ip_addr;
 
-		nph_log.notice("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
+		// nph_log.notice("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
 	}
 
 	bool np_handler::discover_ether_address()
@@ -506,7 +506,7 @@ namespace np
 					sockaddr_dl* sdp = reinterpret_cast<sockaddr_dl*>(p->ifa_addr);
 					memcpy(ether_address.data(), sdp->sdl_data + sdp->sdl_nlen, 6);
 					freeifaddrs(ifap);
-					nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
+					// nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
 					return true;
 				}
 			}
@@ -523,7 +523,7 @@ namespace np
 		{
 			PIP_ADAPTER_INFO info = reinterpret_cast<PIP_ADAPTER_INFO>(adapter_infos.data());
 			memcpy(ether_address.data(), info[0].Address, 6);
-			nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
+			// nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
 			return true;
 		}
 #else
@@ -563,7 +563,7 @@ namespace np
 		if (success)
 		{
 			memcpy(ether_address.data(), ifr.ifr_hwaddr.sa_data, 6);
-			nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
+			// nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
 
 			return true;
 		}
