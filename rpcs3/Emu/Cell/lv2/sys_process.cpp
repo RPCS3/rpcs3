@@ -402,6 +402,13 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	// TODO: set prio, flags
 
+	lv2_exitspawn(ppu, argv, envp, data);
+}
+
+void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data)
+{
+	ppu.state += cpu_flag::wait;
+
 	Emu.CallFromMainThread([argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
