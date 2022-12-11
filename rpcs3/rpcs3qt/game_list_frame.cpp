@@ -1426,9 +1426,14 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			{
 				if (remove_caches)
 				{
-					RemoveShadersCache(cache_base_dir);
-					RemovePPUCache(cache_base_dir);
-					RemoveSPUCache(cache_base_dir);
+					if (fs::is_dir(cache_base_dir))
+					{
+						if (fs::remove_all(cache_base_dir))
+							game_list_log.notice("Removed cache directory: '%s'", cache_base_dir);
+						else
+							game_list_log.error("Could not remove cache directory: '%s' (%s)", cache_base_dir, fs::g_tls_error);
+					}
+
 					RemoveCustomConfiguration(current_game.serial);
 					RemoveCustomPadConfiguration(current_game.serial);
 				}
