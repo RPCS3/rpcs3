@@ -23,6 +23,7 @@ public:
 		// PS3 bootable
 		const QString app_music = tr("Music App");
 		const QString app_photo = tr("Photo App");
+		const QString app_store = tr("Store App");
 		const QString app_tv    = tr("TV App");
 		const QString app_video = tr("Video App");
 		const QString bc_video  = tr("Broadcast Video");
@@ -62,6 +63,7 @@ public:
 		{
 			{ cat::cat_app_music, app_music }, // media
 			{ cat::cat_app_photo, app_photo }, // media
+			{ cat::cat_app_store, app_store }, // media
 			{ cat::cat_app_tv   , app_tv    }, // media
 			{ cat::cat_app_video, app_video }, // media
 			{ cat::cat_bc_video , bc_video  }, // media
