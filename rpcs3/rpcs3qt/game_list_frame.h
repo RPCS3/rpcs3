@@ -62,7 +62,7 @@ public:
 	// Returns the visible version string in the game list
 	static std::string GetGameVersion(const game_info& game);
 
-	void CreateShortcuts(const game_info& gameinfo, std::vector<gui::utils::shortcut_location> locations);
+	void CreateShortcuts(const game_info& gameinfo, const std::set<gui::utils::shortcut_location>& locations);
 
 public Q_SLOTS:
 	void BatchCreatePPUCaches();
