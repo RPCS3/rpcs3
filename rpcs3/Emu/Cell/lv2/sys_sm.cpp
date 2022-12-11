@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_process.h"
 
 #include "sys_sm.h"
