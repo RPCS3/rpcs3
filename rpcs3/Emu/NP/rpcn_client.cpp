@@ -732,7 +732,7 @@ namespace rpcn
 			}
 
 			update_local_addr(client_addr.sin_addr.s_addr);
-			rpcn_log.notice("Updated local address to %s", np::ip_to_string(std::bit_cast<u32, be_t<u32>>(local_addr_sig.load())));
+			// rpcn_log.notice("Updated local address to %s", np::ip_to_string(std::bit_cast<u32, be_t<u32>>(local_addr_sig.load())));
 
 			if (wolfSSL_set_fd(read_wssl, sockfd) != WOLFSSL_SUCCESS)
 			{
