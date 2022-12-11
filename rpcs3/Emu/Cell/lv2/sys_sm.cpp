@@ -45,7 +45,9 @@ error_code sys_sm_get_ext_event2(vm::ptr<u64> a1, vm::ptr<u64> a2, vm::ptr<u64> 
 
 error_code sys_sm_shutdown(ppu_thread& ppu, u16 op, vm::ptr<void> param, u64 size)
 {
-	sys_sm.trace("sys_sm_shutdown(op=0x%x, param=*0x%x, size=0x%x)", op, param, size);
+	ppu.state += cpu_flag::wait;
+
+	sys_sm.success("sys_sm_shutdown(op=0x%x, param=*0x%x, size=0x%x)", op, param, size);
 
 	if (!g_ps3_process_info.has_root_perm())
 	{
@@ -73,7 +75,7 @@ error_code sys_sm_shutdown(ppu_thread& ppu, u16 op, vm::ptr<void> param, u64 siz
 	case 0x8204:
 	{
 		sys_sm.warning("Unsupported LPAR operation: 0x%x", op);
-		break;
+		return CELL_ENOTSUP;
 	}
 	default: return CELL_EINVAL;
 	}
