@@ -30,6 +30,7 @@
 #endif
 
 #include "util/types.hpp"
+#include "util/sysinfo.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/BitField.h"
 #include "Utilities/JIT.h"
@@ -2896,12 +2897,8 @@ protected:
 	bool m_is_be;
 
 	// Allow PSHUFB intrinsic
-#ifdef ARCH_X64
 	bool m_use_ssse3 = true;
-#else
-	// TODO: fix the pshufb arm64 native impl using TBL instruction
-	bool m_use_ssse3 = false;
-#endif
+
 	// Allow FMA
 	bool m_use_fma = false;
 
@@ -2979,6 +2976,7 @@ public:
 		m_engine->updateGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<uptr>(_func));
 
 		const auto inst = m_ir->CreateCall(func, {args...});
+		inst->setTailCallKind(llvm::CallInst::TCK_NoTail);
 #ifdef _WIN32
 		inst->setCallingConv(llvm::CallingConv::Win64);
 #endif
@@ -3445,6 +3443,11 @@ public:
 	template <typename T1, typename T2, typename T3>
 	value_t<u8[16]> vperm2b(T1 a, T2 b, T3 c)
 	{
+		if (!utils::has_fast_vperm2b())
+		{
+			return vperm2b256to128(a, b, c);
+		}
+
 		value_t<u8[16]> result;
 
 		const auto data0 = a.eval(m_ir);

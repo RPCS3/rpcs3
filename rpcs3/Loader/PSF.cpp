@@ -157,9 +157,9 @@ namespace psf
 		fmt::throw_exception("Invalid format (0x%x)", m_type);
 	}
 
-	load_result_t load(const fs::file& stream)
+	load_result_t load(const fs::file& stream, std::string_view filename)
 	{
-#define PSF_CHECK(cond, err) if (!static_cast<bool>(cond)) { if (error::err != error::stream) psf_log.error("Error loading PSF: %s%s", error::err, \
+#define PSF_CHECK(cond, err) if (!static_cast<bool>(cond)) { if (error::err != error::stream) psf_log.error("Error loading PSF '%s': %s%s", filename, error::err, \
 			src_loc{__builtin_LINE(), __builtin_COLUMN(), __builtin_FILE(), __builtin_FUNCTION()}); \
 			result.clear(); \
 			errc = error::err; \
@@ -251,13 +251,21 @@ namespace psf
 			PSF_CHECK(false, corrupt);
 		}
 
+		const auto tid = get_string(pair.sfo, "TITLE_ID", "");
+
+		if (std::find_if(tid.begin(), tid.end(), [](char ch){ return !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')); }) != tid.end())
+		{
+			psf_log.error("Invalid title ID ('%s')", tid);
+			PSF_CHECK(false, corrupt);
+		}
+
 #undef PSF_CHECK
 		return pair;
 	}
 
 	load_result_t load(const std::string& filename)
 	{
-		return load(fs::file(filename));
+		return load(fs::file(filename), filename);
 	}
 
 	std::vector<u8> save_object(const psf::registry& psf, std::vector<u8>&& init)

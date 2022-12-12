@@ -12,6 +12,7 @@
 #include "Utilities/StrUtil.h"
 #include "Utilities/JIT.h"
 #include "util/init_mutex.hpp"
+#include "util/shared_ptr.hpp"
 
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
@@ -32,17 +33,9 @@ const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 // Move 4 args for calling native function from a GHC calling convention function
+#if defined(ARCH_X64)
 static u8* move_args_ghc_to_native(u8* raw)
 {
-#ifdef ARCH_ARM64
-	// Note: this is a placeholder to get rpcs3 working for now
-	// mov x0, x22
-	// mov x1, x23
-	// mov x2, x24
-	// mov x3, x25
-	std::memcpy(raw, "\xE0\x03\x16\xAA\xE1\x03\x17\xAA\xE2\x03\x18\xAA\xE3\x03\x19\xAA", 16);
-	return raw + 16;
-#else
 #ifdef _WIN32
 	// mov  rcx, r13
 	// mov  rdx, rbp
@@ -58,14 +51,34 @@ static u8* move_args_ghc_to_native(u8* raw)
 #endif
 
 	return raw + 12;
-#endif
 }
+#elif defined(ARCH_ARM64)
+static void ghc_cpp_trampoline(u64 fn_target, native_asm& c, auto& args)
+{
+	using namespace asmjit;
+
+	Label target = c.newLabel();
+	c.mov(args[0], a64::x19);
+	c.mov(args[1], a64::x20);
+	c.mov(args[2], a64::x21);
+	c.mov(args[3], a64::x22);
+
+	c.ldr(a64::x15, arm::Mem(target));
+	c.br(a64::x15);
+
+	c.brk(Imm(0x42)); // Unreachable
+
+	c.bind(target);
+	c.embedUInt64(fn_target);
+}
+#endif
 
 DECLARE(spu_runtime::tr_dispatch) = []
 {
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(false);
 #endif
+#if defined(ARCH_X64)
 	// Generate a special trampoline to spu_recompiler_base::dispatch with pause instruction
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = move_args_ghc_to_native(trptr);
@@ -77,10 +90,24 @@ DECLARE(spu_runtime::tr_dispatch) = []
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::dispatch);
 	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
+#elif defined(ARCH_ARM64)
+	auto trptr = build_function_asm<spu_function_t>("tr_dispatch",
+		[](native_asm& c, auto& args)
+		{
+			c.yield();
+			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::dispatch), c, args);
+
+			c.embed("tr_dispatch", 11);
+		});
+	return trptr;
+#else
+#error "Unimplemented"
+#endif
 }();
 
 DECLARE(spu_runtime::tr_branch) = []
 {
+#if defined(ARCH_X64)
 	// Generate a trampoline to spu_recompiler_base::branch
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = move_args_ghc_to_native(trptr);
@@ -90,10 +117,24 @@ DECLARE(spu_runtime::tr_branch) = []
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::branch);
 	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
+
+#elif defined(ARCH_ARM64)
+	auto trptr = build_function_asm<spu_function_t>("tr_branch",
+		[](native_asm& c, auto& args)
+		{
+			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::branch), c, args);
+
+			c.embed("tr_branch", 9);
+		});
+	return trptr;
+#else
+#error "Unimplemented"
+#endif
 }();
 
 DECLARE(spu_runtime::tr_interpreter) = []
 {
+#if defined(ARCH_X64)
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = move_args_ghc_to_native(trptr);
 	*raw++ = 0xff; // jmp [rip]
@@ -102,6 +143,16 @@ DECLARE(spu_runtime::tr_interpreter) = []
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::old_interpreter);
 	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
+#elif defined(ARCH_ARM64)
+	auto trptr = build_function_asm<spu_function_t>("tr_interpreter",
+		[](native_asm& c, auto& args)
+		{
+			ghc_cpp_trampoline(reinterpret_cast<u64>(&spu_recompiler_base::old_interpreter), c, args);
+
+			c.embed("tr_interpreter", 14);
+		});
+	return trptr;
+#endif
 }();
 
 DECLARE(spu_runtime::g_dispatcher) = []
@@ -119,6 +170,7 @@ DECLARE(spu_runtime::g_dispatcher) = []
 
 DECLARE(spu_runtime::tr_all) = []
 {
+#if defined(ARCH_X64)
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = trptr;
 
@@ -168,6 +220,53 @@ DECLARE(spu_runtime::tr_all) = []
 	*raw++ = 0xc2;
 
 	return reinterpret_cast<spu_function_t>(trptr);
+
+#elif defined(ARCH_ARM64)
+	auto trptr = build_function_asm<spu_function_t>("tr_all",
+		[](native_asm& c, auto& args)
+		{
+			using namespace asmjit;
+
+			// w1: PC (eax in x86 SPU)
+			// x7: lsa (rcx in x86 SPU)
+
+			// Load PC
+			Label pc_offset = c.newLabel();
+			c.ldr(a64::x0, arm::Mem(pc_offset));
+			c.ldr(a64::w1, arm::Mem(a64::x19, a64::x0)); // REG_Base + offset(spu_thread::pc)
+			// Compute LS address = REG_Sp + PC, store into x7 (use later)
+			c.add(a64::x7, a64::x20, a64::x1);
+			// Load 32b from LS address
+			c.ldr(a64::w3, arm::Mem(a64::x7));
+			// shr (32 - 20)
+			c.lsr(a64::w3, a64::w3, Imm(32 - 20));
+			// Load g_dispatcher
+			Label g_dispatcher_offset = c.newLabel();
+			c.ldr(a64::x4, arm::Mem(g_dispatcher_offset));
+			// Update block hash
+			Label block_hash_offset = c.newLabel();
+			c.mov(a64::x5, Imm(0));
+			c.ldr(a64::x6, arm::Mem(block_hash_offset));
+			c.str(a64::x5, arm::Mem(a64::x19, a64::x6)); // REG_Base + offset(spu_thread::block_hash)
+			// Jump to [g_dispatcher + idx * 8]
+			c.mov(a64::x6, Imm(8));
+			c.mul(a64::x6, a64::x3, a64::x6);
+			c.add(a64::x4, a64::x4, a64::x6);
+			c.ldr(a64::x4, arm::Mem(a64::x4));
+			c.br(a64::x4);
+
+			c.bind(pc_offset);
+			c.embedUInt64(::offset32(&spu_thread::pc));
+			c.bind(g_dispatcher_offset);
+			c.embedUInt64(reinterpret_cast<u64>(g_dispatcher));
+			c.bind(block_hash_offset);
+			c.embedUInt64(::offset32(&spu_thread::block_hash));
+			c.embed("tr_all", 6);
+		});
+	return trptr;
+#else
+#error "Unimplemented"
+#endif
 }();
 
 DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gateway", [](native_asm& c, auto& args)
@@ -258,8 +357,69 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gatewa
 #endif
 
 	c.ret();
-#else
+#elif defined(ARCH_ARM64)
+	// Push callee saved registers to the stack
+	// We need to save x18-x30 = 13 x 8B each + 8 bytes for 16B alignment = 112B
+	c.sub(a64::sp, a64::sp, Imm(112));
+	c.stp(a64::x18, a64::x19, arm::Mem(a64::sp));
+	c.stp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
+	c.stp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
+	c.stp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
+	c.stp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
+	c.stp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
+	c.str(a64::x30, arm::Mem(a64::sp, 96));
+
+	// Save native stack pointer for longjmp emulation
+	Label sp_offset = c.newLabel();
+	c.ldr(a64::x26, arm::Mem(sp_offset));
+	// sp not allowed to be used in load/stores directly
+	c.mov(a64::x15, a64::sp);
+	c.str(a64::x15, arm::Mem(args[0], a64::x26));
+
+	// Move 4 args (despite spu_function_t def)
+	c.mov(a64::x19, args[0]);
+	c.mov(a64::x20, args[1]);
+	c.mov(a64::x21, args[2]);
+	c.mov(a64::x22, args[3]);
+
+	// Save ret address to stack
+	// since non-tail calls to cpp fns may corrupt lr and
+	// g_tail_escape may jump out of a fn before the epilogue can restore lr
+	Label ret_addr = c.newLabel();
+	c.adr(a64::x0, ret_addr);
+	c.str(a64::x0, arm::Mem(a64::sp, 104));
+
+	Label call_target = c.newLabel();
+	c.ldr(a64::x0, arm::Mem(call_target));
+	c.blr(a64::x0);
+
+	c.bind(ret_addr);
+
+	// Restore stack ptr
+	c.ldr(a64::x26, arm::Mem(sp_offset));
+	c.ldr(a64::x15, arm::Mem(a64::x19, a64::x26));
+	c.mov(a64::sp, a64::x15);
+
+	// Restore registers from the stack
+	c.ldp(a64::x18, a64::x19, arm::Mem(a64::sp));
+	c.ldp(a64::x20, a64::x21, arm::Mem(a64::sp, 16));
+	c.ldp(a64::x22, a64::x23, arm::Mem(a64::sp, 32));
+	c.ldp(a64::x24, a64::x25, arm::Mem(a64::sp, 48));
+	c.ldp(a64::x26, a64::x27, arm::Mem(a64::sp, 64));
+	c.ldp(a64::x28, a64::x29, arm::Mem(a64::sp, 80));
+	c.ldr(a64::x30, arm::Mem(a64::sp, 96));
+	// Restore stack ptr
+	c.add(a64::sp, a64::sp, Imm(112));
+	// Return
 	c.ret(a64::x30);
+
+	c.bind(sp_offset);
+	c.embedUInt64(::offset32(&spu_thread::saved_native_sp));
+	c.bind(call_target);
+	c.embedUInt64(reinterpret_cast<u64>(spu_runtime::tr_all));
+	c.embed("spu_gateway", 11);
+#else
+#error "Unimplemented"
 #endif
 });
 
@@ -274,6 +434,22 @@ DECLARE(spu_runtime::g_escape) = build_function_asm<void(*)(spu_thread*)>("spu_e
 	// Return to the return location
 	c.sub(x86::rsp, 8);
 	c.ret();
+#elif defined(ARCH_ARM64)
+	// Restore native stack pointer (longjmp emulation)
+	Label sp_offset = c.newLabel();
+	c.ldr(a64::x15, arm::Mem(sp_offset));
+	c.ldr(a64::x15, arm::Mem(args[0], a64::x15));
+	c.mov(a64::sp, a64::x15);
+
+	c.ldr(a64::x30, arm::Mem(a64::sp, 104));
+	c.ret(a64::x30);
+
+	c.bind(sp_offset);
+	c.embedUInt64(::offset32(&spu_thread::saved_native_sp));
+
+	c.embed("spu_escape", 10);
+#else
+#error "Unimplemented"
 #endif
 });
 
@@ -295,6 +471,35 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, sp
 	c.xor_(x86::ebx, x86::ebx);
 	c.mov(x86::qword_ptr(x86::rsp), args[1]);
 	c.ret();
+#elif defined(ARCH_ARM64)
+	// Restore native stack pointer (longjmp emulation)
+	Label sp_offset = c.newLabel();
+	c.ldr(a64::x15, arm::Mem(sp_offset));
+	c.ldr(a64::x15, arm::Mem(args[0], a64::x15));
+	c.mov(a64::sp, a64::x15);
+
+	// Reload lr, since it might've been clobbered by a cpp fn
+	// and g_tail_escape runs before epilogue
+	c.ldr(a64::x30, arm::Mem(a64::sp, 104));
+
+	// Tail call, GHC CC
+	c.mov(a64::x19, args[0]); // REG_Base
+	Label ls_offset = c.newLabel();
+	c.ldr(a64::x20, arm::Mem(ls_offset));
+	c.ldr(a64::x20, arm::Mem(args[0], a64::x20)); // REG_Sp
+	c.mov(a64::x21, args[2]); // REG_Hp
+	c.eor(a64::w22, a64::w22, a64::w22); // REG_R1
+
+	c.br(args[1]);
+
+	c.bind(ls_offset);
+	c.embedUInt64(::offset32(&spu_thread::ls));
+	c.bind(sp_offset);
+	c.embedUInt64(::offset32(&spu_thread::saved_native_sp));
+
+	c.embed("spu_tail_escape", 15);
+#else
+#error "Unimplemented"
 #endif
 });
 
@@ -765,8 +970,8 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 	static thread_local std::vector<std::pair<std::basic_string_view<u32>, spu_function_t>> m_flat_list;
 
 	// Remember top position
-	auto stuff_it = m_stuff.at(id_inst >> 12).begin();
-	auto stuff_end = m_stuff.at(id_inst >> 12).end();
+	auto stuff_it = ::at32(m_stuff, id_inst >> 12).begin();
+	auto stuff_end = ::at32(m_stuff, id_inst >> 12).end();
 	{
 		if (stuff_it->trampoline)
 		{
@@ -791,12 +996,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		}
 	}
 
-	std::sort(m_flat_list.begin(), m_flat_list.end(), [&](const auto& a, const auto& b)
-	{
-		std::basic_string_view<u32> lhs = a.first;
-		std::basic_string_view<u32> rhs = b.first;
-		return lhs < rhs;
-	});
+	std::sort(m_flat_list.begin(), m_flat_list.end(), FN(x.first < y.first));
 
 	struct work
 	{
@@ -820,6 +1020,89 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 	if (size0 != 1)
 	{
+#if defined(ARCH_ARM64)
+		// Allocate some writable executable memory
+		u8* const wxptr = jit_runtime::alloc(size0 * 128 + 16, 16);
+
+		if (!wxptr)
+		{
+			return nullptr;
+		}
+
+		// Raw assembly pointer
+		u8* raw = wxptr;
+
+		auto make_jump = [&](asmjit::arm::CondCode op, auto target)
+		{
+			// 36 bytes
+			// Fallback to dispatch if no target
+			const u64 taddr = target ? reinterpret_cast<u64>(target) : reinterpret_cast<u64>(tr_dispatch);
+
+			// ldr x9, #16 -> ldr x9, taddr
+			*raw++ = 0x89;
+			*raw++ = 0x00;
+			*raw++ = 0x00;
+			*raw++ = 0x58;
+
+			if (op == asmjit::arm::CondCode::kAlways)
+			{
+				// br x9
+				*raw++ = 0x20;
+				*raw++ = 0x01;
+				*raw++ = 0x1F;
+				*raw++ = 0xD6;
+
+				// nop
+				*raw++ = 0x1F;
+				*raw++ = 0x20;
+				*raw++ = 0x03;
+				*raw++ = 0xD5;
+
+				// nop
+				*raw++ = 0x1F;
+				*raw++ = 0x20;
+				*raw++ = 0x03;
+				*raw++ = 0xD5;
+			}
+			else
+			{
+				// b.COND #8 -> b.COND do_branch
+				switch (op)
+				{
+				case asmjit::arm::CondCode::kUnsignedLT:
+					*raw++ = 0x43;
+					break;
+				case asmjit::arm::CondCode::kUnsignedGT:
+					*raw++ = 0x48;
+					break;
+				default:
+					asm("brk 0x42");
+				}
+
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x54;
+
+				// b #16 -> b cont
+				*raw++ = 0x04;
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x14;
+
+				// do_branch: br x9
+				*raw++ = 0x20;
+				*raw++ = 0x01;
+				*raw++ = 0x1f;
+				*raw++ = 0xD6;
+			}
+
+			// taddr
+			std::memcpy(raw, &taddr, 8);
+			raw += 8;
+
+			// cont: next instruction
+		};
+#elif defined(ARCH_X64)
 		// Allocate some writable executable memory
 		u8* const wxptr = jit_runtime::alloc(size0 * 22 + 14, 16);
 
@@ -858,6 +1141,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			std::memcpy(raw, &r32, 4);
 			raw += 4;
 		};
+#endif
 
 		workload.clear();
 		workload.reserve(size0);
@@ -894,7 +1178,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					break;
 				}
 
-				const u32 x1 = w.beg->first.at(w.level);
+				const u32 x1 = ::at32(w.beg->first, w.level);
 
 				if (!x1)
 				{
@@ -917,7 +1201,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				}
 
 				// Adjust ranges (forward)
-				while (it != w.end && x1 == it->first.at(w.level))
+				while (it != w.end && x1 == ::at32(it->first, w.level))
 				{
 					it++;
 					size1++;
@@ -937,21 +1221,38 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 			if (w.rel32)
 			{
+#if defined(ARCH_X64)
 				// Patch rel32 linking it to the current location if necessary
 				const s32 r32 = ::narrow<s32>(raw - w.rel32);
 				std::memcpy(w.rel32 - 4, &r32, 4);
+#elif defined(ARCH_ARM64)
+				//	Rewrite jump address
+				{
+					u64 raw64 = reinterpret_cast<u64>(raw);
+					memcpy(w.rel32 - 8, &raw64, 8);
+				}
+#else
+#error "Unimplemented"
+#endif
 			}
 
 			if (w.level >= w.beg->first.size() || w.level >= it->first.size())
 			{
 				// If functions cannot be compared, assume smallest function
 				spu_log.error("Trampoline simplified at ??? (level=%u)", w.level);
+#if defined(ARCH_X64)
 				make_jump(0xe9, w.beg->second); // jmp rel32
+#elif defined(ARCH_ARM64)
+				u64 branch_target = reinterpret_cast<u64>(w.beg->second);
+				make_jump(asmjit::arm::CondCode::kAlways, branch_target);
+#else
+#error "Unimplemented"
+#endif
 				continue;
 			}
 
 			// Value for comparison
-			const u32 x = it->first.at(w.level);
+			const u32 x = ::at32(it->first, w.level);
 
 			// Adjust ranges (backward)
 			while (it != m_flat_list.begin())
@@ -964,7 +1265,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					break;
 				}
 
-				if (it->first.at(w.level) != x)
+				if (::at32(it->first, w.level) != x)
 				{
 					it++;
 					break;
@@ -978,18 +1279,31 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			if (it == m_flat_list.end())
 			{
 				spu_log.error("Trampoline simplified (II) at ??? (level=%u)", w.level);
+#if defined(ARCH_X64)
 				make_jump(0xe9, w.beg->second); // jmp rel32
+#elif defined(ARCH_ARM64)
+				u64 branch_target = reinterpret_cast<u64>(w.beg->second);
+				make_jump(asmjit::arm::CondCode::kAlways, branch_target);
+#else
+#error "Unimplemented"
+#endif
 				continue;
 			}
 
 			// Emit 32-bit comparison
+#if defined(ARCH_X64)
 			ensure(raw + 12 <= wxptr + size0 * 22 + 16); // "Asm overflow"
+#elif defined(ARCH_ARM64)
+			ensure(raw + (4 * 4) <= wxptr + size0 * 128 + 16);
+#else
+#error "Unimplemented"
+#endif
 
 			if (w.from != w.level)
 			{
 				// If necessary (level has advanced), emit load: mov eax, [rcx + addr]
 				const u32 cmp_lsa = w.level * 4u;
-
+#if defined(ARCH_X64)
 				if (cmp_lsa < 0x80)
 				{
 					*raw++ = 0x8b;
@@ -1003,21 +1317,85 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					std::memcpy(raw, &cmp_lsa, 4);
 					raw += 4;
 				}
+#elif defined(ARCH_ARM64)
+				// ldr w9, #8
+				*raw++ = 0x49;
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x18;
+
+				// b #8
+				*raw++ = 0x02;
+				*raw++ = 0x00;
+				*raw++ = 0x00;
+				*raw++ = 0x14;
+
+				// cmp_lsa
+				std::memcpy(raw, &cmp_lsa, 4);
+				raw += 4;
+
+				// ldr w1, [x7, x9]
+				*raw++ = 0xE1;
+				*raw++ = 0x68;
+				*raw++ = 0x69;
+				*raw++ = 0xB8;
+#else
+#error "Unimplemented"
+#endif
 			}
 
 			// Emit comparison: cmp eax, imm32
+#if defined(ARCH_X64)
 			*raw++ = 0x3d;
 			std::memcpy(raw, &x, 4);
 			raw += 4;
+#elif defined(ARCH_ARM64)
+			// ldr w9, #8
+			*raw++ = 0x49;
+			*raw++ = 0x00;
+			*raw++ = 0x00;
+			*raw++ = 0x18;
+
+			// b #8
+			*raw++ = 0x02;
+			*raw++ = 0x00;
+			*raw++ = 0x00;
+			*raw++ = 0x14;
+
+			// x
+			std::memcpy(raw, &x, 4);
+			raw += 4;
+
+			// cmp w1, w9
+			*raw++ = 0x3f;
+			*raw++ = 0x00;
+			*raw++ = 0x09;
+			*raw++ = 0x6B;
+#else
+#error "Unimplemented"
+#endif
 
 			// Low subrange target
 			if (size1 == 1)
 			{
+#if defined(ARCH_X64)
 				make_jump(0x82, w.beg->second); // jb rel32
+#elif defined(ARCH_ARM64)
+				u64 branch_target = reinterpret_cast<u64>(w.beg->second);
+				make_jump(asmjit::arm::CondCode::kUnsignedLT, branch_target);
+#else
+#error "Unimplemented"
+#endif
 			}
 			else
 			{
+#if defined(ARCH_X64)
 				make_jump(0x82, raw); // jb rel32 (stub)
+#elif defined(ARCH_ARM64)
+				make_jump(asmjit::arm::CondCode::kUnsignedLT, raw);
+#else
+#error "Unimplemented"
+#endif
 				auto& to = workload.emplace_back(w);
 				to.end   = it;
 				to.size  = size1;
@@ -1028,14 +1406,21 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			// Second subrange target
 			if (size2 == 1)
 			{
+#if defined(ARCH_X64)
 				make_jump(0xe9, it->second); // jmp rel32
+#elif defined(ARCH_ARM64)
+				u64 branch_target = reinterpret_cast<u64>(it->second);
+				make_jump(asmjit::arm::CondCode::kAlways, branch_target);
+#else
+#error "Unimplemented"
+#endif
 			}
 			else
 			{
 				it2 = it;
 
 				// Select additional midrange for equality comparison
-				while (it2 != w.end && it2->first.at(w.level) == x)
+				while (it2 != w.end && ::at32(it2->first, w.level) == x)
 				{
 					size2--;
 					it2++;
@@ -1046,11 +1431,24 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 					// High subrange target
 					if (size2 == 1)
 					{
+#if defined(ARCH_X64)
 						make_jump(0x87, it2->second); // ja rel32
+#elif defined(ARCH_ARM64)
+						u64 branch_target = reinterpret_cast<u64>(it2->second);
+						make_jump(asmjit::arm::CondCode::kUnsignedGT, branch_target);
+#else
+#throw "Unimplemented"
+#endif
 					}
 					else
 					{
+#if defined(ARCH_X64)
 						make_jump(0x87, raw); // ja rel32 (stub)
+#elif defined(ARCH_ARM64)
+						make_jump(asmjit::arm::CondCode::kUnsignedGT, raw);
+#else
+#error "Unimplemented"
+#endif
 						auto& to = workload.emplace_back(w);
 						to.beg   = it2;
 						to.size  = size2;
@@ -1062,11 +1460,24 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 					if (size3 == 1)
 					{
+#if defined(ARCH_X64)
 						make_jump(0xe9, it->second); // jmp rel32
+#elif defined(ARCH_ARM64)
+						u64 branch_target = reinterpret_cast<u64>(it->second);
+						make_jump(asmjit::arm::CondCode::kAlways, branch_target);
+#else
+#error "Unimplemented"
+#endif
 					}
 					else
 					{
+#if defined(ARCH_X64)
 						make_jump(0xe9, raw); // jmp rel32 (stub)
+#elif defined(ARCH_ARM64)
+						make_jump(asmjit::arm::CondCode::kAlways, raw);
+#else
+#error "Unimplemented"
+#endif
 						auto& to = workload.emplace_back(w);
 						to.beg   = it;
 						to.end   = it2;
@@ -1077,7 +1488,13 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 				}
 				else
 				{
+#if defined(ARCH_X64)
 					make_jump(0xe9, raw); // jmp rel32 (stub)
+#elif defined(ARCH_ARM64)
+					make_jump(asmjit::arm::CondCode::kAlways, raw);
+#else
+#error "Unimplemented"
+#endif
 					auto& to = workload.emplace_back(w);
 					to.beg   = it;
 					to.size  = w.size - size1;
@@ -1101,7 +1518,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 	}
 
 	// Install ubertrampoline
-	auto& insert_to = spu_runtime::g_dispatcher->at(id_inst >> 12);
+	auto& insert_to = ::at32(*spu_runtime::g_dispatcher, id_inst >> 12);
 
 	auto _old = insert_to.load();
 
@@ -1134,7 +1551,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 {
-	for (auto& item : m_stuff.at(ls[addr / 4] >> 12))
+	for (auto& item : ::at32(m_stuff, ls[addr / 4] >> 12))
 	{
 		if (const auto ptr = item.compiled.load())
 		{
@@ -1158,6 +1575,7 @@ spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 
 spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 {
+#if defined(ARCH_X64)
 	u8* const raw = jit_runtime::alloc(16, 16);
 
 	if (!raw)
@@ -1186,6 +1604,60 @@ spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 	raw[15] = data & 0xff;
 
 	return reinterpret_cast<spu_function_t>(raw);
+#elif defined(ARCH_ARM64)
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(false);
+#endif
+
+	u8* const patch_fn = ensure(jit_runtime::alloc(36, 16));
+	u8* raw = patch_fn;
+
+	// adr x21, #16
+	*raw++ = 0x95;
+	*raw++ = 0x00;
+	*raw++ = 0x00;
+	*raw++ = 0x10;
+
+	// nop x3
+	for (int i = 0; i < 3; i++)
+	{
+		*raw++ = 0x1F;
+		*raw++ = 0x20;
+		*raw++ = 0x03;
+		*raw++ = 0xD5;
+	}
+
+	// ldr x9, #8
+	*raw++ = 0x49;
+	*raw++ = 0x00;
+	*raw++ = 0x00;
+	*raw++ = 0x58;
+
+	// br x9
+	*raw++ = 0x20;
+	*raw++ = 0x01;
+	*raw++ = 0x1F;
+	*raw++ = 0xD6;
+
+	u64 branch_target = reinterpret_cast<u64>(tr_branch);
+	std::memcpy(raw, &branch_target, 8);
+	raw += 8;
+
+	*raw++ = static_cast<u8>(data >> 8);
+	*raw++ = static_cast<u8>(data & 0xff);
+
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(true);
+#endif
+
+	// Flush all cache lines after potentially writing executable code
+	asm("ISB");
+	asm("DSB ISH");
+
+	return reinterpret_cast<spu_function_t>(patch_fn);
+#else
+#error "Unimplemented"
+#endif
 }
 
 spu_recompiler_base::spu_recompiler_base()
@@ -1201,6 +1673,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	// If code verification failed from a patched patchpoint, clear it with a dispatcher jump
 	if (rip)
 	{
+#if defined(ARCH_X64)
 		const s64 rel = reinterpret_cast<u64>(spu_runtime::tr_all) - reinterpret_cast<u64>(rip - 8) - 5;
 
 		union
@@ -1216,10 +1689,45 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 		bytes[7] = 0x90;
 
 		atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip - 8), result);
+#elif defined(ARCH_ARM64)
+		union
+		{
+			u8 bytes[16];
+			u128 result;
+		};
+
+		// ldr x9, #8
+		bytes[0] = 0x49;
+		bytes[1] = 0x00;
+		bytes[2] = 0x00;
+		bytes[3] = 0x58;
+
+		// br x9
+		bytes[4] = 0x20;
+		bytes[5] = 0x01;
+		bytes[6] = 0x1F;
+		bytes[7] = 0xD6;
+
+		const u64 target = reinterpret_cast<u64>(spu_runtime::tr_all);
+		std::memcpy(bytes + 8, &target, 8);
+#if defined(__APPLE__)
+		pthread_jit_write_protect_np(false);
+#endif
+		atomic_storage<u128>::release(*reinterpret_cast<u128*>(rip), result);
+#if defined(__APPLE__)
+		pthread_jit_write_protect_np(true);
+#endif
+
+		// Flush all cache lines after potentially writing executable code
+		asm("ISB");
+		asm("DSB ISH");
+#else
+#error "Unimplemented"
+#endif
 	}
 
 	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
-	if (spu.block_counter != spu.block_recover && &dispatch != spu_runtime::g_dispatcher->at(spu._ref<nse_t<u32>>(spu.pc) >> 12))
+	if (spu.block_counter != spu.block_recover && &dispatch != ::at32(*spu_runtime::g_dispatcher, spu._ref<nse_t<u32>>(spu.pc) >> 12))
 	{
 		spu.block_recover = spu.block_counter;
 		return;
@@ -1252,13 +1760,27 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 			spu_log.trace("Called from 0x%x", _info._u32[2] - 4);
 		}
 	}
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(true);
+#endif
 
+#if defined(ARCH_ARM64)
+	// Flush all cache lines after potentially writing executable code
+	asm("ISB");
+	asm("DSB ISH");
+#endif
 	spu_runtime::g_tail_escape(&spu, func, nullptr);
 }
 
 void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 {
+#if defined(ARCH_X64)
 	if (const u32 ls_off = ((rip[6] << 8) | rip[7]) * 4)
+#elif defined(ARCH_ARM64)
+	if (const u32 ls_off = ((rip[16] << 8) | rip[17]) * 4) // See branch_patchpoint `data`
+#else
+#error "Unimplemented"
+#endif
 	{
 		spu_log.todo("Special branch patchpoint hit.\nPlease report to the developer (0x%05x).", ls_off);
 	}
@@ -1271,6 +1793,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 		return;
 	}
 
+#if defined(ARCH_X64)
 	// Overwrite jump to this function with jump to the compiled function
 	const s64 rel = reinterpret_cast<u64>(func) - reinterpret_cast<u64>(rip) - 5;
 
@@ -1306,6 +1829,41 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	}
 
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
+#elif defined(ARCH_ARM64)
+	union
+	{
+		u8 bytes[16];
+		u128 result;
+	};
+
+	// ldr x9, #8
+	bytes[0] = 0x49;
+	bytes[1] = 0x00;
+	bytes[2] = 0x00;
+	bytes[3] = 0x58;
+
+	// br x9
+	bytes[4] = 0x20;
+	bytes[5] = 0x01;
+	bytes[6] = 0x1F;
+	bytes[7] = 0xD6;
+
+	const u64 target = reinterpret_cast<u64>(func);
+	std::memcpy(bytes + 8, &target, 8);
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(false);
+#endif
+	atomic_storage<u128>::release(*reinterpret_cast<u128*>(rip), result);
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(true);
+#endif
+
+	// Flush all cache lines after potentially writing executable code
+	asm("ISB");
+	asm("DSB ISH");
+#else
+#error "Unimplemented"
+#endif
 
 	spu_runtime::g_tail_escape(&spu, func, rip);
 }
@@ -2141,7 +2699,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 					// Check for possible fallthrough predecessor
 					if (!had_fallthrough)
 					{
-						if (result.data.at((j - lsa) / 4 - 1) == 0 || m_targets.count(j - 4))
+						if (::at32(result.data, (j - lsa) / 4 - 1) == 0 || m_targets.count(j - 4))
 						{
 							break;
 						}
@@ -2526,13 +3084,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	{
 		workload.clear();
 		workload.push_back(entry_point);
+		ensure(m_bbs.count(entry_point));
 
 		std::basic_string<u32> new_entries;
 
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			auto& block    = m_bbs.at(addr);
+			auto& block = ::at32(m_bbs, addr);
 			const u32 _new = block.chunk;
 
 			if (!m_entry_info[addr / 4])
@@ -2540,7 +3099,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				// Check block predecessors
 				for (u32 pred : block.preds)
 				{
-					const u32 _old = m_bbs.at(pred).chunk;
+					const u32 _old = ::at32(m_bbs, pred).chunk;
 
 					if (_old < 0x40000 && _old != _new)
 					{
@@ -2609,9 +3168,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	// Fill workload adding targets
 	for (u32 wi = 0; wi < workload.size(); wi++)
 	{
-		const u32 addr  = workload[wi];
-		auto& block     = m_bbs.at(addr);
-		block.analysed  = true;
+		const u32 addr = workload[wi];
+		auto& block = ::at32(m_bbs, addr);
+		block.analysed = true;
 
 		for (u32 target : block.targets)
 		{
@@ -2653,7 +3212,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			auto& block    = m_bbs.at(addr);
+			auto& block = ::at32(m_bbs, addr);
 
 			// Initialize entry point with default value: unknown origin (requires load)
 			if (m_entry_info[addr / 4])
@@ -2743,7 +3302,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			auto& block    = m_bbs.at(addr);
+			auto& block = ::at32(m_bbs, addr);
 
 			// Reset values for the next attempt (keep negative values)
 			for (u32 i = 0; i < s_reg_max; i++)
@@ -2765,8 +3324,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		}
 
 		const u32 addr = workload[wi];
-		auto& bb       = m_bbs.at(addr);
-		auto& func     = m_funcs.at(bb.func);
+		auto& bb = ::at32(m_bbs, addr);
+		auto& func = ::at32(m_funcs, bb.func);
 
 		// Update function size
 		func.size = std::max<u16>(func.size, bb.size + (addr - bb.func) / 4);
@@ -2778,7 +3337,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 			if (orig < 0x40000)
 			{
-				auto& src = m_bbs.at(orig);
+				auto& src = ::at32(m_bbs, orig);
 				bb.reg_const[i] = src.reg_const[i];
 				bb.reg_val32[i] = src.reg_val32[i];
 			}
@@ -2792,7 +3351,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 		if (u32 orig = bb.reg_origin_abs[s_reg_sp]; orig < 0x40000)
 		{
-			auto& prologue = m_bbs.at(orig);
+			auto& prologue = ::at32(m_bbs, orig);
 
 			// Copy stack offset (from the assumed prologue)
 			bb.stack_sub = prologue.stack_sub;
@@ -2803,7 +3362,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			bb.stack_sub = 0x80000000;
 		}
 
-		spu_opcode_t op;
+		spu_opcode_t op{};
 
 		auto last_inst = spu_itype::UNK;
 
@@ -2853,7 +3412,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 			case spu_itype::OR:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] & bb.reg_const[op.rb];
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] | bb.reg_val32[op.rb];
 				break;
 			}
@@ -2865,7 +3424,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 			case spu_itype::A:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] & bb.reg_const[op.rb];
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] + bb.reg_val32[op.rb];
 				break;
 			}
@@ -2877,7 +3436,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			}
 			case spu_itype::SF:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] & bb.reg_const[op.rb];
+				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
 				bb.reg_val32[op.rt] = bb.reg_val32[op.rb] - bb.reg_val32[op.ra];
 				break;
 			}
@@ -3104,8 +3663,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 		for (auto it = m_bbs.lower_bound(f.first); it != m_bbs.end() && it->second.func == f.first; ++it)
 		{
-			auto& bb       = it->second;
-			auto& func     = m_funcs.at(bb.func);
+			auto& bb = it->second;
+			auto& func = ::at32(m_funcs, bb.func);
 			const u32 addr = it->first;
 			const u32 flim = bb.func + func.size * 4;
 
@@ -3121,7 +3680,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				// Check $LR (alternative return registers are currently not supported)
 				if (u32 lr_orig = bb.reg_mod[s_reg_lr] ? addr : bb.reg_origin_abs[s_reg_lr]; lr_orig < 0x40000)
 				{
-					auto& src = m_bbs.at(lr_orig);
+					auto& src = ::at32(m_bbs, lr_orig);
 
 					if (src.reg_load_mod[s_reg_lr] != func.reg_save_off[s_reg_lr])
 					{
@@ -3145,7 +3704,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				{
 					if (u32 orig = bb.reg_mod[i] ? addr : bb.reg_origin_abs[i]; orig < 0x40000)
 					{
-						auto& src = m_bbs.at(orig);
+						auto& src = ::at32(m_bbs, orig);
 
 						if (src.reg_load_mod[i] != func.reg_save_off[i])
 						{
@@ -3874,7 +4433,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			return m_ir->CreateBitCast(_ptr<u8>(m_thread, get_reg_offset(index)), get_reg_type(index)->getPointerTo());
 		}
 
-		auto& ptr = m_reg_addr.at(index);
+		auto& ptr = ::at32(m_reg_addr, index);
 
 		if (!ptr)
 		{
@@ -3984,7 +4543,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		llvm::Value* dummy{};
 
-		auto& reg = *(m_block ? &m_block->reg.at(index) : &dummy);
+		auto& reg = *(m_block ? &::at32(m_block->reg, index) : &dummy);
 
 		if (!reg)
 		{
@@ -4068,7 +4627,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (m_block)
 		{
-			auto v = m_block->reg.at(index);
+			auto v = ::at32(m_block->reg, index);
 
 			if (v && v->getType() == get_type<T>())
 			{
@@ -4179,7 +4738,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				value->setName(fmt::format("result_0x%05x", m_pos));
 #endif
 
-			m_block->reg.at(index) = saved_value;
+			::at32(m_block->reg, index) = saved_value;
 		}
 
 		// Get register location
@@ -4315,7 +4874,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
-	void check_state(u32 addr)
+	void check_state(u32 addr, bool may_be_unsafe_for_savestate = true)
 	{
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
@@ -4323,7 +4882,24 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
 		m_ir->SetInsertPoint(check);
 		update_pc(addr);
+
+		if (may_be_unsafe_for_savestate && std::none_of(std::begin(m_block->phi), std::end(m_block->phi), FN(!!x)))
+		{
+			may_be_unsafe_for_savestate = false;
+		}
+
+		if (may_be_unsafe_for_savestate)
+		{
+			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable), true);
+		}
+
 		m_ir->CreateStore(m_ir->getFalse(), m_fake_global1, true);
+
+		if (may_be_unsafe_for_savestate)
+		{
+			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable), true);
+		}
+
 		m_ir->CreateBr(_body);
 		m_ir->SetInsertPoint(_body);
 	}
@@ -4690,7 +5266,7 @@ public:
 		m_test_state->setLinkage(GlobalValue::InternalLinkage);
 #ifdef ARCH_ARM64
 		// LLVM doesn't support PreserveAll on arm64.
-		m_test_state->setCallingConv(CallingConv::GHC);
+		m_test_state->setCallingConv(CallingConv::PreserveMost);
 #else
 		m_test_state->setCallingConv(CallingConv::PreserveAll);
 #endif
@@ -4728,7 +5304,7 @@ public:
 				const u32 baddr = m_block_queue[bi];
 				m_block = &m_blocks[baddr];
 				m_ir->SetInsertPoint(m_block->block);
-				auto& bb = m_bbs.at(baddr);
+				auto& bb = ::at32(m_bbs, baddr);
 				bool need_check = false;
 				m_block->bb = &bb;
 
@@ -5010,6 +5586,10 @@ public:
 			fmt::throw_exception("Compilation failed");
 		}
 
+#if defined(__APPLE__)
+		pthread_jit_write_protect_np(false);
+#endif
+
 		if (g_cfg.core.spu_debug)
 		{
 			// Testing only
@@ -5041,6 +5621,15 @@ public:
 			out.flush();
 			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 		}
+
+#if defined(__APPLE__)
+		pthread_jit_write_protect_np(true);
+#endif
+#if defined(ARCH_ARM64)
+		// Flush all cache lines after potentially writing executable code
+		asm("ISB");
+		asm("DSB ISH");
+#endif
 
 		if (g_fxo->get<spu_cache>().operator bool())
 		{
@@ -5539,7 +6128,7 @@ public:
 
 	static void exec_stop(spu_thread* _spu, u32 code)
 	{
-		if (!_spu->stop_and_signal(code))
+		if (!_spu->stop_and_signal(code) || _spu->state & cpu_flag::again)
 		{
 			spu_runtime::g_escape(_spu);
 		}
@@ -5586,17 +6175,12 @@ public:
 	{
 		const s64 result = _spu->get_ch_value(ch);
 
-		if (result < 0)
+		if (result < 0 || _spu->state & cpu_flag::again)
 		{
 			spu_runtime::g_escape(_spu);
 		}
 
-		if (_spu->test_stopped())
-		{
-			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
-		}
-
+		static_cast<void>(_spu->test_stopped());
 		return static_cast<u32>(result & 0xffffffff);
 	}
 
@@ -5614,12 +6198,7 @@ public:
 		{
 			_spu->state += cpu_flag::wait;
 			std::this_thread::yield();
-
-			if (_spu->test_stopped())
-			{
-				_spu->pc += 4;
-				spu_runtime::g_escape(_spu);
-			}
+			static_cast<void>(_spu->test_stopped());
 		}
 
 		return res;
@@ -5629,6 +6208,11 @@ public:
 	{
 		// TODO
 		return exec_rdch(_spu, SPU_RdEventStat);
+	}
+
+	void ensure_gpr_stores()
+	{
+		m_block->store.fill(nullptr);
 	}
 
 	llvm::Value* get_rdch(spu_opcode_t op, u32 off, bool atomic)
@@ -5655,6 +6239,7 @@ public:
 		val0 = m_ir->CreateTrunc(val0, get_type<u32>());
 		m_ir->CreateCondBr(cond, done, wait);
 		m_ir->SetInsertPoint(wait);
+		update_pc();
 		const auto val1 = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(op.ra));
 		m_ir->CreateBr(done);
 		m_ir->SetInsertPoint(done);
@@ -5685,6 +6270,7 @@ public:
 		case SPU_RdInMbox:
 		{
 			update_pc();
+			ensure_gpr_stores();
 			res.value = call("spu_read_in_mbox", &exec_read_in_mbox, m_thread);
 			break;
 		}
@@ -5700,11 +6286,13 @@ public:
 		}
 		case SPU_RdSigNotify1:
 		{
+			ensure_gpr_stores();
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr1), true);
 			break;
 		}
 		case SPU_RdSigNotify2:
 		{
+			ensure_gpr_stores();
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr2), true);
 			break;
 		}
@@ -5744,6 +6332,7 @@ public:
 		default:
 		{
 			update_pc();
+			ensure_gpr_stores();
 			res.value = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(op.ra));
 			break;
 		}
@@ -5879,16 +6468,12 @@ public:
 
 	static void exec_wrch(spu_thread* _spu, u32 ch, u32 value)
 	{
-		if (!_spu->set_ch_value(ch, value))
+		if (!_spu->set_ch_value(ch, value) || _spu->state & cpu_flag::again)
 		{
 			spu_runtime::g_escape(_spu);
 		}
 
-		if (_spu->test_stopped())
-		{
-			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
-		}
+		static_cast<void>(_spu->test_stopped());
 	}
 
 	static void exec_list_unstall(spu_thread* _spu, u32 tag)
@@ -5906,16 +6491,12 @@ public:
 
 	static void exec_mfc_cmd(spu_thread* _spu)
 	{
-		if (!_spu->process_mfc_cmd())
+		if (!_spu->process_mfc_cmd() || _spu->state & cpu_flag::again)
 		{
 			spu_runtime::g_escape(_spu);
 		}
 
-		if (_spu->test_stopped())
-		{
-			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
-		}
+		static_cast<void>(_spu->test_stopped());
 	}
 
 	void WRCH(spu_opcode_t op) //
@@ -6048,17 +6629,19 @@ public:
 
 			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(trunc<u8>(val).eval(m_ir)))
 			{
-				if (g_cfg.core.spu_accurate_dma)
+				if (g_cfg.core.mfc_debug)
 				{
 					break;
 				}
 
-				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); g_cfg.core.rsx_fifo_accuracy || !g_use_rtm)
+				bool must_use_cpp_functions = !!g_cfg.core.spu_accurate_dma;
+
+				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); g_cfg.core.rsx_fifo_accuracy || g_cfg.video.strict_rendering_mode || !g_use_rtm)
 				{
 					// TODO: don't require TSX (current implementation is TSX-only)
 					if (cmdh == MFC_PUT_CMD || cmdh == MFC_SNDSIG_CMD)
 					{
-						break;
+						must_use_cpp_functions = true;
 					}
 				}
 
@@ -6082,10 +6665,6 @@ public:
 				{
 					return;
 				}
-				case MFC_GETLLAR_CMD:
-				case MFC_PUTLLC_CMD:
-				case MFC_PUTLLUC_CMD:
-				case MFC_PUTQLLUC_CMD:
 				case MFC_PUTL_CMD:
 				case MFC_PUTLB_CMD:
 				case MFC_PUTLF_CMD:
@@ -6095,7 +6674,15 @@ public:
 				case MFC_GETL_CMD:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
+				{
+					ensure_gpr_stores();
+					[[fallthrough]];
+				}
 				case MFC_SDCRZ_CMD:
+				case MFC_GETLLAR_CMD:
+				case MFC_PUTLLC_CMD:
+				case MFC_PUTLLUC_CMD:
+				case MFC_PUTQLLUC_CMD:
 				{
 					// TODO
 					m_ir->CreateBr(next);
@@ -6154,12 +6741,16 @@ public:
 					m_ir->CreateCondBr(cond, exec, fail, m_md_likely);
 					m_ir->SetInsertPoint(exec);
 
-					const auto mmio = llvm::BasicBlock::Create(m_context, "", m_function);
 					const auto copy = llvm::BasicBlock::Create(m_context, "", m_function);
 
 					// Always use interpreter function for MFC debug option
-					m_ir->CreateCondBr(m_ir->CreateICmpUGE(eal.value, m_ir->getInt32(g_cfg.core.mfc_debug ? 0 : 0xe0000000)), mmio, copy, m_md_unlikely);
-					m_ir->SetInsertPoint(mmio);
+					if (!must_use_cpp_functions)
+					{
+						const auto mmio = llvm::BasicBlock::Create(m_context, "", m_function);
+						m_ir->CreateCondBr(m_ir->CreateICmpUGE(eal.value, m_ir->getInt32(0xe0000000)), mmio, copy, m_md_unlikely);
+						m_ir->SetInsertPoint(mmio);
+					}
+
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
 					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
 					m_ir->CreateBr(next);
@@ -6373,6 +6964,7 @@ public:
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(_old, _new), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
 			update_pc();
+			ensure_gpr_stores();
 			call("spu_list_unstall", &exec_list_unstall, m_thread, eval(val & 0x1f).value);
 			m_ir->CreateBr(next);
 			m_ir->SetInsertPoint(next);
@@ -6396,6 +6988,7 @@ public:
 		}
 
 		update_pc();
+		ensure_gpr_stores();
 		call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 	}
 
@@ -6416,6 +7009,7 @@ public:
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
 			update_pc(m_pos + 4);
+			ensure_gpr_stores();
 			tail_chunk(m_dispatch);
 		}
 	}
@@ -6872,14 +7466,9 @@ public:
 		alignas(32) const __m128i buf[2]{a, a};
 		return _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (16 - (b & 0xf))));
 	}
+#elif defined(ARCH_ARM64)
 #else
-	static v128 exec_rotqby(v128 a, u8 b)
-	{
-		alignas(32) const v128 buf[2]{a, a};
-		alignas(16) v128 res;
-		std::memcpy(&res, reinterpret_cast<const u8*>(buf) + (16 - (b & 0xf)), 16);
-		return res;
-	}
+#error "Unimplemented"
 #endif
 
 	void ROTQBY(spu_opcode_t op)
@@ -6887,6 +7476,7 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 
+#if defined(ARCH_X64)
 		if (!m_use_ssse3)
 		{
 			value_t<u8[16]> r;
@@ -6894,6 +7484,7 @@ public:
 			set_vr(op.rt, r);
 			return;
 		}
+#endif
 
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
@@ -7728,13 +8319,13 @@ public:
 				{
 					if (perm_only)
 					{
-						set_vr(op.rt4, vperm2b256to128(as, bs, c));
+						set_vr(op.rt4, vperm2b(as, bs, c));
 						return;
 					}
 
 					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b256to128(as, bs, c);
+					const auto ab = vperm2b(as, bs, c);
 					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 					return;
 				}
@@ -7786,18 +8377,18 @@ public:
 			}
 		}
 
-		if (m_use_avx512_icl && (op.ra != op.rb))
+		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
 			if (perm_only)
 			{
-				set_vr(op.rt4, vperm2b256to128(a, b, eval(c ^ 0xf)));
+				set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
 				return;
 			}
 
 			const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 			const auto cr = eval(c ^ 0xf);
-			const auto ab = vperm2b256to128(a, b, cr);
+			const auto ab = vperm2b(a, b, cr);
 			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 			return;
 		}
@@ -8131,12 +8722,44 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
+			const value_t<f32[4]> ab[2]{a, b};
+
+			std::bitset<2> safe_int_compare(0);
+
+			for (u32 i = 0; i < 2; i++)
+			{
+				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
+				{
+					safe_int_compare.set(i);
+
+					for (u32 j = 0; j < 4; j++)
+					{
+						const u32 value = data._u32[j];
+						const u8 exponent = static_cast<u8>(value >> 23);
+
+						if ((value & 0x7fffffffu) >= 0x7f7fffffu || !exponent)
+						{
+							// See above
+							safe_int_compare.reset(i);
+						}
+					}
+				}
+			}
+
 			const auto ma = eval(fabs(a));
 			const auto mb = eval(fabs(b));
 
+			const auto mai = eval(bitcast<s32[4]>(ma));
+			const auto mbi = eval(bitcast<s32[4]>(mb));
+
+			if (safe_int_compare.any())
+			{
+				return eval(sext<s32[4]>(mai > mbi));
+			}
+
 			if (g_cfg.core.spu_approx_xfloat)
 			{
-				return eval(sext<s32[4]>(fcmp_uno(ma > mb) & (bitcast<s32[4]>(ma) > bitcast<s32[4]>(mb))));
+				return eval(sext<s32[4]>(fcmp_uno(ma > mb) & (mai > mbi)));
 			}
 			else
 			{
@@ -10105,6 +10728,7 @@ struct spu_llvm
 {
 	// Workload
 	lf_queue<std::pair<const u64, spu_item*>> registered;
+	atomic_ptr<named_thread_group<spu_llvm_worker>> m_workers;
 
 	spu_llvm()
 	{
@@ -10174,7 +10798,9 @@ struct spu_llvm
 
 		u32 worker_index = 0;
 
-		named_thread_group<spu_llvm_worker> workers("SPUW.", worker_count);
+		m_workers = make_single<named_thread_group<spu_llvm_worker>>("SPUW.", worker_count);
+		auto workers_ptr = m_workers.load();
+		auto& workers = *workers_ptr;
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
@@ -10203,7 +10829,7 @@ struct spu_llvm
 
 			for (auto it = enqueued.begin(), end = enqueued.end(); it != end; ++it)
 			{
-				const u64 cur = std::as_const(samples).at(it->first);
+				const u64 cur = ::at32(std::as_const(samples), it->first);
 
 				if (cur > sample_max)
 				{
@@ -10227,10 +10853,25 @@ struct spu_llvm
 
 		static_cast<void>(prof_mutex.init_always([&]{ samples.clear(); }));
 
+		m_workers.reset();
+
 		for (u32 i = 0; i < worker_count; i++)
 		{
-			(workers.begin() + i)->registered.push(0, nullptr);
+			(workers.begin() + i)->operator=(thread_state::aborting);
 		}
+	}
+
+	spu_llvm& operator=(thread_state)
+	{
+		if (const auto workers = m_workers.load())
+		{
+			for (u32 i = 0; i < workers->size(); i++)
+			{
+				(workers->begin() + i)->operator=(thread_state::aborting);
+			}
+		}
+
+		return *this;
 	}
 
 	static constexpr auto thread_name = "SPU LLVM"sv;

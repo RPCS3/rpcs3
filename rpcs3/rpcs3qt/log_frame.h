@@ -46,15 +46,21 @@ private:
 
 	std::unique_ptr<find_dialog> m_find_dialog;
 
+	QTimer* m_timer = nullptr;
+
 	QList<QColor> m_color;
 	QColor m_color_stack;
 	QPlainTextEdit* m_log = nullptr;
-	QString m_old_log_text;
+	std::string m_old_log_text;
 	QString m_old_tty_text;
-	ullong m_log_counter{};
-	ullong m_tty_counter{};
+	QString m_log_text;
+	std::string m_tty_buf;
+	usz m_tty_limited_read = 0;
+	usz m_log_counter{};
+	usz m_tty_counter{};
 	bool m_stack_log{};
 	bool m_stack_tty{};
+	logs::level m_old_log_level{};
 
 	fs::file m_tty_file;
 	QWidget* m_tty_container = nullptr;

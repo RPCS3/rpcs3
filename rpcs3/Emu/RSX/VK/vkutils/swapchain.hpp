@@ -555,7 +555,7 @@ namespace vk
 		std::pair<VkSurfaceCapabilitiesKHR, bool> init_surface_capabilities()
 		{
 #ifdef _WIN32
-			if (g_cfg.video.vk.force_disable_exclusive_fullscreen_mode && dev.get_surface_capabilities_2_support())
+			if (g_cfg.video.vk.exclusive_fullscreen_mode != vk_exclusive_fs_mode::unspecified && dev.get_surface_capabilities_2_support())
 			{
 				HMONITOR hmonitor = MonitorFromWindow(window_handle, MONITOR_DEFAULTTOPRIMARY);
 				if (hmonitor)
@@ -609,7 +609,7 @@ namespace vk
 			VkSwapchainKHR old_swapchain = m_vk_swapchain;
 			vk::physical_device& gpu = const_cast<vk::physical_device&>(dev.gpu());
 
-			auto [surface_descriptors, should_disable_exclusive_full_screen] = init_surface_capabilities();
+			auto [surface_descriptors, should_specify_exclusive_full_screen_mode] = init_surface_capabilities();
 
 			if (surface_descriptors.maxImageExtent.width < m_width ||
 				surface_descriptors.maxImageExtent.height < m_height)
@@ -710,10 +710,14 @@ namespace vk
 
 	#ifdef _WIN32
 			VkSurfaceFullScreenExclusiveInfoEXT full_screen_exclusive_info = {};
-			if (should_disable_exclusive_full_screen)
+			if (should_specify_exclusive_full_screen_mode)
 			{
-				full_screen_exclusive_info.sType               = VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_INFO_EXT;
-				full_screen_exclusive_info.fullScreenExclusive = VK_FULL_SCREEN_EXCLUSIVE_DISALLOWED_EXT;
+				vk_exclusive_fs_mode fs_mode = g_cfg.video.vk.exclusive_fullscreen_mode;
+				ensure(fs_mode == vk_exclusive_fs_mode::enable || fs_mode == vk_exclusive_fs_mode::disable);
+
+				full_screen_exclusive_info.sType = VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_INFO_EXT;
+				full_screen_exclusive_info.fullScreenExclusive =
+					fs_mode == vk_exclusive_fs_mode::enable ? VK_FULL_SCREEN_EXCLUSIVE_ALLOWED_EXT : VK_FULL_SCREEN_EXCLUSIVE_DISALLOWED_EXT;
 
 				swap_info.pNext = &full_screen_exclusive_info;
 			}

@@ -34,7 +34,7 @@ namespace rsx
 		rsx_log.trace("RSX method 0x%x (arg=0x%x)", reg << 2, arg);
 	}
 
-	template<bool FlushDMA, bool FlushPipe>
+	template <bool FlushDMA, bool FlushPipe>
 	void write_gcm_label(thread* rsx, u32 address, u32 data)
 	{
 		const bool is_flip_sema = (address == (rsx->label_addr + 0x10) || address == (rsx->device_addr + 0x30));
@@ -42,6 +42,12 @@ namespace rsx
 		{
 			// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
 			const bool handled = rsx->get_backend_config().supports_host_gpu_labels && rsx->release_GCM_label(address, data);
+
+			if (vm::_ref<RsxSemaphore>(address).val == data)
+			{
+				// It's a no-op to write the same value (although there is a delay in real-hw so it's more accurate to allow GPU label in this case)
+				return;
+			}
 
 			if constexpr (FlushDMA)
 			{
@@ -115,6 +121,7 @@ namespace rsx
 			{
 				if (rsx->test_stopped())
 				{
+					rsx->state += cpu_flag::again;
 					return;
 				}
 
@@ -500,7 +507,7 @@ namespace rsx
 
 				if (fifo_span.size() < rcount)
 				{
-					rcount = fifo_span.size();
+					rcount = ::size32(fifo_span);
 				}
 
 				if (rsx->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
@@ -553,7 +560,7 @@ namespace rsx
 
 				if (fifo_span.size() < rcount)
 				{
-					rcount = fifo_span.size();
+					rcount = ::size32(fifo_span);
 				}
 
 				copy_data_swap_u32(&rsx::method_registers.transform_program[load_pos * 4 + index % 4], fifo_span.data(), rcount);
@@ -620,7 +627,9 @@ namespace rsx
 				}
 			}
 			else
+			{
 				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
+			}
 
 			if (!rsx::method_registers.current_draw_clause.empty())
 			{
@@ -647,6 +656,13 @@ namespace rsx
 			else
 			{
 				rsxthr->in_begin_end = false;
+			}
+
+			if (rsxthr->pause_on_draw && rsxthr->pause_on_draw.exchange(false))
+			{
+				rsxthr->state -= cpu_flag::dbg_step;
+				rsxthr->state += cpu_flag::dbg_pause;
+				rsxthr->check_state();
 			}
 		}
 
@@ -743,21 +759,18 @@ namespace rsx
 			rsx->enable_conditional_rendering(address_ptr);
 		}
 
-		void set_zcull_render_enable(thread* rsx, u32, u32 arg)
+		void set_zcull_render_enable(thread* rsx, u32, u32)
 		{
-			rsx->zcull_rendering_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
-		void set_zcull_stats_enable(thread* rsx, u32, u32 arg)
+		void set_zcull_stats_enable(thread* rsx, u32, u32)
 		{
-			rsx->zcull_stats_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
-		void set_zcull_pixel_count_enable(thread* rsx, u32, u32 arg)
+		void set_zcull_pixel_count_enable(thread* rsx, u32, u32)
 		{
-			rsx->zcull_pixel_cnt_enabled = !!arg;
 			rsx->notify_zcull_info_changed();
 		}
 
@@ -1002,7 +1015,7 @@ namespace rsx
 				}
 
 				// Get position of the current command arg
-				const u32 src_offset = rsx->fifo_ctrl->get_pos();
+				[[maybe_unused]] const u32 src_offset = rsx->fifo_ctrl->get_pos();
 
 				// FIFO args count including this one
 				const u32 fifo_args_cnt = rsx->fifo_ctrl->get_remaining_args_count() + 1;
@@ -1026,7 +1039,7 @@ namespace rsx
 
 				if (fifo_span.size() < count)
 				{
-					count = fifo_span.size();
+					count = ::size32(fifo_span);
 				}
 
 				// Skip "handled methods"
@@ -1084,7 +1097,7 @@ namespace rsx
 
 					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, data_length);
 					const auto dst = vm::_ptr<u16>(dst_address);
-					const auto src = reinterpret_cast<const be_t<u32>*>(fifo_span.data());
+					const auto src = utils::bless<const be_t<u32>>(fifo_span.data());
 
 					if (!dst_address)
 					{
@@ -1789,8 +1802,6 @@ namespace rsx
 		}
 
 		rsx->reset();
-		nv4097::set_zcull_render_enable(rsx, 0, 0x3);
-		nv4097::set_render_mode(rsx, 0, 0x0100'0000);
 		rsx->on_frame_end(arg);
 		rsx->request_emu_flip(arg);
 		vm::_ref<atomic_t<u128>>(rsx->label_addr + 0x10).store(u128{});
@@ -1823,7 +1834,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
+			static void impl(thread*, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
@@ -2837,6 +2848,11 @@ namespace rsx
 		return registers[reg] == value;
 	}
 
+	void draw_clause::operator()(utils::serial& ar)
+	{
+		ar(draw_command_ranges, draw_command_barriers, current_range_index, primitive, command, is_immediate_draw, is_disjoint_primitive, primitive_barrier_enable, inline_vertex_array);
+	}
+
 	void draw_clause::insert_command_barrier(command_barrier_type type, u32 arg, u32 index)
 	{
 		ensure(!draw_command_ranges.empty());
@@ -2974,7 +2990,7 @@ namespace rsx
 
 		auto bind = [](u32 id, rsx_method_t func)
 		{
-			methods.at(id) = func;
+			::at32(methods, id) = func;
 		};
 
 		auto bind_array = [](u32 id, u32 step, u32 count, rsx_method_t func)
@@ -3375,6 +3391,7 @@ namespace rsx
 		bind(NV4097_SET_SURFACE_COLOR_BOFFSET, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_SURFACE_COLOR_COFFSET, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_SURFACE_COLOR_DOFFSET, nv4097::set_surface_dirty_bit);
+		bind(NV4097_SET_SURFACE_COLOR_TARGET, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_SURFACE_ZETA_OFFSET, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_CONTEXT_DMA_COLOR_A, nv4097::set_surface_dirty_bit);
 		bind(NV4097_SET_CONTEXT_DMA_COLOR_B, nv4097::set_surface_dirty_bit);
@@ -3465,6 +3482,12 @@ namespace rsx
 		bind(NV4097_SET_BLEND_FUNC_DFACTOR, nv4097::set_blend_factor);
 		bind(NV4097_SET_POLYGON_STIPPLE, nv4097::notify_state_changed<fragment_state_dirty>);
 		bind_array(NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>);
+		bind(NV4097_SET_POLY_OFFSET_FILL_ENABLE, nv4097::notify_state_changed<polygon_offset_state_dirty>);
+		bind(NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR, nv4097::notify_state_changed<polygon_offset_state_dirty>);
+		bind(NV4097_SET_POLYGON_OFFSET_BIAS, nv4097::notify_state_changed<polygon_offset_state_dirty>);
+		bind(NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE, nv4097::notify_state_changed<depth_bounds_state_dirty>);
+		bind(NV4097_SET_DEPTH_BOUNDS_MIN, nv4097::notify_state_changed<depth_bounds_state_dirty>);
+		bind(NV4097_SET_DEPTH_BOUNDS_MAX, nv4097::notify_state_changed<depth_bounds_state_dirty>);
 
 		//NV308A (0xa400..0xbffc!)
 		bind_array(NV308A_COLOR, 1, 256 * 7, nv308a::color::impl);

@@ -32,7 +32,21 @@ cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
 
 		if (m_use_ssse3)
 		{
+#if defined(ARCH_X64)
 			return m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {data0, index});
+#elif defined(ARCH_ARM64)
+			// Modified from sse2neon
+			// movi    v2.16b, #143
+			// and     v1.16b, v1.16b, v2.16b
+			// tbl     v0.16b, { v0.16b }, v1.16b
+			auto mask = llvm::ConstantInt::get(get_type<u8[16]>(), 0x8F);
+			auto and_mask = llvm::ConstantInt::get(get_type<bool[16]>(), true);
+			auto vec_len = llvm::ConstantInt::get(get_type<u32>(), 16);
+			auto index_masked = m_ir->CreateCall(get_intrinsic<u8[16]>(llvm::Intrinsic::vp_and), {index, mask, and_mask, vec_len});
+			return m_ir->CreateCall(get_intrinsic<u8[16]>(llvm::Intrinsic::aarch64_neon_tbl1), {data0, index_masked});
+#else
+#error "Unimplemented"
+#endif
 		}
 		else
 		{
@@ -139,6 +153,14 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		m_use_avx512 = true;
 		m_use_avx512_icl = true;
 		m_use_vnni = true;
+	}
+
+	// Aarch64 CPUs
+	if (cpu == "cyclone" || cpu.contains("cortex"))
+	{
+		m_use_fma = true;
+		// AVX does not use intrinsics so far
+		m_use_avx = true;
 	}
 }
 

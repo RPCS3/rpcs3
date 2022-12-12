@@ -3,6 +3,8 @@
 #include "GLHelpers.h"
 #include "../rsx_utils.h"
 
+#include "glutils/fbo.h"
+
 struct color_swizzle
 {
 	gl::texture::channel a = gl::texture::channel::a;
@@ -122,6 +124,8 @@ struct gl_render_target_traits
 {
 	using surface_storage_type = std::unique_ptr<gl::render_target>;
 	using surface_type = gl::render_target*;
+	using buffer_object_storage_type = std::unique_ptr<gl::buffer>;
+	using buffer_object_type = gl::buffer*;
 	using command_list_type = gl::command_context&;
 	using download_buffer_object = std::vector<u8>;
 	using barrier_descriptor_t = rsx::deferred_clipped_region<gl::render_target*>;
@@ -233,6 +237,17 @@ struct gl_render_target_traits
 	}
 
 	static
+	std::unique_ptr<gl::render_target> convert_pitch(
+		gl::command_context& /*cmd*/,
+		std::unique_ptr<gl::render_target>& src,
+		usz /*out_pitch*/)
+	{
+		// TODO
+		src->state_flags = rsx::surface_state_flags::erase_bkgnd;
+		return {};
+	}
+
+	static
 	bool is_compatible_surface(const gl::render_target* surface, const gl::render_target* ref, u16 width, u16 height, u8 sample_count)
 	{
 		return (surface->get_internal_format() == ref->get_internal_format() &&
@@ -332,7 +347,38 @@ struct gl_render_target_traits
 	}
 
 	static
-	gl::render_target* get(const std::unique_ptr<gl::render_target> &in)
+	void spill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
+	{
+		// TODO
+	}
+
+	static
+	void unspill_buffer(std::unique_ptr<gl::buffer>& /*bo*/)
+	{
+		// TODO
+	}
+
+	static
+	void write_render_target_to_memory(
+		gl::command_context&,
+		gl::buffer*,
+		gl::render_target*,
+		u64, u64, u64)
+	{
+		// TODO
+	}
+
+	template <int BlockSize>
+	static
+	gl::buffer* merge_bo_list(gl::command_context&, const std::vector<gl::buffer*>& /*list*/)
+	{
+		// TODO
+		return nullptr;
+	}
+
+	template <typename T>
+	static
+	T* get(const std::unique_ptr<T> &in)
 	{
 		return in.get();
 	}

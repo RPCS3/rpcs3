@@ -294,128 +294,120 @@ namespace rsx
 				return;
 			}
 
-			usz i                = 0u;
-			bool skip_whitespace = false;
-
-			while (true)
+			// Render as many characters as possible as glyphs.
+			for (usz i = 0u, begin_of_word = 0u; i < char_limit; i++)
 			{
-				if (auto c = text[i++]; c && (i <= char_limit))
+				switch (const auto& c = text[i])
 				{
-					switch (c)
+				case '\0':
+				{
+					// We're done.
+					return;
+				}
+				case '\n':
+				{
+					// Reset x to 0 and increase y to advance to the new line.
+					x_advance = 0.f;
+					y_advance += size_px + 2.f;
+					begin_of_word = result.size();
+					continue;
+				}
+				case '\r':
+				{
+					// Reset x to 0.
+					x_advance = 0.f;
+					begin_of_word = result.size();
+					continue;
+				}
+				default:
+				{
+					const bool is_whitespace = c == ' ';
+					stbtt_aligned_quad quad{};
+
+					if (is_whitespace)
 					{
-					case '\n':
-					{
-						y_advance += size_px + 2.f;
-						x_advance = 0.f;
-						continue;
-					}
-					case '\r':
-					{
-						x_advance = 0.f;
-						continue;
-					}
-					default:
-					{
-						stbtt_aligned_quad quad;
-						if (skip_whitespace && text[i - 1] == ' ')
+						// Skip whitespace if we are at the start of a line.
+						if (x_advance <= 0.f)
 						{
-							quad = {};
+							// Set the glyph to the current position.
+							// This is necessary for downstream linewidth calculations.
+							quad.x0 = quad.x1 = x_advance;
+							quad.y0 = quad.y1 = y_advance;
 						}
 						else
 						{
-							quad            = get_char(c, x_advance, y_advance);
-							skip_whitespace = false;
-						}
+							const f32 x_advance_old = x_advance;
+							const f32 y_advance_old = y_advance;
 
-						if (x_advance > max_width)
-						{
-							bool wrapped              = false;
-							bool non_whitespace_break = false;
+							// Get the glyph size.
+							quad = get_char(c, x_advance, y_advance);
 
-							if (wrap)
+							// Reset the result if the glyph would protrude out of the given space anyway.
+							if (x_advance > max_width)
 							{
-								// scan previous chars
-								for (usz j = i - 1, nb_chars = 0; j > 0; j--, nb_chars++)
-								{
-									if (text[j] == '\n')
-										break;
-
-									if (text[j] == ' ')
-									{
-										non_whitespace_break = true;
-										continue;
-									}
-
-									if (non_whitespace_break)
-									{
-										if (nb_chars > 1)
-										{
-											nb_chars--;
-
-											auto first_affected = result.size() - (nb_chars * 4);
-											f32 base_x          = result[first_affected].values[0];
-
-											for (usz n = first_affected; n < result.size(); ++n)
-											{
-												auto char_index = n / 4;
-												if (text[char_index] == ' ')
-												{
-													// Skip character
-													result[n++].vec2(0.f, 0.f);
-													result[n++].vec2(0.f, 0.f);
-													result[n++].vec2(0.f, 0.f);
-													result[n].vec2(0.f, 0.f);
-													continue;
-												}
-
-												result[n].values[0] -= base_x;
-												result[n].values[1] += size_px + 2.f;
-											}
-
-											x_advance = result.back().values[0];
-										}
-										else
-										{
-											x_advance = 0.f;
-										}
-
-										wrapped = true;
-										y_advance += size_px + 2.f;
-
-										if (text[i - 1] == ' ')
-										{
-											quad            = {};
-											skip_whitespace = true;
-										}
-										else
-										{
-											quad = get_char(c, x_advance, y_advance);
-										}
-
-										break;
-									}
-								}
+								// Set the glyph to the previous position.
+								// This is necessary for downstream linewidth calculations.
+								quad.x0 = quad.x1 = x_advance_old;
+								quad.y0 = quad.y1 = y_advance_old;
 							}
+						}
+					}
+					else
+					{
+						// No whitespace. Get the glyph size.
+						quad = get_char(c, x_advance, y_advance);
+					}
 
-							if (!wrapped)
+					// Add the glyph's vertices.
+					result.emplace_back(quad.x0, quad.y0, quad.s0, quad.t0);
+					result.emplace_back(quad.x1, quad.y0, quad.s1, quad.t0);
+					result.emplace_back(quad.x0, quad.y1, quad.s0, quad.t1);
+					result.emplace_back(quad.x1, quad.y1, quad.s1, quad.t1);
+
+					// The next word will begin after any whitespaces.
+					if (is_whitespace)
+					{
+						begin_of_word = result.size();
+					}
+
+					// Check if we reached the end of the available space.
+					if (x_advance > max_width)
+					{
+						// Try to wrap the protruding text
+						if (wrap)
+						{
+							// Increase y to advance to the next line.
+							y_advance += size_px + 2.f;
+
+							// We can just reset x and move on to the next character if this is a whitespace.
+							if (is_whitespace)
 							{
-								// TODO: Ellipsize
+								x_advance = 0.f;
 								break;
 							}
-						}
 
-						result.emplace_back(quad.x0, quad.y0, quad.s0, quad.t0);
-						result.emplace_back(quad.x1, quad.y0, quad.s1, quad.t0);
-						result.emplace_back(quad.x0, quad.y1, quad.s0, quad.t1);
-						result.emplace_back(quad.x1, quad.y1, quad.s1, quad.t1);
-						break;
+							// Get the leftmost offset of the current word.
+							const f32 base_x = result[begin_of_word].x();
+
+							// Move all characters of the current word one line down and to the left.
+							for (usz n = begin_of_word; n < result.size(); ++n)
+							{
+								result[n].x() -= base_x;
+								result[n].y() += size_px + 2.f;
+							}
+
+							// Set x offset to the rightmost position of the current word
+							x_advance = result.back().x();
+						}
+						else
+						{
+							// TODO: Ellipsize
+						}
 					}
-					} // switch
-				}
-				else
-				{
+
 					break;
 				}
+				} // switch
 			}
 		}
 

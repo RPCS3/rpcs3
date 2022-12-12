@@ -44,6 +44,7 @@ bool cfg_input::load(const std::string& title_id, const std::string& profile, bo
 	input_log.notice("Pad profile empty. Adding default keyboard pad handler");
 	player[0]->handler.from_string(fmt::format("%s", pad_handler::keyboard));
 	player[0]->device.from_string(pad::keyboard_device_name.data());
+	player[0]->buddy_device.from_string(""sv);
 
 	return false;
 }

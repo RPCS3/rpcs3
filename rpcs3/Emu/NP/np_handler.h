@@ -14,6 +14,7 @@
 #include "Emu/NP/np_allocator.h"
 #include "Emu/NP/np_cache.h"
 #include "Emu/NP/np_event_data.h"
+#include "Emu/NP/np_contexts.h"
 
 namespace np
 {
@@ -66,13 +67,19 @@ namespace np
 	class np_handler
 	{
 	public:
+		SAVESTATE_INIT_POS(5);
+
 		np_handler();
+		~np_handler();
+		np_handler(utils::serial& ar);
+		void save(utils::serial& ar);
 
 		const std::array<u8, 6>& get_ether_addr() const;
 		const std::string& get_hostname() const;
 		u32 get_local_ip_addr() const;
 		u32 get_public_ip_addr() const;
 		u32 get_dns_ip() const;
+		u32 get_bind_ip() const;
 
 		s32 get_psn_status() const;
 		s32 get_net_status() const;
@@ -88,13 +95,13 @@ namespace np
 		void init_NP(u32 poolsize, vm::ptr<void> poolptr);
 		void terminate_NP();
 
-		bool is_netctl_init     = false;
-		bool is_NP_init         = false;
-		bool is_NP_Lookup_init  = false;
-		bool is_NP_Score_init   = false;
-		bool is_NP2_init        = false;
-		bool is_NP2_Match2_init = false;
-		bool is_NP_Auth_init    = false;
+		atomic_t<bool> is_netctl_init     = false;
+		atomic_t<bool> is_NP_init         = false;
+		atomic_t<bool> is_NP_Lookup_init  = false;
+		atomic_t<bool> is_NP_Score_init   = false;
+		atomic_t<bool> is_NP2_init        = false;
+		atomic_t<bool> is_NP2_Match2_init = false;
+		atomic_t<bool> is_NP_Auth_init    = false;
 
 		// NP Handlers/Callbacks
 		// Seems to be global
@@ -147,6 +154,16 @@ namespace np
 
 		u32 get_match2_event(SceNpMatching2EventKey event_key, u32 dest_addr, u32 size);
 
+		// Score requests
+		void score_async_handler(std::unique_lock<shared_mutex> lock, const std::shared_ptr<score_transaction_ctx>& trans_ctx, u32 req_id, bool async);
+		void get_board_infos(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, vm::ptr<SceNpScoreBoardInfo> boardInfo, bool async);
+		void record_score(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, vm::cptr<SceNpScoreComment> scoreComment, const u8* data, u32 data_size, vm::ptr<SceNpScoreRankNumber> tmpRank, bool async);
+		void record_score_data(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, u32 totalSize, u32 sendSize, const u8* score_data, bool async);
+		void get_score_data(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const SceNpId& npId, vm::ptr<u32> totalSize, u32 recvSize, vm::ptr<void> score_data, bool async);
+		void get_score_range(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async);
+		void get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async);
+		void get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async);
+
 		// Local functions
 		std::pair<error_code, std::optional<SceNpMatching2RoomSlotInfo>> local_get_room_slots(SceNpMatching2RoomId room_id);
 		std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> local_get_room_password(SceNpMatching2RoomId room_id);
@@ -169,7 +186,7 @@ namespace np
 		// For custom menu
 		struct custom_menu_action
 		{
-			s32 id = 0;
+			s32 id   = 0;
 			u32 mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_ME;
 			std::string name;
 		};
@@ -216,6 +233,13 @@ namespace np
 		bool reply_send_room_message(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data);
 		bool reply_req_ticket(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_board_infos(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_record_score(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_record_score_data(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_score_data(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_score_range(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_score_friends(u32 req_id, std::vector<u8>& reply_data);
+		bool reply_get_score_npid(u32 req_id, std::vector<u8>& reply_data);
 
 		// Helper functions(fb=>np2)
 		void BinAttr_to_SceNpMatching2BinAttr(event_data& edata, const BinAttr* bin_attr, SceNpMatching2BinAttr* binattr_info);
@@ -236,6 +260,7 @@ namespace np
 		void RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(event_data& edata, const RoomMessageInfo* mi, SceNpMatching2RoomMessageInfo* sce_mi);
 		void RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(event_data& edata, const RoomDataInternalUpdateInfo* update_info, SceNpMatching2RoomDataInternalUpdateInfo* sce_update_info, const SceNpId& npid);
 		void RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(event_data& edata, const RoomMemberDataInternalUpdateInfo* update_info, SceNpMatching2RoomMemberDataInternalUpdateInfo* sce_update_info);
+		bool handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data);
 
 		struct callback_info
 		{
@@ -266,6 +291,7 @@ namespace np
 		be_t<u32> local_ip_addr{};
 		be_t<u32> public_ip_addr{};
 		be_t<u32> dns_ip = 0x08080808;
+		be_t<u32> bind_ip = 0x00000000;
 
 		// User infos
 		SceNpId npid{};
@@ -293,6 +319,10 @@ namespace np
 			return match2_event_cnt.fetch_add(1);
 		}
 		event_data& allocate_req_result(u32 event_key, u32 max_size, u32 initial_size);
+
+		// Async score threads
+		shared_mutex mutex_score_transactions;
+		std::unordered_map<u32, std::shared_ptr<score_transaction_ctx>> score_transactions; // (req_id, transaction_ctx)
 
 		// RPCN
 		shared_mutex mutex_rpcn;

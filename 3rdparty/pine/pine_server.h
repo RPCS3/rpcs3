@@ -265,9 +265,8 @@ namespace pine
 				case MsgVersion:
 				{
 					char version[256] = {};
-					sprintf(version, "RPCS3 %s", Impl::get_version_and_branch().c_str());
+					snprintf(version, sizeof(version), "RPCS3 %s", Impl::get_version_and_branch().c_str());
 					const u32 size = strlen(version) + 1;
-					version[size] = 0x00;
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
 						goto error;
 					ToArray(ret_buffer, size, ret_cnt);
@@ -291,8 +290,7 @@ namespace pine
 					const auto title_string = Impl::get_title();
 					const auto size = title_string.size() + 1;
 					char* title = new char[size];
-					sprintf(title, "%s", title_string.c_str());
-					title[size] = 0x00;
+					snprintf(title, size, "%s", title_string.c_str());
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
 						goto error;
 					ToArray(ret_buffer, size, ret_cnt);
@@ -307,8 +305,7 @@ namespace pine
 					const auto title_id_string = Impl::get_title_ID();
 					const auto size = title_id_string.size() + 1;
 					char* title_id = new char[size];
-					sprintf(title_id, "%s", title_id_string.c_str());
-					title_id[size] = 0x00;
+					snprintf(title_id, size, "%s", title_id_string.c_str());
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
 						goto error;
 					ToArray(ret_buffer, size, ret_cnt);
@@ -323,8 +320,7 @@ namespace pine
 					const auto hash_string = Impl::get_executable_hash();
 					const auto size = hash_string.size() + 1;
 					char* hash = new char[size];
-					sprintf(hash, "%s", hash_string.c_str());
-					hash[size] = 0x00;
+					snprintf(hash, size, "%s", hash_string.c_str());
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
 						goto error;
 					ToArray(ret_buffer, size, ret_cnt);
@@ -339,8 +335,7 @@ namespace pine
 					const auto game_version_string = Impl::get_app_version();
 					const auto size = game_version_string.size() + 1;
 					char* game_version = new char[size];
-					sprintf(game_version, "%s", game_version_string.c_str());
-					game_version[size] = 0x00;
+					snprintf(game_version, size, "%s", game_version_string.c_str());
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size, buf_size))
 						goto error;
 					ToArray(ret_buffer, size, ret_cnt);

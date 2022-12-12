@@ -7,6 +7,9 @@
 #include "upscalers/bilinear_pass.hpp"
 #include "upscalers/fsr_pass.h"
 #include "util/asm.hpp"
+#include "util/video_provider.h"
+
+extern atomic_t<recording_mode> g_recording_mode;
 
 void VKGSRender::reinitialize_swapchain()
 {
@@ -503,6 +506,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		buffer_height = present_info.height;
 	}
 
+	if (info.emu_flip)
+	{
+		evaluate_cpu_usage_reduction_limits();
+	}
+
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
 	ensure(m_current_frame->present_image == umax);
 	ensure(m_current_frame->swap_command_buffer == nullptr);
@@ -662,10 +670,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			m_upscaler->scale_output(*m_current_command_buffer, image_to_flip, target_image, target_layout, rgn, UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);
 		}
 
-		if (m_frame->screenshot_toggle)
+		if (m_frame->screenshot_toggle || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
-			m_frame->screenshot_toggle = false;
-
 			const usz sshot_size = buffer_height * buffer_width * 4;
 
 			vk::buffer sshot_vkbuf(*m_device, utils::align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent,
@@ -697,7 +703,16 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			sshot_vkbuf.unmap();
 
 			const bool is_bgra = image_to_flip->format() == VK_FORMAT_B8G8R8A8_UNORM;
-			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
+
+			if (m_frame->screenshot_toggle)
+			{
+				m_frame->screenshot_toggle = false;
+				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
+			}
+			else
+			{
+				m_frame->present_frame(sshot_frame, buffer_width, buffer_height, is_bgra);
+			}
 		}
 	}
 

@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
-
 #include "Emu/Io/pad_types.h"
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
@@ -10,6 +10,8 @@
 
 extern void libio_sys_config_init();
 extern void libio_sys_config_end();
+
+extern bool is_input_allowed();
 
 LOG_CHANNEL(sys_io);
 
@@ -49,6 +51,18 @@ void fmt_class_string<CellPadFilterError>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+pad_info::pad_info(utils::serial& ar)
+	: max_connect(ar)
+	, port_setting(ar)
+{
+}
+
+void pad_info::save(utils::serial& ar)
+{
+	ar(max_connect, port_setting);
+}
+
 
 error_code cellPadInit(u32 max_connect)
 {
@@ -130,7 +144,7 @@ error_code cellPadClearBuf(u32 port_no)
 	const auto pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	clear_pad_buffer(pad);
 
@@ -163,7 +177,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	const auto pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, data.get_ptr());
 	return CELL_OK;
@@ -185,7 +199,7 @@ void pad_get_data(u32 port_no, CellPadData* data)
 	const auto setting = config.port_setting[port_no];
 	bool btnChanged = false;
 
-	if (rinfo.ignore_input)
+	if (rinfo.ignore_input || !is_input_allowed())
 	{
 		// Needed for Hotline Miami and Ninja Gaiden Sigma after dialogs were closed and buttons are still pressed.
 		// Gran Turismo 6 would keep registering the Start button during OSK Dialogs if this wasn't cleared and if we'd return with len as CELL_PAD_LEN_NO_CHANGE.
@@ -490,7 +504,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, &data->cellpad_data);
 
@@ -525,7 +539,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 	const auto pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// ?
 
@@ -591,7 +605,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	const auto pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// TODO: find out if this is checked here or later or at all
 	if (!(pad->m_device_capability & CELL_PAD_CAPABILITY_ACTUATOR))
@@ -739,7 +753,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 	const auto pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	// Should return the same as device capability mask, psl1ght has it backwards in pad->h
 	memset(info->info, 0, CELL_PAD_MAX_CAPABILITY_INFO * sizeof(u32));
@@ -797,7 +811,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 	const auto pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) ? 1 : 0);
 }
@@ -826,7 +840,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 	const auto pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
+		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) ? 1 : 0);
 }

@@ -101,6 +101,7 @@ extern ps3_process_info_t  g_ps3_process_info;
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
+void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data);
 
 enum CellError : u32;
 CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);

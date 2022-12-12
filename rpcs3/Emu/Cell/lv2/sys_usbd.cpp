@@ -63,6 +63,18 @@ public:
 	usb_handler_thread();
 	~usb_handler_thread();
 
+	SAVESTATE_INIT_POS(14);
+
+	usb_handler_thread(utils::serial& ar) : usb_handler_thread()
+	{
+		is_init = !!ar.operator u8();
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(u8{is_init.load()});
+	}
+
 	// Thread loop
 	void operator()();
 
@@ -97,7 +109,7 @@ public:
 
 	// sys_usbd_receive_event PPU Threads
 	shared_mutex mutex_sq;
-	std::deque<ppu_thread*> sq;
+	ppu_thread* sq{};
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
@@ -177,6 +189,7 @@ usb_handler_thread::usb_handler_thread()
 
 	bool found_skylander = false;
 	bool found_usio      = false;
+	bool found_h050      = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -264,6 +277,15 @@ usb_handler_thread::usb_handler_thread()
 		{
 			found_usio = true;
 		}
+
+		// Densha de GO! controller
+		check_device(0x0AE4, 0x0004, 0x0004, "Densha de GO! Type 2 Controller");
+
+		// H050 USJ
+		if (check_device(0x0B9A, 0x0900, 0x0900, "H050 USJ(C) PCB rev00"))
+		{
+			found_h050 = true;
+		}
 	}
 
 	libusb_free_device_list(list, 1);
@@ -274,7 +296,7 @@ usb_handler_thread::usb_handler_thread()
 		usb_devices.push_back(std::make_shared<usb_device_skylander>(get_new_location()));
 	}
 
-	if (!found_usio)
+	if (!found_usio && !found_h050) // Only one of these two IO boards should be present at the same time; otherwise, an exception will be thrown by the game.
 	{
 		sys_usbd.notice("Adding emulated v406 usio");
 		usb_devices.push_back(std::make_shared<usb_device_usio>(get_new_location()));
@@ -469,7 +491,7 @@ bool usb_handler_thread::is_pipe(u32 pipe_id) const
 
 const UsbPipe& usb_handler_thread::get_pipe(u32 pipe_id) const
 {
-	return open_pipes.at(pipe_id);
+	return ::at32(open_pipes, pipe_id);
 }
 
 void usb_handler_thread::check_devices_vs_ldds()
@@ -607,11 +629,14 @@ error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
-	std::lock_guard lock(usbh.mutex);
+	{
+		std::lock_guard lock(usbh.mutex);
 
-	// Must not occur (lv2 allows multiple handles, cellUsbd does not)
-	ensure(!usbh.is_init.exchange(true));
+		// Must not occur (lv2 allows multiple handles, cellUsbd does not)
+		ensure(!usbh.is_init.exchange(true));
+	}
 
+	ppu.check_state();
 	*handle = 0x115B;
 
 	// TODO
@@ -630,7 +655,7 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	usbh.is_init = false;
 
 	// Forcefully awake all waiters
-	for (auto& cpu : ::as_rvalue(std::move(usbh.sq)))
+	while (auto cpu = lv2_obj::schedule<ppu_thread>(usbh.sq, SYS_SYNC_FIFO))
 	{
 		// Special ternimation signal value
 		cpu->gpr[4] = 4;
@@ -740,9 +765,10 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_pr
 	}
 	else if (s_product.get_ptr() == "PS3A-USJ"sv)
 	{
-		// Arcade v406 USIO board
+		// Arcade IO boards
 		sys_usbd.warning("sys_usbd_register_ldd(handle=0x%x, s_product=%s, slen_product=0x%x) -> Redirecting to sys_usbd_register_extra_ldd", handle, s_product, slen_product);
 		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0910, 0x0910); // usio
+		sys_usbd_register_extra_ldd(ppu, handle, s_product, slen_product, 0x0B9A, 0x0900, 0x0900); // H050 USJ
 	}
 	else
 	{
@@ -845,26 +871,38 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 		}
 
 		lv2_obj::sleep(ppu);
-		usbh.sq.emplace_back(&ppu);
+		lv2_obj::emplace(usbh.sq, &ppu);
 	}
 
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+	while (auto state = +ppu.state)
 	{
-		if (is_stopped(state))
-		{
-			sys_usbd.trace("sys_usbd_receive_event: aborting");
-			return {};
-		}
-
-		if (state & cpu_flag::signal)
+		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			sys_usbd.trace("Received event(queued): arg1=0x%x arg2=0x%x arg3=0x%x", ppu.gpr[4], ppu.gpr[5], ppu.gpr[6]);
 			break;
 		}
 
-		thread_ctrl::wait_on(ppu.state, state);
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(usbh.mutex);
+
+			for (auto cpu = +usbh.sq; cpu; cpu = cpu->next_cpu)
+			{
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					sys_usbd.trace("sys_usbd_receive_event: aborting");
+					return {};
+				}
+			}
+
+			break;
+		}
+
+		ppu.state.wait(state);
 	}
 
+	ppu.check_state();
 	*arg1 = ppu.gpr[4];
 	*arg2 = ppu.gpr[5];
 	*arg3 = ppu.gpr[6];
@@ -897,7 +935,7 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 
 	sys_usbd.trace("sys_usbd_transfer_data(handle=0x%x, id_pipe=0x%x, buf=*0x%x, buf_length=0x%x, request=*0x%x, type=0x%x)", handle, id_pipe, buf, buf_size, request, type_transfer);
 
-	if (sys_usbd.enabled == logs::level::trace && request)
+	if (sys_usbd.trace && request)
 	{
 		sys_usbd.trace("RequestType:0x%x, Request:0x%x, wValue:0x%x, wIndex:0x%x, wLength:0x%x", request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength);
 		if ((request->bmRequestType & 0x80) == 0 && buf && buf_size != 0)

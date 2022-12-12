@@ -198,9 +198,7 @@ namespace utils
 #endif
 		}();
 
-		ensure(r > 0 && r <= 0x10000);
-
-		return r;
+		return ensure(r, FN(((x & (x - 1)) == 0 && x > 0 && x <= 0x10000)));
 	}
 
 	// Convert memory protection (internal)
@@ -231,7 +229,7 @@ namespace utils
 		return _prot;
 	}
 
-	void* memory_reserve(usz size, void* use_addr, bool is_memory_mapping)
+	void* memory_reserve(usz size, void* use_addr, [[maybe_unused]] bool is_memory_mapping)
 	{
 #ifdef _WIN32
 		if (is_memory_mapping && has_win10_memory_mapping_api())
@@ -261,7 +259,11 @@ namespace utils
 		}
 
 #ifdef __APPLE__
+#ifdef ARCH_ARM64
+		auto ptr = ::mmap(use_addr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+#else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+#endif
 #else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
 #endif
@@ -395,8 +397,8 @@ namespace utils
 	void memory_release(void* pointer, usz size)
 	{
 #ifdef _WIN32
-		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 		unmap_mappping_memory(reinterpret_cast<u64>(pointer), size);
+		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 #else
 		ensure(::munmap(pointer, size) != -1);
 #endif
@@ -457,7 +459,7 @@ namespace utils
 #endif
 	}
 
-	shm::shm(u32 size, u32 flags)
+	shm::shm(u64 size, u32 flags)
 		: m_flags(flags)
 		, m_size(utils::align(size, 0x10000))
 	{
@@ -506,10 +508,7 @@ namespace utils
 #ifdef _WIN32
 		fs::file f;
 
-		// Get system version
-		[[maybe_unused]] static const DWORD version_major = *reinterpret_cast<const DWORD*>(__readgsqword(0x60) + 0x118);
-
-		auto set_sparse = [](HANDLE h, usz m_size) -> bool
+		std::function<bool(const std::string&, HANDLE, usz)> set_sparse = [&](const std::string& storagex, HANDLE h, usz m_size) -> bool
 		{
 			FILE_SET_SPARSE_BUFFER arg{.SetSparse = true};
 			FILE_BASIC_INFO info0{};
@@ -522,16 +521,14 @@ namespace utils
 				ensure(SetFileInformationByHandle(h, FileBasicInfo, &info0, sizeof(info0)));
 			}
 
-			if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
-			{
-				MessageBoxW(0, L"RPCS3 needs to be restarted to create sparse file rpcs3_vm.", L"RPCS3", MB_ICONEXCLAMATION);
-			}
-
 			if (DWORD bytesReturned{}; (info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) || DeviceIoControl(h, FSCTL_SET_SPARSE, &arg, sizeof(arg), nullptr, 0, &bytesReturned, nullptr))
 			{
-				if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
+				if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && !storagex.empty())
 				{
-					std::abort();
+					// Retry once (bug workaround)
+					f.close();
+					f.open(storagex, fs::read + fs::write + fs::create);
+					return set_sparse("", f.get_handle(), m_size);
 				}
 
 				FILE_STANDARD_INFO info;
@@ -565,30 +562,38 @@ namespace utils
 			return false;
 		};
 
-		const std::string storage2 = fs::get_temp_dir() + "rpcs3_vm_sparse.tmp";
-		const std::string storage3 = fs::get_cache_dir() + "rpcs3_vm_sparse.tmp";
+		std::string storage1 = fs::get_cache_dir();
+		std::string storage2 = fs::get_temp_dir();
 
-		if (!storage.empty())
+		if (storage.empty())
 		{
-			// Explicitly specified storage
-			ensure(f.open(storage, fs::read + fs::write + fs::create));
-		}
-		else if (!f.open(storage2, fs::read + fs::write + fs::create) || !set_sparse(f.get_handle(), m_size))
-		{
-			// Fallback storage
-			ensure(f.open(storage3, fs::read + fs::write + fs::create));
+			storage1 += "rpcs3_vm_sparse.tmp";
+			storage2 += "rpcs3_vm_sparse.tmp";
 		}
 		else
 		{
-			goto check;
+			storage1 += storage;
+			storage2 += storage;
 		}
 
-		if (!set_sparse(f.get_handle(), m_size))
+		if (!f.open(storage1, fs::read + fs::write + fs::create) || !set_sparse(storage1, f.get_handle(), m_size))
 		{
-			MessageBoxW(0, L"Failed to initialize sparse file.\nCan't find a filesystem with sparse file support (NTFS).", L"RPCS3", MB_ICONERROR);
+			// Fallback storage
+			ensure(f.open(storage2, fs::read + fs::write + fs::create));
+
+			if (!set_sparse(storage2, f.get_handle(), m_size))
+			{
+				MessageBoxW(0, L"Failed to initialize sparse file.\nCan't find a filesystem with sparse file support (NTFS).", L"RPCS3", MB_ICONERROR);
+			}
+
+			m_storage = std::move(storage2);
+		}
+		else
+		{
+			m_storage = std::move(storage1);
 		}
 
-	check:
+		// It seems impossible to automatically delete file on exit when file mapping is used
 		if (f.size() != m_size)
 		{
 			// Resize the file gradually (bug workaround)
@@ -607,8 +612,7 @@ namespace utils
 		if (const char c = fs::file("/proc/sys/vm/overcommit_memory").read<char>(); c == '0' || c == '1')
 		{
 			// Simply use memfd for overcommit memory
-			m_file = ::memfd_create_("", 0);
-			ensure(m_file >= 0);
+			m_file = ensure(::memfd_create_("", 0), FN(x >= 0));
 			ensure(::ftruncate(m_file, m_size) >= 0);
 			return;
 		}
@@ -634,8 +638,7 @@ namespace utils
 		if ((vm_overcommit & 3) == 0)
 		{
 #if defined(__FreeBSD__)
-			m_file = ::memfd_create_("", 0);
-			ensure(m_file >= 0);
+			m_file = ensure(::memfd_create_("", 0), FN(x >= 0));
 #else
 			const std::string name = "/rpcs3-mem2-" + std::to_string(reinterpret_cast<u64>(this));
 
@@ -659,10 +662,13 @@ namespace utils
 		if (!storage.empty())
 		{
 			m_file = ::open(storage.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			::unlink(storage.c_str());
 		}
 		else
 		{
-			m_file = ::open((fs::get_cache_dir() + "rpcs3_vm_sparse.tmp").c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			std::string storage = fs::get_cache_dir() + "rpcs3_vm_sparse.tmp";
+			m_file = ::open(storage.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			::unlink(storage.c_str());
 		}
 
 		ensure(m_file >= 0);
@@ -707,6 +713,9 @@ namespace utils
 #else
 		::close(m_file);
 #endif
+
+		if (!m_storage.empty())
+			fs::remove_file(m_storage);
 	}
 
 	u8* shm::map(void* ptr, protection prot, bool cow) const
@@ -823,19 +832,29 @@ namespace utils
 				return {nullptr, "Failed to split allocation end"};
 			}
 
-			if (cow)
+			DWORD access = 0;
+
+			switch (prot)
 			{
-				// TODO: Implement it
+			case protection::rw:
+			case protection::ro:
+			case protection::no:
+				access = cow ? PAGE_WRITECOPY : PAGE_READWRITE;
+				break;
+			case protection::wx:
+			case protection::rx:
+				access = cow ? PAGE_EXECUTE_WRITECOPY : PAGE_EXECUTE_READWRITE;
+				break;
 			}
-	
-			if (MapViewOfFile3(m_handle, GetCurrentProcess(), target, 0, m_size, MEM_REPLACE_PLACEHOLDER, PAGE_EXECUTE_READWRITE, nullptr, 0))
+
+			if (MapViewOfFile3(m_handle, GetCurrentProcess(), target, 0, m_size, MEM_REPLACE_PLACEHOLDER, access, nullptr, 0))
 			{
 				if (prot != protection::rw && prot != protection::wx)
 				{
 					DWORD old;
 					if (!::VirtualProtect(target, m_size, +prot, &old))
 					{
-						UnmapViewOfFile2(nullptr, target, MEM_PRESERVE_PLACEHOLDER);
+						UnmapViewOfFile2(GetCurrentProcess(), target, MEM_PRESERVE_PLACEHOLDER);
 						return {nullptr, "Failed to protect"};
 					}
 				}

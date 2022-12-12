@@ -148,41 +148,51 @@ enum class lv2_file_type
 struct lv2_fs_mount_point
 {
 	const std::string_view root;
+	const std::string_view file_system;
+	const std::string_view device;
 	const u32 sector_size = 512;
+	const u64 sector_count = 256;
 	const u32 block_size = 4096;
 	const bs_t<lv2_mp_flag> flags{};
+	lv2_fs_mount_point* const next = nullptr;
 
 	mutable std::recursive_mutex mutex;
 };
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd0;
-extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
 
 struct lv2_fs_object
 {
-	static const u32 id_base = 3;
-	static const u32 id_step = 1;
-	static const u32 id_count = 255 - id_base;
-
-	// Mount Point
-	const std::add_pointer_t<lv2_fs_mount_point> mp;
+	static constexpr u32 id_base = 3;
+	static constexpr u32 id_step = 1;
+	static constexpr u32 id_count = 255 - id_base;
+	static constexpr bool id_lowest = true;
+	SAVESTATE_INIT_POS(40);
 
 	// File Name (max 1055)
 	const std::array<char, 0x420> name;
 
+	// Mount Point
+	const std::add_pointer_t<lv2_fs_mount_point> mp;
+
 protected:
 	lv2_fs_object(lv2_fs_mount_point* mp, std::string_view filename)
-		: mp(mp)
-		, name(get_name(filename))
+		: name(get_name(filename))
+		, mp(mp)
 	{
 	}
+
+	lv2_fs_object(utils::serial& ar, bool dummy);
 
 public:
 	lv2_fs_object(const lv2_fs_object&) = delete;
 
 	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
-	static lv2_fs_mount_point* get_mp(std::string_view filename);
+	static std::string_view get_device_path(std::string_view filename);
+	static lv2_fs_mount_point* get_mp(std::string_view filename, std::string* vfs_path = nullptr);
+	static std::string device_name_to_path(std::string_view device_name);
+	static bool vfs_unmount(std::string_view vpath, bool no_error = false);
 
 	static std::array<char, 0x420> get_name(std::string_view filename)
 	{
@@ -197,10 +207,14 @@ public:
 		name[filename.size()] = 0;
 		return name;
 	}
+
+	void save(utils::serial&) {}
 };
 
 struct lv2_file final : lv2_fs_object
 {
+	static constexpr u32 id_type = 1;
+ 
 	fs::file file;
 	const s32 mode;
 	const s32 flags;
@@ -240,6 +254,9 @@ struct lv2_file final : lv2_fs_object
 		, type(type)
 	{
 	}
+
+	lv2_file(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	struct open_raw_result_t
 	{
@@ -285,6 +302,8 @@ struct lv2_file final : lv2_fs_object
 
 struct lv2_dir final : lv2_fs_object
 {
+	static constexpr u32 id_type = 2;
+ 
 	const std::vector<fs::dir_entry> entries;
 
 	// Current reading position
@@ -295,6 +314,9 @@ struct lv2_dir final : lv2_fs_object
 		, entries(std::move(entries))
 	{
 	}
+
+	lv2_dir(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	// Read next
 	const fs::dir_entry* dir_read()
@@ -598,6 +620,8 @@ error_code sys_fs_lsn_write(ppu_thread& ppu, u32 fd, vm::cptr<void>, u64);
 error_code sys_fs_mapped_allocate(ppu_thread& ppu, u32 fd, u64, vm::pptr<void> out_ptr);
 error_code sys_fs_mapped_free(ppu_thread& ppu, u32 fd, vm::ptr<void> ptr);
 error_code sys_fs_truncate2(ppu_thread& ppu, u32 fd, u64 size);
+error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, s32 unk1, vm::cptr<char> str1);
 error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char> file_system, vm::cptr<char> path, s32 unk1, s32 prot, s32 unk3, vm::cptr<char> str1, u32 str_len);
+error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 unk2);
 error_code sys_fs_get_mount_info_size(ppu_thread& ppu, vm::ptr<u64> len);
-error_code sys_fs_get_mount_info(ppu_thread& ppu, vm::ptr<CellFsMountInfo> info, u32 len, vm::ptr<u64> out_len);
+error_code sys_fs_get_mount_info(ppu_thread& ppu, vm::ptr<CellFsMountInfo> info, u64 len, vm::ptr<u64> out_len);

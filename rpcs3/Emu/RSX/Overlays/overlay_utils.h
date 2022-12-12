@@ -36,6 +36,26 @@ struct vertex
 		return values[index];
 	}
 
+	float& x()
+	{
+		return values[0];
+	}
+
+	float& y()
+	{
+		return values[1];
+	}
+
+	float& z()
+	{
+		return values[2];
+	}
+
+	float& w()
+	{
+		return values[3];
+	}
+
 	void vec2(float x, float y)
 	{
 		values[0] = x;

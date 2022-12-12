@@ -35,18 +35,23 @@ namespace rsx
 				return;
 			}
 
-			auto bytes = f.to_vector<u8>();
-			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(f.size()), &w, &h, &bpp, STBI_rgb_alpha);
+			const std::vector<u8> bytes = f.to_vector<u8>();
+			load_data(bytes);
 		}
 
 		image_info::image_info(const std::vector<u8>& bytes)
 		{
-			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, STBI_rgb_alpha);
+			load_data(bytes);
 		}
 
 		image_info::~image_info()
 		{
 			if (data) stbi_image_free(data);
+		}
+
+		void image_info::load_data(const std::vector<u8>& bytes)
+		{
+			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, STBI_rgb_alpha);
 		}
 
 		resource_config::resource_config()
@@ -234,7 +239,7 @@ namespace rsx
 		{
 			if (sinus_modifier >= 0)
 			{
-				static const f32 PI = 3.14159265f;
+				static constexpr f32 PI = 3.14159265f;
 				const f32 pulse_sinus_x = static_cast<f32>(get_system_time() / 1000) * pulse_speed_modifier;
 				pulse_sinus_offset = fmod(pulse_sinus_x + sinus_modifier * PI, 2.0f * PI);
 			}
@@ -355,72 +360,144 @@ namespace rsx
 			return font_ref ? font_ref : fontmgr::get("Arial", 12);
 		}
 
-		std::vector<vertex> overlay_element::render_text(const char32_t *string, f32 x, f32 y)
+		std::vector<vertex> overlay_element::render_text(const char32_t* string, f32 x, f32 y)
 		{
 			auto renderer = get_font();
 
-			f32 text_extents_w = 0.f;
-			u16 clip_width = clip_text ? w : umax;
+			const u16 clip_width = clip_text ? w : umax;
 			std::vector<vertex> result = renderer->render_text(string, clip_width, wrap_text);
 
 			if (!result.empty())
 			{
-				for (auto &v : result)
+				const auto apply_transform = [&]()
 				{
-					// Check for real text region extent
-					// TODO: Ellipsis
-					text_extents_w = std::max(v.values[0], text_extents_w);
+					const f32 size_px = renderer->get_size_px();
 
-					// Apply transform.
-					// (0, 0) has text sitting one line off the top left corner (text is outside the rect) hence the offset by text height
-					v.values[0] += x + padding_left;
-					v.values[1] += y + padding_top + static_cast<f32>(renderer->get_size_px());
+					for (vertex& v : result)
+					{
+						// Apply transform.
+						// (0, 0) has text sitting one line off the top left corner (text is outside the rect) hence the offset by text height
+						v.x() += x + padding_left;
+						v.y() += y + padding_top + size_px;
+					}
+				};
+
+				if (alignment == text_align::left)
+				{
+					apply_transform();
 				}
-
-				if (alignment != text_align::left)
+				else
 				{
 					// Scan for lines and measure them
 					// Reposition them to the center or right depending on the alignment
-					std::vector<std::pair<u32, u32>> lines;
+					std::vector<std::tuple<u32, u32, f32>> lines;
 					u32 line_begin = 0;
+					u32 line_end = 0;
+					u32 word_end = 0;
 					u32 ctr = 0;
+					f32 text_extents_w = w;
 
-					for (auto c : text)
+					for (const auto& c : text)
 					{
 						switch (c)
 						{
 						case '\r':
+						{
 							continue;
+						}
 						case '\n':
-							lines.emplace_back(line_begin, ctr);
-							line_begin = ctr;
+						{
+							lines.emplace_back(line_begin, std::min(word_end, line_end), text_extents_w);
+							word_end = line_end = line_begin = ctr;
+							text_extents_w = w;
 							continue;
+						}
 						default:
+						{
 							ctr += 4;
+
+							if (c == ' ')
+							{
+								if (line_end == line_begin)
+								{
+									// Ignore leading whitespace
+									word_end = line_end = line_begin = ctr;
+								}
+								else
+								{
+									line_end = ctr;
+								}
+							}
+							else
+							{
+								word_end = line_end = ctr;
+
+								// Check for real text region extent
+								text_extents_w = std::max(result[ctr - 1].x(), text_extents_w);
+							}
+							continue;
+						}
 						}
 					}
 
-					lines.emplace_back(line_begin, ctr);
-					const auto max_region_w = std::max<f32>(text_extents_w, w);
+					// Add final line
+					lines.emplace_back(line_begin, std::min(word_end, line_end), std::max<f32>(text_extents_w, w));
+
 					const f32 offset_extent = (alignment == text_align::center ? 0.5f : 1.0f);
+					const f32 size_px = renderer->get_size_px() * 0.5f;
 
-					for (auto p : lines)
+					// Apply padding
+					apply_transform();
+
+					// Moves all glyphs of a line by the correct amount to get a nice alignment.
+					const auto move_line = [&result, &offset_extent](u32 begin, u32 end, f32 max_region_w)
 					{
-						if (p.first >= p.second)
-							continue;
-
-						const f32 line_length = result[p.second - 1].values[0] - result[p.first].values[0];
-						const bool wrapped = std::fabs(result[p.second - 1].values[1] - result[p.first + 3].values[1]) >= (renderer->get_size_px() * 0.5f);
-
-						if (wrapped)
-							continue;
+						const f32 line_length = result[end - 1].x() - result[begin].x();
 
 						if (line_length < max_region_w)
 						{
 							const f32 offset = (max_region_w - line_length) * offset_extent;
-							for (auto n = p.first; n < p.second; ++n)
+							for (auto n = begin; n < end; ++n)
 							{
-								result[n].values[0] += offset;
+								result[n].x() += offset;
+							}
+						}
+					};
+
+					// Properly place all lines individually
+					for (const auto& [begin, end, max_region_w] : lines)
+					{
+						if (begin >= end)
+							continue;
+
+						// Check if there's any wrapped text
+						if (std::fabs(result[end - 1].y() - result[begin + 3].y()) < size_px)
+						{
+							// No wrapping involved. We can just move the entire line.
+							move_line(begin, end, max_region_w);
+							continue;
+						}
+
+						// Wrapping involved. We have to search for the line breaks and move each line seperately.
+						for (u32 i_begin = begin, i_next = begin + 4;; i_next += 4)
+						{
+							// Check if this is the last glyph in the line of text.
+							const bool is_last_glyph = i_next >= end;
+
+							// The line may be wrapped, so we need to check if the next glyph's position is below the current position.
+							if (is_last_glyph || (result[i_next - 1].y() - result[i_begin + 3].y() >= size_px))
+							{
+								// Whenever we reached the end of a visual line we need to move its glyphs accordingly.
+								const u32 i_end = i_next - (is_last_glyph ? 0 : 4);
+
+								move_line(i_begin, i_end, max_region_w);
+
+								i_begin = i_end;
+
+								if (is_last_glyph)
+								{
+									break;
+								}
 							}
 						}
 					}
@@ -578,12 +655,10 @@ namespace rsx
 				m_items.push_back(std::move(item));
 				return m_items.back().get();
 			}
-			else
-			{
-				auto result = item.get();
-				m_items.insert(m_items.begin() + offset, std::move(item));
-				return result;
-			}
+
+			auto result = item.get();
+			m_items.insert(m_items.begin() + offset, std::move(item));
+			return result;
 		}
 
 		compiled_resource& vertical_layout::get_compiled()
@@ -598,6 +673,12 @@ namespace rsx
 
 				for (auto &item : m_items)
 				{
+					if (!item)
+					{
+						rsx_log.error("Found null item in overlay_controls");
+						continue;
+					}
+
 					const s32 item_y_limit = s32{item->y} + item->h - scroll_offset_value - y;
 					const s32 item_y_base = s32{item->y} - scroll_offset_value - y;
 
@@ -606,7 +687,8 @@ namespace rsx
 						// Out of bounds
 						continue;
 					}
-					else if (item_y_limit > h || item_y_base < 0)
+
+					if (item_y_limit > h || item_y_base < 0)
 					{
 						// Partial render
 						areaf clip_rect = static_cast<areaf>(areai{x, y, (x + w), (y + h)});
@@ -649,12 +731,10 @@ namespace rsx
 				m_items.push_back(std::move(item));
 				return m_items.back().get();
 			}
-			else
-			{
-				auto result = item.get();
-				m_items.insert(m_items.begin() + offset, std::move(item));
-				return result;
-			}
+
+			auto result = item.get();
+			m_items.insert(m_items.begin() + offset, std::move(item));
+			return result;
 		}
 
 		compiled_resource& horizontal_layout::get_compiled()
@@ -711,7 +791,6 @@ namespace rsx
 				cmd_img.config.set_image_resource(image_resource_ref);
 				cmd_img.config.color = fore_color;
 				cmd_img.config.external_data_ref = external_ref;
-
 				cmd_img.config.blur_strength = blur_strength;
 
 				// Make padding work for images (treat them as the content instead of the 'background')

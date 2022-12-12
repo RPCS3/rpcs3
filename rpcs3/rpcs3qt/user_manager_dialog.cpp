@@ -17,6 +17,7 @@
 #include "main_application.h"
 #include "gui_settings.h"
 #include "persistent_settings.h"
+#include "qt_utils.h"
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
@@ -426,7 +427,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(show_dir_act, &QAction::triggered, this, [this, key]()
 	{
 		const QString path = qstr(m_user_list[key].GetUserDir());
-		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+		gui::utils::open_dir(path);
 	});
 
 	connect(user_id_act, &QAction::triggered, this, [this] {OnSort(0); });

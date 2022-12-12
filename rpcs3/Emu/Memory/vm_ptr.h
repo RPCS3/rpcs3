@@ -29,7 +29,7 @@ namespace vm
 		using type = T;
 		using addr_type = std::remove_cv_t<AT>;
 
-		using enable_bitcopy = std::true_type;
+		ENABLE_BITWISE_SERIALIZATION;
 
 		_ptr_base() = default;
 
@@ -240,7 +240,7 @@ namespace vm
 
 	public:
 		using addr_type = std::remove_cv_t<AT>;
-		using enable_bitcopy = std::true_type;
+		ENABLE_BITWISE_SERIALIZATION;
 
 		_ptr_base() = default;
 

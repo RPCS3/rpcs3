@@ -1,5 +1,7 @@
 #include "GLOverlays.h"
 
+#include "../rsx_utils.h"
+
 namespace gl
 {
 	// Lame
@@ -82,7 +84,7 @@ namespace gl
 		glBindVertexArray(old_vao);
 	}
 
-	void overlay_pass::run(gl::command_context& cmd, const areau& region, GLuint target_texture, bool depth_target, bool use_blending)
+	void overlay_pass::run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool enable_blending)
 	{
 		if (!compiled)
 		{
@@ -97,16 +99,26 @@ namespace gl
 		{
 			save_fbo = std::make_unique<fbo::save_binding_state>(fbo);
 
-			if (depth_target)
+			switch (image_aspect_bits)
 			{
-				fbo.draw_buffer(fbo.no_color);
-				fbo.depth_stencil = target_texture;
-			}
-			else
-			{
+			case gl::image_aspect::color:
 				fbo.color[0] = target_texture;
 				fbo.draw_buffer(fbo.color[0]);
+				break;
+			case gl::image_aspect::depth:
+				fbo.draw_buffer(fbo.no_color);
+				fbo.depth = target_texture;
+				break;
+			case gl::image_aspect::depth | gl::image_aspect::stencil:
+				fbo.draw_buffer(fbo.no_color);
+				fbo.depth_stencil = target_texture;
+				break;
+			default:
+				fmt::throw_exception("Unsupported image aspect combination 0x%x", image_aspect_bits);
 			}
+
+			enable_depth_writes = (image_aspect_bits & m_write_aspect_mask) & gl::image_aspect::depth;
+			enable_stencil_writes = (image_aspect_bits & m_write_aspect_mask) & gl::image_aspect::stencil;
 		}
 
 		if (!target_texture || fbo.check())
@@ -117,17 +129,37 @@ namespace gl
 			// Set initial state
 			glViewport(region.x1, region.y1, region.width(), region.height());
 			cmd->color_maski(0, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-			cmd->depth_mask(depth_target ? GL_TRUE : GL_FALSE);
+			cmd->depth_mask(image_aspect_bits == gl::image_aspect::color ? GL_FALSE : GL_TRUE);
 
-			// Disabling depth test will also disable depth writes which is not desired
-			cmd->depth_func(GL_ALWAYS);
-			cmd->enable(GL_DEPTH_TEST);
-
-			cmd->disable(GL_SCISSOR_TEST);
 			cmd->disable(GL_CULL_FACE);
-			cmd->disable(GL_STENCIL_TEST);
+			cmd->disable(GL_SCISSOR_TEST);
+			cmd->clip_planes(GL_NONE);
 
-			if (use_blending)
+			if (enable_depth_writes)
+			{
+				// Disabling depth test will also disable depth writes which is not desired
+				cmd->depth_func(GL_ALWAYS);
+				cmd->enable(GL_DEPTH_TEST);
+			}
+			else
+			{
+				cmd->disable(GL_DEPTH_TEST);
+			}
+
+			if (enable_stencil_writes)
+			{
+				// Disabling stencil test also disables stencil writes.
+				cmd->enable(GL_STENCIL_TEST);
+				cmd->stencil_mask(0xFF);
+				cmd->stencil_func(GL_ALWAYS, 0xFF, 0xFF);
+				cmd->stencil_op(GL_KEEP, GL_KEEP, GL_REPLACE);
+			}
+			else
+			{
+				cmd->disable(GL_STENCIL_TEST);
+			}
+
+			if (enable_blending)
 			{
 				cmd->enablei(GL_BLEND, 0);
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -149,6 +181,7 @@ namespace gl
 			if (target_texture)
 			{
 				fbo.color[0] = GL_NONE;
+				fbo.depth = GL_NONE;
 				fbo.depth_stencil = GL_NONE;
 			}
 		}
@@ -401,10 +434,8 @@ namespace gl
 		{
 			return cached->second.get();
 		}
-		else
-		{
-			return load_simple_image(desc, true, owner_uid);
-		}
+
+		return load_simple_image(desc, true, owner_uid);
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)
@@ -468,6 +499,12 @@ namespace gl
 		saved_sampler_state save_30(30, m_sampler);
 		saved_sampler_state save_31(31, m_sampler);
 
+		if (ui.status_flags & rsx::overlays::status_bits::invalidate_image_cache)
+		{
+			remove_temp_resources(ui.uid);
+			ui.status_flags.clear(rsx::overlays::status_bits::invalidate_image_cache);
+		}
+
 		for (auto& cmd : ui.get_compiled().draw_commands)
 		{
 			set_primitive_type(cmd.config.primitives);
@@ -511,7 +548,7 @@ namespace gl
 			program_handle.uniforms["blur_strength"] = static_cast<s32>(cmd.config.blur_strength);
 			program_handle.uniforms["clip_region"] = static_cast<s32>(cmd.config.clip_region);
 			program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
-			overlay_pass::run(cmd_, viewport, target, false, true);
+			overlay_pass::run(cmd_, viewport, target, gl::image_aspect::color, true);
 		}
 
 		ui.update();
@@ -582,41 +619,64 @@ namespace gl
 		saved_sampler_state saved2(30, m_sampler);
 		cmd->bind_texture(30, GL_TEXTURE_2D, source[1]);
 
-		overlay_pass::run(cmd, viewport, GL_NONE, false, false);
+		overlay_pass::run(cmd, viewport, GL_NONE, gl::image_aspect::color, false);
 	}
 
-	rp_ssbo_to_d24x8_texture::rp_ssbo_to_d24x8_texture()
+	rp_ssbo_to_generic_texture::rp_ssbo_to_generic_texture()
 	{
 		vs_src =
 		#include "../Program/GLSLSnippets/GenericVSPassthrough.glsl"
 		;
 
 		fs_src =
-		#include "../Program/GLSLSnippets/CopyBufferToD24x8.glsl"
+		#include "../Program/GLSLSnippets/CopyBufferToGenericImage.glsl"
 		;
+
+		const auto& caps = gl::get_driver_caps();
+		const bool stencil_export_supported = caps.ARB_shader_stencil_export_supported;
+		const bool legacy_format_support = caps.subvendor_ATI;
 
 		std::pair<std::string_view, std::string> repl_list[] =
 		{
 			{ "%set, ", "" },
 			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
-			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) }
+			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) },
+			{ "%stencil_export_supported", stencil_export_supported ? "1" : "0" },
+			{ "%legacy_format_support", legacy_format_support ? "1" : "0" }
 		};
 
 		fs_src = fmt::replace_all(fs_src, repl_list);
+
+		if (stencil_export_supported)
+		{
+			m_write_aspect_mask |= gl::image_aspect::stencil;
+		}
 	}
 
-	void rp_ssbo_to_d24x8_texture::run(gl::command_context& cmd,
-		const buffer* src, const texture* dst,
+	void rp_ssbo_to_generic_texture::run(gl::command_context& cmd,
+		const buffer* src, const texture_view* dst,
 		const u32 src_offset, const coordu& dst_region,
-		const pixel_unpack_settings& settings)
+		const pixel_buffer_layout& layout)
 	{
-		const u32 row_length = settings.get_row_length() ? settings.get_row_length() : static_cast<u32>(dst_region.width);
+		const u32 bpp = dst->image()->pitch() / dst->image()->width();
+		const u32 row_length = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
+
 		program_handle.uniforms["src_pitch"] = row_length;
-		program_handle.uniforms["swap_bytes"] = settings.get_swap_bytes();
-		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * 4 * dst_region.height);
+		program_handle.uniforms["swap_bytes"] = layout.swap_bytes;
+		program_handle.uniforms["format"] = static_cast<GLenum>(dst->image()->get_internal_format());
+		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * bpp * dst_region.height);
 
 		cmd->stencil_mask(0xFF);
 
-		overlay_pass::run(cmd, dst_region, dst->id(), true);
+		overlay_pass::run(cmd, dst_region, dst->id(), dst->aspect());
+	}
+
+	void rp_ssbo_to_generic_texture::run(gl::command_context& cmd,
+		const buffer* src, texture* dst,
+		const u32 src_offset, const coordu& dst_region,
+		const pixel_buffer_layout& layout)
+	{
+		gl::nil_texture_view view(dst);
+		run(cmd, src, &view, src_offset, dst_region, layout);
 	}
 }

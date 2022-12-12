@@ -8,7 +8,6 @@
 #include "Thread.h"
 #include "Utilities/JIT.h"
 #include <thread>
-#include <sstream>
 #include <cfenv>
 
 #ifdef _WIN32
@@ -17,6 +16,9 @@
 #include <process.h>
 #include <sysinfoapi.h>
 #else
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #ifdef __APPLE__
 #define _XOPEN_SOURCE
 #define __USE_GNU
@@ -94,15 +96,7 @@ thread_local bool g_tls_access_violation_recovered = false;
 extern thread_local std::string(*g_tls_log_prefix)();
 
 // Report error and call std::abort(), defined in main.cpp
-[[noreturn]] void report_fatal_error(std::string_view);
-
-template <>
-void fmt_class_string<std::thread::id>::format(std::string& out, u64 arg)
-{
-	std::ostringstream ss;
-	ss << get_object(arg);
-	out += ss.str();
-}
+[[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
 std::string dump_useful_thread_info()
 {
@@ -1248,16 +1242,18 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 
 	const auto cpu = get_current_cpu_thread();
 
-	if (rsx::g_access_violation_handler)
+	if (addr < RAW_SPU_BASE_ADDR && vm::check_addr(addr) && rsx::g_access_violation_handler)
 	{
+		bool state_changed = false;
+
 		if (cpu)
 		{
-			vm::temporary_unlock(*cpu);
+			state_changed = vm::temporary_unlock(*cpu);
 		}
 
 		bool handled = rsx::g_access_violation_handler(addr, is_writing);
 
-		if (cpu && (cpu->state += cpu_flag::temp, cpu->test_stopped()))
+		if (state_changed && (cpu->state += cpu_flag::temp, cpu->test_stopped()))
 		{
 			//
 		}
@@ -1536,14 +1532,14 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			// If we fail due to being busy, wait a bit and try again.
 			while (static_cast<u32>(sending_error) == CELL_EBUSY)
 			{
+				thread_ctrl::wait_for(1000);
+				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+
 				if (cpu->is_stopped())
 				{
 					sending_error = {};
 					break;
 				}
-
-				thread_ctrl::wait_for(1000);
-				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
 			}
 
 			if (sending_error)
@@ -1644,7 +1640,7 @@ static void append_thread_name(std::string& msg)
 	}
 	else
 	{
-		fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
+		fmt::append(msg, "Thread id = %u.\n", thread_ctrl::get_tid());
 	}
 }
 
@@ -1931,7 +1927,10 @@ const bool s_terminate_handler_set = []() -> bool
 	std::set_terminate([]()
 	{
 		if (IsDebuggerPresent())
+		{
+			logs::listener::sync_all();
 			utils::trap();
+		}
 
 		report_fatal_error("RPCS3 has abnormally terminated.");
 	});
@@ -2069,7 +2068,7 @@ void thread_base::set_name(std::string name)
 u64 thread_base::finalize(thread_state result_state) noexcept
 {
 	// Report pending errors
-	error_code::error_report(0, 0, 0, 0);
+	error_code::error_report(0, nullptr, nullptr, nullptr, nullptr);
 
 #ifdef _WIN32
 	static thread_local ULONG64 tls_cycles{};
@@ -2322,14 +2321,14 @@ thread_state thread_ctrl::state()
 	return static_cast<thread_state>(_this->m_sync & 3);
 }
 
-void thread_ctrl::_wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
+void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 {
 	auto _this = g_tls_this_thread;
 
 #ifdef __linux__
 	static thread_local struct linux_timer_handle_t
 	{
-		// Allocate timer only if needed (i.e. someone calls _wait_for with alert and short period)
+		// Allocate timer only if needed (i.e. someone calls wait_for with alert and short period)
 		const int m_timer = timerfd_create(CLOCK_MONOTONIC, 0);
 
 		linux_timer_handle_t() noexcept
@@ -2381,6 +2380,58 @@ void thread_ctrl::_wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 	list.set<0>(_this->m_sync, 0, 4 + 1);
 	list.set<1>(_this->m_taskq, nullptr);
 	list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
+}
+
+void thread_ctrl::wait_for_accurate(u64 usec)
+{
+	if (!usec)
+	{
+		return;
+	}
+
+	using namespace std::chrono_literals;
+
+	const auto until = std::chrono::steady_clock::now() + 1us * usec;
+
+	while (true)
+	{
+#ifdef __linux__
+		// NOTE: Assumption that timer initialization has succeeded
+		u64 host_min_quantum = usec <= 1000 ? 10 : 50;
+#else
+		// Host scheduler quantum for windows (worst case)
+		// NOTE: On ps3 this function has very high accuracy
+		constexpr u64 host_min_quantum = 500;
+#endif
+		if (usec >= host_min_quantum)
+		{
+#ifdef __linux__
+			// Do not wait for the last quantum to avoid loss of accuracy
+			wait_for(usec - ((usec % host_min_quantum) + host_min_quantum), false);
+#else
+			// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
+			wait_for(usec - (usec % host_min_quantum), false);
+#endif
+		}
+		// TODO: Determine best value for yield delay
+		else if (usec >= host_min_quantum / 2)
+		{
+			std::this_thread::yield();
+		}
+		else
+		{
+			busy_wait(100);
+		}
+
+		const auto current = std::chrono::steady_clock::now();
+
+		if (current >= until)
+		{
+			break;
+		}
+
+		usec = (until - current).count();
+	}
 }
 
 std::string thread_ctrl::get_name_cached()
@@ -2602,7 +2653,10 @@ void thread_base::exec()
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
 	if (IsDebuggerPresent())
+	{
+		logs::listener::sync_all();
 		utils::trap();
+	}
 
 	if (const auto _this = g_tls_this_thread)
 	{
@@ -3087,6 +3141,8 @@ u64 thread_ctrl::get_tid()
 {
 #ifdef _WIN32
 	return GetCurrentThreadId();
+#elif defined(__linux__)
+	return syscall(SYS_gettid);
 #else
 	return reinterpret_cast<u64>(pthread_self());
 #endif

@@ -257,7 +257,7 @@ namespace vk
 			const auto s_offset = utils::align<u32>(z_offset + in_depth_size, 256);
 
 			// Zero out the stencil block
-			vkCmdFillBuffer(cmd, src->value, s_offset, in_stencil_size, 0);
+			vkCmdFillBuffer(cmd, src->value, s_offset, utils::align(in_stencil_size, 4), 0);
 
 			vk::insert_buffer_memory_barrier(cmd, src->value, s_offset, in_stencil_size,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -1012,7 +1012,7 @@ namespace vk
 					{
 						// D-S aspect requires a load section that can fit a separated block => D(4) + S(1)
 						// Due to reverse processing of inputs, only enough space to fit one layer is needed here.
-						scratch_buf_size += dst_image->width() * dst_image->height() * 5;
+						scratch_buf_size += (image_linear_size * 5) / 4;
 					}
 
 					// Must acquire scratch buffer owned by the processing command queue!

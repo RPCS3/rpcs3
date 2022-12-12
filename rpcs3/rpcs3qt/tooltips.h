@@ -33,7 +33,7 @@ public:
 		const QString zcull_operation_mode         = tr("Changes ZCULL report synchronization behaviour. Experiment to find the best option for your game. Approximate mode is recommended for most games.\n· Precise is the most accurate to PS3 behaviour. Required for accurate visuals in some titles such as Demon's Souls and The Darkness.\n· Approximate is a much faster way to generate occlusion data which may not always match what the PS3 would generate. Works well with most PS3 games.\n· Relaxed changes the synchronization method completely and can greatly improve performance in some games or completely break others.");
 		const QString max_spurs_threads            = tr("Limits the maximum number of SPURS threads in each thread group.\nMay improve performance in some cases, especially on systems with limited number of hardware threads.\nLimiting the number of threads is likely to cause crashes; it's recommended to keep this at the default value.");
 		const QString sleep_timers_accuracy        = tr("Changes the sleep period accuracy.\n'As Host' uses default accuracy of the underlying operating system, while 'All Timers' attempts to improve it.\n'Usleep Only' limits the adjustments to usleep syscall only.\nCan affect performance in unexpected ways.");
-		const QString rsx_fifo_accuracy            = tr("\"Fast\" is the least accurate setting, RSX does not emulate atomic FIFO buffer.\n\"Atomic & Ordered\" is the most accurate but it is the slowest and without much stability benefit in games over \"Atomic\" which benefits stability greatly in many games with little performance penalty.");
+		const QString rsx_fifo_accuracy            = tr("\"Fast\" is the least accurate setting, RSX does not emulate atomic FIFO buffer.\n\"Atomic\" benefits stability greatly in many games with little performance penalty.\n\"Atomic & Ordered\" is the most accurate but it is the slowest and without much stability benefit in games.");
 		const QString vblank_rate                  = tr("Adjusts the frequency of vertical blanking signals that the emulator sends.\nAffects timing of events which rely on these signals.");
 		const QString vblank_ntsc_fixup            = tr("Multiplies the rate of VBLANK by 1000/1001 for values like 59.94Hz.\nKnown to fix the rhythm game Space Channel 5 Part 2");
 		const QString clocks_scale                 = tr("Changes the scale of emulated system time.\nAffects software which uses system time to calculate things such as dynamic timesteps.");
@@ -42,7 +42,8 @@ public:
 		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Safe' mode for more spec compliant behavior at the cost of some CPU overhead. This setting works with all devices.\nUse 'Fast' to use a faster but hacky version. This option is internally disabled for NVIDIA GPUs due to causing GPU hangs.");
 		const QString allow_host_labels            = tr("Allows the host GPU to synchronize with CELL directly. This incurs a performance penalty, but exposes the true state of GPU objects to the guest CPU. Can help eliminate visual noise and glitching at the cost of performance. Use with caution.");
 		const QString disable_msl_fast_math        = tr("Disables Fast Math for MSL shaders, which may violate the IEEE 754 standard.\nDisabling it may fix some artefacts especially on Apple GPUs, at the cost of performance.");
-		const QString mvk_software_vksemaphore     = tr("Emulates VkSemaphore purely in software instead of using MTLEvent/MTLFence.\nEnabling this might fix artefacts caused by synchronization issues, but can cause tearing and usually has a very high performance cost.\nMainly affects Apple GPUs when running the emulator using Rosetta.");
+		const QString suspend_savestates           = tr("When this mode is on, emulation exits when saving and the savestate file is concealed after loading it, preventing reuse by RPCS3.\nThis mode is like hibernation of emulation: if you don't want to be able to cheat using savestates when playing the game, consider using this mode.\nDo note that the savestate file is not gone completely just ignored by RPCS3, you can manually relaunch it if needed.");
+		const QString paused_savestates            = tr("When this mode is on, savestates are loaded and paused on the first frame.\nThis allows players to prepare for gameplay without being thrown into the action immediately.");
 
 		// audio
 
@@ -50,6 +51,7 @@ public:
 		const QString audio_out_linux           = tr("Cubeb uses a cross-platform approach and supports audio buffering, so it is the recommended option.\nIf it's not available, FAudio could be used instead.");
 		const QString audio_provider            = tr("Controls which PS3 audio API is used.\nGames use CellAudio, while VSH requires RSXAudio.");
 		const QString audio_avport              = tr("Controls which avport is used to sample audio data from.");
+		const QString audio_device              = tr("Controls which device is used by audio backend.");
 		const QString audio_dump                = tr("Saves all audio as a raw wave file. If unsure, leave this unchecked.");
 		const QString convert                   = tr("Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.");
 		const QString audio_format              = tr("Determines the sound format.\nConfigure this setting if you want to switch between stereo and surround sound.\nChanging these values requires a restart of the game.\nThe manual setting will use your selected formats while the automatic setting will let the game choose from all available formats.");
@@ -84,6 +86,7 @@ public:
 		const QString fixup_ppuvnan             = tr("Fixup NaN results in vector instructions in PPU backends.\nIf unsure, do not modify this setting.");
 		const QString accurate_ppuvnan          = tr("Accurately set NaN results in vector instructions in PPU backends.\nIf unsure, do not modify this setting.");
 		const QString accurate_ppufpcc          = tr("Accurately set FPCC Bits in PPU backends.\nIf unsure, do not modify this setting.");
+		const QString max_cpu_preempt           = tr("Reduces CPU usage and power consumption, on mobile devices improves battery life. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
 
 		// debug
 
@@ -109,7 +112,6 @@ public:
 		const QString disable_fifo_reordering      = tr("Disables RSX FIFO optimizations completely. Draws are processed as they are received by the DMA puller.");
 		const QString gpu_texture_scaling          = tr("Force all texture transfer, scaling and conversion operations on the GPU.\nMay cause texture corruption in some cases.");
 		const QString strict_texture_flushing      = tr("Forces texture flushing even in situations where it is not necessary/correct. Known to cause visual artifacts, but useful for debugging certain texture cache issues.");
-		const QString disable_native_fp16          = tr("Disables hardware half-float support which is known to cause problems in some rare cases on some GPUs.");
 		const QString enable_3d                    = tr("Enables 3D stereo rendering.\nNote that only anaglyph viewing is supported at the moment.");
 		const QString accurate_ppu_128_loop        = tr("When enabled, PPU atomic operations will operate on entire cache line data, as opposed to a single 64bit block of memory when disabled.\nNumerical values control whether or not to enable the accurate version based on the atomic operation's length.");
 		const QString enable_performance_report    = tr("Measure certain events and print a chart after the emulator is stopped. Don't enable if not asked to.");
@@ -175,12 +177,15 @@ public:
 		const QString async_with_shader_interpreter   = tr("Hybrid rendering mode.\nIf a shader is not found in the cache, the interpreter will be used to render approximated graphics for this shader until it has compiled.");
 		const QString shader_interpreter_only         = tr("All rendering is handled by the interpreter with no attempt to compile native shaders.\nThis mode is very slow and experimental.");
 		const QString shader_compiler_threads         = tr("Number of threads to use for the shader compiler backend.\nOnly has an impact when shader mode is set to one of the asynchronous modes.");
+		const QString shader_precision                = tr("Controls the precision level of generated shaders. Low precision generates much faster code depending on the hardware, but can sometimes generate minor visual glitches or flicker.");
 
-		const QString async_texture_streaming                  = tr("Stream textures to GPU in parallel with 3D rendering using asynchronous compute.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer and greatly benefits from having MTRSX enabled if you have a capable CPU.");
-		const QString force_disable_exclusive_fullscreen_mode  = tr("Forces borderless windowed mode for all fullscreen windows. Disables exclusive fullscreen graphics driver optimizations.\nUse when you wish to stream using vulkan or if your screen goes dim using hdr.\nNote rpcs3 does not use hdr at all.");
+		const QString async_texture_streaming   = tr("Stream textures to GPU in parallel with 3D rendering using asynchronous compute.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer and greatly benefits from having MTRSX enabled if you have a capable CPU.");
+		const QString exclusive_fullscreen_mode = tr("Controls which fullscreen mode RPCS3 requests from drivers when using Vulkan renderer.\nAutomatic will let the driver choose an appropriate mode, while the other options will hint the drivers on whether they should use exclusive or borderless fullscreen.\nUsing Prefer borderless fullscreen option can help if you have issues with streaming RPCS3 gameplay or if your system incorrectly enables HDR mode when using fullscreen.");
 
 		const QString fsr_upscaling     = tr("Enable FidelityFX Super Resolution upscaling filter to improve the look of upscaled images.\nIf the game is rendering at an internal resolution lower than your window resolution, FidelityFX will handle the upscale.\nCan cause visual artifacts.\nDoes not work with stereo 3D output for now.");
 		const QString fsr_rcas_strength = tr("Control the sharpening strength applied by FidelityFX Super Resolution. Higher values will give sharper output but may introduce artifacts.");
+
+		const QString texture_lod_bias = tr("Changes Texture sampling accuracy. (Small changes have a big effect.)\nAvoid using values outside the range of -12 to +12 if you're unsure.\n-3 to +3 is plenty for most usecases");
 
 		// gui
 
@@ -198,6 +203,7 @@ public:
 		const QString use_rich_presence  = tr("Enables use of Discord Rich Presence to show what game you are playing on Discord.\nRequires a restart of RPCS3 to completely close the connection.");
 		const QString discord_state      = tr("Tell your friends what you are doing.");
 		const QString custom_colors      = tr("Prioritize custom user interface colors over properties set in stylesheet.");
+		const QString uuid               = tr("This is the ID used for hardware statistics.\nIt should only be reset if you change your hardware configuration or if you copied RPCS3 to another PC.");
 
 		// input
 
@@ -213,6 +219,8 @@ public:
 		const QString buzz              = tr("Buzz! support.\nSelect 1 or 2 controllers if the game requires Buzz! controllers and you don't have real controllers.\nSelect Null if the game has support for DualShock or if you have real Buzz! controllers.");
 		const QString turntable         = tr("DJ Hero Turntable controller support.\nSelect 1 or 2 controllers if the game requires DJ Hero Turntable controllers and you don't have real turntable controllers.\nSelect Null if the game has support for DualShock or if you have real turntable controllers.\nA real turntable controller can be used at the same time as an emulated turntable controller.");
 		const QString ghltar            = tr("Guitar Hero Live (GHL) Guitar controller support.\nSelect 1 or 2 controllers if the game requires GHL Guitar controllers and you don't have real guitar controllers.\nSelect Null if the game has support for DualShock or if you have real guitar controllers.\nA real guitar controller can be used at the same time as an emulated guitar controller.");
+		const QString background_input  = tr("Allows pad and keyboard input while the game window is unfocused.");
+		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
 
 		// network
 
@@ -220,6 +228,7 @@ public:
 		const QString psn_status    = tr("If set to Simulated, RPCS3 will fake PSN connection as best as it can.");
 		const QString dns           = tr("DNS used to resolve hostnames by applications.");
 		const QString dns_swap      = tr("DNS Swap List.");
+		const QString bind          = tr("Interface IP Address to bind to.");
 
 		// system
 
@@ -255,6 +264,7 @@ public:
 		const QString stick_multiplier   = tr("The stick multipliers can be used to change the sensitivity of your stick movements.<br>The default setting is 1 and represents normal input.");
 		const QString stick_deadzones    = tr("A stick's deadzone determines how far the stick has to be moved until it is fully recognized by the game. The resulting range will be projected onto the full input range in order to give you a smooth experience. Movement inside the deadzone is actually simulated as a real DualShock 3's deadzone of ~13%, so don't worry if there is still movement shown in the emulated stick preview.");
 		const QString vibration          = tr("The PS3 activates two motors (large and small) to handle controller vibrations.<br>You can enable, disable or even switch these signals for the currently selected pad here.");
+		const QString motion_controls    = tr("Use this to configure the gamepad motion controls.");
 		const QString emulated_preview   = tr("The emulated stick values (red dots) in the stick preview represent the actual stick positions as they will be visible to the game. The actual DualShock 3's stick range is not circular but formed like a rounded square (or squircle) which represents the maximum range of the emulated sticks. The blue regular dots represent the raw stick values (including stick multipliers) before they are converted for ingame usage.");
 		const QString trigger_deadzones  = tr("A trigger's deadzone determines how far the trigger has to be moved until it is recognized by the game. The resulting range will be projected onto the full input range in order to give you a smooth experience.");
 		const QString stick_lerp         = tr("With keyboards, you are inevitably restricted to 8 stick directions (4 straight + 4 diagonal). Furthermore, the stick will jump to the maximum value of the chosen direction immediately when a key is pressed. The stick interpolation can be used to work-around both of these issues by smoothening out these directional changes. The lower the value, the longer you have to press or release a key until the maximum amplitude is reached.");

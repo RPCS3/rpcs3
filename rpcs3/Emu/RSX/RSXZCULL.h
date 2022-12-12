@@ -62,7 +62,7 @@ namespace rsx
 		struct query_stat_counter
 		{
 			u32 result;
-			u32 reserved;
+			u32 flags;
 		};
 
 		struct sync_hint_payload_t
@@ -84,6 +84,15 @@ namespace rsx
 			sync_no_notify = 2   // If set, backend hint notifications will not be made
 		};
 
+		enum constants
+		{
+			max_zcull_delay_us    = 300,   // Delay before a report update operation is forced to retire
+			min_zcull_tick_us     = 100,   // Default tick duration. To avoid hardware spam, we schedule peeks in multiples of this.
+			occlusion_query_count = 2048,  // Number of occlusion query slots available. Real hardware actually has far fewer units before choking
+			max_safe_queue_depth  = 1792,  // Number of in-flight queries before we start forcefully flushing data from the GPU device.
+			max_stat_registers    = 8192   // Size of the statistics cache
+		};
+
 		class ZCULL_control
 		{
 		private:
@@ -97,13 +106,6 @@ namespace rsx
 			void disable_optimizations(class ::rsx::thread* ptimer, u32 location);
 
 		protected:
-			// Delay before a report update operation is forced to retire
-			const u32 max_zcull_delay_us = 300;
-			const u32 min_zcull_tick_us = 100;
-
-			// Number of occlusion query slots available. Real hardware actually has far fewer units before choking
-			const u32 occlusion_query_count = 1024;
-			const u32 max_safe_queue_depth = 892;
 
 			bool unit_enabled = false;           // The ZCULL unit is on
 			bool write_enabled = false;          // A surface in the ZCULL-monitored tile region has been loaded for rasterization
@@ -111,7 +113,7 @@ namespace rsx
 			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
 			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
 
-			std::array<occlusion_query_info, 1024> m_occlusion_query_data = {};
+			std::array<occlusion_query_info, 2048> m_occlusion_query_data = {};
 			std::stack<occlusion_query_info*> m_free_occlusion_pool{};
 
 			occlusion_query_info* m_current_task = nullptr;
@@ -126,7 +128,7 @@ namespace rsx
 			u64 m_timer = 0;
 
 			std::vector<queued_report_write> m_pending_writes{};
-			std::unordered_map<u32, query_stat_counter> m_statistics_map{};
+			std::array<query_stat_counter, max_stat_registers> m_statistics_map{};
 
 			// Enables/disables the ZCULL unit
 			void set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue);

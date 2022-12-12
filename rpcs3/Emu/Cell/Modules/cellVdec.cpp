@@ -7,6 +7,7 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "sysPrxForUser.h"
 #include "util/media_utils.h"
+#include "util/init_mutex.hpp"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -173,6 +174,7 @@ struct vdec_context final
 	static const u32 id_base = 0xf0000000;
 	static const u32 id_step = 0x00000100;
 	static const u32 id_count = 1024;
+	SAVESTATE_INIT_POS(24);
 
 	u32 handle = 0;
 
@@ -561,9 +563,10 @@ struct vdec_context final
 									break;
 								}
 							}
-							thread_ctrl::wait_for(1000);
 
-							if (elapsed++ >= 5000) // 5 seconds
+							thread_ctrl::wait_for(10000);
+
+							if (elapsed++ >= 500) // 5 seconds
 							{
 								cellVdec.error("Video au decode has been waiting for a consumer for 5 seconds. (handle=0x%x, seq_id=%d, cmd_id=%d, queue_size=%d)", handle, cmd->seq_id, cmd->id, out_queue.size());
 								elapsed = 0;
@@ -627,7 +630,41 @@ struct vdec_context final
 	}
 };
 
-static void vdecEntry(ppu_thread& ppu, u32 vid)
+struct vdec_creation_lock
+{
+	stx::init_mutex locked;
+
+	vdec_creation_lock()
+	{
+		auto lk = locked.init();
+	}
+};
+
+extern bool try_lock_vdec_context_creation()
+{
+	auto& lock = g_fxo->get<vdec_creation_lock>();
+	auto reset = lock.locked.reset();
+
+	if (reset)
+	{
+		bool context_exists = false;
+
+		idm::select<vdec_context>([&](u32, vdec_context&)
+		{
+			context_exists = true;
+		});
+
+		if (context_exists)
+		{
+			reset.set_init();
+			return false;
+		}
+	}
+
+	return true;
+}
+
+extern void vdecEntry(ppu_thread& ppu, u32 vid)
 {
 	idm::get<vdec_context>(vid)->exec(ppu, vid);
 
@@ -856,9 +893,20 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	}
 
 	// Create decoder context
-	const u32 vid = idm::make<vdec_context>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	std::shared_ptr<vdec_context> vdec;
 
-	auto vdec = idm::get<vdec_context>(vid);
+	if (auto access = g_fxo->get<vdec_creation_lock>().locked.access(); access)
+	{
+		vdec = idm::make_ptr<vdec_context>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	}
+	else
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	const u32 vid = idm::last_id();
+
 	ensure(vdec);
 	vdec->handle = vid;
 
@@ -948,8 +996,10 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	return CELL_OK;
 }
 
-error_code cellVdecStartSeq(u32 handle)
+error_code cellVdecStartSeq(ppu_thread& ppu, u32 handle)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellVdec.warning("cellVdecStartSeq(handle=0x%x)", handle);
 
 	const auto vdec = idm::get<vdec_context>(handle);
@@ -998,8 +1048,10 @@ error_code cellVdecStartSeq(u32 handle)
 	return CELL_OK;
 }
 
-error_code cellVdecEndSeq(u32 handle)
+error_code cellVdecEndSeq(ppu_thread& ppu, u32 handle)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellVdec.warning("cellVdecEndSeq(handle=0x%x)", handle);
 
 	const auto vdec = idm::get<vdec_context>(handle);
@@ -1029,8 +1081,10 @@ error_code cellVdecEndSeq(u32 handle)
 	return CELL_OK;
 }
 
-error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfo> auInfo)
+error_code cellVdecDecodeAu(ppu_thread& ppu, u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfo> auInfo)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellVdec.trace("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, +mode, auInfo);
 
 	const auto vdec = idm::get<vdec_context>(handle);
@@ -1075,8 +1129,10 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 	return CELL_OK;
 }
 
-error_code cellVdecDecodeAuEx2(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfoEx2> auInfo)
+error_code cellVdecDecodeAuEx2(ppu_thread& ppu, u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfoEx2> auInfo)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellVdec.todo("cellVdecDecodeAuEx2(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, +mode, auInfo);
 
 	const auto vdec = idm::get<vdec_context>(handle);
@@ -1129,8 +1185,10 @@ error_code cellVdecDecodeAuEx2(u32 handle, CellVdecDecodeMode mode, vm::cptr<Cel
 	return CELL_OK;
 }
 
-error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format, vm::ptr<u8> outBuff, u32 arg4)
+error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecPicFormat2> format, vm::ptr<u8> outBuff, u32 arg4)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellVdec.trace("cellVdecGetPictureExt(handle=0x%x, format=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format, outBuff, arg4);
 
 	const auto vdec = idm::get<vdec_context>(handle);
@@ -1274,8 +1332,10 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 	return CELL_OK;
 }
 
-error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u8> outBuff)
+error_code cellVdecGetPicture(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u8> outBuff)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellVdec.trace("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
 
 	if (!format)
@@ -1290,11 +1350,13 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 	format2->unk0 = 0;
 	format2->unk1 = 0;
 
-	return cellVdecGetPictureExt(handle, format2, outBuff, 0);
+	return cellVdecGetPictureExt(ppu, handle, format2, outBuff, 0);
 }
 
-error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
+error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicItem> picItem)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellVdec.trace("cellVdecGetPicItem(handle=0x%x, picItem=**0x%x)", handle, picItem);
 
 	const auto vdec = idm::get<vdec_context>(handle);

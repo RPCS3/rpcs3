@@ -15,7 +15,7 @@
 #include "sys_memory.h"
 #include <span>
 
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
@@ -170,6 +170,8 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libwmadec.sprx", 0 },
 };
 
+bool ppu_register_library_lock(std::string_view libname, bool lock_lib);
+
 static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> /*pOpt*/, fs::file src = {}, s64 file_offset = 0)
 {
 	if (flags != 0)
@@ -191,16 +193,6 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	const std::string path = vfs::get(vpath, nullptr, &vpath0);
 	const std::string name = vpath0.substr(vpath0.find_last_of('/') + 1);
 
-	const auto existing = idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& prx)
-	{
-		return prx.path == path && prx.offset == file_offset;
-	});
-
-	if (existing)
-	{
-		return CELL_PRX_ERROR_LIBRARY_FOUND;
-	}
-
 	bool ignore = false;
 
 	constexpr std::string_view firmware_sprx_dir = "/dev_flash/sys/external/";
@@ -221,14 +213,14 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		else
 		{
 			// Use list
-			ignore = g_prx_list.at(name) != 0;
+			ignore = ::at32(g_prx_list, name) != 0;
 		}
 	}
 	else if (vpath0.starts_with("/"))
 	{
 		// Special case : HLE for files outside of "/dev_flash/sys/external/"
 		// Have to specify full path for them
-		ignore = g_prx_list.count(vpath0) && g_prx_list.at(vpath0);
+		ignore = g_prx_list.count(vpath0) && ::at32(g_prx_list, vpath0);
 	}
 
 	auto hle_load = [&]()
@@ -289,6 +281,90 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	sys_prx.success(u8"Loaded module: “%s” (id=0x%x)", vpath, idm::last_id());
 
 	return not_an_error(idm::last_id());
+}
+
+fs::file make_file_view(fs::file&& _file, u64 offset);
+
+std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
+{
+	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(lv2_prx_overlay);
+
+	const std::string path = vfs::get(ar.operator std::string());
+	const s64 offset = ar;
+	const u32 state = ar;
+
+	usz seg_count = 0;
+	ar.deserialize_vle(seg_count);
+
+	std::shared_ptr<lv2_prx> prx;
+
+	auto hle_load = [&]()
+	{
+		prx = std::make_shared<lv2_prx>();
+		prx->path = path;
+		prx->name = path.substr(path.find_last_of(fs::delim) + 1);
+	};
+
+	if (seg_count)
+	{
+		fs::file file{path.substr(0, path.size() - (offset ? fmt::format("_x%x", offset).size() : 0))};
+
+		if (file)
+		{
+			u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
+			file = make_file_view(std::move(file), offset);
+			prx = ppu_load_prx(ppu_prx_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, path, 0, &ar);
+			
+			if (version >= 2 && state == PRX_STATE_STARTED)
+			{
+				ensure(ppu_register_library_lock(prx->module_info_name, true));
+				prx->load_exports();
+			}
+
+			if (version == 1)
+			{
+				prx->load_exports();
+			}
+
+			ensure(prx);
+		}
+		else
+		{
+			ensure(g_cfg.savestate.state_inspection_mode.get());
+
+			hle_load();
+
+			// Partially recover information
+			for (usz i = 0; i < seg_count; i++)
+			{
+				auto& seg = prx->segs.emplace_back();
+				seg.addr = ar;
+				seg.size = 1; // TODO
+			}
+		}
+	}
+	else
+	{
+		hle_load();
+	}
+
+	prx->state = state;
+	return prx;
+}
+
+void lv2_prx::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_prx_overlay);
+
+	ar(vfs::retrieve(path), offset, state);
+
+	// Save segments count
+	ar.serialize_vle(segs.size());
+
+	for (const ppu_segment& seg : segs)
+	{
+		if (seg.type == 0x1u && seg.size) ar(seg.addr);
+	}
 }
 
 error_code sys_prx_get_ppu_guid(ppu_thread& ppu)
@@ -428,9 +504,35 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 	{
 	case 1:
 	{
+		std::lock_guard lock(prx->mutex);
+
+		if (prx->state != PRX_STATE_INITIALIZED)
+		{
+			if (prx->state == PRX_STATE_DESTROYED)
+			{
+				return CELL_ESRCH;
+			}
+
+			return CELL_PRX_ERROR_ERROR;
+		}
+
+		if (prx->exports_end > prx->exports_start && !ppu_register_library_lock(prx->module_info_name, true))
+		{
+			return {CELL_PRX_ERROR_LIBRARY_FOUND, +prx->module_info_name};
+		}
+
+		prx->load_exports();
+
 		if (!prx->state.compare_and_swap_test(PRX_STATE_INITIALIZED, PRX_STATE_STARTING))
 		{
 			// The only error code here
+			ensure(prx->exports_end <= prx->exports_start || ppu_register_library_lock(prx->module_info_name, false));
+
+			if (prx->state == PRX_STATE_DESTROYED)
+			{
+				return CELL_ESRCH;
+			}
+
 			return CELL_PRX_ERROR_ERROR;
 		}
 
@@ -472,6 +574,7 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 		return CELL_PRX_ERROR_ERROR;
 	}
 
+	ppu.check_state();
 	pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
 
 	// This check is probably for older fw
@@ -519,11 +622,13 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		case PRX_STATE_STOPPED: return CELL_PRX_ERROR_ALREADY_STOPPED;
 		case PRX_STATE_STOPPING: return CELL_PRX_ERROR_ALREADY_STOPPING; // Internal error
 		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR; // Internal error
+		case PRX_STATE_DESTROYED: return CELL_ESRCH;
 		case PRX_STATE_STARTED: break;
 		default:
 			fmt::throw_exception("Invalid prx state (%d)", old);
 		}
 
+		ppu.check_state();
 		pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
 		set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 		return CELL_OK;
@@ -535,6 +640,8 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		case 0:
 		{
 			// No error code on invalid state, so throw on unexpected state
+			std::lock_guard lock(prx->mutex);
+			ensure(prx->exports_end <= prx->exports_start || (prx->state == PRX_STATE_STOPPING && ppu_register_library_lock(prx->module_info_name, false)));
 			ensure(prx->state.compare_and_swap_test(PRX_STATE_STOPPING, PRX_STATE_STOPPED));
 			return CELL_OK;
 		}
@@ -556,6 +663,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		case PRX_STATE_STOPPED: return CELL_PRX_ERROR_ALREADY_STOPPED;
 		case PRX_STATE_STOPPING: return CELL_PRX_ERROR_ALREADY_STOPPING; // Internal error
 		case PRX_STATE_STARTING: return CELL_PRX_ERROR_ERROR; // Internal error
+		case PRX_STATE_DESTROYED: return CELL_ESRCH;
 		case PRX_STATE_STARTED: break;
 		default:
 			fmt::throw_exception("Invalid prx state (%d)", old);
@@ -563,6 +671,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 
 		if (pOpt->cmd == 4u)
 		{
+			ppu.check_state();
 			pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
 			set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 		}
@@ -587,7 +696,16 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 	// Get the PRX, free the used memory and delete the object and its ID
 	const auto prx = idm::withdraw<lv2_obj, lv2_prx>(id, [](lv2_prx& prx) -> CellPrxError
 	{
-		switch (prx.state)
+		switch (prx.state.fetch_op([](u32& value)
+		{
+			if (value == PRX_STATE_INITIALIZED || value == PRX_STATE_STOPPED)
+			{
+				value = PRX_STATE_DESTROYED;
+				return true;
+			}
+
+			return false;
+		}).first)
 		{
 		case PRX_STATE_INITIALIZED:
 		case PRX_STATE_STOPPED:
@@ -610,6 +728,8 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 
 	sys_prx.success("_sys_prx_unload_module(id=0x%x, flags=0x%x, pOpt=*0x%x): name='%s'", id, flags, pOpt, prx->name);
 
+	prx->mutex.lock_unlock();
+
 	ppu_unload_prx(*prx);
 
 	ppu_finalize(*prx);
@@ -620,6 +740,17 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 }
 
 void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size);
+
+void lv2_prx::load_exports()
+{
+	if (exports_end <= exports_start)
+	{
+		// Nothing to load
+		return;
+	}
+
+	ppu_manual_load_imports_exports(0, 0, exports_start, exports_end - exports_start);
+}
 
 error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::ptr<void> opt)
 {

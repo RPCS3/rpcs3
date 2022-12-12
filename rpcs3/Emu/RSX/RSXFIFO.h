@@ -90,7 +90,7 @@ namespace rsx
 
 			u32 deferred_primitive = 0;
 			u32 draw_count = 0;
-			u32 begin_end_ctr = 0;
+			bool in_begin_end = false;
 
 			bool enabled = false;
 			u32  num_collapsed = 0;
@@ -113,6 +113,7 @@ namespace rsx
 		class FIFO_control
 		{
 		private:
+			mutable rsx::thread* m_thread;
 			RsxDmaControl* m_ctrl = nullptr;
 			const rsx::rsx_iomap_table* m_iotable;
 			u32 m_internal_get = 0;
@@ -129,6 +130,7 @@ namespace rsx
 			u32 m_cache_addr = 0;
 			u32 m_cache_size = 0;
 			alignas(64) std::byte m_cache[8][128];
+
 		public:
 			FIFO_control(rsx::thread* pctrl);
 			~FIFO_control() = default;
@@ -141,6 +143,7 @@ namespace rsx
 			void sync_get() const;
 			std::span<const u32> get_current_arg_ptr() const;
 			u32 get_remaining_args_count() const { return m_remaining_commands; }
+			void restore_state(u32 cmd, u32 count);
 			void inc_get(bool wait);
 
 			void set_get(u32 get, u32 spin_cmd = 0);

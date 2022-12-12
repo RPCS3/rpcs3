@@ -135,6 +135,8 @@ struct CellAudioOutSoundMode
 	u8 fs;
 	u8 reserved;
 	be_t<u32> layout;
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct CellAudioOutDeviceInfo
@@ -217,5 +219,8 @@ struct audio_out_configuration
 
 	std::array<audio_out, 2> out;
 
+	SAVESTATE_INIT_POS(8.9); // Is a dependency of cellAudio
 	audio_out_configuration();
+	audio_out_configuration(utils::serial& ar);
+	void save(utils::serial& ar);
 };

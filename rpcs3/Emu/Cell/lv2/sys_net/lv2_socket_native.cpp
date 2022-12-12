@@ -13,6 +13,32 @@ lv2_socket_native::lv2_socket_native(lv2_socket_family family, lv2_socket_type t
 {
 }
 
+lv2_socket_native::lv2_socket_native(utils::serial& ar, lv2_socket_type type)
+	: lv2_socket(ar, type)
+{
+#ifdef _WIN32
+	ar(so_reuseaddr, so_reuseport);
+#else
+	std::array<char, 8> dummy{};
+	ar(dummy);
+
+	if (dummy != std::array<char, 8>{})
+	{
+		sys_net.error("[Native] Savestate tried to load Win32 specific data, compatibility may be affected");
+	}
+#endif
+}
+
+void lv2_socket_native::save(utils::serial& ar)
+{
+	static_cast<lv2_socket*>(this)->save(ar, true);
+#ifdef _WIN32
+	ar(so_reuseaddr, so_reuseport);
+#else
+	ar(std::array<char, 8>{});
+#endif
+}
+
 lv2_socket_native::~lv2_socket_native()
 {
 	std::lock_guard lock(mutex);
@@ -81,6 +107,9 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 		auto newsock = std::make_shared<lv2_socket_native>(family, type, protocol);
 		newsock->set_socket(native_socket, family, type, protocol);
 
+		// Sockets inherit non blocking behaviour from their parent
+		newsock->so_nbio = so_nbio;
+
 		sys_net_sockaddr ps3_addr = native_addr_to_sys_net_addr(native_addr);
 
 		return {true, 0, std::move(newsock), ps3_addr};
@@ -94,22 +123,31 @@ std::tuple<bool, s32, std::shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_
 	return {false, {}, {}, {}};
 }
 
-s32 lv2_socket_native::bind(const sys_net_sockaddr& addr, [[maybe_unused]] s32 ps3_id)
+s32 lv2_socket_native::bind(const sys_net_sockaddr& addr)
 {
 	std::lock_guard lock(mutex);
 
 	const auto* psa_in = reinterpret_cast<const sys_net_sockaddr_in*>(&addr);
 
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	u32 saddr = nph.get_bind_ip();
+	if (saddr == 0)
+	{
+		// If zero use the supplied address
+		saddr = std::bit_cast<u32>(psa_in->sin_addr);
+	}
+
 	::sockaddr_in native_addr{};
 	native_addr.sin_family      = AF_INET;
 	native_addr.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
-	native_addr.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+	native_addr.sin_addr.s_addr = saddr;
 	::socklen_t native_addr_len = sizeof(native_addr);
 
 	sys_net.warning("[Native] Trying to bind %s:%d", native_addr.sin_addr, std::bit_cast<be_t<u16>, u16>(native_addr.sin_port));
 
 	if (::bind(socket, reinterpret_cast<struct sockaddr*>(&native_addr), native_addr_len) == 0)
 	{
+		last_bound_addr = addr;
 		return CELL_OK;
 	}
 	return -get_last_error(false);
@@ -149,7 +187,7 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 #ifdef _WIN32
 			connecting = true;
 #endif
-			this->poll_queue(u32{0}, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
+			this->poll_queue(nullptr, lv2_socket::poll_t::write, [this](bs_t<lv2_socket::poll_t> events) -> bool
 				{
 					if (events & lv2_socket::poll_t::write)
 					{
@@ -827,6 +865,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_nat
 #endif
 
 	const auto result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+
 	if (result)
 	{
 		return {{-result, {}, {}}};
@@ -900,6 +939,50 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 	}
 
 	// Note that this can only happen if the send buffer is full
+	return std::nullopt;
+}
+
+std::optional<s32> lv2_socket_native::sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock)
+{
+	std::unique_lock<shared_mutex> lock(mutex, std::defer_lock);
+
+	if (is_lock)
+	{
+		lock.lock();
+	}
+
+	int native_flags                       = 0;
+	int native_result                      = -1;
+
+	sys_net_error result{};
+
+	if (flags & SYS_NET_MSG_WAITALL)
+	{
+		native_flags |= MSG_WAITALL;
+	}
+
+
+	for (int i = 0; i < msg.msg_iovlen; i++)
+	{
+		auto iov_base = msg.msg_iov[i].iov_base;
+		const u32 len = msg.msg_iov[i].iov_len;
+		const std::vector<u8> buf_copy(vm::_ptr<const char>(iov_base.addr()), vm::_ptr<const char>(iov_base.addr()) + len);
+
+		native_result = ::send(socket, reinterpret_cast<const char*>(buf_copy.data()), buf_copy.size(), native_flags);
+
+		if (native_result >= 0)
+		{
+			return {native_result};
+		}
+	}
+
+	result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+
+	if (result)
+	{
+		return {-result};
+	}
+
 	return std::nullopt;
 }
 

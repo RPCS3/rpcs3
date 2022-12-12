@@ -437,17 +437,13 @@ public:
 		auto operator<=>(const port_config&) const = default;
 	};
 
-	union avport_bit
+	struct avport_bit
 	{
-		struct
-		{
-			bool hdmi_0  : 1;
-			bool hdmi_1  : 1;
-			bool avmulti : 1;
-			bool spdif_0 : 1;
-			bool spdif_1 : 1;
-		};
-		u8 raw : 5 = 0;
+		bool hdmi_0  : 1;
+		bool hdmi_1  : 1;
+		bool avmulti : 1;
+		bool spdif_0 : 1;
+		bool spdif_1 : 1;
 	};
 
 	rsxaudio_backend_thread();
@@ -468,6 +464,7 @@ private:
 
 	struct emu_audio_cfg
 	{
+		std::string audio_device{};
 		s64 desired_buffer_duration = 0;
 		f64 time_stretching_threshold = 0;
 		bool buffering_enabled = false;
@@ -548,6 +545,7 @@ private:
 	backend_config backend_current_cfg{ {}, new_emu_cfg.avport };
 	atomic_t<callback_config> callback_cfg{};
 	bool backend_error_occured = false;
+	bool backend_device_changed = false;
 
 	AudioDumper dumper{};
 	audio_resampler resampler{};
@@ -558,7 +556,7 @@ private:
 	void backend_stop();
 	bool backend_playing();
 	u32 write_data_callback(u32 bytes, void* buf);
-	void error_callback();
+	void state_changed_callback(AudioStateEvent event);
 
 	// Time management
 	u64 get_time_until_service();

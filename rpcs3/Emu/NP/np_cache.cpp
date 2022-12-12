@@ -218,8 +218,8 @@ namespace np
 			return SCE_NP_MATCHING2_ERROR_ROOM_MEMBER_NOT_FOUND;
 		}
 
-		const auto& room = rooms.at(room_id);
-		const auto& member = room.members.at(member_id);
+		const auto& room = ::at32(rooms, room_id);
+		const auto& member = ::at32(room.members, member_id);
 
 		if (ptr_member)
 		{
@@ -232,8 +232,15 @@ namespace np
 			ptr_member->flagAttr      = member.flagAttr;
 		}
 
-		const u32 needed_data_size = sizeof(SceNpOnlineName) + sizeof(SceNpAvatarUrl) + sizeof(SceNpMatching2RoomGroup) +
-		                             (binattrs_list.size() * (sizeof(SceNpMatching2RoomMemberBinAttrInternal) + SCE_NP_MATCHING2_ROOMMEMBER_BIN_ATTR_INTERNAL_MAX_SIZE));
+		u32 needed_data_size = sizeof(SceNpOnlineName) + sizeof(SceNpAvatarUrl) + sizeof(SceNpMatching2RoomGroup);
+
+		for (usz i = 0; i < binattrs_list.size(); i++)
+		{
+			if (member.bins.contains(binattrs_list[i]))
+			{
+				needed_data_size += (sizeof(SceNpMatching2RoomMemberBinAttrInternal) + ::at32(member.bins, binattrs_list[i]).data.size());
+			}
+		}
 
 		if (!addr_data || !ptr_member)
 		{
@@ -263,7 +270,7 @@ namespace np
 		if (member.group_id)
 		{
 			ptr_member->roomGroup.set(mem.allocate(sizeof(SceNpMatching2RoomGroup)));
-			memcpy(ptr_member->roomGroup.get_ptr(), &room.groups.at(member.group_id), sizeof(SceNpMatching2RoomGroup));
+			memcpy(ptr_member->roomGroup.get_ptr(), &::at32(room.groups, member.group_id), sizeof(SceNpMatching2RoomGroup));
 		}
 
 		u32 num_binattrs = 0;
@@ -278,7 +285,7 @@ namespace np
 		if (num_binattrs)
 		{
 			ptr_member->roomMemberBinAttrInternal.set(mem.allocate(sizeof(SceNpMatching2RoomMemberBinAttrInternal) * num_binattrs));
-			ptr_member->roomMemberBinAttrInternalNum = num_binattrs;
+			ptr_member->roomMemberBinAttrInternalNum         = num_binattrs;
 			SceNpMatching2RoomMemberBinAttrInternal* bin_ptr = ptr_member->roomMemberBinAttrInternal.get_ptr();
 
 			u32 actual_cnt = 0;
@@ -286,10 +293,10 @@ namespace np
 			{
 				if (member.bins.contains(binattrs_list[i]))
 				{
-					const auto& bin = member.bins.at(binattrs_list[i]);
+					const auto& bin = ::at32(member.bins, binattrs_list[i]);
 					bin_ptr[actual_cnt].updateDate.tick = bin.updateDate.tick;
-					bin_ptr[actual_cnt].data.id = bin.id;
-					bin_ptr[actual_cnt].data.size = bin.data.size();
+					bin_ptr[actual_cnt].data.id         = bin.id;
+					bin_ptr[actual_cnt].data.size       = bin.data.size();
 					bin_ptr[actual_cnt].data.ptr.set(mem.allocate(bin.data.size()));
 					memcpy(bin_ptr[actual_cnt].data.ptr.get_ptr(), bin.data.data(), bin.data.size());
 					actual_cnt++;
@@ -299,4 +306,15 @@ namespace np
 
 		return needed_data_size;
 	}
+
+	SceNpId cache_manager::get_npid(u64 room_id, u16 member_id)
+	{
+		std::lock_guard lock(mutex);
+
+		ensure(rooms.contains(room_id), "cache_manager::get_npid: Room not cached!");
+		ensure(::at32(rooms, room_id).members.contains(member_id), "cache_manager::get_npid: Member not cached!");
+
+		return ::at32(::at32(rooms, room_id).members, member_id).userInfo.npId;
+	}
+
 } // namespace np

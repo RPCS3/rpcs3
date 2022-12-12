@@ -58,7 +58,7 @@ sce_np_tus_title_context* sce_np_tus_manager::get_title_context(s32 titleCtxId)
 {
 	if (title_contexts.find(titleCtxId) != title_contexts.end())
 	{
-		return &title_contexts.at(titleCtxId);
+		return &::at32(title_contexts, titleCtxId);
 	}
 
 	return nullptr;
@@ -81,7 +81,7 @@ s32 sce_np_tus_manager::add_transaction_context(s32 titleCtxId)
 			sce_np_tus_transaction_context new_transaction;
 			new_transaction.id = next_transaction_context_id;
 
-			if (title_contexts.at(titleCtxId).transaction_contexts.emplace(next_transaction_context_id, new_transaction).second)
+			if (::at32(title_contexts, titleCtxId).transaction_contexts.emplace(next_transaction_context_id, new_transaction).second)
 			{
 				return next_transaction_context_id++;
 			}
@@ -122,7 +122,7 @@ sce_np_tus_transaction_context* sce_np_tus_manager::get_transaction_context(s32 
 
 		if (transactions.find(transId) != transactions.end())
 		{
-			return &transactions.at(transId);
+			return &::at32(transactions, transId);
 		}
 	}
 
@@ -1224,7 +1224,7 @@ error_code sceNpTusDeleteMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNp
 	return CELL_OK;
 }
 
-error_code sceNpTusSetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u64 totalSize, u64 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.todo("sceNpTusSetData(transId=%d, targetNpId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 
@@ -1255,7 +1255,7 @@ error_code sceNpTusSetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSl
 	return not_an_error(data_size);
 }
 
-error_code sceNpTusSetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u64 totalSize, u64 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.todo("sceNpTusSetDataAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 
@@ -1286,7 +1286,7 @@ error_code sceNpTusSetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> tar
 	return not_an_error(data_size);
 }
 
-error_code sceNpTusSetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u64 totalSize, u64 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.todo("sceNpTusSetDataAsync(transId=%d, targetNpId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 
@@ -1316,7 +1316,7 @@ error_code sceNpTusSetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNp
 	return CELL_OK;
 }
 
-error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u64 totalSize, u64 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
+error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, u64 infoStructSize, vm::ptr<SceNpTusSetDataOptParam> option)
 {
 	sceNpTus.todo("sceNpTusSetDataAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 
@@ -1346,7 +1346,7 @@ error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId
 	return CELL_OK;
 }
 
-error_code sceNpTusGetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u64 dataStatusSize, vm::ptr<void> data, u64 recvSize, vm::ptr<void> option)
+error_code sceNpTusGetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<void> option)
 {
 	sceNpTus.todo("sceNpTusGetData(transId=%d, targetNpId=*0x%x, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, targetNpId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
@@ -1377,7 +1377,7 @@ error_code sceNpTusGetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSl
 	return not_an_error(data_size);
 }
 
-error_code sceNpTusGetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u64 dataStatusSize, vm::ptr<void> data, u64 recvSize, vm::ptr<void> option)
+error_code sceNpTusGetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<void> option)
 {
 	sceNpTus.todo("sceNpTusGetDataVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
@@ -1408,7 +1408,7 @@ error_code sceNpTusGetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> tar
 	return not_an_error(data_size);
 }
 
-error_code sceNpTusGetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u64 dataStatusSize, vm::ptr<void> data, u64 recvSize, vm::ptr<void> option)
+error_code sceNpTusGetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<void> option)
 {
 	sceNpTus.todo("sceNpTusGetDataAsync(transId=%d, targetNpId=*0x%x, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, targetNpId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
@@ -1443,7 +1443,7 @@ error_code sceNpTusGetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNp
 	return CELL_OK;
 }
 
-error_code sceNpTusGetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u64 dataStatusSize, vm::ptr<void> data, u64 recvSize, vm::ptr<void> option)
+error_code sceNpTusGetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId> targetVirtualUserId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<void> option)
 {
 	sceNpTus.todo("sceNpTusGetDataVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
@@ -1968,7 +1968,7 @@ error_code sceNpTusDeleteMultiSlotDataVUserAsync(s32 transId, vm::cptr<SceNpTusV
 	return CELL_OK;
 }
 
-error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u64 dataStatusSize, vm::ptr<void> data, u64 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
+error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
 	sceNpTus.todo("sceNpTssGetData(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
@@ -1993,7 +1993,7 @@ error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssD
 	return CELL_OK;
 }
 
-error_code sceNpTssGetDataAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u64 dataStatusSize, vm::ptr<void> data, u64 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
+error_code sceNpTssGetDataAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
 	sceNpTus.todo("sceNpTssGetDataAsync(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 

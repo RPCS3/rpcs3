@@ -16,6 +16,11 @@
 
 namespace vk
 {
+	namespace surface_cache_utils
+	{
+		void dispose(vk::buffer* buf);
+	}
+
 	void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
 	void unresolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
 
@@ -85,6 +90,8 @@ namespace vk
 	{
 		using surface_storage_type = std::unique_ptr<vk::render_target>;
 		using surface_type = vk::render_target*;
+		using buffer_object_storage_type = std::unique_ptr<vk::buffer>;
+		using buffer_object_type = vk::buffer*;
 		using command_list_type = vk::command_buffer&;
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
@@ -94,6 +101,12 @@ namespace vk
 			if (g_cfg.video.strict_rendering_mode)
 			{
 				return {};
+			}
+
+			// If we have driver support for FBO loops, set the usage flag for it.
+			if (vk::get_current_renderer()->get_framebuffer_loops_support())
+			{
+				return { VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT, 0 };
 			}
 
 			// Workarounds to force transition to GENERAL to decompress.
@@ -329,6 +342,16 @@ namespace vk
 			sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 		}
 
+		static std::unique_ptr<vk::render_target> convert_pitch(
+			vk::command_buffer& /*cmd*/,
+			std::unique_ptr<vk::render_target>& src,
+			usz /*out_pitch*/)
+		{
+			// TODO
+			src->state_flags = rsx::surface_state_flags::erase_bkgnd;
+			return {};
+		}
+
 		static bool is_compatible_surface(const vk::render_target* surface, const vk::render_target* ref, u16 width, u16 height, u8 sample_count)
 		{
 			return (surface->format() == ref->format() &&
@@ -440,9 +463,122 @@ namespace vk
 			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
 		}
 
-		static vk::render_target* get(const std::unique_ptr<vk::render_target>& tex)
+		static void spill_buffer(std::unique_ptr<vk::buffer>& /*bo*/)
 		{
-			return tex.get();
+			// TODO
+		}
+
+		static void unspill_buffer(std::unique_ptr<vk::buffer>& /*bo*/)
+		{
+			// TODO
+		}
+
+		static void write_render_target_to_memory(
+			vk::command_buffer& cmd,
+			vk::buffer* bo,
+			vk::render_target* surface,
+			u64 dst_offset_in_buffer,
+			u64 src_offset_in_buffer,
+			u64 max_copy_length)
+		{
+			surface->read_barrier(cmd);
+			vk::image* source = surface->get_surface(rsx::surface_access::transfer_read);
+			const bool is_scaled = surface->width() != surface->surface_width;
+			if (is_scaled)
+			{
+				const areai src_rect = { 0, 0, static_cast<int>(source->width()), static_cast<int>(source->height()) };
+				const areai dst_rect = { 0, 0, surface->get_surface_width<rsx::surface_metrics::samples, int>(), surface->get_surface_height<rsx::surface_metrics::samples, int>() };
+
+				auto scratch = vk::get_typeless_helper(source->format(), source->format_class(), dst_rect.x2, dst_rect.y2);
+				vk::copy_scaled_image(cmd, source, scratch, src_rect, dst_rect, 1, true, VK_FILTER_NEAREST);
+
+				source = scratch;
+			}
+
+			auto dest = bo;
+			const auto transfer_size = surface->get_memory_range().length();
+			if (transfer_size > max_copy_length || src_offset_in_buffer || surface->is_depth_surface())
+			{
+				auto scratch = vk::get_scratch_buffer(cmd, transfer_size * 4);
+				dest = scratch;
+			}
+
+			VkBufferImageCopy region =
+			{
+				.bufferOffset = (dest == bo) ? dst_offset_in_buffer : 0,
+				.bufferRowLength = surface->rsx_pitch / surface->get_bpp(),
+				.bufferImageHeight = 0,
+				.imageSubresource = { source->aspect(), 0, 0, 1 },
+				.imageOffset = {},
+				.imageExtent = {
+					.width = source->width(),
+					.height = source->height(),
+					.depth = 1
+				}
+			};
+
+			vk::copy_image_to_buffer(cmd, source, dest, region);
+			vk::insert_buffer_memory_barrier(cmd,
+				dest->value, src_offset_in_buffer, max_copy_length,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+			if (dest != bo)
+			{
+				VkBufferCopy copy = { src_offset_in_buffer, dst_offset_in_buffer, max_copy_length };
+				vkCmdCopyBuffer(cmd, dest->value, bo->value, 1, &copy);
+
+				vk::insert_buffer_memory_barrier(cmd,
+					bo->value, dst_offset_in_buffer, max_copy_length,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+			}
+		}
+
+		template <int BlockSize>
+		static vk::buffer* merge_bo_list(vk::command_buffer& cmd, std::vector<vk::buffer*>& list)
+		{
+			u32 required_bo_size = 0;
+			for (auto& bo : list)
+			{
+				required_bo_size += (bo ? bo->size() : BlockSize);
+			}
+
+			// Create dst
+			auto& dev = cmd.get_command_pool().get_owner();
+			auto dst = new vk::buffer(dev,
+				required_bo_size,
+				dev.get_memory_mapping().device_local, 0,
+				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				0, VMM_ALLOCATION_POOL_SURFACE_CACHE);
+
+			// TODO: Initialize the buffer with system RAM contents
+
+			// Copy all the data over from the sub-blocks
+			u32 offset = 0;
+			for (auto& bo : list)
+			{
+				if (!bo)
+				{
+					offset += BlockSize;
+					continue;
+				}
+
+				VkBufferCopy copy = { 0, offset, ::size32(*bo) };
+				offset += ::size32(*bo);
+				vkCmdCopyBuffer(cmd, bo->value, dst->value, 1, &copy);
+
+				// Cleanup
+				vk::surface_cache_utils::dispose(bo);
+			}
+
+			return dst;
+		}
+
+		template <typename T>
+		static T* get(const std::unique_ptr<T>& obj)
+		{
+			return obj.get();
 		}
 	};
 

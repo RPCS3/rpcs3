@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include "Emu/Memory/vm.h"
 #include "Common/BufferUtils.h"
 #include "RSXOffload.h"
 #include "RSXThread.h"
@@ -44,6 +45,8 @@ namespace rsx
 					{
 					case raw_copy:
 					{
+						const u32 vm_addr = vm::try_get_addr(job.src).first;
+						rsx::reservation_lock<true, 1> rsx_lock(vm_addr, job.length, g_cfg.video.strict_rendering_mode && vm_addr);
 						std::memcpy(job.dst, job.src, job.length);
 						break;
 					}
@@ -84,14 +87,10 @@ namespace rsx
 		static constexpr auto thread_name = "RSX Offloader"sv;
 	};
 
-
-	using dma_thread = named_thread<dma_manager::offload_thread>;
-
-	static_assert(std::is_default_constructible_v<dma_thread>);
-
 	// initialization
 	void dma_manager::init()
 	{
+		m_thread = std::make_shared<named_thread<offload_thread>>();
 	}
 
 	// General transport
@@ -103,8 +102,8 @@ namespace rsx
 		}
 		else
 		{
-			g_fxo->get<dma_thread>().m_enqueued_count++;
-			g_fxo->get<dma_thread>().m_work_queue.push(dst, src, length);
+			m_thread->m_enqueued_count++;
+			m_thread->m_work_queue.push(dst, src, length);
 		}
 	}
 
@@ -112,12 +111,14 @@ namespace rsx
 	{
 		if (length <= max_immediate_transfer_size || !g_cfg.video.multithreaded_rsx)
 		{
+			const u32 vm_addr = vm::try_get_addr(src).first;
+			rsx::reservation_lock<true, 1> rsx_lock(vm_addr, length, g_cfg.video.strict_rendering_mode && vm_addr);
 			std::memcpy(dst, src, length);
 		}
 		else
 		{
-			g_fxo->get<dma_thread>().m_enqueued_count++;
-			g_fxo->get<dma_thread>().m_work_queue.push(dst, src, length);
+			m_thread->m_enqueued_count++;
+			m_thread->m_work_queue.push(dst, src, length);
 		}
 	}
 
@@ -131,8 +132,8 @@ namespace rsx
 		}
 		else
 		{
-			g_fxo->get<dma_thread>().m_enqueued_count++;
-			g_fxo->get<dma_thread>().m_work_queue.push(dst, primitive, count);
+			m_thread->m_enqueued_count++;
+			m_thread->m_work_queue.push(dst, primitive, count);
 		}
 	}
 
@@ -141,16 +142,16 @@ namespace rsx
 	{
 		ensure(g_cfg.video.multithreaded_rsx);
 
-		g_fxo->get<dma_thread>().m_enqueued_count++;
-		g_fxo->get<dma_thread>().m_work_queue.push(request_code, args);
+		m_thread->m_enqueued_count++;
+		m_thread->m_work_queue.push(request_code, args);
 	}
 
 	// Synchronization
-	bool dma_manager::is_current_thread()
+	bool dma_manager::is_current_thread() const
 	{
 		if (auto cpu = thread_ctrl::get_current())
 		{
-			return g_fxo->get<dma_thread>().current_thread_ == cpu;
+			return m_thread->current_thread_ == cpu;
 		}
 
 		return false;
@@ -158,7 +159,7 @@ namespace rsx
 
 	bool dma_manager::sync() const
 	{
-		auto& _thr = g_fxo->get<dma_thread>();
+		auto& _thr = *m_thread;
 
 		if (_thr.m_enqueued_count.load() <= _thr.m_processed_count.load()) [[likely]]
 		{
@@ -191,8 +192,8 @@ namespace rsx
 
 	void dma_manager::join()
 	{
-		g_fxo->get<dma_thread>() = thread_state::aborting;
 		sync();
+		*m_thread = thread_state::aborting;
 	}
 
 	void dma_manager::set_mem_fault_flag()
@@ -208,9 +209,9 @@ namespace rsx
 	}
 
 	// Fault recovery
-	utils::address_range dma_manager::get_fault_range(bool writing)
+	utils::address_range dma_manager::get_fault_range(bool writing) const
 	{
-		const auto m_current_job = ensure(g_fxo->get<dma_thread>().m_current_job);
+		const auto m_current_job = ensure(m_thread->m_current_job);
 
 		void *address = nullptr;
 		u32 range = m_current_job->length;

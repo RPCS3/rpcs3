@@ -10,6 +10,7 @@
 
 std::wstring utf8_to_wchar(std::string_view src);
 std::string wchar_to_utf8(std::wstring_view src);
+std::string utf16_to_utf8(std::u16string_view src);
 
 // Copy null-terminated string from a std::string or a char array to a char array with truncation
 template <typename D, typename T>
@@ -25,6 +26,12 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max);
 
 // Convert string to unsigned integer
 bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
+
+// Convert string to float
+bool try_to_float(f64* out, std::string_view value, f64 min, f64 max);
+
+// Get the file extension of a file path ("png", "jpg", etc.)
+std::string get_file_extension(const std::string& file_path);
 
 namespace fmt
 {

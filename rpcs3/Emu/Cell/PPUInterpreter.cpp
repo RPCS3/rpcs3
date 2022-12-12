@@ -23,6 +23,7 @@
 #if !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 #endif
 
 extern bool is_debugger_present();
@@ -5311,7 +5312,7 @@ auto STVLX()
 	{
 		const u64 addr = op.ra ? a + b : b;
 		const u32 tail = u32(addr & 15);
-		u8* ptr = vm::_ptr<u8>(addr & -16);
+		u8* ptr = vm::_ptr<u8>(addr);
 		for (u32 j = 0; j < 16 - tail; j++)
 			ptr[j] = s.u8r[j];
 	};

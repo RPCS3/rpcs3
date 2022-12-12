@@ -189,12 +189,23 @@ struct audio_port
 	f32 last_tag_value[PORT_BUFFER_TAG_COUNT] = { 0 };
 
 	void tag(s32 offset = 0);
+
+	audio_port() = default;
+
+	// Handle copy ctor of atomic var
+	audio_port(const audio_port& r)
+	{
+		std::memcpy(this, &r, sizeof(r));
+	}
+
+	ENABLE_BITWISE_SERIALIZATION;
 };
 
 struct cell_audio_config
 {
 	struct raw_config
 	{
+		std::string audio_device{};
 		bool buffering_enabled = false;
 		s64 desired_buffer_duration = 0;
 		bool enable_time_stretching = false;
@@ -211,6 +222,7 @@ struct cell_audio_config
 	std::shared_ptr<AudioBackend> backend = nullptr;
 
 	AudioChannelCnt audio_downmix = AudioChannelCnt::SURROUND_7_1;
+	AudioChannelCnt backend_ch_cnt = AudioChannelCnt::SURROUND_7_1;
 	u32 audio_channels = 0;
 	u32 audio_sampling_rate = 0;
 	u32 audio_block_period = 0;
@@ -280,6 +292,7 @@ private:
 	audio_resampler resampler{};
 
 	atomic_t<bool> backend_active = false;
+	atomic_t<bool> backend_device_changed = false;
 	bool playing = false;
 
 	u64 update_timestamp = 0;
@@ -298,6 +311,7 @@ private:
 
 	void commit_data(f32* buf, u32 sample_cnt);
 	u32 backend_write_callback(u32 size, void *buf);
+	void backend_state_callback(AudioStateEvent event);
 
 public:
 	audio_ringbuffer(cell_audio_config &cfg);
@@ -333,6 +347,11 @@ public:
 		return backend->Operational();
 	}
 
+	bool device_changed()
+	{
+		return backend_device_changed.test_and_reset() && backend->DefaultDeviceChanged();
+	}
+
 	std::string_view get_backend_name() const
 	{
 		return backend->GetName();
@@ -366,7 +385,7 @@ public:
 	atomic_t<audio_backend_update> m_update_configuration = audio_backend_update::NONE;
 
 	shared_mutex mutex{};
-	atomic_t<u32> init = 0;
+	atomic_t<u8> init = 0;
 
 	u32 key_count = 0;
 	u8 event_period = 0;
@@ -390,9 +409,13 @@ public:
 	bool m_backend_failed = false;
 	bool m_audio_should_restart = false;
 
-	cell_audio_thread();
-
 	void operator()();
+
+	SAVESTATE_INIT_POS(9);
+
+	cell_audio_thread();
+	cell_audio_thread(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	audio_port* open_port();
 

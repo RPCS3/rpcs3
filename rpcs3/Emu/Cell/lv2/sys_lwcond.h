@@ -31,8 +31,7 @@ struct lv2_lwcond final : lv2_obj
 	vm::ptr<sys_lwcond_t> control;
 
 	shared_mutex mutex;
-	atomic_t<u32> waiters{0};
-	std::deque<cpu_thread*> sq;
+	ppu_thread* sq{};
 
 	lv2_lwcond(u64 name, u32 lwid, u32 protocol, vm::ptr<sys_lwcond_t> control) noexcept
 		: name(std::bit_cast<be_t<u64>>(name))
@@ -41,6 +40,9 @@ struct lv2_lwcond final : lv2_obj
 		, control(control)
 	{
 	}
+
+	lv2_lwcond(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 // Aux

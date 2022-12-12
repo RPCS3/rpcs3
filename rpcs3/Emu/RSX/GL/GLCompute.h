@@ -2,6 +2,7 @@
 
 #include "Emu/IdManager.h"
 #include "GLHelpers.h"
+#include "glutils/program.h"
 #include "../rsx_utils.h"
 
 #include <unordered_map>
@@ -24,7 +25,7 @@ namespace gl
 
 		void initialize();
 		void create();
-		void destroy();
+		virtual void destroy();
 
 		virtual void bind_resources() {}
 
@@ -77,6 +78,7 @@ namespace gl
 		}
 	};
 
+	template <bool SwapBytes>
 	struct cs_shuffle_d32fx8_to_x8d24f : cs_shuffle_base
 	{
 		u32 m_ssbo_length = 0;
@@ -88,6 +90,7 @@ namespace gl
 		void run(gl::command_context& cmd, const gl::buffer* data, u32 src_offset, u32 dst_offset, u32 num_texels);
 	};
 
+	template <bool SwapBytes>
 	struct cs_shuffle_x8d24f_to_d32fx8 : cs_shuffle_base
 	{
 		u32 m_ssbo_length = 0;
@@ -342,21 +345,33 @@ namespace gl
 
 	struct pixel_buffer_layout;
 
-	struct cs_image_to_ssbo : compute_task
+	class cs_image_to_ssbo : public compute_task
 	{
-		virtual void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) = 0;
+	protected:
+		gl::sampler_state m_sampler;
+
+	public:
+		void destroy() override { m_sampler.remove(); compute_task::destroy(); }
+		virtual void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) = 0;
 	};
 
 	struct cs_d24x8_to_ssbo : cs_image_to_ssbo
 	{
 		cs_d24x8_to_ssbo();
-		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) override;
+		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) override;
 	};
 
 	struct cs_rgba8_to_ssbo : cs_image_to_ssbo
 	{
 		cs_rgba8_to_ssbo();
-		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout, const gl::pixel_pack_settings& settings) override;
+		void run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout) override;
+	};
+
+	struct cs_ssbo_to_color_image : compute_task
+	{
+		cs_ssbo_to_color_image();
+		void run(gl::command_context& cmd, const buffer* src, const texture_view* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
+		void run(gl::command_context& cmd, const buffer* src, texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
 	};
 
 	// TODO: Replace with a proper manager

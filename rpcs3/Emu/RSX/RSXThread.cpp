@@ -2,6 +2,7 @@
 #include "RSXThread.h"
 
 #include "Emu/Cell/PPUCallback.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/timers.hpp"
 
 #include "Common/BufferUtils.h"
@@ -17,6 +18,7 @@
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
 #include "Overlays/overlay_perf_metrics.h"
+#include "Overlays/overlay_message.h"
 #include "Program/GLSLCommon.h"
 #include "Utilities/date_time.h"
 #include "Utilities/StrUtil.h"
@@ -41,11 +43,25 @@ rsx::frame_capture_data frame_capture;
 
 extern CellGcmOffsetTable offsetTable;
 extern thread_local std::string(*g_tls_log_prefix)();
+extern atomic_t<u32> g_lv2_preempts_taken;
+
+LOG_CHANNEL(perf_log, "PERF");
 
 template <>
 bool serialize<rsx::rsx_state>(utils::serial& ar, rsx::rsx_state& o)
 {
-	return ar(o.transform_program, /*o.transform_constants,*/ o.registers);
+	ar(o.transform_program);
+
+	// Work around for old RSX captures.
+	// RSX capture and savestates both call this method.
+	// We do not want to grab transform constants if it is not savestate capture.
+	const bool is_savestate_capture = thread_ctrl::get_current() && thread_ctrl::get_name() == "Emu State Capture Thread";
+	if (GET_SERIALIZATION_VERSION(global_version) || is_savestate_capture)
+	{
+		ar(o.transform_constants);
+	}
+
+	return ar(o.registers);
 }
 
 template <>
@@ -71,6 +87,29 @@ template <>
 bool serialize<rsx::frame_capture_data::replay_command>(utils::serial& ar, rsx::frame_capture_data::replay_command& o)
 {
 	return ar(o.rsx_command, o.memory_state, o.tile_state, o.display_buffer_state);
+}
+
+template <>
+bool serialize<rsx::rsx_iomap_table>(utils::serial& ar, rsx::rsx_iomap_table& o)
+{
+	// We do not need more than that
+	ar(std::span(o.ea.data(), 512));
+
+	if (!ar.is_writing())
+	{
+		// Populate o.io
+		for (const atomic_t<u32>& ea_addr : o.ea)
+		{
+			const u32& addr = ea_addr.raw();
+
+			if (addr != umax)
+			{
+				o.io[addr >> 20].raw() = static_cast<u32>(&ea_addr - o.ea.data()) << 20;
+			}
+		}
+	}
+
+	return true;
 }
 
 namespace rsx
@@ -205,6 +244,25 @@ namespace rsx
 		}
 
 		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc{line, col, file, func});
+	}
+
+	extern void set_rsx_yield_flag() noexcept
+	{
+		if (auto rsx = get_current_renderer())
+		{
+			if (g_cfg.core.allow_rsx_cpu_preempt)
+			{
+				rsx->state += cpu_flag::yield;
+			}
+		}
+	}
+
+	extern void set_native_ui_flip()
+	{
+		if (auto rsxthr = rsx::get_current_renderer())
+		{
+			rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
+		}
 	}
 
 	std::pair<u32, u32> interleaved_range_info::calculate_required_range(u32 first, u32 count) const
@@ -413,7 +471,48 @@ namespace rsx
 		g_access_violation_handler = nullptr;
 	}
 
-	thread::thread()
+	void thread::save(utils::serial& ar)
+	{
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
+ 
+		ar(rsx::method_registers);
+	
+		for (auto& v : vertex_push_buffers)
+		{
+			ar(v.attr, v.size, v.type, v.vertex_count, v.dword_count, v.data);
+		}
+
+		ar(element_push_buffer, fifo_ret_addr, saved_fifo_ret, zcull_surface_active, m_surface_info, m_depth_surface_info, m_framebuffer_layout);
+		ar(dma_address, iomap_table, restore_point, tiles, zculls, display_buffers, display_buffers_count, current_display_buffer);
+		ar(enable_second_vhandler, requested_vsync);
+		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
+		ar(in_begin_end);
+		ar(display_buffers, display_buffers_count, current_display_buffer);
+		ar(unsent_gcm_events, rsx::method_registers.current_draw_clause);
+
+		if (ar.is_writing())
+		{
+			if (fifo_ctrl && state & cpu_flag::again)
+			{
+				ar(fifo_ctrl->get_remaining_args_count() + 1);
+				ar(fifo_ctrl->last_cmd());
+			}
+			else
+			{
+				ar(u32{0});
+			}
+		}
+		else if (version > 1)
+		{
+			if (u32 count = ar)
+			{
+				restore_fifo_count = count;
+				ar(restore_fifo_cmd);
+			}
+		}
+	}
+
+	thread::thread(utils::serial* _ar)
 		: cpu_thread(0x5555'5555)
 	{
 		g_access_violation_handler = [this](u32 address, bool is_writing)
@@ -435,6 +534,36 @@ namespace rsx
 		}
 
 		state -= cpu_flag::stop + cpu_flag::wait; // TODO: Remove workaround
+
+		if (!_ar)
+		{
+			return;
+		}
+
+		serialized = true;
+		save(*_ar);
+
+		if (dma_address)
+		{
+			ctrl = vm::_ptr<RsxDmaControl>(dma_address);
+			m_rsx_thread_exiting = false;
+		}
+
+		if (g_cfg.savestate.start_paused)
+		{
+			// Allow to render a whole frame within this emulation session so there won't be missing graphics 
+			m_pause_after_x_flips = 2;
+		}
+	}
+
+	avconf::avconf(utils::serial& ar)
+	{
+		ar(*this);
+	}
+
+	void avconf::save(utils::serial& ar)
+	{
+		ar(*this);
 	}
 
 	void thread::capture_frame(const std::string &name)
@@ -475,6 +604,18 @@ namespace rsx
 				// NOTE: eval_sources list is reversed with newest query first
 				zcull_ctrl->read_barrier(this, cond_render_ctrl.eval_address, cond_render_ctrl.eval_sources.front());
 				ensure(!cond_render_ctrl.eval_pending());
+			}
+		}
+
+		if (!backend_config.supports_normalized_barycentrics)
+		{
+			// Check for mode change between rasterized polys vs lines and points
+			// Luckily this almost never happens in real games
+			const auto current_mode = rsx::method_registers.current_draw_clause.classify_mode();
+			if (current_mode != m_current_draw_mode)
+			{
+				m_graphics_state |= (rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty);
+				m_current_draw_mode = current_mode;
 			}
 		}
 
@@ -582,15 +723,15 @@ namespace rsx
 			wait_pause();
 		}
 
-		on_semaphore_acquire_wait();
-
 		if ((state & (cpu_flag::dbg_global_pause + cpu_flag::exit)) == cpu_flag::dbg_global_pause)
 		{
 			// Wait 16ms during emulation pause. This reduces cpu load while still giving us the chance to render overlays.
+			do_local_task(rsx::FIFO_state::paused);
 			thread_ctrl::wait_on(state, old, 16000);
 		}
 		else
 		{
+			on_semaphore_acquire_wait();
 			std::this_thread::yield();
 		}
 	}
@@ -620,6 +761,11 @@ namespace rsx
 		}
 	}
 
+	namespace nv4097
+	{
+		void set_render_mode(thread* rsx, u32, u32 arg);
+	}
+
 	void thread::on_task()
 	{
 		g_tls_log_prefix = []
@@ -628,15 +774,15 @@ namespace rsx
 			return fmt::format("RSX [0x%07x]", rsx->ctrl ? +rsx->ctrl->get : 0);
 		};
 
-		method_registers.init();
+		if (!serialized) method_registers.init();
 
 		rsx::overlays::reset_performance_overlay();
 
 		g_fxo->get<rsx::dma_manager>().init();
 		on_init_thread();
 
-		is_inited = true;
-		is_inited.notify_all();
+		is_initialized = true;
+		is_initialized.notify_all();
 
 		if (!zcull_ctrl)
 		{
@@ -644,17 +790,18 @@ namespace rsx
 			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
 		}
 
+		check_zcull_status(false);
+		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
+
 		performance_counters.state = FIFO_state::empty;
 
-		// Wait for startup (TODO)
-		while (m_rsx_thread_exiting)
-		{
-			// Wait for external pause events
-			if (external_interrupt_lock)
-			{
-				wait_pause();
-			}
+		const u64 event_flags = unsent_gcm_events.exchange(0);
 
+		Emu.CallFromMainThread([]{ Emu.RunPPU(); });
+
+		// Wait for startup (TODO)
+		while (m_rsx_thread_exiting || Emu.IsPaused())
+		{
 			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);
 
@@ -672,10 +819,21 @@ namespace rsx
 		performance_counters.state = FIFO_state::running;
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
+		fifo_ctrl->set_get(ctrl->get);
 
 		last_guest_flip_timestamp = rsx::uclock() - 1000000;
 
 		vblank_count = 0;
+
+		if (restore_fifo_count)
+		{
+			fifo_ctrl->restore_state(restore_fifo_cmd, restore_fifo_count);
+		}
+
+		if (!send_event(0, event_flags, 0))
+		{
+			return;
+		}
 
 		g_fxo->init<named_thread>("VBlank Thread", [this]()
 		{
@@ -693,7 +851,7 @@ namespace rsx
 			u64 local_vblank_count = 0;
 
 			// TODO: exit condition
-			while (!is_stopped())
+			while (!is_stopped() && !unsent_gcm_events && thread_ctrl::state() != thread_state::aborting)
 			{
 				// Get current time
 				const u64 current = get_system_time();
@@ -796,6 +954,11 @@ namespace rsx
 
 	void thread::on_exit()
 	{
+		if (zcull_ctrl)
+		{
+			zcull_ctrl->sync(this);
+		}
+
 		// Deregister violation handler
 		g_access_violation_handler = nullptr;
 
@@ -803,7 +966,6 @@ namespace rsx
 		std::this_thread::sleep_for(10ms);
 		do_local_task(rsx::FIFO_state::lock_wait);
 
-		m_rsx_thread_exiting = true;
 		g_fxo->get<rsx::dma_manager>().join();
 		state += cpu_flag::exit;
 	}
@@ -900,18 +1062,18 @@ namespace rsx
 
 	void thread::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/)
 	{
-		u32 rop_control = 0u;
+		ROP_control_t rop_control{};
 
 		if (rsx::method_registers.alpha_test_enabled())
 		{
 			const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
-			rop_control |= (alpha_func << 16);
-			rop_control |= ROP_control::alpha_test_enable;
+			rop_control.set_alpha_test_func(alpha_func);
+			rop_control.enable_alpha_test();
 		}
 
 		if (rsx::method_registers.polygon_stipple_enabled())
 		{
-			rop_control |= ROP_control::polygon_stipple_enable;
+			rop_control.enable_polygon_stipple();
 		}
 
 		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !backend_config.supports_hw_a2c)
@@ -920,8 +1082,11 @@ namespace rsx
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
 			// Simulated using combined alpha blend and alpha test
-			if (rsx::method_registers.msaa_sample_mask()) rop_control |= ROP_control::msaa_mask_enable;
-			rop_control |= ROP_control::csaa_enable;
+			rop_control.enable_alpha_to_coverage();
+			if (rsx::method_registers.msaa_sample_mask())
+			{
+				rop_control.enable_MSAA_writes();
+			}
 
 			// Sample configuration bits
 			switch (rsx::method_registers.surface_antialias())
@@ -929,10 +1094,10 @@ namespace rsx
 				case rsx::surface_antialiasing::center_1_sample:
 					break;
 				case rsx::surface_antialiasing::diagonal_centered_2_samples:
-					rop_control |= 1u << 6;
+					rop_control.set_msaa_control(1u);
 					break;
 				default:
-					rop_control |= 3u << 6;
+					rop_control.set_msaa_control(3u);
 					break;
 			}
 		}
@@ -941,19 +1106,24 @@ namespace rsx
 		const f32 fog1 = rsx::method_registers.fog_params_1();
 		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
 
-		if (rsx::method_registers.framebuffer_srgb_enabled())
+		// Check if framebuffer is actually an XRGB format and not a WZYX format
+		switch (rsx::method_registers.surface_color())
 		{
-			// Check if framebuffer is actually an XRGB format and not a WZYX format
-			switch (rsx::method_registers.surface_color())
+		case rsx::surface_color_format::w16z16y16x16:
+		case rsx::surface_color_format::w32z32y32x32:
+		case rsx::surface_color_format::x32:
+			// These behave very differently from "normal" formats.
+			break;
+		default:
+			// Integer framebuffer formats.
+			rop_control.enable_framebuffer_INT();
+
+			// Check if we want sRGB conversion.
+			if (rsx::method_registers.framebuffer_srgb_enabled())
 			{
-			case rsx::surface_color_format::w16z16y16x16:
-			case rsx::surface_color_format::w32z32y32x32:
-			case rsx::surface_color_format::x32:
-				break;
-			default:
-				rop_control |= ROP_control::framebuffer_srgb_enable;
-				break;
+				rop_control.enable_framebuffer_sRGB();
 			}
+			break;
 		}
 
 		// Generate wpos coefficients
@@ -970,7 +1140,7 @@ namespace rsx
 		const f32 alpha_ref = rsx::method_registers.alpha_ref();
 
 		u32 *dst = static_cast<u32*>(buffer);
-		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
+		utils::stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control.value, std::bit_cast<u32>(alpha_ref));
 		utils::stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
@@ -1087,6 +1257,14 @@ namespace rsx
 		if (m_eng_interrupt_mask & rsx::pipe_flush_interrupt)
 		{
 			sync();
+		}
+
+		if (is_stopped())
+		{
+			std::lock_guard lock(m_mtx_task);
+
+			m_invalidated_memory_range = utils::address_range::start_end(0x2 << 28, constants::local_mem_base + local_mem_size - 1);
+			handle_invalidated_memory_range();
 		}
 	}
 
@@ -1457,6 +1635,12 @@ namespace rsx
 
 	void thread::on_framebuffer_options_changed(u32 opt)
 	{
+		if (m_rtts_dirty)
+		{
+			// Nothing to do
+			return;
+		}
+
 		auto evaluate_depth_buffer_state = [&]()
 		{
 			m_framebuffer_layout.zeta_write_enabled =
@@ -1529,12 +1713,6 @@ namespace rsx
 
 			return false;
 		};
-
-		if (m_rtts_dirty)
-		{
-			// Nothing to do
-			return;
-		}
 
 		switch (opt)
 		{
@@ -1769,6 +1947,7 @@ namespace rsx
 
 		ensure(!(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty));
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
+		current_vertex_program.ctrl = 0; // Reserved
 
 		for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
@@ -1800,9 +1979,8 @@ namespace rsx
 
 		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
-			interleaved_range_info info = {};
+			interleaved_range_info& info = *result.alloc_interleaved_block();
 			info.interleaved = true;
-			info.locations.reserve(8);
 
 			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
@@ -1830,7 +2008,7 @@ namespace rsx
 			if (info.attribute_stride)
 			{
 				// At least one array feed must be enabled for vertex input
-				result.interleaved_blocks.emplace_back(std::move(info));
+				result.interleaved_blocks.push_back(&info);
 			}
 
 			return;
@@ -1897,21 +2075,21 @@ namespace rsx
 
 				for (auto &block : result.interleaved_blocks)
 				{
-					if (block.single_vertex)
+					if (block->single_vertex)
 					{
 						//Single vertex definition, continue
 						continue;
 					}
 
-					if (block.attribute_stride != info.stride())
+					if (block->attribute_stride != info.stride())
 					{
 						//Stride does not match, continue
 						continue;
 					}
 
-					if (base_address > block.base_offset)
+					if (base_address > block->base_offset)
 					{
-						const u32 diff = base_address - block.base_offset;
+						const u32 diff = base_address - block->base_offset;
 						if (diff > info.stride())
 						{
 							//Not interleaved, continue
@@ -1920,7 +2098,7 @@ namespace rsx
 					}
 					else
 					{
-						const u32 diff = block.base_offset - base_address;
+						const u32 diff = block->base_offset - base_address;
 						if (diff > info.stride())
 						{
 							//Not interleaved, continue
@@ -1928,18 +2106,18 @@ namespace rsx
 						}
 
 						//Matches, and this address is lower than existing
-						block.base_offset = base_address;
+						block->base_offset = base_address;
 					}
 
 					alloc_new_block = false;
-					block.locations.push_back({ index, modulo, info.frequency() });
-					block.interleaved = true;
+					block->locations.push_back({ index, modulo, info.frequency() });
+					block->interleaved = true;
 					break;
 				}
 
 				if (alloc_new_block)
 				{
-					interleaved_range_info block = {};
+					interleaved_range_info& block = *result.alloc_interleaved_block();
 					block.base_offset = base_address;
 					block.attribute_stride = info.stride();
 					block.memory_location = info.offset() >> 31;
@@ -1952,7 +2130,7 @@ namespace rsx
 						block.attribute_stride = rsx::get_vertex_type_size_on_host(info.type(), info.size());
 					}
 
-					result.interleaved_blocks.emplace_back(std::move(block));
+					result.interleaved_blocks.push_back(&block);
 				}
 			}
 		}
@@ -1960,7 +2138,7 @@ namespace rsx
 		for (auto &info : result.interleaved_blocks)
 		{
 			//Calculate real data address to be used during upload
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location);
+			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info->base_offset), info->memory_location);
 		}
 	}
 
@@ -1977,8 +2155,15 @@ namespace rsx
 		current_fragment_program.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
 		current_fragment_program.two_sided_lighting = rsx::method_registers.two_side_light_en();
 
-		if (method_registers.current_draw_clause.primitive == primitive_type::points &&
-			method_registers.point_sprite_enabled())
+		if (method_registers.current_draw_clause.classify_mode() == primitive_class::polygon)
+		{
+			if (!backend_config.supports_normalized_barycentrics)
+			{
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
+			}
+		}
+		else if (method_registers.point_sprite_enabled() &&
+			method_registers.current_draw_clause.primitive == primitive_type::points)
 		{
 			// Set high word of the control mask to store point sprite control
 			current_fragment_program.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
@@ -2190,6 +2375,8 @@ namespace rsx
 	void thread::reset()
 	{
 		rsx::method_registers.reset();
+		check_zcull_status(false);
+		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
 		m_graphics_state = pipeline_state::all_dirty;
 		m_rtts_dirty = true;
 		m_framebuffer_state_contested = false;
@@ -2201,6 +2388,7 @@ namespace rsx
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
+		vm::write32(device_addr + 0x30, 1);
 		std::memset(display_buffers, 0, sizeof(display_buffers));
 
 		m_rsx_thread_exiting = false;
@@ -2217,7 +2405,7 @@ namespace rsx
 		{
 			for (const auto &block : layout.interleaved_blocks)
 			{
-				volatile_memory_size += block.attribute_stride * vertex_count;
+				volatile_memory_size += block->attribute_stride * vertex_count;
 			}
 		}
 		else
@@ -2264,7 +2452,7 @@ namespace rsx
 		{
 			const auto &block = layout.interleaved_blocks[0];
 			u32 inline_data_offset = volatile_offset;
-			for (const auto& attrib : block.locations)
+			for (const auto& attrib : block->locations)
 			{
 				auto &info = rsx::method_registers.vertex_arrays_info[attrib.index];
 
@@ -2276,14 +2464,14 @@ namespace rsx
 		{
 			for (const auto &block : layout.interleaved_blocks)
 			{
-				for (const auto& attrib : block.locations)
+				for (const auto& attrib : block->locations)
 				{
 					const u32 local_address = (rsx::method_registers.vertex_arrays_info[attrib.index].offset() & 0x7fffffff);
-					offset_in_block[attrib.index] = persistent_offset + (local_address - block.base_offset);
+					offset_in_block[attrib.index] = persistent_offset + (local_address - block->base_offset);
 				}
 
-				const auto range = block.calculate_required_range(first_vertex, vertex_count);
-				persistent_offset += block.attribute_stride * range.second;
+				const auto range = block->calculate_required_range(first_vertex, vertex_count);
+				persistent_offset += block->attribute_stride * range.second;
 			}
 		}
 
@@ -2348,7 +2536,7 @@ namespace rsx
 						type = info.type();
 						size = info.size();
 
-						attrib0 = layout.interleaved_blocks[0].attribute_stride | default_frequency_mask;
+						attrib0 = layout.interleaved_blocks[0]->attribute_stride | default_frequency_mask;
 					}
 				}
 				else
@@ -2488,12 +2676,12 @@ namespace rsx
 		{
 			for (const auto &block : layout.interleaved_blocks)
 			{
-				auto range = block.calculate_required_range(first_vertex, vertex_count);
+				auto range = block->calculate_required_range(first_vertex, vertex_count);
 
-				const u32 data_size = range.second * block.attribute_stride;
-				const u32 vertex_base = range.first * block.attribute_stride;
+				const u32 data_size = range.second * block->attribute_stride;
+				const u32 vertex_base = range.first * block->attribute_stride;
 
-				g_fxo->get<rsx::dma_manager>().copy(persistent, vm::_ptr<char>(block.real_offset_address) + vertex_base, data_size);
+				g_fxo->get<rsx::dma_manager>().copy(persistent, vm::_ptr<char>(block->real_offset_address) + vertex_base, data_size);
 				persistent += data_size;
 			}
 		}
@@ -2519,6 +2707,11 @@ namespace rsx
 		if (info.emu_flip)
 		{
 			performance_counters.sampled_frames++;
+
+			if (m_pause_after_x_flips && m_pause_after_x_flips-- == 1)
+			{
+				Emu.Pause();
+			}
 		}
 
 		last_host_flip_timestamp = rsx::uclock();
@@ -2526,6 +2719,10 @@ namespace rsx
 
 	void thread::check_zcull_status(bool framebuffer_swap)
 	{
+		const bool zcull_rendering_enabled = !!method_registers.registers[NV4097_SET_ZCULL_EN];
+		const bool zcull_stats_enabled = !!method_registers.registers[NV4097_SET_ZCULL_STATS_ENABLE];
+		const bool zcull_pixel_cnt_enabled = !!method_registers.registers[NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE];
+
 		if (framebuffer_swap)
 		{
 			zcull_surface_active = false;
@@ -3007,6 +3204,12 @@ namespace rsx
 		if (!m_invalidated_memory_range.valid())
 			return;
 
+		if (is_stopped())
+		{
+			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::read);
+			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::write);
+		}
+
 		on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);
 		m_invalidated_memory_range.invalidate();
 	}
@@ -3018,7 +3221,7 @@ namespace rsx
 
 		while (!external_interrupt_ack)
 		{
-			if (Emu.IsStopped())
+			if (is_stopped())
 				break;
 
 			utils::pause();
@@ -3172,7 +3375,7 @@ namespace rsx
 		m_profiler.enabled = !!g_cfg.video.overlay;
 	}
 
-	void thread::request_emu_flip(u32 buffer)
+	bool thread::request_emu_flip(u32 buffer)
 	{
 		if (is_current_thread()) // requested through command buffer
 		{
@@ -3184,13 +3387,22 @@ namespace rsx
 			if (async_flip_requested & flip_request::emu_requested)
 			{
 				// ignore multiple requests until previous happens
-				return;
+				return true;
 			}
 
 			async_flip_buffer = buffer;
 			async_flip_requested |= flip_request::emu_requested;
+
 			m_eng_interrupt_mask |= rsx::display_interrupt;
+	
+			if (state & cpu_flag::exit)
+			{
+				// Resubmit possibly-ignored flip on savestate load
+				return false;
+			}
 		}
+
+		return true;
 	}
 
 	void thread::handle_emu_flip(u32 buffer)
@@ -3213,7 +3425,7 @@ namespace rsx
 
 		switch (frame_limit)
 		{
-		case frame_limit_type::none: limit = 0.; break;
+		case frame_limit_type::none: limit = g_cfg.core.max_cpu_preempt_count_per_frame ? static_cast<double>(g_cfg.video.vblank_rate) : 0.; break;
 		case frame_limit_type::_50: limit = 50.; break;
 		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
@@ -3224,37 +3436,28 @@ namespace rsx
 			break;
 		}
 
+		if (double limit2 = g_cfg.video.second_frame_limit; limit2 >= 0.1 && (limit2 < limit || !limit))
+		{
+			// Apply a second limit
+			limit = limit2;
+		}
+
 		if (limit)
 		{
-			const u64 time = rsx::uclock() - Emu.GetPauseTime();
 			const u64 needed_us = static_cast<u64>(1000000 / limit);
+			const u64 time = std::max<u64>(get_system_time(), target_rsx_flip_time > needed_us ? target_rsx_flip_time - needed_us : 0);
 
-			if (int_flip_index == 0)
+			if (int_flip_index)
 			{
-				target_rsx_flip_time = time;
-			}
-			else
-			{
-				do
-				{
-					target_rsx_flip_time += needed_us;
-				}
-				while (time >= target_rsx_flip_time + needed_us);
-
 				if (target_rsx_flip_time > time + 1000)
 				{
 					const auto delay_us = target_rsx_flip_time - time;
-					lv2_obj::wait_timeout<false, false>(delay_us);
-
-					if (thread_ctrl::state() == thread_state::aborting)
-					{
-						return;
-					}
-
+					lv2_obj::wait_timeout(delay_us, nullptr, false);
 					performance_counters.idle_time += delay_us;
 				}
 			}
 
+			target_rsx_flip_time = std::max(time, target_rsx_flip_time) + needed_us;
 			flip_notification_count = 1;
 		}
 		else if (frame_limit == frame_limit_type::_ps3)
@@ -3301,6 +3504,13 @@ namespace rsx
 			if (!isHLE)
 			{
 				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
+
+				if (unsent_gcm_events)
+				{
+					// TODO: A proper fix
+					return;
+				}
+
 				continue;
 			}
 
@@ -3317,5 +3527,211 @@ namespace rsx
 				intr_thread->cmd_notify.notify_one();
 			}
 		}
+	}
+
+	void thread::evaluate_cpu_usage_reduction_limits()
+	{
+		const u64 max_preempt_count = g_cfg.core.max_cpu_preempt_count_per_frame;
+
+		if (!max_preempt_count)
+		{
+			frame_times.clear();
+			lv2_obj::set_yield_frequency(0, 0);
+			return;
+		}
+
+		const u64 current_time = get_system_time();
+		const u64 current_tsc = utils::get_tsc();
+		u64 preempt_count = 0;
+
+		if (frame_times.size() >= 60)
+		{
+			u64 diffs = 0;
+
+			for (usz i = 1; i < frame_times.size(); i++)
+			{
+				const u64 cur_diff = frame_times[i].timestamp - frame_times[i - 1].timestamp;
+				diffs += cur_diff;
+			}
+
+			const usz avg_frame_time = diffs / 59;
+
+			u32 lowered_delay = 0;
+			u32 raised_delay = 0;
+			bool can_reevaluate = true;
+			u64 prev_preempt_count = umax;
+
+			for (usz i = frame_times.size() - 30; i < frame_times.size(); i++)
+			{
+				if (prev_preempt_count == umax)
+				{
+					prev_preempt_count = frame_times[i].preempt_count;
+					continue;
+				}
+
+				if (prev_preempt_count != frame_times[i].preempt_count)
+				{
+					if (prev_preempt_count > frame_times[i].preempt_count)
+					{
+						lowered_delay++;
+					}
+					else if (prev_preempt_count < frame_times[i].preempt_count)
+					{
+						raised_delay++;
+					}
+
+					if (i > frame_times.size() - 30)
+					{
+						// Slow preemption count increase
+						can_reevaluate = false;
+					}
+				}
+
+				prev_preempt_count = frame_times[i].preempt_count;
+			}
+
+			preempt_count = std::min<u64>(frame_times.back().preempt_count, max_preempt_count);
+
+			u32 fails = 0;
+			u32 hard_fails = 0;
+			bool is_last_frame_a_fail = false;
+
+			auto abs_dst = [](u64 a, u64 b)
+			{
+				return a >= b ? a - b : b - a;
+			};
+
+			for (u32 i = 1; i <= frame_times.size(); i++)
+			{
+				const u64 cur_diff = (i == frame_times.size() ? current_time : frame_times[i].timestamp) - frame_times[i - 1].timestamp;
+
+				if (const u64 diff_of_diff = abs_dst(cur_diff, avg_frame_time);
+					diff_of_diff >= avg_frame_time / 7)
+				{
+					if (diff_of_diff >= avg_frame_time / 3)
+					{
+						raised_delay++;
+						hard_fails++;
+
+						if (i == frame_times.size())
+						{
+							is_last_frame_a_fail = true;
+						}
+					}
+
+					if (fails != umax)
+					{
+						fails++;
+					}
+				}
+			}
+
+			bool hard_measures_taken = false;
+			const usz fps_10 = 10'000'000 / avg_frame_time;
+
+			auto lower_preemption_count = [&]()
+			{
+				if (preempt_count >= 10)
+				{
+					preempt_count -= 10;
+				}
+				else
+				{
+					preempt_count = 0;
+				}
+
+				if ((hard_fails > 2 || fails > 20) && is_last_frame_a_fail)
+				{
+					hard_measures_taken = preempt_count > 1;
+					preempt_count = preempt_count * 7 / 8;
+					prevent_preempt_increase_tickets = 10;
+				}
+				else
+				{
+					prevent_preempt_increase_tickets = std::max<u32>(7, prevent_preempt_increase_tickets);
+				}
+			};
+
+			const u64 vblank_rate_10 = g_cfg.video.vblank_rate * 10;
+
+			if (can_reevaluate)
+			{
+				const bool is_avg_fps_ok = (abs_dst(fps_10, 300) < 3 || abs_dst(fps_10, 600) < 4 || abs_dst(fps_10, vblank_rate_10) < 4 || abs_dst(fps_10, vblank_rate_10 / 2) < 3);
+
+				if (!hard_fails && fails < 6 && is_avg_fps_ok)
+				{
+					if (prevent_preempt_increase_tickets)
+					{
+						prevent_preempt_increase_tickets--;
+					}
+					else
+					{
+						preempt_count = std::min<u64>(preempt_count + 4, max_preempt_count);
+					}
+				}
+				else
+				{
+					lower_preemption_count();
+				}
+			}
+			// Sudden FPS drop detection
+			else if ((fails > 13 || hard_fails > 2 || !(abs_dst(fps_10, 300) < 20 || abs_dst(fps_10, 600) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10 / 2) < 20)) && lowered_delay < raised_delay && is_last_frame_a_fail)
+			{
+				lower_preemption_count();
+			}
+
+			perf_log.trace("CPU preemption control: reeval=%d, preempt_count=%llu, fails=%u, hard=%u, avg_frame_time=%llu, highered=%u, lowered=%u, taken=%u", can_reevaluate, preempt_count, fails, hard_fails, avg_frame_time, raised_delay, lowered_delay, ::g_lv2_preempts_taken.load());
+
+			if (hard_measures_taken)
+			{
+				preempt_fail_old_preempt_count = std::max<u64>(preempt_fail_old_preempt_count, std::min<u64>(frame_times.back().preempt_count, max_preempt_count));
+			}
+			else if (preempt_fail_old_preempt_count)
+			{
+				perf_log.error("Lowering current preemption count significantly due to a performance drop, if this issue persists frequently consider lowering max preemptions count to 'new-count' or lower. (old-count=%llu, new-count=%llu)", preempt_fail_old_preempt_count, preempt_count);
+				preempt_fail_old_preempt_count = 0;
+			}
+
+			const u64 tsc_diff = (current_tsc - frame_times.back().tsc);
+			const u64 time_diff = (current_time - frame_times.back().timestamp);
+			const u64 preempt_diff = tsc_diff * (1'000'000 / 30) / (time_diff * std::max<u64>(preempt_count, 1ull));
+
+			if (!preempt_count)
+			{
+				lv2_obj::set_yield_frequency(0, 0);
+			}
+			else if (abs_dst(fps_10, 300) < 30)
+			{
+				// Set an upper limit so a backoff technique would be taken if there is a sudden performance drop
+				// Allow 4% of no yield to reduce significantly the risk of stutter
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 96 / (30 * 100)) / time_diff));
+			}
+			else if (abs_dst(fps_10, 600) < 40)
+			{
+				// 5% for 60fps
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 94 / (60 * 100)) / time_diff));
+			}
+			else if (abs_dst(fps_10, vblank_rate_10) < 40)
+			{
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 94 / (vblank_rate_10 * 10)) / time_diff));
+			}
+			else if (abs_dst(fps_10, vblank_rate_10 / 2) < 30)
+			{
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 96 / ((vblank_rate_10 / 2) * 10)) / time_diff));
+			}
+			else
+			{
+				// Undetected case, last 12% is with no yield
+				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * 88 / 100));
+			}
+
+			frame_times.pop_front();
+		}
+		else
+		{
+			lv2_obj::set_yield_frequency(0, 0);
+		}
+
+		frame_times.push_back(frame_time_t{preempt_count, current_time, current_tsc});
 	}
 }

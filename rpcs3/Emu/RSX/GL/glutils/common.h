@@ -1,6 +1,6 @@
 #pragma once
 
-#include "capabilities.hpp"
+#include "capabilities.h"
 
 #define GL_FRAGMENT_TEXTURES_START 0
 #define GL_VERTEX_TEXTURES_START   (GL_FRAGMENT_TEXTURES_START + 16)
@@ -8,8 +8,8 @@
 #define GL_STREAM_BUFFER_START     (GL_STENCIL_MIRRORS_START + 16)
 #define GL_TEMP_IMAGE_SLOT         31
 
-#define UBO_SLOT(x)  (x)
-#define SSBO_SLOT(x) (x + 8)
+#define UBO_SLOT(x)  (x + 8)
+#define SSBO_SLOT(x) (x)
 
 #define GL_VERTEX_PARAMS_BIND_SLOT             UBO_SLOT(0)
 #define GL_VERTEX_LAYOUT_BIND_SLOT             UBO_SLOT(1)
@@ -21,6 +21,7 @@
 #define GL_INTERPRETER_VERTEX_BLOCK            SSBO_SLOT(0)
 #define GL_INTERPRETER_FRAGMENT_BLOCK          SSBO_SLOT(1)
 #define GL_COMPUTE_BUFFER_SLOT(index)          SSBO_SLOT(2 + index)
+#define GL_COMPUTE_IMAGE_SLOT(index)           SSBO_SLOT(index)
 
 //Function call wrapped in ARB_DSA vs EXT_DSA compat check
 #define DSA_CALL(func, object_name, target, ...)\
@@ -48,127 +49,31 @@
 
 namespace gl
 {
-	// TODO: Move to sync.h
-	class fence
+	template<typename Type, uint BindId, uint GetStateId>
+	class save_binding_state_base
 	{
-		GLsync m_value = nullptr;
-		mutable GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
-		mutable bool signaled = false;
+		GLint m_last_binding;
 
 	public:
-
-		fence() = default;
-		~fence() = default;
-
-		void create()
+		save_binding_state_base(const Type& new_state) : save_binding_state_base()
 		{
-			m_value = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-			flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+			new_state.bind();
 		}
 
-		void destroy()
+		save_binding_state_base()
 		{
-			glDeleteSync(m_value);
-			m_value = nullptr;
+			glGetIntegerv(GetStateId, &m_last_binding);
 		}
 
-		void reset()
+		~save_binding_state_base()
 		{
-			if (m_value != nullptr)
-				destroy();
-
-			create();
-		}
-
-		bool is_empty() const
-		{
-			return (m_value == nullptr);
-		}
-
-		bool check_signaled() const
-		{
-			ensure(m_value);
-
-			if (signaled)
-				return true;
-
-			if (flags)
-			{
-				GLenum err = glClientWaitSync(m_value, flags, 0);
-				flags = 0;
-
-				if (!(err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED))
-					return false;
-			}
-			else
-			{
-				GLint status = GL_UNSIGNALED;
-				GLint tmp;
-
-				glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-
-				if (status != GL_SIGNALED)
-					return false;
-			}
-
-			signaled = true;
-			return true;
-		}
-
-		bool wait_for_signal()
-		{
-			ensure(m_value);
-
-			if (signaled == GL_FALSE)
-			{
-				GLenum err = GL_WAIT_FAILED;
-				bool done = false;
-
-				while (!done)
-				{
-					if (flags)
-					{
-						err = glClientWaitSync(m_value, flags, 0);
-						flags = 0;
-
-						switch (err)
-						{
-						default:
-							rsx_log.error("gl::fence sync returned unknown error 0x%X", err);
-							[[fallthrough]];
-						case GL_ALREADY_SIGNALED:
-						case GL_CONDITION_SATISFIED:
-							done = true;
-							break;
-						case GL_TIMEOUT_EXPIRED:
-							continue;
-						}
-					}
-					else
-					{
-						GLint status = GL_UNSIGNALED;
-						GLint tmp;
-
-						glGetSynciv(m_value, GL_SYNC_STATUS, 4, &tmp, &status);
-
-						if (status == GL_SIGNALED)
-							break;
-					}
-				}
-
-				signaled = (err == GL_ALREADY_SIGNALED || err == GL_CONDITION_SATISFIED);
-			}
-
-			glDeleteSync(m_value);
-			m_value = nullptr;
-
-			return signaled;
-		}
-
-		void server_wait_sync() const
-		{
-			ensure(m_value != nullptr);
-			glWaitSync(m_value, 0, GL_TIMEOUT_IGNORED);
+			glBindBuffer(BindId, m_last_binding);
 		}
 	};
+
+	// Very useful util when capturing traces with RenderDoc
+	static inline void push_debug_label(const char* label)
+	{
+		glInsertEventMarkerEXT(static_cast<GLsizei>(strlen(label)), label);
+	}
 }

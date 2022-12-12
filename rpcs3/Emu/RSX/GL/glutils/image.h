@@ -10,6 +10,9 @@ using namespace ::rsx::format_class_;
 
 namespace gl
 {
+#define GL_BGRA8        0x80E1 // Enumerant of GL_BGRA8_EXT from the GL_EXT_texture_format_BGRA8888
+#define GL_BGR5_A1      0x99F0 // Unused enum 0x96xx is the last official GL enumerant
+
 	class buffer;
 	class buffer_view;
 	class command_context;
@@ -21,6 +24,37 @@ namespace gl
 		color = 1,
 		depth = 2,
 		stencil = 4
+	};
+
+	enum class filter
+	{
+		nearest = GL_NEAREST,
+		linear = GL_LINEAR
+	};
+
+	enum class min_filter
+	{
+		nearest = GL_NEAREST,
+		linear = GL_LINEAR,
+		nearest_mipmap_nearest = GL_NEAREST_MIPMAP_NEAREST,
+		nearest_mipmap_linear = GL_NEAREST_MIPMAP_LINEAR,
+		linear_mipmap_nearest = GL_LINEAR_MIPMAP_NEAREST,
+		linear_mipmap_linear = GL_LINEAR_MIPMAP_LINEAR
+	};
+
+	enum remap_constants : u32
+	{
+		GL_REMAP_IDENTITY = 0xCAFEBABE,
+		GL_REMAP_BGRA = 0x0000AA6C
+	};
+
+	struct subresource_range
+	{
+		GLenum aspect_mask;
+		GLuint min_level;
+		GLuint num_levels;
+		GLuint min_layer;
+		GLuint num_layers;
 	};
 
 	class texture
@@ -99,8 +133,10 @@ namespace gl
 
 			//Sized internal formats, see opengl spec document on glTexImage2D, table 3
 			rgba8 = GL_RGBA8,
+			bgra8 = GL_BGRA8,
 			rgb565 = GL_RGB565,
 			rgb5a1 = GL_RGB5_A1,
+			bgr5a1 = GL_BGR5_A1,
 			rgba4 = GL_RGBA4,
 			r8 = GL_R8,
 			r16 = GL_R16,
@@ -109,7 +145,9 @@ namespace gl
 			rg16 = GL_RG16,
 			rg16f = GL_RG16F,
 			rgba16f = GL_RGBA16F,
-			rgba32f = GL_RGBA32F
+			rgba32f = GL_RGBA32F,
+
+			rg8_snorm = GL_RG8_SNORM
 		};
 
 		enum class wrap
@@ -135,7 +173,8 @@ namespace gl
 			texture2D = GL_TEXTURE_2D,
 			texture3D = GL_TEXTURE_3D,
 			textureCUBE = GL_TEXTURE_CUBE_MAP,
-			textureBuffer = GL_TEXTURE_BUFFER
+			textureBuffer = GL_TEXTURE_BUFFER,
+			texture2DArray = GL_TEXTURE_2D_ARRAY
 		};
 
 	protected:
@@ -219,6 +258,19 @@ namespace gl
 			return m_mipmaps;
 		}
 
+		GLuint layers() const
+		{
+			switch (m_target)
+			{
+			case target::textureCUBE:
+				return 6;
+			case target::texture2DArray:
+				return m_depth;
+			default:
+				return 1;
+			}
+		}
+
 		GLuint pitch() const
 		{
 			return m_pitch;
@@ -290,15 +342,19 @@ namespace gl
 
 	class texture_view
 	{
+	protected:
 		GLuint m_id = GL_NONE;
 		GLenum m_target = 0;
 		GLenum m_format = 0;
+		GLenum m_view_format = 0;
 		GLenum m_aspect_flags = 0;
 		texture* m_image_data = nullptr;
 
 		GLenum component_swizzle[4];
 
-		void create(texture* data, GLenum target, GLenum sized_format, GLenum aspect_flags, const GLenum* argb_swizzle = nullptr);
+		texture_view() = default;
+
+		void create(texture* data, GLenum target, GLenum sized_format, const subresource_range& range, const GLenum* argb_swizzle = nullptr);
 
 	public:
 		texture_view(const texture_view&) = delete;
@@ -308,7 +364,7 @@ namespace gl
 			const GLenum* argb_swizzle = nullptr,
 			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
-			create(data, target, sized_format, aspect_flags, argb_swizzle);
+			create(data, target, sized_format, { aspect_flags, 0, data->levels(), 0, data->layers() }, argb_swizzle);
 		}
 
 		texture_view(texture* data, const GLenum* argb_swizzle = nullptr,
@@ -316,7 +372,22 @@ namespace gl
 		{
 			GLenum target = static_cast<GLenum>(data->get_target());
 			GLenum sized_format = static_cast<GLenum>(data->get_internal_format());
-			create(data, target, sized_format, aspect_flags, argb_swizzle);
+			create(data, target, sized_format, { aspect_flags, 0, data->levels(), 0, data->layers() }, argb_swizzle);
+		}
+
+		texture_view(texture* data, const subresource_range& range,
+			const GLenum* argb_swizzle = nullptr)
+		{
+			GLenum target = static_cast<GLenum>(data->get_target());
+			GLenum sized_format = static_cast<GLenum>(data->get_internal_format());
+			create(data, target, sized_format, range, argb_swizzle);
+		}
+
+		texture_view(texture* data, GLenum target, const subresource_range& range,
+			const GLenum* argb_swizzle = nullptr)
+		{
+			GLenum sized_format = static_cast<GLenum>(data->get_internal_format());
+			create(data, target, sized_format, range, argb_swizzle);
 		}
 
 		virtual ~texture_view();
@@ -334,6 +405,11 @@ namespace gl
 		GLenum internal_format() const
 		{
 			return m_format;
+		}
+
+		GLenum view_format() const
+		{
+			return m_view_format;
 		}
 
 		GLenum aspect() const
@@ -368,9 +444,17 @@ namespace gl
 		void bind(gl::command_context& cmd, GLuint layer) const;
 	};
 
+	// Passthrough texture view that simply wraps the original texture in a texture_view interface
+	class nil_texture_view : public texture_view
+	{
+	public:
+		nil_texture_view(texture* data);
+		~nil_texture_view();
+	};
+
 	class viewable_image : public texture
 	{
-		std::unordered_multimap<u32, std::unique_ptr<texture_view>> views;
+		std::unordered_map<u64, std::unique_ptr<texture_view>> views;
 
 	public:
 		using texture::texture;

@@ -1,13 +1,12 @@
 R"(
 #version 450
 
-#define SSBO_BASE_LOCATION %loc
-#define SSBO(x) (SSBO_BASE_LOCATION + x)
+#define SSBO_LOCATION(x) (x + %loc)
 
 layout(local_size_x = %ws, local_size_y = 1, local_size_z = 1) in;
 
-layout(%set, binding=SSBO(0), std430) buffer ssbo0{ uint data_in[]; };
-layout(%set, binding=SSBO(1), std430) buffer ssbo1{ uint data_out[]; };
+layout(%set, binding=SSBO_LOCATION(0), std430) buffer ssbo0{ uint data_in[]; };
+layout(%set, binding=SSBO_LOCATION(1), std430) buffer ssbo1{ uint data_out[]; };
 layout(%push_block) uniform parameters
 {
 	uint image_width;

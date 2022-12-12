@@ -231,9 +231,8 @@ public:
 
 				// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushed to jostling_value)
 				ensure(this->data.bit_test_reset(off_wait));
+				data.notify_one();
 			}
-
-			data.notify_one();
 
 			// Return true if count has changed from 0 to 1, this condition is considered satisfied even if we pushed a value directly to the special storage for waiting SPUs 
 			return !pushed_to_data || (old & bit_count) == 0;
@@ -298,102 +297,10 @@ public:
 	}
 
 	// Waiting for channel pop state availability, actually popping if specified
-	s64 pop_wait(cpu_thread& spu, bool pop = true)
-	{
-		u64 old = data.fetch_op([&](u64& data)
-		{
-			if (data & bit_count) [[likely]]
-			{
-				if (pop)
-				{
-					data = 0;
-					return true;
-				}
-
-				return false;
-			}
-
-			data = bit_wait;
-			jostling_value.release(bit_wait);
-			return true;
-		}).first;
-
-		if (old & bit_count)
-		{
-			return static_cast<u32>(old);
-		}
-
-		while (true)
-		{
-			thread_ctrl::wait_on(data, bit_wait);
-			old = data;
-
-			if (!(old & bit_wait))
-			{
-				return static_cast<u32>(jostling_value);
-			}
-
-			if (spu.is_stopped())
-			{
-				// Abort waiting and test if a value has been received
-				if (u64 v = jostling_value.exchange(0); !(v & bit_wait))
-				{
-					return static_cast<u32>(v);
-				}
-
-				ensure(data.bit_test_reset(off_wait));
-				return -1;
-			}
-		}
-	}
+	s64 pop_wait(cpu_thread& spu, bool pop = true);
 
 	// Waiting for channel push state availability, actually pushing if specified
-	bool push_wait(cpu_thread& spu, u32 value, bool push = true)
-	{
-		u64 state;
-		data.fetch_op([&](u64& data)
-		{
-			if (data & bit_count) [[unlikely]]
-			{
-				jostling_value.release(push ? value : static_cast<u32>(data));
-				data |= bit_wait;
-			}
-			else if (push)
-			{
-				data = bit_count | value;
-			}
-			else
-			{
-				state = data;
-				return false;
-			}
-
-			state = data;
-			return true;
-		});
-
-		while (true)
-		{
-			if (!(state & bit_wait))
-			{
-				if (!push)
-				{
-					data &= ~bit_count;
-				}
-
-				return true;
-			}
-
-			if (spu.is_stopped())
-			{
-				data &= ~bit_wait;
-				return false;
-			}
-
-			thread_ctrl::wait_on(data, state);
-			state = data;
-		}
-	}
+	bool push_wait(cpu_thread& spu, u32 value, bool push = true);
 
 	void set_value(u32 value, bool count = true)
 	{
@@ -424,45 +331,61 @@ struct spu_channel_4_t
 	};
 
 	atomic_t<sync_var_t> values;
+	atomic_t<u64> jostling_value;
 	atomic_t<u32> value3;
 
-public:
+	static constexpr u32 off_wait  = 32;
+	static constexpr u64 bit_wait  = 1ull << off_wait;
+
 	void clear()
 	{
 		values.release({});
 	}
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
-	void push(cpu_thread& spu, u32 value)
+	void push(u32 value)
 	{
-		value3.release(value);
-
-		if (values.atomic_op([value](sync_var_t& data) -> bool
+		while (true)
 		{
-			switch (data.count++)
+			value3.release(value);
+			const auto [old, pushed_to_data] = values.fetch_op([&](sync_var_t& data)
 			{
-			case 0: data.value0 = value; break;
-			case 1: data.value1 = value; break;
-			case 2: data.value2 = value; break;
-			default:
-			{
-				data.count = 4;
-				data.value3_inval++; // Ensure the SPU reads the most recent value3 write in try_pop by re-loading
-				break;
-			}
-			}
+				if (data.waiting)
+				{
+					return false;
+				}
 
-			if (data.waiting)
-			{
-				data.waiting = 0;
+				switch (data.count++)
+				{
+				case 0: data.value0 = value; break;
+				case 1: data.value1 = value; break;
+				case 2: data.value2 = value; break;
+				default:
+				{
+					data.count = 4;
+					data.value3_inval++; // Ensure the SPU reads the most recent value3 write in try_pop by re-loading
+					break;
+				}
+				}
 
 				return true;
+			});
+
+			if (!pushed_to_data)
+			{
+				// Insert the pending value in special storage for waiting SPUs, leave no time in which the channel has data
+				if (!jostling_value.compare_and_swap_test(bit_wait, value))
+				{
+					// Other thread has inserted a value through jostling_value, retry
+					continue;
+				}
+
+				// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushing to jostling_value)
+				ensure(atomic_storage<u8>::exchange(values.raw().waiting, 0));
+				values.notify_one();
 			}
 
-			return false;
-		}))
-		{
-			spu.notify();
+			return;
 		}
 	}
 
@@ -483,14 +406,13 @@ public:
 				data.value1 = data.value2;
 				data.value2 = this->value3;
 			}
-			else
-			{
-				data.waiting = 1;
-			}
 
 			return result;
 		});
 	}
+
+	// Returns [previous count, value] (if aborted 0 count is returned)
+	std::pair<u32, u32> pop_wait(cpu_thread& spu);
 
 	// returns current queue size without modification
 	uint try_read(u32 (&out)[4]) const
@@ -682,6 +604,7 @@ public:
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 	virtual std::string dump_misc() const override;
 	virtual void cpu_task() override final;
+	virtual void cpu_on_stop() override;
 	virtual void cpu_return() override;
 	virtual void cpu_work() override;
 	virtual ~spu_thread() override;
@@ -699,6 +622,13 @@ public:
 
 	using cpu_thread::operator=;
 
+	SAVESTATE_INIT_POS(5);
+
+	spu_thread(utils::serial& ar, lv2_spu_group* group = nullptr);
+	void serialize_common(utils::serial& ar);
+	void save(utils::serial& ar);
+	bool savable() const { return get_type() != spu_type::threaded; } // Threaded SPUs are saved as part of the SPU group
+
 	u32 pc = 0;
 	u32 dbg_step_pc = 0;
 
@@ -714,6 +644,7 @@ public:
 
 	// MFC command data
 	spu_mfc_cmd ch_mfc_cmd;
+	u32 mfc_cmd_id = 0;
 
 	// MFC command queue
 	spu_mfc_cmd mfc_queue[16]{};
@@ -744,6 +675,7 @@ public:
 	u64 rtime = 0;
 	alignas(64) std::byte rdata[128]{};
 	u32 raddr = 0;
+	const decltype(rdata)* resrv_mem{};
 
 	// Range Lock pointer
 	atomic_t<u64, 64>* range_lock{};
@@ -802,11 +734,14 @@ public:
 	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
 	lv2_spu_group* const group; // SPU Thread Group (access by the spu threads in the group only! From other threads obtain a shared pointer to group using group ID)
 	const u32 index; // SPU index
+	const spu_type thread_type;
 	std::shared_ptr<utils::shm> shm; // SPU memory
 	const std::add_pointer_t<u8> ls; // SPU LS pointer
-	const spu_type thread_type;
 	const u32 option; // sys_spu_thread_initialize option
 	const u32 lv2_id; // The actual id that is used by syscalls
+	u32 spurs_addr = 0;
+
+	spu_thread* next_cpu{}; // LV2 thread queues' node link
 
 	// Thread name
 	atomic_ptr<std::string> spu_tname;
@@ -827,6 +762,11 @@ public:
 	u32 last_faddr = 0;
 	u64 last_fail = 0;
 	u64 last_succ = 0;
+	u64 last_gtsc = 0;
+	u32 last_getllar = umax; // LS address of last GETLLAR (if matches current GETLLAR we can let the thread rest)
+	u32 last_getllar_id = umax;
+	u32 getllar_spin_count = 0;
+	u32 getllar_busy_waiting_switch = umax; // umax means the test needs evaluation, otherwise it's a boolean
 
 	std::vector<mfc_cmd_dump> mfc_history;
 	u64 mfc_dump_idx = 0;
@@ -840,6 +780,7 @@ public:
 
 	const char* current_func{}; // Current STOP or RDCH blocking function
 	u64 start_time{}; // Starting time of STOP or RDCH bloking function
+	bool unsavable = false; // Flag indicating whether saving the spu thread state is currently unsafe
 
 	atomic_t<u8> debugger_float_mode = 0;
 
@@ -847,6 +788,7 @@ public:
 	std::array<atomic_t<bool>, SPU_LS_SIZE / 4> local_breakpoints{};
 	atomic_t<bool> has_active_local_bps = false;
 	u32 current_bp_pc = umax;
+	bool stop_flag_removal_protection = false;
 
 	void push_snr(u32 number, u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);
@@ -871,7 +813,12 @@ public:
 
 	void fast_call(u32 ls_addr);
 
-	bool capture_local_storage() const;
+	std::array<std::shared_ptr<utils::serial>, 32> rewind_captures; // shared_ptr to avoid header inclusion
+	u8 current_rewind_capture_idx = 0;
+
+	bool capture_state();
+	bool try_load_debug_capture();
+	void wakeup_delay(u32 div = 1) const;
 
 	// Convert specified SPU LS address to a pointer of specified (possibly converted to BE) type
 	template<typename T>
@@ -896,6 +843,8 @@ public:
 	{
 		return group ? SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (id & 0xffffff) : RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index;
 	}
+
+	static u8* map_ls(utils::shm& shm, void* ptr = nullptr);
 
 	// Returns true if reservation existed but was just discovered to be lost
 	// It is safe to use on any address, even if not directly accessed by SPU (so it's slower)
@@ -943,6 +892,9 @@ public:
 
 	~spu_function_logger()
 	{
-		spu.start_time = 0;
+		if (!spu.is_stopped())
+		{
+			spu.start_time = 0;
+		}
 	}
 };

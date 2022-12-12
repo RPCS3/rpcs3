@@ -66,11 +66,24 @@ void cell_audio_config::reset(bool backend_changed)
 
 	const AudioFreq freq = AudioFreq::FREQ_48K;
 	const AudioSampleSize sample_size = raw.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
-	const auto [ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
-	const f64 cb_frame_len = backend->Open(freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
+
+	const auto [req_ch_cnt, downmix] = AudioBackend::get_channel_count_and_downmixer(0); // CELL_AUDIO_OUT_PRIMARY
+	f64 cb_frame_len = 0.0;
+	u32 ch_cnt = 2;
+
+	if (backend->Open(raw.audio_device, freq, sample_size, req_ch_cnt))
+	{
+		cb_frame_len = backend->GetCallbackFrameLen();
+		ch_cnt = backend->get_channels();
+	}
+	else
+	{
+		cellAudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
+	}
 
 	audio_downmix = downmix;
-	audio_channels = static_cast<u32>(ch_cnt);
+	backend_ch_cnt = AudioChannelCnt{ch_cnt};
+	audio_channels = static_cast<u32>(req_ch_cnt);
 	audio_sampling_rate = static_cast<u32>(freq);
 	audio_block_period = AUDIO_BUFFER_SAMPLES * 1'000'000 / audio_sampling_rate;
 	audio_sample_size = static_cast<u32>(sample_size);
@@ -143,8 +156,9 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 		return cfg.audio_min_buffer_duration;
 	}();
 
-	cb_ringbuf.set_buf_size(static_cast<u32>(cfg.audio_channels * cfg.audio_sampling_rate * cfg.audio_sample_size * buffer_dur_mult));
+	cb_ringbuf.set_buf_size(static_cast<u32>(static_cast<u32>(cfg.backend_ch_cnt) * cfg.audio_sampling_rate * cfg.audio_sample_size * buffer_dur_mult));
 	backend->SetWriteCallback(std::bind(&audio_ringbuffer::backend_write_callback, this, std::placeholders::_1, std::placeholders::_2));
+	backend->SetStateCallback(std::bind(&audio_ringbuffer::backend_state_callback, this, std::placeholders::_1));
 }
 
 audio_ringbuffer::~audio_ringbuffer()
@@ -178,6 +192,14 @@ u32 audio_ringbuffer::backend_write_callback(u32 size, void *buf)
 	return static_cast<u32>(cb_ringbuf.pop(buf, size, true));
 }
 
+void audio_ringbuffer::backend_state_callback(AudioStateEvent event)
+{
+	if (event == AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED)
+	{
+		backend_device_changed = true;
+	}
+}
+
 u64 audio_ringbuffer::get_timestamp()
 {
 	return get_system_time();
@@ -191,7 +213,7 @@ float* audio_ringbuffer::get_current_buffer() const
 u64 audio_ringbuffer::get_enqueued_samples() const
 {
 	AUDIT(cfg.buffering_enabled);
-	const u64 ringbuf_samples = cb_ringbuf.get_used_size() / (cfg.audio_sample_size * cfg.audio_channels);
+	const u64 ringbuf_samples = cb_ringbuf.get_used_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt));
 
 	if (cfg.time_stretching_enabled)
 	{
@@ -252,7 +274,7 @@ void audio_ringbuffer::process_resampled_data()
 {
 	if (!cfg.time_stretching_enabled) return;
 
-	const auto samples = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * cfg.audio_channels)));
+	const auto samples = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt))));
 	commit_data(samples.first, samples.second);
 }
 
@@ -263,12 +285,48 @@ void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
 	// Dump audio if enabled
 	m_dump.WriteData(buf, sample_cnt * static_cast<u32>(AudioSampleSize::FLOAT));
 
-	if (cfg.backend->get_convert_to_s16())
+	if (cfg.backend_ch_cnt < AudioChannelCnt{cfg.audio_channels})
 	{
-		AudioBackend::convert_to_s16(sample_cnt, buf, buf);
+		if (AudioChannelCnt{cfg.audio_channels} == AudioChannelCnt::SURROUND_7_1)
+		{
+			if (cfg.backend_ch_cnt == AudioChannelCnt::SURROUND_5_1)
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::SURROUND_5_1>(sample_cnt, buf, buf);
+			}
+			else if (cfg.backend_ch_cnt == AudioChannelCnt::STEREO)
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_7_1, AudioChannelCnt::STEREO>(sample_cnt, buf, buf);
+			}
+			else
+			{
+				fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
+			}
+		}
+		else if (AudioChannelCnt{cfg.audio_channels} == AudioChannelCnt::SURROUND_5_1)
+		{
+			if (cfg.backend_ch_cnt == AudioChannelCnt::STEREO)
+			{
+				AudioBackend::downmix<AudioChannelCnt::SURROUND_5_1, AudioChannelCnt::STEREO>(sample_cnt, buf, buf);
+			}
+			else
+			{
+				fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
+			}
+		}
+		else
+		{
+			fmt::throw_exception("Invalid downmix combination: %u -> %u", cfg.audio_channels, static_cast<u32>(cfg.backend_ch_cnt));
+		}
 	}
 
-	cb_ringbuf.push(buf, sample_cnt * cfg.audio_sample_size);
+	const u32 sample_cnt_out = sample_cnt / cfg.audio_channels * static_cast<u32>(cfg.backend_ch_cnt);
+
+	if (cfg.backend->get_convert_to_s16())
+	{
+		AudioBackend::convert_to_s16(sample_cnt_out, buf, buf);
+	}
+
+	cb_ringbuf.push(buf, sample_cnt_out * cfg.audio_sample_size);
 }
 
 void audio_ringbuffer::play()
@@ -340,6 +398,52 @@ void audio_port::tag(s32 offset)
 	}
 
 	prev_touched_tag_nr = -1;
+}
+
+cell_audio_thread::cell_audio_thread(utils::serial& ar)
+	: cell_audio_thread()
+{
+	ar(init);
+
+	if (!init)
+	{
+		return;
+	}
+
+	ar(key_count, event_period);
+
+	keys.resize(ar);
+
+	for (key_info& k : keys)
+	{
+		ar(k.start_period, k.flags, k.source);
+		k.port = lv2_event_queue::load_ptr(ar, k.port);
+	}
+
+	ar(ports);
+}
+
+void cell_audio_thread::save(utils::serial& ar)
+{
+	ar(init);
+
+	if (!init)
+	{
+		return;
+	}
+
+	USING_SERIALIZATION_VERSION(cellAudio);
+
+	ar(key_count, event_period);
+	ar(keys.size());
+
+	for (const key_info& k : keys)
+	{
+		ar(k.start_period, k.flags, k.source);
+		lv2_event_queue::save_ptr(ar, k.port.get());
+	}
+
+	ar(ports);
 }
 
 std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
@@ -511,6 +615,7 @@ void cell_audio_thread::advance(u64 timestamp)
 
 	for (u32 i = 0; i < queue_count; i++)
 	{
+		lv2_obj::notify_all_t notify;
 		queues[i]->send(event_sources[i], 0, 0, 0);
 	}
 }
@@ -521,6 +626,7 @@ namespace audio
 	{
 		return
 		{
+			.audio_device = g_cfg.audio.audio_device,
 			.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
 			.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
 			.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
@@ -546,6 +652,7 @@ namespace audio
 
 			if (const auto raw = g_audio.cfg.raw;
 				force_reset ||
+				raw.audio_device != new_raw.audio_device ||
 				raw.desired_buffer_duration != new_raw.desired_buffer_duration ||
 				raw.buffering_enabled != new_raw.buffering_enabled ||
 				raw.time_stretching_threshold != new_raw.time_stretching_threshold ||
@@ -585,7 +692,6 @@ void cell_audio_thread::reset_counters()
 	m_start_time = ringbuffer->get_timestamp();
 	m_last_period_end = m_start_time;
 	m_dynamic_period = 0;
-	m_backend_failed = false;
 	m_audio_should_restart = true;
 }
 
@@ -615,11 +721,20 @@ void cell_audio_thread::operator()()
 
 	thread_ctrl::scoped_priority high_prio(+1);
 
+	while (Emu.IsPaused())
+	{
+		thread_ctrl::wait_for(5000);
+	}
+
 	u32 untouched_expected = 0;
+
+	u32 loop_count = 0;
 
 	// Main cellAudio loop
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
+		loop_count++;
+
 		const auto update_req = m_update_configuration.observe();
 		if (update_req != audio_backend_update::NONE)
 		{
@@ -632,30 +747,8 @@ void cell_audio_thread::operator()()
 			update_config(update_req == audio_backend_update::ALL);
 		}
 
-		if (!ringbuffer->get_operational_status())
-		{
-			if (m_backend_failed)
-			{
-				thread_ctrl::wait_for(500 * 1000);
-			}
-			else
-			{
-				cellAudio.warning("Backend stopped unexpectedly (likely device change). Attempting to recover...");
-			}
-
-			update_config(true);
-			m_backend_failed = true;
-			continue;
-		}
-
-		if (m_backend_failed)
-		{
-			cellAudio.warning("Backend recovered");
-			m_backend_failed = false;
-		}
-
 		const bool emu_paused = Emu.IsPaused();
-		const u64 timestamp = ringbuffer->update(emu_paused);
+		const u64 timestamp = ringbuffer->update(emu_paused || m_backend_failed);
 
 		if (emu_paused)
 		{
@@ -691,6 +784,36 @@ void cell_audio_thread::operator()()
 
 			m_audio_should_restart = false;
 			continue;
+		}
+
+		bool operational = ringbuffer->get_operational_status();
+
+		if (!operational && loop_count % 128 == 0)
+		{
+			update_config(true);
+			operational = ringbuffer->get_operational_status();
+		}
+
+		if (ringbuffer->device_changed())
+		{
+			cellAudio.warning("Default device changed, attempting to switch...");
+			update_config(false);
+
+			if (operational != ringbuffer->get_operational_status())
+			{
+				continue;
+			}
+		}
+
+		if (!m_backend_failed && !operational)
+		{
+			cellAudio.error("Backend stopped unexpectedly (likely device change). Attempting to recover...");
+			m_backend_failed = true;
+		}
+		else if (m_backend_failed && operational)
+		{
+			cellAudio.success("Backend recovered");
+			m_backend_failed = false;
 		}
 
 		if (!cfg.buffering_enabled)
@@ -796,7 +919,7 @@ void cell_audio_thread::operator()()
 				// As such, if the game doesn't touch buffers for too long we advance time hoping the game recovers
 				if (
 					(untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout) ||
-					(time_since_last_period > cfg.partially_untouched_timeout)
+					(time_since_last_period > cfg.partially_untouched_timeout) || g_cfg.audio.disable_sampling_skip
 				   )
 				{
 					// There's no audio in the buffers, simply advance time and hope the game recovers
@@ -1749,12 +1872,13 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	{
 		for (u32 i = 0; i < CELL_AUDIO_BLOCK_SAMPLES; i++)
 		{
+			// Channel order in src is Front Left, Center, Front Right, Surround Left, Surround Right, LFE
 			dst[i * 8 + 0] += src[i * 6 + 0] * volume; // mix L ch
-			dst[i * 8 + 1] += src[i * 6 + 1] * volume; // mix R ch
-			dst[i * 8 + 2] += src[i * 6 + 2] * volume; // mix center
-			dst[i * 8 + 3] += src[i * 6 + 3] * volume; // mix LFE
-			dst[i * 8 + 4] += src[i * 6 + 4] * volume; // mix rear L
-			dst[i * 8 + 5] += src[i * 6 + 5] * volume; // mix rear R
+			dst[i * 8 + 1] += src[i * 6 + 2] * volume; // mix R ch
+			dst[i * 8 + 2] += src[i * 6 + 1] * volume; // mix center
+			dst[i * 8 + 3] += src[i * 6 + 5] * volume; // mix LFE
+			dst[i * 8 + 4] += src[i * 6 + 3] * volume; // mix rear L
+			dst[i * 8 + 5] += src[i * 6 + 4] * volume; // mix rear R
 			//dst[i * 8 + 6] += 0.0f; // side L
 			//dst[i * 8 + 7] += 0.0f; // side R
 		}

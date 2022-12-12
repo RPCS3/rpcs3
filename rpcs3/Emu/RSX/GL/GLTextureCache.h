@@ -1,8 +1,9 @@
 #pragma once
 
-#include "util/types.hpp"
-
 #include "GLRenderTargets.h"
+#include "glutils/blitter.h"
+#include "glutils/sync.hpp"
+
 #include "../Common/texture_cache.h"
 
 #include <memory>
@@ -12,10 +13,6 @@ class GLGSRender;
 
 namespace gl
 {
-	class blitter;
-
-	extern blitter* g_hw_blitter;
-
 	class cached_texture_section;
 	class texture_cache;
 
@@ -423,7 +420,7 @@ namespace gl
 
 		gl::texture_view* get_raw_view()
 		{
-			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);
+			return vram_texture->get_view(GL_REMAP_IDENTITY, rsx::default_remap_vector);
 		}
 
 		bool is_depth_texture() const
@@ -444,36 +441,19 @@ namespace gl
 		using baseclass = rsx::texture_cache<gl::texture_cache, gl::texture_cache_traits>;
 		friend baseclass;
 
-	private:
-		struct discardable_storage
+		struct temporary_image_t : public gl::viewable_image, public rsx::ref_counted
 		{
-			std::unique_ptr<gl::texture> image;
-			std::unique_ptr<gl::texture_view> view;
+			u64 properties_encoding = 0;
 
-			discardable_storage() = default;
-
-			discardable_storage(std::unique_ptr<gl::texture>& tex)
-			{
-				image = std::move(tex);
-			}
-
-			discardable_storage(std::unique_ptr<gl::texture_view>& _view)
-			{
-				view = std::move(_view);
-			}
-
-			discardable_storage(std::unique_ptr<gl::texture>& tex, std::unique_ptr<gl::texture_view>& _view)
-			{
-				image = std::move(tex);
-				view = std::move(_view);
-			}
+			using gl::viewable_image::viewable_image;
 		};
 
-	private:
-
 		blitter m_hw_blitter;
-		std::vector<discardable_storage> m_temporary_surfaces;
+		std::vector<std::unique_ptr<temporary_image_t>> m_temporary_surfaces;
 
+		const u32 max_cached_image_pool_size = 256;
+
+	private:
 		void clear()
 		{
 			baseclass::clear();
@@ -578,7 +558,7 @@ namespace gl
 		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			auto _template = get_template_from_collection_impl(sources);
-			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_3D, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_CUBE_MAP, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
 
 			copy_transfer_regions_impl(cmd, result->image(), sources);
 			return result;
@@ -618,10 +598,9 @@ namespace gl
 		{
 			for (auto& e : m_temporary_surfaces)
 			{
-				if (e.image.get() == view->image())
+				if (e.get() == view->image())
 				{
-					e.view.reset();
-					e.image.reset();
+					e->release();
 					return;
 				}
 			}
@@ -716,7 +695,7 @@ namespace gl
 				{
 				case CELL_GCM_TEXTURE_A8R8G8B8:
 				{
-					cached.set_format(gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, false);
+					cached.set_format(gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8_rev, true);
 					break;
 				}
 				case CELL_GCM_TEXTURE_R5G6B5:
@@ -817,7 +796,7 @@ namespace gl
 				return (ifmt == gl::texture::internal_format::rgb565);
 			case CELL_GCM_TEXTURE_A8R8G8B8:
 			case CELL_GCM_TEXTURE_D8R8G8B8:
-				return (ifmt == gl::texture::internal_format::rgba8 ||
+				return (ifmt == gl::texture::internal_format::bgra8 ||
 						ifmt == gl::texture::internal_format::depth24_stencil8 ||
 						ifmt == gl::texture::internal_format::depth32f_stencil8);
 			case CELL_GCM_TEXTURE_B8:
@@ -892,7 +871,10 @@ namespace gl
 				purge_unreleased_sections();
 			}
 
-			clear_temporary_subresources();
+			if (m_temporary_surfaces.size() > max_cached_image_pool_size)
+			{
+				m_temporary_surfaces.resize(max_cached_image_pool_size / 2);
+			}
 
 			baseclass::on_frame_end();
 		}

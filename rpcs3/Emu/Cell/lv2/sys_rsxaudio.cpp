@@ -1294,7 +1294,7 @@ rsxaudio_backend_thread::~rsxaudio_backend_thread()
 	{
 		backend->Close();
 		backend->SetWriteCallback(nullptr);
-		backend->SetErrorCallback(nullptr);
+		backend->SetStateCallback(nullptr);
 		backend = nullptr;
 	}
 }
@@ -1327,6 +1327,7 @@ rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 
 	emu_audio_cfg cfg =
 	{
+		.audio_device = g_cfg.audio.audio_device,
 		.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
 		.time_stretching_threshold = g_cfg.audio.time_stretching_threshold / 100.0,
 		.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
@@ -1360,13 +1361,14 @@ void rsxaudio_backend_thread::operator()()
 	{
 		bool should_update_backend = false;
 		bool reset_backend = false;
+		bool checkDefaultDevice = false;
 		bool should_service_stream = false;
 
 		{
 			std::unique_lock lock(state_update_m);
 			for (;;)
 			{
-				// Unsafe to access backend under lock (error_callback uses state_update_m -> possible deadlock)
+				// Unsafe to access backend under lock (state_changed_callback uses state_update_m -> possible deadlock)
 
 				if (thread_ctrl::state() == thread_state::aborting)
 				{
@@ -1375,16 +1377,24 @@ void rsxaudio_backend_thread::operator()()
 					return;
 				}
 
+				if (backend_device_changed)
+				{
+					should_update_backend = true;
+					checkDefaultDevice = true;
+					backend_device_changed = false;
+				}
+
 				// Emulated state changed
 				if (ra_state_changed)
 				{
 					const callback_config cb_cfg = callback_cfg.observe();
-					should_update_backend |= cb_cfg.cfg_changed;
 					ra_state_changed = false;
 					ra_state = new_ra_state;
 
 					if (cb_cfg.cfg_changed)
 					{
+						should_update_backend = true;
+						checkDefaultDevice = false;
 						callback_cfg.atomic_op([&](callback_config& val)
 						{
 							val.cfg_changed = false; // Acknowledge cfg update
@@ -1399,6 +1409,7 @@ void rsxaudio_backend_thread::operator()()
 					emu_cfg_changed = false;
 					emu_cfg = new_emu_cfg;
 					should_update_backend = true;
+					checkDefaultDevice = false;
 				}
 
 				// Handle backend error notification
@@ -1406,6 +1417,7 @@ void rsxaudio_backend_thread::operator()()
 				{
 					reset_backend = true;
 					should_update_backend = true;
+					checkDefaultDevice = false;
 					backend_error_occured = false;
 				}
 
@@ -1441,7 +1453,7 @@ void rsxaudio_backend_thread::operator()()
 			}
 		}
 
-		if (should_update_backend)
+		if (should_update_backend && (!checkDefaultDevice || backend->DefaultDeviceChanged()))
 		{
 			backend_init(ra_state, emu_cfg, reset_backend);
 
@@ -1669,15 +1681,26 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 		backend = nullptr;
 		backend = Emu.GetCallbacks().get_audio();
 		backend->SetWriteCallback(std::bind(&rsxaudio_backend_thread::write_data_callback, this, std::placeholders::_1, std::placeholders::_2));
-		backend->SetErrorCallback(std::bind(&rsxaudio_backend_thread::error_callback, this));
+		backend->SetStateCallback(std::bind(&rsxaudio_backend_thread::state_changed_callback, this, std::placeholders::_1));
 	}
 
 	const port_config& port_cfg = ra_state.port[static_cast<u8>(emu_cfg.avport)];
 	const AudioSampleSize sample_size = emu_cfg.convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
 	const AudioChannelCnt ch_cnt = static_cast<AudioChannelCnt>(std::min<u32>(static_cast<u32>(port_cfg.ch_cnt), static_cast<u32>(emu_cfg.channels)));
 
+	f64 cb_frame_len = 0.0;
+	u32 backend_ch_cnt = 2;
+	if (backend->Open(emu_cfg.audio_device, port_cfg.freq, sample_size, ch_cnt))
+	{
+		cb_frame_len = backend->GetCallbackFrameLen();
+		backend_ch_cnt = backend->get_channels();
+	}
+	else
+	{
+		sys_rsxaudio.error("Failed to open audio backend. Make sure that no other application is running that might block audio access (e.g. Netflix).");
+	}
+
 	static constexpr f64 _10ms = 512.0 / 48000.0;
-	const f64 cb_frame_len  = backend->Open(port_cfg.freq, sample_size, ch_cnt) ? backend->GetCallbackFrameLen() : 0.0;
 	const f64 buffering_len = emu_cfg.buffering_enabled ? (emu_cfg.desired_buffer_duration / 1000.0) : 0.0;
 	const u64 bytes_per_sec = static_cast<u32>(AudioSampleSize::FLOAT) * static_cast<u32>(port_cfg.ch_cnt) * static_cast<u32>(port_cfg.freq);
 
@@ -1711,7 +1734,7 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 		{
 			val.freq = static_cast<u32>(port_cfg.freq);
 			val.input_ch_cnt = static_cast<u32>(port_cfg.ch_cnt);
-			val.output_ch_cnt = static_cast<u32>(ch_cnt);
+			val.output_ch_cnt = backend_ch_cnt;
 			val.convert_to_s16 = emu_cfg.convert_to_s16;
 			val.avport_idx = emu_cfg.avport;
 			val.ready = true;
@@ -1863,11 +1886,27 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 	return bytes;
 }
 
-void rsxaudio_backend_thread::error_callback()
+void rsxaudio_backend_thread::state_changed_callback(AudioStateEvent event)
 {
 	{
 		std::lock_guard lock(state_update_m);
-		backend_error_occured = true;
+		switch (event)
+		{
+		case AudioStateEvent::UNSPECIFIED_ERROR:
+		{
+			backend_error_occured = true;
+			break;
+		}
+		case AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED:
+		{
+			backend_device_changed = true;
+			break;
+		}
+		default:
+		{
+			fmt::throw_exception("Unknown audio state event");
+		}
+		}
 	}
 	state_update_c.notify_all();
 }

@@ -42,6 +42,8 @@
 
 #include "util/asm.hpp"
 
+#include <span>
+
 LOG_CHANNEL(sys_net);
 LOG_CHANNEL(sceNp2);
 LOG_CHANNEL(sceNp);
@@ -190,9 +192,9 @@ namespace np
 		}
 
 		ticket_data tdata{};
-		const auto* ptr      = data() + index;
-		tdata.id             = *reinterpret_cast<const be_t<u16>*>(ptr);
-		tdata.len            = *reinterpret_cast<const be_t<u16>*>(ptr + 2);
+		const auto* ptr = data() + index;
+		tdata.id = read_from_ptr<be_t<u16>>(ptr);
+		tdata.len = read_from_ptr<be_t<u16>>(ptr + 2);
 		const auto* data_ptr = data() + index + 4;
 
 		auto check_size = [&](std::size_t expected) -> bool
@@ -217,7 +219,7 @@ namespace np
 			{
 				return std::nullopt;
 			}
-			tdata.data.data_u32 = *reinterpret_cast<const be_t<u32>*>(data_ptr);
+			tdata.data.data_u32 = read_from_ptr<be_t<u32>>(data_ptr);
 			break;
 		case 2:
 		case 7:
@@ -225,7 +227,7 @@ namespace np
 			{
 				return std::nullopt;
 			}
-			tdata.data.data_u64 = *reinterpret_cast<const be_t<u64>*>(data_ptr);
+			tdata.data.data_u64 = read_from_ptr<be_t<u64>>(data_ptr);
 			break;
 		case 4:
 		case 8:
@@ -275,14 +277,14 @@ namespace np
 			return;
 		}
 
-		version = *reinterpret_cast<const be_t<u32>*>(data());
+		version = read_from_ptr<be_t<u32>>(data());
 		if (version != 0x21010000)
 		{
 			ticket_log.error("Invalid version: 0x%08x", version);
 			return;
 		}
 
-		u32 given_size = *reinterpret_cast<const be_t<u32>*>(data() + 4);
+		u32 given_size = read_from_ptr<be_t<u32>>(data() + 4);
 		if ((given_size + 8) != size())
 		{
 			ticket_log.error("Size mismatch (gs: %d vs s: %d)", given_size, size());
@@ -369,7 +371,82 @@ namespace np
 			{
 				dns_ip = conv.s_addr;
 			}
+
+			// Convert bind address
+			conv = {};
+			if (!inet_pton(AF_INET, g_cfg.net.bind_address.to_string().c_str(), &conv))
+			{
+				// Do not set to disconnected on invalid IP just error and continue using default (0.0.0.0)
+				nph_log.error("Provided IP(%s) address for bind is invalid!", g_cfg.net.bind_address.to_string());
+			}
+			else
+			{
+				bind_ip = conv.s_addr;
+			}
 		}
+	}
+
+	np_handler::np_handler(utils::serial& ar)
+		: np_handler()
+	{
+		ar(is_netctl_init, is_NP_init);
+
+		if (!is_NP_init)
+		{
+			return;
+		}
+
+		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
+
+		// Call init func if needed (np_memory is unaffected when an empty pool is provided)
+		init_NP(0, vm::null);
+
+		np_memory.save(ar);
+
+		// TODO: IDM-tied objects are not yet saved
+	}
+
+	np_handler::~np_handler()
+	{
+		std::unordered_map<u32, std::shared_ptr<score_transaction_ctx>> moved_trans;
+		{
+			std::lock_guard lock(mutex_score_transactions);
+			moved_trans = std::move(score_transactions);
+			score_transactions.clear();
+		}
+
+		for (auto& [trans_id, trans] : moved_trans)
+		{
+			trans->abort_score_transaction();
+		}
+
+		for (auto& [trans_id, trans] : moved_trans)
+		{
+			if (trans->thread.joinable())
+				trans->thread.join();
+		}
+	}
+
+	void np_handler::save(utils::serial& ar)
+	{
+		// TODO: See ctor
+		ar(is_netctl_init, is_NP_init);
+
+		if (!is_NP_init)
+		{
+			return;
+		}
+
+		USING_SERIALIZATION_VERSION(sceNp);
+
+		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
+
+		np_memory.save(ar);
+	}
+
+	void memory_allocator::save(utils::serial& ar)
+	{
+		ar(m_pool, m_size, m_allocs, m_avail);
 	}
 
 	void np_handler::discover_ip_address()
@@ -391,7 +468,7 @@ namespace np
 			return;
 		}
 
-		nph_log.notice("discover_ip_address: Hostname was determined to be %s", hostname.c_str());
+		// nph_log.notice("discover_ip_address: Hostname was determined to be %s", hostname.c_str());
 
 		hostent* host = gethostbyname(hostname.data());
 		if (!host)
@@ -406,13 +483,12 @@ namespace np
 			return;
 		}
 
-		// First address is used for now, (TODO combobox with possible local addresses to use?)
-		local_ip_addr = *reinterpret_cast<u32*>(host->h_addr_list[0]);
+		local_ip_addr = read_from_ptr<u32>(host->h_addr_list[0]);
 
-		// Set public address to local discovered address for now, may be updated later;
+		// Set public address to local discovered address for now, may be updated later from RPCN socket
 		public_ip_addr = local_ip_addr;
 
-		nph_log.notice("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
+		// nph_log.notice("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
 	}
 
 	bool np_handler::discover_ether_address()
@@ -430,7 +506,7 @@ namespace np
 					sockaddr_dl* sdp = reinterpret_cast<sockaddr_dl*>(p->ifa_addr);
 					memcpy(ether_address.data(), sdp->sdl_data + sdp->sdl_nlen, 6);
 					freeifaddrs(ifap);
-					nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
+					// nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
 					return true;
 				}
 			}
@@ -447,7 +523,7 @@ namespace np
 		{
 			PIP_ADAPTER_INFO info = reinterpret_cast<PIP_ADAPTER_INFO>(adapter_infos.data());
 			memcpy(ether_address.data(), info[0].Address, 6);
-			nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
+			// nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
 			return true;
 		}
 #else
@@ -487,7 +563,7 @@ namespace np
 		if (success)
 		{
 			memcpy(ether_address.data(), ifr.ifr_hwaddr.sa_data, 6);
-			nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
+			// nph_log.notice("Determined Ethernet address to be %s", ether_to_string(ether_address));
 
 			return true;
 		}
@@ -519,6 +595,11 @@ namespace np
 	u32 np_handler::get_dns_ip() const
 	{
 		return dns_ip;
+	}
+
+	u32 np_handler::get_bind_ip() const
+	{
+		return bind_ip;
 	}
 
 	s32 np_handler::get_net_status() const
@@ -553,8 +634,11 @@ namespace np
 
 	void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 	{
-		// Init memory pool
-		np_memory.setup(poolptr, poolsize);
+		if (poolsize)
+		{
+			// Init memory pool (zero arg is reserved for savestate's use)
+			np_memory.setup(poolptr, poolsize);
+		}
 
 		memset(&npid, 0, sizeof(npid));
 		memset(&online_name, 0, sizeof(online_name));
@@ -611,6 +695,7 @@ namespace np
 			string_to_online_name(rpcn->get_online_name(), &online_name);
 			string_to_avatar_url(rpcn->get_avatar_url(), &avatar_url);
 			public_ip_addr = rpcn->get_addr_sig();
+			local_ip_addr  = std::bit_cast<u32, be_t<u32>>(rpcn->get_addr_local());
 
 			break;
 		}
@@ -638,7 +723,7 @@ namespace np
 		if (!match2_req_results.contains(event_key))
 			return 0;
 
-		auto& data = match2_req_results.at(event_key);
+		auto& data = ::at32(match2_req_results, event_key);
 		data.apply_relocations(dest_addr);
 
 		vm::ptr<void> dest = vm::cast(dest_addr);
@@ -732,6 +817,9 @@ namespace np
 					const u32 req_id      = reply.first;
 					std::vector<u8>& data = reply.second.second;
 
+					// Every reply should at least contain a return value/error code
+					ensure(data.size() >= 1);
+
 					switch (command)
 					{
 					case rpcn::CommandType::GetWorldList: reply_get_world_list(req_id, data); break;
@@ -748,6 +836,13 @@ namespace np
 					case rpcn::CommandType::SendRoomMessage: reply_send_room_message(req_id, data); break;
 					case rpcn::CommandType::RequestSignalingInfos: reply_req_sign_infos(req_id, data); break;
 					case rpcn::CommandType::RequestTicket: reply_req_ticket(req_id, data); break;
+					case rpcn::CommandType::GetBoardInfos: reply_get_board_infos(req_id, data); break;
+					case rpcn::CommandType::RecordScore: reply_record_score(req_id, data); break;
+					case rpcn::CommandType::RecordScoreData: reply_record_score_data(req_id, data); break;
+					case rpcn::CommandType::GetScoreData: reply_get_score_data(req_id, data); break;
+					case rpcn::CommandType::GetScoreRange: reply_get_score_range(req_id, data); break;
+					case rpcn::CommandType::GetScoreFriends: reply_get_score_friends(req_id, data); break;
+					case rpcn::CommandType::GetScoreNpid: reply_get_score_npid(req_id, data); break;
 					default: rpcn_log.error("Unknown reply(%d) received!", command); break;
 					}
 				}
@@ -845,16 +940,8 @@ namespace np
 		const u32 req_id = get_req_id(optParam ? optParam->appReqId : ctx->default_match2_optparam.appReqId);
 
 		ret.ctx_id = ctx_id;
-		ret.cb_arg = optParam ? optParam->cbFuncArg : ctx->default_match2_optparam.cbFuncArg;
-
-		if (optParam && optParam->cbFunc)
-		{
-			ret.cb = optParam->cbFunc;
-		}
-		else
-		{
-			ret.cb = ctx->default_match2_optparam.cbFunc;
-		}
+		ret.cb_arg = (optParam && optParam->cbFuncArg) ? optParam->cbFuncArg : ctx->default_match2_optparam.cbFuncArg;
+		ret.cb     = (optParam && optParam->cbFunc) ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc;
 
 		nph_log.warning("Callback used is 0x%x", ret.cb);
 
@@ -870,7 +957,7 @@ namespace np
 	{
 		std::lock_guard lock(mutex_pending_requests);
 
-		const auto cb_info = std::move(pending_requests.at(req_id));
+		const auto cb_info = std::move(::at32(pending_requests, req_id));
 		pending_requests.erase(req_id);
 
 		return cb_info;
@@ -880,7 +967,7 @@ namespace np
 	{
 		std::lock_guard lock(mutex_match2_req_results);
 		match2_req_results.emplace(std::piecewise_construct, std::forward_as_tuple(event_key), std::forward_as_tuple(np_memory.allocate(max_size), initial_size, max_size));
-		return match2_req_results.at(event_key);
+		return ::at32(match2_req_results, event_key);
 	}
 
 	u32 np_handler::add_players_to_history(vm::cptr<SceNpId> /*npids*/, u32 /*count*/)

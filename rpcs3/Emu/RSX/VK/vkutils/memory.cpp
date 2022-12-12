@@ -135,10 +135,7 @@ namespace vk
 		}
 
 		ensure(free_memory_map.size() == num_types);
-		std::sort(free_memory_map.begin(), free_memory_map.end(), [](const auto& a, const auto& b)
-		{
-			return a.second > b.second;
-		});
+		std::sort(free_memory_map.begin(), free_memory_map.end(), FN(x.second > y.second));
 
 		std::vector<u32> new_type_ids(num_types);
 		std::vector<u64> new_type_sizes(num_types);

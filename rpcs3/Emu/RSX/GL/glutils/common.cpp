@@ -1,5 +1,5 @@
-#pragma once
 #include "state_tracker.hpp"
+#include "vao.hpp"
 
 namespace gl
 {
@@ -29,5 +29,10 @@ namespace gl
 	gl::command_context get_command_context()
 	{
 		return { *s_current_state };
+	}
+
+	attrib_t vao::operator[](u32 index) const noexcept
+	{
+		return attrib_t(index);
 	}
 }

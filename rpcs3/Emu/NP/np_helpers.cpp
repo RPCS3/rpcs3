@@ -22,24 +22,24 @@ namespace np
 		return fmt::format("%02X:%02X:%02X:%02X:%02X:%02X", ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
 	}
 
-	void string_to_npid(const std::string& str, SceNpId* npid)
+	void string_to_npid(std::string_view str, SceNpId* npid)
 	{
 		memset(npid, 0, sizeof(SceNpId));
 		strcpy_trunc(npid->handle.data, str);
 		// npid->reserved[0] = 1;
 	}
 
-	void string_to_online_name(const std::string& str, SceNpOnlineName* online_name)
+	void string_to_online_name(std::string_view str, SceNpOnlineName* online_name)
 	{
 		strcpy_trunc(online_name->data, str);
 	}
 
-	void string_to_avatar_url(const std::string& str, SceNpAvatarUrl* avatar_url)
+	void string_to_avatar_url(std::string_view str, SceNpAvatarUrl* avatar_url)
 	{
 		strcpy_trunc(avatar_url->data, str);
 	}
 
-	void string_to_communication_id(const std::string& str, SceNpCommunicationId* comm_id)
+	void string_to_communication_id(std::string_view str, SceNpCommunicationId* comm_id)
 	{
 		strcpy_trunc(comm_id->data, str);
 	}

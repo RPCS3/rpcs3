@@ -230,17 +230,12 @@ disc_change_manager::~disc_change_manager()
 
 error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCallback> func_eject, vm::ptr<CellGameDiscInsertCallback> func_insert)
 {
-	if (!func_eject || !func_insert)
-	{
-		return CELL_GAME_ERROR_PARAM;
-	}
-
 	std::lock_guard lock(mtx);
 
 	eject_callback = func_eject;
 	insert_callback = func_insert;
 
-	Emu.GetCallbacks().enable_disc_eject(true);
+	Emu.GetCallbacks().enable_disc_eject(!!func_eject);
 	Emu.GetCallbacks().enable_disc_insert(false);
 
 	return CELL_OK;
@@ -420,16 +415,16 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	else
 	{
 		// TODO: Is cellHddGameCheck really responsible for writing the information in get->getParam ? (If not, delete this else)
-		const psf::registry psf = psf::load_object(fs::file(local_dir +"/PARAM.SFO"));
+		const psf::registry psf = psf::load_object(local_dir + "/PARAM.SFO");
 
 		// Some following fields may be zero in old FW 1.00 version PARAM.SFO
-		if (psf.contains("PARENTAL_LEVEL")) get->getParam.parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
-		if (psf.contains("ATTRIBUTE")) get->getParam.attribute = psf.at("ATTRIBUTE").as_integer();
-		if (psf.contains("RESOLUTION")) get->getParam.resolution = psf.at("RESOLUTION").as_integer();
-		if (psf.contains("SOUND_FORMAT")) get->getParam.soundFormat = psf.at("SOUND_FORMAT").as_integer();
-		if (psf.contains("TITLE")) strcpy_trunc(get->getParam.title, psf.at("TITLE").as_string());
-		if (psf.contains("APP_VER")) strcpy_trunc(get->getParam.dataVersion, psf.at("APP_VER").as_string());
-		if (psf.contains("TITLE_ID")) strcpy_trunc(get->getParam.titleId, psf.at("TITLE_ID").as_string());
+		if (psf.contains("PARENTAL_LEVEL")) get->getParam.parentalLevel = ::at32(psf, "PARENTAL_LEVEL").as_integer();
+		if (psf.contains("ATTRIBUTE")) get->getParam.attribute = ::at32(psf, "ATTRIBUTE").as_integer();
+		if (psf.contains("RESOLUTION")) get->getParam.resolution = ::at32(psf, "RESOLUTION").as_integer();
+		if (psf.contains("SOUND_FORMAT")) get->getParam.soundFormat = ::at32(psf, "SOUND_FORMAT").as_integer();
+		if (psf.contains("TITLE")) strcpy_trunc(get->getParam.title, ::at32(psf, "TITLE").as_string());
+		if (psf.contains("APP_VER")) strcpy_trunc(get->getParam.dataVersion, ::at32(psf, "APP_VER").as_string());
+		if (psf.contains("TITLE_ID")) strcpy_trunc(get->getParam.titleId, ::at32(psf, "TITLE_ID").as_string());
 
 		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 		{
@@ -675,7 +670,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*attributes = 0; // TODO
 		// TODO: dirName might be a read only string when BootCheck is called on a disc game. (e.g. Ben 10 Ultimate Alien: Cosmic Destruction)
 
-		sfo = psf::load_object(fs::file(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")));
+		sfo = psf::load_object(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO"));
 	}
 	else if (cat == "GD")
 	{
@@ -684,7 +679,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
 
-		sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
+		sfo = psf::load_object(vfs::get(Emu.GetDir() + "PARAM.SFO"));
 	}
 	else
 	{
@@ -693,7 +688,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
 
-		sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
+		sfo = psf::load_object(vfs::get(Emu.GetDir() + "PARAM.SFO"));
 		dir = Emu.GetTitleID();
 	}
 
@@ -728,7 +723,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 		return CELL_GAME_ERROR_NOTPATCH;
 	}
 
-	psf::registry sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
+	psf::registry sfo = psf::load_object(vfs::get(Emu.GetDir() + "PARAM.SFO"));
 
 	auto& perm = g_fxo->get<content_permission>();
 
@@ -1536,7 +1531,8 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 			return CELL_GAME_ERROR_PARAM;
 		}
 
-		error_msg += "\n" + get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
+		error_msg += '\n';
+		error_msg += get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
 	}
 
 	return open_exit_dialog(error_msg, type > CELL_GAME_ERRDIALOG_NOSPACE);
@@ -1702,7 +1698,7 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 	}
 
 	// Always sets 0 at first dword
-	*utils::bless<nse_t<u32, 1>>(getParam->titleId + 0) = 0;
+	write_to_ptr<u32>(getParam->titleId, 0);
 
 	// This is also called by non-disc games, see NPUB90029
 	static const std::string dir = "/dev_bdvd/PS3_GAME"s;
@@ -1712,10 +1708,10 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 		return CELL_DISCGAME_ERROR_NOT_DISCBOOT;
 	}
 
-	const psf::registry psf = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	const psf::registry psf = psf::load_object(vfs::get(dir + "/PARAM.SFO"));
 
-	if (psf.contains("PARENTAL_LEVEL")) getParam->parentalLevel = psf.at("PARENTAL_LEVEL").as_integer();
-	if (psf.contains("TITLE_ID")) strcpy_trunc(getParam->titleId, psf.at("TITLE_ID").as_string());
+	if (psf.contains("PARENTAL_LEVEL")) getParam->parentalLevel = ::at32(psf, "PARENTAL_LEVEL").as_integer();
+	if (psf.contains("TITLE_ID")) strcpy_trunc(getParam->titleId, ::at32(psf, "TITLE_ID").as_string());
 
 	return CELL_OK;
 }

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_ppu_thread.h"
 
 #include "Emu/System.h"
@@ -43,9 +43,9 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 	// Deallocate Stack Area
 	ensure(vm::dealloc(ppu.stack_addr, vm::stack) == ppu.stack_size);
 
-	if (auto& dct = g_fxo->get<lv2_memory_container>(); !Emu.IsStopped())
+	if (auto dct = g_fxo->try_get<lv2_memory_container>())
 	{
-		dct.free(ppu.stack_size);
+		dct->free(ppu.stack_size);
 	}
 
 	if (ppu.call_history.index)
@@ -55,6 +55,8 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 		ppu_log.notice("Calling history: %s", str);
 	}
 }
+
+constexpr u32 c_max_ppu_name_size = 28;
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
@@ -75,6 +77,9 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	{
 		// Avoid cases where cleaning causes the destructor to be called inside IDM lock scope (for performance)
 		std::shared_ptr<void> old_ppu;
+
+		lv2_obj::notify_all_t notify;
+		lv2_obj::prepare_for_sleep(ppu);
 
 		std::lock_guard lock(id_manager::g_mutex);
 
@@ -105,13 +110,21 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 		// Unqueue
 		lv2_obj::sleep(ppu);
+		notify.cleanup();
 
 		// Remove suspend state (TODO)
 		ppu.state -= cpu_flag::suspend;
 	}
 
-	while (ppu.joiner == ppu_join_status::zombie && !ppu.is_stopped())
+	while (ppu.joiner == ppu_join_status::zombie)
 	{
+		if (ppu.is_stopped() && ppu.joiner.compare_and_swap_test(ppu_join_status::zombie, ppu_join_status::joinable))
+		{
+			// Abort
+			ppu.state += cpu_flag::again;
+			return;
+		}
+
 		// Wait for termination
 		thread_ctrl::wait_on(ppu.joiner, ppu_join_status::zombie);
 	}
@@ -131,17 +144,17 @@ s32 sys_ppu_thread_yield(ppu_thread& ppu)
 
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
 {
-	ppu.state += cpu_flag::wait;
+	lv2_obj::prepare_for_sleep(ppu);
 
 	sys_ppu_thread.trace("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
 
-	auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
+	if (thread_id == ppu.id)
 	{
-		if (&ppu == &thread)
-		{
-			return CELL_EDEADLK;
-		}
+		return CELL_EDEADLK;
+	}
 
+	auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread) -> CellError
+	{
 		CellError result = thread.joiner.atomic_op([&](ppu_join_status& value) -> CellError
 		{
 			if (value == ppu_join_status::zombie)
@@ -166,6 +179,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 		if (!result)
 		{
+			lv2_obj::prepare_for_sleep(ppu);
 			lv2_obj::sleep(ppu);
 		}
 		else if (result == CELL_EAGAIN)
@@ -173,6 +187,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 			thread.joiner.notify_one();
 		}
 
+		notify.cleanup();
 		return result;
 	});
 
@@ -192,9 +207,11 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	if (thread->joiner != ppu_join_status::exited)
 	{
 		// Thread aborted, log it later
-		ppu.state += cpu_flag::exit;
+		ppu.state += cpu_flag::again;
 		return {};
 	}
+
+	static_cast<void>(ppu.test_stopped());
 
 	// Get the exit status from the register
 	const u64 vret = thread->gpr[3];
@@ -292,7 +309,18 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 		return CELL_EINVAL;
 	}
 
-	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
+	if (thread_id == ppu.id)
+	{
+		// Fast path for self
+		if (ppu.prio != prio)
+		{
+			lv2_obj::set_priority(ppu, prio);
+		}
+
+		return CELL_OK;
+	}
+
+	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread)
 	{
 		if (thread.prio != prio)
 		{
@@ -314,7 +342,15 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 
 	sys_ppu_thread.trace("sys_ppu_thread_get_priority(thread_id=0x%x, priop=*0x%x)", thread_id, priop);
 
-	u32 prio;
+	if (thread_id == ppu.id)
+	{
+		// Fast path for self
+		ppu.check_state();
+		*priop = ppu.prio;
+		return CELL_OK;
+	}
+
+	u32 prio{};
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
@@ -326,6 +362,7 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 		return CELL_ESRCH;
 	}
 
+	ppu.check_state();
 	*priop = prio;
 	return CELL_OK;
 }
@@ -426,7 +463,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 	if (threadname)
 	{
-		constexpr u32 max_size = 27; // max size including null terminator
+		constexpr u32 max_size = c_max_ppu_name_size; // max size including null terminator
 		const auto pname = threadname.get_ptr();
 		ppu_name.assign(pname, std::find(pname, pname + max_size, '\0'));
 	}
@@ -451,8 +488,10 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		return CELL_EAGAIN;
 	}
 
-	*thread_id = tid;
 	sys_ppu_thread.warning(u8"_sys_ppu_thread_create(): Thread “%s” created (id=0x%x, func=*0x%x, rtoc=0x%x, user-tls=0x%x)", ppu_name, tid, entry.addr, entry.rtoc, tls);
+
+	ppu.check_state();
+	*thread_id = tid;
 	return CELL_OK;
 }
 
@@ -462,7 +501,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	sys_ppu_thread.trace("sys_ppu_thread_start(thread_id=0x%x)", thread_id);
 
-	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
+	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread) -> CellError
 	{
 		if (!thread.state.test_and_reset(cpu_flag::stop))
 		{
@@ -470,7 +509,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 			return CELL_EBUSY;
 		}
 
-		lv2_obj::awake(&thread);
+		ensure(lv2_obj::awake(&thread));
 
 		thread.cmd_list
 		({
@@ -497,6 +536,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 		// Dirty hack for sound: confirm the creation of _mxr000 event queue
 		if (*thread->ppu_tname.load() == "_cellsurMixerMain"sv)
 		{
+			ppu.check_state();
 			lv2_obj::sleep(ppu);
 
 			while (!idm::select<lv2_obj, lv2_event_queue>([](u32, lv2_event_queue& eq)
@@ -541,7 +581,7 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 		return CELL_EFAULT;
 	}
 
-	constexpr u32 max_size = 27; // max size including null terminator
+	constexpr u32 max_size = c_max_ppu_name_size; // max size including null terminator
 	const auto pname = name.get_ptr();
 
 	// Make valid name

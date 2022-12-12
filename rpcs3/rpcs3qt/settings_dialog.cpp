@@ -15,6 +15,7 @@
 #include "gui_settings.h"
 #include "display_sleep_control.h"
 #include "qt_utils.h"
+#include "uuid.h"
 #include "settings_dialog.h"
 #include "ui_settings_dialog.h"
 #include "tooltips.h"
@@ -27,6 +28,8 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
+
+#include "Emu/Audio/audio_device_enumerator.h"
 
 #include "Loader/PSF.h"
 
@@ -287,20 +290,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		if (!utils::has_mpx() || utils::has_tsx_force_abort())
 		{
 			const QString current_text = ui->enableTSX->currentText();
-			const QString localized_tsx_enabled = m_emu_settings->GetLocalizedSetting(tsx_enabled, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::enabled));
+			const QString localized_tsx_enabled = m_emu_settings->GetLocalizedSetting(tsx_enabled, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::enabled), true);
 
 			ui->enableTSX->removeItem(ui->enableTSX->findText(localized_tsx_enabled));
 
 			if (current_text == localized_tsx_enabled)
 			{
-				ui->enableTSX->setCurrentText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def)));
+				ui->enableTSX->setCurrentText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def), true));
 			}
 		}
 
 		// connect the toogled signal so that the stateChanged signal in EnhanceCheckBox can be prevented
 		connect(ui->enableTSX, &QComboBox::currentTextChanged, this, [this](const QString& text)
 		{
-			if (text == m_emu_settings->GetLocalizedSetting(tsx_forced, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::forced)) &&
+			if (text == m_emu_settings->GetLocalizedSetting(tsx_forced, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::forced), true) &&
 				(!utils::has_mpx() || utils::has_tsx_force_abort()))
 			{
 				QString title;
@@ -336,7 +339,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				if (QMessageBox::No == QMessageBox::critical(this, title, message, QMessageBox::Yes, QMessageBox::No))
 				{
 					// Reset if the messagebox was answered with no. This prevents the currentIndexChanged signal in EnhanceComboBox
-					ui->enableTSX->setCurrentText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def)));
+					ui->enableTSX->setCurrentText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def), true));
 				}
 			}
 		});
@@ -444,9 +447,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	r_creator->update_names(
 	{
-		m_emu_settings->GetLocalizedSetting("Vulkan", emu_settings_type::Renderer, static_cast<int>(video_renderer::vulkan)),
-		m_emu_settings->GetLocalizedSetting("OpenGl", emu_settings_type::Renderer, static_cast<int>(video_renderer::opengl)),
-		m_emu_settings->GetLocalizedSetting("Null", emu_settings_type::Renderer, static_cast<int>(video_renderer::null))
+		m_emu_settings->GetLocalizedSetting("Vulkan", emu_settings_type::Renderer, static_cast<int>(video_renderer::vulkan), true),
+		m_emu_settings->GetLocalizedSetting("OpenGl", emu_settings_type::Renderer, static_cast<int>(video_renderer::opengl), true),
+		m_emu_settings->GetLocalizedSetting("Null", emu_settings_type::Renderer, static_cast<int>(video_renderer::null), true)
 	});
 
 	// Comboboxes
@@ -454,7 +457,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_renderer, tooltips.settings.renderer);
 	SubscribeTooltip(ui->gb_graphicsAdapter, tooltips.settings.graphics_adapter);
 
-	m_emu_settings->EnhanceComboBox(ui->resBox, emu_settings_type::Resolution);
+	m_emu_settings->EnhanceComboBox(ui->resBox, emu_settings_type::Resolution, false, false, 0, false, false);
 	SubscribeTooltip(ui->gb_default_resolution, tooltips.settings.resolution);
 	// remove unsupported resolutions from the dropdown
 	bool saved_index_removed = false;
@@ -512,7 +515,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	}
 
-	m_emu_settings->EnhanceComboBox(ui->aspectBox, emu_settings_type::AspectRatio);
+	m_emu_settings->EnhanceComboBox(ui->aspectBox, emu_settings_type::AspectRatio, false, false, 0, false, false);
 	SubscribeTooltip(ui->gb_aspectRatio, tooltips.settings.aspect_ratio);
 
 	m_emu_settings->EnhanceComboBox(ui->frameLimitBox, emu_settings_type::FrameLimit);
@@ -543,7 +546,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	}
 
-	// Comboboxes
+	m_emu_settings->EnhanceComboBox(ui->shaderPrecision, emu_settings_type::ShaderPrecisionQuality);
+	SubscribeTooltip(ui->gbShaderPrecision, tooltips.settings.shader_precision);
+
 	m_emu_settings->EnhanceComboBox(ui->shaderCompilerThreads, emu_settings_type::ShaderCompilerNumThreads, true);
 	SubscribeTooltip(ui->gb_shader_compiler_threads, tooltips.settings.shader_compiler_threads);
 	ui->shaderCompilerThreads->setItemText(ui->shaderCompilerThreads->findData(0), tr("Auto", "Number of Shader Compiler Threads"));
@@ -725,6 +730,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->fsrSharpeningStrength->setValue(fsr_sharpening_strength_def);
 	});
 
+	// DoubleSpinBoxes
+	m_emu_settings->EnhanceDoubleSpinBox(ui->TextureLODBias, emu_settings_type::TextureLodBias);
+	SubscribeTooltip(ui->gb_Level_of_Detail, tooltips.settings.texture_lod_bias);
+	connect(ui->TextureLODBiasReset, &QAbstractButton::clicked, [this]()
+	{
+		ui->TextureLODBias->setValue(stod(m_emu_settings->GetSettingDefault(emu_settings_type::TextureLodBias)));
+	});
+
 	// Remove renderers from the renderer Combobox if not supported
 	for (const auto& renderer : r_creator->renderers)
 	{
@@ -870,31 +883,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	//    / ____ \ |_| | (_| | | (_) |    | | (_| | |_) |
 	//   /_/    \_\__,_|\__,_|_|\___/     |_|\__,_|_.__/
 
-	const auto enable_time_stretching_options = [this](bool enabled)
-	{
-		ui->timeStretchingThresholdLabel->setEnabled(enabled);
-		ui->timeStretchingThreshold->setEnabled(enabled);
-	};
-
-	const auto enable_buffering_options = [this, enable_time_stretching_options](bool enabled)
-	{
-		ui->audioBufferDuration->setEnabled(enabled);
-		ui->audioBufferDurationLabel->setEnabled(enabled);
-		ui->enableTimeStretching->setEnabled(enabled);
-		enable_time_stretching_options(enabled && ui->enableTimeStretching->isChecked());
-	};
-
-	const auto enable_buffering = [this, enable_buffering_options](int index)
-	{
-		if (index < 0) return;
-		const QVariantList var_list = ui->audioOutBox->itemData(index).toList();
-		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
-		const QString text = var_list[0].toString();
-		const bool enabled = text == "Cubeb" || text == "XAudio2" || text == "FAudio";
-		ui->enableBuffering->setEnabled(enabled);
-		enable_buffering_options(enabled && ui->enableBuffering->isChecked());
-	};
-
 	const QString mic_none = m_emu_settings->m_microphone_creator.get_none();
 
 	const auto change_microphone_type = [mic_none, this](int index)
@@ -959,6 +947,46 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		propagate_used_devices();
 	};
 
+	const auto get_audio_output_devices = [this]()
+	{
+		const QVariantList var_list = ui->audioOutBox->currentData().toList();
+		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
+		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator(var_list[1].toInt());
+		std::vector<audio_device_enumerator::audio_device> dev_array = dev_enum->get_output_devices();
+
+		ui->audioDeviceBox->clear();
+		ui->audioDeviceBox->blockSignals(true);
+		ui->audioDeviceBox->addItem(tr("Default"), qsv(audio_device_enumerator::DEFAULT_DEV_ID));
+
+		const std::string selected_device = m_emu_settings->GetSetting(emu_settings_type::AudioDevice);
+		int device_index = 0;
+
+		for (auto& dev : dev_array)
+		{
+			const QString cur_item = qstr(dev.id);
+			ui->audioDeviceBox->addItem(qstr(dev.name), cur_item);
+			if (selected_device == dev.id)
+			{
+				device_index = ui->audioDeviceBox->findData(cur_item);
+			}
+		}
+
+		ui->audioDeviceBox->blockSignals(false);
+		ui->audioDeviceBox->setCurrentIndex(std::max(device_index, 0));
+	};
+
+	const auto change_audio_output_device = [this](int index)
+	{
+		if (index < 0)
+		{
+			return;
+		}
+
+		const QVariant item_data = ui->audioDeviceBox->itemData(index);
+		m_emu_settings->SetSetting(emu_settings_type::AudioDevice, sstr(item_data.toString()));
+		ui->audioDeviceBox->setCurrentIndex(index);
+	};
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->audioOutBox, emu_settings_type::AudioRenderer);
@@ -967,7 +995,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #else
 	SubscribeTooltip(ui->gb_audio_out, tooltips.settings.audio_out_linux);
 #endif
-	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, enable_buffering);
+	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [change_audio_output_device, get_audio_output_devices](int)
+	{
+		get_audio_output_devices();
+		change_audio_output_device(0); // Set device to 'Default'
+	});
 
 	connect(ui->combo_audio_format, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
@@ -994,7 +1026,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 	for (const audio_format_flag& audio_fmt : audio_formats)
 	{
-		const QString audio_format_name = m_emu_settings->GetLocalizedSetting("", emu_settings_type::AudioFormats, static_cast<int>(audio_fmt));
+		const QString audio_format_name = m_emu_settings->GetLocalizedSetting("", emu_settings_type::AudioFormats, static_cast<int>(audio_fmt), true);
 		QListWidgetItem* item = new QListWidgetItem(audio_format_name, ui->list_audio_formats);
 		item->setData(Qt::UserRole, static_cast<u32>(audio_fmt));
 		if (audio_fmt == audio_format_flag::lpcm_2_48khz)
@@ -1033,6 +1065,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->audioAvportBox, emu_settings_type::AudioAvport);
 	SubscribeTooltip(ui->gb_audio_avport, tooltips.settings.audio_avport);
+
+	SubscribeTooltip(ui->gb_audio_device, tooltips.settings.audio_device);
+	connect(ui->audioDeviceBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, change_audio_output_device);
+	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [change_audio_output_device]() { change_audio_output_device(0); }); // Set device to 'Default'
+	get_audio_output_devices();
 
 	// Microphone Comboboxes
 	m_mics_combo[0] = ui->microphone1Box;
@@ -1083,13 +1120,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->enableBuffering, emu_settings_type::EnableBuffering);
 	SubscribeTooltip(ui->enableBuffering, tooltips.settings.enable_buffering);
-	connect(ui->enableBuffering, &QCheckBox::toggled, enable_buffering_options);
 
 	m_emu_settings->EnhanceCheckBox(ui->enableTimeStretching, emu_settings_type::EnableTimeStretching);
 	SubscribeTooltip(ui->enableTimeStretching, tooltips.settings.enable_time_stretching);
-	connect(ui->enableTimeStretching, &QCheckBox::toggled, enable_time_stretching_options);
-
-	enable_buffering(ui->audioOutBox->currentIndex());
 
 	// Sliders
 
@@ -1175,6 +1208,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->ghltarBox, emu_settings_type::GHLtar);
 	SubscribeTooltip(ui->gb_ghltar_emulated, tooltips.settings.ghltar);
 
+	m_emu_settings->EnhanceCheckBox(ui->backgroundInputBox, emu_settings_type::BackgroundInput);
+	SubscribeTooltip(ui->backgroundInputBox, tooltips.settings.background_input);
+
+	m_emu_settings->EnhanceCheckBox(ui->showMoveCursorBox, emu_settings_type::ShowMoveCursor);
+	SubscribeTooltip(ui->showMoveCursorBox, tooltips.settings.show_move_cursor);
+
 	//     _____           _                   _______    _
 	//    / ____|         | |                 |__   __|  | |
 	//   | (___  _   _ ___| |_ ___ _ __ ___      | | __ _| |__
@@ -1242,6 +1281,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceLineEdit(ui->edit_dns, emu_settings_type::DNSAddress);
 	SubscribeTooltip(ui->gb_edit_dns, tooltips.settings.dns);
 
+	m_emu_settings->EnhanceLineEdit(ui->edit_bind, emu_settings_type::BindAddress);
+	SubscribeTooltip(ui->gb_edit_bind, tooltips.settings.bind);
+
 	m_emu_settings->EnhanceLineEdit(ui->edit_swaps, emu_settings_type::IpSwapList);
 	SubscribeTooltip(ui->gb_edit_swaps, tooltips.settings.dns_swap);
 
@@ -1294,6 +1336,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->accuratePPUFPCC, emu_settings_type::AccuratePPUFPCC);
 	SubscribeTooltip(ui->accuratePPUFPCC, tooltips.settings.accurate_ppufpcc);
 
+	m_emu_settings->EnhanceCheckBox(ui->suspendSavestates, emu_settings_type::SuspendEmulationSavestateMode);
+	SubscribeTooltip(ui->suspendSavestates, tooltips.settings.suspend_savestates);
+
+	m_emu_settings->EnhanceCheckBox(ui->pausedSavestates, emu_settings_type::StartSavestatePaused);
+	SubscribeTooltip(ui->pausedSavestates, tooltips.settings.paused_savestates);
+
 	m_emu_settings->EnhanceCheckBox(ui->silenceAllLogs, emu_settings_type::SilenceAllLogs);
 	SubscribeTooltip(ui->silenceAllLogs, tooltips.settings.silence_all_logs);
 
@@ -1308,10 +1356,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
-	
-	m_emu_settings->EnhanceCheckBox(ui->forceDisableExclusiveFullscreenMode, emu_settings_type::ForceDisableExclusiveFullscreenMode);
-	SubscribeTooltip(ui->forceDisableExclusiveFullscreenMode, tooltips.settings.force_disable_exclusive_fullscreen_mode);
-	
+
 	m_emu_settings->EnhanceCheckBox(ui->vblankNTSCFixup, emu_settings_type::VBlankNTSCFixup);
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
@@ -1323,13 +1368,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 
 	m_emu_settings->EnhanceCheckBox(ui->disableMslFastMath, emu_settings_type::DisableMSLFastMath);
-	m_emu_settings->EnhanceCheckBox(ui->softwareVkSemaphore, emu_settings_type::SoftwareVkSemaphore);
 #ifdef __APPLE__
 	SubscribeTooltip(ui->disableMslFastMath, tooltips.settings.disable_msl_fast_math);
-	SubscribeTooltip(ui->softwareVkSemaphore, tooltips.settings.mvk_software_vksemaphore);
 #else
 	ui->disableMslFastMath->setVisible(false);
-	ui->softwareVkSemaphore->setVisible(false);
 #endif
 
 	// Comboboxes
@@ -1337,6 +1379,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
 	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData(6), tr("Unlimited (Default)", "Max SPURS threads"));
 	SubscribeTooltip(ui->gb_max_spurs_threads, tooltips.settings.max_spurs_threads);
+
+	m_emu_settings->EnhanceComboBox(ui->exclusiveFullscreenMode, emu_settings_type::ExclusiveFullscreenMode);
+	SubscribeTooltip(ui->gb_exclusiveFullscreen, tooltips.settings.exclusive_fullscreen_mode);
 
 	m_emu_settings->EnhanceComboBox(ui->sleepTimersAccuracy, emu_settings_type::SleepTimersAccuracy);
 	SubscribeTooltip(ui->gb_sleep_timers_accuracy, tooltips.settings.sleep_timers_accuracy);
@@ -1378,6 +1423,24 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->clockScaleReset, &QAbstractButton::clicked, [clocks_scale_def, this]()
 	{
 		ui->clockScale->setValue(clocks_scale_def);
+	});
+
+	EnhanceSlider(emu_settings_type::MaxPreemptCount, ui->maxPreemptCount, ui->preemptText, tr(reinterpret_cast<const char*>(u8"%0"), "Max CPU preempt count"));
+	SubscribeTooltip(ui->gb_max_preempt_count, tooltips.settings.max_cpu_preempt);
+
+#ifdef _WIN32
+	// Windows' thread execution slice is much larger than on other platforms
+	SnapSlider(ui->maxPreemptCount, 5);
+	ui->maxPreemptCount->setPageStep(20);
+#else
+	SnapSlider(ui->maxPreemptCount, 10);
+	ui->maxPreemptCount->setPageStep(50);
+#endif
+
+	const int preempt_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::MaxPreemptCount));
+	connect(ui->preemptReset, &QAbstractButton::clicked, [preempt_def, this]()
+	{
+		ui->maxPreemptCount->setValue(preempt_def);
 	});
 
 	if (!game) // Prevent users from doing dumb things
@@ -1694,9 +1757,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		});
 
 		const bool enable_buttons = m_gui_settings->GetValue(gui::gs_resize).toBool();
+		const bool use_manual_resize = m_gui_settings->GetValue(gui::gs_resize_manual).toBool();
 		ui->gs_resizeOnBoot->setChecked(enable_buttons);
-		ui->gs_width->setEnabled(enable_buttons);
-		ui->gs_height->setEnabled(enable_buttons);
+		ui->gs_resizeOnBootManual->setChecked(use_manual_resize);
+		ui->gs_resizeOnBootManual->setEnabled(enable_buttons);
+		ui->gs_width->setEnabled(enable_buttons && use_manual_resize);
+		ui->gs_height->setEnabled(enable_buttons && use_manual_resize);
 
 		const QRect screen = QGuiApplication::primaryScreen()->geometry();
 		const int width = m_gui_settings->GetValue(gui::gs_width).toInt();
@@ -1706,9 +1772,18 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		connect(ui->gs_resizeOnBoot, &QCheckBox::toggled, [this](bool checked)
 		{
+			const bool enabled = checked && ui->gs_resizeOnBootManual->isChecked();
 			m_gui_settings->SetValue(gui::gs_resize, checked);
-			ui->gs_width->setEnabled(checked);
-			ui->gs_height->setEnabled(checked);
+			ui->gs_resizeOnBootManual->setEnabled(checked);
+			ui->gs_width->setEnabled(enabled);
+			ui->gs_height->setEnabled(enabled);
+		});
+		connect(ui->gs_resizeOnBootManual, &QCheckBox::toggled, [this](bool checked)
+		{
+			const bool enabled = checked && ui->gs_resizeOnBoot->isChecked();
+			m_gui_settings->SetValue(gui::gs_resize_manual, checked);
+			ui->gs_width->setEnabled(enabled);
+			ui->gs_height->setEnabled(enabled);
 		});
 		connect(ui->gs_width, &QSpinBox::editingFinished, [this]()
 		{
@@ -1853,6 +1928,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_show_obsolete_cfg_dialog, tooltips.settings.show_obsolete_cfg);
 		SubscribeTooltip(ui->cb_show_same_buttons_dialog, tooltips.settings.show_same_buttons);
 		SubscribeTooltip(ui->gb_updates, tooltips.settings.check_update_start);
+		SubscribeTooltip(ui->gb_uuid, tooltips.settings.uuid);
 
 		// Discord:
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
@@ -1873,6 +1949,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			m_discord_state = ui->discordState->text();
 		});
+
+		connect(ui->pb_uuid, &QAbstractButton::clicked, [this]()
+		{
+			std::string uuid;
+			if (!gui::utils::create_new_uuid(uuid))
+			{
+				QMessageBox::critical(this, tr("Error"), tr("Failed to create new installation ID!"), QMessageBox::Ok);
+				return;
+			}
+
+			ui->label_uuid->setText(QString::fromStdString(uuid));
+			gui::utils::log_uuid();
+		});
+		ui->label_uuid->setText(QString::fromStdString(gui::utils::load_uuid()));
 
 		// Log and TTY:
 		SubscribeTooltip(ui->log_limit, tooltips.settings.log_limit);
@@ -2063,9 +2153,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->strictTextureFlushing, emu_settings_type::StrictTextureFlushing);
 	SubscribeTooltip(ui->strictTextureFlushing, tooltips.settings.strict_texture_flushing);
-
-	m_emu_settings->EnhanceCheckBox(ui->disableNativefp16, emu_settings_type::DisableNativefloat16);
-	SubscribeTooltip(ui->disableNativefp16, tooltips.settings.disable_native_fp16);
 
 	m_emu_settings->EnhanceCheckBox(ui->Enable3D, emu_settings_type::Enable3D);
 	SubscribeTooltip(ui->Enable3D, tooltips.settings.enable_3d);

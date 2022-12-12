@@ -148,7 +148,7 @@ int check_filename(std::string_view file_path, bool disallow_system_files, bool 
 		return 70;
 	}
 
-	char name[CELL_SAVEDATA_FILENAME_SIZE - 3];
+	char name[CELL_SAVEDATA_FILENAME_SIZE + 3];
 
 	if (dotpos)
 	{
@@ -228,7 +228,7 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 		}
 
 		// PSF parameters
-		const psf::registry psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
+		const psf::registry psf = psf::load_object(base_dir + entry.name + "/PARAM.SFO");
 
 		if (psf.empty())
 		{
@@ -755,7 +755,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 						listGet->dirListNum++; // number of directories in list
 
 						// PSF parameters
-						const psf::registry psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
+						const psf::registry psf = psf::load_object(base_dir + entry.name + "/PARAM.SFO");
 
 						if (psf.empty())
 						{
@@ -1372,7 +1372,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	const std::string old_path = base_dir + ".backup_" + save_entry.escaped + "/";
 	const std::string new_path = base_dir + ".working_" + save_entry.escaped + "/";
 
-	psf::registry psf = psf::load_object(fs::file(dir_path + "PARAM.SFO"));
+	psf::registry psf = psf::load_object(dir_path + "PARAM.SFO");
 	bool has_modified = false;
 	bool recreated = false;
 
@@ -2070,7 +2070,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 		return CELL_SAVEDATA_ERROR_NODATA;
 	}
 
-	const psf::registry psf = psf::load_object(fs::file(sfo));
+	const psf::registry psf = psf::load_object(sfo);
 
 	if (sysFileParam)
 	{

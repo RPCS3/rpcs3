@@ -68,8 +68,6 @@ void breakpoint_list::RemoveBreakpoint(u32 addr)
 		}
 	}
 
-	Q_EMIT RequestShowAddress(addr);
-
 	if (!count())
 	{
 		hide();
@@ -93,8 +91,6 @@ bool breakpoint_list::AddBreakpoint(u32 pc)
 	breakpoint_item->setBackground(m_color_bp);
 	breakpoint_item->setData(Qt::UserRole, pc);
 	addItem(breakpoint_item);
-
-	Q_EMIT RequestShowAddress(pc);
 
 	show();
 
@@ -220,7 +216,7 @@ void breakpoint_list::OnBreakpointListDelete()
 {
 	for (int i = selectedItems().count() - 1; i >= 0; i--)
 	{
-		RemoveBreakpoint(selectedItems().at(i)->data(Qt::UserRole).value<u32>());
+		RemoveBreakpoint(::at32(selectedItems(), i)->data(Qt::UserRole).value<u32>());
 	}
 
 	if (m_context_menu)

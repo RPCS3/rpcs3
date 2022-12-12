@@ -3,6 +3,15 @@
 
 namespace vk
 {
+	namespace surface_cache_utils
+	{
+		void dispose(vk::buffer* buf)
+		{
+			auto obj = vk::disposable_t::make(buf);
+			vk::get_resource_manager()->dispose(obj);
+		}
+	}
+
 	void surface_cache::destroy()
 	{
 		invalidate_all();
@@ -269,10 +278,7 @@ namespace vk
 		process_list_function(m_render_targets_storage, m_render_targets_memory_range);
 		process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
 
-		std::sort(sorted_list.begin(), sorted_list.end(), [](const auto& a, const auto& b)
-		{
-			return a->last_rw_access_tag < b->last_rw_access_tag;
-		});
+		std::sort(sorted_list.begin(), sorted_list.end(), FN(x->last_rw_access_tag < y->last_rw_access_tag));
 
 		// Remove upto target_memory bytes from VRAM
 		u64 bytes_spilled = 0;
@@ -799,7 +805,10 @@ namespace vk
 		if (!write_barrier_sync_tag) write_barrier_sync_tag++; // Activate barrier sync
 		cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
 
-		vk::insert_texture_barrier(cmd, this, VK_IMAGE_LAYOUT_GENERAL);
+		const auto supports_fbo_loops = cmd.get_command_pool().get_owner().get_framebuffer_loops_support();
+		const auto optimal_layout = supports_fbo_loops ? VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT
+			: VK_IMAGE_LAYOUT_GENERAL;
+		vk::insert_texture_barrier(cmd, this, optimal_layout);
 	}
 
 	void render_target::reset_surface_counters()
@@ -856,7 +865,7 @@ namespace vk
 
 		if (access == rsx::surface_access::shader_write && write_barrier_sync_tag != 0)
 		{
-			if (current_layout == VK_IMAGE_LAYOUT_GENERAL)
+			if (current_layout == VK_IMAGE_LAYOUT_GENERAL || current_layout == VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT)
 			{
 				if (write_barrier_sync_tag != cyclic_reference_sync_tag)
 				{
@@ -880,7 +889,7 @@ namespace vk
 						dst_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 					}
 
-					vk::insert_image_memory_barrier(cmd, value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+					vk::insert_image_memory_barrier(cmd, value, current_layout, current_layout,
 						src_stage, dst_stage, src_access, dst_access, { aspect(), 0, 1, 0, 1 });
 
 					write_barrier_sync_tag = 0; // Disable for next draw

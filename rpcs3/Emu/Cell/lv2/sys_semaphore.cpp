@@ -7,7 +7,30 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_semaphore);
+
+lv2_sema::lv2_sema(utils::serial& ar)
+	: protocol(ar)
+	, key(ar)
+	, name(ar)
+	, max(ar)
+{
+	ar(val);
+}
+
+std::shared_ptr<void> lv2_sema::load(utils::serial& ar)
+{
+	auto sema = std::make_shared<lv2_sema>(ar);
+	return lv2_obj::load(sema->key, sema);
+}
+
+void lv2_sema::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_sync);
+	ar(protocol, key, name, max, std::max<s32>(+val, 0));
+}
 
 error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
@@ -46,10 +69,7 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 		return error;
 	}
 
-	if (ppu.test_stopped())
-	{
-		return {};
-	}
+	static_cast<void>(ppu.test_stopped());
 
 	*sem_id = idm::last_id();
 	return CELL_OK;
@@ -91,7 +111,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
-	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
+	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&, notify = lv2_obj::notify_all_t()](lv2_sema& sema)
 	{
 		const s32 val = sema.val;
 
@@ -103,12 +123,14 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 			}
 		}
 
+		lv2_obj::prepare_for_sleep(ppu);
+
 		std::lock_guard lock(sema.mutex);
 
 		if (sema.val-- <= 0)
 		{
-			sema.sq.emplace_back(&ppu);
 			sema.sleep(ppu, timeout);
+			lv2_obj::emplace(sema.sq, &ppu);
 			return false;
 		}
 
@@ -127,16 +149,37 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
+	while (auto state = +ppu.state)
 	{
-		if (is_stopped(state))
-		{
-			return {};
-		}
-
-		if (state & cpu_flag::signal)
+		if (state & cpu_flag::signal && ppu.state.test_and_reset(cpu_flag::signal))
 		{
 			break;
+		}
+
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(sem->mutex);
+
+			for (auto cpu = +sem->sq; cpu; cpu = cpu->next_cpu)
+			{
+				if (cpu == &ppu)
+				{
+					ppu.state += cpu_flag::again;
+					return {};
+				}
+			}
+
+			break;
+		}
+
+		for (usz i = 0; cpu_flag::signal - ppu.state && i < 50; i++)
+		{
+			busy_wait(500);
+		}
+
+		if (ppu.state & cpu_flag::signal)
+ 		{
+			continue;
 		}
 
 		if (timeout)
@@ -146,7 +189,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return {};
+					continue;
 				}
 
 				std::lock_guard lock(sem->mutex);
@@ -170,7 +213,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		}
 		else
 		{
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 	}
 
@@ -232,6 +275,8 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 		return CELL_EINVAL;
 	}
 
+	lv2_obj::notify_all_t notify;
+
 	if (sem.ret)
 	{
 		return CELL_OK;
@@ -239,6 +284,15 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 	else
 	{
 		std::lock_guard lock(sem->mutex);
+
+		for (auto cpu = +sem->sq; cpu; cpu = cpu->next_cpu)
+		{
+			if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+			{
+				ppu.state += cpu_flag::again;
+				return {};
+			}
+		}
 
 		const auto [val, ok] = sem->val.fetch_op([&](s32& val)
 		{
@@ -294,10 +348,7 @@ error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> cou
 		return CELL_EFAULT;
 	}
 
-	if (ppu.test_stopped())
-	{
-		return {};
-	}
+	static_cast<void>(ppu.test_stopped());
 
 	*count = sema.ret;
 	return CELL_OK;

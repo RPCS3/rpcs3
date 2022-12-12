@@ -4,6 +4,11 @@
 #include "../Common/simple_array.hpp"
 #include "../Overlays/overlays.h"
 #include "GLTexture.h"
+
+#include "glutils/fbo.h"
+#include "glutils/program.h"
+#include "glutils/vao.hpp"
+
 #include <string>
 #include <unordered_map>
 
@@ -30,27 +35,9 @@ namespace gl
 		GLenum primitives = GL_TRIANGLE_STRIP;
 		GLenum input_filter = GL_NEAREST;
 
-		struct saved_sampler_state
-		{
-			GLuint saved = GL_NONE;
-			GLuint unit = 0;
-
-			saved_sampler_state(GLuint _unit, const gl::sampler_state& sampler)
-			{
-				glActiveTexture(GL_TEXTURE0 + _unit);
-				glGetIntegerv(GL_SAMPLER_BINDING, reinterpret_cast<GLint*>(&saved));
-
-				unit = _unit;
-				sampler.bind(_unit);
-			}
-
-			saved_sampler_state(const saved_sampler_state&) = delete;
-
-			~saved_sampler_state()
-			{
-				glBindSampler(unit, saved);
-			}
-		};
+		u32 m_write_aspect_mask = gl::image_aspect::color | gl::image_aspect::depth;
+		bool enable_depth_writes = false;
+		bool enable_stencil_writes = false;
 
 		void create();
 		void destroy();
@@ -69,7 +56,7 @@ namespace gl
 
 		virtual void emit_geometry();
 
-		void run(gl::command_context& cmd, const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false);
+		void run(gl::command_context& cmd, const areau& region, GLuint target_texture, GLuint image_aspect_bits, bool enable_blending = false);
 	};
 
 	struct ui_overlay_renderer : public overlay_pass
@@ -109,10 +96,11 @@ namespace gl
 		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d);
 	};
 
-	struct rp_ssbo_to_d24x8_texture : public overlay_pass
+	struct rp_ssbo_to_generic_texture : public overlay_pass
 	{
-		rp_ssbo_to_d24x8_texture();
-		void run(gl::command_context& cmd, const buffer* src, const texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_unpack_settings& settings);
+		rp_ssbo_to_generic_texture();
+		void run(gl::command_context& cmd, const buffer* src, texture* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
+		void run(gl::command_context& cmd, const buffer* src, const texture_view* dst, const u32 src_offset, const coordu& dst_region, const pixel_buffer_layout& layout);
 	};
 
 	// TODO: Replace with a proper manager

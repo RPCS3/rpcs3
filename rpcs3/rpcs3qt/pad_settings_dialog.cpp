@@ -9,6 +9,7 @@
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
 #include "pad_led_settings_dialog.h"
+#include "pad_motion_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
 #include "tooltips.h"
 #include "gui_settings.h"
@@ -174,7 +175,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	connect(ui->chb_show_emulated_values, &QCheckBox::clicked, [this](bool checked)
 	{
 		m_gui_settings->SetValue(gui::pads_show_emulated, checked);
-		const auto& cfg = GetPlayerConfig();
+		const cfg_pad& cfg = GetPlayerConfig();
 		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, cfg.lpadsquircling, cfg.lstickmultiplier / 100.0);
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, cfg.rpadsquircling, cfg.rstickmultiplier / 100.0);
 	});
@@ -364,16 +365,52 @@ void pad_settings_dialog::InitButtons()
 	{
 		// Allow LED battery indication while the dialog is open
 		ensure(m_handler);
-		const auto& cfg = GetPlayerConfig();
+		const cfg_pad& cfg = GetPlayerConfig();
 		SetPadData(0, 0, cfg.led_battery_indicator.get());
-		pad_led_settings_dialog dialog(this, cfg.colorR, cfg.colorG, cfg.colorB, m_handler->has_rgb(), m_handler->has_battery(), cfg.led_low_battery_blink.get(), cfg.led_battery_indicator.get(), cfg.led_battery_indicator_brightness);
-		connect(&dialog, &pad_led_settings_dialog::pass_led_settings, this, &pad_settings_dialog::apply_led_settings);
+		pad_led_settings_dialog dialog(this, cfg.colorR, cfg.colorG, cfg.colorB, m_handler->has_rgb(), m_handler->has_player_led(), cfg.player_led_enabled.get(), m_handler->has_battery(), cfg.led_low_battery_blink.get(), cfg.led_battery_indicator.get(), cfg.led_battery_indicator_brightness);
+		connect(&dialog, &pad_led_settings_dialog::pass_led_settings, this, [this](const pad_led_settings_dialog::led_settings& settings)
+		{
+			ensure(m_handler);
+			cfg_pad& cfg = GetPlayerConfig();
+			cfg.colorR.set(settings.color_r);
+			cfg.colorG.set(settings.color_g);
+			cfg.colorB.set(settings.color_b);
+			cfg.led_battery_indicator.set(settings.battery_indicator);
+			cfg.led_battery_indicator_brightness.set(settings.battery_indicator_brightness);
+			cfg.led_low_battery_blink.set(settings.low_battery_blink);
+			cfg.player_led_enabled.set(settings.player_led_enabled);
+			SetPadData(0, 0, settings.battery_indicator);
+		});
 		dialog.exec();
 		SetPadData(0, 0);
 	});
 
+	// Open Motion settings
+	connect(ui->b_motion_controls, &QPushButton::clicked, this, [this]()
+	{
+		if (m_timer_input.isActive())
+		{
+			m_timer_input.stop();
+		}
+		if (m_timer_pad_refresh.isActive())
+		{
+			m_timer_pad_refresh.stop();
+		}
+		pause_input_thread();
+
+		pad_motion_settings_dialog dialog(this, m_handler, g_cfg_input.player[GetPlayerIndex()]);
+		dialog.exec();
+
+		if (ui->chooseDevice->isEnabled() && ui->chooseDevice->currentIndex() >= 0)
+		{
+			start_input_thread();
+			m_timer_input.start(1);
+			m_timer_pad_refresh.start(1000);
+		}
+	});
+
 	// Enable Button Remapping
-	const auto callback = [this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
+	const auto callback = [this](PadHandlerBase::connection status, u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 	{
 		SwitchPadInfo(pad_name, true);
 
@@ -403,7 +440,7 @@ void pad_settings_dialog::InitButtons()
 
 		ui->pb_battery->setValue(m_enable_battery ? battery_level : 0);
 
-		if (val <= 0)
+		if (val <= 0 || status == PadHandlerBase::connection::no_data)
 		{
 			return;
 		}
@@ -462,37 +499,19 @@ void pad_settings_dialog::InitButtons()
 
 		if (data.has_new_data)
 		{
-			if (data.success)
+			if (data.status == PadHandlerBase::disconnected)
 			{
-				callback(data.val, std::move(data.name), std::move(data.pad_name), data.battery_level, std::move(data.preview_values));
+				fail_callback(data.pad_name);
 			}
 			else
 			{
-				fail_callback(data.pad_name);
+				callback(data.status, data.val, std::move(data.name), std::move(data.pad_name), data.battery_level, std::move(data.preview_values));
 			}
 		}
 	});
 
 	// Use timer to refresh pad connection status
-	connect(&m_timer_pad_refresh, &QTimer::timeout, this, [this]()
-	{
-		for (int i = 0; i < ui->chooseDevice->count(); i++)
-		{
-			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
-			{
-				cfg_log.fatal("Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
-				continue;
-			}
-
-			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
-
-			std::lock_guard lock(m_handler_mutex);
-
-			m_handler->get_next_button_press(info.name,
-				[this](u16, std::string, std::string pad_name, u32, pad_preview_values) { SwitchPadInfo(pad_name, true); },
-				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
-		}
-	});
+	connect(&m_timer_pad_refresh, &QTimer::timeout, this, &pad_settings_dialog::RefreshPads);
 
 	// Use thread to get button input
 	m_input_thread = std::make_unique<named_thread<std::function<void()>>>("Pad Settings Thread", [this]()
@@ -505,6 +524,8 @@ void pad_settings_dialog::InitButtons()
 			{
 				if (m_input_thread_state == input_thread_state::pausing)
 				{
+					std::lock_guard lock(m_input_mutex);
+					m_input_callback_data = {};
 					m_input_thread_state = input_thread_state::paused;
 				}
 
@@ -520,7 +541,8 @@ void pad_settings_dialog::InitButtons()
 				m_cfg_entries[button_ids::id_pad_rstick_left].key, m_cfg_entries[button_ids::id_pad_rstick_right].key, m_cfg_entries[button_ids::id_pad_rstick_down].key,
 				m_cfg_entries[button_ids::id_pad_rstick_up].key
 			};
-			m_handler->get_next_button_press(m_device_name,
+
+			const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name,
 				[this](u16 val, std::string name, std::string pad_name, u32 battery_level, pad_preview_values preview_values)
 				{
 					std::lock_guard lock(m_input_mutex);
@@ -530,60 +552,96 @@ void pad_settings_dialog::InitButtons()
 					m_input_callback_data.battery_level = battery_level;
 					m_input_callback_data.preview_values = std::move(preview_values);
 					m_input_callback_data.has_new_data = true;
-					m_input_callback_data.success = true;
+					m_input_callback_data.status = PadHandlerBase::connection::connected;
 				},
 				[this](std::string pad_name)
 				{
 					std::lock_guard lock(m_input_mutex);
 					m_input_callback_data.pad_name = std::move(pad_name);
 					m_input_callback_data.has_new_data = true;
-					m_input_callback_data.success = false;
+					m_input_callback_data.status = PadHandlerBase::connection::disconnected;
 				},
 				false, buttons);
+
+			if (status == PadHandlerBase::connection::no_data)
+			{
+				std::lock_guard lock(m_input_mutex);
+				m_input_callback_data.pad_name = m_device_name;
+				m_input_callback_data.has_new_data = true;
+				m_input_callback_data.status = status;
+			}
 		}
 	});
+}
+
+void pad_settings_dialog::RefreshPads()
+{
+	for (int i = 0; i < ui->chooseDevice->count(); i++)
+	{
+		pad_device_info info = get_pad_info(ui->chooseDevice, i);
+
+		if (info.name.empty())
+		{
+			continue;
+		}
+
+		std::lock_guard lock(m_handler_mutex);
+		const PadHandlerBase::connection status = m_handler->get_next_button_press(info.name, nullptr, nullptr, false);
+		switch_pad_info(i, info, status != PadHandlerBase::connection::disconnected);
+	}
 }
 
 void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor, bool led_battery_indicator)
 {
 	ensure(m_handler);
-	const auto& cfg = GetPlayerConfig();
+	const cfg_pad& cfg = GetPlayerConfig();
 
 	std::lock_guard lock(m_handler_mutex);
-	m_handler->SetPadData(m_device_name, GetPlayerIndex(), large_motor, small_motor, cfg.colorR, cfg.colorG, cfg.colorB, led_battery_indicator, cfg.led_battery_indicator_brightness);
+	m_handler->SetPadData(m_device_name, GetPlayerIndex(), large_motor, small_motor, cfg.colorR, cfg.colorG, cfg.colorB, cfg.player_led_enabled.get(), led_battery_indicator, cfg.led_battery_indicator_brightness);
 }
 
-// Slot to handle the data from a signal in the led settings dialog
-void pad_settings_dialog::apply_led_settings(int colorR, int colorG, int colorB, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
+pad_device_info pad_settings_dialog::get_pad_info(QComboBox* combo, int index)
 {
-	ensure(m_handler);
-	auto& cfg = GetPlayerConfig();
-	cfg.colorR.set(colorR);
-	cfg.colorG.set(colorG);
-	cfg.colorB.set(colorB);
-	cfg.led_battery_indicator.set(led_battery_indicator);
-	cfg.led_battery_indicator_brightness.set(led_battery_indicator_brightness);
-	cfg.led_low_battery_blink.set(led_low_battery_blink);
-	SetPadData(0, 0, led_battery_indicator);
+	if (!combo || index < 0)
+	{
+		cfg_log.fatal("get_pad_info: Invalid combo box or index (combo=%d, index=%d)", !!combo, index);
+		return {};
+	}
+
+	const QVariant user_data = combo->itemData(index);
+
+	if (!user_data.canConvert<pad_device_info>())
+	{
+		cfg_log.fatal("get_pad_info: Cannot convert itemData for index %d and itemText %s", index, sstr(combo->itemText(index)));
+		return {};
+	}
+
+	return user_data.value<pad_device_info>();
+}
+
+void pad_settings_dialog::switch_pad_info(int index, pad_device_info info, bool is_connected)
+{
+	if (index >= 0 && info.is_connected != is_connected)
+	{
+		info.is_connected = is_connected;
+
+		ui->chooseDevice->setItemData(index, QVariant::fromValue(info));
+		ui->chooseDevice->setItemText(index, is_connected ? qstr(info.name) : (qstr(info.name) + Disconnected_suffix));
+	}
+
+	if (!is_connected && m_timer.isActive() && ui->chooseDevice->currentIndex() == index)
+	{
+		ReactivateButtons();
+	}
 }
 
 void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_connected)
 {
 	for (int i = 0; i < ui->chooseDevice->count(); i++)
 	{
-		const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
-		if (info.name == pad_name)
+		if (pad_device_info info = get_pad_info(ui->chooseDevice, i); info.name == pad_name)
 		{
-			if (info.is_connected != is_connected)
-			{
-				ui->chooseDevice->setItemData(i, QVariant::fromValue(pad_device_info{ pad_name, is_connected }));
-				ui->chooseDevice->setItemText(i, is_connected ? qstr(pad_name) : (qstr(pad_name) + Disconnected_suffix));
-			}
-
-			if (!is_connected && m_timer.isActive() && ui->chooseDevice->currentIndex() == i)
-			{
-				ReactivateButtons();
-			}
+			switch_pad_info(i, info, is_connected);
 			break;
 		}
 	}
@@ -600,7 +658,7 @@ void pad_settings_dialog::ReloadButtons()
 		button->setText(text);
 	};
 
-	auto& cfg = GetPlayerConfig();
+	cfg_pad& cfg = GetPlayerConfig();
 
 	updateButton(button_ids::id_pad_lstick_left, ui->b_lstick_left, &cfg.ls_left);
 	updateButton(button_ids::id_pad_lstick_down, ui->b_lstick_down, &cfg.ls_down);
@@ -1120,6 +1178,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->squircle_right->setEnabled(is_enabled);
 	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
+	ui->gb_motion_controls->setEnabled(is_enabled && m_enable_motion);
 	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
 	ui->gb_triggers->setEnabled(is_enabled && m_enable_deadzones);
 	ui->gb_battery->setEnabled(is_enabled && (m_enable_battery || m_enable_led));
@@ -1159,7 +1218,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	case button_ids::id_blacklist:
 	{
 		std::lock_guard lock(m_handler_mutex);
-		m_handler->get_next_button_press(m_device_name, nullptr, nullptr, true);
+		[[maybe_unused]] const PadHandlerBase::connection status = m_handler->get_next_button_press(m_device_name, nullptr, nullptr, true);
 		return;
 	}
 	default:
@@ -1215,9 +1274,11 @@ void pad_settings_dialog::ChangeHandler()
 	bool force_enable = false; // enable configs even with disconnected devices
 	const u32 player = GetPlayerIndex();
 	const bool is_ldd_pad = GetIsLddPad(player);
+	cfg_player* player_config = g_cfg_input.player[player];
 
 	std::string handler;
 	std::string device;
+	std::string buddy_device;
 
 	if (is_ldd_pad)
 	{
@@ -1226,13 +1287,14 @@ void pad_settings_dialog::ChangeHandler()
 	else
 	{
 		handler = sstr(ui->chooseHandler->currentData().toString());
-		device = g_cfg_input.player[player]->device.to_string();
+		device = player_config->device.to_string();
+		buddy_device = player_config->buddy_device.to_string();
 	}
-	
-	auto& cfg = g_cfg_input.player[player]->config;
+
+	cfg_pad& cfg = player_config->config;
 
 	// Change and get this player's current handler.
-	if (auto& cfg_handler = g_cfg_input.player[player]->handler; handler != cfg_handler.to_string())
+	if (auto& cfg_handler = player_config->handler; handler != cfg_handler.to_string())
 	{
 		if (!cfg_handler.from_string(handler))
 		{
@@ -1241,18 +1303,18 @@ void pad_settings_dialog::ChangeHandler()
 		}
 
 		// Initialize the new pad config's defaults
-		m_handler = pad_thread::GetHandler(g_cfg_input.player[player]->handler);
+		m_handler = pad_thread::GetHandler(player_config->handler);
 		pad_thread::InitPadConfig(cfg, cfg_handler, m_handler);
 	}
 	else
 	{
-		m_handler = pad_thread::GetHandler(g_cfg_input.player[player]->handler);
+		m_handler = pad_thread::GetHandler(player_config->handler);
 	}
 
 	ensure(m_handler);
 
 	// Get the handler's currently available devices.
-	const auto device_list = m_handler->ListDevices();
+	const std::vector<pad_list_entry> device_list = m_handler->list_devices();
 
 	// Localized tooltips
 	const Tooltips tooltips;
@@ -1303,8 +1365,8 @@ void pad_settings_dialog::ChangeHandler()
 	ui->l_description->setText(m_description);
 
 	// Update parameters
-	m_min_force = m_handler->vibration_min;
-	m_max_force = m_handler->vibration_max;
+	m_min_force = 0;
+	m_max_force = 255;
 
 	// Reset parameters
 	m_lx = 0;
@@ -1314,6 +1376,9 @@ void pad_settings_dialog::ChangeHandler()
 
 	// Enable Vibration Checkboxes
 	m_enable_rumble = m_handler->has_rumble();
+
+	// Enable Motion Settings
+	m_enable_motion = m_handler->has_motion();
 
 	// Enable Deadzone Settings
 	m_enable_deadzones = m_handler->has_deadzones();
@@ -1360,9 +1425,15 @@ void pad_settings_dialog::ChangeHandler()
 	}
 	default:
 	{
-		for (const auto& device_name : device_list)
+		for (const pad_list_entry& device : device_list)
 		{
-			ui->chooseDevice->addItem(qstr(device_name), QVariant::fromValue(pad_device_info{ device_name, true }));
+			if (!device.is_buddy_only)
+			{
+				const QString device_name = QString::fromStdString(device.name);
+				const QVariant user_data = QVariant::fromValue(pad_device_info{ device.name, true });
+
+				ui->chooseDevice->addItem(device_name, user_data);
+			}
 		}
 		break;
 	}
@@ -1372,26 +1443,24 @@ void pad_settings_dialog::ChangeHandler()
 	ui->chooseDevice->blockSignals(false);
 
 	// Handle empty device list
-	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
+	const bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
 
 	if (config_enabled)
 	{
+		RefreshPads();
+
 		for (int i = 0; i < ui->chooseDevice->count(); i++)
 		{
-			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
-			{
-				cfg_log.fatal("Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
-				continue;
-			}
-			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
-			m_handler->get_next_button_press(info.name,
-				[this](u16, std::string, std::string pad_name, u32, pad_preview_values) { SwitchPadInfo(pad_name, true); },
-				[this](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
-
-			if (info.name == device)
+			if (pad_device_info info = get_pad_info(ui->chooseDevice, i); info.name == device)
 			{
 				ui->chooseDevice->setCurrentIndex(i);
+				break;
 			}
+		}
+
+		if (ui->chooseDevice->currentIndex() < 0 && ui->chooseDevice->count() > 0)
+		{
+			ui->chooseDevice->setCurrentIndex(0);
 		}
 
 		// Force Refresh
@@ -1403,6 +1472,8 @@ void pad_settings_dialog::ChangeHandler()
 		{
 			ui->chooseDevice->setPlaceholderText(tr("No Device Detected"));
 		}
+
+		m_device_name.clear();
 	}
 
 	// Handle running timers
@@ -1485,11 +1556,18 @@ void pad_settings_dialog::ChangeDevice(int index)
 	if (index < 0)
 		return;
 
-	const pad_device_info info = ui->chooseDevice->itemData(index).value<pad_device_info>();
+	const QVariant user_data = ui->chooseDevice->itemData(index);
+
+	if (!user_data.canConvert<pad_device_info>())
+	{
+		cfg_log.fatal("ChangeDevice: Cannot convert itemData for index %d and itemText %s", index, sstr(ui->chooseDevice->itemText(index)));
+		return;
+	}
+
+	const pad_device_info info = user_data.value<pad_device_info>();
 	m_device_name = info.name;
 	if (!g_cfg_input.player[GetPlayerIndex()]->device.from_string(m_device_name))
 	{
-		// Something went wrong
 		cfg_log.error("Failed to convert device string: %s", m_device_name);
 	}
 }
@@ -1788,7 +1866,7 @@ bool pad_settings_dialog::GetIsLddPad(u32 index) const
 		{
 			ensure(index < handler->GetPads().size());
 
-			if (const std::shared_ptr<Pad> pad = handler->GetPads().at(index))
+			if (const std::shared_ptr<Pad> pad = ::at32(handler->GetPads(), index))
 			{
 				return pad->ldd;
 			}
@@ -1843,6 +1921,7 @@ void pad_settings_dialog::SubscribeTooltips()
 	SubscribeTooltip(ui->gb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
 	SubscribeTooltip(ui->gb_kb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
 	SubscribeTooltip(ui->gb_vibration, tooltips.gamepad_settings.vibration);
+	SubscribeTooltip(ui->gb_motion_controls, tooltips.gamepad_settings.motion_controls);
 	SubscribeTooltip(ui->gb_sticks, tooltips.gamepad_settings.stick_deadzones);
 	SubscribeTooltip(ui->gb_stick_preview, tooltips.gamepad_settings.emulated_preview);
 	SubscribeTooltip(ui->gb_triggers, tooltips.gamepad_settings.trigger_deadzones);

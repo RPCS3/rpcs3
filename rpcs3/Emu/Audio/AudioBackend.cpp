@@ -6,10 +6,16 @@
 
 AudioBackend::AudioBackend() {}
 
-void AudioBackend::SetErrorCallback(std::function<void()> cb)
+void AudioBackend::SetWriteCallback(std::function<u32(u32 /* byte_cnt */, void* /* buffer */)> cb)
 {
-	std::lock_guard lock(m_error_cb_mutex);
-	m_error_callback = cb;
+	std::lock_guard lock(m_cb_mutex);
+	m_write_callback = cb;
+}
+
+void AudioBackend::SetStateCallback(std::function<void(AudioStateEvent)> cb)
+{
+	std::lock_guard lock(m_state_cb_mutex);
+	m_state_callback = cb;
 }
 
 /*
@@ -105,7 +111,7 @@ std::pair<AudioChannelCnt, AudioChannelCnt> AudioBackend::get_channel_count_and_
 	audio_out_configuration& audio_out_cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(audio_out_cfg.mtx);
 	ensure(device_index < audio_out_cfg.out.size());
-	const audio_out_configuration::audio_out& out = audio_out_cfg.out.at(device_index);
+	const audio_out_configuration::audio_out& out = ::at32(audio_out_cfg.out, device_index);
 	return out.get_channel_count_and_downmixer();
 }
 
@@ -114,7 +120,7 @@ AudioChannelCnt AudioBackend::get_max_channel_count(u32 device_index)
 	audio_out_configuration& audio_out_cfg = g_fxo->get<audio_out_configuration>();
 	std::lock_guard lock(audio_out_cfg.mtx);
 	ensure(device_index < audio_out_cfg.out.size());
-	const audio_out_configuration::audio_out& out = audio_out_cfg.out.at(device_index);
+	const audio_out_configuration::audio_out& out = ::at32(audio_out_cfg.out, device_index);
 
 	AudioChannelCnt count = AudioChannelCnt::STEREO;
 
@@ -133,4 +139,25 @@ AudioChannelCnt AudioBackend::get_max_channel_count(u32 device_index)
 	}
 
 	return count;
+}
+
+AudioChannelCnt AudioBackend::convert_channel_count(u64 raw)
+{
+	switch (raw)
+	{
+	default:
+	case 8:
+		return AudioChannelCnt::SURROUND_7_1;
+	case 7:
+	case 6:
+		return AudioChannelCnt::SURROUND_5_1;
+	case 5:
+	case 4:
+	case 3:
+	case 2:
+	case 1:
+		return AudioChannelCnt::STEREO;
+	case 0:
+		fmt::throw_exception("Usupported channel count");
+	}
 }

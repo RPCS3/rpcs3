@@ -36,7 +36,7 @@ public:
 	bool Init();
 
 	/** Connects a combo box with the target settings type*/
-	void EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false);
+	void EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false, bool strict = true);
 
 	/** Connects a check box with the target settings type*/
 	void EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type);
@@ -87,7 +87,7 @@ public:
 	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
 
 	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
-	QString GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const;
+	QString GetLocalizedSetting(const QString& original, emu_settings_type type, int index, bool strict) const;
 
 	/** Validates the settings and logs unused entries or cleans up the yaml*/
 	bool ValidateSettings(bool cleanup);

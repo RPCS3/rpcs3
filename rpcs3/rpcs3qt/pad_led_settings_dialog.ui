@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>287</width>
-    <height>287</height>
+    <width>255</width>
+    <height>350</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -37,6 +37,22 @@
        <widget class="QPushButton" name="b_colorpicker">
         <property name="text">
          <string>Select color</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="gb_player_led">
+     <property name="title">
+      <string>GroupBox</string>
+     </property>
+     <layout class="QVBoxLayout" name="gb_player_led_layout">
+      <item>
+       <widget class="QCheckBox" name="cb_player_led">
+        <property name="text">
+         <string>Enable player LED</string>
         </property>
        </widget>
       </item>
@@ -104,6 +120,19 @@
       </item>
      </layout>
     </widget>
+   </item>
+   <item>
+    <spacer name="main_verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+    </spacer>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="bb_dialog_buttons">

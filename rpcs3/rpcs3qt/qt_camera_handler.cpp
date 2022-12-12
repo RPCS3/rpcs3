@@ -18,7 +18,10 @@ qt_camera_handler::qt_camera_handler() : camera_handler_base()
 		camera_log.success("Found camera: name=%s, description=%s", cameraInfo.deviceName().toStdString(), cameraInfo.description().toStdString());
 	}
 
-	g_cfg_camera.load();
+	if (!g_cfg_camera.load())
+	{
+		camera_log.notice("Could not load camera config. Using defaults.");
+	}
 }
 
 qt_camera_handler::~qt_camera_handler()

@@ -17,6 +17,12 @@ sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, lv2_memory_container* ct, u32 psize)
 	g_ids[addr >> 28].release(idm::last_id());
 }
 
+void sys_vm_t::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_vm);
+	ar(ct->id, addr, size, psize);
+}
+
 sys_vm_t::~sys_vm_t()
 {
 	// Free ID
@@ -29,6 +35,17 @@ struct sys_vm_global_t
 {
 	atomic_t<u32> total_vsize = 0;
 };
+
+sys_vm_t::sys_vm_t(utils::serial& ar)
+	: ct(lv2_memory_container::search(ar))
+	, addr(ar)
+	, size(ar)
+	, psize(ar)
+{
+	g_ids[addr >> 28].release(idm::last_id());
+	g_fxo->need<sys_vm_global_t>();
+	g_fxo->get<sys_vm_global_t>().total_vsize += size;
+}
 
 error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {
@@ -81,6 +98,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 		idm::make<sys_vm_t>(area->addr, vsize, ct, psize);
 
 		// Write a pointer for the allocated memory
+		ppu.check_state();
 		*addr = area->addr;
 		return CELL_OK;
 	}
@@ -382,6 +400,7 @@ error_code sys_vm_test(ppu_thread& ppu, u32 addr, u32 size, vm::ptr<u64> result)
 		return CELL_EINVAL;
 	}
 
+	ppu.check_state();
 	*result = SYS_VM_STATE_ON_MEMORY;
 
 	return CELL_OK;
@@ -400,6 +419,7 @@ error_code sys_vm_get_statistics(ppu_thread& ppu, u32 addr, vm::ptr<sys_vm_stati
 		return CELL_EINVAL;
 	}
 
+	ppu.check_state();
 	stat->page_fault_ppu = 0;
 	stat->page_fault_spu = 0;
 	stat->page_in = 0;

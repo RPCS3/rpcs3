@@ -1157,9 +1157,9 @@ struct SceNpScoreRankData
 	be_t<u32> serialRank;
 	be_t<u32> rank;
 	be_t<u32> highestRank;
-	be_t<s64> scoreValue;
 	be_t<s32> hasGameData;
 	u8 pad0[4];
+	be_t<s64> scoreValue;
 	CellRtcTick recordDate;
 };
 
@@ -1393,14 +1393,14 @@ struct SceNpMatchingReqRange
 
 struct SceNpScoreVariableSizeGameInfo
 {
-	be_t<u64> infoSize;
+	be_t<u32> infoSize;
 	u8 data[SCE_NP_SCORE_VARIABLE_SIZE_GAMEINFO_MAXSIZE];
 	u8 pad[3];
 };
 
 struct SceNpScoreRecordOptParam
 {
-	be_t<u64> size;
+	be_t<u32> size;
 	vm::bptr<SceNpScoreVariableSizeGameInfo> vsInfo;
 	vm::bptr<CellRtcTick> reserved;
 };

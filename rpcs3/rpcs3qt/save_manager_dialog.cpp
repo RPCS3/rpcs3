@@ -65,11 +65,11 @@ namespace
 			}
 
 			SaveDataEntry save_entry2;
-			save_entry2.dirName = psf.at("SAVEDATA_DIRECTORY").as_string();
-			save_entry2.listParam = psf.at("SAVEDATA_LIST_PARAM").as_string();
-			save_entry2.title = psf.at("TITLE").as_string();
-			save_entry2.subtitle = psf.at("SUB_TITLE").as_string();
-			save_entry2.details = psf.at("DETAIL").as_string();
+			save_entry2.dirName = ::at32(psf, "SAVEDATA_DIRECTORY").as_string();
+			save_entry2.listParam = ::at32(psf, "SAVEDATA_LIST_PARAM").as_string();
+			save_entry2.title = ::at32(psf, "TITLE").as_string();
+			save_entry2.subtitle = ::at32(psf, "SUB_TITLE").as_string();
+			save_entry2.details = ::at32(psf, "DETAIL").as_string();
 
 			save_entry2.size = 0;
 
@@ -210,7 +210,7 @@ void save_manager_dialog::Init()
 		}
 		const int idx_real = item->data(Qt::UserRole).toInt();
 		const QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
-		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+		gui::utils::open_dir(path);
 	});
 	connect(slider_icon_size, &QAbstractSlider::valueChanged, this, &save_manager_dialog::SetIconSize);
 	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &save_manager_dialog::OnSort);
@@ -488,7 +488,7 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 		}
 		const int idx_real = item->data(Qt::UserRole).toInt();
 		const QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
-		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+		gui::utils::open_dir(path);
 	});
 
 	menu->exec(m_list->viewport()->mapToGlobal(pos));

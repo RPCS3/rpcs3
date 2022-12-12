@@ -315,12 +315,14 @@ private:
 	friend class atomic_wait::list;
 
 	static void wait(const void* data, u32 size, u128 old_value, u64 timeout, u128 mask, atomic_wait::info* ext = nullptr);
+
+public:
 	static void notify_one(const void* data, u32 size, u128 mask128);
 	static void notify_all(const void* data, u32 size, u128 mask128);
 
-public:
 	static void set_wait_callback(bool(*cb)(const void* data, u64 attempts, u64 stamp0));
 	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
+	static void set_one_time_use_wait_callback(bool(*cb)(u64 progress));
 
 	static void notify_all(const void* data)
 	{
@@ -331,7 +333,7 @@ public:
 template <uint Max, typename... T>
 void atomic_wait::list<Max, T...>::wait(atomic_wait_timeout timeout)
 {
-	static_assert(Max, "Cannot initiate atomic wait with empty list.");
+	static_assert(!!Max, "Cannot initiate atomic wait with empty list.");
 
 	atomic_wait_engine::wait(m_info[0].data, m_info[0].size, m_info[0].old, static_cast<u64>(timeout), m_info[0].mask, m_info + 1);
 }
@@ -1096,8 +1098,21 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 #endif
 	}
 #elif defined(ARCH_ARM64)
+
 	static inline T load(const T& dest)
 	{
+#if defined(ARM_FEATURE_LSE2)
+		u64 data[2];
+		__asm__ volatile("1:\n"
+			"ldp %x[data0], %x[data1], %[dest]\n"
+			"dmb ish\n"
+			: [data0] "=r"(data[0]), [data1] "=r"(data[1])
+			: [dest] "Q"(dest)
+			: "memory");
+		T result;
+		std::memcpy(&result, data, 16);
+		return result;
+#else
 		u32 tmp;
 		u64 data[2];
 		__asm__ volatile("1:\n"
@@ -1111,6 +1126,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 		T result;
 		std::memcpy(&result, data, 16);
 		return result;
+#endif
 	}
 
 	static inline T observe(const T& dest)
@@ -1172,13 +1188,38 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline void store(T& dest, T value)
 	{
 		// TODO
+#if defined(ARM_FEATURE_LSE2)
+		u64 src[2];
+		std::memcpy(src, &value, 16);
+		__asm__ volatile("1:\n"
+			"dmb ish\n"
+			"stp %x[data0], %x[data1], %[dest]\n"
+			"dmb ish\n"
+			: [dest] "=Q" (dest)
+			: [data0] "r" (src[0]), [data1] "r" (src[1])
+			: "memory"
+		);
+#else
 		exchange(dest, value);
+#endif
 	}
 
 	static inline void release(T& dest, T value)
 	{
+#if defined(ARM_FEATURE_LSE2)
+		u64 src[2];
+		std::memcpy(src, &value, 16);
+		__asm__ volatile("1:\n"
+			 "dmb ish\n"
+			 "stp %x[data0], %x[data1], %[dest]\n"
+			 : [dest] "=Q" (dest)
+			 : [data0] "r" (src[0]), [data1] "r" (src[1])
+			 : "memory"
+		);
+#else
 		// TODO
 		exchange(dest, value);
+#endif
 	}
 #endif
 
@@ -1214,7 +1255,7 @@ protected:
 
 public:
 	static constexpr usz align = Align;
-	using enable_bitcopy = std::true_type;
+	ENABLE_BITWISE_SERIALIZATION;
 
 	atomic_t() noexcept = default;
 

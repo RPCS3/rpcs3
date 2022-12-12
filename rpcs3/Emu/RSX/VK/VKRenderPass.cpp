@@ -31,12 +31,14 @@ namespace vk
 		// Internal utils
 		static u64 encode_layout(VkImageLayout layout)
 		{
-			switch (layout)
+			switch (+layout)
 			{
 			case VK_IMAGE_LAYOUT_GENERAL:
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 				return static_cast<u64>(layout);
+			case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
+				return 4ull;
 			default:
 				fmt::throw_exception("Unsupported layout 0x%llx here", static_cast<usz>(layout));
 			}
@@ -50,6 +52,8 @@ namespace vk
 			case 2:
 			case 3:
 				return static_cast<VkImageLayout>(encoded);
+			case 4:
+				return VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT;
 			default:
 				fmt::throw_exception("Unsupported layout encoding 0x%llx here", encoded);
 			}
@@ -73,8 +77,9 @@ namespace vk
 		// Encoders
 		inline void set_layout(u32 index, VkImageLayout layout)
 		{
-			switch (layout)
+			switch (+layout)
 			{
+			case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
 			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
 			case VK_IMAGE_LAYOUT_GENERAL:
@@ -148,9 +153,9 @@ namespace vk
 
 			for (u32 i = 0, layout_offset = 0; i < 5; ++i, layout_offset += 3)
 			{
-				if (const auto layout = VkImageLayout((layout_blob >> layout_offset) & 0x7))
+				if (const auto layout_encoding = (layout_blob >> layout_offset) & 0x7)
 				{
-					result.push_back(layout);
+					result.push_back(decode_layout(layout_encoding));
 				}
 				else
 				{

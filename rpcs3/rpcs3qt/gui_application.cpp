@@ -97,7 +97,7 @@ bool gui_application::Init()
 		const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
 		const auto index    = codes.indexOf(language);
 
-		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : codes.at(index));
+		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : ::at32(codes, index));
 	}
 
 	// Create callbacks from the emulator, which reference the handlers.
@@ -277,12 +277,21 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 {
 	extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
 
-	auto [w, h] = g_video_out_resolution_map.at(g_cfg.video.resolution);
+	auto [w, h] = ::at32(g_video_out_resolution_map, g_cfg.video.resolution);
 
 	if (m_gui_settings->GetValue(gui::gs_resize).toBool())
 	{
-		w = m_gui_settings->GetValue(gui::gs_width).toInt();
-		h = m_gui_settings->GetValue(gui::gs_height).toInt();
+		if (m_gui_settings->GetValue(gui::gs_resize_manual).toBool())
+		{
+			w = m_gui_settings->GetValue(gui::gs_width).toInt();
+			h = m_gui_settings->GetValue(gui::gs_height).toInt();
+		}
+		else
+		{
+			const qreal device_pixel_ratio = devicePixelRatio();
+			w /= device_pixel_ratio;
+			h /= device_pixel_ratio;
+		}
 	}
 
 	const auto screen = m_main_window ? m_main_window->screen() : primaryScreen();
@@ -343,26 +352,26 @@ void gui_application::InitializeCallbacks()
 		RequestCallFromMainThread(std::move(func), wake_up);
 	};
 
-	callbacks.init_gs_render = []()
+	callbacks.init_gs_render = [](utils::serial* ar)
 	{
 		switch (g_cfg.video.renderer.get())
 		{
 		case video_renderer::null:
 		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
 			break;
 		}
 		case video_renderer::opengl:
 		{
 #if not defined(__APPLE__)
-			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<GLGSRender>>(ar);
 #endif
 			break;
 		}
 		case video_renderer::vulkan:
 		{
 #if defined(HAVE_VULKAN)
-			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<VKGSRender>>(ar);
 #endif
 			break;
 		}

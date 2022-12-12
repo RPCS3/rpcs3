@@ -7,6 +7,10 @@
 #include "Emu/System.h"
 #include "pad_thread.h"
 
+#if defined(__APPLE__)
+#include "3rdparty/hidapi/hidapi/mac/hidapi_darwin.h"
+#endif
+
 #include <algorithm>
 #include <memory>
 
@@ -63,6 +67,10 @@ bool hid_pad_handler<Device>::Init()
 	if (res != 0)
 		fmt::throw_exception("%s hidapi-init error.threadproc", m_type);
 
+#if defined(__APPLE__)
+	hid_darwin_set_open_exclusive(0);
+#endif
+	
 	for (usz i = 1; i <= MAX_GAMEPADS; i++) // Controllers 1-n in GUI
 	{
 		m_controllers.emplace(m_name_string + std::to_string(i), std::make_shared<Device>());
@@ -90,24 +98,24 @@ bool hid_pad_handler<Device>::Init()
 }
 
 template <class Device>
-void hid_pad_handler<Device>::ThreadProc()
+void hid_pad_handler<Device>::process()
 {
 	update_devices();
 
-	PadHandlerBase::ThreadProc();
+	PadHandlerBase::process();
 }
 
 template <class Device>
-std::vector<std::string> hid_pad_handler<Device>::ListDevices()
+std::vector<pad_list_entry> hid_pad_handler<Device>::list_devices()
 {
-	std::vector<std::string> pads_list;
+	std::vector<pad_list_entry> pads_list;
 
 	if (!Init())
 		return pads_list;
 
 	for (const auto& controller : m_controllers) // Controllers 1-n in GUI
 	{
-		pads_list.emplace_back(controller.first);
+		pads_list.emplace_back(controller.first, false);
 	}
 
 	return pads_list;
@@ -232,9 +240,9 @@ std::shared_ptr<PadDevice> hid_pad_handler<Device>::get_device(const std::string
 }
 
 template <class Device>
-u32 hid_pad_handler<Device>::get_battery_color(u8 battery_level, int brightness)
+u32 hid_pad_handler<Device>::get_battery_color(u8 battery_level, u32 brightness)
 {
-	static const std::array<u32, 12> battery_level_clr = {0xff00, 0xff33, 0xff66, 0xff99, 0xffcc, 0xffff, 0xccff, 0x99ff, 0x66ff, 0x33ff, 0x00ff, 0x00ff};
+	static constexpr std::array<u32, 12> battery_level_clr = {0xff00, 0xff33, 0xff66, 0xff99, 0xffcc, 0xffff, 0xccff, 0x99ff, 0x66ff, 0x33ff, 0x00ff, 0x00ff};
 
 	const u32 combined_color = battery_level_clr[battery_level < battery_level_clr.size() ? battery_level : 0];
 

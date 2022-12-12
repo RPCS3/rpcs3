@@ -230,7 +230,7 @@ error_code cellHttpUtilBuildRequestLine(vm::cptr<CellHttpRequestLine> req, vm::p
 	std::string path = fmt::format("%s", req->path);
 	if (path.empty())
 	{
-		path = "/";
+		path += '/';
 	}
 
 	// TODO: are the numbers properly formatted ?
@@ -727,7 +727,7 @@ error_code cellHttpUtilFormUrlDecode(vm::ptr<u8> out, u32 size, vm::cptr<char> i
 				return CELL_HTTP_UTIL_ERROR_INVALID_URI;
 			}
 
-			const auto FUN_00036710 = [](b8 c)
+			const auto check_char = [](b8 c)
 			{
 				u32 utmp = static_cast<u32>(c);
 				s32 stmp = utmp - 48;
@@ -746,8 +746,8 @@ error_code cellHttpUtilFormUrlDecode(vm::ptr<u8> out, u32 size, vm::cptr<char> i
 				return stmp;
 			};
 
-			const s32 tmp1 = FUN_00036710(c2);
-			const s32 tmp2 = FUN_00036710(c3);
+			const s32 tmp1 = check_char(c2);
+			const s32 tmp2 = check_char(c3);
 
 			if (tmp1 < 0 || tmp2 < 0)
 			{
@@ -805,7 +805,7 @@ error_code cellHttpUtilBase64Encoder(vm::ptr<char> out, vm::cptr<void> input, u3
 
 error_code cellHttpUtilBase64Decoder(vm::ptr<char> output, vm::cptr<void> in, u32 len)
 {
-	cellHttpUtil.todo("cellHttpUtilBase64Decoder(output=*0x%x, in=*0x%x, len=%d)", output, in, len); 
+	cellHttpUtil.todo("cellHttpUtilBase64Decoder(output=*0x%x, in=*0x%x, len=%d)", output, in, len);
 
 	if (!in)
 	{

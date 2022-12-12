@@ -55,6 +55,7 @@ private:
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_TEXT: return tr("[Enter Text]", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_PASSWORD: return tr("[Enter Password]", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_TITLE: return tr("Select media", "Media dialog");
+		case localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_TITLE_PHOTO_IMPORT: return tr("Select photo to import", "Media dialog");
 		case localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_EMPTY: return tr("No media found.", "Media dialog");
 		case localized_string_id::RSX_OVERLAYS_LIST_SELECT: return tr("Enter", "Enter Dialog List");
 		case localized_string_id::RSX_OVERLAYS_LIST_CANCEL: return tr("Back", "Cancel Dialog List");
@@ -151,6 +152,9 @@ private:
 		case localized_string_id::CELL_SAVEDATA_DELETE: return tr("Delete this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_LOAD: return tr("Load this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_OVERWRITE: return tr("Do you want to overwrite the saved data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_CROSS_CONTROLLER_MSG: return tr("Start [%0] on the PS Vita system.\nIf you have not installed [%0], go to [Remote Play] on the PS Vita system and start [Cross-Controller] from the LiveArea™ screen.", "Cross-Controller message").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_CROSS_CONTROLLER_FW_MSG: return tr("If your system software version on the PS Vita system is earlier than 1.80, you must update the system software to the latest version.", "Cross-Controller firmware message");
+		case localized_string_id::RECORDING_ABORTED: return tr("Recording aborted!");
 		case localized_string_id::RPCN_NO_ERROR: return tr("RPCN: No Error");
 		case localized_string_id::RPCN_ERROR_INVALID_INPUT: return tr("RPCN: Invalid Input (Wrong Host/Port)");
 		case localized_string_id::RPCN_ERROR_WOLFSSL: return tr("RPCN Connection Error: WolfSSL Error");
@@ -164,6 +168,9 @@ private:
 		case localized_string_id::RPCN_ERROR_INVALID_PROTOCOL_VERSION: return tr("RPCN Misc Error: Protocol Version Error (outdated RPCS3?)");
 		case localized_string_id::RPCN_ERROR_UNKNOWN: return tr("RPCN: Unknown Error");
 		case localized_string_id::RPCN_SUCCESS_LOGGED_ON: return tr("Successfully logged on RPCN!");
+		case localized_string_id::EMULATION_PAUSED_RESUME_WITH_START: return tr("Press and hold the START button to resume");
+		case localized_string_id::EMULATION_RESUMING: return tr("Resuming...!");
+		case localized_string_id::EMULATION_FROZEN: return tr("The PS3 application has likely crashed, you can close it.");
 		case localized_string_id::INVALID: return tr("Invalid");
 		default: return tr("Unknown");
 		}

@@ -183,7 +183,7 @@ namespace rsx
 				scale_y = scale.height;
 				scale_z = scale.depth;
 				image_type = type;
-				samples = msaa_samples;	
+				samples = msaa_samples;
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
@@ -495,10 +495,7 @@ namespace rsx
 			{
 				// Sort with oldest data first
 				// Ensures that new data tramples older data
-				std::sort(data.sections_to_flush.begin(), data.sections_to_flush.end(), [](const auto& a, const auto& b)
-				{
-					return (a->last_write_tag < b->last_write_tag);
-				});
+				std::sort(data.sections_to_flush.begin(), data.sections_to_flush.end(), FN(x->last_write_tag < y->last_write_tag));
 			}
 
 			rsx::simple_array<section_storage_type*> sections_to_transfer;
@@ -3238,6 +3235,24 @@ namespace rsx
 		predictor_type& get_predictor()
 		{
 			return m_predictor;
+		}
+
+		bool is_protected(u32 section_base_address, const address_range& test_range, rsx::texture_upload_context context)
+		{
+			reader_lock lock(m_cache_mutex);
+
+			const auto& block = m_storage.block_for(section_base_address);
+			for (const auto& tex : block)
+			{
+				if (tex.get_section_base() == section_base_address)
+				{
+					return tex.get_context() == context &&
+						tex.is_locked() &&
+						test_range.inside(tex.get_section_range());
+				}
+			}
+
+			return false;
 		}
 
 

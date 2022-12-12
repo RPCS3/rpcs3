@@ -183,6 +183,7 @@ namespace gui
 	const gui_save fs_dev_flash_list    = gui_save(fs, "dev_flash_list",    QStringList());
 	const gui_save fs_dev_flash2_list   = gui_save(fs, "dev_flash2_list",   QStringList());
 	const gui_save fs_dev_flash3_list   = gui_save(fs, "dev_flash3_list",   QStringList());
+	const gui_save fs_dev_bdvd_list     = gui_save(fs, "dev_bdvd_list",     QStringList());
 	const gui_save fs_dev_usb_list      = gui_save(fs, "dev_usb00X_list",   QStringList()); // Used as a template for all usb paths
 
 	const gui_save l_tty       = gui_save(logger, "TTY",       true);
@@ -195,7 +196,6 @@ namespace gui
 	const gui_save l_limit_tty = gui_save(logger, "TTY_limit", 1000);
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
-	const gui_save d_centerPC      = gui_save(debugger, "centerPC",      false);
 
 	const gui_save rsx_geometry = gui_save(rsx, "geometry", QByteArray());
 	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
@@ -212,6 +212,7 @@ namespace gui
 	const gui_save gs_showMouseFs       = gui_save(gs_frame, "showMouseInFullscreen", false);
 	const gui_save gs_lockMouseFs       = gui_save(gs_frame, "lockMouseInFullscreen", true);
 	const gui_save gs_resize            = gui_save(gs_frame, "resize",                false);
+	const gui_save gs_resize_manual     = gui_save(gs_frame, "resizeManual",          true);
 	const gui_save gs_width             = gui_save(gs_frame, "width",                 1280);
 	const gui_save gs_height            = gui_save(gs_frame, "height",                720);
 	const gui_save gs_hideMouseIdle     = gui_save(gs_frame, "hideMouseOnIdle",       false);

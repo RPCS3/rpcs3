@@ -5,6 +5,8 @@
 #include "util/logs.hpp"
 #include "util/v128.hpp"
 
+#include <locale>
+#include <codecvt>
 #include <algorithm>
 #include <string_view>
 #include "Thread.h"
@@ -13,8 +15,6 @@
 #include <Windows.h>
 #else
 #include <errno.h>
-#include <locale>
-#include <codecvt>
 #endif
 
 std::string wchar_to_utf8(std::wstring_view src)
@@ -26,9 +26,15 @@ std::string wchar_to_utf8(std::wstring_view src)
 	WideCharToMultiByte(CP_UTF8, 0, src.data(), src.size(), utf8_string.data(), tmp_size, nullptr, nullptr);
 	return utf8_string;
 #else
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t> converter{};
+	std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter{};
 	return converter.to_bytes(src.data());
 #endif
+}
+
+std::string utf16_to_utf8(std::u16string_view src)
+{
+	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+	return converter.to_bytes(src.data());
 }
 
 std::wstring utf8_to_wchar(std::string_view src)
@@ -443,7 +449,7 @@ struct fmt::cfmt_src
 	{
 // Hack: use known function pointers to determine type
 #define TYPE(type) \
-	if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
+		if (sup[extra].fmt_string == &fmt_class_string<type>::format) return sizeof(type);
 
 		TYPE(int);
 		TYPE(llong);
@@ -451,10 +457,11 @@ struct fmt::cfmt_src
 		TYPE(short);
 		if (std::is_signed<char>::value) TYPE(char);
 		TYPE(long);
-		TYPE(u128);
 		TYPE(s128);
 
 #undef TYPE
+		if (sup[extra].fmt_string == &fmt_class_string<u128>::format)
+			return -1;
 
 		return 0;
 	}
@@ -608,4 +615,14 @@ bool fmt::match(const std::string& source, const std::string& mask)
 		return false;
 
 	return true;
+}
+
+std::string get_file_extension(const std::string& file_path)
+{
+	if (usz dotpos = file_path.find_last_of('.'); dotpos != std::string::npos && dotpos + 1 < file_path.size())
+	{
+		return file_path.substr(dotpos + 1);
+	}
+
+	return {};
 }

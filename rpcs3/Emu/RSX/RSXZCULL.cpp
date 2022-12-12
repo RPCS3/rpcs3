@@ -11,6 +11,11 @@ namespace rsx
 			{
 				m_free_occlusion_pool.push(&query);
 			}
+
+			for (auto& stat : m_statistics_map)
+			{
+				stat.flags = stat.result = 0;
+			}
 		}
 
 		ZCULL_control::~ZCULL_control()
@@ -23,7 +28,7 @@ namespace rsx
 				{
 					if (p.second.prot != utils::protection::rw)
 					{
-						utils::memory_protect(vm::base(p.first), 4096, utils::protection::rw);
+						utils::memory_protect(vm::base(p.first), utils::c_page_size, utils::protection::rw);
 					}
 				}
 
@@ -75,7 +80,7 @@ namespace rsx
 		{
 			// NOTE: Only enable host queries if pixel count is active to save on resources
 			// Can optionally be enabled for either stats enabled or zpass enabled for accuracy
-			const bool data_stream_available = write_enabled && (zpass_count_enabled /*|| stats_enabled*/);
+			const bool data_stream_available = zpass_count_enabled; // write_enabled && (zpass_count_enabled || stats_enabled);
 			if (host_queries_active && !data_stream_available)
 			{
 				// Stop
@@ -157,6 +162,8 @@ namespace rsx
 			}
 
 			auto forwarder = &m_pending_writes.back();
+			m_statistics_map[m_statistics_tag_id].flags |= 1;
+
 			for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); It++)
 			{
 				if (!It->sink)
@@ -272,8 +279,27 @@ namespace rsx
 				m_pending_writes.resize(valid_size);
 			}
 
-			m_statistics_tag_id++;
-			m_statistics_map[m_statistics_tag_id] = {};
+			if (m_pending_writes.empty())
+			{
+				// Clear can be invoked from flip as a workaround to prevent query leakage.
+				m_statistics_map[m_statistics_tag_id].flags = 0;
+			}
+
+			if (m_statistics_map[m_statistics_tag_id].flags)
+			{
+				// Move to the next slot if this one is still in use.
+				m_statistics_tag_id = (m_statistics_tag_id + 1) % max_stat_registers;
+			}
+
+			auto& current_stats = m_statistics_map[m_statistics_tag_id];
+			if (current_stats.flags != 0)
+			{
+				// This shouldn't happen
+				rsx_log.error("Allocating a new ZCULL statistics slot %u overwrites previous data.", m_statistics_tag_id);
+			}
+
+			// Clear value before use
+			current_stats.result = 0;
 		}
 
 		void ZCULL_control::on_draw()
@@ -312,14 +338,14 @@ namespace rsx
 				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
-				value = value ? 0 : u16{ umax };
+				value = (value || !write_enabled || !stats_enabled) ? 0 : u16{ umax };
 				break;
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS:
 			default:
 				//Not implemented
-				value = -1;
+				value = (write_enabled && stats_enabled) ? -1 : 0;
 				break;
 			}
 
@@ -462,13 +488,18 @@ namespace rsx
 				}
 			}
 
-			//Delete all statistics caches but leave the current one
-			for (auto It = m_statistics_map.begin(); It != m_statistics_map.end(); )
+			// Delete all statistics caches but leave the current one
+			const u32 current_index = m_statistics_tag_id;
+			const u32 previous_index = (current_index + max_stat_registers - 1) % max_stat_registers;
+			for (u32 index = previous_index; index != current_index;)
 			{
-				if (It->first == m_statistics_tag_id)
-					++It;
-				else
-					It = m_statistics_map.erase(It);
+				if (m_statistics_map[index].flags == 0)
+				{
+					break;
+				}
+
+				m_statistics_map[index].flags = 0;
+				index = (index + max_stat_registers - 1) % max_stat_registers;
 			}
 
 			//Decrement jobs counter
@@ -534,21 +565,11 @@ namespace rsx
 				}
 			}
 
-			u32 stat_tag_to_remove = m_statistics_tag_id;
 			u32 processed = 0;
 			for (auto& writer : m_pending_writes)
 			{
 				if (!writer.sink)
 					break;
-
-				if (writer.counter_tag != stat_tag_to_remove &&
-					stat_tag_to_remove != m_statistics_tag_id)
-				{
-					//If the stat id is different from this stat id and the queue is advancing,
-					//its guaranteed that the previous tag has no remaining writes as the queue is ordered
-					m_statistics_map.erase(stat_tag_to_remove);
-					stat_tag_to_remove = m_statistics_tag_id;
-				}
 
 				auto query = writer.query;
 				auto& counter = m_statistics_map[writer.counter_tag];
@@ -586,14 +607,12 @@ namespace rsx
 					free_query(query);
 				}
 
-				stat_tag_to_remove = writer.counter_tag;
+				// Release the stat tag for this object. Slots are all or nothing.
+				m_statistics_map[writer.counter_tag].flags = 0;
 
 				retire(ptimer, &writer, counter.result);
 				processed++;
 			}
-
-			if (stat_tag_to_remove != m_statistics_tag_id)
-				m_statistics_map.erase(stat_tag_to_remove);
 
 			if (processed)
 			{
@@ -691,7 +710,7 @@ namespace rsx
 				}
 
 				// There can be multiple queries all writing to the same address, loop to flush all of them
-				while (query->pending && !Emu.IsStopped())
+				while (query->pending)
 				{
 					update(ptimer, sync_address);
 				}
@@ -704,7 +723,7 @@ namespace rsx
 		flags32_t ZCULL_control::read_barrier(class ::rsx::thread* ptimer, u32 memory_address, occlusion_query_info* query)
 		{
 			// Called by cond render control. Internal RSX usage, do not disable optimizations
-			while (query->pending && !Emu.IsStopped())
+			while (query->pending)
 			{
 				update(ptimer, memory_address);
 			}
@@ -790,13 +809,13 @@ namespace rsx
 
 			if (!m_pages_accessed[location]) [[ likely ]]
 			{
-				const auto page_address = static_cast<u32>(address) & ~0xfff;
+				const auto page_address = utils::page_start(static_cast<u32>(address));
 				auto& page = m_locked_pages[location][page_address];
 				page.add_ref();
 
 				if (page.prot == utils::protection::rw)
 				{
-					utils::memory_protect(vm::base(page_address), 4096, utils::protection::no);
+					utils::memory_protect(vm::base(page_address), utils::c_page_size, utils::protection::no);
 					page.prot = utils::protection::no;
 				}
 			}
@@ -811,7 +830,7 @@ namespace rsx
 			const auto location = rsx::classify_location(address);
 			if (!m_pages_accessed[location])
 			{
-				const auto page_address = static_cast<u32>(address) & ~0xfff;
+				const auto page_address = utils::page_start(static_cast<u32>(address));
 				std::scoped_lock lock(m_pages_mutex);
 
 				if (auto found = m_locked_pages[location].find(page_address);
@@ -830,7 +849,7 @@ namespace rsx
 			}
 		}
 
-		void ZCULL_control::disable_optimizations(::rsx::thread* ptimer, u32 location)
+		void ZCULL_control::disable_optimizations(::rsx::thread*, u32 location)
 		{
 			// Externally synchronized
 			rsx_log.warning("Reports area at location %s was accessed. ZCULL optimizations will be disabled.", location_tostring(location));
@@ -844,7 +863,7 @@ namespace rsx
 
 				if (page.prot != utils::protection::rw)
 				{
-					utils::memory_protect(vm::base(this_address), 4096, utils::protection::rw);
+					utils::memory_protect(vm::base(this_address), utils::c_page_size, utils::protection::rw);
 					page.prot = utils::protection::rw;
 				}
 
@@ -860,7 +879,7 @@ namespace rsx
 
 		bool ZCULL_control::on_access_violation(u32 address)
 		{
-			const auto page_address = address & ~0xfff;
+			const auto page_address = utils::page_start(address);
 			const auto location = rsx::classify_location(address);
 
 			if (m_pages_accessed[location])
@@ -890,7 +909,7 @@ namespace rsx
 						else
 						{
 							// R/W to stale block, unload it and move on
-							utils::memory_protect(vm::base(page_address), 4096, utils::protection::rw);
+							utils::memory_protect(vm::base(page_address), utils::c_page_size, utils::protection::rw);
 							m_locked_pages[location].erase(page_address);
 
 							return true;

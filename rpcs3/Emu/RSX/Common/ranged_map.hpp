@@ -7,9 +7,10 @@
 
 namespace rsx
 {
-	template<typename T, int BlockSize>
+	template <typename T, int BlockSize>
 	class ranged_map
 	{
+	protected:
 		struct block_metadata_t
 		{
 			u32 id = umax;             // ID of the matadata blob
@@ -28,6 +29,11 @@ namespace rsx
 		static inline u32 block_for(u32 address)
 		{
 			return address / BlockSize;
+		}
+
+		static inline u32 block_address(u32 block_id)
+		{
+			return block_id * BlockSize;
 		}
 
 		void broadcast_insert(const utils::address_range& range)
@@ -54,7 +60,7 @@ namespace rsx
 			block_metadata_t* m_metadata_ptr = nullptr;
 			inner_iterator m_it{};
 
-			inline void forward_scan()
+			void forward_scan()
 			{
 				while (m_current < m_end)
 				{
@@ -85,14 +91,14 @@ namespace rsx
 				forward_scan();
 			}
 
-			inline void begin_range(u32 address, inner_iterator& where)
+			void begin_range(u32 address, inner_iterator& where)
 			{
 				m_current = &m_data_ptr[address / BlockSize];
 				m_end = m_current;
 				m_it = where;
 			}
 
-			inline void begin_range(const utils::address_range& range)
+			void begin_range(const utils::address_range& range)
 			{
 				const auto start_block_id = range.start / BlockSize;
 				const auto& metadata = m_metadata_ptr[start_block_id];
@@ -103,7 +109,7 @@ namespace rsx
 				forward_scan();
 			}
 
-			inline void erase()
+			void erase()
 			{
 				m_it = m_current->erase(m_it);
 				if (m_it != m_current->end())
@@ -120,43 +126,43 @@ namespace rsx
 			{}
 
 		public:
-			inline bool operator == (const iterator& other) const
+			bool operator == (const iterator& other) const
 			{
 				return m_it == other.m_it;
 			}
 
-			inline auto* operator -> ()
+			auto* operator -> ()
 			{
 				ensure(m_current);
 				return m_it.operator->();
 			}
 
-			inline auto& operator * ()
+			auto& operator * ()
 			{
 				ensure(m_current);
 				return m_it.operator*();
 			}
 
-			inline auto* operator -> () const
+			auto* operator -> () const
 			{
 				ensure(m_current);
 				return m_it.operator->();
 			}
 
-			inline auto& operator * () const
+			auto& operator * () const
 			{
 				ensure(m_current);
 				return m_it.operator*();
 			}
 
-			inline iterator& operator ++ ()
+			iterator& operator ++ ()
 			{
 				ensure(m_current);
 				next();
 				return *this;
 			}
 
-			inline T& operator ++ (int)
+			T& operator ++ (int)
 			{
 				ensure(m_current);
 				auto old = *this;
@@ -171,13 +177,25 @@ namespace rsx
 			std::for_each(m_metadata.begin(), m_metadata.end(), [&](auto& meta) { meta.id = static_cast<u32>(&meta - m_metadata.data()); });
 		}
 
-		inline void emplace(const utils::address_range& range, T&& value)
+		void emplace(const utils::address_range& range, T&& value)
 		{
 			broadcast_insert(range);
 			m_data[block_for(range.start)].insert_or_assign(range.start, std::forward<T>(value));
 		}
 
-		inline iterator find(const u32 key)
+		usz count(const u32 key)
+		{
+			auto& block = m_data[block_for(key)];
+			if (auto found = block.find(key);
+				found != block.end())
+			{
+				return 1;
+			}
+
+			return 0;
+		}
+
+		iterator find(const u32 key)
 		{
 			auto& block = m_data[block_for(key)];
 			iterator ret = { this };
@@ -191,43 +209,31 @@ namespace rsx
 			return ret;
 		}
 
-		inline T& at(const u32 key)
-		{
-			auto& block = m_data[block_for(key)];
-			if (auto found = block.find(key);
-				found != block.end())
-			{
-				return (*found).second;
-			}
-
-			fmt::throw_exception("Object not found");
-		}
-
-		inline iterator erase(iterator& where)
+		iterator erase(iterator& where)
 		{
 			where.erase();
 			return where;
 		}
 
-		inline void erase(u32 address)
+		void erase(u32 address)
 		{
 			m_data[block_for(address)].erase(address);
 		}
 
-		inline iterator begin_range(const utils::address_range& range)
+		iterator begin_range(const utils::address_range& range)
 		{
 			iterator ret = { this };
 			ret.begin_range(range);
 			return ret;
 		}
 
-		inline iterator end()
+		iterator end()
 		{
 			iterator ret = { this };
 			return ret;
 		}
 
-		inline void clear()
+		void clear()
 		{
 			for (auto& e : m_data)
 			{

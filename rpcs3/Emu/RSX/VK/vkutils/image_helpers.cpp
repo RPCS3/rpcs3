@@ -78,7 +78,7 @@ namespace vk
 		VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
-		switch (new_layout)
+		switch (+new_layout)
 		{
 		case VK_IMAGE_LAYOUT_GENERAL:
 			// Avoid this layout as it is unoptimized
@@ -117,6 +117,7 @@ namespace vk
 			dst_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
 			break;
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+		case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
 			dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 			break;
@@ -126,7 +127,7 @@ namespace vk
 			fmt::throw_exception("Attempted to transition to an invalid layout");
 		}
 
-		switch (current_layout)
+		switch (+current_layout)
 		{
 		case VK_IMAGE_LAYOUT_GENERAL:
 			// Avoid this layout as it is unoptimized
@@ -189,6 +190,7 @@ namespace vk
 			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 			break;
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+		case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT:
 			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
 			src_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 			break;

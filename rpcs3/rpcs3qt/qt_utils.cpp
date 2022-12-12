@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "qt_utils.h"
 #include <QApplication>
 #include <QBitmap>
@@ -11,6 +12,8 @@
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
 #include <cmath>
+
+LOG_CHANNEL(gui_log, "GUI");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;
@@ -147,13 +150,13 @@ namespace gui
 
 		QIcon get_colorized_icon(const QIcon& old_icon, const QColor& old_color, const QColor& new_color, bool use_special_masks, bool colorize_all)
 		{
-			return QIcon(get_colorized_pixmap(old_icon.pixmap(old_icon.availableSizes().at(0)), old_color, new_color, use_special_masks, colorize_all));
+			return QIcon(get_colorized_pixmap(old_icon.pixmap(::at32(old_icon.availableSizes(), 0)), old_color, new_color, use_special_masks, colorize_all));
 		}
 
 		QIcon get_colorized_icon(const QIcon& old_icon, const QColor& old_color, const std::map<QIcon::Mode, QColor>& new_colors, bool use_special_masks, bool colorize_all)
 		{
 			QIcon icon{};
-			const QPixmap old_pixmap = old_icon.pixmap(old_icon.availableSizes().at(0));
+			const QPixmap old_pixmap = old_icon.pixmap(::at32(old_icon.availableSizes(), 0));
 			for (const auto& [mode, color] : new_colors)
 			{
 				icon.addPixmap(get_colorized_pixmap(old_pixmap, old_color, color, use_special_masks, colorize_all), mode);
@@ -193,6 +196,34 @@ namespace gui
 			QLabel l(text);
 			if (font) l.setFont(*font);
 			return l.sizeHint().width();
+		}
+
+		QImage get_centered_image(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio)
+		{
+			// Create empty canvas for expanded image
+			QImage exp_img(icon_size, QImage::Format_ARGB32);
+			exp_img.setDevicePixelRatio(device_pixel_ratio);
+			exp_img.fill(Qt::transparent);
+
+			// Load scaled pixmap
+			const QPixmap pixmap = QPixmap(path).scaled(icon_size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+			// Define offset for raw image placement
+			QPoint offset(offset_x + icon_size.width() / 2 - pixmap.width() / 2,
+			              offset_y + icon_size.height() / 2 - pixmap.height() / 2);
+
+			// Place raw image inside expanded image
+			QPainter painter(&exp_img);
+			painter.setRenderHint(QPainter::SmoothPixmapTransform);
+			painter.drawPixmap(offset, pixmap);
+			painter.end();
+
+			return exp_img;
+		}
+
+		QPixmap get_centered_pixmap(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio)
+		{
+			return QPixmap::fromImage(get_centered_image(path, icon_size, offset_x, offset_y, device_pixel_ratio));
 		}
 
 		QImage get_opaque_image_area(const QString& path)
@@ -366,7 +397,6 @@ namespace gui
 
 		void open_dir(const std::string& spath)
 		{
-			fs::create_dir(spath);
 			const QString path = qstr(spath);
 
 			if (fs::is_file(spath))
@@ -374,18 +404,46 @@ namespace gui
 				// open directory and select file
 				// https://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
 #ifdef _WIN32
-				QProcess::startDetached("explorer.exe", { "/select,", QDir::toNativeSeparators(path) });
+				const QString cleaned_path = QDir::toNativeSeparators(path);
+				gui_log.notice("gui::utils::open_dir: About to open file path '%s' (original: '%s')", cleaned_path.toStdString(), spath);
+
+				if (!QProcess::startDetached("explorer.exe", {"/select,", cleaned_path}))
+				{
+					gui_log.error("gui::utils::open_dir: Failed to start explorer process");
+				}
 #elif defined(__APPLE__)
+				gui_log.notice("gui::utils::open_dir: About to open file path '%s'", spath);
+
 				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
 				QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
 #else
 				// open parent directory
-				QDesktopServices::openUrl(QUrl::fromLocalFile(qstr(fs::get_parent_dir(spath))));
+				const QUrl url = QUrl::fromLocalFile(qstr(fs::get_parent_dir(spath)));
+				const std::string url_path = url.toString().toStdString();
+				gui_log.notice("gui::utils::open_dir: About to open parent dir url '%s' for path '%s'", url_path, spath);
+
+				if (!QDesktopServices::openUrl(url))
+				{
+					gui_log.error("gui::utils::open_dir: Failed to open parent dir url '%s' for path '%s'", url_path, spath);
+				}
 #endif
 				return;
 			}
 
-			QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+			if (!fs::is_dir && !fs::create_path(spath))
+			{
+				gui_log.error("gui::utils::open_dir: Failed to create path '%s' (%s)", spath, fs::g_tls_error);
+				return;
+			}
+
+			const QUrl url = QUrl::fromLocalFile(path);
+			const std::string url_path = url.toString().toStdString();
+			gui_log.notice("gui::utils::open_dir: About to open dir url '%s' for path '%s'", url_path, spath);
+
+			if (!QDesktopServices::openUrl(url))
+			{
+				gui_log.error("gui::utils::open_dir: Failed to open dir url '%s' for path '%s'", url_path, spath);
+			}
 		}
 
 		void open_dir(const QString& path)

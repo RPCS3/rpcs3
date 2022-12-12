@@ -346,8 +346,6 @@ namespace rsx
 		constexpr const_iterator begin() const noexcept { return m_entries.begin(); }
 		inline iterator end() noexcept { return m_entries.end(); }
 		inline const_iterator end() const noexcept { return m_entries.end(); }
-		inline iterator at(size_type pos) { return m_entries.at(pos); }
-		inline const_iterator at(size_type pos) const { return m_entries.at(pos); }
 		bool empty() const noexcept { return m_entries.empty(); }
 		size_type size() const noexcept { return m_entries.size(); }
 		void clear() { m_entries.clear(); }

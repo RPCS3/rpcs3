@@ -49,7 +49,7 @@ namespace disc
 
 			// Load PARAM.SFO
 			const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(elf_dir + "/../", "");
-			const psf::registry _psf = psf::load_object(fs::file(sfo_dir + "/PARAM.SFO"));
+			const psf::registry _psf = psf::load_object(sfo_dir + "/PARAM.SFO");
 
 			if (_psf.empty())
 			{

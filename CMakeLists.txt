@@ -104,9 +104,9 @@ if(WIN32)
     add_definitions(-D_WIN32_WINNT=0x0602)
 endif()
 
-if(APPLE)
-    include_directories(/opt/local/include)
-    link_directories(/opt/local/lib)
+if(APPLE AND CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+    include_directories(/opt/homebrew/include)
+    link_directories(/opt/homebrew/lib)
 endif()
 
 # Warnings are silenced for 3rdparty code

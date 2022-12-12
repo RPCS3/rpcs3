@@ -31,6 +31,7 @@ namespace glsl
 		bool require_texture_expand : 1;
 		bool require_srgb_to_linear : 1;
 		bool require_linear_to_srgb : 1;
+		bool require_explicit_invariance: 1;
 		bool emulate_coverage_tests : 1;
 		bool emulate_shadow_compare : 1;
 		bool emulate_zclip_transform : 1;
@@ -38,6 +39,6 @@ namespace glsl
 		bool low_precision_tests : 1;
 		bool disable_early_discard : 1;
 		bool supports_native_fp16 : 1;
-		bool srgb_output_rounding : 1;
+		bool ROP_output_rounding : 1;
 	};
 };

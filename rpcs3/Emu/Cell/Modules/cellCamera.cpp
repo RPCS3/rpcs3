@@ -131,6 +131,25 @@ static const char* get_camera_attr_name(s32 value)
 	return nullptr;
 }
 
+camera_context::camera_context(utils::serial& ar)
+{
+	save(ar);
+}
+
+void camera_context::save(utils::serial& ar)
+{
+	ar(init);
+
+	if (!init)
+	{
+		return;
+	}
+
+	GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellCamera);
+
+	ar(notify_data_map, start_timestamp, read_mode, is_streaming, is_attached, is_open, info, attr, frame_num);
+}
+
 static bool check_dev_num(s32 dev_num)
 {
 	return dev_num == 0;
@@ -156,7 +175,7 @@ static error_code check_camera_info(const VariantOfCellCameraInfo& info)
 		return CELL_CAMERA_ERROR_BAD_FRAMERATE;
 	}
 
-	auto check_fps = [fps = info.framerate](const std::vector<s32>& range)
+	auto check_fps = [fps = info.framerate](std::initializer_list<s32> range)
 	{
 		return std::find(range.begin(), range.end(), fps) != range.end();
 	};

@@ -3,21 +3,6 @@
 #include "util/types.hpp"
 #include <vector>
 
-namespace stx
-{
-	template <typename T>
-	struct exact_t
-	{
-		T obj;
-
-		exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
-
-		// TODO: More conversions
-		template <typename U> requires (std::is_same_v<U&, T>)
-		operator U&() const { return obj; };
-	};
-}
-
 namespace utils
 {
 	template <typename T>
@@ -50,12 +35,17 @@ namespace utils
 	struct serial
 	{
 		std::vector<u8> data;
-		usz pos = umax;
+		usz pos = 0;
+		bool m_is_writing = true;
+
+		serial() = default;
+		serial(const serial&) = delete;
+		~serial() = default;
 
 		// Checks if this instance is currently used for serialization
 		bool is_writing() const
 		{
-			return pos == umax;
+			return m_is_writing;
 		}
 
 		// Reserve memory for serialization
@@ -72,7 +62,8 @@ namespace utils
 		{
 			if (is_writing())
 			{
-				data.insert(data.end(), static_cast<const u8*>(ptr), static_cast<const u8*>(ptr) + size);
+				data.insert(data.begin() + pos, static_cast<const u8*>(ptr), static_cast<const u8*>(ptr) + size);
+				pos += size;
 				return true;
 			}
 
@@ -267,6 +258,13 @@ namespace utils
 			return true;
 		}
 
+		template <typename T> requires requires (T& obj) { (obj.*(&T::operator()))(std::declval<stx::exact_t<utils::serial&>>()); }
+		bool serialize(T& obj)
+		{
+			obj(*this);
+			return is_valid();
+		}
+
 		template <usz i = 0, typename T>
 		bool serialize_tuple(T& obj)
 		{
@@ -298,8 +296,8 @@ namespace utils
 				, serialize(const_cast<std::remove_cvref_t<Args>&>(static_cast<const Args&>(args)))), ...);
 		}
 
-		// Convert serialization manager to deserializion manager (can't go the other way)
-		// If no arg provided reuse saved buffer
+		// Convert serialization manager to deserializion manager
+		// If no arg is provided reuse saved buffer
 		void set_reading_state(std::vector<u8>&& _data = std::vector<u8>{})
 		{
 			if (!_data.empty())
@@ -307,7 +305,23 @@ namespace utils
 				data = std::move(_data);
 			}
 
+			m_is_writing = false;
 			pos = 0;
+		}
+
+		// Reset to empty serialization manager
+		void clear()
+		{
+			data.clear();
+			m_is_writing = true;
+			pos = 0;
+		}
+
+		usz seek_end(usz backwards = 0)
+		{
+			ensure(pos >= backwards);
+			pos = data.size() - backwards;
+			return pos;
 		}
 
 		template <typename T> requires (std::is_copy_constructible_v<std::remove_const_t<T>>) && (std::is_constructible_v<std::remove_const_t<T>> || Bitcopy<std::remove_const_t<T>> ||
@@ -342,10 +356,32 @@ namespace utils
 			}
 		}
 
-		// Returns true if writable or readable and valid
+		template <typename T> requires (std::is_copy_constructible_v<T> && std::is_constructible_v<T> && Bitcopy<T>)
+		std::pair<bool, T> try_read()
+		{
+			if (is_writing())
+			{
+				return {};
+			}
+
+			const usz left = data.size() - pos;
+	 		using type = std::remove_const_t<T>;
+
+			if (left >= sizeof(type))
+			{
+				u8 buf[sizeof(type)]{};
+				ensure(raw_serialize(buf, sizeof(buf)));
+				return {true, std::bit_cast<type>(buf)};
+			}
+
+			return {};
+		}
+
+		// Returns true if valid, can be invalidated by setting pos to umax
+		// Used when an invalid state is encountered somewhere in a place we can't check success code such as constructor)
 		bool is_valid() const
 		{
-			return is_writing() || pos < data.size();
+			return pos <= data.size();
 		}
 	};
 }

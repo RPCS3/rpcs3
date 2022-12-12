@@ -553,7 +553,7 @@ bool package_reader::read_param_sfo()
 
 			tmp.seek(0);
 
-			m_psf = psf::load_object(tmp);
+			m_psf = psf::load_object(tmp, name);
 
 			if (m_psf.empty())
 			{
@@ -610,7 +610,8 @@ package_error package_reader::check_target_app_version() const
 		return package_error::no_error;
 	}
 
-	const fs::file installed_sfo_file(rpcs3::utils::get_hdd0_dir() + "game/" + std::string(title_id) + "/PARAM.SFO");
+	const std::string sfo_path = rpcs3::utils::get_hdd0_dir() + "game/" + std::string(title_id) + "/PARAM.SFO";
+	const fs::file installed_sfo_file(sfo_path);
 	if (!installed_sfo_file)
 	{
 		if (!target_app_ver.empty())
@@ -624,7 +625,7 @@ package_error package_reader::check_target_app_version() const
 		return package_error::no_error;
 	}
 
-	const auto installed_psf = psf::load_object(installed_sfo_file);
+	const auto installed_psf = psf::load_object(installed_sfo_file, sfo_path);
 
 	const auto installed_title_id = psf::get_string(installed_psf, "TITLE_ID", "");
 	const auto installed_app_ver  = psf::get_string(installed_psf, "APP_VER", "");
@@ -857,6 +858,12 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 					else
 					{
 						pkg_log.notice("Created file %s", path);
+
+						if (name == "USRDIR/EBOOT.BIN" && entry.file_size > 4)
+						{
+							// Expose the creation of a bootable file
+							m_bootable_file_path = path;
+						}
 					}
 				}
 				else

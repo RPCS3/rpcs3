@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Io/KeyboardHandler.h"
@@ -7,6 +8,8 @@
 
 extern void libio_sys_config_init();
 extern void libio_sys_config_end();
+
+extern bool is_input_allowed();
 
 LOG_CHANNEL(sys_io);
 
@@ -29,6 +32,33 @@ void fmt_class_string<CellKbError>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+
+KeyboardHandlerBase::KeyboardHandlerBase(utils::serial* ar)
+{
+	if (!ar)
+	{
+		return;
+	}
+
+	(*ar)(m_info.max_connect);
+
+	if (m_info.max_connect)
+	{
+		Emu.DeferDeserialization([this]()
+		{
+			Init(m_info.max_connect);
+			auto lk = init.init();
+		});
+	}
+}
+
+void KeyboardHandlerBase::save(utils::serial& ar)
+{
+	const auto inited = init.access();
+
+	ar(inited ? m_info.max_connect : 0);
 }
 
 error_code cellKbInit(u32 max_connect)
@@ -89,7 +119,7 @@ error_code cellKbClearBuf(u32 port_no)
 	const KbInfo& current_info = handler.GetInfo();
 
 	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
-		return CELL_KB_ERROR_NO_DEVICE;
+		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
 	KbData& current_data = handler.GetData(port_no);
 	current_data.len = 0;
@@ -301,11 +331,11 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	const KbInfo& current_info = handler.GetInfo();
 
 	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
-		return CELL_KB_ERROR_NO_DEVICE;
+		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
 	KbData& current_data = handler.GetData(port_no);
 
-	if (current_info.is_null_handler || (current_info.info & CELL_KB_INFO_INTERCEPTED))
+	if (current_info.is_null_handler || (current_info.info & CELL_KB_INFO_INTERCEPTED) || !is_input_allowed())
 	{
 		data->led = 0;
 		data->mkey = 0;
@@ -444,7 +474,7 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 	const KbInfo& current_info = handler.GetInfo();
 
 	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
-		return CELL_KB_ERROR_NO_DEVICE;
+		return not_an_error(CELL_KB_ERROR_NO_DEVICE);
 
 	// tests show that config is checked only after the device's status
 	if (!config)

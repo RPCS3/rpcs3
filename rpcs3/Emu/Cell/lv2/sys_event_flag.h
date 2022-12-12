@@ -41,9 +41,8 @@ struct lv2_event_flag final : lv2_obj
 	const u64 name;
 
 	shared_mutex mutex;
-	atomic_t<u32> waiters{0};
 	atomic_t<u64> pattern;
-	std::deque<cpu_thread*> sq;
+	ppu_thread* sq{};
 
 	lv2_event_flag(u32 protocol, u64 key, s32 type, u64 name, u64 pattern) noexcept
 		: protocol{static_cast<u8>(protocol)}
@@ -53,6 +52,10 @@ struct lv2_event_flag final : lv2_obj
 		, pattern(pattern)
 	{
 	}
+
+	lv2_event_flag(utils::serial& ar);
+	static std::shared_ptr<void> load(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	// Check mode arg
 	static bool check_mode(u32 mode)

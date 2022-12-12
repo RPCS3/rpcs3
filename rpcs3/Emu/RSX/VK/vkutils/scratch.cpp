@@ -97,7 +97,7 @@ namespace vk
 		auto& tex = g_null_image_views[type];
 		tex = std::make_unique<viewable_image>(*g_render_device, g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			image_type, VK_FORMAT_B8G8R8A8_UNORM, size, size, 1, 1, num_layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, flags | VK_IMAGE_CREATE_ALLOW_NULL, VMM_ALLOCATION_POOL_SCRATCH);
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, flags | VK_IMAGE_CREATE_ALLOW_NULL_RPCS3, VMM_ALLOCATION_POOL_SCRATCH);
 
 		if (!tex->value)
 		{
@@ -110,7 +110,7 @@ namespace vk
 		tex->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 		VkClearColorValue clear_color = {};
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, tex->mipmaps(), 0, tex->layers() };
 		vkCmdClearColorImage(cmd, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 
 		// Prep for shader access
@@ -146,6 +146,7 @@ namespace vk
 			}
 
 			ptr.reset(create_texture());
+			ptr->set_debug_name(fmt::format("Scratch: Format=0x%x", static_cast<u32>(format)));
 		}
 
 		return ptr.get();

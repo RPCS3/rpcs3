@@ -42,9 +42,11 @@ namespace rsx
 
 	struct rsx_iomap_table
 	{
+		static constexpr u32 c_lock_stride = 8192;
+
 		std::array<atomic_t<u32>, 4096> ea;
 		std::array<atomic_t<u32>, 4096> io;
-		std::array<shared_mutex, 0x8'0000> rs;
+		std::array<shared_mutex, 0x1'0000'0000 / c_lock_stride> rs;
 
 		rsx_iomap_table() noexcept;
 
@@ -63,7 +65,7 @@ namespace rsx
 
 			bool added_wait = false;
 
-			for (u32 block = addr / 8192; block <= (end / 8192); block += Stride)
+			for (u32 block = addr / c_lock_stride; block <= (end / c_lock_stride); block += Stride)
 			{
 				auto& mutex_ = rs[block];
 
@@ -148,11 +150,17 @@ namespace rsx
 
 		push_buffer_arrays_dirty = 0x20000,   // Push buffers have data written to them (immediate mode vertex buffers)
 
+		polygon_offset_state_dirty = 0x40000, // Polygon offset config was changed
+		depth_bounds_state_dirty   = 0x80000, // Depth bounds configuration changed
+
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
+
+		// Vulkan-specific signals
+		invalidate_vk_dynamic_state = zclip_config_state_dirty | scissor_config_state_dirty | polygon_offset_state_dirty | depth_bounds_state_dirty,
 
 		all_dirty = ~0u
 	};
@@ -173,7 +181,8 @@ namespace rsx
 		empty = 1,    // PUT == GET
 		spinning = 2, // Puller continuously jumps to self addr (synchronization technique)
 		nop = 3,      // Puller is processing a NOP command
-		lock_wait = 4 // Puller is processing a lock acquire
+		lock_wait = 4,// Puller is processing a lock acquire
+		paused = 5,   // Puller is paused externallly
 	};
 
 	enum FIFO_hint : u8
@@ -187,17 +196,6 @@ namespace rsx
 		result_none = 0,
 		result_error = 1,
 		result_zcull_intr = 2
-	};
-
-	enum ROP_control : u32
-	{
-		alpha_test_enable       = (1u << 0),
-		framebuffer_srgb_enable = (1u << 1),
-		csaa_enable             = (1u << 4),
-		msaa_mask_enable        = (1u << 5),
-		msaa_config_mask        = (3u << 6),
-		polygon_stipple_enable  = (1u << 9),
-		alpha_func_mask         = (7u << 16)
 	};
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
@@ -287,18 +285,36 @@ namespace rsx
 		transient = 2
 	};
 
-	struct vertex_input_layout
+	class vertex_input_layout
 	{
-		std::vector<interleaved_range_info> interleaved_blocks{};  // Interleaved blocks to be uploaded as-is
-		std::vector<std::pair<u8, u32>> volatile_blocks{};         // Volatile data blocks (immediate draw vertex data for example)
-		rsx::simple_array<u8> referenced_registers{};              // Volatile register data
+		int m_num_used_blocks = 0;
+		std::array<interleaved_range_info, 16> m_blocks_data{};
+
+	public:
+		rsx::simple_array<interleaved_range_info*> interleaved_blocks{};  // Interleaved blocks to be uploaded as-is
+		std::vector<std::pair<u8, u32>> volatile_blocks{};                // Volatile data blocks (immediate draw vertex data for example)
+		rsx::simple_array<u8> referenced_registers{};                     // Volatile register data
 
 		std::array<attribute_buffer_placement, 16> attribute_placement = fill_array(attribute_buffer_placement::none);
 
 		vertex_input_layout() = default;
 
+		interleaved_range_info* alloc_interleaved_block()
+		{
+			auto result = &m_blocks_data[m_num_used_blocks++];
+			result->attribute_stride = 0;
+			result->base_offset = 0;
+			result->memory_location = 0;
+			result->real_offset_address = 0;
+			result->single_vertex = false;
+			result->locations.clear();
+			result->interleaved = true;
+			return result;
+		}
+
 		void clear()
 		{
+			m_num_used_blocks = 0;
 			interleaved_blocks.clear();
 			volatile_blocks.clear();
 			referenced_registers.clear();
@@ -309,7 +325,7 @@ namespace rsx
 			// Criteria: At least one array stream has to be defined to feed vertex positions
 			// This stream cannot be a const register as the vertices cannot create a zero-area primitive
 
-			if (!interleaved_blocks.empty() && interleaved_blocks.front().attribute_stride != 0)
+			if (!interleaved_blocks.empty() && interleaved_blocks[0]->attribute_stride != 0)
 				return true;
 
 			if (!volatile_blocks.empty())
@@ -351,8 +367,8 @@ namespace rsx
 			u32 mem = 0;
 			for (auto &block : interleaved_blocks)
 			{
-				const auto range = block.calculate_required_range(first_vertex, vertex_count);
-				mem += range.second * block.attribute_stride;
+				const auto range = block->calculate_required_range(first_vertex, vertex_count);
+				mem += range.second * block->attribute_stride;
 			}
 
 			return mem;
@@ -361,6 +377,8 @@ namespace rsx
 
 	struct framebuffer_layout
 	{
+		ENABLE_BITWISE_SERIALIZATION;
+
 		u16 width;
 		u16 height;
 		std::array<u32, 4> color_addresses;
@@ -434,18 +452,32 @@ namespace rsx
 
 	struct backend_configuration
 	{
-		bool supports_multidraw;             // Draw call batching
-		bool supports_hw_a2c;                // Alpha to coverage
-		bool supports_hw_renormalization;    // Should be true on NV hardware which matches PS3 texture renormalization behaviour
-		bool supports_hw_msaa;               // MSAA support
-		bool supports_hw_a2one;              // Alpha to one
-		bool supports_hw_conditional_render; // Conditional render
-		bool supports_passthrough_dma;       // DMA passthrough
-		bool supports_asynchronous_compute;  // Async compute
-		bool supports_host_gpu_labels;       // Advanced host synchronization
+		bool supports_multidraw;               // Draw call batching
+		bool supports_hw_a2c;                  // Alpha to coverage
+		bool supports_hw_renormalization;      // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_msaa;                 // MSAA support
+		bool supports_hw_a2one;                // Alpha to one
+		bool supports_hw_conditional_render;   // Conditional render
+		bool supports_passthrough_dma;         // DMA passthrough
+		bool supports_asynchronous_compute;    // Async compute
+		bool supports_host_gpu_labels;         // Advanced host synchronization
+		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
 	};
 
 	struct sampled_image_descriptor_base;
+
+	struct desync_fifo_cmd_info
+	{
+		u32 cmd;
+		u64 timestamp;
+	};
+
+	struct frame_time_t
+	{
+		u64 preempt_count;
+		u64 timestamp;
+		u64 tsc;
+	};
 
 	class thread : public cpu_thread
 	{
@@ -465,6 +497,8 @@ namespace rsx
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
 
+		primitive_class m_current_draw_mode = primitive_class::polygon;
+
 		backend_configuration backend_config{};
 
 		// FIFO
@@ -476,6 +510,8 @@ namespace rsx
 		FIFO::flattening_helper m_flattener;
 		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
+		u32 restore_fifo_cmd = 0;
+		u32 restore_fifo_count = 0;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -497,6 +533,9 @@ namespace rsx
 		rsx::profiling_timer m_profiler;
 		frame_statistics_t m_frame_stats;
 
+		// Savestates related
+		u32 m_pause_after_x_flips = 0;
+
 	public:
 		RsxDmaControl* ctrl = nullptr;
 		u32 dma_address{0};
@@ -506,7 +545,7 @@ namespace rsx
 		u32 last_known_code_start = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
-		atomic_t<bool> is_inited{ false };
+		atomic_t<bool> is_initialized{ false };
 		bool is_fifo_idle() const;
 		void flush_fifo();
 
@@ -560,6 +599,7 @@ namespace rsx
 
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };
+		bool serialized = false;
 
 		u32 flip_status;
 		int debug_level;
@@ -579,7 +619,9 @@ namespace rsx
 		u32 rsx_event_port{0};
 		u32 driver_info{0};
 
-		void send_event(u64, u64, u64) const;
+		atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
+
+		bool send_event(u64, u64, u64);
 
 		bool m_rtts_dirty = true;
 		std::array<bool, 16> m_textures_dirty;
@@ -594,10 +636,10 @@ namespace rsx
 		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
 		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
 
-	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 
+	protected:
 		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
 		bool get_scissor(areau& region, bool clip_viewport);
 
@@ -651,21 +693,15 @@ namespace rsx
 
 	public:
 		atomic_t<bool> sync_point_request = false;
+		atomic_t<bool> pause_on_draw = false;
 		bool in_begin_end = false;
 
-		struct desync_fifo_cmd_info
-		{
-			u32 cmd;
-			u64 timestamp;
-		};
-
 		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;
+		std::deque<frame_time_t> frame_times;
+		u32 prevent_preempt_increase_tickets = 0;
+		u64 preempt_fail_old_preempt_count = 0;
 
 		atomic_t<s32> async_tasks_pending{ 0 };
-
-		bool zcull_stats_enabled = false;
-		bool zcull_rendering_enabled = false;
-		bool zcull_pixel_cnt_enabled = false;
 
 		reports::conditional_render_eval cond_render_ctrl;
 
@@ -675,7 +711,10 @@ namespace rsx
 		static constexpr auto thread_name = "rsx::thread"sv;
 
 	protected:
-		thread();
+		thread(utils::serial* ar);
+
+		thread() : thread(static_cast<utils::serial*>(nullptr)) {}
+
 		virtual void on_task();
 		virtual void on_exit();
 
@@ -691,6 +730,7 @@ namespace rsx
 	public:
 		thread(const thread&) = delete;
 		thread& operator=(const thread&) = delete;
+		void save(utils::serial& ar);
 
 		virtual void clear_surface(u32 /*arg*/) {}
 		virtual void begin();
@@ -761,6 +801,8 @@ namespace rsx
 		 */
 		void write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data);
 
+		void evaluate_cpu_usage_reduction_limits();
+
 	private:
 		shared_mutex m_mtx_task;
 
@@ -819,7 +861,7 @@ namespace rsx
 		void init(u32 ctrlAddress);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
-		void request_emu_flip(u32 buffer);
+		bool request_emu_flip(u32 buffer);
 
 		void pause();
 		void unpause();
@@ -846,15 +888,18 @@ namespace rsx
 	template<bool IsFullLock = false, uint Stride = 128>
 	class reservation_lock
 	{
-		u32 addr = 0, length = 0;
-		bool locked = false;
+		u32 addr = 0;
+		u32 length = 0;
 
 		inline void lock_range(u32 addr, u32 length)
 		{
+			if (!get_current_renderer()->iomap_table.lock<IsFullLock, Stride>(addr, length, get_current_cpu_thread()))
+			{
+				length = 0;
+			}
+
 			this->addr = addr;
 			this->length = length;
-
-			this->locked = get_current_renderer()->iomap_table.lock<IsFullLock, Stride>(addr, length, get_current_cpu_thread());
 		}
 
 	public:
@@ -869,7 +914,7 @@ namespace rsx
 
 		reservation_lock(u32 addr, u32 length, bool setting)
 		{
-			if (setting && addr < constants::local_mem_base)
+			if (setting)
 			{
 				lock_range(addr, length);
 			}
@@ -902,12 +947,40 @@ namespace rsx
 			}
 		}
 
-		~reservation_lock()
+		// Very special utility for batched transfers (SPU related)
+		template <typename T = void>
+		void update_if_enabled(u32 addr, u32 _length, const std::add_pointer_t<T>& lock_release = std::add_pointer_t<void>{})
 		{
-			if (locked)
+			// This check is not perfect but it covers the important cases fast (this check is only an optimization - forcing true disables it)
+			if (length && (this->addr / rsx_iomap_table::c_lock_stride != addr / rsx_iomap_table::c_lock_stride || (addr % rsx_iomap_table::c_lock_stride + _length) > rsx_iomap_table::c_lock_stride) && _length > 1)
+			{
+				if constexpr (!std::is_void_v<T>)
+				{
+					// See SPUThread.cpp
+					lock_release->release(0);
+				}
+
+				unlock();
+				lock_range(addr, _length);
+			}
+		}
+
+		void unlock(bool destructor = false)
+		{
+			if (length)
 			{
 				get_current_renderer()->iomap_table.unlock<IsFullLock, Stride>(addr, length);
+
+				if (!destructor)
+				{
+					length = 0;
+				}
 			}
+		}
+
+		~reservation_lock()
+		{
+			unlock(true);
 		}
 	};
 

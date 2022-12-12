@@ -45,6 +45,7 @@ set(SRC_FILES
     msg_dialog_frame.cpp
     osk_dialog_frame.cpp
     pad_led_settings_dialog.cpp
+    pad_motion_settings_dialog.cpp
     pad_settings_dialog.cpp
     patch_creator_dialog.cpp
     patch_manager_dialog.cpp
@@ -81,6 +82,7 @@ set(SRC_FILES
     update_manager.cpp
     user_account.cpp
     user_manager_dialog.cpp
+    uuid.cpp
     vfs_dialog.cpp
     vfs_dialog_path_widget.cpp
     vfs_dialog_tab.cpp
@@ -94,6 +96,7 @@ set(UI_FILES
     camera_settings_dialog.ui
     main_window.ui
     pad_led_settings_dialog.ui
+    pad_motion_settings_dialog.ui
     pad_settings_dialog.ui
     patch_creator_dialog.ui
     patch_manager_dialog.ui

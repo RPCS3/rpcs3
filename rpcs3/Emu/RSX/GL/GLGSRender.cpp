@@ -8,14 +8,35 @@
 
 #include "../Program/program_state_cache2.hpp"
 
+[[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true);
+
+namespace
+{
+	void throw_fatal(const std::vector<std::string>& reasons)
+	{
+		const std::string delimiter = "\n- ";
+		const std::string reasons_list = fmt::merge(reasons, delimiter);
+		const std::string message = fmt::format(
+			"OpenGL could not be initialized on this system for the following reason(s):\n"
+			"\n"
+			"- %s",
+			reasons_list);
+
+		Emu.BlockingCallFromMainThread([message]()
+		{
+			report_fatal_error(message, false, false);
+		});
+	}
+}
+
 u64 GLGSRender::get_cycles()
 {
 	return thread_ctrl::get_cycles(static_cast<named_thread<GLGSRender>&>(*this));
 }
 
-GLGSRender::GLGSRender() : GSRender()
+GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
-	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.93");
+	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.94");
 
 	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
 		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();
@@ -25,6 +46,7 @@ GLGSRender::GLGSRender() : GSRender()
 	backend_config.supports_hw_a2c = false;
 	backend_config.supports_hw_a2one = false;
 	backend_config.supports_multidraw = true;
+	backend_config.supports_normalized_barycentrics = true;
 }
 
 extern CellGcmContextData current_context;
@@ -110,14 +132,20 @@ void GLGSRender::on_init_thread()
 
 	auto& gl_caps = gl::get_driver_caps();
 
+	std::vector<std::string> exception_reasons;
 	if (!gl_caps.ARB_texture_buffer_supported)
 	{
-		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_texture_buffer_object is required but not supported by your GPU");
+		exception_reasons.push_back("GL_ARB_texture_buffer_object is required but not supported by your GPU");
 	}
 
 	if (!gl_caps.ARB_dsa_supported && !gl_caps.EXT_dsa_supported)
 	{
-		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_direct_state_access or EXT_direct_state_access is required but not supported by your GPU");
+		exception_reasons.push_back("GL_ARB_direct_state_access or GL_EXT_direct_state_access is required but not supported by your GPU");
+	}
+
+	if (!exception_reasons.empty())
+	{
+		throw_fatal(exception_reasons);
 	}
 
 	if (!gl_caps.ARB_depth_buffer_float_supported && g_cfg.video.force_high_precision_z_buffer)
@@ -142,6 +170,14 @@ void GLGSRender::on_init_thread()
 		default:
 			break;
 		}
+	}
+
+	if (gl_caps.NV_fragment_shader_barycentric_supported &&
+		gl_caps.vendor_NVIDIA &&
+		g_cfg.video.shader_precision != gpu_preset_level::low)
+	{
+		// NVIDIA's attribute interpolation requires some workarounds
+		backend_config.supports_normalized_barycentrics = false;
 	}
 
 	// Use industry standard resource alignment values as defaults
@@ -180,7 +216,7 @@ void GLGSRender::on_init_thread()
 
 	// Fallback null texture instead of relying on texture0
 	{
-		std::vector<u32> pixeldata = { 0, 0, 0, 0 };
+		std::array<u32, 8> pixeldata = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 		// 1D
 		auto tex1D = std::make_unique<gl::texture>(GL_TEXTURE_1D, 1, 1, 1, 1, GL_RGBA8);
@@ -308,7 +344,7 @@ void GLGSRender::on_init_thread()
 	}
 
 	//Occlusion query
-	for (u32 i = 0; i < occlusion_query_count; ++i)
+	for (u32 i = 0; i < rsx::reports::occlusion_query_count; ++i)
 	{
 		GLuint handle = 0;
 		auto &query = m_occlusion_query_data[i];
@@ -319,14 +355,6 @@ void GLGSRender::on_init_thread()
 		query.active = false;
 		query.result = 0;
 	}
-
-	//Clip planes are shader controlled; enable all planes driver-side
-	glEnable(GL_CLIP_DISTANCE0 + 0);
-	glEnable(GL_CLIP_DISTANCE0 + 1);
-	glEnable(GL_CLIP_DISTANCE0 + 2);
-	glEnable(GL_CLIP_DISTANCE0 + 3);
-	glEnable(GL_CLIP_DISTANCE0 + 4);
-	glEnable(GL_CLIP_DISTANCE0 + 5);
 
 	m_ui_renderer.create();
 	m_video_output_pass.create();
@@ -484,7 +512,7 @@ void GLGSRender::on_exit()
 
 	m_shader_interpreter.destroy();
 
-	for (u32 i = 0; i < occlusion_query_count; ++i)
+	for (u32 i = 0; i < rsx::reports::occlusion_query_count; ++i)
 	{
 		auto &query = m_occlusion_query_data[i];
 		query.active = false;
@@ -511,7 +539,7 @@ void GLGSRender::clear_surface(u32 arg)
 	if ((arg & RSX_GCM_CLEAR_ANY_MASK) == 0) return;
 
 	u8 ctx = rsx::framebuffer_creation_context::context_draw;
-	if (arg & RSX_GCM_CLEAR_COLOR_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+	if (arg & RSX_GCM_CLEAR_COLOR_RGBA_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
 	if (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 
 	init_buffers(static_cast<rsx::framebuffer_creation_context>(ctx), true);
@@ -618,6 +646,21 @@ void GLGSRender::clear_surface(u32 arg)
 		{
 			rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
 			colormask = rsx::get_g8b8_r8g8_clearmask(colormask);
+			break;
+		}
+		case rsx::surface_color_format::r5g6b5:
+		{
+			rsx::get_rgb565_clear_color(clear_r, clear_g, clear_b, clear_a);
+			break;
+		}
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		{
+			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 255);
+			break;
+		}
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		{
+			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 0);
 			break;
 		}
 		case rsx::surface_color_format::a8b8g8r8:
@@ -1036,7 +1079,7 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 
 	if (m_overlay_manager)
 	{
-		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
+		if (!in_begin_end && async_flip_requested & flip_request::native_ui && !is_stopped())
 		{
 			rsx::display_flip_info_t info{};
 			info.buffer = current_display_buffer;

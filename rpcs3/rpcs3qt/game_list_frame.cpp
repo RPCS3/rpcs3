@@ -1,6 +1,5 @@
 #include "game_list_frame.h"
 #include "qt_utils.h"
-#include "shortcut_utils.h"
 #include "settings_dialog.h"
 #include "pad_settings_dialog.h"
 #include "table_item_delegate.h"
@@ -22,6 +21,7 @@
 #include "Loader/PSF.h"
 #include "util/types.hpp"
 #include "Utilities/File.h"
+#include "Utilities/mutex.h"
 #include "util/yaml.hpp"
 #include "Input/pad_thread.h"
 
@@ -30,6 +30,7 @@
 #include <set>
 #include <regex>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <QtConcurrent>
 #include <QDesktopServices>
@@ -447,6 +448,11 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_notes.clear();
 		m_games.pop_all();
 
+		if (Emu.IsStopped())
+		{
+			Emu.AddGamesFromDir(fs::get_config_dir() + "/games");
+		}
+
 		const std::string _hdd =  rpcs3::utils::get_hdd0_dir();
 
 		const auto add_disc_dir = [&](const std::string& path)
@@ -529,7 +535,14 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
-			if (fs::is_file(game_dir + "/PS3_DISC.SFB"))
+			if (game_dir.empty())
+			{
+				continue;
+			}
+
+			const bool has_sfo = fs::is_file(game_dir + "/PARAM.SFO");
+
+			if (!has_sfo && fs::is_file(game_dir + "/PS3_DISC.SFB"))
 			{
 				// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
 				if (game_dir.starts_with(_hdd))
@@ -552,9 +565,13 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				add_disc_dir(game_dir);
 			}
+			else if (has_sfo)
+			{
+				m_path_list.emplace_back(game_dir);
+			}
 			else
 			{
-				game_list_log.trace("Invalid disc path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+				game_list_log.trace("Invalid game path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
 			}
 		}
 
@@ -569,7 +586,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			const Localized thread_localized;
 
 			const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir);
-			const psf::registry psf = psf::load_object(fs::file(sfo_dir + "/PARAM.SFO"));
+			const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
 			const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 			if (title_id.empty())
@@ -877,6 +894,107 @@ void game_list_frame::ItemSelectionChangedSlot()
 	Q_EMIT NotifyGameSelection(game);
 }
 
+void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<gui::utils::shortcut_location>& locations)
+{
+	if (locations.empty())
+	{
+		game_list_log.error("Failed to create shortcuts for %s. No locations selected.", sstr(qstr(gameinfo->info.name).simplified()));
+		return;
+	}
+
+	std::string gameid_token_value;
+
+	if (gameinfo->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + gameinfo->info.serial + "/USRDIR/EBOOT.BIN"))
+	{
+		const usz ps3_game_dir_pos = fs::get_parent_dir(gameinfo->info.path).size();
+		std::string relative_boot_dir = gameinfo->info.path.substr(ps3_game_dir_pos);
+
+		if (usz char_pos = relative_boot_dir.find_first_not_of(fs::delim); char_pos != umax)
+		{
+			relative_boot_dir = relative_boot_dir.substr(char_pos);
+		}
+		else
+		{
+			relative_boot_dir.clear();
+		}
+
+		if (!relative_boot_dir.empty())
+		{
+			if (relative_boot_dir != "PS3_GAME")
+			{
+				gameid_token_value = gameinfo->info.serial + "/" + relative_boot_dir;
+			}
+			else
+			{
+				gameid_token_value = gameinfo->info.serial;
+			}
+		}
+	}
+	else
+	{
+		gameid_token_value = gameinfo->info.serial;
+	}
+
+#ifdef __linux__
+	const std::string target_cli_args = fmt::format("--no-gui \"%%%%RPCS3_GAMEID%%%%:%s\"", gameid_token_value);
+#else
+	const std::string target_cli_args = fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", gameid_token_value);
+#endif
+	const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
+
+	if (!fs::create_path(target_icon_dir))
+	{
+		game_list_log.error("Failed to create shortcut path %s (%s)", sstr(qstr(gameinfo->info.name).simplified()), target_icon_dir, fs::g_tls_error);
+		return;
+	}
+
+	bool success = true;
+
+	for (const gui::utils::shortcut_location& location : locations)
+	{
+		std::string destination;
+
+		switch (location)
+		{
+		case gui::utils::shortcut_location::desktop:
+			destination = "desktop";
+			break;
+		case gui::utils::shortcut_location::applications:
+			destination = "application menu";
+			break;
+#ifdef _WIN32
+		case gui::utils::shortcut_location::rpcs3_shortcuts:
+			destination = "/games/shortcuts/";
+			break;
+#endif
+		}
+
+		if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
+		{
+			game_list_log.success("Created %s shortcut for %s", destination, sstr(qstr(gameinfo->info.name).simplified()));
+		}
+		else
+		{
+			game_list_log.error("Failed to create %s shortcut for %s", destination, sstr(qstr(gameinfo->info.name).simplified()));
+			success = false;
+		}
+	}
+
+#ifdef _WIN32
+	if (locations.size() > 1 || !locations.contains(gui::utils::shortcut_location::rpcs3_shortcuts))
+#endif
+	{
+		if (success)
+		{
+			QMessageBox::information(this, tr("Success!"), tr("Successfully created shortcut(s)."));
+		}
+		else
+		{
+			QMessageBox::warning(this, tr("Warning!"), tr("Failed to create shortcut(s)!"));
+		}
+	}
+}
+
 void game_list_frame::ShowContextMenu(const QPoint &pos)
 {
 	QPoint global_pos;
@@ -971,6 +1089,20 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 	}
 
+	extern bool is_savestate_compatible(const fs::file& file);
+
+	if (const std::string sstate = fs::get_cache_dir() + "/savestates/" + current_game.serial + ".SAVESTAT"; is_savestate_compatible(fs::file(sstate)))
+	{
+		QAction* boot_state = menu.addAction(is_current_running_game
+			? tr("&Reboot with savestate")
+			: tr("&Boot with savestate"));
+		connect(boot_state, &QAction::triggered, [this, gameinfo, sstate]
+		{
+			sys_log.notice("Booting savestate from gamelist per context menu...");
+			Q_EMIT RequestBoot(gameinfo, cfg_mode::custom, "", sstate);
+		});
+	}
+
 	menu.addSeparator();
 
 	QAction* configure = menu.addAction(gameinfo->hasCustomConfig
@@ -984,25 +1116,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	menu.addSeparator();
 
-	const auto on_shortcut = [this, gameinfo](bool is_desktop_shortcut)
-	{
-		const std::string target_cli_args = fmt::format("--no-gui \"%s\"", gameinfo->info.path);
-		const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
-
-		if (gui::utils::create_shortcut(gameinfo->info.name, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, is_desktop_shortcut))
-		{
-			game_list_log.success("Created %s shortcut for %s", is_desktop_shortcut ? "desktop" : "application menu", sstr(qstr(gameinfo->info.name).simplified()));
-			QMessageBox::information(this, tr("Success!"), tr("Successfully created a shortcut."));
-		}
-		else
-		{
-			game_list_log.error("Failed to create %s shortcut for %s", is_desktop_shortcut ? "desktop" : "application menu", sstr(qstr(gameinfo->info.name).simplified()));
-			QMessageBox::warning(this, tr("Warning!"), tr("Failed to create a shortcut!"));
-		}
-	};
 	QMenu* shortcut_menu = menu.addMenu(tr("&Create Shortcut"));
 	QAction* create_desktop_shortcut = shortcut_menu->addAction(tr("&Create Desktop Shortcut"));
-	connect(create_desktop_shortcut, &QAction::triggered, this, [this, gameinfo, on_shortcut](){ on_shortcut(true); });
+	connect(create_desktop_shortcut, &QAction::triggered, this, [this, gameinfo](){ CreateShortcuts(gameinfo, { gui::utils::shortcut_location::desktop }); });
 #ifdef _WIN32
 	QAction* create_start_menu_shortcut = shortcut_menu->addAction(tr("&Create Start Menu Shortcut"));
 #elif defined(__APPLE__)
@@ -1010,7 +1126,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 #else
 	QAction* create_start_menu_shortcut = shortcut_menu->addAction(tr("&Create Application Menu Shortcut"));
 #endif
-	connect(create_start_menu_shortcut, &QAction::triggered, this, [this, gameinfo, on_shortcut](){ on_shortcut(false); });
+	connect(create_start_menu_shortcut, &QAction::triggered, this, [this, gameinfo](){ CreateShortcuts(gameinfo, { gui::utils::shortcut_location::applications }); });
 
 	menu.addSeparator();
 
@@ -1067,9 +1183,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove all caches?")) != QMessageBox::Yes)
 				return;
 
-			RemoveShadersCache(cache_base_dir);
-			RemovePPUCache(cache_base_dir);
-			RemoveSPUCache(cache_base_dir);
+			if (fs::remove_all(cache_base_dir))
+				game_list_log.success("Removed cache directory: '%s'", cache_base_dir);
+			else
+				game_list_log.error("Could not remove cache directory: '%s' (%s)", cache_base_dir, fs::g_tls_error);
 		});
 	}
 	menu.addSeparator();
@@ -1136,7 +1253,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			hover_gif,
 			shader_load
 		};
-		
+
 		const auto handle_icon = [this, serial](const QString& game_icon_path, const QString& suffix, icon_action action, icon_type type)
 		{
 			QString icon_path;
@@ -1314,9 +1431,14 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			{
 				if (remove_caches)
 				{
-					RemoveShadersCache(cache_base_dir);
-					RemovePPUCache(cache_base_dir);
-					RemoveSPUCache(cache_base_dir);
+					if (fs::is_dir(cache_base_dir))
+					{
+						if (fs::remove_all(cache_base_dir))
+							game_list_log.notice("Removed cache directory: '%s'", cache_base_dir);
+						else
+							game_list_log.error("Could not remove cache directory: '%s' (%s)", cache_base_dir, fs::g_tls_error);
+					}
+
 					RemoveCustomConfiguration(current_game.serial);
 					RemoveCustomPadConfiguration(current_game.serial);
 				}
@@ -1545,8 +1667,9 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	u32 caches_total   = 0;
 
 	const QStringList filter{ QStringLiteral("shaders_cache") };
+	const QString q_base_dir = qstr(base_dir);
 
-	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	while (dir_iter.hasNext())
 	{
@@ -1572,6 +1695,14 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	else
 		game_list_log.fatal("Only %d/%d shaders cache dirs could be removed in %s", caches_removed, caches_total, base_dir);
 
+	if (QDir(q_base_dir).isEmpty())
+	{
+		if (fs::remove_dir(base_dir))
+			game_list_log.notice("Removed empty shader cache directory: %s", base_dir);
+		else
+			game_list_log.error("Could not remove empty shader cache directory: '%s' (%s)", base_dir, fs::g_tls_error);
+	}
+
 	return success;
 }
 
@@ -1587,8 +1718,9 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	u32 files_total = 0;
 
 	const QStringList filter{ QStringLiteral("v*.obj"), QStringLiteral("v*.obj.gz") };
+	const QString q_base_dir = qstr(base_dir);
 
-	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	while (dir_iter.hasNext())
 	{
@@ -1614,6 +1746,14 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	else
 		game_list_log.fatal("Only %d/%d PPU cache files could be removed in %s", files_removed, files_total, base_dir);
 
+	if (QDir(q_base_dir).isEmpty())
+	{
+		if (fs::remove_dir(base_dir))
+			game_list_log.notice("Removed empty PPU cache directory: %s", base_dir);
+		else
+			game_list_log.error("Could not remove empty PPU cache directory: '%s' (%s)", base_dir, fs::g_tls_error);
+	}
+
 	return success;
 }
 
@@ -1629,8 +1769,9 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	u32 files_total = 0;
 
 	const QStringList filter{ QStringLiteral("spu*.dat"), QStringLiteral("spu*.dat.gz"), QStringLiteral("spu*.obj"), QStringLiteral("spu*.obj.gz") };
+	const QString q_base_dir = qstr(base_dir);
 
-	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	QDirIterator dir_iter(q_base_dir, filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	while (dir_iter.hasNext())
 	{
@@ -1655,6 +1796,14 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 		game_list_log.success("Removed SPU cache in %s", base_dir);
 	else
 		game_list_log.fatal("Only %d/%d SPU cache files could be removed in %s", files_removed, files_total, base_dir);
+
+	if (QDir(q_base_dir).isEmpty())
+	{
+		if (fs::remove_dir(base_dir))
+			game_list_log.notice("Removed empty SPU cache directory: %s", base_dir);
+		else
+			game_list_log.error("Could not remove empty SPU cache directory: '%s' (%s)", base_dir, fs::g_tls_error);
+	}
 
 	return success;
 }
@@ -2173,10 +2322,26 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 
 	const std::function func = [this](const game_info& game) -> movie_item*
 	{
+		static std::unordered_set<std::string> warn_once_list;
+		static shared_mutex s_mtx;
+
 		if (game->icon.isNull() && (game->info.icon_path.empty() || !game->icon.load(qstr(game->info.icon_path))))
 		{
-			game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game->info.icon_path)).absolutePath()));
+			if (game_list_log.warning)
+			{
+				bool logged = false;
+				{
+					std::lock_guard lock(s_mtx);
+					logged = !warn_once_list.emplace(game->info.icon_path).second;
+				}
+
+				if (!logged)
+				{
+					game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game->info.icon_path)).absolutePath()));
+				}
+			}
 		}
+
 		const QColor color = getGridCompatibilityColor(game->compat.color);
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 		return game->item;
@@ -2607,7 +2772,7 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 	{
 		if (map.find(key) != map.end())
 		{
-			string << map.at(key);
+			string << ::at32(map, key);
 		}
 	}
 
@@ -2686,7 +2851,7 @@ void game_list_frame::SetPlayHoverGifs(bool play)
 	}
 }
 
-QList<game_info> game_list_frame::GetGameInfo() const
+const QList<game_info>& game_list_frame::GetGameInfo() const
 {
 	return m_game_data;
 }

@@ -1,8 +1,11 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
+#include "util/video_provider.h"
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
+
+extern atomic_t<recording_mode> g_recording_mode;
 
 namespace gl
 {
@@ -201,6 +204,11 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		buffer_height = present_info.height;
 	}
 
+	if (info.emu_flip)
+	{
+		evaluate_cpu_usage_reduction_limits();
+	}
+
 	// Get window state
 	const int width = m_frame->client_width();
 	const int height = m_frame->client_height();
@@ -227,10 +235,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (m_frame->screenshot_toggle)
+		if (m_frame->screenshot_toggle || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
-			m_frame->screenshot_toggle = false;
-
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
 
 			gl::pixel_pack_settings pack_settings{};
@@ -241,10 +247,19 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			else
 				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, sshot_frame.data());
 
-			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
+			if (GLenum err = glGetError(); err != GL_NO_ERROR)
+			{
 				screenshot_log.error("Failed to capture image: 0x%x", err);
-			else
+			}
+			else if (m_frame->screenshot_toggle)
+			{
+				m_frame->screenshot_toggle = false;
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, false);
+			}
+			else
+			{
+				m_frame->present_frame(sshot_frame, buffer_width, buffer_height, false);
+			}
 		}
 
 		const areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });

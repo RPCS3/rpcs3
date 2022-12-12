@@ -237,7 +237,7 @@ error_code sceNpMatching2Init(u32 stackSize, s32 priority)
 
 error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
 {
-	sceNp2.todo("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
+	sceNp2.warning("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -319,7 +319,7 @@ error_code sceNpMatching2Term2()
 
 error_code sceNpMatching2DestroyContext(SceNpMatching2ContextId ctxId)
 {
-	sceNp2.todo("sceNpMatching2DestroyContext(ctxId=%d)", ctxId);
+	sceNp2.warning("sceNpMatching2DestroyContext(ctxId=%d)", ctxId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -611,11 +611,20 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!connInfo)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;	
+	}
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	const auto si = sigh.get_sig2_infos(roomId, memberId);
+
 	switch (code)
 	{
 		case SCE_NP_SIGNALING_CONN_INFO_RTT:
 		{
-			connInfo->rtt = 20000; // HACK
+			connInfo->rtt = si.rtt;
+			sceNp2.warning("Returning a RTT of %d microseconds", connInfo->rtt);
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_BANDWIDTH:
@@ -625,22 +634,17 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_PEER_NPID:
 		{
-			// TODO: need an update to whole signaling as matching2 signaling ignores npids atm
-			sceNp2.fatal("sceNpMatching2SignalingGetConnectionInfo Unimplemented SCE_NP_SIGNALING_CONN_INFO_PEER_NPID");
+			connInfo->npId = si.npid;
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_PEER_ADDRESS:
 		{
-			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-			const auto si = sigh.get_sig2_infos(roomId, memberId);
 			connInfo->address.port = std::bit_cast<u16, be_t<u16>>(si.port);
 			connInfo->address.addr.np_s_addr = si.addr;
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_MAPPED_ADDRESS:
 		{
-			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-			const auto si = sigh.get_sig2_infos(roomId, memberId);
 			connInfo->address.port = std::bit_cast<u16, be_t<u16>>(si.mapped_port);
 			connInfo->address.addr.np_s_addr = si.mapped_addr;
 			break;
@@ -652,8 +656,7 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 		}
 		default:
 		{
-			sceNp2.fatal("sceNpMatching2SignalingGetConnectionInfo Unimplemented code: %d", code);
-			return CELL_OK;
+			return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
 		}
 	}
 
@@ -713,6 +716,16 @@ error_code sceNpMatching2AbortRequest(SceNpMatching2ContextId ctxId, SceNpMatchi
 	if (!nph.is_NP2_Match2_init)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
 	}
 
 	return CELL_OK;
@@ -1349,7 +1362,7 @@ error_code sceNpMatching2SetDefaultRequestOptParam(SceNpMatching2ContextId ctxId
 
 error_code sceNpMatching2RegisterRoomEventCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2RoomEventCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	sceNp2.todo("sceNpMatching2RegisterRoomEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+	sceNp2.warning("sceNpMatching2RegisterRoomEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -1546,7 +1559,7 @@ error_code sceNpMatching2SetLobbyMemberDataInternal(
 
 error_code sceNpMatching2RegisterRoomMessageCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2RoomMessageCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	sceNp2.todo("sceNpMatching2RegisterRoomMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+	sceNp2.warning("sceNpMatching2RegisterRoomMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

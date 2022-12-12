@@ -30,6 +30,7 @@
 #include "input_dialog.h"
 #include "camera_settings_dialog.h"
 #include "ipc_settings_dialog.h"
+#include "shortcut_utils.h"
 
 #include <thread>
 #include <charconv>
@@ -40,6 +41,8 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QFontDatabase>
+#include <QBuffer>
+#include <QTemporaryFile>
 
 #include "rpcs3_version.h"
 #include "Emu/IdManager.h"
@@ -357,6 +360,7 @@ void main_window::OnPlayOrPause()
 
 		return;
 	}
+	case system_state::starting: break;
 	default: fmt::throw_exception("Unreachable");
 	}
 }
@@ -375,6 +379,9 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::invalid_file_or_folder:
 		message = tr("The selected file or folder is invalid or corrupted.");
 		break;
+	case game_boot_result::invalid_bdvd_folder:
+		message = tr("The virtual dev_bdvd folder does not exist or is not empty.");
+		break;
 	case game_boot_result::install_failed:
 		message = tr("Additional content could not be installed.");
 		break;
@@ -386,6 +393,12 @@ void main_window::show_boot_error(game_boot_result status)
 		break;
 	case game_boot_result::unsupported_disc_type:
 		message = tr("This disc type is not supported yet.");
+		break;
+	case game_boot_result::savestate_corrupted:
+		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
+		break;
+	case game_boot_result::savestate_version_unsupported:
+		message = tr("Savestate versioning data differes from your RPCS3 build.");
 		break;
 	case game_boot_result::firmware_missing: // Handled elsewhere
 	case game_boot_result::no_errors:
@@ -509,6 +522,36 @@ void main_window::BootTest()
 	const std::string path = sstr(QFileInfo(file_path).absoluteFilePath());
 
 	gui_log.notice("Booting from BootTest...");
+	Boot(path, "", true);
+}
+
+void main_window::BootSavestate()
+{
+	bool stopped = false;
+
+	if (Emu.IsRunning())
+	{
+		Emu.Pause();
+		stopped = true;
+	}
+
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Savestate To Boot"), qstr(fs::get_cache_dir() + "/savestates/"), tr(
+		"Savestate files (*.SAVESTAT);;"
+		"All files (*.*)"),
+		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
+
+	if (file_path.isEmpty())
+	{
+		if (stopped)
+		{
+			Emu.Resume();
+		}
+		return;
+	}
+
+	const std::string path = sstr(QFileInfo(file_path).absoluteFilePath());
+
+	gui_log.notice("Booting from BootSavestate...");
 	Boot(path, "", true);
 }
 
@@ -806,12 +849,13 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	package_error error = package_error::no_error;
 
 	bool cancelled = false;
+	std::map<std::string, QString> bootable_paths_installed; // -> title id
 
 	for (usz i = 0, count = packages.size(); i < count; i++)
 	{
 		progress = 0.;
 
-		const compat::package_info& package = packages.at(i);
+		const compat::package_info& package = ::at32(packages, i);
 		QString app_info = package.title; // This should always be non-empty
 
 		if (!package.title_id.isEmpty() || !package.version.isEmpty())
@@ -842,15 +886,21 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		const std::string path      = sstr(package.path);
 		const std::string file_name = sstr(file_info.fileName());
 
+		std::string bootable_path;
+
 		// Run PKG unpacking asynchronously
-		named_thread worker("PKG Installer", [path, &progress, &error]
+		named_thread worker("PKG Installer", [path, &progress, &error, &bootable_path]
 		{
 			package_reader reader(path);
 			error = reader.check_target_app_version();
 
 			if (error == package_error::no_error)
 			{
-				return reader.extract_data(progress);
+				if (reader.extract_data(progress))
+				{
+					bootable_path = reader.try_get_bootable_file_path_if_created_new();
+					return true;
+				}
 			}
 
 			return false;
@@ -882,7 +932,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		}
 		else
 		{
-			pdlg.setHidden(true);
+			pdlg.hide();
 			pdlg.SignalFailure();
 		}
 
@@ -891,9 +941,86 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			m_game_list_frame->Refresh(true);
 			gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", file_name, sstr(package.title_id), sstr(package.title), sstr(package.version));
 
+			if (!bootable_path.empty())
+			{
+				bootable_paths_installed[bootable_path] = package.title_id;
+			}
+
 			if (i == (count - 1))
 			{
-				m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+				pdlg.hide();
+
+				bool create_desktop_shortcuts = false;
+				bool create_app_shortcut = false;
+
+				if (bootable_paths_installed.empty())
+				{
+					m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+				}
+				else
+				{
+					auto dlg = new QDialog(this);
+					dlg->setWindowTitle(tr("Success!"));
+
+					QVBoxLayout* vlayout = new QVBoxLayout(dlg);
+
+					QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
+#ifdef _WIN32
+					QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
+#elif defined(__APPLE__)
+					QCheckBox* quick_check = new QCheckBox(tr("Add dock shortcut(s)"));
+#else
+					QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
+#endif
+					QLabel* label = new QLabel(tr("Successfully installed software from package(s)!\nWould you like to install shortcuts to the installed software? (%1 new software detected)\n\n").arg(bootable_paths_installed.size()), dlg);
+	
+					vlayout->addWidget(label);
+					vlayout->addStretch(10);
+					vlayout->addWidget(desk_check);
+					vlayout->addStretch(3);
+					vlayout->addWidget(quick_check);
+					vlayout->addStretch(3);
+
+					QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
+	
+					vlayout->addWidget(btn_box);
+					dlg->setLayout(vlayout);
+
+					connect(btn_box, &QDialogButtonBox::accepted, this, [&]()
+					{
+						create_desktop_shortcuts = desk_check->isChecked();
+						create_app_shortcut = quick_check->isChecked();
+						dlg->accept();
+					});
+
+					dlg->setAttribute(Qt::WA_DeleteOnClose);
+					dlg->exec();
+				}
+
+				std::set<gui::utils::shortcut_location> locations;
+#ifdef _WIN32
+				locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
+#endif
+				if (create_desktop_shortcuts)
+				{
+					locations.insert(gui::utils::shortcut_location::desktop);
+				}
+				if (create_app_shortcut)
+				{
+					locations.insert(gui::utils::shortcut_location::applications);
+				}
+
+				for (const auto& [boot_path, title_id] : bootable_paths_installed)
+				{
+					for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+					{
+						if (gameinfo && gameinfo->info.bootable && gameinfo->info.serial == sstr(title_id) && boot_path.starts_with(gameinfo->info.path))
+						{
+							m_game_list_frame->CreateShortcuts(gameinfo, locations);
+							break;
+						}
+					}
+				}
 			}
 		}
 		else
@@ -1153,7 +1280,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 			return;
 		}
 
-		if (!update_files.extract("/pup_extract"))
+		if (!update_files.extract("/pup_extract", true))
 		{
 			gui_log.error("Error while installing firmware: TAR contents are invalid.");
 			critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
@@ -1413,7 +1540,7 @@ void main_window::RepaintThumbnailIcons()
 	m_icon_thumb_stop = icon(":/Icons/stop.png");
 	m_icon_thumb_restart = icon(":/Icons/restart.png");
 
-	m_thumb_playPause->setIcon(Emu.IsRunning() ? m_icon_thumb_pause : m_icon_thumb_play);
+	m_thumb_playPause->setIcon(Emu.IsRunning() || Emu.IsStarting() ? m_icon_thumb_pause : m_icon_thumb_play);
 	m_thumb_stop->setIcon(m_icon_thumb_stop);
 	m_thumb_restart->setIcon(m_icon_thumb_restart);
 #endif
@@ -1695,6 +1822,7 @@ void main_window::EnableMenus(bool enabled) const
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
 	ui->toolsStringSearchAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
+	ui->actionCreate_Savestate->setEnabled(enabled);
 }
 
 void main_window::OnEnableDiscEject(bool enabled) const
@@ -1722,11 +1850,11 @@ void main_window::BootRecentAction(const QAction* act)
 	int idx = -1;
 	for (int i = 0; i < m_rg_entries.count(); i++)
 	{
-		if (m_rg_entries.at(i).first == pth)
+		if (::at32(m_rg_entries, i).first == pth)
 		{
 			idx = i;
 			contains_path = true;
-			name = m_rg_entries.at(idx).second;
+			name = ::at32(m_rg_entries, idx).second;
 			break;
 		}
 	}
@@ -1746,7 +1874,7 @@ void main_window::BootRecentAction(const QAction* act)
 			m_rg_entries.removeAt(idx);
 			m_recent_game_acts.removeAt(idx);
 
-			m_gui_settings->SetValue(gui::rg_entries, m_gui_settings->List2Var(m_rg_entries));
+			m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(m_rg_entries));
 
 			gui_log.error("Recent Game not valid, removed from Boot Recent list: %s", path);
 
@@ -1754,7 +1882,7 @@ void main_window::BootRecentAction(const QAction* act)
 			for (int i = 0; i < m_recent_game_acts.count(); i++)
 			{
 				m_recent_game_acts[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
-				m_recent_game_acts[i]->setToolTip(m_rg_entries.at(i).second);
+				m_recent_game_acts[i]->setToolTip(::at32(m_rg_entries, i).second);
 				ui->bootRecentMenu->addAction(m_recent_game_acts[i]);
 			}
 
@@ -1782,7 +1910,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 			const int idx = m_rg_entries.indexOf(entry);
 			m_rg_entries.removeAt(idx);
 
-			m_gui_settings->SetValue(gui::rg_entries, m_gui_settings->List2Var(m_rg_entries));
+			m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(m_rg_entries));
 		}
 		return nullptr;
 	}
@@ -1865,11 +1993,11 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	for (int i = 0; i < m_recent_game_acts.count(); i++)
 	{
 		m_recent_game_acts[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
-		m_recent_game_acts[i]->setToolTip(m_rg_entries.at(i).second);
+		m_recent_game_acts[i]->setToolTip(::at32(m_rg_entries, i).second);
 		ui->bootRecentMenu->addAction(m_recent_game_acts[i]);
 	}
 
-	m_gui_settings->SetValue(gui::rg_entries, m_gui_settings->List2Var(m_rg_entries));
+	m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(m_rg_entries));
 }
 
 void main_window::UpdateLanguageActions(const QStringList& language_codes, const QString& language_code)
@@ -1983,6 +2111,14 @@ void main_window::CreateConnects()
 		g_user_asked_for_frame_capture = true;
 	});
 
+	connect(ui->actionCreate_Savestate, &QAction::triggered, this, []()
+	{
+		gui_log.notice("User triggered savestate creation from utilities.");
+		Emu.Kill(false, true);
+	});
+
+	connect(ui->bootSavestateAct, &QAction::triggered, this, &main_window::BootSavestate);
+
 	connect(ui->addGamesAct, &QAction::triggered, this, [this]()
 	{
 		if (!m_gui_settings->GetBootConfirmation(this))
@@ -2032,7 +2168,7 @@ void main_window::CreateConnects()
 			ui->bootRecentMenu->removeAction(act);
 		}
 		m_recent_game_acts.clear();
-		m_gui_settings->SetValue(gui::rg_entries, m_gui_settings->List2Var(q_pair_list()));
+		m_gui_settings->SetValue(gui::rg_entries, gui_settings::List2Var(q_pair_list()));
 	});
 
 	connect(ui->freezeRecentAct, &QAction::triggered, this, [this](bool checked)
@@ -2196,7 +2332,7 @@ void main_window::CreateConnects()
 		std::unordered_map<std::string, std::set<std::string>> games;
 		if (m_game_list_frame)
 		{
-			for (const auto& game : m_game_list_frame->GetGameInfo())
+			for (const game_info& game : m_game_list_frame->GetGameInfo())
 			{
 				if (game)
 				{
@@ -2577,9 +2713,9 @@ void main_window::CreateDockWindows()
 		m_selected_game = game;
 	});
 
-	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path)
+	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path, const std::string& savestate)
 	{
-		Boot(game->info.path, game->info.serial, false, false, config_mode, config_path);
+		Boot(savestate.empty() ? game->info.path : savestate, game->info.serial, false, false, config_mode, config_path);
 	});
 
 	connect(m_game_list_frame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);
@@ -2822,27 +2958,11 @@ Add valid disc games to gamelist (games.yml)
 void main_window::AddGamesFromDir(const QString& path)
 {
 	if (!QFileInfo(path).isDir())
+	{
 		return;
-
-	const std::string s_path = sstr(path);
-
-	// search dropped path first or else the direct parent to an elf is wrongly skipped
-	if (const auto error = Emu.BootGame(s_path, "", false, true); error == game_boot_result::no_errors)
-	{
-		gui_log.notice("Returned from game addition by drag and drop: %s", s_path);
 	}
 
-	// search direct subdirectories, that way we can drop one folder containing all games
-	QDirIterator dir_iter(path, QDir::Dirs | QDir::NoDotAndDotDot);
-	while (dir_iter.hasNext())
-	{
-		const std::string dir_path = sstr(dir_iter.next());
-
-		if (const auto error = Emu.BootGame(dir_path, "", false, true); error == game_boot_result::no_errors)
-		{
-			gui_log.notice("Returned from game addition by drag and drop: %s", dir_path);
-		}
-	}
+	Emu.AddGamesFromDir(sstr(path));
 }
 
 /**
