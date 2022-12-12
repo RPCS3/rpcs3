@@ -152,9 +152,10 @@ namespace vk
 		return ptr.get();
 	}
 
-	vk::buffer* get_scratch_buffer(u32 queue_family, u64 min_required_size)
+	std::pair<vk::buffer*, bool> get_scratch_buffer(u32 queue_family, u64 min_required_size)
 	{
 		auto& scratch_buffer = g_scratch_buffers_pool[queue_family].get_buf();
+		bool is_new = false;
 
 		if (scratch_buffer && scratch_buffer->size() < min_required_size)
 		{
@@ -170,14 +171,25 @@ namespace vk
 			scratch_buffer = std::make_unique<vk::buffer>(*g_render_device, alloc_size,
 				g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0, VMM_ALLOCATION_POOL_SCRATCH);
+
+			is_new = true;
 		}
 
-		return scratch_buffer.get();
+		return { scratch_buffer.get(), is_new };
 	}
 
-	vk::buffer* get_scratch_buffer(const vk::command_buffer& cmd, u64 min_required_size)
+	vk::buffer* get_scratch_buffer(const vk::command_buffer& cmd, u64 min_required_size, bool zero_memory)
 	{
-		return get_scratch_buffer(cmd.get_queue_family(), min_required_size);
+		const auto [buf, init_mem] = get_scratch_buffer(cmd.get_queue_family(), min_required_size);
+
+		if (init_mem || zero_memory)
+		{
+			// Zero-initialize the allocated VRAM
+			const u64 zero_length = init_mem ? buf->size() : utils::align(min_required_size, 4);
+			vkCmdFillBuffer(cmd, buf->value, 0, zero_length, 0);
+		}
+
+		return buf;
 	}
 
 	void clear_scratch_resources()
