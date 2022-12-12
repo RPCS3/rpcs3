@@ -352,10 +352,19 @@ namespace vk
 
 		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 		{
+			if (mip_level > 0)
+			{
+				// Technically never reached as this method only ever processes 1 mip
+				insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length,
+					VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+			}
+
 			vk::copy_image_to_buffer(cmd, src, scratch_buf, src_copy);
 
 			auto src_convert = get_format_convert_flags(src->info.format);
 			auto dst_convert = get_format_convert_flags(dst->info.format);
+			bool require_rw_barrier = true;
 
 			if (src_convert.first || dst_convert.first)
 			{
@@ -366,7 +375,8 @@ namespace vk
 				}
 				else
 				{
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 					vk::cs_shuffle_base *shuffle_kernel = nullptr;
@@ -393,9 +403,19 @@ namespace vk
 
 					shuffle_kernel->run(cmd, scratch_buf, src_length);
 
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length,
+						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+					require_rw_barrier = false;
 				}
+			}
+
+			if (require_rw_barrier)
+			{
+				insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, src_length,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 			}
 
 			vk::copy_buffer_to_image(cmd, scratch_buf, dst, dst_copy);
@@ -920,6 +940,8 @@ namespace vk
 		std::vector<std::pair<VkBuffer, u32>> upload_commands;
 		copy_regions.reserve(subresource_layout.size());
 
+		auto& cmd2 = prepare_for_transfer(cmd, dst_image, image_setup_flags);
+
 		for (const rsx::subresource_layout &layout : subresource_layout)
 		{
 			const auto [row_pitch, upload_pitch_in_texel] = calculate_upload_pitch(format, heap_align, dst_image, layout);
@@ -1015,13 +1037,7 @@ namespace vk
 						scratch_buf_size += (image_linear_size * 5) / 4;
 					}
 
-					// Must acquire scratch buffer owned by the processing command queue!
-					auto pdev = vk::get_current_renderer();
-					const u32 queue_family = (image_setup_flags & vk::upload_contents_async) ?
-						pdev->get_transfer_queue_family() :
-						pdev->get_graphics_queue_family();
-
-					scratch_buf = vk::get_scratch_buffer(queue_family, scratch_buf_size);
+					scratch_buf = vk::get_scratch_buffer(cmd2, scratch_buf_size);
 					buffer_copies.reserve(subresource_layout.size());
 				}
 
@@ -1075,7 +1091,6 @@ namespace vk
 		}
 
 		ensure(upload_buffer);
-		auto& cmd2 = prepare_for_transfer(cmd, dst_image, image_setup_flags);
 
 		if (opt.require_swap || opt.require_deswizzle || requires_depth_processing)
 		{
