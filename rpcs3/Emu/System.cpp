@@ -2823,13 +2823,16 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 	return to_ar;
 }
 
-game_boot_result Emulator::Restart()
+game_boot_result Emulator::Restart(bool graceful)
 {
 	if (!IsStopped())
 	{
 		auto save_args = std::make_tuple(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode);
 
-		GracefulShutdown(false, false);
+		if (graceful)
+			GracefulShutdown(false, false);
+		else
+			Kill(false);
 
 		std::tie(argv, envp, data, disc, klic, hdd1, m_config_mode, m_config_mode) = std::move(save_args);
 	}
