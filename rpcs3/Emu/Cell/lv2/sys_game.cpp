@@ -69,7 +69,7 @@ struct watchdog_t
 
 				Emu.CallFromMainThread([]()
 				{
-					Emu.Restart();
+					Emu.Restart(false);
 				});
 
 				return;

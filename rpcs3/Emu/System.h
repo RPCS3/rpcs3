@@ -307,7 +307,7 @@ public:
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
 	std::shared_ptr<utils::serial> Kill(bool allow_autoexit = true, bool savestate = false);
-	game_boot_result Restart();
+	game_boot_result Restart(bool graceful = true);
 	bool Quit(bool force_quit);
 	static void CleanUp();
 
