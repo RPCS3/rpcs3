@@ -513,7 +513,7 @@ void Emulator::Init(bool add_only)
 	}
 
 	// Wipe clean VSH's temporary directory of choice
-	if (g_cfg.vfs.empty_hdd0_tmp && !fs::remove_all(dev_hdd0 + "tmp/", false, true))
+	if (m_config_mode != cfg_mode::continuous && g_cfg.vfs.empty_hdd0_tmp && !fs::remove_all(dev_hdd0 + "tmp/", false, true))
 	{
 		sys_log.error("Could not clean /dev_hdd0/tmp/ (%s)", fs::g_tls_error);
 	}
