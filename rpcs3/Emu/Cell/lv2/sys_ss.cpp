@@ -126,14 +126,14 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 
 error_code sys_ss_get_console_id(vm::ptr<u8> buf)
 {
-	sys_ss.trace("sys_ss_get_console_id(buf=*0x%x)", buf);
+	sys_ss.notice("sys_ss_get_console_id(buf=*0x%x)", buf);
 
 	return sys_ss_appliance_info_manager(0x19003, buf);
 }
 
 error_code sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 {
-	sys_ss.trace("sys_ss_get_open_psid(psid=*0x%x)", psid);
+	sys_ss.notice("sys_ss_get_open_psid(psid=*0x%x)", psid);
 
 	psid->high = g_cfg.sys.console_psid_high;
 	psid->low = g_cfg.sys.console_psid_low;
