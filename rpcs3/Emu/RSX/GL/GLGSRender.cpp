@@ -8,6 +8,27 @@
 
 #include "../Program/program_state_cache2.hpp"
 
+[[noreturn]] extern void report_fatal_error(std::string_view _text, bool is_html = false, bool include_help_text = true);
+
+namespace
+{
+	void throw_fatal(const std::vector<std::string>& reasons)
+	{
+		const std::string delimiter = "\n- ";
+		const std::string reasons_list = fmt::merge(reasons, delimiter);
+		const std::string message = fmt::format(
+			"OpenGL could not be initialized on this system for the following reason(s):\n"
+			"\n"
+			"- %s",
+			reasons_list);
+
+		Emu.BlockingCallFromMainThread([message]()
+		{
+			report_fatal_error(message, false, false);
+		});
+	}
+}
+
 u64 GLGSRender::get_cycles()
 {
 	return thread_ctrl::get_cycles(static_cast<named_thread<GLGSRender>&>(*this));
@@ -111,14 +132,20 @@ void GLGSRender::on_init_thread()
 
 	auto& gl_caps = gl::get_driver_caps();
 
+	std::vector<std::string> exception_reasons;
 	if (!gl_caps.ARB_texture_buffer_supported)
 	{
-		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_texture_buffer_object is required but not supported by your GPU");
+		exception_reasons.push_back("GL_ARB_texture_buffer_object is required but not supported by your GPU");
 	}
 
 	if (!gl_caps.ARB_dsa_supported && !gl_caps.EXT_dsa_supported)
 	{
-		fmt::throw_exception("Failed to initialize OpenGL renderer. ARB_direct_state_access or EXT_direct_state_access is required but not supported by your GPU");
+		exception_reasons.push_back("GL_ARB_direct_state_access or GL_EXT_direct_state_access is required but not supported by your GPU");
+	}
+
+	if (!exception_reasons.empty())
+	{
+		throw_fatal(exception_reasons);
 	}
 
 	if (!gl_caps.ARB_depth_buffer_float_supported && g_cfg.video.force_high_precision_z_buffer)

@@ -965,7 +965,7 @@ void rsx_debugger::GetBuffers() const
 				for (u32 x = 0; x < width; x++)
 				{
 					be_t<u16> data{};
-					std::memcpy(&data, rsx_buffer + pitch * y + x * 2, 4);
+					std::memcpy(&data, rsx_buffer + pitch * y + x * 2, 2);
 					const u16 res = is_float ? static_cast<u16>(f16_to_f32(static_cast<f16>(+data))) : +data;
 					std::memcpy(buffer + y * width * 2 + x * 2, &res, 2);
 				}
@@ -1023,21 +1023,14 @@ void rsx_debugger::GetBuffers() const
 
 	u32 bytes_per_block = 4;
 	u32 pixels_per_block = 1;
-	QImage::Format format = QImage::Format_RGBA8888;
 	bool bswap = true;
 
 	// Naturally only a handful of common formats are implemented at the moment
 
 	switch (tex_fmt)
 	{
-	case CELL_GCM_TEXTURE_A8R8G8B8:
-	{
-		format = QImage::Format_RGBA8888;
-		break;
-	}
 	case CELL_GCM_TEXTURE_B8:
 	{
-		format = QImage::Format_Grayscale8;
 		bytes_per_block = 1;
 		break;
 	}

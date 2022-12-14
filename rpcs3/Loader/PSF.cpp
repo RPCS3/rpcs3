@@ -243,7 +243,7 @@ namespace psf
 		}
 
 		const auto cat = get_string(pair.sfo, "CATEGORY", "");
-		constexpr std::string_view valid_cats[]{"GD", "DG", "HG", "AM", "AP", "AT", "AV", "BV", "WT", "HM", "CB", "SF", "2P", "2G", "1P", "PP", "MN", "PE", "2D", "SD", "MS"};
+		constexpr std::string_view valid_cats[]{"GD", "DG", "HG", "AM", "AP", "AS", "AT", "AV", "BV", "WT", "HM", "CB", "SF", "2P", "2G", "1P", "PP", "MN", "PE", "2D", "SD", "MS"};
 
 		if (std::find(std::begin(valid_cats), std::end(valid_cats), cat) == std::end(valid_cats))
 		{

@@ -84,6 +84,13 @@ error_code sys_sm_shutdown(ppu_thread& ppu, u16 op, vm::ptr<void> param, u64 siz
 	return CELL_OK;
 }
 
+error_code sys_sm_set_shop_mode(s32 mode)
+{
+	sys_sm.todo("sys_sm_set_shop_mode(mode=0x%x)", mode);
+
+	return CELL_OK;
+}
+
 error_code sys_sm_control_led(u8 led, u8 action)
 {
 	sys_sm.todo("sys_sm_control_led(led=0x%x, action=0x%x)", led, action);

@@ -430,7 +430,7 @@ namespace gui
 				return;
 			}
 
-			if (!fs::is_dir && !fs::create_path(spath))
+			if (!fs::is_dir(spath) && !fs::create_path(spath))
 			{
 				gui_log.error("gui::utils::open_dir: Failed to create path '%s' (%s)", spath, fs::g_tls_error);
 				return;

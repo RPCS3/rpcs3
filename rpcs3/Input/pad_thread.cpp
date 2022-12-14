@@ -10,6 +10,9 @@
 #elif HAVE_LIBEVDEV
 #include "evdev_joystick_handler.h"
 #endif
+#ifdef HAVE_SDL2
+#include "sdl_pad_handler.h"
+#endif
 #include "keyboard_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/PadHandler.h"
@@ -169,6 +172,11 @@ void pad_thread::Init()
 				break;
 			case pad_handler::mm:
 				cur_pad_handler = std::make_shared<mm_joystick_handler>();
+				break;
+#endif
+#ifdef HAVE_SDL2
+			case pad_handler::sdl:
+				cur_pad_handler = std::make_shared<sdl_pad_handler>();
 				break;
 #endif
 #ifdef HAVE_LIBEVDEV
@@ -545,6 +553,10 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 		return std::make_unique<xinput_pad_handler>();
 	case pad_handler::mm:
 		return std::make_unique<mm_joystick_handler>();
+#endif
+#ifdef HAVE_SDL2
+	case pad_handler::sdl:
+		return std::make_unique<sdl_pad_handler>();
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:

@@ -124,19 +124,16 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 	return CELL_OK;
 }
 
-s32 sys_ss_get_console_id(vm::ptr<u8> buf)
+error_code sys_ss_get_console_id(vm::ptr<u8> buf)
 {
-	sys_ss.todo("sys_ss_get_console_id(buf=*0x%x)", buf);
+	sys_ss.notice("sys_ss_get_console_id(buf=*0x%x)", buf);
 
-	// TODO: Return some actual IDPS?
-	*buf = 0;
-
-	return CELL_OK;
+	return sys_ss_appliance_info_manager(0x19003, buf);
 }
 
-s32 sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
+error_code sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 {
-	sys_ss.warning("sys_ss_get_open_psid(psid=*0x%x)", psid);
+	sys_ss.notice("sys_ss_get_open_psid(psid=*0x%x)", psid);
 
 	psid->high = g_cfg.sys.console_psid_high;
 	psid->low = g_cfg.sys.console_psid_low;
@@ -146,7 +143,7 @@ s32 sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 
 error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 {
-	sys_ss.warning("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
+	sys_ss.notice("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
 
 	if (!buffer)
 	{
