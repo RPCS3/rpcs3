@@ -393,7 +393,7 @@ namespace gl
 			return managed_texture.get();
 		}
 
-		gl::render_target* get_render_target()
+		gl::render_target* get_render_target() const
 		{
 			return gl::as_rtt(vram_texture);
 		}
