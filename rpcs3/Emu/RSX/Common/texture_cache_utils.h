@@ -1645,12 +1645,18 @@ namespace rsx
 			ensure(exists());
 			AUDIT(is_locked());
 
-			// If we are fully inside the flush exclusions regions, we just mark ourselves as flushed and return
-			if (get_confirmed_range().inside(flush_exclusions))
+			auto cleanup_flush = [&]()
 			{
 				flushed = true;
 				flush_exclusions.clear();
 				on_flush();
+			};
+
+			// If we are fully inside the flush exclusions regions, we just mark ourselves as flushed and return
+			// We apply the same skip if there is nothing new in the surface data
+			if (!should_flush() || get_confirmed_range().inside(flush_exclusions))
+			{
+				cleanup_flush();
 				return;
 			}
 
@@ -1662,10 +1668,8 @@ namespace rsx
 
 			// Finish up
 			// Its highly likely that this surface will be reused, so we just leave resources in place
-			flushed = true;
 			derived()->finish_flush();
-			flush_exclusions.clear();
-			on_flush();
+			cleanup_flush();
 		}
 
 		void add_flush_exclusion(const address_range& rng)
