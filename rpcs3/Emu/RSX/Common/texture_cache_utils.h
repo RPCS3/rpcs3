@@ -1375,17 +1375,17 @@ namespace rsx
 			if (context == rsx::texture_upload_context::framebuffer_storage && !Emu.IsStopped())
 			{
 				// Lock, unlock
+				auto surface = derived()->get_render_target();
+
 				if (prot == utils::protection::no && old_prot != utils::protection::no)
 				{
 					// Locked memory. We have to take ownership of the object in the surface cache as well
-					auto surface = derived()->get_render_target();
 					surface->on_lock();
 				}
 				else if (old_prot == utils::protection::no && prot != utils::protection::no)
 				{
 					// Release the surface, the cache can remove it if needed
 					ensure(prot == utils::protection::rw);
-					auto surface = derived()->get_render_target();
 					surface->on_unlock();
 				}
 			}

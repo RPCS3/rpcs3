@@ -722,6 +722,30 @@ namespace rsx
 			release();
 		}
 
+		void on_swap_out()
+		{
+			if (is_locked())
+			{
+				on_unlock();
+			}
+			else
+			{
+				release();
+			}
+		}
+
+		void on_swap_in(bool lock)
+		{
+			if (!is_locked() && lock)
+			{
+				on_lock();
+			}
+			else
+			{
+				add_ref();
+			}
+		}
+
 		bool is_locked() const
 		{
 			return texture_cache_metadata.locked;
