@@ -1324,6 +1324,26 @@ namespace rsx
 			return (get_protection() == utils::protection::no);
 		}
 
+		bool is_synchronized() const
+		{
+			return synchronized;
+		}
+
+		bool is_flushed() const
+		{
+			return flushed;
+		}
+
+		bool should_flush() const
+		{
+			if (context == rsx::texture_upload_context::framebuffer_storage)
+			{
+				const auto surface = derived()->get_render_target();
+				return surface->has_flushable_data();
+			}
+
+			return true;
+		}
 
 	private:
 		/**
@@ -1359,14 +1379,14 @@ namespace rsx
 				{
 					// Locked memory. We have to take ownership of the object in the surface cache as well
 					auto surface = derived()->get_render_target();
-					surface->add_ref();
+					surface->on_lock();
 				}
 				else if (old_prot == utils::protection::no && prot != utils::protection::no)
 				{
 					// Release the surface, the cache can remove it if needed
 					ensure(prot == utils::protection::rw);
 					auto surface = derived()->get_render_target();
-					surface->release();
+					surface->on_unlock();
 				}
 			}
 		}

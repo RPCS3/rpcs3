@@ -345,11 +345,6 @@ namespace vk
 			}
 		}
 
-		bool is_synchronized() const
-		{
-			return synchronized;
-		}
-
 		bool has_compatible_format(vk::image* tex) const
 		{
 			return vram_texture->info.format == tex->info.format;

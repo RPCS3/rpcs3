@@ -47,7 +47,7 @@ namespace rsx
 
 namespace gl
 {
-	class render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<texture*>
+	class render_target : public viewable_image, public rsx::render_target_descriptor<texture*>
 	{
 		void clear_memory(gl::command_context& cmd);
 		void load_memory(gl::command_context& cmd);
@@ -79,11 +79,6 @@ namespace gl
 		bool is_depth_surface() const override
 		{
 			return !!(aspect() & gl::image_aspect::depth);
-		}
-
-		void release_ref(texture* t) const override
-		{
-			static_cast<gl::render_target*>(t)->release();
 		}
 
 		viewable_image* get_surface(rsx::surface_access /*access_type*/) override
@@ -232,6 +227,7 @@ struct gl_render_target_traits
 
 		sink->set_rsx_pitch(ref->get_rsx_pitch());
 		sink->set_old_contents_region(prev, false);
+		sink->texture_cache_metadata = ref->texture_cache_metadata;
 		sink->last_use_tag = ref->last_use_tag;
 		sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 	}
@@ -293,6 +289,7 @@ struct gl_render_target_traits
 		}
 
 		surface->release();
+		surface->reset();
 	}
 
 	static

@@ -383,26 +383,6 @@ namespace gl
 			return format;
 		}
 
-		bool is_flushed() const
-		{
-			return flushed;
-		}
-
-		bool is_synchronized() const
-		{
-			return synchronized;
-		}
-
-		void set_flushed(bool state)
-		{
-			flushed = state;
-		}
-
-		bool is_empty() const
-		{
-			return vram_texture == nullptr;
-		}
-
 		gl::texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
 			return vram_texture->get_view(remap_encoding, remap);

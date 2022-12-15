@@ -2450,10 +2450,15 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				!!g_cfg.video.write_color_buffers;
 
 			if (lock &&
+#ifdef TEXTURE_CACHE_DEBUG
 				!m_texture_cache.is_protected(
 					base_addr,
 					surface->get_memory_range(),
-					rsx::texture_upload_context::framebuffer_storage))
+					rsx::texture_upload_context::framebuffer_storage)
+#else
+				!surface->is_locked()
+#endif
+				)
 			{
 				lock = false;
 			}
