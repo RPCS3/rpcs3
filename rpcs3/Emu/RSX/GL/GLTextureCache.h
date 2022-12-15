@@ -70,12 +70,12 @@ namespace gl
 			if (vram_texture && !managed_texture && get_protection() == utils::protection::no)
 			{
 				// In-place image swap, still locked. Likely a color buffer that got rebound as depth buffer or vice-versa.
-				gl::as_rtt(vram_texture)->release();
+				gl::as_rtt(vram_texture)->on_swap_out();
 
 				if (!managed)
 				{
 					// Incoming is also an external resource, reference it immediately
-					gl::as_rtt(image)->add_ref();
+					gl::as_rtt(image)->on_swap_in(is_locked());
 				}
 			}
 
