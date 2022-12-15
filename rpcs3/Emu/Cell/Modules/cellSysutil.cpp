@@ -6,6 +6,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellGame.h"
 
+#include "Emu/Cell/lv2/sys_game.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSysutil.h"
 
@@ -125,6 +126,10 @@ extern s32 sysutil_send_system_cmd(u64 status, u64 param)
 				cellSysutil.error("Tried to enqueue a DRAWING_END callback without a BEGIN callback!");
 				return -1;
 			}
+		}
+		else if (status == CELL_SYSUTIL_REQUEST_EXITGAME)
+		{
+			abort_lv2_watchdog();
 		}
 
 		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
