@@ -4440,7 +4440,7 @@ error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId board
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
+	if (rankArraySize != (arrayNum * sizeof(SceNpScorePlayerRankData)) && rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
@@ -4521,7 +4521,7 @@ error_code scenp_score_get_friends_ranking(s32 transId, SceNpScoreBoardId boardI
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if (rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
+	if (rankArraySize != (arrayNum * sizeof(SceNpScorePlayerRankData)) && rankArraySize != (arrayNum * sizeof(SceNpScoreRankData)))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
 	}
