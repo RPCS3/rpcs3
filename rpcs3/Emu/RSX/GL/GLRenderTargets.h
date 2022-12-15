@@ -113,6 +113,11 @@ namespace gl
 	{
 		return ensure(dynamic_cast<gl::render_target*>(t));
 	}
+
+	static inline const gl::render_target* as_rtt(const gl::texture* t)
+	{
+		return ensure(dynamic_cast<const gl::render_target*>(t));
+	}
 }
 
 struct gl_render_target_traits

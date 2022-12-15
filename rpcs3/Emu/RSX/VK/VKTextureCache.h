@@ -163,7 +163,7 @@ namespace vk
 			return managed_texture;
 		}
 
-		vk::render_target* get_render_target()
+		vk::render_target* get_render_target() const
 		{
 			return vk::as_rtt(vram_texture);
 		}

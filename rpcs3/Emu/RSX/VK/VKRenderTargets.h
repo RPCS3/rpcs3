@@ -85,6 +85,11 @@ namespace vk
 		return ensure(dynamic_cast<vk::render_target*>(t));
 	}
 
+	static inline const vk::render_target* as_rtt(const vk::image* t)
+	{
+		return ensure(dynamic_cast<const vk::render_target*>(t));
+	}
+
 	struct surface_cache_traits
 	{
 		using surface_storage_type = std::unique_ptr<vk::render_target>;
