@@ -82,6 +82,15 @@ struct watchdog_t
 	static constexpr auto thread_name = "LV2 Watchdog Thread"sv;
 };
 
+void abort_lv2_watchdog()
+{
+	if (auto thr = g_fxo->try_get<named_thread<watchdog_t>>())
+	{
+		sys_game.notice("Aborting %s...", thr->thread_name);
+		*thr = thread_state::aborting;
+	}
+}
+
 error_code _sys_game_watchdog_start(u32 timeout)
 {
 	sys_game.trace("sys_game_watchdog_start(timeout=%d)", timeout);
