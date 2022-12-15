@@ -24,7 +24,7 @@ namespace vk
 	void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
 	void unresolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
 
-	class render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::viewable_image*>
+	class render_target : public viewable_image, public rsx::render_target_descriptor<vk::viewable_image*>
 	{
 		u64 cyclic_reference_sync_tag = 0;
 		u64 write_barrier_sync_tag = 0;
@@ -64,7 +64,6 @@ namespace vk
 
 		vk::viewable_image* get_surface(rsx::surface_access access_type) override;
 		bool is_depth_surface() const override;
-		void release_ref(vk::viewable_image* t) const override;
 		bool matches_dimensions(u16 _width, u16 _height) const;
 		void reset_surface_counters();
 
@@ -338,6 +337,7 @@ namespace vk
 
 			sink->rsx_pitch = ref->get_rsx_pitch();
 			sink->set_old_contents_region(prev, false);
+			sink->texture_cache_metadata = ref->texture_cache_metadata;
 			sink->last_use_tag = ref->last_use_tag;
 			sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 		}
@@ -411,6 +411,7 @@ namespace vk
 			}
 
 			surface->release();
+			surface->reset();
 		}
 
 		static void notify_surface_persist(const std::unique_ptr<vk::render_target>& /*surface*/)

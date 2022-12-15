@@ -125,7 +125,7 @@ namespace rsx
 	};
 
 	template <typename image_storage_type>
-	struct render_target_descriptor
+	struct render_target_descriptor : public rsx::ref_counted
 	{
 		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
 		u32 base_addr = 0;
@@ -165,6 +165,13 @@ namespace rsx
 		}
 		format_info;
 
+		struct
+		{
+			u64 timestamp = 0;
+			bool locked = false;
+		}
+		texture_cache_metadata;
+
 		render_target_descriptor() {}
 
 		virtual ~render_target_descriptor()
@@ -178,7 +185,11 @@ namespace rsx
 
 		virtual image_storage_type get_surface(rsx::surface_access access_type) = 0;
 		virtual bool is_depth_surface() const = 0;
-		virtual void release_ref(image_storage_type) const = 0;
+
+		void reset()
+		{
+			texture_cache_metadata = {};
+		}
 
 		template<rsx::surface_metrics Metrics = rsx::surface_metrics::pixels, typename T = u32>
 		T get_surface_width() const
@@ -438,7 +449,7 @@ namespace rsx
 		{
 			for (auto &e : old_contents)
 			{
-				release_ref(e.source);
+				ensure(dynamic_cast<rsx::ref_counted*>(e.source))->release();
 			}
 
 			old_contents.clear();
@@ -695,6 +706,32 @@ namespace rsx
 
 			ensure(access_type.is_read() || access_type.is_transfer());
 			transform_samples_to_pixels(region);
+		}
+
+		void on_lock()
+		{
+			add_ref();
+			texture_cache_metadata.locked = true;
+			texture_cache_metadata.timestamp = rsx::get_shared_tag();
+		}
+
+		void on_unlock()
+		{
+			texture_cache_metadata.locked = false;
+			texture_cache_metadata.timestamp = rsx::get_shared_tag();
+			release();
+		}
+
+		bool is_locked() const
+		{
+			return texture_cache_metadata.locked;
+		}
+
+		bool has_flushable_data() const
+		{
+			ensure(is_locked());
+			ensure(texture_cache_metadata.timestamp);
+			return (texture_cache_metadata.timestamp < last_use_tag);
 		}
 	};
 }
