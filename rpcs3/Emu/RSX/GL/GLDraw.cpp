@@ -48,11 +48,11 @@ namespace gl
 		case rsx::blend_equation::add: return GL_FUNC_ADD;
 		case rsx::blend_equation::min: return GL_MIN;
 		case rsx::blend_equation::max: return GL_MAX;
-		case rsx::blend_equation::substract: return GL_FUNC_SUBTRACT;
-		case rsx::blend_equation::reverse_substract_signed:
+		case rsx::blend_equation::subtract: return GL_FUNC_SUBTRACT;
+		case rsx::blend_equation::reverse_subtract_signed:
 			rsx_log.trace("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 			[[fallthrough]];
-		case rsx::blend_equation::reverse_substract: return GL_FUNC_REVERSE_SUBTRACT;
+		case rsx::blend_equation::reverse_subtract: return GL_FUNC_REVERSE_SUBTRACT;
 		case rsx::blend_equation::reverse_add_signed:
 		default:
 			rsx_log.error("Blend equation 0x%X is unimplemented!", static_cast<u32>(op));
