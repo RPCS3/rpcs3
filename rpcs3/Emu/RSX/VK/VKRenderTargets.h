@@ -325,7 +325,7 @@ namespace vk
 				sink->change_layout(cmd, best_layout);
 			}
 
-			prev.target = sink.get();
+			sink->on_clone_from(ref);
 
 			if (!sink->old_contents.empty())
 			{
@@ -340,11 +340,8 @@ namespace vk
 				}
 			}
 
-			sink->rsx_pitch = ref->get_rsx_pitch();
+			prev.target = sink.get();
 			sink->set_old_contents_region(prev, false);
-			sink->texture_cache_metadata = ref->texture_cache_metadata;
-			sink->last_use_tag = ref->last_use_tag;
-			sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 		}
 
 		static std::unique_ptr<vk::render_target> convert_pitch(
@@ -416,7 +413,6 @@ namespace vk
 			}
 
 			surface->release();
-			surface->reset();
 		}
 
 		static void notify_surface_persist(const std::unique_ptr<vk::render_target>& /*surface*/)

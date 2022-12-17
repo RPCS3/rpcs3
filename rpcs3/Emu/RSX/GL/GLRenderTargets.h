@@ -215,7 +215,7 @@ struct gl_render_target_traits
 			sink->queue_tag(address);
 		}
 
-		prev.target = sink.get();
+		sink->on_clone_from(ref);
 
 		if (!sink->old_contents.empty())
 		{
@@ -230,11 +230,8 @@ struct gl_render_target_traits
 			}
 		}
 
-		sink->set_rsx_pitch(ref->get_rsx_pitch());
+		prev.target = sink.get();
 		sink->set_old_contents_region(prev, false);
-		sink->texture_cache_metadata = ref->texture_cache_metadata;
-		sink->last_use_tag = ref->last_use_tag;
-		sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 	}
 
 	static
@@ -294,7 +291,6 @@ struct gl_render_target_traits
 		}
 
 		surface->release();
-		surface->reset();
 	}
 
 	static

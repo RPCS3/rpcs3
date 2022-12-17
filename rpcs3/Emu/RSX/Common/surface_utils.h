@@ -392,6 +392,9 @@ namespace rsx
 			ensure(native_pitch);
 			ensure(rsx_pitch);
 
+			// Clear metadata
+			reset();
+
 			base_addr = address;
 
 			const u32 size_x = (native_pitch > 8)? (native_pitch - 8) : 0u;
@@ -744,6 +747,19 @@ namespace rsx
 			{
 				add_ref();
 			}
+		}
+
+		void on_clone_from(const render_target_descriptor* ref)
+		{
+			if (ref->is_locked() && !is_locked())
+			{
+				// Propagate locked state only.
+				texture_cache_metadata = ref->texture_cache_metadata;
+			}
+
+			rsx_pitch = ref->get_rsx_pitch();
+			last_use_tag = ref->last_use_tag;
+			raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 		}
 
 		bool is_locked() const
