@@ -139,6 +139,12 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnRefreshFinished);
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
 	{
+		if (m_size_watcher.isRunning())
+		{
+			m_size_watcher.cancel();
+			m_size_watcher.waitForFinished();
+		}
+
 		if (m_repaint_watcher.isRunning())
 		{
 			m_repaint_watcher.cancel();
@@ -158,6 +164,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			item->call_icon_func();
 		}
+	});
+	connect(&m_size_watcher, &QFutureWatcher<void>::finished, this, [this]()
+	{
+		Refresh();
 	});
 
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -424,6 +434,12 @@ std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
 
 void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 {
+	if (m_size_watcher.isRunning())
+	{
+		m_size_watcher.cancel();
+		m_size_watcher.waitForFinished();
+	}
+
 	if (m_repaint_watcher.isRunning())
 	{
 		m_repaint_watcher.cancel();
@@ -596,7 +612,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				return;
 			}
 
-			GameInfo game;
+			GameInfo game{};
 			game.path         = dir;
 			game.serial       = std::string(title_id);
 			game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
@@ -609,7 +625,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
 			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
 			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
-			game.size_on_disk = fs::get_dir_size(dir);
 
 			if (m_show_custom_icons)
 			{
@@ -674,12 +689,15 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			m_mutex_cat.unlock();
 
-			const auto compat = m_game_compat->GetCompatibility(game.serial);
-			const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
-			const bool hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
-			const bool has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
+			gui_game_info info{};
+			info.info = game;
+			info.localized_category = qt_cat;
+			info.compat = m_game_compat->GetCompatibility(game.serial);
+			info.hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
+			info.hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
+			info.has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
-			m_games.push(std::make_shared<gui_game_info>(gui_game_info{game, qt_cat, compat, {}, {}, hasCustomConfig, hasCustomPadConfig, has_hover_gif, nullptr}));
+			m_games.push(std::make_shared<gui_game_info>(std::move(info)));
 		}));
 
 		return;
@@ -711,6 +729,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 void game_list_frame::OnRefreshFinished()
 {
+	if (m_size_watcher.isRunning())
+	{
+		m_size_watcher.cancel();
+		m_size_watcher.waitForFinished();
+	}
+
 	if (m_repaint_watcher.isRunning())
 	{
 		m_repaint_watcher.cancel();
@@ -785,6 +809,11 @@ void game_list_frame::OnRefreshFinished()
 	m_path_list.clear();
 
 	Refresh();
+
+	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this](const game_info& game) -> void
+	{
+		if (game) game->info.size_on_disk = fs::get_dir_size(game->info.path);
+	}));
 }
 
 void game_list_frame::OnRepaintFinished()
