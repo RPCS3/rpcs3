@@ -589,5 +589,21 @@ namespace gui
 				}
 			}
 		}
+
+		QString format_byte_size(usz size)
+		{
+			usz byte_unit = 0;
+			usz divisor = 1;
+
+			static const QString s_units[]{"B", "KB", "MB", "GB", "TB", "PB"};
+
+			while (byte_unit < std::size(s_units) - 1 && size / divisor >= 1024)
+			{
+				byte_unit++;
+				divisor *= 1024;
+			}
+
+			return QStringLiteral("%0 %1").arg(QString::number((size + 0.) / divisor, 'f', 2)).arg(s_units[byte_unit]);
+		}
 	} // utils
 } // gui

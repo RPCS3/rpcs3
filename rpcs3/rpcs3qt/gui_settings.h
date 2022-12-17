@@ -33,6 +33,7 @@ namespace gui
 		column_last_play,
 		column_playtime,
 		column_compat,
+		column_dir_size,
 
 		column_count
 	};
@@ -69,6 +70,8 @@ namespace gui
 			return "column_playtime";
 		case column_compat:
 			return "column_compat";
+		case column_dir_size:
+			return "column_dir_size";
 		case column_count:
 			return "";
 		}
