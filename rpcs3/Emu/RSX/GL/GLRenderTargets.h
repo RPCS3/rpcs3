@@ -47,7 +47,7 @@ namespace rsx
 
 namespace gl
 {
-	class render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<texture*>
+	class render_target : public viewable_image, public rsx::render_target_descriptor<texture*>
 	{
 		void clear_memory(gl::command_context& cmd);
 		void load_memory(gl::command_context& cmd);
@@ -81,11 +81,6 @@ namespace gl
 			return !!(aspect() & gl::image_aspect::depth);
 		}
 
-		void release_ref(texture* t) const override
-		{
-			static_cast<gl::render_target*>(t)->release();
-		}
-
 		viewable_image* get_surface(rsx::surface_access /*access_type*/) override
 		{
 			// TODO
@@ -117,6 +112,11 @@ namespace gl
 	static inline gl::render_target* as_rtt(gl::texture* t)
 	{
 		return ensure(dynamic_cast<gl::render_target*>(t));
+	}
+
+	static inline const gl::render_target* as_rtt(const gl::texture* t)
+	{
+		return ensure(dynamic_cast<const gl::render_target*>(t));
 	}
 }
 
@@ -215,7 +215,7 @@ struct gl_render_target_traits
 			sink->queue_tag(address);
 		}
 
-		prev.target = sink.get();
+		sink->on_clone_from(ref);
 
 		if (!sink->old_contents.empty())
 		{
@@ -230,10 +230,8 @@ struct gl_render_target_traits
 			}
 		}
 
-		sink->set_rsx_pitch(ref->get_rsx_pitch());
+		prev.target = sink.get();
 		sink->set_old_contents_region(prev, false);
-		sink->last_use_tag = ref->last_use_tag;
-		sink->raster_type = ref->raster_type;     // Can't actually cut up swizzled data
 	}
 
 	static

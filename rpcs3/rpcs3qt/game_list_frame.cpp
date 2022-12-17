@@ -133,11 +133,18 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	add_column(gui::column_last_play,  tr("Last Played"),           tr("Show Last Played"));
 	add_column(gui::column_playtime,   tr("Time Played"),           tr("Show Time Played"));
 	add_column(gui::column_compat,     tr("Compatibility"),         tr("Show Compatibility"));
+	add_column(gui::column_dir_size,   tr("Space On Disk"),         tr("Show Space On Disk"));
 
 	// Events
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnRefreshFinished);
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
 	{
+		if (m_size_watcher.isRunning())
+		{
+			m_size_watcher.cancel();
+			m_size_watcher.waitForFinished();
+		}
+
 		if (m_repaint_watcher.isRunning())
 		{
 			m_repaint_watcher.cancel();
@@ -157,6 +164,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			item->call_icon_func();
 		}
+	});
+	connect(&m_size_watcher, &QFutureWatcher<void>::finished, this, [this]()
+	{
+		Refresh();
 	});
 
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -423,6 +434,12 @@ std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
 
 void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 {
+	if (m_size_watcher.isRunning())
+	{
+		m_size_watcher.cancel();
+		m_size_watcher.waitForFinished();
+	}
+
 	if (m_repaint_watcher.isRunning())
 	{
 		m_repaint_watcher.cancel();
@@ -595,7 +612,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				return;
 			}
 
-			GameInfo game;
+			GameInfo game{};
 			game.path         = dir;
 			game.serial       = std::string(title_id);
 			game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
@@ -672,12 +689,15 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			m_mutex_cat.unlock();
 
-			const auto compat = m_game_compat->GetCompatibility(game.serial);
-			const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
-			const bool hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
-			const bool has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
+			gui_game_info info{};
+			info.info = game;
+			info.localized_category = qt_cat;
+			info.compat = m_game_compat->GetCompatibility(game.serial);
+			info.hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
+			info.hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
+			info.has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
-			m_games.push(std::make_shared<gui_game_info>(gui_game_info{game, qt_cat, compat, {}, {}, hasCustomConfig, hasCustomPadConfig, has_hover_gif, nullptr}));
+			m_games.push(std::make_shared<gui_game_info>(std::move(info)));
 		}));
 
 		return;
@@ -709,6 +729,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 void game_list_frame::OnRefreshFinished()
 {
+	if (m_size_watcher.isRunning())
+	{
+		m_size_watcher.cancel();
+		m_size_watcher.waitForFinished();
+	}
+
 	if (m_repaint_watcher.isRunning())
 	{
 		m_repaint_watcher.cancel();
@@ -783,6 +809,11 @@ void game_list_frame::OnRefreshFinished()
 	m_path_list.clear();
 
 	Refresh();
+
+	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this](const game_info& game) -> void
+	{
+		if (game) game->info.size_on_disk = fs::get_dir_size(game->info.path);
+	}));
 }
 
 void game_list_frame::OnRepaintFinished()
@@ -1421,12 +1452,23 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			return;
 		}
 
-		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr("Confirm %1 Removal").arg(gameinfo->localized_category), tr("Permanently remove %0 from drive?\nPath: %1").arg(name).arg(qstr(current_game.path)), QMessageBox::Yes | QMessageBox::No, this);
-		mb->setCheckBox(new QCheckBox(tr("Remove caches and custom configs")));
-		mb->deleteLater();
-		if (mb->exec() == QMessageBox::Yes)
+		QString size_information;
+
+		if (current_game.size_on_disk != umax)
 		{
-			const bool remove_caches = mb->checkBox()->isChecked();
+			fs::device_stat stat{};
+			if (fs::statfs(current_game.path, stat))
+			{
+				size_information = tr("Game Directory Size: %0\nCurrent Free Disk Space: %1\n\n").arg(gui::utils::format_byte_size(current_game.size_on_disk)).arg(gui::utils::format_byte_size(stat.avail_free));
+			}
+		}
+
+		QMessageBox mb(QMessageBox::Question, tr("Confirm %1 Removal").arg(gameinfo->localized_category), tr("Permanently remove %0 from drive?\n%1Path: %2").arg(name).arg(size_information).arg(qstr(current_game.path)), QMessageBox::Yes | QMessageBox::No, this);
+		mb.setCheckBox(new QCheckBox(tr("Remove caches and custom configs")));
+
+		if (mb.exec() == QMessageBox::Yes)
+		{
+			const bool remove_caches = mb.checkBox()->isChecked();
 			if (fs::remove_all(current_game.path))
 			{
 				if (remove_caches)
@@ -2579,6 +2621,8 @@ void game_list_frame::PopulateGameList()
 			}
 		}
 
+		const usz game_size = game->info.size_on_disk;
+
 		m_game_list->setItem(row, gui::column_icon,       icon_item);
 		m_game_list->setItem(row, gui::column_name,       title_item);
 		m_game_list->setItem(row, gui::column_serial,     serial_item);
@@ -2593,6 +2637,7 @@ void game_list_frame::PopulateGameList()
 		m_game_list->setItem(row, gui::column_last_play,  new custom_table_widget_item(locale.toString(last_played, last_played >= QDateTime::currentDateTime().addDays(-7) ? gui::persistent::last_played_date_with_time_of_day_format : gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
 		m_game_list->setItem(row, gui::column_playtime,   new custom_table_widget_item(elapsed_ms == 0 ? tr("Never played") : localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
 		m_game_list->setItem(row, gui::column_compat,     compat_item);
+		m_game_list->setItem(row, gui::column_dir_size,   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<usz>(game_size)));
 
 		if (selected_item == game->info.path + game->info.icon_path)
 		{

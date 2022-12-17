@@ -1,7 +1,31 @@
 #include "gcm_enums.h"
 #include "Utilities/StrFmt.h"
 
+#include "Utilities/Thread.h"
+
 using namespace rsx;
+
+struct convertible_to_invalid
+{
+	convertible_to_invalid() noexcept = default;
+
+	template <typename T> requires (std::is_enum_v<T>)
+	constexpr operator T() const
+	{
+		return T::invalid;
+	}
+};
+
+template <usz Size, typename... Args>
+convertible_to_invalid throw_exception_if_emulating(const char(&fmt)[Size], Args&&... args)
+{
+	if (thread_ctrl::get_current())
+	{
+		fmt::throw_exception(fmt, std::forward<Args>(args)...);
+	}
+
+	return {};
+}
 
 vertex_base_type rsx::to_vertex_base_type(u8 in)
 {
@@ -16,7 +40,7 @@ vertex_base_type rsx::to_vertex_base_type(u8 in)
 	case 6: return vertex_base_type::cmp;
 	case 7: return vertex_base_type::ub256;
 	}
-	fmt::throw_exception("Unknown vertex base type %d", in);
+	return throw_exception_if_emulating("Unknown vertex base type %d", in);
 }
 
 primitive_type rsx::to_primitive_type(u8 in)
@@ -52,7 +76,7 @@ window_origin rsx::to_window_origin(u8 in)
 	case CELL_GCM_WINDOW_ORIGIN_TOP: return window_origin::top;
 	case CELL_GCM_WINDOW_ORIGIN_BOTTOM: return window_origin::bottom;
 	}
-	fmt::throw_exception("Unknown window origin modifier 0x%x", in);
+	return throw_exception_if_emulating("Unknown window origin modifier 0x%x", in);
 }
 
 window_pixel_center rsx::to_window_pixel_center(u8 in)
@@ -62,7 +86,7 @@ window_pixel_center rsx::to_window_pixel_center(u8 in)
 	case CELL_GCM_WINDOW_PIXEL_CENTER_HALF: return window_pixel_center::half;
 	case CELL_GCM_WINDOW_PIXEL_CENTER_INTEGER: return window_pixel_center::integer;
 	}
-	fmt::throw_exception("Unknown window pixel center 0x%x", in);
+	return throw_exception_if_emulating("Unknown window pixel center 0x%x", in);
 }
 
 comparison_function rsx::to_comparison_function(u16 in)
@@ -101,7 +125,7 @@ comparison_function rsx::to_comparison_function(u16 in)
 	case CELL_GCM_ALWAYS:
 		return comparison_function::always;
 	}
-	fmt::throw_exception("Unknown comparison function 0x%x", in);
+	return throw_exception_if_emulating("Unknown comparison function 0x%x", in);
 }
 
 fog_mode rsx::to_fog_mode(u32 in)
@@ -115,7 +139,7 @@ fog_mode rsx::to_fog_mode(u32 in)
 	case CELL_GCM_FOG_MODE_EXP2_ABS: return fog_mode::exponential2_abs;
 	case CELL_GCM_FOG_MODE_LINEAR_ABS: return fog_mode::linear_abs;
 	}
-	fmt::throw_exception("Unknown fog mode 0x%x", in);
+	return throw_exception_if_emulating("Unknown fog mode 0x%x", in);
 }
 
 texture_dimension rsx::to_texture_dimension(u8 in)
@@ -126,7 +150,7 @@ texture_dimension rsx::to_texture_dimension(u8 in)
 	case 2: return texture_dimension::dimension2d;
 	case 3: return texture_dimension::dimension3d;
 	}
-	fmt::throw_exception("Unknown texture dimension %d", in);
+	return throw_exception_if_emulating("Unknown texture dimension %d", in);
 }
 
 template <>
@@ -228,6 +252,7 @@ void fmt_class_string<comparison_function>::format(std::string& out, u64 arg)
 		case comparison_function::not_equal: return "Not_equal";
 		case comparison_function::greater_or_equal: return "Greater_equal";
 		case comparison_function::always: return "Always";
+		case comparison_function::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -249,6 +274,7 @@ void fmt_class_string<stencil_op>::format(std::string& out, u64 arg)
 		case stencil_op::incr_wrap: return "Incr_wrap";
 		case stencil_op::decr_wrap: return "Decr_wrap";
 		case stencil_op::invert: return "Invert";
+		case stencil_op::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -268,6 +294,7 @@ void fmt_class_string<fog_mode>::format(std::string& out, u64 arg)
 		case fog_mode::exponential_abs: return "exponential(abs)";
 		case fog_mode::linear: return "linear";
 		case fog_mode::linear_abs: return "linear(abs)";
+		case fog_mode::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -297,6 +324,7 @@ void fmt_class_string<logic_op>::format(std::string& out, u64 arg)
 		case logic_op::logic_copy_inverted: return "Copy_inverted";
 		case logic_op::logic_or_inverted: return "Or_inverted";
 		case logic_op::logic_nand: return "Nand";
+		case logic_op::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -312,6 +340,7 @@ void fmt_class_string<front_face>::format(std::string& out, u64 arg)
 		{
 		case front_face::ccw: return "counter clock wise";
 		case front_face::cw: return "clock wise";
+		case front_face::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -328,6 +357,7 @@ void fmt_class_string<cull_face>::format(std::string& out, u64 arg)
 		case cull_face::back: return "back";
 		case cull_face::front: return "front";
 		case cull_face::front_and_back: return "front and back";
+		case cull_face::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -347,6 +377,7 @@ void fmt_class_string<surface_target>::format(std::string& out, u64 arg)
 		case surface_target::surfaces_a_b: return "surfaces A and B";
 		case surface_target::surfaces_a_b_c: return "surfaces A, B and C";
 		case surface_target::surfaces_a_b_c_d: return "surfaces A,B, C and D";
+		case surface_target::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -390,6 +421,7 @@ void fmt_class_string<blit_engine::transfer_operation>::format(std::string& out,
 		case blit_engine::transfer_operation::srccopy: return "srccopy";
 		case blit_engine::transfer_operation::srccopy_and: return "srccopy_and";
 		case blit_engine::transfer_operation::srccopy_premult: return "srccopy_premult";
+		case blit_engine::transfer_operation::invalid: return "Invalid";
 		default: return unknown;
 		}
 	});
@@ -415,6 +447,7 @@ void fmt_class_string<blit_engine::transfer_source_format>::format(std::string& 
 		case blit_engine::transfer_source_format::x8r8g8b8: return "x8r8g8b8";
 		case blit_engine::transfer_source_format::y8: return "y8";
 		case blit_engine::transfer_source_format::yb8cr8ya8cb8: return "yb8cr8ya8cb8";
+		case blit_engine::transfer_source_format::invalid: return "Invalid";
 		default: return unknown;
 		}
 	});
@@ -429,6 +462,7 @@ void fmt_class_string<blit_engine::context_surface>::format(std::string& out, u6
 		{
 		case blit_engine::context_surface::surface2d: return "surface 2d";
 		case blit_engine::context_surface::swizzle2d: return "swizzle 2d";
+		case blit_engine::context_surface::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -445,6 +479,7 @@ void fmt_class_string<blit_engine::transfer_destination_format>::format(std::str
 		case blit_engine::transfer_destination_format::a8r8g8b8: return "a8r8g8b8";
 		case blit_engine::transfer_destination_format::r5g6b5: return "r5g6b5";
 		case blit_engine::transfer_destination_format::y32: return "y32";
+		case blit_engine::transfer_destination_format::invalid: return "Invalid";
 		default: return unknown;
 		}
 	});
@@ -459,6 +494,7 @@ void fmt_class_string<index_array_type>::format(std::string& out, u64 arg)
 		{
 		case index_array_type::u16: return "u16";
 		case index_array_type::u32: return "u32";
+		case index_array_type::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -475,6 +511,7 @@ void fmt_class_string<polygon_mode>::format(std::string& out, u64 arg)
 		case polygon_mode::fill: return "fill";
 		case polygon_mode::line: return "line";
 		case polygon_mode::point: return "point";
+		case polygon_mode::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -502,6 +539,7 @@ void fmt_class_string<surface_color_format>::format(std::string& out, u64 arg)
 		case surface_color_format::x8b8g8r8_z8b8g8r8: return "X8B8G8R8_Z8B8G8R8";
 		case surface_color_format::x8b8g8r8_o8b8g8r8: return "X8B8G8R8_O8B8G8R8";
 		case surface_color_format::a8b8g8r8: return "A8B8G8R8";
+		case surface_color_format::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -519,6 +557,7 @@ void fmt_class_string<surface_antialiasing>::format(std::string& out, u64 arg)
 		case surface_antialiasing::diagonal_centered_2_samples: return "2 samples diagonal centered";
 		case surface_antialiasing::square_centered_4_samples: return "4 samples square centered";
 		case surface_antialiasing::square_rotated_4_samples: return "4 samples diagonal rotated";
+		case surface_antialiasing::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -533,13 +572,14 @@ void fmt_class_string<blend_equation>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case blend_equation::add: return "Add";
-		case blend_equation::substract: return "Substract";
-		case blend_equation::reverse_substract: return "Reverse_substract";
+		case blend_equation::subtract: return "Subtract";
+		case blend_equation::reverse_subtract: return "Reverse_subtract";
 		case blend_equation::min: return "Min";
 		case blend_equation::max: return "Max";
 		case blend_equation::add_signed: return "Add_signed";
 		case blend_equation::reverse_add_signed: return "Reverse_add_signed";
-		case blend_equation::reverse_substract_signed: return "Reverse_substract_signed";
+		case blend_equation::reverse_subtract_signed: return "Reverse_subtract_signed";
+		case blend_equation::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -568,6 +608,7 @@ void fmt_class_string<blend_factor>::format(std::string& out, u64 arg)
 		case blend_factor::one_minus_constant_color: return "(1 - const.rgb)";
 		case blend_factor::constant_alpha: return "const.a";
 		case blend_factor::one_minus_constant_alpha: return "(1 - const.a)";
+		case blend_factor::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -583,6 +624,7 @@ void fmt_class_string<window_origin>::format(std::string& out, u64 arg)
 		{
 		case window_origin::bottom: return "bottom";
 		case window_origin::top: return "top";
+		case window_origin::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -598,6 +640,7 @@ void fmt_class_string<window_pixel_center>::format(std::string& out, u64 arg)
 		{
 		case window_pixel_center::half: return "half";
 		case window_pixel_center::integer: return "integer";
+		case window_pixel_center::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -614,6 +657,7 @@ void fmt_class_string<user_clip_plane_op>::format(std::string& out, u64 arg)
 		case user_clip_plane_op::disable: return "disabled";
 		case user_clip_plane_op::greater_or_equal: return "greater or equal";
 		case user_clip_plane_op::less_than: return "less than";
+		case user_clip_plane_op::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -630,6 +674,7 @@ void fmt_class_string<blit_engine::context_dma>::format(std::string& out, u64 ar
 		case blit_engine::context_dma::report_location_main: return "report location main";
 		case blit_engine::context_dma::to_memory_get_report: return "to memory get report";
 		case blit_engine::context_dma::memory_host_buffer: return "memory host buffer";
+		case blit_engine::context_dma::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -645,6 +690,7 @@ void fmt_class_string<blit_engine::transfer_origin>::format(std::string& out, u6
 		{
 		case blit_engine::transfer_origin::center: return "center";
 		case blit_engine::transfer_origin::corner: return "corner";
+		case blit_engine::transfer_origin::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -660,6 +706,7 @@ void fmt_class_string<shading_mode>::format(std::string& out, u64 arg)
 		{
 		case shading_mode::flat: return "flat";
 		case shading_mode::smooth: return "smooth";
+		case shading_mode::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -675,6 +722,7 @@ void fmt_class_string<surface_depth_format>::format(std::string& out, u64 arg)
 		{
 		case surface_depth_format::z16: return "Z16";
 		case surface_depth_format::z24s8: return "Z24S8";
+		case surface_depth_format::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -691,6 +739,7 @@ void fmt_class_string<blit_engine::transfer_interpolator>::format(std::string& o
 		{
 		case blit_engine::transfer_interpolator::foh: return "foh";
 		case blit_engine::transfer_interpolator::zoh: return "zoh";
+		case blit_engine::transfer_interpolator::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -708,6 +757,7 @@ void fmt_class_string<texture_dimension>::format(std::string& out, u64 arg)
 		case texture_dimension::dimension1d: return "1D";
 		case texture_dimension::dimension2d: return "2D";
 		case texture_dimension::dimension3d: return "3D";
+		case texture_dimension::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -729,6 +779,7 @@ void fmt_class_string<texture_max_anisotropy>::format(std::string& out, u64 arg)
 		case texture_max_anisotropy::x10: return "10";
 		case texture_max_anisotropy::x12: return "12";
 		case texture_max_anisotropy::x16: return "16";
+		case texture_max_anisotropy::invalid: return "Invalid";
 		}
 
 		return unknown;
@@ -823,7 +874,7 @@ texture_wrap_mode rsx::to_texture_wrap_mode(u8 in)
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_BORDER: return texture_wrap_mode::mirror_once_border;
 	case CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP: return texture_wrap_mode::mirror_once_clamp;
 	}
-	fmt::throw_exception("Unknown wrap mode 0x%x", in);
+	return throw_exception_if_emulating("Unknown wrap mode 0x%x", in);
 }
 
 texture_max_anisotropy rsx::to_texture_max_anisotropy(u8 in)
@@ -839,7 +890,7 @@ texture_max_anisotropy rsx::to_texture_max_anisotropy(u8 in)
 	case CELL_GCM_TEXTURE_MAX_ANISO_12: return texture_max_anisotropy::x12;
 	case CELL_GCM_TEXTURE_MAX_ANISO_16: return texture_max_anisotropy::x16;
 	}
-	fmt::throw_exception("Unknown anisotropy max mode 0x%x", in);
+	return throw_exception_if_emulating("Unknown anisotropy max mode 0x%x", in);
 }
 
 texture_minify_filter rsx::to_texture_minify_filter(u8 in)
@@ -854,7 +905,7 @@ texture_minify_filter rsx::to_texture_minify_filter(u8 in)
 	case CELL_GCM_TEXTURE_LINEAR_LINEAR: return texture_minify_filter::linear_linear;
 	case CELL_GCM_TEXTURE_CONVOLUTION_MIN: return texture_minify_filter::linear_linear;
 	}
-	fmt::throw_exception("Unknown minify filter 0x%x", in);
+	return throw_exception_if_emulating("Unknown minify filter 0x%x", in);
 }
 
 
@@ -866,7 +917,7 @@ texture_magnify_filter rsx::to_texture_magnify_filter(u8 in)
 	case CELL_GCM_TEXTURE_LINEAR: return texture_magnify_filter::linear;
 	case CELL_GCM_TEXTURE_CONVOLUTION_MAG: return texture_magnify_filter::convolution_mag;
 	}
-	fmt::throw_exception("Unknown magnify filter 0x%x", in);
+	return throw_exception_if_emulating("Unknown magnify filter 0x%x", in);
 }
 
 surface_target rsx::to_surface_target(u8 in)
@@ -880,7 +931,7 @@ surface_target rsx::to_surface_target(u8 in)
 	case CELL_GCM_SURFACE_TARGET_MRT2: return surface_target::surfaces_a_b_c;
 	case CELL_GCM_SURFACE_TARGET_MRT3: return surface_target::surfaces_a_b_c_d;
 	}
-	fmt::throw_exception("Unknown surface target 0x%x", in);
+	return throw_exception_if_emulating("Unknown surface target 0x%x", in);
 }
 
 surface_depth_format rsx::to_surface_depth_format(u8 in)
@@ -890,7 +941,7 @@ surface_depth_format rsx::to_surface_depth_format(u8 in)
 	case CELL_GCM_SURFACE_Z16: return surface_depth_format::z16;
 	case CELL_GCM_SURFACE_Z24S8: return surface_depth_format::z24s8;
 	}
-	fmt::throw_exception("Unknown surface depth format 0x%x", in);
+	return throw_exception_if_emulating("Unknown surface depth format 0x%x", in);
 }
 
 surface_antialiasing rsx::to_surface_antialiasing(u8 in)
@@ -902,7 +953,7 @@ surface_antialiasing rsx::to_surface_antialiasing(u8 in)
 	case CELL_GCM_SURFACE_SQUARE_CENTERED_4: return surface_antialiasing::square_centered_4_samples;
 	case CELL_GCM_SURFACE_SQUARE_ROTATED_4: return surface_antialiasing::square_rotated_4_samples;
 	}
-	fmt::throw_exception("Unknown surface antialiasing format 0x%x", in);
+	return throw_exception_if_emulating("Unknown surface antialiasing format 0x%x", in);
 }
 
 surface_color_format rsx::to_surface_color_format(u8 in)
@@ -924,7 +975,7 @@ surface_color_format rsx::to_surface_color_format(u8 in)
 	case CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8: return surface_color_format::x8b8g8r8_o8b8g8r8;
 	case CELL_GCM_SURFACE_A8B8G8R8: return surface_color_format::a8b8g8r8;
 	}
-	fmt::throw_exception("Unknown surface color format 0x%x", in);
+	return throw_exception_if_emulating("Unknown surface color format 0x%x", in);
 }
 
 stencil_op rsx::to_stencil_op(u16 in)
@@ -940,7 +991,7 @@ stencil_op rsx::to_stencil_op(u16 in)
 	case CELL_GCM_DECR_WRAP: return stencil_op::decr_wrap;
 	case CELL_GCM_ZERO: return stencil_op::zero;
 	}
-	fmt::throw_exception("Unknown stencil op 0x%x", in);
+	return throw_exception_if_emulating("Unknown stencil op 0x%x", in);
 }
 
 blend_equation rsx::to_blend_equation(u16 in)
@@ -950,13 +1001,13 @@ blend_equation rsx::to_blend_equation(u16 in)
 	case CELL_GCM_FUNC_ADD: return blend_equation::add;
 	case CELL_GCM_MIN: return blend_equation::min;
 	case CELL_GCM_MAX: return blend_equation::max;
-	case CELL_GCM_FUNC_SUBTRACT: return blend_equation::substract;
-	case CELL_GCM_FUNC_REVERSE_SUBTRACT: return blend_equation::reverse_substract;
-	case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED: return blend_equation::reverse_substract_signed;
+	case CELL_GCM_FUNC_SUBTRACT: return blend_equation::subtract;
+	case CELL_GCM_FUNC_REVERSE_SUBTRACT: return blend_equation::reverse_subtract;
+	case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED: return blend_equation::reverse_subtract_signed;
 	case CELL_GCM_FUNC_ADD_SIGNED: return blend_equation::add_signed;
 	case CELL_GCM_FUNC_REVERSE_ADD_SIGNED: return blend_equation::reverse_add_signed;
 	}
-	fmt::throw_exception("Unknown blend eq 0x%x", in);
+	return throw_exception_if_emulating("Unknown blend eq 0x%x", in);
 }
 
 blend_factor rsx::to_blend_factor(u16 in)
@@ -979,7 +1030,7 @@ blend_factor rsx::to_blend_factor(u16 in)
 	case CELL_GCM_CONSTANT_ALPHA: return blend_factor::constant_alpha;
 	case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA: return blend_factor::one_minus_constant_alpha;
 	}
-	fmt::throw_exception("Unknown blend factor 0x%x", in);
+	return throw_exception_if_emulating("Unknown blend factor 0x%x", in);
 }
 
 enum
@@ -1022,7 +1073,7 @@ logic_op rsx::to_logic_op(u16 in)
 	case CELL_GCM_NAND: return logic_op::logic_nand;
 	case CELL_GCM_SET: return logic_op::logic_set;
 	}
-	fmt::throw_exception("Unknown logic op 0x%x", in);
+	return throw_exception_if_emulating("Unknown logic op 0x%x", in);
 }
 
 front_face rsx::to_front_face(u16 in)
@@ -1033,7 +1084,7 @@ front_face rsx::to_front_face(u16 in)
 	case CELL_GCM_CW: return front_face::cw;
 	case CELL_GCM_CCW: return front_face::ccw;
 	}
-	fmt::throw_exception("Unknown front face 0x%x", in);
+	return throw_exception_if_emulating("Unknown front face 0x%x", in);
 }
 
 enum
@@ -1052,7 +1103,7 @@ blit_engine::transfer_origin blit_engine::to_transfer_origin(u8 in)
 	case CELL_GCM_TRANSFER_ORIGIN_CENTER: return blit_engine::transfer_origin::center;
 	case CELL_GCM_TRANSFER_ORIGIN_CORNER: return blit_engine::transfer_origin::corner;
 	}
-	fmt::throw_exception("Unknown transfer origin 0x%x", in);
+	return throw_exception_if_emulating("Unknown transfer origin 0x%x", in);
 }
 
 blit_engine::transfer_interpolator blit_engine::to_transfer_interpolator(u8 in)
@@ -1062,7 +1113,7 @@ blit_engine::transfer_interpolator blit_engine::to_transfer_interpolator(u8 in)
 	case CELL_GCM_TRANSFER_INTERPOLATOR_ZOH: return blit_engine::transfer_interpolator::zoh;
 	case CELL_GCM_TRANSFER_INTERPOLATOR_FOH: return blit_engine::transfer_interpolator::foh;
 	}
-	fmt::throw_exception("Unknown transfer interpolator 0x%x", in);
+	return throw_exception_if_emulating("Unknown transfer interpolator 0x%x", in);
 }
 
 enum
@@ -1159,7 +1210,7 @@ blit_engine::context_surface blit_engine::to_context_surface(u32 in)
 	case CELL_GCM_CONTEXT_SURFACE2D: return blit_engine::context_surface::surface2d;
 	case CELL_GCM_CONTEXT_SWIZZLE2D: return blit_engine::context_surface::swizzle2d;
 	}
-	fmt::throw_exception("Unknown context surface 0x%x", in);
+	return throw_exception_if_emulating("Unknown context surface 0x%x", in);
 }
 
 blit_engine::context_dma blit_engine::to_context_dma(u32 in)
@@ -1170,7 +1221,7 @@ blit_engine::context_dma blit_engine::to_context_dma(u32 in)
 	case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN: return blit_engine::context_dma::report_location_main;
 	case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER: return blit_engine::context_dma::memory_host_buffer;
 	}
-	fmt::throw_exception("Unknown context dma 0x%x", in);
+	return throw_exception_if_emulating("Unknown context dma 0x%x", in);
 }
 
 enum
@@ -1188,7 +1239,7 @@ user_clip_plane_op rsx::to_user_clip_plane_op(u8 in)
 	case CELL_GCM_USER_CLIP_PLANE_ENABLE_LT: return user_clip_plane_op::less_than;
 	case CELL_GCM_USER_CLIP_PLANE_ENABLE_GE: return user_clip_plane_op::greater_or_equal;
 	}
-	fmt::throw_exception("Unknown user clip plane 0x%x", in);
+	return throw_exception_if_emulating("Unknown user clip plane 0x%x", in);
 }
 
 enum
@@ -1204,7 +1255,7 @@ shading_mode rsx::to_shading_mode(u32 in)
 	case CELL_GCM_FLAT: return shading_mode::flat;
 	case CELL_GCM_SMOOTH: return shading_mode::smooth;
 	}
-	fmt::throw_exception("Unknown shading mode 0x%x", in);
+	return throw_exception_if_emulating("Unknown shading mode 0x%x", in);
 }
 
 enum
@@ -1222,5 +1273,5 @@ polygon_mode rsx::to_polygon_mode(u32 in)
 	case CELL_GCM_POLYGON_MODE_LINE: return polygon_mode::line;
 	case CELL_GCM_POLYGON_MODE_FILL: return polygon_mode::fill;
 	}
-	fmt::throw_exception("Unknown polygon mode 0x%x", in);
+	return throw_exception_if_emulating("Unknown polygon mode 0x%x", in);
 }

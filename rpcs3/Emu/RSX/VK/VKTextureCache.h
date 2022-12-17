@@ -50,12 +50,12 @@ namespace vk
 			if (vram_texture && !managed_texture && get_protection() == utils::protection::no)
 			{
 				// In-place image swap, still locked. Likely a color buffer that got rebound as depth buffer or vice-versa.
-				vk::as_rtt(vram_texture)->release();
+				vk::as_rtt(vram_texture)->on_swap_out();
 
 				if (!managed)
 				{
 					// Incoming is also an external resource, reference it immediately
-					vk::as_rtt(image)->add_ref();
+					vk::as_rtt(image)->on_swap_in(is_locked());
 				}
 			}
 
@@ -163,7 +163,7 @@ namespace vk
 			return managed_texture;
 		}
 
-		vk::render_target* get_render_target()
+		vk::render_target* get_render_target() const
 		{
 			return vk::as_rtt(vram_texture);
 		}
@@ -343,11 +343,6 @@ namespace vk
 			{
 				rtt->inherit_surface_contents(vk::as_rtt(surface->vram_texture));
 			}
-		}
-
-		bool is_synchronized() const
-		{
-			return synchronized;
 		}
 
 		bool has_compatible_format(vk::image* tex) const

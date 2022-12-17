@@ -117,23 +117,22 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 
 	const QFlags<QMessageBox::StandardButton> buttons = icon != QMessageBox::Information ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
 
-	QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
-	mb->deleteLater();
-	mb->setTextFormat(Qt::RichText);
+	QMessageBox mb(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
+	mb.setTextFormat(Qt::RichText);
 
 	if (has_gui_setting && icon != QMessageBox::Critical)
 	{
-		mb->setCheckBox(new QCheckBox(tr("Don't show again")));
+		mb.setCheckBox(new QCheckBox(tr("Don't show again")));
 	}
 
-	connect(mb, &QMessageBox::finished, [&](int res)
+	connect(&mb, &QMessageBox::finished, [&](int res)
 	{
 		if (result)
 		{
 			*result = res;
 		}
 
-		const auto checkBox = mb->checkBox();
+		const auto checkBox = mb.checkBox();
 
 		if (checkBox && checkBox->isChecked())
 		{
@@ -142,7 +141,7 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 		}
 	});
 
-	mb->exec();
+	mb.exec();
 }
 
 void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)

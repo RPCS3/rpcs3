@@ -294,13 +294,12 @@ bool main_window::OnMissingFw()
 	const QString message = tr("Commercial games require the firmware (PS3UPDAT.PUP file) to be installed."
 				"\n<br>For information about how to obtain the required firmware read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
 
-	QMessageBox* mb = new QMessageBox(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
-	mb->deleteLater();
-	mb->setTextFormat(Qt::RichText);
+	QMessageBox mb(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
+	mb.setTextFormat(Qt::RichText);
 
-	mb->button(QMessageBox::Ok)->setText(tr("Locate PS3UPDAT.PUP"));
+	mb.button(QMessageBox::Ok)->setText(tr("Locate PS3UPDAT.PUP"));
 
-	if (mb->exec() == QMessageBox::Ok)
+	if (mb.exec() == QMessageBox::Ok)
 	{
 		InstallPup();
 		return true;
@@ -2457,12 +2456,9 @@ void main_window::CreateConnects()
 		m_game_list_frame->Refresh(true);
 	});
 
-	connect(m_category_visible_act_group, &QActionGroup::triggered, this, [this](QAction* act)
+	const auto get_cats = [this](QAction* act, int& id) -> QStringList
 	{
 		QStringList categories;
-		int id = 0;
-		const bool checked = act->isChecked();
-
 		if      (act == ui->showCatHDDGameAct)    { categories += cat::cat_hdd_game;  id = Category::HDD_Game;    }
 		else if (act == ui->showCatDiscGameAct)   { categories += cat::cat_disc_game; id = Category::Disc_Game;   }
 		else if (act == ui->showCatPS1GamesAct)   { categories += cat::cat_ps1_game;  id = Category::PS1_Game;    }
@@ -2473,13 +2469,47 @@ void main_window::CreateConnects()
 		else if (act == ui->showCatGameDataAct)   { categories += cat::data;          id = Category::Data;        }
 		else if (act == ui->showCatUnknownAct)    { categories += cat::cat_unknown;   id = Category::Unknown_Cat; }
 		else if (act == ui->showCatOtherAct)      { categories += cat::others;        id = Category::Others;      }
-		else gui_log.warning("categoryVisibleActGroup: category action not found");
+		else { gui_log.warning("categoryVisibleActGroup: category action not found"); }
+		return categories;
+	};
+
+	connect(m_category_visible_act_group, &QActionGroup::triggered, this, [this, get_cats](QAction* act)
+	{
+		int id = 0;
+		const QStringList categories = get_cats(act, id);
 
 		if (!categories.isEmpty())
 		{
+			const bool checked = act->isChecked();
 			m_game_list_frame->ToggleCategoryFilter(categories, checked);
 			m_gui_settings->SetCategoryVisibility(id, checked);
 		}
+	});
+	
+	connect(ui->menuGame_Categories, &QMenu::aboutToShow, ui->menuGame_Categories, [this, get_cats]()
+	{
+		const auto set_cat_count = [&](QAction* act, const QString& text)
+		{
+			int count = 0;
+			int id = 0; // Unused
+			const QStringList categories = get_cats(act, id);
+			for (const game_info& game : m_game_list_frame->GetGameInfo())
+			{
+				if (game && categories.contains(qstr(game->info.category))) count++;
+			}
+			act->setText(QString("%0 (%1)").arg(text).arg(count));
+		};
+
+		set_cat_count(ui->showCatHDDGameAct, tr("HDD Games"));
+		set_cat_count(ui->showCatDiscGameAct, tr("Disc Games"));
+		set_cat_count(ui->showCatPS1GamesAct, tr("PS1 Games"));
+		set_cat_count(ui->showCatPS2GamesAct, tr("PS2 Games"));
+		set_cat_count(ui->showCatPSPGamesAct, tr("PSP Games"));
+		set_cat_count(ui->showCatHomeAct, tr("Home"));
+		set_cat_count(ui->showCatAudioVideoAct, tr("Audio/Video"));
+		set_cat_count(ui->showCatGameDataAct, tr("Game Data"));
+		set_cat_count(ui->showCatUnknownAct, tr("Unknown"));
+		set_cat_count(ui->showCatOtherAct, tr("Other"));
 	});
 
 	connect(ui->updateAct, &QAction::triggered, this, [this]()

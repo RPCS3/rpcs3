@@ -1,5 +1,7 @@
 #pragma once
 
+void abort_lv2_watchdog();
+
 error_code _sys_game_watchdog_start(u32 timeout);
 error_code _sys_game_watchdog_stop();
 error_code _sys_game_watchdog_clear();

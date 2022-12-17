@@ -583,6 +583,7 @@ namespace rsx
 			}
 
 			data.flushed = true;
+			update_cache_tag();
 		}
 
 

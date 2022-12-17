@@ -70,12 +70,12 @@ namespace gl
 			if (vram_texture && !managed_texture && get_protection() == utils::protection::no)
 			{
 				// In-place image swap, still locked. Likely a color buffer that got rebound as depth buffer or vice-versa.
-				gl::as_rtt(vram_texture)->release();
+				gl::as_rtt(vram_texture)->on_swap_out();
 
 				if (!managed)
 				{
 					// Incoming is also an external resource, reference it immediately
-					gl::as_rtt(image)->add_ref();
+					gl::as_rtt(image)->on_swap_in(is_locked());
 				}
 			}
 
@@ -383,26 +383,6 @@ namespace gl
 			return format;
 		}
 
-		bool is_flushed() const
-		{
-			return flushed;
-		}
-
-		bool is_synchronized() const
-		{
-			return synchronized;
-		}
-
-		void set_flushed(bool state)
-		{
-			flushed = state;
-		}
-
-		bool is_empty() const
-		{
-			return vram_texture == nullptr;
-		}
-
 		gl::texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
 			return vram_texture->get_view(remap_encoding, remap);
@@ -413,7 +393,7 @@ namespace gl
 			return managed_texture.get();
 		}
 
-		gl::render_target* get_render_target()
+		gl::render_target* get_render_target() const
 		{
 			return gl::as_rtt(vram_texture);
 		}

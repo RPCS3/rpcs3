@@ -13,6 +13,7 @@ namespace rsx
 		s32k, ///< signed 16bits int
 		cmp, ///< compressed aka X11G11Z10 and always 1. W.
 		ub256, ///< unsigned byte interpreted as between 0 and 255.
+		invalid,
 	};
 
 	vertex_base_type to_vertex_base_type(u8 in);
@@ -21,6 +22,7 @@ namespace rsx
 	{
 		u32 = 0, // CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32
 		u16 = 1, // CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16
+		invalid,
 	};
 
 	enum class primitive_type : u8
@@ -48,6 +50,7 @@ namespace rsx
 		surfaces_a_b,
 		surfaces_a_b_c,
 		surfaces_a_b_c_d,
+		invalid,
 	};
 
 	surface_target to_surface_target(u8 in);
@@ -56,6 +59,7 @@ namespace rsx
 	{
 		z16,   // typeless 16 bits depth
 		z24s8, // typeless 24 bits depth + 8 bits stencil
+		invalid,
 	};
 
 	enum class surface_depth_format2 : u8
@@ -64,6 +68,7 @@ namespace rsx
 		z24s8_uint,  // unsigned 24 bits depth + 8 bits stencil
 		z16_float,   // floating point 16 bits depth
 		z24s8_float, // floating point 24 bits depth + 8 bits stencil
+		invalid,
 	};
 
 	surface_depth_format to_surface_depth_format(u8 in);
@@ -94,6 +99,7 @@ namespace rsx
 		diagonal_centered_2_samples,
 		square_centered_4_samples,
 		square_rotated_4_samples,
+		invalid,
 	};
 
 	surface_antialiasing to_surface_antialiasing(u8 in);
@@ -114,6 +120,7 @@ namespace rsx
 		x8b8g8r8_z8b8g8r8,
 		x8b8g8r8_o8b8g8r8,
 		a8b8g8r8,
+		invalid,
 	};
 
 	surface_color_format to_surface_color_format(u8 in);
@@ -121,7 +128,8 @@ namespace rsx
 	enum class window_origin : u8
 	{
 		top,
-		bottom
+		bottom,
+		invalid,
 	};
 
 	window_origin to_window_origin(u8 in);
@@ -129,7 +137,8 @@ namespace rsx
 	enum class window_pixel_center : u8
 	{
 		half,
-		integer
+		integer,
+		invalid,
 	};
 
 	window_pixel_center to_window_pixel_center(u8 in);
@@ -143,7 +152,8 @@ namespace rsx
 		greater,
 		not_equal,
 		greater_or_equal,
-		always
+		always,
+		invalid,
 	};
 
 	comparison_function to_comparison_function(u16 in);
@@ -155,7 +165,8 @@ namespace rsx
 		exponential2,
 		exponential_abs,
 		exponential2_abs,
-		linear_abs
+		linear_abs,
+		invalid,
 	};
 
 	fog_mode to_fog_mode(u32 in);
@@ -169,6 +180,7 @@ namespace rsx
 		texture_dimension_2d = 1,
 		texture_dimension_cubemap = 2,
 		texture_dimension_3d = 3,
+		invalid,
 	};
 
 	enum class texture_dimension : u8
@@ -176,6 +188,7 @@ namespace rsx
 		dimension1d,
 		dimension2d,
 		dimension3d,
+		invalid,
 	};
 
 	texture_dimension to_texture_dimension(u8 in);
@@ -190,6 +203,7 @@ namespace rsx
 		mirror_once_clamp_to_edge,
 		mirror_once_border,
 		mirror_once_clamp,
+		invalid,
 	};
 
 	texture_wrap_mode to_texture_wrap_mode(u8 in);
@@ -204,6 +218,7 @@ namespace rsx
 		x10,
 		x12,
 		x16,
+		invalid,
 	};
 
 	texture_max_anisotropy to_texture_max_anisotropy(u8 in);
@@ -217,6 +232,7 @@ namespace rsx
 		nearest_linear, ///< no filtering, linear mix between closest mipmap levels
 		linear_linear, ///< linear filtering, linear mix between closest mipmap levels
 		convolution_min, ///< Unknown mode but looks close to linear_linear
+		invalid,
 	};
 
 	texture_minify_filter to_texture_minify_filter(u8 in);
@@ -226,6 +242,7 @@ namespace rsx
 		nearest, ///< no filtering
 		linear, ///< linear filtering
 		convolution_mag, ///< Unknown mode but looks close to linear
+		invalid,
 	};
 
 	texture_magnify_filter to_texture_magnify_filter(u8 in);
@@ -240,6 +257,7 @@ namespace rsx
 		invert,
 		incr_wrap,
 		decr_wrap,
+		invalid,
 	};
 
 	stencil_op to_stencil_op(u16 in);
@@ -249,11 +267,12 @@ namespace rsx
 		add,
 		min,
 		max,
-		substract,
-		reverse_substract,
-		reverse_substract_signed,
+		subtract,
+		reverse_subtract,
+		reverse_subtract_signed,
 		add_signed,
 		reverse_add_signed,
+		invalid,
 	};
 
 	blend_equation to_blend_equation(u16 in);
@@ -275,6 +294,7 @@ namespace rsx
 		one_minus_constant_color,
 		constant_alpha,
 		one_minus_constant_alpha,
+		invalid,
 	};
 
 	blend_factor to_blend_factor(u16 in);
@@ -297,6 +317,7 @@ namespace rsx
 		logic_or_inverted,
 		logic_nand,
 		logic_set,
+		invalid,
 	};
 
 	logic_op to_logic_op(u16 in);
@@ -304,7 +325,8 @@ namespace rsx
 	enum class front_face : u8
 	{
 		cw, /// clockwise
-		ccw /// counter clockwise
+		ccw, /// counter clockwise
+		invalid,
 	};
 
 	front_face to_front_face(u16 in);
@@ -314,6 +336,7 @@ namespace rsx
 		front = 0x0404, // CELL_GCM_FRONT
 		back = 0x0405, // CELL_GCM_BACK
 		front_and_back = 0x0408, // CELL_GCM_FRONT_AND_BACK
+		invalid,
 	};
 
 	enum class user_clip_plane_op : u8
@@ -321,6 +344,7 @@ namespace rsx
 		disable,
 		less_than,
 		greater_or_equal,
+		invalid,
 	};
 
 	user_clip_plane_op to_user_clip_plane_op(u8 in);
@@ -329,6 +353,7 @@ namespace rsx
 	{
 		smooth,
 		flat,
+		invalid,
 	};
 
 	shading_mode to_shading_mode(u32 in);
@@ -338,6 +363,7 @@ namespace rsx
 		point,
 		line,
 		fill,
+		invalid,
 	};
 
 	polygon_mode to_polygon_mode(u32 in);
@@ -348,6 +374,7 @@ namespace rsx
 		{
 			center,
 			corner,
+			invalid,
 		};
 
 		transfer_origin to_transfer_origin(u8 in);
@@ -356,6 +383,7 @@ namespace rsx
 		{
 			zoh,
 			foh,
+			invalid,
 		};
 
 		transfer_interpolator to_transfer_interpolator(u8 in);
@@ -398,7 +426,7 @@ namespace rsx
 			r5g6b5,
 			a8r8g8b8,
 			y32,
-			invalid
+			invalid,
 		};
 
 		transfer_destination_format to_transfer_destination_format(u8 in);
@@ -407,6 +435,7 @@ namespace rsx
 		{
 			surface2d,
 			swizzle2d,
+			invalid,
 		};
 
 		context_surface to_context_surface(u32 in);
@@ -416,6 +445,7 @@ namespace rsx
 			to_memory_get_report,
 			report_location_main,
 			memory_host_buffer,
+			invalid,
 		};
 
 		context_dma to_context_dma(u32 in);

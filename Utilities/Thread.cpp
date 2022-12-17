@@ -100,23 +100,17 @@ extern thread_local std::string(*g_tls_log_prefix)();
 
 std::string dump_useful_thread_info()
 {
-	thread_local volatile bool guard = false;
-
 	std::string result;
-
-	// In case the dumping function was the cause for the exception/access violation
-	// Avoid recursion
-	if (std::exchange(guard, true))
-	{
-		return result;
-	}
 
 	if (auto cpu = get_current_cpu_thread())
 	{
-		cpu->dump_all(result);
+		// Wrap it to disable some internal exceptions when printing (not thrown on main thread)
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			cpu->dump_all(result);
+		});
 	}
 
-	guard = false;
 	return result;
 }
 

@@ -788,11 +788,6 @@ namespace vk
 		return !!(aspect() & VK_IMAGE_ASPECT_DEPTH_BIT);
 	}
 
-	void render_target::release_ref(vk::viewable_image* t) const
-	{
-		static_cast<vk::render_target*>(t)->release();
-	}
-
 	bool render_target::matches_dimensions(u16 _width, u16 _height) const
 	{
 		// Use forward scaling to account for rounding and clamping errors

@@ -16,7 +16,7 @@ std::string utf16_to_utf8(std::u16string_view src);
 template <typename D, typename T>
 inline void strcpy_trunc(D& dst, const T& src)
 {
-	const usz count = std::size(src) >= std::size(dst) ? std::size(dst) - 1 : std::size(src);
+	const usz count = std::size(src) >= std::size(dst) ? std::max<usz>(std::size(dst), 1) - 1 : std::size(src);
 	std::memcpy(std::data(dst), std::data(src), count);
 	std::memset(std::data(dst) + count, 0, std::size(dst) - count);
 }
