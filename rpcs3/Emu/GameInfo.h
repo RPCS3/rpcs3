@@ -20,6 +20,7 @@ struct GameInfo
 	u32 parental_lvl = 0;
 	u32 sound_format = 0;
 	u32 resolution = 0;
+	usz size_on_disk = umax;
 
 	GameInfo()
 	{

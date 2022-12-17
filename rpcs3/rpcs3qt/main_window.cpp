@@ -294,13 +294,12 @@ bool main_window::OnMissingFw()
 	const QString message = tr("Commercial games require the firmware (PS3UPDAT.PUP file) to be installed."
 				"\n<br>For information about how to obtain the required firmware read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
 
-	QMessageBox* mb = new QMessageBox(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
-	mb->deleteLater();
-	mb->setTextFormat(Qt::RichText);
+	QMessageBox mb(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
+	mb.setTextFormat(Qt::RichText);
 
-	mb->button(QMessageBox::Ok)->setText(tr("Locate PS3UPDAT.PUP"));
+	mb.button(QMessageBox::Ok)->setText(tr("Locate PS3UPDAT.PUP"));
 
-	if (mb->exec() == QMessageBox::Ok)
+	if (mb.exec() == QMessageBox::Ok)
 	{
 		InstallPup();
 		return true;
