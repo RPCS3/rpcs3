@@ -1,3 +1,4 @@
+#include "barriers.h"
 #include "buffer_object.h"
 #include "image.h"
 #include "sampler.h"
@@ -187,6 +188,10 @@ namespace vk
 			// Zero-initialize the allocated VRAM
 			const u64 zero_length = init_mem ? buf->size() : utils::align(min_required_size, 4);
 			vkCmdFillBuffer(cmd, buf->value, 0, zero_length, 0);
+
+			insert_buffer_memory_barrier(cmd, buf->value, 0, zero_length,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT);
 		}
 
 		return buf;
