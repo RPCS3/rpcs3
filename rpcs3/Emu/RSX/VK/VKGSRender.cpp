@@ -158,11 +158,11 @@ namespace vk
 			[[fallthrough]];
 		case rsx::blend_equation::add:
 			return VK_BLEND_OP_ADD;
-		case rsx::blend_equation::substract: return VK_BLEND_OP_SUBTRACT;
-		case rsx::blend_equation::reverse_substract_signed:
+		case rsx::blend_equation::subtract: return VK_BLEND_OP_SUBTRACT;
+		case rsx::blend_equation::reverse_subtract_signed:
 			rsx_log.trace("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 			[[fallthrough]];
-		case rsx::blend_equation::reverse_substract: return VK_BLEND_OP_REVERSE_SUBTRACT;
+		case rsx::blend_equation::reverse_subtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
 		default:

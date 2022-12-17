@@ -158,6 +158,7 @@ private:
 	QSet<QString> m_serials;
 	QMutex m_mutex_cat;
 	lf_queue<game_info> m_games;
+	QFutureWatcher<void> m_size_watcher;
 	QFutureWatcher<void> m_refresh_watcher;
 	QFutureWatcher<movie_item*> m_repaint_watcher;
 	QSet<QString> m_hidden_list;
