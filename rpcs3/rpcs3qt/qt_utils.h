@@ -124,5 +124,8 @@ namespace gui
 
 		// Sort a QTreeWidget (currently only column 0)
 		void sort_tree(QTreeWidget* tree, Qt::SortOrder sort_order, bool recursive);
+
+		// Convert an arbitrary count of bytes to a readable format using global units (KB, MB...)
+		QString format_byte_size(usz size);
 	} // utils
 } // gui
