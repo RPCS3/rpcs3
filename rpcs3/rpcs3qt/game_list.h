@@ -12,7 +12,7 @@ class movie_item;
 /* Having the icons associated with the game info simplifies logic internally */
 struct gui_game_info
 {
-	GameInfo info;
+	GameInfo info{};
 	QString localized_category;
 	compat::status compat;
 	QPixmap icon;
