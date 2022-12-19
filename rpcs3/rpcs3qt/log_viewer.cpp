@@ -41,6 +41,9 @@ log_viewer::log_viewer(std::shared_ptr<gui_settings> gui_settings)
 	resize(QSize(620, 395));
 
 	m_path_last = m_gui_settings->GetValue(gui::fd_log_viewer).toString();
+	m_show_timestamps = m_gui_settings->GetValue(gui::lv_show_timestamps).toBool();
+	m_show_threads = m_gui_settings->GetValue(gui::lv_show_threads).toBool();
+	m_log_levels = std::bitset<32>(m_gui_settings->GetValue(gui::lv_log_levels).toUInt());
 
 	m_log_text = new QPlainTextEdit(this);
 	m_log_text->setReadOnly(true);
@@ -99,6 +102,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 		connect(act, &QAction::triggered, this, [this, logLevel](bool checked)
 		{
 			m_log_levels.set(static_cast<u32>(logLevel), checked);
+			m_gui_settings->SetValue(gui::lv_log_levels, ::narrow<u32>(m_log_levels.to_ulong()));
 			filter_log();
 		});
 	};
@@ -169,12 +173,14 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	connect(threads, &QAction::toggled, this, [this](bool checked)
 	{
 		m_show_threads = checked;
+		m_gui_settings->SetValue(gui::lv_show_threads, m_show_threads);
 		filter_log();
 	});
 
 	connect(timestamps, &QAction::toggled, this, [this](bool checked)
 	{
 		m_show_timestamps = checked;
+		m_gui_settings->SetValue(gui::lv_show_timestamps, m_show_timestamps);
 		filter_log();
 	});
 
@@ -353,11 +359,9 @@ void log_viewer::filter_log()
 			set_text_and_keep_position(result);
 			return;
 		}
-		else
-		{
-			QMessageBox::information(this, tr("Ooops!"), tr("Cannot find any game boot!"));
-			// Pass through to regular log filter
-		}
+
+		QMessageBox::information(this, tr("Ooops!"), tr("Cannot find any game boot!"));
+		// Pass through to regular log filter
 	}
 
 	if (!stream.seek(0))
