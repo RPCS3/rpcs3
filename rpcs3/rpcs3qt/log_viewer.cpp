@@ -224,9 +224,8 @@ void log_viewer::show_log()
 		m_gui_settings->SetValue(gui::fd_log_viewer, m_path_last);
 
 		QTextStream stream(&file);
-		QString text = stream.readAll();
-		text.replace('\0', '0');
-		set_text_and_keep_position(text);
+		m_full_log = stream.readAll();
+		m_full_log.replace('\0', '0');
 		file.close();
 	}
 	else
@@ -252,12 +251,8 @@ void log_viewer::filter_log()
 {
 	if (m_full_log.isEmpty())
 	{
-		m_full_log = m_log_text->toPlainText();
-
-		if (m_full_log.isEmpty())
-		{
-			return;
-		}
+		set_text_and_keep_position(m_full_log);
+		return;
 	}
 
 	m_log_text->setPlainText(tr("Filtering..."));
