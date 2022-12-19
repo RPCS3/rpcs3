@@ -226,7 +226,7 @@ void log_viewer::show_log()
 		QTextStream stream(&file);
 		QString text = stream.readAll();
 		text.replace('\0', '0');
-		m_log_text->setPlainText(text);
+		set_text_and_keep_position(text);
 		file.close();
 	}
 	else
@@ -240,6 +240,9 @@ void log_viewer::show_log()
 
 void log_viewer::set_text_and_keep_position(const QString& text)
 {
+	m_log_text->setPlainText(tr("Pasting..."));
+	QApplication::processEvents();
+
 	const int pos = m_log_text->verticalScrollBar()->value();
 	m_log_text->setPlainText(text);
 	m_log_text->verticalScrollBar()->setValue(pos);
@@ -256,6 +259,8 @@ void log_viewer::filter_log()
 			return;
 		}
 	}
+
+	m_log_text->setPlainText(tr("Filtering..."));
 
 	std::vector<QString> excluded_log_levels;
 	if (!m_log_levels.test(static_cast<u32>(logs::level::fatal)))   excluded_log_levels.push_back("·F ");
