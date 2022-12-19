@@ -801,12 +801,16 @@ namespace rsx
 
 		void set_surface_format(thread* rsx, u32 reg, u32 arg)
 		{
-			// Special consideration - antialiasing control can affect ROP state
-			const auto aa_mask = (0xF << 12);
-			if ((arg & aa_mask) != (method_registers.register_previous_value & aa_mask))
+			if (reg == NV4097_SET_SURFACE_FORMAT)
 			{
-				// Antialias control has changed, update ROP parameters
-				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+				const auto current = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(arg);
+				const auto previous = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(method_registers.register_previous_value);
+
+				if (current.antialias() != previous.antialias() ||                               // Antialias control has changed, update ROP parameters
+					current.is_integer_color_format() != previous.is_integer_color_format())     // The type of color format also requires ROP control update
+				{
+					rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+				}
 			}
 
 			set_surface_dirty_bit(rsx, reg, arg);
