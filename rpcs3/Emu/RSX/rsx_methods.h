@@ -454,6 +454,12 @@ namespace rsx
 			return decoded_type<opcode>(register_value);
 		}
 
+		template<u32 opcode>
+		decoded_type<opcode> decode(u32 register_value) const
+		{
+			return decoded_type<opcode>(register_value);
+		}
+
 		rsx_state& operator=(const rsx_state& in)
 		{
 			registers = in.registers;

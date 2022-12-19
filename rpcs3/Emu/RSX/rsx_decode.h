@@ -3335,6 +3335,11 @@ struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 		{
 			return bf_decoder<24, 8>(value);
 		}
+
+		bool is_integer_color_format() const
+		{
+			return color_fmt() < surface_color_format::w16z16y16x16;
+		}
 	};
 
 	static std::string dump(const decoded_type& decoded)
