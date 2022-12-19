@@ -114,12 +114,12 @@ namespace rsx
 		a8r8g8b8,
 		b8,
 		g8b8,
-		w16z16y16x16,
-		w32z32y32x32,
-		x32,
 		x8b8g8r8_z8b8g8r8,
 		x8b8g8r8_o8b8g8r8,
 		a8b8g8r8,
+		w16z16y16x16,
+		w32z32y32x32,
+		x32,
 		invalid,
 	};
 
