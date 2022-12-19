@@ -115,6 +115,7 @@ namespace gui
 	const QString localization = "Localization";
 	const QString pad_settings = "PadSettings";
 	const QString config       = "Config";
+	const QString log_viewer   = "LogViewer";
 	
 	const QString update_on   = "true";
 	const QString update_off  = "false";
@@ -252,6 +253,10 @@ namespace gui
 
 	const gui_save pads_show_emulated = gui_save(pad_settings, "show_emulated_values", false);
 	const gui_save pads_geometry      = gui_save(pad_settings, "geometry",             QByteArray());
+
+	const gui_save lv_show_timestamps = gui_save(log_viewer, "show_timestamps", true);
+	const gui_save lv_show_threads    = gui_save(log_viewer, "show_threads",    true);
+	const gui_save lv_log_levels      = gui_save(log_viewer, "log_levels",      0b11111111u);
 }
 
 /** Class for GUI settings..
