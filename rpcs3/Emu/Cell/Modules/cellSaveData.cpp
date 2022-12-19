@@ -1830,7 +1830,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (file == all_files.cend() || file->second.size() <= fileSet->fileOffset)
 			{
-				cellSaveData.error("Failed to open file %s%s", dir_path, file_path);
+				cellSaveData.error("Failed to open file %s%s (size=%d, fileOffset=%d)", dir_path, file_path, file->second.size(), fileSet->fileOffset);
 				savedata_result = CELL_SAVEDATA_ERROR_FAILURE;
 				break;
 			}
