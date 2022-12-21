@@ -31,6 +31,7 @@
 #include "camera_settings_dialog.h"
 #include "ipc_settings_dialog.h"
 #include "shortcut_utils.h"
+#include "config_checker.h"
 
 #include <thread>
 #include <charconv>
@@ -2373,6 +2374,29 @@ void main_window::CreateConnects()
 		log_viewer* viewer = new log_viewer(m_gui_settings);
 		viewer->show();
 		viewer->show_log();
+	});
+
+	connect(ui->toolsCheckConfigAct, &QAction::triggered, this, [this]
+	{
+		const QString path_last_cfg = m_gui_settings->GetValue(gui::fd_cfg_check).toString();
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select rpcs3.log or config.yml"), path_last_cfg, tr("Log files (*.log);;Config Files (*.yml);;All files (*.*)"));
+		if (file_path.isEmpty())
+		{
+			// Aborted
+			return;
+		}
+
+		QFile file(file_path);
+		if (!file.exists() || !file.open(QIODevice::ReadOnly))
+		{
+			QMessageBox::warning(this, tr("Failed to open file"), tr("The file could not be opened:\n%0").arg(file_path));
+			return;
+		}
+
+		m_gui_settings->SetValue(gui::fd_cfg_check, QFileInfo(file_path).path());
+
+		config_checker* dlg = new config_checker(this, file.readAll(), file_path.endsWith(".log"));
+		dlg->exec();
 	});
 
 	connect(ui->toolskernel_explorerAct, &QAction::triggered, this, [this]

@@ -11,6 +11,7 @@ set(SRC_FILES
     cg_disasm_window.cpp
     cheat_manager.cpp
     config_adapter.cpp
+    config_checker.cpp
     curl_handle.cpp
     custom_dialog.cpp
     custom_table_widget_item.cpp

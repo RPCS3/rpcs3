@@ -80,7 +80,13 @@ namespace cfg
 		// Convert to string (optional)
 		virtual std::string to_string() const
 		{
-			return{};
+			return {};
+		}
+
+		// Convert default to string (optional)
+		virtual std::string def_to_string() const
+		{
+			return {};
 		}
 
 		// Try to convert from string (optional)
@@ -89,7 +95,7 @@ namespace cfg
 		// Get string list (optional)
 		virtual std::vector<std::string> to_list() const
 		{
-			return{};
+			return {};
 		}
 
 		// Set multiple values. Implementation-specific, optional.
@@ -163,6 +169,11 @@ namespace cfg
 			return m_value ? "true" : "false";
 		}
 
+		std::string def_to_string() const override
+		{
+			return def ? "true" : "false";
+		}
+
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			if (value.size() != 4 && value.size() != 5)
@@ -232,6 +243,13 @@ namespace cfg
 			return result; // TODO: ???
 		}
 
+		std::string def_to_string() const override
+		{
+			std::string result;
+			fmt_class_string<T>::format(result, fmt_unveil<T>::get(def));
+			return result; // TODO: ???
+		}
+
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			u64 result;
@@ -295,6 +313,11 @@ namespace cfg
 		std::string to_string() const override
 		{
 			return std::to_string(m_value);
+		}
+
+		std::string def_to_string() const override
+		{
+			return std::to_string(def);
 		}
 
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
@@ -361,6 +384,11 @@ namespace cfg
 		std::string to_string() const override
 		{
 			return std::to_string(m_value);
+		}
+
+		std::string def_to_string() const override
+		{
+			return std::to_string(def);
 		}
 
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
@@ -437,6 +465,11 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
+		std::string def_to_string() const override
+		{
+			return std::to_string(def);
+		}
+
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			u64 result;
@@ -508,6 +541,11 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
+		std::string def_to_string() const override
+		{
+			return def;
+		}
+
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override
 		{
 			m_value = std::string(value);
@@ -541,7 +579,7 @@ namespace cfg
 
 		std::vector<std::string> to_list() const override
 		{
-			return{ m_set.begin(), m_set.end() };
+			return { m_set.begin(), m_set.end() };
 		}
 
 		bool from_list(std::vector<std::string>&& list) override
