@@ -145,6 +145,7 @@ namespace gui
 	const gui_save fd_ext_mself    = gui_save(main_window, "lastExplorePathExMSELF",  "");
 	const gui_save fd_ext_tar      = gui_save(main_window, "lastExplorePathExTAR",  "");
 	const gui_save fd_insert_disc  = gui_save(main_window, "lastExplorePathDISC", "");
+	const gui_save fd_cfg_check    = gui_save(main_window, "lastExplorePathCfgChk", "");
 
 	const gui_save mw_debugger         = gui_save(main_window, "debuggerVisible",  false);
 	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    true);

@@ -4,6 +4,7 @@
 #include "gui_settings.h"
 #include "syntax_highlighter.h"
 #include "find_dialog.h"
+#include "config_checker.h"
 
 #include <QApplication>
 #include <QMenu>
@@ -21,13 +22,6 @@
 #include <map>
 
 LOG_CHANNEL(gui_log, "GUI");
-
-[[maybe_unused]] constexpr auto qstr = QString::fromStdString;
-
-inline std::string sstr(const QString& _in)
-{
-	return _in.toStdString();
-}
 
 log_viewer::log_viewer(std::shared_ptr<gui_settings> gui_settings)
     : m_gui_settings(std::move(gui_settings))
@@ -70,6 +64,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	QAction* open   = new QAction(tr("&Open log file"));
 	QAction* save   = new QAction(tr("&Save filtered log"));
 	QAction* filter = new QAction(tr("&Filter log"));
+	QAction* config = new QAction(tr("&Check config"));
 
 	QAction* timestamps = new QAction(tr("&Show Timestamps"));
 	timestamps->setCheckable(true);
@@ -119,6 +114,8 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	menu.addSeparator();
 	menu.addAction(save);
 	menu.addSeparator();
+	menu.addAction(config);
+	menu.addSeparator();
 	menu.addAction(filter);
 	menu.addSeparator();
 	menu.addAction(timestamps);
@@ -156,12 +153,18 @@ void log_viewer::show_context_menu(const QPoint& pos)
 		{
 			log_file.write(m_log_text->toPlainText().toUtf8());
 			log_file.close();
-			gui_log.success("Exported filtered log to file '%s'", sstr(file_path));
+			gui_log.success("Exported filtered log to file '%s'", file_path.toStdString());
 		}
 		else
 		{
-			gui_log.error("Failed to export filtered log to file '%s'", sstr(file_path));
+			gui_log.error("Failed to export filtered log to file '%s'", file_path.toStdString());
 		}
+	});
+
+	connect(config, &QAction::triggered, this, [this]()
+	{
+		config_checker* dlg = new config_checker(this, m_full_log, true);
+		dlg->exec();
 	});
 
 	connect(filter, &QAction::triggered, this, [this]()
@@ -230,7 +233,7 @@ void log_viewer::show_log()
 	}
 	else
 	{
-		gui_log.error("log_viewer: Failed to open %s", sstr(m_path_last));
+		gui_log.error("log_viewer: Failed to open %s", m_path_last.toStdString());
 		m_log_text->setPlainText(tr("Failed to open '%0'").arg(m_path_last));
 	}
 

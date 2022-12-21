@@ -268,6 +268,7 @@
      <string>Utilities</string>
     </property>
     <addaction name="actionLog_Viewer"/>
+    <addaction name="toolsCheckConfigAct"/>
     <addaction name="toolsCgDisasmAct"/>
     <addaction name="toolskernel_explorerAct"/>
     <addaction name="toolsmemory_viewerAct"/>
@@ -1231,6 +1232,11 @@
    </property>
    <property name="text">
     <string>Insert Disc</string>
+   </property>
+  </action>
+  <action name="toolsCheckConfigAct">
+   <property name="text">
+    <string>Check Config</string>
    </property>
   </action>
  </widget>
