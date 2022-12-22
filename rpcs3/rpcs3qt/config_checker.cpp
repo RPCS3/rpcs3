@@ -11,7 +11,7 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-config_checker::config_checker(QWidget* parent, const QString& path, bool is_log) : QDialog(parent)
+config_checker::config_checker(QWidget* parent, const QString& content, bool is_log) : QDialog(parent)
 {
 	setObjectName("config_checker");
 	setAttribute(Qt::WA_DeleteOnClose);
@@ -22,7 +22,7 @@ config_checker::config_checker(QWidget* parent, const QString& path, bool is_log
 
 	QString result;
 
-	if (check_config(path, result, is_log))
+	if (check_config(content, result, is_log))
 	{
 		setWindowTitle(tr("Interesting!"));
 
