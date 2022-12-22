@@ -66,8 +66,7 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 		}
 	}
 
-	m_icon_loader = new QFutureWatcher<thumbnail>(this);
-	connect(m_icon_loader, &QFutureWatcher<QIcon>::resultReadyAt, this, &screenshot_manager_dialog::update_icon);
+	connect(&m_icon_loader, &QFutureWatcher<QIcon>::resultReadyAt, this, &screenshot_manager_dialog::update_icon);
 
 	connect(m_grid, &QListWidget::itemDoubleClicked, this, &screenshot_manager_dialog::show_preview);
 	connect(m_grid->verticalScrollBar(), &QScrollBar::valueChanged, this, &screenshot_manager_dialog::update_icons);
@@ -82,8 +81,7 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 
 screenshot_manager_dialog::~screenshot_manager_dialog()
 {
-	m_icon_loader->cancel();
-	m_icon_loader->waitForFinished();
+	gui::utils::stop_future_watcher(m_icon_loader, true);
 }
 
 void screenshot_manager_dialog::show_preview(QListWidgetItem* item)
@@ -101,7 +99,7 @@ void screenshot_manager_dialog::show_preview(QListWidgetItem* item)
 
 void screenshot_manager_dialog::update_icon(int index) const
 {
-	const thumbnail tn = m_icon_loader->resultAt(index);
+	const thumbnail tn = m_icon_loader.resultAt(index);
 
 	if (QListWidgetItem* item = m_grid->item(tn.index))
 	{
@@ -144,11 +142,7 @@ void screenshot_manager_dialog::update_icons(int value)
 		}
 	}
 
-	if (m_icon_loader->isRunning())
-	{
-		m_icon_loader->cancel();
-		m_icon_loader->waitForFinished();
-	}
+	gui::utils::stop_future_watcher(m_icon_loader, true);
 
 	const std::function<thumbnail(thumbnail)> load = [icon_size = m_icon_size](thumbnail tn) -> thumbnail
 	{
@@ -156,7 +150,7 @@ void screenshot_manager_dialog::update_icons(int value)
 		return tn;
 	};
 
-	m_icon_loader->setFuture(QtConcurrent::mapped(thumbnails_to_load, load));
+	m_icon_loader.setFuture(QtConcurrent::mapped(thumbnails_to_load, load));
 }
 
 void screenshot_manager_dialog::resizeEvent(QResizeEvent* event)

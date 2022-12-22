@@ -11,6 +11,7 @@
 #include <QHeaderView>
 #include <QTreeWidgetItem>
 #include <QPainter>
+#include <QFutureWatcher>
 
 #include <string>
 #include <map>
@@ -127,5 +128,18 @@ namespace gui
 
 		// Convert an arbitrary count of bytes to a readable format using global units (KB, MB...)
 		QString format_byte_size(usz size);
+
+		template <typename T>
+		void stop_future_watcher(QFutureWatcher<T>& watcher, bool cancel)
+		{
+			if (watcher.isRunning())
+			{
+				if (cancel)
+				{
+					watcher.cancel();
+				}
+				watcher.waitForFinished();
+			}
+		}
 	} // utils
 } // gui
