@@ -2379,11 +2379,21 @@ void main_window::CreateConnects()
 	connect(ui->toolsCheckConfigAct, &QAction::triggered, this, [this]
 	{
 		const QString path_last_cfg = m_gui_settings->GetValue(gui::fd_cfg_check).toString();
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select rpcs3.log or config.yml"), path_last_cfg, tr("Log files (*.log);;Config Files (*.yml);;All files (*.*)"));
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select rpcs3.log or config.yml"), path_last_cfg, tr("Log or Config files (*.log *.txt *.yml);;Log files (*.log);;Config Files (*.yml);;Text Files (*.txt);;All files (*.*)"));
 		if (file_path.isEmpty())
 		{
 			// Aborted
 			return;
+		}
+
+		const QFileInfo file_info(file_path);
+
+		if (file_info.isExecutable() || !(file_path.endsWith(".log") || file_path.endsWith(".txt") || file_path.endsWith(".yml")))
+		{
+			if (QMessageBox::question(this, tr("Weird file!"), tr("This file seems to have an unexpected type:\n%0\n\nCheck anyway?").arg(file_path)) != QMessageBox::Yes)
+			{
+				return;
+			}
 		}
 
 		QFile file(file_path);
@@ -2393,7 +2403,7 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		m_gui_settings->SetValue(gui::fd_cfg_check, QFileInfo(file_path).path());
+		m_gui_settings->SetValue(gui::fd_cfg_check, file_info.path());
 
 		config_checker* dlg = new config_checker(this, file.readAll(), file_path.endsWith(".log"));
 		dlg->exec();
