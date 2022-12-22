@@ -368,6 +368,8 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 trophy_manager_dialog::~trophy_manager_dialog()
 {
+	gui::utils::stop_future_watcher(m_game_repaint_watcher, true);
+	gui::utils::stop_future_watcher(m_trophy_repaint_watcher, true);
 }
 
 bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
@@ -559,11 +561,7 @@ void trophy_manager_dialog::ResizeGameIcons()
 	if (m_game_combo->count() <= 0)
 		return;
 
-	if (m_game_repaint_watcher.isRunning())
-	{
-		m_game_repaint_watcher.cancel();
-		m_game_repaint_watcher.waitForFinished();
-	}
+	gui::utils::stop_future_watcher(m_game_repaint_watcher, true);
 
 	QPixmap placeholder(m_game_icon_size);
 	placeholder.fill(Qt::transparent);
@@ -594,11 +592,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 	if (m_game_combo->count() <= 0)
 		return;
 
-	if (m_trophy_repaint_watcher.isRunning())
-	{
-		m_trophy_repaint_watcher.cancel();
-		m_trophy_repaint_watcher.waitForFinished();
-	}
+	gui::utils::stop_future_watcher(m_trophy_repaint_watcher, true);
 
 	const int db_pos = m_game_combo->currentData().toInt();
 	const qreal dpr = devicePixelRatioF();
@@ -825,15 +819,8 @@ void trophy_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
 
 void trophy_manager_dialog::StartTrophyLoadThreads()
 {
-	if (m_game_repaint_watcher.isRunning())
-	{
-		m_game_repaint_watcher.waitForFinished();
-	}
-
-	if (m_trophy_repaint_watcher.isRunning())
-	{
-		m_trophy_repaint_watcher.waitForFinished();
-	}
+	gui::utils::stop_future_watcher(m_game_repaint_watcher, false);
+	gui::utils::stop_future_watcher(m_trophy_repaint_watcher, false);
 
 	m_trophies_db.clear();
 
@@ -894,11 +881,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 
 void trophy_manager_dialog::PopulateGameTable()
 {
-	if (m_game_repaint_watcher.isRunning())
-	{
-		m_game_repaint_watcher.cancel();
-		m_game_repaint_watcher.waitForFinished();
-	}
+	gui::utils::stop_future_watcher(m_game_repaint_watcher, true);
 
 	m_game_table->setSortingEnabled(false); // Disable sorting before using setItem calls
 

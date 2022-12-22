@@ -44,7 +44,7 @@ private:
 
 	QListWidget* m_grid = nullptr;
 
-	QFutureWatcher<thumbnail>* m_icon_loader;
+	QFutureWatcher<thumbnail> m_icon_loader;
 
 	QSize m_icon_size;
 	QIcon m_placeholder;

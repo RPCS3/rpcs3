@@ -139,17 +139,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnRefreshFinished);
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
 	{
-		if (m_size_watcher.isRunning())
-		{
-			m_size_watcher.cancel();
-			m_size_watcher.waitForFinished();
-		}
-
-		if (m_repaint_watcher.isRunning())
-		{
-			m_repaint_watcher.cancel();
-			m_repaint_watcher.waitForFinished();
-		}
+		gui::utils::stop_future_watcher(m_size_watcher, true);
+		gui::utils::stop_future_watcher(m_repaint_watcher, true);
 
 		m_path_list.clear();
 		m_game_data.clear();
@@ -266,6 +257,10 @@ void game_list_frame::LoadSettings()
 
 game_list_frame::~game_list_frame()
 {
+	gui::utils::stop_future_watcher(m_size_watcher, true);
+	gui::utils::stop_future_watcher(m_repaint_watcher, true);
+	gui::utils::stop_future_watcher(m_refresh_watcher, true);
+
 	SaveSettings();
 }
 
@@ -434,26 +429,9 @@ std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
 
 void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 {
-	if (m_size_watcher.isRunning())
-	{
-		m_size_watcher.cancel();
-		m_size_watcher.waitForFinished();
-	}
-
-	if (m_repaint_watcher.isRunning())
-	{
-		m_repaint_watcher.cancel();
-		m_repaint_watcher.waitForFinished();
-	}
-
-	if (m_refresh_watcher.isRunning())
-	{
-		if (from_drive)
-		{
-			m_refresh_watcher.cancel();
-		}
-		m_refresh_watcher.waitForFinished();
-	}
+	gui::utils::stop_future_watcher(m_size_watcher, true);
+	gui::utils::stop_future_watcher(m_repaint_watcher, true);
+	gui::utils::stop_future_watcher(m_refresh_watcher, from_drive);
 
 	if (from_drive)
 	{
@@ -729,17 +707,8 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 void game_list_frame::OnRefreshFinished()
 {
-	if (m_size_watcher.isRunning())
-	{
-		m_size_watcher.cancel();
-		m_size_watcher.waitForFinished();
-	}
-
-	if (m_repaint_watcher.isRunning())
-	{
-		m_repaint_watcher.cancel();
-		m_repaint_watcher.waitForFinished();
-	}
+	gui::utils::stop_future_watcher(m_size_watcher, true);
+	gui::utils::stop_future_watcher(m_repaint_watcher, true);
 
 	for (auto&& g : m_games.pop_all())
 	{
@@ -2319,11 +2288,7 @@ void game_list_frame::ResizeIcons(const int& slider_pos)
 
 void game_list_frame::RepaintIcons(const bool& from_settings)
 {
-	if (m_repaint_watcher.isRunning())
-	{
-		m_repaint_watcher.cancel();
-		m_repaint_watcher.waitForFinished();
-	}
+	gui::utils::stop_future_watcher(m_repaint_watcher, true);
 
 	if (from_settings)
 	{
