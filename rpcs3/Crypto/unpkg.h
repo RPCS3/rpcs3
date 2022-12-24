@@ -6,12 +6,14 @@
 #include "Utilities/File.h"
 #include <sstream>
 #include <iomanip>
+#include <span>
 
 // Constants
-enum
+enum : u32
 {
 	PKG_HEADER_SIZE  = 0xC0, // sizeof(pkg_header) + sizeof(pkg_unk_checksum)
 	PKG_HEADER_SIZE2 = 0x280,
+	PKG_MAX_FILENAME_SIZE = 256,
 };
 
 enum : u16
@@ -317,14 +319,21 @@ public:
 		return m_bootable_file_path;
 	}
 
+	struct thread_key
+	{
+		const usz unique_num = umax;
+	};
+
 private:
 	bool read_header();
 	bool read_metadata();
 	bool read_param_sfo();
 	bool decrypt_data();
-	void archive_seek(const s64 new_offset, const fs::seek_mode damode = fs::seek_set);
-	u64 archive_read(void* data_ptr, const u64 num_bytes);
-	u64 decrypt(u64 offset, u64 size, const uchar* key);
+	void archive_seek(s64 new_offset, const fs::seek_mode damode = fs::seek_set);
+	u64 archive_read(void* data_ptr, u64 num_bytes);
+	std::span<const char> archive_read_block(u64 offset, void* data_ptr, u64 num_bytes);
+	std::span<const char> decrypt(u64 offset, u64 size, const uchar* key, thread_key thread_data_key = {0});
+	usz extract_worker(const std::string& dir, bool was_null, atomic_t<double>& sync, thread_key thread_data_key, atomic_t<usz>& entry_indexer, std::vector<PKGEntry>& entries);
 
 	const usz BUF_SIZE = 8192 * 1024; // 8 MB
 
@@ -333,7 +342,7 @@ private:
 	std::string m_path{};
 	std::string m_install_dir{};
 	fs::file m_file{};
-	std::unique_ptr<u128[]> m_buf{};
+	std::vector<std::unique_ptr<u128[]>> m_bufs{};
 	std::array<uchar, 16> m_dec_key{};
 
 	PKGHeader m_header{};
