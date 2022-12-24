@@ -396,7 +396,7 @@ error_code sys_timer_sleep(ppu_thread& ppu, u32 sleep_time)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_timer.warning("sys_timer_sleep(sleep_time=%d)", sleep_time);
+	sys_timer.trace("sys_timer_sleep(sleep_time=%d)", sleep_time);
 
 	return sys_timer_usleep(ppu, sleep_time * u64{1000000});
 }

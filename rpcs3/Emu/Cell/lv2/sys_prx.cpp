@@ -307,6 +307,13 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 
 	if (seg_count)
 	{
+		std::basic_string<bool> loaded_flags;
+
+		if (version >= 3)
+		{
+			ar(loaded_flags);
+		}
+
 		fs::file file{path.substr(0, path.size() - (offset ? fmt::format("_x%x", offset).size() : 0))};
 
 		if (file)
@@ -314,11 +321,16 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 			u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 			file = make_file_view(std::move(file), offset);
 			prx = ppu_load_prx(ppu_prx_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, path, 0, &ar);
+			prx->m_loaded_flags = std::move(loaded_flags);
 			
-			if (version >= 2 && state == PRX_STATE_STARTED)
+			if (version == 2 && state == PRX_STATE_STARTED)
 			{
-				ensure(ppu_register_library_lock(prx->module_info_name, true));
 				prx->load_exports();
+			}
+
+			if (version == 3 && state == PRX_STATE_STARTED)
+			{
+				prx->restore_exports();
 			}
 
 			if (version == 1)
@@ -360,6 +372,11 @@ void lv2_prx::save(utils::serial& ar)
 
 	// Save segments count
 	ar.serialize_vle(segs.size());
+
+	if (!segs.empty())
+	{
+		ar(m_loaded_flags);
+	}
 
 	for (const ppu_segment& seg : segs)
 	{
@@ -506,7 +523,7 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 	{
 		std::lock_guard lock(prx->mutex);
 
-		if (prx->state != PRX_STATE_INITIALIZED)
+		if (!prx->state.compare_and_swap_test(PRX_STATE_INITIALIZED, PRX_STATE_STARTING))
 		{
 			if (prx->state == PRX_STATE_DESTROYED)
 			{
@@ -514,28 +531,9 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 			}
 
 			return CELL_PRX_ERROR_ERROR;
-		}
-
-		if (prx->exports_end > prx->exports_start && !ppu_register_library_lock(prx->module_info_name, true))
-		{
-			return {CELL_PRX_ERROR_LIBRARY_FOUND, +prx->module_info_name};
 		}
 
 		prx->load_exports();
-
-		if (!prx->state.compare_and_swap_test(PRX_STATE_INITIALIZED, PRX_STATE_STARTING))
-		{
-			// The only error code here
-			ensure(prx->exports_end <= prx->exports_start || ppu_register_library_lock(prx->module_info_name, false));
-
-			if (prx->state == PRX_STATE_DESTROYED)
-			{
-				return CELL_ESRCH;
-			}
-
-			return CELL_PRX_ERROR_ERROR;
-		}
-
 		break;
 	}
 	case 2:
@@ -557,6 +555,7 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 
 				// Thread-safe if called from liblv2.sprx, due to internal lwmutex lock before it
 				prx->state = PRX_STATE_STOPPED;
+				prx->unload_exports();
 				_sys_prx_unload_module(ppu, id, 0, vm::null);
 
 				// Return the exact value returned by the start function (as an error)
@@ -641,7 +640,10 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		{
 			// No error code on invalid state, so throw on unexpected state
 			std::lock_guard lock(prx->mutex);
-			ensure(prx->exports_end <= prx->exports_start || (prx->state == PRX_STATE_STOPPING && ppu_register_library_lock(prx->module_info_name, false)));
+			ensure(prx->exports_end <= prx->exports_start || (prx->state == PRX_STATE_STOPPING));
+
+			prx->unload_exports();
+
 			ensure(prx->state.compare_and_swap_test(PRX_STATE_STOPPING, PRX_STATE_STOPPED));
 			return CELL_OK;
 		}
@@ -739,7 +741,7 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 	return CELL_OK;
 }
 
-void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size);
+void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<bool>& loaded_flags);
 
 void lv2_prx::load_exports()
 {
@@ -749,7 +751,40 @@ void lv2_prx::load_exports()
 		return;
 	}
 
-	ppu_manual_load_imports_exports(0, 0, exports_start, exports_end - exports_start);
+	if (!m_loaded_flags.empty())
+	{
+		// Already loaded
+		return;
+	}
+
+	ppu_manual_load_imports_exports(0, 0, exports_start, exports_end - exports_start, m_loaded_flags);
+}
+
+void lv2_prx::restore_exports()
+{
+	constexpr usz sizeof_export_data = 0x1C;
+
+	std::basic_string<bool> loaded_flags_empty;
+
+	for (usz start = exports_start, i = 0; start < exports_end; i++, start += sizeof_export_data)
+	{
+		if (::at32(m_loaded_flags, i))
+		{
+			loaded_flags_empty.clear();
+			ppu_manual_load_imports_exports(0, 0, start, sizeof_export_data, loaded_flags_empty);
+		}
+	}
+}
+
+void lv2_prx::unload_exports()
+{
+	if (m_loaded_flags.empty())
+	{
+		// Not loaded
+		return;
+	}
+
+	ppu_manual_load_imports_exports(0, 0, exports_start, exports_end - exports_start, m_loaded_flags);
 }
 
 error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::ptr<void> opt)
@@ -799,7 +834,7 @@ error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::pt
 	{
 		if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
 		{
-			ppu_manual_load_imports_exports(info.lib_stub_ea.addr(), info.lib_stub_size, info.lib_entries_ea.addr(), info.lib_entries_size);
+			ppu_manual_load_imports_exports(info.lib_stub_ea.addr(), info.lib_stub_size, info.lib_entries_ea.addr(), info.lib_entries_size, *std::make_unique<std::basic_string<bool>>());
 		}
 		else
 		{

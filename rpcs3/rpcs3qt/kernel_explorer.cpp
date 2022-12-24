@@ -466,7 +466,7 @@ void kernel_explorer::update()
 				break;
 			}
 
-			const QString text = qstr(fmt::format("PRX 0x%08x: '%s'", id, prx.name));
+			const QString text = qstr(fmt::format("PRX 0x%08x: '%s', attr=0x%x, lib=%s", id, prx.name, prx.module_info_attributes, prx.module_info_name));
 			QTreeWidgetItem* prx_tree = add_solid_node(node, text, text);
 			display_program_segments(prx_tree, prx);
 			break;

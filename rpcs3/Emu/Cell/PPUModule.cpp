@@ -22,6 +22,7 @@
 #include "Emu/Cell/Modules/StaticHLE.h"
 
 #include <map>
+#include <span>
 #include <set>
 #include <algorithm>
 #include <shared_mutex>
@@ -154,6 +155,7 @@ struct ppu_linkage_info
 	// Module map
 	std::map<std::string, module_data> modules{};
 	std::map<std::string, atomic_t<bool>, std::less<>> lib_lock;
+	shared_mutex lib_lock_mutex;
 	shared_mutex mutex;
 };
 
@@ -601,6 +603,12 @@ static void ppu_patch_refs(std::vector<ppu_reloc>* out_relocs, u32 fref, u32 fad
 	}
 }
 
+enum PRX_EXPORT_ATTRIBUTES : u16
+{
+	PRX_EXPORT_LIBRARY_FLAG = 1,
+	PRX_EXPORT_PRX_MANAGEMENT_FUNCTIONS_FLAG = 0x8000,
+};
+
 // Export or import module struct
 struct ppu_prx_module_info
 {
@@ -639,7 +647,7 @@ extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib)
 		return false;
 	}
 
-	reader_lock lock(link->mutex);
+	reader_lock lock(link->lib_lock_mutex);
 
 	if (auto it = link->lib_lock.find(libname); it != link->lib_lock.cend())
 	{
@@ -660,17 +668,31 @@ extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib)
 }
 
 // Load and register exports; return special exports found (nameless module)
-static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end, bool for_observing_callbacks = false)
+static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end, bool for_observing_callbacks = false, std::basic_string<bool>* loaded_flags = nullptr)
 {
 	std::unordered_map<u32, u32> result;
 
+	// Flags were already provided meaning it's an unload operation
+	const bool unload_exports = loaded_flags && !loaded_flags->empty();
+
 	std::lock_guard lock(link->mutex);
 
-	for (u32 addr = exports_start; addr < exports_end;)
-	{
-		const auto& lib = vm::_ref<const ppu_prx_module_info>(addr);
+	usz unload_index = 0;
 
-		if (!lib.name)
+	for (u32 addr = exports_start; addr < exports_end; unload_index++)
+	{
+		ppu_prx_module_info lib{};
+		std::memcpy(&lib, vm::base(addr), sizeof(lib));
+
+		const bool is_library = !!(lib.attributes & PRX_EXPORT_LIBRARY_FLAG);
+		const bool is_management = !is_library && !!(lib.attributes & PRX_EXPORT_PRX_MANAGEMENT_FUNCTIONS_FLAG);
+
+		if (loaded_flags && !unload_exports)
+		{
+			loaded_flags->push_back(false);
+		}
+
+		if (is_management)
 		{
 			// Set special exports
 			for (u32 i = 0, end = lib.num_func + lib.num_var; i < end; i++)
@@ -694,6 +716,13 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 			continue;
 		}
 
+		if (!is_library)
+		{
+			// Skipped if none of the flags is set
+			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
+			continue;
+		}
+
 		if (for_observing_callbacks)
 		{
 			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
@@ -702,11 +731,36 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 
 		const std::string module_name(lib.name.get_ptr());
 
-		ppu_loader.notice("** Exported module '%s' (0x%x, 0x%x, 0x%x, 0x%x)", module_name, lib.vnids, lib.vstubs, lib.unk4, lib.unk5);
+		if (unload_exports)
+		{
+			if (::at32(*loaded_flags, unload_index))
+			{
+				ppu_register_library_lock(module_name, false);
+			}
+
+			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
+			continue;
+		}
+
+		ppu_loader.notice("** Exported module '%s' (vnids=0x%x, vstubs=0x%x, version=0x%x, attributes=0x%x, unk4=0x%x, unk5=0x%x)", module_name, lib.vnids, lib.vstubs, lib.version, lib.attributes, lib.unk4, lib.unk5);
 
 		if (lib.num_tlsvar)
 		{
 			ppu_loader.fatal("Unexpected num_tlsvar (%u)!", lib.num_tlsvar);
+		}
+
+		const bool should_load = ppu_register_library_lock(module_name, true);
+
+		if (loaded_flags)
+		{
+			loaded_flags->back() = should_load;
+		}
+
+		if (!should_load)
+		{
+			ppu_loader.notice("** Skipped module '%s' (already loaded)", module_name);
+			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
+			continue;
 		}
 
 		// Static module
@@ -904,12 +958,12 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 }
 
 // For _sys_prx_register_module
-void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size)
+void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<bool>& loaded_flags)
 {
 	auto& _main = g_fxo->get<ppu_module>();
 	auto& link = g_fxo->get<ppu_linkage_info>();
 
-	ppu_load_exports(&link, exports_start, exports_start + exports_size);
+	ppu_load_exports(&link, exports_start, exports_start + exports_size, false, &loaded_flags);
 
 	if (!imports_size)
 	{
