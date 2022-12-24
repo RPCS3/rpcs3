@@ -914,7 +914,11 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 	}
 	else
 	{
-		fs::remove_all(dir, true);
+		if (was_null)
+		{
+			fs::remove_all(dir, true);
+		}
+
 		pkg_log.error("Package installation failed: %s", dir);
 	}
 
