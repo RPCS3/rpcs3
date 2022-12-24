@@ -91,6 +91,7 @@ namespace vk
 			bool surface_capabilities_2 = false;
 			bool synchronization_2 = false;
 			bool unrestricted_depth_range = false;
+			bool extended_device_fault = false;
 		} optional_features_support;
 
 		friend class render_device;
@@ -153,6 +154,7 @@ namespace vk
 		PFN_vkCmdSetEvent2KHR _vkCmdSetEvent2KHR = nullptr;
 		PFN_vkCmdWaitEvents2KHR _vkCmdWaitEvents2KHR = nullptr;
 		PFN_vkCmdPipelineBarrier2KHR _vkCmdPipelineBarrier2KHR = nullptr;
+		PFN_vkGetDeviceFaultInfoEXT _vkGetDeviceFaultInfoEXT = nullptr;
 
 	public:
 		render_device() = default;
@@ -187,6 +189,7 @@ namespace vk
 		bool get_framebuffer_loops_support() const { return pgpu->optional_features_support.framebuffer_loops; }
 		bool get_barycoords_support() const { return pgpu->optional_features_support.barycentric_coords; }
 		bool get_synchronization2_support() const { return pgpu->optional_features_support.synchronization_2; }
+		bool get_extended_device_fault_support() const { return pgpu->optional_features_support.extended_device_fault; }
 
 		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_indexing_support.update_after_bind_mask; }
 		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }
