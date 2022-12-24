@@ -617,7 +617,7 @@ struct ppu_far_jumps_t
 		bool with_toc;
 		std::string module_name;
 		ppu_intrp_func_t func;
-	
+
 		u32 get_target(u32 pc, ppu_thread* ppu = nullptr) const
 		{
 			u32 direct_target = this->target;
@@ -706,7 +706,7 @@ struct ppu_far_jumps_t
 		{
 			return targets;
 		}
-		
+
 		for (auto end = vals.lower_bound(pc + size); it != end; it++)
 		{
 			all_info_t& all_info = it->second;
@@ -1994,7 +1994,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc)
 
 		if (auto name = get_prx_name_by_cia(cia))
 		{
-			return fmt::format("PPU[0x%x] Thread (%s) [%s: 0x%08x]", _this->id, *name_cache.get(), name, cia);	
+			return fmt::format("PPU[0x%x] Thread (%s) [%s: 0x%08x]", _this->id, *name_cache.get(), name, cia);
 		}
 
 		return fmt::format("PPU[0x%x] Thread (%s) [0x%08x]", _this->id, *name_cache.get(), cia);
@@ -2804,6 +2804,11 @@ namespace
 
 			m_pos += result;
 			return result;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 size) override
+		{
+			return m_file.read_at(offset + m_off, buffer, size);
 		}
 
 		u64 write(const void*, u64) override

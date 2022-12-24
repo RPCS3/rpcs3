@@ -1106,10 +1106,12 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	class windows_file final : public file_base
 	{
 		const HANDLE m_handle;
+		atomic_t<u64> m_pos;
 
 	public:
 		windows_file(HANDLE handle)
 			: m_handle(handle)
+			, m_pos(0)
 		{
 		}
 
@@ -1165,7 +1167,39 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
 
 				DWORD nread = 0;
-				ensure(ReadFile(m_handle, data, size, &nread, nullptr)); // "file::read"
+				OVERLAPPED ovl{};
+				const u64 pos = m_pos;
+				ovl.Offset = DWORD(pos);
+				ovl.OffsetHigh = DWORD(pos >> 32);
+				ensure(ReadFile(m_handle, data, size, &nread, &ovl) || GetLastError() == ERROR_HANDLE_EOF); // "file::read"
+				nread_sum += nread;
+				m_pos += nread;
+
+				if (nread < size)
+				{
+					break;
+				}
+
+				count -= size;
+				data += size;
+			}
+
+			return nread_sum;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 count) override
+		{
+			u64 nread_sum = 0;
+
+			for (char* data = static_cast<char*>(buffer); count;)
+			{
+				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
+
+				DWORD nread = 0;
+				OVERLAPPED ovl{};
+				ovl.Offset = DWORD(offset);
+				ovl.OffsetHigh = DWORD(offset >> 32);
+				ensure(ReadFile(m_handle, data, size, &nread, &ovl) || GetLastError() == ERROR_HANDLE_EOF); // "file::read"
 				nread_sum += nread;
 
 				if (nread < size)
@@ -1175,6 +1209,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 				count -= size;
 				data += size;
+				offset += size;
 			}
 
 			return nread_sum;
@@ -1189,8 +1224,13 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
 
 				DWORD nwritten = 0;
-				ensure(WriteFile(m_handle, data, size, &nwritten, nullptr)); // "file::write"
+				OVERLAPPED ovl{};
+				const u64 pos = m_pos;
+				ovl.Offset = DWORD(pos);
+				ovl.OffsetHigh = DWORD(pos >> 32);
+				ensure(WriteFile(m_handle, data, size, &nwritten, &ovl)); // "file::write"
 				nwritten_sum += nwritten;
+				m_pos += nwritten;
 
 				if (nwritten < size)
 				{
@@ -1211,20 +1251,19 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				fmt::throw_exception("Invalid whence (0x%x)", whence);
 			}
 
-			LARGE_INTEGER pos;
-			pos.QuadPart = offset;
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + m_pos :
+				whence == fs::seek_end ? offset + size() : -1;
 
-			const DWORD mode =
-				whence == seek_set ? FILE_BEGIN :
-				whence == seek_cur ? FILE_CURRENT : FILE_END;
-
-			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
+			if (new_pos < 0)
 			{
-				g_tls_error = to_error(GetLastError());
+				fs::g_tls_error = fs::error::inval;
 				return -1;
 			}
 
-			return pos.QuadPart;
+			m_pos = new_pos;
+			return m_pos;
 		}
 
 		u64 size() override
@@ -1349,6 +1388,14 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return result;
 		}
 
+		u64 read_at(u64 offset, void* buffer, u64 count) override
+		{
+			const auto result = ::pread(m_fd, buffer, count, offset);
+			ensure(result != -1);
+
+			return result;
+		}
+
 		u64 write(const void* buffer, u64 count) override
 		{
 			const auto result = ::write(m_fd, buffer, count);
@@ -1459,6 +1506,21 @@ fs::file::file(const void* ptr, usz size)
 				{
 					std::memcpy(buffer, m_ptr + m_pos, result);
 					m_pos += result;
+					return result;
+				}
+			}
+
+			return 0;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 count) override
+		{
+			if (offset < m_size)
+			{
+				// Get readable size
+				if (const u64 result = std::min<u64>(count, m_size - offset))
+				{
+					std::memcpy(buffer, m_ptr + offset, result);
 					return result;
 				}
 			}
@@ -1933,6 +1995,40 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 
 						const u64 count = std::min<u64>(it->first - pos, buf_max);
 						const u64 read  = files[it->second].read(buf_out, count);
+
+						buf_out += count;
+						buf_max -= count;
+						pos     += read;
+
+						if (read < count || buf_max == 0)
+						{
+							break;
+						}
+					}
+
+					return pos - start;
+				}
+			}
+
+			return 0;
+		}
+
+		u64 read_at(u64 start, void* buffer, u64 size) override
+		{
+			if (start < end)
+			{
+				u64 pos = start;
+
+				// Get readable size
+				if (const u64 max = std::min<u64>(size, end - pos))
+				{
+					u8* buf_out = static_cast<u8*>(buffer);
+					u64 buf_max = max;
+
+					for (auto it = ends.upper_bound(pos); it != ends.end(); ++it)
+					{
+						const u64 count = std::min<u64>(it->first - pos, buf_max);
+						const u64 read  = files[it->second].read_at(files[it->second].size() + pos - it->first, buf_out, count);
 
 						buf_out += count;
 						buf_max -= count;
