@@ -21,39 +21,65 @@
 
 #include <util/types.hpp>
 
-#ifndef VK_EXT_attachment_feedback_loop_layout
+// Requires SDK ver 230 which is not supported by CI currently
+#ifndef VK_EXT_device_fault
 
-#define VK_EXT_attachment_feedback_loop_layout 1
-#define VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME "VK_EXT_attachment_feedback_loop_layout"
-#define VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT static_cast<VkImageLayout>(1000339000)
-#define VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT 0x00080000
-#define VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_FEATURES_EXT static_cast<VkStructureType>(1000339000)
+#define VK_EXT_device_fault 1
+#define VK_EXT_DEVICE_FAULT_EXTENSION_NAME "VK_EXT_device_fault"
+#define VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT static_cast<VkStructureType>(1000341002)
+#define VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT static_cast<VkStructureType>(1000341000)
 
-typedef struct VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT {
+typedef enum VkDeviceFaultAddressTypeEXT {
+	VK_DEVICE_FAULT_ADDRESS_TYPE_NONE_EXT = 0,
+	VK_DEVICE_FAULT_ADDRESS_TYPE_READ_INVALID_EXT = 1,
+	VK_DEVICE_FAULT_ADDRESS_TYPE_WRITE_INVALID_EXT = 2,
+	VK_DEVICE_FAULT_ADDRESS_TYPE_EXECUTE_INVALID_EXT = 3,
+	VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT = 4,
+	VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT = 5,
+	VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_EXT = 6,
+} VkDeviceFaultAddressTypeEXT;
+
+typedef struct VkPhysicalDeviceFaultFeaturesEXT {
 	VkStructureType    sType;
 	void*              pNext;
-	VkBool32           attachmentFeedbackLoopLayout;
-} VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesEXT;
+	VkBool32           deviceFault;
+	VkBool32           deviceFaultVendorBinary;
+} VkPhysicalDeviceFaultFeaturesEXT;
 
-#endif
+typedef struct VkDeviceFaultCountsEXT {
+	VkStructureType    sType;
+	void*              pNext;
+	uint32_t           addressInfoCount;
+	uint32_t           vendorInfoCount;
+	VkDeviceSize       vendorBinarySize;
+} VkDeviceFaultCountsEXT;
 
-#ifndef VK_KHR_fragment_shader_barycentric
+typedef struct VkDeviceFaultAddressInfoEXT {
+	VkDeviceFaultAddressTypeEXT    addressType;
+	VkDeviceAddress                reportedAddress;
+	VkDeviceSize                   addressPrecision;
+} VkDeviceFaultAddressInfoEXT;
 
-#define VK_KHR_fragment_shader_barycentric 1
-#define VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_SPEC_VERSION 1
-#define VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME "VK_KHR_fragment_shader_barycentric"
-#define VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR static_cast<VkStructureType>(1000203000)
+typedef struct VkDeviceFaultVendorInfoEXT {
+	char        description[VK_MAX_DESCRIPTION_SIZE];
+	uint64_t    vendorFaultCode;
+	uint64_t    vendorFaultData;
+} VkDeviceFaultVendorInfoEXT;
 
-typedef struct VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR {
-    VkStructureType    sType;
-    void*              pNext;
-    VkBool32           fragmentShaderBarycentric;
-} VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR;
+typedef struct VkDeviceFaultInfoEXT {
+	VkStructureType                 sType;
+	void*                           pNext;
+	char                            description[VK_MAX_DESCRIPTION_SIZE];
+	VkDeviceFaultAddressInfoEXT*    pAddressInfos;
+	VkDeviceFaultVendorInfoEXT*     pVendorInfos;
+	void*                           pVendorBinaryData;
+} VkDeviceFaultInfoEXT;
 
-typedef struct VkPhysicalDeviceFragmentShaderBarycentricPropertiesKHR {
-    VkStructureType    sType;
-    void*              pNext;
-    VkBool32           triStripVertexOrderIndependentOfProvokingVertex;
-} VkPhysicalDeviceFragmentShaderBarycentricPropertiesKHR;
+VKAPI_ATTR VkResult VKAPI_CALL vkGetDeviceFaultInfoEXT(
+	VkDevice                                    device,
+	VkDeviceFaultCountsEXT*                     pFaultCounts,
+	VkDeviceFaultInfoEXT*                       pFaultInfo);
+
+typedef VkResult (VKAPI_PTR* PFN_vkGetDeviceFaultInfoEXT)(VkDevice device, VkDeviceFaultCountsEXT* pFaultCounts, VkDeviceFaultInfoEXT* pFaultInfo);
 
 #endif
