@@ -921,6 +921,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			// Update progress window
 			double pval = progress;
 			if (pval < 0.) pval += 1.;
+
 			pdlg.SetValue(static_cast<int>(pval * pdlg.maximum()));
 			QCoreApplication::processEvents();
 		}
