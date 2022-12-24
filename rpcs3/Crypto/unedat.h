@@ -115,6 +115,11 @@ public:
 		return bytesRead;
 	}
 
+	u64 read_at(u64 offset, void* buffer, u64 size) override
+	{
+		return ReadData(offset, static_cast<u8*>(buffer), size);
+	}
+
 	u64 write(const void*, u64) override
 	{
 		return 0;
