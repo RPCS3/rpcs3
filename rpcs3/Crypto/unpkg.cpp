@@ -750,8 +750,73 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 
 	std::memcpy(entries.data(), m_buf.get(), entries.size() * sizeof(PKGEntry));
 
+	// Create directories first
 	for (const auto& entry : entries)
 	{
+		if (entry.name_size > 256)
+		{
+			num_failures++;
+			pkg_log.error("PKG name size is too big (0x%x)", entry.name_size);
+			continue;
+		}
+
+		switch (const u8 entry_type = entry.type & 0xff)
+		{
+		case PKG_FILE_ENTRY_FOLDER:
+		case 0x12:
+		{
+			const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
+			decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
+
+			const std::string name{reinterpret_cast<char*>(m_buf.get()), entry.name_size};
+			const std::string path = dir + vfs::escape(name);
+
+			const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
+
+			(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
+
+			if (fs::is_dir(path))
+			{
+				pkg_log.warning("Reused existing directory %s", path);
+			}
+			else if (fs::create_path(path))
+			{
+				pkg_log.notice("Created directory %s", path);
+			}
+			else
+			{
+				num_failures++;
+				pkg_log.error("Failed to create directory %s", path);
+			}
+
+			break;
+		}
+
+		default:
+		{
+			continue;
+		}
+		}
+	}
+
+	if (num_failures != 0)
+	{
+		if (was_null)
+		{
+			fs::remove_all(dir, true);
+		}
+
+		pkg_log.error("Package installation failed: %s", dir);
+		return false;
+	}
+
+	for (const auto& entry : entries)
+	{
+		if ((entry.type & 0xff) == PKG_FILE_ENTRY_FOLDER || (entry.type & 0xff) == 0x12)
+		{
+			continue;
+		}
+
 		if (entry.name_size > 256)
 		{
 			num_failures++;
@@ -879,27 +944,6 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 
 			break;
 		}
-
-		case PKG_FILE_ENTRY_FOLDER:
-		case 0x12:
-		{
-			if (fs::create_dir(path))
-			{
-				pkg_log.notice("Created directory %s", path);
-			}
-			else if (fs::is_dir(path))
-			{
-				pkg_log.warning("Reused existing directory %s", path);
-			}
-			else
-			{
-				num_failures++;
-				pkg_log.error("Failed to create directory %s", path);
-			}
-
-			break;
-		}
-
 		default:
 		{
 			num_failures++;
