@@ -2586,7 +2586,7 @@ void game_list_frame::PopulateGameList()
 			}
 		}
 
-		const usz game_size = game->info.size_on_disk;
+		const u64 game_size = game->info.size_on_disk;
 
 		m_game_list->setItem(row, gui::column_icon,       icon_item);
 		m_game_list->setItem(row, gui::column_name,       title_item);
@@ -2602,7 +2602,7 @@ void game_list_frame::PopulateGameList()
 		m_game_list->setItem(row, gui::column_last_play,  new custom_table_widget_item(locale.toString(last_played, last_played >= QDateTime::currentDateTime().addDays(-7) ? gui::persistent::last_played_date_with_time_of_day_format : gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
 		m_game_list->setItem(row, gui::column_playtime,   new custom_table_widget_item(elapsed_ms == 0 ? tr("Never played") : localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
 		m_game_list->setItem(row, gui::column_compat,     compat_item);
-		m_game_list->setItem(row, gui::column_dir_size,   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<usz>(game_size)));
+		m_game_list->setItem(row, gui::column_dir_size,   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<qulonglong>(game_size)));
 
 		if (selected_item == game->info.path + game->info.icon_path)
 		{

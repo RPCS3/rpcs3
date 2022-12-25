@@ -21,5 +21,5 @@ struct GameInfo
 	u32 sound_format = 0;
 	u32 resolution = 0;
 
-	usz size_on_disk = umax;
+	u64 size_on_disk = umax;
 };
