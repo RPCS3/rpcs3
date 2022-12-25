@@ -1382,24 +1382,55 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		u64 read(void* buffer, u64 count) override
 		{
-			const auto result = ::read(m_fd, buffer, count);
-			ensure(result != -1); // "file::read"
+			u64 result = 0;
+
+			// Loop because (huge?) read can be processed partially
+			while (auto r = ::read(m_fd, buffer, count))
+			{
+				ensure(r > 0); // "file::read"
+				count -= r;
+				result += r;
+				buffer = static_cast<u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
 
 			return result;
 		}
 
 		u64 read_at(u64 offset, void* buffer, u64 count) override
 		{
-			const auto result = ::pread(m_fd, buffer, count, offset);
-			ensure(result != -1);
+			u64 result = 0;
+
+			// For safety; see read()
+			while (auto r = ::pread(m_fd, buffer, count, offset))
+			{
+				ensure(r > 0); // "file::read_at"
+				count -= r;
+				offset += r;
+				result += r;
+				buffer = static_cast<u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
 
 			return result;
 		}
 
 		u64 write(const void* buffer, u64 count) override
 		{
-			const auto result = ::write(m_fd, buffer, count);
-			ensure(result != -1); // "file::write"
+			u64 result = 0;
+
+			// For safety; see read()
+			while (auto r = ::write(m_fd, buffer, count))
+			{
+				ensure(r > 0); // "file::write"
+				count -= r;
+				result += r;
+				buffer = static_cast<const u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
 
 			return result;
 		}
