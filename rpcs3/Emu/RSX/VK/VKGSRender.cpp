@@ -1780,9 +1780,6 @@ bool VKGSRender::load_program()
 		properties.state.enable_depth_test(vk::get_compare_func(rsx::method_registers.depth_func()));
 	}
 
-	if (rsx::method_registers.logic_op_enabled())
-		properties.state.enable_logic_op(vk::get_logic_op(rsx::method_registers.logic_operation()));
-
 	if (rsx::method_registers.cull_face_enabled())
 		properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
 
@@ -1808,31 +1805,39 @@ bool VKGSRender::load_program()
 		properties.state.set_color_mask(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	}
 
-	bool mrt_blend_enabled[] =
+	// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
+	if (rsx::method_registers.logic_op_enabled())
 	{
-		rsx::method_registers.blend_enabled(),
-		rsx::method_registers.blend_enabled_surface_1(),
-		rsx::method_registers.blend_enabled_surface_2(),
-		rsx::method_registers.blend_enabled_surface_3()
-	};
-
-	VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
-	VkBlendOp equation_rgb, equation_a;
-
-	if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
+		properties.state.enable_logic_op(vk::get_logic_op(rsx::method_registers.logic_operation()));
+	}
+	else
 	{
-		sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-		sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
-		dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-		dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
-		equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
-		equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
-
-		for (u8 idx = 0; idx < m_draw_buffers.size(); ++idx)
+		bool mrt_blend_enabled[] =
 		{
-			if (mrt_blend_enabled[idx])
+			rsx::method_registers.blend_enabled(),
+			rsx::method_registers.blend_enabled_surface_1(),
+			rsx::method_registers.blend_enabled_surface_2(),
+			rsx::method_registers.blend_enabled_surface_3()
+		};
+
+		VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
+		VkBlendOp equation_rgb, equation_a;
+
+		if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
+		{
+			sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
+			sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
+			dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
+			dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
+			equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
+			equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
+
+			for (u8 idx = 0; idx < m_draw_buffers.size(); ++idx)
 			{
-				properties.state.enable_blend(idx, sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a, equation_rgb, equation_a);
+				if (mrt_blend_enabled[idx])
+				{
+					properties.state.enable_blend(idx, sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a, equation_rgb, equation_a);
+				}
 			}
 		}
 	}
