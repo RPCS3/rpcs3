@@ -210,36 +210,45 @@ void GLGSRender::update_draw_state()
 			gl_state.color_maski(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 		}
 
-		bool mrt_blend_enabled[] =
-		{
-			rsx::method_registers.blend_enabled(),
-			rsx::method_registers.blend_enabled_surface_1(),
-			rsx::method_registers.blend_enabled_surface_2(),
-			rsx::method_registers.blend_enabled_surface_3()
-		};
-
-		if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
-		{
-			glBlendFuncSeparate(gl::blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
-				gl::blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
-				gl::blend_factor(rsx::method_registers.blend_func_sfactor_a()),
-				gl::blend_factor(rsx::method_registers.blend_func_dfactor_a()));
-
-			auto blend_colors = rsx::get_constant_blend_colors();
-			glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
-
-			glBlendEquationSeparate(gl::blend_equation(rsx::method_registers.blend_equation_rgb()),
-				gl::blend_equation(rsx::method_registers.blend_equation_a()));
-		}
-
-		gl_state.enablei(mrt_blend_enabled[0], GL_BLEND, 0);
-		gl_state.enablei(mrt_blend_enabled[1], GL_BLEND, 1);
-		gl_state.enablei(mrt_blend_enabled[2], GL_BLEND, 2);
-		gl_state.enablei(mrt_blend_enabled[3], GL_BLEND, 3);
-
+		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
+		// In OpenGL, this behavior is enforced in spec, but let's enforce it at renderer level as well.
 		if (gl_state.enable(rsx::method_registers.logic_op_enabled(), GL_COLOR_LOGIC_OP))
 		{
 			gl_state.logic_op(gl::logic_op(rsx::method_registers.logic_operation()));
+
+			gl_state.enablei(GL_FALSE, GL_BLEND, 0);
+			gl_state.enablei(GL_FALSE, GL_BLEND, 1);
+			gl_state.enablei(GL_FALSE, GL_BLEND, 2);
+			gl_state.enablei(GL_FALSE, GL_BLEND, 3);
+		}
+		else
+		{
+			bool mrt_blend_enabled[] =
+			{
+				rsx::method_registers.blend_enabled(),
+				rsx::method_registers.blend_enabled_surface_1(),
+				rsx::method_registers.blend_enabled_surface_2(),
+				rsx::method_registers.blend_enabled_surface_3()
+			};
+
+			if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
+			{
+				glBlendFuncSeparate(gl::blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
+					gl::blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
+					gl::blend_factor(rsx::method_registers.blend_func_sfactor_a()),
+					gl::blend_factor(rsx::method_registers.blend_func_dfactor_a()));
+
+				auto blend_colors = rsx::get_constant_blend_colors();
+				glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
+
+				glBlendEquationSeparate(gl::blend_equation(rsx::method_registers.blend_equation_rgb()),
+					gl::blend_equation(rsx::method_registers.blend_equation_a()));
+			}
+
+			gl_state.enablei(mrt_blend_enabled[0], GL_BLEND, 0);
+			gl_state.enablei(mrt_blend_enabled[1], GL_BLEND, 1);
+			gl_state.enablei(mrt_blend_enabled[2], GL_BLEND, 2);
+			gl_state.enablei(mrt_blend_enabled[3], GL_BLEND, 3);
 		}
 	}
 
