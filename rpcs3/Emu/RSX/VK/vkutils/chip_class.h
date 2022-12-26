@@ -14,6 +14,7 @@ namespace vk
 		AMD_vega,
 		AMD_navi1x,
 		AMD_navi2x,
+		AMD_navi3x,
 		NV_generic,
 		NV_kepler,
 		NV_maxwell,
@@ -21,6 +22,7 @@ namespace vk
 		NV_volta,
 		NV_turing,
 		NV_ampere,
+		NV_lovelace,
 		MVK_apple
 	};
 
