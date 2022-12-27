@@ -160,7 +160,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		if (m_size_watcher_cancel)
 		{
-			m_size_watcher_cancel = true;
+			*m_size_watcher_cancel = true;
 		}
 	});
 	connect(&m_size_watcher, &QFutureWatcher<void>::finished, this, [this]()
