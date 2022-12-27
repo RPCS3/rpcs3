@@ -161,6 +161,7 @@ private:
 	QFutureWatcher<void> m_size_watcher;
 	QFutureWatcher<void> m_refresh_watcher;
 	QFutureWatcher<movie_item*> m_repaint_watcher;
+	std::shared_ptr<atomic_t<bool>> m_size_watcher_cancel;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
 
