@@ -156,6 +156,13 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 			item->call_icon_func();
 		}
 	});
+	connect(&m_size_watcher, &QFutureWatcher<void>::canceled, this, [this]()
+	{
+		if (m_size_watcher_cancel)
+		{
+			m_size_watcher_cancel = 0;
+		}
+	});
 	connect(&m_size_watcher, &QFutureWatcher<void>::finished, this, [this]()
 	{
 		Refresh();
@@ -779,9 +786,11 @@ void game_list_frame::OnRefreshFinished()
 
 	Refresh();
 
-	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this](const game_info& game) -> void
+	m_size_watcher_cancel = std::make_shared<atomic_t<bool>>(false);
+
+	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this, cancel = m_size_watcher_cancel](const game_info& game) -> void
 	{
-		if (game) game->info.size_on_disk = fs::get_dir_size(game->info.path);
+		if (game) game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
 	}));
 }
 
