@@ -657,7 +657,7 @@ namespace fs
 	bool remove_all(const std::string& path, bool remove_root = true, bool is_no_dir_ok = false);
 
 	// Get size of all files recursively
-	u64 get_dir_size(const std::string& path, u64 rounding_alignment = 1);
+	u64 get_dir_size(const std::string& path, u64 rounding_alignment = 1, atomic_t<bool>* cancel_flag = nullptr);
 
 	enum class error : uint
 	{
