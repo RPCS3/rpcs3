@@ -803,7 +803,7 @@ namespace vk
 		const auto optimal_layout = supports_fbo_loops ? VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT
 			: VK_IMAGE_LAYOUT_GENERAL;
 
-		if (is_framebuffer_read_only && current_layout == optimal_layout && m_cyclic_ref_tracker.can_skip())
+		if (m_cyclic_ref_tracker.can_skip() && current_layout == optimal_layout && is_framebuffer_read_only)
 		{
 			// If we have back-to-back depth-read barriers, skip subsequent ones
 			// If an actual write is happening, this flag will be automatically reset
@@ -824,7 +824,7 @@ namespace vk
 		// This is a fall-out barrier after a cyclic ref when the same surface is still bound.
 		// In this case, we're just checking that the previous read completes before the next write.
 		const bool is_framebuffer_read_only = is_depth_surface() && !rsx::method_registers.depth_write_enabled();
-		if (is_framebuffer_read_only && m_cyclic_ref_tracker.can_skip())
+		if (m_cyclic_ref_tracker.can_skip() && is_framebuffer_read_only)
 		{
 			// Barrier ellided if triggered by a chain of cyclic references with no actual writes
 			m_cyclic_ref_tracker.reset();
