@@ -87,12 +87,6 @@ namespace vk
 		}
 		else
 		{
-			if (!rsx::method_registers.depth_write_enabled() && current_layout == new_layout)
-			{
-				// Nothing to do
-				return;
-			}
-
 			src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 		}
