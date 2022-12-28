@@ -39,7 +39,8 @@ namespace vk
 
 		void on_insert_draw_barrier()
 		{
-			m_draw_barrier_count++;
+			// Account for corner case where the same texture can be bound to more than 1 slot
+			m_draw_barrier_count = m_texture_barrier_count;
 		}
 
 		void allow_skip()
