@@ -139,7 +139,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnRefreshFinished);
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
 	{
-		gui::utils::stop_future_watcher(m_size_watcher, true);
+		gui::utils::stop_future_watcher(m_size_watcher, true, m_size_watcher_cancel);
 		gui::utils::stop_future_watcher(m_repaint_watcher, true);
 
 		m_path_list.clear();
@@ -436,7 +436,10 @@ std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
 
 void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 {
-	gui::utils::stop_future_watcher(m_size_watcher, true);
+	if (from_drive)
+	{
+		gui::utils::stop_future_watcher(m_size_watcher, true, m_size_watcher_cancel);
+	}
 	gui::utils::stop_future_watcher(m_repaint_watcher, true);
 	gui::utils::stop_future_watcher(m_refresh_watcher, from_drive);
 
@@ -714,7 +717,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 void game_list_frame::OnRefreshFinished()
 {
-	gui::utils::stop_future_watcher(m_size_watcher, true);
+	gui::utils::stop_future_watcher(m_size_watcher, true, m_size_watcher_cancel);
 	gui::utils::stop_future_watcher(m_repaint_watcher, true);
 
 	for (auto&& g : m_games.pop_all())

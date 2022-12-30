@@ -2982,6 +2982,10 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 	{
 		ui->toolbar_fullscreen->trigger();
 	}
+	else if ((keyEvent->modifiers() & Qt::ControlModifier) && keyEvent->key() == Qt::Key_F5)
+	{
+		m_game_list_frame->Refresh(true);
+	}
 }
 
 void main_window::mouseDoubleClickEvent(QMouseEvent *event)
