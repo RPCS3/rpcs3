@@ -13,6 +13,8 @@
 #include "util/sysinfo.hpp"
 #include "Loader/PSF.h"
 
+#include <filesystem>
+
 LOG_CHANNEL(pkg_log, "PKG");
 
 package_reader::package_reader(const std::string& path)
@@ -689,34 +691,174 @@ package_error package_reader::check_target_app_version() const
 	return package_error::app_version;
 }
 
-fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose = false);
-
-usz package_reader::extract_worker(const std::string& dir, bool was_null, atomic_t<double>& sync, thread_key thread_data_key, atomic_t<usz>& entry_indexer, std::vector<PKGEntry>& entries)
+bool package_reader::fill_data(std::map<std::string, install_entry*>& all_install_entries)
 {
+	if (!m_is_valid)
+	{
+		return false;
+	}
+
+	m_install_entries.clear();
+	m_install_path.clear();
+	m_bootable_file_path.clear();
+	m_entry_indexer = 0;
+	m_written_bytes = 0;
+
+	// Get full path and create the directory
+	std::string dir = rpcs3::utils::get_hdd0_dir();
+
+	// Based on https://www.psdevwiki.com/ps3/PKG_files#ContentType
+	switch (m_metadata.content_type)
+	{
+	case PKG_CONTENT_TYPE_THEME:
+		dir += "theme/";
+		break;
+	case PKG_CONTENT_TYPE_WIDGET:
+		dir += "widget/";
+		break;
+	case PKG_CONTENT_TYPE_LICENSE:
+		dir += "home/" + Emu.GetUsr() + "/exdata/";
+		break;
+	case PKG_CONTENT_TYPE_VSH_MODULE:
+		dir += "vsh/modules/";
+		break;
+	case PKG_CONTENT_TYPE_PSN_AVATAR:
+		dir += "home/" + Emu.GetUsr() + "/psn_avatar/";
+		break;
+	case PKG_CONTENT_TYPE_VMC:
+		dir += "tmp/vmc/";
+		break;
+	// TODO: Find out if other content types are installed elsewhere
+	default:
+		dir += "game/";
+		break;
+	}
+
+	// TODO: Verify whether other content types require appending title ID
+	if (m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
+		dir += m_install_dir + '/';
+
+	// If false, an existing directory is being overwritten: cannot cancel the operation
+	m_was_null = !fs::is_dir(dir);
+
+	if (!fs::create_path(dir))
+	{
+		pkg_log.error("Could not create the installation directory %s", dir);
+		return false;
+	}
+
+	m_install_path = dir;
+
+	if (!decrypt_data())
+	{
+		return false;
+	}
+
 	usz num_failures = 0;
 
-	for (usz entry_index = entry_indexer++; num_failures == 0 && entry_index < entries.size(); entry_index = entry_indexer++)
+	std::vector<PKGEntry> entries(m_header.file_count);
+
+	std::memcpy(entries.data(), m_bufs.back().get(), entries.size() * sizeof(PKGEntry));
+
+	// Create directories first
+	for (const auto& entry : entries)
 	{
-		const auto& entry = ::at32(entries, entry_index);
-
-		if ((entry.type & 0xff) == PKG_FILE_ENTRY_FOLDER || (entry.type & 0xff) == 0x12u)
-		{
-			continue;
-		}
-
 		if (entry.name_size > PKG_MAX_FILENAME_SIZE)
 		{
 			num_failures++;
 			pkg_log.error("PKG name size is too big (0x%x)", entry.name_size);
+			break;
+		}
+
+		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
+		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
+
+		const std::string name{reinterpret_cast<char*>(m_bufs.back().get()), entry.name_size};
+		std::string path = dir + vfs::escape(name);
+
+		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
+
+		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
+
+		switch (const u8 entry_type = entry.type & 0xff)
+		{
+		case PKG_FILE_ENTRY_FOLDER:
+		case 0x12:
+		{
+			if (fs::is_dir(path))
+			{
+				pkg_log.warning("Reused existing directory %s", path);
+			}
+			else if (fs::create_path(path))
+			{
+				pkg_log.notice("Created directory %s", path);
+			}
+			else
+			{
+				num_failures++;
+				pkg_log.error("Failed to create directory %s", path);
+				break;
+			}
+
+			break;
+		}
+		default:
+		{
+			const std::string true_path = std::filesystem::weakly_canonical(std::filesystem::path(path)).string();
+			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;
+
+			m_install_entries.push_back({ map_ptr, name, entry.file_offset, entry.file_size, entry.type, entry.pad });
+
+			if (map_ptr->second && !(entry.type & PKG_FILE_ENTRY_OVERWRITE))
+			{
+				// Cannot override
+				continue;
+			}
+
+			// Link
+			map_ptr->second = &m_install_entries.back();
+			continue;
+		}
+		}
+	}
+
+	if (num_failures != 0)
+	{
+		pkg_log.error("Package installation failed: %s", dir);
+		return false;
+	}
+
+	return true;
+}
+
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose = false);
+
+usz package_reader::extract_worker(thread_key thread_data_key, std::map<std::string, install_entry*>& all_install_entries)
+{
+	usz num_failures = 0;
+
+	while (true)
+	{
+		const usz maybe_index = m_entry_indexer++;
+
+		if (maybe_index >= m_install_entries.size())
+		{
+			break;
+		}
+
+		const install_entry& entry = ::at32(m_install_entries, maybe_index);
+
+		if (!entry.is_dominating())
+		{
+			// Overwritten by another entry
+			m_written_bytes += entry.file_size;
 			continue;
 		}
 
 		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
 
-		std::span<const char> data_span = decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), thread_data_key);
-
-		const std::string name{data_span.data(), entry.name_size};
-		const std::string path = dir + vfs::escape(name);
+		const std::string& path = entry.weak_reference->first;
+		const std::string& name = entry.name;
 
 		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
 		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
@@ -761,7 +903,7 @@ usz package_reader::extract_worker(const std::string& dir, bool was_null, atomic
 				{
 					const u64 block_size = std::min<u64>(BUF_SIZE, entry.file_size - pos);
 
-					data_span = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), thread_data_key);
+					const std::span<const char> data_span = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), thread_data_key);
 
 					if (data_span.size() != block_size)
 					{
@@ -777,18 +919,7 @@ usz package_reader::extract_worker(const std::string& dir, bool was_null, atomic
 						break;
 					}
 
-					if (sync.fetch_add((block_size + 0.0) / m_header.data_size) < 0.)
-					{
-						// Cancel the installation
-						num_failures++;
-
-						if (was_null)
-						{
-							pkg_log.error("Package installation cancelled: %s", dir);
-							out.close();
-							return num_failures;
-						}
-					}
+					m_written_bytes += block_size;
 				}
 
 				if (is_buffered)
@@ -844,156 +975,57 @@ usz package_reader::extract_worker(const std::string& dir, bool was_null, atomic
 	return num_failures;
 }
 
-bool package_reader::extract_data(atomic_t<double>& sync)
+bool package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
 {
-	if (!m_is_valid)
+	std::map<std::string, install_entry*> all_install_entries;
+
+	for (auto& reader : readers)
 	{
-		return false;
-	}
-
-	// Get full path and create the directory
-	std::string dir = rpcs3::utils::get_hdd0_dir();
-
-	// Based on https://www.psdevwiki.com/ps3/PKG_files#ContentType
-	switch (m_metadata.content_type)
-	{
-	case PKG_CONTENT_TYPE_THEME:
-		dir += "theme/";
-		break;
-	case PKG_CONTENT_TYPE_WIDGET:
-		dir += "widget/";
-		break;
-	case PKG_CONTENT_TYPE_LICENSE:
-		dir += "home/" + Emu.GetUsr() + "/exdata/";
-		break;
-	case PKG_CONTENT_TYPE_VSH_MODULE:
-		dir += "vsh/modules/";
-		break;
-	case PKG_CONTENT_TYPE_PSN_AVATAR:
-		dir += "home/" + Emu.GetUsr() + "/psn_avatar/";
-		break;
-	case PKG_CONTENT_TYPE_VMC:
-		dir += "tmp/vmc/";
-		break;
-	// TODO: Find out if other content types are installed elsewhere
-	default:
-		dir += "game/";
-		break;
-	}
-
-	// TODO: Verify whether other content types require appending title ID
-	if (m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
-		dir += m_install_dir + '/';
-
-	// If false, an existing directory is being overwritten: cannot cancel the operation
-	const bool was_null = !fs::is_dir(dir);
-
-	if (!fs::create_path(dir))
-	{
-		pkg_log.error("Could not create the installation directory %s", dir);
-		return false;
-	}
-
-	if (!decrypt_data())
-	{
-		return false;
-	}
-
-	atomic_t<usz> num_failures = 0;
-
-	std::vector<PKGEntry> entries(m_header.file_count);
-
-	std::memcpy(entries.data(), m_bufs.back().get(), entries.size() * sizeof(PKGEntry));
-
-	// Create directories first
-	for (const auto& entry : entries)
-	{
-		if (entry.name_size > PKG_MAX_FILENAME_SIZE)
+		if (!reader.fill_data(all_install_entries))
 		{
-			num_failures++;
-			pkg_log.error("PKG name size is too big (0x%x)", entry.name_size);
+			return false;
+		}
+	}
+
+	usz num_failures = 0;
+
+	for (auto& reader : readers)
+	{
+		reader.m_bufs.resize(std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size()));
+
+		atomic_t<usz> thread_indexer = 0;
+
+		named_thread_group workers("PKG Installer "sv, std::max<usz>(reader.m_bufs.size(), 1) - 1, [&]()
+		{
+			num_failures += reader.extract_worker(thread_key{thread_indexer++}, all_install_entries);
+		});
+
+		num_failures += reader.extract_worker(thread_key{thread_indexer++}, all_install_entries);
+		workers.join();
+
+		reader.m_bufs.clear();
+		reader.m_bufs.shrink_to_fit();
+
+		if (num_failures)
+		{
+			if (reader.m_was_null)
+			{
+				fs::remove_all(reader.m_install_path, true);
+			}
+
+			pkg_log.success("Package failed to install ('%s')", reader.m_install_path);
 			break;
 		}
-
-		switch (const u8 entry_type = entry.type & 0xff)
+		else if (reader.get_progress(1) != 1)
 		{
-		case PKG_FILE_ENTRY_FOLDER:
-		case 0x12:
-		{
-			const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
-			decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
-
-			const std::string name{reinterpret_cast<char*>(m_bufs.back().get()), entry.name_size};
-			const std::string path = dir + vfs::escape(name);
-
-			const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
-
-			(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
-
-			if (fs::is_dir(path))
-			{
-				pkg_log.warning("Reused existing directory %s", path);
-			}
-			else if (fs::create_path(path))
-			{
-				pkg_log.notice("Created directory %s", path);
-			}
-			else
-			{
-				num_failures++;
-				pkg_log.error("Failed to create directory %s", path);
-				break;
-			}
-
-			break;
+			pkg_log.warning("Missing %d bytes from PKG total files size.", reader.m_header.data_size - reader.m_written_bytes);
+			reader.m_written_bytes = reader.m_header.data_size; // Mark as completed anyway
 		}
-		default:
-		{
-			continue;
-		}
-		}
+
+		// May be empty
+		bootable_paths.emplace_back(std::move(reader.m_bootable_file_path));
 	}
 
-	if (num_failures != 0)
-	{
-		if (was_null)
-		{
-			fs::remove_all(dir, true);
-		}
-
-		pkg_log.error("Package installation failed: %s", dir);
-		return false;
-	}
-
-	atomic_t<usz> entry_indexer = 0;
-	atomic_t<usz> thread_indexer = 0;
-
-	m_bufs.resize(std::min<usz>(1 /*utils::get_thread_count()*/, entries.size()));
-
-	named_thread_group workers("PKG Installer "sv, std::max<usz>(m_bufs.size(), 1) - 1, [&]()
-	{
-		num_failures += extract_worker(dir, was_null, sync, thread_key{thread_indexer++}, entry_indexer, entries);
-	});
-
-	num_failures += extract_worker(dir, was_null, sync, thread_key{thread_indexer++}, entry_indexer, entries);
-
-	workers.join();
-
-	if (num_failures == 0)
-	{
-		pkg_log.success("Package successfully installed to %s", dir);
-	}
-	else
-	{
-		if (was_null)
-		{
-			fs::remove_all(dir, true);
-		}
-
-		pkg_log.error("Package installation failed: %s", dir);
-	}
-
-	m_bufs.clear();
 	return num_failures == 0;
 }
 
