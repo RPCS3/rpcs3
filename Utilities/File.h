@@ -93,6 +93,7 @@ namespace fs
 		virtual void sync();
 		virtual bool trunc(u64 length) = 0;
 		virtual u64 read(void* buffer, u64 size) = 0;
+		virtual u64 read_at(u64 offset, void* buffer, u64 size) = 0;
 		virtual u64 write(const void* buffer, u64 size) = 0;
 		virtual u64 seek(s64 offset, seek_mode whence) = 0;
 		virtual u64 size() = 0;
@@ -299,6 +300,17 @@ namespace fs
 		{
 			if (!m_file) xnull({line, col, file, func});
 			return m_file->read(buffer, count);
+		}
+
+		// Read the data from the file at specified offset in thread-safe manner
+		u64 read_at(u64 offset, void* buffer, u64 count,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
+		{
+			if (!m_file) xnull({line, col, file, func});
+			return m_file->read_at(offset, buffer, count);
 		}
 
 		// Write the data to the file and return the amount of data actually written
@@ -716,6 +728,24 @@ namespace fs
 				{
 					std::copy(obj.cbegin() + pos, obj.cbegin() + pos + max, static_cast<value_type*>(buffer));
 					pos = pos + max;
+					update_time();
+					return max;
+				}
+			}
+
+			return 0;
+		}
+
+		u64 read_at(u64 offset, void* buffer, u64 size) override
+		{
+			const u64 end = obj.size();
+
+			if (offset < end)
+			{
+				// Get readable size
+				if (const u64 max = std::min<u64>(size, end - offset))
+				{
+					std::copy(obj.cbegin() + offset, obj.cbegin() + offset + max, static_cast<value_type*>(buffer));
 					update_time();
 					return max;
 				}

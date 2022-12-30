@@ -24,10 +24,56 @@ namespace vk
 	void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
 	void unresolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
 
+	class image_reference_sync_barrier
+	{
+		u32 m_texture_barrier_count = 0;
+		u32 m_draw_barrier_count = 0;
+		bool m_allow_skip_barrier = true;
+
+	public:
+		void on_insert_texture_barrier()
+		{
+			m_texture_barrier_count++;
+			m_allow_skip_barrier = false;
+		}
+
+		void on_insert_draw_barrier()
+		{
+			// Account for corner case where the same texture can be bound to more than 1 slot
+			m_draw_barrier_count = std::max(m_draw_barrier_count + 1, m_texture_barrier_count);
+		}
+
+		void allow_skip()
+		{
+			m_allow_skip_barrier = true;
+		}
+
+		void reset()
+		{
+			m_texture_barrier_count = m_draw_barrier_count = 0ull;
+			m_allow_skip_barrier = false;
+		}
+
+		bool can_skip() const
+		{
+			return m_allow_skip_barrier;
+		}
+
+		bool is_enabled() const
+		{
+			return !!m_texture_barrier_count;
+		}
+
+		bool requires_post_loop_barrier() const
+		{
+			return is_enabled() && m_texture_barrier_count < m_draw_barrier_count;
+		}
+	};
+
 	class render_target : public viewable_image, public rsx::render_target_descriptor<vk::viewable_image*>
 	{
-		u64 cyclic_reference_sync_tag = 0;
-		u64 write_barrier_sync_tag = 0;
+		// Cyclic reference hazard tracking
+		image_reference_sync_barrier m_cyclic_ref_tracker;
 
 		// Memory spilling support
 		std::unique_ptr<vk::buffer> m_spilled_mem;
@@ -75,6 +121,7 @@ namespace vk
 
 		// Synchronization
 		void texture_barrier(vk::command_buffer& cmd);
+		void post_texture_barrier(vk::command_buffer& cmd);
 		void memory_barrier(vk::command_buffer& cmd, rsx::surface_access access);
 		void read_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, rsx::surface_access::shader_read); }
 		void write_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, rsx::surface_access::shader_write); }

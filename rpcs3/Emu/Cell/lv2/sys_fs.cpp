@@ -579,6 +579,11 @@ struct lv2_file::file_view : fs::file_base
 		return result;
 	}
 
+	u64 read_at(u64 offset, void* buffer, u64 size) override
+	{
+		return m_file->file.read_at(offset, buffer, size);
+	}
+
 	u64 write(const void*, u64) override
 	{
 		return 0;
@@ -2380,7 +2385,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 				strcpy_trunc(entry.entry_name.d_name, info->name);
 			}
 
-			// Apparently all this function does to additional buffer elements is to zeroize them 
+			// Apparently all this function does to additional buffer elements is to zeroize them
 			std::memset(arg_ptr.get_ptr() + read_count, 0, (max - read_count) * arg->ptr.size());
 		}
 

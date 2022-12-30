@@ -1,5 +1,6 @@
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
+#include "Emu/RSX/rsx_methods.h"
 
 namespace vk
 {
@@ -797,19 +798,67 @@ namespace vk
 
 	void render_target::texture_barrier(vk::command_buffer& cmd)
 	{
-		if (!write_barrier_sync_tag) write_barrier_sync_tag++; // Activate barrier sync
-		cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
-
+		const auto is_framebuffer_read_only = is_depth_surface() && !rsx::method_registers.depth_write_enabled();
 		const auto supports_fbo_loops = cmd.get_command_pool().get_owner().get_framebuffer_loops_support();
 		const auto optimal_layout = supports_fbo_loops ? VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT
 			: VK_IMAGE_LAYOUT_GENERAL;
+
+		if (m_cyclic_ref_tracker.can_skip() && current_layout == optimal_layout && is_framebuffer_read_only)
+		{
+			// If we have back-to-back depth-read barriers, skip subsequent ones
+			// If an actual write is happening, this flag will be automatically reset
+			return;
+		}
+
 		vk::insert_texture_barrier(cmd, this, optimal_layout);
+		m_cyclic_ref_tracker.on_insert_texture_barrier();
+
+		if (is_framebuffer_read_only)
+		{
+			m_cyclic_ref_tracker.allow_skip();
+		}
+	}
+
+	void render_target::post_texture_barrier(vk::command_buffer& cmd)
+	{
+		// This is a fall-out barrier after a cyclic ref when the same surface is still bound.
+		// In this case, we're just checking that the previous read completes before the next write.
+		const bool is_framebuffer_read_only = is_depth_surface() && !rsx::method_registers.depth_write_enabled();
+		if (m_cyclic_ref_tracker.can_skip() && is_framebuffer_read_only)
+		{
+			// Barrier ellided if triggered by a chain of cyclic references with no actual writes
+			m_cyclic_ref_tracker.reset();
+			return;
+		}
+
+		VkPipelineStageFlags src_stage, dst_stage;
+		VkAccessFlags src_access, dst_access;
+
+		if (!is_depth_surface()) [[likely]]
+		{
+			src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			dst_access = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		}
+		else
+		{
+			src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			dst_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			dst_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		}
+
+		vk::insert_image_memory_barrier(cmd, value, current_layout, current_layout,
+			src_stage, dst_stage, src_access, dst_access, { aspect(), 0, 1, 0, 1 });
+
+		m_cyclic_ref_tracker.reset();
 	}
 
 	void render_target::reset_surface_counters()
 	{
 		frame_tag = 0;
-		write_barrier_sync_tag = 0;
+		m_cyclic_ref_tracker.reset();
 	}
 
 	image_view* render_target::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, VkImageAspectFlags mask)
@@ -858,46 +907,23 @@ namespace vk
 			unspill(cmd);
 		}
 
-		if (access == rsx::surface_access::shader_write && write_barrier_sync_tag != 0)
+		if (access == rsx::surface_access::shader_write && m_cyclic_ref_tracker.is_enabled())
 		{
 			if (current_layout == VK_IMAGE_LAYOUT_GENERAL || current_layout == VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT)
 			{
-				if (write_barrier_sync_tag != cyclic_reference_sync_tag)
+				// Flag draw barrier observed
+				m_cyclic_ref_tracker.on_insert_draw_barrier();
+
+				// Check if we've had more draws than barriers so far (fall-out condition)
+				if (m_cyclic_ref_tracker.requires_post_loop_barrier())
 				{
-					// This barrier catches a very specific case where 2 draw calls are executed with general layout (cyclic ref) but no texture barrier in between.
-					// This happens when a cyclic ref is broken. In this case previous draw must finish drawing before the new one renders to avoid current draw breaking previous one.
-					VkPipelineStageFlags src_stage, dst_stage;
-					VkAccessFlags src_access, dst_access;
-
-					if (!is_depth_surface()) [[likely]]
-					{
-						src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-						dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-						src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-						dst_access = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-					}
-					else
-					{
-						src_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-						dst_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-						src_access = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-						dst_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-					}
-
-					vk::insert_image_memory_barrier(cmd, value, current_layout, current_layout,
-						src_stage, dst_stage, src_access, dst_access, { aspect(), 0, 1, 0, 1 });
-
-					write_barrier_sync_tag = 0; // Disable for next draw
-				}
-				else
-				{
-					// Synced externally for this draw
-					write_barrier_sync_tag++;
+					post_texture_barrier(cmd);
 				}
 			}
 			else
 			{
-				write_barrier_sync_tag = 0; // Disable
+				// Layouts changed elsewhere. Reset.
+				m_cyclic_ref_tracker.reset();
 			}
 		}
 
