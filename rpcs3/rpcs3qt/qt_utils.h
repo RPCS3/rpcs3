@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/atomic.hpp"
 
 #include <QDir>
 #include <QComboBox>
@@ -130,13 +131,19 @@ namespace gui
 		QString format_byte_size(usz size);
 
 		template <typename T>
-		void stop_future_watcher(QFutureWatcher<T>& watcher, bool cancel)
+		void stop_future_watcher(QFutureWatcher<T>& watcher, bool cancel, std::shared_ptr<atomic_t<bool>> cancel_flag = nullptr)
 		{
-			if (watcher.isRunning())
+			if (watcher.isStarted() || watcher.isRunning())
 			{
 				if (cancel)
 				{
 					watcher.cancel();
+
+					// We use an optional cancel flag since the QFutureWatcher::canceled signal seems to be very unreliable
+					if (cancel_flag)
+					{
+						*cancel_flag = true;
+					}
 				}
 				watcher.waitForFinished();
 			}
