@@ -1924,7 +1924,7 @@ bool fs::remove_all(const std::string& path, bool remove_root, bool is_no_dir_ok
 	return true;
 }
 
-u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
+u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment, atomic_t<bool>* cancel_flag)
 {
 	u64 result = 0;
 
@@ -1937,6 +1937,11 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 	for (const auto& entry : root_dir)
 	{
+		if (cancel_flag && *cancel_flag)
+		{
+			return umax;
+		}
+
 		if (entry.name == "." || entry.name == "..")
 		{
 			continue;
