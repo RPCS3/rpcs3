@@ -968,7 +968,7 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 	atomic_t<usz> entry_indexer = 0;
 	atomic_t<usz> thread_indexer = 0;
 
-	m_bufs.resize(std::min<usz>(utils::get_thread_count(), entries.size()));
+	m_bufs.resize(std::min<usz>(1 /*utils::get_thread_count()*/, entries.size()));
 
 	named_thread_group workers("PKG Installer "sv, std::max<usz>(m_bufs.size(), 1) - 1, [&]()
 	{
