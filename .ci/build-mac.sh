@@ -1,15 +1,49 @@
 #!/bin/sh -ex
 
-brew update
-brew install llvm@13 sdl2 nasm qt@5 ninja cmake glew git p7zip create-dmg ccache
+export NONINTERACTIVE=1
 
-export MACOSX_DEPLOYMENT_TARGET=11.6
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"
+
+arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+arch -x86_64 /usr/local/homebrew/bin/brew install llvm@14 sdl2 qt@5 glew cmake nasm ninja p7zip create-dmg ccache
+
+export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
 export CC=clang
 export Qt5_DIR="/usr/local/opt/qt@5/lib/cmake/Qt5"
-export PATH="/usr/local/opt/llvm@13/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
-export LDFLAGS="-L/usr/local/opt/llvm@13/lib -Wl,-rpath,/usr/local/opt/llvm@13/lib"
-export CPPFLAGS="-I/usr/local/opt/llvm@13/include -msse -msse2 -mcx16 -no-pie"
+export PATH="/usr/local/opt/llvm@14/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
+export LDFLAGS="-L/usr/local/opt/llvm@14/lib -Wl,-rpath,/usr/local/opt/llvm@14/lib"
+export CPPFLAGS="-I/usr/local/opt/llvm@14/include -msse -msse2 -mcx16 -no-pie"
+
+brew unlink llvm@14
+brew link llvm@14
+
+brew unlink sdl2
+brew link sdl2
+
+brew unlink qt@5
+brew link qt@5
+
+brew unlink glew
+brew link glew
+
+brew unlink cmake
+brew link cmake
+
+brew unlink nasm
+brew link nasm
+
+brew unlink ninja
+brew link ninja
+
+brew unlink p7zip
+brew link p7zip
+
+brew unlink create-dmg
+brew link create-dmg
+
+brew unlink ccache
+brew link ccache
 
 git submodule update --init --recursive --depth 1
 
