@@ -227,17 +227,6 @@ namespace rsx
 			remap_ctl |= lo_word;
 			break;
 		}
-		case CELL_GCM_TEXTURE_B8:
-		{
-			// Low bit in remap control seems to affect whether the A component is forced to 1
-			// Only seen in BLUS31604
-			if (remap_override)
-			{
-				// Set remap lookup for A component to FORCE_ONE
-				remap_ctl = (remap_ctl & ~(3 << 8)) | (1 << 8);
-			}
-			break;
-		}
 		default:
 			break;
 		}
