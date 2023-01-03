@@ -269,8 +269,8 @@ namespace glsl
 		"{\n"
 		"	const int elem_size_table[] = { 2, 4, 2, 1, 2, 4, 1 };\n"
 		"	const float scaling_table[] = { 32767.5, 1., 1., 255., 1., 32767., 1. };\n"
-		"	const int elem_size = elem_size_table[desc.type];\n"
-		"	const vec4 scale = scaling_table[desc.type].xxxx;\n\n"
+		"	const int elem_size = elem_size_table[desc.type - 1];\n"
+		"	const vec4 scale = scaling_table[desc.type - 1].xxxx;\n\n"
 
 		"	uvec4 tmp, result = uvec4(0u);\n"
 		"	vec4 ret;\n"
