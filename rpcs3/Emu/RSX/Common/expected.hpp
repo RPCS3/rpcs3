@@ -5,13 +5,37 @@
 
 namespace rsx
 {
-    template <typename E>
-    concept ErrorType = requires (E& e)
-    {
-        { e.empty() } -> std::same_as<bool>;
-    };
+	namespace exception_utils
+	{
+		enum soft_exception_error_code
+		{
+			none = 0,
+			range_exception = 1,
+			invalid_enum = 2
+		};
 
-    template <typename T, ErrorType E = std::string>
+		struct soft_exception_t
+		{
+			soft_exception_error_code error = soft_exception_error_code::none;
+
+			soft_exception_t() = default;
+			soft_exception_t(soft_exception_error_code code)
+				: error(code) {}
+
+			bool empty() const
+			{
+				return error == soft_exception_error_code::none;
+			}
+		};
+	}
+
+	template <typename E>
+	concept ErrorType = requires (E & e)
+	{
+		{ e.empty() } -> std::same_as<bool>;
+	};
+
+    template <typename T, ErrorType E = exception_utils::soft_exception_t>
     class expected
     {
         T value;
