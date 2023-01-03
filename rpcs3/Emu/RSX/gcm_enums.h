@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "Common/expected.hpp"
+#include "Utilities/StrFmt.h"
 
 namespace gcm
 {
@@ -975,8 +976,8 @@ namespace rsx
 		return fmt::format("Enum out of range 0x%x", value);
 	}
 
-	template <typename T, int N>
-	expected<T> gcm_enum_cast(u32 value, u32 allowed[N])
+	template <typename T>
+	expected<T> gcm_enum_cast(u32 value, std::initializer_list<u32> allowed)
 	{
 		for (const auto v : allowed)
 		{
@@ -989,8 +990,8 @@ namespace rsx
 		return fmt::format("Invalid enum value 0x%x", value);
 	}
 
-	template <typename T, int N>
-	expected<T> gcm_enum_cast(u32 value, u32 allowed[2][N])
+	template <typename T>
+	expected<T> gcm_enum_cast(u32 value, std::initializer_list<u32[2]> allowed)
 	{
 		for (const auto& range : allowed)
 		{
@@ -1021,7 +1022,7 @@ namespace rsx
 				vertex_base_type,
 				RSX_VERTEX_BASE_TYPE_SNORM16,
 				RSX_VERTEX_BASE_TYPE_INT8>(in)
-			: vertex_base_type::ub256;
+			: expected(vertex_base_type::ub256);
 	}
 
 	enum class index_array_type : u8
@@ -1064,7 +1065,7 @@ namespace rsx
 
 	static inline auto to_surface_target(u32 in)
 	{
-		gcm_enum_cast<surface_target>(in, {
+		return gcm_enum_cast<surface_target>(in, {
 			CELL_GCM_SURFACE_TARGET_0,
 			CELL_GCM_SURFACE_TARGET_MRT1,
 			CELL_GCM_SURFACE_TARGET_NONE,
@@ -1111,6 +1112,7 @@ namespace rsx
 
 	enum class surface_raster_type : u8
 	{
+		undefined = CELL_GCM_ZERO,
 		linear = CELL_GCM_SURFACE_PITCH,
 		swizzle = CELL_GCM_SURFACE_SWIZZLE,
 	};
@@ -1125,11 +1127,11 @@ namespace rsx
 
 	static inline auto to_surface_antialiasing(u32 in)
 	{
-		return gcm_enum_cast<
-			surface_antialiasing,
-			CELL_GCM_SURFACE_DIAGONAL_CENTERED_2,
-			CELL_GCM_SURFACE_SQUARE_ROTATED_4,
-			CELL_GCM_SURFACE_CENTER_1>
+		return gcm_enum_cast<surface_antialiasing>(in,
+		{
+			{ CELL_GCM_SURFACE_CENTER_1, CELL_GCM_SURFACE_CENTER_1 },
+			{ CELL_GCM_SURFACE_DIAGONAL_CENTERED_2, CELL_GCM_SURFACE_SQUARE_ROTATED_4 }
+		});
 	}
 
 	enum class surface_color_format : u8
@@ -1137,7 +1139,7 @@ namespace rsx
 		x1r5g5b5_z1r5g5b5 = CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5,
 		x1r5g5b5_o1r5g5b5 = CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5,
 		r5g6b5 = CELL_GCM_SURFACE_R5G6B5,
-		x8r8g8b8_z8r8g8b8 = CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8
+		x8r8g8b8_z8r8g8b8 = CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8,
 		x8r8g8b8_o8r8g8b8 = CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8,
 		a8r8g8b8 = CELL_GCM_SURFACE_A8R8G8B8,
 		b8 = CELL_GCM_SURFACE_B8,
@@ -1160,7 +1162,7 @@ namespace rsx
 
 	enum class window_origin : u8
 	{
-		top = CELL_GCM_WINDOW_ORIGIN_TOP
+		top = CELL_GCM_WINDOW_ORIGIN_TOP,
 		bottom = CELL_GCM_WINDOW_ORIGIN_BOTTOM
 	};
 
@@ -1186,7 +1188,7 @@ namespace rsx
 			CELL_GCM_WINDOW_PIXEL_CENTER_INTEGER>(in);
 	}
 
-	enum class comparison_function : u8
+	enum class comparison_function : u16
 	{
 		never = CELL_GCM_NEVER,
 		less = CELL_GCM_LESS,
@@ -1203,15 +1205,15 @@ namespace rsx
 		return gcm_enum_cast<
 			comparison_function,
 			CELL_GCM_NEVER,
-			CELL_GCM_ALWAYS>(in & 0xFF);
+			CELL_GCM_ALWAYS>(in | 0x200);
 	}
 
-	enum class fog_mode : u8
+	enum class fog_mode : u16
 	{
 		linear = CELL_GCM_FOG_MODE_LINEAR,
 		exponential = CELL_GCM_FOG_MODE_EXP,
 		exponential2 = CELL_GCM_FOG_MODE_EXP2,
-		exponential_abs = CELL_GCM_FOG_MODE_EXP_ABS
+		exponential_abs = CELL_GCM_FOG_MODE_EXP_ABS,
 		exponential2_abs = CELL_GCM_FOG_MODE_EXP2_ABS,
 		linear_abs = CELL_GCM_FOG_MODE_LINEAR_ABS
 	};
@@ -1220,7 +1222,7 @@ namespace rsx
 	{
 		if (in == CELL_GCM_FOG_MODE_LINEAR)
 		{
-			return fog_mode::linear;
+			return expected(fog_mode::linear);
 		}
 
 		return gcm_enum_cast<
@@ -1320,10 +1322,10 @@ namespace rsx
 
 	static inline auto to_texture_magnify_filter(u32 in)
 	{
-		return gcm_enum_cast<texture_magnify_filter>(value, { CELL_GCM_TEXTURE_LINEAR, CELL_GCM_TEXTURE_NEAREST, CELL_GCM_TEXTURE_CONVOLUTION_MAG});
+		return gcm_enum_cast<texture_magnify_filter>(in, { CELL_GCM_TEXTURE_LINEAR, CELL_GCM_TEXTURE_NEAREST, CELL_GCM_TEXTURE_CONVOLUTION_MAG });
 	}
 
-	enum class stencil_op : u8
+	enum class stencil_op : u16
 	{
 		keep = CELL_GCM_KEEP,
 		zero = CELL_GCM_ZERO,
@@ -1345,11 +1347,11 @@ namespace rsx
 		});
 	}
 
-	enum class blend_equation : u8
+	enum class blend_equation : u16
 	{
 		add = CELL_GCM_FUNC_ADD,
-		min = CELL_GCM_FUNC_MIN,
-		max = CELL_GCM_FUNC_MAX,
+		min = CELL_GCM_MIN,
+		max = CELL_GCM_MAX,
 		subtract = CELL_GCM_FUNC_SUBTRACT,
 		reverse_subtract = CELL_GCM_FUNC_REVERSE_SUBTRACT,
 		reverse_subtract_signed = CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED,
@@ -1366,7 +1368,7 @@ namespace rsx
 		});
 	}
 
-	enum class blend_factor : u8
+	enum class blend_factor : u16
 	{
 		zero = CELL_GCM_ZERO,
 		one = CELL_GCM_ONE,
@@ -1391,10 +1393,10 @@ namespace rsx
 		{
 			{ CELL_GCM_SRC_COLOR, CELL_GCM_ONE_MINUS_CONSTANT_ALPHA },
 			{ CELL_GCM_ZERO, CELL_GCM_ONE }
-		})
+		});
 	}
 
-	enum class logic_op : u8
+	enum class logic_op : u16
 	{
 		logic_clear = CELL_GCM_CLEAR,
 		logic_and = CELL_GCM_AND,
@@ -1422,7 +1424,7 @@ namespace rsx
 			CELL_GCM_SET>(in);
 	}
 
-	enum class front_face : u8
+	enum class front_face : u16
 	{
 		cw = CELL_GCM_CW, /// clockwise
 		ccw = CELL_GCM_CCW, /// counter clockwise
@@ -1436,7 +1438,7 @@ namespace rsx
 			CELL_GCM_CCW>(in);
 	}
 
-	enum class cull_face : u32
+	enum class cull_face : u16
 	{
 		front = CELL_GCM_FRONT,
 		back = CELL_GCM_BACK,
@@ -1458,7 +1460,7 @@ namespace rsx
 			CELL_GCM_USER_CLIP_PLANE_ENABLE_GE>(in);
 	}
 
-	enum class shading_mode : u8
+	enum class shading_mode : u16
 	{
 		smooth = CELL_GCM_SMOOTH,
 		flat = CELL_GCM_FLAT,
@@ -1472,7 +1474,7 @@ namespace rsx
 			CELL_GCM_SMOOTH>(in);
 	}
 
-	enum class polygon_mode : u8
+	enum class polygon_mode : u16
 	{
 		point = CELL_GCM_POLYGON_MODE_POINT,
 		line = CELL_GCM_POLYGON_MODE_LINE,
@@ -1577,7 +1579,7 @@ namespace rsx
 			});
 		}
 
-		enum class context_surface : u8
+		enum class context_surface : u32
 		{
 			surface2d = CELL_GCM_CONTEXT_SURFACE2D,
 			swizzle2d = CELL_GCM_CONTEXT_SWIZZLE2D,
@@ -1592,7 +1594,7 @@ namespace rsx
 			});
 		}
 
-		enum class context_dma : u8
+		enum class context_dma : u32
 		{
 			to_memory_get_report = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL,
 			report_location_main = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN,

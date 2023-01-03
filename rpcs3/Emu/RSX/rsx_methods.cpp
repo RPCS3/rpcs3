@@ -593,9 +593,8 @@ namespace rsx
 			// Ignore upper bits
 			if (const u8 prim = static_cast<u8>(arg))
 			{
-				rsx::method_registers.current_draw_clause.reset(to_primitive_type(prim));
-
-				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
+				const auto primitive_type = to_primitive_type(prim);
+				if (!primitive_type)
 				{
 					rsxthr->in_begin_end = true;
 
@@ -603,17 +602,18 @@ namespace rsx
 					return;
 				}
 
+				rsx::method_registers.current_draw_clause.reset(primitive_type);
 				rsxthr->begin();
 				return;
 			}
 
-			//Check if we have immediate mode vertex data in a driver-local buffer
+			// Check if we have immediate mode vertex data in a driver-local buffer
 			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
 			{
 				const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
 				const u32 push_buffer_index_count = rsxthr->get_push_buffer_index_count();
 
-				//Need to set this flag since it overrides some register contents
+				// Need to set this flag since it overrides some register contents
 				rsx::method_registers.current_draw_clause.is_immediate_draw = true;
 
 				if (push_buffer_index_count)
@@ -634,15 +634,6 @@ namespace rsx
 
 			if (!rsx::method_registers.current_draw_clause.empty())
 			{
-				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
-				{
-					// Recover from invalid primitive only if draw clause is not empty
-					rsxthr->recover_fifo();
-
-					rsx_log.error("NV4097_SET_BEGIN_END aborted due to invalid primitive!");
-					return;
-				}
-
 				rsx::method_registers.current_draw_clause.compile();
 
 				if (g_cfg.video.disable_video_output)
@@ -1050,7 +1041,7 @@ namespace rsx
 				// Skip "handled methods"
 				rsx->fifo_ctrl->skip_methods(count - 1);
 
-				switch (method_registers.blit_engine_nv3062_color_format())
+				switch (*method_registers.blit_engine_nv3062_color_format())
 				{
 				case blit_engine::transfer_destination_format::a8r8g8b8:
 				case blit_engine::transfer_destination_format::y32:
@@ -1166,7 +1157,7 @@ namespace rsx
 
 			const blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
 			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
-			rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
+			auto src_color_format = method_registers.blit_engine_src_color_format();
 
 			const f32 scale_x = method_registers.blit_engine_ds_dx();
 			const f32 scale_y = method_registers.blit_engine_dt_dy();
@@ -1214,7 +1205,7 @@ namespace rsx
 				return;
 			}
 
-			if (src_color_format == rsx::blit_engine::transfer_source_format::invalid)
+			if (!src_color_format)
 			{
 				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown src color format (0x%x)", method_registers.registers[NV3089_SET_COLOR_FORMAT]);
 				rsx->recover_fifo();
@@ -1237,16 +1228,19 @@ namespace rsx
 			{
 				dst_dma = method_registers.blit_engine_output_location_nv3062();
 				dst_offset = method_registers.blit_engine_output_offset_nv3062();
-				dst_color_format = method_registers.blit_engine_nv3062_color_format();
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
 				is_block_transfer = fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f);
 
-				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				if (auto dst_fmt = method_registers.blit_engine_nv3062_color_format(); !dst_fmt)
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV3062 dst color format (0x%x)", method_registers.registers[NV3062_SET_COLOR_FORMAT]);
 					rsx->recover_fifo();
 					return;
+				}
+				else
+				{
+					dst_color_format = dst_fmt;
 				}
 
 				break;
@@ -1255,13 +1249,16 @@ namespace rsx
 			{
 				dst_dma = method_registers.blit_engine_nv309E_location();
 				dst_offset = method_registers.blit_engine_nv309E_offset();
-				dst_color_format = method_registers.blit_engine_output_format_nv309E();
 
-				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				if (auto dst_fmt = method_registers.blit_engine_output_format_nv309E(); !dst_fmt)
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV309E dst color format (0x%x)", method_registers.registers[NV309E_SET_FORMAT]);
 					rsx->recover_fifo();
 					return;
+				}
+				else
+				{
+					dst_color_format = dst_fmt;
 				}
 
 				break;
@@ -1395,7 +1392,7 @@ namespace rsx
 				else
 				{
 					// TODO: Support more formats
-					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", static_cast<u8>(src_color_format));
+					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", static_cast<u8>(*src_color_format));
 				}
 			}
 
