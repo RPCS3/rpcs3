@@ -843,19 +843,10 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	pdlg.setAutoClose(false);
 	pdlg.show();
 
-	// Synchronization variable
-	atomic_t<double> progress(0.);
-
 	package_error error = package_error::no_error;
 
-	bool cancelled = false;
-	std::map<std::string, QString> bootable_paths_installed; // -> title id
-
-	for (usz i = 0, count = packages.size(); i < count; i++)
+	auto get_app_info = [](compat::package_info& package)
 	{
-		progress = 0.;
-
-		const compat::package_info& package = ::at32(packages, i);
 		QString app_info = package.title; // This should always be non-empty
 
 		if (!package.title_id.isEmpty() || !package.version.isEmpty())
@@ -878,76 +869,100 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			}
 		}
 
-		pdlg.SetValue(0);
-		pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(i + 1).arg(count).arg(app_info));
-		pdlg.show();
+		return app_info;
+	};
 
-		const QFileInfo file_info(package.path);
-		const std::string path      = sstr(package.path);
-		const std::string file_name = sstr(file_info.fileName());
+	bool cancelled = false;
+	std::map<std::string, QString> bootable_paths_installed; // -> title id
 
-		std::string bootable_path;
+	std::deque<package_reader> readers;
 
-		// Run PKG unpacking asynchronously
-		named_thread worker("PKG Installer", [path, &progress, &error, &bootable_path]
+	for (usz i = 0; error == package_error::no_error && i < packages.size(); i++)
+	{
+		readers.emplace_back(sstr(packages[i].path));
+		error = readers.back().check_target_app_version();
+	}
+
+	std::deque<std::string> bootable_paths;
+
+	// Run PKG unpacking asynchronously
+	named_thread worker("PKG Installer", [&readers, &error, &bootable_paths]
+	{
+		if (error == package_error::no_error)
 		{
-			package_reader reader(path);
-			error = reader.check_target_app_version();
-
-			if (error == package_error::no_error)
+			if (package_reader::extract_data(readers, bootable_paths))
 			{
-				if (reader.extract_data(progress))
-				{
-					bootable_path = reader.try_get_bootable_file_path_if_created_new();
-					return true;
-				}
+				return true;
+			}
+		}
+
+		return false;
+	});
+
+	pdlg.show();
+
+	// Wait for the completion
+	for (usz i = 0, set_text = umax; i < readers.size();)
+	{
+		std::this_thread::sleep_for(5ms);
+
+		if (pdlg.wasCanceled())
+		{
+			cancelled = true;
+			
+			for (auto& reader : readers)
+			{
+				reader.abort_extract();
 			}
 
-			return false;
-		});
-
-		// Wait for the completion
-		while (worker <= thread_state::aborting)
-		{
-			std::this_thread::sleep_for(5ms);
-
-			if (pdlg.wasCanceled())
-			{
-				cancelled = true;
-				progress -= 1.;
-				break;
-			}
-
-			// Update progress window
-			double pval = progress;
-			if (pval < 0.) pval += 1.;
-
-			pdlg.SetValue(static_cast<int>(pval * pdlg.maximum()));
-			QCoreApplication::processEvents();
+			break;
 		}
 
-		if (worker())
+		// Update progress window
+		const int progress = readers[i].get_progress(pdlg.maximum());
+		pdlg.SetValue(progress);
+
+		if (set_text != i)
 		{
-			pdlg.SetValue(pdlg.maximum());
-			std::this_thread::sleep_for(100ms);
-		}
-		else
-		{
-			pdlg.hide();
-			pdlg.SignalFailure();
+			pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(i + 1).arg(readers.size()).arg(get_app_info(packages[i])));
+			set_text = i;
 		}
 
-		if (worker())
+		QCoreApplication::processEvents();
+
+		if (progress == pdlg.maximum())
+		{
+			i++;
+		}
+	}
+
+	if (worker())
+	{
+		pdlg.SetValue(pdlg.maximum());
+		std::this_thread::sleep_for(100ms);
+
+		if (true)
 		{
 			m_game_list_frame->Refresh(true);
-			gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", file_name, sstr(package.title_id), sstr(package.title), sstr(package.version));
-
-			if (!bootable_path.empty())
+			
+			for (const auto& package : packages)
 			{
-				bootable_paths_installed[bootable_path] = package.title_id;
+				gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
 			}
 
-			if (i == (count - 1))
+			gui_log.success("Package(s) successfully installed!");
+
+			for (usz index = 0; index < bootable_paths.size(); index++)
+			{
+				if (bootable_paths[index].empty())
+				{
+					continue;
+				}
+
+				bootable_paths_installed[bootable_paths[index]] = packages[index].title_id;
+			}
+
+			if (true)
 			{
 				pdlg.hide();
 
@@ -1024,30 +1039,39 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 				}
 			}
 		}
-		else
+	}
+	else
+	{
+		pdlg.hide();
+		pdlg.SignalFailure();
+
+		if (!cancelled)
 		{
-			if (!cancelled)
+			const compat::package_info* package = nullptr;
+
+			for (usz i = 0; i < readers.size(); i++)
 			{
-				if (error == package_error::app_version)
+				// Figure out what package failed the installation
+				if (readers[i].get_progress(1) != 1)
 				{
-					gui_log.error("Cannot install %s.", file_name);
-					QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package.path));
-				}
-				else
-				{
-					gui_log.error("Failed to install %s.", file_name);
-					QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!"
-						"\nThis is very likely caused by external interference from a faulty anti-virus software."
-						"\nPlease add RPCS3 to your anti-virus\' whitelist or use better anti-virus software.").arg(package.path));
+					package = &packages[i];
 				}
 			}
-			return;
-		}
 
-		// return if the thread was still running after cancel
-		if (cancelled)
-		{
-			return;
+			ensure(package);
+
+			if (error == package_error::app_version)
+			{
+				gui_log.error("Cannot install %s.", sstr(package->path));
+				QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package->path));
+			}
+			else
+			{
+				gui_log.error("Failed to install %s.", sstr(package->path));
+				QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!"
+					"\nThis is very likely caused by external interference from a faulty anti-virus software."
+					"\nPlease add RPCS3 to your anti-virus\' whitelist or use better anti-virus software.").arg(package->path));
+			}
 		}
 	}
 }
