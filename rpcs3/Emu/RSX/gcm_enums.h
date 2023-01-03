@@ -955,7 +955,7 @@ namespace gcm
 		RSX_VERTEX_BASE_TYPE_UNORM8,
 		RSX_VERTEX_BASE_TYPE_SINT16,
 		RSX_VERTEX_BASE_TYPE_CMP32,
-		RSX_VERTEX_BASE_TYPE_INT8,
+		RSX_VERTEX_BASE_TYPE_UINT8,
 	};
 }
 
@@ -1012,7 +1012,7 @@ namespace rsx
 		ub = RSX_VERTEX_BASE_TYPE_UNORM8,     ///< unsigned byte interpreted as 0.f and 1.f
 		s32k = RSX_VERTEX_BASE_TYPE_SINT16,   ///< signed 16bits int
 		cmp  = RSX_VERTEX_BASE_TYPE_CMP32,    ///< compressed aka X11G11Z10 and always 1. W.
-		ub256 = RSX_VERTEX_BASE_TYPE_INT8,    ///< unsigned byte interpreted as between 0 and 255.
+		ub256 = RSX_VERTEX_BASE_TYPE_UINT8,   ///< unsigned byte interpreted as between 0 and 255.
 	};
 
 	static inline auto to_vertex_base_type(u32 in)
@@ -1021,7 +1021,7 @@ namespace rsx
 			? gcm_enum_cast<
 				vertex_base_type,
 				RSX_VERTEX_BASE_TYPE_SNORM16,
-				RSX_VERTEX_BASE_TYPE_INT8>(in)
+				RSX_VERTEX_BASE_TYPE_UINT8>(in)
 			: expected(vertex_base_type::ub256);
 	}
 

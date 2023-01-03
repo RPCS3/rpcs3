@@ -184,13 +184,13 @@ namespace glsl
 
 		//Actually decode a vertex attribute from a raw byte stream
 		OS <<
-		"#define VTX_FMT_SNORM16 0\n"
-		"#define VTX_FMT_FLOAT32 1\n"
-		"#define VTX_FMT_FLOAT16 2\n"
-		"#define VTX_FMT_UNORM8  3\n"
-		"#define VTX_FMT_SINT16  4\n"
-		"#define VTX_FMT_COMP32  5\n"
-		"#define VTX_FMT_UINT8   6\n\n";
+		"#define VTX_FMT_SNORM16 " << RSX_VERTEX_BASE_TYPE_SNORM16 << "\n"
+		"#define VTX_FMT_FLOAT32 " << RSX_VERTEX_BASE_TYPE_FLOAT << "\n"
+		"#define VTX_FMT_FLOAT16 " << RSX_VERTEX_BASE_TYPE_HALF_FLOAT << "\n"
+		"#define VTX_FMT_UNORM8  " << RSX_VERTEX_BASE_TYPE_UNORM8 << "\n"
+		"#define VTX_FMT_SINT16  " << RSX_VERTEX_BASE_TYPE_SINT16 << "\n"
+		"#define VTX_FMT_COMP32  " << RSX_VERTEX_BASE_TYPE_CMP32 << "\n"
+		"#define VTX_FMT_UINT8   " << RSX_VERTEX_BASE_TYPE_UINT8 << "\n\n";
 
 		// For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
 		// Note: Tested on Mesa iris with HD 530 and compilant path works fine, may be a bug on Windows proprietary drivers
