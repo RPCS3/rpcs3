@@ -36,13 +36,9 @@ namespace vk
 
 	u64 calculate_working_buffer_size(u64 base_size, VkImageAspectFlags aspect)
 	{
-		if (aspect & VK_IMAGE_ASPECT_STENCIL_BIT)
+		if (aspect & (VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT))
 		{
-			return (base_size * 9) / 4;
-		}
-		else if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT)
-		{
-			return (base_size * 6) / 2;
+			return (base_size * 3);
 		}
 		else
 		{
