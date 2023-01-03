@@ -973,7 +973,7 @@ namespace rsx
 			return static_cast<T>(value);
 		}
 
-		return fmt::format("Enum out of range 0x%x", value);
+		return exception_utils::soft_exception_t{ rsx::exception_utils::invalid_enum };
 	}
 
 	template <typename T>
@@ -987,7 +987,7 @@ namespace rsx
 			}
 		}
 
-		return fmt::format("Invalid enum value 0x%x", value);
+		return exception_utils::soft_exception_t{ rsx::exception_utils::invalid_enum };
 	}
 
 	template <typename T>
@@ -1001,7 +1001,7 @@ namespace rsx
 			}
 		}
 
-		return fmt::format("Enum is out of range 0x%x", value);
+		return exception_utils::soft_exception_t{ rsx::exception_utils::invalid_enum };
 	}
 
 	enum class vertex_base_type : u8
@@ -1083,8 +1083,8 @@ namespace rsx
 
 	enum class surface_depth_format2 : u8
 	{
-		z16_uint,    // unsigned 16 bits depth
-		z24s8_uint,  // unsigned 24 bits depth + 8 bits stencil
+		z16_uint = surface_depth_format::z16,      // unsigned 16 bits depth
+		z24s8_uint = surface_depth_format::z24s8,  // unsigned 24 bits depth + 8 bits stencil
 		z16_float,   // floating point 16 bits depth
 		z24s8_float, // floating point 24 bits depth + 8 bits stencil
 	};
@@ -1270,7 +1270,7 @@ namespace rsx
 	{
 		return gcm_enum_cast<
 			texture_wrap_mode,
-			CELL_GCM_TEXTURE_CLAMP,
+			CELL_GCM_TEXTURE_WRAP,
 			CELL_GCM_TEXTURE_MIRROR_ONCE_CLAMP>(in);
 	}
 

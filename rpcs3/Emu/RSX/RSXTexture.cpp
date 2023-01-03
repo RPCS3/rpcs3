@@ -97,7 +97,7 @@ namespace rsx
 
 	rsx::comparison_function fragment_texture::zfunc() const
 	{
-		return static_cast<rsx::comparison_function>((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);
+		return rsx::to_comparison_function((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);
 	}
 
 	u8 fragment_texture::unsigned_remap() const
