@@ -571,8 +571,6 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 	case rsx::primitive_type::triangle_fan:
 	case rsx::primitive_type::quads:
 		return false;
-	case rsx::primitive_type::invalid:
-		break;
 	}
 
 	fmt::throw_exception("Wrong primitive type");
@@ -663,8 +661,6 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
 		fmt::throw_exception("Native primitive type doesn't require expansion");
-	case rsx::primitive_type::invalid:
-		break;
 	}
 
 	fmt::throw_exception("Tried to load invalid primitive type");

@@ -2812,7 +2812,7 @@ struct registers_decoder<NV3089_SET_COLOR_FORMAT>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blit_engine::transfer_source_format transfer_source_fmt() const
+		expected<blit_engine::transfer_source_format> transfer_source_fmt() const
 		{
 			return blit_engine::to_transfer_source_format(value);
 		}
@@ -2820,7 +2820,7 @@ struct registers_decoder<NV3089_SET_COLOR_FORMAT>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV3089: source fmt: %s", decoded.transfer_source_fmt());
+		return fmt::format("NV3089: source fmt: %s", *decoded.transfer_source_fmt());
 	}
 };
 
@@ -2858,7 +2858,7 @@ struct registers_decoder<NV3062_SET_COLOR_FORMAT>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blit_engine::transfer_destination_format transfer_dest_fmt() const
+		expected<blit_engine::transfer_destination_format> transfer_dest_fmt() const
 		{
 			return blit_engine::to_transfer_destination_format(value);
 		}
@@ -2866,7 +2866,7 @@ struct registers_decoder<NV3062_SET_COLOR_FORMAT>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV3062: output fmt: %s", decoded.transfer_dest_fmt());
+		return fmt::format("NV3062: output fmt: %s", *decoded.transfer_dest_fmt());
 	}
 };
 
@@ -3741,10 +3741,9 @@ struct registers_decoder<NV309E_SET_FORMAT>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		blit_engine::transfer_destination_format format() const
+		expected<blit_engine::transfer_destination_format> format() const
 		{
-			// Why truncate??
-			return blit_engine::to_transfer_destination_format(static_cast<u8>(transfer_destination_fmt()));
+			return blit_engine::to_transfer_destination_format(transfer_destination_fmt());
 		}
 
 		u8 sw_height_log2() const
@@ -3760,7 +3759,7 @@ struct registers_decoder<NV309E_SET_FORMAT>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV309E: output fmt: %s log2-width: %u log2-height: %u", decoded.format(),
+		return fmt::format("NV309E: output fmt: %s log2-width: %u log2-height: %u", *decoded.format(),
 			decoded.sw_width_log2(), decoded.sw_height_log2());
 	}
 };
