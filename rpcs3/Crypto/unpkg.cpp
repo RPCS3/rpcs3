@@ -804,7 +804,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		}
 		default:
 		{
-			const std::string true_path = std::filesystem::weakly_canonical(std::filesystem::path(path)).string();
+			const std::string true_path = std::filesystem::weakly_canonical(std::filesystem::u8path(path)).string();
 			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;
 
 			m_install_entries.push_back({ map_ptr, name, entry.file_offset, entry.file_size, entry.type, entry.pad });
