@@ -546,7 +546,7 @@ namespace rsx
 		if (dma_address)
 		{
 			ctrl = vm::_ptr<RsxDmaControl>(dma_address);
-			m_rsx_thread_exiting = false;
+			rsx_thread_running = true;
 		}
 
 		if (g_cfg.savestate.start_paused)
@@ -712,7 +712,14 @@ namespace rsx
 			thread_ctrl::wait_for(1000);
 		}
 
-		on_task();
+		do
+		{
+			on_task();
+
+			state -= cpu_flag::ret;
+		}
+		while (!is_stopped());
+
 		on_exit();
 	}
 
@@ -778,8 +785,11 @@ namespace rsx
 
 		rsx::overlays::reset_performance_overlay();
 
-		g_fxo->get<rsx::dma_manager>().init();
-		on_init_thread();
+		if (!is_initialized)
+		{
+			g_fxo->get<rsx::dma_manager>().init();
+			on_init_thread();
+		}
 
 		is_initialized = true;
 		is_initialized.notify_all();
@@ -797,10 +807,16 @@ namespace rsx
 
 		const u64 event_flags = unsent_gcm_events.exchange(0);
 
-		Emu.CallFromMainThread([]{ Emu.RunPPU(); });
+		if (Emu.IsStarting())
+		{
+			Emu.CallFromMainThread([]
+			{
+				Emu.RunPPU();
+			});
+		}
 
 		// Wait for startup (TODO)
-		while (m_rsx_thread_exiting || Emu.IsPaused())
+		while (!rsx_thread_running || Emu.IsPaused())
 		{
 			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);
@@ -835,7 +851,7 @@ namespace rsx
 			return;
 		}
 
-		g_fxo->init<named_thread>("VBlank Thread", [this]()
+		g_fxo->get<vblank_thread>().set_thread(std::make_shared<named_thread<std::function<void()>>>("VBlank Thread", [this]()
 		{
 			// See sys_timer_usleep for details
 #ifdef __linux__
@@ -882,7 +898,7 @@ namespace rsx
 							vblank_rate = g_cfg.video.vblank_rate;
 							vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
 						}
-	
+
 						post_vblank_event(post_event_time);
 					}
 				}
@@ -909,7 +925,16 @@ namespace rsx
 					start_time = rsx::uclock() - start_time;
 				}
 			}
-		});
+		}));
+
+		struct join_vblank
+		{
+			~join_vblank() noexcept
+			{
+				g_fxo->get<vblank_thread>() = thread_state::finished;
+			}
+
+		} join_vblank_obj{};
 
 		// Raise priority above other threads
 		thread_ctrl::scoped_priority high_prio(+1);
@@ -925,6 +950,11 @@ namespace rsx
 			if (external_interrupt_lock)
 			{
 				wait_pause();
+
+				if (!rsx_thread_running)
+				{
+					return;
+				}
 			}
 
 			// Note a possible rollback address
@@ -945,6 +975,21 @@ namespace rsx
 
 				// Update other sub-units
 				zcull_ctrl->update(this);
+
+				if (new_get_put != umax)
+				{
+					const u64 get_put = new_get_put.exchange(u64{umax});
+
+					if (get_put != umax)
+					{
+						vm::_ref<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put)).release(get_put);
+						fifo_ctrl->set_get(static_cast<u32>(get_put));
+						fifo_ctrl->abort();
+						fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+						last_known_code_start = static_cast<u32>(get_put);
+						sync_point_request.release(true);
+					}
+				}
 			}
 
 			// Execute FIFO queue
@@ -967,6 +1012,7 @@ namespace rsx
 		do_local_task(rsx::FIFO_state::lock_wait);
 
 		g_fxo->get<rsx::dma_manager>().join();
+		g_fxo->get<vblank_thread>() = thread_state::finished;
 		state += cpu_flag::exit;
 	}
 
@@ -2387,11 +2433,12 @@ namespace rsx
 		dma_address = ctrlAddress;
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 
 		vm::write32(device_addr + 0x30, 1);
 		std::memset(display_buffers, 0, sizeof(display_buffers));
 
-		m_rsx_thread_exiting = false;
+		rsx_thread_running = true;
 	}
 
 	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count)
@@ -3098,7 +3145,7 @@ namespace rsx
 		// we must block until RSX has invalidated the memory
 		// or lock m_mtx_task and do it ourselves
 
-		if (m_rsx_thread_exiting)
+		if (!rsx_thread_running)
 			return;
 
 		reader_lock lock(m_mtx_task);
@@ -3117,7 +3164,7 @@ namespace rsx
 
 	void thread::on_notify_memory_unmapped(u32 address, u32 size)
 	{
-		if (!m_rsx_thread_exiting && address < rsx::constants::local_mem_base)
+		if (rsx_thread_running && address < rsx::constants::local_mem_base)
 		{
 			if (!isHLE)
 			{
@@ -3245,7 +3292,7 @@ namespace rsx
 
 			external_interrupt_ack.store(true);
 
-			while (external_interrupt_lock)
+			while (external_interrupt_lock && (cpu_flag::ret - state))
 			{
 				// TODO: Investigate non busy-spinning method
 				utils::pause();
@@ -3253,7 +3300,7 @@ namespace rsx
 
 			external_interrupt_ack.store(false);
 		}
-		while (external_interrupt_lock);
+		while (external_interrupt_lock && (cpu_flag::ret - state));
 	}
 
 	u32 thread::get_load()
@@ -3734,4 +3781,19 @@ namespace rsx
 
 		frame_times.push_back(frame_time_t{preempt_count, current_time, current_tsc});
 	}
-}
+
+	void vblank_thread::set_thread(std::shared_ptr<named_thread<std::function<void()>>> thread)
+	{
+		std::swap(m_thread, thread);
+	}
+
+	vblank_thread& vblank_thread::operator=(thread_state state)
+	{
+		if (m_thread)
+		{
+			*m_thread = state;
+		}
+
+		return *this;
+	}
+} // namespace rsx
