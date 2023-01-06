@@ -174,9 +174,6 @@
     <ClCompile Include="curl\lib\http_proxy.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\idn_win32.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\if2ip.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -481,6 +478,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\ws.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\cfilters.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\idn.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -981,6 +984,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\ws.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\cfilters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\idn.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
