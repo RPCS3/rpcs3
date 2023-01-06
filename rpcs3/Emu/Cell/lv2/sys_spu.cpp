@@ -129,7 +129,7 @@ void sys_spu_image::free() const
 	}
 }
 
-void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs)
+void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs, bool is_verbose)
 {
 	// Segment info dump
 	std::string dump;
@@ -192,7 +192,7 @@ void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs)
 		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, loc);
 	}
 
-	spu_log.notice("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);
+	(is_verbose ? spu_log.notice : sys_spu.trace)("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);
 }
 
 lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
@@ -1061,7 +1061,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			auto& args = group->args[thread->lv2_id >> 24];
 			auto& img = group->imgs[thread->lv2_id >> 24];
 
-			sys_spu_image::deploy(thread->ls, std::span(img.second.data(), img.second.size()));
+			sys_spu_image::deploy(thread->ls, std::span(img.second.data(), img.second.size()), group->stop_count < 5);
 
 			thread->cpu_init();
 			thread->gpr[3] = v128::from64(0, args[0]);
