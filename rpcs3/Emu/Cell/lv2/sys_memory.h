@@ -137,3 +137,4 @@ error_code sys_memory_get_user_memory_stat(cpu_thread& cpu, vm::ptr<sys_memory_u
 error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 size);
 error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid);
 error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info, u32 cid);
+error_code sys_memory_container_destroy_parent_with_childs(cpu_thread& cpu, u32 cid, u32 must_0, vm::ptr<u32> mc_child);

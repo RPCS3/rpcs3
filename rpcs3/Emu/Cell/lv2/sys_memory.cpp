@@ -402,3 +402,17 @@ error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_inf
 
 	return CELL_OK;
 }
+
+error_code sys_memory_container_destroy_parent_with_childs(cpu_thread& cpu, u32 cid, u32 must_0, vm::ptr<u32> mc_child)
+{
+	sys_memory.warning("sys_memory_container_destroy_parent_with_childs(cid=0x%x, must_0=%d, mc_child=*0x%x)", cid, must_0, mc_child);
+
+	if (must_0)
+	{
+		return CELL_EINVAL;
+	}
+
+	// Multi-process is not supported yet so child containers mean nothing at the moment
+	// Simply destroy parent
+	return sys_memory_container_destroy(cpu, cid);
+}

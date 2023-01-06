@@ -394,7 +394,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_memory_container_destroy),                //342 (0x156)
 	BIND_SYSC(sys_memory_container_get_size),               //343 (0x157)
 	NULL_FUNC(sys_memory_budget_set),                       //344 (0x158)
-	null_func,//BIND_SYSC(sys_memory_...),                  //345 (0x159)
+	BIND_SYSC(sys_memory_container_destroy_parent_with_childs), //345 (0x159)
 	null_func,//BIND_SYSC(sys_memory_...),                  //346 (0x15A)
 	uns_func,                                               //347 (0x15B)  UNS
 	BIND_SYSC(sys_memory_allocate),                         //348 (0x15C)
