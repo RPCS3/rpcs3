@@ -40,7 +40,7 @@ SERIALIZATION_VER(ppu, 1,                                       1)
 SERIALIZATION_VER(spu, 2,                                       1, 2 /*spu_limits_t ctor*/)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
-SERIALIZATION_VER(lv2_net, 5,                                   1)
+SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*RECV/SEND timeout*/)
 SERIALIZATION_VER(lv2_fs, 6,                                    1)
 SERIALIZATION_VER(lv2_prx_overlay, 7,                           1, 2/*PRX dynamic exports*/, 3/*Conditionally Loaded Local Exports*/)
 SERIALIZATION_VER(lv2_memory, 8,                                1)
@@ -57,7 +57,7 @@ namespace np
 }
 
 #ifdef _MSC_VER
-// Compiler bug, lambda function body does seem to inherit used namespace atleast for function declaration 
+// Compiler bug, lambda function body does seem to inherit used namespace atleast for function declaration
 SERIALIZATION_VER(rsx, 10)
 SERIALIZATION_VER(sceNp, 11)
 #endif
