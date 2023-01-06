@@ -66,6 +66,7 @@
     <ClCompile Include="curl\lib\base64.c" />
     <ClCompile Include="curl\lib\bufref.c" />
     <ClCompile Include="curl\lib\c-hyper.c" />
+    <ClCompile Include="curl\lib\cfilters.c" />
     <ClCompile Include="curl\lib\conncache.c" />
     <ClCompile Include="curl\lib\connect.c" />
     <ClCompile Include="curl\lib\content_encoding.c" />
@@ -121,7 +122,7 @@
     <ClCompile Include="curl\lib\http_negotiate.c" />
     <ClCompile Include="curl\lib\http_ntlm.c" />
     <ClCompile Include="curl\lib\http_proxy.c" />
-    <ClCompile Include="curl\lib\idn_win32.c" />
+    <ClCompile Include="curl\lib\idn.c" />
     <ClCompile Include="curl\lib\if2ip.c" />
     <ClCompile Include="curl\lib\imap.c" />
     <ClCompile Include="curl\lib\inet_ntop.c" />
@@ -232,6 +233,7 @@
     <ClInclude Include="curl\lib\asyn.h" />
     <ClInclude Include="curl\lib\bufref.h" />
     <ClInclude Include="curl\lib\c-hyper.h" />
+    <ClInclude Include="curl\lib\cfilters.h" />
     <ClInclude Include="curl\lib\config-amigaos.h" />
     <ClInclude Include="curl\lib\config-dos.h" />
     <ClInclude Include="curl\lib\config-mac.h" />
@@ -304,6 +306,7 @@
     <ClInclude Include="curl\lib\http_negotiate.h" />
     <ClInclude Include="curl\lib\http_ntlm.h" />
     <ClInclude Include="curl\lib\http_proxy.h" />
+    <ClInclude Include="curl\lib\idn.h" />
     <ClInclude Include="curl\lib\if2ip.h" />
     <ClInclude Include="curl\lib\imap.h" />
     <ClInclude Include="curl\lib\inet_ntop.h" />
