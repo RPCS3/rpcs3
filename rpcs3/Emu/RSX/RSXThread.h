@@ -80,6 +80,8 @@ namespace rsx
 		polygon_offset_state_dirty = 0x40000, // Polygon offset config was changed
 		depth_bounds_state_dirty   = 0x80000, // Depth bounds configuration changed
 
+		pipeline_config_dirty      = 0x100000, // Generic pipeline configuration changes. Shader peek hint.
+
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
@@ -138,13 +140,6 @@ namespace rsx
 	{
 		u32 cmd;
 		u64 timestamp;
-	};
-
-	struct frame_time_t
-	{
-		u64 preempt_count;
-		u64 timestamp;
-		u64 tsc;
 	};
 
 	// TODO: This class is a mess, this needs to be broken into smaller chunks, like I did for RSXFIFO and RSXZCULL (kd)

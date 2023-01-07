@@ -18,6 +18,13 @@ namespace rsx
 		s64 flip_time;
 	};
 
+	struct frame_time_t
+	{
+		u64 preempt_count;
+		u64 timestamp;
+		u64 tsc;
+	};
+
 	struct display_flip_info_t
 	{
 		std::deque<u32> buffer_queue;

@@ -840,6 +840,11 @@ namespace rsx
 					break;
 				}
 			}
+			else if (method_registers.register_previous_value != value)
+			{
+				// Something changed, set signal flags if any specified
+				m_graphics_state |= state_signals[reg];
+			}
 		}
 		while (fifo_ctrl->read_unsafe(command));
 
