@@ -91,6 +91,12 @@ private:
 	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_vertex_layout_storage;
 
+	struct
+	{
+		rsx::primitive_type prim = rsx::primitive_type::points;
+		bool primitive_restart = false;
+	} m_cached_draw_state;
+
 public:
 	//vk::fbo draw_fbo;
 	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
