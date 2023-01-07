@@ -4,6 +4,7 @@
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Common/time.hpp"
+#include "Core/RSXReservationLock.hpp"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/RSX/Common/BufferUtils.h"
@@ -1278,6 +1279,11 @@ namespace rsx
 				out_pitch = out_bpp * out_w;
 			}
 
+			if (in_pitch == 0)
+			{
+				in_pitch = in_bpp * in_w;
+			}
+
 			if (in_bpp != out_bpp)
 			{
 				is_block_transfer = false;
@@ -1680,12 +1686,6 @@ namespace rsx
 			const u8 in_format = method_registers.nv0039_input_format();
 			const u32 notify = arg;
 
-			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
-			if (in_format != 0x01 || out_format != 0x01)
-			{
-				rsx_log.error("NV0039_BUFFER_NOTIFY: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
-			}
-
 			if (!line_count || !line_length)
 			{
 				rsx_log.warning("NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
@@ -1734,7 +1734,28 @@ namespace rsx
 				 (dst_offset >= src_offset && dst_offset < src_max);
 			}();
 
-			if (is_overlapping)
+			if (in_format > 1 || out_format > 1) [[ unlikely ]]
+			{
+				// The formats are just input channel strides. You can use this to do cool tricks like gathering channels
+				// Very rare, only seen in use by Destiny
+				// TODO: Hw accel
+				for (u32 row = 0; row < line_count; ++row)
+				{
+					auto dst_ptr = dst;
+					auto src_ptr = src;
+					while (src_ptr < src + line_length)
+					{
+						*dst_ptr = *src_ptr;
+
+						src_ptr += in_format;
+						dst_ptr += out_format;
+					}
+
+					dst += out_pitch;
+					src += in_pitch;
+				}
+			}
+			else if (is_overlapping) [[ unlikely ]]
 			{
 				if (is_block_transfer)
 				{

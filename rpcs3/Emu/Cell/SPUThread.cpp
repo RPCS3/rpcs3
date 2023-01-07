@@ -9,7 +9,6 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/perf_meter.hpp"
-#include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/lv2/sys_spu.h"
@@ -22,6 +21,9 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/Cell/timers.hpp"
+
+#include "Emu/RSX/Core/RSXReservationLock.hpp"
+#include "Emu/RSX/RSXThread.h"
 
 #include <cmath>
 #include <cfenv>

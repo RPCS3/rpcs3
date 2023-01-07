@@ -673,7 +673,7 @@ VKGSRender::~VKGSRender()
 	// Flush DMA queue
 	while (!g_fxo->get<rsx::dma_manager>().sync())
 	{
-		do_local_task(rsx::FIFO_state::lock_wait);
+		do_local_task(rsx::FIFO::state::lock_wait);
 	}
 
 	//Wait for device to finish up with resources
@@ -895,7 +895,7 @@ void VKGSRender::on_semaphore_acquire_wait()
 		(async_flip_requested & flip_request::emu_requested) ||
 		(m_queue_status & flush_queue_state::deadlock))
 	{
-		do_local_task(rsx::FIFO_state::lock_wait);
+		do_local_task(rsx::FIFO::state::lock_wait);
 	}
 }
 
@@ -1602,7 +1602,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 	return true;
 }
 
-void VKGSRender::sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_t payload)
+void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload)
 {
 	rsx::thread::sync_hint(hint, payload);
 
@@ -1615,7 +1615,7 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_
 	// Occlusion test result evaluation is coming up, avoid a hard sync
 	switch (hint)
 	{
-	case rsx::FIFO_hint::hint_conditional_render_eval:
+	case rsx::FIFO::interrupt_hint::conditional_render_eval:
 	{
 		// If a flush request is already enqueued, do nothing
 		if (m_flush_requests.pending())
@@ -1645,7 +1645,7 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_
 		m_last_cond_render_eval_hint = now;
 		break;
 	}
-	case rsx::FIFO_hint::hint_zcull_sync:
+	case rsx::FIFO::interrupt_hint::zcull_sync:
 	{
 		// Check if the required report is synced to this CB
 		auto& data = m_occlusion_map[payload.query->driver_handle];
@@ -1672,7 +1672,7 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_
 	}
 }
 
-void VKGSRender::do_local_task(rsx::FIFO_state state)
+void VKGSRender::do_local_task(rsx::FIFO::state state)
 {
 	if (m_queue_status & flush_queue_state::deadlock)
 	{
@@ -1702,7 +1702,7 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 			m_flush_queue_mutex.unlock();
 		}
 	}
-	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
+	else if (!in_begin_end && state != rsx::FIFO::state::lock_wait)
 	{
 		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
 		{
@@ -1717,11 +1717,11 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 
 	switch (state)
 	{
-	case rsx::FIFO_state::lock_wait:
+	case rsx::FIFO::state::lock_wait:
 		// Critical check finished
 		return;
-	//case rsx::FIFO_state::spinning:
-	//case rsx::FIFO_state::empty:
+	//case rsx::FIFO::state::spinning:
+	//case rsx::FIFO::state::empty:
 		// We have some time, check the present queue
 		//check_present_status();
 		//break;

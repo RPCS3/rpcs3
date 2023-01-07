@@ -9,7 +9,7 @@
 #include "Emu/perf_meter.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Memory/vm_locking.h"
-#include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/VFS.h"
 #include "Emu/system_progress.hpp"
 #include "Emu/system_utils.hpp"

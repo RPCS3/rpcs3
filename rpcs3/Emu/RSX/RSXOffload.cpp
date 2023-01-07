@@ -2,6 +2,7 @@
 
 #include "Emu/Memory/vm.h"
 #include "Common/BufferUtils.h"
+#include "Core/RSXReservationLock.hpp"
 #include "RSXOffload.h"
 #include "RSXThread.h"
 
