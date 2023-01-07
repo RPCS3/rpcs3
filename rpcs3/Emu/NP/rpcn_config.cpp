@@ -45,7 +45,7 @@ void cfg_rpcn::save() const
 
 	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
-		rpcn_log.error("Could not save config: %s", cfg_rpcn::get_path());
+		rpcn_log.error("Could not save config: %s (error=%s)", cfg_rpcn::get_path(), fs::g_tls_error);
 	}
 }
 

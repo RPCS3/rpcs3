@@ -111,7 +111,7 @@ void cfg_vfs::save() const
 
 	if (!temp.file)
 	{
-		vfs_log.error("Could not save config: \"%s\"", cfg_vfs::get_path());
+		vfs_log.error("Could not save config: \"%s\" (error=%s)", cfg_vfs::get_path(), fs::g_tls_error);
 		return;
 	}
 

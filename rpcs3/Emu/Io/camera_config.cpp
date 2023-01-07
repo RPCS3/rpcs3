@@ -38,7 +38,7 @@ void cfg_camera::save() const
 
 	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
-		camera_log.error("Failed to save camera config to '%s'", path);
+		camera_log.error("Failed to save camera config to '%s' (error=%s)", path, fs::g_tls_error);
 	}
 }
 

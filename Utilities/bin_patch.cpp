@@ -1181,7 +1181,7 @@ void patch_engine::save_config(const patch_map& patches_map)
 
 	if (!file.file || (file.file.write(out.c_str(), out.size()), !file.commit()))
 	{
-		patch_log.error("Failed to create patch config file %s (%s)", path, fs::g_tls_error);
+		patch_log.error("Failed to create patch config file %s (error=%s)", path, fs::g_tls_error);
 	}
 }
 
