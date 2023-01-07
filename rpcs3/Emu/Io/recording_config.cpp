@@ -39,6 +39,6 @@ void cfg_recording::save() const
 
 	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
-		cfg_log.error("Failed to save recording config to '%s'", path);
+		cfg_log.error("Failed to save recording config to '%s' (error=%s)", path, fs::g_tls_error);
 	}
 }

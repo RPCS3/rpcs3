@@ -284,7 +284,10 @@ void emu_settings::SaveSettings()
 	// Save config atomically
 	fs::pending_file temp(config_name);
 	temp.file.write(out.c_str(), out.size());
-	temp.commit();
+	if (!temp.commit())
+	{
+		cfg_log.error("Could not save config to %s (error=%s)", config_name, fs::g_tls_error);
+	}
 
 	// Check if the running config/title is the same as the edited config/title.
 	if (config_name == g_cfg.name || m_title_id == Emu.GetTitleID())

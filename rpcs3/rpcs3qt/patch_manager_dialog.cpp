@@ -1034,7 +1034,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 
 		if (!patch_file.file || (patch_file.file.write(content), !patch_file.commit()))
 		{
-			patch_log.error("Could not save new patches to %s (%s)", path, fs::g_tls_error);
+			patch_log.error("Could not save new patches to %s (error=%s)", path, fs::g_tls_error);
 			return false;
 		}
 

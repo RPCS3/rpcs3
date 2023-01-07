@@ -1541,7 +1541,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				// Do not update games.yml when TITLE_ID is empty
 				if (!temp.file || temp.file.write(out.c_str(), out.size()), !temp.commit())
 				{
-					sys_log.error("Failed to save BDVD location of title '%s' (%s)", m_title_id, fs::g_tls_error);
+					sys_log.error("Failed to save BDVD location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
 				}
 			}
 		}
@@ -1597,7 +1597,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				if (!temp.file || temp.file.write(out.c_str(), out.size()), !temp.commit())
 				{
-					sys_log.error("Failed to save HG game location of title '%s' (%s)", m_title_id, fs::g_tls_error);
+					sys_log.error("Failed to save HG game location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
 				}
 
 				vfs::mount("/dev_hdd0/game/" + m_title_id, m_sfo_dir + '/');
