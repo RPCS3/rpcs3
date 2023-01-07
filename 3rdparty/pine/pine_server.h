@@ -79,13 +79,13 @@ namespace pine
 		 * A preallocated buffer used to store all IPC replies.
 		 * to the size of 50.000 MsgWrite64 IPC calls.
 		 */
-		char* m_ret_buffer;
+		std::vector<char> m_ret_buffer;
 
 		/**
 		 * IPC messages buffer.
 		 * A preallocated buffer used to store all IPC messages.
 		 */
-		char* m_ipc_buffer;
+		std::vector<char> m_ipc_buffer;
 
 		/**
 		 * IPC Command messages opcodes.
@@ -118,8 +118,8 @@ namespace pine
 		 */
 		struct IPCBuffer
 		{
-			int size;     /**< Size of the buffer. */
-			char* buffer; /**< Buffer. */
+			usz size{};     /**< Size of the buffer. */
+			char* buffer{}; /**< Buffer. */
 		};
 
 		/**
@@ -144,8 +144,8 @@ namespace pine
 		 */
 		IPCBuffer ParseCommand(char* buf, char* ret_buffer, u32 buf_size)
 		{
-			u32 ret_cnt = 5;
-			u32 buf_cnt = 0;
+			usz ret_cnt = 5;
+			usz buf_cnt = 0;
 
 			const auto error = [&]()
 			{
@@ -325,7 +325,7 @@ namespace pine
 				}
 				}
 			}
-			return IPCBuffer{ static_cast<int>(ret_cnt), MakeOkIPC(ret_buffer, ret_cnt) };
+			return IPCBuffer{ ret_cnt, MakeOkIPC(ret_buffer, ret_cnt) };
 		}
 
 		/**
@@ -334,25 +334,25 @@ namespace pine
 		 * size: size of the IPC buffer.
 		 * return value: buffer containing the status code allocated of size
 		 */
-		static inline char* MakeOkIPC(char* ret_buffer, uint32_t size = 5)
+		static inline char* MakeOkIPC(char* ret_buffer, usz size = 5)
 		{
-			ToArray<uint32_t>(ret_buffer, size, 0);
+			ToArray(ret_buffer, ::narrow<u32>(size), 0);
 			ret_buffer[4] = IPC_OK;
 			return ret_buffer;
 		}
 
-		static inline char* MakeFailIPC(char* ret_buffer, uint32_t size = 5)
+		static inline char* MakeFailIPC(char* ret_buffer, usz size = 5)
 		{
-			ToArray<uint32_t>(ret_buffer, size, 0);
+			ToArray(ret_buffer, ::narrow<u32>(size), 0);
 			ret_buffer[4] = IPC_FAIL;
 			return ret_buffer;
 		}
 
 		/**
 		 * Initializes an open socket for IPC communication.
-		 * return value: -1 if a fatal failure happened, 0 otherwise.
+		 * return value: false if a fatal failure happened, true otherwise.
 		 */
-		int StartSocket()
+		bool StartSocket()
 		{
 			m_msgsock = accept(m_sock, 0, 0);
 
@@ -371,10 +371,10 @@ namespace pine
 				{
 #endif
 					Impl::error("IPC: An unrecoverable error happened! Shutting down...");
-					return -1;
+					return false;
 				}
 			}
-			return 0;
+			return true;
 		}
 
 		// Thread used to relay IPC commands.
@@ -382,10 +382,10 @@ namespace pine
 		{
 			// we allocate once buffers to not have to do mallocs for each IPC
 			// request, as malloc is expansive when we optimize for µs.
-			m_ret_buffer = new char[MAX_IPC_RETURN_SIZE];
-			m_ipc_buffer = new char[MAX_IPC_SIZE];
+			m_ret_buffer.resize(MAX_IPC_RETURN_SIZE);
+			m_ipc_buffer.resize(MAX_IPC_SIZE);
 
-			if (StartSocket() < 0)
+			if (!StartSocket())
 				return;
 
 			while (thread_ctrl::state() != thread_state::aborting)
@@ -405,7 +405,7 @@ namespace pine
 					if (tmp_length <= 0)
 					{
 						receive_length = 0;
-						if (StartSocket() < 0)
+						if (!StartSocket())
 							return;
 						break;
 					}
@@ -415,7 +415,7 @@ namespace pine
 					// if we got at least the final size then update
 					if (end_length == 4 && receive_length >= 4)
 					{
-						end_length = FromArray<u32>(m_ipc_buffer, 0);
+						end_length = FromArray<u32>(m_ipc_buffer.data(), 0);
 						// we'd like to avoid a client trying to do OOB
 						if (end_length > MAX_IPC_SIZE || end_length < 4)
 						{
@@ -432,12 +432,12 @@ namespace pine
 				// disconnects
 				if (receive_length != 0)
 				{
-					pine_server::IPCBuffer res = ParseCommand(&m_ipc_buffer[4], m_ret_buffer, static_cast<u32>(end_length) - 4);
+					pine_server::IPCBuffer res = ParseCommand(&m_ipc_buffer[4], m_ret_buffer.data(), static_cast<u32>(end_length) - 4);
 
 					// if we cannot send back our answer restart the socket
 					if (write_portable(m_msgsock, res.buffer, res.size) < 0)
 					{
-						if (StartSocket() < 0)
+						if (!StartSocket())
 							return;
 					}
 				}
@@ -453,9 +453,9 @@ namespace pine
 		 * NB: implicitely inlined
 		 */
 		template <typename T>
-		static char* ToArray(char* res_array, T res, int i)
+		static char* ToArray(char* res_array, T res, usz i)
 		{
-			memcpy((res_array + i), reinterpret_cast<char*>(&res), sizeof(T));
+			memcpy(res_array + i, reinterpret_cast<char*>(&res), sizeof(T));
 			return res_array;
 		}
 
@@ -476,7 +476,7 @@ namespace pine
 		 * Ensures an IPC message isn't too big.
 		 * return value: false if checks failed, true otherwise.
 		 */
-		static inline bool SafetyChecks(u32 command_len, int command_size, u32 reply_len, int reply_size = 0, u32 buf_size = MAX_IPC_SIZE - 1)
+		static inline bool SafetyChecks(usz command_len, usz command_size, usz reply_len, usz reply_size = 0, usz buf_size = MAX_IPC_SIZE - 1)
 		{
 			bool res = ((command_len + command_size) > buf_size ||
 				(reply_len + reply_size) >= MAX_IPC_RETURN_SIZE);
@@ -582,8 +582,6 @@ namespace pine
 		~pine_server()
 		{
 			Cleanup();
-			delete[] m_ret_buffer;
-			delete[] m_ipc_buffer;
 		}
 
 	}; // class pine_server
