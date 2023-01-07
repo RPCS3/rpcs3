@@ -1445,6 +1445,16 @@ namespace rsx
 		front_and_back = CELL_GCM_FRONT_AND_BACK
 	};
 
+	static inline auto to_cull_face(u32 in)
+	{
+		return gcm_enum_cast<cull_face>(in,
+		{
+			CELL_GCM_FRONT,
+			CELL_GCM_BACK,
+			CELL_GCM_FRONT_AND_BACK
+		});
+	}
+
 	enum class user_clip_plane_op : u8
 	{
 		disable = CELL_GCM_USER_CLIP_PLANE_DISABLE,
