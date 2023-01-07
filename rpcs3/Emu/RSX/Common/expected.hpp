@@ -3,6 +3,12 @@
 #include <concepts>
 #include <utility>
 
+namespace fmt
+{
+	template <typename CharT, usz N, typename... Args>
+	static std::string format(const CharT(&)[N], const Args&...);
+}
+
 namespace rsx
 {
 	namespace exception_utils
@@ -25,6 +31,21 @@ namespace rsx
 			bool empty() const
 			{
 				return error == soft_exception_error_code::none;
+			}
+
+			std::string to_string() const
+			{
+				switch (error)
+				{
+				case soft_exception_error_code::none:
+					return "No error";
+				case soft_exception_error_code::range_exception:
+					return "Bad Range";
+				case soft_exception_error_code::invalid_enum:
+					return "Invalid enum";
+				default:
+					return "Unknown Error";
+				}
 			}
 		};
 	}
@@ -79,5 +100,20 @@ namespace rsx
         {
             return error.empty() && value == other;
         }
+
+		std::string to_string() const
+		{
+			if (error.empty())
+			{
+				return fmt::format("%s", value);
+			}
+
+			if constexpr (std::is_same_v<E, exception_utils::soft_exception_t>)
+			{
+				return error.to_string();
+			}
+
+			return fmt::format("%s", error);
+		}
     };
 }

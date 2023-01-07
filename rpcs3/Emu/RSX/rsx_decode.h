@@ -2820,7 +2820,7 @@ struct registers_decoder<NV3089_SET_COLOR_FORMAT>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV3089: source fmt: %s", *decoded.transfer_source_fmt());
+		return fmt::format("NV3089: source fmt: %s", decoded.transfer_source_fmt());
 	}
 };
 
@@ -2866,7 +2866,7 @@ struct registers_decoder<NV3062_SET_COLOR_FORMAT>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV3062: output fmt: %s", *decoded.transfer_dest_fmt());
+		return fmt::format("NV3062: output fmt: %s", decoded.transfer_dest_fmt());
 	}
 };
 
@@ -3759,7 +3759,7 @@ struct registers_decoder<NV309E_SET_FORMAT>
 
 	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NV309E: output fmt: %s log2-width: %u log2-height: %u", *decoded.format(),
+		return fmt::format("NV309E: output fmt: %s log2-width: %u log2-height: %u", decoded.format(),
 			decoded.sw_width_log2(), decoded.sw_height_log2());
 	}
 };

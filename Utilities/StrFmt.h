@@ -239,6 +239,29 @@ struct fmt_class_string<wchar_t*, void> : fmt_class_string<const wchar_t*>
 
 namespace fmt
 {
+	template <typename T>
+	concept StringConvertible = requires (T & t)
+	{
+		{ t.to_string() } -> std::convertible_to<std::string>;
+	};
+}
+
+template <fmt::StringConvertible T>
+struct fmt_class_string<T, void>
+{
+	static FORCE_INLINE SAFE_BUFFERS(const T&) get_object(u64 arg)
+	{
+		return *reinterpret_cast<const T*>(static_cast<uptr>(arg));
+	}
+
+	static void format(std::string& out, u64 arg)
+	{
+		out += get_object(arg).to_string();
+	}
+};
+
+namespace fmt
+{
 	// Both uchar and std::byte are allowed
 	template <typename T>
 	concept ByteArray = requires (T& t) { const_cast<std::conditional_t<std::is_same_v<decltype(std::as_const(t[0])), const std::byte&>, std::byte, uchar>&>(std::data(t)[0]); };

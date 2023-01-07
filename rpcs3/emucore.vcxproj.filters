@@ -2227,6 +2227,9 @@
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\expected.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
