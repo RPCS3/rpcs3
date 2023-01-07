@@ -223,15 +223,13 @@ namespace rsx
 				return;
 			}
 
-			switch (arg)
+			const auto typed = to_cull_face(arg);
+			if (typed) [[ likely ]]
 			{
-			case CELL_GCM_FRONT_AND_BACK:
-			case CELL_GCM_FRONT:
-			case CELL_GCM_BACK:
 				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
-				return;
-			default:
-				// Ignore value if unknown
+			}
+			else
+			{
 				method_registers.registers[reg] = method_registers.register_previous_value;
 			}
 		}
@@ -826,26 +824,19 @@ namespace rsx
 
 		void set_stencil_op(thread* rsx, u32 reg, u32 arg)
 		{
-			if (arg != method_registers.register_previous_value)
+			if (arg == method_registers.register_previous_value)
 			{
-				switch (arg)
-				{
-				case CELL_GCM_INVERT:
-				case CELL_GCM_KEEP:
-				case CELL_GCM_REPLACE:
-				case CELL_GCM_INCR:
-				case CELL_GCM_DECR:
-				case CELL_GCM_INCR_WRAP:
-				case CELL_GCM_DECR_WRAP:
-				case CELL_GCM_ZERO:
-					set_surface_options_dirty_bit(rsx, reg, arg);
-					break;
+				return;
+			}
 
-				default:
-					// Ignored on RSX
-					method_registers.decode(reg, method_registers.register_previous_value);
-					break;
-				}
+			const auto typed = to_stencil_op(arg);
+			if (typed) [[ likely ]]
+			{
+				set_surface_options_dirty_bit(rsx, reg, arg);
+			}
+			else
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
 			}
 		}
 
@@ -908,60 +899,39 @@ namespace rsx
 			}
 		}
 
-		void set_blend_equation(thread* /*rsx*/, u32 reg, u32 arg)
+		void set_blend_equation(thread* rsx, u32 reg, u32 arg)
 		{
-			for (u32 i = 0; i < 32u; i += 16)
+			if (reg == method_registers.register_previous_value)
 			{
-				switch ((arg >> i) & 0xffff)
-				{
-				case CELL_GCM_FUNC_ADD:
-				case CELL_GCM_MIN:
-				case CELL_GCM_MAX:
-				case CELL_GCM_FUNC_SUBTRACT:
-				case CELL_GCM_FUNC_REVERSE_SUBTRACT:
-				case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED:
-				case CELL_GCM_FUNC_ADD_SIGNED:
-				case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
-					break;
+				return;
+			}
 
-				default:
-				{
-					// Ignore invalid values as a whole
-					method_registers.decode(reg, method_registers.register_previous_value);
-					return;
-				}
-				}
+			if (to_blend_equation(arg & 0xFFFF) &&
+				to_blend_equation((arg >> 16) & 0xFFFF)) [[ likely ]]
+			{
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
+			}
+			else
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
 			}
 		}
 
-		void set_blend_factor(thread* /*rsx*/, u32 reg, u32 arg)
+		void set_blend_factor(thread* rsx, u32 reg, u32 arg)
 		{
-			for (u32 i = 0; i < 32u; i += 16)
+			if (reg == method_registers.register_previous_value)
 			{
-				switch ((arg >> i) & 0xffff)
-				{
-				case CELL_GCM_ZERO:
-				case CELL_GCM_ONE:
-				case CELL_GCM_SRC_COLOR:
-				case CELL_GCM_ONE_MINUS_SRC_COLOR:
-				case CELL_GCM_SRC_ALPHA:
-				case CELL_GCM_ONE_MINUS_SRC_ALPHA:
-				case CELL_GCM_DST_ALPHA:
-				case CELL_GCM_ONE_MINUS_DST_ALPHA:
-				case CELL_GCM_DST_COLOR:
-				case CELL_GCM_ONE_MINUS_DST_COLOR:
-				case CELL_GCM_SRC_ALPHA_SATURATE:
-				case CELL_GCM_CONSTANT_COLOR:
-				case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
-				case CELL_GCM_CONSTANT_ALPHA:
-				case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA:
-					break;
+				return;
+			}
 
-				default:
-					// Ignore invalid values as a whole
-					method_registers.decode(reg, method_registers.register_previous_value);
-					return;
-				}
+			if (to_blend_factor(arg & 0xFFFF) &&
+				to_blend_factor((arg >> 16) & 0xFFFF)) [[ likely ]]
+			{
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
+			}
+			else
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
 			}
 		}
 
