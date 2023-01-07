@@ -4,6 +4,7 @@
 #include "RSXThread.h"
 #include "Capture/rsx_capture.h"
 #include "Common/time.hpp"
+#include "Core/RSXReservationLock.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "util/asm.hpp"
@@ -613,20 +614,20 @@ namespace rsx
 			{
 			case FIFO::FIFO_NOP:
 			{
-				if (performance_counters.state == FIFO_state::running)
+				if (performance_counters.state == FIFO::state::running)
 				{
 					performance_counters.FIFO_idle_timestamp = rsx::uclock();
-					performance_counters.state = FIFO_state::nop;
+					performance_counters.state = FIFO::state::nop;
 				}
 
 				return;
 			}
 			case FIFO::FIFO_EMPTY:
 			{
-				if (performance_counters.state == FIFO_state::running)
+				if (performance_counters.state == FIFO::state::running)
 				{
 					performance_counters.FIFO_idle_timestamp = rsx::uclock();
-					performance_counters.state = FIFO_state::empty;
+					performance_counters.state = FIFO::state::empty;
 				}
 				else
 				{
@@ -658,13 +659,13 @@ namespace rsx
 				if (offs == fifo_ctrl->get_pos())
 				{
 					//Jump to self. Often preceded by NOP
-					if (performance_counters.state == FIFO_state::running)
+					if (performance_counters.state == FIFO::state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = rsx::uclock();
 						sync_point_request.release(true);
 					}
 
-					performance_counters.state = FIFO_state::spinning;
+					performance_counters.state = FIFO::state::spinning;
 				}
 				else
 				{
@@ -710,14 +711,14 @@ namespace rsx
 		}
 
 		if (const auto state = performance_counters.state;
-			state != FIFO_state::running)
+			state != FIFO::state::running)
 		{
-			performance_counters.state = FIFO_state::running;
+			performance_counters.state = FIFO::state::running;
 
 			// Hack: Delay FIFO wake-up according to setting
 			// NOTE: The typical spin setup is a NOP followed by a jump-to-self
 			// NOTE: There is a small delay when the jump address is dynamically edited by cell
-			if (state != FIFO_state::nop)
+			if (state != FIFO::state::nop)
 			{
 				fifo_wake_delay();
 			}

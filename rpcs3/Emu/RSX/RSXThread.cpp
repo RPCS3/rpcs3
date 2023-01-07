@@ -5,12 +5,14 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/timers.hpp"
 
+#include "Capture/rsx_capture.h"
 #include "Common/BufferUtils.h"
 #include "Common/buffer_stream.hpp"
 #include "Common/texture_cache.h"
 #include "Common/surface_store.h"
 #include "Common/time.hpp"
-#include "Capture/rsx_capture.h"
+#include "Core/RSXReservationLock.hpp"
+#include "Core/RSXEngLock.hpp"
 #include "rsx_methods.h"
 #include "gcm_printing.h"
 #include "RSXDisAsm.h"
@@ -733,7 +735,7 @@ namespace rsx
 		if ((state & (cpu_flag::dbg_global_pause + cpu_flag::exit)) == cpu_flag::dbg_global_pause)
 		{
 			// Wait 16ms during emulation pause. This reduces cpu load while still giving us the chance to render overlays.
-			do_local_task(rsx::FIFO_state::paused);
+			do_local_task(rsx::FIFO::state::paused);
 			thread_ctrl::wait_on(state, old, 16000);
 		}
 		else
@@ -803,7 +805,7 @@ namespace rsx
 		check_zcull_status(false);
 		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
 
-		performance_counters.state = FIFO_state::empty;
+		performance_counters.state = FIFO::state::empty;
 
 		const u64 event_flags = unsent_gcm_events.exchange(0);
 
@@ -832,7 +834,7 @@ namespace rsx
 			thread_ctrl::wait_for(1000);
 		}
 
-		performance_counters.state = FIFO_state::running;
+		performance_counters.state = FIFO::state::running;
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 		fifo_ctrl->set_get(ctrl->get);
@@ -994,7 +996,7 @@ namespace rsx
 
 		// Clear any pending flush requests to release threads
 		std::this_thread::sleep_for(10ms);
-		do_local_task(rsx::FIFO_state::lock_wait);
+		do_local_task(rsx::FIFO::state::lock_wait);
 
 		g_fxo->get<rsx::dma_manager>().join();
 		g_fxo->get<vblank_thread>() = thread_state::finished;
@@ -1261,7 +1263,7 @@ namespace rsx
 		fmt::throw_exception("ill-formed draw command");
 	}
 
-	void thread::do_local_task(FIFO_state state)
+	void thread::do_local_task(FIFO::state state)
 	{
 		m_eng_interrupt_mask.clear(rsx::backend_interrupt);
 
@@ -1272,7 +1274,7 @@ namespace rsx
 			handle_emu_flip(async_flip_buffer);
 		}
 
-		if (!in_begin_end && state != FIFO_state::lock_wait)
+		if (!in_begin_end && state != FIFO::state::lock_wait)
 		{
 			if (atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
 			{
@@ -2845,7 +2847,7 @@ namespace rsx
 			if (!result.queries.empty())
 			{
 				cond_render_ctrl.set_eval_sources(result.queries);
-				sync_hint(FIFO_hint::hint_conditional_render_eval, { .query = cond_render_ctrl.eval_sources.front(), .address = ref });
+				sync_hint(FIFO::interrupt_hint::conditional_render_eval, { .query = cond_render_ctrl.eval_sources.front(), .address = ref });
 			}
 			else
 			{
@@ -2895,7 +2897,7 @@ namespace rsx
 		//ensure(async_tasks_pending.load() == 0);
 	}
 
-	void thread::sync_hint(FIFO_hint /*hint*/, rsx::reports::sync_hint_payload_t payload)
+	void thread::sync_hint(FIFO::interrupt_hint /*hint*/, rsx::reports::sync_hint_payload_t payload)
 	{
 		zcull_ctrl->on_sync_hint(payload);
 	}

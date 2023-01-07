@@ -525,6 +525,12 @@
     <ClInclude Include="Emu\RSX\Common\simple_array.hpp" />
     <ClInclude Include="Emu\RSX\Common\surface_cache_dma.hpp" />
     <ClInclude Include="Emu\RSX\Common\time.hpp" />
+    <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
+    <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXIOMap.hpp" />
+    <ClInclude Include="Emu\RSX\Core\RSXDisplay.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXReservationLock.hpp" />
+    <ClInclude Include="Emu\RSX\Core\RSXVertexTypes.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_cursor.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_list_view.hpp" />

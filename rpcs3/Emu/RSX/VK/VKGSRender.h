@@ -248,7 +248,7 @@ public:
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
-	void sync_hint(rsx::FIFO_hint hint, rsx::reports::sync_hint_payload_t payload) override;
+	void sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
 	bool release_GCM_label(u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -282,7 +282,7 @@ protected:
 
 	void renderctl(u32 request_code, void* args) override;
 
-	void do_local_task(rsx::FIFO_state state) override;
+	void do_local_task(rsx::FIFO::state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 

@@ -1037,11 +1037,11 @@ void GLGSRender::on_semaphore_acquire_wait()
 	if (!work_queue.empty() ||
 		(async_flip_requested & flip_request::emu_requested))
 	{
-		do_local_task(rsx::FIFO_state::lock_wait);
+		do_local_task(rsx::FIFO::state::lock_wait);
 	}
 }
 
-void GLGSRender::do_local_task(rsx::FIFO_state state)
+void GLGSRender::do_local_task(rsx::FIFO::state state)
 {
 	if (!work_queue.empty())
 	{
@@ -1058,7 +1058,7 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 			q.processed = true;
 		}
 	}
-	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
+	else if (!in_begin_end && state != rsx::FIFO::state::lock_wait)
 	{
 		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
 		{
@@ -1071,7 +1071,7 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 
 	rsx::thread::do_local_task(state);
 
-	if (state == rsx::FIFO_state::lock_wait)
+	if (state == rsx::FIFO::state::lock_wait)
 	{
 		// Critical check finished
 		return;

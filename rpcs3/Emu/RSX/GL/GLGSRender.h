@@ -193,7 +193,7 @@ protected:
 	void on_exit() override;
 	void flip(const rsx::display_flip_info_t& info) override;
 
-	void do_local_task(rsx::FIFO_state state) override;
+	void do_local_task(rsx::FIFO::state state) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;

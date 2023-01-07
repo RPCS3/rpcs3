@@ -5,6 +5,8 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm_locking.h"
+#include "Emu/RSX/Core/RSXEngLock.hpp"
+#include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/RSX/RSXThread.h"
 #include "util/asm.hpp"
 #include "sys_event.h"
