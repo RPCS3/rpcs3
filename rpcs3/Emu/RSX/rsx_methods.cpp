@@ -820,6 +820,7 @@ namespace rsx
 			if (arg != method_registers.register_previous_value)
 			{
 				rsx->on_framebuffer_options_changed(reg);
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
 			}
 		}
 
@@ -2531,6 +2532,23 @@ namespace rsx
 			state_signals[NV4097_SET_DEPTH_BOUNDS_MAX] = rsx::depth_bounds_state_dirty;
 			state_signals[NV4097_SET_FRONT_FACE] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_STENCIL_FUNC] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BACK_STENCIL_FUNC] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_ANTI_ALIASING_CONTROL] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_RESTART_INDEX_ENABLE] = rsx::pipeline_config_dirty;
+		}
+
+		// Sanity checks
+		for (size_t id = 0; id < methods.size(); ++id)
+		{
+			if (methods[id] && state_signals[id])
+			{
+				rsx_log.error("FIXME: Method register 0x%x is registered as a method and signal. The signal will be ignored.");
+			}
 		}
 	}
 
@@ -3534,7 +3552,6 @@ namespace rsx
 		bind(NV4097_CLEAR_ZCULL_SURFACE, nv4097::clear_zcull);
 		bind(NV4097_SET_DEPTH_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_DEPTH_FUNC, nv4097::set_surface_options_dirty_bit);
-		bind(NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_COLOR_MASK_MRT, nv4097::set_surface_options_dirty_bit);
