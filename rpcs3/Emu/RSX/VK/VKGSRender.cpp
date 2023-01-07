@@ -1743,6 +1743,8 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 
 bool VKGSRender::load_program()
 {
+	const auto shadermode = g_cfg.video.shadermode.get();
+
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
@@ -1752,9 +1754,24 @@ bool VKGSRender::load_program()
 
 		m_graphics_state &= ~rsx::pipeline_state::invalidate_pipeline_bits;
 	}
+	else if (!(m_graphics_state & rsx::pipeline_state::pipeline_config_dirty) && m_program)
+	{
+		if (!m_shader_interpreter.is_interpreter(m_program)) [[ likely ]]
+		{
+			return true;
+		}
+
+		if (shadermode == shader_mode::interpreter_only)
+		{
+			m_program = m_shader_interpreter.get(m_pipeline_properties, current_fp_metadata);
+			return true;
+		}
+	}
 
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
+
+	m_cached_draw_state.prim = rsx::method_registers.current_draw_clause.primitive;
 
 	vk::pipeline_props properties{};
 
@@ -1915,7 +1932,6 @@ bool VKGSRender::load_program()
 		}
 	}
 
-	const auto shadermode = g_cfg.video.shadermode.get();
 	m_vertex_prog = nullptr;
 	m_fragment_prog = nullptr;
 
@@ -1966,6 +1982,7 @@ bool VKGSRender::load_program()
 	}
 
 	m_pipeline_properties = properties;
+	m_graphics_state &= ~rsx::pipeline_state::pipeline_config_dirty;
 	return m_program != nullptr;
 }
 

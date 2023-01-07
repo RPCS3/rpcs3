@@ -94,7 +94,6 @@ private:
 	struct
 	{
 		rsx::primitive_type prim = rsx::primitive_type::points;
-		bool primitive_restart = false;
 	} m_cached_draw_state;
 
 public:
