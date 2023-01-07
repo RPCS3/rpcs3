@@ -1083,8 +1083,8 @@ namespace rsx
 
 	enum class surface_depth_format2 : u8
 	{
-		z16_uint = surface_depth_format::z16,      // unsigned 16 bits depth
-		z24s8_uint = surface_depth_format::z24s8,  // unsigned 24 bits depth + 8 bits stencil
+		z16_uint = CELL_GCM_SURFACE_Z16,      // unsigned 16 bits depth
+		z24s8_uint = CELL_GCM_SURFACE_Z24S8,  // unsigned 24 bits depth + 8 bits stencil
 		z16_float,   // floating point 16 bits depth
 		z24s8_float, // floating point 24 bits depth + 8 bits stencil
 	};
