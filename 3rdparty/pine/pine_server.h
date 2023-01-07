@@ -152,6 +152,17 @@ namespace pine
 				return IPCBuffer{ 5, MakeFailIPC(ret_buffer) };
 			};
 
+			const auto write_string = [&](const std::string& str)
+			{
+				if (!SafetyChecks(buf_cnt, 0, ret_cnt, str.size() + 1 + sizeof(u32), buf_size))
+					return false;
+				ToArray(ret_buffer, ::narrow<u32>(str.size() + 1), ret_cnt);
+				ret_cnt += sizeof(u32);
+				memcpy(&ret_buffer[ret_cnt], str.data(), str.size());
+				ret_cnt += str.size();
+				ret_buffer[ret_cnt++] = '\0';
+				return true;
+			};
 
 			while (buf_cnt < buf_size)
 			{
@@ -270,15 +281,8 @@ namespace pine
 				}
 				case MsgVersion:
 				{
-					char version[256] = {};
-					snprintf(version, sizeof(version), "RPCS3 %s", Impl::get_version_and_branch().c_str());
-					const u32 size = strlen(version) + 1;
-					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
+					if (!write_string("RPCS3 " + Impl::get_version_and_branch()))
 						return error();
-					ToArray(ret_buffer, size, ret_cnt);
-					ret_cnt += 4;
-					memcpy(&ret_buffer[ret_cnt], version, size);
-					ret_cnt += size;
 					break;
 				}
 				case MsgStatus:
@@ -293,62 +297,26 @@ namespace pine
 				}
 				case MsgTitle:
 				{
-					const auto title_string = Impl::get_title();
-					const auto size = title_string.size() + 1;
-					char* title = new char[size];
-					snprintf(title, size, "%s", title_string.c_str());
-					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
+					if (!write_string(Impl::get_title()))
 						return error();
-					ToArray(ret_buffer, size, ret_cnt);
-					ret_cnt += 4;
-					memcpy(&ret_buffer[ret_cnt], title, size);
-					ret_cnt += size;
-					delete[] title;
 					break;
 				}
 				case MsgID:
 				{
-					const auto title_id_string = Impl::get_title_ID();
-					const auto size = title_id_string.size() + 1;
-					char* title_id = new char[size];
-					snprintf(title_id, size, "%s", title_id_string.c_str());
-					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
+					if (!write_string(Impl::get_title_ID()))
 						return error();
-					ToArray(ret_buffer, size, ret_cnt);
-					ret_cnt += 4;
-					memcpy(&ret_buffer[ret_cnt], title_id, size);
-					ret_cnt += size;
-					delete[] title_id;
 					break;
 				}
 				case MsgUUID:
 				{
-					const auto hash_string = Impl::get_executable_hash();
-					const auto size = hash_string.size() + 1;
-					char* hash = new char[size];
-					snprintf(hash, size, "%s", hash_string.c_str());
-					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
+					if (!write_string(Impl::get_executable_hash()))
 						return error();
-					ToArray(ret_buffer, size, ret_cnt);
-					ret_cnt += 4;
-					memcpy(&ret_buffer[ret_cnt], hash, size);
-					ret_cnt += size;
-					delete[] hash;
 					break;
 				}
 				case MsgGameVersion:
 				{
-					const auto game_version_string = Impl::get_app_version();
-					const auto size = game_version_string.size() + 1;
-					char* game_version = new char[size];
-					snprintf(game_version, size, "%s", game_version_string.c_str());
-					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size, buf_size))
+					if (!write_string(Impl::get_app_version()))
 						return error();
-					ToArray(ret_buffer, size, ret_cnt);
-					ret_cnt += 4;
-					memcpy(&ret_buffer[ret_cnt], game_version, size);
-					ret_cnt += size;
-					delete[] game_version;
 					break;
 				}
 				default:
