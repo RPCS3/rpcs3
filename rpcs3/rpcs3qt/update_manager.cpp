@@ -385,11 +385,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	// Get executable path
 	const std::string exe_dir = rpcs3::utils::get_exe_dir();
 	const std::string orig_path = exe_dir + "rpcs3.exe";
-
-	std::wstring wchar_orig_path;
-	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, nullptr, 0);
-	wchar_orig_path.resize(tmp_size);
-	MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, wchar_orig_path.data(), tmp_size);
+	const std::wstring wchar_orig_path = utf8_to_wchar(orig_path);
 
 	char temp_path[PATH_MAX];
 
@@ -417,7 +413,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	ISzAlloc allocImp;
 	ISzAlloc allocTempImp;
 
-	CFileInStream archiveStream;
+	CFileInStream archiveStream{};
 	CLookToRead2 lookStream;
 	CSzArEx db;
 	SRes res;
