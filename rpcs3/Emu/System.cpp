@@ -3085,7 +3085,7 @@ bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) cons
 {
 	const std::string dir_path = GetCallbacks().resolve_path(dir);
 
-	return !dir_path.empty() && (GetCallbacks().resolve_path(path) + '/').starts_with(dir_path + '/');
+	return !dir_path.empty() && (GetCallbacks().resolve_path(path) + '/').starts_with((dir_path.back() == '/') ? dir_path : (dir_path + '/'));
 };
 
 const std::string& Emulator::GetFakeCat() const
