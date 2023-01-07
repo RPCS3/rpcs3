@@ -147,10 +147,16 @@ namespace pine
 			u32 ret_cnt = 5;
 			u32 buf_cnt = 0;
 
+			const auto error = [&]()
+			{
+				return IPCBuffer{ 5, MakeFailIPC(ret_buffer) };
+			};
+
+
 			while (buf_cnt < buf_size)
 			{
 				if (!SafetyChecks(buf_cnt, 1, ret_cnt, 0, buf_size))
-					return IPCBuffer{ 5, MakeFailIPC(ret_buffer) };
+					return error();
 				buf_cnt++;
 				// example IPC messages: MsgRead/Write
 				// refer to the client doc for more info on the format
@@ -169,10 +175,10 @@ namespace pine
 				case MsgRead8:
 				{
 					if (!SafetyChecks(buf_cnt, 4, ret_cnt, 1, buf_size))
-						goto error;
+						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
 					if (!Impl::template check_addr(a))
-						goto error;
+						return error();
 					const u8 res = Impl::read8(a);
 					ToArray(ret_buffer, res, ret_cnt);
 					ret_cnt += 1;
@@ -182,10 +188,10 @@ namespace pine
 				case MsgRead16:
 				{
 					if (!SafetyChecks(buf_cnt, 4, ret_cnt, 2, buf_size))
-						goto error;
+						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
 					if (!Impl::template check_addr<2>(a))
-						goto error;
+						return error();
 					const u16 res = Impl::read16(a);
 					ToArray(ret_buffer, res, ret_cnt);
 					ret_cnt += 2;
@@ -195,10 +201,10 @@ namespace pine
 				case MsgRead32:
 				{
 					if (!SafetyChecks(buf_cnt, 4, ret_cnt, 4, buf_size))
-						goto error;
+						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
 					if (!Impl::template check_addr<4>(a))
-						goto error;
+						return error();
 					const u32 res = Impl::read32(a);
 					ToArray(ret_buffer, res, ret_cnt);
 					ret_cnt += 4;
@@ -208,10 +214,10 @@ namespace pine
 				case MsgRead64:
 				{
 					if (!SafetyChecks(buf_cnt, 4, ret_cnt, 8, buf_size))
-						goto error;
+						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
 					if (!Impl::template check_addr<8>(a))
-						goto error;
+						return error();
 					u64 res = Impl::read64(a);
 					ToArray(ret_buffer, res, ret_cnt);
 					ret_cnt += 8;
@@ -221,10 +227,10 @@ namespace pine
 				case MsgWrite8:
 				{
 					if (!SafetyChecks(buf_cnt, 1 + 4, ret_cnt, 0, buf_size))
-						goto error;
+						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
 					if (!Impl::template check_addr(a, vm::page_writable))
-						goto error;
+						return error();
 					Impl::write8(a, FromArray<u8>(&buf[buf_cnt], 4));
 					buf_cnt += 5;
 					break;
@@ -232,10 +238,10 @@ namespace pine
 				case MsgWrite16:
 				{
 					if (!SafetyChecks(buf_cnt, 2 + 4, ret_cnt, 0, buf_size))
-						goto error;
+						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
 					if (!Impl::template check_addr<2>(a, vm::page_writable))
-						goto error;
+						return error();
 					Impl::write16(a, FromArray<u16>(&buf[buf_cnt], 4));
 					buf_cnt += 6;
 					break;
@@ -243,10 +249,10 @@ namespace pine
 				case MsgWrite32:
 				{
 					if (!SafetyChecks(buf_cnt, 4 + 4, ret_cnt, 0, buf_size))
-						goto error;
+						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
 					if (!Impl::template check_addr<4>(a, vm::page_writable))
-						goto error;
+						return error();
 					Impl::write32(a, FromArray<u32>(&buf[buf_cnt], 4));
 					buf_cnt += 8;
 					break;
@@ -254,10 +260,10 @@ namespace pine
 				case MsgWrite64:
 				{
 					if (!SafetyChecks(buf_cnt, 8 + 4, ret_cnt, 0, buf_size))
-						goto error;
+						return error();
 					const u32 a = FromArray<u32>(&buf[buf_cnt], 0);
 					if (!Impl::template check_addr<8>(a, vm::page_writable))
-						goto error;
+						return error();
 					Impl::write64(a, FromArray<u64>(&buf[buf_cnt], 4));
 					buf_cnt += 12;
 					break;
@@ -268,7 +274,7 @@ namespace pine
 					snprintf(version, sizeof(version), "RPCS3 %s", Impl::get_version_and_branch().c_str());
 					const u32 size = strlen(version) + 1;
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
-						goto error;
+						return error();
 					ToArray(ret_buffer, size, ret_cnt);
 					ret_cnt += 4;
 					memcpy(&ret_buffer[ret_cnt], version, size);
@@ -278,7 +284,7 @@ namespace pine
 				case MsgStatus:
 				{
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, 4, buf_size))
-						goto error;
+						return error();
 					EmuStatus status = Impl::get_status();
 					ToArray(ret_buffer, status, ret_cnt);
 					ret_cnt += 4;
@@ -292,7 +298,7 @@ namespace pine
 					char* title = new char[size];
 					snprintf(title, size, "%s", title_string.c_str());
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
-						goto error;
+						return error();
 					ToArray(ret_buffer, size, ret_cnt);
 					ret_cnt += 4;
 					memcpy(&ret_buffer[ret_cnt], title, size);
@@ -307,7 +313,7 @@ namespace pine
 					char* title_id = new char[size];
 					snprintf(title_id, size, "%s", title_id_string.c_str());
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
-						goto error;
+						return error();
 					ToArray(ret_buffer, size, ret_cnt);
 					ret_cnt += 4;
 					memcpy(&ret_buffer[ret_cnt], title_id, size);
@@ -322,7 +328,7 @@ namespace pine
 					char* hash = new char[size];
 					snprintf(hash, size, "%s", hash_string.c_str());
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size + 4, buf_size))
-						goto error;
+						return error();
 					ToArray(ret_buffer, size, ret_cnt);
 					ret_cnt += 4;
 					memcpy(&ret_buffer[ret_cnt], hash, size);
@@ -337,7 +343,7 @@ namespace pine
 					char* game_version = new char[size];
 					snprintf(game_version, size, "%s", game_version_string.c_str());
 					if (!SafetyChecks(buf_cnt, 0, ret_cnt, size, buf_size))
-						goto error;
+						return error();
 					ToArray(ret_buffer, size, ret_cnt);
 					ret_cnt += 4;
 					memcpy(&ret_buffer[ret_cnt], game_version, size);
@@ -347,8 +353,7 @@ namespace pine
 				}
 				default:
 				{
-				error:
-					return IPCBuffer{ 5, MakeFailIPC(ret_buffer) };
+					return error();
 				}
 				}
 			}
