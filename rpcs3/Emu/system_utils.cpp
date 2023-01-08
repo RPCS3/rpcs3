@@ -352,9 +352,14 @@ namespace rpcs3::utils
 #endif
 	}
 
-	std::string get_custom_config_path(const std::string& title_id)
+	std::string get_custom_config_path(const std::string& identifier)
 	{
-		return get_custom_config_dir() + "config_" + title_id + ".yml";
+		if (identifier.empty())
+		{
+			return {};
+		}
+
+		return get_custom_config_dir() + "config_" + identifier + ".yml";
 	}
 
 	std::string get_input_config_root()

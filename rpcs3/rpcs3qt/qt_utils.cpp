@@ -397,17 +397,18 @@ namespace gui
 
 		void open_dir(const std::string& spath)
 		{
-			const QString path = qstr(spath);
+			QString path = qstr(spath);
 
 			if (fs::is_file(spath))
 			{
 				// open directory and select file
 				// https://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
 #ifdef _WIN32
-				const QString cleaned_path = QDir::toNativeSeparators(path);
-				gui_log.notice("gui::utils::open_dir: About to open file path '%s' (original: '%s')", cleaned_path.toStdString(), spath);
+				// Remove double slashes and convert to native separators. Double slashes don't seem to work with the explorer call.
+				path.replace(QRegularExpression("[\\\\|/]+"), QDir::separator());
+				gui_log.notice("gui::utils::open_dir: About to open file path '%s' (original: '%s')", path.toStdString(), spath);
 
-				if (!QProcess::startDetached("explorer.exe", {"/select,", cleaned_path}))
+				if (!QProcess::startDetached("explorer.exe", {"/select,", path}))
 				{
 					gui_log.error("gui::utils::open_dir: Failed to start explorer process");
 				}

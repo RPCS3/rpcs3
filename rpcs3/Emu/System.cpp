@@ -855,12 +855,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		bool resolve_path_as_vfs_path = false;
 
+		const bool from_dev_flash  = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
+
 		if (m_ar)
 		{
 			struct file_header
 			{
 				ENABLE_BITWISE_SERIALIZATION;
-	
+
 				nse_t<u64, 1> magic;
 				bool LE_format;
 				bool state_inspection_support;
@@ -874,14 +876,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				return game_boot_result::savestate_corrupted;
 			}
-	
+
 			if (header.LE_format != (std::endian::native == std::endian::little) || header.offset >= m_ar->data.size())
 			{
 				return game_boot_result::savestate_corrupted;
 			}
 
 			g_cfg.savestate.state_inspection_mode.set(header.state_inspection_support);
-	
+
 			// Emulate seek operation (please avoid using in other places)
 			m_ar->pos = header.offset;
 
@@ -894,7 +896,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			argv.clear();
 			klic.clear();
-	
+
 			std::string disc_info;
 			(*m_ar)(argv.emplace_back(), disc_info, klic.emplace_back(), m_game_dir, hdd1);
 
@@ -907,7 +909,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				// Restore disc path for disc games (must exist in games.yml i.e. your game library)
 				m_title_id = disc_info;
-	
+
 				// Load /dev_bdvd/ from game list if available
 				if (auto node = games[m_title_id])
 				{
@@ -1189,37 +1191,30 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 			else if (m_config_mode == cfg_mode::custom)
 			{
-				const std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id);
-
-				// Load custom config-1
-				if (fs::file cfg_file{ config_path })
+				// Load custom configs
+				for (std::string config_path :
 				{
-					sys_log.notice("Applying custom config: %s", config_path);
-
-					if (g_cfg.from_string(cfg_file.to_string()))
+					m_path + ".yml",
+					rpcs3::utils::get_custom_config_path(from_dev_flash ? m_path.substr(m_path.find_last_of(fs::delim) + 1) : m_title_id),
+				})
+				{
+					if (config_path.empty())
 					{
-						g_cfg.name = config_path;
-						m_config_path = config_path;
+						continue;
 					}
-					else
+
+					if (fs::file cfg_file{config_path})
 					{
+						sys_log.notice("Applying custom config: %s", config_path);
+
+						if (g_cfg.from_string(cfg_file.to_string()))
+						{
+							g_cfg.name = config_path;
+							m_config_path = config_path;
+							break;
+						}
+
 						sys_log.fatal("Failed to apply custom config: %s", config_path);
-					}
-				}
-
-				// Load custom config-2
-				if (fs::file cfg_file{ m_path + ".yml" })
-				{
-					sys_log.notice("Applying custom config: %s.yml", m_path);
-
-					if (g_cfg.from_string(cfg_file.to_string()))
-					{
-						g_cfg.name = m_path + ".yml";
-						m_config_path = g_cfg.name;
-					}
-					else
-					{
-						sys_log.fatal("Failed to apply custom config: %s.yml", m_path);
 					}
 				}
 			}
@@ -1441,7 +1436,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Detect boot location
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const bool from_hdd0_game   = IsPathInsideDir(m_path, hdd0_game);
-		const bool from_dev_flash   = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
 
 #ifdef _WIN32
 		// m_path might be passed from command line with differences in uppercase/lowercase on windows.
@@ -3091,7 +3085,7 @@ bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) cons
 {
 	const std::string dir_path = GetCallbacks().resolve_path(dir);
 
-	return !dir_path.empty() && (GetCallbacks().resolve_path(path) + '/').starts_with(dir_path + '/');
+	return !dir_path.empty() && (GetCallbacks().resolve_path(path) + '/').starts_with((dir_path.back() == '/') ? dir_path : (dir_path + '/'));
 };
 
 const std::string& Emulator::GetFakeCat() const

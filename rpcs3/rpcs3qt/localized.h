@@ -33,6 +33,7 @@ public:
 		const QString network   = tr("Network");
 		const QString store_fe  = tr("Store");
 		const QString web_tv    = tr("Web TV");
+		const QString os_app    = tr("Operating System");
 
 		// PS2 bootable
 		const QString ps2_game = tr("PS2 Classics");
@@ -79,6 +80,7 @@ public:
 			{ cat::cat_psp_game , psp_game  }, // psp_games
 			{ cat::cat_psp_mini , psp_mini  }, // psp_games
 			{ cat::cat_psp_rema , psp_rema  }, // psp_games
+			{ cat::cat_ps3_os   , os_app    }, // other
 		};
 
 		const localized_cat cat_data =
@@ -122,4 +124,10 @@ public:
 		sound();
 		const std::map<u32, QString> format;
 	} sound;
+
+	const struct title_t
+	{
+		title_t();
+		const std::map<std::string, QString> titles;
+	} title;
 };
