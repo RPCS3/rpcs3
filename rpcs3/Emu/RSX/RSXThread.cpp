@@ -975,21 +975,6 @@ namespace rsx
 
 				// Update other sub-units
 				zcull_ctrl->update(this);
-
-				if (new_get_put != umax)
-				{
-					const u64 get_put = new_get_put.exchange(u64{umax});
-
-					if (get_put != umax)
-					{
-						vm::_ref<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put)).release(get_put);
-						fifo_ctrl->set_get(static_cast<u32>(get_put));
-						fifo_ctrl->abort();
-						fifo_ret_addr = RSX_CALL_STACK_EMPTY;
-						last_known_code_start = static_cast<u32>(get_put);
-						sync_point_request.release(true);
-					}
-				}
 			}
 
 			// Execute FIFO queue
@@ -1311,6 +1296,21 @@ namespace rsx
 
 			m_invalidated_memory_range = utils::address_range::start_end(0x2 << 28, constants::local_mem_base + local_mem_size - 1);
 			handle_invalidated_memory_range();
+		}
+		else if (state != FIFO_state::lock_wait && new_get_put != umax)
+		{
+			const u64 get_put = new_get_put.exchange(u64{umax});
+
+			// Recheck in case aborted externally
+			if (get_put != umax)
+			{
+				vm::_ref<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put)).release(get_put);
+				fifo_ctrl->set_get(static_cast<u32>(get_put));
+				fifo_ctrl->abort();
+				fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+				last_known_code_start = static_cast<u32>(get_put);
+				sync_point_request.release(true);
+			}
 		}
 	}
 
