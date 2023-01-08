@@ -471,15 +471,28 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u64 get = static_cast<u32>(a3);
 		const u64 put = static_cast<u32>(a4);
 		const u64 get_put = put << 32 | get;
+		bool changed_value = false;
 		{
 			rsx::eng_lock rlock(render);
 			std::lock_guard lock(render->sys_rsx_mtx);
-			render->new_get_put = get_put;
+			render->fifo_ctrl->abort();
+
+			while (render->new_get_put == umax)
+			{
+				if (render->new_get_put.compare_and_swap_test(u64{umax}, get_put))
+				{
+					changed_value = true;
+					break;
+				}
+
+				// Assume CAS can fail spuriously here
+			}
 		}
 
-		while (render->new_get_put == get_put)
+		// Wait for the first store to complete (or be aborted)
+		while (render->new_get_put != umax)
 		{
-			if (Emu.IsStopped())
+			if (Emu.IsStopped() && changed_value)
 			{
 				// Abort
 				if (render->new_get_put.compare_and_swap_test(get_put, u64{umax}))
