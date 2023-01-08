@@ -258,7 +258,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	case Qt::Key_Escape:
 	{
-		if (visibility() == FullScreen)
+		if (visibility() == FullScreen && !m_disable_kb_hotkeys)
 		{
 			toggle_fullscreen();
 			return;
