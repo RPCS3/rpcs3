@@ -803,7 +803,7 @@ namespace rsx
 				const auto current = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(arg);
 				const auto previous = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(method_registers.register_previous_value);
 
-				if (current.antialias() != previous.antialias() ||                               // Antialias control has changed, update ROP parameters
+				if (*current.antialias() != *previous.antialias() ||                               // Antialias control has changed, update ROP parameters
 					current.is_integer_color_format() != previous.is_integer_color_format())     // The type of color format also requires ROP control update
 				{
 					rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
