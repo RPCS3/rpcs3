@@ -18,10 +18,14 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     # Embed newer libstdc++ for distros that don't come with it (ubuntu 16.04)
     mkdir -p appdir/usr/optional/ ; mkdir -p appdir/usr/optional/libstdc++/
     cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./appdir/usr/optional/libstdc++/
-    
+
     # Remove libwayland-client because it has platform-dependent exports and breaks other OSes
     rm -f ./appdir/usr/lib/libwayland-client.so*
-    
+
+    # Remove libgmodule and libglib due to g_source_set_static_name symbol conflict with host libraries
+    rm -f ./appdir/usr/lib/libgmodule-2.0.so*
+    rm -f ./appdir/usr/lib/libglib-2.0.so*
+
     # Install latest appimage runner
     rm ./appdir/AppRun
     curl -sL https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous2/AppRun-patched-x86_64 -o ./appdir/AppRun
@@ -39,7 +43,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 
     # Package it up and send it off
     ./squashfs-root/usr/bin/appimagetool "$APPDIR"
-    
+
     ls
 
     COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ../rpcs3/rpcs3_version.cpp)
@@ -57,7 +61,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     FILESIZE=$(stat -c %s ./rpcs3*.AppImage)
     SHA256SUM=$(sha256sum ./rpcs3*.AppImage | awk '{ print $1 }')
     echo "${SHA256SUM};${FILESIZE}B" > "$RELEASE_MESSAGE"
-    
+
 fi
 
 if [ "$DEPLOY_PPA" = "true" ]; then
