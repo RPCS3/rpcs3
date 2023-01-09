@@ -510,7 +510,7 @@ Value* PPUTranslator::Broadcast(Value* value, u32 count)
 {
 	if (const auto cv = dyn_cast<Constant>(value))
 	{
-		return ConstantVector::getSplat({count, false}, cv);
+		return ConstantVector::getSplat(count, cv);
 	}
 
 	return m_ir->CreateVectorSplat(count, value);
