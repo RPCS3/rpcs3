@@ -106,7 +106,7 @@ void lv2_socket::handle_events(const pollfd& native_pfd, [[maybe_unused]] bool u
 	if (native_pfd.revents & POLLERR && events.test_and_reset(lv2_socket::poll_t::error))
 		events_happening += lv2_socket::poll_t::error;
 
-	if (events_happening)
+	if (events_happening || (!queue.empty() && (so_rcvtimeo || so_sendtimeo)))
 	{
 		std::lock_guard lock(mutex);
 #ifdef _WIN32
@@ -114,7 +114,7 @@ void lv2_socket::handle_events(const pollfd& native_pfd, [[maybe_unused]] bool u
 			set_connecting(false);
 #endif
 
-		for (auto it = queue.begin(); events_happening && it != queue.end();)
+		for (auto it = queue.begin(); it != queue.end();)
 		{
 			if (it->second(events_happening))
 			{

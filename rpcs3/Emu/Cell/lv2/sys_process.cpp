@@ -409,7 +409,10 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 {
 	ppu.state += cpu_flag::wait;
 
-	Emu.CallFromMainThread([argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
+	// sys_sm_shutdown
+	const bool is_real_reboot = (ppu.gpr[11] == 379);
+
+	Emu.CallFromMainThread([is_real_reboot, argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
 
@@ -428,8 +431,14 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 
 		using namespace id_manager;
 
-		auto func = [old_size = g_fxo->get<lv2_memory_container>().size, vec = (reader_lock{g_mutex}, g_fxo->get<id_map<lv2_memory_container>>().vec)](u32 sdk_suggested_mem) mutable
+		auto func = [is_real_reboot, old_size = g_fxo->get<lv2_memory_container>().size, vec = (reader_lock{g_mutex}, g_fxo->get<id_map<lv2_memory_container>>().vec)](u32 sdk_suggested_mem) mutable
 		{
+			if (is_real_reboot)
+			{
+				// Do not save containers on actual reboot
+				vec.clear();
+			}
+
 			// Save LV2 memory containers
 			g_fxo->init<id_map<lv2_memory_container>>()->vec = std::move(vec);
 

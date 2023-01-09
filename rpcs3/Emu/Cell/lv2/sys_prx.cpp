@@ -19,6 +19,7 @@ extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::s
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
+extern void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<bool>& loaded_flags);
 
 LOG_CHANNEL(sys_prx);
 
@@ -741,8 +742,6 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 	return CELL_OK;
 }
 
-void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<bool>& loaded_flags);
-
 void lv2_prx::load_exports()
 {
 	if (exports_end <= exports_start)
@@ -858,7 +857,14 @@ error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_prx.todo("_sys_prx_register_library(library=*0x%x)", library);
+	sys_prx.notice("_sys_prx_register_library(library=*0x%x)", library);
+
+	if (!vm::check_addr(library.addr()))
+	{
+		return CELL_EFAULT;
+	}
+
+	ppu_manual_load_imports_exports(0, 0, library.addr(), 0x1c, *std::make_unique<std::basic_string<bool>>());
 	return CELL_OK;
 }
 

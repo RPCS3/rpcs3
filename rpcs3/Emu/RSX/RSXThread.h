@@ -29,7 +29,7 @@
 #include "Emu/system_config.h"
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
-extern atomic_t<bool> g_disable_frame_limit; 
+extern atomic_t<bool> g_disable_frame_limit;
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
 
@@ -75,7 +75,7 @@ namespace rsx
 					{
 						added_wait |= !self->state.test_and_set(cpu_flag::wait);
 					}
-					
+
 					if (!self || self->id_type() != 0x55u)
 					{
 						IsFullLock ? mutex_.lock() : mutex_.lock_shared();
@@ -450,6 +450,20 @@ namespace rsx
 		}
 	};
 
+	class vblank_thread
+	{
+		std::shared_ptr<named_thread<std::function<void()>>> m_thread;
+
+	public:
+		vblank_thread() = default;
+		vblank_thread(const vblank_thread&) = delete;
+
+		void set_thread(std::shared_ptr<named_thread<std::function<void()>>> thread);
+
+		vblank_thread& operator=(thread_state);
+		vblank_thread& operator=(const vblank_thread&) = delete;
+	};
+
 	struct backend_configuration
 	{
 		bool supports_multidraw;               // Draw call batching
@@ -489,7 +503,6 @@ namespace rsx
 
 		void cpu_task() override;
 	protected:
-		atomic_t<bool> m_rsx_thread_exiting{ true };
 
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
@@ -504,6 +517,7 @@ namespace rsx
 		// FIFO
 	public:
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
+		atomic_t<bool> rsx_thread_running{ false };
 		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 
 	protected:
@@ -541,6 +555,7 @@ namespace rsx
 		u32 dma_address{0};
 		rsx_iomap_table iomap_table;
 		u32 restore_point = 0;
+		atomic_t<u64> new_get_put = u64{umax};
 		u32 dbg_step_pc = 0;
 		u32 last_known_code_start = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };

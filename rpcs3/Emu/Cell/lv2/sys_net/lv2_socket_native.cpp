@@ -634,13 +634,18 @@ s32 lv2_socket_native::setsockopt(s32 level, s32 optname, const std::vector<u8>&
 			native_opt = optname == SYS_NET_SO_SNDTIMEO ? SO_SNDTIMEO : SO_RCVTIMEO;
 			native_val = &native_timeo;
 			native_len = sizeof(native_timeo);
+
+			const int tv_sec = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_sec);
+			const int tv_usec = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_usec);
 #ifdef _WIN32
-			native_timeo = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_sec) * 1000;
-			native_timeo += ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_usec) / 1000;
+			native_timeo = tv_sec * 1000;
+			native_timeo += tv_usec / 1000;
 #else
-			native_timeo.tv_sec = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_sec);
-			native_timeo.tv_usec = ::narrow<int>(reinterpret_cast<const sys_net_timeval*>(optval.data())->tv_usec);
+			native_timeo.tv_sec = tv_sec;
+			native_timeo.tv_usec = tv_usec;
 #endif
+			// TODO: Overflow detection?
+			(optname == SYS_NET_SO_SNDTIMEO ? so_sendtimeo : so_rcvtimeo) = tv_usec + tv_sec * 1000000;
 			break;
 		}
 		case SYS_NET_SO_LINGER:

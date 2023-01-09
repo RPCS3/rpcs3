@@ -828,9 +828,20 @@ void game_list_frame::OnRefreshFinished()
 
 	m_size_watcher_cancel = std::make_shared<atomic_t<bool>>(false);
 
-	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this, cancel = m_size_watcher_cancel](const game_info& game) -> void
+	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this, cancel = m_size_watcher_cancel, dev_flash = g_cfg_vfs.get_dev_flash()](const game_info& game) -> void
 	{
-		if (game) game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
+		if (game)
+		{
+			if (game->info.path.starts_with(dev_flash))
+			{
+				// Do not report size of apps inside /dev_flash (it does not make sense to do so)
+				game->info.size_on_disk = 0;
+			}
+			else
+			{
+				game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
+			}
+		}
 	}));
 }
 
