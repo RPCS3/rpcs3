@@ -256,7 +256,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	if (properties.in_register_mask & in_fogc)
-		glsl::insert_fog_declaration(OS);
+		program_common::insert_fog_declaration(OS);
 
 	std::set<std::string> output_registers;
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)

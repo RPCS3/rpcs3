@@ -4,8 +4,21 @@
 #include "GLSLCommon.h"
 #include "RSXFragmentProgram.h"
 
+#include "../gcm_enums.h"
+
 namespace program_common
 {
+	template <typename T>
+	void define_glsl_constants(std::ostream& OS, std::initializer_list<std::pair<const char*, T>> enums)
+	{
+		for (const auto& e : enums)
+		{
+			OS << "#define " << e.first << " " << static_cast<int>(e.second) << "\n";
+		}
+
+		OS << "\n";
+	}
+
 	void insert_compare_op(std::ostream& OS)
 	{
 		OS <<
@@ -46,14 +59,19 @@ namespace program_common
 		"}\n\n";
 	}
 
-	void insert_fog_declaration(std::ostream& OS, const std::string& wide_vector_type, const std::string& input_coord, bool declare)
+	void insert_fog_declaration(std::ostream& OS, std::string_view wide_vector_type, std::string_view input_coord)
 	{
-		std::string template_body;
+		define_glsl_constants<rsx::fog_mode>(OS,
+		{
+			{ "FOG_LINEAR", rsx::fog_mode::linear },
+			{ "FOG_EXP", rsx::fog_mode::exponential },
+			{ "FOG_EXP2", rsx::fog_mode::exponential2 },
+			{ "FOG_LINEAR_ABS", rsx::fog_mode::linear_abs },
+			{ "FOG_EXP_ABS", rsx::fog_mode::exponential_abs },
+			{ "FOG_EXP2_ABS", rsx::fog_mode::exponential2_abs }
+		});
 
-		if (!declare)
-			template_body += "$T fetch_fog_value(const in uint mode)\n";
-		else
-			template_body += "$T fetch_fog_value(const in uint mode, const in $T $I)\n";
+		std::string template_body = "$T fetch_fog_value(const in uint mode)\n";
 
 		template_body +=
 		"{\n"
@@ -62,27 +80,27 @@ namespace program_common
 		"	{\n"
 		"	default:\n"
 		"		return result;\n"
-		"	case 0:\n"
+		"	case FOG_LINEAR:\n"
 		"		//linear\n"
 		"		result.y = fog_param1 * $I.x + (fog_param0 - 1.);\n"
 		"		break;\n"
-		"	case 1:\n"
+		"	case FOG_EXP:\n"
 		"		//exponential\n"
 		"		result.y = exp(11.084 * (fog_param1 * $I.x + fog_param0 - 1.5));\n"
 		"		break;\n"
-		"	case 2:\n"
+		"	case FOG_EXP2:\n"
 		"		//exponential2\n"
 		"		result.y = exp(-pow(4.709 * (fog_param1 * $I.x + fog_param0 - 1.5), 2.));\n"
 		"		break;\n"
-		"	case 3:\n"
+		"	case FOG_EXP_ABS:\n"
 		"		//exponential_abs\n"
 		"		result.y = exp(11.084 * (fog_param1 * abs($I.x) + fog_param0 - 1.5));\n"
 		"		break;\n"
-		"	case 4:\n"
+		"	case FOG_EXP2_ABS:\n"
 		"		//exponential2_abs\n"
 		"		result.y = exp(-pow(4.709 * (fog_param1 * abs($I.x) + fog_param0 - 1.5), 2.));\n"
 		"		break;\n"
-		" case 5:\n"
+		" case FOG_LINEAR_ABS:\n"
 		"		//linear_abs\n"
 		"		result.y = fog_param1 * abs($I.x) + (fog_param0 - 1.);\n"
 		"		break;\n"
@@ -93,8 +111,10 @@ namespace program_common
 		"}\n\n";
 
 		std::pair<std::string_view, std::string> replacements[] =
-			{std::make_pair("$T", wide_vector_type),
-			 std::make_pair("$I", input_coord)};
+		{
+			std::make_pair("$T", std::string(wide_vector_type)),
+			std::make_pair("$I", std::string(input_coord))
+		};
 
 		OS << fmt::replace_all(template_body, replacements);
 	}
@@ -182,15 +202,17 @@ namespace glsl
 	{
 		std::string vertex_id_name = (rules != glsl_rules_spirv) ? "gl_VertexID" : "gl_VertexIndex";
 
-		//Actually decode a vertex attribute from a raw byte stream
-		OS <<
-		"#define VTX_FMT_SNORM16 " << RSX_VERTEX_BASE_TYPE_SNORM16 << "\n"
-		"#define VTX_FMT_FLOAT32 " << RSX_VERTEX_BASE_TYPE_FLOAT << "\n"
-		"#define VTX_FMT_FLOAT16 " << RSX_VERTEX_BASE_TYPE_HALF_FLOAT << "\n"
-		"#define VTX_FMT_UNORM8  " << RSX_VERTEX_BASE_TYPE_UNORM8 << "\n"
-		"#define VTX_FMT_SINT16  " << RSX_VERTEX_BASE_TYPE_SINT16 << "\n"
-		"#define VTX_FMT_COMP32  " << RSX_VERTEX_BASE_TYPE_CMP32 << "\n"
-		"#define VTX_FMT_UINT8   " << RSX_VERTEX_BASE_TYPE_UINT8 << "\n\n";
+		// Actually decode a vertex attribute from a raw byte stream
+		program_common::define_glsl_constants<int>(OS,
+		{
+			{ "VTX_FMT_SNORM16", RSX_VERTEX_BASE_TYPE_SNORM16 },
+			{ "VTX_FMT_FLOAT32", RSX_VERTEX_BASE_TYPE_FLOAT },
+			{ "VTX_FMT_FLOAT16", RSX_VERTEX_BASE_TYPE_HALF_FLOAT },
+			{ "VTX_FMT_UNORM8", RSX_VERTEX_BASE_TYPE_UNORM8 },
+			{ "VTX_FMT_SINT16", RSX_VERTEX_BASE_TYPE_SINT16 },
+			{ "VTX_FMT_COMP32", RSX_VERTEX_BASE_TYPE_CMP32 },
+			{ "VTX_FMT_UINT8", RSX_VERTEX_BASE_TYPE_UINT8 }
+		});
 
 		// For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
 		// Note: Tested on Mesa iris with HD 530 and compilant path works fine, may be a bug on Windows proprietary drivers
@@ -1008,11 +1030,6 @@ namespace glsl
 			"	return (gl_FragCoord * vec4(abs_scale, wpos_scale, 1., 1.)) + vec4(0., wpos_bias, 0., 0.);\n"
 			"}\n\n";
 		}
-	}
-
-	void insert_fog_declaration(std::ostream& OS)
-	{
-		program_common::insert_fog_declaration(OS, "vec4", "fog_c");
 	}
 
 	std::string getFunctionImpl(FUNCTION f)
