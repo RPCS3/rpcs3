@@ -1112,10 +1112,18 @@ namespace rsx
 
 	enum class surface_raster_type : u8
 	{
-		undefined = CELL_GCM_ZERO,
+		undefined = CELL_GCM_ZERO, // TODO: Drop this (used in surface cache for optional args)
 		linear = CELL_GCM_SURFACE_PITCH,
 		swizzle = CELL_GCM_SURFACE_SWIZZLE,
 	};
+
+	static inline auto to_surface_raster_type(u32 in)
+	{
+		return gcm_enum_cast<
+			surface_raster_type,
+			CELL_GCM_SURFACE_PITCH,
+			CELL_GCM_SURFACE_SWIZZLE>(in);
+	}
 
 	enum class surface_antialiasing : u8
 	{
