@@ -1262,7 +1262,7 @@ namespace rsx
 
 		surface_depth_format2 surface_depth_fmt() const
 		{
-			const auto base_fmt = decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
+			const auto base_fmt = *decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
 			if (!depth_buffer_float_enabled()) [[likely]]
 			{
 				return static_cast<surface_depth_format2>(base_fmt);
