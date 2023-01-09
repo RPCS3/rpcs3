@@ -851,7 +851,7 @@ namespace rsx
 			return;
 		}
 
-		g_fxo->get<vblank_thread>().set_thread(std::make_shared<named_thread<std::function<void()>>>("VBlank Thread", [this]()
+		g_fxo->get<vblank_thread>().set_thread(std::make_shared<named_thread<std::function<void()>>>("VBlank Thread"s, [this]()
 		{
 			// See sys_timer_usleep for details
 #ifdef __linux__
