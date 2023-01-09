@@ -1297,7 +1297,7 @@ namespace rsx
 			m_invalidated_memory_range = utils::address_range::start_end(0x2 << 28, constants::local_mem_base + local_mem_size - 1);
 			handle_invalidated_memory_range();
 		}
-		else if (state != FIFO_state::lock_wait && new_get_put != umax)
+		else if (new_get_put != umax && state != FIFO_state::lock_wait)
 		{
 			const u64 get_put = new_get_put.exchange(u64{umax});
 
