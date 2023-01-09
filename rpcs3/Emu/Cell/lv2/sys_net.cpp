@@ -256,6 +256,14 @@ lv2_socket::lv2_socket(utils::serial& ar, lv2_socket_type _type)
 	// Try to match structure between different platforms
 	ar.pos += 8;
 #endif
+
+	const s32 version = GET_SERIALIZATION_VERSION(lv2_net);
+
+	if (version >= 2)
+	{
+		ar(so_rcvtimeo, so_sendtimeo);
+	}
+
 	lv2_id = idm::last_id();
 
 	ar(last_bound_addr);
@@ -282,7 +290,7 @@ std::shared_ptr<lv2_socket> lv2_socket::load(utils::serial& ar)
 	case SYS_NET_SOCK_STREAM_P2P: sock_lv2 = std::make_shared<lv2_socket_p2ps>(ar, type); break;
 	}
 
-	if (std::memcmp(&sock_lv2->last_bound_addr, std::array<u8, 16>{}.data(), 16)) 
+	if (std::memcmp(&sock_lv2->last_bound_addr, std::array<u8, 16>{}.data(), 16))
 	{
 		// NOTE: It is allowed fail
 		sock_lv2->bind(sock_lv2->last_bound_addr);
@@ -303,6 +311,7 @@ void lv2_socket::save(utils::serial& ar, bool save_only_this_class)
 #else
 		ar(std::array<char, 8>{});
 #endif
+		ar(so_rcvtimeo, so_sendtimeo);
 		ar(last_bound_addr);
 		return;
 	}
@@ -830,6 +839,13 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 						}
 					}
 
+					if (sock.so_rcvtimeo && get_guest_system_time() - ppu.start_time > sock.so_rcvtimeo)
+					{
+						result = -SYS_NET_EWOULDBLOCK;
+						lv2_obj::awake(&ppu);
+						return true;
+					}
+
 					sock.set_poll_event(lv2_socket::poll_t::read);
 					return false;
 				});
@@ -1030,6 +1046,14 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 							return true;
 						}
 					}
+
+					if (sock.so_sendtimeo && get_guest_system_time() - ppu.start_time > sock.so_sendtimeo)
+					{
+						result = -SYS_NET_EWOULDBLOCK;
+						lv2_obj::awake(&ppu);
+						return true;
+					}
+
 					sock.set_poll_event(lv2_socket::poll_t::write);
 					return false;
 				});

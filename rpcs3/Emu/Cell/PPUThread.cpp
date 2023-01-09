@@ -2876,7 +2876,7 @@ extern void ppu_finalize(const ppu_module& info)
 	fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
 
 #ifdef LLVM_AVAILABLE
-	g_fxo->get<jit_module_manager>().remove(cache_path + info.name);
+	g_fxo->get<jit_module_manager>().remove(cache_path + info.name + "_" + std::to_string(info.segs[0].addr));
 #endif
 }
 
@@ -3425,7 +3425,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	};
 
 	// Permanently loaded compiled PPU modules (name -> data)
-	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + info.name);
+	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + info.name + "_" + std::to_string(info.segs[0].addr));
 
 	// Compiler instance (deferred initialization)
 	std::shared_ptr<jit_compiler>& jit = jit_mod.pjit;
