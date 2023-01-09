@@ -851,7 +851,7 @@ namespace rsx
 			return;
 		}
 
-		g_fxo->get<vblank_thread>().set_thread(std::make_shared<named_thread<std::function<void()>>>("VBlank Thread", [this]()
+		g_fxo->get<vblank_thread>().set_thread(std::shared_ptr<named_thread<std::function<void()>>>(new named_thread<std::function<void()>>("VBlank Thread"sv, [this]() -> void
 		{
 			// See sys_timer_usleep for details
 #ifdef __linux__
@@ -925,7 +925,7 @@ namespace rsx
 					start_time = rsx::uclock() - start_time;
 				}
 			}
-		}));
+		})));
 
 		struct join_vblank
 		{
