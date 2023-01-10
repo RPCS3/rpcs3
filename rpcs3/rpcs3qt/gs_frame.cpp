@@ -22,7 +22,6 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QScreen>
-#include <QSound>
 
 #include <string>
 #include <thread>
@@ -465,7 +464,7 @@ void gs_frame::toggle_recording()
 		// Play a sound
 		if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_recording.wav"; fs::is_file(sound_path))
 		{
-			QSound::play(qstr(sound_path));
+			Emu.GetCallbacks().play_sound(sound_path);
 		}
 		else
 		{
@@ -1006,7 +1005,7 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			{
 				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
 				{
-					QSound::play(qstr(sound_path));
+					Emu.GetCallbacks().play_sound(sound_path);
 				}
 				else
 				{
