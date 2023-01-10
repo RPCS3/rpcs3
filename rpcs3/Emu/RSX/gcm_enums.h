@@ -991,7 +991,7 @@ namespace rsx
 	}
 
 	template <typename T>
-	expected<T> gcm_enum_cast(u32 value, std::initializer_list<u32[2]> allowed)
+	expected<T> gcm_enum_cast(u32 value, std::initializer_list<const std::array<u32, 2>> allowed)
 	{
 		for (const auto& range : allowed)
 		{
