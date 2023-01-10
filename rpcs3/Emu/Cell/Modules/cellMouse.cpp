@@ -63,7 +63,7 @@ void MouseHandlerBase::save(utils::serial& ar)
 
 error_code cellMouseInit(u32 max_connect)
 {
-	sys_io.warning("cellMouseInit(max_connect=%d)", max_connect);
+	sys_io.notice("cellMouseInit(max_connect=%d)", max_connect);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -259,7 +259,7 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
-	sys_io.warning("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
+	sys_io.notice("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -406,7 +406,7 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 
 error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 {
-	sys_io.warning("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
+	sys_io.notice("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
