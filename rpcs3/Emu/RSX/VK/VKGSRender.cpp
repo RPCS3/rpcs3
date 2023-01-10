@@ -1754,7 +1754,9 @@ bool VKGSRender::load_program()
 
 		m_graphics_state &= ~rsx::pipeline_state::invalidate_pipeline_bits;
 	}
-	else if (!(m_graphics_state & rsx::pipeline_state::pipeline_config_dirty) && m_program)
+	else if (!(m_graphics_state & rsx::pipeline_state::pipeline_config_dirty) &&
+		m_cached_draw_state.prim == rsx::method_registers.current_draw_clause.primitive &&
+		m_program)
 	{
 		if (!m_shader_interpreter.is_interpreter(m_program)) [[ likely ]]
 		{
