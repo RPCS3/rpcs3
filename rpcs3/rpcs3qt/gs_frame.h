@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shortcut_handler.h"
+#include "progress_indicator.h"
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/media_utils.h"
@@ -10,11 +11,6 @@
 #include <QWindow>
 #include <QPaintEvent>
 #include <QTimer>
-
-#ifdef _WIN32
-#include <QWinTaskbarProgress>
-#include <QWinTaskbarButton>
-#endif
 
 #include <memory>
 #include <vector>
@@ -27,14 +23,7 @@ class gs_frame : public QWindow, public GSFrameBase
 
 private:
 	// taskbar progress
-	int m_gauge_max = 100;
-#ifdef _WIN32
-	QWinTaskbarButton* m_tb_button = nullptr;
-	QWinTaskbarProgress* m_tb_progress = nullptr;
-#elif HAVE_QTDBUS
-	int m_progress_value = 0;
-	void UpdateProgress(int progress, bool progress_visible);
-#endif
+	std::unique_ptr<progress_indicator> m_progress_indicator;
 
 	QRect m_initial_geometry;
 

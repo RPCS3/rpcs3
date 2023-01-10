@@ -53,6 +53,7 @@ set(SRC_FILES
     persistent_settings.cpp
     pkg_install_dialog.cpp
     progress_dialog.cpp
+    progress_indicator.cpp
     qt_camera_error_handler.cpp
     qt_camera_handler.cpp
     qt_camera_video_surface.cpp
