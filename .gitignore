@@ -31,6 +31,7 @@
 *.wav
 
 /build
+/build-*
 /lib
 /tmp
 /ipch
@@ -135,3 +136,7 @@ yaml-cpp.pc
 cacert.pem
 
 _ReSharper.*/
+CMakeUserPresets.json
+
+.cache/
+.lldbinit
