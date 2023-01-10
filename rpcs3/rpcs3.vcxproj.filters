@@ -148,6 +148,9 @@
     <Filter Include="Gui\shortcuts">
       <UniqueIdentifier>{1b83df2f-bb74-4bc9-87f1-ab2f3889bcc9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\progress">
+      <UniqueIdentifier>{d60be100-0d7e-4076-a24a-d413d0e91532}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -921,6 +924,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_shortcut_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\progress_indicator.cpp">
+      <Filter>Gui\progress</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1090,6 +1096,9 @@
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_shortcut_dialog.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\progress_indicator.h">
+      <Filter>Gui\progress</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

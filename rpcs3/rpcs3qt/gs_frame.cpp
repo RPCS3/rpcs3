@@ -42,13 +42,6 @@
 #endif
 #endif
 
-#ifdef _WIN32
-#include <QWinTHumbnailToolbutton>
-#elif HAVE_QTDBUS
-#include <QtDBus/QDBusMessage>
-#include <QtDBus/QDBusConnection>
-#endif
-
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 LOG_CHANNEL(mark_log, "MARK");
 LOG_CHANNEL(gui_log, "GUI");
@@ -144,34 +137,11 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	connect(&m_mousehide_timer, &QTimer::timeout, this, &gs_frame::mouse_hide_timeout);
 	m_mousehide_timer.setSingleShot(true);
 
-#ifdef _WIN32
-	m_tb_button = new QWinTaskbarButton();
-	m_tb_progress = m_tb_button->progress();
-	m_tb_progress->setRange(0, m_gauge_max);
-	m_tb_progress->setVisible(false);
-
-#elif HAVE_QTDBUS
-	UpdateProgress(0, false);
-	m_progress_value = 0;
-#endif
+	m_progress_indicator = std::make_unique<progress_indicator>(0, 100);
 }
 
 gs_frame::~gs_frame()
 {
-#ifdef _WIN32
-	// QWinTaskbarProgress::hide() will crash if the application is already about to close, even if the object is not null.
-	if (m_tb_progress && !QCoreApplication::closingDown())
-	{
-		m_tb_progress->hide();
-	}
-	if (m_tb_button)
-	{
-		m_tb_button->deleteLater();
-	}
-#elif HAVE_QTDBUS
-	UpdateProgress(0, false);
-#endif
-
 	screenshot_toggle = false;
 }
 
@@ -644,14 +614,8 @@ void gs_frame::show()
 		}
 	});
 
-#ifdef _WIN32
 	// if we do this before show, the QWinTaskbarProgress won't show
-	if (m_tb_button)
-	{
-		m_tb_button->setWindow(this);
-		m_tb_progress->show();
-	}
-#endif
+	m_progress_indicator->show(this);
 }
 
 display_handle_t gs_frame::handle() const
@@ -1119,14 +1083,7 @@ bool gs_frame::event(QEvent* ev)
 
 void gs_frame::progress_reset(bool reset_limit)
 {
-#ifdef _WIN32
-	if (m_tb_progress)
-	{
-		m_tb_progress->reset();
-	}
-#elif HAVE_QTDBUS
-	UpdateProgress(0, false);
-#endif
+	m_progress_indicator->reset();
 
 	if (reset_limit)
 	{
@@ -1136,60 +1093,18 @@ void gs_frame::progress_reset(bool reset_limit)
 
 void gs_frame::progress_set_value(int value)
 {
-#ifdef _WIN32
-	if (m_tb_progress)
-	{
-		m_tb_progress->setValue(std::clamp(value, m_tb_progress->minimum(), m_tb_progress->maximum()));
-	}
-#elif HAVE_QTDBUS
-	m_progress_value = std::clamp(value, 0, m_gauge_max);
-	UpdateProgress(m_progress_value, true);
-#endif
+	m_progress_indicator->set_value(value);
 }
 
 void gs_frame::progress_increment(int delta)
 {
-	if (delta == 0)
+	if (delta != 0)
 	{
-		return;
+		m_progress_indicator->set_value(m_progress_indicator->value() + delta);
 	}
-
-#ifdef _WIN32
-	if (m_tb_progress)
-	{
-		progress_set_value(m_tb_progress->value() + delta);
-	}
-#elif HAVE_QTDBUS
-	progress_set_value(m_progress_value + delta);
-#endif
 }
 
 void gs_frame::progress_set_limit(int limit)
 {
-#ifdef _WIN32
-	if (m_tb_progress)
-	{
-		m_tb_progress->setMaximum(limit);
-	}
-#elif HAVE_QTDBUS
-	m_gauge_max = limit;
-#endif
+	m_progress_indicator->set_range(0, limit);
 }
-
-#ifdef HAVE_QTDBUS
-void gs_frame::UpdateProgress(int progress, bool progress_visible)
-{
-	QDBusMessage message = QDBusMessage::createSignal
-	(
-		QStringLiteral("/"),
-		QStringLiteral("com.canonical.Unity.LauncherEntry"),
-		QStringLiteral("Update")
-	);
-	QVariantMap properties;
-	// Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), 1. * progress / m_gauge_max);
-	properties.insert(QStringLiteral("progress-visible"), progress_visible);
-	message << QStringLiteral("application://rpcs3.desktop") << properties;
-	QDBusConnection::sessionBus().send(message);
-}
-#endif
