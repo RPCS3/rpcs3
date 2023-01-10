@@ -34,9 +34,44 @@ void fmt_class_string<sys_rsx_error>::format(std::string& out, u64 arg)
 	});
 }
 
-u64 rsxTimeStamp()
+static u64 rsx_timeStamp()
 {
 	return get_timebased_time();
+}
+
+static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
+{
+	{
+		rsx::eng_lock rlock(render);
+		render->fifo_ctrl->abort();
+
+		// Unconditional set
+		while (!render->new_get_put.compare_and_swap_test(u64{umax}, get_put))
+		{
+			utils::pause();
+		}
+
+		// Schedule FIFO interrupt to deal with this immediately
+		render->m_eng_interrupt_mask |= rsx::dma_control_interrupt;
+	}
+
+	if (auto cpu = cpu_thread::get_current())
+	{
+		// Wait for the first store to complete (or be aborted)
+		while (render->new_get_put != usz{umax})
+		{
+			if (Emu.IsStopped())
+			{
+				if (render->new_get_put.compare_and_swap_test(get_put, umax))
+				{
+					// Retry
+					cpu->state += cpu_flag::again;
+				}
+			}
+
+			thread_ctrl::wait_for(1000);
+		}
+	}
 }
 
 bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
@@ -473,43 +508,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u64 get = static_cast<u32>(a3);
 		const u64 put = static_cast<u32>(a4);
 		const u64 get_put = put << 32 | get;
-		bool changed_value = false;
-		{
-			rsx::eng_lock rlock(render);
-			std::lock_guard lock(render->sys_rsx_mtx);
-			render->fifo_ctrl->abort();
 
-			while (render->new_get_put == umax)
-			{
-				if (render->new_get_put.compare_and_swap_test(u64{umax}, get_put))
-				{
-					changed_value = true;
-					break;
-				}
-
-				// Assume CAS can fail spuriously here
-			}
-		}
-
-		// Wait for the first store to complete (or be aborted)
-		while (render->new_get_put != umax)
-		{
-			if (Emu.IsStopped() && changed_value)
-			{
-				// Abort
-				if (render->new_get_put.compare_and_swap_test(get_put, u64{umax}))
-				{
-					if (auto cpu = cpu_thread::get_current())
-					{
-						cpu->state += cpu_flag::again;
-						break;
-					}
-				}
-			}
-
-			thread_ctrl::wait_for(1000);
-		}
-
+		std::lock_guard lock(render->sys_rsx_mtx);
+		set_rsx_dmactl(render, get_put);
 		break;
 	}
 
@@ -835,7 +836,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	{
 		// we only ever use head 1 for now
 		driverInfo.head[1].flipFlags |= 0x80000000;
-		driverInfo.head[1].lastFlipTime = rsxTimeStamp(); // should rsxthread set this?
+		driverInfo.head[1].lastFlipTime = rsx_timeStamp(); // should rsxthread set this?
 		driverInfo.head[1].flipBufferId = static_cast<u32>(a3);
 
 		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
@@ -865,7 +866,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		});
 
 		// Time point is supplied in argument 4 (todo: convert it to MFTB rate and use it)
-		const u64 current_time = rsxTimeStamp();
+		const u64 current_time = rsx_timeStamp();
 
 
 		// Note: not atomic

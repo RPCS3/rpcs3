@@ -1274,9 +1274,9 @@ namespace rsx
 			handle_emu_flip(async_flip_buffer);
 		}
 
-		if (!in_begin_end && state != FIFO::state::lock_wait)
+		if (state != FIFO::state::lock_wait)
 		{
-			if (atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
+			if (!in_begin_end && atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
 			{
 				std::lock_guard lock(m_mtx_task);
 
@@ -1284,6 +1284,22 @@ namespace rsx
 				{
 					handle_invalidated_memory_range();
 				}
+			}
+
+			if (m_eng_interrupt_mask & rsx::dma_control_interrupt && !is_stopped())
+			{
+				if (const u64 get_put = new_get_put.exchange(u64{umax});
+					get_put != umax)
+				{
+					vm::_ref<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put)).release(get_put);
+					fifo_ctrl->set_get(static_cast<u32>(get_put));
+					fifo_ctrl->abort();
+					fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+					last_known_code_start = static_cast<u32>(get_put);
+					sync_point_request.release(true);
+				}
+
+				m_eng_interrupt_mask.clear(rsx::dma_control_interrupt);
 			}
 		}
 
@@ -1298,21 +1314,6 @@ namespace rsx
 
 			m_invalidated_memory_range = utils::address_range::start_end(0x2 << 28, constants::local_mem_base + local_mem_size - 1);
 			handle_invalidated_memory_range();
-		}
-		else if (new_get_put != umax && state != FIFO_state::lock_wait)
-		{
-			const u64 get_put = new_get_put.exchange(u64{umax});
-
-			// Recheck in case aborted externally
-			if (get_put != umax)
-			{
-				vm::_ref<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put)).release(get_put);
-				fifo_ctrl->set_get(static_cast<u32>(get_put));
-				fifo_ctrl->abort();
-				fifo_ret_addr = RSX_CALL_STACK_EMPTY;
-				last_known_code_start = static_cast<u32>(get_put);
-				sync_point_request.release(true);
-			}
 		}
 	}
 
@@ -3268,11 +3269,8 @@ namespace rsx
 	{
 		external_interrupt_lock++;
 
-		while (!external_interrupt_ack)
+		while (!external_interrupt_ack && !is_stopped())
 		{
-			if (is_stopped())
-				break;
-
 			utils::pause();
 		}
 	}
