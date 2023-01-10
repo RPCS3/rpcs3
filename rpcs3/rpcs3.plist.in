@@ -26,6 +26,8 @@
 	<string>Licensed under GPLv2</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.games</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>11.6</string>
 	<key>NSCameraUsageDescription</key>
