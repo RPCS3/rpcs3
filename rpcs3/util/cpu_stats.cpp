@@ -159,7 +159,7 @@ namespace utils
 		DWORD dwItemCount = 0;  // Number of items in the items buffer
 
 		status = PdhGetFormattedCounterArray(m_cpu_cores, PDH_FMT_DOUBLE, &dwBufferSize, &dwItemCount, nullptr);
-		if (PDH_MORE_DATA == status)
+		if (static_cast<PDH_STATUS>(PDH_MORE_DATA) == status)
 		{
 			std::vector<PDH_FMT_COUNTERVALUE_ITEM> items(utils::aligned_div(dwBufferSize, sizeof(PDH_FMT_COUNTERVALUE_ITEM)));
 			if (items.size() >= dwItemCount)
@@ -195,7 +195,7 @@ namespace utils
 						}
 					}
 				}
-				else if (PDH_CALC_NEGATIVE_DENOMINATOR == status) // Apparently this is a common uncritical error
+				else if (static_cast<PDH_STATUS>(PDH_CALC_NEGATIVE_DENOMINATOR) == status) // Apparently this is a common uncritical error
 				{
 					perf_log.notice("Failed to get per core cpu usage: %s", pdh_error(status));
 				}

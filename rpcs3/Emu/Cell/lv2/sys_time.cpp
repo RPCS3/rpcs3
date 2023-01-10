@@ -40,7 +40,7 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 	time_aux_info_t result;
 	result.perf_freq   = freq.QuadPart;
 	result.start_time  = start.QuadPart;
-	result.start_ftime = (ftime.dwLowDateTime | (u64)ftime.dwHighDateTime << 32) - 116444736000000000;
+	result.start_ftime = (ftime.dwLowDateTime | static_cast<u64>(ftime.dwHighDateTime) << 32) - 116444736000000000;
 
 	return result;
 }();

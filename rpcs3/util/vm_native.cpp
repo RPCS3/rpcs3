@@ -591,7 +591,7 @@ namespace utils
 				ensure(clean(GetFileInformationByHandleEx(h, FileStandardInfo, &info, sizeof(info))));
 				ensure(clean(GetFileSizeEx(h, &_eof.EndOfFile)));
 
-				if (info.AllocationSize.QuadPart && _eof.EndOfFile.QuadPart == m_size)
+				if (info.AllocationSize.QuadPart && _eof.EndOfFile.QuadPart == static_cast<LONGLONG>(m_size))
 				{
 					// Truncate file since it may be dirty (fool-proof)
 					DWORD ret = 0;
@@ -604,7 +604,7 @@ namespace utils
 					}
 				}
 
-				if (_eof.EndOfFile.QuadPart != m_size)
+				if (_eof.EndOfFile.QuadPart != static_cast<LONGLONG>(m_size))
 				{
 					// Reset file size to 0 if it doesn't match
 					_eof.EndOfFile.QuadPart = 0;

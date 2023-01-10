@@ -1148,7 +1148,7 @@ namespace vm
 		{
 			auto fill64 = [](u8* ptr, u64 data, usz count)
 			{
-#ifdef _M_X64
+#ifdef _MSC_VER
 				__stosq(reinterpret_cast<u64*>(ptr), data, count);
 #elif defined(ARCH_X64)
 				__asm__ ("mov %0, %%rdi; mov %1, %%rax; mov %2, %%rcx; rep stosq;"

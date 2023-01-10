@@ -2046,7 +2046,7 @@ void thread_base::start()
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	ensure(m_thread);
-	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1);
+	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != static_cast<DWORD>(-1));
 #elif defined(__APPLE__)
 	pthread_attr_t stack_size_attr;
 	pthread_attr_init(&stack_size_attr);

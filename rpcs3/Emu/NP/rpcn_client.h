@@ -454,7 +454,11 @@ namespace rpcn
 
 		sockaddr_in addr_rpcn{};
 		sockaddr_in addr_rpcn_udp{};
+#ifdef _WIN32
+		SOCKET sockfd = 0;
+#else
 		int sockfd = 0;
+#endif
 
 		atomic_t<u64> rpcn_request_counter = 0x100000001; // Counter used for commands whose result is not forwarded to NP handler(login, create, sendmessage, etc)
 
