@@ -606,7 +606,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 		update_log.error("Failed to create new AppImage file: %s (%s)", replace_path, fs::g_tls_error);
 		return false;
 	}
-	if (new_appimage.write(data.data(), data.size()) != data.size() + 0u)
+	if (new_appimage.write(data.data(), data.size()) != data.size() + 0ull)
 	{
 		update_log.error("Failed to write new AppImage file: %s", replace_path);
 		return false;
