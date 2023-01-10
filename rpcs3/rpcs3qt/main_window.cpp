@@ -900,6 +900,13 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 	Emu.GracefulShutdown(false);
 
+	std::vector<std::string> path_vec;
+	for (const compat::package_info& pkg : packages)
+	{
+		path_vec.push_back(pkg.path.toStdString());
+	}
+	gui_log.notice("About to install packages:\n%s", fmt::merge(path_vec, "\n"));
+
 	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
 	pdlg.setAutoClose(false);
 	pdlg.show();
@@ -934,7 +941,6 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	};
 
 	bool cancelled = false;
-	std::map<std::string, QString> bootable_paths_installed; // -> title id
 
 	std::deque<package_reader> readers;
 
@@ -971,7 +977,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		{
 			cancelled = true;
 			
-			for (auto& reader : readers)
+			for (package_reader& reader : readers)
 			{
 				reader.abort_extract();
 			}
@@ -1002,15 +1008,45 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		pdlg.SetValue(pdlg.maximum());
 		std::this_thread::sleep_for(100ms);
 
+		for (usz i = 0; i < packages.size(); i++)
 		{
-			m_game_list_frame->Refresh(true);
-			
-			for (const auto& package : packages)
+			const compat::package_info& package = ::at32(packages, i);
+			const package_reader& reader = ::at32(readers, i);
+
+			switch (reader.get_result())
+			{
+			case package_reader::result::success:
 			{
 				gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				break;
 			}
+			case package_reader::result::not_started:
+			case package_reader::result::aborted_cleaned:
+			{
+				gui_log.notice("Aborted installation of %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				break;
+			}
+			case package_reader::result::error_cleaned:
+			{
+				gui_log.error("Failed to install %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				break;
+			}
+			case package_reader::result::aborted:
+			case package_reader::result::error:
+			{
+				gui_log.error("Partially installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				break;
+			}
+			}
+		}
 
-			gui_log.success("Package(s) successfully installed!");
+		m_game_list_frame->Refresh(true);
+
+		pdlg.hide();
+
+		if (!cancelled)
+		{
+			std::map<std::string, QString> bootable_paths_installed; // -> title id
 
 			for (usz index = 0; index < bootable_paths.size(); index++)
 			{
@@ -1022,78 +1058,73 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 				bootable_paths_installed[bootable_paths[index]] = packages[index].title_id;
 			}
 
+			if (bootable_paths_installed.empty())
 			{
-				pdlg.hide();
+				m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+				return;
+			}
 
-				bool create_desktop_shortcuts = false;
-				bool create_app_shortcut = false;
+			auto dlg = new QDialog(this);
+			dlg->setWindowTitle(tr("Success!"));
 
-				if (bootable_paths_installed.empty())
-				{
-					m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
-				}
-				else
-				{
-					auto dlg = new QDialog(this);
-					dlg->setWindowTitle(tr("Success!"));
+			QVBoxLayout* vlayout = new QVBoxLayout(dlg);
 
-					QVBoxLayout* vlayout = new QVBoxLayout(dlg);
-
-					QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
+			QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
 #ifdef _WIN32
-					QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
+			QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
 #elif defined(__APPLE__)
-					QCheckBox* quick_check = new QCheckBox(tr("Add dock shortcut(s)"));
+			QCheckBox* quick_check = new QCheckBox(tr("Add dock shortcut(s)"));
 #else
-					QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
+			QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
 #endif
-					QLabel* label = new QLabel(tr("Successfully installed software from package(s)!\nWould you like to install shortcuts to the installed software? (%1 new software detected)\n\n").arg(bootable_paths_installed.size()), dlg);
+			QLabel* label = new QLabel(tr("Successfully installed software from package(s)!\nWould you like to install shortcuts to the installed software? (%1 new software detected)\n\n").arg(bootable_paths_installed.size()), dlg);
 	
-					vlayout->addWidget(label);
-					vlayout->addStretch(10);
-					vlayout->addWidget(desk_check);
-					vlayout->addStretch(3);
-					vlayout->addWidget(quick_check);
-					vlayout->addStretch(3);
+			vlayout->addWidget(label);
+			vlayout->addStretch(10);
+			vlayout->addWidget(desk_check);
+			vlayout->addStretch(3);
+			vlayout->addWidget(quick_check);
+			vlayout->addStretch(3);
 
-					QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
+			QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
 	
-					vlayout->addWidget(btn_box);
-					dlg->setLayout(vlayout);
+			vlayout->addWidget(btn_box);
+			dlg->setLayout(vlayout);
 
-					connect(btn_box, &QDialogButtonBox::accepted, this, [&]()
-					{
-						create_desktop_shortcuts = desk_check->isChecked();
-						create_app_shortcut = quick_check->isChecked();
-						dlg->accept();
-					});
+			bool create_desktop_shortcuts = false;
+			bool create_app_shortcut = false;
 
-					dlg->setAttribute(Qt::WA_DeleteOnClose);
-					dlg->exec();
-				}
+			connect(btn_box, &QDialogButtonBox::accepted, this, [&]()
+			{
+				create_desktop_shortcuts = desk_check->isChecked();
+				create_app_shortcut = quick_check->isChecked();
+				dlg->accept();
+			});
 
-				std::set<gui::utils::shortcut_location> locations;
+			dlg->setAttribute(Qt::WA_DeleteOnClose);
+			dlg->exec();
+
+			std::set<gui::utils::shortcut_location> locations;
 #ifdef _WIN32
-				locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
+			locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
 #endif
-				if (create_desktop_shortcuts)
-				{
-					locations.insert(gui::utils::shortcut_location::desktop);
-				}
-				if (create_app_shortcut)
-				{
-					locations.insert(gui::utils::shortcut_location::applications);
-				}
+			if (create_desktop_shortcuts)
+			{
+				locations.insert(gui::utils::shortcut_location::desktop);
+			}
+			if (create_app_shortcut)
+			{
+				locations.insert(gui::utils::shortcut_location::applications);
+			}
 
-				for (const auto& [boot_path, title_id] : bootable_paths_installed)
+			for (const auto& [boot_path, title_id] : bootable_paths_installed)
+			{
+				for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
 				{
-					for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+					if (gameinfo && gameinfo->info.bootable && gameinfo->info.serial == sstr(title_id) && boot_path.starts_with(gameinfo->info.path))
 					{
-						if (gameinfo && gameinfo->info.bootable && gameinfo->info.serial == sstr(title_id) && boot_path.starts_with(gameinfo->info.path))
-						{
-							m_game_list_frame->CreateShortcuts(gameinfo, locations);
-							break;
-						}
+						m_game_list_frame->CreateShortcuts(gameinfo, locations);
+						break;
 					}
 				}
 			}
@@ -1108,12 +1139,20 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		{
 			const compat::package_info* package = nullptr;
 
-			for (usz i = 0; i < readers.size(); i++)
+			for (usz i = 0; i < readers.size() && !package; i++)
 			{
 				// Figure out what package failed the installation
-				if (readers[i].get_progress(1) != 1)
+				switch (readers[i].get_result())
 				{
+				case package_reader::result::success:
+				case package_reader::result::not_started:
+				case package_reader::result::aborted:
+				case package_reader::result::aborted_cleaned:
+					break;
+				case package_reader::result::error:
+				case package_reader::result::error_cleaned:
 					package = &packages[i];
+					break;
 				}
 			}
 

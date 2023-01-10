@@ -332,10 +332,21 @@ public:
 	package_reader(const std::string& path);
 	~package_reader();
 
+	enum result
+	{
+		not_started,
+		success,
+		aborted,
+		aborted_cleaned,
+		error,
+		error_cleaned
+	};
+
 	bool is_valid() const { return m_is_valid; }
 	package_error check_target_app_version() const;
 	static bool extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths);
 	psf::registry get_psf() const { return m_psf; }
+	result get_result() const { return m_result; };
 
 	int get_progress(int maximum = 100) const;
 
@@ -351,10 +362,12 @@ private:
 	bool fill_data(std::map<std::string, install_entry*>& all_install_entries);
 	std::span<const char> archive_read_block(u64 offset, void* data_ptr, u64 num_bytes);
 	std::span<const char> decrypt(u64 offset, u64 size, const uchar* key, thread_key thread_data_key = {0});
-	usz extract_worker(thread_key thread_data_key);
+	void extract_worker(thread_key thread_data_key);
 
 	std::deque<install_entry> m_install_entries;
 	std::string m_install_path;
+	atomic_t<bool> m_aborted = false;
+	atomic_t<usz> m_num_failures = 0;
 	atomic_t<usz> m_entry_indexer = 0;
 	atomic_t<usz> m_written_bytes = 0;
 	bool m_was_null = false;
@@ -362,6 +375,7 @@ private:
 	static constexpr usz BUF_SIZE = 8192 * 1024; // 8 MB
 
 	bool m_is_valid = false;
+	result m_result = result::not_started;
 
 	std::string m_path{};
 	std::string m_install_dir{};
