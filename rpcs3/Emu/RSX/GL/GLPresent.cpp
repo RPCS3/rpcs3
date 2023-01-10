@@ -336,12 +336,19 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		m_text_printer.set_scale(m_frame->client_device_pixel_ratio());
 
-		m_text_printer.print_text(cmd, 4,  0, width, height, fmt::format("RSX Load:                %3d%%", get_load()));
-		m_text_printer.print_text(cmd, 4, 18, width, height, fmt::format("draw calls: %16d", info.stats.draw_calls));
-		m_text_printer.print_text(cmd, 4, 36, width, height, fmt::format("draw call setup: %11dus", info.stats.setup_time));
-		m_text_printer.print_text(cmd, 4, 54, width, height, fmt::format("vertex upload time: %8dus", info.stats.vertex_upload_time));
-		m_text_printer.print_text(cmd, 4, 72, width, height, fmt::format("textures upload time: %6dus", info.stats.textures_upload_time));
-		m_text_printer.print_text(cmd, 4, 90, width, height, fmt::format("draw call execution: %7dus", info.stats.draw_exec_time));
+		int y_loc = 0;
+		const auto println = [&](const std::string& text)
+		{
+			m_text_printer.print_text(cmd, 4, 0, width, height, text);
+			y_loc += 16;
+		};
+
+		println(fmt::format("RSX Load:                %3d%%", get_load()));
+		println(fmt::format("draw calls: %16d", info.stats.draw_calls));
+		println(fmt::format("draw call setup: %11dus", info.stats.setup_time));
+		println(fmt::format("vertex upload time: %8dus", info.stats.vertex_upload_time));
+		println(fmt::format("textures upload time: %6dus", info.stats.textures_upload_time));
+		println(fmt::format("draw call execution: %7dus", info.stats.draw_exec_time));
 
 		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
 		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
@@ -354,10 +361,10 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto num_texture_upload = m_gl_texture_cache.get_texture_upload_calls_this_frame();
 		const auto num_texture_upload_miss = m_gl_texture_cache.get_texture_upload_misses_this_frame();
 		const auto texture_upload_miss_ratio = m_gl_texture_cache.get_texture_upload_miss_percentage();
-		m_text_printer.print_text(cmd, 4, 126, width, height, fmt::format("Unreleased textures: %7d", num_dirty_textures));
-		m_text_printer.print_text(cmd, 4, 144, width, height, fmt::format("Texture memory: %12dM", texture_memory_size));
-		m_text_printer.print_text(cmd, 4, 162, width, height, fmt::format("Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
-		m_text_printer.print_text(cmd, 4, 180, width, height, fmt::format("Texture uploads: %15u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
+		println(fmt::format("Unreleased textures: %7d", num_dirty_textures));
+		println(fmt::format("Texture memory: %12dM", texture_memory_size));
+		println(fmt::format("Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
+		println(fmt::format("Texture uploads: %15u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
 	}
 
 	if (gl::debug::g_vis_texture)
