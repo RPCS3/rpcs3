@@ -209,6 +209,164 @@ namespace vk
 			fmt::throw_exception("Unknown cull face value: 0x%x", static_cast<u32>(cfv));
 		}
 	}
+
+	// TODO: This should be deprecated soon (kd)
+	vk::pipeline_props decode_rsx_state(
+		VkPrimitiveTopology primitive,
+		bool emulated_primitive_type,
+		vk::render_target* ds,
+		const rsx::backend_configuration& backend_config,
+		u8 num_draw_buffers,
+		u8 num_rasterization_samples,
+		bool depth_bounds_support)
+	{
+		vk::pipeline_props properties{};
+
+		// Input assembly
+		properties.state.set_primitive_type(primitive);
+
+		const bool restarts_valid = rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && !emulated_primitive_type && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+		if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart(rsx::method_registers.current_draw_clause.primitive) && restarts_valid)
+			properties.state.enable_primitive_restart();
+
+		// Rasterizer state
+		properties.state.set_attachment_count(num_draw_buffers);
+		properties.state.set_front_face(vk::get_front_face(rsx::method_registers.front_face_mode()));
+		properties.state.enable_depth_clamp(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled());
+		properties.state.enable_depth_bias(true);
+		properties.state.enable_depth_bounds_test(depth_bounds_support);
+
+		if (rsx::method_registers.depth_test_enabled())
+		{
+			//NOTE: Like stencil, depth write is meaningless without depth test
+			properties.state.set_depth_mask(rsx::method_registers.depth_write_enabled());
+			properties.state.enable_depth_test(vk::get_compare_func(rsx::method_registers.depth_func()));
+		}
+
+		if (rsx::method_registers.cull_face_enabled())
+			properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
+
+		for (uint index = 0; index < num_draw_buffers; ++index)
+		{
+			bool color_mask_b = rsx::method_registers.color_mask_b(index);
+			bool color_mask_g = rsx::method_registers.color_mask_g(index);
+			bool color_mask_r = rsx::method_registers.color_mask_r(index);
+			bool color_mask_a = rsx::method_registers.color_mask_a(index);
+
+			switch (rsx::method_registers.surface_color())
+			{
+			case rsx::surface_color_format::b8:
+				rsx::get_b8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+				break;
+			case rsx::surface_color_format::g8b8:
+				rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+				break;
+			default:
+				break;
+			}
+
+			properties.state.set_color_mask(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+		}
+
+		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
+		if (rsx::method_registers.logic_op_enabled())
+		{
+			properties.state.enable_logic_op(vk::get_logic_op(rsx::method_registers.logic_operation()));
+		}
+		else
+		{
+			bool mrt_blend_enabled[] =
+			{
+				rsx::method_registers.blend_enabled(),
+				rsx::method_registers.blend_enabled_surface_1(),
+				rsx::method_registers.blend_enabled_surface_2(),
+				rsx::method_registers.blend_enabled_surface_3()
+			};
+
+			VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
+			VkBlendOp equation_rgb, equation_a;
+
+			if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
+			{
+				sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
+				sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
+				dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
+				dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
+				equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
+				equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
+
+				for (u8 idx = 0; idx < num_draw_buffers; ++idx)
+				{
+					if (mrt_blend_enabled[idx])
+					{
+						properties.state.enable_blend(idx, sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a, equation_rgb, equation_a);
+					}
+				}
+			}
+		}
+
+		if (rsx::method_registers.stencil_test_enabled())
+		{
+			if (!rsx::method_registers.two_sided_stencil_test_enabled())
+			{
+				properties.state.enable_stencil_test(
+					vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
+					vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
+					vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
+					vk::get_compare_func(rsx::method_registers.stencil_func()),
+					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
+			}
+			else
+			{
+				properties.state.enable_stencil_test_separate(0,
+					vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
+					vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
+					vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
+					vk::get_compare_func(rsx::method_registers.stencil_func()),
+					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
+
+				properties.state.enable_stencil_test_separate(1,
+					vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail()),
+					vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail()),
+					vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass()),
+					vk::get_compare_func(rsx::method_registers.back_stencil_func()),
+					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
+			}
+
+			if (ds && ds->samples() > 1 && !(ds->stencil_init_flags & 0xFF00))
+			{
+				if (properties.state.ds.front.failOp != VK_STENCIL_OP_KEEP ||
+					properties.state.ds.front.depthFailOp != VK_STENCIL_OP_KEEP ||
+					properties.state.ds.front.passOp != VK_STENCIL_OP_KEEP ||
+					properties.state.ds.back.failOp != VK_STENCIL_OP_KEEP ||
+					properties.state.ds.back.depthFailOp != VK_STENCIL_OP_KEEP ||
+					properties.state.ds.back.passOp != VK_STENCIL_OP_KEEP)
+				{
+					// Toggle bit 9 to signal require full bit-wise transfer
+					ds->stencil_init_flags |= (1 << 8);
+				}
+			}
+		}
+
+		if (backend_config.supports_hw_a2c || num_rasterization_samples > 1)
+		{
+			const bool alpha_to_one_enable = rsx::method_registers.msaa_alpha_to_one_enabled() && backend_config.supports_hw_a2one;
+
+			properties.state.set_multisample_state(
+				num_rasterization_samples,
+				rsx::method_registers.msaa_sample_mask(),
+				rsx::method_registers.msaa_enabled(),
+				rsx::method_registers.msaa_alpha_to_coverage_enabled(),
+				alpha_to_one_enable);
+
+			// A problem observed on multiple GPUs is that interior geometry edges can resolve 0 samples unless we force shading rate of 1.
+			// For whatever reason, the way MSAA images are 'resolved' on PS3 bypasses this issue.
+			// NOTE: We do not do image resolve at all, the output is merely 'exploded' and the guest application is responsible for doing the resolve in software as it is on real hardware.
+			properties.state.set_multisample_shading_rate(1.f);
+		}
+
+		return properties;
+	}
 }
 
 namespace
@@ -1745,6 +1903,11 @@ bool VKGSRender::load_program()
 {
 	const auto shadermode = g_cfg.video.shadermode.get();
 
+	// TODO: EXT_dynamic_state should get rid of this sillyness soon (kd)
+	const auto [primitive_type, is_emulated_primitive] = rsx::method_registers.current_draw_clause.primitive == m_cached_draw_state.rsx_prim
+		? std::make_pair(m_cached_draw_state.prim, m_cached_draw_state.is_emulated_prim)
+		: vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive);
+
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
@@ -1755,7 +1918,7 @@ bool VKGSRender::load_program()
 		m_graphics_state &= ~rsx::pipeline_state::invalidate_pipeline_bits;
 	}
 	else if (!(m_graphics_state & rsx::pipeline_state::pipeline_config_dirty) &&
-		m_cached_draw_state.prim == rsx::method_registers.current_draw_clause.primitive &&
+		m_cached_draw_state.prim == primitive_type &&
 		m_program)
 	{
 		if (!m_shader_interpreter.is_interpreter(m_program)) [[ likely ]]
@@ -1773,165 +1936,39 @@ bool VKGSRender::load_program()
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
 
-	m_cached_draw_state.prim = rsx::method_registers.current_draw_clause.primitive;
+	m_cached_draw_state.prim = primitive_type;
+	m_cached_draw_state.is_emulated_prim = is_emulated_primitive;
+	m_cached_draw_state.rsx_prim = rsx::method_registers.current_draw_clause.primitive;
 
-	vk::pipeline_props properties{};
-
-	// Input assembly
-	bool emulated_primitive_type;
-	properties.state.set_primitive_type(vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, emulated_primitive_type));
-
-	const bool restarts_valid = rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && !emulated_primitive_type && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
-	if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart(rsx::method_registers.current_draw_clause.primitive) && restarts_valid)
-		properties.state.enable_primitive_restart();
-
-	// Rasterizer state
-	properties.state.set_attachment_count(::size32(m_draw_buffers));
-	properties.state.set_front_face(vk::get_front_face(rsx::method_registers.front_face_mode()));
-	properties.state.enable_depth_clamp(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled());
-	properties.state.enable_depth_bias(true);
-	properties.state.enable_depth_bounds_test(m_device->get_depth_bounds_support());
-
-	if (rsx::method_registers.depth_test_enabled())
+	if (m_graphics_state & rsx::pipeline_state::pipeline_config_dirty)
 	{
-		//NOTE: Like stencil, depth write is meaningless without depth test
-		properties.state.set_depth_mask(rsx::method_registers.depth_write_enabled());
-		properties.state.enable_depth_test(vk::get_compare_func(rsx::method_registers.depth_func()));
-	}
+		vk::pipeline_props properties = vk::decode_rsx_state(
+			primitive_type,
+			is_emulated_primitive,
+			m_rtts.m_bound_depth_stencil.second,
+			backend_config,
+			static_cast<u8>(m_draw_buffers.size()),
+			u8((m_current_renderpass_key >> 16) & 0xF),
+			m_device->get_depth_bounds_support()
+		);
 
-	if (rsx::method_registers.cull_face_enabled())
-		properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
-
-	for (uint index = 0; index < m_draw_buffers.size(); ++index)
-	{
-		bool color_mask_b = rsx::method_registers.color_mask_b(index);
-		bool color_mask_g = rsx::method_registers.color_mask_g(index);
-		bool color_mask_r = rsx::method_registers.color_mask_r(index);
-		bool color_mask_a = rsx::method_registers.color_mask_a(index);
-
-		switch (rsx::method_registers.surface_color())
-		{
-		case rsx::surface_color_format::b8:
-			rsx::get_b8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-			break;
-		case rsx::surface_color_format::g8b8:
-			rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-			break;
-		default:
-			break;
-		}
-
-		properties.state.set_color_mask(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-	}
-
-	// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
-	if (rsx::method_registers.logic_op_enabled())
-	{
-		properties.state.enable_logic_op(vk::get_logic_op(rsx::method_registers.logic_operation()));
-	}
-	else
-	{
-		bool mrt_blend_enabled[] =
-		{
-			rsx::method_registers.blend_enabled(),
-			rsx::method_registers.blend_enabled_surface_1(),
-			rsx::method_registers.blend_enabled_surface_2(),
-			rsx::method_registers.blend_enabled_surface_3()
-		};
-
-		VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
-		VkBlendOp equation_rgb, equation_a;
-
-		if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
-		{
-			sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-			sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
-			dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-			dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
-			equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
-			equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
-
-			for (u8 idx = 0; idx < m_draw_buffers.size(); ++idx)
-			{
-				if (mrt_blend_enabled[idx])
-				{
-					properties.state.enable_blend(idx, sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a, equation_rgb, equation_a);
-				}
-			}
-		}
-	}
-
-	if (rsx::method_registers.stencil_test_enabled())
-	{
-		if (!rsx::method_registers.two_sided_stencil_test_enabled())
-		{
-			properties.state.enable_stencil_test(
-				vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
-				vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
-				vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
-				vk::get_compare_func(rsx::method_registers.stencil_func()),
-				0xFF, 0xFF); //write mask, func_mask, ref are dynamic
-		}
-		else
-		{
-			properties.state.enable_stencil_test_separate(0,
-				vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
-				vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
-				vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
-				vk::get_compare_func(rsx::method_registers.stencil_func()),
-				0xFF, 0xFF); //write mask, func_mask, ref are dynamic
-
-			properties.state.enable_stencil_test_separate(1,
-				vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail()),
-				vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail()),
-				vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass()),
-				vk::get_compare_func(rsx::method_registers.back_stencil_func()),
-				0xFF, 0xFF); //write mask, func_mask, ref are dynamic
-		}
-
-		if (auto ds = m_rtts.m_bound_depth_stencil.second;
-			ds && ds->samples() > 1 && !(ds->stencil_init_flags & 0xFF00))
-		{
-			if (properties.state.ds.front.failOp != VK_STENCIL_OP_KEEP ||
-				properties.state.ds.front.depthFailOp != VK_STENCIL_OP_KEEP ||
-				properties.state.ds.front.passOp != VK_STENCIL_OP_KEEP ||
-				properties.state.ds.back.failOp != VK_STENCIL_OP_KEEP ||
-				properties.state.ds.back.depthFailOp != VK_STENCIL_OP_KEEP ||
-				properties.state.ds.back.passOp != VK_STENCIL_OP_KEEP)
-			{
-				// Toggle bit 9 to signal require full bit-wise transfer
-				ds->stencil_init_flags |= (1 << 8);
-			}
-		}
-	}
-
-	const auto rasterization_samples = u8((m_current_renderpass_key >> 16) & 0xF);
-	if (backend_config.supports_hw_a2c || rasterization_samples > 1)
-	{
-		const bool alpha_to_one_enable = rsx::method_registers.msaa_alpha_to_one_enabled() && backend_config.supports_hw_a2one;
-
-		properties.state.set_multisample_state(
-			rasterization_samples,
-			rsx::method_registers.msaa_sample_mask(),
-			rsx::method_registers.msaa_enabled(),
-			rsx::method_registers.msaa_alpha_to_coverage_enabled(),
-			alpha_to_one_enable);
-
-		// A problem observed on multiple GPUs is that interior geometry edges can resolve 0 samples unless we force shading rate of 1.
-		// For whatever reason, the way MSAA images are 'resolved' on PS3 bypasses this issue.
-		// NOTE: We do not do image resolve at all, the output is merely 'exploded' and the guest application is responsible for doing the resolve in software as it is on real hardware.
-		properties.state.set_multisample_shading_rate(1.f);
-	}
-
-	properties.renderpass_key = m_current_renderpass_key;
-	if (!m_interpreter_state && m_program) [[likely]]
-	{
-		if (!m_shader_interpreter.is_interpreter(m_program) &&
+		properties.renderpass_key = m_current_renderpass_key;
+		if (m_program &&
+			!m_shader_interpreter.is_interpreter(m_program) &&
 			m_pipeline_properties == properties)
 		{
 			// Nothing changed
 			return true;
 		}
+
+		// Fallthrough
+		m_pipeline_properties = properties;
+		m_graphics_state &= ~rsx::pipeline_state::pipeline_config_dirty;
+	}
+	else
+	{
+		// Update primitive type. Not needed with EXT_dynamic_state
+		m_pipeline_properties.state.set_primitive_type(primitive_type);
 	}
 
 	m_vertex_prog = nullptr;
@@ -1942,7 +1979,7 @@ bool VKGSRender::load_program()
 		vk::enter_uninterruptible();
 
 		// Load current program from cache
-		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
+		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, m_pipeline_properties,
 			shadermode != shader_mode::recompiler, true, pipeline_layout);
 
 		vk::leave_uninterruptible();
@@ -1980,11 +2017,9 @@ bool VKGSRender::load_program()
 			m_interpreter_state = rsx::invalidate_pipeline_bits;
 		}
 
-		m_program = m_shader_interpreter.get(properties, current_fp_metadata);
+		m_program = m_shader_interpreter.get(m_pipeline_properties, current_fp_metadata);
 	}
 
-	m_pipeline_properties = properties;
-	m_graphics_state &= ~rsx::pipeline_state::pipeline_config_dirty;
 	return m_program != nullptr;
 }
 
