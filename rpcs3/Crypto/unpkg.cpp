@@ -619,7 +619,7 @@ package_error package_reader::check_target_app_version() const
 		if (!target_app_ver.empty())
 		{
 			// We are unable to compare anything with the target app version
-			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s", target_app_ver, title_id);
+			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s. (path='%s', error=%s)", target_app_ver, title_id, sfo_path, fs::g_tls_error);
 			return package_error::app_version;
 		}
 
@@ -840,20 +840,28 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose = false);
 
-usz package_reader::extract_worker(thread_key thread_data_key)
+void package_reader::extract_worker(thread_key thread_data_key)
 {
-	usz num_failures = 0;
-
-	while (true)
+	while (m_num_failures == 0 && !m_aborted)
 	{
-		const usz maybe_index = m_entry_indexer++;
+		// Make sure m_entry_indexer does not exceed m_install_entries
+		const usz index = m_entry_indexer.fetch_op([this](usz& v)
+		{
+			if (v < m_install_entries.size())
+			{
+				v++;
+				return true;
+			}
 
-		if (maybe_index >= m_install_entries.size())
+			return false;
+		}).first;
+
+		if (index >= m_install_entries.size())
 		{
 			break;
 		}
 
-		const install_entry& entry = ::at32(m_install_entries, maybe_index);
+		const install_entry& entry = ::at32(m_install_entries, index);
 
 		if (!entry.is_dominating())
 		{
@@ -934,7 +942,7 @@ usz package_reader::extract_worker(thread_key thread_data_key)
 					out = DecryptEDAT(out, name, 1, reinterpret_cast<u8*>(&m_header.klicensee), true);
 					if (!out || !fs::write_file(path, fs::rewrite, static_cast<fs::container_stream<std::vector<u8>>*>(out.release().get())->obj))
 					{
-						num_failures++;
+						m_num_failures++;
 						pkg_log.error("Failed to create file %s", path);
 						break;
 					}
@@ -959,12 +967,12 @@ usz package_reader::extract_worker(thread_key thread_data_key)
 				}
 				else
 				{
-					num_failures++;
+					m_num_failures++;
 				}
 			}
 			else
 			{
-				num_failures++;
+				m_num_failures++;
 				pkg_log.error("Failed to create file %s", path);
 			}
 
@@ -972,21 +980,19 @@ usz package_reader::extract_worker(thread_key thread_data_key)
 		}
 		default:
 		{
-			num_failures++;
+			m_num_failures++;
 			pkg_log.error("Unknown PKG entry type (0x%x) %s", entry.type, name);
 			break;
 		}
 		}
 	}
-
-	return num_failures;
 }
 
 bool package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
 {
 	std::map<std::string, install_entry*> all_install_entries;
 
-	for (auto& reader : readers)
+	for (package_reader& reader : readers)
 	{
 		if (!reader.fill_data(all_install_entries))
 		{
@@ -999,30 +1005,57 @@ bool package_reader::extract_data(std::deque<package_reader>& readers, std::dequ
 	for (package_reader& reader : readers)
 	{
 		reader.m_bufs.resize(std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size()));
+		reader.m_num_failures = 0;
+		reader.m_result = result::not_started;
 
 		atomic_t<usz> thread_indexer = 0;
 
 		named_thread_group workers("PKG Installer "sv, std::max<usz>(reader.m_bufs.size(), 1) - 1, [&]()
 		{
-			num_failures += reader.extract_worker(thread_key{thread_indexer++});
+			reader.extract_worker(thread_key{thread_indexer++});
 		});
 
-		num_failures += reader.extract_worker(thread_key{thread_indexer++});
+		reader.extract_worker(thread_key{thread_indexer++});
 		workers.join();
+
+		num_failures += reader.m_num_failures;
 
 		reader.m_bufs.clear();
 		reader.m_bufs.shrink_to_fit();
 
-		if (num_failures)
+		// We don't count this package as aborted if all entries were processed.
+		if (reader.m_num_failures || (reader.m_aborted && reader.m_entry_indexer < reader.m_install_entries.size()))
 		{
-			if (reader.m_was_null)
+			// Clear boot path. We don't want to propagate potentially broken paths to the caller.
+			reader.m_bootable_file_path.clear();
+
+			bool cleaned = reader.m_was_null;
+
+			if (reader.m_was_null && fs::is_dir(reader.m_install_path))
 			{
-				fs::remove_all(reader.m_install_path, true);
+				pkg_log.notice("Removing partial installation ('%s')", reader.m_install_path);
+
+				if (!fs::remove_all(reader.m_install_path, true))
+				{
+					pkg_log.notice("Failed to remove partial installation ('%s') (error=%s)", reader.m_install_path, fs::g_tls_error);
+					cleaned = false;
+				}
 			}
 
-			pkg_log.success("Package failed to install ('%s')", reader.m_install_path);
+			if (reader.m_num_failures)
+			{
+				pkg_log.error("Package failed to install ('%s')", reader.m_install_path);
+				reader.m_result = cleaned ? result::error_cleaned : result::error;
+			}
+			else
+			{
+				pkg_log.warning("Package installation aborted ('%s')", reader.m_install_path);
+				reader.m_result = cleaned ? result::aborted_cleaned : result::aborted;
+			}
 			break;
 		}
+
+		reader.m_result = result::success;
 
 		if (reader.get_progress(1) != 1)
 		{
@@ -1147,14 +1180,5 @@ int package_reader::get_progress(int maximum) const
 
 void package_reader::abort_extract()
 {
-	m_entry_indexer.fetch_op([this](usz& v)
-	{
-		if (v < m_install_entries.size())
-		{
-			v = m_install_entries.size();
-			return true;
-		}
-
-		return false;
-	});
+	m_aborted = true;
 }
