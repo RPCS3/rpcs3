@@ -1914,4 +1914,5 @@ namespace atomic_wait
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
 #endif

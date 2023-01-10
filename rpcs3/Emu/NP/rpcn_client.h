@@ -29,7 +29,14 @@
 
 #include "generated/np2_structs_generated.h"
 
+#ifdef __clang__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 #include <wolfssl/ssl.h>
+#ifdef __clang__
+#pragma GCC diagnostic pop
+#endif
 
 class vec_stream
 {

@@ -150,7 +150,7 @@ namespace gui::utils
 			return return_value;
 		};
 
-		res = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID*)&pShellLink);
+		res = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pShellLink));
 		if (FAILED(res))
 			return cleanup(false, "CoCreateInstance failed");
 
@@ -196,7 +196,7 @@ namespace gui::utils
 		}
 
 		// Use the IPersistFile object to save the shell link
-		res = pShellLink->QueryInterface(IID_IPersistFile, (LPVOID*)&pPersistFile);
+		res = pShellLink->QueryInterface(IID_PPV_ARGS(&pPersistFile));
 		if (FAILED(res))
 			return cleanup(false, fmt::format("QueryInterface failed (%s)", str_error(res)));
 
