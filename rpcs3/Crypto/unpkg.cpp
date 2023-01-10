@@ -515,7 +515,7 @@ bool package_reader::read_param_sfo()
 
 	std::memcpy(entries.data(), m_bufs.back().get(), entries.size() * sizeof(PKGEntry));
 
-	for (const auto& entry : entries)
+	for (const PKGEntry& entry : entries)
 	{
 		if (entry.name_size > 256)
 		{
@@ -567,11 +567,9 @@ bool package_reader::read_param_sfo()
 
 			return true;
 		}
-		else
-		{
-			pkg_log.error("Failed to create temporary PARAM.SFO file");
-			return false;
-		}
+
+		pkg_log.error("Failed to create temporary PARAM.SFO file");
+		return false;
 	}
 
 	return false;
@@ -780,7 +778,9 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
 
-		switch (const u8 entry_type = entry.type & 0xff)
+		const u8 entry_type = entry.type & 0xff;
+
+		switch (entry_type)
 		{
 		case PKG_FILE_ENTRY_FOLDER:
 		case 0x12:
@@ -807,7 +807,14 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 			const std::string true_path = std::filesystem::weakly_canonical(std::filesystem::u8path(path)).string();
 			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;
 
-			m_install_entries.push_back({ map_ptr, name, entry.file_offset, entry.file_size, entry.type, entry.pad });
+			m_install_entries.push_back({
+				.weak_reference = map_ptr,
+				.name = name,
+				.file_offset = entry.file_offset,
+				.file_size = entry.file_size,
+				.type = entry.type,
+				.pad = entry.pad
+			});
 
 			if (map_ptr->second && !(entry.type & PKG_FILE_ENTRY_OVERWRITE))
 			{
@@ -833,7 +840,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose = false);
 
-usz package_reader::extract_worker(thread_key thread_data_key, std::map<std::string, install_entry*>& all_install_entries)
+usz package_reader::extract_worker(thread_key thread_data_key)
 {
 	usz num_failures = 0;
 
@@ -989,7 +996,7 @@ bool package_reader::extract_data(std::deque<package_reader>& readers, std::dequ
 
 	usz num_failures = 0;
 
-	for (auto& reader : readers)
+	for (package_reader& reader : readers)
 	{
 		reader.m_bufs.resize(std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size()));
 
@@ -997,10 +1004,10 @@ bool package_reader::extract_data(std::deque<package_reader>& readers, std::dequ
 
 		named_thread_group workers("PKG Installer "sv, std::max<usz>(reader.m_bufs.size(), 1) - 1, [&]()
 		{
-			num_failures += reader.extract_worker(thread_key{thread_indexer++}, all_install_entries);
+			num_failures += reader.extract_worker(thread_key{thread_indexer++});
 		});
 
-		num_failures += reader.extract_worker(thread_key{thread_indexer++}, all_install_entries);
+		num_failures += reader.extract_worker(thread_key{thread_indexer++});
 		workers.join();
 
 		reader.m_bufs.clear();
@@ -1016,7 +1023,8 @@ bool package_reader::extract_data(std::deque<package_reader>& readers, std::dequ
 			pkg_log.success("Package failed to install ('%s')", reader.m_install_path);
 			break;
 		}
-		else if (reader.get_progress(1) != 1)
+
+		if (reader.get_progress(1) != 1)
 		{
 			pkg_log.warning("Missing %d bytes from PKG total files size.", reader.m_header.data_size - reader.m_written_bytes);
 			reader.m_written_bytes = reader.m_header.data_size; // Mark as completed anyway
@@ -1032,7 +1040,7 @@ bool package_reader::extract_data(std::deque<package_reader>& readers, std::dequ
 void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damode)
 {
 	if (m_file) m_file.seek(new_offset, damode);
-};
+}
 
 u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
 {
@@ -1128,4 +1136,25 @@ std::span<const char> package_reader::decrypt(u64 offset, u64 size, const uchar*
 
 	// Return the amount of data written in buf
 	return data_span;
-};
+}
+
+int package_reader::get_progress(int maximum) const
+{
+	const usz wr = m_written_bytes;
+
+	return wr >= m_header.data_size ? maximum : ::narrow<int>(wr * maximum / m_header.data_size);
+}
+
+void package_reader::abort_extract()
+{
+	m_entry_indexer.fetch_op([this](usz& v)
+	{
+		if (v < m_install_entries.size())
+		{
+			v = m_install_entries.size();
+			return true;
+		}
+
+		return false;
+	});
+}
