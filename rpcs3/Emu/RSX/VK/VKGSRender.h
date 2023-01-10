@@ -93,7 +93,9 @@ private:
 
 	struct
 	{
-		rsx::primitive_type prim = rsx::primitive_type::points;
+		rsx::primitive_type rsx_prim = rsx::primitive_type::points;
+		VkPrimitiveTopology prim = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+		bool is_emulated_prim = false;
 	} m_cached_draw_state;
 
 public:
