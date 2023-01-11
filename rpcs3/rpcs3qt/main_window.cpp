@@ -1035,22 +1035,22 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 		m_game_list_frame->Refresh(true);
 
-		pdlg.hide();
+		std::map<std::string, QString> bootable_paths_installed; // -> title id
 
-		if (!cancelled)
+		for (usz index = 0; index < bootable_paths.size(); index++)
 		{
-			std::map<std::string, QString> bootable_paths_installed; // -> title id
-
-			for (usz index = 0; index < bootable_paths.size(); index++)
+			if (bootable_paths[index].empty())
 			{
-				if (bootable_paths[index].empty())
-				{
-					continue;
-				}
-
-				bootable_paths_installed[bootable_paths[index]] = packages[index].title_id;
+				continue;
 			}
 
+			bootable_paths_installed[bootable_paths[index]] = packages[index].title_id;
+		}
+
+		pdlg.hide();
+
+		if (!cancelled || !bootable_paths_installed.empty())
+		{
 			if (bootable_paths_installed.empty())
 			{
 				m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
