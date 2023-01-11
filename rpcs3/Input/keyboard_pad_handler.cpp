@@ -285,6 +285,7 @@ void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
 	switch (event->key())
 	{
 	case Qt::Key_Escape:
+	case Qt::Key_F11:
 	case Qt::Key_F12:
 		break;
 	case Qt::Key_L:

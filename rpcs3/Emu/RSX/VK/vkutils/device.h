@@ -9,7 +9,7 @@
 #include <vector>
 #include <unordered_map>
 
-#define DESCRIPTOR_MAX_DRAW_CALLS 16384
+#define DESCRIPTOR_MAX_DRAW_CALLS 32768
 
 namespace vk
 {

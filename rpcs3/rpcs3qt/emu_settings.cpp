@@ -8,6 +8,7 @@
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Io/Keyboard.h"
@@ -136,10 +137,9 @@ void emu_settings::LoadSettings(const std::string& title_id)
 		// Otherwise we'll always trigger the "obsolete settings dialog" when editing custom configs.
 		ValidateSettings(true);
 
-		const std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id);
 		std::string custom_config_path;
 
-		if (fs::is_file(config_path))
+		if (std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id); fs::is_file(config_path))
 		{
 			custom_config_path = config_path;
 		}
@@ -284,7 +284,10 @@ void emu_settings::SaveSettings()
 	// Save config atomically
 	fs::pending_file temp(config_name);
 	temp.file.write(out.c_str(), out.size());
-	temp.commit();
+	if (!temp.commit())
+	{
+		cfg_log.error("Could not save config to %s (error=%s)", config_name, fs::g_tls_error);
+	}
 
 	// Check if the running config/title is the same as the edited config/title.
 	if (config_name == g_cfg.name || m_title_id == Emu.GetTitleID())

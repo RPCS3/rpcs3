@@ -1,5 +1,7 @@
 #pragma once
 
+#include "shortcut_handler.h"
+#include "progress_indicator.h"
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/media_utils.h"
@@ -9,11 +11,6 @@
 #include <QWindow>
 #include <QPaintEvent>
 #include <QTimer>
-
-#ifdef _WIN32
-#include <QWinTaskbarProgress>
-#include <QWinTaskbarButton>
-#endif
 
 #include <memory>
 #include <vector>
@@ -26,14 +23,7 @@ class gs_frame : public QWindow, public GSFrameBase
 
 private:
 	// taskbar progress
-	int m_gauge_max = 100;
-#ifdef _WIN32
-	QWinTaskbarButton* m_tb_button = nullptr;
-	QWinTaskbarProgress* m_tb_progress = nullptr;
-#elif HAVE_QTDBUS
-	int m_progress_value = 0;
-	void UpdateProgress(int progress, bool progress_visible);
-#endif
+	std::unique_ptr<progress_indicator> m_progress_indicator;
 
 	QRect m_initial_geometry;
 
@@ -105,10 +95,12 @@ protected:
 
 private:
 	void hide_on_close();
+	void toggle_recording();
 	void toggle_mouselock();
 	void update_cursor();
 	void handle_cursor(QWindow::Visibility visibility, bool from_event, bool start_idle_timer);
 
 private Q_SLOTS:
-	void MouseHideTimeout();
+	void mouse_hide_timeout();
+	void handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence);
 };

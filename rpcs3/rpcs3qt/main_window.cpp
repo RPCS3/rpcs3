@@ -32,6 +32,7 @@
 #include "ipc_settings_dialog.h"
 #include "shortcut_utils.h"
 #include "config_checker.h"
+#include "shortcut_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -158,6 +159,9 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 			return false;
 		}
 	}
+
+	m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::main_window, this, m_gui_settings);
+	connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &main_window::handle_shortcut);
 
 	show(); // needs to be done before creating the thumbnail toolbar
 
@@ -327,6 +331,63 @@ void main_window::ResizeIcons(int index)
 	}
 
 	m_game_list_frame->ResizeIcons(index);
+}
+
+void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence)
+{
+	gui_log.notice("Main window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString().toStdString());
+
+	const system_state status = Emu.GetStatus();
+
+	switch (shortcut_key)
+	{
+	case gui::shortcuts::shortcut::mw_toggle_fullscreen:
+	{
+		ui->toolbar_fullscreen->trigger();
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_exit_fullscreen:
+	{
+		if (isFullScreen())
+			ui->toolbar_fullscreen->trigger();
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_refresh:
+	{
+		m_game_list_frame->Refresh(true);
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_pause:
+	{
+		if (status == system_state::running)
+			Emu.Pause();
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_restart:
+	{
+		if (status == system_state::paused)
+			Emu.Resume();
+		else if (status == system_state::ready)
+			Emu.Run(true);
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_start:
+	{
+		if (!Emu.GetBoot().empty())
+			Emu.Restart();
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_stop:
+	{
+		if (status != system_state::stopped)
+			Emu.GracefulShutdown(false, true);
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
 }
 
 void main_window::OnPlayOrPause()
@@ -839,23 +900,21 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 	Emu.GracefulShutdown(false);
 
+	std::vector<std::string> path_vec;
+	for (const compat::package_info& pkg : packages)
+	{
+		path_vec.push_back(pkg.path.toStdString());
+	}
+	gui_log.notice("About to install packages:\n%s", fmt::merge(path_vec, "\n"));
+
 	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
 	pdlg.setAutoClose(false);
 	pdlg.show();
 
-	// Synchronization variable
-	atomic_t<double> progress(0.);
-
 	package_error error = package_error::no_error;
 
-	bool cancelled = false;
-	std::map<std::string, QString> bootable_paths_installed; // -> title id
-
-	for (usz i = 0, count = packages.size(); i < count; i++)
+	auto get_app_info = [](compat::package_info& package)
 	{
-		progress = 0.;
-
-		const compat::package_info& package = ::at32(packages, i);
 		QString app_info = package.title; // This should always be non-empty
 
 		if (!package.title_id.isEmpty() || !package.version.isEmpty())
@@ -878,176 +937,233 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			}
 		}
 
-		pdlg.SetValue(0);
-		pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(i + 1).arg(count).arg(app_info));
-		pdlg.show();
+		return app_info;
+	};
 
-		const QFileInfo file_info(package.path);
-		const std::string path      = sstr(package.path);
-		const std::string file_name = sstr(file_info.fileName());
+	bool cancelled = false;
 
-		std::string bootable_path;
+	std::deque<package_reader> readers;
 
-		// Run PKG unpacking asynchronously
-		named_thread worker("PKG Installer", [path, &progress, &error, &bootable_path]
+	for (const compat::package_info& info : packages)
+	{
+		readers.emplace_back(sstr(info.path));
+	}
+
+	std::deque<std::string> bootable_paths;
+
+	// Run PKG unpacking asynchronously
+	named_thread worker("PKG Installer", [&readers, &error, &bootable_paths]
+	{
+		error = package_reader::extract_data(readers, bootable_paths);
+		return error == package_error::no_error;
+	});
+
+	pdlg.show();
+
+	// Wait for the completion
+	for (usz i = 0, set_text = umax; i < readers.size();)
+	{
+		std::this_thread::sleep_for(5ms);
+
+		if (pdlg.wasCanceled())
 		{
-			package_reader reader(path);
-			error = reader.check_target_app_version();
-
-			if (error == package_error::no_error)
+			cancelled = true;
+			
+			for (package_reader& reader : readers)
 			{
-				if (reader.extract_data(progress))
-				{
-					bootable_path = reader.try_get_bootable_file_path_if_created_new();
-					return true;
-				}
+				reader.abort_extract();
 			}
 
-			return false;
-		});
+			break;
+		}
 
-		// Wait for the completion
-		while (worker <= thread_state::aborting)
+		// Update progress window
+		const int progress = readers[i].get_progress(pdlg.maximum());
+		pdlg.SetValue(progress);
+
+		if (set_text != i)
 		{
-			std::this_thread::sleep_for(5ms);
+			pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(i + 1).arg(readers.size()).arg(get_app_info(packages[i])));
+			set_text = i;
+		}
 
-			if (pdlg.wasCanceled())
+		QCoreApplication::processEvents();
+
+		if (progress == pdlg.maximum())
+		{
+			i++;
+		}
+	}
+
+	if (worker())
+	{
+		pdlg.SetValue(pdlg.maximum());
+		std::this_thread::sleep_for(100ms);
+
+		for (usz i = 0; i < packages.size(); i++)
+		{
+			const compat::package_info& package = ::at32(packages, i);
+			const package_reader& reader = ::at32(readers, i);
+
+			switch (reader.get_result())
 			{
-				cancelled = true;
-				progress -= 1.;
+			case package_reader::result::success:
+			{
+				gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
 				break;
 			}
-
-			// Update progress window
-			double pval = progress;
-			if (pval < 0.) pval += 1.;
-
-			pdlg.SetValue(static_cast<int>(pval * pdlg.maximum()));
-			QCoreApplication::processEvents();
-		}
-
-		if (worker())
-		{
-			pdlg.SetValue(pdlg.maximum());
-			std::this_thread::sleep_for(100ms);
-		}
-		else
-		{
-			pdlg.hide();
-			pdlg.SignalFailure();
-		}
-
-		if (worker())
-		{
-			m_game_list_frame->Refresh(true);
-			gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", file_name, sstr(package.title_id), sstr(package.title), sstr(package.version));
-
-			if (!bootable_path.empty())
+			case package_reader::result::not_started:
+			case package_reader::result::started:
+			case package_reader::result::aborted_cleaned:
 			{
-				bootable_paths_installed[bootable_path] = package.title_id;
+				gui_log.notice("Aborted installation of %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				break;
+			}
+			case package_reader::result::error_cleaned:
+			{
+				gui_log.error("Failed to install %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				break;
+			}
+			case package_reader::result::aborted:
+			case package_reader::result::error:
+			{
+				gui_log.error("Partially installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
+				break;
+			}
+			}
+		}
+
+		m_game_list_frame->Refresh(true);
+
+		std::map<std::string, QString> bootable_paths_installed; // -> title id
+
+		for (usz index = 0; index < bootable_paths.size(); index++)
+		{
+			if (bootable_paths[index].empty())
+			{
+				continue;
 			}
 
-			if (i == (count - 1))
+			bootable_paths_installed[bootable_paths[index]] = packages[index].title_id;
+		}
+
+		pdlg.hide();
+
+		if (!cancelled || !bootable_paths_installed.empty())
+		{
+			if (bootable_paths_installed.empty())
 			{
-				pdlg.hide();
+				m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+				return;
+			}
 
-				bool create_desktop_shortcuts = false;
-				bool create_app_shortcut = false;
+			auto dlg = new QDialog(this);
+			dlg->setWindowTitle(tr("Success!"));
 
-				if (bootable_paths_installed.empty())
-				{
-					m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
-				}
-				else
-				{
-					auto dlg = new QDialog(this);
-					dlg->setWindowTitle(tr("Success!"));
+			QVBoxLayout* vlayout = new QVBoxLayout(dlg);
 
-					QVBoxLayout* vlayout = new QVBoxLayout(dlg);
-
-					QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
+			QCheckBox* desk_check = new QCheckBox(tr("Add desktop shortcut(s)"));
 #ifdef _WIN32
-					QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
+			QCheckBox* quick_check = new QCheckBox(tr("Add Start menu shortcut(s)"));
 #elif defined(__APPLE__)
-					QCheckBox* quick_check = new QCheckBox(tr("Add dock shortcut(s)"));
+			QCheckBox* quick_check = new QCheckBox(tr("Add dock shortcut(s)"));
 #else
-					QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
+			QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
 #endif
-					QLabel* label = new QLabel(tr("Successfully installed software from package(s)!\nWould you like to install shortcuts to the installed software? (%1 new software detected)\n\n").arg(bootable_paths_installed.size()), dlg);
+			QLabel* label = new QLabel(tr("Successfully installed software from package(s)!\nWould you like to install shortcuts to the installed software? (%1 new software detected)\n\n").arg(bootable_paths_installed.size()), dlg);
 	
-					vlayout->addWidget(label);
-					vlayout->addStretch(10);
-					vlayout->addWidget(desk_check);
-					vlayout->addStretch(3);
-					vlayout->addWidget(quick_check);
-					vlayout->addStretch(3);
+			vlayout->addWidget(label);
+			vlayout->addStretch(10);
+			vlayout->addWidget(desk_check);
+			vlayout->addStretch(3);
+			vlayout->addWidget(quick_check);
+			vlayout->addStretch(3);
 
-					QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
+			QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
 	
-					vlayout->addWidget(btn_box);
-					dlg->setLayout(vlayout);
+			vlayout->addWidget(btn_box);
+			dlg->setLayout(vlayout);
 
-					connect(btn_box, &QDialogButtonBox::accepted, this, [&]()
-					{
-						create_desktop_shortcuts = desk_check->isChecked();
-						create_app_shortcut = quick_check->isChecked();
-						dlg->accept();
-					});
+			bool create_desktop_shortcuts = false;
+			bool create_app_shortcut = false;
 
-					dlg->setAttribute(Qt::WA_DeleteOnClose);
-					dlg->exec();
-				}
+			connect(btn_box, &QDialogButtonBox::accepted, this, [&]()
+			{
+				create_desktop_shortcuts = desk_check->isChecked();
+				create_app_shortcut = quick_check->isChecked();
+				dlg->accept();
+			});
 
-				std::set<gui::utils::shortcut_location> locations;
+			dlg->setAttribute(Qt::WA_DeleteOnClose);
+			dlg->exec();
+
+			std::set<gui::utils::shortcut_location> locations;
 #ifdef _WIN32
-				locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
+			locations.insert(gui::utils::shortcut_location::rpcs3_shortcuts);
 #endif
-				if (create_desktop_shortcuts)
-				{
-					locations.insert(gui::utils::shortcut_location::desktop);
-				}
-				if (create_app_shortcut)
-				{
-					locations.insert(gui::utils::shortcut_location::applications);
-				}
+			if (create_desktop_shortcuts)
+			{
+				locations.insert(gui::utils::shortcut_location::desktop);
+			}
+			if (create_app_shortcut)
+			{
+				locations.insert(gui::utils::shortcut_location::applications);
+			}
 
-				for (const auto& [boot_path, title_id] : bootable_paths_installed)
+			for (const auto& [boot_path, title_id] : bootable_paths_installed)
+			{
+				for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
 				{
-					for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+					if (gameinfo && gameinfo->info.bootable && gameinfo->info.serial == sstr(title_id) && boot_path.starts_with(gameinfo->info.path))
 					{
-						if (gameinfo && gameinfo->info.bootable && gameinfo->info.serial == sstr(title_id) && boot_path.starts_with(gameinfo->info.path))
-						{
-							m_game_list_frame->CreateShortcuts(gameinfo, locations);
-							break;
-						}
+						m_game_list_frame->CreateShortcuts(gameinfo, locations);
+						break;
 					}
 				}
 			}
 		}
-		else
+	}
+	else
+	{
+		pdlg.hide();
+		pdlg.SignalFailure();
+
+		if (!cancelled)
 		{
-			if (!cancelled)
+			const compat::package_info* package = nullptr;
+
+			for (usz i = 0; i < readers.size() && !package; i++)
 			{
-				if (error == package_error::app_version)
+				// Figure out what package failed the installation
+				switch (readers[i].get_result())
 				{
-					gui_log.error("Cannot install %s.", file_name);
-					QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package.path));
-				}
-				else
-				{
-					gui_log.error("Failed to install %s.", file_name);
-					QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!"
-						"\nThis is very likely caused by external interference from a faulty anti-virus software."
-						"\nPlease add RPCS3 to your anti-virus\' whitelist or use better anti-virus software.").arg(package.path));
+				case package_reader::result::success:
+				case package_reader::result::not_started:
+				case package_reader::result::started:
+				case package_reader::result::aborted:
+				case package_reader::result::aborted_cleaned:
+					break;
+				case package_reader::result::error:
+				case package_reader::result::error_cleaned:
+					package = &packages[i];
+					break;
 				}
 			}
-			return;
-		}
 
-		// return if the thread was still running after cancel
-		if (cancelled)
-		{
-			return;
+			ensure(package);
+
+			if (error == package_error::app_version)
+			{
+				gui_log.error("Cannot install %s.", sstr(package->path));
+				QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package->path));
+			}
+			else
+			{
+				gui_log.error("Failed to install %s.", sstr(package->path));
+				QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!"
+					"\nThis is very likely caused by external interference from a faulty anti-virus software."
+					"\nPlease add RPCS3 to your anti-virus\' whitelist or use better anti-virus software.").arg(package->path));
+			}
 		}
 	}
 }
@@ -1660,7 +1776,6 @@ void main_window::OnEmuRun(bool /*start_playtime*/) const
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
 	ui->sysPauseAct->setText(tr("&Pause"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setText(tr("Pause"));
@@ -1684,7 +1799,6 @@ void main_window::OnEmuResume() const
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
 	ui->sysPauseAct->setText(tr("&Pause"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setText(tr("Pause"));
@@ -1702,7 +1816,6 @@ void main_window::OnEmuPause() const
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	ui->sysPauseAct->setText(tr("&Resume"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
@@ -1723,7 +1836,6 @@ void main_window::OnEmuStop()
 	m_debugger_frame->UpdateUI();
 
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 #ifdef _WIN32
 	m_thumb_playPause->setToolTip(play_tooltip);
@@ -1784,7 +1896,6 @@ void main_window::OnEmuReady() const
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
@@ -2261,6 +2372,13 @@ void main_window::CreateConnects()
 	connect(ui->confAdvAct,    &QAction::triggered, this, [open_settings]() { open_settings(6); });
 	connect(ui->confEmuAct,    &QAction::triggered, this, [open_settings]() { open_settings(7); });
 	connect(ui->confGuiAct,    &QAction::triggered, this, [open_settings]() { open_settings(8); });
+
+	connect(ui->confShortcutsAct, &QAction::triggered, [this]()
+	{
+		shortcut_dialog dlg(m_gui_settings, this);
+		connect(&dlg, &shortcut_dialog::saved, m_shortcut_handler, &shortcut_handler::update);
+		dlg.exec();
+	});
 
 	const auto open_pad_settings = [this]
 	{
@@ -2969,23 +3087,6 @@ void main_window::CreateFirmwareCache()
 		error != game_boot_result::no_errors)
 	{
 		gui_log.error("Creating firmware cache failed: reason: %s", error);
-	}
-}
-
-void main_window::keyPressEvent(QKeyEvent *keyEvent)
-{
-	if (keyEvent->isAutoRepeat())
-	{
-		return;
-	}
-
-	if (((keyEvent->modifiers() & Qt::AltModifier) && keyEvent->key() == Qt::Key_Return) || (isFullScreen() && keyEvent->key() == Qt::Key_Escape))
-	{
-		ui->toolbar_fullscreen->trigger();
-	}
-	else if ((keyEvent->modifiers() & Qt::ControlModifier) && keyEvent->key() == Qt::Key_F5)
-	{
-		m_game_list_frame->Refresh(true);
 	}
 }
 

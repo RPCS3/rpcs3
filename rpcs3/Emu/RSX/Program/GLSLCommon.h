@@ -1,5 +1,6 @@
 #pragma once
 #include <sstream>
+#include <string_view>
 
 #include "GLSLTypes.h"
 #include "ShaderParam.h"
@@ -79,7 +80,7 @@ namespace program_common
 {
 	void insert_compare_op(std::ostream& OS, bool low_precision);
 	void insert_compare_op_vector(std::ostream& OS);
-	void insert_fog_declaration(std::ostream& OS, const std::string& wide_vector_type, const std::string& input_coord, bool declare = false);
+	void insert_fog_declaration(std::ostream& OS, std::string_view vector_type = "vec4", std::string_view input_coord = "fog_c");
 }
 
 namespace glsl
@@ -105,7 +106,6 @@ namespace glsl
 	void insert_rop_init(std::ostream& OS);
 	void insert_rop(std::ostream& OS, const shader_properties& props);
 	void insert_glsl_legacy_function(std::ostream& OS, const shader_properties& props);
-	void insert_fog_declaration(std::ostream& OS);
 	std::string getFunctionImpl(FUNCTION f);
 	void insert_subheader_block(std::ostream& OS);
 

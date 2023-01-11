@@ -5,12 +5,14 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/timers.hpp"
 
+#include "Capture/rsx_capture.h"
 #include "Common/BufferUtils.h"
 #include "Common/buffer_stream.hpp"
 #include "Common/texture_cache.h"
 #include "Common/surface_store.h"
 #include "Common/time.hpp"
-#include "Capture/rsx_capture.h"
+#include "Core/RSXReservationLock.hpp"
+#include "Core/RSXEngLock.hpp"
 #include "rsx_methods.h"
 #include "gcm_printing.h"
 #include "RSXDisAsm.h"
@@ -546,7 +548,7 @@ namespace rsx
 		if (dma_address)
 		{
 			ctrl = vm::_ptr<RsxDmaControl>(dma_address);
-			m_rsx_thread_exiting = false;
+			rsx_thread_running = true;
 		}
 
 		if (g_cfg.savestate.start_paused)
@@ -712,7 +714,14 @@ namespace rsx
 			thread_ctrl::wait_for(1000);
 		}
 
-		on_task();
+		do
+		{
+			on_task();
+
+			state -= cpu_flag::ret;
+		}
+		while (!is_stopped());
+
 		on_exit();
 	}
 
@@ -726,7 +735,7 @@ namespace rsx
 		if ((state & (cpu_flag::dbg_global_pause + cpu_flag::exit)) == cpu_flag::dbg_global_pause)
 		{
 			// Wait 16ms during emulation pause. This reduces cpu load while still giving us the chance to render overlays.
-			do_local_task(rsx::FIFO_state::paused);
+			do_local_task(rsx::FIFO::state::paused);
 			thread_ctrl::wait_on(state, old, 16000);
 		}
 		else
@@ -778,8 +787,11 @@ namespace rsx
 
 		rsx::overlays::reset_performance_overlay();
 
-		g_fxo->get<rsx::dma_manager>().init();
-		on_init_thread();
+		if (!is_initialized)
+		{
+			g_fxo->get<rsx::dma_manager>().init();
+			on_init_thread();
+		}
 
 		is_initialized = true;
 		is_initialized.notify_all();
@@ -793,14 +805,20 @@ namespace rsx
 		check_zcull_status(false);
 		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
 
-		performance_counters.state = FIFO_state::empty;
+		performance_counters.state = FIFO::state::empty;
 
 		const u64 event_flags = unsent_gcm_events.exchange(0);
 
-		Emu.CallFromMainThread([]{ Emu.RunPPU(); });
+		if (Emu.IsStarting())
+		{
+			Emu.CallFromMainThread([]
+			{
+				Emu.RunPPU();
+			});
+		}
 
 		// Wait for startup (TODO)
-		while (m_rsx_thread_exiting || Emu.IsPaused())
+		while (!rsx_thread_running || Emu.IsPaused())
 		{
 			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);
@@ -816,7 +834,7 @@ namespace rsx
 			thread_ctrl::wait_for(1000);
 		}
 
-		performance_counters.state = FIFO_state::running;
+		performance_counters.state = FIFO::state::running;
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 		fifo_ctrl->set_get(ctrl->get);
@@ -835,7 +853,7 @@ namespace rsx
 			return;
 		}
 
-		g_fxo->init<named_thread>("VBlank Thread", [this]()
+		g_fxo->get<vblank_thread>().set_thread(std::shared_ptr<named_thread<std::function<void()>>>(new named_thread<std::function<void()>>("VBlank Thread"sv, [this]() -> void
 		{
 			// See sys_timer_usleep for details
 #ifdef __linux__
@@ -882,7 +900,7 @@ namespace rsx
 							vblank_rate = g_cfg.video.vblank_rate;
 							vblank_period = 1'000'000 + u64{g_cfg.video.vblank_ntsc.get()} * 1000;
 						}
-	
+
 						post_vblank_event(post_event_time);
 					}
 				}
@@ -909,7 +927,16 @@ namespace rsx
 					start_time = rsx::uclock() - start_time;
 				}
 			}
-		});
+		})));
+
+		struct join_vblank
+		{
+			~join_vblank() noexcept
+			{
+				g_fxo->get<vblank_thread>() = thread_state::finished;
+			}
+
+		} join_vblank_obj{};
 
 		// Raise priority above other threads
 		thread_ctrl::scoped_priority high_prio(+1);
@@ -925,6 +952,11 @@ namespace rsx
 			if (external_interrupt_lock)
 			{
 				wait_pause();
+
+				if (!rsx_thread_running)
+				{
+					return;
+				}
 			}
 
 			// Note a possible rollback address
@@ -964,9 +996,10 @@ namespace rsx
 
 		// Clear any pending flush requests to release threads
 		std::this_thread::sleep_for(10ms);
-		do_local_task(rsx::FIFO_state::lock_wait);
+		do_local_task(rsx::FIFO::state::lock_wait);
 
 		g_fxo->get<rsx::dma_manager>().join();
+		g_fxo->get<vblank_thread>() = thread_state::finished;
 		state += cpu_flag::exit;
 	}
 
@@ -1230,7 +1263,7 @@ namespace rsx
 		fmt::throw_exception("ill-formed draw command");
 	}
 
-	void thread::do_local_task(FIFO_state state)
+	void thread::do_local_task(FIFO::state state)
 	{
 		m_eng_interrupt_mask.clear(rsx::backend_interrupt);
 
@@ -1241,9 +1274,9 @@ namespace rsx
 			handle_emu_flip(async_flip_buffer);
 		}
 
-		if (!in_begin_end && state != FIFO_state::lock_wait)
+		if (state != FIFO::state::lock_wait)
 		{
-			if (atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
+			if (!in_begin_end && atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
 			{
 				std::lock_guard lock(m_mtx_task);
 
@@ -1251,6 +1284,22 @@ namespace rsx
 				{
 					handle_invalidated_memory_range();
 				}
+			}
+
+			if (m_eng_interrupt_mask & rsx::dma_control_interrupt && !is_stopped())
+			{
+				if (const u64 get_put = new_get_put.exchange(u64{umax});
+					get_put != umax)
+				{
+					vm::_ref<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put)).release(get_put);
+					fifo_ctrl->set_get(static_cast<u32>(get_put));
+					fifo_ctrl->abort();
+					fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+					last_known_code_start = static_cast<u32>(get_put);
+					sync_point_request.release(true);
+				}
+
+				m_eng_interrupt_mask.clear(rsx::dma_control_interrupt);
 			}
 		}
 
@@ -2387,11 +2436,12 @@ namespace rsx
 		dma_address = ctrlAddress;
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 
 		vm::write32(device_addr + 0x30, 1);
 		std::memset(display_buffers, 0, sizeof(display_buffers));
 
-		m_rsx_thread_exiting = false;
+		rsx_thread_running = true;
 	}
 
 	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count)
@@ -2798,7 +2848,7 @@ namespace rsx
 			if (!result.queries.empty())
 			{
 				cond_render_ctrl.set_eval_sources(result.queries);
-				sync_hint(FIFO_hint::hint_conditional_render_eval, { .query = cond_render_ctrl.eval_sources.front(), .address = ref });
+				sync_hint(FIFO::interrupt_hint::conditional_render_eval, { .query = cond_render_ctrl.eval_sources.front(), .address = ref });
 			}
 			else
 			{
@@ -2848,7 +2898,7 @@ namespace rsx
 		//ensure(async_tasks_pending.load() == 0);
 	}
 
-	void thread::sync_hint(FIFO_hint /*hint*/, rsx::reports::sync_hint_payload_t payload)
+	void thread::sync_hint(FIFO::interrupt_hint /*hint*/, rsx::reports::sync_hint_payload_t payload)
 	{
 		zcull_ctrl->on_sync_hint(payload);
 	}
@@ -3098,7 +3148,7 @@ namespace rsx
 		// we must block until RSX has invalidated the memory
 		// or lock m_mtx_task and do it ourselves
 
-		if (m_rsx_thread_exiting)
+		if (!rsx_thread_running)
 			return;
 
 		reader_lock lock(m_mtx_task);
@@ -3117,7 +3167,7 @@ namespace rsx
 
 	void thread::on_notify_memory_unmapped(u32 address, u32 size)
 	{
-		if (!m_rsx_thread_exiting && address < rsx::constants::local_mem_base)
+		if (rsx_thread_running && address < rsx::constants::local_mem_base)
 		{
 			if (!isHLE)
 			{
@@ -3219,11 +3269,8 @@ namespace rsx
 	{
 		external_interrupt_lock++;
 
-		while (!external_interrupt_ack)
+		while (!external_interrupt_ack && !is_stopped())
 		{
-			if (is_stopped())
-				break;
-
 			utils::pause();
 		}
 	}
@@ -3245,7 +3292,7 @@ namespace rsx
 
 			external_interrupt_ack.store(true);
 
-			while (external_interrupt_lock)
+			while (external_interrupt_lock && (cpu_flag::ret - state))
 			{
 				// TODO: Investigate non busy-spinning method
 				utils::pause();
@@ -3253,7 +3300,7 @@ namespace rsx
 
 			external_interrupt_ack.store(false);
 		}
-		while (external_interrupt_lock);
+		while (external_interrupt_lock && (cpu_flag::ret - state));
 	}
 
 	u32 thread::get_load()
@@ -3734,4 +3781,19 @@ namespace rsx
 
 		frame_times.push_back(frame_time_t{preempt_count, current_time, current_tsc});
 	}
-}
+
+	void vblank_thread::set_thread(std::shared_ptr<named_thread<std::function<void()>>> thread)
+	{
+		std::swap(m_thread, thread);
+	}
+
+	vblank_thread& vblank_thread::operator=(thread_state state)
+	{
+		if (m_thread)
+		{
+			*m_thread = state;
+		}
+
+		return *this;
+	}
+} // namespace rsx

@@ -4,6 +4,7 @@
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Common/time.hpp"
+#include "Core/RSXReservationLock.hpp"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/RSX/Common/BufferUtils.h"
@@ -13,6 +14,7 @@ namespace rsx
 	rsx_state method_registers;
 
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
+	std::array<u32, 0x10000 / 4> state_signals{};
 
 	void invalid_method(thread* rsx, u32 reg, u32 arg)
 	{
@@ -214,16 +216,20 @@ namespace rsx
 			}
 		}
 
-		void set_cull_face(thread* /*rsx*/, u32 reg, u32 arg)
+		void set_cull_face(thread* rsx, u32 reg, u32 arg)
 		{
-			switch (arg)
+			if (reg == method_registers.register_previous_value)
 			{
-			case CELL_GCM_FRONT_AND_BACK:
-			case CELL_GCM_FRONT:
-			case CELL_GCM_BACK:
 				return;
-			default:
-				// Ignore value if unknown
+			}
+
+			const auto typed = to_cull_face(arg);
+			if (typed) [[ likely ]]
+			{
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
+			}
+			else
+			{
 				method_registers.registers[reg] = method_registers.register_previous_value;
 			}
 		}
@@ -592,9 +598,8 @@ namespace rsx
 			// Ignore upper bits
 			if (const u8 prim = static_cast<u8>(arg))
 			{
-				rsx::method_registers.current_draw_clause.reset(to_primitive_type(prim));
-
-				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
+				const auto primitive_type = to_primitive_type(prim);
+				if (!primitive_type)
 				{
 					rsxthr->in_begin_end = true;
 
@@ -602,17 +607,18 @@ namespace rsx
 					return;
 				}
 
+				rsx::method_registers.current_draw_clause.reset(primitive_type);
 				rsxthr->begin();
 				return;
 			}
 
-			//Check if we have immediate mode vertex data in a driver-local buffer
+			// Check if we have immediate mode vertex data in a driver-local buffer
 			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
 			{
 				const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
 				const u32 push_buffer_index_count = rsxthr->get_push_buffer_index_count();
 
-				//Need to set this flag since it overrides some register contents
+				// Need to set this flag since it overrides some register contents
 				rsx::method_registers.current_draw_clause.is_immediate_draw = true;
 
 				if (push_buffer_index_count)
@@ -633,15 +639,6 @@ namespace rsx
 
 			if (!rsx::method_registers.current_draw_clause.empty())
 			{
-				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
-				{
-					// Recover from invalid primitive only if draw clause is not empty
-					rsxthr->recover_fifo();
-
-					rsx_log.error("NV4097_SET_BEGIN_END aborted due to invalid primitive!");
-					return;
-				}
-
 				rsx::method_registers.current_draw_clause.compile();
 
 				if (g_cfg.video.disable_video_output)
@@ -806,7 +803,7 @@ namespace rsx
 				const auto current = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(arg);
 				const auto previous = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(method_registers.register_previous_value);
 
-				if (current.antialias() != previous.antialias() ||                               // Antialias control has changed, update ROP parameters
+				if (*current.antialias() != *previous.antialias() ||                               // Antialias control has changed, update ROP parameters
 					current.is_integer_color_format() != previous.is_integer_color_format())     // The type of color format also requires ROP control update
 				{
 					rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
@@ -821,40 +818,25 @@ namespace rsx
 			if (arg != method_registers.register_previous_value)
 			{
 				rsx->on_framebuffer_options_changed(reg);
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
 			}
 		}
 
 		void set_stencil_op(thread* rsx, u32 reg, u32 arg)
 		{
-			if (arg != method_registers.register_previous_value)
+			if (arg == method_registers.register_previous_value)
 			{
-				switch (arg)
-				{
-				case CELL_GCM_INVERT:
-				case CELL_GCM_KEEP:
-				case CELL_GCM_REPLACE:
-				case CELL_GCM_INCR:
-				case CELL_GCM_DECR:
-				case CELL_GCM_INCR_WRAP:
-				case CELL_GCM_DECR_WRAP:
-				case CELL_GCM_ZERO:
-					set_surface_options_dirty_bit(rsx, reg, arg);
-					break;
-
-				default:
-					// Ignored on RSX
-					method_registers.decode(reg, method_registers.register_previous_value);
-					break;
-				}
+				return;
 			}
-		}
 
-		template <u32 RsxFlags>
-		void notify_state_changed(thread* rsx, u32, u32 arg)
-		{
-			if (arg != method_registers.register_previous_value)
+			const auto typed = to_stencil_op(arg);
+			if (typed) [[ likely ]]
 			{
-				rsx->m_graphics_state |= RsxFlags;
+				set_surface_options_dirty_bit(rsx, reg, arg);
+			}
+			else
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
 			}
 		}
 
@@ -917,60 +899,39 @@ namespace rsx
 			}
 		}
 
-		void set_blend_equation(thread* /*rsx*/, u32 reg, u32 arg)
+		void set_blend_equation(thread* rsx, u32 reg, u32 arg)
 		{
-			for (u32 i = 0; i < 32u; i += 16)
+			if (reg == method_registers.register_previous_value)
 			{
-				switch ((arg >> i) & 0xffff)
-				{
-				case CELL_GCM_FUNC_ADD:
-				case CELL_GCM_MIN:
-				case CELL_GCM_MAX:
-				case CELL_GCM_FUNC_SUBTRACT:
-				case CELL_GCM_FUNC_REVERSE_SUBTRACT:
-				case CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED:
-				case CELL_GCM_FUNC_ADD_SIGNED:
-				case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
-					break;
+				return;
+			}
 
-				default:
-				{
-					// Ignore invalid values as a whole
-					method_registers.decode(reg, method_registers.register_previous_value);
-					return;
-				}
-				}
+			if (to_blend_equation(arg & 0xFFFF) &&
+				to_blend_equation((arg >> 16) & 0xFFFF)) [[ likely ]]
+			{
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
+			}
+			else
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
 			}
 		}
 
-		void set_blend_factor(thread* /*rsx*/, u32 reg, u32 arg)
+		void set_blend_factor(thread* rsx, u32 reg, u32 arg)
 		{
-			for (u32 i = 0; i < 32u; i += 16)
+			if (reg == method_registers.register_previous_value)
 			{
-				switch ((arg >> i) & 0xffff)
-				{
-				case CELL_GCM_ZERO:
-				case CELL_GCM_ONE:
-				case CELL_GCM_SRC_COLOR:
-				case CELL_GCM_ONE_MINUS_SRC_COLOR:
-				case CELL_GCM_SRC_ALPHA:
-				case CELL_GCM_ONE_MINUS_SRC_ALPHA:
-				case CELL_GCM_DST_ALPHA:
-				case CELL_GCM_ONE_MINUS_DST_ALPHA:
-				case CELL_GCM_DST_COLOR:
-				case CELL_GCM_ONE_MINUS_DST_COLOR:
-				case CELL_GCM_SRC_ALPHA_SATURATE:
-				case CELL_GCM_CONSTANT_COLOR:
-				case CELL_GCM_ONE_MINUS_CONSTANT_COLOR:
-				case CELL_GCM_CONSTANT_ALPHA:
-				case CELL_GCM_ONE_MINUS_CONSTANT_ALPHA:
-					break;
+				return;
+			}
 
-				default:
-					// Ignore invalid values as a whole
-					method_registers.decode(reg, method_registers.register_previous_value);
-					return;
-				}
+			if (to_blend_factor(arg & 0xFFFF) &&
+				to_blend_factor((arg >> 16) & 0xFFFF)) [[ likely ]]
+			{
+				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
+			}
+			else
+			{
+				method_registers.decode(reg, method_registers.register_previous_value);
 			}
 		}
 
@@ -1049,7 +1010,7 @@ namespace rsx
 				// Skip "handled methods"
 				rsx->fifo_ctrl->skip_methods(count - 1);
 
-				switch (method_registers.blit_engine_nv3062_color_format())
+				switch (*method_registers.blit_engine_nv3062_color_format())
 				{
 				case blit_engine::transfer_destination_format::a8r8g8b8:
 				case blit_engine::transfer_destination_format::y32:
@@ -1165,7 +1126,7 @@ namespace rsx
 
 			const blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
 			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
-			rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
+			auto src_color_format = method_registers.blit_engine_src_color_format();
 
 			const f32 scale_x = method_registers.blit_engine_ds_dx();
 			const f32 scale_y = method_registers.blit_engine_dt_dy();
@@ -1213,7 +1174,7 @@ namespace rsx
 				return;
 			}
 
-			if (src_color_format == rsx::blit_engine::transfer_source_format::invalid)
+			if (!src_color_format)
 			{
 				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown src color format (0x%x)", method_registers.registers[NV3089_SET_COLOR_FORMAT]);
 				rsx->recover_fifo();
@@ -1236,16 +1197,19 @@ namespace rsx
 			{
 				dst_dma = method_registers.blit_engine_output_location_nv3062();
 				dst_offset = method_registers.blit_engine_output_offset_nv3062();
-				dst_color_format = method_registers.blit_engine_nv3062_color_format();
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
 				is_block_transfer = fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f);
 
-				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				if (auto dst_fmt = method_registers.blit_engine_nv3062_color_format(); !dst_fmt)
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV3062 dst color format (0x%x)", method_registers.registers[NV3062_SET_COLOR_FORMAT]);
 					rsx->recover_fifo();
 					return;
+				}
+				else
+				{
+					dst_color_format = dst_fmt;
 				}
 
 				break;
@@ -1254,13 +1218,16 @@ namespace rsx
 			{
 				dst_dma = method_registers.blit_engine_nv309E_location();
 				dst_offset = method_registers.blit_engine_nv309E_offset();
-				dst_color_format = method_registers.blit_engine_output_format_nv309E();
 
-				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				if (auto dst_fmt = method_registers.blit_engine_output_format_nv309E(); !dst_fmt)
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV309E dst color format (0x%x)", method_registers.registers[NV309E_SET_FORMAT]);
 					rsx->recover_fifo();
 					return;
+				}
+				else
+				{
+					dst_color_format = dst_fmt;
 				}
 
 				break;
@@ -1276,6 +1243,11 @@ namespace rsx
 			if (out_pitch == 0)
 			{
 				out_pitch = out_bpp * out_w;
+			}
+
+			if (in_pitch == 0)
+			{
+				in_pitch = in_bpp * in_w;
 			}
 
 			if (in_bpp != out_bpp)
@@ -1389,7 +1361,7 @@ namespace rsx
 				else
 				{
 					// TODO: Support more formats
-					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", static_cast<u8>(src_color_format));
+					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", static_cast<u8>(*src_color_format));
 				}
 			}
 
@@ -1680,12 +1652,6 @@ namespace rsx
 			const u8 in_format = method_registers.nv0039_input_format();
 			const u32 notify = arg;
 
-			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
-			if (in_format != 0x01 || out_format != 0x01)
-			{
-				rsx_log.error("NV0039_BUFFER_NOTIFY: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
-			}
-
 			if (!line_count || !line_length)
 			{
 				rsx_log.warning("NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
@@ -1734,7 +1700,28 @@ namespace rsx
 				 (dst_offset >= src_offset && dst_offset < src_max);
 			}();
 
-			if (is_overlapping)
+			if (in_format > 1 || out_format > 1) [[ unlikely ]]
+			{
+				// The formats are just input channel strides. You can use this to do cool tricks like gathering channels
+				// Very rare, only seen in use by Destiny
+				// TODO: Hw accel
+				for (u32 row = 0; row < line_count; ++row)
+				{
+					auto dst_ptr = dst;
+					auto src_ptr = src;
+					while (src_ptr < src + line_length)
+					{
+						*dst_ptr = *src_ptr;
+
+						src_ptr += in_format;
+						dst_ptr += out_format;
+					}
+
+					dst += out_pitch;
+					src += in_pitch;
+				}
+			}
+			else if (is_overlapping) [[ unlikely ]]
 			{
 				if (is_block_transfer)
 				{
@@ -1878,6 +1865,7 @@ namespace rsx
 	{
 		// Reset all regsiters
 		registers.fill(0);
+		state_signals.fill(0);
 		transform_program.fill(0);
 		transform_constants = {};
 		current_draw_clause = {};
@@ -2432,6 +2420,106 @@ namespace rsx
 			registers[NV308A_SIZE_IN] = 0x0;
 			registers[NV406E_SET_REFERENCE] = umax;
 			if (auto rsx = Emu.IsStopped() ? nullptr : get_current_renderer(); rsx && rsx->ctrl) rsx->ctrl->ref = u32{umax};
+		}
+
+		{
+			// Signal definitions
+			state_signals[NV4097_SET_SHADER_CONTROL] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 0] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 1] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 2] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 3] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 4] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 5] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 6] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 7] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 8] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TEX_COORD_CONTROL + 9] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_TWO_SIDE_LIGHT_EN] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_POINT_SPRITE_CONTROL] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_USER_CLIP_PLANE_CONTROL] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_TRANSFORM_BRANCH_BITS] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_CLIP_MIN] = rsx::invalidate_zclip_bits;
+			state_signals[NV4097_SET_CLIP_MAX] = rsx::invalidate_zclip_bits;
+			state_signals[NV4097_SET_POINT_SIZE] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_ALPHA_FUNC] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_ALPHA_REF] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_ALPHA_TEST_ENABLE] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_ANTI_ALIASING_CONTROL] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_SHADER_PACKER] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_SHADER_WINDOW] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_FOG_MODE] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_SCISSOR_HORIZONTAL] = rsx::scissor_config_state_dirty;
+			state_signals[NV4097_SET_SCISSOR_VERTICAL] = rsx::scissor_config_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_HORIZONTAL] = rsx::scissor_config_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_VERTICAL] = rsx::scissor_config_state_dirty;
+			state_signals[NV4097_SET_FOG_PARAMS + 0] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_FOG_PARAMS + 1] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_SCALE + 0] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_SCALE + 1] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_SCALE + 2] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_OFFSET + 0] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_OFFSET + 1] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_VIEWPORT_OFFSET + 2] = rsx::vertex_state_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE] = rsx::fragment_state_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 0] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 1] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 2] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 3] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 4] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 5] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 6] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 7] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 8] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 9] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 10] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 11] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 12] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 13] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 14] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 15] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 16] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 17] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 18] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 19] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 20] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 21] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 22] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 23] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 24] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 25] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 26] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 27] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 28] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 29] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 30] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 31] = rsx::polygon_stipple_pattern_dirty;
+			state_signals[NV4097_SET_POLY_OFFSET_FILL_ENABLE] = rsx::polygon_offset_state_dirty;
+			state_signals[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = rsx::polygon_offset_state_dirty;
+			state_signals[NV4097_SET_POLYGON_OFFSET_BIAS] = rsx::polygon_offset_state_dirty;
+			state_signals[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE] = rsx::depth_bounds_state_dirty;
+			state_signals[NV4097_SET_DEPTH_BOUNDS_MIN] = rsx::depth_bounds_state_dirty;
+			state_signals[NV4097_SET_DEPTH_BOUNDS_MAX] = rsx::depth_bounds_state_dirty;
+			state_signals[NV4097_SET_FRONT_FACE] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_STENCIL_FUNC] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BACK_STENCIL_FUNC] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_ANTI_ALIASING_CONTROL] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_RESTART_INDEX_ENABLE] = rsx::pipeline_config_dirty;
+		}
+
+		// Sanity checks
+		for (size_t id = 0; id < methods.size(); ++id)
+		{
+			if (methods[id] && state_signals[id])
+			{
+				rsx_log.error("FIXME: Method register 0x%x is registered as a method and signal. The signal will be ignored.");
+			}
 		}
 	}
 
@@ -3435,7 +3523,6 @@ namespace rsx
 		bind(NV4097_CLEAR_ZCULL_SURFACE, nv4097::clear_zcull);
 		bind(NV4097_SET_DEPTH_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_DEPTH_FUNC, nv4097::set_surface_options_dirty_bit);
-		bind(NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit);
 		bind(NV4097_SET_COLOR_MASK_MRT, nv4097::set_surface_options_dirty_bit);
@@ -3452,46 +3539,16 @@ namespace rsx
 		bind(NV4097_WAIT_FOR_IDLE, nv4097::sync);
 		bind(NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty);
 		bind(NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty);
-		bind(NV4097_SET_SHADER_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>);
-		bind_array(NV4097_SET_TEX_COORD_CONTROL, 1, 10, nv4097::notify_state_changed<fragment_program_state_dirty>);
-		bind(NV4097_SET_TWO_SIDE_LIGHT_EN, nv4097::notify_state_changed<fragment_program_state_dirty>);
-		bind(NV4097_SET_POINT_SPRITE_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>);
+
 		bind(NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start);
 		bind(NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask);
 		bind(NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset);
 		bind(NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset);
 		bind_range<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nv4097::set_vertex_array_offset>();
-		bind(NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::notify_state_changed<vertex_state_dirty>);
-		bind(NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::notify_state_changed<vertex_state_dirty>);
-		bind(NV4097_SET_CLIP_MIN, nv4097::notify_state_changed<invalidate_zclip_bits>);
-		bind(NV4097_SET_CLIP_MAX, nv4097::notify_state_changed<invalidate_zclip_bits>);
-		bind(NV4097_SET_POINT_SIZE, nv4097::notify_state_changed<vertex_state_dirty>);
-		bind(NV4097_SET_ALPHA_FUNC, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_ALPHA_REF, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_ALPHA_TEST_ENABLE, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_SHADER_PACKER, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_SHADER_WINDOW, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_FOG_MODE, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind(NV4097_SET_SCISSOR_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
-		bind(NV4097_SET_SCISSOR_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
-		bind(NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
-		bind(NV4097_SET_VIEWPORT_VERTICAL, nv4097::notify_state_changed<scissor_config_state_dirty>);
-		bind_array(NV4097_SET_FOG_PARAMS, 1, 2, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind_array(NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::notify_state_changed<vertex_state_dirty>);
-		bind_array(NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::notify_state_changed<vertex_state_dirty>);
 		bind(NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma);
 		bind(NV4097_SET_BLEND_EQUATION, nv4097::set_blend_equation);
 		bind(NV4097_SET_BLEND_FUNC_SFACTOR, nv4097::set_blend_factor);
 		bind(NV4097_SET_BLEND_FUNC_DFACTOR, nv4097::set_blend_factor);
-		bind(NV4097_SET_POLYGON_STIPPLE, nv4097::notify_state_changed<fragment_state_dirty>);
-		bind_array(NV4097_SET_POLYGON_STIPPLE_PATTERN, 1, 32, nv4097::notify_state_changed<polygon_stipple_pattern_dirty>);
-		bind(NV4097_SET_POLY_OFFSET_FILL_ENABLE, nv4097::notify_state_changed<polygon_offset_state_dirty>);
-		bind(NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR, nv4097::notify_state_changed<polygon_offset_state_dirty>);
-		bind(NV4097_SET_POLYGON_OFFSET_BIAS, nv4097::notify_state_changed<polygon_offset_state_dirty>);
-		bind(NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE, nv4097::notify_state_changed<depth_bounds_state_dirty>);
-		bind(NV4097_SET_DEPTH_BOUNDS_MIN, nv4097::notify_state_changed<depth_bounds_state_dirty>);
-		bind(NV4097_SET_DEPTH_BOUNDS_MAX, nv4097::notify_state_changed<depth_bounds_state_dirty>);
 
 		//NV308A (0xa400..0xbffc!)
 		bind_array(NV308A_COLOR, 1, 256 * 7, nv308a::color::impl);

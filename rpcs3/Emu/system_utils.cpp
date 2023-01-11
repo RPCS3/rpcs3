@@ -83,27 +83,28 @@ namespace rpcs3::utils
 	{
 		sys_log.success("Installing package: %s", path);
 
-		atomic_t<double> progress(0.);
 		int int_progress = 0;
+
+		std::deque<package_reader> reader;
+		reader.emplace_back(path);
 
 		// Run PKG unpacking asynchronously
 		named_thread worker("PKG Installer", [&]
 		{
-			package_reader reader(path);
-			return reader.extract_data(progress);
+			std::deque<std::string> bootables;
+			const package_error error = package_reader::extract_data(reader, bootables);
+			return error == package_error::no_error;
 		});
 
 		// Wait for the completion
 		while (std::this_thread::sleep_for(5ms), worker <= thread_state::aborting)
 		{
 			// TODO: update unified progress dialog
-			double pval = progress;
-			pval < 0 ? pval += 1. : pval;
-			pval *= 100.;
+			const int pval = reader[0].get_progress(100);
 
-			if (static_cast<int>(pval) > int_progress)
+			if (pval > int_progress)
 			{
-				int_progress = static_cast<int>(pval);
+				int_progress = pval;
 				sys_log.success("... %u%%", int_progress);
 			}
 		}
@@ -351,9 +352,14 @@ namespace rpcs3::utils
 #endif
 	}
 
-	std::string get_custom_config_path(const std::string& title_id)
+	std::string get_custom_config_path(const std::string& identifier)
 	{
-		return get_custom_config_dir() + "config_" + title_id + ".yml";
+		if (identifier.empty())
+		{
+			return {};
+		}
+
+		return get_custom_config_dir() + "config_" + identifier + ".yml";
 	}
 
 	std::string get_input_config_root()

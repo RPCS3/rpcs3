@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iomanip>
 #include <span>
+#include <deque>
 
 // Constants
 enum : u32
@@ -305,24 +306,52 @@ enum class package_error
 
 class package_reader
 {
-public:
-	package_reader(const std::string& path);
-	~package_reader();
-
-	bool is_valid() const { return m_is_valid; }
-	package_error check_target_app_version() const;
-	bool extract_data(atomic_t<double>& sync);
-	psf::registry get_psf() const { return m_psf; }
-
-	std::string try_get_bootable_file_path_if_created_new() const
-	{
-		return m_bootable_file_path;
-	}
-
 	struct thread_key
 	{
 		const usz unique_num = umax;
 	};
+
+	struct install_entry
+	{
+		typename std::map<std::string, install_entry*>::value_type* weak_reference{};
+		std::string name;
+
+		u64 file_offset{};
+		u64 file_size{};
+		u32 type{};
+		u32 pad{};
+
+		// Check if the entry is the same one registered in entries to install
+		bool is_dominating() const
+		{
+			return weak_reference->second == this;
+		}
+	};
+
+public:
+	package_reader(const std::string& path);
+	~package_reader();
+
+	enum result
+	{
+		not_started,
+		started,
+		success,
+		aborted,
+		aborted_cleaned,
+		error,
+		error_cleaned
+	};
+
+	bool is_valid() const { return m_is_valid; }
+	package_error check_target_app_version() const;
+	static package_error extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths);
+	psf::registry get_psf() const { return m_psf; }
+	result get_result() const { return m_result; };
+
+	int get_progress(int maximum = 100) const;
+
+	void abort_extract();
 
 private:
 	bool read_header();
@@ -331,13 +360,24 @@ private:
 	bool decrypt_data();
 	void archive_seek(s64 new_offset, const fs::seek_mode damode = fs::seek_set);
 	u64 archive_read(void* data_ptr, u64 num_bytes);
+	bool set_install_path();
+	bool fill_data(std::map<std::string, install_entry*>& all_install_entries);
 	std::span<const char> archive_read_block(u64 offset, void* data_ptr, u64 num_bytes);
 	std::span<const char> decrypt(u64 offset, u64 size, const uchar* key, thread_key thread_data_key = {0});
-	usz extract_worker(const std::string& dir, bool was_null, atomic_t<double>& sync, thread_key thread_data_key, atomic_t<usz>& entry_indexer, std::vector<PKGEntry>& entries);
+	void extract_worker(thread_key thread_data_key);
 
-	const usz BUF_SIZE = 8192 * 1024; // 8 MB
+	std::deque<install_entry> m_install_entries;
+	std::string m_install_path;
+	atomic_t<bool> m_aborted = false;
+	atomic_t<usz> m_num_failures = 0;
+	atomic_t<usz> m_entry_indexer = 0;
+	atomic_t<usz> m_written_bytes = 0;
+	bool m_was_null = false;
+
+	static constexpr usz BUF_SIZE = 8192 * 1024; // 8 MB
 
 	bool m_is_valid = false;
+	result m_result = result::not_started;
 
 	std::string m_path{};
 	std::string m_install_dir{};

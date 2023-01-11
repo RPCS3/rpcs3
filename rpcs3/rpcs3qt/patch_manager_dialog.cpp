@@ -288,7 +288,9 @@ void patch_manager_dialog::populate_tree()
 						const QString q_description = QString::fromStdString(description);
 						QString visible_description = q_description;
 
-						const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(description_role, q_description) << QPair(persistance_role, true);
+						const QList<QPair<int, QVariant>> match_criteria = QList<QPair<int, QVariant>>()
+							<< QPair<int, QVariant>(description_role, q_description)
+							<< QPair<int, QVariant>(persistance_role, true);
 
 						// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
 						if (const auto matches = gui::utils::find_children_by_data(serial_level_item, match_criteria, false); matches.count() > 0)
@@ -322,7 +324,8 @@ void patch_manager_dialog::populate_tree()
 		}
 	}
 
-	const auto match_criteria = QList<QPair<int, QVariant>>() << QPair(persistance_role, true);
+	const QList<QPair<int, QVariant>> match_criteria = QList<QPair<int, QVariant>>()
+		<< QPair<int, QVariant>(persistance_role, true);
 
 	for (int i = ui->patch_tree->topLevelItemCount() - 1; i >= 0; i--)
 	{
@@ -1034,7 +1037,7 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 
 		if (!patch_file.file || (patch_file.file.write(content), !patch_file.commit()))
 		{
-			patch_log.error("Could not save new patches to %s (%s)", path, fs::g_tls_error);
+			patch_log.error("Could not save new patches to %s (error=%s)", path, fs::g_tls_error);
 			return false;
 		}
 

@@ -23,6 +23,7 @@
 #include "Utilities/File.h"
 #include "Utilities/mutex.h"
 #include "util/yaml.hpp"
+#include "util/sysinfo.hpp"
 #include "Input/pad_thread.h"
 
 #include <algorithm>
@@ -580,48 +581,84 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			}
 		}
 
+		const auto dev_flash = g_cfg_vfs.get_dev_flash();
+
+		m_path_list.emplace_back(dev_flash + "vsh/module/vsh.self");
+
 		// Remove duplicates
 		sort(m_path_list.begin(), m_path_list.end());
 		m_path_list.erase(unique(m_path_list.begin(), m_path_list.end()), m_path_list.end());
 
 		const std::string game_icon_path = m_play_hover_movies ? fs::get_config_dir() + "/Icons/game_icons/" : "";
 
-		m_refresh_watcher.setFuture(QtConcurrent::map(m_path_list, [this, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path](const std::string& dir)
+		m_refresh_watcher.setFuture(QtConcurrent::map(m_path_list, [this, dev_flash, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path](const std::string& dir_or_elf)
 		{
+			GameInfo game{};
+			game.path = dir_or_elf;
+
 			const Localized thread_localized;
 
-			const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir);
+			const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
 			const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
 			const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 			if (title_id.empty())
 			{
-				// Do not care about invalid entries
-				return;
-			}
+				if (!fs::is_file(dir_or_elf))
+				{
+					// Do not care about invalid entries
+					return;
+				}
 
-			GameInfo game{};
-			game.path         = dir;
-			game.serial       = std::string(title_id);
-			game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
-			game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
-			game.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
-			game.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
-			game.fw           = std::string(psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized));
-			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
-			game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
-			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
-			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
-			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
+				game.serial = dir_or_elf.substr(dir_or_elf.find_last_of(fs::delim) + 1);
+				game.category = cat::cat_ps3_os.toStdString(); // Key for operating system executables
+				game.version = utils::get_firmware_version();
+				game.fw = game.version;
+				game.bootable = 1;
+				game.icon_path = dev_flash + "vsh/resource/explore/icon/icon_home.png";
+
+				if (dir_or_elf.starts_with(dev_flash))
+				{
+					std::string path_vfs = dir_or_elf.substr(dev_flash.size());
+
+					if (usz pos = path_vfs.find_first_not_of(fs::delim); pos != umax && pos != 0)
+					{
+						path_vfs = path_vfs.substr(pos);
+					}
+
+					if (Localized().title.titles.contains(path_vfs))
+					{
+						game.name = Localized().title.titles.at(path_vfs).toStdString();
+					}
+				}
+
+				if (game.name == "Unknown")
+				{
+					game.name = game.serial;
+				}
+			}
+			else
+			{
+				game.serial       = std::string(title_id);
+				game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
+				game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
+				game.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
+				game.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
+				game.fw           = std::string(psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized));
+				game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
+				game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
+				game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
+				game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
+				game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
+				game.icon_path    = sfo_dir + "/ICON0.PNG";
+			}
 
 			if (m_show_custom_icons)
 			{
-				game.icon_path = fs::get_config_dir() + "/Icons/game_icons/" + game.serial + "/ICON0.PNG";
-			}
-
-			if (!m_show_custom_icons || !fs::is_file(game.icon_path))
-			{
-				game.icon_path = sfo_dir + "/ICON0.PNG";
+				if (std::string icon_path = fs::get_config_dir() + "/Icons/game_icons/" + game.serial + "/ICON0.PNG"; fs::is_file(icon_path))
+				{
+					game.icon_path = std::move(icon_path);
+				}
 			}
 
 			m_mutex_cat.lock();
@@ -791,9 +828,20 @@ void game_list_frame::OnRefreshFinished()
 
 	m_size_watcher_cancel = std::make_shared<atomic_t<bool>>(false);
 
-	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this, cancel = m_size_watcher_cancel](const game_info& game) -> void
+	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this, cancel = m_size_watcher_cancel, dev_flash = g_cfg_vfs.get_dev_flash()](const game_info& game) -> void
 	{
-		if (game) game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
+		if (game)
+		{
+			if (game->info.path.starts_with(dev_flash))
+			{
+				// Do not report size of apps inside /dev_flash (it does not make sense to do so)
+				game->info.size_on_disk = 0;
+			}
+			else
+			{
+				game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
+			}
+		}
 	}));
 }
 
@@ -916,6 +964,8 @@ void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<
 
 	std::string gameid_token_value;
 
+	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
+
 	if (gameinfo->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + gameinfo->info.serial + "/USRDIR/EBOOT.BIN"))
 	{
 		const usz ps3_game_dir_pos = fs::get_parent_dir(gameinfo->info.path).size();
@@ -948,9 +998,11 @@ void game_list_frame::CreateShortcuts(const game_info& gameinfo, const std::set<
 	}
 
 #ifdef __linux__
-	const std::string target_cli_args = fmt::format("--no-gui \"%%%%RPCS3_GAMEID%%%%:%s\"", gameid_token_value);
+	const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%%%RPCS3_VFS%%%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
+											: fmt::format("--no-gui \"%%%%RPCS3_GAMEID%%%%:%s\"", gameid_token_value);
 #else
-	const std::string target_cli_args = fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", gameid_token_value);
+	const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%RPCS3_VFS%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
+											: fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", gameid_token_value);
 #endif
 	const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
 
@@ -1566,7 +1618,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	// Disable options depending on software category
 	const QString category = qstr(current_game.category);
 
-	if (category == cat::cat_disc_game)
+	if (category == cat::cat_disc_game || category == cat::cat_ps3_os)
 	{
 		remove_game->setEnabled(false);
 	}

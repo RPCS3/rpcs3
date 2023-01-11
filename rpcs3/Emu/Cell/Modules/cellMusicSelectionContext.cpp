@@ -140,7 +140,7 @@ void music_selection_context::create_playlist(const std::string& new_hash)
 
 	if (!file.file || (file.file.write(out.c_str(), out.size()), !file.commit()))
 	{
-		cellMusicSelectionContext.error("Failed to create music playlist file %s (%s)", yaml_path, fs::g_tls_error);
+		cellMusicSelectionContext.error("Failed to create music playlist file %s (error=%s)", yaml_path, fs::g_tls_error);
 	}
 }
 
@@ -302,7 +302,7 @@ u32 music_selection_context::step_track(bool next)
 			// Play the previous track. Start with the last track if we reached the start of the playlist.
 			if (current_track == 0)
 			{
-				current_track = playlist.size() - 1;
+				current_track = ::narrow<u32>(playlist.size() - 1);
 			}
 			else
 			{

@@ -145,6 +145,12 @@
     <Filter Include="Io\SDL">
       <UniqueIdentifier>{00fa44cd-ccae-48d9-8541-5f3b2b26a845}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\shortcuts">
+      <UniqueIdentifier>{1b83df2f-bb74-4bc9-87f1-ab2f3889bcc9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui\progress">
+      <UniqueIdentifier>{d60be100-0d7e-4076-a24a-d413d0e91532}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -891,6 +897,36 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_config_checker.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\shortcut_handler.cpp">
+      <Filter>Gui\shortcuts</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_shortcut_handler.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_shortcut_handler.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\shortcut_settings.cpp">
+      <Filter>Gui\shortcuts</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_shortcut_settings.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_shortcut_settings.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\shortcut_dialog.cpp">
+      <Filter>Gui\shortcuts</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_shortcut_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_shortcut_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\progress_indicator.cpp">
+      <Filter>Gui\progress</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1057,6 +1093,12 @@
     </ClInclude>
     <ClInclude Include="Input\sdl_pad_handler.h">
       <Filter>Io\SDL</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_shortcut_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\progress_indicator.h">
+      <Filter>Gui\progress</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1317,6 +1359,18 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\config_checker.h">
       <Filter>Gui\log</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\shortcut_handler.h">
+      <Filter>Gui\shortcuts</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\shortcut_settings.h">
+      <Filter>Gui\shortcuts</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\shortcut_dialog.h">
+      <Filter>Gui\shortcuts</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\shortcut_dialog.ui">
+      <Filter>Form Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

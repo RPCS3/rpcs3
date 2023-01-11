@@ -150,4 +150,8 @@ protected:
 #endif
 
 	sys_net_sockaddr last_bound_addr{};
+
+public:
+	u64 so_rcvtimeo = 0;
+	u64 so_sendtimeo = 0;
 };

@@ -246,6 +246,9 @@
     <addaction name="separator"/>
     <addaction name="confRPCNAct"/>
     <addaction name="confIPCAct"/>
+    <addaction name="separator"/>
+    <addaction name="confShortcutsAct"/>
+    <addaction name="separator"/>
     <addaction name="confAutopauseManagerAct"/>
    </widget>
    <widget class="QMenu" name="menuManage">
@@ -1239,10 +1242,14 @@
     <string>Check Config</string>
    </property>
   </action>
+  <action name="confShortcutsAct">
+   <property name="text">
+    <string>Shortcuts</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources>
-  <include location="../resources.qrc"/>
   <include location="../resources.qrc"/>
  </resources>
  <connections/>

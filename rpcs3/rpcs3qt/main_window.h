@@ -12,6 +12,7 @@
 
 #include "update_manager.h"
 #include "settings.h"
+#include "shortcut_handler.h"
 #include "Emu/System.h"
 
 #include <memory>
@@ -127,9 +128,10 @@ private Q_SLOTS:
 	void RemoveFirmwareCache();
 	void CreateFirmwareCache();
 
+	void handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence);
+
 protected:
 	void closeEvent(QCloseEvent *event) override;
-	void keyPressEvent(QKeyEvent *keyEvent) override;
 	void mouseDoubleClickEvent(QMouseEvent *event) override;
 	void dropEvent(QDropEvent* event) override;
 	void dragEnterEvent(QDragEnterEvent* event) override;
@@ -187,4 +189,6 @@ private:
 
 	update_manager m_updater;
 	QAction* m_download_menu_action = nullptr;
+
+	shortcut_handler* m_shortcut_handler = nullptr;
 };

@@ -3,9 +3,9 @@
 #include "log_viewer.h"
 #include "gui_settings.h"
 #include "syntax_highlighter.h"
-#include "find_dialog.h"
 #include "config_checker.h"
 
+#include <QActionGroup>
 #include <QApplication>
 #include <QMenu>
 #include <QFile>

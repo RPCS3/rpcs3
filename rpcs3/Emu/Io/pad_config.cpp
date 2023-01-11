@@ -73,7 +73,7 @@ void cfg_input::save(const std::string& title_id, const std::string& profile) co
 
 	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
-		input_log.error("Failed to save pad config to '%s'", cfg_name);
+		input_log.error("Failed to save pad config to '%s' (error=%s)", cfg_name, fs::g_tls_error);
 	}
 }
 
@@ -101,6 +101,6 @@ void cfg_profile::save() const
 
 	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
-		input_log.error("Failed to save pad profile config to '%s'", path);
+		input_log.error("Failed to save pad profile config to '%s' (error=%s)", path, fs::g_tls_error);
 	}
 }

@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Core/RSXEngLock.hpp"
+#include "Core/RSXReservationLock.hpp"
 #include "RSXThread.h"
 
 namespace rsx
@@ -422,7 +424,7 @@ namespace rsx
 					if (It->query->sync_tag > m_sync_tag)
 					{
 						// rsx_log.trace("[Performance warning] Query hint emit during sync command.");
-						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, { .query = It->query });
+						ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, { .query = It->query });
 					}
 
 					break;
@@ -531,7 +533,7 @@ namespace rsx
 						{
 							if (It->query->num_draws && It->query->sync_tag > m_sync_tag)
 							{
-								ptimer->sync_hint(FIFO_hint::hint_zcull_sync, { .query = It->query });
+								ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, { .query = It->query });
 								ensure(It->query->sync_tag <= m_sync_tag);
 							}
 
@@ -556,7 +558,7 @@ namespace rsx
 						const auto elapsed = m_tsc - front.query->timestamp;
 						if (elapsed > max_zcull_delay_us)
 						{
-							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, { .query = front.query });
+							ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, { .query = front.query });
 							ensure(front.query->sync_tag <= m_sync_tag);
 						}
 
@@ -704,7 +706,7 @@ namespace rsx
 				{
 					if (query->sync_tag > m_sync_tag) [[unlikely]]
 					{
-						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, { .query = query });
+						ptimer->sync_hint(FIFO::interrupt_hint::zcull_sync, { .query = query });
 						ensure(m_sync_tag >= query->sync_tag);
 					}
 				}

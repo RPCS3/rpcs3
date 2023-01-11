@@ -116,6 +116,7 @@ namespace gui
 	const QString pad_settings = "PadSettings";
 	const QString config       = "Config";
 	const QString log_viewer   = "LogViewer";
+	const QString sc           = "Shortcuts";
 	
 	const QString update_on   = "true";
 	const QString update_off  = "false";
@@ -258,6 +259,8 @@ namespace gui
 	const gui_save lv_show_timestamps = gui_save(log_viewer, "show_timestamps", true);
 	const gui_save lv_show_threads    = gui_save(log_viewer, "show_threads",    true);
 	const gui_save lv_log_levels      = gui_save(log_viewer, "log_levels",      0b11111111u);
+
+	const gui_save sc_shortcuts = gui_save(sc, "shortcuts", QVariantMap());
 }
 
 /** Class for GUI settings..

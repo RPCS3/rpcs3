@@ -1262,7 +1262,7 @@ namespace rsx
 
 		surface_depth_format2 surface_depth_fmt() const
 		{
-			const auto base_fmt = decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
+			const auto base_fmt = *decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
 			if (!depth_buffer_float_enabled()) [[likely]]
 			{
 				return static_cast<surface_depth_format2>(base_fmt);
@@ -1426,7 +1426,7 @@ namespace rsx
 			return decode<NV3089_IMAGE_IN_FORMAT>().transfer_interpolator();
 		}
 
-		blit_engine::transfer_source_format blit_engine_src_color_format() const
+		expected<blit_engine::transfer_source_format> blit_engine_src_color_format() const
 		{
 			return decode<NV3089_SET_COLOR_FORMAT>().transfer_source_fmt();
 		}
@@ -1468,7 +1468,7 @@ namespace rsx
 			return decode<NV3062_SET_OFFSET_DESTIN>().output_offset();
 		}
 
-		blit_engine::transfer_destination_format blit_engine_nv3062_color_format() const
+		expected<blit_engine::transfer_destination_format> blit_engine_nv3062_color_format() const
 		{
 			return decode<NV3062_SET_COLOR_FORMAT>().transfer_dest_fmt();
 		}
@@ -1493,7 +1493,7 @@ namespace rsx
 			return decode<NV309E_SET_OFFSET>().offset();
 		}
 
-		blit_engine::transfer_destination_format blit_engine_output_format_nv309E() const
+		expected<blit_engine::transfer_destination_format> blit_engine_output_format_nv309E() const
 		{
 			return decode<NV309E_SET_FORMAT>().format();
 		}
@@ -1683,4 +1683,5 @@ namespace rsx
 
 	extern rsx_state method_registers;
 	extern std::array<rsx_method_t, 0x10000 / 4> methods;
+	extern std::array<u32, 0x10000 / 4> state_signals;
 }
