@@ -5,7 +5,8 @@ export NONINTERACTIVE=1
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"
 
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/homebrew/bin/brew install llvm@14 sdl2 qt@5 glew cmake nasm ninja p7zip create-dmg ccache
+arch -x86_64 /usr/local/homebrew/bin/brew install llvm@14 sdl2 glew cmake nasm ninja p7zip create-dmg ccache
+arch -x86_64 /usr/local/homebrew/bin/brew install --build-from-source qt@5
 
 export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
@@ -58,7 +59,7 @@ cmake .. \
     -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF \
     -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_PERF=OFF -DLLVM_ENABLE_Z3_SOLVER=OFF \
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
-    -DUSE_SYSTEM_MVK=OFF \
+    -DUSE_SYSTEM_MVK=OFF -DWITH_LLVM=OFF \
     -G Ninja
 
 ninja; build_status=$?;
