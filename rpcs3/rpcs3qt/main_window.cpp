@@ -944,10 +944,9 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 	std::deque<package_reader> readers;
 
-	for (usz i = 0; error == package_error::no_error && i < packages.size(); i++)
+	for (const compat::package_info& info : packages)
 	{
-		readers.emplace_back(sstr(packages[i].path));
-		error = readers.back().check_target_app_version();
+		readers.emplace_back(sstr(info.path));
 	}
 
 	std::deque<std::string> bootable_paths;
@@ -955,15 +954,8 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	// Run PKG unpacking asynchronously
 	named_thread worker("PKG Installer", [&readers, &error, &bootable_paths]
 	{
-		if (error == package_error::no_error)
-		{
-			if (package_reader::extract_data(readers, bootable_paths))
-			{
-				return true;
-			}
-		}
-
-		return false;
+		error = package_reader::extract_data(readers, bootable_paths);
+		return error == package_error::no_error;
 	});
 
 	pdlg.show();
@@ -1021,6 +1013,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 				break;
 			}
 			case package_reader::result::not_started:
+			case package_reader::result::started:
 			case package_reader::result::aborted_cleaned:
 			{
 				gui_log.notice("Aborted installation of %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
@@ -1146,6 +1139,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 				{
 				case package_reader::result::success:
 				case package_reader::result::not_started:
+				case package_reader::result::started:
 				case package_reader::result::aborted:
 				case package_reader::result::aborted_cleaned:
 					break;

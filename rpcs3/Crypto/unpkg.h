@@ -335,6 +335,7 @@ public:
 	enum result
 	{
 		not_started,
+		started,
 		success,
 		aborted,
 		aborted_cleaned,
@@ -344,7 +345,7 @@ public:
 
 	bool is_valid() const { return m_is_valid; }
 	package_error check_target_app_version() const;
-	static bool extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths);
+	static package_error extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths);
 	psf::registry get_psf() const { return m_psf; }
 	result get_result() const { return m_result; };
 
@@ -359,6 +360,7 @@ private:
 	bool decrypt_data();
 	void archive_seek(s64 new_offset, const fs::seek_mode damode = fs::seek_set);
 	u64 archive_read(void* data_ptr, u64 num_bytes);
+	bool set_install_path();
 	bool fill_data(std::map<std::string, install_entry*>& all_install_entries);
 	std::span<const char> archive_read_block(u64 offset, void* data_ptr, u64 num_bytes);
 	std::span<const char> decrypt(u64 offset, u64 size, const uchar* key, thread_key thread_data_key = {0});
