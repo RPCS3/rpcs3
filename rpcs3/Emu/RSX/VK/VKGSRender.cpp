@@ -210,10 +210,34 @@ namespace vk
 		}
 	}
 
+	struct vertex_input_assembly_state
+	{
+		VkPrimitiveTopology primitive;
+		VkBool32 restart_index_enabled;
+	};
+
+	vertex_input_assembly_state decode_vertex_input_assembly_state()
+	{
+		vertex_input_assembly_state state{};
+		const auto& current_draw = rsx::method_registers.current_draw_clause;
+		const auto [primitive, emulated_primitive] = vk::get_appropriate_topology(current_draw.primitive);
+
+		if (rsx::method_registers.restart_index_enabled() &&
+			!current_draw.is_disjoint_primitive &&
+			current_draw.command == rsx::draw_command::indexed &&
+			!emulated_primitive &&
+			!vk::emulate_primitive_restart(current_draw.primitive))
+		{
+			state.restart_index_enabled = VK_TRUE;
+		}
+
+		state.primitive = primitive;
+		return state;
+	}
+
 	// TODO: This should be deprecated soon (kd)
 	vk::pipeline_props decode_rsx_state(
-		VkPrimitiveTopology primitive,
-		bool emulated_primitive_type,
+		const vertex_input_assembly_state& vertex_input,
 		vk::render_target* ds,
 		const rsx::backend_configuration& backend_config,
 		u8 num_draw_buffers,
@@ -223,11 +247,8 @@ namespace vk
 		vk::pipeline_props properties{};
 
 		// Input assembly
-		properties.state.set_primitive_type(primitive);
-
-		const bool restarts_valid = rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed && !emulated_primitive_type && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
-		if (rsx::method_registers.restart_index_enabled() && !vk::emulate_primitive_restart(rsx::method_registers.current_draw_clause.primitive) && restarts_valid)
-			properties.state.enable_primitive_restart();
+		properties.state.set_primitive_type(vertex_input.primitive);
+		properties.state.enable_primitive_restart(vertex_input.restart_index_enabled);
 
 		// Rasterizer state
 		properties.state.set_attachment_count(num_draw_buffers);
@@ -1904,9 +1925,7 @@ bool VKGSRender::load_program()
 	const auto shadermode = g_cfg.video.shadermode.get();
 
 	// TODO: EXT_dynamic_state should get rid of this sillyness soon (kd)
-	const auto [primitive_type, is_emulated_primitive] = rsx::method_registers.current_draw_clause.primitive == m_cached_draw_state.rsx_prim
-		? std::make_pair(m_cached_draw_state.prim, m_cached_draw_state.is_emulated_prim)
-		: vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive);
+	const auto vertex_state = vk::decode_vertex_input_assembly_state();
 
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
@@ -1918,8 +1937,9 @@ bool VKGSRender::load_program()
 		m_graphics_state &= ~rsx::pipeline_state::invalidate_pipeline_bits;
 	}
 	else if (!(m_graphics_state & rsx::pipeline_state::pipeline_config_dirty) &&
-		m_cached_draw_state.prim == primitive_type &&
-		m_program)
+		m_program &&
+		m_pipeline_properties.state.ia.topology == vertex_state.primitive &&
+		m_pipeline_properties.state.ia.primitiveRestartEnable == vertex_state.restart_index_enabled)
 	{
 		if (!m_shader_interpreter.is_interpreter(m_program)) [[ likely ]]
 		{
@@ -1936,15 +1956,10 @@ bool VKGSRender::load_program()
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
 
-	m_cached_draw_state.prim = primitive_type;
-	m_cached_draw_state.is_emulated_prim = is_emulated_primitive;
-	m_cached_draw_state.rsx_prim = rsx::method_registers.current_draw_clause.primitive;
-
 	if (m_graphics_state & rsx::pipeline_state::pipeline_config_dirty)
 	{
 		vk::pipeline_props properties = vk::decode_rsx_state(
-			primitive_type,
-			is_emulated_primitive,
+			vertex_state,
 			m_rtts.m_bound_depth_stencil.second,
 			backend_config,
 			static_cast<u8>(m_draw_buffers.size()),
@@ -1967,8 +1982,10 @@ bool VKGSRender::load_program()
 	}
 	else
 	{
-		// Update primitive type. Not needed with EXT_dynamic_state
-		m_pipeline_properties.state.set_primitive_type(primitive_type);
+		// Update primitive type and restart index. Note that this is not needed with EXT_dynamic_state
+		m_pipeline_properties.state.set_primitive_type(vertex_state.primitive);
+		m_pipeline_properties.state.enable_primitive_restart(vertex_state.restart_index_enabled);
+		m_pipeline_properties.renderpass_key = m_current_renderpass_key;
 	}
 
 	m_vertex_prog = nullptr;
