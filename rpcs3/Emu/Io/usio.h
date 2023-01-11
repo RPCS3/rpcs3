@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Emu/system_utils.hpp"
 #include "Emu/Io/usb_device.h"
 
 class usb_device_usio : public usb_device_emulated
@@ -23,8 +24,8 @@ private:
 	bool test_on = false;
 	bool test_key_pressed = false;
 	bool coin_key_pressed = false;
+	bool is_used = false;
 	le_t<u16> coin_counter = 0;
-	std::string usio_backup_path;
-	fs::file usio_backup_file;
+	const std::string usio_backup_path = rpcs3::utils::get_hdd1_dir() + "/caches/usiobackup.bin";
 	std::vector<u8> response;
 };
