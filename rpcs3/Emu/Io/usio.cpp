@@ -5,7 +5,6 @@
 #include "usio.h"
 #include "Input/pad_thread.h"
 #include "Emu/IdManager.h"
-#include "Emu/system_utils.hpp"
 
 LOG_CHANNEL(usio_log);
 
@@ -106,9 +105,9 @@ extern bool is_input_allowed();
 
 void usb_device_usio::load_backup()
 {
-	usio_backup_path = rpcs3::utils::get_hdd1_dir() + "/caches/usiobackup.bin";
+	fs::file usio_backup_file;
 
-	if (!usio_backup_file.open(usio_backup_path, fs::read + fs::write + fs::lock))
+	if (!usio_backup_file.open(usio_backup_path, fs::read))
 	{
 		usio_log.trace("Failed to load the USIO Backup file: %s", usio_backup_path);
 		return;
@@ -119,23 +118,30 @@ void usb_device_usio::load_backup()
 	if (usio_backup_file.size() != file_size)
 	{
 		usio_log.trace("Invalid USIO Backup file detected: %s", usio_backup_path);
-		usio_backup_file.trunc(file_size);
 		return;
 	}
 
-	usio_backup_file.read(g_fxo->get<usio_memory>().backup_memory.data(), g_fxo->get<usio_memory>().backup_memory.size());
+	usio_backup_file.read(g_fxo->get<usio_memory>().backup_memory.data(), file_size);
 }
 
 void usb_device_usio::save_backup()
 {
-	if (!usio_backup_file && !usio_backup_path.empty() && !usio_backup_file.open(usio_backup_path, fs::create + fs::write + fs::lock))
+	if (!is_used)
+		return;
+
+	fs::file usio_backup_file;
+
+	if (!usio_backup_file.open(usio_backup_path, fs::create + fs::write + fs::lock))
 	{
-		usio_log.error("Failed to create a new USIO Backup file: %s", usio_backup_path);
+		usio_log.error("Failed to save the USIO Backup file: %s", usio_backup_path);
 		return;
 	}
 
+	const u64 file_size = g_fxo->get<usio_memory>().backup_memory.size();
+
 	usio_backup_file.seek(0, fs::seek_set);
-	usio_backup_file.write(g_fxo->get<usio_memory>().backup_memory.data(), g_fxo->get<usio_memory>().backup_memory.size());
+	usio_backup_file.write(g_fxo->get<usio_memory>().backup_memory.data(), file_size);
+	usio_backup_file.trunc(file_size);
 }
 
 void usb_device_usio::translate_input()
@@ -482,6 +488,8 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 	transfer->expected_result = HC_CC_NOERR;
 	// The latency varies per operation but it doesn't seem to matter for this device so let's go fast!
 	transfer->expected_time = get_timestamp();
+
+	is_used = true;
 
 	switch (endpoint)
 	{
