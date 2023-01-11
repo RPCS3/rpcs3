@@ -689,20 +689,16 @@ package_error package_reader::check_target_app_version() const
 	return package_error::app_version;
 }
 
-bool package_reader::fill_data(std::map<std::string, install_entry*>& all_install_entries)
+bool package_reader::set_install_path()
 {
 	if (!m_is_valid)
 	{
 		return false;
 	}
 
-	m_install_entries.clear();
 	m_install_path.clear();
-	m_bootable_file_path.clear();
-	m_entry_indexer = 0;
-	m_written_bytes = 0;
 
-	// Get full path and create the directory
+	// Get full path
 	std::string dir = rpcs3::utils::get_hdd0_dir();
 
 	// Based on https://www.psdevwiki.com/ps3/PKG_files#ContentType
@@ -739,13 +735,27 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 	// If false, an existing directory is being overwritten: cannot cancel the operation
 	m_was_null = !fs::is_dir(dir);
 
-	if (!fs::create_path(dir))
+	m_install_path = dir;
+	return true;
+}
+
+bool package_reader::fill_data(std::map<std::string, install_entry*>& all_install_entries)
+{
+	if (!m_is_valid)
 	{
-		pkg_log.error("Could not create the installation directory %s", dir);
 		return false;
 	}
 
-	m_install_path = dir;
+	if (!fs::create_path(m_install_path))
+	{
+		pkg_log.error("Could not create the installation directory %s (error=%s)", m_install_path, fs::g_tls_error);
+		return false;
+	}
+
+	m_install_entries.clear();
+	m_bootable_file_path.clear();
+	m_entry_indexer = 0;
+	m_written_bytes = 0;
 
 	if (!decrypt_data())
 	{
@@ -772,7 +782,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
 
 		const std::string name{reinterpret_cast<char*>(m_bufs.back().get()), entry.name_size};
-		std::string path = dir + vfs::escape(name);
+		std::string path = m_install_path + vfs::escape(name);
 
 		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
 
@@ -831,7 +841,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 	if (num_failures != 0)
 	{
-		pkg_log.error("Package installation failed: %s", dir);
+		pkg_log.error("Package installation failed: %s", m_install_path);
 		return false;
 	}
 
@@ -988,29 +998,53 @@ void package_reader::extract_worker(thread_key thread_data_key)
 	}
 }
 
-bool package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
+package_error package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
 {
-	std::map<std::string, install_entry*> all_install_entries;
+	package_error error = package_error::no_error;
+	usz num_failures = 0;
 
+	// Set paths first in order to know if the install dir was empty before starting any installations.
+	// This will also allow us to remove all the new packages in one path at once if any of them fail.
 	for (package_reader& reader : readers)
 	{
-		if (!reader.fill_data(all_install_entries))
+		reader.m_result = result::not_started;
+
+		if (!reader.set_install_path())
 		{
-			return false;
+			error = package_error::other;
+			reader.m_result = result::error;
+			break;
 		}
 	}
 
-	usz num_failures = 0;
-
 	for (package_reader& reader : readers)
 	{
+		// Use a seperate map for each reader. We need to check if the target app version exists for each package in sequence.
+		std::map<std::string, install_entry*> all_install_entries;
+		
+		if (error == package_error::no_error)
+		{
+			// Check if this package is allowed to be installed on top of the existing data
+			error = reader.check_target_app_version();
+		}
+
+		if (error == package_error::no_error)
+		{
+			reader.m_result = result::started;
+
+			// Parse the files to be installed and create all paths.
+			if (!reader.fill_data(all_install_entries))
+			{
+				error = package_error::other;
+			}
+		}
+
 		reader.m_bufs.resize(std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size()));
-		reader.m_num_failures = 0;
-		reader.m_result = result::not_started;
+		reader.m_num_failures = error == package_error::no_error ? 0 : 1;
 
 		atomic_t<usz> thread_indexer = 0;
 
-		named_thread_group workers("PKG Installer "sv, std::max<usz>(reader.m_bufs.size(), 1) - 1, [&]()
+		named_thread_group workers("PKG Installer "sv, std::max<u32>(::narrow<u32>(reader.m_bufs.size()), 1) - 1, [&]()
 		{
 			reader.extract_worker(thread_key{thread_indexer++});
 		});
@@ -1067,7 +1101,12 @@ bool package_reader::extract_data(std::deque<package_reader>& readers, std::dequ
 		bootable_paths.emplace_back(std::move(reader.m_bootable_file_path));
 	}
 
-	return num_failures == 0;
+	if (num_failures > 0)
+	{
+		error = package_error::other;
+	}
+
+	return error;
 }
 
 void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damode)
