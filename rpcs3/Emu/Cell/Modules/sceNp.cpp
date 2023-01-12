@@ -18,6 +18,7 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
+#include "Emu/NP/np_helpers.h"
 #include "Emu/system_config.h"
 
 LOG_CHANNEL(sceNp);
@@ -5237,11 +5238,11 @@ error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, v
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (strncmp(nph.get_npid().handle.data, npId->handle.data, 16) == 0)
+	if (np::is_same_npid(nph.get_npid(), *npId))
 		return SCE_NP_SIGNALING_ERROR_OWN_NP_ID;
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-	*conn_id = sigh.init_sig_infos(npId.get_ptr());
+	*conn_id = sigh.init_sig1(*npId);
 
 	return CELL_OK;
 }
@@ -5298,19 +5299,15 @@ error_code sceNpSignalingGetConnectionStatus(u32 ctx_id, u32 conn_id, vm::ptr<s3
 
 	const auto si = sigh.get_sig_infos(conn_id);
 
-	if (si.connStatus == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE && si.ext_status == ext_sign_peer)
-	{
-		*conn_status = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
-	}
-	else
-	{
-		*conn_status = si.connStatus;
-	}
+	if (!si)
+		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+
+	*conn_status = si->conn_status;
 
 	if (peer_addr)
-		(*peer_addr).np_s_addr = si.addr; // infos.addr is already BE
+		(*peer_addr).np_s_addr = si->addr; // infos.addr is already BE
 	if (peer_port)
-		*peer_port = si.port;
+		*peer_port = si->port;
 
 	return CELL_OK;
 }
@@ -5334,33 +5331,36 @@ error_code sceNpSignalingGetConnectionInfo(u32 ctx_id, u32 conn_id, s32 code, vm
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 	const auto si = sigh.get_sig_infos(conn_id);
 
+	if (!si)
+		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+
 	switch (code)
 	{
 		case SCE_NP_SIGNALING_CONN_INFO_RTT:
 		{
-			info->rtt = si.rtt;
+			info->rtt = si->rtt;
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_BANDWIDTH:
 		{
-			info->bandwidth = 10'000'000; // 10 MBPS HACK
+			info->bandwidth = 100'000'000; // 100 MBPS HACK
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_PEER_NPID:
 		{
-			info->npId = si.npid;
+			info->npId = si->npid;
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_PEER_ADDRESS:
 		{
-			info->address.port = std::bit_cast<u16, be_t<u16>>(si.port);
-			info->address.addr.np_s_addr = si.addr;
+			info->address.port = std::bit_cast<u16, be_t<u16>>(si->port);
+			info->address.addr.np_s_addr = si->addr;
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_MAPPED_ADDRESS:
 		{
-			info->address.port = std::bit_cast<u16, be_t<u16>>(si.mapped_port);
-			info->address.addr.np_s_addr = si.mapped_addr;
+			info->address.port = std::bit_cast<u16, be_t<u16>>(si->mapped_port);
+			info->address.addr.np_s_addr = si->mapped_addr;
 			break;
 		}
 		case SCE_NP_SIGNALING_CONN_INFO_PACKET_LOSS:
@@ -5393,8 +5393,13 @@ error_code sceNpSignalingGetConnectionFromNpId(u32 ctx_id, vm::ptr<SceNpId> npId
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
 	}
 
+	if (np::is_same_npid(*npId, nph.get_npid()))
+	{
+		return SCE_NP_SIGNALING_ERROR_OWN_NP_ID;
+	}
+
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-	const auto found_conn_id = sigh.get_conn_id_from_npid(npId.get_ptr());
+	const auto found_conn_id = sigh.get_conn_id_from_npid(*npId);
 
 	if (!found_conn_id)
 	{
@@ -5455,9 +5460,9 @@ error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetIn
 	info->mapped_addr = nph.get_public_ip_addr();
 
 	// Pure speculation below
-	info->nat_status    = 0;
-	info->upnp_status   = 0;
-	info->npport_status = 0;
+	info->nat_status    = SCE_NP_SIGNALING_NETINFO_NAT_STATUS_TYPE2;
+	info->upnp_status   = nph.get_upnp_status();
+	info->npport_status = SCE_NP_SIGNALING_NETINFO_NPPORT_STATUS_OPEN;
 	info->npport        = SCE_NP_PORT;
 
 	return CELL_OK;
@@ -5537,25 +5542,8 @@ error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	// Unknown what this constant means
-	// if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
-	// {
-	// 	return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
-	// }
-
-	if (strncmp(id1->handle.data, id2->handle.data, 16))// || id1->unk1[0] != id2->unk1[0])
-	{
+	if (!np::is_same_npid(*id1, *id2))
 		return not_an_error(SCE_NP_UTIL_ERROR_NOT_MATCH);
-	}
-
-	// if (id1->unk1[1] != id2->unk1[1])
-	// {
-	// 	// If either is zero they match
-	// 	if (id1->opt[4] && id2->opt[4])
-	// 	{
-	// 		return SCE_NP_UTIL_ERROR_NOT_MATCH;
-	// 	}
-	// }
 
 	return CELL_OK;
 }

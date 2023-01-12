@@ -6,7 +6,6 @@
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/cellNetCtl.h"
 #include "Utilities/StrUtil.h"
-#include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/IdManager.h"
 #include "Emu/NP/np_structs_extra.h"
 #include "Emu/System.h"
@@ -14,6 +13,8 @@
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_helpers.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/Cell/lv2/sys_net/network_context.h"
+#include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -342,21 +343,18 @@ namespace np
 	{
 		g_fxo->need<named_thread<signaling_handler>>();
 
-		std::lock_guard lock(mutex_rpcn);
-		rpcn = rpcn::rpcn_client::get_instance();
-
 		is_connected  = (g_cfg.net.net_active == np_internet_status::enabled);
-		is_psn_active = (g_cfg.net.psn_status >= np_psn_status::psn_fake);
+		is_psn_active = (g_cfg.net.psn_status >= np_psn_status::psn_fake) && is_connected;
 
 		if (get_net_status() == CELL_NET_CTL_STATE_IPObtained)
 		{
-			discover_ip_address();
 
-			if (!discover_ether_address())
+			if (!discover_ether_address() || !discover_ip_address())
 			{
-				nph_log.error("Failed to discover ethernet address!");
+				nph_log.error("Failed to discover ethernet or ip address!");
 				is_connected  = false;
 				is_psn_active = false;
+				return;
 			}
 
 			// Convert dns address
@@ -383,6 +381,19 @@ namespace np
 			{
 				bind_ip = conv.s_addr;
 			}
+
+			if (g_cfg.net.upnp_enabled)
+				upnp.upnp_enable();
+		}
+
+		if (is_psn_active && g_cfg.net.psn_status == np_psn_status::psn_rpcn)
+		{
+			g_fxo->need<network_context>();
+			auto& nc = g_fxo->get<network_context>();
+			nc.bind_sce_np_port();
+
+			std::lock_guard lock(mutex_rpcn);
+			rpcn = rpcn::rpcn_client::get_instance();
 		}
 	}
 
@@ -449,46 +460,45 @@ namespace np
 		ar(m_pool, m_size, m_allocs, m_avail);
 	}
 
-	void np_handler::discover_ip_address()
+	bool np_handler::discover_ip_address()
 	{
-		hostname.clear();
-		hostname.resize(1024);
+		auto sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 
-		const auto use_default_ip_addr = [this](const std::string_view error_msg)
+		auto close_socket = [&]()
 		{
-			nph_log.error("discover_ip_address: %s", error_msg);
-			nph_log.error("discover_ip_address: Defaulting to 127.0.0.1!");
-			local_ip_addr  = 0x0100007f;
-			public_ip_addr = local_ip_addr;
+#ifdef _WIN32
+			closesocket(sockfd);
+#else
+			close(sockfd);
+#endif
 		};
 
-		if (gethostname(hostname.data(), hostname.size()) == -1)
+		::sockaddr_in addr;
+		std::memset(&addr, 0, sizeof(addr));
+		addr.sin_family = AF_INET;
+		addr.sin_port = 53;
+		addr.sin_addr.s_addr = 0x08080808;
+		if (connect(sockfd, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)) != 0)
 		{
-			use_default_ip_addr("gethostname failed!");
-			return;
+			// If connect fails a route to the internet is not available
+			nph_log.error("connect to discover local ip failed: %d", get_native_error());
+			close_socket();
+			return false; // offline
 		}
 
-		// nph_log.notice("discover_ip_address: Hostname was determined to be %s", hostname.c_str());
-
-		hostent* host = gethostbyname(hostname.data());
-		if (!host)
+		sockaddr_in client_addr;
+		socklen_t client_addr_size = sizeof(client_addr);
+		if (getsockname(sockfd, reinterpret_cast<struct sockaddr*>(&client_addr), &client_addr_size) != 0)
 		{
-			use_default_ip_addr("gethostbyname failed!");
-			return;
+			rpcn_log.error("getsockname to discover local ip failed: %d", get_native_error());
+			close_socket();
+			return true; // still assume online
 		}
 
-		if (host->h_addrtype != AF_INET)
-		{
-			use_default_ip_addr("Could only find IPv6 addresses for current host!");
-			return;
-		}
-
-		local_ip_addr = read_from_ptr<u32>(host->h_addr_list[0]);
-
-		// Set public address to local discovered address for now, may be updated later from RPCN socket
-		public_ip_addr = local_ip_addr;
-
-		// nph_log.notice("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
+		local_ip_addr = client_addr.sin_addr.s_addr;
+		nph_log.trace("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
+		close_socket();
+		return true;
 	}
 
 	bool np_handler::discover_ether_address()
@@ -612,6 +622,14 @@ namespace np
 		return is_psn_active ? SCE_NP_MANAGER_STATUS_ONLINE : SCE_NP_MANAGER_STATUS_OFFLINE;
 	}
 
+	s32 np_handler::get_upnp_status() const
+	{
+		if (upnp.is_active())
+			return SCE_NP_SIGNALING_NETINFO_UPNP_STATUS_VALID;
+
+		return SCE_NP_SIGNALING_NETINFO_UPNP_STATUS_INVALID;
+	}
+
 	const SceNpId& np_handler::get_npid() const
 	{
 		return npid;
@@ -649,7 +667,7 @@ namespace np
 			std::string s_npid = g_cfg_rpcn.get_npid();
 			ensure(!s_npid.empty()); // It should have been generated before this
 
-			string_to_npid(s_npid, &npid);
+			string_to_npid(s_npid, npid);
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 			sigh.set_self_sig_info(npid);
 		}
@@ -660,8 +678,8 @@ namespace np
 			break;
 		case np_psn_status::psn_fake:
 		{
-			string_to_online_name("RPCS3's user", &online_name);
-			string_to_avatar_url("https://rpcs3.net/cdn/netplay/DefaultAvatar.png", &avatar_url);
+			string_to_online_name("RPCS3's user", online_name);
+			string_to_avatar_url("https://rpcs3.net/cdn/netplay/DefaultAvatar.png", avatar_url);
 			break;
 		}
 		case np_psn_status::psn_rpcn:
@@ -692,8 +710,8 @@ namespace np
 
 			rsx::overlays::queue_message(localized_string_id::RPCN_SUCCESS_LOGGED_ON);
 
-			string_to_online_name(rpcn->get_online_name(), &online_name);
-			string_to_avatar_url(rpcn->get_avatar_url(), &avatar_url);
+			string_to_online_name(rpcn->get_online_name(), online_name);
+			string_to_avatar_url(rpcn->get_avatar_url(), avatar_url);
 			public_ip_addr = rpcn->get_addr_sig();
 			local_ip_addr  = std::bit_cast<u32, be_t<u32>>(rpcn->get_addr_local());
 
@@ -930,7 +948,7 @@ namespace np
 		return false;
 	}
 
-	u32 np_handler::generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam)
+	u32 np_handler::generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, SceNpMatching2Event event_type)
 	{
 		callback_info ret;
 
@@ -942,6 +960,7 @@ namespace np
 		ret.ctx_id = ctx_id;
 		ret.cb_arg = (optParam && optParam->cbFuncArg) ? optParam->cbFuncArg : ctx->default_match2_optparam.cbFuncArg;
 		ret.cb     = (optParam && optParam->cbFunc) ? optParam->cbFunc : ctx->default_match2_optparam.cbFunc;
+		ret.event_type = event_type;
 
 		nph_log.warning("Callback used is 0x%x", ret.cb);
 
@@ -953,14 +972,29 @@ namespace np
 		return req_id;
 	}
 
-	np_handler::callback_info np_handler::take_pending_request(u32 req_id)
+	std::optional<np_handler::callback_info> np_handler::take_pending_request(u32 req_id)
 	{
 		std::lock_guard lock(mutex_pending_requests);
+
+		if (!pending_requests.contains(req_id))
+			return std::nullopt;
 
 		const auto cb_info = std::move(::at32(pending_requests, req_id));
 		pending_requests.erase(req_id);
 
 		return cb_info;
+	}
+
+	bool np_handler::abort_request(u32 req_id)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return false;
+
+		cb_info_opt->queue_callback(req_id, 0, SCE_NP_MATCHING2_ERROR_ABORTED, 0);
+
+		return true;
 	}
 
 	event_data& np_handler::allocate_req_result(u32 event_key, u32 max_size, u32 initial_size)
@@ -974,14 +1008,14 @@ namespace np
 	{
 		const u32 req_id = get_req_id(0);
 
-		// if (basic_handler)
-		// {
-		// 	sysutil_register_cb([basic_handler = this->basic_handler, req_id, basic_handler_arg = this->basic_handler_arg](ppu_thread& cb_ppu) -> s32
-		// 	{
-		// 		basic_handler(cb_ppu, SCE_NP_BASIC_EVENT_ADD_PLAYERS_HISTORY_RESULT, 0, req_id, basic_handler_arg);
-		// 		return 0;
-		// 	});
-		// }
+		if (basic_handler.handler_func)
+		{
+			sysutil_register_cb([req_id, cb = basic_handler.handler_func, cb_arg = basic_handler.handler_arg](ppu_thread& cb_ppu) -> s32
+			{
+				cb(cb_ppu, SCE_NP_BASIC_EVENT_ADD_PLAYERS_HISTORY_RESULT, 0, req_id, cb_arg);
+				return 0;
+			});
+		}
 
 		return req_id;
 	}
@@ -1006,9 +1040,14 @@ namespace np
 		}
 
 		SceNpId npid_friend;
-		string_to_npid(str_friend.value(), &npid_friend);
+		string_to_npid(str_friend.value(), npid_friend);
 
 		return {CELL_OK, npid_friend};
+	}
+
+	std::pair<error_code, std::optional<SceNpId>> np_handler::local_get_npid(u64 room_id, u16 member_id)
+	{
+		return np_cache.get_npid(room_id, member_id);
 	}
 
 	std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> np_handler::local_get_room_password(SceNpMatching2RoomId room_id)
@@ -1029,5 +1068,15 @@ namespace np
 	error_code np_handler::local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data)
 	{
 		return np_cache.get_member_and_attrs(room_id, member_id, binattrs_list, ptr_member, addr_data, size_data);
+	}
+
+	void np_handler::upnp_add_port_mapping(u16 internal_port, std::string_view protocol)
+	{
+		upnp.add_port_redir(np::ip_to_string(get_local_ip_addr()), internal_port, protocol);
+	}
+
+	void np_handler::upnp_remove_port_mapping(u16 internal_port, std::string_view protocol)
+	{
+		upnp.remove_port_redir(internal_port, protocol);
 	}
 } // namespace np

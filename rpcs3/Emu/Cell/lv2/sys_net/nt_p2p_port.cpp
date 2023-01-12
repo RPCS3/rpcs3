@@ -10,6 +10,7 @@
 #include "Emu/NP/signaling_handler.h"
 #include "sys_net_helpers.h"
 #include "Emu/NP/vport0.h"
+#include "Emu/NP/np_handler.h"
 
 LOG_CHANNEL(sys_net);
 
@@ -69,6 +70,9 @@ nt_p2p_port::nt_p2p_port(u16 port)
 	if (ret_bind == -1)
 		fmt::throw_exception("Failed to bind DGRAM socket to %d for P2P: %s!", port, get_last_error(true));
 
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	nph.upnp_add_port_mapping(port, "UDP");
+
 	sys_net.notice("P2P port %d was bound!", port);
 }
 
@@ -82,6 +86,9 @@ nt_p2p_port::~nt_p2p_port()
 		::close(p2p_socket);
 #endif
 	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	nph.upnp_remove_port_mapping(port, "UDP");
 }
 
 void nt_p2p_port::dump_packet(p2ps_encapsulated_tcp* tcph)

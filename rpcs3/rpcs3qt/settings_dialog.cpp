@@ -1304,6 +1304,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceLineEdit(ui->edit_swaps, emu_settings_type::IpSwapList);
 	SubscribeTooltip(ui->gb_edit_swaps, tooltips.settings.dns_swap);
 
+	m_emu_settings->EnhanceCheckBox(ui->enable_upnp, emu_settings_type::EnableUpnp);
+	SubscribeTooltip(ui->enable_upnp, tooltips.settings.enable_upnp);
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings_type::InternetStatus);
@@ -1312,8 +1315,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->netStatusBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
 	{
 		ui->edit_dns->setEnabled(index > 0);
+		ui->enable_upnp->setEnabled(index > 0);
 	});
 	ui->edit_dns->setEnabled(ui->netStatusBox->currentIndex() > 0);
+	ui->enable_upnp->setEnabled(ui->netStatusBox->currentIndex() > 0);
 
 	m_emu_settings->EnhanceComboBox(ui->psnStatusBox, emu_settings_type::PSNStatus);
 	SubscribeTooltip(ui->gb_psnStatusBox, tooltips.settings.psn_status);

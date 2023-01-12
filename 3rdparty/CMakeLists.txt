@@ -358,6 +358,9 @@ if(USE_SDL)
 	endif()
 endif()
 
+# MINIUPNP
+add_subdirectory(miniupnp EXCLUDE_FROM_ALL)
+
 # add nice ALIAS targets for ease of use
 if(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
@@ -385,3 +388,4 @@ add_library(3rdparty::wolfssl ALIAS wolfssl)
 add_library(3rdparty::libcurl ALIAS libcurl)
 add_library(3rdparty::soundtouch ALIAS soundtouch)
 add_library(3rdparty::sdl2 ALIAS ${SDL2_TARGET})
+add_library(3rdparty::miniupnpc ALIAS libminiupnpc-static)

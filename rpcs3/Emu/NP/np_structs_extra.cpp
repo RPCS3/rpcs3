@@ -18,6 +18,7 @@ namespace extra_nps
 
 	void print_sigoptparam(const SceNpMatching2SignalingOptParam* opt)
 	{
+		sceNp2.warning("SceNpMatching2SignalingOptParam:");
 		sceNp2.warning("type: %d", opt->type);
 		sceNp2.warning("flag: %d", opt->flag);
 		sceNp2.warning("hubMemberId: %d", opt->hubMemberId);
@@ -227,7 +228,10 @@ namespace extra_nps
 		sceNp2.warning("curMemberNum: %d", room->curMemberNum);
 		sceNp2.warning("SceNpMatching2RoomPasswordSlotMask: 0x%x", room->passwordSlotMask);
 		sceNp2.warning("owner: *0x%x", room->owner);
-		print_userinfo2(room->owner.get_ptr());
+
+		if (room->owner)
+			print_userinfo2(room->owner.get_ptr());
+
 		sceNp2.warning("roomGroup: *0x%x", room->roomGroup);
 		// TODO: print roomGroup
 		sceNp2.warning("roomGroupNum: %d", room->roomGroupNum);

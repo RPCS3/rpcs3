@@ -173,7 +173,7 @@ usz downloader::update_buffer(char* data, usz size)
 
 	if (m_actual_download_size < 0)
 	{
-		if (curl_easy_getinfo(m_curl->get_curl(), CURLINFO_CONTENT_LENGTH_DOWNLOAD, &m_actual_download_size) == CURLE_OK && m_actual_download_size > 0)
+		if (curl_easy_getinfo(m_curl->get_curl(), CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &m_actual_download_size) == CURLE_OK && m_actual_download_size > 0)
 		{
 			max = static_cast<int>(m_actual_download_size);
 		}
