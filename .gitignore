@@ -122,6 +122,9 @@ yaml-cpp.pc
 /3rdparty/libusb_cmake/config.h
 /3rdparty/libusb_cmake/libusb-1.0.pc
 
+# miniupnp
+/3rdparty/miniupnp/x64/*
+
 # ssl certificate
 cacert.pem
 

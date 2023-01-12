@@ -68,4 +68,5 @@ private:
 	s32 so_reuseaddr = 0;
 	s32 so_reuseport = 0;
 #endif
+	u16 bound_port = 0;
 };

@@ -7,6 +7,7 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "Emu/NP/rpcn_client.h"
 #include "Emu/NP/generated/np2_structs_generated.h"
@@ -15,6 +16,7 @@
 #include "Emu/NP/np_cache.h"
 #include "Emu/NP/np_event_data.h"
 #include "Emu/NP/np_contexts.h"
+#include "Emu/NP/upnp_handler.h"
 
 namespace np
 {
@@ -83,6 +85,7 @@ namespace np
 
 		s32 get_psn_status() const;
 		s32 get_net_status() const;
+		s32 get_upnp_status() const;
 
 		const SceNpId& get_npid() const;
 		const SceNpOnlineId& get_online_id() const;
@@ -165,6 +168,7 @@ namespace np
 		void get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async);
 
 		// Local functions
+		std::pair<error_code, std::optional<SceNpId>> local_get_npid(u64 room_id, u16 member_id);
 		std::pair<error_code, std::optional<SceNpMatching2RoomSlotInfo>> local_get_room_slots(SceNpMatching2RoomId room_id);
 		std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> local_get_room_password(SceNpMatching2RoomId room_id);
 		std::pair<error_code, std::vector<SceNpMatching2RoomMemberId>> local_get_room_memberids(SceNpMatching2RoomId room_id, s32 sort_method);
@@ -179,9 +183,14 @@ namespace np
 		void req_ticket(u32 version, const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, const char* entitlement_id, u32 consumed_count);
 		const ticket& get_ticket() const;
 		u32 add_players_to_history(vm::cptr<SceNpId> npids, u32 count);
+		bool abort_request(u32 req_id);
 
 		// For signaling
 		void req_sign_infos(const std::string& npid, u32 conn_id);
+
+		// For UPNP
+		void upnp_add_port_mapping(u16 internal_port, std::string_view protocol);
+		void upnp_remove_port_mapping(u16 internal_port, std::string_view protocol);
 
 		// For custom menu
 		struct custom_menu_action
@@ -205,7 +214,7 @@ namespace np
 
 	private:
 		// Various generic helpers
-		void discover_ip_address();
+		bool discover_ip_address();
 		bool discover_ether_address();
 		bool error_and_disconnect(const std::string& error_msg);
 
@@ -267,9 +276,23 @@ namespace np
 			SceNpMatching2ContextId ctx_id;
 			vm::ptr<SceNpMatching2RequestCallback> cb;
 			vm::ptr<void> cb_arg;
+			SceNpMatching2Event event_type;
+
+			void queue_callback(u32 req_id, u32 event_key, s32 error_code, u32 data_size) const
+			{
+				if (cb)
+				{
+					sysutil_register_cb([=, *this](ppu_thread& cb_ppu) -> s32
+					{
+						cb(cb_ppu, ctx_id, req_id, event_type, event_key, error_code, data_size, cb_arg);
+						return 0;
+					});
+				}
+			}
 		};
-		u32 generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam);
-		callback_info take_pending_request(u32 req_id);
+
+		u32 generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, SceNpMatching2Event event_type);
+		std::optional<callback_info> take_pending_request(u32 req_id);
 
 		shared_mutex mutex_pending_requests;
 		std::unordered_map<u32, callback_info> pending_requests;
@@ -327,5 +350,8 @@ namespace np
 		// RPCN
 		shared_mutex mutex_rpcn;
 		std::shared_ptr<rpcn::rpcn_client> rpcn;
+
+		// UPNP
+		upnp_handler upnp;
 	};
 } // namespace np

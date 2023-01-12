@@ -2077,7 +2077,7 @@
             <property name="title">
              <string>Network Configuration</string>
             </property>
-            <layout class="QVBoxLayout" name="gb_network_status_layout" stretch="0,0,0,0,0">
+            <layout class="QVBoxLayout" name="gb_network_status_layout" stretch="0,0,0,0,0,0">
              <item>
               <widget class="QGroupBox" name="gb_netStatusBox">
                <property name="title">
@@ -2145,6 +2145,13 @@
                  </widget>
                 </item>
                </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="enable_upnp">
+               <property name="text">
+                <string>Enable UPNP</string>
+               </property>
               </widget>
              </item>
              <item>
