@@ -1867,11 +1867,6 @@ void main_window::OnEmuStop()
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
 
-	if (std::exchange(m_sys_menu_opened, false))
-	{
-		ui->sysSendOpenMenuAct->setText(tr("Send open system menu cmd"));
-	}
-
 	// Refresh game list in order to update time played
 	if (m_game_list_frame)
 	{
@@ -1924,9 +1919,6 @@ void main_window::EnableMenus(bool enabled) const
 	ui->sysPauseAct->setEnabled(enabled);
 	ui->sysStopAct->setEnabled(enabled);
 	ui->sysRebootAct->setEnabled(enabled);
-
-	// PS3 Commands
-	ui->sysSendOpenMenuAct->setEnabled(enabled);
 
 	// Tools
 	ui->toolskernel_explorerAct->setEnabled(enabled);
@@ -2259,7 +2251,7 @@ void main_window::CreateConnects()
 	{
 		// Enable/Disable Recent Games List
 		const bool stopped = Emu.IsStopped();
-		for (auto act : ui->bootRecentMenu->actions())
+		for (QAction* act : ui->bootRecentMenu->actions())
 		{
 			if (act != ui->freezeRecentAct && act != ui->clearRecentAct)
 			{
@@ -2275,7 +2267,7 @@ void main_window::CreateConnects()
 			return;
 		}
 		m_rg_entries.clear();
-		for (auto act : m_recent_game_acts)
+		for (QAction* act : m_recent_game_acts)
 		{
 			ui->bootRecentMenu->removeAction(act);
 		}
@@ -2342,16 +2334,6 @@ void main_window::CreateConnects()
 		}
 
 		m_gui_settings->SetValue(gui::fd_insert_disc, QFileInfo(dir_path).path());
-	});
-
-	connect(ui->sysSendOpenMenuAct, &QAction::triggered, this, [this]()
-	{
-		if (Emu.IsStopped()) return;
-
-		gui_log.notice("User triggered \"Send %s system menu command\" action in menu bar", m_sys_menu_opened ? "close" : "open");
-		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
-		m_sys_menu_opened ^= true;
-		ui->sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
 	});
 
 	const auto open_settings = [this](int tabIndex)
