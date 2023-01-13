@@ -10,6 +10,7 @@
 #include "util/asm.hpp"
 #include "util/video_provider.h"
 
+extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<recording_mode> g_recording_mode;
 
 void VKGSRender::reinitialize_swapchain()
@@ -675,7 +676,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			m_upscaler->scale_output(*m_current_command_buffer, image_to_flip, target_image, target_layout, rgn, UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);
 		}
 
-		if (m_frame->screenshot_toggle || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
+		if (g_user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
 			const usz sshot_size = buffer_height * buffer_width * 4;
 
@@ -709,9 +710,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			const bool is_bgra = image_to_flip->format() == VK_FORMAT_B8G8R8A8_UNORM;
 
-			if (m_frame->screenshot_toggle)
+			if (g_user_asked_for_screenshot.exchange(false))
 			{
-				m_frame->screenshot_toggle = false;
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
 			}
 			else

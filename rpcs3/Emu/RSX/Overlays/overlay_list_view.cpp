@@ -6,7 +6,8 @@ namespace rsx
 {
 	namespace overlays
 	{
-		list_view::list_view(u16 width, u16 height)
+		list_view::list_view(u16 width, u16 height, bool use_separators)
+			: m_use_separators(use_separators)
 		{
 			w = width;
 			h = height;
@@ -62,7 +63,7 @@ namespace rsx
 				return; // Ideally unreachable but it should still be possible to recover by user interaction.
 			}
 
-			const usz current_index = static_cast<usz>(m_selected_entry) * 2;
+			const usz current_index = static_cast<usz>(m_selected_entry) * (m_use_separators ? 2 : 1);
 
 			if (m_items.size() <= current_index)
 			{
@@ -139,11 +140,14 @@ namespace rsx
 			m_elements_count++;
 
 			// Add separator
-			auto separator        = std::make_unique<overlay_element>();
-			separator->back_color = fore_color;
-			separator->w          = w;
-			separator->h          = 2;
-			add_element(separator);
+			if (m_use_separators)
+			{
+				auto separator        = std::make_unique<overlay_element>();
+				separator->back_color = fore_color;
+				separator->w          = w;
+				separator->h          = 2;
+				add_element(separator);
+			}
 
 			if (m_selected_entry < 0)
 				m_selected_entry = 0;
@@ -189,7 +193,7 @@ namespace rsx
 		{
 			if (!is_compiled)
 			{
-				auto compiled = vertical_layout::get_compiled();
+				auto& compiled = vertical_layout::get_compiled();
 				compiled.add(m_highlight_box->get_compiled());
 				compiled.add(m_scroll_indicator_top->get_compiled());
 				compiled.add(m_scroll_indicator_bottom->get_compiled());

@@ -1111,6 +1111,9 @@
     <ClCompile Include="Emu\Cell\Modules\HLE_PATCHES.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_home_menu.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2235,6 +2238,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\expected.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_home_menu.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

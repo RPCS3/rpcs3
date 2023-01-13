@@ -17,10 +17,11 @@ namespace rsx
 			s32 m_selected_entry = -1;
 			u16 m_elements_count = 0;
 
+			bool m_use_separators = false;
 			bool m_cancel_only = false;
 
 		public:
-			list_view(u16 width, u16 height);
+			list_view(u16 width, u16 height, bool use_separators = true);
 
 			void update_selection();
 

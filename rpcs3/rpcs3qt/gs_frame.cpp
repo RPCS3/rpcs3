@@ -46,6 +46,8 @@ LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 LOG_CHANNEL(mark_log, "MARK");
 LOG_CHANNEL(gui_log, "GUI");
 
+extern atomic_t<bool> g_user_asked_for_recording;
+extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
 extern atomic_t<recording_mode> g_recording_mode;
@@ -142,7 +144,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 
 gs_frame::~gs_frame()
 {
-	screenshot_toggle = false;
+	g_user_asked_for_screenshot = false;
 }
 
 void gs_frame::paintEvent(QPaintEvent *event)
@@ -310,7 +312,7 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	}
 	case gui::shortcuts::shortcut::gw_screenshot:
 	{
-		screenshot_toggle = true;
+		g_user_asked_for_screenshot = true;
 		break;
 	}
 	case gui::shortcuts::shortcut::gw_toggle_recording:
@@ -723,6 +725,14 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 		m_frames = 0;
 		fps_t.Start();
+	}
+
+	if (g_user_asked_for_recording.exchange(false))
+	{
+		Emu.CallFromMainThread([this]()
+		{
+			toggle_recording();
+		});
 	}
 }
 
