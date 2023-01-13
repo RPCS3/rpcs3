@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "sys_vm.h"
+#include "sys_process.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/Cell/ErrorCodes.h"
@@ -70,7 +71,8 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 	if (!g_fxo->get<sys_vm_global_t>().total_vsize.fetch_op([vsize](u32& size)
 	{
 		// A single process can hold up to 256MB of virtual memory, even on DECR
-		if (0x10000000 - size < vsize)
+		// VSH can hold more
+		if ((g_ps3_process_info.has_root_perm() ? 0x1E000000 : 0x10000000) - size < vsize)
 		{
 			return false;
 		}
