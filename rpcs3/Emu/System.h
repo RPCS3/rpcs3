@@ -303,7 +303,7 @@ public:
 	void FixGuestTime();
 	void FinalizeRunRequest();
 
-	bool Pause(bool freeze_emulation = false);
+	bool Pause(bool freeze_emulation = false, bool show_resume_message = true);
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
 	std::shared_ptr<utils::serial> Kill(bool allow_autoexit = true, bool savestate = false);

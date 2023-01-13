@@ -38,6 +38,8 @@ class GSRender;
 
 #define CMD_DEBUG 0
 
+atomic_t<bool> g_user_asked_for_recording = false;
+atomic_t<bool> g_user_asked_for_screenshot = false;
 atomic_t<bool> g_user_asked_for_frame_capture = false;
 atomic_t<bool> g_disable_frame_limit = false;
 rsx::frame_trace_data frame_debug;

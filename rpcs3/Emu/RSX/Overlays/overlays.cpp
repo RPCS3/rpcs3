@@ -126,7 +126,7 @@ namespace rsx
 					return selection_code::canceled;
 				}
 
-				if (Emu.IsPaused())
+				if (Emu.IsPaused() && !m_allow_input_on_pause)
 				{
 					thread_ctrl::wait_for(10000);
 					continue;

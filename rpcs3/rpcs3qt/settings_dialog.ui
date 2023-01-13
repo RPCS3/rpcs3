@@ -2863,6 +2863,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="pauseDuringHomeMenu">
+                 <property name="text">
+                  <string>Pause emulation during home menu</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <spacer name="emulatorTabSpacerLeft">
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>

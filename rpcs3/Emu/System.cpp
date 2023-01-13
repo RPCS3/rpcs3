@@ -2192,7 +2192,7 @@ void Emulator::FinalizeRunRequest()
 	m_state.compare_and_swap_test(system_state::starting, system_state::running);
 }
 
-bool Emulator::Pause(bool freeze_emulation)
+bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 {
 	const u64 start = get_system_time();
 
@@ -2245,11 +2245,11 @@ bool Emulator::Pause(bool freeze_emulation)
 
 	GetCallbacks().on_pause();
 
-	BlockingCallFromMainThread([this]()
+	BlockingCallFromMainThread([this, show_resume_message]()
 	{
 		const auto status = Emu.GetStatus(false);
 
-		if (status != system_state::paused && status != system_state::frozen)
+		if (!show_resume_message || (status != system_state::paused && status != system_state::frozen))
 		{
 			return;
 		}

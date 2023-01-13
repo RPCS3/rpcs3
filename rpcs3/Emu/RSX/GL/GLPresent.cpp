@@ -5,6 +5,7 @@
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 
+extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<recording_mode> g_recording_mode;
 
 namespace gl
@@ -235,7 +236,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (m_frame->screenshot_toggle || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
+		if (g_user_asked_for_screenshot || (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame()))
 		{
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
 
@@ -251,9 +252,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			{
 				screenshot_log.error("Failed to capture image: 0x%x", err);
 			}
-			else if (m_frame->screenshot_toggle)
+			else if (g_user_asked_for_screenshot.exchange(false))
 			{
-				m_frame->screenshot_toggle = false;
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, false);
 			}
 			else
