@@ -225,8 +225,6 @@
     <addaction name="separator"/>
     <addaction name="insertDiscAct"/>
     <addaction name="ejectDiscAct"/>
-    <addaction name="separator"/>
-    <addaction name="sysSendOpenMenuAct"/>
    </widget>
    <widget class="QMenu" name="menuConfiguration">
     <property name="title">

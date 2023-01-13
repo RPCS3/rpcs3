@@ -45,7 +45,6 @@ class main_window : public QMainWindow
 
 	std::unique_ptr<Ui::main_window> ui;
 
-	bool m_sys_menu_opened = false;
 	bool m_is_list_mode = true;
 	bool m_save_slider_pos = false;
 	int m_other_slider_pos = 0;
