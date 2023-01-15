@@ -927,6 +927,15 @@
     <ClCompile Include="rpcs3qt\progress_indicator.cpp">
       <Filter>Gui\progress</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\system_cmd_dialog.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_system_cmd_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_system_cmd_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1371,6 +1380,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\shortcut_dialog.ui">
       <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\system_cmd_dialog.h">
+      <Filter>Gui\dev tools</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

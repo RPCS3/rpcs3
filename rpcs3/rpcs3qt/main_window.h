@@ -24,6 +24,7 @@ class gui_settings;
 class emu_settings;
 class persistent_settings;
 class kernel_explorer;
+class system_cmd_dialog;
 
 struct gui_game_info;
 
@@ -182,6 +183,7 @@ private:
 	debugger_frame* m_debugger_frame = nullptr;
 	game_list_frame* m_game_list_frame = nullptr;
 	kernel_explorer* m_kernel_explorer = nullptr;
+	system_cmd_dialog* m_system_cmd_dialog = nullptr;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;

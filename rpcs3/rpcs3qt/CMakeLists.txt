@@ -80,6 +80,7 @@ set(SRC_FILES
     shortcut_settings.cpp
     skylander_dialog.cpp
     syntax_highlighter.cpp
+    system_cmd_dialog.cpp
     tooltips.cpp
     trophy_manager_dialog.cpp
     trophy_notification_frame.cpp

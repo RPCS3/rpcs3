@@ -33,6 +33,7 @@
 #include "shortcut_utils.h"
 #include "config_checker.h"
 #include "shortcut_dialog.h"
+#include "system_cmd_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -1878,6 +1879,12 @@ void main_window::OnEmuStop()
 	{
 		m_kernel_explorer->close();
 	}
+
+	// Close systen command dialog if running
+	if (m_system_cmd_dialog)
+	{
+		m_system_cmd_dialog->close();
+	}
 }
 
 void main_window::OnEmuReady() const
@@ -1925,6 +1932,7 @@ void main_window::EnableMenus(bool enabled) const
 	ui->toolsmemory_viewerAct->setEnabled(enabled);
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
 	ui->toolsStringSearchAct->setEnabled(enabled);
+	ui->toolsSystemCommandsAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
 	ui->actionCreate_Savestate->setEnabled(enabled);
 }
@@ -2537,6 +2545,17 @@ void main_window::CreateConnects()
 	{
 		if (!Emu.IsStopped())
 			idm::make<memory_searcher_handle>(this, make_basic_ppu_disasm());
+	});
+
+	connect(ui->toolsSystemCommandsAct, &QAction::triggered, this, [this]
+	{
+		if (Emu.IsStopped()) return;
+		if (!m_system_cmd_dialog)
+		{
+			m_system_cmd_dialog = new system_cmd_dialog(this);
+			connect(m_system_cmd_dialog, &QDialog::finished, this, [this]() { m_system_cmd_dialog = nullptr; });
+		}
+		m_system_cmd_dialog->show();
 	});
 
 	connect(ui->toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
