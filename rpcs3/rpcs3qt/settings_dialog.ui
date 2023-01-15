@@ -738,17 +738,13 @@
              </layout>
             </item>
             <item>
-             <widget class="QGroupBox" name="gb_Upscaling">
+             <widget class="QGroupBox" name="gb_outputScaling">
               <property name="title">
-               <string>Upscaling</string>
+               <string>Output Scaling</string>
               </property>
               <layout class="QVBoxLayout" name="gb_Upscaling_layout">
                <item>
-                <widget class="QCheckBox" name="fsrUpscalingEnable">
-                 <property name="text">
-                  <string>Enable FSR Upscaling</string>
-                 </property>
-                </widget>
+                <widget class="QComboBox" name="outputScalingMode"/>
                </item>
                <item>
                 <widget class="Line" name="line">
