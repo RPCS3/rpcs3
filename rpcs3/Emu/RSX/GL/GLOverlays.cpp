@@ -35,7 +35,7 @@ namespace gl
 			fbo.create();
 
 			m_sampler.create();
-			m_sampler.apply_defaults(input_filter);
+			m_sampler.apply_defaults(static_cast<GLenum>(m_input_filter));
 
 			m_vertex_data_buffer.create();
 
@@ -322,7 +322,7 @@ namespace gl
 			"}\n";
 
 		// Smooth filtering required for inputs
-		input_filter = GL_LINEAR;
+		m_input_filter = gl::filter::linear;
 	}
 
 	gl::texture_view* ui_overlay_renderer::load_simple_image(rsx::overlays::image_info* desc, bool temp_resource, u32 owner_uid)
@@ -603,11 +603,17 @@ namespace gl
 			"		ocol = color;\n"
 			"}\n";
 
-		input_filter = GL_LINEAR;
+		m_input_filter = gl::filter::linear;
 	}
 
-	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d)
+	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d, gl::filter input_filter)
 	{
+		if (m_input_filter != input_filter)
+		{
+			m_input_filter = input_filter;
+			m_sampler.set_parameteri(GL_TEXTURE_MIN_FILTER, static_cast<GLenum>(m_input_filter));
+			m_sampler.set_parameteri(GL_TEXTURE_MAG_FILTER, static_cast<GLenum>(m_input_filter));
+		}
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
 		program_handle.uniforms["stereo"] = _3d + 0;

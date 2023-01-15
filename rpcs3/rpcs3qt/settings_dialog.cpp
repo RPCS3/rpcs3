@@ -599,6 +599,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 	SubscribeTooltip(ui->gbZCULL, tooltips.settings.zcull_operation_mode);
 
+	m_emu_settings->EnhanceComboBox(ui->outputScalingMode, emu_settings_type::OutputScalingMode);
+	SubscribeTooltip(ui->outputScalingMode, tooltips.settings.output_scaling_mode);
+
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
 	SubscribeTooltip(ui->dumpColor, tooltips.settings.dump_color);
@@ -633,9 +636,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->asyncTextureStreaming, emu_settings_type::VulkanAsyncTextureUploads);
 	SubscribeTooltip(ui->asyncTextureStreaming, tooltips.settings.async_texture_streaming);
-
-	m_emu_settings->EnhanceCheckBox(ui->fsrUpscalingEnable, emu_settings_type::FsrUpscalingEnable);
-	SubscribeTooltip(ui->fsrUpscalingEnable, tooltips.settings.fsr_upscaling);
 
 	// Radio buttons
 
@@ -866,15 +866,25 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		const bool is_vulkan = (text == r_creator->Vulkan.name);
 		ui->asyncTextureStreaming->setEnabled(is_vulkan);
 		ui->vulkansched->setEnabled(is_vulkan);
-		ui->fsrUpscalingEnable->setEnabled(is_vulkan);
-		ui->fsrSharpeningStrength->setEnabled(is_vulkan);
-		ui->fsrSharpeningStrengthReset->setEnabled(is_vulkan);
+	};
+
+	const auto apply_fsr_specific_options = [r_creator, this]()
+	{
+		const bool is_vulkan = (ui->renderBox->currentText() == r_creator->Vulkan.name);
+		const QVariantList var_list = ui->outputScalingMode->itemData(ui->outputScalingMode->currentIndex()).toList();
+		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
+		const bool fsr_selected = static_cast<output_scaling_mode>(var_list[1].toInt()) == output_scaling_mode::fsr;
+		ui->fsrSharpeningStrength->setEnabled(is_vulkan && fsr_selected);
+		ui->fsrSharpeningStrengthReset->setEnabled(is_vulkan && fsr_selected);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
 	on_strict_rendering_mode(ui->strictModeRendering->isChecked());
 	apply_renderer_specific_options(ui->renderBox->currentText()); // Init
+	apply_fsr_specific_options();
 	connect(ui->renderBox, &QComboBox::currentTextChanged, apply_renderer_specific_options);
+	connect(ui->renderBox, &QComboBox::currentTextChanged, this, apply_fsr_specific_options);
+	connect(ui->outputScalingMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, apply_fsr_specific_options);
 
 	//                      _ _         _______    _
 	//       /\            | (_)       |__   __|  | |

@@ -83,7 +83,6 @@ enum class emu_settings_type
 	TextureLodBias,
 	ResolutionScale,
 	MinimumScalableDimension,
-	FsrUpscalingEnable,
 	FsrSharpeningStrength,
 	ExclusiveFullscreenMode,
 	ForceCPUBlitEmulation,
@@ -101,6 +100,7 @@ enum class emu_settings_type
 	VulkanAsyncSchedulerDriver,
 	AllowHostGPULabels,
 	DisableMSLFastMath,
+	OutputScalingMode,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -272,11 +272,11 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
 	{ emu_settings_type::AllowHostGPULabels,         { "Video", "Allow Host GPU Labels"}},
 	{ emu_settings_type::DisableMSLFastMath,         { "Video", "Disable MSL Fast Math"}},
+	{ emu_settings_type::OutputScalingMode,          { "Video", "Output Scaling Mode"}},
 
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,           { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
 	{ emu_settings_type::VulkanAsyncSchedulerDriver,          { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
-	{ emu_settings_type::FsrUpscalingEnable,                  { "Video", "Vulkan", "Enable FidelityFX Super Resolution Upscaling"}},
 	{ emu_settings_type::FsrSharpeningStrength,               { "Video", "Vulkan", "FidelityFX CAS Sharpening Intensity"}},
 	{ emu_settings_type::ExclusiveFullscreenMode,             { "Video", "Vulkan", "Exclusive Fullscreen Mode"}},
 

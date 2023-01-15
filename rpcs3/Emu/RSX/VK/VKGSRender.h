@@ -74,7 +74,7 @@ private:
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
 	std::unique_ptr<vk::upscaler> m_upscaler;
-	bool m_use_fsr_upscaling{false};
+	output_scaling_mode m_output_scaling{output_scaling_mode::bilinear};
 
 	std::unique_ptr<vk::buffer> m_cond_render_buffer;
 	u64 m_cond_render_sync_tag = 0;

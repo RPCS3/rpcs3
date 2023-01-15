@@ -977,6 +977,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case gpu_preset_level::low: return tr("Low", "Shader Precision");
 		}
 		break;
+	case emu_settings_type::OutputScalingMode:
+		switch (static_cast<output_scaling_mode>(index))
+		{
+		case output_scaling_mode::nearest: return tr("Nearest", "Output Scaling Mode");
+		case output_scaling_mode::bilinear: return tr("Bilinear", "Output Scaling Mode");
+		case output_scaling_mode::fsr: return tr("FidelityFX Super Resolution", "Output Scaling Mode");
+		}
+		break;
 	case emu_settings_type::AudioRenderer:
 		switch (static_cast<audio_renderer>(index))
 		{

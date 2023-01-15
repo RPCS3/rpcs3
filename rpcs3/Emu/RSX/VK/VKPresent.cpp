@@ -6,6 +6,7 @@
 
 #include "upscalers/bilinear_pass.hpp"
 #include "upscalers/fsr_pass.h"
+#include "upscalers/nearest_pass.hpp"
 #include "util/asm.hpp"
 #include "util/video_provider.h"
 
@@ -590,13 +591,17 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
-	const bool use_fsr_upscaling = g_cfg.video.vk.fsr_upscaling.get();
+	const output_scaling_mode output_scaling = g_cfg.video.output_scaling.get();
 
-	if (!m_upscaler || m_use_fsr_upscaling != use_fsr_upscaling)
+	if (!m_upscaler || m_output_scaling != output_scaling)
 	{
-		m_use_fsr_upscaling = use_fsr_upscaling;
+		m_output_scaling = output_scaling;
 
-		if (m_use_fsr_upscaling)
+		if (m_output_scaling == output_scaling_mode::nearest)
+		{
+			m_upscaler = std::make_unique<vk::nearest_upscale_pass>();
+		}
+		else if (m_output_scaling == output_scaling_mode::fsr)
 		{
 			m_upscaler = std::make_unique<vk::fsr_upscale_pass>();
 		}
@@ -615,7 +620,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			if (image_to_flip) calibration_src.push_back(image_to_flip);
 			if (image_to_flip2) calibration_src.push_back(image_to_flip2);
 
-			if (m_use_fsr_upscaling && !avconfig._3d) // 3D will be implemented later
+			if (m_output_scaling == output_scaling_mode::fsr && !avconfig._3d) // 3D will be implemented later
 			{
 				// Run upscaling pass before the rest of the output effects pipeline
 				// This can be done with all upscalers but we already get bilinear upscaling for free if we just out the filters directly
