@@ -12,6 +12,10 @@
 #endif
 #endif
 
+#ifdef _WIN32
+#include <shlobj.h>
+#endif
+
 namespace rsx
 {
 	namespace overlays
@@ -108,7 +112,14 @@ namespace rsx
 			result.font_names.push_back(font_name);
 
 #ifdef _WIN32
-			result.lookup_font_dirs.emplace_back("C:/Windows/Fonts/");
+			PWSTR pszPath;
+			std::string lookup_font_dir = "C:/Windows/Fonts/";
+			if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Fonts, 0, nullptr, &pszPath)))
+			{
+				lookup_font_dir = wchar_to_utf8(pszPath) + "/";
+			}
+			result.lookup_font_dirs.emplace_back(lookup_font_dir);
+			CoTaskMemFree(pszPath);
 #else
 			char* home = getenv("HOME");
 			if (home == nullptr)
@@ -283,15 +294,15 @@ namespace rsx
 			}
 		}
 
-		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap)
+		std::vector<vertex> font::render_text_ex(f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap)
 		{
 			x_advance = 0.f;
 			y_advance = 0.f;
-			result.clear();
+			std::vector<vertex> result;
 
 			if (!initialized)
 			{
-				return;
+				return result;
 			}
 
 			// Render as many characters as possible as glyphs.
@@ -302,7 +313,7 @@ namespace rsx
 				case '\0':
 				{
 					// We're done.
-					return;
+					return result;
 				}
 				case '\n':
 				{
@@ -409,23 +420,21 @@ namespace rsx
 				}
 				} // switch
 			}
+			return result;
 		}
 
 		std::vector<vertex> font::render_text(const char32_t* text, u16 max_width, bool wrap)
 		{
-			std::vector<vertex> result;
 			f32 unused_x, unused_y;
 
-			render_text_ex(result, unused_x, unused_y, text, -1, max_width, wrap);
-			return result;
+			return render_text_ex(unused_x, unused_y, text, -1, max_width, wrap);
 		}
 
 		std::pair<f32, f32> font::get_char_offset(const char32_t* text, usz max_length, u16 max_width, bool wrap)
 		{
-			std::vector<vertex> unused;
 			f32 loc_x, loc_y;
 
-			render_text_ex(unused, loc_x, loc_y, text, max_length, max_width, wrap);
+			render_text_ex(loc_x, loc_y, text, max_length, max_width, wrap);
 			return {loc_x, loc_y};
 		}
 
