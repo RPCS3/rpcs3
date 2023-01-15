@@ -3208,6 +3208,11 @@ extern void ppu_initialize()
 
 	idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& _module)
 	{
+		if (_module.funcs.empty())
+		{
+			return;
+		}
+
 		if (_module.path.starts_with(firmware_sprx_path))
 		{
 			// Postpone testing
