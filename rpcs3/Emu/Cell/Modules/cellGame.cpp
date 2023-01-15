@@ -985,16 +985,14 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 		if (setParam)
 		{
-			const psf::registry this_sfo = psf::load(Emu.GetSfoDir(true) + "/PARAM.SFO").sfo;
-
 			if (new_data)
 			{
-				psf::assign(sfo, "CATEGORY", psf::string(4, "GD"));
+				psf::assign(sfo, "CATEGORY", psf::string(3, "GD"));
 			}
 
-			psf::assign(sfo, "TITLE_ID", psf::string(16, setParam->titleId));
+			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
 			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
-			psf::assign(sfo, "VERSION", psf::string(8, setParam->dataVersion));
+			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
 			psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
 
 			for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
@@ -1005,12 +1003,6 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				}
 
 				psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->titleLang[i]));
-			}
-
-			if (this_sfo.contains("PS3_SYSTEM_VER"))
-			{
-				// TODO: Check this and what happens when it's missing
-				psf::assign(sfo, "PS3_SYSTEM_VER", psf::string(8, this_sfo.at("PS3_SYSTEM_VER").as_string()));
 			}
 
 			fs::pending_file temp(vfs::get(dir + "/PARAM.SFO"));
@@ -1129,30 +1121,14 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	perm.temp = vfs::get(tmp_contentInfo);
 	cellGame.success("cellGameCreateGameData(): temporary directory '%s' has been created", tmp_contentInfo);
 
-	const auto title_val = psf::string(CELL_GAME_SYSP_TITLE_SIZE, init->title);
-
-	const psf::registry this_sfo = psf::load(Emu.GetSfoDir(true) + "/PARAM.SFO").sfo;
-
 	// Initial PARAM.SFO parameters (overwrite)
 	perm.sfo =
 	{
-		{ "CATEGORY", psf::string(4, "GD") },
-		{ "TITLE_ID", psf::string(16, init->titleId) },
-		{ "TITLE", title_val },
-		{ "VERSION", psf::string(8, init->version) },
-		{ "PARENTAL_LEVEL", psf::entry(0) },
+		{ "CATEGORY", psf::string(3, "GD") },
+		{ "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, init->titleId) },
+		{ "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, init->title) },
+		{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, init->version) },
 	};
-
-	for (u32 i = 0; i < 16; i++)
-	{
-		//psf::assign(perm.sfo, fmt::format("TITLE_%02d", i), title_val);
-	}
-
-	if (this_sfo.contains("PS3_SYSTEM_VER"))
-	{
-		// TODO: Check this and what happens when it's missing
-		psf::assign(perm.sfo, "PS3_SYSTEM_VER", psf::string(8, this_sfo.at("PS3_SYSTEM_VER").as_string()));
-	}
 
 	return CELL_OK;
 }
