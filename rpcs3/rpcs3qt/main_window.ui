@@ -275,6 +275,7 @@
     <addaction name="toolsmemory_viewerAct"/>
     <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="toolsStringSearchAct"/>
+    <addaction name="toolsSystemCommandsAct"/>
     <addaction name="patchCreatorAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
@@ -1243,6 +1244,14 @@
   <action name="confShortcutsAct">
    <property name="text">
     <string>Shortcuts</string>
+   </property>
+  </action>
+  <action name="toolsSystemCommandsAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>System Commands</string>
    </property>
   </action>
  </widget>
