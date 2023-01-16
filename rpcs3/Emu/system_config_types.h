@@ -305,3 +305,10 @@ enum class gpu_preset_level
 	low,
 	_auto
 };
+
+enum class output_scaling_mode
+{
+	nearest,
+	bilinear,
+	fsr
+};
