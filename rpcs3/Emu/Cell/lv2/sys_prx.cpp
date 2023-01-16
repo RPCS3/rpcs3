@@ -308,11 +308,12 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 
 	if (seg_count)
 	{
-		std::basic_string<bool> loaded_flags;
+		std::basic_string<bool> loaded_flags, external_flags;
 
-		if (version >= 3)
+		if (version >= 4)
 		{
 			ar(loaded_flags);
+			ar(external_flags);
 		}
 
 		fs::file file{path.substr(0, path.size() - (offset ? fmt::format("_x%x", offset).size() : 0))};
@@ -323,13 +324,14 @@ std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
 			file = make_file_view(std::move(file), offset);
 			prx = ppu_load_prx(ppu_prx_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, path, 0, &ar);
 			prx->m_loaded_flags = std::move(loaded_flags);
-			
-			if (version == 2 && state == PRX_STATE_STARTED)
+			prx->m_external_loaded_flags = std::move(external_flags);
+
+			if (version == 2 && (state == PRX_STATE_STARTED || state == PRX_STATE_STARTING))
 			{
 				prx->load_exports();
 			}
 
-			if (version == 3 && state == PRX_STATE_STARTED)
+			if (version >= 4 && state <= PRX_STATE_STARTED)
 			{
 				prx->restore_exports();
 			}
@@ -377,6 +379,7 @@ void lv2_prx::save(utils::serial& ar)
 	if (!segs.empty())
 	{
 		ar(m_loaded_flags);
+		ar(m_external_loaded_flags);
 	}
 
 	for (const ppu_segment& seg : segs)
@@ -765,9 +768,9 @@ void lv2_prx::restore_exports()
 
 	std::basic_string<bool> loaded_flags_empty;
 
-	for (usz start = exports_start, i = 0; start < exports_end; i++, start += sizeof_export_data)
+	for (usz start = exports_start, i = 0; start < exports_end; i++, start += vm::read8(start) ? vm::read8(start) : sizeof_export_data)
 	{
-		if (::at32(m_loaded_flags, i))
+		if (::at32(m_external_loaded_flags, i) || (!m_loaded_flags.empty() && ::at32(m_loaded_flags, i)))
 		{
 			loaded_flags_empty.clear();
 			ppu_manual_load_imports_exports(0, 0, start, sizeof_export_data, loaded_flags_empty);
@@ -783,7 +786,14 @@ void lv2_prx::unload_exports()
 		return;
 	}
 
-	ppu_manual_load_imports_exports(0, 0, exports_start, exports_end - exports_start, m_loaded_flags);
+	std::basic_string<bool> merged = m_loaded_flags;
+
+	for (usz i = 0; i < merged.size(); i++)
+	{
+		merged[i] |= ::at32(m_external_loaded_flags, i);
+	}
+
+	ppu_manual_load_imports_exports(0, 0, exports_start, exports_end - exports_start, merged);
 }
 
 error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::ptr<void> opt)
@@ -864,7 +874,39 @@ error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 		return CELL_EFAULT;
 	}
 
-	ppu_manual_load_imports_exports(0, 0, library.addr(), 0x1c, *std::make_unique<std::basic_string<bool>>());
+	constexpr u32 sizeof_lib = 0x1c;
+
+	std::array<char, sizeof_lib> mem_copy{};
+	std::memcpy(mem_copy.data(), library.get_ptr(), sizeof_lib);
+
+	std::basic_string<bool> flags;
+	ppu_manual_load_imports_exports(0, 0, library.addr(), sizeof_lib, flags);
+
+	if (flags.front())
+	{
+		const bool success = idm::select<lv2_obj, lv2_prx>([&](u32 id, lv2_prx& prx)
+		{
+			if (prx.state == PRX_STATE_INITIALIZED)
+			{
+				for (u32 lib_addr = prx.exports_start, index = 0; lib_addr < prx.exports_end; index++, lib_addr += vm::read8(lib_addr) ? vm::read8(lib_addr) : sizeof_lib)
+				{
+					if (std::memcpy(vm::base(lib_addr), mem_copy.data(), sizeof_lib) == 0)
+					{
+						atomic_storage<bool>::release(prx.m_external_loaded_flags[index], true);
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}).ret;
+
+		if (!success)
+		{
+			sys_prx.error("_sys_prx_register_library(): Failed to associate library to PRX!");
+		}
+	}
+
 	return CELL_OK;
 }
 

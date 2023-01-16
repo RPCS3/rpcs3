@@ -72,7 +72,7 @@ Localized::sound::sound()
 
 Localized::title_t::title_t()
 	: titles({
-		{ "vsh/module/vsh.self", tr("XMB (VSH)") },
+		{ "vsh/module/vsh.self", tr("The PS3 Interface (XMB, or VSH)") },
 	})
 {
 }

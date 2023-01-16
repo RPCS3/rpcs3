@@ -678,10 +678,10 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 	std::lock_guard lock(link->mutex);
 
 	usz unload_index = 0;
+	ppu_prx_module_info lib{};
 
-	for (u32 addr = exports_start; addr < exports_end; unload_index++)
+	for (u32 addr = exports_start; addr < exports_end; unload_index++, addr += lib.size ? lib.size : sizeof(ppu_prx_module_info))
 	{
-		ppu_prx_module_info lib{};
 		std::memcpy(&lib, vm::base(addr), sizeof(lib));
 
 		const bool is_library = !!(lib.attributes & PRX_EXPORT_LIBRARY_FLAG);
@@ -712,20 +712,17 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				result.emplace(nid, addr);
 			}
 
-			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
 			continue;
 		}
 
 		if (!is_library)
 		{
 			// Skipped if none of the flags is set
-			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
 			continue;
 		}
 
 		if (for_observing_callbacks)
 		{
-			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
 			continue;
 		}
 
@@ -738,7 +735,6 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				ppu_register_library_lock(module_name, false);
 			}
 
-			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
 			continue;
 		}
 
@@ -759,7 +755,6 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 		if (!should_load)
 		{
 			ppu_loader.notice("** Skipped module '%s' (already loaded)", module_name);
-			addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
 			continue;
 		}
 
@@ -861,8 +856,6 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				}
 			}
 		}
-
-		addr += lib.size ? lib.size : sizeof(ppu_prx_module_info);
 	}
 
 	return result;
@@ -1516,9 +1509,19 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		prx->module_info_version[0] = lib_info->version[0];
 		prx->module_info_version[1] = lib_info->version[1];
 		prx->module_info_attributes = lib_info->attributes;
-		
+
 		prx->exports_start = lib_info->exports_start;
 		prx->exports_end = lib_info->exports_end;
+
+		for (usz start = prx->exports_start, size = 0;; size++, start += vm::read8(start) ? vm::read8(start) : sizeof(ppu_prx_module_info))
+		{
+			if (start >= prx->exports_end)
+			{
+				// Preallocate storage
+				prx->m_external_loaded_flags.resize(size);
+				break;
+			}
+		}
 
 		ppu_loader.warning("Library %s (rtoc=0x%x):", lib_name, lib_info->toc);
 

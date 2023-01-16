@@ -1077,10 +1077,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				m_path = disc;
 				m_path += std::string_view(argv[0]).substr(9);
 			}
-			else if (argv[0].starts_with("/host_root"sv))
+			else if (argv[0].starts_with("/host_root/"sv))
 			{
 				sys_log.error("Host root has been used in path redirection!");
-				m_path = argv[0].substr(9);
+				m_path = argv[0].substr(11);
 			}
 			else if (argv[0].starts_with("/dev_hdd1"sv))
 			{
