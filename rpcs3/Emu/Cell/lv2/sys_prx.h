@@ -72,7 +72,7 @@ struct sys_prx_module_info_t
 	be_t<u32> all_segments_num; // 0x34
 	vm::bptr<char> filename; // 0x38
 	be_t<u32> filename_size; // 0x3c
-	vm::bptr<sys_prx_segment_info_t> segments; // 0x40 
+	vm::bptr<sys_prx_segment_info_t> segments; // 0x40
 	be_t<u32> segments_num; // 0x44
 };
 
@@ -196,6 +196,7 @@ struct lv2_prx final : lv2_obj, ppu_module
 	u32 exports_end = 0;
 
 	std::basic_string<bool> m_loaded_flags;
+	std::basic_string<bool> m_external_loaded_flags;
 
 	void load_exports(); // (Re)load exports
 	void restore_exports(); // For savestates

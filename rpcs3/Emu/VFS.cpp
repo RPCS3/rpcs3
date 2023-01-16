@@ -75,6 +75,10 @@ bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 				list.back()->path += '/';
 			if (!is_dir && list.back()->path.ends_with('/'))
 				vfs_log.error("File mounted with trailing /.");
+
+			if (path == "/") // Special
+				list.back()->path = "/";
+
 			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, list.back()->path);
 			return true;
 		}
@@ -376,21 +380,19 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 
 		std::vector<std::string_view> mount_path_empty;
 
-		if (std::string res = vfs::retrieve(path, &table.root, &mount_path_empty); !res.empty())
+		const std::string rpath = Emu.GetCallbacks().resolve_path(path);
+
+		if (!rpath.empty())
 		{
-			return res;
+			if (std::string res = vfs::retrieve(rpath, &table.root, &mount_path_empty); !res.empty())
+			{
+				return res;
+			}
 		}
 
 		mount_path_empty.clear();
 
-		const std::string rpath = Emu.GetCallbacks().resolve_path(path);
-
-		if (rpath.empty())
-		{
-			return {};
-		}
-
-		return vfs::retrieve(rpath, &table.root, &mount_path_empty);
+		return vfs::retrieve(path, &table.root, &mount_path_empty);
 	}
 
 	mount_path->emplace_back();

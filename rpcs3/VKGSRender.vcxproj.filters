@@ -168,6 +168,9 @@
       <Filter>upscalers</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\VK\VKGSRenderTypes.hpp" />
+    <ClInclude Include="Emu\RSX\VK\upscalers\nearest_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="vkutils">

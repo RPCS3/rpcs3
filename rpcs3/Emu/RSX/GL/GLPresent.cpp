@@ -265,6 +265,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
 
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
+		// TODO: Implement FSR for OpenGL and remove this fallback to bilinear
+		const gl::filter filter = g_cfg.video.output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
 
 		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && !avconfig._3d)
 		{
@@ -274,7 +276,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			m_flip_fbo.color = image_to_flip;
 			m_flip_fbo.read_buffer(m_flip_fbo.color);
 			m_flip_fbo.draw_buffer(m_flip_fbo.color);
-			m_flip_fbo.blit(gl::screen, screen_area, aspect_ratio.flipped_vertical(), gl::buffers::color, gl::filter::linear);
+			m_flip_fbo.blit(gl::screen, screen_area, aspect_ratio.flipped_vertical(), gl::buffers::color, filter);
 		}
 		else
 		{
@@ -283,7 +285,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			const rsx::simple_array<GLuint> images{ image_to_flip, image_to_flip2 };
 
 			gl::screen.bind();
-			m_video_output_pass.run(cmd, areau(aspect_ratio), images, gamma, limited_range, avconfig._3d);
+			m_video_output_pass.run(cmd, areau(aspect_ratio), images, gamma, limited_range, avconfig._3d, filter);
 		}
 	}
 

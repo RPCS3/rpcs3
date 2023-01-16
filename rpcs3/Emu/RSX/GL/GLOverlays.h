@@ -33,7 +33,7 @@ namespace gl
 
 		u32 num_drawable_elements = 4;
 		GLenum primitives = GL_TRIANGLE_STRIP;
-		GLenum input_filter = GL_NEAREST;
+		gl::filter m_input_filter = gl::filter::nearest;
 
 		u32 m_write_aspect_mask = gl::image_aspect::color | gl::image_aspect::depth;
 		bool enable_depth_writes = false;
@@ -93,7 +93,7 @@ namespace gl
 	{
 		video_out_calibration_pass();
 
-		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d);
+		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d, gl::filter input_filter);
 	};
 
 	struct rp_ssbo_to_generic_texture : public overlay_pass

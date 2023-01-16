@@ -1267,7 +1267,7 @@ std::string spu_thread::dump_misc() const
 
 void spu_thread::cpu_on_stop()
 {
-	if (current_func)
+	if (current_func && is_stopped(state - cpu_flag::stop))
 	{
 		if (start_time)
 		{
@@ -1496,7 +1496,7 @@ void spu_thread::cpu_task()
 		unsavable = false;
 
 		// Print some stats
-		spu_log.notice("Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
+		(!group || group->stop_count < 5 ? spu_log.notice : spu_log.trace)("Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
 	}
 	else
 	{

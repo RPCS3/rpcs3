@@ -182,8 +182,8 @@ public:
 		const QString async_texture_streaming   = tr("Stream textures to GPU in parallel with 3D rendering using asynchronous compute.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer and greatly benefits from having MTRSX enabled if you have a capable CPU.");
 		const QString exclusive_fullscreen_mode = tr("Controls which fullscreen mode RPCS3 requests from drivers when using Vulkan renderer.\nAutomatic will let the driver choose an appropriate mode, while the other options will hint the drivers on whether they should use exclusive or borderless fullscreen.\nUsing Prefer borderless fullscreen option can help if you have issues with streaming RPCS3 gameplay or if your system incorrectly enables HDR mode when using fullscreen.");
 
-		const QString fsr_upscaling     = tr("Enable FidelityFX Super Resolution upscaling filter to improve the look of upscaled images.\nIf the game is rendering at an internal resolution lower than your window resolution, FidelityFX will handle the upscale.\nCan cause visual artifacts.\nDoes not work with stereo 3D output for now.");
-		const QString fsr_rcas_strength = tr("Control the sharpening strength applied by FidelityFX Super Resolution. Higher values will give sharper output but may introduce artifacts.");
+		const QString output_scaling_mode = tr("Final image filtering. Nearest applies no filtering, Bilinear smooths the image, and FidelityFX Super Resolution enhances upscaled images.\nIf the game is rendering at an internal resolution lower than your window resolution, FidelityFX will handle the upscale.\nFidelityFX can cause visual artifacts.\nFidelityFX does not work with stereo 3D output for now.");
+		const QString fsr_rcas_strength   = tr("Control the sharpening strength applied by FidelityFX Super Resolution. Higher values will give sharper output but may introduce artifacts.");
 
 		const QString texture_lod_bias = tr("Changes Texture sampling accuracy. (Small changes have a big effect.)\nAvoid using values outside the range of -12 to +12 if you're unsure.\n-3 to +3 is plenty for most usecases");
 

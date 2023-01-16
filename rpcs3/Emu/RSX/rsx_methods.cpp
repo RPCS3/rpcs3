@@ -783,13 +783,22 @@ namespace rsx
 
 		void set_surface_dirty_bit(thread* rsx, u32 reg, u32 arg)
 		{
-			if (reg == NV4097_SET_SURFACE_CLIP_VERTICAL ||
-				reg == NV4097_SET_SURFACE_CLIP_HORIZONTAL)
+			if (arg == method_registers.register_previous_value)
 			{
-				if (arg != method_registers.register_previous_value)
-				{
-					rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
-				}
+				return;
+			}
+
+			switch (reg)
+			{
+			case NV4097_SET_SURFACE_COLOR_TARGET:
+				rsx->m_graphics_state |= rsx::pipeline_state::pipeline_config_dirty;
+				break;
+			case NV4097_SET_SURFACE_CLIP_VERTICAL:
+			case NV4097_SET_SURFACE_CLIP_HORIZONTAL:
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
+				break;
+			default:
+				break;
 			}
 
 			rsx->m_rtts_dirty = true;
@@ -798,16 +807,23 @@ namespace rsx
 
 		void set_surface_format(thread* rsx, u32 reg, u32 arg)
 		{
-			if (reg == NV4097_SET_SURFACE_FORMAT)
+			// The high bits of this register are just log2(dimension), ignore them
+			if ((arg & 0xFFFF) == (method_registers.register_previous_value & 0xFFFF))
 			{
-				const auto current = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(arg);
-				const auto previous = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(method_registers.register_previous_value);
+				return;
+			}
 
-				if (*current.antialias() != *previous.antialias() ||                               // Antialias control has changed, update ROP parameters
-					current.is_integer_color_format() != previous.is_integer_color_format())     // The type of color format also requires ROP control update
-				{
-					rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
-				}
+			// The important parameters have changed (format, type, antialias)
+			rsx->m_graphics_state |= rsx::pipeline_state::pipeline_config_dirty;
+
+			// Check if we need to also update fragment state
+			const auto current = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(arg);
+			const auto previous = method_registers.decode<NV4097_SET_SURFACE_FORMAT>(method_registers.register_previous_value);
+
+			if (*current.antialias() != *previous.antialias() ||                         // Antialias control has changed, update ROP parameters
+				current.is_integer_color_format() != previous.is_integer_color_format()) // The type of color format also requires ROP control update
+			{
+				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
 			}
 
 			set_surface_dirty_bit(rsx, reg, arg);
