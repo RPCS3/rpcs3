@@ -5,16 +5,20 @@ export NONINTERACTIVE=1
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"
 
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/homebrew/bin/brew install llvm@14 sdl2 glew cmake nasm ninja p7zip create-dmg ccache
-arch -x86_64 /usr/local/homebrew/bin/brew install --build-from-source qt@5
+arch -x86_64 /usr/local/homebrew/bin/brew install llvm@14 sdl2 glew cmake nasm ninja p7zip create-dmg ccache qt@5
+#arch -x86_64 /usr/local/homebrew/bin/brew install --build-from-source qt@5
 
 export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
 export CC=clang
 export Qt5_DIR="/usr/local/opt/qt@5/lib/cmake/Qt5"
 export PATH="/usr/local/opt/llvm@14/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
-export LDFLAGS="-L/usr/local/opt/llvm@14/lib -Wl,-rpath,/usr/local/opt/llvm@14/lib"
-export CPPFLAGS="-I/usr/local/opt/llvm@14/include -msse -msse2 -mcx16 -no-pie"
+#export LDFLAGS="-L/usr/local/opt/llvm@14/lib -Wl,-rpath,/usr/local/opt/llvm@14/lib"
+#export CPPFLAGS="-I/usr/local/opt/llvm@14/include -msse -msse2 -mcx16 -no-pie"
+export LDFLAGS="-L/usr/local/Homebrew/lib -Wl,-rpath,/usr/local/Homebrew/lib"
+export CPPFLAGS="-I/usr/local/Homebrew/include -msse -msse2 -mcx16 -no-pie"
+export LIBRARY_PATH=/usr/local/Homebrew/lib
+export LD_LIBRARY_PATH=/usr/local/Homebrew/lib
 
 brew unlink llvm@14
 brew link llvm@14
@@ -59,7 +63,7 @@ cmake .. \
     -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF \
     -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_PERF=OFF -DLLVM_ENABLE_Z3_SOLVER=OFF \
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
-    -DUSE_SYSTEM_MVK=OFF -DWITH_LLVM=OFF \
+    -DUSE_SYSTEM_MVK=OFF -DWITH_LLVM=ON \
     -G Ninja
 
 ninja; build_status=$?;
