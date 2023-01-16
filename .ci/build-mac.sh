@@ -1,54 +1,31 @@
 #!/bin/sh -ex
 
-export NONINTERACTIVE=1
+brew install -f --overwrite llvm@14 nasm ninja git p7zip create-dmg ccache
 
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)"
-
+#/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/homebrew/bin/brew install llvm@14 sdl2 glew cmake nasm ninja p7zip create-dmg ccache qt@5
-#arch -x86_64 /usr/local/homebrew/bin/brew install --build-from-source qt@5
+arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm@14 sdl2 qt@5 glew cmake
 
-export MACOSX_DEPLOYMENT_TARGET=12.0
+#export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
 export CC=clang
-export Qt5_DIR="/usr/local/opt/qt@5/lib/cmake/Qt5"
-export PATH="/usr/local/opt/llvm@14/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin"
-#export LDFLAGS="-L/usr/local/opt/llvm@14/lib -Wl,-rpath,/usr/local/opt/llvm@14/lib"
-#export CPPFLAGS="-I/usr/local/opt/llvm@14/include -msse -msse2 -mcx16 -no-pie"
-export LDFLAGS="-L/usr/local/Homebrew/lib -Wl,-rpath,/usr/local/Homebrew/lib"
-export CPPFLAGS="-I/usr/local/Homebrew/include -msse -msse2 -mcx16 -no-pie"
-export LIBRARY_PATH=/usr/local/Homebrew/lib
-export LD_LIBRARY_PATH=/usr/local/Homebrew/lib
 
-brew unlink llvm@14
-brew link llvm@14
+export BREW_PATH;
+BREW_PATH="$(brew --prefix)"
+export BREW_X64_PATH;
+BREW_X64_PATH="$("/usr/local/homebrew/bin/brew" --prefix)"
+export BREW_BIN="/usr/local/bin"
+export BREW_SBIN="/usr/local/sbin"
+export CMAKE_EXTRA_OPTS='-DLLVM_TARGETS_TO_BUILD=X86'
 
-brew unlink sdl2
-brew link sdl2
+export Qt5_DIR="$BREW_X64_PATH/opt/qt@5/lib/cmake/Qt5"
+export SDL2_DIR="$BREW_X64_PATH/opt/qt@5/lib/cmake/SDL2"
 
-brew unlink qt@5
-brew link qt@5
-
-brew unlink glew
-brew link glew
-
-brew unlink cmake
-brew link cmake
-
-brew unlink nasm
-brew link nasm
-
-brew unlink ninja
-brew link ninja
-
-brew unlink p7zip
-brew link p7zip
-
-brew unlink create-dmg
-brew link create-dmg
-
-brew unlink ccache
-brew link ccache
+export PATH="$BREW_PATH/opt/llvm@14/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
+export LDFLAGS="-L$BREW_X64_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib"
+export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -no-pie"
+export LIBRARY_PATH="$BREW_X64_PATH/lib"
+export LD_LIBRARY_PATH="$BREW_X64_PATH/lib"
 
 git submodule update --init --recursive --depth 1
 
@@ -57,16 +34,18 @@ sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVer
 
 mkdir build && cd build || exit 1
 
-cmake .. \
-    -DUSE_SDL=ON -DUSE_DISCORD_RPC=OFF -DUSE_VULKAN=ON -DUSE_ALSA=OFF -DUSE_PULSE=OFF -DUSE_AUDIOUNIT=ON \
-    -DLLVM_CCACHE_BUILD=OFF -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF \
+"$BREW_X64_PATH/bin/cmake" .. \
+    -DUSE_DISCORD_RPC=OFF -DUSE_VULKAN=ON -DUSE_ALSA=OFF -DUSE_PULSE=OFF -DUSE_AUDIOUNIT=ON \
+    -DLLVM_CCACHE_BUILD=OFF -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF \
     -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF \
     -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_PERF=OFF -DLLVM_ENABLE_Z3_SOLVER=OFF \
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
-    -DUSE_SYSTEM_MVK=OFF -DWITH_LLVM=ON \
+    -DUSE_SYSTEM_MVK=OFF \
+    $CMAKE_EXTRA_OPTS \
+    -DLLVM_TARGET_ARCH=X86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_IGNORE_PATH="$BREW_PATH/lib" \
     -G Ninja
 
-ninja; build_status=$?;
+"$BREW_PATH/bin/ninja"; build_status=$?;
 
 cd ..
 
