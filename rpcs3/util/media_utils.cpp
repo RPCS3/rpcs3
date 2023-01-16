@@ -715,7 +715,7 @@ namespace utils
 			}
 			else
 			{
-				media_log.error("video_encoder: Could not find requested video_codec %d = %s", static_cast<int>(used_codec), encoder->name);
+				media_log.error("video_encoder: Could not find requested video_codec %d", static_cast<int>(used_codec));
 			}
 
 			// Fallback to some other codec
