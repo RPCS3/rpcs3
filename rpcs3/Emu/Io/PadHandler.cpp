@@ -323,6 +323,26 @@ void PadHandlerBase::init_configs()
 	}
 }
 
+cfg_pad* PadHandlerBase::get_config(const std::string& pad_id)
+{
+	int index = 0;
+
+	for (uint i = 0; i < MAX_GAMEPADS; i++)
+	{
+		if (g_cfg_input.player[i]->handler == m_type)
+		{
+			if (g_cfg_input.player[i]->device.to_string() == pad_id)
+			{
+				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
+				return &m_pad_configs[index];
+			}
+			index++;
+		}
+	}
+
+	return nullptr;
+}
+
 PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
 {
 	if (get_blacklist)

@@ -205,21 +205,7 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 larg
 	device->large_motor = large_motor;
 	device->small_motor = small_motor;
 	device->player_id = player_id;
-
-	int index = 0;
-	for (uint i = 0; i < MAX_GAMEPADS; i++)
-	{
-		if (g_cfg_input.player[i]->handler == m_type)
-		{
-			if (g_cfg_input.player[i]->device.to_string() == padId)
-			{
-				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
-				device->config = &m_pad_configs[index];
-				break;
-			}
-			index++;
-		}
-	}
+	device->config = get_config(padId);
 
 	ensure(device->config);
 

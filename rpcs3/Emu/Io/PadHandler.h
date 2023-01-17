@@ -229,4 +229,5 @@ protected:
 	virtual void get_mapping(const pad_ensemble& binding);
 	void TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool ignore_stick_threshold = false, bool ignore_trigger_threshold = false);
 	void init_configs();
+	cfg_pad* get_config(const std::string& pad_id);
 };

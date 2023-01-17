@@ -443,21 +443,9 @@ void sdl_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 larg
 		return;
 
 	dev->player_id = player_id;
+	dev->config = get_config(padId);
 
-	int index = 0;
-	for (uint i = 0; i < MAX_GAMEPADS; i++)
-	{
-		if (g_cfg_input.player[i]->handler == m_type)
-		{
-			if (g_cfg_input.player[i]->device.to_string() == padId)
-			{
-				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
-				device->config = &m_pad_configs[index];
-				break;
-			}
-			index++;
-		}
-	}
+	ensure(dev->config);
 
 	set_rumble(dev, large_motor, small_motor);
 
