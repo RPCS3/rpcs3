@@ -56,6 +56,11 @@ namespace rsx
 			return m_visible;
 		}
 
+		bool cursor_item::visible() const
+		{
+			return m_visible;
+		}
+
 		compiled_resource cursor_item::get_compiled()
 		{
 			if (!m_visible)

@@ -51,6 +51,10 @@ void fmt_class_string<CellOskDialogContinuousMode>::format(std::string& out, u64
 	});
 }
 
+atomic_t<bool> g_osk_pointer_enabled = false;
+atomic_t<f32> g_osk_pointer_x = 0.0f;
+atomic_t<f32> g_osk_pointer_y = 0.0f;
+
 OskDialogBase::~OskDialogBase()
 {
 }
@@ -535,6 +539,11 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	Emu.BlockingCallFromMainThread([=, &info]()
 	{
+		// Make sure to always have the latest pointer params
+		g_osk_pointer_enabled = info.pointer_enabled.load();
+		g_osk_pointer_x = info.pointer_pos.x;
+		g_osk_pointer_y = info.pointer_pos.y;
+
 		osk->Create({
 			.title = get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE),
 			.message = message,
@@ -802,7 +811,7 @@ error_code cellOskDialogSetInitialInputDevice(u32 inputDevice)
 
 error_code cellOskDialogSetInitialKeyLayout(u32 initialKeyLayout)
 {
-	cellOskDialog.todo("cellOskDialogSetInitialKeyLayout(initialKeyLayout=%d)", initialKeyLayout);
+	cellOskDialog.warning("cellOskDialogSetInitialKeyLayout(initialKeyLayout=%d)", initialKeyLayout);
 
 	if (initialKeyLayout > CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_FULLKEY)
 	{
@@ -830,7 +839,7 @@ error_code cellOskDialogDisableDimmer()
 
 error_code cellOskDialogSetKeyLayoutOption(u32 option)
 {
-	cellOskDialog.todo("cellOskDialogSetKeyLayoutOption(option=0x%x)", option);
+	cellOskDialog.warning("cellOskDialogSetKeyLayoutOption(option=0x%x)", option);
 
 	if (option == 0 || option > 3) // CELL_OSKDIALOG_10KEY_PANEL OR CELL_OSKDIALOG_FULLKEY_PANEL
 	{
@@ -844,7 +853,7 @@ error_code cellOskDialogSetKeyLayoutOption(u32 option)
 
 error_code cellOskDialogAddSupportLanguage(u32 supportLanguage)
 {
-	cellOskDialog.todo("cellOskDialogAddSupportLanguage(supportLanguage=0x%x)", supportLanguage);
+	cellOskDialog.warning("cellOskDialogAddSupportLanguage(supportLanguage=0x%x)", supportLanguage);
 
 	// TODO: error checks
 
@@ -855,7 +864,7 @@ error_code cellOskDialogAddSupportLanguage(u32 supportLanguage)
 
 error_code cellOskDialogSetLayoutMode(s32 layoutMode)
 {
-	cellOskDialog.todo("cellOskDialogSetLayoutMode(layoutMode=0x%x)", layoutMode);
+	cellOskDialog.warning("cellOskDialogSetLayoutMode(layoutMode=0x%x)", layoutMode);
 
 	// TODO: error checks
 
@@ -985,7 +994,7 @@ error_code cellOskDialogExtAddOptionDictionary(vm::cptr<CellOskDialogImeDictiona
 
 error_code cellOskDialogExtSetInitialScale(f32 initialScale)
 {
-	cellOskDialog.todo("cellOskDialogExtSetInitialScale(initialScale=%f)", initialScale);
+	cellOskDialog.warning("cellOskDialogExtSetInitialScale(initialScale=%f)", initialScale);
 
 	if (initialScale < CELL_OSKDIALOG_SCALE_MIN || initialScale > CELL_OSKDIALOG_SCALE_MAX)
 	{
@@ -1087,29 +1096,28 @@ error_code cellOskDialogExtUpdateInputText()
 
 error_code cellOskDialogExtSetPointerEnable(b8 enable)
 {
-	cellOskDialog.todo("cellOskDialogExtSetPointerEnable(enable=%d)", enable);
+	cellOskDialog.warning("cellOskDialogExtSetPointerEnable(enable=%d)", enable);
 
 	// TODO: error checks
 
 	g_fxo->get<osk_info>().pointer_enabled = enable;
-
-	// TODO: Show/hide pointer at the specified position in the OSK overlay.
+	g_osk_pointer_enabled = enable;
 
 	return CELL_OK;
 }
 
 error_code cellOskDialogExtUpdatePointerDisplayPos(vm::cptr<CellOskDialogPoint> pos)
 {
-	cellOskDialog.todo("cellOskDialogExtUpdatePointerDisplayPos(pos=0x%x, posX=%f, posY=%f)", pos->x, pos->y);
+	cellOskDialog.warning("cellOskDialogExtUpdatePointerDisplayPos(pos=0x%x, posX=%f, posY=%f)", pos->x, pos->y);
 
 	// TODO: error checks
 
 	if (pos)
 	{
 		g_fxo->get<osk_info>().pointer_pos = *pos;
+		g_osk_pointer_x = pos->x;
+		g_osk_pointer_y = pos->y;
 	}
-
-	// TODO: Update pointer position in the OSK overlay.
 
 	return CELL_OK;
 }
