@@ -983,10 +983,32 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 		}
 
 		// Claiming interface
-		if (request->bmRequestType == 0 && request->bRequest == 0x09)
+		switch (request->bmRequestType)
 		{
-			pipe.device->set_configuration(static_cast<u8>(+request->wValue));
-			pipe.device->set_interface(0);
+		case LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
+		{
+			switch (request->bRequest)
+			{
+			case LIBUSB_REQUEST_SET_CONFIGURATION:
+			{
+				pipe.device->set_configuration(static_cast<u8>(+request->wValue));
+				pipe.device->set_interface(0);
+				break;
+			}
+			default: break;
+			}
+			break;
+		}
+		case LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE:
+		{
+			if (!buf)
+			{
+				sys_usbd.error("Invalid buffer for control_transfer");
+				return CELL_EFAULT;
+			}
+			break;
+		}
+		default: break;
 		}
 
 		pipe.device->control_transfer(request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength, buf_size, buf.get_ptr(), &transfer);
