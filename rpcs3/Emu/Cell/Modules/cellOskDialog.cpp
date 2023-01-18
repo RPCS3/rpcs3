@@ -546,6 +546,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			.first_view_panel = firstViewPanel,
 			.x_align = info.x_align,
 			.y_align = info.y_align,
+			.initial_scale = info.initial_scale,
 			.base_color = info.base_color.load(),
 			.dimmer_enabled = info.dimmer_enabled.load(),
 			.intercept_input = false
@@ -992,8 +993,6 @@ error_code cellOskDialogExtSetInitialScale(f32 initialScale)
 	}
 
 	g_fxo->get<osk_info>().initial_scale = initialScale;
-
-	// TODO: implement overlay scaling
 
 	return CELL_OK;
 }
