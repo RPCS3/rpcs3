@@ -3,15 +3,18 @@
 #include "sys_ppu_thread.h"
 #include "sys_sync.h"
 
+#include <charconv>
 #include <queue>
 #include "Emu/System.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
+#include "Emu/vfs_config.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 #include "Emu/Io/usb_device.h"
+#include "Emu/Io/usb_vfs.h"
 #include "Emu/Io/Skylander.h"
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/Buzz.h"
@@ -289,6 +292,34 @@ usb_handler_thread::usb_handler_thread()
 	}
 
 	libusb_free_device_list(list, 1);
+
+	for (int i = 0; i < 8; i++) // Add VFS USB mass storage devices (/dev_usbXXX) to the USB device list
+	{
+		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/dev_usb%03d", i));
+
+		if (device.path.empty() || device.vid.empty() || device.pid.empty())
+			continue;
+
+		u16 vid{};
+		{
+			auto [ptr, err] = std::from_chars(device.vid.data(), device.vid.data() + device.vid.size(), vid, 16);
+			if (err != std::errc())
+			{
+				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
+			}
+		}
+
+		u16 pid{};
+		{
+			auto [ptr, err] = std::from_chars(device.pid.data(), device.pid.data() + device.pid.size(), pid, 16);
+			if (err != std::errc())
+			{
+				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
+			}
+		}
+
+		usb_devices.push_back(std::make_shared<usb_device_vfs>(get_new_location(), vid, pid, device.serial));
+	}
 
 	if (!found_skylander)
 	{

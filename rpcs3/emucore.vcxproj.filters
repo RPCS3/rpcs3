@@ -870,6 +870,9 @@
     <ClCompile Include="Emu\Io\usb_device.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClInclude Include="Emu\Io\usb_vfs.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="util\atomic.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1851,6 +1854,9 @@
     <ClInclude Include="Emu\Io\usb_device.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\usb_vfs.h">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClInclude Include="Crypto\aesni.h">
       <Filter>Crypto</Filter>
     </ClInclude>

@@ -177,6 +177,7 @@ public:
 	void get_location(u8* location) const;
 	virtual void read_descriptors();
 
+	virtual u32 get_configuration(u8* buf);
 	virtual bool set_configuration(u8 cfg_num);
 	virtual bool set_interface(u8 int_num);
 
@@ -207,6 +208,7 @@ public:
 
 	bool open_device() override;
 	void read_descriptors() override;
+	u32 get_configuration(u8* buf) override;
 	bool set_configuration(u8 cfg_num) override;
 	bool set_interface(u8 int_num) override;
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;
@@ -234,7 +236,8 @@ public:
 
 	// Emulated specific functions
 	void add_string(char* str);
-	s32 get_descriptor(u8 type, u8 index, u8* ptr, u32 max_size);
+	u32 get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size);
+	u32 get_status(bool self_powered, bool remote_wakeup, u8* buf, u32 buf_size);
 
 protected:
 	std::vector<std::string> strings;
