@@ -531,7 +531,19 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	Emu.BlockingCallFromMainThread([=, &info]()
 	{
-		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel, info.base_color.load(), info.dimmer_enabled.load(), false);
+		osk->Create({
+			.title = get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE),
+			.message = message,
+			.init_text = osk->osk_text,
+			.charlimit = maxLength,
+			.prohibit_flags = prohibitFlgs,
+			.panel_flag = allowOskPanelFlg,
+			.support_language = info.supported_languages,
+			.first_view_panel = firstViewPanel,
+			.base_color = info.base_color.load(),
+			.dimmer_enabled = info.dimmer_enabled.load(),
+			.intercept_input = false
+		});
 	});
 
 	if (info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
@@ -775,7 +787,7 @@ error_code cellOskDialogSetInitialInputDevice(u32 inputDevice)
 
 	g_fxo->get<osk_info>().initial_input_device = static_cast<CellOskDialogInputDevice>(inputDevice);
 
-	// TODO: use value
+	// TODO: use initial_input_device
 	// TODO: Signal CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED if the input device changed (probably only when the dialog is already open)
 
 	return CELL_OK;
@@ -792,7 +804,7 @@ error_code cellOskDialogSetInitialKeyLayout(u32 initialKeyLayout)
 
 	g_fxo->get<osk_info>().initial_key_layout = static_cast<CellOskDialogInitialKeyLayout>(initialKeyLayout);
 
-	// TODO: use value
+	// TODO: use initial_key_layout
 
 	return CELL_OK;
 }
@@ -817,7 +829,7 @@ error_code cellOskDialogSetKeyLayoutOption(u32 option)
 
 	g_fxo->get<osk_info>().key_layout = option;
 
-	// TODO: use value
+	// TODO: use key_layout
 
 	return CELL_OK;
 }
@@ -829,19 +841,6 @@ error_code cellOskDialogAddSupportLanguage(u32 supportLanguage)
 	// TODO: error checks
 
 	g_fxo->get<osk_info>().supported_languages = supportLanguage;
-
-	// TODO: disable extra languages unless they were enabled here
-	// Extra languages are:
-	// CELL_OSKDIALOG_PANELMODE_POLISH
-	// CELL_OSKDIALOG_PANELMODE_KOREAN
-	// CELL_OSKDIALOG_PANELMODE_TURKEY
-	// CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE
-	// CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE
-	// CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL
-	// CELL_OSKDIALOG_PANELMODE_DANISH
-	// CELL_OSKDIALOG_PANELMODE_SWEDISH
-	// CELL_OSKDIALOG_PANELMODE_NORWEGIAN
-	// CELL_OSKDIALOG_PANELMODE_FINNISH
 
 	return CELL_OK;
 }

@@ -945,17 +945,17 @@ namespace rsx
 			static constexpr auto thread_name = "OSK Thread"sv;
 		};
 
-		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled, bool intercept_input)
+		void osk_dialog::Create(const osk_params& params)
 		{
 			state = OskDialogState::Open;
-			flags = prohibit_flags;
-			char_limit = charlimit;
-			m_frame.back_color.r = base_color.r;
-			m_frame.back_color.g = base_color.g;
-			m_frame.back_color.b = base_color.b;
-			m_frame.back_color.a = base_color.a;
-			m_background.back_color.a = dimmer_enabled ? 0.8f : 0.0f;
-			m_start_pad_interception = intercept_input;
+			flags = params.prohibit_flags;
+			char_limit = params.charlimit;
+			m_frame.back_color.r = params.base_color.r;
+			m_frame.back_color.g = params.base_color.g;
+			m_frame.back_color.b = params.base_color.b;
+			m_frame.back_color.a = params.base_color.a;
+			m_background.back_color.a = params.dimmer_enabled ? 0.8f : 0.0f;
+			m_start_pad_interception = params.intercept_input;
 
 			const callback_t shift_cb  = [this](const std::u32string& text){ on_shift(text); };
 			const callback_t layer_cb  = [this](const std::u32string& text){ on_layer(text); };
@@ -963,7 +963,45 @@ namespace rsx
 			const callback_t delete_cb = [this](const std::u32string& text){ on_backspace(text); };
 			const callback_t enter_cb  = [this](const std::u32string& text){ on_enter(text); };
 
-			if (panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
+			const auto is_supported = [&](u32 mode) -> bool
+			{
+				switch (mode)
+				{
+				case CELL_OSKDIALOG_PANELMODE_POLISH:
+				case CELL_OSKDIALOG_PANELMODE_KOREAN:
+				case CELL_OSKDIALOG_PANELMODE_TURKEY:
+				case CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE:
+				case CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE:
+				case CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL:
+				case CELL_OSKDIALOG_PANELMODE_DANISH:
+				case CELL_OSKDIALOG_PANELMODE_SWEDISH:
+				case CELL_OSKDIALOG_PANELMODE_NORWEGIAN:
+				case CELL_OSKDIALOG_PANELMODE_FINNISH:
+					return (params.panel_flag & mode) && (params.support_language & mode);
+				default:
+					return (params.panel_flag & mode);
+				}
+			};
+
+			const auto has_language_support = [&](CellSysutilLang language)
+			{
+				switch (language)
+				{
+				case CELL_SYSUTIL_LANG_KOREAN: return is_supported(CELL_OSKDIALOG_PANELMODE_KOREAN);
+				case CELL_SYSUTIL_LANG_FINNISH: return is_supported(CELL_OSKDIALOG_PANELMODE_FINNISH);
+				case CELL_SYSUTIL_LANG_SWEDISH: return is_supported(CELL_OSKDIALOG_PANELMODE_SWEDISH);
+				case CELL_SYSUTIL_LANG_DANISH: return is_supported(CELL_OSKDIALOG_PANELMODE_DANISH);
+				case CELL_SYSUTIL_LANG_NORWEGIAN: return is_supported(CELL_OSKDIALOG_PANELMODE_NORWEGIAN);
+				case CELL_SYSUTIL_LANG_POLISH: return is_supported(CELL_OSKDIALOG_PANELMODE_POLISH);
+				case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return is_supported(CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL);
+				case CELL_SYSUTIL_LANG_TURKISH: return is_supported(CELL_OSKDIALOG_PANELMODE_TURKEY);
+				case CELL_SYSUTIL_LANG_CHINESE_T: return is_supported(CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE);
+				case CELL_SYSUTIL_LANG_CHINESE_S: return is_supported(CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE);
+				default: return true;
+				}
+			};
+
+			if (params.panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
 			{
 				// If password was requested, then password has to be the only osk panel mode available to the user
 				// first_view_panel can be ignored
@@ -972,15 +1010,23 @@ namespace rsx
 
 				m_password_mode = true;
 			}
-			else if (panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT || panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE)
+			else if (params.panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT || params.panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE)
 			{
 				// Prefer the systems settings
 				// first_view_panel is ignored
 
+				CellSysutilLang language = g_cfg.sys.language;
+
+				// Fall back to english if the panel is not supported
+				if (!has_language_support(language))
+				{
+					language = CELL_SYSUTIL_LANG_ENGLISH_US;
+				}
+
 				switch (g_cfg.sys.language)
 				{
 				case CELL_SYSUTIL_LANG_JAPANESE:
-					if (panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE)
+					if (params.panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE)
 						add_panel(osk_panel_english(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 					else
 						add_panel(osk_panel_japanese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
@@ -1049,111 +1095,111 @@ namespace rsx
 
 				// TODO: find out the exact order
 
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_LATIN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_LATIN))
 				{
 					add_panel(osk_panel_latin(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ENGLISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_ENGLISH))
 				{
 					add_panel(osk_panel_english(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_FRENCH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_FRENCH))
 				{
 					add_panel(osk_panel_french(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_SPANISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_SPANISH))
 				{
 					add_panel(osk_panel_spanish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ITALIAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_ITALIAN))
 				{
 					add_panel(osk_panel_italian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_GERMAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_GERMAN))
 				{
 					add_panel(osk_panel_german(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_TURKEY)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_TURKEY))
 				{
 					add_panel(osk_panel_turkey(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_POLISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_POLISH))
 				{
 					add_panel(osk_panel_polish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_RUSSIAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_RUSSIAN))
 				{
 					add_panel(osk_panel_russian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_DANISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_DANISH))
 				{
 					add_panel(osk_panel_danish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_NORWEGIAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_NORWEGIAN))
 				{
 					add_panel(osk_panel_norwegian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_DUTCH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_DUTCH))
 				{
 					add_panel(osk_panel_dutch(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_SWEDISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_SWEDISH))
 				{
 					add_panel(osk_panel_swedish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_FINNISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_FINNISH))
 				{
 					add_panel(osk_panel_finnish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_PORTUGUESE)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_PORTUGUESE))
 				{
 					add_panel(osk_panel_portuguese_pt(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL))
 				{
 					add_panel(osk_panel_portuguese_br(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_KOREAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_KOREAN))
 				{
 					add_panel(osk_panel_korean(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE))
 				{
 					add_panel(osk_panel_traditional_chinese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE))
 				{
 					add_panel(osk_panel_simplified_chinese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_JAPANESE)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_JAPANESE))
 				{
 					add_panel(osk_panel_japanese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_JAPANESE_HIRAGANA)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_JAPANESE_HIRAGANA))
 				{
 					add_panel(osk_panel_japanese_hiragana(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_JAPANESE_KATAKANA)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_JAPANESE_KATAKANA))
 				{
 					add_panel(osk_panel_japanese_katakana(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ALPHABET)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_ALPHABET))
 				{
 					add_panel(osk_panel_alphabet_half_width(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ALPHABET_FULL_WIDTH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_ALPHABET_FULL_WIDTH))
 				{
 					add_panel(osk_panel_alphabet_full_width(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_NUMERAL)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_NUMERAL))
 				{
 					add_panel(osk_panel_numeral_half_width(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_NUMERAL_FULL_WIDTH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_NUMERAL_FULL_WIDTH))
 				{
 					add_panel(osk_panel_numeral_full_width(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_URL)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_URL))
 				{
 					add_panel(osk_panel_url(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
@@ -1161,7 +1207,7 @@ namespace rsx
 				// Get initial panel based on first_view_panel
 				for (usz i = 0; i < m_panels.size(); ++i)
 				{
-					if (first_view_panel == m_panels[i].osk_panel_mode)
+					if (params.first_view_panel == m_panels[i].osk_panel_mode)
 					{
 						m_panel_index = i;
 						break;
@@ -1176,7 +1222,7 @@ namespace rsx
 				add_panel(osk_panel_english(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 			}
 
-			initialize_layout(utf16_to_u32string(message), utf16_to_u32string(init_text));
+			initialize_layout(utf16_to_u32string(params.message), utf16_to_u32string(params.init_text));
 
 			update_panel();
 
