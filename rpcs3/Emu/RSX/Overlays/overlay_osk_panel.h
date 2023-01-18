@@ -35,10 +35,10 @@ namespace rsx
 			const color4f special2_bg = { 0.83f, 0.81f, 0.57f, 1.f };
 
 			u32 osk_panel_mode = 0;
-			u32 num_rows = 0;
-			u32 num_columns = 0;
-			u32 cell_size_x = 0;
-			u32 cell_size_y = 0;
+			u16 num_rows = 0;
+			u16 num_columns = 0;
+			u16 cell_size_x = 0;
+			u16 cell_size_y = 0;
 
 			std::vector<grid_entry_ctor> layout;
 

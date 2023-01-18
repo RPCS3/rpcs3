@@ -40,6 +40,7 @@ namespace rsx
 			// Base UI
 			u32 m_x_align = 0;
 			u32 m_y_align = 0;
+			f32 m_scaling = 1.0f;
 			overlay_element m_frame;
 			overlay_element m_background;
 			label m_title;
@@ -51,10 +52,10 @@ namespace rsx
 			image_button m_btn_delete;
 
 			// Grid
-			u32 cell_size_x = 0;
-			u32 cell_size_y = 0;
-			u32 num_columns = 0;
-			u32 num_rows = 0;
+			u16 cell_size_x = 0;
+			u16 cell_size_y = 0;
+			u16 num_columns = 0;
+			u16 num_rows = 0;
 			std::vector<u32> num_shift_layers_by_charset;
 			u32 selected_x = 0;
 			u32 selected_y = 0;
@@ -113,6 +114,12 @@ namespace rsx
 			std::u32string get_placeholder() const;
 
 			std::pair<u32, u32> get_cell_geometry(u32 index);
+
+			template <typename T>
+			u16 get_scaled(T val)
+			{
+				return static_cast<u16>(static_cast<f32>(val) * m_scaling);
+			}
 
 			compiled_resource get_compiled() override;
 		};

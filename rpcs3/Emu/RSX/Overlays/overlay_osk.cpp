@@ -89,8 +89,8 @@ namespace rsx
 
 			num_rows = panel.num_rows;
 			num_columns = panel.num_columns;
-			cell_size_x = panel.cell_size_x;
-			cell_size_y = panel.cell_size_y;
+			cell_size_x = get_scaled(panel.cell_size_x);
+			cell_size_y = get_scaled(panel.cell_size_y);
 
 			update_layout();
 
@@ -99,7 +99,7 @@ namespace rsx
 			m_grid.resize(cell_count);
 			num_shift_layers_by_charset.clear();
 
-			const position2u grid_origin = { m_frame.x, m_frame.y + 30u + m_preview.h };
+			const position2u grid_origin(m_frame.x, m_frame.y + m_title.h + m_preview.h);
 
 			const u32 old_index = (selected_y * num_columns) + selected_x;
 
@@ -215,14 +215,15 @@ namespace rsx
 
 		void osk_dialog::update_layout()
 		{
-			const u16 preview_height = (flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90;
+			const u16 title_height = get_scaled(30);
+			const u16 preview_height = get_scaled((flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90);
 
 			// Place elements with absolute positioning
-			constexpr u16 margin = 100;
-			constexpr u16 button_margin = 30;
-			constexpr u16 button_height = 30;
-			const u16 frame_w = static_cast<u16>(num_columns * cell_size_x);
-			const u16 frame_h = static_cast<u16>(num_rows * cell_size_y) + 30 + preview_height;
+			const u16 margin = get_scaled(100);
+			const u16 button_margin = get_scaled(30);
+			const u16 button_height = get_scaled(30);
+			const u16 frame_w = num_columns * cell_size_x;
+			const u16 frame_h = num_rows * cell_size_y + title_height + preview_height;
 			u16 frame_x = 0;
 			u16 frame_y = 0;
 
@@ -258,51 +259,61 @@ namespace rsx
 			m_frame.set_size(frame_w, frame_h);
 
 			m_title.set_pos(frame_x, frame_y);
-			m_title.set_size(frame_w, 30);
-			m_title.set_padding(15, 0, 5, 0);
+			m_title.set_size(frame_w, title_height);
+			m_title.set_padding(get_scaled(15), 0, get_scaled(5), 0);
 
-			m_preview.set_pos(frame_x, frame_y + 30);
+			m_preview.set_pos(frame_x, frame_y + title_height);
 			m_preview.set_size(frame_w, preview_height);
-			m_preview.set_padding(15, 0, 10, 0);
+			m_preview.set_padding(get_scaled(15), 0, get_scaled(10), 0);
 
 			m_btn_cancel.set_pos(frame_x, frame_y + frame_h + button_margin);
-			m_btn_cancel.set_size(140, button_height);
+			m_btn_cancel.set_size(get_scaled(140), button_height);
 			m_btn_cancel.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_CANCEL);
-			m_btn_cancel.set_text_vertical_adjust(5);
+			m_btn_cancel.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_space.set_pos(frame_x + 100, frame_y + frame_h + button_margin);
-			m_btn_space.set_size(100, button_height);
+			m_btn_space.set_pos(frame_x + get_scaled(100), frame_y + frame_h + button_margin);
+			m_btn_space.set_size(get_scaled(100), button_height);
 			m_btn_space.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SPACE);
-			m_btn_space.set_text_vertical_adjust(5);
+			m_btn_space.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_delete.set_pos(frame_x + 200, frame_y + frame_h + button_margin);
-			m_btn_delete.set_size(100, button_height);
+			m_btn_delete.set_pos(frame_x + get_scaled(200), frame_y + frame_h + button_margin);
+			m_btn_delete.set_size(get_scaled(100), button_height);
 			m_btn_delete.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_BACKSPACE);
-			m_btn_delete.set_text_vertical_adjust(5);
+			m_btn_delete.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_shift.set_pos(frame_x + 320, frame_y + frame_h + button_margin);
-			m_btn_shift.set_size(80, button_height);
+			m_btn_shift.set_pos(frame_x + get_scaled(320), frame_y + frame_h + button_margin);
+			m_btn_shift.set_size(get_scaled(80), button_height);
 			m_btn_shift.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SHIFT);
-			m_btn_shift.set_text_vertical_adjust(5);
+			m_btn_shift.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_accept.set_pos(frame_x + 400, frame_y + frame_h + button_margin);
-			m_btn_accept.set_size(100, button_height);
+			m_btn_accept.set_pos(frame_x + get_scaled(400), frame_y + frame_h + button_margin);
+			m_btn_accept.set_size(get_scaled(100), button_height);
 			m_btn_accept.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ACCEPT);
-			m_btn_accept.set_text_vertical_adjust(5);
+			m_btn_accept.set_text_vertical_adjust(get_scaled(5));
 
 			m_update = true;
 		}
 
 		void osk_dialog::initialize_layout(const std::u32string& title, const std::u32string& initial_text)
 		{
+			const auto scale_font = [this](overlay_element& elem)
+			{
+				if (const font* fnt = elem.get_font())
+				{
+					elem.set_font(fnt->get_name().data(), get_scaled(fnt->get_size_pt()));
+				}
+			};
+
 			m_background.set_size(virtual_width, virtual_height);
 
 			m_title.set_unicode_text(title);
 			m_title.back_color.a = 0.7f; // Uses the dimmed color of the frame background
+			scale_font(m_title);
 
 			m_preview.password_mode = m_password_mode;
 			m_preview.set_placeholder(get_placeholder());
 			m_preview.set_unicode_text(initial_text);
+			scale_font(m_preview);
 
 			if (m_preview.value.empty())
 			{
@@ -314,6 +325,18 @@ namespace rsx
 				m_preview.caret_position = m_preview.value.length();
 				m_preview.fore_color.a = 1.f;
 			}
+
+			scale_font(m_btn_shift);
+			scale_font(m_btn_accept);
+			scale_font(m_btn_space);
+			scale_font(m_btn_delete);
+			scale_font(m_btn_cancel);
+
+			m_btn_shift.text_horizontal_offset = get_scaled(m_btn_shift.text_horizontal_offset);
+			m_btn_accept.text_horizontal_offset = get_scaled(m_btn_accept.text_horizontal_offset);
+			m_btn_space.text_horizontal_offset = get_scaled(m_btn_space.text_horizontal_offset);
+			m_btn_delete.text_horizontal_offset = get_scaled(m_btn_delete.text_horizontal_offset);
+			m_btn_cancel.text_horizontal_offset = get_scaled(m_btn_cancel.text_horizontal_offset);
 
 			m_btn_shift.set_image_resource(resource_config::standard_image_resource::select);
 			m_btn_accept.set_image_resource(resource_config::standard_image_resource::start);
@@ -364,11 +387,11 @@ namespace rsx
 
 		std::pair<u32, u32> osk_dialog::get_cell_geometry(u32 index)
 		{
-			const auto index_limit = (num_columns * num_rows) - 1;
+			const u32 grid_size = num_columns * num_rows;
 			u32 start_index = index;
 			u32 count = 0;
 
-			while (start_index > index_limit && start_index >= num_columns)
+			while (start_index >= grid_size && start_index >= num_columns)
 			{
 				// Try one row above
 				start_index -= num_columns;
@@ -383,8 +406,8 @@ namespace rsx
 			// Find last cell
 			while (true)
 			{
-				const auto current_index = (start_index + count);
-				ensure(current_index <= index_limit);
+				const u32 current_index = (start_index + count);
+				ensure(current_index < grid_size);
 				++count;
 
 				if (m_grid[current_index].flags & border_flags::right)
@@ -424,7 +447,7 @@ namespace rsx
 			if (!pad_input_enabled || ignore_input_events)
 				return;
 
-			const auto index_limit = (num_columns * num_rows) - 1;
+			const u32 grid_size = num_columns * num_rows;
 
 			const auto on_accept = [this]()
 			{
@@ -479,7 +502,7 @@ namespace rsx
 					const auto current = get_cell_geometry(current_index);
 					current_index = current.first + current.second;
 
-					if (current_index > index_limit)
+					if (current_index >= grid_size)
 					{
 						break;
 					}
@@ -525,7 +548,7 @@ namespace rsx
 				while (true)
 				{
 					current_index += num_columns;
-					if (current_index > index_limit)
+					if (current_index >= grid_size)
 					{
 						break;
 					}
@@ -885,7 +908,16 @@ namespace rsx
 
 				label label;
 				label.back_color = { 0.f, 0.f, 0.f, 0.f };
-				label.set_padding(0, 0, 10, 0);
+				label.set_padding(0, 0, get_scaled(10), 0);
+
+				const auto scale_font = [this](overlay_element& elem)
+				{
+					if (const font* fnt = elem.get_font())
+					{
+						elem.set_font(fnt->get_name().data(), get_scaled(fnt->get_size_pt()));
+					}
+				};
+				scale_font(label);
 
 				if (m_reset_pulse)
 				{
@@ -983,6 +1015,7 @@ namespace rsx
 			char_limit = params.charlimit;
 			m_x_align = params.x_align;
 			m_y_align = params.y_align;
+			m_scaling = params.initial_scale;
 			m_frame.back_color.r = params.base_color.r;
 			m_frame.back_color.g = params.base_color.g;
 			m_frame.back_color.b = params.base_color.b;

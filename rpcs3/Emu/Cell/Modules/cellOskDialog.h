@@ -273,6 +273,7 @@ public:
 		u32 first_view_panel = 0;
 		u32 x_align = 0;
 		u32 y_align = 0;
+		f32 initial_scale = 1.0f;
 		color base_color{};
 		bool dimmer_enabled = false;
 		bool intercept_input = false;
