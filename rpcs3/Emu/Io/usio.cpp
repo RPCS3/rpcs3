@@ -76,6 +76,7 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 			.wMaxPacketSize   = 0x0008,
 			.bInterval        = 16}));
 
+	g_fxo->get<usio_memory>().backup_memory.clear();
 	g_fxo->get<usio_memory>().backup_memory.resize(0xB8);
 	g_fxo->get<usio_memory>().last_game_status.clear();
 	g_fxo->get<usio_memory>().last_game_status.resize(0x28);
@@ -512,7 +513,12 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 		}
 
 		// Commands
-		ensure(buf_size == 6, "Expected a command but buf_size != 6");
+		if (buf_size != 6)
+		{
+			usio_log.error("Expected a command but buf_size != 6");
+			return;
+		}
+
 		usio_channel  = buf[0] & 0xF;
 		usio_register = *reinterpret_cast<le_t<u16>*>(&buf[2]);
 		usio_length   = *reinterpret_cast<le_t<u16>*>(&buf[4]);
@@ -520,7 +526,11 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 		if ((buf[0] & USIO_COMMAND_WRITE) == USIO_COMMAND_WRITE)
 		{
 			usio_log.trace("UsioWrite(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", usio_channel, usio_register, usio_length);
-			ensure(((~(usio_register >> 8)) & 0xF0) == buf[1]);
+			if (((~(usio_register >> 8)) & 0xF0) != buf[1])
+			{
+				usio_log.error("Invalid UsioWrite command");
+				return;
+			}
 			expecting_data = true;
 			usio_data.clear();
 		}
