@@ -218,10 +218,41 @@ namespace rsx
 			const u16 preview_height = (flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90;
 
 			// Place elements with absolute positioning
+			constexpr u16 margin = 100;
+			constexpr u16 button_margin = 30;
+			constexpr u16 button_height = 30;
 			const u16 frame_w = static_cast<u16>(num_columns * cell_size_x);
 			const u16 frame_h = static_cast<u16>(num_rows * cell_size_y) + 30 + preview_height;
-			const u16 frame_x = (1280 - frame_w) / 2;
-			const u16 frame_y = (720 - frame_h) / 2;
+			u16 frame_x = 0;
+			u16 frame_y = 0;
+
+			switch (m_x_align)
+			{
+			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT:
+				frame_x = margin;
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT:
+				frame_x = virtual_width - (frame_w + margin);
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER:
+			default:
+				frame_x = (virtual_width - frame_w) / 2;
+				break;
+			}
+
+			switch (m_y_align)
+			{
+			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP:
+				frame_y = margin;
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM:
+				frame_y = virtual_height - (frame_h + button_height + button_margin + margin);
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER:
+			default:
+				frame_y = (virtual_height - (frame_h + button_height + button_margin)) / 2;
+				break;
+			}
 
 			m_frame.set_pos(frame_x, frame_y);
 			m_frame.set_size(frame_w, frame_h);
@@ -234,28 +265,28 @@ namespace rsx
 			m_preview.set_size(frame_w, preview_height);
 			m_preview.set_padding(15, 0, 10, 0);
 
-			m_btn_cancel.set_pos(frame_x, frame_y + frame_h + 10);
-			m_btn_cancel.set_size(140, 30);
+			m_btn_cancel.set_pos(frame_x, frame_y + frame_h + button_margin);
+			m_btn_cancel.set_size(140, button_height);
 			m_btn_cancel.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_CANCEL);
 			m_btn_cancel.set_text_vertical_adjust(5);
 
-			m_btn_space.set_pos(frame_x + 100, frame_y + frame_h + 10);
-			m_btn_space.set_size(100, 30);
+			m_btn_space.set_pos(frame_x + 100, frame_y + frame_h + button_margin);
+			m_btn_space.set_size(100, button_height);
 			m_btn_space.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SPACE);
 			m_btn_space.set_text_vertical_adjust(5);
 
-			m_btn_delete.set_pos(frame_x + 200, frame_y + frame_h + 10);
-			m_btn_delete.set_size(100, 30);
+			m_btn_delete.set_pos(frame_x + 200, frame_y + frame_h + button_margin);
+			m_btn_delete.set_size(100, button_height);
 			m_btn_delete.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_BACKSPACE);
 			m_btn_delete.set_text_vertical_adjust(5);
 
-			m_btn_shift.set_pos(frame_x + 320, frame_y + frame_h + 10);
-			m_btn_shift.set_size(80, 30);
+			m_btn_shift.set_pos(frame_x + 320, frame_y + frame_h + button_margin);
+			m_btn_shift.set_size(80, button_height);
 			m_btn_shift.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SHIFT);
 			m_btn_shift.set_text_vertical_adjust(5);
 
-			m_btn_accept.set_pos(frame_x + 400, frame_y + frame_h + 10);
-			m_btn_accept.set_size(100, 30);
+			m_btn_accept.set_pos(frame_x + 400, frame_y + frame_h + button_margin);
+			m_btn_accept.set_size(100, button_height);
 			m_btn_accept.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ACCEPT);
 			m_btn_accept.set_text_vertical_adjust(5);
 
@@ -264,7 +295,7 @@ namespace rsx
 
 		void osk_dialog::initialize_layout(const std::u32string& title, const std::u32string& initial_text)
 		{
-			m_background.set_size(1280, 720);
+			m_background.set_size(virtual_width, virtual_height);
 
 			m_title.set_unicode_text(title);
 			m_title.back_color.a = 0.7f; // Uses the dimmed color of the frame background
@@ -845,16 +876,16 @@ namespace rsx
 				m_cached_resource.add(m_btn_delete.get_compiled());
 
 				overlay_element tmp;
-				label m_label;
-				u16   buffered_cell_count = 0;
-				bool  render_label = false;
+				u16 buffered_cell_count = 0;
+				bool render_label = false;
 
 				const color4f disabled_back_color = { 0.3f, 0.3f, 0.3f, 1.f };
 				const color4f disabled_fore_color = { 0.8f, 0.8f, 0.8f, 1.f };
 				const color4f normal_fore_color = { 0.f, 0.f, 0.f, 1.f };
 
-				m_label.back_color = { 0.f, 0.f, 0.f, 0.f };
-				m_label.set_padding(0, 0, 10, 0);
+				label label;
+				label.back_color = { 0.f, 0.f, 0.f, 0.f };
+				label.set_padding(0, 0, 10, 0);
 
 				if (m_reset_pulse)
 				{
@@ -892,13 +923,13 @@ namespace rsx
 							const u16 offset_x = static_cast<u16>(buffered_cell_count * cell_size_x);
 							const u16 full_width = static_cast<u16>(offset_x + cell_size_x);
 
-							m_label.set_pos(x - offset_x, y);
-							m_label.set_size(full_width, cell_size_y);
-							m_label.fore_color = c.enabled ? normal_fore_color : disabled_fore_color;
+							label.set_pos(x - offset_x, y);
+							label.set_size(full_width, cell_size_y);
+							label.fore_color = c.enabled ? normal_fore_color : disabled_fore_color;
 
 							const auto _z = (selected_z < output_count) ? selected_z : output_count - 1u;
-							m_label.set_unicode_text(c.outputs[m_selected_charset][_z]);
-							m_label.align_text(rsx::overlays::overlay_element::text_align::center);
+							label.set_unicode_text(c.outputs[m_selected_charset][_z]);
+							label.align_text(rsx::overlays::overlay_element::text_align::center);
 							render_label = true;
 						}
 					}
@@ -926,9 +957,9 @@ namespace rsx
 
 					if (render_label)
 					{
-						m_label.pulse_effect_enabled = c.selected;
-						m_label.pulse_sinus_offset = m_key_pulse_cache.pulse_sinus_offset;
-						m_cached_resource.add(m_label.get_compiled());
+						label.pulse_effect_enabled = c.selected;
+						label.pulse_sinus_offset = m_key_pulse_cache.pulse_sinus_offset;
+						m_cached_resource.add(label.get_compiled());
 					}
 				}
 
@@ -950,6 +981,8 @@ namespace rsx
 			state = OskDialogState::Open;
 			flags = params.prohibit_flags;
 			char_limit = params.charlimit;
+			m_x_align = params.x_align;
+			m_y_align = params.y_align;
 			m_frame.back_color.r = params.base_color.r;
 			m_frame.back_color.g = params.base_color.g;
 			m_frame.back_color.b = params.base_color.b;

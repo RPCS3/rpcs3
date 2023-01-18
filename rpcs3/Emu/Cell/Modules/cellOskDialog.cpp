@@ -82,6 +82,8 @@ struct osk_info
 	atomic_t<f32> initial_scale = 1.0f;
 
 	atomic_t<u32> layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+	atomic_t<u32> x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
+	atomic_t<u32> y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
 
 	atomic_t<CellOskDialogContinuousMode> osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
 	atomic_t<u32> last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED; // Used for continuous seperate window dialog
@@ -114,6 +116,8 @@ struct osk_info
 		pointer_pos = {0.0f, 0.0f};
 		initial_scale = 1.0f;
 		layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+		x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
+		y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
 		osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
 		last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED;
 		osk_confirm_callback.store({});
@@ -540,6 +544,8 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			.panel_flag = allowOskPanelFlg,
 			.support_language = info.supported_languages,
 			.first_view_panel = firstViewPanel,
+			.x_align = info.x_align,
+			.y_align = info.y_align,
 			.base_color = info.base_color.load(),
 			.dimmer_enabled = info.dimmer_enabled.load(),
 			.intercept_input = false
@@ -848,13 +854,43 @@ error_code cellOskDialogAddSupportLanguage(u32 supportLanguage)
 
 error_code cellOskDialogSetLayoutMode(s32 layoutMode)
 {
-	cellOskDialog.todo("cellOskDialogSetLayoutMode(layoutMode=%d)", layoutMode);
+	cellOskDialog.todo("cellOskDialogSetLayoutMode(layoutMode=0x%x)", layoutMode);
 
 	// TODO: error checks
 
-	g_fxo->get<osk_info>().layout_mode = layoutMode;
+	auto& osk = g_fxo->get<osk_info>();
+	osk.layout_mode = layoutMode;
 
-	// TODO: use layout mode
+	// Choose alignments, since the devs didn't make them exclusive for some reason.
+	// Let's prefer a centered alignment.
+
+	// Align horizontally
+	if (layoutMode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER)
+	{
+		osk.x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER;
+	}
+	else if (layoutMode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT)
+	{
+		osk.x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
+	}
+	else
+	{
+		osk.x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT;
+	}
+
+	// Align vertically
+	if (layoutMode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER)
+	{
+		osk.y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER;
+	}
+	else if (layoutMode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP)
+	{
+		osk.y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+	}
+	else
+	{
+		osk.y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM;
+	}
 
 	return CELL_OK;
 }

@@ -271,6 +271,8 @@ public:
 		u32 panel_flag = 0;
 		u32 support_language = 0;
 		u32 first_view_panel = 0;
+		u32 x_align = 0;
+		u32 y_align = 0;
 		color base_color{};
 		bool dimmer_enabled = false;
 		bool intercept_input = false;
