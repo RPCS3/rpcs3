@@ -65,10 +65,10 @@ struct osk_info
 	atomic_t<bool> use_separate_windows = false;
 
 	atomic_t<bool> lock_ext_input = false;
-	atomic_t<u32> device_mask = 0; // 0 means all devices can influence the OSK
-	atomic_t<u32> key_layout = CELL_OSKDIALOG_10KEY_PANEL;
-	atomic_t<CellOskDialogInitialKeyLayout> initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM;
-	atomic_t<CellOskDialogInputDevice> initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD;
+	atomic_t<u32> device_mask = 0; // OSK ignores input from the specified devices. 0 means all devices can influence the OSK
+	atomic_t<u32> key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
+	atomic_t<CellOskDialogInitialKeyLayout> initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM; // TODO: use
+	atomic_t<CellOskDialogInputDevice> initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD; // OSK at first only receives input from the initial device
 
 	atomic_t<bool> clipboard_enabled = false; // For copy and paste
 	atomic_t<bool> half_byte_kana_enabled = false;
@@ -102,7 +102,7 @@ struct osk_info
 		use_separate_windows = false;
 		lock_ext_input = false;
 		device_mask = 0;
-		key_layout = CELL_OSKDIALOG_10KEY_PANEL;
+		key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
 		initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM;
 		initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD;
 		clipboard_enabled = false;
@@ -797,14 +797,17 @@ error_code cellOskDialogSetInitialKeyLayout(u32 initialKeyLayout)
 {
 	cellOskDialog.todo("cellOskDialogSetInitialKeyLayout(initialKeyLayout=%d)", initialKeyLayout);
 
-	if (initialKeyLayout > (CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_10KEY | CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_FULLKEY))
+	if (initialKeyLayout > CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_FULLKEY)
 	{
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	g_fxo->get<osk_info>().initial_key_layout = static_cast<CellOskDialogInitialKeyLayout>(initialKeyLayout);
+	auto& osk = g_fxo->get<osk_info>();
 
-	// TODO: use initial_key_layout
+	if (osk.key_layout_options & initialKeyLayout)
+	{
+		osk.initial_key_layout = static_cast<CellOskDialogInitialKeyLayout>(initialKeyLayout);
+	}
 
 	return CELL_OK;
 }
@@ -827,9 +830,7 @@ error_code cellOskDialogSetKeyLayoutOption(u32 option)
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	g_fxo->get<osk_info>().key_layout = option;
-
-	// TODO: use key_layout
+	g_fxo->get<osk_info>().key_layout_options = option;
 
 	return CELL_OK;
 }
