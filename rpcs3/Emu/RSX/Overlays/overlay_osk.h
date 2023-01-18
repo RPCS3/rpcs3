@@ -38,6 +38,8 @@ namespace rsx
 			};
 
 			// Base UI
+			u32 m_x_align = 0;
+			u32 m_y_align = 0;
 			overlay_element m_frame;
 			overlay_element m_background;
 			label m_title;
