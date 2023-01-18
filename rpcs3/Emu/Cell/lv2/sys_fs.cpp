@@ -12,10 +12,8 @@
 #include "Emu/IdManager.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/lv2/sys_process.h"
-#include "Emu/RSX/Overlays/overlay_utils.h" // for ascii8_to_utf16
 #include "Utilities/StrUtil.h"
 
-#include <charconv>
 #include <span>
 
 LOG_CHANNEL(sys_fs);
@@ -2117,33 +2115,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 
 		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, vpath);
+		std::tie(arg->vendorID, arg->productID) = device.get_usb_ids();
 
-		if (device.path.empty() || device.vid.empty() || device.pid.empty())
-		{
-			arg->out_code = CELL_ENOTSUP;
-			break;
-		}
-
-		u16 vid{};
-		{
-			auto [ptr, err] = std::from_chars(device.vid.data(), device.vid.data() + device.vid.size(), vid, 16);
-			if (err != std::errc())
-			{
-				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
-			}
-		}
-
-		u16 pid{};
-		{
-			auto [ptr, err] = std::from_chars(device.pid.data(), device.pid.data() + device.pid.size(), pid, 16);
-			if (err != std::errc())
-			{
-				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
-			}
-		}
-
-		arg->vendorID = vid;
-		arg->productID = pid;
 		arg->out_code = CELL_OK;
 
 		sys_fs.trace("sys_fs_fcntl(0xc0000015): found device '%s' (vid=0x%x, pid=0x%x)", vpath, arg->vendorID, arg->productID);
@@ -2192,49 +2165,11 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 
 		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, vpath);
-
-		if (device.path.empty() || device.vid.empty() || device.pid.empty())
-		{
-			arg->out_code = CELL_ENOTSUP;
-			break;
-		}
-
-		u16 vid{};
-		{
-			auto [ptr, err] = std::from_chars(device.vid.data(), device.vid.data() + device.vid.size(), vid, 16);
-			if (err != std::errc())
-			{
-				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
-			}
-		}
-
-		u16 pid{};
-		{
-			auto [ptr, err] = std::from_chars(device.pid.data(), device.pid.data() + device.pid.size(), pid, 16);
-			if (err != std::errc())
-			{
-				fmt::throw_exception("Failed to read hex string: %s", std::make_error_code(err).message());
-			}
-		}
-
-		arg->vendorID = vid;
-		arg->productID = pid;
+		std::tie(arg->vendorID, arg->productID) = device.get_usb_ids();
 
 		// Serial needs to be encoded to utf-16 BE
-		const std::u16string serial = ascii8_to_utf16(device.serial);
-		ensure((serial.size() * sizeof(u16)) <= sizeof(arg->serial));
-
-		std::memset(arg->serial, 0, sizeof(arg->serial));
-
-		const auto write_byteswapped = [](const void* src, void* dst) -> void
-		{
-			*static_cast<u16*>(dst) = *static_cast<const be_t<u16>*>(src);
-		};
-
-		for (size_t i = 0; i < serial.size(); i++)
-		{
-			write_byteswapped(&serial[i], &arg->serial[i * 2]);
-		}
+		const std::u16string serial = utf8_to_utf16(device.serial);
+		std::copy_n(serial.begin(), std::min(serial.size(), sizeof(arg->serial) / sizeof(u16)), arg->serial);
 
 		arg->out_code = CELL_OK;
 
