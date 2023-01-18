@@ -533,7 +533,7 @@ struct lv2_file_c000001c : lv2_file_op
 	be_t<u16> vendorID;
 	be_t<u16> productID;
 	be_t<u32> out_code; // set to 0
-	u8 serial[64];
+	be_t<u16> serial[32];
 };
 
 CHECK_SIZE(lv2_file_c000001c, 0x60);

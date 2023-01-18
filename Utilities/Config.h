@@ -644,6 +644,7 @@ namespace cfg
 		std::string serial;
 		std::string vid;
 		std::string pid;
+		std::pair<u16, u16> get_usb_ids() const;
 	};
 
 	class device_entry final : public _base
