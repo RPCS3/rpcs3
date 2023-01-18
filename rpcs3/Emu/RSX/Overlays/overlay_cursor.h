@@ -23,6 +23,7 @@ namespace rsx
 			bool set_color(color4f color);
 
 			bool update_visibility(u64 time);
+			bool visible() const;
 
 			compiled_resource get_compiled();
 

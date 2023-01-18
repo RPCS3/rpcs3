@@ -2,6 +2,7 @@
 
 #include "overlays.h"
 #include "overlay_edit_text.hpp"
+#include "overlay_cursor.h"
 #include "overlay_osk_panel.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
 
@@ -50,6 +51,9 @@ namespace rsx
 			image_button m_btn_shift;
 			image_button m_btn_space;
 			image_button m_btn_delete;
+
+			// Pointer
+			cursor_item m_pointer{};
 
 			// Grid
 			u16 cell_size_x = 0;

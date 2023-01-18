@@ -7,6 +7,10 @@
 
 LOG_CHANNEL(osk, "OSK");
 
+extern atomic_t<bool> g_osk_pointer_enabled;
+extern atomic_t<f32> g_osk_pointer_x;
+extern atomic_t<f32> g_osk_pointer_y;
+
 namespace rsx
 {
 	namespace overlays
@@ -303,6 +307,8 @@ namespace rsx
 					elem.set_font(fnt->get_name().data(), get_scaled(fnt->get_size_pt()));
 				}
 			};
+
+			m_pointer.set_color(color4f{ 1.f, 1.f, 1.f, 1.f });
 
 			m_background.set_size(virtual_width, virtual_height);
 
@@ -876,6 +882,18 @@ namespace rsx
 				fade_animation.update(rsx::get_current_renderer()->vblank_count);
 				m_update = true;
 			}
+
+			if (g_osk_pointer_enabled != m_pointer.visible())
+			{
+				m_pointer.set_expiration(g_osk_pointer_enabled ? u64{umax} : 0);
+				m_pointer.update_visibility(get_system_time());
+				m_update = true;
+			}
+
+			if (m_pointer.visible() && m_pointer.set_position(static_cast<u16>(g_osk_pointer_x), static_cast<u16>(g_osk_pointer_y)))
+			{
+				m_update = true;
+			}
 		}
 
 		compiled_resource osk_dialog::get_compiled()
@@ -995,6 +1013,7 @@ namespace rsx
 					}
 				}
 
+				m_cached_resource.add(m_pointer.get_compiled());
 				m_reset_pulse = false;
 				m_update = false;
 			}
