@@ -261,7 +261,22 @@ public:
 		f32 a = 1.0f;
 	};
 
-	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled, bool intercept_input) = 0;
+	struct osk_params
+	{
+		std::string title;
+		std::u16string message;
+		char16_t* init_text = nullptr;
+		u32 charlimit = 0;
+		u32 prohibit_flags = 0;
+		u32 panel_flag = 0;
+		u32 support_language = 0;
+		u32 first_view_panel = 0;
+		color base_color{};
+		bool dimmer_enabled = false;
+		bool intercept_input = false;
+	};
+
+	virtual void Create(const osk_params& params) = 0;
 
 	// Closes the dialog.
 	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.
