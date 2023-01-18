@@ -10,6 +10,7 @@
 #include "cellSysutil.h"
 #include "cellOskDialog.h"
 #include "cellMsgDialog.h"
+#include "cellImeJp.h"
 
 #include "util/init_mutex.hpp"
 
@@ -855,8 +856,6 @@ error_code cellOskDialogAddSupportLanguage(u32 supportLanguage)
 {
 	cellOskDialog.warning("cellOskDialogAddSupportLanguage(supportLanguage=0x%x)", supportLanguage);
 
-	// TODO: error checks
-
 	g_fxo->get<osk_info>().supported_languages = supportLanguage;
 
 	return CELL_OK;
@@ -865,8 +864,6 @@ error_code cellOskDialogAddSupportLanguage(u32 supportLanguage)
 error_code cellOskDialogSetLayoutMode(s32 layoutMode)
 {
 	cellOskDialog.warning("cellOskDialogSetLayoutMode(layoutMode=0x%x)", layoutMode);
-
-	// TODO: error checks
 
 	auto& osk = g_fxo->get<osk_info>();
 	osk.layout_mode = layoutMode;
@@ -953,14 +950,32 @@ error_code cellOskDialogExtRegisterKeyboardEventHookCallbackEx(u16 hookEventMode
 error_code cellOskDialogExtAddJapaneseOptionDictionary(vm::cpptr<char> filePath)
 {
 	cellOskDialog.todo("cellOskDialogExtAddJapaneseOptionDictionary(filePath=**0x%0x)", filePath);
+
+	std::vector<std::string> paths;
+
+	if (filePath)
+	{
+		for (u32 i = 0; i < 4; i++)
+		{
+			if (!filePath[i])
+			{
+				break;
+			}
+
+			std::array<char, CELL_IMEJP_DIC_PATH_MAXLENGTH + 1> path{};
+			std::memcpy(path.data(), filePath[i].get_ptr(), CELL_IMEJP_DIC_PATH_MAXLENGTH);
+			paths.push_back(path.data());
+		}
+	}
+
+	cellOskDialog.todo("cellOskDialogExtAddJapaneseOptionDictionary: got %d dictionaries:\n%s", paths.size(), fmt::merge(paths, "\n"));
+
 	return CELL_OK;
 }
 
 error_code cellOskDialogExtEnableClipboard()
 {
 	cellOskDialog.todo("cellOskDialogExtEnableClipboard()");
-
-	// TODO: error checks
 
 	g_fxo->get<osk_info>().clipboard_enabled = true;
 
@@ -986,9 +1001,37 @@ error_code cellOskDialogExtSendFinishMessage(u32 /*CellOskDialogFinishReason*/ f
 	return CELL_OK;
 }
 
-error_code cellOskDialogExtAddOptionDictionary(vm::cptr<CellOskDialogImeDictionaryInfo> dictionaryInfo)
+error_code cellOskDialogExtAddOptionDictionary(vm::cpptr<CellOskDialogImeDictionaryInfo> dictionaryInfo)
 {
 	cellOskDialog.todo("cellOskDialogExtAddOptionDictionary(dictionaryInfo=*0x%x)", dictionaryInfo);
+
+	if (!dictionaryInfo)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
+
+	std::vector<std::pair<u32, std::string>> paths; // language and path
+
+	for (u32 i = 0; i < 10; i++)
+	{
+		if (!dictionaryInfo[i] || !dictionaryInfo[i]->dictionaryPath)
+		{
+			break;
+		}
+
+		std::array<char, CELL_IMEJP_DIC_PATH_MAXLENGTH + 1> path{};
+		std::memcpy(path.data(), dictionaryInfo[i]->dictionaryPath.get_ptr(), CELL_IMEJP_DIC_PATH_MAXLENGTH);
+		paths.push_back({ dictionaryInfo[i]->targetLanguage, path.data() });
+	}
+
+	std::vector<std::string> msgs;
+	for (const auto& entry : paths)
+	{
+		msgs.push_back(fmt::format("languages=0x%x, path='%s'", entry.first, entry.second));
+	}
+
+	cellOskDialog.todo("cellOskDialogExtAddOptionDictionary: got %d dictionaries:\n%s", msgs.size(), fmt::merge(msgs, "\n"));
+
 	return CELL_OK;
 }
 
@@ -1010,8 +1053,6 @@ error_code cellOskDialogExtInputDeviceLock()
 {
 	cellOskDialog.warning("cellOskDialogExtInputDeviceLock()");
 
-	// TODO: error checks
-
 	g_fxo->get<osk_info>().lock_ext_input = true;
 
 	if (const auto osk = _get_osk_dialog(false))
@@ -1025,8 +1066,6 @@ error_code cellOskDialogExtInputDeviceLock()
 error_code cellOskDialogExtInputDeviceUnlock()
 {
 	cellOskDialog.warning("cellOskDialogExtInputDeviceUnlock()");
-
-	// TODO: error checks
 
 	g_fxo->get<osk_info>().lock_ext_input = false;
 
@@ -1098,8 +1137,6 @@ error_code cellOskDialogExtSetPointerEnable(b8 enable)
 {
 	cellOskDialog.warning("cellOskDialogExtSetPointerEnable(enable=%d)", enable);
 
-	// TODO: error checks
-
 	g_fxo->get<osk_info>().pointer_enabled = enable;
 	g_osk_pointer_enabled = enable;
 
@@ -1109,8 +1146,6 @@ error_code cellOskDialogExtSetPointerEnable(b8 enable)
 error_code cellOskDialogExtUpdatePointerDisplayPos(vm::cptr<CellOskDialogPoint> pos)
 {
 	cellOskDialog.warning("cellOskDialogExtUpdatePointerDisplayPos(pos=0x%x, posX=%f, posY=%f)", pos->x, pos->y);
-
-	// TODO: error checks
 
 	if (pos)
 	{
@@ -1126,8 +1161,6 @@ error_code cellOskDialogExtEnableHalfByteKana()
 {
 	cellOskDialog.todo("cellOskDialogExtEnableHalfByteKana()");
 
-	// TODO: error checks
-
 	g_fxo->get<osk_info>().half_byte_kana_enabled = true;
 
 	// TODO: use new value in osk
@@ -1138,8 +1171,6 @@ error_code cellOskDialogExtEnableHalfByteKana()
 error_code cellOskDialogExtDisableHalfByteKana()
 {
 	cellOskDialog.todo("cellOskDialogExtDisableHalfByteKana()");
-
-	// TODO: error checks
 
 	g_fxo->get<osk_info>().half_byte_kana_enabled = false;
 
