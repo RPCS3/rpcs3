@@ -242,6 +242,8 @@ void pad_thread::operator()()
 {
 	Init();
 
+	const bool is_vsh = Emu.IsVsh();
+
 	pad::g_reset = false;
 	pad::g_started = true;
 
@@ -401,7 +403,7 @@ void pad_thread::operator()()
 		}
 
 		// Handle home menu if requested
-		if (!m_home_menu_open && Emu.IsRunning())
+		if (!is_vsh && !m_home_menu_open && Emu.IsRunning())
 		{
 			for (usz i = 0; i < m_pads.size(); i++)
 			{
