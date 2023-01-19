@@ -139,7 +139,7 @@ namespace utils
 			return;
 		}
 
-#ifdef _M_X64
+#if defined(_M_X64) && !defined(__clang__)
 		return _m_prefetchw(ptr);
 #else
 		return __builtin_prefetch(ptr, 1, 0);
