@@ -223,41 +223,42 @@ namespace rsx
 			const u16 preview_height = get_scaled((flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90);
 
 			// Place elements with absolute positioning
-			const u16 margin = get_scaled(100);
 			const u16 button_margin = get_scaled(30);
 			const u16 button_height = get_scaled(30);
 			const u16 frame_w = num_columns * cell_size_x;
 			const u16 frame_h = num_rows * cell_size_y + title_height + preview_height;
-			u16 frame_x = 0;
-			u16 frame_y = 0;
+			f32 origin_x = 0.0f;
+			f32 origin_y = 0.0f;
 
 			switch (m_x_align)
 			{
-			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT:
-				frame_x = margin;
-				break;
 			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT:
-				frame_x = virtual_width - (frame_w + margin);
+				origin_x = virtual_width;
 				break;
 			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER:
+				origin_x = static_cast<f32>(virtual_width - frame_w) / 2.0f;
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT:
 			default:
-				frame_x = (virtual_width - frame_w) / 2;
 				break;
 			}
 
 			switch (m_y_align)
 			{
-			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP:
-				frame_y = margin;
-				break;
 			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM:
-				frame_y = virtual_height - (frame_h + button_height + button_margin + margin);
+				origin_y = virtual_height;
 				break;
 			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER:
+				origin_y = static_cast<f32>(virtual_height - frame_h) / 2.0f;
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP:
 			default:
-				frame_y = (virtual_height - (frame_h + button_height + button_margin)) / 2;
 				break;
 			}
+
+			constexpr f32 margin = 50.0f; // Let's add a minimal margin on all sides
+			const u16 frame_x = static_cast<u16>(std::clamp<f32>(origin_x + m_x_offset, margin, static_cast<f32>(virtual_width - frame_w) - margin));
+			const u16 frame_y = static_cast<u16>(std::clamp<f32>(origin_y + m_y_offset, margin, static_cast<f32>(virtual_height - (frame_h + button_height + button_margin)) - margin));
 
 			m_frame.set_pos(frame_x, frame_y);
 			m_frame.set_size(frame_w, frame_h);
@@ -1034,6 +1035,8 @@ namespace rsx
 			char_limit = params.charlimit;
 			m_x_align = params.x_align;
 			m_y_align = params.y_align;
+			m_x_offset = params.x_offset;
+			m_y_offset = params.y_offset;
 			m_scaling = params.initial_scale;
 			m_frame.back_color.r = params.base_color.r;
 			m_frame.back_color.g = params.base_color.g;

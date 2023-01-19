@@ -60,6 +60,20 @@ OskDialogBase::~OskDialogBase()
 {
 }
 
+struct osk_window_layout
+{
+	u32 layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+	u32 x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
+	u32 y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+	f32 x_offset = 0.0f;
+	f32 y_offset = 0.0f;
+
+	std::string to_string() const
+	{
+		return fmt::format("{ layout_mode=0x%x, x_align=0x%x, y_align=0x%x, x_offset=%.2f, y_offset=%.2f }", layout_mode, x_align, y_align, x_offset, y_offset);
+	}
+};
+
 struct osk_info
 {
 	std::shared_ptr<OskDialogBase> dlg;
@@ -73,8 +87,8 @@ struct osk_info
 	atomic_t<u32> device_mask = 0; // OSK ignores input from the specified devices. 0 means all devices can influence the OSK
 	atomic_t<u32> input_field_window_width = 0;
 	atomic_t<f32> input_field_background_transparency = 0.0f;
-	CellOskDialogLayoutInfo input_field_layout_info{};
-	CellOskDialogLayoutInfo input_panel_layout_info{};
+	osk_window_layout input_field_layout_info{};
+	osk_window_layout input_panel_layout_info{};
 	atomic_t<u32> key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
 	atomic_t<CellOskDialogInitialKeyLayout> initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM; // TODO: use
 	atomic_t<CellOskDialogInputDevice> initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD; // OSK at first only receives input from the initial device
@@ -90,9 +104,7 @@ struct osk_info
 	CellOskDialogPoint pointer_pos{0.0f, 0.0f};
 	atomic_t<f32> initial_scale = 1.0f;
 
-	atomic_t<u32> layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
-	atomic_t<u32> x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
-	atomic_t<u32> y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+	osk_window_layout layout = {};
 
 	atomic_t<CellOskDialogContinuousMode> osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
 	atomic_t<u32> last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED; // Used for continuous seperate window dialog
@@ -128,9 +140,7 @@ struct osk_info
 		pointer_enabled = false;
 		pointer_pos = {0.0f, 0.0f};
 		initial_scale = 1.0f;
-		layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
-		x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
-		y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+		layout = {};
 		osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
 		last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED;
 		osk_confirm_callback.store({});
@@ -220,6 +230,9 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
+	cellOskDialog.notice("cellOskDialogLoadAsync: dialogParam={ allowOskPanelFlg=0x%x, prohibitFlgs=0x%x, firstViewPanel=%d, controlPoint=(%.2f,%.2f) }",
+		dialogParam->allowOskPanelFlg, dialogParam->prohibitFlgs, dialogParam->firstViewPanel, dialogParam->controlPoint.x, dialogParam->controlPoint.y);
+
 	auto osk = _get_osk_dialog(true);
 
 	// Can't open another dialog if this one is already open.
@@ -234,6 +247,8 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	const u32 prohibitFlgs = dialogParam->prohibitFlgs;
 	const u32 allowOskPanelFlg = dialogParam->allowOskPanelFlg;
 	const u32 firstViewPanel = dialogParam->firstViewPanel;
+	info.layout.x_offset = dialogParam->controlPoint.x;
+	info.layout.y_offset = dialogParam->controlPoint.y;
 
 	// Get init text and prepare return value
 	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
@@ -596,8 +611,10 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			.panel_flag = allowOskPanelFlg,
 			.support_language = info.supported_languages,
 			.first_view_panel = firstViewPanel,
-			.x_align = info.x_align,
-			.y_align = info.y_align,
+			.x_align = info.layout.x_align,
+			.y_align = info.layout.y_align,
+			.x_offset = info.layout.x_offset,
+			.y_offset = info.layout.y_offset,
 			.initial_scale = info.initial_scale,
 			.base_color = info.base_color.load(),
 			.dimmer_enabled = info.dimmer_enabled.load(),
@@ -832,11 +849,14 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 	osk.input_field_background_transparency = std::clamp<f32>(windowOption->inputFieldBackgroundTrans, 0.0f, 1.0f);
 
 	// Choose proper alignments, since the devs didn't make them exclusive for some reason.
-	const auto aligned_layout = [](const CellOskDialogLayoutInfo& info) -> CellOskDialogLayoutInfo
+	const auto aligned_layout = [](const CellOskDialogLayoutInfo& info) -> osk_window_layout
 	{
-		CellOskDialogLayoutInfo res = info;
-		res.position.x = osk_info::get_aligned_x(res.layoutMode);
-		res.position.y = osk_info::get_aligned_y(res.layoutMode);
+		osk_window_layout res{};
+		res.layout_mode = info.layoutMode;
+		res.x_align = osk_info::get_aligned_x(res.layout_mode);
+		res.y_align = osk_info::get_aligned_y(res.layout_mode);
+		res.x_offset = info.position.x;
+		res.y_offset = info.position.y;
 		return res;
 	};
 
@@ -853,7 +873,8 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 		osk.input_panel_layout_info = osk.input_field_layout_info;
 	}
 
-	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: use_separate_windows=true, continuous_mode=%s, device_mask=0x%x)", osk.osk_continuous_mode.load(), osk.device_mask.load());
+	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: use_separate_windows=true, continuous_mode=%s, device_mask=0x%x, input_field_window_width=%f, input_field_background_transparency=%.2f, input_field_layout_info=%s, input_panel_layout_info=%s)",
+		osk.osk_continuous_mode.load(), osk.device_mask.load(), osk.input_field_window_width.load(), osk.input_field_background_transparency.load(), osk.input_field_layout_info, osk.input_panel_layout_info);
 
 	return CELL_OK;
 }
@@ -931,11 +952,11 @@ error_code cellOskDialogSetLayoutMode(s32 layoutMode)
 	cellOskDialog.warning("cellOskDialogSetLayoutMode(layoutMode=0x%x)", layoutMode);
 
 	auto& osk = g_fxo->get<osk_info>();
-	osk.layout_mode = layoutMode;
+	osk.layout.layout_mode = layoutMode;
 
 	// Choose proper alignments, since the devs didn't make them exclusive for some reason.
-	osk.x_align = osk_info::get_aligned_x(layoutMode);
-	osk.y_align = osk_info::get_aligned_y(layoutMode);
+	osk.layout.x_align = osk_info::get_aligned_x(layoutMode);
+	osk.layout.y_align = osk_info::get_aligned_y(layoutMode);
 
 	return CELL_OK;
 }
