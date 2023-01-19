@@ -44,7 +44,7 @@ bool ps3_process_info_t::has_debug_perm() const
 	return (ctrl_flags1 & (0xa << 28)) != 0;
 }
 
-// If a SELF file is of CellOS return its filename, otheriwse return an empty string 
+// If a SELF file is of CellOS return its filename, otheriwse return an empty string
 std::string_view ps3_process_info_t::get_cellos_appname() const
 {
 	if (!has_root_perm() || !Emu.GetTitleID().empty())

@@ -2043,7 +2043,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 
 	// Initialize memory stats (according to sdk version)
 	u32 mem_size;
-	if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+	if (Emu.IsVsh())
 	{
 		// Because vsh.self comes before any generic application, more memory is available to it
 		mem_size = 0xF000000;
@@ -2096,7 +2096,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 		load_libs.emplace("libsysmodule.sprx");
 	}
 
-	if (ar || g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+	if (ar || Emu.IsVsh())
 	{
 		// Cannot be used with vsh.self or savestates (they self-manage itself)
 		load_libs.clear();
@@ -2271,7 +2271,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
-	if (!entry && g_ps3_process_info.get_cellos_appname() != "vsh.self"sv)
+	if (!entry && !Emu.IsVsh())
 	{
 		// Set TLS args, call sys_initialize_tls
 		ppu->cmd_list

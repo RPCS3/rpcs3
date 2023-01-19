@@ -3274,4 +3274,9 @@ utils::serial* Emulator::DeserialManager() const
 	return m_ar.get();
 }
 
+bool Emulator::IsVsh()
+{
+	return g_ps3_process_info.get_cellos_appname() == "vsh.self"sv;
+}
+
 Emulator Emu;
