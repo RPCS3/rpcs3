@@ -71,6 +71,10 @@ struct osk_info
 
 	atomic_t<bool> lock_ext_input = false;
 	atomic_t<u32> device_mask = 0; // OSK ignores input from the specified devices. 0 means all devices can influence the OSK
+	atomic_t<u32> input_field_window_width = 0;
+	atomic_t<f32> input_field_background_transparency = 0.0f;
+	CellOskDialogLayoutInfo input_field_layout_info{};
+	CellOskDialogLayoutInfo input_panel_layout_info{};
 	atomic_t<u32> key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
 	atomic_t<CellOskDialogInitialKeyLayout> initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM; // TODO: use
 	atomic_t<CellOskDialogInputDevice> initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD; // OSK at first only receives input from the initial device
@@ -109,6 +113,10 @@ struct osk_info
 		use_separate_windows = false;
 		lock_ext_input = false;
 		device_mask = 0;
+		input_field_window_width = 0;
+		input_field_background_transparency = 0.0f;
+		input_field_layout_info = {};
+		input_panel_layout_info = {};
 		key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
 		initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM;
 		initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD;
@@ -129,6 +137,40 @@ struct osk_info
 		osk_force_finish_callback.store({});
 		osk_hardware_keyboard_event_hook_callback.store({});
 		hook_event_mode.store(0);
+	}
+
+	// Align horizontally
+	static u32 get_aligned_x(u32 layout_mode)
+	{
+		// Let's prefer a centered alignment.
+		if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER)
+		{
+			return CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER;
+		}
+
+		if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT)
+		{
+			return CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
+		}
+
+		return CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT;
+	}
+
+	// Align vertically
+	static u32 get_aligned_y(u32 layout_mode)
+	{
+		// Let's prefer a centered alignment.
+		if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER)
+		{
+			return CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER;
+		}
+
+		if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP)
+		{
+			return CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+		}
+
+		return CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM;
 	}
 };
 
@@ -773,7 +815,11 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 {
 	cellOskDialog.todo("cellOskDialogSetSeparateWindowOption(windowOption=*0x%x)", windowOption);
 
-	if (!windowOption)
+	if (!windowOption ||
+		!windowOption->inputFieldLayoutInfo ||
+		!!windowOption->reserved ||
+		windowOption->continuousMode > CELL_OSKDIALOG_CONTINUOUS_MODE_SHOW ||
+		windowOption->deviceMask > CELL_OSKDIALOG_DEVICE_MASK_PAD)
 	{
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
@@ -782,11 +828,30 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 	osk.use_separate_windows = true;
 	osk.osk_continuous_mode  = static_cast<CellOskDialogContinuousMode>(+windowOption->continuousMode);
 	osk.device_mask = windowOption->deviceMask;
-	// TODO: handle rest of windowOption
-	// inputFieldWindowWidth;
-	// inputFieldBackgroundTrans;
-	// inputFieldLayoutInfo;
-	// inputPanelLayoutInfo;
+	osk.input_field_window_width = windowOption->inputFieldWindowWidth;
+	osk.input_field_background_transparency = std::clamp<f32>(windowOption->inputFieldBackgroundTrans, 0.0f, 1.0f);
+
+	// Choose proper alignments, since the devs didn't make them exclusive for some reason.
+	const auto aligned_layout = [](const CellOskDialogLayoutInfo& info) -> CellOskDialogLayoutInfo
+	{
+		CellOskDialogLayoutInfo res = info;
+		res.position.x = osk_info::get_aligned_x(res.layoutMode);
+		res.position.y = osk_info::get_aligned_y(res.layoutMode);
+		return res;
+	};
+
+	osk.input_field_layout_info = aligned_layout(*windowOption->inputFieldLayoutInfo);
+
+	// Panel layout is optional
+	if (windowOption->inputPanelLayoutInfo)
+	{
+		osk.input_panel_layout_info = aligned_layout(*windowOption->inputPanelLayoutInfo);
+	}
+	else
+	{
+		// Align to input field
+		osk.input_panel_layout_info = osk.input_field_layout_info;
+	}
 
 	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: use_separate_windows=true, continuous_mode=%s, device_mask=0x%x)", osk.osk_continuous_mode.load(), osk.device_mask.load());
 
@@ -868,36 +933,9 @@ error_code cellOskDialogSetLayoutMode(s32 layoutMode)
 	auto& osk = g_fxo->get<osk_info>();
 	osk.layout_mode = layoutMode;
 
-	// Choose alignments, since the devs didn't make them exclusive for some reason.
-	// Let's prefer a centered alignment.
-
-	// Align horizontally
-	if (layoutMode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER)
-	{
-		osk.x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER;
-	}
-	else if (layoutMode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT)
-	{
-		osk.x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
-	}
-	else
-	{
-		osk.x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT;
-	}
-
-	// Align vertically
-	if (layoutMode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER)
-	{
-		osk.y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER;
-	}
-	else if (layoutMode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP)
-	{
-		osk.y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
-	}
-	else
-	{
-		osk.y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM;
-	}
+	// Choose proper alignments, since the devs didn't make them exclusive for some reason.
+	osk.x_align = osk_info::get_aligned_x(layoutMode);
+	osk.y_align = osk_info::get_aligned_y(layoutMode);
 
 	return CELL_OK;
 }
