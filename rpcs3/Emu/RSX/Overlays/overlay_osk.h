@@ -41,6 +41,8 @@ namespace rsx
 			// Base UI
 			u32 m_x_align = 0;
 			u32 m_y_align = 0;
+			f32 m_x_offset = 0.0f;
+			f32 m_y_offset = 0.0f;
 			f32 m_scaling = 1.0f;
 			overlay_element m_frame;
 			overlay_element m_background;
