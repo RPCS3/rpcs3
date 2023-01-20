@@ -82,6 +82,7 @@ struct EmuCallbacks
 	std::function<void()> init_mouse_handler;
 	std::function<void(std::string_view title_id)> init_pad_handler;
 	std::function<void()> update_emu_settings;
+	std::function<void()> save_emu_settings;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<std::shared_ptr<class camera_handler_base>()> get_camera_handler;
 	std::function<std::shared_ptr<class music_handler_base>()> get_music_handler;
@@ -343,6 +344,8 @@ public:
 	friend void init_fxo_for_exec(utils::serial*, bool);
 
 	static bool IsVsh();
+
+	static void SaveSettings(const std::string& settings, const std::string& title_id);
 };
 
 extern Emulator Emu;

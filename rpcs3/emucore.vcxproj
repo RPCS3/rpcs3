@@ -86,6 +86,7 @@
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_main_menu.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_page.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_settings.cpp" />
@@ -541,6 +542,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXVertexTypes.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.h" />
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_main_menu.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_page.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_settings.h" />

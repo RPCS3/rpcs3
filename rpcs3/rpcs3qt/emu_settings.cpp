@@ -268,40 +268,8 @@ void emu_settings::RestoreDefaults()
 void emu_settings::SaveSettings()
 {
 	YAML::Emitter out;
-	std::string config_name;
-
-	if (m_title_id.empty())
-	{
-		config_name = fs::get_config_dir() + "/config.yml";
-	}
-	else
-	{
-		config_name = rpcs3::utils::get_custom_config_path(m_title_id);
-	}
-
 	emit_data(out, m_current_settings);
-
-	// Save config atomically
-	fs::pending_file temp(config_name);
-	temp.file.write(out.c_str(), out.size());
-	if (!temp.commit())
-	{
-		cfg_log.error("Could not save config to %s (error=%s)", config_name, fs::g_tls_error);
-	}
-
-	// Check if the running config/title is the same as the edited config/title.
-	if (config_name == g_cfg.name || m_title_id == Emu.GetTitleID())
-	{
-		// Update current config
-		if (!g_cfg.from_string({out.c_str(), out.size()}, !Emu.IsStopped()))
-		{
-			cfg_log.fatal("Failed to update configuration");
-		}
-		else if (!Emu.IsStopped()) // Don't spam the log while emulation is stopped. The config will be logged on boot anyway.
-		{
-			cfg_log.notice("Updated configuration:\n%s\n", g_cfg.to_string());
-		}
-	}
+	Emulator::SaveSettings(out.c_str(), m_title_id);
 }
 
 void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged, bool use_max, int max, bool sorted, bool strict)
