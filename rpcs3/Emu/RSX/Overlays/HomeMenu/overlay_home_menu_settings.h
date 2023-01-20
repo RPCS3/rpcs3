@@ -36,6 +36,7 @@ namespace rsx
 						rsx_log.notice("User toggled '%s' in '%s'. Setting '%s' to %d", text, title, setting->get_name(), value);
 						setting->set(value);
 						Emu.GetCallbacks().update_emu_settings();
+						if (m_config_changed) *m_config_changed = true;
 						refresh();
 					}
 
@@ -78,6 +79,7 @@ namespace rsx
 							rsx_log.error("Can't toggle '%s' in '%s'. Setting '%s' to '%s' failed", text, title, setting->get_name(), next_value);
 						}
 						Emu.GetCallbacks().update_emu_settings();
+						if (m_config_changed) *m_config_changed = true;
 						refresh();
 					}
 
@@ -115,6 +117,7 @@ namespace rsx
 							rsx_log.notice("User toggled '%s' in '%s'. Setting '%s' to %d", text, title, setting->get_name(), value);
 							setting->set(value);
 							Emu.GetCallbacks().update_emu_settings();
+							if (m_config_changed) *m_config_changed = true;
 							refresh();
 						}
 					}
@@ -153,6 +156,7 @@ namespace rsx
 							rsx_log.notice("User toggled '%s' in '%s'. Setting '%s' to %d", text, title, setting->get_name(), value);
 							setting->set(value);
 							Emu.GetCallbacks().update_emu_settings();
+							if (m_config_changed) *m_config_changed = true;
 							refresh();
 						}
 					}
@@ -191,6 +195,7 @@ namespace rsx
 							rsx_log.notice("User toggled '%s' in '%s'. Setting '%s' to %.2f", text, title, setting->get_name(), value);
 							setting->set(value);
 							Emu.GetCallbacks().update_emu_settings();
+							if (m_config_changed) *m_config_changed = true;
 							refresh();
 						}
 					}

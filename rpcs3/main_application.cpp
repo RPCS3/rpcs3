@@ -111,6 +111,14 @@ EmuCallbacks main_application::CreateCallbacks()
 		});
 	};
 
+	callbacks.save_emu_settings = [this]()
+	{
+		Emu.BlockingCallFromMainThread([&]()
+		{
+			Emulator::SaveSettings(g_cfg.to_string(), Emu.GetTitleID());
+		});
+	};
+
 	callbacks.init_kb_handler = [this]()
 	{
 		switch (g_cfg.io.keyboard.get())

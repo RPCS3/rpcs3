@@ -368,6 +368,9 @@ void Emulator::Init(bool add_only)
 	// Disable incompatible settings
 	fixup_ppu_settings();
 
+	// Backup config
+	g_backup_cfg.from_string(g_cfg.to_string());
+
 	// Create directories (can be disabled if necessary)
 	auto make_path_verbose = [&](const std::string& path, bool must_exist_outside_emu_dir)
 	{
@@ -1270,6 +1273,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				g_cfg.audio.provider.set(audio_provider::cell_audio);
 			}
+
+			// Backup config
+			g_backup_cfg.from_string(g_cfg.to_string());
 		}
 
 		// Set RTM usage
@@ -3316,6 +3322,45 @@ utils::serial* Emulator::DeserialManager() const
 bool Emulator::IsVsh()
 {
 	return g_ps3_process_info.get_cellos_appname() == "vsh.self"sv;
+}
+
+void Emulator::SaveSettings(const std::string& settings, const std::string& title_id)
+{
+	std::string config_name;
+
+	if (title_id.empty())
+	{
+		config_name = fs::get_config_dir() + "/config.yml";
+	}
+	else
+	{
+		config_name = rpcs3::utils::get_custom_config_path(title_id);
+	}
+
+	// Save config atomically
+	fs::pending_file temp(config_name);
+	temp.file.write(settings.c_str(), settings.size());
+	if (!temp.commit())
+	{
+		sys_log.error("Could not save config to %s (error=%s)", config_name, fs::g_tls_error);
+	}
+
+	// Check if the running config/title is the same as the edited config/title.
+	if (config_name == g_cfg.name || title_id == Emu.GetTitleID())
+	{
+		// Update current config
+		if (!g_cfg.from_string({settings.c_str(), settings.size()}, !Emu.IsStopped()))
+		{
+			sys_log.fatal("Failed to update configuration");
+		}
+		else if (!Emu.IsStopped()) // Don't spam the log while emulation is stopped. The config will be logged on boot anyway.
+		{
+			sys_log.notice("Updated configuration:\n%s\n", g_cfg.to_string());
+		}
+	}
+
+	// Backup config
+	g_backup_cfg.from_string(g_cfg.to_string());
 }
 
 Emulator Emu;

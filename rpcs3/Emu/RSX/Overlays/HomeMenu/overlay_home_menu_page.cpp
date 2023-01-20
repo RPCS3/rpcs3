@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_home_menu_page.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 namespace rsx
 {
@@ -11,6 +12,30 @@ namespace rsx
 			, title(title)
 			, parent(parent)
 		{
+			if (parent)
+			{
+				m_message_box = parent->m_message_box;
+				m_config_changed = parent->m_config_changed;
+			}
+
+			m_save_btn = std::make_unique<image_button>(120, 20);
+			m_discard_btn = std::make_unique<image_button>(120, 20);
+
+			m_save_btn->set_size(120, 30);
+			m_discard_btn->set_size(120, 30);
+
+			m_save_btn->set_image_resource(resource_config::standard_image_resource::square);
+			m_discard_btn->set_image_resource(resource_config::standard_image_resource::triangle);
+
+			m_save_btn->set_pos(width - 2 * (30 + 120), height + 20);
+			m_discard_btn->set_pos(width - (30 + 120), height + 20);
+
+			m_save_btn->set_text(localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON);
+			m_discard_btn->set_text(localized_string_id::HOME_MENU_SETTINGS_DISCARD_BUTTON);
+
+			m_save_btn->set_font("Arial", 16);
+			m_discard_btn->set_font("Arial", 16);
+
 			set_pos(x, y);
 		}
 
@@ -96,8 +121,29 @@ namespace rsx
 			}
 		}
 
+		void home_menu_page::show_dialog(const std::string& text, std::function<void()> on_accept, std::function<void()> on_cancel)
+		{
+			if (m_message_box && !m_message_box->visible())
+			{
+				rsx_log.notice("home_menu_page::show_dialog: page='%s', text='%s'", title, text);
+				m_message_box->show(text, std::move(on_accept), std::move(on_cancel));
+				refresh();
+			}
+		}
+
 		page_navigation home_menu_page::handle_button_press(pad_button button_press)
 		{
+			if (m_message_box && m_message_box->visible())
+			{
+				const page_navigation navigation = m_message_box->handle_button_press(button_press);
+				if (navigation != page_navigation::stay)
+				{
+					m_message_box->hide();
+					refresh();
+				}
+				return navigation;
+			}
+
 			if (home_menu_page* page = get_current_page(false))
 			{
 				return page->handle_button_press(button_press);
@@ -130,6 +176,41 @@ namespace rsx
 					return page_navigation::back;
 				}
 				return page_navigation::exit;
+			}
+			case pad_button::triangle:
+			{
+				if (m_config_changed && *m_config_changed)
+				{
+					show_dialog(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_DISCARD), [this]()
+					{
+						rsx_log.notice("home_menu_page: discarding settings...");
+
+						if (m_config_changed && *m_config_changed)
+						{
+							g_cfg.from_string(g_backup_cfg.to_string());
+							Emu.GetCallbacks().update_emu_settings();
+							*m_config_changed = false;
+						}
+					});
+				}
+				break;
+			}
+			case pad_button::square:
+			{
+				if (m_config_changed && *m_config_changed)
+				{
+					show_dialog(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SAVE), [this]()
+					{
+						rsx_log.notice("home_menu_page: saving settings...");
+						Emu.GetCallbacks().save_emu_settings();
+
+						if (m_config_changed)
+						{
+							*m_config_changed = false;
+						}
+					});
+				}
+				break;
 			}
 			case pad_button::dpad_up:
 			case pad_button::ls_up:
@@ -164,14 +245,42 @@ namespace rsx
 			return page_navigation::stay;
 		}
 
+		void home_menu_page::translate(s16 _x, s16 _y)
+		{
+			list_view::translate(_x, _y);
+			m_save_btn->translate(_x, _y);
+			m_discard_btn->translate(_x, _y);
+		}
+
 		compiled_resource& home_menu_page::get_compiled()
 		{
-			if (home_menu_page* page = get_current_page(false))
+			if (!is_compiled || (m_message_box && !m_message_box->is_compiled))
 			{
-				return page->get_compiled();
+				is_compiled = false;
+
+				if (home_menu_page* page = get_current_page(false))
+				{
+					compiled_resources = page->get_compiled();
+				}
+				else
+				{
+					compiled_resources = list_view::get_compiled();
+
+					if (m_message_box && m_message_box->visible())
+					{
+						compiled_resources.add(m_message_box->get_compiled());
+					}
+					else if (m_config_changed && *m_config_changed)
+					{
+						compiled_resources.add(m_save_btn->get_compiled());
+						compiled_resources.add(m_discard_btn->get_compiled());
+					}
+				}
+
+				is_compiled = true;
 			}
 
-			return list_view::get_compiled();
+			return compiled_resources;
 		}
 	}
 }

@@ -12,6 +12,14 @@ namespace rsx
 		static constexpr u16 available_side_width = (overlay::virtual_width - 6 * menu_entry_margin) / 2;
 		static constexpr u16 element_height = 25;
 
+		enum class page_navigation
+		{
+			stay,
+			back,
+			next,
+			exit
+		};
+
 		struct home_menu_entry : horizontal_layout
 		{
 		public:
