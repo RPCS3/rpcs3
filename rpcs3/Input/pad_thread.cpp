@@ -19,7 +19,7 @@
 #include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
-#include "Emu/RSX/Overlays/overlay_home_menu.h"
+#include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Utilities/Thread.h"
 #include "util/atomic.hpp"

@@ -69,7 +69,7 @@ namespace rsx
 		user_list_dialog::user_list_dialog()
 		{
 			m_dim_background = std::make_unique<overlay_element>();
-			m_dim_background->set_size(1280, 720);
+			m_dim_background->set_size(overlay::virtual_width, overlay::virtual_height);
 			m_dim_background->back_color.a = 0.5f;
 
 			m_list = std::make_unique<list_view>(1240, 540);
@@ -80,7 +80,7 @@ namespace rsx
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select user"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
-			m_description->back_color.a	= 0.f;
+			m_description->back_color.a = 0.f;
 
 			fade_animation.duration = 0.15f;
 

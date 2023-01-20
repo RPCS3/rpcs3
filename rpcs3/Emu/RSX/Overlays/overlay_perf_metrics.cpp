@@ -874,7 +874,7 @@ namespace rsx
 			return compiled_resources;
 		}
 
-		void reset_performance_overlay()
+		extern void reset_performance_overlay()
 		{
 			if (!g_cfg.misc.use_native_interface)
 				return;
