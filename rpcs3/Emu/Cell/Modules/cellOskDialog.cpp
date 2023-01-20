@@ -12,8 +12,6 @@
 #include "cellMsgDialog.h"
 #include "cellImeJp.h"
 
-#include "util/init_mutex.hpp"
-
 #include <thread>
 
 LOG_CHANNEL(cellOskDialog);
@@ -52,137 +50,73 @@ void fmt_class_string<CellOskDialogContinuousMode>::format(std::string& out, u64
 	});
 }
 
-atomic_t<bool> g_osk_pointer_enabled = false;
-atomic_t<f32> g_osk_pointer_x = 0.0f;
-atomic_t<f32> g_osk_pointer_y = 0.0f;
-
-OskDialogBase::~OskDialogBase()
+void osk_info::reset()
 {
+	std::lock_guard lock(text_mtx);
+
+	dlg.reset();
+	valid_text = {};
+	use_separate_windows = false;
+	lock_ext_input = false;
+	device_mask = 0;
+	input_field_window_width = 0;
+	input_field_background_transparency = 0.0f;
+	input_field_layout_info = {};
+	input_panel_layout_info = {};
+	key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
+	initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM;
+	initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD;
+	clipboard_enabled = false;
+	half_byte_kana_enabled = false;
+	supported_languages = 0;
+	dimmer_enabled = true;
+	base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
+	pointer_enabled = false;
+	pointer_x = 0.0f;
+	pointer_y = 0.0f;
+	initial_scale = 1.0f;
+	layout = {};
+	osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
+	last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED;
+	osk_confirm_callback.store({});
+	osk_force_finish_callback.store({});
+	osk_hardware_keyboard_event_hook_callback.store({});
+	hook_event_mode.store(0);
 }
 
-struct osk_window_layout
+// Align horizontally
+u32 osk_info::get_aligned_x(u32 layout_mode)
 {
-	u32 layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
-	u32 x_align = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
-	u32 y_align = CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
-	f32 x_offset = 0.0f;
-	f32 y_offset = 0.0f;
-
-	std::string to_string() const
+	// Let's prefer a centered alignment.
+	if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER)
 	{
-		return fmt::format("{ layout_mode=0x%x, x_align=0x%x, y_align=0x%x, x_offset=%.2f, y_offset=%.2f }", layout_mode, x_align, y_align, x_offset, y_offset);
+		return CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER;
 	}
-};
 
-struct osk_info
+	if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT)
+	{
+		return CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
+	}
+
+	return CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT;
+}
+
+// Align vertically
+u32 osk_info::get_aligned_y(u32 layout_mode)
 {
-	std::shared_ptr<OskDialogBase> dlg;
-
-	std::array<char16_t, CELL_OSKDIALOG_STRING_SIZE> valid_text{};
-	shared_mutex text_mtx;
-
-	atomic_t<bool> use_separate_windows = false;
-
-	atomic_t<bool> lock_ext_input = false;
-	atomic_t<u32> device_mask = 0; // OSK ignores input from the specified devices. 0 means all devices can influence the OSK
-	atomic_t<u32> input_field_window_width = 0;
-	atomic_t<f32> input_field_background_transparency = 0.0f;
-	osk_window_layout input_field_layout_info{};
-	osk_window_layout input_panel_layout_info{};
-	atomic_t<u32> key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
-	atomic_t<CellOskDialogInitialKeyLayout> initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM; // TODO: use
-	atomic_t<CellOskDialogInputDevice> initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD; // OSK at first only receives input from the initial device
-
-	atomic_t<bool> clipboard_enabled = false; // For copy and paste
-	atomic_t<bool> half_byte_kana_enabled = false;
-	atomic_t<u32> supported_languages = 0; // Used to enable non-default languages in the OSK
-
-	atomic_t<bool> dimmer_enabled = true;
-	atomic_t<OskDialogBase::color> base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
-
-	atomic_t<bool> pointer_enabled = false;
-	CellOskDialogPoint pointer_pos{0.0f, 0.0f};
-	atomic_t<f32> initial_scale = 1.0f;
-
-	osk_window_layout layout = {};
-
-	atomic_t<CellOskDialogContinuousMode> osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
-	atomic_t<u32> last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED; // Used for continuous seperate window dialog
-
-	atomic_t<vm::ptr<cellOskDialogConfirmWordFilterCallback>> osk_confirm_callback{};
-	atomic_t<vm::ptr<cellOskDialogForceFinishCallback>> osk_force_finish_callback{};
-	atomic_t<vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback>> osk_hardware_keyboard_event_hook_callback{};
-	atomic_t<u16> hook_event_mode{0};
-
-	stx::init_mutex init;
-
-	void reset()
+	// Let's prefer a centered alignment.
+	if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER)
 	{
-		std::lock_guard lock(text_mtx);
-
-		dlg.reset();
-		valid_text = {};
-		use_separate_windows = false;
-		lock_ext_input = false;
-		device_mask = 0;
-		input_field_window_width = 0;
-		input_field_background_transparency = 0.0f;
-		input_field_layout_info = {};
-		input_panel_layout_info = {};
-		key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
-		initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM;
-		initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD;
-		clipboard_enabled = false;
-		half_byte_kana_enabled = false;
-		supported_languages = 0;
-		dimmer_enabled = true;
-		base_color = OskDialogBase::color{ 0.2f, 0.2f, 0.2f, 1.0f };
-		pointer_enabled = false;
-		pointer_pos = {0.0f, 0.0f};
-		initial_scale = 1.0f;
-		layout = {};
-		osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
-		last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED;
-		osk_confirm_callback.store({});
-		osk_force_finish_callback.store({});
-		osk_hardware_keyboard_event_hook_callback.store({});
-		hook_event_mode.store(0);
+		return CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER;
 	}
 
-	// Align horizontally
-	static u32 get_aligned_x(u32 layout_mode)
+	if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP)
 	{
-		// Let's prefer a centered alignment.
-		if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER)
-		{
-			return CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER;
-		}
-
-		if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT)
-		{
-			return CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT;
-		}
-
-		return CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT;
+		return CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
 	}
 
-	// Align vertically
-	static u32 get_aligned_y(u32 layout_mode)
-	{
-		// Let's prefer a centered alignment.
-		if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER)
-		{
-			return CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER;
-		}
-
-		if (layout_mode & CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP)
-		{
-			return CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
-		}
-
-		return CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM;
-	}
-};
+	return CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM;
+}
 
 // TODO: don't use this function
 std::shared_ptr<OskDialogBase> _get_osk_dialog(bool create)
@@ -597,11 +531,6 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	Emu.BlockingCallFromMainThread([=, &info]()
 	{
-		// Make sure to always have the latest pointer params
-		g_osk_pointer_enabled = info.pointer_enabled.load();
-		g_osk_pointer_x = info.pointer_pos.x;
-		g_osk_pointer_y = info.pointer_pos.y;
-
 		osk->Create({
 			.title = get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE),
 			.message = message,
@@ -1197,20 +1126,19 @@ error_code cellOskDialogExtSetPointerEnable(b8 enable)
 	cellOskDialog.warning("cellOskDialogExtSetPointerEnable(enable=%d)", enable);
 
 	g_fxo->get<osk_info>().pointer_enabled = enable;
-	g_osk_pointer_enabled = enable;
 
 	return CELL_OK;
 }
 
 error_code cellOskDialogExtUpdatePointerDisplayPos(vm::cptr<CellOskDialogPoint> pos)
 {
-	cellOskDialog.warning("cellOskDialogExtUpdatePointerDisplayPos(pos=0x%x, posX=%f, posY=%f)", pos->x, pos->y);
+	cellOskDialog.warning("cellOskDialogExtUpdatePointerDisplayPos(pos=0x%x, posX=%f, posY=%f)", pos, pos->x, pos->y);
 
 	if (pos)
 	{
-		g_fxo->get<osk_info>().pointer_pos = *pos;
-		g_osk_pointer_x = pos->x;
-		g_osk_pointer_y = pos->y;
+		osk_info& osk = g_fxo->get<osk_info>();
+		osk.pointer_x = pos->x;
+		osk.pointer_y = pos->y;
 	}
 
 	return CELL_OK;
