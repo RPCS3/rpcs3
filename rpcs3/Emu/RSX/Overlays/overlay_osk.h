@@ -57,6 +57,10 @@ namespace rsx
 			// Pointer
 			cursor_item m_pointer{};
 
+			// Analog movement
+			u16 m_x_pos = 0;
+			u16 m_y_pos = 0;
+
 			// Grid
 			u16 cell_size_x = 0;
 			u16 cell_size_y = 0;

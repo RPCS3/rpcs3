@@ -49,11 +49,10 @@ namespace rsx
 		{
 			m_interactive = true;
 
-			const u64 ms_interval = 200;
 			std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
 			timestamp.fill(steady_clock::now());
 
-			const u64 ms_threshold = 500;
+			constexpr u64 ms_threshold = 500;
 			std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> initial_timestamp;
 			initial_timestamp.fill(steady_clock::now());
 
@@ -98,7 +97,7 @@ namespace rsx
 					{
 						if (last_auto_repeat_button[pad_index] == button_id
 						    && m_input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold
-						    && m_input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
+						    && m_input_timer.GetMsSince(timestamp[pad_index]) > m_auto_repeat_ms_interval)
 						{
 							// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
 							timestamp[pad_index] = steady_clock::now();

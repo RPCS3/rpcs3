@@ -256,9 +256,28 @@ namespace rsx
 				break;
 			}
 
+			// TODO: does the y offset need to be added or subtracted?
+
+			// Calculate initial position and analog movement range.
 			constexpr f32 margin = 50.0f; // Let's add a minimal margin on all sides
-			const u16 frame_x = static_cast<u16>(std::clamp<f32>(origin_x + m_x_offset, margin, static_cast<f32>(virtual_width - frame_w) - margin));
-			const u16 frame_y = static_cast<u16>(std::clamp<f32>(origin_y + m_y_offset, margin, static_cast<f32>(virtual_height - (frame_h + button_height + button_margin)) - margin));
+			const u16 x_min = static_cast<u16>(margin);
+			const u16 x_max = static_cast<u16>(static_cast<f32>(virtual_width - frame_w) - margin);
+			const u16 y_min = static_cast<u16>(margin);
+			const u16 y_max = static_cast<u16>(static_cast<f32>(virtual_height - (frame_h + button_height + button_margin)) - margin);
+			u16 frame_x = 0;
+			u16 frame_y = 0;
+
+			// x pos should only be 0 the first time
+			if (m_x_pos == 0)
+			{
+				frame_x = m_x_pos = static_cast<u16>(std::clamp<f32>(origin_x + m_x_offset, x_min, x_max));
+				frame_y = m_y_pos = static_cast<u16>(std::clamp<f32>(origin_y + m_y_offset, y_min, y_max));
+			}
+			else
+			{
+				frame_x = m_x_pos = std::clamp(m_x_pos, x_min, x_max);
+				frame_y = m_y_pos = std::clamp(m_y_pos, y_min, y_max);
+			}
 
 			m_frame.set_pos(frame_x, frame_y);
 			m_frame.set_size(frame_w, frame_h);
@@ -484,6 +503,20 @@ namespace rsx
 				}
 			};
 
+			// Increase auto repeat interval for some buttons
+			switch (button_press)
+			{
+			case pad_button::rs_left:
+			case pad_button::rs_right:
+			case pad_button::rs_down:
+			case pad_button::rs_up:
+				m_auto_repeat_ms_interval = 10;
+				break;
+			default:
+				m_auto_repeat_ms_interval = m_auto_repeat_ms_interval_default;
+				break;
+			}
+
 			bool play_cursor_sound = true;
 
 			switch (button_press)
@@ -630,6 +663,26 @@ namespace rsx
 			case pad_button::R2:
 			{
 				step_panel(true);
+				break;
+			}
+			case pad_button::rs_left:
+			case pad_button::rs_right:
+			case pad_button::rs_down:
+			case pad_button::rs_up:
+			{
+				if (!(flags & CELL_OSKDIALOG_NO_INPUT_ANALOG))
+				{
+					switch (button_press)
+					{
+					case pad_button::rs_left:  m_x_pos -= 5; break;
+					case pad_button::rs_right: m_x_pos += 5; break;
+					case pad_button::rs_down:  m_y_pos += 5; break;
+					case pad_button::rs_up:    m_y_pos -= 5; break;
+					default: break;
+					}
+					update_panel();
+				}
+				play_cursor_sound = false;
 				break;
 			}
 			default:

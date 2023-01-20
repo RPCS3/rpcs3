@@ -91,11 +91,17 @@ namespace rsx
 
 		protected:
 			Timer m_input_timer;
+			static constexpr u64 m_auto_repeat_ms_interval_default = 200;
+			u64 m_auto_repeat_ms_interval = m_auto_repeat_ms_interval_default;
 			std::set<u8> m_auto_repeat_buttons = {
 				pad_button::dpad_up,
 				pad_button::dpad_down,
 				pad_button::dpad_left,
 				pad_button::dpad_right,
+				pad_button::rs_up,
+				pad_button::rs_down,
+				pad_button::rs_left,
+				pad_button::rs_right,
 				pad_button::ls_up,
 				pad_button::ls_down,
 				pad_button::ls_left,
