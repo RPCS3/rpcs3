@@ -7,10 +7,6 @@
 
 LOG_CHANNEL(osk, "OSK");
 
-extern atomic_t<bool> g_osk_pointer_enabled;
-extern atomic_t<f32> g_osk_pointer_x;
-extern atomic_t<f32> g_osk_pointer_y;
-
 namespace rsx
 {
 	namespace overlays
@@ -937,14 +933,16 @@ namespace rsx
 				m_update = true;
 			}
 
-			if (g_osk_pointer_enabled != m_pointer.visible())
+			osk_info& info = g_fxo->get<osk_info>();
+
+			if (const bool pointer_enabled = info.pointer_enabled; pointer_enabled != m_pointer.visible())
 			{
-				m_pointer.set_expiration(g_osk_pointer_enabled ? u64{umax} : 0);
+				m_pointer.set_expiration(pointer_enabled ? u64{umax} : 0);
 				m_pointer.update_visibility(get_system_time());
 				m_update = true;
 			}
 
-			if (m_pointer.visible() && m_pointer.set_position(static_cast<u16>(g_osk_pointer_x), static_cast<u16>(g_osk_pointer_y)))
+			if (m_pointer.visible() && m_pointer.set_position(static_cast<u16>(info.pointer_x), static_cast<u16>(info.pointer_y)))
 			{
 				m_update = true;
 			}

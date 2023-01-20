@@ -45,12 +45,12 @@ namespace rsx
 
 						if (convert_ratio > 1.0f)
 						{
-							const u16 new_padding = (target_height - target_height / convert_ratio) / 2;
+							const u16 new_padding = static_cast<u16>(target_height - target_height / convert_ratio) / 2;
 							image->set_padding(image->padding_left, image->padding_right, new_padding + image->padding_top, new_padding + image->padding_bottom);
 						}
 						else if (convert_ratio < 1.0f)
 						{
-							const u16 new_padding = (target_width - target_width * convert_ratio) / 2;
+							const u16 new_padding = static_cast<u16>(target_width - target_width * convert_ratio) / 2;
 							image->set_padding(image->padding_left + new_padding, image->padding_right + new_padding, image->padding_top, image->padding_bottom);
 						}
 					}
@@ -329,7 +329,7 @@ namespace rsx
 					if (new_entry.type != media_list_dialog::media_type::invalid)
 					{
 						new_entry.parent = &current_entry;
-						new_entry.index = current_entry.children.size();
+						new_entry.index = ::narrow<u32>(current_entry.children.size());
 						current_entry.children.emplace_back(std::move(new_entry));
 					}
 				}
