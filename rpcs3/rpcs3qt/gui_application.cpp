@@ -8,7 +8,6 @@
 #include "persistent_settings.h"
 #include "gs_frame.h"
 #include "gl_gs_frame.h"
-#include "display_sleep_control.h"
 #include "localized_emu.h"
 #include "qt_camera_handler.h"
 #include "qt_music_handler.h"
@@ -19,10 +18,6 @@
 
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
-#include "Emu/Cell/Modules/cellAudio.h"
-#include "Emu/Cell/lv2/sys_rsxaudio.h"
-#include "Emu/RSX/Overlays/overlay_perf_metrics.h"
-#include "Emu/system_utils.hpp"
 #include "Emu/vfs_config.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
@@ -238,7 +233,7 @@ void gui_application::InitializeConnects()
 	{
 		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
-		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, &gui_application::OnEmuSettingsChange);
+		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
 
 		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
 		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
@@ -638,40 +633,6 @@ void gui_application::OnChangeStyleSheetRequest()
 	{
 		m_main_window->RepaintGui();
 	}
-}
-
-void gui_application::OnEmuSettingsChange()
-{
-	if (Emu.IsRunning())
-	{
-		if (g_cfg.misc.prevent_display_sleep)
-		{
-			enable_display_sleep();
-		}
-		else
-		{
-			disable_display_sleep();
-		}
-	}
-
-	rpcs3::utils::configure_logs();
-
-	if (!Emu.IsStopped())
-	{
-		// Force audio provider
-		if (Emu.IsVsh())
-		{
-			g_cfg.audio.provider.set(audio_provider::rsxaudio);
-		}
-		else
-		{
-			g_cfg.audio.provider.set(audio_provider::cell_audio);
-		}
-	}
-
-	audio::configure_audio();
-	audio::configure_rsxaudio();
-	rsx::overlays::reset_performance_overlay();
 }
 
 /**

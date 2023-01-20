@@ -20,6 +20,8 @@ public:
 protected:
 	virtual QThread* get_thread() = 0;
 
+	void OnEmuSettingsChange();
+
 	EmuCallbacks CreateCallbacks();
 
 	std::string m_active_user;

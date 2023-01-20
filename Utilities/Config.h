@@ -285,8 +285,8 @@ namespace cfg
 		int_type def;
 
 		// Expose range
-		static const s64 max = Max;
-		static const s64 min = Min;
+		static constexpr s64 max = Max;
+		static constexpr s64 min = Min;
 
 		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)), bool dynamic = false)
 			: _base(type::_int, owner, name, dynamic)
@@ -334,6 +334,7 @@ namespace cfg
 
 		void set(const s64& value)
 		{
+			ensure(value >= Min && value <= Max);
 			m_value = static_cast<int_type>(value);
 		}
 
@@ -405,6 +406,7 @@ namespace cfg
 
 		void set(const f64& value)
 		{
+			ensure(value >= Min && value <= Max);
 			m_value = static_cast<float_type>(value);
 		}
 
@@ -435,8 +437,8 @@ namespace cfg
 		int_type def;
 
 		// Expose range
-		static const u64 max = Max;
-		static const u64 min = Min;
+		static constexpr u64 max = Max;
+		static constexpr u64 min = Min;
 
 		uint(node* owner, const std::string& name, int_type def = std::max<int_type>(Min, 0), bool dynamic = false)
 			: _base(type::uint, owner, name, dynamic)
@@ -484,6 +486,7 @@ namespace cfg
 
 		void set(const u64& value)
 		{
+			ensure(value >= Min && value <= Max);
 			m_value = static_cast<int_type>(value);
 		}
 

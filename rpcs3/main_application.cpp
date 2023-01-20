@@ -1,4 +1,6 @@
+#include "stdafx.h"
 #include "main_application.h"
+#include "display_sleep_control.h"
 
 #include "util/types.hpp"
 #include "util/logs.hpp"
@@ -9,6 +11,7 @@
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "Emu/Io/Null/NullMouseHandler.h"
@@ -37,6 +40,17 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
+namespace audio
+{
+	extern void configure_audio(bool force_reset = false);
+	extern void configure_rsxaudio();
+}
+
+namespace rsx::overlays
+{
+	extern void reset_performance_overlay();
+}
+
 /** Emu.Init() wrapper for user management */
 void main_application::InitializeEmulator(const std::string& user, bool show_gui)
 {
@@ -50,10 +64,52 @@ void main_application::InitializeEmulator(const std::string& user, bool show_gui
 	sys_log.always()("%s", firmware_string);
 }
 
+void main_application::OnEmuSettingsChange()
+{
+	if (Emu.IsRunning())
+	{
+		if (g_cfg.misc.prevent_display_sleep)
+		{
+			enable_display_sleep();
+		}
+		else
+		{
+			disable_display_sleep();
+		}
+	}
+
+	rpcs3::utils::configure_logs();
+
+	if (!Emu.IsStopped())
+	{
+		// Force audio provider
+		if (Emu.IsVsh())
+		{
+			g_cfg.audio.provider.set(audio_provider::rsxaudio);
+		}
+		else
+		{
+			g_cfg.audio.provider.set(audio_provider::cell_audio);
+		}
+	}
+
+	audio::configure_audio();
+	audio::configure_rsxaudio();
+	rsx::overlays::reset_performance_overlay();
+}
+
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
 EmuCallbacks main_application::CreateCallbacks()
 {
-	EmuCallbacks callbacks;
+	EmuCallbacks callbacks{};
+
+	callbacks.update_emu_settings = [this]()
+	{
+		Emu.CallFromMainThread([&]()
+		{
+			OnEmuSettingsChange();
+		});
+	};
 
 	callbacks.init_kb_handler = [this]()
 	{

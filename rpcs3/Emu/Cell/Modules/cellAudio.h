@@ -427,5 +427,5 @@ using cell_audio = named_thread<cell_audio_thread>;
 namespace audio
 {
 	cell_audio_config::raw_config get_raw_config();
-	void configure_audio(bool force_reset = false);
+	extern void configure_audio(bool force_reset = false);
 }

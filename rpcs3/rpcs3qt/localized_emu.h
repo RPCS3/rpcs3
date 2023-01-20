@@ -172,6 +172,14 @@ private:
 		case localized_string_id::HOME_MENU_TITLE: return tr("Home Menu");
 		case localized_string_id::HOME_MENU_EXIT_GAME: return tr("Exit Game");
 		case localized_string_id::HOME_MENU_RESUME: return tr("Resume Game");
+		case localized_string_id::HOME_MENU_SETTINGS: return tr("Settings");
+		case localized_string_id::HOME_MENU_SETTINGS_AUDIO: return tr("Audio");
+		case localized_string_id::HOME_MENU_SETTINGS_VIDEO: return tr("Video");
+		case localized_string_id::HOME_MENU_SETTINGS_INPUT: return tr("Input");
+		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED: return tr("Advanced");
+		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS: return tr("Overlays");
+		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY: return tr("Performance Overlay");
+		case localized_string_id::HOME_MENU_SETTINGS_DEBUG: return tr("Debug");
 		case localized_string_id::HOME_MENU_SCREENSHOT: return tr("Take Screenshot");
 		case localized_string_id::HOME_MENU_RECORDING: return tr("Start/Stop Recording");
 		case localized_string_id::EMULATION_PAUSED_RESUME_WITH_START: return tr("Press and hold the START button to resume");
