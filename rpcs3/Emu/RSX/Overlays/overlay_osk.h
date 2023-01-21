@@ -38,13 +38,18 @@ namespace rsx
 				callback_t callback;
 			};
 
-			// Base UI
-			u32 m_x_align = 0;
-			u32 m_y_align = 0;
-			f32 m_x_offset = 0.0f;
-			f32 m_y_offset = 0.0f;
+			// Base UI configuration
+			bool m_use_separate_windows = false;
+			bool m_show_panel = true;
+			osk_window_layout m_layout = {};
+			osk_window_layout m_input_layout = {}; // Only used with separate windows
+			osk_window_layout m_panel_layout = {}; // Only used with separate windows
+			u32 m_input_field_window_width = 0; // Only used with separate windows
 			f32 m_scaling = 1.0f;
-			overlay_element m_frame;
+
+			// Base UI
+			overlay_element m_input_frame;
+			overlay_element m_panel_frame;
 			overlay_element m_background;
 			label m_title;
 			edit_text m_preview;
@@ -58,8 +63,10 @@ namespace rsx
 			cursor_item m_pointer{};
 
 			// Analog movement
-			u16 m_x_pos = 0;
-			u16 m_y_pos = 0;
+			u16 m_x_input_pos = 0;
+			u16 m_y_input_pos = 0;
+			u16 m_x_panel_pos = 0;
+			u16 m_y_panel_pos = 0;
 
 			// Grid
 			u16 cell_size_x = 0;

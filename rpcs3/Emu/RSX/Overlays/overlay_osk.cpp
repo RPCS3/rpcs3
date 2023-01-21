@@ -99,7 +99,7 @@ namespace rsx
 			m_grid.resize(cell_count);
 			num_shift_layers_by_charset.clear();
 
-			const position2u grid_origin(m_frame.x, m_frame.y + m_title.h + m_preview.h);
+			const position2u grid_origin(m_panel_frame.x, m_panel_frame.y);
 
 			const u32 old_index = (selected_y * num_columns) + selected_x;
 
@@ -215,98 +215,137 @@ namespace rsx
 
 		void osk_dialog::update_layout()
 		{
+			const bool show_panel = m_show_panel || !m_use_separate_windows;
+
 			const u16 title_height = get_scaled(30);
 			const u16 preview_height = get_scaled((flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90);
 
 			// Place elements with absolute positioning
 			const u16 button_margin = get_scaled(30);
 			const u16 button_height = get_scaled(30);
-			const u16 frame_w = num_columns * cell_size_x;
-			const u16 frame_h = num_rows * cell_size_y + title_height + preview_height;
+			const u16 panel_w = show_panel ? (num_columns * cell_size_x) : 0;
+			const u16 panel_h = show_panel ? (num_rows * cell_size_y) : 0;
+			const u16 input_w = m_use_separate_windows ? m_input_field_window_width : panel_w;
+			const u16 input_h = title_height + preview_height;
+			const u16 button_h = show_panel ? (button_height + button_margin) : 0;
+			const u16 total_w = std::max(input_w, panel_w);
+			const u16 total_h = input_h + panel_h + button_h;
 			f32 origin_x = 0.0f;
 			f32 origin_y = 0.0f;
 
-			switch (m_x_align)
+			// TODO: Instead of an actual alignment, the layout mode may tell us which corner of the dialog we should use for positioning.
+			// TODO: Align separate windows.
+			// TODO: Make sure separate windows don't overlap.
+			// TODO: Does the y offset set by the game need to be added or subtracted?
+
+			switch (m_layout.x_align)
 			{
 			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT:
 				origin_x = virtual_width;
 				break;
 			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER:
-				origin_x = static_cast<f32>(virtual_width - frame_w) / 2.0f;
+				origin_x = static_cast<f32>(virtual_width - total_w) / 2.0f;
 				break;
 			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT:
 			default:
 				break;
 			}
 
-			switch (m_y_align)
+			switch (m_layout.y_align)
 			{
 			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM:
 				origin_y = virtual_height;
 				break;
 			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER:
-				origin_y = static_cast<f32>(virtual_height - frame_h) / 2.0f;
+				origin_y = static_cast<f32>(virtual_height - total_h) / 2.0f;
 				break;
 			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP:
 			default:
 				break;
 			}
 
-			// TODO: does the y offset need to be added or subtracted?
-
 			// Calculate initial position and analog movement range.
 			constexpr f32 margin = 50.0f; // Let's add a minimal margin on all sides
 			const u16 x_min = static_cast<u16>(margin);
-			const u16 x_max = static_cast<u16>(static_cast<f32>(virtual_width - frame_w) - margin);
+			const u16 x_max = static_cast<u16>(static_cast<f32>(virtual_width - total_w) - margin);
 			const u16 y_min = static_cast<u16>(margin);
-			const u16 y_max = static_cast<u16>(static_cast<f32>(virtual_height - (frame_h + button_height + button_margin)) - margin);
-			u16 frame_x = 0;
-			u16 frame_y = 0;
+			const u16 y_max = static_cast<u16>(static_cast<f32>(virtual_height - total_h) - margin);
+			u16 input_x = 0;
+			u16 input_y = 0;
+			u16 panel_x = 0;
+			u16 panel_y = 0;
 
-			// x pos should only be 0 the first time
-			if (m_x_pos == 0)
+			// x pos should only be 0 the first time, because we always add a margin
+			if (m_x_input_pos == 0)
 			{
-				frame_x = m_x_pos = static_cast<u16>(std::clamp<f32>(origin_x + m_x_offset, x_min, x_max));
-				frame_y = m_y_pos = static_cast<u16>(std::clamp<f32>(origin_y + m_y_offset, y_min, y_max));
+				const osk_window_layout& input_layout = m_use_separate_windows ? m_input_layout : m_layout;
+				const osk_window_layout& panel_layout = m_use_separate_windows ? m_panel_layout : m_layout;
+
+				if (m_use_separate_windows)
+				{
+					input_x = m_x_input_pos = static_cast<u16>(std::clamp<f32>(origin_x + input_layout.x_offset, x_min, x_max));
+					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(origin_y + input_layout.y_offset, y_min, y_max));
+					panel_x = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(origin_x + panel_layout.x_offset, x_min, x_max));
+					panel_y = m_y_panel_pos = static_cast<u16>(std::clamp<f32>(origin_y + panel_layout.y_offset, y_min + input_h, y_max + input_h));
+				}
+				else
+				{
+					input_x = panel_x = m_x_input_pos = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(origin_x + input_layout.x_offset, x_min, x_max));
+					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(origin_y + input_layout.y_offset, y_min, y_max));
+					panel_y = m_y_panel_pos = input_y + input_h;
+				}
+			}
+			else if (m_use_separate_windows)
+			{
+				input_x = m_x_input_pos = std::clamp(m_x_input_pos, x_min, x_max);
+				input_y = m_y_input_pos = std::clamp(m_y_input_pos, y_min, y_max);
+				panel_x = m_x_panel_pos = std::clamp(m_x_panel_pos, x_min, x_max);
+				panel_y = m_y_panel_pos = std::clamp<u16>(m_y_panel_pos, y_min + input_h, y_max + input_h);
 			}
 			else
 			{
-				frame_x = m_x_pos = std::clamp(m_x_pos, x_min, x_max);
-				frame_y = m_y_pos = std::clamp(m_y_pos, y_min, y_max);
+				input_x = panel_x = m_x_input_pos = m_x_panel_pos = std::clamp(m_x_input_pos, x_min, x_max);
+				input_y = m_y_input_pos = std::clamp(m_y_input_pos, y_min, y_max);
+				panel_y = m_y_panel_pos = input_y + input_h;
 			}
 
-			m_frame.set_pos(frame_x, frame_y);
-			m_frame.set_size(frame_w, frame_h);
+			m_input_frame.set_pos(input_x, input_y);
+			m_input_frame.set_size(input_w, input_h);
 
-			m_title.set_pos(frame_x, frame_y);
-			m_title.set_size(frame_w, title_height);
+			m_panel_frame.set_pos(panel_x, panel_y);
+			m_panel_frame.set_size(panel_w, panel_h);
+
+			m_title.set_pos(input_x, input_y);
+			m_title.set_size(input_w, title_height);
 			m_title.set_padding(get_scaled(15), 0, get_scaled(5), 0);
 
-			m_preview.set_pos(frame_x, frame_y + title_height);
-			m_preview.set_size(frame_w, preview_height);
+			m_preview.set_pos(input_x, input_y + title_height);
+			m_preview.set_size(input_w, preview_height);
 			m_preview.set_padding(get_scaled(15), 0, get_scaled(10), 0);
 
-			m_btn_cancel.set_pos(frame_x, frame_y + frame_h + button_margin);
+			const u16 button_y = panel_y + panel_h + button_margin;
+
+			m_btn_cancel.set_pos(panel_x, button_y);
 			m_btn_cancel.set_size(get_scaled(140), button_height);
 			m_btn_cancel.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_CANCEL);
 			m_btn_cancel.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_space.set_pos(frame_x + get_scaled(100), frame_y + frame_h + button_margin);
+			m_btn_space.set_pos(panel_x + get_scaled(100), button_y);
 			m_btn_space.set_size(get_scaled(100), button_height);
 			m_btn_space.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SPACE);
 			m_btn_space.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_delete.set_pos(frame_x + get_scaled(200), frame_y + frame_h + button_margin);
+			m_btn_delete.set_pos(panel_x + get_scaled(200), button_y);
 			m_btn_delete.set_size(get_scaled(100), button_height);
 			m_btn_delete.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_BACKSPACE);
 			m_btn_delete.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_shift.set_pos(frame_x + get_scaled(320), frame_y + frame_h + button_margin);
+			m_btn_shift.set_pos(panel_x + get_scaled(320), button_y);
 			m_btn_shift.set_size(get_scaled(80), button_height);
 			m_btn_shift.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SHIFT);
 			m_btn_shift.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_accept.set_pos(frame_x + get_scaled(400), frame_y + frame_h + button_margin);
+			m_btn_accept.set_pos(panel_x + get_scaled(400), button_y);
 			m_btn_accept.set_size(get_scaled(100), button_height);
 			m_btn_accept.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ACCEPT);
 			m_btn_accept.set_text_vertical_adjust(get_scaled(5));
@@ -329,7 +368,6 @@ namespace rsx
 			m_background.set_size(virtual_width, virtual_height);
 
 			m_title.set_unicode_text(title);
-			m_title.back_color.a = 0.7f; // Uses the dimmed color of the frame background
 			scale_font(m_title);
 
 			m_preview.password_mode = m_password_mode;
@@ -670,10 +708,10 @@ namespace rsx
 				{
 					switch (button_press)
 					{
-					case pad_button::rs_left:  m_x_pos -= 5; break;
-					case pad_button::rs_right: m_x_pos += 5; break;
-					case pad_button::rs_down:  m_y_pos += 5; break;
-					case pad_button::rs_up:    m_y_pos -= 5; break;
+					case pad_button::rs_left:  m_x_input_pos -= 5; m_x_panel_pos -= 5; break;
+					case pad_button::rs_right: m_x_input_pos += 5; m_x_panel_pos += 5; break;
+					case pad_button::rs_down:  m_y_input_pos += 5; m_y_panel_pos += 5; break;
+					case pad_button::rs_up:    m_y_input_pos -= 5; m_y_panel_pos -= 5; break;
 					default: break;
 					}
 					update_panel();
@@ -955,11 +993,25 @@ namespace rsx
 				return {};
 			}
 
-			if (m_update)
+			if (!m_update)
 			{
-				m_cached_resource.clear();
-				m_cached_resource.add(m_background.get_compiled());
-				m_cached_resource.add(m_frame.get_compiled());
+				fade_animation.apply(m_cached_resource);
+				return m_cached_resource;
+			}
+
+			m_cached_resource.clear();
+			m_cached_resource.add(m_background.get_compiled());
+
+			if (m_use_separate_windows && !m_show_panel)
+			{
+				m_cached_resource.add(m_input_frame.get_compiled());
+				m_cached_resource.add(m_title.get_compiled());
+				m_cached_resource.add(m_preview.get_compiled());
+			}
+			else
+			{
+				m_cached_resource.add(m_input_frame.get_compiled());
+				m_cached_resource.add(m_panel_frame.get_compiled());
 				m_cached_resource.add(m_title.get_compiled());
 				m_cached_resource.add(m_preview.get_compiled());
 				m_cached_resource.add(m_btn_accept.get_compiled());
@@ -1067,8 +1119,9 @@ namespace rsx
 
 				m_cached_resource.add(m_pointer.get_compiled());
 				m_reset_pulse = false;
-				m_update = false;
 			}
+
+			m_update = false;
 
 			fade_animation.apply(m_cached_resource);
 			return m_cached_resource;
@@ -1084,17 +1137,33 @@ namespace rsx
 			state = OskDialogState::Open;
 			flags = params.prohibit_flags;
 			char_limit = params.charlimit;
-			m_x_align = params.x_align;
-			m_y_align = params.y_align;
-			m_x_offset = params.x_offset;
-			m_y_offset = params.y_offset;
+			m_layout = params.layout;
+			m_input_layout = params.input_layout;
+			m_panel_layout = params.panel_layout;
+			m_input_field_window_width = params.input_field_window_width;
 			m_scaling = params.initial_scale;
-			m_frame.back_color.r = params.base_color.r;
-			m_frame.back_color.g = params.base_color.g;
-			m_frame.back_color.b = params.base_color.b;
-			m_frame.back_color.a = params.base_color.a;
+			m_input_frame.back_color.r = params.base_color.r;
+			m_input_frame.back_color.g = params.base_color.g;
+			m_input_frame.back_color.b = params.base_color.b;
+			m_input_frame.back_color.a = params.base_color.a;
+			m_panel_frame.back_color = m_input_frame.back_color;
 			m_background.back_color.a = params.dimmer_enabled ? 0.8f : 0.0f;
 			m_start_pad_interception = params.intercept_input;
+			m_use_separate_windows = params.use_separate_windows;
+
+			if (m_use_separate_windows)
+			{
+				// When using separate windows, we show the text field, but hide the pad input panel if the device mask contains CELL_OSKDIALOG_DEVICE_MASK_PAD.
+				// TODO: If controller input is allowed and the user presses a button, show the pad input panel.
+				// TODO: If keyboard input is allowed and the user presses a key, hide the pad input panel.
+				m_show_panel = pad_input_enabled;
+				m_title.back_color.a = std::clamp(params.input_field_background_transparency, 0.0f, 1.0f);
+				m_preview.back_color.a = std::clamp(params.input_field_background_transparency, 0.0f, 1.0f);
+			}
+			else
+			{
+				m_title.back_color.a = 0.7f; // Uses the dimmed color of the frame background
+			}
 
 			const callback_t shift_cb  = [this](const std::u32string& text){ on_shift(text); };
 			const callback_t layer_cb  = [this](const std::u32string& text){ on_layer(text); };

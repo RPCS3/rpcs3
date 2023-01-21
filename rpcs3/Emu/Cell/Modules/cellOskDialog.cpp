@@ -60,7 +60,7 @@ void osk_info::reset()
 	lock_ext_input = false;
 	device_mask = 0;
 	input_field_window_width = 0;
-	input_field_background_transparency = 0.0f;
+	input_field_background_transparency = 1.0f;
 	input_field_layout_info = {};
 	input_panel_layout_info = {};
 	key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
@@ -540,14 +540,16 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			.panel_flag = allowOskPanelFlg,
 			.support_language = info.supported_languages,
 			.first_view_panel = firstViewPanel,
-			.x_align = info.layout.x_align,
-			.y_align = info.layout.y_align,
-			.x_offset = info.layout.x_offset,
-			.y_offset = info.layout.y_offset,
+			.layout = info.layout,
+			.input_layout = info.input_field_layout_info,
+			.panel_layout = info.input_panel_layout_info,
+			.input_field_window_width = info.input_field_window_width,
+			.input_field_background_transparency = info.input_field_background_transparency,
 			.initial_scale = info.initial_scale,
-			.base_color = info.base_color.load(),
-			.dimmer_enabled = info.dimmer_enabled.load(),
-			.intercept_input = false
+			.base_color = info.base_color,
+			.dimmer_enabled = info.dimmer_enabled,
+			.use_separate_windows = info.use_separate_windows,
+			.intercept_input = false // We handle the interception manually based on the device mask
 		});
 	});
 
@@ -984,6 +986,7 @@ error_code cellOskDialogExtSendFinishMessage(u32 /*CellOskDialogFinishReason*/ f
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
+	// TODO: only hide the dialog if we use separate windows
 	osk->Close(finishReason);
 
 	return CELL_OK;
@@ -1124,6 +1127,9 @@ error_code cellOskDialogExtUpdateInputText()
 error_code cellOskDialogExtSetPointerEnable(b8 enable)
 {
 	cellOskDialog.warning("cellOskDialogExtSetPointerEnable(enable=%d)", enable);
+
+	// TODO: While the pointer is already displayed in the osk overlay, it is not really useful right now.
+	//       On real hardware, this may be used for actual PS Move or mouse input.
 
 	g_fxo->get<osk_info>().pointer_enabled = enable;
 
