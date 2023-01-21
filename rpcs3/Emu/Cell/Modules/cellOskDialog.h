@@ -287,13 +287,15 @@ public:
 		u32 panel_flag = 0;
 		u32 support_language = 0;
 		u32 first_view_panel = 0;
-		u32 x_align = 0;
-		u32 y_align = 0;
-		f32 x_offset = 0.0f;
-		f32 y_offset = 0.0f;
+		osk_window_layout layout{};
+		osk_window_layout input_layout{}; // Only used with separate windows
+		osk_window_layout panel_layout{}; // Only used with separate windows
+		u32 input_field_window_width = 0; // Only used with separate windows
+		f32 input_field_background_transparency = 1.0f; // Only used with separate windows
 		f32 initial_scale = 1.0f;
 		color base_color{};
 		bool dimmer_enabled = false;
+		bool use_separate_windows = false;
 		bool intercept_input = false;
 	};
 
@@ -330,7 +332,7 @@ struct osk_info
 	atomic_t<bool> lock_ext_input = false;
 	atomic_t<u32> device_mask = 0; // OSK ignores input from the specified devices. 0 means all devices can influence the OSK
 	atomic_t<u32> input_field_window_width = 0;
-	atomic_t<f32> input_field_background_transparency = 0.0f;
+	atomic_t<f32> input_field_background_transparency = 1.0f;
 	osk_window_layout input_field_layout_info{};
 	osk_window_layout input_panel_layout_info{};
 	atomic_t<u32> key_layout_options = CELL_OSKDIALOG_10KEY_PANEL;
