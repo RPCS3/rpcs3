@@ -413,6 +413,11 @@ void Emulator::Init(bool add_only)
 		if (make_path_verbose(games_common_dir))
 		{
 			fs::write_file(games_common_dir + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
+
+			if (std::string rpcs3_shortcuts = games_common_dir + "/shortcuts"; make_path_verbose(rpcs3_shortcuts))
+			{
+				fs::write_file(rpcs3_shortcuts + "/Copyable Shortcuts For Installed Games Would Be Added Here.txt", fs::create + fs::excl + fs::write, ""s);
+			}
 		}
 
 		make_path_verbose(dev_hdd0 + "savedata/");
