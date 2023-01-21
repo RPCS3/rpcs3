@@ -90,6 +90,23 @@ void fmt_class_string<CellNetCtlState>::format(std::string& out, u64 arg)
 	});
 }
 
+struct CellGameUpdateResult
+{
+	be_t<s32> status; // CellGameUpdateResultStatus
+	be_t<s32> error_code;
+	char app_ver[CELL_GAME_SYSP_APP_VER_SIZE];
+	char padding[2];
+};
+
+struct CellGameUpdateParam
+{
+	be_t<u32> size;
+	be_t<u32> cid;
+};
+
+using CellGameUpdateCallback = void(s32 status, s32 error_code, vm::ptr<void> userdata);
+using CellGameUpdateCallbackEx = void(vm::ptr<CellGameUpdateResult> result, vm::ptr<void> userdata);
+
 error_code cellNetCtlInit()
 {
 	cellNetCtl.warning("cellNetCtlInit()");

@@ -303,7 +303,7 @@ public:
 	void FixGuestTime();
 	void FinalizeRunRequest();
 
-	bool Pause(bool freeze_emulation = false);
+	bool Pause(bool freeze_emulation = false, bool show_resume_message = true);
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false);
 	std::shared_ptr<utils::serial> Kill(bool allow_autoexit = true, bool savestate = false);
@@ -340,6 +340,8 @@ public:
 	static game_boot_result GetElfPathFromDir(std::string& elf_path, const std::string& path);
 	static void GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::string& game_dir, const std::string& elf_dir);
 	friend void init_fxo_for_exec(utils::serial*, bool);
+
+	static bool IsVsh();
 };
 
 extern Emulator Emu;

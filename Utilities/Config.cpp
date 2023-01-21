@@ -559,6 +559,18 @@ void cfg::log_entry::from_default()
 	set_map({});
 }
 
+std::pair<u16, u16> cfg::device_info::get_usb_ids() const
+{
+	auto string_to_hex = [](const std::string& str) -> u16
+	{
+		u16 value = 0x0000;
+		if (!str.empty() && std::from_chars(str.data(), str.data() + str.size(), value, 16).ec != std::errc{})
+			cfg_log.error("Failed to parse hex from string \"%s\"", str);
+		return value;
+	};
+	return {string_to_hex(vid), string_to_hex(pid)};
+}
+
 void cfg::device_entry::set_map(map_of_type<device_info>&& map)
 {
 	m_map = std::move(map);

@@ -33,6 +33,7 @@
 #include "shortcut_utils.h"
 #include "config_checker.h"
 #include "shortcut_dialog.h"
+#include "system_cmd_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -1559,9 +1560,6 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 	}
 }
 
-// This is ugly, but PS3 headers shall not be included there.
-extern s32 sysutil_send_system_cmd(u64 status, u64 param);
-
 void main_window::DecryptSPRXLibraries()
 {
 	QString path_last_sprx = m_gui_settings->GetValue(gui::fd_decrypt_sprx).toString();
@@ -1867,11 +1865,6 @@ void main_window::OnEmuStop()
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
 
-	if (std::exchange(m_sys_menu_opened, false))
-	{
-		ui->sysSendOpenMenuAct->setText(tr("Send open system menu cmd"));
-	}
-
 	// Refresh game list in order to update time played
 	if (m_game_list_frame)
 	{
@@ -1882,6 +1875,12 @@ void main_window::OnEmuStop()
 	if (m_kernel_explorer)
 	{
 		m_kernel_explorer->close();
+	}
+
+	// Close systen command dialog if running
+	if (m_system_cmd_dialog)
+	{
+		m_system_cmd_dialog->close();
 	}
 }
 
@@ -1925,14 +1924,12 @@ void main_window::EnableMenus(bool enabled) const
 	ui->sysStopAct->setEnabled(enabled);
 	ui->sysRebootAct->setEnabled(enabled);
 
-	// PS3 Commands
-	ui->sysSendOpenMenuAct->setEnabled(enabled);
-
 	// Tools
 	ui->toolskernel_explorerAct->setEnabled(enabled);
 	ui->toolsmemory_viewerAct->setEnabled(enabled);
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
 	ui->toolsStringSearchAct->setEnabled(enabled);
+	ui->toolsSystemCommandsAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
 	ui->actionCreate_Savestate->setEnabled(enabled);
 }
@@ -2259,7 +2256,7 @@ void main_window::CreateConnects()
 	{
 		// Enable/Disable Recent Games List
 		const bool stopped = Emu.IsStopped();
-		for (auto act : ui->bootRecentMenu->actions())
+		for (QAction* act : ui->bootRecentMenu->actions())
 		{
 			if (act != ui->freezeRecentAct && act != ui->clearRecentAct)
 			{
@@ -2275,7 +2272,7 @@ void main_window::CreateConnects()
 			return;
 		}
 		m_rg_entries.clear();
-		for (auto act : m_recent_game_acts)
+		for (QAction* act : m_recent_game_acts)
 		{
 			ui->bootRecentMenu->removeAction(act);
 		}
@@ -2342,16 +2339,6 @@ void main_window::CreateConnects()
 		}
 
 		m_gui_settings->SetValue(gui::fd_insert_disc, QFileInfo(dir_path).path());
-	});
-
-	connect(ui->sysSendOpenMenuAct, &QAction::triggered, this, [this]()
-	{
-		if (Emu.IsStopped()) return;
-
-		gui_log.notice("User triggered \"Send %s system menu command\" action in menu bar", m_sys_menu_opened ? "close" : "open");
-		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
-		m_sys_menu_opened ^= true;
-		ui->sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
 	});
 
 	const auto open_settings = [this](int tabIndex)
@@ -2555,6 +2542,17 @@ void main_window::CreateConnects()
 	{
 		if (!Emu.IsStopped())
 			idm::make<memory_searcher_handle>(this, make_basic_ppu_disasm());
+	});
+
+	connect(ui->toolsSystemCommandsAct, &QAction::triggered, this, [this]
+	{
+		if (Emu.IsStopped()) return;
+		if (!m_system_cmd_dialog)
+		{
+			m_system_cmd_dialog = new system_cmd_dialog(this);
+			connect(m_system_cmd_dialog, &QDialog::finished, this, [this]() { m_system_cmd_dialog = nullptr; });
+		}
+		m_system_cmd_dialog->show();
 	});
 
 	connect(ui->toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);

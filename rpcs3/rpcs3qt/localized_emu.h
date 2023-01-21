@@ -168,6 +168,11 @@ private:
 		case localized_string_id::RPCN_ERROR_INVALID_PROTOCOL_VERSION: return tr("RPCN Misc Error: Protocol Version Error (outdated RPCS3?)");
 		case localized_string_id::RPCN_ERROR_UNKNOWN: return tr("RPCN: Unknown Error");
 		case localized_string_id::RPCN_SUCCESS_LOGGED_ON: return tr("Successfully logged on RPCN!");
+		case localized_string_id::HOME_MENU_TITLE: return tr("Home Menu");
+		case localized_string_id::HOME_MENU_EXIT_GAME: return tr("Exit Game");
+		case localized_string_id::HOME_MENU_RESUME: return tr("Resume Game");
+		case localized_string_id::HOME_MENU_SCREENSHOT: return tr("Take Screenshot");
+		case localized_string_id::HOME_MENU_RECORDING: return tr("Start/Stop Recording");
 		case localized_string_id::EMULATION_PAUSED_RESUME_WITH_START: return tr("Press and hold the START button to resume");
 		case localized_string_id::EMULATION_RESUMING: return tr("Resuming...!");
 		case localized_string_id::EMULATION_FROZEN: return tr("The PS3 application has likely crashed, you can close it.");

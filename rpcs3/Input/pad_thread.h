@@ -32,6 +32,8 @@ public:
 	s32 AddLddPad();
 	void UnregisterLddPad(u32 handle);
 
+	void open_home_menu();
+
 	static std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 	static void InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
 
@@ -54,9 +56,10 @@ protected:
 	u32 num_ldd_pad = 0;
 
 private:
-	u32 m_mask_start_press_to_unpause = 0;
+	u32 m_mask_start_press_to_resume = 0;
 	u64 m_track_start_press_begin_timestamp = 0;
 	bool m_resume_emulation_flag = false;
+	atomic_t<bool> m_home_menu_open = false;
 };
 
 namespace pad

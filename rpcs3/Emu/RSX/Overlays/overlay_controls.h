@@ -263,7 +263,7 @@ namespace rsx
 
 		struct image_button : public image_view
 		{
-			const u16 text_horizontal_offset = 25;
+			u16 text_horizontal_offset = 25;
 			u16 m_text_offset_x = 0;
 			s16 m_text_offset_y = 0;
 

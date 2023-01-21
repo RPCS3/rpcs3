@@ -37,6 +37,12 @@ std::string utf16_to_utf8(std::u16string_view src)
 	return converter.to_bytes(src.data());
 }
 
+std::u16string utf8_to_utf16(std::string_view src)
+{
+	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> converter{};
+	return converter.from_bytes(src.data());
+}
+
 std::wstring utf8_to_wchar(std::string_view src)
 {
 #ifdef _WIN32

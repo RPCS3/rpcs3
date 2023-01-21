@@ -198,28 +198,14 @@ u32 ds4_pad_handler::get_battery_level(const std::string& padId)
 void ds4_pad_handler::SetPadData(const std::string& padId, u8 player_id, u8 large_motor, u8 small_motor, s32 r, s32 g, s32 b, bool /*player_led*/, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DS4Device> device = get_hid_device(padId);
-	if (!device || !device->hidDevice || !device->config)
+	if (!device || !device->hidDevice)
 		return;
 
 	// Set the device's motor speeds to our requested values 0-255
 	device->large_motor = large_motor;
 	device->small_motor = small_motor;
 	device->player_id = player_id;
-
-	int index = 0;
-	for (uint i = 0; i < MAX_GAMEPADS; i++)
-	{
-		if (g_cfg_input.player[i]->handler == m_type)
-		{
-			if (g_cfg_input.player[i]->device.to_string() == padId)
-			{
-				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
-				device->config = &m_pad_configs[index];
-				break;
-			}
-			index++;
-		}
-	}
+	device->config = get_config(padId);
 
 	ensure(device->config);
 

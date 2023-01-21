@@ -21,7 +21,6 @@
 #include "Emu/Io/Null/null_music_handler.h"
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
-#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/vfs_config.h"
@@ -660,7 +659,7 @@ void gui_application::OnEmuSettingsChange()
 	if (!Emu.IsStopped())
 	{
 		// Force audio provider
-		if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+		if (Emu.IsVsh())
 		{
 			g_cfg.audio.provider.set(audio_provider::rsxaudio);
 		}

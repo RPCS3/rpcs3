@@ -159,6 +159,7 @@ error_code cellUserInfoSelectUser_ListType(vm::ptr<CellUserInfoTypeSet> listType
 
 		if (s32 ret = sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0); ret < 0)
 		{
+			g_fxo->get<user_info_manager>().dialog_opened = false;
 			return CELL_USERINFO_ERROR_BUSY;
 		}
 
@@ -267,6 +268,7 @@ error_code cellUserInfoSelectUser_SetList(vm::ptr<CellUserInfoListSet> setList, 
 
 		if (s32 ret = sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0); ret < 0)
 		{
+			g_fxo->get<user_info_manager>().dialog_opened = false;
 			return CELL_USERINFO_ERROR_BUSY;
 		}
 

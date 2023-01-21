@@ -89,8 +89,8 @@ namespace rsx
 
 			num_rows = panel.num_rows;
 			num_columns = panel.num_columns;
-			cell_size_x = panel.cell_size_x;
-			cell_size_y = panel.cell_size_y;
+			cell_size_x = get_scaled(panel.cell_size_x);
+			cell_size_y = get_scaled(panel.cell_size_y);
 
 			update_layout();
 
@@ -99,7 +99,7 @@ namespace rsx
 			m_grid.resize(cell_count);
 			num_shift_layers_by_charset.clear();
 
-			const position2u grid_origin = { m_frame.x, m_frame.y + 30u + m_preview.h };
+			const position2u grid_origin(m_frame.x, m_frame.y + m_title.h + m_preview.h);
 
 			const u32 old_index = (selected_y * num_columns) + selected_x;
 
@@ -215,63 +215,127 @@ namespace rsx
 
 		void osk_dialog::update_layout()
 		{
-			const u16 preview_height = (flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90;
+			const u16 title_height = get_scaled(30);
+			const u16 preview_height = get_scaled((flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90);
 
 			// Place elements with absolute positioning
-			const u16 frame_w = static_cast<u16>(num_columns * cell_size_x);
-			const u16 frame_h = static_cast<u16>(num_rows * cell_size_y) + 30 + preview_height;
-			const u16 frame_x = (1280 - frame_w) / 2;
-			const u16 frame_y = (720 - frame_h) / 2;
+			const u16 button_margin = get_scaled(30);
+			const u16 button_height = get_scaled(30);
+			const u16 frame_w = num_columns * cell_size_x;
+			const u16 frame_h = num_rows * cell_size_y + title_height + preview_height;
+			f32 origin_x = 0.0f;
+			f32 origin_y = 0.0f;
+
+			switch (m_x_align)
+			{
+			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT:
+				origin_x = virtual_width;
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER:
+				origin_x = static_cast<f32>(virtual_width - frame_w) / 2.0f;
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT:
+			default:
+				break;
+			}
+
+			switch (m_y_align)
+			{
+			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM:
+				origin_y = virtual_height;
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER:
+				origin_y = static_cast<f32>(virtual_height - frame_h) / 2.0f;
+				break;
+			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP:
+			default:
+				break;
+			}
+
+			// TODO: does the y offset need to be added or subtracted?
+
+			// Calculate initial position and analog movement range.
+			constexpr f32 margin = 50.0f; // Let's add a minimal margin on all sides
+			const u16 x_min = static_cast<u16>(margin);
+			const u16 x_max = static_cast<u16>(static_cast<f32>(virtual_width - frame_w) - margin);
+			const u16 y_min = static_cast<u16>(margin);
+			const u16 y_max = static_cast<u16>(static_cast<f32>(virtual_height - (frame_h + button_height + button_margin)) - margin);
+			u16 frame_x = 0;
+			u16 frame_y = 0;
+
+			// x pos should only be 0 the first time
+			if (m_x_pos == 0)
+			{
+				frame_x = m_x_pos = static_cast<u16>(std::clamp<f32>(origin_x + m_x_offset, x_min, x_max));
+				frame_y = m_y_pos = static_cast<u16>(std::clamp<f32>(origin_y + m_y_offset, y_min, y_max));
+			}
+			else
+			{
+				frame_x = m_x_pos = std::clamp(m_x_pos, x_min, x_max);
+				frame_y = m_y_pos = std::clamp(m_y_pos, y_min, y_max);
+			}
 
 			m_frame.set_pos(frame_x, frame_y);
 			m_frame.set_size(frame_w, frame_h);
 
 			m_title.set_pos(frame_x, frame_y);
-			m_title.set_size(frame_w, 30);
-			m_title.set_padding(15, 0, 5, 0);
+			m_title.set_size(frame_w, title_height);
+			m_title.set_padding(get_scaled(15), 0, get_scaled(5), 0);
 
-			m_preview.set_pos(frame_x, frame_y + 30);
+			m_preview.set_pos(frame_x, frame_y + title_height);
 			m_preview.set_size(frame_w, preview_height);
-			m_preview.set_padding(15, 0, 10, 0);
+			m_preview.set_padding(get_scaled(15), 0, get_scaled(10), 0);
 
-			m_btn_cancel.set_pos(frame_x, frame_y + frame_h + 10);
-			m_btn_cancel.set_size(140, 30);
+			m_btn_cancel.set_pos(frame_x, frame_y + frame_h + button_margin);
+			m_btn_cancel.set_size(get_scaled(140), button_height);
 			m_btn_cancel.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_CANCEL);
-			m_btn_cancel.set_text_vertical_adjust(5);
+			m_btn_cancel.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_space.set_pos(frame_x + 100, frame_y + frame_h + 10);
-			m_btn_space.set_size(100, 30);
+			m_btn_space.set_pos(frame_x + get_scaled(100), frame_y + frame_h + button_margin);
+			m_btn_space.set_size(get_scaled(100), button_height);
 			m_btn_space.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SPACE);
-			m_btn_space.set_text_vertical_adjust(5);
+			m_btn_space.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_delete.set_pos(frame_x + 200, frame_y + frame_h + 10);
-			m_btn_delete.set_size(100, 30);
+			m_btn_delete.set_pos(frame_x + get_scaled(200), frame_y + frame_h + button_margin);
+			m_btn_delete.set_size(get_scaled(100), button_height);
 			m_btn_delete.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_BACKSPACE);
-			m_btn_delete.set_text_vertical_adjust(5);
+			m_btn_delete.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_shift.set_pos(frame_x + 320, frame_y + frame_h + 10);
-			m_btn_shift.set_size(80, 30);
+			m_btn_shift.set_pos(frame_x + get_scaled(320), frame_y + frame_h + button_margin);
+			m_btn_shift.set_size(get_scaled(80), button_height);
 			m_btn_shift.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SHIFT);
-			m_btn_shift.set_text_vertical_adjust(5);
+			m_btn_shift.set_text_vertical_adjust(get_scaled(5));
 
-			m_btn_accept.set_pos(frame_x + 400, frame_y + frame_h + 10);
-			m_btn_accept.set_size(100, 30);
+			m_btn_accept.set_pos(frame_x + get_scaled(400), frame_y + frame_h + button_margin);
+			m_btn_accept.set_size(get_scaled(100), button_height);
 			m_btn_accept.set_text(localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ACCEPT);
-			m_btn_accept.set_text_vertical_adjust(5);
+			m_btn_accept.set_text_vertical_adjust(get_scaled(5));
 
 			m_update = true;
 		}
 
 		void osk_dialog::initialize_layout(const std::u32string& title, const std::u32string& initial_text)
 		{
-			m_background.set_size(1280, 720);
+			const auto scale_font = [this](overlay_element& elem)
+			{
+				if (const font* fnt = elem.get_font())
+				{
+					elem.set_font(fnt->get_name().data(), get_scaled(fnt->get_size_pt()));
+				}
+			};
+
+			m_pointer.set_color(color4f{ 1.f, 1.f, 1.f, 1.f });
+
+			m_background.set_size(virtual_width, virtual_height);
 
 			m_title.set_unicode_text(title);
 			m_title.back_color.a = 0.7f; // Uses the dimmed color of the frame background
+			scale_font(m_title);
 
 			m_preview.password_mode = m_password_mode;
 			m_preview.set_placeholder(get_placeholder());
 			m_preview.set_unicode_text(initial_text);
+			scale_font(m_preview);
 
 			if (m_preview.value.empty())
 			{
@@ -283,6 +347,18 @@ namespace rsx
 				m_preview.caret_position = m_preview.value.length();
 				m_preview.fore_color.a = 1.f;
 			}
+
+			scale_font(m_btn_shift);
+			scale_font(m_btn_accept);
+			scale_font(m_btn_space);
+			scale_font(m_btn_delete);
+			scale_font(m_btn_cancel);
+
+			m_btn_shift.text_horizontal_offset = get_scaled(m_btn_shift.text_horizontal_offset);
+			m_btn_accept.text_horizontal_offset = get_scaled(m_btn_accept.text_horizontal_offset);
+			m_btn_space.text_horizontal_offset = get_scaled(m_btn_space.text_horizontal_offset);
+			m_btn_delete.text_horizontal_offset = get_scaled(m_btn_delete.text_horizontal_offset);
+			m_btn_cancel.text_horizontal_offset = get_scaled(m_btn_cancel.text_horizontal_offset);
 
 			m_btn_shift.set_image_resource(resource_config::standard_image_resource::select);
 			m_btn_accept.set_image_resource(resource_config::standard_image_resource::start);
@@ -333,11 +409,11 @@ namespace rsx
 
 		std::pair<u32, u32> osk_dialog::get_cell_geometry(u32 index)
 		{
-			const auto index_limit = (num_columns * num_rows) - 1;
+			const u32 grid_size = num_columns * num_rows;
 			u32 start_index = index;
 			u32 count = 0;
 
-			while (start_index > index_limit && start_index >= num_columns)
+			while (start_index >= grid_size && start_index >= num_columns)
 			{
 				// Try one row above
 				start_index -= num_columns;
@@ -352,8 +428,8 @@ namespace rsx
 			// Find last cell
 			while (true)
 			{
-				const auto current_index = (start_index + count);
-				ensure(current_index <= index_limit);
+				const u32 current_index = (start_index + count);
+				ensure(current_index < grid_size);
 				++count;
 
 				if (m_grid[current_index].flags & border_flags::right)
@@ -393,7 +469,7 @@ namespace rsx
 			if (!pad_input_enabled || ignore_input_events)
 				return;
 
-			const auto index_limit = (num_columns * num_rows) - 1;
+			const u32 grid_size = num_columns * num_rows;
 
 			const auto on_accept = [this]()
 			{
@@ -423,6 +499,20 @@ namespace rsx
 				}
 			};
 
+			// Increase auto repeat interval for some buttons
+			switch (button_press)
+			{
+			case pad_button::rs_left:
+			case pad_button::rs_right:
+			case pad_button::rs_down:
+			case pad_button::rs_up:
+				m_auto_repeat_ms_interval = 10;
+				break;
+			default:
+				m_auto_repeat_ms_interval = m_auto_repeat_ms_interval_default;
+				break;
+			}
+
 			bool play_cursor_sound = true;
 
 			switch (button_press)
@@ -448,7 +538,7 @@ namespace rsx
 					const auto current = get_cell_geometry(current_index);
 					current_index = current.first + current.second;
 
-					if (current_index > index_limit)
+					if (current_index >= grid_size)
 					{
 						break;
 					}
@@ -494,7 +584,7 @@ namespace rsx
 				while (true)
 				{
 					current_index += num_columns;
-					if (current_index > index_limit)
+					if (current_index >= grid_size)
 					{
 						break;
 					}
@@ -569,6 +659,26 @@ namespace rsx
 			case pad_button::R2:
 			{
 				step_panel(true);
+				break;
+			}
+			case pad_button::rs_left:
+			case pad_button::rs_right:
+			case pad_button::rs_down:
+			case pad_button::rs_up:
+			{
+				if (!(flags & CELL_OSKDIALOG_NO_INPUT_ANALOG))
+				{
+					switch (button_press)
+					{
+					case pad_button::rs_left:  m_x_pos -= 5; break;
+					case pad_button::rs_right: m_x_pos += 5; break;
+					case pad_button::rs_down:  m_y_pos += 5; break;
+					case pad_button::rs_up:    m_y_pos -= 5; break;
+					default: break;
+					}
+					update_panel();
+				}
+				play_cursor_sound = false;
 				break;
 			}
 			default:
@@ -822,6 +932,20 @@ namespace rsx
 				fade_animation.update(rsx::get_current_renderer()->vblank_count);
 				m_update = true;
 			}
+
+			osk_info& info = g_fxo->get<osk_info>();
+
+			if (const bool pointer_enabled = info.pointer_enabled; pointer_enabled != m_pointer.visible())
+			{
+				m_pointer.set_expiration(pointer_enabled ? u64{umax} : 0);
+				m_pointer.update_visibility(get_system_time());
+				m_update = true;
+			}
+
+			if (m_pointer.visible() && m_pointer.set_position(static_cast<u16>(info.pointer_x), static_cast<u16>(info.pointer_y)))
+			{
+				m_update = true;
+			}
 		}
 
 		compiled_resource osk_dialog::get_compiled()
@@ -845,16 +969,25 @@ namespace rsx
 				m_cached_resource.add(m_btn_delete.get_compiled());
 
 				overlay_element tmp;
-				label m_label;
-				u16   buffered_cell_count = 0;
-				bool  render_label = false;
+				u16 buffered_cell_count = 0;
+				bool render_label = false;
 
 				const color4f disabled_back_color = { 0.3f, 0.3f, 0.3f, 1.f };
 				const color4f disabled_fore_color = { 0.8f, 0.8f, 0.8f, 1.f };
 				const color4f normal_fore_color = { 0.f, 0.f, 0.f, 1.f };
 
-				m_label.back_color = { 0.f, 0.f, 0.f, 0.f };
-				m_label.set_padding(0, 0, 10, 0);
+				label label;
+				label.back_color = { 0.f, 0.f, 0.f, 0.f };
+				label.set_padding(0, 0, get_scaled(10), 0);
+
+				const auto scale_font = [this](overlay_element& elem)
+				{
+					if (const font* fnt = elem.get_font())
+					{
+						elem.set_font(fnt->get_name().data(), get_scaled(fnt->get_size_pt()));
+					}
+				};
+				scale_font(label);
 
 				if (m_reset_pulse)
 				{
@@ -892,13 +1025,13 @@ namespace rsx
 							const u16 offset_x = static_cast<u16>(buffered_cell_count * cell_size_x);
 							const u16 full_width = static_cast<u16>(offset_x + cell_size_x);
 
-							m_label.set_pos(x - offset_x, y);
-							m_label.set_size(full_width, cell_size_y);
-							m_label.fore_color = c.enabled ? normal_fore_color : disabled_fore_color;
+							label.set_pos(x - offset_x, y);
+							label.set_size(full_width, cell_size_y);
+							label.fore_color = c.enabled ? normal_fore_color : disabled_fore_color;
 
 							const auto _z = (selected_z < output_count) ? selected_z : output_count - 1u;
-							m_label.set_unicode_text(c.outputs[m_selected_charset][_z]);
-							m_label.align_text(rsx::overlays::overlay_element::text_align::center);
+							label.set_unicode_text(c.outputs[m_selected_charset][_z]);
+							label.align_text(rsx::overlays::overlay_element::text_align::center);
 							render_label = true;
 						}
 					}
@@ -926,12 +1059,13 @@ namespace rsx
 
 					if (render_label)
 					{
-						m_label.pulse_effect_enabled = c.selected;
-						m_label.pulse_sinus_offset = m_key_pulse_cache.pulse_sinus_offset;
-						m_cached_resource.add(m_label.get_compiled());
+						label.pulse_effect_enabled = c.selected;
+						label.pulse_sinus_offset = m_key_pulse_cache.pulse_sinus_offset;
+						m_cached_resource.add(label.get_compiled());
 					}
 				}
 
+				m_cached_resource.add(m_pointer.get_compiled());
 				m_reset_pulse = false;
 				m_update = false;
 			}
@@ -945,17 +1079,22 @@ namespace rsx
 			static constexpr auto thread_name = "OSK Thread"sv;
 		};
 
-		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled, bool intercept_input)
+		void osk_dialog::Create(const osk_params& params)
 		{
 			state = OskDialogState::Open;
-			flags = prohibit_flags;
-			char_limit = charlimit;
-			m_frame.back_color.r = base_color.r;
-			m_frame.back_color.g = base_color.g;
-			m_frame.back_color.b = base_color.b;
-			m_frame.back_color.a = base_color.a;
-			m_background.back_color.a = dimmer_enabled ? 0.8f : 0.0f;
-			m_start_pad_interception = intercept_input;
+			flags = params.prohibit_flags;
+			char_limit = params.charlimit;
+			m_x_align = params.x_align;
+			m_y_align = params.y_align;
+			m_x_offset = params.x_offset;
+			m_y_offset = params.y_offset;
+			m_scaling = params.initial_scale;
+			m_frame.back_color.r = params.base_color.r;
+			m_frame.back_color.g = params.base_color.g;
+			m_frame.back_color.b = params.base_color.b;
+			m_frame.back_color.a = params.base_color.a;
+			m_background.back_color.a = params.dimmer_enabled ? 0.8f : 0.0f;
+			m_start_pad_interception = params.intercept_input;
 
 			const callback_t shift_cb  = [this](const std::u32string& text){ on_shift(text); };
 			const callback_t layer_cb  = [this](const std::u32string& text){ on_layer(text); };
@@ -963,7 +1102,45 @@ namespace rsx
 			const callback_t delete_cb = [this](const std::u32string& text){ on_backspace(text); };
 			const callback_t enter_cb  = [this](const std::u32string& text){ on_enter(text); };
 
-			if (panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
+			const auto is_supported = [&](u32 mode) -> bool
+			{
+				switch (mode)
+				{
+				case CELL_OSKDIALOG_PANELMODE_POLISH:
+				case CELL_OSKDIALOG_PANELMODE_KOREAN:
+				case CELL_OSKDIALOG_PANELMODE_TURKEY:
+				case CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE:
+				case CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE:
+				case CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL:
+				case CELL_OSKDIALOG_PANELMODE_DANISH:
+				case CELL_OSKDIALOG_PANELMODE_SWEDISH:
+				case CELL_OSKDIALOG_PANELMODE_NORWEGIAN:
+				case CELL_OSKDIALOG_PANELMODE_FINNISH:
+					return (params.panel_flag & mode) && (params.support_language & mode);
+				default:
+					return (params.panel_flag & mode);
+				}
+			};
+
+			const auto has_language_support = [&](CellSysutilLang language)
+			{
+				switch (language)
+				{
+				case CELL_SYSUTIL_LANG_KOREAN: return is_supported(CELL_OSKDIALOG_PANELMODE_KOREAN);
+				case CELL_SYSUTIL_LANG_FINNISH: return is_supported(CELL_OSKDIALOG_PANELMODE_FINNISH);
+				case CELL_SYSUTIL_LANG_SWEDISH: return is_supported(CELL_OSKDIALOG_PANELMODE_SWEDISH);
+				case CELL_SYSUTIL_LANG_DANISH: return is_supported(CELL_OSKDIALOG_PANELMODE_DANISH);
+				case CELL_SYSUTIL_LANG_NORWEGIAN: return is_supported(CELL_OSKDIALOG_PANELMODE_NORWEGIAN);
+				case CELL_SYSUTIL_LANG_POLISH: return is_supported(CELL_OSKDIALOG_PANELMODE_POLISH);
+				case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return is_supported(CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL);
+				case CELL_SYSUTIL_LANG_TURKISH: return is_supported(CELL_OSKDIALOG_PANELMODE_TURKEY);
+				case CELL_SYSUTIL_LANG_CHINESE_T: return is_supported(CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE);
+				case CELL_SYSUTIL_LANG_CHINESE_S: return is_supported(CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE);
+				default: return true;
+				}
+			};
+
+			if (params.panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
 			{
 				// If password was requested, then password has to be the only osk panel mode available to the user
 				// first_view_panel can be ignored
@@ -972,15 +1149,23 @@ namespace rsx
 
 				m_password_mode = true;
 			}
-			else if (panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT || panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE)
+			else if (params.panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT || params.panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE)
 			{
 				// Prefer the systems settings
 				// first_view_panel is ignored
 
+				CellSysutilLang language = g_cfg.sys.language;
+
+				// Fall back to english if the panel is not supported
+				if (!has_language_support(language))
+				{
+					language = CELL_SYSUTIL_LANG_ENGLISH_US;
+				}
+
 				switch (g_cfg.sys.language)
 				{
 				case CELL_SYSUTIL_LANG_JAPANESE:
-					if (panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE)
+					if (params.panel_flag == CELL_OSKDIALOG_PANELMODE_DEFAULT_NO_JAPANESE)
 						add_panel(osk_panel_english(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 					else
 						add_panel(osk_panel_japanese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
@@ -1049,111 +1234,111 @@ namespace rsx
 
 				// TODO: find out the exact order
 
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_LATIN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_LATIN))
 				{
 					add_panel(osk_panel_latin(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ENGLISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_ENGLISH))
 				{
 					add_panel(osk_panel_english(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_FRENCH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_FRENCH))
 				{
 					add_panel(osk_panel_french(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_SPANISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_SPANISH))
 				{
 					add_panel(osk_panel_spanish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ITALIAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_ITALIAN))
 				{
 					add_panel(osk_panel_italian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_GERMAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_GERMAN))
 				{
 					add_panel(osk_panel_german(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_TURKEY)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_TURKEY))
 				{
 					add_panel(osk_panel_turkey(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_POLISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_POLISH))
 				{
 					add_panel(osk_panel_polish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_RUSSIAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_RUSSIAN))
 				{
 					add_panel(osk_panel_russian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_DANISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_DANISH))
 				{
 					add_panel(osk_panel_danish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_NORWEGIAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_NORWEGIAN))
 				{
 					add_panel(osk_panel_norwegian(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_DUTCH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_DUTCH))
 				{
 					add_panel(osk_panel_dutch(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_SWEDISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_SWEDISH))
 				{
 					add_panel(osk_panel_swedish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_FINNISH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_FINNISH))
 				{
 					add_panel(osk_panel_finnish(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_PORTUGUESE)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_PORTUGUESE))
 				{
 					add_panel(osk_panel_portuguese_pt(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL))
 				{
 					add_panel(osk_panel_portuguese_br(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_KOREAN)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_KOREAN))
 				{
 					add_panel(osk_panel_korean(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE))
 				{
 					add_panel(osk_panel_traditional_chinese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE))
 				{
 					add_panel(osk_panel_simplified_chinese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_JAPANESE)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_JAPANESE))
 				{
 					add_panel(osk_panel_japanese(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_JAPANESE_HIRAGANA)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_JAPANESE_HIRAGANA))
 				{
 					add_panel(osk_panel_japanese_hiragana(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_JAPANESE_KATAKANA)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_JAPANESE_KATAKANA))
 				{
 					add_panel(osk_panel_japanese_katakana(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ALPHABET)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_ALPHABET))
 				{
 					add_panel(osk_panel_alphabet_half_width(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_ALPHABET_FULL_WIDTH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_ALPHABET_FULL_WIDTH))
 				{
 					add_panel(osk_panel_alphabet_full_width(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_NUMERAL)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_NUMERAL))
 				{
 					add_panel(osk_panel_numeral_half_width(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_NUMERAL_FULL_WIDTH)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_NUMERAL_FULL_WIDTH))
 				{
 					add_panel(osk_panel_numeral_full_width(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
-				if (panel_flag & CELL_OSKDIALOG_PANELMODE_URL)
+				if (is_supported(CELL_OSKDIALOG_PANELMODE_URL))
 				{
 					add_panel(osk_panel_url(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 				}
@@ -1161,7 +1346,7 @@ namespace rsx
 				// Get initial panel based on first_view_panel
 				for (usz i = 0; i < m_panels.size(); ++i)
 				{
-					if (first_view_panel == m_panels[i].osk_panel_mode)
+					if (params.first_view_panel == m_panels[i].osk_panel_mode)
 					{
 						m_panel_index = i;
 						break;
@@ -1176,7 +1361,7 @@ namespace rsx
 				add_panel(osk_panel_english(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
 			}
 
-			initialize_layout(utf16_to_u32string(message), utf16_to_u32string(init_text));
+			initialize_layout(utf16_to_u32string(params.message), utf16_to_u32string(params.init_text));
 
 			update_panel();
 

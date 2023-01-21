@@ -870,6 +870,9 @@
     <ClCompile Include="Emu\Io\usb_device.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\usb_vfs.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="util\atomic.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1107,6 +1110,9 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\HLE_PATCHES.cpp">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_home_menu.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1851,6 +1857,9 @@
     <ClInclude Include="Emu\Io\usb_device.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\usb_vfs.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Crypto\aesni.h">
       <Filter>Crypto</Filter>
     </ClInclude>
@@ -2229,6 +2238,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\expected.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_home_menu.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

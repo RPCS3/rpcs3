@@ -19,6 +19,7 @@
 #include "Emu/Io/pad_config.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/RSX/Overlays/overlay_home_menu.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Utilities/Thread.h"
 #include "util/atomic.hpp"
@@ -241,6 +242,8 @@ void pad_thread::operator()()
 {
 	Init();
 
+	const bool is_vsh = Emu.IsVsh();
+
 	pad::g_reset = false;
 	pad::g_started = true;
 
@@ -315,7 +318,7 @@ void pad_thread::operator()()
 		if (!pad::g_enabled || !is_input_allowed())
 		{
 			m_resume_emulation_flag = false;
-			m_mask_start_press_to_unpause = 0;
+			m_mask_start_press_to_resume = 0;
 			thread_ctrl::wait_for(30'000);
 			continue;
 		}
@@ -399,6 +402,41 @@ void pad_thread::operator()()
 			}
 		}
 
+		// Handle home menu if requested
+		if (!is_vsh && !m_home_menu_open && Emu.IsRunning())
+		{
+			for (usz i = 0; i < m_pads.size(); i++)
+			{
+				const auto& pad = m_pads[i];
+
+				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+					continue;
+
+				for (const auto& button : pad->m_buttons)
+				{
+					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2 && button.m_outKeyCode == CELL_PAD_CTRL_PS && button.m_pressed)
+					{
+						open_home_menu();
+						break;
+					}
+				}
+			}
+		}
+
+		// Handle paused emulation (if triggered by home menu).
+		if (m_home_menu_open && g_cfg.misc.pause_during_home_menu)
+		{
+			// Reset resume control if the home menu is open
+			m_resume_emulation_flag = false;
+			m_mask_start_press_to_resume = 0;
+			m_track_start_press_begin_timestamp = 0;
+
+			// Update UI
+			rsx::set_native_ui_flip();
+			thread_ctrl::wait_for(33'000);
+			continue;
+		}
+
 		if (m_resume_emulation_flag)
 		{
 			m_resume_emulation_flag = false;
@@ -435,15 +473,15 @@ void pad_thread::operator()()
 				}
 			}
 
-			m_mask_start_press_to_unpause &= pressed_mask;
+			m_mask_start_press_to_resume &= pressed_mask;
 
 			if (!pressed_mask || timestamp - m_track_start_press_begin_timestamp >= 700'000)
 			{
 				m_track_start_press_begin_timestamp = timestamp;
 
-				if (std::exchange(m_mask_start_press_to_unpause, u32{umax}))
+				if (std::exchange(m_mask_start_press_to_resume, u32{umax}))
 				{
-					m_mask_start_press_to_unpause = 0;
+					m_mask_start_press_to_resume = 0;
 					m_track_start_press_begin_timestamp = 0;
 
 					sys_log.success("Resuming emulation using the START button in a few seconds...");
@@ -471,8 +509,8 @@ void pad_thread::operator()()
 		}
 		else
 		{
-			// Reset unpause control if caught a state of unpaused emulation
-			m_mask_start_press_to_unpause = 0;
+			// Reset resume control if caught a state of unpaused emulation
+			m_mask_start_press_to_resume = 0;
 			m_track_start_press_begin_timestamp = 0;
 		}
 
@@ -576,4 +614,35 @@ void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<P
 
 	ensure(!!handler);
 	handler->init_config(&cfg);
+}
+
+extern bool send_open_home_menu_cmds();
+extern void send_close_home_menu_cmds();
+
+void pad_thread::open_home_menu()
+{
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		if (m_home_menu_open.exchange(true))
+		{
+			return;
+		}
+
+		if (!send_open_home_menu_cmds())
+		{
+			m_home_menu_open = false;
+			return;
+		}
+
+		input_log.warning("opening home menu...");
+
+		const error_code result = manager->create<rsx::overlays::home_menu_dialog>()->show([this](s32 status)
+		{
+			input_log.notice("closing home menu with status %d", status);
+
+			m_home_menu_open = false;
+
+			send_close_home_menu_cmds();
+		});
+	}
 }

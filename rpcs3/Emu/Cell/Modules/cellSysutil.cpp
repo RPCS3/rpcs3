@@ -161,6 +161,27 @@ extern u64 get_sysutil_cb_manager_read_count()
 	return 0;
 }
 
+extern bool send_open_home_menu_cmds()
+{
+	// TODO: handle CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE
+	if (sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0) < 0 ||
+		sysutil_send_system_cmd(CELL_SYSUTIL_SYSTEM_MENU_OPEN, 0) < 0 ||
+		sysutil_send_system_cmd(CELL_SYSUTIL_BGMPLAYBACK_PLAY, 0) < 0)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+extern void send_close_home_menu_cmds()
+{
+	// TODO: handle CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE
+	sysutil_send_system_cmd(CELL_SYSUTIL_BGMPLAYBACK_STOP, 0);
+	sysutil_send_system_cmd(CELL_SYSUTIL_SYSTEM_MENU_CLOSE, 0);
+	sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+}
+
 template <>
 void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 {

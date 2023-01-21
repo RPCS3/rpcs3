@@ -2,6 +2,7 @@
 
 #include "overlays.h"
 #include "overlay_edit_text.hpp"
+#include "overlay_cursor.h"
 #include "overlay_osk_panel.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
 
@@ -38,6 +39,11 @@ namespace rsx
 			};
 
 			// Base UI
+			u32 m_x_align = 0;
+			u32 m_y_align = 0;
+			f32 m_x_offset = 0.0f;
+			f32 m_y_offset = 0.0f;
+			f32 m_scaling = 1.0f;
 			overlay_element m_frame;
 			overlay_element m_background;
 			label m_title;
@@ -48,11 +54,18 @@ namespace rsx
 			image_button m_btn_space;
 			image_button m_btn_delete;
 
+			// Pointer
+			cursor_item m_pointer{};
+
+			// Analog movement
+			u16 m_x_pos = 0;
+			u16 m_y_pos = 0;
+
 			// Grid
-			u32 cell_size_x = 0;
-			u32 cell_size_y = 0;
-			u32 num_columns = 0;
-			u32 num_rows = 0;
+			u16 cell_size_x = 0;
+			u16 cell_size_y = 0;
+			u16 num_columns = 0;
+			u16 num_rows = 0;
 			std::vector<u32> num_shift_layers_by_charset;
 			u32 selected_x = 0;
 			u32 selected_y = 0;
@@ -82,7 +95,7 @@ namespace rsx
 			osk_dialog();
 			~osk_dialog() override = default;
 
-			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel, color base_color, bool dimmer_enabled, bool intercept_input) override;
+			void Create(const osk_params& params) override;
 			void Close(s32 status) override;
 
 			void initialize_layout(const std::u32string& title, const std::u32string& initial_text);
@@ -111,6 +124,12 @@ namespace rsx
 			std::u32string get_placeholder() const;
 
 			std::pair<u32, u32> get_cell_geometry(u32 index);
+
+			template <typename T>
+			u16 get_scaled(T val)
+			{
+				return static_cast<u16>(static_cast<f32>(val) * m_scaling);
+			}
 
 			compiled_resource get_compiled() override;
 		};

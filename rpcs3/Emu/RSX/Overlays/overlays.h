@@ -91,11 +91,17 @@ namespace rsx
 
 		protected:
 			Timer m_input_timer;
+			static constexpr u64 m_auto_repeat_ms_interval_default = 200;
+			u64 m_auto_repeat_ms_interval = m_auto_repeat_ms_interval_default;
 			std::set<u8> m_auto_repeat_buttons = {
 				pad_button::dpad_up,
 				pad_button::dpad_down,
 				pad_button::dpad_left,
 				pad_button::dpad_right,
+				pad_button::rs_up,
+				pad_button::rs_down,
+				pad_button::rs_left,
+				pad_button::rs_right,
 				pad_button::ls_up,
 				pad_button::ls_down,
 				pad_button::ls_left,
@@ -109,6 +115,7 @@ namespace rsx
 			atomic_t<u64> thread_bits = 0;
 			bool m_keyboard_input_enabled = false; // Allow keyboard events
 			bool m_keyboard_pad_handler_active = true; // Initialized as true to prevent keyboard input until proven otherwise.
+			bool m_allow_input_on_pause = false;
 
 			static thread_local u64 g_thread_bit;
 
