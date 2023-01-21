@@ -88,6 +88,7 @@ enum CellOskDialogFinishReason
 enum CellOskDialogFinishReasonFake // Helper. Must be negative values.
 {
 	FAKE_CELL_OSKDIALOG_CLOSE_ABORT = -1,
+	FAKE_CELL_OSKDIALOG_CLOSE_TERMINATE = -2,
 };
 
 enum CellOskDialogType
@@ -304,6 +305,7 @@ public:
 	// Closes the dialog.
 	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.
 	// Set status to -1 if closed by the game or system.
+	// Set status to -2 if terminated by the system.
 	virtual void Close(s32 status) = 0;
 	virtual ~OskDialogBase() {};
 
@@ -311,6 +313,7 @@ public:
 	std::function<void(CellOskDialogKeyMessage key_message)> on_osk_key_input_entered;
 
 	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
+	atomic_t<CellOskDialogContinuousMode> continuous_mode{ CELL_OSKDIALOG_CONTINUOUS_MODE_NONE };
 	atomic_t<CellOskDialogInputDevice> input_device{ CELL_OSKDIALOG_INPUT_DEVICE_PAD }; // The current input device.
 	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's events.
 	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's events.

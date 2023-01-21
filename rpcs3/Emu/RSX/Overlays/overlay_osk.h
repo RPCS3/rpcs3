@@ -115,6 +115,8 @@ namespace rsx
 			void update_controls();
 			void update_selection_by_index(u32 index);
 
+			void set_visible(bool visible);
+
 			void on_button_pressed(pad_button button_press) override;
 			void on_key_pressed(u32 led, u32 mkey, u32 key_code, u32 out_key_code, bool pressed, std::u32string key) override;
 			void on_text_changed();
