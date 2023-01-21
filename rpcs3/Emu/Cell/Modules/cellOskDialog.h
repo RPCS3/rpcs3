@@ -311,6 +311,7 @@ public:
 	std::function<void(CellOskDialogKeyMessage key_message)> on_osk_key_input_entered;
 
 	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
+	atomic_t<CellOskDialogInputDevice> input_device{ CELL_OSKDIALOG_INPUT_DEVICE_PAD }; // The current input device.
 	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's events.
 	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's events.
 	atomic_t<bool> keyboard_input_enabled{ true }; // Determines if the OSK consumes the device's events.
