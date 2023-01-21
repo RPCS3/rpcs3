@@ -24,6 +24,25 @@ namespace rsx
 
 		void osk_dialog::Close(s32 status)
 		{
+			if (status == FAKE_CELL_OSKDIALOG_CLOSE_TERMINATE)
+			{
+				close(false, true);
+				return;
+			}
+
+			if (status != FAKE_CELL_OSKDIALOG_CLOSE_ABORT && m_use_separate_windows && continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_REMAIN_OPEN)
+			{
+				// Just call the on_osk_close and don't actually close the dialog.
+				if (on_osk_close)
+				{
+					Emu.CallFromMainThread([this, status]()
+					{
+						on_osk_close(status);
+					});
+				}
+				return;
+			}
+
 			fade_animation.current = color4f(1.f);
 			fade_animation.end = color4f(0.f);
 			fade_animation.duration = 0.5f;
@@ -38,8 +57,13 @@ namespace rsx
 					});
 				}
 
-				visible = false;
-				close(true, true);
+				set_visible(false);
+
+				// Only really close the dialog if we aren't in the continuous separate window mode
+				if (!m_use_separate_windows || continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_NONE)
+				{
+					close(true, true);
+				}
 			};
 
 			fade_animation.active = true;
@@ -413,7 +437,8 @@ namespace rsx
 			}
 
 			m_update = true;
-			visible = true;
+			set_visible(continuous_mode != CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE);
+
 			m_stop_input_loop = false;
 
 			fade_animation.current = color4f(0.f);
@@ -502,6 +527,32 @@ namespace rsx
 			select_cell(index, true);
 		}
 
+		void osk_dialog::set_visible(bool visible)
+		{
+			if (m_use_separate_windows)
+			{
+				if (visible && continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
+				{
+					continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_SHOW;
+				}
+				else if (!visible && continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_SHOW)
+				{
+					continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE;
+				}
+			}
+
+			if (this->visible != visible)
+			{
+				this->visible = visible;
+
+				if (m_use_separate_windows)
+				{
+					osk.notice("set_visible: sending CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED with %s", visible ? "CELL_OSKDIALOG_DISPLAY_STATUS_SHOW" : "CELL_OSKDIALOG_DISPLAY_STATUS_HIDE");
+					sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED, visible ? CELL_OSKDIALOG_DISPLAY_STATUS_SHOW : CELL_OSKDIALOG_DISPLAY_STATUS_HIDE);
+				}
+			}
+		}
+
 		void osk_dialog::on_button_pressed(pad_button button_press)
 		{
 			if (!pad_input_enabled || ignore_input_events)
@@ -509,6 +560,7 @@ namespace rsx
 
 			if (input_device.exchange(CELL_OSKDIALOG_INPUT_DEVICE_PAD) != CELL_OSKDIALOG_INPUT_DEVICE_PAD)
 			{
+				osk.notice("on_button_pressed: sending CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED with CELL_OSKDIALOG_INPUT_DEVICE_PAD");
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED, CELL_OSKDIALOG_INPUT_DEVICE_PAD);
 			}
 
@@ -753,6 +805,7 @@ namespace rsx
 
 			if (input_device.exchange(CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD) != CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD)
 			{
+				osk.notice("on_key_pressed: sending CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED with CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD");
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED, CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD);
 			}
 

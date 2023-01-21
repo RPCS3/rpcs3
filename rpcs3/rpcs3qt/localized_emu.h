@@ -139,6 +139,7 @@ private:
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_8001003E: return tr("Pointer is null.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_DEFAULT: return tr("An error has occurred.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_OSK_DIALOG_TITLE: return tr("On Screen Keyboard", "OSK Dialog");
+		case localized_string_id::CELL_OSK_DIALOG_BUSY: return tr("The Home Menu can't be opened while the On Screen Keyboard is busy!", "OSK Dialog");
 		case localized_string_id::CELL_SAVEDATA_CB_BROKEN: return tr("Error - Save data corrupted", "Savedata Error");
 		case localized_string_id::CELL_SAVEDATA_CB_FAILURE: return tr("Error - Failed to save or load", "Savedata Error");
 		case localized_string_id::CELL_SAVEDATA_CB_NO_DATA: return tr("Error - Save data cannot be found", "Savedata Error");

@@ -59,6 +59,7 @@ private:
 	u32 m_mask_start_press_to_resume = 0;
 	u64 m_track_start_press_begin_timestamp = 0;
 	bool m_resume_emulation_flag = false;
+	bool m_ps_button_pressed = false;
 	atomic_t<bool> m_home_menu_open = false;
 };
 

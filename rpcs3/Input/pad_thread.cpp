@@ -406,7 +406,9 @@ void pad_thread::operator()()
 		// Handle home menu if requested
 		if (!is_vsh && !m_home_menu_open && Emu.IsRunning())
 		{
-			for (usz i = 0; i < m_pads.size(); i++)
+			bool ps_button_pressed = false;
+
+			for (usz i = 0; i < m_pads.size() && !ps_button_pressed; i++)
 			{
 				const auto& pad = m_pads[i];
 
@@ -417,11 +419,18 @@ void pad_thread::operator()()
 				{
 					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2 && button.m_outKeyCode == CELL_PAD_CTRL_PS && button.m_pressed)
 					{
-						open_home_menu();
+						// Make sure we call this function only once per button press
+						if (!m_ps_button_pressed)
+						{
+							open_home_menu();
+						}
+						ps_button_pressed = true;
 						break;
 					}
 				}
 			}
+
+			m_ps_button_pressed = ps_button_pressed;
 		}
 
 		// Handle paused emulation (if triggered by home menu).
@@ -619,9 +628,17 @@ void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<P
 
 extern bool send_open_home_menu_cmds();
 extern void send_close_home_menu_cmds();
+extern bool close_osk_from_ps_button();
 
 void pad_thread::open_home_menu()
 {
+	// Check if the OSK is open and can be closed
+	if (!close_osk_from_ps_button())
+	{
+		rsx::overlays::queue_message(get_localized_string(localized_string_id::CELL_OSK_DIALOG_BUSY));
+		return;
+	}
+
 	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
 		if (m_home_menu_open.exchange(true))
