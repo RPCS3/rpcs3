@@ -408,7 +408,13 @@ void Emulator::Init(bool add_only)
 			}
 		}
 
-		make_path_verbose(dev_hdd0 + "disc/");
+		const std::string games_common_dir = g_cfg_vfs.get(g_cfg_vfs.games_dir, emu_dir);
+
+		if (make_path_verbose(games_common_dir))
+		{
+			fs::write_file(games_common_dir + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
+		}
+
 		make_path_verbose(dev_hdd0 + "savedata/");
 		make_path_verbose(dev_hdd0 + "savedata/vmc/");
 		make_path_verbose(dev_hdd0 + "photo/");
@@ -421,11 +427,6 @@ void Emulator::Init(bool add_only)
 	make_path_verbose(fs::get_config_dir() + "captures/");
 	make_path_verbose(fs::get_config_dir() + "sounds/");
 	make_path_verbose(patch_engine::get_patches_path());
-
-	if (const std::string games_common = fs::get_config_dir() + "/games/"; make_path_verbose(games_common))
-	{
-		fs::write_file(games_common + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
-	}
 
 	if (add_only)
 	{
@@ -1459,18 +1460,18 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				// Booting disc game from wrong location
 				sys_log.error("Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
 
-				const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
-				const std::string dst_dir = hdd0_disc + sfb_dir.substr(hdd0_game.size());
+				const std::string games_common = g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir());
+				const std::string dst_dir = games_common + sfb_dir.substr(hdd0_game.size());
 
 				// Move and retry from correct location
 				if (fs::create_path(fs::get_parent_dir(dst_dir)) && fs::rename(sfb_dir, dst_dir, false))
 				{
-					sys_log.success("Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
-					m_path = hdd0_disc + m_path.substr(hdd0_game.size());
+					sys_log.success("Disc game %s moved to special location '%s'", m_title_id, dst_dir);
+					m_path = games_common + m_path.substr(hdd0_game.size());
 					return Load(m_title_id, add_only);
 				}
 
-				sys_log.error("Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
+				sys_log.error("Failed to move disc game %s to '%s' (%s)", m_title_id, dst_dir, fs::g_tls_error);
 				return game_boot_result::wrong_disc_location;
 			}
 		}
