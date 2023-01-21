@@ -7709,7 +7709,7 @@ public:
 
 			const auto ax = vdbpsadbw(a, zeroes, 0);
 			const auto bx = vdbpsadbw(b, zeroes, 0);
-			set_vr(op.rt, shuffle2(ax, bx, 0, 8, 2, 10, 4, 12, 6, 14));
+			set_vr(op.rt, shuffle2(ax, bx, 0, 9, 2, 11, 4, 13, 6, 15));
 			return;
 		}
 
