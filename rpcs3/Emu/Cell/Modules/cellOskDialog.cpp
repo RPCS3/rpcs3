@@ -513,6 +513,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	// Set device mask and event lock
 	osk->ignore_input_events = info.lock_ext_input.load();
+	osk->input_device = info.initial_input_device.load();
 
 	if (info.use_separate_windows)
 	{
@@ -812,7 +813,7 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 
 error_code cellOskDialogSetInitialInputDevice(u32 inputDevice)
 {
-	cellOskDialog.todo("cellOskDialogSetInitialInputDevice(inputDevice=%d)", inputDevice);
+	cellOskDialog.warning("cellOskDialogSetInitialInputDevice(inputDevice=%d)", inputDevice);
 
 	if (inputDevice > CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD)
 	{
@@ -820,9 +821,6 @@ error_code cellOskDialogSetInitialInputDevice(u32 inputDevice)
 	}
 
 	g_fxo->get<osk_info>().initial_input_device = static_cast<CellOskDialogInputDevice>(inputDevice);
-
-	// TODO: use initial_input_device
-	// TODO: Signal CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED if the input device changed (probably only when the dialog is already open)
 
 	return CELL_OK;
 }

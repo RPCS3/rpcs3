@@ -507,6 +507,18 @@ namespace rsx
 			if (!pad_input_enabled || ignore_input_events)
 				return;
 
+			if (input_device.exchange(CELL_OSKDIALOG_INPUT_DEVICE_PAD) != CELL_OSKDIALOG_INPUT_DEVICE_PAD)
+			{
+				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED, CELL_OSKDIALOG_INPUT_DEVICE_PAD);
+			}
+
+			// Always show the pad input panel if the pad is enabled and in use.
+			if (!m_show_panel)
+			{
+				m_show_panel = true;
+				update_panel();
+			}
+
 			const u32 grid_size = num_columns * num_rows;
 
 			const auto on_accept = [this]()
@@ -739,9 +751,21 @@ namespace rsx
 			if (!pressed || !keyboard_input_enabled || ignore_input_events)
 				return;
 
+			if (input_device.exchange(CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD) != CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD)
+			{
+				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED, CELL_OSKDIALOG_INPUT_DEVICE_KEYBOARD);
+			}
+
+			if (m_use_separate_windows && m_show_panel)
+			{
+				// Hide the pad input panel if the keyboard is in use during separate windows.
+				m_show_panel = false;
+				update_panel();
+			}
+
 			const bool use_key_string_fallback = !key.empty();
 
-			osk.error("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, use_key_string_fallback=%d)", led, mkey, key_code, out_key_code, pressed, use_key_string_fallback);
+			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, use_key_string_fallback=%d)", led, mkey, key_code, out_key_code, pressed, use_key_string_fallback);
 
 			if (!use_key_string_fallback)
 			{
@@ -1153,10 +1177,8 @@ namespace rsx
 
 			if (m_use_separate_windows)
 			{
-				// When using separate windows, we show the text field, but hide the pad input panel if the device mask contains CELL_OSKDIALOG_DEVICE_MASK_PAD.
-				// TODO: If controller input is allowed and the user presses a button, show the pad input panel.
-				// TODO: If keyboard input is allowed and the user presses a key, hide the pad input panel.
-				m_show_panel = pad_input_enabled;
+				// When using separate windows, we show the text field, but hide the pad input panel if the input device is a pad.
+				m_show_panel = pad_input_enabled && input_device == CELL_OSKDIALOG_INPUT_DEVICE_PAD;
 				m_title.back_color.a = std::clamp(params.input_field_background_transparency, 0.0f, 1.0f);
 				m_preview.back_color.a = std::clamp(params.input_field_background_transparency, 0.0f, 1.0f);
 			}
