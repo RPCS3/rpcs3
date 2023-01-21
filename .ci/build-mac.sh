@@ -1,7 +1,6 @@
 #!/bin/sh -ex
 
-brew install -f --overwrite llvm@14 nasm ninja git p7zip create-dmg ccache
-
+brew install -f --overwrite llvm@14 nasm ninja git p7zip create-dmg ccache llvm@14 sdl2 glew cmake
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm@14 sdl2 glew cmake
@@ -43,6 +42,13 @@ git submodule update --init --recursive --depth 1
 
 # 3rdparty fixes
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
+#combine the dependencies of 3rdparty libraries into universal libraries for x86_64 and arm64 using lipo
+for lib in "$BREW_PATH/lib"/*.dylib; do
+    libname="$(basename "$lib")"
+    if [ -f "$BREW_X64_PATH/lib/$libname" ]; then
+        lipo -create -output "$BREW_PATH/lib/$libname" "$BREW_X64_PATH/lib/$libname" "$BREW_PATH/lib/$libname"
+    fi
+done
 
 mkdir build && cd build || exit 1
 
@@ -58,9 +64,29 @@ mkdir build && cd build || exit 1
     -G Ninja
 
 "$BREW_PATH/bin/ninja"; build_status=$?;
-
+# time for arm64 build
 cd ..
+export SDL2_DIR="$BREW_PATH/opt/sdl2/lib/cmake/SDL2"
 
+export LDFLAGS="-L$BREW_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib"
+export CPPFLAGS="-I$BREW_PATH/include -msse -msse2 -mcx16 -no-pie"
+export LIBRARY_PATH="$BREW_PATH/lib"
+export LD_LIBRARY_PATH="$BREW_PATH/lib"
+mkdir build-arm64 && cd build-arm64 || exit 1
+"$BREW_PATH/bin/cmake" .. \
+    -DUSE_SDL=ON -DUSE_DISCORD_RPC=OFF -DUSE_VULKAN=ON -DUSE_ALSA=OFF -DUSE_PULSE=OFF -DUSE_AUDIOUNIT=ON \
+    -DLLVM_CCACHE_BUILD=OFF -DLLVM_BUILD_RUNTIME=OFF -DLLVM_BUILD_TOOLS=OFF \
+    -DLLVM_INCLUDE_DOCS=OFF -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_TOOLS=OFF \
+    -DLLVM_INCLUDE_UTILS=OFF -DLLVM_USE_PERF=OFF -DLLVM_ENABLE_Z3_SOLVER=OFF \
+    -DUSE_NATIVE_INSTRUCTIONS=ON \
+    -DUSE_SYSTEM_MVK=OFF \
+    $CMAKE_EXTRA_OPTS \
+    -DLLVM_TARGET_ARCH=AArch64 -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_IGNORE_PATH="$BREW_X64_PATH/lib" \
+    -G Ninja
+"$BREW_PATH/bin/ninja"; build_status=$?;
+cd ..
+# combine the two builds into a universal binary
+lipo -create -output build/bin/rpcs3.app/Contents/MacOS/rpcs3 build/bin/rpcs3.app/Contents/MacOS/rpcs3 build-arm64/bin/rpcs3.app/Contents/MacOS/rpcs3
 {   [ "$CI_HAS_ARTIFACTS" = "true" ];
 } && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
 
