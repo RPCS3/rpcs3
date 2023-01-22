@@ -983,7 +983,7 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	std::lock_guard lock{vdec->mutex};
 	vdec->seq_state = sequence_state::closed;
 
-	if (!idm::remove_verify<vdec_context>(handle, std::move(vdec)))
+	if (!idm::remove_verify<vdec_context>(handle, vdec))
 	{
 		// Other thread removed it beforehead
 		return CELL_VDEC_ERROR_ARG;
