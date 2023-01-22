@@ -315,10 +315,10 @@ public:
 	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
 	atomic_t<CellOskDialogContinuousMode> continuous_mode{ CELL_OSKDIALOG_CONTINUOUS_MODE_NONE };
 	atomic_t<CellOskDialogInputDevice> input_device{ CELL_OSKDIALOG_INPUT_DEVICE_PAD }; // The current input device.
-	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's events.
-	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's events.
-	atomic_t<bool> keyboard_input_enabled{ true }; // Determines if the OSK consumes the device's events.
-	atomic_t<bool> ignore_input_events{ false };   // Determines if the OSK ignores all consumed events.
+	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's input.
+	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's input.
+	atomic_t<bool> keyboard_input_enabled{ true }; // Determines if the OSK consumes the device's input.
+	atomic_t<bool> ignore_device_events{ false };   // Determines if the OSK ignores device events.
 
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
 	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE]{};
@@ -333,7 +333,7 @@ struct osk_info
 
 	atomic_t<bool> use_separate_windows = false;
 
-	atomic_t<bool> lock_ext_input = false;
+	atomic_t<bool> lock_ext_input_device = false;
 	atomic_t<u32> device_mask = 0; // OSK ignores input from the specified devices. 0 means all devices can influence the OSK
 	atomic_t<u32> input_field_window_width = 0;
 	atomic_t<f32> input_field_background_transparency = 1.0f;
