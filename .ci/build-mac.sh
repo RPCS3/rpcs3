@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-brew install -f --overwrite llvm@14 nasm ninja git p7zip create-dmg ccache llvm@14 sdl2 glew cmake
+brew install -f --overwrite llvm@14 nasm ninja git p7zip create-dmg ccache llvm@14 sdl2 glew cmake qt@5 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm@14 sdl2 glew cmake
@@ -66,6 +66,7 @@ mkdir build && cd build || exit 1
 "$BREW_PATH/bin/ninja"; build_status=$?;
 # time for arm64 build
 cd ..
+export Qt5_DIR="BREW_PATH/opt/qt@5/lib/cmake/Qt5"
 export SDL2_DIR="$BREW_PATH/opt/sdl2/lib/cmake/SDL2"
 
 export LDFLAGS="-L$BREW_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib"
