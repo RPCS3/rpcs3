@@ -3275,7 +3275,7 @@ extern void ppu_initialize()
 
 	const std::string mount_point = vfs::get("/dev_flash/");
 
-	bool dev_flash_located = Emu.GetCat().back() != 'P' && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point);
+	bool dev_flash_located = !Emu.GetCat().ends_with('P') && Emu.IsPathInsideDir(Emu.GetBoot(), mount_point);
 
 	if (compile_fw || dev_flash_located)
 	{
