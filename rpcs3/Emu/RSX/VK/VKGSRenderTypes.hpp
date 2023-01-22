@@ -364,7 +364,7 @@ namespace vk
 
 		inline command_buffer_chunk* get()
 		{
-			return &m_cb_list[m_current_index];
+			return &m_cb_list[m_current_index % Count];
 		}
 	};
 }
