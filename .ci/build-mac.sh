@@ -1,6 +1,6 @@
 #!/bin/sh -ex
 
-brew install -f --overwrite llvm@14 nasm ninja git p7zip create-dmg ccache llvm@14 sdl2 glew cmake qt@5 
+brew install -f --overwrite llvm@14 nasm ninja git p7zip create-dmg ccache sdl2 glew cmake qt@5 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm@14 sdl2 glew cmake
