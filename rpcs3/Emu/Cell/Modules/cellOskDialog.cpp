@@ -57,7 +57,7 @@ void osk_info::reset()
 	dlg.reset();
 	valid_text = {};
 	use_separate_windows = false;
-	lock_ext_input = false;
+	lock_ext_input_device = false;
 	device_mask = 0;
 	input_field_window_width = 0;
 	input_field_background_transparency = 1.0f;
@@ -578,7 +578,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	};
 
 	// Set device mask and event lock
-	osk->ignore_input_events = info.lock_ext_input.load();
+	osk->ignore_device_events = info.lock_ext_input_device.load();
 	osk->input_device = info.initial_input_device.load();
 	osk->continuous_mode = info.osk_continuous_mode.load();
 
@@ -882,7 +882,7 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 		osk.input_panel_layout_info = osk.input_field_layout_info;
 	}
 
-	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: use_separate_windows=true, continuous_mode=%s, device_mask=0x%x, input_field_window_width=%f, input_field_background_transparency=%.2f, input_field_layout_info=%s, input_panel_layout_info=%s)",
+	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: use_separate_windows=true, continuous_mode=%s, device_mask=0x%x, input_field_window_width=%d, input_field_background_transparency=%.2f, input_field_layout_info=%s, input_panel_layout_info=%s)",
 		osk.osk_continuous_mode.load(), osk.device_mask.load(), osk.input_field_window_width.load(), osk.input_field_background_transparency.load(), osk.input_field_layout_info, osk.input_panel_layout_info);
 
 	return CELL_OK;
@@ -1118,11 +1118,11 @@ error_code cellOskDialogExtInputDeviceLock()
 {
 	cellOskDialog.warning("cellOskDialogExtInputDeviceLock()");
 
-	g_fxo->get<osk_info>().lock_ext_input = true;
+	g_fxo->get<osk_info>().lock_ext_input_device = true;
 
 	if (const auto osk = _get_osk_dialog(false))
 	{
-		osk->ignore_input_events = true;
+		osk->ignore_device_events = true;
 	}
 
 	return CELL_OK;
@@ -1132,11 +1132,11 @@ error_code cellOskDialogExtInputDeviceUnlock()
 {
 	cellOskDialog.warning("cellOskDialogExtInputDeviceUnlock()");
 
-	g_fxo->get<osk_info>().lock_ext_input = false;
+	g_fxo->get<osk_info>().lock_ext_input_device = false;
 
 	if (const auto osk = _get_osk_dialog(false))
 	{
-		osk->ignore_input_events = false;
+		osk->ignore_device_events = false;
 	}
 
 	return CELL_OK;
