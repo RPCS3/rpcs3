@@ -401,6 +401,11 @@ namespace rsx
 
 		void overlay::refresh() const
 		{
+			if (!visible)
+			{
+				return;
+			}
+
 			if (auto rsxthr = rsx::get_current_renderer(); rsxthr &&
 				(min_refresh_duration_us + rsxthr->last_host_flip_timestamp) < rsx::uclock())
 			{
