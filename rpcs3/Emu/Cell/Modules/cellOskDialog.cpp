@@ -275,11 +275,16 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		}
 	}
 
-	osk->on_osk_close = [wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
+	osk->on_osk_close = [](s32 status)
 	{
 		cellOskDialog.notice("on_osk_close(status=%d)", status);
 
-		const auto osk = wptr.lock();
+		const auto osk = _get_osk_dialog(false);
+		if (!osk)
+		{
+			return;
+		}
+
 		osk->state = OskDialogState::Closed;
 
 		auto& info = g_fxo->get<osk_info>();
@@ -402,16 +407,17 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	};
 
 	// Set key callback
-	osk->on_osk_key_input_entered = [wptr = std::weak_ptr<OskDialogBase>(osk)](CellOskDialogKeyMessage key_message)
+	osk->on_osk_key_input_entered = [](CellOskDialogKeyMessage key_message)
 	{
-		const auto osk = wptr.lock();
 		auto& info = g_fxo->get<osk_info>();
 		std::lock_guard lock(info.text_mtx);
 		auto event_hook_callback = info.osk_hardware_keyboard_event_hook_callback.load();
 
 		cellOskDialog.notice("on_osk_key_input_entered: led=%d, mkey=%d, keycode=%d, hook_event_mode=%d, event_hook_callback=*0x%x", key_message.led, key_message.mkey, key_message.keycode, info.hook_event_mode.load(), event_hook_callback);
 
-		if (!event_hook_callback)
+		const auto osk = _get_osk_dialog(false);
+
+		if (!osk || !event_hook_callback)
 		{
 			// Nothing to do here
 			return;
