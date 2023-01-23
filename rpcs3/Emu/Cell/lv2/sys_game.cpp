@@ -3,7 +3,6 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/System.h"
-#include "Emu/system_config.h"
 
 #include "Emu/IdManager.h"
 #include "Utilities/Thread.h"
@@ -163,26 +162,27 @@ error_code _sys_game_board_storage_read(vm::ptr<u8> buffer1, vm::ptr<u8> buffer2
 {
 	sys_game.trace("sys_game_board_storage_read(buffer1=*0x%x, buffer2=*0x%x)", buffer1, buffer2);
 
-	if (!buffer1)
+	if (!buffer1 || !buffer2)
 	{
 		return CELL_EFAULT;
 	}
 
-	be_t<u64> psid[2] = { +g_cfg.sys.console_psid_high, +g_cfg.sys.console_psid_low };
-	u8* psid_bytes = reinterpret_cast<u8*>(psid);
-	u8 response[16] = { 0x01, 0xFC, 0x43, 0x50, 0xA7, 0x9B, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-	for (int i = 0; i < 16; i++)
-	{
-		response[i] ^= psid_bytes[i];
-	}
-	memcpy(buffer1.get_ptr(), response, 16);
+	memset(buffer1.get_ptr(), 0, 16);
+	*buffer2 = 0;
 
-	if (!buffer2)
+	return CELL_OK;
+}
+
+error_code _sys_game_get_rtc_status(vm::ptr<s32> status)
+{
+	sys_game.trace("sys_game_get_rtc_status(status=*0x%x)", status);
+
+	if (!status)
 	{
 		return CELL_EFAULT;
 	}
 
-	*buffer2 = 0x00;
+	*status = 0;
 
 	return CELL_OK;
 }
