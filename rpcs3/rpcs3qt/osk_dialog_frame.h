@@ -18,6 +18,7 @@ public:
 	~osk_dialog_frame();
 	void Create(const osk_params& params) override;
 	void Close(s32 status) override;
+	void Clear() override;
 
 private:
 	void SetOskText(const QString& text);

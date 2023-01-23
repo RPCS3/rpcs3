@@ -301,6 +301,7 @@ public:
 	};
 
 	virtual void Create(const osk_params& params) = 0;
+	virtual void Clear() = 0;
 
 	// Closes the dialog.
 	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.
@@ -321,7 +322,7 @@ public:
 	atomic_t<bool> ignore_device_events{ false };   // Determines if the OSK ignores device events.
 
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
-	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE]{};
+	std::array<char16_t, CELL_OSKDIALOG_STRING_SIZE> osk_text{};
 };
 
 struct osk_info

@@ -69,6 +69,15 @@ namespace rsx
 			fade_animation.active = true;
 		}
 
+		void osk_dialog::Clear()
+		{
+			std::lock_guard lock(m_preview_mutex);
+
+			m_preview.caret_position = 0;
+			m_preview.value.clear();
+			on_text_changed();
+		}
+
 		void osk_dialog::add_panel(const osk_panel& panel)
 		{
 			// On PS3 apparently only 7 panels are added, the rest is ignored
@@ -582,6 +591,8 @@ namespace rsx
 				update_panel();
 			}
 
+			std::lock_guard lock(m_preview_mutex);
+
 			const u32 grid_size = num_columns * num_rows;
 
 			const auto on_accept = [this]()
@@ -943,8 +954,8 @@ namespace rsx
 		void osk_dialog::on_text_changed()
 		{
 			const auto ws = u32string_to_utf16(m_preview.value);
-			const auto length = (ws.length() + 1) * sizeof(char16_t);
-			memcpy(osk_text, ws.c_str(), length);
+			const usz length = std::min(osk_text.size(), ws.length() + 1) * sizeof(char16_t);
+			memcpy(osk_text.data(), ws.c_str(), length);
 
 			// Muted contrast for placeholder text
 			m_preview.fore_color.a = m_preview.value.empty() ? 0.5f : 1.f;

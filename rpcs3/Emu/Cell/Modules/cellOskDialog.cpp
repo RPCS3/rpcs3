@@ -247,7 +247,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	// Get init text and prepare return value
 	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
-	std::memset(osk->osk_text, 0, sizeof(osk->osk_text));
+	osk->osk_text = {};
 
 	// Also clear the info text just to be sure (it should be zeroed at this point anyway)
 	{
@@ -605,7 +605,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		osk->Create({
 			.title = get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE),
 			.message = message,
-			.init_text = osk->osk_text,
+			.init_text = osk->osk_text.data(),
 			.charlimit = maxLength,
 			.prohibit_flags = prohibitFlgs,
 			.panel_flag = allowOskPanelFlg,
@@ -741,8 +741,14 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 		case CELL_SYSUTIL_OSKDIALOG_UNLOADED:
 		case CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED:
 		case CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED:
+		{
+			auto& info = g_fxo->get<osk_info>();
+			std::lock_guard lock(info.text_mtx);
+
 			info.valid_text = {};
+			osk->Clear();
 			break;
+		}
 		default:
 			break;
 		}
