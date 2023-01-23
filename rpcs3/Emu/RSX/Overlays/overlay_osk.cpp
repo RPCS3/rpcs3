@@ -849,6 +849,8 @@ namespace rsx
 			// Make sure to show the dialog and send necessary events
 			set_visible(true);
 
+			std::lock_guard lock(m_preview_mutex);
+
 			const bool use_key_string_fallback = !key.empty();
 
 			osk.notice("osk_dialog::on_key_pressed(led=%d, mkey=%d, key_code=%d, out_key_code=%d, pressed=%d, use_key_string_fallback=%d)", led, mkey, key_code, out_key_code, pressed, use_key_string_fallback);
@@ -1114,21 +1116,23 @@ namespace rsx
 
 			if (m_use_separate_windows && !m_show_panel)
 			{
-				m_cached_resource.add(m_input_frame.get_compiled());
+				std::lock_guard lock(m_preview_mutex);
 				m_cached_resource.add(m_preview.get_compiled());
 			}
 			else
 			{
-				m_cached_resource.add(m_input_frame.get_compiled());
 				m_cached_resource.add(m_panel_frame.get_compiled());
 
 				if (!m_use_separate_windows)
 				{
 					// The title is omitted in separate window mode
+					m_cached_resource.add(m_input_frame.get_compiled());
 					m_cached_resource.add(m_title.get_compiled());
 				}
-
-				m_cached_resource.add(m_preview.get_compiled());
+				{
+					std::lock_guard lock(m_preview_mutex);
+					m_cached_resource.add(m_preview.get_compiled());
+				}
 				m_cached_resource.add(m_btn_accept.get_compiled());
 				m_cached_resource.add(m_btn_cancel.get_compiled());
 				m_cached_resource.add(m_btn_shift.get_compiled());
