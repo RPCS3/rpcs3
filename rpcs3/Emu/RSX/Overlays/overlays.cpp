@@ -193,6 +193,7 @@ namespace rsx
 
 				if (!rinfo.now_connect || !input::g_pads_intercepted)
 				{
+					m_keyboard_pad_handler_active = false;
 					refresh();
 					continue;
 				}
