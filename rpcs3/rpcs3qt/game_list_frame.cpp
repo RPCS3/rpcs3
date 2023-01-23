@@ -456,7 +456,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		if (Emu.IsStopped())
 		{
-			Emu.AddGamesFromDir(fs::get_config_dir() + "/games");
+			Emu.AddGamesFromDir(g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
 		}
 
 		const std::string _hdd =  rpcs3::utils::get_hdd0_dir();
@@ -514,7 +514,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		};
 
 		add_dir(_hdd + "game/", false);
-		add_dir(_hdd + "disc/", true);
+		add_dir(_hdd + "disc/", true); // Deprecated
 
 		auto get_games = []() -> YAML::Node
 		{
@@ -564,6 +564,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 						if (frag.find_first_of('/') + 1 == 0)
 						{
 							game_list_log.trace("Removed duplicate for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+
+							if (static std::unordered_set<std::string> warn_once_list; warn_once_list.emplace(game_dir).second)
+							{
+								game_list_log.todo("Game at '%s' is using deprecated directory '/dev_hdd0/disc/'.\nConsider moving into '%s'.", game_dir, g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
+							}
+
 							continue;
 						}
 					}

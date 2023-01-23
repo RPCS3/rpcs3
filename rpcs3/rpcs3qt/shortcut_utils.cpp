@@ -3,6 +3,7 @@
 #include "qt_utils.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
+#include "Emu/vfs_config.h"
 #include "Utilities/StrUtil.h"
 
 #ifdef _WIN32
@@ -95,7 +96,7 @@ namespace gui::utils
 #ifdef _WIN32
 		else if (location == shortcut_location::rpcs3_shortcuts)
 		{
-			link_path = fs::get_config_dir() + "/games/shortcuts/";
+			link_path = g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()) + "/shortcuts/";
 			fs::create_dir(link_path);
 		}
 #endif
