@@ -481,7 +481,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			break;
 		}
 		}
-	
+
 		if (!is_kook_key)
 		{
 			cellOskDialog.notice("on_osk_key_input_entered: not a hook key: led=%d, mkey=%d, keycode=%d, hook_event_mode=%d", key_message.led, key_message.mkey, key_message.keycode, info.hook_event_mode.load());
@@ -490,7 +490,6 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 		constexpr u32 max_size = 101;
 		std::vector<u16> string_to_send(max_size, 0);
-		atomic_t<bool> done = false;
 
 		for (u32 i = 0; i < max_size - 1; i++)
 		{
@@ -498,14 +497,14 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			if (osk->osk_text[i] == 0) break;
 		}
 
-		sysutil_register_cb([&](ppu_thread& cb_ppu) -> s32
+		sysutil_register_cb([key_message, string_to_send, event_hook_callback](ppu_thread& cb_ppu) -> s32
 		{
 			vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
 			vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
-			vm::var<u16[], vm::page_allocator<>> pActionInfo(max_size, string_to_send.data());
+			vm::var<u16[], vm::page_allocator<>> pActionInfo(string_to_send.size(), string_to_send.data());
 
 			std::u16string utf16_string;
-			utf16_string.insert(0, reinterpret_cast<char16_t*>(string_to_send.data()), string_to_send.size());
+			utf16_string.insert(0, reinterpret_cast<const char16_t*>(string_to_send.data()), string_to_send.size());
 			std::string action_info = utf16_to_ascii8(utf16_string);
 
 			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback(led=%d, mkey=%d, keycode=%d, action=%d, pActionInfo='%s')", keyMessage->led, keyMessage->mkey, keyMessage->keycode, *action, action_info);
@@ -527,6 +526,16 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 			if (return_value)
 			{
+				const auto osk = _get_osk_dialog(false);
+				if (!osk)
+				{
+					cellOskDialog.error("osk_hardware_keyboard_event_hook_callback: osk is null");
+					return 0;
+				}
+
+				auto& info = g_fxo->get<osk_info>();
+				std::lock_guard lock(info.text_mtx);
+
 				switch (*action)
 				{
 				case CELL_OSKDIALOG_CHANGE_NO_EVENT:
@@ -572,15 +581,8 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				}
 			}
 
-			done = true;
 			return 0;
 		});
-
-		// wait for callback
-		while (!done && !Emu.IsStopped())
-		{
-			std::this_thread::yield();
-		}
 	};
 
 	// Set device mask and event lock
