@@ -1007,7 +1007,7 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 			QMouseEvent* mouse_event = static_cast<QMouseEvent*>(event);
 			if (const auto button = qobject_cast<QPushButton*>(object); button && mouse_event->button() == Qt::RightButton)
 			{
-				u32 button_id = m_pad_buttons->id(button);
+				const int button_id = m_pad_buttons->id(button);
 				if (button_id != -1)
 				{
 					m_cfg_entries[button_id].key.clear();
