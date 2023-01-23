@@ -355,14 +355,14 @@ usb_handler_thread::~usb_handler_thread()
 	open_pipes.clear();
 	usb_devices.clear();
 
-	if (ctx)
-		libusb_exit(ctx);
-
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
 	{
 		if (transfers[index].transfer)
 			libusb_free_transfer(transfers[index].transfer);
 	}
+
+	if (ctx)
+		libusb_exit(ctx);
 }
 
 void usb_handler_thread::operator()()
