@@ -591,6 +591,9 @@ namespace rsx
 				update_panel();
 			}
 
+			// Make sure to show the dialog and send necessary events
+			set_visible(true);
+
 			std::lock_guard lock(m_preview_mutex);
 
 			const u32 grid_size = num_columns * num_rows;
@@ -842,6 +845,9 @@ namespace rsx
 				m_show_panel = false;
 				update_panel();
 			}
+
+			// Make sure to show the dialog and send necessary events
+			set_visible(true);
 
 			const bool use_key_string_fallback = !key.empty();
 
