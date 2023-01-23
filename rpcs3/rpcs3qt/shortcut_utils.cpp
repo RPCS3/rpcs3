@@ -3,6 +3,7 @@
 #include "qt_utils.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
+#include "Emu/vfs_config.h"
 #include "Utilities/StrUtil.h"
 
 #ifdef _WIN32
