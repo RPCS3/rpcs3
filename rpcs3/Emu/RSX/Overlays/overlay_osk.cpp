@@ -241,7 +241,8 @@ namespace rsx
 		{
 			const bool show_panel = m_show_panel || !m_use_separate_windows;
 
-			const u16 title_height = get_scaled(30);
+			// The title is omitted in separate window mode
+			const u16 title_height = m_use_separate_windows ? 0 : get_scaled(30);
 			const u16 preview_height = get_scaled((flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90);
 
 			// Place elements with absolute positioning
@@ -315,7 +316,7 @@ namespace rsx
 					input_x = m_x_input_pos = static_cast<u16>(std::clamp<f32>(get_x(m_input_layout, input_w), x_min, x_max));
 					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(get_y(m_input_layout, input_h), y_min, y_max));
 					panel_x = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(get_x(m_panel_layout, panel_w), x_min, x_max));
-					panel_y = m_y_panel_pos = static_cast<u16>(std::clamp<f32>(get_y(m_panel_layout, panel_h), y_min + input_h, y_max + input_h));
+					panel_y = m_y_panel_pos = static_cast<u16>(std::clamp<f32>(get_y(m_panel_layout, panel_h), static_cast<f32>(y_min + input_h), static_cast<f32>(y_max + input_h)));
 				}
 				else
 				{
@@ -1097,14 +1098,19 @@ namespace rsx
 			if (m_use_separate_windows && !m_show_panel)
 			{
 				m_cached_resource.add(m_input_frame.get_compiled());
-				m_cached_resource.add(m_title.get_compiled());
 				m_cached_resource.add(m_preview.get_compiled());
 			}
 			else
 			{
 				m_cached_resource.add(m_input_frame.get_compiled());
 				m_cached_resource.add(m_panel_frame.get_compiled());
-				m_cached_resource.add(m_title.get_compiled());
+
+				if (!m_use_separate_windows)
+				{
+					// The title is omitted in separate window mode
+					m_cached_resource.add(m_title.get_compiled());
+				}
+
 				m_cached_resource.add(m_preview.get_compiled());
 				m_cached_resource.add(m_btn_accept.get_compiled());
 				m_cached_resource.add(m_btn_cancel.get_compiled());
@@ -1247,7 +1253,6 @@ namespace rsx
 			{
 				// When using separate windows, we show the text field, but hide the pad input panel if the input device is a pad.
 				m_show_panel = pad_input_enabled && input_device == CELL_OSKDIALOG_INPUT_DEVICE_PAD;
-				m_title.back_color.a = std::clamp(params.input_field_background_transparency, 0.0f, 1.0f);
 				m_preview.back_color.a = std::clamp(params.input_field_background_transparency, 0.0f, 1.0f);
 			}
 			else
