@@ -38,6 +38,9 @@ namespace rsx
 				callback_t callback;
 			};
 
+			// Mutex for interaction between overlay and cellOskDialog
+			shared_mutex m_preview_mutex;
+
 			// Base UI configuration
 			bool m_use_separate_windows = false;
 			bool m_show_panel = true;
@@ -104,6 +107,7 @@ namespace rsx
 
 			void Create(const osk_params& params) override;
 			void Close(s32 status) override;
+			void Clear() override;
 
 			void initialize_layout(const std::u32string& title, const std::u32string& initial_text);
 			void add_panel(const osk_panel& panel);

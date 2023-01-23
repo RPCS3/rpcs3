@@ -182,7 +182,7 @@ void osk_dialog_frame::Create(const osk_params& params)
 
 void osk_dialog_frame::SetOskText(const QString& text)
 {
-	std::memcpy(osk_text, utils::bless<char16_t>(text.constData()), (text.size() + 1u) * sizeof(char16_t));
+	std::memcpy(osk_text.data(), utils::bless<char16_t>(text.constData()), std::min(osk_text.size(), text.size() + 1ull) * sizeof(char16_t));
 }
 
 void osk_dialog_frame::Close(s32 status)
@@ -201,5 +201,13 @@ void osk_dialog_frame::Close(s32 status)
 			m_dialog->done(status);
 			break;
 		}
+	}
+}
+
+void osk_dialog_frame::Clear()
+{
+	if (m_dialog)
+	{
+		SetOskText("");
 	}
 }
