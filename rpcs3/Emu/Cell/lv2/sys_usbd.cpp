@@ -288,6 +288,9 @@ usb_handler_thread::usb_handler_thread()
 		{
 			found_h050 = true;
 		}
+		
+		// EA Active 2 dongle for connecting wristbands & legband
+		check_device(0x21A4, 0xAC27, 0xAC27, "EA Active 2 Dongle");
 	}
 
 	libusb_free_device_list(list, 1);
