@@ -254,39 +254,13 @@ namespace rsx
 			const u16 button_h = show_panel ? (button_height + button_margin) : 0;
 			const u16 total_w = std::max(input_w, panel_w);
 			const u16 total_h = input_h + panel_h + button_h;
-			f32 origin_x = 0.0f;
-			f32 origin_y = 0.0f;
 
-			// TODO: Instead of an actual alignment, the layout mode may tell us which corner of the dialog we should use for positioning.
-			// TODO: Align separate windows.
+			// The cellOskDialog's origin is at the center of the screen with positive values increasing toward the right and upper directions.
+			// The layout mode tells us which corner of the dialog we should use for positioning.
+			// With CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT and CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP and a point (0,0) the dialog's top left corner would be in the center of the screen.
+			// With CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER and CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER and a point (0,0) the dialog would be exactly in the center of the screen.
+
 			// TODO: Make sure separate windows don't overlap.
-			// TODO: Does the y offset set by the game need to be added or subtracted?
-
-			switch (m_layout.x_align)
-			{
-			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT:
-				origin_x = virtual_width;
-				break;
-			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER:
-				origin_x = static_cast<f32>(virtual_width - total_w) / 2.0f;
-				break;
-			case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT:
-			default:
-				break;
-			}
-
-			switch (m_layout.y_align)
-			{
-			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM:
-				origin_y = virtual_height;
-				break;
-			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER:
-				origin_y = static_cast<f32>(virtual_height - total_h) / 2.0f;
-				break;
-			case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP:
-			default:
-				break;
-			}
 
 			// Calculate initial position and analog movement range.
 			constexpr f32 margin = 50.0f; // Let's add a minimal margin on all sides
@@ -302,20 +276,51 @@ namespace rsx
 			// x pos should only be 0 the first time, because we always add a margin
 			if (m_x_input_pos == 0)
 			{
-				const osk_window_layout& input_layout = m_use_separate_windows ? m_input_layout : m_layout;
-				const osk_window_layout& panel_layout = m_use_separate_windows ? m_panel_layout : m_layout;
+				const auto get_x = [](const osk_window_layout& layout, const u16& width) -> f32
+				{
+					constexpr f32 origin_x = virtual_width / 2.0f;
+					const f32 x = origin_x + layout.x_offset;
+
+					switch (layout.x_align)
+					{
+					case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_RIGHT:
+						return x - width;
+					case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_CENTER:
+						return x - (width / 2.0f);
+					case CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT:
+					default:
+						return x;
+					}
+				};
+
+				const auto get_y = [](const osk_window_layout& layout, const u16& height) -> f32
+				{
+					constexpr f32 origin_y = virtual_height / 2.0f;
+					const f32 y = origin_y + layout.y_offset;
+
+					switch (layout.y_align)
+					{
+					case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_BOTTOM:
+						return y - height;
+					case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_CENTER:
+						return y - (height / 2.0f);
+					case CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP:
+					default:
+						return y;
+					}
+				};
 
 				if (m_use_separate_windows)
 				{
-					input_x = m_x_input_pos = static_cast<u16>(std::clamp<f32>(origin_x + input_layout.x_offset, x_min, x_max));
-					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(origin_y + input_layout.y_offset, y_min, y_max));
-					panel_x = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(origin_x + panel_layout.x_offset, x_min, x_max));
-					panel_y = m_y_panel_pos = static_cast<u16>(std::clamp<f32>(origin_y + panel_layout.y_offset, y_min + input_h, y_max + input_h));
+					input_x = m_x_input_pos = static_cast<u16>(std::clamp<f32>(get_x(m_input_layout, input_w), x_min, x_max));
+					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(get_y(m_input_layout, input_h), y_min, y_max));
+					panel_x = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(get_x(m_panel_layout, panel_w), x_min, x_max));
+					panel_y = m_y_panel_pos = static_cast<u16>(std::clamp<f32>(get_y(m_panel_layout, panel_h), y_min + input_h, y_max + input_h));
 				}
 				else
 				{
-					input_x = panel_x = m_x_input_pos = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(origin_x + input_layout.x_offset, x_min, x_max));
-					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(origin_y + input_layout.y_offset, y_min, y_max));
+					input_x = panel_x = m_x_input_pos = m_x_panel_pos = static_cast<u16>(std::clamp<f32>(get_x(m_layout, total_w), x_min, x_max));
+					input_y = m_y_input_pos = static_cast<u16>(std::clamp<f32>(get_y(m_layout, total_h), y_min, y_max));
 					panel_y = m_y_panel_pos = input_y + input_h;
 				}
 			}
