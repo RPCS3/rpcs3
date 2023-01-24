@@ -24,6 +24,8 @@ namespace rsx
 
 		void osk_dialog::Close(s32 status)
 		{
+			osk.notice("Closing osk (status=%d)", status);
+
 			if (status == FAKE_CELL_OSKDIALOG_CLOSE_TERMINATE)
 			{
 				close(false, true);
@@ -63,19 +65,37 @@ namespace rsx
 				if (!m_use_separate_windows || continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_NONE)
 				{
 					close(true, true);
+					return;
 				}
+
+				// Clear text edit in continuous separate window mode. Keep actual data just in case.
+				Clear(false);
 			};
 
 			fade_animation.active = true;
 		}
 
-		void osk_dialog::Clear()
+		void osk_dialog::Clear(bool clear_all_data)
 		{
-			std::lock_guard lock(m_preview_mutex);
+			osk.notice("Clearing osk (clear_all_data=%d)", clear_all_data);
+
+			// Try to lock. Clear might be called recursively.
+			const bool locked = m_preview_mutex.try_lock();
 
 			m_preview.caret_position = 0;
-			m_preview.value.clear();
-			on_text_changed();
+			m_preview.set_text({});
+
+			if (clear_all_data)
+			{
+				on_text_changed();
+			}
+
+			if (locked)
+			{
+				m_preview_mutex.unlock();
+			}
+
+			m_update = true;
 		}
 
 		void osk_dialog::add_panel(const osk_panel& panel)
@@ -961,9 +981,11 @@ namespace rsx
 
 		void osk_dialog::on_text_changed()
 		{
-			const auto ws = u32string_to_utf16(m_preview.value);
+			const std::u16string ws = u32string_to_utf16(m_preview.value);
 			const usz length = std::min(osk_text.size(), ws.length() + 1) * sizeof(char16_t);
 			memcpy(osk_text.data(), ws.c_str(), length);
+
+			osk.notice("on_text_changed: osk_text='%s'", utf16_to_ascii8(ws));
 
 			// Muted contrast for placeholder text
 			m_preview.fore_color.a = m_preview.value.empty() ? 0.5f : 1.f;
