@@ -211,3 +211,20 @@ void osk_dialog_frame::Clear(bool clear_all_data)
 		SetOskText("");
 	}
 }
+
+void osk_dialog_frame::SetText(const std::u16string& text)
+{
+	if (m_dialog)
+	{
+		SetOskText(QString::fromStdU16String(text));
+	}
+}
+
+void osk_dialog_frame::Insert(const std::u16string& text)
+{
+	if (m_dialog)
+	{
+		// TODO: Correct position (will probably never get implemented because this dialog is just a fallback)
+		SetOskText(QString::fromStdU16String(text));
+	}
+}

@@ -67,9 +67,6 @@ namespace rsx
 					close(true, true);
 					return;
 				}
-
-				// Clear text edit in continuous separate window mode. Keep actual data just in case.
-				Clear(false);
 			};
 
 			fade_animation.active = true;
@@ -77,10 +74,10 @@ namespace rsx
 
 		void osk_dialog::Clear(bool clear_all_data)
 		{
-			osk.notice("Clearing osk (clear_all_data=%d)", clear_all_data);
-
 			// Try to lock. Clear might be called recursively.
 			const bool locked = m_preview_mutex.try_lock();
+
+			osk.notice("Clearing osk (clear_all_data=%d)", clear_all_data);
 
 			m_preview.caret_position = 0;
 			m_preview.set_text({});
@@ -89,6 +86,62 @@ namespace rsx
 			{
 				on_text_changed();
 			}
+
+			if (locked)
+			{
+				m_preview_mutex.unlock();
+			}
+
+			m_update = true;
+		}
+
+		void osk_dialog::SetText(const std::u16string& text)
+		{
+			// Try to lock. Insert might be called recursively.
+			const bool locked = m_preview_mutex.try_lock();
+
+			const std::u16string new_str = text.length() <= char_limit ? text : text.substr(0, char_limit);
+
+			osk.notice("Setting osk text (text='%s', new_str='%s', char_limit=%d)", utf16_to_ascii8(text), utf16_to_ascii8(new_str), char_limit);
+
+			m_preview.caret_position = new_str.length();
+			m_preview.set_unicode_text(utf16_to_u32string(new_str));
+
+			on_text_changed();
+
+			if (locked)
+			{
+				m_preview_mutex.unlock();
+			}
+
+			m_update = true;
+		}
+
+		void osk_dialog::Insert(const std::u16string& text)
+		{
+			// Try to lock. Insert might be called recursively.
+			const bool locked = m_preview_mutex.try_lock();
+
+			osk.notice("Inserting into osk at position %d (text='%s', char_limit=%d)", m_preview.caret_position, utf16_to_ascii8(text), char_limit);
+
+			// Append to output text
+			if (m_preview.value.empty())
+			{
+				const std::u16string new_str = text.length() <= char_limit ? text : text.substr(0, char_limit);
+
+				m_preview.caret_position = new_str.length();
+				m_preview.set_unicode_text(utf16_to_u32string(new_str));
+			}
+			else if ((m_preview.value.length() + text.length()) <= char_limit)
+			{
+				m_preview.insert_text(utf16_to_u32string(text));
+			}
+			else
+			{
+				osk.notice("Can't insert into osk: Character limit reached.");
+			}
+
+			on_text_changed();
 
 			if (locked)
 			{
@@ -1008,13 +1061,12 @@ namespace rsx
 			}
 			else
 			{
-				if (m_preview.value.length() == char_limit)
+				if (m_preview.value.length() >= char_limit)
 				{
 					return;
 				}
 
-				const auto new_str = m_preview.value + str;
-				if (new_str.length() <= char_limit)
+				if ((m_preview.value.length() + str.length()) <= char_limit)
 				{
 					m_preview.insert_text(str);
 				}
