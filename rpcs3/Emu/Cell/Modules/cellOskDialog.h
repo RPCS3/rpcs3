@@ -301,7 +301,7 @@ public:
 	};
 
 	virtual void Create(const osk_params& params) = 0;
-	virtual void Clear() = 0;
+	virtual void Clear(bool clear_all_data) = 0;
 
 	// Closes the dialog.
 	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.

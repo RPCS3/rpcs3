@@ -746,7 +746,7 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 			std::lock_guard lock(info.text_mtx);
 
 			info.valid_text = {};
-			osk->Clear();
+			osk->Clear(true);
 			break;
 		}
 		default:
