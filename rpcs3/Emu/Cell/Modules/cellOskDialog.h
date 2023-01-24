@@ -302,6 +302,8 @@ public:
 
 	virtual void Create(const osk_params& params) = 0;
 	virtual void Clear(bool clear_all_data) = 0;
+	virtual void Insert(const std::u16string& text) = 0;
+	virtual void SetText(const std::u16string& text) = 0;
 
 	// Closes the dialog.
 	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.
@@ -319,7 +321,7 @@ public:
 	atomic_t<bool> pad_input_enabled{ true };      // Determines if the OSK consumes the device's input.
 	atomic_t<bool> mouse_input_enabled{ true };    // Determines if the OSK consumes the device's input.
 	atomic_t<bool> keyboard_input_enabled{ true }; // Determines if the OSK consumes the device's input.
-	atomic_t<bool> ignore_device_events{ false };   // Determines if the OSK ignores device events.
+	atomic_t<bool> ignore_device_events{ false };  // Determines if the OSK ignores device events.
 
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
 	std::array<char16_t, CELL_OSKDIALOG_STRING_SIZE> osk_text{};
@@ -329,7 +331,7 @@ struct osk_info
 {
 	std::shared_ptr<OskDialogBase> dlg;
 
-	std::array<char16_t, CELL_OSKDIALOG_STRING_SIZE> valid_text{};
+	std::array<char16_t, CELL_OSKDIALOG_STRING_SIZE> valid_text{}; // The string that's going to be served to the game.
 	shared_mutex text_mtx;
 
 	atomic_t<bool> use_separate_windows = false;

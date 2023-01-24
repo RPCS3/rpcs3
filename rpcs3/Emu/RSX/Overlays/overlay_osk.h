@@ -108,6 +108,8 @@ namespace rsx
 			void Create(const osk_params& params) override;
 			void Close(s32 status) override;
 			void Clear(bool clear_all_data) override;
+			void SetText(const std::u16string& text) override;
+			void Insert(const std::u16string& text) override;
 
 			void initialize_layout(const std::u32string& title, const std::u32string& initial_text);
 			void add_panel(const osk_panel& panel);

@@ -19,6 +19,8 @@ public:
 	void Create(const osk_params& params) override;
 	void Close(s32 status) override;
 	void Clear(bool clear_all_data) override;
+	void SetText(const std::u16string& text) override;
+	void Insert(const std::u16string& text) override;
 
 private:
 	void SetOskText(const QString& text);

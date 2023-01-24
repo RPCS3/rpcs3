@@ -488,31 +488,36 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			return;
 		}
 
+		// The max size is 100 characters plus '\0'. Apparently this used to be 30 plus '\0' in older firmware.
 		constexpr u32 max_size = 101;
-		std::vector<u16> string_to_send(max_size, 0);
 
-		for (u32 i = 0; i < max_size - 1; i++)
-		{
-			string_to_send[i] = osk->osk_text[i];
-			if (osk->osk_text[i] == 0) break;
-		}
+		// TODO: Send unconfirmed string if there is one.
+		// As far as I understand, this is for example supposed to be the IME preview.
+		// So when you type in japanese, you get some word propositions which you can select and confirm.
+		// The "confirmed" string is basically everything you already wrote, while the "unconfirmed"
+		// string is the auto-completion part that you haven't accepted as proper word yet.
+		// The game expects you to send this "preview", or an empty string if there is none.
+		std::array<u16, max_size> string_to_send{};
 
 		sysutil_register_cb([key_message, string_to_send, event_hook_callback](ppu_thread& cb_ppu) -> s32
 		{
+			// Prepare callback variables
 			vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
 			vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
 			vm::var<u16[], vm::page_allocator<>> pActionInfo(string_to_send.size(), string_to_send.data());
 
-			std::u16string utf16_string;
-			utf16_string.insert(0, reinterpret_cast<const char16_t*>(string_to_send.data()), string_to_send.size());
-			std::string action_info = utf16_to_ascii8(utf16_string);
+			// Create helpers for logging
+			std::u16string utf16_string(reinterpret_cast<const char16_t*>(string_to_send.data()), string_to_send.size());
+			std::string utf8_string = utf16_to_ascii8(utf16_string);
 
-			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback(led=%d, mkey=%d, keycode=%d, action=%d, pActionInfo='%s')", keyMessage->led, keyMessage->mkey, keyMessage->keycode, *action, action_info);
+			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback(led=%d, mkey=%d, keycode=%d, action=%d, pActionInfo='%s')", keyMessage->led, keyMessage->mkey, keyMessage->keycode, *action, utf8_string);
 
-			const bool return_value = event_hook_callback(cb_ppu, keyMessage, action, pActionInfo.begin());
+			// Call the hook function. The game reads and writes pActionInfo. We need to react based on the returned action.
+			const bool return_value = event_hook_callback(cb_ppu, keyMessage, action, pActionInfo);
 			ensure(action);
 			ensure(pActionInfo);
 
+			// Parse returned text for logging
 			utf16_string.clear();
 			for (u32 i = 0; i < max_size; i++)
 			{
@@ -520,10 +525,11 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				if (!code) break;
 				utf16_string.push_back(code);
 			}
-			action_info = utf16_to_ascii8(utf16_string);
+			utf8_string = utf16_to_ascii8(utf16_string);
 
-			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: return_value=%d, action=%d, pActionInfo='%s'", return_value, *action, action_info);
+			cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: return_value=%d, action=%d, pActionInfo='%s'", return_value, *action, utf8_string);
 
+			// Check if the hook function was successful
 			if (return_value)
 			{
 				const auto osk = _get_osk_dialog(false);
@@ -546,31 +552,25 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				}
 				case CELL_OSKDIALOG_CHANGE_WORDS_INPUT:
 				{
-					// Set unconfirmed string and reset unconfirmed string
-					for (u32 i = 0; i < max_size; i++)
-					{
-						osk->osk_text[i] = pActionInfo.begin()[i];
-					}
+					// TODO: Replace unconfirmed string.
+					cellOskDialog.todo("osk_hardware_keyboard_event_hook_callback: replace unconfirmed string with '%s'", utf8_string);
 					break;
 				}
 				case CELL_OSKDIALOG_CHANGE_WORDS_INSERT:
 				{
+					// TODO: Remove unconfirmed string
+					cellOskDialog.todo("osk_hardware_keyboard_event_hook_callback: remove unconfirmed string");
+
 					// Set confirmed string and reset unconfirmed string
-					for (u32 i = 0; i < max_size; i++)
-					{
-						info.valid_text[i] = pActionInfo.begin()[i];
-						osk->osk_text[i] = 0;
-					}
+					cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: inserting string '%s'", utf8_string);
+					osk->Insert(utf16_string);
 					break;
 				}
 				case CELL_OSKDIALOG_CHANGE_WORDS_REPLACE_ALL:
 				{
-					// Set confirmed string and reset all strings
-					for (u32 i = 0; i < max_size; i++)
-					{
-						info.valid_text[i] = pActionInfo.begin()[i];
-						osk->osk_text[i] = 0;
-					}
+					// Replace confirmed string and remove unconfirmed string.
+					cellOskDialog.notice("osk_hardware_keyboard_event_hook_callback: replacing all strings with '%s'", utf8_string);
+					osk->SetText(utf16_string);
 					break;
 				}
 				default:
