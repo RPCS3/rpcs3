@@ -111,11 +111,14 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		return;
 	}
 
-	m_graphics_state.clear(rsx::rtt_config_dirty | rsx::rtt_config_contested);
-	framebuffer_status_valid = false;
+	m_graphics_state.clear(
+		rsx::rtt_config_dirty |
+		rsx::rtt_config_contested |
+		rsx::rtt_config_valid |
+		rsx::rtt_cache_state_dirty);
 
 	get_framebuffer_layout(context, m_framebuffer_layout);
-	if (!framebuffer_status_valid)
+	if (!m_graphics_state.test(rsx::rtt_config_valid))
 	{
 		return;
 	}
@@ -206,7 +209,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_depth_surface_info = {};
 	}
 
-	framebuffer_status_valid = false;
+	m_graphics_state.clear(rsx::rtt_config_valid);
 
 	if (m_draw_fbo)
 	{
@@ -224,12 +227,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 			m_draw_fbo->bind();
 			m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
 
-			framebuffer_status_valid = true;
+			m_graphics_state.set(rsx::rtt_config_valid);
 			break;
 		}
 	}
 
-	if (!framebuffer_status_valid)
+	if (!m_graphics_state.test(rsx::rtt_config_valid))
 	{
 		m_framebuffer_cache.emplace_back();
 		m_framebuffer_cache.back().add_ref();
@@ -290,8 +293,13 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		break;
 	}
 
-	framebuffer_status_valid = m_draw_fbo->check();
-	if (!framebuffer_status_valid) return;
+	if (!m_draw_fbo->check())
+	{
+		m_graphics_state.clear(rsx::rtt_config_valid);
+		return;
+	}
+
+	m_graphics_state.set(rsx::rtt_config_valid);
 
 	check_zcull_status(true);
 	set_viewport();

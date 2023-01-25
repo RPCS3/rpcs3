@@ -1435,7 +1435,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 	init_buffers(rsx::framebuffer_creation_context{ctx});
 
-	if (!framebuffer_status_valid) return;
+	if (!m_graphics_state.test(rsx::rtt_config_valid)) return;
 
 	//float depth_clear = 1.f;
 	u32   stencil_clear = 0;
@@ -2406,11 +2406,14 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		return;
 	}
 
-	m_graphics_state.clear(rsx::rtt_config_dirty | rsx::rtt_config_contested);
-	framebuffer_status_valid = false;
+	m_graphics_state.clear(
+		rsx::rtt_config_dirty |
+		rsx::rtt_config_contested |
+		rsx::rtt_config_valid |
+		rsx::rtt_cache_state_dirty);
 
 	get_framebuffer_layout(context, m_framebuffer_layout);
-	if (!framebuffer_status_valid)
+	if (!m_graphics_state.test(rsx::rtt_config_valid))
 	{
 		return;
 	}
