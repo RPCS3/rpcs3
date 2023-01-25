@@ -42,6 +42,7 @@ export LD_LIBRARY_PATH="$BREW_X64_PATH/lib"
 git submodule update --init --recursive --depth 1
 
 # 3rdparty fixes
+ln -s "$VULKAN_SDK/lib/libMoltenVK.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
 sed -i '' "s/extern const double NSAppKitVersionNumber;/const double NSAppKitVersionNumber = 1343;/g" 3rdparty/hidapi/hidapi/mac/hid.c
 
 mkdir build && cd build || exit 1
