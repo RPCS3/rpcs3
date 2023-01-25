@@ -82,6 +82,10 @@ namespace rsx
 
 		pipeline_config_dirty      = 0x100000, // Generic pipeline configuration changes. Shader peek hint.
 
+		rtt_config_dirty           = 0x200000, // Render target configuration changed
+		rtt_config_contested       = 0x400000, // Render target configuration is indeterminate
+		texture_cache_state_dirty  = 0x800000, // Texture cache state is indeterminate
+
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
@@ -288,14 +292,12 @@ namespace rsx
 
 		bool send_event(u64, u64, u64);
 
-		bool m_rtts_dirty = true;
 		std::array<bool, 16> m_textures_dirty;
 		std::array<bool, 4> m_vertex_textures_dirty;
-		bool m_framebuffer_state_contested = false;
 		rsx::framebuffer_creation_context m_current_framebuffer_context = rsx::framebuffer_creation_context::context_draw;
 
 		rsx::atomic_bitmask_t<rsx::eng_interrupt_reason> m_eng_interrupt_mask;
-		u32 m_graphics_state = 0;
+		rsx::bitmask_t<rsx::pipeline_state> m_graphics_state;
 		u64 ROP_sync_timestamp = 0;
 
 		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};

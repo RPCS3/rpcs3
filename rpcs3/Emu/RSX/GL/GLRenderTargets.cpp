@@ -103,7 +103,7 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*skip_reading*/)
 {
 	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
-	if (m_current_framebuffer_context == context && !m_rtts_dirty && m_draw_fbo)
+	if (m_current_framebuffer_context == context && !m_graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
 	{
 		// Fast path
 		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
@@ -111,9 +111,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		return;
 	}
 
-	m_rtts_dirty = false;
+	m_graphics_state.clear(rsx::rtt_config_dirty | rsx::rtt_config_contested);
 	framebuffer_status_valid = false;
-	m_framebuffer_state_contested = false;
 
 	get_framebuffer_layout(context, m_framebuffer_layout);
 	if (!framebuffer_status_valid)

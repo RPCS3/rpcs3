@@ -524,11 +524,10 @@ namespace rsx
 			return on_access_violation(address, is_writing);
 		};
 
-		m_rtts_dirty = true;
 		m_textures_dirty.fill(true);
 		m_vertex_textures_dirty.fill(true);
 
-		m_graphics_state = pipeline_state::all_dirty;
+		m_graphics_state |= pipeline_state::all_dirty;
 
 		g_user_asked_for_frame_capture = false;
 
@@ -685,7 +684,7 @@ namespace rsx
 				push_buf.clear();
 			}
 
-			m_graphics_state &= ~rsx::pipeline_state::push_buffer_arrays_dirty;
+			m_graphics_state.clear(rsx::pipeline_state::push_buffer_arrays_dirty);
 		}
 
 		element_push_buffer.clear();
@@ -1359,8 +1358,8 @@ namespace rsx
 		layout.width = rsx::method_registers.surface_clip_width();
 		layout.height = rsx::method_registers.surface_clip_height();
 
+		m_graphics_state.clear(rsx::rtt_config_contested);
 		framebuffer_status_valid = false;
-		m_framebuffer_state_contested = false;
 		m_current_framebuffer_context = context;
 
 		if (layout.width == 0 || layout.height == 0)
@@ -1481,7 +1480,10 @@ namespace rsx
 			}
 
 			color_buffer_unused = !color_write_enabled || layout.target == rsx::surface_target::none;
-			m_framebuffer_state_contested = color_buffer_unused || depth_buffer_unused;
+			if (color_buffer_unused || depth_buffer_unused)
+			{
+				m_graphics_state.set(rsx::rtt_config_contested);
+			}
 			break;
 		default:
 			fmt::throw_exception("Unknown framebuffer context 0x%x", static_cast<u32>(context));
@@ -1686,7 +1688,7 @@ namespace rsx
 
 	void thread::on_framebuffer_options_changed(u32 opt)
 	{
-		if (m_rtts_dirty)
+		if (m_graphics_state & rsx::rtt_config_dirty)
 		{
 			// Nothing to do
 			return;
@@ -1773,9 +1775,9 @@ namespace rsx
 		{
 			evaluate_depth_buffer_state();
 
-			if (m_framebuffer_state_contested)
+			if (m_graphics_state.test(rsx::rtt_config_contested) && evaluate_depth_buffer_contested())
 			{
-				m_rtts_dirty |= evaluate_depth_buffer_contested();
+				m_graphics_state.set(rsx::rtt_config_dirty);
 			}
 			break;
 		}
@@ -1798,16 +1800,16 @@ namespace rsx
 				evaluate_stencil_buffer_state();
 			}
 
-			if (m_framebuffer_state_contested)
+			if (m_graphics_state.test(rsx::rtt_config_contested) && evaluate_depth_buffer_contested())
 			{
-				m_rtts_dirty |= evaluate_depth_buffer_contested();
+				m_graphics_state.set(rsx::rtt_config_dirty);
 			}
 			break;
 		}
 		case NV4097_SET_COLOR_MASK:
 		case NV4097_SET_COLOR_MASK_MRT:
 		{
-			if (!m_framebuffer_state_contested) [[likely]]
+			if (!m_graphics_state.test(rsx::rtt_config_contested)) [[likely]]
 			{
 				// Update write masks and continue
 				evaluate_color_buffer_state();
@@ -1824,7 +1826,7 @@ namespace rsx
 				if (!old_state && new_state)
 				{
 					// Color buffers now in use
-					m_rtts_dirty = true;
+					m_graphics_state.set(rsx::rtt_config_dirty);
 				}
 			}
 			break;
@@ -1836,16 +1838,16 @@ namespace rsx
 
 	bool thread::get_scissor(areau& region, bool clip_viewport)
 	{
-		if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
+		if (!m_graphics_state.test(rsx::pipeline_state::scissor_config_state_dirty))
 		{
-			if (clip_viewport == !!(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped))
+			if (clip_viewport == m_graphics_state.test(rsx::pipeline_state::scissor_setup_clipped))
 			{
 				// Nothing to do
 				return false;
 			}
 		}
 
-		m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_clipped);
+		m_graphics_state.clear(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_clipped);
 
 		u16 x1, x2, y1, y2;
 
@@ -1889,7 +1891,7 @@ namespace rsx
 
 		if (m_graphics_state & rsx::pipeline_state::scissor_setup_invalid)
 		{
-			m_graphics_state &= ~rsx::pipeline_state::scissor_setup_invalid;
+			m_graphics_state.clear(rsx::pipeline_state::scissor_setup_invalid);
 			framebuffer_status_valid = true;
 		}
 
@@ -1901,10 +1903,12 @@ namespace rsx
 
 	void thread::prefetch_fragment_program()
 	{
-		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty))
+		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty))
+		{
 			return;
+		}
 
-		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
+		m_graphics_state.clear(rsx::pipeline_state::fragment_program_ucode_dirty);
 
 		// Request for update of fragment constants if the program block is invalidated
 		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
@@ -1922,7 +1926,7 @@ namespace rsx
 		current_fragment_program.texture_state.import(current_fp_texture_state, current_fp_metadata.referenced_textures_mask);
 		current_fragment_program.valid = true;
 
-		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_state_dirty))
+		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
 		{
 			// Verify current texture state is valid
 			for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -1937,7 +1941,7 @@ namespace rsx
 			}
 		}
 
-		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_state_dirty) &&
+		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty) &&
 			(prev_textures_reference_mask != current_fp_metadata.referenced_textures_mask))
 		{
 			// If different textures are used, upload their coefficients.
@@ -1948,10 +1952,12 @@ namespace rsx
 
 	void thread::prefetch_vertex_program()
 	{
-		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty))
+		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty))
+		{
 			return;
+		}
 
-		m_graphics_state &= ~rsx::pipeline_state::vertex_program_ucode_dirty;
+		m_graphics_state.clear(rsx::pipeline_state::vertex_program_ucode_dirty);
 
 		// Reload transform constants unconditionally for now
 		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
@@ -1969,7 +1975,7 @@ namespace rsx
 
 		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
 
-		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_state_dirty))
+		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_state_dirty))
 		{
 			// Verify current texture state is valid
 			for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -1993,10 +1999,12 @@ namespace rsx
 
 	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors)
 	{
-		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
+		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_dirty))
+		{
 			return;
+		}
 
-		ensure(!(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty));
+		ensure(!m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty));
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 		current_vertex_program.ctrl = 0; // Reserved
 
@@ -2195,12 +2203,14 @@ namespace rsx
 
 	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
 	{
-		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_dirty))
+		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_dirty))
+		{
 			return;
+		}
 
-		ensure(!(m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty));
+		ensure(!m_graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty));
 
-		m_graphics_state &= ~(rsx::pipeline_state::fragment_program_dirty);
+		m_graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
 
 		current_fragment_program.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		current_fragment_program.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
@@ -2428,9 +2438,7 @@ namespace rsx
 		rsx::method_registers.reset();
 		check_zcull_status(false);
 		nv4097::set_render_mode(this, 0, method_registers.registers[NV4097_SET_RENDER_ENABLE]);
-		m_graphics_state = pipeline_state::all_dirty;
-		m_rtts_dirty = true;
-		m_framebuffer_state_contested = false;
+		m_graphics_state |= pipeline_state::all_dirty;
 	}
 
 	void thread::init(u32 ctrlAddress)
