@@ -1358,8 +1358,7 @@ namespace rsx
 		layout.width = rsx::method_registers.surface_clip_width();
 		layout.height = rsx::method_registers.surface_clip_height();
 
-		m_graphics_state.clear(rsx::rtt_config_contested);
-		framebuffer_status_valid = false;
+		m_graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid);
 		m_current_framebuffer_context = context;
 
 		if (layout.width == 0 || layout.height == 0)
@@ -1563,7 +1562,7 @@ namespace rsx
 				rsx_log.warning("Framebuffer at 0x%X has aliasing color/depth targets, color_index=%d, zeta_pitch = %d, color_pitch=%d, context=%d",
 					layout.zeta_address, index, layout.zeta_pitch, layout.color_pitch[index], static_cast<u32>(context));
 
-				m_framebuffer_state_contested = true;
+				m_graphics_state.set(rsx::rtt_config_contested);
 
 				// TODO: Research clearing both depth AND color
 				// TODO: If context is creation_draw, deal with possibility of a lost buffer clear
@@ -1597,17 +1596,17 @@ namespace rsx
 				layout.actual_color_pitch[index] = layout.color_pitch[index];
 			}
 
-			framebuffer_status_valid = true;
+			m_graphics_state.set(rsx::rtt_config_valid);
 		}
 
-		if (!framebuffer_status_valid && !layout.zeta_address)
+		if (!m_graphics_state.test(rsx::rtt_config_valid) && !layout.zeta_address)
 		{
 			rsx_log.warning("Framebuffer setup failed. Draw calls may have been lost");
 			return;
 		}
 
 		// At least one attachment exists
-		framebuffer_status_valid = true;
+		m_graphics_state.set(rsx::rtt_config_valid);
 
 		// Window (raster) offsets
 		const auto window_offset_x = rsx::method_registers.window_offset_x();
@@ -1885,14 +1884,14 @@ namespace rsx
 			y1 >= rsx::method_registers.window_clip_vertical())
 		{
 			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
-			framebuffer_status_valid = false;
+			m_graphics_state.clear(rsx::rtt_config_valid);
 			return false;
 		}
 
 		if (m_graphics_state & rsx::pipeline_state::scissor_setup_invalid)
 		{
 			m_graphics_state.clear(rsx::pipeline_state::scissor_setup_invalid);
-			framebuffer_status_valid = true;
+			m_graphics_state.set(rsx::rtt_config_valid);
 		}
 
 		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(x1, y1, m_framebuffer_layout.width, m_framebuffer_layout.height);
