@@ -799,13 +799,13 @@ void GLGSRender::load_program_env()
 
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
 
-	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
-	const bool update_fragment_constants = !!(m_graphics_state & rsx::pipeline_state::fragment_constants_dirty) && fragment_constants_size;
-	const bool update_vertex_env = !!(m_graphics_state & rsx::pipeline_state::vertex_state_dirty);
-	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
-	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
-	const bool update_instruction_buffers = (!!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program));
-	const bool update_raster_env = (rsx::method_registers.polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
+	const bool update_transform_constants = m_graphics_state & rsx::pipeline_state::transform_constants_dirty;
+	const bool update_fragment_constants = (m_graphics_state & rsx::pipeline_state::fragment_constants_dirty) && fragment_constants_size;
+	const bool update_vertex_env = m_graphics_state & rsx::pipeline_state::vertex_state_dirty;
+	const bool update_fragment_env = m_graphics_state & rsx::pipeline_state::fragment_state_dirty;
+	const bool update_fragment_texture_env = m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty;
+	const bool update_instruction_buffers = !!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program);
+	const bool update_raster_env = rsx::method_registers.polygon_stipple_enabled() && (m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty);
 
 	if (manually_flush_ring_buffers)
 	{
@@ -892,7 +892,7 @@ void GLGSRender::load_program_env()
 		std::memcpy(mapping.first, rsx::method_registers.polygon_stipple_pattern(), 128);
 		m_raster_env_ring_buffer->bind_range(GL_RASTERIZER_STATE_BIND_SLOT, mapping.second, 128);
 
-		m_graphics_state &= ~(rsx::pipeline_state::polygon_stipple_pattern_dirty);
+		m_graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	}
 
 	if (update_instruction_buffers)
@@ -954,8 +954,12 @@ void GLGSRender::load_program_env()
 		}
 	}
 
-	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty | rsx::pipeline_state::fragment_constants_dirty | rsx::pipeline_state::fragment_texture_state_dirty);
-	m_graphics_state &= ~handled_flags;
+	m_graphics_state.clear(
+		rsx::pipeline_state::fragment_state_dirty |
+		rsx::pipeline_state::vertex_state_dirty |
+		rsx::pipeline_state::transform_constants_dirty |
+		rsx::pipeline_state::fragment_constants_dirty |
+		rsx::pipeline_state::fragment_texture_state_dirty);
 }
 
 void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
@@ -1065,7 +1069,7 @@ void GLGSRender::do_local_task(rsx::FIFO::state state)
 			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 			//Only call when there are no waiters
 			m_gl_texture_cache.do_update();
-			m_graphics_state &= ~rsx::pipeline_state::framebuffer_reads_dirty;
+			m_graphics_state.clear(rsx::pipeline_state::framebuffer_reads_dirty);
 		}
 	}
 

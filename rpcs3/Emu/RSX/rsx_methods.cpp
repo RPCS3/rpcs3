@@ -801,8 +801,8 @@ namespace rsx
 				break;
 			}
 
-			rsx->m_rtts_dirty = true;
-			rsx->m_framebuffer_state_contested = false;
+			rsx->m_graphics_state.set(rtt_config_dirty);
+			rsx->m_graphics_state.clear(rtt_config_contested);
 		}
 
 		void set_surface_format(thread* rsx, u32 reg, u32 arg)

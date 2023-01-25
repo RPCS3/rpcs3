@@ -1355,7 +1355,7 @@ void VKGSRender::set_viewport()
 	}
 
 	m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
-	m_graphics_state &= ~(rsx::pipeline_state::zclip_config_state_dirty);
+	m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 }
 
 void VKGSRender::set_scissor(bool clip_viewport)
@@ -1382,7 +1382,7 @@ void VKGSRender::bind_viewport()
 			m_viewport.maxDepth = rsx::method_registers.clip_max();
 		}
 
-		m_graphics_state &= ~(rsx::pipeline_state::zclip_config_state_dirty);
+		m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 	}
 
 	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &m_viewport);
@@ -1888,7 +1888,7 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 			//Only call when there are no waiters
 			m_texture_cache.do_update();
-			m_graphics_state &= ~rsx::pipeline_state::framebuffer_reads_dirty;
+			m_graphics_state.clear(rsx::pipeline_state::framebuffer_reads_dirty);
 		}
 	}
 
@@ -1934,7 +1934,7 @@ bool VKGSRender::load_program()
 
 		get_current_vertex_program(vs_sampler_state);
 
-		m_graphics_state &= ~rsx::pipeline_state::invalidate_pipeline_bits;
+		m_graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 	}
 	else if (!(m_graphics_state & rsx::pipeline_state::pipeline_config_dirty) &&
 		m_program &&
@@ -1978,7 +1978,7 @@ bool VKGSRender::load_program()
 
 		// Fallthrough
 		m_pipeline_properties = properties;
-		m_graphics_state &= ~rsx::pipeline_state::pipeline_config_dirty;
+		m_graphics_state.clear(rsx::pipeline_state::pipeline_config_dirty);
 	}
 	else
 	{
@@ -2152,7 +2152,7 @@ void VKGSRender::load_program_env()
 		m_raster_env_ring_info.unmap();
 		m_raster_env_buffer_info = { m_raster_env_ring_info.heap->value, mem, 128 };
 
-		m_graphics_state &= ~(rsx::pipeline_state::polygon_stipple_pattern_dirty);
+		m_graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	}
 
 	if (update_instruction_buffers)
@@ -2219,9 +2219,13 @@ void VKGSRender::load_program_env()
 		m_program->bind_buffer({ predicate, 0, 4 }, binding_table.conditional_render_predicate_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
 	}
 
-	//Clear flags
-	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty | rsx::pipeline_state::fragment_constants_dirty | rsx::pipeline_state::fragment_texture_state_dirty);
-	m_graphics_state &= ~handled_flags;
+	// Clear flags
+	m_graphics_state.clear(
+		rsx::pipeline_state::fragment_state_dirty |
+		rsx::pipeline_state::vertex_state_dirty |
+		rsx::pipeline_state::transform_constants_dirty |
+		rsx::pipeline_state::fragment_constants_dirty |
+		rsx::pipeline_state::fragment_texture_state_dirty);
 }
 
 void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info)
@@ -2394,7 +2398,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 {
 	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
-	if (m_current_framebuffer_context == context && !m_rtts_dirty && m_draw_fbo)
+	if (m_current_framebuffer_context == context && !m_graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
 	{
 		// Fast path
 		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
@@ -2402,9 +2406,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		return;
 	}
 
-	m_rtts_dirty = false;
+	m_graphics_state.clear(rsx::rtt_config_dirty | rsx::rtt_config_contested);
 	framebuffer_status_valid = false;
-	m_framebuffer_state_contested = false;
 
 	get_framebuffer_layout(context, m_framebuffer_layout);
 	if (!framebuffer_status_valid)

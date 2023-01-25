@@ -320,7 +320,7 @@ void GLGSRender::update_draw_state()
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
 	// For OGL Z range is updated every draw as it is separate from viewport config
-	m_graphics_state &= ~(rsx::pipeline_state::zclip_config_state_dirty);
+	m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 
 	m_frame_stats.setup_time += m_profiler.duration();
 }

@@ -409,11 +409,11 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		return false;
 	});
 
-	if (m_draw_fbo && !m_rtts_dirty)
+	if (m_draw_fbo && !m_graphics_state.test(rsx::rtt_config_dirty))
 	{
 		// Always restore the active framebuffer
 		m_draw_fbo->bind();
 		set_viewport();
-		set_scissor(!!(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped));
+		set_scissor(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped);
 	}
 }

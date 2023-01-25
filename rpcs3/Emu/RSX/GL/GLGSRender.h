@@ -78,7 +78,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	const GLFragmentProgram *m_fragment_prog = nullptr;
 	const GLVertexProgram *m_vertex_prog = nullptr;
 
-	u32 m_interpreter_state = 0;
+	rsx::flags32_t m_interpreter_state = 0;
 	gl::shader_interpreter m_shader_interpreter;
 
 	gl_render_targets m_rtts;
