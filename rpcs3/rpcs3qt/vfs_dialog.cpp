@@ -60,13 +60,13 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 
 			for (int i = 0; i < tabs->count(); ++i)
 			{
-				if (i < tabs->count() - 1)
+				if (tabs->tabText(i) == "dev_usb")
 				{
-					static_cast<vfs_dialog_tab*>(tabs->widget(i))->reset();
+					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->reset();
 				}
 				else
 				{
-					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->reset();
+					static_cast<vfs_dialog_tab*>(tabs->widget(i))->reset();
 				}
 			}
 		}
@@ -74,13 +74,13 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 		{
 			for (int i = 0; i < tabs->count(); ++i)
 			{
-				if (i < tabs->count() - 1)
+				if (tabs->tabText(i) == "dev_usb")
 				{
-					static_cast<vfs_dialog_tab*>(tabs->widget(i))->set_settings();
+					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->set_settings();
 				}
 				else
 				{
-					static_cast<vfs_dialog_usb_tab*>(tabs->widget(i))->set_settings();
+					static_cast<vfs_dialog_tab*>(tabs->widget(i))->set_settings();
 				}
 			}
 
