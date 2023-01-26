@@ -367,7 +367,7 @@ usb_handler_thread::~usb_handler_thread()
 
 void usb_handler_thread::operator()()
 {
-	timeval lusb_tv{0, 200};
+	timeval lusb_tv{0, 0};
 
 	while (ctx && thread_ctrl::state() != thread_state::aborting)
 	{
@@ -405,7 +405,10 @@ void usb_handler_thread::operator()()
 		}
 
 		// If there is no handled devices usb thread is not actively needed
-		thread_ctrl::wait_for(handled_devices.empty() ? 500'000 : 200);
+		if (handled_devices.empty())
+			thread_ctrl::wait_for(500'000);
+		else
+			std::this_thread::yield();
 	}
 }
 
