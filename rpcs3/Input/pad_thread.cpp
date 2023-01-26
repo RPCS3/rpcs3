@@ -325,7 +325,8 @@ void pad_thread::operator()()
 
 		// Update variables
 		const bool needs_reset = pad::g_reset && pad::g_reset.exchange(false);
-		mode_changed |= pad_mode != pad_mode.exchange(g_cfg.io.pad_mode.get());
+		const pad_handler_mode new_pad_mode = g_cfg.io.pad_mode.get();
+		mode_changed |= new_pad_mode != pad_mode.exchange(new_pad_mode);
 
 		// Reset pad handlers if necessary
 		if (needs_reset || mode_changed)
