@@ -384,7 +384,7 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 		case 0x7000:
 		{
 			// Card reader check - 2
-			response.resize(size);
+			// No data returned
 			break;
 		}
 		case 0x1080:
@@ -444,13 +444,12 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 			case 0x1000:
 			{
 				//ensure(size == 0x1000);
-				response.resize(size);
+				// No data returned
 				break;
 			}
 			default:
 			{
 				usio_log.error("Unhandled read of sram(chip: %d, addr: 0x%04X)", channel - 2, reg);
-				response.resize(size);
 				break;
 			}
 			}
@@ -459,7 +458,6 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 		default:
 		{
 			usio_log.error("Unhandled read of sram(chip: %d, addr: 0x%04X)", channel - 2, reg);
-			response.resize(size);
 			break;
 		}
 		}
@@ -470,6 +468,8 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 		// We are not using any firmware since this is emulation.
 		usio_log.warning("Unsupported read operation(channel: 0x%02X, addr: 0x%04X)", channel, reg);
 	}
+
+	response.resize(size); // Always resize the response vector to the given size
 }
 
 void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
