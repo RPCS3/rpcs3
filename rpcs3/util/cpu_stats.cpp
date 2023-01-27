@@ -10,7 +10,9 @@
 #ifdef _WIN32
 #include "windows.h"
 #include "tlhelp32.h"
+#ifdef _MSC_VER
 #pragma comment(lib, "pdh.lib")
+#endif
 #else
 #include "fstream"
 #include "sstream"
@@ -99,13 +101,13 @@ namespace utils
 	void cpu_stats::init_cpu_query()
 	{
 #ifdef _WIN32
-		PDH_STATUS status = PdhOpenQuery(NULL, NULL, &m_cpu_query);
+		PDH_STATUS status = PdhOpenQuery(NULL, 0, &m_cpu_query);
 		if (ERROR_SUCCESS != status)
 		{
 			perf_log.error("Failed to open cpu query for per core cpu usage: %s", pdh_error(status));
 			return;
 		}
-		status = PdhAddEnglishCounter(m_cpu_query, L"\\Processor(*)\\% Processor Time", NULL, &m_cpu_cores);
+		status = PdhAddEnglishCounter(m_cpu_query, L"\\Processor(*)\\% Processor Time", 0, &m_cpu_cores);
 		if (ERROR_SUCCESS != status)
 		{
 			perf_log.error("Failed to add processor time counter for per core cpu usage: %s", pdh_error(status));

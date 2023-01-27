@@ -12,7 +12,9 @@
 #include <Windows.h>
 #include <system_error>
 
+#ifdef _MSC_VER
 #pragma comment(lib, "xaudio2_9redist.lib")
+#endif
 
 #ifndef XAUDIO2_USE_DEFAULT_PROCESSOR
 #define XAUDIO2_USE_DEFAULT_PROCESSOR XAUDIO2_DEFAULT_PROCESSOR
@@ -30,6 +32,7 @@ void fmt_class_string<ERole>::format(std::string& out, u64 arg)
 		case eConsole: return "eConsole";
 		case eMultimedia: return "eMultimedia";
 		case eCommunications: return "eCommunications";
+		case ERole_enum_count: return unknown;
 		}
 
 		return unknown;
@@ -46,6 +49,7 @@ void fmt_class_string<EDataFlow>::format(std::string& out, u64 arg)
 		case eRender: return "eRender";
 		case eCapture: return "eCapture";
 		case eAll: return "eAll";
+		case EDataFlow_enum_count: return unknown;
 		}
 
 		return unknown;

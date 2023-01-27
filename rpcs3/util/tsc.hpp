@@ -2,8 +2,10 @@
 
 #include "util/types.hpp"
 
-#ifdef _M_X64
+#ifdef _MSC_VER
 extern "C" u64 __rdtsc();
+#elif _M_X64
+#include <immintrin.h>
 #endif
 
 namespace utils

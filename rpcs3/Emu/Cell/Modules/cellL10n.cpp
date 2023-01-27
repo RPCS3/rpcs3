@@ -206,7 +206,7 @@ std::string _OemToOem(HostCode src_code, HostCode dst_code, const std::string& s
 
 #endif
 
-s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *dst, s32 *dst_len, bool allowIncomplete)
+s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *dst, s32 *dst_len, [[maybe_unused]] bool allowIncomplete)
 {
 	HostCode srcCode = 0, dstCode = 0;	//OEM code pages
 	bool src_page_converted = _L10nCodeParse(src_code, srcCode);	//Check if code is in list.

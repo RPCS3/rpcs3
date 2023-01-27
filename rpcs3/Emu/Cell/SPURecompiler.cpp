@@ -1551,7 +1551,8 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 {
-	for (auto& item : ::at32(m_stuff, ls[addr / 4] >> 12))
+	const u32 index = ls[addr / 4] >> 12;
+	for (const auto& item : ::at32(m_stuff, index))
 	{
 		if (const auto ptr = item.compiled.load())
 		{

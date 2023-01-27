@@ -1657,7 +1657,7 @@ bool fs::dir::open(const std::string& path)
 			to_utf8(info.name, found.cFileName);
 			info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 			info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
-			info.size = ((u64)found.nFileSizeHigh << 32) | (u64)found.nFileSizeLow;
+			info.size = (static_cast<u64>(found.nFileSizeHigh) << 32) | static_cast<u64>(found.nFileSizeLow);
 			info.atime = to_time(found.ftLastAccessTime);
 			info.mtime = to_time(found.ftLastWriteTime);
 			info.ctime = info.mtime;

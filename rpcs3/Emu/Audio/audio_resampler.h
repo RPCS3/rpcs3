@@ -6,6 +6,7 @@
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsuggest-override"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 #include "SoundTouch.h"
 #ifndef _MSC_VER

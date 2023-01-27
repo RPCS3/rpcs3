@@ -46,9 +46,10 @@ private:
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#else
+#pragma GCC diagnostic ignored "-Wsuggest-attribute=noreturn"
 #endif
 #endif
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"

@@ -470,8 +470,8 @@ std::string utils::get_OS_version()
 	std::vector<char> holder(service_pack.Length + 1, '\0');
 	if (has_sp)
 	{
-		WideCharToMultiByte(CP_UTF8, NULL, service_pack.Buffer, service_pack.Length,
-			(LPSTR) holder.data(), static_cast<int>(holder.size()), nullptr, nullptr);
+		WideCharToMultiByte(CP_UTF8, 0, service_pack.Buffer, service_pack.Length,
+			static_cast<LPSTR>(holder.data()), static_cast<int>(holder.size()), nullptr, nullptr);
 	}
 
 	fmt::append(output,

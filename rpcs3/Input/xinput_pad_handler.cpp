@@ -139,7 +139,7 @@ void xinput_pad_handler::SetPadData(const std::string& padId, u8 /*player_id*/, 
 	vibrate.wLeftMotorSpeed = large_motor * 257;  // between 0 to 65535
 	vibrate.wRightMotorSpeed = small_motor * 257; // between 0 to 65535
 
-	(*xinputSetState)(static_cast<u32>(device_number), &vibrate);
+	xinputSetState(static_cast<u32>(device_number), &vibrate);
 }
 
 u32 xinput_pad_handler::get_battery_level(const std::string& padId)
@@ -150,7 +150,7 @@ u32 xinput_pad_handler::get_battery_level(const std::string& padId)
 
 	// Receive Battery Info. If device is not on cable, get battery level, else assume full.
 	XINPUT_BATTERY_INFORMATION battery_info;
-	(*xinputGetBatteryInformation)(device_number, BATTERY_DEVTYPE_GAMEPAD, &battery_info);
+	xinputGetBatteryInformation(device_number, BATTERY_DEVTYPE_GAMEPAD, &battery_info);
 
 	switch (battery_info.BatteryType)
 	{
@@ -336,6 +336,12 @@ pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_m
 	};
 }
 
+template<class T>
+T getProc(HMODULE hModule, LPCSTR lpProcName)
+{
+	return reinterpret_cast<T>(GetProcAddress(hModule, lpProcName));
+}
+
 bool xinput_pad_handler::Init()
 {
 	if (m_is_init)
@@ -346,14 +352,14 @@ bool xinput_pad_handler::Init()
 		library = LoadLibrary(it);
 		if (library)
 		{
-			xinputGetExtended = reinterpret_cast<PFN_XINPUTGETEXTENDED>(GetProcAddress(library, "XInputGetExtended")); // Optional
-			xinputGetCustomData = reinterpret_cast<PFN_XINPUTGETCUSTOMDATA>(GetProcAddress(library, "XInputGetCustomData")); // Optional
-			xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, reinterpret_cast<LPCSTR>(100)));
+			xinputGetExtended = getProc<PFN_XINPUTGETEXTENDED>(library, "XInputGetExtended"); // Optional
+			xinputGetCustomData = getProc<PFN_XINPUTGETCUSTOMDATA>(library, "XInputGetCustomData"); // Optional
+			xinputGetState = getProc<PFN_XINPUTGETSTATE>(library, reinterpret_cast<LPCSTR>(100));
 			if (!xinputGetState)
-				xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, "XInputGetState"));
+				xinputGetState = getProc<PFN_XINPUTGETSTATE>(library, "XInputGetState");
 
-			xinputSetState = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
-			xinputGetBatteryInformation = reinterpret_cast<PFN_XINPUTGETBATTERYINFORMATION>(GetProcAddress(library, "XInputGetBatteryInformation"));
+			xinputSetState = getProc<PFN_XINPUTSETSTATE>(library, "XInputSetState");
+			xinputGetBatteryInformation = getProc<PFN_XINPUTGETBATTERYINFORMATION>(library, "XInputGetBatteryInformation");
 
 			if (xinputGetState && xinputSetState && xinputGetBatteryInformation)
 			{
@@ -496,7 +502,7 @@ void xinput_pad_handler::get_extended_info(const pad_ensemble& binding)
 
 	// Receive Battery Info. If device is not on cable, get battery level, else assume full
 	XINPUT_BATTERY_INFORMATION battery_info;
-	(*xinputGetBatteryInformation)(padnum, BATTERY_DEVTYPE_GAMEPAD, &battery_info);
+	xinputGetBatteryInformation(padnum, BATTERY_DEVTYPE_GAMEPAD, &battery_info);
 	pad->m_cable_state = battery_info.BatteryType == BATTERY_TYPE_WIRED ? 1 : 0;
 	pad->m_battery_level = pad->m_cable_state ? BATTERY_LEVEL_FULL : battery_info.BatteryLevel;
 
@@ -545,7 +551,7 @@ void xinput_pad_handler::apply_pad_data(const pad_ensemble& binding)
 		vibrate.wLeftMotorSpeed = speed_large * 257;  // between 0 to 65535
 		vibrate.wRightMotorSpeed = speed_small * 257; // between 0 to 65535
 
-		if ((*xinputSetState)(padnum, &vibrate) == ERROR_SUCCESS)
+		if (xinputSetState(padnum, &vibrate) == ERROR_SUCCESS)
 		{
 			dev->newVibrateData = false;
 			dev->last_vibration = steady_clock::now();
