@@ -30,8 +30,8 @@ namespace rsx
 			u32 uid = umax;
 			u32 type_index = umax;
 
-			static const u16 virtual_width = 1280;
-			static const u16 virtual_height = 720;
+			static constexpr u16 virtual_width = 1280;
+			static constexpr u16 virtual_height = 720;
 
 			u32 min_refresh_duration_us = 16600;
 			atomic_t<bool> visible = false;

@@ -379,7 +379,7 @@ namespace rsx
 				const auto get_y = [](const osk_window_layout& layout, const u16& height) -> f32
 				{
 					constexpr f32 origin_y = virtual_height / 2.0f;
-					const f32 y = origin_y + layout.y_offset;
+					const f32 y = origin_y - layout.y_offset; // Negative because we increase y towards the bottom and cellOsk increases y towards the top.
 
 					switch (layout.y_align)
 					{
