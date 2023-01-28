@@ -216,15 +216,25 @@ namespace rsx
 			}
 		}
 
-		void set_cull_face(thread* rsx, u32 reg, u32 arg)
+		void set_face_property(thread* rsx, u32 reg, u32 arg)
 		{
 			if (reg == method_registers.register_previous_value)
 			{
 				return;
 			}
 
-			const auto typed = to_cull_face(arg);
-			if (typed) [[ likely ]]
+			bool valid;
+			switch (reg)
+			{
+			case NV4097_SET_CULL_FACE:
+				valid = !!to_cull_face(arg); break;
+			case NV4097_SET_FRONT_FACE:
+				valid = !!to_front_face(arg); break;
+			default:
+				valid = false; break;
+			}
+
+			if (valid) [[ likely ]]
 			{
 				rsx->m_graphics_state |= rsx::pipeline_config_dirty;
 			}
@@ -2516,7 +2526,6 @@ namespace rsx
 			state_signals[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE] = rsx::depth_bounds_state_dirty;
 			state_signals[NV4097_SET_DEPTH_BOUNDS_MIN] = rsx::depth_bounds_state_dirty;
 			state_signals[NV4097_SET_DEPTH_BOUNDS_MAX] = rsx::depth_bounds_state_dirty;
-			state_signals[NV4097_SET_FRONT_FACE] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
@@ -3470,7 +3479,8 @@ namespace rsx
 		bind(NV406E_SEMAPHORE_RELEASE, nv406e::semaphore_release);
 
 		// NV4097
-		bind(NV4097_SET_CULL_FACE, nv4097::set_cull_face);
+		bind(NV4097_SET_CULL_FACE, nv4097::set_face_property);
+		bind(NV4097_SET_FRONT_FACE, nv4097::set_face_property);
 		bind(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release);
 		bind(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release);
 		bind(NV4097_SET_BEGIN_END, nv4097::set_begin_end);
