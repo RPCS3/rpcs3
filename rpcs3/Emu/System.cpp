@@ -369,8 +369,33 @@ void Emulator::Init(bool add_only)
 	fixup_ppu_settings();
 
 	// Create directories (can be disabled if necessary)
-	auto make_path_verbose = [](const std::string& path)
+	auto make_path_verbose = [&](const std::string& path, bool must_exist_outside_emu_dir)
 	{
+		if (fs::is_dir(path))
+		{
+			return true;
+		}
+
+		if (must_exist_outside_emu_dir)
+		{
+			const std::string parent = fs::get_parent_dir(path);
+			const std::string emu_dir_no_delim = emu_dir.substr(0, emu_dir.find_last_not_of(fs::delim) + 1);
+
+			auto get_stat = [](const std::string& path)
+			{
+				fs::stat_t stat{};
+				fs::stat(path, stat);
+				return stat;
+			};
+
+			// TODO: Use weak canonical path for better accuracy (currently has false negatives)
+			if (parent != emu_dir_no_delim && get_stat(parent) != get_stat(emu_dir_no_delim))
+			{
+				sys_log.fatal("Cannot use '%s' for Virtual File System because it does not exist.\nPlease specify an existing and writable directory path in Toolbar -> Manage -> Virtual File System.", path);
+				return false;
+			}
+		}
+
 		if (!fs::create_path(path))
 		{
 			sys_log.fatal("Failed to create path: %s (%s)", path, fs::g_tls_error);
@@ -385,55 +410,61 @@ void Emulator::Init(bool add_only)
 
 	if (g_cfg.vfs.init_dirs)
 	{
-		make_path_verbose(dev_bdvd);
-		make_path_verbose(dev_hdd0);
-		make_path_verbose(dev_hdd1);
-		make_path_verbose(dev_flash);
-		make_path_verbose(dev_flash2);
-		make_path_verbose(dev_flash3);
-		make_path_verbose(dev_usb);
-		make_path_verbose(dev_hdd0 + "game/");
-		make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"game/＄locks/"));
-		make_path_verbose(dev_hdd0 + "home/");
-		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/");
-		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/exdata/");
-		make_path_verbose(save_path);
-		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/trophy/");
+		make_path_verbose(dev_bdvd, true);
+		make_path_verbose(dev_flash, true);
+		make_path_verbose(dev_flash2, true);
+		make_path_verbose(dev_flash3, true);
+		make_path_verbose(dev_usb, true);
 
-		if (!fs::write_file(user_path, fs::create + fs::excl + fs::write, "User"s))
+		if (make_path_verbose(dev_hdd1, true))
 		{
-			if (fs::g_tls_error != fs::error::exist)
+			make_path_verbose(dev_hdd1 + "caches/", false);
+		}
+
+		if (make_path_verbose(dev_hdd0, true))
+		{
+			make_path_verbose(dev_hdd0 + "game/", false);
+			make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"game/＄locks/"), false);
+			make_path_verbose(dev_hdd0 + "home/", false);
+			make_path_verbose(dev_hdd0 + "home/" + m_usr + "/", false);
+			make_path_verbose(dev_hdd0 + "home/" + m_usr + "/exdata/", false);
+			make_path_verbose(save_path, false);
+			make_path_verbose(dev_hdd0 + "home/" + m_usr + "/trophy/", false);
+
+			if (!fs::write_file(user_path, fs::create + fs::excl + fs::write, "User"s))
 			{
-				sys_log.fatal("Failed to create file: %s (%s)", user_path, fs::g_tls_error);
+				if (fs::g_tls_error != fs::error::exist)
+				{
+					sys_log.fatal("Failed to create file: %s (%s)", user_path, fs::g_tls_error);
+				}
 			}
+
+			make_path_verbose(dev_hdd0 + "savedata/", false);
+			make_path_verbose(dev_hdd0 + "savedata/vmc/", false);
+			make_path_verbose(dev_hdd0 + "photo/", false);
 		}
 
 		const std::string games_common_dir = g_cfg_vfs.get(g_cfg_vfs.games_dir, emu_dir);
 
-		if (make_path_verbose(games_common_dir))
+		if (make_path_verbose(games_common_dir, true))
 		{
 			fs::write_file(games_common_dir + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
 
 #ifdef _WIN32
-			if (std::string rpcs3_shortcuts = games_common_dir + "/shortcuts"; make_path_verbose(rpcs3_shortcuts))
+			if (std::string rpcs3_shortcuts = games_common_dir + "/shortcuts"; make_path_verbose(rpcs3_shortcuts, false))
 			{
 				fs::write_file(rpcs3_shortcuts + "/Copyable Shortcuts For Installed Games Would Be Added Here.txt", fs::create + fs::excl + fs::write, ""s);
 			}
 #endif
 		}
-
-		make_path_verbose(dev_hdd0 + "savedata/");
-		make_path_verbose(dev_hdd0 + "savedata/vmc/");
-		make_path_verbose(dev_hdd0 + "photo/");
-		make_path_verbose(dev_hdd1 + "caches/");
 	}
 
-	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
-	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
-	make_path_verbose(fs::get_cache_dir() + "/savestates/");
-	make_path_verbose(fs::get_config_dir() + "captures/");
-	make_path_verbose(fs::get_config_dir() + "sounds/");
-	make_path_verbose(patch_engine::get_patches_path());
+	make_path_verbose(fs::get_cache_dir() + "shaderlog/", false);
+	make_path_verbose(fs::get_cache_dir() + "spu_progs/", false);
+	make_path_verbose(fs::get_cache_dir() + "/savestates/", false);
+	make_path_verbose(fs::get_config_dir() + "captures/", false);
+	make_path_verbose(fs::get_config_dir() + "sounds/", false);
+	make_path_verbose(patch_engine::get_patches_path(), false);
 
 	if (add_only)
 	{
