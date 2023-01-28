@@ -142,7 +142,7 @@ add_subdirectory(SoundTouch EXCLUDE_FROM_ALL)
 # libevdev
 set(LIBEVDEV_TARGET 3rdparty_dummy_lib)
 if(USE_LIBEVDEV)
-	pkg_check_modules(LIBEVDEV libevdev)
+	pkg_check_modules(LIBEVDEV libevdev libudev)
 	if(LIBEVDEV_FOUND)
 		add_library(3rdparty_libevdev INTERFACE)
 		target_compile_definitions(3rdparty_libevdev INTERFACE -DHAVE_LIBEVDEV)
