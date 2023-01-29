@@ -381,15 +381,7 @@ void Emulator::Init(bool add_only)
 			const std::string parent = fs::get_parent_dir(path);
 			const std::string emu_dir_no_delim = emu_dir.substr(0, emu_dir.find_last_not_of(fs::delim) + 1);
 
-			auto get_stat = [](const std::string& path)
-			{
-				fs::stat_t stat{};
-				fs::stat(path, stat);
-				return stat;
-			};
-
-			// TODO: Use weak canonical path for better accuracy (currently has false negatives)
-			if (parent != emu_dir_no_delim && get_stat(parent) != get_stat(emu_dir_no_delim))
+			if (parent != emu_dir_no_delim && GetCallbacks().resolve_path(parent) != GetCallbacks().resolve_path(emu_dir_no_delim))
 			{
 				sys_log.fatal("Cannot use '%s' for Virtual File System because it does not exist.\nPlease specify an existing and writable directory path in Toolbar -> Manage -> Virtual File System.", path);
 				return false;
