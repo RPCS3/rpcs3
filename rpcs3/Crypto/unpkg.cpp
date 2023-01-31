@@ -815,7 +815,15 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		}
 		default:
 		{
-			const std::string true_path = std::filesystem::weakly_canonical(std::filesystem::u8path(path)).string();
+			// TODO: check for valid utf8 characters
+			const std::string true_path = std::filesystem::weakly_canonical(path).string();
+			if (true_path.empty())
+			{
+				num_failures++;
+				pkg_log.error("Failed to get weakly_canonical path for '%s'", path);
+				break;
+			}
+
 			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;
 
 			m_install_entries.push_back({
