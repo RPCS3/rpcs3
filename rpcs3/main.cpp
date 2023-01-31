@@ -287,6 +287,7 @@ constexpr auto arg_user_id      = "user-id";
 constexpr auto arg_installfw    = "installfw";
 constexpr auto arg_installpkg   = "installpkg";
 constexpr auto arg_savestate    = "savestate";
+constexpr auto arg_rsx_capture  = "rsx-capture";
 constexpr auto arg_timer        = "high-res-timer";
 constexpr auto arg_verbose_curl = "verbose-curl";
 constexpr auto arg_any_location = "allow-any-location";
@@ -640,6 +641,8 @@ int main(int argc, char** argv)
 	parser.addOption(user_id_option);
 	const QCommandLineOption savestate_option(arg_savestate, "Path for directly loading a savestate.", "path", "");
 	parser.addOption(savestate_option);
+	const QCommandLineOption rsx_capture_option(arg_rsx_capture, "Path for directly loading an rsx capture.", "path", "");
+	parser.addOption(rsx_capture_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
@@ -1127,6 +1130,29 @@ int main(int argc, char** argv)
 				if (s_headless || s_no_gui)
 				{
 					report_fatal_error(fmt::format("Booting savestate '%s' failed!\n\nReason: %s", path, error));
+				}
+			}
+		});
+	}
+	else if (parser.isSet(arg_rsx_capture))
+	{
+		const std::string rsx_capture_path = parser.value(rsx_capture_option).toStdString();
+		sys_log.notice("Booting rsx capture from command line: %s", rsx_capture_path);
+
+		if (!fs::is_file(rsx_capture_path))
+		{
+			report_fatal_error(fmt::format("No rsx capture file found: %s", rsx_capture_path));
+		}
+
+		Emu.CallFromMainThread([path = rsx_capture_path]()
+		{
+			if (!Emu.BootRsxCapture(path))
+			{
+				sys_log.error("Booting rsx capture '%s' failed", path);
+
+				if (s_headless || s_no_gui)
+				{
+					report_fatal_error(fmt::format("Booting rsx capture '%s' failed!", path));
 				}
 			}
 		});
