@@ -24,6 +24,7 @@ namespace rsx
 
 			m_text.set_font("Arial", 14);
 			m_text.set_text(msg_id);
+			m_text.set_padding(4, 8, 4, 8);
 			m_text.auto_resize();
 			m_text.back_color.a = 0.f;
 
@@ -32,10 +33,18 @@ namespace rsx
 			m_fade_animation.duration = 2.f;
 			m_fade_animation.active = true;
 
+			back_color.a = 0.15;
+
 			if (icon)
 			{
 				m_icon = std::move(icon);
 				m_icon->set_pos(m_text.x + m_text.w + 8, m_text.y);
+
+				set_size(m_margin + m_text.w + m_icon->w + m_margin, m_margin + std::max(m_text.h, m_icon->h) + m_margin);
+			}
+			else
+			{
+				set_size(m_text.w + m_margin + m_margin, m_text.h + m_margin + m_margin);
 			}
 		}
 		template message_item::message_item(std::string msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::unique_ptr<overlay_element>);
@@ -47,15 +56,30 @@ namespace rsx
 			return m_refs && *m_refs == 0 ? 0 : m_expiration_time;
 		}
 
+		void message_item::set_pos(u16 _x, u16 _y)
+		{
+			rounded_rect::set_pos(_x, _y);
+			m_text.set_pos(_x + m_margin, y + m_margin);
+
+			if (m_icon)
+			{
+				m_icon->set_pos(m_icon->x, m_text.y);
+			}
+		}
+
 		compiled_resource& message_item::get_compiled()
 		{
-			if (!m_processed)
+			if (!m_processed || !m_fade_animation.active)
 			{
 				compiled_resources = {};
 				return compiled_resources;
 			}
 
-			compiled_resources = m_text.get_compiled();
+			// Disable caching
+			is_compiled = false;
+
+			compiled_resources = rounded_rect::get_compiled();
+			compiled_resources.add(m_text.get_compiled());
 			if (m_icon)
 			{
 				compiled_resources.add(m_icon->get_compiled());
@@ -70,18 +94,14 @@ namespace rsx
 			if (m_cur_pos != index)
 			{
 				m_cur_pos = index;
-				m_text.set_pos(10, static_cast<u16>(origin + (index * 18 * grow_direction)));
-				if (m_icon)
-				{
-					m_icon->set_pos(m_icon->x, m_text.y);
-				}
+				set_pos(10, static_cast<u16>(origin + (index * 18 * grow_direction)));
 			}
 
 			if (!m_processed)
 			{
 				m_expiration_time = get_expiration_time(m_visible_duration);
 			}
-			else if ((m_expiration_time - time) < 2'000'000)
+			else if (time + 2'000'000 > m_expiration_time)
 			{
 				m_fade_animation.update(rsx::get_current_renderer()->vblank_count);
 			}
@@ -126,7 +146,7 @@ namespace rsx
 
 			std::lock_guard lock(m_mutex_queue);
 
-			update_queue(m_vis_items_top, m_ready_queue_top, 0, 1);
+			update_queue(m_vis_items_top, m_ready_queue_top, 10, 1);
 			update_queue(m_vis_items_bottom, m_ready_queue_bottom, virtual_height - 18, -1);
 
 			visible = !m_vis_items_top.empty() || !m_vis_items_bottom.empty();

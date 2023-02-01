@@ -25,6 +25,34 @@ namespace rsx
 {
 	namespace overlays
 	{
+		static std::vector<vertex> generate_unit_quadrant(int num_patch_points, const float offset[2], const float scale[2])
+		{
+			std::vector<vertex> result;
+			result.resize(num_patch_points + 1);
+
+			// Set root vertex
+			result[0].vec2(offset[0], offset[1]);
+
+			// Set the 0th and Nth outer vertices which lie flush with the axes
+			result[1].vec2(offset[0] + scale[0], offset[1]);
+			result[num_patch_points].vec2(offset[0], offset[1] + scale[1]);
+
+			constexpr float degrees_to_radians = 0.0174533f;
+			for (int i = 1; i < num_patch_points - 1; i++)
+			{
+				// If we keep a unit circle, 2 of the 4 components of the rotation matrix become 0
+				// We end up with a simple vec2(cos_theta, sin_theta) as the output
+				// The final scaling and translation can then be done with fmad
+				const auto angle = degrees_to_radians * ((i * 90) / (num_patch_points - 1));
+				result[i + 1].vec2(
+					std::fmaf(std::cosf(angle), scale[0], offset[0]),
+					std::fmaf(std::sinf(angle), scale[1], offset[1])
+				);
+			}
+
+			return result;
+		}
+
 		image_info::image_info(const char* filename)
 		{
 			fs::file f(filename, fs::read + fs::isfile);
@@ -904,6 +932,90 @@ namespace rsx
 
 			bool size_changed = old_width != new_width || old_height != new_height;
 			return size_changed;
+		}
+
+		compiled_resource& rounded_rect::get_compiled()
+		{
+			if (!is_compiled)
+			{
+				compiled_resources.clear();
+
+				if (radius == 0 || radius > (w / 2))
+				{
+					// Invalid radius
+					compiled_resources = overlay_element::get_compiled();
+				}
+				else
+				{
+					compiled_resource compiled_resources_temp = {};
+					compiled_resources_temp.append({}); // Bg horizontal mid
+					compiled_resources_temp.append({}); // Bg horizontal top
+					compiled_resources_temp.append({}); // Bg horizontal bottom
+					compiled_resources_temp.append({}); // Bg upper-left
+					compiled_resources_temp.append({}); // Bg lower-left
+					compiled_resources_temp.append({}); // Bg upper-right
+					compiled_resources_temp.append({}); // Bg lower-right
+
+					for (auto& draw_cmd : compiled_resources_temp.draw_commands)
+					{
+						auto& config = draw_cmd.config;
+						config.color = back_color;
+						config.pulse_glow = pulse_effect_enabled;
+						config.pulse_sinus_offset = pulse_sinus_offset;
+						config.pulse_speed_modifier = pulse_speed_modifier;
+					}
+
+					auto& bg0 = compiled_resources_temp.draw_commands[0];
+					auto& bg1 = compiled_resources_temp.draw_commands[1];
+					auto& bg2 = compiled_resources_temp.draw_commands[2];
+
+					bg0.verts.emplace_back(f32(x), f32(y + radius), 0.f, 0.f);
+					bg0.verts.emplace_back(f32(x + w), f32(y + radius), 0.f, 0.f);
+					bg0.verts.emplace_back(f32(x), f32(y + h) - radius, 0.f, 0.f);
+					bg0.verts.emplace_back(f32(x + w), f32(y + h) - radius, 0.f, 0.f);
+
+					bg1.verts.emplace_back(f32(x + radius), f32(y), 0.f, 0.f);
+					bg1.verts.emplace_back(f32(x + w) - radius, f32(y), 0.f, 0.f);
+					bg1.verts.emplace_back(f32(x + radius), f32(y + radius), 0.f, 0.f);
+					bg1.verts.emplace_back(f32(x + w) - radius, f32(y + radius), 0.f, 0.f);
+
+					bg2.verts.emplace_back(f32(x + radius), f32(y + h) - radius, 0.f, 0.f);
+					bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h) - radius, 0.f, 0.f);
+					bg2.verts.emplace_back(f32(x + radius), f32(y + h) + 1.f, 0.f, 0.f);         // Note the +1 subpixel correction
+					bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h) + 1.f, 0.f, 0.f);
+
+					// Generate the quadrants
+					const f32 corners[4][2] =
+					{
+						{ f32(x + radius), f32(y + radius) },
+						{ f32(x + radius), f32(y + h) - radius },
+						{ f32(x + w) - radius, f32(y + radius) },
+						{ f32(x + w) - radius, f32(y + h) - radius }
+					};
+
+					const f32 radius_f = static_cast<f32>(radius);
+					const f32 scale[4][2] =
+					{
+						{ -radius_f, -radius_f },
+						{ -radius_f, +radius_f },
+						{ +radius_f, -radius_f },
+						{ +radius_f, +radius_f }
+					};
+
+					for (int i = 0; i < 4; ++i)
+					{
+						auto& command = compiled_resources_temp.draw_commands[i + 3];
+						command.config.primitives = rsx::overlays::primitive_type::triangle_fan;
+						command.verts = generate_unit_quadrant(num_control_points, corners[i], scale[i]);
+					}
+
+					compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
+				}
+
+				is_compiled = true;
+			}
+
+			return compiled_resources;
 		}
 	}
 }

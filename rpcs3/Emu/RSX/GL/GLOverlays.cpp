@@ -454,6 +454,9 @@ namespace gl
 			case rsx::overlays::primitive_type::line_strip:
 				primitives = GL_LINE_STRIP;
 				break;
+			case rsx::overlays::primitive_type::triangle_fan:
+				primitives = GL_TRIANGLE_FAN;
+				break;
 			default:
 				fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
 		}

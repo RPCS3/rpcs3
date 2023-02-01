@@ -13,15 +13,16 @@ namespace rsx
 			bottom
 		};
 
-		class message_item : public overlay_element
+		class message_item : public rounded_rect
 		{
 		public:
 			template <typename T>
 			message_item(T msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::unique_ptr<overlay_element> icon = {});
 			void update(usz index, u64 time, u16 origin, int grow_direction);
+			void set_pos(u16 _x, u16 _y) override;
 
 			u64 get_expiration() const;
-			compiled_resource& get_compiled();
+			compiled_resource& get_compiled() override;
 
 		private:
 			label m_text{};
@@ -33,6 +34,7 @@ namespace rsx
 			std::shared_ptr<atomic_t<u32>> m_refs;
 			bool m_processed      = false;
 			usz m_cur_pos         = umax;
+			const u16 m_margin    = 6;
 		};
 
 		class message final : public overlay
