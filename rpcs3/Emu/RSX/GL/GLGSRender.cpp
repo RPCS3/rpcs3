@@ -750,19 +750,7 @@ bool GLGSRender::load_program()
 			// Notify the user with HUD notification
 			if (g_cfg.misc.show_shader_compilation_hint)
 			{
-				if (m_overlay_manager)
-				{
-					if (auto dlg = m_overlay_manager->get<rsx::overlays::shader_compile_notification>())
-					{
-						// Extend duration
-						dlg->touch();
-					}
-					else
-					{
-						// Create dialog but do not show immediately
-						m_overlay_manager->create<rsx::overlays::shader_compile_notification>();
-					}
-				}
+				rsx::overlays::show_shader_compile_notification();
 			}
 		}
 		else
