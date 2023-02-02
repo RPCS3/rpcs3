@@ -785,9 +785,14 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		const std::string name{reinterpret_cast<char*>(m_bufs.back().get()), entry.name_size};
 		std::string path = m_install_path + vfs::escape(name);
 
-		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
-
-		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
+		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
+		{
+			pkg_log.todo("Entry with unknown type or padding: type=0x%08x, pad=0x%x, name='%s'", entry.type, entry.pad, name);
+		}
+		else
+		{
+			pkg_log.notice("Entry: type=0x%08x, name='%s'", entry.type, name);
+		}
 
 		const u8 entry_type = entry.type & 0xff;
 
@@ -894,8 +899,14 @@ void package_reader::extract_worker(thread_key thread_data_key)
 		const std::string& path = entry.weak_reference->first;
 		const std::string& name = entry.name;
 
-		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
-		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
+		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
+		{
+			pkg_log.todo("Entry with unknown type or padding: type=0x%08x, pad=0x%x, name='%s'", entry.type, entry.pad, name);
+		}
+		else
+		{
+			pkg_log.notice("Entry: type=0x%08x, name='%s'", entry.type, name);
+		}
 
 		switch (const u8 entry_type = entry.type & 0xff)
 		{
