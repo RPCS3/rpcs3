@@ -12,7 +12,7 @@ namespace rsx
 		{
 			queue_message(
 				localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS,
-				15'000'000,
+				5'000'000,
 				{},
 				message_pin_location::bottom,
 				std::make_unique<loading_icon24>());
