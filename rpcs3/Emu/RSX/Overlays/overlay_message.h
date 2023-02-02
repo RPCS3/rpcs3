@@ -7,7 +7,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		enum message_pin_location
+		enum class message_pin_location
 		{
 			top,
 			bottom
@@ -18,7 +18,7 @@ namespace rsx
 		public:
 			template <typename T>
 			message_item(T msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::unique_ptr<overlay_element> icon = {});
-			void update(usz index, u64 time, u16 origin, int grow_direction);
+			void update(usz index, u64 time, u16 y_offset);
 			void set_pos(u16 _x, u16 _y) override;
 
 			u64 get_expiration() const;
@@ -27,7 +27,8 @@ namespace rsx
 		private:
 			label m_text{};
 			std::unique_ptr<overlay_element> m_icon{};
-			animation_color_interpolate m_fade_animation;
+			animation_color_interpolate m_fade_in_animation;
+			animation_color_interpolate m_fade_out_animation;
 
 			u64 m_expiration_time = 0;
 			u64 m_visible_duration = 0;
@@ -84,7 +85,7 @@ namespace rsx
 			std::deque<message_item> m_vis_items_top;
 			std::deque<message_item> m_vis_items_bottom;
 
-			void update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, u16 origin, int grow_direction);
+			void update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, message_pin_location origin);
 		};
 
 		template <typename T>
