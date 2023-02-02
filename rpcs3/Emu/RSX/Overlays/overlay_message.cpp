@@ -38,7 +38,7 @@ namespace rsx
 			m_fade_out_animation.duration = 2.f;
 			m_fade_out_animation.active = true;
 
-			back_color = 0.25;
+			back_color = color4f(0.25f, 0.25f, 0.25f, 0.85f);
 
 			if (icon)
 			{
