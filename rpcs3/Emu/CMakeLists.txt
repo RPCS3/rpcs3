@@ -437,6 +437,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/TextureUtils.cpp
     RSX/Common/texture_cache.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/Overlays/overlay_animated_icon.cpp
     RSX/Overlays/overlay_animation.cpp
     RSX/Overlays/overlay_controls.cpp
     RSX/Overlays/overlay_cursor.cpp
@@ -455,7 +456,6 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_user_list_dialog.cpp
     RSX/Overlays/overlay_utils.cpp
     RSX/Overlays/overlays.cpp
-    RSX/Overlays/overlay_shader_compile_notification.cpp
     RSX/Overlays/overlay_trophy_notification.cpp
     RSX/Overlays/Shaders/shader_loading_dialog.cpp
     RSX/Overlays/Shaders/shader_loading_dialog_native.cpp
