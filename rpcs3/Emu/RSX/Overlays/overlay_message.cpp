@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_message.h"
 #include "Emu/RSX/RSXThread.h"
+#pragma optimize("", off)
 
 namespace rsx
 {
@@ -38,7 +39,7 @@ namespace rsx
 			m_fade_out_animation.duration = 2.f;
 			m_fade_out_animation.active = true;
 
-			back_color.a = 0.15;
+			back_color = 0.25;
 
 			if (icon)
 			{
@@ -59,6 +60,11 @@ namespace rsx
 		{
 			// If reference counting is enabled and reached 0 consider it expired 
 			return m_refs && *m_refs == 0 ? 0 : m_expiration_time;
+		}
+
+		bool message_item::text_matches(const std::u32string& text) const
+		{
+			return m_text.text == text;
 		}
 
 		void message_item::set_pos(u16 _x, u16 _y)
@@ -197,6 +203,37 @@ namespace rsx
 			}
 
 			return cr;
+		}
+
+		bool message::message_exists(message_pin_location location, localized_string_id id)
+		{
+			return message_exists(location, get_localized_u32string(id));
+		}
+
+		bool message::message_exists(message_pin_location location, const std::string& msg)
+		{
+			return message_exists(location, utf8_to_u32string(msg));
+		}
+
+		bool message::message_exists(message_pin_location location, const std::u32string& msg)
+		{
+			auto check_list = [&](const std::deque<message_item>& list)
+			{
+				return std::any_of(list.cbegin(), list.cend(), [&](const message_item& item)
+				{
+					return item.text_matches(msg);
+				});
+			};
+
+			switch (location)
+			{
+			case message_pin_location::top:
+				return check_list(m_ready_queue_top) || check_list(m_vis_items_top);
+			case message_pin_location::bottom:
+				return check_list(m_ready_queue_bottom) || check_list(m_vis_items_bottom);
+			default:
+				fmt::throw_exception("Unreachable");
+			}
 		}
 
 	} // namespace overlays

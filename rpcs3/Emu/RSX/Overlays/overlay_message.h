@@ -24,6 +24,8 @@ namespace rsx
 			u64 get_expiration() const;
 			compiled_resource& get_compiled() override;
 
+			bool text_matches(const std::u32string& text) const;
+
 		private:
 			label m_text{};
 			std::unique_ptr<overlay_element> m_icon{};
@@ -62,10 +64,13 @@ namespace rsx
 				{
 					for (auto id : msg_id)
 					{
-						queue.emplace_back(id, expiration, refs, icon);
+						if (!message_exists(location, id))
+						{
+							queue.emplace_back(id, expiration, refs, icon);
+						}
 					}
 				}
-				else
+				else if (!message_exists(location, msg_id))
 				{
 					queue.emplace_back(msg_id, expiration, std::move(refs), std::move(icon));
 				}
@@ -86,6 +91,11 @@ namespace rsx
 			std::deque<message_item> m_vis_items_bottom;
 
 			void update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, message_pin_location origin);
+
+			// Stacking. Extends the lifetime of a message instead of inserting a duplicate
+			bool message_exists(message_pin_location location, localized_string_id id);
+			bool message_exists(message_pin_location location, const std::string& msg);
+			bool message_exists(message_pin_location location, const std::u32string& msg);
 		};
 
 		template <typename T>
