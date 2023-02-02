@@ -28,10 +28,15 @@ namespace rsx
 			m_text.auto_resize();
 			m_text.back_color.a = 0.f;
 
-			m_fade_animation.current = color4f(1.f);
-			m_fade_animation.end = color4f(1.0f, 1.0f, 1.0f, 0.f);
-			m_fade_animation.duration = 2.f;
-			m_fade_animation.active = true;
+			m_fade_in_animation.current = color4f(0.f);
+			m_fade_in_animation.end = color4f(1.0f);
+			m_fade_in_animation.duration = 1.f;
+			m_fade_in_animation.active = true;
+
+			m_fade_out_animation.current = color4f(1.f);
+			m_fade_out_animation.end = color4f(0.f);
+			m_fade_out_animation.duration = 2.f;
+			m_fade_out_animation.active = true;
 
 			back_color.a = 0.15;
 
@@ -69,7 +74,11 @@ namespace rsx
 
 		compiled_resource& message_item::get_compiled()
 		{
-			if (!m_processed || !m_fade_animation.active)
+			auto& current_animation = m_fade_in_animation.active
+				? m_fade_in_animation
+				: m_fade_out_animation;
+
+			if (!m_processed || !current_animation.active)
 			{
 				compiled_resources = {};
 				return compiled_resources;
@@ -84,32 +93,37 @@ namespace rsx
 			{
 				compiled_resources.add(m_icon->get_compiled());
 			}
-			m_fade_animation.apply(compiled_resources);
 
+			current_animation.apply(compiled_resources);
 			return compiled_resources;
 		}
 
-		void message_item::update(usz index, u64 time, u16 origin, int grow_direction)
+		void message_item::update(usz index, u64 time, u16 y_offset)
 		{
 			if (m_cur_pos != index)
 			{
 				m_cur_pos = index;
-				set_pos(10, static_cast<u16>(origin + (index * 18 * grow_direction)));
+				set_pos(10, y_offset);
 			}
 
 			if (!m_processed)
 			{
 				m_expiration_time = get_expiration_time(m_visible_duration);
 			}
+
+			if (m_fade_in_animation.active)
+			{
+				m_fade_in_animation.update(rsx::get_current_renderer()->vblank_count);
+			}
 			else if (time + 2'000'000 > m_expiration_time)
 			{
-				m_fade_animation.update(rsx::get_current_renderer()->vblank_count);
+				m_fade_out_animation.update(rsx::get_current_renderer()->vblank_count);
 			}
 
 			m_processed = true;
 		}
 
-		void message::update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, u16 origin, int grow_direction)
+		void message::update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, message_pin_location origin)
 		{
 			const u64 cur_time = rsx::uclock();
 
@@ -129,11 +143,20 @@ namespace rsx
 				return;
 			}
 
-			usz index = 0;
-			for (auto& item : vis_set)
+			// Render reversed list. Oldest entries are furthest from the border
+			u16 y_offset = 8, margin = 4, index = 0;
+			for (auto it = vis_set.rbegin(); it != vis_set.rend(); ++it, ++index)
 			{
-				item.update(index, cur_time, origin, grow_direction);
-				index++;
+				if (origin == message_pin_location::top) [[ likely ]]
+				{
+					it->update(index, cur_time, y_offset);
+					y_offset += (margin + it->h);
+				}
+				else
+				{
+					y_offset += (margin + it->h);
+					it->update(index, cur_time, virtual_height - y_offset);
+				}
 			}
 		}
 
@@ -146,8 +169,8 @@ namespace rsx
 
 			std::lock_guard lock(m_mutex_queue);
 
-			update_queue(m_vis_items_top, m_ready_queue_top, 10, 1);
-			update_queue(m_vis_items_bottom, m_ready_queue_bottom, virtual_height - 18, -1);
+			update_queue(m_vis_items_top, m_ready_queue_top, message_pin_location::top);
+			update_queue(m_vis_items_bottom, m_ready_queue_bottom, message_pin_location::bottom);
 
 			visible = !m_vis_items_top.empty() || !m_vis_items_bottom.empty();
 		}
