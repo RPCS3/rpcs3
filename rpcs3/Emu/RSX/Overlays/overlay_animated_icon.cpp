@@ -17,21 +17,21 @@ namespace rsx
 
 		void animated_icon::update_animation_frame(compiled_resource& result)
 		{
-			if (m_last_update_timestamp == 0)
+			if (m_last_update_timestamp_us == 0)
 			{
-				m_last_update_timestamp = rsx::uclock();
+				m_last_update_timestamp_us = rsx::uclock();
 			}
 			else
 			{
 				const auto now = rsx::uclock();
-				m_current_frame_duration += (rsx::uclock() - m_last_update_timestamp);
-				m_last_update_timestamp = now;
+				m_current_frame_duration_us += (rsx::uclock() - m_last_update_timestamp_us);
+				m_last_update_timestamp_us = now;
 			}
 
-			if (m_current_frame_duration > m_frame_duration)
+			if (m_current_frame_duration_us > m_frame_duration_us)
 			{
 				m_current_frame = (m_current_frame + 1) % m_total_frames;
-				m_current_frame_duration = 0;
+				m_current_frame_duration_us = 0;
 			}
 
 			// We only care about the uvs (zw) components
