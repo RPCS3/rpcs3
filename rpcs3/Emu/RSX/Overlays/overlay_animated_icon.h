@@ -10,6 +10,7 @@ namespace rsx
 		{
 		public:
 			animated_icon(const char* icon_name);
+			animated_icon(const std::vector<u8>& icon_data);
 
 			void update_animation_frame(compiled_resource& result);
 			compiled_resource& get_compiled() override;

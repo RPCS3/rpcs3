@@ -15,6 +15,12 @@ namespace rsx
 			set_raw_image(m_icon.get());
 		}
 
+		animated_icon::animated_icon(const std::vector<u8>& icon_data)
+		{
+			m_icon = std::make_unique<image_info>(icon_data);
+			set_raw_image(m_icon.get());
+		}
+
 		void animated_icon::update_animation_frame(compiled_resource& result)
 		{
 			if (m_last_update_timestamp_us == 0)
