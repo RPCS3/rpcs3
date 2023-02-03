@@ -45,8 +45,8 @@ namespace rsx
 				// The final scaling and translation can then be done with fmad
 				const auto angle = degrees_to_radians * ((i * 90) / (num_patch_points - 1));
 				result[i + 1].vec2(
-					std::fmaf(std::cosf(angle), scale[0], offset[0]),
-					std::fmaf(std::sinf(angle), scale[1], offset[1])
+					std::fmaf(std::cos(angle), scale[0], offset[0]),
+					std::fmaf(std::sin(angle), scale[1], offset[1])
 				);
 			}
 
