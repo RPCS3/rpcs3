@@ -35,7 +35,7 @@ namespace rsx
 
 			m_fade_out_animation.current = color4f(1.f);
 			m_fade_out_animation.end = color4f(0.f);
-			m_fade_out_animation.duration = 2.f;
+			m_fade_out_animation.duration = 1.f;
 			m_fade_out_animation.active = true;
 
 			back_color = color4f(0.25f, 0.25f, 0.25f, 0.85f);
@@ -120,7 +120,7 @@ namespace rsx
 			{
 				m_fade_in_animation.update(rsx::get_current_renderer()->vblank_count);
 			}
-			else if (time + 2'000'000 > m_expiration_time)
+			else if (time + u64(m_fade_out_animation.duration * 1'000'000) > m_expiration_time)
 			{
 				m_fade_out_animation.update(rsx::get_current_renderer()->vblank_count);
 			}
@@ -230,8 +230,6 @@ namespace rsx
 				return check_list(m_ready_queue_top) || check_list(m_visible_items_top);
 			case message_pin_location::bottom:
 				return check_list(m_ready_queue_bottom) || check_list(m_visible_items_bottom);
-			default:
-				fmt::throw_exception("Unreachable");
 			}
 		}
 
