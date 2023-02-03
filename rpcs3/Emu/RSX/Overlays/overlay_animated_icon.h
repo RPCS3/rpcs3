@@ -8,7 +8,11 @@ namespace rsx
 	{
 		class animated_icon : public image_view
 		{
-			std::unique_ptr<image_info> m_icon;
+		public:
+			animated_icon(const char* icon_name);
+
+			void update_animation_frame(compiled_resource& result);
+			compiled_resource& get_compiled() override;
 
 		protected:
 			// Some layout and frame data
@@ -27,11 +31,8 @@ namespace rsx
 			u64 m_current_frame_duration = 0;
 			u64 m_last_update_timestamp = 0;
 
-		public:
-			animated_icon(const char* icon_name);
-
-			void update_animation_frame(compiled_resource& result);
-			compiled_resource& get_compiled() override;
+		private:
+			std::unique_ptr<image_info> m_icon;
 		};
 	}
 }
