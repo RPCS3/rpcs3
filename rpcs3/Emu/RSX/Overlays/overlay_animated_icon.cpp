@@ -35,14 +35,14 @@ namespace rsx
 			}
 
 			// We only care about the uvs (zw) components
-			float x = f32(m_frame_width + m_spacing_x) * (m_current_frame % m_row_length) + m_start_x;
-			float y = f32(m_frame_height + m_spacing_y) * (m_current_frame / m_row_length) + m_start_y;
+			const float x = f32(m_frame_width + m_spacing_x) * (m_current_frame % m_row_length) + m_start_x;
+			const float y = f32(m_frame_height + m_spacing_y) * (m_current_frame / m_row_length) + m_start_y;
 
 			auto& cmd = result.draw_commands[0];
 			cmd.verts[0].z() = x / m_icon->w;
-			cmd.verts[0].w() = (y / m_icon->h);
+			cmd.verts[0].w() = y / m_icon->h;
 			cmd.verts[1].z() = (x + m_frame_width) / m_icon->w;
-			cmd.verts[1].w() = (y / m_icon->h);
+			cmd.verts[1].w() = y / m_icon->h;
 			cmd.verts[2].z() = x / m_icon->w;
 			cmd.verts[2].w() = ((y + m_frame_height) / m_icon->h);
 			cmd.verts[3].z() = (x + m_frame_width) / m_icon->w;
