@@ -17,7 +17,7 @@ namespace rsx
 		{
 		public:
 			template <typename T>
-			message_item(T msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::unique_ptr<overlay_element> icon = {});
+			message_item(T msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon = {});
 			void update(usz index, u64 time, u16 y_offset);
 			void set_pos(u16 _x, u16 _y) override;
 
@@ -28,7 +28,7 @@ namespace rsx
 
 		private:
 			label m_text{};
-			std::unique_ptr<overlay_element> m_icon{};
+			std::shared_ptr<overlay_element> m_icon{};
 			animation_color_interpolate m_fade_in_animation;
 			animation_color_interpolate m_fade_out_animation;
 
@@ -52,7 +52,7 @@ namespace rsx
 				u64 expiration,
 				std::shared_ptr<atomic_t<u32>> refs,
 				message_pin_location location = message_pin_location::top,
-				std::unique_ptr<overlay_element> icon = {})
+				std::shared_ptr<overlay_element> icon = {})
 			{
 				std::lock_guard lock(m_mutex_queue);
 
@@ -72,7 +72,7 @@ namespace rsx
 				}
 				else if (!message_exists(location, msg_id))
 				{
-					queue.emplace_back(msg_id, expiration, std::move(refs), std::move(icon));
+					queue.emplace_back(msg_id, expiration, std::move(refs), icon);
 				}
 
 				visible = true;
@@ -104,7 +104,7 @@ namespace rsx
 			u64 expiration = 5'000'000,
 			std::shared_ptr<atomic_t<u32>> refs = {},
 			message_pin_location location = message_pin_location::top,
-			std::unique_ptr<overlay_element> icon = {})
+			std::shared_ptr<overlay_element> icon = {})
 		{
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{

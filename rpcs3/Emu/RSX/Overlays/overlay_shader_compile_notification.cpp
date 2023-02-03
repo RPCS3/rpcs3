@@ -14,7 +14,7 @@ namespace rsx
 				5'000'000,
 				{},
 				message_pin_location::bottom,
-				std::make_unique<loading_icon24>());
+				std::make_shared<loading_icon24>());
 		}
 	}
 }
