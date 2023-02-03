@@ -459,7 +459,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	NULL_FUNC(sys_sm_get_tzpb),                             //408 (0x198)  PM
 	NULL_FUNC(sys_sm_get_fan_policy),                       //409 (0x199)  PM
 	BIND_SYSC(_sys_game_board_storage_read),                //410 (0x19A)
-	NULL_FUNC(sys_game_board_storage_write),                //411 (0x19B)
+	BIND_SYSC(_sys_game_board_storage_write),               //411 (0x19B)
 	BIND_SYSC(_sys_game_get_rtc_status),                    //412 (0x19C)
 	null_func,//BIND_SYSC(sys_...),                         //413 (0x19D)  ROOT
 	null_func,//BIND_SYSC(sys_...),                         //414 (0x19E)  ROOT

@@ -1,15 +1,72 @@
 #include "stdafx.h"
 #include "util/sysinfo.hpp"
+#include "util/v128.hpp"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/System.h"
-
+#include "Emu/system_utils.hpp"
 #include "Emu/IdManager.h"
 #include "Utilities/Thread.h"
 
 #include "sys_game.h"
 
 LOG_CHANNEL(sys_game);
+
+struct board_storage
+{
+public:
+	bool read(u8* buffer)
+	{
+		if (!buffer)
+			return false;
+
+		const auto data = storage.load();
+		memcpy(buffer, &data, size);
+
+		return true;
+	}
+
+	bool write(u8* buffer)
+	{
+		if (!buffer)
+			return false;
+
+		storage.store(read_from_ptr<be_t<v128>>(buffer));
+		written = true;
+
+		return true;
+	}
+
+	board_storage()
+	{
+		if (fs::file file; file.open(file_path, fs::read))
+			file.read(&storage.raw(), size);
+		else
+			memset(&storage.raw(), 0, size);
+	}
+
+	board_storage(const board_storage&) = delete;
+
+	board_storage& operator =(const board_storage&) = delete;
+
+	~board_storage()
+	{
+		if (written)
+		{
+			if (fs::file file; file.open(file_path, fs::create + fs::write + fs::lock))
+			{
+				file.write(&storage.raw(), size);
+				file.trunc(size);
+			}
+		}
+	}
+
+private:
+	atomic_be_t<v128> storage;
+	bool written = false;
+	const std::string file_path = rpcs3::utils::get_hdd1_dir() + "/caches/board_storage.bin";
+	static constexpr size_t size = sizeof(v128);
+};
 
 struct watchdog_t
 {
@@ -167,8 +224,21 @@ error_code _sys_game_board_storage_read(vm::ptr<u8> buffer1, vm::ptr<u8> buffer2
 		return CELL_EFAULT;
 	}
 
-	memset(buffer1.get_ptr(), 0, 16);
-	*buffer2 = 0;
+	*buffer2 = g_fxo->get<board_storage>().read(buffer1.get_ptr()) ? 0x00 : 0xFF;
+
+	return CELL_OK;
+}
+
+error_code _sys_game_board_storage_write(vm::ptr<u8> buffer1, vm::ptr<u8> buffer2)
+{
+	sys_game.trace("sys_game_board_storage_write(buffer1=*0x%x, buffer2=*0x%x)", buffer1, buffer2);
+
+	if (!buffer1 || !buffer2)
+	{
+		return CELL_EFAULT;
+	}
+
+	*buffer2 = g_fxo->get<board_storage>().write(buffer1.get_ptr()) ? 0x00 : 0xFF;
 
 	return CELL_OK;
 }
