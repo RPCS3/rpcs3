@@ -143,23 +143,24 @@ namespace rsx
 				ready_set.pop_front();
 			}
 
-			if (vis_set.empty() && ready_set.empty())
+			if (vis_set.empty())
 			{
 				return;
 			}
 
 			// Render reversed list. Oldest entries are furthest from the border
-			u16 y_offset = 8, margin = 4, index = 0;
+			constexpr u16 spacing = 4;
+			u16 y_offset = 8, index = 0;
 			for (auto it = vis_set.rbegin(); it != vis_set.rend(); ++it, ++index)
 			{
 				if (origin == message_pin_location::top) [[ likely ]]
 				{
 					it->update(index, cur_time, y_offset);
-					y_offset += (margin + it->h);
+					y_offset += (spacing + it->h);
 				}
 				else
 				{
-					y_offset += (margin + it->h);
+					y_offset += (spacing + it->h);
 					it->update(index, cur_time, virtual_height - y_offset);
 				}
 			}
@@ -231,6 +232,8 @@ namespace rsx
 			case message_pin_location::bottom:
 				return check_list(m_ready_queue_bottom) || check_list(m_visible_items_bottom);
 			}
+
+			return false;
 		}
 
 	} // namespace overlays
