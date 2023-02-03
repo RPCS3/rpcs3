@@ -540,7 +540,7 @@ struct vdec_context final
 				{
 					// Send AUDONE even if the current sequence was reset and a new sequence was started.
 					cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
-					au_count.try_dec(0);
+					ensure(au_count.try_dec(0));
 
 					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
 					lv2_obj::sleep(ppu);
