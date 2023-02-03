@@ -24,12 +24,12 @@ namespace rsx
 			u16 m_spacing_y = 8;
 			u16 m_row_length = 12;   // Number of animation frames in the X direction in case of a 2D grid of frames
 			u16 m_total_frames = 12; // Total number of available frames
-			u64 m_frame_duration = 100'000; // Hold duration for each frame
+			u64 m_frame_duration_us = 100'000; // Hold duration for each frame
 
 			// Animation playback variables
 			int m_current_frame = 0;
-			u64 m_current_frame_duration = 0;
-			u64 m_last_update_timestamp = 0;
+			u64 m_current_frame_duration_us = 0;
+			u64 m_last_update_timestamp_us = 0;
 
 		private:
 			std::unique_ptr<image_info> m_icon;
