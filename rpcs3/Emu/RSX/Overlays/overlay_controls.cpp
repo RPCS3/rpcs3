@@ -27,8 +27,8 @@ namespace rsx
 	{
 		static std::vector<vertex> generate_unit_quadrant(int num_patch_points, const float offset[2], const float scale[2])
 		{
-			std::vector<vertex> result;
-			result.resize(num_patch_points + 1);
+			ensure(num_patch_points >= 3);
+			std::vector<vertex> result(num_patch_points + 1);
 
 			// Set root vertex
 			result[0].vec2(offset[0], offset[1]);
