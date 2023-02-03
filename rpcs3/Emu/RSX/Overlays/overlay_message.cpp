@@ -174,10 +174,10 @@ namespace rsx
 
 			std::lock_guard lock(m_mutex_queue);
 
-			update_queue(m_vis_items_top, m_ready_queue_top, message_pin_location::top);
-			update_queue(m_vis_items_bottom, m_ready_queue_bottom, message_pin_location::bottom);
+			update_queue(m_visible_items_top, m_ready_queue_top, message_pin_location::top);
+			update_queue(m_visible_items_bottom, m_ready_queue_bottom, message_pin_location::bottom);
 
-			visible = !m_vis_items_top.empty() || !m_vis_items_bottom.empty();
+			visible = !m_visible_items_top.empty() || !m_visible_items_bottom.empty();
 		}
 
 		compiled_resource message::get_compiled()
@@ -191,12 +191,12 @@ namespace rsx
 
 			compiled_resource cr{};
 
-			for (auto& item : m_vis_items_top)
+			for (auto& item : m_visible_items_top)
 			{
 				cr.add(item.get_compiled());
 			}
 
-			for (auto& item : m_vis_items_bottom)
+			for (auto& item : m_visible_items_bottom)
 			{
 				cr.add(item.get_compiled());
 			}
@@ -227,9 +227,9 @@ namespace rsx
 			switch (location)
 			{
 			case message_pin_location::top:
-				return check_list(m_ready_queue_top) || check_list(m_vis_items_top);
+				return check_list(m_ready_queue_top) || check_list(m_visible_items_top);
 			case message_pin_location::bottom:
-				return check_list(m_ready_queue_bottom) || check_list(m_vis_items_bottom);
+				return check_list(m_ready_queue_bottom) || check_list(m_visible_items_bottom);
 			default:
 				fmt::throw_exception("Unreachable");
 			}
