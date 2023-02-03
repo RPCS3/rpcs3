@@ -783,7 +783,9 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 	{
 		const u8 value = SDL_GameControllerGetButton(dev->sdl.game_controller, button_id);
 		const SDLKeyCodes key_code = get_button_code(button_id);
-		values[key_code] = value;
+
+		// TODO: SDL does not support DS3 button intensity in the current version
+		values[key_code] = value ? 255 : 0;
 	}
 
 	for (SDL_GameControllerAxis axis_id : dev->sdl.axis_ids)
