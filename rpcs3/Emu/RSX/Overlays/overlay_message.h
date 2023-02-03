@@ -87,8 +87,8 @@ namespace rsx
 			std::deque<message_item> m_ready_queue_bottom;
 
 			// Top and bottom visible sets
-			std::deque<message_item> m_vis_items_top;
-			std::deque<message_item> m_vis_items_bottom;
+			std::deque<message_item> m_visible_items_top;
+			std::deque<message_item> m_visible_items_bottom;
 
 			void update_queue(std::deque<message_item>& vis_set, std::deque<message_item>& ready_set, message_pin_location origin);
 
