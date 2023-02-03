@@ -181,8 +181,7 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 	{
 		// AIM_get_open_ps_id
 		be_t<u64> psid[2] = { +g_cfg.sys.console_psid_high, +g_cfg.sys.console_psid_low };
-		u8* psid_bytes = reinterpret_cast<u8*>(psid);
-		std::memcpy(buffer.get_ptr(), psid_bytes, 16);
+		std::memcpy(buffer.get_ptr(), psid, 16);
 		break;
 	}
 	case 0x19006:
