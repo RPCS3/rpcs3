@@ -1045,7 +1045,7 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 	if (pOpt->info->filename)
 	{
 		std::span dst(pOpt->info->filename.get_ptr(), pOpt->info->filename_size);
-		strcpy_trunc(dst, prx->path);
+		strcpy_trunc(dst, vfs::retrieve(prx->path));
 	}
 
 	if (pOpt->info->segments)
