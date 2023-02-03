@@ -657,6 +657,15 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
 				game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 				game.icon_path    = sfo_dir + "/ICON0.PNG";
+
+				if (game.category == "DG")
+				{
+					const std::string latest_icon = rpcs3::utils::get_hdd0_dir() + "/game/" + game.serial + "/ICON0.PNG";
+					if (fs::is_file(latest_icon))
+					{
+						game.icon_path = latest_icon;
+					}
+				}
 			}
 
 			if (m_show_custom_icons)
