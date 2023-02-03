@@ -221,15 +221,6 @@ struct cfg_root : cfg::node
 
 		} perf_overlay{ this };
 
-		struct node_shader_compilation_hint : cfg::node
-		{
-			node_shader_compilation_hint(cfg::node* _this) : cfg::node(_this, "Shader Compilation Hint") {}
-
-			cfg::_int<0, 1280> pos_x{ this, "Position X (px)", 20, true }; // horizontal position starting from the upper border in px
-			cfg::_int<0, 720> pos_y{ this, "Position Y (px)", 690, true }; // vertical position starting from the left border in px
-
-		} shader_compilation_hint{ this };
-
 		struct node_shader_preloading_dialog : cfg::node
 		{
 			node_shader_preloading_dialog(cfg::node* _this) : cfg::node(_this, "Shader Loading Dialog") {}
