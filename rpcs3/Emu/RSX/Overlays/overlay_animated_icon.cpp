@@ -24,7 +24,7 @@ namespace rsx
 			else
 			{
 				const auto now = rsx::uclock();
-				m_current_frame_duration_us += (rsx::uclock() - m_last_update_timestamp_us);
+				m_current_frame_duration_us += (now - m_last_update_timestamp_us);
 				m_last_update_timestamp_us = now;
 			}
 
