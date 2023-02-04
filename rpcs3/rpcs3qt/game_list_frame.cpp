@@ -660,10 +660,10 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				if (game.category == "DG")
 				{
-					const std::string latest_icon = rpcs3::utils::get_hdd0_dir() + "/game/" + game.serial + "/ICON0.PNG";
+					std::string latest_icon = rpcs3::utils::get_hdd0_dir() + "game/" + game.serial + "/ICON0.PNG";
 					if (fs::is_file(latest_icon))
 					{
-						game.icon_path = latest_icon;
+						game.icon_path = std::move(latest_icon);
 					}
 				}
 			}
