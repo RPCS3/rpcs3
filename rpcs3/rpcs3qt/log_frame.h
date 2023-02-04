@@ -60,6 +60,7 @@ private:
 	usz m_tty_counter{};
 	bool m_stack_log{};
 	bool m_stack_tty{};
+	bool m_ansi_tty{};
 	logs::level m_old_log_level{};
 
 	fs::file m_tty_file;
@@ -83,6 +84,7 @@ private:
 
 	QAction* m_stack_act_log = nullptr;
 	QAction* m_stack_act_tty = nullptr;
+	QAction* m_ansi_act_tty = nullptr;
 	QAction* m_stack_act_err = nullptr;
 
 	QAction* m_show_prefix_act = nullptr;
