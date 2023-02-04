@@ -521,6 +521,12 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 		return -SYS_NET_EINVAL;
 	}
 
+	if (addr->sa_family != SYS_NET_AF_INET)
+	{
+		sys_net.error("sys_net_bnet_connect(s=%d): unsupported sa_family (%d)", s, addr->sa_family);
+		return -SYS_NET_EAFNOSUPPORT;
+	}
+
 	if (!idm::check<lv2_socket>(s))
 	{
 		return -SYS_NET_EBADF;
