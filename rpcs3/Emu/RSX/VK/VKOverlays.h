@@ -18,6 +18,7 @@ namespace rsx
 {
 	namespace overlays
 	{
+		enum class texture_sampling_mode;
 		struct overlay;
 	}
 }
@@ -135,9 +136,8 @@ namespace vk
 		color4f m_scale_offset;
 		color4f m_color;
 		bool m_pulse_glow = false;
-		bool m_skip_texture_read = false;
 		bool m_clip_enabled = false;
-		int  m_texture_type;
+		rsx::overlays::texture_sampling_mode m_texture_type;
 		areaf m_clip_region;
 		coordf m_viewport;
 
@@ -162,7 +162,9 @@ namespace vk
 		vk::image_view* find_font(rsx::overlays::font* font, vk::command_buffer& cmd, vk::data_heap& upload_heap);
 		vk::image_view* find_temp_image(rsx::overlays::image_info* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid);
 
-		void update_uniforms(vk::command_buffer& /*cmd*/, vk::glsl::program* /*program*/) override;
+		std::vector<VkPushConstantRange> get_push_constants() override;
+
+		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program) override;
 
 		void set_primitive_type(rsx::overlays::primitive_type type);
 
