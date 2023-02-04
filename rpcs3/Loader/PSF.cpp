@@ -100,16 +100,21 @@ namespace psf
 	};
 
 
-	entry::entry(format type, u32 max_size, std::string_view value)
+	entry::entry(format type, u32 max_size, std::string_view value, bool allow_truncate) noexcept
 		: m_type(type)
 		, m_max_size(max_size)
 		, m_value_string(value)
 	{
 		ensure(type == format::string || type == format::array);
-		ensure(max_size);
+		ensure(max_size > (type == format::string ? 1 : 0));
+
+		if (allow_truncate && value.size() > max(false))
+		{
+			m_value_string.resize(max(false));
+		}
 	}
 
-	entry::entry(u32 value)
+	entry::entry(u32 value) noexcept
 		: m_type(format::integer)
 		, m_max_size(sizeof(u32))
 		, m_value_integer(value)
@@ -148,10 +153,26 @@ namespace psf
 		{
 		case format::string:
 		case format::array:
-			return std::min(m_max_size, ::narrow<u32>(m_value_string.size() + (m_type == format::string)));
+			return std::min(m_max_size, ::narrow<u32>(m_value_string.size() + (m_type == format::string ? 1 : 0)));
 
 		case format::integer:
 			return sizeof(u32);
+		}
+
+		fmt::throw_exception("Invalid format (0x%x)", m_type);
+	}
+
+	bool entry::is_valid() const
+	{
+		switch (m_type)
+		{
+		case format::string:
+		case format::array:
+			return m_value_string.size() <= this->max(false);
+
+		case format::integer:
+			return true;
+		default: break;
 		}
 
 		fmt::throw_exception("Invalid format (0x%x)", m_type);
@@ -251,14 +272,6 @@ namespace psf
 			PSF_CHECK(false, corrupt);
 		}
 
-		const auto tid = get_string(pair.sfo, "TITLE_ID", "");
-
-		if (std::find_if(tid.begin(), tid.end(), [](char ch){ return !((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')); }) != tid.end())
-		{
-			psf_log.error("Invalid title ID ('%s')", tid);
-			PSF_CHECK(false, corrupt);
-		}
-
 #undef PSF_CHECK
 		return pair;
 	}
@@ -283,7 +296,7 @@ namespace psf
 			index.key_off = ::narrow<u32>(key_offset);
 			index.param_fmt = entry.second.type();
 			index.param_len = entry.second.size();
-			index.param_max = entry.second.max();
+			index.param_max = entry.second.max(true);
 			index.data_off = ::narrow<u32>(data_offset);
 
 			// Update offsets:
@@ -322,7 +335,7 @@ namespace psf
 		for (const auto& entry : psf)
 		{
 			const auto fmt = entry.second.type();
-			const u32 max = entry.second.max();
+			const u32 max = entry.second.max(true);
 
 			if (fmt == format::integer && max == sizeof(u32))
 			{
@@ -331,17 +344,17 @@ namespace psf
 			}
 			else if (fmt == format::string || fmt == format::array)
 			{
-				const std::string& value = entry.second.as_string();
-				const usz size = std::min<usz>(max, value.size());
+				std::string_view value = entry.second.as_string();
 
-				if (value.size() + (fmt == format::string) > max)
+				if (!entry.second.is_valid())
 				{
 					// TODO: check real limitations of PSF format
-					psf_log.error("Entry value shrinkage (key='%s', value='%s', size=0x%zx, max=0x%x)", entry.first, value, size, max);
+					psf_log.error("Entry value shrinkage (key='%s', value='%s', size=0x%zx, max=0x%x)", entry.first, value, value.size(), max);
+					value = value.substr(0, entry.second.max(false));
 				}
 
-				stream.write(value);
-				stream.trunc(stream.seek(max - size, fs::seek_cur)); // Skip up to max_size
+				stream.write(value.data(), value.size());
+				stream.trunc(stream.seek(max - value.size(), fs::seek_cur)); // Skip up to max_size
 			}
 			else
 			{
@@ -374,5 +387,45 @@ namespace psf
 		}
 
 		return found->second.as_integer();
+	}
+
+	bool check_registry(const registry& psf, std::function<bool(bool ok, const std::string& key, const entry& value)> validate, u32 line, u32 col, const char* file, const char* func)
+	{
+		bool psf_ok = true;
+
+		for (const auto& [key, value] : psf)
+		{
+			bool entry_ok = value.is_valid();
+
+			if (validate)
+			{
+				// Validate against a custom condition as well (forward error)
+				if (!validate(entry_ok, key, value))
+				{
+					entry_ok = false;
+				}
+			}
+
+			if (!entry_ok)
+			{
+				if (value.type() == format::string)
+				{
+					psf_log.error("Entry '%s' is invalid: string='%s'.%s", key, value.as_string(), src_loc{line , col, file, func});
+				}
+				else
+				{
+					// TODO: Better logging of other types
+					psf_log.error("Entry %s is invalid.%s", key, value.as_string(), src_loc{line , col, file, func});
+				}
+			}
+
+			if (!entry_ok)
+			{
+				// Do not break, run over all entries in order to report all errors
+				psf_ok = false;
+			}
+		}
+
+		return psf_ok;
 	}
 }

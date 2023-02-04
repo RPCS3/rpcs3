@@ -55,10 +55,10 @@ namespace psf
 
 	public:
 		// Construct string entry, assign the value
-		entry(format type, u32 max_size, std::string_view value);
+		entry(format type, u32 max_size, std::string_view value, bool allow_truncate = false) noexcept;
 
 		// Construct integer entry, assign the value
-		entry(u32 value);
+		entry(u32 value) noexcept;
 
 		~entry() = default;
 
@@ -69,8 +69,9 @@ namespace psf
 		entry& operator =(u32 value);
 
 		format type() const { return m_type; }
-		u32 max() const { return m_max_size; }
+		u32 max(bool with_nts) const { return m_max_size - (!with_nts && m_type == format::string ? 1 : 0); }
 		u32 size() const;
+		bool is_valid() const;
 	};
 
 	// Define PSF registry as a sorted map of entries:
@@ -102,6 +103,12 @@ namespace psf
 	// Get integer value or default value
 	u32 get_integer(const registry& psf, std::string_view key, u32 def = 0);
 
+	bool check_registry(const registry& psf, std::function<bool(bool ok, const std::string& key, const entry& value)> validate = {},
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION());
+
 	// Assign new entry
 	inline void assign(registry& psf, std::string_view key, entry&& _entry)
 	{
@@ -118,9 +125,18 @@ namespace psf
 	}
 
 	// Make string entry
-	inline entry string(u32 max_size, std::string_view value)
+	inline entry string(u32 max_size, std::string_view value, bool allow_truncate = false)
 	{
-		return {format::string, max_size, value};
+		return {format::string, max_size, value, allow_truncate};
+	}
+
+	// Make string entry (from char[N])
+	template <usz CharN>
+	inline entry string(u32 max_size, char (&value_array)[CharN], bool allow_truncate = false)
+	{
+		std::string_view value{value_array, CharN};
+		value = value.substr(0, std::min<usz>(value.find_first_of('\0'), value.size()));
+		return string(CharN, value, allow_truncate);
 	}
 
 	// Make array entry

@@ -466,7 +466,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		// 		psf::assign(sfo, "CATEGORY", psf::string(3, "HG"));
 		// 	}
 
-		// 	psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
+		// 	psf::assign(sfo, "TITLE_ID", psf::string(TITLEID_SFO_ENTRY_SIZE, setParam->titleId));
 		// 	psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
 		// 	psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
 		// 	psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
@@ -990,7 +990,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				psf::assign(sfo, "CATEGORY", psf::string(3, "GD"));
 			}
 
-			psf::assign(sfo, "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, setParam->titleId));
+			psf::assign(sfo, "TITLE_ID", psf::string(TITLEID_SFO_ENTRY_SIZE, setParam->titleId, true));
 			psf::assign(sfo, "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->title));
 			psf::assign(sfo, "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, setParam->dataVersion));
 			psf::assign(sfo, "PARENTAL_LEVEL", +setParam->parentalLevel);
@@ -1003,6 +1003,14 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				}
 
 				psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->titleLang[i]));
+			}
+
+			if (!psf::check_registry(sfo))
+			{
+				// This results in CELL_OK, broken SFO and CELL_GAMEDATA_ERROR_BROKEN on the next load
+				// Avoid creation for now
+				cellGame.error("Broken SFO paramters: %s", sfo);
+				return CELL_OK;
 			}
 
 			fs::pending_file temp(vfs::get(dir + "/PARAM.SFO"));
@@ -1125,7 +1133,7 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 	perm.sfo =
 	{
 		{ "CATEGORY", psf::string(3, "GD") },
-		{ "TITLE_ID", psf::string(CELL_GAME_SYSP_TITLEID_SIZE, init->titleId) },
+		{ "TITLE_ID", psf::string(TITLEID_SFO_ENTRY_SIZE, init->titleId) },
 		{ "TITLE", psf::string(CELL_GAME_SYSP_TITLE_SIZE, init->title) },
 		{ "VERSION", psf::string(CELL_GAME_SYSP_VERSION_SIZE, init->version) },
 	};
