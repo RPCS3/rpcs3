@@ -940,7 +940,11 @@ namespace rsx
 			{
 				compiled_resources.clear();
 
-				if (radius == 0 || radius > (w / 2))
+				if (radius == 0 ||
+#ifdef __APPLE__
+					true ||
+#endif
+					radius > (w / 2))
 				{
 					// Invalid radius
 					compiled_resources = overlay_element::get_compiled();
