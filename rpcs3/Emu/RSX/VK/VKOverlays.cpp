@@ -370,7 +370,7 @@ namespace vk
 		fs_src = fmt::replace_all(fs_src,
 		{
 			{ "%preprocessor", "// %preprocessor" },
-			{ "%push_block_offset", "layout(offset=64)" },
+			{ "%push_block_offset", "layout(offset=68)" },
 			{ "%push_block", "push_constant" }
 		});
 
@@ -542,12 +542,12 @@ namespace vk
 			{
 				.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 				.offset = 0,
-				.size = 64
+				.size = 68
 			},
 			{
 				.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-				.offset = 64,
-				.size = 16
+				.offset = 68,
+				.size = 12
 			}
 		};
 	}
@@ -559,9 +559,10 @@ namespace vk
 		// 16: vec4 albedo;
 		// 32: vec4 viewport;
 		// 48: vec4 clip_bounds;
-		// 64: uint fragment_config;
-		// 68: float timestamp;
-		// 72: float blur_intensity;
+		// 64: uint vertex_config;
+		// 68: uint fragment_config;
+		// 72: float timestamp;
+		// 76: float blur_intensity;
 
 		f32 push_buf[32];
 		// 1. Vertex config (00 - 63)
@@ -578,6 +579,12 @@ namespace vk
 		push_buf[14] = m_clip_region.x2;
 		push_buf[15] = m_clip_region.y2;
 
+		rsx::overlays::vertex_options vert_opts;
+		const auto vert_config = vert_opts
+			.disable_vertex_snap(m_disable_vertex_snap)
+			.get();
+		push_buf[16] = std::bit_cast<f32>(vert_config);
+
 		// 2. Fragment stuff
 		rsx::overlays::fragment_options frag_opts;
 		const auto frag_config = frag_opts
@@ -586,10 +593,9 @@ namespace vk
 			.pulse_glow(m_pulse_glow)
 			.get();
 
-		std::memcpy(push_buf + 16, &frag_config, 4);
-		//push_buf[16] = std::bit_cast<f32>(frag_config);
-		push_buf[17] = m_time;
-		push_buf[18] = m_blur_strength;
+		push_buf[17] = std::bit_cast<f32>(frag_config);
+		push_buf[18] = m_time;
+		push_buf[19] = m_blur_strength;
 
 		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 80, push_buf);
 	}
@@ -670,6 +676,7 @@ namespace vk
 			m_blur_strength = static_cast<f32>(command.config.blur_strength) * 0.01f;
 			m_clip_enabled = command.config.clip_region;
 			m_clip_region = command.config.clip_rect;
+			m_disable_vertex_snap = command.config.disable_vertex_snap;
 
 			vk::image_view* src = nullptr;
 			switch (command.config.texture_ref)

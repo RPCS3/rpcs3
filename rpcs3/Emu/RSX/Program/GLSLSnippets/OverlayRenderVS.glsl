@@ -20,13 +20,27 @@ layout(%push_block) uniform Configuration
 	vec4 albedo;
 	vec4 viewport;
 	vec4 clip_bounds;
+	uint vertex_config;
 };
 #else
 	uniform vec4 ui_scale;
 	uniform vec4 albedo;
 	uniform vec4 viewport;
 	uniform vec4 clip_bounds;
+	uniform uint vertex_config;
 #endif
+
+struct config_t
+{
+	bool no_vertex_snap;
+};
+
+config_t unpack_vertex_options()
+{
+	config_t result;
+	result.no_vertex_snap = bitfieldExtract(vertex_config, 0, 1) != 0;
+	return result;
+}
 
 vec2 snap_to_grid(const in vec2 normalized)
 {
@@ -53,8 +67,15 @@ void main()
 	tc0.xy = in_pos.zw;
 	color = albedo;
 	clip_rect = ndc_to_window(clip_to_ndc(clip_bounds));
+
 	vec4 pos = vec4(clip_to_ndc(in_pos).xy, 0.5, 1.);
-	pos.xy = snap_to_grid(pos.xy);
+	config_t config = unpack_vertex_options();
+
+	if (!config.no_vertex_snap)
+	{
+		pos.xy = snap_to_grid(pos.xy);
+	}
+
 	gl_Position = (pos + pos) - 1.;
 }
 )"

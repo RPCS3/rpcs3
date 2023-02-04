@@ -137,6 +137,7 @@ namespace vk
 		color4f m_color;
 		bool m_pulse_glow = false;
 		bool m_clip_enabled = false;
+		bool m_disable_vertex_snap = false;
 		rsx::overlays::texture_sampling_mode m_texture_type;
 		areaf m_clip_region;
 		coordf m_viewport;

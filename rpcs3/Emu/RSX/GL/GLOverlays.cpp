@@ -432,6 +432,11 @@ namespace gl
 			}
 			}
 
+			rsx::overlays::vertex_options vert_opts;
+			program_handle.uniforms["vertex_config"] = vert_opts
+				.disable_vertex_snap(cmd.config.disable_vertex_snap)
+				.get();
+
 			rsx::overlays::fragment_options draw_opts;
 			program_handle.uniforms["fragment_config"] = draw_opts
 				.texture_mode(texture_mode)

@@ -960,6 +960,7 @@ namespace rsx
 					{
 						auto& config = draw_cmd.config;
 						config.color = back_color;
+						config.disable_vertex_snap = true;
 						config.pulse_glow = pulse_effect_enabled;
 						config.pulse_sinus_offset = pulse_sinus_offset;
 						config.pulse_speed_modifier = pulse_speed_modifier;
