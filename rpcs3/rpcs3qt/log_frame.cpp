@@ -249,6 +249,14 @@ void log_frame::CreateAndConnectActions()
 		m_stack_tty = checked;
 	});
 
+	m_ansi_act_tty = new QAction(tr("ANSI Code (TTY)"), this);
+	m_ansi_act_tty->setCheckable(true);
+	connect(m_ansi_act_tty, &QAction::toggled, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::l_ansi_code, checked);
+			m_ansi_tty = checked;
+		});
+
 	m_tty_channel_acts = new QActionGroup(this);
 	// Special Channel: All
 	QAction* all_channels_act = new QAction(tr("All user channels"), m_tty_channel_acts);
@@ -344,6 +352,7 @@ void log_frame::CreateAndConnectActions()
 		menu->addSeparator();
 		menu->addAction(m_tty_act);
 		menu->addAction(m_stack_act_tty);
+		menu->addAction(m_ansi_act_tty);
 		menu->addSeparator();
 		menu->addActions(m_tty_channel_acts->actions());
 		menu->exec(m_tty->viewport()->mapToGlobal(pos));
@@ -402,8 +411,10 @@ void log_frame::LoadSettings()
 	SetTTYLogging(m_gui_settings->GetValue(gui::l_tty).toBool());
 	m_stack_log = m_gui_settings->GetValue(gui::l_stack).toBool();
 	m_stack_tty = m_gui_settings->GetValue(gui::l_stack_tty).toBool();
+	m_ansi_tty = m_gui_settings->GetValue(gui::l_ansi_code).toBool();
 	m_stack_act_log->setChecked(m_stack_log);
 	m_stack_act_tty->setChecked(m_stack_tty);
+	m_ansi_act_tty->setChecked(m_ansi_tty);
 	m_stack_act_err->setChecked(!g_log_all_errors);
 
 	s_gui_listener.show_prefix = m_gui_settings->GetValue(gui::l_prefix).toBool();
@@ -544,7 +555,18 @@ void log_frame::UpdateUI()
 				// clear selection or else it will get colorized as well
 				text_cursor.clearSelection();
 
-				const QString tty_text = QString::fromStdString(buf_line);
+				QString tty_text;
+
+				if (m_ansi_tty)
+				{
+					tty_text = QString::fromStdString(buf_line);
+				}
+				else
+				{
+					// Strip ANSI color code
+					static const QRegularExpression ansi_color_code("\\[\\d+;\\d+(;\\d+)?m|\\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]");
+					tty_text = QString::fromStdString(buf_line).remove(ansi_color_code);
+				}
 
 				// create counter suffix and remove recurring line if needed
 				if (m_stack_tty)
