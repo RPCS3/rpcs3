@@ -26,7 +26,10 @@ const std::map<gun_button, int> button_map
 	{gun_button::btn_2, BTN_2},
 	{gun_button::btn_3, BTN_3},
 	{gun_button::btn_4, BTN_4},
-	{gun_button::btn_5, BTN_5}
+	{gun_button::btn_5, BTN_5},
+	{gun_button::btn_6, BTN_6},
+	{gun_button::btn_7, BTN_7},
+	{gun_button::btn_8, BTN_8}
 };
 
 struct event_udev_entry
