@@ -216,6 +216,11 @@ enum // old consts
 	CELL_DISCGAME_SYSP_TITLEID_SIZE=10,
 };
 
+enum
+{
+	TITLEID_SFO_ENTRY_SIZE = 16, // This is the true length on PS3 (TODO: Fix in more places)
+};
+
 struct CellGameDataSystemFileParam
 {
 	char title[CELL_GAMEDATA_SYSP_TITLE_SIZE];

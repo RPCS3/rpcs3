@@ -1036,6 +1036,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// Try to boot a game through game ID only
 			m_title_id = m_path.substr(("%RPCS3_GAMEID%:"sv).size());
 			m_title_id = m_title_id.substr(0, m_title_id.find_first_of(fs::delim));
+
+			if (m_title_id.size() < 3 && m_title_id.find_first_not_of('.') == umax)
+			{
+				// Do not allow if TITLE_ID result in path redirection
+				sys_log.fatal("Game directory not found using GAMEID token. ('%s')", m_title_id);
+				return game_boot_result::invalid_file_or_folder;
+			}
+
 			std::string tail = m_path.substr(("%RPCS3_GAMEID%:"sv).size() + m_title_id.size());
 
 			if (tail.find_first_not_of(fs::delim) == umax)
