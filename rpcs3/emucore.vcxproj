@@ -546,6 +546,7 @@
     <ClInclude Include="Emu\RSX\Program\GLSLTypes.h" />
     <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h" />
     <ClInclude Include="Emu\RSX\Program\program_util.h" />
+    <ClInclude Include="Emu\RSX\Program\RSXOverlay.h" />
     <ClInclude Include="Emu\RSX\Program\ShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_types.h" />
@@ -865,6 +866,8 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\CopyRGBA8ToBuffer.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\GenericVSPassthrough.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderVS.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl" />
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />
