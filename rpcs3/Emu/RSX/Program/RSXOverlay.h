@@ -56,5 +56,22 @@ namespace rsx
 				return value;
 			}
 		};
+
+		class vertex_options
+		{
+			u32 value = 0;
+
+		public:
+			vertex_options& disable_vertex_snap(bool enable)
+			{
+				value = enable ? 1 : 0;
+				return *this;
+			}
+
+			u32 get() const
+			{
+				return value;
+			}
+		};
 	}
 }

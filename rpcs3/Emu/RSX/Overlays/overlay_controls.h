@@ -83,6 +83,7 @@ namespace rsx
 
 				color4f color = { 1.f, 1.f, 1.f, 1.f };
 				bool pulse_glow = false;
+				bool disable_vertex_snap = false;
 				f32 pulse_sinus_offset = 0.0f; // The current pulse offset
 				f32 pulse_speed_modifier = 0.005f;
 
