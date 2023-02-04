@@ -28,13 +28,13 @@ namespace rsx
 			m_text.auto_resize();
 			m_text.back_color.a = 0.f;
 
-			m_fade_in_animation.current = color4f(0.f);
+			m_fade_in_animation.current = color4f(1.f, 1.f, 1.f, 0.f);
 			m_fade_in_animation.end = color4f(1.0f);
 			m_fade_in_animation.duration = 1.f;
 			m_fade_in_animation.active = true;
 
 			m_fade_out_animation.current = color4f(1.f);
-			m_fade_out_animation.end = color4f(0.f);
+			m_fade_out_animation.end = color4f(1.f, 1.f, 1.f, 0.f);
 			m_fade_out_animation.duration = 1.f;
 			m_fade_out_animation.active = true;
 
