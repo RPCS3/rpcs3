@@ -14,7 +14,10 @@ enum class gun_button
 	btn_2,
 	btn_3,
 	btn_4,
-	btn_5
+	btn_5,
+	btn_6,
+	btn_7,
+	btn_8
 };
 
 class evdev_gun_handler
