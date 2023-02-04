@@ -981,8 +981,8 @@ namespace rsx
 
 					bg2.verts.emplace_back(f32(x + radius), f32(y + h) - radius, 0.f, 0.f);
 					bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h) - radius, 0.f, 0.f);
-					bg2.verts.emplace_back(f32(x + radius), f32(y + h) + 1.f, 0.f, 0.f);         // Note the +1 subpixel correction
-					bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h) + 1.f, 0.f, 0.f);
+					bg2.verts.emplace_back(f32(x + radius), f32(y + h), 0.f, 0.f);
+					bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h), 0.f, 0.f);
 
 					// Generate the quadrants
 					const f32 corners[4][2] =
