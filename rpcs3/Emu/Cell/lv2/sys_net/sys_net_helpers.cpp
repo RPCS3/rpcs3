@@ -151,6 +151,21 @@ sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_ad
 	return native_addr;
 }
 
+bool is_ip_public_address(const ::sockaddr_in& addr)
+{
+	const u8* ip = reinterpret_cast<const u8*>(&addr.sin_addr.s_addr);
+
+	if ((ip[0] == 10) ||
+		(ip[0] == 127) ||
+		(ip[0] == 172 && (ip[1] >= 16 && ip[1] <= 31)) ||
+		(ip[0] == 192 && ip[1] == 168))
+	{
+		return false;
+	}
+
+	return true;
+}
+
 s32 network_clear_queue(ppu_thread& ppu)
 {
 	s32 cleared = 0;

@@ -1,6 +1,7 @@
 #include "GLOverlays.h"
 
 #include "../rsx_utils.h"
+#include "../Program/RSXOverlay.h"
 
 namespace gl
 {
@@ -194,132 +195,19 @@ namespace gl
 	ui_overlay_renderer::ui_overlay_renderer()
 	{
 		vs_src =
-			"#version 420\n\n"
-			"layout(location=0) in vec4 in_pos;\n"
-			"layout(location=0) out vec2 tc0;\n"
-			"layout(location=1) flat out vec4 clip_rect;\n"
-			"uniform vec4 ui_scale;\n"
-			"uniform vec4 viewport;\n"
-			"uniform vec4 clip_bounds;\n"
-			"\n"
-			"vec2 snap_to_grid(vec2 normalized)\n"
-			"{\n"
-			"	return (floor(normalized * viewport.xy) + 0.5) / viewport.xy;\n"
-			"}\n"
-			"\n"
-			"vec4 clip_to_ndc(const in vec4 coord)\n"
-			"{\n"
-			"	vec4 ret = (coord * ui_scale.zwzw) / ui_scale.xyxy;\n"
-			"	ret.yw = 1. - ret.yw;\n"
-			"	return ret;\n"
-			"}\n"
-			"\n"
-			"vec4 ndc_to_window(const in vec4 coord)\n"
-			"{\n"
-			"	return fma(coord, viewport.xyxy, viewport.zwzw);\n"
-			"}\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	tc0.xy = in_pos.zw;\n"
-			"	clip_rect = ndc_to_window(clip_to_ndc(clip_bounds)).xwzy; // Swap y1 and y2 due to flipped origin!\n"
-			"	vec4 pos = vec4(clip_to_ndc(in_pos).xy, 0.5, 1.);\n"
-			"	pos.xy = snap_to_grid(pos.xy);\n"
-			"	gl_Position = (pos + pos) - 1.;\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/OverlayRenderVS.glsl"
+		;
 
 		fs_src =
-			"#version 420\n\n"
-			"layout(binding=31) uniform sampler2D fs0;\n"
-			"layout(binding=30) uniform sampler2DArray fs1;\n"
-			"layout(location=0) in vec2 tc0;\n"
-			"layout(location=1) flat in vec4 clip_rect;\n"
-			"layout(location=0) out vec4 ocol;\n"
-			"uniform vec4 color;\n"
-			"uniform float time;\n"
-			"uniform int sampler_mode;\n"
-			"uniform int pulse_glow;\n"
-			"uniform int clip_region;\n"
-			"uniform int blur_strength;\n"
-			"\n"
-			"vec4 blur_sample(sampler2D tex, vec2 coord, vec2 tex_offset)\n"
-			"{\n"
-			"	vec2 coords[9];\n"
-			"	coords[0] = coord - tex_offset\n;"
-			"	coords[1] = coord + vec2(0., -tex_offset.y);\n"
-			"	coords[2] = coord + vec2(tex_offset.x, -tex_offset.y);\n"
-			"	coords[3] = coord + vec2(-tex_offset.x, 0.);\n"
-			"	coords[4] = coord;\n"
-			"	coords[5] = coord + vec2(tex_offset.x, 0.);\n"
-			"	coords[6] = coord + vec2(-tex_offset.x, tex_offset.y);\n"
-			"	coords[7] = coord + vec2(0., tex_offset.y);\n"
-			"	coords[8] = coord + tex_offset;\n"
-			"\n"
-			"	float weights[9] =\n"
-			"	{\n"
-			"		1., 2., 1.,\n"
-			"		2., 4., 2.,\n"
-			"		1., 2., 1.\n"
-			"	};\n"
-			"\n"
-			"	vec4 blurred = vec4(0.);\n"
-			"	for (int n = 0; n < 9; ++n)\n"
-			"	{\n"
-			"		blurred += texture(tex, coords[n]) * weights[n];\n"
-			"	}\n"
-			"\n"
-			"	return blurred / 16.f;\n"
-			"}\n"
-			"\n"
-			"vec4 sample_image(sampler2D tex, vec2 coord)\n"
-			"{\n"
-			"	vec4 original = texture(tex, coord);\n"
-			"	if (blur_strength == 0) return original;\n"
-			"	\n"
-			"	vec2 constraints = 1.f / vec2(640, 360);\n"
-			"	vec2 res_offset = 1.f / textureSize(fs0, 0);\n"
-			"	vec2 tex_offset = max(res_offset, constraints);\n"
-			"\n"
-			"	// Sample triangle pattern and average\n"
-			"	// TODO: Nicer looking gaussian blur with less sampling\n"
-			"	vec4 blur0 = blur_sample(tex, coord + vec2(-res_offset.x, 0.), tex_offset);\n"
-			"	vec4 blur1 = blur_sample(tex, coord + vec2(res_offset.x, 0.), tex_offset);\n"
-			"	vec4 blur2 = blur_sample(tex, coord + vec2(0., res_offset.y), tex_offset);\n"
-			"\n"
-			"	vec4 blurred = blur0 + blur1 + blur2;\n"
-			"	blurred /= 3.;\n"
-			"	return mix(original, blurred, float(blur_strength) / 100.);\n"
-			"}\n"
-			"\n"
-			"void main()\n"
-			"{\n"
-			"	if (clip_region != 0)\n"
-			"	{"
-			"		if (gl_FragCoord.x < clip_rect.x || gl_FragCoord.x > clip_rect.z ||\n"
-			"			gl_FragCoord.y < clip_rect.y || gl_FragCoord.y > clip_rect.w)\n"
-			"		{\n"
-			"			discard;\n"
-			"			return;\n"
-			"		}\n"
-			"	}\n"
-			"\n"
-			"	vec4 diff_color = color;\n"
-			"	if (pulse_glow != 0)\n"
-			"		diff_color.a *= (sin(time) + 1.f) * 0.5f;\n"
-			"\n"
-			"	switch (sampler_mode)\n"
-			"	{\n"
-			"	case 1:\n"
-			"		ocol = sample_image(fs0, tc0) * diff_color;\n"
-			"		break;\n"
-			"	case 2:\n"
-			"		ocol = texture(fs1, vec3(tc0.x, fract(tc0.y), trunc(tc0.y))) * diff_color;\n"
-			"		break;\n"
-			"	default:\n"
-			"		ocol = diff_color;\n"
-			"		break;\n"
-			"	}\n"
-			"}\n";
+		#include "../Program/GLSLSnippets/OverlayRenderFS.glsl"
+		;
+
+		vs_src = fmt::replace_all(vs_src,
+		{
+			{ "#version 450", "#version 420" },
+			{ "%preprocessor", "// %preprocessor" }
+		});
+		fs_src = fmt::replace_all(fs_src, "%preprocessor", "// %preprocessor");
 
 		// Smooth filtering required for inputs
 		m_input_filter = gl::filter::linear;
@@ -513,7 +401,7 @@ namespace gl
 			set_primitive_type(cmd.config.primitives);
 			upload_vertex_data(cmd.verts.data(), ::size32(cmd.verts));
 			num_drawable_elements = ::size32(cmd.verts);
-			GLint texture_read = GL_TRUE;
+			auto texture_mode = rsx::overlays::texture_sampling_mode::texture2D;
 
 			switch (cmd.config.texture_ref)
 			{
@@ -522,7 +410,7 @@ namespace gl
 				// TODO
 			case rsx::overlays::image_resource_id::none:
 			{
-				texture_read = GL_FALSE;
+				texture_mode = rsx::overlays::texture_sampling_mode::none;
 				cmd_->bind_texture(31, GL_TEXTURE_2D, GL_NONE);
 				break;
 			}
@@ -533,7 +421,7 @@ namespace gl
 			}
 			case rsx::overlays::image_resource_id::font_file:
 			{
-				texture_read = (GL_TRUE + 1);
+				texture_mode = rsx::overlays::texture_sampling_mode::font3D;
 				cmd_->bind_texture(30, GL_TEXTURE_2D_ARRAY, find_font(cmd.config.font_ref)->id());
 				break;
 			}
@@ -544,13 +432,22 @@ namespace gl
 			}
 			}
 
-			program_handle.uniforms["time"] = cmd.config.get_sinus_value();
-			program_handle.uniforms["color"] = cmd.config.color;
-			program_handle.uniforms["sampler_mode"] = texture_read;
-			program_handle.uniforms["pulse_glow"] = static_cast<s32>(cmd.config.pulse_glow);
-			program_handle.uniforms["blur_strength"] = static_cast<s32>(cmd.config.blur_strength);
-			program_handle.uniforms["clip_region"] = static_cast<s32>(cmd.config.clip_region);
+			rsx::overlays::vertex_options vert_opts;
+			program_handle.uniforms["vertex_config"] = vert_opts
+				.disable_vertex_snap(cmd.config.disable_vertex_snap)
+				.get();
+
+			rsx::overlays::fragment_options draw_opts;
+			program_handle.uniforms["fragment_config"] = draw_opts
+				.texture_mode(texture_mode)
+				.clip_fragments(cmd.config.clip_region)
+				.pulse_glow(cmd.config.pulse_glow)
+				.get();
+
+			program_handle.uniforms["timestamp"] = cmd.config.get_sinus_value();
+			program_handle.uniforms["albedo"] = cmd.config.color;
 			program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
+			program_handle.uniforms["blur_intensity"] = static_cast<s32>(cmd.config.blur_strength);
 			overlay_pass::run(cmd_, viewport, target, gl::image_aspect::color, true);
 		}
 

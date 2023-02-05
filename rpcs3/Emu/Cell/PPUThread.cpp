@@ -3350,6 +3350,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			{ "sys_game_watchdog_clear", reinterpret_cast<u64>(ppu_execute_syscall) },
 			{ "sys_game_get_system_sw_version", reinterpret_cast<u64>(ppu_execute_syscall) },
 			{ "sys_game_board_storage_read", reinterpret_cast<u64>(ppu_execute_syscall) },
+			{ "sys_game_board_storage_write", reinterpret_cast<u64>(ppu_execute_syscall) },
 			{ "sys_game_get_rtc_status", reinterpret_cast<u64>(ppu_execute_syscall) },
 			{ "__trap", reinterpret_cast<u64>(&ppu_trap) },
 			{ "__error", reinterpret_cast<u64>(&ppu_error) },

@@ -940,7 +940,11 @@ namespace rsx
 			{
 				compiled_resources.clear();
 
+#ifdef __APPLE__
+				if (true)
+#else
 				if (radius == 0 || radius > (w / 2))
+#endif
 				{
 					// Invalid radius
 					compiled_resources = overlay_element::get_compiled();
@@ -960,6 +964,7 @@ namespace rsx
 					{
 						auto& config = draw_cmd.config;
 						config.color = back_color;
+						config.disable_vertex_snap = true;
 						config.pulse_glow = pulse_effect_enabled;
 						config.pulse_sinus_offset = pulse_sinus_offset;
 						config.pulse_speed_modifier = pulse_speed_modifier;
@@ -981,8 +986,8 @@ namespace rsx
 
 					bg2.verts.emplace_back(f32(x + radius), f32(y + h) - radius, 0.f, 0.f);
 					bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h) - radius, 0.f, 0.f);
-					bg2.verts.emplace_back(f32(x + radius), f32(y + h) + 1.f, 0.f, 0.f);         // Note the +1 subpixel correction
-					bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h) + 1.f, 0.f, 0.f);
+					bg2.verts.emplace_back(f32(x + radius), f32(y + h), 0.f, 0.f);
+					bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h), 0.f, 0.f);
 
 					// Generate the quadrants
 					const f32 corners[4][2] =
