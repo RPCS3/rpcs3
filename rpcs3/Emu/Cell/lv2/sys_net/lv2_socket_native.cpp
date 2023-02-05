@@ -164,6 +164,12 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 
 	sys_net.notice("[Native] Attempting to connect on %s:%d", native_addr.sin_addr, std::bit_cast<be_t<u16>, u16>(native_addr.sin_port));
 
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	if (!nph.get_net_status() && is_ip_public_address(native_addr))
+	{
+		return -SYS_NET_EADDRNOTAVAIL;
+	}
+
 	if (psa_in->sin_port == 53)
 	{
 		// Add socket to the dns hook list
@@ -896,6 +902,12 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 	{
 		native_addr = sys_net_addr_to_native_addr(*opt_sn_addr);
 		sys_net.trace("[Native] Attempting to send to %s:%d", (*native_addr).sin_addr, std::bit_cast<be_t<u16>, u16>((*native_addr).sin_port));
+
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		if (!nph.get_net_status() && is_ip_public_address(*native_addr))
+		{
+			return -SYS_NET_EADDRNOTAVAIL;
+		}
 	}
 
 	sys_net_error result{};
@@ -914,13 +926,6 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 	if (dnshook.is_dns(lv2_id))
 	{
 		const s32 ret_analyzer = dnshook.analyze_dns_packet(lv2_id, reinterpret_cast<const u8*>(buf.data()), buf.size());
-
-		// If we're offline return ENETDOWN for dns requests
-		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-		if (!nph.get_net_status())
-		{
-			return -SYS_NET_ENETDOWN;
-		}
 
 		// Check if the packet is intercepted
 		if (ret_analyzer >= 0)

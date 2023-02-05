@@ -27,7 +27,8 @@ namespace rsx
 			quad_list = 0,
 			triangle_strip = 1,
 			line_list = 2,
-			line_strip = 3
+			line_strip = 3,
+			triangle_fan = 4
 		};
 
 		struct image_info
@@ -82,6 +83,7 @@ namespace rsx
 
 				color4f color = { 1.f, 1.f, 1.f, 1.f };
 				bool pulse_glow = false;
+				bool disable_vertex_snap = false;
 				f32 pulse_sinus_offset = 0.0f; // The current pulse offset
 				f32 pulse_speed_modifier = 0.005f;
 
@@ -239,6 +241,15 @@ namespace rsx
 				// No draw
 				return compiled_resources;
 			}
+		};
+
+		struct rounded_rect : public overlay_element
+		{
+			u8 radius = 5;
+			u8 num_control_points = 8; // Smoothness control
+
+			using overlay_element::overlay_element;
+			compiled_resource& get_compiled() override;
 		};
 
 		struct image_view : public overlay_element
