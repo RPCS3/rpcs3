@@ -84,11 +84,13 @@
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
     <ClCompile Include="Emu\perf_monitor.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_controls.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_cursor.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_home_menu.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_media_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_shader_compile_notification.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_user_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
@@ -400,7 +402,6 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_progress_bar.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_save_dialog.cpp" />
-    <ClCompile Include="Emu\RSX\Overlays\overlay_shader_compile_notification.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_trophy_notification.cpp" />
     <ClCompile Include="Emu\RSX\RSXFIFO.cpp" />
     <ClCompile Include="Emu\RSX\RSXOffload.cpp" />
@@ -534,15 +535,18 @@
     <ClInclude Include="Emu\RSX\Core\RSXDisplay.h" />
     <ClInclude Include="Emu\RSX\Core\RSXReservationLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXVertexTypes.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_animated_icon.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_cursor.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_home_menu.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_list_view.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_loading_icon.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp" />
     <ClInclude Include="Emu\RSX\Program\GLSLTypes.h" />
     <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h" />
     <ClInclude Include="Emu\RSX\Program\program_util.h" />
+    <ClInclude Include="Emu\RSX\Program\RSXOverlay.h" />
     <ClInclude Include="Emu\RSX\Program\ShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_types.h" />
@@ -862,6 +866,8 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\CopyRGBA8ToBuffer.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\GenericVSPassthrough.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderVS.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\ShuffleBytes.glsl" />
   </ItemGroup>
   <PropertyGroup Label="UserMacros" />

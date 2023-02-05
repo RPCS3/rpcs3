@@ -962,7 +962,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	pdlg.show();
 
 	// Wait for the completion
-	for (usz i = 0, set_text = umax; i < readers.size();)
+	for (usz i = 0, set_text = umax; i < readers.size() && error == package_error::no_error;)
 	{
 		std::this_thread::sleep_for(5ms);
 

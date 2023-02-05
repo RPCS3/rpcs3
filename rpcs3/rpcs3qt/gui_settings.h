@@ -199,6 +199,7 @@ namespace gui
 	const gui_save l_stack_err = gui_save(logger, "ERR_stack", true);
 	const gui_save l_stack     = gui_save(logger, "stack",     true);
 	const gui_save l_stack_tty = gui_save(logger, "TTY_stack", false);
+	const gui_save l_ansi_code = gui_save(logger, "ANSI_code", true);
 	const gui_save l_limit     = gui_save(logger, "limit",     1000);
 	const gui_save l_limit_tty = gui_save(logger, "TTY_limit", 1000);
 

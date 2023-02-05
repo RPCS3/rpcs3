@@ -66,6 +66,7 @@ bool package_reader::read_header()
 		return false;
 	}
 
+	pkg_log.notice("Path: '%s'", m_path);
 	pkg_log.notice("Header: pkg_magic = 0x%x = \"%s\"", +m_header.pkg_magic, std::string(reinterpret_cast<const char*>(&m_header.pkg_magic), 4));
 	pkg_log.notice("Header: pkg_type = 0x%x = %d", m_header.pkg_type, m_header.pkg_type);
 	pkg_log.notice("Header: pkg_platform = 0x%x = %d", m_header.pkg_platform, m_header.pkg_platform);
@@ -784,9 +785,14 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		const std::string name{reinterpret_cast<char*>(m_bufs.back().get()), entry.name_size};
 		std::string path = m_install_path + vfs::escape(name);
 
-		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
-
-		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
+		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
+		{
+			pkg_log.todo("Entry with unknown type or padding: type=0x%08x, pad=0x%x, name='%s'", entry.type, entry.pad, name);
+		}
+		else
+		{
+			pkg_log.notice("Entry: type=0x%08x, name='%s'", entry.type, name);
+		}
 
 		const u8 entry_type = entry.type & 0xff;
 
@@ -814,7 +820,15 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		}
 		default:
 		{
-			const std::string true_path = std::filesystem::weakly_canonical(std::filesystem::u8path(path)).string();
+			// TODO: check for valid utf8 characters
+			const std::string true_path = std::filesystem::weakly_canonical(path).string();
+			if (true_path.empty())
+			{
+				num_failures++;
+				pkg_log.error("Failed to get weakly_canonical path for '%s'", path);
+				break;
+			}
+
 			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;
 
 			m_install_entries.push_back({
@@ -885,8 +899,14 @@ void package_reader::extract_worker(thread_key thread_data_key)
 		const std::string& path = entry.weak_reference->first;
 		const std::string& name = entry.name;
 
-		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
-		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
+		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
+		{
+			pkg_log.todo("Entry with unknown type or padding: type=0x%08x, pad=0x%x, name='%s'", entry.type, entry.pad, name);
+		}
+		else
+		{
+			pkg_log.notice("Entry: type=0x%08x, name='%s'", entry.type, name);
+		}
 
 		switch (const u8 entry_type = entry.type & 0xff)
 		{
@@ -933,14 +953,14 @@ void package_reader::extract_worker(thread_key thread_data_key)
 					if (data_span.size() != block_size)
 					{
 						extract_success = false;
-						pkg_log.error("Failed to extract file %s", path);
+						pkg_log.error("Failed to extract file %s (data_span.size=%d, block_size=%d)", path, data_span.size(), block_size);
 						break;
 					}
 
 					if (out.write(data_span.data(), block_size) != block_size)
 					{
 						extract_success = false;
-						pkg_log.error("Failed to write file %s", path);
+						pkg_log.error("Failed to write file %s (error=%s)", path, fs::g_tls_error);
 						break;
 					}
 
@@ -953,7 +973,7 @@ void package_reader::extract_worker(thread_key thread_data_key)
 					if (!out || !fs::write_file(path, fs::rewrite, static_cast<fs::container_stream<std::vector<u8>>*>(out.release().get())->obj))
 					{
 						m_num_failures++;
-						pkg_log.error("Failed to create file %s", path);
+						pkg_log.error("Failed to create file %s (error=%s)", path, fs::g_tls_error);
 						break;
 					}
 				}
@@ -983,7 +1003,7 @@ void package_reader::extract_worker(thread_key thread_data_key)
 			else
 			{
 				m_num_failures++;
-				pkg_log.error("Failed to create file %s", path);
+				pkg_log.error("Failed to create file %s (is_buffered=%d, did_overwrite=%d, error=%s)", path, is_buffered, did_overwrite, fs::g_tls_error);
 			}
 
 			break;

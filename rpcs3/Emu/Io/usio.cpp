@@ -140,7 +140,6 @@ void usb_device_usio::save_backup()
 
 	const u64 file_size = g_fxo->get<usio_memory>().backup_memory.size();
 
-	usio_backup_file.seek(0, fs::seek_set);
 	usio_backup_file.write(g_fxo->get<usio_memory>().backup_memory.data(), file_size);
 	usio_backup_file.trunc(file_size);
 }
