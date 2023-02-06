@@ -7,6 +7,7 @@
 
 #include <QActionGroup>
 #include <QApplication>
+#include <QClipboard>
 #include <QMenu>
 #include <QFile>
 #include <QFileDialog>
@@ -61,6 +62,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 {
 	QMenu menu;
 	QAction* clear  = new QAction(tr("&Clear"));
+	QAction* copy   = new QAction(tr("&Copy"));
 	QAction* open   = new QAction(tr("&Open log file"));
 	QAction* save   = new QAction(tr("&Save filtered log"));
 	QAction* filter = new QAction(tr("&Filter log"));
@@ -110,6 +112,8 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	init_action(notice_act, logs::level::notice);
 	init_action(trace_act, logs::level::trace);
 
+	menu.addAction(copy);
+	menu.addSeparator();
 	menu.addAction(open);
 	menu.addSeparator();
 	menu.addAction(save);
@@ -127,6 +131,11 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	menu.addActions(log_level_acts->actions());
 	menu.addSeparator();
 	menu.addAction(clear);
+
+	connect(copy, &QAction::triggered, this, [this]()
+	{
+		m_log_text->copy();
+	});
 
 	connect(clear, &QAction::triggered, this, [this]()
 	{
