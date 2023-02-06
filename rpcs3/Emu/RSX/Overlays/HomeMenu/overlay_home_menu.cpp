@@ -11,7 +11,7 @@ namespace rsx
 			std::ostringstream ost;
 			const std::time_t dateTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
  			const std::tm tm = *std::localtime(&dateTime);
-			ost << std::put_time(&tm, "%Y/%m/%e %H:%M:%S");
+			ost << std::put_time(&tm, "%Y/%m/%d %H:%M:%S");
 			return ost.str();
 		}
 
