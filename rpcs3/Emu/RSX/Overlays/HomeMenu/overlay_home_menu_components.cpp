@@ -24,8 +24,6 @@ namespace rsx
 			static_cast<vertical_layout*>(text_stack.get())->add_element(padding);
 			static_cast<vertical_layout*>(text_stack.get())->add_element(title);
 
-			// Pack
-			this->pack_padding = 15;
 			add_element(text_stack);
 		}
 
