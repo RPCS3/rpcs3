@@ -2,6 +2,9 @@
 #include "overlay_home_menu.h"
 #include "Emu/RSX/RSXThread.h"
 
+#include <sstream>
+#include <iomanip>
+
 namespace rsx
 {
 	namespace overlays

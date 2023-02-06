@@ -92,11 +92,11 @@ namespace rsx
 				m_dropdown.set_size(available_side_width / 2, element_height);
 				m_dropdown.set_pos(overlay::virtual_width / 2 + menu_entry_margin, 0);
 				m_dropdown.set_font("Arial", 14);
-				m_dropdown.align_text(this->text_align::center);
+				m_dropdown.align_text(home_menu_dropdown<T>::text_align::center);
 				m_dropdown.back_color = { 0.3f, 0.3f, 0.3f, 1.0f };
 			}
 
-			compiled_resource& get_compiled()
+			compiled_resource& get_compiled() override
 			{
 				this->update_value();
 
