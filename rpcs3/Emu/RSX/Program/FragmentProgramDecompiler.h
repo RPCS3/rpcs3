@@ -155,6 +155,8 @@ class FragmentProgramDecompiler
 	std::vector<u32> m_end_offsets;
 	std::vector<u32> m_else_offsets;
 
+	bool m_is_valid_ucode = true;
+
 	std::array<temp_register, 64> temp_registers;
 
 	std::string GetMask() const;
@@ -169,13 +171,10 @@ class FragmentProgramDecompiler
 	void AddFlowOp(const std::string& code);
 	std::string Format(const std::string& code, bool ignore_redirects = false);
 
-	//Technically a temporary workaround until we know what type3 is
-	std::string AddType3();
-
-	//Support the transform-2d temp result for use with TEXBEM
+	// Support the transform-2d temp result for use with TEXBEM
 	std::string AddX2d();
 
-	//Prevents operations from overflowing the desired range (tested with fp_dynamic3 autotest sample, DS2 for src1.input_prec_mod)
+	// Prevents operations from overflowing the desired range (tested with fp_dynamic3 autotest sample, DS2 for src1.input_prec_mod)
 	std::string ClampValue(const std::string& code, u32 precision);
 
 	/**
