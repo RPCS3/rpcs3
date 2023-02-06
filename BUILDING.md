@@ -23,7 +23,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 * [CMake 3.16.9+](https://www.cmake.org/download/)
 * [Qt 5.15.2](https://www.qt.io/download-qt-installer)
 * [Vulkan SDK 1.3.224+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
-* [SDL2](https://www.libsdl.org/download-2.0.php) (for the FAudio backend)
+* [SDL2](https://github.com/libsdl-org/SDL/releases) (for the FAudio backend)
 
 **If you have an NVIDIA GPU, you may need to install the libglvnd package.**
 
