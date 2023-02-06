@@ -9,8 +9,8 @@ namespace rsx
 	{
 		home_menu_page::home_menu_page(u16 x, u16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent, const std::string& title)
 			: list_view(width, height, use_separators)
-			, title(title)
 			, parent(parent)
+			, title(title)
 		{
 			if (parent)
 			{

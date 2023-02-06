@@ -659,7 +659,7 @@ void pad_thread::open_home_menu()
 			return;
 		}
 
-		input_log.warning("opening home menu...");
+		input_log.notice("opening home menu...");
 
 		const error_code result = manager->create<rsx::overlays::home_menu_dialog>()->show([this](s32 status)
 		{
@@ -669,5 +669,7 @@ void pad_thread::open_home_menu()
 
 			send_close_home_menu_cmds();
 		});
+
+		(result ? input_log.error : input_log.notice)("opened home menu with result %d", s32{result});
 	}
 }
