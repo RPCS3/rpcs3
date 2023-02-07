@@ -82,6 +82,7 @@ static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
 atomic_t<bool> g_start_games_fullscreen = false;
+std::string g_pad_profile_override;
 
 extern thread_local std::string(*g_tls_log_prefix)();
 extern thread_local std::string_view g_tls_serialize_name;
@@ -283,6 +284,7 @@ constexpr auto arg_styles       = "styles";
 constexpr auto arg_style        = "style";
 constexpr auto arg_stylesheet   = "stylesheet";
 constexpr auto arg_config       = "config";
+constexpr auto arg_pad_profile  = "pad-profile"; // only useful with no-gui
 constexpr auto arg_q_debug      = "qDebug";
 constexpr auto arg_error        = "error";
 constexpr auto arg_updating     = "updating";
@@ -635,6 +637,8 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
 	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file for CLI-booted game.", "path", "");
 	parser.addOption(config_option);
+	const QCommandLineOption pad_profile_option(arg_pad_profile, "Forces the emulator to use this pad profile file for CLI-booted game.", "name", "");
+	parser.addOption(pad_profile_option);
 	const QCommandLineOption installfw_option(arg_installfw, "Forces the emulator to install this firmware file.", "path", "");
 	parser.addOption(installfw_option);
 	const QCommandLineOption installpkg_option(arg_installpkg, "Forces the emulator to install this pkg file.", "path", "");
@@ -1208,6 +1212,21 @@ int main(int argc, char** argv)
 			if (!fs::is_file(config_path))
 			{
 				report_fatal_error(fmt::format("No config file found: %s", config_path));
+			}
+		}
+
+		if (parser.isSet(arg_pad_profile))
+		{
+			if (!s_no_gui)
+			{
+				report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_pad_profile, arg_no_gui));
+			}
+
+			g_pad_profile_override = parser.value(pad_profile_option).toStdString();
+
+			if (g_pad_profile_override.empty())
+			{
+				report_fatal_error(fmt::format("Pad profile name is empty"));
 			}
 		}
 
