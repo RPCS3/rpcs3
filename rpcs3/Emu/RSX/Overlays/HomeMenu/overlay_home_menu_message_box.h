@@ -18,9 +18,9 @@ namespace rsx
 
 		private:
 			bool m_visible = false;
-			std::unique_ptr<label> m_label;
-			std::unique_ptr<image_button> m_cancel_btn;
-			std::unique_ptr<image_button> m_accept_btn;
+			label m_label{};
+			image_button m_accept_btn;
+			image_button m_cancel_btn;
 			std::function<void()> m_on_accept;
 			std::function<void()> m_on_cancel;
 		};

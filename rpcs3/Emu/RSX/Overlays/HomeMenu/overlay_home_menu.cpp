@@ -19,28 +19,24 @@ namespace rsx
 		}
 
 		home_menu_dialog::home_menu_dialog()
+			: m_main_menu(20, 85, virtual_width - 2 * 20, 540, false, nullptr)
 		{
 			m_allow_input_on_pause = true;
 
-			m_dim_background = std::make_unique<overlay_element>();
-			m_dim_background->set_size(overlay::virtual_width, overlay::virtual_height);
-			m_dim_background->back_color.a = 0.5f;
+			m_dim_background.set_size(virtual_width, virtual_height);
+			m_dim_background.back_color.a = 0.5f;
 
-			m_main_menu = std::make_unique<home_menu_main_menu>(20, 85, 1240, 540, false, nullptr);
+			m_description.set_font("Arial", 20);
+			m_description.set_pos(20, 37);
+			m_description.set_text(m_main_menu.title);
+			m_description.auto_resize();
+			m_description.back_color.a = 0.f;
 
-			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
-			m_description->set_pos(20, 37);
-			m_description->set_text(m_main_menu->title);
-			m_description->auto_resize();
-			m_description->back_color.a = 0.f;
-
-			m_time_display = std::make_unique<label>();
-			m_time_display->set_font("Arial", 14);
-			m_time_display->set_text(get_time_string());
-			m_time_display->auto_resize();
-			m_time_display->set_pos(overlay::virtual_width - (20 + m_time_display->w), (m_description->y + m_description->h) - m_time_display->h);
-			m_time_display->back_color.a = 0.f;
+			m_time_display.set_font("Arial", 14);
+			m_time_display.set_text(get_time_string());
+			m_time_display.auto_resize();
+			m_time_display.set_pos(virtual_width - (20 + m_time_display.w), (m_description.y + m_description.h) - m_time_display.h);
+			m_time_display.back_color.a = 0.f;
 
 			fade_animation.duration = 0.15f;
 
@@ -71,8 +67,8 @@ namespace rsx
 
 			if (last_time != new_time)
 			{
-				m_time_display->set_text(new_time);
-				m_time_display->auto_resize();
+				m_time_display.set_text(new_time);
+				m_time_display.auto_resize();
 				last_time = std::move(new_time);
 			}
 		}
@@ -95,22 +91,22 @@ namespace rsx
 				break;
 			}
 
-			const page_navigation navigation = m_main_menu->handle_button_press(button_press);
+			const page_navigation navigation = m_main_menu.handle_button_press(button_press);
 
 			switch (navigation)
 			{
 			case page_navigation::back:
 			case page_navigation::next:
 			{
-				if (home_menu_page* page = m_main_menu->get_current_page(true))
+				if (home_menu_page* page = m_main_menu.get_current_page(true))
 				{
 					std::string path = page->title;
 					for (home_menu_page* parent = page->parent; parent; parent = parent->parent)
 					{
 						path = parent->title + "  >  " + path;
 					}
-					m_description->set_text(path);
-					m_description->auto_resize();
+					m_description.set_text(path);
+					m_description.auto_resize();
 				}
 				break;
 			}
@@ -149,10 +145,10 @@ namespace rsx
 			}
 
 			compiled_resource result;
-			result.add(m_dim_background->get_compiled());
-			result.add(m_main_menu->get_compiled());
-			result.add(m_description->get_compiled());
-			result.add(m_time_display->get_compiled());
+			result.add(m_dim_background.get_compiled());
+			result.add(m_main_menu.get_compiled());
+			result.add(m_description.get_compiled());
+			result.add(m_time_display.get_compiled());
 
 			fade_animation.apply(result);
 

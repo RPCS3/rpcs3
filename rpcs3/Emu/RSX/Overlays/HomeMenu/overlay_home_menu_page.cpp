@@ -11,6 +11,8 @@ namespace rsx
 			: list_view(width, height, use_separators)
 			, parent(parent)
 			, title(title)
+			, m_save_btn(120, 30)
+			, m_discard_btn(120, 30)
 		{
 			if (parent)
 			{
@@ -18,23 +20,17 @@ namespace rsx
 				m_config_changed = parent->m_config_changed;
 			}
 
-			m_save_btn = std::make_unique<image_button>(120, 20);
-			m_discard_btn = std::make_unique<image_button>(120, 20);
+			m_save_btn.set_image_resource(resource_config::standard_image_resource::square);
+			m_discard_btn.set_image_resource(resource_config::standard_image_resource::triangle);
 
-			m_save_btn->set_size(120, 30);
-			m_discard_btn->set_size(120, 30);
+			m_save_btn.set_pos(width - 2 * (30 + 120), height + 20);
+			m_discard_btn.set_pos(width - (30 + 120), height + 20);
 
-			m_save_btn->set_image_resource(resource_config::standard_image_resource::square);
-			m_discard_btn->set_image_resource(resource_config::standard_image_resource::triangle);
+			m_save_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON);
+			m_discard_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_DISCARD_BUTTON);
 
-			m_save_btn->set_pos(width - 2 * (30 + 120), height + 20);
-			m_discard_btn->set_pos(width - (30 + 120), height + 20);
-
-			m_save_btn->set_text(localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON);
-			m_discard_btn->set_text(localized_string_id::HOME_MENU_SETTINGS_DISCARD_BUTTON);
-
-			m_save_btn->set_font("Arial", 16);
-			m_discard_btn->set_font("Arial", 16);
+			m_save_btn.set_font("Arial", 16);
+			m_discard_btn.set_font("Arial", 16);
 
 			set_pos(x, y);
 		}
@@ -248,8 +244,8 @@ namespace rsx
 		void home_menu_page::translate(s16 _x, s16 _y)
 		{
 			list_view::translate(_x, _y);
-			m_save_btn->translate(_x, _y);
-			m_discard_btn->translate(_x, _y);
+			m_save_btn.translate(_x, _y);
+			m_discard_btn.translate(_x, _y);
 		}
 
 		compiled_resource& home_menu_page::get_compiled()
@@ -272,8 +268,8 @@ namespace rsx
 					}
 					else if (m_config_changed && *m_config_changed)
 					{
-						compiled_resources.add(m_save_btn->get_compiled());
-						compiled_resources.add(m_discard_btn->get_compiled());
+						compiled_resources.add(m_save_btn.get_compiled());
+						compiled_resources.add(m_discard_btn.get_compiled());
 					}
 				}
 

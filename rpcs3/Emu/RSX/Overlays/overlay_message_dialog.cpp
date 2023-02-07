@@ -16,7 +16,7 @@ namespace rsx
 		message_dialog::message_dialog(bool allow_custom_background)
 			: custom_background_allowed(allow_custom_background)
 		{
-			background.set_size(overlay::virtual_width, overlay::virtual_height);
+			background.set_size(virtual_width, virtual_height);
 			background.back_color.a = 0.85f;
 
 			text_display.set_size(1100, 40);
@@ -367,7 +367,7 @@ namespace rsx
 					background_poster.fore_color = color4f(color, color, color, 1.);
 					background.back_color.a      = 0.f;
 
-					background_poster.set_size(overlay::virtual_width, overlay::virtual_height);
+					background_poster.set_size(virtual_width, virtual_height);
 					background_poster.set_raw_image(background_image.get());
 					background_poster.set_blur_strength(static_cast<u8>(background_blur_strength));
 

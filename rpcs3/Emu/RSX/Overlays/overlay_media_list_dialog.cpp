@@ -128,7 +128,7 @@ namespace rsx
 		media_list_dialog::media_list_dialog()
 		{
 			m_dim_background = std::make_unique<overlay_element>();
-			m_dim_background->set_size(overlay::virtual_width, overlay::virtual_height);
+			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.5f;
 
 			m_description = std::make_unique<label>();
@@ -269,7 +269,7 @@ namespace rsx
 				status_flags |= status_bits::invalidate_image_cache;
 			}
 
-			m_list = std::make_unique<list_view>(1240, 540);
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
 			m_list->set_pos(20, 85);
 
 			for (const media_entry& child : m_media->children)
