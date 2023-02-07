@@ -69,10 +69,10 @@ namespace rsx
 		user_list_dialog::user_list_dialog()
 		{
 			m_dim_background = std::make_unique<overlay_element>();
-			m_dim_background->set_size(overlay::virtual_width, overlay::virtual_height);
+			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.5f;
 
-			m_list = std::make_unique<list_view>(1240, 540);
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
 			m_list->set_pos(20, 85);
 
 			m_description = std::make_unique<label>();

@@ -70,11 +70,11 @@ void main_application::OnEmuSettingsChange()
 	{
 		if (g_cfg.misc.prevent_display_sleep)
 		{
-			enable_display_sleep();
+			disable_display_sleep();
 		}
 		else
 		{
-			disable_display_sleep();
+			enable_display_sleep();
 		}
 	}
 
@@ -83,14 +83,7 @@ void main_application::OnEmuSettingsChange()
 	if (!Emu.IsStopped())
 	{
 		// Force audio provider
-		if (Emu.IsVsh())
-		{
-			g_cfg.audio.provider.set(audio_provider::rsxaudio);
-		}
-		else
-		{
-			g_cfg.audio.provider.set(audio_provider::cell_audio);
-		}
+		g_cfg.audio.provider.set(Emu.IsVsh() ? audio_provider::rsxaudio : audio_provider::cell_audio);
 	}
 
 	audio::configure_audio();

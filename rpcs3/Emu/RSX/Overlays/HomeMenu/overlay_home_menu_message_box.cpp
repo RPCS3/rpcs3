@@ -9,42 +9,37 @@ namespace rsx
 	{
 		home_menu_message_box::home_menu_message_box(u16 x, u16 y, u16 width, u16 height)
 			: overlay_element()
+			, m_accept_btn(120, 30)
+			, m_cancel_btn(120, 30)
 		{
 			back_color = {0.15f, 0.15f, 0.15f, 0.95f};
 
 			set_size(width, height);
 			set_pos(x, y);
 
-			m_label = std::make_unique<label>();
-			m_label->align_text(text_align::center);
-			m_label->set_font("Arial", 16);
-			m_label->back_color.a = 0.0f;
-
-			m_accept_btn = std::make_unique<image_button>(120, 20);
-			m_cancel_btn = std::make_unique<image_button>(120, 20);
-
-			m_accept_btn->set_size(120, 30);
-			m_cancel_btn->set_size(120, 30);
+			m_label.align_text(text_align::center);
+			m_label.set_font("Arial", 16);
+			m_label.back_color.a = 0.0f;
 
 			if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
 			{
-				m_accept_btn->set_image_resource(resource_config::standard_image_resource::circle);
-				m_cancel_btn->set_image_resource(resource_config::standard_image_resource::cross);
+				m_accept_btn.set_image_resource(resource_config::standard_image_resource::circle);
+				m_cancel_btn.set_image_resource(resource_config::standard_image_resource::cross);
 			}
 			else
 			{
-				m_accept_btn->set_image_resource(resource_config::standard_image_resource::cross);
-				m_cancel_btn->set_image_resource(resource_config::standard_image_resource::circle);
+				m_accept_btn.set_image_resource(resource_config::standard_image_resource::cross);
+				m_cancel_btn.set_image_resource(resource_config::standard_image_resource::circle);
 			}
 
-			m_accept_btn->set_pos(x + 30, y + height + 20);
-			m_cancel_btn->set_pos(x + 180, y + height + 20);
+			m_accept_btn.set_pos(x + 30, y + height + 20);
+			m_cancel_btn.set_pos(x + 180, y + height + 20);
 
-			m_accept_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_SELECT);
-			m_cancel_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_CANCEL);
+			m_accept_btn.set_text(localized_string_id::RSX_OVERLAYS_LIST_SELECT);
+			m_cancel_btn.set_text(localized_string_id::RSX_OVERLAYS_LIST_CANCEL);
 
-			m_accept_btn->set_font("Arial", 16);
-			m_cancel_btn->set_font("Arial", 16);
+			m_accept_btn.set_font("Arial", 16);
+			m_cancel_btn.set_font("Arial", 16);
 		}
 
 		compiled_resource& home_menu_message_box::get_compiled()
@@ -52,9 +47,9 @@ namespace rsx
 			if (!is_compiled)
 			{
 				compiled_resource& compiled = overlay_element::get_compiled();
-				compiled.add(m_label->get_compiled());
-				compiled.add(m_cancel_btn->get_compiled());
-				compiled.add(m_accept_btn->get_compiled());
+				compiled.add(m_label.get_compiled());
+				compiled.add(m_cancel_btn.get_compiled());
+				compiled.add(m_accept_btn.get_compiled());
 			}
 			return compiled_resources;
 		}
@@ -63,9 +58,9 @@ namespace rsx
 		{
 			m_on_accept = std::move(on_accept);
 			m_on_cancel = std::move(on_cancel);
-			m_label->set_text(text);
-			m_label->auto_resize();
-			m_label->set_pos(x + (w - m_label->w) / 2, y + (h - m_label->h) / 2);
+			m_label.set_text(text);
+			m_label.auto_resize();
+			m_label.set_pos(x + (w - m_label.w) / 2, y + (h - m_label.h) / 2);
 			m_visible = true;
 			refresh();
 		}

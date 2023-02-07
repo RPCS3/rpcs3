@@ -37,8 +37,8 @@ namespace rsx
 			std::vector<std::shared_ptr<home_menu_page>> m_pages;
 
 		private:
-			std::unique_ptr<image_button> m_save_btn;
-			std::unique_ptr<image_button> m_discard_btn;
+			image_button m_save_btn;
+			image_button m_discard_btn;
 			std::vector<std::unique_ptr<overlay_element>> m_entries;
 			std::vector<std::function<page_navigation(pad_button)>> m_callbacks;
 		};
