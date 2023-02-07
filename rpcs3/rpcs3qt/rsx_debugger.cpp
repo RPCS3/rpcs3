@@ -476,19 +476,15 @@ namespace
 	}
 
 	/**
-	 * Return a new buffer that can be passed to QImage.
+	 * Fill a buffer that can be passed to QImage.
 	 */
-	u8* convert_to_QImage_buffer(rsx::surface_color_format format, std::span<const std::byte> orig_buffer, usz width, usz height) noexcept
+	void convert_to_QImage_buffer(rsx::surface_color_format format, std::span<const std::byte> orig_buffer, std::vector<u8>& buffer, usz width, usz height) noexcept
 	{
-		if (width == 0 || height == 0)
-		{
-			return nullptr;
-		}
+		buffer.resize(width * height * 4);
 
-		u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
-		if (!buffer)
+		if (buffer.empty())
 		{
-			return nullptr;
+			return;
 		}
 
 		for (u32 i = 0; i < width * height; i++)
@@ -500,7 +496,6 @@ namespace
 			buffer[2 + i * 4] = colors[2];
 			buffer[3 + i * 4] = 255;
 		}
-		return buffer;
 	}
 }
 
@@ -525,8 +520,9 @@ void rsx_debugger::OnClickDrawCalls()
 	{
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{
-			unsigned char* buffer = convert_to_QImage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], width, height);
-			buffers[i]->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32, [](void* buffer){ std::free(buffer); }, buffer));
+			std::vector<u8>& buffer = buffers[i]->cache;
+			convert_to_QImage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], buffer, width, height);
+			buffers[i]->showImage(QImage(buffer.data(), static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
 		}
 	}
 
@@ -577,7 +573,8 @@ void rsx_debugger::OnClickDrawCalls()
 		if (width && height && !draw_call.depth_stencil[1].empty())
 		{
 			const std::span<const std::byte> orig_buffer = draw_call.depth_stencil[1];
-			u8* buffer = static_cast<u8*>(std::malloc(4ULL * width * height));
+			std::vector<u8>& buffer = m_buffer_stencil->cache;
+			buffer.resize(4ULL * width * height);
 
 			for (u32 row = 0; row < height; row++)
 			{
@@ -590,7 +587,7 @@ void rsx_debugger::OnClickDrawCalls()
 					buffer[4 * col + 3 + width * row * 4] = 255;
 				}
 			}
-			m_buffer_stencil->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
+			m_buffer_stencil->showImage(QImage(buffer.data(), static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
 		}
 	}
 
