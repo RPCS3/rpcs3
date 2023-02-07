@@ -81,6 +81,8 @@ static atomic_t<bool> s_headless = false;
 static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
+atomic_t<bool> g_start_games_fullscreen = false;
+
 extern thread_local std::string(*g_tls_log_prefix)();
 extern thread_local std::string_view g_tls_serialize_name;
 
@@ -274,6 +276,7 @@ constexpr auto arg_commit_db    = "get-commit-db";
 
 // Arguments that can be used with a gui application
 constexpr auto arg_no_gui       = "no-gui";
+constexpr auto arg_fullscreen   = "fullscreen"; // only useful with no-gui
 constexpr auto arg_high_dpi     = "hidpi";
 constexpr auto arg_rounding     = "dpi-rounding";
 constexpr auto arg_styles       = "styles";
@@ -624,6 +627,7 @@ int main(int argc, char** argv)
 	const QCommandLineOption version_option = parser.addVersionOption();
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
+	parser.addOption(QCommandLineOption(arg_fullscreen, "Run games in fullscreen mode. Only used when no-gui is set."));
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
 	parser.addOption(QCommandLineOption(arg_rounding, "Sets the Qt::HighDpiScaleFactorRoundingPolicy for values like 150% zoom.", "rounding", "4"));
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
@@ -927,6 +931,12 @@ int main(int argc, char** argv)
 	}
 
 	s_no_gui = parser.isSet(arg_no_gui);
+	g_start_games_fullscreen = parser.isSet(arg_fullscreen);
+
+	if (g_start_games_fullscreen && !s_no_gui)
+	{
+		report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_fullscreen, arg_no_gui));
+	}
 
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
