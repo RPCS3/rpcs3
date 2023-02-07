@@ -28,6 +28,7 @@ LOG_CHANNEL(input_log, "Input");
 LOG_CHANNEL(sys_log, "SYS");
 
 extern bool is_input_allowed();
+extern std::string g_pad_profile_override;
 
 namespace pad
 {
@@ -102,10 +103,16 @@ void pad_thread::Init()
 
 	g_cfg_profile.load();
 
-	std::string active_profile = g_cfg_profile.active_profiles.get_value(pad::g_title_id);
+	std::string active_profile = g_pad_profile_override;
+
 	if (active_profile.empty())
 	{
-		active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
+		active_profile = g_cfg_profile.active_profiles.get_value(pad::g_title_id);
+
+		if (active_profile.empty())
+		{
+			active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
+		}
 	}
 
 	input_log.notice("Using pad profile: '%s'", active_profile);
