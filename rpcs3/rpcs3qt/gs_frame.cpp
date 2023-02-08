@@ -50,6 +50,7 @@ extern atomic_t<bool> g_user_asked_for_recording;
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
+extern atomic_t<bool> g_start_games_fullscreen;
 extern atomic_t<recording_mode> g_recording_mode;
 
 atomic_t<bool> g_game_window_focused = false;
@@ -610,7 +611,7 @@ void gs_frame::show()
 	Emu.CallFromMainThread([this]()
 	{
 		QWindow::show();
-		if (g_cfg.misc.start_fullscreen)
+		if (g_cfg.misc.start_fullscreen || g_start_games_fullscreen)
 		{
 			setVisibility(FullScreen);
 		}
