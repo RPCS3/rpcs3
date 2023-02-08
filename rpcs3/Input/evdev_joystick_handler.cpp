@@ -368,6 +368,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 
 	const bool is_xbox_360_controller = padId.find("Xbox 360") != umax;
 	const bool is_sony_controller = !is_xbox_360_controller && padId.find("Sony") != umax;
+	const bool is_sony_guitar = is_sony_controller && padId.find("Guitar") != umax;
 
 	for (const auto& [code, name] : button_list)
 	{
@@ -376,7 +377,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 			continue;
 		if (is_xbox_360_controller && code >= BTN_TRIGGER_HAPPY)
 			continue;
-		if (is_sony_controller && (code == BTN_TL2 || code == BTN_TR2))
+		if (is_sony_controller && !is_sony_guitar && (code == BTN_TL2 || code == BTN_TR2))
 			continue;
 
 		if (!get_blacklist && std::find(m_blacklist.begin(), m_blacklist.end(), name) != m_blacklist.end())
