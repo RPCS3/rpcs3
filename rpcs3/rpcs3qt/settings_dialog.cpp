@@ -957,7 +957,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		propagate_used_devices();
 	};
 
-	const auto get_audio_output_devices = [this]()
+	const auto get_audio_output_devices = [this](bool keep_old = true)
 	{
 		const QVariantList var_list = ui->audioOutBox->currentData().toList();
 		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
@@ -979,6 +979,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			{
 				device_index = ui->audioDeviceBox->findData(cur_item);
 			}
+		}
+
+		if (device_index == 0 && keep_old && selected_device != audio_device_enumerator::DEFAULT_DEV_ID)
+		{
+			cfg_log.error("The selected audio device (%s) was not found", selected_device);
+			ui->audioDeviceBox->addItem(tr("Unknown device"), qsv(selected_device));
+			device_index = ui->audioDeviceBox->count() - 1;
 		}
 
 		ui->audioDeviceBox->blockSignals(false);
@@ -1007,7 +1014,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #endif
 	connect(ui->audioOutBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [change_audio_output_device, get_audio_output_devices](int)
 	{
-		get_audio_output_devices();
+		get_audio_output_devices(false);
 		change_audio_output_device(0); // Set device to 'Default'
 	});
 
