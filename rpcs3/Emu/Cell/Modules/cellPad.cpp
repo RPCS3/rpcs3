@@ -219,6 +219,15 @@ void pad_get_data(u32 port_no, CellPadData* data)
 		const u16 d1Initial = pad->m_digital_1;
 		const u16 d2Initial = pad->m_digital_2;
 
+		const auto set_value = [&btnChanged](u16& value, u16 new_value)
+		{
+			if (value != new_value)
+			{
+				btnChanged = true;
+				value = new_value;
+			}
+		};
+
 		for (Button& button : pad->m_buttons)
 		{
 			// here we check btns, and set pad accordingly,
@@ -233,22 +242,10 @@ void pad_get_data(u32 port_no, CellPadData* data)
 
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_LEFT:
-					if (pad->m_press_left != button.m_value) btnChanged = true;
-					pad->m_press_left = button.m_value;
-					break;
-				case CELL_PAD_CTRL_DOWN:
-					if (pad->m_press_down != button.m_value) btnChanged = true;
-					pad->m_press_down = button.m_value;
-					break;
-				case CELL_PAD_CTRL_RIGHT:
-					if (pad->m_press_right != button.m_value) btnChanged = true;
-					pad->m_press_right = button.m_value;
-					break;
-				case CELL_PAD_CTRL_UP:
-					if (pad->m_press_up != button.m_value) btnChanged = true;
-					pad->m_press_up = button.m_value;
-					break;
+				case CELL_PAD_CTRL_LEFT: set_value(pad->m_press_left, button.m_value); break;
+				case CELL_PAD_CTRL_DOWN: set_value(pad->m_press_down, button.m_value); break;
+				case CELL_PAD_CTRL_RIGHT: set_value(pad->m_press_right, button.m_value); break;
+				case CELL_PAD_CTRL_UP: set_value(pad->m_press_up, button.m_value); break;
 				// These arent pressure btns
 				case CELL_PAD_CTRL_R3:
 				case CELL_PAD_CTRL_L3:
@@ -266,38 +263,14 @@ void pad_get_data(u32 port_no, CellPadData* data)
 
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_SQUARE:
-					if (pad->m_press_square != button.m_value) btnChanged = true;
-					pad->m_press_square = button.m_value;
-					break;
-				case CELL_PAD_CTRL_CROSS:
-					if (pad->m_press_cross != button.m_value) btnChanged = true;
-					pad->m_press_cross = button.m_value;
-					break;
-				case CELL_PAD_CTRL_CIRCLE:
-					if (pad->m_press_circle != button.m_value) btnChanged = true;
-					pad->m_press_circle = button.m_value;
-					break;
-				case CELL_PAD_CTRL_TRIANGLE:
-					if (pad->m_press_triangle != button.m_value) btnChanged = true;
-					pad->m_press_triangle = button.m_value;
-					break;
-				case CELL_PAD_CTRL_R1:
-					if (pad->m_press_R1 != button.m_value) btnChanged = true;
-					pad->m_press_R1 = button.m_value;
-					break;
-				case CELL_PAD_CTRL_L1:
-					if (pad->m_press_L1 != button.m_value) btnChanged = true;
-					pad->m_press_L1 = button.m_value;
-					break;
-				case CELL_PAD_CTRL_R2:
-					if (pad->m_press_R2 != button.m_value) btnChanged = true;
-					pad->m_press_R2 = button.m_value;
-					break;
-				case CELL_PAD_CTRL_L2:
-					if (pad->m_press_L2 != button.m_value) btnChanged = true;
-					pad->m_press_L2 = button.m_value;
-					break;
+				case CELL_PAD_CTRL_SQUARE: set_value(pad->m_press_square, button.m_value); break;
+				case CELL_PAD_CTRL_CROSS: set_value(pad->m_press_cross, button.m_value); break;
+				case CELL_PAD_CTRL_CIRCLE: set_value(pad->m_press_circle, button.m_value); break;
+				case CELL_PAD_CTRL_TRIANGLE: set_value(pad->m_press_triangle, button.m_value); break;
+				case CELL_PAD_CTRL_R1: set_value(pad->m_press_R1, button.m_value); break;
+				case CELL_PAD_CTRL_L1: set_value(pad->m_press_L1, button.m_value); break;
+				case CELL_PAD_CTRL_R2: set_value(pad->m_press_R2, button.m_value); break;
+				case CELL_PAD_CTRL_L2: set_value(pad->m_press_L2, button.m_value); break;
 				default: break;
 				}
 			}
@@ -307,22 +280,10 @@ void pad_get_data(u32 port_no, CellPadData* data)
 		{
 			switch (stick.m_offset)
 			{
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-				if (pad->m_analog_left_x != stick.m_value) btnChanged = true;
-				pad->m_analog_left_x = stick.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-				if (pad->m_analog_left_y != stick.m_value) btnChanged = true;
-				pad->m_analog_left_y = stick.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-				if (pad->m_analog_right_x != stick.m_value) btnChanged = true;
-				pad->m_analog_right_x = stick.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-				if (pad->m_analog_right_y != stick.m_value) btnChanged = true;
-				pad->m_analog_right_y = stick.m_value;
-				break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: set_value(pad->m_analog_left_x, stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: set_value(pad->m_analog_left_y, stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: set_value(pad->m_analog_right_x, stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: set_value(pad->m_analog_right_y, stick.m_value); break;
 			default: break;
 			}
 		}
@@ -333,22 +294,10 @@ void pad_get_data(u32 port_no, CellPadData* data)
 			{
 				switch (sensor.m_offset)
 				{
-				case CELL_PAD_BTN_OFFSET_SENSOR_X:
-					if (pad->m_sensor_x != sensor.m_value) btnChanged = true;
-					pad->m_sensor_x = sensor.m_value;
-					break;
-				case CELL_PAD_BTN_OFFSET_SENSOR_Y:
-					if (pad->m_sensor_y != sensor.m_value) btnChanged = true;
-					pad->m_sensor_y = sensor.m_value;
-					break;
-				case CELL_PAD_BTN_OFFSET_SENSOR_Z:
-					if (pad->m_sensor_z != sensor.m_value) btnChanged = true;
-					pad->m_sensor_z = sensor.m_value;
-					break;
-				case CELL_PAD_BTN_OFFSET_SENSOR_G:
-					if (pad->m_sensor_g != sensor.m_value) btnChanged = true;
-					pad->m_sensor_g = sensor.m_value;
-					break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_X: set_value(pad->m_sensor_x, sensor.m_value); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Y: set_value(pad->m_sensor_y, sensor.m_value); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Z: set_value(pad->m_sensor_z, sensor.m_value); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_G: set_value(pad->m_sensor_g, sensor.m_value); break;
 				default: break;
 				}
 			}
