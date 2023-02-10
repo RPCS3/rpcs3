@@ -52,6 +52,11 @@ enum Digital2Flags : u32
 	CELL_PAD_CTRL_PS       = 0x00000100, // Speculative
 };
 
+enum
+{
+	CELL_PAD_CTRL_LDD_PS = 0x00000001
+};
+
 enum DeviceCapability
 {
 	CELL_PAD_CAPABILITY_PS3_CONFORMITY = 0x00000001, // PS3 Conformity Controller
