@@ -336,3 +336,4 @@ struct cfg_root : cfg::node
 };
 
 extern cfg_root g_cfg;
+extern cfg_root g_backup_cfg;

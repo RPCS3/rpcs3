@@ -437,13 +437,18 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/TextureUtils.cpp
     RSX/Common/texture_cache.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_components.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_main_menu.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_message_box.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_page.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_settings.cpp
     RSX/Overlays/overlay_animated_icon.cpp
     RSX/Overlays/overlay_animation.cpp
     RSX/Overlays/overlay_controls.cpp
     RSX/Overlays/overlay_cursor.cpp
     RSX/Overlays/overlay_edit_text.cpp
     RSX/Overlays/overlay_fonts.cpp
-    RSX/Overlays/overlay_home_menu.cpp
     RSX/Overlays/overlay_list_view.cpp
     RSX/Overlays/overlay_media_list_dialog.cpp
     RSX/Overlays/overlay_message.cpp

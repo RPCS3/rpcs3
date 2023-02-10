@@ -128,7 +128,7 @@ namespace rsx
 		media_list_dialog::media_list_dialog()
 		{
 			m_dim_background = std::make_unique<overlay_element>();
-			m_dim_background->set_size(1280, 720);
+			m_dim_background->set_size(virtual_width, virtual_height);
 			m_dim_background->back_color.a = 0.5f;
 
 			m_description = std::make_unique<label>();
@@ -136,7 +136,7 @@ namespace rsx
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select media"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
-			m_description->back_color.a	= 0.f;
+			m_description->back_color.a = 0.f;
 		}
 
 		void media_list_dialog::on_button_pressed(pad_button button_press)
@@ -269,7 +269,7 @@ namespace rsx
 				status_flags |= status_bits::invalidate_image_cache;
 			}
 
-			m_list = std::make_unique<list_view>(1240, 540);
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
 			m_list->set_pos(20, 85);
 
 			for (const media_entry& child : m_media->children)

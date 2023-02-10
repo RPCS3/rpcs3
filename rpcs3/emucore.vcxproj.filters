@@ -79,6 +79,12 @@
     <Filter Include="Emu\GPU\RSX\Core">
       <UniqueIdentifier>{99b3a1c9-93ea-4498-86b0-1000793013fa}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Overlays\HomeMenu">
+      <UniqueIdentifier>{787ed009-9e17-4ef0-abae-885a708d33e7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\GPU\RSX\Overlays\HomeMenu\Pages">
+      <UniqueIdentifier>{017e5a5d-b190-4032-baed-57f8020861a5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -1108,14 +1114,29 @@
     <ClCompile Include="Emu\Cell\Modules\HLE_PATCHES.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\overlay_home_menu.cpp">
-      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_page.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_main_menu.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_settings.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_shader_compile_notification.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2242,8 +2263,20 @@
     <ClInclude Include="Emu\RSX\Common\expected.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\overlay_home_menu.h">
-      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.h">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_page.h">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.h">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_main_menu.h">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_settings.h">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_loading_icon.hpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
@@ -2253,6 +2286,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\RSXOverlay.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.h">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

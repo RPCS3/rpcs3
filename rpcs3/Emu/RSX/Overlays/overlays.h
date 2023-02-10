@@ -18,6 +18,38 @@ namespace rsx
 {
 	namespace overlays
 	{
+		enum pad_button : u8
+		{
+			dpad_up = 0,
+			dpad_down,
+			dpad_left,
+			dpad_right,
+			select,
+			start,
+			ps,
+			triangle,
+			circle,
+			square,
+			cross,
+			L1,
+			R1,
+			L2,
+			R2,
+			L3,
+			R3,
+
+			ls_up,
+			ls_down,
+			ls_left,
+			ls_right,
+			rs_up,
+			rs_down,
+			rs_left,
+			rs_right,
+
+			pad_button_max_enum
+		};
+
 		// Bitfield of UI signals to overlay manager
 		enum status_bits : u32
 		{
@@ -55,38 +87,6 @@ namespace rsx
 				new_save = -1,
 				canceled = -2,
 				error = -3
-			};
-
-			enum pad_button : u8
-			{
-				dpad_up = 0,
-				dpad_down,
-				dpad_left,
-				dpad_right,
-				select,
-				start,
-				ps,
-				triangle,
-				circle,
-				square,
-				cross,
-				L1,
-				R1,
-				L2,
-				R2,
-				L3,
-				R3,
-
-				ls_up,
-				ls_down,
-				ls_left,
-				ls_right,
-				rs_up,
-				rs_down,
-				rs_left,
-				rs_right,
-
-				pad_button_max_enum
 			};
 
 		protected:

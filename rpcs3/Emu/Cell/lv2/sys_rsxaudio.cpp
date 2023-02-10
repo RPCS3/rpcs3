@@ -1268,7 +1268,7 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 
 namespace audio
 {
-	void configure_rsxaudio()
+	extern void configure_rsxaudio()
 	{
 		if (g_cfg.audio.provider == audio_provider::rsxaudio && g_fxo->is_init<rsx_audio_backend>())
 		{

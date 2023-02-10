@@ -85,7 +85,6 @@ private:
 
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest();
-	static void OnEmuSettingsChange();
 
 Q_SIGNALS:
 	void OnEmulatorRun(bool start_playtime);

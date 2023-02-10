@@ -82,9 +82,9 @@ namespace rsx
 		save_dialog::save_dialog()
 		{
 			m_dim_background = std::make_unique<overlay_element>();
-			m_dim_background->set_size(1280, 720);
+			m_dim_background->set_size(virtual_width, virtual_height);
 
-			m_list        = std::make_unique<list_view>(1240, 540);
+			m_list        = std::make_unique<list_view>(virtual_width - 2 * 20, 540);
 			m_description = std::make_unique<label>();
 			m_time_thingy = std::make_unique<label>();
 
