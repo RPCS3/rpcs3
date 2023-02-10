@@ -431,7 +431,7 @@ void pad_thread::operator()()
 
 				for (const auto& button : pad->m_buttons)
 				{
-					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2 && button.m_outKeyCode == CELL_PAD_CTRL_PS && button.m_pressed)
+					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && button.m_outKeyCode == CELL_PAD_CTRL_PS && button.m_pressed)
 					{
 						ps_button_pressed = true;
 						break;
