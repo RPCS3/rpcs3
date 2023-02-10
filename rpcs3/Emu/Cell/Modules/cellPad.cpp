@@ -141,7 +141,7 @@ error_code cellPadClearBuf(u32 port_no)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -174,7 +174,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -485,7 +485,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -500,7 +500,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 	sys_io.trace("cellPadGetDataExtra(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
 
 	// TODO: This is used just to get data from a BD/CEC remote,
-	// but if the port isnt a remote, device type is set to 0 and just regular cellPadGetData is returned
+	// but if the port isnt a remote, device type is set to CELL_PAD_DEV_TYPE_STANDARD and just regular cellPadGetData is returned
 
 	if (auto err = cellPadGetData(port_no, data))
 	{
@@ -509,7 +509,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 
 	if (device_type) // no error is returned on NULL
 	{
-		*device_type = 0;
+		*device_type = CELL_PAD_DEV_TYPE_STANDARD;
 	}
 
 	// Set BD data
@@ -551,7 +551,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -699,7 +699,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -731,7 +731,7 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 
 	config.port_setting[port_no] = port_setting;
 
-	// can also return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD
+	// can also return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD <- Update: seems to be just internal and ignored
 
 	return CELL_OK;
 }
@@ -757,7 +757,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -786,7 +786,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -816,7 +816,7 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 	if (port_no >= CELL_PAD_MAX_PORT_NUM)
 		return CELL_OK;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	// TODO: find out if this is checked here or later or at all
 	if (!(pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE))
@@ -901,11 +901,11 @@ error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
+	auto& pads = handler->GetPads();
 
-	if (handle < 0 || !data) // data == NULL stalls on decr
+	if (handle < 0 || static_cast<u32>(handle) >= pads.size() || !data) // data == NULL stalls on decr
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	auto& pads = handler->GetPads();
 	if (!pads[handle]->ldd)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
@@ -926,11 +926,11 @@ error_code cellPadLddGetPortNo(s32 handle)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
+	auto& pads = handler->GetPads();
 
-	if (handle < 0)
+	if (handle < 0 || static_cast<u32>(handle) >= pads.size())
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	auto& pads = handler->GetPads();
 	if (!pads[handle]->ldd)
 		return CELL_PAD_ERROR_FATAL; // might be incorrect
 
@@ -950,13 +950,10 @@ error_code cellPadLddUnregisterController(s32 handle)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
-
-	if (handle < 0)
-		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
 	const auto& pads = handler->GetPads();
 
-	// TODO: check if handle >= pads.size()
+	if (handle < 0 || static_cast<u32>(handle) >= pads.size())
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	if (!pads[handle]->ldd)
 		return CELL_PAD_ERROR_NO_DEVICE;
