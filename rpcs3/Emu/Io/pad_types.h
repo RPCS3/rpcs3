@@ -37,6 +37,7 @@ enum Digital1Flags : u32
 	CELL_PAD_CTRL_RIGHT  = 0x00000020,
 	CELL_PAD_CTRL_DOWN   = 0x00000040,
 	CELL_PAD_CTRL_LEFT   = 0x00000080,
+	CELL_PAD_CTRL_PS     = 0x00000100,
 };
 
 enum Digital2Flags : u32
@@ -49,7 +50,6 @@ enum Digital2Flags : u32
 	CELL_PAD_CTRL_CIRCLE   = 0x00000020,
 	CELL_PAD_CTRL_CROSS    = 0x00000040,
 	CELL_PAD_CTRL_SQUARE   = 0x00000080,
-	CELL_PAD_CTRL_PS       = 0x00000100, // Speculative
 };
 
 enum
