@@ -1074,8 +1074,31 @@ void spu_thread::dump_regs(std::string& ret) const
 
 		if (is_packed)
 		{
-			// Shortand formatting
-			fmt::append(ret, "%08x", i3);
+			bool printed_error = false;
+
+			if (i3 >> 31)
+			{
+				const usz old_size = ret.size();
+
+				fmt::append(ret, "%s (0x%x)", CellError{i3}, i3);
+
+				// Test if failed to format (appended " 0x8".. in such case)
+				if (ret[old_size] == '0')
+				{
+					// Failed
+					ret.resize(old_size);
+				}
+				else
+				{
+					printed_error = true;
+				}
+			}
+
+			if (!printed_error)
+			{
+				// Shortand formatting
+				fmt::append(ret, "08x", i3);
+			}
 		}
 		else
 		{
