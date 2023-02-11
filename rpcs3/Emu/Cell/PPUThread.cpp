@@ -1060,7 +1060,32 @@ void ppu_thread::dump_regs(std::string& ret) const
 			is_const = false;
 		}
 
-		fmt::append(ret, "r%d%s%s 0x%-8llx", i, i <= 9 ? " " : "", is_const ? "©" : ":", reg);
+		fmt::append(ret, "r%d%s%s ", i, i <= 9 ? " " : "", is_const ? "©" : ":");
+
+		bool printed_error = false;
+
+		if ((reg >> 31) == 0x1'ffff'ffff)
+		{
+			const usz old_size = ret.size();
+
+			fmt::append(ret, "%s (0x%x)", CellError{static_cast<u32>(reg)}, reg);
+
+			// Test if failed to format (appended " 0x8".. in such case)
+			if (ret[old_size] == '0')
+			{
+				// Failed
+				ret.resize(old_size);
+			}
+			else
+			{
+				printed_error = true;
+			}
+		}
+
+		if (!printed_error)
+		{
+			fmt::append(ret, "0x%-8llx", reg);
+		}
 
 		constexpr u32 max_str_len = 32;
 		constexpr u32 hex_count = 8;
