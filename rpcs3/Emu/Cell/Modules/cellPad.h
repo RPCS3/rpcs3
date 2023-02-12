@@ -126,12 +126,6 @@ enum
 	CELL_PADFILTER_IIR_CUTOFF_2ND_LPF_BT_010 = 2, // 10% Nyquist frequency
 };
 
-struct CellPadData
-{
-	be_t<s32> len;
-	be_t<u16> button[CELL_PAD_MAX_CODES];
-};
-
 struct CellPadInfo
 {
 	be_t<u32> max_connect;

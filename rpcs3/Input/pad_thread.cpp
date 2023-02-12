@@ -423,7 +423,7 @@ void pad_thread::operator()()
 					continue;
 
 				// Check if an LDD pad pressed the PS button (bit 0 of the first button)
-				if (pad->ldd && !!(static_cast<be_t<u16>>(pad->ldd_data[sizeof(be_t<u32>)]) & CELL_PAD_CTRL_LDD_PS))
+				if (pad->ldd && !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
 				{
 					ps_button_pressed = true;
 					break;

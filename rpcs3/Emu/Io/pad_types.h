@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/endian.hpp"
 #include "Emu/Io/pad_config_types.h"
 
 #include <vector>
@@ -170,6 +171,12 @@ enum
 	CELL_MAX_PADS = 127,
 };
 
+struct CellPadData
+{
+	be_t<s32> len;
+	be_t<u16> button[CELL_PAD_MAX_CODES];
+};
+
 static constexpr u16 DEFAULT_MOTION_X = 512;
 static constexpr u16 DEFAULT_MOTION_Y = 399;
 static constexpr u16 DEFAULT_MOTION_Z = 512;
@@ -324,7 +331,7 @@ struct Pad
 	u16 m_sensor_g{DEFAULT_MOTION_G};
 
 	bool ldd{false};
-	u8 ldd_data[132] = {};
+	CellPadData ldd_data{};
 
 	explicit Pad(pad_handler handler, u32 port_status, u32 device_capability, u32 device_type)
 		: m_pad_handler(handler)

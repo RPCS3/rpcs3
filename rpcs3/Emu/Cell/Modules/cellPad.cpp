@@ -207,7 +207,7 @@ void pad_get_data(u32 port_no, CellPadData* data)
 	}
 	else if (pad->ldd)
 	{
-		std::memcpy(data, pad->ldd_data, sizeof(CellPadData));
+		pad->ldd_data = *data;
 		if (setting & CELL_PAD_SETTING_SENSOR_ON)
 			data->len = CELL_PAD_LEN_CHANGE_SENSOR_ON;
 		else
@@ -909,7 +909,7 @@ error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 	if (!pads[handle]->ldd)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	memcpy(pads[handle]->ldd_data, data.get_ptr(), sizeof(CellPadData));
+	pads[handle]->ldd_data = *data;
 
 	return CELL_OK;
 }
