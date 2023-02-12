@@ -141,7 +141,7 @@ error_code cellPadClearBuf(u32 port_no)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -174,7 +174,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -207,7 +207,7 @@ void pad_get_data(u32 port_no, CellPadData* data)
 	}
 	else if (pad->ldd)
 	{
-		std::memcpy(data, pad->ldd_data, sizeof(CellPadData));
+		pad->ldd_data = *data;
 		if (setting & CELL_PAD_SETTING_SENSOR_ON)
 			data->len = CELL_PAD_LEN_CHANGE_SENSOR_ON;
 		else
@@ -218,6 +218,15 @@ void pad_get_data(u32 port_no, CellPadData* data)
 	{
 		const u16 d1Initial = pad->m_digital_1;
 		const u16 d2Initial = pad->m_digital_2;
+
+		const auto set_value = [&btnChanged](u16& value, u16 new_value)
+		{
+			if (value != new_value)
+			{
+				btnChanged = true;
+				value = new_value;
+			}
+		};
 
 		for (Button& button : pad->m_buttons)
 		{
@@ -233,22 +242,10 @@ void pad_get_data(u32 port_no, CellPadData* data)
 
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_LEFT:
-					if (pad->m_press_left != button.m_value) btnChanged = true;
-					pad->m_press_left = button.m_value;
-					break;
-				case CELL_PAD_CTRL_DOWN:
-					if (pad->m_press_down != button.m_value) btnChanged = true;
-					pad->m_press_down = button.m_value;
-					break;
-				case CELL_PAD_CTRL_RIGHT:
-					if (pad->m_press_right != button.m_value) btnChanged = true;
-					pad->m_press_right = button.m_value;
-					break;
-				case CELL_PAD_CTRL_UP:
-					if (pad->m_press_up != button.m_value) btnChanged = true;
-					pad->m_press_up = button.m_value;
-					break;
+				case CELL_PAD_CTRL_LEFT: set_value(pad->m_press_left, button.m_value); break;
+				case CELL_PAD_CTRL_DOWN: set_value(pad->m_press_down, button.m_value); break;
+				case CELL_PAD_CTRL_RIGHT: set_value(pad->m_press_right, button.m_value); break;
+				case CELL_PAD_CTRL_UP: set_value(pad->m_press_up, button.m_value); break;
 				// These arent pressure btns
 				case CELL_PAD_CTRL_R3:
 				case CELL_PAD_CTRL_L3:
@@ -266,38 +263,14 @@ void pad_get_data(u32 port_no, CellPadData* data)
 
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_SQUARE:
-					if (pad->m_press_square != button.m_value) btnChanged = true;
-					pad->m_press_square = button.m_value;
-					break;
-				case CELL_PAD_CTRL_CROSS:
-					if (pad->m_press_cross != button.m_value) btnChanged = true;
-					pad->m_press_cross = button.m_value;
-					break;
-				case CELL_PAD_CTRL_CIRCLE:
-					if (pad->m_press_circle != button.m_value) btnChanged = true;
-					pad->m_press_circle = button.m_value;
-					break;
-				case CELL_PAD_CTRL_TRIANGLE:
-					if (pad->m_press_triangle != button.m_value) btnChanged = true;
-					pad->m_press_triangle = button.m_value;
-					break;
-				case CELL_PAD_CTRL_R1:
-					if (pad->m_press_R1 != button.m_value) btnChanged = true;
-					pad->m_press_R1 = button.m_value;
-					break;
-				case CELL_PAD_CTRL_L1:
-					if (pad->m_press_L1 != button.m_value) btnChanged = true;
-					pad->m_press_L1 = button.m_value;
-					break;
-				case CELL_PAD_CTRL_R2:
-					if (pad->m_press_R2 != button.m_value) btnChanged = true;
-					pad->m_press_R2 = button.m_value;
-					break;
-				case CELL_PAD_CTRL_L2:
-					if (pad->m_press_L2 != button.m_value) btnChanged = true;
-					pad->m_press_L2 = button.m_value;
-					break;
+				case CELL_PAD_CTRL_SQUARE: set_value(pad->m_press_square, button.m_value); break;
+				case CELL_PAD_CTRL_CROSS: set_value(pad->m_press_cross, button.m_value); break;
+				case CELL_PAD_CTRL_CIRCLE: set_value(pad->m_press_circle, button.m_value); break;
+				case CELL_PAD_CTRL_TRIANGLE: set_value(pad->m_press_triangle, button.m_value); break;
+				case CELL_PAD_CTRL_R1: set_value(pad->m_press_R1, button.m_value); break;
+				case CELL_PAD_CTRL_L1: set_value(pad->m_press_L1, button.m_value); break;
+				case CELL_PAD_CTRL_R2: set_value(pad->m_press_R2, button.m_value); break;
+				case CELL_PAD_CTRL_L2: set_value(pad->m_press_L2, button.m_value); break;
 				default: break;
 				}
 			}
@@ -307,22 +280,10 @@ void pad_get_data(u32 port_no, CellPadData* data)
 		{
 			switch (stick.m_offset)
 			{
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-				if (pad->m_analog_left_x != stick.m_value) btnChanged = true;
-				pad->m_analog_left_x = stick.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-				if (pad->m_analog_left_y != stick.m_value) btnChanged = true;
-				pad->m_analog_left_y = stick.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-				if (pad->m_analog_right_x != stick.m_value) btnChanged = true;
-				pad->m_analog_right_x = stick.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-				if (pad->m_analog_right_y != stick.m_value) btnChanged = true;
-				pad->m_analog_right_y = stick.m_value;
-				break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X: set_value(pad->m_analog_left_x, stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y: set_value(pad->m_analog_left_y, stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X: set_value(pad->m_analog_right_x, stick.m_value); break;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: set_value(pad->m_analog_right_y, stick.m_value); break;
 			default: break;
 			}
 		}
@@ -333,22 +294,10 @@ void pad_get_data(u32 port_no, CellPadData* data)
 			{
 				switch (sensor.m_offset)
 				{
-				case CELL_PAD_BTN_OFFSET_SENSOR_X:
-					if (pad->m_sensor_x != sensor.m_value) btnChanged = true;
-					pad->m_sensor_x = sensor.m_value;
-					break;
-				case CELL_PAD_BTN_OFFSET_SENSOR_Y:
-					if (pad->m_sensor_y != sensor.m_value) btnChanged = true;
-					pad->m_sensor_y = sensor.m_value;
-					break;
-				case CELL_PAD_BTN_OFFSET_SENSOR_Z:
-					if (pad->m_sensor_z != sensor.m_value) btnChanged = true;
-					pad->m_sensor_z = sensor.m_value;
-					break;
-				case CELL_PAD_BTN_OFFSET_SENSOR_G:
-					if (pad->m_sensor_g != sensor.m_value) btnChanged = true;
-					pad->m_sensor_g = sensor.m_value;
-					break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_X: set_value(pad->m_sensor_x, sensor.m_value); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Y: set_value(pad->m_sensor_y, sensor.m_value); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Z: set_value(pad->m_sensor_z, sensor.m_value); break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_G: set_value(pad->m_sensor_g, sensor.m_value); break;
 				default: break;
 				}
 			}
@@ -536,7 +485,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -551,7 +500,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 	sys_io.trace("cellPadGetDataExtra(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
 
 	// TODO: This is used just to get data from a BD/CEC remote,
-	// but if the port isnt a remote, device type is set to 0 and just regular cellPadGetData is returned
+	// but if the port isnt a remote, device type is set to CELL_PAD_DEV_TYPE_STANDARD and just regular cellPadGetData is returned
 
 	if (auto err = cellPadGetData(port_no, data))
 	{
@@ -560,7 +509,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 
 	if (device_type) // no error is returned on NULL
 	{
-		*device_type = 0;
+		*device_type = CELL_PAD_DEV_TYPE_STANDARD;
 	}
 
 	// Set BD data
@@ -602,7 +551,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -750,7 +699,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -782,7 +731,7 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 
 	config.port_setting[port_no] = port_setting;
 
-	// can also return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD
+	// can also return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD <- Update: seems to be just internal and ignored
 
 	return CELL_OK;
 }
@@ -808,7 +757,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -837,7 +786,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
@@ -867,7 +816,7 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 	if (port_no >= CELL_PAD_MAX_PORT_NUM)
 		return CELL_OK;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	// TODO: find out if this is checked here or later or at all
 	if (!(pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE))
@@ -952,15 +901,15 @@ error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
+	auto& pads = handler->GetPads();
 
-	if (handle < 0 || !data) // data == NULL stalls on decr
+	if (handle < 0 || static_cast<u32>(handle) >= pads.size() || !data) // data == NULL stalls on decr
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	auto& pads = handler->GetPads();
 	if (!pads[handle]->ldd)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	memcpy(pads[handle]->ldd_data, data.get_ptr(), sizeof(CellPadData));
+	pads[handle]->ldd_data = *data;
 
 	return CELL_OK;
 }
@@ -977,11 +926,11 @@ error_code cellPadLddGetPortNo(s32 handle)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
+	auto& pads = handler->GetPads();
 
-	if (handle < 0)
+	if (handle < 0 || static_cast<u32>(handle) >= pads.size())
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	auto& pads = handler->GetPads();
 	if (!pads[handle]->ldd)
 		return CELL_PAD_ERROR_FATAL; // might be incorrect
 
@@ -1001,13 +950,10 @@ error_code cellPadLddUnregisterController(s32 handle)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
-
-	if (handle < 0)
-		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
 	const auto& pads = handler->GetPads();
 
-	// TODO: check if handle >= pads.size()
+	if (handle < 0 || static_cast<u32>(handle) >= pads.size())
+		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	if (!pads[handle]->ldd)
 		return CELL_PAD_ERROR_NO_DEVICE;

@@ -422,19 +422,27 @@ void pad_thread::operator()()
 				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 					continue;
 
+				// Check if an LDD pad pressed the PS button (bit 0 of the first button)
+				if (pad->ldd && !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
+				{
+					ps_button_pressed = true;
+					break;
+				}
+
 				for (const auto& button : pad->m_buttons)
 				{
-					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2 && button.m_outKeyCode == CELL_PAD_CTRL_PS && button.m_pressed)
+					if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1 && button.m_outKeyCode == CELL_PAD_CTRL_PS && button.m_pressed)
 					{
-						// Make sure we call this function only once per button press
-						if (!m_ps_button_pressed)
-						{
-							open_home_menu();
-						}
 						ps_button_pressed = true;
 						break;
 					}
 				}
+			}
+
+			// Make sure we call this function only once per button press
+			if (ps_button_pressed && !m_ps_button_pressed)
+			{
+				open_home_menu();
 			}
 
 			m_ps_button_pressed = ps_button_pressed;
