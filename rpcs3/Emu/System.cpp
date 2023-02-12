@@ -1184,7 +1184,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 			else
 			{
-				m_sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(elf_dir + "/../", m_title_id);
+				m_sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(fs::get_parent_dir(elf_dir), m_title_id);
 			}
 
 			_psf = psf::load_object(m_sfo_dir + "/PARAM.SFO");
@@ -1633,8 +1633,16 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			if (!m_title_id.empty() && !from_hdd0_game && m_cat == "HG")
 			{
+				std::string game_dir = m_sfo_dir;
+
+				// Don't use the C00 subdirectory in our game list
+				if (game_dir.ends_with("/C00") || game_dir.ends_with("\\C00"))
+				{
+					game_dir = game_dir.substr(0, game_dir.size() - 4);
+				}
+
 				// Add HG games not in HDD0 to games.yml
-				games[m_title_id] = m_sfo_dir;
+				games[m_title_id] = game_dir;
 				YAML::Emitter out;
 				out << games;
 
@@ -1645,7 +1653,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					sys_log.error("Failed to save HG game location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
 				}
 
-				vfs::mount("/dev_hdd0/game/" + m_title_id, m_sfo_dir + '/');
+				vfs::mount("/dev_hdd0/game/" + m_title_id, game_dir + '/');
 			}
 		}
 		else if (m_cat == "DG" && from_hdd0_game && disc.empty())
@@ -1977,8 +1985,16 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 				else if (!m_title_id.empty() && m_cat == "HG")
 				{
+					std::string game_dir = m_sfo_dir;
+
+					// Remove the C00 suffix
+					if (game_dir.ends_with("/C00") || game_dir.ends_with("\\C00"))
+					{
+						game_dir = game_dir.substr(0, game_dir.size() - 4);
+					}
+
 					m_dir = "/dev_hdd0/game/" + m_title_id + '/';
-					argv[0] = m_dir + unescape(resolved_path.substr(GetCallbacks().resolve_path(m_sfo_dir).size()));
+					argv[0] = m_dir + unescape(resolved_path.substr(GetCallbacks().resolve_path(game_dir).size()));
 					sys_log.notice("Boot path: %s", m_dir);
 				}
 				else if (g_cfg.vfs.host_root)

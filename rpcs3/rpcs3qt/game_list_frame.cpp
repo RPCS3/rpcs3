@@ -546,6 +546,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				continue;
 			}
 
+			// Don't use the C00 subdirectory in our game list
+			if (game_dir.ends_with("/C00") || game_dir.ends_with("\\C00"))
+			{
+				game_dir = game_dir.substr(0, game_dir.size() - 4);
+			}
+
 			const bool has_sfo = fs::is_file(game_dir + "/PARAM.SFO");
 
 			if (!has_sfo && fs::is_file(game_dir + "/PS3_DISC.SFB"))
