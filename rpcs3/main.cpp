@@ -277,6 +277,7 @@ constexpr auto arg_commit_db    = "get-commit-db";
 // Arguments that can be used with a gui application
 constexpr auto arg_no_gui       = "no-gui";
 constexpr auto arg_fullscreen   = "fullscreen"; // only useful with no-gui
+constexpr auto arg_gs_screen    = "game-screen";
 constexpr auto arg_high_dpi     = "hidpi";
 constexpr auto arg_rounding     = "dpi-rounding";
 constexpr auto arg_styles       = "styles";
@@ -629,6 +630,8 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_fullscreen, "Run games in fullscreen mode. Only used when no-gui is set."));
+	const QCommandLineOption screen_option(arg_gs_screen, "Forces the emulator to use the specified screen for the game window.", "index", "");
+	parser.addOption(screen_option);
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
 	parser.addOption(QCommandLineOption(arg_rounding, "Sets the Qt::HighDpiScaleFactorRoundingPolicy for values like 150% zoom.", "rounding", "4"));
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
@@ -954,6 +957,18 @@ int main(int argc, char** argv)
 			}
 
 			gui_app->SetStartGamesFullscreen(true);
+		}
+
+		if (parser.isSet(arg_gs_screen))
+		{
+			const int game_screen_index = parser.value(arg_gs_screen).toInt();
+
+			if (game_screen_index < 0)
+			{
+				report_fatal_error(fmt::format("The option '%s' can only be used with numbers >= 0 (you used %d)", arg_gs_screen, game_screen_index));
+			}
+
+			gui_app->SetGameScreenIndex(game_screen_index);
 		}
 
 		if (!gui_app->Init())

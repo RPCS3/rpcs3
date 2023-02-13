@@ -288,10 +288,37 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		}
 	}
 
-	const auto screen = m_main_window ? m_main_window->screen() : primaryScreen();
-	const auto base_geometry  = m_main_window ? m_main_window->frameGeometry() : primaryScreen()->geometry();
-	const auto frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
-	const auto app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
+	QScreen* screen = nullptr;
+	QRect base_geometry{};
+
+	if (m_game_screen_index >= 0)
+	{
+		const QList<QScreen*> available_screens = screens();
+
+		if (m_game_screen_index < available_screens.count())
+		{
+			screen = ::at32(available_screens, m_game_screen_index);
+
+			if (screen)
+			{
+				base_geometry = screen->geometry();
+			}
+		}
+
+		if (!screen)
+		{
+			gui_log.error("The selected game screen with index %d is not available (available screens: %d)", m_game_screen_index, available_screens.count());
+		}
+	}
+
+	if (!screen)
+	{
+		screen = m_main_window ? m_main_window->screen() : primaryScreen();
+		base_geometry = m_main_window ? m_main_window->frameGeometry() : primaryScreen()->geometry();
+	}
+
+	const QRect frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
+	const QIcon app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	gs_frame* frame = nullptr;
 

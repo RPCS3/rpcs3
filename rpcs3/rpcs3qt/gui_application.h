@@ -49,6 +49,11 @@ public:
 		m_start_games_fullscreen = start_games_fullscreen;
 	}
 
+	void SetGameScreenIndex(int screen_index = -1)
+	{
+		m_game_screen_index = screen_index;
+	}
+
 	/** Call this method before calling app.exec */
 	bool Init() override;
 
@@ -88,6 +93,7 @@ private:
 	bool m_use_cli_style = false;
 	bool m_with_cli_boot = false;
 	bool m_start_games_fullscreen = false;
+	int m_game_screen_index = -1;
 
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest();
