@@ -146,6 +146,22 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 gs_frame::~gs_frame()
 {
 	g_user_asked_for_screenshot = false;
+
+	// Save active screen to gui settings
+	const QScreen* current_screen = screen();
+	const QList<QScreen*> screens = QGuiApplication::screens();
+	int screen_index = 0;
+
+	for (int i = 0; i < screens.count(); i++)
+	{
+		if (current_screen == ::at32(screens, i))
+		{
+			screen_index = i;
+			break;
+		}
+	}
+
+	m_gui_settings->SetValue(gui::gs_screen, screen_index);
 }
 
 void gs_frame::paintEvent(QPaintEvent *event)

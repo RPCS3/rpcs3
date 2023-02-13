@@ -291,13 +291,23 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	QScreen* screen = nullptr;
 	QRect base_geometry{};
 
-	if (m_game_screen_index >= 0)
+	// Use screen index set by CLI argument
+	int screen_index = m_game_screen_index;
+
+	// In no-gui mode: use last used screen if no CLI index was set
+	if (screen_index < 0 && !m_main_window)
+	{
+		screen_index = m_gui_settings->GetValue(gui::gs_screen).toInt();
+	}
+
+	// Try to find the specified screen
+	if (screen_index >= 0)
 	{
 		const QList<QScreen*> available_screens = screens();
 
-		if (m_game_screen_index < available_screens.count())
+		if (screen_index < available_screens.count())
 		{
-			screen = ::at32(available_screens, m_game_screen_index);
+			screen = ::at32(available_screens, screen_index);
 
 			if (screen)
 			{
@@ -307,10 +317,11 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 
 		if (!screen)
 		{
-			gui_log.error("The selected game screen with index %d is not available (available screens: %d)", m_game_screen_index, available_screens.count());
+			gui_log.error("The selected game screen with index %d is not available (available screens: %d)", screen_index, available_screens.count());
 		}
 	}
 
+	// Fallback to the screen of the main window. Use the primary screen as last resort.
 	if (!screen)
 	{
 		screen = m_main_window ? m_main_window->screen() : primaryScreen();
