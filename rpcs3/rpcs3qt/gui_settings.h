@@ -117,7 +117,7 @@ namespace gui
 	const QString config       = "Config";
 	const QString log_viewer   = "LogViewer";
 	const QString sc           = "Shortcuts";
-	
+
 	const QString update_on   = "true";
 	const QString update_off  = "false";
 	const QString update_auto = "auto";

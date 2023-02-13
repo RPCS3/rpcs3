@@ -1697,7 +1697,7 @@ void lv2_obj::schedule_all(u64 current_time)
 				{
 					if (g_ppu && cpu_flag::preempt - g_ppu->state)
 					{
-						// Don't be picky, pick up any running PPU thread even it has a wait flag 
+						// Don't be picky, pick up any running PPU thread even it has a wait flag
 						cpu = g_ppu;
 					}
 					// TODO: If this case is common enough it may be valuable to iterate over all CPU threads to find a perfect candidate (one without a wait or suspend flag)

@@ -29,7 +29,7 @@ body:
         * Why your feature is important to RPCS3.
         * If the feature is implemented in other projects, attach screenshots.
         * If this feature is something that a game is trying to use, upload a log file for it.
-        
+
         RPCS3's Log file will be ```RPCS3.log.gz``` (sometimes shows as RPCS3.log with zip icon) or ```RPCS3.log``` (sometimes shows as RPCS3 wtih notepad icon).
         * On Windows it will be in the RPCS3 directory near the executable
         * On Linux it will be in ```~/.cache/rpcs3/```

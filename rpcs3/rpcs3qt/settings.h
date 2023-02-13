@@ -30,7 +30,7 @@ public:
 	~settings();
 
 	QString GetSettingsDir() const;
-	
+
 	QVariant GetValue(const QString& key, const QString& name, const QVariant& def) const;
 	QVariant GetValue(const gui_save& entry) const;
 	static QVariant List2Var(const q_pair_list& list);

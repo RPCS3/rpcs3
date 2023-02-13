@@ -24,5 +24,5 @@ public:
 	[[nodiscard]] qreal getMarginFactor() const;
 
 private:
-	game_list_grid_delegate* grid_item_delegate; 
+	game_list_grid_delegate* grid_item_delegate;
 };

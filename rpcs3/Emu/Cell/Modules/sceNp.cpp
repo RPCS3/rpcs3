@@ -3854,7 +3854,7 @@ error_code sceNpScoreCreateTransactionCtx(s32 titleCtxId)
 	}
 
 	auto score = idm::get<score_ctx>(titleCtxId);
-	
+
 	if (!score)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
@@ -4409,7 +4409,7 @@ error_code scenp_score_get_ranking_by_range(s32 transId, SceNpScoreBoardId board
 		if (opt_ptr[1])
 		{
 			vm::ptr<u32> ssr_ptr = vm::cast(opt_ptr[1]);
-			startSerialRank = *ssr_ptr; 
+			startSerialRank = *ssr_ptr;
 		}
 
 		// It also uses opt_ptr[2] for unknown purposes
@@ -5272,7 +5272,7 @@ error_code sceNpSignalingTerminateConnection(u32 ctx_id, u32 conn_id)
 	}
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-	
+
 	sigh.stop_sig(conn_id);
 
 	return CELL_OK;
@@ -5306,7 +5306,7 @@ error_code sceNpSignalingGetConnectionStatus(u32 ctx_id, u32 conn_id, vm::ptr<s3
 	{
 		*conn_status = si.connStatus;
 	}
-	
+
 	if (peer_addr)
 		(*peer_addr).np_s_addr = si.addr; // infos.addr is already BE
 	if (peer_port)

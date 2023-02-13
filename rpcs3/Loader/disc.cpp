@@ -93,32 +93,32 @@ namespace disc
 
 			search_dir = std::move(parent_dir);
 		}
-	
+
 		for (usz i = 0; i < lines.size(); i++)
 		{
 			const std::string& line = lines[i];
 			const usz pos = line.find('=');
-	
+
 			if (pos == umax)
 			{
 				continue;
 			}
-	
+
 			const std::string key = fmt::trim(line.substr(0, pos));
 			std::string value;
-	
+
 			if (pos != (line.size() - 1))
 			{
 				value = fmt::trim(line.substr(pos + 1));
 			}
-	
+
 			if (value.empty() && i != (lines.size() - 1) && line.size() != 1)
 			{
 				// Some games have a character on the last line of the file, don't print the error in those cases.
 				disc_log.warning("Unusual or malformed entry in SYSTEM.CNF ignored: %s", line);
 				continue;
 			}
-	
+
 			if (key == "BOOT2")
 			{
 				disc_log.notice("SYSTEM.CNF - Detected PS2 Disc = %s", value);
@@ -138,12 +138,12 @@ namespace disc
 				disc_log.notice("SYSTEM.CNF - Software version = %s", value);
 			}
 		}
-	
+
 		if (type == disc_type::unknown)
 		{
 			disc_log.error("SYSTEM.CNF - Disc is not a PSX/PSone or PS2 game!");
 		}
-	
+
 		return type;
 	}
 }

@@ -253,7 +253,7 @@ error_code cellUserInfoSelectUser_SetList(vm::ptr<CellUserInfoListSet> setList, 
 			funcSelect(ppu, CELL_USERINFO_ERROR_NOUSER, selectUser, userdata);
 			return CELL_OK;
 		});
-		
+
 		return CELL_OK;
 	}
 

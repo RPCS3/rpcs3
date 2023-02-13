@@ -30,7 +30,7 @@ lv2_memory_container::lv2_memory_container(utils::serial& ar, bool from_idm) noe
 
 std::shared_ptr<void> lv2_memory_container::load(utils::serial& ar)
 {
-	// Use idm::last_id() only for the instances at IDM  
+	// Use idm::last_id() only for the instances at IDM
 	return std::make_shared<lv2_memory_container>(stx::exact_t<utils::serial&>(ar), true);
 }
 
@@ -77,7 +77,7 @@ struct sys_memory_address_table
 		{
 			if (const auto ptr = +ctr)
 			{
-				mm[static_cast<u16>(&ctr - addrs)] = ptr->id; 
+				mm[static_cast<u16>(&ctr - addrs)] = ptr->id;
 			}
 		}
 

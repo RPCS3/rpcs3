@@ -4629,7 +4629,7 @@ struct texture_format_helper
 		{
 			return bf_decoder<2, 1, bool>(value);
 		}
-	
+
 		u8 border_type() const
 		{
 			return bf_decoder<3, 1>(value);

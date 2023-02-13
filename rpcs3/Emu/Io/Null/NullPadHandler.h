@@ -9,7 +9,7 @@ public:
 	{
 		b_has_pressure_intensity_button = false;
 	}
-	
+
 	bool Init() override
 	{
 		return true;

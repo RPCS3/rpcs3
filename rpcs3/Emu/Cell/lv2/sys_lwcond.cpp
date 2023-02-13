@@ -268,7 +268,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 			auto sq = cond.sq;
 			atomic_storage<ppu_thread*>::release(cond.sq, nullptr);
-	
+
 			while (const auto cpu = cond.schedule<ppu_thread>(sq, cond.protocol))
 			{
 				if (mode == 2)

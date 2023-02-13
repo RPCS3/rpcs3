@@ -1755,7 +1755,7 @@ error_code lv2_socket::abort_socket(s32 flags)
 	{
 		if (!ppu)
 			continue;
-			
+
 		sys_net.warning("lv2_socket::abort_socket(): waking up \"%s\": (func: %s, r3=0x%x, r4=0x%x, r5=0x%x, r6=0x%x)", ppu->get_name(), ppu->current_function, ppu->gpr[3], ppu->gpr[4], ppu->gpr[5], ppu->gpr[6]);
 		ppu->gpr[3] = static_cast<u64>(-SYS_NET_EINTR);
 		lv2_obj::append(ppu.get());
@@ -1821,7 +1821,7 @@ error_code sys_net_abort(ppu_thread& ppu, s32 type, u64 arg, s32 flags)
 
 			sock->close();
 
-			sys_net.success("lv2_socket::handle_abort(): Closed socket %d", id); 
+			sys_net.success("lv2_socket::handle_abort(): Closed socket %d", id);
 		}
 
 		// Ensures the socket has no lingering copy from the network thread

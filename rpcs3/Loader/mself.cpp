@@ -42,7 +42,7 @@ bool extract_mself(const std::string& file, const std::string& extract_to)
 	if (!mself.read(recs))
 	{
 		mself_log.error("Error extracting MSELF records");
-		return false;	
+		return false;
 	}
 
 	std::vector<u8> buffer;

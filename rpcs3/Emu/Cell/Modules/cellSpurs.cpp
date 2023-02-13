@@ -5461,7 +5461,7 @@ DECLARE(ppu_module_manager::cellSpurs)("cellSpurs", [](ppu_static_module* _this)
 	_this->add_init_func([](ppu_static_module*)
 	{
 		const auto val = g_cfg.core.spu_accurate_reservations ? MFF_PERFECT : MFF_FORCED_HLE;
-	
+
 		REINIT_FUNC(cellSpursSetPriorities).flag(val);
 		REINIT_FUNC(cellSpursAddWorkload).flag(val);
 		REINIT_FUNC(cellSpursAddWorkloadWithAttribute).flag(val);

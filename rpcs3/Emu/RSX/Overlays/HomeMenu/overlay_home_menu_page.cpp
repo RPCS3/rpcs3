@@ -70,7 +70,7 @@ namespace rsx
 
 			return nullptr;
 		}
-		
+
 		void home_menu_page::add_page(std::shared_ptr<home_menu_page> page)
 		{
 			ensure(page);

@@ -24,7 +24,7 @@ private:
 private:
 	custom_dialog* m_dialog  = nullptr;
 	QListWidget* m_lst_friends = nullptr;
-	
+
 	std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 
 Q_SIGNALS:

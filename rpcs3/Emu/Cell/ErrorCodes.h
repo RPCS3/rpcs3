@@ -34,7 +34,7 @@ class error_code
 	{
 	}
 
-public:	
+public:
 	// Implementation must be provided independently
 	static s32 error_report(s32 result, const logs::message* channel, const char* fmt, const fmt_type_info* sup, const u64* args);
 

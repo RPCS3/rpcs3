@@ -164,7 +164,7 @@ error_code cellVideoExportInitialize2(u32 version, vm::ptr<CellVideoExportUtilFi
 error_code cellVideoExportInitialize(u32 version, u32 container, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
 	cellVideoExport.notice("cellVideoExportInitialize(version=0x%x, container=0x%x, funcFinish=*0x%x, userdata=*0x%x)", version, container, funcFinish, userdata);
-	
+
 	if (version != CELL_VIDEO_EXPORT_UTIL_VERSION_CURRENT)
 	{
 		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;
@@ -282,7 +282,7 @@ error_code cellVideoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 error_code cellVideoExportFromFile(vm::cptr<char> srcHddDir, vm::cptr<char> srcHddFile, vm::ptr<CellVideoExportSetParam> param, vm::ptr<CellVideoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
 	cellVideoExport.todo("cellVideoExportFromFile(srcHddDir=%s, srcHddFile=%s, param=*0x%x, funcFinish=*0x%x, userdata=*0x%x)", srcHddDir, srcHddFile, param, funcFinish, userdata);
-	
+
 	if (!param || !funcFinish || !srcHddDir || !srcHddDir[0] || !srcHddFile || !srcHddFile[0])
 	{
 		return CELL_VIDEO_EXPORT_UTIL_ERROR_PARAM;

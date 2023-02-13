@@ -969,7 +969,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		if (pdlg.wasCanceled())
 		{
 			cancelled = true;
-			
+
 			for (package_reader& reader : readers)
 			{
 				reader.abort_extract();
@@ -1072,7 +1072,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			QCheckBox* quick_check = new QCheckBox(tr("Add launcher shortcut(s)"));
 #endif
 			QLabel* label = new QLabel(tr("Successfully installed software from package(s)!\nWould you like to install shortcuts to the installed software? (%1 new software detected)\n\n").arg(bootable_paths_installed.size()), dlg);
-	
+
 			vlayout->addWidget(label);
 			vlayout->addStretch(10);
 			vlayout->addWidget(desk_check);
@@ -1081,7 +1081,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			vlayout->addStretch(3);
 
 			QDialogButtonBox* btn_box = new QDialogButtonBox(QDialogButtonBox::Ok);
-	
+
 			vlayout->addWidget(btn_box);
 			dlg->setLayout(vlayout);
 
@@ -2636,7 +2636,7 @@ void main_window::CreateConnects()
 			m_gui_settings->SetCategoryVisibility(id, checked);
 		}
 	});
-	
+
 	connect(ui->menuGame_Categories, &QMenu::aboutToShow, ui->menuGame_Categories, [this, get_cats]()
 	{
 		const auto set_cat_count = [&](QAction* act, const QString& text)

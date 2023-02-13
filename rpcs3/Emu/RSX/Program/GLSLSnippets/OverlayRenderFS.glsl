@@ -90,7 +90,7 @@ vec4 sample_image(sampler2D tex, vec2 coord, float blur_strength)
 {
 	vec4 original = texture(tex, coord);
 	if (blur_strength == 0) return original;
-	
+
 	vec2 constraints = 1.f / vec2(640, 360);
 	vec2 res_offset = 1.f / textureSize(fs0, 0);
 	vec2 tex_offset = max(res_offset, constraints);

@@ -38,7 +38,7 @@ namespace rsx
 			m_command_inc = ((m_cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
 			m_remaining_commands = count;
 			m_internal_get = m_ctrl->get - 4;
-			m_args_ptr = m_iotable->get_addr(m_internal_get);	
+			m_args_ptr = m_iotable->get_addr(m_internal_get);
 			m_command_reg = (m_cmd & 0xffff) + m_command_inc * (((m_cmd >> 18) - count) & 0x7ff) - m_command_inc;
 		}
 
@@ -116,7 +116,7 @@ namespace rsx
 
 				if (addr < put && put < m_cache_addr + m_cache_size)
 				{
-					// Adjust to knownly-prepared FIFO buffer bounds 
+					// Adjust to knownly-prepared FIFO buffer bounds
 					m_cache_size = put - m_cache_addr;
 				}
 
@@ -267,7 +267,7 @@ namespace rsx
 				m_command_reg += m_command_inc;
 
 				--m_remaining_commands;
-	
+
 				data.set(m_command_reg, arg);
 				return true;
 			}
@@ -422,7 +422,7 @@ namespace rsx
 				data.set(m_cmd & 0xfffc, arg);
 				return;
 			}
-	
+
 			inc_get(true); // Wait for data block to become available
 
 			// Validate the args ptr if the command attempts to read from it

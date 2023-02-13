@@ -1311,7 +1311,7 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 	{
 		return 0x900000;
 	}
-	
+
 	u32 video_size = 0x600000; // 6 MB
 	u32 audio_size = 0x100000; // 1 MB
 	u32 external_input_size = 0;
@@ -1616,7 +1616,7 @@ error_code cellRecSetInfo(s32 setInfo, u64 value)
 		{
 			return CELL_REC_ERROR_INVALID_VALUE;
 		}
-		
+
 		for (u32 i = 0; i < scene_metadata->tagNum; i++)
 		{
 			if (!scene_metadata->tag[i] ||

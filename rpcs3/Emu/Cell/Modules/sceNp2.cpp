@@ -613,7 +613,7 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 
 	if (!connInfo)
 	{
-		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;	
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
 	}
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
