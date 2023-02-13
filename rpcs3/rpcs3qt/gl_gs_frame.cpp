@@ -5,8 +5,8 @@
 #include <QOpenGLContext>
 #include <QOffscreenSurface>
 
-gl_gs_frame::gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings)
-	: gs_frame(screen, geometry, appIcon, std::move(gui_settings))
+gl_gs_frame::gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen)
+	: gs_frame(screen, geometry, appIcon, std::move(gui_settings), force_fullscreen)
 {
 	setSurfaceType(QSurface::OpenGLSurface);
 

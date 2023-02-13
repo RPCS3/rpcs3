@@ -81,7 +81,6 @@ static atomic_t<bool> s_headless = false;
 static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
-atomic_t<bool> g_start_games_fullscreen = false;
 std::string g_pad_profile_override;
 
 extern thread_local std::string(*g_tls_log_prefix)();
@@ -935,14 +934,8 @@ int main(int argc, char** argv)
 	}
 
 	s_no_gui = parser.isSet(arg_no_gui);
-	g_start_games_fullscreen = parser.isSet(arg_fullscreen);
 
-	if (g_start_games_fullscreen && !s_no_gui)
-	{
-		report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_fullscreen, arg_no_gui));
-	}
-
-	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
+	if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))
 	{
 		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
 		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
@@ -953,13 +946,23 @@ int main(int argc, char** argv)
 		gui_app->SetWithCliBoot(parser.isSet(arg_installfw) || parser.isSet(arg_installpkg) || !parser.positionalArguments().isEmpty());
 		gui_app->SetActiveUser(active_user);
 
+		if (parser.isSet(arg_fullscreen))
+		{
+			if (!s_no_gui)
+			{
+				report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_fullscreen, arg_no_gui));
+			}
+
+			gui_app->SetStartGamesFullscreen(true);
+		}
+
 		if (!gui_app->Init())
 		{
 			Emu.Quit(true);
 			return 0;
 		}
 	}
-	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
+	else if (headless_application* headless_app = qobject_cast<headless_application*>(app.data()))
 	{
 		s_headless = true;
 

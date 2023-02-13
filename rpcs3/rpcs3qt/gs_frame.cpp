@@ -50,7 +50,6 @@ extern atomic_t<bool> g_user_asked_for_recording;
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
-extern atomic_t<bool> g_start_games_fullscreen;
 extern atomic_t<recording_mode> g_recording_mode;
 
 atomic_t<bool> g_game_window_focused = false;
@@ -62,10 +61,11 @@ bool is_input_allowed()
 
 constexpr auto qstr = QString::fromStdString;
 
-gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings)
+gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen)
 	: QWindow()
 	, m_initial_geometry(geometry)
 	, m_gui_settings(std::move(gui_settings))
+	, m_start_games_fullscreen(force_fullscreen)
 {
 	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
 	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
@@ -611,7 +611,7 @@ void gs_frame::show()
 	Emu.CallFromMainThread([this]()
 	{
 		QWindow::show();
-		if (g_cfg.misc.start_fullscreen || g_start_games_fullscreen)
+		if (g_cfg.misc.start_fullscreen || m_start_games_fullscreen)
 		{
 			setVisibility(FullScreen);
 		}

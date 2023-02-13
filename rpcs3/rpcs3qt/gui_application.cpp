@@ -299,13 +299,13 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	{
 	case video_renderer::opengl:
 	{
-		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
+		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings, m_start_games_fullscreen);
 		break;
 	}
 	case video_renderer::null:
 	case video_renderer::vulkan:
 	{
-		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
+		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings, m_start_games_fullscreen);
 		break;
 	}
 	}
