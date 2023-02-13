@@ -26,7 +26,7 @@ std::vector<std::pair<u128, id_manager::typeinfo>>& id_manager::get_typeinfo_map
 {
 	// Magic static
 	static std::vector<std::pair<u128, id_manager::typeinfo>> s_map;
-	return s_map; 
+	return s_map;
 }
 
 idm::map_data* idm::allocate_id(std::vector<map_data>& vec, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range)

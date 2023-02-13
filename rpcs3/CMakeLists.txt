@@ -187,13 +187,13 @@ elseif(WIN32)
 
     # If Qt5 is installed from vcpkg
     list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5$<$<CONFIG:Debug>:/debug>/bin/")
-    
+
     add_custom_command(TARGET rpcs3 POST_BUILD
         COMMAND set PATH=${_QT5_TOOLS_PATHS}$<SEMICOLON>%PATH%
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
         # If Qt5 is installed from vcpkg, add binary path to PATH
         # otherwise windeployqt tool won't be able to locate necessary dlls
-        COMMAND set PATH=${Qt5_DIR}/../../../$<$<CONFIG:Debug>:debug/>bin/$<SEMICOLON>%PATH% 
+        COMMAND set PATH=${Qt5_DIR}/../../../$<$<CONFIG:Debug>:debug/>bin/$<SEMICOLON>%PATH%
         COMMAND "${_WINDEPLOYQT}" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" $<$<CONFIG:Debug>:--debug> $<$<CONFIG:Release>:--release> "$<TARGET_FILE:rpcs3>")
 endif()
 

@@ -999,7 +999,7 @@ void rsx_debugger::GetBuffers() const
 
 	for (u32 i = 0; i < textures.size(); i++)
 	{
-		// Technically it can also check if used by shader but idk 
+		// Technically it can also check if used by shader but idk
 		if (textures[i].enabled() && textures[i].width())
 		{
 			if (!text.isEmpty())
@@ -1147,7 +1147,7 @@ void rsx_debugger::GetBuffers() const
 						else if (code == 3)
 						{
 							return 0;
-						} // otherwise is the default values 
+						} // otherwise is the default values
 
 						break;
 					}
@@ -1155,7 +1155,7 @@ void rsx_debugger::GetBuffers() const
 					{
 						fmt::throw_exception("Unreachable!");
 						break;
-					} 
+					}
 					}
 
 					return ((a1 * a1_portion + a0 * a0_portion) / (a0_portion + a1_portion)) << shift;

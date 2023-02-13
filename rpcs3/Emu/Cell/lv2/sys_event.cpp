@@ -157,7 +157,7 @@ CellError lv2_event_queue::send(lv2_event event)
 	{
 		// Store event in In_MBox
 		auto& spu = static_cast<spu_thread&>(*schedule<spu_thread>(sq, protocol));
-	
+
 		if (spu.state & cpu_flag::again)
 		{
 			if (auto cpu = get_current_cpu_thread())
@@ -325,7 +325,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 				queue->append(cpu);
 			}
 
-			atomic_storage<ppu_thread*>::release(queue->pq, nullptr); 
+			atomic_storage<ppu_thread*>::release(queue->pq, nullptr);
 			lv2_obj::awake_all();
 		}
 		else
@@ -336,7 +336,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 				resume_spu_thread_group_from_waiting(*cpu);
 			}
 
-			atomic_storage<spu_thread*>::release(queue->sq, nullptr); 
+			atomic_storage<spu_thread*>::release(queue->sq, nullptr);
 		}
 
 		qlock.unlock();

@@ -50,7 +50,7 @@ static bool s_null_wait_cb(const void*, u64, u64){ return true; };
 static thread_local bool(*s_tls_wait_cb)(const void* data, u64 attempts, u64 stamp0) = s_null_wait_cb;
 
 // Callback for wait() function for a second custon condition, commonly passed with timeout
-static thread_local bool(*s_tls_one_time_wait_cb)(u64 attempts) = nullptr; 
+static thread_local bool(*s_tls_one_time_wait_cb)(u64 attempts) = nullptr;
 
 // Callback for notification functions for optimizations
 static thread_local void(*s_tls_notify_cb)(const void* data, u64 progress) = nullptr;

@@ -478,9 +478,9 @@ namespace rsx
 	void thread::save(utils::serial& ar)
 	{
 		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
- 
+
 		ar(rsx::method_registers);
-	
+
 		for (auto& v : vertex_push_buffers)
 		{
 			ar(v.attr, v.size, v.type, v.vertex_count, v.dword_count, v.data);
@@ -554,7 +554,7 @@ namespace rsx
 
 		if (g_cfg.savestate.start_paused)
 		{
-			// Allow to render a whole frame within this emulation session so there won't be missing graphics 
+			// Allow to render a whole frame within this emulation session so there won't be missing graphics
 			m_pause_after_x_flips = 2;
 		}
 	}
@@ -3450,7 +3450,7 @@ namespace rsx
 			async_flip_requested |= flip_request::emu_requested;
 
 			m_eng_interrupt_mask |= rsx::display_interrupt;
-	
+
 			if (state & cpu_flag::exit)
 			{
 				// Resubmit possibly-ignored flip on savestate load

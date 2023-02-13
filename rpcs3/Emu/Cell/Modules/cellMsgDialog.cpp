@@ -222,7 +222,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 	auto& ppu = *get_current_cpu_thread();
 	lv2_obj::sleep(ppu);
 
-	// PS3 memory must not be accessed by Main thread 
+	// PS3 memory must not be accessed by Main thread
 	std::string msg_string = msgString.get_ptr();
 
 	// Run asynchronously in GUI thread

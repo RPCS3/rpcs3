@@ -151,7 +151,7 @@ namespace rsx
 		case 16: return rsx::texture_max_anisotropy::x16;
 		default: break;
 		}
-	
+
 		return rsx::to_texture_max_anisotropy((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
 	}
 

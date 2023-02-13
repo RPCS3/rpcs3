@@ -188,7 +188,7 @@ public:
 	std::unique_ptr<CPUDisAsm> copy_type_erased() const override;
 	std::pair<bool, v128> try_get_const_value(u32 reg, u32 pc = -1, u32 TTL = 10) const;
 
-	// Get constant value if the original array is made of only repetitions of the same value 
+	// Get constant value if the original array is made of only repetitions of the same value
 	template <typename T> requires (sizeof(T) < sizeof(v128) && !(sizeof(v128) % sizeof(T)))
 	std::pair<bool, T> try_get_const_equal_value_array(u32 reg, u32 pc = -1, u32 TTL = 10) const
 	{

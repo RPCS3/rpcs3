@@ -4103,7 +4103,7 @@ bool spu_thread::process_mfc_cmd()
 		raddr = addr;
 		rtime = ntime;
 		mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
-	
+
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 
 		if (g_cfg.core.mfc_debug)
@@ -4769,7 +4769,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 		}
 
 		const bool reservation_busy_waiting = ((utils::get_tsc() >> 8) % 100 + ((raddr == spurs_addr) ? 50 : 0)) < g_cfg.core.spu_reservation_busy_waiting_percentage;
-	
+
 		for (; !events.count; events = get_events(mask1 & ~SPU_EVENT_LR, true, true))
 		{
 			const auto old = +state;
@@ -4805,7 +4805,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 						// Wait without timeout, in this situation we have notifications for all writes making it possible
 						// Abort notifications are handled specially for performance reasons
 						vm::reservation_notifier(raddr).wait(rtime, -128);
-						continue;	
+						continue;
 					}
 
 					atomic_wait_engine::set_one_time_use_wait_callback(mask1 != SPU_EVENT_LR ? nullptr : +[](u64 attempts) -> bool
@@ -5481,7 +5481,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 			if (Emu.IsStarting())
 			{
-				// Deregister lv2_obj::g_to_sleep entry (savestates related) 
+				// Deregister lv2_obj::g_to_sleep entry (savestates related)
 				lv2_obj::sleep(*this);
 			}
 

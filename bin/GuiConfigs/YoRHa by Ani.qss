@@ -456,7 +456,7 @@ QSlider#sizeSlider::groove:horizontal {
 	height: 1.5em;
 }
 
-/* 
+/*
 	On Patch Creator, it's the patch validation label
 	since we can't avoid repainting color, let's bold it instead
 */

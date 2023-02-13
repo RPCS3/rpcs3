@@ -122,7 +122,7 @@ struct lv2_lwmutex final : lv2_obj
 			// Notify lwmutex destroyer (may cause EBUSY to be returned for it)
 			lwcond_waiters.notify_all();
 		}
-	
+
 		if (signal)
 		{
 			cpu->next_cpu = nullptr;

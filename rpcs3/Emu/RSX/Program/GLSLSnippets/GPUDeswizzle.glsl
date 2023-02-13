@@ -66,7 +66,7 @@ uint get_z_index(const in uint x_, const in uint y_, const in uint z_)
 	uint log2w = invocation.size_log2.x;
 	uint log2h = invocation.size_log2.y;
 	uint log2d = invocation.size_log2.z;
-		
+
 	do
 	{
 		if (log2w > 0)
@@ -76,7 +76,7 @@ uint get_z_index(const in uint x_, const in uint y_, const in uint z_)
 			x >>= 1;
 			log2w--;
 		}
-		
+
 		if (log2h > 0)
 		{
 			offset |= (y & 1) << shift;
@@ -84,7 +84,7 @@ uint get_z_index(const in uint x_, const in uint y_, const in uint z_)
 			y >>= 1;
 			log2h--;
 		}
-		
+
 		if (log2d > 0)
 		{
 			offset |= (z & 1) << shift;
@@ -94,7 +94,7 @@ uint get_z_index(const in uint x_, const in uint y_, const in uint z_)
 		}
 	}
 	while(x > 0 || y > 0 || z > 0);
-		
+
 	return offset;
 }
 

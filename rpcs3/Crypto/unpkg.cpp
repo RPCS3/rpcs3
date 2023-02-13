@@ -1041,7 +1041,7 @@ package_error package_reader::extract_data(std::deque<package_reader>& readers, 
 	{
 		// Use a seperate map for each reader. We need to check if the target app version exists for each package in sequence.
 		std::map<std::string, install_entry*> all_install_entries;
-		
+
 		if (error == package_error::no_error)
 		{
 			// Check if this package is allowed to be installed on top of the existing data

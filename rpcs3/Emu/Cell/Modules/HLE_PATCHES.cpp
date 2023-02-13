@@ -8,7 +8,7 @@
 
 #include <thread>
 
-// SONIC THE HEDGEDOG: a fix for a race condition between SPUs and PPUs causing missing graphics (SNR is overriden when non-empty) 
+// SONIC THE HEDGEDOG: a fix for a race condition between SPUs and PPUs causing missing graphics (SNR is overriden when non-empty)
 void WaitForSPUsToEmptySNRs(ppu_thread& ppu, u32 spu_id, u32 snr_mask)
 {
 	ppu.state += cpu_flag::wait;

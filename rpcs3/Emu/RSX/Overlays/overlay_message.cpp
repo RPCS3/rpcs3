@@ -57,7 +57,7 @@ namespace rsx
 
 		u64 message_item::get_expiration() const
 		{
-			// If reference counting is enabled and reached 0 consider it expired 
+			// If reference counting is enabled and reached 0 consider it expired
 			return m_refs && *m_refs == 0 ? 0 : m_expiration_time;
 		}
 

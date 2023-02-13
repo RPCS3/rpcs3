@@ -162,7 +162,7 @@ void RSXDisAsm::Write(std::string_view str, s32 count, bool is_non_inc, u32 id)
 	case cpu_disasm_mode::interpreter:
 	{
 		last_opcode.clear();
-	
+
 		if (count >= 0)
 		{
 			fmt::append(last_opcode, "[%08x] (%s%u)", dump_pc, is_non_inc ? "+" : "", count);

@@ -70,7 +70,7 @@ bool hid_pad_handler<Device>::Init()
 #if defined(__APPLE__)
 	hid_darwin_set_open_exclusive(0);
 #endif
-	
+
 	for (usz i = 1; i <= MAX_GAMEPADS; i++) // Controllers 1-n in GUI
 	{
 		m_controllers.emplace(m_name_string + std::to_string(i), std::make_shared<Device>());

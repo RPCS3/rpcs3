@@ -370,7 +370,7 @@ error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 			{
 				s32 prio = smax;
 				ppu_thread* it{};
-	
+
 				for (auto ppu = first; ppu; ppu = ppu->next_cpu)
 				{
 					if (!ppu->gpr[7] && (flag->protocol != SYS_SYNC_PRIORITY || ppu->prio <= prio))

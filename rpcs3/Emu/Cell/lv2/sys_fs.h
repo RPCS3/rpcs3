@@ -214,7 +214,7 @@ public:
 struct lv2_file final : lv2_fs_object
 {
 	static constexpr u32 id_type = 1;
- 
+
 	fs::file file;
 	const s32 mode;
 	const s32 flags;
@@ -303,7 +303,7 @@ struct lv2_file final : lv2_fs_object
 struct lv2_dir final : lv2_fs_object
 {
 	static constexpr u32 id_type = 2;
- 
+
 	const std::vector<fs::dir_entry> entries;
 
 	// Current reading position

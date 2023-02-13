@@ -182,7 +182,7 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
 	}
 }
 
-// This function ensures constant initialization order between different compilers and builds 
+// This function ensures constant initialization order between different compilers and builds
 void init_fxo_for_exec(utils::serial* ar, bool full = false)
 {
 	g_fxo->init<ppu_module>();
@@ -2833,13 +2833,13 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 
 			if (fs::remove_file(old_path))
 			{
-				sys_log.success("Old savestate has been removed: path='%s'", old_path);	
+				sys_log.success("Old savestate has been removed: path='%s'", old_path);
 			}
 
 			// For backwards compatibility - avoid having loose files
 			if (fs::remove_file(old_path2))
 			{
-				sys_log.success("Old savestate has been removed: path='%s'", old_path2);	
+				sys_log.success("Old savestate has been removed: path='%s'", old_path2);
 			}
 
 			sys_log.success("Saved savestate! path='%s'", path);

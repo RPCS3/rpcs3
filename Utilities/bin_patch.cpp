@@ -756,7 +756,7 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 			// NOP filled
 			std::fill_n(vm::get_super_ptr<u32>(addr), p.value.long_value, 0x60000000);
 
-			// Check if already registered by previous code allocation 
+			// Check if already registered by previous code allocation
 			if (relocate_instructions_at != addr)
 			{
 				// Register code

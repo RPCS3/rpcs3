@@ -71,7 +71,7 @@ vfs_dialog_usb_input::vfs_dialog_usb_input(const QString& name, const cfg::devic
 	m_serial_edit = new QLineEdit;
 	m_serial_edit->setMaxLength(64); // Max length defined in sys_fs
 	m_serial_edit->setText(QString::fromStdString(info->serial));
-	
+
 	QVBoxLayout* vbox_left = new QVBoxLayout;
 	vbox_left->addWidget(new QLabel(tr("Vendor ID:")));
 	vbox_left->addWidget(new QLabel(tr("Product ID:")));

@@ -1,5 +1,5 @@
-/* 
-ModernBlue Theme for RPCS3 
+/*
+ModernBlue Theme for RPCS3
 by themitosan @ twitter.com/themitosan
 (2017.12.12)
 */
@@ -124,7 +124,7 @@ QGroupBox::title {
 /* Buttons */
 QPushButton {
 	background-color: #46598b;
-	color: #fff; 
+	color: #fff;
 }
 
 QPushButton::disabled {
@@ -133,7 +133,7 @@ QPushButton::disabled {
 }
 
 QPushButton::pressed {
-	background-color: #172038; 
+	background-color: #172038;
 }
 
 /* Log and Debugger borders */
@@ -190,7 +190,7 @@ QListWidget::item:hover {
 }
 
 /* Pad Settings: Controller Image */
-QLabel#l_controller { 
+QLabel#l_controller {
 	color: #fff;
 }
 
@@ -227,8 +227,8 @@ QLabel#color_button {
 }
 
 /* Search bar on main toolbar */
-QLineEdit#mw_searchbar { 
-	margin-left: 0.7em; 
+QLineEdit#mw_searchbar {
+	margin-left: 0.7em;
 	color: #ecf0f1;
 }
 

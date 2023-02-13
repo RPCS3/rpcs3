@@ -1,5 +1,5 @@
-/* 
-TheMitoSan Dark-Theme for RPCS3 
+/*
+TheMitoSan Dark-Theme for RPCS3
 Based on Kuroi (Dark) by Ani
 by themitosan @ twitter.com/themitosan
 Ani @ https://github.com/AniLeo
@@ -135,7 +135,7 @@ QPushButton::disabled {
 }
 
 QPushButton::pressed {
-	background-color: #333; 
+	background-color: #333;
 }
 
 /* Log and Debugger borders */
@@ -193,7 +193,7 @@ QListWidget::item:hover {
 }
 
 /* Pad Settings: Controller Image */
-QLabel#l_controller { 
+QLabel#l_controller {
 	color: #FFF;
 }
 
@@ -230,8 +230,8 @@ QLabel#color_button {
 }
 
 /* Search bar on main toolbar */
-QLineEdit#mw_searchbar { 
-	margin-left: 0.7em; 
+QLineEdit#mw_searchbar {
+	margin-left: 0.7em;
 	color: #ecf0f1;
 }
 

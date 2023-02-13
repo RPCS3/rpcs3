@@ -63,7 +63,7 @@ void fmt_class_string<spu_stop_syscall>::format(std::string& out, u64 arg)
 		case SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT: return "sys_spu_thread_tryreceive_event";
 		case SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE: return "sys_spu_thread_switch_system_module";
 		}
-		
+
 		return unknown;
 	});
 }
@@ -254,7 +254,7 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 	}
 	case SPU_THREAD_GROUP_STATUS_SUSPENDED:
 	{
-		// Suspend all SPU threads except a thread that waits on sys_spu_thread_receive_event  
+		// Suspend all SPU threads except a thread that waits on sys_spu_thread_receive_event
 		for (const auto& thread : threads)
 		{
 			if (thread)

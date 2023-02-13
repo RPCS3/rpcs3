@@ -234,7 +234,7 @@ public:
 				data.notify_one();
 			}
 
-			// Return true if count has changed from 0 to 1, this condition is considered satisfied even if we pushed a value directly to the special storage for waiting SPUs 
+			// Return true if count has changed from 0 to 1, this condition is considered satisfied even if we pushed a value directly to the special storage for waiting SPUs
 			return !pushed_to_data || (old & bit_count) == 0;
 		}
 	}

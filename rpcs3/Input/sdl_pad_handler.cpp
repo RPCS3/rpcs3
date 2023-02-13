@@ -484,7 +484,7 @@ u32 sdl_pad_handler::get_battery_color(SDL_JoystickPowerLevel power_level, u32 b
 	case SDL_JOYSTICK_POWER_WIRED:   combined_color = 0x00FF; break;
 	case SDL_JOYSTICK_POWER_MAX:     combined_color = 0x00FF; break;
 	}
-	
+
 	const u32 red = (combined_color >> 8) * brightness / 100;
 	const u32 green = (combined_color & 0xff) * brightness / 100;
 	return ((red << 8) | green);
@@ -565,7 +565,7 @@ void sdl_pad_handler::get_extended_info(const pad_ensemble& binding)
 			pad->m_sensors[2].m_value = Clamp0To1023((accel_z / SDL_STANDARD_GRAVITY) * -1 * 113 + 512);
 		}
 	}
-	
+
 	if (dev->sdl.has_gyro)
 	{
 		if (SDL_GameControllerGetSensorData(dev->sdl.game_controller, SDL_SENSOR_GYRO, dev->values_gyro.data(), 3) != 0)
