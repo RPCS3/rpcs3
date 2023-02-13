@@ -189,7 +189,7 @@ namespace rsx
 			}
 
 			// The top must never be an empty ref. Pop all empties.
-			while (!m_input_token_stack.front().target && m_input_token_stack.size())
+			while (!m_input_token_stack.empty() && !m_input_token_stack.front().target)
 			{
 				m_input_token_stack.pop_front();
 			}
