@@ -150,11 +150,6 @@ namespace rsx
 			return result;
 		}
 
-		struct home_menu_dialog_thread
-		{
-			static constexpr auto thread_name = "Home Menu Thread"sv;
-		};
-
 		error_code home_menu_dialog::show(std::function<void(s32 status)> on_close)
 		{
 			visible = false;

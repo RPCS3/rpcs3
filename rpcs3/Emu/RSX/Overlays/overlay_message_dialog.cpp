@@ -196,11 +196,6 @@ namespace rsx
 			user_interface::close(use_callback, stop_pad_interception);
 		}
 
-		struct msg_dialog_thread
-		{
-			static constexpr auto thread_name = "MsgDialog Thread"sv;
-		};
-
 		void message_dialog::update()
 		{
 			if (fade_animation.active)
