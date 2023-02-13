@@ -112,6 +112,7 @@ namespace rsx
 			atomic_t<bool> m_interactive = false;
 			bool m_start_pad_interception = true;
 			atomic_t<bool> m_stop_pad_interception = false;
+			atomic_t<bool> m_input_thread_detached = false;
 			atomic_t<u64> thread_bits = 0;
 			bool m_keyboard_input_enabled = false; // Allow keyboard input
 			bool m_keyboard_pad_handler_active = true; // Initialized as true to prevent keyboard input until proven otherwise.
@@ -145,6 +146,9 @@ namespace rsx
 			};
 		public:
 			s32 return_code = 0; // CELL_OK
+
+			bool is_detached() const { return m_input_thread_detached; }
+			void detach_input() { m_input_thread_detached.store(true); }
 
 			void update() override {}
 

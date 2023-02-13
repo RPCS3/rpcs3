@@ -7,6 +7,15 @@ namespace rsx
 {
 	namespace overlays
 	{
+		display_manager::display_manager(int)
+		{
+			m_input_thread = std::make_shared<named_thread<overlay_input_thread>>();
+			(*m_input_thread)([this]()
+			{
+				input_thread_loop();
+			});
+		}
+
 		display_manager::~display_manager()
 		{
 			if (m_input_thread)
@@ -135,22 +144,9 @@ namespace rsx
 			m_type_ids_to_remove.clear();
 		}
 
-		void display_manager::on_overlay_activated(const std::shared_ptr<overlay>& item)
+		void display_manager::on_overlay_activated(const std::shared_ptr<overlay>& /*item*/)
 		{
-			if (auto iface = std::dynamic_pointer_cast<user_interface>(item))
-			{
-				// Kick input thread if not enabled. Expect the interface to attach shortly
-				std::lock_guard lock(m_input_thread_lock);
-
-				if (!m_input_thread)
-				{
-					m_input_thread = std::make_shared<named_thread<overlay_input_thread>>();
-					(*m_input_thread)([this]()
-					{
-						input_thread_loop();
-					});
-				}
-			}
+			// TODO: Internal management, callbacks, etc
 		}
 
 		void display_manager::attach_thread_input(
@@ -161,8 +157,7 @@ namespace rsx
 		{
 			if (auto iface = std::dynamic_pointer_cast<user_interface>(get(uid)))
 			{
-				std::lock_guard lock(m_input_thread_lock);
-				m_input_token_stack.emplace_front(
+				m_input_token_stack.push(
 					std::move(iface),
 					on_input_loop_enter,
 					on_input_loop_exit,
@@ -172,46 +167,27 @@ namespace rsx
 
 		void display_manager::on_overlay_removed(const std::shared_ptr<overlay>& item)
 		{
-			if (!dynamic_cast<user_interface*>(item.get()))
+			auto iface = std::dynamic_pointer_cast<user_interface>(item);
+			if (!iface)
 			{
 				// Not instance of UI, ignore
 				return;
 			}
 
-			std::lock_guard lock(m_input_thread_lock);
-			for (auto& entry : m_input_token_stack)
-			{
-				if (entry.target->uid == item->uid)
-				{
-					// Release
-					entry.target = {};
-					break;
-				}
-			}
-
-			// The top must never be an empty ref. Pop all empties.
-			while (!m_input_token_stack.empty() && !m_input_token_stack.front().target)
-			{
-				m_input_token_stack.pop_front();
-			}
+			iface->detach_input();
 		}
 
 		void display_manager::input_thread_loop()
 		{
 			while (!m_input_thread_abort)
 			{
-				input_thread_context_t input_context;
+				for (auto&& input_context : m_input_token_stack.pop_all_reversed())
 				{
-					reader_lock lock(m_input_thread_lock);
-					if (!m_input_token_stack.empty())
+					if (input_context.target->is_detached())
 					{
-						input_context = m_input_token_stack.front();
-						m_input_token_stack.pop_front();
+						continue;
 					}
-				}
 
-				if (input_context.target)
-				{
 					if (input_context.input_loop_prologue)
 					{
 						input_context.input_loop_prologue();
@@ -236,10 +212,8 @@ namespace rsx
 						rsx_log.error("Input loop exited with error code=%d", result);
 					}
 				}
-				else
-				{
-					thread_ctrl::wait_for(1000);
-				}
+
+				m_input_token_stack.wait();
 			}
 		}
 	}
