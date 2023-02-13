@@ -39,8 +39,7 @@ namespace rsx
 
 		public:
 			// Disable default construction to make it conditionally available in g_fxo
-			explicit display_manager(int) noexcept
-			{}
+			explicit display_manager(int) noexcept;
 
 			~display_manager();
 
@@ -176,8 +175,7 @@ namespace rsx
 				std::function<s32()> input_loop_override = nullptr;
 			};
 
-			std::deque<input_thread_context_t> m_input_token_stack;
-			shared_mutex m_input_thread_lock;
+			lf_queue<input_thread_context_t> m_input_token_stack;
 			atomic_t<bool> m_input_thread_abort = false;
 
 			std::shared_ptr<named_thread<overlay_input_thread>> m_input_thread;
