@@ -11,6 +11,8 @@ namespace rsx
 			if (m_input_thread)
 			{
 				m_input_thread_abort.store(true);
+
+				*m_input_thread = thread_state::aborting;
 				while (*m_input_thread <= thread_state::aborting)
 				{
 					_mm_pause();
@@ -152,13 +154,18 @@ namespace rsx
 
 		void display_manager::attach_thread_input(
 			u32 uid,
+			std::function<void()> on_input_loop_enter,
 			std::function<void(s32)> on_input_loop_exit,
-			std::function<void()> on_input_loop_enter)
+			std::function<s32()> input_loop_override)
 		{
 			if (auto iface = std::dynamic_pointer_cast<user_interface>(get(uid)))
 			{
 				std::lock_guard lock(m_input_thread_lock);
-				m_input_token_stack.emplace_front(std::move(iface), on_input_loop_enter, on_input_loop_exit);
+				m_input_token_stack.emplace_front(
+					std::move(iface),
+					on_input_loop_enter,
+					on_input_loop_exit,
+					input_loop_override);
 			}
 		}
 
@@ -209,11 +216,23 @@ namespace rsx
 						input_context.input_loop_prologue();
 					}
 
-					const auto result = input_context.target->run_input_loop();
+					s32 result = 0;
+					if (!input_context.input_loop_override) [[ likely ]]
+					{
+						result = input_context.target->run_input_loop();
+					}
+					else
+					{
+						result = input_context.input_loop_override();
+					}
 
 					if (input_context.input_loop_epilogue)
 					{
 						input_context.input_loop_epilogue(result);
+					}
+					else if (result && result != user_interface::selection_code::canceled)
+					{
+						rsx_log.error("Input loop exited with error code=%d", result);
 					}
 				}
 				else

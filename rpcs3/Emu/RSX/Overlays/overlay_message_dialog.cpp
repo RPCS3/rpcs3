@@ -303,37 +303,39 @@ namespace rsx
 					const auto notify = std::make_shared<atomic_t<bool>>(false);
 					auto& overlayman = g_fxo->get<display_manager>();
 
-					overlayman.attach_thread_input(
-						uid,
-						[](s32 error)
-						{
-							if (error && error != selection_code::canceled)
-							{
-								rsx_log.error("Message dialog input loop exited with error code=%d", error);
-							}
-						},
-						[&notify]()
-						{
-							*notify = true;
-							notify->notify_one();
-						}
-					);
-
-#if 0
-					while (!m_stop_input_loop && thread_ctrl::state() != thread_state::aborting)
+					if (interactive)
 					{
-						refresh();
-
-						// Only update the screen at about 60fps since updating it everytime slows down the process
-						std::this_thread::sleep_for(16ms);
-
-						if (!g_fxo->is_init<display_manager>())
-						{
-							rsx_log.fatal("display_manager was improperly destroyed");
-							break;
-						}
+						overlayman.attach_thread_input(
+							uid,
+							[&notify]() { *notify = true; notify->notify_one(); }
+						);
 					}
-#endif
+					else
+					{
+						overlayman.attach_thread_input(
+							uid,
+							[&notify]() { *notify = true; notify->notify_one(); },
+							nullptr,
+							[&]()
+							{
+								while (!m_stop_input_loop && thread_ctrl::state() != thread_state::aborting)
+								{
+									refresh();
+
+									// Only update the screen at about 60fps since updating it everytime slows down the process
+									std::this_thread::sleep_for(16ms);
+
+									if (!g_fxo->is_init<display_manager>())
+									{
+										rsx_log.fatal("display_manager was improperly destroyed");
+										break;
+									}
+								}
+
+								return 0;
+							}
+						);
+					}
 
 					while (!Emu.IsStopped() && !*notify)
 					{
