@@ -7,7 +7,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		display_manager::display_manager(int)
+		display_manager::display_manager(int) noexcept
 		{
 			m_input_thread = std::make_shared<named_thread<overlay_input_thread>>();
 			(*m_input_thread)([this]()
