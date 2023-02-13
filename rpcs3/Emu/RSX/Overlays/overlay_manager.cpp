@@ -151,6 +151,7 @@ namespace rsx
 
 		void display_manager::attach_thread_input(
 			u32 uid,
+			const std::string_view& name,
 			std::function<void()> on_input_loop_enter,
 			std::function<void(s32)> on_input_loop_exit,
 			std::function<s32()> input_loop_override)
@@ -158,6 +159,7 @@ namespace rsx
 			if (auto iface = std::dynamic_pointer_cast<user_interface>(get(uid)))
 			{
 				m_input_token_stack.push(
+					name,
 					std::move(iface),
 					on_input_loop_enter,
 					on_input_loop_exit,
@@ -209,7 +211,7 @@ namespace rsx
 					}
 					else if (result && result != user_interface::selection_code::canceled)
 					{
-						rsx_log.error("Input loop exited with error code=%d", result);
+						rsx_log.error("%s exited with error code=%d", input_context.name, result);
 					}
 				}
 

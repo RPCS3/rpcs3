@@ -243,7 +243,7 @@ namespace rsx
 			auto& overlayman = g_fxo->get<display_manager>();
 
 			overlayman.attach_thread_input(
-				uid,
+				uid, "User list dialog",
 				[&notify]() { *notify = true; notify->notify_one(); }
 			);
 

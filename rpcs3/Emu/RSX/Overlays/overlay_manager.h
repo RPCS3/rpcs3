@@ -157,6 +157,7 @@ namespace rsx
 			// Enable input thread attach to the specified interface
 			void attach_thread_input(
 				u32 uid,                                                 // The input target
+				const std::string_view& name,                            // The name of the target
 				std::function<void()> on_input_loop_enter = nullptr,     // [optional] What to do before running the input routine
 				std::function<void(s32)> on_input_loop_exit = nullptr,   // [optional] What to do with the result if any
 				std::function<s32()> input_loop_override = nullptr);     // [optional] What to do during the input loop. By default calls user_interface::run_input_loop
@@ -169,6 +170,7 @@ namespace rsx
 
 			struct input_thread_context_t
 			{
+				std::string_view name;
 				std::shared_ptr<user_interface> target;
 				std::function<void()> input_loop_prologue = nullptr;
 				std::function<void(s32)> input_loop_epilogue = nullptr;
