@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "overlay_manager.h"
 #include "overlay_osk.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
@@ -1624,31 +1625,26 @@ namespace rsx
 
 			update_panel();
 
-			auto& osk_thread = g_fxo->get<named_thread<osk_dialog_thread>>();
-
 			const auto notify = std::make_shared<atomic_t<bool>>(false);
+			auto& overlayman = g_fxo->get<display_manager>();
 
-			osk_thread([&, notify]()
-			{
-				const u64 tbit = alloc_thread_bit();
-				g_thread_bit = tbit;
-
-				*notify = true;
-				notify->notify_one();
-
-				if (const auto error = run_input_loop())
+			overlayman.attach_thread_input(
+				uid,
+				[](s32 error)
 				{
-					if (error != selection_code::canceled)
+					if (error && error != selection_code::canceled)
 					{
 						rsx_log.error("Osk input loop exited with error code=%d", error);
 					}
+				},
+				[&notify]()
+				{
+					*notify = true;
+					notify->notify_one();
 				}
+			);
 
-				thread_bits &= ~tbit;
-				thread_bits.notify_all();
-			});
-
-			while (osk_thread < thread_state::errored && !*notify)
+			while (!Emu.IsStopped() && !*notify)
 			{
 				notify->wait(false, atomic_wait_timeout{1'000'000});
 			}

@@ -2,6 +2,7 @@
 #include "system_progress.hpp"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
 #include "Emu/System.h"
 

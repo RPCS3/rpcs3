@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "overlays.h"
+#include "overlay_manager.h"
 #include "overlay_message_dialog.h"
 #include "Input/pad_thread.h"
 #include "Emu/Io/interception.h"
@@ -47,6 +48,8 @@ namespace rsx
 
 		s32 user_interface::run_input_loop()
 		{
+			user_interface::thread_bits_allocator thread_bits_alloc(this);
+
 			m_interactive = true;
 
 			std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;

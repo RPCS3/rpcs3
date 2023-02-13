@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "overlay_cursor.h"
+#include "overlay_manager.h"
+
 #include "Emu/RSX/RSXThread.h"
 
 namespace rsx

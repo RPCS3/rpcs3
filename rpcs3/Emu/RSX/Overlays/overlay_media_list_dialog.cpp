@@ -1,10 +1,12 @@
 #include "stdafx.h"
+#include "overlays.h"
+#include "overlay_manager.h"
 #include "overlay_media_list_dialog.h"
+
+#include "Emu/Cell/Modules/cellMusic.h"
+#include "Emu/VFS.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
-#include "overlays.h"
-#include "Emu/VFS.h"
-#include "Emu/Cell/Modules/cellMusic.h"
 
 namespace rsx
 {

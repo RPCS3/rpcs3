@@ -1,10 +1,23 @@
 #include "stdafx.h"
 #include "overlay_manager.h"
+#include "Emu/System.h"
 
 namespace rsx
 {
 	namespace overlays
 	{
+		display_manager::~display_manager()
+		{
+			if (m_input_thread)
+			{
+				m_input_thread_abort.store(true);
+				while (*m_input_thread <= thread_state::aborting)
+				{
+					_mm_pause();
+				}
+			}
+		}
+
 		void display_manager::lock()
 		{
 			m_list_mutex.lock_shared();
@@ -123,8 +136,29 @@ namespace rsx
 		{
 			if (auto iface = std::dynamic_pointer_cast<user_interface>(item))
 			{
+				// Kick input thread if not enabled. Expect the interface to attach shortly
 				std::lock_guard lock(m_input_thread_lock);
-				m_input_token_stack.emplace_front(std::move(iface));
+
+				if (!m_input_thread)
+				{
+					m_input_thread = std::make_shared<named_thread<overlay_input_thread>>();
+					(*m_input_thread)([this]()
+					{
+						input_thread_loop();
+					});
+				}
+			}
+		}
+
+		void display_manager::attach_thread_input(
+			u32 uid,
+			std::function<void(s32)> on_input_loop_exit,
+			std::function<void()> on_input_loop_enter)
+		{
+			if (auto iface = std::dynamic_pointer_cast<user_interface>(get(uid)))
+			{
+				std::lock_guard lock(m_input_thread_lock);
+				m_input_token_stack.emplace_front(std::move(iface), on_input_loop_enter, on_input_loop_exit);
 			}
 		}
 
@@ -151,6 +185,41 @@ namespace rsx
 			while (!m_input_token_stack.front().target && m_input_token_stack.size())
 			{
 				m_input_token_stack.pop_front();
+			}
+		}
+
+		void display_manager::input_thread_loop()
+		{
+			while (!m_input_thread_abort)
+			{
+				input_thread_context_t input_context;
+				{
+					reader_lock lock(m_input_thread_lock);
+					if (!m_input_token_stack.empty())
+					{
+						input_context = m_input_token_stack.front();
+						m_input_token_stack.pop_front();
+					}
+				}
+
+				if (input_context.target)
+				{
+					if (input_context.input_loop_prologue)
+					{
+						input_context.input_loop_prologue();
+					}
+
+					const auto result = input_context.target->run_input_loop();
+
+					if (input_context.input_loop_epilogue)
+					{
+						input_context.input_loop_epilogue(result);
+					}
+				}
+				else
+				{
+					thread_ctrl::wait_for(1000);
+				}
 			}
 		}
 	}
