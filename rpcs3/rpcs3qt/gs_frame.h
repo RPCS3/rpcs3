@@ -43,11 +43,12 @@ private:
 	bool m_hide_mouse_after_idletime = false;
 	u32 m_hide_mouse_idletime = 2000; // ms
 	bool m_flip_showed_frame = false;
+	bool m_start_games_fullscreen = false;
 
 	std::shared_ptr<utils::video_encoder> m_video_encoder{};
 
 public:
-	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings);
+	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);
 	~gs_frame();
 
 	draw_context_t make_context() override;
