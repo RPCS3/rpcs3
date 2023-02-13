@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_manager.h"
 #include "Emu/System.h"
+#include <util/asm.hpp>
 
 namespace rsx
 {
@@ -15,7 +16,7 @@ namespace rsx
 				*m_input_thread = thread_state::aborting;
 				while (*m_input_thread <= thread_state::aborting)
 				{
-					_mm_pause();
+					utils::pause();
 				}
 			}
 		}
