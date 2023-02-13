@@ -456,6 +456,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_edit_text.cpp
     RSX/Overlays/overlay_fonts.cpp
     RSX/Overlays/overlay_list_view.cpp
+    RSX/Overlays/overlay_manager.cpp
     RSX/Overlays/overlay_media_list_dialog.cpp
     RSX/Overlays/overlay_message.cpp
     RSX/Overlays/overlay_message_dialog.cpp
