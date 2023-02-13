@@ -1,6 +1,8 @@
 #pragma once
 
 #include "overlays.h"
+#include "overlay_manager.h"
+
 #include <deque>
 
 namespace rsx

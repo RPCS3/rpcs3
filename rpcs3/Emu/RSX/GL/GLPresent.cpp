@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
 #include "util/video_provider.h"
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "overlay_manager.h"
 #include "overlay_message_dialog.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -299,52 +300,42 @@ namespace rsx
 			{
 				if (!m_stop_input_loop)
 				{
-					auto& dlg_thread = g_fxo->get<named_thread<msg_dialog_thread>>();
-
 					const auto notify = std::make_shared<atomic_t<bool>>(false);
+					auto& overlayman = g_fxo->get<display_manager>();
 
-					dlg_thread([&, notify]()
+					overlayman.attach_thread_input(
+						uid,
+						[](s32 error)
+						{
+							if (error && error != selection_code::canceled)
+							{
+								rsx_log.error("Message dialog input loop exited with error code=%d", error);
+							}
+						},
+						[&notify]()
+						{
+							*notify = true;
+							notify->notify_one();
+						}
+					);
+
+#if 0
+					while (!m_stop_input_loop && thread_ctrl::state() != thread_state::aborting)
 					{
-						const u64 tbit = alloc_thread_bit();
-						g_thread_bit = tbit;
+						refresh();
 
-						*notify = true;
-						notify->notify_one();
+						// Only update the screen at about 60fps since updating it everytime slows down the process
+						std::this_thread::sleep_for(16ms);
 
-						if (interactive)
+						if (!g_fxo->is_init<display_manager>())
 						{
-							auto ref = g_fxo->get<display_manager>().get(uid);
-
-							if (const auto error = run_input_loop())
-							{
-								if (error != selection_code::canceled)
-								{
-									rsx_log.error("Message dialog input loop exited with error code=%d", error);
-								}
-							}
+							rsx_log.fatal("display_manager was improperly destroyed");
+							break;
 						}
-						else
-						{
-							while (!m_stop_input_loop && thread_ctrl::state() != thread_state::aborting)
-							{
-								refresh();
+					}
+#endif
 
-								// Only update the screen at about 60fps since updating it everytime slows down the process
-								std::this_thread::sleep_for(16ms);
-
-								if (!g_fxo->is_init<display_manager>())
-								{
-									rsx_log.fatal("display_manager was improperly destroyed");
-									break;
-								}
-							}
-						}
-
-						thread_bits &= ~tbit;
-						thread_bits.notify_all();
-					});
-
-					while (dlg_thread < thread_state::errored && !*notify)
+					while (!Emu.IsStopped() && !*notify)
 					{
 						notify->wait(false, atomic_wait_timeout{1'000'000});
 					}

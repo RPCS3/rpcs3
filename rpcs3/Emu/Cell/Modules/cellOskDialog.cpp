@@ -4,8 +4,10 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/Keyboard.h"
-#include "Emu/RSX/Overlays/overlay_osk.h"
 #include "Emu/IdManager.h"
+
+#include "Emu/RSX/Overlays/overlay_manager.h"
+#include "Emu/RSX/Overlays/overlay_osk.h"
 
 #include "cellSysutil.h"
 #include "cellOskDialog.h"

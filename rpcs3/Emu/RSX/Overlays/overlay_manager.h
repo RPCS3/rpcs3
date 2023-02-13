@@ -4,6 +4,7 @@
 
 #include "Emu/IdManager.h"
 #include "Utilities/mutex.h"
+#include "Utilities/Thread.h"
 #include "Utilities/Timer.h"
 
 #include <deque>
@@ -40,6 +41,8 @@ namespace rsx
 			// Disable default construction to make it conditionally available in g_fxo
 			explicit display_manager(int) noexcept
 			{}
+
+			~display_manager();
 
 			// Adds an object to the internal list. Optionally removes other objects of the same type.
 			// Original handle loses ownership but a usable pointer is returned
@@ -152,19 +155,31 @@ namespace rsx
 			// Release read-only lock (BasicLockable). May perform internal cleanup before returning
 			void unlock();
 
+			// Enable input thread attach to the specified interface
+			void attach_thread_input(
+				u32 uid,                                                 // The input target
+				std::function<void(s32)> on_input_loop_exit = nullptr,   // [optional] What to do with the result if any
+				std::function<void()> on_input_loop_enter = nullptr);    // [optional] What to do before running the input routine
+
 		private:
 			struct overlay_input_thread
 			{
 				static constexpr auto thread_name = "Overlay Input Thread"sv;
 			};
 
-			struct input_thread_access_token
+			struct input_thread_context_t
 			{
 				std::shared_ptr<user_interface> target;
+				std::function<void()> input_loop_prologue = nullptr;
+				std::function<void(s32)> input_loop_epilogue = nullptr;
 			};
 
-			std::deque<input_thread_access_token> m_input_token_stack;
+			std::deque<input_thread_context_t> m_input_token_stack;
 			shared_mutex m_input_thread_lock;
+			atomic_t<bool> m_input_thread_abort = false;
+
+			std::shared_ptr<named_thread<overlay_input_thread>> m_input_thread;
+			void input_thread_loop();
 		};
 	}
 }
