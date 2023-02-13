@@ -170,19 +170,8 @@ namespace rsx
 			auto& overlayman = g_fxo->get<display_manager>();
 
 			overlayman.attach_thread_input(
-				uid,                         // Target
-				[](s32 error)               // What to do with the result
-				{
-					if (error && error != selection_code::canceled)
-					{
-						rsx_log.error("Home menu dialog input loop exited with error code=%d", error);
-					}
-				},
-				[&notify]()                  // What to do before starting the loop
-				{
-					*notify = true;
-					notify->notify_one();
-				}
+				uid,
+				[&notify]() { *notify = true; notify->notify_one(); }
 			);
 
 			if (g_cfg.misc.pause_during_home_menu)

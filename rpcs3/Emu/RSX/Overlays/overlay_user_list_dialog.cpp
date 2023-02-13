@@ -249,18 +249,7 @@ namespace rsx
 
 			overlayman.attach_thread_input(
 				uid,
-				[](s32 error)
-				{
-					if (error && error != selection_code::canceled)
-					{
-						rsx_log.error("User list dialog input loop exited with error code=%d", error);
-					}
-				},
-				[&notify]()
-				{
-					*notify = true;
-					notify->notify_one();
-				}
+				[&notify]() { *notify = true; notify->notify_one(); }
 			);
 
 			while (!Emu.IsStopped() && !*notify)
