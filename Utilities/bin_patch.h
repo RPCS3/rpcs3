@@ -22,6 +22,8 @@ namespace patch_key
 
 inline static const std::string patch_engine_version = "1.2";
 
+std::shared_ptr<gui_settings> m_gui_settings
+
 enum class patch_type
 {
 	invalid,
@@ -45,6 +47,7 @@ enum class patch_type
 	bef32,
 	bef64,
 	utf8, // Text of string (not null-terminated automatically)
+	bef32_aspectratio,
 };
 
 class patch_engine

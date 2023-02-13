@@ -59,6 +59,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::lef32: return "lef32";
 		case patch_type::lef64: return "lef64";
 		case patch_type::utf8: return "utf8";
+		case patch_type::bef32_aspectratio: return "bef32_aspectratio";
 		}
 
 		return unknown;
@@ -485,6 +486,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	{
 		break;
 	}
+	//case patch_type::bef32_aspectratio:
 	case patch_type::bef32:
 	case patch_type::lef32:
 	case patch_type::bef64:
@@ -938,6 +940,14 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 		case patch_type::utf8:
 		{
 			std::memcpy(ptr, p.original_value.data(), p.original_value.size());
+			break;
+		}
+		case patch_type::bef32_aspectratio:
+		{
+			w = m_gui_settings->GetValue(gui::gs_width).toInt();
+			h = m_gui_settings->GetValue(gui::gs_height).toInt();
+			be_t<f32> val = w / h
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		}
