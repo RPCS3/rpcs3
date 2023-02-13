@@ -1624,7 +1624,7 @@ namespace rsx
 			auto& overlayman = g_fxo->get<display_manager>();
 
 			overlayman.attach_thread_input(
-				uid,
+				uid, "OSK",
 				[&notify]() { *notify = true; notify->notify_one(); }
 			);
 
