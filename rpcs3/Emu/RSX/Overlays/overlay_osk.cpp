@@ -1321,11 +1321,6 @@ namespace rsx
 			return m_cached_resource;
 		}
 
-		struct osk_dialog_thread
-		{
-			static constexpr auto thread_name = "OSK Thread"sv;
-		};
-
 		void osk_dialog::Create(const osk_params& params)
 		{
 			state = OskDialogState::Open;

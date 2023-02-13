@@ -176,11 +176,6 @@ namespace rsx
 			return result;
 		}
 
-		struct user_list_dialog_thread
-		{
-			static constexpr auto thread_name = "UserList Thread"sv;
-		};
-
 		error_code user_list_dialog::show(const std::string& title, u32 focused, const std::vector<u32>& user_ids, bool enable_overlay, std::function<void(s32 status)> on_close)
 		{
 			visible = false;
