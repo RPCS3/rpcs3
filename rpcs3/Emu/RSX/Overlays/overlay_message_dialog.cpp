@@ -279,8 +279,6 @@ namespace rsx
 						}
 						return error;
 					}
-
-					g_last_user_response = return_code;
 				}
 				else
 				{
