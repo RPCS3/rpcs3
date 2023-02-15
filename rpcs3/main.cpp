@@ -81,7 +81,6 @@ static atomic_t<bool> s_headless = false;
 static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
-atomic_t<bool> g_start_games_fullscreen = false;
 std::string g_pad_profile_override;
 
 extern thread_local std::string(*g_tls_log_prefix)();
@@ -278,6 +277,7 @@ constexpr auto arg_commit_db    = "get-commit-db";
 // Arguments that can be used with a gui application
 constexpr auto arg_no_gui       = "no-gui";
 constexpr auto arg_fullscreen   = "fullscreen"; // only useful with no-gui
+constexpr auto arg_gs_screen    = "game-screen";
 constexpr auto arg_high_dpi     = "hidpi";
 constexpr auto arg_rounding     = "dpi-rounding";
 constexpr auto arg_styles       = "styles";
@@ -630,6 +630,8 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_fullscreen, "Run games in fullscreen mode. Only used when no-gui is set."));
+	const QCommandLineOption screen_option(arg_gs_screen, "Forces the emulator to use the specified screen for the game window.", "index", "");
+	parser.addOption(screen_option);
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
 	parser.addOption(QCommandLineOption(arg_rounding, "Sets the Qt::HighDpiScaleFactorRoundingPolicy for values like 150% zoom.", "rounding", "4"));
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
@@ -935,14 +937,8 @@ int main(int argc, char** argv)
 	}
 
 	s_no_gui = parser.isSet(arg_no_gui);
-	g_start_games_fullscreen = parser.isSet(arg_fullscreen);
 
-	if (g_start_games_fullscreen && !s_no_gui)
-	{
-		report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_fullscreen, arg_no_gui));
-	}
-
-	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
+	if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))
 	{
 		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
 		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
@@ -953,13 +949,35 @@ int main(int argc, char** argv)
 		gui_app->SetWithCliBoot(parser.isSet(arg_installfw) || parser.isSet(arg_installpkg) || !parser.positionalArguments().isEmpty());
 		gui_app->SetActiveUser(active_user);
 
+		if (parser.isSet(arg_fullscreen))
+		{
+			if (!s_no_gui)
+			{
+				report_fatal_error(fmt::format("The option '%s' can only be used in combination with '%s'.", arg_fullscreen, arg_no_gui));
+			}
+
+			gui_app->SetStartGamesFullscreen(true);
+		}
+
+		if (parser.isSet(arg_gs_screen))
+		{
+			const int game_screen_index = parser.value(arg_gs_screen).toInt();
+
+			if (game_screen_index < 0)
+			{
+				report_fatal_error(fmt::format("The option '%s' can only be used with numbers >= 0 (you used %d)", arg_gs_screen, game_screen_index));
+			}
+
+			gui_app->SetGameScreenIndex(game_screen_index);
+		}
+
 		if (!gui_app->Init())
 		{
 			Emu.Quit(true);
 			return 0;
 		}
 	}
-	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
+	else if (headless_application* headless_app = qobject_cast<headless_application*>(app.data()))
 	{
 		s_headless = true;
 

@@ -288,10 +288,48 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		}
 	}
 
-	const auto screen = m_main_window ? m_main_window->screen() : primaryScreen();
-	const auto base_geometry  = m_main_window ? m_main_window->frameGeometry() : primaryScreen()->geometry();
-	const auto frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
-	const auto app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
+	QScreen* screen = nullptr;
+	QRect base_geometry{};
+
+	// Use screen index set by CLI argument
+	int screen_index = m_game_screen_index;
+
+	// In no-gui mode: use last used screen if no CLI index was set
+	if (screen_index < 0 && !m_main_window)
+	{
+		screen_index = m_gui_settings->GetValue(gui::gs_screen).toInt();
+	}
+
+	// Try to find the specified screen
+	if (screen_index >= 0)
+	{
+		const QList<QScreen*> available_screens = screens();
+
+		if (screen_index < available_screens.count())
+		{
+			screen = ::at32(available_screens, screen_index);
+
+			if (screen)
+			{
+				base_geometry = screen->geometry();
+			}
+		}
+
+		if (!screen)
+		{
+			gui_log.error("The selected game screen with index %d is not available (available screens: %d)", screen_index, available_screens.count());
+		}
+	}
+
+	// Fallback to the screen of the main window. Use the primary screen as last resort.
+	if (!screen)
+	{
+		screen = m_main_window ? m_main_window->screen() : primaryScreen();
+		base_geometry = m_main_window ? m_main_window->frameGeometry() : primaryScreen()->geometry();
+	}
+
+	const QRect frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
+	const QIcon app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	gs_frame* frame = nullptr;
 
@@ -299,13 +337,13 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	{
 	case video_renderer::opengl:
 	{
-		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
+		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings, m_start_games_fullscreen);
 		break;
 	}
 	case video_renderer::null:
 	case video_renderer::vulkan:
 	{
-		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
+		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings, m_start_games_fullscreen);
 		break;
 	}
 	}

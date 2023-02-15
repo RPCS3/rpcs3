@@ -18,7 +18,7 @@ private:
 	GLContext *m_primary_context = nullptr;
 
 public:
-	explicit gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings);
+	explicit gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);
 
 	draw_context_t make_context() override;
 	void set_current(draw_context_t ctx) override;
