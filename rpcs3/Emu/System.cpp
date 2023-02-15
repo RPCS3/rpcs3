@@ -420,6 +420,7 @@ void Emulator::Init(bool add_only)
 		{
 			make_path_verbose(dev_hdd0 + "game/", false);
 			make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"game/＄locks/"), false);
+			make_path_verbose(dev_hdd0 + "game/TEST12345/USRDIR/", false); // Some test elfs rely on this
 			make_path_verbose(dev_hdd0 + "home/", false);
 			make_path_verbose(dev_hdd0 + "home/" + m_usr + "/", false);
 			make_path_verbose(dev_hdd0 + "home/" + m_usr + "/exdata/", false);
