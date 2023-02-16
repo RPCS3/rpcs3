@@ -28,7 +28,7 @@ namespace IPC_socket
 		static void write64(u32 addr, be_t<u64> value);
 
 		template<typename... Args>
-		static void error(const const_str& fmt, const Args&&... args)
+		static void error(const const_str& fmt, Args&&... args)
 		{
 			IPC.error(fmt, std::forward<Args>(args)...);
 		}

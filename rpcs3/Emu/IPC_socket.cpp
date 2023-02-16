@@ -106,9 +106,9 @@ namespace IPC_socket
 				m_old_port = port;
 			}
 		}
-		else if (!enabled && m_ipc_server)
+		else
 		{
-			m_ipc_server.reset(nullptr);
+			m_ipc_server.reset();
 		}
 	}
 }
