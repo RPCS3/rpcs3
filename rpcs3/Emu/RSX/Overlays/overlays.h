@@ -8,8 +8,6 @@
 #include "Utilities/Timer.h"
 
 #include "../Common/bitfield.hpp"
-#include "../../system_progress.hpp"
-
 
 #include <mutex>
 #include <set>
@@ -143,7 +141,6 @@ namespace rsx
 		class display_manager
 		{
 		private:
-			friend progress_dialog_server;
 			atomic_t<u32> m_uid_ctr = 0;
 			std::vector<std::shared_ptr<overlay>> m_iface_list;
 			std::vector<std::shared_ptr<overlay>> m_dirty_list;
