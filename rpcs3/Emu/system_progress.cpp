@@ -80,6 +80,7 @@ void progress_dialog_server::operator()()
 				type.progress_bar_count = 1;
 
 				native_dlg = manager->create<rsx::overlays::progress_dialog>(true);
+				std::lock_guard lock(manager->m_list_mutex);
 				native_dlg->show(false, text0, type, nullptr);
 				native_dlg->progress_bar_set_message(0, "Please wait");
 			}
@@ -161,6 +162,8 @@ void progress_dialog_server::operator()()
 				// Changes detected, send update
 				if (native_dlg)
 				{
+					auto manager  = g_fxo->try_get<rsx::overlays::display_manager>();
+					std::lock_guard lock(manager->m_list_mutex);
 					native_dlg->set_text(text_new);
 					native_dlg->progress_bar_set_message(0, progr);
 					native_dlg->progress_bar_set_value(0, std::floor(value));
