@@ -37,6 +37,14 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr);
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
+std::unordered_map<std::string, ppu_static_module*>& ppu_module_manager::get()
+{
+	// In C++ the order of static initialization is undefined if it happens in
+	// separate compilation units, therefore we have to initialize the map on first use.
+	static std::unordered_map<std::string, ppu_static_module*> s_module_map;
+	return s_module_map;
+}
+
 // HLE function name cache
 std::vector<std::string> g_ppu_function_names;
 
@@ -82,12 +90,12 @@ void ppu_static_module::initialize()
 
 void ppu_module_manager::register_module(ppu_static_module* _module)
 {
-	ppu_module_manager::s_module_map.emplace(_module->name, _module);
+	ppu_module_manager::get().emplace(_module->name, _module);
 }
 
 ppu_static_function& ppu_module_manager::access_static_function(const char* _module, u32 fnid)
 {
-	auto& res = ::at32(ppu_module_manager::s_module_map, _module)->functions[fnid];
+	auto& res = ::at32(ppu_module_manager::get(), _module)->functions[fnid];
 
 	if (res.name)
 	{
@@ -99,7 +107,7 @@ ppu_static_function& ppu_module_manager::access_static_function(const char* _mod
 
 ppu_static_variable& ppu_module_manager::access_static_variable(const char* _module, u32 vnid)
 {
-	auto& res = ::at32(ppu_module_manager::s_module_map, _module)->variables[vnid];
+	auto& res = ::at32(ppu_module_manager::get(), _module)->variables[vnid];
 
 	if (res.name)
 	{
@@ -111,14 +119,14 @@ ppu_static_variable& ppu_module_manager::access_static_variable(const char* _mod
 
 const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
 {
-	const auto& map = ppu_module_manager::s_module_map;
+	const auto& map = ppu_module_manager::get();
 	const auto found = map.find(name);
 	return found != map.end() ? found->second : nullptr;
 }
 
 void ppu_module_manager::initialize_modules()
 {
-	for (auto& _module : s_module_map)
+	for (auto& _module : ppu_module_manager::get())
 	{
 		_module.second->initialize();
 	}
