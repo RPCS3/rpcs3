@@ -43,7 +43,7 @@ namespace rsx
 
 			error_code show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);
 
-			void set_text(const std::string& text);
+			virtual void set_text(const std::string& text);
 			void update_custom_background();
 
 			u32 progress_bar_count() const;

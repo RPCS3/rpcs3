@@ -24,8 +24,20 @@ namespace rsx::overlays
 {
 	class progress_dialog : public message_dialog
 	{
+		shared_mutex m_mutex;
 	public:
 		using message_dialog::message_dialog;
+
+		compiled_resource get_compiled() override {
+			reader_lock lock(m_mutex);
+			return message_dialog::get_compiled();
+		};
+
+		void set_text(const std::string& text) override {
+			std::lock_guard lock(m_mutex);
+			message_dialog::set_text(text);
+		};
+		
 	};
 } // namespace rsx::overlays
 
