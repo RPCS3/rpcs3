@@ -39,6 +39,8 @@ extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
 std::unordered_map<std::string, ppu_static_module*>& ppu_module_manager::get()
 {
+	// In C++ the order of static initialization is undefined if it happens in
+	// separate compilation units, therefore we have to initialize the map on first use.
 	static std::unordered_map<std::string, ppu_static_module*> s_module_map;
 	return s_module_map;
 }
