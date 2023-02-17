@@ -357,7 +357,7 @@ namespace pine
 		{
 			::pollfd poll_fd{};
 
-			for (int pending_connection = 0; pending_connection <= 0;)
+			for (int pending_connection = 0; pending_connection != 1;)
 			{
 				if (thread_ctrl::state() == thread_state::aborting)
 				{
