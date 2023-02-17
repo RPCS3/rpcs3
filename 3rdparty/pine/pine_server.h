@@ -24,6 +24,7 @@
 #define close_portable(a) (close(a))
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <netinet/in.h>
 #if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <unistd.h>
 #endif
