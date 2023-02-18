@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QDoubleSpinBox>
 
 #include "ui_patch_manager_dialog.h"
 #include "patch_manager_dialog.h"
@@ -43,7 +44,8 @@ enum patch_role : int
 	description_role,
 	patch_group_role,
 	persistance_role,
-	node_level_role
+	node_level_role,
+	dynamic_values_role
 };
 
 enum node_level : int
@@ -64,9 +66,6 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	ui->setupUi(this);
 	setModal(true);
 
-	// Load config for special settings
-	patch_engine::load_config();
-
 	// Load gui settings
 	m_show_owned_games_only = m_gui_settings->GetValue(gui::pm_show_owned).toBool();
 
@@ -84,6 +83,7 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::handle_item_changed);
 	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::handle_custom_context_menu_requested);
 	connect(ui->cb_owned_games_only, &QCheckBox::stateChanged, this, &patch_manager_dialog::handle_show_owned_games_only);
+	connect(ui->dynamic_value_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &patch_manager_dialog::handle_dynamic_value_changed);
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
@@ -259,7 +259,7 @@ void patch_manager_dialog::populate_tree()
 					const QString q_serial = QString::fromStdString(serial);
 					const QString visible_serial = serial == patch_key::all ? tr_all_serials : q_serial;
 
-					for (const auto& [app_version, enabled] : app_versions)
+					for (const auto& [app_version, config_values] : app_versions)
 					{
 						const QString q_app_version = QString::fromStdString(app_version);
 						const QString q_version_suffix = app_version == patch_key::all ? (QStringLiteral(" - ") + tr_all_versions) : (QStringLiteral(" v.") + q_app_version);
@@ -305,9 +305,16 @@ void patch_manager_dialog::populate_tree()
 							visible_description += QString::number(counter) + ')';
 						}
 
+						QMap<QString, QVariant> q_dynamic_values;
+
+						for (const auto& [key, value] : patch.default_dynamic_values)
+						{
+							q_dynamic_values[QString::fromStdString(key)] = config_values.dynamic_values.contains(key) ? config_values.dynamic_values.at(key) : value;
+						}
+
 						QTreeWidgetItem* patch_level_item = new QTreeWidgetItem();
 						patch_level_item->setText(0, visible_description);
-						patch_level_item->setCheckState(0, enabled ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
+						patch_level_item->setCheckState(0, config_values.enabled ? Qt::CheckState::Checked : Qt::CheckState::Unchecked);
 						patch_level_item->setData(0, hash_role, q_hash);
 						patch_level_item->setData(0, title_role, q_title);
 						patch_level_item->setData(0, serial_role, q_serial);
@@ -316,6 +323,7 @@ void patch_manager_dialog::populate_tree()
 						patch_level_item->setData(0, patch_group_role, q_patch_group);
 						patch_level_item->setData(0, node_level_role, node_level::patch_level);
 						patch_level_item->setData(0, persistance_role, true);
+						patch_level_item->setData(0, dynamic_values_role, q_dynamic_values);
 
 						serial_level_item->addChild(patch_level_item);
 					}
@@ -395,7 +403,7 @@ void patch_manager_dialog::filter_patches(const QString& term)
 				const std::string app_version = item->data(0, app_version_role).toString().toStdString();
 
 				if (serial != patch_key::all &&
-					(m_owned_games.find(serial) == m_owned_games.end() || (app_version != patch_key::all && !::at32(m_owned_games, serial).contains(app_version))))
+					(!m_owned_games.contains(serial) || (app_version != patch_key::all && !::at32(m_owned_games, serial).contains(app_version))))
 				{
 					item->setHidden(true);
 					return 0;
@@ -494,6 +502,11 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	ui->label_serial->setText(info.serial);
 	ui->label_title->setText(info.title);
 	ui->label_app_version->setText(info.app_version);
+
+	// TODO: support more than one value in the future
+	ui->dynamic_label->setText(info.dynamic_values.empty() ? tr("N/A") : info.dynamic_values.firstKey());
+	ui->dynamic_value_box->setValue(info.dynamic_values.empty() ? 0.0 : info.dynamic_values.first().toDouble());
+	ui->dynamic_value_box->setEnabled(!info.dynamic_values.empty());
 }
 
 void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
@@ -519,17 +532,18 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 		const std::string description = current->data(0, description_role).toString().toStdString();
 
 		// Find the patch for this item and get its metadata
-		if (m_map.find(hash) != m_map.end())
+		if (m_map.contains(hash))
 		{
 			const auto& container = ::at32(m_map, hash);
 
-			if (container.patch_info_map.find(description) != container.patch_info_map.end())
+			if (container.patch_info_map.contains(description))
 			{
 				const auto& found_info = ::at32(container.patch_info_map, description);
 				info.author = QString::fromStdString(found_info.author);
 				info.notes = QString::fromStdString(found_info.notes);
 				info.description = QString::fromStdString(found_info.description);
 				info.patch_version = QString::fromStdString(found_info.patch_version);
+				info.dynamic_values = current->data(0, dynamic_values_role).toMap();
 			}
 		}
 		[[fallthrough]];
@@ -593,15 +607,70 @@ void patch_manager_dialog::handle_item_changed(QTreeWidgetItem *item, int /*colu
 	}
 
 	// Enable/disable the patch for this item and show its metadata
-	if (m_map.find(hash) != m_map.end())
+	if (m_map.contains(hash))
 	{
-		auto& container = m_map[hash];
+		auto& info = m_map[hash].patch_info_map;
 
-		if (container.patch_info_map.find(description) != container.patch_info_map.end())
+		if (info.contains(description))
 		{
-			m_map[hash].patch_info_map[description].titles[title][serial][app_version] = enabled;
+			info[description].titles[title][serial][app_version].enabled = enabled;
 			handle_item_selected(item, nullptr);
-			return;
+		}
+	}
+}
+
+void patch_manager_dialog::handle_dynamic_value_changed(double value)
+{
+	QList<QTreeWidgetItem*> list = ui->patch_tree->selectedItems();
+	QTreeWidgetItem* item = list.size() == 1 ? list.first() : nullptr;
+
+	if (!item)
+	{
+		return;
+	}
+
+	const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
+
+	if (level != node_level::patch_level)
+	{
+		return;
+	}
+
+	const QString key = ui->dynamic_label->text();
+	const QVariant data = item->data(0, dynamic_values_role);
+	QVariantMap q_dynamic_values = data.canConvert<QVariantMap>() ? data.toMap() : QVariantMap{};
+
+	if (q_dynamic_values.isEmpty() || !q_dynamic_values.contains(key))
+	{
+		return;
+	}
+
+	q_dynamic_values[key] = value;
+	item->setData(0, dynamic_values_role, q_dynamic_values);
+
+	// Update the dynamic value of the patch for this item
+	const std::string hash = item->data(0, hash_role).toString().toStdString();
+	const std::string title = item->data(0, title_role).toString().toStdString();
+	const std::string serial = item->data(0, serial_role).toString().toStdString();
+	const std::string app_version = item->data(0, app_version_role).toString().toStdString();
+	const std::string description = item->data(0, description_role).toString().toStdString();
+
+	if (m_map.contains(hash))
+	{
+		auto& info = m_map[hash].patch_info_map;
+
+		if (info.contains(description))
+		{
+			auto& patch = info[description];
+			auto& dynamic_values = patch.titles[title][serial][app_version].dynamic_values;
+
+			for (const QString& q_key : q_dynamic_values.keys())
+			{
+				if (const std::string s_key = q_key.toStdString(); patch.default_dynamic_values.contains(s_key))
+				{
+					dynamic_values[s_key] = q_dynamic_values[q_key].toDouble();
+				}
+			}
 		}
 	}
 }
@@ -625,11 +694,11 @@ void patch_manager_dialog::handle_custom_context_menu_requested(const QPoint &po
 		const std::string hash = item->data(0, hash_role).toString().toStdString();
 		const std::string description = item->data(0, description_role).toString().toStdString();
 
-		if (m_map.find(hash) != m_map.end())
+		if (m_map.contains(hash))
 		{
 			const auto& container = ::at32(m_map, hash);
 
-			if (container.patch_info_map.find(description) != container.patch_info_map.end())
+			if (container.patch_info_map.contains(description))
 			{
 				const auto& info = ::at32(container.patch_info_map, description);
 

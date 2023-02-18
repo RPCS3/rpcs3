@@ -18,6 +18,8 @@ namespace patch_key
 	static const std::string patch = "Patch";
 	static const std::string patch_version = "Patch Version";
 	static const std::string version = "Version";
+	static const std::string enabled = "Enabled";
+	static const std::string dynamic_values = "Dynamic Values";
 }
 
 inline static const std::string patch_engine_version = "1.2";
@@ -63,7 +65,12 @@ public:
 		mutable u32 alloc_addr = 0; // Used to save optional allocation address (if occured)
 	};
 
-	using patch_app_versions = std::unordered_map<std::string /*app_version*/, bool /*enabled*/>;
+	struct patch_config_values
+	{
+		bool enabled{};
+		std::map<std::string, f64> dynamic_values;
+	};
+	using patch_app_versions = std::unordered_map<std::string /*app_version*/, patch_config_values>;
 	using patch_serials = std::unordered_map<std::string /*serial*/, patch_app_versions>;
 	using patch_titles = std::unordered_map<std::string /*serial*/, patch_serials>;
 
@@ -78,6 +85,7 @@ public:
 		std::string author{};
 		std::string notes{};
 		std::string source_path{};
+		std::map<std::string, f64> default_dynamic_values;
 
 		// Redundant information for accessibility (see patch_container)
 		std::string hash{};
