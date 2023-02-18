@@ -28,19 +28,22 @@ namespace rsx::overlays
 	public:
 		using message_dialog::message_dialog;
 
-		compiled_resource get_compiled() override {
+		compiled_resource get_compiled() override
+		{
 			reader_lock lock(m_mutex);
 			return message_dialog::get_compiled();
 		}
 
-		void set_text(const std::string& text) override {
+		void set_text(const std::string& text) override
+		{
 			if (std::unique_lock lock(m_mutex, std::try_to_lock); lock)
 			{
 				message_dialog::set_text(text);
 			}
 		}
 
-		error_code progress_bar_set_message(u32 index, const std::string& msg) override {
+		error_code progress_bar_set_message(u32 index, const std::string& msg) override
+		{
 			if (std::unique_lock lock(m_mutex, std::try_to_lock); lock)
 			{
 				return message_dialog::progress_bar_set_message(index, msg);
