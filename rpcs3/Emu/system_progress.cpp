@@ -31,12 +31,22 @@ namespace rsx::overlays
 		compiled_resource get_compiled() override {
 			reader_lock lock(m_mutex);
 			return message_dialog::get_compiled();
-		};
+		}
 
 		void set_text(const std::string& text) override {
-			std::lock_guard lock(m_mutex);
-			message_dialog::set_text(text);
-		};
+			if (std::unique_lock lock(m_mutex, std::try_to_lock); lock)
+			{
+				message_dialog::set_text(text);
+			}
+		}
+
+		error_code progress_bar_set_message(u32 index, const std::string& msg) override {
+			if (std::unique_lock lock(m_mutex, std::try_to_lock); lock)
+			{
+				return message_dialog::progress_bar_set_message(index, msg);
+			}
+			return CELL_OK;
+		}
 		
 	};
 } // namespace rsx::overlays
