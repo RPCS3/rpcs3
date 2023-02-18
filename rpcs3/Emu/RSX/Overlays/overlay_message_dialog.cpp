@@ -71,6 +71,23 @@ namespace rsx
 				return {};
 			}
 
+			if (const auto [dirty, text] = text_guard.get_text(); dirty)
+			{
+				u16 text_w, text_h;
+				text_display.set_pos(90, 364);
+				text_display.set_text(text);
+				text_display.measure_text(text_w, text_h);
+				text_display.translate(0, -(text_h - 16));
+			}
+
+			for (u32 i = 0; i < progress_bars.size(); i++)
+			{
+				if (const auto [dirty, text] = ::at32(bar_text_guard, i).get_text(); dirty)
+				{
+					::at32(progress_bars, i).set_text(text);
+				}
+			}
+
 			compiled_resource result;
 
 			update_custom_background();
@@ -339,11 +356,7 @@ namespace rsx
 
 		void message_dialog::set_text(const std::string& text)
 		{
-			u16 text_w, text_h;
-			text_display.set_pos(90, 364);
-			text_display.set_text(text);
-			text_display.measure_text(text_w, text_h);
-			text_display.translate(0, -(text_h - 16));
+			text_guard.set_text(text);
 		}
 
 		void message_dialog::update_custom_background()
@@ -415,7 +428,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			::at32(progress_bars, index).set_text(msg);
+			::at32(bar_text_guard, index).set_text(msg);
 
 			return CELL_OK;
 		}
