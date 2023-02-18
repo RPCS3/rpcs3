@@ -334,7 +334,6 @@ struct vdec_context final
 
 				out_queue.clear(); // Flush image queue
 				log_time_base = {};
-				au_count = 0;
 
 				frc_set = 0; // TODO: ???
 				next_pts = 0;
