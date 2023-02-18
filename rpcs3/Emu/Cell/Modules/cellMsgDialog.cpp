@@ -369,11 +369,11 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 	if (_type.se_normal)
 	{
-		cellSysutil.warning("%s", msgString);
+		cellSysutil.warning("Opening message dialog with message: %s", msgString);
 	}
 	else
 	{
-		cellSysutil.error("%s", msgString);
+		cellSysutil.error("Opening error message dialog with message: %s", msgString);
 	}
 
 	return open_msg_dialog(false, type, msgString, callback, userData, extParam);
