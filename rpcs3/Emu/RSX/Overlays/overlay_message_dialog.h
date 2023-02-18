@@ -16,7 +16,7 @@ namespace rsx
 
 			overlay_element bottom_bar, background;
 			image_view background_poster;
-			progress_bar progress_1, progress_2;
+			std::array<progress_bar, 2> progress_bars{};
 			u8 num_progress_bars = 0;
 			s32 taskbar_index = 0;
 			s32 taskbar_limit = 0;

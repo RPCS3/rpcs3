@@ -30,10 +30,11 @@ namespace rsx
 			bottom_bar.set_size(1200, 2);
 			bottom_bar.set_pos(40, 400);
 
-			progress_1.set_size(800, 4);
-			progress_2.set_size(800, 4);
-			progress_1.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
-			progress_2.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
+			for (progress_bar& bar : progress_bars)
+			{
+				bar.set_size(800, 4);
+				bar.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
+			}
 
 			btn_ok.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_YES);
 			btn_ok.set_size(140, 30);
@@ -84,12 +85,12 @@ namespace rsx
 
 			if (num_progress_bars > 0)
 			{
-				result.add(progress_1.get_compiled());
+				result.add(::at32(progress_bars, 0).get_compiled());
 			}
 
 			if (num_progress_bars > 1)
 			{
-				result.add(progress_2.get_compiled());
+				result.add(::at32(progress_bars, 1).get_compiled());
 			}
 
 			if (interactive)
@@ -196,11 +197,11 @@ namespace rsx
 			if (num_progress_bars)
 			{
 				u16 offset = 58;
-				progress_1.set_pos(240, 412);
+				::at32(progress_bars, 0).set_pos(240, 412);
 
 				if (num_progress_bars > 1)
 				{
-					progress_2.set_pos(240, 462);
+					::at32(progress_bars, 1).set_pos(240, 462);
 					offset = 98;
 				}
 
@@ -414,10 +415,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.set_text(msg);
-			else
-				progress_2.set_text(msg);
+			::at32(progress_bars, index).set_text(msg);
 
 			return CELL_OK;
 		}
@@ -427,10 +425,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.inc(value);
-			else
-				progress_2.inc(value);
+			::at32(progress_bars, index).inc(value);
 
 			if (index == static_cast<u32>(taskbar_index) || taskbar_index == -1)
 				Emu.GetCallbacks().handle_taskbar_progress(1, static_cast<s32>(value));
@@ -443,10 +438,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.set_value(value);
-			else
-				progress_2.set_value(value);
+			::at32(progress_bars, index).set_value(value);
 
 			if (index == static_cast<u32>(taskbar_index) || taskbar_index == -1)
 				Emu.GetCallbacks().handle_taskbar_progress(3, static_cast<s32>(value));
@@ -459,10 +451,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.set_value(0.f);
-			else
-				progress_2.set_value(0.f);
+			::at32(progress_bars, index).set_value(0.f);
 
 			Emu.GetCallbacks().handle_taskbar_progress(0, 0);
 
@@ -474,10 +463,7 @@ namespace rsx
 			if (index >= num_progress_bars)
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
-			if (index == 0)
-				progress_1.set_limit(static_cast<f32>(limit));
-			else
-				progress_2.set_limit(static_cast<f32>(limit));
+			::at32(progress_bars, index).set_limit(static_cast<f32>(limit));
 
 			if (index == static_cast<u32>(taskbar_index))
 			{
