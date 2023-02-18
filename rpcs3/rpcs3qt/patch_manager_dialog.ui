@@ -272,7 +272,13 @@
                </widget>
               </item>
               <item>
-               <widget class="QDoubleSpinBox" name="dynamic_value_box">
+               <widget class="QComboBox" name="dynamic_combo_box"/>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="dynamic_spin_box"/>
+              </item>
+              <item>
+               <widget class="QDoubleSpinBox" name="dynamic_double_spin_box">
                 <property name="minimum">
                  <double>-1000000.000000000000000</double>
                 </property>

@@ -20,6 +20,11 @@ namespace patch_key
 	static const std::string version = "Version";
 	static const std::string enabled = "Enabled";
 	static const std::string dynamic_values = "Dynamic Values";
+	static const std::string value = "Value";
+	static const std::string type = "Type";
+	static const std::string min = "Min";
+	static const std::string max = "Max";
+	static const std::string allowed_values = "Allowed Values";
 }
 
 inline static const std::string patch_engine_version = "1.2";
@@ -49,6 +54,14 @@ enum class patch_type
 	utf8, // Text of string (not null-terminated automatically)
 };
 
+enum class patch_dynamic_type
+{
+	double_range,
+	double_enum,
+	long_range,
+	long_enum
+};
+
 class patch_engine
 {
 public:
@@ -65,11 +78,26 @@ public:
 		mutable u32 alloc_addr = 0; // Used to save optional allocation address (if occured)
 	};
 
+	struct patch_dynamic_value
+	{
+		f64 value{};
+		f64 min{};
+		f64 max{};
+		patch_dynamic_type type{};
+		std::vector<f64> allowed_values;
+
+		bool operator==(const patch_dynamic_value& other) const
+		{
+			return value == other.value && min == other.min && max == other.max && type == other.type && allowed_values == other.allowed_values;
+		}
+	};
+
 	struct patch_config_values
 	{
 		bool enabled{};
-		std::map<std::string, f64> dynamic_values;
+		std::map<std::string, patch_dynamic_value> dynamic_values;
 	};
+
 	using patch_app_versions = std::unordered_map<std::string /*app_version*/, patch_config_values>;
 	using patch_serials = std::unordered_map<std::string /*serial*/, patch_app_versions>;
 	using patch_titles = std::unordered_map<std::string /*serial*/, patch_serials>;
@@ -85,11 +113,12 @@ public:
 		std::string author{};
 		std::string notes{};
 		std::string source_path{};
-		std::map<std::string, f64> default_dynamic_values;
+		std::map<std::string, patch_dynamic_value> default_dynamic_values;
 
 		// Redundant information for accessibility (see patch_container)
 		std::string hash{};
 		std::string version{};
+		std::map<std::string, patch_dynamic_value> actual_dynamic_values;
 	};
 
 	struct patch_container

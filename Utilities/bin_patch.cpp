@@ -32,6 +32,23 @@ void fmt_class_string<YAML::NodeType::value>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<patch_dynamic_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](patch_dynamic_type value)
+	{
+		switch (value)
+		{
+		case patch_dynamic_type::double_range: return "double_range";
+		case patch_dynamic_type::double_enum: return "double_enum";
+		case patch_dynamic_type::long_range: return "long_range";
+		case patch_dynamic_type::long_enum: return "long_enum";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](patch_type value)
@@ -359,15 +376,160 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 				{
 					for (const auto dynamic_value_node : dynamic_values_node)
 					{
-						if (dynamic_value_node.second.IsScalar())
+						const std::string& value_key = dynamic_value_node.first.Scalar();
+
+						if (const auto yml_type = dynamic_value_node.second.Type(); yml_type != YAML::NodeType::Map)
 						{
-							const std::string& value_key = dynamic_value_node.first.Scalar();
-							info.default_dynamic_values[value_key] = dynamic_value_node.second.as<f64>(0.0);
+							append_log_message(log_messages, fmt::format("Error: Skipping dynamic value %s: expected Map, found %s (patch: %s, key: %s, location: %s, file: %s)", value_key, yml_type, description, main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+							is_valid = false;
 						}
 						else
 						{
-							append_log_message(log_messages, fmt::format("Error: Invalid dynamic value (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
-							is_valid = false;
+							patch_dynamic_value& dynamic_value = info.default_dynamic_values[value_key];
+
+							if (const auto dynamic_value_type_node = dynamic_value_node.second[patch_key::type]; dynamic_value_type_node && dynamic_value_type_node.IsScalar())
+							{
+								const std::string& str_type = dynamic_value_type_node.Scalar();
+								bool is_valid_type = false;
+
+								for (patch_dynamic_type type : { patch_dynamic_type::double_range, patch_dynamic_type::double_enum, patch_dynamic_type::long_range, patch_dynamic_type::long_enum })
+								{
+									if (str_type == fmt::format("%s", type))
+									{
+										dynamic_value.type = type;
+										is_valid_type = true;
+										break;
+									}
+								}
+
+								if (is_valid_type)
+								{
+									const auto get_and_check_dynamic_value = [&](const YAML::Node& node)
+									{
+										std::string err;
+										f64 val{};
+
+										switch (dynamic_value.type)
+										{
+										case patch_dynamic_type::double_range:
+										case patch_dynamic_type::double_enum:
+											val = get_yaml_node_value<f64>(node, err);
+											break;
+										case patch_dynamic_type::long_range:
+										case patch_dynamic_type::long_enum:
+											val = get_yaml_node_value<s64>(node, err);
+											break;
+										}
+
+										if (!err.empty())
+										{
+											append_log_message(log_messages, fmt::format("Error: Invalid data type found in dynamic value: %s (key: %s, location: %s, file: %s)", err, main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											is_valid = false;
+										}
+
+										return val;
+									};
+
+									if (const auto dynamic_value_value_node = dynamic_value_node.second[patch_key::value]; dynamic_value_value_node && dynamic_value_value_node.IsScalar())
+									{
+										dynamic_value.value = get_and_check_dynamic_value(dynamic_value_value_node);
+									}
+									else
+									{
+										append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic value (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+										is_valid = false;
+									}
+
+									switch (dynamic_value.type)
+									{
+									case patch_dynamic_type::double_range:
+									case patch_dynamic_type::long_range:
+									{
+										if (const auto dynamic_value_min_node = dynamic_value_node.second[patch_key::min]; dynamic_value_min_node && dynamic_value_min_node.IsScalar())
+										{
+											dynamic_value.min = get_and_check_dynamic_value(dynamic_value_min_node);
+										}
+										else
+										{
+											append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic min (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											is_valid = false;
+										}
+
+										if (const auto dynamic_value_max_node = dynamic_value_node.second[patch_key::max]; dynamic_value_max_node && dynamic_value_max_node.IsScalar())
+										{
+											dynamic_value.max = get_and_check_dynamic_value(dynamic_value_max_node);
+										}
+										else
+										{
+											append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic max (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											is_valid = false;
+										}
+
+										if (dynamic_value.min >= dynamic_value.max)
+										{
+											append_log_message(log_messages, fmt::format("Error: dynamic max has to be larger than dynamic min (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											is_valid = false;
+										}
+
+										if (dynamic_value.value < dynamic_value.min || dynamic_value.value > dynamic_value.max)
+										{
+											append_log_message(log_messages, fmt::format("Error: dynamic value out of range (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											is_valid = false;
+										}
+										break;
+									}
+									case patch_dynamic_type::double_enum:
+									case patch_dynamic_type::long_enum:
+									{
+										if (const auto dynamic_value_allowed_values_node = dynamic_value_node.second[patch_key::allowed_values]; dynamic_value_allowed_values_node && dynamic_value_allowed_values_node.IsSequence())
+										{
+											dynamic_value.allowed_values.clear();
+
+											for (const auto allowed_value : dynamic_value_allowed_values_node)
+											{
+												if (allowed_value && allowed_value.IsScalar())
+												{
+													dynamic_value.allowed_values.push_back(get_and_check_dynamic_value(allowed_value));
+												}
+												else
+												{
+													append_log_message(log_messages, fmt::format("Error: Skipping dynamic allowed value (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(allowed_value), path), &patch_log.error);
+													is_valid = false;
+												}
+											}
+
+											if (dynamic_value.allowed_values.size() < 2)
+											{
+												append_log_message(log_messages, fmt::format("Error: Dynamic allowed values need at least 2 entries (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_allowed_values_node), path), &patch_log.error);
+												is_valid = false;
+											}
+
+											if (std::none_of(dynamic_value.allowed_values.begin(), dynamic_value.allowed_values.end(), [&dynamic_value](const f64& val){ return val == dynamic_value.value; }))
+											{
+												append_log_message(log_messages, fmt::format("Error: Dynamic value was not found in allowed values (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_allowed_values_node), path), &patch_log.error);
+												is_valid = false;
+											}
+										}
+										else
+										{
+											append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic allowed values (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											is_valid = false;
+										}
+										break;
+									}
+									}
+								}
+								else
+								{
+									append_log_message(log_messages, fmt::format("Error: Invalid dynamic type (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_type_node), path), &patch_log.error);
+									is_valid = false;
+								}
+							}
+							else
+							{
+								append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic type (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+								is_valid = false;
+							}
 						}
 					}
 				}
@@ -496,7 +658,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	p_data.original_value = value_node.Scalar();
 
 	const bool is_dynamic_value = info.default_dynamic_values.contains(p_data.original_value);
-	const f64 dynamic_value = is_dynamic_value ? ::at32(info.default_dynamic_values, p_data.original_value) : 0.0;
+	const patch_dynamic_value dynamic_value = is_dynamic_value ? ::at32(info.default_dynamic_values, p_data.original_value) : patch_dynamic_value{};
 
 	std::string error_message;
 
@@ -512,12 +674,12 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	case patch_type::bef64:
 	case patch_type::lef64:
 	{
-		p_data.value.double_value = is_dynamic_value ? dynamic_value : get_yaml_node_value<f64>(value_node, error_message);
+		p_data.value.double_value = is_dynamic_value ? dynamic_value.value : get_yaml_node_value<f64>(value_node, error_message);
 		break;
 	}
 	default:
 	{
-		p_data.value.long_value = is_dynamic_value ? static_cast<u64>(dynamic_value) : get_yaml_node_value<u64>(value_node, error_message);
+		p_data.value.long_value = is_dynamic_value ? static_cast<u64>(dynamic_value.value) : get_yaml_node_value<u64>(value_node, error_message);
 
 		if (error_message.find("bad conversion") != std::string::npos)
 		{
@@ -601,11 +763,44 @@ void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 }
 
 // Returns old 'applied' size
-static usz apply_modification(std::basic_string<u32>& applied, const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 min_addr)
+static usz apply_modification(std::basic_string<u32>& applied, patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 min_addr)
 {
 	const usz old_applied_size = applied.size();
 
-	for (const auto& p : patch.data_list)
+	// Update dynamic values
+	for (const auto& [key, dynamic_value] : patch.actual_dynamic_values)
+	{
+		for (usz i = 0; i < patch.data_list.size(); i++)
+		{
+			patch_engine::patch_data& p = ::at32(patch.data_list, i);
+
+			if (p.original_value == key)
+			{
+				switch (p.type)
+				{
+				case patch_type::bef32:
+				case patch_type::lef32:
+				case patch_type::bef64:
+				case patch_type::lef64:
+				{
+					p.value.double_value = dynamic_value.value;
+					patch_log.notice("Using dynamic value (key='%s', value=%f, index=%d, hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s')",
+						key, p.value.double_value, i, patch.hash, patch.description, patch.author, patch.patch_version, patch.version);
+					break;
+				}
+				default:
+				{
+					p.value.long_value = dynamic_value.value;
+					patch_log.notice("Using dynamic value (key='%s', value=0x%x=%d, index=%d, hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s')",
+						key, p.value.long_value, p.value.long_value, i, patch.hash, patch.description, patch.author, patch.patch_version, patch.version);
+					break;
+				}
+				}
+			}
+		}
+	}
+
+	for (const patch_engine::patch_data& p : patch.data_list)
 	{
 		if (p.type != patch_type::alloc) continue;
 
@@ -679,7 +874,7 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 
 	u32 relocate_instructions_at = 0;
 
-	for (const auto& p : patch.data_list)
+	for (const patch_engine::patch_data& p : patch.data_list)
 	{
 		u32 offset = p.offset;
 
@@ -982,10 +1177,10 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 	const auto& app_version = Emu.GetAppVersion();
 
 	// Different containers in order to seperate the patches
-	std::vector<const patch_info*> patches_for_this_serial_and_this_version;
-	std::vector<const patch_info*> patches_for_this_serial_and_all_versions;
-	std::vector<const patch_info*> patches_for_all_serials_and_this_version;
-	std::vector<const patch_info*> patches_for_all_serials_and_all_versions;
+	std::vector<std::shared_ptr<patch_info>> patches_for_this_serial_and_this_version;
+	std::vector<std::shared_ptr<patch_info>> patches_for_this_serial_and_all_versions;
+	std::vector<std::shared_ptr<patch_info>> patches_for_all_serials_and_this_version;
+	std::vector<std::shared_ptr<patch_info>> patches_for_all_serials_and_all_versions;
 
 	// Sort patches into different vectors based on their serial and version
 	for (const auto& [description, patch] : container.patch_info_map)
@@ -1033,44 +1228,49 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 
 			const patch_config_values& config_values = ::at32(app_versions, found_app_version);
 
+			// Check if this patch is enabled
 			if (config_values.enabled)
 			{
-				// This patch is enabled
+				// Make copy of this patch
+				std::shared_ptr<patch_info> p_ptr = std::make_shared<patch_info>(patch);
+
+				// Move dynamic values to special container for readability
+				p_ptr->actual_dynamic_values = p_ptr->default_dynamic_values;
+
+				// Update dynamic values
+				for (auto& [key, dynamic_value] : config_values.dynamic_values)
+				{
+					if (p_ptr->actual_dynamic_values.contains(key))
+					{
+						::at32(p_ptr->actual_dynamic_values, key).value = dynamic_value.value;
+					}
+				}
+
+				// Sort the patch by priority
 				if (is_all_serials)
 				{
 					if (is_all_versions)
 					{
-						patches_for_all_serials_and_all_versions.emplace_back(&patch);
+						patches_for_all_serials_and_all_versions.emplace_back(p_ptr);
 					}
 					else
 					{
-						patches_for_all_serials_and_this_version.emplace_back(&patch);
+						patches_for_all_serials_and_this_version.emplace_back(p_ptr);
 					}
 				}
 				else if (is_all_versions)
 				{
-					patches_for_this_serial_and_all_versions.emplace_back(&patch);
+					patches_for_this_serial_and_all_versions.emplace_back(p_ptr);
 				}
 				else
 				{
-					patches_for_this_serial_and_this_version.emplace_back(&patch);
+					patches_for_this_serial_and_this_version.emplace_back(p_ptr);
 				}
 
 				break;
 			}
 		}
 	}
-
-	// Apply modifications sequentially
-	auto apply_func = [&](const patch_info& patch)
-	{
-		const usz old_size = apply_modification(applied_total, patch, dst, filesz, min_addr);
-
-		if (applied_total.size() != old_size)
-		{
-			patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %u)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied_total.size() - old_size);
-		}
-	};
 
 	// Sort specific patches after global patches
 	// So they will determine the end results
@@ -1091,19 +1291,26 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 			{
 				if (!m_applied_groups.insert(patch->patch_group).second)
 				{
-					patch = nullptr;
+					patch.reset();
 				}
 			}
 		}
 	}
 
+	// Apply modifications sequentially
 	for (auto patch_list : patch_super_list)
 	{
-		for (const patch_info* patch : *patch_list)
+		for (const std::shared_ptr<patch_info>& patch : *patch_list)
 		{
 			if (patch)
 			{
-				apply_func(*patch);
+				const usz old_size = apply_modification(applied_total, *patch, dst, filesz, min_addr);
+
+				if (applied_total.size() != old_size)
+				{
+					patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %u)",
+						patch->hash, patch->description, patch->author, patch->patch_version, patch->version, applied_total.size() - old_size);
+				}
 			}
 		}
 	}
@@ -1202,9 +1409,9 @@ void patch_engine::save_config(const patch_map& patches_map)
 								{
 									out << patch_key::dynamic_values << YAML::BeginMap;
 
-									for (const auto& [name, value] : config_values.dynamic_values)
+									for (const auto& [name, dynamic_value] : config_values.dynamic_values)
 									{
-										out << name << value;
+										out << name << dynamic_value.value;
 									}
 
 									out << YAML::EndMap;
@@ -1358,9 +1565,33 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 			{
 				out << patch_key::dynamic_values << YAML::BeginMap;
 
-				for (const auto& [key, value] : info.default_dynamic_values)
+				for (const auto& [key, dynamic_value] : info.default_dynamic_values)
 				{
-					out << key << value;
+					out << key << YAML::BeginMap;
+					out << patch_key::type << fmt::format("%s", dynamic_value.type);
+					out << patch_key::value << dynamic_value.value;
+
+					switch (dynamic_value.type)
+					{
+					case patch_dynamic_type::double_range:
+					case patch_dynamic_type::long_range:
+						out << patch_key::min << dynamic_value.min;
+						out << patch_key::max << dynamic_value.max;
+						break;
+					case patch_dynamic_type::double_enum:
+					case patch_dynamic_type::long_enum:
+						out << patch_key::allowed_values << YAML::BeginSeq;
+
+						for (const auto& allowed_value : dynamic_value.allowed_values)
+						{
+							out << allowed_value;
+						}
+
+						out << YAML::EndSeq;
+						break;
+					}
+
+					out << YAML::EndMap;
 				}
 
 				out << YAML::EndMap;
@@ -1505,7 +1736,8 @@ patch_engine::patch_map patch_engine::load_config()
 								{
 									for (const auto dynamic_value_node : dynamic_values_node)
 									{
-										config_values.dynamic_values[dynamic_value_node.first.Scalar()] = dynamic_value_node.second.as<f64>(0.0);
+										patch_dynamic_value& dynamic_value = config_values.dynamic_values[dynamic_value_node.first.Scalar()];
+										dynamic_value.value = dynamic_value_node.second.as<f64>(0.0);
 									}
 								}
 							}
