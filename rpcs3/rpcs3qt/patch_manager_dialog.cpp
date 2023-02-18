@@ -55,6 +55,8 @@ enum node_level : int
 	patch_level
 };
 
+Q_DECLARE_METATYPE(patch_engine::patch_dynamic_value);
+
 patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, const std::string& title_id, const std::string& version, QWidget* parent)
 	: QDialog(parent)
 	, m_gui_settings(std::move(gui_settings))
@@ -77,13 +79,28 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 
 	m_downloader = new downloader(this);
 
+	ui->dynamic_combo_box->setEnabled(false);
+	ui->dynamic_combo_box->setVisible(false);
+	ui->dynamic_spin_box->setEnabled(false);
+	ui->dynamic_spin_box->setVisible(false);
+	ui->dynamic_double_spin_box->setEnabled(false);
+	ui->dynamic_double_spin_box->setVisible(false);
+
 	// Create connects
 	connect(ui->patch_filter, &QLineEdit::textChanged, this, &patch_manager_dialog::filter_patches);
 	connect(ui->patch_tree, &QTreeWidget::currentItemChanged, this, &patch_manager_dialog::handle_item_selected);
 	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::handle_item_changed);
 	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::handle_custom_context_menu_requested);
 	connect(ui->cb_owned_games_only, &QCheckBox::stateChanged, this, &patch_manager_dialog::handle_show_owned_games_only);
-	connect(ui->dynamic_value_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &patch_manager_dialog::handle_dynamic_value_changed);
+	connect(ui->dynamic_combo_box, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		if (index >= 0)
+		{
+			handle_dynamic_value_changed(ui->dynamic_combo_box->itemData(index).toDouble());
+		}
+	});
+	connect(ui->dynamic_spin_box, QOverload<int>::of(&QSpinBox::valueChanged), this, &patch_manager_dialog::handle_dynamic_value_changed);
+	connect(ui->dynamic_double_spin_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &patch_manager_dialog::handle_dynamic_value_changed);
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
@@ -307,9 +324,16 @@ void patch_manager_dialog::populate_tree()
 
 						QMap<QString, QVariant> q_dynamic_values;
 
-						for (const auto& [key, value] : patch.default_dynamic_values)
+						for (const auto& [key, default_dynamic_value] : patch.default_dynamic_values)
 						{
-							q_dynamic_values[QString::fromStdString(key)] = config_values.dynamic_values.contains(key) ? config_values.dynamic_values.at(key) : value;
+							patch_engine::patch_dynamic_value dynamic_value = default_dynamic_value;
+
+							if (config_values.dynamic_values.contains(key))
+							{
+								dynamic_value.value = config_values.dynamic_values.at(key).value;
+							}
+
+							q_dynamic_values[QString::fromStdString(key)] = QVariant::fromValue(dynamic_value);
 						}
 
 						QTreeWidgetItem* patch_level_item = new QTreeWidgetItem();
@@ -503,10 +527,63 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	ui->label_title->setText(info.title);
 	ui->label_app_version->setText(info.app_version);
 
-	// TODO: support more than one value in the future
-	ui->dynamic_label->setText(info.dynamic_values.empty() ? tr("N/A") : info.dynamic_values.firstKey());
-	ui->dynamic_value_box->setValue(info.dynamic_values.empty() ? 0.0 : info.dynamic_values.first().toDouble());
-	ui->dynamic_value_box->setEnabled(!info.dynamic_values.empty());
+	// TODO: support more than one dynamic value in the future
+
+	if (info.dynamic_values.empty())
+	{
+		ui->dynamic_label->setText(tr("N/A"));
+		ui->dynamic_combo_box->setEnabled(false);
+		ui->dynamic_combo_box->setVisible(false);
+		ui->dynamic_spin_box->setEnabled(false);
+		ui->dynamic_spin_box->setVisible(false);
+		ui->dynamic_double_spin_box->setEnabled(false);
+		ui->dynamic_double_spin_box->setVisible(false);
+		return;
+	}
+
+	ui->dynamic_label->setText(info.dynamic_values.firstKey());
+
+	const QVariant& variant = info.dynamic_values.first();
+	ensure(variant.canConvert<patch_engine::patch_dynamic_value>());
+
+	const patch_engine::patch_dynamic_value dynamic_value = variant.value<patch_engine::patch_dynamic_value>();
+
+	switch (dynamic_value.type)
+	{
+	case patch_dynamic_type::double_range:
+		ui->dynamic_double_spin_box->blockSignals(true);
+		ui->dynamic_double_spin_box->setRange(dynamic_value.min, dynamic_value.max);
+		ui->dynamic_double_spin_box->setValue(dynamic_value.value);
+		ui->dynamic_double_spin_box->setEnabled(true);
+		ui->dynamic_double_spin_box->setVisible(true);
+		ui->dynamic_double_spin_box->blockSignals(false);
+		break;
+	case patch_dynamic_type::long_range:
+		ui->dynamic_spin_box->blockSignals(true);
+		ui->dynamic_spin_box->setRange(dynamic_value.min, dynamic_value.max);
+		ui->dynamic_spin_box->setValue(dynamic_value.value);
+		ui->dynamic_spin_box->setEnabled(true);
+		ui->dynamic_spin_box->setVisible(true);
+		ui->dynamic_spin_box->blockSignals(false);
+		break;
+	case patch_dynamic_type::double_enum:
+	case patch_dynamic_type::long_enum:
+		ui->dynamic_combo_box->blockSignals(true);
+		ui->dynamic_combo_box->clear();
+		for (const f64& allowed_value : dynamic_value.allowed_values)
+		{
+			ui->dynamic_combo_box->addItem(QString::number(allowed_value), allowed_value);
+
+			if (allowed_value == dynamic_value.value)
+			{
+				ui->dynamic_combo_box->setCurrentIndex(ui->dynamic_combo_box->findText(QString::number(allowed_value)));
+			}
+		}
+		ui->dynamic_combo_box->setEnabled(true);
+		ui->dynamic_combo_box->setVisible(true);
+		ui->dynamic_combo_box->blockSignals(false);
+		break;
+	}
 }
 
 void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
@@ -645,7 +722,13 @@ void patch_manager_dialog::handle_dynamic_value_changed(double value)
 		return;
 	}
 
-	q_dynamic_values[key] = value;
+	QVariant& variant = q_dynamic_values[key];
+	ensure(variant.canConvert<patch_engine::patch_dynamic_value>());
+
+	patch_engine::patch_dynamic_value dynamic_value = variant.value<patch_engine::patch_dynamic_value>();
+	dynamic_value.value = value;
+	variant = QVariant::fromValue(dynamic_value);
+
 	item->setData(0, dynamic_values_role, q_dynamic_values);
 
 	// Update the dynamic value of the patch for this item
@@ -666,9 +749,9 @@ void patch_manager_dialog::handle_dynamic_value_changed(double value)
 
 			for (const QString& q_key : q_dynamic_values.keys())
 			{
-				if (const std::string s_key = q_key.toStdString(); patch.default_dynamic_values.contains(s_key))
+				if (const std::string s_key = q_key.toStdString(); key == q_key && patch.default_dynamic_values.contains(s_key))
 				{
-					dynamic_values[s_key] = q_dynamic_values[q_key].toDouble();
+					dynamic_values[s_key].value = value;
 				}
 			}
 		}
