@@ -32,6 +32,35 @@ namespace rsx
 
 			animation_color_interpolate fade_animation;
 
+			struct text_guard_t
+			{
+				std::mutex mutex;
+				std::string text;
+				bool dirty{false};
+
+				void set_text(std::string t)
+				{
+					std::lock_guard lock(mutex);
+					text = std::move(t);
+					dirty = true;
+				}
+
+				std::pair<bool, std::string> get_text()
+				{
+					if (dirty)
+					{
+						std::lock_guard lock(mutex);
+						dirty = false;
+						return { true, std::move(text) };
+					}
+
+					return { false, {} };
+				}
+			};
+
+			text_guard_t text_guard{};
+			std::array<text_guard_t, 2> bar_text_guard{};
+
 		public:
 			message_dialog(bool allow_custom_background = false);
 
