@@ -32,16 +32,16 @@ void fmt_class_string<YAML::NodeType::value>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<patch_dynamic_type>::format(std::string& out, u64 arg)
+void fmt_class_string<patch_configurable_type>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](patch_dynamic_type value)
+	format_enum(out, arg, [](patch_configurable_type value)
 	{
 		switch (value)
 		{
-		case patch_dynamic_type::double_range: return "double_range";
-		case patch_dynamic_type::double_enum: return "double_enum";
-		case patch_dynamic_type::long_range: return "long_range";
-		case patch_dynamic_type::long_enum: return "long_enum";
+		case patch_configurable_type::double_range: return "double_range";
+		case patch_configurable_type::double_enum: return "double_enum";
+		case patch_configurable_type::long_range: return "long_range";
+		case patch_configurable_type::long_enum: return "long_enum";
 		}
 
 		return unknown;
@@ -360,38 +360,38 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 				info.patch_group = patch_group_node.Scalar();
 			}
 
-			if (const auto dynamic_values_node = patches_entry.second[patch_key::dynamic_values])
+			if (const auto config_values_node = patches_entry.second[patch_key::config_values])
 			{
-				if (const auto yml_type = dynamic_values_node.Type(); yml_type != YAML::NodeType::Map || dynamic_values_node.size() == 0)
+				if (const auto yml_type = config_values_node.Type(); yml_type != YAML::NodeType::Map || config_values_node.size() == 0)
 				{
-					append_log_message(log_messages, fmt::format("Error: Skipping dynamic values: expected Map, found %s (patch: %s, key: %s, location: %s, file: %s)", yml_type, description, main_key, get_yaml_node_location(dynamic_values_node), path), &patch_log.error);
+					append_log_message(log_messages, fmt::format("Error: Skipping configurable values: expected Map, found %s (patch: %s, key: %s, location: %s, file: %s)", yml_type, description, main_key, get_yaml_node_location(config_values_node), path), &patch_log.error);
 					is_valid = false;
 				}
 				else
 				{
-					for (const auto dynamic_value_node : dynamic_values_node)
+					for (const auto config_value_node : config_values_node)
 					{
-						const std::string& value_key = dynamic_value_node.first.Scalar();
+						const std::string& value_key = config_value_node.first.Scalar();
 
-						if (const auto yml_type = dynamic_value_node.second.Type(); yml_type != YAML::NodeType::Map)
+						if (const auto yml_type = config_value_node.second.Type(); yml_type != YAML::NodeType::Map)
 						{
-							append_log_message(log_messages, fmt::format("Error: Skipping dynamic value %s: expected Map, found %s (patch: %s, key: %s, location: %s, file: %s)", value_key, yml_type, description, main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+							append_log_message(log_messages, fmt::format("Error: Skipping configurable value %s: expected Map, found %s (patch: %s, key: %s, location: %s, file: %s)", value_key, yml_type, description, main_key, get_yaml_node_location(config_value_node), path), &patch_log.error);
 							is_valid = false;
 						}
 						else
 						{
-							patch_dynamic_value& dynamic_value = info.default_dynamic_values[value_key];
+							patch_config_value& config_value = info.default_config_values[value_key];
 
-							if (const auto dynamic_value_type_node = dynamic_value_node.second[patch_key::type]; dynamic_value_type_node && dynamic_value_type_node.IsScalar())
+							if (const auto config_value_type_node = config_value_node.second[patch_key::type]; config_value_type_node && config_value_type_node.IsScalar())
 							{
-								const std::string& str_type = dynamic_value_type_node.Scalar();
+								const std::string& str_type = config_value_type_node.Scalar();
 								bool is_valid_type = false;
 
-								for (patch_dynamic_type type : { patch_dynamic_type::double_range, patch_dynamic_type::double_enum, patch_dynamic_type::long_range, patch_dynamic_type::long_enum })
+								for (patch_configurable_type type : { patch_configurable_type::double_range, patch_configurable_type::double_enum, patch_configurable_type::long_range, patch_configurable_type::long_enum })
 								{
 									if (str_type == fmt::format("%s", type))
 									{
-										dynamic_value.type = type;
+										config_value.type = type;
 										is_valid_type = true;
 										break;
 									}
@@ -399,127 +399,127 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 								if (is_valid_type)
 								{
-									const auto get_and_check_dynamic_value = [&](const YAML::Node& node)
+									const auto get_and_check_config_value = [&](const YAML::Node& node)
 									{
 										std::string err;
 										f64 val{};
 
-										switch (dynamic_value.type)
+										switch (config_value.type)
 										{
-										case patch_dynamic_type::double_range:
-										case patch_dynamic_type::double_enum:
+										case patch_configurable_type::double_range:
+										case patch_configurable_type::double_enum:
 											val = get_yaml_node_value<f64>(node, err);
 											break;
-										case patch_dynamic_type::long_range:
-										case patch_dynamic_type::long_enum:
+										case patch_configurable_type::long_range:
+										case patch_configurable_type::long_enum:
 											val = static_cast<f64>(get_yaml_node_value<s64>(node, err));
 											break;
 										}
 
 										if (!err.empty())
 										{
-											append_log_message(log_messages, fmt::format("Error: Invalid data type found in dynamic value: %s (key: %s, location: %s, file: %s)", err, main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											append_log_message(log_messages, fmt::format("Error: Invalid data type found in configurable value: %s (key: %s, location: %s, file: %s)", err, main_key, get_yaml_node_location(config_value_node), path), &patch_log.error);
 											is_valid = false;
 										}
 
 										return val;
 									};
 
-									if (const auto dynamic_value_value_node = dynamic_value_node.second[patch_key::value]; dynamic_value_value_node && dynamic_value_value_node.IsScalar())
+									if (const auto config_value_value_node = config_value_node.second[patch_key::value]; config_value_value_node && config_value_value_node.IsScalar())
 									{
-										dynamic_value.value = get_and_check_dynamic_value(dynamic_value_value_node);
+										config_value.value = get_and_check_config_value(config_value_value_node);
 									}
 									else
 									{
-										append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic value (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+										append_log_message(log_messages, fmt::format("Error: Invalid or missing configurable value (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_node), path), &patch_log.error);
 										is_valid = false;
 									}
 
-									switch (dynamic_value.type)
+									switch (config_value.type)
 									{
-									case patch_dynamic_type::double_range:
-									case patch_dynamic_type::long_range:
+									case patch_configurable_type::double_range:
+									case patch_configurable_type::long_range:
 									{
-										if (const auto dynamic_value_min_node = dynamic_value_node.second[patch_key::min]; dynamic_value_min_node && dynamic_value_min_node.IsScalar())
+										if (const auto config_value_min_node = config_value_node.second[patch_key::min]; config_value_min_node && config_value_min_node.IsScalar())
 										{
-											dynamic_value.min = get_and_check_dynamic_value(dynamic_value_min_node);
+											config_value.min = get_and_check_config_value(config_value_min_node);
 										}
 										else
 										{
-											append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic min (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											append_log_message(log_messages, fmt::format("Error: Invalid or missing configurable min (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_node), path), &patch_log.error);
 											is_valid = false;
 										}
 
-										if (const auto dynamic_value_max_node = dynamic_value_node.second[patch_key::max]; dynamic_value_max_node && dynamic_value_max_node.IsScalar())
+										if (const auto config_value_max_node = config_value_node.second[patch_key::max]; config_value_max_node && config_value_max_node.IsScalar())
 										{
-											dynamic_value.max = get_and_check_dynamic_value(dynamic_value_max_node);
+											config_value.max = get_and_check_config_value(config_value_max_node);
 										}
 										else
 										{
-											append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic max (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											append_log_message(log_messages, fmt::format("Error: Invalid or missing configurable max (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_node), path), &patch_log.error);
 											is_valid = false;
 										}
 
-										if (dynamic_value.min >= dynamic_value.max)
+										if (config_value.min >= config_value.max)
 										{
-											append_log_message(log_messages, fmt::format("Error: dynamic max has to be larger than dynamic min (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											append_log_message(log_messages, fmt::format("Error: Configurable max has to be larger than configurable min (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_node), path), &patch_log.error);
 											is_valid = false;
 										}
 
-										if (dynamic_value.value < dynamic_value.min || dynamic_value.value > dynamic_value.max)
+										if (config_value.value < config_value.min || config_value.value > config_value.max)
 										{
-											append_log_message(log_messages, fmt::format("Error: dynamic value out of range (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											append_log_message(log_messages, fmt::format("Error: Configurable value out of range (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_node), path), &patch_log.error);
 											is_valid = false;
 										}
 										break;
 									}
-									case patch_dynamic_type::double_enum:
-									case patch_dynamic_type::long_enum:
+									case patch_configurable_type::double_enum:
+									case patch_configurable_type::long_enum:
 									{
-										if (const auto dynamic_value_allowed_values_node = dynamic_value_node.second[patch_key::allowed_values]; dynamic_value_allowed_values_node && dynamic_value_allowed_values_node.IsMap())
+										if (const auto config_value_allowed_values_node = config_value_node.second[patch_key::allowed_values]; config_value_allowed_values_node && config_value_allowed_values_node.IsMap())
 										{
-											dynamic_value.allowed_values.clear();
+											config_value.allowed_values.clear();
 
-											for (const auto allowed_value : dynamic_value_allowed_values_node)
+											for (const auto allowed_value : config_value_allowed_values_node)
 											{
 												if (allowed_value.second && allowed_value.second.IsScalar())
 												{
 													patch_allowed_value new_allowed_value{};
 													new_allowed_value.label = allowed_value.first.Scalar();
-													new_allowed_value.value = get_and_check_dynamic_value(allowed_value.second);
+													new_allowed_value.value = get_and_check_config_value(allowed_value.second);
 
-													if (std::any_of(dynamic_value.allowed_values.begin(), dynamic_value.allowed_values.end(), [&new_allowed_value](const patch_allowed_value& other){ return new_allowed_value.value == other.value || new_allowed_value.label == other.label; }))
+													if (std::any_of(config_value.allowed_values.begin(), config_value.allowed_values.end(), [&new_allowed_value](const patch_allowed_value& other){ return new_allowed_value.value == other.value || new_allowed_value.label == other.label; }))
 													{
-														append_log_message(log_messages, fmt::format("Error: Skipping dynamic allowed value. Another entry with the same label or value already exists. (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(allowed_value), path), &patch_log.error);
+														append_log_message(log_messages, fmt::format("Error: Skipping configurable allowed value. Another entry with the same label or value already exists. (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(allowed_value), path), &patch_log.error);
 														is_valid = false;
 													}
 													else
 													{
-														dynamic_value.allowed_values.push_back(new_allowed_value);
+														config_value.allowed_values.push_back(new_allowed_value);
 													}
 												}
 												else
 												{
-													append_log_message(log_messages, fmt::format("Error: Skipping dynamic allowed value (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(allowed_value), path), &patch_log.error);
+													append_log_message(log_messages, fmt::format("Error: Skipping configurable allowed value (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(allowed_value), path), &patch_log.error);
 													is_valid = false;
 												}
 											}
 
-											if (dynamic_value.allowed_values.size() < 2)
+											if (config_value.allowed_values.size() < 2)
 											{
-												append_log_message(log_messages, fmt::format("Error: Dynamic allowed values need at least 2 entries (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_allowed_values_node), path), &patch_log.error);
+												append_log_message(log_messages, fmt::format("Error: Configurable allowed values need at least 2 entries (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_allowed_values_node), path), &patch_log.error);
 												is_valid = false;
 											}
 
-											if (std::none_of(dynamic_value.allowed_values.begin(), dynamic_value.allowed_values.end(), [&dynamic_value](const patch_allowed_value& other){ return other.value == dynamic_value.value; }))
+											if (std::none_of(config_value.allowed_values.begin(), config_value.allowed_values.end(), [&config_value](const patch_allowed_value& other){ return other.value == config_value.value; }))
 											{
-												append_log_message(log_messages, fmt::format("Error: Dynamic value was not found in allowed values (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_allowed_values_node), path), &patch_log.error);
+												append_log_message(log_messages, fmt::format("Error: Configurable value was not found in allowed values (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_allowed_values_node), path), &patch_log.error);
 												is_valid = false;
 											}
 										}
 										else
 										{
-											append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic allowed values (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+											append_log_message(log_messages, fmt::format("Error: Invalid or missing configurable allowed values (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_node), path), &patch_log.error);
 											is_valid = false;
 										}
 										break;
@@ -528,13 +528,13 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 								}
 								else
 								{
-									append_log_message(log_messages, fmt::format("Error: Invalid dynamic type (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_type_node), path), &patch_log.error);
+									append_log_message(log_messages, fmt::format("Error: Invalid configurable type (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_type_node), path), &patch_log.error);
 									is_valid = false;
 								}
 							}
 							else
 							{
-								append_log_message(log_messages, fmt::format("Error: Invalid or missing dynamic type (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_node), path), &patch_log.error);
+								append_log_message(log_messages, fmt::format("Error: Invalid or missing configurable type (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(config_value_node), path), &patch_log.error);
 								is_valid = false;
 							}
 						}
@@ -664,8 +664,8 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	p_data.offset         = addr_node.as<u32>(0) + modifier;
 	p_data.original_value = value_node.Scalar();
 
-	const bool is_dynamic_value = info.default_dynamic_values.contains(p_data.original_value);
-	const patch_dynamic_value dynamic_value = is_dynamic_value ? ::at32(info.default_dynamic_values, p_data.original_value) : patch_dynamic_value{};
+	const bool is_config_value = info.default_config_values.contains(p_data.original_value);
+	const patch_config_value config_value = is_config_value ? ::at32(info.default_config_values, p_data.original_value) : patch_config_value{};
 
 	std::string error_message;
 
@@ -681,12 +681,12 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	case patch_type::bef64:
 	case patch_type::lef64:
 	{
-		p_data.value.double_value = is_dynamic_value ? dynamic_value.value : get_yaml_node_value<f64>(value_node, error_message);
+		p_data.value.double_value = is_config_value ? config_value.value : get_yaml_node_value<f64>(value_node, error_message);
 		break;
 	}
 	default:
 	{
-		p_data.value.long_value = is_dynamic_value ? static_cast<u64>(dynamic_value.value) : get_yaml_node_value<u64>(value_node, error_message);
+		p_data.value.long_value = is_config_value ? static_cast<u64>(config_value.value) : get_yaml_node_value<u64>(value_node, error_message);
 
 		if (error_message.find("bad conversion") != std::string::npos)
 		{
@@ -774,8 +774,8 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 {
 	const usz old_applied_size = applied.size();
 
-	// Update dynamic values
-	for (const auto& [key, dynamic_value] : patch.actual_dynamic_values)
+	// Update configurable values
+	for (const auto& [key, config_value] : patch.actual_config_values)
 	{
 		for (usz i = 0; i < patch.data_list.size(); i++)
 		{
@@ -790,15 +790,15 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 				case patch_type::bef64:
 				case patch_type::lef64:
 				{
-					p.value.double_value = dynamic_value.value;
-					patch_log.notice("Using dynamic value (key='%s', value=%f, index=%d, hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s')",
+					p.value.double_value = config_value.value;
+					patch_log.notice("Using configurable value (key='%s', value=%f, index=%d, hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s')",
 						key, p.value.double_value, i, patch.hash, patch.description, patch.author, patch.patch_version, patch.version);
 					break;
 				}
 				default:
 				{
-					p.value.long_value = static_cast<u64>(dynamic_value.value);
-					patch_log.notice("Using dynamic value (key='%s', value=0x%x=%d, index=%d, hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s')",
+					p.value.long_value = static_cast<u64>(config_value.value);
+					patch_log.notice("Using configurable value (key='%s', value=0x%x=%d, index=%d, hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s')",
 						key, p.value.long_value, p.value.long_value, i, patch.hash, patch.description, patch.author, patch.patch_version, patch.version);
 					break;
 				}
@@ -1241,15 +1241,15 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 				// Make copy of this patch
 				std::shared_ptr<patch_info> p_ptr = std::make_shared<patch_info>(patch);
 
-				// Move dynamic values to special container for readability
-				p_ptr->actual_dynamic_values = p_ptr->default_dynamic_values;
+				// Move configurable values to special container for readability
+				p_ptr->actual_config_values = p_ptr->default_config_values;
 
-				// Update dynamic values
-				for (auto& [key, dynamic_value] : config_values.dynamic_values)
+				// Update configurable values
+				for (auto& [key, config_value] : config_values.config_values)
 				{
-					if (p_ptr->actual_dynamic_values.contains(key))
+					if (p_ptr->actual_config_values.contains(key))
 					{
-						::at32(p_ptr->actual_dynamic_values, key).value = dynamic_value.value;
+						::at32(p_ptr->actual_config_values, key).value = config_value.value;
 					}
 				}
 
@@ -1371,9 +1371,9 @@ void patch_engine::save_config(const patch_map& patches_map)
 				{
 					for (const auto& [app_version, config_values] : app_versions)
 					{
-						const bool dynamic_values_dirty = !patch.default_dynamic_values.empty() && !config_values.dynamic_values.empty() && patch.default_dynamic_values != config_values.dynamic_values;
+						const bool config_values_dirty = !patch.default_config_values.empty() && !config_values.config_values.empty() && patch.default_config_values != config_values.config_values;
 
-						if (config_values.enabled || dynamic_values_dirty)
+						if (config_values.enabled || config_values_dirty)
 						{
 							config_map[hash].patch_info_map[description].titles[title][serial][app_version] = config_values;
 						}
@@ -1400,10 +1400,10 @@ void patch_engine::save_config(const patch_map& patches_map)
 
 						for (const auto& [app_version, config_values] : app_versions)
 						{
-							const auto& default_dynamic_values = ::at32(container.patch_info_map, description).default_dynamic_values;
-							const bool dynamic_values_dirty = !default_dynamic_values.empty() && !config_values.dynamic_values.empty() && default_dynamic_values != config_values.dynamic_values;
+							const auto& default_config_values = ::at32(container.patch_info_map, description).default_config_values;
+							const bool config_values_dirty = !default_config_values.empty() && !config_values.config_values.empty() && default_config_values != config_values.config_values;
 
-							if (config_values.enabled || dynamic_values_dirty)
+							if (config_values.enabled || config_values_dirty)
 							{
 								out << app_version << YAML::BeginMap;
 
@@ -1412,13 +1412,13 @@ void patch_engine::save_config(const patch_map& patches_map)
 									out << patch_key::enabled << config_values.enabled;
 								}
 
-								if (dynamic_values_dirty)
+								if (config_values_dirty)
 								{
-									out << patch_key::dynamic_values << YAML::BeginMap;
+									out << patch_key::config_values << YAML::BeginMap;
 
-									for (const auto& [name, dynamic_value] : config_values.dynamic_values)
+									for (const auto& [name, config_value] : config_values.config_values)
 									{
-										out << name << dynamic_value.value;
+										out << name << config_value.value;
 									}
 
 									out << YAML::EndMap;
@@ -1568,28 +1568,28 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 			if (!info.patch_group.empty())   out << patch_key::group         << info.patch_group;
 			if (!info.notes.empty())         out << patch_key::notes         << info.notes;
 
-			if (!info.default_dynamic_values.empty())
+			if (!info.default_config_values.empty())
 			{
-				out << patch_key::dynamic_values << YAML::BeginMap;
+				out << patch_key::config_values << YAML::BeginMap;
 
-				for (const auto& [key, dynamic_value] : info.default_dynamic_values)
+				for (const auto& [key, config_value] : info.default_config_values)
 				{
 					out << key << YAML::BeginMap;
-					out << patch_key::type << fmt::format("%s", dynamic_value.type);
-					out << patch_key::value << dynamic_value.value;
+					out << patch_key::type << fmt::format("%s", config_value.type);
+					out << patch_key::value << config_value.value;
 
-					switch (dynamic_value.type)
+					switch (config_value.type)
 					{
-					case patch_dynamic_type::double_range:
-					case patch_dynamic_type::long_range:
-						out << patch_key::min << dynamic_value.min;
-						out << patch_key::max << dynamic_value.max;
+					case patch_configurable_type::double_range:
+					case patch_configurable_type::long_range:
+						out << patch_key::min << config_value.min;
+						out << patch_key::max << config_value.max;
 						break;
-					case patch_dynamic_type::double_enum:
-					case patch_dynamic_type::long_enum:
+					case patch_configurable_type::double_enum:
+					case patch_configurable_type::long_enum:
 						out << patch_key::allowed_values << YAML::BeginMap;
 
-						for (const auto& allowed_value : dynamic_value.allowed_values)
+						for (const auto& allowed_value : config_value.allowed_values)
 						{
 							out << allowed_value.label << allowed_value.value;
 						}
@@ -1739,12 +1739,12 @@ patch_engine::patch_map patch_engine::load_config()
 									config_values.enabled = enable_node.as<bool>(false);
 								}
 
-								if (const auto dynamic_values_node = app_version_node.second[patch_key::dynamic_values])
+								if (const auto config_values_node = app_version_node.second[patch_key::config_values])
 								{
-									for (const auto dynamic_value_node : dynamic_values_node)
+									for (const auto config_value_node : config_values_node)
 									{
-										patch_dynamic_value& dynamic_value = config_values.dynamic_values[dynamic_value_node.first.Scalar()];
-										dynamic_value.value = dynamic_value_node.second.as<f64>(0.0);
+										patch_config_value& config_value = config_values.config_values[config_value_node.first.Scalar()];
+										config_value.value = config_value_node.second.as<f64>(0.0);
 									}
 								}
 							}

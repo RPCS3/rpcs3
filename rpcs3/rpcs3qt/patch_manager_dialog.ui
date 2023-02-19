@@ -261,28 +261,28 @@
            <item>
             <widget class="QGroupBox" name="gb_values">
              <property name="title">
-              <string>Dynamic Values</string>
+              <string>Configurable Values</string>
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout">
               <item>
-               <widget class="QComboBox" name="dynamic_selector">
+               <widget class="QComboBox" name="configurable_selector">
                 <property name="placeholderText">
                  <string>N/A</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="dynamic_combo_box">
+               <widget class="QComboBox" name="configurable_combo_box">
                 <property name="placeholderText">
                  <string>N/A</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QSpinBox" name="dynamic_spin_box"/>
+               <widget class="QSpinBox" name="configurable_spin_box"/>
               </item>
               <item>
-               <widget class="QDoubleSpinBox" name="dynamic_double_spin_box">
+               <widget class="QDoubleSpinBox" name="configurable_double_spin_box">
                 <property name="minimum">
                  <double>-1000000.000000000000000</double>
                 </property>
