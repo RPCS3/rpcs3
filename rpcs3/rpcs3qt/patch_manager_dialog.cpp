@@ -570,13 +570,13 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	case patch_dynamic_type::long_enum:
 		ui->dynamic_combo_box->blockSignals(true);
 		ui->dynamic_combo_box->clear();
-		for (const f64& allowed_value : dynamic_value.allowed_values)
+		for (const patch_engine::patch_allowed_value& allowed_value : dynamic_value.allowed_values)
 		{
-			ui->dynamic_combo_box->addItem(QString::number(allowed_value), allowed_value);
+			ui->dynamic_combo_box->addItem(QString::fromStdString(allowed_value.label), allowed_value.value);
 
-			if (allowed_value == dynamic_value.value)
+			if (allowed_value.value == dynamic_value.value)
 			{
-				ui->dynamic_combo_box->setCurrentIndex(ui->dynamic_combo_box->findText(QString::number(allowed_value)));
+				ui->dynamic_combo_box->setCurrentIndex(ui->dynamic_combo_box->findData(allowed_value.value));
 			}
 		}
 		ui->dynamic_combo_box->setEnabled(true);

@@ -78,13 +78,24 @@ public:
 		mutable u32 alloc_addr = 0; // Used to save optional allocation address (if occured)
 	};
 
+	struct patch_allowed_value
+	{
+		std::string label;
+		f64 value{};
+
+		bool operator==(const patch_allowed_value& other) const
+		{
+			return value == other.value && label == other.label;
+		}
+	};
+
 	struct patch_dynamic_value
 	{
 		f64 value{};
 		f64 min{};
 		f64 max{};
 		patch_dynamic_type type{};
-		std::vector<f64> allowed_values;
+		std::vector<patch_allowed_value> allowed_values;
 
 		bool operator==(const patch_dynamic_value& other) const
 		{
