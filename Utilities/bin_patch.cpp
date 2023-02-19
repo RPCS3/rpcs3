@@ -82,6 +82,35 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 	});
 }
 
+void patch_engine::patch_config_value::set_and_check_value(f64 new_value, const std::string& name)
+{
+	switch (type)
+	{
+	case patch_configurable_type::double_enum:
+	case patch_configurable_type::long_enum:
+	{
+		if (std::none_of(allowed_values.begin(), allowed_values.end(), [&new_value](const patch_allowed_value& allowed_value){ return allowed_value.value == new_value; }))
+		{
+			patch_log.error("Can't set configurable enumerated value '%s' to %f. Using default value %f", name, new_value, value);
+			return;
+		}
+		break;
+	}
+	case patch_configurable_type::double_range:
+	case patch_configurable_type::long_range:
+	{
+		if (new_value < min || new_value > max)
+		{
+			patch_log.error("Can't set configurable range value '%s' to %f. Using default value %f", name, new_value, value);
+			return;
+		}
+		break;
+	}
+	}
+
+	value = new_value;
+}
+
 patch_engine::patch_engine()
 {
 }
@@ -1249,7 +1278,8 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 				{
 					if (p_ptr->actual_config_values.contains(key))
 					{
-						::at32(p_ptr->actual_config_values, key).value = config_value.value;
+						patch_config_value& actual_config_value = ::at32(p_ptr->actual_config_values, key);
+						actual_config_value.set_and_check_value(config_value.value, key);
 					}
 				}
 

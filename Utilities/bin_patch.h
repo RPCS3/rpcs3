@@ -101,6 +101,8 @@ public:
 		{
 			return value == other.value && min == other.min && max == other.max && type == other.type && allowed_values == other.allowed_values;
 		}
+
+		void set_and_check_value(f64 new_value, const std::string& name);
 	};
 
 	struct patch_config_values

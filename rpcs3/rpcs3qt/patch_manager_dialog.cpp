@@ -340,7 +340,7 @@ void patch_manager_dialog::populate_tree()
 
 							if (config_values.config_values.contains(key))
 							{
-								config_value.value = config_values.config_values.at(key).value;
+								config_value.set_and_check_value(config_values.config_values.at(key).value, key);
 							}
 
 							q_config_values[QString::fromStdString(key)] = QVariant::fromValue(config_value);
