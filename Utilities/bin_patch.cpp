@@ -367,11 +367,6 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 					append_log_message(log_messages, fmt::format("Error: Skipping dynamic values: expected Map, found %s (patch: %s, key: %s, location: %s, file: %s)", yml_type, description, main_key, get_yaml_node_location(dynamic_values_node), path), &patch_log.error);
 					is_valid = false;
 				}
-				else if (dynamic_values_node.size() > 1)
-				{
-					append_log_message(log_messages, fmt::format("Error: Skipping dynamic values: Currently only one value is allowed, found %d (patch: %s, key: %s, location: %s, file: %s)", dynamic_values_node.size(), description, main_key, get_yaml_node_location(dynamic_values_node), path), &patch_log.error);
-					is_valid = false;
-				}
 				else
 				{
 					for (const auto dynamic_value_node : dynamic_values_node)
