@@ -79,6 +79,7 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 
 	m_downloader = new downloader(this);
 
+	ui->dynamic_selector->setEnabled(false);
 	ui->dynamic_combo_box->setEnabled(false);
 	ui->dynamic_combo_box->setVisible(false);
 	ui->dynamic_spin_box->setEnabled(false);
@@ -92,6 +93,15 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	connect(ui->patch_tree, &QTreeWidget::itemChanged, this, &patch_manager_dialog::handle_item_changed);
 	connect(ui->patch_tree, &QTreeWidget::customContextMenuRequested, this, &patch_manager_dialog::handle_custom_context_menu_requested);
 	connect(ui->cb_owned_games_only, &QCheckBox::stateChanged, this, &patch_manager_dialog::handle_show_owned_games_only);
+	connect(ui->dynamic_selector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
+	{
+		if (index >= 0)
+		{
+			QList<QTreeWidgetItem*> list = ui->patch_tree->selectedItems();
+			QTreeWidgetItem* item = list.size() == 1 ? list.first() : nullptr;
+			handle_item_selected(item, item);
+		}
+	});
 	connect(ui->dynamic_combo_box, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
 		if (index >= 0)
@@ -527,23 +537,29 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	ui->label_title->setText(info.title);
 	ui->label_app_version->setText(info.app_version);
 
-	// TODO: support more than one dynamic value in the future
+	ui->dynamic_combo_box->setEnabled(false);
+	ui->dynamic_combo_box->setVisible(false);
+	ui->dynamic_spin_box->setEnabled(false);
+	ui->dynamic_spin_box->setVisible(false);
+	ui->dynamic_double_spin_box->setEnabled(false);
+	ui->dynamic_double_spin_box->setVisible(false);
 
 	if (info.dynamic_values.empty())
 	{
-		ui->dynamic_label->setText(tr("N/A"));
-		ui->dynamic_combo_box->setEnabled(false);
-		ui->dynamic_combo_box->setVisible(false);
-		ui->dynamic_spin_box->setEnabled(false);
-		ui->dynamic_spin_box->setVisible(false);
-		ui->dynamic_double_spin_box->setEnabled(false);
-		ui->dynamic_double_spin_box->setVisible(false);
+		ui->dynamic_selector->blockSignals(true);
+		ui->dynamic_selector->clear();
+		ui->dynamic_selector->blockSignals(false);
+		ui->dynamic_selector->setEnabled(false);
 		return;
 	}
 
-	ui->dynamic_label->setText(info.dynamic_values.firstKey());
+	const QString key = ui->dynamic_selector->currentIndex() < 0 ? "" : ui->dynamic_selector->currentData().toString();
+	if (key.isEmpty())
+	{
+		return;
+	}
 
-	const QVariant& variant = info.dynamic_values.first();
+	const QVariant& variant = info.dynamic_values.value(key);
 	ensure(variant.canConvert<patch_engine::patch_dynamic_value>());
 
 	const patch_engine::patch_dynamic_value dynamic_value = variant.value<patch_engine::patch_dynamic_value>();
@@ -586,7 +602,7 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	}
 }
 
-void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem * /*previous*/)
+void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeWidgetItem *previous)
 {
 	if (!current)
 	{
@@ -621,6 +637,25 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 				info.description = QString::fromStdString(found_info.description);
 				info.patch_version = QString::fromStdString(found_info.patch_version);
 				info.dynamic_values = current->data(0, dynamic_values_role).toMap();
+
+				if (current != previous)
+				{
+					ui->dynamic_selector->blockSignals(true);
+					ui->dynamic_selector->clear();
+					for (const auto& key : info.dynamic_values.keys())
+					{
+						const QVariant& variant = info.dynamic_values.value(key);
+						ensure(variant.canConvert<patch_engine::patch_dynamic_value>());
+						const patch_engine::patch_dynamic_value dynamic_value = variant.value<patch_engine::patch_dynamic_value>();
+						ui->dynamic_selector->addItem(key, key);
+					}
+					if (ui->dynamic_selector->count() > 0)
+					{
+						ui->dynamic_selector->setCurrentIndex(0);
+					}
+					ui->dynamic_selector->blockSignals(false);
+					ui->dynamic_selector->setEnabled(ui->dynamic_selector->count() > 0);
+				}
 			}
 		}
 		[[fallthrough]];
@@ -691,7 +726,7 @@ void patch_manager_dialog::handle_item_changed(QTreeWidgetItem *item, int /*colu
 		if (info.contains(description))
 		{
 			info[description].titles[title][serial][app_version].enabled = enabled;
-			handle_item_selected(item, nullptr);
+			handle_item_selected(item, item);
 		}
 	}
 }
@@ -713,7 +748,7 @@ void patch_manager_dialog::handle_dynamic_value_changed(double value)
 		return;
 	}
 
-	const QString key = ui->dynamic_label->text();
+	const QString key = ui->dynamic_selector->currentText();
 	const QVariant data = item->data(0, dynamic_values_role);
 	QVariantMap q_dynamic_values = data.canConvert<QVariantMap>() ? data.toMap() : QVariantMap{};
 

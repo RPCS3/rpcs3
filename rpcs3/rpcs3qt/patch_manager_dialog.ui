@@ -265,14 +265,18 @@
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout">
               <item>
-               <widget class="QLabel" name="dynamic_label">
-                <property name="text">
-                 <string>Dynamic label</string>
+               <widget class="QComboBox" name="dynamic_selector">
+                <property name="placeholderText">
+                 <string>N/A</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="dynamic_combo_box"/>
+               <widget class="QComboBox" name="dynamic_combo_box">
+                <property name="placeholderText">
+                 <string>N/A</string>
+                </property>
+               </widget>
               </item>
               <item>
                <widget class="QSpinBox" name="dynamic_spin_box"/>
