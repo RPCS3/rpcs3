@@ -19,7 +19,7 @@ namespace patch_key
 	static const std::string patch_version = "Patch Version";
 	static const std::string version = "Version";
 	static const std::string enabled = "Enabled";
-	static const std::string dynamic_values = "Dynamic Values";
+	static const std::string config_values = "Configurable Values";
 	static const std::string value = "Value";
 	static const std::string type = "Type";
 	static const std::string min = "Min";
@@ -54,7 +54,7 @@ enum class patch_type
 	utf8, // Text of string (not null-terminated automatically)
 };
 
-enum class patch_dynamic_type
+enum class patch_configurable_type
 {
 	double_range,
 	double_enum,
@@ -89,15 +89,15 @@ public:
 		}
 	};
 
-	struct patch_dynamic_value
+	struct patch_config_value
 	{
 		f64 value{};
 		f64 min{};
 		f64 max{};
-		patch_dynamic_type type{};
+		patch_configurable_type type{};
 		std::vector<patch_allowed_value> allowed_values;
 
-		bool operator==(const patch_dynamic_value& other) const
+		bool operator==(const patch_config_value& other) const
 		{
 			return value == other.value && min == other.min && max == other.max && type == other.type && allowed_values == other.allowed_values;
 		}
@@ -106,7 +106,7 @@ public:
 	struct patch_config_values
 	{
 		bool enabled{};
-		std::map<std::string, patch_dynamic_value> dynamic_values;
+		std::map<std::string, patch_config_value> config_values;
 	};
 
 	using patch_app_versions = std::unordered_map<std::string /*app_version*/, patch_config_values>;
@@ -124,12 +124,12 @@ public:
 		std::string author{};
 		std::string notes{};
 		std::string source_path{};
-		std::map<std::string, patch_dynamic_value> default_dynamic_values;
+		std::map<std::string, patch_config_value> default_config_values;
 
 		// Redundant information for accessibility (see patch_container)
 		std::string hash{};
 		std::string version{};
-		std::map<std::string, patch_dynamic_value> actual_dynamic_values;
+		std::map<std::string, patch_config_value> actual_config_values;
 	};
 
 	struct patch_container
