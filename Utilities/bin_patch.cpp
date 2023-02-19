@@ -417,7 +417,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 											break;
 										case patch_dynamic_type::long_range:
 										case patch_dynamic_type::long_enum:
-											val = get_yaml_node_value<s64>(node, err);
+											val = static_cast<f64>(get_yaml_node_value<s64>(node, err));
 											break;
 										}
 
@@ -481,15 +481,27 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 									case patch_dynamic_type::double_enum:
 									case patch_dynamic_type::long_enum:
 									{
-										if (const auto dynamic_value_allowed_values_node = dynamic_value_node.second[patch_key::allowed_values]; dynamic_value_allowed_values_node && dynamic_value_allowed_values_node.IsSequence())
+										if (const auto dynamic_value_allowed_values_node = dynamic_value_node.second[patch_key::allowed_values]; dynamic_value_allowed_values_node && dynamic_value_allowed_values_node.IsMap())
 										{
 											dynamic_value.allowed_values.clear();
 
 											for (const auto allowed_value : dynamic_value_allowed_values_node)
 											{
-												if (allowed_value && allowed_value.IsScalar())
+												if (allowed_value.second && allowed_value.second.IsScalar())
 												{
-													dynamic_value.allowed_values.push_back(get_and_check_dynamic_value(allowed_value));
+													patch_allowed_value new_allowed_value{};
+													new_allowed_value.label = allowed_value.first.Scalar();
+													new_allowed_value.value = get_and_check_dynamic_value(allowed_value.second);
+
+													if (std::any_of(dynamic_value.allowed_values.begin(), dynamic_value.allowed_values.end(), [&new_allowed_value](const patch_allowed_value& other){ return new_allowed_value.value == other.value || new_allowed_value.label == other.label; }))
+													{
+														append_log_message(log_messages, fmt::format("Error: Skipping dynamic allowed value. Another entry with the same label or value already exists. (patch: %s, key: %s, location: %s, file: %s)", description, main_key, get_yaml_node_location(allowed_value), path), &patch_log.error);
+														is_valid = false;
+													}
+													else
+													{
+														dynamic_value.allowed_values.push_back(new_allowed_value);
+													}
 												}
 												else
 												{
@@ -504,7 +516,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 												is_valid = false;
 											}
 
-											if (std::none_of(dynamic_value.allowed_values.begin(), dynamic_value.allowed_values.end(), [&dynamic_value](const f64& val){ return val == dynamic_value.value; }))
+											if (std::none_of(dynamic_value.allowed_values.begin(), dynamic_value.allowed_values.end(), [&dynamic_value](const patch_allowed_value& other){ return other.value == dynamic_value.value; }))
 											{
 												append_log_message(log_messages, fmt::format("Error: Dynamic value was not found in allowed values (key: %s, location: %s, file: %s)", main_key, get_yaml_node_location(dynamic_value_allowed_values_node), path), &patch_log.error);
 												is_valid = false;
@@ -790,7 +802,7 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 				}
 				default:
 				{
-					p.value.long_value = dynamic_value.value;
+					p.value.long_value = static_cast<u64>(dynamic_value.value);
 					patch_log.notice("Using dynamic value (key='%s', value=0x%x=%d, index=%d, hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s')",
 						key, p.value.long_value, p.value.long_value, i, patch.hash, patch.description, patch.author, patch.patch_version, patch.version);
 					break;
@@ -1580,14 +1592,14 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 						break;
 					case patch_dynamic_type::double_enum:
 					case patch_dynamic_type::long_enum:
-						out << patch_key::allowed_values << YAML::BeginSeq;
+						out << patch_key::allowed_values << YAML::BeginMap;
 
 						for (const auto& allowed_value : dynamic_value.allowed_values)
 						{
-							out << allowed_value;
+							out << allowed_value.label << allowed_value.value;
 						}
 
-						out << YAML::EndSeq;
+						out << YAML::EndMap;
 						break;
 					}
 
