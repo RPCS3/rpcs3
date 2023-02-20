@@ -24,6 +24,7 @@
 #define close_portable(a) (close(a))
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <poll.h>
 #if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <unistd.h>
 #endif
@@ -354,6 +355,28 @@ namespace pine
 		 */
 		bool StartSocket()
 		{
+			::pollfd poll_fd{};
+
+			for (int pending_connection = 0; pending_connection != 1;)
+			{
+				if (thread_ctrl::state() == thread_state::aborting)
+				{
+					return false;
+				}
+
+				std::memset(&poll_fd, 0, sizeof(poll_fd));
+				poll_fd.events  = POLLIN;
+				poll_fd.revents = 0;
+				poll_fd.fd      = m_sock;
+
+#ifdef _WIN32
+				// Try to wait for an incoming connection
+				pending_connection = ::WSAPoll(&poll_fd, 1, 10);
+#else
+				pending_connection = ::poll(&poll_fd, 1, 10);
+#endif
+			}
+
 			m_msgsock = accept(m_sock, 0, 0);
 
 			if (m_msgsock == -1)
