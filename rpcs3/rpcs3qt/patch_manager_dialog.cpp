@@ -45,7 +45,8 @@ enum patch_role : int
 	patch_group_role,
 	persistance_role,
 	node_level_role,
-	config_values_role
+	config_values_role,
+	config_key_role,
 };
 
 enum node_level : int
@@ -358,6 +359,7 @@ void patch_manager_dialog::populate_tree()
 						patch_level_item->setData(0, node_level_role, node_level::patch_level);
 						patch_level_item->setData(0, persistance_role, true);
 						patch_level_item->setData(0, config_values_role, q_config_values);
+						patch_level_item->setData(0, config_key_role, QString()); // Start with empty key. We will use this to keep track of the current config value during editing.
 
 						serial_level_item->addChild(patch_level_item);
 					}
@@ -537,15 +539,16 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 	ui->label_title->setText(info.title);
 	ui->label_app_version->setText(info.app_version);
 
-	ui->configurable_combo_box->setEnabled(false);
-	ui->configurable_combo_box->setVisible(false);
-	ui->configurable_spin_box->setEnabled(false);
-	ui->configurable_spin_box->setVisible(false);
-	ui->configurable_double_spin_box->setEnabled(false);
-	ui->configurable_double_spin_box->setVisible(false);
+	const QString key = ui->configurable_selector->currentIndex() < 0 ? "" : ui->configurable_selector->currentData().toString();
 
-	if (info.config_values.empty())
+	if (info.config_values.empty() || key.isEmpty())
 	{
+		ui->configurable_combo_box->setEnabled(false);
+		ui->configurable_combo_box->setVisible(false);
+		ui->configurable_spin_box->setEnabled(false);
+		ui->configurable_spin_box->setVisible(false);
+		ui->configurable_double_spin_box->setEnabled(false);
+		ui->configurable_double_spin_box->setVisible(false);
 		ui->configurable_selector->blockSignals(true);
 		ui->configurable_selector->clear();
 		ui->configurable_selector->blockSignals(false);
@@ -553,17 +556,27 @@ void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_pat
 		return;
 	}
 
-	const QString key = ui->configurable_selector->currentIndex() < 0 ? "" : ui->configurable_selector->currentData().toString();
-	if (key.isEmpty())
+	if (key == info.config_value_key)
 	{
+		// Don't update widget if the config key did not change
 		return;
 	}
 
+	// Disable all config widgets first
+	ui->configurable_combo_box->setEnabled(false);
+	ui->configurable_combo_box->setVisible(false);
+	ui->configurable_spin_box->setEnabled(false);
+	ui->configurable_spin_box->setVisible(false);
+	ui->configurable_double_spin_box->setEnabled(false);
+	ui->configurable_double_spin_box->setVisible(false);
+
+	// Fetch the config values of this item
 	const QVariant& variant = info.config_values.value(key);
 	ensure(variant.canConvert<patch_engine::patch_config_value>());
 
 	const patch_engine::patch_config_value config_value = variant.value<patch_engine::patch_config_value>();
 
+	// Setup the proper config widget
 	switch (config_value.type)
 	{
 	case patch_configurable_type::double_range:
@@ -611,6 +624,12 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 		return;
 	}
 
+	// Clear key of previous patch level item
+	if (previous && current != previous && static_cast<node_level>(previous->data(0, node_level_role).toInt()) == node_level::patch_level)
+	{
+		previous->setData(0, config_key_role, QString());
+	}
+
 	const node_level level = static_cast<node_level>(current->data(0, node_level_role).toInt());
 
 	patch_manager_dialog::gui_patch_info info{};
@@ -637,9 +656,11 @@ void patch_manager_dialog::handle_item_selected(QTreeWidgetItem *current, QTreeW
 				info.description = QString::fromStdString(found_info.description);
 				info.patch_version = QString::fromStdString(found_info.patch_version);
 				info.config_values = current->data(0, config_values_role).toMap();
+				info.config_value_key = current->data(0, config_key_role).toString();
 
 				if (current != previous)
 				{
+					// Update the config value combo box with the new config keys
 					ui->configurable_selector->blockSignals(true);
 					ui->configurable_selector->clear();
 					for (const auto& key : info.config_values.keys())
@@ -748,6 +769,7 @@ void patch_manager_dialog::handle_config_value_changed(double value)
 		return;
 	}
 
+	// Fetch the config values of this item
 	const QString key = ui->configurable_selector->currentText();
 	const QVariant data = item->data(0, config_values_role);
 	QVariantMap q_config_values = data.canConvert<QVariantMap>() ? data.toMap() : QVariantMap{};
@@ -757,6 +779,7 @@ void patch_manager_dialog::handle_config_value_changed(double value)
 		return;
 	}
 
+	// Fetch the config value for the current key
 	QVariant& variant = q_config_values[key];
 	ensure(variant.canConvert<patch_engine::patch_config_value>());
 
@@ -764,6 +787,8 @@ void patch_manager_dialog::handle_config_value_changed(double value)
 	config_value.value = value;
 	variant = QVariant::fromValue(config_value);
 
+	// Set the key first. setData will trigger the itemChanged signal and we don't want to re-create the config widgets each time we set the config values.
+	item->setData(0, config_key_role, key);
 	item->setData(0, config_values_role, q_config_values);
 
 	// Update the configurable value of the patch for this item
