@@ -159,6 +159,9 @@ class Emulator final
 	}
 
 public:
+	static constexpr std::string_view game_id_boot_prefix = "%RPCS3_GAMEID%:";
+	static constexpr std::string_view vfs_boot_prefix = "%RPCS3_VFS%:";
+
 	Emulator() = default;
 
 	void SetCallbacks(EmuCallbacks&& cb)
