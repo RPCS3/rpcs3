@@ -283,6 +283,9 @@
               </item>
               <item>
                <widget class="QDoubleSpinBox" name="configurable_double_spin_box">
+                <property name="decimals">
+                 <number>10</number>
+                </property>
                 <property name="minimum">
                  <double>-1000000.000000000000000</double>
                 </property>
