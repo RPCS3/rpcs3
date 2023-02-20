@@ -229,6 +229,8 @@ namespace stx
 				this->reset();
 			}
 
+			ensure(m_init);
+
 			// Use unique_ptr to reduce header dependencies in this commonly used header
 			const auto order = std::make_unique<std::pair<double, const type_info<typeinfo>*>[]>(stx::typelist<typeinfo>().count());
 
@@ -351,6 +353,8 @@ namespace stx
 		template <typename T>
 		void need() noexcept
 		{
+			ensure(m_init);
+
 			if (!m_init[stx::typeindex<typeinfo, std::decay_t<T>>()])
 			{
 				if constexpr (std::is_constructible_v<T, manual_typemap&>)
@@ -371,6 +375,8 @@ namespace stx
 		template <typename T, typename As = T, typename... Args>
 		As* init(Args&&... args) noexcept
 		{
+			ensure(m_init);
+
 			if (std::exchange(m_init[stx::typeindex<typeinfo, std::decay_t<T>, std::decay_t<As>>()], true))
 			{
 				// Already exists, recreation is not supported (may be added later)
@@ -409,7 +415,7 @@ namespace stx
 		template <typename T>
 		bool is_init() const noexcept
 		{
-			return m_init[stx::typeindex<typeinfo, std::decay_t<T>>()];
+			return m_init && m_init[stx::typeindex<typeinfo, std::decay_t<T>>()];
 		}
 
 		// Obtain object pointer (may be uninitialized memory)
