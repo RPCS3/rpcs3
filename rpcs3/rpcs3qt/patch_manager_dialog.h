@@ -30,6 +30,7 @@ class patch_manager_dialog : public QDialog
 		QString notes;
 		QString description;
 		QString patch_version;
+		QString config_value_key;
 		QMap<QString, QVariant> config_values;
 	};
 
