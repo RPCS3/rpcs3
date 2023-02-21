@@ -298,6 +298,7 @@ struct cfg_root : cfg::node
 		cfg::string bind_address{this, "Bind address", "0.0.0.0"};
 		cfg::string dns{this, "DNS address", "8.8.8.8"};
 		cfg::string swap_list{this, "IP swap list", ""};
+		cfg::_bool upnp_enabled{this, "UPNP Enabled", false};
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 	} net{this};

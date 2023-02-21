@@ -1769,7 +1769,7 @@ error_code sys_net_abort(ppu_thread& ppu, s32 type, u64 arg, s32 flags)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_net.todo("sys_net_abort(type=%d, arg=0x%x, flags=0x%x)", type, arg, flags);
+	sys_net.warning("sys_net_abort(type=%d, arg=0x%x, flags=0x%x)", type, arg, flags);
 
 	enum abort_type : s32
 	{

@@ -1193,13 +1193,13 @@ int main(int argc, char** argv)
 	{
 		std::string spath = sstr(::at32(args, 0));
 
-		if (spath.starts_with("%RPCS3_VFS%"))
+		if (spath.starts_with(Emulator::vfs_boot_prefix))
 		{
-			sys_log.notice("Booting application from command line using VFS path: %s", spath.substr(("%RPCS3_VFS%"sv).size()));
+			sys_log.notice("Booting application from command line using VFS path: %s", spath.substr(Emulator::vfs_boot_prefix.size()));
 		}
-		else if (spath.starts_with("%RPCS3_GAMEID%"))
+		else if (spath.starts_with(Emulator::game_id_boot_prefix))
 		{
-			sys_log.notice("Booting application from command line using GAMEID: %s", spath.substr(("%RPCS3_GAMEID%"sv).size()));
+			sys_log.notice("Booting application from command line using GAMEID: %s", spath.substr(Emulator::game_id_boot_prefix.size()));
 		}
 		else
 		{

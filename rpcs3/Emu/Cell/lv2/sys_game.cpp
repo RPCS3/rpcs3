@@ -39,10 +39,9 @@ public:
 
 	board_storage()
 	{
+		memset(&storage.raw(), -1, size);
 		if (fs::file file; file.open(file_path, fs::read))
-			file.read(&storage.raw(), size);
-		else
-			memset(&storage.raw(), 0, size);
+			file.read(&storage.raw(), std::min(file.size(), size));
 	}
 
 	board_storage(const board_storage&) = delete;
@@ -65,7 +64,7 @@ private:
 	atomic_be_t<v128> storage;
 	bool written = false;
 	const std::string file_path = rpcs3::utils::get_hdd1_dir() + "/caches/board_storage.bin";
-	static constexpr size_t size = sizeof(v128);
+	static constexpr u64 size = sizeof(v128);
 };
 
 struct watchdog_t
@@ -215,30 +214,30 @@ u64 _sys_game_get_system_sw_version()
 	return stof(utils::get_firmware_version()) * 10000;
 }
 
-error_code _sys_game_board_storage_read(vm::ptr<u8> buffer1, vm::ptr<u8> buffer2)
+error_code _sys_game_board_storage_read(vm::ptr<u8> buffer, vm::ptr<u8> status)
 {
-	sys_game.trace("sys_game_board_storage_read(buffer1=*0x%x, buffer2=*0x%x)", buffer1, buffer2);
+	sys_game.trace("sys_game_board_storage_read(buffer=*0x%x, status=*0x%x)", buffer, status);
 
-	if (!buffer1 || !buffer2)
+	if (!buffer || !status)
 	{
 		return CELL_EFAULT;
 	}
 
-	*buffer2 = g_fxo->get<board_storage>().read(buffer1.get_ptr()) ? 0x00 : 0xFF;
+	*status = g_fxo->get<board_storage>().read(buffer.get_ptr()) ? 0x00 : 0xFF;
 
 	return CELL_OK;
 }
 
-error_code _sys_game_board_storage_write(vm::ptr<u8> buffer1, vm::ptr<u8> buffer2)
+error_code _sys_game_board_storage_write(vm::ptr<u8> buffer, vm::ptr<u8> status)
 {
-	sys_game.trace("sys_game_board_storage_write(buffer1=*0x%x, buffer2=*0x%x)", buffer1, buffer2);
+	sys_game.trace("sys_game_board_storage_write(buffer=*0x%x, status=*0x%x)", buffer, status);
 
-	if (!buffer1 || !buffer2)
+	if (!buffer || !status)
 	{
 		return CELL_EFAULT;
 	}
 
-	*buffer2 = g_fxo->get<board_storage>().write(buffer1.get_ptr()) ? 0x00 : 0xFF;
+	*status = g_fxo->get<board_storage>().write(buffer.get_ptr()) ? 0x00 : 0xFF;
 
 	return CELL_OK;
 }

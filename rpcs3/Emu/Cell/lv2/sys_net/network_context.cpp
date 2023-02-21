@@ -83,14 +83,10 @@ void need_network()
 	initialize_tcp_timeout_monitor();
 }
 
-network_thread::network_thread() noexcept
+void network_thread::bind_sce_np_port()
 {
-	if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
-		list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(SCE_NP_PORT), std::forward_as_tuple(SCE_NP_PORT));
-}
-
-network_thread::~network_thread()
-{
+	std::lock_guard list_lock(list_p2p_ports_mutex);
+	list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(SCE_NP_PORT), std::forward_as_tuple(SCE_NP_PORT));
 }
 
 void network_thread::operator()()

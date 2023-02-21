@@ -80,3 +80,6 @@
 	path = 3rdparty/libsdl-org/SDL
 	url = https://github.com/libsdl-org/SDL.git
 	ignore = dirty
+[submodule "3rdparty/miniupnp/miniupnp"]
+	path = 3rdparty/miniupnp/miniupnp
+	url = https://github.com/miniupnp/miniupnp.git

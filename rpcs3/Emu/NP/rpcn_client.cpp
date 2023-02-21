@@ -71,7 +71,7 @@ namespace rpcn
 		return get_localized_string(rpcn_state_to_localized_string_id(state));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 18;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 19;
 	constexpr usz RPCN_HEADER_SIZE      = 15;
 	constexpr usz COMMUNICATION_ID_SIZE = 9;
 
