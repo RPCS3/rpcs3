@@ -1,9 +1,7 @@
 #include "stdafx.h"
 #include "overlay_home_menu.h"
 #include "Emu/RSX/RSXThread.h"
-
-#include <sstream>
-#include <iomanip>
+#include "Utilities/date_time.h"
 
 namespace rsx
 {
@@ -11,11 +9,7 @@ namespace rsx
 	{
 		std::string get_time_string()
 		{
-			std::ostringstream ost;
-			const std::time_t dateTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
- 			const std::tm tm = *std::localtime(&dateTime);
-			ost << std::put_time(&tm, "%Y/%m/%d %H:%M:%S");
-			return ost.str();
+			return date_time::fmt_time("%Y/%m/%d %H:%M:%S", time(nullptr));
 		}
 
 		home_menu_dialog::home_menu_dialog()
