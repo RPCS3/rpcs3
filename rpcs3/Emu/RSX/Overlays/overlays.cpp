@@ -122,7 +122,7 @@ namespace rsx
 				last_button_state[pad_index][button_id] = pressed;
 			};
 
-			while (!m_stop_input_loop)
+			while (!m_stop_input_loop && !m_input_loop_interrupted)
 			{
 				if (Emu.IsStopped())
 				{
@@ -363,7 +363,9 @@ namespace rsx
 
 			m_interactive = false;
 
-			return 0;
+			return (m_input_loop_interrupted && !m_stop_input_loop)
+				? selection_code::interrupted
+				: selection_code::ok;
 		}
 
 		void user_interface::close(bool use_callback, bool stop_pad_interception)

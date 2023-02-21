@@ -84,9 +84,11 @@ namespace rsx
 			// Move this somewhere to avoid duplication
 			enum selection_code
 			{
+				ok = 0,
 				new_save = -1,
 				canceled = -2,
-				error = -3
+				error = -3,
+				interrupted = -4
 			};
 
 		protected:
@@ -113,6 +115,7 @@ namespace rsx
 			bool m_start_pad_interception = true;
 			atomic_t<bool> m_stop_pad_interception = false;
 			atomic_t<bool> m_input_thread_detached = false;
+			atomic_t<bool> m_input_loop_interrupted = false;
 			atomic_t<u64> thread_bits = 0;
 			bool m_keyboard_input_enabled = false; // Allow keyboard input
 			bool m_keyboard_pad_handler_active = true; // Initialized as true to prevent keyboard input until proven otherwise.
@@ -149,6 +152,8 @@ namespace rsx
 
 			bool is_detached() const { return m_input_thread_detached; }
 			void detach_input() { m_input_thread_detached.store(true); }
+			void on_input_interrupted() { m_input_loop_interrupted.store(true); }
+			void on_input_resumed() { m_input_loop_interrupted.store(false); }
 
 			void update() override {}
 
