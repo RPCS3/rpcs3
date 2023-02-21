@@ -236,5 +236,16 @@ namespace rsx
 			return false;
 		}
 
+		void refresh_message_queue()
+		{
+			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+			{
+				if (auto msg_overlay = manager->get<rsx::overlays::message>())
+				{
+					msg_overlay->refresh();
+				}
+			}
+		}
+
 	} // namespace overlays
 } // namespace rsx

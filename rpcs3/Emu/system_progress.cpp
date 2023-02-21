@@ -4,6 +4,8 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/RSX/Overlays/overlay_compile_notification.h"
 #include "Emu/System.h"
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -141,7 +143,8 @@ void progress_dialog_server::operator()()
 
 				if (skip_this_one)
 				{
-					// Do nothing
+					// Show a message instead
+					rsx::overlays::show_ppu_compile_notification();
 					thread_ctrl::wait_for(10000);
 					continue;
 				}
@@ -175,6 +178,12 @@ void progress_dialog_server::operator()()
 						dlg->ProgressBarSetValue(0, static_cast<u32>(std::floor(value)));
 					});
 				}
+			}
+
+			if (skip_this_one)
+			{
+				// Make sure to update any pending messages. PPU compilation may freeze the image.
+				rsx::overlays::refresh_message_queue();
 			}
 
 			thread_ctrl::wait_for(10000);

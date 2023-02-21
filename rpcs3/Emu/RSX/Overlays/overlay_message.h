@@ -78,6 +78,7 @@ namespace rsx
 				}
 
 				visible = true;
+				refresh();
 			}
 
 		private:
@@ -119,6 +120,8 @@ namespace rsx
 				msg_overlay->queue_message(msg_id, expiration, std::move(refs), location, std::move(icon));
 			}
 		}
+
+		void refresh_message_queue();
 
 	} // namespace overlays
 } // namespace rsx
