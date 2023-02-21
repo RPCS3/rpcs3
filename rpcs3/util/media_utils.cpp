@@ -442,7 +442,7 @@ namespace utils
 							memcpy(&data[m_size], buffer, buffer_size);
 						}
 
-						const u32 timestamp_ms = stream->time_base.den ? (1000 * av.frame->best_effort_timestamp * stream->time_base.num) / stream->time_base.den : 0;
+						const s64 timestamp_ms = stream->time_base.den ? (1000 * av.frame->best_effort_timestamp * stream->time_base.num) / stream->time_base.den : 0;
 						timestamps_ms.push_back({m_size, timestamp_ms});
 						m_size += buffer_size;
 					}
