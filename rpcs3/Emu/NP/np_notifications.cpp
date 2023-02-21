@@ -29,7 +29,8 @@ namespace np
 		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		np_cache.add_member(room_id, notif_data->roomMemberDataInternal.get_ptr());
+		if (!np_cache.add_member(room_id, notif_data->roomMemberDataInternal.get_ptr()))
+			return;
 
 		rpcn_log.notice("Received notification that user %s(%d) joined the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 		extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
@@ -60,7 +61,8 @@ namespace np
 		RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(edata, update_info, notif_data);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		np_cache.del_member(room_id, notif_data->roomMemberDataInternal->memberId);
+		if (!np_cache.del_member(room_id, notif_data->roomMemberDataInternal->memberId))
+			return;
 
 		rpcn_log.notice("Received notification that user %s(%d) left the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 		extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
@@ -154,7 +156,8 @@ namespace np
 		RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(edata, update_info, notif_data);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		np_cache.add_member(room_id, notif_data->newRoomMemberDataInternal.get_ptr());
+		if (!np_cache.add_member(room_id, notif_data->newRoomMemberDataInternal.get_ptr()))
+			return;
 
 		rpcn_log.notice("Received notification that user's %s(%d) room (%d) data was updated", notif_data->newRoomMemberDataInternal->userInfo.npId.handle.data, notif_data->newRoomMemberDataInternal->memberId, room_id);
 		extra_nps::print_room_member_data_internal(notif_data->newRoomMemberDataInternal.get_ptr());
@@ -200,22 +203,27 @@ namespace np
 
 	void np_handler::notif_p2p_connect(std::vector<u8>& data)
 	{
-		if (data.size() != 16)
+		vec_stream noti(data);
+		const u64 room_id = noti.get<u64>();
+		const u16 member_id = noti.get<u16>();
+		const u16 port_p2p = noti.get<u16>();
+		const u32 addr_p2p = noti.get<u32>();
+
+		if (noti.is_error())
 		{
-			rpcn_log.error("Notification data for SignalP2PConnect != 14");
+			rpcn_log.error("Received faulty SignalP2PConnect notification");
 			return;
 		}
 
-		const u64 room_id = read_from_ptr<le_t<u64>>(data);
-		const u16 member_id = read_from_ptr<le_t<u16>>(data, 8);
-		const u16 port_p2p = read_from_ptr<be_t<u16>>(data, 10);
-		const u32 addr_p2p = read_from_ptr<le_t<u32>>(data, 12);
+		auto [res, npid] = np_cache.get_npid(room_id, member_id);
+		if (!npid)
+			return;
 
-		rpcn_log.notice("Received notification to connect to member(%d) of room(%d): %s:%d", member_id, room_id, ip_to_string(addr_p2p), port_p2p);
+		rpcn_log.notice("Received notification to connect to member(%d=%s) of room(%d): %s:%d", member_id, reinterpret_cast<const char*>((*npid).handle.data), room_id, ip_to_string(addr_p2p), port_p2p);
 
 		// Attempt Signaling
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-		sigh.set_sig2_infos(room_id, member_id, SCE_NP_SIGNALING_CONN_STATUS_PENDING, addr_p2p, port_p2p, np_cache.get_npid(room_id, member_id));
-		sigh.start_sig2(room_id, member_id);
+		const u32 conn_id = sigh.init_sig2(*npid, room_id, member_id);
+		sigh.start_sig(conn_id, addr_p2p, port_p2p);
 	}
 } // namespace np
