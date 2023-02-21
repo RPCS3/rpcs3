@@ -1014,9 +1014,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			m_path_old = m_path;
 			resolve_path_as_vfs_path = true;
 		}
-		else if (m_path.starts_with("%RPCS3_VFS%:"))
+		else if (m_path.starts_with(vfs_boot_prefix))
 		{
-			m_path = m_path.substr(("%RPCS3_VFS%:"sv).size());
+			m_path = m_path.substr(vfs_boot_prefix.size());
 
 			if (!m_path.empty() && m_path[0] != '/')
 			{
@@ -1035,10 +1035,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			resolve_path_as_vfs_path =  true;
 		}
-		else if (m_path.starts_with("%RPCS3_GAMEID%:"))
+		else if (m_path.starts_with(game_id_boot_prefix))
 		{
 			// Try to boot a game through game ID only
-			m_title_id = m_path.substr(("%RPCS3_GAMEID%:"sv).size());
+			m_title_id = m_path.substr(game_id_boot_prefix.size());
 			m_title_id = m_title_id.substr(0, m_title_id.find_first_of(fs::delim));
 
 			if (m_title_id.size() < 3 && m_title_id.find_first_not_of('.') == umax)
@@ -1048,7 +1048,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				return game_boot_result::invalid_file_or_folder;
 			}
 
-			std::string tail = m_path.substr(("%RPCS3_GAMEID%:"sv).size() + m_title_id.size());
+			std::string tail = m_path.substr(game_id_boot_prefix.size() + m_title_id.size());
 
 			if (tail.find_first_not_of(fs::delim) == umax)
 			{

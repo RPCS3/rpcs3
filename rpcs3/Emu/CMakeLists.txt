@@ -159,6 +159,10 @@ target_link_libraries(rpcs3_emu
     PUBLIC
         3rdparty::soundtouch)
 
+target_link_libraries(rpcs3_emu
+    PUBLIC
+        3rdparty::miniupnpc)
+
 # Cell
 target_sources(rpcs3_emu PRIVATE
     Cell/MFC.cpp
@@ -411,6 +415,8 @@ target_sources(rpcs3_emu PRIVATE
     NP/np_structs_extra.cpp
     NP/rpcn_client.cpp
     NP/rpcn_config.cpp
+    NP/upnp_config.cpp
+    NP/upnp_handler.cpp
 )
 
 # Memory

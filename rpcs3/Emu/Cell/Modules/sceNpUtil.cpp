@@ -39,8 +39,8 @@ struct bandwidth_test
 			}
 		}
 
-		test_result.upload_bps = 16000.0;
-		test_result.download_bps = 16000.0;
+		test_result.upload_bps = 100'000'000.0;
+		test_result.download_bps = 100'000'000.0;
 		test_result.result = CELL_OK;
 		status = SCE_NP_UTIL_BANDWIDTH_TEST_STATUS_FINISHED;
 		finished = true;

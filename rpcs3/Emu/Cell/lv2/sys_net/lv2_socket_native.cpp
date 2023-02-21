@@ -50,6 +50,13 @@ lv2_socket_native::~lv2_socket_native()
 		::close(socket);
 #endif
 	}
+
+	if (bound_port)
+	{
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		nph.upnp_remove_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
+		bound_port = 0;
+	}
 }
 
 s32 lv2_socket_native::create_socket()
@@ -143,10 +150,36 @@ s32 lv2_socket_native::bind(const sys_net_sockaddr& addr)
 	native_addr.sin_addr.s_addr = saddr;
 	::socklen_t native_addr_len = sizeof(native_addr);
 
+	// Note that this is a hack(TODO)
+	// ATM we don't support binding 3658 udp because we use it for the p2ps main socket
+	// Only Fat Princess is known to do this to my knowledge
+	if (psa_in->sin_port == 3658 && type == SYS_NET_SOCK_DGRAM)
+	{
+		native_addr.sin_port = std::bit_cast<u16, be_t<u16>>(3659);
+	}
+
 	sys_net.warning("[Native] Trying to bind %s:%d", native_addr.sin_addr, std::bit_cast<be_t<u16>, u16>(native_addr.sin_port));
 
 	if (::bind(socket, reinterpret_cast<struct sockaddr*>(&native_addr), native_addr_len) == 0)
 	{
+		// Only UPNP port forward binds to 0.0.0.0
+		if (saddr == 0)
+		{
+			if (native_addr.sin_port == 0)
+			{
+				sockaddr_in client_addr;
+				socklen_t client_addr_size = sizeof(client_addr);
+				ensure(::getsockname(socket, reinterpret_cast<struct sockaddr*>(&client_addr), &client_addr_size) == 0);
+				bound_port = std::bit_cast<u16, be_t<u16>>(client_addr.sin_port);
+			}
+			else
+			{
+				bound_port = std::bit_cast<u16, be_t<u16>>(native_addr.sin_port);
+			}
+
+			nph.upnp_add_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
+		}
+
 		last_bound_addr = addr;
 		return CELL_OK;
 	}
@@ -1011,6 +1044,13 @@ void lv2_socket_native::close()
 
 	auto& dnshook = g_fxo->get<np::dnshook>();
 	dnshook.remove_dns_spy(lv2_id);
+
+	if (bound_port)
+	{
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		nph.upnp_remove_port_mapping(bound_port, type == SYS_NET_SOCK_STREAM ? "TCP" : "UDP");
+		bound_port = 0;
+	}
 }
 
 s32 lv2_socket_native::shutdown(s32 how)

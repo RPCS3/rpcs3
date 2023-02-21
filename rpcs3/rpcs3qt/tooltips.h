@@ -230,6 +230,7 @@ public:
 		const QString dns           = tr("DNS used to resolve hostnames by applications.");
 		const QString dns_swap      = tr("DNS Swap List.");
 		const QString bind          = tr("Interface IP Address to bind to.");
+		const QString enable_upnp   = tr("Enable UPNP.\nThis will automatically forward ports bound on 0.0.0.0 if your router has UPNP enabled.");
 
 		// system
 

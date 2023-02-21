@@ -16,7 +16,7 @@ namespace rsx
 
 			overlay_element bottom_bar, background;
 			image_view background_poster;
-			progress_bar progress_1, progress_2;
+			std::array<progress_bar, 2> progress_bars{};
 			u8 num_progress_bars = 0;
 			s32 taskbar_index = 0;
 			s32 taskbar_limit = 0;
@@ -31,6 +31,35 @@ namespace rsx
 			std::unique_ptr<image_info> background_image;
 
 			animation_color_interpolate fade_animation;
+
+			struct text_guard_t
+			{
+				std::mutex mutex;
+				std::string text;
+				bool dirty{false};
+
+				void set_text(std::string t)
+				{
+					std::lock_guard lock(mutex);
+					text = std::move(t);
+					dirty = true;
+				}
+
+				std::pair<bool, std::string> get_text()
+				{
+					if (dirty)
+					{
+						std::lock_guard lock(mutex);
+						dirty = false;
+						return { true, std::move(text) };
+					}
+
+					return { false, {} };
+				}
+			};
+
+			text_guard_t text_guard{};
+			std::array<text_guard_t, 2> bar_text_guard{};
 
 		public:
 			message_dialog(bool allow_custom_background = false);

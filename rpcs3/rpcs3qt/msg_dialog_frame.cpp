@@ -16,7 +16,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	Close(true);
 
 	m_dialog = new custom_dialog(type.disable_cancel);
-	m_dialog->setWindowTitle(title.empty() ? (type.se_normal ? "Normal dialog" : "Error dialog") : qstr(title));
+	m_dialog->setWindowTitle(title.empty() ? (type.se_normal ? tr("Normal dialog") : tr("Error dialog")) : qstr(title));
 	m_dialog->setWindowOpacity(type.bg_invisible ? 1. : 0.75);
 
 	m_text = new QLabel(qstr(msg));
@@ -65,8 +65,8 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		m_dialog->setModal(true);
 
-		QPushButton* m_button_yes = new QPushButton("&Yes", m_dialog);
-		QPushButton* m_button_no = new QPushButton("&No", m_dialog);
+		QPushButton* m_button_yes = new QPushButton(tr("&Yes"), m_dialog);
+		QPushButton* m_button_no = new QPushButton(tr("&No"), m_dialog);
 
 		QHBoxLayout* hBoxButtons = new QHBoxLayout;
 		hBoxButtons->setAlignment(Qt::AlignCenter);
@@ -102,7 +102,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		m_dialog->setModal(true);
 
-		QPushButton* m_button_ok = new QPushButton("&OK", m_dialog);
+		QPushButton* m_button_ok = new QPushButton(tr("&OK"), m_dialog);
 		m_button_ok->setFixedWidth(50);
 
 		QHBoxLayout* hBoxButtons = new QHBoxLayout;

@@ -3,8 +3,6 @@
 
 #include <iostream>
 #include <chrono>
-#include <sstream>
-#include <iomanip>
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -28,6 +26,7 @@
 
 #include "headless_application.h"
 #include "Utilities/sema.h"
+#include "Utilities/date_time.h"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
 #include "module_verifier.hpp"
@@ -410,11 +409,8 @@ void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QStrin
 template <>
 void fmt_class_string<std::chrono::sys_time<typename std::chrono::system_clock::duration>>::format(std::string& out, u64 arg)
 {
-	std::ostringstream ss;
 	const std::time_t dateTime = std::chrono::system_clock::to_time_t(get_object(arg));
- 	const std::tm tm = *std::localtime(&dateTime);
-	ss << std::put_time(&tm, "%Y-%m-%eT%H:%M:%S");
- 	out += ss.str();
+ 	out += date_time::fmt_time("%Y-%m-%eT%H:%M:%S", dateTime);
 }
 
 void run_platform_sanity_checks()
@@ -1193,13 +1189,13 @@ int main(int argc, char** argv)
 	{
 		std::string spath = sstr(::at32(args, 0));
 
-		if (spath.starts_with("%RPCS3_VFS%"))
+		if (spath.starts_with(Emulator::vfs_boot_prefix))
 		{
-			sys_log.notice("Booting application from command line using VFS path: %s", spath.substr(("%RPCS3_VFS%"sv).size()));
+			sys_log.notice("Booting application from command line using VFS path: %s", spath.substr(Emulator::vfs_boot_prefix.size()));
 		}
-		else if (spath.starts_with("%RPCS3_GAMEID%"))
+		else if (spath.starts_with(Emulator::game_id_boot_prefix))
 		{
-			sys_log.notice("Booting application from command line using GAMEID: %s", spath.substr(("%RPCS3_GAMEID%"sv).size()));
+			sys_log.notice("Booting application from command line using GAMEID: %s", spath.substr(Emulator::game_id_boot_prefix.size()));
 		}
 		else
 		{

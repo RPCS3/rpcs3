@@ -6,6 +6,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asmjit", "3rdparty\asmjit\a
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "emucore", "rpcs3\emucore.vcxproj", "{C4A10229-4712-4BD2-B63E-50D93C67A038}"
 	ProjectSection(ProjectDependencies) = postProject
+		{5228F863-E0DD-4DE7-AA7B-5C52B14CD4D0} = {5228F863-E0DD-4DE7-AA7B-5C52B14CD4D0}
 		{939FE206-1182-ABC3-1234-FEAB88E98404} = {939FE206-1182-ABC3-1234-FEAB88E98404}
 	EndProjectSection
 EndProject
@@ -74,7 +75,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcurl", "3rdparty\curl\li
 		{73973223-5EE8-41CA-8E88-1D60E89A237B} = {73973223-5EE8-41CA-8E88-1D60E89A237B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SPIRV", "3rdparty\SPIRV\spirv.vcxproj", "{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spirv", "3rdparty\SPIRV\spirv.vcxproj", "{4CBD3DDD-5555-49A4-A44D-DD3D8CB516A1}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "3rdParty", "3rdParty", "{6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}"
 EndProject
@@ -92,6 +93,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "pine", "pine", "{A55DA1B5-C
 	ProjectSection(SolutionItems) = preProject
 		3rdparty\pine\pine_server.h = 3rdparty\pine\pine_server.h
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "miniupnpc_static", "3rdparty\miniupnp\miniupnpc_static.vcxproj", "{5228F863-E0DD-4DE7-AA7B-5C52B14CD4D0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -187,6 +190,10 @@ Global
 		{8DC244EE-A0BD-4038-BAF7-CFAFA5EB2BAA}.Debug|x64.Build.0 = Debug|x64
 		{8DC244EE-A0BD-4038-BAF7-CFAFA5EB2BAA}.Release|x64.ActiveCfg = Release|x64
 		{8DC244EE-A0BD-4038-BAF7-CFAFA5EB2BAA}.Release|x64.Build.0 = Release|x64
+		{5228F863-E0DD-4DE7-AA7B-5C52B14CD4D0}.Debug|x64.ActiveCfg = Debug|x64
+		{5228F863-E0DD-4DE7-AA7B-5C52B14CD4D0}.Debug|x64.Build.0 = Debug|x64
+		{5228F863-E0DD-4DE7-AA7B-5C52B14CD4D0}.Release|x64.ActiveCfg = Release|x64
+		{5228F863-E0DD-4DE7-AA7B-5C52B14CD4D0}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -216,6 +223,7 @@ Global
 		{508C291A-3D18-49F5-B25D-F7C8DB92CB21} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 		{8DC244EE-A0BD-4038-BAF7-CFAFA5EB2BAA} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 		{A55DA1B5-CC17-4525-BE7F-1659CE17BB56} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
+		{5228F863-E0DD-4DE7-AA7B-5C52B14CD4D0} = {6C3B64A0-8F8A-4DC4-8C0B-D71EBEED7FA8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {06CC7920-E085-4B81-9582-8DE8AAD42510}

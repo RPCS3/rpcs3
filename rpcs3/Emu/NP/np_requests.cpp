@@ -35,70 +35,47 @@ namespace np
 	u32 np_handler::get_server_status(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 server_id)
 	{
 		// TODO: actually implement interaction with server for this?
-		u32 req_id    = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo);
 		u32 event_key = get_event_key();
 
-		auto& edata                                    = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetServerInfo, sizeof(SceNpMatching2GetServerInfoResponse));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetServerInfo, sizeof(SceNpMatching2GetServerInfoResponse));
 		SceNpMatching2GetServerInfoResponse* serv_info = reinterpret_cast<SceNpMatching2GetServerInfoResponse*>(edata.data());
-		serv_info->server.serverId                     = server_id;
-		serv_info->server.status                       = SCE_NP_MATCHING2_SERVER_STATUS_AVAILABLE;
+		serv_info->server.serverId = server_id;
+		serv_info->server.status = SCE_NP_MATCHING2_SERVER_STATUS_AVAILABLE;
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		const auto cb_info = take_pending_request(req_id);
-
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo, event_key, 0, size, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		const auto cb_info_opt = take_pending_request(req_id);
+		ensure(cb_info_opt);
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return req_id;
 	}
 
 	u32 np_handler::create_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 /*server_id*/)
 	{
-		u32 req_id    = generate_callback_info(ctx_id, optParam);
-		u32 event_key = get_event_key();
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateServerContext);
 
-		const auto cb_info = take_pending_request(req_id);
-
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_CreateServerContext, event_key, 0, 0, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		const auto cb_info_opt = take_pending_request(req_id);
+		ensure(cb_info_opt);
+		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
 		return req_id;
 	}
 
 	u32 np_handler::delete_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 /*server_id*/)
 	{
-		u32 req_id    = generate_callback_info(ctx_id, optParam);
-		u32 event_key = get_event_key();
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_DeleteServerContext);
 
-		const auto cb_info = take_pending_request(req_id);
-
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_DeleteServerContext, event_key, 0, 0, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		const auto cb_info_opt = take_pending_request(req_id);
+		ensure(cb_info_opt);
+		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
 		return req_id;
 	}
 
 	u32 np_handler::get_world_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 server_id)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList);
 
 		if (!rpcn->get_world_list(req_id, get_match2_context(ctx_id)->communicationId, server_id))
 		{
@@ -111,7 +88,10 @@ namespace np
 
 	bool np_handler::reply_get_world_list(u32 req_id, std::vector<u8>& reply_data)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
 
 		vec_stream reply(reply_data, 1);
 
@@ -129,8 +109,8 @@ namespace np
 
 		u32 event_key = get_event_key();
 
-		auto& edata          = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetWorldInfoList, sizeof(SceNpMatching2GetWorldInfoListResponse));
-		auto* world_info     = reinterpret_cast<SceNpMatching2GetWorldInfoListResponse*>(edata.data());
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetWorldInfoList, sizeof(SceNpMatching2GetWorldInfoListResponse));
+		auto* world_info = reinterpret_cast<SceNpMatching2GetWorldInfoListResponse*>(edata.data());
 		world_info->worldNum = world_list.size();
 
 		if (!world_list.empty())
@@ -138,32 +118,19 @@ namespace np
 			auto* worlds = edata.allocate<SceNpMatching2World>(sizeof(SceNpMatching2World) * world_list.size(), world_info->world);
 			for (usz i = 0; i < world_list.size(); i++)
 			{
-				worlds[i].worldId                  = world_list[i];
-				worlds[i].numOfLobby               = 1; // TODO
-				worlds[i].maxNumOfTotalLobbyMember = 10000;
-				worlds[i].curNumOfTotalLobbyMember = 1;
-				worlds[i].curNumOfRoom             = 1;
-				worlds[i].curNumOfTotalRoomMember  = 1;
+				worlds[i].worldId = world_list[i];
 			}
 		}
 
 		np_memory.shrink_allocation(edata.addr(), edata.size());
-
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList, event_key, 0, size, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return true;
 	}
 
 	u32 np_handler::create_join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2CreateJoinRoomRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom);
 
 		extra_nps::print_createjoinroom(req);
 
@@ -181,7 +148,10 @@ namespace np
 
 	bool np_handler::reply_create_join_room(u32 req_id, std::vector<u8>& reply_data)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
 
 		vec_stream reply(reply_data, 1);
 		auto* resp = reply.get_flatbuffer<RoomDataInternal>();
@@ -191,7 +161,7 @@ namespace np
 
 		u32 event_key = get_event_key();
 
-		auto& edata     = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_CreateJoinRoom, sizeof(SceNpMatching2CreateJoinRoomResponse));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_CreateJoinRoom, sizeof(SceNpMatching2CreateJoinRoomResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2CreateJoinRoomResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
 		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
@@ -200,29 +170,16 @@ namespace np
 		np_cache.insert_room(room_info);
 		np_cache.update_password(room_resp->roomDataInternal->roomId, cached_cj_password);
 
-		// Establish Matching2 self signaling info
-		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-		sigh.set_self_sig2_info(room_info->roomId, 1);
-		sigh.set_sig2_infos(room_info->roomId, 1, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn->get_addr_sig(), rpcn->get_port_sig(), get_npid(), true);
-		// TODO? Should this send a message to Signaling CB? Is this even necessary?
-
 		extra_nps::print_create_room_resp(room_resp);
 
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom, event_key, 0, size, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return true;
 	}
 
 	u32 np_handler::join_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2JoinRoomRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom);
 
 		extra_nps::print_joinroom(req);
 
@@ -237,6 +194,11 @@ namespace np
 
 	bool np_handler::reply_join_room(u32 req_id, std::vector<u8>& reply_data)
 	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
+
 		s32 error_code = 0;
 
 		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
@@ -250,19 +212,9 @@ namespace np
 			}
 		}
 
-		const auto cb_info = take_pending_request(req_id);
-
 		if (error_code != 0)
 		{
-			if (cb_info.cb)
-			{
-				sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-					{
-						cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom, 0, error_code, 0, cb_info.cb_arg);
-						return 0;
-					});
-			}
-
+			cb_info_opt->queue_callback(req_id, 0, error_code, 0);
 			return true;
 		}
 
@@ -275,37 +227,24 @@ namespace np
 
 		u32 event_key = get_event_key();
 
-		auto& edata     = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_JoinRoom, sizeof(SceNpMatching2JoinRoomResponse));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_JoinRoom, sizeof(SceNpMatching2JoinRoomResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2JoinRoomResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
-		u16 member_id   = RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
+		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		np_cache.insert_room(room_info);
 
 		extra_nps::print_room_data_internal(room_info);
 
-		// Establish Matching2 self signaling info
-		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-		sigh.set_self_sig2_info(room_info->roomId, member_id);
-		sigh.set_sig2_infos(room_info->roomId, member_id, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn->get_addr_sig(), rpcn->get_port_sig(), get_npid(), true);
-		// TODO? Should this send a message to Signaling CB? Is this even necessary?
-
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom, event_key, 0, size, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return true;
 	}
 
 	u32 np_handler::leave_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2LeaveRoomRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom);
 
 		if (!rpcn->leave_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -318,34 +257,27 @@ namespace np
 
 	bool np_handler::reply_leave_room(u32 req_id, std::vector<u8>& reply_data)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
 
 		vec_stream reply(reply_data, 1);
 		u64 room_id = reply.get<u64>();
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to LeaveRoom command");
 
-		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
-
 		// Disconnect all users from that room
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh.disconnect_sig2_users(room_id);
-
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom, event_key, 0, 0, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
 		return true;
 	}
 
 	u32 np_handler::search_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SearchRoomRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom);
 
 		extra_nps::print_search_room(req);
 
@@ -360,7 +292,10 @@ namespace np
 
 	bool np_handler::reply_search_room(u32 req_id, std::vector<u8>& reply_data)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
 
 		vec_stream reply(reply_data, 1);
 		auto* resp = reply.get_flatbuffer<SearchRoomResponse>();
@@ -370,28 +305,20 @@ namespace np
 
 		u32 event_key = get_event_key();
 
-		auto& edata       = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SearchRoom, sizeof(SceNpMatching2SearchRoomResponse));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SearchRoom, sizeof(SceNpMatching2SearchRoomResponse));
 		auto* search_resp = reinterpret_cast<SceNpMatching2SearchRoomResponse*>(edata.data());
 		SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(edata, resp, search_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_search_room_resp(search_resp);
-
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom, event_key, 0, size, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return true;
 	}
 
 	u32 np_handler::get_roomdata_external_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataExternalListRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList);
 
 		extra_nps::print_get_roomdata_external_list_req(req);
 
@@ -406,7 +333,10 @@ namespace np
 
 	bool np_handler::reply_get_roomdata_external_list(u32 req_id, std::vector<u8>& reply_data)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
 
 		vec_stream reply(reply_data, 1);
 		auto* resp = reply.get_flatbuffer<GetRoomDataExternalListResponse>();
@@ -416,28 +346,21 @@ namespace np
 
 		u32 event_key = get_event_key();
 
-		auto& edata                 = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataExternalList, sizeof(SceNpMatching2GetRoomDataExternalListResponse));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataExternalList, sizeof(SceNpMatching2GetRoomDataExternalListResponse));
 		auto* sce_get_room_ext_resp = reinterpret_cast<SceNpMatching2GetRoomDataExternalListResponse*>(edata.data());
 		GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(edata, resp, sce_get_room_ext_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
 		extra_nps::print_get_roomdata_external_list_resp(sce_get_room_ext_resp);
 
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataExternalList, event_key, 0, size, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return true;
 	}
 
 	u32 np_handler::set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataExternalRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal);
 
 		extra_nps::print_set_roomdata_ext_req(req);
 
@@ -452,25 +375,19 @@ namespace np
 
 	bool np_handler::reply_set_roomdata_external(u32 req_id, std::vector<u8>& /*reply_data*/)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
 
-		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
+		if (!cb_info_opt)
+			return true;
 
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal, event_key, 0, 0, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
 		return true;
 	}
 
 	u32 np_handler::get_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataInternalRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal);
 
 		if (!rpcn->get_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -483,7 +400,10 @@ namespace np
 
 	bool np_handler::reply_get_roomdata_internal(u32 req_id, std::vector<u8>& reply_data)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
 
 		vec_stream reply(reply_data, 1);
 
@@ -494,7 +414,7 @@ namespace np
 
 		u32 event_key = get_event_key();
 
-		auto& edata     = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataInternal, sizeof(SceNpMatching2GetRoomDataInternalResponse));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetRoomDataInternal, sizeof(SceNpMatching2GetRoomDataInternalResponse));
 		auto* room_resp = reinterpret_cast<SceNpMatching2GetRoomDataInternalResponse*>(edata.data());
 		auto* room_info = edata.allocate<SceNpMatching2RoomDataInternal>(sizeof(SceNpMatching2RoomDataInternal), room_resp->roomDataInternal);
 		RoomDataInternal_to_SceNpMatching2RoomDataInternal(edata, resp, room_info, npid);
@@ -504,21 +424,14 @@ namespace np
 
 		extra_nps::print_room_data_internal(room_info);
 
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal, event_key, 0, size, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return true;
 	}
 
 	u32 np_handler::set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataInternalRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal);
 
 		// TODO: extra_nps::print_set_roomdata_req(req);
 
@@ -535,25 +448,19 @@ namespace np
 
 	bool np_handler::reply_set_roomdata_internal(u32 req_id, std::vector<u8>& /*reply_data*/)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
 
-		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
+		if (!cb_info_opt)
+			return true;
 
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal, event_key, 0, 0, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
 		return true;
 	}
 
 	u32 np_handler::set_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal);
 
 		extra_nps::print_set_roommemberdata_int_req(req);
 
@@ -568,25 +475,19 @@ namespace np
 
 	bool np_handler::reply_set_roommemberdata_internal(u32 req_id, std::vector<u8>& /*reply_data*/)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
 
-		u32 event_key = get_event_key(); // Unsure if necessary if there is no data
+		if (!cb_info_opt)
+			return true;
 
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal, event_key, 0, 0, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
 		return true;
 	}
 
 	u32 np_handler::get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SignalingGetPingInfoRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo);
 
 		if (!rpcn->ping_room_owner(req_id, get_match2_context(ctx_id)->communicationId, req->roomId))
 		{
@@ -599,7 +500,10 @@ namespace np
 
 	bool np_handler::reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return true;
 
 		vec_stream reply(reply_data, 1);
 
@@ -610,26 +514,18 @@ namespace np
 
 		u32 event_key = get_event_key();
 
-		auto& edata           = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SignalingGetPingInfo, sizeof(SceNpMatching2SignalingGetPingInfoResponse));
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SignalingGetPingInfo, sizeof(SceNpMatching2SignalingGetPingInfoResponse));
 		auto* final_ping_resp = reinterpret_cast<SceNpMatching2SignalingGetPingInfoResponse*>(edata.data());
 		GetPingInfoResponse_to_SceNpMatching2SignalingGetPingInfoResponse(resp, final_ping_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
-
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=, size = edata.size()](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo, event_key, 0, size, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
 
 		return true;
 	}
 
 	u32 np_handler::send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req)
 	{
-		u32 req_id = generate_callback_info(ctx_id, optParam);
+		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage);
 
 		if (!rpcn->send_room_message(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
@@ -642,16 +538,12 @@ namespace np
 
 	bool np_handler::reply_send_room_message(u32 req_id, std::vector<u8>& /*reply_data*/)
 	{
-		const auto cb_info = take_pending_request(req_id);
+		auto cb_info_opt = take_pending_request(req_id);
 
-		if (cb_info.cb)
-		{
-			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
-				{
-					cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage, 0, 0, 0, cb_info.cb_arg);
-					return 0;
-				});
-		}
+		if (!cb_info_opt)
+			return true;
+
+		cb_info_opt->queue_callback(req_id, 0, 0, 0);
 
 		return true;
 	}
@@ -727,7 +619,7 @@ namespace np
 		if (reply.is_error())
 			return error_and_disconnect("Malformed reply to RequestTicket command");
 
-		current_ticket   = ticket(std::move(ticket_raw));
+		current_ticket = ticket(std::move(ticket_raw));
 		auto ticket_size = static_cast<s32>(current_ticket.size());
 
 		if (manager_cb)
@@ -785,7 +677,7 @@ namespace np
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 
-		u32 req_id       = get_req_id(0x3334);
+		u32 req_id = get_req_id(0x3334);
 		trans_ctx->tdata = tdata_get_board_infos{.boardInfo = boardInfo};
 		rpcn->get_board_infos(req_id, trans_ctx->communicationId, boardId);
 
@@ -803,10 +695,10 @@ namespace np
 
 		SceNpScoreBoardInfo board_info;
 
-		board_info.rankLimit       = resp->rankLimit();
-		board_info.updateMode      = resp->updateMode();
-		board_info.sortMode        = resp->sortMode();
-		board_info.uploadNumLimit  = resp->uploadNumLimit();
+		board_info.rankLimit = resp->rankLimit();
+		board_info.updateMode = resp->updateMode();
+		board_info.sortMode = resp->sortMode();
+		board_info.uploadNumLimit = resp->uploadNumLimit();
 		board_info.uploadSizeLimit = resp->uploadSizeLimit();
 
 		std::lock_guard lock_trans(mutex_score_transactions);
@@ -832,8 +724,8 @@ namespace np
 	void np_handler::record_score(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, vm::cptr<SceNpScoreComment> scoreComment, const u8* data, u32 data_size, vm::ptr<SceNpScoreRankNumber> tmpRank, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id                              = get_req_id(0x3334);
-		std::optional<std::string> str_comment  = scoreComment ? std::optional(std::string(reinterpret_cast<const char*>(scoreComment->data))) : std::nullopt;
+		u32 req_id = get_req_id(0x3334);
+		std::optional<std::string> str_comment = scoreComment ? std::optional(std::string(reinterpret_cast<const char*>(scoreComment->data))) : std::nullopt;
 		std::optional<std::vector<u8>> vec_data;
 
 		if (data)
@@ -904,7 +796,7 @@ namespace np
 		if (!tdata)
 		{
 			trans_ctx->tdata = tdata_record_score_data{.game_data_size = totalSize};
-			tdata            = std::get_if<tdata_record_score_data>(&trans_ctx->tdata);
+			tdata = std::get_if<tdata_record_score_data>(&trans_ctx->tdata);
 			tdata->game_data.reserve(totalSize);
 		}
 
@@ -913,7 +805,7 @@ namespace np
 		if (tdata->game_data.size() == tdata->game_data_size)
 		{
 			trans_ctx->result = std::nullopt;
-			u32 req_id        = get_req_id(0x3334);
+			u32 req_id = get_req_id(0x3334);
 			rpcn->record_score_data(req_id, trans_ctx->communicationId, trans_ctx->pcId, boardId, score, tdata->game_data);
 			score_async_handler(std::move(lock), trans_ctx, req_id, async);
 		}
@@ -984,7 +876,7 @@ namespace np
 		usz to_copy = std::min(tdata->game_data.size(), static_cast<usz>(recvSize));
 		std::memcpy(score_data.get_ptr(), tdata->game_data.data(), to_copy);
 		tdata->game_data.erase(tdata->game_data.begin(), tdata->game_data.begin() + to_copy);
-		*totalSize        = tdata->game_data_size;
+		*totalSize = tdata->game_data_size;
 		trans_ctx->result = not_an_error(to_copy);
 	}
 
@@ -1038,14 +930,14 @@ namespace np
 		u32 req_id = get_req_id(0x3334);
 
 		trans_ctx->tdata = tdata_get_score_generic{
-			.rankArray     = rankArray,
+			.rankArray = rankArray,
 			.rankArraySize = rankArraySize,
-			.commentArray  = commentArray,
-			.infoArray     = infoArray,
+			.commentArray = commentArray,
+			.infoArray = infoArray,
 			.infoArraySize = infoArraySize,
-			.arrayNum      = arrayNum,
-			.lastSortDate  = lastSortDate,
-			.totalRecord   = totalRecord,
+			.arrayNum = arrayNum,
+			.lastSortDate = lastSortDate,
+			.totalRecord = totalRecord,
 		};
 
 		bool with_comments = !!commentArray;
@@ -1088,9 +980,9 @@ namespace np
 
 		memset(tdata->rankArray.get_ptr(), 0, tdata->rankArraySize);
 		auto* fb_rankarray = resp->rankArray();
-		u32 target_index   = 0;
+		u32 target_index = 0;
 
-		vm::ptr<SceNpScoreRankData> rankArray             = vm::static_ptr_cast<SceNpScoreRankData>(tdata->rankArray);
+		vm::ptr<SceNpScoreRankData> rankArray = vm::static_ptr_cast<SceNpScoreRankData>(tdata->rankArray);
 		vm::ptr<SceNpScorePlayerRankData> rankPlayerArray = vm::static_ptr_cast<SceNpScorePlayerRankData>(tdata->rankArray);
 
 		for (flatbuffers::uoffset_t i = 0; i < fb_rankarray->size(); i++)
@@ -1109,18 +1001,18 @@ namespace np
 			else
 			{
 				rankPlayerArray[i].hasData = 1;
-				cur_rank                   = &rankPlayerArray[i].rankData;
+				cur_rank = &rankPlayerArray[i].rankData;
 			}
 
-			string_to_npid(fb_rankdata->npId()->string_view(), &cur_rank->npId);
-			string_to_online_name(fb_rankdata->onlineName()->string_view(), &cur_rank->onlineName);
+			string_to_npid(fb_rankdata->npId()->string_view(), cur_rank->npId);
+			string_to_online_name(fb_rankdata->onlineName()->string_view(), cur_rank->onlineName);
 
-			cur_rank->pcId            = fb_rankdata->pcId();
-			cur_rank->serialRank      = fb_rankdata->rank();
-			cur_rank->rank            = fb_rankdata->rank();
-			cur_rank->highestRank     = fb_rankdata->rank();
-			cur_rank->scoreValue      = fb_rankdata->score();
-			cur_rank->hasGameData     = fb_rankdata->hasGameData();
+			cur_rank->pcId = fb_rankdata->pcId();
+			cur_rank->serialRank = fb_rankdata->rank();
+			cur_rank->rank = fb_rankdata->rank();
+			cur_rank->highestRank = fb_rankdata->rank();
+			cur_rank->scoreValue = fb_rankdata->score();
+			cur_rank->hasGameData = fb_rankdata->hasGameData();
 			cur_rank->recordDate.tick = fb_rankdata->recordDate();
 
 			target_index++;
@@ -1170,7 +1062,7 @@ namespace np
 		}
 
 		tdata->lastSortDate->tick = resp->lastSortDate();
-		*tdata->totalRecord       = resp->totalRecord();
+		*tdata->totalRecord = resp->totalRecord();
 
 		if (fb_rankarray->size())
 			trans_ctx->result = not_an_error(fb_rankarray->size());
@@ -1188,16 +1080,16 @@ namespace np
 	void np_handler::get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id       = get_req_id(0x3334);
+		u32 req_id = get_req_id(0x3334);
 		trans_ctx->tdata = tdata_get_score_generic{
-			.rankArray     = rankArray,
+			.rankArray = rankArray,
 			.rankArraySize = rankArraySize,
-			.commentArray  = commentArray,
-			.infoArray     = infoArray,
+			.commentArray = commentArray,
+			.infoArray = infoArray,
 			.infoArraySize = infoArraySize,
-			.arrayNum      = arrayNum,
-			.lastSortDate  = lastSortDate,
-			.totalRecord   = totalRecord,
+			.arrayNum = arrayNum,
+			.lastSortDate = lastSortDate,
+			.totalRecord = totalRecord,
 		};
 
 		bool with_comments = !!commentArray;
@@ -1215,16 +1107,16 @@ namespace np
 	void np_handler::get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id       = get_req_id(0x3334);
+		u32 req_id = get_req_id(0x3334);
 		trans_ctx->tdata = tdata_get_score_generic{
-			.rankArray     = rankArray,
+			.rankArray = rankArray,
 			.rankArraySize = rankArraySize,
-			.commentArray  = commentArray,
-			.infoArray     = infoArray,
+			.commentArray = commentArray,
+			.infoArray = infoArray,
 			.infoArraySize = infoArraySize,
-			.arrayNum      = arrayNum,
-			.lastSortDate  = lastSortDate,
-			.totalRecord   = totalRecord,
+			.arrayNum = arrayNum,
+			.lastSortDate = lastSortDate,
+			.totalRecord = totalRecord,
 		};
 
 		bool with_comments = !!commentArray;
