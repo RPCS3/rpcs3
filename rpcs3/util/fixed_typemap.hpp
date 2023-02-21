@@ -168,14 +168,14 @@ namespace stx
 			mutable uchar m_data[Size ? Size : 1];
 		};
 
+		// Indicates whether object is created at given index
+		std::array<bool, (Size ? Size / Align : 65536)> m_init{};
+
 		// Creation order for each object (used to reverse destruction order)
 		void** m_order = nullptr;
 
 		// Helper for destroying in reverse order
 		const typeinfo** m_info = nullptr;
-
-		// Indicates whether object is created at given index
-		bool* m_init = nullptr;
 
 	public:
 		manual_typemap() noexcept = default;
@@ -186,19 +186,19 @@ namespace stx
 
 		~manual_typemap()
 		{
-			ensure(!m_init);
+			ensure(!m_info);
 		}
 
 		void reset()
 		{
-			if (m_init)
+			if (is_init())
 			{
 				clear();
 			}
 
 			m_order = new void*[stx::typelist<typeinfo>().count() + 1];
 			m_info = new const typeinfo*[stx::typelist<typeinfo>().count() + 1];
-			m_init = new bool[stx::typelist<typeinfo>().count()]{};
+			ensure(m_init.size() > stx::typelist<typeinfo>().count());
 
 			if constexpr (Size == 0)
 			{
@@ -269,7 +269,7 @@ namespace stx
 
 		void clear()
 		{
-			if (!m_init)
+			if (!is_init())
 			{
 				return;
 			}
@@ -295,7 +295,6 @@ namespace stx
 			// Pointers should be restored to their positions
 			m_info--;
 			m_order--;
-			delete[] m_init;
 			delete[] m_info;
 			delete[] m_order;
 
@@ -311,7 +310,7 @@ namespace stx
 				}
 			}
 
-			m_init = nullptr;
+			m_init.fill(false);
 			m_info = nullptr;
 			m_order = nullptr;
 
@@ -323,7 +322,7 @@ namespace stx
 
 		void save(utils::serial& ar)
 		{
-			if (!m_init)
+			if (!is_init())
 			{
 				return;
 			}
@@ -410,6 +409,11 @@ namespace stx
 		bool is_init() const noexcept
 		{
 			return m_init[stx::typeindex<typeinfo, std::decay_t<T>>()];
+		}
+
+		bool is_init() const noexcept
+		{
+			return m_info != nullptr;
 		}
 
 		// Obtain object pointer (may be uninitialized memory)
