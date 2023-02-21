@@ -117,7 +117,7 @@ void mic_context::operator()()
 			{
 				if (mic.has_data())
 				{
-					mic_queue->send(0, CELLMIC_DATA, dev_num, 0);
+					mic_queue->send(event_queue_source, CELLMIC_DATA, dev_num, 0);
 				}
 			}
 
@@ -545,51 +545,12 @@ error_code cellMicEnd()
 	// TODO
 	mic_thr.init = 0;
 	mic_thr.event_queue_key = 0;
+	mic_thr.event_queue_source = 0;
 
 	return CELL_OK;
 }
 
 /// Open/Close Microphone Functions
-
-error_code cellMicOpen(s32 dev_num, s32 sampleRate)
-{
-	cellMic.trace("cellMicOpen(dev_num=%d sampleRate=%d)", dev_num, sampleRate);
-
-	auto& mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr.mutex);
-	if (!mic_thr.init)
-		return CELL_MICIN_ERROR_NOT_INIT;
-
-	if (!mic_thr.mic_list.count(dev_num))
-		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
-
-	auto& device = ::at32(mic_thr.mic_list, dev_num);
-
-	if (device.is_opened())
-		return CELL_MICIN_ERROR_ALREADY_OPEN;
-
-	return device.open_microphone(CELLMIC_SIGTYPE_DSP, sampleRate, sampleRate);
-}
-
-error_code cellMicOpenRaw(s32 dev_num, s32 sampleRate, s32 maxChannels)
-{
-	cellMic.trace("cellMicOpenRaw(dev_num=%d, sampleRate=%d, maxChannels=%d)", dev_num, sampleRate, maxChannels);
-
-	auto& mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr.mutex);
-	if (!mic_thr.init)
-		return CELL_MICIN_ERROR_NOT_INIT;
-
-	if (!mic_thr.mic_list.count(dev_num))
-		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
-
-	auto& device = ::at32(mic_thr.mic_list, dev_num);
-
-	if (device.is_opened())
-		return CELL_MICIN_ERROR_ALREADY_OPEN;
-
-	return device.open_microphone(CELLMIC_SIGTYPE_DSP | CELLMIC_SIGTYPE_RAW, sampleRate, sampleRate, maxChannels);
-}
 
 error_code cellMicOpenEx(s32 dev_num, s32 rawSampleRate, s32 rawChannel, s32 DSPSampleRate, s32 bufferSizeMS, u8 signalType)
 {
@@ -601,7 +562,7 @@ error_code cellMicOpenEx(s32 dev_num, s32 rawSampleRate, s32 rawChannel, s32 DSP
 	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr.mic_list.count(dev_num))
+	if (!mic_thr.mic_list.contains(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
 	auto& device = ::at32(mic_thr.mic_list, dev_num);
@@ -614,6 +575,20 @@ error_code cellMicOpenEx(s32 dev_num, s32 rawSampleRate, s32 rawChannel, s32 DSP
 	return device.open_microphone(signalType, DSPSampleRate, rawSampleRate, rawChannel);
 }
 
+error_code cellMicOpen(s32 dev_num, s32 sampleRate)
+{
+	cellMic.trace("cellMicOpen(dev_num=%d sampleRate=%d)", dev_num, sampleRate);
+
+	return cellMicOpenEx(dev_num, sampleRate, 2, sampleRate, 0x80, CELLMIC_SIGTYPE_DSP);
+}
+
+error_code cellMicOpenRaw(s32 dev_num, s32 sampleRate, s32 maxChannels)
+{
+	cellMic.trace("cellMicOpenRaw(dev_num=%d, sampleRate=%d, maxChannels=%d)", dev_num, sampleRate, maxChannels);
+
+	return cellMicOpenEx(dev_num, sampleRate, maxChannels, sampleRate, 0x80, CELLMIC_SIGTYPE_RAW);
+}
+
 u8 cellMicIsOpen(s32 dev_num)
 {
 	cellMic.trace("cellMicIsOpen(dev_num=%d)", dev_num);
@@ -623,7 +598,7 @@ u8 cellMicIsOpen(s32 dev_num)
 	if (!mic_thr.init)
 		return false;
 
-	if (!mic_thr.mic_list.count(dev_num))
+	if (!mic_thr.mic_list.contains(dev_num))
 		return false;
 
 	return ::at32(mic_thr.mic_list, dev_num).is_opened();
@@ -644,7 +619,7 @@ error_code cellMicClose(s32 dev_num)
 	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr.mic_list.count(dev_num))
+	if (!mic_thr.mic_list.contains(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
 	auto& device = ::at32(mic_thr.mic_list, dev_num);
@@ -657,38 +632,19 @@ error_code cellMicClose(s32 dev_num)
 
 /// Starting/Stopping Microphone Functions
 
-error_code cellMicStart(s32 dev_num)
-{
-	cellMic.trace("cellMicStart(dev_num=%d)", dev_num);
-
-	auto& mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr.mutex);
-	if (!mic_thr.init)
-		return CELL_MICIN_ERROR_NOT_INIT;
-
-	if (!mic_thr.mic_list.count(dev_num))
-		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
-
-	auto& device = ::at32(mic_thr.mic_list, dev_num);
-
-	if (!device.is_opened())
-		return CELL_MICIN_ERROR_NOT_OPEN;
-
-	return device.start_microphone();
-}
-
 error_code cellMicStartEx(s32 dev_num, u32 iflags)
 {
 	cellMic.todo("cellMicStartEx(dev_num=%d, iflags=%d)", dev_num, iflags);
 
-	// TODO: flags
+	if ((iflags & 0xfffffffc) != 0) // iflags > 3
+		return CELL_MICIN_ERROR_PARAM;
 
 	auto& mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr.mutex);
 	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr.mic_list.count(dev_num))
+	if (!mic_thr.mic_list.contains(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
 	auto& device = ::at32(mic_thr.mic_list, dev_num);
@@ -696,9 +652,17 @@ error_code cellMicStartEx(s32 dev_num, u32 iflags)
 	if (!device.is_opened())
 		return CELL_MICIN_ERROR_NOT_OPEN;
 
+	// TODO: flags
+
 	cellMic.success("We're getting started mate!");
 
 	return device.start_microphone();
+}
+
+error_code cellMicStart(s32 dev_num)
+{
+	cellMic.trace("cellMicStart(dev_num=%d)", dev_num);
+	return cellMicStartEx(dev_num, 0);
 }
 
 error_code cellMicStop(s32 dev_num)
@@ -710,7 +674,7 @@ error_code cellMicStop(s32 dev_num)
 	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr.mic_list.count(dev_num))
+	if (!mic_thr.mic_list.contains(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
 	auto& device = ::at32(mic_thr.mic_list, dev_num);
@@ -732,28 +696,36 @@ error_code cellMicGetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 {
 	cellMic.trace("cellMicGetDeviceAttr(dev_num=%d, deviceAttribute=%d, arg1=*0x%x, arg2=*0x%x)", dev_num, +deviceAttributes, arg1, arg2);
 
-	if (!arg1 || (!arg2 && deviceAttributes == CELLMIC_DEVATTR_CHANVOL))
-		return CELL_MICIN_ERROR_PARAM;
-
 	auto& mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr.mutex);
 	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr.mic_list.count(dev_num))
+	if (dev_num < 0)
+		return CELL_MICIN_ERROR_PARAM;
+
+	if (!mic_thr.mic_list.contains(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
 	auto& device = ::at32(mic_thr.mic_list, dev_num);
 
-	switch (deviceAttributes)
+	if (arg1)
 	{
-	case CELLMIC_DEVATTR_LED: *arg1 = device.attr_led; break;
-	case CELLMIC_DEVATTR_GAIN: *arg1 = device.attr_gain; break;
-	case CELLMIC_DEVATTR_VOLUME: *arg1 = device.attr_volume; break;
-	case CELLMIC_DEVATTR_AGC: *arg1 = device.attr_agc; break;
-	case CELLMIC_DEVATTR_CHANVOL: *arg1 = device.attr_volume; break;
-	case CELLMIC_DEVATTR_DSPTYPE: *arg1 = device.attr_dsptype; break;
-	default: return CELL_MICIN_ERROR_PARAM;
+		switch (deviceAttributes)
+		{
+		case CELLMIC_DEVATTR_LED: *arg1 = device.attr_led; break;
+		case CELLMIC_DEVATTR_GAIN: *arg1 = device.attr_gain; break;
+		case CELLMIC_DEVATTR_VOLUME: *arg1 = device.attr_volume; break;
+		case CELLMIC_DEVATTR_AGC: *arg1 = device.attr_agc; break;
+		case CELLMIC_DEVATTR_CHANVOL: *arg1 = device.attr_volume; break;
+		case CELLMIC_DEVATTR_DSPTYPE: *arg1 = device.attr_dsptype; break;
+		default: return CELL_MICIN_ERROR_PARAM;
+		}
+	}
+
+	if (arg2)
+	{
+		*arg2 = static_cast<s32>((deviceAttributes & 0xffffU) << 0x10);
 	}
 
 	return CELL_OK;
@@ -768,7 +740,7 @@ error_code cellMicSetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr.mic_list.count(dev_num))
+	if (!mic_thr.mic_list.contains(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
 	auto& device = ::at32(mic_thr.mic_list, dev_num);
@@ -779,7 +751,7 @@ error_code cellMicSetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 		// Used by SingStar to set the volume of each mic
 		if (arg1 > 2)
 			return CELL_MICIN_ERROR_PARAM;
-		device.attr_chanvol[arg1] = arg2;
+		::at32(device.attr_chanvol, arg1) = arg2;
 		break;
 	case CELLMIC_DEVATTR_LED: device.attr_led = arg1; break;
 	case CELLMIC_DEVATTR_GAIN: device.attr_gain = arg1; break;
@@ -795,12 +767,48 @@ error_code cellMicSetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 error_code cellMicGetSignalAttr(s32 dev_num, CellMicSignalAttr sig_attrib, vm::ptr<void> value)
 {
 	cellMic.todo("cellMicGetSignalAttr(dev_num=%d, sig_attrib=%d, value=*0x%x)", dev_num, +sig_attrib, value);
+
+	if (!value)
+		return CELL_MICIN_ERROR_PARAM;
+
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
+		return CELL_MICIN_ERROR_NOT_INIT;
+
+	if (!mic_thr.mic_list.contains(dev_num))
+		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
+
+	auto& mic = ::at32(mic_thr.mic_list, dev_num);
+	if (!mic.is_opened())
+		return CELL_MICIN_ERROR_NOT_OPEN;
+
+	// TODO
+
 	return CELL_OK;
 }
 
 error_code cellMicSetSignalAttr(s32 dev_num, CellMicSignalAttr sig_attrib, vm::ptr<void> value)
 {
 	cellMic.todo("cellMicSetSignalAttr(dev_num=%d, sig_attrib=%d, value=*0x%x)", dev_num, +sig_attrib, value);
+
+	if (!value)
+		return CELL_MICIN_ERROR_PARAM;
+
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
+		return CELL_MICIN_ERROR_NOT_INIT;
+
+	if (!mic_thr.mic_list.contains(dev_num))
+		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
+
+	auto& mic = ::at32(mic_thr.mic_list, dev_num);
+	if (!mic.is_opened())
+		return CELL_MICIN_ERROR_NOT_OPEN;
+
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -808,10 +816,20 @@ error_code cellMicGetSignalState(s32 dev_num, CellMicSignalState sig_state, vm::
 {
 	cellMic.todo("cellMicGetSignalState(dev_num=%d, sig_state=%d, value=*0x%x)", dev_num, +sig_state, value);
 
+	if (!value)
+		return CELL_MICIN_ERROR_PARAM;
+
 	auto& mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr.mutex);
 	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
+
+	if (!mic_thr.mic_list.contains(dev_num))
+		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
+
+	auto& mic = ::at32(mic_thr.mic_list, dev_num);
+	if (!mic.is_opened())
+		return CELL_MICIN_ERROR_NOT_OPEN;
 
 	be_t<u32>* ival = vm::_ptr<u32>(value.addr());
 	be_t<f32>* fval = vm::_ptr<f32>(value.addr());
@@ -842,19 +860,26 @@ error_code cellMicGetSignalState(s32 dev_num, CellMicSignalState sig_state, vm::
 	return CELL_OK;
 }
 
-error_code cellMicGetFormatRaw(s32 dev_num, vm::ptr<CellMicInputFormatI> format)
+error_code cellMicGetFormatEx(s32 dev_num, vm::ptr<CellMicInputFormatI> format, /*CellMicSignalType*/u32 type)
 {
-	cellMic.trace("cellMicGetFormatRaw(dev_num=%d, format=0x%x)", dev_num, format);
+	cellMic.trace("cellMicGetFormatEx(dev_num=%d, format=*0x%x, type=0x%x)", dev_num, format, type);
+
+	if (!format)
+		return CELL_MICIN_ERROR_PARAM;
 
 	auto& mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr.mutex);
 	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr.mic_list.count(dev_num))
+	if (!mic_thr.mic_list.contains(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
 	auto& device = ::at32(mic_thr.mic_list, dev_num);
+	if (!device.is_opened())
+		return CELL_MICIN_ERROR_NOT_OPEN;
+
+	// TODO: type
 
 	format->subframeSize  = device.get_bit_resolution() / 8; // Probably?
 	format->bitResolution = device.get_bit_resolution();
@@ -865,18 +890,28 @@ error_code cellMicGetFormatRaw(s32 dev_num, vm::ptr<CellMicInputFormatI> format)
 	return CELL_OK;
 }
 
+error_code cellMicGetFormat(s32 dev_num, vm::ptr<CellMicInputFormatI> format)
+{
+	cellMic.todo("cellMicGetFormat(dev_num=%d, format=*0x%x)", dev_num, format);
+	return cellMicGetFormatEx(dev_num, format, CELLMIC_SIGTYPE_DSP);
+}
+
+error_code cellMicGetFormatRaw(s32 dev_num, vm::ptr<CellMicInputFormatI> format)
+{
+	cellMic.trace("cellMicGetFormatRaw(dev_num=%d, format=0x%x)", dev_num, format);
+	return cellMicGetFormatEx(dev_num, format, CELLMIC_SIGTYPE_RAW);
+}
+
 error_code cellMicGetFormatAux(s32 dev_num, vm::ptr<CellMicInputFormatI> format)
 {
 	cellMic.todo("cellMicGetFormatAux(dev_num=%d, format=0x%x)", dev_num, format);
-
-	return cellMicGetFormatRaw(dev_num, format);
+	return cellMicGetFormatEx(dev_num, format, CELLMIC_SIGTYPE_AUX);
 }
 
 error_code cellMicGetFormatDsp(s32 dev_num, vm::ptr<CellMicInputFormatI> format)
 {
 	cellMic.todo("cellMicGetFormatDsp(dev_num=%d, format=0x%x)", dev_num, format);
-
-	return cellMicGetFormatRaw(dev_num, format);
+	return cellMicGetFormatEx(dev_num, format, CELLMIC_SIGTYPE_DSP);
 }
 
 /// Event Queue Functions
@@ -897,7 +932,8 @@ error_code cellMicSetNotifyEventQueue(u64 key)
 
 	mic_thr.event_queue_key = key;
 
-	for (auto& mic_entry : mic_thr.mic_list)
+	// TODO: Properly generate/handle mic events
+	for (const auto& mic_entry : mic_thr.mic_list)
 	{
 		mic_queue->send(0, CELLMIC_ATTACH, mic_entry.first, 0);
 	}
@@ -907,7 +943,6 @@ error_code cellMicSetNotifyEventQueue(u64 key)
 
 error_code cellMicSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 {
-	// TODO: Actually do things with the source variable
 	cellMic.todo("cellMicSetNotifyEventQueue2(key=0x%llx, source=0x%llx, flag=0x%llx", key, source, flag);
 
 	auto& mic_thr = g_fxo->get<mic_thread>();
@@ -920,8 +955,14 @@ error_code cellMicSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 	if (!mic_queue)
 		return CELL_MICIN_ERROR_EVENT_QUEUE;
 
-	mic_queue->send(0, CELLMIC_ATTACH, 0, 0);
 	mic_thr.event_queue_key = key;
+	mic_thr.event_queue_source = source;
+
+	// TODO: Properly generate/handle mic events
+	for (const auto& mic_entry : mic_thr.mic_list)
+	{
+		mic_queue->send(source, CELLMIC_ATTACH, mic_entry.first, 0);
+	}
 
 	return CELL_OK;
 }
@@ -936,16 +977,15 @@ error_code cellMicRemoveNotifyEventQueue(u64 key)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
 	mic_thr.event_queue_key = 0;
+	mic_thr.event_queue_source = 0;
 
 	return CELL_OK;
 }
 
 /// Reading Functions
 
-error_code cellMicReadRaw(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
+error_code cell_mic_read(s32 dev_num, vm::ptr<void> data, s32 max_bytes, /*CellMicSignalType*/u32 type)
 {
-	cellMic.trace("cellMicReadRaw(dev_num=%d, data=0x%x, maxBytes=%d)", dev_num, data, max_bytes);
-
 	// TODO: CELL_MICIN_ERROR_PARAM
 
 	auto& mic_thr = g_fxo->get<mic_thread>();
@@ -953,49 +993,48 @@ error_code cellMicReadRaw(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
 	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr.mic_list.count(dev_num))
+	if (!mic_thr.mic_list.contains(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
 	auto& mic = ::at32(mic_thr.mic_list, dev_num);
 
-	if (!mic.is_opened() || !(mic.get_signal_types() & CELLMIC_SIGTYPE_RAW))
+	if (!mic.is_opened() || !(mic.get_signal_types() & type))
 		return CELL_MICIN_ERROR_NOT_OPEN;
 
-	return not_an_error(mic.read_raw(vm::_ptr<u8>(data.addr()), max_bytes));
+	switch (type)
+	{
+	case CELLMIC_SIGTYPE_DSP: return not_an_error(mic.read_dsp(vm::_ptr<u8>(data.addr()), max_bytes));
+	case CELLMIC_SIGTYPE_AUX: return CELL_OK; // TODO
+	case CELLMIC_SIGTYPE_RAW: return not_an_error(mic.read_raw(vm::_ptr<u8>(data.addr()), max_bytes));
+	default:
+		fmt::throw_exception("Invalid CELLMIC_SIGTYPE %d", type);
+	}
+
+	return CELL_OK;
+}
+
+error_code cellMicReadRaw(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
+{
+	cellMic.trace("cellMicReadRaw(dev_num=%d, data=0x%x, maxBytes=%d)", dev_num, data, max_bytes);
+	return cell_mic_read(dev_num, data, max_bytes, CELLMIC_SIGTYPE_RAW);
 }
 
 error_code cellMicRead(s32 dev_num, vm::ptr<void> data, u32 max_bytes)
 {
 	cellMic.warning("cellMicRead(dev_num=%d, data=0x%x, maxBytes=0x%x)", dev_num, data, max_bytes);
-
-	// TODO: CELL_MICIN_ERROR_PARAM
-
-	auto& mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr.mutex);
-	if (!mic_thr.init)
-		return CELL_MICIN_ERROR_NOT_INIT;
-
-	if (!mic_thr.mic_list.count(dev_num))
-		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
-
-	auto& mic = ::at32(mic_thr.mic_list, dev_num);
-
-	if (!mic.is_opened() || !(mic.get_signal_types() & CELLMIC_SIGTYPE_DSP))
-		return CELL_MICIN_ERROR_NOT_OPEN;
-
-	return not_an_error(mic.read_dsp(vm::_ptr<u8>(data.addr()), max_bytes));
+	return cell_mic_read(dev_num, data, max_bytes, CELLMIC_SIGTYPE_DSP);
 }
 
 error_code cellMicReadAux(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
 {
 	cellMic.todo("cellMicReadAux(dev_num=%d, data=0x%x, max_bytes=0x%x)", dev_num, data, max_bytes);
-	return CELL_OK;
+	return cell_mic_read(dev_num, data, max_bytes, CELLMIC_SIGTYPE_AUX);
 }
 
 error_code cellMicReadDsp(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
 {
-	cellMic.todo("cellMicReadDsp(dev_num=%d, data=0x%x, max_bytes=0x%x)", dev_num, data, max_bytes);
-	return CELL_OK;
+	cellMic.warning("cellMicReadDsp(dev_num=%d, data=0x%x, max_bytes=0x%x)", dev_num, data, max_bytes);
+	return cell_mic_read(dev_num, data, max_bytes, CELLMIC_SIGTYPE_DSP);
 }
 
 /// Unimplemented Functions
@@ -1009,6 +1048,36 @@ error_code cellMicReset(s32 dev_num)
 error_code cellMicGetDeviceGUID(s32 dev_num, vm::ptr<u32> ptr_guid)
 {
 	cellMic.todo("cellMicGetDeviceGUID(dev_num=%d ptr_guid=*0x%x)", dev_num, ptr_guid);
+
+	if (!ptr_guid)
+		return CELL_MICIN_ERROR_PARAM;
+
+	*ptr_guid = 0xffffffff;
+
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
+		return CELL_MICIN_ERROR_NOT_INIT;
+
+	// TODO
+
+	return CELL_OK;
+}
+
+error_code cellMicGetDeviceIdentifier(s32 dev_num, vm::ptr<u32> ptr_id)
+{
+	cellMic.todo("cellMicGetDeviceIdentifier(dev_num=%d, ptr_id=*0x%x)", dev_num, ptr_id);
+
+	if (ptr_id)
+		*ptr_id = 0x0;
+
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
+		return CELL_MICIN_ERROR_NOT_INIT;
+
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -1019,7 +1088,7 @@ error_code cellMicGetType(s32 dev_num, vm::ptr<s32> ptr_type)
 	if (!ptr_type)
 		return CELL_MICIN_ERROR_PARAM;
 
-	*ptr_type = CELLMIC_TYPE_USBAUDIO;
+	*ptr_type = CELLMIC_TYPE_BLUETOOTH;
 
 	return CELL_OK;
 }
@@ -1027,6 +1096,31 @@ error_code cellMicGetType(s32 dev_num, vm::ptr<s32> ptr_type)
 error_code cellMicGetStatus(s32 dev_num, vm::ptr<CellMicStatus> status)
 {
 	cellMic.todo("cellMicGetStatus(dev_num=%d, status=*0x%x)", dev_num, status);
+
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
+		return CELL_MICIN_ERROR_NOT_INIT;
+
+	if (dev_num < 0 || !status)
+		return CELL_MICIN_ERROR_PARAM;
+
+	// TODO
+
+	if (mic_thr.mic_list.contains(dev_num))
+	{
+		const auto& mic = ::at32(mic_thr.mic_list, dev_num);
+		status->raw_samprate = mic.get_raw_samplingrate();
+		status->dsp_samprate = mic.get_raw_samplingrate();
+		status->isStart = mic.is_started();
+		status->isOpen = mic.is_opened();
+		status->dsp_volume = 5; // TODO: 0 - 5 volume
+		status->local_voice = 10; // TODO: 0 - 10 confidence
+		status->remote_voice = 0; // TODO: 0 - 10 confidence
+		status->mic_energy = 60; // TODO: Db
+		status->spk_energy = 60; // TODO: Db
+	}
+
 	return CELL_OK;
 }
 
@@ -1042,19 +1136,7 @@ error_code cellMicSysShareClose()
 	return CELL_OK;
 }
 
-error_code cellMicGetFormat(s32 dev_num, vm::ptr<CellMicInputFormatI> format)
-{
-	cellMic.todo("cellMicGetFormat(dev_num=%d, format=*0x%x)", dev_num, format);
-	return CELL_OK;
-}
-
 error_code cellMicSetMultiMicNotifyEventQueue()
-{
-	UNIMPLEMENTED_FUNC(cellMic);
-	return CELL_OK;
-}
-
-error_code cellMicGetFormatEx()
 {
 	UNIMPLEMENTED_FUNC(cellMic);
 	return CELL_OK;
@@ -1091,12 +1173,6 @@ error_code cellMicSysShareInit()
 }
 
 error_code cellMicSysShareEnd()
-{
-	UNIMPLEMENTED_FUNC(cellMic);
-	return CELL_OK;
-}
-
-error_code cellMicGetDeviceIdentifier()
 {
 	UNIMPLEMENTED_FUNC(cellMic);
 	return CELL_OK;
