@@ -39,6 +39,13 @@ namespace rsx
 			return t;
 		}
 
+		void animation_translate::reset(u64 frame)
+		{
+			active = false;
+			current = start;
+			frame_start = 0;
+		}
+
 		void animation_translate::apply(compiled_resource& resource)
 		{
 			if (!active)
@@ -92,6 +99,13 @@ namespace rsx
 			{
 				on_finish();
 			}
+		}
+
+		void animation_color_interpolate::reset(u64 frame)
+		{
+			active = false;
+			current = start;
+			frame_start = 0;
 		}
 
 		void animation_color_interpolate::apply(compiled_resource& data)
