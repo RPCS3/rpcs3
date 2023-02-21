@@ -158,6 +158,7 @@ namespace rsx
 		{
 			if (auto iface = std::dynamic_pointer_cast<user_interface>(get(uid)))
 			{
+				// TODO: Hijack input immediately!
 				m_input_token_stack.push(
 					name,
 					std::move(iface),
@@ -181,6 +182,10 @@ namespace rsx
 
 		void display_manager::input_thread_loop()
 		{
+			// Avoid tail recursion by reinserting pushed-down items
+			std::vector<input_thread_context_t> interrupted_items;
+			bool in_interrupted_mode = false;
+
 			while (!m_input_thread_abort)
 			{
 				for (auto&& input_context : m_input_token_stack.pop_all_reversed())
@@ -190,9 +195,17 @@ namespace rsx
 						continue;
 					}
 
-					if (input_context.input_loop_prologue)
+					if (in_interrupted_mode)
+					{
+						interrupted_items.push_back(input_context);
+						continue;
+					}
+
+					if (input_context.input_loop_prologue &&
+						!input_context.prologue_completed)
 					{
 						input_context.input_loop_prologue();
+						input_context.prologue_completed = true;
 					}
 
 					s32 result = 0;
@@ -205,6 +218,14 @@ namespace rsx
 						result = input_context.input_loop_override();
 					}
 
+					if (result == user_interface::selection_code::interrupted)
+					{
+						// Push back the items onto the stack
+						in_interrupted_mode = true;
+						interrupted_items.push_back(input_context);
+						continue;
+					}
+
 					if (input_context.input_loop_epilogue)
 					{
 						input_context.input_loop_epilogue(result);
@@ -215,7 +236,17 @@ namespace rsx
 					}
 				}
 
-				m_input_token_stack.wait();
+				if (in_interrupted_mode)
+				{
+					for (const auto& iface : interrupted_items)
+					{
+						m_input_token_stack.push(iface);
+					}
+				}
+				else
+				{
+					m_input_token_stack.wait();
+				}
 			}
 		}
 	}

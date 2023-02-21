@@ -175,6 +175,8 @@ namespace rsx
 				std::function<void()> input_loop_prologue = nullptr;
 				std::function<void(s32)> input_loop_epilogue = nullptr;
 				std::function<s32()> input_loop_override = nullptr;
+
+				bool prologue_completed = false;
 			};
 
 			lf_queue<input_thread_context_t> m_input_token_stack;
