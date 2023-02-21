@@ -23,7 +23,8 @@ namespace rsx
 				5'000'000,
 				{},
 				message_pin_location::bottom,
-				s_shader_loading_icon24);
+				s_shader_loading_icon24,
+				true);
 		}
 
 		void show_ppu_compile_notification()
@@ -39,7 +40,8 @@ namespace rsx
 				5'000'000,
 				{},
 				message_pin_location::bottom,
-				s_ppu_loading_icon24);
+				s_ppu_loading_icon24,
+				true);
 		}
 	}
 }
