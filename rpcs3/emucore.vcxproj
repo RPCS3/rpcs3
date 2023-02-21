@@ -98,7 +98,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_manager.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_media_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
-    <ClCompile Include="Emu\RSX\Overlays\overlay_shader_compile_notification.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_compile_notification.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_user_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
@@ -575,7 +575,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk_panel.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_save_dialog.h" />
-    <ClInclude Include="Emu\RSX\Overlays\overlay_shader_compile_notification.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_compile_notification.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_trophy_notification.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_user_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />

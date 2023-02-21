@@ -1132,7 +1132,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\overlay_shader_compile_notification.cpp">
+    <ClCompile Include="Emu\RSX\Overlays\overlay_compile_notification.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.cpp">
@@ -1959,7 +1959,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_trophy_notification.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\overlay_shader_compile_notification.h">
+    <ClInclude Include="Emu\RSX\Overlays\overlay_compile_notification.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\GHLtar.h">
