@@ -215,7 +215,7 @@ public:
 
 	shared_mutex mtx;
 
-	u64 start_timestamp = 0;
+	u64 start_timestamp_us = 0;
 
 	// helper functions
 	bool is_controller_ready(u32 gem_num) const
@@ -299,10 +299,20 @@ public:
 			return;
 		}
 
-		GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellGem);
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellGem);
 
 		ar(attribute, vc_attribute, status_flags, enable_pitch_correction, inertial_counter, controllers
-			, connected_controllers, update_started, camera_frame, memory_ptr, start_timestamp);
+			, connected_controllers, update_started, camera_frame, memory_ptr);
+
+		if (version == 1 && !ar.is_writing())
+		{
+			u32 ts = ar;
+			start_timestamp_us = ts;
+		}
+		else
+		{
+			ar(start_timestamp_us);
+		}
 	}
 
 	gem_config_data(utils::serial& ar)
@@ -1328,7 +1338,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 	if (g_cfg.io.move != move_handler::null)
 	{
 		auto& shared_data = g_fxo->get<gem_camera_shared>();
-		gem_image_state->frame_timestamp = shared_data.frame_timestamp.load();
+		gem_image_state->frame_timestamp = shared_data.frame_timestamp_us.load();
 		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
 		gem_image_state->r = gem.controllers[gem_num].radius; // Radius in camera pixels
 		gem_image_state->distance = gem.controllers[gem_num].distance; // 1.5 meters away from camera
@@ -1385,7 +1395,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 	{
 		ds3_input_to_ext(gem_num, gem.controllers[gem_num], inertial_state->ext);
 
-		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
+		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp_us);
 		inertial_state->counter = gem.inertial_counter++;
 		inertial_state->accelerometer[0] = 10; // Current gravity in m/s²
 
@@ -1561,7 +1571,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 			tracking_flags |= CELL_GEM_TRACKING_FLAG_POSITION_TRACKED;
 
 		gem_state->tracking_flags = tracking_flags;
-		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
+		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp_us);
 		gem_state->camera_pitch_angle = 0.f;
 		gem_state->quat[3] = 1.f;
 
@@ -1763,7 +1773,7 @@ error_code cellGemInit(ppu_thread& ppu, vm::cptr<CellGemAttribute> attribute)
 	}
 
 	// TODO: is this correct?
-	gem.start_timestamp = get_guest_system_time();
+	gem.start_timestamp_us = get_guest_system_time();
 
 	return CELL_OK;
 }
@@ -1939,7 +1949,7 @@ error_code cellGemReset(u32 gem_num)
 	gem.reset_controller(gem_num);
 
 	// TODO: is this correct?
-	gem.start_timestamp = get_guest_system_time();
+	gem.start_timestamp_us = get_guest_system_time();
 
 	return CELL_OK;
 }

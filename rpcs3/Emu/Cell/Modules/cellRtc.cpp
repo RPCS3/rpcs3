@@ -1351,7 +1351,7 @@ error_code cellRtcSetCurrentTick(vm::cptr<CellRtcTick> pTick)
 
 	// TODO syscall not implemented
 	/*
-	u32 tmp2 = sys_time_get_system_time(tmp / cellRtcGetTickResolution(), (tmp % cellRtcGetTickResolution()) * 1000);
+	u64 tmp2 = sys_time_get_system_time(tmp / cellRtcGetTickResolution(), (tmp % cellRtcGetTickResolution()) * 1000);
 
 	return (tmp2 & (tmp2 | tmp2 - 1) >> 0x1f);
 	*/
