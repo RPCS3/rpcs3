@@ -92,7 +92,7 @@ struct UsbTransfer
 
 	s32 result = 0;
 	u32 count  = 0;
-	UsbDeviceIsoRequest iso_request;
+	UsbDeviceIsoRequest iso_request{};
 
 	std::vector<u8> setup_buf;
 	libusb_transfer* transfer = nullptr;
@@ -111,8 +111,8 @@ struct UsbTransfer
 // Usb descriptor helper
 struct UsbDescriptorNode
 {
-	u8 bLength;
-	u8 bDescriptorType;
+	u8 bLength{};
+	u8 bDescriptorType{};
 
 	union
 	{
@@ -121,7 +121,7 @@ struct UsbDescriptorNode
 		UsbDeviceInterface _interface;
 		UsbDeviceEndpoint _endpoint;
 		UsbDeviceHID _hid;
-		u8 data[0xFF];
+		u8 data[0xFF]{};
 	};
 
 	std::vector<UsbDescriptorNode> subnodes;

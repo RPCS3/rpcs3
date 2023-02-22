@@ -1372,7 +1372,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 				return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 			}
 
-			g_camera.bytes_read = bytes_read;
+			g_camera.bytes_read = ::narrow<u32>(bytes_read);
 
 			cellCamera.trace("cellCameraRead: frame_number=%d, width=%d, height=%d. bytes_read=%d (passed to game: frame=%d, bytesread=%d)",
 				frame_number, width, height, bytes_read, read ? read->frame.get() : 0, read ? read->bytesread.get() : 0);
@@ -1385,7 +1385,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 
 	if (has_new_frame)
 	{
-		g_camera.frame_timestamp = (get_guest_system_time() - g_camera.start_timestamp);
+		g_camera.frame_timestamp = ::narrow<u32>(get_guest_system_time() - g_camera.start_timestamp);
 	}
 
 	if (read) // NULL returns CELL_OK

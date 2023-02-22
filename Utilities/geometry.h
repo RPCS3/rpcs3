@@ -777,9 +777,9 @@ struct color4_base
 	};
 
 	constexpr color4_base()
-		: x{}
-		, y{}
-		, z{}
+		: x{ T{0} }
+		, y{ T{0} }
+		, z{ T{0} }
 		, w{ T(1) }
 	{
 	}

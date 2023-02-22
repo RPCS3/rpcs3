@@ -3953,7 +3953,7 @@ bool spu_thread::process_mfc_cmd()
 							if (getllar_busy_waiting_switch == umax)
 							{
 								// Evalute its value (shift-right to ensure its randomness with different CPUs)
-								getllar_busy_waiting_switch = ((perf0.get() >> 8) % 100 < g_cfg.core.spu_getllar_busy_waiting_percentage);
+								getllar_busy_waiting_switch = ((perf0.get() >> 8) % 100 < g_cfg.core.spu_getllar_busy_waiting_percentage) ? 1 : 0;
 							}
 
 							return !!getllar_busy_waiting_switch || getllar_spin_count < 3;
@@ -3971,7 +3971,7 @@ bool spu_thread::process_mfc_cmd()
 							last_getllar_id = mfc_cmd_id;
 							last_gtsc = perf0.get();
 
-							if (getllar_busy_waiting_switch == true)
+							if (getllar_busy_waiting_switch == 1)
 							{
 								busy_wait(300);
 							}
@@ -4535,7 +4535,7 @@ u32 spu_thread::get_ch_count(u32 ch)
 	case SPU_RdSigNotify1:    return ch_snr1.get_count();
 	case SPU_RdSigNotify2:    return ch_snr2.get_count();
 	case MFC_RdAtomicStat:    return ch_atomic_stat.get_count();
-	case SPU_RdEventStat:     return get_events().count;
+	case SPU_RdEventStat:     return static_cast<u32>(get_events().count);
 	case MFC_Cmd:             return 16 - mfc_size;
 
 	// Channels with a constant count of 1:

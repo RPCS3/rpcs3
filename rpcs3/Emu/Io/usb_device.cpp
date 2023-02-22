@@ -245,7 +245,7 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 			else
 			{
 				const std::u16string u16str = utf8_to_utf16(strings[index - 1]);
-				const u8 len = std::min(u16str.size() * sizeof(u16) + 2, static_cast<size_t>(0xFF));
+				const u8 len = static_cast<u8>(std::min(u16str.size() * sizeof(u16) + 2, static_cast<usz>(0xFF)));
 				buf[0] = len;
 				expected_count = std::min(len, ::narrow<u8>(buf_size));
 				memcpy(buf + 2, u16str.data(), expected_count - 2);
@@ -269,7 +269,7 @@ u32 usb_device_emulated::get_status(bool self_powered, bool remote_wakeup, u8* b
 		return 0;
 	}
 
-	const u16 device_status = self_powered | remote_wakeup << 1;
+	const u16 device_status = static_cast<int>(self_powered) | static_cast<int>(remote_wakeup) << 1;
 	memcpy(buf, &device_status, expected_count);
 	return expected_count;
 }

@@ -248,7 +248,7 @@ error_code cellHttpUtilBuildRequestLine(vm::cptr<CellHttpRequestLine> req, vm::p
 
 	if (required)
 	{
-		*required = result.size();
+		*required = ::narrow<u32>(result.size());
 	}
 
 	return CELL_OK;
@@ -277,7 +277,7 @@ error_code cellHttpUtilBuildHeader(vm::cptr<CellHttpHeader> header, vm::ptr<char
 
 	if (required)
 	{
-		*required = result.size();
+		*required = ::narrow<u32>(result.size());
 	}
 
 	return CELL_OK;
@@ -336,7 +336,7 @@ error_code cellHttpUtilBuildUri(vm::cptr<CellHttpUri> uri, vm::ptr<char> buf, u3
 		fmt::append(result, "%s", uri->path);
 	}
 
-	const u32 size_needed = result.size() + 1; // Including '\0'
+	const u32 size_needed = ::narrow<u32>(result.size() + 1); // Including '\0'
 
 	if (buf)
 	{

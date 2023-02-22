@@ -743,7 +743,7 @@ void rsx_debugger::GetBuffers() const
 		}
 
 		// Touch RSX memory to potentially flush GPU memory (must occur in named_thread)
-		named_thread("RSX Buffer Touch", [&]()
+		[[maybe_unused]] auto buffer_touch_1 = named_thread("RSX Buffer Touch"sv, [&]()
 		{
 			for (u32 page_start = rsx_buffer_addr & -4096; page_start < rsx_buffer_addr + src_mem_size; page_start += 4096)
 			{
@@ -781,7 +781,7 @@ void rsx_debugger::GetBuffers() const
 		{
 			for (u32 y = 0; y < height; y++)
 			{
-				for (u32 x = pitch - 2; x != -2u; x -= 2)
+				for (u32 x = 0; x < std::max(pitch, 1u) - 1; x += 2)
 				{
 					const usz line_start = y * pitch;
 
@@ -904,7 +904,7 @@ void rsx_debugger::GetBuffers() const
 		}
 
 		// Touch RSX memory to potentially flush GPU memory (must occur in named_thread)
-		named_thread("RSX Buffer Touch", [&]()
+		[[maybe_unused]] auto buffer_touch_2 = named_thread("RSX Buffer Touch"sv, [&]()
 		{
 			for (u32 page_start = rsx_buffer_addr & -4096; page_start < rsx_buffer_addr + src_mem_size; page_start += 4096)
 			{
@@ -1059,7 +1059,7 @@ void rsx_debugger::GetBuffers() const
 		return;
 	}
 
-	named_thread("RSX Buffer Touch", [&]()
+	[[maybe_unused]] auto buffer_touch_3 = named_thread("RSX Buffer Touch"sv, [&]()
 	{
 		// Must touch every page
 		for (u32 i = texture_addr & -4096; i < texture_addr + src_mem_size; i += 4096)

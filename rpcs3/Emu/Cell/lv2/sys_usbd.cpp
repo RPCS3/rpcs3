@@ -47,9 +47,9 @@ void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 struct UsbLdd
 {
 	std::string name;
-	u16 id_vendor;
-	u16 id_product_min;
-	u16 id_product_max;
+	u16 id_vendor{};
+	u16 id_product_min{};
+	u16 id_product_max{};
 };
 
 struct UsbPipe
@@ -177,7 +177,7 @@ usb_handler_thread::usb_handler_thread()
 
 	if (ndev < 0)
 	{
-		sys_usbd.error("Failed to get device list: %s", libusb_error_name(ndev));
+		sys_usbd.error("Failed to get device list: %s", libusb_error_name(static_cast<s32>(ndev)));
 		return;
 	}
 
