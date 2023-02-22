@@ -384,7 +384,7 @@ struct CellCameraReadEx
 	be_t<s32> version;
 	be_t<u32> frame;
 	be_t<u32> bytesread;
-	be_t<s64> timestamp;
+	be_t<u64> timestamp; // system_time_t (microseconds)
 	vm::bptr<u8> pbuf;
 };
 
@@ -422,7 +422,7 @@ public:
 
 	shared_mutex mutex;
 	shared_mutex mutex_notify_data_map;
-	u64 start_timestamp = 0;
+	u64 start_timestamp_us = 0;
 
 	atomic_t<u8> read_mode{CELL_CAMERA_READ_FUNCCALL};
 	atomic_t<bool> is_streaming{false};
@@ -444,7 +444,7 @@ public:
 	attr_t attr[500]{};
 	atomic_t<bool> has_new_frame = false;
 	atomic_t<u32> frame_num = 0;
-	atomic_t<u32> frame_timestamp = 0;
+	atomic_t<u64> frame_timestamp_us = 0;
 	atomic_t<u32> bytes_read = 0;
 
 	atomic_t<u8> init = 0;
@@ -471,7 +471,7 @@ using camera_thread = named_thread<camera_context>;
 /// Shared data between cellGem and cellCamera
 struct gem_camera_shared
 {
-	atomic_t<s64> frame_timestamp{}; // latest read timestamp from cellCamera (cellCameraRead(Ex))
+	atomic_t<u64> frame_timestamp_us{}; // latest read timestamp from cellCamera (cellCameraRead(Ex))
 	atomic_t<s32> width{640};
 	atomic_t<s32> height{480};
 	atomic_t<s32> size{0};

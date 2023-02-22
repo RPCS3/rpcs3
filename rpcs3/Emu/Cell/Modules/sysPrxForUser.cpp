@@ -16,7 +16,7 @@ vm::gvar<vm::ptr<void()>> g_ppu_atexitspawn;
 vm::gvar<vm::ptr<void()>> g_ppu_at_Exitspawn;
 extern vm::gvar<u32> g_ppu_exit_mutex;
 
-s64 sys_time_get_system_time()
+u64 sys_time_get_system_time()
 {
 	sysPrxForUser.trace("sys_time_get_system_time()");
 

@@ -20,7 +20,7 @@ struct np_in_addr
 
 using sys_memory_container_t = u32;
 
-using system_time_t = s64;
+using system_time_t = u64; // s64 in documentation. But since this is in microseconds, it doesn't seem to make much sense.
 using second_t = u32;
 using usecond_t = u64;
 

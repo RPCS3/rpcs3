@@ -15,7 +15,7 @@ enum : u32
 
 struct sys_timer_information_t
 {
-	be_t<s64> next_expire;
+	be_t<u64> next_expire; // system_time_t
 	be_t<u64> period;
 	be_t<u32> timer_state;
 	be_t<u32> pad;
