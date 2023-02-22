@@ -846,7 +846,7 @@ error_code cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> 
 	pTime->second      = seconds;
 	pTime->minute      = minutes;
 	pTime->hour        = hours;
-	pTime->day         = days_tmp + 1;
+	pTime->day         = ::narrow<u16>(days_tmp + 1);
 	pTime->month       = months;
 	pTime->year        = years;
 
@@ -1006,10 +1006,10 @@ error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTic
 	// Not pretty, but works
 
 	s64 total_months     = (date_time->year * 12ULL) + date_time->month + iAdd + -1;
-	s32 total_months_s32 = total_months;
+	s32 total_months_s32 = ::narrow<s32>(total_months);
 	u32 unk_1            = total_months_s32 >> 0x1f;
 	u64 unk_2            = ((total_months_s32 / 6 + unk_1) >> 1) - unk_1;
-	u32 unk_3            = unk_2;
+	u32 unk_3            = ::narrow<u32>(unk_2);
 	unk_1                = unk_3 & 0xffff;
 	u64 unk_4            = (total_months - ((u64{unk_3} << 4) - (unk_3 << 2))) + 1;
 	if (((unk_2 & 0xffff) == 0) || ((unk_3 = unk_4 & 0xffff, (unk_4 & 0xffff) == 0 || (0xc < unk_3))))
@@ -1036,8 +1036,8 @@ error_code cellRtcTickAddMonths(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTic
 		date_time->day = month_days;
 	}
 
-	date_time->month = unk_4;
-	date_time->year  = unk_2;
+	date_time->month = ::narrow<u16>(unk_4);
+	date_time->year  = ::narrow<u16>(unk_2);
 	cellRtcGetTick(date_time, pTick0);
 
 	return CELL_OK;
@@ -1086,7 +1086,7 @@ error_code cellRtcTickAddYears(vm::ptr<CellRtcTick> pTick0, vm::cptr<CellRtcTick
 		date_time->day = month_days;
 	}
 
-	date_time->year = total_years;
+	date_time->year = ::narrow<u16>(total_years);
 	cellRtcGetTick(date_time, pTick0);
 
 	return CELL_OK;

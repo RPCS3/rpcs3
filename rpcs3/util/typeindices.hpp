@@ -26,7 +26,7 @@ namespace stx
 		u32 size = 1;
 		u32 align = 1;
 		u32 begin = 0;
-		double order;
+		double order{};
 
 		// Next typeinfo in linked list
 		type_info* next = nullptr;
