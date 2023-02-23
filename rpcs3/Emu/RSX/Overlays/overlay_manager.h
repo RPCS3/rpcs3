@@ -181,6 +181,8 @@ namespace rsx
 
 			lf_queue<input_thread_context_t> m_input_token_stack;
 			atomic_t<bool> m_input_thread_abort = false;
+			atomic_t<bool> m_input_thread_interrupted = false;
+			shared_mutex m_input_stack_guard;
 
 			std::shared_ptr<named_thread<overlay_input_thread>> m_input_thread;
 			void input_thread_loop();
