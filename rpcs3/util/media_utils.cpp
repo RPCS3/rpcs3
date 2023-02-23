@@ -1,8 +1,5 @@
 #include "stdafx.h"
 #include "media_utils.h"
-#include "logs.hpp"
-#include "Utilities/StrUtil.h"
-#include "Emu/Cell/Modules/cellSearch.h"
 #include "Emu/System.h"
 
 #include <random>
