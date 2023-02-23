@@ -170,13 +170,30 @@ namespace rsx
 
 			struct input_thread_context_t
 			{
+				// Ctor
+				input_thread_context_t(
+					const std::string_view& name,
+					std::shared_ptr<user_interface> iface,
+					std::function<void()> on_input_loop_enter,
+					std::function<void(s32)> on_input_loop_exit,
+					std::function<s32()> input_loop_override)
+					: name(name)
+					, target(iface)
+					, input_loop_prologue(on_input_loop_enter)
+					, input_loop_epilogue(on_input_loop_exit)
+					, input_loop_override(input_loop_override)
+					, prologue_completed(false)
+				{}
+
+				// Attributes
 				std::string_view name;
 				std::shared_ptr<user_interface> target;
-				std::function<void()> input_loop_prologue = nullptr;
-				std::function<void(s32)> input_loop_epilogue = nullptr;
-				std::function<s32()> input_loop_override = nullptr;
+				std::function<void()> input_loop_prologue;
+				std::function<void(s32)> input_loop_epilogue;
+				std::function<s32()> input_loop_override;
 
-				bool prologue_completed = false;
+				// Runtime stats
+				bool prologue_completed;
 			};
 
 			lf_queue<input_thread_context_t> m_input_token_stack;
