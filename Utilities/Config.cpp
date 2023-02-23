@@ -97,7 +97,7 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_int64('%s'): out of bounds (%d..%d)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_int64('%s'): out of bounds (val=%d, min=%d, max=%d)", value, result, min, max);
 		return false;
 	}
 
@@ -140,7 +140,7 @@ bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (%u..%u)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (val=%u, min=%u, max=%u)", value, result, min, max);
 		return false;
 	}
 
@@ -176,7 +176,7 @@ bool try_to_float(f64* out, std::string_view value, f64 min, f64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_float('%s'): out of bounds (%f..%f)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_float('%s'): out of bounds (val=%f, min=%f, max=%f)", value, result, min, max);
 		return false;
 	}
 
@@ -231,7 +231,7 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 	if (result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
+		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(val=%u, min=0, max=%u)", value, result, max);
 		return false;
 	}
 

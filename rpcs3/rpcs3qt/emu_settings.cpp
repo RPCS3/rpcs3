@@ -675,20 +675,26 @@ void emu_settings::EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_ty
 	}
 
 	const QStringList range = GetSettingOptions(type);
-	bool ok_def, ok_sel, ok_min, ok_max;
+	const std::string def_s = GetSettingDefault(type);
+	const std::string val_s = GetSetting(type);
+	const std::string min_s = sstr(range.first());
+	const std::string max_s = sstr(range.last());
 
-	const double def = qstr(GetSettingDefault(type)).toDouble(&ok_def);
-	const double min = range.first().toDouble(&ok_min);
-	const double max = range.last().toDouble(&ok_max);
+	// cfg::_float range is in s32
+	constexpr s32 min_value = ::std::numeric_limits<s32>::min();
+	constexpr s32 max_value = ::std::numeric_limits<s32>::max();
+
+	f64 val, def, min, max;
+	const bool ok_sel = try_to_float(&val, val_s, min_value, max_value);
+	const bool ok_def = try_to_float(&def, def_s, min_value, max_value);
+	const bool ok_min = try_to_float(&min, min_s, min_value, max_value);
+	const bool ok_max = try_to_float(&max, max_s, min_value, max_value);
 
 	if (!ok_def || !ok_min || !ok_max)
 	{
-		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid type", cfg_adapter::get_setting_name(type));
+		cfg_log.fatal("EnhanceDoubleSpinBox '%s' was used with an invalid type. (val='%s', def='%s', min_s='%s', max_s='%s')", cfg_adapter::get_setting_name(type), val_s, def_s, min_s, max_s);
 		return;
 	}
-
-	const std::string selected = GetSetting(type);
-	double val = qstr(selected).toDouble(&ok_sel);
 
 	if (!ok_sel || val < min || val > max)
 	{
