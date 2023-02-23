@@ -980,10 +980,10 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 		ppu_execute<&sys_interrupt_thread_disestablish>(ppu, tid);
 	}
 
-	std::lock_guard lock{vdec->mutex};
 	vdec->seq_state = sequence_state::closed;
+	vdec->mutex.lock_unlock();
 
-	if (!idm::remove_verify<vdec_context>(handle, vdec))
+	if (!idm::remove_verify<vdec_context>(handle, std::move(vdec)))
 	{
 		// Other thread removed it beforehead
 		return CELL_VDEC_ERROR_ARG;
