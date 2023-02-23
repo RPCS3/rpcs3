@@ -46,7 +46,7 @@ namespace rsx
 		// Singleton instance declaration
 		fontmgr* fontmgr::m_instance = nullptr;
 
-		s32 user_interface::run_input_loop()
+		s32 user_interface::run_input_loop(std::function<bool()> check_state)
 		{
 			user_interface::thread_bits_allocator thread_bits_alloc(this);
 
@@ -122,8 +122,14 @@ namespace rsx
 				last_button_state[pad_index][button_id] = pressed;
 			};
 
-			while (!m_stop_input_loop && !m_input_loop_interrupted)
+			while (!m_stop_input_loop)
 			{
+				if (check_state && !check_state())
+				{
+					// Interrupted externally.
+					break;
+				}
+
 				if (Emu.IsStopped())
 				{
 					return selection_code::canceled;
@@ -361,9 +367,7 @@ namespace rsx
 				input::SetIntercepted(false);
 			}
 
-			m_interactive = false;
-
-			return (m_input_loop_interrupted && !m_stop_input_loop)
+			return !m_stop_input_loop
 				? selection_code::interrupted
 				: selection_code::ok;
 		}

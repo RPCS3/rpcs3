@@ -158,13 +158,18 @@ namespace rsx
 		{
 			if (auto iface = std::dynamic_pointer_cast<user_interface>(get(uid)))
 			{
-				// TODO: Hijack input immediately!
+				std::lock_guard lock(m_input_stack_guard);
+
+				// Add our interface to the queue
 				m_input_token_stack.push(
 					name,
 					std::move(iface),
 					on_input_loop_enter,
 					on_input_loop_exit,
 					input_loop_override);
+
+				// Signal input thread loop after pushing to avoid a race.
+				m_input_thread_interrupted = true;
 			}
 		}
 
@@ -184,10 +189,12 @@ namespace rsx
 		{
 			// Avoid tail recursion by reinserting pushed-down items
 			std::vector<input_thread_context_t> interrupted_items;
-			bool in_interrupted_mode = false;
 
 			while (!m_input_thread_abort)
 			{
+				// We're about to load the whole list, interruption makes no sense before this point
+				m_input_thread_interrupted = false;
+
 				for (auto&& input_context : m_input_token_stack.pop_all_reversed())
 				{
 					if (input_context.target->is_detached())
@@ -195,10 +202,18 @@ namespace rsx
 						continue;
 					}
 
-					if (in_interrupted_mode)
+					if (m_input_thread_interrupted)
 					{
-						interrupted_items.push_back(input_context);
-						continue;
+						// Someone just pushed something onto the stack. Check if we already saw it.
+						if (m_input_token_stack)
+						{
+							// We actually have new items to read out. Skip the remaining list.
+							interrupted_items.push_back(input_context);
+							continue;
+						}
+
+						// False alarm, we already saw it.
+						m_input_thread_interrupted = false;
 					}
 
 					if (input_context.input_loop_prologue &&
@@ -209,9 +224,14 @@ namespace rsx
 					}
 
 					s32 result = 0;
+
 					if (!input_context.input_loop_override) [[ likely ]]
 					{
-						result = input_context.target->run_input_loop();
+						result = input_context.target->run_input_loop([this]()
+						{
+							// Stop if interrupt status is set or input stack is empty
+							return !m_input_thread_interrupted || !m_input_token_stack;
+						});
 					}
 					else
 					{
@@ -220,8 +240,9 @@ namespace rsx
 
 					if (result == user_interface::selection_code::interrupted)
 					{
-						// Push back the items onto the stack
-						in_interrupted_mode = true;
+						// This dialog was exited prematurely, so we must re-run it's input routine later.
+						ensure(m_input_thread_interrupted);
+						ensure(m_input_token_stack);
 						interrupted_items.push_back(input_context);
 						continue;
 					}
@@ -236,12 +257,27 @@ namespace rsx
 					}
 				}
 
-				if (in_interrupted_mode)
+				if (!interrupted_items.empty())
 				{
-					for (const auto& iface : interrupted_items)
+					std::lock_guard lock(m_input_stack_guard);
+
+					// We need to rebuild the stack in reverse order here
+					const auto current_stack = m_input_token_stack.pop_all();
+
+					// Re-insert interrupted list
+					for (auto it = interrupted_items.crbegin(); it != interrupted_items.crend(); ++it)
+					{
+						m_input_token_stack.push(*it);
+					}
+
+					// Re-insert the 'new' list oldest-first
+					for (const auto& iface : current_stack)
 					{
 						m_input_token_stack.push(iface);
 					}
+
+					// Clear
+					interrupted_items.clear();
 				}
 				else
 				{
