@@ -181,10 +181,13 @@ namespace atomic_wait
 		}
 	} any_value;
 
-	template <typename X, typename T = decltype(std::declval<X>().observe())>
+	template <typename X>
+	using payload_type = decltype(std::declval<X>().observe());
+
+	template <typename X, typename T = payload_type<X>>
 	constexpr u128 default_mask = sizeof(T) <= 8 ? u128{u64{umax} >> ((64 - sizeof(T) * 8) & 63)} : u128(-1);
 
-	template <typename X, typename T = decltype(std::declval<X>().observe())>
+	template <typename X, typename T = payload_type<X>>
 	constexpr u128 get_value(X&, T value = T{}, ...)
 	{
 		static_assert((sizeof(T) & (sizeof(T) - 1)) == 0);
@@ -199,13 +202,13 @@ namespace atomic_wait
 		u128 old;
 		u128 mask;
 
-		template <typename X, typename T = decltype(std::declval<X>().observe())>
+		template <typename X, typename T = payload_type<X>>
 		constexpr void set_value(X& a, T value = T{})
 		{
 			old = get_value(a, value);
 		}
 
-		template <typename X, typename T = decltype(std::declval<X>().observe())>
+		template <typename X, typename T = payload_type<X>>
 		constexpr void set_mask(T value)
 		{
 			static_assert((sizeof(T) & (sizeof(T) - 1)) == 0);
@@ -213,7 +216,7 @@ namespace atomic_wait
 			mask = std::bit_cast<get_uint_t<sizeof(T)>, T>(value);
 		}
 
-		template <typename X, typename T = decltype(std::declval<X>().observe())>
+		template <typename X, typename T = payload_type<X>>
 		constexpr void set_mask()
 		{
 			mask = default_mask<X>;
