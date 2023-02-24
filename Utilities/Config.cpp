@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Config.h"
 #include "util/types.hpp"
-
 #include "util/yaml.hpp"
 
 #include <charconv>
@@ -182,6 +181,27 @@ bool try_to_float(f64* out, std::string_view value, f64 min, f64 max)
 
 	if (out) *out = result;
 	return true;
+}
+
+bool try_to_string(std::string* out, const f64& value)
+{
+#ifdef __APPLE__
+	if (out) *out = std::to_string(value);
+	return true;
+#else
+	std::array<char, 32> str{};
+
+	if (auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), value, std::chars_format::fixed); ec == std::errc())
+	{
+		if (out) *out = std::string(str.data(), ptr);
+		return true;
+	}
+	else
+	{
+		if (out) cfg_log.error("cfg::try_to_string(): could not convert value '%f' to string. error='%s'", value, std::make_error_code(ec).message());
+		return false;
+	}
+#endif
 }
 
 bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, std::string_view value)
