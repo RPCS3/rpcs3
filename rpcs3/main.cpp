@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <clocale>
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -71,6 +72,13 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <charconv>
 
 #include "util/sysinfo.hpp"
+
+// Let's initialize the locale first
+static const bool s_init_locale = []()
+{
+	std::setlocale(LC_ALL, "C");
+	return true;
+}();
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
