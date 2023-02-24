@@ -239,7 +239,7 @@ std::optional<s32> lv2_socket_native::connect(const sys_net_sockaddr& addr)
 						else
 						{
 							// TODO: check error formats (both native and translated)
-							so_error = native_error ? get_last_error(false, native_error) : 0;
+							so_error = native_error ? convert_error(false, native_error) : 0;
 						}
 
 						return true;
@@ -270,7 +270,7 @@ s32 lv2_socket_native::connect_followup()
 	}
 
 	// TODO: check error formats (both native and translated)
-	return native_error ? -get_last_error(false, native_error) : 0;
+	return native_error ? -convert_error(false, native_error) : 0;
 }
 
 std::pair<s32, sys_net_sockaddr> lv2_socket_native::getpeername()
@@ -906,9 +906,10 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_nat
 			return {{0, {}, sn_addr}};
 		}
 	}
-#endif
-
+	const auto result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0, connecting);
+#else
 	const auto result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+#endif
 
 	if (result)
 	{
@@ -974,7 +975,11 @@ std::optional<s32> lv2_socket_native::sendto(s32 flags, const std::vector<u8>& b
 		return {native_result};
 	}
 
-	result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+#ifdef _WIN32
+	get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0, connecting);
+#else
+	get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
+#endif
 
 	if (result)
 	{

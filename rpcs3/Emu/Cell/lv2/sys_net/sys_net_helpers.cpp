@@ -20,16 +20,11 @@ int get_native_error()
 	return native_error;
 }
 
-sys_net_error get_last_error(bool is_blocking, int native_error)
+sys_net_error convert_error(bool is_blocking, int native_error, [[maybe_unused]] bool is_connecting)
 {
 	// Convert the error code for socket functions to a one for sys_net
 	sys_net_error result{};
 	const char* name{};
-
-	if (!native_error)
-	{
-		native_error = get_native_error();
-	}
 
 #ifdef _WIN32
 #define ERROR_CASE(error)         \
@@ -92,6 +87,14 @@ sys_net_error get_last_error(bool is_blocking, int native_error)
 		fmt::throw_exception("sys_net get_last_error(is_blocking=%d, native_error=%d): Unknown/illegal socket error", is_blocking, native_error);
 	}
 
+#ifdef _WIN32
+	// Windows will return SYS_NET_ENOTCONN when recvfrom/sendto is called on a socket that is connecting but not yet connected
+	if (is_connecting && result == SYS_NET_ENOTCONN)
+	{
+		return SYS_NET_EAGAIN;
+	}
+#endif
+
 	if (name && result != SYS_NET_EWOULDBLOCK && result != SYS_NET_EINPROGRESS)
 	{
 		sys_net.error("Socket error %s", name);
@@ -109,6 +112,11 @@ sys_net_error get_last_error(bool is_blocking, int native_error)
 
 	return result;
 #undef ERROR_CASE
+}
+
+sys_net_error get_last_error(bool is_blocking, bool is_connecting)
+{
+	return convert_error(is_blocking, get_native_error(), is_connecting);
 }
 
 sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_addr)
