@@ -1304,7 +1304,7 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 
 	if (m_cpu.empty())
 	{
-		m_cpu = llvm::sys::getHostCPUName().operator std::string();
+		m_cpu = llvm::sys::getHostCPUName().str();
 
 		if (m_cpu == "sandybridge" ||
 			m_cpu == "ivybridge" ||

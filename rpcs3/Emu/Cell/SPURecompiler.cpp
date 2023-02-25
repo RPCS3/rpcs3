@@ -3911,7 +3911,9 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 #pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
+#if LLVM_VERSION_MAJOR < 17
 #include "llvm/ADT/Triple.h"
+#endif
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/InlineAsm.h"
@@ -4069,8 +4071,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		// Set parameters
 		result->setLinkage(llvm::GlobalValue::InternalLinkage);
-		result->addAttribute(1, llvm::Attribute::NoAlias);
-		result->addAttribute(2, llvm::Attribute::NoAlias);
+		result->addParamAttr(0, llvm::Attribute::NoAlias);
+		result->addParamAttr(1, llvm::Attribute::NoAlias);
 #if 1
 		result->setCallingConv(llvm::CallingConv::GHC);
 #endif
@@ -4093,8 +4095,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				llvm::Function* fn = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(fname, func_type).getCallee());
 
 				fn->setLinkage(llvm::GlobalValue::InternalLinkage);
-				fn->addAttribute(1, llvm::Attribute::NoAlias);
-				fn->addAttribute(2, llvm::Attribute::NoAlias);
+				fn->addParamAttr(0, llvm::Attribute::NoAlias);
+				fn->addParamAttr(1, llvm::Attribute::NoAlias);
 #if 1
 				fn->setCallingConv(llvm::CallingConv::GHC);
 #endif
@@ -4164,9 +4166,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (!m_finfo->fn && !m_block)
 		{
-			lr = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::gpr, +s_reg_lr, &v128::_u32, 3));
-			sp = m_ir->CreateLoad(spu_ptr<u32[4]>(&spu_thread::gpr, +s_reg_sp));
-			r3 = m_ir->CreateLoad(spu_ptr<u32[4]>(&spu_thread::gpr, 3));
+			lr = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::gpr, +s_reg_lr, &v128::_u32, 3));
+			sp = m_ir->CreateLoad(get_type<u32[4]>(), spu_ptr<u32[4]>(&spu_thread::gpr, +s_reg_sp));
+			r3 = m_ir->CreateLoad(get_type<u32[4]>(), spu_ptr<u32[4]>(&spu_thread::gpr, 3));
 		}
 		else
 		{
@@ -4199,7 +4201,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			{
 				if (i != s_reg_lr && i != s_reg_sp && (i < s_reg_80 || i > s_reg_127))
 				{
-					m_block->reg[i] = m_ir->CreateLoad(init_reg_fixed(i));
+					m_block->reg[i] = m_ir->CreateLoad(get_reg_type(i), init_reg_fixed(i));
 				}
 			}
 
@@ -4217,9 +4219,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	void set_function(llvm::Function* func)
 	{
 		m_function = func;
-		m_thread = &*func->arg_begin();
-		m_lsptr = &*(func->arg_begin() + 1);
-		m_base_pc = &*(func->arg_begin() + 2);
+		m_thread = func->getArg(0);
+		m_lsptr = func->getArg(1);
+		m_base_pc = func->getArg(2);
 
 		m_reg_addr.fill(nullptr);
 		m_block = nullptr;
@@ -4227,7 +4229,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_blocks.clear();
 		m_block_queue.clear();
 		m_ir->SetInsertPoint(llvm::BasicBlock::Create(m_context, "", m_function));
-		m_memptr = m_ir->CreateLoad(spu_ptr<u8*>(&spu_thread::memory_base_addr));
+		m_memptr = m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::memory_base_addr));
 	}
 
 	// Add block with current block as a predecessor
@@ -4246,11 +4248,11 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 				m_finfo->fn = fn;
 				m_function = fn;
-				m_thread = &*fn->arg_begin();
-				m_lsptr = &*(fn->arg_begin() + 1);
-				m_base_pc = &*(fn->arg_begin() + 2);
+				m_thread = fn->getArg(0);
+				m_lsptr = fn->getArg(1);
+				m_base_pc = fn->getArg(2);
 				m_ir->SetInsertPoint(llvm::BasicBlock::Create(m_context, "", fn));
-				m_memptr = m_ir->CreateLoad(spu_ptr<u8*>(&spu_thread::memory_base_addr));
+				m_memptr = m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::memory_base_addr));
 
 				// Load registers at the entry chunk
 				for (u32 i = 0; i < s_reg_max; i++)
@@ -4261,14 +4263,14 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 						//m_finfo->load[i] = llvm::UndefValue::get(get_reg_type(i));
 					}
 
-					m_finfo->load[i] = m_ir->CreateLoad(init_reg_fixed(i));
+					m_finfo->load[i] = m_ir->CreateLoad(get_reg_type(i), init_reg_fixed(i));
 				}
 
 				// Load $SP
-				m_finfo->load[s_reg_sp] = &*(fn->arg_begin() + 3);
+				m_finfo->load[s_reg_sp] = fn->getArg(3);
 
 				// Load first args
-				m_finfo->load[3] = &*(fn->arg_begin() + 4);
+				m_finfo->load[3] = fn->getArg(4);
 			}
 		}
 		else if (m_block_info[target / 4] && m_entry_info[target / 4] && !(pred_found && m_entry == target) && (!m_finfo->fn || !m_ret_info[target / 4]))
@@ -4367,7 +4369,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	template <typename T = u8>
 	llvm::Value* _ptr(llvm::Value* base, u32 offset)
 	{
-		const auto off = m_ir->CreateGEP(base, m_ir->getInt64(offset));
+		const auto off = m_ir->CreateGEP(get_type<u8>(), base, m_ir->getInt64(offset));
 		const auto ptr = m_ir->CreateBitCast(off, get_type<T*>());
 		return ptr;
 	}
@@ -4381,7 +4383,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	template <typename T, typename... Args>
 	llvm::Value* spu_ptr(value_t<u64> add, Args... offset_args)
 	{
-		const auto off = m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(offset_args...)));
+		const auto off = m_ir->CreateGEP(get_type<u8>(), m_thread, m_ir->getInt64(::offset32(offset_args...)));
 		const auto ptr = m_ir->CreateBitCast(m_ir->CreateAdd(off, add.value), get_type<T*>());
 		return ptr;
 	}
@@ -4466,7 +4468,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto idx = m_ir->CreateAnd(I > 4 ? isr : isl, m_interp_7f0);
 
 		// Pointer to the register
-		return m_ir->CreateBitCast(m_ir->CreateGEP(m_interp_regs, m_ir->CreateZExt(idx, get_type<u64>())), get_type<T*>());
+		return m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_interp_regs, m_ir->CreateZExt(idx, get_type<u64>())), get_type<T*>());
 	}
 
 	llvm::Value* double_as_uint64(llvm::Value* val)
@@ -4548,7 +4550,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		if (!reg)
 		{
 			// Load register value if necessary
-			reg = m_finfo && m_finfo->load[index] ? m_finfo->load[index] : m_ir->CreateLoad(init_reg_fixed(index));
+			reg = m_finfo && m_finfo->load[index] ? m_finfo->load[index] : m_ir->CreateLoad(get_reg_type(index), init_reg_fixed(index));
 		}
 
 		if (reg->getType() == get_type<f64[4]>())
@@ -4593,11 +4595,11 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			// Load reg
 			if (get_type<T>() == get_type<f64[4]>())
 			{
-				r.value = xfloat_to_double(m_ir->CreateLoad(init_vr<u32[4]>(index)));
+				r.value = xfloat_to_double(m_ir->CreateLoad(get_type<u32[4]>(), init_vr<u32[4]>(index)));
 			}
 			else
 			{
-				r.value = m_ir->CreateLoad(init_vr<T>(index));
+				r.value = m_ir->CreateLoad(get_type<T>(), init_vr<T>(index));
 			}
 		}
 		else
@@ -4763,7 +4765,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		}
 
 		// Write register to the context
-		_store = m_ir->CreateStore(is_xfloat ? double_to_xfloat(saved_value) : m_ir->CreateBitCast(value, addr->getType()->getPointerElementType()), addr);
+		_store = m_ir->CreateStore(is_xfloat ? double_to_xfloat(saved_value) : m_ir->CreateBitCast(value, get_reg_type(index)), addr);
 	}
 
 	template <typename T, uint I>
@@ -4879,7 +4881,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto check = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
+		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(get_type<u32>(), pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
 		m_ir->SetInsertPoint(check);
 		update_pc(addr);
 
@@ -5017,7 +5019,7 @@ public:
 
 		// Add entry function (contains only state/code check)
 		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(m_hash, get_ftype<void, u8*, u8*, u64>()).getCallee());
-		const auto main_arg2 = &*(main_func->arg_begin() + 2);
+		const auto main_arg2 = main_func->getArg(2);
 		main_func->setCallingConv(CallingConv::GHC);
 		set_function(main_func);
 
@@ -5028,11 +5030,11 @@ public:
 		const auto label_stop = BasicBlock::Create(m_context, "", m_function);
 
 		// Load PC, which will be the actual value of 'm_base'
-		m_base_pc = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::pc));
+		m_base_pc = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::pc));
 
 		// Emit state check
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
-		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), label_stop, label_test, m_md_unlikely);
+		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pstate, true), m_ir->getInt32(0)), label_stop, label_test, m_md_unlikely);
 
 		// Emit code check
 		u32 check_iterations = 0;
@@ -5049,14 +5051,14 @@ public:
 		}
 		else if (func.data.size() == 1)
 		{
-			const auto pu32 = m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, m_base_pc), get_type<u32*>());
-			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(pu32), m_ir->getInt32(func.data[0]));
+			const auto pu32 = m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_base_pc), get_type<u32*>());
+			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pu32), m_ir->getInt32(func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 		else if (func.data.size() == 2)
 		{
-			const auto pu64 = m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, m_base_pc), get_type<u64*>());
-			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(pu64), m_ir->getInt64(static_cast<u64>(func.data[1]) << 32 | func.data[0]));
+			const auto pu64 = m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_base_pc), get_type<u64*>());
+			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u64>(), pu64), m_ir->getInt64(static_cast<u64>(func.data[1]) << 32 | func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 		else
@@ -5101,7 +5103,7 @@ public:
 
 			// Get actual pc corresponding to the found beginning of the data
 			llvm::Value* starta_pc = m_ir->CreateAnd(get_pc(starta), 0x3fffc);
-			llvm::Value* data_addr = m_ir->CreateGEP(m_lsptr, starta_pc);
+			llvm::Value* data_addr = m_ir->CreateGEP(get_type<u8>(), m_lsptr, starta_pc);
 
 			llvm::Value* acc = nullptr;
 
@@ -5138,21 +5140,21 @@ public:
 				// Load unaligned code block from LS
 				if (m_use_avx512 && g_cfg.core.full_width_avx512)
 				{
-					vls = m_ir->CreateAlignedLoad(_ptr<u32[16]>(data_addr, j - starta), llvm::MaybeAlign{4});
+					vls = m_ir->CreateAlignedLoad(get_type<u32[16]>(), _ptr<u32[16]>(data_addr, j - starta), llvm::MaybeAlign{4});
 				}
 				else if (m_use_avx)
 				{
-					vls = m_ir->CreateAlignedLoad(_ptr<u32[8]>(data_addr, j - starta), llvm::MaybeAlign{4});
+					vls = m_ir->CreateAlignedLoad(get_type<u32[8]>(), _ptr<u32[8]>(data_addr, j - starta), llvm::MaybeAlign{4});
 				}
 				else
 				{
-					vls = m_ir->CreateAlignedLoad(_ptr<u32[4]>(data_addr, j - starta), llvm::MaybeAlign{4});
+					vls = m_ir->CreateAlignedLoad(get_type<u32[4]>(), _ptr<u32[4]>(data_addr, j - starta), llvm::MaybeAlign{4});
 				}
 
 				// Mask if necessary
 				if (holes)
 				{
-					vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::makeArrayRef(indices, elements));
+					vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, elements));
 				}
 
 				// Perform bitwise comparison and accumulate
@@ -5164,7 +5166,7 @@ public:
 					words[i] = k >= start && k < end ? func.data[(k - start) / 4] : 0;
 				}
 
-				vls = m_ir->CreateXor(vls, ConstantDataVector::get(m_context, llvm::makeArrayRef(words, elements)));
+				vls = m_ir->CreateXor(vls, ConstantDataVector::get(m_context, llvm::ArrayRef(words, elements)));
 				acc = acc ? m_ir->CreateOr(acc, vls) : vls;
 				check_iterations++;
 			}
@@ -5198,7 +5200,7 @@ public:
 		// Increase block counter with statistics
 		m_ir->SetInsertPoint(label_body);
 		const auto pbcount = spu_ptr<u64>(&spu_thread::block_counter);
-		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbcount), m_ir->getInt64(check_iterations)), pbcount);
+		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(get_type<u64>(), pbcount), m_ir->getInt64(check_iterations)), pbcount);
 
 		// Call the entry function chunk
 		const auto entry_chunk = add_function(m_pos);
@@ -5232,7 +5234,7 @@ public:
 		if (g_cfg.core.spu_verification)
 		{
 			const auto pbfail = spu_ptr<u64>(&spu_thread::block_failure);
-			m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbfail), m_ir->getInt64(1)), pbfail);
+			m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(get_type<u64>(), pbfail), m_ir->getInt64(1)), pbfail);
 			const auto dispci = call("spu_dispatch", spu_runtime::tr_dispatch, m_thread, m_lsptr, main_arg2);
 			dispci->setCallingConv(CallingConv::GHC);
 			dispci->setTailCall();
@@ -5273,9 +5275,9 @@ public:
 		m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", m_test_state));
 		const auto escape_yes = BasicBlock::Create(m_context, "", m_test_state);
 		const auto escape_no = BasicBlock::Create(m_context, "", m_test_state);
-		m_ir->CreateCondBr(call("spu_exec_check_state", &exec_check_state, &*m_test_state->arg_begin()), escape_yes, escape_no);
+		m_ir->CreateCondBr(call("spu_exec_check_state", &exec_check_state, m_test_state->getArg(0)), escape_yes, escape_no);
 		m_ir->SetInsertPoint(escape_yes);
-		call("spu_escape", spu_runtime::g_escape, &*m_test_state->arg_begin());
+		call("spu_escape", spu_runtime::g_escape, m_test_state->getArg(0));
 		m_ir->CreateRetVoid();
 		m_ir->SetInsertPoint(escape_no);
 		m_ir->CreateRetVoid();
@@ -5341,7 +5343,7 @@ public:
 										if (!value)
 										{
 											// Value hasn't been loaded yet
-											value = m_finfo && m_finfo->load[i] ? m_finfo->load[i] : m_ir->CreateLoad(regptr);
+											value = m_finfo && m_finfo->load[i] ? m_finfo->load[i] : m_ir->CreateLoad(get_reg_type(i), regptr);
 										}
 
 										if (value->getType() == get_type<f64[4]>() && type != get_type<f64[4]>())
@@ -5372,7 +5374,7 @@ public:
 								const auto regptr = init_reg_fixed(i);
 								const auto cblock = m_ir->GetInsertBlock();
 								m_ir->SetInsertPoint(m_function->getEntryBlock().getTerminator());
-								const auto value = m_finfo && m_finfo->load[i] ? m_finfo->load[i] : m_ir->CreateLoad(regptr);
+								const auto value = m_finfo && m_finfo->load[i] ? m_finfo->load[i] : m_ir->CreateLoad(get_reg_type(i), regptr);
 								m_ir->SetInsertPoint(cblock);
 								_phi->addIncoming(value, &m_function->getEntryBlock());
 							}
@@ -5541,7 +5543,7 @@ public:
 						CallInst* ci{};
 						if (si->getOperand(0) == m_ir->getFalse())
 						{
-							ci = m_ir->CreateCall(m_test_state, {&*f->arg_begin()});
+							ci = m_ir->CreateCall(m_test_state, {f->getArg(0)});
 							ci->setCallingConv(m_test_state->getCallingConv());
 						}
 						else
@@ -5697,8 +5699,8 @@ public:
 		ret_func->setCallingConv(CallingConv::GHC);
 		ret_func->setLinkage(GlobalValue::InternalLinkage);
 		m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", ret_func));
-		m_thread = &*(ret_func->arg_begin() + 1);
-		m_interp_pc = &*(ret_func->arg_begin() + 2);
+		m_thread = ret_func->getArg(1);
+		m_interp_pc = ret_func->getArg(2);
 		m_ir->CreateRetVoid();
 
 		// Add entry function, serves as a trampoline
@@ -5709,12 +5711,12 @@ public:
 		set_function(main_func);
 
 		// Load pc and opcode
-		m_interp_pc = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::pc));
-		m_interp_op = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, m_ir->CreateZExt(m_interp_pc, get_type<u64>())), get_type<u32*>()));
+		m_interp_pc = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::pc));
+		m_interp_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_ir->CreateZExt(m_interp_pc, get_type<u64>())), get_type<u32*>()));
 		m_interp_op = m_ir->CreateCall(get_intrinsic<u32>(Intrinsic::bswap), {m_interp_op});
 
 		// Pinned constant, address of interpreter table
-		m_interp_table = m_ir->CreateBitCast(m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->getInt64(0)}), get_type<u8*>());
+		m_interp_table = m_ir->CreateBitCast(m_ir->CreateGEP(m_function_table->getValueType(), m_function_table, {m_ir->getInt64(0), m_ir->getInt64(0)}), get_type<u8*>());
 
 		// Pinned constant, mask for shifted register index
 		m_interp_7f0 = m_ir->getInt32(0x7f0);
@@ -5732,7 +5734,7 @@ public:
 		m_ir->CreateStore(m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::read_register), {rsp_name}), native_sp);
 
 		// Decode (shift) and load function pointer
-		const auto first = m_ir->CreateLoad(m_ir->CreateGEP(m_ir->CreateBitCast(m_interp_table, if_pptr), m_ir->CreateLShr(m_interp_op, 32u - m_interp_magn)));
+		const auto first = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_ir->CreateBitCast(m_interp_table, if_pptr), m_ir->CreateLShr(m_interp_op, 32u - m_interp_magn)));
 		const auto call0 = m_ir->CreateCall({if_type, first}, {m_lsptr, m_thread, m_interp_pc, m_interp_op, m_interp_table, m_interp_7f0, m_interp_regs});
 		call0->setCallingConv(CallingConv::GHC);
 		m_ir->CreateRetVoid();
@@ -5800,16 +5802,16 @@ public:
 				f->setCallingConv(CallingConv::GHC);
 
 				m_function = f;
-				m_lsptr  = &*(f->arg_begin() + 0);
-				m_thread = &*(f->arg_begin() + 1);
-				m_interp_pc = &*(f->arg_begin() + 2);
-				m_interp_op = &*(f->arg_begin() + 3);
-				m_interp_table = &*(f->arg_begin() + 4);
-				m_interp_7f0 = &*(f->arg_begin() + 5);
-				m_interp_regs = &*(f->arg_begin() + 6);
+				m_lsptr  = f->getArg(0);
+				m_thread = f->getArg(1);
+				m_interp_pc = f->getArg(2);
+				m_interp_op = f->getArg(3);
+				m_interp_table = f->getArg(4);
+				m_interp_7f0 = f->getArg(5);
+				m_interp_regs = f->getArg(6);
 
 				m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", f));
-				m_memptr = m_ir->CreateLoad(spu_ptr<u8*>(&spu_thread::memory_base_addr));
+				m_memptr = m_ir->CreateLoad(get_type<u8*>(), spu_ptr<u8*>(&spu_thread::memory_base_addr));
 
 				switch (itype)
 				{
@@ -5874,9 +5876,9 @@ public:
 
 						// Decode next instruction.
 						const auto next_pc = itype & spu_itype::branch ? m_interp_pc : m_interp_pc_next;
-						const auto be32_op = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, m_ir->CreateZExt(next_pc, get_type<u64>())), get_type<u32*>()));
+						const auto be32_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_ir->CreateZExt(next_pc, get_type<u64>())), get_type<u32*>()));
 						const auto next_op = m_ir->CreateCall(get_intrinsic<u32>(Intrinsic::bswap), {be32_op});
-						const auto next_if = m_ir->CreateLoad(m_ir->CreateGEP(m_ir->CreateBitCast(m_interp_table, if_pptr), m_ir->CreateLShr(next_op, 32u - m_interp_magn)));
+						const auto next_if = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_ir->CreateBitCast(m_interp_table, if_pptr), m_ir->CreateLShr(next_op, 32u - m_interp_magn)));
 						llvm::cast<LoadInst>(next_if)->setVolatile(true);
 
 						if (!(itype & spu_itype::branch))
@@ -5906,7 +5908,7 @@ public:
 							{
 								const auto _stop = BasicBlock::Create(m_context, "", f);
 								const auto _next = BasicBlock::Create(m_context, "", f);
-								m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::state))), _stop, _next, m_md_unlikely);
+								m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::state))), _stop, _next, m_md_unlikely);
 								m_ir->SetInsertPoint(_stop);
 								m_ir->CreateStore(m_interp_pc, spu_ptr<u32>(&spu_thread::pc));
 
@@ -5962,7 +5964,7 @@ public:
 							// Call next instruction.
 							const auto _stop = BasicBlock::Create(m_context, "", f);
 							const auto _next = BasicBlock::Create(m_context, "", f);
-							m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::state))), _stop, _next, m_md_unlikely);
+							m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::state))), _stop, _next, m_md_unlikely);
 							m_ir->SetInsertPoint(_next);
 
 							if (itype == spu_itype::WRCH ||
@@ -6227,7 +6229,7 @@ public:
 		}
 		else
 		{
-			const auto val = m_ir->CreateLoad(ptr, true);
+			const auto val = m_ir->CreateLoad(get_type<u64>(), ptr, true);
 			m_ir->CreateStore(m_ir->getInt64(0), ptr, true);
 			val0 = val;
 		}
@@ -6264,7 +6266,7 @@ public:
 		{
 		case SPU_RdSRR0:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::srr0));
+			res.value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::srr0));
 			break;
 		}
 		case SPU_RdInMbox:
@@ -6281,7 +6283,7 @@ public:
 		}
 		case MFC_RdTagMask:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_mask));
+			res.value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_tag_mask));
 			break;
 		}
 		case SPU_RdSigNotify1:
@@ -6313,7 +6315,7 @@ public:
 		}
 		case SPU_RdEventMask:
 		{
-			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
+			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
 			break;
 		}
 		case SPU_RdEventStat:
@@ -6324,8 +6326,8 @@ public:
 		}
 		case SPU_RdMachStat:
 		{
-			res.value = m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&spu_thread::interrupts_enabled)), get_type<u32>());
-			res.value = m_ir->CreateOr(res.value, m_ir->CreateAnd(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::thread_type)), m_ir->getInt32(2)));
+			res.value = m_ir->CreateZExt(m_ir->CreateLoad(get_type<u8>(), spu_ptr<u8>(&spu_thread::interrupts_enabled)), get_type<u32>());
+			res.value = m_ir->CreateOr(res.value, m_ir->CreateAnd(m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::thread_type)), m_ir->getInt32(2)));
 			break;
 		}
 
@@ -6353,7 +6355,7 @@ public:
 
 	llvm::Value* get_rchcnt(u32 off, u64 inv = 0)
 	{
-		const auto val = m_ir->CreateLoad(_ptr<u64>(m_thread, off), true);
+		const auto val = m_ir->CreateLoad(get_type<u64>(), _ptr<u64>(m_thread, off), true);
 		const auto shv = m_ir->CreateLShr(val, spu_channel::off_count);
 		return m_ir->CreateTrunc(m_ir->CreateXor(shv, u64{inv}), get_type<u32>());
 	}
@@ -6413,20 +6415,20 @@ public:
 		}
 		case MFC_Cmd:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_size), true);
+			res.value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::mfc_size), true);
 			res.value = m_ir->CreateSub(m_ir->getInt32(16), res.value);
 			break;
 		}
 		case SPU_RdInMbox:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_in_mbox), true);
+			res.value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_in_mbox), true);
 			res.value = m_ir->CreateLShr(res.value, 8);
 			res.value = m_ir->CreateAnd(res.value, 7);
 			break;
 		}
 		case SPU_RdEventStat:
 		{
-			const auto mask = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
+			const auto mask = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
 			res.value = call("spu_get_events", &exec_get_events, m_thread, mask);
 			break;
 		}
@@ -6532,7 +6534,7 @@ public:
 			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_tag_mask));
 			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto _mfc = llvm::BasicBlock::Create(m_context, "", m_function);
-			m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_upd)), m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE)), _mfc, next);
+			m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_tag_upd)), m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE)), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
 			update_pc();
 			call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
@@ -6544,8 +6546,8 @@ public:
 		{
 			if (true)
 			{
-				const auto tag_mask  = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_mask));
-				const auto mfc_fence = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_fence));
+				const auto tag_mask  = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_tag_mask));
+				const auto mfc_fence = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::mfc_fence));
 				const auto completed = m_ir->CreateAnd(tag_mask, m_ir->CreateNot(mfc_fence));
 				const auto upd_ptr   = spu_ptr<u32>(&spu_thread::ch_tag_upd);
 				const auto stat_ptr  = spu_ptr<u64>(&spu_thread::ch_tag_stat);
@@ -6722,19 +6724,19 @@ public:
 						csize = -1;
 					}
 
-					llvm::Value* src = m_ir->CreateGEP(m_lsptr, zext<u64>(lsa).eval(m_ir));
-					llvm::Value* dst = m_ir->CreateGEP(m_memptr, zext<u64>(eal).eval(m_ir));
+					llvm::Value* src = m_ir->CreateGEP(get_type<u8>(), m_lsptr, zext<u64>(lsa).eval(m_ir));
+					llvm::Value* dst = m_ir->CreateGEP(get_type<u8>(), m_memptr, zext<u64>(eal).eval(m_ir));
 
 					if (cmd & MFC_GET_CMD)
 					{
 						std::swap(src, dst);
 					}
 
-					llvm::Value* barrier = m_ir->CreateLoad(pb);
+					llvm::Value* barrier = m_ir->CreateLoad(get_type<u32>(), pb);
 
 					if (cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK))
 					{
-						barrier = m_ir->CreateOr(barrier, m_ir->CreateLoad(pf));
+						barrier = m_ir->CreateOr(barrier, m_ir->CreateLoad(get_type<u32>(), pf));
 					}
 
 					const auto cond = m_ir->CreateIsNull(m_ir->CreateAnd(mask, barrier));
@@ -6756,7 +6758,7 @@ public:
 					m_ir->CreateBr(next);
 					m_ir->SetInsertPoint(copy);
 
-					llvm::Type* vtype = get_type<u8(*)[16]>();
+					llvm::Type* vtype = get_type<u8[16]>();
 
 					switch (csize)
 					{
@@ -6767,22 +6769,22 @@ public:
 					}
 					case 1:
 					{
-						vtype = get_type<u8*>();
+						vtype = get_type<u8>();
 						break;
 					}
 					case 2:
 					{
-						vtype = get_type<u16*>();
+						vtype = get_type<u16>();
 						break;
 					}
 					case 4:
 					{
-						vtype = get_type<u32*>();
+						vtype = get_type<u32>();
 						break;
 					}
 					case 8:
 					{
-						vtype = get_type<u64*>();
+						vtype = get_type<u64>();
 						break;
 					}
 					default:
@@ -6806,29 +6808,29 @@ public:
 
 					if (m_use_avx && csize >= 32 && !(clsa % 32))
 					{
-						vtype = get_type<u8(*)[32]>();
+						vtype = get_type<u8[32]>();
 						stride = 32;
 					}
 
 					if (csize > 0 && csize <= 16)
 					{
 						// Generate single copy operation
-						m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(src, vtype), true), m_ir->CreateBitCast(dst, vtype), true);
+						m_ir->CreateStore(m_ir->CreateLoad(vtype, m_ir->CreateBitCast(src, vtype->getPointerTo()), true), m_ir->CreateBitCast(dst, vtype->getPointerTo()), true);
 					}
 					else if (csize <= stride * 16 && !(csize % 32))
 					{
 						// Generate fixed sequence of copy operations
 						for (u32 i = 0; i < csize; i += stride)
 						{
-							const auto _src = m_ir->CreateGEP(src, m_ir->getInt32(i));
-							const auto _dst = m_ir->CreateGEP(dst, m_ir->getInt32(i));
+							const auto _src = m_ir->CreateGEP(get_type<u8>(), src, m_ir->getInt32(i));
+							const auto _dst = m_ir->CreateGEP(get_type<u8>(), dst, m_ir->getInt32(i));
 							if (csize - i < stride)
 							{
-								m_ir->CreateStore(m_ir->CreateLoad(m_ir->CreateBitCast(_src, get_type<u8(*)[16]>()), true), m_ir->CreateBitCast(_dst, get_type<u8(*)[16]>()), true);
+								m_ir->CreateStore(m_ir->CreateLoad(get_type<u8[16]>(), m_ir->CreateBitCast(_src, get_type<u8(*)[16]>()), true), m_ir->CreateBitCast(_dst, get_type<u8(*)[16]>()), true);
 							}
 							else
 							{
-								m_ir->CreateAlignedStore(m_ir->CreateAlignedLoad(m_ir->CreateBitCast(_src, vtype), llvm::MaybeAlign{16}), m_ir->CreateBitCast(_dst, vtype), llvm::MaybeAlign{16});
+								m_ir->CreateAlignedStore(m_ir->CreateAlignedLoad(vtype, m_ir->CreateBitCast(_src, vtype->getPointerTo()), llvm::MaybeAlign{16}), m_ir->CreateBitCast(_dst, vtype->getPointerTo()), llvm::MaybeAlign{16});
 							}
 						}
 					}
@@ -6851,7 +6853,7 @@ public:
 				case MFC_EIEIO_CMD:
 				case MFC_SYNC_CMD:
 				{
-					const auto cond = m_ir->CreateIsNull(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_size)));
+					const auto cond = m_ir->CreateIsNull(m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::mfc_size)));
 					m_ir->CreateCondBr(cond, exec, fail, m_md_likely);
 					m_ir->SetInsertPoint(exec);
 					m_ir->CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
@@ -6873,10 +6875,10 @@ public:
 				m_ir->SetInsertPoint(fail);
 
 				// Get MFC slot, redirect to invalid memory address
-				const auto slot = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_size));
+				const auto slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::mfc_size));
 				const auto off0 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&spu_thread::mfc_queue)));
-				const auto ptr0 = m_ir->CreateGEP(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
-				const auto ptr1 = m_ir->CreateGEP(m_memptr, m_ir->getInt64(0xffdeadf0));
+				const auto ptr0 = m_ir->CreateGEP(get_type<u8>(), m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
+				const auto ptr1 = m_ir->CreateGEP(get_type<u8>(), m_memptr, m_ir->getInt64(0xffdeadf0));
 				const auto pmfc = m_ir->CreateSelect(m_ir->CreateICmpULT(slot, m_ir->getInt32(16)), ptr0, ptr1);
 				m_ir->CreateStore(ci, _ptr<u8>(pmfc, ::offset32(&spu_mfc_cmd::cmd)));
 
@@ -6922,9 +6924,9 @@ public:
 					m_ir->CreateStore(size.value, _ptr<u16>(pmfc, ::offset32(&spu_mfc_cmd::size)));
 					m_ir->CreateStore(lsa.value, _ptr<u32>(pmfc, ::offset32(&spu_mfc_cmd::lsa)));
 					m_ir->CreateStore(eal.value, _ptr<u32>(pmfc, ::offset32(&spu_mfc_cmd::eal)));
-					m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(pf), mask), pf);
+					m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(get_type<u32>(), pf), mask), pf);
 					if (cmd & MFC_BARRIER_MASK)
-						m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(pb), mask), pb);
+						m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(get_type<u32>(), pb), mask), pb);
 					break;
 				}
 				case MFC_BARRIER_CMD:
@@ -6932,7 +6934,7 @@ public:
 				case MFC_SYNC_CMD:
 				{
 					m_ir->CreateStore(m_ir->getInt32(-1), pb);
-					m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(pf), mask), pf);
+					m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(get_type<u32>(), pf), mask), pf);
 					break;
 				}
 				default:
@@ -6956,7 +6958,7 @@ public:
 		{
 			const auto mask = eval(splat<u32>(1) << (val & 0x1f));
 			const auto _ptr = spu_ptr<u32>(&spu_thread::ch_stall_mask);
-			const auto _old = m_ir->CreateLoad(_ptr);
+			const auto _old = m_ir->CreateLoad(get_type<u32>(), _ptr);
 			const auto _new = m_ir->CreateAnd(_old, m_ir->CreateNot(mask.value));
 			m_ir->CreateStore(_new, _ptr);
 			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
@@ -9609,13 +9611,13 @@ public:
 	void make_store_ls(value_t<u64> addr, value_t<u8[16]> data)
 	{
 		const auto bswapped = byteswap(data);
-		m_ir->CreateStore(bswapped.eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()), true);
+		m_ir->CreateStore(bswapped.eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, addr.value), get_type<u8(*)[16]>()), true);
 	}
 
 	auto make_load_ls(value_t<u64> addr)
 	{
 		value_t<u8[16]> data;
-		data.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()), true);
+		data.value = m_ir->CreateLoad(get_type<u8[16]>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, addr.value), get_type<u8(*)[16]>()), true);
 		return byteswap(data);
 	}
 
@@ -9730,7 +9732,7 @@ public:
 		m_ir->CreateCondBr(cond.value, halt, next, m_md_unlikely);
 		m_ir->SetInsertPoint(halt);
 		if (m_interp_magn)
-			m_ir->CreateStore(&*(m_function->arg_begin() + 2), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
+			m_ir->CreateStore(m_function->getArg(2), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
 		else
 			update_pc();
 		const auto ptr = _ptr<u32>(m_memptr, 0xffdead00);
@@ -9873,7 +9875,7 @@ public:
 			}
 			else
 			{
-				sp.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::gpr, 1, &v128::_u32, 3));
+				sp.value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::gpr, 1, &v128::_u32, 3));
 			}
 		}
 
@@ -9898,19 +9900,19 @@ public:
 			// Compare address stored in stack mirror with addr
 			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&spu_thread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
-			const auto _ret = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64*>()));
-			const auto link = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
+			const auto _ret = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value), get_type<u64*>()));
+			const auto link = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack1.value), get_type<u64*>()));
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->CreateCondBr(m_ir->CreateICmpEQ(addr.value, m_ir->CreateTrunc(link, get_type<u32>())), next, fail, m_md_likely);
 			m_ir->SetInsertPoint(next);
-			const auto cmp2 = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u32*>()));
+			const auto cmp2 = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, addr.value), get_type<u32*>()));
 			m_ir->CreateCondBr(m_ir->CreateICmpEQ(cmp2, m_ir->CreateTrunc(_ret, get_type<u32>())), done, fail, m_md_likely);
 			m_ir->SetInsertPoint(done);
 
 			// Clear stack mirror and return by tail call to the provided return address
-			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64(*)[2]>()));
+			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value), get_type<u64(*)[2]>()));
 			const auto targ = m_ir->CreateAdd(m_ir->CreateLShr(_ret, 32), get_segment_base());
 			const auto type = m_finfo->chunk->getFunctionType();
 			const auto fval = m_ir->CreateIntToPtr(targ, type->getPointerTo());
@@ -9928,8 +9930,8 @@ public:
 			m_ir->SetInsertPoint(done);
 
 			const auto ad64 = m_ir->CreateZExt(ad32, get_type<u64>());
-			const auto pptr = m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ad64, 2, "", true)});
-			tail_chunk({m_dispatch->getFunctionType(), m_ir->CreateLoad(pptr)});
+			const auto pptr = m_ir->CreateGEP(get_type<u8>(), m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ad64, 2, "", true)});
+			tail_chunk({m_dispatch->getFunctionType(), m_ir->CreateLoad(get_type<u8*>(), pptr)});
 			m_ir->SetInsertPoint(fail);
 		}
 
@@ -10242,7 +10244,7 @@ public:
 	{
 		if (m_block) m_block->block_end = m_ir->GetInsertBlock();
 		value_t<u32> srr0;
-		srr0.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::srr0));
+		srr0.value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::srr0));
 		m_ir->CreateBr(add_block_indirect(op, srr0));
 	}
 
@@ -10251,7 +10253,7 @@ public:
 		if (m_block) m_block->block_end = m_ir->GetInsertBlock();
 		const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
 		set_link(op);
-		const auto mask = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
+		const auto mask = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
 		const auto res = call("spu_get_events", &exec_get_events, m_thread, mask);
 		const auto target = add_block_indirect(op, addr);
 		m_ir->CreateCondBr(m_ir->CreateICmpNE(res, m_ir->getInt32(0)), target, add_block_next());
@@ -10585,8 +10587,8 @@ public:
 			const auto rel_ptr = m_ir->CreateSub(m_ir->CreatePtrToInt(pfunc->chunk, get_type<u64>()), get_segment_base());
 			const auto ptr_plus_op = m_ir->CreateOr(m_ir->CreateShl(rel_ptr, 32), m_ir->getInt64(m_next_op));
 			const auto base_plus_pc = m_ir->CreateOr(m_ir->CreateShl(m_ir->CreateZExt(m_base_pc, get_type<u64>()), 32), m_ir->getInt64(m_pos + 4));
-			m_ir->CreateStore(ptr_plus_op, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), get_type<u64*>()));
-			m_ir->CreateStore(base_plus_pc, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
+			m_ir->CreateStore(ptr_plus_op, m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value), get_type<u64*>()));
+			m_ir->CreateStore(base_plus_pc, m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack1.value), get_type<u64*>()));
 		}
 	}
 
