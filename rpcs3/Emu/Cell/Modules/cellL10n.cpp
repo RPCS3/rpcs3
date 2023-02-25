@@ -6,7 +6,7 @@
 #include <Windows.h>
 #endif
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 typedef int HostCode;
 #else
 #include <iconv.h>
@@ -24,7 +24,7 @@ LOG_CHANNEL(cellL10n);
 // If this makes your compilation fail, try replace the string code with one in "iconv -l"
 bool _L10nCodeParse(s32 code, HostCode& retCode)
 {
-#ifdef _MSC_VER
+#ifdef _WIN32
 	retCode = 0;
 	if ((code >= _L10N_CODE_) || (code < 0)) return false;
 	switch (code)
@@ -161,7 +161,7 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 #endif
 }
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 
 // Use code page to transform std::string to std::wstring.
 s32 _OEM2Wide(HostCode oem_code, const std::string& src, std::wstring& dst)
@@ -216,13 +216,13 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		|| ((!dst_page_converted) && (dstCode == 0)))
 		return ConverterUnknown;
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 	const std::string wrapped_source = std::string(static_cast<const char *>(src), src_len);
 	const std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
 
 	if (dst != nullptr)
 	{
-		if (target.length() > *dst_len) return DSTExhausted;
+		if (target.length() > static_cast<usz>(*dst_len)) return DSTExhausted;
 		memcpy(dst, target.c_str(), target.length());
 	}
 	*dst_len = ::narrow<s32>(target.size());
