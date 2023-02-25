@@ -293,7 +293,7 @@ namespace rsx
 					// Clear
 					interrupted_items.clear();
 				}
-				else
+				else if (!m_input_thread_abort)
 				{
 					m_input_token_stack.wait();
 				}
