@@ -380,6 +380,9 @@ namespace np
 			else
 			{
 				bind_ip = conv.s_addr;
+
+				if (bind_ip)
+					local_ip_addr = bind_ip;
 			}
 
 			if (g_cfg.net.upnp_enabled)

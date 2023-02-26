@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "overlays.h"
+#include "overlay_manager.h"
 #include "overlay_message_dialog.h"
 #include "Input/pad_thread.h"
 #include "Emu/Io/interception.h"
@@ -45,8 +46,10 @@ namespace rsx
 		// Singleton instance declaration
 		fontmgr* fontmgr::m_instance = nullptr;
 
-		s32 user_interface::run_input_loop()
+		s32 user_interface::run_input_loop(std::function<bool()> check_state)
 		{
+			user_interface::thread_bits_allocator thread_bits_alloc(this);
+
 			m_interactive = true;
 
 			std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
@@ -121,6 +124,12 @@ namespace rsx
 
 			while (!m_stop_input_loop)
 			{
+				if (check_state && !check_state())
+				{
+					// Interrupted externally.
+					break;
+				}
+
 				if (Emu.IsStopped())
 				{
 					return selection_code::canceled;
@@ -358,9 +367,9 @@ namespace rsx
 				input::SetIntercepted(false);
 			}
 
-			m_interactive = false;
-
-			return 0;
+			return !m_stop_input_loop
+				? selection_code::interrupted
+				: selection_code::ok;
 		}
 
 		void user_interface::close(bool use_callback, bool stop_pad_interception)

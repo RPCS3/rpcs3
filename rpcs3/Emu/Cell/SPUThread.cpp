@@ -2768,7 +2768,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 
 			u32 s_size = data0._u32[0];
 
-			// We need to verify matching between odd and even elements (vector test is position independant)
+			// We need to verify matching between odd and even elements (vector test is position independent)
 			// 0-5 is the most unlikely couple match for many reasons so it skips the entire check very efficiently in most cases
 			// Assumes padding bits should match
 			if (optimization_compatible == MFC_GET_CMD && s_size == data0._u32[2] && arg_size >= fetch_size * 8)

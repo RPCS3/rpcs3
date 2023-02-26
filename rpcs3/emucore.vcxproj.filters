@@ -1144,6 +1144,9 @@
     <ClCompile Include="Emu\NP\upnp_config.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_manager.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2295,6 +2298,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.h">
       <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_manager.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\upnp_handler.h">
       <Filter>Emu\NP</Filter>

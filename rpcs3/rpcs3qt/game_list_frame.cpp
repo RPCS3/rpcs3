@@ -2646,9 +2646,14 @@ void game_list_frame::PopulateGameList()
 
 		if (game->info.bootable && !game->compat.latest_version.isEmpty())
 		{
+			f64 top_ver = 0.0, app_ver = 0.0;
+			const bool unknown = app_version == localized.category.unknown;
+			const bool ok_app = !unknown && try_to_float(&app_ver, sstr(app_version), ::std::numeric_limits<s32>::min(), ::std::numeric_limits<s32>::max());
+			const bool ok_top = !unknown && try_to_float(&top_ver, sstr(game->compat.latest_version), ::std::numeric_limits<s32>::min(), ::std::numeric_limits<s32>::max());
+
 			// If the app is bootable and the compat database contains info about the latest patch version:
 			// add a hint for available software updates if the app version is unknown or lower than the latest version.
-			if (app_version == localized.category.unknown || game->compat.latest_version.toDouble() > app_version.toDouble())
+			if (unknown || (ok_top && ok_app && top_ver > app_ver))
 			{
 				app_version = tr("%0 (Update available: %1)").arg(app_version, game->compat.latest_version);
 			}

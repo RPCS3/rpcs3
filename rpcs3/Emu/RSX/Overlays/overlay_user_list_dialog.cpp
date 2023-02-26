@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "overlay_manager.h"
 #include "overlay_user_list_dialog.h"
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
@@ -175,11 +176,6 @@ namespace rsx
 			return result;
 		}
 
-		struct user_list_dialog_thread
-		{
-			static constexpr auto thread_name = "UserList Thread"sv;
-		};
-
 		error_code user_list_dialog::show(const std::string& title, u32 focused, const std::vector<u32>& user_ids, bool enable_overlay, std::function<void(s32 status)> on_close)
 		{
 			visible = false;
@@ -243,33 +239,15 @@ namespace rsx
 			this->on_close = std::move(on_close);
 			visible = true;
 
-			auto& list_thread = g_fxo->get<named_thread<user_list_dialog_thread>>();
-
 			const auto notify = std::make_shared<atomic_t<bool>>(false);
+			auto& overlayman = g_fxo->get<display_manager>();
 
-			list_thread([&, notify]()
-			{
-				const u64 tbit = alloc_thread_bit();
-				g_thread_bit = tbit;
+			overlayman.attach_thread_input(
+				uid, "User list dialog",
+				[&notify]() { *notify = true; notify->notify_one(); }
+			);
 
-				*notify = true;
-				notify->notify_one();
-
-				auto ref = g_fxo->get<display_manager>().get(uid);
-
-				if (const auto error = run_input_loop())
-				{
-					if (error != selection_code::canceled)
-					{
-						rsx_log.error("User list dialog input loop exited with error code=%d", error);
-					}
-				}
-
-				thread_bits &= ~tbit;
-				thread_bits.notify_all();
-			});
-
-			while (list_thread < thread_state::errored && !*notify)
+			while (!Emu.IsStopped() && !*notify)
 			{
 				notify->wait(false, atomic_wait_timeout{1'000'000});
 			}

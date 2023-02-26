@@ -4,6 +4,8 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+
+#include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_user_list_dialog.h"
 
 #include "cellUserInfo.h"

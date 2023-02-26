@@ -384,12 +384,24 @@ namespace cfg
 
 		std::string to_string() const override
 		{
-			return std::to_string(m_value);
+			std::string result;
+			if (try_to_string(&result, m_value))
+			{
+				return result;
+			}
+
+			return "0.0";
 		}
 
 		std::string def_to_string() const override
 		{
-			return std::to_string(def);
+			std::string result;
+			if (try_to_string(&result, def))
+			{
+				return result;
+			}
+
+			return "0.0";
 		}
 
 		bool from_string(std::string_view value, bool /*dynamic*/ = false) override

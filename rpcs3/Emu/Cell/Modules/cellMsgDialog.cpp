@@ -5,6 +5,8 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Io/interception.h"
+
+#include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
 
 #include "cellSysutil.h"

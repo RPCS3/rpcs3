@@ -359,6 +359,14 @@ public:
 		return result;
 	}
 
+	// Withdraw the list in reverse order (LIFO/FILO)
+	lf_queue_slice<T> pop_all_reversed()
+	{
+		lf_queue_slice<T> result;
+		result.m_head = m_head.exchange(nullptr);
+		return result;
+	}
+
 	// Apply func(data) to each element, return the total length
 	template <typename F>
 	usz apply(F func)

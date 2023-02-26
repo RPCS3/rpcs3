@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "overlay_home_menu.h"
+#include "../overlay_manager.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Utilities/date_time.h"
 
@@ -149,11 +150,6 @@ namespace rsx
 			return result;
 		}
 
-		struct home_menu_dialog_thread
-		{
-			static constexpr auto thread_name = "Home Menu Thread"sv;
-		};
-
 		error_code home_menu_dialog::show(std::function<void(s32 status)> on_close)
 		{
 			visible = false;
@@ -165,31 +161,13 @@ namespace rsx
 			this->on_close = std::move(on_close);
 			visible = true;
 
-			auto& list_thread = g_fxo->get<named_thread<home_menu_dialog_thread>>();
-
 			const auto notify = std::make_shared<atomic_t<bool>>(false);
+			auto& overlayman = g_fxo->get<display_manager>();
 
-			list_thread([&, notify]()
-			{
-				const u64 tbit = alloc_thread_bit();
-				g_thread_bit = tbit;
-
-				*notify = true;
-				notify->notify_one();
-
-				auto ref = g_fxo->get<display_manager>().get(uid);
-
-				if (const auto error = run_input_loop())
-				{
-					if (error != selection_code::canceled)
-					{
-						rsx_log.error("Home menu dialog input loop exited with error code=%d", error);
-					}
-				}
-
-				thread_bits &= ~tbit;
-				thread_bits.notify_all();
-			});
+			overlayman.attach_thread_input(
+				uid, "Home menu",
+				[&notify]() { *notify = true; notify->notify_one(); }
+			);
 
 			if (g_cfg.misc.pause_during_home_menu)
 			{
@@ -199,7 +177,7 @@ namespace rsx
 				});
 			}
 
-			while (list_thread < thread_state::errored && !*notify)
+			while (!Emu.IsStopped() && !*notify)
 			{
 				notify->wait(false, atomic_wait_timeout{1'000'000});
 			}

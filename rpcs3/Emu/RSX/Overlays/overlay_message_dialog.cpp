@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "overlay_manager.h"
 #include "overlay_message_dialog.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -195,11 +196,6 @@ namespace rsx
 			user_interface::close(use_callback, stop_pad_interception);
 		}
 
-		struct msg_dialog_thread
-		{
-			static constexpr auto thread_name = "MsgDialog Thread"sv;
-		};
-
 		void message_dialog::update()
 		{
 			if (fade_animation.active)
@@ -283,6 +279,8 @@ namespace rsx
 						}
 						return error;
 					}
+
+					g_last_user_response = return_code;
 				}
 				else
 				{
@@ -299,52 +297,44 @@ namespace rsx
 			{
 				if (!m_stop_input_loop)
 				{
-					auto& dlg_thread = g_fxo->get<named_thread<msg_dialog_thread>>();
-
 					const auto notify = std::make_shared<atomic_t<bool>>(false);
+					auto& overlayman = g_fxo->get<display_manager>();
 
-					dlg_thread([&, notify]()
+					if (interactive)
 					{
-						const u64 tbit = alloc_thread_bit();
-						g_thread_bit = tbit;
-
-						*notify = true;
-						notify->notify_one();
-
-						if (interactive)
-						{
-							auto ref = g_fxo->get<display_manager>().get(uid);
-
-							if (const auto error = run_input_loop())
+						overlayman.attach_thread_input(
+							uid, "Message dialog",
+							[&notify]() { *notify = true; notify->notify_one(); }
+						);
+					}
+					else
+					{
+						overlayman.attach_thread_input(
+							uid, "Message dialog",
+							[&notify]() { *notify = true; notify->notify_one(); },
+							nullptr,
+							[&]()
 							{
-								if (error != selection_code::canceled)
+								while (!m_stop_input_loop && thread_ctrl::state() != thread_state::aborting)
 								{
-									rsx_log.error("Message dialog input loop exited with error code=%d", error);
+									refresh();
+
+									// Only update the screen at about 60fps since updating it everytime slows down the process
+									std::this_thread::sleep_for(16ms);
+
+									if (!g_fxo->is_init<display_manager>())
+									{
+										rsx_log.fatal("display_manager was improperly destroyed");
+										break;
+									}
 								}
+
+								return 0;
 							}
-						}
-						else
-						{
-							while (!m_stop_input_loop && thread_ctrl::state() != thread_state::aborting)
-							{
-								refresh();
+						);
+					}
 
-								// Only update the screen at about 60fps since updating it everytime slows down the process
-								std::this_thread::sleep_for(16ms);
-
-								if (!g_fxo->is_init<display_manager>())
-								{
-									rsx_log.fatal("display_manager was improperly destroyed");
-									break;
-								}
-							}
-						}
-
-						thread_bits &= ~tbit;
-						thread_bits.notify_all();
-					});
-
-					while (dlg_thread < thread_state::errored && !*notify)
+					while (!Emu.IsStopped() && !*notify)
 					{
 						notify->wait(false, atomic_wait_timeout{1'000'000});
 					}

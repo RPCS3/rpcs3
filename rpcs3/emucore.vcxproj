@@ -95,6 +95,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_controls.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_cursor.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_manager.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_media_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_shader_compile_notification.cpp" />
@@ -555,6 +556,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_list_view.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_loading_icon.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_manager.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp" />
     <ClInclude Include="Emu\RSX\Program\GLSLTypes.h" />
