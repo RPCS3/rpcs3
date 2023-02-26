@@ -422,8 +422,9 @@ void pad_thread::operator()()
 				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 					continue;
 
+				// TODO: this keeps opening the home menu. Find out how to do it properly.
 				// Check if an LDD pad pressed the PS button (bit 0 of the first button)
-				if (pad->ldd && !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
+				if (false && pad->ldd && !!(pad->ldd_data.button[0] & CELL_PAD_CTRL_LDD_PS))
 				{
 					ps_button_pressed = true;
 					break;
