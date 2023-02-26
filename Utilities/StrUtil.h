@@ -31,6 +31,9 @@ bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
 // Convert string to float
 bool try_to_float(f64* out, std::string_view value, f64 min, f64 max);
 
+// Convert float to string locale independent
+bool try_to_string(std::string* out, const f64& value);
+
 // Get the file extension of a file path ("png", "jpg", etc.)
 std::string get_file_extension(const std::string& file_path);
 

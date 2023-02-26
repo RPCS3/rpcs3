@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Config.h"
 #include "util/types.hpp"
-
 #include "util/yaml.hpp"
 
 #include <charconv>
@@ -97,7 +96,7 @@ bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_int64('%s'): out of bounds (%d..%d)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_int64('%s'): out of bounds (val=%d, min=%d, max=%d)", value, result, min, max);
 		return false;
 	}
 
@@ -140,7 +139,7 @@ bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (%u..%u)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (val=%u, min=%u, max=%u)", value, result, min, max);
 		return false;
 	}
 
@@ -176,12 +175,33 @@ bool try_to_float(f64* out, std::string_view value, f64 min, f64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_float('%s'): out of bounds (%f..%f)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_float('%s'): out of bounds (val=%f, min=%f, max=%f)", value, result, min, max);
 		return false;
 	}
 
 	if (out) *out = result;
 	return true;
+}
+
+bool try_to_string(std::string* out, const f64& value)
+{
+#ifdef __APPLE__
+	if (out) *out = std::to_string(value);
+	return true;
+#else
+	std::array<char, 32> str{};
+
+	if (auto [ptr, ec] = std::to_chars(str.data(), str.data() + str.size(), value, std::chars_format::fixed); ec == std::errc())
+	{
+		if (out) *out = std::string(str.data(), ptr);
+		return true;
+	}
+	else
+	{
+		if (out) cfg_log.error("cfg::try_to_string(): could not convert value '%f' to string. error='%s'", value, std::make_error_code(ec).message());
+		return false;
+	}
+#endif
 }
 
 bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, std::string_view value)
@@ -231,7 +251,7 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 
 	if (result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
+		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(val=%u, min=0, max=%u)", value, result, max);
 		return false;
 	}
 

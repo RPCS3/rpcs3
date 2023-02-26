@@ -20,8 +20,21 @@ namespace rsx
 		{
 			if (m_input_thread)
 			{
+				// This keeps the input thread from looping again
 				m_input_thread_abort.store(true);
 
+				// Wake it if it is asleep
+				const input_thread_context_t wakeup_node =
+				{
+					"stop_node",
+					nullptr,
+					nullptr,
+					nullptr,
+					nullptr
+				};
+				m_input_token_stack.push(wakeup_node);
+
+				// Wait for join
 				*m_input_thread = thread_state::aborting;
 				while (*m_input_thread <= thread_state::aborting)
 				{
@@ -87,7 +100,8 @@ namespace rsx
 				{
 					return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
 				}),
-				m_dirty_list.end());
+				m_dirty_list.end()
+			);
 		}
 
 		bool display_manager::remove_type(u32 type_id)
@@ -197,7 +211,7 @@ namespace rsx
 
 				for (auto&& input_context : m_input_token_stack.pop_all_reversed())
 				{
-					if (input_context.target->is_detached())
+					if (!input_context.target || input_context.target->is_detached())
 					{
 						continue;
 					}
@@ -279,7 +293,7 @@ namespace rsx
 					// Clear
 					interrupted_items.clear();
 				}
-				else
+				else if (!m_input_thread_abort)
 				{
 					m_input_token_stack.wait();
 				}
