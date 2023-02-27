@@ -168,7 +168,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 		const auto res = manager->create<rsx::overlays::message_dialog>()->show(is_blocking, msgString.get_ptr(), _type, [callback, userData, &return_code, is_blocking, &notify](s32 status)
 		{
-			if (return_code)
+			if (is_blocking && return_code)
 			{
 				*return_code = status;
 			}
