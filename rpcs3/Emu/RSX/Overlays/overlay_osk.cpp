@@ -1625,7 +1625,7 @@ namespace rsx
 
 			overlayman.attach_thread_input(
 				uid, "OSK",
-				[&notify]() { *notify = true; notify->notify_one(); }
+				[notify]() { *notify = true; notify->notify_one(); }
 			);
 
 			while (!Emu.IsStopped() && !*notify)

@@ -244,7 +244,7 @@ namespace rsx
 
 			overlayman.attach_thread_input(
 				uid, "User list dialog",
-				[&notify]() { *notify = true; notify->notify_one(); }
+				[notify]() { *notify = true; notify->notify_one(); }
 			);
 
 			while (!Emu.IsStopped() && !*notify)

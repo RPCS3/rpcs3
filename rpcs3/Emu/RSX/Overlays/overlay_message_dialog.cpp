@@ -302,14 +302,14 @@ namespace rsx
 					{
 						overlayman.attach_thread_input(
 							uid, "Message dialog",
-							[&notify]() { *notify = true; notify->notify_one(); }
+							[notify]() { *notify = true; notify->notify_one(); }
 						);
 					}
 					else
 					{
 						overlayman.attach_thread_input(
 							uid, "Message dialog",
-							[&notify]() { *notify = true; notify->notify_one(); },
+							[notify]() { *notify = true; notify->notify_one(); },
 							nullptr,
 							[&]()
 							{
