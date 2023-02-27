@@ -160,7 +160,7 @@ namespace rsx
 	protected:
 
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
-		std::vector<u32> element_push_buffer;
+		rsx::simple_array<u32> element_push_buffer;
 
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
