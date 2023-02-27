@@ -166,7 +166,7 @@ namespace rsx
 
 			overlayman.attach_thread_input(
 				uid, "Home menu",
-				[&notify]() { *notify = true; notify->notify_one(); }
+				[notify]() { *notify = true; notify->notify_one(); }
 			);
 
 			if (g_cfg.misc.pause_during_home_menu)
