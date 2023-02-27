@@ -1097,7 +1097,7 @@ void spu_thread::dump_regs(std::string& ret) const
 			if (!printed_error)
 			{
 				// Shortand formatting
-				fmt::append(ret, "08x", i3);
+				fmt::append(ret, "%08x", i3);
 			}
 		}
 		else
