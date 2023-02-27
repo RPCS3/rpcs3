@@ -1192,9 +1192,9 @@ void ppu_thread::dump_regs(std::string& ret) const
 		}
 	}
 
-	fmt::append(ret, "CIA: 0x%08x\n", cia);
+	fmt::append(ret, "CIA: 0x%x\n", cia);
 	fmt::append(ret, "CR: 0x%08x\n", cr.pack());
-	fmt::append(ret, "LR: 0x%08llx\n", lr);
+	fmt::append(ret, "LR: 0x%llx\n", lr);
 	fmt::append(ret, "CTR: 0x%llx\n", ctr);
 	fmt::append(ret, "VRSAVE: 0x%08x\n", vrsave);
 	fmt::append(ret, "XER: [CA=%u | OV=%u | SO=%u | CNT=%u]\n", xer.ca, xer.ov, xer.so, xer.cnt);
