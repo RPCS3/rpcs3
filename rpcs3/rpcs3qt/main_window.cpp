@@ -1424,7 +1424,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		return;
 	}
 
-	static constexpr std::string_view cur_version = "4.89";
+	static constexpr std::string_view cur_version = "4.90";
 
 	std::string version_string;
 
