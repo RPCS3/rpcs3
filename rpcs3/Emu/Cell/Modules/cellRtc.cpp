@@ -259,8 +259,8 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	pszDateTime[0xb] = ' ';
 
 	// year
-	char yearDigits[5];
-	sprintf(yearDigits, "%04hi", u16{date_time->year});
+	std::array<char, 5> yearDigits{};
+	snprintf(yearDigits.data(), yearDigits.size(), "%04hi", u16{date_time->year});
 	pszDateTime[0xc]  = yearDigits[0];
 	pszDateTime[0xd]  = yearDigits[1];
 	pszDateTime[0xe]  = yearDigits[2];
@@ -268,22 +268,22 @@ error_code cellRtcFormatRfc2822(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	pszDateTime[0x10] = ' ';
 
 	// Hours
-	char hourDigits[3];
-	sprintf(hourDigits, "%02hi", u16{date_time->hour});
+	std::array<char, 3> hourDigits{};
+	snprintf(hourDigits.data(), hourDigits.size(), "%02hi", u16{date_time->hour});
 	pszDateTime[0x11] = hourDigits[0];
 	pszDateTime[0x12] = hourDigits[1];
 	pszDateTime[0x13] = ':';
 
 	// Minutes
-	char minDigits[3];
-	sprintf(minDigits, "%02hi", u16{date_time->minute});
+	std::array<char, 3> minDigits{};
+	snprintf(minDigits.data(), minDigits.size(), "%02hi", u16{date_time->minute});
 	pszDateTime[0x14] = minDigits[0];
 	pszDateTime[0x15] = minDigits[1];
 	pszDateTime[0x16] = ':';
 
 	// Seconds
-	char secDigits[3];
-	sprintf(secDigits, "%02hi", u16{date_time->second});
+	std::array<char, 3> secDigits{};
+	snprintf(secDigits.data(), secDigits.size(), "%02hi", u16{date_time->second});
 	pszDateTime[0x17] = secDigits[0];
 	pszDateTime[0x18] = secDigits[1];
 	pszDateTime[0x19] = ' ';
@@ -379,8 +379,8 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	s32 tzone = iTimeZone;
 
 	// Year - XXXX-04-13T10:56:31.35+66:40
-	char yearDigits[5];
-	sprintf(yearDigits, "%04hi", u16{date_time->year});
+	std::array<char, 5> yearDigits{};
+	snprintf(yearDigits.data(), yearDigits.size(), "%04hi", u16{date_time->year});
 	pszDateTime[0x0] = yearDigits[0];
 	pszDateTime[0x1] = yearDigits[1];
 	pszDateTime[0x2] = yearDigits[2];
@@ -388,43 +388,43 @@ error_code cellRtcFormatRfc3339(vm::ptr<char> pszDateTime, vm::cptr<CellRtcTick>
 	pszDateTime[0x4] = '-';
 
 	// Month - 2020-XX-13T10:56:31.35+66:40
-	char monthDigits[3];
-	sprintf(monthDigits, "%02hi", u16{date_time->month});
+	std::array<char, 3> monthDigits{};
+	snprintf(monthDigits.data(), monthDigits.size(), "%02hi", u16{date_time->month});
 	pszDateTime[0x5] = monthDigits[0];
 	pszDateTime[0x6] = monthDigits[1];
 	pszDateTime[0x7] = '-';
 
 	// Day - 2020-04-XXT10:56:31.35+66:40
-	char dayDigits[3];
-	sprintf(dayDigits, "%02hi", u16{date_time->day});
+	std::array<char, 3> dayDigits{};
+	snprintf(dayDigits.data(), dayDigits.size(), "%02hi", u16{date_time->day});
 	pszDateTime[0x8] = dayDigits[0];
 	pszDateTime[0x9] = dayDigits[1];
 	pszDateTime[0xa] = 'T';
 
 	// Hours - 2020-04-13TXX:56:31.35+66:40
-	char hourDigits[3];
-	sprintf(hourDigits, "%02hi", u16{date_time->hour});
+	std::array<char, 3> hourDigits{};
+	snprintf(hourDigits.data(), hourDigits.size(), "%02hi", u16{date_time->hour});
 	pszDateTime[0xb] = hourDigits[0];
 	pszDateTime[0xc] = hourDigits[1];
 	pszDateTime[0xd] = ':';
 
 	// Minutes - 2020-04-13T10:XX:31.35+66:40
-	char minDigits[3];
-	sprintf(minDigits, "%02hi", u16{date_time->minute});
+	std::array<char, 3> minDigits{};
+	snprintf(minDigits.data(), minDigits.size(), "%02hi", u16{date_time->minute});
 	pszDateTime[0xe]  = minDigits[0];
 	pszDateTime[0xf]  = minDigits[1];
 	pszDateTime[0x10] = ':';
 
 	// Seconds - 2020-04-13T10:56:XX.35+66:40
-	char secDigits[3];
-	sprintf(secDigits, "%02hi", u16{date_time->second});
+	std::array<char, 3> secDigits{};
+	snprintf(secDigits.data(), secDigits.size(), "%02hi", u16{date_time->second});
 	pszDateTime[0x11] = secDigits[0];
 	pszDateTime[0x12] = secDigits[1];
 	pszDateTime[0x13] = '.';
 
 	// Microseconds - 2020-04-13T10:56:31.XX+66:40
-	char microDigits[3];
-	sprintf(microDigits, "%02u", u32{date_time->microsecond});
+	std::array<char, 3> microDigits{};
+	snprintf(microDigits.data(), microDigits.size(), "%02u", u32{date_time->microsecond});
 	pszDateTime[0x14] = microDigits[0];
 	pszDateTime[0x15] = microDigits[1];
 
