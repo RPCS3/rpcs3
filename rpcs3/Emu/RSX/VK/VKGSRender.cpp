@@ -2081,8 +2081,11 @@ void VKGSRender::load_program_env()
 			auto mem = m_transform_constants_ring_info.alloc<1>(utils::align(transform_constants_size, alignment));
 			auto buf = m_transform_constants_ring_info.map(mem, transform_constants_size);
 
-			const std::vector<u16>& constant_ids = (transform_constants_size == 8192) ? std::vector<u16>{} : m_vertex_prog->constant_ids;
+			const auto constant_ids = (transform_constants_size == 8192)
+				? std::span<const u16>{}
+				: std::span<const u16>(m_vertex_prog->constant_ids);
 			fill_vertex_program_constants_data(buf, constant_ids);
+
 			m_transform_constants_ring_info.unmap();
 			m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, transform_constants_size };
 		}

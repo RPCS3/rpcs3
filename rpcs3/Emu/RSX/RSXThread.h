@@ -160,7 +160,7 @@ namespace rsx
 	protected:
 
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
-		std::vector<u32> element_push_buffer;
+		rsx::simple_array<u32> element_push_buffer;
 
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
@@ -493,7 +493,7 @@ namespace rsx
 		* Fill buffer with vertex program constants.
 		* Relocation table allows to do a partial fill with only selected registers.
 		*/
-		void fill_vertex_program_constants_data(void* buffer, const std::vector<u16>& reloc_table);
+		void fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table);
 
 		/**
 		 * Fill buffer with fragment rasterization state.
