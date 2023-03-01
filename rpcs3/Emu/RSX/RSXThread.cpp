@@ -1077,7 +1077,7 @@ namespace rsx
 	* Fill buffer with vertex program constants.
 	* Buffer must be at least 512 float4 wide.
 	*/
-	void thread::fill_vertex_program_constants_data(void* buffer, const std::vector<u16>& reloc_table)
+	void thread::fill_vertex_program_constants_data(void* buffer, const std::span<const u16>& reloc_table)
 	{
 		if (!reloc_table.empty()) [[ likely ]]
 		{

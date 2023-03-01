@@ -138,6 +138,17 @@ namespace rsx
 			_data[_size++] = val;
 		}
 
+		template <typename... Args>
+		void emplace_back(Args&&... args)
+		{
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+			}
+
+			std::construct_at(&_data[_size++], std::forward<Args&&>(args)...);
+		}
+
 		Ty pop_back()
 		{
 			return _data[--_size];

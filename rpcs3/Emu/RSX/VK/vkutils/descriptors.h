@@ -82,7 +82,39 @@ namespace vk
 		rsx::simple_array<VkDescriptorBufferInfo> m_buffer_info_pool;
 		rsx::simple_array<VkDescriptorImageInfo> m_image_info_pool;
 
-		rsx::simple_array<VkWriteDescriptorSet> m_pending_writes;
+#ifdef __clang__
+		// Clang (pre 16.x) does not support LWG 2089, std::construct_at for POD types
+		struct WriteDescriptorSetT : public VkWriteDescriptorSet
+		{
+			WriteDescriptorSetT(
+				VkStructureType                  sType,
+				const void*                      pNext,
+				VkDescriptorSet                  dstSet,
+				uint32_t                         dstBinding,
+				uint32_t                         dstArrayElement,
+				uint32_t                         descriptorCount,
+				VkDescriptorType                 descriptorType,
+				const VkDescriptorImageInfo*     pImageInfo,
+				const VkDescriptorBufferInfo*    pBufferInfo,
+				const VkBufferView*              pTexelBufferView)
+			{
+				this->sType = sType,
+				this->pNext = pNext,
+				this->dstSet = dstSet,
+				this->dstBinding = dstBinding,
+				this->dstArrayElement = dstArrayElement,
+				this->descriptorCount = descriptorCount,
+				this->descriptorType = descriptorType,
+				this->pImageInfo = pImageInfo,
+				this->pBufferInfo = pBufferInfo,
+				this->pTexelBufferView = pTexelBufferView;
+			}
+		};
+#else
+		using WriteDescriptorSetT = VkWriteDescriptorSet;
+#endif
+
+		rsx::simple_array<WriteDescriptorSetT> m_pending_writes;
 		rsx::simple_array<VkCopyDescriptorSet> m_pending_copies;
 	};
 
