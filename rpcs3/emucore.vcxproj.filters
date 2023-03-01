@@ -2308,6 +2308,9 @@
     <ClInclude Include="Emu\NP\upnp_config.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
+    <ClInclude Include="io_buffer.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">

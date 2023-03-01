@@ -591,6 +591,7 @@
     <ClInclude Include="Emu\vfs_config.h" />
     <ClInclude Include="Loader\disc.h" />
     <ClInclude Include="Loader\mself.hpp" />
+    <ClInclude Include="io_buffer.h" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\image_sink.h" />
     <ClInclude Include="util\video_provider.h" />

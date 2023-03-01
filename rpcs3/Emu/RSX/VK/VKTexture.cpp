@@ -946,10 +946,6 @@ namespace vk
 			// Calculate estimated memory utilization for this subresource
 			image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 
-			// Map with extra padding bytes in case of realignment
-			offset_in_upload_buffer = upload_heap.alloc<512>(image_linear_size + 8);
-			void* mapped_buffer = upload_heap.map(offset_in_upload_buffer, image_linear_size + 8);
-
 			// Only do GPU-side conversion if occupancy is good
 			if (check_caps)
 			{
@@ -960,8 +956,16 @@ namespace vk
 				check_caps = false;
 			}
 
-			std::span<std::byte> mapped{ static_cast<std::byte*>(mapped_buffer), image_linear_size };
-			opt = upload_texture_subresource(mapped, layout, format, is_swizzled, caps);
+			auto buf_allocator = [&]() -> std::tuple<void*, usz>
+			{
+				// Map with extra padding bytes in case of realignment
+				offset_in_upload_buffer = upload_heap.alloc<512>(image_linear_size + 8);
+				void* mapped_buffer = upload_heap.map(offset_in_upload_buffer, image_linear_size + 8);
+				return { mapped_buffer, image_linear_size };
+			};
+
+			auto io_buf = rsx::io_buffer(buf_allocator);
+			opt = upload_texture_subresource(io_buf, layout, format, is_swizzled, caps);
 			upload_heap.unmap();
 
 			copy_regions.push_back({});
