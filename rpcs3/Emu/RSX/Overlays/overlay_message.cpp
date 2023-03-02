@@ -123,10 +123,13 @@ namespace rsx
 
 			if (m_fade_in_animation.active)
 			{
+				// We are fading in.
 				m_fade_in_animation.update(rsx::get_current_renderer()->vblank_count);
 			}
 			else if (time + u64(m_fade_out_animation.duration * 1'000'000) > get_expiration())
 			{
+				// We are fading out.
+
 				// Only activate the animation if the message hasn't expired yet (prevents glitches afterwards).
 				if (time <= get_expiration())
 				{
@@ -137,7 +140,19 @@ namespace rsx
 			}
 			else if (m_fade_out_animation.active)
 			{
-				m_fade_out_animation.reset(rsx::get_current_renderer()->vblank_count);
+				// We are fading out, but the expiration was extended.
+
+				// Reset the fade in animation to the state of the fade out animation to prevent opacity pop.
+				const usz current_frame = rsx::get_current_renderer()->vblank_count;
+				const f32 fade_out_progress = static_cast<f32>(m_fade_out_animation.get_remaining_frames(current_frame)) / static_cast<f32>(m_fade_out_animation.get_duration_in_frames());
+				const u64 fade_in_frames_done = u64(fade_out_progress * m_fade_in_animation.get_duration_in_frames());
+
+				m_fade_in_animation.reset(current_frame - fade_in_frames_done);
+				m_fade_in_animation.active = true;
+				m_fade_in_animation.update(current_frame);
+
+				// Reset the fade out animation.
+				m_fade_out_animation.reset();
 			}
 
 			m_processed = true;
