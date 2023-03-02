@@ -226,7 +226,7 @@ public:
 		// network
 
 		const QString net_status    = tr("If set to Connected, RPCS3 will allow programs to use your internet connection.");
-		const QString psn_status    = tr("If set to Simulated, RPCS3 will fake PSN connection as best as it can.");
+		const QString psn_status    = tr("Only available in custom configurations.\nIf set to RPCN, RPCS3 will use the RPCN server as PSN connection if the game is supported.\nIf set to Simulated, RPCS3 will try to fake the PSN connection, but any actual attempt at using the PSN functionality may result in errors or crashes.");
 		const QString dns           = tr("DNS used to resolve hostnames by applications.");
 		const QString dns_swap      = tr("DNS Swap List.");
 		const QString bind          = tr("Interface IP Address to bind to.");

@@ -50,6 +50,46 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
 inline QString qsv(std::string_view sv) { return QString(sv.data()); }
 
+std::pair<QString, int> get_data(const QComboBox* box, int index)
+{
+	if (!box) return {};
+
+	const QVariantList var_list = box->itemData(index).toList();
+	ensure(var_list.size() == 2);
+	ensure(var_list[0].canConvert<QString>());
+	ensure(var_list[1].canConvert<int>());
+
+	return { var_list[0].toString(), var_list[1].toInt() };
+}
+
+int find_item(const QComboBox* box, int value)
+{
+	for (int i = 0; box && i < box->count(); i++)
+	{
+		if (get_data(box, i).second == value)
+		{
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void remove_item(QComboBox* box, int data_value, int def_value)
+{
+	if (!box) return;
+
+	const int index = find_item(box, data_value);
+	const bool was_selected = index == box->currentIndex();
+
+	box->removeItem(index);
+
+	if (was_selected)
+	{
+		box->setCurrentIndex(find_item(box, def_value));
+	}
+}
+
 extern const std::map<std::string_view, int> g_prx_list;
 
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index, QWidget *parent, const GameInfo* game)
@@ -283,27 +323,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		m_emu_settings->EnhanceComboBox(ui->enableTSX, emu_settings_type::EnableTSX);
 		SubscribeTooltip(ui->gb_tsx, tooltips.settings.enable_tsx);
 
-		static const QString tsx_enabled = qstr(fmt::format("%s", tsx_usage::enabled));
-		static const QString tsx_forced = qstr(fmt::format("%s", tsx_usage::forced));
-		static const QString tsx_default = qstr(m_emu_settings->GetSettingDefault(emu_settings_type::EnableTSX));
-
 		if (!utils::has_mpx() || utils::has_tsx_force_abort())
 		{
-			const QString current_text = ui->enableTSX->currentText();
-			const QString localized_tsx_enabled = m_emu_settings->GetLocalizedSetting(tsx_enabled, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::enabled), true);
-
-			ui->enableTSX->removeItem(ui->enableTSX->findText(localized_tsx_enabled));
-
-			if (current_text == localized_tsx_enabled)
-			{
-				ui->enableTSX->setCurrentText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def), true));
-			}
+			remove_item(ui->enableTSX, static_cast<int>(tsx_usage::enabled), static_cast<int>(g_cfg.core.enable_TSX.def));
 		}
 
-		// connect the toogled signal so that the stateChanged signal in EnhanceCheckBox can be prevented
-		connect(ui->enableTSX, &QComboBox::currentTextChanged, this, [this](const QString& text)
+		connect(ui->enableTSX, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 		{
-			if (text == m_emu_settings->GetLocalizedSetting(tsx_forced, emu_settings_type::EnableTSX, static_cast<int>(tsx_usage::forced), true) &&
+			if (index < 0) return;
+			if (const auto [text, value] = get_data(ui->enableTSX, index); value == static_cast<int>(tsx_usage::forced) &&
 				(!utils::has_mpx() || utils::has_tsx_force_abort()))
 			{
 				QString title;
@@ -339,7 +367,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				if (QMessageBox::No == QMessageBox::critical(this, title, message, QMessageBox::Yes, QMessageBox::No))
 				{
 					// Reset if the messagebox was answered with no. This prevents the currentIndexChanged signal in EnhanceComboBox
-					ui->enableTSX->setCurrentText(m_emu_settings->GetLocalizedSetting(tsx_default, emu_settings_type::EnableTSX, static_cast<int>(g_cfg.core.enable_TSX.def), true));
+					ui->enableTSX->setCurrentIndex(find_item(ui->enableTSX, static_cast<int>(g_cfg.core.enable_TSX.def)));
 				}
 			}
 		});
@@ -498,10 +526,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	}
 	for (int i = 0; i < ui->resBox->count(); i++)
 	{
-		const QVariantList var_list = ui->resBox->itemData(i).toList();
-		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
+		const auto [text, value] = get_data(ui->resBox, i);
 
-		if (var_list[0].toString() == "1280x720")
+		if (text == "1280x720")
 		{
 			// Rename the default resolution for users
 			ui->resBox->setItemText(i, tr("1280x720 (Recommended)", "Resolution"));
@@ -871,9 +898,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	const auto apply_fsr_specific_options = [r_creator, this]()
 	{
 		const bool is_vulkan = (ui->renderBox->currentText() == r_creator->Vulkan.name);
-		const QVariantList var_list = ui->outputScalingMode->itemData(ui->outputScalingMode->currentIndex()).toList();
-		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
-		const bool fsr_selected = static_cast<output_scaling_mode>(var_list[1].toInt()) == output_scaling_mode::fsr;
+		const auto [text, value] = get_data(ui->outputScalingMode, ui->outputScalingMode->currentIndex());
+		const bool fsr_selected = static_cast<output_scaling_mode>(value) == output_scaling_mode::fsr;
 		ui->fsrSharpeningStrength->setEnabled(is_vulkan && fsr_selected);
 		ui->fsrSharpeningStrengthReset->setEnabled(is_vulkan && fsr_selected);
 	};
@@ -902,9 +928,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			return;
 		}
 
-		const QVariantList var_list = ui->microphoneBox->itemData(index).toList();
-		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
-		const int handler_id = var_list[1].toInt();
+		const auto [text, handler_id] = get_data(ui->microphoneBox, index);
 		int max = 0;
 
 		switch (static_cast<microphone_handler>(handler_id))
@@ -959,9 +983,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	const auto get_audio_output_devices = [this](bool keep_old = true)
 	{
-		const QVariantList var_list = ui->audioOutBox->currentData().toList();
-		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
-		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator(var_list[1].toInt());
+		const auto [text, value] = get_data(ui->audioOutBox, ui->audioOutBox->currentIndex());
+		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator(value);
 		std::vector<audio_device_enumerator::audio_device> dev_array = dev_enum->get_output_devices();
 
 		ui->audioDeviceBox->clear();
@@ -1020,9 +1043,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(ui->combo_audio_format, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
-		const QVariantList var_list = ui->combo_audio_format->itemData(index).toList();
-		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
-		ui->list_audio_formats->setEnabled(static_cast<audio_format>(var_list[1].toInt()) == audio_format::manual);
+		const auto [text, value] = get_data(ui->combo_audio_format, index);
+		ui->list_audio_formats->setEnabled(static_cast<audio_format>(value) == audio_format::manual);
 	});
 	m_emu_settings->EnhanceComboBox(ui->combo_audio_format, emu_settings_type::AudioFormat);
 	SubscribeTooltip(ui->gb_audio_format, tooltips.settings.audio_format);
@@ -1322,6 +1344,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->psnStatusBox, emu_settings_type::PSNStatus);
 	SubscribeTooltip(ui->gb_psnStatusBox, tooltips.settings.psn_status);
+	ui->gb_psnStatusBox->setEnabled(!!game);
 
 	//                _                               _   _______    _
 	//       /\      | |                             | | |__   __|  | |
@@ -1412,7 +1435,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_rsx_fifo_accuracy, tooltips.settings.rsx_fifo_accuracy);
 
 	// Hide a developers' setting
-	ui->FIFOAccuracy->removeItem(static_cast<int>(rsx_fifo_mode::as_ps3));
+	remove_item(ui->FIFOAccuracy, static_cast<int>(rsx_fifo_mode::as_ps3), static_cast<int>(g_cfg.core.rsx_fifo_accuracy.def));
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
