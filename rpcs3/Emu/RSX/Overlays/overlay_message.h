@@ -37,9 +37,9 @@ namespace rsx
 			u64 m_expiration_time = 0;
 			u64 m_visible_duration = 0;
 			std::shared_ptr<atomic_t<u32>> m_refs;
-			bool m_processed      = false;
-			usz m_cur_pos         = umax;
-			const u16 m_margin    = 6;
+			bool m_processed = false;
+			usz m_cur_pos = umax;
+			static constexpr u16 m_margin = 6;
 		};
 
 		class message final : public overlay
