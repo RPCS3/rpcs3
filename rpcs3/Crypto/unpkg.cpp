@@ -1032,8 +1032,8 @@ package_error package_reader::extract_data(std::deque<package_reader>& readers, 
 		if (!reader.set_install_path())
 		{
 			error = package_error::other;
-			reader.m_result = result::error;
-			break;
+			reader.m_result = result::error; // We don't know if it's dirty yet.
+			return error;
 		}
 	}
 
@@ -1042,40 +1042,51 @@ package_error package_reader::extract_data(std::deque<package_reader>& readers, 
 		// Use a seperate map for each reader. We need to check if the target app version exists for each package in sequence.
 		std::map<std::string, install_entry*> all_install_entries;
 
-		if (error == package_error::no_error)
+		if (error != package_error::no_error || num_failures > 0)
 		{
-			// Check if this package is allowed to be installed on top of the existing data
-			error = reader.check_target_app_version();
+			ensure(reader.m_result == result::error || reader.m_result == result::error_dirty);
+			return error;
 		}
 
-		if (error == package_error::no_error)
-		{
-			reader.m_result = result::started;
+		// Check if this package is allowed to be installed on top of the existing data
+		error = reader.check_target_app_version();
 
-			// Parse the files to be installed and create all paths.
-			if (!reader.fill_data(all_install_entries))
-			{
-				error = package_error::other;
-			}
+		if (error != package_error::no_error)
+		{
+			reader.m_result = result::error; // We don't know if it's dirty yet.
+			return error;
 		}
 
-		reader.m_bufs.resize(std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size()));
+		reader.m_result = result::started;
+
+		// Parse the files to be installed and create all paths.
+		if (!reader.fill_data(all_install_entries))
+		{
+			error = package_error::other;
+			// Do not return yet. We may need to clean up down below.
+		}
+
 		reader.m_num_failures = error == package_error::no_error ? 0 : 1;
 
-		atomic_t<usz> thread_indexer = 0;
-
-		named_thread_group workers("PKG Installer "sv, std::max<u32>(::narrow<u32>(reader.m_bufs.size()), 1) - 1, [&]()
+		if (reader.m_num_failures == 0)
 		{
-			reader.extract_worker(thread_key{thread_indexer++});
-		});
+			reader.m_bufs.resize(std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size()));
 
-		reader.extract_worker(thread_key{thread_indexer++});
-		workers.join();
+			atomic_t<usz> thread_indexer = 0;
+
+			named_thread_group workers("PKG Installer "sv, std::max<u32>(::narrow<u32>(reader.m_bufs.size()), 1) - 1, [&]()
+			{
+				reader.extract_worker(thread_key{thread_indexer++});
+			});
+
+			reader.extract_worker(thread_key{thread_indexer++});
+			workers.join();
+
+			reader.m_bufs.clear();
+			reader.m_bufs.shrink_to_fit();
+		}
 
 		num_failures += reader.m_num_failures;
-
-		reader.m_bufs.clear();
-		reader.m_bufs.shrink_to_fit();
 
 		// We don't count this package as aborted if all entries were processed.
 		if (reader.m_num_failures || (reader.m_aborted && reader.m_entry_indexer < reader.m_install_entries.size()))
@@ -1099,13 +1110,14 @@ package_error package_reader::extract_data(std::deque<package_reader>& readers, 
 			if (reader.m_num_failures)
 			{
 				pkg_log.error("Package failed to install ('%s')", reader.m_install_path);
-				reader.m_result = cleaned ? result::error_cleaned : result::error;
+				reader.m_result = cleaned ? result::error : result::error_dirty;
 			}
 			else
 			{
 				pkg_log.warning("Package installation aborted ('%s')", reader.m_install_path);
-				reader.m_result = cleaned ? result::aborted_cleaned : result::aborted;
+				reader.m_result = cleaned ? result::aborted : result::aborted_dirty;
 			}
+
 			break;
 		}
 
@@ -1121,7 +1133,7 @@ package_error package_reader::extract_data(std::deque<package_reader>& readers, 
 		bootable_paths.emplace_back(std::move(reader.m_bootable_file_path));
 	}
 
-	if (num_failures > 0)
+	if (error == package_error::no_error && num_failures > 0)
 	{
 		error = package_error::other;
 	}
