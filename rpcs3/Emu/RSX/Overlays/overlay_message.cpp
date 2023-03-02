@@ -132,9 +132,16 @@ namespace rsx
 		{
 			const u64 cur_time = rsx::uclock();
 
-			while (!vis_set.empty() && vis_set.front().get_expiration() < cur_time)
+			for (auto it = vis_set.begin(); it != vis_set.end();)
 			{
-				vis_set.pop_front();
+				if (it->get_expiration() < cur_time)
+				{
+					it = vis_set.erase(it);
+				}
+				else
+				{
+					it++;
+				}
 			}
 
 			while (vis_set.size() < max_visible_items && !ready_set.empty())
