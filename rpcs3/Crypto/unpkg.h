@@ -338,9 +338,9 @@ public:
 		started,
 		success,
 		aborted,
-		aborted_cleaned,
+		aborted_dirty,
 		error,
-		error_cleaned
+		error_dirty
 	};
 
 	bool is_valid() const { return m_is_valid; }

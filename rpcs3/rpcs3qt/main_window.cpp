@@ -1015,18 +1015,18 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 			}
 			case package_reader::result::not_started:
 			case package_reader::result::started:
-			case package_reader::result::aborted_cleaned:
+			case package_reader::result::aborted:
 			{
 				gui_log.notice("Aborted installation of %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
 				break;
 			}
-			case package_reader::result::error_cleaned:
+			case package_reader::result::error:
 			{
 				gui_log.error("Failed to install %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
 				break;
 			}
-			case package_reader::result::aborted:
-			case package_reader::result::error:
+			case package_reader::result::aborted_dirty:
+			case package_reader::result::error_dirty:
 			{
 				gui_log.error("Partially installed %s (title_id=%s, title=%s, version=%s).", sstr(package.path), sstr(package.title_id), sstr(package.title), sstr(package.version));
 				break;
@@ -1142,10 +1142,10 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 				case package_reader::result::not_started:
 				case package_reader::result::started:
 				case package_reader::result::aborted:
-				case package_reader::result::aborted_cleaned:
+				case package_reader::result::aborted_dirty:
 					break;
 				case package_reader::result::error:
-				case package_reader::result::error_cleaned:
+				case package_reader::result::error_dirty:
 					package = &packages[i];
 					break;
 				}
