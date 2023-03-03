@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Utilities/Thread.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "3rdparty/OpenAL/include/alext.h"
 
@@ -351,10 +352,14 @@ public:
 	void operator()();
 	void load_config_and_init();
 
+	// Returns index of registered device
+	u32 register_device(const std::string& name, const std::string& name_2_for_singstar = {});
+	void unregister_device(u32 dev_num);
+
 	u64 event_queue_key = 0;
 	u64 event_queue_source = 0;
 
-	std::unordered_map<s32, microphone_device> mic_list;
+	std::vector<microphone_device> mic_list;
 
 	shared_mutex mutex;
 	atomic_t<u8> init = 0;
