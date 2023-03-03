@@ -184,6 +184,7 @@ void microphone_device::variable_byteswap(const void* src, void* dst, const u32 
 	{
 	case 4: *static_cast<u32*>(dst) = *static_cast<const be_t<u32>*>(src); break;
 	case 2: *static_cast<u16*>(dst) = *static_cast<const be_t<u16>*>(src); break;
+	default: break;
 	}
 }
 
@@ -725,7 +726,7 @@ error_code cellMicGetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 
 	if (arg2)
 	{
-		*arg2 = static_cast<s32>((deviceAttributes & 0xffffU) << 0x10);
+		// TODO
 	}
 
 	return CELL_OK;
@@ -1086,11 +1087,17 @@ error_code cellMicGetDeviceIdentifier(s32 dev_num, vm::ptr<u32> ptr_id)
 
 error_code cellMicGetType(s32 dev_num, vm::ptr<s32> ptr_type)
 {
-	cellMic.todo("cellMicGetType(dev_num=%d, ptr_type=*0x%x)", dev_num, ptr_type);
+	cellMic.trace("cellMicGetType(dev_num=%d, ptr_type=*0x%x)", dev_num, ptr_type);
 
 	if (!ptr_type)
 		return CELL_MICIN_ERROR_PARAM;
 
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
+		return CELL_MICIN_ERROR_NOT_INIT;
+
+	// TODO: get proper type (log message is trace because of massive spam)
 	*ptr_type = CELLMIC_TYPE_BLUETOOTH;
 
 	return CELL_OK;
