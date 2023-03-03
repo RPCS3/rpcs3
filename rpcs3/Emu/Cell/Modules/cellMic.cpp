@@ -834,27 +834,30 @@ error_code cellMicGetSignalState(s32 dev_num, CellMicSignalState sig_state, vm::
 	be_t<u32>* ival = vm::_ptr<u32>(value.addr());
 	be_t<f32>* fval = vm::_ptr<f32>(value.addr());
 
+	// TODO
+
 	switch (sig_state)
 	{
 	case CELLMIC_SIGSTATE_LOCTALK:
-		*ival = 9; // Someone is probably talking
+		*ival = 9; // Someone is probably talking (0 to 10)
 		break;
 	case CELLMIC_SIGSTATE_FARTALK:
-		// TODO
+		*ival = 1; // The speakers are probably off (0 to 10)
 		break;
 	case CELLMIC_SIGSTATE_NSR:
-		// TODO
+		*fval = 0.0f; // No noise reduction
 		break;
 	case CELLMIC_SIGSTATE_AGC:
-		// TODO
+		*fval = 1.0f; // No gain applied
 		break;
 	case CELLMIC_SIGSTATE_MICENG:
 		*fval = 40.0f; // 40 decibels
 		break;
 	case CELLMIC_SIGSTATE_SPKENG:
-		// TODO
+		*fval = 10.0f; // 10 decibels
 		break;
-	default: return CELL_MICIN_ERROR_PARAM;
+	default:
+		return CELL_MICIN_ERROR_PARAM;
 	}
 
 	return CELL_OK;
