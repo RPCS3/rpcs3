@@ -279,7 +279,7 @@ public:
 	void update_audio();
 	bool has_data() const;
 
-	bool is_opened() const { return mic_opened;	}
+	bool is_opened() const { return mic_opened; }
 	bool is_started() const { return mic_started; }
 	u8 get_signal_types() const { return signal_types; }
 	u8 get_bit_resolution() const {	return bit_resolution; }
@@ -304,7 +304,7 @@ public:
 	u32 attr_gain       = 3;
 	u32 attr_volume     = 145;
 	u32 attr_agc        = 0;
-	u32 attr_chanvol[2] = {145, 145};
+	std::array<u32, 2> attr_chanvol = {145, 145};
 	u32 attr_led        = 0;
 	u32 attr_dsptype    = 0;
 
@@ -352,6 +352,7 @@ public:
 	void load_config_and_init();
 
 	u64 event_queue_key = 0;
+	u64 event_queue_source = 0;
 
 	std::unordered_map<s32, microphone_device> mic_list;
 
