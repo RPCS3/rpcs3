@@ -52,7 +52,14 @@ enum class patch_type
 	bef32,
 	bef64,
 	utf8, // Text of string (not null-terminated automatically)
+	move_file, // Move file
+	hide_file, // Hide file
 };
+
+static constexpr bool patch_type_uses_hex_offset(patch_type type)
+{
+	return type >= patch_type::alloc && type <= patch_type::utf8;
+}
 
 enum class patch_configurable_type
 {
@@ -69,6 +76,7 @@ public:
 	{
 		patch_type type = patch_type::load;
 		u32 offset = 0;
+		std::string original_offset{}; // Used for specifying paths
 		std::string original_value{}; // Used for import consistency (avoid rounding etc.)
 		union
 		{
