@@ -37,7 +37,7 @@ bool recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpBasicMe
 
 	m_dialog->setWindowTitle(tr("Choose message:"));
 
-	m_rpcn = rpcn::rpcn_client::get_instance();
+	m_rpcn = rpcn::rpcn_client::get_instance(true);
 
 	QVBoxLayout* vbox_global = new QVBoxLayout();
 
