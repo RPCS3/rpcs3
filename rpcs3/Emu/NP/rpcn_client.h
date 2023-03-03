@@ -335,7 +335,7 @@ namespace rpcn
 		~rpcn_client();
 		rpcn_client(rpcn_client& other)    = delete;
 		void operator=(const rpcn_client&) = delete;
-		static std::shared_ptr<rpcn_client> get_instance();
+		static std::shared_ptr<rpcn_client> get_instance(bool check_config = false);
 		rpcn_state wait_for_connection();
 		rpcn_state wait_for_authentified();
 

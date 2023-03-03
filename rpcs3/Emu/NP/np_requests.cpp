@@ -23,7 +23,7 @@ namespace np
 			return server_list;
 		}
 
-		if (!rpcn->get_server_list(get_req_id(0), get_match2_context(ctx_id)->communicationId, server_list))
+		if (!get_rpcn()->get_server_list(get_req_id(0), get_match2_context(ctx_id)->communicationId, server_list))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -77,7 +77,7 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList);
 
-		if (!rpcn->get_world_list(req_id, get_match2_context(ctx_id)->communicationId, server_id))
+		if (!get_rpcn()->get_world_list(req_id, get_match2_context(ctx_id)->communicationId, server_id))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -134,7 +134,7 @@ namespace np
 
 		extra_nps::print_createjoinroom(req);
 
-		if (!rpcn->createjoin_room(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->createjoin_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -183,7 +183,7 @@ namespace np
 
 		extra_nps::print_joinroom(req);
 
-		if (!rpcn->join_room(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->join_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -246,7 +246,7 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom);
 
-		if (!rpcn->leave_room(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->leave_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -281,7 +281,7 @@ namespace np
 
 		extra_nps::print_search_room(req);
 
-		if (!rpcn->search_room(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->search_room(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -322,7 +322,7 @@ namespace np
 
 		extra_nps::print_get_roomdata_external_list_req(req);
 
-		if (!rpcn->get_roomdata_external_list(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->get_roomdata_external_list(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -364,7 +364,7 @@ namespace np
 
 		extra_nps::print_set_roomdata_ext_req(req);
 
-		if (!rpcn->set_roomdata_external(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->set_roomdata_external(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -389,7 +389,7 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal);
 
-		if (!rpcn->get_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->get_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -437,7 +437,7 @@ namespace np
 
 		extra_nps::print_set_roomdata_int_req(req);
 
-		if (!rpcn->set_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->set_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -464,7 +464,7 @@ namespace np
 
 		extra_nps::print_set_roommemberdata_int_req(req);
 
-		if (!rpcn->set_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->set_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -489,7 +489,7 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo);
 
-		if (!rpcn->ping_room_owner(req_id, get_match2_context(ctx_id)->communicationId, req->roomId))
+		if (!get_rpcn()->ping_room_owner(req_id, get_match2_context(ctx_id)->communicationId, req->roomId))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -527,7 +527,7 @@ namespace np
 	{
 		u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage);
 
-		if (!rpcn->send_room_message(req_id, get_match2_context(ctx_id)->communicationId, req))
+		if (!get_rpcn()->send_room_message(req_id, get_match2_context(ctx_id)->communicationId, req))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -556,7 +556,7 @@ namespace np
 			pending_sign_infos_requests[req_id] = conn_id;
 		}
 
-		if (!rpcn->req_sign_infos(req_id, npid))
+		if (!get_rpcn()->req_sign_infos(req_id, npid))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -597,7 +597,7 @@ namespace np
 			cookie_vec.assign(cookie, cookie + cookie_size);
 		}
 
-		if (!rpcn->req_ticket(req_id, service_id_str, cookie_vec))
+		if (!get_rpcn()->req_ticket(req_id, service_id_str, cookie_vec))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
@@ -679,7 +679,7 @@ namespace np
 
 		u32 req_id = get_req_id(0x3334);
 		trans_ctx->tdata = tdata_get_board_infos{.boardInfo = boardInfo};
-		rpcn->get_board_infos(req_id, trans_ctx->communicationId, boardId);
+		get_rpcn()->get_board_infos(req_id, trans_ctx->communicationId, boardId);
 
 		score_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
@@ -735,7 +735,7 @@ namespace np
 
 		trans_ctx->tdata = tdata_record_score{.tmpRank = tmpRank};
 
-		rpcn->record_score(req_id, trans_ctx->communicationId, boardId, trans_ctx->pcId, score, str_comment, vec_data);
+		get_rpcn()->record_score(req_id, trans_ctx->communicationId, boardId, trans_ctx->pcId, score, str_comment, vec_data);
 
 		score_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
@@ -806,7 +806,7 @@ namespace np
 		{
 			trans_ctx->result = std::nullopt;
 			u32 req_id = get_req_id(0x3334);
-			rpcn->record_score_data(req_id, trans_ctx->communicationId, trans_ctx->pcId, boardId, score, tdata->game_data);
+			get_rpcn()->record_score_data(req_id, trans_ctx->communicationId, trans_ctx->pcId, boardId, score, tdata->game_data);
 			score_async_handler(std::move(lock), trans_ctx, req_id, async);
 		}
 		else
@@ -858,7 +858,7 @@ namespace np
 			trans_ctx->tdata = tdata_get_score_data{.totalSize = totalSize, .recvSize = recvSize, .score_data = score_data};
 
 			u32 req_id = get_req_id(0x3334);
-			rpcn->get_score_data(req_id, trans_ctx->communicationId, trans_ctx->pcId, boardId, npId);
+			get_rpcn()->get_score_data(req_id, trans_ctx->communicationId, trans_ctx->pcId, boardId, npId);
 			score_async_handler(std::move(lock), trans_ctx, req_id, async);
 			return;
 		}
@@ -943,7 +943,7 @@ namespace np
 		bool with_comments = !!commentArray;
 		bool with_gameinfo = !!infoArray;
 
-		rpcn->get_score_range(req_id, trans_ctx->communicationId, boardId, startSerialRank, arrayNum, with_comments, with_gameinfo);
+		get_rpcn()->get_score_range(req_id, trans_ctx->communicationId, boardId, startSerialRank, arrayNum, with_comments, with_gameinfo);
 
 		score_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
@@ -1095,7 +1095,7 @@ namespace np
 		bool with_comments = !!commentArray;
 		bool with_gameinfo = !!infoArray;
 
-		rpcn->get_score_friend(req_id, trans_ctx->communicationId, boardId, include_self, with_comments, with_gameinfo, arrayNum);
+		get_rpcn()->get_score_friend(req_id, trans_ctx->communicationId, boardId, include_self, with_comments, with_gameinfo, arrayNum);
 
 		score_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
@@ -1122,7 +1122,7 @@ namespace np
 		bool with_comments = !!commentArray;
 		bool with_gameinfo = !!infoArray;
 
-		rpcn->get_score_npid(req_id, trans_ctx->communicationId, boardId, npid_vec, with_comments, with_gameinfo);
+		get_rpcn()->get_score_npid(req_id, trans_ctx->communicationId, boardId, npid_vec, with_comments, with_gameinfo);
 
 		score_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}

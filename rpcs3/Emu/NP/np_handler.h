@@ -350,6 +350,7 @@ namespace np
 		// RPCN
 		shared_mutex mutex_rpcn;
 		std::shared_ptr<rpcn::rpcn_client> rpcn;
+		std::shared_ptr<rpcn::rpcn_client> get_rpcn();
 
 		// UPNP
 		upnp_handler upnp;

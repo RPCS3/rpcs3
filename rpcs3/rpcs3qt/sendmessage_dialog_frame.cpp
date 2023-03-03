@@ -35,7 +35,7 @@ bool sendmessage_dialog_frame::Exec(message_data& msg_data, std::set<std::string
 
 	m_dialog->setWindowTitle(tr("Choose friend to message:"));
 
-	m_rpcn = rpcn::rpcn_client::get_instance();
+	m_rpcn = rpcn::rpcn_client::get_instance(true);
 
 	QVBoxLayout* vbox_global = new QVBoxLayout();
 

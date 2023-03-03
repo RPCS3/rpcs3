@@ -441,6 +441,16 @@ namespace np
 		}
 	}
 
+	std::shared_ptr<rpcn::rpcn_client> np_handler::get_rpcn()
+	{
+		if (!rpcn) [[unlikely]]
+		{
+			ensure(g_cfg.net.psn_status == np_psn_status::psn_fake);
+			fmt::throw_exception("RPCN is required to use PSN online features.");
+		}
+		return rpcn;
+	}
+
 	void np_handler::save(utils::serial& ar)
 	{
 		// TODO: See ctor
@@ -812,7 +822,7 @@ namespace np
 
 	std::optional<std::shared_ptr<std::pair<std::string, message_data>>> np_handler::get_message(u64 id)
 	{
-		return rpcn->get_message(id);
+		return get_rpcn()->get_message(id);
 	}
 
 	void np_handler::operator()()
@@ -1025,17 +1035,17 @@ namespace np
 
 	u32 np_handler::get_num_friends()
 	{
-		return rpcn->get_num_friends();
+		return get_rpcn()->get_num_friends();
 	}
 
 	u32 np_handler::get_num_blocks()
 	{
-		return rpcn->get_num_blocks();
+		return get_rpcn()->get_num_blocks();
 	}
 
 	std::pair<error_code, std::optional<SceNpId>> np_handler::get_friend_by_index(u32 index)
 	{
-		auto str_friend = rpcn->get_friend_by_index(index);
+		auto str_friend = get_rpcn()->get_friend_by_index(index);
 
 		if (!str_friend)
 		{

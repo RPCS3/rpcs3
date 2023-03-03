@@ -13,6 +13,7 @@
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/NP/np_helpers.h"
 #include "Emu/NP/vport0.h"
+#include "Emu/system_config.h"
 
 #include "util/asm.hpp"
 
@@ -148,8 +149,13 @@ namespace rpcn
 		sem_authentified.release();
 	}
 
-	std::shared_ptr<rpcn_client> rpcn_client::get_instance()
+	std::shared_ptr<rpcn_client> rpcn_client::get_instance(bool check_config)
 	{
+		if (check_config && g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+		{
+			fmt::throw_exception("RPCN is required to use PSN online features.");
+		}
+
 		std::shared_ptr<rpcn_client> sptr;
 
 		std::lock_guard lock(inst_mutex);
