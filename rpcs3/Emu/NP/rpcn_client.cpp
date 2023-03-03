@@ -499,7 +499,7 @@ namespace rpcn
 						return recvn_result::recvn_nodata;
 
 					num_timeouts++;
-					if (num_timeouts >= 1000)
+					if (num_timeouts >= 50)
 					{
 						rpcn_log.error("recvn timeout with %d bytes received", n_recv);
 						return recvn_result::recvn_timeout;
@@ -541,7 +541,7 @@ namespace rpcn
 				if (wolfSSL_want_write(write_wssl))
 				{
 					num_timeouts++;
-					if (num_timeouts >= 1000)
+					if (num_timeouts >= 50)
 					{
 						rpcn_log.error("send_packet timeout with %d bytes sent", n_sent);
 						return error_and_disconnect("Failed to send all the bytes");
@@ -707,11 +707,11 @@ namespace rpcn
 			sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
 #ifdef _WIN32
-			u32 timeout = 5;
+			u32 timeout = 200; // 200ms
 #else
 			struct timeval timeout;
 			timeout.tv_sec  = 0;
-			timeout.tv_usec = 50000; // 50ms
+			timeout.tv_usec = 200000; // 200ms
 #endif
 
 			if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) < 0)
@@ -750,7 +750,7 @@ namespace rpcn
 			int ret_connect;
 			while ((ret_connect = wolfSSL_connect(read_wssl)) != SSL_SUCCESS)
 			{
-				if (wolfSSL_want_read(read_wssl))
+				if (wolfSSL_want_read(read_wssl) || wolfSSL_want_write(read_wssl))
 					continue;
 
 				state = rpcn_state::failure_wolfssl;
