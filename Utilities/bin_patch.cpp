@@ -4,6 +4,7 @@
 #include "version.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "Emu/VFS.h"
 
 #include "util/types.hpp"
 #include "util/endian.hpp"
@@ -76,6 +77,8 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::lef32: return "lef32";
 		case patch_type::lef64: return "lef64";
 		case patch_type::utf8: return "utf8";
+		case patch_type::move_file: return "move_file";
+		case patch_type::hide_file: return "hide_file";
 		}
 
 		return unknown;
@@ -682,16 +685,17 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 		return false;
 	}
 
-	if (!addr_node.Scalar().starts_with("0x"))
+	if (patch_type_uses_hex_offset(type) && !addr_node.Scalar().starts_with("0x"))
 	{
 		append_log_message(log_messages, fmt::format("Skipping patch node %s. Address element has wrong format %s. (key: %s, location: %s)", info.description, addr_node.Scalar(), info.hash, get_yaml_node_location(node)), &patch_log.error);
 		return false;
 	}
 
 	struct patch_data p_data{};
-	p_data.type           = type;
-	p_data.offset         = addr_node.as<u32>(0) + modifier;
-	p_data.original_value = value_node.Scalar();
+	p_data.type            = type;
+	p_data.offset          = addr_node.as<u32>(0) + modifier;
+	p_data.original_offset = addr_node.Scalar();
+	p_data.original_value  = value_node.Scalar();
 
 	const bool is_config_value = info.default_config_values.contains(p_data.original_value);
 	const patch_config_value config_value = is_config_value ? ::at32(info.default_config_values, p_data.original_value) : patch_config_value{};
@@ -1189,6 +1193,51 @@ static usz apply_modification(std::basic_string<u32>& applied, patch_engine::pat
 		case patch_type::utf8:
 		{
 			std::memcpy(ptr, p.original_value.data(), p.original_value.size());
+			break;
+		}
+		case patch_type::move_file:
+		case patch_type::hide_file:
+		{
+			const bool is_hide = p.type == patch_type::hide_file;
+			std::string original_vfs_path = p.original_offset;
+			std::string dest_vfs_path = p.original_value;
+
+			if (original_vfs_path.empty())
+			{
+				patch_log.error("Failed to patch file: original path is empty", original_vfs_path);
+				continue;
+			}
+
+			if (!is_hide && dest_vfs_path.empty())
+			{
+				patch_log.error("Failed to patch file: destination path is empty", dest_vfs_path);
+				continue;
+			}
+
+			if (!original_vfs_path.starts_with("/dev_"))
+			{
+				original_vfs_path.insert(0, "/dev_");
+			}
+
+			if (!is_hide && !dest_vfs_path.starts_with("/dev_"))
+			{
+				dest_vfs_path.insert(0, "/dev_");
+			}
+
+			const std::string dest_path = is_hide ? fs::get_config_dir() + "delete_this_dir.../delete_this..." : vfs::get(dest_vfs_path);
+
+			if (dest_path.empty())
+			{
+				patch_log.error("Failed to patch file path at '%s': destination is not mounted", original_vfs_path, dest_vfs_path);
+				continue;
+			}
+
+			if (!vfs::mount(original_vfs_path, dest_path))
+			{
+				patch_log.error("Failed to patch file path at '%s': vfs::mount(dest='%s') failed", original_vfs_path, dest_vfs_path);
+				continue;
+			}
+
 			break;
 		}
 		}
