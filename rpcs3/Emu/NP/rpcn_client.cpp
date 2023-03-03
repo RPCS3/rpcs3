@@ -45,6 +45,11 @@
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
+void wolfssl_logging_cb(const int logLevel, const char* const logMessage)
+{
+	rpcn_log.error("wolfssl(%d): %s", logLevel, logMessage);
+}
+
 namespace rpcn
 {
 	localized_string_id rpcn_state_to_localized_string_id(rpcn::rpcn_state state)
@@ -666,6 +671,20 @@ namespace rpcn
 			if (wolfSSL_Init() != WOLFSSL_SUCCESS)
 			{
 				rpcn_log.error("connect: Failed to initialize wolfssl");
+				state = rpcn_state::failure_wolfssl;
+				return false;
+			}
+
+			if (wolfSSL_SetLoggingCb(wolfssl_logging_cb))
+			{
+				rpcn_log.error("connect: failed to set logging cb");
+				state = rpcn_state::failure_wolfssl;
+				return false;
+			}
+
+			if (wolfSSL_Debugging_ON())
+			{
+				rpcn_log.error("connect: failed to enable wolfssl logging");
 				state = rpcn_state::failure_wolfssl;
 				return false;
 			}

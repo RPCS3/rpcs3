@@ -6,6 +6,8 @@
 #error This user_settings.h header is only designed for Windows
 #endif
 
+#define DEBUG_WOLFSSL
+
 /* Configurations */
 #define WOLFSSL_DES_ECB
 #define HAVE_FFDHE_2048
