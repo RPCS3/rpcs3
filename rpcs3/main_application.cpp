@@ -37,7 +37,6 @@
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
 #include <QImageReader> // This shouldn't be outside rpcs3qt...
 #include <thread>
-#include <iostream>
 
 LOG_CHANNEL(sys_log, "SYS");
 
