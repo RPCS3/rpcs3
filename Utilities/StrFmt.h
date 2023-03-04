@@ -10,8 +10,15 @@ namespace fmt
 	static std::string format(const CharT(&)[N], const Args&...);
 
 #ifdef _WIN32
+	struct win_error
+	{
+		unsigned long error{};
+		void* module_handle{};
+	};
+
 	// Get a string for a windows error (DWORD). Optionally a module HANDLE can be passed.
 	std::string win_error_to_string(unsigned long error, void* module_handle = nullptr);
+	std::string win_error_to_string(const win_error& error);
 #endif
 }
 

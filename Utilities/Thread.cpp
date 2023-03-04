@@ -2710,7 +2710,7 @@ void thread_ctrl::detect_cpu_layout()
 		if (!GetLogicalProcessorInformationEx(relationship,
 			reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *>(buffer.data()), &buffer_size))
 		{
-			sig_log.error("GetLogicalProcessorInformationEx failed (size=%u, error=%u)", buffer_size, GetLastError());
+			sig_log.error("GetLogicalProcessorInformationEx failed (size=%u, error=%s)", buffer_size, fmt::win_error{GetLastError(), nullptr});
 		}
 		else
 		{
@@ -2957,7 +2957,7 @@ void thread_ctrl::set_native_priority(int priority)
 
 	if (!SetThreadPriority(_this_thread, native_priority))
 	{
-		sig_log.error("SetThreadPriority() failed: 0x%x", GetLastError());
+		sig_log.error("SetThreadPriority() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}
 #else
 	int policy;
@@ -3009,7 +3009,7 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 	HANDLE _this_thread = GetCurrentThread();
 	if (!SetThreadAffinityMask(_this_thread, !mask ? process_affinity_mask : mask))
 	{
-		sig_log.error("Failed to set thread affinity 0x%x: error 0x%x.", mask, GetLastError());
+		sig_log.error("Failed to set thread affinity 0x%x: error: %s", mask, fmt::win_error{GetLastError(), nullptr});
 	}
 #elif __APPLE__
 	// Supports only one core

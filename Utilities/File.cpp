@@ -1783,7 +1783,7 @@ const std::string& fs::get_config_dir()
 		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, size) - 1 >= size - 1 &&
 			GetModuleFileName(nullptr, buf, size) - 1 >= size - 1)
 		{
-			MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+			MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
 			return dir; // empty
 		}
 
@@ -1868,7 +1868,7 @@ const std::string& fs::get_temp_dir()
 		wchar_t buf[MAX_PATH + 2]{};
 		if (GetTempPathW(MAX_PATH + 1, buf) - 1 > MAX_PATH)
 		{
-			MessageBoxA(nullptr, fmt::format("GetTempPath() failed: error %u.", GetLastError()).c_str(), "fs::get_temp_dir()", MB_ICONERROR);
+			MessageBoxA(nullptr, fmt::format("GetTempPath() failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_temp_dir()", MB_ICONERROR);
 			return dir; // empty
 		}
 
