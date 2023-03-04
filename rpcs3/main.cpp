@@ -503,7 +503,7 @@ int main(int argc, char** argv)
 	WSADATA wsa_data{};
 	if (const int res = WSAStartup(MAKEWORD(2, 2), &wsa_data); res != 0)
 	{
-		report_fatal_error(fmt::format("WSAStartup failed (error=%s)", fmt::win_error_to_string(res, nullptr)));
+		report_fatal_error(fmt::format("WSAStartup failed (error=%s)", fmt::win_error{static_cast<unsigned long>(res), nullptr}));
 	}
 #endif
 

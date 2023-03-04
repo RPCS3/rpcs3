@@ -79,6 +79,17 @@ std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
 
 	return message;
 }
+
+std::string fmt::win_error_to_string(const fmt::win_error& error)
+{
+	return fmt::win_error_to_string(error.error, error.module_handle);
+}
+
+template <>
+void fmt_class_string<fmt::win_error>::format(std::string& out, u64 arg)
+{
+	fmt::append(out, "%s", fmt::win_error_to_string(get_object(arg)));
+}
 #endif
 
 template <>
