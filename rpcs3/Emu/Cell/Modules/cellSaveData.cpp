@@ -1678,8 +1678,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	error_code savedata_result = CELL_OK;
 
+	u64 delay_save_until = 0;
+
 	while (funcFile)
 	{
+		lv2_sleep(ppu, 2000);
+
 		std::memset(fileSet.get_ptr(), 0, fileSet.size());
 		std::memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
 		std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
@@ -1691,6 +1695,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (res == CELL_SAVEDATA_CBRESULT_OK_LAST || res == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
 			{
 				// TODO: display user prompt
+
+				// Some games (Jak II [NPUA80707]) rely on this delay
+				lv2_obj::sleep(ppu);
+				delay_save_until = get_guest_system_time() + (has_modified ? 500'000 : 100'000);
 				break;
 			}
 
@@ -2018,6 +2026,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	if (savedata_result + 0u == CELL_SAVEDATA_ERROR_CBRESULT)
 	{
 		return display_callback_result_error_message(ppu, *result, errDialog);
+	}
+
+	if (u64 current_time = get_guest_system_time(); current_time < delay_save_until)
+	{
+		lv2_sleep(ppu, delay_save_until - current_time);
 	}
 
 	return savedata_result;
