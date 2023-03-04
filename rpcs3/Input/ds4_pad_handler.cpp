@@ -571,6 +571,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	{
 		hw_version = read_u32(&buf[35]);
 		fw_version = read_u32(&buf[41]);
+		ds4_log.notice("check_add_device: Got firmware version: hw_version: 0x%x, fw_version: 0x%x", hw_version, fw_version);
 	}
 
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
