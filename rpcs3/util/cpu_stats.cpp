@@ -54,9 +54,9 @@ LOG_CHANNEL(perf_log, "PERF");
 namespace utils
 {
 #ifdef _WIN32
-	std::string pdh_error(PDH_STATUS status)
+	fmt::win_error pdh_error(PDH_STATUS status)
 	{
-		return fmt::win_error_to_string(status, LoadLibrary(L"pdh.dll"));
+		return fmt::win_error{static_cast<unsigned long>(status), LoadLibrary(L"pdh.dll")};
 	}
 #endif
 

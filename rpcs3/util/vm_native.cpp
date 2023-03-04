@@ -421,7 +421,7 @@ namespace utils
 
 			if (!::VirtualProtect(reinterpret_cast<LPVOID>(addr), block_size, +prot, &old))
 			{
-				fmt::throw_exception("VirtualProtect failed (%p, 0x%x, addr=0x%x, error=%#x)", pointer, size, addr, GetLastError());
+				fmt::throw_exception("VirtualProtect failed (%p, 0x%x, addr=0x%x, error=%s)", pointer, size, addr, fmt::win_error{GetLastError(), nullptr});
 			}
 
 			// Next region
