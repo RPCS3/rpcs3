@@ -71,6 +71,8 @@ bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 		{
 			// Mounting completed; fixup for directories due to resolve_path messing with trailing /
 			list.back()->path = Emu.GetCallbacks().resolve_path(path);
+			if (list.back()->path.empty())
+				list.back()->path = std::string(path); // Fallback when resolving failed
 			if (is_dir && !list.back()->path.ends_with('/'))
 				list.back()->path += '/';
 			if (!is_dir && list.back()->path.ends_with('/'))
