@@ -328,15 +328,8 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.resolve_path = [](std::string_view sv)
 	{
-		const std::string result = QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
-
-		if (result.empty())
-		{
-			// May fail if path does not exist
-			std::clog << fmt::format("main_application: resolve_path(): Failed to resolve path \'%s\'\n", sv);
-		}
-
-		return result;
+		// May result in an empty string if path does not exist
+		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
 	};
 
 	return callbacks;
