@@ -134,7 +134,11 @@ void hid_pad_handler<Device>::enumerate_devices()
 		hid_device_info* head     = dev_info;
 		while (dev_info)
 		{
-			ensure(dev_info->path != nullptr);
+			if (!dev_info->path)
+			{
+				hid_log.error("Skipping enumeration of device with empty path.");
+				continue;
+			}
 			device_paths.insert(dev_info->path);
 			serials[dev_info->path] = dev_info->serial_number ? std::wstring_view(dev_info->serial_number) : std::wstring_view{};
 			dev_info                = dev_info->next;
@@ -188,6 +192,15 @@ void hid_pad_handler<Device>::update_devices()
 		hid_device* dev = hid_open_path(path.c_str());
 		if (dev)
 		{
+			if (const hid_device_info* info = hid_get_device_info(dev))
+			{
+				hid_log.notice("%s adding device: vid=0x%x, pid=0x%x, serial='%s', path='%s'", m_type, info->vendor_id, info->product_id, m_enumerated_serials[path].data(), path);
+			}
+			else
+			{
+				hid_log.warning("%s adding device: vid=N/A, pid=N/A, serial='%s', path='%s'", m_type, m_enumerated_serials[path].data(), path);
+			}
+
 			check_add_device(dev, path, m_enumerated_serials[path]);
 		}
 		else
