@@ -706,6 +706,8 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	{
 	case patch_type::utf8:
 	case patch_type::jump_func:
+	case patch_type::move_file:
+	case patch_type::hide_file:
 	{
 		break;
 	}
