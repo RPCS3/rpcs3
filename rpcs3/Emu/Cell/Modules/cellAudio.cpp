@@ -606,6 +606,7 @@ void cell_audio_thread::advance(u64 timestamp)
 			}
 
 			event_sources[queue_count] = key_inf.source;
+			event_data3[queue_count] = (key_inf.flags & CELL_AUDIO_EVENTFLAG_BEFOREMIX) ? key_inf.source : 0;
 			queue_count++;
 		}
 	}
@@ -615,7 +616,7 @@ void cell_audio_thread::advance(u64 timestamp)
 	for (u32 i = 0; i < queue_count; i++)
 	{
 		lv2_obj::notify_all_t notify;
-		queues[i]->send(event_sources[i], 0, 0, 0);
+		queues[i]->send(event_sources[i], CELL_AUDIO_EVENT_MIX, 0, event_data3[i]);
 	}
 }
 
@@ -757,7 +758,15 @@ void cell_audio_thread::operator()()
 			continue;
 		}
 
-		// TODO: send beforemix event (in ~2,6 ms before mixing)
+		// TODO: (no idea how much of this is already implemented)
+		// The hardware heartbeat interval of libaudio is ~5.3ms.
+		// As soon as one interval starts, libaudio waits for ~2.6ms (half of the interval) before it mixes the audio.
+		// There are 2 different types of games:
+		// - Normal games:
+		//     Once the audio was mixed, we send the CELL_AUDIO_EVENT_MIX event and the game can process audio.
+		// - Latency sensitive games:
+		//     If CELL_AUDIO_EVENTFLAG_BEFOREMIX is specified, we immediately send the CELL_AUDIO_EVENT_MIX event and the game can process audio.
+		//     We then have to wait for a maximum of ~2.6ms for cellAudioSendAck and then mix immediately.
 
 		const u64 time_since_last_period = timestamp - m_last_period_end;
 
@@ -1678,7 +1687,13 @@ error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)
 	}
 
 	// Set unique source associated with the key
-	g_audio.keys.push_back({g_audio.event_period, iFlags, ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio.key_count++ * lv2_event_port::id_step), std::move(q)});
+	g_audio.keys.push_back({
+		.start_period = g_audio.event_period,
+		.flags = iFlags,
+		.source = ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio.key_count++ * lv2_event_port::id_step),
+		.ack_timestamp = 0,
+		.port = std::move(q)
+	});
 	g_audio.key_count %= lv2_event_port::id_count;
 
 	return CELL_OK;
@@ -1910,7 +1925,28 @@ error_code cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
 
 error_code cellAudioSendAck(u64 data3)
 {
-	cellAudio.todo("cellAudioSendAck(data3=0x%llx)", data3);
+	cellAudio.trace("cellAudioSendAck(data3=0x%llx)", data3);
+
+	auto& g_audio = g_fxo->get<cell_audio>();
+
+	std::unique_lock lock(g_audio.mutex);
+
+	if (!g_audio.init)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	// TODO: error checks
+
+	for (cell_audio_thread::key_info& k : g_audio.keys)
+	{
+		if (k.source == data3)
+		{
+			k.ack_timestamp = get_system_time();
+			break;
+		}
+	}
+
 	return CELL_OK;
 }
 
