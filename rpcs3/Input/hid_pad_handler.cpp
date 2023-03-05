@@ -194,11 +194,11 @@ void hid_pad_handler<Device>::update_devices()
 		{
 			if (const hid_device_info* info = hid_get_device_info(dev))
 			{
-				hid_log.notice("%s adding device: vid=0x%x, pid=0x%x, serial='%s', path='%s'", m_type, info->vendor_id, info->product_id, m_enumerated_serials[path].data(), path);
+				hid_log.notice("%s adding device: vid=0x%x, pid=0x%x, path='%s'", m_type, info->vendor_id, info->product_id, path);
 			}
 			else
 			{
-				hid_log.warning("%s adding device: vid=N/A, pid=N/A, serial='%s', path='%s'", m_type, m_enumerated_serials[path].data(), path);
+				hid_log.warning("%s adding device: vid=N/A, pid=N/A, path='%s'", m_type, path);
 			}
 
 			check_add_device(dev, path, m_enumerated_serials[path]);
