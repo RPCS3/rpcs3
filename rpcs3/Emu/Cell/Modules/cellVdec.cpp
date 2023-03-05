@@ -1298,7 +1298,11 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 		u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], alpha_plane.get() };
 		int in_line[4] = { frame->linesize[0], frame->linesize[1], frame->linesize[2], w * 1 };
 		u8* out_data[4] = { outBuff.get_ptr() };
-		int out_line[4] = { static_cast<int>(utils::align(w * 4u, 128)) }; // RGBA32 or ARGB32
+		int out_line[4] = { w * 4 }; // RGBA32 or ARGB32
+
+		// TODO:
+		// It's possible that we need to align the pitch to 128 here.
+		// PS HOME seems to rely on this somehow in certain cases.
 
 		if (!alpha_plane)
 		{
@@ -1310,10 +1314,6 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 			{
 				fmt::throw_exception("cellVdecGetPictureExt: av_image_fill_linesizes failed (handle=0x%x, seq_id=%d, cmd_id=%d, ret=0x%x): %s", handle, frame.seq_id, frame.cmd_id, ret, utils::av_error_to_string(ret));
 			}
-
-			// TODO:
-			// It's possible that we need to align the pitch to 128 here as well.
-			// But I'd wait for a game with broken images before tackling this.
 		}
 
 		sws_scale(vdec->sws, in_data, in_line, 0, h, out_data, out_line);
