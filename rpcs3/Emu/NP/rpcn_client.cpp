@@ -14,6 +14,7 @@
 #include "Emu/NP/np_helpers.h"
 #include "Emu/NP/vport0.h"
 #include "Emu/system_config.h"
+#include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
 
 #include "util/asm.hpp"
 
@@ -42,6 +43,8 @@
 #pragma GCC diagnostic pop
 #endif
 #endif
+
+#include <wolfssl/internal.h>
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
@@ -117,6 +120,65 @@ namespace rpcn
 		}
 
 		return true;
+	}
+
+	int custom_translate_error()
+	{
+		int native_error = get_native_error();
+
+#ifdef _WIN32
+#define ERROR_CASE(error) case WSA##error
+#else
+#define ERROR_CASE(error) case error
+#endif
+
+		switch (native_error)
+		{
+		ERROR_CASE(EWOULDBLOCK):
+		ERROR_CASE(ETIMEDOUT):
+#ifdef _WIN32
+		case WSA_IO_PENDING:
+#endif
+			return WOLFSSL_CBIO_ERR_WANT_READ;
+		ERROR_CASE(ECONNRESET):
+			return WOLFSSL_CBIO_ERR_CONN_RST;
+		ERROR_CASE(EINTR):
+			return WOLFSSL_CBIO_ERR_ISR;
+		ERROR_CASE(ECONNABORTED):
+			return WOLFSSL_CBIO_ERR_CONN_CLOSE;
+#ifndef _WIN32
+		ERROR_CASE(EPIPE):
+			return WOLFSSL_CBIO_ERR_CONN_CLOSE;
+#endif
+		default:
+			return WOLFSSL_CBIO_ERR_GENERAL;
+		}
+#undef ERROR_CASE
+	}
+
+	int custom_wolfssl_receive(WOLFSSL* /* ssl */, char* buf, int sz, void* ctx)
+	{
+		int sd = *static_cast<int*>(ctx);
+		int res_recv = ::recv(sd, buf, sz, 0);
+
+		if (res_recv < 0)
+		{
+			return custom_translate_error();
+		}
+		else if (res_recv == 0)
+		{
+			return WOLFSSL_CBIO_ERR_CONN_CLOSE;
+		}
+
+		return res_recv;
+	}
+
+	int custom_wolfssl_send(WOLFSSL* /* ssl */, char* buf, int sz, void* ctx)
+	{
+		int sd = *static_cast<int*>(ctx);
+		int res_sent = send(sd, buf, sz, 0);
+
+		return res_sent < 0 ? custom_translate_error() : res_sent;
 	}
 
 	// Constructor, destructor & singleton manager
@@ -499,7 +561,7 @@ namespace rpcn
 						return recvn_result::recvn_nodata;
 
 					num_timeouts++;
-					if (num_timeouts >= 50)
+					if (num_timeouts >= 200)
 					{
 						rpcn_log.error("recvn timeout with %d bytes received", n_recv);
 						return recvn_result::recvn_timeout;
@@ -541,7 +603,7 @@ namespace rpcn
 				if (wolfSSL_want_write(write_wssl))
 				{
 					num_timeouts++;
-					if (num_timeouts >= 50)
+					if (num_timeouts >= 200)
 					{
 						rpcn_log.error("send_packet timeout with %d bytes sent", n_sent);
 						return error_and_disconnect("Failed to send all the bytes");
@@ -679,6 +741,9 @@ namespace rpcn
 
 			wolfSSL_CTX_set_verify(wssl_ctx, SSL_VERIFY_NONE, nullptr);
 
+			wolfSSL_SetIORecv(wssl_ctx, custom_wolfssl_receive);
+			wolfSSL_SetIOSend(wssl_ctx, custom_wolfssl_send);
+
 			if ((read_wssl = wolfSSL_new(wssl_ctx)) == nullptr)
 			{
 				rpcn_log.error("connect: Failed to create wolfssl object");
@@ -707,11 +772,11 @@ namespace rpcn
 			sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
 #ifdef _WIN32
-			u32 timeout = 200; // 200ms
+			u32 timeout = 50; // 50ms
 #else
 			struct timeval timeout;
 			timeout.tv_sec  = 0;
-			timeout.tv_usec = 200000; // 200ms
+			timeout.tv_usec = 50'000; // 50ms
 #endif
 
 			if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) < 0)
