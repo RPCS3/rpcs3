@@ -389,6 +389,7 @@ public:
 
 	u32 key_count = 0;
 	u8 event_period = 0;
+	std::array<u64, MAX_AUDIO_EVENT_QUEUES> event_sources{};
 
 	struct key_info
 	{
