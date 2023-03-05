@@ -10,7 +10,17 @@ namespace rsx
 		void animation_base::begin_animation(u64 frame)
 		{
 			frame_start = frame;
-			frame_end = u64(frame + duration * g_cfg.video.vblank_rate);
+			frame_end = frame + get_duration_in_frames();
+		}
+
+		u64 animation_base::get_duration_in_frames() const
+		{
+			return u64(duration * g_cfg.video.vblank_rate);
+		}
+
+		u64 animation_base::get_remaining_frames(u64 frame) const
+		{
+			return frame >= frame_end ? 0 : (frame_end - frame);
 		}
 
 		f32 animation_base::get_progress_ratio(u64 frame) const
@@ -37,6 +47,18 @@ namespace rsx
 			}
 
 			return t;
+		}
+
+		void animation_translate::reset(u64 start_frame)
+		{
+			active = false;
+			current = start;
+			frame_start = start_frame;
+
+			if (frame_start > 0)
+			{
+				frame_end = frame_start + get_duration_in_frames();
+			}
 		}
 
 		void animation_translate::apply(compiled_resource& resource)
@@ -91,6 +113,18 @@ namespace rsx
 			if (on_finish)
 			{
 				on_finish();
+			}
+		}
+
+		void animation_color_interpolate::reset(u64 start_frame)
+		{
+			active = false;
+			current = start;
+			frame_start = start_frame;
+
+			if (frame_start > 0)
+			{
+				frame_end = frame_start + get_duration_in_frames();
 			}
 		}
 

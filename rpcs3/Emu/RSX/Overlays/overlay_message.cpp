@@ -36,7 +36,7 @@ namespace rsx
 			m_fade_out_animation.current = color4f(1.f);
 			m_fade_out_animation.end = color4f(1.f, 1.f, 1.f, 0.f);
 			m_fade_out_animation.duration = 1.f;
-			m_fade_out_animation.active = true;
+			m_fade_out_animation.active = false;
 
 			back_color = color4f(0.25f, 0.25f, 0.25f, 0.85f);
 
@@ -54,6 +54,11 @@ namespace rsx
 		}
 		template message_item::message_item(std::string msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>);
 		template message_item::message_item(localized_string_id msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>);
+
+		void message_item::reset_expiration()
+		{
+			m_expiration_time = get_expiration_time(m_visible_duration);
+		}
 
 		u64 message_item::get_expiration() const
 		{
@@ -79,11 +84,7 @@ namespace rsx
 
 		compiled_resource& message_item::get_compiled()
 		{
-			auto& current_animation = m_fade_in_animation.active
-				? m_fade_in_animation
-				: m_fade_out_animation;
-
-			if (!m_processed || !current_animation.active)
+			if (!m_processed)
 			{
 				compiled_resources = {};
 				return compiled_resources;
@@ -98,6 +99,10 @@ namespace rsx
 			{
 				compiled_resources.add(m_icon->get_compiled());
 			}
+
+			auto& current_animation = m_fade_in_animation.active
+				? m_fade_in_animation
+				: m_fade_out_animation;
 
 			current_animation.apply(compiled_resources);
 			return compiled_resources;
@@ -118,11 +123,36 @@ namespace rsx
 
 			if (m_fade_in_animation.active)
 			{
+				// We are fading in.
 				m_fade_in_animation.update(rsx::get_current_renderer()->vblank_count);
 			}
-			else if (time + u64(m_fade_out_animation.duration * 1'000'000) > m_expiration_time)
+			else if (time + u64(m_fade_out_animation.duration * 1'000'000) > get_expiration())
 			{
+				// We are fading out.
+
+				// Only activate the animation if the message hasn't expired yet (prevents glitches afterwards).
+				if (time <= get_expiration())
+				{
+					m_fade_out_animation.active = true;
+				}
+
 				m_fade_out_animation.update(rsx::get_current_renderer()->vblank_count);
+			}
+			else if (m_fade_out_animation.active)
+			{
+				// We are fading out, but the expiration was extended.
+
+				// Reset the fade in animation to the state of the fade out animation to prevent opacity pop.
+				const usz current_frame = rsx::get_current_renderer()->vblank_count;
+				const f32 fade_out_progress = static_cast<f32>(m_fade_out_animation.get_remaining_frames(current_frame)) / static_cast<f32>(m_fade_out_animation.get_duration_in_frames());
+				const u64 fade_in_frames_done = u64(fade_out_progress * m_fade_in_animation.get_duration_in_frames());
+
+				m_fade_in_animation.reset(current_frame - fade_in_frames_done);
+				m_fade_in_animation.active = true;
+				m_fade_in_animation.update(current_frame);
+
+				// Reset the fade out animation.
+				m_fade_out_animation.reset();
 			}
 
 			m_processed = true;
@@ -132,9 +162,16 @@ namespace rsx
 		{
 			const u64 cur_time = rsx::uclock();
 
-			while (!vis_set.empty() && vis_set.front().get_expiration() < cur_time)
+			for (auto it = vis_set.begin(); it != vis_set.end();)
 			{
-				vis_set.pop_front();
+				if (it->get_expiration() < cur_time)
+				{
+					it = vis_set.erase(it);
+				}
+				else
+				{
+					it++;
+				}
 			}
 
 			while (vis_set.size() < max_visible_items && !ready_set.empty())
@@ -205,23 +242,31 @@ namespace rsx
 			return cr;
 		}
 
-		bool message::message_exists(message_pin_location location, localized_string_id id)
+		bool message::message_exists(message_pin_location location, localized_string_id id, bool allow_refresh)
 		{
-			return message_exists(location, get_localized_u32string(id));
+			return message_exists(location, get_localized_u32string(id), allow_refresh);
 		}
 
-		bool message::message_exists(message_pin_location location, const std::string& msg)
+		bool message::message_exists(message_pin_location location, const std::string& msg, bool allow_refresh)
 		{
-			return message_exists(location, utf8_to_u32string(msg));
+			return message_exists(location, utf8_to_u32string(msg), allow_refresh);
 		}
 
-		bool message::message_exists(message_pin_location location, const std::u32string& msg)
+		bool message::message_exists(message_pin_location location, const std::u32string& msg, bool allow_refresh)
 		{
-			auto check_list = [&](const std::deque<message_item>& list)
+			auto check_list = [&](std::deque<message_item>& list)
 			{
-				return std::any_of(list.cbegin(), list.cend(), [&](const message_item& item)
+				return std::any_of(list.begin(), list.end(), [&](message_item& item)
 				{
-					return item.text_matches(msg);
+					if (item.text_matches(msg))
+					{
+						if (allow_refresh)
+						{
+							item.reset_expiration();
+						}
+						return true;
+					}
+					return false;
 				});
 			};
 
@@ -234,6 +279,17 @@ namespace rsx
 			}
 
 			return false;
+		}
+
+		void refresh_message_queue()
+		{
+			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+			{
+				if (auto msg_overlay = manager->get<rsx::overlays::message>())
+				{
+					msg_overlay->refresh();
+				}
+			}
 		}
 
 	} // namespace overlays

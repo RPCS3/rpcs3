@@ -1,7 +1,5 @@
 #include "stdafx.h"
-#include "../Overlays/overlay_animated_icon.h"
-#include "../Overlays/overlay_manager.h"
-#include "../Overlays/overlay_shader_compile_notification.h"
+#include "../Overlays/overlay_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 
 #include "VKAsyncScheduler.h"

@@ -683,7 +683,7 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 	if ((meta_info.key_pad[0] != 0x00) ||
 		(meta_info.iv_pad[0] != 0x00))
 	{
-		self_log.error("Failed to decrypt metadata info!");
+		self_log.error("Failed to decrypt SCE metadata info!");
 		return false;
 	}
 
@@ -1095,7 +1095,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	else if (npd->license == 3)  // Free license.
 	{
 		// Use klicensee if available.
-		if (key_v.GetKlicenseeKey() != nullptr)
+		if (key_v.GetKlicenseeKey())
 			memcpy(npdrm_key, key_v.GetKlicenseeKey(), 0x10);
 		else
 			memcpy(npdrm_key, NP_KLIC_FREE, 0x10);
@@ -1182,7 +1182,7 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 	if ((meta_info.key_pad[0] != 0x00) ||
 		(meta_info.iv_pad[0] != 0x00))
 	{
-		self_log.error("Failed to decrypt metadata info!");
+		self_log.error("Failed to decrypt SELF metadata info!");
 		return false;
 	}
 

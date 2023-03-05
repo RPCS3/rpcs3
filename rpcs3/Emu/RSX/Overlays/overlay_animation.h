@@ -42,7 +42,11 @@ namespace rsx
 
 			std::function<void()> on_finish;
 
+			u64 get_duration_in_frames() const;
+			u64 get_remaining_frames(u64 frame) const;
+
 			virtual void apply(compiled_resource&) = 0;
+			virtual void reset(u64 start_frame) = 0;
 			virtual void update(u64 frame) = 0;
 		};
 
@@ -57,6 +61,7 @@ namespace rsx
 			vector3f end{};
 
 			void apply(compiled_resource& data) override;
+			void reset(u64 start_frame = 0) override;
 			void update(u64 frame) override;
 			void finish();
 		};
@@ -71,6 +76,7 @@ namespace rsx
 			color4f end{};
 
 			void apply(compiled_resource& data) override;
+			void reset(u64 start_frame = 0) override;
 			void update(u64 frame) override;
 			void finish();
 		};
