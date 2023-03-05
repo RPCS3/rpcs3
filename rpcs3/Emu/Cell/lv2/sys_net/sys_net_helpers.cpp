@@ -210,7 +210,7 @@ void windows_poll(pollfd* fds, unsigned long nfds, int timeout, bool* connecting
 
 	if (r == SOCKET_ERROR)
 	{
-		sys_net.error("WSAPoll failed: %u", WSAGetLastError());
+		sys_net.error("WSAPoll failed: %s", fmt::win_error{static_cast<unsigned long>(WSAGetLastError()), nullptr});
 		return;
 	}
 
