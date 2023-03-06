@@ -298,7 +298,8 @@ void Emulator::Init(bool add_only)
 			continue;
 		}
 
-		vfs::mount(key, usb_info.path);
+		if (fs::is_dir(usb_info.path))
+			vfs::mount(key, usb_info.path);
 
 		if (key == "/dev_usb000"sv)
 		{
