@@ -379,10 +379,8 @@ namespace np
 			}
 			else
 			{
-				bind_ip = conv.s_addr;
-
-				if (bind_ip)
-					local_ip_addr = bind_ip;
+				if (conv.s_addr)
+					local_ip_addr = conv.s_addr;
 			}
 
 			if (g_cfg.net.upnp_enabled)
@@ -618,11 +616,6 @@ namespace np
 	u32 np_handler::get_dns_ip() const
 	{
 		return dns_ip;
-	}
-
-	u32 np_handler::get_bind_ip() const
-	{
-		return bind_ip;
 	}
 
 	s32 np_handler::get_net_status() const

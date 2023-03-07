@@ -137,17 +137,11 @@ s32 lv2_socket_native::bind(const sys_net_sockaddr& addr)
 	const auto* psa_in = reinterpret_cast<const sys_net_sockaddr_in*>(&addr);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-	u32 saddr = nph.get_bind_ip();
-	if (saddr == 0)
-	{
-		// If zero use the supplied address
-		saddr = std::bit_cast<u32>(psa_in->sin_addr);
-	}
 
 	::sockaddr_in native_addr{};
 	native_addr.sin_family      = AF_INET;
 	native_addr.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
-	native_addr.sin_addr.s_addr = saddr;
+	native_addr.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
 	::socklen_t native_addr_len = sizeof(native_addr);
 
 	// Note that this is a hack(TODO)
@@ -163,7 +157,7 @@ s32 lv2_socket_native::bind(const sys_net_sockaddr& addr)
 	if (::bind(socket, reinterpret_cast<struct sockaddr*>(&native_addr), native_addr_len) == 0)
 	{
 		// Only UPNP port forward binds to 0.0.0.0
-		if (saddr == 0)
+		if (psa_in->sin_addr == 0u)
 		{
 			if (native_addr.sin_port == 0)
 			{
