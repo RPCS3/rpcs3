@@ -5,6 +5,7 @@
 
 #include "lv2_socket.h"
 #include "sys_net_helpers.h"
+#include "Emu/NP/np_handler.h"
 
 LOG_CHANNEL(sys_net);
 
@@ -155,6 +156,18 @@ sys_net_sockaddr native_addr_to_sys_net_addr(const ::sockaddr_storage& native_ad
 		native_addr.sin_addr.s_addr = std::bit_cast<u32, be_t<u32>>(0x7F000001);
 	}
 #endif
+
+	// If bind IP is set and the game tried to bind 0.0.0.0 we redirected it on a specific IP
+	// Connection to 127.0.0.1 would then fail, redirect the connection to the bind IP
+	if (native_addr.sin_addr.s_addr == std::bit_cast<u32, be_t<u32>>(0x7F000001))
+	{
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+		u32 bind_addr = nph.get_bind_ip();
+		if (bind_addr != 0)
+		{
+			native_addr.sin_addr.s_addr = bind_addr;
+		}
+	}
 
 	return native_addr;
 }
