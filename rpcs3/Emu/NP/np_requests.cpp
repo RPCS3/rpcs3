@@ -572,6 +572,22 @@ namespace np
 			pending_sign_infos_requests.erase(req_id);
 		}
 
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			case rpcn::ErrorType::NotFound:
+			{
+				rpcn_log.error("Signaling information was requested for a user that doesn't exist or is not online");
+				return true;
+			}
+			case rpcn::ErrorType::Malformed:
+				return error_and_disconnect("RequestSignalingInfos request was malformed!");
+			default:
+				return error_and_disconnect(fmt::format("RequestSignalingInfos failed with unknown error(%d)!", reply_data[0]));
+			}
+		}
+
 		vec_stream reply(reply_data, 1);
 		u32 addr = reply.get<u32>();
 		u16 port = reply.get<u16>();
