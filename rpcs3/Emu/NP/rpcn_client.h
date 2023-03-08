@@ -493,6 +493,9 @@ namespace rpcn
 		atomic_t<u32> addr_sig{};
 		atomic_t<u16> port_sig{};
 		atomic_t<u32> local_addr_sig{};
+
+		static constexpr int RPCN_TIMEOUT_INTERVAL = 50; // 50ms
+		static constexpr int RPCN_TIMEOUT = 10'000;      // 10s
 	};
 
 } // namespace rpcn
