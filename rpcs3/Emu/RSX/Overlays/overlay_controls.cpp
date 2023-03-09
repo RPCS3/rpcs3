@@ -98,6 +98,7 @@ namespace rsx
 			texture_resource_files.emplace_back("R2.png");
 			texture_resource_files.emplace_back("save.png");
 			texture_resource_files.emplace_back("new.png");
+			texture_resource_files.emplace_back("spinner-24.png");
 		}
 
 		void resource_config::load_files()
