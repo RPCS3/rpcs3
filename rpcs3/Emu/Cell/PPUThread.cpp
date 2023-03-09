@@ -492,11 +492,6 @@ static void ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, 
 	if (ppu.gpr[2] != found->second)
 	{
 		ppu_log.error("Unexpected TOC (0x%x, expected 0x%x)", ppu.gpr[2], found->second);
-
-		if (!ppu.state.test_and_set(cpu_flag::dbg_pause) && ppu.check_state())
-		{
-			return;
-		}
 	}
 
 	// Fallback to the interpreter function
