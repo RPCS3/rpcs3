@@ -78,7 +78,7 @@ protected:
 
 	std::set<std::string> m_last_enumerated_devices;
 	std::set<std::string> m_new_enumerated_devices;
-	std::map<std::string, std::wstring_view> m_enumerated_serials;
+	std::map<std::string, std::wstring> m_enumerated_serials;
 	std::mutex m_enumeration_mutex;
 	std::unique_ptr<named_thread<std::function<void()>>> m_enumeration_thread;
 
