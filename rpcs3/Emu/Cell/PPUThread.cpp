@@ -42,7 +42,9 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Object/ObjectFile.h"
+#if LLVM_VERSION_MAJOR < 17
 #include "llvm/ADT/Triple.h"
+#endif
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -3970,7 +3972,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		{
 			const auto f = cast<Function>(_module->getOrInsertFunction(func.name, _func).getCallee());
 			f->setCallingConv(CallingConv::GHC);
-			f->addAttribute(2, Attribute::NoAlias);
+			f->addParamAttr(1, llvm::Attribute::NoAlias);
 			f->addFnAttr(Attribute::NoUnwind);
 		}
 	}

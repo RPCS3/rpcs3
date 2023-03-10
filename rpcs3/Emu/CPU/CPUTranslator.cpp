@@ -299,7 +299,7 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u
 {
 	if (const auto ct = llvm::dyn_cast<llvm::IntegerType>(t); ct && ct->getBitWidth() == 128)
 	{
-		return llvm::ConstantInt::get(t, llvm::APInt(128, llvm::makeArrayRef(reinterpret_cast<const u64*>(v._bytes), 2)));
+		return llvm::ConstantInt::get(t, llvm::APInt(128, llvm::ArrayRef(reinterpret_cast<const u64*>(v._bytes), 2)));
 	}
 
 	ensure(t->isVectorTy());
@@ -309,27 +309,27 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u
 
 	if (sct->isIntegerTy(8))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(v._bytes), 16));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(v._bytes), 16));
 	}
 	if (sct->isIntegerTy(16))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u16*>(v._bytes), 8));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u16*>(v._bytes), 8));
 	}
 	if (sct->isIntegerTy(32))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u32*>(v._bytes), 4));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u32*>(v._bytes), 4));
 	}
 	if (sct->isIntegerTy(64))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u64*>(v._bytes), 2));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u64*>(v._bytes), 2));
 	}
 	if (sct->isFloatTy())
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f32*>(v._bytes), 4));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const f32*>(v._bytes), 4));
 	}
 	if (sct->isDoubleTy())
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
 	}
 
 	fmt::throw_exception("[line %u] No supported constant type", _line);
