@@ -126,7 +126,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 {
 	Timer timer;
 	std::set<std::string> device_paths;
-	std::map<std::string, std::wstring_view> serials;
+	std::map<std::string, std::wstring> serials;
 
 	for (const auto& [vid, pid] : m_ids)
 	{
@@ -140,7 +140,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 				continue;
 			}
 			device_paths.insert(dev_info->path);
-			serials[dev_info->path] = dev_info->serial_number ? std::wstring_view(dev_info->serial_number) : std::wstring_view{};
+			serials[dev_info->path] = dev_info->serial_number ? std::wstring(dev_info->serial_number) : std::wstring();
 			dev_info                = dev_info->next;
 		}
 		hid_free_enumeration(head);
@@ -149,7 +149,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 
 	std::lock_guard lock(m_enumeration_mutex);
 	m_new_enumerated_devices = device_paths;
-	m_enumerated_serials = serials;
+	m_enumerated_serials = std::move(serials);
 }
 
 template <class Device>
