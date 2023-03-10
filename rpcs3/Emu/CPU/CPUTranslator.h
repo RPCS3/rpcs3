@@ -3550,11 +3550,7 @@ public:
 	template <typename T>
 	llvm::Value* load_const(llvm::GlobalVariable* g, llvm::Value* i)
 	{
-#ifdef OLDLLVM
-		return m_ir->CreateLoad(m_ir->CreateGEP(g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
-#else
 		return m_ir->CreateLoad(get_type<T>(), m_ir->CreateGEP(g->getValueType(), g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
-#endif
 	}
 
 	template <typename T, typename I>
