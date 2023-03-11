@@ -2497,7 +2497,13 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		for (u32 i = 100; i < 140; i++)
 		{
 			std::this_thread::sleep_for(50ms);
-			Resume(); // TODO: Prevent pausing by other threads while in this loop
+
+			// TODO: Prevent pausing by other threads while in this loop
+			CallFromMainThread([this]()
+			{
+				Resume();
+			});
+
 			process_qt_events(); // Is nullified when performed on non-main thread
 
 			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count())
