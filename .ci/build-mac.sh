@@ -1,10 +1,10 @@
 #!/bin/sh -ex
 
-brew install -f --overwrite llvm@14 nasm ninja git p7zip create-dmg ccache
+brew install -f --overwrite llvm@16 nasm ninja git p7zip create-dmg ccache
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm@14 sdl2 glew cmake
+arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm@16 sdl2 glew cmake
 
 #export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
@@ -33,7 +33,7 @@ cd ..
 export Qt5_DIR="$WORKDIR/qt-downloader/5.15.2/clang_64/lib/cmake/Qt5"
 export SDL2_DIR="$BREW_X64_PATH/opt/sdl2/lib/cmake/SDL2"
 
-export PATH="$BREW_PATH/opt/llvm@14/bin:$WORKDIR/qt-downloader/5.15.2/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
+export PATH="$BREW_PATH/opt/llvm@16/bin:$WORKDIR/qt-downloader/5.15.2/clang_64/bin:$BREW_BIN:$BREW_SBIN:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L$BREW_X64_PATH/lib -Wl,-rpath,$BREW_X64_PATH/lib"
 export CPPFLAGS="-I$BREW_X64_PATH/include -msse -msse2 -mcx16 -no-pie"
 export LIBRARY_PATH="$BREW_X64_PATH/lib"

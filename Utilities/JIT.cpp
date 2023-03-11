@@ -198,6 +198,9 @@ static u8* add_jit_memory(usz size, uint align)
 		});
 	}
 
+	ensure(pointer + pos >= get_jit_memory() + Off);
+	ensure(pointer + pos < get_jit_memory() + Off + 0x40000000);
+
 	return pointer + pos;
 }
 
@@ -1319,7 +1322,10 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			m_cpu == "icelake-client" ||
 			m_cpu == "icelake-server" ||
 			m_cpu == "tigerlake" ||
-			m_cpu == "rocketlake")
+			m_cpu == "rocketlake" ||
+			m_cpu == "alderlake" ||
+			m_cpu == "raptorlake" ||
+			m_cpu == "meteorlake")
 		{
 			// Downgrade if AVX is not supported by some chips
 			if (!utils::has_avx())
@@ -1350,6 +1356,18 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			// Upgrade
 			m_cpu = "znver2";
 		}
+
+		if ((m_cpu == "znver3" || m_cpu == "goldmont" || m_cpu == "alderlake" || m_cpu == "raptorlake" || m_cpu == "meteorlake") && utils::has_avx512_icl())
+		{
+			// Upgrade
+			m_cpu = "icelake-client";
+		}
+
+		if (m_cpu == "goldmont" && utils::has_avx2())
+		{
+			// Upgrade
+			m_cpu = "alderlake";
+		}
 	}
 
 	return m_cpu;
@@ -1362,15 +1380,13 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	std::string result;
 
 	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
-#if defined(__APPLE__) && defined(ARCH_ARM64)
-	// Force override triple on Apple arm64 or we'll get linking errors.
-	null_mod->setTargetTriple(llvm::Triple::normalize(utils::c_llvm_default_triple));
-#endif
+	null_mod->setTargetTriple(llvm::Triple::normalize(llvm::sys::getProcessTriple()));
+
+	std::unique_ptr<llvm::RTDyldMemoryManager> mem;
 
 	if (_link.empty())
 	{
-		std::unique_ptr<llvm::RTDyldMemoryManager> mem;
-
+		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
 		if (flags & 0x1)
 		{
 			mem = std::make_unique<MemoryManager1>();
@@ -1378,31 +1394,33 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		else
 		{
 			mem = std::make_unique<MemoryManager2>();
-			null_mod->setTargetTriple(llvm::Triple::normalize(utils::c_llvm_default_triple));
+#if defined(_WIN32) && defined(ARCH_X64)
+			null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
+#endif
 		}
+	}
+	else
+	{
+		mem = std::make_unique<MemoryManager1>();
+	}
 
-		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
+	{
 		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
 			.setErrorStr(&result)
 			.setEngineKind(llvm::EngineKind::JIT)
 			.setMCJITMemoryManager(std::move(mem))
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
 			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
+#ifdef __APPLE__
+			.setCodeModel(llvm::CodeModel::Large)
+#endif
+			.setRelocationModel(llvm::Reloc::Model::PIC_)
 			.setMCPU(m_cpu)
 			.create());
 	}
-	else
-	{
-		// Primary JIT
-		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
-			.setErrorStr(&result)
-			.setEngineKind(llvm::EngineKind::JIT)
-			.setMCJITMemoryManager(std::make_unique<MemoryManager1>())
-			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
-			.setMCPU(m_cpu)
-			.create());
 
+	if (!_link.empty())
+	{
 		for (auto&& [name, addr] : _link)
 		{
 			m_engine->updateGlobalMapping(name, addr);

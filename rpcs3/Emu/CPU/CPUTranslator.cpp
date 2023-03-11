@@ -75,6 +75,14 @@ cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
 			return result;
 		}
 	});
+
+	register_intrinsic("any_select_by_bit4", [&](llvm::CallInst* ci) -> llvm::Value*
+	{
+		const auto s = bitcast<s8[16]>(m_ir->CreateShl(bitcast<u64[2]>(ci->getOperand(0)), 3));;
+		const auto a = bitcast<u8[16]>(ci->getOperand(1));
+		const auto b = bitcast<u8[16]>(ci->getOperand(2));
+		return m_ir->CreateSelect(m_ir->CreateICmpSLT(s, llvm::ConstantAggregateZero::get(get_type<s8[16]>())), b, a);
+	});
 }
 
 void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine)
@@ -112,6 +120,8 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "broadwell" ||
 		cpu == "skylake" ||
 		cpu == "alderlake" ||
+		cpu == "raptorlake" ||
+		cpu == "meteorlake" ||
 		cpu == "bdver2" ||
 		cpu == "bdver3" ||
 		cpu == "bdver4" ||
@@ -135,7 +145,9 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 	// Test VNNI feature (TODO)
 	if (cpu == "cascadelake" ||
 		cpu == "cooperlake" ||
-		cpu == "alderlake")
+		cpu == "alderlake" ||
+		cpu == "raptorlake" ||
+		cpu == "meteorlake")
 	{
 		m_use_vnni = true;
 	}
