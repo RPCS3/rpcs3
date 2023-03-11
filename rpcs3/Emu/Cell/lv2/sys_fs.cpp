@@ -1337,9 +1337,13 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm::ptr<u64> nread)
 {
 	ppu.state += cpu_flag::wait;
-	lv2_obj::sleep(ppu);
 
 	sys_fs.warning("sys_fs_readdir(fd=%d, dir=*0x%x, nread=*0x%x)", fd, dir, nread);
+
+	if (!dir || !nread)
+	{
+		return CELL_EFAULT;
+	}
 
 	const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
 
@@ -1350,18 +1354,40 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 
 	ppu.check_state();
 
-	if (auto* info = directory->dir_read())
+	auto* info = directory->dir_read();
+
+	u64 nread_to_write = 0;
+
+	if (info)
 	{
-		dir->d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
-		dir->d_namlen = u8(std::min<usz>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
-		strcpy_trunc(dir->d_name, info->name);
-		*nread = sizeof(CellFsDirent);
+		nread_to_write = sizeof(CellFsDirent);
 	}
 	else
 	{
-		*nread = 0;
+		// It does actually write polling the last entry. Seems consistent across HDD0 and HDD1 (TODO: check more partitions)
+		info = &directory->entries.back();
+		nread_to_write = 0;
 	}
 
+	CellFsDirent dir_write{};
+
+	dir_write.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
+	dir_write.d_namlen = u8(std::min<usz>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+	strcpy_trunc(dir_write.d_name, info->name);
+
+	// TODO: Check more partitions (HDD1 is known to differ in actual filesystem implementation)
+	if (directory->mp != &g_mp_sys_dev_hdd1 && nread_to_write == 0)
+	{
+		// First 3 bytes are being set to 0 here
+		dir_write.d_type = 0;
+		dir_write.d_namlen = 0;
+		dir_write.d_name[0] = '\0';
+	}
+
+	*dir = dir_write;
+
+	// Write after dir
+	*nread = nread_to_write;
 	return CELL_OK;
 }
 
