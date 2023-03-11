@@ -1222,9 +1222,6 @@
     <CustomBuild Include="rpcs3qt\game_list_grid.h">
       <Filter>Gui\game list</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\memory_string_searcher.h">
-      <Filter>Gui\dev tools</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
