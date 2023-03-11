@@ -856,6 +856,8 @@ public:
 	void FCTID_(ppu_opcode_t op) { return FCTID(op); }
 	void FCTIDZ_(ppu_opcode_t op) { return FCTIDZ(op); }
 	void FCFID_(ppu_opcode_t op) { return FCFID(op); }
+
+	void build_interpreter();
 };
 
 #endif

@@ -115,7 +115,7 @@ namespace std
 }
 #endif
 
-#if defined(__INTELLISENSE__)
+#if defined(__INTELLISENSE__) || (defined (__clang__) && (__clang_major__ <= 16))
 #define consteval constexpr
 #define constinit
 #endif

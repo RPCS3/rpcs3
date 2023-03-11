@@ -9,7 +9,7 @@ export ASSUME_ALWAYS_YES=true
 pkg info # debug
 
 # Prefer newer Clang than in base system (see also .ci/build-freebsd.sh)
-pkg install llvm15
+pkg install llvm16
 
 # Mandatory dependencies (qt5-dbus and qt5-gui are pulled via qt5-widgets)
 pkg install git ccache cmake ninja qt5-qmake qt5-buildtools qt5-widgets qt5-concurrent qt5-multimedia qt5-svg glew openal-soft ffmpeg
