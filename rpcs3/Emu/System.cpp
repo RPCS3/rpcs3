@@ -2249,7 +2249,7 @@ void Emulator::FinalizeRunRequest()
 
 	idm::select<named_thread<spu_thread>>(on_select);
 
-	lv2_obj::awake_all();
+	lv2_obj::make_scheduler_ready();
 
 	m_state.compare_and_swap_test(system_state::starting, system_state::running);
 }

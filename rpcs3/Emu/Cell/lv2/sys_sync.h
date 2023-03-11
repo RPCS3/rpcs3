@@ -242,6 +242,8 @@ public:
 		g_to_awake.clear();
 	}
 
+	static void make_scheduler_ready();
+
 	static ppu_thread_status ppu_state(ppu_thread* ppu, bool lock_idm = true, bool lock_lv2 = true);
 
 	static inline void append(cpu_thread* const thread)

@@ -1218,7 +1218,7 @@ static std::deque<std::pair<u64, class cpu_thread*>> g_waiting;
 
 // Threads which must call lv2_obj::sleep before the scheduler starts
 static std::deque<class cpu_thread*> g_to_sleep;
-
+static atomic_t<bool> g_scheduler_ready = false;
 static atomic_t<u64> s_yield_frequency = 0;
 static atomic_t<u64> s_max_allowed_yield_tsc = 0;
 static u64 s_last_yield_tsc = 0;
@@ -1596,6 +1596,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 void lv2_obj::cleanup()
 {
 	g_ppu = nullptr;
+	g_scheduler_ready = false;
 	g_to_sleep.clear();
 	g_waiting.clear();
 	g_pending = 0;
@@ -1606,7 +1607,7 @@ void lv2_obj::schedule_all(u64 current_time)
 {
 	usz notify_later_idx = 0;
 
-	if (!g_pending && g_to_sleep.empty())
+	if (!g_pending && g_scheduler_ready)
 	{
 		auto target = +g_ppu;
 
@@ -1725,6 +1726,12 @@ void lv2_obj::schedule_all(u64 current_time)
 			}
 		}
 	}
+}
+
+void lv2_obj::make_scheduler_ready()
+{
+	g_scheduler_ready.release(true);
+	lv2_obj::awake_all();
 }
 
 ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_lv2)
