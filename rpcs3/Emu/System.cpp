@@ -2502,7 +2502,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 			CallFromMainThread([this]()
 			{
 				Resume();
-			});
+			}, nullptr, true, read_counter);
 
 			process_qt_events(); // Is nullified when performed on non-main thread
 
