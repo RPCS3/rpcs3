@@ -14,7 +14,6 @@
 #include "auto_pause_settings_dialog.h"
 #include "cg_disasm_window.h"
 #include "log_viewer.h"
-#include "memory_string_searcher.h"
 #include "memory_viewer_panel.h"
 #include "rsx_debugger.h"
 #include "about_dialog.h"
@@ -1930,7 +1929,6 @@ void main_window::EnableMenus(bool enabled) const
 	ui->toolskernel_explorerAct->setEnabled(enabled);
 	ui->toolsmemory_viewerAct->setEnabled(enabled);
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
-	ui->toolsStringSearchAct->setEnabled(enabled);
 	ui->toolsSystemCommandsAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
 	ui->actionCreate_Savestate->setEnabled(enabled);
@@ -2545,19 +2543,13 @@ void main_window::CreateConnects()
 	connect(ui->toolsmemory_viewerAct, &QAction::triggered, this, [this]
 	{
 		if (!Emu.IsStopped())
-			idm::make<memory_viewer_handle>(this);
+			idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm());
 	});
 
 	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, this, [this]
 	{
 		rsx_debugger* rsx = new rsx_debugger(m_gui_settings);
 		rsx->show();
-	});
-
-	connect(ui->toolsStringSearchAct, &QAction::triggered, this, [this]
-	{
-		if (!Emu.IsStopped())
-			idm::make<memory_searcher_handle>(this, make_basic_ppu_disasm());
 	});
 
 	connect(ui->toolsSystemCommandsAct, &QAction::triggered, this, [this]

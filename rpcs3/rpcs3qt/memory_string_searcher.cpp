@@ -1,4 +1,4 @@
-#include "memory_string_searcher.h"
+#include "memory_viewer_panel.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/CPU/CPUDisAsm.h"
@@ -26,17 +26,6 @@ LOG_CHANNEL(gui_log, "GUI");
 
 constexpr auto qstr = QString::fromStdString;
 
-enum search_mode : int
-{
-	no_mode          = 1,
-	as_string        = 2,
-	as_hex           = 4,
-	as_f64           = 8,
-	as_f32           = 16,
-	as_inst          = 32,
-	as_fake_spu_inst = 64,
-};
-
 template <>
 void fmt_class_string<search_mode>::format(std::string& out, u64 arg)
 {
@@ -45,9 +34,9 @@ void fmt_class_string<search_mode>::format(std::string& out, u64 arg)
 		out += "No search modes have been selected";
 	}
 
-	for (int modes = static_cast<int>(arg); modes; modes &= modes - 1)
+	for (u32 modes = static_cast<u32>(arg); modes; modes &= modes - 1)
 	{
-		const int mode = modes & ~(modes - 1);
+		const u32 mode = modes & ~(modes - 1);
 
 		auto mode_s = [&]() -> std::string_view
 		{
@@ -68,7 +57,7 @@ void fmt_class_string<search_mode>::format(std::string& out, u64 arg)
 			break;
 		}
 
-		if (modes != static_cast<int>(arg))
+		if (modes != static_cast<u32>(arg))
 		{
 			out += ", ";
 		}
@@ -77,125 +66,13 @@ void fmt_class_string<search_mode>::format(std::string& out, u64 arg)
 	}
 }
 
-memory_string_searcher::memory_string_searcher(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, std::string_view title)
-	: QDialog(parent)
-	, m_disasm(std::move(disasm))
+u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 {
-	if (title.empty())
+	if (m_rsx)
 	{
-		setWindowTitle(tr("Memory Searcher"));
-	}
-	else
-	{
-		setWindowTitle(tr("Memory Searcher Of %1").arg(title.data()));
+		return 0;
 	}
 
-	setObjectName("memory_string_searcher");
-	setAttribute(Qt::WA_DeleteOnClose);
-
-	// Extract memory view from the disassembler
-	std::tie(m_ptr, m_size) = m_disasm->get_memory_span();
-
-	m_addr_line = new QLineEdit(this);
-	m_addr_line->setFixedWidth(QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width());
-	m_addr_line->setPlaceholderText(tr("Search..."));
-	m_addr_line->setMaxLength(4096);
-
-	QPushButton* button_search = new QPushButton(tr("&Search"), this);
-
-	m_chkbox_case_insensitive = new QCheckBox(tr("Case Insensitive"), this);
-	m_chkbox_case_insensitive->setCheckable(true);
-	m_chkbox_case_insensitive->setToolTip(tr("When using string mode, the characters' case will not matter both in string and in memory."
-		"\nWarning: this may reduce performance of the search."));
-
-	m_cbox_input_mode = new QComboBox(this);
-	m_cbox_input_mode->addItem(tr("Select search mode(s).."), QVariant::fromValue(+no_mode));
-	m_cbox_input_mode->addItem(tr("String"), QVariant::fromValue(+as_string));
-	m_cbox_input_mode->addItem(tr("HEX bytes/integer"), QVariant::fromValue(+as_hex));
-	m_cbox_input_mode->addItem(tr("Double"), QVariant::fromValue(+as_f64));
-	m_cbox_input_mode->addItem(tr("Float"), QVariant::fromValue(+as_f32));
-	m_cbox_input_mode->addItem(tr("Instruction"), QVariant::fromValue(+as_inst));
-
-	QString tooltip = tr("String: search the memory for the specified string."
-		"\nHEX bytes/integer: search the memory for hexadecimal values. Spaces, commas, \"0x\", \"0X\", \"\\x\", \"h\", \"H\" ensure separation of bytes but they are not mandatory."
-		"\nDouble: reinterpret the string as 64-bit precision floating point value. Values are searched for exact representation, meaning -0 != 0."
-		"\nFloat: reinterpret the string as 32-bit precision floating point value. Values are searched for exact representation, meaning -0 != 0."
-		"\nInstruction: search an instruction contains the text of the string.");
-
-	if (m_size != 0x40000/*SPU_LS_SIZE*/)
-	{
-		m_cbox_input_mode->addItem("SPU Instruction", QVariant::fromValue(+as_fake_spu_inst));
-		tooltip.append(tr("\nSPU Instruction: Search an SPU instruction contains the text of the string. For searching instructions within embedded SPU images.\nTip: SPU floats are commented along forming instructions."));
-	}
-
-	connect(m_cbox_input_mode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
-	{
-		if (index < 0) return;
-
-		if ((1 << index) == no_mode)
-		{
-			m_modes = {};
-		}
-		else
-		{
-			m_modes = search_mode{m_modes | (1 << index)};
-		}
-
-		m_modes_label->setText(qstr(fmt::format("%s.", m_modes)));
-	});
-
-	m_cbox_input_mode->setToolTip(tooltip);
-
-	m_modes_label = new QLabel(qstr(fmt::format("%s.", m_modes)));
-
-	QHBoxLayout* hbox_panel = new QHBoxLayout();
-	hbox_panel->addWidget(m_addr_line);
-	hbox_panel->addWidget(m_cbox_input_mode);
-	hbox_panel->addWidget(m_chkbox_case_insensitive);
-	hbox_panel->addWidget(button_search);
-
-	QVBoxLayout* vbox_panel = new QVBoxLayout();
-	vbox_panel->addLayout(hbox_panel);
-	vbox_panel->addWidget(m_modes_label);
-
-	setLayout(vbox_panel);
-
-	connect(button_search, &QAbstractButton::clicked, this, [this]()
-	{
-		std::string wstr = m_addr_line->text().toStdString();
-
-		if (wstr.empty() || wstr.size() >= 4096u)
-		{
-			gui_log.error("String is empty or too long (size=%u)", wstr.size());
-			return;
-		}
-
-		gui_log.notice("Searching for %s (mode: %s)", wstr, m_modes);
-
-		u64 found = 0;
-
-		for (int modes = m_modes; modes; modes &= modes - 1)
-		{
-			found += OnSearch(wstr, modes & ~(modes - 1));
-		}
-
-		gui_log.success("Search completed (found %u matches)", +found);
-	});
-
-	layout()->setSizeConstraint(QLayout::SetFixedSize);
-
-	// Show by default
-	show();
-
-	// Expected to be created by IDM, emulation stop will close it
-	connect(this, &memory_string_searcher::finished, [id = idm::last_id()](int)
-	{
-		idm::remove<memory_searcher_handle>(id);
-	});
-}
-
-u64 memory_string_searcher::OnSearch(std::string wstr, int mode)
-{
 	bool case_insensitive = false;
 
 	// First characters for case insensitive search
@@ -250,7 +127,7 @@ u64 memory_string_searcher::OnSearch(std::string wstr, int mode)
 		if (const usz pos = wstr.find_first_not_of(hex_chars); pos != umax)
 		{
 			gui_log.error("String '%s' cannot be interpreted as hexadecimal byte string due to unknown character '%c'.",
-				m_addr_line->text().toStdString(), wstr[pos]);
+				m_search_line->text().toStdString(), wstr[pos]);
 			return 0;
 		}
 
