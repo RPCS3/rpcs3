@@ -3429,7 +3429,7 @@ public:
 
 			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 			{
-				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 				result.value = m_ir->CreateShuffleVector(data0, zeros, result.value);
 				return result;
@@ -3472,7 +3472,7 @@ public:
 
 			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 			{
-				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 				result.value = m_ir->CreateShuffleVector(data0, data1, result.value);
 				return result;
@@ -3512,7 +3512,7 @@ public:
 
 			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 			{
-				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 				result.value = m_ir->CreateShuffleVector(data0, data1, result.value);
 				return result;
@@ -3530,7 +3530,7 @@ public:
 		u8 mask16[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
 		// insert the second source operand into the same vector as the first source operand and expand to 256 bit width
-		shuffle.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask32), 32));
+		shuffle.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask32), 32));
 		shuffle.value = m_ir->CreateZExt(shuffle.value, get_type<u32[32]>());
 		intermediate.value = m_ir->CreateShuffleVector(data0, data1, shuffle.value);
 
@@ -3541,22 +3541,23 @@ public:
 		intermediate.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_permvar_qi_256), {intermediate.value, shuffleindex.value});
 
 		// convert the 256 bit vector back to 128 bits
-		result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask16), 16));
+		result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(&mask16), 16));
 		result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 		result.value = m_ir->CreateShuffleVector(intermediate.value, zeroes32, result.value);
 		return result;
 	}
 
+	template <typename T>
 	llvm::Value* load_const(llvm::GlobalVariable* g, llvm::Value* i)
 	{
-		return m_ir->CreateLoad(m_ir->CreateGEP(g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
+		return m_ir->CreateLoad(get_type<T>(), m_ir->CreateGEP(g->getValueType(), g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
 	}
 
 	template <typename T, typename I>
 	value_t<T> load_const(llvm::GlobalVariable* g, I i)
 	{
 		value_t<T> result;
-		result.value = load_const(g, i.eval(m_ir));
+		result.value = load_const<T>(g, i.eval(m_ir));
 		return result;
 	}
 
@@ -3635,7 +3636,7 @@ public:
 				if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 				{
 					llvm::Value* r = nullptr;
-					r = llvm::ConstantDataVector::get(ir->getContext(), llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+					r = llvm::ConstantDataVector::get(ir->getContext(), llvm::ArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 					r = ir->CreateZExt(r, llvm_value_t<u32[16]>::get_type(ir->getContext()));
 					r = ir->CreateShuffleVector(args[0], zeros, r);
 					return r;
