@@ -29,5 +29,8 @@ else()
 	add_subdirectory(curl EXCLUDE_FROM_ALL)
 
 	target_link_libraries(libcurl PRIVATE wolfssl)
+	if(MSVC)
+		target_compile_definitions(libcurl PRIVATE HAVE_SSIZE_T)
+	endif()
 
 endif()

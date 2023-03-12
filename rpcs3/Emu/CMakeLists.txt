@@ -20,11 +20,8 @@ add_library(rpcs3_emu STATIC
 )
 
 if(USE_ASAN)
-    set_source_files_properties(../../Utilities/Thread.cpp PROPERTIES COMPILE_OPTIONS -DUSE_ASAN)
+    set_source_files_properties(../../Utilities/Thread.cpp PROPERTIES COMPILE_DEFINITIONS USE_ASAN)
 endif()
-
-# prevent WolfSSL from warning about not having harden options
-add_compile_definitions(WC_NO_HARDEN)
 
 target_link_libraries(rpcs3_emu
     PRIVATE

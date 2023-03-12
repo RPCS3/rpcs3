@@ -1,6 +1,3 @@
-﻿# prevent WolfSSL from warning about not having harden options
-add_compile_definitions(WC_NO_HARDEN)
-
 add_library(rpcs3_ui STATIC
     about_dialog.cpp
     auto_pause_settings_dialog.cpp
