@@ -1,4 +1,4 @@
-add_library(rpcs3_emu
+add_library(rpcs3_emu STATIC
     cache_utils.cpp
     games_config.cpp
     IdManager.cpp
@@ -19,6 +19,10 @@ add_library(rpcs3_emu
     IPC_socket.cpp
 )
 
+if(USE_ASAN)
+    set_source_files_properties(../../Utilities/Thread.cpp PROPERTIES COMPILE_OPTIONS -DUSE_ASAN)
+endif()
+
 # prevent WolfSSL from warning about not having harden options
 add_compile_definitions(WC_NO_HARDEN)
 
@@ -36,7 +40,7 @@ target_link_libraries(rpcs3_emu
 # For stdafx.h
 target_include_directories(rpcs3_emu
     PUBLIC
-        ${RPCS3_SRC_DIR})
+        ${PROJECT_SOURCE_DIR}/rpcs3)
 
 # Utilities
 target_sources(rpcs3_emu PRIVATE
@@ -78,15 +82,27 @@ target_link_libraries(rpcs3_emu
         3rdparty::pugixml)
 
 if(MSVC)
-    set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS /GR-)
+    set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES
+        COMPILE_FLAGS /GR-
+        SKIP_PRECOMPILE_HEADERS ON
+    )
 else()
-    set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS -fno-rtti)
+    set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES
+        COMPILE_FLAGS -fno-rtti
+        SKIP_PRECOMPILE_HEADERS ON
+    )
 endif()
 
 if(MSVC)
-    set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS /EHsc)
+    set_source_files_properties("../util/yaml.cpp" PROPERTIES
+        COMPILE_FLAGS /EHsc
+        SKIP_PRECOMPILE_HEADERS ON
+    )
 else()
-    set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS -fexceptions)
+    set_source_files_properties("../util/yaml.cpp" PROPERTIES
+        COMPILE_FLAGS -fexceptions
+        SKIP_PRECOMPILE_HEADERS ON
+    )
 endif()
 
 # Crypto
@@ -139,9 +155,13 @@ if(USE_FAUDIO)
 endif()
 
 if(WIN32)
-    target_include_directories(rpcs3_emu PUBLIC "${RPCS3_SRC_DIR}/../3rdparty/XAudio2Redist/include")
-    target_link_libraries(rpcs3_emu PRIVATE "${RPCS3_SRC_DIR}/../3rdparty/XAudio2Redist/libs/xaudio2_9redist.lib")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DELAYLOAD:xaudio2_9redist.dll")
+    target_include_directories(rpcs3_emu PUBLIC "${PROJECT_SOURCE_DIR}/3rdparty/XAudio2Redist/include")
+    if(MSVC)
+        target_link_libraries(rpcs3_emu PRIVATE "${PROJECT_SOURCE_DIR}/3rdparty/XAudio2Redist/libs/xaudio2_9redist.lib")
+        target_link_options(rpcs3_emu PRIVATE /DELAYLOAD:xaudio2_9redist.dll)
+    else()
+        target_link_libraries(rpcs3_emu PRIVATE xaudio2_8)
+    endif()
     target_sources(rpcs3_emu PRIVATE
         Audio/XAudio2/XAudio2Backend.cpp
         Audio/XAudio2/xaudio2_enumerator.cpp
@@ -366,7 +386,10 @@ target_sources(rpcs3_emu PRIVATE
 )
 
 if(NOT MSVC)
-    set_source_files_properties(Cell/PPUTranslator.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
+    set_source_files_properties(Cell/PPUTranslator.cpp PROPERTIES
+        COMPILE_FLAGS -fno-rtti
+        SKIP_PRECOMPILE_HEADERS ON
+    )
 endif()
 
 target_link_libraries(rpcs3_emu
@@ -576,23 +599,12 @@ target_link_libraries(rpcs3_emu
 
 if(APPLE)
     check_function_exists(clock_gettime HAVE_CLOCK_GETTIME)
-    if (${HAVE_CLOCK_GETTIME})
+    if (HAVE_CLOCK_GETTIME)
         target_compile_definitions(rpcs3_emu PUBLIC -DHAVE_CLOCK_GETTIME)
     endif()
 endif()
 
 
 if(USE_PRECOMPILED_HEADERS)
-    if(COMMAND target_precompile_headers)
-        target_precompile_headers(rpcs3_emu PRIVATE "${RPCS3_SRC_DIR}/stdafx.h")
-    else()
-        # Setup cotire
-        option(UNITY_BUILD_EMU "Use unity build for rpcs3_emu target" OFF)
-
-        set_target_properties(rpcs3_emu PROPERTIES
-            COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
-            COTIRE_ADD_UNITY_BUILD ${UNITY_BUILD_EMU})
-
-        cotire(rpcs3_emu)
-    endif()
+    target_precompile_headers(rpcs3_emu PRIVATE "${PROJECT_SOURCE_DIR}/rpcs3/stdafx.h")
 endif()

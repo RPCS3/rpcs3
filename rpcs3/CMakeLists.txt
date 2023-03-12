@@ -1,9 +1,4 @@
-﻿
-if(USE_PRECOMPILED_HEADERS AND NOT COMMAND target_precompile_headers)
-    include(cotire)
-endif()
-
-# Define GNU standard installation directories
+﻿# Define GNU standard installation directories
 include(GNUInstallDirs)
 
 # Generate git-version.h at build time.
@@ -16,10 +11,10 @@ include(CheckFunctionExists)
 set(CMAKE_CXX_STANDARD 20)
 
 set(ADDITIONAL_LIBS "")
-if(CMAKE_SYSTEM MATCHES "Linux")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     #on some Linux distros shm_unlink and similar functions are in librt only
     set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "rt")
-elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
+elseif(NOT WIN32 AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
     #it seems like glibc includes the iconv functions we use but other libc
     #implementations like the one on OSX don't seem implement them
     set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
@@ -34,13 +29,6 @@ if(UNIX AND NOT APPLE)
     endif()
 endif()
 
-if(NOT RPCS3_SRC_DIR)
-    set(RPCS3_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
-    message("-- Initializing RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
-else()
-    message("-- Using Custom RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
-endif()
-
 # Qt5
 # finds Qt libraries and setups custom commands for MOC and UIC
 # Must be done here because generated MOC and UIC targets cant
@@ -51,7 +39,21 @@ include(${CMAKE_SOURCE_DIR}/3rdparty/qt5.cmake)
 add_subdirectory(Emu)
 add_subdirectory(rpcs3qt)
 
-set(RPCS3_SRC
+if(WIN32)
+    add_executable(rpcs3 WIN32)
+    target_sources(rpcs3 PRIVATE rpcs3.rc)
+elseif(APPLE)
+    add_executable(rpcs3 MACOSX_BUNDLE)
+    target_sources(rpcs3 PRIVATE rpcs3.icns)
+    set_target_properties(rpcs3
+        PROPERTIES
+            MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.plist.in")
+else()
+    add_executable(rpcs3)
+endif()
+
+target_sources(rpcs3
+    PRIVATE
     display_sleep_control.cpp
     headless_application.cpp
     main.cpp
@@ -75,36 +77,20 @@ set(RPCS3_SRC
     Input/xinput_pad_handler.cpp
 )
 
-if(WIN32)
-    add_executable(rpcs3 WIN32 ${RPCS3_SRC})
-elseif(APPLE)
-    add_executable(rpcs3 MACOSX_BUNDLE ${RPCS3_SRC} "${RPCS3_SRC_DIR}/rpcs3.icns")
-    set_target_properties(rpcs3
-        PROPERTIES
-            MACOSX_BUNDLE_INFO_PLIST "${RPCS3_SRC_DIR}/rpcs3.plist.in")
-else()
-    add_executable(rpcs3 ${RPCS3_SRC})
-endif()
-
-gen_git_version(${RPCS3_SRC_DIR})
+gen_git_version(${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(rpcs3
     PROPERTIES
         AUTOMOC ON
         AUTOUIC ON)
 
-target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui)
-target_link_libraries(rpcs3 3rdparty::discordRPC 3rdparty::qt5 3rdparty::hidapi 3rdparty::libusb 3rdparty::wolfssl 3rdparty::libcurl)
-target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
-
-# Win resource file
-if(WIN32)
-    target_sources(rpcs3 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.rc")
-endif()
+target_link_libraries(rpcs3 PRIVATE rpcs3_emu rpcs3_ui)
+target_link_libraries(rpcs3 PRIVATE 3rdparty::discordRPC 3rdparty::qt5 3rdparty::hidapi 3rdparty::libusb 3rdparty::wolfssl 3rdparty::libcurl 3rdparty::zlib)
+target_link_libraries(rpcs3 PRIVATE ${ADDITIONAL_LIBS})
 
 # Unix display manager
 if(X11_FOUND)
     target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
-    target_link_libraries(rpcs3 ${X11_LIBRARIES})
+    target_link_libraries(rpcs3 PRIVATE ${X11_LIBRARIES})
 elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE)
     # Wayland has been checked in 3rdparty/CMakeLists.txt already.
     message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
@@ -113,30 +99,26 @@ endif()
 if(UNIX)
     set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
     find_package(Threads REQUIRED)
-    target_link_libraries(rpcs3 Threads::Threads)
+    target_link_libraries(rpcs3 PRIVATE Threads::Threads)
 endif()
 
 if(WIN32)
-    target_link_libraries(rpcs3 ws2_32.lib Iphlpapi.lib Winmm.lib Psapi.lib gdi32.lib setupapi.lib)
+    target_link_libraries(rpcs3 PRIVATE ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi pdh)
 else()
-    target_link_libraries(rpcs3 ${CMAKE_DL_LIBS})
+    target_link_libraries(rpcs3 PRIVATE ${CMAKE_DL_LIBS})
 endif()
 
 if(USE_PRECOMPILED_HEADERS)
-    if(COMMAND target_precompile_headers)
-        target_precompile_headers(rpcs3 PRIVATE "${RPCS3_SRC_DIR}/stdafx.h")
-    else()
-        set_target_properties(rpcs3 PROPERTIES
-            COTIRE_CXX_PREFIX_HEADER_INIT "${RPCS3_SRC_DIR}/stdafx.h"
-            COTIRE_ADD_UNITY_BUILD OFF)
-
-        cotire(rpcs3)
-    endif()
+    target_precompile_headers(rpcs3 PRIVATE stdafx.h)
 endif()
 
 get_target_property(_qmake_executable Qt5::qmake IMPORTED_LOCATION)
 get_filename_component(_qt_bin_dir "${_qmake_executable}" DIRECTORY)
-find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS "${_qt_bin_dir}")
+if(APPLE)
+    find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS "${_qt_bin_dir}")
+elseif(WIN32)
+    find_program(WINDEPLOYQT_EXECUTABLE windeployqt HINTS "${_qt_bin_dir}")
+endif()
 
 # Copy icons to executable directory
 if(APPLE)
@@ -147,7 +129,7 @@ if(APPLE)
     endif()
     add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy
-            ${RPCS3_SRC_DIR}/rpcs3.icns $<TARGET_FILE_DIR:rpcs3>/../Resources/rpcs3.icns
+            ${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.icns $<TARGET_FILE_DIR:rpcs3>/../Resources/rpcs3.icns
             COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/../Resources/Icons
             COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -183,18 +165,18 @@ elseif(WIN32)
     # share/cmake/Qt5/ for Qt5_Dir
 
     # If Qt5 is installed from official Qt installer
-    list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../bin/")
+    # list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../bin/")
 
     # If Qt5 is installed from vcpkg
-    list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5$<$<CONFIG:Debug>:/debug>/bin/")
+    # list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5$<$<CONFIG:Debug>:/debug>/bin/")
 
     add_custom_command(TARGET rpcs3 POST_BUILD
-        COMMAND set PATH=${_QT5_TOOLS_PATHS}$<SEMICOLON>%PATH%
+        # COMMAND set PATH=${_QT5_TOOLS_PATHS}$<SEMICOLON>%PATH%
         COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
         # If Qt5 is installed from vcpkg, add binary path to PATH
         # otherwise windeployqt tool won't be able to locate necessary dlls
-        COMMAND set PATH=${Qt5_DIR}/../../../$<$<CONFIG:Debug>:debug/>bin/$<SEMICOLON>%PATH%
-        COMMAND "${_WINDEPLOYQT}" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" $<$<CONFIG:Debug>:--debug> $<$<CONFIG:Release>:--release> "$<TARGET_FILE:rpcs3>")
+        # COMMAND set PATH=${Qt5_DIR}/../../../$<$<CONFIG:Debug>:debug/>bin/$<SEMICOLON>%PATH% 
+        COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" --verbose 0 "$<TARGET_FILE:rpcs3>")
 endif()
 
 # Unix installation

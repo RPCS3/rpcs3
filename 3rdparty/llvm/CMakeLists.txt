@@ -1,6 +1,6 @@
 if(WITH_LLVM)
-	CHECK_CXX_COMPILER_FLAG("-msse -msse2 -mcx16" COMPILER_X86)
-	CHECK_CXX_COMPILER_FLAG("-march=armv8-a+lse" COMPILER_ARM)
+	check_cxx_compiler_flag("-msse -msse2 -mcx16" COMPILER_X86)
+	check_cxx_compiler_flag("-march=armv8-a+lse" COMPILER_ARM)
 
 	if(BUILD_LLVM)
 		message(STATUS "LLVM will be built from the submodule.")
@@ -14,28 +14,26 @@ if(WITH_LLVM)
 		option(LLVM_INCLUDE_TESTS OFF)
 		option(LLVM_INCLUDE_TOOLS OFF)
 		option(LLVM_INCLUDE_UTILS OFF)
-		option(LLVM_CCACHE_BUILD ON)
+		# we globally enable ccache
+		set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 
 		if(WIN32)
 			set(LLVM_USE_INTEL_JITEVENTS ON)
 		endif()
 
-		if(CMAKE_SYSTEM MATCHES "Linux")
+		if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 			set(LLVM_USE_INTEL_JITEVENTS ON)
 			set(LLVM_USE_PERF ON)
 		endif()
 
-		set(CXX_FLAGS_OLD ${CMAKE_CXX_FLAGS})
-
 		if (MSVC)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS")
+			add_compile_definitions("$<$<COMPILE_LANGUAGE:CXX>:_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS>")
 		endif()
 
 		# LLVM needs to be built out-of-tree
-		add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/llvm/llvm/llvm ${CMAKE_BINARY_DIR}/3rdparty/llvm/llvm_build EXCLUDE_FROM_ALL)
-		set(LLVM_DIR "${CMAKE_BINARY_DIR}/3rdparty/llvm/llvm_build/lib/cmake/llvm/")
+		add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/llvm/llvm ${CMAKE_CURRENT_BINARY_DIR}/llvm_build EXCLUDE_FROM_ALL)
+		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/llvm_build/lib/cmake/llvm/")
 
-		set(CMAKE_CXX_FLAGS ${CXX_FLAGS_OLD})
 		set(STATIC_LINK_LLVM ON CACHE BOOL "Link against LLVM statically. This will get set to ON if you build LLVM from the submodule." FORCE)
 
 		# now tries to find LLVM again
@@ -72,11 +70,11 @@ if(WITH_LLVM)
 				set(LLVM_TARGETS_TO_BUILD "X86" CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 			endif()
 		endif()
-		if(WIN32 OR CMAKE_SYSTEM MATCHES "Linux")
-			set (LLVM_ADDITIONAL_LIBS ${LLVM_ADDITIONAL_LIBS} IntelJITEvents)
+		if((WIN32 AND BUILD_LLVM) OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+			list (APPEND LLVM_ADDITIONAL_LIBS IntelJITEvents)
 		endif()
-		if(CMAKE_SYSTEM MATCHES "Linux")
-			set (LLVM_ADDITIONAL_LIBS ${LLVM_ADDITIONAL_LIBS} PerfJITEvents)
+		if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+			list (APPEND LLVM_ADDITIONAL_LIBS PerfJITEvents)
 		endif()
 		llvm_map_components_to_libnames(LLVM_LIBS
 			${LLVM_TARGETS_TO_BUILD}
@@ -92,7 +90,7 @@ if(WITH_LLVM)
 	add_library(3rdparty_llvm INTERFACE)
 	target_link_libraries(3rdparty_llvm INTERFACE ${LLVM_LIBS})
 	target_include_directories(3rdparty_llvm INTERFACE ${LLVM_INCLUDE_DIRS})
-	target_compile_definitions(3rdparty_llvm INTERFACE ${LLVM_DEFINITIONS} -DLLVM_AVAILABLE)
+	target_compile_definitions(3rdparty_llvm INTERFACE ${LLVM_DEFINITIONS} LLVM_AVAILABLE)
 
 	add_library(3rdparty::llvm ALIAS 3rdparty_llvm)
 else()
