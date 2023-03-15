@@ -123,10 +123,13 @@ namespace np
 
 		void queue_basic_event(basic_event to_queue);
 		bool send_basic_event(s32 event, s32 retCode, u32 reqId);
-		error_code get_basic_event(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size);
+		error_code get_basic_event(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<u8> data, vm::ptr<u32> size);
 
 		// Messages-related functions
 		std::optional<std::shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
+		void set_message_selected(SceNpBasicAttachmentDataId id, u64 msg_id);
+		std::optional<std::shared_ptr<std::pair<std::string, message_data>>> get_message_selected(SceNpBasicAttachmentDataId id);
+		void clear_message_selected(SceNpBasicAttachmentDataId id);
 
 		// Those should probably be under match2 ctx
 		vm::ptr<SceNpMatching2RoomEventCallback> room_event_cb{}; // Room events
@@ -327,6 +330,10 @@ namespace np
 		// Cache related
 		std::optional<SceNpMatching2SessionPassword> cached_cj_password;
 		cache_manager np_cache;
+
+		// Messages related
+		std::optional<u64> selected_invite_id{};
+		std::optional<u64> selected_message_id{};
 
 		// Requests(reqEventKey : data)
 		shared_mutex mutex_match2_req_results;

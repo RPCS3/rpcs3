@@ -1057,7 +1057,7 @@ struct SceNpManagerCacheParam
 // Message attachment data
 struct SceNpBasicAttachmentData
 {
-	be_t<u32> id; // SceNpBasicAttachmentDataId
+	be_t<SceNpBasicAttachmentDataId> id;
 	be_t<u32> size;
 };
 
@@ -1068,7 +1068,7 @@ struct SceNpBasicExtendedAttachmentData
 	be_t<u64> msgId;
 	SceNpBasicAttachmentData data;
 	be_t<u32> userAction;
-	b8 markedAsUsed;
+	u8 markedAsUsed;
 	u8 reserved[3];
 };
 
