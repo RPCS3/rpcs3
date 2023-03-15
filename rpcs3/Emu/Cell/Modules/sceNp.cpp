@@ -5300,7 +5300,10 @@ error_code sceNpSignalingGetConnectionStatus(u32 ctx_id, u32 conn_id, vm::ptr<s3
 	const auto si = sigh.get_sig_infos(conn_id);
 
 	if (!si)
+	{
+		*conn_status = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
 		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+	}
 
 	*conn_status = si->conn_status;
 
