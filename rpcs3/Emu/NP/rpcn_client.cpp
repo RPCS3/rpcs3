@@ -2151,6 +2151,10 @@ namespace rpcn
 	{
 		{
 			std::lock_guard lock(mutex_messages);
+
+			if (!messages.contains(id))
+				return std::nullopt;
+
 			return ::at32(messages, id);
 		}
 	}
@@ -2194,7 +2198,7 @@ namespace rpcn
 		}
 	}
 
-	void rpcn_client::discard_active_message(u64 id)
+	void rpcn_client::mark_message_used(u64 id)
 	{
 		std::lock_guard lock(mutex_messages);
 

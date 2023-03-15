@@ -75,7 +75,7 @@ bool recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpBasicMe
 
 		if (!preserve)
 		{
-			m_rpcn->discard_active_message(chosen_msg_id);
+			m_rpcn->mark_message_used(chosen_msg_id);
 		}
 
 		m_dialog->close();
@@ -85,6 +85,8 @@ bool recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpBasicMe
 		{ accept_or_deny(SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT); });
     connect(btn_deny, &QAbstractButton::clicked, this, [&accept_or_deny]()
 		{ accept_or_deny(SCE_NP_BASIC_MESSAGE_ACTION_DENY); });
+    connect(btn_cancel, &QAbstractButton::clicked, this, [m_dialog=this->m_dialog]()
+		{ m_dialog->close(); });
 	connect(this, &recvmessage_dialog_frame::signal_new_message, this, &recvmessage_dialog_frame::slot_new_message);
 
 	// Get list of messages
