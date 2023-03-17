@@ -21,17 +21,21 @@ bool TRPLoader::Install(std::string_view dest, bool /*show*/)
 
 	fs::g_tls_error = {};
 
-	const std::string& local_path = vfs::get(dest);
+	const std::string local_path = vfs::get(dest);
 
-	const auto temp = fmt::format(u8"%s.＄temp＄%u", local_path, utils::get_unique_tsc());
+	const std::string temp = fmt::format(u8"%s.＄temp＄%u", local_path, utils::get_unique_tsc());
 
 	if (!fs::create_dir(temp))
 	{
+		trp_log.error("Failed to create temp dir: '%s' (error=%s)", temp, fs::g_tls_error);
 		return false;
 	}
 
 	// Save TROPUSR.DAT
-	fs::copy_file(local_path + "/TROPUSR.DAT", temp + "/TROPUSR.DAT", false);
+	if (!fs::copy_file(local_path + "/TROPUSR.DAT", temp + "/TROPUSR.DAT", false))
+	{
+		trp_log.error("Failed to copy TROPUSR.DAT from '%s' to '%s' (error=%s)", local_path, temp, fs::g_tls_error);
+	}
 
 	std::vector<char> buffer(65536);
 
@@ -47,9 +51,11 @@ bool TRPLoader::Install(std::string_view dest, bool /*show*/)
 		}
 
 		// Create the file in the temporary directory
-		success = fs::write_file<true>(temp + '/' + vfs::escape(entry.name), fs::create + fs::excl, buffer);
+		const std::string filename = temp + '/' + vfs::escape(entry.name);
+		success = fs::write_file<true>(filename, fs::create + fs::excl, buffer);
 		if (!success)
 		{
+			trp_log.error("Failed to write file '%s' (error=%s)", filename, fs::g_tls_error);
 			break;
 		}
 	}
@@ -62,6 +68,14 @@ bool TRPLoader::Install(std::string_view dest, bool /*show*/)
 		{
 			// Atomically create trophy data (overwrite existing data)
 			success = fs::rename(temp, local_path, false);
+			if (!success)
+			{
+				trp_log.error("Failed to move directory '%s' to '%s' (error=%s)", temp, local_path, fs::g_tls_error);
+			}
+		}
+		else
+		{
+			trp_log.error("Failed to remove directory '%s' (error=%s)", local_path, fs::g_tls_error);
 		}
 	}
 
