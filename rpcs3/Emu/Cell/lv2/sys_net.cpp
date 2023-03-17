@@ -334,22 +334,7 @@ void lv2_socket::save(utils::serial& ar, bool save_only_this_class)
 
 void sys_net_dump_data(std::string_view desc, const u8* data, s32 len)
 {
-	if (sys_net_dump.trace)
-	{
-		auto data_dump     = fmt::format("%s:\n", desc);
-		const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-		for (s32 index = 0; index < len; index++)
-		{
-			if ((index % 16) == 0)
-				data_dump += '\n';
-
-			data_dump += hex[(data[index] >> 4) & 15];
-			data_dump += hex[(data[index]) & 15];
-			data_dump += ' ';
-		}
-		sys_net.trace("%s", data_dump);
-	}
+	sys_net_dump.trace("%s:%s", desc, fmt::buf_to_hexstring(data, len));
 }
 
 error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
