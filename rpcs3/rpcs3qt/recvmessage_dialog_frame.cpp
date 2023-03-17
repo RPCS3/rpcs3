@@ -83,9 +83,9 @@ bool recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpBasicMe
 
 	connect(btn_accept, &QAbstractButton::clicked, this, [&accept_or_deny]()
 		{ accept_or_deny(SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT); });
-    connect(btn_deny, &QAbstractButton::clicked, this, [&accept_or_deny]()
+	connect(btn_deny, &QAbstractButton::clicked, this, [&accept_or_deny]()
 		{ accept_or_deny(SCE_NP_BASIC_MESSAGE_ACTION_DENY); });
-    connect(btn_cancel, &QAbstractButton::clicked, this, [m_dialog=this->m_dialog]()
+	connect(btn_cancel, &QAbstractButton::clicked, this, [this]()
 		{ m_dialog->close(); });
 	connect(this, &recvmessage_dialog_frame::signal_new_message, this, &recvmessage_dialog_frame::slot_new_message);
 

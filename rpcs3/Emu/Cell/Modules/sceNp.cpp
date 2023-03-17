@@ -986,25 +986,7 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 		msg_data.data.assign(msg->data.get_ptr(), msg->data.get_ptr() + msg->size);
 	}
 
-	if (sceNp.trace)
-	{
-		std::string datrace;
-		const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-		const u8* buf = msg->data.get_ptr();
-
-		for (u32 index = 0; index < msg->size; index++)
-		{
-			if ((index % 16) == 0)
-				datrace += '\n';
-
-			datrace += hex[(buf[index] >> 4) & 15];
-			datrace += hex[(buf[index]) & 15];
-			datrace += ' ';
-		}
-
-		sceNp.trace("Message Data: %s", datrace);
-	}
+	sceNp.trace("Message Data:\n%s", fmt::buf_to_hexstring(msg->data.get_ptr(), msg->size));
 
 	bool result = false;
 
@@ -1103,7 +1085,7 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 	return CELL_OK;
 }
 
-error_code sceNpBasicRecvMessageAttachmentLoad(ppu_thread& ppu, SceNpBasicAttachmentDataId id, vm::ptr<void> buffer, vm::ptr<u32> size)
+error_code sceNpBasicRecvMessageAttachmentLoad(SceNpBasicAttachmentDataId id, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
 	sceNp.warning("sceNpBasicRecvMessageAttachmentLoad(id=%d, buffer=*0x%x, size=*0x%x)", id, buffer, size);
 
@@ -1135,6 +1117,7 @@ error_code sceNpBasicRecvMessageAttachmentLoad(ppu_thread& ppu, SceNpBasicAttach
 		return SCE_NP_BASIC_ERROR_INVALID_DATA_ID;
 	}
 
+	// Not sure about this
 	// nph.clear_message_selected(id);
 
 	const auto msg_pair = opt_msg.value();
@@ -1144,24 +1127,7 @@ error_code sceNpBasicRecvMessageAttachmentLoad(ppu_thread& ppu, SceNpBasicAttach
 	const u32 size_to_copy = std::min(static_cast<u32>(msg.data.size()), orig_size);
 	memcpy(buffer.get_ptr(), msg.data.data(), size_to_copy);
 
-	if (sceNp.trace)
-	{
-		std::string datrace;
-		const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-		const u8* buf = static_cast<u8*>(buffer.get_ptr());
-		for (u32 index = 0; index < size_to_copy; index++)
-		{
-			if ((index % 16) == 0)
-				datrace += '\n';
-
-			datrace += hex[(buf[index] >> 4) & 15];
-			datrace += hex[(buf[index]) & 15];
-			datrace += ' ';
-		}
-
-		sceNp.trace("Message Data received: %s", datrace);
-	}
+	sceNp.trace("Message Data received:\n%s", fmt::buf_to_hexstring(static_cast<u8*>(buffer.get_ptr()), size_to_copy));
 
 	*size = size_to_copy;
 	if (size_to_copy < msg.data.size())
@@ -1236,6 +1202,7 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 
 	nph.set_message_selected(att_data->data.id, chosen_msg_id);
 
+	// Is this sent if used from home menu but not from sceNpBasicRecvMessageCustom, not sure
 	// sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0);
 
 	nph.queue_basic_event(to_add);
