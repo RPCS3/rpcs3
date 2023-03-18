@@ -106,7 +106,7 @@ public:
 	}
 
 	// Find and remove the object from the linked list
-	template <typename T>
+	template <bool ModifyNode = true, typename T>
 	static T* unqueue(T*& first, T* object, T* T::* mem_ptr = &T::next_cpu)
 	{
 		auto it = +first;
@@ -114,7 +114,12 @@ public:
 		if (it == object)
 		{
 			atomic_storage<T*>::release(first, it->*mem_ptr);
-			atomic_storage<T*>::release(it->*mem_ptr, nullptr);
+
+			if constexpr (ModifyNode)
+			{
+				atomic_storage<T*>::release(it->*mem_ptr, nullptr);
+			}
+
 			return it;
 		}
 
@@ -125,7 +130,12 @@ public:
 			if (next == object)
 			{
 				atomic_storage<T*>::release(it->*mem_ptr, next->*mem_ptr);
-				atomic_storage<T*>::release(next->*mem_ptr, nullptr);
+
+				if constexpr (ModifyNode)
+				{
+					atomic_storage<T*>::release(next->*mem_ptr, nullptr);
+				}
+
 				return next;
 			}
 
@@ -137,7 +147,7 @@ public:
 
 	// Remove an object from the linked set according to the protocol
 	template <typename E, typename T>
-	static E* schedule(T& first, u32 protocol)
+	static E* schedule(T& first, u32 protocol, bool modify_node = true)
 	{
 		auto it = static_cast<E*>(first);
 
@@ -161,7 +171,7 @@ public:
 					continue;
 				}
 
-				if (it && cpu_flag::again - it->state)
+				if (cpu_flag::again - it->state)
 				{
 					atomic_storage<T>::release(*parent_found, nullptr);
 				}
@@ -199,7 +209,11 @@ public:
 		if (cpu_flag::again - found->state)
 		{
 			atomic_storage<T>::release(*parent_found, found->next_cpu);
-			atomic_storage<T>::release(found->next_cpu, nullptr);
+
+			if (modify_node)
+			{
+				atomic_storage<T>::release(found->next_cpu, nullptr);
+			}
 		}
 
 		return found;

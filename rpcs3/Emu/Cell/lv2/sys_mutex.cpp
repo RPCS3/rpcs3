@@ -245,12 +245,38 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 				std::lock_guard lock(mutex->mutex);
 
-				if (!mutex->unqueue(mutex->control.raw().sq, &ppu))
+				bool success = false;
+
+				mutex->control.fetch_op([&](lv2_mutex::control_data_t& data)
 				{
-					break;
+					success = false;
+
+					ppu_thread* sq = static_cast<ppu_thread*>(data.sq);
+
+					const bool retval = &ppu == sq;
+
+					if (!mutex->unqueue<false>(sq, &ppu))
+					{
+						return false;
+					}
+
+					success = true;
+
+					if (!retval)
+					{
+						return false;
+					}
+
+					data.sq = sq;
+					return true;
+				});
+
+				if (success)
+				{
+					ppu.next_cpu = nullptr;
+					ppu.gpr[3] = CELL_ETIMEDOUT;
 				}
 
-				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
 		}
