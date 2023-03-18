@@ -207,6 +207,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 {
 	auto result = &g_mp_sys_no_device; // Default fallback
 	const auto mp_name = get_device_path(filename);
+	std::string path_fix;
 
 	if (filename.starts_with('/'))
 	{
@@ -222,13 +223,16 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 					if (fmt::format("%s%03d", mp_root, i) == mp_name)
 					{
 						result = mp;
+						path_fix = filename.substr(mp_name.size() + 1); // Also remove leading '/'
 						break;
 					}
 				}
+				break;
 			}
-			else if (mp_root == mp_name)
+			if (mp_root == mp_name)
 			{
 				result = mp;
+				path_fix = filename.substr(mp_name.size() + 1); // Also remove leading '/'
 				break;
 			}
 		}
@@ -258,6 +262,9 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 			*vfs_path = g_cfg_vfs.get_dev_flash3();
 		else
 			*vfs_path = {};
+
+		if (!vfs_path->empty())
+			vfs_path->append(path_fix);
 	}
 
 	return result;
@@ -265,6 +272,10 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 
 std::string lv2_fs_object::device_name_to_path(std::string_view device_name)
 {
+	constexpr std::string_view cell_fs_path = "CELL_FS_PATH:";
+	if (device_name.starts_with(cell_fs_path))
+		return std::string(device_name.substr(cell_fs_path.size()));
+
 	auto alias_check = [&](lv2_fs_mount_point* mp)
 	{
 		if (mp == &g_mp_sys_dev_hdd0 && device_name == "CELL_FS_IOS:PATA0_HDD_DRIVE"sv)
@@ -288,13 +299,11 @@ std::string lv2_fs_object::device_name_to_path(std::string_view device_name)
 					return fmt::format("%s%03d", mp->root, i);
 				}
 			}
+			break;
 		}
-		else
+		if (mp->device == device_name || alias_check(mp))
 		{
-			if (mp->device == device_name || alias_check(mp))
-			{
-				return std::string(mp->root);
-			}
+			return std::string(mp->root);
 		}
 	}
 
@@ -321,10 +330,7 @@ bool lv2_fs_object::vfs_unmount(std::string_view vpath)
 		}
 	}
 
-	if (!vfs::unmount(vpath))
-		return false;
-
-	return true;
+	return vfs::unmount(vpath);
 }
 
 lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
