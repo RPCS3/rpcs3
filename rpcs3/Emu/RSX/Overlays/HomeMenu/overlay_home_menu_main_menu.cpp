@@ -5,6 +5,7 @@
 
 extern atomic_t<bool> g_user_asked_for_recording;
 extern atomic_t<bool> g_user_asked_for_screenshot;
+extern bool boot_last_savestate(bool testing);
 
 namespace rsx
 {
@@ -38,6 +39,46 @@ namespace rsx
 				g_user_asked_for_screenshot = true;
 				return page_navigation::exit;
 			});
+
+			const bool suspend_mode = g_cfg.savestate.suspend_emu.get();
+
+			std::unique_ptr<overlay_element> save_state = std::make_unique<home_menu_entry>(get_localized_string(suspend_mode ? localized_string_id::HOME_MENU_SAVESTATE_AND_EXIT : localized_string_id::HOME_MENU_SAVESTATE));
+			add_item(save_state, [suspend_mode](pad_button btn) -> page_navigation
+			{
+				if (btn != pad_button::cross) return page_navigation::stay;
+
+				rsx_log.notice("User selected savestate in home menu");
+
+				Emu.CallFromMainThread([suspend_mode]()
+				{
+					Emu.Kill(false, true);
+
+					if (!suspend_mode)
+					{
+						Emu.Restart();
+					}
+				});
+
+				return page_navigation::exit;
+			});
+
+			if (!suspend_mode && boot_last_savestate(true))
+			{
+				std::unique_ptr<overlay_element> reload_state = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RELOAD_SAVESTATE));
+				add_item(reload_state, [](pad_button btn) -> page_navigation
+				{
+					if (btn != pad_button::cross) return page_navigation::stay;
+
+					rsx_log.notice("User selected reload savestate in home menu");
+
+					Emu.CallFromMainThread([]()
+					{
+						boot_last_savestate(false);
+					});
+
+					return page_navigation::exit;
+				});
+			}
 
 			std::unique_ptr<overlay_element> recording = std::make_unique<home_menu_entry>(get_localized_string(localized_string_id::HOME_MENU_RECORDING));
 			add_item(recording, [](pad_button btn) -> page_navigation

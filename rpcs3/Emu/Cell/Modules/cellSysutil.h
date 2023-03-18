@@ -317,6 +317,14 @@ struct CellSysCacheParam
 	vm::bptr<void> reserved;
 };
 
+template <u32 BaseEvent>
+struct SysutilEventStatus
+{
+	atomic_t<bool> active = false;
+};
+
+using SysutilMenuOpenStatus = SysutilEventStatus<CELL_SYSUTIL_SYSTEM_MENU_OPEN>;
+
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&&);
 extern s32 sysutil_send_system_cmd(u64 status, u64 param);
 s32 sysutil_check_name_string(const char* src, s32 minlen, s32 maxlen);

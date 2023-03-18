@@ -372,8 +372,8 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 				return;
 			}
 
-			extern bool boot_last_savestate();
-			boot_last_savestate();
+			extern bool boot_last_savestate(bool testing);
+			boot_last_savestate(false);
 		}
 		break;
 	}
