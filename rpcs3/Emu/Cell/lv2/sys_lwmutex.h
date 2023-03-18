@@ -152,21 +152,15 @@ struct lv2_lwmutex final : lv2_obj
 	template <typename T>
 	T* reown(bool unlock2 = false)
 	{
-		T* res{};
-		T* restore_next{};
+		T* res = nullptr;
 
 		lv2_control.fetch_op([&](control_data_t& data)
 		{
-			if (res)
-			{
-				res->next_cpu = restore_next;
-				res = nullptr;
-			}
+			res = nullptr;
 
 			if (auto sq = static_cast<T*>(data.sq))
 			{
-				restore_next = sq->next_cpu;
-				res = schedule<T>(data.sq, protocol);
+				res = schedule<T>(data.sq, protocol, false);
 
 				if (sq == data.sq)
 				{
@@ -181,6 +175,12 @@ struct lv2_lwmutex final : lv2_obj
 				return true;
 			}
 		});
+
+		if (res && cpu_flag::again - res->state)
+		{
+			// Detach manually (fetch_op can fail, so avoid side-effects on the first node in this case)
+			res->next_cpu = nullptr;
+		}
 
 		return res;
 	}
