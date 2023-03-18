@@ -790,7 +790,7 @@ namespace np
 		queue_basic_events.push(std::move(to_queue));
 	}
 
-	error_code np_handler::get_basic_event(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
+	error_code np_handler::get_basic_event(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<u8> data, vm::ptr<u32> size)
 	{
 		basic_event cur_event;
 		{
@@ -817,12 +817,63 @@ namespace np
 			return SCE_NP_BASIC_ERROR_DATA_LOST;
 		}
 
+		nph_log.notice("basic_event: event:%d, from:%s(%s), size:%d", *event, static_cast<char*>(from->userId.handle.data), static_cast<char*>(from->name.data), *size);
+
 		return CELL_OK;
 	}
 
 	std::optional<std::shared_ptr<std::pair<std::string, message_data>>> np_handler::get_message(u64 id)
 	{
 		return get_rpcn()->get_message(id);
+	}
+
+	void np_handler::set_message_selected(SceNpBasicAttachmentDataId id, u64 msg_id)
+	{
+		switch (id)
+		{
+		case SCE_NP_BASIC_SELECTED_INVITATION_DATA:
+			selected_invite_id = msg_id;
+			break;
+		case SCE_NP_BASIC_SELECTED_MESSAGE_DATA:
+			selected_message_id = msg_id;
+			break;
+		default:
+			fmt::throw_exception("set_message_selected with id %d", id);
+		}
+	}
+
+	std::optional<std::shared_ptr<std::pair<std::string, message_data>>> np_handler::get_message_selected(SceNpBasicAttachmentDataId id)
+	{
+		switch (id)
+		{
+		case SCE_NP_BASIC_SELECTED_INVITATION_DATA:
+			if (!selected_invite_id)
+				return std::nullopt;
+
+			return get_message(*selected_invite_id);
+		case SCE_NP_BASIC_SELECTED_MESSAGE_DATA:
+			if (!selected_message_id)
+				return std::nullopt;
+
+			return get_message(*selected_message_id);
+		default:
+			fmt::throw_exception("get_message_selected with id %d", id);
+		}
+	}
+
+	void np_handler::clear_message_selected(SceNpBasicAttachmentDataId id)
+	{
+		switch (id)
+		{
+		case SCE_NP_BASIC_SELECTED_INVITATION_DATA:
+			selected_invite_id = std::nullopt;
+			break;
+		case SCE_NP_BASIC_SELECTED_MESSAGE_DATA:
+			selected_message_id = std::nullopt;
+			break;
+		default:
+			fmt::throw_exception("clear_message_selected with id %d", id);
+		}
 	}
 
 	void np_handler::operator()()

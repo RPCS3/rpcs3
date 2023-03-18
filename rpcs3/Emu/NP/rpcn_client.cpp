@@ -496,14 +496,13 @@ namespace rpcn
 			{
 				if (wolfSSL_want_read(read_wssl))
 				{
-					// If we received partially what we want try to wait longer
-					if (n_recv == 0)
-						return recvn_result::recvn_nodata;
-
 					pollfd poll_fd{};
 
 					while ((poll_fd.revents & POLLIN) != POLLIN && (poll_fd.revents & POLLRDNORM) != POLLRDNORM)
 					{
+						if (!connected)
+							return recvn_result::recvn_noconn;
+
 						if (terminate)
 							return recvn_result::recvn_terminate;
 
@@ -523,8 +522,12 @@ namespace rpcn
 						}
 
 						num_timeouts++;
+
 						if (num_timeouts > (RPCN_TIMEOUT / RPCN_TIMEOUT_INTERVAL))
 						{
+							if (n_recv == 0)
+								return recvn_result::recvn_nodata;
+
 							rpcn_log.error("recvn timeout with %d bytes received", n_recv);
 							return recvn_result::recvn_timeout;
 						}
@@ -545,6 +548,12 @@ namespace rpcn
 
 				res = 0;
 			}
+			else
+			{
+				// Reset timeout each time something is received
+				num_timeouts = 0;
+			}
+
 			n_recv += res;
 		}
 
@@ -2142,6 +2151,10 @@ namespace rpcn
 	{
 		{
 			std::lock_guard lock(mutex_messages);
+
+			if (!messages.contains(id))
+				return std::nullopt;
+
 			return ::at32(messages, id);
 		}
 	}
@@ -2185,7 +2198,7 @@ namespace rpcn
 		}
 	}
 
-	void rpcn_client::discard_active_message(u64 id)
+	void rpcn_client::mark_message_used(u64 id)
 	{
 		std::lock_guard lock(mutex_messages);
 
