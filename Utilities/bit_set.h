@@ -42,6 +42,8 @@ public:
 	// Underlying type
 	using under = std::underlying_type_t<T>;
 
+	ENABLE_BITWISE_SERIALIZATION;
+
 private:
 	// Underlying value
 	under m_data;
@@ -49,7 +51,7 @@ private:
 	friend class atomic_bs_t<T>;
 
 	// Value constructor
-	constexpr explicit bs_t(int, under data)
+	constexpr explicit bs_t(int, under data) noexcept
 		: m_data(data)
 	{
 	}
@@ -71,19 +73,19 @@ public:
 	bs_t() = default;
 
 	// Construct from a single bit
-	constexpr bs_t(T bit)
+	constexpr bs_t(T bit) noexcept
 		: m_data(shift(bit))
 	{
 	}
 
 	// Test for empty bitset
-	constexpr explicit operator bool() const
+	constexpr explicit operator bool() const noexcept
 	{
 		return m_data != 0;
 	}
 
 	// Extract underlying data
-	constexpr explicit operator under() const
+	constexpr explicit operator under() const noexcept
 	{
 		return m_data;
 	}
@@ -138,7 +140,7 @@ public:
 		return bs_t(0, lhs.m_data ^ rhs.m_data);
 	}
 
-	constexpr bool operator ==(bs_t rhs) const
+	constexpr bool operator ==(bs_t rhs) const noexcept
 	{
 		return m_data == rhs.m_data;
 	}

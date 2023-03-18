@@ -174,7 +174,7 @@ std::vector<std::pair<u16, u16>> read_used_savestate_versions()
 	return used_serial;
 }
 
-bool boot_last_savestate()
+bool boot_last_savestate(bool testing)
 {
 	if (!g_cfg.savestate.suspend_emu && !Emu.GetTitleID().empty() && (Emu.IsRunning() || Emu.GetStatus() == system_state::paused))
 	{
@@ -203,7 +203,15 @@ bool boot_last_savestate()
 			}
 		}
 
-		if (fs::is_file(savestate_path))
+		const bool result = fs::is_file(savestate_path);
+
+		if (testing)
+		{
+			sys_log.trace("boot_last_savestate(true) returned %s.", result);
+			return result;
+		}
+
+		if (result)
 		{
 			sys_log.success("Booting the most recent savestate \'%s\' using the Reload shortcut.", savestate_path);
 			Emu.GracefulShutdown(false);

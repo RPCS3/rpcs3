@@ -22,6 +22,7 @@
 #include "Emu/Cell/lv2/sys_overlay.h"
 #include "Emu/Cell/lv2/sys_spu.h"
 #include "Emu/Cell/Modules/cellGame.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
@@ -83,6 +84,8 @@ extern bool ppu_load_rel_exec(const ppu_rel_object&);
 extern bool is_savestate_version_compatible(const std::vector<std::pair<u16, u16>>& data, bool is_boot_check);
 extern std::vector<std::pair<u16, u16>> read_used_savestate_versions();
 std::string get_savestate_path(std::string_view title_id, std::string_view boot_path);
+
+extern void send_close_home_menu_cmds();
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -206,7 +209,12 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 	if (ar)
 	{
 		Emu.ExecDeserializationRemnants();
-		ar->pos += 32; // Reserved area
+
+		auto flags = (*ar)(Emu.m_savestate_extension_flags1);
+
+		const usz advance = (Emu.m_savestate_extension_flags1 & Emulator::SaveStateExtentionFlags1::SupportsMenuOpenResume ? 32 : 31);
+
+		ar->pos += advance; // Reserved area
 	}
 }
 
@@ -888,6 +896,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 
 		m_state_inspection_savestate = g_cfg.savestate.state_inspection_mode.get();
+		m_savestate_extension_flags1 = {};
 
 		bool resolve_path_as_vfs_path = false;
 
@@ -2248,11 +2257,29 @@ void Emulator::FinalizeRunRequest()
 		spu.state.notify_one(cpu_flag::stop);
 	};
 
+	if (m_savestate_extension_flags1 & SaveStateExtentionFlags1::ShouldCloseMenu)
+	{
+		g_fxo->get<SysutilMenuOpenStatus>().active = true;
+	}
+
 	idm::select<named_thread<spu_thread>>(on_select);
 
 	lv2_obj::make_scheduler_ready();
 
 	m_state.compare_and_swap_test(system_state::starting, system_state::running);
+
+	if (m_savestate_extension_flags1 & SaveStateExtentionFlags1::ShouldCloseMenu)
+	{
+		std::thread([this, info = ProcureCurrentEmulationCourseInformation()]()
+		{
+			std::this_thread::sleep_for(2s);
+
+			CallFromMainThread([this]()
+			{
+				send_close_home_menu_cmds();
+			}, info);
+		}).detach();
+	}
 }
 
 bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
@@ -2579,6 +2606,7 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 		m_config_path.clear();
 		m_config_mode = cfg_mode::custom;
 		read_used_savestate_versions();
+		m_savestate_extension_flags1 = {};
 		return to_ar;
 	}
 
@@ -2755,6 +2783,16 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 			ar(std::array<u8, 32>{}); // Reserved for future use
 			vm::save(ar);
 			g_fxo->save(ar);
+
+			bs_t<SaveStateExtentionFlags1> extension_flags{SaveStateExtentionFlags1::SupportsMenuOpenResume};
+
+			if (g_fxo->get<SysutilMenuOpenStatus>().active)
+			{
+				extension_flags += SaveStateExtentionFlags1::ShouldCloseMenu;
+			}
+
+			ar(extension_flags);
+
 			ar(std::array<u8, 32>{}); // Reserved for future use
 			ar(timestamp);
 		});
@@ -2874,6 +2912,7 @@ std::shared_ptr<utils::serial> Emulator::Kill(bool allow_autoexit, bool savestat
 	m_config_mode = cfg_mode::custom;
 	m_ar.reset();
 	read_used_savestate_versions();
+	m_savestate_extension_flags1 = {};
 
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
