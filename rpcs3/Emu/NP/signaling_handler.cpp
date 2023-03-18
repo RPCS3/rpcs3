@@ -610,10 +610,14 @@ void signaling_handler::stop_sig_nl(u32 conn_id)
 	if (!sig_peers.contains(conn_id))
 		return;
 
+	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
+
+	// Do not queue packets for an already dead connection
+	if (si->conn_status == SCE_NP_SIGNALING_CONN_STATUS_INACTIVE)
+		return;
+
 	auto& sent_packet = sig_packet;
 	sent_packet.command = signal_finished;
-
-	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
 	queue_signaling_packet(sent_packet, std::move(si), steady_clock::now() + REPEAT_FINISHED_DELAY);
