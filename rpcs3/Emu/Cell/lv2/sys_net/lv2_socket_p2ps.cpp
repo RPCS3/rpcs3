@@ -382,7 +382,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 	}
 
 	// Only valid packet
-	if (tcp_header->flags == p2ps_tcp_flags::SYN && backlog.size() < max_backlog)
+	if (tcp_header->flags == p2ps_tcp_flags::SYN)
 	{
 		if (backlog.size() >= max_backlog)
 		{
@@ -394,6 +394,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 			send_hdr.flags    = p2ps_tcp_flags::RST;
 			auto packet       = generate_u2s_packet(send_hdr, nullptr, 0);
 			send_u2s_packet(std::move(packet), reinterpret_cast<::sockaddr_in*>(op_addr), 0, false);
+			return true;
 		}
 
 		// Yes, new connection and a backlog is available, create a new lv2_socket for it and send SYN|ACK
@@ -449,17 +450,6 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 				events.store({});
 			}
 		}
-	}
-	else if (tcp_header->flags == p2ps_tcp_flags::SYN)
-	{
-		// Send a RST packet on backlog full
-		sys_net.trace("[P2PS] Backlog was full, sent a RST packet");
-		p2ps_encapsulated_tcp send_hdr;
-		send_hdr.src_port = tcp_header->dst_port;
-		send_hdr.dst_port = tcp_header->src_port;
-		send_hdr.flags    = p2ps_tcp_flags::RST;
-		auto packet       = generate_u2s_packet(send_hdr, nullptr, 0);
-		send_u2s_packet(std::move(packet), reinterpret_cast<::sockaddr_in*>(op_addr), 0, false);
 	}
 
 	// Ignore other packets?

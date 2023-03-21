@@ -131,7 +131,7 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ 0x11d               , "0x11d"       },
 		{ 0x11e               , "0x11e"       },
 		{ 0x11f               , "0x11f"       },
-		{ BTN_JOYSTICK        , "Joystick"    },
+		//{ BTN_JOYSTICK        , "Joystick"    }, same as BTN_TRIGGER
 		{ BTN_TRIGGER         , "Trigger"     },
 		{ BTN_THUMB           , "Thumb"       },
 		{ BTN_THUMB2          , "Thumb 2"     },
