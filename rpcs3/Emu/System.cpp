@@ -3357,7 +3357,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	// Save config atomically
 	fs::pending_file temp(config_name);
 	temp.file.write(settings.c_str(), settings.size());
-	if (!temp.commit())
+	if (!temp.file || !temp.commit())
 	{
 		sys_log.error("Could not save config to %s (error=%s)", config_name, fs::g_tls_error);
 	}
