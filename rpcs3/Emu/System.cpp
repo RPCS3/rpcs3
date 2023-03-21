@@ -3358,7 +3358,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	fs::pending_file temp(config_name);
 	if (!temp.file)
 	{
-		sys_log.error("Could not save config to %s (failed to create temporay file) (error=%s)", config_name, fs::g_tls_error);
+		sys_log.error("Could not save config to %s (failed to create temporary file) (error=%s)", config_name, fs::g_tls_error);
 	}
 	else
 	{
