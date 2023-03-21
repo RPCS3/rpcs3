@@ -3356,10 +3356,17 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 
 	// Save config atomically
 	fs::pending_file temp(config_name);
-	temp.file.write(settings.c_str(), settings.size());
-	if (!temp.file || !temp.commit())
+	if (!temp.file)
 	{
-		sys_log.error("Could not save config to %s (error=%s)", config_name, fs::g_tls_error);
+		sys_log.error("Could not save config to %s (failed to create temporay file) (error=%s)", config_name, fs::g_tls_error);
+	}
+	else
+	{
+		temp.file.write(settings.c_str(), settings.size());
+		if (!temp.commit())
+		{
+			sys_log.error("Could not save config to %s (failed to commit) (error=%s)", config_name, fs::g_tls_error);
+		}
 	}
 
 	// Check if the running config/title is the same as the edited config/title.
