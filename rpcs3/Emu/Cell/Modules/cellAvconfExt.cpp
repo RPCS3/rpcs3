@@ -149,7 +149,7 @@ std::optional<CellAudioInDeviceInfo> avconf_manager::get_device_info(vm::cptr<ch
 {
 	for (const CellAudioInDeviceInfo& device : devices)
 	{
-		if (strncmp(device.name, name.get_ptr(), 64) == 0)
+		if (strncmp(device.name, name.get_ptr(), sizeof(device.name)) == 0)
 		{
 			return device;
 		}
@@ -399,7 +399,7 @@ error_code cellAudioInRegisterDevice(u64 deviceType, vm::cptr<char> name, vm::pt
 	const std::lock_guard lock(av_manager.mutex);
 
 	std::optional<CellAudioInDeviceInfo> info = av_manager.get_device_info(name);
-	if (!info || !memchr(info->name, '\0', 64))
+	if (!info || !memchr(info->name, '\0', sizeof(info->name)))
 	{
 		// TODO
 		return CELL_AUDIO_IN_ERROR_DEVICE_NOT_FOUND;
