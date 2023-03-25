@@ -54,8 +54,8 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	transfer->expected_count  = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
 	// Interrupt transfers are slow(6ms, TODO accurate measurement)
-	// But make the emulated guitar go as fast as possible for better input behavior
-	transfer->expected_time = get_timestamp();
+	// But make the emulated guitar reply in 1ms for better input behavior
+	transfer->expected_time = get_timestamp() + 1'000;
 
 	memset(buf, 0, buf_size);
 
