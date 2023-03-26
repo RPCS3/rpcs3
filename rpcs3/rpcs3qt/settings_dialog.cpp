@@ -12,6 +12,7 @@
 #include <QScreen>
 #include <QUrl>
 
+#include "Emu/system_config_types.h"
 #include "gui_settings.h"
 #include "display_sleep_control.h"
 #include "qt_utils.h"
@@ -629,6 +630,21 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->outputScalingMode, emu_settings_type::OutputScalingMode);
 	SubscribeTooltip(ui->outputScalingMode, tooltips.settings.output_scaling_mode);
 
+	//3D
+	m_emu_settings->EnhanceCheckBox(ui->Enable3D, emu_settings_type::Enable3D);
+	SubscribeTooltip(ui->Enable3D, tooltips.settings.enable_3d);
+	const auto on_stereo = [this](bool checked)
+	{
+		ui->stereo_render_mode->setEnabled(checked);
+	};
+	connect(ui->Enable3D, &QCheckBox::toggled, this, on_stereo);
+
+	m_emu_settings->EnhanceComboBox(ui->stereo_render_mode, emu_settings_type::StereoRenderMode);
+	SubscribeTooltip(ui->stereo_render_mode, tooltips.settings.stereo_render_mode);
+	ui->stereo_render_mode->addItem(tr("Anaglyph"), static_cast<int>(stereo_render_mode_options::anaglyph));
+	ui->stereo_render_mode->addItem(tr("Side-by-Side"), static_cast<int>(stereo_render_mode_options::side_by_side));
+	ui->stereo_render_mode->addItem(tr("Over-Under"), static_cast<int>(stereo_render_mode_options::over_under));
+
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
 	SubscribeTooltip(ui->dumpColor, tooltips.settings.dump_color);
@@ -814,6 +830,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			ui->antiAliasing->blockSignals(false);
 
 			ui->graphicsAdapterBox->clear();
+
+			ui->stereo_render_mode->clear();
 
 			// Fill combobox with placeholder if no adapters needed
 			if (!renderer.has_adapters)
@@ -2206,9 +2224,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->strictTextureFlushing, emu_settings_type::StrictTextureFlushing);
 	SubscribeTooltip(ui->strictTextureFlushing, tooltips.settings.strict_texture_flushing);
-
-	m_emu_settings->EnhanceCheckBox(ui->Enable3D, emu_settings_type::Enable3D);
-	SubscribeTooltip(ui->Enable3D, tooltips.settings.enable_3d);
 
 	m_emu_settings->EnhanceCheckBox(ui->gpuTextureScaling, emu_settings_type::GPUTextureScaling);
 	SubscribeTooltip(ui->gpuTextureScaling, tooltips.settings.gpu_texture_scaling);

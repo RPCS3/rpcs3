@@ -560,6 +560,43 @@
              </widget>
             </item>
             <item>
+             <widget class="QWidget" name="widget_gpu_4" native="true">
+              <layout class="QHBoxLayout" name="widget_gpu_3_layout" stretch="1,1">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+               <item>
+                <widget class="QGroupBox" name="gb_3dMode">
+                 <property name="title">
+                  <string>3D</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="gb_3dMode_layout">
+                 <item>
+                <widget class="QCheckBox" name="Enable3D">
+                 <property name="text">
+                  <string>Enable 3D</string>
+                 </property>
+                </widget>
+               </item>
+                  <item>
+                   <widget class="QComboBox" name="stereo_render_mode"/>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <spacer name="gpu_tab_layout_right_spacer">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -969,13 +1006,7 @@
                  </property>
                 </widget>
                </item>
-               <item>
-                <widget class="QCheckBox" name="Enable3D">
-                 <property name="text">
-                  <string>Enable 3D</string>
-                 </property>
-                </widget>
-               </item>
+               
                <item>
                 <widget class="QCheckBox" name="disableVertexCache">
                  <property name="text">
