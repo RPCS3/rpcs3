@@ -690,8 +690,8 @@ namespace vk
 		{
 			// GTX970 workaround/hack
 			// The driver reports a full working 4GB of memory which is incorrect.
-			// Limit to ~3GB to allow vma to avoid running over the headroom of 0.5G.
-			memory_map.device_local_total_bytes = 3072 * 0x100000;
+			// Limit to ~2.5GB to allow vma to avoid running over the headroom of 0.5G.
+			memory_map.device_local_total_bytes = 2560 * 0x100000;
 		}
 	}
 
