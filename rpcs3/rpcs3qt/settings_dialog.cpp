@@ -635,15 +635,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->Enable3D, tooltips.settings.enable_3d);
 	const auto on_stereo = [this](bool checked)
 	{
-		ui->stereo_render_mode->setEnabled(checked);
+		ui->stereoRenderMode->setEnabled(checked);
 	};
 	connect(ui->Enable3D, &QCheckBox::toggled, this, on_stereo);
 
-	m_emu_settings->EnhanceComboBox(ui->stereo_render_mode, emu_settings_type::StereoRenderMode);
-	SubscribeTooltip(ui->stereo_render_mode, tooltips.settings.stereo_render_mode);
-	ui->stereo_render_mode->addItem(tr("Anaglyph"), static_cast<int>(stereo_render_mode_options::anaglyph));
-	ui->stereo_render_mode->addItem(tr("Side-by-Side"), static_cast<int>(stereo_render_mode_options::side_by_side));
-	ui->stereo_render_mode->addItem(tr("Over-Under"), static_cast<int>(stereo_render_mode_options::over_under));
+	m_emu_settings->EnhanceComboBox(ui->stereoRenderMode, emu_settings_type::StereoRenderMode);
+	SubscribeTooltip(ui->stereoRenderMode, tooltips.settings.stereo_render_mode);
 
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
@@ -830,8 +827,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			ui->antiAliasing->blockSignals(false);
 
 			ui->graphicsAdapterBox->clear();
-
-			ui->stereo_render_mode->clear();
 
 			// Fill combobox with placeholder if no adapters needed
 			if (!renderer.has_adapters)

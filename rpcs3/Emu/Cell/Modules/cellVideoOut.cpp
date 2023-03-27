@@ -191,7 +191,7 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 	auto& conf = g_fxo->get<rsx::avconf>();
 	conf.resolution_id = config->resolutionId;
 	conf._3d = config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING;
-	conf.stereo_mode = 1;
+	conf.stereo_mode = static_cast<u8>(g_cfg.video.stereo_render_mode.get());
 	conf.aspect = config->aspect;
 	conf.format = config->format;
 	conf.scanline_pitch = config->pitch;

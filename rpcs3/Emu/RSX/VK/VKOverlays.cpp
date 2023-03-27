@@ -913,7 +913,9 @@ namespace vk
 			"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
 			"   if(stereo_display_method == 0)\n" //anaglyph
 			"	  {\n"
-			"     final = vec4(1.,1.,1.,1.);\n"
+			"		  left = texture(fs0, coord_left);\n"
+			"		  right = texture(fs0, coord_right);\n"
+			"	    final =  vec4(left.r, right.g, right.b, 1.);\n"
 			"	  }\n"
 			"   else if(stereo_display_method == 1)\n" //SBS
 			"	  {\n"
@@ -927,11 +929,17 @@ namespace vk
 			"	  }\n"
 			"   else if(stereo_display_method == 2)\n" //over-under
 			"	  {\n"
-			"     final = vec4(1.,0.,0.,1.);\n"
+			"     coord_left.y *= 2.f;\n"
+			"     coord_right.y *= 2.f;\n"
+			"     coord_right.y -= 1;\n"
+			"		  left = texture(fs0, coord_left);\n"
+			"		  right = texture(fs0, coord_right);\n"
+			"     if(tc0.y > 0.5) final = vec4(right.r, right.g, right.b, 1.);\n"
+			"                else final = vec4(left.r,  left.g,  left.b,  1.);\n"
 			"	  }\n"
 			"   else\n" //undefined behavior
 			"	  {\n"
-			"     final = vec4(0.,0.,stereo_display_method / 255.,1.);\n"
+			"     final = vec4(0.,0.,0.,1.);\n"
 			"	  }\n"
 
 			"	}\n"
