@@ -988,7 +988,6 @@
                  </property>
                 </widget>
                </item>
-
                <item>
                 <widget class="QCheckBox" name="disableVertexCache">
                  <property name="text">

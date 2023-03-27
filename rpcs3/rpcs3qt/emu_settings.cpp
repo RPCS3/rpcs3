@@ -1270,7 +1270,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::StereoRenderMode:
 		switch (static_cast<stereo_render_mode_options>(index))
 		{
-		case stereo_render_mode_options::anaglyph: return tr("Anaglyph", "3D");
+		case stereo_render_mode_options::anaglyph: return tr("Anaglyph", "3D Display Mode");
 		case stereo_render_mode_options::side_by_side: return tr("Side-by-side", "3D Display Mode");
 		case stereo_render_mode_options::over_under: return tr("Over-under", "3D Display Mode");
 		}

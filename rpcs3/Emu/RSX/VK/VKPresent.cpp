@@ -460,9 +460,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		//commented out because I don't see a point in doing this, however others may
+		//commented out because it squishes the framebuffer and breaks 3D modes entirely somehow
 		//const u32 video_frame_height = (!avconfig._3d? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
-		//buffer_width = std::max(buffer_width, video_frame_width);
+		//buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		//buffer_height = std::min(buffer_height, video_frame_height);
 	}
 	else
@@ -656,7 +656,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src,
 				avconfig.gamma, !use_full_rgb_range_output, avconfig._3d, avconfig.stereo_mode, single_target_pass);
 
-	
 			direct_fbo->release();
 		}
 		else
