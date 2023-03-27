@@ -471,16 +471,48 @@ namespace gl
 			"uniform int limit_range;\n"
 			"uniform int stereo;\n"
 			"uniform int stereo_image_count;\n"
+			"uniform int stereo_display_method;\n"
 			"\n"
 			"vec4 read_source()\n"
 			"{\n"
 			"	if (stereo == 0) return texture(fs0, tc0);\n"
 			"\n"
-			"	vec4 left, right;\n"
+			"	vec4 left, right, final;\n"
 			"	if (stereo_image_count == 2)\n"
 			"	{\n"
-			"		left = texture(fs0, tc0);\n"
-			"		right = texture(fs1, tc0);\n"
+			"   vec2 coord_left = tc0 * vec2(1.f, 0.4898f);\n"
+			"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
+			"   if(stereo_display_method == 0)\n" //anaglyph
+			"	  {\n"
+			"		  left = texture(fs0, coord_left);\n"
+			"		  right = texture(fs0, coord_right);\n"
+			"	    final =  vec4(left.r, right.g, right.b, 1.);\n"
+			"	  }\n"
+			"   else if(stereo_display_method == 1)\n" //SBS
+			"	  {\n"
+			"     coord_left.x *= 2.f;\n"
+			"     coord_right.x *= 2.f;\n"
+			"     coord_right.x -= 1;\n"
+			"		  left = texture(fs0, coord_left);\n"
+			"		  right = texture(fs0, coord_right);\n"
+			"     if(tc0.x >= 0.5) final = vec4(right.r, right.g, right.b, 1.);\n"
+			"                else final = vec4(left.r,  left.g,  left.b,  1.);\n"
+			"	  }\n"
+			"   else if(stereo_display_method == 2)\n" //over-under
+			"	  {\n"
+			"     coord_left.y *= 2.f;\n"
+			"     coord_right.y *= 2.f;\n"
+			"     coord_right.y -= 1;\n"
+			"		  left = texture(fs0, coord_left);\n"
+			"		  right = texture(fs0, coord_right);\n"
+			
+			"     if(tc0.y <= 0.5) final = vec4(right.r, right.g, right.b, 1.);\n"
+			"                 else final = vec4(left.r,  left.g,  left.b,  1.);\n"
+			"	  }\n"
+			"   else\n" //undefined behavior
+			"	  {\n"
+			"     final = vec4(0.,0.,0.,1.);\n"
+			"	  }\n"
 			"	}\n"
 			"	else\n"
 			"	{\n"
@@ -488,9 +520,10 @@ namespace gl
 			"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
 			"		left = texture(fs0, coord_left);\n"
 			"		right = texture(fs0, coord_right);\n"
+			"   final = vec4(left.r, right.g, right.b, 1.);\n"
 			"	}\n"
 			"\n"
-			"	return vec4(left.r, right.g, right.b, 1.);\n"
+			"	return vec4(final.xyz, 1.);\n"
 			"}\n"
 			"\n"
 			"void main()\n"
@@ -506,7 +539,7 @@ namespace gl
 		m_input_filter = gl::filter::linear;
 	}
 
-	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d, gl::filter input_filter)
+	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d, u8 stereo_mode, gl::filter input_filter)
 	{
 		if (m_input_filter != input_filter)
 		{
@@ -518,6 +551,7 @@ namespace gl
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
 		program_handle.uniforms["stereo"] = _3d + 0;
 		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
+		program_handle.uniforms["stereo_display_method"] = stereo_mode;
 
 		saved_sampler_state saved(31, m_sampler);
 		cmd->bind_texture(31, GL_TEXTURE_2D, source[0]);

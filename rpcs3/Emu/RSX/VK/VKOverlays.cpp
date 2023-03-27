@@ -934,7 +934,7 @@ namespace vk
 			"     coord_right.y -= 1;\n"
 			"		  left = texture(fs0, coord_left);\n"
 			"		  right = texture(fs0, coord_right);\n"
-			"     if(tc0.y > 0.5) final = vec4(right.r, right.g, right.b, 1.);\n"
+			"     if(tc0.y >= 0.5) final = vec4(right.r, right.g, right.b, 1.);\n"
 			"                else final = vec4(left.r,  left.g,  left.b,  1.);\n"
 			"	  }\n"
 			"   else\n" //undefined behavior

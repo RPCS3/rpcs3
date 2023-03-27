@@ -286,7 +286,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			const rsx::simple_array<GLuint> images{ image_to_flip, image_to_flip2 };
 
 			gl::screen.bind();
-			m_video_output_pass.run(cmd, areau(aspect_ratio), images, gamma, limited_range, avconfig._3d, filter);
+			m_video_output_pass.run(cmd, areau(aspect_ratio), images, gamma, limited_range, avconfig._3d, avconfig.stereo_mode, filter);
 		}
 	}
 
