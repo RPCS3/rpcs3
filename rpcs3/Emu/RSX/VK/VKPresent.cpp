@@ -460,10 +460,10 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		//commented out because it squishes the framebuffer and breaks 3D modes entirely somehow
-		//const u32 video_frame_height = (!avconfig._3d? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
-		//buffer_width = std::min(buffer_width, avconfig.resolution_x);
-		//buffer_height = std::min(buffer_height, video_frame_height);
+		//gonna come back to this once i settle on how to handle this with modes, it makes sense for anaglyph but not SBS or over-under
+		const u32 video_frame_height = (avconfig.stereo_mode == stereo_render_mode_options::anaglyph? (avconfig.resolution_y - 30) / 2 : avconfig.resolution_y);
+		buffer_width = std::min(buffer_width, avconfig.resolution_x);
+		buffer_height = std::min(buffer_height, video_frame_height);
 	}
 	else
 	{
