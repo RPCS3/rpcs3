@@ -169,18 +169,21 @@ void mic_context::load_config_and_init()
 
 u32 mic_context::register_device(const std::string& device_name)
 {
-	usz index = 0;
+	usz index = mic_list.size();
 	for (usz i = 0; i < mic_list.size(); i++)
 	{
 		microphone_device& device = ::at32(mic_list, i);
 		if (!device.is_registered())
 		{
-			index = i;
+			if (index == mic_list.size())
+			{
+				index = i;
+			}
 		}
 		else if (device_name == device.get_device_name())
 		{
 			// TODO: what happens if the device is registered twice?
-			return ::narrow<u32>(index);
+			return ::narrow<u32>(i);
 		}
 	}
 
