@@ -639,6 +639,7 @@ void fmt_class_string<stereo_render_mode_options>::format(std::string& out, u64 
 		{
 			switch (value)
 			{
+			case stereo_render_mode_options::disabled: return "Disabled";
 			case stereo_render_mode_options::anaglyph: return "Anaglyph";
 			case stereo_render_mode_options::side_by_side: return "Side-by-Side";
 			case stereo_render_mode_options::over_under: return "Over-Under";

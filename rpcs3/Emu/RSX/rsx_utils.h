@@ -153,8 +153,7 @@ namespace rsx
 
 	struct avconf
 	{
-		bool _3d  = false;         // Stereo 3D off
-		u8 stereo_mode = 1;        // Stereo 3D display mode
+		stereo_render_mode_options stereo_mode = stereo_render_mode_options::disabled;        // Stereo 3D display mode
 		u8 format = 0;             // XRGB
 		u8 aspect = 0;             // AUTO
 		u8 resolution_id = 2;      // 720p

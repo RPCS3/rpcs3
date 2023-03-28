@@ -630,14 +630,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->outputScalingMode, tooltips.settings.output_scaling_mode);
 
 	// 3D
-	m_emu_settings->EnhanceCheckBox(ui->Enable3D, emu_settings_type::Enable3D);
-	SubscribeTooltip(ui->Enable3D, tooltips.settings.enable_3d);
-	const auto on_stereo = [this](bool checked)
-	{
-		ui->stereoRenderMode->setEnabled(checked);
-	};
-	connect(ui->Enable3D, &QCheckBox::toggled, this, on_stereo);
-
 	m_emu_settings->EnhanceComboBox(ui->stereoRenderMode, emu_settings_type::StereoRenderMode);
 	SubscribeTooltip(ui->stereoRenderMode, tooltips.settings.stereo_render_mode);
 

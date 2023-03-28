@@ -897,27 +897,26 @@ namespace vk
       "{\n"
       "	float gamma;\n"
       "	int limit_range;\n"
-      "	int stereo;\n"
+      "	int stereo_display_mode;\n"
       "	int stereo_image_count;\n"
-      "	int stereo_display_method;\n"
       "};\n"
       "\n"
       "vec4 read_source()\n"
       "{\n"
-      "	if (stereo == 0) return texture(fs0, tc0);\n"
+      "	if (stereo_display_mode == 0) return texture(fs0, tc0);\n"
       "\n"
       "	vec4 left, right;\n"
       "	if (stereo_image_count == 2)\n"
       "	{\n"
       "		vec2 coord_left = tc0 * vec2(1.f, 0.4898f);\n"
       "		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
-      "		if(stereo_display_method == 0)\n" // anaglyph
+      "		if(stereo_display_mode == 1)\n" // anaglyph
       "		{\n"
       "			left = texture(fs0, coord_left);\n"
       "			right = texture(fs0, coord_right);\n"
       "			return vec4(left.r, right.g, right.b, 1.);\n"
       "		}\n"
-      "		else if(stereo_display_method == 1)\n" // SBS
+      "		else if(stereo_display_mode == 2)\n" // SBS
       "		{\n"
       "			coord_left.x *= 2.f;\n"
       "			coord_right.x *= 2.f;\n"
@@ -927,7 +926,7 @@ namespace vk
       "			if(tc0.x > 0.5) return vec4(right.r, right.g, right.b, 1.);\n"
       "			           else return vec4(left.r,  left.g,  left.b,  1.);\n"
       "		}\n"
-      "		else if(stereo_display_method == 2)\n" // over-under
+      "		else if(stereo_display_mode == 3)\n" // over-under
       "		{\n"
       "			coord_left.y *= 2.f;\n"
       "			coord_right.y *= 2.f;\n"
@@ -982,17 +981,16 @@ namespace vk
 
 	void video_out_calibration_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
 	{
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 20, config.data);
+		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, config.data);
 	}
 
 	void video_out_calibration_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,
-		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, bool _3d, u8 stereo_mode, VkRenderPass render_pass)
+		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, VkRenderPass render_pass)
 	{
 		config.gamma = gamma;
 		config.limit_range = limited_rgb? 1 : 0;
-		config.stereo = _3d? 1 : 0;
+		config.stereo_display_mode = static_cast<u8>(stereo_mode);
 		config.stereo_image_count = std::min(::size32(src), 2u);
-		config.stereo_display_method = stereo_mode;
 
 		std::vector<vk::image_view*> views;
 		views.reserve(2);
