@@ -82,6 +82,11 @@ namespace vk
 			return s_AMD_family_tree.find(device_id);
 		}
 
+		if (vendor_id == 0x106B)
+		{
+			return chip_class::MVK_apple;
+		}
+
 		return chip_class::unknown;
 	}
 
