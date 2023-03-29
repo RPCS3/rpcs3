@@ -96,7 +96,7 @@ void mic_context::operator()()
 		{
 			std::lock_guard lock(mutex);
 
-			if (mic_list.empty())
+			if (std::none_of(mic_list.begin(), mic_list.end(), [](const microphone_device& dev) { return dev.is_registered(); }))
 			{
 				return false;
 			}
