@@ -389,12 +389,15 @@ public:
 
 	u32 key_count = 0;
 	u8 event_period = 0;
+	std::array<u64, MAX_AUDIO_EVENT_QUEUES> event_sources{};
+	std::array<u64, MAX_AUDIO_EVENT_QUEUES> event_data3{};
 
 	struct key_info
 	{
 		u8 start_period = 0; // Starting event_period
 		u32 flags = 0; // iFlags
 		u64 source = 0; // Event source
+		u64 ack_timestamp = 0; // timestamp of last call of cellAudioSendAck
 		std::shared_ptr<lv2_event_queue> port{}; // Underlying event port
 	};
 
