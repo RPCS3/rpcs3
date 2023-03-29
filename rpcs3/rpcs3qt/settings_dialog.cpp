@@ -631,7 +631,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// 3D
 	m_emu_settings->EnhanceComboBox(ui->stereoRenderMode, emu_settings_type::StereoRenderMode);
-	SubscribeTooltip(ui->stereoRenderMode, tooltips.settings.stereo_render_mode);
+	SubscribeTooltip(ui->gb_stereo, tooltips.settings.stereo_render_mode);
 
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
