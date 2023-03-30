@@ -288,6 +288,11 @@ error_code cellPhotoExportInitialize2(u32 version, vm::ptr<CellPhotoExportUtilFi
 		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
 	}
 
+	if (!funcFinish)
+	{
+		return CELL_PHOTO_EXPORT_UTIL_ERROR_PARAM;
+	}
+
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		funcFinish(ppu, CELL_OK, userdata);
@@ -454,7 +459,7 @@ error_code cellPhotoExportFromFileWithCopy(vm::cptr<char> srcHddDir, vm::cptr<ch
 
 error_code cellPhotoExportProgress(vm::ptr<CellPhotoExportUtilFinishCallback> funcFinish, vm::ptr<void> userdata)
 {
-	cellPhotoExport.todo("cellPhotoExportProgress(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
+	cellPhotoExport.notice("cellPhotoExportProgress(funcFinish=*0x%x, userdata=*0x%x)", funcFinish, userdata);
 
 	if (!funcFinish)
 	{
