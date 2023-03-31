@@ -71,6 +71,9 @@ CMakeSettings.json
 *PVS-Studio*
 PVS/*
 
+# Qt Creator files
+*.autosave
+
 # Ignore other system generated files
 x64/*
 rpcs3/x64/*
