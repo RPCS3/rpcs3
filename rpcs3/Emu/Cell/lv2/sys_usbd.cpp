@@ -398,7 +398,7 @@ void usb_handler_thread::operator()()
 		if (handled_devices.empty())
 			thread_ctrl::wait_for(500'000);
 		else
-			std::this_thread::yield();
+			thread_ctrl::wait_for(1'000);
 	}
 }
 
