@@ -151,6 +151,63 @@ struct RecordScoreGameDataRequestBuilder;
 struct GetScoreGameDataRequest;
 struct GetScoreGameDataRequestBuilder;
 
+struct TusUser;
+struct TusUserBuilder;
+
+struct TusVariable;
+struct TusVariableBuilder;
+
+struct TusVarResponse;
+struct TusVarResponseBuilder;
+
+struct TusSetMultiSlotVariableRequest;
+struct TusSetMultiSlotVariableRequestBuilder;
+
+struct TusGetMultiSlotVariableRequest;
+struct TusGetMultiSlotVariableRequestBuilder;
+
+struct TusGetMultiUserVariableRequest;
+struct TusGetMultiUserVariableRequestBuilder;
+
+struct TusGetFriendsVariableRequest;
+struct TusGetFriendsVariableRequestBuilder;
+
+struct TusAddAndGetVariableRequest;
+struct TusAddAndGetVariableRequestBuilder;
+
+struct TusTryAndSetVariableRequest;
+struct TusTryAndSetVariableRequestBuilder;
+
+struct TusDeleteMultiSlotVariableRequest;
+struct TusDeleteMultiSlotVariableRequestBuilder;
+
+struct TusSetDataRequest;
+struct TusSetDataRequestBuilder;
+
+struct TusDataStatus;
+struct TusDataStatusBuilder;
+
+struct TusData;
+struct TusDataBuilder;
+
+struct TusDataStatusResponse;
+struct TusDataStatusResponseBuilder;
+
+struct TusGetDataRequest;
+struct TusGetDataRequestBuilder;
+
+struct TusGetMultiSlotDataStatusRequest;
+struct TusGetMultiSlotDataStatusRequestBuilder;
+
+struct TusGetMultiUserDataStatusRequest;
+struct TusGetMultiUserDataStatusRequestBuilder;
+
+struct TusGetFriendsDataStatusRequest;
+struct TusGetFriendsDataStatusRequestBuilder;
+
+struct TusDeleteMultiSlotDataRequest;
+struct TusDeleteMultiSlotDataRequestBuilder;
+
 struct BinAttr FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef BinAttrBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
@@ -4411,6 +4468,1457 @@ inline flatbuffers::Offset<GetScoreGameDataRequest> CreateGetScoreGameDataReques
       boardId,
       npId__,
       pcId);
+}
+
+struct TusUser FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusUserBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_VUSER = 4,
+    VT_NPID = 6
+  };
+  bool vuser() const {
+    return GetField<uint8_t>(VT_VUSER, 0) != 0;
+  }
+  const flatbuffers::String *npid() const {
+    return GetPointer<const flatbuffers::String *>(VT_NPID);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint8_t>(verifier, VT_VUSER, 1) &&
+           VerifyOffset(verifier, VT_NPID) &&
+           verifier.VerifyString(npid()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusUserBuilder {
+  typedef TusUser Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_vuser(bool vuser) {
+    fbb_.AddElement<uint8_t>(TusUser::VT_VUSER, static_cast<uint8_t>(vuser), 0);
+  }
+  void add_npid(flatbuffers::Offset<flatbuffers::String> npid) {
+    fbb_.AddOffset(TusUser::VT_NPID, npid);
+  }
+  explicit TusUserBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusUser> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusUser>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusUser> CreateTusUser(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    bool vuser = false,
+    flatbuffers::Offset<flatbuffers::String> npid = 0) {
+  TusUserBuilder builder_(_fbb);
+  builder_.add_npid(npid);
+  builder_.add_vuser(vuser);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusUser> CreateTusUserDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    bool vuser = false,
+    const char *npid = nullptr) {
+  auto npid__ = npid ? _fbb.CreateString(npid) : 0;
+  return CreateTusUser(
+      _fbb,
+      vuser,
+      npid__);
+}
+
+struct TusVariable FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusVariableBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_OWNERID = 4,
+    VT_HASDATA = 6,
+    VT_LASTCHANGEDDATE = 8,
+    VT_LASTCHANGEDAUTHORID = 10,
+    VT_VARIABLE = 12,
+    VT_OLDVARIABLE = 14
+  };
+  const flatbuffers::String *ownerId() const {
+    return GetPointer<const flatbuffers::String *>(VT_OWNERID);
+  }
+  bool hasData() const {
+    return GetField<uint8_t>(VT_HASDATA, 0) != 0;
+  }
+  uint64_t lastChangedDate() const {
+    return GetField<uint64_t>(VT_LASTCHANGEDDATE, 0);
+  }
+  const flatbuffers::String *lastChangedAuthorId() const {
+    return GetPointer<const flatbuffers::String *>(VT_LASTCHANGEDAUTHORID);
+  }
+  int64_t variable() const {
+    return GetField<int64_t>(VT_VARIABLE, 0);
+  }
+  int64_t oldVariable() const {
+    return GetField<int64_t>(VT_OLDVARIABLE, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_OWNERID) &&
+           verifier.VerifyString(ownerId()) &&
+           VerifyField<uint8_t>(verifier, VT_HASDATA, 1) &&
+           VerifyField<uint64_t>(verifier, VT_LASTCHANGEDDATE, 8) &&
+           VerifyOffset(verifier, VT_LASTCHANGEDAUTHORID) &&
+           verifier.VerifyString(lastChangedAuthorId()) &&
+           VerifyField<int64_t>(verifier, VT_VARIABLE, 8) &&
+           VerifyField<int64_t>(verifier, VT_OLDVARIABLE, 8) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusVariableBuilder {
+  typedef TusVariable Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_ownerId(flatbuffers::Offset<flatbuffers::String> ownerId) {
+    fbb_.AddOffset(TusVariable::VT_OWNERID, ownerId);
+  }
+  void add_hasData(bool hasData) {
+    fbb_.AddElement<uint8_t>(TusVariable::VT_HASDATA, static_cast<uint8_t>(hasData), 0);
+  }
+  void add_lastChangedDate(uint64_t lastChangedDate) {
+    fbb_.AddElement<uint64_t>(TusVariable::VT_LASTCHANGEDDATE, lastChangedDate, 0);
+  }
+  void add_lastChangedAuthorId(flatbuffers::Offset<flatbuffers::String> lastChangedAuthorId) {
+    fbb_.AddOffset(TusVariable::VT_LASTCHANGEDAUTHORID, lastChangedAuthorId);
+  }
+  void add_variable(int64_t variable) {
+    fbb_.AddElement<int64_t>(TusVariable::VT_VARIABLE, variable, 0);
+  }
+  void add_oldVariable(int64_t oldVariable) {
+    fbb_.AddElement<int64_t>(TusVariable::VT_OLDVARIABLE, oldVariable, 0);
+  }
+  explicit TusVariableBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusVariable> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusVariable>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusVariable> CreateTusVariable(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> ownerId = 0,
+    bool hasData = false,
+    uint64_t lastChangedDate = 0,
+    flatbuffers::Offset<flatbuffers::String> lastChangedAuthorId = 0,
+    int64_t variable = 0,
+    int64_t oldVariable = 0) {
+  TusVariableBuilder builder_(_fbb);
+  builder_.add_oldVariable(oldVariable);
+  builder_.add_variable(variable);
+  builder_.add_lastChangedDate(lastChangedDate);
+  builder_.add_lastChangedAuthorId(lastChangedAuthorId);
+  builder_.add_ownerId(ownerId);
+  builder_.add_hasData(hasData);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusVariable> CreateTusVariableDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *ownerId = nullptr,
+    bool hasData = false,
+    uint64_t lastChangedDate = 0,
+    const char *lastChangedAuthorId = nullptr,
+    int64_t variable = 0,
+    int64_t oldVariable = 0) {
+  auto ownerId__ = ownerId ? _fbb.CreateString(ownerId) : 0;
+  auto lastChangedAuthorId__ = lastChangedAuthorId ? _fbb.CreateString(lastChangedAuthorId) : 0;
+  return CreateTusVariable(
+      _fbb,
+      ownerId__,
+      hasData,
+      lastChangedDate,
+      lastChangedAuthorId__,
+      variable,
+      oldVariable);
+}
+
+struct TusVarResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusVarResponseBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_VARS = 4
+  };
+  const flatbuffers::Vector<flatbuffers::Offset<TusVariable>> *vars() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<TusVariable>> *>(VT_VARS);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_VARS) &&
+           verifier.VerifyVector(vars()) &&
+           verifier.VerifyVectorOfTables(vars()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusVarResponseBuilder {
+  typedef TusVarResponse Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_vars(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TusVariable>>> vars) {
+    fbb_.AddOffset(TusVarResponse::VT_VARS, vars);
+  }
+  explicit TusVarResponseBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusVarResponse> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusVarResponse>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusVarResponse> CreateTusVarResponse(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TusVariable>>> vars = 0) {
+  TusVarResponseBuilder builder_(_fbb);
+  builder_.add_vars(vars);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusVarResponse> CreateTusVarResponseDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<flatbuffers::Offset<TusVariable>> *vars = nullptr) {
+  auto vars__ = vars ? _fbb.CreateVector<flatbuffers::Offset<TusVariable>>(*vars) : 0;
+  return CreateTusVarResponse(
+      _fbb,
+      vars__);
+}
+
+struct TusSetMultiSlotVariableRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusSetMultiSlotVariableRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USER = 4,
+    VT_SLOTIDARRAY = 6,
+    VT_VARIABLEARRAY = 8
+  };
+  const TusUser *user() const {
+    return GetPointer<const TusUser *>(VT_USER);
+  }
+  const flatbuffers::Vector<int32_t> *slotIdArray() const {
+    return GetPointer<const flatbuffers::Vector<int32_t> *>(VT_SLOTIDARRAY);
+  }
+  const flatbuffers::Vector<int64_t> *variableArray() const {
+    return GetPointer<const flatbuffers::Vector<int64_t> *>(VT_VARIABLEARRAY);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USER) &&
+           verifier.VerifyTable(user()) &&
+           VerifyOffset(verifier, VT_SLOTIDARRAY) &&
+           verifier.VerifyVector(slotIdArray()) &&
+           VerifyOffset(verifier, VT_VARIABLEARRAY) &&
+           verifier.VerifyVector(variableArray()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusSetMultiSlotVariableRequestBuilder {
+  typedef TusSetMultiSlotVariableRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_user(flatbuffers::Offset<TusUser> user) {
+    fbb_.AddOffset(TusSetMultiSlotVariableRequest::VT_USER, user);
+  }
+  void add_slotIdArray(flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray) {
+    fbb_.AddOffset(TusSetMultiSlotVariableRequest::VT_SLOTIDARRAY, slotIdArray);
+  }
+  void add_variableArray(flatbuffers::Offset<flatbuffers::Vector<int64_t>> variableArray) {
+    fbb_.AddOffset(TusSetMultiSlotVariableRequest::VT_VARIABLEARRAY, variableArray);
+  }
+  explicit TusSetMultiSlotVariableRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusSetMultiSlotVariableRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusSetMultiSlotVariableRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusSetMultiSlotVariableRequest> CreateTusSetMultiSlotVariableRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int64_t>> variableArray = 0) {
+  TusSetMultiSlotVariableRequestBuilder builder_(_fbb);
+  builder_.add_variableArray(variableArray);
+  builder_.add_slotIdArray(slotIdArray);
+  builder_.add_user(user);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusSetMultiSlotVariableRequest> CreateTusSetMultiSlotVariableRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    const std::vector<int32_t> *slotIdArray = nullptr,
+    const std::vector<int64_t> *variableArray = nullptr) {
+  auto slotIdArray__ = slotIdArray ? _fbb.CreateVector<int32_t>(*slotIdArray) : 0;
+  auto variableArray__ = variableArray ? _fbb.CreateVector<int64_t>(*variableArray) : 0;
+  return CreateTusSetMultiSlotVariableRequest(
+      _fbb,
+      user,
+      slotIdArray__,
+      variableArray__);
+}
+
+struct TusGetMultiSlotVariableRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusGetMultiSlotVariableRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USER = 4,
+    VT_SLOTIDARRAY = 6
+  };
+  const TusUser *user() const {
+    return GetPointer<const TusUser *>(VT_USER);
+  }
+  const flatbuffers::Vector<int32_t> *slotIdArray() const {
+    return GetPointer<const flatbuffers::Vector<int32_t> *>(VT_SLOTIDARRAY);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USER) &&
+           verifier.VerifyTable(user()) &&
+           VerifyOffset(verifier, VT_SLOTIDARRAY) &&
+           verifier.VerifyVector(slotIdArray()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusGetMultiSlotVariableRequestBuilder {
+  typedef TusGetMultiSlotVariableRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_user(flatbuffers::Offset<TusUser> user) {
+    fbb_.AddOffset(TusGetMultiSlotVariableRequest::VT_USER, user);
+  }
+  void add_slotIdArray(flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray) {
+    fbb_.AddOffset(TusGetMultiSlotVariableRequest::VT_SLOTIDARRAY, slotIdArray);
+  }
+  explicit TusGetMultiSlotVariableRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusGetMultiSlotVariableRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusGetMultiSlotVariableRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusGetMultiSlotVariableRequest> CreateTusGetMultiSlotVariableRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray = 0) {
+  TusGetMultiSlotVariableRequestBuilder builder_(_fbb);
+  builder_.add_slotIdArray(slotIdArray);
+  builder_.add_user(user);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusGetMultiSlotVariableRequest> CreateTusGetMultiSlotVariableRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    const std::vector<int32_t> *slotIdArray = nullptr) {
+  auto slotIdArray__ = slotIdArray ? _fbb.CreateVector<int32_t>(*slotIdArray) : 0;
+  return CreateTusGetMultiSlotVariableRequest(
+      _fbb,
+      user,
+      slotIdArray__);
+}
+
+struct TusGetMultiUserVariableRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusGetMultiUserVariableRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USERS = 4,
+    VT_SLOTID = 6
+  };
+  const flatbuffers::Vector<flatbuffers::Offset<TusUser>> *users() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<TusUser>> *>(VT_USERS);
+  }
+  int32_t slotId() const {
+    return GetField<int32_t>(VT_SLOTID, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USERS) &&
+           verifier.VerifyVector(users()) &&
+           verifier.VerifyVectorOfTables(users()) &&
+           VerifyField<int32_t>(verifier, VT_SLOTID, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusGetMultiUserVariableRequestBuilder {
+  typedef TusGetMultiUserVariableRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_users(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TusUser>>> users) {
+    fbb_.AddOffset(TusGetMultiUserVariableRequest::VT_USERS, users);
+  }
+  void add_slotId(int32_t slotId) {
+    fbb_.AddElement<int32_t>(TusGetMultiUserVariableRequest::VT_SLOTID, slotId, 0);
+  }
+  explicit TusGetMultiUserVariableRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusGetMultiUserVariableRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusGetMultiUserVariableRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusGetMultiUserVariableRequest> CreateTusGetMultiUserVariableRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TusUser>>> users = 0,
+    int32_t slotId = 0) {
+  TusGetMultiUserVariableRequestBuilder builder_(_fbb);
+  builder_.add_slotId(slotId);
+  builder_.add_users(users);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusGetMultiUserVariableRequest> CreateTusGetMultiUserVariableRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<flatbuffers::Offset<TusUser>> *users = nullptr,
+    int32_t slotId = 0) {
+  auto users__ = users ? _fbb.CreateVector<flatbuffers::Offset<TusUser>>(*users) : 0;
+  return CreateTusGetMultiUserVariableRequest(
+      _fbb,
+      users__,
+      slotId);
+}
+
+struct TusGetFriendsVariableRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusGetFriendsVariableRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_SLOTID = 4,
+    VT_INCLUDESELF = 6,
+    VT_SORTTYPE = 8,
+    VT_ARRAYNUM = 10
+  };
+  int32_t slotId() const {
+    return GetField<int32_t>(VT_SLOTID, 0);
+  }
+  bool includeSelf() const {
+    return GetField<uint8_t>(VT_INCLUDESELF, 0) != 0;
+  }
+  int32_t sortType() const {
+    return GetField<int32_t>(VT_SORTTYPE, 0);
+  }
+  uint32_t arrayNum() const {
+    return GetField<uint32_t>(VT_ARRAYNUM, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<int32_t>(verifier, VT_SLOTID, 4) &&
+           VerifyField<uint8_t>(verifier, VT_INCLUDESELF, 1) &&
+           VerifyField<int32_t>(verifier, VT_SORTTYPE, 4) &&
+           VerifyField<uint32_t>(verifier, VT_ARRAYNUM, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusGetFriendsVariableRequestBuilder {
+  typedef TusGetFriendsVariableRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_slotId(int32_t slotId) {
+    fbb_.AddElement<int32_t>(TusGetFriendsVariableRequest::VT_SLOTID, slotId, 0);
+  }
+  void add_includeSelf(bool includeSelf) {
+    fbb_.AddElement<uint8_t>(TusGetFriendsVariableRequest::VT_INCLUDESELF, static_cast<uint8_t>(includeSelf), 0);
+  }
+  void add_sortType(int32_t sortType) {
+    fbb_.AddElement<int32_t>(TusGetFriendsVariableRequest::VT_SORTTYPE, sortType, 0);
+  }
+  void add_arrayNum(uint32_t arrayNum) {
+    fbb_.AddElement<uint32_t>(TusGetFriendsVariableRequest::VT_ARRAYNUM, arrayNum, 0);
+  }
+  explicit TusGetFriendsVariableRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusGetFriendsVariableRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusGetFriendsVariableRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusGetFriendsVariableRequest> CreateTusGetFriendsVariableRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    int32_t slotId = 0,
+    bool includeSelf = false,
+    int32_t sortType = 0,
+    uint32_t arrayNum = 0) {
+  TusGetFriendsVariableRequestBuilder builder_(_fbb);
+  builder_.add_arrayNum(arrayNum);
+  builder_.add_sortType(sortType);
+  builder_.add_slotId(slotId);
+  builder_.add_includeSelf(includeSelf);
+  return builder_.Finish();
+}
+
+struct TusAddAndGetVariableRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusAddAndGetVariableRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USER = 4,
+    VT_SLOTID = 6,
+    VT_INVARIABLE = 8,
+    VT_ISLASTCHANGEDDATE = 10,
+    VT_ISLASTCHANGEDAUTHORID = 12
+  };
+  const TusUser *user() const {
+    return GetPointer<const TusUser *>(VT_USER);
+  }
+  int32_t slotId() const {
+    return GetField<int32_t>(VT_SLOTID, 0);
+  }
+  int64_t inVariable() const {
+    return GetField<int64_t>(VT_INVARIABLE, 0);
+  }
+  const flatbuffers::Vector<uint64_t> *isLastChangedDate() const {
+    return GetPointer<const flatbuffers::Vector<uint64_t> *>(VT_ISLASTCHANGEDDATE);
+  }
+  const flatbuffers::String *isLastChangedAuthorId() const {
+    return GetPointer<const flatbuffers::String *>(VT_ISLASTCHANGEDAUTHORID);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USER) &&
+           verifier.VerifyTable(user()) &&
+           VerifyField<int32_t>(verifier, VT_SLOTID, 4) &&
+           VerifyField<int64_t>(verifier, VT_INVARIABLE, 8) &&
+           VerifyOffset(verifier, VT_ISLASTCHANGEDDATE) &&
+           verifier.VerifyVector(isLastChangedDate()) &&
+           VerifyOffset(verifier, VT_ISLASTCHANGEDAUTHORID) &&
+           verifier.VerifyString(isLastChangedAuthorId()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusAddAndGetVariableRequestBuilder {
+  typedef TusAddAndGetVariableRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_user(flatbuffers::Offset<TusUser> user) {
+    fbb_.AddOffset(TusAddAndGetVariableRequest::VT_USER, user);
+  }
+  void add_slotId(int32_t slotId) {
+    fbb_.AddElement<int32_t>(TusAddAndGetVariableRequest::VT_SLOTID, slotId, 0);
+  }
+  void add_inVariable(int64_t inVariable) {
+    fbb_.AddElement<int64_t>(TusAddAndGetVariableRequest::VT_INVARIABLE, inVariable, 0);
+  }
+  void add_isLastChangedDate(flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate) {
+    fbb_.AddOffset(TusAddAndGetVariableRequest::VT_ISLASTCHANGEDDATE, isLastChangedDate);
+  }
+  void add_isLastChangedAuthorId(flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId) {
+    fbb_.AddOffset(TusAddAndGetVariableRequest::VT_ISLASTCHANGEDAUTHORID, isLastChangedAuthorId);
+  }
+  explicit TusAddAndGetVariableRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusAddAndGetVariableRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusAddAndGetVariableRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusAddAndGetVariableRequest> CreateTusAddAndGetVariableRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    int32_t slotId = 0,
+    int64_t inVariable = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate = 0,
+    flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId = 0) {
+  TusAddAndGetVariableRequestBuilder builder_(_fbb);
+  builder_.add_inVariable(inVariable);
+  builder_.add_isLastChangedAuthorId(isLastChangedAuthorId);
+  builder_.add_isLastChangedDate(isLastChangedDate);
+  builder_.add_slotId(slotId);
+  builder_.add_user(user);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusAddAndGetVariableRequest> CreateTusAddAndGetVariableRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    int32_t slotId = 0,
+    int64_t inVariable = 0,
+    const std::vector<uint64_t> *isLastChangedDate = nullptr,
+    const char *isLastChangedAuthorId = nullptr) {
+  auto isLastChangedDate__ = isLastChangedDate ? _fbb.CreateVector<uint64_t>(*isLastChangedDate) : 0;
+  auto isLastChangedAuthorId__ = isLastChangedAuthorId ? _fbb.CreateString(isLastChangedAuthorId) : 0;
+  return CreateTusAddAndGetVariableRequest(
+      _fbb,
+      user,
+      slotId,
+      inVariable,
+      isLastChangedDate__,
+      isLastChangedAuthorId__);
+}
+
+struct TusTryAndSetVariableRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusTryAndSetVariableRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USER = 4,
+    VT_SLOTID = 6,
+    VT_OPETYPE = 8,
+    VT_VARIABLE = 10,
+    VT_ISLASTCHANGEDDATE = 12,
+    VT_ISLASTCHANGEDAUTHORID = 14,
+    VT_COMPAREVALUE = 16
+  };
+  const TusUser *user() const {
+    return GetPointer<const TusUser *>(VT_USER);
+  }
+  int32_t slotId() const {
+    return GetField<int32_t>(VT_SLOTID, 0);
+  }
+  int32_t opeType() const {
+    return GetField<int32_t>(VT_OPETYPE, 0);
+  }
+  int64_t variable() const {
+    return GetField<int64_t>(VT_VARIABLE, 0);
+  }
+  const flatbuffers::Vector<uint64_t> *isLastChangedDate() const {
+    return GetPointer<const flatbuffers::Vector<uint64_t> *>(VT_ISLASTCHANGEDDATE);
+  }
+  const flatbuffers::String *isLastChangedAuthorId() const {
+    return GetPointer<const flatbuffers::String *>(VT_ISLASTCHANGEDAUTHORID);
+  }
+  const flatbuffers::Vector<int64_t> *compareValue() const {
+    return GetPointer<const flatbuffers::Vector<int64_t> *>(VT_COMPAREVALUE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USER) &&
+           verifier.VerifyTable(user()) &&
+           VerifyField<int32_t>(verifier, VT_SLOTID, 4) &&
+           VerifyField<int32_t>(verifier, VT_OPETYPE, 4) &&
+           VerifyField<int64_t>(verifier, VT_VARIABLE, 8) &&
+           VerifyOffset(verifier, VT_ISLASTCHANGEDDATE) &&
+           verifier.VerifyVector(isLastChangedDate()) &&
+           VerifyOffset(verifier, VT_ISLASTCHANGEDAUTHORID) &&
+           verifier.VerifyString(isLastChangedAuthorId()) &&
+           VerifyOffset(verifier, VT_COMPAREVALUE) &&
+           verifier.VerifyVector(compareValue()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusTryAndSetVariableRequestBuilder {
+  typedef TusTryAndSetVariableRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_user(flatbuffers::Offset<TusUser> user) {
+    fbb_.AddOffset(TusTryAndSetVariableRequest::VT_USER, user);
+  }
+  void add_slotId(int32_t slotId) {
+    fbb_.AddElement<int32_t>(TusTryAndSetVariableRequest::VT_SLOTID, slotId, 0);
+  }
+  void add_opeType(int32_t opeType) {
+    fbb_.AddElement<int32_t>(TusTryAndSetVariableRequest::VT_OPETYPE, opeType, 0);
+  }
+  void add_variable(int64_t variable) {
+    fbb_.AddElement<int64_t>(TusTryAndSetVariableRequest::VT_VARIABLE, variable, 0);
+  }
+  void add_isLastChangedDate(flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate) {
+    fbb_.AddOffset(TusTryAndSetVariableRequest::VT_ISLASTCHANGEDDATE, isLastChangedDate);
+  }
+  void add_isLastChangedAuthorId(flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId) {
+    fbb_.AddOffset(TusTryAndSetVariableRequest::VT_ISLASTCHANGEDAUTHORID, isLastChangedAuthorId);
+  }
+  void add_compareValue(flatbuffers::Offset<flatbuffers::Vector<int64_t>> compareValue) {
+    fbb_.AddOffset(TusTryAndSetVariableRequest::VT_COMPAREVALUE, compareValue);
+  }
+  explicit TusTryAndSetVariableRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusTryAndSetVariableRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusTryAndSetVariableRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusTryAndSetVariableRequest> CreateTusTryAndSetVariableRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    int32_t slotId = 0,
+    int32_t opeType = 0,
+    int64_t variable = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate = 0,
+    flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int64_t>> compareValue = 0) {
+  TusTryAndSetVariableRequestBuilder builder_(_fbb);
+  builder_.add_variable(variable);
+  builder_.add_compareValue(compareValue);
+  builder_.add_isLastChangedAuthorId(isLastChangedAuthorId);
+  builder_.add_isLastChangedDate(isLastChangedDate);
+  builder_.add_opeType(opeType);
+  builder_.add_slotId(slotId);
+  builder_.add_user(user);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusTryAndSetVariableRequest> CreateTusTryAndSetVariableRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    int32_t slotId = 0,
+    int32_t opeType = 0,
+    int64_t variable = 0,
+    const std::vector<uint64_t> *isLastChangedDate = nullptr,
+    const char *isLastChangedAuthorId = nullptr,
+    const std::vector<int64_t> *compareValue = nullptr) {
+  auto isLastChangedDate__ = isLastChangedDate ? _fbb.CreateVector<uint64_t>(*isLastChangedDate) : 0;
+  auto isLastChangedAuthorId__ = isLastChangedAuthorId ? _fbb.CreateString(isLastChangedAuthorId) : 0;
+  auto compareValue__ = compareValue ? _fbb.CreateVector<int64_t>(*compareValue) : 0;
+  return CreateTusTryAndSetVariableRequest(
+      _fbb,
+      user,
+      slotId,
+      opeType,
+      variable,
+      isLastChangedDate__,
+      isLastChangedAuthorId__,
+      compareValue__);
+}
+
+struct TusDeleteMultiSlotVariableRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusDeleteMultiSlotVariableRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USER = 4,
+    VT_SLOTIDARRAY = 6
+  };
+  const TusUser *user() const {
+    return GetPointer<const TusUser *>(VT_USER);
+  }
+  const flatbuffers::Vector<int32_t> *slotIdArray() const {
+    return GetPointer<const flatbuffers::Vector<int32_t> *>(VT_SLOTIDARRAY);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USER) &&
+           verifier.VerifyTable(user()) &&
+           VerifyOffset(verifier, VT_SLOTIDARRAY) &&
+           verifier.VerifyVector(slotIdArray()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusDeleteMultiSlotVariableRequestBuilder {
+  typedef TusDeleteMultiSlotVariableRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_user(flatbuffers::Offset<TusUser> user) {
+    fbb_.AddOffset(TusDeleteMultiSlotVariableRequest::VT_USER, user);
+  }
+  void add_slotIdArray(flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray) {
+    fbb_.AddOffset(TusDeleteMultiSlotVariableRequest::VT_SLOTIDARRAY, slotIdArray);
+  }
+  explicit TusDeleteMultiSlotVariableRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusDeleteMultiSlotVariableRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusDeleteMultiSlotVariableRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusDeleteMultiSlotVariableRequest> CreateTusDeleteMultiSlotVariableRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray = 0) {
+  TusDeleteMultiSlotVariableRequestBuilder builder_(_fbb);
+  builder_.add_slotIdArray(slotIdArray);
+  builder_.add_user(user);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusDeleteMultiSlotVariableRequest> CreateTusDeleteMultiSlotVariableRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    const std::vector<int32_t> *slotIdArray = nullptr) {
+  auto slotIdArray__ = slotIdArray ? _fbb.CreateVector<int32_t>(*slotIdArray) : 0;
+  return CreateTusDeleteMultiSlotVariableRequest(
+      _fbb,
+      user,
+      slotIdArray__);
+}
+
+struct TusSetDataRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusSetDataRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USER = 4,
+    VT_SLOTID = 6,
+    VT_DATA = 8,
+    VT_INFO = 10,
+    VT_ISLASTCHANGEDDATE = 12,
+    VT_ISLASTCHANGEDAUTHORID = 14
+  };
+  const TusUser *user() const {
+    return GetPointer<const TusUser *>(VT_USER);
+  }
+  int32_t slotId() const {
+    return GetField<int32_t>(VT_SLOTID, 0);
+  }
+  const flatbuffers::Vector<uint8_t> *data() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_DATA);
+  }
+  const flatbuffers::Vector<uint8_t> *info() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_INFO);
+  }
+  const flatbuffers::Vector<uint64_t> *isLastChangedDate() const {
+    return GetPointer<const flatbuffers::Vector<uint64_t> *>(VT_ISLASTCHANGEDDATE);
+  }
+  const flatbuffers::String *isLastChangedAuthorId() const {
+    return GetPointer<const flatbuffers::String *>(VT_ISLASTCHANGEDAUTHORID);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USER) &&
+           verifier.VerifyTable(user()) &&
+           VerifyField<int32_t>(verifier, VT_SLOTID, 4) &&
+           VerifyOffset(verifier, VT_DATA) &&
+           verifier.VerifyVector(data()) &&
+           VerifyOffset(verifier, VT_INFO) &&
+           verifier.VerifyVector(info()) &&
+           VerifyOffset(verifier, VT_ISLASTCHANGEDDATE) &&
+           verifier.VerifyVector(isLastChangedDate()) &&
+           VerifyOffset(verifier, VT_ISLASTCHANGEDAUTHORID) &&
+           verifier.VerifyString(isLastChangedAuthorId()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusSetDataRequestBuilder {
+  typedef TusSetDataRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_user(flatbuffers::Offset<TusUser> user) {
+    fbb_.AddOffset(TusSetDataRequest::VT_USER, user);
+  }
+  void add_slotId(int32_t slotId) {
+    fbb_.AddElement<int32_t>(TusSetDataRequest::VT_SLOTID, slotId, 0);
+  }
+  void add_data(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data) {
+    fbb_.AddOffset(TusSetDataRequest::VT_DATA, data);
+  }
+  void add_info(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> info) {
+    fbb_.AddOffset(TusSetDataRequest::VT_INFO, info);
+  }
+  void add_isLastChangedDate(flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate) {
+    fbb_.AddOffset(TusSetDataRequest::VT_ISLASTCHANGEDDATE, isLastChangedDate);
+  }
+  void add_isLastChangedAuthorId(flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId) {
+    fbb_.AddOffset(TusSetDataRequest::VT_ISLASTCHANGEDAUTHORID, isLastChangedAuthorId);
+  }
+  explicit TusSetDataRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusSetDataRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusSetDataRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusSetDataRequest> CreateTusSetDataRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    int32_t slotId = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> info = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate = 0,
+    flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId = 0) {
+  TusSetDataRequestBuilder builder_(_fbb);
+  builder_.add_isLastChangedAuthorId(isLastChangedAuthorId);
+  builder_.add_isLastChangedDate(isLastChangedDate);
+  builder_.add_info(info);
+  builder_.add_data(data);
+  builder_.add_slotId(slotId);
+  builder_.add_user(user);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusSetDataRequest> CreateTusSetDataRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    int32_t slotId = 0,
+    const std::vector<uint8_t> *data = nullptr,
+    const std::vector<uint8_t> *info = nullptr,
+    const std::vector<uint64_t> *isLastChangedDate = nullptr,
+    const char *isLastChangedAuthorId = nullptr) {
+  auto data__ = data ? _fbb.CreateVector<uint8_t>(*data) : 0;
+  auto info__ = info ? _fbb.CreateVector<uint8_t>(*info) : 0;
+  auto isLastChangedDate__ = isLastChangedDate ? _fbb.CreateVector<uint64_t>(*isLastChangedDate) : 0;
+  auto isLastChangedAuthorId__ = isLastChangedAuthorId ? _fbb.CreateString(isLastChangedAuthorId) : 0;
+  return CreateTusSetDataRequest(
+      _fbb,
+      user,
+      slotId,
+      data__,
+      info__,
+      isLastChangedDate__,
+      isLastChangedAuthorId__);
+}
+
+struct TusDataStatus FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusDataStatusBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_OWNERID = 4,
+    VT_HASDATA = 6,
+    VT_LASTCHANGEDDATE = 8,
+    VT_LASTCHANGEDAUTHORID = 10,
+    VT_INFO = 12
+  };
+  const flatbuffers::String *ownerId() const {
+    return GetPointer<const flatbuffers::String *>(VT_OWNERID);
+  }
+  bool hasData() const {
+    return GetField<uint8_t>(VT_HASDATA, 0) != 0;
+  }
+  uint64_t lastChangedDate() const {
+    return GetField<uint64_t>(VT_LASTCHANGEDDATE, 0);
+  }
+  const flatbuffers::String *lastChangedAuthorId() const {
+    return GetPointer<const flatbuffers::String *>(VT_LASTCHANGEDAUTHORID);
+  }
+  const flatbuffers::Vector<uint8_t> *info() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_INFO);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_OWNERID) &&
+           verifier.VerifyString(ownerId()) &&
+           VerifyField<uint8_t>(verifier, VT_HASDATA, 1) &&
+           VerifyField<uint64_t>(verifier, VT_LASTCHANGEDDATE, 8) &&
+           VerifyOffset(verifier, VT_LASTCHANGEDAUTHORID) &&
+           verifier.VerifyString(lastChangedAuthorId()) &&
+           VerifyOffset(verifier, VT_INFO) &&
+           verifier.VerifyVector(info()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusDataStatusBuilder {
+  typedef TusDataStatus Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_ownerId(flatbuffers::Offset<flatbuffers::String> ownerId) {
+    fbb_.AddOffset(TusDataStatus::VT_OWNERID, ownerId);
+  }
+  void add_hasData(bool hasData) {
+    fbb_.AddElement<uint8_t>(TusDataStatus::VT_HASDATA, static_cast<uint8_t>(hasData), 0);
+  }
+  void add_lastChangedDate(uint64_t lastChangedDate) {
+    fbb_.AddElement<uint64_t>(TusDataStatus::VT_LASTCHANGEDDATE, lastChangedDate, 0);
+  }
+  void add_lastChangedAuthorId(flatbuffers::Offset<flatbuffers::String> lastChangedAuthorId) {
+    fbb_.AddOffset(TusDataStatus::VT_LASTCHANGEDAUTHORID, lastChangedAuthorId);
+  }
+  void add_info(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> info) {
+    fbb_.AddOffset(TusDataStatus::VT_INFO, info);
+  }
+  explicit TusDataStatusBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusDataStatus> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusDataStatus>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusDataStatus> CreateTusDataStatus(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> ownerId = 0,
+    bool hasData = false,
+    uint64_t lastChangedDate = 0,
+    flatbuffers::Offset<flatbuffers::String> lastChangedAuthorId = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> info = 0) {
+  TusDataStatusBuilder builder_(_fbb);
+  builder_.add_lastChangedDate(lastChangedDate);
+  builder_.add_info(info);
+  builder_.add_lastChangedAuthorId(lastChangedAuthorId);
+  builder_.add_ownerId(ownerId);
+  builder_.add_hasData(hasData);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusDataStatus> CreateTusDataStatusDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *ownerId = nullptr,
+    bool hasData = false,
+    uint64_t lastChangedDate = 0,
+    const char *lastChangedAuthorId = nullptr,
+    const std::vector<uint8_t> *info = nullptr) {
+  auto ownerId__ = ownerId ? _fbb.CreateString(ownerId) : 0;
+  auto lastChangedAuthorId__ = lastChangedAuthorId ? _fbb.CreateString(lastChangedAuthorId) : 0;
+  auto info__ = info ? _fbb.CreateVector<uint8_t>(*info) : 0;
+  return CreateTusDataStatus(
+      _fbb,
+      ownerId__,
+      hasData,
+      lastChangedDate,
+      lastChangedAuthorId__,
+      info__);
+}
+
+struct TusData FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusDataBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_STATUS = 4,
+    VT_DATA = 6
+  };
+  const TusDataStatus *status() const {
+    return GetPointer<const TusDataStatus *>(VT_STATUS);
+  }
+  const flatbuffers::Vector<uint8_t> *data() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_DATA);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_STATUS) &&
+           verifier.VerifyTable(status()) &&
+           VerifyOffset(verifier, VT_DATA) &&
+           verifier.VerifyVector(data()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusDataBuilder {
+  typedef TusData Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_status(flatbuffers::Offset<TusDataStatus> status) {
+    fbb_.AddOffset(TusData::VT_STATUS, status);
+  }
+  void add_data(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data) {
+    fbb_.AddOffset(TusData::VT_DATA, data);
+  }
+  explicit TusDataBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusData> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusData>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusData> CreateTusData(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusDataStatus> status = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data = 0) {
+  TusDataBuilder builder_(_fbb);
+  builder_.add_data(data);
+  builder_.add_status(status);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusData> CreateTusDataDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusDataStatus> status = 0,
+    const std::vector<uint8_t> *data = nullptr) {
+  auto data__ = data ? _fbb.CreateVector<uint8_t>(*data) : 0;
+  return CreateTusData(
+      _fbb,
+      status,
+      data__);
+}
+
+struct TusDataStatusResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusDataStatusResponseBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_STATUS = 4
+  };
+  const flatbuffers::Vector<flatbuffers::Offset<TusDataStatus>> *status() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<TusDataStatus>> *>(VT_STATUS);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_STATUS) &&
+           verifier.VerifyVector(status()) &&
+           verifier.VerifyVectorOfTables(status()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusDataStatusResponseBuilder {
+  typedef TusDataStatusResponse Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_status(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TusDataStatus>>> status) {
+    fbb_.AddOffset(TusDataStatusResponse::VT_STATUS, status);
+  }
+  explicit TusDataStatusResponseBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusDataStatusResponse> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusDataStatusResponse>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusDataStatusResponse> CreateTusDataStatusResponse(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TusDataStatus>>> status = 0) {
+  TusDataStatusResponseBuilder builder_(_fbb);
+  builder_.add_status(status);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusDataStatusResponse> CreateTusDataStatusResponseDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<flatbuffers::Offset<TusDataStatus>> *status = nullptr) {
+  auto status__ = status ? _fbb.CreateVector<flatbuffers::Offset<TusDataStatus>>(*status) : 0;
+  return CreateTusDataStatusResponse(
+      _fbb,
+      status__);
+}
+
+struct TusGetDataRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusGetDataRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USER = 4,
+    VT_SLOTID = 6
+  };
+  const TusUser *user() const {
+    return GetPointer<const TusUser *>(VT_USER);
+  }
+  int32_t slotId() const {
+    return GetField<int32_t>(VT_SLOTID, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USER) &&
+           verifier.VerifyTable(user()) &&
+           VerifyField<int32_t>(verifier, VT_SLOTID, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusGetDataRequestBuilder {
+  typedef TusGetDataRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_user(flatbuffers::Offset<TusUser> user) {
+    fbb_.AddOffset(TusGetDataRequest::VT_USER, user);
+  }
+  void add_slotId(int32_t slotId) {
+    fbb_.AddElement<int32_t>(TusGetDataRequest::VT_SLOTID, slotId, 0);
+  }
+  explicit TusGetDataRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusGetDataRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusGetDataRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusGetDataRequest> CreateTusGetDataRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    int32_t slotId = 0) {
+  TusGetDataRequestBuilder builder_(_fbb);
+  builder_.add_slotId(slotId);
+  builder_.add_user(user);
+  return builder_.Finish();
+}
+
+struct TusGetMultiSlotDataStatusRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusGetMultiSlotDataStatusRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USER = 4,
+    VT_SLOTIDARRAY = 6
+  };
+  const TusUser *user() const {
+    return GetPointer<const TusUser *>(VT_USER);
+  }
+  const flatbuffers::Vector<int32_t> *slotIdArray() const {
+    return GetPointer<const flatbuffers::Vector<int32_t> *>(VT_SLOTIDARRAY);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USER) &&
+           verifier.VerifyTable(user()) &&
+           VerifyOffset(verifier, VT_SLOTIDARRAY) &&
+           verifier.VerifyVector(slotIdArray()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusGetMultiSlotDataStatusRequestBuilder {
+  typedef TusGetMultiSlotDataStatusRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_user(flatbuffers::Offset<TusUser> user) {
+    fbb_.AddOffset(TusGetMultiSlotDataStatusRequest::VT_USER, user);
+  }
+  void add_slotIdArray(flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray) {
+    fbb_.AddOffset(TusGetMultiSlotDataStatusRequest::VT_SLOTIDARRAY, slotIdArray);
+  }
+  explicit TusGetMultiSlotDataStatusRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusGetMultiSlotDataStatusRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusGetMultiSlotDataStatusRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusGetMultiSlotDataStatusRequest> CreateTusGetMultiSlotDataStatusRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray = 0) {
+  TusGetMultiSlotDataStatusRequestBuilder builder_(_fbb);
+  builder_.add_slotIdArray(slotIdArray);
+  builder_.add_user(user);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusGetMultiSlotDataStatusRequest> CreateTusGetMultiSlotDataStatusRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    const std::vector<int32_t> *slotIdArray = nullptr) {
+  auto slotIdArray__ = slotIdArray ? _fbb.CreateVector<int32_t>(*slotIdArray) : 0;
+  return CreateTusGetMultiSlotDataStatusRequest(
+      _fbb,
+      user,
+      slotIdArray__);
+}
+
+struct TusGetMultiUserDataStatusRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusGetMultiUserDataStatusRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USERS = 4,
+    VT_SLOTID = 6
+  };
+  const flatbuffers::Vector<flatbuffers::Offset<TusUser>> *users() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<TusUser>> *>(VT_USERS);
+  }
+  int32_t slotId() const {
+    return GetField<int32_t>(VT_SLOTID, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USERS) &&
+           verifier.VerifyVector(users()) &&
+           verifier.VerifyVectorOfTables(users()) &&
+           VerifyField<int32_t>(verifier, VT_SLOTID, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusGetMultiUserDataStatusRequestBuilder {
+  typedef TusGetMultiUserDataStatusRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_users(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TusUser>>> users) {
+    fbb_.AddOffset(TusGetMultiUserDataStatusRequest::VT_USERS, users);
+  }
+  void add_slotId(int32_t slotId) {
+    fbb_.AddElement<int32_t>(TusGetMultiUserDataStatusRequest::VT_SLOTID, slotId, 0);
+  }
+  explicit TusGetMultiUserDataStatusRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusGetMultiUserDataStatusRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusGetMultiUserDataStatusRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusGetMultiUserDataStatusRequest> CreateTusGetMultiUserDataStatusRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<TusUser>>> users = 0,
+    int32_t slotId = 0) {
+  TusGetMultiUserDataStatusRequestBuilder builder_(_fbb);
+  builder_.add_slotId(slotId);
+  builder_.add_users(users);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusGetMultiUserDataStatusRequest> CreateTusGetMultiUserDataStatusRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<flatbuffers::Offset<TusUser>> *users = nullptr,
+    int32_t slotId = 0) {
+  auto users__ = users ? _fbb.CreateVector<flatbuffers::Offset<TusUser>>(*users) : 0;
+  return CreateTusGetMultiUserDataStatusRequest(
+      _fbb,
+      users__,
+      slotId);
+}
+
+struct TusGetFriendsDataStatusRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusGetFriendsDataStatusRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_SLOTID = 4,
+    VT_INCLUDESELF = 6,
+    VT_SORTTYPE = 8,
+    VT_ARRAYNUM = 10
+  };
+  int32_t slotId() const {
+    return GetField<int32_t>(VT_SLOTID, 0);
+  }
+  bool includeSelf() const {
+    return GetField<uint8_t>(VT_INCLUDESELF, 0) != 0;
+  }
+  int32_t sortType() const {
+    return GetField<int32_t>(VT_SORTTYPE, 0);
+  }
+  uint32_t arrayNum() const {
+    return GetField<uint32_t>(VT_ARRAYNUM, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<int32_t>(verifier, VT_SLOTID, 4) &&
+           VerifyField<uint8_t>(verifier, VT_INCLUDESELF, 1) &&
+           VerifyField<int32_t>(verifier, VT_SORTTYPE, 4) &&
+           VerifyField<uint32_t>(verifier, VT_ARRAYNUM, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusGetFriendsDataStatusRequestBuilder {
+  typedef TusGetFriendsDataStatusRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_slotId(int32_t slotId) {
+    fbb_.AddElement<int32_t>(TusGetFriendsDataStatusRequest::VT_SLOTID, slotId, 0);
+  }
+  void add_includeSelf(bool includeSelf) {
+    fbb_.AddElement<uint8_t>(TusGetFriendsDataStatusRequest::VT_INCLUDESELF, static_cast<uint8_t>(includeSelf), 0);
+  }
+  void add_sortType(int32_t sortType) {
+    fbb_.AddElement<int32_t>(TusGetFriendsDataStatusRequest::VT_SORTTYPE, sortType, 0);
+  }
+  void add_arrayNum(uint32_t arrayNum) {
+    fbb_.AddElement<uint32_t>(TusGetFriendsDataStatusRequest::VT_ARRAYNUM, arrayNum, 0);
+  }
+  explicit TusGetFriendsDataStatusRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusGetFriendsDataStatusRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusGetFriendsDataStatusRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusGetFriendsDataStatusRequest> CreateTusGetFriendsDataStatusRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    int32_t slotId = 0,
+    bool includeSelf = false,
+    int32_t sortType = 0,
+    uint32_t arrayNum = 0) {
+  TusGetFriendsDataStatusRequestBuilder builder_(_fbb);
+  builder_.add_arrayNum(arrayNum);
+  builder_.add_sortType(sortType);
+  builder_.add_slotId(slotId);
+  builder_.add_includeSelf(includeSelf);
+  return builder_.Finish();
+}
+
+struct TusDeleteMultiSlotDataRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef TusDeleteMultiSlotDataRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USER = 4,
+    VT_SLOTIDARRAY = 6
+  };
+  const TusUser *user() const {
+    return GetPointer<const TusUser *>(VT_USER);
+  }
+  const flatbuffers::Vector<int32_t> *slotIdArray() const {
+    return GetPointer<const flatbuffers::Vector<int32_t> *>(VT_SLOTIDARRAY);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USER) &&
+           verifier.VerifyTable(user()) &&
+           VerifyOffset(verifier, VT_SLOTIDARRAY) &&
+           verifier.VerifyVector(slotIdArray()) &&
+           verifier.EndTable();
+  }
+};
+
+struct TusDeleteMultiSlotDataRequestBuilder {
+  typedef TusDeleteMultiSlotDataRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_user(flatbuffers::Offset<TusUser> user) {
+    fbb_.AddOffset(TusDeleteMultiSlotDataRequest::VT_USER, user);
+  }
+  void add_slotIdArray(flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray) {
+    fbb_.AddOffset(TusDeleteMultiSlotDataRequest::VT_SLOTIDARRAY, slotIdArray);
+  }
+  explicit TusDeleteMultiSlotDataRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<TusDeleteMultiSlotDataRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<TusDeleteMultiSlotDataRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<TusDeleteMultiSlotDataRequest> CreateTusDeleteMultiSlotDataRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int32_t>> slotIdArray = 0) {
+  TusDeleteMultiSlotDataRequestBuilder builder_(_fbb);
+  builder_.add_slotIdArray(slotIdArray);
+  builder_.add_user(user);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<TusDeleteMultiSlotDataRequest> CreateTusDeleteMultiSlotDataRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<TusUser> user = 0,
+    const std::vector<int32_t> *slotIdArray = nullptr) {
+  auto slotIdArray__ = slotIdArray ? _fbb.CreateVector<int32_t>(*slotIdArray) : 0;
+  return CreateTusDeleteMultiSlotDataRequest(
+      _fbb,
+      user,
+      slotIdArray__);
 }
 
 #endif  // FLATBUFFERS_GENERATED_NP2STRUCTS_H_

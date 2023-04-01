@@ -74,7 +74,7 @@ namespace rpcn
 		return get_localized_string(rpcn_state_to_localized_string_id(state));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 19;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 20;
 	constexpr usz RPCN_HEADER_SIZE      = 15;
 	constexpr usz COMMUNICATION_ID_SIZE = 9;
 
@@ -114,6 +114,7 @@ namespace rpcn
 		case ScoreNotBest: rpcn_log.error("Attempted to register a score that is not better!"); break;
 		case ScoreInvalid: rpcn_log.error("Score for player was found but wasn't what was expected!"); break;
 		case ScoreHasData: rpcn_log.error("Score already has game data associated with it!"); break;
+		case CondFail: rpcn_log.error("Condition related to the query failed!"); break;
 		case Unsupported: rpcn_log.error("An unsupported operation was attempted!"); break;
 		default: rpcn_log.fatal("Unhandled ErrorType reached the switch?"); break;
 		}
@@ -364,7 +365,7 @@ namespace rpcn
 		std::vector<u8> data;
 		if (packet_size > RPCN_HEADER_SIZE)
 		{
-			const u16 data_size = packet_size - RPCN_HEADER_SIZE;
+			const u32 data_size = packet_size - RPCN_HEADER_SIZE;
 			data.resize(data_size);
 			if (recvn(data.data(), data_size) != recvn_result::recvn_success)
 				return error_and_disconnect("Failed to receive a whole packet");
@@ -383,7 +384,7 @@ namespace rpcn
 				command == CommandType::AddFriend || command == CommandType::RemoveFriend ||
 				command == CommandType::AddBlock || command == CommandType::RemoveBlock ||
 				command == CommandType::SendMessage || command == CommandType::SendToken ||
-				command == CommandType::SendResetToken || command == CommandType::ResetPassword)
+				command == CommandType::SendResetToken || command == CommandType::ResetPassword || command == CommandType::GetNetworkTime)
 			{
 				std::lock_guard lock(mutex_replies_sync);
 				replies_sync.insert(std::make_pair(packet_id, std::make_pair(command, std::move(data))));
@@ -1261,6 +1262,34 @@ namespace rpcn
 		return true;
 	}
 
+	u64 rpcn_client::get_network_time(u32 req_id)
+	{
+		std::vector<u8> data, reply_data;
+		if (!forge_send_reply(CommandType::GetNetworkTime, req_id, data, reply_data))
+		{
+			return 0;
+		}
+
+		vec_stream reply(reply_data);
+		auto error = static_cast<ErrorType>(reply.get<u8>());
+
+		if (is_error(error))
+		{
+			return 0;
+		}
+
+		u64 network_time = reply.get<u64>();
+
+		if (reply.is_error())
+		{
+			error_and_disconnect("Malformed reply to GetNetworkTime command");
+			return 0;
+		}
+
+		return network_time;
+	}
+
+
 	bool rpcn_client::get_world_list(u32 req_id, const SceNpCommunicationId& communication_id, u16 server_id)
 	{
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u16));
@@ -1381,8 +1410,8 @@ namespace rpcn
 			final_memberbinattrinternal_vec, req->teamId, final_optparam);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1418,8 +1447,8 @@ namespace rpcn
 		auto req_finished = CreateJoinRoomRequest(builder, req->roomId, final_roompassword, final_grouplabel, final_memberbinattrinternal_vec, final_optdata, req->teamId);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1435,8 +1464,8 @@ namespace rpcn
 		flatbuffers::Offset<PresenceOptionData> final_optdata = CreatePresenceOptionData(builder, builder.CreateVector(req->optData.data, 16), req->optData.length);
 		auto req_finished                                     = CreateLeaveRoomRequest(builder, req->roomId, final_optdata);
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1502,8 +1531,8 @@ namespace rpcn
 
 		auto req_finished = s_req.Finish();
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1530,8 +1559,8 @@ namespace rpcn
 		auto req_finished = CreateGetRoomDataExternalListRequestDirect(builder, &roomIds, &attrIds);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1580,8 +1609,8 @@ namespace rpcn
 		auto req_finished = CreateSetRoomDataExternalRequest(builder, req->roomId, final_searchintattrexternal_vec, final_searchbinattrexternal_vec, final_binattrexternal_vec);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1609,8 +1638,8 @@ namespace rpcn
 		auto req_finished = CreateGetRoomDataInternalRequest(builder, req->roomId, final_attr_ids_vec);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1664,8 +1693,8 @@ namespace rpcn
 			CreateSetRoomDataInternalRequest(builder, req->roomId, req->flagFilter, req->flagAttr, final_binattrinternal_vec, final_grouppasswordconfig_vec, final_passwordSlotMask, final_ownerprivilege_vec);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1693,8 +1722,8 @@ namespace rpcn
 		auto req_finished = CreateSetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, req->teamId, final_binattrinternal_vec);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1743,8 +1772,8 @@ namespace rpcn
 		auto req_finished = CreateSendRoomMessageRequest(builder, req->roomId, req->castType, builder.CreateVector(dst.data(), dst.size()), builder.CreateVector(reinterpret_cast<const u8*>(req->msg.get_ptr()), req->msgLen), req->option);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1797,8 +1826,8 @@ namespace rpcn
 		auto fb_sendmessage = CreateSendMessageRequest(builder, nested_flatbuffer_vector, npids_vector);
 
 		builder.Finish(fb_sendmessage);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(bufsize + sizeof(u32));
 
 		reinterpret_cast<le_t<u32>&>(data[0]) = static_cast<u32>(bufsize);
@@ -1825,8 +1854,8 @@ namespace rpcn
 		auto req_finished = CreateRecordScoreRequestDirect(builder, board_id, char_id, score, comment ? (*comment).c_str() : nullptr, score_data ? &*score_data : nullptr);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1842,8 +1871,8 @@ namespace rpcn
 		auto req_finished = CreateGetScoreRangeRequest(builder, board_id, start_rank, num_rank, with_comment, with_gameinfo);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1867,8 +1896,8 @@ namespace rpcn
 		auto req_finished = CreateGetScoreNpIdRequest(builder, board_id, builder.CreateVector(davec), with_comment, with_gameinfo);
 
 		builder.Finish(req_finished);
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1884,8 +1913,8 @@ namespace rpcn
 		auto req_finished = CreateGetScoreFriendsRequest(builder, board_id, include_self, max_entries, with_comment, with_gameinfo);
 		builder.Finish(req_finished);
 
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1901,8 +1930,8 @@ namespace rpcn
 		auto req_finished = CreateRecordScoreGameDataRequest(builder, board_id, pc_id, score);
 		builder.Finish(req_finished);
 
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize + sizeof(u32) + score_data.size());
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1920,8 +1949,8 @@ namespace rpcn
 		auto req_finished = CreateGetScoreGameDataRequest(builder, board_id, builder.CreateString(reinterpret_cast<const char*>(npid.handle.data)), pc_id);
 		builder.Finish(req_finished);
 
-		u8* buf     = builder.GetBufferPointer();
-		usz bufsize = builder.GetSize();
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1929,6 +1958,324 @@ namespace rpcn
 		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
 
 		return forge_send(CommandType::GetScoreData, req_id, data);
+	}
+
+	bool rpcn_client::tus_set_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser)
+	{
+		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
+		const std::vector<s64> variable_array(variableArray.get_ptr(), variableArray.get_ptr() + arrayNum);
+
+		flatbuffers::FlatBufferBuilder builder(1024);
+		auto req_finished = CreateTusSetMultiSlotVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array), builder.CreateVector(variable_array));
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusSetMultiSlotVariable, req_id, data);
+	}
+
+	bool rpcn_client::tus_get_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
+	{
+		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
+
+		flatbuffers::FlatBufferBuilder builder(1024);
+		auto req_finished = CreateTusGetMultiSlotVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusGetMultiSlotVariable, req_id, data);
+	}
+
+	bool rpcn_client::tus_get_multiuser_variable(u32 req_id, const SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+
+		std::vector<flatbuffers::Offset<TusUser>> davec;
+		for (s32 i = 0; i < arrayNum; i++)
+		{
+			davec.push_back(CreateTusUser(builder, vuser, builder.CreateString(targetNpIdArray[i].data)));
+		}
+
+		auto req_finished = CreateTusGetMultiUserVariableRequest(builder, builder.CreateVector(davec), slotId);
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusGetMultiUserVariable, req_id, data);
+	}
+
+	bool rpcn_client::tus_get_friends_variable(u32 req_id, const SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+		auto req_finished = CreateTusGetFriendsVariableRequest(builder, slotId, includeSelf, sortType, arrayNum);
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusGetFriendsVariable, req_id, data);
+	}
+
+	bool rpcn_client::tus_add_and_get_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+
+		flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate;
+		flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId;
+
+		if (option)
+		{
+			if (option->isLastChangedDate)
+			{
+				std::vector<u64> is_last_changed_date_vec;
+				is_last_changed_date_vec.push_back(option->isLastChangedDate->tick);
+				isLastChangedDate = builder.CreateVector(is_last_changed_date_vec);
+			}
+
+			if (option->isLastChangedAuthorId)
+			{
+				isLastChangedAuthorId = builder.CreateString(option->isLastChangedAuthorId->handle.data);
+			}
+		}
+
+		auto req_finished = CreateTusAddAndGetVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId, inVariable, isLastChangedDate, isLastChangedAuthorId);
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusAddAndGetVariable, req_id, data);
+	}
+
+	bool rpcn_client::tus_try_and_set_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+
+		flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate;
+		flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId;
+		flatbuffers::Offset<flatbuffers::Vector<int64_t>> compareValue;
+
+		if (option)
+		{
+			if (option->isLastChangedDate)
+			{
+				std::vector<u64> is_last_changed_date_vec;
+				is_last_changed_date_vec.push_back(option->isLastChangedDate->tick);
+				isLastChangedDate = builder.CreateVector(is_last_changed_date_vec);
+			}
+
+			if (option->isLastChangedAuthorId)
+			{
+				isLastChangedAuthorId = builder.CreateString(option->isLastChangedAuthorId->handle.data);
+			}
+
+			if (option->compareValue)
+			{
+				std::vector<s64> compare_value_vec;
+				compare_value_vec.push_back(*(option->compareValue));
+				compareValue = builder.CreateVector(compare_value_vec);
+			}
+		}
+
+		auto req_finished = CreateTusTryAndSetVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId, opeType, variable, isLastChangedDate, isLastChangedAuthorId, compareValue);
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusTryAndSetVariable, req_id, data);
+	}
+
+	bool rpcn_client::tus_delete_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
+	{
+		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
+
+		flatbuffers::FlatBufferBuilder builder(1024);
+		auto req_finished = CreateTusDeleteMultiSlotVariableRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusDeleteMultiSlotVariable, req_id, data);
+	}
+
+	bool rpcn_client::tus_set_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, const std::vector<u8>& tus_data, vm::cptr<SceNpTusDataInfo> info, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+
+		flatbuffers::Offset<flatbuffers::Vector<uint64_t>> isLastChangedDate;
+		flatbuffers::Offset<flatbuffers::String> isLastChangedAuthorId;
+
+		if (option)
+		{
+			if (option->isLastChangedDate)
+			{
+				std::vector<u64> is_last_changed_date_vec;
+				is_last_changed_date_vec.push_back(option->isLastChangedDate->tick);
+				isLastChangedDate = builder.CreateVector(is_last_changed_date_vec);
+			}
+
+			if (option->isLastChangedAuthorId)
+			{
+				isLastChangedAuthorId = builder.CreateString(option->isLastChangedAuthorId->handle.data);
+			}
+		}
+
+		flatbuffers::Offset<flatbuffers::Vector<uint8_t>> fb_info;
+
+		if (info)
+		{
+			fb_info = builder.CreateVector(info->data, static_cast<size_t>(info->infoSize));
+		}
+
+		auto req_finished = CreateTusSetDataRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId, builder.CreateVector(tus_data), fb_info, isLastChangedDate, isLastChangedAuthorId);
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusSetData, req_id, data);
+	}
+
+	bool rpcn_client::tus_get_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, bool vuser)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+		auto req_finished = CreateTusGetDataRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), slotId);
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusGetData, req_id, data);
+	}
+
+	bool rpcn_client::tus_get_multislot_data_status(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
+	{
+		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
+
+		flatbuffers::FlatBufferBuilder builder(1024);
+		auto req_finished = CreateTusGetMultiSlotDataStatusRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusGetMultiSlotDataStatus, req_id, data);
+	}
+
+	bool rpcn_client::tus_get_multiuser_data_status(u32 req_id, SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+
+		std::vector<flatbuffers::Offset<TusUser>> davec;
+		for (s32 i = 0; i < arrayNum; i++)
+		{
+			davec.push_back(CreateTusUser(builder, vuser, builder.CreateString(targetNpIdArray[i].data)));
+		}
+
+		auto req_finished = CreateTusGetMultiUserDataStatusRequest(builder, builder.CreateVector(davec), slotId);
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusGetMultiUserDataStatus, req_id, data);
+	}
+
+	bool rpcn_client::tus_get_friends_data_status(u32 req_id, SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum)
+	{
+		flatbuffers::FlatBufferBuilder builder(1024);
+		auto req_finished = CreateTusGetFriendsDataStatusRequest(builder, slotId, includeSelf, sortType, arrayNum);
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusGetFriendsDataStatus, req_id, data);
+	}
+
+	bool rpcn_client::tus_delete_multislot_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser)
+	{
+		const std::vector<s32> slotid_array(slotIdArray.get_ptr(), slotIdArray.get_ptr() + arrayNum);
+
+		flatbuffers::FlatBufferBuilder builder(1024);
+		auto req_finished = CreateTusDeleteMultiSlotDataRequest(builder, CreateTusUser(builder, vuser, builder.CreateString(targetNpId.data)), builder.CreateVector(slotid_array));
+		builder.Finish(req_finished);
+
+		const u8* buf     = builder.GetBufferPointer();
+		const usz bufsize = builder.GetSize();
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
+
+		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+		return forge_send(CommandType::TusDeleteMultiSlotData, req_id, data);
 	}
 
 	std::vector<u8> rpcn_client::forge_request(u16 command, u64 packet_id, const std::vector<u8>& data) const
