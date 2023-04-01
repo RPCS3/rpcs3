@@ -61,8 +61,8 @@ struct SceNpTusVariable
 {
 	SceNpId ownerId;
 	be_t<s32> hasData;
-	u8 pad[4];
 	CellRtcTick lastChangedDate;
+	u8 pad[4];
 	SceNpId lastChangedAuthorId;
 	be_t<s64> variable;
 	be_t<s64> oldVariable;
@@ -84,7 +84,7 @@ struct SceNpTusDataStatus
 	be_t<s32> hasData;
 	CellRtcTick lastChangedDate;
 	SceNpId lastChangedAuthorId;
-	be_t<u32> data;
+	vm::bptr<void> data;
 	be_t<u32> dataSize;
 	u8 pad[4];
 	SceNpTusDataInfo info;

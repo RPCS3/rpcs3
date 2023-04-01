@@ -73,7 +73,6 @@ public:
 	void start_sig(u32 conn_id, u32 addr, u16 port);
 	void stop_sig(u32 conn_id);
 
-	void start_sig2(u64 room_id, u16 member_id);
 	void disconnect_sig2_users(u64 room_id);
 
 	static constexpr auto thread_name = "Signaling Manager Thread"sv;
@@ -120,7 +119,6 @@ private:
 	u32 get_always_conn_id(const SceNpId& npid);
 	static void update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
 	static void update_si_mapped_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
-	static void update_room_info(std::shared_ptr<signaling_info>& si, u64 room_id, u16 member_id);
 	void update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status);
 	void update_ext_si_status(std::shared_ptr<signaling_info>& si, bool op_activated);
 	void signal_sig_callback(u32 conn_id, int event);
@@ -134,7 +132,7 @@ private:
 	void stop_sig_nl(u32 conn_id);
 
 	shared_mutex data_mutex;
-	atomic_t<u32> wakey;
+	atomic_t<u32> wakey = 0;
 
 	signaling_packet sig_packet{};
 

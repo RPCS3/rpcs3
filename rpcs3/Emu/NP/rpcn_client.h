@@ -26,6 +26,7 @@
 
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
+#include "Emu/Cell/Modules/sceNpTus.h"
 
 #include "generated/np2_structs_generated.h"
 
@@ -182,6 +183,20 @@ namespace rpcn
 		GetScoreRange,
 		GetScoreFriends,
 		GetScoreNpid,
+		GetNetworkTime,
+		TusSetMultiSlotVariable,
+		TusGetMultiSlotVariable,
+		TusGetMultiUserVariable,
+		TusGetFriendsVariable,
+		TusAddAndGetVariable,
+		TusTryAndSetVariable,
+		TusDeleteMultiSlotVariable,
+		TusSetData,
+		TusGetData,
+		TusGetMultiSlotDataStatus,
+		TusGetMultiUserDataStatus,
+		TusGetFriendsDataStatus,
+		TusDeleteMultiSlotData,
 	};
 
 	enum NotificationType : u16
@@ -253,6 +268,7 @@ namespace rpcn
 		ScoreNotBest,                // A better score is already registered for that user/character_id
 		ScoreInvalid,                // Score for player was found but wasn't what was expected
 		ScoreHasData,                // Score already has data
+		CondFail,                    // Condition related to query failed
 		Unsupported,
 		__error_last
 	};
@@ -386,6 +402,7 @@ namespace rpcn
 
 		// Synchronous requests
 		bool get_server_list(u32 req_id, const SceNpCommunicationId& communication_id, std::vector<u16>& server_list);
+		u64 get_network_time(u32 req_id);
 		// Asynchronous requests
 		bool get_world_list(u32 req_id, const SceNpCommunicationId& communication_id, u16 server_id);
 		bool createjoin_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2CreateJoinRoomRequest* req);
@@ -409,6 +426,19 @@ namespace rpcn
 		bool get_score_friend(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, bool include_self, bool with_comment, bool with_gameinfo, u32 max_entries);
 		bool record_score_data(u32 req_id, const SceNpCommunicationId& communication_id,  SceNpScorePcId pc_id, SceNpScoreBoardId board_id, s64 score, const std::vector<u8>& score_data);
 		bool get_score_data(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScorePcId pc_id, SceNpScoreBoardId board_id, const SceNpId& npid);
+		bool tus_set_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser);
+		bool tus_get_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
+		bool tus_get_multiuser_variable(u32 req_id, const SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser);
+		bool tus_get_friends_variable(u32 req_id, const SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum);
+		bool tus_add_and_get_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser);
+		bool tus_try_and_set_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser);
+		bool tus_delete_multislot_variable(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
+		bool tus_set_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, const std::vector<u8>& tus_data, vm::cptr<SceNpTusDataInfo> info, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser);
+		bool tus_get_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, bool vuser);
+		bool tus_get_multislot_data_status(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
+		bool tus_get_multiuser_data_status(u32 req_id, SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser);
+		bool tus_get_friends_data_status(u32 req_id, SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum);
+		bool tus_delete_multislot_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
 
 		const std::string& get_online_name() const
 		{
@@ -472,7 +502,7 @@ namespace rpcn
 		shared_mutex mutex_notifs, mutex_replies, mutex_replies_sync;
 		std::vector<std::pair<u16, std::vector<u8>>> notifications;            // notif type / data
 		std::unordered_map<u32, std::pair<u16, std::vector<u8>>> replies;      // req id / (command / data)
-		std::unordered_map<u64, std::pair<u16, std::vector<u8>>> replies_sync; // same but for sync replies(Login, Create, GetServerList)
+		std::unordered_map<u64, std::pair<u16, std::vector<u8>>> replies_sync; // same but for sync replies(see handle_input())
 
 		// Messages
 		struct message_cb_t

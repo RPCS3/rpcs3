@@ -167,7 +167,7 @@ namespace np
 		get_resp->roomDataExternalNum = resp->rooms() ? resp->rooms()->size() : 0;
 
 		SceNpMatching2RoomDataExternal* prev_room = nullptr;
-		for (std::size_t i = 0; i < get_resp->roomDataExternalNum; i++)
+		for (flatbuffers::uoffset_t i = 0; i < get_resp->roomDataExternalNum; i++)
 		{
 			auto* fb_room = resp->rooms()->Get(i);
 			SceNpMatching2RoomDataExternal* cur_room;
