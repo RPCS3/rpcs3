@@ -11,31 +11,35 @@
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/sceNpCommerce2.h"
+#include "Emu/Cell/Modules/sceNpTus.h"
 
-// Score related
-struct score_ctx
+// Used By Score and Tus
+struct generic_async_transaction_context
 {
-	score_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
+	virtual ~generic_async_transaction_context();
 
-	static const u32 id_base  = 0x2001;
-	static const u32 id_step  = 1;
-	static const u32 id_count = 32;
-	SAVESTATE_INIT_POS(25);
+	generic_async_transaction_context(const SceNpCommunicationId& communicationId, const SceNpCommunicationPassphrase& passphrase, u64 timeout);
+
+	std::optional<s32> get_transaction_status();
+	void abort_transaction();
+	error_code wait_for_completion();
+	bool set_result_and_wake(error_code err);
 
 	shared_mutex mutex;
+	std::condition_variable_any wake_cond, completion_cond;
+	std::optional<error_code> result;
+	SceNpCommunicationId communicationId;
+	SceNpCommunicationPassphrase passphrase;
+	u64 timeout;
 
-	u64 timeout = 60'000'000; // 60 seconds
-
-	SceNpCommunicationId communicationId{};
-	SceNpCommunicationPassphrase passphrase{};
-	s32 pcId = 0;
+	std::thread thread;
 };
-s32 create_score_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
-bool destroy_score_context(s32 ctx_id);
 
 struct tdata_invalid
 {
 };
+
+// Score transaction data
 
 struct tdata_get_board_infos
 {
@@ -74,33 +78,104 @@ struct tdata_get_score_generic
 	vm::ptr<SceNpScoreRankNumber> totalRecord;
 };
 
-struct score_transaction_ctx
-{
-	score_transaction_ctx(const std::shared_ptr<score_ctx>& score);
-	~score_transaction_ctx();
-	std::optional<s32> get_score_transaction_status();
-	void abort_score_transaction();
-	error_code wait_for_completion();
-	bool set_result_and_wake(error_code err);
+// TUS transaction data
 
-	static const u32 id_base  = 0x1001;
-	static const u32 id_step  = 1;
-	static const u32 id_count = 32;
-	SAVESTATE_INIT_POS(26);
+struct tdata_tus_get_variables_generic
+{
+	vm::ptr<SceNpTusVariable> variableArray;
+	s32 arrayNum;
+};
+
+struct tdata_tus_get_variable_generic
+{
+	vm::ptr<SceNpTusVariable> outVariable;
+};
+
+struct tdata_tus_set_data
+{
+	u32 tus_data_size;
+	std::vector<u8> tus_data;
+};
+
+struct tdata_tus_get_data
+{
+	u32 recvSize = 0;
+	vm::ptr<SceNpTusDataStatus> dataStatus;
+	vm::ptr<void> data;
+	std::vector<u8> tus_data;
+};
+
+struct tdata_tus_get_datastatus_generic
+{
+	vm::ptr<SceNpTusDataStatus> statusArray;
+	s32 arrayNum;
+};
+
+// TUS related
+struct tus_ctx
+{
+	tus_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
+
+	static const u32 id_base = 0x7001;
+	static const u32 id_step = 1;
+	static const u32 id_count = SCE_NP_TUS_MAX_CTX_NUM;
+	SAVESTATE_INIT_POS(50);
 
 	shared_mutex mutex;
-	std::condition_variable_any wake_cond, completion_cond;
+	u64 timeout = 60'000'000; // 60 seconds
+	SceNpCommunicationId communicationId{};
+	SceNpCommunicationPassphrase passphrase{};
+};
+s32 create_tus_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
+bool destroy_tus_context(s32 ctx_id);
 
-	std::optional<error_code> result;
-	std::variant<tdata_invalid, tdata_get_board_infos, tdata_record_score, tdata_record_score_data, tdata_get_score_data, tdata_get_score_generic> tdata;
+struct tus_transaction_ctx : public generic_async_transaction_context
+{
+	tus_transaction_ctx(const std::shared_ptr<tus_ctx>& tus);
+	virtual ~tus_transaction_ctx() = default;
 
-	u64 timeout = 60'000'000; // 60 seconds;
+	static const u32 id_base  = 0x8001;
+	static const u32 id_step  = 1;
+	static const u32 id_count = SCE_NP_TUS_MAX_CTX_NUM;
+	SAVESTATE_INIT_POS(51);
 
+	std::variant<tdata_invalid, tdata_tus_get_variables_generic, tdata_tus_get_variable_generic, tdata_tus_set_data, tdata_tus_get_data, tdata_tus_get_datastatus_generic> tdata;
+};
+
+s32 create_tus_transaction_context(const std::shared_ptr<tus_ctx>& tus);
+bool destroy_tus_transaction_context(s32 ctx_id);
+
+// Score related
+struct score_ctx
+{
+	score_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
+
+	static const u32 id_base  = 0x2001;
+	static const u32 id_step  = 1;
+	static const u32 id_count = SCE_NP_SCORE_MAX_CTX_NUM;
+	SAVESTATE_INIT_POS(25);
+
+	shared_mutex mutex;
+	u64 timeout = 60'000'000; // 60 seconds
 	SceNpCommunicationId communicationId{};
 	SceNpCommunicationPassphrase passphrase{};
 	s32 pcId = 0;
+};
+s32 create_score_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase);
+bool destroy_score_context(s32 ctx_id);
 
-	std::thread thread;
+struct score_transaction_ctx : public generic_async_transaction_context
+{
+	score_transaction_ctx(const std::shared_ptr<score_ctx>& score);
+	virtual ~score_transaction_ctx() = default;
+
+	static const u32 id_base  = 0x1001;
+	static const u32 id_step  = 1;
+	static const u32 id_count = SCE_NP_SCORE_MAX_CTX_NUM;
+	SAVESTATE_INIT_POS(26);
+
+	std::variant<tdata_invalid, tdata_get_board_infos, tdata_record_score, tdata_record_score_data, tdata_get_score_data, tdata_get_score_generic> tdata;
+	s32 pcId = 0;
 };
 s32 create_score_transaction_context(const std::shared_ptr<score_ctx>& score);
 bool destroy_score_transaction_context(s32 ctx_id);
@@ -112,7 +187,7 @@ struct match2_ctx
 
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
-	static const u32 id_count = 255;
+	static const u32 id_count = 255; // TODO: constant here?
 	SAVESTATE_INIT_POS(27);
 
 	SceNpCommunicationId communicationId{};
@@ -134,7 +209,7 @@ struct lookup_title_ctx
 
 	static const u32 id_base  = 0x3001;
 	static const u32 id_step  = 1;
-	static const u32 id_count = 32;
+	static const u32 id_count = SCE_NP_LOOKUP_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(28);
 
 	SceNpCommunicationId communicationId{};
@@ -149,7 +224,7 @@ struct lookup_transaction_ctx
 
 	static const u32 id_base  = 0x4001;
 	static const u32 id_step  = 1;
-	static const u32 id_count = 32;
+	static const u32 id_count = SCE_NP_LOOKUP_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(29);
 
 	s32 lt_ctx = 0;
@@ -163,7 +238,7 @@ struct commerce2_ctx
 
 	static const u32 id_base  = 0x5001;
 	static const u32 id_step  = 1;
-	static const u32 id_count = 32;
+	static const u32 id_count = SCE_NP_COMMERCE2_CTX_MAX;
 	SAVESTATE_INIT_POS(30);
 
 	u32 version{};
@@ -181,7 +256,7 @@ struct signaling_ctx
 
 	static const u32 id_base  = 0x6001;
 	static const u32 id_step  = 1;
-	static const u32 id_count = 32;
+	static const u32 id_count = SCE_NP_SIGNALING_CTX_MAX;
 	SAVESTATE_INIT_POS(31);
 
 	SceNpId npid{};

@@ -181,7 +181,7 @@ public:
 	static constexpr auto thread_name = "Tcp Over Udp Timeout Manager Thread"sv;
 
 private:
-	atomic_t<u32> wakey;
+	atomic_t<u32> wakey = 0;
 	shared_mutex data_mutex;
 	// List of outgoing messages
 	struct message

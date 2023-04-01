@@ -23,13 +23,40 @@ namespace np
 			return server_list;
 		}
 
-		if (!get_rpcn()->get_server_list(get_req_id(0), get_match2_context(ctx_id)->communicationId, server_list))
+		if (!get_rpcn()->get_server_list(get_req_id(REQUEST_ID_HIGH::MISC), get_match2_context(ctx_id)->communicationId, server_list))
 		{
 			rpcn_log.error("Disconnecting from RPCN!");
 			is_psn_active = false;
 		}
 
 		return server_list;
+	}
+
+	u64 np_handler::get_network_time()
+	{
+		// If network time hasn't been set we need to sync time with the rpcn server
+		auto get_local_timestamp = []() -> u64
+		{
+			return std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now().time_since_epoch()).count();
+		};
+
+		if (!network_time_offset)
+		{
+			// Could be improved with multiple requests to increase latency determination accuracy
+			const u64 req_timestamp = get_local_timestamp();
+			const u64 server_timestamp = get_rpcn()->get_network_time(get_req_id(REQUEST_ID_HIGH::MISC));
+			if (!server_timestamp)
+			{
+				rpcn_log.error("Disconnecting from RPCN!");
+				is_psn_active = false;
+				return 0;
+			}
+			const u64 reply_timestamp = get_local_timestamp();
+			const u64 latency = (reply_timestamp - req_timestamp) / 2;
+			network_time_offset = reply_timestamp - (server_timestamp + latency);
+		}
+
+		return get_local_timestamp() - network_time_offset;
 	}
 
 	u32 np_handler::get_server_status(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, u16 server_id)
@@ -550,7 +577,7 @@ namespace np
 
 	void np_handler::req_sign_infos(const std::string& npid, u32 conn_id)
 	{
-		u32 req_id = get_req_id(0x3333);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::MISC);
 		{
 			std::lock_guard lock(mutex_pending_sign_infos_requests);
 			pending_sign_infos_requests[req_id] = conn_id;
@@ -603,7 +630,7 @@ namespace np
 
 	void np_handler::req_ticket([[maybe_unused]] u32 version, [[maybe_unused]] const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, [[maybe_unused]] const char* entitlement_id, [[maybe_unused]] u32 consumed_count)
 	{
-		u32 req_id = get_req_id(0x3333);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::MISC);
 
 		std::string service_id_str(service_id);
 
@@ -650,14 +677,14 @@ namespace np
 		return true;
 	}
 
-	void np_handler::score_async_handler(std::unique_lock<shared_mutex> lock, const std::shared_ptr<score_transaction_ctx>& trans_ctx, u32 req_id, bool async)
+	void np_handler::transaction_async_handler(std::unique_lock<shared_mutex> lock, const std::shared_ptr<generic_async_transaction_context>& trans_ctx, u32 req_id, bool async)
 	{
 		auto worker_function = [trans_ctx = trans_ctx, req_id, this](std::unique_lock<shared_mutex> lock)
 		{
 			auto res = trans_ctx->wake_cond.wait_for(lock, std::chrono::microseconds(trans_ctx->timeout));
 			{
-				std::lock_guard lock_threads(this->mutex_score_transactions);
-				this->score_transactions.erase(req_id);
+				std::lock_guard lock_threads(this->mutex_async_transactions);
+				this->async_transactions.erase(req_id);
 			}
 
 			if (res == std::cv_status::timeout)
@@ -673,8 +700,8 @@ namespace np
 		};
 
 		{
-			std::lock_guard lock_score(mutex_score_transactions);
-			ensure(score_transactions.insert({req_id, trans_ctx}).second);
+			std::lock_guard lock_score(mutex_async_transactions);
+			ensure(async_transactions.insert({req_id, trans_ctx}).second);
 		}
 
 		if (async)
@@ -693,11 +720,11 @@ namespace np
 	{
 		std::unique_lock lock(trans_ctx->mutex);
 
-		u32 req_id = get_req_id(0x3334);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 		trans_ctx->tdata = tdata_get_board_infos{.boardInfo = boardInfo};
 		get_rpcn()->get_board_infos(req_id, trans_ctx->communicationId, boardId);
 
-		score_async_handler(std::move(lock), trans_ctx, req_id, async);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
 	bool np_handler::reply_get_board_infos(u32 req_id, std::vector<u8>& reply_data)
@@ -717,22 +744,24 @@ namespace np
 		board_info.uploadNumLimit = resp->uploadNumLimit();
 		board_info.uploadSizeLimit = resp->uploadSizeLimit();
 
-		std::lock_guard lock_trans(mutex_score_transactions);
-		if (!score_transactions.count(req_id))
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
 			return false;
 		}
 
-		auto trans = ::at32(score_transactions, req_id);
-		std::lock_guard lock(trans->mutex);
+		auto score_trans = std::dynamic_pointer_cast<score_transaction_ctx>(::at32(async_transactions, req_id));
+		ensure(score_trans);
 
-		const auto* tdata = std::get_if<tdata_get_board_infos>(&trans->tdata);
+		std::lock_guard lock(score_trans->mutex);
+
+		const auto* tdata = std::get_if<tdata_get_board_infos>(&score_trans->tdata);
 		ensure(tdata);
 
 		memcpy(reinterpret_cast<u8*>(tdata->boardInfo.get_ptr()), &board_info, sizeof(SceNpScoreBoardInfo));
-		trans->result = CELL_OK;
-		trans->wake_cond.notify_one();
+		score_trans->result = CELL_OK;
+		score_trans->wake_cond.notify_one();
 
 		return true;
 	}
@@ -740,7 +769,7 @@ namespace np
 	void np_handler::record_score(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreValue score, vm::cptr<SceNpScoreComment> scoreComment, const u8* data, u32 data_size, vm::ptr<SceNpScoreRankNumber> tmpRank, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(0x3334);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 		std::optional<std::string> str_comment = scoreComment ? std::optional(std::string(reinterpret_cast<const char*>(scoreComment->data))) : std::nullopt;
 		std::optional<std::vector<u8>> vec_data;
 
@@ -753,20 +782,22 @@ namespace np
 
 		get_rpcn()->record_score(req_id, trans_ctx->communicationId, boardId, trans_ctx->pcId, score, str_comment, vec_data);
 
-		score_async_handler(std::move(lock), trans_ctx, req_id, async);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
 	bool np_handler::reply_record_score(u32 req_id, std::vector<u8>& reply_data)
 	{
-		std::lock_guard lock_trans(mutex_score_transactions);
-		if (!score_transactions.count(req_id))
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
 			return false;
 		}
 
-		auto trans = ::at32(score_transactions, req_id);
-		std::lock_guard lock(trans->mutex);
+		auto score_trans = std::dynamic_pointer_cast<score_transaction_ctx>(::at32(async_transactions, req_id));
+		ensure(score_trans);
+
+		std::lock_guard lock(score_trans->mutex);
 
 		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
 		{
@@ -774,8 +805,8 @@ namespace np
 			{
 			case rpcn::ErrorType::ScoreNotBest:
 			{
-				trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_NOT_BEST_SCORE;
-				trans->wake_cond.notify_one();
+				score_trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_NOT_BEST_SCORE;
+				score_trans->wake_cond.notify_one();
 				return true;
 			}
 			default: return false;
@@ -791,7 +822,7 @@ namespace np
 			return false;
 		}
 
-		const auto* tdata = std::get_if<tdata_record_score>(&trans->tdata);
+		const auto* tdata = std::get_if<tdata_record_score>(&score_trans->tdata);
 		ensure(tdata);
 
 		if (tdata->tmpRank)
@@ -799,8 +830,8 @@ namespace np
 			*tdata->tmpRank = tmp_rank;
 		}
 
-		trans->result = CELL_OK;
-		trans->wake_cond.notify_one();
+		score_trans->result = CELL_OK;
+		score_trans->wake_cond.notify_one();
 		return true;
 	}
 
@@ -821,9 +852,9 @@ namespace np
 		if (tdata->game_data.size() == tdata->game_data_size)
 		{
 			trans_ctx->result = std::nullopt;
-			u32 req_id = get_req_id(0x3334);
+			u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 			get_rpcn()->record_score_data(req_id, trans_ctx->communicationId, trans_ctx->pcId, boardId, score, tdata->game_data);
-			score_async_handler(std::move(lock), trans_ctx, req_id, async);
+			transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 		}
 		else
 		{
@@ -833,14 +864,14 @@ namespace np
 
 	bool np_handler::reply_record_score_data(u32 req_id, std::vector<u8>& reply_data)
 	{
-		std::lock_guard lock_trans(mutex_score_transactions);
-		if (!score_transactions.count(req_id))
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
 			return false;
 		}
 
-		auto trans = ::at32(score_transactions, req_id);
+		auto trans = ::at32(async_transactions, req_id);
 		std::lock_guard lock(trans->mutex);
 
 		auto set_result_and_wake = [&](error_code err) -> bool
@@ -873,9 +904,9 @@ namespace np
 		{
 			trans_ctx->tdata = tdata_get_score_data{.totalSize = totalSize, .recvSize = recvSize, .score_data = score_data};
 
-			u32 req_id = get_req_id(0x3334);
+			u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 			get_rpcn()->get_score_data(req_id, trans_ctx->communicationId, trans_ctx->pcId, boardId, npId);
-			score_async_handler(std::move(lock), trans_ctx, req_id, async);
+			transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 			return;
 		}
 
@@ -898,28 +929,29 @@ namespace np
 
 	bool np_handler::reply_get_score_data(u32 req_id, std::vector<u8>& reply_data)
 	{
-		std::lock_guard lock_trans(mutex_score_transactions);
-		if (!score_transactions.count(req_id))
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
 			return false;
 		}
 
-		auto trans = ::at32(score_transactions, req_id);
-		std::lock_guard lock(trans->mutex);
+		auto score_trans = std::dynamic_pointer_cast<score_transaction_ctx>(::at32(async_transactions, req_id));
+		ensure(score_trans);
+		std::lock_guard lock(score_trans->mutex);
 
 		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
 		{
 			switch (reply_data[0])
 			{
-			case rpcn::ErrorType::NotFound: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_GAME_DATA_MASTER_NOT_FOUND);
+			case rpcn::ErrorType::NotFound: return score_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_GAME_DATA_MASTER_NOT_FOUND);
 			default: return false;
 			}
 		}
 
 		vec_stream reply(reply_data, 1);
 
-		auto* tdata = std::get_if<tdata_get_score_data>(&trans->tdata);
+		auto* tdata = std::get_if<tdata_get_score_data>(&score_trans->tdata);
 		ensure(tdata);
 
 		tdata->game_data = reply.get_rawdata();
@@ -937,13 +969,13 @@ namespace np
 		tdata->game_data.erase(tdata->game_data.begin(), tdata->game_data.begin() + to_copy);
 		*tdata->totalSize = tdata->game_data_size;
 
-		return trans->set_result_and_wake(not_an_error(to_copy));
+		return score_trans->set_result_and_wake(not_an_error(to_copy));
 	}
 
 	void np_handler::get_score_range(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, SceNpScoreRankNumber startSerialRank, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(0x3334);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 
 		trans_ctx->tdata = tdata_get_score_generic{
 			.rankArray = rankArray,
@@ -961,20 +993,21 @@ namespace np
 
 		get_rpcn()->get_score_range(req_id, trans_ctx->communicationId, boardId, startSerialRank, arrayNum, with_comments, with_gameinfo);
 
-		score_async_handler(std::move(lock), trans_ctx, req_id, async);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 
 	bool np_handler::handle_GetScoreResponse(u32 req_id, std::vector<u8>& reply_data)
 	{
-		std::lock_guard lock_trans(mutex_score_transactions);
-		if (!score_transactions.count(req_id))
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
 		{
 			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
 			return false;
 		}
 
-		auto trans_ctx = ::at32(score_transactions, req_id);
-		std::lock_guard lock(trans_ctx->mutex);
+		auto score_trans = std::dynamic_pointer_cast<score_transaction_ctx>(::at32(async_transactions, req_id));
+		ensure(score_trans);
+		std::lock_guard lock(score_trans->mutex);
 
 		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
 		{
@@ -990,7 +1023,7 @@ namespace np
 			return false;
 		}
 
-		const auto* tdata = std::get_if<tdata_get_score_generic>(&trans_ctx->tdata);
+		const auto* tdata = std::get_if<tdata_get_score_generic>(&score_trans->tdata);
 		ensure(tdata);
 		ensure(resp->rankArray() && resp->rankArray()->size() <= tdata->arrayNum);
 
@@ -1078,13 +1111,14 @@ namespace np
 		*tdata->totalRecord = resp->totalRecord();
 
 		if (fb_rankarray->size())
-			trans_ctx->result = not_an_error(fb_rankarray->size());
+			score_trans->result = not_an_error(fb_rankarray->size());
 		else
-			trans_ctx->result = SCE_NP_COMMUNITY_SERVER_ERROR_GAME_RANKING_NOT_FOUND;
+			score_trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_GAME_RANKING_NOT_FOUND;
 
-		trans_ctx->wake_cond.notify_one();
+		score_trans->wake_cond.notify_one();
 		return true;
 	}
+
 	bool np_handler::reply_get_score_range(u32 req_id, std::vector<u8>& reply_data)
 	{
 		return handle_GetScoreResponse(req_id, reply_data);
@@ -1093,7 +1127,7 @@ namespace np
 	void np_handler::get_score_friend(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, bool include_self, vm::ptr<SceNpScoreRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(0x3334);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 		trans_ctx->tdata = tdata_get_score_generic{
 			.rankArray = rankArray,
 			.rankArraySize = rankArraySize,
@@ -1110,7 +1144,7 @@ namespace np
 
 		get_rpcn()->get_score_friend(req_id, trans_ctx->communicationId, boardId, include_self, with_comments, with_gameinfo, arrayNum);
 
-		score_async_handler(std::move(lock), trans_ctx, req_id, async);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 	bool np_handler::reply_get_score_friends(u32 req_id, std::vector<u8>& reply_data)
 	{
@@ -1120,7 +1154,7 @@ namespace np
 	void np_handler::get_score_npid(std::shared_ptr<score_transaction_ctx>& trans_ctx, SceNpScoreBoardId boardId, const std::vector<std::pair<SceNpId, s32>>& npid_vec, vm::ptr<SceNpScorePlayerRankData> rankArray, u32 rankArraySize, vm::ptr<SceNpScoreComment> commentArray, [[maybe_unused]] u32 commentArraySize, vm::ptr<void> infoArray, u32 infoArraySize, u32 arrayNum, vm::ptr<CellRtcTick> lastSortDate, vm::ptr<SceNpScoreRankNumber> totalRecord, bool async)
 	{
 		std::unique_lock lock(trans_ctx->mutex);
-		u32 req_id = get_req_id(0x3334);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
 		trans_ctx->tdata = tdata_get_score_generic{
 			.rankArray = rankArray,
 			.rankArraySize = rankArraySize,
@@ -1137,11 +1171,583 @@ namespace np
 
 		get_rpcn()->get_score_npid(req_id, trans_ctx->communicationId, boardId, npid_vec, with_comments, with_gameinfo);
 
-		score_async_handler(std::move(lock), trans_ctx, req_id, async);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
 	}
 	bool np_handler::reply_get_score_npid(u32 req_id, std::vector<u8>& reply_data)
 	{
 		return handle_GetScoreResponse(req_id, reply_data);
 	}
+
+	bool np_handler::handle_tus_no_data(u32 req_id, std::vector<u8>& reply_data)
+	{
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return false;
+		}
+
+		auto trans = ::at32(async_transactions, req_id);
+		std::lock_guard lock(trans->mutex);
+
+		auto set_result_and_wake = [&](error_code err) -> bool
+		{
+			trans->result = err;
+			trans->wake_cond.notify_one();
+			return true;
+		};
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			case rpcn::ErrorType::NotFound: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
+			case rpcn::ErrorType::Unauthorized: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
+			case rpcn::ErrorType::CondFail: return trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
+			default: return false;
+			}
+		}
+
+		return set_result_and_wake(CELL_OK);
+	}
+
+	bool np_handler::handle_TusVarResponse(u32 req_id, std::vector<u8>& reply_data)
+	{
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return false;
+		}
+
+		auto tus_trans = std::dynamic_pointer_cast<tus_transaction_ctx>(::at32(async_transactions, req_id));
+		ensure(tus_trans);
+		std::lock_guard lock(tus_trans->mutex);
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
+			case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
+			case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
+			default: return false;
+			}
+		}
+
+		vec_stream reply(reply_data, 1);
+		auto* resp = reply.get_flatbuffer<TusVarResponse>();
+
+		if (reply.is_error())
+		{
+			rpcn_log.error("Error parsing response in handle_TusVarResponse");
+			return false;
+		}
+
+		const auto* tdata = std::get_if<tdata_tus_get_variables_generic>(&tus_trans->tdata);
+		ensure(tdata);
+		ensure(resp->vars() && resp->vars()->size() <= static_cast<usz>(tdata->arrayNum));
+
+		const auto* fb_vars = resp->vars();
+
+		memset(tdata->variableArray.get_ptr(), 0, sizeof(SceNpTusVariable) * tdata->arrayNum);
+		for (flatbuffers::uoffset_t i = 0; i < fb_vars->size(); i++)
+		{
+			auto* cur_var = &tdata->variableArray[i];
+			const auto* cur_fb_var = fb_vars->Get(i);
+
+			ensure(cur_fb_var->ownerId());
+			string_to_npid(cur_fb_var->ownerId()->string_view(), cur_var->ownerId);
+
+			if (!cur_fb_var->hasData())
+			{
+				continue;
+			}
+
+			ensure(cur_fb_var->lastChangedAuthorId());
+
+			cur_var->hasData = 1;
+			cur_var->lastChangedDate.tick = cur_fb_var->lastChangedDate();
+			string_to_npid(cur_fb_var->lastChangedAuthorId()->string_view(), cur_var->lastChangedAuthorId);
+			cur_var->variable = cur_fb_var->variable();
+			cur_var->oldVariable = cur_fb_var->oldVariable();
+		}
+
+		tus_trans->result = not_an_error(fb_vars->size());
+		tus_trans->wake_cond.notify_one();
+
+		return true;
+	}
+
+	bool np_handler::handle_TusVariable(u32 req_id, std::vector<u8>& reply_data)
+	{
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return false;
+		}
+
+		auto tus_trans = std::dynamic_pointer_cast<tus_transaction_ctx>(::at32(async_transactions, req_id));
+		ensure(tus_trans);
+		std::lock_guard lock(tus_trans->mutex);
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
+			case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
+			case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
+			default: return false;
+			}
+		}
+
+		vec_stream reply(reply_data, 1);
+		const auto* fb_var = reply.get_flatbuffer<TusVariable>();
+
+		if (reply.is_error())
+		{
+			rpcn_log.error("Error parsing response in handle_TusVariable");
+			return false;
+		}
+
+		const auto* tdata = std::get_if<tdata_tus_get_variable_generic>(&tus_trans->tdata);
+		ensure(tdata);
+
+		auto* var = tdata->outVariable.get_ptr();
+		memset(var, 0, sizeof(SceNpTusVariable));
+
+		ensure(fb_var->ownerId());
+		string_to_npid(fb_var->ownerId()->string_view(), var->ownerId);
+
+		if (fb_var->hasData())
+		{
+			ensure(fb_var->lastChangedAuthorId());
+			var->hasData = 1;
+			var->lastChangedDate.tick = fb_var->lastChangedDate();
+			string_to_npid(fb_var->lastChangedAuthorId()->string_view(), var->lastChangedAuthorId);
+			var->variable = fb_var->variable();
+			var->oldVariable = fb_var->oldVariable();
+		}
+
+		tus_trans->result = CELL_OK;
+		tus_trans->wake_cond.notify_one();
+
+		return true;
+	}
+
+	bool np_handler::handle_TusDataStatusResponse(u32 req_id, std::vector<u8>& reply_data)
+	{
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return false;
+		}
+
+		auto tus_trans = std::dynamic_pointer_cast<tus_transaction_ctx>(::at32(async_transactions, req_id));
+		ensure(tus_trans);
+		std::lock_guard lock(tus_trans->mutex);
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
+			case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
+			case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
+			default: return false;
+			}
+		}
+
+		vec_stream reply(reply_data, 1);
+		auto* resp = reply.get_flatbuffer<TusDataStatusResponse>();
+
+		if (reply.is_error())
+		{
+			rpcn_log.error("Error parsing response in handle_TusDataStatusReponse");
+			return false;
+		}
+
+		const auto* tdata = std::get_if<tdata_tus_get_datastatus_generic>(&tus_trans->tdata);
+		ensure(tdata);
+		ensure(resp->status() && resp->status()->size() <= static_cast<usz>(tdata->arrayNum));
+
+		const auto* fb_status = resp->status();
+
+		memset(tdata->statusArray.get_ptr(), 0, sizeof(SceNpTusDataStatus) * tdata->arrayNum);
+		for (flatbuffers::uoffset_t i = 0; i < fb_status->size(); i++)
+		{
+			auto* cur_status = &tdata->statusArray[i];
+			const auto* cur_fb_status = fb_status->Get(i);
+
+			ensure(cur_fb_status->ownerId());
+			string_to_npid(cur_fb_status->ownerId()->string_view(), cur_status->ownerId);
+
+			if (!cur_fb_status->hasData())
+			{
+				continue;
+			}
+
+			ensure(cur_fb_status->lastChangedAuthorId());
+
+			cur_status->hasData = 1;
+			cur_status->lastChangedDate.tick = cur_fb_status->lastChangedDate();
+			string_to_npid(cur_fb_status->lastChangedAuthorId()->string_view(), cur_status->lastChangedAuthorId);
+			cur_status->info.infoSize = cur_fb_status->info() ? cur_fb_status->info()->size() : 0;
+			for (usz i = 0; i < static_cast<usz>(cur_status->info.infoSize); i++)
+			{
+				cur_status->info.data[i] = cur_fb_status->info()->Get(i);
+			}
+		}
+
+		tus_trans->result = not_an_error(fb_status->size());
+		tus_trans->wake_cond.notify_one();
+
+		return true;
+	}
+
+	void np_handler::tus_set_multislot_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::cptr<s64> variableArray, s32 arrayNum, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		get_rpcn()->tus_set_multislot_variable(req_id, trans_ctx->communicationId, targetNpId, slotIdArray, variableArray, arrayNum, vuser);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_set_multislot_variable(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_tus_no_data(req_id, reply_data);
+	}
+
+	void np_handler::tus_get_multislot_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		trans_ctx->tdata = tdata_tus_get_variables_generic {
+			.variableArray = variableArray,
+			.arrayNum = arrayNum,
+		};
+
+		get_rpcn()->tus_get_multislot_variable(req_id, trans_ctx->communicationId, targetNpId, slotIdArray, arrayNum, vuser);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_get_multislot_variable(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_TusVarResponse(req_id, reply_data);
+	}
+
+	void np_handler::tus_get_multiuser_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusVariable> variableArray, s32 arrayNum, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		trans_ctx->tdata = tdata_tus_get_variables_generic {
+			.variableArray = variableArray,
+			.arrayNum = arrayNum,
+		};
+
+		get_rpcn()->tus_get_multiuser_variable(req_id, trans_ctx->communicationId, targetNpIdArray, slotId, arrayNum, vuser);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_get_multiuser_variable(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_TusVarResponse(req_id, reply_data);
+	}
+
+	void np_handler::tus_get_friends_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusVariable> variableArray,s32 arrayNum, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		trans_ctx->tdata = tdata_tus_get_variables_generic {
+			.variableArray = variableArray,
+			.arrayNum = arrayNum,
+		};
+
+		get_rpcn()->tus_get_friends_variable(req_id, trans_ctx->communicationId, slotId, !!includeSelf, sortType, arrayNum);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_get_friends_variable(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_TusVarResponse(req_id, reply_data);
+	}
+
+	void np_handler::tus_add_and_get_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s64 inVariable, vm::ptr<SceNpTusVariable> outVariable, vm::ptr<SceNpTusAddAndGetVariableOptParam> option, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		trans_ctx->tdata = tdata_tus_get_variable_generic {
+			.outVariable = outVariable,
+		};
+
+		get_rpcn()->tus_add_and_get_variable(req_id, trans_ctx->communicationId, targetNpId, slotId, inVariable, option, vuser);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_add_and_get_variable(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_TusVariable(req_id, reply_data);
+	}
+
+	void np_handler::tus_try_and_set_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, s32 opeType, s64 variable, vm::ptr<SceNpTusVariable> resultVariable, vm::ptr<SceNpTusTryAndSetVariableOptParam> option, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		trans_ctx->tdata = tdata_tus_get_variable_generic {
+			.outVariable = resultVariable,
+		};
+
+		get_rpcn()->tus_try_and_set_variable(req_id, trans_ctx->communicationId, targetNpId, slotId, opeType, variable, option, vuser);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_try_and_set_variable(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_TusVariable(req_id, reply_data);
+	}
+
+	void np_handler::tus_delete_multislot_variable(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		get_rpcn()->tus_delete_multislot_variable(req_id, trans_ctx->communicationId, targetNpId, slotIdArray, arrayNum, vuser);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_delete_multislot_variable(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_tus_no_data(req_id, reply_data);
+	}
+
+	void np_handler::tus_set_data(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, u32 totalSize, u32 sendSize, vm::cptr<void> data, vm::cptr<SceNpTusDataInfo> info, vm::ptr<SceNpTusSetDataOptParam> option, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+
+		auto* tdata = std::get_if<tdata_tus_set_data>(&trans_ctx->tdata);
+		if (!tdata)
+		{
+			trans_ctx->tdata = tdata_tus_set_data{.tus_data_size = totalSize};
+			tdata = std::get_if<tdata_tus_set_data>(&trans_ctx->tdata);
+			tdata->tus_data.reserve(totalSize);
+		}
+
+		const u8* ptr = static_cast<const u8*>(data.get_ptr());
+
+		std::copy(ptr, ptr + sendSize, std::back_inserter(tdata->tus_data));
+
+		if (tdata->tus_data.size() == tdata->tus_data_size)
+		{
+			trans_ctx->result = std::nullopt;
+			u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+			get_rpcn()->tus_set_data(req_id, trans_ctx->communicationId, targetNpId, slotId, tdata->tus_data, info, option, vuser);
+			transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+		}
+		else
+		{
+			trans_ctx->result = CELL_OK;
+		}
+	}
+
+	bool np_handler::reply_tus_set_data(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_tus_no_data(req_id, reply_data);
+	}
+
+	void np_handler::tus_get_data(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> dataStatus, vm::ptr<void> data, u32 recvSize, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+
+		auto* tdata = std::get_if<tdata_tus_get_data>(&trans_ctx->tdata);
+		if (!tdata)
+		{
+			trans_ctx->tdata = tdata_tus_get_data{.recvSize = recvSize, .dataStatus = dataStatus, .data = data};
+			u32 req_id = get_req_id(REQUEST_ID_HIGH::SCORE);
+			get_rpcn()->tus_get_data(req_id, trans_ctx->communicationId, targetNpId, slotId, vuser);
+			transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+			return;
+		}
+
+		// Check if the transaction has actually completed, otherwise adjust tdata parameters
+		if (!trans_ctx->result)
+		{
+			tdata->recvSize = recvSize;
+			tdata->dataStatus = dataStatus;
+			tdata->data = data;
+			return;
+		}
+
+		// If here the data has already been acquired and the client is just asking for part of it
+		usz to_copy = std::min(tdata->tus_data.size(), static_cast<usz>(recvSize));
+		std::memcpy(data.get_ptr(), tdata->tus_data.data(), to_copy);
+		tdata->tus_data.erase(tdata->tus_data.begin(), tdata->tus_data.begin() + to_copy);
+		trans_ctx->result = not_an_error(to_copy);
+	}
+
+	bool np_handler::reply_tus_get_data(u32 req_id, std::vector<u8>& reply_data)
+	{
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return false;
+		}
+
+		auto tus_trans = std::dynamic_pointer_cast<tus_transaction_ctx>(::at32(async_transactions, req_id));
+		ensure(tus_trans);
+		std::lock_guard lock(tus_trans->mutex);
+
+		if (rpcn::is_error(static_cast<rpcn::ErrorType>(reply_data[0])))
+		{
+			switch (reply_data[0])
+			{
+			case rpcn::ErrorType::NotFound: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED);
+			case rpcn::ErrorType::Unauthorized: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN);
+			case rpcn::ErrorType::CondFail: return tus_trans->set_result_and_wake(SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED);
+			default: return false;
+			}
+		}
+
+		vec_stream reply(reply_data, 1);
+		const auto* fb_data = reply.get_flatbuffer<TusData>();
+
+		if (reply.is_error())
+		{
+			rpcn_log.error("Error parsing response in reply_tus_get_data");
+			return false;
+		}
+
+		auto* tdata = std::get_if<tdata_tus_get_data>(&tus_trans->tdata);
+		ensure(tdata);
+
+		const auto* fb_status = fb_data->status();
+		ensure(fb_status && fb_status->ownerId());
+
+		auto* data_status = tdata->dataStatus.get_ptr();
+		auto* data = static_cast<u8 *>(tdata->data.get_ptr());
+
+		memset(data_status, 0, sizeof(SceNpTusDataStatus));
+		string_to_npid(fb_status->ownerId()->string_view(), data_status->ownerId);
+
+		usz to_copy = 0;
+
+		if (fb_status->hasData())
+		{
+			data_status->hasData = 1;
+			data_status->lastChangedDate.tick = fb_status->lastChangedDate();
+			string_to_npid(fb_status->lastChangedAuthorId()->string_view(), data_status->lastChangedAuthorId);
+			data_status->data = tdata->data;
+			data_status->dataSize = fb_data->data() ? fb_data->data()->size() : 0;
+			data_status->info.infoSize = fb_status->info() ? fb_status->info()->size() : 0;
+			
+			to_copy = std::min(static_cast<usz>(data_status->dataSize), static_cast<usz>(tdata->recvSize));
+			for (usz i = 0; i < to_copy; i++)
+			{
+				data[i] = fb_data->data()->Get(i);
+			}
+			const usz bytes_left = data_status->dataSize - to_copy;
+			tdata->tus_data.reserve(bytes_left);
+			for (usz i = to_copy; i < bytes_left; i++)
+			{
+				tdata->tus_data.push_back(fb_data->data()->Get(i));
+			}
+
+			for (usz i = 0; i < data_status->info.infoSize; i++)
+			{
+				fb_status->info()->Get(i);
+			}
+			tus_trans->result = not_an_error(to_copy);
+		}
+		else
+		{
+			tus_trans->result = SCE_NP_COMMUNITY_SERVER_ERROR_USER_STORAGE_DATA_NOT_FOUND;
+		}
+
+		tus_trans->wake_cond.notify_one();
+		return true;
+	}
+
+	void np_handler::tus_get_multislot_data_status(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		trans_ctx->tdata = tdata_tus_get_datastatus_generic {
+			.statusArray = statusArray,
+			.arrayNum = arrayNum,
+		};
+
+		get_rpcn()->tus_get_multislot_data_status(req_id, trans_ctx->communicationId, targetNpId, slotIdArray, arrayNum, vuser);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_get_multislot_data_status(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_TusDataStatusResponse(req_id, reply_data);
+	}
+
+	void np_handler::tus_get_multiuser_data_status(std::shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		trans_ctx->tdata = tdata_tus_get_datastatus_generic {
+			.statusArray = statusArray,
+			.arrayNum = arrayNum,
+		};
+
+		get_rpcn()->tus_get_multiuser_data_status(req_id, trans_ctx->communicationId, targetNpIdArray, slotId, arrayNum, vuser);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_get_multiuser_data_status(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_TusDataStatusResponse(req_id, reply_data);
+	}
+
+	void np_handler::tus_get_friends_data_status(std::shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		trans_ctx->tdata = tdata_tus_get_datastatus_generic {
+			.statusArray = statusArray,
+			.arrayNum = arrayNum,
+		};
+
+		get_rpcn()->tus_get_friends_data_status(req_id, trans_ctx->communicationId, slotId, !!includeSelf, sortType, arrayNum);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_get_friends_data_status(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_TusDataStatusResponse(req_id, reply_data);
+	}
+
+	void np_handler::tus_delete_multislot_data(std::shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		get_rpcn()->tus_delete_multislot_data(req_id, trans_ctx->communicationId, targetNpId, slotIdArray, arrayNum, vuser);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	bool np_handler::reply_tus_delete_multislot_data(u32 req_id, std::vector<u8>& reply_data)
+	{
+		return handle_tus_no_data(req_id, reply_data);
+	}
+
+	
+
 
 } // namespace np

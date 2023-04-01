@@ -3085,18 +3085,7 @@ error_code sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	vm::var<s64> sec;
-	vm::var<s64> nsec;
-
-	error_code ret = sys_time_get_current_time(sec, nsec);
-
-	if (ret != CELL_OK)
-	{
-		return ret;
-	}
-
-	// Taken from cellRtc
-	pTick->tick = *nsec / 1000 + *sec * cellRtcGetTickResolution() + 62135596800000000ULL;
+	pTick->tick = nph.get_network_time();
 
 	return CELL_OK;
 }
@@ -3974,7 +3963,9 @@ error_code sceNpScoreSetTimeout(s32 ctxId, usecond_t timeout)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (static_cast<u32>(ctxId) >= score_transaction_ctx::id_base)
+	const u32 idm_id = static_cast<u32>(ctxId);
+
+	if (idm_id >= score_transaction_ctx::id_base && idm_id < (score_transaction_ctx::id_base + score_transaction_ctx::id_count))
 	{
 		auto trans = idm::get<score_transaction_ctx>(ctxId);
 		if (!trans)
@@ -3983,7 +3974,7 @@ error_code sceNpScoreSetTimeout(s32 ctxId, usecond_t timeout)
 		}
 		trans->timeout = timeout;
 	}
-	else
+	else if (idm_id >= score_ctx::id_base && idm_id < (score_ctx::id_base + score_ctx::id_count))
 	{
 		auto score = idm::get<score_ctx>(ctxId);
 		if (!ctxId)
@@ -3991,6 +3982,10 @@ error_code sceNpScoreSetTimeout(s32 ctxId, usecond_t timeout)
 			return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 		}
 		score->timeout = timeout;
+	}
+	else
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
 	return CELL_OK;
@@ -4073,7 +4068,7 @@ error_code sceNpScorePollAsync(s32 transId, vm::ptr<s32> result)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
-	auto res = trans->get_score_transaction_status();
+	auto res = trans->get_transaction_status();
 
 	if (!res)
 	{
@@ -4790,7 +4785,7 @@ error_code sceNpScoreAbortTransaction(s32 transId)
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
-	trans->abort_score_transaction();
+	trans->abort_transaction();
 
 	return CELL_OK;
 }
