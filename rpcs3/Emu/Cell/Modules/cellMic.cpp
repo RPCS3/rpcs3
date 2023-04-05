@@ -661,7 +661,7 @@ error_code cellMicEnd()
 
 error_code cellMicOpenEx(s32 dev_num, s32 rawSampleRate, s32 rawChannel, s32 DSPSampleRate, s32 bufferSizeMS, u8 signalType)
 {
-	cellMic.trace("cellMicOpenEx(dev_num=%d, rawSampleRate=%d, rawChannel=%d, DSPSampleRate=%d, bufferSizeMS=%d, signalType=0x%x)",
+	cellMic.notice("cellMicOpenEx(dev_num=%d, rawSampleRate=%d, rawChannel=%d, DSPSampleRate=%d, bufferSizeMS=%d, signalType=0x%x)",
 		dev_num, rawSampleRate, rawChannel, DSPSampleRate, bufferSizeMS, signalType);
 
 	auto& mic_thr = g_fxo->get<mic_thread>();
@@ -714,7 +714,9 @@ s32 cellMicIsOpen(s32 dev_num)
 
 s32 cellMicIsAttached(s32 dev_num)
 {
-	cellMic.notice("cellMicIsAttached(dev_num=%d)", dev_num);
+	cellMic.trace("cellMicIsAttached(dev_num=%d)", dev_num);
+
+	// TODO
 	return 1;
 }
 
@@ -922,7 +924,7 @@ error_code cellMicSetSignalAttr(s32 dev_num, CellMicSignalAttr sig_attrib, vm::p
 
 error_code cellMicGetSignalState(s32 dev_num, CellMicSignalState sig_state, vm::ptr<void> value)
 {
-	cellMic.todo("cellMicGetSignalState(dev_num=%d, sig_state=%d, value=*0x%x)", dev_num, +sig_state, value);
+	cellMic.trace("cellMicGetSignalState(dev_num=%d, sig_state=%d, value=*0x%x)", dev_num, +sig_state, value);
 
 	if (!value)
 		return CELL_MICIN_ERROR_PARAM;
