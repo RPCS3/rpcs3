@@ -271,11 +271,6 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	switch (device_type)
 	{
 	case microphone_handler::standard:
-		if (num_channels > 2)
-		{
-			cellMic.warning("Reducing number of mic channels from %d to 2 for %s", num_channels, device_name[0]);
-			num_channels = 2;
-		}
 		break;
 	case microphone_handler::singstar:
 	case microphone_handler::real_singstar:
@@ -310,20 +305,65 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 			num_al_channels = AL_FORMAT_STEREO16;
 		break;
 	case 4:
-		if (alcIsExtensionPresent(nullptr, "AL_EXT_MCFORMATS") == AL_TRUE)
-		{
-			num_al_channels = AL_FORMAT_QUAD16;
-		}
-		else
-		{
-			cellMic.error("Requested 4 channels but AL_EXT_MCFORMATS not available, settling down to 2");
-			num_channels    = 2;
-			num_al_channels = AL_FORMAT_STEREO16;
-		}
+		num_al_channels = AL_FORMAT_QUAD16;
 		break;
 	default:
-		cellMic.fatal("Requested an invalid number of channels: %d", num_channels);
-		num_al_channels = AL_FORMAT_STEREO16;
+		cellMic.warning("Requested an invalid number of %d channels. Defaulting to 4 channels instead.", num_channels);
+		num_al_channels = AL_FORMAT_QUAD16;
+		num_channels = 4;
+		break;
+	}
+
+	// Real firmware tries 4, 2 and then 1 channels if the channel count is not supported
+	for (bool found_valid_channels = false; !found_valid_channels;)
+	{
+		switch (num_al_channels)
+		{
+		case AL_FORMAT_QUAD16:
+			if (alcIsExtensionPresent(nullptr, "AL_EXT_MCFORMATS") == AL_TRUE)
+			{
+				found_valid_channels = true;
+				break;
+			}
+
+			cellMic.warning("Requested 4 channels but AL_EXT_MCFORMATS not available, trying 2 channels next");
+			num_al_channels = AL_FORMAT_STEREO16;
+			num_channels = 2;
+			break;
+		case AL_FORMAT_STEREO16:
+			if (true) // TODO: check stereo capability
+			{
+				found_valid_channels = true;
+				break;
+			}
+
+			cellMic.warning("Requested 2 channels but extension is not available, trying 1 channel next");
+			num_al_channels = AL_FORMAT_MONO16;
+			num_channels = 1;
+			break;
+		case AL_FORMAT_MONO16:
+			found_valid_channels = true;
+			break;
+		default:
+			ensure(false);
+			break;
+		}
+	}
+
+	// Ensure that the code above delivers what it should
+	switch (num_al_channels)
+	{
+	case AL_FORMAT_QUAD16:
+		ensure(num_channels == 4 && device_type != microphone_handler::singstar && device_type != microphone_handler::real_singstar);
+		break;
+	case AL_FORMAT_STEREO16:
+		ensure(num_channels == 2 && device_type != microphone_handler::singstar);
+		break;
+	case AL_FORMAT_MONO16:
+		ensure(num_channels == 1 || (num_channels == 2 && device_type == microphone_handler::singstar));
+		break;
+	default:
+		ensure(false);
 		break;
 	}
 
@@ -646,7 +686,7 @@ error_code cellMicOpen(s32 dev_num, s32 sampleRate)
 {
 	cellMic.trace("cellMicOpen(dev_num=%d sampleRate=%d)", dev_num, sampleRate);
 
-	return cellMicOpenEx(dev_num, sampleRate, 2, sampleRate, 0x80, CELLMIC_SIGTYPE_DSP);
+	return cellMicOpenEx(dev_num, sampleRate, 1, sampleRate, 0x80, CELLMIC_SIGTYPE_DSP);
 }
 
 error_code cellMicOpenRaw(s32 dev_num, s32 sampleRate, s32 maxChannels)
