@@ -389,6 +389,25 @@ namespace utils
 		return static_cast<T>(value / align + (value > 0 ? T{(value % align) > (align / 2)} : 0 - T{(value % align) < (align / 2)}));
 	}
 
+	template <UnsignedInt T>
+	constexpr T add_saturate(T addend1, T addend2)
+	{
+		return static_cast<T>(~addend1) < addend2 ? T{umax} : static_cast<T>(addend1 + addend2);
+	}
+
+	template <UnsignedInt T>
+	constexpr T sub_saturate(T minuend, T subtrahend)
+	{
+		return minuend < subtrahend ? T{0} : static_cast<T>(minuend - subtrahend);
+	}
+
+
+	template <UnsignedInt T>
+	constexpr T mul_saturate(T factor1, T factor2)
+	{
+		return T{umax} / factor1 < factor2 ? T{umax} : static_cast<T>(factor1 * factor2);
+	}
+
 	// Hack. Pointer cast util to workaround UB. Use with extreme care.
 	template <typename T, typename U>
 	[[nodiscard]] T* bless(U* ptr)

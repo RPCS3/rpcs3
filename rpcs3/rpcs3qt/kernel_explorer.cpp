@@ -527,11 +527,30 @@ void kernel_explorer::update()
 		{
 			auto& timer = static_cast<lv2_timer&>(obj);
 
-			sys_timer_information_t info;
-			timer.get_information(info);
+			u32 timer_state{SYS_TIMER_STATE_STOP};
+			std::shared_ptr<lv2_event_queue> port;
+			u64 source = 0;
+			u64 data1 = 0;
+			u64 data2 = 0;
 
-			add_leaf(node, qstr(fmt::format("Timer 0x%08x: State: %s, Period: 0x%llx, Next Expire: 0x%llx", id, info.timer_state ? "Running" : "Stopped"
-				, info.period, info.next_expire)));
+			u64 expire = 0; // Next expiration time
+			u64 period = 0; // Period (oneshot if 0)
+
+			if (reader_lock r_lock(timer.mutex); true)
+			{
+				timer_state = timer.state;
+
+				port = timer.port;
+				source = timer.source;
+				data1 = timer.data1;
+				data2 = timer.data2;
+
+				expire = timer.expire; // Next expiration time
+				period = timer.period; // Period (oneshot if 0)
+			}
+
+			add_leaf(node, qstr(fmt::format("Timer 0x%08x: State: %s, Period: 0x%llx, Next Expire: 0x%llx, Queue ID: 0x%08x, Source: 0x%08x, Data1: 0x%08x, Data2: 0x%08x", id, timer_state ? "Running" : "Stopped"
+				, period, expire, port ? port->id : 0, source, data1, data2)));
 			break;
 		}
 		case SYS_SEMAPHORE_OBJECT:
