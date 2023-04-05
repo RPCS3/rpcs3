@@ -656,7 +656,7 @@ error_code cellMicOpenRaw(s32 dev_num, s32 sampleRate, s32 maxChannels)
 	return cellMicOpenEx(dev_num, sampleRate, maxChannels, sampleRate, 0x80, CELLMIC_SIGTYPE_RAW);
 }
 
-u8 cellMicIsOpen(s32 dev_num)
+s32 cellMicIsOpen(s32 dev_num)
 {
 	cellMic.trace("cellMicIsOpen(dev_num=%d)", dev_num);
 
@@ -1121,6 +1121,22 @@ error_code cellMicReadDsp(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
 error_code cellMicReset(s32 dev_num)
 {
 	cellMic.todo("cellMicReset(dev_num=%d)", dev_num);
+
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
+		return CELL_MICIN_ERROR_NOT_INIT;
+
+	if (!mic_thr.check_device(dev_num))
+		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
+
+	microphone_device& device = ::at32(mic_thr.mic_list, dev_num);
+
+	if (!device.is_opened())
+		return CELL_MICIN_ERROR_NOT_OPEN;
+
+	// TODO
+
 	return CELL_OK;
 }
 
