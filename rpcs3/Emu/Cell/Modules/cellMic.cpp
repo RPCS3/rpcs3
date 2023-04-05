@@ -287,15 +287,21 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 			num_channels = 2;
 		}
 		break;
-	case microphone_handler::rocksmith: num_channels = 1; break;
+	case microphone_handler::rocksmith:
+		num_channels = 1;
+		break;
 	case microphone_handler::null:
-	default: ensure(false); break;
+	default:
+		ensure(false);
+		break;
 	}
 
 	ALCenum num_al_channels;
 	switch (num_channels)
 	{
-	case 1: num_al_channels = AL_FORMAT_MONO16; break;
+	case 1:
+		num_al_channels = AL_FORMAT_MONO16;
+		break;
 	case 2:
 		// If we're using SingStar each device needs to be mono
 		if (device_type == microphone_handler::singstar)
