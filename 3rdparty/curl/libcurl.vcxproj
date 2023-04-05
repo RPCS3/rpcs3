@@ -66,6 +66,8 @@
     <ClCompile Include="curl\lib\base64.c" />
     <ClCompile Include="curl\lib\bufref.c" />
     <ClCompile Include="curl\lib\c-hyper.c" />
+    <ClCompile Include="curl\lib\cf-https-connect.c" />
+    <ClCompile Include="curl\lib\cf-socket.c" />
     <ClCompile Include="curl\lib\cfilters.c" />
     <ClCompile Include="curl\lib\conncache.c" />
     <ClCompile Include="curl\lib\connect.c" />
@@ -78,6 +80,7 @@
     <ClCompile Include="curl\lib\curl_gethostname.c" />
     <ClCompile Include="curl\lib\curl_get_line.c" />
     <ClCompile Include="curl\lib\curl_gssapi.c" />
+    <ClCompile Include="curl\lib\curl_log.c" />
     <ClCompile Include="curl\lib\curl_memrchr.c" />
     <ClCompile Include="curl\lib\curl_multibyte.c" />
     <ClCompile Include="curl\lib\curl_ntlm_core.c" />
@@ -179,11 +182,13 @@
     <ClCompile Include="curl\lib\vauth\gsasl.c" />
     <ClCompile Include="curl\lib\version.c" />
     <ClCompile Include="curl\lib\version_win32.c" />
+    <ClCompile Include="curl\lib\vquic\curl_msh3.c" />
+    <ClCompile Include="curl\lib\vquic\curl_ngtcp2.c" />
+    <ClCompile Include="curl\lib\vquic\curl_quiche.c" />
     <ClCompile Include="curl\lib\vtls\hostcheck.c" />
     <ClCompile Include="curl\lib\vtls\rustls.c" />
     <ClCompile Include="curl\lib\vtls\x509asn1.c" />
     <ClCompile Include="curl\lib\warnless.c" />
-    <ClCompile Include="curl\lib\wildcard.c" />
     <ClCompile Include="curl\lib\vauth\cleartext.c" />
     <ClCompile Include="curl\lib\vauth\cram.c" />
     <ClCompile Include="curl\lib\vauth\digest.c" />
@@ -196,8 +201,6 @@
     <ClCompile Include="curl\lib\vauth\spnego_gssapi.c" />
     <ClCompile Include="curl\lib\vauth\spnego_sspi.c" />
     <ClCompile Include="curl\lib\vauth\vauth.c" />
-    <ClCompile Include="curl\lib\vquic\ngtcp2.c" />
-    <ClCompile Include="curl\lib\vquic\quiche.c" />
     <ClCompile Include="curl\lib\vquic\vquic.c" />
     <ClCompile Include="curl\lib\vssh\libssh.c" />
     <ClCompile Include="curl\lib\vssh\libssh2.c" />
@@ -233,6 +236,8 @@
     <ClInclude Include="curl\lib\asyn.h" />
     <ClInclude Include="curl\lib\bufref.h" />
     <ClInclude Include="curl\lib\c-hyper.h" />
+    <ClInclude Include="curl\lib\cf-https-connect.h" />
+    <ClInclude Include="curl\lib\cf-socket.h" />
     <ClInclude Include="curl\lib\cfilters.h" />
     <ClInclude Include="curl\lib\config-amigaos.h" />
     <ClInclude Include="curl\lib\config-dos.h" />
@@ -259,6 +264,7 @@
     <ClInclude Include="curl\lib\curl_hmac.h" />
     <ClInclude Include="curl\lib\curl_krb5.h" />
     <ClInclude Include="curl\lib\curl_ldap.h" />
+    <ClInclude Include="curl\lib\curl_log.h" />
     <ClInclude Include="curl\lib\curl_md4.h" />
     <ClInclude Include="curl\lib\curl_md5.h" />
     <ClInclude Include="curl\lib\curl_memory.h" />
@@ -325,7 +331,6 @@
     <ClInclude Include="curl\lib\pop3.h" />
     <ClInclude Include="curl\lib\progress.h" />
     <ClInclude Include="curl\lib\psl.h" />
-    <ClInclude Include="curl\lib\quic.h" />
     <ClInclude Include="curl\lib\rand.h" />
     <ClInclude Include="curl\lib\rename.h" />
     <ClInclude Include="curl\lib\rtsp.h" />
@@ -360,16 +365,17 @@
     <ClInclude Include="curl\lib\urlapi-int.h" />
     <ClInclude Include="curl\lib\urldata.h" />
     <ClInclude Include="curl\lib\version_win32.h" />
+    <ClInclude Include="curl\lib\vquic\curl_msh3.h" />
+    <ClInclude Include="curl\lib\vquic\curl_ngtcp2.h" />
+    <ClInclude Include="curl\lib\vquic\curl_quiche.h" />
+    <ClInclude Include="curl\lib\vquic\vquic_int.h" />
     <ClInclude Include="curl\lib\vtls\hostcheck.h" />
     <ClInclude Include="curl\lib\vtls\rustls.h" />
     <ClInclude Include="curl\lib\vtls\x509asn1.h" />
     <ClInclude Include="curl\lib\warnless.h" />
-    <ClInclude Include="curl\lib\wildcard.h" />
     <ClInclude Include="curl\lib\vauth\digest.h" />
     <ClInclude Include="curl\lib\vauth\ntlm.h" />
     <ClInclude Include="curl\lib\vauth\vauth.h" />
-    <ClInclude Include="curl\lib\vquic\ngtcp2.h" />
-    <ClInclude Include="curl\lib\vquic\quiche.h" />
     <ClInclude Include="curl\lib\vquic\vquic.h" />
     <ClInclude Include="curl\lib\vssh\ssh.h" />
     <ClInclude Include="curl\lib\vssh\wolfssh.h" />
