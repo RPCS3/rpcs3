@@ -4134,7 +4134,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 			if (m_finfo->chunk->getReturnType() != get_type<void>())
 			{
-				m_ir->CreateRet(m_ir->CreateBitCast(ppfunc, get_type<u8*>()));
+				m_ir->CreateRet(ppfunc);
 				return;
 			}
 
@@ -4370,9 +4370,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	template <typename T = u8>
 	llvm::Value* _ptr(llvm::Value* base, u32 offset)
 	{
-		const auto off = m_ir->CreateGEP(get_type<u8>(), base, m_ir->getInt64(offset));
-		const auto ptr = m_ir->CreateBitCast(off, get_type<T*>());
-		return ptr;
+		return m_ir->CreateGEP(get_type<u8>(), base, m_ir->getInt64(offset));
 	}
 
 	template <typename T, typename... Args>
@@ -4385,8 +4383,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::Value* spu_ptr(value_t<u64> add, Args... offset_args)
 	{
 		const auto off = m_ir->CreateGEP(get_type<u8>(), m_thread, m_ir->getInt64(::offset32(offset_args...)));
-		const auto ptr = m_ir->CreateBitCast(m_ir->CreateAdd(off, add.value), get_type<T*>());
-		return ptr;
+		return m_ir->CreateAdd(off, add.value);
 	}
 
 	// Return default register type
@@ -4433,7 +4430,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		if (!m_block)
 		{
-			return m_ir->CreateBitCast(_ptr<u8>(m_thread, get_reg_offset(index)), get_reg_type(index)->getPointerTo());
+			return _ptr<u8>(m_thread, get_reg_offset(index));
 		}
 
 		auto& ptr = ::at32(m_reg_addr, index);
@@ -4446,7 +4443,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			// Emit register pointer at the beginning of the function chunk
 			m_ir->SetInsertPoint(m_function->getEntryBlock().getTerminator());
 			ptr = _ptr<u8>(m_thread, get_reg_offset(index));
-			ptr = m_ir->CreateBitCast(ptr, get_reg_type(index)->getPointerTo());
 			m_ir->SetInsertPoint(block_cur);
 		}
 
@@ -4469,7 +4465,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto idx = m_ir->CreateAnd(I > 4 ? isr : isl, m_interp_7f0);
 
 		// Pointer to the register
-		return m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_interp_regs, m_ir->CreateZExt(idx, get_type<u64>())), get_type<T*>());
+		return m_ir->CreateGEP(get_type<u8>(), m_interp_regs, m_ir->CreateZExt(idx, get_type<u64>()));
 	}
 
 	llvm::Value* double_as_uint64(llvm::Value* val)
@@ -5056,13 +5052,13 @@ public:
 		}
 		else if (func.data.size() == 1)
 		{
-			const auto pu32 = m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_base_pc), get_type<u32*>());
+			const auto pu32 = m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_base_pc);
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pu32), m_ir->getInt32(func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 		else if (func.data.size() == 2)
 		{
-			const auto pu64 = m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_base_pc), get_type<u64*>());
+			const auto pu64 = m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_base_pc);
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u64>(), pu64), m_ir->getInt64(static_cast<u64>(func.data[1]) << 32 | func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
@@ -5219,8 +5215,7 @@ public:
 		// Proceed to the next code
 		if (entry_chunk->chunk->getReturnType() != get_type<void>())
 		{
-			const auto f_ptr = m_ir->CreateBitCast(entry_call, main_func->getType());
-			const auto next_call = m_ir->CreateCall({main_func->getFunctionType(), f_ptr}, {m_thread, m_lsptr, m_ir->getInt64(0)});
+			const auto next_call = m_ir->CreateCall(main_func->getFunctionType(), entry_call, {m_thread, m_lsptr, m_ir->getInt64(0)});
 			next_call->setCallingConv(main_func->getCallingConv());
 			next_call->setTailCall();
 		}
@@ -5258,15 +5253,14 @@ public:
 
 		if (entry_chunk->chunk->getReturnType() == get_type<void>())
 		{
-			const auto f_ptr = m_ir->CreateBitCast(dispatcher, main_func->getType());
-			const auto next_call = m_ir->CreateCall({main_func->getFunctionType(), f_ptr}, {m_thread, m_lsptr, m_ir->getInt64(0)});
+			const auto next_call = m_ir->CreateCall(main_func->getFunctionType(), dispatcher, {m_thread, m_lsptr, m_ir->getInt64(0)});
 			next_call->setCallingConv(main_func->getCallingConv());
 			next_call->setTailCall();
 			m_ir->CreateRetVoid();
 		}
 		else
 		{
-			m_ir->CreateRet(m_ir->CreateBitCast(dispatcher, get_type<u8*>()));
+			m_ir->CreateRet(dispatcher);
 		}
 
 		// Function that executes check_state and escapes if necessary
@@ -5701,7 +5695,6 @@ public:
 
 		// Create interpreter table
 		const auto if_type = get_ftype<void, u8*, u8*, u32, u32, u8*, u32, u8*>();
-		const auto if_pptr = if_type->getPointerTo()->getPointerTo();
 		m_function_table = new GlobalVariable(*m_module, ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), true, GlobalValue::InternalLinkage, nullptr);
 
 		// Add return function
@@ -5722,11 +5715,11 @@ public:
 
 		// Load pc and opcode
 		m_interp_pc = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::pc));
-		m_interp_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_ir->CreateZExt(m_interp_pc, get_type<u64>())), get_type<u32*>()));
+		m_interp_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_ir->CreateZExt(m_interp_pc, get_type<u64>())));
 		m_interp_op = m_ir->CreateCall(get_intrinsic<u32>(Intrinsic::bswap), {m_interp_op});
 
 		// Pinned constant, address of interpreter table
-		m_interp_table = m_ir->CreateBitCast(m_ir->CreateGEP(m_function_table->getValueType(), m_function_table, {m_ir->getInt64(0), m_ir->getInt64(0)}), get_type<u8*>());
+		m_interp_table = m_ir->CreateGEP(m_function_table->getValueType(), m_function_table, {m_ir->getInt64(0), m_ir->getInt64(0)});
 
 		// Pinned constant, mask for shifted register index
 		m_interp_7f0 = m_ir->getInt32(0x7f0);
@@ -5744,8 +5737,8 @@ public:
 		m_ir->CreateStore(m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::read_register), {rsp_name}), native_sp);
 
 		// Decode (shift) and load function pointer
-		const auto first = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_ir->CreateBitCast(m_interp_table, if_pptr), m_ir->CreateLShr(m_interp_op, 32u - m_interp_magn)));
-		const auto call0 = m_ir->CreateCall({if_type, first}, {m_lsptr, m_thread, m_interp_pc, m_interp_op, m_interp_table, m_interp_7f0, m_interp_regs});
+		const auto first = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_interp_table, m_ir->CreateLShr(m_interp_op, 32u - m_interp_magn)));
+		const auto call0 = m_ir->CreateCall(if_type, first, {m_lsptr, m_thread, m_interp_pc, m_interp_op, m_interp_table, m_interp_7f0, m_interp_regs});
 		call0->setCallingConv(CallingConv::GHC);
 		m_ir->CreateRetVoid();
 
@@ -5886,9 +5879,9 @@ public:
 
 						// Decode next instruction.
 						const auto next_pc = itype & spu_itype::branch ? m_interp_pc : m_interp_pc_next;
-						const auto be32_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_ir->CreateZExt(next_pc, get_type<u64>())), get_type<u32*>()));
+						const auto be32_op = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateGEP(get_type<u8>(), m_lsptr, m_ir->CreateZExt(next_pc, get_type<u64>())));
 						const auto next_op = m_ir->CreateCall(get_intrinsic<u32>(Intrinsic::bswap), {be32_op});
-						const auto next_if = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_ir->CreateBitCast(m_interp_table, if_pptr), m_ir->CreateLShr(next_op, 32u - m_interp_magn)));
+						const auto next_if = m_ir->CreateLoad(if_type->getPointerTo(), m_ir->CreateGEP(if_type->getPointerTo(), m_interp_table, m_ir->CreateLShr(next_op, 32u - m_interp_magn)));
 						llvm::cast<LoadInst>(next_if)->setVolatile(true);
 
 						if (!(itype & spu_itype::branch))
@@ -5933,7 +5926,7 @@ public:
 								m_ir->SetInsertPoint(_next);
 							}
 
-							llvm::Value* fret = m_ir->CreateBitCast(m_interp_table, if_type->getPointerTo());
+							llvm::Value* fret = m_interp_table;
 
 							if (itype == spu_itype::WRCH ||
 								itype == spu_itype::RDCH ||
@@ -5963,7 +5956,7 @@ public:
 							}
 
 							const auto arg3 = UndefValue::get(get_type<u32>());
-							const auto _ret = m_ir->CreateCall({if_type, fret}, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
+							const auto _ret = m_ir->CreateCall(if_type, fret, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
 							_ret->setCallingConv(CallingConv::GHC);
 							_ret->setTailCall();
 							m_ir->CreateRetVoid();
@@ -5987,7 +5980,7 @@ public:
 								m_interp_regs = _ptr(m_thread, get_reg_offset(0));
 							}
 
-							const auto ncall = m_ir->CreateCall({if_type, next_if}, {m_lsptr, m_thread, m_interp_pc, next_op, m_interp_table, m_interp_7f0, m_interp_regs});
+							const auto ncall = m_ir->CreateCall(if_type, next_if, {m_lsptr, m_thread, m_interp_pc, next_op, m_interp_table, m_interp_7f0, m_interp_regs});
 							ncall->setCallingConv(CallingConv::GHC);
 							ncall->setTailCall();
 							m_ir->CreateRetVoid();
@@ -6826,7 +6819,7 @@ public:
 					if (csize > 0 && csize <= 16)
 					{
 						// Generate single copy operation
-						m_ir->CreateStore(m_ir->CreateLoad(vtype, m_ir->CreateBitCast(src, vtype->getPointerTo())), m_ir->CreateBitCast(dst, vtype->getPointerTo()));
+						m_ir->CreateStore(m_ir->CreateLoad(vtype, src), dst);
 					}
 					else if (csize <= stride * 16 && !(csize % 32))
 					{
@@ -6837,11 +6830,11 @@ public:
 							const auto _dst = m_ir->CreateGEP(get_type<u8>(), dst, m_ir->getInt32(i));
 							if (csize - i < stride)
 							{
-								m_ir->CreateStore(m_ir->CreateLoad(get_type<u8[16]>(), m_ir->CreateBitCast(_src, get_type<u8(*)[16]>())), m_ir->CreateBitCast(_dst, get_type<u8(*)[16]>()));
+								m_ir->CreateStore(m_ir->CreateLoad(get_type<u8[16]>(), _src), _dst);
 							}
 							else
 							{
-								m_ir->CreateAlignedStore(m_ir->CreateAlignedLoad(vtype, m_ir->CreateBitCast(_src, vtype->getPointerTo()), llvm::MaybeAlign{16}), m_ir->CreateBitCast(_dst, vtype->getPointerTo()), llvm::MaybeAlign{16});
+								m_ir->CreateAlignedStore(m_ir->CreateAlignedLoad(vtype, _src, llvm::MaybeAlign{16}), _dst, llvm::MaybeAlign{16});
 							}
 						}
 					}
@@ -9694,13 +9687,13 @@ public:
 	void make_store_ls(value_t<u64> addr, value_t<u8[16]> data)
 	{
 		const auto bswapped = byteswap(data);
-		m_ir->CreateStore(bswapped.eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, addr.value), get_type<u8(*)[16]>()));
+		m_ir->CreateStore(bswapped.eval(m_ir), m_ir->CreateGEP(get_type<u8>(), m_lsptr, addr.value));
 	}
 
 	auto make_load_ls(value_t<u64> addr)
 	{
 		value_t<u8[16]> data;
-		data.value = m_ir->CreateLoad(get_type<u8[16]>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, addr.value), get_type<u8(*)[16]>()));
+		data.value = m_ir->CreateLoad(get_type<u8[16]>(), m_ir->CreateGEP(get_type<u8>(), m_lsptr, addr.value));
 		return byteswap(data);
 	}
 
@@ -9983,19 +9976,19 @@ public:
 			// Compare address stored in stack mirror with addr
 			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&spu_thread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
-			const auto _ret = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value), get_type<u64*>()));
-			const auto link = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack1.value), get_type<u64*>()));
+			const auto _ret = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value));
+			const auto link = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateGEP(get_type<u8>(), m_thread, stack1.value));
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->CreateCondBr(m_ir->CreateICmpEQ(addr.value, m_ir->CreateTrunc(link, get_type<u32>())), next, fail, m_md_likely);
 			m_ir->SetInsertPoint(next);
-			const auto cmp2 = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_lsptr, addr.value), get_type<u32*>()));
+			const auto cmp2 = m_ir->CreateLoad(get_type<u32>(), m_ir->CreateGEP(get_type<u8>(), m_lsptr, addr.value));
 			m_ir->CreateCondBr(m_ir->CreateICmpEQ(cmp2, m_ir->CreateTrunc(_ret, get_type<u32>())), done, fail, m_md_likely);
 			m_ir->SetInsertPoint(done);
 
 			// Clear stack mirror and return by tail call to the provided return address
-			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value), get_type<u64(*)[2]>()));
+			m_ir->CreateStore(splat<u64[2]>(-1).eval(m_ir), m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value));
 			const auto targ = m_ir->CreateAdd(m_ir->CreateLShr(_ret, 32), get_segment_base());
 			const auto type = m_finfo->chunk->getFunctionType();
 			const auto fval = m_ir->CreateIntToPtr(targ, type->getPointerTo());
@@ -10670,8 +10663,8 @@ public:
 			const auto rel_ptr = m_ir->CreateSub(m_ir->CreatePtrToInt(pfunc->chunk, get_type<u64>()), get_segment_base());
 			const auto ptr_plus_op = m_ir->CreateOr(m_ir->CreateShl(rel_ptr, 32), m_ir->getInt64(m_next_op));
 			const auto base_plus_pc = m_ir->CreateOr(m_ir->CreateShl(m_ir->CreateZExt(m_base_pc, get_type<u64>()), 32), m_ir->getInt64(m_pos + 4));
-			m_ir->CreateStore(ptr_plus_op, m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value), get_type<u64*>()));
-			m_ir->CreateStore(base_plus_pc, m_ir->CreateBitCast(m_ir->CreateGEP(get_type<u8>(), m_thread, stack1.value), get_type<u64*>()));
+			m_ir->CreateStore(ptr_plus_op, m_ir->CreateGEP(get_type<u8>(), m_thread, stack0.value));
+			m_ir->CreateStore(base_plus_pc, m_ir->CreateGEP(get_type<u8>(), m_thread, stack1.value));
 		}
 	}
 
