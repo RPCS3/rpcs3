@@ -28,20 +28,8 @@ template <>
 void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 {
 	const auto& transfer = get_object(arg);
-
-	std::string datrace;
-	const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
 	const int data_start = transfer.type == LIBUSB_TRANSFER_TYPE_CONTROL ? LIBUSB_CONTROL_SETUP_SIZE : 0;
-
-	for (int index = data_start; index < data_start + transfer.actual_length; index++)
-	{
-		datrace += hex[transfer.buffer[index] >> 4];
-		datrace += hex[(transfer.buffer[index]) & 15];
-		datrace += ' ';
-	}
-
-	fmt::append(out, "TR[r:%d][sz:%d] => %s", +transfer.status, transfer.actual_length, datrace);
+	fmt::append(out, "TR[r:%d][sz:%d] => %s", +transfer.status, transfer.actual_length, fmt::buf_to_hexstring(&transfer.buffer[data_start], transfer.actual_length));
 }
 
 struct UsbLdd
@@ -297,7 +285,9 @@ usb_handler_thread::usb_handler_thread()
 
 	for (int i = 0; i < 8; i++) // Add VFS USB mass storage devices (/dev_usbXXX) to the USB device list
 	{
-		usb_devices.push_back(std::make_shared<usb_device_vfs>(g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/dev_usb%03d", i)), get_new_location()));
+		const auto usb_info = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/dev_usb%03d", i));
+		if (fs::is_dir(usb_info.path))
+			usb_devices.push_back(std::make_shared<usb_device_vfs>(usb_info, get_new_location()));
 	}
 
 	if (!found_skylander)
@@ -951,20 +941,9 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 	if (sys_usbd.trace && request)
 	{
 		sys_usbd.trace("RequestType:0x%x, Request:0x%x, wValue:0x%x, wIndex:0x%x, wLength:0x%x", request->bmRequestType, request->bRequest, request->wValue, request->wIndex, request->wLength);
+
 		if ((request->bmRequestType & 0x80) == 0 && buf && buf_size != 0)
-		{
-			std::string datrace;
-			const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-			for (u32 index = 0; index < buf_size; index++)
-			{
-				datrace += hex[(buf[index] >> 4) & 15];
-				datrace += hex[(buf[index]) & 15];
-				datrace += ' ';
-			}
-
-			sys_usbd.trace("Control sent: %s", datrace);
-		}
+			sys_usbd.trace("Control sent:\n%s", fmt::buf_to_hexstring(buf.get_ptr(), buf_size));
 	}
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
@@ -1023,19 +1002,8 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 	{
 		// If output endpoint
 		if (!(pipe.endpoint & 0x80))
-		{
-			std::string datrace;
-			const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+			sys_usbd.trace("Write Int(s: %d):\n%s", buf_size, fmt::buf_to_hexstring(buf.get_ptr(), buf_size));
 
-			for (u32 index = 0; index < buf_size; index++)
-			{
-				datrace += hex[buf[index] >> 4];
-				datrace += hex[buf[index] & 15];
-				datrace += ' ';
-			}
-
-			sys_usbd.trace("Write Int(s: %d) :%s", buf_size, datrace);
-		}
 		pipe.device->interrupt_transfer(buf_size, buf.get_ptr(), pipe.endpoint, &transfer);
 	}
 

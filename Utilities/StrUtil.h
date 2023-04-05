@@ -177,4 +177,13 @@ namespace fmt
 	std::string to_lower(const std::string& string);
 
 	bool match(const std::string& source, const std::string& mask);
+
+	struct buf_to_hexstring
+	{
+		buf_to_hexstring(const u8* buf, usz len)
+			: buf(buf), len(len) {}
+
+		const u8* buf;
+		usz len;
+	};
 }

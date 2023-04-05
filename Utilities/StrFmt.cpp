@@ -214,6 +214,26 @@ void fmt_class_string<std::vector<char8_t>>::format(std::string& out, u64 arg)
 	out.append(obj.cbegin(), obj.cend());
 }
 
+template <>
+void fmt_class_string<fmt::buf_to_hexstring>::format(std::string& out, u64 arg)
+{
+	const auto& _arg = get_object(arg);
+	const std::vector<u8> buf(_arg.buf, _arg.buf + _arg.len);
+	out.reserve(out.size() + (buf.size() * 3));
+	static constexpr char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+
+	for (usz index = 0; index < buf.size(); index++)
+	{
+		out += hex[buf[index] >> 4];
+		out += hex[buf[index] & 15];
+
+		if (((index + 1) % 16) == 0)
+			out += '\n';
+		else
+			out += ' ';
+	}
+}
+
 void format_byte_array(std::string& out, const uchar* data, usz size)
 {
 	if (!size)

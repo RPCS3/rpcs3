@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "np_structs_extra.h"
 
+LOG_CHANNEL(sceNp);
 LOG_CHANNEL(sceNp2);
 
 // Helper functions for printing
@@ -327,6 +328,18 @@ namespace extra_nps
 			print_room_data_external(cur_room);
 			cur_room = cur_room->next.get_ptr();
 		}
+	}
+
+	void print_SceNpBasicExtendedAttachmentData(const SceNpBasicExtendedAttachmentData* data)
+	{
+		sceNp.warning("SceNpBasicExtendedAttachmentData:");
+
+		sceNp.warning("flags: 0x%x", data->flags);
+		sceNp.warning("msgId: %d", data->msgId);
+		sceNp.warning("SceNpBasicAttachmentData.id: %d", data->data.id);
+		sceNp.warning("SceNpBasicAttachmentData.size: %d", data->data.size);
+		sceNp.warning("userAction: %d", data->userAction);
+		sceNp.warning("markedAsUsed: %d", data->markedAsUsed);
 	}
 
 } // namespace extra_nps

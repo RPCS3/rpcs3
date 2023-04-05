@@ -298,7 +298,8 @@ void Emulator::Init(bool add_only)
 			continue;
 		}
 
-		vfs::mount(key, usb_info.path);
+		if (fs::is_dir(usb_info.path))
+			vfs::mount(key, usb_info.path);
 
 		if (key == "/dev_usb000"sv)
 		{
@@ -2249,7 +2250,7 @@ void Emulator::FinalizeRunRequest()
 
 	idm::select<named_thread<spu_thread>>(on_select);
 
-	lv2_obj::awake_all();
+	lv2_obj::make_scheduler_ready();
 
 	m_state.compare_and_swap_test(system_state::starting, system_state::running);
 }
@@ -3362,10 +3363,17 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 
 	// Save config atomically
 	fs::pending_file temp(config_name);
-	temp.file.write(settings.c_str(), settings.size());
-	if (!temp.commit())
+	if (!temp.file)
 	{
-		sys_log.error("Could not save config to %s (error=%s)", config_name, fs::g_tls_error);
+		sys_log.error("Could not save config to %s (failed to create temporary file) (error=%s)", config_name, fs::g_tls_error);
+	}
+	else
+	{
+		temp.file.write(settings.c_str(), settings.size());
+		if (!temp.commit())
+		{
+			sys_log.error("Could not save config to %s (failed to commit) (error=%s)", config_name, fs::g_tls_error);
+		}
 	}
 
 	// Check if the running config/title is the same as the edited config/title.

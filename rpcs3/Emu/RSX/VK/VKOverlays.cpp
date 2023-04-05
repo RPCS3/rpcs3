@@ -585,6 +585,8 @@ namespace vk
 			.get();
 		push_buf[16] = std::bit_cast<f32>(vert_config);
 
+		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 68, push_buf);
+
 		// 2. Fragment stuff
 		rsx::overlays::fragment_options frag_opts;
 		const auto frag_config = frag_opts
@@ -593,11 +595,11 @@ namespace vk
 			.pulse_glow(m_pulse_glow)
 			.get();
 
-		push_buf[17] = std::bit_cast<f32>(frag_config);
-		push_buf[18] = m_time;
-		push_buf[19] = m_blur_strength;
+		push_buf[0] = std::bit_cast<f32>(frag_config);
+		push_buf[1] = m_time;
+		push_buf[2] = m_blur_strength;
 
-		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 80, push_buf);
+		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 68, 12, push_buf);
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)

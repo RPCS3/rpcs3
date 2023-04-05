@@ -448,21 +448,33 @@ error_code sceNpMatching2SignalingGetConnectionStatus(
 	auto [res, npid] = nph.local_get_npid(roomId, memberId);
 
 	if (res)
+	{
+		*connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
 		return res;
+	}
 
 	if (np::is_same_npid(nph.get_npid(), *npid))
+	{
+		*connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
 		return SCE_NP_SIGNALING_ERROR_OWN_NP_ID;
+	}
 
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 
 	auto conn_id = sigh.get_conn_id_from_npid(*npid);
 	if (!conn_id)
+	{
+		*connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
 		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+	}
 
 	const auto si = sigh.get_sig_infos(*conn_id);
 
 	if (!si)
+	{
+		*connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
 		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+	}
 
 	*connStatus = si->conn_status;
 

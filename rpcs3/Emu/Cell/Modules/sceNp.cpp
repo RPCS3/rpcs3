@@ -19,6 +19,7 @@
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_helpers.h"
+#include "Emu/NP/np_structs_extra.h"
 #include "Emu/system_config.h"
 
 LOG_CHANNEL(sceNp);
@@ -985,6 +986,8 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 		msg_data.data.assign(msg->data.get_ptr(), msg->data.get_ptr() + msg->size);
 	}
 
+	sceNp.trace("Message Data:\n%s", fmt::buf_to_hexstring(msg->data.get_ptr(), msg->size));
+
 	bool result = false;
 
 	input::SetIntercepted(true);
@@ -1082,7 +1085,7 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 	return CELL_OK;
 }
 
-error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm::ptr<u32> size)
+error_code sceNpBasicRecvMessageAttachmentLoad(SceNpBasicAttachmentDataId id, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
 	sceNp.warning("sceNpBasicRecvMessageAttachmentLoad(id=%d, buffer=*0x%x, size=*0x%x)", id, buffer, size);
 
@@ -1103,11 +1106,19 @@ error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm:
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto opt_msg = nph.get_message(id);
+	if (id != SCE_NP_BASIC_SELECTED_INVITATION_DATA && id != SCE_NP_BASIC_SELECTED_MESSAGE_DATA)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_DATA_ID;
+	}
+
+	const auto opt_msg = nph.get_message_selected(id);
 	if (!opt_msg)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_DATA_ID;
 	}
+
+	// Not sure about this
+	// nph.clear_message_selected(id);
 
 	const auto msg_pair = opt_msg.value();
 	const auto msg = msg_pair->second;
@@ -1115,6 +1126,8 @@ error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm:
 	const u32 orig_size = *size;
 	const u32 size_to_copy = std::min(static_cast<u32>(msg.data.size()), orig_size);
 	memcpy(buffer.get_ptr(), msg.data.data(), size_to_copy);
+
+	sceNp.trace("Message Data received:\n%s", fmt::buf_to_hexstring(static_cast<u8*>(buffer.get_ptr()), size_to_copy));
 
 	*size = size_to_copy;
 	if (size_to_copy < msg.data.size())
@@ -1180,10 +1193,17 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 	SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
 	att_data->flags                            = 0; // ?
 	att_data->msgId                            = chosen_msg_id;
-	att_data->data.id                          = static_cast<u32>(chosen_msg_id);
+	att_data->data.id = (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? SCE_NP_BASIC_SELECTED_INVITATION_DATA : SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
 	att_data->data.size                        = static_cast<u32>(msg.data.size());
 	att_data->userAction                       = recv_result;
 	att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
+
+	extra_nps::print_SceNpBasicExtendedAttachmentData(att_data);
+
+	nph.set_message_selected(att_data->data.id, chosen_msg_id);
+
+	// Is this sent if used from home menu but not from sceNpBasicRecvMessageCustom, not sure
+	// sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0);
 
 	nph.queue_basic_event(to_add);
 	nph.send_basic_event(event_to_send, 0, 0);
@@ -1985,7 +2005,7 @@ error_code sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo>
 	return CELL_OK;
 }
 
-error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
+error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<u8> data, vm::ptr<u32> size)
 {
 	sceNp.warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
@@ -5300,7 +5320,10 @@ error_code sceNpSignalingGetConnectionStatus(u32 ctx_id, u32 conn_id, vm::ptr<s3
 	const auto si = sigh.get_sig_infos(conn_id);
 
 	if (!si)
+	{
+		*conn_status = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
 		return SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND;
+	}
 
 	*conn_status = si->conn_status;
 

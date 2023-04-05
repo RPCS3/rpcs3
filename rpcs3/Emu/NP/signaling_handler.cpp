@@ -184,6 +184,11 @@ bool signaling_handler::validate_signaling_packet(const signaling_packet* sp)
 	return true;
 }
 
+u64 signaling_handler::get_micro_timestamp(const std::chrono::steady_clock::time_point& time_point)
+{
+	return std::chrono::duration_cast<std::chrono::microseconds>(time_point.time_since_epoch()).count();
+}
+
 void signaling_handler::process_incoming_messages()
 {
 	auto msgs = get_sign_msgs();
@@ -249,14 +254,15 @@ void signaling_handler::process_incoming_messages()
 			}
 
 			sent_packet.command = signal_ping;
-			sent_packet.timestamp_sender = now.time_since_epoch().count();
+			sent_packet.timestamp_sender = get_micro_timestamp(now);
 			send_signaling_packet(sent_packet, si->addr, si->port);
 			queue_signaling_packet(sent_packet, si, now + REPEAT_PING_DELAY);
 		};
 
 		const auto update_rtt = [&](u64 rtt_timestamp)
 		{
-			u32 rtt = now.time_since_epoch().count() - rtt_timestamp;
+			u64 timestamp_now = get_micro_timestamp(now);
+			u64 rtt = timestamp_now - rtt_timestamp;
 			si->last_rtts[(si->rtt_counters % 6)] = rtt;
 			si->rtt_counters++;
 
@@ -267,7 +273,7 @@ void signaling_handler::process_incoming_messages()
 				sum += si->last_rtts[index];
 			}
 
-			si->rtt = (sum / num_rtts) / 1000;
+			si->rtt = (sum / num_rtts);
 		};
 
 		switch (sp->command)
@@ -289,7 +295,7 @@ void signaling_handler::process_incoming_messages()
 			schedule_repeat = true;
 			sent_packet.command = signal_connect_ack;
 			sent_packet.timestamp_sender = sp->timestamp_sender;
-			sent_packet.timestamp_receiver = now.time_since_epoch().count();
+			sent_packet.timestamp_receiver = get_micro_timestamp(now);
 			update_si_addr(si, op_addr, op_port);
 			break;
 		case signal_connect_ack:
@@ -298,7 +304,7 @@ void signaling_handler::process_incoming_messages()
 			schedule_repeat = false;
 			setup_ping();
 			sent_packet.command = signal_confirm;
-			sent_packet.timestamp_receiver = now.time_since_epoch().count();
+			sent_packet.timestamp_receiver = sp->timestamp_receiver;
 			retire_packet(si, signal_connect);
 			update_si_addr(si, op_addr, op_port);
 			update_si_mapped_addr(si, sp->sent_addr, sp->sent_port);
@@ -375,10 +381,10 @@ void signaling_handler::operator()()
 			{
 			case signal_connect:
 			case signal_ping:
-				sig.packet.timestamp_sender = now.time_since_epoch().count();
+				sig.packet.timestamp_sender = get_micro_timestamp(now);
 				break;
 			case signal_connect_ack:
-				sig.packet.timestamp_receiver = now.time_since_epoch().count();
+				sig.packet.timestamp_receiver = get_micro_timestamp(now);
 				break;
 			default:
 				break;
@@ -586,7 +592,7 @@ void signaling_handler::start_sig(u32 conn_id, u32 addr, u16 port)
 	std::lock_guard lock(data_mutex);
 	auto& sent_packet = sig_packet;
 	sent_packet.command = signal_connect;
-	sent_packet.timestamp_sender = steady_clock::now().time_since_epoch().count();
+	sent_packet.timestamp_sender = get_micro_timestamp(steady_clock::now());
 
 	ensure(sig_peers.contains(conn_id));
 	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
@@ -604,10 +610,14 @@ void signaling_handler::stop_sig_nl(u32 conn_id)
 	if (!sig_peers.contains(conn_id))
 		return;
 
+	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
+
+	// Do not queue packets for an already dead connection
+	if (si->conn_status == SCE_NP_SIGNALING_CONN_STATUS_INACTIVE)
+		return;
+
 	auto& sent_packet = sig_packet;
 	sent_packet.command = signal_finished;
-
-	std::shared_ptr<signaling_info> si = ::at32(sig_peers, conn_id);
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
 	queue_signaling_packet(sent_packet, std::move(si), steady_clock::now() + REPEAT_FINISHED_DELAY);

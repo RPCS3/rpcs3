@@ -9930,8 +9930,8 @@ public:
 			m_ir->SetInsertPoint(done);
 
 			const auto ad64 = m_ir->CreateZExt(ad32, get_type<u64>());
-			const auto pptr = m_ir->CreateGEP(get_type<u8>(), m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ad64, 2, "", true)});
-			tail_chunk({m_dispatch->getFunctionType(), m_ir->CreateLoad(get_type<u8*>(), pptr)});
+			const auto pptr = dyn_cast<llvm::GetElementPtrInst>(m_ir->CreateGEP(m_function_table->getValueType(), m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ad64, 2, "", true)}));
+			tail_chunk({m_dispatch->getFunctionType(), m_ir->CreateLoad(pptr->getResultElementType(), pptr)});
 			m_ir->SetInsertPoint(fail);
 		}
 

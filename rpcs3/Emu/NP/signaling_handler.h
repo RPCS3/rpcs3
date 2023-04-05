@@ -116,6 +116,8 @@ private:
 	vm::ptr<SceNpMatching2SignalingCallback> sig2_cb{};
 	vm::ptr<void> sig2_cb_arg{};
 
+	static u64 get_micro_timestamp(const std::chrono::steady_clock::time_point& time_point);
+
 	u32 get_always_conn_id(const SceNpId& npid);
 	static void update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
 	static void update_si_mapped_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);

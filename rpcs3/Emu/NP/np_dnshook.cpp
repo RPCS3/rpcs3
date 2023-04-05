@@ -102,22 +102,8 @@ namespace np
 	s32 dnshook::analyze_dns_packet(s32 s, const u8* buf, u32 len)
 	{
 		std::lock_guard lock(mutex);
-		if (dnshook_log.trace)
-		{
-			std::string datrace;
-			const char hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-
-			for (u32 index = 0; index < len; index++)
-			{
-				if ((index % 16) == 0)
-					datrace += '\n';
-
-				datrace += hex[(buf[index] >> 4) & 15];
-				datrace += hex[(buf[index]) & 15];
-				datrace += ' ';
-			}
-			dnshook_log.trace("DNS REQUEST: %s", datrace);
-		}
+		
+		dnshook_log.trace("DNS REQUEST:\n%s", fmt::buf_to_hexstring(buf, len));
 
 		struct dns_header
 		{

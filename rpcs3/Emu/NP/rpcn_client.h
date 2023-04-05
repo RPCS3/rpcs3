@@ -360,7 +360,7 @@ namespace rpcn
 		std::optional<std::shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
 		std::vector<std::pair<u64, std::shared_ptr<std::pair<std::string, message_data>>>> get_messages_and_register_cb(SceNpBasicMessageMainType type, bool include_bootable, message_cb_func cb_func, void* cb_param);
 		void remove_message_cb(message_cb_func cb_func, void* cb_param);
-		void discard_active_message(u64 id);
+		void mark_message_used(u64 id);
 
 		bool is_connected() const
 		{
