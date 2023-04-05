@@ -36,20 +36,19 @@ struct lv2_timer : lv2_obj
 	atomic_t<u64> expire{0}; // Next expiration time
 	atomic_t<u64> period{0}; // Period (oneshot if 0)
 
-	u64 check();
+	u64 check() noexcept;
+	void check_unlocked(u64 _now) noexcept;
 
 	lv2_timer() noexcept
 		: lv2_obj{1}
 	{
 	}
 
-	void get_information(sys_timer_information_t& info)
+	void get_information(sys_timer_information_t& info) const
 	{
-		reader_lock lock(mutex);
-
 		if (state == SYS_TIMER_STATE_RUN)
 		{
-			info.timer_state = SYS_TIMER_STATE_RUN;
+			info.timer_state = state;
 			info.next_expire = expire;
 			info.period      = period;
 		}

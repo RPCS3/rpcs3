@@ -710,7 +710,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 	{
 		if (lv2_obj::check(port.queue))
 		{
-			const u64 source = port.name ? port.name : (s64{process_getpid()} << 32) | u64{eport_id};
+			const u64 source = port.name ? port.name : (u64{process_getpid() + 0u} << 32) | u64{eport_id};
 
 			return port.queue->send(source, data1, data2, data3);
 		}
