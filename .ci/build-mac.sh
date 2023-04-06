@@ -4,7 +4,7 @@ brew install -f --overwrite llvm@16 nasm ninja git p7zip create-dmg ccache
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm@16 sdl2 glew cmake
+arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm sdl2 glew cmake
 
 #export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
