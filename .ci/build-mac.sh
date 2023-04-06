@@ -1,7 +1,6 @@
 #!/bin/sh -ex
 
-brew update
-brew install -f --overwrite nasm ninja git p7zip create-dmg ccache
+brew install -f --overwrite nasm ninja git p7zip create-dmg ccache pipenv
 
 #/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -28,9 +27,8 @@ WORKDIR="$(pwd)"
 git clone https://github.com/engnr/qt-downloader.git
 cd qt-downloader
 git checkout f52efee0f18668c6d6de2dec0234b8c4bc54c597
-pip3 install pipenv
-pipenv run pip3 install py7zr requests semantic_version lxml
-pipenv run ./qt-downloader macos desktop 5.15.2 clang_64 --opensource
+"/opt/homebrew/bin/pipenv" run pip3 install py7zr requests semantic_version lxml
+"/opt/homebrew/bin/pipenv" run ./qt-downloader macos desktop 5.15.2 clang_64 --opensource
 cd ..
 
 export Qt5_DIR="$WORKDIR/qt-downloader/5.15.2/clang_64/lib/cmake/Qt5"
