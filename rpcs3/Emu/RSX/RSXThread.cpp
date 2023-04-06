@@ -1513,13 +1513,59 @@ namespace rsx
 
 			minimum_color_pitch = color_texel_size * write_limit_x;
 			minimum_zeta_pitch = depth_texel_size * write_limit_x;
+
+			// Check for size fit and attempt to correct incorrect inputs.
+			// BLUS30072 is misconfigured here and renders fine on PS3. The width fails to account for AA being active in that engine.
+			u16 corrected_width = umax;
+			std::vector<u32*> pitch_fixups;
+
+			if (!depth_buffer_unused &&
+				layout.zeta_pitch < minimum_zeta_pitch)
+			{
+				if (layout.zeta_pitch > 64)
+				{
+					corrected_width = layout.zeta_pitch / depth_texel_size;
+					layout.zeta_pitch = depth_texel_size;
+					pitch_fixups.push_back(&layout.zeta_pitch);
+				}
+				else
+				{
+					rsx_log.warning("Misconfigured surface could not fit a depth buffer. Dropping.");
+					layout.zeta_address = 0;
+				}
+			}
+
+			for (const auto& index : rsx::utility::get_rtt_indexes(layout.target))
+			{
+				if (!color_buffer_unused &&
+					layout.color_pitch[index] < minimum_color_pitch)
+				{
+					if (layout.color_pitch[index] > 64)
+					{
+						corrected_width = std::min<u16>(corrected_width, layout.color_pitch[index] / color_texel_size);
+						layout.color_pitch[index] = color_texel_size;
+						pitch_fixups.push_back(&layout.color_pitch[index]);
+					}
+					else
+					{
+						rsx_log.warning("Misconfigured surface could not fit color buffer %d. Dropping.", index);
+						layout.color_addresses[index] = 0;
+					}
+				}
+			}
+
+			if (corrected_width != umax)
+			{
+				layout.width = corrected_width;
+
+				for (auto& value : pitch_fixups)
+				{
+					*value = *value * layout.width;
+				}
+			}
 		}
 
 		if (depth_buffer_unused)
-		{
-			layout.zeta_address = 0;
-		}
-		else if (layout.zeta_pitch < minimum_zeta_pitch)
 		{
 			layout.zeta_address = 0;
 		}
@@ -1529,12 +1575,6 @@ namespace rsx
 		}
 		else
 		{
-			const auto packed_zeta_pitch = (layout.width * depth_texel_size);
-			if (packed_zeta_pitch > layout.zeta_pitch)
-			{
-				layout.width = (layout.zeta_pitch / depth_texel_size);
-			}
-
 			layout.actual_zeta_pitch = layout.zeta_pitch;
 		}
 
@@ -1549,12 +1589,20 @@ namespace rsx
 			if (layout.color_pitch[index] < minimum_color_pitch)
 			{
 				// Unlike the depth buffer, when given a color target we know it is intended to be rendered to
-				rsx_log.error("Framebuffer setup error: Color target failed pitch check, Pitch=[%d, %d, %d, %d] + %d, target=%d, context=%d",
+				rsx_log.warning("Framebuffer setup error: Color target failed pitch check, Pitch=[%d, %d, %d, %d] + %d, target=%d, context=%d",
 					layout.color_pitch[0], layout.color_pitch[1], layout.color_pitch[2], layout.color_pitch[3],
 					layout.zeta_pitch, static_cast<u32>(layout.target), static_cast<u32>(context));
 
-				// Do not remove this buffer for now as it implies something went horribly wrong anyway
-				break;
+				// Some games (COD4) are buggy and set incorrect width + AA + pitch combo. Force fit in such scenarios.
+				if (layout.color_pitch[index] > 64)
+				{
+					layout.width = layout.color_pitch[index] / color_texel_size;
+				}
+				else
+				{
+					layout.color_addresses[index] = 0;
+					continue;
+				}
 			}
 
 			if (layout.color_addresses[index] == layout.zeta_address)
@@ -1588,11 +1636,6 @@ namespace rsx
 			}
 			else
 			{
-				if (packed_pitch > layout.color_pitch[index])
-				{
-					layout.width = (layout.color_pitch[index] / color_texel_size);
-				}
-
 				layout.actual_color_pitch[index] = layout.color_pitch[index];
 			}
 
