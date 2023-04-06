@@ -9,6 +9,8 @@ arch -x86_64 /usr/local/homebrew/bin/brew update
 arch -x86_64 /usr/local/homebrew/bin/brew install -f --overwrite llvm@16 sdl2 glew cmake
 arch -x86_64 /usr/local/homebrew/bin/brew link -f llvm@16
 
+rm -rf /opt/homebrew/opt/llvm@16/lib
+
 #export MACOSX_DEPLOYMENT_TARGET=12.0
 export CXX=clang++
 export CC=clang
@@ -57,7 +59,7 @@ mkdir build && cd build || exit 1
     -DUSE_NATIVE_INSTRUCTIONS=OFF \
     -DUSE_SYSTEM_MVK=OFF \
     $CMAKE_EXTRA_OPTS \
-    -DLLVM_TARGET_ARCH=X86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_IGNORE_PATH="$BREW_PATH/lib;/opt/homebrew/opt/llvm@16/lib" \
+    -DLLVM_TARGET_ARCH=X86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_IGNORE_PATH="$BREW_PATH/lib" \
     -G Ninja
 
 "$BREW_PATH/bin/ninja"; build_status=$?;
