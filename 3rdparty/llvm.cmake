@@ -32,8 +32,8 @@ if(WITH_LLVM)
 		endif()
 
 		# LLVM needs to be built out-of-tree
-		add_subdirectory(${CMAKE_SOURCE_DIR}/llvm ${CMAKE_CURRENT_BINARY_DIR}/llvm_build EXCLUDE_FROM_ALL)
-		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/llvm_build/lib/cmake/llvm/")
+		add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/llvm/llvm ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/llvm/llvm_build EXCLUDE_FROM_ALL)
+		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/llvm/llvm_build/lib/cmake/llvm/")
 
 		set(CMAKE_CXX_FLAGS ${CXX_FLAGS_OLD})
 
