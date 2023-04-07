@@ -160,7 +160,7 @@ struct cfg_root : cfg::node
 		cfg::_bool strict_texture_flushing{ this, "Strict Texture Flushing", false };
 		cfg::_bool multithreaded_rsx{ this, "Multithreaded RSX", false };
 		cfg::_bool relaxed_zcull_sync{ this, "Relaxed ZCULL Sync", false };
-		cfg::_bool enable_3d{ this, "Enable 3D", false };
+		cfg::_enum<stereo_render_mode_options> stereo_render_mode{ this, "3D Display Mode", stereo_render_mode_options::disabled };
 		cfg::_bool debug_program_analyser{ this, "Debug Program Analyser", false };
 		cfg::_bool precise_zpass_count{ this, "Accurate ZCULL stats", true };
 		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};

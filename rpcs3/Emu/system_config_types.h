@@ -312,3 +312,11 @@ enum class output_scaling_mode
 	bilinear,
 	fsr
 };
+
+enum class stereo_render_mode_options
+{
+	disabled,
+	anaglyph,
+	side_by_side,
+	over_under
+};

@@ -211,7 +211,7 @@ namespace vk
 			{
 				float gamma;
 				int   limit_range;
-				int   stereo;
+				int   stereo_display_mode;
 				int   stereo_image_count;
 			};
 
@@ -226,7 +226,7 @@ namespace vk
 		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override;
 
 		void run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,
-			const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, bool _3d, VkRenderPass render_pass);
+			const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, VkRenderPass render_pass);
 	};
 
 	// TODO: Replace with a proper manager

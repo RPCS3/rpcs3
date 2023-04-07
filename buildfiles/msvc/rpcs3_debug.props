@@ -14,7 +14,7 @@
       <PreprocessorDefinitions>LLVM_AVAILABLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)'=='Debug'">%(AdditionalLibraryDirectories);..\llvm_build\Debug\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)'=='Debug'">%(AdditionalLibraryDirectories);..3rdparty\llvm\llvm_build\Debug\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies);
         LLVMAggressiveInstCombine.lib;
         LLVMAnalysis.lib;
