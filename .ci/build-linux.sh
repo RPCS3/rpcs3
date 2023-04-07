@@ -9,15 +9,10 @@ if [ -z "$CIRRUS_CI" ]; then
    cd rpcs3 || exit 1
 fi
 
-# Pull all the submodules except llvm, since it is built separately and we just download that build
+# Pull all the submodules except llvm
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
-
-# Download pre-compiled llvm libs
-curl -sLO https://github.com/RPCS3/llvm-mirror/releases/download/custom-build/llvmlibs-linux.tar.gz
-mkdir llvmlibs
-tar -xzf ./llvmlibs-linux.tar.gz -C llvmlibs
+git submodule -q update --init $(awk '/path/ && !/llvm/ && !/SPIRV/ { print $3 }' .gitmodules)
 
 mkdir build && cd build || exit 1
 
@@ -42,8 +37,6 @@ export CFLAGS="$CFLAGS -fuse-ld=${LINKER}"
 
 cmake ..                                               \
     -DCMAKE_INSTALL_PREFIX=/usr                        \
-    -DBUILD_LLVM_SUBMODULE=OFF                         \
-    -DLLVM_DIR=llvmlibs/lib/cmake/llvm/                \
     -DUSE_NATIVE_INSTRUCTIONS=OFF                      \
     -DUSE_PRECOMPILED_HEADERS=OFF                      \
     -DCMAKE_C_FLAGS="$CFLAGS"                          \

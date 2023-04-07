@@ -36,7 +36,6 @@
 /ipch
 /rpcs3/Debug
 /rpcs3/Release
-/llvm_build
 
 !/bin
 /bin/*
@@ -104,6 +103,7 @@ rpcs3/rpcs3_autogen/*
 
 # QtCreator
 CMakeLists.txt.user
+*.autosave
 
 # CLion
 /.idea/*
@@ -124,6 +124,12 @@ yaml-cpp.pc
 
 # miniupnp
 /3rdparty/miniupnp/x64/*
+
+# llvm
+/3rdparty/llvm/llvm_build
+
+# legacy llvm
+/llvm_build
 
 # ssl certificate
 cacert.pem

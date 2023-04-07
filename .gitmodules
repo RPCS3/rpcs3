@@ -7,9 +7,9 @@
 	url = ../../RPCS3/asmjit.git
 	branch = aarch64
 	ignore = dirty
-[submodule "llvm"]
-	path = llvm
-	url = ../../RPCS3/llvm-mirror.git
+[submodule "3rdparty/llvm/llvm"]
+	path = 3rdparty/llvm/llvm
+	url = ../../llvm/llvm-project.git
 	ignore = dirty
 [submodule "3rdparty/glslang"]
 	path = 3rdparty/glslang/glslang

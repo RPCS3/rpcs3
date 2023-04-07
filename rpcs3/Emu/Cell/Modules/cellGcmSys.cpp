@@ -1056,7 +1056,7 @@ error_code cellGcmMapEaIoAddressWithFlags(ppu_thread& ppu, u32 ea, u32 io, u32 s
 {
 	cellGcmSys.warning("cellGcmMapEaIoAddressWithFlags(ea=0x%x, io=0x%x, size=0x%x, flags=0x%x)", ea, io, size, flags);
 
-	ensure(flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/);
+	ensure(flags == CELL_GCM_IOMAP_FLAG_STRICT_ORDERING);
 
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(gcm_cfg.gcmio_mutex);

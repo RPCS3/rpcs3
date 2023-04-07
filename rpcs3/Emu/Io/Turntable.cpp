@@ -52,8 +52,8 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 	transfer->expected_count  = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
 	// Turntable runs at 100hz --> 10ms
-	// But make the emulated table go as fast as possible for better input behavior
-	transfer->expected_time = get_timestamp();
+	// But make the emulated table go at 1ms for better input behavior
+	transfer->expected_time = get_timestamp() + 1'000;
 
 	memset(buf, 0, buf_size);
 
