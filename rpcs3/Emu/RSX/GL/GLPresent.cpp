@@ -181,7 +181,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto image_to_flip_ = get_present_source(&present_info, avconfig);
 		image_to_flip = image_to_flip_->id();
 
-		if (avconfig.stereo_mode == stereo_render_mode_options::disabled) [[unlikely]]
+		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip_->height() < min_expected_height)
@@ -269,7 +269,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		// TODO: Implement FSR for OpenGL and remove this fallback to bilinear
 		const gl::filter filter = g_cfg.video.output_scaling == output_scaling_mode::nearest ? gl::filter::nearest : gl::filter::linear;
 
-		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode != stereo_render_mode_options::disabled)
+		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && avconfig.stereo_mode == stereo_render_mode_options::disabled)
 		{
 			// Blit source image to the screen
 			m_flip_fbo.recreate();
