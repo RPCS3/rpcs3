@@ -834,6 +834,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_config.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\Infinity.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\Skylander.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -1882,6 +1885,9 @@
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\Keyboard.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Infinity.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\Skylander.h">

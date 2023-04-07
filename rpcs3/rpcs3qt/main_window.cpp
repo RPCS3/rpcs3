@@ -20,6 +20,7 @@
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
+#include "infinity_dialog.h"
 #include "cheat_manager.h"
 #include "patch_manager_dialog.h"
 #include "patch_creator_dialog.h"
@@ -2413,6 +2414,12 @@ void main_window::CreateConnects()
 	{
 		skylander_dialog* sky_diag = skylander_dialog::get_dlg(this);
 		sky_diag->show();
+	});
+
+	connect(ui->actionManage_Infinity_Base, &QAction::triggered, this, [this]
+	{
+		infinity_dialog* inf_dlg = infinity_dialog::get_dlg(this);
+		inf_dlg->show();
 	});
 
 	connect(ui->actionManage_Cheats, &QAction::triggered, this, [this]
