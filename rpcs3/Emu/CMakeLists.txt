@@ -395,6 +395,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/PadHandler.cpp
     Io/usb_device.cpp
     Io/usb_vfs.cpp
+    Io/Infinity.cpp
     Io/Skylander.cpp
     Io/GHLtar.cpp
     Io/Buzz.cpp

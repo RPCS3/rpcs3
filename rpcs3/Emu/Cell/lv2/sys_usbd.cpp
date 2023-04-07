@@ -16,6 +16,7 @@
 #include "Emu/Io/usb_device.h"
 #include "Emu/Io/usb_vfs.h"
 #include "Emu/Io/Skylander.h"
+#include "Emu/Io/Infinity.h"
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/Buzz.h"
 #include "Emu/Io/Turntable.h"
@@ -179,6 +180,7 @@ usb_handler_thread::usb_handler_thread()
 	};
 
 	bool found_skylander = false;
+	bool found_infinity  = false;
 	bool found_usio      = false;
 	bool found_h050      = false;
 
@@ -210,8 +212,12 @@ usb_handler_thread::usb_handler_thread()
 			found_skylander = true;
 		}
 
+		if (check_device(0x0E6F, 0x0129, 0x0129, "Disney Infinity Base"))
+		{
+			found_infinity = true;
+		}
+
 		check_device(0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal");
-		check_device(0x0E6F, 0x0129, 0x0129, "Disney Infinity Portal");
 		check_device(0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal");
 
 		// Cameras
@@ -295,6 +301,12 @@ usb_handler_thread::usb_handler_thread()
 	{
 		sys_usbd.notice("Adding emulated skylander");
 		usb_devices.push_back(std::make_shared<usb_device_skylander>(get_new_location()));
+	}
+
+	if (!found_infinity)
+	{
+		sys_usbd.notice("Adding emulated infinity base");
+		usb_devices.push_back(std::make_shared<usb_device_infinity>(get_new_location()));
 	}
 
 	if (!found_usio && !found_h050) // Only one of these two IO boards should be present at the same time; otherwise, an exception will be thrown by the game.
