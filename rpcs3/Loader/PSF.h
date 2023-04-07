@@ -136,7 +136,7 @@ namespace psf
 	{
 		std::string_view value{value_array, CharN};
 		value = value.substr(0, std::min<usz>(value.find_first_of('\0'), value.size()));
-		return string(CharN, value, allow_truncate);
+		return string(max_size, value, allow_truncate);
 	}
 
 	// Make array entry

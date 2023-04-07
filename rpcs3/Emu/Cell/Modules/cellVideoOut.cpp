@@ -181,7 +181,7 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 	CellVideoOutResolution res;
 	if (_IntGetResolutionInfo(config->resolutionId, &res) != CELL_OK ||
-		(config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING && !g_cfg.video.enable_3d))
+		(config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING && g_cfg.video.stereo_render_mode == stereo_render_mode_options::disabled))
 	{
 		// Resolution not supported
 		cellSysutil.error("Unusual resolution requested: 0x%x", config->resolutionId);
@@ -190,7 +190,7 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 	auto& conf = g_fxo->get<rsx::avconf>();
 	conf.resolution_id = config->resolutionId;
-	conf._3d = config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING;
+	conf.stereo_mode = (config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING) ? g_cfg.video.stereo_render_mode.get() : stereo_render_mode_options::disabled;
 	conf.aspect = config->aspect;
 	conf.format = config->format;
 	conf.scanline_pitch = config->pitch;
@@ -301,7 +301,7 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 	info->availableModes[0].resolutionId = ::at32(g_video_out_resolution_id, g_cfg.video.resolution);
 	info->availableModes[0].scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
 
-	if (g_cfg.video.enable_3d && g_cfg.video.resolution == video_resolution::_720)
+	if (g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled && g_cfg.video.resolution == video_resolution::_720)
 	{
 		// Register 3D-capable display mode
 		info->availableModes[1] = info->availableModes[0];
@@ -346,7 +346,7 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 			return not_an_error(1);
 		}
 
-		if (g_cfg.video.enable_3d && g_cfg.video.resolution == video_resolution::_720)
+		if ((g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled) && g_cfg.video.resolution == video_resolution::_720)
 		{
 			switch (resolutionId)
 			{

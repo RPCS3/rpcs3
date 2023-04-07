@@ -15,7 +15,7 @@ echo "AVVER=$AVVER" >> ../.ci/ci-vars.env
 cd bin
 mkdir "rpcs3.app/Contents/lib/"
 
-cp "/usr/local/Homebrew/opt/llvm@14/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
+cp "/usr/local/Homebrew/opt/llvm@16/lib/c++/libc++abi.1.0.dylib" "rpcs3.app/Contents/lib/libc++abi.1.dylib"
 
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \

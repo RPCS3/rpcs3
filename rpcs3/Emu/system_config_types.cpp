@@ -633,6 +633,23 @@ void fmt_class_string<vk_exclusive_fs_mode>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<stereo_render_mode_options>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](stereo_render_mode_options value)
+		{
+			switch (value)
+			{
+			case stereo_render_mode_options::disabled: return "Disabled";
+			case stereo_render_mode_options::anaglyph: return "Anaglyph";
+			case stereo_render_mode_options::side_by_side: return "Side-by-Side";
+			case stereo_render_mode_options::over_under: return "Over-Under";
+			}
+
+			return unknown;
+		});
+}
+
+template <>
 void fmt_class_string<output_scaling_mode>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](output_scaling_mode value)

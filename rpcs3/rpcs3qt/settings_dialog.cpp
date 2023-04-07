@@ -629,6 +629,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->outputScalingMode, emu_settings_type::OutputScalingMode);
 	SubscribeTooltip(ui->outputScalingMode, tooltips.settings.output_scaling_mode);
 
+	// 3D
+	m_emu_settings->EnhanceComboBox(ui->stereoRenderMode, emu_settings_type::StereoRenderMode);
+	SubscribeTooltip(ui->gb_stereo, tooltips.settings.stereo_render_mode);
+
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
 	SubscribeTooltip(ui->dumpColor, tooltips.settings.dump_color);
@@ -2206,9 +2210,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->strictTextureFlushing, emu_settings_type::StrictTextureFlushing);
 	SubscribeTooltip(ui->strictTextureFlushing, tooltips.settings.strict_texture_flushing);
-
-	m_emu_settings->EnhanceCheckBox(ui->Enable3D, emu_settings_type::Enable3D);
-	SubscribeTooltip(ui->Enable3D, tooltips.settings.enable_3d);
 
 	m_emu_settings->EnhanceCheckBox(ui->gpuTextureScaling, emu_settings_type::GPUTextureScaling);
 	SubscribeTooltip(ui->gpuTextureScaling, tooltips.settings.gpu_texture_scaling);

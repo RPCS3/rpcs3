@@ -356,6 +356,7 @@ class mic_context
 public:
 	void operator()();
 	void load_config_and_init();
+	void wake_up();
 
 	// Returns index of registered device
 	u32 register_device(const std::string& name);
@@ -373,8 +374,7 @@ public:
 	static constexpr auto thread_name = "Microphone Thread"sv;
 
 protected:
-	const u64 start_time = get_guest_system_time();
-	u64 m_counter        = 0;
+	atomic_t<u64> wakey = 0;
 
 	//	u32 signalStateLocalTalk = 9; // value is in range 0-10. 10 indicates talking, 0 indicating none.
 	//	u32 signalStateFarTalk = 0; // value is in range 0-10. 10 indicates talking from far away, 0 indicating none.
