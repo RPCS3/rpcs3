@@ -530,7 +530,7 @@ namespace ppu_patterns
 	};
 }
 
-void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied)
+bool ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied, std::function<bool()> check_aborted)
 {
 	// Assume first segment is executable
 	const u32 start = segs[0].addr;
@@ -841,6 +841,11 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	// Main loop (func_queue may grow)
 	for (usz i = 0; i < func_queue.size(); i++)
 	{
+		if (check_aborted && check_aborted())
+		{
+			return false;
+		}
+
 		ppu_function& func = func_queue[i];
 
 		// Fixup TOCs
@@ -1843,6 +1848,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	}
 
 	ppu_log.notice("Block analysis: %zu blocks (%zu enqueued)", funcs.size(), block_queue.size());
+	return true;
 }
 
 // Temporarily

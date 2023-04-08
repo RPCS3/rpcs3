@@ -961,7 +961,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 // For _sys_prx_register_module
 void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<bool>& loaded_flags)
 {
-	auto& _main = g_fxo->get<ppu_module>();
+	auto& _main = g_fxo->get<main_ppu_module>();
 	auto& link = g_fxo->get<ppu_linkage_info>();
 
 	ppu_load_exports(&link, exports_start, exports_start + exports_size, false, &loaded_flags);
@@ -1158,7 +1158,7 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 void try_spawn_ppu_if_exclusive_program(const ppu_module& m)
 {
 	// If only PRX/OVL has been loaded at Emu.BootGame(), launch a single PPU thread so its memory can be viewed
-	if (Emu.IsReady() && g_fxo->get<ppu_module>().segs.empty() && !Emu.DeserialManager())
+	if (Emu.IsReady() && g_fxo->get<main_ppu_module>().segs.empty() && !Emu.DeserialManager())
 	{
 		ppu_thread_params p
 		{
@@ -1706,7 +1706,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 	init_ppu_functions(ar, false);
 
 	// Set for delayed initialization in ppu_initialize()
-	auto& _main = g_fxo->get<ppu_module>();
+	auto& _main = g_fxo->get<main_ppu_module>();
 
 	// Access linkage information object
 	auto& link = g_fxo->get<ppu_linkage_info>();
@@ -2126,11 +2126,9 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 	_main.name.clear();
 	_main.path = vfs::get(Emu.argv[0]);
 
-	// Analyse executable (TODO)
-	_main.analyse(0, static_cast<u32>(elf.header.e_entry), end, applied);
-
-	// Validate analyser results (not required)
-	_main.validate(0);
+	_main.elf_entry = static_cast<u32>(elf.header.e_entry);
+	_main.seg0_code_end = end;
+	_main.applied_pathes = applied;
 
 	// Set SDK version
 	g_ps3_process_info.sdk_ver = sdk_version;
