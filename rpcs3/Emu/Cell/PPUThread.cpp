@@ -3937,7 +3937,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	std::unique_ptr<Module> _module = std::make_unique<Module>(obj_name, jit.get_context());
 
 	// Initialize target
+#if defined(__APPLE__) && defined(ARCH_X64)
+	_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
+#else
 	_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
+#endif
 	_module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator
