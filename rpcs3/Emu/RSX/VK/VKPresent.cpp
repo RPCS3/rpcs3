@@ -460,7 +460,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		const u32 video_frame_height = (!avconfig._3d? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
+		const u32 video_frame_height = (avconfig.stereo_mode == stereo_render_mode_options::disabled? avconfig.resolution_y : ((avconfig.resolution_y - 30) / 2));
 		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
 	}
@@ -484,7 +484,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 
-		if (avconfig._3d) [[unlikely]]
+		if (avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
@@ -617,12 +617,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	{
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
 
-		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig.gamma, 1.f) || avconfig._3d) [[unlikely]]
+		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig.gamma, 1.f) || avconfig.stereo_mode != stereo_render_mode_options::disabled) [[unlikely]]
 		{
 			if (image_to_flip) calibration_src.push_back(image_to_flip);
 			if (image_to_flip2) calibration_src.push_back(image_to_flip2);
 
-			if (m_output_scaling == output_scaling_mode::fsr && !avconfig._3d) // 3D will be implemented later
+			if (m_output_scaling == output_scaling_mode::fsr && avconfig.stereo_mode == stereo_render_mode_options::disabled) // 3D will be implemented later
 			{
 				// Run upscaling pass before the rest of the output effects pipeline
 				// This can be done with all upscalers but we already get bilinear upscaling for free if we just out the filters directly
@@ -653,7 +653,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			vk::get_overlay_pass<vk::video_out_calibration_pass>()->run(
 				*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src,
-				avconfig.gamma, !use_full_rgb_range_output, avconfig._3d, single_target_pass);
+				avconfig.gamma, !use_full_rgb_range_output, avconfig.stereo_mode, single_target_pass);
 
 			direct_fbo->release();
 		}

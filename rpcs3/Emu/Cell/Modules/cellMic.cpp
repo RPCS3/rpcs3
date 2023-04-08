@@ -70,72 +70,62 @@ void fmt_class_string<CellMicInErrorDsp>::format(std::string& out, u64 arg)
 
 void mic_context::operator()()
 {
+	// Timestep in microseconds
+	constexpr u64 TIMESTEP = 256ull * 1'000'000ull / 48000ull;
+	u64 timeout = 0;
+	u64 oldvalue = 0;
+
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		// The time between processing is copied from audio thread
-		// Might be inaccurate for mic thread
-		if (Emu.IsPaused())
+		if (timeout != 0)
 		{
-			thread_ctrl::wait_for(1000); // hack
-			continue;
+			thread_ctrl::wait_on(wakey, oldvalue, timeout);
+			oldvalue = wakey;
 		}
 
-		const u64 stamp0   = get_guest_system_time();
-		const u64 time_pos = stamp0 - start_time - Emu.GetPauseTime();
+		std::lock_guard lock(mutex);
 
-		const u64 expected_time = m_counter * 256 * 1000000 / 48000;
-		if (expected_time >= time_pos)
+		if (std::none_of(mic_list.begin(), mic_list.end(), [](const microphone_device& dev) { return dev.is_registered(); }))
 		{
-			thread_ctrl::wait_for(1000); // hack
+			timeout = umax;
 			continue;
 		}
-		m_counter++;
-
-		// Process signals
-		const auto process_signals = [this]() -> bool
+		else
 		{
-			std::lock_guard lock(mutex);
+			timeout = TIMESTEP - (std::chrono::duration_cast<std::chrono::microseconds>(steady_clock::now().time_since_epoch()).count() % TIMESTEP);
+		}
 
-			if (std::none_of(mic_list.begin(), mic_list.end(), [](const microphone_device& dev) { return dev.is_registered(); }))
-			{
-				return false;
-			}
-
-			for (auto& mic_entry : mic_list)
-			{
-				mic_entry.update_audio();
-			}
-
-			auto mic_queue = lv2_event_queue::find(event_queue_key);
-			if (!mic_queue)
-			{
-				return true;
-			}
-
-			for (usz dev_num = 0; dev_num < mic_list.size(); dev_num++)
-			{
-				microphone_device& device = ::at32(mic_list, dev_num);
-				if (device.has_data())
-				{
-					mic_queue->send(event_queue_source, CELLMIC_DATA, dev_num, 0);
-				}
-			}
-
-			return true;
-		};
-
-		// Get mic input and sleep if mics are idle
-		if (!process_signals())
+		for (auto& mic_entry : mic_list)
 		{
-			thread_ctrl::wait_for(100000);
+			mic_entry.update_audio();
+		}
+
+		auto mic_queue = lv2_event_queue::find(event_queue_key);
+		if (!mic_queue)
+			continue;
+
+		for (usz dev_num = 0; dev_num < mic_list.size(); dev_num++)
+		{
+			microphone_device& device = ::at32(mic_list, dev_num);
+			if (device.has_data())
+			{
+				mic_queue->send(event_queue_source, CELLMIC_DATA, dev_num, 0);
+			}
 		}
 	}
 
 	// Cleanup
+	std::lock_guard lock(mutex);
 	for (auto& mic_entry : mic_list)
 	{
 		mic_entry.close_microphone();
 	}
+}
+
+void mic_context::wake_up()
+{
+	wakey++;
+	wakey.notify_one();
 }
 
 void mic_context::load_config_and_init()
@@ -213,6 +203,8 @@ u32 mic_context::register_device(const std::string& device_name)
 	default:
 		break;
 	}
+
+	wake_up();
 
 	return ::narrow<u32>(index);
 }
