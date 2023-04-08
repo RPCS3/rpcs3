@@ -1394,7 +1394,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		else
 		{
 			mem = std::make_unique<MemoryManager2>();
-#if defined(_WIN32) && defined(ARCH_X64)
+#if (defined(_WIN32) || defined(__APPLE__)) && defined(ARCH_X64)
 			null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
 #endif
 		}
