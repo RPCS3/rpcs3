@@ -13,6 +13,7 @@
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Weffc++"
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
 #endif
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"

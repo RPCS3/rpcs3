@@ -5007,11 +5007,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
-#if defined(_WIN32) && defined(ARCH_X64)
-		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
-#else
-		_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
-#endif
+		_module->setTargetTriple(jit_compiler::triple2());
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -5687,11 +5683,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
-#if defined(_WIN32) && defined(ARCH_X64)
-		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
-#else
-		_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
-#endif
+		_module->setTargetTriple(jit_compiler::triple2());
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -7104,7 +7096,7 @@ public:
 			minusb = eval(x);
 		}
 
-		if (auto k = get_known_bits(minusb); (k & kbc<u32>(32)).isZero())
+		if (auto k = get_known_bits(minusb); !!(k.Zero & 32))
 		{
 			set_vr(op.rt, a >> (minusb & 31));
 			return;
@@ -7123,7 +7115,7 @@ public:
 			minusb = eval(x);
 		}
 
-		if (auto k = get_known_bits(minusb); (k & kbc<u32>(32)).isZero())
+		if (auto k = get_known_bits(minusb); !!(k.Zero & 32))
 		{
 			set_vr(op.rt, a >> (minusb & 31));
 			return;
@@ -7136,7 +7128,7 @@ public:
 	{
 		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 
-		if (auto k = get_known_bits(b); (k & kbc<u32>(32)).isZero())
+		if (auto k = get_known_bits(b); !!(k.Zero & 32))
 		{
 			set_vr(op.rt, a << (b & 31));
 			return;
@@ -7161,7 +7153,7 @@ public:
 			minusb = eval(x);
 		}
 
-		if (auto k = get_known_bits(minusb); (k & kbc<u16>(16)).isZero())
+		if (auto k = get_known_bits(minusb); !!(k.Zero & 16))
 		{
 			set_vr(op.rt, a >> (minusb & 15));
 			return;
@@ -7180,7 +7172,7 @@ public:
 			minusb = eval(x);
 		}
 
-		if (auto k = get_known_bits(minusb); (k & kbc<u16>(16)).isZero())
+		if (auto k = get_known_bits(minusb); !!(k.Zero & 16))
 		{
 			set_vr(op.rt, a >> (minusb & 15));
 			return;
@@ -7193,7 +7185,7 @@ public:
 	{
 		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
 
-		if (auto k = get_known_bits(b); (k & kbc<u16>(16)).isZero())
+		if (auto k = get_known_bits(b); !!(k.Zero & 16))
 		{
 			set_vr(op.rt, a << (b & 15));
 			return;
