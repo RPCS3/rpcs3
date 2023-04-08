@@ -1380,7 +1380,11 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	std::string result;
 
 	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
+#if defined(__APPLE__) && defined(ARCH_X64)
+	null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
+#else
 	null_mod->setTargetTriple(llvm::Triple::normalize(llvm::sys::getProcessTriple()));
+#endif
 
 	std::unique_ptr<llvm::RTDyldMemoryManager> mem;
 
