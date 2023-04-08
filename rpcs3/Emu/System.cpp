@@ -185,7 +185,7 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func) const
 // This function ensures constant initialization order between different compilers and builds
 void init_fxo_for_exec(utils::serial* ar, bool full = false)
 {
-	g_fxo->init<ppu_module>();
+	g_fxo->init<main_ppu_module>();
 
 	void init_ppu_functions(utils::serial* ar, bool full);
 
@@ -1352,7 +1352,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			g_fxo->init<ppu_module>();
+			g_fxo->init<main_ppu_module>();
 			vm::init();
 			m_force_boot = false;
 
@@ -1435,7 +1435,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 					if (obj == elf_error::ok && ppu_load_exec(obj))
 					{
-						g_fxo->get<ppu_module>().path = path;
+						g_fxo->get<main_ppu_module>().path = path;
 					}
 					else
 					{
@@ -1455,14 +1455,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 			}
 
-			if (auto& _main = g_fxo->get<ppu_module>(); _main.path.empty())
+			if (auto& _main = g_fxo->get<main_ppu_module>(); _main.path.empty())
 			{
 				init_fxo_for_exec(nullptr, false);
 			}
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue]() mutable
 			{
-				if (auto& _main = g_fxo->get<ppu_module>(); !_main.path.empty())
+				if (auto& _main = g_fxo->get<main_ppu_module>(); !_main.path.empty())
 				{
 					ppu_initialize(_main);
 				}
@@ -2020,7 +2020,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				sys_log.error("Booting HG category outside of HDD0!");
 			}
 
-			g_fxo->init<ppu_module>();
+			g_fxo->init<main_ppu_module>();
 
 			if (ppu_load_exec(ppu_exec, DeserialManager()))
 			{
@@ -2032,7 +2032,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 			else
 			{
-				// Preserve emulation state for OVL excutable
+				// Preserve emulation state for OVL executable
 				Pause(true);
 			}
 
@@ -3026,7 +3026,7 @@ s32 error_code::error_report(s32 result, const logs::message* channel, const cha
 
 void Emulator::ConfigurePPUCache() const
 {
-	auto& _main = g_fxo->get<ppu_module>();
+	auto& _main = g_fxo->get<main_ppu_module>();
 
 	_main.cache = rpcs3::utils::get_cache_dir();
 
