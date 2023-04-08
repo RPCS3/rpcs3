@@ -5007,7 +5007,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
-#if defined(_WIN32) && defined(ARCH_X64)
+#if (defined(_WIN32) || defined(__APPLE__)) && defined(ARCH_X64)
 		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
 #else
 		_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
@@ -5687,7 +5687,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
-#if defined(_WIN32) && defined(ARCH_X64)
+#if (defined(_WIN32) || defined(__APPLE__)) && defined(ARCH_X64)
 		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
 #else
 		_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
