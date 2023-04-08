@@ -5,7 +5,7 @@ if(WITH_LLVM)
 	if(BUILD_LLVM)
 		message(STATUS "LLVM will be built from the submodule.")
 
-		set(LLVM_TARGETS_TO_BUILD "AArch64;X86")
+		set(LLVM_TARGETS_TO_BUILD "AArch64;X86" CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 		option(LLVM_BUILD_RUNTIME OFF)
 		option(LLVM_BUILD_TOOLS OFF)
 		option(LLVM_INCLUDE_BENCHMARKS OFF)
@@ -32,8 +32,8 @@ if(WITH_LLVM)
 		endif()
 
 		# LLVM needs to be built out-of-tree
-		add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/llvm/llvm ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/llvm/llvm_build EXCLUDE_FROM_ALL)
-		set(LLVM_DIR "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/llvm/llvm_build/lib/cmake/llvm/")
+		add_subdirectory(${CMAKE_SOURCE_DIR}/3rdparty/llvm/llvm/llvm ${CMAKE_BINARY_DIR}/3rdparty/llvm/llvm_build EXCLUDE_FROM_ALL)
+		set(LLVM_DIR "${CMAKE_BINARY_DIR}/3rdparty/llvm/llvm_build/lib/cmake/llvm/")
 
 		set(CMAKE_CXX_FLAGS ${CXX_FLAGS_OLD})
 
@@ -42,6 +42,14 @@ if(WITH_LLVM)
 		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
+
+		llvm_map_components_to_libnames(LLVM_LIBS
+			${LLVM_TARGETS_TO_BUILD}
+			Core
+			ExecutionEngine
+			IntelJITEvents
+			MCJIT
+		)
 
 	else()
 		message(STATUS "Using prebuilt or system LLVM")
@@ -62,9 +70,9 @@ if(WITH_LLVM)
 			message(FATAL_ERROR "Can't find LLVM libraries from the CMAKE_PREFIX_PATH path or LLVM_DIR. \
 													 Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
 		endif()
-	endif()
 
-	set(LLVM_LIBS LLVM)
+		set(LLVM_LIBS LLVM)
+	endif()
 
 	add_library(3rdparty_llvm INTERFACE)
 	target_link_libraries(3rdparty_llvm INTERFACE ${LLVM_LIBS})
