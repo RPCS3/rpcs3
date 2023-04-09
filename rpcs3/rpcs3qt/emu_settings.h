@@ -4,6 +4,7 @@
 #include "util/yaml.hpp"
 
 #include "microphone_creator.h"
+#include "midi_creator.h"
 #include "render_creator.h"
 #include "emu_settings_type.h"
 
@@ -79,6 +80,9 @@ public:
 
 	/** Gets a list of all the microphones available.*/
 	microphone_creator m_microphone_creator;
+
+	/** Gets a list of all the midi devices available.*/
+	midi_creator m_midi_creator;
 
 	/** Loads the settings from path.*/
 	void LoadSettings(const std::string& title_id = "");

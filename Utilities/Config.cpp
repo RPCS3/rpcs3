@@ -23,9 +23,9 @@ namespace cfg
 	{
 		for (const auto& node : owner->m_nodes)
 		{
-			if (node->get_name() == name)
+			if (node->get_name() == m_name)
 			{
-				cfg_log.fatal("Node already exists: %s", name);
+				cfg_log.fatal("Node already exists: %s", m_name);
 			}
 		}
 

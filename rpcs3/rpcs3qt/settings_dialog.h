@@ -45,6 +45,9 @@ private:
 	QString m_old_renderer;
 	// Audio tab
 	std::array<QComboBox*, 4> m_mics_combo;
+	// IO tab
+	std::array<QComboBox*, 3> m_midi_type_combo;
+	std::array<QComboBox*, 3> m_midi_device_combo;
 
 	int m_tab_index;
 	std::unique_ptr<Ui::settings_dialog> ui;
