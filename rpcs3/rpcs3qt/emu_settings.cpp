@@ -1277,6 +1277,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case stereo_render_mode_options::over_under: return tr("Over-under", "3D Display Mode");
 		}
 		break;
+	case emu_settings_type::MidiDevices:
+		switch (static_cast<midi_device_type>(index))
+		{
+		case midi_device_type::guitar: return tr("Guitar (17 frets)", "Midi Device Type");
+		case midi_device_type::guitar_22fret: return tr("Guitar (22 frets)", "Midi Device Type");
+		case midi_device_type::keyboard: return tr("Keyboard", "Midi Device Type");
+		}
+		break;
 	default:
 		break;
 	}

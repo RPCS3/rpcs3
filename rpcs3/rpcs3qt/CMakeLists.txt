@@ -51,6 +51,7 @@ set(SRC_FILES
     memory_string_searcher.cpp
     memory_viewer_panel.cpp
     microphone_creator.cpp
+    midi_creator.cpp
     movie_item.cpp
     movie_item_base.cpp
     msg_dialog_frame.cpp
@@ -156,4 +157,5 @@ target_link_libraries(rpcs3_ui
         3rdparty::libpng
         3rdparty::7z
         3rdparty::wolfssl
-        3rdparty::libcurl)
+        3rdparty::libcurl
+        3rdparty::rtmidi)
