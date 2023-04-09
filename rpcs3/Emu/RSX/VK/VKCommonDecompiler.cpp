@@ -14,7 +14,6 @@
 #endif
 #endif
 #include "SPIRV/GlslangToSpv.h"
-#include "spirv-tools/optimizer.hpp"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else

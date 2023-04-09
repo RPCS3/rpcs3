@@ -560,6 +560,18 @@
              </widget>
             </item>
             <item>
+             <widget class="QGroupBox" name="gb_stereo">
+              <property name="title">
+               <string>3D</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_stereo_layout">
+               <item>
+                <widget class="QComboBox" name="stereoRenderMode"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
              <spacer name="gpu_tab_layout_right_spacer">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -966,13 +978,6 @@
                 <widget class="QCheckBox" name="stretchToDisplayArea">
                  <property name="text">
                   <string>Stretch To Display Area</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="Enable3D">
-                 <property name="text">
-                  <string>Enable 3D</string>
                  </property>
                 </widget>
                </item>

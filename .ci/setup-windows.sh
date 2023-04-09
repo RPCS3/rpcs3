@@ -40,7 +40,7 @@ DEP_URLS="         \
 # Pull all the submodules except llvm, since it is built separately and we just download that build
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/SPIRV/ { print $3 }' .gitmodules)
 
 # Git bash doesn't have rev, so here it is
 rev()
@@ -79,7 +79,7 @@ for url in $DEP_URLS; do
     # shellcheck disable=SC1003
     case "$url" in
     *qt*) checksum=$(curl -L "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
-    *llvm*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="." ;;
+    *llvm*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./3rdparty/llvm" ;;
     *glslang*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./lib/Release-x64" ;;
     *Vulkan*)
         # Vulkan setup needs to be run in batch environment

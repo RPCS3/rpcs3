@@ -93,7 +93,7 @@ namespace gl
 	{
 		video_out_calibration_pass();
 
-		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d, gl::filter input_filter);
+		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, gl::filter input_filter);
 	};
 
 	struct rp_ssbo_to_generic_texture : public overlay_pass
