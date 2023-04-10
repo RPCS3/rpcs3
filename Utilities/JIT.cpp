@@ -1415,9 +1415,6 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 			.setMCJITMemoryManager(std::move(mem))
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
 			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
-#ifdef __APPLE__
-			.setCodeModel(llvm::CodeModel::Large)
-#endif
 			.setRelocationModel(llvm::Reloc::Model::PIC_)
 			.setMCPU(m_cpu)
 			.create());
