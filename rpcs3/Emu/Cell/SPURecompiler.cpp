@@ -4290,7 +4290,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 				m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_base_pc, m_ir->getInt32(m_base)), next, fail);
 				m_ir->SetInsertPoint(fail);
-				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc), true);
+				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
 				tail_chunk(nullptr);
 				m_ir->SetInsertPoint(next);
 			}
@@ -4328,7 +4328,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			{
 				ensure(!m_finfo->fn);
 
-				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc), true);
+				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
 			}
 			else
 			{
@@ -4766,7 +4766,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	template <typename T, uint I>
-	void set_vr(const bf_t<u32, I, 7>& index, T expr, bool fixup = true)
+	void set_vr(const bf_t<u32, I, 7>& index, T expr, std::function<llvm::KnownBits()> vr_assume = nullptr, bool fixup = true)
 	{
 		// Process expression
 		const auto value = expr.eval(m_ir);
@@ -4788,6 +4788,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			// Store value
 			m_ir->CreateStore(is_xfloat ? double_to_xfloat(saved_value) : m_ir->CreateBitCast(value, get_type<u32[4]>()), init_vr<u32[4]>(index));
 			return;
+		}
+
+		if (vr_assume)
+		{
 		}
 
 		set_reg_fixed(index, value, fixup);
@@ -4869,7 +4873,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Update PC for current or explicitly specified instruction address
 	void update_pc(u32 target = -1)
 	{
-		m_ir->CreateStore(m_ir->CreateAnd(get_pc(target + 1 ? target : m_pos), 0x3fffc), spu_ptr<u32>(&spu_thread::pc), true);
+		m_ir->CreateStore(m_ir->CreateAnd(get_pc(target + 1 ? target : m_pos), 0x3fffc), spu_ptr<u32>(&spu_thread::pc));
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
@@ -4889,14 +4893,14 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (may_be_unsafe_for_savestate)
 		{
-			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable), true);
+			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable));
 		}
 
-		m_ir->CreateStore(m_ir->getFalse(), m_fake_global1, true);
+		m_ir->CreateStore(m_ir->getFalse(), m_fake_global1);
 
 		if (may_be_unsafe_for_savestate)
 		{
-			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable), true);
+			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable));
 		}
 
 		m_ir->CreateBr(_body);
@@ -5003,11 +5007,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
-#if defined(_WIN32) && defined(ARCH_X64)
-		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
-#else
-		_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
-#endif
+		_module->setTargetTriple(jit_compiler::triple2());
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -5035,7 +5035,7 @@ public:
 
 		// Emit state check
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
-		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pstate, true), m_ir->getInt32(0)), label_stop, label_test, m_md_unlikely);
+		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pstate), m_ir->getInt32(0)), label_stop, label_test, m_md_unlikely);
 
 		// Emit code check
 		u32 check_iterations = 0;
@@ -5043,7 +5043,7 @@ public:
 
 		// Set block hash for profiling (if enabled)
 		if (g_cfg.core.spu_prof && g_cfg.core.spu_verification)
-			m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536)), spu_ptr<u64>(&spu_thread::block_hash), true);
+			m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536)), spu_ptr<u64>(&spu_thread::block_hash));
 
 		if (!g_cfg.core.spu_verification)
 		{
@@ -5294,7 +5294,7 @@ public:
 
 			// Set block hash for profiling (if enabled)
 			if (g_cfg.core.spu_prof)
-				m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536) | (m_entry >> 2)), spu_ptr<u64>(&spu_thread::block_hash), true);
+				m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536) | (m_entry >> 2)), spu_ptr<u64>(&spu_thread::block_hash));
 
 			m_finfo = &m_functions[m_entry];
 			m_ir->CreateBr(add_block(m_entry));
@@ -5535,7 +5535,7 @@ public:
 			{
 				for (auto& i : bb)
 				{
-					// Replace volatile fake store with spu_test_state call
+					// Replace fake store with spu_test_state call
 					if (auto si = dyn_cast<StoreInst>(&i); si && si->getOperand(1) == m_fake_global1)
 					{
 						m_ir->SetInsertPoint(si);
@@ -5681,11 +5681,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
-#if defined(_WIN32) && defined(ARCH_X64)
-		_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
-#else
-		_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
-#endif
+		_module->setTargetTriple(jit_compiler::triple2());
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -5985,7 +5981,7 @@ public:
 							ncall->setTailCall();
 							m_ir->CreateRetVoid();
 							m_ir->SetInsertPoint(_stop);
-							m_ir->CreateStore(m_interp_pc, spu_ptr<u32>(&spu_thread::pc), true);
+							m_ir->CreateStore(m_interp_pc, spu_ptr<u32>(&spu_thread::pc));
 							call("spu_escape", spu_runtime::g_escape, m_thread)->setTailCall();
 							m_ir->CreateRetVoid();
 						}
@@ -6233,8 +6229,9 @@ public:
 		}
 		else
 		{
-			const auto val = m_ir->CreateLoad(get_type<u64>(), ptr, true);
-			m_ir->CreateStore(m_ir->getInt64(0), ptr, true);
+			const auto val = m_ir->CreateLoad(get_type<u64>(), ptr);
+			val->setAtomic(llvm::AtomicOrdering::Unordered);
+			m_ir->CreateStore(m_ir->getInt64(0), ptr)->setAtomic(llvm::AtomicOrdering::Unordered);
 			val0 = val;
 		}
 
@@ -6319,7 +6316,7 @@ public:
 		}
 		case SPU_RdEventMask:
 		{
-			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events), true), 32), get_type<u32>());
+			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events)), 32), get_type<u32>());
 			break;
 		}
 		case SPU_RdEventStat:
@@ -6575,7 +6572,7 @@ public:
 				// Illegal update, access violate with special address
 				m_ir->SetInsertPoint(fail);
 				const auto ptr = _ptr<u32>(m_memptr, 0xffdead04);
-				m_ir->CreateStore(m_ir->getInt32("TAG\0"_u32), ptr, true);
+				m_ir->CreateStore(m_ir->getInt32("TAG\0"_u32), ptr);
 				m_ir->CreateBr(next);
 
 				m_ir->SetInsertPoint(any);
@@ -7097,7 +7094,7 @@ public:
 			minusb = eval(x);
 		}
 
-		if (auto k = get_known_bits(minusb); (k & kbc<u32>(32)).isZero())
+		if (auto k = get_known_bits(minusb); !!(k.Zero & 32))
 		{
 			set_vr(op.rt, a >> (minusb & 31));
 			return;
@@ -7116,7 +7113,7 @@ public:
 			minusb = eval(x);
 		}
 
-		if (auto k = get_known_bits(minusb); (k & kbc<u32>(32)).isZero())
+		if (auto k = get_known_bits(minusb); !!(k.Zero & 32))
 		{
 			set_vr(op.rt, a >> (minusb & 31));
 			return;
@@ -7129,7 +7126,7 @@ public:
 	{
 		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 
-		if (auto k = get_known_bits(b); (k & kbc<u32>(32)).isZero())
+		if (auto k = get_known_bits(b); !!(k.Zero & 32))
 		{
 			set_vr(op.rt, a << (b & 31));
 			return;
@@ -7154,7 +7151,7 @@ public:
 			minusb = eval(x);
 		}
 
-		if (auto k = get_known_bits(minusb); (k & kbc<u16>(16)).isZero())
+		if (auto k = get_known_bits(minusb); !!(k.Zero & 16))
 		{
 			set_vr(op.rt, a >> (minusb & 15));
 			return;
@@ -7173,7 +7170,7 @@ public:
 			minusb = eval(x);
 		}
 
-		if (auto k = get_known_bits(minusb); (k & kbc<u16>(16)).isZero())
+		if (auto k = get_known_bits(minusb); !!(k.Zero & 16))
 		{
 			set_vr(op.rt, a >> (minusb & 15));
 			return;
@@ -7186,7 +7183,7 @@ public:
 	{
 		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
 
-		if (auto k = get_known_bits(b); (k & kbc<u16>(16)).isZero())
+		if (auto k = get_known_bits(b); !!(k.Zero & 16))
 		{
 			set_vr(op.rt, a << (b & 15));
 			return;
@@ -8992,7 +8989,7 @@ public:
 			const auto i = select(a > 0x47f0000000000000, eval(s | 0x47f0000000000000), d);
 			const auto n = select(a > 0x7ff0000000000000, splat<s64[2]>(0x47f8000000000000), i);
 			const auto z = select(a < 0x3810000000000000, s, n);
-			set_vr(op.rt, zshuffle(bitcast<f64[2]>(z), 2, 0, 3, 1), false);
+			set_vr(op.rt, zshuffle(bitcast<f64[2]>(z), 2, 0, 3, 1), nullptr, false);
 			return;
 		}
 
@@ -9808,11 +9805,11 @@ public:
 		m_ir->CreateCondBr(cond.value, halt, next, m_md_unlikely);
 		m_ir->SetInsertPoint(halt);
 		if (m_interp_magn)
-			m_ir->CreateStore(m_function->getArg(2), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
+			m_ir->CreateStore(m_function->getArg(2), spu_ptr<u32>(&spu_thread::pc));
 		else
 			update_pc();
 		const auto ptr = _ptr<u32>(m_memptr, 0xffdead00);
-		m_ir->CreateStore(m_ir->getInt32("HALT"_u32), ptr)->setVolatile(true);
+		m_ir->CreateStore(m_ir->getInt32("HALT"_u32), ptr);
 		m_ir->CreateBr(next);
 		m_ir->SetInsertPoint(next);
 	}
@@ -10292,8 +10289,8 @@ public:
 			if (m_finfo && m_finfo->fn)
 			{
 				// Can't afford external tail call in true functions
-				m_ir->CreateStore(m_ir->getInt32("BIJT"_u32), _ptr<u32>(m_memptr, 0xffdead20))->setVolatile(true);
-				m_ir->CreateStore(m_ir->getFalse(), m_fake_global1, true);
+				m_ir->CreateStore(m_ir->getInt32("BIJT"_u32), _ptr<u32>(m_memptr, 0xffdead20));
+				m_ir->CreateStore(m_ir->getFalse(), m_fake_global1);
 				m_ir->CreateBr(sw->getDefaultDest());
 			}
 			else
