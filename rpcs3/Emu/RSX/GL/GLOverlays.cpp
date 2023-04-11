@@ -467,30 +467,69 @@ namespace gl
 			"layout(location=0) in vec2 tc0;\n"
 			"layout(location=0) out vec4 ocol;\n"
 			"\n"
+			"#define STEREO_MODE_DISABLED 0\n"
+			"#define STEREO_MODE_ANAGLYPH 1\n"
+			"#define STEREO_MODE_SIDE_BY_SIDE 2\n"
+			"#define STEREO_MODE_OVER_UNDER 3\n"
+			"\n"
+			"vec2 sbs_single_matrix = vec2(2.0,0.4898f);\n"
+			"vec2 sbs_multi_matrix =  vec2(2.0,1.0);\n"
+			"vec2 ou_single_matrix =  vec2(1.0,0.9796f);\n"
+			"vec2 ou_multi_matrix =   vec2(1.0,2.0);\n"
+			"\n"
 			"uniform float gamma;\n"
 			"uniform int limit_range;\n"
-			"uniform int stereo;\n"
+			"uniform int stereo_display_mode;\n"
 			"uniform int stereo_image_count;\n"
 			"\n"
 			"vec4 read_source()\n"
 			"{\n"
-			"	if (stereo == 0) return texture(fs0, tc0);\n"
+			"	if (stereo_display_mode == STEREO_MODE_DISABLED) return texture(fs0, tc0);\n"
 			"\n"
 			"	vec4 left, right;\n"
-			"	if (stereo_image_count == 2)\n"
+			"	if (stereo_image_count == 1)\n"
 			"	{\n"
-			"		left = texture(fs0, tc0);\n"
-			"		right = texture(fs1, tc0);\n"
+			"		switch (stereo_display_mode)\n"
+			"		{\n"
+			"			case STEREO_MODE_ANAGLYPH:\n"
+			"				left = texture(fs0, tc0 * vec2(1.f, 0.4898f));\n"
+			"				right = texture(fs0, (tc0 * vec2(1.f, 0.4898f)) + vec2(0.f, 0.510204f));\n"
+			"				return vec4(left.r, right.g, right.b, 1.f);\n"
+			"			case STEREO_MODE_SIDE_BY_SIDE:\n"
+			"				if (tc0.x < 0.5) return texture(fs0, tc0* sbs_single_matrix);\n"
+			"				else             return texture(fs0, (tc0* sbs_single_matrix) + vec2(-1.f, 0.510204f));\n"
+			"			case STEREO_MODE_OVER_UNDER:\n"
+			"				if (tc0.y < 0.5) return texture(fs0, tc0* ou_single_matrix);\n"
+			"				else             return texture(fs0, (tc0* ou_single_matrix) + vec2(0.f, 0.020408f) );\n"
+			"			default:\n" // undefined behavior
+			"				return texture(fs0,tc0);\n"
+			"		}\n"
 			"	}\n"
-			"	else\n"
+			"	else if (stereo_image_count == 2)\n"
+			"	{\n"
+			"		switch (stereo_display_mode)\n"
+			"		{\n"
+			"			case STEREO_MODE_ANAGLYPH:\n"
+			"				left = texture(fs0, tc0);\n"
+			"				right = texture(fs1, tc0);\n"
+			"				return vec4(left.r, right.g, right.b, 1.f);\n"
+			"			case STEREO_MODE_SIDE_BY_SIDE:\n"
+			"				if (tc0.x < 0.5) return texture(fs0,(tc0 * sbs_multi_matrix));\n"
+			"				else             return texture(fs1,(tc0 * sbs_multi_matrix) + vec2(-1.f,0.f));\n"
+			"			case STEREO_MODE_OVER_UNDER:\n"
+			"				if (tc0.y < 0.5) return texture(fs0,(tc0 * ou_multi_matrix));\n"
+			"				else             return texture(fs1,(tc0 * ou_multi_matrix) + vec2(0.f,-1.f));\n"
+			"			default:\n" // undefined behavior
+			"				return texture(fs0,tc0);\n"
+			"		}\n"
+			"	}\n"
 			"	{\n"
 			"		vec2 coord_left = tc0 * vec2(1.f, 0.4898f);\n"
 			"		vec2 coord_right = coord_left + vec2(0.f, 0.510204f);\n"
 			"		left = texture(fs0, coord_left);\n"
 			"		right = texture(fs0, coord_right);\n"
+			"		return vec4(left.r, right.g, right.b, 1.);\n"
 			"	}\n"
-			"\n"
-			"	return vec4(left.r, right.g, right.b, 1.);\n"
 			"}\n"
 			"\n"
 			"void main()\n"
@@ -506,7 +545,7 @@ namespace gl
 		m_input_filter = gl::filter::linear;
 	}
 
-	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, bool _3d, gl::filter input_filter)
+	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb, stereo_render_mode_options stereo_mode, gl::filter input_filter)
 	{
 		if (m_input_filter != input_filter)
 		{
@@ -516,7 +555,7 @@ namespace gl
 		}
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
-		program_handle.uniforms["stereo"] = _3d + 0;
+		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_mode);
 		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
 
 		saved_sampler_state saved(31, m_sampler);

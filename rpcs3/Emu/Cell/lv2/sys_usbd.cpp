@@ -285,7 +285,9 @@ usb_handler_thread::usb_handler_thread()
 
 	for (int i = 0; i < 8; i++) // Add VFS USB mass storage devices (/dev_usbXXX) to the USB device list
 	{
-		usb_devices.push_back(std::make_shared<usb_device_vfs>(g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/dev_usb%03d", i)), get_new_location()));
+		const auto usb_info = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/dev_usb%03d", i));
+		if (fs::is_dir(usb_info.path))
+			usb_devices.push_back(std::make_shared<usb_device_vfs>(usb_info, get_new_location()));
 	}
 
 	if (!found_skylander)
@@ -396,7 +398,7 @@ void usb_handler_thread::operator()()
 		if (handled_devices.empty())
 			thread_ctrl::wait_for(500'000);
 		else
-			std::this_thread::yield();
+			thread_ctrl::wait_for(1'000);
 	}
 }
 

@@ -487,7 +487,7 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 	transfer->fake            = true;
 	transfer->expected_result = HC_CC_NOERR;
 	// The latency varies per operation but it doesn't seem to matter for this device so let's go fast!
-	transfer->expected_time = get_timestamp();
+	transfer->expected_time = get_timestamp() + 1'000;
 
 	is_used = true;
 

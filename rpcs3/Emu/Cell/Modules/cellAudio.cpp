@@ -274,8 +274,8 @@ void audio_ringbuffer::process_resampled_data()
 {
 	if (!cfg.time_stretching_enabled) return;
 
-	const auto samples = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt))));
-	commit_data(samples.first, samples.second);
+	const auto [buffer, samples] = resampler.get_samples(static_cast<u32>(cb_ringbuf.get_free_size() / (cfg.audio_sample_size * static_cast<u32>(cfg.backend_ch_cnt))));
+	commit_data(buffer, samples);
 }
 
 void audio_ringbuffer::commit_data(f32* buf, u32 sample_cnt)
@@ -455,7 +455,7 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 	u32 untouched = 0;
 	u32 incomplete = 0;
 
-	for (auto& port : ports)
+	for (audio_port& port : ports)
 	{
 		if (port.state != audio_port_state::started) continue;
 		active++;
@@ -526,7 +526,7 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 void cell_audio_thread::reset_ports(s32 offset)
 {
 	// Memset buffer to 0 and tag
-	for (auto& port : ports)
+	for (audio_port& port : ports)
 	{
 		if (port.state != audio_port_state::started) continue;
 
@@ -548,7 +548,7 @@ void cell_audio_thread::advance(u64 timestamp)
 	// update ports
 	reset_ports(0);
 
-	for (auto& port : ports)
+	for (audio_port& port : ports)
 	{
 		if (port.state != audio_port_state::started) continue;
 
@@ -572,12 +572,11 @@ void cell_audio_thread::advance(u64 timestamp)
 
 	// send aftermix event (normal audio event)
 	std::array<std::shared_ptr<lv2_event_queue>, MAX_AUDIO_EVENT_QUEUES> queues;
-	std::array<u64, MAX_AUDIO_EVENT_QUEUES> event_sources;
 	u32 queue_count = 0;
 
 	event_period++;
 
-	for (const auto& key_inf : keys)
+	for (const key_info& key_inf : keys)
 	{
 		if (key_inf.flags & CELL_AUDIO_EVENTFLAG_NOMIX)
 		{
@@ -607,6 +606,7 @@ void cell_audio_thread::advance(u64 timestamp)
 			}
 
 			event_sources[queue_count] = key_inf.source;
+			event_data3[queue_count] = (key_inf.flags & CELL_AUDIO_EVENTFLAG_BEFOREMIX) ? key_inf.source : 0;
 			queue_count++;
 		}
 	}
@@ -616,7 +616,7 @@ void cell_audio_thread::advance(u64 timestamp)
 	for (u32 i = 0; i < queue_count; i++)
 	{
 		lv2_obj::notify_all_t notify;
-		queues[i]->send(event_sources[i], 0, 0, 0);
+		queues[i]->send(event_sources[i], CELL_AUDIO_EVENT_MIX, 0, event_data3[i]);
 	}
 }
 
@@ -648,9 +648,9 @@ namespace audio
 		if (auto& g_audio = g_fxo->get<cell_audio>(); g_fxo->is_init<cell_audio>())
 		{
 			// Only reboot the audio renderer if a relevant setting changed
-			const auto new_raw = get_raw_config();
+			const cell_audio_config::raw_config new_raw = get_raw_config();
 
-			if (const auto raw = g_audio.cfg.raw;
+			if (const cell_audio_config::raw_config raw = g_audio.cfg.raw;
 				force_reset ||
 				raw.audio_device != new_raw.audio_device ||
 				raw.desired_buffer_duration != new_raw.desired_buffer_duration ||
@@ -735,7 +735,7 @@ void cell_audio_thread::operator()()
 	{
 		loop_count++;
 
-		const auto update_req = m_update_configuration.observe();
+		const audio_backend_update update_req = m_update_configuration.observe();
 		if (update_req != audio_backend_update::NONE)
 		{
 			cellAudio.warning("Updating cell_audio_thread configuration");
@@ -758,7 +758,15 @@ void cell_audio_thread::operator()()
 			continue;
 		}
 
-		// TODO: send beforemix event (in ~2,6 ms before mixing)
+		// TODO: (no idea how much of this is already implemented)
+		// The hardware heartbeat interval of libaudio is ~5.3ms.
+		// As soon as one interval starts, libaudio waits for ~2.6ms (half of the interval) before it mixes the audio.
+		// There are 2 different types of games:
+		// - Normal games:
+		//     Once the audio was mixed, we send the CELL_AUDIO_EVENT_MIX event and the game can process audio.
+		// - Latency sensitive games:
+		//     If CELL_AUDIO_EVENTFLAG_BEFOREMIX is specified, we immediately send the CELL_AUDIO_EVENT_MIX event and the game can process audio.
+		//     We then have to wait for a maximum of ~2.6ms for cellAudioSendAck and then mix immediately.
 
 		const u64 time_since_last_period = timestamp - m_last_period_end;
 
@@ -1057,7 +1065,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 	std::memset(out_buffer, 0, out_buffer_sz * sizeof(float));
 
 	// mixing
-	for (auto& port : ports)
+	for (audio_port& port : ports)
 	{
 		if (port.state != audio_port_state::started) continue;
 
@@ -1070,7 +1078,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 		// spread port volume changes over 13ms
 		auto step_volume = [master_volume, &m](audio_port& port)
 		{
-			const auto param = port.level_set.load();
+			const audio_port::level_set_t param = port.level_set.load();
 
 			if (param.inc != 0.0f)
 			{
@@ -1180,11 +1188,11 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 void cell_audio_thread::finish_port_volume_stepping()
 {
 	// part of cellAudioSetPortLevel functionality
-	for (auto& port : ports)
+	for (audio_port& port : ports)
 	{
 		if (port.state != audio_port_state::started) continue;
 
-		const auto param = port.level_set.load();
+		const audio_port::level_set_t param = port.level_set.load();
 		port.level = param.value;
 		port.level_set.compare_and_swap(param, { param.value, 0.0f });
 	}
@@ -1312,7 +1320,7 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	}
 
 	// Open audio port
-	const auto port = g_audio.open_port();
+	audio_port* port = g_audio.open_port();
 
 	if (!port)
 	{
@@ -1373,7 +1381,7 @@ error_code cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> port
 
 	portConfig->readIndexAddr = port.index;
 
-	switch (auto state = port.state.load())
+	switch (audio_port_state state = port.state.load())
 	{
 	case audio_port_state::closed:
 		portConfig->status = CELL_AUDIO_STATUS_CLOSE;
@@ -1414,7 +1422,7 @@ error_code cellAudioPortStart(u32 portNum)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	switch (auto state = g_audio.ports[portNum].state.compare_and_swap(audio_port_state::opened, audio_port_state::started))
+	switch (audio_port_state state = g_audio.ports[portNum].state.compare_and_swap(audio_port_state::opened, audio_port_state::started))
 	{
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case audio_port_state::started: return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
@@ -1441,7 +1449,7 @@ error_code cellAudioPortClose(u32 portNum)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	switch (auto state = g_audio.ports[portNum].state.exchange(audio_port_state::closed))
+	switch (audio_port_state state = g_audio.ports[portNum].state.exchange(audio_port_state::closed))
 	{
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case audio_port_state::started: return CELL_OK;
@@ -1468,7 +1476,7 @@ error_code cellAudioPortStop(u32 portNum)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	switch (auto state = g_audio.ports[portNum].state.compare_and_swap(audio_port_state::started, audio_port_state::opened))
+	switch (audio_port_state state = g_audio.ports[portNum].state.compare_and_swap(audio_port_state::started, audio_port_state::opened))
 	{
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
 	case audio_port_state::started: return CELL_OK;
@@ -1679,7 +1687,13 @@ error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)
 	}
 
 	// Set unique source associated with the key
-	g_audio.keys.push_back({g_audio.event_period, iFlags, ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio.key_count++ * lv2_event_port::id_step), std::move(q)});
+	g_audio.keys.push_back({
+		.start_period = g_audio.event_period,
+		.flags = iFlags,
+		.source = ((process_getpid() + u64{}) << 32) + lv2_event_port::id_base + (g_audio.key_count++ * lv2_event_port::id_step),
+		.ack_timestamp = 0,
+		.port = std::move(q)
+	});
 	g_audio.key_count %= lv2_event_port::id_count;
 
 	return CELL_OK;
@@ -1911,7 +1925,28 @@ error_code cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
 
 error_code cellAudioSendAck(u64 data3)
 {
-	cellAudio.todo("cellAudioSendAck(data3=0x%llx)", data3);
+	cellAudio.trace("cellAudioSendAck(data3=0x%llx)", data3);
+
+	auto& g_audio = g_fxo->get<cell_audio>();
+
+	std::unique_lock lock(g_audio.mutex);
+
+	if (!g_audio.init)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	// TODO: error checks
+
+	for (cell_audio_thread::key_info& k : g_audio.keys)
+	{
+		if (k.source == data3)
+		{
+			k.ack_timestamp = get_system_time();
+			break;
+		}
+	}
+
 	return CELL_OK;
 }
 

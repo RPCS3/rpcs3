@@ -2130,10 +2130,10 @@ static void ppu_check(ppu_thread& ppu, u64 addr)
 {
 	ppu.cia = ::narrow<u32>(addr);
 
+	// ppu_check() shall not return directly
 	if (ppu.test_stopped())
-	{
-		return;
-	}
+		{}
+	ppu_escape(&ppu);
 }
 
 static void ppu_trace(u64 addr)
@@ -3368,13 +3368,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	{
 		std::unordered_map<std::string, u64> link_table
 		{
-			{ "sys_game_watchdog_start", reinterpret_cast<u64>(ppu_execute_syscall) },
-			{ "sys_game_watchdog_stop", reinterpret_cast<u64>(ppu_execute_syscall) },
-			{ "sys_game_watchdog_clear", reinterpret_cast<u64>(ppu_execute_syscall) },
-			{ "sys_game_get_system_sw_version", reinterpret_cast<u64>(ppu_execute_syscall) },
-			{ "sys_game_board_storage_read", reinterpret_cast<u64>(ppu_execute_syscall) },
-			{ "sys_game_board_storage_write", reinterpret_cast<u64>(ppu_execute_syscall) },
-			{ "sys_game_get_rtc_status", reinterpret_cast<u64>(ppu_execute_syscall) },
 			{ "__trap", reinterpret_cast<u64>(&ppu_trap) },
 			{ "__error", reinterpret_cast<u64>(&ppu_error) },
 			{ "__check", reinterpret_cast<u64>(&ppu_check) },
@@ -3388,6 +3381,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			{ "__dcbz", reinterpret_cast<u64>(+[](u32 addr){ alignas(64) static constexpr u8 z[128]{}; do_cell_atomic_128_store(addr, z); }) },
 			{ "__resupdate", reinterpret_cast<u64>(vm::reservation_update) },
 			{ "__resinterp", reinterpret_cast<u64>(ppu_reservation_fallback) },
+			{ "__escape", reinterpret_cast<u64>(+ppu_escape) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -3696,7 +3690,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			// Settings: should be populated by settings which affect codegen (TODO)
 			enum class ppu_settings : u32
 			{
-				non_win32,
+				platform_bit,
 				accurate_dfma,
 				fixup_vnan,
 				fixup_nj_denormals,
@@ -3713,8 +3707,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			be_t<bs_t<ppu_settings>> settings{};
 
-#ifndef _WIN32
-			settings += ppu_settings::non_win32;
+#if !defined(_WIN32) && !defined(__APPLE__)
+			settings += ppu_settings::platform_bit;
 #endif
 			if (g_cfg.core.use_accurate_dfma)
 				settings += ppu_settings::accurate_dfma;
@@ -3943,12 +3937,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	std::unique_ptr<Module> _module = std::make_unique<Module>(obj_name, jit.get_context());
 
 	// Initialize target
-#if defined(__APPLE__) && defined(ARCH_ARM64)
-	// Force target linux on macOS arm64 to bypass some 64-bit address space linking issues
-	_module->setTargetTriple(Triple::normalize(utils::c_llvm_default_triple));
-#else
-	_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
-#endif
+	_module->setTargetTriple(jit_compiler::triple1());
 	_module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator
@@ -3978,6 +3967,11 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	}
 
 	{
+		if (g_cfg.core.ppu_debug)
+		{
+			translator.build_interpreter();
+		}
+
 		legacy::FunctionPassManager pm(_module.get());
 
 		// Basic optimizations

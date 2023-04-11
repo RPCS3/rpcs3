@@ -200,7 +200,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 
 		// Create tail call to the check function
 		m_ir->SetInsertPoint(vcheck);
-		Call(GetType<void>(), "__check", m_thread, GetAddr());
+		Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCall();
 		m_ir->CreateRetVoid();
 	}
 	else
@@ -385,7 +385,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 		const auto pos = m_ir->CreateShl(indirect, 1);
 		const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(get_type<u8>(), m_exec, pos));
-		const auto val = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateBitCast(ptr, get_type<u64*>()));
+		const auto val = m_ir->CreateLoad(get_type<u64>(), ptr);
 		callee = FunctionCallee(type, m_ir->CreateIntToPtr(m_ir->CreateAnd(val, 0xffff'ffff'ffff), type->getPointerTo()));
 
 		// Load new segment address
@@ -456,7 +456,7 @@ void PPUTranslator::FlushRegisters()
 				m_ir->SetInsertPoint(block);
 			}
 
-			m_ir->CreateStore(local, bitcast(m_globals[index], local->getType()->getPointerTo()));
+			m_ir->CreateStore(local, m_globals[index]);
 			m_globals[index] = nullptr;
 		}
 	}
@@ -591,9 +591,9 @@ void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
 	}
 }
 
-llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr, llvm::Type* type)
+llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr)
 {
-	return bitcast(m_ir->CreateGEP(get_type<u8>(), m_base, addr), type->getPointerTo());
+	return m_ir->CreateGEP(get_type<u8>(), m_base, addr);
 }
 
 Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
@@ -604,12 +604,12 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 	{
 		// Read, byteswap, bitcast
 		const auto int_type = m_ir->getIntNTy(size);
-		const auto value = m_ir->CreateAlignedLoad(int_type, GetMemory(addr, int_type), llvm::MaybeAlign{align}, true);
+		const auto value = m_ir->CreateAlignedLoad(int_type, GetMemory(addr), llvm::MaybeAlign{align});
 		return bitcast(Call(int_type, fmt::format("llvm.bswap.i%u", size), value), type);
 	}
 
 	// Read normally
-	return m_ir->CreateAlignedLoad(type, GetMemory(addr, type), llvm::MaybeAlign{align}, true);
+	return m_ir->CreateAlignedLoad(type, GetMemory(addr), llvm::MaybeAlign{align});
 }
 
 void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align)
@@ -625,7 +625,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 	}
 
 	// Write
-	m_ir->CreateAlignedStore(value, GetMemory(addr, value->getType()), llvm::MaybeAlign{align}, true);
+	m_ir->CreateAlignedStore(value, GetMemory(addr), llvm::MaybeAlign{align});
 }
 
 void PPUTranslator::CompilationError(const std::string& error)
@@ -1945,12 +1945,14 @@ void PPUTranslator::SC(ppu_opcode_t op)
 		if (index < 1024)
 		{
 			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread);
+			//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 			m_ir->CreateRetVoid();
 			return;
 		}
 	}
 
 	Call(GetType<void>(), op.lev ? "__lv1call" : "__syscall", m_thread, num);
+	//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 	m_ir->CreateRetVoid();
 }
 
@@ -2507,6 +2509,7 @@ void PPUTranslator::LWARX(ppu_opcode_t op)
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
 		Call(GetType<void>(), "__resinterp", m_thread);
+		//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 		m_ir->CreateRetVoid();
 		return;
 	}
@@ -2649,6 +2652,7 @@ void PPUTranslator::LDARX(ppu_opcode_t op)
 		RegStore(Trunc(GetAddr()), m_cia);
 		FlushRegisters();
 		Call(GetType<void>(), "__resinterp", m_thread);
+		//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 		m_ir->CreateRetVoid();
 		return;
 	}
@@ -2784,13 +2788,9 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 			std::fill_n(m_g_cr + i * 4, 4, nullptr);
 
 			const auto index = m_ir->CreateAnd(m_ir->CreateLShr(value, 28 - i * 4), 15);
-			const auto src = m_ir->CreateGEP(dyn_cast<GlobalVariable>(m_mtocr_table)->getValueType(), m_mtocr_table, {m_ir->getInt32(0), m_ir->CreateShl(index, 2)});
-			const auto dst = bitcast(m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(m_cr - m_locals) + i * 4), GetType<u8*>());
-#if LLVM_VERSION_MAJOR < 15
-			Call(GetType<void>(), "llvm.memcpy.p0i8.p0i8.i32", dst, src, m_ir->getInt32(4), m_ir->getFalse());
-#else
+			const auto src = m_ir->CreateGEP(m_mtocr_table->getValueType(), m_mtocr_table, {m_ir->getInt32(0), m_ir->CreateShl(index, 2)});
+			const auto dst = m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(m_cr - m_locals) + i * 4);
 			Call(GetType<void>(), "llvm.memcpy.p0.p0.i32", dst, src, m_ir->getInt32(4), m_ir->getFalse());
-#endif
 		}
 	}
 }
@@ -3311,9 +3311,9 @@ void PPUTranslator::STVLX(ppu_opcode_t op)
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
 	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
 	const auto mask = bitcast<bool[16]>(splat<u16>(0xffff) << trunc<u16>(value<u64>(addr) & 0xf));
-	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8[16]>()));
+	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull)));
 	const auto align = splat<u32>(16);
-	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0v16i8", {data, ptr, align, mask}});
+	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0", {data, ptr, align, mask}});
 }
 
 void PPUTranslator::STDBRX(ppu_opcode_t op)
@@ -3341,9 +3341,9 @@ void PPUTranslator::STVRX(ppu_opcode_t op)
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
 	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
 	const auto mask = bitcast<bool[16]>(trunc<u16>(splat<u64>(0xffff) << (value<u64>(addr) & 0xf) >> 16));
-	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8[16]>()));
+	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull)));
 	const auto align = splat<u32>(16);
-	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0v16i8", {data, ptr, align, mask}});
+	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0", {data, ptr, align, mask}});
 }
 
 void PPUTranslator::STFSUX(ppu_opcode_t op)
@@ -3524,7 +3524,7 @@ void PPUTranslator::DCBZ(ppu_opcode_t op)
 	}
 	else
 	{
-		Call(GetType<void>(), "llvm.memset.p0i8.i32", GetMemory(addr, GetType<u8>()), m_ir->getInt8(0), m_ir->getInt32(128), m_ir->getTrue());
+		Call(GetType<void>(), "llvm.memset.p0.i32", GetMemory(addr), m_ir->getInt8(0), m_ir->getInt32(128), m_ir->getFalse());
 	}
 }
 
@@ -4009,7 +4009,7 @@ void PPUTranslator::FRES(ppu_opcode_t op)
 	const auto n = m_ir->CreateFCmpUNO(a, a); // test for NaN
 	const auto e = m_ir->CreateAnd(m_ir->CreateLShr(b, 52), 0x7ff); // double exp
 	const auto i = m_ir->CreateAnd(m_ir->CreateLShr(b, 45), 0x7f); // mantissa LUT index
-	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(dyn_cast<GlobalVariable>(m_fres_table)->getValueType(), m_fres_table, {m_ir->getInt64(0), i}));
+	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(m_fres_table->getValueType(), m_fres_table, {m_ir->getInt64(0), i}));
 	assert(ptr->getResultElementType() == get_type<u32>());
 	const auto m = m_ir->CreateShl(ZExt(m_ir->CreateLoad(ptr->getResultElementType(), ptr)), 29);
 	const auto c = m_ir->CreateICmpUGE(e, m_ir->getInt64(0x3ff + 0x80)); // test for INF
@@ -4382,7 +4382,7 @@ void PPUTranslator::FRSQRTE(ppu_opcode_t op)
 	}
 
 	const auto b = m_ir->CreateBitCast(GetFpr(op.frb), GetType<u64>());
-	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(dyn_cast<GlobalVariable>(m_frsqrte_table)->getValueType(), m_frsqrte_table, {m_ir->getInt64(0), m_ir->CreateLShr(b, 49)}));
+	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(m_frsqrte_table->getValueType(), m_frsqrte_table, {m_ir->getInt64(0), m_ir->CreateLShr(b, 49)}));
 	assert(ptr->getResultElementType() == get_type<u32>());
 	const auto v = m_ir->CreateLoad(ptr->getResultElementType(), ptr);
 	const auto result = m_ir->CreateBitCast(m_ir->CreateShl(ZExt(v), 32), GetType<f64>());
@@ -4601,6 +4601,7 @@ void PPUTranslator::UNK(ppu_opcode_t op)
 {
 	FlushRegisters();
 	Call(GetType<void>(), "__error", m_thread, GetAddr(), m_ir->getInt32(op.opcode));
+	//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 	m_ir->CreateRetVoid();
 }
 
@@ -4862,6 +4863,7 @@ Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)
 void PPUTranslator::Trap()
 {
 	Call(GetType<void>(), "__trap", m_thread, GetAddr());
+	//Call(GetType<void>(), "__escape", m_thread)->setTailCall();
 	m_ir->CreateRetVoid();
 }
 
@@ -4907,6 +4909,186 @@ MDNode* PPUTranslator::CheckBranchProbability(u32 bo)
 	}
 
 	return nullptr;
+}
+
+void PPUTranslator::build_interpreter()
+{
+#define BUILD_VEC_INST(i) { \
+		m_function = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("op_" #i, get_type<void>(), m_thread_type->getPointerTo()).getCallee()); \
+		std::fill(std::begin(m_globals), std::end(m_globals), nullptr); \
+		std::fill(std::begin(m_locals), std::end(m_locals), nullptr); \
+		IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function)); \
+		m_ir = &irb; \
+		m_thread = m_function->getArg(0); \
+		ppu_opcode_t op{}; \
+		op.vd = 0; \
+		op.va = 1; \
+		op.vb = 2; \
+		op.vc = 3; \
+		this->i(op); \
+		FlushRegisters(); \
+		m_ir->CreateRetVoid(); \
+		replace_intrinsics(*m_function); \
+	}
+
+	BUILD_VEC_INST(VADDCUW);
+	BUILD_VEC_INST(VADDFP);
+	BUILD_VEC_INST(VADDSBS);
+	BUILD_VEC_INST(VADDSHS);
+	BUILD_VEC_INST(VADDSWS);
+	BUILD_VEC_INST(VADDUBM);
+	BUILD_VEC_INST(VADDUBS);
+	BUILD_VEC_INST(VADDUHM);
+	BUILD_VEC_INST(VADDUHS);
+	BUILD_VEC_INST(VADDUWM);
+	BUILD_VEC_INST(VADDUWS);
+	BUILD_VEC_INST(VAND);
+	BUILD_VEC_INST(VANDC);
+	BUILD_VEC_INST(VAVGSB);
+	BUILD_VEC_INST(VAVGSH);
+	BUILD_VEC_INST(VAVGSW);
+	BUILD_VEC_INST(VAVGUB);
+	BUILD_VEC_INST(VAVGUH);
+	BUILD_VEC_INST(VAVGUW);
+	BUILD_VEC_INST(VCFSX);
+	BUILD_VEC_INST(VCFUX);
+	BUILD_VEC_INST(VCMPBFP);
+	BUILD_VEC_INST(VCMPBFP_);
+	BUILD_VEC_INST(VCMPEQFP);
+	BUILD_VEC_INST(VCMPEQFP_);
+	BUILD_VEC_INST(VCMPEQUB);
+	BUILD_VEC_INST(VCMPEQUB_);
+	BUILD_VEC_INST(VCMPEQUH);
+	BUILD_VEC_INST(VCMPEQUH_);
+	BUILD_VEC_INST(VCMPEQUW);
+	BUILD_VEC_INST(VCMPEQUW_);
+	BUILD_VEC_INST(VCMPGEFP);
+	BUILD_VEC_INST(VCMPGEFP_);
+	BUILD_VEC_INST(VCMPGTFP);
+	BUILD_VEC_INST(VCMPGTFP_);
+	BUILD_VEC_INST(VCMPGTSB);
+	BUILD_VEC_INST(VCMPGTSB_);
+	BUILD_VEC_INST(VCMPGTSH);
+	BUILD_VEC_INST(VCMPGTSH_);
+	BUILD_VEC_INST(VCMPGTSW);
+	BUILD_VEC_INST(VCMPGTSW_);
+	BUILD_VEC_INST(VCMPGTUB);
+	BUILD_VEC_INST(VCMPGTUB_);
+	BUILD_VEC_INST(VCMPGTUH);
+	BUILD_VEC_INST(VCMPGTUH_);
+	BUILD_VEC_INST(VCMPGTUW);
+	BUILD_VEC_INST(VCMPGTUW_);
+	BUILD_VEC_INST(VCTSXS);
+	BUILD_VEC_INST(VCTUXS);
+	BUILD_VEC_INST(VEXPTEFP);
+	BUILD_VEC_INST(VLOGEFP);
+	BUILD_VEC_INST(VMADDFP);
+	BUILD_VEC_INST(VMAXFP);
+	BUILD_VEC_INST(VMAXSB);
+	BUILD_VEC_INST(VMAXSH);
+	BUILD_VEC_INST(VMAXSW);
+	BUILD_VEC_INST(VMAXUB);
+	BUILD_VEC_INST(VMAXUH);
+	BUILD_VEC_INST(VMAXUW);
+	BUILD_VEC_INST(VMHADDSHS);
+	BUILD_VEC_INST(VMHRADDSHS);
+	BUILD_VEC_INST(VMINFP);
+	BUILD_VEC_INST(VMINSB);
+	BUILD_VEC_INST(VMINSH);
+	BUILD_VEC_INST(VMINSW);
+	BUILD_VEC_INST(VMINUB);
+	BUILD_VEC_INST(VMINUH);
+	BUILD_VEC_INST(VMINUW);
+	BUILD_VEC_INST(VMLADDUHM);
+	BUILD_VEC_INST(VMRGHB);
+	BUILD_VEC_INST(VMRGHH);
+	BUILD_VEC_INST(VMRGHW);
+	BUILD_VEC_INST(VMRGLB);
+	BUILD_VEC_INST(VMRGLH);
+	BUILD_VEC_INST(VMRGLW);
+	BUILD_VEC_INST(VMSUMMBM);
+	BUILD_VEC_INST(VMSUMSHM);
+	BUILD_VEC_INST(VMSUMSHS);
+	BUILD_VEC_INST(VMSUMUBM);
+	BUILD_VEC_INST(VMSUMUHM);
+	BUILD_VEC_INST(VMSUMUHS);
+	BUILD_VEC_INST(VMULESB);
+	BUILD_VEC_INST(VMULESH);
+	BUILD_VEC_INST(VMULEUB);
+	BUILD_VEC_INST(VMULEUH);
+	BUILD_VEC_INST(VMULOSB);
+	BUILD_VEC_INST(VMULOSH);
+	BUILD_VEC_INST(VMULOUB);
+	BUILD_VEC_INST(VMULOUH);
+	BUILD_VEC_INST(VNMSUBFP);
+	BUILD_VEC_INST(VNOR);
+	BUILD_VEC_INST(VOR);
+	BUILD_VEC_INST(VPERM);
+	BUILD_VEC_INST(VPKPX);
+	BUILD_VEC_INST(VPKSHSS);
+	BUILD_VEC_INST(VPKSHUS);
+	BUILD_VEC_INST(VPKSWSS);
+	BUILD_VEC_INST(VPKSWUS);
+	BUILD_VEC_INST(VPKUHUM);
+	BUILD_VEC_INST(VPKUHUS);
+	BUILD_VEC_INST(VPKUWUM);
+	BUILD_VEC_INST(VPKUWUS);
+	BUILD_VEC_INST(VREFP);
+	BUILD_VEC_INST(VRFIM);
+	BUILD_VEC_INST(VRFIN);
+	BUILD_VEC_INST(VRFIP);
+	BUILD_VEC_INST(VRFIZ);
+	BUILD_VEC_INST(VRLB);
+	BUILD_VEC_INST(VRLH);
+	BUILD_VEC_INST(VRLW);
+	BUILD_VEC_INST(VRSQRTEFP);
+	BUILD_VEC_INST(VSEL);
+	BUILD_VEC_INST(VSL);
+	BUILD_VEC_INST(VSLB);
+	BUILD_VEC_INST(VSLDOI);
+	BUILD_VEC_INST(VSLH);
+	BUILD_VEC_INST(VSLO);
+	BUILD_VEC_INST(VSLW);
+	BUILD_VEC_INST(VSPLTB);
+	BUILD_VEC_INST(VSPLTH);
+	BUILD_VEC_INST(VSPLTISB);
+	BUILD_VEC_INST(VSPLTISH);
+	BUILD_VEC_INST(VSPLTISW);
+	BUILD_VEC_INST(VSPLTW);
+	BUILD_VEC_INST(VSR);
+	BUILD_VEC_INST(VSRAB);
+	BUILD_VEC_INST(VSRAH);
+	BUILD_VEC_INST(VSRAW);
+	BUILD_VEC_INST(VSRB);
+	BUILD_VEC_INST(VSRH);
+	BUILD_VEC_INST(VSRO);
+	BUILD_VEC_INST(VSRW);
+	BUILD_VEC_INST(VSUBCUW);
+	BUILD_VEC_INST(VSUBFP);
+	BUILD_VEC_INST(VSUBSBS);
+	BUILD_VEC_INST(VSUBSHS);
+	BUILD_VEC_INST(VSUBSWS);
+	BUILD_VEC_INST(VSUBUBM);
+	BUILD_VEC_INST(VSUBUBS);
+	BUILD_VEC_INST(VSUBUHM);
+	BUILD_VEC_INST(VSUBUHS);
+	BUILD_VEC_INST(VSUBUWM);
+	BUILD_VEC_INST(VSUBUWS);
+	BUILD_VEC_INST(VSUMSWS);
+	BUILD_VEC_INST(VSUM2SWS);
+	BUILD_VEC_INST(VSUM4SBS);
+	BUILD_VEC_INST(VSUM4SHS);
+	BUILD_VEC_INST(VSUM4UBS);
+	BUILD_VEC_INST(VUPKHPX);
+	BUILD_VEC_INST(VUPKHSB);
+	BUILD_VEC_INST(VUPKHSH);
+	BUILD_VEC_INST(VUPKLPX);
+	BUILD_VEC_INST(VUPKLSB);
+	BUILD_VEC_INST(VUPKLSH);
+	BUILD_VEC_INST(VXOR);
+#undef BUILD_VEC_INST
+
+
 }
 
 #endif

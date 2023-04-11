@@ -5,9 +5,12 @@
 #include "Emu/RSX/rsx_utils.h"
 #include "Utilities/StrUtil.h"
 
+#include "cellMic.h"
 #include "cellAudioIn.h"
 #include "cellAudioOut.h"
 #include "cellVideoOut.h"
+
+#include <optional>
 
 LOG_CHANNEL(cellAvconfExt);
 
@@ -34,9 +37,12 @@ void fmt_class_string<CellAudioInError>::format(std::string& out, u64 arg)
 
 struct avconf_manager
 {
+	shared_mutex mutex;
 	std::vector<CellAudioInDeviceInfo> devices;
+	CellAudioInDeviceMode inDeviceMode = CELL_AUDIO_IN_SINGLE_DEVICE_MODE; // TODO: use somewhere
 
-	void copy_device_info(u32 num, vm::ptr<CellAudioInDeviceInfo> info);
+	void copy_device_info(u32 num, vm::ptr<CellAudioInDeviceInfo> info) const;
+	std::optional<CellAudioInDeviceInfo> get_device_info(vm::cptr<char> name) const;
 
 	avconf_manager();
 
@@ -49,7 +55,8 @@ avconf_manager::avconf_manager()
 {
 	u32 curindex = 0;
 
-	auto mic_list = fmt::split(g_cfg.audio.microphone_devices.to_string(), {"@@@"});
+	const std::vector<std::string> mic_list = fmt::split(g_cfg.audio.microphone_devices.to_string(), {"@@@"});
+
 	if (!mic_list.empty())
 	{
 		switch (g_cfg.audio.microphone_type)
@@ -131,20 +138,24 @@ avconf_manager::avconf_manager()
 	}
 }
 
-void avconf_manager::copy_device_info(u32 num, vm::ptr<CellAudioInDeviceInfo> info)
+void avconf_manager::copy_device_info(u32 num, vm::ptr<CellAudioInDeviceInfo> info) const
 {
 	memset(info.get_ptr(), 0, sizeof(CellAudioInDeviceInfo));
+	ensure(num < devices.size());
+	*info = devices[num];
+}
 
-	info->portType                  = devices[num].portType;
-	info->availableModeCount        = devices[num].availableModeCount;
-	info->state                     = devices[num].state;
-	info->deviceId                  = devices[num].deviceId;
-	info->type                      = devices[num].type;
-	info->availableModes[0].type    = devices[num].availableModes[0].type;
-	info->availableModes[0].channel = devices[num].availableModes[0].channel;
-	info->availableModes[0].fs      = devices[num].availableModes[0].fs;
-	info->deviceNumber              = devices[num].deviceNumber;
-	strcpy_trunc(info->name, devices[num].name);
+std::optional<CellAudioInDeviceInfo> avconf_manager::get_device_info(vm::cptr<char> name) const
+{
+	for (const CellAudioInDeviceInfo& device : devices)
+	{
+		if (strncmp(device.name, name.get_ptr(), sizeof(device.name)) == 0)
+		{
+			return device;
+		}
+	}
+
+	return std::nullopt;
 }
 
 error_code cellAudioOutUnregisterDevice(u32 deviceNumber)
@@ -199,6 +210,7 @@ error_code cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<C
 	}
 
 	auto& av_manager = g_fxo->get<avconf_manager>();
+	std::lock_guard lock(av_manager.mutex);
 
 	if (deviceNumber >= av_manager.devices.size())
 		return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
@@ -273,12 +285,22 @@ error_code cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDevic
 	}
 
 	auto& av_manager = g_fxo->get<avconf_manager>();
+	std::lock_guard lock(av_manager.mutex);
 
 	u32 num_devices_returned = std::min<u32>(count, ::size32(av_manager.devices));
 
 	for (u32 index = 0; index < num_devices_returned; index++)
 	{
 		av_manager.copy_device_info(index, device_info + index);
+	}
+
+	CellAudioInDeviceInfo disconnected_device{};
+	disconnected_device.state = CELL_AUDIO_OUT_DEVICE_STATE_UNAVAILABLE;
+	disconnected_device.deviceNumber = 0xff;
+
+	for (u32 index = num_devices_returned; index < count; index++)
+	{
+		device_info[index] = disconnected_device;
 	}
 
 	return not_an_error(num_devices_returned);
@@ -355,6 +377,11 @@ error_code cellAudioInSetDeviceMode(u32 deviceMode)
 		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
 	}
 
+	auto& av_manager = g_fxo->get<avconf_manager>();
+	std::lock_guard lock(av_manager.mutex);
+
+	av_manager.inDeviceMode = static_cast<CellAudioInDeviceMode>(deviceMode);
+
 	return CELL_OK;
 }
 
@@ -368,12 +395,31 @@ error_code cellAudioInRegisterDevice(u64 deviceType, vm::cptr<char> name, vm::pt
 		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	return not_an_error(0); // device number
+	auto& av_manager = g_fxo->get<avconf_manager>();
+	const std::lock_guard lock(av_manager.mutex);
+
+	std::optional<CellAudioInDeviceInfo> info = av_manager.get_device_info(name);
+	if (!info || !memchr(info->name, '\0', sizeof(info->name)))
+	{
+		// TODO
+		return CELL_AUDIO_IN_ERROR_DEVICE_NOT_FOUND;
+	}
+
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard mic_lock(mic_thr.mutex);
+	const u32 device_number = mic_thr.register_device(info->name);
+
+	return not_an_error(device_number);
 }
 
 error_code cellAudioInUnregisterDevice(u32 deviceNumber)
 {
 	cellAvconfExt.todo("cellAudioInUnregisterDevice(deviceNumber=0x%x)", deviceNumber);
+
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	mic_thr.unregister_device(deviceNumber);
+
 	return CELL_OK;
 }
 
@@ -391,7 +437,7 @@ error_code cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
-	if (g_cfg.video.enable_3d)
+	if (g_cfg.video.stereo_render_mode != stereo_render_mode_options::disabled)
 	{
 		// Return Playstation 3D display value
 		// Some games call this function when 3D is enabled

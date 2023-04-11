@@ -330,9 +330,6 @@
     <ClCompile Include="curl\lib\warnless.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\wildcard.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\vauth\cleartext.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -367,12 +364,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\vauth\vauth.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="curl\lib\vquic\ngtcp2.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="curl\lib\vquic\quiche.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\vssh\libssh.c">
@@ -484,6 +475,24 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\idn.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\curl_log.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\cf-https-connect.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\cf-socket.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\curl_msh3.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\curl_ngtcp2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\curl_quiche.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -764,9 +773,6 @@
     <ClInclude Include="curl\lib\psl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\quic.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\rand.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -863,9 +869,6 @@
     <ClInclude Include="curl\lib\warnless.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\wildcard.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\vauth\digest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -873,12 +876,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vauth\vauth.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\vquic\ngtcp2.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\vquic\quiche.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vssh\ssh.h">
@@ -990,6 +987,27 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\idn.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\curl_log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\cf-https-connect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\cf-socket.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\curl_msh3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\curl_ngtcp2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\curl_quiche.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\vquic_int.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

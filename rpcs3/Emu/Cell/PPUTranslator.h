@@ -54,9 +54,9 @@ class PPUTranslator final : public cpu_translator
 	// Thread context struct
 	llvm::StructType* m_thread_type;
 
-	llvm::Value* m_mtocr_table{};
-	llvm::Value* m_frsqrte_table{};
-	llvm::Value* m_fres_table{};
+	llvm::GlobalVariable* m_mtocr_table{};
+	llvm::GlobalVariable* m_frsqrte_table{};
+	llvm::GlobalVariable* m_fres_table{};
 
 	llvm::Value* m_globals[175];
 	llvm::Value** const m_g_cr = m_globals + 99;
@@ -294,7 +294,7 @@ public:
 	void UseCondition(llvm::MDNode* hint, llvm::Value* = nullptr);
 
 	// Get memory pointer
-	llvm::Value* GetMemory(llvm::Value* addr, llvm::Type* type);
+	llvm::Value* GetMemory(llvm::Value* addr);
 
 	// Read from memory
 	llvm::Value* ReadMemory(llvm::Value* addr, llvm::Type* type, bool is_be = true, u32 align = 1);
@@ -856,6 +856,8 @@ public:
 	void FCTID_(ppu_opcode_t op) { return FCTID(op); }
 	void FCTIDZ_(ppu_opcode_t op) { return FCTIDZ(op); }
 	void FCFID_(ppu_opcode_t op) { return FCFID(op); }
+
+	void build_interpreter();
 };
 
 #endif

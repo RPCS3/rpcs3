@@ -2351,10 +2351,9 @@ void thread_ctrl::wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 	{
 		struct itimerspec timeout;
 		u64 missed;
-		u64 nsec = usec * 1000ull;
 
-		timeout.it_value.tv_nsec = (nsec % 1000000000ull);
-		timeout.it_value.tv_sec = nsec / 1000000000ull;
+		timeout.it_value.tv_nsec = usec * 1'000ull;
+		timeout.it_value.tv_sec = 0;
 		timeout.it_interval.tv_sec = 0;
 		timeout.it_interval.tv_nsec = 0;
 		timerfd_settime(fd_timer, 0, &timeout, NULL);

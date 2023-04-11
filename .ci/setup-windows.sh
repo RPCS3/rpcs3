@@ -19,7 +19,7 @@ QT_DECL_URL="${QT_HOST}${QT_PREFIX}qtdeclarative${QT_SUFFIX}"
 QT_TOOL_URL="${QT_HOST}${QT_PREFIX}qttools${QT_SUFFIX}"
 QT_MM_URL="${QT_HOST}${QT_PREFIX}qtmultimedia${QT_SUFFIX}"
 QT_SVG_URL="${QT_HOST}${QT_PREFIX}qtsvg${QT_SUFFIX}"
-LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z'
+LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-16.0.1/llvmlibs_mt.7z'
 GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
 VULKAN_SDK_URL="https://www.dropbox.com/s/cs77c3iv5mbo0bt/VulkanSDK-${VULKAN_VER}-Installer.exe"
 
@@ -40,7 +40,7 @@ DEP_URLS="         \
 # Pull all the submodules except llvm, since it is built separately and we just download that build
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/SPIRV/ { print $3 }' .gitmodules)
 
 # Git bash doesn't have rev, so here it is
 rev()
@@ -79,7 +79,7 @@ for url in $DEP_URLS; do
     # shellcheck disable=SC1003
     case "$url" in
     *qt*) checksum=$(curl -L "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
-    *llvm*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="." ;;
+    *llvm*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./3rdparty/llvm" ;;
     *glslang*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./lib/Release-x64" ;;
     *Vulkan*)
         # Vulkan setup needs to be run in batch environment
