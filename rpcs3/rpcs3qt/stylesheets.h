@@ -17,11 +17,11 @@ namespace gui
 			"QSlider#sizeSlider::groove:horizontal { border-radius: .15em; background: #5b5b5b; height: .3em; }"
 
 			// main window toolbar
-			"QToolBar#mw_toolbar { color: #505050; background-color: #F0F0F0; border: none; }"
-			"QToolBar#mw_toolbar::separator { background-color: rgba(207, 207, 207, 235); width: 0.125em; margin-top: 0.250em; margin-bottom: 0.250em; }"
+			//"QToolBar#mw_toolbar { color: #505050; background-color: #F0F0F0; border: none; }"
+			//"QToolBar#mw_toolbar::separator { background-color: rgba(207, 207, 207, 235); width: 0.125em; margin-top: 0.250em; margin-bottom: 0.250em; }"
 
 			// main window toolbar icon color
-			"QLabel#toolbar_icon_color { color: #5b5b5b; }"
+			//"QLabel#toolbar_icon_color { color: #5b5b5b; }"
 
 			// thumbnail icon color
 			"QLabel#thumbnail_icon_color { color: rgba(0, 100, 231, 255); }"
