@@ -9,15 +9,15 @@ namespace gui
 		const QString default_style_sheet
 		(
 			// main window toolbar search
-			"QLineEdit#mw_searchbar { padding: 0 1em; background: #fdfdfd; selection-background-color: #148aff; margin: .8em; color:#000000; }"
+			//"QLineEdit#mw_searchbar { padding: 0 1em; background: #fdfdfd; selection-background-color: #148aff; margin: .8em; color:#000000; }"
 
 			// main window toolbar slider
-			"QSlider#sizeSlider { color: #505050; background: #F0F0F0; }"
-			"QSlider#sizeSlider::handle:horizontal { border: 0em smooth rgba(227, 227, 227, 255); border-radius: .58em; background: #404040; width: 1.2em; margin: -.5em 0; }"
-			"QSlider#sizeSlider::groove:horizontal { border-radius: .15em; background: #5b5b5b; height: .3em; }"
+			//"QSlider#sizeSlider { color: #505050; background: #F0F0F0; }"
+			//"QSlider#sizeSlider::handle:horizontal { border: 0em smooth rgba(227, 227, 227, 255); border-radius: .58em; background: #404040; width: 1.2em; margin: -.5em 0; }"
+			//"QSlider#sizeSlider::groove:horizontal { border-radius: .15em; background: #5b5b5b; height: .3em; }"
 
 			// main window toolbar
-			//"QToolBar#mw_toolbar { color: #505050; background-color: #F0F0F0; border: none; }"
+			//"QToolBar#mw_toolbar { background-color: #F0F0F0; border: none; }"
 			//"QToolBar#mw_toolbar::separator { background-color: rgba(207, 207, 207, 235); width: 0.125em; margin-top: 0.250em; margin-bottom: 0.250em; }"
 
 			// main window toolbar icon color
