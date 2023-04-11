@@ -546,6 +546,12 @@ public:
 
 	// Get CPU info
 	static std::string cpu(const std::string& _cpu);
+
+	// Get system triple (PPU)
+	static std::string triple1();
+
+	// Get system triple (SPU)
+	static std::string triple2();
 };
 
 #endif

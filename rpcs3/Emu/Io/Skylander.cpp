@@ -196,12 +196,12 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 usb_device_skylander::usb_device_skylander(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
 {
-	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x20, 0x1430, 0x0150, 0x0100, 0x01, 0x02, 0x00, 0x01});
-	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0029, 0x01, 0x01, 0x00, 0x80, 0x96}));
+	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x40, 0x1430, 0x0150, 0x0100, 0x01, 0x02, 0x00, 0x01});
+	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0029, 0x01, 0x01, 0x00, 0x80, 0xFA}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x02, 0x03, 0x00, 0x00, 0x00}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_HID, UsbDeviceHID{0x0111, 0x00, 0x01, 0x22, 0x001d}));
-	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x03, 0x0020, 0x01}));
-	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x01, 0x03, 0x0020, 0x01}));
+	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x81, 0x03, 0x40, 0x01}));
+	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_ENDPOINT, UsbDeviceEndpoint{0x02, 0x03, 0x40, 0x01}));
 }
 
 usb_device_skylander::~usb_device_skylander()
@@ -256,10 +256,9 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 			}
 			case 'L':
 			{
-				// Audio Download status?
+				// Trap Team Portal Side Lights
 				ensure(buf_size == 5);
-				q_result[0] = 0x4C;
-				q_queries.push(q_result);
+				// TODO Proper Light side structs
 				break;
 			}
 			case 'M':
@@ -268,8 +267,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				// Return version of 0 to prevent attempts to
 				// play audio on the portal
 				ensure(buf_size == 2);
-				q_result[0] = 0x4D;
-				q_result[1] = buf[1];
+				q_result = {0x4D, buf[1], 0x00, 0x19};
 				q_queries.push(q_result);
 				break;
 			}
@@ -335,23 +333,32 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 	}
 }
 
-void usb_device_skylander::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
+void usb_device_skylander::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
 	ensure(buf_size == 0x20);
 
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
 	transfer->expected_result = HC_CC_NOERR;
-	// Interrupt transfers are slow(~22ms)
-	transfer->expected_time = get_timestamp() + 22000;
-
-	if (!q_queries.empty())
+	
+	if (endpoint == 0x02)
 	{
-		memcpy(buf, q_queries.front().data(), 0x20);
-		q_queries.pop();
+		// Audio transfers are fairly quick(~1ms)
+		transfer->expected_time = get_timestamp() + 1000;
+		// The response is simply the request, echoed back
 	}
 	else
 	{
-		g_skyportal.get_status(buf);
+		// Interrupt transfers are slow(~22ms)
+		transfer->expected_time = get_timestamp() + 22000;
+		if (!q_queries.empty())
+		{
+			memcpy(buf, q_queries.front().data(), 0x20);
+			q_queries.pop();
+		}
+		else
+		{
+			g_skyportal.get_status(buf);
+		}
 	}
 }
