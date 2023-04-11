@@ -1373,6 +1373,34 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 	return m_cpu;
 }
 
+std::string jit_compiler::triple1()
+{
+#if defined(_WIN32)
+	return llvm::Triple::normalize(llvm::sys::getProcessTriple());
+#elif defined(__APPLE__) && defined(ARCH_X64)
+	return llvm::Triple::normalize("x86_64-unknown-linux-gnu");
+#elif defined(__APPLE__) && defined(ARCH_ARM64)
+	return llvm::Triple::normalize("aarch64-unknown-linux-gnu");
+#else
+	return llvm::Triple::normalize(llvm::sys::getProcessTriple());
+#endif
+}
+
+std::string jit_compiler::triple2()
+{
+#if defined(_WIN32) && defined(ARCH_X64)
+	return llvm::Triple::normalize("x86_64-unknown-linux-gnu");
+#elif defined(_WIN32) && defined(ARCH_ARM64)
+	return llvm::Triple::normalize("aarch64-unknown-linux-gnu");
+#elif defined(__APPLE__) && defined(ARCH_X64)
+	return llvm::Triple::normalize("x86_64-unknown-linux-gnu");
+#elif defined(__APPLE__) && defined(ARCH_ARM64)
+	return llvm::Triple::normalize("aarch64-unknown-linux-gnu");
+#else
+	return llvm::Triple::normalize(llvm::sys::getProcessTriple());
+#endif
+}
+
 jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
 	: m_context(new llvm::LLVMContext)
 	, m_cpu(cpu(_cpu))
@@ -1380,11 +1408,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	std::string result;
 
 	auto null_mod = std::make_unique<llvm::Module> ("null_", *m_context);
-#if defined(__APPLE__) && defined(ARCH_X64)
-	null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
-#else
-	null_mod->setTargetTriple(llvm::Triple::normalize(llvm::sys::getProcessTriple()));
-#endif
+	null_mod->setTargetTriple(jit_compiler::triple1());
 
 	std::unique_ptr<llvm::RTDyldMemoryManager> mem;
 
@@ -1398,9 +1422,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		else
 		{
 			mem = std::make_unique<MemoryManager2>();
-#if (defined(_WIN32) || defined(__APPLE__)) && defined(ARCH_X64)
-			null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
-#endif
+			null_mod->setTargetTriple(jit_compiler::triple2());
 		}
 	}
 	else

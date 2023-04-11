@@ -2132,7 +2132,7 @@ static void ppu_check(ppu_thread& ppu, u64 addr)
 
 	// ppu_check() shall not return directly
 	if (ppu.test_stopped())
-		;
+		{}
 	ppu_escape(&ppu);
 }
 
@@ -3690,7 +3690,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			// Settings: should be populated by settings which affect codegen (TODO)
 			enum class ppu_settings : u32
 			{
-				non_win32,
+				platform_bit,
 				accurate_dfma,
 				fixup_vnan,
 				fixup_nj_denormals,
@@ -3707,8 +3707,8 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			be_t<bs_t<ppu_settings>> settings{};
 
-#ifndef _WIN32
-			settings += ppu_settings::non_win32;
+#if !defined(_WIN32) && !defined(__APPLE__)
+			settings += ppu_settings::platform_bit;
 #endif
 			if (g_cfg.core.use_accurate_dfma)
 				settings += ppu_settings::accurate_dfma;
@@ -3937,11 +3937,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	std::unique_ptr<Module> _module = std::make_unique<Module>(obj_name, jit.get_context());
 
 	// Initialize target
-#if defined(__APPLE__) && defined(ARCH_X64)
-	_module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
-#else
-	_module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
-#endif
+	_module->setTargetTriple(jit_compiler::triple1());
 	_module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator

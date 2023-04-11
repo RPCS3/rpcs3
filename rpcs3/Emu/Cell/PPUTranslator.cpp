@@ -385,7 +385,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 		const auto pos = m_ir->CreateShl(indirect, 1);
 		const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(get_type<u8>(), m_exec, pos));
-		const auto val = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateBitCast(ptr, get_type<u64*>()));
+		const auto val = m_ir->CreateLoad(get_type<u64>(), ptr);
 		callee = FunctionCallee(type, m_ir->CreateIntToPtr(m_ir->CreateAnd(val, 0xffff'ffff'ffff), type->getPointerTo()));
 
 		// Load new segment address
@@ -456,7 +456,7 @@ void PPUTranslator::FlushRegisters()
 				m_ir->SetInsertPoint(block);
 			}
 
-			m_ir->CreateStore(local, bitcast(m_globals[index], local->getType()->getPointerTo()));
+			m_ir->CreateStore(local, m_globals[index]);
 			m_globals[index] = nullptr;
 		}
 	}
@@ -591,9 +591,9 @@ void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
 	}
 }
 
-llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr, llvm::Type* type)
+llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr)
 {
-	return bitcast(m_ir->CreateGEP(get_type<u8>(), m_base, addr), type->getPointerTo());
+	return m_ir->CreateGEP(get_type<u8>(), m_base, addr);
 }
 
 Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
@@ -604,12 +604,12 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 	{
 		// Read, byteswap, bitcast
 		const auto int_type = m_ir->getIntNTy(size);
-		const auto value = m_ir->CreateAlignedLoad(int_type, GetMemory(addr, int_type), llvm::MaybeAlign{align});
+		const auto value = m_ir->CreateAlignedLoad(int_type, GetMemory(addr), llvm::MaybeAlign{align});
 		return bitcast(Call(int_type, fmt::format("llvm.bswap.i%u", size), value), type);
 	}
 
 	// Read normally
-	return m_ir->CreateAlignedLoad(type, GetMemory(addr, type), llvm::MaybeAlign{align});
+	return m_ir->CreateAlignedLoad(type, GetMemory(addr), llvm::MaybeAlign{align});
 }
 
 void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align)
@@ -625,7 +625,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 	}
 
 	// Write
-	m_ir->CreateAlignedStore(value, GetMemory(addr, value->getType()), llvm::MaybeAlign{align});
+	m_ir->CreateAlignedStore(value, GetMemory(addr), llvm::MaybeAlign{align});
 }
 
 void PPUTranslator::CompilationError(const std::string& error)
@@ -2788,8 +2788,8 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 			std::fill_n(m_g_cr + i * 4, 4, nullptr);
 
 			const auto index = m_ir->CreateAnd(m_ir->CreateLShr(value, 28 - i * 4), 15);
-			const auto src = m_ir->CreateGEP(dyn_cast<GlobalVariable>(m_mtocr_table)->getValueType(), m_mtocr_table, {m_ir->getInt32(0), m_ir->CreateShl(index, 2)});
-			const auto dst = bitcast(m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(m_cr - m_locals) + i * 4), GetType<u8*>());
+			const auto src = m_ir->CreateGEP(m_mtocr_table->getValueType(), m_mtocr_table, {m_ir->getInt32(0), m_ir->CreateShl(index, 2)});
+			const auto dst = m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(m_cr - m_locals) + i * 4);
 			Call(GetType<void>(), "llvm.memcpy.p0.p0.i32", dst, src, m_ir->getInt32(4), m_ir->getFalse());
 		}
 	}
@@ -3311,7 +3311,7 @@ void PPUTranslator::STVLX(ppu_opcode_t op)
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
 	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
 	const auto mask = bitcast<bool[16]>(splat<u16>(0xffff) << trunc<u16>(value<u64>(addr) & 0xf));
-	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8[16]>()));
+	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull)));
 	const auto align = splat<u32>(16);
 	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0", {data, ptr, align, mask}});
 }
@@ -3341,7 +3341,7 @@ void PPUTranslator::STVRX(ppu_opcode_t op)
 	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
 	const auto data = pshufb(get_vr<u8[16]>(op.vs), build<u8[16]>(255, 254, 253, 252, 251, 250, 249, 248, 247, 246, 245, 244, 243, 242, 241, 240) + vsplat<u8[16]>(trunc<u8>(value<u64>(addr) & 0xf)));
 	const auto mask = bitcast<bool[16]>(trunc<u16>(splat<u64>(0xffff) << (value<u64>(addr) & 0xf) >> 16));
-	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull), GetType<u8[16]>()));
+	const auto ptr = value<u8(*)[16]>(GetMemory(m_ir->CreateAnd(addr, ~0xfull)));
 	const auto align = splat<u32>(16);
 	eval(llvm_calli<void, decltype(data), decltype(ptr), decltype(align), decltype(mask)>{"llvm.masked.store.v16i8.p0", {data, ptr, align, mask}});
 }
@@ -3524,7 +3524,7 @@ void PPUTranslator::DCBZ(ppu_opcode_t op)
 	}
 	else
 	{
-		Call(GetType<void>(), "llvm.memset.p0.i32", GetMemory(addr, GetType<u8>()), m_ir->getInt8(0), m_ir->getInt32(128), m_ir->getFalse());
+		Call(GetType<void>(), "llvm.memset.p0.i32", GetMemory(addr), m_ir->getInt8(0), m_ir->getInt32(128), m_ir->getFalse());
 	}
 }
 
@@ -4009,7 +4009,7 @@ void PPUTranslator::FRES(ppu_opcode_t op)
 	const auto n = m_ir->CreateFCmpUNO(a, a); // test for NaN
 	const auto e = m_ir->CreateAnd(m_ir->CreateLShr(b, 52), 0x7ff); // double exp
 	const auto i = m_ir->CreateAnd(m_ir->CreateLShr(b, 45), 0x7f); // mantissa LUT index
-	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(dyn_cast<GlobalVariable>(m_fres_table)->getValueType(), m_fres_table, {m_ir->getInt64(0), i}));
+	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(m_fres_table->getValueType(), m_fres_table, {m_ir->getInt64(0), i}));
 	assert(ptr->getResultElementType() == get_type<u32>());
 	const auto m = m_ir->CreateShl(ZExt(m_ir->CreateLoad(ptr->getResultElementType(), ptr)), 29);
 	const auto c = m_ir->CreateICmpUGE(e, m_ir->getInt64(0x3ff + 0x80)); // test for INF
@@ -4382,7 +4382,7 @@ void PPUTranslator::FRSQRTE(ppu_opcode_t op)
 	}
 
 	const auto b = m_ir->CreateBitCast(GetFpr(op.frb), GetType<u64>());
-	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(dyn_cast<GlobalVariable>(m_frsqrte_table)->getValueType(), m_frsqrte_table, {m_ir->getInt64(0), m_ir->CreateLShr(b, 49)}));
+	const auto ptr = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(m_frsqrte_table->getValueType(), m_frsqrte_table, {m_ir->getInt64(0), m_ir->CreateLShr(b, 49)}));
 	assert(ptr->getResultElementType() == get_type<u32>());
 	const auto v = m_ir->CreateLoad(ptr->getResultElementType(), ptr);
 	const auto result = m_ir->CreateBitCast(m_ir->CreateShl(ZExt(v), 32), GetType<f64>());

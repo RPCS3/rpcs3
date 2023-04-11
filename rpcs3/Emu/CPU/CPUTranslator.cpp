@@ -125,7 +125,9 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "bdver2" ||
 		cpu == "bdver3" ||
 		cpu == "bdver4" ||
-		cpu.startswith("znver"))
+		cpu == "znver1" ||
+		cpu == "znver2" ||
+		cpu == "znver3")
 	{
 		m_use_fma = true;
 		m_use_avx = true;
@@ -158,7 +160,8 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "icelake-server" ||
 		cpu == "tigerlake" ||
 		cpu == "rocketlake" ||
-		cpu == "sapphirerapids")
+		cpu == "sapphirerapids" ||
+		(cpu.startswith("znver") && cpu != "znver1" && cpu != "znver2" && cpu != "znver3"))
 	{
 		m_use_avx = true;
 		m_use_fma = true;
