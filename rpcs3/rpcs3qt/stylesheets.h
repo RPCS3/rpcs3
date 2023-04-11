@@ -17,7 +17,7 @@ namespace gui
 			"QSlider#sizeSlider::groove:horizontal { border-radius: .15em; background: #5b5b5b; height: .3em; }"
 
 			// main window toolbar
-			"QToolBar#mw_toolbar { background-color: #F0F0F0; border: none; }"
+			"QToolBar#mw_toolbar { color: #505050; background-color: #F0F0F0; border: none; }"
 			"QToolBar#mw_toolbar::separator { background-color: rgba(207, 207, 207, 235); width: 0.125em; margin-top: 0.250em; margin-bottom: 0.250em; }"
 
 			// main window toolbar icon color
