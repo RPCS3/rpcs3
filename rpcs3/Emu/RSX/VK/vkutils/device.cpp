@@ -678,9 +678,21 @@ namespace vk
 		}
 
 		if (g_cfg.video.disable_vulkan_mem_allocator)
+		{
 			m_allocator = std::make_unique<vk::mem_allocator_vk>(dev, pdev);
+		}
 		else
+		{
 			m_allocator = std::make_unique<vk::mem_allocator_vma>(dev, pdev);
+		}
+
+		if (pgpu->props.deviceID == 0x13c2)
+		{
+			// GTX970 workaround/hack
+			// The driver reports a full working 4GB of memory which is incorrect.
+			// Limit to ~2.5GB to allow vma to avoid running over the headroom of 0.5G.
+			memory_map.device_local_total_bytes = 2560 * 0x100000;
+		}
 	}
 
 	void render_device::destroy()

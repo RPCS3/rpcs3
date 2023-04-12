@@ -3200,7 +3200,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 extern void ppu_initialize()
 {
-	if (!g_fxo->is_init<ppu_module>())
+	if (!g_fxo->is_init<main_ppu_module>())
 	{
 		return;
 	}
@@ -3210,9 +3210,20 @@ extern void ppu_initialize()
 		return;
 	}
 
-	auto& _main = g_fxo->get<ppu_module>();
+	auto& _main = g_fxo->get<main_ppu_module>();
 
-	scoped_progress_dialog progr = "Scanning PPU modules...";
+	scoped_progress_dialog progr = "Analyzing PPU Executable...";
+
+	// Analyse executable
+	if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_pathes, [](){ return Emu.IsStopped(); }))
+	{
+		return;
+	}
+
+	// Validate analyser results (not required)
+	_main.validate(0);
+
+	g_progr = "Scanning PPU Modules...";
 
 	bool compile_main = false;
 
