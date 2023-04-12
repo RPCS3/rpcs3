@@ -8663,15 +8663,26 @@ public:
 			const auto a = get_vr<f32[4]>(op.ra);
 			const auto mask_ov = sext<s32[4]>(bitcast<s32[4]>(fabs(a)) > splat<s32[4]>(0x7e7fffff));
 			const auto mask_de = eval(noncast<u32[4]>(sext<s32[4]>(fcmp_ord(a == fsplat<f32[4]>(0.)))) >> 1);
-			set_vr(op.rt, (bitcast<s32[4]>(fre(a)) & ~mask_ov) | noncast<s32[4]>(mask_de));
+			set_vr(op.rt, (bitcast<s32[4]>(fsplat<f32[4]>(1.0) / a) & ~mask_ov) | noncast<s32[4]>(mask_de));
 			return;
 		}
 
-		register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
+		// To avoid divergence in online play don't use divergent intel/amd intrinsics when online
+		if (g_cfg.net.net_active == np_internet_status::enabled)
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			return fre(a);
-		});
+			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
+			{
+				return fsplat<f32[4]>(1.0) / value<f32[4]>(ci->getOperand(0));
+			});
+		}
+		else
+		{
+			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
+			{
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				return fre(a);
+			});
+		}
 
 		set_vr(op.rt, frest(get_vr<f32[4]>(op.ra)));
 	}
@@ -8691,11 +8702,22 @@ public:
 			return;
 		}
 
-		register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
+		// To avoid divergence in online play don't use divergent intel/amd intrinsics when online
+		if (g_cfg.net.net_active == np_internet_status::enabled)
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			return frsqe(fabs(a));
-		});
+			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
+			{
+				return fsplat<f32[4]>(1.0) / fsqrt(fabs(value<f32[4]>(ci->getOperand(0))));
+			});
+		}
+		else
+		{
+			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
+			{
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				return frsqe(fabs(a));
+			});
+		}
 
 		set_vr(op.rt, frsqest(get_vr<f32[4]>(op.ra)));
 	}
@@ -9418,17 +9440,35 @@ public:
 			return bitcast<f32[4]>((b & 0xff800000u) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~0xff800000u)); // Inject old sign and exponent
 		});
 
-		register_intrinsic("spu_re", [&](llvm::CallInst* ci)
+		// To avoid divergence in online play don't use divergent intel/amd intrinsics when online
+		if (g_cfg.net.net_active == np_internet_status::enabled)
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			return fre(a);
-		});
+			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
+			{
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				return fsplat<f32[4]>(1.0) / a;
+			});
 
-		register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
+			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
+			{
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				return fsplat<f32[4]>(1.0) / fsqrt(fabs(a));
+			});
+		}
+		else
 		{
-			const auto a = value<f32[4]>(ci->getOperand(0));
-			return frsqe(fabs(a));
-		});
+			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
+			{
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				return fre(a);
+			});
+
+			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
+			{
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				return frsqe(a);
+			});
+		}
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
 
