@@ -1141,10 +1141,10 @@ void debugger_frame::DoStep(bool step_over)
 			{
 				const u32 current_instruction_pc = cpu->get_pc();
 
-				ppu_opcode_t op{};
 				vm::ptr<u32> inst_ptr = vm::cast(current_instruction_pc);
+				be_t<u32> result{};
 
-				if (inst_ptr.try_read(op.opcode) && op.lk == 0)
+				if (inst_ptr.try_read(result) && ppu_opcode_t{+result}.lk == 0)
 				{
 					should_step_over = false;
 				}
