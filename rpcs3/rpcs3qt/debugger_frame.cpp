@@ -1137,6 +1137,19 @@ void debugger_frame::DoStep(bool step_over)
 
 		if (const auto _state = +cpu->state; _state & s_pause_flags && _state & cpu_flag::wait && !(_state & cpu_flag::dbg_step))
 		{
+			if (should_step_over && cpu->id_type() == 1)
+			{
+				const u32 current_instruction_pc = cpu->get_pc();
+
+				ppu_opcode_t op{};
+				vm::ptr<u32> inst_ptr = vm::cast(current_instruction_pc);
+
+				if (inst_addr.try_read(op.opcode) && op.lk == 0)
+				{
+					should_step_over = false;
+				}
+			}
+
 			if (should_step_over)
 			{
 				const u32 current_instruction_pc = cpu->get_pc();
