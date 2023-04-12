@@ -1144,7 +1144,7 @@ void debugger_frame::DoStep(bool step_over)
 				ppu_opcode_t op{};
 				vm::ptr<u32> inst_ptr = vm::cast(current_instruction_pc);
 
-				if (inst_addr.try_read(op.opcode) && op.lk == 0)
+				if (inst_ptr.try_read(op.opcode) && op.lk == 0)
 				{
 					should_step_over = false;
 				}
