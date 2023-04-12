@@ -1813,7 +1813,11 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 
 const bool s_exception_handler_set = []() -> bool
 {
+#ifdef USE_ASAN
+	if (!AddVectoredExceptionHandler(FALSE, (PVECTORED_EXCEPTION_HANDLER)exception_handler))
+#else
 	if (!AddVectoredExceptionHandler(1, (PVECTORED_EXCEPTION_HANDLER)exception_handler))
+#endif
 	{
 		report_fatal_error("AddVectoredExceptionHandler() failed.");
 	}
