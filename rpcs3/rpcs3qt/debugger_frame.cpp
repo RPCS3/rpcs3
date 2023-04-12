@@ -1146,11 +1146,12 @@ void debugger_frame::DoStep(bool step_over)
 
 				vm::ptr<u32> inst_ptr = vm::cast(current_instruction_pc);
 				be_t<u32> result{};
+
 				if (inst_ptr.try_read(result))
 				{
 					ppu_opcode_t ppu_op{result};
+					const ppu_itype itype = g_ppu_itype.decode(ppu_op.opcode);
 
-					const auto itype = g_ppu_itype.decode(pp.opcode);
 					should_step_over = (itype == ppu_itype::BC || itype == ppu_itype::B || itype == ppu_itype::BCCTR || itype == ppu_itype::BCLR) && ppu_op.lk;
 				}
 			}
