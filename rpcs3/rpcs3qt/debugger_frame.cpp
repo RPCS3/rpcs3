@@ -1150,7 +1150,7 @@ void debugger_frame::DoStep(bool step_over)
 				if (inst_ptr.try_read(result))
 				{
 					ppu_opcode_t ppu_op{result};
-					const ppu_itype itype = g_ppu_itype.decode(ppu_op.opcode);
+					const ppu_itype::type itype = g_ppu_itype.decode(ppu_op.opcode);
 
 					should_step_over = (itype == ppu_itype::BC || itype == ppu_itype::B || itype == ppu_itype::BCCTR || itype == ppu_itype::BCLR) && ppu_op.lk;
 				}
