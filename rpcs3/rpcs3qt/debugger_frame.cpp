@@ -15,6 +15,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/RSXDisAsm.h"
+#include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUDisAsm.h"
@@ -40,6 +41,8 @@ constexpr auto qstr = QString::fromStdString;
 constexpr auto s_pause_flags = cpu_flag::dbg_pause + cpu_flag::dbg_global_pause;
 
 extern atomic_t<bool> g_debugger_pause_all_threads_on_bp;
+
+extern const ppu_decoder<ppu_itype> g_ppu_itype;
 
 extern bool is_using_interpreter(u32 id_type)
 {
@@ -1137,6 +1140,22 @@ void debugger_frame::DoStep(bool step_over)
 
 		if (const auto _state = +cpu->state; _state & s_pause_flags && _state & cpu_flag::wait && !(_state & cpu_flag::dbg_step))
 		{
+			if (should_step_over && cpu->id_type() == 1)
+			{
+				const u32 current_instruction_pc = cpu->get_pc();
+
+				vm::ptr<u32> inst_ptr = vm::cast(current_instruction_pc);
+				be_t<u32> result{};
+
+				if (inst_ptr.try_read(result))
+				{
+					ppu_opcode_t ppu_op{result};
+					const ppu_itype::type itype = g_ppu_itype.decode(ppu_op.opcode);
+
+					should_step_over = (itype == ppu_itype::BC || itype == ppu_itype::B || itype == ppu_itype::BCCTR || itype == ppu_itype::BCLR) && ppu_op.lk;
+				}
+			}
+
 			if (should_step_over)
 			{
 				const u32 current_instruction_pc = cpu->get_pc();
