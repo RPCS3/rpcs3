@@ -77,7 +77,7 @@ namespace vk
 		u32 m_vao_offset = 0;
 
 		overlay_pass();
-		~overlay_pass();
+		virtual ~overlay_pass();
 
 		u64 get_pipeline_key(VkRenderPass pass);
 
