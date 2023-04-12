@@ -315,6 +315,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	}
 
 	// Real firmware tries 4, 2 and then 1 channels if the channel count is not supported
+	// TODO: The used channel count may vary for Sony's camera devices
 	for (bool found_valid_channels = false; !found_valid_channels;)
 	{
 		switch (num_al_channels)
@@ -366,6 +367,43 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 		ensure(false);
 		break;
 	}
+
+	// Make sure we use a proper sampling rate
+	const auto fixup_samplingrate = [this](u32& rate) -> bool
+	{
+		// TODO: The used sample rate may vary for Sony's camera devices
+		const std::array<u32, 7> samplingrates = { rate, 48000u, 32000u, 24000u, 16000u, 12000u, 8000u };
+
+		const auto test_samplingrate = [&samplingrates](const u32& rate)
+		{
+			// TODO: actually check if device supports sampling rates
+			return std::any_of(samplingrates.cbegin() + 1, samplingrates.cend(), [&rate](const u32& r){ return r == rate; });
+		};
+
+		for (u32 samplingrate : samplingrates)
+		{
+			if (test_samplingrate(samplingrate))
+			{
+				// Use this sampling rate
+				raw_samplingrate = samplingrate;
+				cellMic.notice("Using sampling rate %d.", samplingrate);
+				return true;
+			}
+
+			cellMic.warning("Requested sampling rate %d, but we do not support it. Trying next sampling rate...", samplingrate);
+		}
+
+		return false;
+	};
+
+	if (!fixup_samplingrate(raw_samplingrate))
+	{
+		return CELL_MICIN_ERROR_DEVICE_NOT_SUPPORT;
+	}
+
+	aux_samplingrate = dsp_samplingrate = raw_samplingrate; // Same rate for now
+
+	ensure(!device_name.empty());
 
 	ALCdevice* device = alcCaptureOpenDevice(device_name[0].c_str(), raw_samplingrate, num_al_channels, inbuf_size);
 
