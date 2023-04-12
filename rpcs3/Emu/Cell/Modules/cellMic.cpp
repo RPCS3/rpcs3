@@ -1269,7 +1269,7 @@ error_code cellMicGetType(s32 dev_num, vm::ptr<s32> ptr_type)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
 	// TODO: get proper type (log message is trace because of massive spam)
-	*ptr_type = CELLMIC_TYPE_BLUETOOTH;
+	*ptr_type = CELLMIC_TYPE_USBAUDIO; // Needed for Guitar Hero: Warriors of Rock (BLUS30487)
 
 	return CELL_OK;
 }
