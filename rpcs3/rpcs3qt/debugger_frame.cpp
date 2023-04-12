@@ -41,6 +41,8 @@ constexpr auto s_pause_flags = cpu_flag::dbg_pause + cpu_flag::dbg_global_pause;
 
 extern atomic_t<bool> g_debugger_pause_all_threads_on_bp;
 
+extern const ppu_decoder<ppu_itype> g_ppu_itype;
+
 extern bool is_using_interpreter(u32 id_type)
 {
 	switch (id_type)
@@ -1143,10 +1145,12 @@ void debugger_frame::DoStep(bool step_over)
 
 				vm::ptr<u32> inst_ptr = vm::cast(current_instruction_pc);
 				be_t<u32> result{};
-
-				if (inst_ptr.try_read(result) && !ppu_opcode_t{+result}.lk)
+				if (inst_ptr.try_read(result))
 				{
-					should_step_over = false;
+					ppu_opcode_t ppu_op{result};
+
+					const auto itype = g_ppu_itype.decode(pp.opcode);
+					should_step_over = (itype == ppu_itype::BC || itype == ppu_itype::B || itype == ppu_itype::BCCTR || itype == ppu_itype::BCLR) && ppu_op.lk;
 				}
 			}
 
