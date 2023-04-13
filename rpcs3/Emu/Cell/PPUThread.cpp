@@ -3996,7 +3996,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//pm.add(createLICMPass());
 		//pm.add(createLoopInstSimplifyPass());
 		//pm.add(createNewGVNPass());
-		pm.add(createDeadStoreEliminationPass());
+		//pm.add(createDeadStoreEliminationPass());
 		//pm.add(createSCCPPass());
 		//pm.add(createReassociatePass());
 		//pm.add(createInstructionCombiningPass());

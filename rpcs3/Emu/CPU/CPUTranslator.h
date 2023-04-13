@@ -21,6 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -3051,7 +3052,7 @@ public:
 	}
 
 	template <typename RT, DSLValue... Args>
-	auto call(llvm::Function* func, Args&&... args)
+	auto callf(llvm::Function* func, Args&&... args)
 	{
 		llvm_value_t<RT> r;
 		r.value = m_ir->CreateCall(func, {std::forward<Args>(args).eval(m_ir)...});
