@@ -4891,12 +4891,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			may_be_unsafe_for_savestate = false;
 		}
 
-		if (may_be_unsafe_for_savestate)
-		{
-			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable));
-		}
-
-		m_ir->CreateStore(m_ir->getFalse(), m_fake_global1);
+		m_ir->CreateStore(m_ir->getInt1(may_be_unsafe_for_savestate), m_fake_global1);
 
 		if (may_be_unsafe_for_savestate)
 		{
@@ -5540,8 +5535,13 @@ public:
 					{
 						m_ir->SetInsertPoint(si);
 
+						if (si->getOperand(0) == m_ir->getTrue())
+						{
+							m_ir->CreateStore(m_ir->getInt8(1), _ptr<u8>(f->getArg(0), ::offset32(&spu_thread::unsavable)));
+						}
+
 						CallInst* ci{};
-						if (si->getOperand(0) == m_ir->getFalse())
+						if (si->getOperand(0) == m_ir->getTrue() || si->getOperand(0) == m_ir->getFalse())
 						{
 							ci = m_ir->CreateCall(m_test_state, {f->getArg(0)});
 							ci->setCallingConv(m_test_state->getCallingConv());
