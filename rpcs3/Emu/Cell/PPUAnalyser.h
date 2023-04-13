@@ -70,15 +70,15 @@ struct ppu_segment
 // PPU Module Information
 struct ppu_module
 {
-	ppu_module() = default;
+	ppu_module() noexcept = default;
 
 	ppu_module(const ppu_module&) = delete;
 
-	ppu_module(ppu_module&&) = default;
+	ppu_module(ppu_module&&) noexcept = default;
 
 	ppu_module& operator=(const ppu_module&) = delete;
 
-	ppu_module& operator=(ppu_module&&) = default;
+	ppu_module& operator=(ppu_module&&) noexcept = default;
 
 	uchar sha1[20]{};
 	std::string name{};
@@ -101,8 +101,15 @@ struct ppu_module
 		secs = info.secs;
 	}
 
-	void analyse(u32 lib_toc, u32 entry, u32 end, const std::basic_string<u32>& applied);
+	bool analyse(u32 lib_toc, u32 entry, u32 end, const std::basic_string<u32>& applied, std::function<bool()> check_aborted = {});
 	void validate(u32 reloc);
+};
+
+struct main_ppu_module : public ppu_module
+{
+	u32 elf_entry;
+	u32 seg0_code_end;
+	std::basic_string<u32> applied_pathes;
 };
 
 // Aux
