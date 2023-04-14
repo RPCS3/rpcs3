@@ -6230,8 +6230,8 @@ public:
 		else
 		{
 			const auto val = m_ir->CreateLoad(get_type<u64>(), ptr);
-			val->setAtomic(llvm::AtomicOrdering::Unordered);
-			m_ir->CreateStore(m_ir->getInt64(0), ptr)->setAtomic(llvm::AtomicOrdering::Unordered);
+			val->setAtomic(llvm::AtomicOrdering::Acquire);
+			m_ir->CreateStore(m_ir->getInt64(0), ptr)->setAtomic(llvm::AtomicOrdering::Release);
 			val0 = val;
 		}
 
@@ -6316,7 +6316,9 @@ public:
 		}
 		case SPU_RdEventMask:
 		{
-			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events)), 32), get_type<u32>());
+			const auto value = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events));
+			value->setAtomic(llvm::AtomicOrdering::Acquire);
+			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(value, 32), get_type<u32>());
 			break;
 		}
 		case SPU_RdEventStat:
@@ -6357,6 +6359,7 @@ public:
 	llvm::Value* get_rchcnt(u32 off, u64 inv = 0)
 	{
 		const auto val = m_ir->CreateLoad(get_type<u64>(), _ptr<u64>(m_thread, off));
+		val->setAtomic(llvm::AtomicOrdering::Acquire);
 		const auto shv = m_ir->CreateLShr(val, spu_channel::off_count);
 		return m_ir->CreateTrunc(m_ir->CreateXor(shv, u64{inv}), get_type<u32>());
 	}
@@ -6422,7 +6425,9 @@ public:
 		}
 		case SPU_RdInMbox:
 		{
-			res.value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_in_mbox));
+			const auto value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_in_mbox));
+			value->setAtomic(llvm::AtomicOrdering::Acquire);
+			res.value = value;
 			res.value = m_ir->CreateLShr(res.value, 8);
 			res.value = m_ir->CreateAnd(res.value, 7);
 			break;
