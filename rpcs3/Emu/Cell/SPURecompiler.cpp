@@ -3920,6 +3920,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Analysis/PostDominators.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -4003,6 +4004,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		// Final block (for PHI nodes, set after completion)
 		llvm::BasicBlock* block_end{};
+
+		// Additional blocks for sinking instructions after block_end:
+		std::unordered_map<u32, llvm::BasicBlock*, value_hash<u32, 2>> block_edges;
 
 		// Current register values
 		std::array<llvm::Value*, s_reg_max> reg{};
@@ -4748,7 +4752,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// Erase previous dead store instruction if necessary
 		if (_store)
 		{
-			// TODO: better cross-block dead store elimination
 			_store->eraseFromParent();
 		}
 
@@ -5463,6 +5466,112 @@ public:
 				}
 
 				ensure(m_block->block_end);
+			}
+
+			// Work on register stores.
+			// 1. Remove stores which are post-dominated.
+			// 2. Sink stores to post-dominating blocks.
+			llvm::PostDominatorTree pdt(*m_function);
+			llvm::DominatorTree dt(*m_function);
+
+			std::vector<block_info*> block_q;
+			block_q.reserve(m_blocks.size());
+			for (auto& [a, b] : m_blocks)
+			{
+				block_q.emplace_back(&b);
+			}
+
+			for (usz bi = 0; bi < block_q.size(); bi++)
+			{
+				// TODO: process all registers up to s_reg_max
+				for (u32 i = 0; i < 128; i++)
+				{
+					auto& bs = block_q[bi]->store[i];
+
+					if (bs)
+					{
+						for (auto& [a, b] : m_blocks)
+						{
+							if (b.store[i] && b.store[i] != bs)
+							{
+								if (pdt.dominates(b.store[i], bs))
+								{
+									bs->eraseFromParent();
+									bs = nullptr;
+
+									pdt.recalculate(*m_function);
+									dt.recalculate(*m_function);
+									break;
+								}
+							}
+						}
+					}
+
+					// If store isn't erased, try to sink it
+					if (bs)
+					{
+						std::map<u32, block_info*, std::greater<>> sucs;
+
+						for (u32 tj : block_q[bi]->bb->targets)
+						{
+							auto b2it = m_blocks.find(tj);
+
+							if (b2it != m_blocks.end())
+							{
+								sucs.emplace(tj, &b2it->second);
+							}
+						}
+
+						for (auto [a2, b2] : sucs)
+						{
+							auto ins = b2->block->getFirstNonPHI();
+
+							if (b2 != block_q[bi] && pdt.dominates(ins, bs) && dt.dominates(bs->getOperand(0), ins))
+							{
+								if (b2->bb->preds.size() == 1)
+								{
+									m_ir->SetInsertPoint(ins);
+									auto si = llvm::cast<StoreInst>(m_ir->Insert(bs->clone()));
+									if (b2->store[i] == nullptr)
+									{
+										b2->store[i] = si;
+
+										if (!std::count(block_q.begin() + bi, block_q.end(), b2))
+										{
+											// Sunk store can be checked again
+											block_q.push_back(b2);
+										}
+									}
+								}
+								else
+								{
+									// Initialize additional block between two basic blocks
+									auto& edge = block_q[bi]->block_edges[a2];
+									if (!edge)
+									{
+										edge = llvm::SplitEdge(block_q[bi]->block_end, b2->block);
+										pdt.recalculate(*m_function);
+										dt.recalculate(*m_function);
+									}
+
+									ins = edge->getTerminator();
+									if (!pdt.dominates(ins, bs))
+										continue;
+
+									m_ir->SetInsertPoint(ins);
+									m_ir->Insert(bs->clone());
+								}
+
+								bs->eraseFromParent();
+								bs = nullptr;
+
+								pdt.recalculate(*m_function);
+								dt.recalculate(*m_function);
+								break;
+							}
+						}
+					}
+				}
 			}
 		}
 
