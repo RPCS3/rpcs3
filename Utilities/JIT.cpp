@@ -798,7 +798,7 @@ void asmjit::simd_builder::vec_cmp_eq(u32 esize, const Operand& dst, const Opera
 		}
 		else
 		{
-			_vec_binary_op(kIdPcmpeqw, kIdVpcmpeqw, kIdNone, dst, lhs, rhs);
+			_vec_binary_op(kIdPcmpeqd, kIdVpcmpeqd, kIdNone, dst, lhs, rhs);
 		}
 	}
 	else
