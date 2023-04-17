@@ -3,6 +3,7 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/Modules/cellUserInfo.h"
 #include "Emu/Io/interception.h"
 #include "Utilities/StrUtil.h"
 
@@ -3354,7 +3355,7 @@ error_code sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 
 error_code sceNpManagerGetCachedInfo(CellSysutilUserId userId, vm::ptr<SceNpManagerCacheParam> param)
 {
-	sceNp.todo("sceNpManagerGetCachedInfo(userId=%d, param=*0x%x)", userId, param);
+	sceNp.warning("sceNpManagerGetCachedInfo(userId=%d, param=*0x%x)", userId, param);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -3367,6 +3368,17 @@ error_code sceNpManagerGetCachedInfo(CellSysutilUserId userId, vm::ptr<SceNpMana
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
+
+	if (userId != CELL_SYSUTIL_USERID_CURRENT && userId != Emu.GetUsrId())
+	{
+		return CELL_ENOENT;
+	}
+
+	param->size = sizeof(SceNpManagerCacheParam);
+	param->onlineId = nph.get_online_id();
+	param->npId = nph.get_npid();
+	param->onlineName = nph.get_online_name();
+	param->avatarUrl = nph.get_avatar_url();
 
 	return CELL_OK;
 }
