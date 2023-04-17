@@ -1249,8 +1249,10 @@ namespace glsl
 			"\n"
 			"vec4 _interpolate_varying3(const in vec4[3] v)\n"
 			"{\n"
-			"	const float _gl_BaryCoord_z = 1.0 - ($gl_BaryCoord.x + $gl_BaryCoord.y);\n"
-			"	return $gl_BaryCoord.x * v[0] + $gl_BaryCoord.y * v[1] + _gl_BaryCoord_z * v[2];\n"
+			"	const double _gl_BaryCoord_x = double($gl_BaryCoord.x);\n"
+			"	const double _gl_BaryCoord_y = double($gl_BaryCoord.y);\n"
+			"	const double _gl_BaryCoord_z = double(1.0) - (_gl_BaryCoord_x + _gl_BaryCoord_y);\n"
+			"	return vec4(_gl_BaryCoord_x * v[0] + _gl_BaryCoord_y * v[1] + _gl_BaryCoord_z * v[2]);\n"
 			"}\n\n",
 			{
 				{ "$gl_BaryCoord", "gl_BaryCoord"s + std::string(ext_flavour) }
