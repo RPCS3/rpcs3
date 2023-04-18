@@ -13,6 +13,11 @@ settings::settings(QObject* parent) : QObject(parent),
 
 settings::~settings()
 {
+	sync();
+}
+
+void settings::sync()
+{
 	if (m_settings)
 	{
 		m_settings->sync();
