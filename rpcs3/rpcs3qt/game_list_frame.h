@@ -144,6 +144,7 @@ private:
 
 	// Categories
 	QStringList m_category_filters;
+	QStringList m_grid_category_filters;
 
 	// List Mode
 	bool m_is_list_layout = true;
