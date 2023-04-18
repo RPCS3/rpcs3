@@ -3,6 +3,7 @@
 #include "localized.h"
 #include "rpcs3_version.h"
 #include "downloader.h"
+#include "gui_settings.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/File.h"
 #include "Emu/System.h"
@@ -38,6 +39,11 @@
 #endif
 
 LOG_CHANNEL(update_log, "UPDATER");
+
+update_manager::update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings)
+	: QObject(parent), m_gui_settings(std::move(gui_settings))
+{
+}
 
 void update_manager::check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent)
 {
@@ -637,7 +643,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 	if (!auto_accept)
 	{
-		QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
+		m_gui_settings->ShowInfoBox(tr("Auto-updater"), tr("Update successful!<br>RPCS3 will now restart.<br>"), gui::ib_restart_hint, m_parent);
+		m_gui_settings->sync(); // Make sure to sync before terminating RPCS3
 	}
 
 	Emu.GracefulShutdown(false);

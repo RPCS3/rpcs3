@@ -91,9 +91,10 @@ extern void process_qt_events()
 main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
 	: QMainWindow(parent)
 	, ui(new Ui::main_window)
-	, m_gui_settings(std::move(gui_settings))
+	, m_gui_settings(gui_settings)
 	, m_emu_settings(std::move(emu_settings))
 	, m_persistent_settings(std::move(persistent_settings))
+	, m_updater(nullptr, gui_settings)
 {
 	Q_INIT_RESOURCE(resources);
 

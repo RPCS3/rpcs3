@@ -1984,6 +1984,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_show_pup_install, tooltips.settings.show_pup_install);
 		SubscribeTooltip(ui->cb_show_obsolete_cfg_dialog, tooltips.settings.show_obsolete_cfg);
 		SubscribeTooltip(ui->cb_show_same_buttons_dialog, tooltips.settings.show_same_buttons);
+		SubscribeTooltip(ui->cb_show_restart_hint, tooltips.settings.show_restart_hint);
 		SubscribeTooltip(ui->gb_updates, tooltips.settings.check_update_start);
 		SubscribeTooltip(ui->gb_uuid, tooltips.settings.uuid);
 
@@ -2073,6 +2074,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->cb_show_pup_install->setChecked(m_gui_settings->GetValue(gui::ib_pup_success).toBool());
 		ui->cb_show_obsolete_cfg_dialog->setChecked(m_gui_settings->GetValue(gui::ib_obsolete_cfg).toBool());
 		ui->cb_show_same_buttons_dialog->setChecked(m_gui_settings->GetValue(gui::ib_same_buttons).toBool());
+		ui->cb_show_restart_hint->setChecked(m_gui_settings->GetValue(gui::ib_restart_hint).toBool());
 
 		ui->combo_updates->addItem(tr("Yes", "Updates"), gui::update_on);
 		ui->combo_updates->addItem(tr("Background", "Updates"), gui::update_bkg);
@@ -2119,6 +2121,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		connect(ui->cb_show_same_buttons_dialog, &QCheckBox::toggled, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::ib_same_buttons, checked);
+		});
+		connect(ui->cb_show_restart_hint, &QCheckBox::toggled, [this](bool checked)
+		{
+			m_gui_settings->SetValue(gui::ib_restart_hint, checked);
 		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::toggled, [this](bool checked)
