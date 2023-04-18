@@ -236,7 +236,8 @@ void game_list_frame::LoadSettings()
 {
 	m_col_sort_order = m_gui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 	m_sort_column = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
-	m_category_filters = m_gui_settings->GetGameListCategoryFilters();
+	m_category_filters = m_gui_settings->GetGameListCategoryFilters(true);
+	m_grid_category_filters = m_gui_settings->GetGameListCategoryFilters(false);
 	m_draw_compat_status_to_grid = m_gui_settings->GetValue(gui::gl_draw_compat).toBool();
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
 	m_play_hover_movies = m_gui_settings->GetValue(gui::gl_hover_gifs).toBool();
@@ -337,15 +338,14 @@ void game_list_frame::OnColClicked(int col)
 // Get visibility of entries
 bool game_list_frame::IsEntryVisible(const game_info& game)
 {
-	auto matches_category = [&]()
+	const auto matches_category = [&]()
 	{
 		if (m_is_list_layout)
 		{
 			return m_category_filters.contains(qstr(game->info.category));
 		}
 
-		const auto cat_boot = Localized().category.cat_boot;
-		return cat_boot.find(qstr(game->info.category)) != cat_boot.end();
+		return m_grid_category_filters.contains(qstr(game->info.category));
 	};
 
 	const QString serial = qstr(game->info.serial);
@@ -912,15 +912,17 @@ void game_list_frame::OnCompatFinished()
 
 void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool show)
 {
+	QStringList& filters = m_is_list_layout ? m_category_filters : m_grid_category_filters;
+
 	if (show)
 	{
-		m_category_filters.append(categories);
+		filters.append(categories);
 	}
 	else
 	{
-		for (const auto& cat : categories)
+		for (const QString& cat : categories)
 		{
-			m_category_filters.removeAll(cat);
+			filters.removeAll(cat);
 		}
 	}
 
