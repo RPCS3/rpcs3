@@ -1302,6 +1302,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* download_compat = menu.addAction(tr("&Download Compatibility Database"));
 	menu.addSeparator();
 	QAction* edit_notes = menu.addAction(tr("&Edit Tooltip Notes"));
+	QAction* reset_time_played = menu.addAction(tr("&Reset Time Played"));
 
 	QMenu* icon_menu = menu.addMenu(tr("&Custom Images"));
 	const std::array<QAction*, 3> custom_icon_actions =
@@ -1622,6 +1623,16 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				m_notes.insert(serial, new_notes);
 				m_persistent_settings->SetValue(gui::persistent::notes, serial, new_notes);
 			}
+			Refresh();
+		}
+	});
+	connect(reset_time_played, &QAction::triggered, this, [this, name, serial]
+	{
+		if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset time played?\n\n%0 [%1]").arg(name).arg(serial)) == QMessageBox::Yes)
+		{
+			m_persistent_settings->SetPlaytime(serial, 0);
+			m_persistent_settings->SetLastPlayed(serial, 0);
+			m_persistent_settings->sync();
 			Refresh();
 		}
 	});
