@@ -415,11 +415,23 @@ std::string utils::get_firmware_version()
 		version = version.substr(start, end - start);
 
 		// Trim version (e.g. '04.8900' becomes '4.89')
-		const usz trim_start = version.find_first_not_of('0');
+		usz trim_start = version.find_first_not_of('0');
 
 		if (trim_start == umax)
 		{
 			return {};
+		}
+
+		// Keep at least one preceding 0 (e.g. '00.3100' becomes '0.31' instead of '.31')
+		if (version[trim_start] == '.')
+		{
+			if (trim_start == 0)
+			{
+				// Version starts with '.' for some reason
+				return {};
+			}
+
+			trim_start--;
 		}
 
 		const usz dot_pos = version.find_first_of('.', trim_start);
