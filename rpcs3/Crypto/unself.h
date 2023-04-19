@@ -317,18 +317,18 @@ struct SceHeader
 	bool CheckMagic() const { return se_magic == 0x53434500; }
 };
 
-struct SelfHeader
+struct ext_hdr
 {
-	u64 se_htype;
-	u64 se_appinfooff;
-	u64 se_elfoff;
-	u64 se_phdroff;
-	u64 se_shdroff;
-	u64 se_secinfoff;
-	u64 se_sceveroff;
-	u64 se_controloff;
-	u64 se_controlsize;
-	u64 pad;
+	u64 ext_hdr_version;
+	u64 program_identification_hdr_offset;
+	u64 ehdr_offset;
+	u64 phdr_offset;
+	u64 shdr_offset;
+	u64 segment_ext_hdr_offset;
+	u64 version_hdr_offset;
+	u64 supplemental_hdr_offset;
+	u64 supplemental_hdr_size;
+	u64 padding;
 
 	void Load(const fs::file& f);
 	static void Show(){}
@@ -376,7 +376,7 @@ class SELFDecrypter
 
 	// SCE, SELF and APP headers.
 	SceHeader sce_hdr{};
-	SelfHeader self_hdr{};
+	ext_hdr m_ext_hdr{};
 	AppInfo app_info{};
 
 	// ELF64 header and program header/section header arrays.
@@ -484,7 +484,7 @@ private:
 		}
 
 		// Write section headers.
-		if (self_hdr.se_shdroff != 0)
+		if (m_ext_hdr.shdr_offset != 0)
 		{
 			e.seek(ehdr.e_shoff);
 
