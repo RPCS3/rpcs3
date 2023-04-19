@@ -255,8 +255,8 @@ std::tuple<u16, u16> PadHandlerBase::ConvertToSquirclePoint(u16 inX, u16 inY, in
 	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * r;
 
 	// we now have len and angle, convert to cartesian
-	const int newX = Clamp0To255(((newLen * std::cos(angle)) + 1) * 127.5f);
-	const int newY = Clamp0To255(((newLen * std::sin(angle)) + 1) * 127.5f);
+	const int newX = Clamp0To255(std::round(((newLen * std::cos(angle)) + 1) * 127.5f));
+	const int newY = Clamp0To255(std::round(((newLen * std::sin(angle)) + 1) * 127.5f));
 	return std::tuple<u16, u16>(newX, newY);
 }
 

@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "Utilities/bit_set.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -157,6 +158,16 @@ class Emulator final
 			func();
 		}
 	}
+
+	enum class SaveStateExtentionFlags1 : u8
+	{
+		SupportsMenuOpenResume,
+		ShouldCloseMenu,
+
+		__bitset_enum_max,
+	};
+
+	bs_t<SaveStateExtentionFlags1> m_savestate_extension_flags1{};
 
 public:
 	static constexpr std::string_view game_id_boot_prefix = "%RPCS3_GAMEID%:";

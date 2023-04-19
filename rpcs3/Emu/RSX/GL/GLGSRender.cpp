@@ -546,7 +546,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 	if (!m_graphics_state.test(rsx::rtt_config_valid)) return;
 
-	GLbitfield mask = 0;
+	gl::clear_cmd_info clear_cmd{};
 
 	gl::command_context cmd{ gl_state };
 	const bool full_frame =
@@ -565,26 +565,23 @@ void GLGSRender::clear_surface(u32 arg)
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
 
-			gl_state.depth_mask(GL_TRUE);
-			gl_state.clear_depth(f32(clear_depth) / max_depth_value);
-			mask |= GLenum(gl::buffers::depth);
+			clear_cmd.clear_depth.value = f32(clear_depth) / max_depth_value;
+			clear_cmd.aspect_mask |= gl::image_aspect::depth;
 		}
 
 		if (is_depth_stencil_format(surface_depth_format))
 		{
 			if (arg & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
-				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
-
-				gl_state.stencil_mask(rsx::method_registers.stencil_mask());
-				gl_state.clear_stencil(clear_stencil);
-				mask |= GLenum(gl::buffers::stencil);
+				clear_cmd.clear_stencil.mask = rsx::method_registers.stencil_mask();
+				clear_cmd.clear_stencil.value = rsx::method_registers.stencil_clear_value();
+				clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 			}
 
 			if (const auto ds_mask = (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
 				ds_mask != RSX_GCM_CLEAR_DEPTH_STENCIL_MASK || !full_frame)
 			{
-				ensure(mask);
+				ensure(clear_cmd.aspect_mask);
 
 				if (ds->state_flags & rsx::surface_state_flags::erase_bkgnd &&  // Needs initialization
 					ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
@@ -593,16 +590,15 @@ void GLGSRender::clear_surface(u32 arg)
 					if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT)
 					{
 						// Depth was cleared, initialize stencil
-						gl_state.stencil_mask(0xFF);
-						gl_state.clear_stencil(0xFF);
-						mask |= GLenum(gl::buffers::stencil);
+						clear_cmd.clear_stencil.mask = 0xff;
+						clear_cmd.clear_stencil.value = 0xff;
+						clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 					}
 					else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
 					{
 						// Stencil was cleared, initialize depth
-						gl_state.depth_mask(GL_TRUE);
-						gl_state.clear_depth(1.f);
-						mask |= GLenum(gl::buffers::depth);
+						clear_cmd.clear_depth.value = 1.f;
+						clear_cmd.aspect_mask |= gl::image_aspect::depth;
 					}
 				}
 				else
@@ -612,7 +608,7 @@ void GLGSRender::clear_surface(u32 arg)
 			}
 		}
 
-		if (mask)
+		if (clear_cmd.aspect_mask)
 		{
 			// Memory has been initialized
 			update_z = true;
@@ -679,18 +675,20 @@ void GLGSRender::clear_surface(u32 arg)
 
 		if (colormask)
 		{
-			gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
-			mask |= GLenum(gl::buffers::color);
+			clear_cmd.clear_color.mask = colormask;
+			clear_cmd.clear_color.attachment_count = static_cast<u8>(m_rtts.m_bound_render_target_ids.size());
+			clear_cmd.clear_color.r = clear_r;
+			clear_cmd.clear_color.g = clear_g;
+			clear_cmd.clear_color.b = clear_b;
+			clear_cmd.clear_color.a = clear_a;
+			clear_cmd.aspect_mask |= gl::image_aspect::color;
 
-			int hw_index = 0;
-			for (const auto& index : m_rtts.m_bound_render_target_ids)
+			if (!full_frame)
 			{
-				if (!full_frame)
+				for (const auto& index : m_rtts.m_bound_render_target_ids)
 				{
 					m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
 				}
-
-				gl_state.color_maski(hw_index++, colormask);
 			}
 
 			update_color = true;
@@ -707,7 +705,7 @@ void GLGSRender::clear_surface(u32 arg)
 		gl_state.enable(GL_SCISSOR_TEST);
 	}
 
-	glClear(mask);
+	gl::clear_attachments(cmd, clear_cmd);
 }
 
 bool GLGSRender::load_program()

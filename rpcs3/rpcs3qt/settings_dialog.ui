@@ -3823,6 +3823,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="cb_show_restart_hint">
+                 <property name="text">
+                  <string>Show Restart Dialog</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <spacer name="guiTabSpacerRight">
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>

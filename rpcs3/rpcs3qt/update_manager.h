@@ -7,6 +7,7 @@
 #include <string>
 
 class downloader;
+class gui_settings;
 
 class update_manager final :  public QObject
 {
@@ -15,6 +16,8 @@ class update_manager final :  public QObject
 private:
 	downloader* m_downloader = nullptr;
 	QWidget* m_parent        = nullptr;
+
+	std::shared_ptr<gui_settings> m_gui_settings;
 
 	// This message is empty if there is no download available
 	QString m_update_message;
@@ -36,7 +39,7 @@ private:
 	bool handle_rpcs3(const QByteArray& data, bool auto_accept);
 
 public:
-	update_manager() = default;
+	update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings);
 	void check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent = nullptr);
 	void update(bool auto_accept);
 

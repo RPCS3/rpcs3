@@ -372,7 +372,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 	if (indirect)
 	{
-		m_ir->CreateStore(Trunc(indirect, GetType<u32>()), m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_cia - m_locals)), true);
+		m_ir->CreateStore(Trunc(indirect, GetType<u32>()), m_ir->CreateStructGEP(m_thread_type, m_thread, static_cast<uint>(&m_cia - m_locals)));
 
 		// Try to optimize
 		if (auto inst = dyn_cast_or_null<Instruction>(indirect))
@@ -605,11 +605,14 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 		// Read, byteswap, bitcast
 		const auto int_type = m_ir->getIntNTy(size);
 		const auto value = m_ir->CreateAlignedLoad(int_type, GetMemory(addr), llvm::MaybeAlign{align});
+		value->setVolatile(true);
 		return bitcast(Call(int_type, fmt::format("llvm.bswap.i%u", size), value), type);
 	}
 
 	// Read normally
-	return m_ir->CreateAlignedLoad(type, GetMemory(addr), llvm::MaybeAlign{align});
+	const auto r = m_ir->CreateAlignedLoad(type, GetMemory(addr), llvm::MaybeAlign{align});
+	r->setVolatile(true);
+	return r;
 }
 
 void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align)
@@ -625,7 +628,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 	}
 
 	// Write
-	m_ir->CreateAlignedStore(value, GetMemory(addr), llvm::MaybeAlign{align});
+	m_ir->CreateAlignedStore(value, GetMemory(addr), llvm::MaybeAlign{align})->setVolatile(true);
 }
 
 void PPUTranslator::CompilationError(const std::string& error)
@@ -1393,22 +1396,22 @@ void PPUTranslator::VREFP(ppu_opcode_t op)
 
 void PPUTranslator::VRFIM(ppu_opcode_t op)
 {
-	set_vr(op.vd, vec_handle_result(call<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::floor), get_vr<f32[4]>(op.vb))));
+	set_vr(op.vd, vec_handle_result(callf<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::floor), get_vr<f32[4]>(op.vb))));
 }
 
 void PPUTranslator::VRFIN(ppu_opcode_t op)
 {
-	set_vr(op.vd, vec_handle_result(call<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::roundeven), get_vr<f32[4]>(op.vb))));
+	set_vr(op.vd, vec_handle_result(callf<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::roundeven), get_vr<f32[4]>(op.vb))));
 }
 
 void PPUTranslator::VRFIP(ppu_opcode_t op)
 {
-	set_vr(op.vd, vec_handle_result(call<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::ceil), get_vr<f32[4]>(op.vb))));
+	set_vr(op.vd, vec_handle_result(callf<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::ceil), get_vr<f32[4]>(op.vb))));
 }
 
 void PPUTranslator::VRFIZ(ppu_opcode_t op)
 {
-	set_vr(op.vd, vec_handle_result(call<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::trunc), get_vr<f32[4]>(op.vb))));
+	set_vr(op.vd, vec_handle_result(callf<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::trunc), get_vr<f32[4]>(op.vb))));
 }
 
 void PPUTranslator::VRLB(ppu_opcode_t op)
@@ -1431,7 +1434,7 @@ void PPUTranslator::VRLW(ppu_opcode_t op)
 
 void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)
 {
-	set_vr(op.vd, vec_handle_result(fsplat<f32[4]>(1.0) / call<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::sqrt), get_vr<f32[4]>(op.vb))));
+	set_vr(op.vd, vec_handle_result(fsplat<f32[4]>(1.0) / callf<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::sqrt), get_vr<f32[4]>(op.vb))));
 }
 
 void PPUTranslator::VSEL(ppu_opcode_t op)

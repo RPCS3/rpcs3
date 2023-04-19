@@ -126,8 +126,8 @@ namespace
 				c.emit(x86::Inst::kIdPsrlw, c.v0, 8);
 				c.emit(x86::Inst::kIdPsllw, c.v1, 8);
 				c.emit(x86::Inst::kIdPor, c.v0, c.v1);
-				c.emit(x86::Inst::kIdPshuflw, c.v0, c.v0, 0b01001110);
-				c.emit(x86::Inst::kIdPshufhw, c.v0, c.v0, 0b01001110);
+				c.emit(x86::Inst::kIdPshuflw, c.v0, c.v0, 0b10110001);
+				c.emit(x86::Inst::kIdPshufhw, c.v0, c.v0, 0b10110001);
 			}
 
 			if constexpr (Compare)
@@ -251,8 +251,8 @@ namespace
 
 					if constexpr (sizeof(T) == 4)
 					{
-						c.emit(x86::Inst::kIdPshuflw, c.v0, c.v0, 0b01001110);
-						c.emit(x86::Inst::kIdPshufhw, c.v0, c.v0, 0b01001110);
+						c.emit(x86::Inst::kIdPshuflw, c.v0, c.v0, 0b10110001);
+						c.emit(x86::Inst::kIdPshufhw, c.v0, c.v0, 0b10110001);
 					}
 				}
 
@@ -353,8 +353,8 @@ namespace
 
 					if constexpr (sizeof(T) == 4)
 					{
-						c.emit(x86::Inst::kIdPshuflw, c.v0, c.v0, 0b01001110);
-						c.emit(x86::Inst::kIdPshufhw, c.v0, c.v0, 0b01001110);
+						c.emit(x86::Inst::kIdPshuflw, c.v0, c.v0, 0b10110001);
+						c.emit(x86::Inst::kIdPshufhw, c.v0, c.v0, 0b10110001);
 					}
 				}
 

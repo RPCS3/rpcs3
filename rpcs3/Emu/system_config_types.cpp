@@ -608,6 +608,7 @@ void fmt_class_string<gpu_preset_level>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case gpu_preset_level::_auto: return "Auto";
+		case gpu_preset_level::ultra: return "Ultra";
 		case gpu_preset_level::high: return "High";
 		case gpu_preset_level::low: return "Low";
 		}

@@ -165,6 +165,7 @@ private:
 	void AddRecentAction(const q_string_pair& entry);
 
 	void UpdateLanguageActions(const QStringList& language_codes, const QString& language);
+	void UpdateFilterActions();
 
 	static QString GetCurrentTitle();
 

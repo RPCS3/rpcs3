@@ -91,9 +91,10 @@ extern void process_qt_events()
 main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
 	: QMainWindow(parent)
 	, ui(new Ui::main_window)
-	, m_gui_settings(std::move(gui_settings))
+	, m_gui_settings(gui_settings)
 	, m_emu_settings(std::move(emu_settings))
 	, m_persistent_settings(std::move(persistent_settings))
+	, m_updater(nullptr, gui_settings)
 {
 	Q_INIT_RESOURCE(resources);
 
@@ -2135,6 +2136,20 @@ void main_window::UpdateLanguageActions(const QStringList& language_codes, const
 	}
 }
 
+void main_window::UpdateFilterActions()
+{
+	ui->showCatHDDGameAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::HDD_Game, m_is_list_mode));
+	ui->showCatDiscGameAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Disc_Game, m_is_list_mode));
+	ui->showCatPS1GamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PS1_Game, m_is_list_mode));
+	ui->showCatPS2GamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PS2_Game, m_is_list_mode));
+	ui->showCatPSPGamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PSP_Game, m_is_list_mode));
+	ui->showCatHomeAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Home, m_is_list_mode));
+	ui->showCatAudioVideoAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Media, m_is_list_mode));
+	ui->showCatGameDataAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Data, m_is_list_mode));
+	ui->showCatUnknownAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Unknown_Cat, m_is_list_mode));
+	ui->showCatOtherAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Others, m_is_list_mode));
+}
+
 void main_window::RepaintGui()
 {
 	if (m_game_list_frame)
@@ -2633,7 +2648,7 @@ void main_window::CreateConnects()
 		{
 			const bool checked = act->isChecked();
 			m_game_list_frame->ToggleCategoryFilter(categories, checked);
-			m_gui_settings->SetCategoryVisibility(id, checked);
+			m_gui_settings->SetCategoryVisibility(id, checked, m_is_list_mode);
 		}
 	});
 
@@ -2723,7 +2738,8 @@ void main_window::CreateConnects()
 
 		m_is_list_mode = is_list_act;
 		m_game_list_frame->SetListMode(m_is_list_mode);
-		m_category_visible_act_group->setEnabled(m_is_list_mode);
+
+		UpdateFilterActions();
 	});
 
 	connect(ui->toolbar_open, &QAction::triggered, this, &main_window::BootGame);
@@ -2966,24 +2982,15 @@ void main_window::ConfigureGuiFromSettings()
 	ui->showCustomIconsAct->setChecked(m_gui_settings->GetValue(gui::gl_custom_icon).toBool());
 	ui->playHoverGifsAct->setChecked(m_gui_settings->GetValue(gui::gl_hover_gifs).toBool());
 
-	ui->showCatHDDGameAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::HDD_Game));
-	ui->showCatDiscGameAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Disc_Game));
-	ui->showCatPS1GamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PS1_Game));
-	ui->showCatPS2GamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PS2_Game));
-	ui->showCatPSPGamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PSP_Game));
-	ui->showCatHomeAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Home));
-	ui->showCatAudioVideoAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Media));
-	ui->showCatGameDataAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Data));
-	ui->showCatUnknownAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Unknown_Cat));
-	ui->showCatOtherAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Others));
+	m_is_list_mode = m_gui_settings->GetValue(gui::gl_listMode).toBool();
+
+	UpdateFilterActions();
 
 	// handle icon size options
-	m_is_list_mode = m_gui_settings->GetValue(gui::gl_listMode).toBool();
 	if (m_is_list_mode)
 		ui->setlistModeListAct->setChecked(true);
 	else
 		ui->setlistModeGridAct->setChecked(true);
-	m_category_visible_act_group->setEnabled(m_is_list_mode);
 
 	const int icon_size_index = m_gui_settings->GetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
 	m_other_slider_pos = m_gui_settings->GetValue(!m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
