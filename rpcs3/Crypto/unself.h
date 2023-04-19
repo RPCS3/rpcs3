@@ -11,12 +11,12 @@
 
 LOG_CHANNEL(self_log, "SELF");
 
-struct AppInfo
+struct program_identification_header
 {
-	u64 authid;
-	u32 vendor_id;
-	u32 self_type;
-	u64 version;
+	u64 program_authority_id;
+	u32 program_vendor_id;
+	u32 program_type;
+	u64 program_sceversion;
 	u64 padding;
 
 	void Load(const fs::file& f);
@@ -338,7 +338,7 @@ struct SelfAdditionalInfo
 {
 	bool valid = false;
 	std::vector<ControlInfo> ctrl_info;
-	AppInfo app_info;
+	program_identification_header prog_id_hdr;
 };
 
 class SCEDecrypter
@@ -377,7 +377,7 @@ class SELFDecrypter
 	// SCE, SELF and APP headers.
 	SceHeader sce_hdr{};
 	ext_hdr m_ext_hdr{};
-	AppInfo app_info{};
+	program_identification_header m_prog_id_hdr{};
 
 	// ELF64 header and program header/section header arrays.
 	Elf64_Ehdr elf64_hdr{};

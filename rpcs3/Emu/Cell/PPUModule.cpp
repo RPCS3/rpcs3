@@ -1925,7 +1925,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 		}
 
 		ppu_loader.notice("SELF header information found: ctrl_flags1=0x%x, authid=0x%llx",
-			g_ps3_process_info.ctrl_flags1, g_ps3_process_info.self_info.app_info.authid);
+			g_ps3_process_info.ctrl_flags1, g_ps3_process_info.self_info.prog_id_hdr.program_authority_id);
 	}
 
 	// Load other programs

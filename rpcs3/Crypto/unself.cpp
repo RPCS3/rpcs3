@@ -192,21 +192,21 @@ void WriteShdr(const fs::file& f, Elf32_Shdr& shdr)
 }
 
 
-void AppInfo::Load(const fs::file& f)
+void program_identification_header::Load(const fs::file& f)
 {
-	authid    = Read64(f);
-	vendor_id = Read32(f);
-	self_type = Read32(f);
-	version   = Read64(f);
-	padding   = Read64(f);
+	program_authority_id = Read64(f);
+	program_vendor_id    = Read32(f);
+	program_type         = Read32(f);
+	program_sceversion   = Read64(f);
+	padding              = Read64(f);
 }
 
-void AppInfo::Show() const
+void program_identification_header::Show() const
 {
-	self_log.notice("AuthID: 0x%llx", authid);
-	self_log.notice("VendorID: 0x%08x", vendor_id);
-	self_log.notice("SELF type: 0x%08x", self_type);
-	self_log.notice("Version: 0x%llx", version);
+	self_log.notice("AuthID: 0x%llx", program_authority_id);
+	self_log.notice("VendorID: 0x%08x", program_vendor_id);
+	self_log.notice("SELF type: 0x%08x", program_type);
+	self_log.notice("Version: 0x%llx", program_sceversion);
 }
 
 void SectionInfo::Load(const fs::file& f)
@@ -888,11 +888,11 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 	// Read the APP INFO.
 	self_f.seek(m_ext_hdr.program_identification_hdr_offset);
-	app_info.Load(self_f);
+	m_prog_id_hdr.Load(self_f);
 
 	if (out_info)
 	{
-		out_info->app_info = app_info;
+		out_info->prog_id_hdr = m_prog_id_hdr;
 	}
 
 	// Read ELF header.
@@ -1027,7 +1027,7 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("APP INFO");
 	self_log.notice("----------------------------------------------------");
-	app_info.Show();
+	m_prog_id_hdr.Show();
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("ELF header");
 	self_log.notice("----------------------------------------------------");
@@ -1150,7 +1150,7 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 	self_f.read(metadata_headers.get(), metadata_headers_size);
 
 	// Find the right keyset from the key vault.
-	SELF_KEY keyset = key_v.FindSelfKey(app_info.self_type, sce_hdr.se_flags, app_info.version);
+	SELF_KEY keyset = key_v.FindSelfKey(m_prog_id_hdr.program_type, sce_hdr.se_flags, m_prog_id_hdr.program_sceversion);
 
 	// Set klic if given
 	if (klic_key)
