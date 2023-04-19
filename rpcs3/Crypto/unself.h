@@ -11,6 +11,68 @@
 
 LOG_CHANNEL(self_log, "SELF");
 
+// SCE-specific definitions for e_type:
+enum
+{
+	ET_SCE_EXEC         = 0xFE00, // SCE Executable - PRX2
+	ET_SCE_RELEXEC      = 0xFE04, // SCE Relocatable Executable - PRX2
+	ET_SCE_STUBLIB      = 0xFE0C, // SCE SDK Stubs
+	ET_SCE_DYNEXEC      = 0xFE10, // SCE EXEC_ASLR (PS4 Executable with ASLR)
+	ET_SCE_DYNAMIC      = 0xFE18, // ?
+	ET_SCE_IOPRELEXEC   = 0xFF80, // SCE IOP Relocatable Executable
+	ET_SCE_IOPRELEXEC2  = 0xFF81, // SCE IOP Relocatable Executable Version 2
+	ET_SCE_EERELEXEC    = 0xFF90, // SCE EE Relocatable Executable
+	ET_SCE_EERELEXEC2   = 0xFF91, // SCE EE Relocatable Executable Version 2
+	ET_SCE_PSPRELEXEC   = 0xFFA0, // SCE PSP Relocatable Executable
+	ET_SCE_PPURELEXEC   = 0xFFA4, // SCE PPU Relocatable Executable
+	ET_SCE_ARMRELEXEC   = 0xFFA5, // ?SCE ARM Relocatable Executable (PS Vita System Software earlier or equal 0.931.010)
+	ET_SCE_PSPOVERLAY   = 0xFFA8, // ?
+};
+
+enum
+{
+	ELFOSABI_CELL_LV2 = 102 // CELL LV2
+};
+
+enum
+{
+	PT_SCE_RELA         = 0x60000000,
+	PT_SCE_LICINFO_1    = 0x60000001,
+	PT_SCE_LICINFO_2    = 0x60000002,
+	PT_SCE_DYNLIBDATA   = 0x61000000,
+	PT_SCE_PROCPARAM    = 0x61000001,
+	PT_SCE_UNK_61000010 = 0x61000010,
+	PT_SCE_COMMENT      = 0x6FFFFF00,
+	PT_SCE_LIBVERSION   = 0x6FFFFF01,
+	PT_SCE_UNK_70000001 = 0x70000001,
+	PT_SCE_IOPMOD       = 0x70000080,
+	PT_SCE_EEMOD        = 0x70000090,
+	PT_SCE_PSPRELA      = 0x700000A0,
+	PT_SCE_PSPRELA2     = 0x700000A1,
+	PT_SCE_PPURELA      = 0x700000A4,
+	PT_SCE_SEGSYM       = 0x700000A8,
+};
+
+enum
+{
+	PF_SPU_X = 0x00100000,
+	PF_SPU_W = 0x00200000,
+	PF_SPU_R = 0x00400000,
+	PF_RSX_X = 0x01000000,
+	PF_RSX_W = 0x02000000,
+	PF_RSX_R = 0x04000000,
+};
+
+enum
+{
+	SHT_SCE_RELA    = 0x60000000,
+	SHT_SCE_NID     = 0x61000001,
+	SHT_SCE_IOPMOD  = 0x70000080,
+	SHT_SCE_EEMOD   = 0x70000090,
+	SHT_SCE_PSPRELA = 0x700000A0,
+	SHT_SCE_PPURELA = 0x700000A4,
+};
+
 struct program_identification_header
 {
 	u64 program_authority_id;
@@ -181,25 +243,26 @@ struct SelfSection
 
 struct Elf32_Ehdr
 {
+	//u8 e_ident[16];      // ELF identification
 	u32 e_magic;
 	u8 e_class;
 	u8 e_data;
 	u8 e_curver;
 	u8 e_os_abi;
 	u64 e_abi_ver;
-	u16 e_type;
-	u16 e_machine;
-	u32 e_version;
-	u32 e_entry;
-	u32 e_phoff;
-	u32 e_shoff;
-	u32 e_flags;
-	u16 e_ehsize;
-	u16 e_phentsize;
-	u16 e_phnum;
-	u16 e_shentsize;
-	u16 e_shnum;
-	u16 e_shstrndx;
+	u16 e_type;          // object file type
+	u16 e_machine;       // machine type
+	u32 e_version;       // object file version
+	u32 e_entry;         // entry point address
+	u32 e_phoff;         // program header offset
+	u32 e_shoff;         // section header offset
+	u32 e_flags;         // processor-specific flags
+	u16 e_ehsize;        // ELF header size
+	u16 e_phentsize;     // size of program header entry
+	u16 e_phnum;         // number of program header entries
+	u16 e_shentsize;     // size of section header entry
+	u16 e_shnum;         // number of section header entries
+	u16 e_shstrndx;      // section name string table index
 
 	void Load(const fs::file& f);
 	static void Show() {}
@@ -210,16 +273,16 @@ struct Elf32_Ehdr
 
 struct Elf32_Shdr
 {
-	u32 sh_name;
-	u32 sh_type;
-	u32 sh_flags;
-	u32 sh_addr;
-	u32 sh_offset;
-	u32 sh_size;
-	u32 sh_link;
-	u32 sh_info;
-	u32 sh_addralign;
-	u32 sh_entsize;
+	u32 sh_name;      // section name
+	u32 sh_type;      // section type
+	u32 sh_flags;     // section attributes
+	u32 sh_addr;      // virtual address in memory
+	u32 sh_offset;    // offset in file
+	u32 sh_size;      // size of section
+	u32 sh_link;      // link to other section
+	u32 sh_info;      // miscellaneous information
+	u32 sh_addralign; // address alignment boundary
+	u32 sh_entsize;   // size of entries, if section has table
 
 	void Load(const fs::file& f);
 	void LoadLE(const fs::file& f);
@@ -228,14 +291,14 @@ struct Elf32_Shdr
 
 struct Elf32_Phdr
 {
-	u32 p_type;
-	u32 p_offset;
-	u32 p_vaddr;
-	u32 p_paddr;
-	u32 p_filesz;
-	u32 p_memsz;
-	u32 p_flags;
-	u32 p_align;
+	u32 p_type;   // Segment type
+	u32 p_offset; // Segment file offset
+	u32 p_vaddr;  // Segment virtual address
+	u32 p_paddr;  // Segment physical address
+	u32 p_filesz; // Segment size in file
+	u32 p_memsz;  // Segment size in memory
+	u32 p_flags;  // Segment flags
+	u32 p_align;  // Segment alignment
 
 	void Load(const fs::file& f);
 	void LoadLE(const fs::file& f);
@@ -244,25 +307,26 @@ struct Elf32_Phdr
 
 struct Elf64_Ehdr
 {
+	//u8 e_ident[16];      // ELF identification
 	u32 e_magic;
 	u8 e_class;
 	u8 e_data;
 	u8 e_curver;
 	u8 e_os_abi;
 	u64 e_abi_ver;
-	u16 e_type;
-	u16 e_machine;
-	u32 e_version;
-	u64 e_entry;
-	u64 e_phoff;
-	u64 e_shoff;
-	u32 e_flags;
-	u16 e_ehsize;
-	u16 e_phentsize;
-	u16 e_phnum;
-	u16 e_shentsize;
-	u16 e_shnum;
-	u16 e_shstrndx;
+	u16 e_type;          // object file type
+	u16 e_machine;       // machine type
+	u32 e_version;       // object file version
+	u64 e_entry;         // entry point address
+	u64 e_phoff;         // program header offset
+	u64 e_shoff;         // section header offset
+	u32 e_flags;         // processor-specific flags
+	u16 e_ehsize;        // ELF header size
+	u16 e_phentsize;     // size of program header entry
+	u16 e_phnum;         // number of program header entries
+	u16 e_shentsize;     // size of section header entry
+	u16 e_shnum;         // number of section header entries
+	u16 e_shstrndx;      // section name string table index
 
 	void Load(const fs::file& f);
 	static void Show() {}
@@ -272,16 +336,16 @@ struct Elf64_Ehdr
 
 struct Elf64_Shdr
 {
-	u32 sh_name;
-	u32 sh_type;
-	u64 sh_flags;
-	u64 sh_addr;
-	u64 sh_offset;
-	u64 sh_size;
-	u32 sh_link;
-	u32 sh_info;
-	u64 sh_addralign;
-	u64 sh_entsize;
+	u32 sh_name;      // section name
+	u32 sh_type;      // section type
+	u64 sh_flags;     // section attributes
+	u64 sh_addr;      // virtual address in memory
+	u64 sh_offset;    // offset in file
+	u64 sh_size;      // size of section
+	u32 sh_link;      // link to other section
+	u32 sh_info;      // miscellaneous information
+	u64 sh_addralign; // address alignment boundary
+	u64 sh_entsize;   // size of entries, if section has table
 
 	void Load(const fs::file& f);
 	static void Show(){}
@@ -289,14 +353,14 @@ struct Elf64_Shdr
 
 struct Elf64_Phdr
 {
-	u32 p_type;
-	u32 p_flags;
-	u64 p_offset;
-	u64 p_vaddr;
-	u64 p_paddr;
-	u64 p_filesz;
-	u64 p_memsz;
-	u64 p_align;
+	u32 p_type;   // Segment type
+	u32 p_flags;  // Segment flags
+	u64 p_offset; // Segment file offset
+	u64 p_vaddr;  // Segment virtual address
+	u64 p_paddr;  // Segment physical address
+	u64 p_filesz; // Segment size in file
+	u64 p_memsz;  // Segment size in memory
+	u64 p_align;  // Segment alignment
 
 	void Load(const fs::file& f);
 	static void Show(){}
