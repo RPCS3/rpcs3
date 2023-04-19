@@ -169,15 +169,6 @@ namespace gl
 		glClear(static_cast<GLbitfield>(buffers_));
 	}
 
-	void fbo::clear(buffers buffers_, color4f color_value, double depth_value, u8 stencil_value) const
-	{
-		save_binding_state save(*this);
-		glClearColor(color_value.r, color_value.g, color_value.b, color_value.a);
-		glClearDepth(depth_value);
-		glClearStencil(stencil_value);
-		clear(buffers_);
-	}
-
 	void fbo::copy_from(const void* pixels, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
 	{
 		save_binding_state save(*this);
