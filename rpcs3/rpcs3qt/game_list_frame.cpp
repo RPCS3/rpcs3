@@ -614,14 +614,14 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				{
 					std::string path_vfs = dir_or_elf.substr(dev_flash.size());
 
-					if (usz pos = path_vfs.find_first_not_of(fs::delim); pos != umax && pos != 0)
+					if (const usz pos = path_vfs.find_first_not_of(fs::delim); pos != umax && pos != 0)
 					{
 						path_vfs = path_vfs.substr(pos);
 					}
 
-					if (Localized().title.titles.contains(path_vfs))
+					if (const auto it = thread_localized.title.titles.find(path_vfs); it != thread_localized.title.titles.cend())
 					{
-						game.name = Localized().title.titles.at(path_vfs).toStdString();
+						game.name = it->second.toStdString();
 					}
 				}
 
@@ -663,9 +663,9 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				}
 			}
 
-			m_mutex_cat.lock();
-
 			const QString serial = qstr(game.serial);
+
+			m_mutex_cat.lock();
 
 			// Read persistent_settings values
 			const QString note  = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
@@ -695,13 +695,15 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				m_titles.insert(serial, title);
 			}
 
-			auto qt_cat = qstr(game.category);
+			m_mutex_cat.unlock();
 
-			if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.end())
+			QString qt_cat = qstr(game.category);
+
+			if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.cend())
 			{
 				qt_cat = boot_cat->second;
 			}
-			else if (const auto data_cat = thread_localized.category.cat_data.find(qt_cat); data_cat != thread_localized.category.cat_data.end())
+			else if (const auto data_cat = thread_localized.category.cat_data.find(qt_cat); data_cat != thread_localized.category.cat_data.cend())
 			{
 				qt_cat = data_cat->second;
 			}
@@ -714,11 +716,9 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				qt_cat = thread_localized.category.other;
 			}
 
-			m_mutex_cat.unlock();
-
 			gui_game_info info{};
 			info.info = game;
-			info.localized_category = qt_cat;
+			info.localized_category = std::move(qt_cat);
 			info.compat = m_game_compat->GetCompatibility(game.serial);
 			info.hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
 			info.hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
