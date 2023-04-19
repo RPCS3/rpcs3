@@ -37,26 +37,27 @@ namespace gl
 
 		struct
 		{
-			f32 value = 0;
+			f32 value;
 		}
-		clear_depth;
+		clear_depth{};
 
 		struct
 		{
-			u8 mask = 0;
-			u8 value = 0;
+			u8 mask;
+			u8 value;
 		}
-		clear_stencil;
+		clear_stencil{};
 
-		struct {
-			u32 mask = 0;
-			u8 attachment_count = 0;
-			u8 r = 0;
-			u8 g = 0;
-			u8 b = 0;
-			u8 a = 0;
+		struct
+		{
+			u32 mask;
+			u8 attachment_count;
+			u8 r;
+			u8 g;
+			u8 b;
+			u8 a;
 		}
-		clear_color;
+		clear_color{};
 	};
 
 	GLenum get_target(rsx::texture_dimension_extended type);
