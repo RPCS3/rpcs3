@@ -97,27 +97,27 @@ struct segment_ext_header
 	void Show() const;
 };
 
-struct SCEVersionInfo
+struct version_header
 {
-	u32 subheader_type;
-	u32 present;
-	u32 size;
-	u32 unknown;
+	u32 subheader_type; // 1 - sceversion
+	u32 present;        // 0 = false, 1 = true
+	u32 size;           // usually 0x10
+	u32 unknown4;
 
 	void Load(const fs::file& f);
 	void Show() const;
 };
 
-struct ControlInfo
+struct supplemental_header
 {
-	u32 type;
+	u32 type; // 1=PS3 plaintext_capability; 2=PS3 ELF digest; 3=PS3 NPDRM, 4=PS Vita ELF digest; 5=PS Vita NPDRM; 6=PS Vita boot param; 7=PS Vita shared secret
 	u32 size;
-	u64 next;
+	u64 next; // 1 if another Supplemental Header element follows else 0
 
 	union
 	{
-		// type 1 0x30 bytes
-		struct
+		// type 1, 0x30 bytes
+		struct // 0x20 bytes of data
 		{
 			u32 ctrl_flag1;
 			u32 unknown1;
@@ -127,28 +127,28 @@ struct ControlInfo
 			u32 unknown5;
 			u32 unknown6;
 			u32 unknown7;
+		} PS3_plaintext_capability_header;
 
-		} control_flags;
-
-		// type 2 0x30 bytes
-		struct
+		// type 2, 0x40 bytes
+		struct // 0x30 bytes of data
 		{
-			u8 digest[20];
-			u64 unknown;
+			u8 constant[0x14]; // same for every PS3/PS Vita SELF, hardcoded in make_fself.exe: 627CB1808AB938E32C8C091708726A579E2586E4
+			u8 elf_digest[0x14]; // SHA-1. Hash F2C552BF716ED24759CBE8A0A9A6DB9965F3811C is blacklisted by appldr
+			u64 required_system_version; // filled on Sony authentication server, contains decimal PS3_SYSTEM_VER value from PARAM.SFO
+		} PS3_elf_digest_header_40;
 
-		} file_digest_30;
-
-		// type 2 0x40 bytes
-		struct
+		// type 2, 0x30 bytes
+		struct // 0x20 bytes of data
 		{
-			u8 digest1[20];
-			u8 digest2[20];
-			u64 unknown;
+			u8 constant_or_elf_digest[0x14];
+			u8 padding[0xC];
+		} PS3_elf_digest_header_30;
 
-		} file_digest_40;
-
-		// type 3 0x90 bytes
-		NPD_HEADER npdrm;
+		// type 3, 0x90 bytes
+		struct // 0x80 bytes of data
+		{
+			NPD_HEADER npd;
+		} PS3_npdrm_header;
 	};
 
 	void Load(const fs::file& f);
@@ -233,7 +233,7 @@ struct Signature
 
 struct SelfSection
 {
-	u8 *data;
+	u8* data;
 	u64 size;
 	u64 offset;
 
@@ -400,7 +400,7 @@ struct ext_hdr
 struct SelfAdditionalInfo
 {
 	bool valid = false;
-	std::vector<ControlInfo> ctrl_info;
+	std::vector<supplemental_header> supplemental_hdr;
 	program_identification_header prog_id_hdr;
 };
 
@@ -454,8 +454,8 @@ class SELFDecrypter
 
 	// Decryption info structs.
 	std::vector<segment_ext_header> m_seg_ext_hdr{};
-	SCEVersionInfo scev_info{};
-	std::vector<ControlInfo> ctrlinfo_arr{};
+	version_header m_version_hdr{};
+	std::vector<supplemental_header> m_supplemental_hdr_arr{};
 
 	// Metadata structs.
 	MetadataInfo meta_info{};

@@ -227,23 +227,23 @@ void segment_ext_header::Show() const
 	self_log.notice("Encryption: 0x%08x", encryption);
 }
 
-void SCEVersionInfo::Load(const fs::file& f)
+void version_header::Load(const fs::file& f)
 {
 	subheader_type = Read32(f);
 	present        = Read32(f);
 	size           = Read32(f);
-	unknown        = Read32(f);
+	unknown4       = Read32(f);
 }
 
-void SCEVersionInfo::Show() const
+void version_header::Show() const
 {
 	self_log.notice("Sub-header type: 0x%08x", subheader_type);
 	self_log.notice("Present: 0x%08x", present);
 	self_log.notice("Size: 0x%08x", size);
-	self_log.notice("Unknown: 0x%08x", unknown);
+	self_log.notice("Unknown: 0x%08x", unknown4);
 }
 
-void ControlInfo::Load(const fs::file& f)
+void supplemental_header::Load(const fs::file& f)
 {
 	type = Read32(f);
 	size = Read32(f);
@@ -251,45 +251,45 @@ void ControlInfo::Load(const fs::file& f)
 
 	if (type == 1)
 	{
-		control_flags.ctrl_flag1 = Read32(f);
-		control_flags.unknown1 = Read32(f);
-		control_flags.unknown2 = Read32(f);
-		control_flags.unknown3 = Read32(f);
-		control_flags.unknown4 = Read32(f);
-		control_flags.unknown5 = Read32(f);
-		control_flags.unknown6 = Read32(f);
-		control_flags.unknown7 = Read32(f);
+		PS3_plaintext_capability_header.ctrl_flag1 = Read32(f);
+		PS3_plaintext_capability_header.unknown1 = Read32(f);
+		PS3_plaintext_capability_header.unknown2 = Read32(f);
+		PS3_plaintext_capability_header.unknown3 = Read32(f);
+		PS3_plaintext_capability_header.unknown4 = Read32(f);
+		PS3_plaintext_capability_header.unknown5 = Read32(f);
+		PS3_plaintext_capability_header.unknown6 = Read32(f);
+		PS3_plaintext_capability_header.unknown7 = Read32(f);
 	}
 	else if (type == 2)
 	{
 		if (size == 0x30)
 		{
-			f.read(file_digest_30.digest, 20);
-			file_digest_30.unknown = Read64(f);
+			f.read(PS3_elf_digest_header_30.constant_or_elf_digest, sizeof(PS3_elf_digest_header_30.constant_or_elf_digest));
+			f.read(PS3_elf_digest_header_30.padding, sizeof(PS3_elf_digest_header_30.padding));
 		}
 		else if (size == 0x40)
 		{
-			f.read(file_digest_40.digest1, 20);
-			f.read(file_digest_40.digest2, 20);
-			file_digest_40.unknown = Read64(f);
+			f.read(PS3_elf_digest_header_40.constant, sizeof(PS3_elf_digest_header_40.constant));
+			f.read(PS3_elf_digest_header_40.elf_digest, sizeof(PS3_elf_digest_header_40.elf_digest));
+			PS3_elf_digest_header_40.required_system_version = Read64(f);
 		}
 	}
 	else if (type == 3)
 	{
-		npdrm.magic = Read32(f);
-		npdrm.version = Read32(f);
-		npdrm.license = Read32(f);
-		npdrm.type = Read32(f);
-		f.read(npdrm.content_id, 48);
-		f.read(npdrm.digest, 16);
-		f.read(npdrm.title_hash, 16);
-		f.read(npdrm.dev_hash, 16);
-		npdrm.activate_time = Read64(f);
-		npdrm.expire_time = Read64(f);
+		PS3_npdrm_header.npd.magic = Read32(f);
+		PS3_npdrm_header.npd.version = Read32(f);
+		PS3_npdrm_header.npd.license = Read32(f);
+		PS3_npdrm_header.npd.type = Read32(f);
+		f.read(PS3_npdrm_header.npd.content_id, 48);
+		f.read(PS3_npdrm_header.npd.digest, 16);
+		f.read(PS3_npdrm_header.npd.title_hash, 16);
+		f.read(PS3_npdrm_header.npd.dev_hash, 16);
+		PS3_npdrm_header.npd.activate_time = Read64(f);
+		PS3_npdrm_header.npd.expire_time = Read64(f);
 	}
 }
 
-void ControlInfo::Show() const
+void supplemental_header::Show() const
 {
 	self_log.notice("Type: 0x%08x", type);
 	self_log.notice("Size: 0x%08x", size);
@@ -297,41 +297,41 @@ void ControlInfo::Show() const
 
 	if (type == 1)
 	{
-		self_log.notice("Control flag 1: 0x%08x", control_flags.ctrl_flag1);
-		self_log.notice("Unknown1: 0x%08x", control_flags.unknown1);
-		self_log.notice("Unknown2: 0x%08x", control_flags.unknown2);
-		self_log.notice("Unknown3: 0x%08x", control_flags.unknown3);
-		self_log.notice("Unknown4: 0x%08x", control_flags.unknown4);
-		self_log.notice("Unknown5: 0x%08x", control_flags.unknown5);
-		self_log.notice("Unknown6: 0x%08x", control_flags.unknown6);
-		self_log.notice("Unknown7: 0x%08x", control_flags.unknown7);
+		self_log.notice("Control flag 1: 0x%08x", PS3_plaintext_capability_header.ctrl_flag1);
+		self_log.notice("Unknown1: 0x%08x", PS3_plaintext_capability_header.unknown1);
+		self_log.notice("Unknown2: 0x%08x", PS3_plaintext_capability_header.unknown2);
+		self_log.notice("Unknown3: 0x%08x", PS3_plaintext_capability_header.unknown3);
+		self_log.notice("Unknown4: 0x%08x", PS3_plaintext_capability_header.unknown4);
+		self_log.notice("Unknown5: 0x%08x", PS3_plaintext_capability_header.unknown5);
+		self_log.notice("Unknown6: 0x%08x", PS3_plaintext_capability_header.unknown6);
+		self_log.notice("Unknown7: 0x%08x", PS3_plaintext_capability_header.unknown7);
 	}
 	else if (type == 2)
 	{
 		if (size == 0x30)
 		{
-			self_log.notice("Digest: %s", file_digest_30.digest);
-			self_log.notice("Unknown: 0x%llx", file_digest_30.unknown);
+			self_log.notice("Digest: %s", PS3_elf_digest_header_30.constant_or_elf_digest);
+			self_log.notice("Unknown: 0x%llx", PS3_elf_digest_header_30.padding);
 		}
 		else if (size == 0x40)
 		{
-			self_log.notice("Digest1: %s", file_digest_40.digest1);
-			self_log.notice("Digest2: %s", file_digest_40.digest2);
-			self_log.notice("Unknown: 0x%llx", file_digest_40.unknown);
+			self_log.notice("Digest1: %s", PS3_elf_digest_header_40.constant);
+			self_log.notice("Digest2: %s", PS3_elf_digest_header_40.elf_digest);
+			self_log.notice("Unknown: 0x%llx", PS3_elf_digest_header_40.required_system_version);
 		}
 	}
 	else if (type == 3)
 	{
-		self_log.notice("Magic: 0x%08x", npdrm.magic);
-		self_log.notice("Version: 0x%08x", npdrm.version);
-		self_log.notice("License: 0x%08x", npdrm.license);
-		self_log.notice("Type: 0x%08x", npdrm.type);
-		self_log.notice("ContentID: %s", npdrm.content_id);
-		self_log.notice("Digest: %s", npdrm.digest);
-		self_log.notice("Inverse digest: %s", npdrm.title_hash);
-		self_log.notice("XOR digest: %s", npdrm.dev_hash);
-		self_log.notice("Activation time: 0x%llx", npdrm.activate_time);
-		self_log.notice("Expiration time: 0x%llx", npdrm.expire_time);
+		self_log.notice("Magic: 0x%08x", PS3_npdrm_header.npd.magic);
+		self_log.notice("Version: 0x%08x", PS3_npdrm_header.npd.version);
+		self_log.notice("License: 0x%08x", PS3_npdrm_header.npd.license);
+		self_log.notice("Type: 0x%08x", PS3_npdrm_header.npd.type);
+		self_log.notice("ContentID: %s", PS3_npdrm_header.npd.content_id);
+		self_log.notice("Digest: %s", PS3_npdrm_header.npd.digest);
+		self_log.notice("Inverse digest: %s", PS3_npdrm_header.npd.title_hash);
+		self_log.notice("XOR digest: %s", PS3_npdrm_header.npd.dev_hash);
+		self_log.notice("Activation time: 0x%llx", PS3_npdrm_header.npd.activate_time);
+		self_log.notice("Expiration time: 0x%llx", PS3_npdrm_header.npd.expire_time);
 	}
 }
 
@@ -949,23 +949,23 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 	// Read SCE version info.
 	self_f.seek(m_ext_hdr.version_hdr_offset);
-	scev_info.Load(self_f);
+	m_version_hdr.Load(self_f);
 
 	// Read control info.
-	ctrlinfo_arr.clear();
+	m_supplemental_hdr_arr.clear();
 	self_f.seek(m_ext_hdr.supplemental_hdr_offset);
 
 	for (u64 i = 0; i < m_ext_hdr.supplemental_hdr_size;)
 	{
-		ctrlinfo_arr.emplace_back();
-		ControlInfo &cinfo = ctrlinfo_arr.back();
+		m_supplemental_hdr_arr.emplace_back();
+		supplemental_header& cinfo = m_supplemental_hdr_arr.back();
 		cinfo.Load(self_f);
 		i += cinfo.size;
 	}
 
 	if (out_info)
 	{
-		out_info->ctrl_info = ctrlinfo_arr;
+		out_info->supplemental_hdr = m_supplemental_hdr_arr;
 	}
 
 	// Read ELF section headers.
@@ -1043,12 +1043,12 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("SCE version info");
 	self_log.notice("----------------------------------------------------");
-	scev_info.Show();
+	m_version_hdr.Show();
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("Control info");
 	self_log.notice("----------------------------------------------------");
-	for(unsigned int i = 0; i < ctrlinfo_arr.size(); i++)
-		ctrlinfo_arr[i].Show();
+	for(unsigned int i = 0; i < m_supplemental_hdr_arr.size(); i++)
+		m_supplemental_hdr_arr[i].Show();
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("ELF section headers");
 	self_log.notice("----------------------------------------------------");
@@ -1121,11 +1121,11 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 const NPD_HEADER* SELFDecrypter::GetNPDHeader() const
 {
 	// Parse the control info structures to find the NPDRM control info.
-	for (const ControlInfo& info : ctrlinfo_arr)
+	for (const supplemental_header& info : m_supplemental_hdr_arr)
 	{
 		if (info.type == 3)
 		{
-			return &info.npdrm;
+			return &info.PS3_npdrm_header.npd;
 		}
 	}
 
