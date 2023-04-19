@@ -610,18 +610,18 @@ void SceHeader::Load(const fs::file& f)
 	se_esize = Read64(f);
 }
 
-void SelfHeader::Load(const fs::file& f)
+void ext_hdr::Load(const fs::file& f)
 {
-	se_htype = Read64(f);
-	se_appinfooff = Read64(f);
-	se_elfoff = Read64(f);
-	se_phdroff = Read64(f);
-	se_shdroff = Read64(f);
-	se_secinfoff = Read64(f);
-	se_sceveroff = Read64(f);
-	se_controloff = Read64(f);
-	se_controlsize = Read64(f);
-	pad = Read64(f);
+	ext_hdr_version = Read64(f);
+	program_identification_hdr_offset = Read64(f);
+	ehdr_offset = Read64(f);
+	phdr_offset = Read64(f);
+	shdr_offset = Read64(f);
+	segment_ext_hdr_offset = Read64(f);
+	version_hdr_offset = Read64(f);
+	supplemental_hdr_offset = Read64(f);
+	supplemental_hdr_size = Read64(f);
+	padding = Read64(f);
 }
 
 SCEDecrypter::SCEDecrypter(const fs::file& s)
@@ -884,10 +884,10 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 	}
 
 	// Read SELF header.
-	self_hdr.Load(self_f);
+	m_ext_hdr.Load(self_f);
 
 	// Read the APP INFO.
-	self_f.seek(self_hdr.se_appinfooff);
+	self_f.seek(m_ext_hdr.program_identification_hdr_offset);
 	app_info.Load(self_f);
 
 	if (out_info)
@@ -896,7 +896,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 	}
 
 	// Read ELF header.
-	self_f.seek(self_hdr.se_elfoff);
+	self_f.seek(m_ext_hdr.ehdr_offset);
 
 	if (isElf32)
 		elf32_hdr.Load(self_f);
@@ -912,7 +912,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 			self_log.error("ELF program header offset is null!");
 			return false;
 		}
-		self_f.seek(self_hdr.se_phdroff);
+		self_f.seek(m_ext_hdr.phdr_offset);
 		for(u32 i = 0; i < elf32_hdr.e_phnum; ++i)
 		{
 			phdr32_arr.emplace_back();
@@ -929,7 +929,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 			return false;
 		}
 
-		self_f.seek(self_hdr.se_phdroff);
+		self_f.seek(m_ext_hdr.phdr_offset);
 
 		for (u32 i = 0; i < elf64_hdr.e_phnum; ++i)
 		{
@@ -941,7 +941,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 	// Read section info.
 	secinfo_arr.clear();
-	self_f.seek(self_hdr.se_secinfoff);
+	self_f.seek(m_ext_hdr.segment_ext_hdr_offset);
 
 	for(u32 i = 0; i < ((isElf32) ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
 	{
@@ -950,14 +950,14 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 	}
 
 	// Read SCE version info.
-	self_f.seek(self_hdr.se_sceveroff);
+	self_f.seek(m_ext_hdr.version_hdr_offset);
 	scev_info.Load(self_f);
 
 	// Read control info.
 	ctrlinfo_arr.clear();
-	self_f.seek(self_hdr.se_controloff);
+	self_f.seek(m_ext_hdr.supplemental_hdr_offset);
 
-	for (u64 i = 0; i < self_hdr.se_controlsize;)
+	for (u64 i = 0; i < m_ext_hdr.supplemental_hdr_size;)
 	{
 		ctrlinfo_arr.emplace_back();
 		ControlInfo &cinfo = ctrlinfo_arr.back();
@@ -981,7 +981,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 			return true;
 		}
 
-		self_f.seek(self_hdr.se_shdroff);
+		self_f.seek(m_ext_hdr.shdr_offset);
 
 		for(u32 i = 0; i < elf32_hdr.e_shnum; ++i)
 		{
@@ -998,7 +998,7 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 			return true;
 		}
 
-		self_f.seek(self_hdr.se_shdroff);
+		self_f.seek(m_ext_hdr.shdr_offset);
 
 		for(u32 i = 0; i < elf64_hdr.e_shnum; ++i)
 		{
@@ -1023,7 +1023,7 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("SELF header");
 	self_log.notice("----------------------------------------------------");
-	self_hdr.Show();
+	m_ext_hdr.Show();
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("APP INFO");
 	self_log.notice("----------------------------------------------------");
@@ -1333,15 +1333,15 @@ static bool IsSelfElf32(const fs::file& f)
 
 	f.seek(0);
 
-	SceHeader hdr;
-	SelfHeader sh;
+	SceHeader hdr{};
+	ext_hdr sh{};
 	hdr.Load(f);
 	sh.Load(f);
 
 	// Locate the class byte and check it.
 	u8 elf_class[0x8];
 
-	f.seek(sh.se_elfoff);
+	f.seek(sh.ehdr_offset);
 	f.read(elf_class, 0x8);
 
 	return (elf_class[4] == 1);
