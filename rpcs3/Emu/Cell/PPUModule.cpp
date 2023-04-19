@@ -1909,18 +1909,18 @@ bool ppu_load_exec(const ppu_exec_object& elf, utils::serial* ar)
 
 	if (bool not_found = g_ps3_process_info.self_info.valid)
 	{
-		for (const auto& ctrl : g_ps3_process_info.self_info.ctrl_info)
+		for (const auto& ctrl : g_ps3_process_info.self_info.supplemental_hdr)
 		{
 			if (ctrl.type == 1)
 			{
 				if (!std::exchange(not_found, false))
 				{
 					ppu_loader.error("More than one control flags header found! (flags1=0x%x)",
-						ctrl.control_flags.ctrl_flag1);
+						ctrl.PS3_plaintext_capability_header.ctrl_flag1);
 					break;
 				}
 
-				g_ps3_process_info.ctrl_flags1 |= ctrl.control_flags.ctrl_flag1;
+				g_ps3_process_info.ctrl_flags1 |= ctrl.PS3_plaintext_capability_header.ctrl_flag1;
 			}
 		}
 
