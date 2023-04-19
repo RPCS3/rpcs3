@@ -209,24 +209,22 @@ void program_identification_header::Show() const
 	self_log.notice("Version: 0x%llx", program_sceversion);
 }
 
-void SectionInfo::Load(const fs::file& f)
+void segment_ext_header::Load(const fs::file& f)
 {
-	offset     = Read64(f);
-	size       = Read64(f);
-	compressed = Read32(f);
-	unknown1   = Read32(f);
-	unknown2   = Read32(f);
-	encrypted  = Read32(f);
+	offset      = Read64(f);
+	size        = Read64(f);
+	compression = Read32(f);
+	unknown     = Read32(f);
+	encryption  = Read64(f);
 }
 
-void SectionInfo::Show() const
+void segment_ext_header::Show() const
 {
 	self_log.notice("Offset: 0x%llx", offset);
 	self_log.notice("Size: 0x%llx", size);
-	self_log.notice("Compressed: 0x%08x", compressed);
-	self_log.notice("Unknown1: 0x%08x", unknown1);
-	self_log.notice("Unknown2: 0x%08x", unknown2);
-	self_log.notice("Encrypted: 0x%08x", encrypted);
+	self_log.notice("Compression: 0x%08x", compression);
+	self_log.notice("Unknown: 0x%08x", unknown);
+	self_log.notice("Encryption: 0x%08x", encryption);
 }
 
 void SCEVersionInfo::Load(const fs::file& f)
@@ -940,13 +938,13 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 
 	// Read section info.
-	secinfo_arr.clear();
+	m_seg_ext_hdr.clear();
 	self_f.seek(m_ext_hdr.segment_ext_hdr_offset);
 
 	for(u32 i = 0; i < ((isElf32) ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
 	{
-		secinfo_arr.emplace_back();
-		secinfo_arr.back().Load(self_f);
+		m_seg_ext_hdr.emplace_back();
+		m_seg_ext_hdr.back().Load(self_f);
 	}
 
 	// Read SCE version info.
@@ -1040,8 +1038,8 @@ void SELFDecrypter::ShowHeaders(bool isElf32)
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("Section info");
 	self_log.notice("----------------------------------------------------");
-	for(unsigned int i = 0; i < secinfo_arr.size(); i++)
-		secinfo_arr[i].Show();
+	for(unsigned int i = 0; i < m_seg_ext_hdr.size(); i++)
+		m_seg_ext_hdr[i].Show();
 	self_log.notice("----------------------------------------------------");
 	self_log.notice("SCE version info");
 	self_log.notice("----------------------------------------------------");

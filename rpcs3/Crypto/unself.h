@@ -85,14 +85,13 @@ struct program_identification_header
 	void Show() const;
 };
 
-struct SectionInfo
+struct segment_ext_header
 {
-	u64 offset;
-	u64 size;
-	u32 compressed;
-	u32 unknown1;
-	u32 unknown2;
-	u32 encrypted;
+	u64 offset;      // Offset to data
+	u64 size;        // Size of data
+	u32 compression; // 1 = plain, 2 = zlib
+	u32 unknown;     // Always 0, as far as I know.
+	u64 encryption;  // 0 = unrequested, 1 = completed, 2 = requested
 
 	void Load(const fs::file& f);
 	void Show() const;
@@ -454,7 +453,7 @@ class SELFDecrypter
 	std::vector<Elf32_Phdr> phdr32_arr{};
 
 	// Decryption info structs.
-	std::vector<SectionInfo> secinfo_arr{};
+	std::vector<segment_ext_header> m_seg_ext_hdr{};
 	SCEVersionInfo scev_info{};
 	std::vector<ControlInfo> ctrlinfo_arr{};
 
