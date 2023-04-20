@@ -5596,7 +5596,7 @@ public:
 				for (u32 i = 0; i < 128; i++)
 				{
 					// If store isn't erased, try to sink it
-					if (auto& bs = block_q[bi]->store[i])
+					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1)
 					{
 						std::map<u32, block_info*, std::greater<>> sucs;
 
@@ -5614,10 +5614,15 @@ public:
 						{
 							auto ins = b2->block->getFirstNonPHI();
 
-							if (b2 != block_q[bi] && pdt.dominates(ins, bs) && dt.dominates(bs->getOperand(0), ins))
+							if (b2 != block_q[bi])
 							{
 								if (b2->bb->preds.size() == 1)
 								{
+									if (!dt.dominates(bs->getOperand(0), ins))
+										continue;
+									if (!pdt.dominates(ins, bs))
+										continue;
+
 									m_ir->SetInsertPoint(ins);
 									auto si = llvm::cast<StoreInst>(m_ir->Insert(bs->clone()));
 									if (b2->store[i] == nullptr)
@@ -5637,12 +5642,42 @@ public:
 									auto& edge = block_q[bi]->block_edges[a2];
 									if (!edge)
 									{
-										edge = llvm::SplitEdge(block_q[bi]->block_end, b2->block);
+										const auto succ_range = llvm::successors(block_q[bi]->block_end);
+
+										auto succ = b2->block;
+
+										std::vector<llvm::BasicBlock*> succ_q{b2->block};
+
+										for (usz j = 0; j < succ_q.size(); j++)
+										{
+											if (!llvm::count(succ_range, (succ = succ_q[j])))
+											{
+												for (auto pred : llvm::predecessors(succ))
+												{
+													succ_q.emplace_back(pred);
+												}
+											}
+											else
+											{
+												break;
+											}
+										}
+
+										if (!llvm::count(succ_range, succ))
+										{
+											// TODO: figure this out
+											spu_log.notice("[%s] Failed successor to 0x%05x", fmt::base57(be_t<u64>{m_hash_start}), a2);
+											continue;
+										}
+
+										edge = llvm::SplitEdge(block_q[bi]->block_end, succ);
 										pdt.recalculate(*m_function);
 										dt.recalculate(*m_function);
 									}
 
 									ins = edge->getTerminator();
+									if (!dt.dominates(bs->getOperand(0), ins))
+										continue;
 									if (!pdt.dominates(ins, bs))
 										continue;
 
