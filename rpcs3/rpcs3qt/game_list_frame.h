@@ -5,6 +5,7 @@
 #include "gui_save.h"
 #include "shortcut_utils.h"
 #include "Utilities/lockless.h"
+#include "Utilities/mutex.h"
 #include "Emu/System.h"
 
 #include <QMainWindow>
@@ -155,9 +156,17 @@ private:
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 	QList<game_info> m_game_data;
-	std::vector<std::string> m_path_list;
+	struct path_entry
+	{
+		std::string path;
+		bool is_disc{};
+		bool is_from_yml{};
+	};
+	std::vector<path_entry> m_path_entries;
+	shared_mutex m_path_mutex;
+	std::set<std::string> m_path_list;
 	QSet<QString> m_serials;
-	QMutex m_mutex_cat;
+	QMutex m_games_mutex;
 	lf_queue<game_info> m_games;
 	QFutureWatcher<void> m_size_watcher;
 	QFutureWatcher<void> m_refresh_watcher;

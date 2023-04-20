@@ -143,6 +143,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		gui::utils::stop_future_watcher(m_size_watcher, true, m_size_watcher_cancel);
 		gui::utils::stop_future_watcher(m_repaint_watcher, true);
 
+		m_path_entries.clear();
 		m_path_list.clear();
 		m_game_data.clear();
 		m_serials.clear();
@@ -448,6 +449,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 	{
 		const Localized localized;
 
+		m_path_entries.clear();
 		m_path_list.clear();
 		m_serials.clear();
 		m_game_data.clear();
@@ -461,7 +463,19 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		const std::string _hdd =  rpcs3::utils::get_hdd0_dir();
 
-		const auto add_disc_dir = [&](const std::string& path)
+		const auto push_path = [this](const std::string& path, std::vector<std::string>& legit_paths)
+		{
+			{
+				std::lock_guard lock(m_path_mutex);
+				if (!m_path_list.insert(path).second)
+				{
+					return;
+				}
+			}
+			legit_paths.push_back(path);
+		};
+
+		const auto add_disc_dir = [push_path](const std::string& path, std::vector<std::string>& legit_paths)
 		{
 			for (const auto& entry : fs::dir(path))
 			{
@@ -472,7 +486,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				if (entry.name == "PS3_GAME" || std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
 				{
-					m_path_list.emplace_back(path + "/" + entry.name);
+					push_path(path + "/" + entry.name, legit_paths);
 				}
 			}
 		};
@@ -486,30 +500,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 					continue;
 				}
 
-				const std::string entry_path = path + entry.name;
-
-				if (fs::is_file(entry_path + "/PS3_DISC.SFB"))
-				{
-					if (!is_disc)
-					{
-						game_list_log.error("Invalid game path found in %s", entry_path);
-					}
-					else
-					{
-						add_disc_dir(entry_path);
-					}
-				}
-				else
-				{
-					if (is_disc)
-					{
-						game_list_log.error("Invalid disc path found in %s", entry_path);
-					}
-					else
-					{
-						m_path_list.emplace_back(entry_path);
-					}
-				}
+				m_path_entries.emplace_back(path_entry{path + entry.name, is_disc, false});
 			}
 		};
 
@@ -533,58 +524,20 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				game_dir = game_dir.substr(0, game_dir.size() - 4);
 			}
 
-			const bool has_sfo = fs::is_file(game_dir + "/PARAM.SFO");
-
-			if (!has_sfo && fs::is_file(game_dir + "/PS3_DISC.SFB"))
-			{
-				// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
-				if (game_dir.starts_with(_hdd))
-				{
-					std::string_view frag = std::string_view(game_dir).substr(_hdd.size());
-
-					if (frag.starts_with("disc/"))
-					{
-						// Our path starts from _hdd + 'disc/'
-						frag.remove_prefix(5);
-
-						// Check if the remaining part is the only path component
-						if (frag.find_first_of('/') + 1 == 0)
-						{
-							game_list_log.trace("Removed duplicate for %s: %s", serial, path);
-
-							if (static std::unordered_set<std::string> warn_once_list; warn_once_list.emplace(game_dir).second)
-							{
-								game_list_log.todo("Game at '%s' is using deprecated directory '/dev_hdd0/disc/'.\nConsider moving into '%s'.", game_dir, g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
-							}
-
-							continue;
-						}
-					}
-				}
-
-				add_disc_dir(game_dir);
-			}
-			else if (has_sfo)
-			{
-				m_path_list.emplace_back(game_dir);
-			}
-			else
-			{
-				game_list_log.trace("Invalid game path registered for %s: %s", serial, path);
-			}
+			m_path_entries.emplace_back(path_entry{game_dir, false, true});
 		}
 
 		const auto dev_flash = g_cfg_vfs.get_dev_flash();
 
-		m_path_list.emplace_back(dev_flash + "vsh/module/vsh.self");
+		m_path_list.emplace(dev_flash + "vsh/module/vsh.self");
 
 		// Remove duplicates
-		sort(m_path_list.begin(), m_path_list.end());
-		m_path_list.erase(unique(m_path_list.begin(), m_path_list.end()), m_path_list.end());
+		sort(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path < r.path;});
+		m_path_entries.erase(unique(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path == r.path;}), m_path_entries.end());
 
 		const std::string game_icon_path = m_play_hover_movies ? fs::get_config_dir() + "/Icons/game_icons/" : "";
 
-		m_refresh_watcher.setFuture(QtConcurrent::map(m_path_list, [this, dev_flash, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path](const std::string& dir_or_elf)
+		const auto add_game = [this, dev_flash, cat_unknown_localized = sstr(localized.category.unknown), cat_unknown = sstr(cat::cat_unknown), game_icon_path](const std::string& dir_or_elf)
 		{
 			GameInfo game{};
 			game.path = dir_or_elf;
@@ -665,7 +618,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			const QString serial = qstr(game.serial);
 
-			m_mutex_cat.lock();
+			m_games_mutex.lock();
 
 			// Read persistent_settings values
 			const QString note  = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
@@ -695,7 +648,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				m_titles.insert(serial, title);
 			}
 
-			m_mutex_cat.unlock();
+			m_games_mutex.unlock();
 
 			QString qt_cat = qstr(game.category);
 
@@ -725,6 +678,78 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			info.has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
 			m_games.push(std::make_shared<gui_game_info>(std::move(info)));
+		};
+
+		m_refresh_watcher.setFuture(QtConcurrent::map(m_path_entries, [this, _hdd, add_disc_dir, push_path, add_game](const path_entry& entry)
+		{
+			std::vector<std::string> legit_paths;
+
+			if (entry.is_from_yml)
+			{
+				if (fs::is_file(entry.path + "/PARAM.SFO"))
+				{
+					push_path(entry.path, legit_paths);
+				}
+				else if (fs::is_file(entry.path + "/PS3_DISC.SFB"))
+				{
+					// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
+					if (entry.path.starts_with(_hdd))
+					{
+						std::string_view frag = std::string_view(entry.path).substr(_hdd.size());
+
+						if (frag.starts_with("disc/"))
+						{
+							// Our path starts from _hdd + 'disc/'
+							frag.remove_prefix(5);
+
+							// Check if the remaining part is the only path component
+							if (frag.find_first_of('/') + 1 == 0)
+							{
+								game_list_log.trace("Removed duplicate: %s", entry.path);
+
+								if (static std::unordered_set<std::string> warn_once_list; warn_once_list.emplace(entry.path).second)
+								{
+									game_list_log.todo("Game at '%s' is using deprecated directory '/dev_hdd0/disc/'.\nConsider moving into '%s'.", entry.path, g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
+								}
+
+								return;
+							}
+						}
+					}
+
+					add_disc_dir(entry.path, legit_paths);
+				}
+				else
+				{
+					game_list_log.trace("Invalid game path registered: %s", entry.path);
+					return;
+				}
+			}
+			else if (fs::is_file(entry.path + "/PS3_DISC.SFB"))
+			{
+				if (!entry.is_disc)
+				{
+					game_list_log.error("Invalid game path found in %s", entry.path);
+					return;
+				}
+
+				add_disc_dir(entry.path, legit_paths);
+			}
+			else
+			{
+				if (entry.is_disc)
+				{
+					game_list_log.error("Invalid disc path found in %s", entry.path);
+					return;
+				}
+
+				push_path(entry.path, legit_paths);
+			}
+
+			for (const std::string& path : legit_paths)
+			{
+				add_game(path);
+			}
 		}));
 
 		return;
@@ -825,6 +850,7 @@ void game_list_frame::OnRefreshFinished()
 	m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 	m_serials.clear();
 	m_path_list.clear();
+	m_path_entries.clear();
 
 	Refresh();
 
