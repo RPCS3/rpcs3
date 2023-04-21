@@ -276,6 +276,9 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	// Disable vsh if not present.
 	ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self"));
 
+	// Focus to search bar by default
+	ui->mw_searchbar->setFocus();
+
 	return true;
 }
 
@@ -2784,6 +2787,7 @@ void main_window::CreateConnects()
 	});
 
 	connect(ui->mw_searchbar, &QLineEdit::textChanged, m_game_list_frame, &game_list_frame::SetSearchText);
+	connect(ui->mw_searchbar, &QLineEdit::returnPressed, m_game_list_frame, &game_list_frame::FocusAndSelectFirstEntryIfNoneIs);
 }
 
 void main_window::CreateDockWindows()

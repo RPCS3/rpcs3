@@ -77,6 +77,7 @@ public Q_SLOTS:
 	void SetShowCompatibilityInGrid(bool show);
 	void SetShowCustomIcons(bool show);
 	void SetPlayHoverGifs(bool play);
+	void FocusAndSelectFirstEntryIfNoneIs();
 
 private Q_SLOTS:
 	void OnRefreshFinished();

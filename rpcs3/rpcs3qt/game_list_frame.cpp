@@ -2422,6 +2422,28 @@ void game_list_frame::SetSearchText(const QString& text)
 	Refresh();
 }
 
+void game_list_frame::FocusAndSelectFirstEntryIfNoneIs()
+{
+	if (m_is_list_layout)
+	{
+		if (!m_game_list)
+		{
+			return;
+		}
+
+		m_game_list->FocusAndSelectFirstEntryIfNoneIs();
+	}
+	else
+	{
+		if (!m_game_grid)
+		{
+			return;
+		}
+
+		m_game_grid->FocusAndSelectFirstEntryIfNoneIs();
+	}
+}
+
 void game_list_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
