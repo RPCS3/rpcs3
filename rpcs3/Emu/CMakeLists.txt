@@ -1,5 +1,6 @@
 add_library(rpcs3_emu
     cache_utils.cpp
+    games_config.cpp
     IdManager.cpp
     localized_string.cpp
     savestate_utils.cpp

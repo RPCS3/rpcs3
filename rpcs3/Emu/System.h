@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "Utilities/bit_set.h"
+#include "games_config.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -119,7 +120,7 @@ class Emulator final
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
 	atomic_t<u64> m_stop_ctr{0}; // Increments when emulation is stopped
 
-	bool m_games_yml_invalidated = false;
+	games_config m_games_config;
 
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
@@ -285,6 +286,11 @@ public:
 	const std::string& GetUsr() const
 	{
 		return m_usr;
+	}
+
+	const games_config& GetGamesConfig() const
+	{
+		return m_games_config;
 	}
 
 	// Get deserialization manager

@@ -37,7 +37,6 @@
 #include "Utilities/StrUtil.h"
 
 #include "../Crypto/unself.h"
-#include "util/yaml.hpp"
 #include "util/logs.hpp"
 #include "util/serialization.hpp"
 
@@ -875,26 +874,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 	{
 		Init(add_only);
 
-		// Load game list (maps ABCD12345 IDs to /dev_bdvd/ locations)
-		YAML::Node games;
-
-		if (fs::file f{fs::get_config_dir() + "/games.yml", fs::read + fs::create})
-		{
-			auto [result, error] = yaml_load(f.to_string());
-
-			if (!error.empty())
-			{
-				sys_log.error("Failed to load games.yml: %s", error);
-			}
-
-			games = result;
-		}
-
-		if (!games.IsMap())
-		{
-			games.reset();
-		}
-
 		m_state_inspection_savestate = g_cfg.savestate.state_inspection_mode.get();
 		m_savestate_extension_flags1 = {};
 
@@ -956,9 +935,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				m_title_id = disc_info;
 
 				// Load /dev_bdvd/ from game list if available
-				if (auto node = games[m_title_id])
+				if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 				{
-					disc = node.Scalar();
+					disc = std::move(game_path);
 				}
 				else if (!g_cfg.savestate.state_inspection_mode)
 				{
@@ -1070,9 +1049,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			std::string title_path;
 
 			// const overload does not create new node on failure
-			if (auto node = std::as_const(games)[m_title_id])
+			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
-				title_path = node.Scalar();
+				title_path = std::move(game_path);
 			}
 
 			for (std::string test_path :
@@ -1113,9 +1092,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					title_id = title_id.substr(0, title_id.find_first_of('/'));
 
 					// Try to load game directory from list if available
-					if (auto node = (title_id.empty() ? YAML::Node{} : games[title_id]))
+					if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 					{
-						disc = node.Scalar();
+						disc = std::move(game_path);
 						m_path = disc + argv[0].substr(game0_path.size() + title_id.size());
 					}
 				}
@@ -1541,9 +1520,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		if ((is_disc_patch || m_cat == "GD") && bdvd_dir.empty() && disc.empty())
 		{
 			// Load /dev_bdvd/ from game list if available
-			if (auto node = games[m_title_id])
+			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
-				bdvd_dir = node.Scalar();
+				bdvd_dir = std::move(game_path);
 			}
 			else
 			{
@@ -1551,35 +1530,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				return game_boot_result::invalid_file_or_folder;
 			}
 		}
-
-		auto try_register_game_location = [&](const std::string& key, const std::string& loc)
-		{
-			// Access or create node if does not exist
-			auto node = games[key];
-
-			if (node && node.Scalar() == loc)
-			{
-				// Nothing to do
-				return true;
-			}
-
-			// Write to node
-			node = loc;
-
-			YAML::Emitter out;
-			out << games;
-
-			fs::pending_file temp(fs::get_config_dir() + "/games.yml");
-
-			// Do not update games.yml when TITLE_ID is empty
-			if (temp.file && temp.file.write(out.c_str(), out.size()), temp.commit())
-			{
-				m_games_yml_invalidated = true;
-				return true;
-			}
-
-			return false;
-		};
 
 		// Check /dev_bdvd/
 		if (disc.empty() && !bdvd_dir.empty() && fs::is_dir(bdvd_dir))
@@ -1617,7 +1567,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 
 				// Store /dev_bdvd/ location
-				if (!try_register_game_location(m_title_id, bdvd_dir))
+				if (m_games_config.add_game(m_title_id, bdvd_dir))
+				{
+					sys_log.notice("Registered BDVD game directory for title '%s': %s", m_title_id, bdvd_dir);
+				}
+				else
 				{
 					sys_log.error("Failed to save BDVD location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
 				}
@@ -1675,7 +1629,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 
 				// Add HG games not in HDD0 to games.yml
-				if (!try_register_game_location(m_title_id, game_dir))
+				if (m_games_config.add_game(m_title_id, game_dir))
+				{
+					sys_log.notice("Registered HG game directory for title '%s': %s", m_title_id, game_dir);
+				}
+				else
 				{
 					sys_log.error("Failed to save HG game location of title '%s' (error=%s)", m_title_id, fs::g_tls_error);
 				}
@@ -3154,15 +3112,12 @@ void Emulator::AddGamesFromDir(const std::string& path)
 	if (!IsStopped())
 		return;
 
-	m_games_yml_invalidated = false;
+	m_games_config.set_save_on_dirty(false);
 
 	// search dropped path first or else the direct parent to an elf is wrongly skipped
 	if (const auto error = BootGame(path, "", false, true); error == game_boot_result::no_errors)
 	{
-		if (std::exchange(m_games_yml_invalidated, false))
-		{
-			sys_log.notice("Registered game directory: %s", path);
-		}
+		// Nothing to do
 	}
 
 	// search direct subdirectories, that way we can drop one folder containing all games
@@ -3177,11 +3132,15 @@ void Emulator::AddGamesFromDir(const std::string& path)
 
 		if (const auto error = BootGame(dir_path, "", false, true); error == game_boot_result::no_errors)
 		{
-			if (std::exchange(m_games_yml_invalidated, false))
-			{
-				sys_log.notice("Registered game directory: %s", dir_path);
-			}
+			// Nothing to do
 		}
+	}
+
+	m_games_config.set_save_on_dirty(true);
+
+	if (m_games_config.is_dirty() && !m_games_config.save())
+	{
+		sys_log.error("Failed to save games.yml after adding games");
 	}
 }
 

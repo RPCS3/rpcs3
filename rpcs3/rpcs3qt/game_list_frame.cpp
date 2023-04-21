@@ -516,28 +516,9 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		add_dir(_hdd + "game/", false);
 		add_dir(_hdd + "disc/", true); // Deprecated
 
-		auto get_games = []() -> YAML::Node
+		for (const auto& [serial, path] : Emu.GetGamesConfig().get_games())
 		{
-			if (const fs::file games = fs::file(fs::get_config_dir() + "/games.yml", fs::read + fs::create))
-			{
-				auto [result, error] = yaml_load(games.to_string());
-
-				if (!error.empty())
-				{
-					game_list_log.error("Failed to load games.yml: %s", error);
-					return {};
-				}
-
-				return result;
-			}
-
-			game_list_log.error("Failed to load games.yml, check permissions.");
-			return {};
-		};
-
-		for (auto&& pair : get_games())
-		{
-			std::string game_dir = pair.second.Scalar();
+			std::string game_dir = path;
 
 			game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
@@ -569,7 +550,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 						// Check if the remaining part is the only path component
 						if (frag.find_first_of('/') + 1 == 0)
 						{
-							game_list_log.trace("Removed duplicate for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+							game_list_log.trace("Removed duplicate for %s: %s", serial, path);
 
 							if (static std::unordered_set<std::string> warn_once_list; warn_once_list.emplace(game_dir).second)
 							{
@@ -589,7 +570,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			}
 			else
 			{
-				game_list_log.trace("Invalid game path registered for %s: %s", pair.first.Scalar(), pair.second.Scalar());
+				game_list_log.trace("Invalid game path registered for %s: %s", serial, path);
 			}
 		}
 
