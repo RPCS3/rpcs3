@@ -119,6 +119,8 @@ class Emulator final
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
 	atomic_t<u64> m_stop_ctr{0}; // Increments when emulation is stopped
 
+	bool m_games_yml_invalidated = false;
+
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
 
