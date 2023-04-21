@@ -936,6 +936,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_system_cmd_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\table_item_delegate.cpp">
+      <Filter>Gui\custom items</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\movie_item.cpp">
+      <Filter>Gui\custom items</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">

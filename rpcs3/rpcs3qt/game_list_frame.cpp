@@ -81,7 +81,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_game_list = new game_list();
 	m_game_list->setShowGrid(false);
-	m_game_list->setItemDelegate(new table_item_delegate(this, true));
+	m_game_list->setItemDelegate(new table_item_delegate(m_game_list, true));
 	m_game_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_game_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_game_list->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -140,8 +140,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnRefreshFinished);
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
 	{
-		gui::utils::stop_future_watcher(m_size_watcher, true, m_size_watcher_cancel);
-		gui::utils::stop_future_watcher(m_repaint_watcher, true);
+		WaitAndAbortSizeCalcThreads();
+		WaitAndAbortRepaintThreads();
 
 		m_path_entries.clear();
 		m_path_list.clear();
@@ -156,6 +156,21 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		if (movie_item* item = m_repaint_watcher.resultAt(index))
 		{
 			item->call_icon_func();
+		}
+	});
+	connect(this, &game_list_frame::IconReady, this, [this](movie_item* item)
+	{
+		if (!m_is_list_layout || !item) return;
+		item->call_icon_func();
+	});
+	connect(this, &game_list_frame::SizeOnDiskReady, this, [this](const game_info& game)
+	{
+		if (!m_is_list_layout || !game || !game->item) return;
+		if (QTableWidgetItem* size_item = m_game_list->item(game->item->row(), gui::column_dir_size))
+		{
+			const u64& game_size = game->info.size_on_disk;
+			size_item->setText(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"));
+			size_item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(game_size));
 		}
 	});
 	connect(&m_size_watcher, &QFutureWatcher<void>::canceled, this, [this]()
@@ -267,8 +282,8 @@ void game_list_frame::LoadSettings()
 
 game_list_frame::~game_list_frame()
 {
-	gui::utils::stop_future_watcher(m_size_watcher, true);
-	gui::utils::stop_future_watcher(m_repaint_watcher, true);
+	WaitAndAbortSizeCalcThreads();
+	WaitAndAbortRepaintThreads();
 	gui::utils::stop_future_watcher(m_refresh_watcher, true);
 
 	SaveSettings();
@@ -440,9 +455,9 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 {
 	if (from_drive)
 	{
-		gui::utils::stop_future_watcher(m_size_watcher, true, m_size_watcher_cancel);
+		WaitAndAbortSizeCalcThreads();
 	}
-	gui::utils::stop_future_watcher(m_repaint_watcher, true);
+	WaitAndAbortRepaintThreads();
 	gui::utils::stop_future_watcher(m_refresh_watcher, from_drive);
 
 	if (from_drive)
@@ -781,8 +796,8 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 void game_list_frame::OnRefreshFinished()
 {
-	gui::utils::stop_future_watcher(m_size_watcher, true, m_size_watcher_cancel);
-	gui::utils::stop_future_watcher(m_repaint_watcher, true);
+	WaitAndAbortSizeCalcThreads();
+	WaitAndAbortRepaintThreads();
 
 	for (auto&& g : m_games.pop_all())
 	{
@@ -855,6 +870,38 @@ void game_list_frame::OnRefreshFinished()
 	Refresh();
 
 	m_size_watcher_cancel = std::make_shared<atomic_t<bool>>(false);
+
+	if (m_is_list_layout)
+	{
+		for (auto& game : m_game_data)
+		{
+			if (movie_item* item = game->item)
+			{
+				item->set_size_calc_func([this, game, cancel = item->size_on_disk_loading_aborted(), dev_flash = g_cfg_vfs.get_dev_flash()]()
+				{
+					if (game && game->info.size_on_disk == umax && (!cancel || !cancel->load()))
+					{
+						if (game->info.path.starts_with(dev_flash))
+						{
+							// Do not report size of apps inside /dev_flash (it does not make sense to do so)
+							game->info.size_on_disk = 0;
+						}
+						else
+						{
+							game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
+						}
+
+						if (!cancel || !cancel->load())
+						{
+							Q_EMIT SizeOnDiskReady(game);
+						}
+					}
+				});
+			}
+		}
+
+		return;
+	}
 
 	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this, cancel = m_size_watcher_cancel, dev_flash = g_cfg_vfs.get_dev_flash()](const game_info& game) -> void
 	{
@@ -2393,7 +2440,7 @@ void game_list_frame::ResizeIcons(const int& slider_pos)
 
 void game_list_frame::RepaintIcons(const bool& from_settings)
 {
-	gui::utils::stop_future_watcher(m_repaint_watcher, true);
+	WaitAndAbortRepaintThreads();
 
 	if (from_settings)
 	{
@@ -2415,8 +2462,52 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 		for (auto& game : m_game_data)
 		{
 			game->pxmap = placeholder;
+
 			if (movie_item* item = game->item)
 			{
+				item->set_icon_load_func([this, game, cancel = item->icon_loading_aborted()]()
+				{
+					if (cancel && cancel->load())
+					{
+						return;
+					}
+
+					static std::unordered_set<std::string> warn_once_list;
+					static shared_mutex s_mtx;
+
+					if (game->icon.isNull() && (game->info.icon_path.empty() || !game->icon.load(qstr(game->info.icon_path))))
+					{
+						if (game_list_log.warning)
+						{
+							bool logged = false;
+							{
+								std::lock_guard lock(s_mtx);
+								logged = !warn_once_list.emplace(game->info.icon_path).second;
+							}
+
+							if (!logged)
+							{
+								game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game->info.icon_path)).absolutePath()));
+							}
+						}
+					}
+
+					if (!game->item || (cancel && cancel->load()))
+					{
+						return;
+					}
+
+					const QColor color = getGridCompatibilityColor(game->compat.color);
+					{
+						std::lock_guard lock(game->item->pixmap_mutex);
+						game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
+					}
+
+					if (!cancel || !cancel->load())
+					{
+						Q_EMIT IconReady(game->item);
+					}
+				});
 				item->call_icon_func();
 			}
 		}
@@ -2430,6 +2521,8 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 
 		// Shorten the last section to remove horizontal scrollbar if possible
 		m_game_list->resizeColumnToContents(gui::column_count - 1);
+
+		return;
 	}
 
 	const std::function func = [this](const game_info& game) -> movie_item*
@@ -2606,12 +2699,14 @@ void game_list_frame::PopulateGameList()
 		{
 			ensure(icon_item && game);
 
-			if (QMovie* movie = icon_item->movie(); movie && icon_item->get_active())
+			if (std::shared_ptr<QMovie> movie = icon_item->movie(); movie && icon_item->get_active())
 			{
 				icon_item->setData(Qt::DecorationRole, movie->currentPixmap().scaled(m_icon_size, Qt::KeepAspectRatio));
 			}
 			else
 			{
+				std::lock_guard lock(icon_item->pixmap_mutex);
+
 				icon_item->setData(Qt::DecorationRole, game->pxmap);
 
 				if (!game->has_hover_gif)
@@ -2985,4 +3080,30 @@ std::string game_list_frame::GetGameVersion(const game_info& game)
 	}
 
 	return game->info.app_ver;
+}
+
+void game_list_frame::WaitAndAbortRepaintThreads()
+{
+	gui::utils::stop_future_watcher(m_repaint_watcher, true);
+
+	for (const game_info& game : m_game_data)
+	{
+		if (game && game->item)
+		{
+			game->item->wait_for_icon_loading(true);
+		}
+	}
+}
+
+void game_list_frame::WaitAndAbortSizeCalcThreads()
+{
+	gui::utils::stop_future_watcher(m_size_watcher, true, m_size_watcher_cancel);
+
+	for (const game_info& game : m_game_data)
+	{
+		if (game && game->item)
+		{
+			game->item->wait_for_size_on_disk_loading(true);
+		}
+	}
 }
