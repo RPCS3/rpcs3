@@ -109,9 +109,9 @@ private:
 	void ShowCustomConfigIcon(const game_info& game);
 	void PopulateGameList();
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
-	bool IsEntryVisible(const game_info& game);
+	bool IsEntryVisible(const game_info& game, bool search_fallback = false);
 	void SortGameList() const;
-	bool SearchMatchesApp(const QString& name, const QString& serial) const;
+	bool SearchMatchesApp(const QString& name, const QString& serial, bool fallback = false) const;
 
 	bool RemoveCustomConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
 	bool RemoveCustomPadConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
