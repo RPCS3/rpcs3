@@ -45,3 +45,13 @@ void game_list::leaveEvent(QEvent */*event*/)
 		m_last_hover_item = nullptr;
 	}
 }
+
+void game_list::FocusAndSelectFirstEntryIfNoneIs()
+{
+	if (QTableWidgetItem* item = itemAt(0, 0); item && selectedIndexes().isEmpty())
+	{
+		setCurrentItem(item);
+	}
+
+	setFocus();
+}
