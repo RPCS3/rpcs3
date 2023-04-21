@@ -481,7 +481,7 @@ void main_window::show_boot_error(game_boot_result status)
 	msg.exec();
 }
 
-void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool add_only, cfg_mode config_mode, const std::string& config_path)
+void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path)
 {
 	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_boot))
 	{
@@ -492,7 +492,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
 
-	if (const auto error = Emu.BootGame(path, title_id, direct, add_only, config_mode, config_path); error != game_boot_result::no_errors)
+	if (const auto error = Emu.BootGame(path, title_id, direct, false, config_mode, config_path); error != game_boot_result::no_errors)
 	{
 		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
 		show_boot_error(error);
@@ -500,10 +500,8 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	else
 	{
 		gui_log.success("Boot successful.");
-		if (!add_only)
-		{
-			AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(Emu.GetTitleAndTitleID())));
-		}
+
+		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(Emu.GetTitleAndTitleID())));
 	}
 
 	m_game_list_frame->Refresh(true);
@@ -2912,7 +2910,7 @@ void main_window::CreateDockWindows()
 
 	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path, const std::string& savestate)
 	{
-		Boot(savestate.empty() ? game->info.path : savestate, game->info.serial, false, false, config_mode, config_path);
+		Boot(savestate.empty() ? game->info.path : savestate, game->info.serial, false, config_mode, config_path);
 	});
 
 	connect(m_game_list_frame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);
