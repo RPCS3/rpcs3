@@ -609,13 +609,13 @@ namespace rsx
 		{
 			auto protect_ranges = [this](address_range_vector& _set, utils::protection _prot)
 			{
-				u32 count = 0;
+				//u32 count = 0;
 				for (auto &range : _set)
 				{
 					if (range.valid())
 					{
 						rsx::memory_protect(range, _prot);
-						count++;
+						//count++;
 					}
 				}
 				//rsx_log.error("Set protection of %d blocks to 0x%x", count, static_cast<u32>(prot));

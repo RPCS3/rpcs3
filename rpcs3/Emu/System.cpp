@@ -210,7 +210,7 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 	{
 		Emu.ExecDeserializationRemnants();
 
-		auto flags = (*ar)(Emu.m_savestate_extension_flags1);
+		[[maybe_unused]] auto flags = (*ar)(Emu.m_savestate_extension_flags1);
 
 		const usz advance = (Emu.m_savestate_extension_flags1 & Emulator::SaveStateExtentionFlags1::SupportsMenuOpenResume ? 32 : 31);
 
@@ -2506,7 +2506,6 @@ void Emulator::Resume()
 	}
 }
 
-s32 sysutil_send_system_cmd(u64 status, u64 param);
 u64 get_sysutil_cb_manager_read_count();
 
 void process_qt_events();

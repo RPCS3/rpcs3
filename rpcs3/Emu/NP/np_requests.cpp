@@ -996,7 +996,6 @@ namespace np
 
 		memset(tdata->rankArray.get_ptr(), 0, tdata->rankArraySize);
 		auto* fb_rankarray = resp->rankArray();
-		u32 target_index = 0;
 
 		vm::ptr<SceNpScoreRankData> rankArray = vm::static_ptr_cast<SceNpScoreRankData>(tdata->rankArray);
 		vm::ptr<SceNpScorePlayerRankData> rankPlayerArray = vm::static_ptr_cast<SceNpScorePlayerRankData>(tdata->rankArray);
@@ -1030,8 +1029,6 @@ namespace np
 			cur_rank->scoreValue = fb_rankdata->score();
 			cur_rank->hasGameData = fb_rankdata->hasGameData();
 			cur_rank->recordDate.tick = fb_rankdata->recordDate();
-
-			target_index++;
 		}
 
 		if (tdata->commentArray)
