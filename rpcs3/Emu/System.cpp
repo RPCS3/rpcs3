@@ -1572,7 +1572,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			fs::pending_file temp(fs::get_config_dir() + "/games.yml");
 
 			// Do not update games.yml when TITLE_ID is empty
-			return temp.file && temp.file.write(out.c_str(), out.size()), temp.commit();
+			if (temp.file && temp.file.write(out.c_str(), out.size()), temp.commit())
+			{
+				m_games_yml_invalidated = true;
+				return true;
+			}
+
+			return false;
 		};
 
 		// Check /dev_bdvd/
@@ -3149,27 +3155,14 @@ void Emulator::AddGamesFromDir(const std::string& path)
 	if (!IsStopped())
 		return;
 
-	const std::string games_yml = fs::get_cache_dir() + "/games.yml";
-
-	std::string content_before, content_after;
-
-	if (fs::file fd{games_yml})
-	{
-		content_before = fd.to_string();
-	}
+	m_games_yml_invalidated = false;
 
 	// search dropped path first or else the direct parent to an elf is wrongly skipped
 	if (const auto error = BootGame(path, "", false, true); error == game_boot_result::no_errors)
 	{
-		if (fs::file fd{games_yml, fs::read + fs::isfile})
-		{
-			content_after = fd.to_string();
-		}
-
-		if (content_before != content_after)
+		if (std::exchange(m_games_yml_invalidated, false))
 		{
 			sys_log.notice("Registered game directory: %s", path);
-			content_before = content_after;
 		}
 	}
 
@@ -3185,15 +3178,9 @@ void Emulator::AddGamesFromDir(const std::string& path)
 
 		if (const auto error = BootGame(dir_path, "", false, true); error == game_boot_result::no_errors)
 		{
-			if (fs::file fd{games_yml, fs::read + fs::isfile})
-			{
-				content_after = fd.to_string();
-			}
-
-			if (content_before != content_after)
+			if (std::exchange(m_games_yml_invalidated, false))
 			{
 				sys_log.notice("Registered game directory: %s", dir_path);
-				content_before = content_after;
 			}
 		}
 	}
