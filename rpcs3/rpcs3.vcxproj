@@ -671,6 +671,7 @@
     <ClCompile Include="rpcs3qt\localized.cpp" />
     <ClCompile Include="rpcs3qt\log_viewer.cpp" />
     <ClCompile Include="rpcs3qt\microphone_creator.cpp" />
+    <ClCompile Include="rpcs3qt\movie_item.cpp" />
     <ClCompile Include="rpcs3qt\osk_dialog_frame.cpp" />
     <ClCompile Include="rpcs3qt\pad_led_settings_dialog.cpp" />
     <ClCompile Include="rpcs3qt\pad_motion_settings_dialog.cpp" />
@@ -696,6 +697,7 @@
     <ClCompile Include="rpcs3qt\shortcut_utils.cpp" />
     <ClCompile Include="rpcs3qt\skylander_dialog.cpp" />
     <ClCompile Include="rpcs3qt\system_cmd_dialog.cpp" />
+    <ClCompile Include="rpcs3qt\table_item_delegate.cpp" />
     <ClCompile Include="rpcs3qt\tooltips.cpp" />
     <ClCompile Include="rpcs3qt\update_manager.cpp" />
     <ClCompile Include="rpcs3qt\qt_camera_video_surface.cpp" />

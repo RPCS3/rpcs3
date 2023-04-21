@@ -92,6 +92,8 @@ Q_SIGNALS:
 	void RequestBoot(const game_info& game, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::string& savestate = "");
 	void RequestIconSizeChange(const int& val);
 	void NotifyEmuSettingsChange();
+	void IconReady(movie_item* item);
+	void SizeOnDiskReady(const game_info& game);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
@@ -126,6 +128,9 @@ private:
 
 	game_info GetGameInfoByMode(const QTableWidgetItem* item) const;
 	static game_info GetGameInfoFromItem(const QTableWidgetItem* item);
+
+	void WaitAndAbortRepaintThreads();
+	void WaitAndAbortSizeCalcThreads();
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_game_dock = nullptr;
