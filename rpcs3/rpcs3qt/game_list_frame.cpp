@@ -332,7 +332,7 @@ void game_list_frame::OnColClicked(int col)
 }
 
 // Get visibility of entries
-bool game_list_frame::IsEntryVisible(const game_info& game)
+bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback)
 {
 	const auto matches_category = [&]()
 	{
@@ -346,7 +346,7 @@ bool game_list_frame::IsEntryVisible(const game_info& game)
 
 	const QString serial = qstr(game->info.serial);
 	const bool is_visible = m_show_hidden || !m_hidden_list.contains(serial);
-	return is_visible && matches_category() && SearchMatchesApp(qstr(game->info.name), serial);
+	return is_visible && matches_category() && SearchMatchesApp(qstr(game->info.name), serial, search_fallback);
 }
 
 void game_list_frame::SortGameList() const
@@ -2544,11 +2544,15 @@ void game_list_frame::PopulateGameList()
 
 	int row = 0;
 	int index = -1;
+
+	// Fallback is not needed when at least one entry is visible
+	const bool use_search_fallback = std::none_of(m_game_data.begin(), m_game_data.end(), [this](auto& game){ return IsEntryVisible(game); });
+
 	for (const auto& game : m_game_data)
 	{
 		index++;
 
-		if (!IsEntryVisible(game))
+		if (!IsEntryVisible(game, use_search_fallback))
 		{
 			game->item = nullptr;
 			continue;
@@ -2748,6 +2752,18 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 		}
 	}
 
+	// Fallback is not needed when at least one entry is visible
+	if (matching_apps.isEmpty())
+	{
+		for (const auto& app : m_game_data)
+		{
+			if (IsEntryVisible(app, true))
+			{
+				matching_apps.push_back(app);
+			}
+		}
+	}
+
 	const int entries = matching_apps.count();
 
 	// Edge cases!
@@ -2820,12 +2836,43 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 /**
 * Returns false if the game should be hidden because it doesn't match search term in toolbar.
 */
-bool game_list_frame::SearchMatchesApp(const QString& name, const QString& serial) const
+bool game_list_frame::SearchMatchesApp(const QString& name, const QString& serial, bool fallback) const
 {
 	if (!m_search_text.isEmpty())
 	{
-		const QString search_text = m_search_text.toLower();
-		return m_titles.value(serial, name).toLower().contains(search_text) || serial.toLower().contains(search_text);
+		QString search_text = m_search_text.toLower();
+		QString title_name = m_titles.value(serial, name).toLower();
+
+		// Ignore trademarks when no search results have been yielded by unmodified search
+		static const QRegularExpression s_ignored_on_fallback(reinterpret_cast<const char*>(u8"[:\\-®©™]+"));
+
+		if (fallback)
+		{
+			search_text = search_text.simplified();
+			title_name = title_name.simplified();
+
+			QString title_name_replaced_trademarks_with_spaces = title_name;
+			QString title_name_simplified = title_name;
+
+			search_text.remove(s_ignored_on_fallback);
+			title_name.remove(s_ignored_on_fallback);
+			title_name_replaced_trademarks_with_spaces.replace(s_ignored_on_fallback, " ");
+
+			// Before simplify to allow spaces in the beginning and end where ignored characters may have been
+			if (title_name_replaced_trademarks_with_spaces.contains(search_text))
+			{
+				return true;
+			}
+
+			title_name_replaced_trademarks_with_spaces = title_name_replaced_trademarks_with_spaces.simplified();
+
+			if (title_name_replaced_trademarks_with_spaces.contains(search_text))
+			{
+				return true;
+			}
+		}
+
+		return title_name.contains(search_text) || serial.toLower().contains(search_text);
 	}
 	return true;
 }
