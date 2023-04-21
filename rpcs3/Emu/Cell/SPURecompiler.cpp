@@ -5646,15 +5646,16 @@ public:
 
 										auto succ = b2->block;
 
-										std::vector<llvm::BasicBlock*> succ_q{b2->block};
+										llvm::SmallSetVector<llvm::BasicBlock*, 32> succ_q;
+										succ_q.insert(b2->block);
 
-										for (usz j = 0; j < succ_q.size(); j++)
+										for (usz j = 0; j < 32 && j < succ_q.size(); j++)
 										{
 											if (!llvm::count(succ_range, (succ = succ_q[j])))
 											{
 												for (auto pred : llvm::predecessors(succ))
 												{
-													succ_q.emplace_back(pred);
+													succ_q.insert(pred);
 												}
 											}
 											else
