@@ -848,37 +848,6 @@ void game_list_frame::OnRefreshFinished()
 	m_path_entries.clear();
 
 	Refresh();
-
-	// Only calculate sizes in list mode
-	if (m_is_list_layout)
-	{
-		for (auto& game : m_game_data)
-		{
-			if (movie_item* item = game->item)
-			{
-				item->set_size_calc_func([this, game, cancel = item->size_on_disk_loading_aborted(), dev_flash = g_cfg_vfs.get_dev_flash()]()
-				{
-					if (game && game->info.size_on_disk == umax && (!cancel || !cancel->load()))
-					{
-						if (game->info.path.starts_with(dev_flash))
-						{
-							// Do not report size of apps inside /dev_flash (it does not make sense to do so)
-							game->info.size_on_disk = 0;
-						}
-						else
-						{
-							game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
-						}
-
-						if (!cancel || !cancel->load())
-						{
-							Q_EMIT SizeOnDiskReady(game);
-						}
-					}
-				});
-			}
-		}
-	}
 }
 
 void game_list_frame::OnCompatFinished()
@@ -2596,6 +2565,28 @@ void game_list_frame::PopulateGameList()
 				if (movie)
 				{
 					movie->stop();
+				}
+			}
+		});
+
+		icon_item->set_size_calc_func([this, game, cancel = icon_item->size_on_disk_loading_aborted(), dev_flash = g_cfg_vfs.get_dev_flash()]()
+		{
+			if (game && game->info.size_on_disk == umax && (!cancel || !cancel->load()))
+			{
+				if (game->info.path.starts_with(dev_flash))
+				{
+					// Do not report size of apps inside /dev_flash (it does not make sense to do so)
+					game->info.size_on_disk = 0;
+				}
+				else
+				{
+					game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
+				}
+
+				if (!cancel || !cancel->load())
+				{
+					Q_EMIT SizeOnDiskReady(game);
+					return;
 				}
 			}
 		});
