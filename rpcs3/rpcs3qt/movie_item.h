@@ -61,12 +61,12 @@ public:
 		return m_size_on_disk_loading;
 	}
 
-	std::shared_ptr<atomic_t<bool>> icon_loading_aborted() const
+	[[nodiscard]] std::shared_ptr<atomic_t<bool>> icon_loading_aborted() const
 	{
 		return m_icon_loading_aborted;
 	}
 
-	std::shared_ptr<atomic_t<bool>> size_on_disk_loading_aborted() const
+	[[nodiscard]] std::shared_ptr<atomic_t<bool>> size_on_disk_loading_aborted() const
 	{
 		return m_size_on_disk_loading_aborted;
 	}

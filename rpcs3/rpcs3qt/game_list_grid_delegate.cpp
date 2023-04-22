@@ -1,4 +1,7 @@
 #include "game_list_grid_delegate.h"
+#include "movie_item.h"
+
+#include <QTableWidget>
 
 game_list_grid_delegate::game_list_grid_delegate(const QSize& size, const qreal& margin_factor, const qreal& text_factor, QObject *parent)
 	 : QStyledItemDelegate(parent), m_size(size), m_margin_factor(margin_factor), m_text_factor(text_factor)
@@ -23,12 +26,30 @@ void game_list_grid_delegate::paint(QPainter* painter, const QStyleOptionViewIte
 	painter->setRenderHints(QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
 	painter->eraseRect(r);
 
+	// Paint from our stylesheet
+	QStyledItemDelegate::paint(painter, option, index);
+
+	// Check if the item is visible
+	if (const QTableWidget* table = static_cast<const QTableWidget*>(parent()))
+	{
+		if (movie_item* item = static_cast<movie_item*>(table->item(index.row(), index.column())))
+		{
+			if (!table->visibleRegion().intersects(table->visualItemRect(item)))
+			{
+				// Skip all further actions if the item is not visible
+				return;
+			}
+
+			if (!item->icon_loading())
+			{
+				item->call_icon_load_func();
+			}
+		}
+	}
+
 	// Get title and image
 	const QPixmap image = qvariant_cast<QPixmap>(index.data(Qt::DecorationRole));
 	const QString title = index.data(Qt::DisplayRole).toString();
-
-	// Paint from our stylesheet
-	QStyledItemDelegate::paint(painter, option, index);
 
 	// image
 	if (image.isNull() == false)
