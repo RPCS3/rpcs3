@@ -2727,6 +2727,8 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	for (const auto& app : m_game_data)
 	{
+		app->item = nullptr;
+
 		if (IsEntryVisible(app))
 		{
 			matching_apps.push_back(app);
