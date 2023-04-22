@@ -173,17 +173,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 			size_item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(game_size));
 		}
 	});
-	connect(&m_size_watcher, &QFutureWatcher<void>::canceled, this, [this]()
-	{
-		if (m_size_watcher_cancel)
-		{
-			*m_size_watcher_cancel = true;
-		}
-	});
-	connect(&m_size_watcher, &QFutureWatcher<void>::finished, this, [this]()
-	{
-		Refresh();
-	});
 
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_list, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
@@ -869,8 +858,7 @@ void game_list_frame::OnRefreshFinished()
 
 	Refresh();
 
-	m_size_watcher_cancel = std::make_shared<atomic_t<bool>>(false);
-
+	// Only calculate sizes in list mode
 	if (m_is_list_layout)
 	{
 		for (auto& game : m_game_data)
@@ -899,25 +887,7 @@ void game_list_frame::OnRefreshFinished()
 				});
 			}
 		}
-
-		return;
 	}
-
-	m_size_watcher.setFuture(QtConcurrent::map(m_game_data, [this, cancel = m_size_watcher_cancel, dev_flash = g_cfg_vfs.get_dev_flash()](const game_info& game) -> void
-	{
-		if (game)
-		{
-			if (game->info.path.starts_with(dev_flash))
-			{
-				// Do not report size of apps inside /dev_flash (it does not make sense to do so)
-				game->info.size_on_disk = 0;
-			}
-			else
-			{
-				game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
-			}
-		}
-	}));
 }
 
 void game_list_frame::OnRepaintFinished()
@@ -3097,8 +3067,6 @@ void game_list_frame::WaitAndAbortRepaintThreads()
 
 void game_list_frame::WaitAndAbortSizeCalcThreads()
 {
-	gui::utils::stop_future_watcher(m_size_watcher, true, m_size_watcher_cancel);
-
 	for (const game_info& game : m_game_data)
 	{
 		if (game && game->item)
