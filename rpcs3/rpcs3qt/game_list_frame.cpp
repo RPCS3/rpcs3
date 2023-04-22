@@ -149,10 +149,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_serials.clear();
 		m_games.pop_all();
 	});
-	connect(&m_repaint_watcher, &QFutureWatcher<movie_item*>::finished, this, &game_list_frame::OnRepaintFinished);
 	connect(this, &game_list_frame::IconReady, this, [this](movie_item* item)
 	{
-		if (!m_is_list_layout || !item) return;
+		if (!item) return;
 		item->call_icon_func();
 	});
 	connect(this, &game_list_frame::SizeOnDiskReady, this, [this](const game_info& game)
@@ -879,29 +878,6 @@ void game_list_frame::OnRefreshFinished()
 				});
 			}
 		}
-	}
-}
-
-void game_list_frame::OnRepaintFinished()
-{
-	if (!m_is_list_layout)
-	{
-		// The game grid needs to be recreated from scratch
-		int games_per_row = 0;
-
-		if (m_icon_size.width() > 0 && m_icon_size.height() > 0)
-		{
-			games_per_row = width() / (m_icon_size.width() + m_icon_size.width() * m_game_grid->getMarginFactor() * 2);
-		}
-
-		const int scroll_position = m_game_grid->verticalScrollBar()->value();
-		PopulateGameGrid(games_per_row, m_icon_size, m_icon_color);
-		connect(m_game_grid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
-		connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
-		connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
-		m_central_widget->addWidget(m_game_grid);
-		m_central_widget->setCurrentWidget(m_game_grid);
-		m_game_grid->verticalScrollBar()->setValue(scroll_position);
 	}
 }
 
@@ -2409,7 +2385,7 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 		QPixmap placeholder(m_icon_size);
 		placeholder.fill(Qt::transparent);
 
-		for (auto& game : m_game_data)
+		for (game_info& game : m_game_data)
 		{
 			game->pxmap = placeholder;
 
@@ -2417,46 +2393,7 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 			{
 				item->set_icon_load_func([this, game, cancel = item->icon_loading_aborted()]()
 				{
-					if (cancel && cancel->load())
-					{
-						return;
-					}
-
-					static std::unordered_set<std::string> warn_once_list;
-					static shared_mutex s_mtx;
-
-					if (game->icon.isNull() && (game->info.icon_path.empty() || !game->icon.load(qstr(game->info.icon_path))))
-					{
-						if (game_list_log.warning)
-						{
-							bool logged = false;
-							{
-								std::lock_guard lock(s_mtx);
-								logged = !warn_once_list.emplace(game->info.icon_path).second;
-							}
-
-							if (!logged)
-							{
-								game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game->info.icon_path)).absolutePath()));
-							}
-						}
-					}
-
-					if (!game->item || (cancel && cancel->load()))
-					{
-						return;
-					}
-
-					const QColor color = getGridCompatibilityColor(game->compat.color);
-					{
-						std::lock_guard lock(game->item->pixmap_mutex);
-						game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
-					}
-
-					if (!cancel || !cancel->load())
-					{
-						Q_EMIT IconReady(game->item);
-					}
+					IconLoadFunction(game, cancel);
 				});
 				item->call_icon_func();
 			}
@@ -2471,37 +2408,26 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 
 		// Shorten the last section to remove horizontal scrollbar if possible
 		m_game_list->resizeColumnToContents(gui::column_count - 1);
-
-		return;
 	}
-
-	const std::function func = [this](const game_info& game) -> movie_item*
+	else
 	{
-		static std::unordered_set<std::string> warn_once_list;
-		static shared_mutex s_mtx;
+		// The game grid needs to be recreated from scratch
+		int games_per_row = 0;
 
-		if (game->icon.isNull() && (game->info.icon_path.empty() || !game->icon.load(qstr(game->info.icon_path))))
+		if (m_icon_size.width() > 0 && m_icon_size.height() > 0)
 		{
-			if (game_list_log.warning)
-			{
-				bool logged = false;
-				{
-					std::lock_guard lock(s_mtx);
-					logged = !warn_once_list.emplace(game->info.icon_path).second;
-				}
-
-				if (!logged)
-				{
-					game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game->info.icon_path)).absolutePath()));
-				}
-			}
+			games_per_row = width() / (m_icon_size.width() + m_icon_size.width() * m_game_grid->getMarginFactor() * 2);
 		}
 
-		const QColor color = getGridCompatibilityColor(game->compat.color);
-		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
-		return game->item;
-	};
-	m_repaint_watcher.setFuture(QtConcurrent::mapped(m_game_data, func));
+		const int scroll_position = m_game_grid->verticalScrollBar()->value();
+		PopulateGameGrid(games_per_row, m_icon_size, m_icon_color);
+		connect(m_game_grid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
+		connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
+		connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
+		m_central_widget->addWidget(m_game_grid);
+		m_central_widget->setCurrentWidget(m_game_grid);
+		m_game_grid->verticalScrollBar()->setValue(scroll_position);
+	}
 }
 
 void game_list_frame::SetShowHidden(bool show)
@@ -2647,7 +2573,10 @@ void game_list_frame::PopulateGameList()
 
 		icon_item->set_icon_func([this, icon_item, game](int)
 		{
-			ensure(icon_item && game);
+			if (!icon_item || !game)
+			{
+				return;
+			}
 
 			if (std::shared_ptr<QMovie> movie = icon_item->movie(); movie && icon_item->get_active())
 			{
@@ -2821,7 +2750,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	const QString game_icon_path = m_play_hover_movies ? qstr(fs::get_config_dir() + "/Icons/game_icons/") : "";
 
-	for (const auto& app : matching_apps)
+	for (const game_info& app : matching_apps)
 	{
 		const QString serial = qstr(app->info.serial);
 		const QString title = m_titles.value(serial, qstr(app->info.name));
@@ -2831,6 +2760,10 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 		ensure(item);
 		app->item = item;
 		item->setData(gui::game_role, QVariant::fromValue(app));
+		item->set_icon_load_func([this, app, cancel = item->icon_loading_aborted()]()
+		{
+			IconLoadFunction(app, cancel);
+		});
 
 		if (!notes.isEmpty())
 		{
@@ -3032,10 +2965,52 @@ std::string game_list_frame::GetGameVersion(const game_info& game)
 	return game->info.app_ver;
 }
 
+void game_list_frame::IconLoadFunction(game_info game, std::shared_ptr<atomic_t<bool>> cancel)
+{
+	if (cancel && cancel->load())
+	{
+		return;
+	}
+
+	static std::unordered_set<std::string> warn_once_list;
+	static shared_mutex s_mtx;
+
+	if (game->icon.isNull() && (game->info.icon_path.empty() || !game->icon.load(qstr(game->info.icon_path))))
+	{
+		if (game_list_log.warning)
+		{
+			bool logged = false;
+			{
+				std::lock_guard lock(s_mtx);
+				logged = !warn_once_list.emplace(game->info.icon_path).second;
+			}
+
+			if (!logged)
+			{
+				game_list_log.warning("Could not load image from path %s", sstr(QDir(qstr(game->info.icon_path)).absolutePath()));
+			}
+		}
+	}
+
+	if (!game->item || (cancel && cancel->load()))
+	{
+		return;
+	}
+
+	const QColor color = getGridCompatibilityColor(game->compat.color);
+	{
+		std::lock_guard lock(game->item->pixmap_mutex);
+		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
+	}
+
+	if (!cancel || !cancel->load())
+	{
+		Q_EMIT IconReady(game->item);
+	}
+}
+
 void game_list_frame::WaitAndAbortRepaintThreads()
 {
-	gui::utils::stop_future_watcher(m_repaint_watcher, true);
-
 	for (const game_info& game : m_game_data)
 	{
 		if (game && game->item)

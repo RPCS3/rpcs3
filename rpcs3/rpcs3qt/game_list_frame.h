@@ -80,7 +80,6 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnRefreshFinished();
-	void OnRepaintFinished();
 	void OnCompatFinished();
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
@@ -102,6 +101,7 @@ protected:
 private:
 	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor()) const;
 	QColor getGridCompatibilityColor(const QString& string) const;
+	void IconLoadFunction(game_info game, std::shared_ptr<atomic_t<bool>> cancel);
 
 	/** Sets the custom config icon. Only call this for list title items. */
 	void SetCustomConfigIcon(QTableWidgetItem* title_item, const game_info& game);
@@ -174,7 +174,6 @@ private:
 	QMutex m_games_mutex;
 	lf_queue<game_info> m_games;
 	QFutureWatcher<void> m_refresh_watcher;
-	QFutureWatcher<movie_item*> m_repaint_watcher;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
 

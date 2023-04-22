@@ -129,7 +129,7 @@ void movie_item::set_size_calc_func(const size_calc_callback_t& func)
 
 void movie_item::wait_for_icon_loading(bool abort)
 {
-	if (m_icon_load_thread)
+	if (m_icon_load_thread && m_icon_load_thread->isRunning())
 	{
 		*m_icon_loading_aborted = abort;
 		m_icon_load_thread->wait();
@@ -139,7 +139,7 @@ void movie_item::wait_for_icon_loading(bool abort)
 
 void movie_item::wait_for_size_on_disk_loading(bool abort)
 {
-	if (m_size_calc_thread)
+	if (m_size_calc_thread && m_size_calc_thread->isRunning())
 	{
 		*m_size_on_disk_loading_aborted = abort;
 		m_size_calc_thread->wait();

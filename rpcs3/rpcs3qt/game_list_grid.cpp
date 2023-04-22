@@ -66,7 +66,10 @@ movie_item* game_list_grid::addItem(const game_info& app, const QString& name, c
 
 	item->set_icon_func([this, app, item](int)
 	{
-		ensure(item);
+		if (!item)
+		{
+			return;
+		}
 
 		const qreal device_pixel_ratio = devicePixelRatioF();
 
