@@ -94,6 +94,7 @@ Q_SIGNALS:
 	void NotifyEmuSettingsChange();
 	void IconReady(movie_item* item);
 	void SizeOnDiskReady(const game_info& game);
+	void FocusToSearchBar();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;

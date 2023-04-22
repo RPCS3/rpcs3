@@ -25,7 +25,6 @@
 
 #include <QKeyEvent>
 #include <QScrollBar>
-#include <QApplication>
 #include <QFontDatabase>
 #include <QCompleter>
 #include <QVBoxLayout>
@@ -333,7 +332,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	const u32 pc = (m_debugger_list->m_pc & address_limits);
 	const u32 selected = (m_debugger_list->m_showing_selected_instruction ? m_debugger_list->m_selected_instruction : cpu->get_pc()) & address_limits;
 
-	const auto modifiers = QApplication::keyboardModifiers();
+	const auto modifiers = event->modifiers();
 
 	if (modifiers & Qt::ControlModifier)
 	{
