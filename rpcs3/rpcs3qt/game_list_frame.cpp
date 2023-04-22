@@ -150,14 +150,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_games.pop_all();
 	});
 	connect(&m_repaint_watcher, &QFutureWatcher<movie_item*>::finished, this, &game_list_frame::OnRepaintFinished);
-	connect(&m_repaint_watcher, &QFutureWatcher<movie_item*>::resultReadyAt, this, [this](int index)
-	{
-		if (!m_is_list_layout) return;
-		if (movie_item* item = m_repaint_watcher.resultAt(index))
-		{
-			item->call_icon_func();
-		}
-	});
 	connect(this, &game_list_frame::IconReady, this, [this](movie_item* item)
 	{
 		if (!m_is_list_layout || !item) return;
@@ -892,19 +884,7 @@ void game_list_frame::OnRefreshFinished()
 
 void game_list_frame::OnRepaintFinished()
 {
-	if (m_is_list_layout)
-	{
-		// Fixate vertical header and row height
-		m_game_list->verticalHeader()->setMinimumSectionSize(m_icon_size.height());
-		m_game_list->verticalHeader()->setMaximumSectionSize(m_icon_size.height());
-
-		// Resize the icon column
-		m_game_list->resizeColumnToContents(gui::column_icon);
-
-		// Shorten the last section to remove horizontal scrollbar if possible
-		m_game_list->resizeColumnToContents(gui::column_count - 1);
-	}
-	else
+	if (!m_is_list_layout)
 	{
 		// The game grid needs to be recreated from scratch
 		int games_per_row = 0;
