@@ -197,6 +197,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online compatibility database!\nFalling back to local database.\n\n%0").arg(error));
 	});
 
+	connect(m_game_list, &game_list::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
+	connect(m_game_grid, &game_list::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
+
 	for (int col = 0; col < m_columnActs.count(); ++col)
 	{
 		m_columnActs[col]->setCheckable(true);
@@ -2393,6 +2396,7 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 		connect(m_game_grid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 		connect(m_game_grid, &QTableWidget::itemSelectionChanged, this, &game_list_frame::ItemSelectionChangedSlot);
 		connect(m_game_grid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
+		connect(m_game_grid, &game_list::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
 		m_central_widget->addWidget(m_game_grid);
 		m_central_widget->setCurrentWidget(m_game_grid);
 		m_game_grid->verticalScrollBar()->setValue(scroll_position);
