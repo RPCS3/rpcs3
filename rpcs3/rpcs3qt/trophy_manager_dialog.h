@@ -71,12 +71,15 @@ public Q_SLOTS:
 	void HandleRepaintUiRequest();
 
 private Q_SLOTS:
-	QPixmap GetResizedGameIcon(int index) const;
 	void ResizeGameIcons();
 	void ResizeTrophyIcons();
 	void ApplyFilter();
 	void ShowTrophyTableContextMenu(const QPoint& pos);
 	void ShowGameTableContextMenu(const QPoint& pos);
+
+Q_SIGNALS:
+	void GameIconReady(int index, const QPixmap& pixmap);
+	void TrophyIconReady(int index, const QPixmap& pixmap);
 
 private:
 	/** Loads a trophy folder.
@@ -100,6 +103,9 @@ private:
 	void ReadjustGameTable() const;
 	void ReadjustTrophyTable() const;
 
+	void WaitAndAbortGameRepaintThreads();
+	void WaitAndAbortTrophyRepaintThreads();
+
 	void closeEvent(QCloseEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 
@@ -112,8 +118,6 @@ private:
 	QSplitter* m_splitter; //! Contains the game and trophy tables
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	QTableWidget* m_game_table; //! UI element to display games.
-	QFutureWatcher<QPixmap> m_game_repaint_watcher;
-	QFutureWatcher<QPixmap> m_trophy_repaint_watcher;
 
 	bool m_show_hidden_trophies = false;
 	bool m_show_unlocked_trophies = true;
