@@ -948,6 +948,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_game_list.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_delegate.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1117,6 +1120,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\progress_indicator.h">
       <Filter>Gui\progress</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\game_list_delegate.h">
+      <Filter>Gui\game list</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

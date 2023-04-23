@@ -671,6 +671,7 @@
     <ClCompile Include="rpcs3qt\downloader.cpp" />
     <ClCompile Include="rpcs3qt\fatal_error_dialog.cpp" />
     <ClCompile Include="rpcs3qt\game_list.cpp" />
+    <ClCompile Include="rpcs3qt\game_list_delegate.cpp" />
     <ClCompile Include="rpcs3qt\gui_application.cpp" />
     <ClCompile Include="rpcs3qt\input_dialog.cpp" />
     <ClCompile Include="rpcs3qt\ipc_settings_dialog.cpp" />
@@ -1158,6 +1159,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
+    <ClInclude Include="rpcs3qt\game_list_delegate.h" />
     <ClInclude Include="rpcs3qt\gui_save.h" />
     <CustomBuild Include="rpcs3qt\patch_manager_dialog.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
