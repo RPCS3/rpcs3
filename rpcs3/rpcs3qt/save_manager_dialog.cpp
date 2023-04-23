@@ -65,11 +65,11 @@ namespace
 			}
 
 			SaveDataEntry save_entry2;
-			save_entry2.dirName = ::at32(psf, "SAVEDATA_DIRECTORY").as_string();
-			save_entry2.listParam = ::at32(psf, "SAVEDATA_LIST_PARAM").as_string();
-			save_entry2.title = ::at32(psf, "TITLE").as_string();
-			save_entry2.subtitle = ::at32(psf, "SUB_TITLE").as_string();
-			save_entry2.details = ::at32(psf, "DETAIL").as_string();
+			save_entry2.dirName = psf::get_string(psf, "SAVEDATA_DIRECTORY");
+			save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
+			save_entry2.title = psf::get_string(psf, "TITLE");
+			save_entry2.subtitle = psf::get_string(psf, "SUB_TITLE");
+			save_entry2.details = psf::get_string(psf, "DETAIL");
 
 			save_entry2.size = 0;
 
