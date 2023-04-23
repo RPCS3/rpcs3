@@ -24,6 +24,7 @@ set(SRC_FILES
     find_dialog.cpp
     game_compatibility.cpp
     game_list.cpp
+    game_list_delegate.cpp
     game_list_frame.cpp
     game_list_grid.cpp
     game_list_grid_delegate.cpp

@@ -2,7 +2,7 @@
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "pad_settings_dialog.h"
-#include "table_item_delegate.h"
+#include "game_list_delegate.h"
 #include "custom_table_widget_item.h"
 #include "input_dialog.h"
 #include "localized.h"
@@ -81,7 +81,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_game_list = new game_list();
 	m_game_list->setShowGrid(false);
-	m_game_list->setItemDelegate(new table_item_delegate(m_game_list, true));
+	m_game_list->setItemDelegate(new game_list_delegate(m_game_list));
 	m_game_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_game_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_game_list->setSelectionMode(QAbstractItemView::SingleSelection);
