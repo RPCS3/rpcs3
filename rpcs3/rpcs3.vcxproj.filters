@@ -941,6 +941,7 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\movie_item.cpp">
       <Filter>Gui\custom items</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
