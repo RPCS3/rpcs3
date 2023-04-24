@@ -11,6 +11,7 @@
 #include "localized_emu.h"
 #include "qt_camera_handler.h"
 #include "qt_music_handler.h"
+#include "rpcs3_version.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -29,11 +30,13 @@
 
 #include <QScreen>
 #include <QFontDatabase>
+#include <QLayout>
 #include <QLibraryInfo>
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QSound>
 #include <QMessageBox>
+#include <QTextDocument>
 
 #include <clocale>
 
@@ -62,6 +65,36 @@ bool gui_application::Init()
 #ifndef __APPLE__
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 #endif
+
+	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
+	{
+		const std::string_view branch_name = rpcs3::get_full_branch();
+		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
+
+		QMessageBox msg;
+		msg.setWindowTitle(tr("Experimental Build Warning"));
+		msg.setIcon(QMessageBox::Critical);
+		msg.setTextFormat(Qt::RichText);
+		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+		msg.setDefaultButton(QMessageBox::No);
+		msg.setText(QString(tr(
+			R"(
+				<p style="white-space: nowrap;">
+					Please understand that this build is not an official RPCS3 release.<br>
+					This build contains changes that may break games, or even <b>damage</b> your data.<br>
+					We recommend to download and use the official build from the <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>
+					Build origin: %1<br>
+					Do you wish to use this build anyway?
+				</p>
+			)"
+		)).arg(Qt::convertFromPlainText(branch_name.data())));
+		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+		if (msg.exec() == QMessageBox::No)
+		{
+			return false;
+		}
+	}
 
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
