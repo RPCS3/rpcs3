@@ -132,36 +132,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	Q_EMIT RequestGlobalStylesheetChange();
 	ConfigureGuiFromSettings();
 
-	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
-	{
-		const std::string_view branch_name = rpcs3::get_full_branch();
-		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
-
-		QMessageBox msg;
-		msg.setWindowTitle(tr("Experimental Build Warning"));
-		msg.setIcon(QMessageBox::Critical);
-		msg.setTextFormat(Qt::RichText);
-		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-		msg.setDefaultButton(QMessageBox::No);
-		msg.setText(QString(tr(
-			R"(
-				<p style="white-space: nowrap;">
-					Please understand that this build is not an official RPCS3 release.<br>
-					This build contains changes that may break games, or even <b>damage</b> your data.<br>
-					We recommend to download and use the official build from the <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>
-					Build origin: %1<br>
-					Do you wish to use this build anyway?
-				</p>
-			)"
-		)).arg(Qt::convertFromPlainText(branch_name.data())));
-		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
-
-		if (msg.exec() == QMessageBox::No)
-		{
-			return false;
-		}
-	}
-
 	m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::main_window, this, m_gui_settings);
 	connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &main_window::handle_shortcut);
 
