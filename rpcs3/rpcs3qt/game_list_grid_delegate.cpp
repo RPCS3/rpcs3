@@ -42,7 +42,7 @@ void game_list_grid_delegate::paint(QPainter* painter, const QStyleOptionViewIte
 
 			if (!item->icon_loading())
 			{
-				item->call_icon_load_func();
+				item->call_icon_load_func(index.row());
 			}
 		}
 	}

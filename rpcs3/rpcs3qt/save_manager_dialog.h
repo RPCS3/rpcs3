@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QPixmap>
 
 class gui_settings;
 class persistent_settings;
@@ -24,19 +25,25 @@ public:
 public Q_SLOTS:
 	void HandleRepaintUiRequest();
 private Q_SLOTS:
-	void OnEntryRemove();
+	void OnEntryRemove(int row, bool user_interaction);
 	void OnEntriesRemove();
 	void OnSort(int logicalIndex);
 	void SetIconSize(int size);
 	void UpdateDetails();
+
+Q_SIGNALS:
+	void IconReady(int index, const QPixmap& new_icon);
+
 private:
 	void Init();
 	void UpdateList();
-	QPixmap GetResizedIcon(int i) const;
 	void UpdateIcons();
 	void ShowContextMenu(const QPoint &pos);
+	void WaitForRepaintThreads(bool abort);
 
 	void closeEvent(QCloseEvent* event) override;
+
+	std::vector<SaveDataEntry> GetSaveEntries(const std::string& base_dir);
 
 	QTableWidget* m_list = nullptr;
 	std::string m_dir;

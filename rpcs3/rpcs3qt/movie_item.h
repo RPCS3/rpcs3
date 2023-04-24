@@ -12,7 +12,7 @@
 #include <functional>
 
 using icon_callback_t = std::function<void(int)>;
-using icon_load_callback_t = std::function<void()>;
+using icon_load_callback_t = std::function<void(int)>;
 using size_calc_callback_t = std::function<void()>;
 
 class movie_item : public QTableWidgetItem
@@ -42,7 +42,7 @@ public:
 	void call_icon_func() const;
 	void set_icon_func(const icon_callback_t& func);
 
-	void call_icon_load_func();
+	void call_icon_load_func(int index);
 	void set_icon_load_func(const icon_load_callback_t& func);
 
 	void call_size_calc_func();
