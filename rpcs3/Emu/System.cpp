@@ -3120,6 +3120,8 @@ void Emulator::AddGamesFromDir(const std::string& path)
 		// Nothing to do
 	}
 
+	process_qt_events();
+
 	// search direct subdirectories, that way we can drop one folder containing all games
 	for (auto&& dir_entry : fs::dir(path))
 	{
@@ -3134,6 +3136,8 @@ void Emulator::AddGamesFromDir(const std::string& path)
 		{
 			// Nothing to do
 		}
+
+		process_qt_events();
 	}
 
 	m_games_config.set_save_on_dirty(true);

@@ -192,9 +192,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, &main_window::OnPlayOrPause);
 #endif
 
-	// Fix possible hidden game list columns. The game list has to be visible already. Use this after show()
-	m_game_list_frame->FixNarrowColumns();
-
 	// RPCS3 Updater
 
 	QMenu* download_menu = new QMenu(tr("Update Available!"));
@@ -248,6 +245,9 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	// Focus to search bar by default
 	ui->mw_searchbar->setFocus();
+
+	// Refresh gamelist last
+	m_game_list_frame->Refresh(true);
 
 	return true;
 }
