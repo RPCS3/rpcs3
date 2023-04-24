@@ -71,7 +71,7 @@ void movie_item::set_icon_func(const icon_callback_t& func)
 	call_icon_func();
 }
 
-void movie_item::call_icon_load_func()
+void movie_item::call_icon_load_func(int index)
 {
 	wait_for_icon_loading(true);
 
@@ -82,11 +82,11 @@ void movie_item::call_icon_load_func()
 
 	*m_icon_loading_aborted = false;
 	m_icon_loading = true;
-	m_icon_load_thread.reset(QThread::create([this]()
+	m_icon_load_thread.reset(QThread::create([this, index]()
 	{
 		if (m_icon_load_callback)
 		{
-			m_icon_load_callback();
+			m_icon_load_callback(index);
 		}
 	}));
 	m_icon_load_thread->start();

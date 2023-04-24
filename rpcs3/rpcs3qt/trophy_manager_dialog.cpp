@@ -41,6 +41,35 @@ namespace
 	inline std::string sstr(const QString& _in) { return _in.toUtf8().toStdString(); }
 }
 
+enum TrophyColumns
+{
+	Icon = 0,
+	Name = 1,
+	Description = 2,
+	Type = 3,
+	IsUnlocked = 4,
+	Id = 5,
+	PlatinumLink = 6,
+
+	Count
+};
+
+enum GameColumns
+{
+	GameIcon = 0,
+	GameName = 1,
+	GameProgress = 2,
+
+	GameColumnsCount
+};
+
+enum GameUserRole
+{
+	GameIndex = Qt::UserRole,
+	GamePixmapLoaded,
+	GamePixmap
+};
+
 trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings)
 	: QWidget()
 	, m_gui_settings(std::move(gui_settings))
@@ -518,6 +547,7 @@ void trophy_manager_dialog::ResizeGameIcons()
 	QPixmap placeholder(m_game_icon_size);
 	placeholder.fill(Qt::transparent);
 
+	qRegisterMetaType<QVector<int>>("QVector<int>");
 	QList<int> indices;
 	for (int i = 0; i < m_game_table->rowCount(); ++i)
 	{
@@ -539,7 +569,7 @@ void trophy_manager_dialog::ResizeGameIcons()
 			const int trophy_index = item->data(GameUserRole::GameIndex).toInt();
 			const std::string icon_path = m_trophies_db[trophy_index]->path + "ICON0.PNG";
 
-			item->set_icon_load_func([this, icon_path, trophy_index, index = i, cancel = item->icon_loading_aborted(), dpr]()
+			item->set_icon_load_func([this, icon_path, trophy_index, cancel = item->icon_loading_aborted(), dpr](int index)
 			{
 				if (cancel && cancel->load())
 				{
@@ -625,7 +655,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 		{
 			if (movie_item* item = static_cast<movie_item*>(m_trophy_table->item(i, TrophyColumns::Icon)))
 			{
-				item->set_icon_load_func([this, data = ::at32(m_trophies_db, db_pos).get(), trophy_id = id_item->text().toInt(), index = i, cancel = item->icon_loading_aborted(), dpr, new_height]()
+				item->set_icon_load_func([this, data = ::at32(m_trophies_db, db_pos).get(), trophy_id = id_item->text().toInt(), cancel = item->icon_loading_aborted(), dpr, new_height](int index)
 				{
 					if (cancel && cancel->load())
 					{
@@ -882,6 +912,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 		return;
 	}
 
+	qRegisterMetaType<QVector<int>>("QVector<int>");
 	QList<int> indices;
 	for (int i = 0; i < count; ++i)
 		indices.append(i);
@@ -923,12 +954,12 @@ void trophy_manager_dialog::PopulateGameTable()
 	WaitAndAbortGameRepaintThreads();
 
 	m_game_table->setSortingEnabled(false); // Disable sorting before using setItem calls
-
 	m_game_table->clearContents();
 	m_game_table->setRowCount(static_cast<int>(m_trophies_db.size()));
 
 	m_game_combo->clear();
 
+	qRegisterMetaType<QVector<int>>("QVector<int>");
 	QList<int> indices;
 	for (usz i = 0; i < m_trophies_db.size(); ++i)
 		indices.append(static_cast<int>(i));

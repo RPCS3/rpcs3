@@ -31,7 +31,7 @@ void game_list_delegate::paint(QPainter* painter, const QStyleOptionViewItem& op
 					{
 						if (!item->icon_loading())
 						{
-							item->call_icon_load_func();
+							item->call_icon_load_func(index.row());
 						}
 					}
 				}

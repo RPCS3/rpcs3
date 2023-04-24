@@ -2363,7 +2363,7 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 
 			if (movie_item* item = game->item)
 			{
-				item->set_icon_load_func([this, game, cancel = item->icon_loading_aborted()]()
+				item->set_icon_load_func([this, game, cancel = item->icon_loading_aborted()](int)
 				{
 					IconLoadFunction(game, cancel);
 				});
@@ -2795,7 +2795,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 		ensure(item);
 		app->item = item;
 		item->setData(gui::game_role, QVariant::fromValue(app));
-		item->set_icon_load_func([this, app, cancel = item->icon_loading_aborted()]()
+		item->set_icon_load_func([this, app, cancel = item->icon_loading_aborted()](int)
 		{
 			IconLoadFunction(app, cancel);
 		});
