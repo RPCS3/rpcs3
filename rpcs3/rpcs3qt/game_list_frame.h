@@ -14,6 +14,7 @@
 #include <QSet>
 #include <QTableWidgetItem>
 #include <QFutureWatcher>
+#include <QTimer>
 
 #include <memory>
 
@@ -21,6 +22,7 @@ class game_list_grid;
 class gui_settings;
 class emu_settings;
 class persistent_settings;
+class progress_dialog;
 
 class game_list_frame : public custom_dock_widget
 {
@@ -80,6 +82,7 @@ public Q_SLOTS:
 	void FocusAndSelectFirstEntryIfNoneIs();
 
 private Q_SLOTS:
+	void OnParsingFinished();
 	void OnRefreshFinished();
 	void OnCompatFinished();
 	void OnColClicked(int col);
@@ -101,6 +104,8 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
+	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
+
 	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor()) const;
 	QColor getGridCompatibilityColor(const QString& string) const;
 	void IconLoadFunction(game_info game, std::shared_ptr<atomic_t<bool>> cancel);
@@ -111,7 +116,7 @@ private:
 	void PopulateGameList();
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false);
-	void SortGameList() const;
+	void SortGameList();
 	bool SearchMatchesApp(const QString& name, const QString& serial, bool fallback = false) const;
 
 	bool RemoveCustomConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
@@ -144,9 +149,12 @@ private:
 	// Game List
 	game_list* m_game_list = nullptr;
 	game_compatibility* m_game_compat = nullptr;
+	progress_dialog* m_progress_dialog = nullptr;
+	QTimer* m_progress_dialog_timer = nullptr;
 	QList<QAction*> m_columnActs;
 	Qt::SortOrder m_col_sort_order;
 	int m_sort_column;
+	bool m_initial_refresh_done = false;
 	QMap<QString, QString> m_notes;
 	QMap<QString, QString> m_titles;
 
@@ -175,6 +183,8 @@ private:
 	QSet<QString> m_serials;
 	QMutex m_games_mutex;
 	lf_queue<game_info> m_games;
+	const std::array<int, 1> m_parsing_threads{0};
+	QFutureWatcher<void> m_parsing_watcher;
 	QFutureWatcher<void> m_refresh_watcher;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};

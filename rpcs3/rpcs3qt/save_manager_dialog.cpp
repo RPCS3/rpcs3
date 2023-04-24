@@ -5,6 +5,7 @@
 #include "gui_settings.h"
 #include "persistent_settings.h"
 #include "game_list_delegate.h"
+#include "progress_dialog.h"
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
@@ -22,7 +23,6 @@
 #include <QPainter>
 #include <QScreen>
 #include <QScrollBar>
-#include <QProgressDialog>
 
 #include "Utilities/File.h"
 #include "Utilities/mutex.h"
@@ -237,8 +237,7 @@ std::vector<SaveDataEntry> save_manager_dialog::GetSaveEntries(const std::string
 
 	QFutureWatcher<void> future_watcher;
 
-	QProgressDialog progress_dialog(tr("Loading save data, please wait..."), tr("Cancel"), 0, 1, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-	progress_dialog.setWindowTitle(tr("Loading save data"));
+	progress_dialog progress_dialog(tr("Loading save data"), tr("Loading save data, please wait..."), tr("Cancel"), 0, 1, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 
 	connect(&future_watcher, &QFutureWatcher<void>::progressRangeChanged, &progress_dialog, &QProgressDialog::setRange);
 	connect(&future_watcher, &QFutureWatcher<void>::progressValueChanged, &progress_dialog, &QProgressDialog::setValue);
