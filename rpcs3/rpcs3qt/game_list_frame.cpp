@@ -527,7 +527,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		const auto dev_flash = g_cfg_vfs.get_dev_flash();
 
-		m_path_list.emplace(dev_flash + "vsh/module/vsh.self");
+		m_path_entries.emplace_back(path_entry{dev_flash + "vsh/module/vsh.self", false, false});
 
 		// Remove duplicates
 		sort(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path < r.path;});
@@ -2363,7 +2363,7 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 
 			if (movie_item* item = game->item)
 			{
-				item->set_icon_load_func([this, game, cancel = item->icon_loading_aborted()]()
+				item->set_icon_load_func([this, game, cancel = item->icon_loading_aborted()](int)
 				{
 					IconLoadFunction(game, cancel);
 				});
@@ -2795,7 +2795,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 		ensure(item);
 		app->item = item;
 		item->setData(gui::game_role, QVariant::fromValue(app));
-		item->set_icon_load_func([this, app, cancel = item->icon_loading_aborted()]()
+		item->set_icon_load_func([this, app, cancel = item->icon_loading_aborted()](int)
 		{
 			IconLoadFunction(app, cancel);
 		});

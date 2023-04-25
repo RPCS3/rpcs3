@@ -29,35 +29,6 @@ struct GameTrophiesData
 	std::string path;
 };
 
-enum TrophyColumns
-{
-	Icon = 0,
-	Name = 1,
-	Description = 2,
-	Type = 3,
-	IsUnlocked = 4,
-	Id = 5,
-	PlatinumLink = 6,
-
-	Count
-};
-
-enum GameColumns
-{
-	GameIcon = 0,
-	GameName = 1,
-	GameProgress = 2,
-
-	GameColumnsCount
-};
-
-enum GameUserRole
-{
-	GameIndex = Qt::UserRole,
-	GamePixmapLoaded,
-	GamePixmap
-};
-
 class trophy_manager_dialog : public QWidget
 {
 	Q_OBJECT
@@ -117,7 +88,7 @@ private:
 	QLabel* m_game_progress; //! Shows you the current game's progress
 	QSplitter* m_splitter; //! Contains the game and trophy tables
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
-	QTableWidget* m_game_table; //! UI element to display games.
+	game_list* m_game_table; //! UI element to display games.
 
 	bool m_show_hidden_trophies = false;
 	bool m_show_unlocked_trophies = true;
