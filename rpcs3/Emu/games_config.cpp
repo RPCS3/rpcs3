@@ -72,6 +72,24 @@ bool games_config::add_game(const std::string& key, const std::string& path)
 	return true;
 }
 
+bool games_config::add_external_hdd_game(const std::string& key, std::string& path)
+{
+	// Don't use the C00 subdirectory in our game list
+	if (path.ends_with("/C00") || path.ends_with("\\C00"))
+	{
+		path = path.substr(0, path.size() - 4);
+	}
+
+	if (add_game(key, path))
+	{
+		cfg_log.notice("Registered HG game directory for title '%s': %s", key, path);
+		return true;
+	}
+
+	cfg_log.error("Failed to save HG game location of title '%s' (error=%s)", key, fs::g_tls_error);
+	return false;
+}
+
 bool games_config::save()
 {
 	std::lock_guard lock(m_mutex);
