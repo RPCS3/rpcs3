@@ -151,6 +151,9 @@
     <Filter Include="Gui\progress">
       <UniqueIdentifier>{d60be100-0d7e-4076-a24a-d413d0e91532}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\flow_layout">
+      <UniqueIdentifier>{9191ae51-8b80-4606-b5bc-966a9588f538}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -951,6 +954,18 @@
     <ClCompile Include="rpcs3qt\game_list_delegate.cpp">
       <Filter>Gui\game list</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\flow_layout.cpp">
+      <Filter>Gui\flow_layout</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\flow_widget.cpp">
+      <Filter>Gui\flow_layout</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_flow_widget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_flow_widget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1123,6 +1138,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\game_list_delegate.h">
       <Filter>Gui\game list</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\flow_layout.h">
+      <Filter>Gui\flow_layout</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1401,6 +1419,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\game_list.h">
       <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\flow_widget.h">
+      <Filter>Gui\flow_layout</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
