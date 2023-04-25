@@ -22,6 +22,8 @@ set(SRC_FILES
     emu_settings.cpp
     fatal_error_dialog.cpp
     find_dialog.cpp
+    flow_layout.cpp
+    flow_widget.cpp
     game_compatibility.cpp
     game_list.cpp
     game_list_delegate.cpp
