@@ -2647,26 +2647,24 @@ void thread_base::exec()
 	while (shared_ptr<thread_future> head = m_taskq.exchange(null_ptr))
 	{
 		// TODO: check if adapting reverse algorithm is feasible here
-		shared_ptr<thread_future>* prev{};
+		thread_future* prev_head{head.get()};
 
-		for (auto ptr = head.get(); ptr; ptr = ptr->next.get())
+		for (thread_future* prev{};;)
 		{
-			utils::prefetch_exec(ptr->exec.load());
+			utils::prefetch_exec(prev_head->exec.load());
 
-			ptr->prev = prev;
-
-			if (ptr->next)
+			if (auto next = prev_head->next.get())
 			{
-				prev = &ptr->next;
+				prev = std::exchange(prev_head, next);
+				prev_head->prev = prev;
+			}
+			else
+			{
+				break;
 			}
 		}
 
-		if (!prev)
-		{
-			prev = &head;
-		}
-
-		for (auto ptr = prev->get(); ptr; ptr = ptr->prev->get())
+		for (auto ptr = prev_head; ptr; ptr = ptr->prev)
 		{
 			if (auto task = ptr->exec.load()) [[likely]]
 			{
@@ -2689,11 +2687,6 @@ void thread_base::exec()
 			{
 				// Partial cleanup
 				ptr->next.reset();
-			}
-
-			if (!ptr->prev)
-			{
-				break;
 			}
 		}
 
