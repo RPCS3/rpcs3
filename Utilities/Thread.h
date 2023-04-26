@@ -95,7 +95,7 @@ class thread_future
 
 	shared_ptr<thread_future> next{};
 
-	shared_ptr<thread_future>* prev{};
+	thread_future* prev{};
 
 protected:
 	atomic_t<void(*)(thread_base*, thread_future*)> exec{};
