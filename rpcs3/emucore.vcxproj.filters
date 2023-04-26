@@ -2317,6 +2317,9 @@
     <ClInclude Include="Emu\games_config.h">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\config_mode.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">

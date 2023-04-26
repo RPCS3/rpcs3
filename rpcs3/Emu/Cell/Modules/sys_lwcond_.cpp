@@ -1,6 +1,6 @@
 #include "stdafx.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
-
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_cond.h"

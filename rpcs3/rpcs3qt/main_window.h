@@ -13,7 +13,7 @@
 #include "update_manager.h"
 #include "settings.h"
 #include "shortcut_handler.h"
-#include "Emu/System.h"
+#include "Emu/config_mode.h"
 
 #include <memory>
 

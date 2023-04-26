@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "Utilities/bit_set.h"
+#include "config_mode.h"
 #include "games_config.h"
 #include <functional>
 #include <memory>
@@ -56,16 +57,6 @@ constexpr bool is_error(game_boot_result res)
 {
 	return res != game_boot_result::no_errors;
 }
-
-enum class cfg_mode
-{
-	custom,           // Prefer regular custom config. Fall back to global config.
-	custom_selection, // Use user-selected custom config. Fall back to global config.
-	global,           // Use global config.
-	config_override,  // Use config override. This does not use the global VFS settings! Fall back to global config.
-	continuous,       // Use same config as on last boot. Fall back to global config.
-	default_config    // Use the default values of the config entries.
-};
 
 struct EmuCallbacks
 {

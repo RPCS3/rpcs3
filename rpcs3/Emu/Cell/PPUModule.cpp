@@ -9,6 +9,7 @@
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/VFS.h"
 
 #include "Emu/Cell/PPUOpcodes.h"

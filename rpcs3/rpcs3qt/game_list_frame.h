@@ -6,7 +6,7 @@
 #include "shortcut_utils.h"
 #include "Utilities/lockless.h"
 #include "Utilities/mutex.h"
-#include "Emu/System.h"
+#include "Emu/config_mode.h"
 
 #include <QMainWindow>
 #include <QToolBar>
@@ -17,6 +17,7 @@
 #include <QTimer>
 
 #include <memory>
+#include <set>
 
 class game_list_grid;
 class gui_settings;
