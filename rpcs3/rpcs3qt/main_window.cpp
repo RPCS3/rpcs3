@@ -455,7 +455,7 @@ void main_window::show_boot_error(game_boot_result status)
 	msg.exec();
 }
 
-void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path)
+void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool refresh_list, cfg_mode config_mode, const std::string& config_path)
 {
 	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_boot))
 	{
@@ -476,9 +476,12 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 		gui_log.success("Boot successful.");
 
 		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(Emu.GetTitleAndTitleID())));
-	}
 
-	m_game_list_frame->Refresh(true);
+		if (refresh_list)
+		{
+			m_game_list_frame->Refresh(true);
+		}
+	}
 }
 
 void main_window::BootElf()
@@ -517,7 +520,7 @@ void main_window::BootElf()
 	const std::string path = sstr(QFileInfo(file_path).absoluteFilePath());
 
 	gui_log.notice("Booting from BootElf...");
-	Boot(path, "", true);
+	Boot(path, "", true, true);
 }
 
 void main_window::BootTest()
@@ -615,7 +618,7 @@ void main_window::BootGame()
 	m_gui_settings->SetValue(gui::fd_boot_game, QFileInfo(dir_path).path());
 
 	gui_log.notice("Booting from BootGame...");
-	Boot(sstr(dir_path));
+	Boot(sstr(dir_path), "", false, true);
 }
 
 void main_window::BootVSH()
@@ -2886,7 +2889,7 @@ void main_window::CreateDockWindows()
 
 	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path, const std::string& savestate)
 	{
-		Boot(savestate.empty() ? game->info.path : savestate, game->info.serial, false, config_mode, config_path);
+		Boot(savestate.empty() ? game->info.path : savestate, game->info.serial, false, false, config_mode, config_path);
 	});
 
 	connect(m_game_list_frame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);
