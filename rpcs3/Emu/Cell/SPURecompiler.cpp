@@ -8860,12 +8860,16 @@ public:
 			return;
 		}
 
-		// To avoid divergence in online play don't use divergent intel/amd intrinsics when online
-		if (g_cfg.net.net_active == np_internet_status::enabled)
+		if (g_cfg.core.spu_approx_xfloat)
 		{
 			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
 			{
-				return fsplat<f32[4]>(1.0) / value<f32[4]>(ci->getOperand(0));
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				const auto acc_result = fsplat<f32[4]>(1.0) / a;
+				// Determines accuracy penalty, frest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
+				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
+				return bitcast<f32[4]>(bitcast<u32[4]>(acc_result - acc_penalty) & splat<u32[4]>(0xFFFFF800));
 			});
 		}
 		else
@@ -8873,6 +8877,7 @@ public:
 			register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Fast but this makes the result vary per cpu
 				return fre(a);
 			});
 		}
@@ -8895,12 +8900,16 @@ public:
 			return;
 		}
 
-		// To avoid divergence in online play don't use divergent intel/amd intrinsics when online
-		if (g_cfg.net.net_active == np_internet_status::enabled)
+		if (g_cfg.core.spu_approx_xfloat)
 		{
 			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
 			{
-				return fsplat<f32[4]>(1.0) / fsqrt(fabs(value<f32[4]>(ci->getOperand(0))));
+				const auto a = value<f32[4]>(ci->getOperand(0));
+				const auto acc_result = fsplat<f32[4]>(1.0) / fsqrt(fabs(a));
+				// Determines accuracy penalty, frsqest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
+				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
+				return bitcast<f32[4]>(bitcast<u32[4]>(acc_result - acc_penalty) & splat<u32[4]>(0xFFFFF800));
 			});
 		}
 		else
@@ -8908,6 +8917,7 @@ public:
 			register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
+				// Fast but this makes the result vary per cpu
 				return frsqe(fabs(a));
 			});
 		}
@@ -9633,23 +9643,29 @@ public:
 			return bitcast<f32[4]>((b & 0xff800000u) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~0xff800000u)); // Inject old sign and exponent
 		});
 
-		// To avoid divergence in online play don't use divergent intel/amd intrinsics when online
-		if (g_cfg.net.net_active == np_internet_status::enabled)
+		if (g_cfg.core.spu_approx_xfloat)
 		{
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
-				return fsplat<f32[4]>(1.0) / a;
+				const auto acc_result = fsplat<f32[4]>(1.0) / a;
+				// Determines accuracy penalty, frest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
+				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				return acc_result - acc_penalty;
 			});
 
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
-				return fsplat<f32[4]>(1.0) / fsqrt(fabs(a));
+				const auto acc_result = fsplat<f32[4]>(1.0) / fsqrt(fabs(a));
+				// Determines accuracy penalty, frsqest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
+				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				return acc_result - acc_penalty;
 			});
 		}
 		else
 		{
+			// For relaxed use intrinsics, those make the results vary per cpu
 			register_intrinsic("spu_re", [&](llvm::CallInst* ci)
 			{
 				const auto a = value<f32[4]>(ci->getOperand(0));
