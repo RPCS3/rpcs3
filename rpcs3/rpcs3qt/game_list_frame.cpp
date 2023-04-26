@@ -2515,7 +2515,7 @@ void game_list_frame::SetListMode(const bool& is_list)
 
 	m_gui_settings->SetValue(gui::gl_listMode, is_list);
 
-	Refresh(true);
+	Refresh();
 
 	m_central_widget->setCurrentWidget(m_is_list_layout ? m_game_list : m_game_grid);
 }
