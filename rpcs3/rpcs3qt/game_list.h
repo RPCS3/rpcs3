@@ -2,6 +2,7 @@
 
 #include <QTableWidget>
 #include <QMouseEvent>
+#include <QKeyEvent>
 #include <QPixmap>
 
 #include "game_compatibility.h"
@@ -32,13 +33,22 @@ Q_DECLARE_METATYPE(game_info)
 */
 class game_list : public QTableWidget
 {
+	Q_OBJECT
+
 public:
 	void clear_list(); // Use this instead of clearContents
+
+public Q_SLOTS:
+	void FocusAndSelectFirstEntryIfNoneIs();
+
+Q_SIGNALS:
+	void FocusToSearchBar();
 
 protected:
 	movie_item* m_last_hover_item = nullptr;
 
 	void mousePressEvent(QMouseEvent *event) override;
 	void mouseMoveEvent(QMouseEvent *event) override;
+	void keyPressEvent(QKeyEvent *event) override;
 	void leaveEvent(QEvent *event) override;
 };

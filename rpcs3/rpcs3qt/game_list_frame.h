@@ -5,6 +5,7 @@
 #include "gui_save.h"
 #include "shortcut_utils.h"
 #include "Utilities/lockless.h"
+#include "Utilities/mutex.h"
 #include "Emu/System.h"
 
 #include <QMainWindow>
@@ -76,10 +77,10 @@ public Q_SLOTS:
 	void SetShowCompatibilityInGrid(bool show);
 	void SetShowCustomIcons(bool show);
 	void SetPlayHoverGifs(bool play);
+	void FocusAndSelectFirstEntryIfNoneIs();
 
 private Q_SLOTS:
 	void OnRefreshFinished();
-	void OnRepaintFinished();
 	void OnCompatFinished();
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
@@ -91,6 +92,9 @@ Q_SIGNALS:
 	void RequestBoot(const game_info& game, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::string& savestate = "");
 	void RequestIconSizeChange(const int& val);
 	void NotifyEmuSettingsChange();
+	void IconReady(movie_item* item);
+	void SizeOnDiskReady(const game_info& game);
+	void FocusToSearchBar();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
@@ -99,15 +103,16 @@ protected:
 private:
 	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor()) const;
 	QColor getGridCompatibilityColor(const QString& string) const;
+	void IconLoadFunction(game_info game, std::shared_ptr<atomic_t<bool>> cancel);
 
 	/** Sets the custom config icon. Only call this for list title items. */
 	void SetCustomConfigIcon(QTableWidgetItem* title_item, const game_info& game);
 	void ShowCustomConfigIcon(const game_info& game);
 	void PopulateGameList();
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
-	bool IsEntryVisible(const game_info& game);
+	bool IsEntryVisible(const game_info& game, bool search_fallback = false);
 	void SortGameList() const;
-	bool SearchMatchesApp(const QString& name, const QString& serial) const;
+	bool SearchMatchesApp(const QString& name, const QString& serial, bool fallback = false) const;
 
 	bool RemoveCustomConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
 	bool RemoveCustomPadConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
@@ -125,6 +130,9 @@ private:
 
 	game_info GetGameInfoByMode(const QTableWidgetItem* item) const;
 	static game_info GetGameInfoFromItem(const QTableWidgetItem* item);
+
+	void WaitAndAbortRepaintThreads();
+	void WaitAndAbortSizeCalcThreads();
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_game_dock = nullptr;
@@ -155,14 +163,19 @@ private:
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 	QList<game_info> m_game_data;
-	std::vector<std::string> m_path_list;
+	struct path_entry
+	{
+		std::string path;
+		bool is_disc{};
+		bool is_from_yml{};
+	};
+	std::vector<path_entry> m_path_entries;
+	shared_mutex m_path_mutex;
+	std::set<std::string> m_path_list;
 	QSet<QString> m_serials;
-	QMutex m_mutex_cat;
+	QMutex m_games_mutex;
 	lf_queue<game_info> m_games;
-	QFutureWatcher<void> m_size_watcher;
 	QFutureWatcher<void> m_refresh_watcher;
-	QFutureWatcher<movie_item*> m_repaint_watcher;
-	std::shared_ptr<atomic_t<bool>> m_size_watcher_cancel;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
 

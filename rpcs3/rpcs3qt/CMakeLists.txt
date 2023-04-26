@@ -24,6 +24,7 @@ set(SRC_FILES
     find_dialog.cpp
     game_compatibility.cpp
     game_list.cpp
+    game_list_delegate.cpp
     game_list_frame.cpp
     game_list_grid.cpp
     game_list_grid_delegate.cpp
@@ -43,6 +44,7 @@ set(SRC_FILES
     memory_string_searcher.cpp
     memory_viewer_panel.cpp
     microphone_creator.cpp
+    movie_item.cpp
     msg_dialog_frame.cpp
     osk_dialog_frame.cpp
     pad_led_settings_dialog.cpp
@@ -81,6 +83,7 @@ set(SRC_FILES
     skylander_dialog.cpp
     syntax_highlighter.cpp
     system_cmd_dialog.cpp
+    table_item_delegate.cpp
     tooltips.cpp
     trophy_manager_dialog.cpp
     trophy_notification_frame.cpp

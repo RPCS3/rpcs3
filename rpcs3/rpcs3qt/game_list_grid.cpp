@@ -66,7 +66,10 @@ movie_item* game_list_grid::addItem(const game_info& app, const QString& name, c
 
 	item->set_icon_func([this, app, item](int)
 	{
-		ensure(item);
+		if (!item)
+		{
+			return;
+		}
 
 		const qreal device_pixel_ratio = devicePixelRatioF();
 
@@ -81,7 +84,7 @@ movie_item* game_list_grid::addItem(const game_info& app, const QString& name, c
 			exp_size_f = m_icon_size + m_icon_size * m_margin_factor * 2;
 		}
 
-		QMovie* movie = item->movie();
+		std::shared_ptr<QMovie> movie = item->movie();
 		const bool draw_movie_frame = movie && movie->isValid() && item->get_active();
 		const QSize exp_size = (exp_size_f * device_pixel_ratio).toSize();
 

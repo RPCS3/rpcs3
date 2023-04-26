@@ -1147,6 +1147,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_manager.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\games_config.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2310,6 +2313,9 @@
     </ClInclude>
     <ClInclude Include="io_buffer.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\games_config.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

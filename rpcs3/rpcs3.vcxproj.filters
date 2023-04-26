@@ -936,6 +936,21 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_system_cmd_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\table_item_delegate.cpp">
+      <Filter>Gui\custom items</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\movie_item.cpp">
+      <Filter>Gui\custom items</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_delegate.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -973,9 +988,6 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\gl_gs_frame.h">
       <Filter>Gui\game window</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\game_list.h">
-      <Filter>Gui\game list</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\game_list_grid_delegate.h">
       <Filter>Gui\game list</Filter>
@@ -1108,6 +1120,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\progress_indicator.h">
       <Filter>Gui\progress</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\game_list_delegate.h">
+      <Filter>Gui\game list</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1383,6 +1398,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\system_cmd_dialog.h">
       <Filter>Gui\dev tools</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list.h">
+      <Filter>Gui\game list</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

@@ -3921,6 +3921,8 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -5453,10 +5455,18 @@ public:
 			}
 
 			// Work on register stores.
-			// 1. Remove stores which are post-dominated.
+			// 1. Remove stores which are overwritten later.
 			// 2. Sink stores to post-dominating blocks.
 			llvm::PostDominatorTree pdt(*m_function);
 			llvm::DominatorTree dt(*m_function);
+
+			// Post-order indices
+			std::unordered_map<llvm::BasicBlock*, usz> pois;
+			{
+				usz i = 0;
+				for (auto* bb : llvm::post_order(m_function))
+					pois[bb] = i++;
+			}
 
 			std::vector<block_info*> block_q;
 			block_q.reserve(m_blocks.size());
@@ -5465,14 +5475,14 @@ public:
 				block_q.emplace_back(&b);
 			}
 
-			for (usz bi = 0; bi < block_q.size(); bi++)
+			for (usz bi = 0; bi < block_q.size();)
 			{
+				auto bqbi = block_q[bi++];
+
 				// TODO: process all registers up to s_reg_max
 				for (u32 i = 0; i < 128; i++)
 				{
-					auto& bs = block_q[bi]->store[i];
-
-					if (bs)
+					if (auto& bs = bqbi->store[i])
 					{
 						for (auto& [a, b] : m_blocks)
 						{
@@ -5482,17 +5492,111 @@ public:
 								{
 									bs->eraseFromParent();
 									bs = nullptr;
-
-									pdt.recalculate(*m_function);
-									dt.recalculate(*m_function);
 									break;
 								}
 							}
 						}
-					}
 
+						if (!bs)
+							continue;
+
+						// Set of store instructions which overwrite bs
+						std::vector<llvm::BasicBlock*> killers;
+
+						for (auto& [a, b] : m_blocks)
+						{
+							const auto si = b.store[i];
+
+							if (si && si != bs)
+							{
+								if (pois[bs->getParent()] > pois[si->getParent()])
+								{
+									killers.emplace_back(si->getParent());
+								}
+								else
+								{
+									// Reset: store is not the first in the set
+									killers.clear();
+									break;
+								}
+							}
+						}
+
+						if (killers.empty())
+							continue;
+
+						// Find nearest common post-dominator
+						llvm::BasicBlock* common_pdom = killers[0];
+						for (auto* bbb : llvm::drop_begin(killers))
+						{
+							if (!common_pdom)
+								break;
+							common_pdom = pdt.findNearestCommonDominator(common_pdom, bbb);
+						}
+
+						// Shortcut
+						if (!pdt.dominates(common_pdom, bs->getParent()))
+							common_pdom = nullptr;
+
+						// Look for possibly-dead store in CFG starting from the exit nodes
+						llvm::SetVector<llvm::BasicBlock*> work_list;
+						if (std::count(killers.begin(), killers.end(), common_pdom) == 0)
+						{
+							if (common_pdom)
+							{
+								// Shortcut
+								work_list.insert(common_pdom);
+							}
+							else
+							{
+								// Check all exits
+								for (auto* r : pdt.roots())
+									work_list.insert(r);
+							}
+						}
+
+						for (usz wi = 0; wi < work_list.size(); wi++)
+						{
+							auto* cur = work_list[wi];
+							if (std::count(killers.begin(), killers.end(), cur))
+								continue;
+
+							if (cur == bs->getParent())
+							{
+								// Reset: store is not dead
+								killers.clear();
+								break;
+							}
+
+							for (auto* p : llvm::predecessors(cur))
+								work_list.insert(p);
+						}
+
+						// Finally erase the dead store
+						if (!killers.empty())
+						{
+							bs->eraseFromParent();
+							bs = nullptr;
+
+							// Run the loop from the start
+							bi = 0;
+						}
+					}
+				}
+			}
+
+			block_q.clear();
+			for (auto& [a, b] : m_blocks)
+			{
+				block_q.emplace_back(&b);
+			}
+
+			for (usz bi = 0; bi < block_q.size(); bi++)
+			{
+				for (u32 i = 0; i < 128; i++)
+				{
 					// If store isn't erased, try to sink it
-					if (bs)
+					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1)
 					{
 						std::map<u32, block_info*, std::greater<>> sucs;
 
@@ -5510,10 +5614,15 @@ public:
 						{
 							auto ins = b2->block->getFirstNonPHI();
 
-							if (b2 != block_q[bi] && pdt.dominates(ins, bs) && dt.dominates(bs->getOperand(0), ins))
+							if (b2 != block_q[bi])
 							{
 								if (b2->bb->preds.size() == 1)
 								{
+									if (!dt.dominates(bs->getOperand(0), ins))
+										continue;
+									if (!pdt.dominates(ins, bs))
+										continue;
+
 									m_ir->SetInsertPoint(ins);
 									auto si = llvm::cast<StoreInst>(m_ir->Insert(bs->clone()));
 									if (b2->store[i] == nullptr)
@@ -5533,12 +5642,43 @@ public:
 									auto& edge = block_q[bi]->block_edges[a2];
 									if (!edge)
 									{
-										edge = llvm::SplitEdge(block_q[bi]->block_end, b2->block);
+										const auto succ_range = llvm::successors(block_q[bi]->block_end);
+
+										auto succ = b2->block;
+
+										llvm::SmallSetVector<llvm::BasicBlock*, 32> succ_q;
+										succ_q.insert(b2->block);
+
+										for (usz j = 0; j < 32 && j < succ_q.size(); j++)
+										{
+											if (!llvm::count(succ_range, (succ = succ_q[j])))
+											{
+												for (auto pred : llvm::predecessors(succ))
+												{
+													succ_q.insert(pred);
+												}
+											}
+											else
+											{
+												break;
+											}
+										}
+
+										if (!llvm::count(succ_range, succ))
+										{
+											// TODO: figure this out
+											spu_log.notice("[%s] Failed successor to 0x%05x", fmt::base57(be_t<u64>{m_hash_start}), a2);
+											continue;
+										}
+
+										edge = llvm::SplitEdge(block_q[bi]->block_end, succ);
 										pdt.recalculate(*m_function);
 										dt.recalculate(*m_function);
 									}
 
 									ins = edge->getTerminator();
+									if (!dt.dominates(bs->getOperand(0), ins))
+										continue;
 									if (!pdt.dominates(ins, bs))
 										continue;
 

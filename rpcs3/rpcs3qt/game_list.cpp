@@ -37,6 +37,19 @@ void game_list::mouseMoveEvent(QMouseEvent *event)
 	m_last_hover_item = new_item;
 }
 
+void game_list::keyPressEvent(QKeyEvent* event)
+{
+	const auto modifiers = event->modifiers();
+
+	if (modifiers == Qt::ControlModifier && event->key() == Qt::Key_F && !event->isAutoRepeat())
+	{
+		Q_EMIT FocusToSearchBar();
+		return;
+	}
+
+	QTableWidget::keyPressEvent(event);
+}
+
 void game_list::leaveEvent(QEvent */*event*/)
 {
 	if (m_last_hover_item)
@@ -44,4 +57,14 @@ void game_list::leaveEvent(QEvent */*event*/)
 		m_last_hover_item->set_active(false);
 		m_last_hover_item = nullptr;
 	}
+}
+
+void game_list::FocusAndSelectFirstEntryIfNoneIs()
+{
+	if (QTableWidgetItem* item = itemAt(0, 0); item && selectedIndexes().isEmpty())
+	{
+		setCurrentItem(item);
+	}
+
+	setFocus();
 }
