@@ -461,28 +461,41 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 					break;
 				}
 
-				reader_lock lock2(mutex->mutex);
+				std::lock_guard lock2(mutex->mutex);
 
-				bool mutex_sleep = false;
+				bool success = false;
 
-				for (auto cpu = mutex->load_sq(); cpu; cpu = cpu->next_cpu)
+				mutex->lv2_control.fetch_op([&](lv2_lwmutex::control_data_t& data)
 				{
-					if (cpu == &ppu)
+					success = false;
+
+					ppu_thread* sq = static_cast<ppu_thread*>(data.sq);
+
+					const bool retval = &ppu == sq;
+
+					if (!mutex->unqueue<false>(sq, &ppu))
 					{
-						mutex_sleep = true;
-						break;
+						return false;
 					}
-				}
 
-				if (!mutex_sleep)
+					success = true;
+
+					if (!retval)
+					{
+						return false;
+					}
+
+					data.sq = sq;
+					return true;
+				});
+
+				if (success)
 				{
-					break;
+					ppu.next_cpu = nullptr;
+					ppu.gpr[3] = CELL_ETIMEDOUT;
 				}
 
-				mutex->sleep(ppu);
-				ppu.start_time = start_time; // Restore start time because awake has been called
-				timeout = 0;
-				continue;
+				break;
 			}
 		}
 		else
