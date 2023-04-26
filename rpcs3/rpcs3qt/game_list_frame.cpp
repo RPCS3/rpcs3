@@ -517,10 +517,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			m_progress_dialog_timer->start();
 		}
 
-		if (Emu.IsStopped())
-		{
-			Emu.AddGamesFromDir(g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
-		}
+		Emu.AddGamesFromDir(g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
 
 		const std::string _hdd = rpcs3::utils::get_hdd0_dir();
 

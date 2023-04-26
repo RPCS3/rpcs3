@@ -3039,9 +3039,6 @@ std::set<std::string> Emulator::GetGameDirs() const
 
 void Emulator::AddGamesFromDir(const std::string& path)
 {
-	if (!IsStopped())
-		return;
-
 	m_games_config.set_save_on_dirty(false);
 
 	// search dropped path first or else the direct parent to an elf is wrongly skipped
