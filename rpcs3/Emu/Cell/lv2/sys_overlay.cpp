@@ -4,6 +4,7 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 #include "Crypto/unself.h"
 #include "Crypto/unedat.h"
 #include "Loader/ELF.h"

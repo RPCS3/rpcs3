@@ -1,5 +1,6 @@
 #include "GLOverlays.h"
 
+#include "Emu/system_config.h"
 #include "../rsx_utils.h"
 #include "../Program/RSXOverlay.h"
 

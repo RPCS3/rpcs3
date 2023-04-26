@@ -2,7 +2,7 @@
 
 #include "overlay_home_menu_page.h"
 #include "Emu/System.h"
-#include "Emu/system_config.h"
+#include "Utilities/Config.h"
 
 namespace rsx
 {

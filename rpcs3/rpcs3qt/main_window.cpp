@@ -51,6 +51,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
+#include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 
 #include "Crypto/unpkg.h"
