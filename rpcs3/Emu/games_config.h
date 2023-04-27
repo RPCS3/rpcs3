@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Utilities/mutex.h"
 #include <map>
 
 class games_config
@@ -10,7 +11,7 @@ public:
 
 	void set_save_on_dirty(bool enabled) { m_save_on_dirty = enabled; }
 
-	const std::map<std::string, std::string>& get_games() const { return m_games; }
+	const std::map<std::string, std::string> get_games() const;
 	bool is_dirty() const { return m_dirty; }
 
 	std::string get_path(const std::string& title_id) const;
@@ -22,6 +23,7 @@ private:
 	void load();
 
 	std::map<std::string, std::string> m_games;
+	mutable shared_mutex m_mutex;
 
 	bool m_dirty = false;
 	bool m_save_on_dirty = true;
