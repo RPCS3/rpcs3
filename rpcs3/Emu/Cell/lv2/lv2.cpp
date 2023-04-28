@@ -1209,6 +1209,7 @@ std::string ppu_get_syscall_name(u64 code)
 DECLARE(lv2_obj::g_mutex);
 DECLARE(lv2_obj::g_ppu){};
 DECLARE(lv2_obj::g_pending){};
+DECLARE(lv2_obj::g_priority_order_tag){};
 
 thread_local DECLARE(lv2_obj::g_to_notify){};
 thread_local DECLARE(lv2_obj::g_postpone_notify_barrier){};
@@ -1424,24 +1425,53 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	// Check thread type
 	AUDIT(!cpu || cpu->id_type() == 1);
 
+	bool push_first = false;
+
 	switch (prio)
 	{
 	default:
 	{
 		// Priority set
-		const s32 old_prio = static_cast<ppu_thread*>(cpu)->prio.exchange(prio);
+		auto set_prio = [](atomic_t<ppu_thread::ppu_prio_t>& prio, s32 value, bool increment_order_last, bool increment_order_first)
+		{
+			s64 tag = 0;
+
+			if (increment_order_first || increment_order_last)
+			{
+				tag = ++g_priority_order_tag;
+			}
+
+			prio.atomic_op([&](ppu_thread::ppu_prio_t& prio)
+			{
+				prio.prio = value;
+
+				if (increment_order_first)
+				{
+					prio.order = ~tag;
+				}
+				else if (increment_order_last)
+				{
+					prio.order = tag;
+				}
+			});
+		};
+
+		const s32 old_prio = static_cast<ppu_thread*>(cpu)->prio.load().prio;
 
 		// If priority is the same, push ONPROC/RUNNABLE thread to the back of the priority list if it is not the current thread
 		if (old_prio == prio && cpu == cpu_thread::get_current())
 		{
+			set_prio(static_cast<ppu_thread*>(cpu)->prio, prio, false, false);
 			return true;
 		}
 
 		if (!unqueue(g_ppu, static_cast<ppu_thread*>(cpu), &ppu_thread::next_ppu))
 		{
+			set_prio(static_cast<ppu_thread*>(cpu)->prio, prio, old_prio > prio, old_prio < prio);
 			return true;
 		}
 
+		set_prio(static_cast<ppu_thread*>(cpu)->prio, prio, false, false);
 		break;
 	}
 	case yield_cmd:
@@ -1462,7 +1492,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 			{
 				auto ppu2 = ppu->next_ppu;
 
-				if (!ppu2 || ppu2->prio != ppu->prio)
+				if (!ppu2 || ppu2->prio.load().prio != ppu->prio.load().prio)
 				{
 					// Empty 'same prio' threads list
 					return false;
@@ -1472,7 +1502,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 				{
 					const auto next = ppu2->next_ppu;
 
-					if (!next || next->prio != ppu->prio)
+					if (!next || next->prio.load().prio != ppu->prio.load().prio)
 					{
 						break;
 					}
@@ -1505,7 +1535,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	}
 	}
 
-	const auto emplace_thread = [](cpu_thread* const cpu)
+	const auto emplace_thread = [push_first](cpu_thread* const cpu)
 	{
 		for (auto it = &g_ppu;;)
 		{
@@ -1525,7 +1555,7 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 			}
 
 			// Use priority, also preserve FIFO order
-			if (!next || next->prio > static_cast<ppu_thread*>(cpu)->prio)
+			if (!next || (push_first ? next->prio.load().prio >= static_cast<ppu_thread*>(cpu)->prio.load().prio : next->prio.load().prio > static_cast<ppu_thread*>(cpu)->prio.load().prio))
 			{
 				atomic_storage<ppu_thread*>::release(static_cast<ppu_thread*>(cpu)->next_ppu, next);
 				atomic_storage<ppu_thread*>::release(*it, static_cast<ppu_thread*>(cpu));

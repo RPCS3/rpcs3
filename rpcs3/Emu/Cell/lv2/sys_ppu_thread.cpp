@@ -312,7 +312,7 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 	if (thread_id == ppu.id)
 	{
 		// Fast path for self
-		if (ppu.prio != prio)
+		if (ppu.prio.load().prio != prio)
 		{
 			lv2_obj::set_priority(ppu, prio);
 		}
@@ -322,10 +322,7 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread)
 	{
-		if (thread.prio != prio)
-		{
-			lv2_obj::set_priority(thread, prio);
-		}
+		lv2_obj::set_priority(thread, prio);
 	});
 
 	if (!thread)
@@ -346,7 +343,7 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 	{
 		// Fast path for self
 		ppu.check_state();
-		*priop = ppu.prio;
+		*priop = ppu.prio.load().prio;
 		return CELL_OK;
 	}
 
@@ -354,7 +351,7 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
-		prio = thread.prio;
+		prio = thread.prio.load().prio;
 	});
 
 	if (!thread)

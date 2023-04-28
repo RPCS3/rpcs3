@@ -180,7 +180,7 @@ public:
 			}
 		}
 
-		s32 prio = it->prio;
+		auto prio = it->prio.load();
 		auto found = it;
 
 		while (true)
@@ -193,10 +193,10 @@ public:
 				break;
 			}
 
-			const s32 _prio = static_cast<E*>(next)->prio;
+			const auto _prio = static_cast<E*>(next)->prio.load();
 
-			// This condition tests for equality as well so the eraliest element to be pushed is popped
-			if (_prio <= prio)
+			// This condition tests for equality as well so the earliest element to be pushed is popped
+			if (_prio.prio < prio.prio || (_prio.prio == prio.prio && _prio.order < prio.order))
 			{
 				found = next;
 				parent_found = &node;
@@ -224,6 +224,11 @@ public:
 	{
 		atomic_storage<T>::release(object->next_cpu, first);
 		atomic_storage<T>::release(first, object);
+
+		object->prio.atomic_op([order = ++g_priority_order_tag](std::common_type_t<decltype(std::declval<T>()->prio.load())>& prio)
+		{
+			prio.order = order;
+		});
 	}
 
 private:
@@ -475,6 +480,9 @@ public:
 
 	// Scheduler mutex
 	static shared_mutex g_mutex;
+
+	// Proirity tags
+	static atomic_t<u64> g_priority_order_tag;
 
 private:
 	// Pending list of threads to run
