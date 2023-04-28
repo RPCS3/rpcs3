@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "screenshot_manager_dialog.h"
 #include "screenshot_preview.h"
+#include "screenshot_item.h"
 #include "flow_widget.h"
 #include "qt_utils.h"
 #include "Utilities/File.h"
@@ -23,7 +24,7 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 
 	m_icon_size = QSize(160, 90);
 	m_flow_widget = new flow_widget(this);
-	m_flow_widget->setObjectName("m_flow_widget");
+	m_flow_widget->setObjectName("flow_widget");
 
 	m_placeholder = QPixmap(m_icon_size);
 	m_placeholder.fill(Qt::gray);
@@ -136,32 +137,4 @@ bool screenshot_manager_dialog::eventFilter(QObject* watched, QEvent* event)
 	}
 
 	return false;
-}
-
-screenshot_item::screenshot_item(QWidget* parent)
-	: flow_widget_item(parent)
-{
-	cb_on_first_visibility = [this]()
-	{
-		m_thread.reset(QThread::create([this]()
-		{
-			const QPixmap pixmap = gui::utils::get_centered_pixmap(icon_path, icon_size, 0, 0, 1.0);
-			Q_EMIT signal_icon_update(pixmap);
-		}));
-		m_thread->start();
-	};
-
-	label = new QLabel(this);
-	QVBoxLayout* layout = new QVBoxLayout(this);
-	layout->setContentsMargins(0, 0, 0, 0);
-	layout->addWidget(label);
-	setLayout(layout);
-}
-
-screenshot_item::~screenshot_item()
-{
-	if (m_thread && m_thread->isRunning())
-	{
-		m_thread->wait();
-	}
 }

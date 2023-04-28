@@ -47,6 +47,36 @@ QString Localized::GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days) const
 	return str_seconds;
 }
 
+std::string Localized::GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined)
+{
+	QStringList string;
+
+	if (combined)
+	{
+		for (const auto& item : map)
+		{
+			if (key & item.first)
+			{
+				string << item.second;
+			}
+		}
+	}
+	else
+	{
+		if (map.find(key) != map.end())
+		{
+			string << ::at32(map, key);
+		}
+	}
+
+	if (string.isEmpty())
+	{
+		string << tr("Unknown");
+	}
+
+	return string.join(", ").toStdString();
+}
+
 Localized::resolution::resolution()
 	: mode({
 		{ psf::resolution_flag::_480p,      tr("480p") },

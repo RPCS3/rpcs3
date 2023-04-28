@@ -16,8 +16,6 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-constexpr auto qstr = QString::fromStdString;
-
 render_creator::render_creator(QObject *parent) : QObject(parent)
 {
 #if defined(HAVE_VULKAN)
@@ -50,9 +48,9 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 			if (!work_done) // The spawning thread gave up, do not attempt to modify vulkan_adapters
 			{
-				for (auto& gpu : gpus)
+				for (const auto& gpu : gpus)
 				{
-					adapters->append(qstr(gpu.get_name()));
+					adapters->append(QString::fromStdString(gpu.get_name()));
 				}
 			}
 		}

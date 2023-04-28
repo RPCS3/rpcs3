@@ -154,6 +154,9 @@
     <Filter Include="Gui\flow_layout">
       <UniqueIdentifier>{9191ae51-8b80-4606-b5bc-966a9588f538}</UniqueIdentifier>
     </Filter>
+    <Filter Include="StyleSheets">
+      <UniqueIdentifier>{b927140a-5214-4628-a648-8380ae793179}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -379,9 +382,6 @@
       <Filter>Gui\game list</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\game_list_grid.cpp">
-      <Filter>Gui\game list</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\game_list_grid_delegate.cpp">
       <Filter>Gui\game list</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\memory_string_searcher.cpp">
@@ -954,6 +954,54 @@
     <ClCompile Include="rpcs3qt\flow_widget.cpp">
       <Filter>Gui\flow_layout</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_table.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_table.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_table.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_base.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\movie_item_base.cpp">
+      <Filter>Gui\custom items</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list_grid_item.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_grid_item.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_grid_item.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\flow_widget_item.cpp">
+      <Filter>Gui\flow_layout</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_screenshot_item.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_item.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\screenshot_item.cpp">
+      <Filter>Gui\screenshot manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_flow_widget_item.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_flow_widget_item.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_flow_widget.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_flow_widget.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -991,9 +1039,6 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\gl_gs_frame.h">
       <Filter>Gui\game window</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\game_list_grid_delegate.h">
-      <Filter>Gui\game list</Filter>
     </ClInclude>
     <ClInclude Include="Input\evdev_joystick_handler.h">
       <Filter>Io\evdev</Filter>
@@ -1129,6 +1174,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\flow_layout.h">
       <Filter>Gui\flow_layout</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\movie_item_base.h">
+      <Filter>Gui\custom items</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1408,11 +1456,55 @@
     <CustomBuild Include="rpcs3qt\flow_widget.h">
       <Filter>Gui\flow_layout</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_table.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_base.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\game_list_grid_item.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\screenshot_item.h">
+      <Filter>Gui\screenshot manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\flow_widget_item.h">
+      <Filter>Gui\flow_layout</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Image Include="rpcs3.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\bin\GuiConfigs\Classic (Bright).qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Darker Style by TheMitoSan.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\YoRHa by Ani.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Skyline.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\ModernBlue Theme by TheMitoSan.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Nekotekina by GooseWing.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Skyline (Nightfall).qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Kuroi (Dark) by Ani.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Envy.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
   </ItemGroup>
 </Project>

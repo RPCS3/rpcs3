@@ -57,15 +57,23 @@
 class flow_layout : public QLayout
 {
 public:
-	explicit flow_layout(QWidget* parent, int margin = -1, int hSpacing = -1, int vSpacing = -1);
-	explicit flow_layout(int margin = -1, int hSpacing = -1, int vSpacing = -1);
+	struct position
+	{
+		int row{};
+		int col{};
+	};
+
+	explicit flow_layout(QWidget* parent, int margin = -1, bool dynamic_spacing = false, int hSpacing = -1, int vSpacing = -1);
+	explicit flow_layout(int margin = -1, bool dynamic_spacing = false, int hSpacing = -1, int vSpacing = -1);
 	~flow_layout();
 
 	void clear();
+	const QList<QLayoutItem*>& item_list() const { return itemList; }
+	const QList<position>& positions() const { return m_positions; }
+	int rows() const { return m_rows; }
+	int cols() const { return m_cols; }
 
 	void addItem(QLayoutItem* item) override;
-	int horizontalSpacing() const;
-	int verticalSpacing() const;
 	Qt::Orientations expandingDirections() const override;
 	bool hasHeightForWidth() const override;
 	int heightForWidth(int) const override;
@@ -77,10 +85,19 @@ public:
 	QLayoutItem* takeAt(int index) override;
 
 private:
+	int horizontalSpacing() const;
+	int verticalSpacing() const;
 	int doLayout(const QRect& rect, bool testOnly) const;
 	int smartSpacing(QStyle::PixelMetric pm) const;
 
 	QList<QLayoutItem*> itemList;
-	int m_hSpace;
-	int m_vSpace;
+	bool m_dynamic_spacing{};
+	int m_hSpaceInitial{-1};
+	int m_vSpaceInitial{-1};
+	mutable int m_hSpace{-1};
+	mutable int m_vSpace{-1};
+
+	mutable QList<position> m_positions;
+	mutable int m_rows{};
+	mutable int m_cols{};
 };
