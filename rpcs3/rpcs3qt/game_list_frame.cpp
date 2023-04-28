@@ -2839,6 +2839,11 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	const std::string selected_item = CurrentSelectionPath();
 
 	// Release old data
+	for (const auto& game : m_game_data)
+	{
+		game->item = nullptr;
+	}
+
 	m_game_list->clear_list();
 	m_game_grid->deleteLater();
 
@@ -2858,8 +2863,6 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	for (const auto& app : m_game_data)
 	{
-		app->item = nullptr;
-
 		if (IsEntryVisible(app))
 		{
 			matching_apps.push_back(app);
