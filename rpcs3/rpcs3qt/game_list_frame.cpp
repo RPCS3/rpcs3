@@ -173,10 +173,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_serials.clear();
 		m_games.pop_all();
 	});
-	connect(this, &game_list_frame::IconReady, this, [this](movie_item* item)
+	connect(this, &game_list_frame::IconReady, this, [this](const game_info& game)
 	{
-		if (!item) return;
-		item->call_icon_func();
+		if (!game || !game->item) return;
+		game->item->call_icon_func();
 	});
 	connect(this, &game_list_frame::SizeOnDiskReady, this, [this](const game_info& game)
 	{
@@ -285,7 +285,7 @@ game_list_frame::~game_list_frame()
 
 void game_list_frame::FixNarrowColumns() const
 {
-	qApp->processEvents();
+	QApplication::processEvents();
 
 	// handle columns (other than the icon column) that have zero width after showing them (stuck between others)
 	for (int col = 1; col < m_columnActs.count(); ++col)
@@ -365,10 +365,6 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 
 void game_list_frame::SortGameList()
 {
-	gui::utils::stop_future_watcher(m_parsing_watcher, false);
-	gui::utils::stop_future_watcher(m_refresh_watcher, false);
-	WaitAndAbortRepaintThreads();
-
 	// Back-up old header sizes to handle unwanted column resize in case of zero search results
 	const int old_row_count = m_game_list->rowCount();
 	const int old_game_count = m_game_data.count();
@@ -2635,6 +2631,11 @@ void game_list_frame::PopulateGameList()
 	const std::string selected_item = CurrentSelectionPath();
 
 	// Release old data
+	for (const auto& game : m_game_data)
+	{
+		game->item = nullptr;
+	}
+
 	m_game_grid->clear_list();
 	m_game_list->clear_list();
 
@@ -2658,7 +2659,6 @@ void game_list_frame::PopulateGameList()
 
 		if (!IsEntryVisible(game, use_search_fallback))
 		{
-			game->item = nullptr;
 			continue;
 		}
 
@@ -3171,7 +3171,7 @@ void game_list_frame::IconLoadFunction(game_info game, std::shared_ptr<atomic_t<
 
 	if (!cancel || !cancel->load())
 	{
-		Q_EMIT IconReady(game->item);
+		Q_EMIT IconReady(game);
 	}
 }
 

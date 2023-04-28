@@ -73,12 +73,12 @@ void movie_item::set_icon_func(const icon_callback_t& func)
 
 void movie_item::call_icon_load_func(int index)
 {
-	wait_for_icon_loading(true);
-
-	if (!m_icon_load_callback || m_icon_loading)
+	if (!m_icon_load_callback || m_icon_loading || m_icon_loading_aborted->load())
 	{
 		return;
 	}
+
+	wait_for_icon_loading(true);
 
 	*m_icon_loading_aborted = false;
 	m_icon_loading = true;
@@ -98,16 +98,17 @@ void movie_item::set_icon_load_func(const icon_load_callback_t& func)
 
 	m_icon_loading = false;
 	m_icon_load_callback = func;
+	*m_icon_loading_aborted = false;
 }
 
 void movie_item::call_size_calc_func()
 {
-	wait_for_size_on_disk_loading(true);
-
-	if (!m_size_calc_callback || m_size_on_disk_loading)
+	if (!m_size_calc_callback || m_size_on_disk_loading || m_size_on_disk_loading_aborted->load())
 	{
 		return;
 	}
+
+	wait_for_size_on_disk_loading(true);
 
 	*m_size_on_disk_loading_aborted = false;
 	m_size_on_disk_loading = true;
@@ -125,13 +126,15 @@ void movie_item::set_size_calc_func(const size_calc_callback_t& func)
 {
 	m_size_on_disk_loading = false;
 	m_size_calc_callback = func;
+	*m_size_on_disk_loading_aborted = false;
 }
 
 void movie_item::wait_for_icon_loading(bool abort)
 {
+	*m_icon_loading_aborted = abort;
+
 	if (m_icon_load_thread && m_icon_load_thread->isRunning())
 	{
-		*m_icon_loading_aborted = abort;
 		m_icon_load_thread->wait();
 		m_icon_load_thread.reset();
 	}
@@ -139,9 +142,10 @@ void movie_item::wait_for_icon_loading(bool abort)
 
 void movie_item::wait_for_size_on_disk_loading(bool abort)
 {
+	*m_size_on_disk_loading_aborted = abort;
+
 	if (m_size_calc_thread && m_size_calc_thread->isRunning())
 	{
-		*m_size_on_disk_loading_aborted = abort;
 		m_size_calc_thread->wait();
 		m_size_calc_thread.reset();
 	}
