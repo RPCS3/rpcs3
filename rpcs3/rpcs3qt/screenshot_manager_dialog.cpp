@@ -81,11 +81,8 @@ void screenshot_manager_dialog::reload()
 	m_abort_parsing = true;
 	gui::utils::stop_future_watcher(m_parsing_watcher, true);
 
-	// Make sure the directory is mounted
-	vfs::mount("/dev_hdd0", rpcs3::utils::get_hdd0_dir());
-
 	const std::string screenshot_path_qt   = fs::get_config_dir() + "screenshots/";
-	const std::string screenshot_path_cell = vfs::get("/dev_hdd0/photo/");
+	const std::string screenshot_path_cell = rpcs3::utils::get_hdd0_dir() + "/photo/";
 
 	m_flow_widget->clear();
 	m_abort_parsing = false;
