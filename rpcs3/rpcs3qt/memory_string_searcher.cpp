@@ -8,11 +8,6 @@
 #include "Utilities/Thread.h"
 #include "Utilities/StrUtil.h"
 
-#include <QLabel>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QHBoxLayout>
-#include <QComboBox>
 #include <QCheckBox>
 
 #include <charconv>
@@ -23,8 +18,6 @@
 #include "util/asm.hpp"
 
 LOG_CHANNEL(gui_log, "GUI");
-
-constexpr auto qstr = QString::fromStdString;
 
 template <>
 void fmt_class_string<search_mode>::format(std::string& out, u64 arg)

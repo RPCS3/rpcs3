@@ -1,5 +1,14 @@
+#include "stdafx.h"
 #include "game_list.h"
 #include "movie_item.h"
+
+game_list::game_list() : QTableWidget(), game_list_base()
+{
+	m_icon_ready_callback = [this](const game_info& game)
+	{
+		Q_EMIT IconReady(game);
+	};
+}
 
 void game_list::clear_list()
 {

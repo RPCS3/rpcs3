@@ -2430,7 +2430,7 @@ void main_window::CreateConnects()
 			{
 				if (game)
 				{
-					games[game->info.serial].insert(game_list_frame::GetGameVersion(game));
+					games[game->info.serial].insert(game_list::GetGameVersion(game));
 				}
 			}
 		}

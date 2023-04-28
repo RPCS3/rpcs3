@@ -1,28 +1,37 @@
 #pragma once
 
-#include "game_list.h"
+#include "game_list_base.h"
+#include "flow_widget.h"
 
-class game_list_grid_delegate;
+#include <QKeyEvent>
 
-class game_list_grid : public game_list
+class game_list_grid : public flow_widget, public game_list_base
 {
 	Q_OBJECT
 
-	QSize m_icon_size;
-	QColor m_icon_color;
-	qreal m_margin_factor;
-	qreal m_text_factor;
-	bool m_text_enabled = true;
-
 public:
-	explicit game_list_grid(const QSize& icon_size, QColor icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText);
+	explicit game_list_grid();
 
-	void enableText(const bool& enabled);
-	void setIconSize(const QSize& size) const;
-	movie_item* addItem(const game_info& app, const QString& name, const QString& movie_path, const int& row, const int& col);
+	void clear_list() override;
 
-	[[nodiscard]] qreal getMarginFactor() const;
+	void populate(
+		const std::vector<game_info>& game_data,
+		const QMap<QString, QString>& notes_map,
+		const QMap<QString, QString>& title_map,
+		const std::string& selected_item_id,
+		bool play_hover_movies) override;
 
-private:
-	game_list_grid_delegate* grid_item_delegate;
+	void repaint_icons(QList<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio) override;
+
+	bool eventFilter(QObject* watched, QEvent* event) override;
+	void keyPressEvent(QKeyEvent* event) override;
+
+public Q_SLOTS:
+	void FocusAndSelectFirstEntryIfNoneIs();
+
+Q_SIGNALS:
+	void FocusToSearchBar();
+	void ItemDoubleClicked(const game_info& game);
+	void ItemSelectionChanged(const game_info& game);
+	void IconReady(const game_info& game);
 };
