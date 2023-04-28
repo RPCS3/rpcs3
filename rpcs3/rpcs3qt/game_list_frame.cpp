@@ -922,15 +922,25 @@ void game_list_frame::OnRefreshFinished()
 
 	if (!std::exchange(m_initial_refresh_done, true))
 	{
+		// Resize to fit and get the ideal icon column width
+		ResizeColumnsToContents();
+		const int icon_column_width = m_game_list->columnWidth(gui::column_icon);
+
+		// Restore header layout from last session
 		const QByteArray state = m_gui_settings->GetValue(gui::gl_state).toByteArray();
 		if (!m_game_list->horizontalHeader()->restoreState(state) && m_game_list->rowCount())
 		{
-			// If no settings exist, resize to contents.
-			ResizeColumnsToContents();
+			// Nothing to do
 		}
 
+		// Make sure no columns are squished
 		FixNarrowColumns();
 
+		// Make sure that the icon column is large enough for the actual items.
+		// This is important if the list appeared as empty when closing the software before.
+		m_game_list->horizontalHeader()->resizeSection(gui::column_icon, icon_column_width);
+
+		// Save new header state
 		m_game_list->horizontalHeader()->restoreState(m_game_list->horizontalHeader()->saveState());
 	}
 
