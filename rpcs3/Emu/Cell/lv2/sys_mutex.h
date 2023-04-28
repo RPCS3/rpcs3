@@ -105,6 +105,11 @@ struct lv2_mutex final : lv2_obj
 		{
 			if (data.owner)
 			{
+				cpu.prio.atomic_op([tag = ++g_priority_order_tag](std::common_type_t<decltype(T::prio)>& prio)
+				{
+					prio.order = tag;
+				});
+
 				cpu.next_cpu = data.sq;
 				data.sq = &cpu;
 				return false;

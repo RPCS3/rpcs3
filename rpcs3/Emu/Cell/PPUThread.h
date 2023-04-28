@@ -3,6 +3,7 @@
 #include "../CPU/CPUThread.h"
 #include "../Memory/vm_ptr.h"
 #include "Utilities/lockless.h"
+#include "Utilities/BitField.h"
 
 #include "util/logs.hpp"
 #include "util/v128.hpp"
@@ -253,7 +254,14 @@ public:
 	alignas(64) std::byte rdata[128]{}; // Reservation data
 	bool use_full_rdata{};
 
-	atomic_t<s32> prio{0}; // Thread priority (0..3071)
+	union ppu_prio_t
+	{
+		u64 all;
+		bf_t<s64, 0, 13> prio; // Thread priority (0..3071) (firs 12-bits)
+		bf_t<s64, 13, 51> order; // Thread enqueue order (last 52-bits)
+	};
+
+	atomic_t<ppu_prio_t> prio{};
 	const u32 stack_size; // Stack size
 	const u32 stack_addr; // Stack address
 

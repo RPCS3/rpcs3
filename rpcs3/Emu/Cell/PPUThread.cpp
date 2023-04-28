@@ -1357,7 +1357,7 @@ std::string ppu_thread::dump_misc() const
 		fmt::append(ret, " (LV2 suspended)\n");
 	}
 
-	fmt::append(ret, "Priority: %d\n", +prio);
+	fmt::append(ret, "Priority: %d\n", prio.load().prio);
 	fmt::append(ret, "Stack: 0x%x..0x%x\n", stack_addr, stack_addr + stack_size - 1);
 	fmt::append(ret, "Joiner: %s\n", joiner.load());
 
@@ -1660,9 +1660,8 @@ ppu_thread::~ppu_thread()
 	perf_log.notice("Perf stats for instructions: total %u", exec_bytes / 4);
 }
 
-ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 prio, int detached)
+ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 _prio, int detached)
 	: cpu_thread(idm::last_id())
-	, prio(prio)
 	, stack_size(param.stack_size)
 	, stack_addr(param.stack_addr)
 	, joiner(detached != 0 ? ppu_join_status::detached : ppu_join_status::joinable)
@@ -1671,6 +1670,8 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, is_interrupt_thread(detached < 0)
 	, ppu_tname(make_single<std::string>(name))
 {
+	prio.raw().prio = _prio;
+
 	gpr[1] = stack_addr + stack_size - ppu_stack_start_offset;
 
 	gpr[13] = param.tls_addr;
@@ -1732,7 +1733,25 @@ bool ppu_thread::savable() const
 
 void ppu_thread::serialize_common(utils::serial& ar)
 {
-	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj, prio, optional_savestate_state, vr);
+	[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), ppu);
+
+	ar(gpr, fpr, cr, fpscr.bits, lr, ctr, vrsave, cia, xer, sat, nj);
+
+	if (ar.is_writing())
+	{
+	 	ar(prio.load().all);
+	}
+	else if (version < 2)
+	{
+		prio.raw().all = 0;
+		prio.raw().prio = ar.operator s32();
+	}
+	else
+	{
+		ar(prio.raw().all);
+	}
+
+	ar(optional_savestate_state, vr);
 
 	if (optional_savestate_state->data.empty())
 	{

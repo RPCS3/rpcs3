@@ -887,12 +887,25 @@ public:
 		operator std::string() const;
 	} thread_name{ this };
 
+	union spu_prio_t
+	{
+		u64 all;
+		bf_t<s64, 0, 9> prio; // Thread priority (0..3071) (firs 9-bits)
+		bf_t<s64, 9, 55> order; // Thread enqueue order (TODO, last 52-bits)
+	};
+
 	// For lv2_obj::schedule<spu_thread>
-	const struct priority_t
+	struct priority_t
 	{
 		const spu_thread* _this;
 
-		operator s32() const;
+		spu_prio_t load() const;
+
+		template <typename Func>
+		auto atomic_op(Func&& func)
+		{
+			return static_cast<std::conditional_t<std::is_void_v<Func>, Func, decltype(_this->group)>>(_this->group)->prio.atomic_op(std::move(func));
+		}
 	} prio{ this };
 };
 

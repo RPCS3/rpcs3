@@ -186,7 +186,7 @@ void register_editor_dialog::updateRegister(int reg) const
 		else if (reg == PPU_LR)  str = fmt::format("%016llx", ppu.lr);
 		else if (reg == PPU_CTR) str = fmt::format("%016llx", ppu.ctr);
 		else if (reg == PPU_VRSAVE) str = fmt::format("%08x", ppu.vrsave);
-		else if (reg == PPU_PRIO) str = fmt::format("%08x", +ppu.prio);
+		else if (reg == PPU_PRIO) str = fmt::format("%08x", ppu.prio.load().prio);
 		else if (reg == RESERVATION_LOST) str = sstr(ppu.raddr ? tr("Lose reservation on OK") : tr("Reservation is inactive"));
 		else if (reg == PC) str = fmt::format("%08x", ppu.cia);
 	}

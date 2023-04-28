@@ -656,7 +656,7 @@ void kernel_explorer::update()
 		const auto func = ppu.last_function;
 		const ppu_thread_status status = lv2_obj::ppu_state(&ppu, false, false);
 
-		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”%s", id, *ppu.ppu_tname.load(), +ppu.prio, ppu.joiner.load(), status, ppu.state.load()
+		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”%s", id, *ppu.ppu_tname.load(), ppu.prio.load().prio, ppu.joiner.load(), status, ppu.state.load()
 			, ppu.ack_suspend ? "After" : (ppu.current_function ? "In" : "Last"), func ? func : "", get_wait_time_str(ppu.start_time))));
 	}, idm::unlocked);
 
@@ -723,7 +723,7 @@ void kernel_explorer::update()
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
-		QTreeWidgetItem* spu_tree = add_solid_node(find_node(root, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Type = 0x%x", id, tg.name, tg.type)), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
+		QTreeWidgetItem* spu_tree = add_solid_node(find_node(root, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Type = 0x%x", id, tg.name, tg.type)), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), tg.prio.load().prio, tg.type)));
 
 		if (tg.name.ends_with("CellSpursKernelGroup"sv))
 		{

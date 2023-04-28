@@ -6157,11 +6157,13 @@ spu_thread::thread_name_t::operator std::string() const
 	return full_name;
 }
 
-spu_thread::priority_t::operator s32() const
+spu_thread::spu_prio_t spu_thread::priority_t::load() const
 {
 	if (_this->get_type() != spu_type::threaded || !_this->group->has_scheduler_context)
 	{
-		return s32{smax};
+		spu_thread::spu_prio_t prio{};
+		prio.prio = smax;
+		return prio;
 	}
 
 	return _this->group->prio;
