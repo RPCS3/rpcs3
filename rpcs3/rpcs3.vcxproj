@@ -1726,8 +1726,6 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="QTGeneratedFiles\Debug\pkg_install_dialog.moc" />
-    <None Include="QTGeneratedFiles\Release\pkg_install_dialog.moc" />
     <CustomBuild Include="rpcs3qt\patch_creator_dialog.ui">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Uic%27ing %(Identity)...</Message>
