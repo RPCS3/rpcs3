@@ -48,15 +48,14 @@ void lv2_timer::save(utils::serial& ar)
 	ar(state), lv2_event_queue::save_ptr(ar, port.get()), ar(source, data1, data2, expire, period);
 }
 
-u64 lv2_timer::check() noexcept
+u64 lv2_timer::check(u64 _now) noexcept
 {
-	while (thread_ctrl::state() != thread_state::aborting)
+	while (true)
 	{
 		const u32 _state = +state;
 
 		if (_state == SYS_TIMER_STATE_RUN)
 		{
-			const u64 _now = get_guest_system_time();
 			u64 next = expire;
 
 			// If aborting, perform the last accurate check for event
@@ -83,7 +82,7 @@ u64 lv2_timer::check_unlocked(u64 _now) noexcept
 
 	if (_now < next || state != SYS_TIMER_STATE_RUN)
 	{
-		return;
+		return umax;
 	}
 
 	if (port)
@@ -95,7 +94,7 @@ u64 lv2_timer::check_unlocked(u64 _now) noexcept
 	{
 		// Set next expiration time and check again
 		const u64 expire0 = utils::add_saturate<u64>(next, period);
-		expire.release(_expire0);
+		expire.release(expire0);
 		return expire0 - _now;
 	}
 
@@ -134,13 +133,15 @@ void lv2_timer_thread::operator()()
 			continue;
 		}
 
+		const u64 _now = get_guest_system_time();
+
 		reader_lock lock(mutex);
 
 		for (const auto& timer : timers)
 		{
 			if (lv2_obj::check(timer))
 			{
-				const u64 advised_sleep_time = timer->check();
+				const u64 advised_sleep_time = timer->check(_now);
 
 				if (sleep_time > advised_sleep_time)
 				{

@@ -36,7 +36,7 @@ struct lv2_timer : lv2_obj
 	atomic_t<u64> expire{0}; // Next expiration time
 	atomic_t<u64> period{0}; // Period (oneshot if 0)
 
-	u64 check() noexcept;
+	u64 check(u64 _now) noexcept;
 	u64 check_unlocked(u64 _now) noexcept;
 
 	lv2_timer() noexcept
