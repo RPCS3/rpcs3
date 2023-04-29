@@ -267,7 +267,8 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 	{
 		std::lock_guard lock(timer.mutex);
 
-		if (!lv2_obj::check(timer.port))
+		// LV2 Disassembly: Simple nullptr check (assignment test, do not use lv2_obj::check here)
+		if (!timer.port)
 		{
 			return CELL_ENOTCONN;
 		}
