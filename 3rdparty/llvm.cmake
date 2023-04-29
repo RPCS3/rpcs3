@@ -36,21 +36,13 @@ if(WITH_LLVM)
 		set(LLVM_DIR "${CMAKE_BINARY_DIR}/3rdparty/llvm/llvm_build/lib/cmake/llvm/")
 
 		set(CMAKE_CXX_FLAGS ${CXX_FLAGS_OLD})
+		option(STATIC_LINK_LLVM "" ON)
 
 		# now tries to find LLVM again
 		find_package(LLVM 16.0 CONFIG)
 		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
-
-		llvm_map_components_to_libnames(LLVM_LIBS
-			${LLVM_TARGETS_TO_BUILD}
-			Core
-			ExecutionEngine
-			IntelJITEvents
-			MCJIT
-		)
-
 	else()
 		message(STATUS "Using prebuilt or system LLVM")
 
@@ -70,7 +62,30 @@ if(WITH_LLVM)
 			message(FATAL_ERROR "Can't find LLVM libraries from the CMAKE_PREFIX_PATH path or LLVM_DIR. \
 													 Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
 		endif()
+	endif()
 
+	if (STATIC_LINK_LLVM)
+		if (NOT DEFINED LLVM_TARGETS_TO_BUILD)
+			if(COMPILER_ARM)
+				set(LLVM_TARGETS_TO_BUILD "AArch64;X86" CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
+			else()
+				set(LLVM_TARGETS_TO_BUILD "X86" CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
+			endif()
+		endif()
+		if(WIN32 OR CMAKE_SYSTEM MATCHES "Linux")
+			set (LLVM_ADDITIONAL_LIBS ${LLVM_ADDITIONAL_LIBS} IntelJITEvents)
+		endif()
+		if(CMAKE_SYSTEM MATCHES "Linux")
+			set (LLVM_ADDITIONAL_LIBS ${LLVM_ADDITIONAL_LIBS} PerfJITEvents)
+		endif()
+		llvm_map_components_to_libnames(LLVM_LIBS
+			${LLVM_TARGETS_TO_BUILD}
+			${LLVM_ADDITIONAL_LIBS}
+			Core
+			ExecutionEngine
+			MCJIT
+		)
+	else()
 		set(LLVM_LIBS LLVM)
 	endif()
 

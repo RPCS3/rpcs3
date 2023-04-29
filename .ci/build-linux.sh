@@ -46,6 +46,8 @@ cmake ..                                               \
     -DUSE_SYSTEM_CURL=ON                               \
     -DUSE_SDL=OFF                                      \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
+    -DLLVM_DIR=/opt/llvm/lib/cmake/llvm                \
+    -DSTATIC_LINK_LLVM=ON                              \
     -G Ninja
 
 ninja; build_status=$?;
