@@ -96,7 +96,7 @@ Q_SIGNALS:
 	void RequestBoot(const game_info& game, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::string& savestate = "");
 	void RequestIconSizeChange(const int& val);
 	void NotifyEmuSettingsChange();
-	void IconReady(movie_item* item);
+	void IconReady(const game_info& game);
 	void SizeOnDiskReady(const game_info& game);
 	void FocusToSearchBar();
 protected:

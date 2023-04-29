@@ -173,10 +173,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		m_serials.clear();
 		m_games.pop_all();
 	});
-	connect(this, &game_list_frame::IconReady, this, [this](movie_item* item)
+	connect(this, &game_list_frame::IconReady, this, [this](const game_info& game)
 	{
-		if (!item) return;
-		item->call_icon_func();
+		if (!game || !game->item) return;
+		game->item->call_icon_func();
 	});
 	connect(this, &game_list_frame::SizeOnDiskReady, this, [this](const game_info& game)
 	{
@@ -285,7 +285,7 @@ game_list_frame::~game_list_frame()
 
 void game_list_frame::FixNarrowColumns() const
 {
-	qApp->processEvents();
+	QApplication::processEvents();
 
 	// handle columns (other than the icon column) that have zero width after showing them (stuck between others)
 	for (int col = 1; col < m_columnActs.count(); ++col)
@@ -365,10 +365,6 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 
 void game_list_frame::SortGameList()
 {
-	gui::utils::stop_future_watcher(m_parsing_watcher, false);
-	gui::utils::stop_future_watcher(m_refresh_watcher, false);
-	WaitAndAbortRepaintThreads();
-
 	// Back-up old header sizes to handle unwanted column resize in case of zero search results
 	const int old_row_count = m_game_list->rowCount();
 	const int old_game_count = m_game_data.count();
@@ -521,10 +517,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			m_progress_dialog_timer->start();
 		}
 
-		if (Emu.IsStopped())
-		{
-			Emu.AddGamesFromDir(g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
-		}
+		Emu.AddGamesFromDir(g_cfg_vfs.get(g_cfg_vfs.games_dir, rpcs3::utils::get_emu_dir()));
 
 		const std::string _hdd = rpcs3::utils::get_hdd0_dir();
 
@@ -926,15 +919,25 @@ void game_list_frame::OnRefreshFinished()
 
 	if (!std::exchange(m_initial_refresh_done, true))
 	{
+		// Resize to fit and get the ideal icon column width
+		ResizeColumnsToContents();
+		const int icon_column_width = m_game_list->columnWidth(gui::column_icon);
+
+		// Restore header layout from last session
 		const QByteArray state = m_gui_settings->GetValue(gui::gl_state).toByteArray();
 		if (!m_game_list->horizontalHeader()->restoreState(state) && m_game_list->rowCount())
 		{
-			// If no settings exist, resize to contents.
-			ResizeColumnsToContents();
+			// Nothing to do
 		}
 
+		// Make sure no columns are squished
 		FixNarrowColumns();
 
+		// Make sure that the icon column is large enough for the actual items.
+		// This is important if the list appeared as empty when closing the software before.
+		m_game_list->horizontalHeader()->resizeSection(gui::column_icon, icon_column_width);
+
+		// Save new header state
 		m_game_list->horizontalHeader()->restoreState(m_game_list->horizontalHeader()->saveState());
 	}
 
@@ -2635,6 +2638,11 @@ void game_list_frame::PopulateGameList()
 	const std::string selected_item = CurrentSelectionPath();
 
 	// Release old data
+	for (const auto& game : m_game_data)
+	{
+		game->item = nullptr;
+	}
+
 	m_game_grid->clear_list();
 	m_game_list->clear_list();
 
@@ -2658,7 +2666,6 @@ void game_list_frame::PopulateGameList()
 
 		if (!IsEntryVisible(game, use_search_fallback))
 		{
-			game->item = nullptr;
 			continue;
 		}
 
@@ -2829,6 +2836,11 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	const std::string selected_item = CurrentSelectionPath();
 
 	// Release old data
+	for (const auto& game : m_game_data)
+	{
+		game->item = nullptr;
+	}
+
 	m_game_list->clear_list();
 	m_game_grid->deleteLater();
 
@@ -2848,8 +2860,6 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	for (const auto& app : m_game_data)
 	{
-		app->item = nullptr;
-
 		if (IsEntryVisible(app))
 		{
 			matching_apps.push_back(app);
@@ -3171,7 +3181,7 @@ void game_list_frame::IconLoadFunction(game_info game, std::shared_ptr<atomic_t<
 
 	if (!cancel || !cancel->load())
 	{
-		Q_EMIT IconReady(game->item);
+		Q_EMIT IconReady(game);
 	}
 }
 

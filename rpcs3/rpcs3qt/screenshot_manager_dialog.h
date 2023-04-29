@@ -1,6 +1,6 @@
 #pragma once
 
-#include "flow_widget.h";
+#include "flow_widget.h"
 
 #include <QDialog>
 #include <QFutureWatcher>

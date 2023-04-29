@@ -17,6 +17,7 @@ public:
 	std::string get_path(const std::string& title_id) const;
 
 	bool add_game(const std::string& key, const std::string& path);
+	bool add_external_hdd_game(const std::string& key, std::string& path);
 	bool save();
 
 private:

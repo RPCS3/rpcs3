@@ -1,13 +1,13 @@
 #pragma once
 
 #include "util/atomic.hpp"
+#include "Utilities/mutex.h"
 
 #include <QTableWidgetItem>
 #include <QMovie>
 #include <QObject>
 #include <QThread>
 
-#include <mutex>
 #include <memory>
 #include <functional>
 
@@ -71,7 +71,7 @@ public:
 		return m_size_on_disk_loading_aborted;
 	}
 
-	std::mutex pixmap_mutex;
+	shared_mutex pixmap_mutex;
 
 private:
 	std::shared_ptr<QMovie> m_movie;

@@ -466,7 +466,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
 
-	if (const auto error = Emu.BootGame(path, title_id, direct, false, config_mode, config_path); error != game_boot_result::no_errors)
+	if (const auto error = Emu.BootGame(path, title_id, direct, config_mode, config_path); error != game_boot_result::no_errors)
 	{
 		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
 		show_boot_error(error);

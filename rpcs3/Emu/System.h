@@ -210,7 +210,7 @@ public:
 		m_state = system_state::running;
 	}
 
-	void Init(bool add_only = false);
+	void Init();
 
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
@@ -307,12 +307,12 @@ public:
 		return m_config_path;
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);
 
-	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool is_disc_patch = false);
+	game_boot_result Load(const std::string& title_id = "", bool is_disc_patch = false);
 	void Run(bool start_playtime);
 	void RunPPU();
 	void FixGuestTime();
@@ -345,9 +345,12 @@ public:
 
 	std::set<std::string> GetGameDirs() const;
 	void AddGamesFromDir(const std::string& path);
+	game_boot_result AddGame(const std::string& path);
+	game_boot_result AddGameToYml(const std::string& path);
 
 	// Check if path is inside the specified directory
 	bool IsPathInsideDir(std::string_view path, std::string_view dir) const;
+	game_boot_result VerifyPathCasing(std::string_view path, std::string_view dir, bool from_dir) const;
 
 	void EjectDisc();
 	game_boot_result InsertDisc(const std::string& path);
@@ -357,6 +360,7 @@ public:
 	friend void init_fxo_for_exec(utils::serial*, bool);
 
 	static bool IsVsh();
+	static bool IsValidSfb(const std::string& path);
 
 	static void SaveSettings(const std::string& settings, const std::string& title_id);
 };
