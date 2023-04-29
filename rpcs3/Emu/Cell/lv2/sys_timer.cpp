@@ -115,7 +115,7 @@ void lv2_timer_thread::operator()()
 {
 	u64 sleep_time = 0;
 
-	while (thread_ctrl::state() != thread_state::aborting)
+	while (true)
 	{
 		if (sleep_time != umax)
 		{
@@ -124,6 +124,11 @@ void lv2_timer_thread::operator()()
 		}
 
 		thread_ctrl::wait_for(sleep_time);
+
+		if (thread_ctrl::state() == thread_state::aborting)
+		{
+			break;
+		}
 
 		sleep_time = umax;
 
