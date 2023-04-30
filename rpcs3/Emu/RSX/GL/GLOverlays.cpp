@@ -448,7 +448,7 @@ namespace gl
 			program_handle.uniforms["timestamp"] = cmd.config.get_sinus_value();
 			program_handle.uniforms["albedo"] = cmd.config.color;
 			program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
-			program_handle.uniforms["blur_intensity"] = static_cast<s32>(cmd.config.blur_strength);
+			program_handle.uniforms["blur_intensity"] = static_cast<f32>(cmd.config.blur_strength);
 			overlay_pass::run(cmd_, viewport, target, gl::image_aspect::color, true);
 		}
 
