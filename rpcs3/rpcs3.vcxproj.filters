@@ -219,12 +219,6 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_main_window.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_memory_string_searcher.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_memory_string_searcher.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_pad_settings_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
