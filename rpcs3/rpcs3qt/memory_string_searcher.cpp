@@ -400,7 +400,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 			{
 				while (first_char = section.find_first_of(insensitive_search, first_char), first_char != umax)
 				{
-					const u32 start = addr + first_char;
+					const u32 start = addr + ::narrow<u32>(first_char);
 
 					std::string_view test_sv{get_ptr(start), addr_max - start};
 
@@ -420,7 +420,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 			{
 				while (first_char = section.find_first_of(wstr[0], first_char), first_char != umax)
 				{
-					const u32 start = addr + first_char;
+					const u32 start = addr + ::narrow<u32>(first_char);
 
 					std::string_view test_sv{get_ptr(start), addr_max - start};
 
