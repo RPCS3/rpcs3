@@ -189,9 +189,8 @@ public:
 
 	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
-	static std::string_view get_device_path(std::string_view filename);
+	static std::string_view get_device_root(std::string_view filename);
 	static lv2_fs_mount_point* get_mp(std::string_view filename, std::string* vfs_path = nullptr);
-	static std::string device_name_to_path(std::string_view device_name);
 	static bool vfs_unmount(std::string_view vpath);
 
 	static std::array<char, 0x420> get_name(std::string_view filename)
