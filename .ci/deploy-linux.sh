@@ -10,7 +10,13 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     curl -sL -o /usr/bin/linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
     chmod +x /usr/bin/linuxdeploy-plugin-qt
 
-    EXTRA_QT_PLUGINS="svg;" APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt --output appimage 
+    EXTRA_QT_PLUGINS="svg;" APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt
+
+    # Remove libwayland-client because it has platform-dependent exports and breaks other OSes
+    rm -f ./AppDir/usr/lib/libwayland-client.so*
+
+    linuxdeploy --appimage-extract
+    ./squashfs-root/plugins/linuxdeploy-plugin-appimage/usr/bin/appimagetool AppDir -g
 
     COMM_TAG=$(awk '/version{.*}/ { printf("%d.%d.%d", $5, $6, $7) }' ../rpcs3/rpcs3_version.cpp)
     COMM_COUNT="$(git rev-list --count HEAD)"
