@@ -272,6 +272,11 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 		return;
 	}
 
+	if (event->modifiers())
+	{
+		return;
+	}
+
 	switch (event->key())
 	{
 	case Qt::Key_PageUp:   scroll(0 - m_item_count); return;
