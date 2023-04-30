@@ -5,6 +5,7 @@
 
 #include <queue>
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 #include "Emu/vfs_config.h"

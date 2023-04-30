@@ -8,7 +8,6 @@
 #include "Emu/Cell/timers.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
-#include "Emu/system_config.h"
 
 #include <thread>
 

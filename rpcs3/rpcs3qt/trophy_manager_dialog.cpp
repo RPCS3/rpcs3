@@ -5,6 +5,7 @@
 #include "qt_utils.h"
 #include "game_list.h"
 #include "gui_settings.h"
+#include "progress_dialog.h"
 
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
@@ -29,7 +30,6 @@
 #include <QUrl>
 #include <QScrollBar>
 #include <QWheelEvent>
-#include <QProgressDialog>
 #include <QGuiApplication>
 #include <QScreen>
 
@@ -919,8 +919,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 
 	QFutureWatcher<void> futureWatcher;
 
-	QProgressDialog progressDialog(tr("Loading trophy data, please wait..."), tr("Cancel"), 0, 1, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-	progressDialog.setWindowTitle(tr("Loading trophies"));
+	progress_dialog progressDialog(tr("Loading trophies"), tr("Loading trophy data, please wait..."), tr("Cancel"), 0, 1, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 
 	connect(&futureWatcher, &QFutureWatcher<void>::progressRangeChanged, &progressDialog, &QProgressDialog::setRange);
 	connect(&futureWatcher, &QFutureWatcher<void>::progressValueChanged, &progressDialog, &QProgressDialog::setValue);

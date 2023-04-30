@@ -19,12 +19,20 @@ games_config::~games_config()
 	}
 }
 
+const std::map<std::string, std::string> games_config::get_games() const
+{
+	std::lock_guard lock(m_mutex);
+	return m_games;
+}
+
 std::string games_config::get_path(const std::string& title_id) const
 {
 	if (title_id.empty())
 	{
 		return {};
 	}
+
+	std::lock_guard lock(m_mutex);
 
 	if (const auto it = m_games.find(title_id); it != m_games.cend())
 	{
@@ -36,6 +44,8 @@ std::string games_config::get_path(const std::string& title_id) const
 
 bool games_config::add_game(const std::string& key, const std::string& path)
 {
+	std::lock_guard lock(m_mutex);
+
 	// Access or create node if does not exist
 	if (auto it = m_games.find(key); it != m_games.end())
 	{
@@ -62,8 +72,28 @@ bool games_config::add_game(const std::string& key, const std::string& path)
 	return true;
 }
 
+bool games_config::add_external_hdd_game(const std::string& key, std::string& path)
+{
+	// Don't use the C00 subdirectory in our game list
+	if (path.ends_with("/C00") || path.ends_with("\\C00"))
+	{
+		path = path.substr(0, path.size() - 4);
+	}
+
+	if (add_game(key, path))
+	{
+		cfg_log.notice("Registered HG game directory for title '%s': %s", key, path);
+		return true;
+	}
+
+	cfg_log.error("Failed to save HG game location of title '%s' (error=%s)", key, fs::g_tls_error);
+	return false;
+}
+
 bool games_config::save()
 {
+	std::lock_guard lock(m_mutex);
+
 	YAML::Emitter out;
 	out << m_games;
 
@@ -81,6 +111,8 @@ bool games_config::save()
 
 void games_config::load()
 {
+	std::lock_guard lock(m_mutex);
+
 	m_games.clear();
 
 	if (fs::file f{fs::get_config_dir() + "/games.yml", fs::read + fs::create})

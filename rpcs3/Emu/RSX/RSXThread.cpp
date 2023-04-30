@@ -1519,37 +1519,55 @@ namespace rsx
 			u16 corrected_width = umax;
 			std::vector<u32*> pitch_fixups;
 
-			if (!depth_buffer_unused &&
-				layout.zeta_pitch < minimum_zeta_pitch)
+			if (!depth_buffer_unused)
 			{
-				if (layout.zeta_pitch > 64)
+				if (layout.zeta_pitch < minimum_zeta_pitch)
 				{
-					corrected_width = layout.zeta_pitch / depth_texel_size;
-					layout.zeta_pitch = depth_texel_size;
-					pitch_fixups.push_back(&layout.zeta_pitch);
-				}
-				else
-				{
-					rsx_log.warning("Misconfigured surface could not fit a depth buffer. Dropping.");
-					layout.zeta_address = 0;
-				}
-			}
-
-			for (const auto& index : rsx::utility::get_rtt_indexes(layout.target))
-			{
-				if (!color_buffer_unused &&
-					layout.color_pitch[index] < minimum_color_pitch)
-				{
-					if (layout.color_pitch[index] > 64)
+					// Observed in CoD3 where the depth buffer is clearly misconfigured.
+					if (layout.zeta_pitch > 64)
 					{
-						corrected_width = std::min<u16>(corrected_width, layout.color_pitch[index] / color_texel_size);
-						layout.color_pitch[index] = color_texel_size;
-						pitch_fixups.push_back(&layout.color_pitch[index]);
+						corrected_width = layout.zeta_pitch / depth_texel_size;
+						layout.zeta_pitch = depth_texel_size;
+						pitch_fixups.push_back(&layout.zeta_pitch);
 					}
 					else
 					{
-						rsx_log.warning("Misconfigured surface could not fit color buffer %d. Dropping.", index);
-						layout.color_addresses[index] = 0;
+						rsx_log.warning("Misconfigured surface could not fit a depth buffer. Dropping.");
+						layout.zeta_address = 0;
+					}
+				}
+				else if (layout.width * depth_texel_size > layout.zeta_pitch)
+				{
+					// This is ok, misconfigured raster dimensions, but we're only writing the pitch as determined by the scissor
+					corrected_width = layout.zeta_pitch / depth_texel_size;
+				}
+			}
+
+			if (!color_buffer_unused)
+			{
+				for (const auto& index : rsx::utility::get_rtt_indexes(layout.target))
+				{
+					if (layout.color_pitch[index] < minimum_color_pitch)
+					{
+						if (layout.color_pitch[index] > 64)
+						{
+							corrected_width = std::min<u16>(corrected_width, layout.color_pitch[index] / color_texel_size);
+							layout.color_pitch[index] = color_texel_size;
+							pitch_fixups.push_back(&layout.color_pitch[index]);
+						}
+						else
+						{
+							rsx_log.warning("Misconfigured surface could not fit color buffer %d. Dropping.", index);
+							layout.color_addresses[index] = 0;
+						}
+
+						continue;
+					}
+
+					if (layout.width * color_texel_size > layout.color_pitch[index])
+					{
+						// This is ok, misconfigured raster dimensions, but we're only writing the pitch as determined by the scissor
+						corrected_width = std::min<u16>(corrected_width, layout.color_pitch[index] / color_texel_size);
 					}
 				}
 			}

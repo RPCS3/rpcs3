@@ -26,7 +26,6 @@
 
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/IdManager.h"
-#include "Emu/system_config.h"
 
 #include "Core/RSXDisplay.h"
 #include "Core/RSXFrameBuffer.h"

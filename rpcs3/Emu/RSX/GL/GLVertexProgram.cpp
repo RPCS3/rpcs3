@@ -2,6 +2,7 @@
 #include "GLVertexProgram.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "GLCommonDecompiler.h"
 #include "../Program/GLSLCommon.h"

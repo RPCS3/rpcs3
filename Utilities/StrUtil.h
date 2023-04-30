@@ -173,8 +173,8 @@ namespace fmt
 		return result;
 	}
 
-	std::string to_upper(const std::string& string);
-	std::string to_lower(const std::string& string);
+	std::string to_upper(std::string_view string);
+	std::string to_lower(std::string_view string);
 
 	bool match(const std::string& source, const std::string& mask);
 

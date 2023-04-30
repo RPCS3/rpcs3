@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config_mode.h"
 #include "system_config_types.h"
 #include "Utilities/Config.h"
 

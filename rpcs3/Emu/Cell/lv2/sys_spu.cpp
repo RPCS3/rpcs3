@@ -2,6 +2,7 @@
 #include "sys_spu.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -1484,7 +1485,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			{
 				std::lock_guard lock(group->mutex);
 
-				if (!group->waiter)
+				if (group->waiter != &ppu)
 				{
 					break;
 				}
