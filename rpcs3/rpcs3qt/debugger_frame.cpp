@@ -281,7 +281,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	case Qt::Key_F1:
 	{
 		if (event->isAutoRepeat())
+		{
 			return;
+		}
 
 		QDialog* dlg = new QDialog(this);
 		dlg->setAttribute(Qt::WA_DeleteOnClose);
@@ -322,6 +324,34 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	default: break;
 	}
 
+	if (event->modifiers() == Qt::ControlModifier)
+	{
+		switch (const auto key = event->key())
+		{
+		case Qt::Key_PageUp:
+		case Qt::Key_PageDown:
+		{
+			if (event->isAutoRepeat())
+			{
+				break;
+			}
+
+			const int count = m_choice_units->count();
+			const int cur_index = m_choice_units->currentIndex();
+
+			if (count && cur_index >= 0)
+			{
+				// Wrap around
+				// Adding count so the result would not be negative, that would alter the remainder operation
+				m_choice_units->setCurrentIndex((cur_index + count + (key == Qt::Key_PageUp ? -1 : 1)) % count);
+			}
+
+			return;
+		}
+		default: break;
+		}
+	}
+
 	if (!cpu)
 	{
 		return;
@@ -333,10 +363,12 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 	const auto modifiers = event->modifiers();
 
-	if (modifiers & Qt::ControlModifier)
+	if (modifiers == Qt::ControlModifier)
 	{
 		if (event->isAutoRepeat())
+		{
 			return;
+		}
 
 		switch (event->key())
 		{
@@ -360,7 +392,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_D:
 		{
 			if (event->isAutoRepeat())
+			{
 				return;
+			}
 
 			auto get_max_allowed = [&](QString title, QString description, u32 limit) -> u32
 			{
@@ -517,7 +551,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_E:
 		{
 			if (event->isAutoRepeat())
+			{
 				return;
+			}
 
 			if (cpu->id_type() == 1 || cpu->id_type() == 2)
 			{
