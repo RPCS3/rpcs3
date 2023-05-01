@@ -36,7 +36,7 @@ if(WITH_LLVM)
 		set(LLVM_DIR "${CMAKE_BINARY_DIR}/3rdparty/llvm/llvm_build/lib/cmake/llvm/")
 
 		set(CMAKE_CXX_FLAGS ${CXX_FLAGS_OLD})
-		option(STATIC_LINK_LLVM "" ON)
+		set(STATIC_LINK_LLVM ON CACHE BOOL "Link against LLVM statically. This will get set to ON if you build LLVM from the submodule." FORCE)
 
 		# now tries to find LLVM again
 		find_package(LLVM 16.0 CONFIG)
