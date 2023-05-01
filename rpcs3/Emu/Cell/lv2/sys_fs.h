@@ -173,12 +173,11 @@ struct lv2_fs_object
 	const std::array<char, 0x420> name;
 
 	// Mount Point
-	const std::add_pointer_t<lv2_fs_mount_point> mp;
+	lv2_fs_mount_point* const mp = get_mp(name.data());
 
 protected:
-	lv2_fs_object(lv2_fs_mount_point* mp, std::string_view filename)
+	lv2_fs_object(std::string_view filename)
 		: name(get_name(filename))
-		, mp(mp)
 	{
 	}
 
@@ -235,7 +234,7 @@ struct lv2_file final : lv2_fs_object
 	} restore_data{};
 
 	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
-		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
+		: lv2_fs_object(filename)
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
@@ -245,7 +244,7 @@ struct lv2_file final : lv2_fs_object
 	}
 
 	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
-		: lv2_fs_object(host.mp, host.name.data())
+		: lv2_fs_object(host.name.data())
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
@@ -309,7 +308,7 @@ struct lv2_dir final : lv2_fs_object
 	atomic_t<u64> pos{0};
 
 	lv2_dir(std::string_view filename, std::vector<fs::dir_entry>&& entries)
-		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
+		: lv2_fs_object(filename)
 		, entries(std::move(entries))
 	{
 	}
