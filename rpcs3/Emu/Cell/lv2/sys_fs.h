@@ -595,7 +595,7 @@ CHECK_SIZE(lv2_file_c000001a, 0x18);
 
 struct lv2_file_c000001c : lv2_file_op
 {
-	be_t<u32> size; // 0x20
+	be_t<u32> size; // 0x60
 	be_t<u32> _x4;  // 0x10
 	be_t<u32> _x8;  // 0x18 - offset of out_code
 	be_t<u32> name_size;

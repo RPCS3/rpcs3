@@ -2142,29 +2142,29 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		return CELL_OK;
 	}
 
-	case 0xc0000015: // USB Vid/Pid lookup - Used by arcade games on dev_usbXXX
+	case 0xc0000015: // USB Vid/Pid query
+	case 0xc000001c: // USB Vid/Pid/Serial query
 	{
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000015>(_arg);
+		const bool with_serial = op == 0xc000001c;
 
-		if (arg->size != 0x20u)
+		if (arg->size != (with_serial ? sizeof(lv2_file_c000001c) : sizeof(lv2_file_c0000015)))
 		{
-			sys_fs.error("sys_fs_fcntl(0xc0000015): invalid size (0x%x)", arg->size);
+			sys_fs.error("sys_fs_fcntl(0x%08x): invalid size (0x%x)", op, arg->size);
 			break;
 		}
 
 		if (arg->_x4 != 0x10u || arg->_x8 != 0x18u)
 		{
-			sys_fs.error("sys_fs_fcntl(0xc0000015): invalid args (0x%x, 0x%x)", arg->_x4, arg->_x8);
+			sys_fs.error("sys_fs_fcntl(0x%08x): invalid args (0x%x, 0x%x)", op, arg->_x4, arg->_x8);
 			break;
 		}
 
-		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
+		std::string_view vpath{arg->name.get_ptr(), arg->name_size};
 
 		// Trim trailing '\0'
 		if (const auto trim_pos = vpath.find('\0'); trim_pos != umax)
-		{
 			vpath.remove_suffix(vpath.size() - trim_pos);
-		}
 
 		if (vfs::get(vpath).empty())
 		{
@@ -2185,9 +2185,16 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, device_path);
 		std::tie(arg->vendorID, arg->productID) = device.get_usb_ids();
 
+		if (with_serial)
+		{
+			const auto arg_c000001c = vm::static_ptr_cast<lv2_file_c000001c>(_arg);
+			const std::u16string serial = utf8_to_utf16(device.serial); // Serial needs to be encoded to utf-16 BE
+			std::copy_n(serial.begin(), std::min(serial.size(), sizeof(arg_c000001c->serial) / sizeof(u16)), arg_c000001c->serial);
+		}
+
 		arg->out_code = CELL_OK;
 
-		sys_fs.trace("sys_fs_fcntl(0xc0000015): found device '%s' (vid=0x%x, pid=0x%x)", device_path, arg->vendorID, arg->productID);
+		sys_fs.trace("sys_fs_fcntl(0x%08x): found device \"%s\" (vid=0x%x, pid=0x%x, serial=\"%s\")", op, device_path, arg->vendorID, arg->productID, device.serial);
 		return CELL_OK;
 	}
 
@@ -2199,59 +2206,6 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 	case 0xc000001a: // cellFsSetDiscReadRetrySetting, 5731DF45
 	{
 		[[maybe_unused]] const auto arg = vm::static_ptr_cast<lv2_file_c000001a>(_arg);
-		return CELL_OK;
-	}
-
-	case 0xc000001c: // USB Vid/Pid/Serial lookup
-	{
-		const auto arg = vm::static_ptr_cast<lv2_file_c000001c>(_arg);
-
-		if (arg->size != 0x60u)
-		{
-			sys_fs.error("sys_fs_fcntl(0xc000001c): invalid size (0x%x)", arg->size);
-			break;
-		}
-
-		if (arg->_x4 != 0x10u || arg->_x8 != 0x18u)
-		{
-			sys_fs.error("sys_fs_fcntl(0xc000001c): invalid args (0x%x, 0x%x)", arg->_x4, arg->_x8);
-			break;
-		}
-
-		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
-
-		// Trim trailing '\0'
-		if (const auto trim_pos = vpath.find('\0'); trim_pos != umax)
-		{
-			vpath.remove_suffix(vpath.size() - trim_pos);
-		}
-
-		if (vfs::get(vpath).empty())
-		{
-			arg->out_code = CELL_ENOTMOUNTED;
-			return {CELL_ENOTMOUNTED, vpath};
-		}
-
-		const auto& mi = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
-		const auto num_pos = mi.device.find_first_of("0123456789");
-
-		if (mi != &g_mp_sys_dev_usb || num_pos == umax)
-		{
-			arg->out_code = CELL_ENOTSUP;
-			return {CELL_ENOTSUP, vpath};
-		}
-
-		const std::string device_path = fmt::format("%s%s", mi->root, mi.device.substr(num_pos));
-		const cfg::device_info device = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, device_path);
-		std::tie(arg->vendorID, arg->productID) = device.get_usb_ids();
-
-		// Serial needs to be encoded to utf-16 BE
-		const std::u16string serial = utf8_to_utf16(device.serial);
-		std::copy_n(serial.begin(), std::min(serial.size(), sizeof(arg->serial) / sizeof(u16)), arg->serial);
-
-		arg->out_code = CELL_OK;
-
-		sys_fs.trace("sys_fs_fcntl(0xc000001c): found device '%s' (vid=0x%x, pid=0x%x, serial=%s)", device_path, arg->vendorID, arg->productID, device.serial);
 		return CELL_OK;
 	}
 
