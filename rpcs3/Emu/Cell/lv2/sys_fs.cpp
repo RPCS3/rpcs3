@@ -307,7 +307,6 @@ bool lv2_fs_object::vfs_unmount(std::string_view vpath)
 
 lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
 	: name(ar)
-	, mp(get_mp(name.data()))
 {
 }
 
