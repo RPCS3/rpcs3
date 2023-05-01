@@ -160,6 +160,79 @@ struct lv2_fs_mount_point
 };
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd0;
+extern lv2_fs_mount_point g_mp_sys_no_device;
+
+struct lv2_fs_mount_info
+{
+	lv2_fs_mount_point* const mp;
+	const std::string device;
+	const std::string file_system;
+	const bool read_only;
+
+	lv2_fs_mount_info(lv2_fs_mount_point* mp = nullptr, std::string_view device = {}, std::string_view file_system = {}, bool read_only = false)
+		: mp(mp ? mp : &g_mp_sys_no_device)
+		, device(device.empty() ? this->mp->device : device)
+		, file_system(file_system.empty() ? this->mp->file_system : file_system)
+		, read_only((this->mp->flags & lv2_mp_flag::read_only) || read_only)
+	{
+	}
+
+	constexpr bool operator==(const lv2_fs_mount_info& rhs) const noexcept
+	{
+		return this == &rhs;
+	}
+	constexpr bool operator==(lv2_fs_mount_point* const& rhs) const noexcept
+	{
+		return mp == rhs;
+	}
+	constexpr const lv2_fs_mount_point* operator->() const noexcept
+	{
+		return mp;
+	}
+};
+
+struct CellFsMountInfo; // Forward Declaration
+
+struct lv2_fs_mount_info_map
+{
+public:
+	SAVESTATE_INIT_POS(49);
+
+	lv2_fs_mount_info_map();
+	lv2_fs_mount_info_map(const lv2_fs_mount_info_map&) = delete;
+	lv2_fs_mount_info_map& operator=(const lv2_fs_mount_info_map&) = delete;
+	~lv2_fs_mount_info_map();
+
+	// Forwarding arguments to map.try_emplace(): refer to the constructor of lv2_fs_mount_info
+	template <typename... Args>
+	bool add(Args&&... args);
+	bool remove(std::string_view path);
+	const lv2_fs_mount_info& lookup(std::string_view path) const;
+	u64 get_all(CellFsMountInfo* info = nullptr, u64 len = 0) const;
+
+private:
+	struct string_hash
+	{
+		using hash_type = std::hash<std::string_view>;
+		using is_transparent = void;
+
+		std::size_t operator()(const char* str) const
+		{
+			return hash_type{}(str);
+		}
+		std::size_t operator()(std::string_view str) const
+		{
+			return hash_type{}(str);
+		}
+		std::size_t operator()(std::string const& str) const
+		{
+			return hash_type{}(str);
+		}
+	};
+
+	std::unordered_map<std::string, lv2_fs_mount_info, string_hash, std::equal_to<>> map;
+	lv2_fs_mount_info mount_info_no_device;
+};
 
 struct lv2_fs_object
 {
