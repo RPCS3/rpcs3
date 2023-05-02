@@ -2924,7 +2924,7 @@ namespace rsx
 					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
 					cached_src = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
-						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, false);
+						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled);
 
 					typeless_info.src_gcm_format = gcm_format;
 				}
