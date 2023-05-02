@@ -21,6 +21,7 @@ public:
 	bool save();
 
 private:
+	bool save_nl();
 	void load();
 
 	std::map<std::string, std::string> m_games;
