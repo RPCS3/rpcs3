@@ -2924,7 +2924,7 @@ namespace rsx
 					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
 					cached_src = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
-						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled);
+						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, false);
 
 					typeless_info.src_gcm_format = gcm_format;
 				}
@@ -3031,7 +3031,7 @@ namespace rsx
 					{
 						cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
 							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-							false, channel_order, 0);
+							dst.swizzled, channel_order, 0);
 					}
 					else
 					{
@@ -3052,7 +3052,7 @@ namespace rsx
 
 						cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
 							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
-							rsx::texture_dimension_extended::texture_dimension_2d, false);
+							rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled);
 
 						set_component_order(*cached_dest, preferred_dst_format, channel_order);
 					}
