@@ -535,15 +535,16 @@ struct lv2_file_c0000006 : lv2_file_op
 
 CHECK_SIZE(lv2_file_c0000006, 0x20);
 
+// sys_fs_fcntl: cellFsArcadeHddSerialNumber
 struct lv2_file_c0000007 : lv2_file_op
 {
 	be_t<u32> out_code;
-	vm::bcptr<char> name;
-	be_t<u32> name_size; // 0x14
-	vm::bptr<char> unk1;
-	be_t<u32> unk1_size; //0x41
-	vm::bptr<char> unk2;
-	be_t<u32> unk2_size; //0x21
+	vm::bcptr<char> device;
+	be_t<u32> device_size;  // 0x14
+	vm::bptr<char> model;
+	be_t<u32> model_size; // 0x29
+	vm::bptr<char> serial;
+	be_t<u32> serial_size; // 0x15
 };
 
 CHECK_SIZE(lv2_file_c0000007, 0x1c);
