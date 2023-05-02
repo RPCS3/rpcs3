@@ -1820,7 +1820,7 @@ namespace rsx
 							rsx_log.warning("A texture was found in cache for address 0x%x, but swizzle flag does not match", attr.address);
 							cached_texture->unprotect();
 							cached_texture->set_dirty(true);
-							return {};
+							break;
 						}
 
 						return{ cached_texture->get_view(encoded_remap, remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
@@ -1834,7 +1834,7 @@ namespace rsx
 					(
 						std::remove_if(overlapping_locals.begin(), overlapping_locals.end(), [](const auto& e)
 						{
-							return (e->get_context() != rsx::texture_upload_context::blit_engine_dst);
+							return e->is_dirty() || (e->get_context() != rsx::texture_upload_context::blit_engine_dst);
 						}),
 						overlapping_locals.end()
 					);
@@ -3084,7 +3084,7 @@ namespace rsx
 				update_cache_tag();
 
 				// Set swizzle flag
-				cached_dest->set_swizzled(raster_type == rsx::surface_raster_type::swizzle);
+				cached_dest->set_swizzled(raster_type == rsx::surface_raster_type::swizzle || dst.swizzled);
 			}
 			else
 			{
