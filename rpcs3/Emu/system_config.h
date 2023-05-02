@@ -288,6 +288,8 @@ struct cfg_root : cfg::node
 		cfg::_int<-60*60*24*365*100LL, 60*60*24*365*100LL> console_time_offset{ this, "Console time offset (s)", 0 }; // console time offset, limited to +/-100years
 		cfg::uint<0, umax> console_psid_high{this, "PSID high"};
 		cfg::uint<0, umax> console_psid_low{this, "PSID low"};
+		cfg::string hdd_model{this, "HDD Model Name", ""};
+		cfg::string hdd_serial{this, "HDD Serial Number", ""};
 	} sys{ this };
 
 	struct node_net : cfg::node
