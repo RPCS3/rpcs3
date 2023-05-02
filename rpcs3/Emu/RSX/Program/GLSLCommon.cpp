@@ -1250,6 +1250,8 @@ namespace glsl
 			"\n"
 			"vec4 _interpolate_varying3(const in vec4[3] v)\n"
 			"{\n"
+			// In the corner case where v[0] == v[1] == v[2], this algorithm generates a perfect result vs alternatives that use weighted multiply + add.
+			// Due to the finite precision of floating point arithmetic, adding together the result of different multiplies yeields a slightly inaccurate result which breaks things.
 			"	const vec4 p10 = v[1] - v[0];\n"
 			"	const vec4 p20 = v[2] - v[0];\n"
 			"	return v[0] + p10 * $gl_BaryCoord.y + p20 * $gl_BaryCoord.z;\n"
