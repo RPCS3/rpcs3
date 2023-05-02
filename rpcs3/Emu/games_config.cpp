@@ -66,7 +66,7 @@ bool games_config::add_game(const std::string& key, const std::string& path)
 
 	if (m_save_on_dirty)
 	{
-		return save();
+		return save_nl();
 	}
 
 	return true;
@@ -90,10 +90,8 @@ bool games_config::add_external_hdd_game(const std::string& key, std::string& pa
 	return false;
 }
 
-bool games_config::save()
+bool games_config::save_nl()
 {
-	std::lock_guard lock(m_mutex);
-
 	YAML::Emitter out;
 	out << m_games;
 
@@ -107,6 +105,12 @@ bool games_config::save()
 
 	cfg_log.error("Failed to save games.yml: %s", fs::g_tls_error);
 	return false;
+}
+
+bool games_config::save()
+{
+	std::lock_guard lock(m_mutex);
+	return save_nl();
 }
 
 void games_config::load()
