@@ -901,8 +901,41 @@ namespace gl
 
 	std::pair<bool, u32> get_format_convert_flags(GLenum format)
 	{
-		const auto texel_width = get_format_texel_width(format);
-		return { (texel_width > 1), texel_width };
+		switch (format)
+		{
+			// 8-bit
+		case GL_R8:
+			return{ false, 1 };
+		case GL_RGBA8:
+		case GL_BGRA8:
+			return{ true, 4 };
+			// 16-bit
+		case GL_RG16:
+		case GL_RG16F:
+		case GL_R16:
+		case GL_RGB565:
+			return{ true, 2 };
+			// 32-bit
+		case GL_R32F:
+		case GL_RGBA32F:
+			return{ true, 4 };
+			// DXT
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			return{ false, 1 };
+			// Depth
+		case GL_DEPTH_COMPONENT16:
+		case GL_DEPTH_COMPONENT32F:
+			return{ true, 2 };
+		case GL_DEPTH24_STENCIL8:
+		case GL_DEPTH32F_STENCIL8:
+			return{ true, 4 };
+		default:
+			break;
+		}
+
+		fmt::throw_exception("Unexpected internal format 0x%X", static_cast<u32>(format));
 	}
 
 	bool formats_are_bitcast_compatible(GLenum format1, GLenum format2)
