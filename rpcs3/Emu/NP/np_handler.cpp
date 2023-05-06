@@ -677,6 +677,7 @@ namespace np
 
 		if (g_cfg.net.psn_status >= np_psn_status::psn_fake)
 		{
+			g_cfg_rpcn.load(); // Ensures config is loaded even if rpcn is not running for simulated
 			std::string s_npid = g_cfg_rpcn.get_npid();
 			ensure(!s_npid.empty()); // It should have been generated before this
 
