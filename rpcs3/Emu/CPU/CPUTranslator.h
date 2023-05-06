@@ -21,6 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -3051,7 +3052,7 @@ public:
 	}
 
 	template <typename RT, DSLValue... Args>
-	auto call(llvm::Function* func, Args&&... args)
+	auto callf(llvm::Function* func, Args&&... args)
 	{
 		llvm_value_t<RT> r;
 		r.value = m_ir->CreateCall(func, {std::forward<Args>(args).eval(m_ir)...});
@@ -3355,37 +3356,6 @@ public:
 	{
 		static constexpr u32 esz = llvm_value_t<CT>::esize;
 
-		if constexpr (esz == 32)
-		{
-#if defined(ARCH_X64)
-			if (m_use_fma && !llvm::isa<llvm::Constant>(b.eval(m_ir)))
-				return eval(llvm_calli<CT, T, U>{"llvm.x86.avx2.psllv.d", {std::forward<T>(a), std::forward<U>(b)}});
-#endif
-		}
-
-		if constexpr (esz == 16)
-		{
-#if defined(ARCH_X64)
-			if (m_use_avx512 && !llvm::isa<llvm::Constant>(b.eval(m_ir)))
-				return eval(llvm_calli<CT, T, U>{"llvm.x86.avx512.psllv.w.128", {std::forward<T>(a), std::forward<U>(b)}});
-
-			if (m_use_fma && !llvm::isa<llvm::Constant>(b.eval(m_ir)))
-			{
-				using t32 = value_t<u32[4]>;
-				auto a32 = eval(bitcast<u32[4]>(std::forward<T>(a)));
-				auto b32 = eval(bitcast<u32[4]>(std::forward<U>(b)));
-				auto sizeL = eval(b32 & 0xffff);
-				auto sizeH = eval(b32 >> 16);
-				auto dataL = eval(llvm_calli<u32[4], t32, t32>{"llvm.x86.avx2.psllv.d", {a32, sizeL}});
-				auto dataH = eval(llvm_calli<u32[4], t32, t32>{"llvm.x86.avx2.psllv.d", {eval(a32 & 0xffff0000), sizeH}});
-				return eval(bitcast<CT>((dataL & 0xffff) | dataH));
-			}
-#endif
-		}
-
-		return eval(select(b < esz, a << b, splat<CT>(0)));
-
-		/*
 		return expr(select(b < esz, a << b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
 		{
 			static const auto M = match<CT>();
@@ -3404,7 +3374,6 @@ public:
 			value = nullptr;
 			return {};
 		});
-		*/
 	}
 
 	// Infinite-precision logical shift right (unsigned)
@@ -3413,37 +3382,6 @@ public:
 	{
 		static constexpr u32 esz = llvm_value_t<CT>::esize;
 
-		if constexpr (esz == 32)
-		{
-#if defined(ARCH_X64)
-			if (m_use_fma && !llvm::isa<llvm::Constant>(b.eval(m_ir)))
-				return eval(llvm_calli<CT, T, U>{"llvm.x86.avx2.psrlv.d", {std::forward<T>(a), std::forward<U>(b)}});
-#endif
-		}
-
-		if constexpr (esz == 16)
-		{
-#if defined(ARCH_X64)
-			if (m_use_avx512 && !llvm::isa<llvm::Constant>(b.eval(m_ir)))
-				return eval(llvm_calli<CT, T, U>{"llvm.x86.avx512.psrlv.w.128", {std::forward<T>(a), std::forward<U>(b)}});
-
-			if (m_use_fma && !llvm::isa<llvm::Constant>(b.eval(m_ir)))
-			{
-				using t32 = value_t<u32[4]>;
-				auto a32 = eval(bitcast<u32[4]>(std::forward<T>(a)));
-				auto b32 = eval(bitcast<u32[4]>(std::forward<U>(b)));
-				auto sizeL = eval(b32 & 0xffff);
-				auto sizeH = eval(b32 >> 16);
-				auto dataL = eval(llvm_calli<u32[4], t32, t32>{"llvm.x86.avx2.psrlv.d", {eval(a32 & 0xffff), sizeL}});
-				auto dataH = eval(llvm_calli<u32[4], t32, t32>{"llvm.x86.avx2.psrlv.d", {a32, sizeH}});
-				return eval(bitcast<CT>(dataL | (dataH & 0xffff0000)));
-			}
-#endif
-		}
-
-		return eval(select(b < esz, a >> b, splat<CT>(0)));
-
-		/*
 		return expr(select(b < esz, a >> b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
 		{
 			static const auto M = match<CT>();
@@ -3462,7 +3400,6 @@ public:
 			value = nullptr;
 			return {};
 		});
-		*/
 	}
 
 	// Infinite-precision arithmetic shift right (signed)
@@ -3471,37 +3408,6 @@ public:
 	{
 		static constexpr u32 esz = llvm_value_t<CT>::esize;
 
-		if constexpr (esz == 32)
-		{
-#if defined(ARCH_X64)
-			if (m_use_fma && !llvm::isa<llvm::Constant>(b.eval(m_ir)))
-				return eval(llvm_calli<CT, T, U>{"llvm.x86.avx2.psrav.d", {std::forward<T>(a), std::forward<U>(b)}});
-#endif
-		}
-
-		if constexpr (esz == 16)
-		{
-#if defined(ARCH_X64)
-			if (m_use_avx512 && !llvm::isa<llvm::Constant>(b.eval(m_ir)))
-				return eval(llvm_calli<CT, T, U>{"llvm.x86.avx512.psrav.w.128", {std::forward<T>(a), std::forward<U>(b)}});
-
-			if (m_use_fma && !llvm::isa<llvm::Constant>(b.eval(m_ir)))
-			{
-				using t32 = value_t<u32[4]>;
-				auto a32 = eval(bitcast<u32[4]>(std::forward<T>(a)));
-				auto b32 = eval(bitcast<u32[4]>(std::forward<U>(b)));
-				auto sizeL = eval(b32 & 0xffff);
-				auto sizeH = eval(b32 >> 16);
-				auto dataL = eval(llvm_calli<u32[4], t32, t32>{"llvm.x86.avx2.psrav.d", {eval(a32 << 16), sizeL}});
-				auto dataH = eval(llvm_calli<u32[4], t32, t32>{"llvm.x86.avx2.psrav.d", {a32, sizeH}});
-				return eval(bitcast<CT>((dataL >> 16) | (dataH & 0xffff0000)));
-			}
-#endif
-		}
-
-		return eval(a >> select(b > (esz - 1), splat<CT>(esz - 1), b));
-
-		/*
 		return expr(a >> select(b > (esz - 1), splat<CT>(esz - 1), b), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
 		{
 			static const auto M = match<CT>();
@@ -3520,7 +3426,6 @@ public:
 			value = nullptr;
 			return {};
 		});
-		*/
 	}
 
 	template <typename... Types>

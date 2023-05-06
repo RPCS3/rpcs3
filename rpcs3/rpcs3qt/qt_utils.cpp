@@ -198,15 +198,15 @@ namespace gui
 			return l.sizeHint().width();
 		}
 
-		QImage get_centered_image(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio)
+		QPixmap get_centered_pixmap(QPixmap pixmap, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode)
 		{
 			// Create empty canvas for expanded image
-			QImage exp_img(icon_size, QImage::Format_ARGB32);
+			QPixmap exp_img(icon_size);
 			exp_img.setDevicePixelRatio(device_pixel_ratio);
 			exp_img.fill(Qt::transparent);
 
 			// Load scaled pixmap
-			const QPixmap pixmap = QPixmap(path).scaled(icon_size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+			pixmap = pixmap.scaled(icon_size, Qt::KeepAspectRatio, mode);
 
 			// Define offset for raw image placement
 			QPoint offset(offset_x + icon_size.width() / 2 - pixmap.width() / 2,
@@ -221,9 +221,9 @@ namespace gui
 			return exp_img;
 		}
 
-		QPixmap get_centered_pixmap(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio)
+		QPixmap get_centered_pixmap(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode)
 		{
-			return QPixmap::fromImage(get_centered_image(path, icon_size, offset_x, offset_y, device_pixel_ratio));
+			return get_centered_pixmap(QPixmap(path), icon_size, offset_x, offset_y, device_pixel_ratio, mode);
 		}
 
 		QImage get_opaque_image_area(const QString& path)

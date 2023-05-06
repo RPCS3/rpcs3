@@ -28,6 +28,7 @@ void fmt_class_string<CellPamfError>::format(std::string& out, u64 arg)
 			STR_CASE(CELL_PAMF_ERROR_UNSUPPORTED_VERSION);
 			STR_CASE(CELL_PAMF_ERROR_UNKNOWN_STREAM);
 			STR_CASE(CELL_PAMF_ERROR_EP_NOT_FOUND);
+			STR_CASE(CELL_PAMF_ERROR_NOT_AVAILABLE);
 		}
 
 		return unknown;

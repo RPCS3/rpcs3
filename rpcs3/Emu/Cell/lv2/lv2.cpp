@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Memory/vm_locking.h"
 

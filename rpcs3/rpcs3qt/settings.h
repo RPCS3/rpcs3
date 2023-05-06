@@ -29,6 +29,8 @@ public:
 	explicit settings(QObject* parent = nullptr);
 	~settings();
 
+	void sync();
+
 	QString GetSettingsDir() const;
 
 	QVariant GetValue(const QString& key, const QString& name, const QVariant& def) const;

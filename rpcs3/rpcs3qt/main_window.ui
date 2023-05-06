@@ -274,7 +274,6 @@
     <addaction name="toolskernel_explorerAct"/>
     <addaction name="toolsmemory_viewerAct"/>
     <addaction name="toolsRsxDebuggerAct"/>
-    <addaction name="toolsStringSearchAct"/>
     <addaction name="toolsSystemCommandsAct"/>
     <addaction name="patchCreatorAct"/>
     <addaction name="separator"/>
@@ -644,14 +643,6 @@
    </property>
    <property name="text">
     <string>RSX Debugger</string>
-   </property>
-  </action>
-  <action name="toolsStringSearchAct">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Memory Searcher</string>
    </property>
   </action>
   <action name="toolsDecryptSprxLibsAct">

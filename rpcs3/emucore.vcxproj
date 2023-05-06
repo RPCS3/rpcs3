@@ -67,6 +67,7 @@
     <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp" />
     <ClCompile Include="Emu\Cell\Modules\HLE_PATCHES.cpp" />
+    <ClCompile Include="Emu\games_config.cpp" />
     <ClCompile Include="Emu\Io\camera_config.cpp" />
     <ClCompile Include="Emu\Io\recording_config.cpp" />
     <ClCompile Include="Emu\Io\Turntable.cpp" />
@@ -496,7 +497,9 @@
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
     <ClInclude Include="Emu\Cell\Modules\libfs_utility_init.h" />
     <ClInclude Include="Emu\Cell\Modules\sys_crashdump.h" />
+    <ClInclude Include="Emu\config_mode.h" />
     <ClInclude Include="Emu\CPU\sse2neon.h" />
+    <ClInclude Include="Emu\games_config.h" />
     <ClInclude Include="Emu\Io\camera_config.h" />
     <ClInclude Include="Emu\Io\camera_handler_base.h" />
     <ClInclude Include="Emu\Io\music_handler_base.h" />

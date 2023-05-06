@@ -211,7 +211,6 @@ namespace gl
 		void draw_elements(const buffer& buffer, GLenum mode, GLsizei count, const GLuint* indices) const;
 
 		void clear(buffers buffers_) const;
-		void clear(buffers buffers_, color4f color_value, double depth_value, u8 stencil_value) const;
 
 		void copy_from(const void* pixels, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;
 		void copy_from(const buffer& buf, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;

@@ -7,6 +7,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Crypto/unedat.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
 #include "Emu/IdManager.h"

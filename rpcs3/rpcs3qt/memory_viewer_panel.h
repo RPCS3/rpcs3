@@ -10,7 +10,15 @@
 
 #include <string>
 
+class QLineEdit;
+class QCheckBox;
+class QComboBox;
+class QLabel;
+class QThread;
+class QHBoxLayout;
+
 class cpu_thread;
+class CPUDisAsm;
 
 namespace utils
 {
@@ -22,12 +30,25 @@ namespace rsx
 	class thread;
 }
 
+enum search_mode : unsigned
+{
+	no_mode          = 1,
+	clear_modes      = 2,
+	as_string        = 4,
+	as_hex           = 8,
+	as_f64           = 16,
+	as_f32           = 32,
+	as_inst          = 64,
+	as_fake_spu_inst = 128,
+	search_mode_last = 256,
+};
+
 class memory_viewer_panel : public QDialog
 {
 	Q_OBJECT
 
 public:
-	memory_viewer_panel(QWidget* parent, u32 addr = 0, std::function<cpu_thread*()> func = []() -> cpu_thread* { return {}; });
+	memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, u32 addr = 0, std::function<cpu_thread*()> func = []() -> cpu_thread* { return {}; });
 	~memory_viewer_panel();
 
 	enum class color_format : int
@@ -44,17 +65,26 @@ protected:
 	void resizeEvent(QResizeEvent* event) override;
 
 private:
-	u32 m_addr;
-	u32 m_colcount;
-	u32 m_rowcount;
+	u32 m_addr = 0;
+	u32 m_colcount = 0;
+	u32 m_rowcount = 0;
+	u32 m_min_height = 0;
 
-	QLineEdit* m_addr_line;
+	QLineEdit* m_addr_line = nullptr;
 
-	QLabel* m_mem_addr;
-	QLabel* m_mem_hex;
-	QLabel* m_mem_ascii;
+	QLabel* m_mem_addr = nullptr;
+	QLabel* m_mem_hex = nullptr;
+	QLabel* m_mem_ascii = nullptr;
 
-	QFontMetrics* m_fontMetrics;
+	QFontMetrics* m_fontMetrics = nullptr;
+
+	static constexpr int c_pad_memory_labels = 15;
+
+	QLineEdit* m_search_line = nullptr;
+	QCheckBox* m_chkbox_case_insensitive = nullptr;
+	QComboBox* m_cbox_input_mode = nullptr;
+	QHBoxLayout* m_hbox_mem_panel = nullptr;
+	QThread* m_search_thread = nullptr;
 
 	enum class thread_type
 	{
@@ -70,6 +100,13 @@ private:
 	const std::shared_ptr<utils::shm> m_spu_shm;
 	const u32 m_addr_mask;
 
+	std::shared_ptr<CPUDisAsm> m_disasm;
+
+	const void* m_ptr = nullptr;
+	usz m_size = 0;
+
+	search_mode m_modes{};
+
 	std::string getHeaderAtAddr(u32 addr) const;
 	void scroll(s32 steps);
 	void* to_ptr(u32 addr, u32 size = 1) const;
@@ -78,6 +115,7 @@ private:
 	virtual void ShowMemory();
 
 	void ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv) const;
+	u64 OnSearch(std::string wstr, u32 mode);
 };
 
 // Lifetime management with IDM

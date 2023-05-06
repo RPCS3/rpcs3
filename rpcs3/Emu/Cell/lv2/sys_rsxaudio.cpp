@@ -2,6 +2,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "sys_process.h"
 #include "sys_rsxaudio.h"

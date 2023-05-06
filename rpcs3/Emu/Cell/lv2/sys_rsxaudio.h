@@ -5,6 +5,7 @@
 #include "Utilities/simple_ringbuf.h"
 #include "Utilities/transactional_storage.h"
 #include "Utilities/cond.h"
+#include "Emu/system_config_types.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Audio/AudioDumper.h"

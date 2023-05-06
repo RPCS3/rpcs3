@@ -82,11 +82,11 @@ namespace gui
 			qobj.setFont(font);
 		}
 
-		// Returns a scaled, centered QImage
-		QImage get_centered_image(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio);
+		// Returns a scaled, centered QPixmap
+		QPixmap get_centered_pixmap(QPixmap pixmap, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode);
 
 		// Returns a scaled, centered QPixmap
-		QPixmap get_centered_pixmap(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio);
+		QPixmap get_centered_pixmap(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode);
 
 		// Returns the part of the image loaded from path that is inside the bounding box of its opaque areas
 		QImage get_opaque_image_area(const QString& path);
@@ -133,8 +133,10 @@ namespace gui
 		template <typename T>
 		void stop_future_watcher(QFutureWatcher<T>& watcher, bool cancel, std::shared_ptr<atomic_t<bool>> cancel_flag = nullptr)
 		{
-			if (watcher.isStarted() || watcher.isRunning())
+			if (watcher.isPaused() || watcher.isRunning())
 			{
+				watcher.resume();
+
 				if (cancel)
 				{
 					watcher.cancel();

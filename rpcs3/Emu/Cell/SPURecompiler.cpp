@@ -3920,6 +3920,9 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -3981,9 +3984,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::GlobalVariable* m_scale_float_to{};
 	llvm::GlobalVariable* m_scale_to_float{};
 
-	// Helper for check_state
-	llvm::GlobalVariable* m_fake_global1{};
-
 	// Function for check_state execution
 	llvm::Function* m_test_state{};
 
@@ -4003,6 +4003,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		// Final block (for PHI nodes, set after completion)
 		llvm::BasicBlock* block_end{};
+
+		// Additional blocks for sinking instructions after block_end:
+		std::unordered_map<u32, llvm::BasicBlock*, value_hash<u32, 2>> block_edges;
 
 		// Current register values
 		std::array<llvm::Value*, s_reg_max> reg{};
@@ -4748,7 +4751,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// Erase previous dead store instruction if necessary
 		if (_store)
 		{
-			// TODO: better cross-block dead store elimination
 			_store->eraseFromParent();
 		}
 
@@ -4873,11 +4875,11 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Update PC for current or explicitly specified instruction address
 	void update_pc(u32 target = -1)
 	{
-		m_ir->CreateStore(m_ir->CreateAnd(get_pc(target + 1 ? target : m_pos), 0x3fffc), spu_ptr<u32>(&spu_thread::pc));
+		m_ir->CreateStore(m_ir->CreateAnd(get_pc(target + 1 ? target : m_pos), 0x3fffc), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
-	void check_state(u32 addr, bool may_be_unsafe_for_savestate = true)
+	void check_state(u32 addr)
 	{
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
@@ -4885,24 +4887,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(get_type<u32>(), pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
 		m_ir->SetInsertPoint(check);
 		update_pc(addr);
-
-		if (may_be_unsafe_for_savestate && std::none_of(std::begin(m_block->phi), std::end(m_block->phi), FN(!!x)))
-		{
-			may_be_unsafe_for_savestate = false;
-		}
-
-		if (may_be_unsafe_for_savestate)
-		{
-			m_ir->CreateStore(m_ir->getInt8(1), spu_ptr<u8>(&spu_thread::unsavable));
-		}
-
-		m_ir->CreateStore(m_ir->getFalse(), m_fake_global1);
-
-		if (may_be_unsafe_for_savestate)
-		{
-			m_ir->CreateStore(m_ir->getInt8(0), spu_ptr<u8>(&spu_thread::unsavable));
-		}
-
+		m_ir->CreateCall(m_test_state, {m_thread});
 		m_ir->CreateBr(_body);
 		m_ir->SetInsertPoint(_body);
 	}
@@ -5015,9 +5000,6 @@ public:
 		IRBuilder<> irb(m_context);
 		m_ir = &irb;
 
-		// Helper for check_state. Used to not interfere with LICM pass.
-		m_fake_global1 = new llvm::GlobalVariable(*m_module, get_type<bool>(), false, llvm::GlobalValue::InternalLinkage, m_ir->getFalse());
-
 		// Add entry function (contains only state/code check)
 		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(m_hash, get_ftype<void, u8*, u8*, u64>()).getCallee());
 		const auto main_arg2 = main_func->getArg(2);
@@ -5035,6 +5017,7 @@ public:
 
 		// Emit state check
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
+		m_ir->CreateStore(m_ir->getInt8(false), spu_ptr<u8>(&spu_thread::unsavable));
 		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(get_type<u32>(), pstate), m_ir->getInt32(0)), label_stop, label_test, m_md_unlikely);
 
 		// Emit code check
@@ -5202,6 +5185,7 @@ public:
 		m_ir->SetInsertPoint(label_body);
 		const auto pbcount = spu_ptr<u64>(&spu_thread::block_counter);
 		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(get_type<u64>(), pbcount), m_ir->getInt64(check_iterations)), pbcount);
+		m_ir->CreateStore(m_ir->getInt8(true), spu_ptr<u8>(&spu_thread::unsavable));
 
 		// Call the entry function chunk
 		const auto entry_chunk = add_function(m_pos);
@@ -5469,6 +5453,250 @@ public:
 
 				ensure(m_block->block_end);
 			}
+
+			// Work on register stores.
+			// 1. Remove stores which are overwritten later.
+			// 2. Sink stores to post-dominating blocks.
+			llvm::PostDominatorTree pdt(*m_function);
+			llvm::DominatorTree dt(*m_function);
+
+			// Post-order indices
+			std::unordered_map<llvm::BasicBlock*, usz> pois;
+			{
+				usz i = 0;
+				for (auto* bb : llvm::post_order(m_function))
+					pois[bb] = i++;
+			}
+
+			std::vector<block_info*> block_q;
+			block_q.reserve(m_blocks.size());
+			for (auto& [a, b] : m_blocks)
+			{
+				block_q.emplace_back(&b);
+			}
+
+			for (usz bi = 0; bi < block_q.size();)
+			{
+				auto bqbi = block_q[bi++];
+
+				// TODO: process all registers up to s_reg_max
+				for (u32 i = 0; i < 128; i++)
+				{
+					if (auto& bs = bqbi->store[i])
+					{
+						for (auto& [a, b] : m_blocks)
+						{
+							if (b.store[i] && b.store[i] != bs)
+							{
+								if (pdt.dominates(b.store[i], bs))
+								{
+									bs->eraseFromParent();
+									bs = nullptr;
+									break;
+								}
+							}
+						}
+
+						if (!bs)
+							continue;
+
+						// Set of store instructions which overwrite bs
+						std::vector<llvm::BasicBlock*> killers;
+
+						for (auto& [a, b] : m_blocks)
+						{
+							const auto si = b.store[i];
+
+							if (si && si != bs)
+							{
+								if (pois[bs->getParent()] > pois[si->getParent()])
+								{
+									killers.emplace_back(si->getParent());
+								}
+								else
+								{
+									// Reset: store is not the first in the set
+									killers.clear();
+									break;
+								}
+							}
+						}
+
+						if (killers.empty())
+							continue;
+
+						// Find nearest common post-dominator
+						llvm::BasicBlock* common_pdom = killers[0];
+						for (auto* bbb : llvm::drop_begin(killers))
+						{
+							if (!common_pdom)
+								break;
+							common_pdom = pdt.findNearestCommonDominator(common_pdom, bbb);
+						}
+
+						// Shortcut
+						if (!pdt.dominates(common_pdom, bs->getParent()))
+							common_pdom = nullptr;
+
+						// Look for possibly-dead store in CFG starting from the exit nodes
+						llvm::SetVector<llvm::BasicBlock*> work_list;
+						if (std::count(killers.begin(), killers.end(), common_pdom) == 0)
+						{
+							if (common_pdom)
+							{
+								// Shortcut
+								work_list.insert(common_pdom);
+							}
+							else
+							{
+								// Check all exits
+								for (auto* r : pdt.roots())
+									work_list.insert(r);
+							}
+						}
+
+						for (usz wi = 0; wi < work_list.size(); wi++)
+						{
+							auto* cur = work_list[wi];
+							if (std::count(killers.begin(), killers.end(), cur))
+								continue;
+
+							if (cur == bs->getParent())
+							{
+								// Reset: store is not dead
+								killers.clear();
+								break;
+							}
+
+							for (auto* p : llvm::predecessors(cur))
+								work_list.insert(p);
+						}
+
+						// Finally erase the dead store
+						if (!killers.empty())
+						{
+							bs->eraseFromParent();
+							bs = nullptr;
+
+							// Run the loop from the start
+							bi = 0;
+						}
+					}
+				}
+			}
+
+			block_q.clear();
+			for (auto& [a, b] : m_blocks)
+			{
+				block_q.emplace_back(&b);
+			}
+
+			for (usz bi = 0; bi < block_q.size(); bi++)
+			{
+				for (u32 i = 0; i < 128; i++)
+				{
+					// If store isn't erased, try to sink it
+					if (auto& bs = block_q[bi]->store[i]; bs && block_q[bi]->bb->targets.size() > 1)
+					{
+						std::map<u32, block_info*, std::greater<>> sucs;
+
+						for (u32 tj : block_q[bi]->bb->targets)
+						{
+							auto b2it = m_blocks.find(tj);
+
+							if (b2it != m_blocks.end())
+							{
+								sucs.emplace(tj, &b2it->second);
+							}
+						}
+
+						for (auto [a2, b2] : sucs)
+						{
+							auto ins = b2->block->getFirstNonPHI();
+
+							if (b2 != block_q[bi])
+							{
+								if (b2->bb->preds.size() == 1)
+								{
+									if (!dt.dominates(bs->getOperand(0), ins))
+										continue;
+									if (!pdt.dominates(ins, bs))
+										continue;
+
+									m_ir->SetInsertPoint(ins);
+									auto si = llvm::cast<StoreInst>(m_ir->Insert(bs->clone()));
+									if (b2->store[i] == nullptr)
+									{
+										b2->store[i] = si;
+
+										if (!std::count(block_q.begin() + bi, block_q.end(), b2))
+										{
+											// Sunk store can be checked again
+											block_q.push_back(b2);
+										}
+									}
+								}
+								else
+								{
+									// Initialize additional block between two basic blocks
+									auto& edge = block_q[bi]->block_edges[a2];
+									if (!edge)
+									{
+										const auto succ_range = llvm::successors(block_q[bi]->block_end);
+
+										auto succ = b2->block;
+
+										llvm::SmallSetVector<llvm::BasicBlock*, 32> succ_q;
+										succ_q.insert(b2->block);
+
+										for (usz j = 0; j < 32 && j < succ_q.size(); j++)
+										{
+											if (!llvm::count(succ_range, (succ = succ_q[j])))
+											{
+												for (auto pred : llvm::predecessors(succ))
+												{
+													succ_q.insert(pred);
+												}
+											}
+											else
+											{
+												break;
+											}
+										}
+
+										if (!llvm::count(succ_range, succ))
+										{
+											// TODO: figure this out
+											spu_log.notice("[%s] Failed successor to 0x%05x", fmt::base57(be_t<u64>{m_hash_start}), a2);
+											continue;
+										}
+
+										edge = llvm::SplitEdge(block_q[bi]->block_end, succ);
+										pdt.recalculate(*m_function);
+										dt.recalculate(*m_function);
+									}
+
+									ins = edge->getTerminator();
+									if (!dt.dominates(bs->getOperand(0), ins))
+										continue;
+									if (!pdt.dominates(ins, bs))
+										continue;
+
+									m_ir->SetInsertPoint(ins);
+									m_ir->Insert(bs->clone());
+								}
+
+								bs->eraseFromParent();
+								bs = nullptr;
+
+								pdt.recalculate(*m_function);
+								dt.recalculate(*m_function);
+								break;
+							}
+						}
+					}
+				}
+			}
 		}
 
 		// Create function table if necessary
@@ -5530,33 +5758,6 @@ public:
 		{
 			const auto f = func.second.fn ? func.second.fn : func.second.chunk;
 			pm.run(*f);
-
-			for (auto& bb : *f)
-			{
-				for (auto& i : bb)
-				{
-					// Replace fake store with spu_test_state call
-					if (auto si = dyn_cast<StoreInst>(&i); si && si->getOperand(1) == m_fake_global1)
-					{
-						m_ir->SetInsertPoint(si);
-
-						CallInst* ci{};
-						if (si->getOperand(0) == m_ir->getFalse())
-						{
-							ci = m_ir->CreateCall(m_test_state, {f->getArg(0)});
-							ci->setCallingConv(m_test_state->getCallingConv());
-						}
-						else
-						{
-							continue;
-						}
-
-						si->replaceAllUsesWith(ci);
-						si->eraseFromParent();
-						break;
-					}
-				}
-			}
 		}
 
 		// Clear context (TODO)
@@ -6212,11 +6413,6 @@ public:
 		return exec_rdch(_spu, SPU_RdEventStat);
 	}
 
-	void ensure_gpr_stores()
-	{
-		m_block->store.fill(nullptr);
-	}
-
 	llvm::Value* get_rdch(spu_opcode_t op, u32 off, bool atomic)
 	{
 		const auto ptr = _ptr<u64>(m_thread, off);
@@ -6230,8 +6426,8 @@ public:
 		else
 		{
 			const auto val = m_ir->CreateLoad(get_type<u64>(), ptr);
-			val->setAtomic(llvm::AtomicOrdering::Unordered);
-			m_ir->CreateStore(m_ir->getInt64(0), ptr)->setAtomic(llvm::AtomicOrdering::Unordered);
+			val->setAtomic(llvm::AtomicOrdering::Acquire);
+			m_ir->CreateStore(m_ir->getInt64(0), ptr)->setAtomic(llvm::AtomicOrdering::Release);
 			val0 = val;
 		}
 
@@ -6273,7 +6469,6 @@ public:
 		case SPU_RdInMbox:
 		{
 			update_pc();
-			ensure_gpr_stores();
 			res.value = call("spu_read_in_mbox", &exec_read_in_mbox, m_thread);
 			break;
 		}
@@ -6289,13 +6484,11 @@ public:
 		}
 		case SPU_RdSigNotify1:
 		{
-			ensure_gpr_stores();
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr1), true);
 			break;
 		}
 		case SPU_RdSigNotify2:
 		{
-			ensure_gpr_stores();
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr2), true);
 			break;
 		}
@@ -6316,7 +6509,9 @@ public:
 		}
 		case SPU_RdEventMask:
 		{
-			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events)), 32), get_type<u32>());
+			const auto value = m_ir->CreateLoad(get_type<u64>(), spu_ptr<u64>(&spu_thread::ch_events));
+			value->setAtomic(llvm::AtomicOrdering::Acquire);
+			res.value = m_ir->CreateTrunc(m_ir->CreateLShr(value, 32), get_type<u32>());
 			break;
 		}
 		case SPU_RdEventStat:
@@ -6335,7 +6530,6 @@ public:
 		default:
 		{
 			update_pc();
-			ensure_gpr_stores();
 			res.value = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(op.ra));
 			break;
 		}
@@ -6357,6 +6551,7 @@ public:
 	llvm::Value* get_rchcnt(u32 off, u64 inv = 0)
 	{
 		const auto val = m_ir->CreateLoad(get_type<u64>(), _ptr<u64>(m_thread, off));
+		val->setAtomic(llvm::AtomicOrdering::Acquire);
 		const auto shv = m_ir->CreateLShr(val, spu_channel::off_count);
 		return m_ir->CreateTrunc(m_ir->CreateXor(shv, u64{inv}), get_type<u32>());
 	}
@@ -6422,7 +6617,9 @@ public:
 		}
 		case SPU_RdInMbox:
 		{
-			res.value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_in_mbox));
+			const auto value = m_ir->CreateLoad(get_type<u32>(), spu_ptr<u32>(&spu_thread::ch_in_mbox));
+			value->setAtomic(llvm::AtomicOrdering::Acquire);
+			res.value = value;
 			res.value = m_ir->CreateLShr(res.value, 8);
 			res.value = m_ir->CreateAnd(res.value, 7);
 			break;
@@ -6678,7 +6875,6 @@ public:
 				case MFC_GETLB_CMD:
 				case MFC_GETLF_CMD:
 				{
-					ensure_gpr_stores();
 					[[fallthrough]];
 				}
 				case MFC_SDCRZ_CMD:
@@ -6967,7 +7163,6 @@ public:
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(_old, _new), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
 			update_pc();
-			ensure_gpr_stores();
 			call("spu_list_unstall", &exec_list_unstall, m_thread, eval(val & 0x1f).value);
 			m_ir->CreateBr(next);
 			m_ir->SetInsertPoint(next);
@@ -6991,7 +7186,6 @@ public:
 		}
 
 		update_pc();
-		ensure_gpr_stores();
 		call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 	}
 
@@ -7012,7 +7206,6 @@ public:
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
 			update_pc(m_pos + 4);
-			ensure_gpr_stores();
 			tail_chunk(m_dispatch);
 		}
 	}
@@ -10330,7 +10523,7 @@ public:
 			{
 				// Can't afford external tail call in true functions
 				m_ir->CreateStore(m_ir->getInt32("BIJT"_u32), _ptr<u32>(m_memptr, 0xffdead20));
-				m_ir->CreateStore(m_ir->getFalse(), m_fake_global1);
+				m_ir->CreateCall(m_test_state, {m_thread});
 				m_ir->CreateBr(sw->getDefaultDest());
 			}
 			else

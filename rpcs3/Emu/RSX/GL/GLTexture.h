@@ -31,6 +31,35 @@ namespace gl
 		u64 memory_required;
 	};
 
+	struct clear_cmd_info
+	{
+		GLbitfield aspect_mask = 0;
+
+		struct
+		{
+			f32 value;
+		}
+		clear_depth{};
+
+		struct
+		{
+			u8 mask;
+			u8 value;
+		}
+		clear_stencil{};
+
+		struct
+		{
+			u32 mask;
+			u8 attachment_count;
+			u8 r;
+			u8 g;
+			u8 b;
+			u8 a;
+		}
+		clear_color{};
+	};
+
 	GLenum get_target(rsx::texture_dimension_extended type);
 	GLenum get_sized_internal_format(u32 texture_format);
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
@@ -50,6 +79,8 @@ namespace gl
 		const void* src_offset, const int dst_level, const coord3u& dst_region, image_memory_requirements* mem_info);
 
 	void upload_texture(gl::command_context& cmd, texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout);
+
+	void clear_attachments(gl::command_context& cmd, const clear_cmd_info& info);
 
 	namespace debug
 	{

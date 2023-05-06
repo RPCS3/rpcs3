@@ -599,7 +599,7 @@ std::string fmt::trim(const std::string& source, const std::string& values)
 	return source.substr(begin, source.find_last_not_of(values) + 1);
 }
 
-std::string fmt::to_upper(const std::string& string)
+std::string fmt::to_upper(std::string_view string)
 {
 	std::string result;
 	result.resize(string.size());
@@ -607,7 +607,7 @@ std::string fmt::to_upper(const std::string& string)
 	return result;
 }
 
-std::string fmt::to_lower(const std::string& string)
+std::string fmt::to_lower(std::string_view string)
 {
 	std::string result;
 	result.resize(string.size());

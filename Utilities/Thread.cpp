@@ -277,7 +277,10 @@ enum x64_op_t : u32
 	X64OP_ADC, // lock adc [mem], ...
 	X64OP_SUB, // lock sub [mem], ...
 	X64OP_SBB, // lock sbb [mem], ...
+	X64OP_BEXTR,
 };
+
+static thread_local x64_reg_t s_tls_reg3{};
 
 void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz& out_size, usz& out_length)
 {
@@ -739,9 +742,11 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 		const u8 vopm = op1 == 0xc5 ? 1 : op2 & 0x1f;
 		const u8 vop1 = op1 == 0xc5 ? op3 : code[2];
 		const u8 vlen = (opx & 0x4) ? 32 : 16;
-		//const u8 vreg = (~opx >> 3) & 0xf;
+		const u8 vreg = (~opx >> 3) & 0xf;
 		out_length += op1 == 0xc5 ? 2 : 3;
 		code += op1 == 0xc5 ? 2 : 3;
+
+		s_tls_reg3 = x64_reg_t{vreg};
 
 		if (vopm == 0x1) switch (vop1) // Implied leading byte 0x0F
 		{
@@ -765,6 +770,22 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 				out_op = X64OP_STORE;
 				out_reg = get_modRM_reg_xmm(code, rex);
 				out_size = vlen;
+				out_length += get_modRM_size(code);
+				return;
+			}
+			break;
+		}
+		}
+
+		if (vopm == 0x2) switch (vop1) // Implied leading bytes 0x0F 0x38
+		{
+		case 0xf7:
+		{
+			if (!repe && !repne && vlen == 16) // BEXTR r32,mem,r32
+			{
+				out_op = X64OP_BEXTR;
+				out_reg = get_modRM_reg_xmm(code, rex);
+				out_size = opx & 0x80 ? 8 : 4;
 				out_length += get_modRM_size(code);
 				return;
 			}
@@ -1361,6 +1382,37 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			}
 
 			if (!put_x64_reg_value(context, reg, d_size, value))
+			{
+				return false;
+			}
+
+			break;
+		}
+		case X64OP_BEXTR:
+		{
+			u32 value;
+			if (is_writing || !thread->read_reg(addr, value))
+			{
+				return false;
+			}
+
+			value = stx::se_storage<u32>::swap(value);
+
+			u64 ctrl;
+			if (!get_x64_reg_value(context, s_tls_reg3, d_size, i_size, ctrl))
+			{
+				return false;
+			}
+
+			u8 start = ctrl & 0xff;
+			u8 _len = (ctrl & 0xff00) >> 8;
+			if (_len > 32)
+				_len = 32;
+			if (start > 32)
+				start = 32;
+			value = (u64{value} >> start) & ~(u64{umax} << _len);
+
+			if (!put_x64_reg_value(context, reg, d_size, value) || !set_x64_cmp_flags(context, d_size, value, 0))
 			{
 				return false;
 			}

@@ -2,6 +2,9 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "Utilities/bit_set.h"
+#include "config_mode.h"
+#include "games_config.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -54,16 +57,6 @@ constexpr bool is_error(game_boot_result res)
 {
 	return res != game_boot_result::no_errors;
 }
-
-enum class cfg_mode
-{
-	custom,           // Prefer regular custom config. Fall back to global config.
-	custom_selection, // Use user-selected custom config. Fall back to global config.
-	global,           // Use global config.
-	config_override,  // Use config override. This does not use the global VFS settings! Fall back to global config.
-	continuous,       // Use same config as on last boot. Fall back to global config.
-	default_config    // Use the default values of the config entries.
-};
 
 struct EmuCallbacks
 {
@@ -118,6 +111,8 @@ class Emulator final
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
 	atomic_t<u64> m_stop_ctr{0}; // Increments when emulation is stopped
 
+	games_config m_games_config;
+
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
 
@@ -157,6 +152,16 @@ class Emulator final
 			func();
 		}
 	}
+
+	enum class SaveStateExtentionFlags1 : u8
+	{
+		SupportsMenuOpenResume,
+		ShouldCloseMenu,
+
+		__bitset_enum_max,
+	};
+
+	bs_t<SaveStateExtentionFlags1> m_savestate_extension_flags1{};
 
 public:
 	static constexpr std::string_view game_id_boot_prefix = "%RPCS3_GAMEID%:";
@@ -205,7 +210,7 @@ public:
 		m_state = system_state::running;
 	}
 
-	void Init(bool add_only = false);
+	void Init();
 
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
@@ -274,6 +279,11 @@ public:
 		return m_usr;
 	}
 
+	const games_config& GetGamesConfig() const
+	{
+		return m_games_config;
+	}
+
 	// Get deserialization manager
 	utils::serial* DeserialManager() const;
 
@@ -297,12 +307,12 @@ public:
 		return m_config_path;
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);
 
-	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool is_disc_patch = false);
+	game_boot_result Load(const std::string& title_id = "", bool is_disc_patch = false);
 	void Run(bool start_playtime);
 	void RunPPU();
 	void FixGuestTime();
@@ -335,9 +345,12 @@ public:
 
 	std::set<std::string> GetGameDirs() const;
 	void AddGamesFromDir(const std::string& path);
+	game_boot_result AddGame(const std::string& path);
+	game_boot_result AddGameToYml(const std::string& path);
 
 	// Check if path is inside the specified directory
 	bool IsPathInsideDir(std::string_view path, std::string_view dir) const;
+	game_boot_result VerifyPathCasing(std::string_view path, std::string_view dir, bool from_dir) const;
 
 	void EjectDisc();
 	game_boot_result InsertDisc(const std::string& path);
@@ -347,6 +360,7 @@ public:
 	friend void init_fxo_for_exec(utils::serial*, bool);
 
 	static bool IsVsh();
+	static bool IsValidSfb(const std::string& path);
 
 	static void SaveSettings(const std::string& settings, const std::string& title_id);
 };

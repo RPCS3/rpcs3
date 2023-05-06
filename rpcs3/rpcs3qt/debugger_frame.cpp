@@ -2,7 +2,6 @@
 #include "register_editor_dialog.h"
 #include "instruction_editor_dialog.h"
 #include "memory_viewer_panel.h"
-#include "memory_string_searcher.h"
 #include "gui_settings.h"
 #include "debugger_list.h"
 #include "breakpoint_list.h"
@@ -25,7 +24,6 @@
 
 #include <QKeyEvent>
 #include <QScrollBar>
-#include <QApplication>
 #include <QFontDatabase>
 #include <QCompleter>
 #include <QVBoxLayout>
@@ -291,7 +289,6 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		QLabel* l = new QLabel(tr(
 			"Keys Ctrl+G: Go to typed address."
 			"\nKeys Ctrl+B: Open breakpoints settings."
-			"\nKeys Ctrl+S: Search memory string utility."
 			"\nKeys Alt+S: Capture SPU images of selected SPU."
 			"\nKeys Alt+R: Load last saved SPU state capture."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
@@ -333,7 +330,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	const u32 pc = (m_debugger_list->m_pc & address_limits);
 	const u32 selected = (m_debugger_list->m_showing_selected_instruction ? m_debugger_list->m_selected_instruction : cpu->get_pc()) & address_limits;
 
-	const auto modifiers = QApplication::keyboardModifiers();
+	const auto modifiers = event->modifiers();
 
 	if (modifiers & Qt::ControlModifier)
 	{
@@ -350,20 +347,6 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_B:
 		{
 			open_breakpoints_settings();
-			return;
-		}
-		case Qt::Key_S:
-		{
-			if (m_disasm && (cpu->id_type() == 2 || cpu->id_type() == 1))
-			{
-				if (cpu->id_type() == 2)
-				{
-					// Save shared pointer to shared memory handle, ensure the destructor will not be called until the SPUDisAsm is destroyed
-					static_cast<SPUDisAsm*>(m_disasm.get())->set_shm(static_cast<const spu_thread*>(cpu)->shm);
-				}
-
-				idm::make<memory_searcher_handle>(this, m_disasm, cpu->id_type() == 2 ? cpu->get_name() : "");
-			}
 			return;
 		}
 		default: break;
@@ -639,8 +622,14 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			if (event->isAutoRepeat())
 				return;
 
+			if (m_disasm && cpu->id_type() == 2)
+			{
+				// Save shared pointer to shared memory handle, ensure the destructor will not be called until the SPUDisAsm is destroyed
+				static_cast<SPUDisAsm*>(m_disasm.get())->set_shm(static_cast<const spu_thread*>(cpu)->shm);
+			}
+
 			// Memory viewer
-			idm::make<memory_viewer_handle>(this, pc, make_check_cpu(cpu));
+			idm::make<memory_viewer_handle>(this, m_disasm, pc, make_check_cpu(cpu));
 			return;
 		}
 		case Qt::Key_F10:

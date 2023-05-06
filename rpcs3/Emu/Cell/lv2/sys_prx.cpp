@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "sys_prx.h"
 
+#include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -884,7 +885,7 @@ error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 
 	if (flags.front())
 	{
-		const bool success = idm::select<lv2_obj, lv2_prx>([&](u32 id, lv2_prx& prx)
+		const bool success = idm::select<lv2_obj, lv2_prx>([&](u32 /*id*/, lv2_prx& prx)
 		{
 			if (prx.state == PRX_STATE_INITIALIZED)
 			{

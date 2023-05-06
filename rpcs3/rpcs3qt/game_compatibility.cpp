@@ -238,9 +238,10 @@ compat::status game_compatibility::GetCompatibility(const std::string& title_id)
 	{
 		return ::at32(Status_Data, "NoData");
 	}
-	else if (m_compat_database.count(title_id) > 0)
+
+	if (const auto it = m_compat_database.find(title_id); it != m_compat_database.cend())
 	{
-		return m_compat_database[title_id];
+		return it->second;
 	}
 
 	return ::at32(Status_Data, "NoResult");

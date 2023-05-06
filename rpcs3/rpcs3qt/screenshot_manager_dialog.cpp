@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "screenshot_manager_dialog.h"
 #include "screenshot_preview.h"
+#include "screenshot_item.h"
+#include "flow_widget.h"
 #include "qt_utils.h"
 #include "Utilities/File.h"
 #include "Emu/VFS.h"
@@ -9,9 +11,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QDirIterator>
-#include <QListWidget>
 #include <QScreen>
-#include <QScrollBar>
 #include <QVBoxLayout>
 #include <QtConcurrent>
 
@@ -23,57 +23,18 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 	setAttribute(Qt::WA_DeleteOnClose);
 
 	m_icon_size = QSize(160, 90);
+	m_flow_widget = new flow_widget(this);
+	m_flow_widget->setObjectName("flow_widget");
 
-	m_grid = new QListWidget(this);
-	m_grid->setViewMode(QListWidget::IconMode);
-	m_grid->setMovement(QListWidget::Static);
-	m_grid->setResizeMode(QListWidget::Adjust);
-	m_grid->setIconSize(m_icon_size);
-	m_grid->setGridSize(m_icon_size + QSize(10, 10));
+	m_placeholder = QPixmap(m_icon_size);
+	m_placeholder.fill(Qt::gray);
 
-	// Make sure the directory is mounted
-	vfs::mount("/dev_hdd0", rpcs3::utils::get_hdd0_dir());
-
-	const std::string screenshot_path_qt   = fs::get_config_dir() + "screenshots/";
-	const std::string screenshot_path_cell = vfs::get("/dev_hdd0/photo/");
-	const QStringList filter{ QStringLiteral("*.png") };
-
-	QPixmap placeholder(m_icon_size);
-	placeholder.fill(Qt::gray);
-	m_placeholder = QIcon(placeholder);
-
-	for (const std::string& path : { screenshot_path_qt, screenshot_path_cell })
-	{
-		if (path.empty())
-		{
-			gui_log.error("Screenshot manager: Trying to load screenshots from empty path!");
-			continue;
-		}
-
-		QDirIterator dir_iter(QString::fromStdString(path), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-
-		while (dir_iter.hasNext())
-		{
-			const QString filepath = dir_iter.next();
-
-			QListWidgetItem* item = new QListWidgetItem;
-			item->setData(item_role::source, filepath);
-			item->setData(item_role::loaded, false);
-			item->setIcon(m_placeholder);
-			item->setToolTip(filepath);
-
-			m_grid->addItem(item);
-		}
-	}
-
-	connect(&m_icon_loader, &QFutureWatcher<QIcon>::resultReadyAt, this, &screenshot_manager_dialog::update_icon);
-
-	connect(m_grid, &QListWidget::itemDoubleClicked, this, &screenshot_manager_dialog::show_preview);
-	connect(m_grid->verticalScrollBar(), &QScrollBar::valueChanged, this, &screenshot_manager_dialog::update_icons);
+	connect(this, &screenshot_manager_dialog::signal_icon_preview, this, &screenshot_manager_dialog::show_preview);
+	connect(this, &screenshot_manager_dialog::signal_entry_parsed, this, &screenshot_manager_dialog::add_entry);
 
 	QVBoxLayout* layout = new QVBoxLayout;
 	layout->setContentsMargins(0, 0, 0, 0);
-	layout->addWidget(m_grid);
+	layout->addWidget(m_flow_widget);
 	setLayout(layout);
 
 	resize(QGuiApplication::primaryScreen()->availableSize() * 3 / 5);
@@ -81,80 +42,99 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 
 screenshot_manager_dialog::~screenshot_manager_dialog()
 {
-	gui::utils::stop_future_watcher(m_icon_loader, true);
+	m_abort_parsing = true;
+	gui::utils::stop_future_watcher(m_parsing_watcher, true);
 }
 
-void screenshot_manager_dialog::show_preview(QListWidgetItem* item)
+void screenshot_manager_dialog::add_entry(const QString& path)
 {
-	if (!item)
-	{
-		return;
-	}
+	screenshot_item* item = new screenshot_item(m_flow_widget);
+	ensure(item->label);
+	item->setToolTip(path);
+	item->installEventFilter(this);
+	item->label->setPixmap(m_placeholder);
+	item->icon_path = path;
+	item->icon_size = m_icon_size;
+	connect(item, &screenshot_item::signal_icon_update, this, &screenshot_manager_dialog::update_icon);
 
-	const QString filepath = item->data(Qt::UserRole).toString();
+	m_flow_widget->add_widget(item);
+}
 
-	screenshot_preview* preview = new screenshot_preview(filepath);
+void screenshot_manager_dialog::show_preview(const QString& path)
+{
+	screenshot_preview* preview = new screenshot_preview(path);
 	preview->show();
 }
 
-void screenshot_manager_dialog::update_icon(int index) const
+void screenshot_manager_dialog::update_icon(const QPixmap& pixmap)
 {
-	const thumbnail tn = m_icon_loader.resultAt(index);
-
-	if (QListWidgetItem* item = m_grid->item(tn.index))
+	if (screenshot_item* item = static_cast<screenshot_item*>(QObject::sender()))
 	{
-		item->setIcon(tn.icon);
-		item->setData(item_role::loaded, true);
+		if (item->label)
+		{
+			item->label->setPixmap(pixmap);
+		}
 	}
 }
 
-void screenshot_manager_dialog::update_icons(int value)
+void screenshot_manager_dialog::reload()
 {
-	const QRect visible_rect = rect();
+	m_abort_parsing = true;
+	gui::utils::stop_future_watcher(m_parsing_watcher, true);
 
-	QList<thumbnail> thumbnails_to_load;
+	const std::string screenshot_path_qt   = fs::get_config_dir() + "screenshots/";
+	const std::string screenshot_path_cell = rpcs3::utils::get_hdd0_dir() + "/photo/";
 
-	const bool forward = value >= m_scrollbar_value;
-	m_scrollbar_value  = value;
-
-	const int first = forward ? 0 : (m_grid->count() - 1);
-	const int last  = forward ? (m_grid->count() - 1) : 0;
-
-	for (int i = first; forward ? i <= last : i >= last; forward ? ++i : --i)
+	m_flow_widget->clear();
+	m_abort_parsing = false;
+	m_parsing_watcher.setFuture(QtConcurrent::map(m_parsing_threads, [this, screenshot_path_qt, screenshot_path_cell](int index)
 	{
-		if (QListWidgetItem* item = m_grid->item(i))
+		if (index != 0)
 		{
-			const bool is_loaded  = item->data(item_role::loaded).toBool();
-			const bool is_visible = visible_rect.intersects(m_grid->visualItemRect(item));
+			return;
+		}
 
-			if (is_visible)
+		const QStringList filter{ QStringLiteral("*.png") };
+
+		for (const std::string& path : { screenshot_path_qt, screenshot_path_cell })
+		{
+			if (m_abort_parsing)
 			{
-				if (!is_loaded)
-				{
-					thumbnails_to_load.push_back({ QIcon(), item->data(item_role::source).toString() , i });
-				}
+				return;
 			}
-			else if (is_loaded)
+
+			if (path.empty())
 			{
-				item->setIcon(m_placeholder);
-				item->setData(item_role::loaded, false);
+				gui_log.error("Screenshot manager: Trying to load screenshots from empty path!");
+				continue;
 			}
+
+			QDirIterator dir_iter(QString::fromStdString(path), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+
+			while (dir_iter.hasNext() && !m_abort_parsing)
+			{
+				Q_EMIT signal_entry_parsed(dir_iter.next());
+			}
+		}
+	}));
+}
+
+void screenshot_manager_dialog::showEvent(QShowEvent* event)
+{
+	QDialog::showEvent(event);
+	reload();
+}
+
+bool screenshot_manager_dialog::eventFilter(QObject* watched, QEvent* event)
+{
+	if (event && event->type() == QEvent::MouseButtonDblClick)
+	{
+		if (screenshot_item* item = static_cast<screenshot_item*>(watched))
+		{
+			Q_EMIT signal_icon_preview(item->icon_path);
+			return true;
 		}
 	}
 
-	gui::utils::stop_future_watcher(m_icon_loader, true);
-
-	const std::function<thumbnail(thumbnail)> load = [icon_size = m_icon_size](thumbnail tn) -> thumbnail
-	{
-		tn.icon = QIcon(gui::utils::get_centered_pixmap(tn.path, icon_size, 0, 0, 1.0));
-		return tn;
-	};
-
-	m_icon_loader.setFuture(QtConcurrent::mapped(thumbnails_to_load, load));
-}
-
-void screenshot_manager_dialog::resizeEvent(QResizeEvent* event)
-{
-	QDialog::resizeEvent(event);
-	update_icons(m_scrollbar_value);
+	return false;
 }

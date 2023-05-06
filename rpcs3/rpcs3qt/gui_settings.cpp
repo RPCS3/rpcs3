@@ -18,89 +18,33 @@ gui_settings::gui_settings(QObject* parent) : settings(parent)
 	m_settings.reset(new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent));
 }
 
-QStringList gui_settings::GetGameListCategoryFilters() const
+QStringList gui_settings::GetGameListCategoryFilters(bool is_list_mode) const
 {
 	QStringList filterList;
 
-	if (GetCategoryVisibility(Category::HDD_Game)) filterList.append(cat::cat_hdd_game);
-	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(cat::cat_disc_game);
-	if (GetCategoryVisibility(Category::PS1_Game)) filterList.append(cat::cat_ps1_game);
-	if (GetCategoryVisibility(Category::PS2_Game)) filterList.append(cat::ps2_games);
-	if (GetCategoryVisibility(Category::PSP_Game)) filterList.append(cat::psp_games);
-	if (GetCategoryVisibility(Category::Home)) filterList.append(cat::cat_home);
-	if (GetCategoryVisibility(Category::Media)) filterList.append(cat::media);
-	if (GetCategoryVisibility(Category::Data)) filterList.append(cat::data);
-	if (GetCategoryVisibility(Category::Unknown_Cat)) filterList.append(cat::cat_unknown);
-	if (GetCategoryVisibility(Category::Others)) filterList.append(cat::others);
+	if (GetCategoryVisibility(Category::HDD_Game, is_list_mode)) filterList.append(cat::cat_hdd_game);
+	if (GetCategoryVisibility(Category::Disc_Game, is_list_mode)) filterList.append(cat::cat_disc_game);
+	if (GetCategoryVisibility(Category::PS1_Game, is_list_mode)) filterList.append(cat::cat_ps1_game);
+	if (GetCategoryVisibility(Category::PS2_Game, is_list_mode)) filterList.append(cat::ps2_games);
+	if (GetCategoryVisibility(Category::PSP_Game, is_list_mode)) filterList.append(cat::psp_games);
+	if (GetCategoryVisibility(Category::Home, is_list_mode)) filterList.append(cat::cat_home);
+	if (GetCategoryVisibility(Category::Media, is_list_mode)) filterList.append(cat::media);
+	if (GetCategoryVisibility(Category::Data, is_list_mode)) filterList.append(cat::data);
+	if (GetCategoryVisibility(Category::Unknown_Cat, is_list_mode)) filterList.append(cat::cat_unknown);
+	if (GetCategoryVisibility(Category::Others, is_list_mode)) filterList.append(cat::others);
 
 	return filterList;
 }
 
-bool gui_settings::GetCategoryVisibility(int cat) const
+bool gui_settings::GetCategoryVisibility(int cat, bool is_list_mode) const
 {
-	gui_save value;
-
-	switch (cat)
-	{
-	case Category::HDD_Game:
-		value = gui::cat_hdd_game; break;
-	case Category::Disc_Game:
-		value = gui::cat_disc_game; break;
-	case Category::PS1_Game:
-		value = gui::cat_ps1_game; break;
-	case Category::PS2_Game:
-		value = gui::cat_ps2_game; break;
-	case Category::PSP_Game:
-		value = gui::cat_psp_game; break;
-	case Category::Home:
-		value = gui::cat_home; break;
-	case Category::Media:
-		value = gui::cat_audio_video; break;
-	case Category::Data:
-		value = gui::cat_game_data; break;
-	case Category::Unknown_Cat:
-		value = gui::cat_unknown; break;
-	case Category::Others:
-		value = gui::cat_other; break;
-	default:
-		cfg_log.warning("GetCategoryVisibility: wrong cat <%d>", cat);
-		break;
-	}
-
+	const gui_save value = GetGuiSaveForCategory(cat, is_list_mode);
 	return GetValue(value).toBool();
 }
 
-void gui_settings::SetCategoryVisibility(int cat, const bool& val) const
+void gui_settings::SetCategoryVisibility(int cat, bool val, bool is_list_mode) const
 {
-	gui_save value;
-
-	switch (cat)
-	{
-	case Category::HDD_Game:
-		value = gui::cat_hdd_game; break;
-	case Category::Disc_Game:
-		value = gui::cat_disc_game; break;
-	case Category::Home:
-		value = gui::cat_home; break;
-	case Category::PS1_Game:
-		value = gui::cat_ps1_game; break;
-	case Category::PS2_Game:
-		value = gui::cat_ps2_game; break;
-	case Category::PSP_Game:
-		value = gui::cat_psp_game; break;
-	case Category::Media:
-		value = gui::cat_audio_video; break;
-	case Category::Data:
-		value = gui::cat_game_data; break;
-	case Category::Unknown_Cat:
-		value = gui::cat_unknown; break;
-	case Category::Others:
-		value = gui::cat_other; break;
-	default:
-		cfg_log.warning("SetCategoryVisibility: wrong cat <%d>", cat);
-		break;
-	}
-
+	const gui_save value = GetGuiSaveForCategory(cat, is_list_mode);
 	SetValue(value, val);
 }
 
@@ -244,4 +188,24 @@ gui_save gui_settings::GetGuiSaveForColumn(int col)
 	// hide sound format, parental level, firmware version and path by default
 	const bool show = col != gui::column_sound && col != gui::column_parental && col != gui::column_firmware && col != gui::column_path;
 	return gui_save{ gui::game_list, "visibility_" + gui::get_game_list_column_name(static_cast<gui::game_list_columns>(col)), show };
+}
+
+gui_save gui_settings::GetGuiSaveForCategory(int cat, bool is_list_mode)
+{
+	switch (cat)
+	{
+	case Category::HDD_Game: return is_list_mode ? gui::cat_hdd_game : gui::grid_cat_hdd_game;
+	case Category::Disc_Game: return is_list_mode ? gui::cat_disc_game : gui::grid_cat_disc_game;
+	case Category::Home: return is_list_mode ? gui::cat_home : gui::grid_cat_home;
+	case Category::PS1_Game: return is_list_mode ? gui::cat_ps1_game : gui::grid_cat_ps1_game;
+	case Category::PS2_Game: return is_list_mode ? gui::cat_ps2_game : gui::grid_cat_ps2_game;
+	case Category::PSP_Game: return is_list_mode ? gui::cat_psp_game : gui::grid_cat_psp_game;
+	case Category::Media: return is_list_mode ? gui::cat_audio_video : gui::grid_cat_audio_video;
+	case Category::Data: return is_list_mode ? gui::cat_game_data : gui::grid_cat_game_data;
+	case Category::Unknown_Cat: return is_list_mode ? gui::cat_unknown : gui::grid_cat_unknown;
+	case Category::Others: return is_list_mode ? gui::cat_other : gui::grid_cat_other;
+	default:
+		cfg_log.warning("GetGuiSaveForCategory: wrong cat <%d>", cat);
+		return {};
+	}
 }

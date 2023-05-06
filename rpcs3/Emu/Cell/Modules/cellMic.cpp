@@ -271,11 +271,6 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	switch (device_type)
 	{
 	case microphone_handler::standard:
-		if (num_channels > 2)
-		{
-			cellMic.warning("Reducing number of mic channels from %d to 2 for %s", num_channels, device_name[0]);
-			num_channels = 2;
-		}
 		break;
 	case microphone_handler::singstar:
 	case microphone_handler::real_singstar:
@@ -287,15 +282,21 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 			num_channels = 2;
 		}
 		break;
-	case microphone_handler::rocksmith: num_channels = 1; break;
+	case microphone_handler::rocksmith:
+		num_channels = 1;
+		break;
 	case microphone_handler::null:
-	default: ensure(false); break;
+	default:
+		ensure(false);
+		break;
 	}
 
 	ALCenum num_al_channels;
 	switch (num_channels)
 	{
-	case 1: num_al_channels = AL_FORMAT_MONO16; break;
+	case 1:
+		num_al_channels = AL_FORMAT_MONO16;
+		break;
 	case 2:
 		// If we're using SingStar each device needs to be mono
 		if (device_type == microphone_handler::singstar)
@@ -304,22 +305,105 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 			num_al_channels = AL_FORMAT_STEREO16;
 		break;
 	case 4:
-		if (alcIsExtensionPresent(nullptr, "AL_EXT_MCFORMATS") == AL_TRUE)
-		{
-			num_al_channels = AL_FORMAT_QUAD16;
-		}
-		else
-		{
-			cellMic.error("Requested 4 channels but AL_EXT_MCFORMATS not available, settling down to 2");
-			num_channels    = 2;
-			num_al_channels = AL_FORMAT_STEREO16;
-		}
+		num_al_channels = AL_FORMAT_QUAD16;
 		break;
 	default:
-		cellMic.fatal("Requested an invalid number of channels: %d", num_channels);
-		num_al_channels = AL_FORMAT_STEREO16;
+		cellMic.warning("Requested an invalid number of %d channels. Defaulting to 4 channels instead.", num_channels);
+		num_al_channels = AL_FORMAT_QUAD16;
+		num_channels = 4;
 		break;
 	}
+
+	// Real firmware tries 4, 2 and then 1 channels if the channel count is not supported
+	// TODO: The used channel count may vary for Sony's camera devices
+	for (bool found_valid_channels = false; !found_valid_channels;)
+	{
+		switch (num_al_channels)
+		{
+		case AL_FORMAT_QUAD16:
+			if (alcIsExtensionPresent(nullptr, "AL_EXT_MCFORMATS") == AL_TRUE)
+			{
+				found_valid_channels = true;
+				break;
+			}
+
+			cellMic.warning("Requested 4 channels but AL_EXT_MCFORMATS not available, trying 2 channels next");
+			num_al_channels = AL_FORMAT_STEREO16;
+			num_channels = 2;
+			break;
+		case AL_FORMAT_STEREO16:
+			if (true) // TODO: check stereo capability
+			{
+				found_valid_channels = true;
+				break;
+			}
+
+			cellMic.warning("Requested 2 channels but extension is not available, trying 1 channel next");
+			num_al_channels = AL_FORMAT_MONO16;
+			num_channels = 1;
+			break;
+		case AL_FORMAT_MONO16:
+			found_valid_channels = true;
+			break;
+		default:
+			ensure(false);
+			break;
+		}
+	}
+
+	// Ensure that the code above delivers what it should
+	switch (num_al_channels)
+	{
+	case AL_FORMAT_QUAD16:
+		ensure(num_channels == 4 && device_type != microphone_handler::singstar && device_type != microphone_handler::real_singstar);
+		break;
+	case AL_FORMAT_STEREO16:
+		ensure(num_channels == 2 && device_type != microphone_handler::singstar);
+		break;
+	case AL_FORMAT_MONO16:
+		ensure(num_channels == 1 || (num_channels == 2 && device_type == microphone_handler::singstar));
+		break;
+	default:
+		ensure(false);
+		break;
+	}
+
+	// Make sure we use a proper sampling rate
+	const auto fixup_samplingrate = [this](u32& rate) -> bool
+	{
+		// TODO: The used sample rate may vary for Sony's camera devices
+		const std::array<u32, 7> samplingrates = { rate, 48000u, 32000u, 24000u, 16000u, 12000u, 8000u };
+
+		const auto test_samplingrate = [&samplingrates](const u32& rate)
+		{
+			// TODO: actually check if device supports sampling rates
+			return std::any_of(samplingrates.cbegin() + 1, samplingrates.cend(), [&rate](const u32& r){ return r == rate; });
+		};
+
+		for (u32 samplingrate : samplingrates)
+		{
+			if (test_samplingrate(samplingrate))
+			{
+				// Use this sampling rate
+				raw_samplingrate = samplingrate;
+				cellMic.notice("Using sampling rate %d.", samplingrate);
+				return true;
+			}
+
+			cellMic.warning("Requested sampling rate %d, but we do not support it. Trying next sampling rate...", samplingrate);
+		}
+
+		return false;
+	};
+
+	if (!fixup_samplingrate(raw_samplingrate))
+	{
+		return CELL_MICIN_ERROR_DEVICE_NOT_SUPPORT;
+	}
+
+	aux_samplingrate = dsp_samplingrate = raw_samplingrate; // Same rate for now
+
+	ensure(!device_name.empty());
 
 	ALCdevice* device = alcCaptureOpenDevice(device_name[0].c_str(), raw_samplingrate, num_al_channels, inbuf_size);
 
@@ -615,7 +699,7 @@ error_code cellMicEnd()
 
 error_code cellMicOpenEx(s32 dev_num, s32 rawSampleRate, s32 rawChannel, s32 DSPSampleRate, s32 bufferSizeMS, u8 signalType)
 {
-	cellMic.trace("cellMicOpenEx(dev_num=%d, rawSampleRate=%d, rawChannel=%d, DSPSampleRate=%d, bufferSizeMS=%d, signalType=0x%x)",
+	cellMic.notice("cellMicOpenEx(dev_num=%d, rawSampleRate=%d, rawChannel=%d, DSPSampleRate=%d, bufferSizeMS=%d, signalType=0x%x)",
 		dev_num, rawSampleRate, rawChannel, DSPSampleRate, bufferSizeMS, signalType);
 
 	auto& mic_thr = g_fxo->get<mic_thread>();
@@ -640,7 +724,7 @@ error_code cellMicOpen(s32 dev_num, s32 sampleRate)
 {
 	cellMic.trace("cellMicOpen(dev_num=%d sampleRate=%d)", dev_num, sampleRate);
 
-	return cellMicOpenEx(dev_num, sampleRate, 2, sampleRate, 0x80, CELLMIC_SIGTYPE_DSP);
+	return cellMicOpenEx(dev_num, sampleRate, 1, sampleRate, 0x80, CELLMIC_SIGTYPE_DSP);
 }
 
 error_code cellMicOpenRaw(s32 dev_num, s32 sampleRate, s32 maxChannels)
@@ -650,7 +734,7 @@ error_code cellMicOpenRaw(s32 dev_num, s32 sampleRate, s32 maxChannels)
 	return cellMicOpenEx(dev_num, sampleRate, maxChannels, sampleRate, 0x80, CELLMIC_SIGTYPE_RAW);
 }
 
-u8 cellMicIsOpen(s32 dev_num)
+s32 cellMicIsOpen(s32 dev_num)
 {
 	cellMic.trace("cellMicIsOpen(dev_num=%d)", dev_num);
 
@@ -668,7 +752,9 @@ u8 cellMicIsOpen(s32 dev_num)
 
 s32 cellMicIsAttached(s32 dev_num)
 {
-	cellMic.notice("cellMicIsAttached(dev_num=%d)", dev_num);
+	cellMic.trace("cellMicIsAttached(dev_num=%d)", dev_num);
+
+	// TODO
 	return 1;
 }
 
@@ -876,7 +962,7 @@ error_code cellMicSetSignalAttr(s32 dev_num, CellMicSignalAttr sig_attrib, vm::p
 
 error_code cellMicGetSignalState(s32 dev_num, CellMicSignalState sig_state, vm::ptr<void> value)
 {
-	cellMic.todo("cellMicGetSignalState(dev_num=%d, sig_state=%d, value=*0x%x)", dev_num, +sig_state, value);
+	cellMic.trace("cellMicGetSignalState(dev_num=%d, sig_state=%d, value=*0x%x)", dev_num, +sig_state, value);
 
 	if (!value)
 		return CELL_MICIN_ERROR_PARAM;
@@ -1115,6 +1201,22 @@ error_code cellMicReadDsp(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
 error_code cellMicReset(s32 dev_num)
 {
 	cellMic.todo("cellMicReset(dev_num=%d)", dev_num);
+
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
+		return CELL_MICIN_ERROR_NOT_INIT;
+
+	if (!mic_thr.check_device(dev_num))
+		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
+
+	microphone_device& device = ::at32(mic_thr.mic_list, dev_num);
+
+	if (!device.is_opened())
+		return CELL_MICIN_ERROR_NOT_OPEN;
+
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -1167,7 +1269,7 @@ error_code cellMicGetType(s32 dev_num, vm::ptr<s32> ptr_type)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
 	// TODO: get proper type (log message is trace because of massive spam)
-	*ptr_type = CELLMIC_TYPE_BLUETOOTH;
+	*ptr_type = CELLMIC_TYPE_USBAUDIO; // Needed for Guitar Hero: Warriors of Rock (BLUS30487)
 
 	return CELL_OK;
 }

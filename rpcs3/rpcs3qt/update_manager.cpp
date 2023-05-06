@@ -3,6 +3,7 @@
 #include "localized.h"
 #include "rpcs3_version.h"
 #include "downloader.h"
+#include "gui_settings.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/File.h"
 #include "Emu/System.h"
@@ -38,6 +39,11 @@
 #endif
 
 LOG_CHANNEL(update_log, "UPDATER");
+
+update_manager::update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings)
+	: QObject(parent), m_gui_settings(std::move(gui_settings))
+{
+}
 
 void update_manager::check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent)
 {
@@ -387,12 +393,10 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	const std::string orig_path = exe_dir + "rpcs3.exe";
 	const std::wstring wchar_orig_path = utf8_to_wchar(orig_path);
 
-	char temp_path[PATH_MAX];
+	wchar_t wide_temp_path[MAX_PATH + 1]{};
+	GetTempPathW(sizeof(wide_temp_path), wide_temp_path);
 
-	GetTempPathA(sizeof(temp_path) - 1, temp_path);
-	temp_path[PATH_MAX - 1] = 0;
-
-	std::string tmpfile_path = temp_path;
+	std::string tmpfile_path = wchar_to_utf8(wide_temp_path);
 	tmpfile_path += "\\rpcs3_update.7z";
 
 	fs::file tmpfile(tmpfile_path, fs::read + fs::write + fs::create + fs::trunc);
@@ -639,7 +643,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 
 	if (!auto_accept)
 	{
-		QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
+		m_gui_settings->ShowInfoBox(tr("Auto-updater"), tr("Update successful!<br>RPCS3 will now restart.<br>"), gui::ib_restart_hint, m_parent);
+		m_gui_settings->sync(); // Make sure to sync before terminating RPCS3
 	}
 
 	Emu.GracefulShutdown(false);

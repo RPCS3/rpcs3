@@ -23,7 +23,8 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQuick.framework" \
 "rpcs3.app/Contents/Frameworks/QtVirtualKeyboard.framework" \
 "rpcs3.app/Contents/Plugins/platforminputcontexts" \
-"rpcs3.app/Contents/Plugins/virtualkeyboard"
+"rpcs3.app/Contents/Plugins/virtualkeyboard" \
+"rpcs3.app/Contents/Resources/git"
 
 # Need to do this rename hack due to case insensitive filesystem
 mv rpcs3.app RPCS3_.app

@@ -53,7 +53,7 @@ std::string derive_password(std::string_view user_password)
 	std::string_view salt_str = "No matter where you go, everybody's connected.";
 
 	u8 derived_password_digest[SHA3_256_DIGEST_LENGTH];
-	ensure(!wc_PBKDF2(derived_password_digest, reinterpret_cast<const u8*>(user_password.data()), user_password.size(), reinterpret_cast<const u8*>(salt_str.data()), salt_str.size(), 200'000, SHA3_256_DIGEST_LENGTH, WC_SHA3_256));
+	ensure(!wc_PBKDF2(derived_password_digest, reinterpret_cast<const u8*>(user_password.data()), ::narrow<s32>(user_password.size()), reinterpret_cast<const u8*>(salt_str.data()), ::narrow<s32>(salt_str.size()), 200'000, SHA3_256_DIGEST_LENGTH, WC_SHA3_256));
 
 	std::string derived_password("0000000000000000000000000000000000000000000000000000000000000000");
 	for (u32 i = 0; i < SHA3_256_DIGEST_LENGTH; i++)

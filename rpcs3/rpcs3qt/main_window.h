@@ -13,7 +13,7 @@
 #include "update_manager.h"
 #include "settings.h"
 #include "shortcut_handler.h"
-#include "Emu/System.h"
+#include "Emu/config_mode.h"
 
 #include <memory>
 
@@ -109,7 +109,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnPlayOrPause();
-	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
+	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool refresh_list = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	void BootElf();
 	void BootTest();
 	void BootGame();
@@ -120,7 +120,6 @@ private Q_SLOTS:
 	static void show_boot_error(game_boot_result status);
 
 	void SaveWindowState() const;
-	void ConfigureGuiFromSettings();
 	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 
@@ -139,6 +138,7 @@ protected:
 	void dragLeaveEvent(QDragLeaveEvent* event) override;
 
 private:
+	void ConfigureGuiFromSettings();
 	void RepaintToolBarIcons();
 	void RepaintThumbnailIcons();
 	void CreateActions();
@@ -165,6 +165,7 @@ private:
 	void AddRecentAction(const q_string_pair& entry);
 
 	void UpdateLanguageActions(const QStringList& language_codes, const QString& language);
+	void UpdateFilterActions();
 
 	static QString GetCurrentTitle();
 

@@ -135,6 +135,7 @@ namespace gui
 	const gui_save ib_confirm_boot = gui_save(main_window, "confirmationBoxBootGame",  true);
 	const gui_save ib_obsolete_cfg = gui_save(main_window, "confirmationObsoleteCfg",  true);
 	const gui_save ib_same_buttons = gui_save(main_window, "confirmationSameButtons",  true);
+	const gui_save ib_restart_hint = gui_save(main_window, "confirmationRestart",      true);
 
 	const gui_save fd_install_pkg  = gui_save(main_window, "lastExplorePathPKG",  "");
 	const gui_save fd_install_pup  = gui_save(main_window, "lastExplorePathPUP",  "");
@@ -167,6 +168,17 @@ namespace gui
 	const gui_save cat_game_data   = gui_save(game_list, "categoryVisibleGameData",   false);
 	const gui_save cat_unknown     = gui_save(game_list, "categoryVisibleUnknown",    true);
 	const gui_save cat_other       = gui_save(game_list, "categoryVisibleOther",      true);
+
+	const gui_save grid_cat_hdd_game    = gui_save(game_list, "gridCategoryVisibleHDDGame",    true);
+	const gui_save grid_cat_disc_game   = gui_save(game_list, "gridCategoryVisibleDiscGame",   true);
+	const gui_save grid_cat_ps1_game    = gui_save(game_list, "gridCategoryVisiblePS1Game",    true);
+	const gui_save grid_cat_ps2_game    = gui_save(game_list, "gridCategoryVisiblePS2Game",    true);
+	const gui_save grid_cat_psp_game    = gui_save(game_list, "gridCategoryVisiblePSPGame",    true);
+	const gui_save grid_cat_home        = gui_save(game_list, "gridCategoryVisibleHome",       true);
+	const gui_save grid_cat_audio_video = gui_save(game_list, "gridCategoryVisibleAudioVideo", true);
+	const gui_save grid_cat_game_data   = gui_save(game_list, "gridCategoryVisibleGameData",   false);
+	const gui_save grid_cat_unknown     = gui_save(game_list, "gridCategoryVisibleUnknown",    true);
+	const gui_save grid_cat_other       = gui_save(game_list, "gridCategoryVisibleOther",      true);
 
 	const gui_save gl_sortAsc      = gui_save(game_list, "sortAsc",      true);
 	const gui_save gl_sortCol      = gui_save(game_list, "sortCol",      1);
@@ -275,7 +287,7 @@ class gui_settings : public settings
 public:
 	explicit gui_settings(QObject* parent = nullptr);
 
-	bool GetCategoryVisibility(int cat) const;
+	bool GetCategoryVisibility(int cat, bool is_list_mode) const;
 
 	void ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent);
 	void ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent);
@@ -285,11 +297,11 @@ public:
 	bool GetGamelistColVisibility(int col) const;
 	QColor GetCustomColor(int col) const;
 	QStringList GetStylesheetEntries() const;
-	QStringList GetGameListCategoryFilters() const;
+	QStringList GetGameListCategoryFilters(bool is_list_mode) const;
 
 public Q_SLOTS:
 	/** Sets the visibility of the chosen category. */
-	void SetCategoryVisibility(int cat, const bool& val) const;
+	void SetCategoryVisibility(int cat, bool val, bool is_list_mode) const;
 
 	void SetGamelistColVisibility(int col, bool val) const;
 
@@ -297,6 +309,7 @@ public Q_SLOTS:
 
 	static QSize SizeFromSlider(int pos);
 	static gui_save GetGuiSaveForColumn(int col);
+	static gui_save GetGuiSaveForCategory(int cat, bool is_list_mode);
 
 private:
 	void ShowBox(QMessageBox::Icon icon, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);

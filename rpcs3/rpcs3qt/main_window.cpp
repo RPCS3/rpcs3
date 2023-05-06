@@ -14,7 +14,6 @@
 #include "auto_pause_settings_dialog.h"
 #include "cg_disasm_window.h"
 #include "log_viewer.h"
-#include "memory_string_searcher.h"
 #include "memory_viewer_panel.h"
 #include "rsx_debugger.h"
 #include "about_dialog.h"
@@ -51,6 +50,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
+#include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 
 #include "Crypto/unpkg.h"
@@ -91,9 +91,10 @@ extern void process_qt_events()
 main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
 	: QMainWindow(parent)
 	, ui(new Ui::main_window)
-	, m_gui_settings(std::move(gui_settings))
+	, m_gui_settings(gui_settings)
 	, m_emu_settings(std::move(emu_settings))
 	, m_persistent_settings(std::move(persistent_settings))
+	, m_updater(nullptr, gui_settings)
 {
 	Q_INIT_RESOURCE(resources);
 
@@ -130,36 +131,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	Q_EMIT RequestGlobalStylesheetChange();
 	ConfigureGuiFromSettings();
-
-	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
-	{
-		const std::string_view branch_name = rpcs3::get_full_branch();
-		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
-
-		QMessageBox msg;
-		msg.setWindowTitle(tr("Experimental Build Warning"));
-		msg.setIcon(QMessageBox::Critical);
-		msg.setTextFormat(Qt::RichText);
-		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-		msg.setDefaultButton(QMessageBox::No);
-		msg.setText(QString(tr(
-			R"(
-				<p style="white-space: nowrap;">
-					Please understand that this build is not an official RPCS3 release.<br>
-					This build contains changes that may break games, or even <b>damage</b> your data.<br>
-					We recommend to download and use the official build from the <a href='https://rpcs3.net/download'>RPCS3 website</a>.<br><br>
-					Build origin: %1<br>
-					Do you wish to use this build anyway?
-				</p>
-			)"
-		)).arg(Qt::convertFromPlainText(branch_name.data())));
-		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
-
-		if (msg.exec() == QMessageBox::No)
-		{
-			return false;
-		}
-	}
 
 	m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::main_window, this, m_gui_settings);
 	connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &main_window::handle_shortcut);
@@ -221,9 +192,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	connect(m_thumb_playPause, &QWinThumbnailToolButton::clicked, this, &main_window::OnPlayOrPause);
 #endif
 
-	// Fix possible hidden game list columns. The game list has to be visible already. Use this after show()
-	m_game_list_frame->FixNarrowColumns();
-
 	// RPCS3 Updater
 
 	QMenu* download_menu = new QMenu(tr("Update Available!"));
@@ -274,6 +242,12 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	// Disable vsh if not present.
 	ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self"));
+
+	// Focus to search bar by default
+	ui->mw_searchbar->setFocus();
+
+	// Refresh gamelist last
+	m_game_list_frame->Refresh(true);
 
 	return true;
 }
@@ -480,7 +454,7 @@ void main_window::show_boot_error(game_boot_result status)
 	msg.exec();
 }
 
-void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool add_only, cfg_mode config_mode, const std::string& config_path)
+void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool refresh_list, cfg_mode config_mode, const std::string& config_path)
 {
 	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_boot))
 	{
@@ -491,7 +465,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
 
-	if (const auto error = Emu.BootGame(path, title_id, direct, add_only, config_mode, config_path); error != game_boot_result::no_errors)
+	if (const auto error = Emu.BootGame(path, title_id, direct, config_mode, config_path); error != game_boot_result::no_errors)
 	{
 		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
 		show_boot_error(error);
@@ -499,13 +473,14 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	else
 	{
 		gui_log.success("Boot successful.");
-		if (!add_only)
+
+		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(Emu.GetTitleAndTitleID())));
+
+		if (refresh_list)
 		{
-			AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(Emu.GetTitleAndTitleID())));
+			m_game_list_frame->Refresh(true);
 		}
 	}
-
-	m_game_list_frame->Refresh(true);
 }
 
 void main_window::BootElf()
@@ -544,7 +519,7 @@ void main_window::BootElf()
 	const std::string path = sstr(QFileInfo(file_path).absoluteFilePath());
 
 	gui_log.notice("Booting from BootElf...");
-	Boot(path, "", true);
+	Boot(path, "", true, true);
 }
 
 void main_window::BootTest()
@@ -642,7 +617,7 @@ void main_window::BootGame()
 	m_gui_settings->SetValue(gui::fd_boot_game, QFileInfo(dir_path).path());
 
 	gui_log.notice("Booting from BootGame...");
-	Boot(sstr(dir_path));
+	Boot(sstr(dir_path), "", false, true);
 }
 
 void main_window::BootVSH()
@@ -1928,7 +1903,6 @@ void main_window::EnableMenus(bool enabled) const
 	ui->toolskernel_explorerAct->setEnabled(enabled);
 	ui->toolsmemory_viewerAct->setEnabled(enabled);
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
-	ui->toolsStringSearchAct->setEnabled(enabled);
 	ui->toolsSystemCommandsAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
 	ui->actionCreate_Savestate->setEnabled(enabled);
@@ -2133,6 +2107,20 @@ void main_window::UpdateLanguageActions(const QStringList& language_codes, const
 
 		ui->languageMenu->addAction(act);
 	}
+}
+
+void main_window::UpdateFilterActions()
+{
+	ui->showCatHDDGameAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::HDD_Game, m_is_list_mode));
+	ui->showCatDiscGameAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Disc_Game, m_is_list_mode));
+	ui->showCatPS1GamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PS1_Game, m_is_list_mode));
+	ui->showCatPS2GamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PS2_Game, m_is_list_mode));
+	ui->showCatPSPGamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PSP_Game, m_is_list_mode));
+	ui->showCatHomeAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Home, m_is_list_mode));
+	ui->showCatAudioVideoAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Media, m_is_list_mode));
+	ui->showCatGameDataAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Data, m_is_list_mode));
+	ui->showCatUnknownAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Unknown_Cat, m_is_list_mode));
+	ui->showCatOtherAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Others, m_is_list_mode));
 }
 
 void main_window::RepaintGui()
@@ -2442,7 +2430,7 @@ void main_window::CreateConnects()
 			{
 				if (game)
 				{
-					games[game->info.serial].insert(game_list_frame::GetGameVersion(game));
+					games[game->info.serial].insert(game_list::GetGameVersion(game));
 				}
 			}
 		}
@@ -2529,19 +2517,13 @@ void main_window::CreateConnects()
 	connect(ui->toolsmemory_viewerAct, &QAction::triggered, this, [this]
 	{
 		if (!Emu.IsStopped())
-			idm::make<memory_viewer_handle>(this);
+			idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm());
 	});
 
 	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, this, [this]
 	{
 		rsx_debugger* rsx = new rsx_debugger(m_gui_settings);
 		rsx->show();
-	});
-
-	connect(ui->toolsStringSearchAct, &QAction::triggered, this, [this]
-	{
-		if (!Emu.IsStopped())
-			idm::make<memory_searcher_handle>(this, make_basic_ppu_disasm());
 	});
 
 	connect(ui->toolsSystemCommandsAct, &QAction::triggered, this, [this]
@@ -2633,7 +2615,7 @@ void main_window::CreateConnects()
 		{
 			const bool checked = act->isChecked();
 			m_game_list_frame->ToggleCategoryFilter(categories, checked);
-			m_gui_settings->SetCategoryVisibility(id, checked);
+			m_gui_settings->SetCategoryVisibility(id, checked, m_is_list_mode);
 		}
 	});
 
@@ -2723,7 +2705,8 @@ void main_window::CreateConnects()
 
 		m_is_list_mode = is_list_act;
 		m_game_list_frame->SetListMode(m_is_list_mode);
-		m_category_visible_act_group->setEnabled(m_is_list_mode);
+
+		UpdateFilterActions();
 	});
 
 	connect(ui->toolbar_open, &QAction::triggered, this, &main_window::BootGame);
@@ -2770,6 +2753,8 @@ void main_window::CreateConnects()
 	});
 
 	connect(ui->mw_searchbar, &QLineEdit::textChanged, m_game_list_frame, &game_list_frame::SetSearchText);
+	connect(ui->mw_searchbar, &QLineEdit::returnPressed, m_game_list_frame, &game_list_frame::FocusAndSelectFirstEntryIfNoneIs);
+	connect(m_game_list_frame, &game_list_frame::FocusToSearchBar, this, [this]() { ui->mw_searchbar->setFocus(); });
 }
 
 void main_window::CreateDockWindows()
@@ -2966,24 +2951,15 @@ void main_window::ConfigureGuiFromSettings()
 	ui->showCustomIconsAct->setChecked(m_gui_settings->GetValue(gui::gl_custom_icon).toBool());
 	ui->playHoverGifsAct->setChecked(m_gui_settings->GetValue(gui::gl_hover_gifs).toBool());
 
-	ui->showCatHDDGameAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::HDD_Game));
-	ui->showCatDiscGameAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Disc_Game));
-	ui->showCatPS1GamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PS1_Game));
-	ui->showCatPS2GamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PS2_Game));
-	ui->showCatPSPGamesAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::PSP_Game));
-	ui->showCatHomeAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Home));
-	ui->showCatAudioVideoAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Media));
-	ui->showCatGameDataAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Data));
-	ui->showCatUnknownAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Unknown_Cat));
-	ui->showCatOtherAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Others));
+	m_is_list_mode = m_gui_settings->GetValue(gui::gl_listMode).toBool();
+
+	UpdateFilterActions();
 
 	// handle icon size options
-	m_is_list_mode = m_gui_settings->GetValue(gui::gl_listMode).toBool();
 	if (m_is_list_mode)
 		ui->setlistModeListAct->setChecked(true);
 	else
 		ui->setlistModeGridAct->setChecked(true);
-	m_category_visible_act_group->setEnabled(m_is_list_mode);
 
 	const int icon_size_index = m_gui_settings->GetValue(m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();
 	m_other_slider_pos = m_gui_settings->GetValue(!m_is_list_mode ? gui::gl_iconSize : gui::gl_iconSizeGrid).toInt();

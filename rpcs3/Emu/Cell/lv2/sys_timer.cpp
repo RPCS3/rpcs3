@@ -2,11 +2,11 @@
 #include "sys_timer.h"
 
 #include "Emu/IdManager.h"
-
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "sys_event.h"
 #include "sys_process.h"
 
