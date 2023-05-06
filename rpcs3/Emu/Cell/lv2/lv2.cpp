@@ -424,7 +424,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(_sys_game_watchdog_start),                    //372 (0x174)
 	BIND_SYSC(_sys_game_watchdog_stop),                     //373 (0x175)
 	BIND_SYSC(_sys_game_watchdog_clear),                    //374 (0x176)
-	NULL_FUNC(sys_game_set_system_sw_version),              //375 (0x177)  ROOT
+	BIND_SYSC(_sys_game_set_system_sw_version),             //375 (0x177)  ROOT
 	BIND_SYSC(_sys_game_get_system_sw_version),             //376 (0x178)  ROOT
 	BIND_SYSC(sys_sm_set_shop_mode),                        //377 (0x179)  ROOT
 	BIND_SYSC(sys_sm_get_ext_event2),                       //378 (0x17A)  ROOT

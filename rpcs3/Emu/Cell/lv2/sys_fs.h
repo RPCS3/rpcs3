@@ -160,6 +160,79 @@ struct lv2_fs_mount_point
 };
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd0;
+extern lv2_fs_mount_point g_mp_sys_no_device;
+
+struct lv2_fs_mount_info
+{
+	lv2_fs_mount_point* const mp;
+	const std::string device;
+	const std::string file_system;
+	const bool read_only;
+
+	lv2_fs_mount_info(lv2_fs_mount_point* mp = nullptr, std::string_view device = {}, std::string_view file_system = {}, bool read_only = false)
+		: mp(mp ? mp : &g_mp_sys_no_device)
+		, device(device.empty() ? this->mp->device : device)
+		, file_system(file_system.empty() ? this->mp->file_system : file_system)
+		, read_only((this->mp->flags & lv2_mp_flag::read_only) || read_only)
+	{
+	}
+
+	constexpr bool operator==(const lv2_fs_mount_info& rhs) const noexcept
+	{
+		return this == &rhs;
+	}
+	constexpr bool operator==(lv2_fs_mount_point* const& rhs) const noexcept
+	{
+		return mp == rhs;
+	}
+	constexpr const lv2_fs_mount_point* operator->() const noexcept
+	{
+		return mp;
+	}
+};
+
+struct CellFsMountInfo; // Forward Declaration
+
+struct lv2_fs_mount_info_map
+{
+public:
+	SAVESTATE_INIT_POS(49);
+
+	lv2_fs_mount_info_map();
+	lv2_fs_mount_info_map(const lv2_fs_mount_info_map&) = delete;
+	lv2_fs_mount_info_map& operator=(const lv2_fs_mount_info_map&) = delete;
+	~lv2_fs_mount_info_map();
+
+	// Forwarding arguments to map.try_emplace(): refer to the constructor of lv2_fs_mount_info
+	template <typename... Args>
+	bool add(Args&&... args);
+	bool remove(std::string_view path);
+	const lv2_fs_mount_info& lookup(std::string_view path) const;
+	u64 get_all(CellFsMountInfo* info = nullptr, u64 len = 0) const;
+
+private:
+	struct string_hash
+	{
+		using hash_type = std::hash<std::string_view>;
+		using is_transparent = void;
+
+		std::size_t operator()(const char* str) const
+		{
+			return hash_type{}(str);
+		}
+		std::size_t operator()(std::string_view str) const
+		{
+			return hash_type{}(str);
+		}
+		std::size_t operator()(std::string const& str) const
+		{
+			return hash_type{}(str);
+		}
+	};
+
+	std::unordered_map<std::string, lv2_fs_mount_info, string_hash, std::equal_to<>> map;
+	lv2_fs_mount_info mount_info_no_device;
+};
 
 struct lv2_fs_object
 {
@@ -173,12 +246,11 @@ struct lv2_fs_object
 	const std::array<char, 0x420> name;
 
 	// Mount Point
-	const std::add_pointer_t<lv2_fs_mount_point> mp;
+	lv2_fs_mount_point* const mp = get_mp(name.data());
 
 protected:
-	lv2_fs_object(lv2_fs_mount_point* mp, std::string_view filename)
+	lv2_fs_object(std::string_view filename)
 		: name(get_name(filename))
-		, mp(mp)
 	{
 	}
 
@@ -189,9 +261,8 @@ public:
 
 	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
-	static std::string_view get_device_path(std::string_view filename);
+	static std::string_view get_device_root(std::string_view filename);
 	static lv2_fs_mount_point* get_mp(std::string_view filename, std::string* vfs_path = nullptr);
-	static std::string device_name_to_path(std::string_view device_name);
 	static bool vfs_unmount(std::string_view vpath);
 
 	static std::array<char, 0x420> get_name(std::string_view filename)
@@ -236,7 +307,7 @@ struct lv2_file final : lv2_fs_object
 	} restore_data{};
 
 	lv2_file(std::string_view filename, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
-		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
+		: lv2_fs_object(filename)
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
@@ -246,7 +317,7 @@ struct lv2_file final : lv2_fs_object
 	}
 
 	lv2_file(const lv2_file& host, fs::file&& file, s32 mode, s32 flags, const std::string& real_path, lv2_file_type type = {})
-		: lv2_fs_object(host.mp, host.name.data())
+		: lv2_fs_object(host.name.data())
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
@@ -310,7 +381,7 @@ struct lv2_dir final : lv2_fs_object
 	atomic_t<u64> pos{0};
 
 	lv2_dir(std::string_view filename, std::vector<fs::dir_entry>&& entries)
-		: lv2_fs_object(lv2_fs_object::get_mp(filename), filename)
+		: lv2_fs_object(filename)
 		, entries(std::move(entries))
 	{
 	}
@@ -464,15 +535,16 @@ struct lv2_file_c0000006 : lv2_file_op
 
 CHECK_SIZE(lv2_file_c0000006, 0x20);
 
+// sys_fs_fcntl: cellFsArcadeHddSerialNumber
 struct lv2_file_c0000007 : lv2_file_op
 {
 	be_t<u32> out_code;
-	vm::bcptr<char> name;
-	be_t<u32> name_size; // 0x14
-	vm::bptr<char> unk1;
-	be_t<u32> unk1_size; //0x41
-	vm::bptr<char> unk2;
-	be_t<u32> unk2_size; //0x21
+	vm::bcptr<char> device;
+	be_t<u32> device_size;  // 0x14
+	vm::bptr<char> model;
+	be_t<u32> model_size; // 0x29
+	vm::bptr<char> serial;
+	be_t<u32> serial_size; // 0x15
 };
 
 CHECK_SIZE(lv2_file_c0000007, 0x1c);
@@ -524,7 +596,7 @@ CHECK_SIZE(lv2_file_c000001a, 0x18);
 
 struct lv2_file_c000001c : lv2_file_op
 {
-	be_t<u32> size; // 0x20
+	be_t<u32> size; // 0x60
 	be_t<u32> _x4;  // 0x10
 	be_t<u32> _x8;  // 0x18 - offset of out_code
 	be_t<u32> name_size;
