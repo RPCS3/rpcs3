@@ -239,15 +239,22 @@ QStringList gui_application::GetAvailableLanguageCodes()
 	if (QFileInfo(language_path).isDir())
 	{
 		const QDir dir(language_path);
-		const QStringList filenames = dir.entryList(QStringList("*.qm"));
+		const QStringList filenames = dir.entryList(QStringList("rpcs3_*.qm"));
 
-		for (const auto& filename : filenames)
+		for (const QString& filename : filenames)
 		{
 			QString language_code = filename;                        // "rpcs3_en.qm"
 			language_code.truncate(language_code.lastIndexOf('.'));  // "rpcs3_en"
 			language_code.remove(0, language_code.indexOf('_') + 1); // "en"
 
-			language_codes << language_code;
+			if (language_codes.contains(language_code))
+			{
+				gui_log.error("Found duplicate language '%s' (%s)", language_code.toStdString(), filename.toStdString());
+			}
+			else
+			{
+				language_codes << language_code;
+			}
 		}
 	}
 
