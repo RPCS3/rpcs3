@@ -9,6 +9,8 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     chmod +x /usr/bin/linuxdeploy
     curl -sL -o /usr/bin/linuxdeploy-plugin-qt https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
     chmod +x /usr/bin/linuxdeploy-plugin-qt
+    curl -sL -o linuxdeploy-plugin-checkrt.sh https://github.com/linuxdeploy/linuxdeploy-plugin-checkrt/releases/download/continuous/linuxdeploy-plugin-checkrt-x86_64.sh
+    chmod +x ./linuxdeploy-plugin-checkrt.sh
 
     EXTRA_QT_PLUGINS="svg;" APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt
 
@@ -17,6 +19,8 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 
     # Remove git directory containing local commit history file
     rm -rf ./AppDir/usr/share/rpcs3/git
+
+    ./linuxdeploy-plugin-checkrt.sh --appdir AppDir
 
     linuxdeploy --appimage-extract
     ./squashfs-root/plugins/linuxdeploy-plugin-appimage/usr/bin/appimagetool AppDir -g
