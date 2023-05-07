@@ -3379,6 +3379,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	{
 		std::unordered_map<std::string, u64> link_table
 		{
+			{ "sys_game_set_system_sw_version", reinterpret_cast<u64>(ppu_execute_syscall) },
 			{ "__trap", reinterpret_cast<u64>(&ppu_trap) },
 			{ "__error", reinterpret_cast<u64>(&ppu_error) },
 			{ "__check", reinterpret_cast<u64>(&ppu_check) },
