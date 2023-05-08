@@ -84,26 +84,29 @@ namespace rsx
 
 		resource_config::resource_config()
 		{
-			texture_resource_files.emplace_back("fade_top.png");
-			texture_resource_files.emplace_back("fade_bottom.png");
-			texture_resource_files.emplace_back("select.png");
-			texture_resource_files.emplace_back("start.png");
-			texture_resource_files.emplace_back("cross.png");
-			texture_resource_files.emplace_back("circle.png");
-			texture_resource_files.emplace_back("triangle.png");
-			texture_resource_files.emplace_back("square.png");
-			texture_resource_files.emplace_back("L1.png");
-			texture_resource_files.emplace_back("R1.png");
-			texture_resource_files.emplace_back("L2.png");
-			texture_resource_files.emplace_back("R2.png");
-			texture_resource_files.emplace_back("save.png");
-			texture_resource_files.emplace_back("new.png");
-			texture_resource_files.emplace_back("spinner-24.png");
 		}
 
 		void resource_config::load_files()
 		{
-			for (const auto &res : texture_resource_files)
+			const std::array<std::string, 15> texture_resource_files
+			{
+				"fade_top.png",
+				"fade_bottom.png",
+				"select.png",
+				"start.png",
+				"cross.png",
+				"circle.png",
+				"triangle.png",
+				"square.png",
+				"L1.png",
+				"R1.png",
+				"L2.png",
+				"R2.png",
+				"save.png",
+				"new.png",
+				"spinner-24.png"
+			};
+			for (const std::string& res : texture_resource_files)
 			{
 				// First check the global config dir
 				const std::string image_path = fs::get_config_dir() + "Icons/ui/" + res;
