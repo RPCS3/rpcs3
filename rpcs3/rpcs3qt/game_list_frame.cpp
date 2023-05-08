@@ -95,6 +95,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_grid->scroll_area()->verticalScrollBar()->installEventFilter(this);
 
 	m_game_list = new game_list_table(this, m_persistent_settings);
+	m_game_list->installEventFilter(this);
+	m_game_list->verticalScrollBar()->installEventFilter(this);
 
 	m_game_compat = new game_compatibility(m_gui_settings, this);
 
@@ -2265,7 +2267,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 	// Zoom gamelist/gamegrid
 	if (event->type() == QEvent::Wheel && (object == m_game_list->verticalScrollBar() || object == m_game_grid->scroll_area()->verticalScrollBar()))
 	{
-		QWheelEvent *wheel_event = static_cast<QWheelEvent *>(event);
+		QWheelEvent* wheel_event = static_cast<QWheelEvent*>(event);
 
 		if (wheel_event->modifiers() & Qt::ControlModifier)
 		{
@@ -2277,7 +2279,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 	}
 	else if (event->type() == QEvent::KeyPress && (object == m_game_list || object == m_game_grid))
 	{
-		QKeyEvent *key_event = static_cast<QKeyEvent *>(event);
+		QKeyEvent* key_event = static_cast<QKeyEvent*>(event);
 
 		if (key_event->modifiers() & Qt::ControlModifier)
 		{
