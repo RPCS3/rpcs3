@@ -387,7 +387,7 @@ namespace vk
 	}
 
 	vk::image_view* ui_overlay_renderer::upload_simple_texture(vk::render_device& dev, vk::command_buffer& cmd,
-		vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, void* pixel_src, u32 owner_uid)
+		vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, const void* pixel_src, u32 owner_uid)
 	{
 		const VkFormat format = (font) ? VK_FORMAT_R8_UNORM : VK_FORMAT_B8G8R8A8_UNORM;
 		const u32 pitch = (font) ? w : w * 4;
@@ -517,7 +517,7 @@ namespace vk
 		}
 
 		// Create font resource
-		std::vector<u8> bytes = font->get_glyph_data();
+		const std::vector<u8> bytes = font->get_glyph_data();
 
 		return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, image_size.width, image_size.height, image_size.depth,
 				true, false, bytes.data(), -1);

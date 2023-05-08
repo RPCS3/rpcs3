@@ -152,7 +152,7 @@ namespace vk
 		ui_overlay_renderer();
 
 		vk::image_view* upload_simple_texture(vk::render_device& dev, vk::command_buffer& cmd,
-			vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, void* pixel_src, u32 owner_uid);
+			vk::data_heap& upload_heap, u64 key, u32 w, u32 h, u32 layers, bool font, bool temp, const void* pixel_src, u32 owner_uid);
 
 		void init(vk::command_buffer& cmd, vk::data_heap& upload_heap);
 

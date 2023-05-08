@@ -334,11 +334,11 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.get_font_dirs = []()
 	{
-		auto locations = QStandardPaths::standardLocations(QStandardPaths::FontsLocation);
+		const QStringList locations = QStandardPaths::standardLocations(QStandardPaths::FontsLocation);
 		std::vector<std::string> font_dirs;
-		for (const auto& location : locations)
+		for (const QString& location : locations)
 		{
-			auto font_dir = location.toStdString();
+			std::string font_dir = location.toStdString();
 			if (!font_dir.ends_with('/'))
 			{
 				font_dir += '/';
