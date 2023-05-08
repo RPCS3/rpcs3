@@ -111,6 +111,7 @@ namespace utils
 		per_core_usage.resize(utils::get_thread_count());
 		std::fill(per_core_usage.begin(), per_core_usage.end(), 0.0);
 
+#if defined(_WIN32) || defined(__linux__)
 		const auto string_to_number = [](const std::string& str) -> std::pair<bool, size_t>
 		{
 			std::add_pointer_t<char> eval;
@@ -284,6 +285,7 @@ namespace utils
 		{
 			perf_log.error("Failed to open /proc/stat (%s)", strerror(errno));
 		}
+#endif
 #else
 		total_usage = get_usage();
 #endif

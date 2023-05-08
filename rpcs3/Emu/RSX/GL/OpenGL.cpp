@@ -57,6 +57,6 @@ void gl::set_swapinterval(int interval)
 	//No existing drawable or missing swap extension, EGL?
 	rsx_log.error("Failed to set swap interval");
 #else
-	rsx_log.error("Swap control not implemented for this platform. Vsync options not available.");
+	rsx_log.error("Swap control not implemented for this platform. Vsync options not available. (interval=%d)", interval);
 #endif
 }
