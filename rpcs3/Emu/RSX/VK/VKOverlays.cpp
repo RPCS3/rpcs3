@@ -517,8 +517,7 @@ namespace vk
 		}
 
 		// Create font resource
-		std::vector<u8> bytes;
-		font->get_glyph_data(bytes);
+		std::vector<u8> bytes = font->get_glyph_data();
 
 		return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, image_size.width, image_size.height, image_size.depth,
 				true, false, bytes.data(), -1);

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "overlay_controls.h"
+#include "Emu/System.h"
 #include "Emu/vfs_config.h"
 
 #ifndef _WIN32
@@ -10,10 +11,6 @@
 #if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #include <sys/sysctl.h>
 #endif
-#endif
-
-#ifdef _WIN32
-#include <shlobj.h>
 #endif
 
 namespace rsx
@@ -111,26 +108,8 @@ namespace rsx
 			glyph_load_setup result;
 			result.font_names.push_back(font_name);
 
-#ifdef _WIN32
-			PWSTR pszPath;
-			std::string lookup_font_dir = "C:/Windows/Fonts/";
-			if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Fonts, 0, nullptr, &pszPath)))
-			{
-				lookup_font_dir = wchar_to_utf8(pszPath) + "/";
-			}
-			result.lookup_font_dirs.emplace_back(lookup_font_dir);
-			CoTaskMemFree(pszPath);
-#else
-			char* home = getenv("HOME");
-			if (home == nullptr)
-				home = getpwuid(getuid())->pw_dir;
-
-			result.lookup_font_dirs.emplace_back(home);
-			if (home[result.lookup_font_dirs[0].length() - 1] == '/')
-				result.lookup_font_dirs[0] += ".fonts/";
-			else
-				result.lookup_font_dirs[0] += "/.fonts/";
-#endif
+			auto font_dirs = Emu.GetCallbacks().get_font_dirs();
+			result.lookup_font_dirs.insert(result.lookup_font_dirs.end(), font_dirs.begin(), font_dirs.end());
 			// Search dev_flash for the font too
 			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/");
 			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/SONY-CC/");
@@ -438,8 +417,9 @@ namespace rsx
 			return {loc_x, loc_y};
 		}
 
-		void font::get_glyph_data(std::vector<u8>& bytes) const
+		std::vector<u8> font::get_glyph_data() const
 		{
+			std::vector<u8> bytes;
 			const u32 page_size = codepage::bitmap_width * codepage::bitmap_height;
 			const auto size = page_size * m_glyph_map.size();
 
@@ -451,6 +431,7 @@ namespace rsx
 				std::memcpy(data, e.second->glyph_data.data(), page_size);
 				data += page_size;
 			}
+			return bytes;
 		}
 	} // namespace overlays
 } // namespace rsx

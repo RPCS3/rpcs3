@@ -87,7 +87,7 @@ namespace rsx
 
 			// Renderer info
 			size3u get_glyph_data_dimensions() const { return { codepage::bitmap_width, codepage::bitmap_height, ::size32(m_glyph_map) }; }
-			void get_glyph_data(std::vector<u8>& bytes) const;
+			std::vector<u8> get_glyph_data() const;
 		};
 
 		// TODO: Singletons are cancer
