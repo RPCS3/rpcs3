@@ -1333,7 +1333,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 		if (temp_sp <= sp)
 		{
-			// Ensure inequility and that the old stack pointer is higher than current
+			// Ensure inequality and that the old stack pointer is higher than current
 			break;
 		}
 
