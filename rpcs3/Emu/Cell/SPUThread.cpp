@@ -1315,11 +1315,11 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 
 		if (temp_sp <= sp)
 		{
-			// Ensure inequility and descending stack frame pointers
+			// Ensure ascending stack frame pointers
 			break;
 		}
 
-		sp = temo_sp;
+		sp = temp_sp;
 	}
 
 	return call_stack_list;
