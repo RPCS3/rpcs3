@@ -313,7 +313,7 @@ public:
 
 	void SetForceBoot(bool force_boot);
 
-	game_boot_result Load(const std::string& title_id = "", bool is_disc_patch = false);
+	game_boot_result Load(const std::string& title_id = "", bool is_disc_patch = false, usz recursion_count = 0);
 	void Run(bool start_playtime);
 	void RunPPU();
 	void FixGuestTime();
