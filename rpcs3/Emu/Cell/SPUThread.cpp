@@ -1182,7 +1182,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 	const v128 gpr0 = gpr[0];
 
 	// Declare first 128-bytes as invalid for stack (common values such as 0 do not make sense here)
-	for (u32 sp = gpr[1]._u32[3]; (sp & 0xF) == 0u && sp >= 0x80u && sp <= 0x3FFE0u; sp = _ref<u32>(sp), first = false)
+	for (u32 sp = gpr[1]._u32[3]; (sp & 0xF) == 0u && sp >= 0x80u && sp <= 0x3FFE0u; first = false)
 	{
 		v128 lr = _ref<v128>(sp + 16);
 
@@ -1310,6 +1310,16 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 
 		// TODO: function addresses too
 		call_stack_list.emplace_back(lr._u32[3], sp);
+
+		const u32 temp_sp = _ref<u32>(sp);
+
+		if (temp_sp <= sp)
+		{
+			// Ensure ascending stack frame pointers
+			break;
+		}
+
+		sp = temp_sp;
 	}
 
 	return call_stack_list;
