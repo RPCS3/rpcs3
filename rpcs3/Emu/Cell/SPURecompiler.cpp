@@ -32,6 +32,8 @@ const extern spu_decoder<spu_itype> g_spu_itype;
 const extern spu_decoder<spu_iname> g_spu_iname;
 const extern spu_decoder<spu_iflag> g_spu_iflag;
 
+constexpr float APPROXIMATION_LOSS = 0x1p-13f;
+
 // Move 4 args for calling native function from a GHC calling convention function
 #if defined(ARCH_X64)
 static u8* move_args_ghc_to_native(u8* raw)
@@ -8867,7 +8869,7 @@ public:
 				const auto a = value<f32[4]>(ci->getOperand(0));
 				const auto acc_result = fsplat<f32[4]>(1.0) / a;
 				// Determines accuracy penalty, frest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
-				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				const auto acc_penalty = fsplat<f32[4]>(APPROXIMATION_LOSS) * acc_result;
 				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
 				return bitcast<f32[4]>(bitcast<u32[4]>(acc_result - acc_penalty) & splat<u32[4]>(0xFFFFF800));
 			});
@@ -8907,7 +8909,7 @@ public:
 				const auto a = value<f32[4]>(ci->getOperand(0));
 				const auto acc_result = fsplat<f32[4]>(1.0) / fsqrt(fabs(a));
 				// Determines accuracy penalty, frsqest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
-				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				const auto acc_penalty = fsplat<f32[4]>(APPROXIMATION_LOSS) * acc_result;
 				// Zeroes the last 11 bytes of the mantissa so FI calculations end up correct if needed
 				return bitcast<f32[4]>(bitcast<u32[4]>(acc_result - acc_penalty) & splat<u32[4]>(0xFFFFF800));
 			});
@@ -9164,7 +9166,16 @@ public:
 			}
 		});
 
-		set_vr(op.rt, fm(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+
+		if (const auto [ok_re_acc, div] = match_expr(b, re_accurate(match<f32[4]>())); ok_re_acc)
+		{
+			erase_stores(b);
+			set_vr(op.rt, a / div);
+			return;
+		}
+
+		set_vr(op.rt, fm(a, b));
 	}
 
 	template <typename T>
@@ -9491,6 +9502,12 @@ public:
 		return {"spu_fma", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
 	}
 
+	template <typename T>
+	static llvm_calli<f32[4], T> re_accurate(T&& a)
+	{
+		return {"spu_re_acc", {std::forward<T>(a)}};
+	}
+
 	void FMA(spu_opcode_t op)
 	{
 		// Hardware FMA produces the same result as multiple + add on the limited double range (xfloat).
@@ -9519,6 +9536,12 @@ public:
 			{
 				return fma32x4(a, b, c);
 			}
+		});
+
+		register_intrinsic("spu_re_acc", [&](llvm::CallInst* ci)
+		{
+			const auto div = value<f32[4]>(ci->getOperand(0));
+			return fsplat<f32[4]>(1.0f) / div;
 		});
 
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
@@ -9554,6 +9577,23 @@ public:
 					return;
 				}
 			}
+		}
+
+		// Match accurate reciprocal
+		// Seen in Watch Dogs, followed by fm
+		if (auto [ok_fnms, b1] = match_expr(a, fnms(b, MT, fsplat<f32[4]>(1.0f))); ok_fnms)
+		{
+			if (auto [ok_re, div] = match_expr(b, spu_re(MT)); ok_re && b1.eq(div))
+			{
+				erase_stores(b);
+				set_vr(op.rt4, re_accurate(div));
+				return;
+			}
+		}
+
+		if (auto [ok_re, mystery] = match_expr(b, spu_re(MT)); ok_re)
+		{
+			spu_log.todo("[%s:0x%05x] Unmatched spu_re found", m_hash, m_pos);
 		}
 
 		set_vr(op.rt4, fma(a, b, c));
@@ -9650,7 +9690,7 @@ public:
 				const auto a = value<f32[4]>(ci->getOperand(0));
 				const auto acc_result = fsplat<f32[4]>(1.0) / a;
 				// Determines accuracy penalty, frest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
-				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				const auto acc_penalty = fsplat<f32[4]>(APPROXIMATION_LOSS) * acc_result;
 				return acc_result - acc_penalty;
 			});
 
@@ -9659,7 +9699,7 @@ public:
 				const auto a = value<f32[4]>(ci->getOperand(0));
 				const auto acc_result = fsplat<f32[4]>(1.0) / fsqrt(fabs(a));
 				// Determines accuracy penalty, frsqest result is always slightly closer to 0 than actual value and provides ~12 bits accuracy
-				const auto acc_penalty = fsplat<f32[4]>(0x1p-13f) * acc_result;
+				const auto acc_penalty = fsplat<f32[4]>(APPROXIMATION_LOSS) * acc_result;
 				return acc_result - acc_penalty;
 			});
 		}

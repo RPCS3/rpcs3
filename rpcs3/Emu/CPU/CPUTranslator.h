@@ -43,6 +43,9 @@
 #include <functional>
 #include <unordered_map>
 
+// Helper function
+llvm::Value* peek_through_bitcasts(llvm::Value*);
+
 enum class i2 : char
 {
 };
@@ -147,7 +150,7 @@ struct llvm_value_t
 
 	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
 	{
-		if (value != this->value)
+		if (peek_through_bitcasts(value) != peek_through_bitcasts(this->value))
 		{
 			value = nullptr;
 		}
@@ -503,9 +506,6 @@ using llvm_common_t = std::enable_if_t<(is_llvm_expr_of<T, Types>::ok && ...), t
 template <typename... Args>
 using llvm_match_tuple = decltype(std::tuple_cat(std::declval<llvm_expr_t<Args>&>().match(std::declval<llvm::Value*&>(), nullptr)...));
 
-// Helper function
-llvm::Value* peek_through_bitcasts(llvm::Value*);
-
 template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
 struct llvm_match_t
 {
@@ -532,7 +532,7 @@ struct llvm_match_t
 
 	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
 	{
-		if (value != this->value)
+		if (peek_through_bitcasts(value) != peek_through_bitcasts(this->value))
 		{
 			value = nullptr;
 		}
