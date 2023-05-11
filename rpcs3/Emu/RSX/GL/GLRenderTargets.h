@@ -250,8 +250,8 @@ struct gl_render_target_traits
 	{
 		return (surface->get_internal_format() == ref->get_internal_format() &&
 				surface->get_spp() == sample_count &&
-				surface->get_surface_width<rsx::surface_metrics::pixels>() >= width &&
-				surface->get_surface_height<rsx::surface_metrics::pixels>() >= height);
+				surface->get_surface_width<rsx::surface_metrics::pixels>() == width &&
+				surface->get_surface_height<rsx::surface_metrics::pixels>() == height);
 	}
 
 	static

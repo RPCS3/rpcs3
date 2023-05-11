@@ -405,8 +405,8 @@ namespace vk
 		{
 			return (surface->format() == ref->format() &&
 				surface->get_spp() == sample_count &&
-				surface->get_surface_width() >= width &&
-				surface->get_surface_height() >= height);
+				surface->get_surface_width() == width &&
+				surface->get_surface_height() == height);
 		}
 
 		static void prepare_surface_for_drawing(vk::command_buffer& cmd, vk::render_target* surface)
