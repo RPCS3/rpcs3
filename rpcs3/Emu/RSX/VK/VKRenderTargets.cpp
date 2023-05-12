@@ -30,7 +30,7 @@ namespace vk
 		}
 		else if (total_device_memory >= 1024)
 		{
-			quota = 768;
+			quota = std::max<u64>(512, (total_device_memory * 30) / 100);
 		}
 		else if (total_device_memory >= 768)
 		{

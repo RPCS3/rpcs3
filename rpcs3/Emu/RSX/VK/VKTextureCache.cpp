@@ -1396,13 +1396,17 @@ namespace vk
 		const auto total_device_memory = m_device->get_memory_mapping().device_local_total_bytes / 0x100000;
 		u64 quota = 0;
 
-		if (total_device_memory >= 1024)
+		if (total_device_memory >= 2048)
 		{
 			quota = std::min<u64>(3072, (total_device_memory * 40) / 100);
 		}
+		else if (total_device_memory >= 1024)
+		{
+			quota = std::max<u64>(204, (total_device_memory * 30) / 100);
+		}
 		else if (total_device_memory >= 768)
 		{
-			quota = 256;
+			quota = 192;
 		}
 		else
 		{
