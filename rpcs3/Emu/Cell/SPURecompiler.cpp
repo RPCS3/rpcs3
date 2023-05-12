@@ -9591,6 +9591,17 @@ public:
 			}
 		}
 
+		// Seen in NFS:MW
+		if (auto [ok_fnms, a1] = match_expr(a, fnms(MT, b, fsplat<f32[4]>(1.00000011920928955078125))); ok_fnms)
+		{
+			if (auto [ok_re, div] = match_expr(b, spu_re(MT)); ok_re && a1.eq(div))
+			{
+				erase_stores(b);
+				set_vr(op.rt4, re_accurate(div));
+				return;
+			}
+		}
+
 		if (auto [ok_re, mystery] = match_expr(b, spu_re(MT)); ok_re)
 		{
 			spu_log.todo("[%s:0x%05x] Unmatched spu_re found", m_hash, m_pos);
