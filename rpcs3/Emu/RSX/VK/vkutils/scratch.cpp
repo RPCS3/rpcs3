@@ -125,8 +125,8 @@ namespace vk
 	{
 		auto create_texture = [&]()
 		{
-			u32 new_width = utils::align(requested_width, 1024u);
-			u32 new_height = utils::align(requested_height, 1024u);
+			u32 new_width = utils::align(requested_width, 256u);
+			u32 new_height = utils::align(requested_height, 256u);
 
 			return new vk::image(*g_render_device, g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D, format, new_width, new_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
