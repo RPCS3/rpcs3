@@ -9175,6 +9175,13 @@ public:
 			return;
 		}
 
+		if (const auto [ok_re_acc, div] = match_expr(a, re_accurate(match<f32[4]>())); ok_re_acc)
+		{
+			erase_stores(b);
+			set_vr(op.rt, b / div);
+			return;
+		}
+
 		set_vr(op.rt, fm(a, b));
 	}
 
@@ -9661,18 +9668,18 @@ public:
 			return;
 
 		// Match division (fast)
-		if (auto [ok_fnma, divb, diva] = match_expr(a, fnms(c, MT, MT)); ok_fnma)
-		{
-			if (auto [ok_fm] = match_expr(c, fm(diva, b)); ok_fm)
-			{
-				if (auto [ok_re] = match_expr(b, spu_re(divb)); ok_re)
-				{
-					erase_stores(b, c);
-					set_vr(op.rt4, diva / divb);
-					return;
-				}
-			}
-		}
+		// if (auto [ok_fnma, divb, diva] = match_expr(a, fnms(c, MT, MT)); ok_fnma)
+		// {
+		// 	if (auto [ok_fm] = match_expr(c, fm(diva, b)); ok_fm)
+		// 	{
+		// 		if (auto [ok_re] = match_expr(b, spu_re(divb)); ok_re)
+		// 		{
+		// 			erase_stores(b, c);
+		// 			set_vr(op.rt4, diva / divb);
+		// 			return;
+		// 		}
+		// 	}
+		// }
 
 		auto check_accurate_reciprocal_pattern_for_float = [&](float float_value) -> bool
 		{
