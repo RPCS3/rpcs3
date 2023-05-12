@@ -9579,32 +9579,70 @@ public:
 			}
 		}
 
-		// Match accurate reciprocal
-		// Seen in Watch Dogs, followed by fm
-		if (auto [ok_fnms, b1] = match_expr(a, fnms(b, MT, fsplat<f32[4]>(1.0f))); ok_fnms)
+		auto check_accurate_reciprocal_pattern_for_float = [&](float float_value) -> bool
 		{
-			if (auto [ok_re, div] = match_expr(b, spu_re(MT)); ok_re && b1.eq(div))
+			if (auto [ok_fnms, b1] = match_expr(a, fnms(b, MT, fsplat<f32[4]>(float_value))); ok_fnms)
 			{
-				erase_stores(b);
-				set_vr(op.rt4, re_accurate(div));
-				return;
+				if (auto [ok_re, div] = match_expr(b, spu_re(MT)); ok_re && b1.eq(div))
+				{
+					erase_stores(b);
+					set_vr(op.rt4, re_accurate(div));
+					return true;
+				}
 			}
-		}
 
-		// Seen in NFS:MW
-		if (auto [ok_fnms, a1] = match_expr(a, fnms(MT, b, fsplat<f32[4]>(1.00000011920928955078125))); ok_fnms)
-		{
-			if (auto [ok_re, div] = match_expr(b, spu_re(MT)); ok_re && a1.eq(div))
+			if (auto [ok_fnms, a1] = match_expr(a, fnms(MT, b, fsplat<f32[4]>(float_value))); ok_fnms)
 			{
-				erase_stores(b);
-				set_vr(op.rt4, re_accurate(div));
-				return;
+				if (auto [ok_re, div] = match_expr(b, spu_re(MT)); ok_re && a1.eq(div))
+				{
+					erase_stores(b);
+					set_vr(op.rt4, re_accurate(div));
+					return true;
+				}
 			}
+
+			if (auto [ok_fnms, a1] = match_expr(b, fnms(MT, a, fsplat<f32[4]>(float_value))); ok_fnms)
+			{
+				if (auto [ok_re, div] = match_expr(b, spu_re(MT)); ok_re && a1.eq(div))
+				{
+					erase_stores(b);
+					set_vr(op.rt4, re_accurate(div));
+					return true;
+				}
+			}
+
+			if (auto [ok_fnms, b1] = match_expr(b, fnms(a, MT, fsplat<f32[4]>(float_value))); ok_fnms)
+			{
+				if (auto [ok_re, div] = match_expr(a, spu_re(MT)); ok_re && b1.eq(div))
+				{
+					erase_stores(b);
+					set_vr(op.rt4, re_accurate(div));
+					return true;
+				}
+			}
+			
+			return false;
+		};
+
+		if (check_accurate_reciprocal_pattern_for_float(1.0f))
+			return;
+
+		if (check_accurate_reciprocal_pattern_for_float(1.00000011920928955078125))
+			return;
+
+		if (auto [ok_re, mystery] = match_expr(a, spu_re(MT)); ok_re)
+		{
+			spu_log.todo("[%s:0x%05x] Unmatched spu_re(a) found", m_hash, m_pos);
 		}
 
 		if (auto [ok_re, mystery] = match_expr(b, spu_re(MT)); ok_re)
 		{
-			spu_log.todo("[%s:0x%05x] Unmatched spu_re found", m_hash, m_pos);
+			spu_log.todo("[%s:0x%05x] Unmatched spu_re(b) found", m_hash, m_pos);
+		}
+
+		if (auto [ok_resq, mystery] = match_expr(c, spu_rsqrte(MT)); ok_resq)
+		{
+			spu_log.todo("[%s:0x%05x] Unmatched spu_rsqrte(c) found", m_hash, m_pos);
 		}
 
 		set_vr(op.rt4, fma(a, b, c));
