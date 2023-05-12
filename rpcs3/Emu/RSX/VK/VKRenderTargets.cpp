@@ -47,12 +47,6 @@ namespace vk
 
 	bool surface_cache::can_collapse_surface(const std::unique_ptr<vk::render_target>& surface, rsx::problem_severity severity)
 	{
-		if (surface->samples() == 1)
-		{
-			// No internal allocations needed for non-MSAA images
-			return true;
-		}
-
 		if (severity < rsx::problem_severity::fatal &&
 			vk::vmm_determine_memory_load_severity() < rsx::problem_severity::fatal)
 		{
@@ -61,27 +55,21 @@ namespace vk
 		}
 
 		// Check if we need to do any allocations. Do not collapse in such a situation otherwise
-		if (!surface->resolve_surface)
+		if (surface->samples() > 1 && !surface->resolve_surface)
 		{
 			return false;
 		}
-		else
+
+		// Resolve target does exist. Scan through the entire collapse chain
+		for (auto& region : surface->old_contents)
 		{
-			// Resolve target does exist. Scan through the entire collapse chain
-			for (auto& region : surface->old_contents)
+			// FIXME: This is just lazy
+			auto proxy = std::unique_ptr<vk::render_target>(vk::as_rtt(region.source));
+			const bool collapsible = can_collapse_surface(proxy, severity);
+			proxy.release();
+
+			if (!collapsible)
 			{
-				if (region.source->samples() == 1)
-				{
-					// Not MSAA
-					continue;
-				}
-
-				if (vk::as_rtt(region.source)->resolve_surface)
-				{
-					// Has a resolve target.
-					continue;
-				}
-
 				return false;
 			}
 		}
@@ -135,9 +123,9 @@ namespace vk
 			// 1. Spill an strip any 'invalidated resources'. At this point it doesn't matter and we donate to the resolve cache which is a plus.
 			for (auto& surface : invalidated_resources)
 			{
-				if (!surface->value)
+				if (!surface->value && !surface->resolve_surface)
 				{
-					ensure(!surface->resolve_surface);
+					// Unspilled resources can have no value but have a resolve surface used for read
 					continue;
 				}
 
@@ -536,8 +524,6 @@ namespace vk
 
 	bool render_target::spill(vk::command_buffer& cmd, std::vector<std::unique_ptr<vk::viewable_image>>& resolve_cache)
 	{
-		ensure(value);
-
 		u64 element_size;
 		switch (const auto fmt = format())
 		{
@@ -556,6 +542,7 @@ namespace vk
 		vk::viewable_image* src = nullptr;
 		if (samples() == 1) [[likely]]
 		{
+			ensure(value);
 			src = this;
 		}
 		else if (resolve_surface)
@@ -716,7 +703,11 @@ namespace vk
 			else
 			{
 				content = vk::get_typeless_helper(format(), format_class(), subres.width_in_block, subres.height_in_block);
-				content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				if (content->current_layout == VK_IMAGE_LAYOUT_UNDEFINED)
+				{
+					content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				}
+				content->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 			}
 
 			// Load Cell data into temp buffer
@@ -726,12 +717,15 @@ namespace vk
 			if (content != final_dst)
 			{
 				// Avoid layout push/pop on scratch memory by setting explicit layout here
-				content->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				content->pop_layout(cmd);
+				content->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				vk::copy_scaled_image(cmd, content, final_dst,
 					{ 0, 0, subres.width_in_block, subres.height_in_block },
 					{ 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
 					1, true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
+
+				content->pop_layout(cmd);
 			}
 
 			final_dst->pop_layout(cmd);
