@@ -1122,56 +1122,57 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	}
 
 	bool surface_cache_relieved = false;
-	if (severity >= rsx::problem_severity::moderate)
+	const auto mem_info = m_device->get_memory_mapping();
+
+	// Check if we need to spill
+	if (severity >= rsx::problem_severity::fatal &&                // Only spill for fatal errors
+		mem_info.device_local != mem_info.host_visible_coherent && // Do not spill if it is an IGP, there is nowhere to spill to
+		m_rtts.is_overallocated())                                 // Surface cache must be over-allocated by the design quota
 	{
-		// Check if we need to spill
-		const auto mem_info = m_device->get_memory_mapping();
-		if (severity >= rsx::problem_severity::fatal &&                // Only spill for fatal errors
-			mem_info.device_local != mem_info.host_visible_coherent && // Do not spill if it is an IGP, there is nowhere to spill to
-			m_rtts.is_overallocated())                                 // Surface cache must be over-allocated by the design quota
-		{
-			// Queue a VRAM spill operation.
-			m_rtts.spill_unused_memory();
-		}
+		// Queue a VRAM spill operation.
+		m_rtts.spill_unused_memory();
+	}
 
-		// Moderate severity and higher also starts removing stale render target objects
-		if (m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
-		{
-			surface_cache_relieved = true;
-			m_rtts.free_invalidated(*m_current_command_buffer, severity);
-		}
-
-		if (severity >= rsx::problem_severity::fatal && surface_cache_relieved && !m_samplers_dirty)
-		{
-			// If surface cache was modified destructively, then we must reload samplers touching the surface cache.
-			bool invalidate_samplers = false;
-			auto scan_array = [&](const auto& texture_array, const auto& sampler_states)
-			{
-				for (auto i = 0ull; i < texture_array.size() && !invalidate_samplers; ++i)
-				{
-					if (texture_array[i].enabled() && sampler_states[i])
-					{
-						invalidate_samplers = (sampler_states[i]->upload_context == rsx::texture_upload_context::framebuffer_storage);
-					}
-				}
-			};
-
-			scan_array(rsx::method_registers.fragment_textures, fs_sampler_state);
-			scan_array(rsx::method_registers.vertex_textures, vs_sampler_state);
-
-			if (invalidate_samplers)
-			{
-				m_samplers_dirty.store(true);
-			}
-		}
+	// Moderate severity and higher also starts removing stale render target objects
+	if (m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+	{
+		surface_cache_relieved = true;
+		m_rtts.free_invalidated(*m_current_command_buffer, severity);
 	}
 
 	const bool any_cache_relieved = (texture_cache_relieved || surface_cache_relieved);
-	if (severity >= rsx::problem_severity::fatal)
+	if (severity <= rsx::problem_severity::moderate)
 	{
-		// Imminent crash, full GPU sync is the least of our problems
-		flush_command_queue(true, true);
+		return any_cache_relieved;
 	}
+
+	ensure(severity >= rsx::problem_severity::fatal);
+	if (surface_cache_relieved && !m_samplers_dirty)
+	{
+		// If surface cache was modified destructively, then we must reload samplers touching the surface cache.
+		bool invalidate_samplers = false;
+		auto scan_array = [&](const auto& texture_array, const auto& sampler_states)
+		{
+			for (auto i = 0ull; i < texture_array.size() && !invalidate_samplers; ++i)
+			{
+				if (texture_array[i].enabled() && sampler_states[i])
+				{
+					invalidate_samplers = (sampler_states[i]->upload_context == rsx::texture_upload_context::framebuffer_storage);
+				}
+			}
+		};
+
+		scan_array(rsx::method_registers.fragment_textures, fs_sampler_state);
+		scan_array(rsx::method_registers.vertex_textures, vs_sampler_state);
+
+		if (invalidate_samplers)
+		{
+			m_samplers_dirty.store(true);
+		}
+	}
+
+	// Imminent crash, full GPU sync is the least of our problems
+	flush_command_queue(true, true);
 
 	return any_cache_relieved;
 }
