@@ -1083,28 +1083,35 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	ensure(!vk::is_uninterruptible() && rsx::get_current_renderer()->is_current_thread());
 
 	bool texture_cache_relieved = false;
-	if (severity >= rsx::problem_severity::fatal && m_texture_cache.is_overallocated())
+	if (severity >= rsx::problem_severity::fatal)
 	{
-		// Evict some unused textures. Do not evict any active references
-		std::set<u32> exclusion_list;
-		auto scan_array = [&](const auto& texture_array)
+		// Hard sync before trying to evict anything. This guarantees no UAF crashes in the driver.
+		// As a bonus, we also get a free gc pass
+		flush_command_queue(true, true);
+
+		if (m_texture_cache.is_overallocated())
 		{
-			for (auto i = 0ull; i < texture_array.size(); ++i)
+			// Evict some unused textures. Do not evict any active references
+			std::set<u32> exclusion_list;
+			auto scan_array = [&](const auto& texture_array)
 			{
-				const auto& tex = texture_array[i];
-				const auto addr = rsx::get_address(tex.offset(), tex.location());
-				exclusion_list.insert(addr);
-			}
-		};
+				for (auto i = 0ull; i < texture_array.size(); ++i)
+				{
+					const auto& tex = texture_array[i];
+					const auto addr = rsx::get_address(tex.offset(), tex.location());
+					exclusion_list.insert(addr);
+				}
+			};
 
-		scan_array(rsx::method_registers.fragment_textures);
-		scan_array(rsx::method_registers.vertex_textures);
+			scan_array(rsx::method_registers.fragment_textures);
+			scan_array(rsx::method_registers.vertex_textures);
 
-		// Hold the secondary lock guard to prevent threads from trying to touch access violation handler stuff
-		std::lock_guard lock(m_secondary_cb_guard);
+			// Hold the secondary lock guard to prevent threads from trying to touch access violation handler stuff
+			std::lock_guard lock(m_secondary_cb_guard);
 
-		rsx_log.warning("Texture cache is overallocated. Will evict unnecessary textures.");
-		texture_cache_relieved = m_texture_cache.evict_unused(exclusion_list);
+			rsx_log.warning("Texture cache is overallocated. Will evict unnecessary textures.");
+			texture_cache_relieved = m_texture_cache.evict_unused(exclusion_list);
+		}
 	}
 
 	texture_cache_relieved |= m_texture_cache.handle_memory_pressure(severity);
@@ -1160,7 +1167,7 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	}
 
 	const bool any_cache_relieved = (texture_cache_relieved || surface_cache_relieved);
-	if (any_cache_relieved && severity >= rsx::problem_severity::fatal)
+	if (severity >= rsx::problem_severity::fatal)
 	{
 		// Imminent crash, full GPU sync is the least of our problems
 		flush_command_queue(true, true);
