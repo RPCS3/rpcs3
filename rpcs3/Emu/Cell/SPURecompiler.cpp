@@ -9548,22 +9548,117 @@ public:
 
 		static const auto MT = match<f32[4]>();
 
-		// Match sqrt
-		if (auto [ok_fnma, a1, b1] = match_expr(a, fnms(MT, MT, fsplat<f32[4]>(1.00000011920928955078125))); ok_fnma)
+		auto check_sqrt_pattern_for_float = [&](float float_value) -> bool
 		{
-			if (auto [ok_fm2, a2] = match_expr(b, fm(MT, fsplat<f32[4]>(0.5))); ok_fm2 && a2.eq(b1))
+			auto match_fnms = [&](float float_value)
 			{
-				if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
+				auto res = match_expr(a, fnms(MT, MT, fsplat<f32[4]>(float_value)));
+				if (std::get<0>(res))
+					return res;
+
+				return match_expr(b, fnms(MT, MT, fsplat<f32[4]>(float_value)));
+			};
+
+			auto match_fm_half = [&]()
+			{
+				auto res = match_expr(a, fm(MT, fsplat<f32[4]>(0.5)));
+				if (std::get<0>(res))
+					return res;
+
+				res = match_expr(a, fm(fsplat<f32[4]>(0.5), MT));
+				if (std::get<0>(res))
+					return res;
+
+				res = match_expr(b, fm(MT, fsplat<f32[4]>(0.5)));
+				if (std::get<0>(res))
+					return res;
+
+				return match_expr(b, fm(fsplat<f32[4]>(0.5), MT));
+			};
+
+
+			if (auto [ok_fnma, a1, b1] = match_fnms(float_value); ok_fnma)
+			{
+				if (auto [ok_fm2, fm_half_mul] = match_fm_half(); ok_fm2 && fm_half_mul.eq(b1))
 				{
-					if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
+					if (fm_half_mul.eq(b1))
 					{
-						erase_stores(a, b, c, a3);
-						set_vr(op.rt4, fsqrt(fabs(src)));
-						return;
+						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
+						{
+							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
+							{
+								erase_stores(a, b, c, a3);
+								set_vr(op.rt4, fsqrt(fabs(src)));
+								return true;
+							}	
+						}
+						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(a1))
+						{
+							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
+							{
+								erase_stores(a, b, c, b3);
+								set_vr(op.rt4, fsqrt(fabs(src)));
+								return true;
+							}	
+						}
+					}
+					else if (fm_half_mul.eq(a1))
+					{
+						if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(b1))
+						{
+							if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
+							{
+								erase_stores(a, b, c, a3);
+								set_vr(op.rt4, fsqrt(fabs(src)));
+								return true;
+							}	
+						}
+						else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(b1))
+						{
+							if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
+							{
+								erase_stores(a, b, c, b3);
+								set_vr(op.rt4, fsqrt(fabs(src)));
+								return true;
+							}	
+						}
 					}
 				}
 			}
-		}
+
+			if (auto [ok_fnma, a1, b1] = match_expr(b, fnms(MT, MT, fsplat<f32[4]>(float_value))); ok_fnma)
+			{
+				if (auto [ok_fm2, a2] = match_expr(a, fm(MT, fsplat<f32[4]>(0.5))); ok_fm2 && a2.eq(b1))
+				{
+					if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
+					{
+						if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
+						{
+							erase_stores(a, b, c, a3);
+							set_vr(op.rt4, fsqrt(fabs(src)));
+							return true;
+						}
+					}
+					else if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && b3.eq(a1))
+					{
+						if (auto [ok_sqrte, src] = match_expr(b3, spu_rsqrte(MT)); ok_sqrte && src.eq(a3))
+						{
+							erase_stores(a, b, c, b3);
+							set_vr(op.rt4, fsqrt(fabs(src)));
+							return true;
+						}
+					}
+				}
+			}
+
+			return false;
+		};
+
+		if (check_sqrt_pattern_for_float(1.0f))
+			return;
+
+		if (check_sqrt_pattern_for_float(1.00000011920928955078125))
+			return;
 
 		// Match division (fast)
 		if (auto [ok_fnma, divb, diva] = match_expr(a, fnms(c, MT, MT)); ok_fnma)
@@ -9620,7 +9715,7 @@ public:
 					return true;
 				}
 			}
-			
+
 			return false;
 		};
 
