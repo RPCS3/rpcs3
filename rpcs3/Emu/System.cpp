@@ -3218,7 +3218,10 @@ bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) cons
 	return !dir_path.empty() && (GetCallbacks().resolve_path(path) + '/').starts_with((dir_path.back() == '/') ? dir_path : (dir_path + '/'));
 }
 
-game_boot_result Emulator::VerifyPathCasing(std::string_view path, std::string_view dir, bool from_dir) const
+game_boot_result Emulator::VerifyPathCasing(
+	[[maybe_unused]] std::string_view path,
+	[[maybe_unused]] std::string_view dir,
+	[[maybe_unused]] bool from_dir) const
 {
 #ifdef _WIN32
 	// path might be passed from command line with differences in uppercase/lowercase on windows.

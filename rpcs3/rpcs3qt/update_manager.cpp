@@ -369,6 +369,8 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
 
 #ifdef __APPLE__
+	Q_UNUSED(data);
+	Q_UNUSED(auto_accept);
 	update_log.error("Unsupported operating system.");
 	return false;
 #else

@@ -622,12 +622,12 @@ namespace utils
 		}
 #else
 		int vm_overcommit = 0;
-		auto vm_sz = sizeof(int);
 
 #if defined(__NetBSD__) || defined(__APPLE__)
 		// Always ON
 		vm_overcommit = 0;
 #elif defined(__FreeBSD__)
+		auto vm_sz = sizeof(int);
 		int mib[2]{CTL_VM, VM_OVERCOMMIT};
 		if (::sysctl(mib, 2, &vm_overcommit, &vm_sz, NULL, 0) != 0)
 			vm_overcommit = -1;

@@ -1968,7 +1968,7 @@ namespace vm
 
 		range_lock->store(begin | (u64{size} << 32));
 
-		for (u64 i = 0;; i++)
+		while (true)
 		{
 			const u64 lock_val = g_range_lock.load();
 			const u64 is_share = g_shmem[begin >> 16].load();

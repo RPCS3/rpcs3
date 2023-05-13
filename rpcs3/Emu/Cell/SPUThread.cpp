@@ -1179,8 +1179,10 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 
 	bool first = true;
 
+	const v128 gpr0 = gpr[0];
+
 	// Declare first 128-bytes as invalid for stack (common values such as 0 do not make sense here)
-	for (u32 sp = gpr[1]._u32[3]; (sp & 0xF) == 0u && sp >= 0x80u && sp <= 0x3FFE0u; sp = _ref<u32>(sp), first = false)
+	for (u32 sp = gpr[1]._u32[3]; (sp & 0xF) == 0u && sp >= 0x80u && sp <= 0x3FFE0u; first = false)
 	{
 		v128 lr = _ref<v128>(sp + 16);
 
@@ -1204,7 +1206,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 			{
 				// Function hasn't saved LR, could be because it's a leaf function
 				// Use LR directly instead
-				lr = gpr[0];
+				lr = gpr0;
 
 				if (is_invalid(lr))
 				{
@@ -1217,9 +1219,107 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 				break;
 			}
 		}
+		else if (first && lr._u32[3] != gpr0._u32[3] && !is_invalid(gpr0))
+		{
+			// Detect functions with no stack or before LR has been stored
+			std::vector<bool> passed(SPU_LS_SIZE / 4);
+			std::vector<u32> start_points{pc};
+
+			bool is_ok = false;
+			bool all_failed = false;
+
+			for (usz start = 0; !all_failed && start < start_points.size(); start++)
+			{
+				for (u32 i = start_points[start]; i < SPU_LS_SIZE;)
+				{
+					if (passed[i / 4])
+					{
+						// Already passed
+						break;
+					}
+
+					passed[i / 4] = true;
+
+					const spu_opcode_t op{_ref<u32>(i)};
+					const auto type = s_spu_itype.decode(op.opcode);
+
+					if (start == 0 && type == spu_itype::STQD && op.ra == 1u && op.rt == 0u)
+					{
+						// Saving LR to stack: this is indeed a new function
+						is_ok = true;
+						break;
+					}
+
+					if (type == spu_itype::LQD && op.rt == 0u)
+					{
+						// Loading LR from stack: this is not a leaf function
+						all_failed = true;
+						break;
+					}
+
+					if (type == spu_itype::UNK)
+					{
+						// Ignore for now
+						break;
+					}
+
+					if ((type == spu_itype::BRSL || type == spu_itype::BRASL || type == spu_itype::BISL) && op.rt == 0u)
+					{
+						// Gave up on link before saving
+						all_failed = true;
+						break;
+					}
+
+					if (type & spu_itype::branch && type >= spu_itype::BI && op.ra == 0u)
+					{
+						// Returned
+						is_ok = true;
+						break;
+					}
+
+					const auto results = op_branch_targets(i, op);
+
+					bool proceeded = false;
+					for (usz res_i = 0; res_i < results.size(); res_i++)
+					{
+						const u32 route_pc = results[res_i];
+						if (route_pc < SPU_LS_SIZE && !passed[route_pc / 4])
+						{
+							if (proceeded)
+							{
+								// Remember next route start point
+								start_points.emplace_back(route_pc);
+							}
+							else
+							{
+								// Next PC
+								i = route_pc;
+								proceeded = true;
+							}
+						}
+					}
+				}
+			}
+
+			if (is_ok && !all_failed)
+			{
+				// Same stack as far as we know (for now)
+				call_stack_list.emplace_back(gpr0._u32[3], sp);
+			}
+		}
 
 		// TODO: function addresses too
 		call_stack_list.emplace_back(lr._u32[3], sp);
+
+		const u32 temp_sp = _ref<u32>(sp);
+
+		if (temp_sp <= sp)
+		{
+			// Ensure ascending stack frame pointers
+			break;
+		}
+
+		sp = temp_sp;
 	}
 
 	return call_stack_list;

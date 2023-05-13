@@ -28,7 +28,6 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	setSelectionMode(QAbstractItemView::SingleSelection);
 	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-	verticalScrollBar()->installEventFilter(this);
 	verticalScrollBar()->setSingleStep(20);
 	horizontalScrollBar()->setSingleStep(20);
 	verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
@@ -41,7 +40,6 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	setAlternatingRowColors(true);
-	installEventFilter(this);
 	setColumnCount(gui::column_count);
 	setMouseTracking(true);
 

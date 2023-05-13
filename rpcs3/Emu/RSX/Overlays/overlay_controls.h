@@ -66,7 +66,6 @@ namespace rsx
 			};
 
 			// Define resources
-			std::vector<std::string> texture_resource_files;
 			std::vector<std::unique_ptr<image_info>> texture_raw_data;
 
 			resource_config();
