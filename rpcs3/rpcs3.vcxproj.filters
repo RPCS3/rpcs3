@@ -1002,6 +1002,15 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_flow_widget.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\elf_memory_dumping_dialog.cpp">
+      <Filter>Gui\dev tools</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_elf_memory_dumping_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_elf_memory_dumping_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1470,6 +1479,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\flow_widget_item.h">
       <Filter>Gui\flow_layout</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\elf_memory_dumping_dialog.h">
+      <Filter>Gui\dev tools</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

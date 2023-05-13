@@ -9,6 +9,10 @@
 #include "util/logs.hpp"
 #include "util/to_endian.hpp"
 
+#include "Loader/ELF.h"
+
+#include <span>
+
 LOG_CHANNEL(spu_log, "SPU");
 
 struct lv2_event_queue;
@@ -596,6 +600,14 @@ enum class spu_type : u32
 	isolated,
 };
 
+struct spu_memory_segment_dump_data
+{
+	u32 ls_addr;
+	const u8* src_addr;
+	u32 segment_size;
+	u32 flags = umax;
+};
+
 class spu_thread : public cpu_thread
 {
 public:
@@ -804,7 +816,7 @@ public:
 	void set_events(u32 bits);
 	void set_interrupt_status(bool enable);
 	bool check_mfc_interrupts(u32 next_pc);
-	bool is_exec_code(u32 addr) const; // Only a hint, do not rely on it other than debugging purposes
+	static bool is_exec_code(u32 addr, const u8* ls_ptr); // Only a hint, do not rely on it other than debugging purposes
 	u32 get_ch_count(u32 ch);
 	s64 get_ch_value(u32 ch);
 	bool set_ch_value(u32 ch, u32 value);
@@ -816,6 +828,7 @@ public:
 	std::array<std::shared_ptr<utils::serial>, 32> rewind_captures; // shared_ptr to avoid header inclusion
 	u8 current_rewind_capture_idx = 0;
 
+	static spu_exec_object capture_memory_as_elf(std::span<spu_memory_segment_dump_data> segs, u32 pc_hint = umax);
 	bool capture_state();
 	bool try_load_debug_capture();
 	void wakeup_delay(u32 div = 1) const;

@@ -87,7 +87,7 @@ void vfs_dialog_path_widget::remove_directory() const
 	const int row = m_dir_list->currentRow();
 	if (row > 0)
 	{
-		QListWidgetItem* item = m_dir_list->item(row);
+		QListWidgetItem* item = m_dir_list->takeItem(row);
 		delete item;
 	}
 }
