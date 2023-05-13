@@ -1105,7 +1105,7 @@ void spu_thread::dump_regs(std::string& ret) const
 			fmt::append(ret, "%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 		}
 
-		if (i3 >= 0x80 && is_exec_code(i3))
+		if (i3 >= 0x80 && is_exec_code(i3, ls))
 		{
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
@@ -1197,7 +1197,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 				return true;
 			}
 
-			return !addr || !is_exec_code(addr);
+			return !addr || !is_exec_code(addr, ls);
 		};
 
 		if (is_invalid(lr))
@@ -3912,7 +3912,7 @@ bool spu_thread::check_mfc_interrupts(u32 next_pc)
 	return false;
 }
 
-bool spu_thread::is_exec_code(u32 addr) const
+bool spu_thread::is_exec_code(u32 addr, const u8* ls_ptr)
 {
 	if (addr & ~0x3FFFC)
 	{
@@ -3922,7 +3922,7 @@ bool spu_thread::is_exec_code(u32 addr) const
 	for (u32 i = 0; i < 30; i++)
 	{
 		const u32 addr0 = addr + (i * 4);
-		const u32 op = _ref<u32>(addr0);
+		const u32 op = read_from_ptr<be_t<u32>>(ls_ptr + addr0);
 		const auto type = s_spu_itype.decode(op);
 
 		if (type == spu_itype::UNK || !op)
@@ -5925,20 +5925,84 @@ void spu_thread::fast_call(u32 ls_addr)
 	gpr[1]._u32[3] = old_stack;
 }
 
+spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_dump_data> segs, u32 pc_hint)
+{
+	spu_exec_object spu_exec;
+	spu_exec.set_error(elf_error::ok);
+
+	std::vector<u8> all_data(SPU_LS_SIZE);
+
+	for (auto& seg : segs)
+	{
+		std::vector<uchar> data(seg.segment_size);
+
+		if (auto [vm_addr, ok] = vm::try_get_addr(seg.src_addr); ok)
+		{
+			if (!vm::try_access(vm_addr, data.data(), data.size(), false))
+			{
+				spu_log.error("capture_memory_as_elf(): Failed to read {0x%x..0x%x}, aborting capture.", +vm_addr, vm_addr + seg.segment_size - 1);
+				spu_exec.set_error(elf_error::stream_data);
+				return spu_exec;
+			}
+		}
+		else
+		{
+			std::memcpy(data.data(), seg.src_addr, data.size());
+		}
+
+		std::memcpy(all_data.data() + seg.ls_addr, data.data(), data.size());
+
+		auto& prog = spu_exec.progs.emplace_back(SYS_SPU_SEGMENT_TYPE_COPY, seg.flags & 0x7, seg.ls_addr, seg.segment_size, 8, std::move(data));
+
+		prog.p_paddr = prog.p_vaddr;
+
+		spu_log.success("Segment: p_type=0x%x, p_vaddr=0x%x, p_filesz=0x%x, p_memsz=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz);
+	}
+
+
+	u32 pc0 = pc_hint;
+
+	if (pc_hint != umax)
+	{
+		for (pc0 = pc_hint; pc0; pc0 -= 4)
+		{
+			const u32 op = read_from_ptr<be_t<u32>>(all_data.data(), pc0 - 4);
+
+			// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
+			if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
+			{
+				if (is_exec_code(pc0, all_data.data()))
+					break;
+			}
+		}
+	}
+	else
+	{
+		for (pc0 = 0; pc0 < SPU_LS_SIZE; pc0 += 4)
+		{
+			const spu_opcode_t op{read_from_ptr<be_t<u32>>(all_data.data(), pc0)};
+
+			// Try to find a function entry (very basic)
+			if (is_exec_code(pc0, all_data.data()))
+				break;
+		}
+	}
+
+	spu_exec.header.e_entry = pc0;
+
+	return spu_exec;
+}
+
 bool spu_thread::capture_state()
 {
 	ensure(state & cpu_flag::wait);
-
-	spu_exec_object spu_exec;
 
 	// Save data as an executable segment, even the SPU stack
 	// In the past, an optimization was made here to save only non-zero chunks of data
 	// But Ghidra didn't like accessing memory out of chunks (pretty common)
 	// So it has been reverted
-	auto& prog = spu_exec.progs.emplace_back(SYS_SPU_SEGMENT_TYPE_COPY, 0x7, 0, SPU_LS_SIZE, 8, std::vector<uchar>(ls, ls + SPU_LS_SIZE));
-
-	prog.p_paddr = prog.p_vaddr;
-	spu_log.success("Segment: p_type=0x%x, p_vaddr=0x%x, p_filesz=0x%x, p_memsz=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz);
+	spu_memory_segment_dump_data single_seg{.ls_addr = 0, .src_addr = ls, .segment_size = SPU_LS_SIZE};
+	spu_exec_object spu_exec = capture_memory_as_elf({&single_seg, 1}, pc);
 
 	std::string name;
 
@@ -5956,22 +6020,6 @@ bool spu_thread::capture_state()
 	{
 		fmt::append(name, "RawSPU.%u", lv2_id);
 	}
-
-	u32 pc0 = pc;
-
-	for (; pc0; pc0 -= 4)
-	{
-		be_t<u32> op;
-		std::memcpy(&op, prog.bin.data() + pc0 - 4, 4);
-
-		// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
-		if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
-		{
-			break;
-		}
-	}
-
-	spu_exec.header.e_entry = pc0;
 
 	name = vfs::escape(name, true);
 	std::replace(name.begin(), name.end(), ' ', '_');
@@ -6027,7 +6075,7 @@ bool spu_thread::capture_state()
 	}
 
 	rewind = std::make_shared<utils::serial>();
-	(*rewind)(std::span(prog.bin.data(), prog.bin.size())); // span serialization doesn't remember size which is what we need
+	(*rewind)(std::span(spu_exec.progs[0].bin.data(), spu_exec.progs[0].bin.size())); // span serialization doesn't remember size which is what we need
 	serialize_common(*rewind);
 
 	// TODO: Save and restore decrementer state properly

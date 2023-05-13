@@ -2,6 +2,7 @@
 #include "register_editor_dialog.h"
 #include "instruction_editor_dialog.h"
 #include "memory_viewer_panel.h"
+#include "elf_memory_dumping_dialog.h"
 #include "gui_settings.h"
 #include "debugger_list.h"
 #include "breakpoint_list.h"
@@ -289,7 +290,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		QLabel* l = new QLabel(tr(
 			"Keys Ctrl+G: Go to typed address."
 			"\nKeys Ctrl+B: Open breakpoints settings."
-			"\nKeys Alt+S: Capture SPU images of selected SPU."
+			"\nKeys Alt+S: Capture SPU images of selected SPU or generalized form when used from PPU."
 			"\nKeys Alt+R: Load last saved SPU state capture."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
 			"\nKey D: Also PPU calling history logger, interpreter and non-zero call history size must be used."
@@ -569,6 +570,12 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 			if (modifiers & Qt::AltModifier)
 			{
+				if (cpu->id_type() == 1)
+				{
+					new elf_memory_dumping_dialog(pc, m_gui_settings, this);
+					return;
+				}
+
 				if (cpu->id_type() != 2)
 				{
 					return;

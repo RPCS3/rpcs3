@@ -20,6 +20,7 @@ set(SRC_FILES
     downloader.cpp
     _discord_utils.cpp
     emu_settings.cpp
+    elf_memory_dumping_dialog.cpp
     fatal_error_dialog.cpp
     find_dialog.cpp
     flow_layout.cpp
