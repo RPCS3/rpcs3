@@ -73,7 +73,7 @@ namespace rsx
 
 			stbtt_aligned_quad get_char(char32_t c, f32& x_advance, f32& y_advance);
 
-			void render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap);
+			std::vector<vertex> render_text_ex(f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap);
 
 			std::vector<vertex> render_text(const char32_t* text, u16 max_width = -1, bool wrap = false);
 
@@ -87,7 +87,7 @@ namespace rsx
 
 			// Renderer info
 			size3u get_glyph_data_dimensions() const { return { codepage::bitmap_width, codepage::bitmap_height, ::size32(m_glyph_map) }; }
-			void get_glyph_data(std::vector<u8>& bytes) const;
+			std::vector<u8> get_glyph_data() const;
 		};
 
 		// TODO: Singletons are cancer

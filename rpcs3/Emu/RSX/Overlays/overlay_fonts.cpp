@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "overlay_controls.h"
+#include "Emu/System.h"
 #include "Emu/vfs_config.h"
 
 #ifndef _WIN32
@@ -107,19 +108,8 @@ namespace rsx
 			glyph_load_setup result;
 			result.font_names.push_back(font_name);
 
-#ifdef _WIN32
-			result.lookup_font_dirs.emplace_back("C:/Windows/Fonts/");
-#else
-			char* home = getenv("HOME");
-			if (home == nullptr)
-				home = getpwuid(getuid())->pw_dir;
-
-			result.lookup_font_dirs.emplace_back(home);
-			if (home[result.lookup_font_dirs[0].length() - 1] == '/')
-				result.lookup_font_dirs[0] += ".fonts/";
-			else
-				result.lookup_font_dirs[0] += "/.fonts/";
-#endif
+			const std::vector<std::string> font_dirs = Emu.GetCallbacks().get_font_dirs();
+			result.lookup_font_dirs.insert(result.lookup_font_dirs.end(), font_dirs.begin(), font_dirs.end());
 			// Search dev_flash for the font too
 			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/");
 			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/SONY-CC/");
@@ -283,15 +273,15 @@ namespace rsx
 			}
 		}
 
-		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap)
+		std::vector<vertex> font::render_text_ex(f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap)
 		{
 			x_advance = 0.f;
 			y_advance = 0.f;
-			result.clear();
+			std::vector<vertex> result;
 
 			if (!initialized)
 			{
-				return;
+				return result;
 			}
 
 			// Render as many characters as possible as glyphs.
@@ -302,7 +292,7 @@ namespace rsx
 				case '\0':
 				{
 					// We're done.
-					return;
+					return result;
 				}
 				case '\n':
 				{
@@ -409,28 +399,27 @@ namespace rsx
 				}
 				} // switch
 			}
+			return result;
 		}
 
 		std::vector<vertex> font::render_text(const char32_t* text, u16 max_width, bool wrap)
 		{
-			std::vector<vertex> result;
 			f32 unused_x, unused_y;
 
-			render_text_ex(result, unused_x, unused_y, text, -1, max_width, wrap);
-			return result;
+			return render_text_ex(unused_x, unused_y, text, -1, max_width, wrap);
 		}
 
 		std::pair<f32, f32> font::get_char_offset(const char32_t* text, usz max_length, u16 max_width, bool wrap)
 		{
-			std::vector<vertex> unused;
 			f32 loc_x, loc_y;
 
-			render_text_ex(unused, loc_x, loc_y, text, max_length, max_width, wrap);
+			render_text_ex(loc_x, loc_y, text, max_length, max_width, wrap);
 			return {loc_x, loc_y};
 		}
 
-		void font::get_glyph_data(std::vector<u8>& bytes) const
+		std::vector<u8> font::get_glyph_data() const
 		{
+			std::vector<u8> bytes;
 			const u32 page_size = codepage::bitmap_width * codepage::bitmap_height;
 			const auto size = page_size * m_glyph_map.size();
 
@@ -442,6 +431,7 @@ namespace rsx
 				std::memcpy(data, e.second->glyph_data.data(), page_size);
 				data += page_size;
 			}
+			return bytes;
 		}
 	} // namespace overlays
 } // namespace rsx

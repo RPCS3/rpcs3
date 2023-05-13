@@ -36,6 +36,7 @@
 
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
 #include <QImageReader> // This shouldn't be outside rpcs3qt...
+#include <QStandardPaths> // This shouldn't be outside rpcs3qt...
 #include <thread>
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -329,6 +330,22 @@ EmuCallbacks main_application::CreateCallbacks()
 	{
 		// May result in an empty string if path does not exist
 		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
+	};
+
+	callbacks.get_font_dirs = []()
+	{
+		const QStringList locations = QStandardPaths::standardLocations(QStandardPaths::FontsLocation);
+		std::vector<std::string> font_dirs;
+		for (const QString& location : locations)
+		{
+			std::string font_dir = location.toStdString();
+			if (!font_dir.ends_with('/'))
+			{
+				font_dir += '/';
+			}
+			font_dirs.push_back(font_dir);
+		}
+		return font_dirs;
 	};
 
 	return callbacks;
