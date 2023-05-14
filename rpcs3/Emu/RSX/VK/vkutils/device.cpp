@@ -679,11 +679,11 @@ namespace vk
 
 		if (g_cfg.video.disable_vulkan_mem_allocator)
 		{
-			m_allocator = std::make_unique<vk::mem_allocator_vk>(dev, pdev);
+			m_allocator = std::make_unique<vk::mem_allocator_vk>(*this, pdev);
 		}
 		else
 		{
-			m_allocator = std::make_unique<vk::mem_allocator_vma>(dev, pdev);
+			m_allocator = std::make_unique<vk::mem_allocator_vma>(*this, pdev);
 		}
 
 		// Useful for debugging different VRAM configurations

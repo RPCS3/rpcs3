@@ -153,7 +153,12 @@ namespace vk
 		rsx_log.warning("Rebalanced memory types successfully");
 	}
 
-	mem_allocator_vma::mem_allocator_vma(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev)
+	mem_allocator_base::mem_allocator_base(const vk::render_device& dev, VkPhysicalDevice)
+		: m_device(dev), m_allocation_flags(0)
+	{}
+
+	mem_allocator_vma::mem_allocator_vma(const vk::render_device& dev, VkPhysicalDevice pdev)
+		: mem_allocator_base(dev, pdev)
 	{
 		// Initialize stats pool
 		std::fill(stats.begin(), stats.end(), VmaBudget{});
@@ -164,11 +169,11 @@ namespace vk
 
 		std::vector<VkDeviceSize> heap_limits;
 		const auto vram_allocation_limit = g_cfg.video.vk.vram_allocation_limit * 0x100000ull;
-		if (vram_allocation_limit < g_render_device->get_memory_mapping().device_local_total_bytes)
+		if (vram_allocation_limit < dev.get_memory_mapping().device_local_total_bytes)
 		{
 			VkPhysicalDeviceMemoryProperties memory_properties;
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
-			for (int i = 0; i < memory_properties.memoryHeapCount; ++i)
+			for (u32 i = 0; i < memory_properties.memoryHeapCount; ++i)
 			{
 				const u64 max_sz = (memory_properties.memoryHeaps[i].flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 					? vram_allocation_limit
